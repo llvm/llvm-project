@@ -64,7 +64,7 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
+          Options.get("IncludeStyle", "llvm"))) {}
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   const auto ExpensiveValueParamDecl =

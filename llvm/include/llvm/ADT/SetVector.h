@@ -20,9 +20,13 @@
 #ifndef LLVM_ADT_SETVECTOR_H
 #define LLVM_ADT_SETVECTOR_H
 
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <vector>
 
 namespace llvm {
@@ -33,28 +37,36 @@ namespace llvm {
 /// property of a deterministic iteration order. The order of iteration is the
 /// order of insertion.
 template <typename T, typename Vector = std::vector<T>,
-                      typename Set = SmallSet<T, 16> >
+          typename Set = DenseSet<T>>
 class SetVector {
 public:
-  typedef T value_type;
-  typedef T key_type;
-  typedef T& reference;
-  typedef const T& const_reference;
-  typedef Set set_type;
-  typedef Vector vector_type;
-  typedef typename vector_type::const_iterator iterator;
-  typedef typename vector_type::const_iterator const_iterator;
-  typedef typename vector_type::const_reverse_iterator reverse_iterator;
-  typedef typename vector_type::const_reverse_iterator const_reverse_iterator;
-  typedef typename vector_type::size_type size_type;
+  using value_type = T;
+  using key_type = T;
+  using reference = T&;
+  using const_reference = const T&;
+  using set_type = Set;
+  using vector_type = Vector;
+  using iterator = typename vector_type::const_iterator;
+  using const_iterator = typename vector_type::const_iterator;
+  using reverse_iterator = typename vector_type::const_reverse_iterator;
+  using const_reverse_iterator = typename vector_type::const_reverse_iterator;
+  using size_type = typename vector_type::size_type;
 
   /// \brief Construct an empty SetVector
-  SetVector() {}
+  SetVector() = default;
 
   /// \brief Initialize a SetVector with a range of elements
   template<typename It>
   SetVector(It Start, It End) {
     insert(Start, End);
+  }
+
+  ArrayRef<T> getArrayRef() const { return vector_; }
+
+  /// Clear the SetVector and return the underlying vector.
+  Vector takeVector() {
+    set_.clear();
+    return std::move(vector_);
   }
 
   /// \brief Determine if the SetVector is empty or not.
@@ -107,6 +119,12 @@ public:
     return vector_.rend();
   }
 
+  /// \brief Return the first element of the SetVector.
+  const T &front() const {
+    assert(!empty() && "Cannot call front() on empty SetVector!");
+    return vector_.front();
+  }
+
   /// \brief Return the last element of the SetVector.
   const T &back() const {
     assert(!empty() && "Cannot call back() on empty SetVector!");
@@ -120,7 +138,7 @@ public:
   }
 
   /// \brief Insert a new element into the SetVector.
-  /// \returns true iff the element was inserted into the SetVector.
+  /// \returns true if the element was inserted into the SetVector.
   bool insert(const value_type &X) {
     bool result = set_.insert(X).second;
     if (result)
@@ -139,13 +157,30 @@ public:
   /// \brief Remove an item from the set vector.
   bool remove(const value_type& X) {
     if (set_.erase(X)) {
-      typename vector_type::iterator I =
-        std::find(vector_.begin(), vector_.end(), X);
+      typename vector_type::iterator I = find(vector_, X);
       assert(I != vector_.end() && "Corrupted SetVector instances!");
       vector_.erase(I);
       return true;
     }
     return false;
+  }
+
+  /// Erase a single element from the set vector.
+  /// \returns an iterator pointing to the next element that followed the
+  /// element erased. This is the end of the SetVector if the last element is
+  /// erased.
+  iterator erase(iterator I) {
+    const key_type &V = *I;
+    assert(set_.count(V) && "Corrupted SetVector instances!");
+    set_.erase(V);
+
+    // FIXME: No need to use the non-const iterator when built with
+    // std:vector.erase(const_iterator) as defined in C++11. This is for
+    // compatibility with non-standard libstdc++ up to 4.8 (fixed in 4.9).
+    auto NI = vector_.begin();
+    std::advance(NI, std::distance<iterator>(NI, I));
+
+    return vector_.erase(NI);
   }
 
   /// \brief Remove items from the set vector based on a predicate function.
@@ -154,7 +189,7 @@ public:
   /// write it:
   ///
   /// \code
-  ///   V.erase(std::remove_if(V.begin(), V.end(), P), V.end());
+  ///   V.erase(remove_if(V, P), V.end());
   /// \endcode
   ///
   /// However, SetVector doesn't expose non-const iterators, making any
@@ -163,9 +198,8 @@ public:
   /// \returns true if any element is removed.
   template <typename UnaryPredicate>
   bool remove_if(UnaryPredicate P) {
-    typename vector_type::iterator I
-      = std::remove_if(vector_.begin(), vector_.end(),
-                       TestAndEraseFromSet<UnaryPredicate>(P, set_));
+    typename vector_type::iterator I =
+        llvm::remove_if(vector_, TestAndEraseFromSet<UnaryPredicate>(P, set_));
     if (I == vector_.end())
       return false;
     vector_.erase(I, vector_.end());
@@ -191,7 +225,7 @@ public:
     vector_.pop_back();
   }
 
-  T LLVM_ATTRIBUTE_UNUSED_RESULT pop_back_val() {
+  LLVM_NODISCARD T pop_back_val() {
     T Ret = back();
     pop_back();
     return Ret;
@@ -205,6 +239,31 @@ public:
     return vector_ != that.vector_;
   }
 
+  /// \brief Compute This := This u S, return whether 'This' changed.
+  /// TODO: We should be able to use set_union from SetOperations.h, but
+  ///       SetVector interface is inconsistent with DenseSet.
+  template <class STy>
+  bool set_union(const STy &S) {
+    bool Changed = false;
+
+    for (typename STy::const_iterator SI = S.begin(), SE = S.end(); SI != SE;
+         ++SI)
+      if (insert(*SI))
+        Changed = true;
+
+    return Changed;
+  }
+
+  /// \brief Compute This := This - B
+  /// TODO: We should be able to use set_subtract from SetOperations.h, but
+  ///       SetVector interface is inconsistent with DenseSet.
+  template <class STy>
+  void set_subtract(const STy &S) {
+    for (typename STy::const_iterator SI = S.begin(), SE = S.end(); SI != SE;
+         ++SI)
+      remove(*SI);
+  }
+
 private:
   /// \brief A wrapper predicate designed for use with std::remove_if.
   ///
@@ -216,7 +275,8 @@ private:
     set_type &set_;
 
   public:
-    TestAndEraseFromSet(UnaryPredicate P, set_type &set_) : P(P), set_(set_) {}
+    TestAndEraseFromSet(UnaryPredicate P, set_type &set_)
+        : P(std::move(P)), set_(set_) {}
 
     template <typename ArgumentT>
     bool operator()(const ArgumentT &Arg) {
@@ -235,9 +295,10 @@ private:
 /// \brief A SetVector that performs no allocations if smaller than
 /// a certain size.
 template <typename T, unsigned N>
-class SmallSetVector : public SetVector<T, SmallVector<T, N>, SmallSet<T, N> > {
+class SmallSetVector
+    : public SetVector<T, SmallVector<T, N>, SmallDenseSet<T, N>> {
 public:
-  SmallSetVector() {}
+  SmallSetVector() = default;
 
   /// \brief Initialize a SmallSetVector with a range of elements
   template<typename It>
@@ -246,7 +307,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-// vim: sw=2 ai
-#endif
+#endif // LLVM_ADT_SETVECTOR_H

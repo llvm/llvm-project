@@ -17,7 +17,6 @@
 #include "llvm-c/Core.h"
 #include "llvm-c/Initialization.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
   class PassRegistry;

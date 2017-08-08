@@ -70,6 +70,18 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NOMMSA %s
 // CHECK-NOMMSA: "-target-feature" "-msa"
 //
+// -mmt
+// RUN: %clang -target mips-linux-gnu -### -c %s \
+// RUN:     -mno-mt -mmt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MMT %s
+// CHECK-MMT: "-target-feature" "+mt"
+//
+// -mno-mt
+// RUN: %clang -target mips-linux-gnu -### -c %s \
+// RUN:     -mmt -mno-mt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOMMT %s
+// CHECK-NOMMT: "-target-feature" "-mt"
+//
 // -modd-spreg
 // RUN: %clang -target mips-linux-gnu -### -c %s -mno-odd-spreg -modd-spreg 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MODDSPREG %s
@@ -115,6 +127,24 @@
 // RUN:     -mnan=2008 -mnan=legacy 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NANLEGACY %s
 // CHECK-NANLEGACY: "-target-feature" "-nan2008"
+//
+// -mcompact-branches=never
+// RUN: %clang -target mips-linux-gnu -march=mips32r6 -### -c %s \
+// RUN:     -mcompact-branches=never 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CBNEVER %s
+// CHECK-CBNEVER: "-mllvm" "-mips-compact-branches=never"
+//
+// -mcompact-branches=optimal
+// RUN: %clang -target mips-linux-gnu -march=mips32r6 -### -c %s \
+// RUN:     -mcompact-branches=optimal 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CBOPTIMAL %s
+// CHECK-CBOPTIMAL: "-mllvm" "-mips-compact-branches=optimal"
+//
+// -mcompact-branches=always
+// RUN: %clang -target mips-linux-gnu -march=mips32r6 -### -c %s \
+// RUN:     -mcompact-branches=always 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CBALWAYS %s
+// CHECK-CBALWAYS: "-mllvm" "-mips-compact-branches=always"
 //
 // -mxgot
 // RUN: %clang -target mips-linux-gnu -### -c %s \
@@ -229,3 +259,14 @@
 // RUN:   | FileCheck --check-prefix=CHECK-IMG-SINGLEFLOAT-FPXX %s
 // CHECK-IMG-SINGLEFLOAT-FPXX: "-target-feature" "+single-float"
 // CHECK-IMG-SINGLEFLOAT-FPXX: "-target-feature" "+fpxx"
+
+// -mlong-call
+// RUN: %clang -target mips-img-linux-gnu -### -c %s -mlong-calls 2>&1 \
+// RUN:   | FileCheck --check-prefix=LONG-CALLS-ON %s
+// RUN: %clang -target mips-img-linux-gnu -### -c %s -mno-long-calls 2>&1 \
+// RUN:   | FileCheck --check-prefix=LONG-CALLS-OFF %s
+// RUN: %clang -target mips-img-linux-gnu -### -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=LONG-CALLS-DEF %s
+// LONG-CALLS-ON: "-target-feature" "+long-calls"
+// LONG-CALLS-OFF: "-target-feature" "-long-calls"
+// LONG-CALLS-DEF-NOT: "long-calls"

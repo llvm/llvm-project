@@ -21,6 +21,8 @@
 
 namespace llvm {
 
+class AArch64RegisterBankInfo;
+
 class AArch64TargetMachine : public LLVMTargetMachine {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
@@ -29,11 +31,14 @@ protected:
 public:
   AArch64TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Reloc::Model RM, CodeModel::Model CM,
+                       Optional<Reloc::Model> RM, CodeModel::Model CM,
                        CodeGenOpt::Level OL, bool IsLittleEndian);
 
   ~AArch64TargetMachine() override;
   const AArch64Subtarget *getSubtargetImpl(const Function &F) const override;
+  // The no argument getSubtargetImpl, while it exists on some, targets is
+  // deprecated and should not be used.
+  const AArch64Subtarget *getSubtargetImpl() const = delete;
 
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
@@ -49,25 +54,25 @@ private:
   bool isLittle;
 };
 
-// AArch64leTargetMachine - AArch64 little endian target machine.
+// AArch64 little endian target machine.
 //
 class AArch64leTargetMachine : public AArch64TargetMachine {
   virtual void anchor();
 public:
   AArch64leTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                          StringRef FS, const TargetOptions &Options,
-                         Reloc::Model RM, CodeModel::Model CM,
+                         Optional<Reloc::Model> RM, CodeModel::Model CM,
                          CodeGenOpt::Level OL);
 };
 
-// AArch64beTargetMachine - AArch64 big endian target machine.
+// AArch64 big endian target machine.
 //
 class AArch64beTargetMachine : public AArch64TargetMachine {
   virtual void anchor();
 public:
   AArch64beTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                          StringRef FS, const TargetOptions &Options,
-                         Reloc::Model RM, CodeModel::Model CM,
+                         Optional<Reloc::Model> RM, CodeModel::Model CM,
                          CodeGenOpt::Level OL);
 };
 

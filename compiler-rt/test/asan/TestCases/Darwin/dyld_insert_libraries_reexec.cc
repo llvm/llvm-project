@@ -1,6 +1,8 @@
 // When DYLD-inserting the ASan dylib from a different location than the
 // original, make sure we don't try to reexec.
 
+// UNSUPPORTED: ios
+
 // RUN: mkdir -p %T/dyld_insert_libraries_reexec
 // RUN: cp `%clang_asan %s -fsanitize=address -### 2>&1 \
 // RUN:   | grep "libclang_rt.asan_osx_dynamic.dylib" \
@@ -37,10 +39,10 @@ int main() {
 
 // CHECK-NOINSERT: exec()-ing the program with
 // CHECK-NOINSERT: DYLD_INSERT_LIBRARIES
-// CHECK-NOINSERT: to enable ASan wrappers.
+// CHECK-NOINSERT: to enable wrappers.
 // CHECK-NOINSERT: Passed
 
 // CHECK-NOT: exec()-ing the program with
 // CHECK-NOT: DYLD_INSERT_LIBRARIES
-// CHECK-NOT: to enable ASan wrappers.
+// CHECK-NOT: to enable wrappers.
 // CHECK: Passed

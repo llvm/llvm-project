@@ -16,7 +16,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -25,6 +24,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <list>
 using namespace llvm;
@@ -68,7 +68,7 @@ INITIALIZE_PASS_END(RegToMem, "reg2mem", "Demote all values to stack slots",
                 false, false)
 
 bool RegToMem::runOnFunction(Function &F) {
-  if (F.isDeclaration())
+  if (F.isDeclaration() || skipFunction(F))
     return false;
 
   // Insert all new allocas into entry block.
@@ -89,10 +89,9 @@ bool RegToMem::runOnFunction(Function &F) {
   // Find the escaped instructions. But don't create stack slots for
   // allocas in entry block.
   std::list<Instruction*> WorkList;
-  for (Function::iterator ibb = F.begin(), ibe = F.end();
-       ibb != ibe; ++ibb)
-    for (BasicBlock::iterator iib = ibb->begin(), iie = ibb->end();
-         iib != iie; ++iib) {
+  for (BasicBlock &ibb : F)
+    for (BasicBlock::iterator iib = ibb.begin(), iie = ibb.end(); iib != iie;
+         ++iib) {
       if (!(isa<AllocaInst>(iib) && iib->getParent() == BBEntry) &&
           valueEscapes(&*iib)) {
         WorkList.push_front(&*iib);
@@ -101,25 +100,22 @@ bool RegToMem::runOnFunction(Function &F) {
 
   // Demote escaped instructions
   NumRegsDemoted += WorkList.size();
-  for (std::list<Instruction*>::iterator ilb = WorkList.begin(),
-       ile = WorkList.end(); ilb != ile; ++ilb)
-    DemoteRegToStack(**ilb, false, AllocaInsertionPoint);
+  for (Instruction *ilb : WorkList)
+    DemoteRegToStack(*ilb, false, AllocaInsertionPoint);
 
   WorkList.clear();
 
   // Find all phi's
-  for (Function::iterator ibb = F.begin(), ibe = F.end();
-       ibb != ibe; ++ibb)
-    for (BasicBlock::iterator iib = ibb->begin(), iie = ibb->end();
-         iib != iie; ++iib)
+  for (BasicBlock &ibb : F)
+    for (BasicBlock::iterator iib = ibb.begin(), iie = ibb.end(); iib != iie;
+         ++iib)
       if (isa<PHINode>(iib))
         WorkList.push_front(&*iib);
 
   // Demote phi nodes
   NumPhisDemoted += WorkList.size();
-  for (std::list<Instruction*>::iterator ilb = WorkList.begin(),
-       ile = WorkList.end(); ilb != ile; ++ilb)
-    DemotePHIToStack(cast<PHINode>(*ilb), AllocaInsertionPoint);
+  for (Instruction *ilb : WorkList)
+    DemotePHIToStack(cast<PHINode>(ilb), AllocaInsertionPoint);
 
   return true;
 }

@@ -1,0 +1,16 @@
+; RUN: llvm-readobj -codeview %S/Inputs/codeview-label.obj | FileCheck %s
+
+; CHECK-LABEL:  Label (0x1000) {
+; CHECK-NEXT:     TypeLeafKind: LF_LABEL (0xE)
+; CHECK-NEXT:     Mode: Near (0x0)
+; CHECK-NEXT:   }
+
+; To reproduce codeview-label.obj:
+; $ cat codeview-label.asm
+;         .model flat, C
+;         .code
+;         public  foo
+; foo:
+;         ret
+; end
+; $ ml -c -Zi codeview-label.asm

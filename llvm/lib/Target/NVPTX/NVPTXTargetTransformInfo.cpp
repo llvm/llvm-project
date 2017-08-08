@@ -32,7 +32,7 @@ static bool readsThreadIndex(const IntrinsicInst *II) {
 }
 
 static bool readsLaneId(const IntrinsicInst *II) {
-  return II->getIntrinsicID() == Intrinsic::ptx_read_laneid;
+  return II->getIntrinsicID() == Intrinsic::nvvm_read_ptx_sreg_laneid;
 }
 
 // Whether the given intrinsic is an atomic instruction in PTX.
@@ -42,6 +42,29 @@ static bool isNVVMAtomic(const IntrinsicInst *II) {
     case Intrinsic::nvvm_atomic_load_add_f32:
     case Intrinsic::nvvm_atomic_load_inc_32:
     case Intrinsic::nvvm_atomic_load_dec_32:
+
+    case Intrinsic::nvvm_atomic_add_gen_f_cta:
+    case Intrinsic::nvvm_atomic_add_gen_f_sys:
+    case Intrinsic::nvvm_atomic_add_gen_i_cta:
+    case Intrinsic::nvvm_atomic_add_gen_i_sys:
+    case Intrinsic::nvvm_atomic_and_gen_i_cta:
+    case Intrinsic::nvvm_atomic_and_gen_i_sys:
+    case Intrinsic::nvvm_atomic_cas_gen_i_cta:
+    case Intrinsic::nvvm_atomic_cas_gen_i_sys:
+    case Intrinsic::nvvm_atomic_dec_gen_i_cta:
+    case Intrinsic::nvvm_atomic_dec_gen_i_sys:
+    case Intrinsic::nvvm_atomic_inc_gen_i_cta:
+    case Intrinsic::nvvm_atomic_inc_gen_i_sys:
+    case Intrinsic::nvvm_atomic_max_gen_i_cta:
+    case Intrinsic::nvvm_atomic_max_gen_i_sys:
+    case Intrinsic::nvvm_atomic_min_gen_i_cta:
+    case Intrinsic::nvvm_atomic_min_gen_i_sys:
+    case Intrinsic::nvvm_atomic_or_gen_i_cta:
+    case Intrinsic::nvvm_atomic_or_gen_i_sys:
+    case Intrinsic::nvvm_atomic_exch_gen_i_cta:
+    case Intrinsic::nvvm_atomic_exch_gen_i_sys:
+    case Intrinsic::nvvm_atomic_xor_gen_i_cta:
+    case Intrinsic::nvvm_atomic_xor_gen_i_sys:
       return true;
   }
 }
@@ -92,7 +115,7 @@ bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) {
 int NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::OperandValueKind Opd1Info,
     TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo) {
+    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args) {
   // Legalize the type.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
@@ -118,9 +141,9 @@ int NVPTXTTIImpl::getArithmeticInstrCost(
   }
 }
 
-void NVPTXTTIImpl::getUnrollingPreferences(Loop *L,
+void NVPTXTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                            TTI::UnrollingPreferences &UP) {
-  BaseT::getUnrollingPreferences(L, UP);
+  BaseT::getUnrollingPreferences(L, SE, UP);
 
   // Enable partial unrolling and runtime unrolling, but reduce the
   // threshold.  This partially unrolls small loops which are often

@@ -1,0 +1,74 @@
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=data %p/Inputs/FilterTest.pdb \
+; RUN:    | FileCheck --check-prefix=ONLY_DATA %s
+
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=thunks %p/Inputs/FilterTest.pdb \
+; RUN:    | FileCheck --check-prefix=ONLY_THUNKS %s
+
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=funcs %p/Inputs/FilterTest.pdb \
+; RUN:    | FileCheck --check-prefix=ONLY_FUNCS %s
+
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=funcs -sym-types=data \
+; RUN: %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=TWO_TYPES %s
+
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=data \
+; RUN: -symbol-order=name %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=NAME_SORT_DATA %s
+
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=data \
+; RUN: -symbol-order=size %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=SIZE_SORT_DATA %s
+
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=funcs \
+; RUN: -symbol-order=name %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=NAME_SORT_FUNCS %s
+
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=funcs \
+; RUN: -symbol-order=size %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=SIZE_SORT_FUNCS %s
+
+; ONLY_DATA-NOT: func
+; ONLY_DATA-NOT: thunk
+; ONLY_DATA-DAG: data {{.*}} static char OneByte
+; ONLY_DATA-DAG: data {{.*}} static double DoubleGlobalVar
+; ONLY_DATA-DAG: data {{.*}} static char TwoBytes[2]
+; ONLY_DATA-DAG: data {{.*}} static char ThreeBytes[3]
+; ONLY_DATA-DAG: data {{.*}} static int IntGlobalVar
+; ONLY_DATA-DAG: data {{.*}} static GlobalEnum GlobalEnumVar
+
+; ONLY_FUNCS-NOT: data
+; ONLY_FUNCS-NOT: thunk
+; ONLY_FUNCS: func {{.*}} int __cdecl main(int argc, char** argv)
+; ONLY_FUNCS: func {{.*}} int __cdecl CFunc()
+; ONLY_FUNCS: func {{.*}} int __cdecl BFunc()
+; ONLY_FUNCS: func {{.*}} int __cdecl AFunc()
+; ONLY_FUNCS: func {{.*}} int FilterTestClass::foo()
+
+; ONLY_THUNKS-NOT: func
+; ONLY_THUNKS-NOT: data
+; ONLY_THUNKS-DAG: thunk {{.*}} (TrampIncremental)
+
+; TWO_TYPES-NOT: thunk
+; TWO_TYPES-DAG: func {{.*}} int __cdecl main(int argc, char** argv)
+; TWO_TYPES-DAG: data {{.*}} static double DoubleGlobalVar
+
+; NAME_SORT_DATA: data {{.*}} static double DoubleGlobalVar
+; NAME_SORT_DATA: data {{.*}} static GlobalEnum GlobalEnumVar
+; NAME_SORT_DATA: data {{.*}} static int IntGlobalVar
+; NAME_SORT_DATA: data {{.*}} static char OneByte
+; NAME_SORT_DATA: data {{.*}} static char ThreeBytes[3]
+; NAME_SORT_DATA: data {{.*}} static char TwoBytes[2]
+
+; SIZE_SORT_DATA: data {{.*}}sizeof=8{{.*}}double DoubleGlobalVar
+; SIZE_SORT_DATA-DAG: data {{.*}}sizeof=4{{.*}}GlobalEnum GlobalEnumVar
+; SIZE_SORT_DATA-DAG: data {{.*}}sizeof=4{{.*}}int IntGlobalVar
+; SIZE_SORT_DATA: data {{.*}}sizeof=3{{.*}}char ThreeBytes[3]
+; SIZE_SORT_DATA: data {{.*}}sizeof=2{{.*}}char TwoBytes[2]
+; SIZE_SORT_DATA: data {{.*}}sizeof=1{{.*}}char OneByte
+
+; NAME_SORT_FUNCS: func {{.*}}sizeof= 40{{.*}}AFunc
+; NAME_SORT_FUNCS: func {{.*}}sizeof= 10{{.*}}BFunc
+; NAME_SORT_FUNCS: func {{.*}}sizeof= 14{{.*}}CFunc
+; NAME_SORT_FUNCS: func {{.*}}sizeof= 16{{.*}}FilterTestClass::foo
+; NAME_SORT_FUNCS: func {{.*}}sizeof=  7{{.*}}main
+
+; SIZE_SORT_FUNCS: func {{.*}}sizeof= 40{{.*}}AFunc
+; SIZE_SORT_FUNCS: func {{.*}}sizeof= 16{{.*}}FilterTestClass::foo
+; SIZE_SORT_FUNCS: func {{.*}}sizeof= 14{{.*}}CFunc
+; SIZE_SORT_FUNCS: func {{.*}}sizeof= 10{{.*}}BFunc
+; SIZE_SORT_FUNCS: func {{.*}}sizeof=  7{{.*}}main

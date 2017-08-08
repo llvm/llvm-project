@@ -24,6 +24,8 @@ int main(int argc, char **argv, char *env[]) {
   #pragma omp task depend ( // expected-error {{expected 'in', 'out' or 'inout' in OpenMP clause 'depend'}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-warning {{missing ':' after dependency type - ignoring}}
   #pragma omp task depend () // expected-error {{expected 'in', 'out' or 'inout' in OpenMP clause 'depend'}} expected-warning {{missing ':' after dependency type - ignoring}}
   #pragma omp task depend (argc // expected-error {{expected 'in', 'out' or 'inout' in OpenMP clause 'depend'}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp task depend (source : argc) // expected-error {{expected 'in', 'out' or 'inout' in OpenMP clause 'depend'}}
+  #pragma omp task depend (source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}}
   #pragma omp task depend (in : argc)) // expected-warning {{extra tokens at the end of '#pragma omp task' are ignored}}
   #pragma omp task depend (out: ) // expected-error {{expected expression}}
   #pragma omp task depend (inout : foobool(argc)), depend (in, argc) // expected-error {{expected variable name, array element or array section}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected expression}}
@@ -41,7 +43,7 @@ int main(int argc, char **argv, char *env[]) {
   #pragma omp task depend (in : argv[argc: // expected-error {{expected expression}} expected-error {{expected ']'}} expected-error {{expected ')'}} expected-note {{to match this '['}} expected-note {{to match this '('}}
   #pragma omp task depend (in : argv[argc:argc] // expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp task depend (in : argv[0:-1]) // expected-error {{section length is evaluated to a negative value -1}}
-  #pragma omp task depend (in : argv[-1:0]) // expected-error {{section lower bound is evaluated to a negative value -1}}
+  #pragma omp task depend (in : argv[-1:0])
   #pragma omp task depend (in : argv[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   #pragma omp task depend (in : argv[3:4:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   #pragma omp task depend(in:a[0:1]) // expected-error {{subscripted value is not an array or pointer}}

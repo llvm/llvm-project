@@ -9,9 +9,9 @@
 
 # Store conditional
 0x03 0xd5 0xb1 0xa0
-# CHECK: memw_locked(r17, p3) = r21
+# CHECK: memw_locked(r17,p3) = r21
 0x03 0xd4 0xf1 0xa0
-# CHECK: memd_locked(r17, p3) = r21:20
+# CHECK: memd_locked(r17,p3) = r21:20
 
 # Memory barrier
 0x00 0xc0 0x00 0xa8
@@ -19,7 +19,7 @@
 
 # Data cache prefetch
 0x15 0xc0 0x11 0x94
-# CHECK: dcfetch(r17 + #168)
+# CHECK: dcfetch(r17+#168)
 
 # Send value to ETM trace
 0x00 0xc0 0x51 0x62

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-optzns -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck %s
 
 void test0(_Bool cond) {
   id test0_helper(void) __attribute__((ns_returns_retained));
@@ -11,7 +11,7 @@ void test0(_Bool cond) {
   // CHECK-NEXT: zext
   // CHECK-NEXT: store
   // CHECK-NEXT: [[XPTR1:%.*]] = bitcast i8** [[X]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 8, i8* [[XPTR1]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[XPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = load i8, i8* [[COND]]
   // CHECK-NEXT: [[T1:%.*]] = trunc i8 [[T0]] to i1
   // CHECK-NEXT: store i1 false, i1* [[RELCOND]]
@@ -32,7 +32,7 @@ void test0(_Bool cond) {
   // CHECK:      [[T0:%.*]] = load i8*, i8** [[X]]
   // CHECK-NEXT: call void @objc_release(i8* [[T0]]) [[NUW]]
   // CHECK-NEXT: [[XPTR2:%.*]] = bitcast i8** [[X]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 8, i8* [[XPTR2]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[XPTR2]])
   // CHECK-NEXT: ret void
   id x = (cond ? 0 : test0_helper());
 }
@@ -54,10 +54,10 @@ void test1(int cond) {
   // CHECK-NEXT: [[CONDCLEANUP:%.*]] = alloca i1
   // CHECK-NEXT: store i32
   // CHECK-NEXT: [[STRONGPTR1:%.*]] = bitcast i8** [[STRONG]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 8, i8* [[STRONGPTR1]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[STRONGPTR1]])
   // CHECK-NEXT: store i8* null, i8** [[STRONG]]
   // CHECK-NEXT: [[WEAKPTR1:%.*]] = bitcast i8** [[WEAK]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 8, i8* [[WEAKPTR1]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[WEAKPTR1]])
   // CHECK-NEXT: call i8* @objc_initWeak(i8** [[WEAK]], i8* null)
 
   // CHECK-NEXT: [[T0:%.*]] = load i32, i32* [[COND]]
@@ -102,9 +102,9 @@ void test1(int cond) {
 
   // CHECK:      call void @objc_destroyWeak(i8** [[WEAK]])
   // CHECK:      [[WEAKPTR2:%.*]] = bitcast i8** [[WEAK]] to i8*
-  // CHECK:      call void @llvm.lifetime.end(i64 8, i8* [[WEAKPTR2]])
+  // CHECK:      call void @llvm.lifetime.end.p0i8(i64 8, i8* [[WEAKPTR2]])
   // CHECK:      [[STRONGPTR2:%.*]] = bitcast i8** [[STRONG]] to i8*
-  // CHECK:      call void @llvm.lifetime.end(i64 8, i8* [[STRONGPTR2]])
+  // CHECK:      call void @llvm.lifetime.end.p0i8(i64 8, i8* [[STRONGPTR2]])
   // CHECK:      ret void
 }
 

@@ -19,6 +19,6 @@
 type = Library
 name = AMDGPUAsmPrinter
 parent = AMDGPU
-required_libraries = MC Support
+required_libraries = MC Support AMDGPUUtils
 add_to_library_groups = AMDGPU
 

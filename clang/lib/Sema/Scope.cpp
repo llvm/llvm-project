@@ -18,7 +18,7 @@
 
 using namespace clang;
 
-void Scope::Init(Scope *parent, unsigned flags) {
+void Scope::setFlags(Scope *parent, unsigned flags) {
   AnyParent = parent;
   Flags = flags;
 
@@ -83,6 +83,10 @@ void Scope::Init(Scope *parent, unsigned flags) {
     else
       incrementMSManglingNumber();
   }
+}
+
+void Scope::Init(Scope *parent, unsigned flags) {
+  setFlags(parent, flags);
 
   DeclsInScope.clear();
   UsingDirectives.clear();
@@ -130,7 +134,7 @@ void Scope::mergeNRVOIntoParent() {
     getParent()->addNRVOCandidate(NRVO.getPointer());
 }
 
-void Scope::dump() const { dumpImpl(llvm::errs()); }
+LLVM_DUMP_METHOD void Scope::dump() const { dumpImpl(llvm::errs()); }
 
 void Scope::dumpImpl(raw_ostream &OS) const {
   unsigned Flags = getFlags();

@@ -38,6 +38,13 @@ B
 **BB Vectorization**
     Basic-Block Vectorization
 
+**BDCE**
+    Bit-tracking dead code elimination. Some bit-wise instructions (shifts,
+    ands, ors, etc.) "kill" some of their input bits -- that is, they make it
+    such that those bits can be either zero or one without affecting control or
+    data flow of a program. The BDCE pass removes instructions that only
+    compute these dead bits.
+
 **BURS**
     Bottom Up Rewriting System --- A method of instruction selection for code
     generation.  An example is the `BURG
@@ -101,6 +108,13 @@ G
 **GC**
     Garbage Collection. The practice of using reachability analysis instead of
     explicit memory management to reclaim unused memory.
+
+**GVN**
+    Global Value Numbering. GVN is a pass that partitions values computed by a
+    function into congruence classes. Values ending up in the same congruence
+    class are guaranteed to be the same for every execution of the program.
+    In that respect, congruency is a compile-time approximation of equivalence
+    of values at runtime.
 
 H
 -
@@ -180,6 +194,10 @@ O
 P
 -
 
+**PR**
+    Problem report. A bug filed on `the LLVM Bug Tracking System
+    <https://bugs.llvm.org/enter_bug.cgi>`_.
+
 **PRE**
     Partial Redundancy Elimination
 
@@ -237,6 +255,14 @@ S
 **SLP**
     Superword-Level Parallelism, same as :ref:`Basic-Block Vectorization
     <lexicon-bb-vectorization>`.
+
+**Splat**
+    Splat refers to a vector of identical scalar elements.
+
+    The term is based on the PowerPC Altivec instructions that provided
+    this functionality in hardware. For example, "vsplth" and the corresponding
+    software intrinsic "vec_splat()". Examples of other hardware names for this
+    action include "duplicate" (ARM) and "broadcast" (x86).
 
 **SRoA**
     Scalar Replacement of Aggregates

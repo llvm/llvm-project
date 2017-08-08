@@ -16,6 +16,7 @@
 namespace llvm {
 
 class raw_ostream;
+namespace pdb {
 
 class PDBSymbolTypeFriend : public PDBSymbol {
 public:
@@ -26,12 +27,12 @@ public:
 
   void dump(PDBSymDumper &Dumper) const override;
 
-  FORWARD_SYMBOL_METHOD(getClassParentId)
+  FORWARD_SYMBOL_ID_METHOD(getClassParent)
   FORWARD_SYMBOL_METHOD(getName)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
-  FORWARD_SYMBOL_METHOD(getTypeId)
+  FORWARD_SYMBOL_ID_METHOD(getType)
 };
 
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEFRIEND_H

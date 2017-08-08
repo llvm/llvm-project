@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/ThreadLocal.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/ThreadLocal.h"
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only TRULY operating system

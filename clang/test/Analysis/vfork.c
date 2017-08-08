@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,security.insecureAPI.vfork,unix.Vfork -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,security.insecureAPI.vfork,unix.Vfork -verify -x c++ %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,security.insecureAPI.vfork,unix.Vfork -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,security.insecureAPI.vfork,unix.Vfork -verify -x c++ %s
 
 #include "Inputs/system-header-simulator.h"
 

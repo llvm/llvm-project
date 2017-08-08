@@ -8,33 +8,33 @@ define void @atomic_maxmin_i6432() {
   %1 = atomicrmw max  i64* @sc64, i64 5 acquire
 ; LINUX: [[LABEL:.LBB[0-9]+_[0-9]+]]
 ; LINUX: cmpl
-; LINUX: seta
-; LINUX: cmovne
-; LINUX: cmovne
+; LINUX: sbbl
+; LINUX: jne
+; LINUX: jne
 ; LINUX: lock cmpxchg8b
 ; LINUX: jne [[LABEL]]
   %2 = atomicrmw min  i64* @sc64, i64 6 acquire
 ; LINUX: [[LABEL:.LBB[0-9]+_[0-9]+]]
 ; LINUX: cmpl
-; LINUX: setb
-; LINUX: cmovne
-; LINUX: cmovne
+; LINUX: sbbl
+; LINUX: jne
+; LINUX: jne
 ; LINUX: lock cmpxchg8b
 ; LINUX: jne [[LABEL]]
   %3 = atomicrmw umax i64* @sc64, i64 7 acquire
 ; LINUX: [[LABEL:.LBB[0-9]+_[0-9]+]]
 ; LINUX: cmpl
-; LINUX: seta
-; LINUX: cmovne
-; LINUX: cmovne
+; LINUX: sbbl
+; LINUX: jne
+; LINUX: jne
 ; LINUX: lock cmpxchg8b
 ; LINUX: jne [[LABEL]]
   %4 = atomicrmw umin i64* @sc64, i64 8 acquire
 ; LINUX: [[LABEL:.LBB[0-9]+_[0-9]+]]
 ; LINUX: cmpl
-; LINUX: setb
-; LINUX: cmovne
-; LINUX: cmovne
+; LINUX: sbbl
+; LINUX: jne
+; LINUX: jne
 ; LINUX: lock cmpxchg8b
 ; LINUX: jne [[LABEL]]
   ret void

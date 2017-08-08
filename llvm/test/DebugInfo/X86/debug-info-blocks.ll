@@ -167,7 +167,7 @@ define internal void @"__9-[A init]_block_invoke"(i8* %.block_descriptor) #0 !db
   %d = alloca %1*, align 8
   store i8* %.block_descriptor, i8** %1, align 8
   %3 = load i8*, i8** %1
-  call void @llvm.dbg.value(metadata i8* %3, i64 0, metadata !76, metadata !DIExpression()), !dbg !88
+  call void @llvm.dbg.value(metadata i8* %3, metadata !76, metadata !DIExpression()), !dbg !88
   call void @llvm.dbg.declare(metadata i8* %.block_descriptor, metadata !76, metadata !DIExpression()), !dbg !88
   %4 = bitcast i8* %.block_descriptor to <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>*, !dbg !88
   store <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>* %4, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>** %2, align 8, !dbg !88
@@ -200,7 +200,7 @@ define internal void @"__9-[A init]_block_invoke"(i8* %.block_descriptor) #0 !db
   ret void, !dbg !90
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 declare i8* @objc_msgSend_fixup(i8*, %struct._message_ref_t*, ...)
 
@@ -270,7 +270,7 @@ attributes #3 = { nounwind }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!56, !57, !58, !59, !110}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 3.3 ", isOptimized: false, runtimeVersion: 2, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !12, globals: !2, imports:  !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 3.3 ", isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, globals: !2, imports:  !2)
 !1 = !DIFile(filename: "llvm/tools/clang/test/CodeGenObjC/<unknown>", directory: "llvm/_build.ninja.Debug")
 !2 = !{}
 !3 = !{!4}
@@ -282,8 +282,7 @@ attributes #3 = { nounwind }
 !9 = !DICompositeType(tag: DW_TAG_structure_type, name: "NSObject", line: 21, align: 8, runtimeLang: DW_LANG_ObjC, file: !5, scope: !6, elements: !2)
 !10 = !DIDerivedType(tag: DW_TAG_member, name: "ivar", line: 35, size: 32, align: 32, file: !5, scope: !6, baseType: !11)
 !11 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!12 = !{!13, !27, !31, !35, !36, !39}
-!13 = distinct !DISubprogram(name: "-[A init]", line: 46, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 46, file: !5, scope: !6, type: !14, variables: !2)
+!13 = distinct !DISubprogram(name: "-[A init]", line: 46, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 46, file: !5, scope: !6, type: !14, variables: !2)
 !14 = !DISubroutineType(types: !15)
 !15 = !{!16, !23, !24}
 !16 = !DIDerivedType(tag: DW_TAG_typedef, name: "id", line: 46, file: !5, baseType: !17)
@@ -297,19 +296,19 @@ attributes #3 = { nounwind }
 !24 = !DIDerivedType(tag: DW_TAG_typedef, name: "SEL", line: 46, flags: DIFlagArtificial, file: !5, baseType: !25)
 !25 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !26)
 !26 = !DICompositeType(tag: DW_TAG_structure_type, name: "objc_selector", flags: DIFlagFwdDecl, file: !1)
-!27 = distinct !DISubprogram(name: "__9-[A init]_block_invoke", line: 49, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 49, file: !5, scope: !6, type: !28, variables: !2)
+!27 = distinct !DISubprogram(name: "__9-[A init]_block_invoke", line: 49, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 49, file: !5, scope: !6, type: !28, variables: !2)
 !28 = !DISubroutineType(types: !29)
 !29 = !{null, !30}
 !30 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: null)
-!31 = distinct !DISubprogram(name: "__copy_helper_block_", line: 52, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: false, scopeLine: 52, file: !1, scope: !32, type: !33, variables: !2)
+!31 = distinct !DISubprogram(name: "__copy_helper_block_", line: 52, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !0, scopeLine: 52, file: !1, scope: !32, type: !33, variables: !2)
 !32 = !DIFile(filename: "llvm/tools/clang/test/CodeGenObjC/<unknown>", directory: "llvm/_build.ninja.Debug")
 !33 = !DISubroutineType(types: !34)
 !34 = !{null, !30, !30}
-!35 = distinct !DISubprogram(name: "__destroy_helper_block_", line: 52, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: false, scopeLine: 52, file: !1, scope: !32, type: !28, variables: !2)
-!36 = distinct !DISubprogram(name: "main", line: 59, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scopeLine: 60, file: !5, scope: !6, type: !37, variables: !2)
+!35 = distinct !DISubprogram(name: "__destroy_helper_block_", line: 52, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !0, scopeLine: 52, file: !1, scope: !32, type: !28, variables: !2)
+!36 = distinct !DISubprogram(name: "main", line: 59, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !0, scopeLine: 60, file: !5, scope: !6, type: !37, variables: !2)
 !37 = !DISubroutineType(types: !38)
 !38 = !{!11}
-!39 = distinct !DISubprogram(name: "run", line: 39, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 40, file: !5, scope: !6, type: !40, variables: !2)
+!39 = distinct !DISubprogram(name: "run", line: 39, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 40, file: !5, scope: !6, type: !40, variables: !2)
 !40 = !DISubroutineType(types: !41)
 !41 = !{null, !42}
 !42 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, baseType: !43)
@@ -381,4 +380,4 @@ attributes #3 = { nounwind }
 !108 = !DILocation(line: 61, scope: !36)
 !109 = !DILocation(line: 62, scope: !36)
 !110 = !{i32 1, !"Debug Info Version", i32 3}
-!111 = !DIExpression(DW_OP_deref, DW_OP_plus, 32)
+!111 = !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32)

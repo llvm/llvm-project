@@ -1,8 +1,7 @@
-// RUN: %clangxx_asan -O0 -mllvm -asan-instrument-allocas %s -o %t
+// RUN: %clangxx_asan -O0 -mllvm -asan-instrument-dynamic-allocas %s -o %t
 // RUN: %run %t 2>&1
 //
 // REQUIRES: stable-runtime
-// XFAIL: powerpc64
 
 // This testcase checks correct interaction between VLAs and allocas.
 

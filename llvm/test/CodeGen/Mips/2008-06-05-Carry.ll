@@ -2,20 +2,21 @@
 
 define i64 @add64(i64 %u, i64 %v) nounwind  {
 entry:
+; CHECK-LABEL: add64:
 ; CHECK: addu
-; CHECK: sltu 
+; CHECK-DAG: sltu
+; CHECK-DAG: addu
 ; CHECK: addu
-; CHECK: addu
-  %tmp2 = add i64 %u, %v  
+  %tmp2 = add i64 %u, %v
   ret i64 %tmp2
 }
 
 define i64 @sub64(i64 %u, i64 %v) nounwind  {
 entry:
-; CHECK: sub64
+; CHECK-LABEL: sub64
+; CHECK-DAG: sltu
+; CHECK-DAG: subu
 ; CHECK: subu
-; CHECK: sltu 
-; CHECK: addu
 ; CHECK: subu
   %tmp2 = sub i64 %u, %v
   ret i64 %tmp2

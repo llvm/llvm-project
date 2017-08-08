@@ -21,6 +21,12 @@ def err_fe_pch_malformed_block : Error<
 def err_fe_pch_file_modified : Error<
     "file '%0' has been modified since the precompiled header '%1' was built">,
     DefaultFatal;
+def err_fe_module_file_modified : Error<
+    "file '%0' has been modified since the module file '%1' was built">,
+    DefaultFatal;
+def err_fe_ast_file_modified : Error<
+    "file '%0' has been modified since the AST file '%1' was built">,
+    DefaultFatal;
 def err_fe_pch_file_overridden : Error<
     "file '%0' from the precompiled header has been overridden">;
 def note_pch_required_by : Note<"'%0' required by '%1'">;
@@ -106,19 +112,151 @@ def note_module_odr_violation_possible_decl : Note<
 def err_module_odr_violation_different_definitions : Error<
   "%q0 has different definitions in different modules; "
   "%select{definition in module '%2' is here|defined here}1">;
+def note_first_module_difference : Note<
+  "in first definition, possible difference is here">;
 def note_module_odr_violation_different_definitions : Note<
   "definition in module '%0' is here">;
+def note_second_module_difference : Note<
+  "in second definition, possible difference is here">;
+
 def err_module_odr_violation_different_instantiations : Error<
   "instantiation of %q0 is different in different modules">;
 
-def warn_module_uses_date_time : Warning<
-  "%select{precompiled header|module}0 uses __DATE__ or __TIME__">,
-  InGroup<DiagGroup<"pch-date-time">>;
+def err_module_odr_violation_mismatch_decl : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{end of class|public access specifier|private access specifier|"
+  "protected access specifier|static assert|field|method|type alias|typedef|"
+  "data member|friend declaration}3">;
+def note_module_odr_violation_mismatch_decl : Note<"but in '%0' found "
+  "%select{end of class|public access specifier|private access specifier|"
+  "protected access specifier|static assert|field|method|type alias|typedef|"
+  "data member|friend declaration}1">;
+
+def err_module_odr_violation_mismatch_decl_diff : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "static assert with condition|"
+  "static assert with message|"
+  "static assert with %select{|no }4message|"
+  "field %4|"
+  "field %4 with type %5|"
+  "%select{non-|}5bitfield %4|"
+  "bitfield %4 with one width expression|"
+  "%select{non-|}5mutable field %4|"
+  "field %4 with %select{no|an}5 initalizer|"
+  "field %4 with an initializer|"
+  "%select{method %5|constructor|destructor}4|"
+  "%select{method %5|constructor|destructor}4 "
+    "is %select{not deleted|deleted}6|"
+  "%select{method %5|constructor|destructor}4 "
+    "is %select{|pure }6%select{not virtual|virtual}7|"
+  "%select{method %5|constructor|destructor}4 "
+    "is %select{not static|static}6|"
+  "%select{method %5|constructor|destructor}4 "
+    "is %select{not volatile|volatile}6|"
+  "%select{method %5|constructor|destructor}4 "
+    "is %select{not const|const}6|"
+  "%select{method %5|constructor|destructor}4 "
+    "is %select{not inline|inline}6|"
+  "%select{method %5|constructor|destructor}4 "
+    "that has %6 parameter%s6|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %ordinal6 parameter of type %7%select{| decayed from %9}8|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %ordinal6 parameter named %7|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %ordinal6 parameter with%select{out|}7 a default argument|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %ordinal6 parameter with a default argument|"
+  "%select{typedef|type alias}4 name %5|"
+  "%select{typedef|type alias}4 %5 with underlying type %6|"
+  "data member with name %4|"
+  "data member %4 with type %5|"
+  "data member %4 with%select{out|}5 an initializer|"
+  "data member %4 with an initializer|"
+  "data member %4 %select{is constexpr|is not constexpr}5|"
+  "friend %select{class|function}4|"
+  "friend %4|"
+  "friend function %4|"
+  "}3">;
+
+def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
+  "%select{"
+  "static assert with different condition|"
+  "static assert with different message|"
+  "static assert with %select{|no }2message|"
+  "field %2|"
+  "field %2 with type %3|"
+  "%select{non-|}3bitfield %2|"
+  "bitfield %2 with different width expression|"
+  "%select{non-|}3mutable field %2|"
+  "field %2 with %select{no|an}3 initializer|"
+  "field %2 with a different initializer|"
+  "%select{method %3|constructor|destructor}2|"
+  "%select{method %3|constructor|destructor}2 "
+    "is %select{not deleted|deleted}4|"
+  "%select{method %3|constructor|destructor}2 "
+    "is %select{|pure }4%select{not virtual|virtual}5|"
+  "%select{method %3|constructor|destructor}2 "
+    "is %select{not static|static}4|"
+  "%select{method %3|constructor|destructor}2 "
+    "is %select{not volatile|volatile}4|"
+  "%select{method %3|constructor|destructor}2 "
+    "is %select{not const|const}4|"
+  "%select{method %3|constructor|destructor}2 "
+    "is %select{not inline|inline}4|"
+  "%select{method %3|constructor|destructor}2 "
+    "that has %4 parameter%s4|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %ordinal4 parameter of type %5%select{| decayed from %7}6|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %ordinal4 parameter named %5|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %ordinal4 parameter with%select{out|}5 a default argument|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %ordinal4 parameter with a different default argument|"
+  "%select{typedef|type alias}2 name %3|"
+  "%select{typedef|type alias}2 %3 with different underlying type %4|"
+  "data member with name %2|"
+  "data member %2 with different type %3|"
+  "data member %2 with%select{out|}3 an initializer|"
+  "data member %2 with a different initializer|"
+  "data member %2 %select{is constexpr|is not constexpr}3|"
+  "friend %select{class|function}2|"
+  "friend %2|"
+  "friend function %2|"
+  "}1">;
+
+def err_module_odr_violation_mismatch_decl_unknown : Error<
+  "%q0 %select{with definition in module '%2'|defined here}1 has different "
+  "definitions in different modules; first difference is this "
+  "%select{||||static assert|field|method|type alias|typedef|data member|"
+  "friend declaration|unexpected decl}3">;
+def note_module_odr_violation_mismatch_decl_unknown : Note<
+  "but in '%0' found "
+  "%select{||||different static assert|different field|different method|"
+  "different type alias|different typedef|different data member|"
+  "different friend declaration|another unexpected decl}1">;
 
 def warn_duplicate_module_file_extension : Warning<
   "duplicate module file extension block name '%0'">,
   InGroup<ModuleFileExtension>;
 
+def warn_module_system_bit_conflict : Warning<
+  "module file '%0' was validated as a system module and is now being imported "
+  "as a non-system module; any difference in diagnostic options will be ignored">,
+  InGroup<ModuleConflict>;
+} // let CategoryName
+
+let CategoryName = "AST Serialization Issue" in {
+def warn_module_uses_date_time : Warning<
+  "%select{precompiled header|module}0 uses __DATE__ or __TIME__">,
+  InGroup<DiagGroup<"pch-date-time">>;
+def err_module_no_size_mtime_for_header : Error<
+  "cannot emit module %0: %select{size|mtime}1 must be explicitly specified "
+  "for missing header file \"%2\"">;
 } // let CategoryName
 } // let Component
 

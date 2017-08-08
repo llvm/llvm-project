@@ -5,7 +5,7 @@
 ; Bug 6685.
 
 ; CHECK: loop0
-; CHECK-NOT: r{{[0-9]+}}{{.}}={{.}}add(r{{[0-9]+}},{{.}}#-1)
+; CHECK-NOT: r{{[0-9]+}} = add(r{{[0-9]+}},#-1)
 ; CHECK-NOT: cmp.eq
 ; CHECK: endloop0
 
@@ -39,7 +39,7 @@ for.end:
 ; This test checks that that initial loop count value is removed.
 ; CHECK-NOT: ={{.}}#40
 ; CHECK: loop0
-; CHECK-NOT: r{{[0-9]+}}{{.}}={{.}}add(r{{[0-9]+}},{{.}}#-1)
+; CHECK-NOT: r{{[0-9]+}} = add(r{{[0-9]+}},#-1)
 ; CHECK-NOT: cmp.eq
 ; CHECK: endloop0
 
@@ -64,7 +64,7 @@ for.end:
 
 ; This test checks that we don't remove the induction variable since it's used.
 ; CHECK: loop0
-; CHECK: r{{[0-9]+}}{{.}}={{.}}add(r{{[0-9]+}},{{.}}#1)
+; CHECK: r{{[0-9]+}} = add(r{{[0-9]+}},#1)
 ; CHECK-NOT: cmp.eq
 ; CHECK: endloop0
 define i32 @test3(i32* nocapture %b) nounwind {

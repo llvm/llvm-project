@@ -21,20 +21,140 @@ define i64 @ba_ne_i64(i64 %a, i64 %b) {
   ret i64 %sel
 }
 
-; PTX does have e.g. max.s16, but at least as of Kepler (sm_3x) that
-; gets compiled to SASS that converts the 16 bit parameters to 32 bit
-; before using a 32 bit instruction. That is probably not a win and
-; NVCC 7.5 does not emit 16 bit min/max either, presumably for that
-; reason.
+; *************************************
+; * All variations with i16
+
+; *** ab, unsigned, i16
 define i16 @ab_ugt_i16(i16 %a, i16 %b) {
 ; LABEL: @ab_ugt_i16
-; CHECK-NOT: min
-; CHECK-NOT: max
+; CHECK: max.u16
   %cmp = icmp ugt i16 %a, %b
   %sel = select i1 %cmp, i16 %a, i16 %b
   ret i16 %sel
 }
 
+define i16 @ab_uge_i16(i16 %a, i16 %b) {
+; LABEL: @ab_uge_i16
+; CHECK: max.u16
+  %cmp = icmp uge i16 %a, %b
+  %sel = select i1 %cmp, i16 %a, i16 %b
+  ret i16 %sel
+}
+
+define i16 @ab_ult_i16(i16 %a, i16 %b) {
+; LABEL: @ab_ult_i16
+; CHECK: min.u16
+  %cmp = icmp ult i16 %a, %b
+  %sel = select i1 %cmp, i16 %a, i16 %b
+  ret i16 %sel
+}
+
+define i16 @ab_ule_i16(i16 %a, i16 %b) {
+; LABEL: @ab_ule_i16
+; CHECK: min.u16
+  %cmp = icmp ule i16 %a, %b
+  %sel = select i1 %cmp, i16 %a, i16 %b
+  ret i16 %sel
+}
+
+; *** ab, signed, i16
+define i16 @ab_sgt_i16(i16 %a, i16 %b) {
+; LABEL: @ab_ugt_i16
+; CHECK: max.s16
+  %cmp = icmp sgt i16 %a, %b
+  %sel = select i1 %cmp, i16 %a, i16 %b
+  ret i16 %sel
+}
+
+define i16 @ab_sge_i16(i16 %a, i16 %b) {
+; LABEL: @ab_sge_i16
+; CHECK: max.s16
+  %cmp = icmp sge i16 %a, %b
+  %sel = select i1 %cmp, i16 %a, i16 %b
+  ret i16 %sel
+}
+
+define i16 @ab_slt_i16(i16 %a, i16 %b) {
+; LABEL: @ab_slt_i16
+; CHECK: min.s16
+  %cmp = icmp slt i16 %a, %b
+  %sel = select i1 %cmp, i16 %a, i16 %b
+  ret i16 %sel
+}
+
+define i16 @ab_sle_i16(i16 %a, i16 %b) {
+; LABEL: @ab_sle_i16
+; CHECK: min.s16
+  %cmp = icmp sle i16 %a, %b
+  %sel = select i1 %cmp, i16 %a, i16 %b
+  ret i16 %sel
+}
+
+; *** ba, unsigned, i16
+define i16 @ba_ugt_i16(i16 %a, i16 %b) {
+; LABEL: @ba_ugt_i16
+; CHECK: min.u16
+  %cmp = icmp ugt i16 %a, %b
+  %sel = select i1 %cmp, i16 %b, i16 %a
+  ret i16 %sel
+}
+
+define i16 @ba_uge_i16(i16 %a, i16 %b) {
+; LABEL: @ba_uge_i16
+; CHECK: min.u16
+  %cmp = icmp uge i16 %a, %b
+  %sel = select i1 %cmp, i16 %b, i16 %a
+  ret i16 %sel
+}
+
+define i16 @ba_ult_i16(i16 %a, i16 %b) {
+; LABEL: @ba_ult_i16
+; CHECK: max.u16
+  %cmp = icmp ult i16 %a, %b
+  %sel = select i1 %cmp, i16 %b, i16 %a
+  ret i16 %sel
+}
+
+define i16 @ba_ule_i16(i16 %a, i16 %b) {
+; LABEL: @ba_ule_i16
+; CHECK: max.u16
+  %cmp = icmp ule i16 %a, %b
+  %sel = select i1 %cmp, i16 %b, i16 %a
+  ret i16 %sel
+}
+
+; *** ba, signed, i16
+define i16 @ba_sgt_i16(i16 %a, i16 %b) {
+; LBAEL: @ba_ugt_i16
+; CHECK: min.s16
+  %cmp = icmp sgt i16 %a, %b
+  %sel = select i1 %cmp, i16 %b, i16 %a
+  ret i16 %sel
+}
+
+define i16 @ba_sge_i16(i16 %a, i16 %b) {
+; LABEL: @ba_sge_i16
+; CHECK: min.s16
+  %cmp = icmp sge i16 %a, %b
+  %sel = select i1 %cmp, i16 %b, i16 %a
+  ret i16 %sel
+}
+
+define i16 @ba_slt_i16(i16 %a, i16 %b) {
+; LABEL: @ba_slt_i16
+; CHECK: max.s16
+  %cmp = icmp slt i16 %a, %b
+  %sel = select i1 %cmp, i16 %b, i16 %a
+  ret i16 %sel
+}
+
+define i16 @ba_sle_i16(i16 %a, i16 %b) {
+; LABEL: @ba_sle_i16
+; CHECK: max.s16
+  %cmp = icmp sle i16 %a, %b
+  %sel = select i1 %cmp, i16 %b, i16 %a
+  ret i16 %sel
+}
 
 ; *************************************
 ; * All variations with i32

@@ -35,27 +35,58 @@ class CF_MEM_RAT_CACHELESS <bits<6> rat_inst, bits<4> rat_id, bits<4> mask, dag 
     : EG_CF_RAT <0x57, rat_inst, rat_id, mask, (outs), ins,
                  "MEM_RAT_CACHELESS "#name, pattern>;
 
-class CF_MEM_RAT <bits<6> rat_inst, bits<4> rat_id, dag ins, string name,
-                  list<dag> pattern>
-    : EG_CF_RAT <0x56, rat_inst, rat_id, 0xf /* mask */, (outs), ins,
+class CF_MEM_RAT <bits<6> rat_inst, bits<4> rat_id, bits<4> mask, dag ins,
+                  dag outs, string name, list<dag> pattern>
+    : EG_CF_RAT <0x56, rat_inst, rat_id, mask, outs, ins,
                  "MEM_RAT "#name, pattern>;
 
 class CF_MEM_RAT_STORE_TYPED<bits<1> has_eop>
-    : CF_MEM_RAT <0x1, ?, (ins R600_Reg128:$rw_gpr, R600_Reg128:$index_gpr,
-                           i32imm:$rat_id, InstFlag:$eop),
+    : CF_MEM_RAT <0x1, ?, 0xf, (ins R600_Reg128:$rw_gpr, R600_Reg128:$index_gpr,
+                           i32imm:$rat_id, InstFlag:$eop), (outs),
                   "STORE_TYPED RAT($rat_id) $rw_gpr, $index_gpr"
                                #!if(has_eop, ", $eop", ""),
                   [(int_r600_rat_store_typed R600_Reg128:$rw_gpr,
                                              R600_Reg128:$index_gpr,
                                              (i32 imm:$rat_id))]>;
 
-def RAT_MSKOR : CF_MEM_RAT <0x11, 0,
-  (ins R600_Reg128:$rw_gpr, R600_TReg32_X:$index_gpr),
+def RAT_MSKOR : CF_MEM_RAT <0x11, 0, 0xf,
+  (ins R600_Reg128:$rw_gpr, R600_TReg32_X:$index_gpr), (outs),
   "MSKOR $rw_gpr.XW, $index_gpr",
   [(mskor_global v4i32:$rw_gpr, i32:$index_gpr)]
 > {
   let eop = 0;
 }
+
+
+multiclass RAT_ATOMIC<bits<6> op_ret, bits<6> op_noret, string name> {
+  let Constraints = "$rw_gpr = $out_gpr", eop = 0, mayStore = 1 in {
+  def  _RTN: CF_MEM_RAT <op_ret, 0, 0xf,
+             (ins R600_Reg128:$rw_gpr, R600_TReg32_X:$index_gpr),
+             (outs R600_Reg128:$out_gpr),
+             name ## "_RTN" ## " $rw_gpr, $index_gpr", [] >;
+  def _NORET: CF_MEM_RAT <op_noret, 0, 0xf,
+              (ins R600_Reg128:$rw_gpr, R600_TReg32_X:$index_gpr),
+              (outs R600_Reg128:$out_gpr),
+              name ## " $rw_gpr, $index_gpr", [] >;
+  }
+}
+
+// Swap no-ret is just store. Raw store to cached target
+// can only store on dword, which exactly matches swap_no_ret.
+defm RAT_ATOMIC_XCHG_INT : RAT_ATOMIC<1, 34, "ATOMIC_XCHG_INT">;
+defm RAT_ATOMIC_CMPXCHG_INT : RAT_ATOMIC<4, 36, "ATOMIC_CMPXCHG_INT">;
+defm RAT_ATOMIC_ADD : RAT_ATOMIC<7, 39, "ATOMIC_ADD">;
+defm RAT_ATOMIC_SUB : RAT_ATOMIC<8, 40, "ATOMIC_SUB">;
+defm RAT_ATOMIC_RSUB : RAT_ATOMIC<9, 41, "ATOMIC_RSUB">;
+defm RAT_ATOMIC_MIN_INT : RAT_ATOMIC<10, 42, "ATOMIC_MIN_INT">;
+defm RAT_ATOMIC_MIN_UINT : RAT_ATOMIC<11, 43, "ATOMIC_MIN_UINT">;
+defm RAT_ATOMIC_MAX_INT : RAT_ATOMIC<12, 44, "ATOMIC_MAX_INT">;
+defm RAT_ATOMIC_MAX_UINT : RAT_ATOMIC<13, 45, "ATOMIC_MAX_UINT">;
+defm RAT_ATOMIC_AND : RAT_ATOMIC<14, 46, "ATOMIC_AND">;
+defm RAT_ATOMIC_OR : RAT_ATOMIC<15, 47, "ATOMIC_OR">;
+defm RAT_ATOMIC_XOR : RAT_ATOMIC<16, 48, "ATOMIC_XOR">;
+defm RAT_ATOMIC_INC_UINT : RAT_ATOMIC<18, 50, "ATOMIC_INC_UINT">;
+defm RAT_ATOMIC_DEC_UINT : RAT_ATOMIC<19, 51, "ATOMIC_DEC_UINT">;
 
 } // End let Predicates = [isEGorCayman]
 
@@ -72,6 +103,8 @@ def MULLO_INT_eg : MULLO_INT_Common<0x8F>;
 def MULHI_INT_eg : MULHI_INT_Common<0x90>;
 def MULLO_UINT_eg : MULLO_UINT_Common<0x91>;
 def MULHI_UINT_eg : MULHI_UINT_Common<0x92>;
+def MULHI_UINT24_eg : MULHI_UINT24_Common<0xb2>;
+
 def RECIP_UINT_eg : RECIP_UINT_Common<0x94>;
 def RECIPSQRT_CLAMPED_eg : RECIPSQRT_CLAMPED_Common<0x87>;
 def EXP_IEEE_eg : EXP_IEEE_Common<0x81>;
@@ -84,8 +117,6 @@ def COS_eg : COS_Common<0x8E>;
 
 def : POW_Common <LOG_IEEE_eg, EXP_IEEE_eg, MUL>;
 def : Pat<(fsqrt f32:$src), (MUL $src, (RECIPSQRT_CLAMPED_eg $src))>;
-
-defm : Expand24IBitOps<MULLO_INT_eg, ADD_INT>;
 
 //===----------------------------------------------------------------------===//
 // Memory read/write instructions
@@ -118,14 +149,13 @@ def RAT_STORE_TYPED_eg: CF_MEM_RAT_STORE_TYPED<1>;
 
 } // End usesCustomInserter = 1
 
-class VTX_READ_eg <string name, bits<8> buffer_id, dag outs, list<dag> pattern>
-    : VTX_WORD0_eg, VTX_READ<name, buffer_id, outs, pattern> {
+class VTX_READ_eg <string name, dag outs>
+    : VTX_WORD0_eg, VTX_READ<name, outs, []> {
 
   // Static fields
   let VC_INST = 0;
   let FETCH_TYPE = 2;
   let FETCH_WHOLE_QUAD = 0;
-  let BUFFER_ID = buffer_id;
   let SRC_REL = 0;
   // XXX: We can infer this field based on the SRC_GPR.  This would allow us
   // to store vertex addresses in any channel, not just X.
@@ -134,9 +164,9 @@ class VTX_READ_eg <string name, bits<8> buffer_id, dag outs, list<dag> pattern>
   let Inst{31-0} = Word0;
 }
 
-class VTX_READ_8_eg <bits<8> buffer_id, list<dag> pattern>
-    : VTX_READ_eg <"VTX_READ_8 $dst_gpr, $src_gpr", buffer_id,
-                   (outs R600_TReg32_X:$dst_gpr), pattern> {
+def VTX_READ_8_eg
+    : VTX_READ_eg <"VTX_READ_8 $dst_gpr, $src_gpr",
+                   (outs R600_TReg32_X:$dst_gpr)> {
 
   let MEGA_FETCH_COUNT = 1;
   let DST_SEL_X = 0;
@@ -146,9 +176,9 @@ class VTX_READ_8_eg <bits<8> buffer_id, list<dag> pattern>
   let DATA_FORMAT = 1; // FMT_8
 }
 
-class VTX_READ_16_eg <bits<8> buffer_id, list<dag> pattern>
-    : VTX_READ_eg <"VTX_READ_16 $dst_gpr, $src_gpr", buffer_id,
-                   (outs R600_TReg32_X:$dst_gpr), pattern> {
+def VTX_READ_16_eg
+    : VTX_READ_eg <"VTX_READ_16 $dst_gpr, $src_gpr",
+                   (outs R600_TReg32_X:$dst_gpr)> {
   let MEGA_FETCH_COUNT = 2;
   let DST_SEL_X = 0;
   let DST_SEL_Y = 7;   // Masked
@@ -158,9 +188,9 @@ class VTX_READ_16_eg <bits<8> buffer_id, list<dag> pattern>
 
 }
 
-class VTX_READ_32_eg <bits<8> buffer_id, list<dag> pattern>
-    : VTX_READ_eg <"VTX_READ_32 $dst_gpr, $src_gpr", buffer_id,
-                   (outs R600_TReg32_X:$dst_gpr), pattern> {
+def VTX_READ_32_eg
+    : VTX_READ_eg <"VTX_READ_32 $dst_gpr, $src_gpr",
+                   (outs R600_TReg32_X:$dst_gpr)> {
 
   let MEGA_FETCH_COUNT = 4;
   let DST_SEL_X        = 0;
@@ -179,9 +209,9 @@ class VTX_READ_32_eg <bits<8> buffer_id, list<dag> pattern>
   let Constraints = "$src_gpr.ptr = $dst_gpr";
 }
 
-class VTX_READ_64_eg <bits<8> buffer_id, list<dag> pattern>
-    : VTX_READ_eg <"VTX_READ_64 $dst_gpr.XY, $src_gpr", buffer_id,
-                   (outs R600_Reg64:$dst_gpr), pattern> {
+def VTX_READ_64_eg
+    : VTX_READ_eg <"VTX_READ_64 $dst_gpr.XY, $src_gpr",
+                   (outs R600_Reg64:$dst_gpr)> {
 
   let MEGA_FETCH_COUNT = 8;
   let DST_SEL_X        = 0;
@@ -191,9 +221,9 @@ class VTX_READ_64_eg <bits<8> buffer_id, list<dag> pattern>
   let DATA_FORMAT      = 0x1D; // COLOR_32_32
 }
 
-class VTX_READ_128_eg <bits<8> buffer_id, list<dag> pattern>
-    : VTX_READ_eg <"VTX_READ_128 $dst_gpr.XYZW, $src_gpr", buffer_id,
-                   (outs R600_Reg128:$dst_gpr), pattern> {
+def VTX_READ_128_eg
+    : VTX_READ_eg <"VTX_READ_128 $dst_gpr.XYZW, $src_gpr",
+                   (outs R600_Reg128:$dst_gpr)> {
 
   let MEGA_FETCH_COUNT = 16;
   let DST_SEL_X        =  0;
@@ -211,54 +241,44 @@ class VTX_READ_128_eg <bits<8> buffer_id, list<dag> pattern>
 //===----------------------------------------------------------------------===//
 // VTX Read from parameter memory space
 //===----------------------------------------------------------------------===//
+def : Pat<(i32:$dst_gpr (vtx_id3_az_extloadi8 ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_8_eg MEMxi:$src_gpr, 3)>;
+def : Pat<(i32:$dst_gpr (vtx_id3_az_extloadi16 ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_16_eg MEMxi:$src_gpr, 3)>;
+def : Pat<(i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_32_eg MEMxi:$src_gpr, 3)>;
+def : Pat<(v2i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_64_eg MEMxi:$src_gpr, 3)>;
+def : Pat<(v4i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_128_eg MEMxi:$src_gpr, 3)>;
 
-def VTX_READ_PARAM_8_eg : VTX_READ_8_eg <0,
-  [(set i32:$dst_gpr, (load_param_exti8 ADDRVTX_READ:$src_gpr))]
->;
-
-def VTX_READ_PARAM_16_eg : VTX_READ_16_eg <0,
-  [(set i32:$dst_gpr, (load_param_exti16 ADDRVTX_READ:$src_gpr))]
->;
-
-def VTX_READ_PARAM_32_eg : VTX_READ_32_eg <0,
-  [(set i32:$dst_gpr, (load_param ADDRVTX_READ:$src_gpr))]
->;
-
-def VTX_READ_PARAM_64_eg : VTX_READ_64_eg <0,
-  [(set v2i32:$dst_gpr, (load_param ADDRVTX_READ:$src_gpr))]
->;
-
-def VTX_READ_PARAM_128_eg : VTX_READ_128_eg <0,
-  [(set v4i32:$dst_gpr, (load_param ADDRVTX_READ:$src_gpr))]
->;
+//===----------------------------------------------------------------------===//
+// VTX Read from constant memory space
+//===----------------------------------------------------------------------===//
+def : Pat<(i32:$dst_gpr (vtx_id2_az_extloadi8 ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_8_eg MEMxi:$src_gpr, 2)>;
+def : Pat<(i32:$dst_gpr (vtx_id2_az_extloadi16 ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_16_eg MEMxi:$src_gpr, 2)>;
+def : Pat<(i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_32_eg MEMxi:$src_gpr, 2)>;
+def : Pat<(v2i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_64_eg MEMxi:$src_gpr, 2)>;
+def : Pat<(v4i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_128_eg MEMxi:$src_gpr, 2)>;
 
 //===----------------------------------------------------------------------===//
 // VTX Read from global memory space
 //===----------------------------------------------------------------------===//
-
-// 8-bit reads
-def VTX_READ_GLOBAL_8_eg : VTX_READ_8_eg <1,
-  [(set i32:$dst_gpr, (az_extloadi8_global ADDRVTX_READ:$src_gpr))]
->;
-
-def VTX_READ_GLOBAL_16_eg : VTX_READ_16_eg <1,
-  [(set i32:$dst_gpr, (az_extloadi16_global ADDRVTX_READ:$src_gpr))]
->;
-
-// 32-bit reads
-def VTX_READ_GLOBAL_32_eg : VTX_READ_32_eg <1,
-  [(set i32:$dst_gpr, (global_load ADDRVTX_READ:$src_gpr))]
->;
-
-// 64-bit reads
-def VTX_READ_GLOBAL_64_eg : VTX_READ_64_eg <1,
-  [(set v2i32:$dst_gpr, (global_load ADDRVTX_READ:$src_gpr))]
->;
-
-// 128-bit reads
-def VTX_READ_GLOBAL_128_eg : VTX_READ_128_eg <1,
-  [(set v4i32:$dst_gpr, (global_load ADDRVTX_READ:$src_gpr))]
->;
+def : Pat<(i32:$dst_gpr (vtx_id1_az_extloadi8 ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_8_eg MEMxi:$src_gpr, 1)>;
+def : Pat<(i32:$dst_gpr (vtx_id1_az_extloadi16 ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_16_eg MEMxi:$src_gpr, 1)>;
+def : Pat<(i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_32_eg MEMxi:$src_gpr, 1)>;
+def : Pat<(v2i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_64_eg MEMxi:$src_gpr, 1)>;
+def : Pat<(v4i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_128_eg MEMxi:$src_gpr, 1)>;
 
 } // End Predicates = [isEG]
 
@@ -267,6 +287,76 @@ def VTX_READ_GLOBAL_128_eg : VTX_READ_128_eg <1,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [isEGorCayman] in {
+
+multiclass AtomicPat<Instruction inst_ret, Instruction inst_noret,
+                     SDPatternOperator node_ret, SDPatternOperator node_noret> {
+  // FIXME: Add _RTN version. We need per WI scratch location to store the old value
+  // EXTRACT_SUBREG here is dummy, we know the node has no uses
+  def : Pat<(i32 (node_noret i32:$ptr, i32:$data)),
+            (EXTRACT_SUBREG (inst_noret
+              (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), $data, sub0), $ptr), sub1)>;
+}
+multiclass AtomicIncDecPat<Instruction inst_ret, Instruction inst_noret,
+                     SDPatternOperator node_ret, SDPatternOperator node_noret, int C> {
+  // FIXME: Add _RTN version. We need per WI scratch location to store the old value
+  // EXTRACT_SUBREG here is dummy, we know the node has no uses
+  def : Pat<(i32 (node_noret i32:$ptr, C)),
+            (EXTRACT_SUBREG (inst_noret
+              (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), (MOV_IMM_I32 -1), sub0), $ptr), sub1)>;
+}
+
+// CMPSWAP is pattern is special
+// EXTRACT_SUBREG here is dummy, we know the node has no uses
+// FIXME: Add _RTN version. We need per WI scratch location to store the old value
+def : Pat<(i32 (atomic_cmp_swap_global_noret i32:$ptr, i32:$cmp, i32:$data)),
+          (EXTRACT_SUBREG (RAT_ATOMIC_CMPXCHG_INT_NORET
+            (INSERT_SUBREG
+              (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), $cmp, sub3),
+            $data, sub0),
+          $ptr), sub1)>;
+
+defm AtomicSwapPat : AtomicPat <RAT_ATOMIC_XCHG_INT_RTN,
+                                RAT_ATOMIC_XCHG_INT_NORET,
+                                atomic_swap_global_ret,
+                                atomic_swap_global_noret>;
+defm AtomicAddPat : AtomicPat <RAT_ATOMIC_ADD_RTN, RAT_ATOMIC_ADD_NORET,
+                               atomic_add_global_ret, atomic_add_global_noret>;
+defm AtomicSubPat : AtomicPat <RAT_ATOMIC_SUB_RTN, RAT_ATOMIC_SUB_NORET,
+                               atomic_sub_global_ret, atomic_sub_global_noret>;
+defm AtomicMinPat : AtomicPat <RAT_ATOMIC_MIN_INT_RTN,
+                               RAT_ATOMIC_MIN_INT_NORET,
+                               atomic_min_global_ret, atomic_min_global_noret>;
+defm AtomicUMinPat : AtomicPat <RAT_ATOMIC_MIN_UINT_RTN,
+                                RAT_ATOMIC_MIN_UINT_NORET,
+                                atomic_umin_global_ret, atomic_umin_global_noret>;
+defm AtomicMaxPat : AtomicPat <RAT_ATOMIC_MAX_INT_RTN,
+                               RAT_ATOMIC_MAX_INT_NORET,
+                               atomic_max_global_ret, atomic_max_global_noret>;
+defm AtomicUMaxPat : AtomicPat <RAT_ATOMIC_MAX_UINT_RTN,
+                                RAT_ATOMIC_MAX_UINT_NORET,
+                                atomic_umax_global_ret, atomic_umax_global_noret>;
+defm AtomicAndPat : AtomicPat <RAT_ATOMIC_AND_RTN, RAT_ATOMIC_AND_NORET,
+                               atomic_and_global_ret, atomic_and_global_noret>;
+defm AtomicOrPat : AtomicPat <RAT_ATOMIC_OR_RTN, RAT_ATOMIC_OR_NORET,
+                              atomic_or_global_ret, atomic_or_global_noret>;
+defm AtomicXorPat : AtomicPat <RAT_ATOMIC_XOR_RTN, RAT_ATOMIC_XOR_NORET,
+                               atomic_xor_global_ret, atomic_xor_global_noret>;
+defm AtomicIncAddPat : AtomicIncDecPat <RAT_ATOMIC_INC_UINT_RTN,
+                                        RAT_ATOMIC_INC_UINT_NORET,
+                                        atomic_add_global_ret,
+                                        atomic_add_global_noret, 1>;
+defm AtomicIncSubPat : AtomicIncDecPat <RAT_ATOMIC_INC_UINT_RTN,
+                                        RAT_ATOMIC_INC_UINT_NORET,
+                                        atomic_sub_global_ret,
+                                        atomic_sub_global_noret, -1>;
+defm AtomicDecAddPat : AtomicIncDecPat <RAT_ATOMIC_DEC_UINT_RTN,
+                                        RAT_ATOMIC_DEC_UINT_NORET,
+                                        atomic_add_global_ret,
+                                        atomic_add_global_noret, -1>;
+defm AtomicDecSubPat : AtomicIncDecPat <RAT_ATOMIC_DEC_UINT_RTN,
+                                        RAT_ATOMIC_DEC_UINT_NORET,
+                                        atomic_sub_global_ret,
+                                        atomic_sub_global_noret, 1>;
 
 // Should be predicated on FeatureFP64
 // def FMA_64 : R600_3OP <
@@ -298,7 +388,7 @@ def BFE_INT_eg : R600_3OP <0x5, "BFE_INT",
   VecALU
 >;
 
-def : BFEPattern <BFE_UINT_eg, MOV_IMM_I32>;
+defm : BFEPattern <BFE_UINT_eg, BFE_INT_eg, MOV_IMM_I32>;
 
 def BFI_INT_eg : R600_3OP <0x06, "BFI_INT",
   [(set i32:$dst, (AMDGPUbfi i32:$src0, i32:$src1, i32:$src2))],
@@ -344,19 +434,19 @@ def MUL_UINT24_eg : R600_2OP <0xB5, "MUL_UINT24",
 def DOT4_eg : DOT4_Common<0xBE>;
 defm CUBE_eg : CUBE_Common<0xC0>;
 
-def BCNT_INT : R600_1OP_Helper <0xAA, "BCNT_INT", ctpop, VecALU>;
 
 def ADDC_UINT : R600_2OP_Helper <0x52, "ADDC_UINT", AMDGPUcarry>;
 def SUBB_UINT : R600_2OP_Helper <0x53, "SUBB_UINT", AMDGPUborrow>;
 
-def FFBH_UINT : R600_1OP_Helper <0xAB, "FFBH_UINT", ctlz_zero_undef, VecALU>;
+def FLT32_TO_FLT16 : R600_1OP_Helper <0xA2, "FLT32_TO_FLT16", AMDGPUfp_to_f16, VecALU>;
+def FLT16_TO_FLT32 : R600_1OP_Helper <0xA3, "FLT16_TO_FLT32", f16_to_fp, VecALU>;
+def BCNT_INT : R600_1OP_Helper <0xAA, "BCNT_INT", ctpop, VecALU>;
+def FFBH_UINT : R600_1OP_Helper <0xAB, "FFBH_UINT", AMDGPUffbh_u32, VecALU>;
 def FFBL_INT : R600_1OP_Helper <0xAC, "FFBL_INT", cttz_zero_undef, VecALU>;
 
 let hasSideEffects = 1 in {
   def MOVA_INT_eg : R600_1OP <0xCC, "MOVA_INT", [], VecALU>;
 }
-
-def TGSI_LIT_Z_eg : TGSI_LIT_Z_Common<MUL_LIT_eg, LOG_CLAMPED_eg, EXP_IEEE_eg>;
 
 def FLT_TO_INT_eg : FLT_TO_INT_Common<0x50> {
   let Pattern = [];
@@ -372,7 +462,7 @@ def FLT_TO_UINT_eg : FLT_TO_UINT_Common<0x9A> {
 def UINT_TO_FLT_eg : UINT_TO_FLT_Common<0x9C>;
 
 def GROUP_BARRIER : InstR600 <
-    (outs), (ins), "  GROUP_BARRIER", [(int_AMDGPU_barrier_local), (int_AMDGPU_barrier_global)], AnyALU>,
+    (outs), (ins), "  GROUP_BARRIER", [(int_r600_group_barrier)], AnyALU>,
     R600ALU_Word0,
     R600ALU_Word1_OP2 <0x54> {
 
@@ -400,11 +490,6 @@ def GROUP_BARRIER : InstR600 <
 
   let ALUInst = 1;
 }
-
-def : Pat <
-	(int_AMDGPU_barrier_global),
-	(GROUP_BARRIER)
->;
 
 //===----------------------------------------------------------------------===//
 // LDS Instructions

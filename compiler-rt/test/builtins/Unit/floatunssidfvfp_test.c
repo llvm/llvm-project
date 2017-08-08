@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- floatunssidfvfp_test.c - Test __floatunssidfvfp -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -19,7 +20,7 @@
 
 extern COMPILER_RT_ABI double __floatunssidfvfp(unsigned int a);
 
-#if __arm__
+#if __arm__ && __VFP_FP__
 int test__floatunssidfvfp(unsigned int a)
 {
     double actual = __floatunssidfvfp(a);
@@ -33,7 +34,7 @@ int test__floatunssidfvfp(unsigned int a)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__floatunssidfvfp(0))
         return 1;
     if (test__floatunssidfvfp(1))

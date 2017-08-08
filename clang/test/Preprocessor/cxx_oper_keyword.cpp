@@ -29,3 +29,15 @@
 #ifdef and
 #warning and is defined
 #endif
+
+#ifdef OPERATOR_NAMES
+//expected-error@+2 {{invalid token at start of a preprocessor expression}}
+#endif
+#if or
+#endif
+
+#ifdef OPERATOR_NAMES
+//expected-error@+2 {{invalid token at start of a preprocessor expression}}
+#endif
+#if and_eq
+#endif

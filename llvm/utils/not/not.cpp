@@ -12,7 +12,6 @@
 //   not --crash cmd
 //     Will return true if cmd crashes (e.g. for testing crash reporting).
 
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;

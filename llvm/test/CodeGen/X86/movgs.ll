@@ -59,9 +59,10 @@ entry:
   %0 = load i64, i64 addrspace(256)* %p
   %tmp2 = insertelement <2 x i64> zeroinitializer, i64 %0, i32 0
   %1 = bitcast <2 x i64> %tmp2 to <8 x i16>
-  %2 = tail call <4 x i32> @llvm.x86.sse41.pmovsxwd(<8 x i16> %1) nounwind readnone
-  %3 = bitcast <4 x i32> %2 to <2 x i64>
-  ret <2 x i64> %3
+  %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = sext <4 x i16> %2 to <4 x i32>
+  %4 = bitcast <4 x i32> %3 to <2 x i64>
+  ret <2 x i64> %4
 }
 
 ; The two loads here both look identical to selection DAG, except for their
@@ -90,5 +91,3 @@ entry:
 	%tmp4 = add i32 %tmp1, %tmp3
 	ret i32 %tmp4
 }
-
-declare <4 x i32> @llvm.x86.sse41.pmovsxwd(<8 x i16>) nounwind readnone

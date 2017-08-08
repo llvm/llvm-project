@@ -17,8 +17,8 @@
 // CHECK-DAG: @__func__._ZN24ClassInTopLevelNamespace25topLevelNamespaceFunctionEv = private unnamed_addr constant [26 x i8] c"topLevelNamespaceFunction\00"
 // CHECK-DAG: @__PRETTY_FUNCTION__._ZN24ClassInTopLevelNamespace25topLevelNamespaceFunctionEv = private unnamed_addr constant [60 x i8] c"auto *ClassInTopLevelNamespace::topLevelNamespaceFunction()\00"
 
-// CHECK-DAG: @__func__.___ZN16ClassBlockConstrD2Ev_block_invoke = private unnamed_addr constant [41 x i8] c"___ZN16ClassBlockConstrD2Ev_block_invoke\00"
-// CHECK-DAG: @__func__.___ZN16ClassBlockConstrC2Ev_block_invoke = private unnamed_addr constant [41 x i8] c"___ZN16ClassBlockConstrC2Ev_block_invoke\00"
+// CHECK-DAG: @__func__.___ZN16ClassBlockConstrD2Ev_block_invoke = private unnamed_addr constant [31 x i8] c"~ClassBlockConstr_block_invoke\00"
+// CHECK-DAG: @__func__.___ZN16ClassBlockConstrC2Ev_block_invoke = private unnamed_addr constant [30 x i8] c"ClassBlockConstr_block_invoke\00"
 
 int printf(const char * _Format, ...);
 

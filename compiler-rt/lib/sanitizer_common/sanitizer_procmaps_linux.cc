@@ -18,47 +18,36 @@
 namespace __sanitizer {
 
 void ReadProcMaps(ProcSelfMapsBuff *proc_maps) {
-  CHECK(ReadFileToBuffer("/proc/self/maps", &proc_maps->data,
-                         &proc_maps->mmaped_size, &proc_maps->len));
+  ReadFileToBuffer("/proc/self/maps", &proc_maps->data, &proc_maps->mmaped_size,
+                   &proc_maps->len);
 }
 
 static bool IsOneOf(char c, char c1, char c2) {
   return c == c1 || c == c2;
 }
 
-bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
-                               char filename[], uptr filename_size,
-                               uptr *protection) {
+bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
   char *last = proc_self_maps_.data + proc_self_maps_.len;
   if (current_ >= last) return false;
-  uptr dummy;
-  if (!start) start = &dummy;
-  if (!end) end = &dummy;
-  if (!offset) offset = &dummy;
-  if (!protection) protection = &dummy;
   char *next_line = (char*)internal_memchr(current_, '\n', last - current_);
   if (next_line == 0)
     next_line = last;
   // Example: 08048000-08056000 r-xp 00000000 03:0c 64593   /foo/bar
-  *start = ParseHex(&current_);
+  segment->start = ParseHex(&current_);
   CHECK_EQ(*current_++, '-');
-  *end = ParseHex(&current_);
+  segment->end = ParseHex(&current_);
   CHECK_EQ(*current_++, ' ');
   CHECK(IsOneOf(*current_, '-', 'r'));
-  *protection = 0;
-  if (*current_++ == 'r')
-    *protection |= kProtectionRead;
+  segment->protection = 0;
+  if (*current_++ == 'r') segment->protection |= kProtectionRead;
   CHECK(IsOneOf(*current_, '-', 'w'));
-  if (*current_++ == 'w')
-    *protection |= kProtectionWrite;
+  if (*current_++ == 'w') segment->protection |= kProtectionWrite;
   CHECK(IsOneOf(*current_, '-', 'x'));
-  if (*current_++ == 'x')
-    *protection |= kProtectionExecute;
+  if (*current_++ == 'x') segment->protection |= kProtectionExecute;
   CHECK(IsOneOf(*current_, 's', 'p'));
-  if (*current_++ == 's')
-    *protection |= kProtectionShared;
+  if (*current_++ == 's') segment->protection |= kProtectionShared;
   CHECK_EQ(*current_++, ' ');
-  *offset = ParseHex(&current_);
+  segment->offset = ParseHex(&current_);
   CHECK_EQ(*current_++, ' ');
   ParseHex(&current_);
   CHECK_EQ(*current_++, ':');
@@ -67,20 +56,18 @@ bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
   while (IsDecimal(*current_))
     current_++;
   // Qemu may lack the trailing space.
-  // http://code.google.com/p/address-sanitizer/issues/detail?id=160
+  // https://github.com/google/sanitizers/issues/160
   // CHECK_EQ(*current_++, ' ');
   // Skip spaces.
   while (current_ < next_line && *current_ == ' ')
     current_++;
   // Fill in the filename.
-  uptr i = 0;
-  while (current_ < next_line) {
-    if (filename && i < filename_size - 1)
-      filename[i++] = *current_;
-    current_++;
+  if (segment->filename) {
+    uptr len = Min((uptr)(next_line - current_), segment->filename_size - 1);
+    internal_strncpy(segment->filename, current_, len);
+    segment->filename[len] = 0;
   }
-  if (filename && i < filename_size)
-    filename[i] = 0;
+
   current_ = next_line + 1;
   return true;
 }

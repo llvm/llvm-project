@@ -40,8 +40,8 @@ define i64 @test_i64(i64 %a) {
 ; CHECK-LABEL: test_i64:
 ; CHECK: rbit
 ; CHECK: rbit
-; CHECK: cmp
 ; CHECK: clz
+; CHECK: cmp
 ; CHECK: add
 ; CHECK: clzne
   %tmp = call i64 @llvm.cttz.i64(i64 %a, i1 false)
@@ -81,8 +81,8 @@ define i64 @test_i64_zero_undef(i64 %a) {
 ; CHECK-LABEL: test_i64_zero_undef:
 ; CHECK: rbit
 ; CHECK: rbit
-; CHECK: cmp
 ; CHECK: clz
+; CHECK: cmp
 ; CHECK: add
 ; CHECK: clzne
   %tmp = call i64 @llvm.cttz.i64(i64 %a, i1 true)

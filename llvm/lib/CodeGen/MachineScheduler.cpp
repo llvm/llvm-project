@@ -13,29 +13,66 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PriorityQueue.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/CodeGen/ScheduleDAGInstrs.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/ScheduleDFS.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/MC/LaneBitmask.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
-#include <queue>
+#include "llvm/Target/TargetLowering.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
-#define DEBUG_TYPE "misched"
+#define DEBUG_TYPE "machine-scheduler"
 
 namespace llvm {
+
 cl::opt<bool> ForceTopDown("misched-topdown", cl::Hidden,
                            cl::desc("Force top-down list scheduling"));
 cl::opt<bool> ForceBottomUp("misched-bottomup", cl::Hidden,
@@ -43,7 +80,8 @@ cl::opt<bool> ForceBottomUp("misched-bottomup", cl::Hidden,
 cl::opt<bool>
 DumpCriticalPathLength("misched-dcpl", cl::Hidden,
                        cl::desc("Print critical path length to stdout"));
-}
+
+} // end namespace llvm
 
 #ifndef NDEBUG
 static cl::opt<bool> ViewMISchedDAGs("view-misched-dags", cl::Hidden,
@@ -65,18 +103,20 @@ static cl::opt<unsigned> SchedOnlyBlock("misched-only-block", cl::Hidden,
 static bool ViewMISchedDAGs = false;
 #endif // NDEBUG
 
+/// Avoid quadratic complexity in unusually large basic blocks by limiting the
+/// size of the ready lists.
+static cl::opt<unsigned> ReadyListLimit("misched-limit", cl::Hidden,
+  cl::desc("Limit ready list to N instructions"), cl::init(256));
+
 static cl::opt<bool> EnableRegPressure("misched-regpressure", cl::Hidden,
   cl::desc("Enable register pressure scheduling."), cl::init(true));
 
 static cl::opt<bool> EnableCyclicPath("misched-cyclicpath", cl::Hidden,
   cl::desc("Enable cyclic critical path analysis."), cl::init(true));
 
-static cl::opt<bool> EnableLoadCluster("misched-cluster", cl::Hidden,
-  cl::desc("Enable load clustering."), cl::init(true));
-
-// Experimental heuristics
-static cl::opt<bool> EnableMacroFusion("misched-fusion", cl::Hidden,
-  cl::desc("Enable scheduling for macro fusion."), cl::init(true));
+static cl::opt<bool> EnableMemOpCluster("misched-cluster", cl::Hidden,
+                                        cl::desc("Enable memop clustering."),
+                                        cl::init(true));
 
 static cl::opt<bool> VerifyScheduling("verify-misched", cl::Hidden,
   cl::desc("Verify machine instrs before and after machine scheduling"));
@@ -86,14 +126,14 @@ static const unsigned MinSubtreeSize = 8;
 
 // Pin the vtables to this file.
 void MachineSchedStrategy::anchor() {}
+
 void ScheduleDAGMutation::anchor() {}
 
 //===----------------------------------------------------------------------===//
 // Machine Instruction Scheduling Pass and Registry
 //===----------------------------------------------------------------------===//
 
-MachineSchedContext::MachineSchedContext():
-    MF(nullptr), MLI(nullptr), MDT(nullptr), PassConfig(nullptr), AA(nullptr), LIS(nullptr) {
+MachineSchedContext::MachineSchedContext() {
   RegClassInfo = new RegisterClassInfo();
 }
 
@@ -102,6 +142,7 @@ MachineSchedContext::~MachineSchedContext() {
 }
 
 namespace {
+
 /// Base class for a machine scheduler class that can run at any point.
 class MachineSchedulerBase : public MachineSchedContext,
                              public MachineFunctionPass {
@@ -143,18 +184,20 @@ public:
 protected:
   ScheduleDAGInstrs *createPostMachineScheduler();
 };
-} // namespace
+
+} // end anonymous namespace
 
 char MachineScheduler::ID = 0;
 
 char &llvm::MachineSchedulerID = MachineScheduler::ID;
 
-INITIALIZE_PASS_BEGIN(MachineScheduler, "machine-scheduler",
+INITIALIZE_PASS_BEGIN(MachineScheduler, DEBUG_TYPE,
                       "Machine Instruction Scheduler", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_END(MachineScheduler, "machine-scheduler",
+INITIALIZE_PASS_END(MachineScheduler, DEBUG_TYPE,
                     "Machine Instruction Scheduler", false, false)
 
 MachineScheduler::MachineScheduler()
@@ -205,7 +248,7 @@ static ScheduleDAGInstrs *useDefaultMachineSched(MachineSchedContext *C) {
 
 /// MachineSchedOpt allows command line selection of the scheduler.
 static cl::opt<MachineSchedRegistry::ScheduleDAGCtor, false,
-               RegisterPassParser<MachineSchedRegistry> >
+               RegisterPassParser<MachineSchedRegistry>>
 MachineSchedOpt("misched",
                 cl::init(&useDefaultMachineSched), cl::Hidden,
                 cl::desc("Machine instruction scheduler to use"));
@@ -219,10 +262,10 @@ static cl::opt<bool> EnableMachineSched(
     cl::desc("Enable the machine instruction scheduling pass."), cl::init(true),
     cl::Hidden);
 
-/// Forward declare the standard machine scheduler. This will be used as the
-/// default scheduler if the target does not set a default.
-static ScheduleDAGInstrs *createGenericSchedLive(MachineSchedContext *C);
-static ScheduleDAGInstrs *createGenericSchedPostRA(MachineSchedContext *C);
+static cl::opt<bool> EnablePostRAMachineSched(
+    "enable-post-misched",
+    cl::desc("Enable the post-ra machine instruction scheduling pass."),
+    cl::init(true), cl::Hidden);
 
 /// Decrement this iterator until reaching the top or a non-debug instr.
 static MachineBasicBlock::const_iterator
@@ -240,8 +283,8 @@ priorNonDebug(MachineBasicBlock::const_iterator I,
 static MachineBasicBlock::iterator
 priorNonDebug(MachineBasicBlock::iterator I,
               MachineBasicBlock::const_iterator Beg) {
-  return const_cast<MachineInstr*>(
-    &*priorNonDebug(MachineBasicBlock::const_iterator(I), Beg));
+  return priorNonDebug(MachineBasicBlock::const_iterator(I), Beg)
+      .getNonConstIterator();
 }
 
 /// If this iterator is a debug value, increment until reaching the End or a
@@ -260,12 +303,8 @@ nextIfDebug(MachineBasicBlock::const_iterator I,
 static MachineBasicBlock::iterator
 nextIfDebug(MachineBasicBlock::iterator I,
             MachineBasicBlock::const_iterator End) {
-  // Cast the return value to nonconst MachineInstr, then cast to an
-  // instr_iterator, which does not check for null, finally return a
-  // bundle_iterator.
-  return MachineBasicBlock::instr_iterator(
-    const_cast<MachineInstr*>(
-      &*nextIfDebug(MachineBasicBlock::const_iterator(I), End)));
+  return nextIfDebug(MachineBasicBlock::const_iterator(I), End)
+      .getNonConstIterator();
 }
 
 /// Instantiate a ScheduleDAGInstrs that will be owned by the caller.
@@ -314,6 +353,9 @@ ScheduleDAGInstrs *PostMachineScheduler::createPostMachineScheduler() {
 /// design would be to split blocks at scheduling boundaries, but LLVM has a
 /// general bias against block splitting purely for implementation simplicity.
 bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
+  if (skipFunction(*mf.getFunction()))
+    return false;
+
   if (EnableMachineSched.getNumOccurrences()) {
     if (!EnableMachineSched)
       return false;
@@ -349,10 +391,13 @@ bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
 }
 
 bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
-  if (skipOptnoneFunction(*mf.getFunction()))
+  if (skipFunction(*mf.getFunction()))
     return false;
 
-  if (!mf.getSubtarget().enablePostRAScheduler()) {
+  if (EnablePostRAMachineSched.getNumOccurrences()) {
+    if (!EnablePostRAMachineSched)
+      return false;
+  } else if (!mf.getSubtarget().enablePostRAScheduler()) {
     DEBUG(dbgs() << "Subtarget disables post-MI-sched.\n");
     return false;
   }
@@ -389,7 +434,7 @@ static bool isSchedBoundary(MachineBasicBlock::iterator MI,
                             MachineBasicBlock *MBB,
                             MachineFunction *MF,
                             const TargetInstrInfo *TII) {
-  return MI->isCall() || TII->isSchedulingBoundary(MI, MBB, *MF);
+  return MI->isCall() || TII->isSchedulingBoundary(*MI, MBB, *MF);
 }
 
 /// Main driver for both MachineScheduler and PostMachineScheduler.
@@ -427,7 +472,6 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
     //
     // MBB::size() uses instr_iterator to count. Here we need a bundle to count
     // as a single instruction.
-    unsigned RemainingInstrs = std::distance(MBB->begin(), MBB->end());
     for(MachineBasicBlock::iterator RegionEnd = MBB->end();
         RegionEnd != MBB->begin(); RegionEnd = Scheduler.begin()) {
 
@@ -435,18 +479,17 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
       if (RegionEnd != MBB->end() ||
           isSchedBoundary(&*std::prev(RegionEnd), &*MBB, MF, TII)) {
         --RegionEnd;
-        // Count the boundary instruction.
-        --RemainingInstrs;
       }
 
       // The next region starts above the previous region. Look backward in the
       // instruction stream until we find the nearest boundary.
       unsigned NumRegionInstrs = 0;
       MachineBasicBlock::iterator I = RegionEnd;
-      for(;I != MBB->begin(); --I, --RemainingInstrs) {
-        if (isSchedBoundary(&*std::prev(I), &*MBB, MF, TII))
+      for (; I != MBB->begin(); --I) {
+        MachineInstr &MI = *std::prev(I);
+        if (isSchedBoundary(&MI, &*MBB, MF, TII))
           break;
-        if (!I->isDebugValue())
+        if (!MI.isDebugValue())
           ++NumRegionInstrs;
       }
       // Notify the scheduler of the region, even if we may skip scheduling
@@ -466,8 +509,7 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
             << "\n  From: " << *I << "    To: ";
             if (RegionEnd != MBB->end()) dbgs() << *RegionEnd;
             else dbgs() << "End";
-            dbgs() << " RegionInstrs: " << NumRegionInstrs
-            << " Remaining: " << RemainingInstrs << "\n");
+            dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n');
       if (DumpCriticalPathLength) {
         errs() << MF->getName();
         errs() << ":BB# " << MBB->getNumber();
@@ -485,13 +527,12 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
       // scheduler for the top of it's scheduled region.
       RegionEnd = Scheduler.begin();
     }
-    assert(RemainingInstrs == 0 && "Instruction count mismatch!");
     Scheduler.finishBlock();
     // FIXME: Ideally, no further passes should rely on kill flags. However,
     // thumb2 size reduction is currently an exception, so the PostMIScheduler
     // needs to do this.
     if (FixKillFlags)
-        Scheduler.fixupKills(&*MBB);
+      Scheduler.fixupKills(*MBB);
   }
   Scheduler.finalizeSchedule();
 }
@@ -500,13 +541,14 @@ void MachineSchedulerBase::print(raw_ostream &O, const Module* m) const {
   // unimplemented
 }
 
-LLVM_DUMP_METHOD
-void ReadyQueue::dump() {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void ReadyQueue::dump() const {
   dbgs() << "Queue " << Name << ": ";
-  for (unsigned i = 0, e = Queue.size(); i < e; ++i)
-    dbgs() << Queue[i]->NodeNum << " ";
+  for (const SUnit *SU : Queue)
+    dbgs() << SU->NodeNum << " ";
   dbgs() << "\n";
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // ScheduleDAGMI - Basic machine instruction scheduling. This is
@@ -515,8 +557,7 @@ void ReadyQueue::dump() {
 // ===----------------------------------------------------------------------===/
 
 // Provide a vtable anchor.
-ScheduleDAGMI::~ScheduleDAGMI() {
-}
+ScheduleDAGMI::~ScheduleDAGMI() = default;
 
 bool ScheduleDAGMI::canAddEdge(SUnit *SuccSU, SUnit *PredSU) {
   return SuccSU == &ExitSU || !Topo.IsReachable(PredSU, SuccSU);
@@ -568,10 +609,8 @@ void ScheduleDAGMI::releaseSucc(SUnit *SU, SDep *SuccEdge) {
 
 /// releaseSuccessors - Call releaseSucc on each of SU's successors.
 void ScheduleDAGMI::releaseSuccessors(SUnit *SU) {
-  for (SUnit::succ_iterator I = SU->Succs.begin(), E = SU->Succs.end();
-       I != E; ++I) {
-    releaseSucc(SU, &*I);
-  }
+  for (SDep &Succ : SU->Succs)
+    releaseSucc(SU, &Succ);
 }
 
 /// ReleasePred - Decrement the NumSuccsLeft count of a predecessor. When
@@ -607,10 +646,8 @@ void ScheduleDAGMI::releasePred(SUnit *SU, SDep *PredEdge) {
 
 /// releasePredecessors - Call releasePred on each of SU's predecessors.
 void ScheduleDAGMI::releasePredecessors(SUnit *SU) {
-  for (SUnit::pred_iterator I = SU->Preds.begin(), E = SU->Preds.end();
-       I != E; ++I) {
-    releasePred(SU, &*I);
-  }
+  for (SDep &Pred : SU->Preds)
+    releasePred(SU, &Pred);
 }
 
 /// enterRegion - Called back from MachineScheduler::runOnMachineFunction after
@@ -640,7 +677,7 @@ void ScheduleDAGMI::moveInstruction(
 
   // Update LiveIntervals
   if (LIS)
-    LIS->handleMove(MI, /*UpdateFlags=*/true);
+    LIS->handleMove(*MI, /*UpdateFlags=*/true);
 
   // Recede RegionBegin if an instruction moves above the first.
   if (RegionBegin == InsertPos)
@@ -680,8 +717,14 @@ void ScheduleDAGMI::schedule() {
   // This may initialize a DFSResult to be used for queue priority.
   SchedImpl->initialize(this);
 
-  DEBUG(for (unsigned su = 0, e = SUnits.size(); su != e; ++su)
-          SUnits[su].dumpAll(this));
+  DEBUG(
+    if (EntrySU.getInstr() != nullptr)
+      EntrySU.dumpAll(this);
+    for (const SUnit &SU : SUnits)
+      SU.dumpAll(this);
+    if (ExitSU.getInstr() != nullptr)
+      ExitSU.dumpAll(this);
+  );
   if (ViewMISchedDAGs) viewGraph();
 
   // Initialize ready queues now that the DAG and priority data are finalized.
@@ -704,8 +747,7 @@ void ScheduleDAGMI::schedule() {
         CurrentTop = nextIfDebug(++CurrentTop, CurrentBottom);
       else
         moveInstruction(MI, CurrentTop);
-    }
-    else {
+    } else {
       assert(SU->isBottomReady() && "node still has unscheduled dependencies");
       MachineBasicBlock::iterator priorII =
         priorNonDebug(CurrentBottom, CurrentTop);
@@ -740,28 +782,25 @@ void ScheduleDAGMI::schedule() {
 
 /// Apply each ScheduleDAGMutation step in order.
 void ScheduleDAGMI::postprocessDAG() {
-  for (unsigned i = 0, e = Mutations.size(); i < e; ++i) {
-    Mutations[i]->apply(this);
-  }
+  for (auto &m : Mutations)
+    m->apply(this);
 }
 
 void ScheduleDAGMI::
 findRootsAndBiasEdges(SmallVectorImpl<SUnit*> &TopRoots,
                       SmallVectorImpl<SUnit*> &BotRoots) {
-  for (std::vector<SUnit>::iterator
-         I = SUnits.begin(), E = SUnits.end(); I != E; ++I) {
-    SUnit *SU = &(*I);
-    assert(!SU->isBoundaryNode() && "Boundary node should not be in SUnits");
+  for (SUnit &SU : SUnits) {
+    assert(!SU.isBoundaryNode() && "Boundary node should not be in SUnits");
 
     // Order predecessors so DFSResult follows the critical path.
-    SU->biasCriticalPath();
+    SU.biasCriticalPath();
 
     // A SUnit is ready to top schedule if it has no predecessors.
-    if (!I->NumPredsLeft)
-      TopRoots.push_back(SU);
+    if (!SU.NumPredsLeft)
+      TopRoots.push_back(&SU);
     // A SUnit is ready to bottom schedule if it has no successors.
-    if (!I->NumSuccsLeft)
-      BotRoots.push_back(SU);
+    if (!SU.NumSuccsLeft)
+      BotRoots.push_back(&SU);
   }
   ExitSU.biasCriticalPath();
 }
@@ -776,10 +815,9 @@ void ScheduleDAGMI::initQueues(ArrayRef<SUnit*> TopRoots,
   //
   // Nodes with unreleased weak edges can still be roots.
   // Release top roots in forward order.
-  for (SmallVectorImpl<SUnit*>::const_iterator
-         I = TopRoots.begin(), E = TopRoots.end(); I != E; ++I) {
-    SchedImpl->releaseTopNode(*I);
-  }
+  for (SUnit *SU : TopRoots)
+    SchedImpl->releaseTopNode(SU);
+
   // Release bottom roots in reverse order so the higher priority nodes appear
   // first. This is more natural and slightly more efficient.
   for (SmallVectorImpl<SUnit*>::const_reverse_iterator
@@ -816,7 +854,7 @@ void ScheduleDAGMI::placeDebugValues() {
     RegionBegin = FirstDbgValue;
   }
 
-  for (std::vector<std::pair<MachineInstr *, MachineInstr *> >::iterator
+  for (std::vector<std::pair<MachineInstr *, MachineInstr *>>::iterator
          DI = DbgValues.end(), DE = DbgValues.begin(); DI != DE; --DI) {
     std::pair<MachineInstr *, MachineInstr *> P = *std::prev(DI);
     MachineInstr *DbgValue = P.first;
@@ -832,7 +870,7 @@ void ScheduleDAGMI::placeDebugValues() {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void ScheduleDAGMI::dumpSchedule() const {
+LLVM_DUMP_METHOD void ScheduleDAGMI::dumpSchedule() const {
   for (MachineBasicBlock::iterator MI = begin(), ME = end(); MI != ME; ++MI) {
     if (SUnit *SU = getSUnit(&(*MI)))
       SU->dump(this);
@@ -849,6 +887,44 @@ void ScheduleDAGMI::dumpSchedule() const {
 
 ScheduleDAGMILive::~ScheduleDAGMILive() {
   delete DFSResult;
+}
+
+void ScheduleDAGMILive::collectVRegUses(SUnit &SU) {
+  const MachineInstr &MI = *SU.getInstr();
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg())
+      continue;
+    if (!MO.readsReg())
+      continue;
+    if (TrackLaneMasks && !MO.isUse())
+      continue;
+
+    unsigned Reg = MO.getReg();
+    if (!TargetRegisterInfo::isVirtualRegister(Reg))
+      continue;
+
+    // Ignore re-defs.
+    if (TrackLaneMasks) {
+      bool FoundDef = false;
+      for (const MachineOperand &MO2 : MI.operands()) {
+        if (MO2.isReg() && MO2.isDef() && MO2.getReg() == Reg && !MO2.isDead()) {
+          FoundDef = true;
+          break;
+        }
+      }
+      if (FoundDef)
+        continue;
+    }
+
+    // Record this local VReg use.
+    VReg2SUnitMultiMap::iterator UI = VRegUses.find(Reg);
+    for (; UI != VRegUses.end(); ++UI) {
+      if (UI->SU == &SU)
+        break;
+    }
+    if (UI == VRegUses.end())
+      VRegUses.insert(VReg2SUnit(Reg, LaneBitmask::getNone(), &SU));
+  }
 }
 
 /// enterRegion - Called back from MachineScheduler::runOnMachineFunction after
@@ -869,13 +945,24 @@ void ScheduleDAGMILive::enterRegion(MachineBasicBlock *bb,
   SUPressureDiffs.clear();
 
   ShouldTrackPressure = SchedImpl->shouldTrackPressure();
+  ShouldTrackLaneMasks = SchedImpl->shouldTrackLaneMasks();
+
+  assert((!ShouldTrackLaneMasks || ShouldTrackPressure) &&
+         "ShouldTrackLaneMasks requires ShouldTrackPressure");
 }
 
 // Setup the register pressure trackers for the top scheduled top and bottom
 // scheduled regions.
 void ScheduleDAGMILive::initRegPressure() {
-  TopRPTracker.init(&MF, RegClassInfo, LIS, BB, RegionBegin);
-  BotRPTracker.init(&MF, RegClassInfo, LIS, BB, LiveRegionEnd);
+  VRegUses.clear();
+  VRegUses.setUniverse(MRI.getNumVirtRegs());
+  for (SUnit &SU : SUnits)
+    collectVRegUses(SU);
+
+  TopRPTracker.init(&MF, RegClassInfo, LIS, BB, RegionBegin,
+                    ShouldTrackLaneMasks, false);
+  BotRPTracker.init(&MF, RegClassInfo, LIS, BB, LiveRegionEnd,
+                    ShouldTrackLaneMasks, false);
 
   // Close the RPTracker to finalize live ins.
   RPTracker.closeRegion();
@@ -905,10 +992,17 @@ void ScheduleDAGMILive::initRegPressure() {
 
   // Account for liveness generated by the region boundary.
   if (LiveRegionEnd != RegionEnd) {
-    SmallVector<unsigned, 8> LiveUses;
+    SmallVector<RegisterMaskPair, 8> LiveUses;
     BotRPTracker.recede(&LiveUses);
     updatePressureDiffs(LiveUses);
   }
+
+  DEBUG(
+    dbgs() << "Top Pressure:\n";
+    dumpRegSetPressure(TopRPTracker.getRegSetPressureAtPos(), TRI);
+    dbgs() << "Bottom Pressure:\n";
+    dumpRegSetPressure(BotRPTracker.getRegSetPressureAtPos(), TRI);
+  );
 
   assert(BotRPTracker.getPos() == RegionEnd && "Can't find the region bottom");
 
@@ -927,9 +1021,9 @@ void ScheduleDAGMILive::initRegPressure() {
     }
   }
   DEBUG(dbgs() << "Excess PSets: ";
-        for (unsigned i = 0, e = RegionCriticalPSets.size(); i != e; ++i)
+        for (const PressureChange &RCPS : RegionCriticalPSets)
           dbgs() << TRI->getRegPressureSetName(
-            RegionCriticalPSets[i].getPSet()) << " ";
+            RCPS.getPSet()) << " ";
         dbgs() << "\n");
 }
 
@@ -938,16 +1032,15 @@ updateScheduledPressure(const SUnit *SU,
                         const std::vector<unsigned> &NewMaxPressure) {
   const PressureDiff &PDiff = getPressureDiff(SU);
   unsigned CritIdx = 0, CritEnd = RegionCriticalPSets.size();
-  for (PressureDiff::const_iterator I = PDiff.begin(), E = PDiff.end();
-       I != E; ++I) {
-    if (!I->isValid())
+  for (const PressureChange &PC : PDiff) {
+    if (!PC.isValid())
       break;
-    unsigned ID = I->getPSet();
+    unsigned ID = PC.getPSet();
     while (CritIdx != CritEnd && RegionCriticalPSets[CritIdx].getPSet() < ID)
       ++CritIdx;
     if (CritIdx != CritEnd && RegionCriticalPSets[CritIdx].getPSet() == ID) {
       if ((int)NewMaxPressure[ID] > RegionCriticalPSets[CritIdx].getUnitInc()
-          && NewMaxPressure[ID] <= INT16_MAX)
+          && NewMaxPressure[ID] <= (unsigned)std::numeric_limits<int16_t>::max())
         RegionCriticalPSets[CritIdx].setUnitInc(NewMaxPressure[ID]);
     }
     unsigned Limit = RegClassInfo->getRegPressureSetLimit(ID);
@@ -962,47 +1055,74 @@ updateScheduledPressure(const SUnit *SU,
 
 /// Update the PressureDiff array for liveness after scheduling this
 /// instruction.
-void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<unsigned> LiveUses) {
-  for (unsigned LUIdx = 0, LUEnd = LiveUses.size(); LUIdx != LUEnd; ++LUIdx) {
+void ScheduleDAGMILive::updatePressureDiffs(
+    ArrayRef<RegisterMaskPair> LiveUses) {
+  for (const RegisterMaskPair &P : LiveUses) {
+    unsigned Reg = P.RegUnit;
     /// FIXME: Currently assuming single-use physregs.
-    unsigned Reg = LiveUses[LUIdx];
-    DEBUG(dbgs() << "  LiveReg: " << PrintVRegOrUnit(Reg, TRI) << "\n");
     if (!TRI->isVirtualRegister(Reg))
       continue;
 
-    // This may be called before CurrentBottom has been initialized. However,
-    // BotRPTracker must have a valid position. We want the value live into the
-    // instruction or live out of the block, so ask for the previous
-    // instruction's live-out.
-    const LiveInterval &LI = LIS->getInterval(Reg);
-    VNInfo *VNI;
-    MachineBasicBlock::const_iterator I =
-      nextIfDebug(BotRPTracker.getPos(), BB->end());
-    if (I == BB->end())
-      VNI = LI.getVNInfoBefore(LIS->getMBBEndIdx(BB));
-    else {
-      LiveQueryResult LRQ = LI.Query(LIS->getInstructionIndex(I));
-      VNI = LRQ.valueIn();
-    }
-    // RegisterPressureTracker guarantees that readsReg is true for LiveUses.
-    assert(VNI && "No live value at use.");
-    for (const VReg2SUnit &V2SU
-         : make_range(VRegUses.find(Reg), VRegUses.end())) {
-      SUnit *SU = V2SU.SU;
-      // If this use comes before the reaching def, it cannot be a last use, so
-      // descrease its pressure change.
-      if (!SU->isScheduled && SU != &ExitSU) {
-        LiveQueryResult LRQ
-          = LI.Query(LIS->getInstructionIndex(SU->getInstr()));
-        if (LRQ.valueIn() == VNI) {
-          PressureDiff &PDiff = getPressureDiff(SU);
-          PDiff.addPressureChange(Reg, true, &MRI);
-          DEBUG(
-            dbgs() << "  UpdateRegP: SU(" << SU->NodeNum << ") "
-                   << *SU->getInstr();
-            dbgs() << "              to ";
-            PDiff.dump(*TRI);
-          );
+    if (ShouldTrackLaneMasks) {
+      // If the register has just become live then other uses won't change
+      // this fact anymore => decrement pressure.
+      // If the register has just become dead then other uses make it come
+      // back to life => increment pressure.
+      bool Decrement = P.LaneMask.any();
+
+      for (const VReg2SUnit &V2SU
+           : make_range(VRegUses.find(Reg), VRegUses.end())) {
+        SUnit &SU = *V2SU.SU;
+        if (SU.isScheduled || &SU == &ExitSU)
+          continue;
+
+        PressureDiff &PDiff = getPressureDiff(&SU);
+        PDiff.addPressureChange(Reg, Decrement, &MRI);
+        DEBUG(
+          dbgs() << "  UpdateRegP: SU(" << SU.NodeNum << ") "
+                 << PrintReg(Reg, TRI) << ':' << PrintLaneMask(P.LaneMask)
+                 << ' ' << *SU.getInstr();
+          dbgs() << "              to ";
+          PDiff.dump(*TRI);
+        );
+      }
+    } else {
+      assert(P.LaneMask.any());
+      DEBUG(dbgs() << "  LiveReg: " << PrintVRegOrUnit(Reg, TRI) << "\n");
+      // This may be called before CurrentBottom has been initialized. However,
+      // BotRPTracker must have a valid position. We want the value live into the
+      // instruction or live out of the block, so ask for the previous
+      // instruction's live-out.
+      const LiveInterval &LI = LIS->getInterval(Reg);
+      VNInfo *VNI;
+      MachineBasicBlock::const_iterator I =
+        nextIfDebug(BotRPTracker.getPos(), BB->end());
+      if (I == BB->end())
+        VNI = LI.getVNInfoBefore(LIS->getMBBEndIdx(BB));
+      else {
+        LiveQueryResult LRQ = LI.Query(LIS->getInstructionIndex(*I));
+        VNI = LRQ.valueIn();
+      }
+      // RegisterPressureTracker guarantees that readsReg is true for LiveUses.
+      assert(VNI && "No live value at use.");
+      for (const VReg2SUnit &V2SU
+           : make_range(VRegUses.find(Reg), VRegUses.end())) {
+        SUnit *SU = V2SU.SU;
+        // If this use comes before the reaching def, it cannot be a last use,
+        // so decrease its pressure change.
+        if (!SU->isScheduled && SU != &ExitSU) {
+          LiveQueryResult LRQ =
+              LI.Query(LIS->getInstructionIndex(*SU->getInstr()));
+          if (LRQ.valueIn() == VNI) {
+            PressureDiff &PDiff = getPressureDiff(SU);
+            PDiff.addPressureChange(Reg, true, &MRI);
+            DEBUG(
+              dbgs() << "  UpdateRegP: SU(" << SU->NodeNum << ") "
+                     << *SU->getInstr();
+              dbgs() << "              to ";
+              PDiff.dump(*TRI);
+            );
+          }
         }
       }
     }
@@ -1036,24 +1156,29 @@ void ScheduleDAGMILive::schedule() {
   SchedImpl->initialize(this);
 
   DEBUG(
+    if (EntrySU.getInstr() != nullptr)
+      EntrySU.dumpAll(this);
     for (const SUnit &SU : SUnits) {
       SU.dumpAll(this);
       if (ShouldTrackPressure) {
         dbgs() << "  Pressure Diff      : ";
         getPressureDiff(&SU).dump(*TRI);
       }
+      dbgs() << "  Single Issue       : ";
+      if (SchedModel.mustBeginGroup(SU.getInstr()) &&
+         SchedModel.mustEndGroup(SU.getInstr()))
+        dbgs() << "true;";
+      else
+        dbgs() << "false;";
       dbgs() << '\n';
     }
+    if (ExitSU.getInstr() != nullptr)
+      ExitSU.dumpAll(this);
   );
   if (ViewMISchedDAGs) viewGraph();
 
   // Initialize ready queues now that the DAG and priority data are finalized.
   initQueues(TopRoots, BotRoots);
-
-  if (ShouldTrackPressure) {
-    assert(TopRPTracker.getPos() == RegionBegin && "bad initial Top tracker");
-    TopRPTracker.setPos(CurrentTop);
-  }
 
   bool IsTopNode = false;
   while (true) {
@@ -1104,14 +1229,14 @@ void ScheduleDAGMILive::buildDAGWithRegPressure() {
 
   // Initialize the register pressure tracker used by buildSchedGraph.
   RPTracker.init(&MF, RegClassInfo, LIS, BB, LiveRegionEnd,
-                 /*TrackUntiedDefs=*/true);
+                 ShouldTrackLaneMasks, /*TrackUntiedDefs=*/true);
 
   // Account for liveness generate by the region boundary.
   if (LiveRegionEnd != RegionEnd)
     RPTracker.recede();
 
   // Build the DAG, and compute current register pressure.
-  buildSchedGraph(AA, &RPTracker, &SUPressureDiffs);
+  buildSchedGraph(AA, &RPTracker, &SUPressureDiffs, LIS, ShouldTrackLaneMasks);
 
   // Initialize top/bottom trackers after computing region pressure.
   initRegPressure();
@@ -1160,10 +1285,8 @@ unsigned ScheduleDAGMILive::computeCyclicCriticalPath() {
 
   unsigned MaxCyclicLatency = 0;
   // Visit each live out vreg def to find def/use pairs that cross iterations.
-  ArrayRef<unsigned> LiveOuts = RPTracker.getPressure().LiveOutRegs;
-  for (ArrayRef<unsigned>::iterator RI = LiveOuts.begin(), RE = LiveOuts.end();
-       RI != RE; ++RI) {
-    unsigned Reg = *RI;
+  for (const RegisterMaskPair &P : RPTracker.getPressure().LiveOutRegs) {
+    unsigned Reg = P.RegUnit;
     if (!TRI->isVirtualRegister(Reg))
         continue;
     const LiveInterval &LI = LIS->getInterval(Reg);
@@ -1186,8 +1309,7 @@ unsigned ScheduleDAGMILive::computeCyclicCriticalPath() {
         continue;
 
       // Only consider uses of the phi.
-      LiveQueryResult LRQ =
-        LI.Query(LIS->getInstructionIndex(SU->getInstr()));
+      LiveQueryResult LRQ = LI.Query(LIS->getInstructionIndex(*SU->getInstr()));
       if (!LRQ.valueIn()->isPHIDef())
         continue;
 
@@ -1202,8 +1324,7 @@ unsigned ScheduleDAGMILive::computeCyclicCriticalPath() {
       if (LiveInHeight > LiveOutHeight) {
         if (LiveInHeight - LiveOutHeight < CyclicLatency)
           CyclicLatency = LiveInHeight - LiveOutHeight;
-      }
-      else
+      } else
         CyclicLatency = 0;
 
       DEBUG(dbgs() << "Cyclic Path: SU(" << DefSU->NodeNum << ") -> SU("
@@ -1214,6 +1335,17 @@ unsigned ScheduleDAGMILive::computeCyclicCriticalPath() {
   }
   DEBUG(dbgs() << "Cyclic Critical Path: " << MaxCyclicLatency << "c\n");
   return MaxCyclicLatency;
+}
+
+/// Release ExitSU predecessors and setup scheduler queues. Re-position
+/// the Top RP tracker in case the region beginning has changed.
+void ScheduleDAGMILive::initQueues(ArrayRef<SUnit*> TopRoots,
+                                   ArrayRef<SUnit*> BotRoots) {
+  ScheduleDAGMI::initQueues(TopRoots, BotRoots);
+  if (ShouldTrackPressure) {
+    assert(TopRPTracker.getPos() == RegionBegin && "bad initial Top tracker");
+    TopRPTracker.setPos(CurrentTop);
+  }
 }
 
 /// Move an instruction and update register pressure.
@@ -1232,7 +1364,18 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
 
     if (ShouldTrackPressure) {
       // Update top scheduled pressure.
-      TopRPTracker.advance();
+      RegisterOperands RegOpers;
+      RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks, false);
+      if (ShouldTrackLaneMasks) {
+        // Adjust liveness and add missing dead+read-undef flags.
+        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
+        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+      } else {
+        // Adjust for missing dead-def flags.
+        RegOpers.detectDeadDefs(*MI, *LIS);
+      }
+
+      TopRPTracker.advance(RegOpers);
       assert(TopRPTracker.getPos() == CurrentTop && "out of sync");
       DEBUG(
         dbgs() << "Top Pressure:\n";
@@ -1241,8 +1384,7 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
 
       updateScheduledPressure(SU, TopRPTracker.getPressure().MaxSetPressure);
     }
-  }
-  else {
+  } else {
     assert(SU->isBottomReady() && "node still has unscheduled dependencies");
     MachineBasicBlock::iterator priorII =
       priorNonDebug(CurrentBottom, CurrentTop);
@@ -1257,9 +1399,20 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
       CurrentBottom = MI;
     }
     if (ShouldTrackPressure) {
-      // Update bottom scheduled pressure.
-      SmallVector<unsigned, 8> LiveUses;
-      BotRPTracker.recede(&LiveUses);
+      RegisterOperands RegOpers;
+      RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks, false);
+      if (ShouldTrackLaneMasks) {
+        // Adjust liveness and add missing dead+read-undef flags.
+        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
+        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+      } else {
+        // Adjust for missing dead-def flags.
+        RegOpers.detectDeadDefs(*MI, *LIS);
+      }
+
+      BotRPTracker.recedeSkipDebugValues();
+      SmallVector<RegisterMaskPair, 8> LiveUses;
+      BotRPTracker.recede(RegOpers, &LiveUses);
       assert(BotRPTracker.getPos() == CurrentBottom && "out of sync");
       DEBUG(
         dbgs() << "Bottom Pressure:\n";
@@ -1273,181 +1426,153 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
 }
 
 //===----------------------------------------------------------------------===//
-// LoadClusterMutation - DAG post-processing to cluster loads.
+// BaseMemOpClusterMutation - DAG post-processing to cluster loads or stores.
 //===----------------------------------------------------------------------===//
 
 namespace {
+
 /// \brief Post-process the DAG to create cluster edges between neighboring
-/// loads.
-class LoadClusterMutation : public ScheduleDAGMutation {
-  struct LoadInfo {
+/// loads or between neighboring stores.
+class BaseMemOpClusterMutation : public ScheduleDAGMutation {
+  struct MemOpInfo {
     SUnit *SU;
     unsigned BaseReg;
-    unsigned Offset;
-    LoadInfo(SUnit *su, unsigned reg, unsigned ofs)
-      : SU(su), BaseReg(reg), Offset(ofs) {}
+    int64_t Offset;
 
-    bool operator<(const LoadInfo &RHS) const {
-      return std::tie(BaseReg, Offset) < std::tie(RHS.BaseReg, RHS.Offset);
+    MemOpInfo(SUnit *su, unsigned reg, int64_t ofs)
+        : SU(su), BaseReg(reg), Offset(ofs) {}
+
+    bool operator<(const MemOpInfo&RHS) const {
+      return std::tie(BaseReg, Offset, SU->NodeNum) <
+             std::tie(RHS.BaseReg, RHS.Offset, RHS.SU->NodeNum);
     }
   };
 
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
+  bool IsLoad;
+
 public:
-  LoadClusterMutation(const TargetInstrInfo *tii,
-                      const TargetRegisterInfo *tri)
-    : TII(tii), TRI(tri) {}
+  BaseMemOpClusterMutation(const TargetInstrInfo *tii,
+                           const TargetRegisterInfo *tri, bool IsLoad)
+      : TII(tii), TRI(tri), IsLoad(IsLoad) {}
 
-  void apply(ScheduleDAGMI *DAG) override;
+  void apply(ScheduleDAGInstrs *DAGInstrs) override;
+
 protected:
-  void clusterNeighboringLoads(ArrayRef<SUnit*> Loads, ScheduleDAGMI *DAG);
+  void clusterNeighboringMemOps(ArrayRef<SUnit *> MemOps, ScheduleDAGMI *DAG);
 };
-} // anonymous
 
-void LoadClusterMutation::clusterNeighboringLoads(ArrayRef<SUnit*> Loads,
-                                                  ScheduleDAGMI *DAG) {
-  SmallVector<LoadClusterMutation::LoadInfo,32> LoadRecords;
-  for (unsigned Idx = 0, End = Loads.size(); Idx != End; ++Idx) {
-    SUnit *SU = Loads[Idx];
+class StoreClusterMutation : public BaseMemOpClusterMutation {
+public:
+  StoreClusterMutation(const TargetInstrInfo *tii,
+                       const TargetRegisterInfo *tri)
+      : BaseMemOpClusterMutation(tii, tri, false) {}
+};
+
+class LoadClusterMutation : public BaseMemOpClusterMutation {
+public:
+  LoadClusterMutation(const TargetInstrInfo *tii, const TargetRegisterInfo *tri)
+      : BaseMemOpClusterMutation(tii, tri, true) {}
+};
+
+} // end anonymous namespace
+
+namespace llvm {
+
+std::unique_ptr<ScheduleDAGMutation>
+createLoadClusterDAGMutation(const TargetInstrInfo *TII,
+                             const TargetRegisterInfo *TRI) {
+  return EnableMemOpCluster ? llvm::make_unique<LoadClusterMutation>(TII, TRI)
+                            : nullptr;
+}
+
+std::unique_ptr<ScheduleDAGMutation>
+createStoreClusterDAGMutation(const TargetInstrInfo *TII,
+                              const TargetRegisterInfo *TRI) {
+  return EnableMemOpCluster ? llvm::make_unique<StoreClusterMutation>(TII, TRI)
+                            : nullptr;
+}
+
+} // end namespace llvm
+
+void BaseMemOpClusterMutation::clusterNeighboringMemOps(
+    ArrayRef<SUnit *> MemOps, ScheduleDAGMI *DAG) {
+  SmallVector<MemOpInfo, 32> MemOpRecords;
+  for (SUnit *SU : MemOps) {
     unsigned BaseReg;
-    unsigned Offset;
-    if (TII->getMemOpBaseRegImmOfs(SU->getInstr(), BaseReg, Offset, TRI))
-      LoadRecords.push_back(LoadInfo(SU, BaseReg, Offset));
+    int64_t Offset;
+    if (TII->getMemOpBaseRegImmOfs(*SU->getInstr(), BaseReg, Offset, TRI))
+      MemOpRecords.push_back(MemOpInfo(SU, BaseReg, Offset));
   }
-  if (LoadRecords.size() < 2)
+  if (MemOpRecords.size() < 2)
     return;
-  std::sort(LoadRecords.begin(), LoadRecords.end());
+
+  std::sort(MemOpRecords.begin(), MemOpRecords.end());
   unsigned ClusterLength = 1;
-  for (unsigned Idx = 0, End = LoadRecords.size(); Idx < (End - 1); ++Idx) {
-    if (LoadRecords[Idx].BaseReg != LoadRecords[Idx+1].BaseReg) {
+  for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
+    if (MemOpRecords[Idx].BaseReg != MemOpRecords[Idx+1].BaseReg) {
       ClusterLength = 1;
       continue;
     }
 
-    SUnit *SUa = LoadRecords[Idx].SU;
-    SUnit *SUb = LoadRecords[Idx+1].SU;
-    if (TII->shouldClusterLoads(SUa->getInstr(), SUb->getInstr(), ClusterLength)
-        && DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {
-
-      DEBUG(dbgs() << "Cluster loads SU(" << SUa->NodeNum << ") - SU("
+    SUnit *SUa = MemOpRecords[Idx].SU;
+    SUnit *SUb = MemOpRecords[Idx+1].SU;
+    if (TII->shouldClusterMemOps(*SUa->getInstr(), *SUb->getInstr(),
+                                 ClusterLength) &&
+        DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {
+      DEBUG(dbgs() << "Cluster ld/st SU(" << SUa->NodeNum << ") - SU("
             << SUb->NodeNum << ")\n");
       // Copy successor edges from SUa to SUb. Interleaving computation
       // dependent on SUa can prevent load combining due to register reuse.
       // Predecessor edges do not need to be copied from SUb to SUa since nearby
       // loads should have effectively the same inputs.
-      for (SUnit::const_succ_iterator
-             SI = SUa->Succs.begin(), SE = SUa->Succs.end(); SI != SE; ++SI) {
-        if (SI->getSUnit() == SUb)
+      for (const SDep &Succ : SUa->Succs) {
+        if (Succ.getSUnit() == SUb)
           continue;
-        DEBUG(dbgs() << "  Copy Succ SU(" << SI->getSUnit()->NodeNum << ")\n");
-        DAG->addEdge(SI->getSUnit(), SDep(SUb, SDep::Artificial));
+        DEBUG(dbgs() << "  Copy Succ SU(" << Succ.getSUnit()->NodeNum << ")\n");
+        DAG->addEdge(Succ.getSUnit(), SDep(SUb, SDep::Artificial));
       }
       ++ClusterLength;
-    }
-    else
+    } else
       ClusterLength = 1;
   }
 }
 
 /// \brief Callback from DAG postProcessing to create cluster edges for loads.
-void LoadClusterMutation::apply(ScheduleDAGMI *DAG) {
+void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
+
+  ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
+
   // Map DAG NodeNum to store chain ID.
   DenseMap<unsigned, unsigned> StoreChainIDs;
-  // Map each store chain to a set of dependent loads.
+  // Map each store chain to a set of dependent MemOps.
   SmallVector<SmallVector<SUnit*,4>, 32> StoreChainDependents;
-  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
-    SUnit *SU = &DAG->SUnits[Idx];
-    if (!SU->getInstr()->mayLoad())
+  for (SUnit &SU : DAG->SUnits) {
+    if ((IsLoad && !SU.getInstr()->mayLoad()) ||
+        (!IsLoad && !SU.getInstr()->mayStore()))
       continue;
+
     unsigned ChainPredID = DAG->SUnits.size();
-    for (SUnit::const_pred_iterator
-           PI = SU->Preds.begin(), PE = SU->Preds.end(); PI != PE; ++PI) {
-      if (PI->isCtrl()) {
-        ChainPredID = PI->getSUnit()->NodeNum;
+    for (const SDep &Pred : SU.Preds) {
+      if (Pred.isCtrl()) {
+        ChainPredID = Pred.getSUnit()->NodeNum;
         break;
       }
     }
     // Check if this chain-like pred has been seen
-    // before. ChainPredID==MaxNodeID for loads at the top of the schedule.
+    // before. ChainPredID==MaxNodeID at the top of the schedule.
     unsigned NumChains = StoreChainDependents.size();
     std::pair<DenseMap<unsigned, unsigned>::iterator, bool> Result =
       StoreChainIDs.insert(std::make_pair(ChainPredID, NumChains));
     if (Result.second)
       StoreChainDependents.resize(NumChains + 1);
-    StoreChainDependents[Result.first->second].push_back(SU);
+    StoreChainDependents[Result.first->second].push_back(&SU);
   }
+
   // Iterate over the store chains.
-  for (unsigned Idx = 0, End = StoreChainDependents.size(); Idx != End; ++Idx)
-    clusterNeighboringLoads(StoreChainDependents[Idx], DAG);
-}
-
-//===----------------------------------------------------------------------===//
-// MacroFusion - DAG post-processing to encourage fusion of macro ops.
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// \brief Post-process the DAG to create cluster edges between instructions
-/// that may be fused by the processor into a single operation.
-class MacroFusion : public ScheduleDAGMutation {
-  const TargetInstrInfo &TII;
-  const TargetRegisterInfo &TRI;
-public:
-  MacroFusion(const TargetInstrInfo &TII, const TargetRegisterInfo &TRI)
-    : TII(TII), TRI(TRI) {}
-
-  void apply(ScheduleDAGMI *DAG) override;
-};
-} // anonymous
-
-/// Returns true if \p MI reads a register written by \p Other.
-static bool HasDataDep(const TargetRegisterInfo &TRI, const MachineInstr &MI,
-                       const MachineInstr &Other) {
-  for (const MachineOperand &MO : MI.uses()) {
-    if (!MO.isReg() || !MO.readsReg())
-      continue;
-
-    unsigned Reg = MO.getReg();
-    if (Other.modifiesRegister(Reg, &TRI))
-      return true;
-  }
-  return false;
-}
-
-/// \brief Callback from DAG postProcessing to create cluster edges to encourage
-/// fused operations.
-void MacroFusion::apply(ScheduleDAGMI *DAG) {
-  // For now, assume targets can only fuse with the branch.
-  SUnit &ExitSU = DAG->ExitSU;
-  MachineInstr *Branch = ExitSU.getInstr();
-  if (!Branch)
-    return;
-
-  for (SUnit &SU : DAG->SUnits) {
-    // SUnits with successors can't be schedule in front of the ExitSU.
-    if (!SU.Succs.empty())
-      continue;
-    // We only care if the node writes to a register that the branch reads.
-    MachineInstr *Pred = SU.getInstr();
-    if (!HasDataDep(TRI, *Branch, *Pred))
-      continue;
-
-    if (!TII.shouldScheduleAdjacent(Pred, Branch))
-      continue;
-
-    // Create a single weak edge from SU to ExitSU. The only effect is to cause
-    // bottom-up scheduling to heavily prioritize the clustered SU.  There is no
-    // need to copy predecessor edges from ExitSU to SU, since top-down
-    // scheduling cannot prioritize ExitSU anyway. To defer top-down scheduling
-    // of SU, we could create an artificial edge from the deepest root, but it
-    // hasn't been needed yet.
-    bool Success = DAG->addEdge(&ExitSU, SDep(&SU, SDep::Cluster));
-    (void)Success;
-    assert(Success && "No DAG nodes should be reachable from ExitSU");
-
-    DEBUG(dbgs() << "Macro Fuse SU(" << SU.NodeNum << ")\n");
-    break;
-  }
+  for (auto &SCD : StoreChainDependents)
+    clusterNeighboringMemOps(SCD, DAG);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1455,6 +1580,7 @@ void MacroFusion::apply(ScheduleDAGMI *DAG) {
 //===----------------------------------------------------------------------===//
 
 namespace {
+
 /// \brief Post-process the DAG to create weak edges from all uses of a copy to
 /// the one use that defines the copy's source vreg, most likely an induction
 /// variable increment.
@@ -1464,15 +1590,27 @@ class CopyConstrain : public ScheduleDAGMutation {
   // RegionEndIdx is the slot index of the last non-debug instruction in the
   // scheduling region. So we may have RegionBeginIdx == RegionEndIdx.
   SlotIndex RegionEndIdx;
+
 public:
   CopyConstrain(const TargetInstrInfo *, const TargetRegisterInfo *) {}
 
-  void apply(ScheduleDAGMI *DAG) override;
+  void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
 protected:
   void constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG);
 };
-} // anonymous
+
+} // end anonymous namespace
+
+namespace llvm {
+
+std::unique_ptr<ScheduleDAGMutation>
+createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
+                               const TargetRegisterInfo *TRI) {
+  return llvm::make_unique<CopyConstrain>(TII, TRI);
+}
+
+} // end namespace llvm
 
 /// constrainLocalCopy handles two possibilities:
 /// 1) Local src:
@@ -1498,12 +1636,14 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
   MachineInstr *Copy = CopySU->getInstr();
 
   // Check for pure vreg copies.
-  unsigned SrcReg = Copy->getOperand(1).getReg();
-  if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
+  const MachineOperand &SrcOp = Copy->getOperand(1);
+  unsigned SrcReg = SrcOp.getReg();
+  if (!TargetRegisterInfo::isVirtualRegister(SrcReg) || !SrcOp.readsReg())
     return;
 
-  unsigned DstReg = Copy->getOperand(0).getReg();
-  if (!TargetRegisterInfo::isVirtualRegister(DstReg))
+  const MachineOperand &DstOp = Copy->getOperand(0);
+  unsigned DstReg = DstOp.getReg();
+  if (!TargetRegisterInfo::isVirtualRegister(DstReg) || DstOp.isDead())
     return;
 
   // Check if either the dest or source is local. If it's live across a back
@@ -1575,16 +1715,14 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
   const VNInfo *LastLocalVN = LocalLI->getVNInfoBefore(LocalLI->endIndex());
   MachineInstr *LastLocalDef = LIS->getInstructionFromIndex(LastLocalVN->def);
   SUnit *LastLocalSU = DAG->getSUnit(LastLocalDef);
-  for (SUnit::const_succ_iterator
-         I = LastLocalSU->Succs.begin(), E = LastLocalSU->Succs.end();
-       I != E; ++I) {
-    if (I->getKind() != SDep::Data || I->getReg() != LocalReg)
+  for (const SDep &Succ : LastLocalSU->Succs) {
+    if (Succ.getKind() != SDep::Data || Succ.getReg() != LocalReg)
       continue;
-    if (I->getSUnit() == GlobalSU)
+    if (Succ.getSUnit() == GlobalSU)
       continue;
-    if (!DAG->canAddEdge(GlobalSU, I->getSUnit()))
+    if (!DAG->canAddEdge(GlobalSU, Succ.getSUnit()))
       return;
-    LocalUses.push_back(I->getSUnit());
+    LocalUses.push_back(Succ.getSUnit());
   }
   // Open the top of the GlobalLI hole by constraining any earlier global uses
   // to precede the start of LocalLI.
@@ -1592,15 +1730,14 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
   MachineInstr *FirstLocalDef =
     LIS->getInstructionFromIndex(LocalLI->beginIndex());
   SUnit *FirstLocalSU = DAG->getSUnit(FirstLocalDef);
-  for (SUnit::const_pred_iterator
-         I = GlobalSU->Preds.begin(), E = GlobalSU->Preds.end(); I != E; ++I) {
-    if (I->getKind() != SDep::Anti || I->getReg() != GlobalReg)
+  for (const SDep &Pred : GlobalSU->Preds) {
+    if (Pred.getKind() != SDep::Anti || Pred.getReg() != GlobalReg)
       continue;
-    if (I->getSUnit() == FirstLocalSU)
+    if (Pred.getSUnit() == FirstLocalSU)
       continue;
-    if (!DAG->canAddEdge(FirstLocalSU, I->getSUnit()))
+    if (!DAG->canAddEdge(FirstLocalSU, Pred.getSUnit()))
       return;
-    GlobalUses.push_back(I->getSUnit());
+    GlobalUses.push_back(Pred.getSUnit());
   }
   DEBUG(dbgs() << "Constraining copy SU(" << CopySU->NodeNum << ")\n");
   // Add the weak edges.
@@ -1620,22 +1757,22 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
 
 /// \brief Callback from DAG postProcessing to create weak edges to encourage
 /// copy elimination.
-void CopyConstrain::apply(ScheduleDAGMI *DAG) {
+void CopyConstrain::apply(ScheduleDAGInstrs *DAGInstrs) {
+  ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
   assert(DAG->hasVRegLiveness() && "Expect VRegs with LiveIntervals");
 
   MachineBasicBlock::iterator FirstPos = nextIfDebug(DAG->begin(), DAG->end());
   if (FirstPos == DAG->end())
     return;
-  RegionBeginIdx = DAG->getLIS()->getInstructionIndex(&*FirstPos);
+  RegionBeginIdx = DAG->getLIS()->getInstructionIndex(*FirstPos);
   RegionEndIdx = DAG->getLIS()->getInstructionIndex(
-    &*priorNonDebug(DAG->end(), DAG->begin()));
+      *priorNonDebug(DAG->end(), DAG->begin()));
 
-  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
-    SUnit *SU = &DAG->SUnits[Idx];
-    if (!SU->getInstr()->isCopy())
+  for (SUnit &SU : DAG->SUnits) {
+    if (!SU.getInstr()->isCopy())
       continue;
 
-    constrainLocalCopy(SU, static_cast<ScheduleDAGMILive*>(DAG));
+    constrainLocalCopy(&SU, static_cast<ScheduleDAGMILive*>(DAG));
   }
 }
 
@@ -1659,10 +1796,9 @@ void SchedBoundary::reset() {
   Available.clear();
   Pending.clear();
   CheckPending = false;
-  NextSUs.clear();
   CurrCycle = 0;
   CurrMOps = 0;
-  MinReadyCycle = UINT_MAX;
+  MinReadyCycle = std::numeric_limits<unsigned>::max();
   ExpectedLatency = 0;
   DependentLatency = 0;
   RetiredMOps = 0;
@@ -1687,10 +1823,9 @@ init(ScheduleDAGMI *DAG, const TargetSchedModel *SchedModel) {
   if (!SchedModel->hasInstrSchedModel())
     return;
   RemainingCounts.resize(SchedModel->getNumProcResourceKinds());
-  for (std::vector<SUnit>::iterator
-         I = DAG->SUnits.begin(), E = DAG->SUnits.end(); I != E; ++I) {
-    const MCSchedClassDesc *SC = DAG->getSchedClass(&*I);
-    RemIssueCount += SchedModel->getNumMicroOps(I->getInstr(), SC)
+  for (SUnit &SU : DAG->SUnits) {
+    const MCSchedClassDesc *SC = DAG->getSchedClass(&SU);
+    RemIssueCount += SchedModel->getNumMicroOps(SU.getInstr(), SC)
       * SchedModel->getMicroOpFactor();
     for (TargetSchedModel::ProcResIter
            PI = SchedModel->getWriteProcResBegin(SC),
@@ -1763,12 +1898,22 @@ bool SchedBoundary::checkHazard(SUnit *SU) {
       && HazardRec->getHazardType(SU) != ScheduleHazardRecognizer::NoHazard) {
     return true;
   }
+
   unsigned uops = SchedModel->getNumMicroOps(SU->getInstr());
   if ((CurrMOps > 0) && (CurrMOps + uops > SchedModel->getIssueWidth())) {
     DEBUG(dbgs() << "  SU(" << SU->NodeNum << ") uops="
           << SchedModel->getNumMicroOps(SU->getInstr()) << '\n');
     return true;
   }
+
+  if (CurrMOps > 0 &&
+      ((isTop() && SchedModel->mustBeginGroup(SU->getInstr())) ||
+       (!isTop() && SchedModel->mustEndGroup(SU->getInstr())))) {
+    DEBUG(dbgs() << "  hazard: SU(" << SU->NodeNum << ") must "
+                 << (isTop()? "begin" : "end") << " group\n");
+    return true;
+  }
+
   if (SchedModel->hasInstrSchedModel() && SU->hasReservedResource) {
     const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
     for (TargetSchedModel::ProcResIter
@@ -1794,12 +1939,11 @@ unsigned SchedBoundary::
 findMaxLatency(ArrayRef<SUnit*> ReadySUs) {
   SUnit *LateSU = nullptr;
   unsigned RemLatency = 0;
-  for (ArrayRef<SUnit*>::iterator I = ReadySUs.begin(), E = ReadySUs.end();
-       I != E; ++I) {
-    unsigned L = getUnscheduledLatency(*I);
+  for (SUnit *SU : ReadySUs) {
+    unsigned L = getUnscheduledLatency(SU);
     if (L > RemLatency) {
       RemLatency = L;
-      LateSU = *I;
+      LateSU = SU;
     }
   }
   if (LateSU) {
@@ -1855,33 +1999,18 @@ void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle) {
   // Check for interlocks first. For the purpose of other heuristics, an
   // instruction that cannot issue appears as if it's not in the ReadyQueue.
   bool IsBuffered = SchedModel->getMicroOpBufferSize() != 0;
-  if ((!IsBuffered && ReadyCycle > CurrCycle) || checkHazard(SU))
+  if ((!IsBuffered && ReadyCycle > CurrCycle) || checkHazard(SU) ||
+      Available.size() >= ReadyListLimit)
     Pending.push(SU);
   else
     Available.push(SU);
-
-  // Record this node as an immediate dependent of the scheduled node.
-  NextSUs.insert(SU);
-}
-
-void SchedBoundary::releaseTopNode(SUnit *SU) {
-  if (SU->isScheduled)
-    return;
-
-  releaseNode(SU, SU->TopReadyCycle);
-}
-
-void SchedBoundary::releaseBottomNode(SUnit *SU) {
-  if (SU->isScheduled)
-    return;
-
-  releaseNode(SU, SU->BotReadyCycle);
 }
 
 /// Move the boundary of scheduled code by one cycle.
 void SchedBoundary::bumpCycle(unsigned NextCycle) {
   if (SchedModel->getMicroOpBufferSize() == 0) {
-    assert(MinReadyCycle < UINT_MAX && "MinReadyCycle uninitialized");
+    assert(MinReadyCycle < std::numeric_limits<unsigned>::max() &&
+           "MinReadyCycle uninitialized");
     if (MinReadyCycle > NextCycle)
       NextCycle = MinReadyCycle;
   }
@@ -1898,8 +2027,7 @@ void SchedBoundary::bumpCycle(unsigned NextCycle) {
   if (!HazardRec->isEnabled()) {
     // Bypass HazardRec virtual calls.
     CurrCycle = NextCycle;
-  }
-  else {
+  } else {
     // Bypass getHazardType calls in case of long latency.
     for (; CurrCycle != NextCycle; ++CurrCycle) {
       if (isTop())
@@ -2067,8 +2195,7 @@ void SchedBoundary::bumpNode(SUnit *SU) {
   // If we stall for any reason, bump the cycle.
   if (NextCycle > CurrCycle) {
     bumpCycle(NextCycle);
-  }
-  else {
+  } else {
     // After updating ZoneCritResIdx and ExpectedLatency, check if we're
     // resource limited. If a stall occurred, bumpCycle does this.
     unsigned LFactor = SchedModel->getLatencyFactor();
@@ -2081,6 +2208,18 @@ void SchedBoundary::bumpNode(SUnit *SU) {
   // one cycle.  Since we commonly reach the max MOps here, opportunistically
   // bump the cycle to avoid uselessly checking everything in the readyQ.
   CurrMOps += IncMOps;
+
+  // Bump the cycle count for issue group constraints.
+  // This must be done after NextCycle has been adjust for all other stalls.
+  // Calling bumpCycle(X) will reduce CurrMOps by one issue group and set
+  // currCycle to X.
+  if ((isTop() &&  SchedModel->mustEndGroup(SU->getInstr())) ||
+      (!isTop() && SchedModel->mustBeginGroup(SU->getInstr()))) {
+    DEBUG(dbgs() << "  Bump cycle to "
+                 << (isTop() ? "end" : "begin") << " group\n");
+    bumpCycle(++NextCycle);
+  }
+
   while (CurrMOps >= SchedModel->getIssueWidth()) {
     DEBUG(dbgs() << "  *** Max MOps " << CurrMOps
           << " at cycle " << CurrCycle << '\n');
@@ -2094,7 +2233,7 @@ void SchedBoundary::bumpNode(SUnit *SU) {
 void SchedBoundary::releasePending() {
   // If the available queue is empty, it is safe to reset MinReadyCycle.
   if (Available.empty())
-    MinReadyCycle = UINT_MAX;
+    MinReadyCycle = std::numeric_limits<unsigned>::max();
 
   // Check to see if any of the pending instructions are ready to issue.  If
   // so, add them to the available queue.
@@ -2112,11 +2251,13 @@ void SchedBoundary::releasePending() {
     if (checkHazard(SU))
       continue;
 
+    if (Available.size() >= ReadyListLimit)
+      break;
+
     Available.push(SU);
     Pending.remove(Pending.begin()+i);
     --i; --e;
   }
-  DEBUG(if (!Pending.empty()) Pending.dump());
   CheckPending = false;
 }
 
@@ -2156,22 +2297,25 @@ SUnit *SchedBoundary::pickOnlyChoice() {
     bumpCycle(CurrCycle + 1);
     releasePending();
   }
+
+  DEBUG(Pending.dump());
+  DEBUG(Available.dump());
+
   if (Available.size() == 1)
     return *Available.begin();
   return nullptr;
 }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // This is useful information to dump after bumpNode.
 // Note that the Queue contents are more useful before pickNodeFromQueue.
-void SchedBoundary::dumpScheduledState() {
+LLVM_DUMP_METHOD void SchedBoundary::dumpScheduledState() const {
   unsigned ResFactor;
   unsigned ResCount;
   if (ZoneCritResIdx) {
     ResFactor = SchedModel->getResourceFactor(ZoneCritResIdx);
     ResCount = getResourceCount(ZoneCritResIdx);
-  }
-  else {
+  } else {
     ResFactor = SchedModel->getMicroOpFactor();
     ResCount = RetiredMOps * SchedModel->getMicroOpFactor();
   }
@@ -2211,8 +2355,7 @@ initResourceDelta(const ScheduleDAGMI *DAG,
 
 /// Set the CandPolicy given a scheduling zone given the current resources and
 /// latencies inside and outside the zone.
-void GenericSchedulerBase::setPolicy(CandPolicy &Policy,
-                                     bool IsPostRA,
+void GenericSchedulerBase::setPolicy(CandPolicy &Policy, bool IsPostRA,
                                      SchedBoundary &CurrZone,
                                      SchedBoundary *OtherZone) {
   // Apply preemptive heuristics based on the total latency and resources
@@ -2288,7 +2431,8 @@ const char *GenericSchedulerBase::getReasonStr(
   GenericSchedulerBase::CandReason Reason) {
   switch (Reason) {
   case NoCand:         return "NOCAND    ";
-  case PhysRegCopy:    return "PREG-COPY";
+  case Only1:          return "ONLY1     ";
+  case PhysRegCopy:    return "PREG-COPY ";
   case RegExcess:      return "REG-EXCESS";
   case RegCritical:    return "REG-CRIT  ";
   case Stall:          return "STALL     ";
@@ -2374,7 +2518,6 @@ static bool tryLess(int TryVal, int CandVal,
       Cand.Reason = Reason;
     return true;
   }
-  Cand.setRepeat(Reason);
   return false;
 }
 
@@ -2391,7 +2534,6 @@ static bool tryGreater(int TryVal, int CandVal,
       Cand.Reason = Reason;
     return true;
   }
-  Cand.setRepeat(Reason);
   return false;
 }
 
@@ -2407,8 +2549,7 @@ static bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
     if (tryGreater(TryCand.SU->getHeight(), Cand.SU->getHeight(),
                    TryCand, Cand, GenericSchedulerBase::TopPathReduce))
       return true;
-  }
-  else {
+  } else {
     if (Cand.SU->getHeight() > Zone.getScheduledLatency()) {
       if (tryLess(TryCand.SU->getHeight(), Cand.SU->getHeight(),
                   TryCand, Cand, GenericSchedulerBase::BotHeightReduce))
@@ -2421,10 +2562,13 @@ static bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
   return false;
 }
 
-static void tracePick(const GenericSchedulerBase::SchedCandidate &Cand,
-                      bool IsTop) {
+static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop) {
   DEBUG(dbgs() << "Pick " << (IsTop ? "Top " : "Bot ")
-        << GenericSchedulerBase::getReasonStr(Cand.Reason) << '\n');
+        << GenericSchedulerBase::getReasonStr(Reason) << '\n');
+}
+
+static void tracePick(const GenericSchedulerBase::SchedCandidate &Cand) {
+  tracePick(Cand.Reason, Cand.AtTop);
 }
 
 void GenericScheduler::initialize(ScheduleDAGMI *dag) {
@@ -2453,6 +2597,8 @@ void GenericScheduler::initialize(ScheduleDAGMI *dag) {
         DAG->MF.getSubtarget().getInstrInfo()->CreateTargetMIHazardRecognizer(
             Itin, DAG);
   }
+  TopCand.SU = nullptr;
+  BotCand.SU = nullptr;
 }
 
 /// Initialize the per-region scheduling policy.
@@ -2480,8 +2626,7 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   RegionPolicy.OnlyBottomUp = true;
 
   // Allow the subtarget to override default policy.
-  MF.getSubtarget().overrideSchedPolicy(RegionPolicy, Begin, End,
-                                        NumRegionInstrs);
+  MF.getSubtarget().overrideSchedPolicy(RegionPolicy, NumRegionInstrs);
 
   // After subtarget overrides, apply command line options.
   if (!EnableRegPressure)
@@ -2503,12 +2648,15 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   }
 }
 
-void GenericScheduler::dumpPolicy() {
+void GenericScheduler::dumpPolicy() const {
+  // Cannot completely remove virtual function even in release mode.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dbgs() << "GenericScheduler RegionPolicy: "
          << " ShouldTrackPressure=" << RegionPolicy.ShouldTrackPressure
          << " OnlyTopDown=" << RegionPolicy.OnlyTopDown
          << " OnlyBottomUp=" << RegionPolicy.OnlyBottomUp
          << "\n";
+#endif
 }
 
 /// Set IsAcyclicLatencyLimited if the acyclic path is longer than the cyclic
@@ -2552,17 +2700,16 @@ void GenericScheduler::registerRoots() {
   Rem.CriticalPath = DAG->ExitSU.getDepth();
 
   // Some roots may not feed into ExitSU. Check all of them in case.
-  for (std::vector<SUnit*>::const_iterator
-         I = Bot.Available.begin(), E = Bot.Available.end(); I != E; ++I) {
-    if ((*I)->getDepth() > Rem.CriticalPath)
-      Rem.CriticalPath = (*I)->getDepth();
+  for (const SUnit *SU : Bot.Available) {
+    if (SU->getDepth() > Rem.CriticalPath)
+      Rem.CriticalPath = SU->getDepth();
   }
   DEBUG(dbgs() << "Critical Path(GS-RR ): " << Rem.CriticalPath << '\n');
   if (DumpCriticalPathLength) {
     errs() << "Critical Path(GS-RR ): " << Rem.CriticalPath << " \n";
   }
 
-  if (EnableCyclicPath) {
+  if (EnableCyclicPath && SchedModel->getMicroOpBufferSize() > 0) {
     Rem.CyclicCritPath = DAG->computeCyclicCriticalPath();
     checkAcyclicLatency();
   }
@@ -2572,20 +2719,35 @@ static bool tryPressure(const PressureChange &TryP,
                         const PressureChange &CandP,
                         GenericSchedulerBase::SchedCandidate &TryCand,
                         GenericSchedulerBase::SchedCandidate &Cand,
-                        GenericSchedulerBase::CandReason Reason) {
-  int TryRank = TryP.getPSetOrMax();
-  int CandRank = CandP.getPSetOrMax();
-  // If both candidates affect the same set, go with the smallest increase.
-  if (TryRank == CandRank) {
-    return tryLess(TryP.getUnitInc(), CandP.getUnitInc(), TryCand, Cand,
-                   Reason);
-  }
+                        GenericSchedulerBase::CandReason Reason,
+                        const TargetRegisterInfo *TRI,
+                        const MachineFunction &MF) {
   // If one candidate decreases and the other increases, go with it.
   // Invalid candidates have UnitInc==0.
   if (tryGreater(TryP.getUnitInc() < 0, CandP.getUnitInc() < 0, TryCand, Cand,
                  Reason)) {
     return true;
   }
+  // Do not compare the magnitude of pressure changes between top and bottom
+  // boundary.
+  if (Cand.AtTop != TryCand.AtTop)
+    return false;
+
+  // If both candidates affect the same set in the same boundary, go with the
+  // smallest increase.
+  unsigned TryPSet = TryP.getPSetOrMax();
+  unsigned CandPSet = CandP.getPSetOrMax();
+  if (TryPSet == CandPSet) {
+    return tryLess(TryP.getUnitInc(), CandP.getUnitInc(), TryCand, Cand,
+                   Reason);
+  }
+
+  int TryRank = TryP.isValid() ? TRI->getRegPressureSetScore(MF, TryPSet) :
+                                 std::numeric_limits<int>::max();
+
+  int CandRank = CandP.isValid() ? TRI->getRegPressureSetScore(MF, CandPSet) :
+                                   std::numeric_limits<int>::max();
+
   // If the candidates are decreasing pressure, reverse priority.
   if (TryP.getUnitInc() < 0)
     std::swap(TryRank, CandRank);
@@ -2624,6 +2786,43 @@ static int biasPhysRegCopy(const SUnit *SU, bool isTop) {
   return 0;
 }
 
+void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
+                                     bool AtTop,
+                                     const RegPressureTracker &RPTracker,
+                                     RegPressureTracker &TempTracker) {
+  Cand.SU = SU;
+  Cand.AtTop = AtTop;
+  if (DAG->isTrackingPressure()) {
+    if (AtTop) {
+      TempTracker.getMaxDownwardPressureDelta(
+        Cand.SU->getInstr(),
+        Cand.RPDelta,
+        DAG->getRegionCriticalPSets(),
+        DAG->getRegPressure().MaxSetPressure);
+    } else {
+      if (VerifyScheduling) {
+        TempTracker.getMaxUpwardPressureDelta(
+          Cand.SU->getInstr(),
+          &DAG->getPressureDiff(Cand.SU),
+          Cand.RPDelta,
+          DAG->getRegionCriticalPSets(),
+          DAG->getRegPressure().MaxSetPressure);
+      } else {
+        RPTracker.getUpwardPressureDelta(
+          Cand.SU->getInstr(),
+          DAG->getPressureDiff(Cand.SU),
+          Cand.RPDelta,
+          DAG->getRegionCriticalPSets(),
+          DAG->getRegPressure().MaxSetPressure);
+      }
+    }
+  }
+  DEBUG(if (Cand.RPDelta.Excess.isValid())
+          dbgs() << "  Try  SU(" << Cand.SU->NodeNum << ") "
+                 << TRI->getRegPressureSetName(Cand.RPDelta.Excess.getPSet())
+                 << ":" << Cand.RPDelta.Excess.getUnitInc() << "\n");
+}
+
 /// Apply a set of heursitics to a new candidate. Heuristics are currently
 /// hierarchical. This may be more efficient than a graduated cost model because
 /// we don't need to evaluate all aspects of the model for each node in the
@@ -2632,82 +2831,55 @@ static int biasPhysRegCopy(const SUnit *SU, bool isTop) {
 ///
 /// \param Cand provides the policy and current best candidate.
 /// \param TryCand refers to the next SUnit candidate, otherwise uninitialized.
-/// \param Zone describes the scheduled zone that we are extending.
-/// \param RPTracker describes reg pressure within the scheduled zone.
-/// \param TempTracker is a scratch pressure tracker to reuse in queries.
+/// \param Zone describes the scheduled zone that we are extending, or nullptr
+//              if Cand is from a different zone than TryCand.
 void GenericScheduler::tryCandidate(SchedCandidate &Cand,
                                     SchedCandidate &TryCand,
-                                    SchedBoundary &Zone,
-                                    const RegPressureTracker &RPTracker,
-                                    RegPressureTracker &TempTracker) {
-
-  if (DAG->isTrackingPressure()) {
-    // Always initialize TryCand's RPDelta.
-    if (Zone.isTop()) {
-      TempTracker.getMaxDownwardPressureDelta(
-        TryCand.SU->getInstr(),
-        TryCand.RPDelta,
-        DAG->getRegionCriticalPSets(),
-        DAG->getRegPressure().MaxSetPressure);
-    }
-    else {
-      if (VerifyScheduling) {
-        TempTracker.getMaxUpwardPressureDelta(
-          TryCand.SU->getInstr(),
-          &DAG->getPressureDiff(TryCand.SU),
-          TryCand.RPDelta,
-          DAG->getRegionCriticalPSets(),
-          DAG->getRegPressure().MaxSetPressure);
-      }
-      else {
-        RPTracker.getUpwardPressureDelta(
-          TryCand.SU->getInstr(),
-          DAG->getPressureDiff(TryCand.SU),
-          TryCand.RPDelta,
-          DAG->getRegionCriticalPSets(),
-          DAG->getRegPressure().MaxSetPressure);
-      }
-    }
-  }
-  DEBUG(if (TryCand.RPDelta.Excess.isValid())
-          dbgs() << "  Try  SU(" << TryCand.SU->NodeNum << ") "
-                 << TRI->getRegPressureSetName(TryCand.RPDelta.Excess.getPSet())
-                 << ":" << TryCand.RPDelta.Excess.getUnitInc() << "\n");
-
+                                    SchedBoundary *Zone) {
   // Initialize the candidate if needed.
   if (!Cand.isValid()) {
     TryCand.Reason = NodeOrder;
     return;
   }
 
-  if (tryGreater(biasPhysRegCopy(TryCand.SU, Zone.isTop()),
-                 biasPhysRegCopy(Cand.SU, Zone.isTop()),
+  if (tryGreater(biasPhysRegCopy(TryCand.SU, TryCand.AtTop),
+                 biasPhysRegCopy(Cand.SU, Cand.AtTop),
                  TryCand, Cand, PhysRegCopy))
     return;
 
   // Avoid exceeding the target's limit.
   if (DAG->isTrackingPressure() && tryPressure(TryCand.RPDelta.Excess,
                                                Cand.RPDelta.Excess,
-                                               TryCand, Cand, RegExcess))
+                                               TryCand, Cand, RegExcess, TRI,
+                                               DAG->MF))
     return;
 
   // Avoid increasing the max critical pressure in the scheduled region.
   if (DAG->isTrackingPressure() && tryPressure(TryCand.RPDelta.CriticalMax,
                                                Cand.RPDelta.CriticalMax,
-                                               TryCand, Cand, RegCritical))
+                                               TryCand, Cand, RegCritical, TRI,
+                                               DAG->MF))
     return;
 
-  // For loops that are acyclic path limited, aggressively schedule for latency.
-  // This can result in very long dependence chains scheduled in sequence, so
-  // once every cycle (when CurrMOps == 0), switch to normal heuristics.
-  if (Rem.IsAcyclicLatencyLimited && !Zone.getCurrMOps()
-      && tryLatency(TryCand, Cand, Zone))
-    return;
+  // We only compare a subset of features when comparing nodes between
+  // Top and Bottom boundary. Some properties are simply incomparable, in many
+  // other instances we should only override the other boundary if something
+  // is a clear good pick on one boundary. Skip heuristics that are more
+  // "tie-breaking" in nature.
+  bool SameBoundary = Zone != nullptr;
+  if (SameBoundary) {
+    // For loops that are acyclic path limited, aggressively schedule for
+    // latency. Within an single cycle, whenever CurrMOps > 0, allow normal
+    // heuristics to take precedence.
+    if (Rem.IsAcyclicLatencyLimited && !Zone->getCurrMOps() &&
+        tryLatency(TryCand, Cand, *Zone))
+      return;
 
-  // Prioritize instructions that read unbuffered resources by stall cycles.
-  if (tryLess(Zone.getLatencyStallCycles(TryCand.SU),
-              Zone.getLatencyStallCycles(Cand.SU), TryCand, Cand, Stall))
-    return;
+    // Prioritize instructions that read unbuffered resources by stall cycles.
+    if (tryLess(Zone->getLatencyStallCycles(TryCand.SU),
+                Zone->getLatencyStallCycles(Cand.SU), TryCand, Cand, Stall))
+      return;
+  }
 
   // Keep clustered nodes together to encourage downstream peephole
   // optimizations which may reduce resource requirements.
@@ -2715,52 +2887,52 @@ void GenericScheduler::tryCandidate(SchedCandidate &Cand,
   // This is a best effort to set things up for a post-RA pass. Optimizations
   // like generating loads of multiple registers should ideally be done within
   // the scheduler pass by combining the loads during DAG postprocessing.
-  const SUnit *NextClusterSU =
-    Zone.isTop() ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  if (tryGreater(TryCand.SU == NextClusterSU, Cand.SU == NextClusterSU,
+  const SUnit *CandNextClusterSU =
+    Cand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
+  const SUnit *TryCandNextClusterSU =
+    TryCand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
+  if (tryGreater(TryCand.SU == TryCandNextClusterSU,
+                 Cand.SU == CandNextClusterSU,
                  TryCand, Cand, Cluster))
     return;
 
-  // Weak edges are for clustering and other constraints.
-  if (tryLess(getWeakLeft(TryCand.SU, Zone.isTop()),
-              getWeakLeft(Cand.SU, Zone.isTop()),
-              TryCand, Cand, Weak)) {
-    return;
+  if (SameBoundary) {
+    // Weak edges are for clustering and other constraints.
+    if (tryLess(getWeakLeft(TryCand.SU, TryCand.AtTop),
+                getWeakLeft(Cand.SU, Cand.AtTop),
+                TryCand, Cand, Weak))
+      return;
   }
+
   // Avoid increasing the max pressure of the entire region.
   if (DAG->isTrackingPressure() && tryPressure(TryCand.RPDelta.CurrentMax,
                                                Cand.RPDelta.CurrentMax,
-                                               TryCand, Cand, RegMax))
+                                               TryCand, Cand, RegMax, TRI,
+                                               DAG->MF))
     return;
 
-  // Avoid critical resource consumption and balance the schedule.
-  TryCand.initResourceDelta(DAG, SchedModel);
-  if (tryLess(TryCand.ResDelta.CritResources, Cand.ResDelta.CritResources,
-              TryCand, Cand, ResourceReduce))
-    return;
-  if (tryGreater(TryCand.ResDelta.DemandedResources,
-                 Cand.ResDelta.DemandedResources,
-                 TryCand, Cand, ResourceDemand))
-    return;
+  if (SameBoundary) {
+    // Avoid critical resource consumption and balance the schedule.
+    TryCand.initResourceDelta(DAG, SchedModel);
+    if (tryLess(TryCand.ResDelta.CritResources, Cand.ResDelta.CritResources,
+                TryCand, Cand, ResourceReduce))
+      return;
+    if (tryGreater(TryCand.ResDelta.DemandedResources,
+                   Cand.ResDelta.DemandedResources,
+                   TryCand, Cand, ResourceDemand))
+      return;
 
-  // Avoid serializing long latency dependence chains.
-  // For acyclic path limited loops, latency was already checked above.
-  if (!RegionPolicy.DisableLatencyHeuristic && Cand.Policy.ReduceLatency &&
-      !Rem.IsAcyclicLatencyLimited && tryLatency(TryCand, Cand, Zone)) {
-    return;
-  }
+    // Avoid serializing long latency dependence chains.
+    // For acyclic path limited loops, latency was already checked above.
+    if (!RegionPolicy.DisableLatencyHeuristic && TryCand.Policy.ReduceLatency &&
+        !Rem.IsAcyclicLatencyLimited && tryLatency(TryCand, Cand, *Zone))
+      return;
 
-  // Prefer immediate defs/users of the last scheduled instruction. This is a
-  // local pressure avoidance strategy that also makes the machine code
-  // readable.
-  if (tryGreater(Zone.isNextSU(TryCand.SU), Zone.isNextSU(Cand.SU),
-                 TryCand, Cand, NextDefUse))
-    return;
-
-  // Fall through to original instruction order.
-  if ((Zone.isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum)
-      || (!Zone.isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum)) {
-    TryCand.Reason = NodeOrder;
+    // Fall through to original instruction order.
+    if ((Zone->isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum)
+        || (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum)) {
+      TryCand.Reason = NodeOrder;
+    }
   }
 }
 
@@ -2770,20 +2942,20 @@ void GenericScheduler::tryCandidate(SchedCandidate &Cand,
 /// DAG building. To adjust for the current scheduling location we need to
 /// maintain the number of vreg uses remaining to be top-scheduled.
 void GenericScheduler::pickNodeFromQueue(SchedBoundary &Zone,
+                                         const CandPolicy &ZonePolicy,
                                          const RegPressureTracker &RPTracker,
                                          SchedCandidate &Cand) {
-  ReadyQueue &Q = Zone.Available;
-
-  DEBUG(Q.dump());
-
   // getMaxPressureDelta temporarily modifies the tracker.
   RegPressureTracker &TempTracker = const_cast<RegPressureTracker&>(RPTracker);
 
-  for (ReadyQueue::iterator I = Q.begin(), E = Q.end(); I != E; ++I) {
+  ReadyQueue &Q = Zone.Available;
+  for (SUnit *SU : Q) {
 
-    SchedCandidate TryCand(Cand.Policy);
-    TryCand.SU = *I;
-    tryCandidate(Cand, TryCand, Zone, RPTracker, TempTracker);
+    SchedCandidate TryCand(ZonePolicy);
+    initCandidate(TryCand, SU, Zone.isTop(), RPTracker, TempTracker);
+    // Pass SchedBoundary only when comparing nodes from the same boundary.
+    SchedBoundary *ZoneArg = Cand.AtTop == TryCand.AtTop ? &Zone : nullptr;
+    tryCandidate(Cand, TryCand, ZoneArg);
     if (TryCand.Reason != NoCand) {
       // Initialize resource delta if needed in case future heuristics query it.
       if (TryCand.ResDelta == SchedResourceDelta())
@@ -2800,57 +2972,77 @@ SUnit *GenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   // efficient, but also provides the best heuristics for CriticalPSets.
   if (SUnit *SU = Bot.pickOnlyChoice()) {
     IsTopNode = false;
-    DEBUG(dbgs() << "Pick Bot NOCAND\n");
+    tracePick(Only1, false);
     return SU;
   }
   if (SUnit *SU = Top.pickOnlyChoice()) {
     IsTopNode = true;
-    DEBUG(dbgs() << "Pick Top NOCAND\n");
+    tracePick(Only1, true);
     return SU;
   }
-  CandPolicy NoPolicy;
-  SchedCandidate BotCand(NoPolicy);
-  SchedCandidate TopCand(NoPolicy);
   // Set the bottom-up policy based on the state of the current bottom zone and
   // the instructions outside the zone, including the top zone.
-  setPolicy(BotCand.Policy, /*IsPostRA=*/false, Bot, &Top);
+  CandPolicy BotPolicy;
+  setPolicy(BotPolicy, /*IsPostRA=*/false, Bot, &Top);
   // Set the top-down policy based on the state of the current top zone and
   // the instructions outside the zone, including the bottom zone.
-  setPolicy(TopCand.Policy, /*IsPostRA=*/false, Top, &Bot);
+  CandPolicy TopPolicy;
+  setPolicy(TopPolicy, /*IsPostRA=*/false, Top, &Bot);
 
-  // Prefer bottom scheduling when heuristics are silent.
-  pickNodeFromQueue(Bot, DAG->getBotRPTracker(), BotCand);
-  assert(BotCand.Reason != NoCand && "failed to find the first candidate");
-
-  // If either Q has a single candidate that provides the least increase in
-  // Excess pressure, we can immediately schedule from that Q.
-  //
-  // RegionCriticalPSets summarizes the pressure within the scheduled region and
-  // affects picking from either Q. If scheduling in one direction must
-  // increase pressure for one of the excess PSets, then schedule in that
-  // direction first to provide more freedom in the other direction.
-  if ((BotCand.Reason == RegExcess && !BotCand.isRepeat(RegExcess))
-      || (BotCand.Reason == RegCritical
-          && !BotCand.isRepeat(RegCritical)))
-  {
-    IsTopNode = false;
-    tracePick(BotCand, IsTopNode);
-    return BotCand.SU;
+  // See if BotCand is still valid (because we previously scheduled from Top).
+  DEBUG(dbgs() << "Picking from Bot:\n");
+  if (!BotCand.isValid() || BotCand.SU->isScheduled ||
+      BotCand.Policy != BotPolicy) {
+    BotCand.reset(CandPolicy());
+    pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), BotCand);
+    assert(BotCand.Reason != NoCand && "failed to find the first candidate");
+  } else {
+    DEBUG(traceCandidate(BotCand));
+#ifndef NDEBUG
+    if (VerifyScheduling) {
+      SchedCandidate TCand;
+      TCand.reset(CandPolicy());
+      pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), TCand);
+      assert(TCand.SU == BotCand.SU &&
+             "Last pick result should correspond to re-picking right now");
+    }
+#endif
   }
+
   // Check if the top Q has a better candidate.
-  pickNodeFromQueue(Top, DAG->getTopRPTracker(), TopCand);
-  assert(TopCand.Reason != NoCand && "failed to find the first candidate");
-
-  // Choose the queue with the most important (lowest enum) reason.
-  if (TopCand.Reason < BotCand.Reason) {
-    IsTopNode = true;
-    tracePick(TopCand, IsTopNode);
-    return TopCand.SU;
+  DEBUG(dbgs() << "Picking from Top:\n");
+  if (!TopCand.isValid() || TopCand.SU->isScheduled ||
+      TopCand.Policy != TopPolicy) {
+    TopCand.reset(CandPolicy());
+    pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TopCand);
+    assert(TopCand.Reason != NoCand && "failed to find the first candidate");
+  } else {
+    DEBUG(traceCandidate(TopCand));
+#ifndef NDEBUG
+    if (VerifyScheduling) {
+      SchedCandidate TCand;
+      TCand.reset(CandPolicy());
+      pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TCand);
+      assert(TCand.SU == TopCand.SU &&
+           "Last pick result should correspond to re-picking right now");
+    }
+#endif
   }
-  // Otherwise prefer the bottom candidate, in node order if all else failed.
-  IsTopNode = false;
-  tracePick(BotCand, IsTopNode);
-  return BotCand.SU;
+
+  // Pick best from BotCand and TopCand.
+  assert(BotCand.isValid());
+  assert(TopCand.isValid());
+  SchedCandidate Cand = BotCand;
+  TopCand.Reason = NoCand;
+  tryCandidate(Cand, TopCand, nullptr);
+  if (TopCand.Reason != NoCand) {
+    Cand.setBest(TopCand);
+    DEBUG(traceCandidate(Cand));
+  }
+
+  IsTopNode = Cand.AtTop;
+  tracePick(Cand);
+  return Cand.SU;
 }
 
 /// Pick the best node to balance the schedule. Implements MachineSchedStrategy.
@@ -2866,27 +3058,25 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
       SU = Top.pickOnlyChoice();
       if (!SU) {
         CandPolicy NoPolicy;
-        SchedCandidate TopCand(NoPolicy);
-        pickNodeFromQueue(Top, DAG->getTopRPTracker(), TopCand);
+        TopCand.reset(NoPolicy);
+        pickNodeFromQueue(Top, NoPolicy, DAG->getTopRPTracker(), TopCand);
         assert(TopCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(TopCand, true);
+        tracePick(TopCand);
         SU = TopCand.SU;
       }
       IsTopNode = true;
-    }
-    else if (RegionPolicy.OnlyBottomUp) {
+    } else if (RegionPolicy.OnlyBottomUp) {
       SU = Bot.pickOnlyChoice();
       if (!SU) {
         CandPolicy NoPolicy;
-        SchedCandidate BotCand(NoPolicy);
-        pickNodeFromQueue(Bot, DAG->getBotRPTracker(), BotCand);
+        BotCand.reset(NoPolicy);
+        pickNodeFromQueue(Bot, NoPolicy, DAG->getBotRPTracker(), BotCand);
         assert(BotCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(BotCand, false);
+        tracePick(BotCand);
         SU = BotCand.SU;
       }
       IsTopNode = false;
-    }
-    else {
+    } else {
       SU = pickNodeBidirectional(IsTopNode);
     }
   } while (SU->isScheduled);
@@ -2901,7 +3091,6 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
 }
 
 void GenericScheduler::reschedulePhysRegCopies(SUnit *SU, bool isTop) {
-
   MachineBasicBlock::iterator InsertPos = SU->getInstr();
   if (!isTop)
     ++InsertPos;
@@ -2909,18 +3098,17 @@ void GenericScheduler::reschedulePhysRegCopies(SUnit *SU, bool isTop) {
 
   // Find already scheduled copies with a single physreg dependence and move
   // them just above the scheduled instruction.
-  for (SmallVectorImpl<SDep>::iterator I = Deps.begin(), E = Deps.end();
-       I != E; ++I) {
-    if (I->getKind() != SDep::Data || !TRI->isPhysicalRegister(I->getReg()))
+  for (SDep &Dep : Deps) {
+    if (Dep.getKind() != SDep::Data || !TRI->isPhysicalRegister(Dep.getReg()))
       continue;
-    SUnit *DepSU = I->getSUnit();
+    SUnit *DepSU = Dep.getSUnit();
     if (isTop ? DepSU->Succs.size() > 1 : DepSU->Preds.size() > 1)
       continue;
     MachineInstr *Copy = DepSU->getInstr();
     if (!Copy->isCopy())
       continue;
     DEBUG(dbgs() << "  Rescheduling physreg copy ";
-          I->getSUnit()->dump(DAG));
+          Dep.getSUnit()->dump(DAG));
     DAG->moveInstruction(Copy, InsertPos);
   }
 }
@@ -2938,8 +3126,7 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
     Top.bumpNode(SU);
     if (SU->hasPhysRegUses)
       reschedulePhysRegCopies(SU, true);
-  }
-  else {
+  } else {
     SU->BotReadyCycle = std::max(SU->BotReadyCycle, Bot.getCurrCycle());
     Bot.bumpNode(SU);
     if (SU->hasPhysRegDefs)
@@ -2949,24 +3136,25 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
 
 /// Create the standard converging machine scheduler. This will be used as the
 /// default scheduler if the target does not set a default.
-static ScheduleDAGInstrs *createGenericSchedLive(MachineSchedContext *C) {
-  ScheduleDAGMILive *DAG = new ScheduleDAGMILive(C, make_unique<GenericScheduler>(C));
+ScheduleDAGMILive *llvm::createGenericSchedLive(MachineSchedContext *C) {
+  ScheduleDAGMILive *DAG =
+      new ScheduleDAGMILive(C, llvm::make_unique<GenericScheduler>(C));
   // Register DAG post-processors.
   //
   // FIXME: extend the mutation API to allow earlier mutations to instantiate
   // data and pass it to later mutations. Have a single mutation that gathers
   // the interesting nodes in one pass.
-  DAG->addMutation(make_unique<CopyConstrain>(DAG->TII, DAG->TRI));
-  if (EnableLoadCluster && DAG->TII->enableClusterLoads())
-    DAG->addMutation(make_unique<LoadClusterMutation>(DAG->TII, DAG->TRI));
-  if (EnableMacroFusion)
-    DAG->addMutation(make_unique<MacroFusion>(*DAG->TII, *DAG->TRI));
+  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
   return DAG;
+}
+
+static ScheduleDAGInstrs *createConveringSched(MachineSchedContext *C) {
+  return createGenericSchedLive(C);
 }
 
 static MachineSchedRegistry
 GenericSchedRegistry("converge", "Standard converging scheduler.",
-                     createGenericSchedLive);
+                     createConveringSched);
 
 //===----------------------------------------------------------------------===//
 // PostGenericScheduler - Generic PostRA implementation of MachineSchedStrategy.
@@ -2991,15 +3179,13 @@ void PostGenericScheduler::initialize(ScheduleDAGMI *Dag) {
   }
 }
 
-
 void PostGenericScheduler::registerRoots() {
   Rem.CriticalPath = DAG->ExitSU.getDepth();
 
   // Some roots may not feed into ExitSU. Check all of them in case.
-  for (SmallVectorImpl<SUnit*>::const_iterator
-         I = BotRoots.begin(), E = BotRoots.end(); I != E; ++I) {
-    if ((*I)->getDepth() > Rem.CriticalPath)
-      Rem.CriticalPath = (*I)->getDepth();
+  for (const SUnit *SU : BotRoots) {
+    if (SU->getDepth() > Rem.CriticalPath)
+      Rem.CriticalPath = SU->getDepth();
   }
   DEBUG(dbgs() << "Critical Path: (PGS-RR) " << Rem.CriticalPath << '\n');
   if (DumpCriticalPathLength) {
@@ -3025,6 +3211,12 @@ void PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
               Top.getLatencyStallCycles(Cand.SU), TryCand, Cand, Stall))
     return;
 
+  // Keep clustered nodes together.
+  if (tryGreater(TryCand.SU == DAG->getNextClusterSucc(),
+                 Cand.SU == DAG->getNextClusterSucc(),
+                 TryCand, Cand, Cluster))
+    return;
+
   // Avoid critical resource consumption and balance the schedule.
   if (tryLess(TryCand.ResDelta.CritResources, Cand.ResDelta.CritResources,
               TryCand, Cand, ResourceReduce))
@@ -3046,12 +3238,10 @@ void PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
 
 void PostGenericScheduler::pickNodeFromQueue(SchedCandidate &Cand) {
   ReadyQueue &Q = Top.Available;
-
-  DEBUG(Q.dump());
-
-  for (ReadyQueue::iterator I = Q.begin(), E = Q.end(); I != E; ++I) {
+  for (SUnit *SU : Q) {
     SchedCandidate TryCand(Cand.Policy);
-    TryCand.SU = *I;
+    TryCand.SU = SU;
+    TryCand.AtTop = true;
     TryCand.initResourceDelta(DAG, SchedModel);
     tryCandidate(Cand, TryCand);
     if (TryCand.Reason != NoCand) {
@@ -3070,7 +3260,9 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
   SUnit *SU;
   do {
     SU = Top.pickOnlyChoice();
-    if (!SU) {
+    if (SU) {
+      tracePick(Only1, true);
+    } else {
       CandPolicy NoPolicy;
       SchedCandidate TopCand(NoPolicy);
       // Set the top-down policy based on the state of the current top zone and
@@ -3078,7 +3270,7 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
       setPolicy(TopCand.Policy, /*IsPostRA=*/true, Top, nullptr);
       pickNodeFromQueue(TopCand);
       assert(TopCand.Reason != NoCand && "failed to find a candidate");
-      tracePick(TopCand, true);
+      tracePick(TopCand);
       SU = TopCand.SU;
     }
   } while (SU->isScheduled);
@@ -3097,9 +3289,9 @@ void PostGenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
   Top.bumpNode(SU);
 }
 
-/// Create a generic scheduler with no vreg liveness or DAG mutation passes.
-static ScheduleDAGInstrs *createGenericSchedPostRA(MachineSchedContext *C) {
-  return new ScheduleDAGMI(C, make_unique<PostGenericScheduler>(C), /*IsPostRA=*/true);
+ScheduleDAGMI *llvm::createGenericSchedPostRA(MachineSchedContext *C) {
+  return new ScheduleDAGMI(C, llvm::make_unique<PostGenericScheduler>(C),
+                           /*RemoveKillFlags=*/true);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3107,14 +3299,14 @@ static ScheduleDAGInstrs *createGenericSchedPostRA(MachineSchedContext *C) {
 //===----------------------------------------------------------------------===//
 
 namespace {
+
 /// \brief Order nodes by the ILP metric.
 struct ILPOrder {
-  const SchedDFSResult *DFSResult;
-  const BitVector *ScheduledTrees;
+  const SchedDFSResult *DFSResult = nullptr;
+  const BitVector *ScheduledTrees = nullptr;
   bool MaximizeILP;
 
-  ILPOrder(bool MaxILP)
-    : DFSResult(nullptr), ScheduledTrees(nullptr), MaximizeILP(MaxILP) {}
+  ILPOrder(bool MaxILP) : MaximizeILP(MaxILP) {}
 
   /// \brief Apply a less-than relation on node priority.
   ///
@@ -3143,12 +3335,13 @@ struct ILPOrder {
 
 /// \brief Schedule based on the ILP metric.
 class ILPScheduler : public MachineSchedStrategy {
-  ScheduleDAGMILive *DAG;
+  ScheduleDAGMILive *DAG = nullptr;
   ILPOrder Cmp;
 
   std::vector<SUnit*> ReadyQ;
+
 public:
-  ILPScheduler(bool MaximizeILP): DAG(nullptr), Cmp(MaximizeILP) {}
+  ILPScheduler(bool MaximizeILP) : Cmp(MaximizeILP) {}
 
   void initialize(ScheduleDAGMI *dag) override {
     assert(dag->hasVRegLiveness() && "ILPScheduler needs vreg liveness");
@@ -3201,14 +3394,16 @@ public:
     std::push_heap(ReadyQ.begin(), ReadyQ.end(), Cmp);
   }
 };
-} // namespace
+
+} // end anonymous namespace
 
 static ScheduleDAGInstrs *createILPMaxScheduler(MachineSchedContext *C) {
-  return new ScheduleDAGMILive(C, make_unique<ILPScheduler>(true));
+  return new ScheduleDAGMILive(C, llvm::make_unique<ILPScheduler>(true));
 }
 static ScheduleDAGInstrs *createILPMinScheduler(MachineSchedContext *C) {
-  return new ScheduleDAGMILive(C, make_unique<ILPScheduler>(false));
+  return new ScheduleDAGMILive(C, llvm::make_unique<ILPScheduler>(false));
 }
+
 static MachineSchedRegistry ILPMaxRegistry(
   "ilpmax", "Schedule bottom-up for max ILP", createILPMaxScheduler);
 static MachineSchedRegistry ILPMinRegistry(
@@ -3220,6 +3415,7 @@ static MachineSchedRegistry ILPMinRegistry(
 
 #ifndef NDEBUG
 namespace {
+
 /// Apply a less-than relation on the node order, which corresponds to the
 /// instruction order prior to scheduling. IsReverse implements greater-than.
 template<bool IsReverse>
@@ -3240,11 +3436,12 @@ class InstructionShuffler : public MachineSchedStrategy {
   // Using a less-than relation (SUnitOrder<false>) for the TopQ priority
   // gives nodes with a higher number higher priority causing the latest
   // instructions to be scheduled first.
-  PriorityQueue<SUnit*, std::vector<SUnit*>, SUnitOrder<false> >
+  PriorityQueue<SUnit*, std::vector<SUnit*>, SUnitOrder<false>>
     TopQ;
   // When scheduling bottom-up, use greater-than as the queue priority.
-  PriorityQueue<SUnit*, std::vector<SUnit*>, SUnitOrder<true> >
+  PriorityQueue<SUnit*, std::vector<SUnit*>, SUnitOrder<true>>
     BottomQ;
+
 public:
   InstructionShuffler(bool alternate, bool topdown)
     : IsAlternating(alternate), IsTopDown(topdown) {}
@@ -3266,8 +3463,7 @@ public:
         TopQ.pop();
       } while (SU->isScheduled);
       IsTopNode = true;
-    }
-    else {
+    } else {
       do {
         if (BottomQ.empty()) return nullptr;
         SU = BottomQ.top();
@@ -3289,15 +3485,18 @@ public:
     BottomQ.push(SU);
   }
 };
-} // namespace
+
+} // end anonymous namespace
 
 static ScheduleDAGInstrs *createInstructionShuffler(MachineSchedContext *C) {
   bool Alternate = !ForceTopDown && !ForceBottomUp;
   bool TopDown = !ForceBottomUp;
   assert((TopDown || !ForceTopDown) &&
          "-misched-topdown incompatible with -misched-bottomup");
-  return new ScheduleDAGMILive(C, make_unique<InstructionShuffler>(Alternate, TopDown));
+  return new ScheduleDAGMILive(
+      C, llvm::make_unique<InstructionShuffler>(Alternate, TopDown));
 }
+
 static MachineSchedRegistry ShufflerRegistry(
   "shuffle", "Shuffle machine instructions alternating directions",
   createInstructionShuffler);
@@ -3315,8 +3514,7 @@ template<> struct GraphTraits<
 
 template<>
 struct DOTGraphTraits<ScheduleDAGMI*> : public DefaultDOTGraphTraits {
-
-  DOTGraphTraits (bool isSimple=false) : DefaultDOTGraphTraits(isSimple) {}
+  DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
   static std::string getGraphName(const ScheduleDAG *G) {
     return G->MF.getName();
@@ -3373,7 +3571,8 @@ struct DOTGraphTraits<ScheduleDAGMI*> : public DefaultDOTGraphTraits {
     return Str;
   }
 };
-} // namespace llvm
+
+} // end namespace llvm
 #endif // NDEBUG
 
 /// viewGraph - Pop up a ghostview window with the reachable parts of the DAG

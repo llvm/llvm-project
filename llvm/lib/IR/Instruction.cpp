@@ -12,9 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Instruction.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
@@ -41,8 +43,6 @@ Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
   InsertAtEnd->getInstList().push_back(this);
 }
 
-
-// Out of line virtual method, so the vtable, etc has a home.
 Instruction::~Instruction() {
   assert(!Parent && "Instruction still linked in the program!");
   if (hasMetadataHashEntry())
@@ -58,10 +58,9 @@ const Module *Instruction::getModule() const {
   return getParent()->getModule();
 }
 
-Module *Instruction::getModule() {
-  return getParent()->getModule();
+const Function *Instruction::getFunction() const {
+  return getParent()->getParent();
 }
-
 
 void Instruction::removeFromParent() {
   getParent()->getInstList().remove(getIterator());
@@ -71,68 +70,103 @@ iplist<Instruction>::iterator Instruction::eraseFromParent() {
   return getParent()->getInstList().erase(getIterator());
 }
 
-/// insertBefore - Insert an unlinked instructions into a basic block
-/// immediately before the specified instruction.
+/// Insert an unlinked instruction into a basic block immediately before the
+/// specified instruction.
 void Instruction::insertBefore(Instruction *InsertPos) {
   InsertPos->getParent()->getInstList().insert(InsertPos->getIterator(), this);
 }
 
-/// insertAfter - Insert an unlinked instructions into a basic block
-/// immediately after the specified instruction.
+/// Insert an unlinked instruction into a basic block immediately after the
+/// specified instruction.
 void Instruction::insertAfter(Instruction *InsertPos) {
   InsertPos->getParent()->getInstList().insertAfter(InsertPos->getIterator(),
                                                     this);
 }
 
-/// moveBefore - Unlink this instruction from its current basic block and
-/// insert it into the basic block that MovePos lives in, right before
-/// MovePos.
+/// Unlink this instruction from its current basic block and insert it into the
+/// basic block that MovePos lives in, right before MovePos.
 void Instruction::moveBefore(Instruction *MovePos) {
-  MovePos->getParent()->getInstList().splice(
-      MovePos->getIterator(), getParent()->getInstList(), getIterator());
+  moveBefore(*MovePos->getParent(), MovePos->getIterator());
 }
 
-/// Set or clear the unsafe-algebra flag on this instruction, which must be an
-/// operator which supports this flag. See LangRef.html for the meaning of this
-/// flag.
+void Instruction::moveBefore(BasicBlock &BB,
+                             SymbolTableList<Instruction>::iterator I) {
+  assert(I == BB.end() || I->getParent() == &BB);
+  BB.getInstList().splice(I, getParent()->getInstList(), getIterator());
+}
+
+void Instruction::setHasNoUnsignedWrap(bool b) {
+  cast<OverflowingBinaryOperator>(this)->setHasNoUnsignedWrap(b);
+}
+
+void Instruction::setHasNoSignedWrap(bool b) {
+  cast<OverflowingBinaryOperator>(this)->setHasNoSignedWrap(b);
+}
+
+void Instruction::setIsExact(bool b) {
+  cast<PossiblyExactOperator>(this)->setIsExact(b);
+}
+
+bool Instruction::hasNoUnsignedWrap() const {
+  return cast<OverflowingBinaryOperator>(this)->hasNoUnsignedWrap();
+}
+
+bool Instruction::hasNoSignedWrap() const {
+  return cast<OverflowingBinaryOperator>(this)->hasNoSignedWrap();
+}
+
+void Instruction::dropPoisonGeneratingFlags() {
+  switch (getOpcode()) {
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::Shl:
+    cast<OverflowingBinaryOperator>(this)->setHasNoUnsignedWrap(false);
+    cast<OverflowingBinaryOperator>(this)->setHasNoSignedWrap(false);
+    break;
+
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::AShr:
+  case Instruction::LShr:
+    cast<PossiblyExactOperator>(this)->setIsExact(false);
+    break;
+
+  case Instruction::GetElementPtr:
+    cast<GetElementPtrInst>(this)->setIsInBounds(false);
+    break;
+  }
+}
+
+bool Instruction::isExact() const {
+  return cast<PossiblyExactOperator>(this)->isExact();
+}
+
 void Instruction::setHasUnsafeAlgebra(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setHasUnsafeAlgebra(B);
 }
 
-/// Set or clear the NoNaNs flag on this instruction, which must be an operator
-/// which supports this flag. See LangRef.html for the meaning of this flag.
 void Instruction::setHasNoNaNs(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setHasNoNaNs(B);
 }
 
-/// Set or clear the no-infs flag on this instruction, which must be an operator
-/// which supports this flag. See LangRef.html for the meaning of this flag.
 void Instruction::setHasNoInfs(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setHasNoInfs(B);
 }
 
-/// Set or clear the no-signed-zeros flag on this instruction, which must be an
-/// operator which supports this flag. See LangRef.html for the meaning of this
-/// flag.
 void Instruction::setHasNoSignedZeros(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setHasNoSignedZeros(B);
 }
 
-/// Set or clear the allow-reciprocal flag on this instruction, which must be an
-/// operator which supports this flag. See LangRef.html for the meaning of this
-/// flag.
 void Instruction::setHasAllowReciprocal(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setHasAllowReciprocal(B);
 }
 
-/// Convenience function for setting all the fast-math flags on this
-/// instruction, which must be an operator which supports these flags. See
-/// LangRef.html for the meaning of these flats.
 void Instruction::setFastMathFlags(FastMathFlags FMF) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setFastMathFlags(FMF);
@@ -143,49 +177,93 @@ void Instruction::copyFastMathFlags(FastMathFlags FMF) {
   cast<FPMathOperator>(this)->copyFastMathFlags(FMF);
 }
 
-/// Determine whether the unsafe-algebra flag is set.
 bool Instruction::hasUnsafeAlgebra() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->hasUnsafeAlgebra();
 }
 
-/// Determine whether the no-NaNs flag is set.
 bool Instruction::hasNoNaNs() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->hasNoNaNs();
 }
 
-/// Determine whether the no-infs flag is set.
 bool Instruction::hasNoInfs() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->hasNoInfs();
 }
 
-/// Determine whether the no-signed-zeros flag is set.
 bool Instruction::hasNoSignedZeros() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->hasNoSignedZeros();
 }
 
-/// Determine whether the allow-reciprocal flag is set.
 bool Instruction::hasAllowReciprocal() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->hasAllowReciprocal();
 }
 
-/// Convenience function for getting all the fast-math flags, which must be an
-/// operator which supports these flags. See LangRef.html for the meaning of
-/// these flags.
+bool Instruction::hasAllowContract() const {
+  assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
+  return cast<FPMathOperator>(this)->hasAllowContract();
+}
+
 FastMathFlags Instruction::getFastMathFlags() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->getFastMathFlags();
 }
 
-/// Copy I's fast-math flags
 void Instruction::copyFastMathFlags(const Instruction *I) {
   copyFastMathFlags(I->getFastMathFlags());
 }
 
+void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
+  // Copy the wrapping flags.
+  if (IncludeWrapFlags && isa<OverflowingBinaryOperator>(this)) {
+    if (auto *OB = dyn_cast<OverflowingBinaryOperator>(V)) {
+      setHasNoSignedWrap(OB->hasNoSignedWrap());
+      setHasNoUnsignedWrap(OB->hasNoUnsignedWrap());
+    }
+  }
+
+  // Copy the exact flag.
+  if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
+    if (isa<PossiblyExactOperator>(this))
+      setIsExact(PE->isExact());
+
+  // Copy the fast-math flags.
+  if (auto *FP = dyn_cast<FPMathOperator>(V))
+    if (isa<FPMathOperator>(this))
+      copyFastMathFlags(FP->getFastMathFlags());
+
+  if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
+    if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
+      DestGEP->setIsInBounds(SrcGEP->isInBounds() | DestGEP->isInBounds());
+}
+
+void Instruction::andIRFlags(const Value *V) {
+  if (auto *OB = dyn_cast<OverflowingBinaryOperator>(V)) {
+    if (isa<OverflowingBinaryOperator>(this)) {
+      setHasNoSignedWrap(hasNoSignedWrap() & OB->hasNoSignedWrap());
+      setHasNoUnsignedWrap(hasNoUnsignedWrap() & OB->hasNoUnsignedWrap());
+    }
+  }
+
+  if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
+    if (isa<PossiblyExactOperator>(this))
+      setIsExact(isExact() & PE->isExact());
+
+  if (auto *FP = dyn_cast<FPMathOperator>(V)) {
+    if (isa<FPMathOperator>(this)) {
+      FastMathFlags FM = getFastMathFlags();
+      FM &= FP->getFastMathFlags();
+      copyFastMathFlags(FM);
+    }
+  }
+
+  if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
+    if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
+      DestGEP->setIsInBounds(SrcGEP->isInBounds() & DestGEP->isInBounds());
+}
 
 const char *Instruction::getOpcodeName(unsigned OpCode) {
   switch (OpCode) {
@@ -197,12 +275,10 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case Invoke: return "invoke";
   case Resume: return "resume";
   case Unreachable: return "unreachable";
-  case CleanupEndPad: return "cleanupendpad";
   case CleanupRet: return "cleanupret";
-  case CatchEndPad: return "catchendpad";
   case CatchRet: return "catchret";
   case CatchPad: return "catchpad";
-  case TerminatePad: return "terminatepad";
+  case CatchSwitch: return "catchswitch";
 
   // Standard binary operators...
   case Add: return "add";
@@ -269,42 +345,48 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   }
 }
 
-/// Return true if both instructions have the same special state
-/// This must be kept in sync with lib/Transforms/IPO/MergeFunctions.cpp.
+/// Return true if both instructions have the same special state. This must be
+/// kept in sync with FunctionComparator::cmpOperations in
+/// lib/Transforms/IPO/MergeFunctions.cpp.
 static bool haveSameSpecialState(const Instruction *I1, const Instruction *I2,
                                  bool IgnoreAlignment = false) {
   assert(I1->getOpcode() == I2->getOpcode() &&
          "Can not compare special state of different instructions");
 
+  if (const AllocaInst *AI = dyn_cast<AllocaInst>(I1))
+    return AI->getAllocatedType() == cast<AllocaInst>(I2)->getAllocatedType() &&
+           (AI->getAlignment() == cast<AllocaInst>(I2)->getAlignment() ||
+            IgnoreAlignment);
   if (const LoadInst *LI = dyn_cast<LoadInst>(I1))
     return LI->isVolatile() == cast<LoadInst>(I2)->isVolatile() &&
            (LI->getAlignment() == cast<LoadInst>(I2)->getAlignment() ||
             IgnoreAlignment) &&
            LI->getOrdering() == cast<LoadInst>(I2)->getOrdering() &&
-           LI->getSynchScope() == cast<LoadInst>(I2)->getSynchScope();
+           LI->getSyncScopeID() == cast<LoadInst>(I2)->getSyncScopeID();
   if (const StoreInst *SI = dyn_cast<StoreInst>(I1))
     return SI->isVolatile() == cast<StoreInst>(I2)->isVolatile() &&
            (SI->getAlignment() == cast<StoreInst>(I2)->getAlignment() ||
             IgnoreAlignment) &&
            SI->getOrdering() == cast<StoreInst>(I2)->getOrdering() &&
-           SI->getSynchScope() == cast<StoreInst>(I2)->getSynchScope();
+           SI->getSyncScopeID() == cast<StoreInst>(I2)->getSyncScopeID();
   if (const CmpInst *CI = dyn_cast<CmpInst>(I1))
     return CI->getPredicate() == cast<CmpInst>(I2)->getPredicate();
   if (const CallInst *CI = dyn_cast<CallInst>(I1))
     return CI->isTailCall() == cast<CallInst>(I2)->isTailCall() &&
            CI->getCallingConv() == cast<CallInst>(I2)->getCallingConv() &&
-           CI->getAttributes() == cast<CallInst>(I2)->getAttributes();
+           CI->getAttributes() == cast<CallInst>(I2)->getAttributes() &&
+           CI->hasIdenticalOperandBundleSchema(*cast<CallInst>(I2));
   if (const InvokeInst *CI = dyn_cast<InvokeInst>(I1))
     return CI->getCallingConv() == cast<InvokeInst>(I2)->getCallingConv() &&
-           CI->getAttributes() ==
-             cast<InvokeInst>(I2)->getAttributes();
+           CI->getAttributes() == cast<InvokeInst>(I2)->getAttributes() &&
+           CI->hasIdenticalOperandBundleSchema(*cast<InvokeInst>(I2));
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(I1))
     return IVI->getIndices() == cast<InsertValueInst>(I2)->getIndices();
   if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(I1))
     return EVI->getIndices() == cast<ExtractValueInst>(I2)->getIndices();
   if (const FenceInst *FI = dyn_cast<FenceInst>(I1))
     return FI->getOrdering() == cast<FenceInst>(I2)->getOrdering() &&
-           FI->getSynchScope() == cast<FenceInst>(I2)->getSynchScope();
+           FI->getSyncScopeID() == cast<FenceInst>(I2)->getSyncScopeID();
   if (const AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(I1))
     return CXI->isVolatile() == cast<AtomicCmpXchgInst>(I2)->isVolatile() &&
            CXI->isWeak() == cast<AtomicCmpXchgInst>(I2)->isWeak() &&
@@ -312,27 +394,22 @@ static bool haveSameSpecialState(const Instruction *I1, const Instruction *I2,
                cast<AtomicCmpXchgInst>(I2)->getSuccessOrdering() &&
            CXI->getFailureOrdering() ==
                cast<AtomicCmpXchgInst>(I2)->getFailureOrdering() &&
-           CXI->getSynchScope() == cast<AtomicCmpXchgInst>(I2)->getSynchScope();
+           CXI->getSyncScopeID() ==
+               cast<AtomicCmpXchgInst>(I2)->getSyncScopeID();
   if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I1))
     return RMWI->getOperation() == cast<AtomicRMWInst>(I2)->getOperation() &&
            RMWI->isVolatile() == cast<AtomicRMWInst>(I2)->isVolatile() &&
            RMWI->getOrdering() == cast<AtomicRMWInst>(I2)->getOrdering() &&
-           RMWI->getSynchScope() == cast<AtomicRMWInst>(I2)->getSynchScope();
+           RMWI->getSyncScopeID() == cast<AtomicRMWInst>(I2)->getSyncScopeID();
 
   return true;
 }
 
-/// isIdenticalTo - Return true if the specified instruction is exactly
-/// identical to the current one.  This means that all operands match and any
-/// extra information (e.g. load is volatile) agree.
 bool Instruction::isIdenticalTo(const Instruction *I) const {
   return isIdenticalToWhenDefined(I) &&
          SubclassOptionalData == I->SubclassOptionalData;
 }
 
-/// isIdenticalToWhenDefined - This is like isIdenticalTo, except that it
-/// ignores the SubclassOptionalData flags, which specify conditions
-/// under which the instruction's result is undefined.
 bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
   if (getOpcode() != I->getOpcode() ||
       getNumOperands() != I->getNumOperands() ||
@@ -357,8 +434,7 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
   return haveSameSpecialState(this, I);
 }
 
-// isSameOperationAs
-// This should be kept in sync with isEquivalentOperation in
+// Keep this in sync with FunctionComparator::cmpOperations in
 // lib/Transforms/IPO/MergeFunctions.cpp.
 bool Instruction::isSameOperationAs(const Instruction *I,
                                     unsigned flags) const {
@@ -384,9 +460,6 @@ bool Instruction::isSameOperationAs(const Instruction *I,
   return haveSameSpecialState(this, I, IgnoreAlignment);
 }
 
-/// isUsedOutsideOfBlock - Return true if there are any uses of I outside of the
-/// specified block.  Note that PHI nodes are considered to evaluate their
-/// operands in the corresponding predecessor block.
 bool Instruction::isUsedOutsideOfBlock(const BasicBlock *BB) const {
   for (const Use &U : uses()) {
     // PHI nodes uses values in the corresponding predecessor block.  For other
@@ -405,8 +478,6 @@ bool Instruction::isUsedOutsideOfBlock(const BasicBlock *BB) const {
   return false;
 }
 
-/// mayReadFromMemory - Return true if this instruction may read memory.
-///
 bool Instruction::mayReadFromMemory() const {
   switch (getOpcode()) {
   default: return false;
@@ -417,7 +488,6 @@ bool Instruction::mayReadFromMemory() const {
   case Instruction::AtomicRMW:
   case Instruction::CatchPad:
   case Instruction::CatchRet:
-  case Instruction::TerminatePad:
     return true;
   case Instruction::Call:
     return !cast<CallInst>(this)->doesNotAccessMemory();
@@ -428,8 +498,6 @@ bool Instruction::mayReadFromMemory() const {
   }
 }
 
-/// mayWriteToMemory - Return true if this instruction may modify memory.
-///
 bool Instruction::mayWriteToMemory() const {
   switch (getOpcode()) {
   default: return false;
@@ -440,7 +508,6 @@ bool Instruction::mayWriteToMemory() const {
   case Instruction::AtomicRMW:
   case Instruction::CatchPad:
   case Instruction::CatchRet:
-  case Instruction::TerminatePad:
     return true;
   case Instruction::Call:
     return !cast<CallInst>(this)->onlyReadsMemory();
@@ -460,9 +527,33 @@ bool Instruction::isAtomic() const {
   case Instruction::Fence:
     return true;
   case Instruction::Load:
-    return cast<LoadInst>(this)->getOrdering() != NotAtomic;
+    return cast<LoadInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
   case Instruction::Store:
-    return cast<StoreInst>(this)->getOrdering() != NotAtomic;
+    return cast<StoreInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+  }
+}
+
+bool Instruction::hasAtomicLoad() const {
+  assert(isAtomic());
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+  case Instruction::Load:
+    return true;
+  }
+}
+
+bool Instruction::hasAtomicStore() const {
+  assert(isAtomic());
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+  case Instruction::Store:
+    return true;
   }
 }
 
@@ -471,30 +562,9 @@ bool Instruction::mayThrow() const {
     return !CI->doesNotThrow();
   if (const auto *CRI = dyn_cast<CleanupReturnInst>(this))
     return CRI->unwindsToCaller();
-  if (const auto *CEPI = dyn_cast<CleanupEndPadInst>(this))
-    return CEPI->unwindsToCaller();
-  if (const auto *CEPI = dyn_cast<CatchEndPadInst>(this))
-    return CEPI->unwindsToCaller();
-  if (const auto *TPI = dyn_cast<TerminatePadInst>(this))
-    return TPI->unwindsToCaller();
+  if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(this))
+    return CatchSwitch->unwindsToCaller();
   return isa<ResumeInst>(this);
-}
-
-bool Instruction::mayReturn() const {
-  if (const CallInst *CI = dyn_cast<CallInst>(this))
-    return !CI->doesNotReturn();
-  return true;
-}
-
-/// isAssociative - Return true if the instruction is associative:
-///
-///   Associative operators satisfy:  x op (y op z) === (x op y) op z
-///
-/// In LLVM, the Add, Mul, And, Or, and Xor operators are associative.
-///
-bool Instruction::isAssociative(unsigned Opcode) {
-  return Opcode == And || Opcode == Or || Opcode == Xor ||
-         Opcode == Add || Opcode == Mul;
 }
 
 bool Instruction::isAssociative() const {
@@ -511,53 +581,47 @@ bool Instruction::isAssociative() const {
   }
 }
 
-/// isCommutative - Return true if the instruction is commutative:
-///
-///   Commutative operators satisfy: (x op y) === (y op x)
-///
-/// In LLVM, these are the associative operators, plus SetEQ and SetNE, when
-/// applied to any type.
-///
-bool Instruction::isCommutative(unsigned op) {
-  switch (op) {
-  case Add:
-  case FAdd:
-  case Mul:
-  case FMul:
-  case And:
-  case Or:
-  case Xor:
-    return true;
-  default:
-    return false;
-  }
-}
-
-/// isIdempotent - Return true if the instruction is idempotent:
-///
-///   Idempotent operators satisfy:  x op x === x
-///
-/// In LLVM, the And and Or operators are idempotent.
-///
-bool Instruction::isIdempotent(unsigned Opcode) {
-  return Opcode == And || Opcode == Or;
-}
-
-/// isNilpotent - Return true if the instruction is nilpotent:
-///
-///   Nilpotent operators satisfy:  x op x === Id,
-///
-///   where Id is the identity for the operator, i.e. a constant such that
-///     x op Id === x and Id op x === x for all x.
-///
-/// In LLVM, the Xor operator is nilpotent.
-///
-bool Instruction::isNilpotent(unsigned Opcode) {
-  return Opcode == Xor;
-}
-
 Instruction *Instruction::cloneImpl() const {
   llvm_unreachable("Subclass of Instruction failed to implement cloneImpl");
+}
+
+void Instruction::swapProfMetadata() {
+  MDNode *ProfileData = getMetadata(LLVMContext::MD_prof);
+  if (!ProfileData || ProfileData->getNumOperands() != 3 ||
+      !isa<MDString>(ProfileData->getOperand(0)))
+    return;
+
+  MDString *MDName = cast<MDString>(ProfileData->getOperand(0));
+  if (MDName->getString() != "branch_weights")
+    return;
+
+  // The first operand is the name. Fetch them backwards and build a new one.
+  Metadata *Ops[] = {ProfileData->getOperand(0), ProfileData->getOperand(2),
+                     ProfileData->getOperand(1)};
+  setMetadata(LLVMContext::MD_prof,
+              MDNode::get(ProfileData->getContext(), Ops));
+}
+
+void Instruction::copyMetadata(const Instruction &SrcInst,
+                               ArrayRef<unsigned> WL) {
+  if (!SrcInst.hasMetadata())
+    return;
+
+  DenseSet<unsigned> WLS;
+  for (unsigned M : WL)
+    WLS.insert(M);
+
+  // Otherwise, enumerate and copy over metadata from the old instruction to the
+  // new one.
+  SmallVector<std::pair<unsigned, MDNode *>, 4> TheMDs;
+  SrcInst.getAllMetadataOtherThanDebugLoc(TheMDs);
+  for (const auto &MD : TheMDs) {
+    if (WL.empty() || WLS.count(MD.first))
+      setMetadata(MD.first, MD.second);
+  }
+  if (WL.empty() || WLS.count(LLVMContext::MD_dbg))
+    setDebugLoc(SrcInst.getDebugLoc());
+  return;
 }
 
 Instruction *Instruction::clone() const {
@@ -574,16 +638,58 @@ Instruction *Instruction::clone() const {
   }
 
   New->SubclassOptionalData = SubclassOptionalData;
-  if (!hasMetadata())
-    return New;
-
-  // Otherwise, enumerate and copy over metadata from the old instruction to the
-  // new one.
-  SmallVector<std::pair<unsigned, MDNode *>, 4> TheMDs;
-  getAllMetadataOtherThanDebugLoc(TheMDs);
-  for (const auto &MD : TheMDs)
-    New->setMetadata(MD.first, MD.second);
-
-  New->setDebugLoc(getDebugLoc());
+  New->copyMetadata(*this);
   return New;
+}
+
+void Instruction::updateProfWeight(uint64_t S, uint64_t T) {
+  auto *ProfileData = getMetadata(LLVMContext::MD_prof);
+  if (ProfileData == nullptr)
+    return;
+
+  auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
+  if (!ProfDataName || (!ProfDataName->getString().equals("branch_weights") &&
+                        !ProfDataName->getString().equals("VP")))
+    return;
+
+  MDBuilder MDB(getContext());
+  SmallVector<Metadata *, 3> Vals;
+  Vals.push_back(ProfileData->getOperand(0));
+  APInt APS(128, S), APT(128, T);
+  if (ProfDataName->getString().equals("branch_weights"))
+    for (unsigned i = 1; i < ProfileData->getNumOperands(); i++) {
+      // Using APInt::div may be expensive, but most cases should fit 64 bits.
+      APInt Val(128,
+                mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(i))
+                    ->getValue()
+                    .getZExtValue());
+      Val *= APS;
+      Vals.push_back(MDB.createConstant(
+          ConstantInt::get(Type::getInt64Ty(getContext()),
+                           Val.udiv(APT).getLimitedValue())));
+    }
+  else if (ProfDataName->getString().equals("VP"))
+    for (unsigned i = 1; i < ProfileData->getNumOperands(); i += 2) {
+      // The first value is the key of the value profile, which will not change.
+      Vals.push_back(ProfileData->getOperand(i));
+      // Using APInt::div may be expensive, but most cases should fit 64 bits.
+      APInt Val(128,
+                mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(i + 1))
+                    ->getValue()
+                    .getZExtValue());
+      Val *= APS;
+      Vals.push_back(MDB.createConstant(
+          ConstantInt::get(Type::getInt64Ty(getContext()),
+                           Val.udiv(APT).getLimitedValue())));
+    }
+  setMetadata(LLVMContext::MD_prof, MDNode::get(getContext(), Vals));
+}
+
+void Instruction::setProfWeight(uint64_t W) {
+  assert((isa<CallInst>(this) || isa<InvokeInst>(this)) &&
+         "Can only set weights for call and invoke instrucitons");
+  SmallVector<uint32_t, 1> Weights;
+  Weights.push_back(W);
+  MDBuilder MDB(getContext());
+  setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
 }

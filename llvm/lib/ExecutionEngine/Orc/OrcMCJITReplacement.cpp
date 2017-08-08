@@ -124,5 +124,10 @@ OrcMCJITReplacement::runFunction(Function *F,
   llvm_unreachable("Full-featured argument passing not supported yet!");
 }
 
+void OrcMCJITReplacement::runStaticConstructorsDestructors(bool isDtors) {
+  for (auto &M : LocalModules)
+    ExecutionEngine::runStaticConstructorsDestructors(*M, isDtors);
+}
+
 } // End namespace orc.
 } // End namespace llvm.

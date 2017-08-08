@@ -22,10 +22,24 @@ def err_drv_unknown_stdin_type_clang_cl : Error<
 def err_drv_unknown_language : Error<"language not recognized: '%0'">;
 def err_drv_invalid_arch_name : Error<
   "invalid arch name '%0'">;
+def err_drv_cuda_bad_gpu_arch : Error<"Unsupported CUDA gpu architecture: %0">;
+def err_drv_no_cuda_installation : Error<
+  "cannot find CUDA installation.  Provide its path via --cuda-path, or pass "
+  "-nocudainc to build without CUDA includes.">;
+def err_drv_no_cuda_libdevice : Error<
+  "cannot find libdevice for %0. Provide path to different CUDA installation "
+  "via --cuda-path, or pass -nocudalib to build without linking with libdevice.">;
+def err_drv_cuda_version_too_low : Error<
+  "GPU arch %1 requires CUDA version at least %3, but installation at %0 is %2. "
+  "Use --cuda-path to specify a different CUDA install, or pass "
+  "--no-cuda-version-check.">;
+def err_drv_cuda_nvptx_host : Error<"unsupported use of NVPTX for host compilation.">;
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<
   "invalid linker name in argument '%0'">;
+def err_drv_invalid_pgo_instrumentor : Error<
+  "invalid PGO instrumentor in argument '%0'">;
 def err_drv_invalid_rtlib_name : Error<
   "invalid runtime library name in argument '%0'">;
 def err_drv_unsupported_rtlib_for_platform : Error<
@@ -71,12 +85,16 @@ def err_drv_clang_unsupported : Error<
   "the clang compiler does not support '%0'">;
 def err_drv_clang_unsupported_opt_cxx_darwin_i386 : Error<
   "the clang compiler does not support '%0' for C++ on Darwin/i386">;
+def err_drv_clang_unsupported_opt_faltivec : Error<
+  "the clang compiler does not support '%0', %1">;
 def err_drv_command_failed : Error<
   "%0 command failed with exit code %1 (use -v to see invocation)">;
+def err_drv_compilationdatabase : Error<
+  "compilation database '%0' could not be opened: %1">;
 def err_drv_command_signalled : Error<
   "%0 command failed due to signal (use -v to see invocation)">;
 def err_drv_force_crash : Error<
-  "failing because environment variable '%0' is set">;
+  "failing because %select{environment variable 'FORCE_CLANG_DIAGNOSTICS_CRASH' is set|'-gen-reproducer' is used}0">;
 def err_drv_invalid_mfloat_abi : Error<
   "invalid float ABI '%0'">;
 def err_drv_invalid_libcxx_deployment : Error<
@@ -92,6 +110,23 @@ def err_target_unsupported_arch
 def err_drv_I_dash_not_supported : Error<
   "'%0' not supported, please use -iquote instead">;
 def err_drv_unknown_argument : Error<"unknown argument: '%0'">;
+def warn_drv_unknown_argument_clang_cl : Warning<
+  "unknown argument ignored in clang-cl: '%0'">,
+  InGroup<UnknownArgument>;
+
+def warn_drv_ycyu_no_arg_clang_cl : Warning<
+  "support for '%0' without a filename not implemented yet; flag ignored">,
+  InGroup<ClangClPch>;
+def warn_drv_ycyu_different_arg_clang_cl : Warning<
+  "support for '/Yc' and '/Yu' with different filenames not implemented yet; flags ignored">,
+  InGroup<ClangClPch>;
+def warn_drv_ycyu_no_fi_arg_clang_cl : Warning<
+  "support for '%0' without a corresponding /FI flag not implemented yet; flag ignored">,
+  InGroup<ClangClPch>;
+def warn_drv_yc_multiple_inputs_clang_cl : Warning<
+  "support for '/Yc' with more than one source file not implemented yet; flag ignored">,
+  InGroup<ClangClPch>;
+
 def err_drv_invalid_value : Error<"invalid value '%1' in '%0'">;
 def err_drv_invalid_int_value : Error<"invalid integral value '%1' in '%0'">;
 def err_drv_invalid_remap_file : Error<
@@ -100,12 +135,14 @@ def err_drv_invalid_gcc_output_type : Error<
     "invalid output type '%0' for use with gcc tool">;
 def err_drv_cc_print_options_failure : Error<
     "unable to open CC_PRINT_OPTIONS file: %0">;
+def err_drv_lto_without_lld : Error<"LTO requires -fuse-ld=lld">;
 def err_drv_preamble_format : Error<
     "incorrect format for -preamble-bytes=N,END">;
+def err_invalid_ios_deployment_target : Error<
+  "invalid iOS deployment version '%0', iOS 10 is the maximum deployment "
+  "target for 32-bit targets">;
 def err_drv_conflicting_deployment_targets : Error<
   "conflicting deployment targets, both '%0' and '%1' are present in environment">;
-def err_drv_objc_gc_arr : Error<
-  "cannot specify both '-fobjc-arc' and '%0'">;
 def err_arc_unsupported_on_runtime : Error<
   "-fobjc-arc is not supported on platforms using the legacy runtime">;
 def err_arc_unsupported_on_toolchain : Error< // feel free to generalize this
@@ -123,13 +160,28 @@ def err_drv_emit_llvm_link : Error<
 def err_drv_optimization_remark_pattern : Error<
   "%0 in '%1'">;
 def err_drv_no_neon_modifier : Error<"[no]neon is not accepted as modifier, please use [no]simd instead">;
+def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
+def err_drv_omp_host_ir_file_not_found : Error<
+  "The provided host compiler IR file '%0' is required to generate code for OpenMP target regions but cannot be found.">;
+def err_drv_omp_host_target_not_supported : Error<
+  "The target '%0' is not a supported OpenMP host target.">;
+def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
+  "The option -fopenmp-targets must be used in conjunction with a -fopenmp option compatible with offloading, please use -fopenmp=libomp or -fopenmp=libiomp5.">;
+def warn_drv_omp_offload_target_duplicate : Warning<
+  "The OpenMP offloading target '%0' is similar to target '%1' already specified - will be ignored.">, 
+  InGroup<OpenMPTarget>;
+def err_drv_bitcode_unsupported_on_toolchain : Error<
+  "-fembed-bitcode is not supported on versions of iOS prior to 6.0">;
 
 def warn_O4_is_O3 : Warning<"-O4 is equivalent to -O3">, InGroup<Deprecated>;
-def warn_drv_lto_libpath : Warning<"libLTO.dylib relative to clang installed dir not found; using 'ld' default search path instead">,
-  InGroup<LibLTO>;
 def warn_drv_optimization_value : Warning<"optimization level '%0' is not supported; using '%1%2' instead">,
   InGroup<InvalidCommandLineArgument>;
 def warn_ignored_gcc_optimization : Warning<"optimization flag '%0' is not supported">,
+  InGroup<IgnoredOptimizationArgument>;
+def warn_ignored_clang_option : Warning<"the flag '%0' has been deprecated and will be ignored">,
+  InGroup<UnusedCommandLineArgument>;
+def warn_drv_unsupported_opt_for_target : Warning<
+  "optimization flag '%0' is not supported for target '%1'">,
   InGroup<IgnoredOptimizationArgument>;
 def warn_c_kext : Warning<
   "ignoring -fapple-kext which is valid for C++ and Objective-C++ only">;
@@ -148,6 +200,9 @@ def warn_drv_unused_argument : Warning<
 def warn_drv_empty_joined_argument : Warning<
   "joined argument expects additional value: '%0'">,
   InGroup<UnusedCommandLineArgument>;
+def warn_drv_diagnostics_hotness_requires_pgo : Warning<
+  "argument '%0' requires profile-guided optimization information">,
+  InGroup<UnusedCommandLineArgument>;
 def warn_drv_clang_unsupported : Warning<
   "the clang compiler does not support '%0'">;
 def warn_drv_deprecated_arg : Warning<
@@ -162,12 +217,12 @@ def warn_drv_overriding_flag_option : Warning<
 def warn_drv_treating_input_as_cxx : Warning<
   "treating '%0' input as '%1' when in C++ mode, this behavior is deprecated">,
   InGroup<Deprecated>;
-def warn_drv_objc_gc_unsupported : Warning<
-  "Objective-C garbage collection is not supported on this platform, ignoring '%0'">;
 def warn_drv_pch_not_first_include : Warning<
   "precompiled header '%0' was ignored because '%1' is not first '-include'">;
 def warn_missing_sysroot : Warning<"no such sysroot directory: '%0'">,
   InGroup<DiagGroup<"missing-sysroot">>;
+def warn_incompatible_sysroot : Warning<"using sysroot for '%0' but targeting '%1'">,
+  InGroup<DiagGroup<"incompatible-sysroot">>;
 def warn_debug_compression_unavailable : Warning<"cannot compress debug sections (zlib not installed)">,
   InGroup<DiagGroup<"debug-compression-unavailable">>;
 def warn_drv_enabling_rtti_with_exceptions : Warning<
@@ -175,7 +230,13 @@ def warn_drv_enabling_rtti_with_exceptions : Warning<
   InGroup<DiagGroup<"rtti-for-exceptions">>;
 def warn_drv_disabling_vptr_no_rtti_default : Warning<
   "implicitly disabling vptr sanitizer because rtti wasn't enabled">,
-  InGroup<DiagGroup<"auto-disable-vptr-sanitizer">>;
+  InGroup<AutoDisableVptrSanitizer>;
+def warn_drv_disabling_vptr_no_null_check : Warning<
+  "implicitly disabling vptr sanitizer because null checking wasn't enabled">,
+  InGroup<AutoDisableVptrSanitizer>;
+def warn_drv_object_size_disabled_O0 : Warning<
+  "the object size sanitizer has no effect at -O0, but is explicitly enabled: %0">,
+  InGroup<InvalidCommandLineArgument>;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;
@@ -183,6 +244,9 @@ def note_drv_t_option_is_global : Note<
   "The last /TC or /TP option takes precedence over earlier instances">;
 def note_drv_address_sanitizer_debug_runtime : Note<
   "AddressSanitizer doesn't support linking with debug runtime libraries yet">;
+def note_drv_use_standard : Note<"use '%0'"
+  "%select{| or '%3'|, '%3', or '%4'|, '%3', '%4', or '%5'}2 "
+  "for '%1' standard">;
 
 def err_analyzer_config_no_value : Error<
   "analyzer-config option '%0' has a key but no value">;
@@ -200,12 +264,24 @@ def err_test_module_file_extension_format : Error<
 def warn_drv_invoking_fallback : Warning<"falling back to %0">,
   InGroup<Fallback>;
 
+def warn_slash_u_filename : Warning<"'/U%0' treated as the '/U' option">,
+  InGroup<DiagGroup<"slash-u-filename">>;
+def note_use_dashdash : Note<"Use '--' to treat subsequent arguments as filenames">;
+
+def err_drv_ropi_rwpi_incompatible_with_pic : Error<
+  "embedded and GOT-based position independence are incompatible">;
+def err_drv_ropi_incompatible_with_cxx : Error<
+  "ROPI is not compatible with c++">;
+
 def warn_target_unsupported_nan2008 : Warning<
   "ignoring '-mnan=2008' option because the '%0' architecture does not support it">,
   InGroup<UnsupportedNan>;
 def warn_target_unsupported_nanlegacy : Warning<
   "ignoring '-mnan=legacy' option because the '%0' architecture does not support it">,
   InGroup<UnsupportedNan>;
+def warn_target_unsupported_compact_branches : Warning<
+  "ignoring '-mcompact-branches=' option because the '%0' architecture does not"
+  " support it">, InGroup<UnsupportedCB>;
 
 def warn_drv_unable_to_find_directory_expected : Warning<
   "unable to find %0 directory, expected to be in '%1'">,
@@ -216,8 +292,14 @@ def warn_drv_ps4_force_pic : Warning<
   InGroup<OptionIgnored>;
 
 def warn_drv_ps4_sdk_dir : Warning<
-  "environment variable SCE_PS4_SDK_DIR is set, but points to invalid or nonexistent directory '%0'">,
+  "environment variable SCE_ORBIS_SDK_DIR is set, but points to invalid or nonexistent directory '%0'">,
   InGroup<InvalidOrNonExistentDirectory>;
 
 def err_drv_unsupported_linker : Error<"unsupported value '%0' for -linker option">;
+def err_drv_defsym_invalid_format : Error<"defsym must be of the form: sym=value: %0">;
+def err_drv_defsym_invalid_symval : Error<"Value is not an integer: %0">;
+def warn_drv_msvc_not_found : Warning<
+  "unable to find a Visual Studio installation; "
+  "try running Clang from a developer command prompt">,
+  InGroup<DiagGroup<"msvc-not-found">>;
 }

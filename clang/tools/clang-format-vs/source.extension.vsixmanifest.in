@@ -1,36 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Vsix Version="1.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2010">
-  <Identifier Id="20dbc914-1c7a-4992-b236-ef58b37850eb">
-    <Name>ClangFormat</Name>
-    <Author>LLVM</Author>
-    <Version>@CLANG_FORMAT_VS_VERSION@</Version>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+  <Metadata>
+    <Identity Id="20dbc914-1c7a-4992-b236-ef58b37850eb" Version="@CLANG_FORMAT_VS_VERSION@" Language="en-US" Publisher="LLVM"/>
+    <DisplayName>ClangFormat</DisplayName>
     <Description xml:space="preserve">A tool to format C/C++/Obj-C code.</Description>
-    <Locale>1033</Locale>
-    <MoreInfoUrl>http://clang.llvm.org/docs/ClangFormat.html</MoreInfoUrl>
+    <MoreInfo>http://clang.llvm.org/docs/ClangFormat.html</MoreInfo>
     <License>license.txt</License>
-    <InstalledByMsi>false</InstalledByMsi>
-    <SupportedProducts>
-      <VisualStudio Version="10.0">
-        <Edition>Pro</Edition>
-      </VisualStudio>
-      <VisualStudio Version="11.0">
-        <Edition>Pro</Edition>
-      </VisualStudio>
-      <VisualStudio Version="12.0">
-        <Edition>Pro</Edition>
-      </VisualStudio>
-      <VisualStudio Version="14.0">
-        <Edition>Pro</Edition>
-      </VisualStudio>
-    </SupportedProducts>
-    <SupportedFrameworkRuntimeEdition MinVersion="4.0" MaxVersion="4.0" />
-  </Identifier>
-  <References>
-        <Reference Id="Microsoft.VisualStudio.MPF" MinVersion="10.0">
-            <Name>Visual Studio MPF</Name>
-        </Reference>
-  </References>
-  <Content>
-    <VsPackage>|%CurrentProject%;PkgdefProjectOutputGroup|</VsPackage>
-  </Content>
-</Vsix>
+  </Metadata>
+  <Installation InstalledByMsi="false">
+    <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[11.0, 15.0]" />
+  </Installation>
+  <Dependencies>
+    <Dependency Id="Microsoft.VisualStudio.MPF" MinVersion="11.0" DisplayName="Visual Studio MPF" />
+  </Dependencies>
+  <Prerequisites>
+    <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[11.0,)" DisplayName="Visual Studio core editor" />
+  </Prerequisites>
+</PackageManifest>

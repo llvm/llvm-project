@@ -10,7 +10,7 @@
 ; CHECK-NEXT: L_.str3:
 
 ; CHECK:        .section  __DATA,__cfstring
-; CHECK-NEXT:   .align  4
+; CHECK-NEXT:   .p2align  4
 ; CHECK-NEXT: L__unnamed_cfstring_4:
 ; CHECK-NEXT:   .quad  ___CFConstantStringClassReference
 ; CHECK-NEXT:   .long  1992

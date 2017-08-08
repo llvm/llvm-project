@@ -43,7 +43,7 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "ARM MLA / MLS expansion pass";
     }
 
@@ -334,18 +334,15 @@ bool MLxExpansion::ExpandFPMLxInstructions(MachineBasicBlock &MBB) {
   unsigned Skip = 0;
   MachineBasicBlock::reverse_iterator MII = MBB.rbegin(), E = MBB.rend();
   while (MII != E) {
-    MachineInstr *MI = &*MII;
+    MachineInstr *MI = &*MII++;
 
-    if (MI->isPosition() || MI->isImplicitDef() || MI->isCopy()) {
-      ++MII;
+    if (MI->isPosition() || MI->isImplicitDef() || MI->isCopy())
       continue;
-    }
 
     const MCInstrDesc &MCID = MI->getDesc();
     if (MI->isBarrier()) {
       clearStack();
       Skip = 0;
-      ++MII;
       continue;
     }
 
@@ -365,25 +362,23 @@ bool MLxExpansion::ExpandFPMLxInstructions(MachineBasicBlock &MBB) {
         pushStack(MI);
       else {
         ExpandFPMLxInstruction(MBB, MI, MulOpc, AddSubOpc, NegAcc, HasLane);
-        E = MBB.rend(); // May have changed if MI was the 1st instruction.
         Changed = true;
-        continue;
       }
     }
-
-    ++MII;
   }
 
   return Changed;
 }
 
 bool MLxExpansion::runOnMachineFunction(MachineFunction &Fn) {
+  if (skipFunction(*Fn.getFunction()))
+    return false;
+
   TII = static_cast<const ARMBaseInstrInfo *>(Fn.getSubtarget().getInstrInfo());
   TRI = Fn.getSubtarget().getRegisterInfo();
   MRI = &Fn.getRegInfo();
   const ARMSubtarget *STI = &Fn.getSubtarget<ARMSubtarget>();
-  // Only run this for CortexA9.
-  if (!STI->isCortexA9())
+  if (!STI->expandMLx())
     return false;
   isLikeA9 = STI->isLikeA9() || STI->isSwift();
   isSwift = STI->isSwift();

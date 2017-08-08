@@ -11,10 +11,10 @@
 // funclets being contiguous.
 //
 //===----------------------------------------------------------------------===//
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/Passes.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "funclet-layout"
@@ -28,12 +28,16 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &F) override;
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoVRegs);
+  }
 };
 }
 
 char FuncletLayout::ID = 0;
 char &llvm::FuncletLayoutID = FuncletLayout::ID;
-INITIALIZE_PASS(FuncletLayout, "funclet-layout",
+INITIALIZE_PASS(FuncletLayout, DEBUG_TYPE,
                 "Contiguously Lay Out Funclets", false, false)
 
 bool FuncletLayout::runOnMachineFunction(MachineFunction &F) {

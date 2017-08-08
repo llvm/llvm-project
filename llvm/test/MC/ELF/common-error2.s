@@ -3,4 +3,4 @@
         .set    A,C
         .comm   C,4,4
 
-// CHECK: Common symbol C cannot be used in assignment expr
+// CHECK: Common symbol 'C' cannot be used in assignment expr

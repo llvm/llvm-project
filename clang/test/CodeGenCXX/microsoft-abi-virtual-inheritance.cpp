@@ -33,7 +33,7 @@ B::B() {
   // CHECK:   %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
   // CHECK:   %[[VFPTR_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_i8]], i32 %{{.*}}
   // CHECK:   %[[VFPTR:.*]] = bitcast i8* %[[VFPTR_i8]] to i32 (...)***
-  // CHECK:   store i32 (...)** bitcast ([3 x i8*]* @"\01??_7B@@6B@" to i32 (...)**), i32 (...)*** %[[VFPTR]]
+  // CHECK:   store i32 (...)** bitcast ({ [3 x i8*] }* @"\01??_7B@@6B@" to i32 (...)**), i32 (...)*** %[[VFPTR]]
 
   // Initialize vtorDisp:
   // CHECK:   %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
@@ -66,7 +66,7 @@ B::~B() {
   // CHECK:   %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
   // CHECK:   %[[VFPTR_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_i8]], i32 %{{.*}}
   // CHECK:   %[[VFPTR:.*]] = bitcast i8* %[[VFPTR_i8]] to i32 (...)***
-  // CHECK:   store i32 (...)** bitcast ([3 x i8*]* @"\01??_7B@@6B@" to i32 (...)**), i32 (...)*** %[[VFPTR]]
+  // CHECK:   store i32 (...)** bitcast ({ [3 x i8*] }* @"\01??_7B@@6B@" to i32 (...)**), i32 (...)*** %[[VFPTR]]
 
   // Initialize vtorDisp:
   // CHECK:   %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
@@ -84,7 +84,7 @@ B::~B() {
 
   // CHECK: ret
 
-  // CHECK2-LABEL: define linkonce_odr x86_thiscallcc void @"\01??_DB@@UAE@XZ"(%struct.B*
+  // CHECK2-LABEL: define linkonce_odr x86_thiscallcc void @"\01??_DB@@QAEXXZ"(%struct.B*
   // CHECK2: %[[THIS:.*]] = load %struct.B*, %struct.B** {{.*}}
   // CHECK2: %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
   // CHECK2: %[[B_i8:.*]] = getelementptr i8, i8* %[[THIS_i8]], i32 8
@@ -102,7 +102,7 @@ B::~B() {
   // CHECK2:   %[[THIS:.*]] = bitcast i8* %[[THIS_i8]] to %struct.B*
   // CHECK2:   store %struct.B* %[[THIS]], %struct.B** %[[THIS_ADDR:.*]], align 4
   // CHECK2:   %[[THIS:.*]] = load %struct.B*, %struct.B** %[[THIS_ADDR]]
-  // CHECK2:   call x86_thiscallcc void @"\01??_DB@@UAE@XZ"(%struct.B* %[[THIS]])
+  // CHECK2:   call x86_thiscallcc void @"\01??_DB@@QAEXXZ"(%struct.B* %[[THIS]])
   // ...
   // CHECK2: ret
 }
@@ -208,7 +208,7 @@ void call_complete_dtor() {
   B b;
   // CHECK: call x86_thiscallcc %struct.B* @"\01??0B@@QAE@XZ"(%struct.B* %[[B:.*]], i32 1)
   // CHECK-NOT: getelementptr
-  // CHECK: call x86_thiscallcc void @"\01??_DB@@UAE@XZ"(%struct.B* %[[B]])
+  // CHECK: call x86_thiscallcc void @"\01??_DB@@QAEXXZ"(%struct.B* %[[B]])
   // CHECK: ret
 }
 
@@ -245,9 +245,9 @@ struct D : virtual A, virtual B, virtual C {
 D::D() {
   // CHECK-LABEL: define x86_thiscallcc %"struct.multiple_vbases::D"* @"\01??0D@multiple_vbases@@QAE@XZ"
   // Just make sure we emit 3 vtordisps after initializing vfptrs.
-  // CHECK: store i32 (...)** bitcast ([1 x i8*]* @"\01??_7D@multiple_vbases@@6BA@1@@" to i32 (...)**), i32 (...)*** %{{.*}}
-  // CHECK: store i32 (...)** bitcast ([1 x i8*]* @"\01??_7D@multiple_vbases@@6BB@1@@" to i32 (...)**), i32 (...)*** %{{.*}}
-  // CHECK: store i32 (...)** bitcast ([1 x i8*]* @"\01??_7D@multiple_vbases@@6BC@1@@" to i32 (...)**), i32 (...)*** %{{.*}}
+  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7D@multiple_vbases@@6BA@1@@" to i32 (...)**), i32 (...)*** %{{.*}}
+  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7D@multiple_vbases@@6BB@1@@" to i32 (...)**), i32 (...)*** %{{.*}}
+  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7D@multiple_vbases@@6BC@1@@" to i32 (...)**), i32 (...)*** %{{.*}}
   // ...
   // CHECK: store i32 %{{.*}}, i32* %{{.*}}
   // CHECK: store i32 %{{.*}}, i32* %{{.*}}
@@ -283,7 +283,7 @@ struct D : virtual Z, B, C {
 } d;
 
 D::~D() {
-  // CHECK-LABEL: define x86_thiscallcc void @"\01??1D@diamond@@UAE@XZ"(%"struct.diamond::D"*)
+  // CHECK-LABEL: define x86_thiscallcc void @"\01??1D@diamond@@UAE@XZ"(%"struct.diamond::D"*{{.*}})
   // CHECK: %[[ARG_i8:.*]] = bitcast %"struct.diamond::D"* %{{.*}} to i8*
   // CHECK: %[[THIS_i8:.*]] = getelementptr inbounds i8, i8* %[[ARG_i8]], i32 -24
   // CHECK: %[[THIS:.*]] = bitcast i8* %[[THIS_i8]] to %"struct.diamond::D"*
@@ -397,7 +397,7 @@ C::~C() {
   // CHECK-NOT: getelementptr
   // CHECK-NOT: bitcast
   // CHECK: %[[VFPTR_i8:.*]] = bitcast %"struct.test4::C"* %{{.*}} to i32 (...)***
-  // CHECK: store i32 (...)** bitcast ([1 x i8*]* @"\01??_7C@test4@@6BB@1@@" to i32 (...)**), i32 (...)*** %[[VFPTR_i8]]
+  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7C@test4@@6BB@1@@" to i32 (...)**), i32 (...)*** %[[VFPTR_i8]]
 
   foo(this);
   // CHECK: ret
@@ -432,7 +432,7 @@ E::~E() {
   // CHECK-NOT: getelementptr
   // CHECK-NOT: bitcast
   // CHECK: %[[VFPTR_i8:.*]] = bitcast %"struct.test4::E"* %{{.*}} to i32 (...)***
-  // CHECK: store i32 (...)** bitcast ([1 x i8*]* @"\01??_7E@test4@@6BD@1@@" to i32 (...)**), i32 (...)*** %[[VFPTR_i8]]
+  // CHECK: store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7E@test4@@6BD@1@@" to i32 (...)**), i32 (...)*** %[[VFPTR_i8]]
   foo(this);
 }
 
@@ -479,5 +479,45 @@ C::C() : B() {}
 // CHECK:   %[[B:.*]] = bitcast %"struct.test5::C"* %[[THIS]] to %"struct.test5::B"*
 // CHECK:   %[[B_i8:.*]] = bitcast %"struct.test5::B"* %[[B]] to i8*
 // CHECK:   %[[FIELD:.*]] = getelementptr inbounds i8, i8* %[[B_i8]], i32 4
+// CHECK:   call void @llvm.memset.p0i8.i32(i8* %[[FIELD]], i8 0, i32 4, i32 4, i1 false)
+}
+
+namespace pr27621 {
+// Devirtualization through a static_cast used to make us compute the 'this'
+// adjustment for B::g instead of C::g. When we directly call C::g, 'this' is a
+// B*, and the prologue of C::g will adjust it to a C*.
+struct A { virtual void f(); };
+struct B { virtual void g(); };
+struct C final : A, B {
+  virtual void h();
+  void g() override;
+};
+void callit(C *p) {
+  static_cast<B*>(p)->g();
+}
+// CHECK-LABEL: define void @"\01?callit@pr27621@@YAXPAUC@1@@Z"(%"struct.pr27621::C"* %{{.*}})
+// CHECK: %[[B_i8:.*]] = getelementptr i8, i8* %{{.*}}, i32 4
+// CHECK: call x86_thiscallcc void @"\01?g@C@pr27621@@UAEXXZ"(i8* %[[B_i8]])
+}
+
+namespace test6 {
+class A {};
+class B : virtual A {};
+class C : virtual B {
+  virtual void m_fn1();
+  float field;
+};
+class D : C {
+  D();
+};
+D::D() : C() {}
+// CHECK-LABEL: define x86_thiscallcc %"class.test6::D"* @"\01??0D@test6@@AAE@XZ"(
+// CHECK:   %[[THIS:.*]] = load %"class.test6::D"*, %"class.test6::D"**
+// CHECK:   br i1 %{{.*}}, label %[[INIT_VBASES:.*]], label %[[SKIP_VBASES:.*]]
+
+// CHECK: %[[SKIP_VBASES]]
+// CHECK:   %[[C:.*]] = bitcast %"class.test6::D"* %[[THIS]] to %"class.test6::C"*
+// CHECK:   %[[C_i8:.*]] = bitcast %"class.test6::C"* %[[C]] to i8*
+// CHECK:   %[[FIELD:.*]] = getelementptr inbounds i8, i8* %[[C_i8]], i32 8
 // CHECK:   call void @llvm.memset.p0i8.i32(i8* %[[FIELD]], i8 0, i32 4, i32 4, i1 false)
 }

@@ -39,37 +39,87 @@ MIR Testing Guide
 You can use the MIR format for testing in two different ways:
 
 - You can write MIR tests that invoke a single code generation pass using the
-  ``run-pass`` option in llc.
+  ``-run-pass`` option in llc.
 
-- You can use llc's ``stop-after`` option with existing or new LLVM assembly
+- You can use llc's ``-stop-after`` option with existing or new LLVM assembly
   tests and check the MIR output of a specific code generation pass.
 
 Testing Individual Code Generation Passes
 -----------------------------------------
 
-The ``run-pass`` option in llc allows you to create MIR tests that invoke
-just a single code generation pass. When this option is used, llc will parse
-an input MIR file, run the specified code generation pass, and print the
-resulting MIR to the standard output stream.
+The ``-run-pass`` option in llc allows you to create MIR tests that invoke just
+a single code generation pass. When this option is used, llc will parse an
+input MIR file, run the specified code generation pass(es), and output the
+resulting MIR code.
 
-You can generate an input MIR file for the test by using the ``stop-after``
-option in llc. For example, if you would like to write a test for the
-post register allocation pseudo instruction expansion pass, you can specify
-the machine copy propagation pass in the ``stop-after`` option, as it runs
-just before the pass that we are trying to test:
+You can generate an input MIR file for the test by using the ``-stop-after`` or
+``-stop-before`` option in llc. For example, if you would like to write a test
+for the post register allocation pseudo instruction expansion pass, you can
+specify the machine copy propagation pass in the ``-stop-after`` option, as it
+runs just before the pass that we are trying to test:
 
-   ``llc -stop-after machine-cp bug-trigger.ll > test.mir``
+   ``llc -stop-after=machine-cp bug-trigger.ll > test.mir``
 
 After generating the input MIR file, you'll have to add a run line that uses
 the ``-run-pass`` option to it. In order to test the post register allocation
 pseudo instruction expansion pass on X86-64, a run line like the one shown
 below can be used:
 
-    ``# RUN: llc -run-pass postrapseudos -march=x86-64 %s -o /dev/null | FileCheck %s``
+    ``# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=postrapseudos | FileCheck %s``
 
 The MIR files are target dependent, so they have to be placed in the target
-specific test directories. They also need to specify a target triple or a
-target architecture either in the run line or in the embedded LLVM IR module.
+specific test directories (``lib/CodeGen/TARGETNAME``). They also need to
+specify a target triple or a target architecture either in the run line or in
+the embedded LLVM IR module.
+
+Simplifying MIR files
+^^^^^^^^^^^^^^^^^^^^^
+
+The MIR code coming out of ``-stop-after``/``-stop-before`` is very verbose;
+Tests are more accessible and future proof when simplified:
+
+- Use the ``-simplify-mir`` option with llc.
+
+- Machine function attributes often have default values or the test works just
+  as well with default values. Typical candidates for this are: `alignment:`,
+  `exposesReturnsTwice`, `legalized`, `regBankSelected`, `selected`.
+  The whole `frameInfo` section is often unnecessary if there is no special
+  frame usage in the function. `tracksRegLiveness` on the other hand is often
+  necessary for some passes that care about block livein lists.
+
+- The (global) `liveins:` list is typically only interesting for early
+  instruction selection passes and can be removed when testing later passes.
+  The per-block `liveins:` on the other hand are necessary if
+  `tracksRegLiveness` is true.
+
+- Branch probability data in block `successors:` lists can be dropped if the
+  test doesn't depend on it. Example:
+  `successors: %bb.1(0x40000000), %bb.2(0x40000000)` can be replaced with
+  `successors: %bb.1, %bb.2`.
+
+- MIR code contains a whole IR module. This is necessary because there are
+  no equivalents in MIR for global variables, references to external functions,
+  function attributes, metadata, debug info. Instead some MIR data references
+  the IR constructs. You can often remove them if the test doesn't depend on
+  them.
+
+- Alias Analysis is performed on IR values. These are referenced by memory
+  operands in MIR. Example: `:: (load 8 from %ir.foobar, !alias.scope !9)`.
+  If the test doesn't depend on (good) alias analysis the references can be
+  dropped: `:: (load 8)`
+
+- MIR blocks can reference IR blocks for debug printing, profile information
+  or debug locations. Example: `bb.42.myblock` in MIR references the IR block
+  `myblock`. It is usually possible to drop the `.myblock` reference and simply
+  use `bb.42`.
+
+- If there are no memory operands or blocks referencing the IR then the
+  IR function can be replaced by a parameterless dummy function like
+  `define @func() { ret void }`.
+
+- It is possible to drop the whole IR section of the MIR file if it only
+  contains dummy functions (see above). The .mir loader will create the
+  IR functions automatically in this case.
 
 Limitations
 -----------
@@ -111,7 +161,6 @@ Here is an example of a YAML document that contains an LLVM module:
 
 .. code-block:: llvm
 
-     --- |
        define i32 @inc(i32* %x) {
        entry:
          %0 = load i32, i32* %x
@@ -119,7 +168,6 @@ Here is an example of a YAML document that contains an LLVM module:
          store i32 %1, i32* %x
          ret i32 %1
        }
-     ...
 
 .. _YAML block literal string: http://www.yaml.org/spec/1.2/spec.html#id2795688
 
@@ -129,7 +177,7 @@ Machine Functions
 The remaining YAML documents contain the machine functions. This is an example
 of such YAML document:
 
-.. code-block:: llvm
+.. code-block:: text
 
      ---
      name:            inc
@@ -172,7 +220,7 @@ A machine basic block is defined in a single block definition source construct
 that contains the block's ID.
 The example below defines two blocks that have an ID of zero and one:
 
-.. code-block:: llvm
+.. code-block:: text
 
     bb.0:
       <instructions>
@@ -182,7 +230,7 @@ The example below defines two blocks that have an ID of zero and one:
 A machine basic block can also have a name. It should be specified after the ID
 in the block's definition:
 
-.. code-block:: llvm
+.. code-block:: text
 
     bb.0.entry:       ; This block's name is "entry"
        <instructions>
@@ -196,7 +244,7 @@ Block References
 The machine basic blocks are identified by their ID numbers. Individual
 blocks are referenced using the following syntax:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %bb.<id>[.<name>]
 
@@ -213,7 +261,7 @@ Successors
 The machine basic block's successors have to be specified before any of the
 instructions:
 
-.. code-block:: llvm
+.. code-block:: text
 
     bb.0.entry:
       successors: %bb.1.then, %bb.2.else
@@ -227,7 +275,7 @@ The branch weights can be specified in brackets after the successor blocks.
 The example below defines a block that has two successors with branch weights
 of 32 and 16:
 
-.. code-block:: llvm
+.. code-block:: text
 
     bb.0.entry:
       successors: %bb.1.then(32), %bb.2.else(16)
@@ -240,7 +288,7 @@ Live In Registers
 The machine basic block's live in registers have to be specified before any of
 the instructions:
 
-.. code-block:: llvm
+.. code-block:: text
 
     bb.0.entry:
       liveins: %edi, %esi
@@ -255,7 +303,7 @@ Miscellaneous Attributes
 The attributes ``IsAddressTaken``, ``IsLandingPad`` and ``Alignment`` can be
 specified in brackets after the block's definition:
 
-.. code-block:: llvm
+.. code-block:: text
 
     bb.0.entry (address-taken):
       <instructions>
@@ -278,7 +326,7 @@ The instruction's name is usually specified before the operands. The example
 below shows an instance of the X86 ``RETQ`` instruction with a single machine
 operand:
 
-.. code-block:: llvm
+.. code-block:: text
 
     RETQ %eax
 
@@ -287,7 +335,7 @@ operands, the instruction's name has to be specified after them. The example
 below shows an instance of the AArch64 ``LDPXpost`` instruction with three
 defined register operands:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %sp, %fp, %lr = LDPXpost %sp, 2
 
@@ -303,7 +351,7 @@ Instruction Flags
 
 The flag ``frame-setup`` can be specified before the instruction's name:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %fp = frame-setup ADDXri %sp, 0, 0
 
@@ -321,13 +369,13 @@ but they can also be used in a number of other places, like the
 The physical registers are identified by their name. They use the following
 syntax:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %<name>
 
 The example below shows three X86 physical registers:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %eax
     %r15
@@ -336,13 +384,13 @@ The example below shows three X86 physical registers:
 The virtual registers are identified by their ID number. They use the following
 syntax:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %<id>
 
 Example:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %0
 
@@ -366,7 +414,7 @@ The immediate machine operands are untyped, 64-bit signed integers. The
 example below shows an instance of the X86 ``MOV32ri`` instruction that has an
 immediate machine operand ``-42``:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %eax = MOV32ri -42
 
@@ -384,14 +432,14 @@ machine operands. The register operands can also have optional
 and a reference to the tied register operand.
 The full syntax of a register operand is shown below:
 
-.. code-block:: llvm
+.. code-block:: text
 
     [<flags>] <register> [ :<subregister-idx-name> ] [ (tied-def <tied-op>) ]
 
 This example shows an instance of the X86 ``XOR32rr`` instruction that has
 5 register operands with different register flags:
 
-.. code-block:: llvm
+.. code-block:: text
 
   dead %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags, implicit-def %al
 
@@ -446,7 +494,7 @@ the subregister indices. The example below shows an instance of the ``COPY``
 pseudo instruction that uses the X86 ``sub_8bit`` subregister index to copy 8
 lower bits from the 32-bit virtual register 0 to the 8-bit virtual register 1:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %1 = COPY %0:sub_8bit
 
@@ -461,7 +509,7 @@ The global value machine operands reference the global values from the
 The example below shows an instance of the X86 ``MOV64rm`` instruction that has
 a global value operand named ``G``:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %rax = MOV64rm %rip, 1, _, @G, _
 

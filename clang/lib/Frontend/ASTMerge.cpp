@@ -21,14 +21,13 @@ ASTMergeAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   return AdaptedAction->CreateASTConsumer(CI, InFile);
 }
 
-bool ASTMergeAction::BeginSourceFileAction(CompilerInstance &CI,
-                                           StringRef Filename) {
+bool ASTMergeAction::BeginSourceFileAction(CompilerInstance &CI) {
   // FIXME: This is a hack. We need a better way to communicate the
   // AST file, compiler instance, and file name than member variables
   // of FrontendAction.
   AdaptedAction->setCurrentInput(getCurrentInput(), takeCurrentASTUnit());
   AdaptedAction->setCompilerInstance(&CI);
-  return AdaptedAction->BeginSourceFileAction(CI, Filename);
+  return AdaptedAction->BeginSourceFileAction(CI);
 }
 
 void ASTMergeAction::ExecuteAction() {
@@ -45,9 +44,9 @@ void ASTMergeAction::ExecuteAction() {
                                     new ForwardingDiagnosticConsumer(
                                           *CI.getDiagnostics().getClient()),
                                     /*ShouldOwnClient=*/true));
-    std::unique_ptr<ASTUnit> Unit =
-        ASTUnit::LoadFromASTFile(ASTFiles[I], CI.getPCHContainerReader(),
-                                 Diags, CI.getFileSystemOpts(), false);
+    std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromASTFile(
+        ASTFiles[I], CI.getPCHContainerReader(), ASTUnit::LoadEverything, Diags,
+        CI.getFileSystemOpts(), false);
 
     if (!Unit)
       continue;
@@ -83,14 +82,13 @@ void ASTMergeAction::EndSourceFileAction() {
   return AdaptedAction->EndSourceFileAction();
 }
 
-ASTMergeAction::ASTMergeAction(FrontendAction *AdaptedAction,
+ASTMergeAction::ASTMergeAction(std::unique_ptr<FrontendAction> adaptedAction,
                                ArrayRef<std::string> ASTFiles)
-  : AdaptedAction(AdaptedAction), ASTFiles(ASTFiles.begin(), ASTFiles.end()) {
+: AdaptedAction(std::move(adaptedAction)), ASTFiles(ASTFiles.begin(), ASTFiles.end()) {
   assert(AdaptedAction && "ASTMergeAction needs an action to adapt");
 }
 
 ASTMergeAction::~ASTMergeAction() { 
-  delete AdaptedAction;
 }
 
 bool ASTMergeAction::usesPreprocessorOnly() const {

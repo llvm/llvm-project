@@ -17,7 +17,9 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Parse/ParseAST.h"
+#include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -25,51 +27,52 @@
 using namespace clang;
 
 namespace {
-class ChainedIncludesSource : public ExternalSemaSource {
+class ChainedIncludesSourceImpl : public ExternalSemaSource {
 public:
-  ~ChainedIncludesSource() override;
-
-  ExternalSemaSource &getFinalReader() const { return *FinalReader; }
-
-  std::vector<CompilerInstance *> CIs;
-  IntrusiveRefCntPtr<ExternalSemaSource> FinalReader;
+  ChainedIncludesSourceImpl(std::vector<std::unique_ptr<CompilerInstance>> CIs)
+      : CIs(std::move(CIs)) {}
 
 protected:
   //===----------------------------------------------------------------------===//
   // ExternalASTSource interface.
   //===----------------------------------------------------------------------===//
 
-  Decl *GetExternalDecl(uint32_t ID) override;
-  Selector GetExternalSelector(uint32_t ID) override;
-  uint32_t GetNumExternalSelectors() override;
-  Stmt *GetExternalDeclStmt(uint64_t Offset) override;
-  CXXCtorInitializer **GetExternalCXXCtorInitializers(uint64_t Offset) override;
-  CXXBaseSpecifier *GetExternalCXXBaseSpecifiers(uint64_t Offset) override;
-  bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name) override;
-  void
-  FindExternalLexicalDecls(const DeclContext *DC,
-                           llvm::function_ref<bool(Decl::Kind)> IsKindWeWant,
-                           SmallVectorImpl<Decl *> &Result) override;
-  void CompleteType(TagDecl *Tag) override;
-  void CompleteType(ObjCInterfaceDecl *Class) override;
-  void StartedDeserializing() override;
-  void FinishedDeserializing() override;
-  void StartTranslationUnit(ASTConsumer *Consumer) override;
-  void PrintStats() override;
-
   /// Return the amount of memory used by memory buffers, breaking down
   /// by heap-backed versus mmap'ed memory.
-  void getMemoryBufferSizes(MemoryBufferSizes &sizes) const override;
+  void getMemoryBufferSizes(MemoryBufferSizes &sizes) const override {
+    for (unsigned i = 0, e = CIs.size(); i != e; ++i) {
+      if (const ExternalASTSource *eSrc =
+          CIs[i]->getASTContext().getExternalSource()) {
+        eSrc->getMemoryBufferSizes(sizes);
+      }
+    }
+  }
 
-  //===----------------------------------------------------------------------===//
-  // ExternalSemaSource interface.
-  //===----------------------------------------------------------------------===//
+private:
+  std::vector<std::unique_ptr<CompilerInstance>> CIs;
+};
 
-  void InitializeSema(Sema &S) override;
-  void ForgetSema() override;
-  void ReadMethodPool(Selector Sel) override;
-  bool LookupUnqualified(LookupResult &R, Scope *S) override;
+/// Members of ChainedIncludesSource, factored out so we can initialize
+/// them before we initialize the ExternalSemaSource base class.
+struct ChainedIncludesSourceMembers {
+  ChainedIncludesSourceMembers(
+      std::vector<std::unique_ptr<CompilerInstance>> CIs,
+      IntrusiveRefCntPtr<ExternalSemaSource> FinalReader)
+      : Impl(std::move(CIs)), FinalReader(std::move(FinalReader)) {}
+  ChainedIncludesSourceImpl Impl;
+  IntrusiveRefCntPtr<ExternalSemaSource> FinalReader;
+};
+
+/// Use MultiplexExternalSemaSource to dispatch all ExternalSemaSource
+/// calls to the final reader.
+class ChainedIncludesSource
+    : private ChainedIncludesSourceMembers,
+      public MultiplexExternalSemaSource {
+public:
+  ChainedIncludesSource(std::vector<std::unique_ptr<CompilerInstance>> CIs,
+                        IntrusiveRefCntPtr<ExternalSemaSource> FinalReader)
+      : ChainedIncludesSourceMembers(std::move(CIs), std::move(FinalReader)),
+        MultiplexExternalSemaSource(Impl, *this->FinalReader) {}
 };
 }
 
@@ -80,7 +83,7 @@ createASTReader(CompilerInstance &CI, StringRef pchFile,
                 ASTDeserializationListener *deserialListener = nullptr) {
   Preprocessor &PP = CI.getPreprocessor();
   std::unique_ptr<ASTReader> Reader;
-  Reader.reset(new ASTReader(PP, CI.getASTContext(),
+  Reader.reset(new ASTReader(PP, &CI.getASTContext(),
                              CI.getPCHContainerReader(),
                              /*Extensions=*/{ },
                              /*isysroot=*/"", /*DisableValidation=*/true));
@@ -107,18 +110,13 @@ createASTReader(CompilerInstance &CI, StringRef pchFile,
   return nullptr;
 }
 
-ChainedIncludesSource::~ChainedIncludesSource() {
-  for (unsigned i = 0, e = CIs.size(); i != e; ++i)
-    delete CIs[i];
-}
-
 IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
     CompilerInstance &CI, IntrusiveRefCntPtr<ExternalSemaSource> &Reader) {
 
   std::vector<std::string> &includes = CI.getPreprocessorOpts().ChainedIncludes;
   assert(!includes.empty() && "No '-chain-include' in options!");
 
-  IntrusiveRefCntPtr<ChainedIncludesSource> source(new ChainedIncludesSource());
+  std::vector<std::unique_ptr<CompilerInstance>> CIs;
   InputKind IK = CI.getFrontendOpts().Inputs[0].getKind();
 
   SmallVector<std::unique_ptr<llvm::MemoryBuffer>, 4> SerialBufs;
@@ -149,7 +147,7 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
 
     std::unique_ptr<CompilerInstance> Clang(
         new CompilerInstance(CI.getPCHContainerOperations()));
-    Clang->setInvocation(CInvok.release());
+    Clang->setInvocation(std::move(CInvok));
     Clang->setDiagnostics(Diags.get());
     Clang->setTarget(TargetInfo::CreateTargetInfo(
         Clang->getDiagnostics(), Clang->getInvocation().TargetOpts));
@@ -161,10 +159,10 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
     Clang->createASTContext();
 
     auto Buffer = std::make_shared<PCHBuffer>();
-    ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>> Extensions;
+    ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions;
     auto consumer = llvm::make_unique<PCHGenerator>(
-        Clang->getPreprocessor(), "-", nullptr, /*isysroot=*/"", Buffer,
-        Extensions);
+        Clang->getPreprocessor(), "-", /*isysroot=*/"", Buffer,
+        Extensions, /*AllowASTWithErrors=*/true);
     Clang->getASTContext().setASTMutationListener(
                                             consumer->GetASTMutationListener());
     Clang->setASTConsumer(std::move(consumer));
@@ -206,7 +204,7 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
     SerialBufs.push_back(llvm::MemoryBuffer::getMemBufferCopy(
         StringRef(serialAST.data(), serialAST.size())));
     serialAST.clear();
-    source->CIs.push_back(Clang.release());
+    CIs.push_back(std::move(Clang));
   }
 
   assert(!SerialBufs.empty());
@@ -216,83 +214,6 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
   if (!Reader)
     return nullptr;
 
-  source->FinalReader = Reader;
-  return source;
+  return IntrusiveRefCntPtr<ChainedIncludesSource>(
+      new ChainedIncludesSource(std::move(CIs), Reader));
 }
-
-//===----------------------------------------------------------------------===//
-// ExternalASTSource interface.
-//===----------------------------------------------------------------------===//
-
-Decl *ChainedIncludesSource::GetExternalDecl(uint32_t ID) {
-  return getFinalReader().GetExternalDecl(ID);
-}
-Selector ChainedIncludesSource::GetExternalSelector(uint32_t ID) {
-  return getFinalReader().GetExternalSelector(ID);
-}
-uint32_t ChainedIncludesSource::GetNumExternalSelectors() {
-  return getFinalReader().GetNumExternalSelectors();
-}
-Stmt *ChainedIncludesSource::GetExternalDeclStmt(uint64_t Offset) {
-  return getFinalReader().GetExternalDeclStmt(Offset);
-}
-CXXBaseSpecifier *
-ChainedIncludesSource::GetExternalCXXBaseSpecifiers(uint64_t Offset) {
-  return getFinalReader().GetExternalCXXBaseSpecifiers(Offset);
-}
-CXXCtorInitializer **
-ChainedIncludesSource::GetExternalCXXCtorInitializers(uint64_t Offset) {
-  return getFinalReader().GetExternalCXXCtorInitializers(Offset);
-}
-bool
-ChainedIncludesSource::FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                                      DeclarationName Name) {
-  return getFinalReader().FindExternalVisibleDeclsByName(DC, Name);
-}
-void ChainedIncludesSource::FindExternalLexicalDecls(
-    const DeclContext *DC, llvm::function_ref<bool(Decl::Kind)> IsKindWeWant,
-    SmallVectorImpl<Decl *> &Result) {
-  return getFinalReader().FindExternalLexicalDecls(DC, IsKindWeWant, Result);
-}
-void ChainedIncludesSource::CompleteType(TagDecl *Tag) {
-  return getFinalReader().CompleteType(Tag);
-}
-void ChainedIncludesSource::CompleteType(ObjCInterfaceDecl *Class) {
-  return getFinalReader().CompleteType(Class);
-}
-void ChainedIncludesSource::StartedDeserializing() {
-  return getFinalReader().StartedDeserializing();
-}
-void ChainedIncludesSource::FinishedDeserializing() {
-  return getFinalReader().FinishedDeserializing();
-}
-void ChainedIncludesSource::StartTranslationUnit(ASTConsumer *Consumer) {
-  return getFinalReader().StartTranslationUnit(Consumer);
-}
-void ChainedIncludesSource::PrintStats() {
-  return getFinalReader().PrintStats();
-}
-void ChainedIncludesSource::getMemoryBufferSizes(MemoryBufferSizes &sizes)const{
-  for (unsigned i = 0, e = CIs.size(); i != e; ++i) {
-    if (const ExternalASTSource *eSrc =
-        CIs[i]->getASTContext().getExternalSource()) {
-      eSrc->getMemoryBufferSizes(sizes);
-    }
-  }
-
-  getFinalReader().getMemoryBufferSizes(sizes);
-}
-
-void ChainedIncludesSource::InitializeSema(Sema &S) {
-  return getFinalReader().InitializeSema(S);
-}
-void ChainedIncludesSource::ForgetSema() {
-  return getFinalReader().ForgetSema();
-}
-void ChainedIncludesSource::ReadMethodPool(Selector Sel) {
-  getFinalReader().ReadMethodPool(Sel);
-}
-bool ChainedIncludesSource::LookupUnqualified(LookupResult &R, Scope *S) {
-  return getFinalReader().LookupUnqualified(R, S);
-}
-

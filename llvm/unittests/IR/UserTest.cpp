@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/User.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/User.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 using namespace llvm;
@@ -84,6 +84,22 @@ TEST(UserTest, ValueOpIteration) {
   EXPECT_FALSE(P.value_op_begin() >= P.value_op_end());
   EXPECT_EQ(10, std::distance(P.value_op_begin(), P.value_op_end()));
 
+  // const value op iteration
+  const PHINode *IP = &P;
+  EXPECT_TRUE(IP->value_op_begin() == IP->value_op_begin());
+  EXPECT_FALSE(IP->value_op_begin() == IP->value_op_end());
+  EXPECT_TRUE(IP->value_op_begin() != IP->value_op_end());
+  EXPECT_FALSE(IP->value_op_end() != IP->value_op_end());
+  EXPECT_TRUE(IP->value_op_begin() < IP->value_op_end());
+  EXPECT_FALSE(IP->value_op_begin() < IP->value_op_begin());
+  EXPECT_TRUE(IP->value_op_end() > IP->value_op_begin());
+  EXPECT_FALSE(IP->value_op_begin() > IP->value_op_begin());
+  EXPECT_TRUE(IP->value_op_begin() <= IP->value_op_begin());
+  EXPECT_FALSE(IP->value_op_end() <= IP->value_op_begin());
+  EXPECT_TRUE(IP->value_op_begin() >= IP->value_op_begin());
+  EXPECT_FALSE(IP->value_op_begin() >= IP->value_op_end());
+  EXPECT_EQ(10, std::distance(IP->value_op_begin(), IP->value_op_end()));
+
   User::value_op_iterator I = P.value_op_begin();
   I += 3;
   EXPECT_EQ(std::next(P.value_op_begin(), 3), I);
@@ -91,6 +107,39 @@ TEST(UserTest, ValueOpIteration) {
   I++;
   EXPECT_EQ(P.getOperand(6), I[2]);
   EXPECT_EQ(P.value_op_end(), (I - 2) + 8);
+
+  // const value op
+  User::const_value_op_iterator CI = IP->value_op_begin();
+  CI += 3;
+  EXPECT_EQ(std::next(IP->value_op_begin(), 3), CI);
+  EXPECT_EQ(IP->getOperand(3), *CI);
+  CI++;
+  EXPECT_EQ(IP->getOperand(6), CI[2]);
+  EXPECT_EQ(IP->value_op_end(), (CI - 2) + 8);
+}
+
+TEST(UserTest, PersonalityUser) {
+  LLVMContext Context;
+  Module M("", Context);
+  FunctionType *RetVoidTy = FunctionType::get(Type::getVoidTy(Context), false);
+  Function *PersonalityF = Function::Create(
+      RetVoidTy, GlobalValue::ExternalLinkage, "PersonalityFn", &M);
+  Function *TestF =
+      Function::Create(RetVoidTy, GlobalValue::ExternalLinkage, "TestFn", &M);
+
+  // Set up the personality function
+  TestF->setPersonalityFn(PersonalityF);
+  auto PersonalityUsers = PersonalityF->user_begin();
+
+  // One user and that user is the Test function
+  EXPECT_EQ(*PersonalityUsers, TestF);
+  EXPECT_EQ(++PersonalityUsers, PersonalityF->user_end());
+
+  // Reset the personality function
+  TestF->setPersonalityFn(nullptr);
+
+  // No users should remain
+  EXPECT_TRUE(TestF->user_empty());
 }
 
 } // end anonymous namespace

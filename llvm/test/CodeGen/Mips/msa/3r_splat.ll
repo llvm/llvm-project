@@ -1,9 +1,9 @@
 ; Test the MSA splat intrinsics that are encoded with the 3R instruction
 ; format.
 
-; RUN: llc -march=mips -mattr=+msa,+fp64 < %s | \
+; RUN: llc -march=mips -mattr=+msa,+fp64 -relocation-model=pic < %s | \
 ; RUN:     FileCheck -check-prefix=MIPS32 %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64 < %s | \
+; RUN: llc -march=mipsel -mattr=+msa,+fp64 -relocation-model=pic < %s | \
 ; RUN:     FileCheck -check-prefix=MIPS32 %s
 
 @llvm_mips_splat_b_ARG1 = global <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, align 16
@@ -92,3 +92,24 @@ declare <2 x i64> @llvm.mips.splat.d(<2 x i64>, i32) nounwind
 ; MIPS64-DAG: splat.d [[R4:\$w[0-9]+]], [[R3]][$4]
 ; MIPS64-DAG: st.d [[R4]], 0([[R2]])
 ; MIPS32: .size llvm_mips_splat_d_test
+
+define void @llvm_mips_splat_d_arg_test(i32 %arg) {
+entry:
+  %0 = tail call <2 x i64> @llvm.mips.splat.d(<2 x i64> <i64 12720328, i64 10580959>, i32 %arg)
+  store volatile <2 x i64> %0, <2 x i64>* @llvm_mips_splat_d_RES
+  ret void
+}
+; CHECK-LABEL: llvm_mips_splat_d_arg_test
+; CHECK: ldi.w [[R1:\$w[0-9]+]], 1 
+; CHECK: and.v [[R2:\$w[0-9]+]], {{\$w[0-9]+}}, [[R1]]
+; CHECK: vshf.d [[R2]], {{.*}}
+
+define void @llvm_mips_splat_d_imm_test() {
+entry:
+  %0 = tail call <2 x i64> @llvm.mips.splat.d(<2 x i64> <i64 12720328, i64 10580959>, i32 76)
+  store volatile<2 x i64> %0, <2 x i64>* @llvm_mips_splat_d_RES
+  ret void
+}
+; CHECK-LABEL: llvm_mips_splat_d_imm_test
+; CHECK: splati. d {{.*}}, {{.*}}[0]
+; CHECK-NOT: vshf.d

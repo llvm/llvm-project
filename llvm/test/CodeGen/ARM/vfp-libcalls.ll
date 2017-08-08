@@ -4,7 +4,7 @@
 
 define float @test_call(float %a, float %b) {
 ; CHECK-HARD: vadd.f32 {{s[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
-; CHECK-SOFTISH: blx ___addsf3vfp
+; CHECK-SOFTISH: bl ___addsf3vfp
 ; CHECK-SOFT: bl ___addsf3{{$}}
   %sum = fadd float %a, %b
   ret float %sum

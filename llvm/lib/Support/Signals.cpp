@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/Signals.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
@@ -23,18 +24,22 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Options.h"
 #include <vector>
-
-namespace llvm {
-using namespace sys;
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only TRULY operating system
 //===          independent code.
 //===----------------------------------------------------------------------===//
+
+using namespace llvm;
+
+static cl::opt<bool>
+    DisableSymbolication("disable-symbolication",
+                         cl::desc("Disable symbolizing crash backtraces."),
+                         cl::init(false), cl::Hidden);
 
 static ManagedStatic<std::vector<std::pair<void (*)(void *), void *>>>
     CallBacksToRun;
@@ -45,9 +50,6 @@ void sys::RunSignalHandlers() {
     I.first(I.second);
   CallBacksToRun->clear();
 }
-}
-
-using namespace llvm;
 
 static bool findModulesAndOffsets(void **StackTrace, int Depth,
                                   const char **Modules, intptr_t *Offsets,
@@ -62,28 +64,43 @@ static FormattedNumber format_ptr(void *PC) {
   return format_hex((uint64_t)PC, PtrWidth);
 }
 
-static bool printSymbolizedStackTrace(void **StackTrace, int Depth,
+static bool printSymbolizedStackTrace(StringRef Argv0,
+                                      void **StackTrace, int Depth,
                                       llvm::raw_ostream &OS)
   LLVM_ATTRIBUTE_USED;
 
 /// Helper that launches llvm-symbolizer and symbolizes a backtrace.
-static bool printSymbolizedStackTrace(void **StackTrace, int Depth,
+static bool printSymbolizedStackTrace(StringRef Argv0,
+                                      void **StackTrace, int Depth,
                                       llvm::raw_ostream &OS) {
+  if (DisableSymbolication)
+    return false;
+
+  // Don't recursively invoke the llvm-symbolizer binary.
+  if (Argv0.find("llvm-symbolizer") != std::string::npos)
+    return false;
+
   // FIXME: Subtract necessary number from StackTrace entries to turn return addresses
   // into actual instruction addresses.
-  // Use llvm-symbolizer tool to symbolize the stack traces.
-  ErrorOr<std::string> LLVMSymbolizerPathOrErr =
-      sys::findProgramByName("llvm-symbolizer");
+  // Use llvm-symbolizer tool to symbolize the stack traces. First look for it
+  // alongside our binary, then in $PATH.
+  ErrorOr<std::string> LLVMSymbolizerPathOrErr = std::error_code();
+  if (!Argv0.empty()) {
+    StringRef Parent = llvm::sys::path::parent_path(Argv0);
+    if (!Parent.empty())
+      LLVMSymbolizerPathOrErr = sys::findProgramByName("llvm-symbolizer", Parent);
+  }
+  if (!LLVMSymbolizerPathOrErr)
+    LLVMSymbolizerPathOrErr = sys::findProgramByName("llvm-symbolizer");
   if (!LLVMSymbolizerPathOrErr)
     return false;
   const std::string &LLVMSymbolizerPath = *LLVMSymbolizerPathOrErr;
-  // We don't know argv0 or the address of main() at this point, but try
-  // to guess it anyway (it's possible on some platforms).
-  std::string MainExecutableName = sys::fs::getMainExecutable(nullptr, nullptr);
-  if (MainExecutableName.empty() ||
-      MainExecutableName.find("llvm-symbolizer") != std::string::npos)
-    return false;
 
+  // If we don't know argv0 or the address of main() at this point, try
+  // to guess it anyway (it's possible on some platforms).
+  std::string MainExecutableName =
+      Argv0.empty() ? sys::fs::getMainExecutable(nullptr, nullptr)
+                    : (std::string)Argv0;
   BumpPtrAllocator Allocator;
   StringSaver StrPool(Allocator);
   std::vector<const char *> Modules(Depth, nullptr);

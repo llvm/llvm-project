@@ -170,6 +170,52 @@ define void @memintr_test(i8* %a, i8* %b) nounwind uwtable sanitize_address {
 ; CHECK: __asan_memcpy
 ; CHECK: ret void
 
+declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture writeonly, i8, i64, i32) nounwind
+declare void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
+declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
+
+define void @memintr_element_atomic_test(i8* %a, i8* %b) nounwind uwtable sanitize_address {
+  ; This is a canary test to make sure that these don't get lowered into calls that don't
+  ; have the element-atomic property. Eventually, asan will have to be enhanced to lower
+  ; these properly.
+  ; CHECK-LABEL: memintr_element_atomic_test
+  ; CHECK-NEXT: tail call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %a, i8 0, i64 100, i32 1)
+  ; CHECK-NEXT: tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %a, i8* align 1 %b, i64 100, i32 1)
+  ; CHECK-NEXT: tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %a, i8* align 1 %b, i64 100, i32 1)
+  ; CHECK-NEXT: ret void
+  tail call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %a, i8 0, i64 100, i32 1)
+  tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %a, i8* align 1 %b, i64 100, i32 1)
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %a, i8* align 1 %b, i64 100, i32 1)
+  ret void
+}
+
+
+; CHECK-LABEL: @test_swifterror
+; CHECK-NOT: __asan_report_load
+; CHECK: ret void
+define void @test_swifterror(i8** swifterror) sanitize_address {
+  %swifterror_ptr_value = load i8*, i8** %0
+  ret void
+}
+
+; CHECK-LABEL: @test_swifterror_2
+; CHECK-NOT: __asan_report_store
+; CHECK: ret void
+define void @test_swifterror_2(i8** swifterror) sanitize_address {
+  store i8* null, i8** %0
+  ret void
+}
+
+; CHECK-LABEL: @test_swifterror_3
+; CHECK-NOT: __asan_report_store
+; CHECK: ret void
+define void @test_swifterror_3() sanitize_address {
+  %swifterror_addr = alloca swifterror i8*
+  store i8* null, i8** %swifterror_addr
+  call void @test_swifterror_2(i8** swifterror %swifterror_addr)
+  ret void
+}
+
 ; CHECK: define internal void @asan.module_ctor()
 ; CHECK: call void @__asan_init()
 

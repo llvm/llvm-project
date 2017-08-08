@@ -23,7 +23,7 @@ static void copyStatusToFileData(const vfs::Status &Status,
                                  FileData &Data) {
   Data.Name = Status.getName();
   Data.Size = Status.getSize();
-  Data.ModTime = Status.getLastModificationTime().toEpochTime();
+  Data.ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
   Data.UniqueID = Status.getUniqueID();
   Data.IsDirectory = Status.isDirectory();
   Data.IsNamedPipe = Status.getType() == llvm::sys::fs::file_type::fifo_file;
@@ -40,7 +40,7 @@ static void copyStatusToFileData(const vfs::Status &Status,
 /// success for directories (not files).  On a successful file lookup, the
 /// implementation can optionally fill in FileDescriptor with a valid
 /// descriptor and the client guarantees that it will close it.
-bool FileSystemStatCache::get(const char *Path, FileData &Data, bool isFile,
+bool FileSystemStatCache::get(StringRef Path, FileData &Data, bool isFile,
                               std::unique_ptr<vfs::File> *F,
                               FileSystemStatCache *Cache, vfs::FileSystem &FS) {
   LookupResult R;
@@ -107,7 +107,7 @@ bool FileSystemStatCache::get(const char *Path, FileData &Data, bool isFile,
 }
 
 MemorizeStatCalls::LookupResult
-MemorizeStatCalls::getStat(const char *Path, FileData &Data, bool isFile,
+MemorizeStatCalls::getStat(StringRef Path, FileData &Data, bool isFile,
                            std::unique_ptr<vfs::File> *F, vfs::FileSystem &FS) {
   LookupResult Result = statChained(Path, Data, isFile, F, FS);
 

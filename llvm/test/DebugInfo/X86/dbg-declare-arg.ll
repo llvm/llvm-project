@@ -1,9 +1,17 @@
-; RUN: llc -O0 -fast-isel=false < %s | FileCheck %s
+; RUN: llc -O0 -fast-isel=true  -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-macosx10.6.7"
-;Radar 9321650
-
-;CHECK: ##DEBUG_VALUE: my_a 
+; rdar://problem/9321650
+;
+; CHECK: DW_AT_name {{.*}}"j"
+; CHECK: DW_TAG_variable  
+; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset] (0x00000000)
+; CHECK-NEXT:   DW_AT_name {{.*}}"my_a"
+; CHECK: .debug_loc contents:
+; CHECK: 0x00000000: Beginning address offset:
+; CHECK-NEXT:           Ending address offset:
+; CHECK-NEXT:            Location description: 77 08
+;                                              rsp+8
 
 %class.A = type { i32, i32, i32, i32 }
 
@@ -54,7 +62,7 @@ entry:
   store %class.A* %this, %class.A** %this.addr, align 8
   call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !43, metadata !DIExpression()), !dbg !44
   %this1 = load %class.A*, %class.A** %this.addr
-  call void @_ZN1AD2Ev(%class.A* %this1)
+  call void @_ZN1AD2Ev(%class.A* %this1), !dbg !53
   ret void, !dbg !45
 }
 
@@ -74,7 +82,7 @@ entry:
 
 !0 = !DISubprogram(name: "~A", line: 2, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !51, scope: !1, type: !11)
 !1 = !DICompositeType(tag: DW_TAG_class_type, name: "A", line: 2, size: 128, align: 32, file: !51, scope: !2, elements: !4)
-!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.0 (trunk 130127)", isOptimized: false, emissionKind: 1, file: !51, enums: !{}, retainedTypes: !{}, subprograms: !50)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.0 (trunk 130127)", isOptimized: false, emissionKind: FullDebug, file: !51, enums: !{}, retainedTypes: !{})
 !3 = !DIFile(filename: "a.cc", directory: "/private/tmp")
 !4 = !{!5, !7, !8, !9, !0, !10, !14}
 !5 = !DIDerivedType(tag: DW_TAG_member, name: "x", line: 2, size: 32, align: 32, file: !51, scope: !3, baseType: !6)
@@ -91,13 +99,13 @@ entry:
 !16 = !{null, !13, !17}
 !17 = !DIDerivedType(tag: DW_TAG_reference_type, scope: !2, baseType: !18)
 !18 = !DIDerivedType(tag: DW_TAG_const_type, file: !3, baseType: !1)
-!19 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooi", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !51, scope: !3, type: !20)
+!19 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooi", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !2, file: !51, scope: !3, type: !20)
 !20 = !DISubroutineType(types: !21)
 !21 = !{!1}
-!22 = distinct !DISubprogram(name: "~A", linkageName: "_ZN1AD1Ev", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !51, scope: !3, type: !23)
+!22 = distinct !DISubprogram(name: "~A", linkageName: "_ZN1AD1Ev", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !2, file: !51, scope: !3, type: !23)
 !23 = !DISubroutineType(types: !24)
 !24 = !{null}
-!25 = distinct !DISubprogram(name: "~A", linkageName: "_ZN1AD2Ev", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !51, scope: !3, type: !23)
+!25 = distinct !DISubprogram(name: "~A", linkageName: "_ZN1AD2Ev", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !2, file: !51, scope: !3, type: !23)
 !26 = !DILocalVariable(name: "i", line: 4, arg: 1, scope: !19, file: !3, type: !6)
 !27 = !DILocation(line: 4, column: 11, scope: !19)
 !28 = !DILocalVariable(name: "j", line: 5, scope: !29, file: !3, type: !6)
@@ -122,6 +130,6 @@ entry:
 !47 = !DILocation(line: 2, column: 47, scope: !25)
 !48 = !DILocation(line: 2, column: 54, scope: !49)
 !49 = distinct !DILexicalBlock(line: 2, column: 52, file: !51, scope: !25)
-!50 = !{!19, !22, !25}
 !51 = !DIFile(filename: "a.cc", directory: "/private/tmp")
 !52 = !{i32 1, !"Debug Info Version", i32 3}
+!53 = !DILocation(line: 0, scope: !22)

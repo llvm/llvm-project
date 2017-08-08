@@ -1,4 +1,5 @@
 ; RUN: opt < %s -adce -disable-output
+; RUN: opt < %s -adce -adce-remove-loops -disable-output
 
 define void @test() {
 entry:

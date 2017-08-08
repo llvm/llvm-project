@@ -35,17 +35,7 @@ namespace llvm {
     TrackingMDNodeRef Loc;
 
   public:
-    DebugLoc() {}
-    DebugLoc(DebugLoc &&X) : Loc(std::move(X.Loc)) {}
-    DebugLoc(const DebugLoc &X) : Loc(X.Loc) {}
-    DebugLoc &operator=(DebugLoc &&X) {
-      Loc = std::move(X.Loc);
-      return *this;
-    }
-    DebugLoc &operator=(const DebugLoc &X) {
-      Loc = X.Loc;
-      return *this;
-    }
+    DebugLoc() = default;
 
     /// \brief Construct from an \a DILocation.
     DebugLoc(const DILocation *L);
@@ -89,6 +79,16 @@ namespace llvm {
     /// FIXME: Remove this.  Users should use DILocation::get().
     static DebugLoc get(unsigned Line, unsigned Col, const MDNode *Scope,
                         const MDNode *InlinedAt = nullptr);
+
+    enum { ReplaceLastInlinedAt = true };
+    /// Rebuild the entire inlined-at chain for this instruction so that the top of
+    /// the chain now is inlined-at the new call site.
+    /// \param   InlinedAt    The new outermost inlined-at in the chain.
+    /// \param   ReplaceLast  Replace the last location in the inlined-at chain.
+    static DebugLoc appendInlinedAt(DebugLoc DL, DILocation *InlinedAt,
+                                    LLVMContext &Ctx,
+                                    DenseMap<const MDNode *, MDNode *> &Cache,
+                                    bool ReplaceLast = false);
 
     unsigned getLine() const;
     unsigned getCol() const;

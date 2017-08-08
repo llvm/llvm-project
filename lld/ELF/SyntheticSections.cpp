@@ -1741,9 +1741,7 @@ static std::vector<AddressEntry> readAddressArea(DWARFContext &Dwarf,
       // Range list with zero size has no effect.
       if (R.LowPC == R.HighPC)
         continue;
-      auto *IS = cast<InputSection>(S);
-      uint64_t Offset = IS->getOffsetInFile();
-      Ret.push_back({IS, R.LowPC - Offset, R.HighPC - Offset, CurrentCu});
+      Ret.push_back({cast<InputSection>(S), R.LowPC, R.HighPC, CurrentCu});
     }
     ++CurrentCu;
   }
@@ -1752,8 +1750,8 @@ static std::vector<AddressEntry> readAddressArea(DWARFContext &Dwarf,
 
 static std::vector<NameTypeEntry> readPubNamesAndTypes(DWARFContext &Dwarf,
                                                        bool IsLE) {
-  StringRef Data[] = {Dwarf.getDWARFObj().getGnuPubNamesSection(),
-                      Dwarf.getDWARFObj().getGnuPubTypesSection()};
+  StringRef Data[] = {Dwarf.getGnuPubNamesSection(),
+                      Dwarf.getGnuPubTypesSection()};
 
   std::vector<NameTypeEntry> Ret;
   for (StringRef D : Data) {
@@ -1803,7 +1801,7 @@ void GdbIndexSection::buildIndex() {
   }
 }
 
-static GdbIndexChunk readDwarf(DWARFContext &Dwarf, InputSection *Sec) {
+static GdbIndexChunk readDwarf(DWARFContextInMemory &Dwarf, InputSection *Sec) {
   GdbIndexChunk Ret;
   Ret.DebugInfoSec = Sec;
   Ret.CompilationUnits = readCuList(Dwarf);
@@ -1815,8 +1813,16 @@ static GdbIndexChunk readDwarf(DWARFContext &Dwarf, InputSection *Sec) {
 template <class ELFT> GdbIndexSection *elf::createGdbIndex() {
   std::vector<GdbIndexChunk> Chunks;
   for (InputSection *Sec : getDebugInfoSections()) {
-    elf::ObjectFile<ELFT> *F = Sec->getFile<ELFT>();
-    DWARFContext Dwarf(make_unique<LLDDwarfObj<ELFT>>(F));
+    InputFile *F = Sec->File;
+    std::error_code EC;
+    ELFObjectFile<ELFT> Obj(F->MB, EC);
+    if (EC)
+      fatal(EC.message());
+    DWARFContextInMemory Dwarf(Obj, nullptr, [&](Error E) {
+      error(toString(F) + ": error parsing DWARF data:\n>>> " +
+            toString(std::move(E)));
+      return ErrorPolicy::Continue;
+    });
     Chunks.push_back(readDwarf(Dwarf, Sec));
   }
   return make<GdbIndexSection>(std::move(Chunks));
@@ -2239,15 +2245,16 @@ void elf::decompressAndMergeSections() {
       continue;
 
     StringRef OutsecName = getOutputSectionName(MS->Name);
+    uint64_t Flags = MS->Flags & ~(uint64_t)SHF_GROUP;
     uint32_t Alignment = std::max<uint32_t>(MS->Alignment, MS->Entsize);
 
     auto I = llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
-      return Sec->Name == OutsecName && Sec->Flags == MS->Flags &&
+      return Sec->Name == OutsecName && Sec->Flags == Flags &&
              Sec->Alignment == Alignment;
     });
     if (I == MergeSections.end()) {
-      MergeSyntheticSection *Syn = make<MergeSyntheticSection>(
-          OutsecName, MS->Type, MS->Flags, Alignment);
+      MergeSyntheticSection *Syn =
+          make<MergeSyntheticSection>(OutsecName, MS->Type, Flags, Alignment);
       MergeSections.push_back(Syn);
       I = std::prev(MergeSections.end());
       S = Syn;

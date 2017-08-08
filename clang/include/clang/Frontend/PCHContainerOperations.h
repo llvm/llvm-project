@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_PCH_CONTAINER_OPERATIONS_H
 #define LLVM_CLANG_PCH_CONTAINER_OPERATIONS_H
 
+#include "clang/Basic/Module.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -17,7 +18,6 @@
 
 namespace llvm {
 class raw_pwrite_stream;
-class BitstreamReader;
 }
 
 using llvm::StringRef;
@@ -30,7 +30,7 @@ class DiagnosticsEngine;
 class CompilerInstance;
 
 struct PCHBuffer {
-  uint64_t Signature;
+  ASTFileSignature Signature;
   llvm::SmallVector<char, 0> Data;
   bool IsComplete;
 };
@@ -46,10 +46,12 @@ public:
   /// Return an ASTConsumer that can be chained with a
   /// PCHGenerator that produces a wrapper file format containing a
   /// serialized AST bitstream.
-  virtual std::unique_ptr<ASTConsumer> CreatePCHContainerGenerator(
-      CompilerInstance &CI, const std::string &MainFileName,
-      const std::string &OutputFileName, llvm::raw_pwrite_stream *OS,
-      std::shared_ptr<PCHBuffer> Buffer) const = 0;
+  virtual std::unique_ptr<ASTConsumer>
+  CreatePCHContainerGenerator(CompilerInstance &CI,
+                              const std::string &MainFileName,
+                              const std::string &OutputFileName,
+                              std::unique_ptr<llvm::raw_pwrite_stream> OS,
+                              std::shared_ptr<PCHBuffer> Buffer) const = 0;
 };
 
 /// This abstract interface provides operations for unwrapping
@@ -61,10 +63,8 @@ public:
   /// Equivalent to the format passed to -fmodule-format=
   virtual StringRef getFormat() const = 0;
 
-  /// Initialize an llvm::BitstreamReader with the serialized AST inside
-  /// the PCH container Buffer.
-  virtual void ExtractPCH(llvm::MemoryBufferRef Buffer,
-                          llvm::BitstreamReader &StreamFile) const = 0;
+  /// Returns the serialized AST inside the PCH container Buffer.
+  virtual StringRef ExtractPCH(llvm::MemoryBufferRef Buffer) const = 0;
 };
 
 /// Implements write operations for a raw pass-through PCH container.
@@ -73,19 +73,20 @@ class RawPCHContainerWriter : public PCHContainerWriter {
 
   /// Return an ASTConsumer that can be chained with a
   /// PCHGenerator that writes the module to a flat file.
-  std::unique_ptr<ASTConsumer> CreatePCHContainerGenerator(
-      CompilerInstance &CI, const std::string &MainFileName,
-      const std::string &OutputFileName, llvm::raw_pwrite_stream *OS,
-      std::shared_ptr<PCHBuffer> Buffer) const override;
+  std::unique_ptr<ASTConsumer>
+  CreatePCHContainerGenerator(CompilerInstance &CI,
+                              const std::string &MainFileName,
+                              const std::string &OutputFileName,
+                              std::unique_ptr<llvm::raw_pwrite_stream> OS,
+                              std::shared_ptr<PCHBuffer> Buffer) const override;
 };
 
 /// Implements read operations for a raw pass-through PCH container.
 class RawPCHContainerReader : public PCHContainerReader {
   StringRef getFormat() const override { return "raw"; }
 
-  /// Initialize an llvm::BitstreamReader with Buffer.
-  void ExtractPCH(llvm::MemoryBufferRef Buffer,
-                  llvm::BitstreamReader &StreamFile) const override;
+  /// Simply returns the buffer contained in Buffer.
+  StringRef ExtractPCH(llvm::MemoryBufferRef Buffer) const override;
 };
 
 /// A registry of PCHContainerWriter and -Reader objects for different formats.

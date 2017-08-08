@@ -7,8 +7,8 @@
 
 define i32 @foo(i32 %p) #0 {
 entry:
-; CHECK: r{{[0-9]+}}{{ *}}={{ *}}memw(#a)
-; CHECK: r{{[0-9]+}}{{ *}}={{ *}}memw(#b)
+; CHECK: r{{[0-9]+}}{{ *}}={{ *}}memw(gp+#a)
+; CHECK: r{{[0-9]+}}{{ *}}={{ *}}memw(gp+#b)
 ; CHECK: if{{ *}}(p{{[0-3]}}) memw(##c){{ *}}={{ *}}r{{[0-9]+}}
   %0 = load i32, i32* @a, align 4
   %1 = load i32, i32* @b, align 4

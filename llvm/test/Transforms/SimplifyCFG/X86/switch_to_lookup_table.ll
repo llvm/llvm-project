@@ -1,28 +1,28 @@
-; RUN: opt < %s -simplifycfg -S -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+; RUN: opt < %s -latesimplifycfg -S -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; The table for @f
-; CHECK: @switch.table = private unnamed_addr constant [7 x i32] [i32 55, i32 123, i32 0, i32 -1, i32 27, i32 62, i32 1]
+; CHECK: @switch.table.f = private unnamed_addr constant [7 x i32] [i32 55, i32 123, i32 0, i32 -1, i32 27, i32 62, i32 1]
 
 ; The float table for @h
-; CHECK: @switch.table.1 = private unnamed_addr constant [4 x float] [float 0x40091EB860000000, float 0x3FF3BE76C0000000, float 0x4012449BA0000000, float 0x4001AE1480000000]
+; CHECK: @switch.table.h = private unnamed_addr constant [4 x float] [float 0x40091EB860000000, float 0x3FF3BE76C0000000, float 0x4012449BA0000000, float 0x4001AE1480000000]
 
 ; The table for @foostring
-; CHECK: @switch.table.2 = private unnamed_addr constant [4 x i8*] [i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str2, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str3, i64 0, i64 0)]
+; CHECK: @switch.table.foostring = private unnamed_addr constant [4 x i8*] [i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str2, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str3, i64 0, i64 0)]
 
 ; The table for @earlyreturncrash
-; CHECK: @switch.table.3 = private unnamed_addr constant [4 x i32] [i32 42, i32 9, i32 88, i32 5]
+; CHECK: @switch.table.earlyreturncrash = private unnamed_addr constant [4 x i32] [i32 42, i32 9, i32 88, i32 5]
 
-; The table for @large.
-; CHECK: @switch.table.4 = private unnamed_addr constant [199 x i32] [i32 1, i32 4, i32 9,
+; The table for @large
+; CHECK: @switch.table.large = private unnamed_addr constant [199 x i32] [i32 1, i32 4, i32 9,
 
 ; The table for @cprop
-; CHECK: @switch.table.5 = private unnamed_addr constant [7 x i32] [i32 5, i32 42, i32 126, i32 -452, i32 128, i32 6, i32 7]
+; CHECK: @switch.table.cprop = private unnamed_addr constant [7 x i32] [i32 5, i32 42, i32 126, i32 -452, i32 128, i32 6, i32 7]
 
 ; The table for @unreachable_case
-; CHECK: @switch.table.6 = private unnamed_addr constant [9 x i32] [i32 0, i32 0, i32 0, i32 2, i32 -1, i32 1, i32 1, i32 1, i32 1]
+; CHECK: @switch.table.unreachable_case = private unnamed_addr constant [9 x i32] [i32 0, i32 0, i32 0, i32 2, i32 -1, i32 1, i32 1, i32 1, i32 1]
 
 ; A simple int-to-int selection switch.
 ; It is dense enough to be replaced by table lookup.
@@ -58,7 +58,7 @@ return:
 ; CHECK-NEXT: %0 = icmp ult i32 %switch.tableidx, 7
 ; CHECK-NEXT: br i1 %0, label %switch.lookup, label %return
 ; CHECK: switch.lookup:
-; CHECK-NEXT: %switch.gep = getelementptr inbounds [7 x i32], [7 x i32]* @switch.table, i32 0, i32 %switch.tableidx
+; CHECK-NEXT: %switch.gep = getelementptr inbounds [7 x i32], [7 x i32]* @switch.table.f, i32 0, i32 %switch.tableidx
 ; CHECK-NEXT: %switch.load = load i32, i32* %switch.gep
 ; CHECK-NEXT: ret i32 %switch.load
 ; CHECK: return:
@@ -97,7 +97,7 @@ sw.epilog:
 ; CHECK-NEXT: %switch.shiftamt = mul i32 %switch.tableidx, 8
 ; CHECK-NEXT: %switch.downshift = lshr i32 89655594, %switch.shiftamt
 ; CHECK-NEXT: %switch.masked = trunc i32 %switch.downshift to i8
-; CHECK-NEXT: %switch.gep = getelementptr inbounds [4 x float], [4 x float]* @switch.table.1, i32 0, i32 %switch.tableidx
+; CHECK-NEXT: %switch.gep = getelementptr inbounds [4 x float], [4 x float]* @switch.table.h, i32 0, i32 %switch.tableidx
 ; CHECK-NEXT: %switch.load = load float, float* %switch.gep
 ; CHECK-NEXT: br label %sw.epilog
 ; CHECK: sw.epilog:
@@ -144,7 +144,7 @@ return:
 ; CHECK-NEXT: %0 = icmp ult i32 %switch.tableidx, 4
 ; CHECK-NEXT: br i1 %0, label %switch.lookup, label %return
 ; CHECK: switch.lookup:
-; CHECK-NEXT: %switch.gep = getelementptr inbounds [4 x i8*], [4 x i8*]* @switch.table.2, i32 0, i32 %switch.tableidx
+; CHECK-NEXT: %switch.gep = getelementptr inbounds [4 x i8*], [4 x i8*]* @switch.table.foostring, i32 0, i32 %switch.tableidx
 ; CHECK-NEXT: %switch.load = load i8*, i8** %switch.gep
 ; CHECK-NEXT: ret i8* %switch.load
 }
@@ -173,7 +173,7 @@ sw.epilog:
 
 ; CHECK-LABEL: @earlyreturncrash(
 ; CHECK: switch.lookup:
-; CHECK-NEXT: %switch.gep = getelementptr inbounds [4 x i32], [4 x i32]* @switch.table.3, i32 0, i32 %switch.tableidx
+; CHECK-NEXT: %switch.gep = getelementptr inbounds [4 x i32], [4 x i32]* @switch.table.earlyreturncrash, i32 0, i32 %switch.tableidx
 ; CHECK-NEXT: %switch.load = load i32, i32* %switch.gep
 ; CHECK-NEXT: ret i32 %switch.load
 ; CHECK: sw.epilog:
@@ -749,7 +749,7 @@ return:
 
 ; CHECK-LABEL: @cprop(
 ; CHECK: switch.lookup:
-; CHECK: %switch.gep = getelementptr inbounds [7 x i32], [7 x i32]* @switch.table.5, i32 0, i32 %switch.tableidx
+; CHECK: %switch.gep = getelementptr inbounds [7 x i32], [7 x i32]* @switch.table.cprop, i32 0, i32 %switch.tableidx
 }
 
 define i32 @unreachable_case(i32 %x)  {
@@ -778,7 +778,7 @@ return:
 
 ; CHECK-LABEL: @unreachable_case(
 ; CHECK: switch.lookup:
-; CHECK: getelementptr inbounds [9 x i32], [9 x i32]* @switch.table.6, i32 0, i32 %switch.tableidx
+; CHECK: getelementptr inbounds [9 x i32], [9 x i32]* @switch.table.unreachable_case, i32 0, i32 %switch.tableidx
 }
 
 define i32 @unreachable_default(i32 %x)  {
@@ -805,7 +805,7 @@ return:
 ; CHECK-NEXT: %switch.tableidx = sub i32 %x, 0
 ; CHECK-NOT: icmp
 ; CHECK-NOT: br 1i
-; CHECK-NEXT: %switch.gep = getelementptr inbounds [4 x i32], [4 x i32]* @switch.table.7, i32 0, i32 %switch.tableidx
+; CHECK-NEXT: %switch.gep = getelementptr inbounds [4 x i32], [4 x i32]* @switch.table.unreachable_default, i32 0, i32 %switch.tableidx
 ; CHECK-NEXT: %switch.load = load i32, i32* %switch.gep
 ; CHECK-NEXT: ret i32 %switch.load
 }
@@ -913,42 +913,57 @@ return:
 
 ; We build lookup tables for switches with three or more cases.
 define i32 @threecases(i32 %c) {
+; CHECK-LABEL: @threecases(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i32 %c, 0
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 3
+; CHECK-NEXT:    br i1 [[TMP0]], label %switch.lookup, label %return
+; CHECK:       switch.lookup:
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* @switch.table.threecases, i32 0, i32 [[SWITCH_TABLEIDX]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]]
+; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK:       return:
+; CHECK-NEXT:    ret i32 3
+;
 entry:
   switch i32 %c, label %sw.default [
-    i32 0, label %return
-    i32 1, label %sw.bb1
-    i32 2, label %sw.bb2
+  i32 0, label %return
+  i32 1, label %sw.bb1
+  i32 2, label %sw.bb2
   ]
-sw.bb1: br label %return
-sw.bb2: br label %return
-sw.default: br label %return
+sw.bb1:
+  br label %return
+sw.bb2:
+  br label %return
+sw.default:
+  br label %return
 return:
   %x = phi i32 [ 3, %sw.default ], [ 5, %sw.bb2 ], [ 7, %sw.bb1 ], [ 10, %entry ]
   ret i32 %x
-; CHECK-LABEL: @threecases(
-; CHECK-NOT: switch i32
-; CHECK: @switch.table
 }
 
 ; We don't build tables for switches with two cases.
 define i32 @twocases(i32 %c) {
+; CHECK-LABEL: @twocases(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i32 %c, 1
+; CHECK-NEXT:    [[SWITCH_SELECT:%.*]] = select i1 [[SWITCH_SELECTCMP:%.*]], i32 7, i32 3
+; CHECK-NEXT:    [[SWITCH_SELECTCMP1:%.*]] = icmp eq i32 %c, 0
+; CHECK-NEXT:    [[SWITCH_SELECT2:%.*]] = select i1 [[SWITCH_SELECTCMP1]], i32 9, i32 [[SWITCH_SELECT]]
+; CHECK-NEXT:    ret i32 [[SWITCH_SELECT2]]
+;
 entry:
   switch i32 %c, label %sw.default [
-    i32 0, label %return
-    i32 1, label %sw.bb1
+  i32 0, label %return
+  i32 1, label %sw.bb1
   ]
-sw.bb1: br label %return
-sw.default: br label %return
+sw.bb1:
+  br label %return
+sw.default:
+  br label %return
 return:
   %x = phi i32 [ 3, %sw.default ], [ 7, %sw.bb1 ], [ 9, %entry ]
   ret i32 %x
-; CHECK-LABEL: @twocases(
-; CHECK-NOT: switch i32
-; CHECK-NOT: @switch.table
-; CHECK: %switch.selectcmp
-; CHECK-NEXT: %switch.select
-; CHECK-NEXT: %switch.selectcmp1
-; CHECK-NEXT: %switch.select2
 }
 
 ; Don't build tables for switches with TLS variables.
@@ -1163,8 +1178,9 @@ return:
   ret i32 %retval.0
 ; CHECK-LABEL: @reuse_cmp2(
 ; CHECK: entry:
-; CHECK-NEXT: %switch.tableidx = sub i32 %x, 0
-; CHECK-NEXT: [[C:%.+]] = icmp ult i32 %switch.tableidx, 4
+; CHECK-NEXT: %switch = icmp ult i32 %x, 4
+; CHECK-NEXT: %x. = select i1 %switch, i32 %x, i32 4
+; CHECK-NEXT: [[C:%.+]] = icmp ne i32 %x., 4
 ; CHECK:      [[R:%.+]] = select i1 [[C]], i32 {{.*}}, i32 100
 ; CHECK-NEXT: ret i32 [[R]]
 }
@@ -1194,7 +1210,7 @@ return:
   %retval.0 = phi i32 [ %r.0, %if.then ], [ 100, %if.end ]
   ret i32 %retval.0
 ; CHECK-LABEL: @no_reuse_cmp(
-; CHECK:  [[S:%.+]] = select 
+; CHECK:  [[S:%.+]] = select
 ; CHECK-NEXT:  %cmp = icmp ne i32 [[S]], 0
 ; CHECK-NEXT:  [[R:%.+]] = select i1 %cmp, i32 [[S]], i32 100
 ; CHECK-NEXT:  ret i32 [[R]]
@@ -1302,3 +1318,95 @@ l6:
 ; CHECK: entry
 ; CHECK-NEXT: switch
 }
+
+; Speculation depth must be limited to avoid a zero-cost instruction cycle.
+
+; CHECK-LABEL: @PR26308(
+; CHECK:       cleanup4:
+; CHECK-NEXT:  br label %cleanup4
+
+define i32 @PR26308(i1 %B, i64 %load) {
+entry:
+  br label %while.body
+
+while.body:
+  br label %cleanup
+
+cleanup:
+  %cleanup.dest.slot.0 = phi i1 [ false, %while.body ]
+  br i1 %cleanup.dest.slot.0, label %for.cond, label %cleanup4
+
+for.cond:
+  %e.0 = phi i64* [ undef, %cleanup ], [ %incdec.ptr, %for.cond2 ]
+  %pi = ptrtoint i64* %e.0 to i64
+  %incdec.ptr = getelementptr inbounds i64, i64* %e.0, i64 1
+  br label %for.cond2
+
+for.cond2:
+  %storemerge = phi i64 [ %pi, %for.cond ], [ %load, %for.cond2 ]
+  br i1 %B, label %for.cond2, label %for.cond
+
+cleanup4:
+  br label %while.body
+}
+
+declare void @throw(i1)
+
+define void @wineh_test(i64 %val) personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  invoke void @throw(i1 false)
+          to label %unreachable unwind label %cleanup1
+
+unreachable:
+  unreachable
+
+cleanup1:
+  %cleanuppad1 = cleanuppad within none []
+  switch i64 %val, label %cleanupdone2 [
+    i64 0, label %cleanupdone1
+    i64 1, label %cleanupdone1
+    i64 6, label %cleanupdone1
+  ]
+
+cleanupdone1:
+  cleanupret from %cleanuppad1 unwind label %cleanup2
+
+cleanupdone2:
+  cleanupret from %cleanuppad1 unwind label %cleanup2
+
+cleanup2:
+  %phi = phi i1 [ true, %cleanupdone1 ], [ false, %cleanupdone2 ]
+  %cleanuppad2 = cleanuppad within none []
+  call void @throw(i1 %phi) [ "funclet"(token %cleanuppad2) ]
+  unreachable
+}
+
+; CHECK-LABEL: @wineh_test(
+; CHECK: entry:
+; CHECK:   invoke void @throw(i1 false)
+; CHECK:           to label %[[unreachable:.*]] unwind label %[[cleanup1:.*]]
+
+; CHECK: [[unreachable]]:
+; CHECK:   unreachable
+
+; CHECK: [[cleanup1]]:
+; CHECK:   %[[cleanuppad1:.*]] = cleanuppad within none []
+; CHECK:   switch i64 %val, label %[[cleanupdone2:.*]] [
+; CHECK:     i64 0, label %[[cleanupdone1:.*]]
+; CHECK:     i64 1, label %[[cleanupdone1]]
+; CHECK:     i64 6, label %[[cleanupdone1]]
+; CHECK:   ]
+
+; CHECK: [[cleanupdone1]]:
+; CHECK:   cleanupret from %[[cleanuppad1]] unwind label %[[cleanup2:.*]]
+
+; CHECK: [[cleanupdone2]]:
+; CHECK:   cleanupret from %[[cleanuppad1]] unwind label %[[cleanup2]]
+
+; CHECK: [[cleanup2]]:
+; CHECK:   %[[phi:.*]] = phi i1 [ true, %[[cleanupdone1]] ], [ false, %[[cleanupdone2]] ]
+; CHECK:   %[[cleanuppad2:.*]] = cleanuppad within none []
+; CHECK:   call void @throw(i1 %[[phi]]) [ "funclet"(token %[[cleanuppad2]]) ]
+; CHECK:   unreachable
+
+declare i32 @__CxxFrameHandler3(...)

@@ -16,6 +16,8 @@
 #error "Missing macro definition of HANDLE_DI_FLAG"
 #endif
 
+HANDLE_DI_FLAG(0, Zero) // Use it as zero value.
+                        // For example: void foo(DIFlags Flags = FlagZero).
 HANDLE_DI_FLAG(1, Private)
 HANDLE_DI_FLAG(2, Protected)
 HANDLE_DI_FLAG(3, Public)
@@ -32,6 +34,26 @@ HANDLE_DI_FLAG((1 << 11), Vector)
 HANDLE_DI_FLAG((1 << 12), StaticMember)
 HANDLE_DI_FLAG((1 << 13), LValueReference)
 HANDLE_DI_FLAG((1 << 14), RValueReference)
-HANDLE_DI_FLAG((1 << 15), ExternalTypeRef)
+// 15 was formerly ExternalTypeRef, but this was never used.
+HANDLE_DI_FLAG((1 << 15), Reserved)
+HANDLE_DI_FLAG((1 << 16), SingleInheritance)
+HANDLE_DI_FLAG((2 << 16), MultipleInheritance)
+HANDLE_DI_FLAG((3 << 16), VirtualInheritance)
+HANDLE_DI_FLAG((1 << 18), IntroducedVirtual)
+HANDLE_DI_FLAG((1 << 19), BitField)
+HANDLE_DI_FLAG((1 << 20), NoReturn)
+HANDLE_DI_FLAG((1 << 21), MainSubprogram)
+
+// To avoid needing a dedicated value for IndirectVirtualBase, we use
+// the bitwise or of Virtual and FwdDecl, which does not otherwise
+// make sense for inheritance.
+HANDLE_DI_FLAG((1 << 2) | (1 << 5), IndirectVirtualBase)
+
+#ifdef DI_FLAG_LARGEST_NEEDED
+// intended to be used with ADT/BitmaskEnum.h
+// NOTE: always must be equal to largest flag, check this when adding new flag
+HANDLE_DI_FLAG((1 << 21), Largest)
+#undef DI_FLAG_LARGEST_NEEDED
+#endif
 
 #undef HANDLE_DI_FLAG

@@ -14,7 +14,7 @@ define i32 @bad2() !prof !1 {
 }
 
 !1 = !{!"function_entry_count"}
-; CHECK-NEXT: !prof annotations should have exactly 2 operands
+; CHECK-NEXT: !prof annotations should have no less than 2 operands
 ; CHECK-NEXT: !1 = !{!"function_entry_count"}
 
 

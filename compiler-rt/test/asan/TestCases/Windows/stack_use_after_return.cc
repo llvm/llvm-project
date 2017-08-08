@@ -18,5 +18,5 @@ int main() {
 // CHECK: is located in stack of thread T0 at offset [[OFFSET:.*]] in frame
 // CHECK-NEXT: {{#0 0x.* in foo.*stack_use_after_return.cc}}
 //
-// CHECK: 'stack_buffer' <== Memory access at offset [[OFFSET]] is inside this variable
+// CHECK: 'stack_buffer'{{.*}} <== Memory access at offset [[OFFSET]] is inside this variable
 }

@@ -1,21 +1,22 @@
-// RUN: %clang_cc1 %s -O1 -disable-llvm-optzns -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -O1 -disable-llvm-passes -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -O1 -disable-llvm-passes -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK2
 
-// CHECK: @_ZN7PR100011xE = global
-// CHECK-NOT: @_ZN7PR100014kBarE = external global i32
-//
-// CHECK-NOT: @_ZTVN5test118stdio_sync_filebufIwEE = constant
-// CHECK-NOT: _ZTVN5test315basic_fstreamXXIcEE
-// CHECK-NOT: @_ZTVN5test018stdio_sync_filebufIA1_iEE
-// CHECK-NOT: @_ZTVN5test018stdio_sync_filebufIA2_iEE
-// CHECK:     @_ZTVN5test018stdio_sync_filebufIA3_iEE = weak_odr unnamed_addr constant
+// Instantiation order varies on different C++ dialects (IE, between C++98 and C++11).
+// CHECK-DAG: @_ZN7PR100011xE = global
+// CHECK-DAG: @_ZTVN5test018stdio_sync_filebufIA3_iEE = weak_odr unnamed_addr constant
+// CHECK-DAG: @_ZN7PR100011SIiE3arrE = linkonce_odr global [3 x i32]
+// CHECK-DAG: @_ZTVN5test018stdio_sync_filebufIA4_iEE = linkonce_odr unnamed_addr constant
 
-// CHECK: @_ZN7PR100011SIiE3arrE = linkonce_odr global [3 x i32]
-// CHECK-NOT: @_ZN7PR100011SIiE3arr2E = linkonce_odr global [3 x i32]A
+// Negative checks go under prefix "CHECK2" to avoid interference with CHECK and CHECK-DAG.
+// CHECK2-NOT: @_ZN7PR100014kBarE = external global i32
+// CHECK2-NOT: @_ZTVN5test118stdio_sync_filebufIwEE = constant
+// CHECK2-NOT: _ZTVN5test315basic_fstreamXXIcEE
+// CHECK2-NOT: @_ZTVN5test018stdio_sync_filebufIA1_iEE
+// CHECK2-NOT: @_ZTVN5test018stdio_sync_filebufIA2_iEE
+// CHECK2-NOT: @_ZN7PR100011SIiE3arr2E = linkonce_odr global [3 x i32]A
 
-// CHECK:     @_ZTVN5test018stdio_sync_filebufIA4_iEE = linkonce_odr unnamed_addr constant
-
-// CHECK-NOT: _ZTVN5test31SIiEE
-// CHECK-NOT: _ZTSN5test31SIiEE
+// CHECK2-NOT: _ZTVN5test31SIiEE
+// CHECK2-NOT: _ZTSN5test31SIiEE
 
 // CHECK-LABEL: define linkonce_odr void @_ZN5test21CIiEC1Ev(%"class.test2::C"* %this) unnamed_addr
 // CHECK-LABEL: define linkonce_odr void @_ZN5test21CIiE6foobarIdEEvT_(
@@ -152,7 +153,7 @@ class B {
   void f () {}
 };
 // Should not instantiate class B since it is introduced in namespace scope.
-// CHECK-NOT: _ZN6PR85051AILi0EE1B1fEv
+// CHECK2-NOT: _ZN6PR85051AILi0EE1B1fEv
 template class A<0>;
 }
 

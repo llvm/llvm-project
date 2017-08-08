@@ -58,8 +58,10 @@ def remark_fe_backend_optimization_remark_analysis_aliasing : Remark<"%0; "
     BackendInfo, InGroup<BackendOptimizationRemarkAnalysis>;
 def warn_fe_backend_optimization_failure : Warning<"%0">, BackendInfo,
     InGroup<BackendOptimizationFailure>, DefaultWarn;
-def note_fe_backend_optimization_remark_invalid_loc : Note<"could "
-  "not determine the original source location for %0:%1:%2">;
+def note_fe_backend_invalid_loc : Note<"could "
+  "not determine the original source location for %0:%1:%2">, BackendInfo;
+
+def err_fe_backend_unsupported : Error<"%0">, BackendInfo;
 
 def remark_sanitize_address_insert_extra_padding_accepted : Remark<
     "-fsanitize-address-field-padding applied to %0">, ShowInSystemHeader,
@@ -105,10 +107,15 @@ def warn_fe_cc_print_header_failure : Warning<
     "unable to open CC_PRINT_HEADERS file: %0 (using stderr)">;
 def warn_fe_cc_log_diagnostics_failure : Warning<
     "unable to open CC_LOG_DIAGNOSTICS file: %0 (using stderr)">;
+def warn_fe_unable_to_open_stats_file : Warning<
+    "unable to open statistics output file '%0': '%1'">,
+    InGroup<DiagGroup<"unable-to-open-stats-file">>;
 def err_fe_no_pch_in_dir : Error<
     "no suitable precompiled header file found in directory '%0'">;
 def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
+def err_fe_invalid_alignment : Error<
+    "invalid value '%1' in '%0'; alignment must be a power of 2">;
 
 def warn_fe_serialized_diag_merge_failure : Warning<
     "unable to merge a subprocess's serialized diagnostics">,
@@ -172,6 +179,10 @@ def warn_incompatible_analyzer_plugin_api : Warning<
 def note_incompatible_analyzer_plugin_api : Note<
     "current API version is '%0', but plugin was compiled with version '%1'">;
 
+def err_module_build_requires_fmodules : Error<
+  "module compilation requires '-fmodules'">;
+def err_module_interface_requires_modules_ts : Error<
+  "module interface compilation requires '-fmodules-ts'">;
 def warn_module_config_mismatch : Warning<
   "module file %0 cannot be loaded due to a configuration mismatch with the current "
   "compilation">, InGroup<DiagGroup<"module-file-config-mismatch">>, DefaultError;
@@ -187,6 +198,7 @@ def err_no_submodule_suggest : Error<
   "no submodule named %0 in module '%1'; did you mean '%2'?">;
 def warn_missing_submodule : Warning<"missing submodule '%0'">,
   InGroup<IncompleteUmbrella>;
+def note_module_import_here : Note<"module imported here">;
 def err_module_cannot_create_includes : Error<
   "cannot create includes file for module %0: %1">;
 def warn_module_config_macro_undef : Warning<
@@ -204,16 +216,23 @@ def err_modules_embed_file_not_found :
   Error<"file '%0' specified by '-fmodules-embed-file=' not found">,
   DefaultFatal;
 
+def remark_index_producing_module_file_data : Remark<"producing index data for "
+  "module file '%0'">,
+  InGroup<IndexStore>;
+
 def err_test_module_file_extension_version : Error<
   "test module file extension '%0' has different version (%1.%2) than expected "
   "(%3.%4)">;
-
-def err_conflicting_module_names : Error<
-  "conflicting module names specified: '-fmodule-name=%0' and "
-  "'-fmodule-implementation-of %1'">;
 
 def err_missing_vfs_overlay_file : Error<
   "virtual filesystem overlay file '%0' not found">, DefaultFatal;
 def err_invalid_vfs_overlay : Error<
   "invalid virtual filesystem overlay file '%0'">, DefaultFatal;
+
+def err_no_apinotes_cache_path : Error<
+  "-fapinotes was provided without -fapinotes-cache-path=<directory>">,
+  DefaultFatal;
+
+def warn_option_invalid_ocl_version : Warning<
+  "OpenCL version %0 does not support the option '%1'">, InGroup<Deprecated>;
 }

@@ -11,18 +11,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SparcMCExpr.h"
 #include "MCTargetDesc/SparcFixupKinds.h"
+#include "SparcMCExpr.h"
 #include "SparcMCTargetDesc.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/EndianStream.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
@@ -31,15 +42,17 @@ using namespace llvm;
 STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
 
 namespace {
+
 class SparcMCCodeEmitter : public MCCodeEmitter {
-  SparcMCCodeEmitter(const SparcMCCodeEmitter &) = delete;
-  void operator=(const SparcMCCodeEmitter &) = delete;
+  const MCInstrInfo &MCII;
   MCContext &Ctx;
 
 public:
-  SparcMCCodeEmitter(MCContext &ctx): Ctx(ctx) {}
-
-  ~SparcMCCodeEmitter() override {}
+  SparcMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
+      : MCII(mcii), Ctx(ctx) {}
+  SparcMCCodeEmitter(const SparcMCCodeEmitter &) = delete;
+  SparcMCCodeEmitter &operator=(const SparcMCCodeEmitter &) = delete;
+  ~SparcMCCodeEmitter() override = default;
 
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
@@ -70,18 +83,20 @@ public:
                                        SmallVectorImpl<MCFixup> &Fixups,
                                        const MCSubtargetInfo &STI) const;
 
+private:
+  uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;
+  void verifyInstructionPredicates(const MCInst &MI,
+                                   uint64_t AvailableFeatures) const;
 };
-} // end anonymous namespace
 
-MCCodeEmitter *llvm::createSparcMCCodeEmitter(const MCInstrInfo &MCII,
-                                              const MCRegisterInfo &MRI,
-                                              MCContext &Ctx) {
-  return new SparcMCCodeEmitter(Ctx);
-}
+} // end anonymous namespace
 
 void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
+  verifyInstructionPredicates(MI,
+                              computeAvailableFeatures(STI.getFeatureBits()));
+
   unsigned Bits = getBinaryCodeForInstr(MI, Fixups, STI);
 
   if (Ctx.getAsmInfo()->isLittleEndian()) {
@@ -110,12 +125,10 @@ void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   ++MCNumEmitted;  // Keep track of the # of mi's emitted.
 }
 
-
 unsigned SparcMCCodeEmitter::
 getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                   SmallVectorImpl<MCFixup> &Fixups,
                   const MCSubtargetInfo &STI) const {
-
   if (MO.isReg())
     return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
 
@@ -198,6 +211,7 @@ getBranchPredTargetOpValue(const MCInst &MI, unsigned OpNo,
                                    (MCFixupKind)Sparc::fixup_sparc_br19));
   return 0;
 }
+
 unsigned SparcMCCodeEmitter::
 getBranchOnRegTargetOpValue(const MCInst &MI, unsigned OpNo,
                            SmallVectorImpl<MCFixup> &Fixups,
@@ -214,6 +228,11 @@ getBranchOnRegTargetOpValue(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
-
-
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "SparcGenMCCodeEmitter.inc"
+
+MCCodeEmitter *llvm::createSparcMCCodeEmitter(const MCInstrInfo &MCII,
+                                              const MCRegisterInfo &MRI,
+                                              MCContext &Ctx) {
+  return new SparcMCCodeEmitter(MCII, Ctx);
+}

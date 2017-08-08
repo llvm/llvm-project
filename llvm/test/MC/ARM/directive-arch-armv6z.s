@@ -11,12 +11,12 @@
 	.syntax	unified
 	.arch	armv6z
 
-@ CHECK-ASM: 	.arch	armv6z
+@ CHECK-ASM: 	.arch	armv6kz
 
 @ CHECK-ATTR: FileAttributes {
 @ CHECK-ATTR:   Attribute {
 @ CHECK-ATTR:     TagName: CPU_name
-@ CHECK-ATTR:     Value: 6Z
+@ CHECK-ATTR:     Value: 6KZ
 @ CHECK-ATTR:   }
 @ CHECK-ATTR:   Attribute {
 @ CHECK-ATTR:     TagName: CPU_arch

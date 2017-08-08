@@ -76,7 +76,7 @@ createLoweredInitializer(ArrayType *NewType, Constant *OriginalInitializer) {
 
 static Instruction *
 createReplacementInstr(ConstantExpr *CE, Instruction *Instr) {
-  IRBuilder<true,NoFolder> Builder(Instr);
+  IRBuilder<NoFolder> Builder(Instr);
   unsigned OpCode = CE->getOpcode();
   switch (OpCode) {
     case Instruction::GetElementPtr: {
@@ -128,11 +128,11 @@ createReplacementInstr(ConstantExpr *CE, Instruction *Instr) {
 
 static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
   do {
-    SmallVector<WeakVH,8> WUsers(CE->user_begin(), CE->user_end());
+    SmallVector<WeakTrackingVH, 8> WUsers(CE->user_begin(), CE->user_end());
     std::sort(WUsers.begin(), WUsers.end());
     WUsers.erase(std::unique(WUsers.begin(), WUsers.end()), WUsers.end());
     while (!WUsers.empty())
-      if (WeakVH WU = WUsers.pop_back_val()) {
+      if (WeakTrackingVH WU = WUsers.pop_back_val()) {
         if (PHINode *PN = dyn_cast<PHINode>(WU)) {
           for (int I = 0, E = PN->getNumIncomingValues(); I < E; ++I)
             if (PN->getIncomingValue(I) == CE) {
@@ -159,12 +159,12 @@ static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
 }
 
 static bool rewriteNonInstructionUses(GlobalVariable *GV, Pass *P) {
-  SmallVector<WeakVH,8> WUsers;
+  SmallVector<WeakTrackingVH, 8> WUsers;
   for (User *U : GV->users())
     if (!isa<Instruction>(U))
-      WUsers.push_back(WeakVH(U));
+      WUsers.push_back(WeakTrackingVH(U));
   while (!WUsers.empty())
-    if (WeakVH WU = WUsers.pop_back_val()) {
+    if (WeakTrackingVH WU = WUsers.pop_back_val()) {
       ConstantExpr *CE = dyn_cast<ConstantExpr>(WU);
       if (!CE || !replaceConstantExprOp(CE, P))
         return false;
@@ -179,7 +179,6 @@ static bool isZeroLengthArray(Type *Ty) {
 
 bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
   Module *M = GV->getParent();
-  LLVMContext &Ctx = M->getContext();
   if (!GV->isThreadLocal())
     return false;
 
@@ -189,7 +188,7 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
     return false;
 
   // Create replacement global.
-  ArrayType *NewType = createLoweredType(GV->getType()->getElementType());
+  ArrayType *NewType = createLoweredType(GV->getValueType());
   Constant *NewInitializer = nullptr;
   if (GV->hasInitializer())
     NewInitializer = createLoweredInitializer(NewType,
@@ -210,11 +209,8 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
     Function *GetID = Intrinsic::getDeclaration(GV->getParent(),
                                                 Intrinsic::xcore_getid);
     Value *ThreadID = Builder.CreateCall(GetID, {});
-    SmallVector<Value *, 2> Indices;
-    Indices.push_back(Constant::getNullValue(Type::getInt64Ty(Ctx)));
-    Indices.push_back(ThreadID);
-    Value *Addr =
-        Builder.CreateInBoundsGEP(NewGV->getValueType(), NewGV, Indices);
+    Value *Addr = Builder.CreateInBoundsGEP(NewGV->getValueType(), NewGV,
+                                            {Builder.getInt64(0), ThreadID});
     U->replaceUsesOfWith(GV, Addr);
   }
 

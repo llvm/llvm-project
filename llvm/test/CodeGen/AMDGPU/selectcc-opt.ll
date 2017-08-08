@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 
@@ -7,7 +7,7 @@
 ; EG-NOT: CND
 ; EG: SET{{[NEQGTL]+}}_DX10
 
-define void @test_a(i32 addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @test_a(i32 addrspace(1)* %out, float %in) {
 entry:
   %0 = fcmp olt float %in, 0.000000e+00
   %1 = select i1 %0, float 1.000000e+00, float 0.000000e+00
@@ -35,7 +35,7 @@ ENDIF:
 ; EG: SET{{[GTEQN]+}}_DX10
 ; EG-NEXT: PRED_
 ; EG-NEXT: ALU clause starting
-define void @test_b(i32 addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @test_b(i32 addrspace(1)* %out, float %in) {
 entry:
   %0 = fcmp olt float %in, 0.0
   %1 = select i1 %0, float 1.000000e+00, float 0.000000e+00
@@ -59,7 +59,7 @@ ENDIF:
 ; Test a CND*_INT instruction with float true/false values
 ; EG-LABEL: {{^}}test_c:
 ; EG: CND{{[GTE]+}}_INT
-define void @test_c(float addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @test_c(float addrspace(1)* %out, i32 %in) {
 entry:
   %0 = icmp sgt i32 %in, 0
   %1 = select i1 %0, float 2.0, float 3.0
@@ -68,11 +68,11 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}selectcc_bool:
-; SI: v_cmp_ne_i32
+; SI: v_cmp_ne_u32
 ; SI-NEXT: v_cndmask_b32_e64
 ; SI-NOT: cmp
 ; SI-NOT: cndmask
-define void @selectcc_bool(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+define amdgpu_kernel void @selectcc_bool(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
   %icmp0 = icmp ne i32 %a, %b
   %ext = select i1 %icmp0, i32 -1, i32 0
   store i32 %ext, i32 addrspace(1)* %out

@@ -1,14 +1,19 @@
-; RUN: llc -march=x86 -O0 < %s | FileCheck %s
-; Currently, dbg.declare generates a DEBUG_VALUE comment.  Eventually it will
-; generate DWARF and this test will need to be modified or removed.
+; RUN: llc -march=x86 -O0 < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s
 
+; CHECK-LABEL: .debug_info contents:
+
+; CHECK-LABEL: DW_TAG_subprogram
+; CHECK:   DW_AT_name [DW_FORM_strp]       ( {{.*}}"foo")
+; CHECK:   DW_TAG_formal_parameter
+; CHECK-NEXT:     DW_AT_location [DW_FORM_exprloc]      (<0x2> 91 {{..}} )
+;                                                             DW_OP_fbreg ??
+; CHECK-NEXT:     DW_AT_name [DW_FORM_strp]     ( {{.*}}"my_r0")
 
 %struct.Pt = type { double, double }
 %struct.Rect = type { %struct.Pt, %struct.Pt }
 
 define double @foo(%struct.Rect* byval %my_r0) nounwind ssp !dbg !1 {
 entry:
-;CHECK: DEBUG_VALUE
   %retval = alloca double                         ; <double*> [#uses=2]
   %0 = alloca double                              ; <double*> [#uses=2]
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]
@@ -32,9 +37,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !llvm.module.flags = !{!21}
 
 !0 = !DILocalVariable(name: "my_r0", line: 11, arg: 1, scope: !1, file: !2, type: !7)
-!1 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scopeLine: 11, file: !19, scope: !2, type: !4)
+!1 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, scopeLine: 11, file: !19, scope: !2, type: !4)
 !2 = !DIFile(filename: "b2.c", directory: "/tmp/")
-!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: 0, file: !19, enums: !20, retainedTypes: !20, subprograms: !18)
+!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: FullDebug, file: !19, enums: !20, retainedTypes: !20)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !7}
 !6 = !DIBasicType(tag: DW_TAG_base_type, name: "double", size: 64, align: 64, encoding: DW_ATE_float)
@@ -49,7 +54,6 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !15 = !DILocation(line: 11, scope: !1)
 !16 = !DILocation(line: 12, scope: !17)
 !17 = distinct !DILexicalBlock(line: 11, column: 0, file: !19, scope: !1)
-!18 = !{!1}
 !19 = !DIFile(filename: "b2.c", directory: "/tmp/")
 !20 = !{}
 !21 = !{i32 1, !"Debug Info Version", i32 3}

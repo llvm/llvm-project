@@ -39,7 +39,6 @@
 # RUN:   --dynamic-linker "some unusual/path" -soname 'foo bar' -soname='foo bar'
 # RUN: tar xf repro2.tar
 # RUN: FileCheck %s --check-prefix=RSP2 < repro2/response.txt
-# RSP2:      --chroot .
 # RSP2:      "{{.*}}foo bar"
 # RSP2-NEXT: -L "{{.*}}foo bar"
 # RSP2-NEXT: -L {{.+}}file

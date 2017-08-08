@@ -6,9 +6,19 @@ Introduction
 ============
 
 This document contains information about adding a build configuration and
-buildslave to private slave builder to LLVM Buildbot Infrastructure
-`<http://lab.llvm.org:8011>`_.
+buildslave to private slave builder to LLVM Buildbot Infrastructure.
 
+Buildmasters
+============
+
+There are two buildmasters running.
+
+* The main buildmaster at `<http://lab.llvm.org:8011>`_. All builders attached
+  to this machine will notify commit authors every time they break the build.
+* The staging buildbot at `<http://lab.llvm.org:8014>`_. All builders attached
+  to this machine will be completely silent by default when the build is broken.
+  Builders for experimental backends should generally be attached to this
+  buildmaster.
 
 Steps To Add Builder To LLVM Buildbot
 =====================================
@@ -30,7 +40,7 @@ Here are the steps you can follow to do so:
 
 #. Install buildslave (currently we are using buildbot version 0.8.5).
    Depending on the platform, buildslave could be available to download and
-   install with your packet manager, or you can download it directly from
+   install with your package manager, or you can download it directly from
    `<http://trac.buildbot.net>`_ and install it manually.
 
 #. Create a designated user account, your buildslave will be running under,
@@ -43,7 +53,7 @@ Here are the steps you can follow to do so:
 #. Create a buildslave in context of that buildslave account.  Point it to
    the **lab.llvm.org** port **9990** (see `Buildbot documentation,
    Creating a slave
-   <http://buildbot.net/buildbot/docs/current/full.html#creating-a-slave>`_
+   <http://docs.buildbot.net/current/tutorial/firstrun.html#creating-a-slave>`_
    for more details) by running the following command:
 
     .. code-block:: bash
@@ -51,6 +61,9 @@ Here are the steps you can follow to do so:
        $ buildslave create-slave <buildslave-root-directory> \
                     lab.llvm.org:9990 \
                     <buildslave-access-name> <buildslave-access-password>
+
+   To point a slave to silent master please use lab.llvm.org:9994 instead
+   of lab.llvm.org:9990.
 
 #. Fill the buildslave description and admin name/e-mail.  Here is an
    example of the buildslave description::
@@ -72,6 +85,13 @@ Here are the steps you can follow to do so:
 
    * slaves are added to ``buildbot/osuosl/master/config/slaves.py``
    * builders are added to ``buildbot/osuosl/master/config/builders.py``
+
+   Please make sure your builder name and its builddir are unique through the file.
+
+   It is possible to whitelist email addresses to unconditionally receive notifications
+   on build failure; for this you'll need to add an ``InformativeMailNotifier`` to
+   ``buildbot/osuosl/master/config/status.py``. This is particularly useful for the
+   staging buildmaster which is silent otherwise.
 
 #. Send the buildslave access name and the access password directly to
    `Galina Kistanova <mailto:gkistanova@gmail.com>`_, and wait till she

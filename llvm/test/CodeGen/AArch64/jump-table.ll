@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -o - %s -mtriple=aarch64-none-linux-gnu -aarch64-atomic-cfg-tidy=0 | FileCheck %s
-; RUN: llc -code-model=large -verify-machineinstrs -o - %s -mtriple=aarch64-none-linux-gnu -aarch64-atomic-cfg-tidy=0 | FileCheck --check-prefix=CHECK-LARGE %s
-; RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs -relocation-model=pic -aarch64-atomic-cfg-tidy=0 -o - %s | FileCheck --check-prefix=CHECK-PIC %s
+; RUN: llc -verify-machineinstrs -o - %s -mtriple=aarch64-none-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc -code-model=large -verify-machineinstrs -o - %s -mtriple=aarch64-none-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 | FileCheck --check-prefix=CHECK-LARGE %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs -relocation-model=pic -aarch64-enable-atomic-cfg-tidy=0 -o - %s | FileCheck --check-prefix=CHECK-PIC %s
 
 define i32 @test_jumptable(i32 %in) {
 ; CHECK: test_jumptable
@@ -16,10 +16,10 @@ define i32 @test_jumptable(i32 %in) {
 ; CHECK: ldr [[DEST:x[0-9]+]], [x[[JT]], {{x[0-9]+}}, lsl #3]
 ; CHECK: br [[DEST]]
 
-; CHECK-LARGE: movz x[[JTADDR:[0-9]+]], #:abs_g3:.LJTI0_0
-; CHECK-LARGE: movk x[[JTADDR]], #:abs_g2_nc:.LJTI0_0
+; CHECK-LARGE: movz x[[JTADDR:[0-9]+]], #:abs_g0_nc:.LJTI0_0
 ; CHECK-LARGE: movk x[[JTADDR]], #:abs_g1_nc:.LJTI0_0
-; CHECK-LARGE: movk x[[JTADDR]], #:abs_g0_nc:.LJTI0_0
+; CHECK-LARGE: movk x[[JTADDR]], #:abs_g2_nc:.LJTI0_0
+; CHECK-LARGE: movk x[[JTADDR]], #:abs_g3:.LJTI0_0
 ; CHECK-LARGE: ldr [[DEST:x[0-9]+]], [x[[JTADDR]], {{x[0-9]+}}, lsl #3]
 ; CHECK-LARGE: br [[DEST]]
 

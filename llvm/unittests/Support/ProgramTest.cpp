@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 #include "gtest/gtest.h"
 #include <stdlib.h>
 #if defined(__APPLE__)
@@ -87,6 +87,7 @@ protected:
       EXPECT_TRUE(convStatus);
       return EnvStorage.back().c_str();
 #else
+      (void)this;
       return Var;
 #endif
     };
@@ -223,7 +224,7 @@ TEST_F(ProgramEnvTest, TestExecuteNoWait) {
   ProcessInfo PI1 = ExecuteNoWait(Executable, argv, getEnviron(), nullptr, 0,
                                   &Error, &ExecutionFailed);
   ASSERT_FALSE(ExecutionFailed) << Error;
-  ASSERT_NE(PI1.Pid, 0) << "Invalid process id";
+  ASSERT_NE(PI1.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
 
   unsigned LoopCount = 0;
 
@@ -231,7 +232,7 @@ TEST_F(ProgramEnvTest, TestExecuteNoWait) {
   // LoopCount should only be incremented once.
   while (true) {
     ++LoopCount;
-    ProcessInfo WaitResult = Wait(PI1, 0, true, &Error);
+    ProcessInfo WaitResult = llvm::sys::Wait(PI1, 0, true, &Error);
     ASSERT_TRUE(Error.empty());
     if (WaitResult.Pid == PI1.Pid)
       break;
@@ -242,13 +243,13 @@ TEST_F(ProgramEnvTest, TestExecuteNoWait) {
   ProcessInfo PI2 = ExecuteNoWait(Executable, argv, getEnviron(), nullptr, 0,
                                   &Error, &ExecutionFailed);
   ASSERT_FALSE(ExecutionFailed) << Error;
-  ASSERT_NE(PI2.Pid, 0) << "Invalid process id";
+  ASSERT_NE(PI2.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
 
   // Test that Wait() with SecondsToWait=0 performs a non-blocking wait. In this
   // cse, LoopCount should be greater than 1 (more than one increment occurs).
   while (true) {
     ++LoopCount;
-    ProcessInfo WaitResult = Wait(PI2, 0, false, &Error);
+    ProcessInfo WaitResult = llvm::sys::Wait(PI2, 0, false, &Error);
     ASSERT_TRUE(Error.empty());
     if (WaitResult.Pid == PI2.Pid)
       break;
@@ -304,7 +305,7 @@ TEST(ProgramTest, TestExecuteNegative) {
     bool ExecutionFailed;
     ProcessInfo PI = ExecuteNoWait(Executable, argv, nullptr, nullptr, 0,
                                    &Error, &ExecutionFailed);
-    ASSERT_EQ(PI.Pid, 0)
+    ASSERT_EQ(PI.Pid, ProcessInfo::InvalidPid)
         << "On error ExecuteNoWait should return an invalid ProcessInfo";
     ASSERT_TRUE(ExecutionFailed);
     ASSERT_FALSE(Error.empty());

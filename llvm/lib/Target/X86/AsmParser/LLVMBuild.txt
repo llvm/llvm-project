@@ -19,5 +19,5 @@
 type = Library
 name = X86AsmParser
 parent = X86
-required_libraries = MC MCParser Support X86CodeGen X86Desc X86Info
+required_libraries = MC MCParser Support X86Desc X86Info
 add_to_library_groups = X86

@@ -19,7 +19,9 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
+#include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 #include <memory>
 
@@ -27,7 +29,7 @@ namespace llvm {
 namespace {
 
 TEST(InstructionsTest, ReturnInst) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   // test for PR6589
   const ReturnInst* r0 = ReturnInst::Create(C);
@@ -103,7 +105,7 @@ TEST_F(ModuleWithFunctionTest, InvokeInst) {
 }
 
 TEST(InstructionsTest, BranchInst) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   // Make a BasicBlocks
   BasicBlock* bb0 = BasicBlock::Create(C);
@@ -169,7 +171,7 @@ TEST(InstructionsTest, BranchInst) {
 }
 
 TEST(InstructionsTest, CastInst) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   Type *Int8Ty = Type::getInt8Ty(C);
   Type *Int16Ty = Type::getInt16Ty(C);
@@ -281,14 +283,18 @@ TEST(InstructionsTest, CastInst) {
   // First form
   BasicBlock *BB = BasicBlock::Create(C);
   Constant *NullV2I32Ptr = Constant::getNullValue(V2Int32PtrTy);
-  CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty, "foo", BB);
+  auto Inst1 = CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty, "foo", BB);
 
   // Second form
-  CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty);
+  auto Inst2 = CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty);
+
+  delete Inst2;
+  Inst1->eraseFromParent();
+  delete BB;
 }
 
 TEST(InstructionsTest, VectorGep) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   // Type Definitions
   Type *I8Ty = IntegerType::get(C, 8);
@@ -391,7 +397,7 @@ TEST(InstructionsTest, VectorGep) {
 }
 
 TEST(InstructionsTest, FPMathOperator) {
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext Context;
   IRBuilder<> Builder(Context);
   MDBuilder MDHelper(Context);
   Instruction *I = Builder.CreatePHI(Builder.getDoubleTy(), 0);
@@ -400,13 +406,13 @@ TEST(InstructionsTest, FPMathOperator) {
   EXPECT_TRUE(isa<FPMathOperator>(V1));
   FPMathOperator *O1 = cast<FPMathOperator>(V1);
   EXPECT_EQ(O1->getFPAccuracy(), 1.0);
-  delete V1;
-  delete I;
+  V1->deleteValue();
+  I->deleteValue();
 }
 
 
 TEST(InstructionsTest, isEliminableCastPair) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   Type* Int16Ty = Type::getInt16Ty(C);
   Type* Int32Ty = Type::getInt32Ty(C);
@@ -486,7 +492,7 @@ TEST(InstructionsTest, isEliminableCastPair) {
 }
 
 TEST(InstructionsTest, CloneCall) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   Type *ArgTys[] = {Int32Ty, Int32Ty, Int32Ty};
   Type *FnTy = FunctionType::get(Int32Ty, ArgTys, /*isVarArg=*/false);
@@ -512,13 +518,234 @@ TEST(InstructionsTest, CloneCall) {
   {
     AttrBuilder AB;
     AB.addAttribute(Attribute::ReadOnly);
-    Call->setAttributes(AttributeSet::get(C, AttributeSet::FunctionIndex, AB));
+    Call->setAttributes(
+        AttributeList::get(C, AttributeList::FunctionIndex, AB));
     std::unique_ptr<CallInst> Clone(cast<CallInst>(Call->clone()));
     EXPECT_TRUE(Clone->onlyReadsMemory());
   }
 }
 
-}  // end anonymous namespace
-}  // end namespace llvm
+TEST(InstructionsTest, AlterCallBundles) {
+  LLVMContext C;
+  Type *Int32Ty = Type::getInt32Ty(C);
+  Type *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
+  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
+  OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
+  std::unique_ptr<CallInst> Call(
+      CallInst::Create(Callee, Args, OldBundle, "result"));
+  Call->setTailCallKind(CallInst::TailCallKind::TCK_NoTail);
+  AttrBuilder AB;
+  AB.addAttribute(Attribute::Cold);
+  Call->setAttributes(AttributeList::get(C, AttributeList::FunctionIndex, AB));
+  Call->setDebugLoc(DebugLoc(MDNode::get(C, None)));
 
+  OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
+  std::unique_ptr<CallInst> Clone(CallInst::Create(Call.get(), NewBundle));
+  EXPECT_EQ(Call->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Call->getArgOperand(0), Clone->getArgOperand(0));
+  EXPECT_EQ(Call->getCallingConv(), Clone->getCallingConv());
+  EXPECT_EQ(Call->getTailCallKind(), Clone->getTailCallKind());
+  EXPECT_TRUE(Clone->hasFnAttr(Attribute::AttrKind::Cold));
+  EXPECT_EQ(Call->getDebugLoc(), Clone->getDebugLoc());
+  EXPECT_EQ(Clone->getNumOperandBundles(), 1U);
+  EXPECT_TRUE(Clone->getOperandBundle("after").hasValue());
+}
 
+TEST(InstructionsTest, AlterInvokeBundles) {
+  LLVMContext C;
+  Type *Int32Ty = Type::getInt32Ty(C);
+  Type *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
+  Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
+  Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
+  std::unique_ptr<BasicBlock> NormalDest(BasicBlock::Create(C));
+  std::unique_ptr<BasicBlock> UnwindDest(BasicBlock::Create(C));
+  OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
+  std::unique_ptr<InvokeInst> Invoke(InvokeInst::Create(
+      Callee, NormalDest.get(), UnwindDest.get(), Args, OldBundle, "result"));
+  AttrBuilder AB;
+  AB.addAttribute(Attribute::Cold);
+  Invoke->setAttributes(
+      AttributeList::get(C, AttributeList::FunctionIndex, AB));
+  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, None)));
+
+  OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
+  std::unique_ptr<InvokeInst> Clone(
+      InvokeInst::Create(Invoke.get(), NewBundle));
+  EXPECT_EQ(Invoke->getNormalDest(), Clone->getNormalDest());
+  EXPECT_EQ(Invoke->getUnwindDest(), Clone->getUnwindDest());
+  EXPECT_EQ(Invoke->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Invoke->getArgOperand(0), Clone->getArgOperand(0));
+  EXPECT_EQ(Invoke->getCallingConv(), Clone->getCallingConv());
+  EXPECT_TRUE(Clone->hasFnAttr(Attribute::AttrKind::Cold));
+  EXPECT_EQ(Invoke->getDebugLoc(), Clone->getDebugLoc());
+  EXPECT_EQ(Clone->getNumOperandBundles(), 1U);
+  EXPECT_TRUE(Clone->getOperandBundle("after").hasValue());
+}
+
+TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
+  auto *OnlyBB = BasicBlock::Create(Ctx, "bb", F);
+  auto *Arg0 = &*F->arg_begin();
+
+  IRBuilder<NoFolder> B(Ctx);
+  B.SetInsertPoint(OnlyBB);
+
+  {
+    auto *UI =
+        cast<Instruction>(B.CreateUDiv(Arg0, Arg0, "", /*isExact*/ true));
+    ASSERT_TRUE(UI->isExact());
+    UI->dropPoisonGeneratingFlags();
+    ASSERT_FALSE(UI->isExact());
+  }
+
+  {
+    auto *ShrI =
+        cast<Instruction>(B.CreateLShr(Arg0, Arg0, "", /*isExact*/ true));
+    ASSERT_TRUE(ShrI->isExact());
+    ShrI->dropPoisonGeneratingFlags();
+    ASSERT_FALSE(ShrI->isExact());
+  }
+
+  {
+    auto *AI = cast<Instruction>(
+        B.CreateAdd(Arg0, Arg0, "", /*HasNUW*/ true, /*HasNSW*/ false));
+    ASSERT_TRUE(AI->hasNoUnsignedWrap());
+    AI->dropPoisonGeneratingFlags();
+    ASSERT_FALSE(AI->hasNoUnsignedWrap());
+    ASSERT_FALSE(AI->hasNoSignedWrap());
+  }
+
+  {
+    auto *SI = cast<Instruction>(
+        B.CreateAdd(Arg0, Arg0, "", /*HasNUW*/ false, /*HasNSW*/ true));
+    ASSERT_TRUE(SI->hasNoSignedWrap());
+    SI->dropPoisonGeneratingFlags();
+    ASSERT_FALSE(SI->hasNoUnsignedWrap());
+    ASSERT_FALSE(SI->hasNoSignedWrap());
+  }
+
+  {
+    auto *ShlI = cast<Instruction>(
+        B.CreateShl(Arg0, Arg0, "", /*HasNUW*/ true, /*HasNSW*/ true));
+    ASSERT_TRUE(ShlI->hasNoSignedWrap());
+    ASSERT_TRUE(ShlI->hasNoUnsignedWrap());
+    ShlI->dropPoisonGeneratingFlags();
+    ASSERT_FALSE(ShlI->hasNoUnsignedWrap());
+    ASSERT_FALSE(ShlI->hasNoSignedWrap());
+  }
+
+  {
+    Value *GEPBase = Constant::getNullValue(B.getInt8PtrTy());
+    auto *GI = cast<GetElementPtrInst>(B.CreateInBoundsGEP(GEPBase, {Arg0}));
+    ASSERT_TRUE(GI->isInBounds());
+    GI->dropPoisonGeneratingFlags();
+    ASSERT_FALSE(GI->isInBounds());
+  }
+}
+
+TEST(InstructionsTest, GEPIndices) {
+  LLVMContext Context;
+  IRBuilder<NoFolder> Builder(Context);
+  Type *ElementTy = Builder.getInt8Ty();
+  Type *ArrTy = ArrayType::get(ArrayType::get(ElementTy, 64), 64);
+  Value *Indices[] = {
+    Builder.getInt32(0),
+    Builder.getInt32(13),
+    Builder.getInt32(42) };
+
+  Value *V = Builder.CreateGEP(ArrTy, UndefValue::get(PointerType::getUnqual(ArrTy)),
+                               Indices);
+  ASSERT_TRUE(isa<GetElementPtrInst>(V));
+
+  auto *GEPI = cast<GetElementPtrInst>(V);
+  ASSERT_NE(GEPI->idx_begin(), GEPI->idx_end());
+  ASSERT_EQ(GEPI->idx_end(), std::next(GEPI->idx_begin(), 3));
+  EXPECT_EQ(Indices[0], GEPI->idx_begin()[0]);
+  EXPECT_EQ(Indices[1], GEPI->idx_begin()[1]);
+  EXPECT_EQ(Indices[2], GEPI->idx_begin()[2]);
+  EXPECT_EQ(GEPI->idx_begin(), GEPI->indices().begin());
+  EXPECT_EQ(GEPI->idx_end(), GEPI->indices().end());
+
+  const auto *CGEPI = GEPI;
+  ASSERT_NE(CGEPI->idx_begin(), CGEPI->idx_end());
+  ASSERT_EQ(CGEPI->idx_end(), std::next(CGEPI->idx_begin(), 3));
+  EXPECT_EQ(Indices[0], CGEPI->idx_begin()[0]);
+  EXPECT_EQ(Indices[1], CGEPI->idx_begin()[1]);
+  EXPECT_EQ(Indices[2], CGEPI->idx_begin()[2]);
+  EXPECT_EQ(CGEPI->idx_begin(), CGEPI->indices().begin());
+  EXPECT_EQ(CGEPI->idx_end(), CGEPI->indices().end());
+
+  delete GEPI;
+}
+
+TEST(InstructionsTest, SwitchInst) {
+  LLVMContext C;
+
+  std::unique_ptr<BasicBlock> BB1, BB2, BB3;
+  BB1.reset(BasicBlock::Create(C));
+  BB2.reset(BasicBlock::Create(C));
+  BB3.reset(BasicBlock::Create(C));
+
+  // We create block 0 after the others so that it gets destroyed first and
+  // clears the uses of the other basic blocks.
+  std::unique_ptr<BasicBlock> BB0(BasicBlock::Create(C));
+
+  auto *Int32Ty = Type::getInt32Ty(C);
+
+  SwitchInst *SI =
+      SwitchInst::Create(UndefValue::get(Int32Ty), BB0.get(), 3, BB0.get());
+  SI->addCase(ConstantInt::get(Int32Ty, 1), BB1.get());
+  SI->addCase(ConstantInt::get(Int32Ty, 2), BB2.get());
+  SI->addCase(ConstantInt::get(Int32Ty, 3), BB3.get());
+
+  auto CI = SI->case_begin();
+  ASSERT_NE(CI, SI->case_end());
+  EXPECT_EQ(1, CI->getCaseValue()->getSExtValue());
+  EXPECT_EQ(BB1.get(), CI->getCaseSuccessor());
+  EXPECT_EQ(2, (CI + 1)->getCaseValue()->getSExtValue());
+  EXPECT_EQ(BB2.get(), (CI + 1)->getCaseSuccessor());
+  EXPECT_EQ(3, (CI + 2)->getCaseValue()->getSExtValue());
+  EXPECT_EQ(BB3.get(), (CI + 2)->getCaseSuccessor());
+  EXPECT_EQ(CI + 1, std::next(CI));
+  EXPECT_EQ(CI + 2, std::next(CI, 2));
+  EXPECT_EQ(CI + 3, std::next(CI, 3));
+  EXPECT_EQ(SI->case_end(), CI + 3);
+  EXPECT_EQ(0, CI - CI);
+  EXPECT_EQ(1, (CI + 1) - CI);
+  EXPECT_EQ(2, (CI + 2) - CI);
+  EXPECT_EQ(3, SI->case_end() - CI);
+  EXPECT_EQ(3, std::distance(CI, SI->case_end()));
+
+  auto CCI = const_cast<const SwitchInst *>(SI)->case_begin();
+  SwitchInst::ConstCaseIt CCE = SI->case_end();
+  ASSERT_NE(CCI, SI->case_end());
+  EXPECT_EQ(1, CCI->getCaseValue()->getSExtValue());
+  EXPECT_EQ(BB1.get(), CCI->getCaseSuccessor());
+  EXPECT_EQ(2, (CCI + 1)->getCaseValue()->getSExtValue());
+  EXPECT_EQ(BB2.get(), (CCI + 1)->getCaseSuccessor());
+  EXPECT_EQ(3, (CCI + 2)->getCaseValue()->getSExtValue());
+  EXPECT_EQ(BB3.get(), (CCI + 2)->getCaseSuccessor());
+  EXPECT_EQ(CCI + 1, std::next(CCI));
+  EXPECT_EQ(CCI + 2, std::next(CCI, 2));
+  EXPECT_EQ(CCI + 3, std::next(CCI, 3));
+  EXPECT_EQ(CCE, CCI + 3);
+  EXPECT_EQ(0, CCI - CCI);
+  EXPECT_EQ(1, (CCI + 1) - CCI);
+  EXPECT_EQ(2, (CCI + 2) - CCI);
+  EXPECT_EQ(3, CCE - CCI);
+  EXPECT_EQ(3, std::distance(CCI, CCE));
+
+  // Make sure that the const iterator is compatible with a const auto ref.
+  const auto &Handle = *CCI;
+  EXPECT_EQ(1, Handle.getCaseValue()->getSExtValue());
+  EXPECT_EQ(BB1.get(), Handle.getCaseSuccessor());
+}
+
+TEST(InstructionsTest, CommuteShuffleMask) {
+  SmallVector<int, 16> Indices({-1, 0, 7});
+  ShuffleVectorInst::commuteShuffleMask(Indices, 4);
+  EXPECT_THAT(Indices, testing::ContainerEq(ArrayRef<int>({-1, 4, 3})));
+}
+
+} // end anonymous namespace
+} // end namespace llvm

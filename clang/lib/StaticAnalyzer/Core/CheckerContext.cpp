@@ -35,6 +35,13 @@ StringRef CheckerContext::getCalleeName(const FunctionDecl *FunDecl) const {
   return funI->getName();
 }
 
+StringRef CheckerContext::getDeclDescription(const Decl *D) {
+  if (isa<ObjCMethodDecl>(D) || isa<CXXMethodDecl>(D))
+    return "method";
+  if (isa<BlockDecl>(D))
+    return "anonymous block";
+  return "function";
+}
 
 bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
                                         StringRef Name) {
@@ -57,12 +64,8 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
     return false;
 
   // Look through 'extern "C"' and anything similar invented in the future.
-  const DeclContext *DC = FD->getDeclContext();
-  while (DC->isTransparentContext())
-    DC = DC->getParent();
-
-  // If this function is in a namespace, it is not a C library function.
-  if (!DC->isTranslationUnit())
+  // If this function is not in TU directly, it is not a C library function.
+  if (!FD->getDeclContext()->getRedeclContext()->isTranslationUnit())
     return false;
 
   // If this function is not externally visible, it is not a C library function.

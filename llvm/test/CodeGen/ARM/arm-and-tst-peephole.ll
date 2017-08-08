@@ -1,7 +1,6 @@
 ; RUN: llc -mtriple=arm-eabi -arm-atomic-cfg-tidy=0 %s -o - | FileCheck -check-prefix=ARM %s
 ; RUN: llc -mtriple=thumb-eabi -arm-atomic-cfg-tidy=0 %s -o - | FileCheck -check-prefix=THUMB %s
-; RUN: llc -mtriple=thumb-eabi -arm-atomic-cfg-tidy=0 -mcpu=arm1156t2-s -mattr=+thumb2 %s -o - \
-; RUN:   | FileCheck -check-prefix=T2 %s
+; RUN: llc -mtriple=thumb-eabi -arm-atomic-cfg-tidy=0 -mcpu=arm1156t2-s -mattr=+thumb2 %s -o - | FileCheck -check-prefix=T2 %s
 ; RUN: llc -mtriple=thumbv8-eabi -arm-atomic-cfg-tidy=0 %s -o - | FileCheck -check-prefix=V8 %s
 
 ; FIXME: The -march=thumb test doesn't change if -disable-peephole is specified.
@@ -49,9 +48,9 @@ tailrecurse.switch:                               ; preds = %tailrecurse
 ; V8-NEXT: beq
 ; V8-NEXT: %tailrecurse.switch
 ; V8: cmp
-; V8-NEXT: bne
-; V8-NEXT: b	
-; The trailing space in the last line checks that the branch is unconditional
+; V8-NEXT: beq
+; V8-NEXT: %sw.epilog
+; V8-NEXT: bx lr
   switch i32 %and, label %sw.epilog [
     i32 1, label %sw.bb
     i32 3, label %sw.bb6
@@ -141,20 +140,48 @@ return:                                           ; preds = %bb2, %bb, %entry
 ; folding of unrelated tests (in this case, a TST against r1 was eliminated in
 ; favour of an AND of r0).
 
+define i32 @test_tst_assessment(i32 %a, i32 %b) {
 ; ARM-LABEL: test_tst_assessment:
+; ARM:       @ BB#0:
+; ARM-NEXT:    and r0, r0, #1
+; ARM-NEXT:    tst r1, #1
+; ARM-NEXT:    subne r0, r0, #1
+; ARM-NEXT:    mov pc, lr
+;
 ; THUMB-LABEL: test_tst_assessment:
+; THUMB:       @ BB#0:
+; THUMB-NEXT:    movs r2, r0
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    ands r0, r2
+; THUMB-NEXT:    subs r2, r0, #1
+; THUMB-NEXT:    lsls r1, r1, #31
+; THUMB-NEXT:    beq .LBB2_2
+; THUMB-NEXT:  @ BB#1:
+; THUMB-NEXT:    movs r0, r2
+; THUMB-NEXT:  .LBB2_2:
+; THUMB-NEXT:    bx lr
+;
 ; T2-LABEL: test_tst_assessment:
+; T2:       @ BB#0:
+; T2-NEXT:    lsls r1, r1, #31
+; T2-NEXT:    and r0, r0, #1
+; T2-NEXT:    it ne
+; T2-NEXT:    subne r0, #1
+; T2-NEXT:    bx lr
+;
 ; V8-LABEL: test_tst_assessment:
-define i32 @test_tst_assessment(i1 %lhs, i1 %rhs) {
-  %lhs32 = zext i1 %lhs to i32
-  %rhs32 = zext i1 %rhs to i32
-  %diff = sub nsw i32 %lhs32, %rhs32
-; ARM: tst r1, #1
-; THUMB: movs [[RTMP:r[0-9]+]], #1
-; THUMB: tst r1, [[RTMP]]
-; T2: tst.w r1, #1
-; V8: tst.w r1, #1
-  ret i32 %diff
+; V8:       @ BB#0:
+; V8-NEXT:    and r0, r0, #1
+; V8-NEXT:    lsls r1, r1, #31
+; V8-NEXT:    it ne
+; V8-NEXT:    subne r0, #1
+; V8-NEXT:    bx lr
+  %and1 = and i32 %a, 1
+  %sub = sub i32 %and1, 1
+  %and2 = and i32 %b, 1
+  %cmp = icmp eq i32 %and2, 0
+  %sel = select i1 %cmp, i32 %and1, i32 %sub
+  ret i32 %sel
 }
 
 !1 = !{!"branch_weights", i32 1, i32 1, i32 3, i32 2 }

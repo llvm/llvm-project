@@ -175,17 +175,17 @@ void test_collapse() {
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-// expected-error@+1 {{argument to 'collapse' clause must be a positive integer value}}
+// expected-error@+1 {{argument to 'collapse' clause must be a strictly positive integer value}}
 #pragma omp for collapse(-5)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-// expected-error@+1 {{argument to 'collapse' clause must be a positive integer value}}
+// expected-error@+1 {{argument to 'collapse' clause must be a strictly positive integer value}}
 #pragma omp for collapse(0)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-// expected-error@+1 {{argument to 'collapse' clause must be a positive integer value}}
+// expected-error@+1 {{argument to 'collapse' clause must be a strictly positive integer value}}
 #pragma omp for collapse(5 - 5)
   for (i = 0; i < 16; ++i)
     ;
@@ -194,7 +194,7 @@ void test_collapse() {
   for (i = 0; i < 16; ++i)
 // expected-note@+1 {{variable with automatic storage duration is predetermined as private; perhaps you forget to enclose 'omp for' directive into a parallel or another task region?}}
     for (int j = 0; j < 16; ++j)
-// expected-error@+2 {{private variable cannot be reduction}}
+// expected-error@+2 {{reduction variable must be shared}}
 // expected-error@+1 {{region cannot be closely nested inside 'for' region; perhaps you forget to enclose 'omp for' directive into a parallel region?}}
 #pragma omp for reduction(+ : i, j)
       for (int k = 0; k < 16; ++k)

@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -start-after branch-folder -stop-after branch-folder -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses fixed stack objects correctly.
 
 --- |
@@ -19,7 +19,7 @@ name:            test
 frameInfo:
   maxAlignment:    4
 # CHECK: fixedStack:
-# CHECK-NEXT: - { id: 0, type: spill-slot, offset: 0, size: 4, alignment: 4 }
+# CHECK-NEXT: - { id: 0, type: spill-slot, offset: 0, size: 4, alignment: 4, callee-saved-register: '' }
 fixedStack:
   - { id: 0, type: spill-slot, offset: 0, size: 4, alignment: 4 }
 stack:

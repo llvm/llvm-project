@@ -14,9 +14,9 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
@@ -31,7 +31,7 @@ class IsPotentiallyReachableTest : public testing::Test {
 protected:
   void ParseAssembly(const char *Assembly) {
     SMDiagnostic Error;
-    M = parseAssemblyString(Assembly, Error, getGlobalContext());
+    M = parseAssemblyString(Assembly, Error, Context);
 
     std::string errMsg;
     raw_string_ostream os(errMsg);
@@ -112,6 +112,7 @@ protected:
     PM.run(*M);
   }
 
+  LLVMContext Context;
   std::unique_ptr<Module> M;
   Instruction *A, *B;
 };

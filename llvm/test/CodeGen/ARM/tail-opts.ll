@@ -65,3 +65,55 @@ altret:
   call void @far(i32 1001)
   ret void
 }
+
+; Use alternating abort functions so that the blocks we wish to merge are not
+; layout successors during branch folding.
+
+; CHECK-LABEL: merge_alternating_aborts:
+; CHECK-NOT: _abort
+; CHECK-NOT: _alt_abort
+; CHECK: bxne lr
+; CHECK-NOT: _abort
+; CHECK-NOT: _alt_abort
+; CHECK: LBB{{.*}}:
+; CHECK: mov lr, pc
+; CHECK: b _alt_abort
+; CHECK-NOT: _abort
+; CHECK-NOT: _alt_abort
+; CHECK: LBB{{.*}}:
+; CHECK: mov lr, pc
+; CHECK: b _abort
+; CHECK-NOT: _abort
+; CHECK-NOT: _alt_abort
+
+declare void @abort()
+declare void @alt_abort()
+
+define void @merge_alternating_aborts() {
+entry:
+  %c1 = call i1 @qux()
+  br i1 %c1, label %cont1, label %abort1
+abort1:
+  call void @abort()
+  unreachable
+cont1:
+  %c2 = call i1 @qux()
+  br i1 %c2, label %cont2, label %abort2
+abort2:
+  call void @alt_abort()
+  unreachable
+cont2:
+  %c3 = call i1 @qux()
+  br i1 %c3, label %cont3, label %abort3
+abort3:
+  call void @abort()
+  unreachable
+cont3:
+  %c4 = call i1 @qux()
+  br i1 %c4, label %cont4, label %abort4
+abort4:
+  call void @alt_abort()
+  unreachable
+cont4:
+  ret void
+}

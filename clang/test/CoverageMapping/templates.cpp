@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fprofile-instr-generate -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name templates.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name templates.cpp %s | FileCheck %s
 
 template<typename T>
 void unused(T x) {

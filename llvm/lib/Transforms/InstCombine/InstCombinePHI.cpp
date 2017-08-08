@@ -15,10 +15,29 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
+
+/// The PHI arguments will be folded into a single operation with a PHI node
+/// as input. The debug location of the single operation will be the merged
+/// locations of the original PHI node arguments.
+DebugLoc InstCombiner::PHIArgMergedDebugLoc(PHINode &PN) {
+  auto *FirstInst = cast<Instruction>(PN.getIncomingValue(0));
+  const DILocation *Loc = FirstInst->getDebugLoc();
+
+  for (unsigned i = 1; i != PN.getNumIncomingValues(); ++i) {
+    auto *I = cast<Instruction>(PN.getIncomingValue(i));
+    Loc = DILocation::getMergedLocation(Loc, I->getDebugLoc());
+  }
+
+  return Loc;
+}
 
 /// If we have something like phi [add (a,b), add(a,c)] and if a/b/c and the
 /// adds all have a single use, turn this into a phi and a single binop.
@@ -31,15 +50,6 @@ Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
 
   Type *LHSType = LHSVal->getType();
   Type *RHSType = RHSVal->getType();
-
-  bool isNUW = false, isNSW = false, isExact = false;
-  if (OverflowingBinaryOperator *BO =
-        dyn_cast<OverflowingBinaryOperator>(FirstInst)) {
-    isNUW = BO->hasNoUnsignedWrap();
-    isNSW = BO->hasNoSignedWrap();
-  } else if (PossiblyExactOperator *PEO =
-               dyn_cast<PossiblyExactOperator>(FirstInst))
-    isExact = PEO->isExact();
 
   // Scan to see if all operands are the same opcode, and all have one use.
   for (unsigned i = 1; i != PN.getNumIncomingValues(); ++i) {
@@ -55,13 +65,6 @@ Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
     if (CmpInst *CI = dyn_cast<CmpInst>(I))
       if (CI->getPredicate() != cast<CmpInst>(FirstInst)->getPredicate())
         return nullptr;
-
-    if (isNUW)
-      isNUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
-    if (isNSW)
-      isNSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    if (isExact)
-      isExact = cast<PossiblyExactOperator>(I)->isExact();
 
     // Keep track of which operand needs a phi node.
     if (I->getOperand(0) != LHSVal) LHSVal = nullptr;
@@ -114,17 +117,20 @@ Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
   if (CmpInst *CIOp = dyn_cast<CmpInst>(FirstInst)) {
     CmpInst *NewCI = CmpInst::Create(CIOp->getOpcode(), CIOp->getPredicate(),
                                      LHSVal, RHSVal);
-    NewCI->setDebugLoc(FirstInst->getDebugLoc());
+    NewCI->setDebugLoc(PHIArgMergedDebugLoc(PN));
     return NewCI;
   }
 
   BinaryOperator *BinOp = cast<BinaryOperator>(FirstInst);
   BinaryOperator *NewBinOp =
     BinaryOperator::Create(BinOp->getOpcode(), LHSVal, RHSVal);
-  if (isNUW) NewBinOp->setHasNoUnsignedWrap();
-  if (isNSW) NewBinOp->setHasNoSignedWrap();
-  if (isExact) NewBinOp->setIsExact();
-  NewBinOp->setDebugLoc(FirstInst->getDebugLoc());
+
+  NewBinOp->copyIRFlags(PN.getIncomingValue(0));
+
+  for (unsigned i = 1, e = PN.getNumIncomingValues(); i != e; ++i)
+    NewBinOp->andIRFlags(PN.getIncomingValue(i));
+
+  NewBinOp->setDebugLoc(PHIArgMergedDebugLoc(PN));
   return NewBinOp;
 }
 
@@ -233,7 +239,7 @@ Instruction *InstCombiner::FoldPHIArgGEPIntoPHI(PHINode &PN) {
       GetElementPtrInst::Create(FirstInst->getSourceElementType(), Base,
                                 makeArrayRef(FixedOperands).slice(1));
   if (AllInBounds) NewGEP->setIsInBounds();
-  NewGEP->setDebugLoc(FirstInst->getDebugLoc());
+  NewGEP->setDebugLoc(PHIArgMergedDebugLoc(PN));
   return NewGEP;
 }
 
@@ -393,7 +399,7 @@ Instruction *InstCombiner::FoldPHIArgLoadIntoPHI(PHINode &PN) {
     for (Value *IncValue : PN.incoming_values())
       cast<LoadInst>(IncValue)->setVolatile(false);
 
-  NewLI->setDebugLoc(FirstLI->getDebugLoc());
+  NewLI->setDebugLoc(PHIArgMergedDebugLoc(PN));
   return NewLI;
 }
 
@@ -451,8 +457,8 @@ Instruction *InstCombiner::FoldPHIArgZextsIntoPHI(PHINode &Phi) {
   }
 
   // The more common cases of a phi with no constant operands or just one
-  // variable operand are handled by FoldPHIArgOpIntoPHI() and FoldOpIntoPhi()
-  // respectively. FoldOpIntoPhi() wants to do the opposite transform that is
+  // variable operand are handled by FoldPHIArgOpIntoPHI() and foldOpIntoPhi()
+  // respectively. foldOpIntoPhi() wants to do the opposite transform that is
   // performed here. It tries to replicate a cast in the phi operand's basic
   // block to expose other folding opportunities. Thus, InstCombine will
   // infinite loop without this check.
@@ -494,7 +500,6 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
   // code size and simplifying code.
   Constant *ConstantOp = nullptr;
   Type *CastSrcTy = nullptr;
-  bool isNUW = false, isNSW = false, isExact = false;
 
   if (isa<CastInst>(FirstInst)) {
     CastSrcTy = FirstInst->getOperand(0)->getType();
@@ -502,7 +507,7 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
     // Be careful about transforming integer PHIs.  We don't want to pessimize
     // the code by turning an i32 into an i1293.
     if (PN.getType()->isIntegerTy() && CastSrcTy->isIntegerTy()) {
-      if (!ShouldChangeType(PN.getType(), CastSrcTy))
+      if (!shouldChangeType(PN.getType(), CastSrcTy))
         return nullptr;
     }
   } else if (isa<BinaryOperator>(FirstInst) || isa<CmpInst>(FirstInst)) {
@@ -511,14 +516,6 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
     ConstantOp = dyn_cast<Constant>(FirstInst->getOperand(1));
     if (!ConstantOp)
       return FoldPHIArgBinOpIntoPHI(PN);
-
-    if (OverflowingBinaryOperator *BO =
-        dyn_cast<OverflowingBinaryOperator>(FirstInst)) {
-      isNUW = BO->hasNoUnsignedWrap();
-      isNSW = BO->hasNoSignedWrap();
-    } else if (PossiblyExactOperator *PEO =
-               dyn_cast<PossiblyExactOperator>(FirstInst))
-      isExact = PEO->isExact();
   } else {
     return nullptr;  // Cannot fold this operation.
   }
@@ -534,13 +531,6 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
     } else if (I->getOperand(1) != ConstantOp) {
       return nullptr;
     }
-
-    if (isNUW)
-      isNUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
-    if (isNSW)
-      isNSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    if (isExact)
-      isExact = cast<PossiblyExactOperator>(I)->isExact();
   }
 
   // Okay, they are all the same operation.  Create a new PHI node of the
@@ -575,23 +565,25 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
   if (CastInst *FirstCI = dyn_cast<CastInst>(FirstInst)) {
     CastInst *NewCI = CastInst::Create(FirstCI->getOpcode(), PhiVal,
                                        PN.getType());
-    NewCI->setDebugLoc(FirstInst->getDebugLoc());
+    NewCI->setDebugLoc(PHIArgMergedDebugLoc(PN));
     return NewCI;
   }
 
   if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(FirstInst)) {
     BinOp = BinaryOperator::Create(BinOp->getOpcode(), PhiVal, ConstantOp);
-    if (isNUW) BinOp->setHasNoUnsignedWrap();
-    if (isNSW) BinOp->setHasNoSignedWrap();
-    if (isExact) BinOp->setIsExact();
-    BinOp->setDebugLoc(FirstInst->getDebugLoc());
+    BinOp->copyIRFlags(PN.getIncomingValue(0));
+
+    for (unsigned i = 1, e = PN.getNumIncomingValues(); i != e; ++i)
+      BinOp->andIRFlags(PN.getIncomingValue(i));
+
+    BinOp->setDebugLoc(PHIArgMergedDebugLoc(PN));
     return BinOp;
   }
 
   CmpInst *CIOp = cast<CmpInst>(FirstInst);
   CmpInst *NewCI = CmpInst::Create(CIOp->getOpcode(), CIOp->getPredicate(),
                                    PhiVal, ConstantOp);
-  NewCI->setDebugLoc(FirstInst->getDebugLoc());
+  NewCI->setDebugLoc(PHIArgMergedDebugLoc(PN));
   return NewCI;
 }
 
@@ -641,6 +633,16 @@ static bool PHIsEqualValue(PHINode *PN, Value *NonPhiInVal,
   return true;
 }
 
+/// Return an existing non-zero constant if this phi node has one, otherwise
+/// return constant 1.
+static ConstantInt *GetAnyNonZeroConstInt(PHINode &PN) {
+  assert(isa<IntegerType>(PN.getType()) && "Expect only integer type phi");
+  for (Value *V : PN.operands())
+    if (auto *ConstVA = dyn_cast<ConstantInt>(V))
+      if (!ConstVA->isZero())
+        return ConstVA;
+  return ConstantInt::get(cast<IntegerType>(PN.getType()), 1);
+}
 
 namespace {
 struct PHIUsageRecord {
@@ -768,7 +770,7 @@ Instruction *InstCombiner::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
 
   // If we have no users, they must be all self uses, just nuke the PHI.
   if (PHIUsers.empty())
-    return ReplaceInstUsesWith(FirstPhi, UndefValue::get(FirstPhi.getType()));
+    return replaceInstUsesWith(FirstPhi, UndefValue::get(FirstPhi.getType()));
 
   // If this phi node is transformable, create new PHIs for all the pieces
   // extracted out of it.  First, sort the users by their offset and size.
@@ -834,12 +836,12 @@ Instruction *InstCombiner::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
         }
 
         // Otherwise, do an extract in the predecessor.
-        Builder->SetInsertPoint(Pred->getTerminator());
+        Builder.SetInsertPoint(Pred->getTerminator());
         Value *Res = InVal;
         if (Offset)
-          Res = Builder->CreateLShr(Res, ConstantInt::get(InVal->getType(),
+          Res = Builder.CreateLShr(Res, ConstantInt::get(InVal->getType(),
                                                           Offset), "extract");
-        Res = Builder->CreateTrunc(Res, Ty, "extract.t");
+        Res = Builder.CreateTrunc(Res, Ty, "extract.t");
         PredVal = Res;
         EltPHI->addIncoming(Res, Pred);
 
@@ -849,8 +851,8 @@ Instruction *InstCombiner::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
         // needed piece.
         if (PHINode *OldInVal = dyn_cast<PHINode>(PN->getIncomingValue(i)))
           if (PHIsInspected.count(OldInVal)) {
-            unsigned RefPHIId = std::find(PHIsToSlice.begin(),PHIsToSlice.end(),
-                                          OldInVal)-PHIsToSlice.begin();
+            unsigned RefPHIId =
+                find(PHIsToSlice, OldInVal) - PHIsToSlice.begin();
             PHIUsers.push_back(PHIUsageRecord(RefPHIId, Offset,
                                               cast<Instruction>(Res)));
             ++UserE;
@@ -864,22 +866,22 @@ Instruction *InstCombiner::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
     }
 
     // Replace the use of this piece with the PHI node.
-    ReplaceInstUsesWith(*PHIUsers[UserI].Inst, EltPHI);
+    replaceInstUsesWith(*PHIUsers[UserI].Inst, EltPHI);
   }
 
   // Replace all the remaining uses of the PHI nodes (self uses and the lshrs)
   // with undefs.
   Value *Undef = UndefValue::get(FirstPhi.getType());
   for (unsigned i = 1, e = PHIsToSlice.size(); i != e; ++i)
-    ReplaceInstUsesWith(*PHIsToSlice[i], Undef);
-  return ReplaceInstUsesWith(FirstPhi, Undef);
+    replaceInstUsesWith(*PHIsToSlice[i], Undef);
+  return replaceInstUsesWith(FirstPhi, Undef);
 }
 
 // PHINode simplification
 //
 Instruction *InstCombiner::visitPHINode(PHINode &PN) {
-  if (Value *V = SimplifyInstruction(&PN, DL, TLI, DT, AC))
-    return ReplaceInstUsesWith(PN, V);
+  if (Value *V = SimplifyInstruction(&PN, SQ.getWithInstruction(&PN)))
+    return replaceInstUsesWith(PN, V);
 
   if (Instruction *Result = FoldPHIArgZextsIntoPHI(PN))
     return Result;
@@ -905,7 +907,7 @@ Instruction *InstCombiner::visitPHINode(PHINode &PN) {
       SmallPtrSet<PHINode*, 16> PotentiallyDeadPHIs;
       PotentiallyDeadPHIs.insert(&PN);
       if (DeadPHICycle(PU, PotentiallyDeadPHIs))
-        return ReplaceInstUsesWith(PN, UndefValue::get(PN.getType()));
+        return replaceInstUsesWith(PN, UndefValue::get(PN.getType()));
     }
 
     // If this phi has a single use, and if that use just computes a value for
@@ -917,7 +919,30 @@ Instruction *InstCombiner::visitPHINode(PHINode &PN) {
     if (PHIUser->hasOneUse() &&
         (isa<BinaryOperator>(PHIUser) || isa<GetElementPtrInst>(PHIUser)) &&
         PHIUser->user_back() == &PN) {
-      return ReplaceInstUsesWith(PN, UndefValue::get(PN.getType()));
+      return replaceInstUsesWith(PN, UndefValue::get(PN.getType()));
+    }
+    // When a PHI is used only to be compared with zero, it is safe to replace
+    // an incoming value proved as known nonzero with any non-zero constant.
+    // For example, in the code below, the incoming value %v can be replaced
+    // with any non-zero constant based on the fact that the PHI is only used to
+    // be compared with zero and %v is a known non-zero value:
+    // %v = select %cond, 1, 2
+    // %p = phi [%v, BB] ...
+    //      icmp eq, %p, 0
+    auto *CmpInst = dyn_cast<ICmpInst>(PHIUser);
+    // FIXME: To be simple, handle only integer type for now.
+    if (CmpInst && isa<IntegerType>(PN.getType()) && CmpInst->isEquality() &&
+        match(CmpInst->getOperand(1), m_Zero())) {
+      ConstantInt *NonZeroConst = nullptr;
+      for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
+        Instruction *CtxI = PN.getIncomingBlock(i)->getTerminator();
+        Value *VA = PN.getIncomingValue(i);
+        if (isKnownNonZero(VA, DL, 0, &AC, CtxI, &DT)) {
+          if (!NonZeroConst)
+            NonZeroConst = GetAnyNonZeroConstInt(PN);
+          PN.setIncomingValue(i, NonZeroConst);
+        }
+      }
     }
   }
 
@@ -951,7 +976,7 @@ Instruction *InstCombiner::visitPHINode(PHINode &PN) {
       if (InValNo == NumIncomingVals) {
         SmallPtrSet<PHINode*, 16> ValueEqualPHIs;
         if (PHIsEqualValue(&PN, NonPhiInVal, ValueEqualPHIs))
-          return ReplaceInstUsesWith(PN, NonPhiInVal);
+          return replaceInstUsesWith(PN, NonPhiInVal);
       }
     }
   }

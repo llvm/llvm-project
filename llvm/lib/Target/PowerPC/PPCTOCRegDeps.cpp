@@ -61,10 +61,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPCInstrInfo.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
 #include "PPCInstrBuilder.h"
+#include "PPCInstrInfo.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
@@ -74,7 +74,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"

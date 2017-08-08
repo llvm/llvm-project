@@ -1,4 +1,4 @@
-//===-- llvm/MC/MCAsmBackend.h - MC Asm Backend -----------------*- C++ -*-===//
+//===- llvm/MC/MCAsmBackend.h - MC Asm Backend ------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,36 +11,34 @@
 #define LLVM_MC_MCASMBACKEND_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/Support/DataTypes.h"
-#include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 
 namespace llvm {
+
 class MCAsmLayout;
 class MCAssembler;
-class MCELFObjectTargetWriter;
+class MCCFIInstruction;
 struct MCFixupKindInfo;
 class MCFragment;
 class MCInst;
-class MCRelaxableFragment;
 class MCObjectWriter;
-class MCSection;
+class MCRelaxableFragment;
+class MCSubtargetInfo;
 class MCValue;
-class raw_ostream;
+class raw_pwrite_stream;
 
 /// Generic interface to target specific assembler backends.
 class MCAsmBackend {
-  MCAsmBackend(const MCAsmBackend &) = delete;
-  void operator=(const MCAsmBackend &) = delete;
-
 protected: // Can only create subclasses.
   MCAsmBackend();
 
-  unsigned HasDataInCodeSupport : 1;
-
 public:
+  MCAsmBackend(const MCAsmBackend &) = delete;
+  MCAsmBackend &operator=(const MCAsmBackend &) = delete;
   virtual ~MCAsmBackend();
 
   /// lifetime management
@@ -50,40 +48,32 @@ public:
   /// emit the final object file.
   virtual MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const = 0;
 
-  /// Create a new ELFObjectTargetWriter to enable non-standard
-  /// ELFObjectWriters.
-  virtual MCELFObjectTargetWriter *createELFObjectTargetWriter() const {
-    llvm_unreachable("createELFObjectTargetWriter is not supported by asm "
-                     "backend");
-  }
-
-  /// Check whether this target implements data-in-code markers. If not, data
-  /// region directives will be ignored.
-  bool hasDataInCodeSupport() const { return HasDataInCodeSupport; }
-
   /// \name Target Fixup Interfaces
   /// @{
 
   /// Get the number of target specific fixup kinds.
   virtual unsigned getNumFixupKinds() const = 0;
 
+  /// Map a relocation name used in .reloc to a fixup kind.
+  virtual Optional<MCFixupKind> getFixupKind(StringRef Name) const;
+
   /// Get information on a fixup kind.
   virtual const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const;
 
-  /// Target hook to adjust the literal value of a fixup if necessary.
-  /// IsResolved signals whether the caller believes a relocation is needed; the
-  /// target can modify the value. The default does nothing.
-  virtual void processFixupValue(const MCAssembler &Asm,
-                                 const MCAsmLayout &Layout,
-                                 const MCFixup &Fixup, const MCFragment *DF,
-                                 const MCValue &Target, uint64_t &Value,
-                                 bool &IsResolved) {}
+  /// Hook to check if a relocation is needed for some target specific reason.
+  virtual bool shouldForceRelocation(const MCAssembler &Asm,
+                                     const MCFixup &Fixup,
+                                     const MCValue &Target) {
+    return false;
+  }
 
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
-  /// appropriate.
-  virtual void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                          uint64_t Value, bool IsPCRel) const = 0;
+  /// appropriate. Errors (such as an out of range fixup value) should be
+  /// reported via \p Ctx.
+  virtual void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                          const MCValue &Target, MutableArrayRef<char> Data,
+                          uint64_t Value, bool IsResolved) const = 0;
 
   /// @}
 
@@ -111,8 +101,10 @@ public:
   ///
   /// \param Inst The instruction to relax, which may be the same as the
   /// output.
+  /// \param STI the subtarget information for the associated instruction.
   /// \param [out] Res On return, the relaxed instruction.
-  virtual void relaxInstruction(const MCInst &Inst, MCInst &Res) const = 0;
+  virtual void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                                MCInst &Res) const = 0;
 
   /// @}
 
@@ -128,6 +120,10 @@ public:
   /// \return - True on success.
   virtual bool writeNopData(uint64_t Count, MCObjectWriter *OW) const = 0;
 
+  /// Give backend an opportunity to finish layout after relaxation
+  virtual void finishLayout(MCAssembler const &Asm,
+                            MCAsmLayout &Layout) const {}
+
   /// Handle any target-specific assembler flags. By default, do nothing.
   virtual void handleAssemblerFlag(MCAssemblerFlag Flag) {}
 
@@ -138,6 +134,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCASMBACKEND_H

@@ -1,0 +1,33 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - ReturnType:      I32
+        ParamTypes:
+          - F32
+          - F32
+      - ReturnType:      I64
+        ParamTypes:
+          - F64
+          - F64
+...
+# CHECK: --- !WASM
+# CHECK: FileHeader:
+# CHECK:   Version:           0x00000001
+# CHECK: Sections:
+# CHECK:  - Type:            TYPE
+# CHECK:    Signatures:
+# CHECK:      - Index:           0
+# CHECK:        ReturnType:      I32
+# CHECK:        ParamTypes:
+# CHECK:          - F32
+# CHECK:          - F32
+# CHECK:      - Index:           1
+# CHECK:        ReturnType:      I64
+# CHECK:        ParamTypes:
+# CHECK:          - F64
+# CHECK:          - F64
+# CHECK: ...

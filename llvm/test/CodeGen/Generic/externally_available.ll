@@ -1,4 +1,4 @@
-; RUN: llc < %s | not grep test_
+; RUN: llc -verify-machine-dom-info < %s | not grep test_
 
 ; test_function should not be emitted to the .s file.
 define available_externally i32 @test_function() {

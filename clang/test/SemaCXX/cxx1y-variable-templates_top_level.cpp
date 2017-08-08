@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -Wno-c++11-extensions -Wno-c++1y-extensions %s -DPRECXX11
+// RUN: %clang_cc1 -std=c++98 -verify -fsyntax-only -Wno-c++11-extensions -Wno-c++1y-extensions %s -DPRECXX11
 // RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only -Wno-c++1y-extensions %s
 // RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only %s
 
@@ -9,7 +9,7 @@
 #endif
 
 template<typename T> 
-T pi = T(3.1415926535897932385); // expected-note {{template is declared here}}
+T pi = T(3.1415926535897932385); // expected-note 2{{declared here}}
 
 template<typename T> 
 CONST T cpi = T(3.1415926535897932385); // expected-note {{template is declared here}}
@@ -58,10 +58,9 @@ namespace use_in_top_level_funcs {
 namespace shadow {
   void foo() {
     int ipi0 = pi<int>;
-    int pi;
+    int pi; // expected-note {{found}}
     int a = pi;
-    int ipi = pi<int>;  // expected-error {{expected '(' for function-style cast or type construction}} \
-                        // expected-error {{expected expression}}
+    int ipi = pi<int>;  // expected-error {{'pi' does not name a template but is followed by template arguments; did you mean '::pi'?}}
   }
 }
 
@@ -102,7 +101,7 @@ namespace odr_tmpl {
     template<typename T> extern int v;    // expected-error {{redeclaration of 'v' with a different type: 'int' vs 'T'}}
 
 #ifndef PRECXX11
-    template<typename T> extern auto v;   // expected-error {{declaration of variable 'v' with type 'auto' requires an initializer}}
+    template<typename T> extern auto v;   // expected-error {{declaration of variable 'v' with deduced type 'auto' requires an initializer}}
 #endif
 
     template<typename T> T var = T();     // expected-note {{previous definition is here}}
@@ -111,7 +110,7 @@ namespace odr_tmpl {
 
 #ifndef PRECXX11
   namespace pvt_auto {
-    template<typename T> auto v0; // expected-error {{declaration of variable 'v0' with type 'auto' requires an initializer}}
+    template<typename T> auto v0; // expected-error {{declaration of variable 'v0' with deduced type 'auto' requires an initializer}}
     template<typename T> auto v1 = T();  // expected-note {{previous definition is here}}
     template<typename T> int v1;   // expected-error {{redefinition of 'v1' with a different type: 'int' vs 'auto'}}
     template<typename T> auto v2 = T();  // expected-note {{previous definition is here}}
@@ -119,7 +118,7 @@ namespace odr_tmpl {
     template<typename T> auto v3 = T();   // expected-note {{previous definition is here}}
     template<typename T> extern T v3;     // expected-error {{redeclaration of 'v3' with a different type: 'T' vs 'auto'}}
     template<typename T> auto v4 = T();
-    template<typename T> extern auto v4;   // expected-error {{declaration of variable 'v4' with type 'auto' requires an initializer}}
+    template<typename T> extern auto v4;   // expected-error {{declaration of variable 'v4' with deduced type 'auto' requires an initializer}}
   }
 #endif
   
@@ -264,9 +263,9 @@ namespace explicit_specialization {
     template<typename T> 
     T pi0 = T(3.1415926535897932385);   // expected-note {{variable template 'pi0' declared here}}
 
-    template<> int pi0<int> = 10;
-    template int pi0<int>;
-    template float pi0<int>;    // expected-error {{type 'float' of explicit instantiation of 'pi0' does not match expected type}}
+    template<> int pi0<int> = 10; // expected-note 2{{previous template specialization is here}}
+    template int pi0<int>;        // expected-warning {{has no effect}}
+    template float pi0<int>;      // expected-error {{type 'float' of explicit instantiation of 'pi0' does not match expected type}} expected-warning {{has no effect}}
 
     template<typename T1, typename T2>
     CONST int pi2 = 1;
@@ -458,3 +457,14 @@ namespace PR19169 {
   template<> int g<double>; // expected-error {{no variable template matches specialization; did you mean to use 'g' as function template instead?}}
 }
 
+#ifndef PRECXX11
+template <typename... Args> struct Variadic_t { };
+template <typename... Args> Variadic_t<Args...> Variadic;
+auto variadic1 = Variadic<>;
+auto variadic2 = Variadic<int, int>;
+#endif
+
+namespace VexingParse {
+  template <typename> int var; // expected-note {{declared here}}
+  int x(var); // expected-error {{cannot refer to variable template 'var' without a template argument list}}
+}

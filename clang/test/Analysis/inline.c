@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
 void clang_analyzer_checkInlined(int);
@@ -114,5 +114,5 @@ void never_called_by_anyone() {
 void knr_one_argument(a) int a; { }
 
 void call_with_less_arguments() {
-  knr_one_argument(); // expected-warning{{too few arguments}} expected-warning{{Function taking 1 argument}}
+  knr_one_argument(); // expected-warning{{too few arguments}} expected-warning{{Function taking 1 argument is called with fewer (0)}}
 }

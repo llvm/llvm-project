@@ -19,8 +19,6 @@ class BasicBlock;
 //                                 User Class
 //===----------------------------------------------------------------------===//
 
-void User::anchor() {}
-
 void User::replaceUsesOfWith(Value *From, Value *To) {
   if (From == To) return;   // Duh what?
 
@@ -43,10 +41,9 @@ void User::replaceUsesOfWith(Value *From, Value *To) {
 void User::allocHungoffUses(unsigned N, bool IsPhi) {
   assert(HasHungOffUses && "alloc must have hung off uses");
 
-  static_assert(AlignOf<Use>::Alignment >= AlignOf<Use::UserRef>::Alignment,
+  static_assert(alignof(Use) >= alignof(Use::UserRef),
                 "Alignment is insufficient for 'hung-off-uses' pieces");
-  static_assert(AlignOf<Use::UserRef>::Alignment >=
-                    AlignOf<BasicBlock *>::Alignment,
+  static_assert(alignof(Use::UserRef) >= alignof(BasicBlock *),
                 "Alignment is insufficient for 'hung-off-uses' pieces");
 
   // Allocate the array of Uses, followed by a pointer (with bottom bit set) to
@@ -192,14 +189,6 @@ void User::operator delete(void *Usr) {
              /* Delete */ false);
     ::operator delete(Storage);
   }
-}
-
-//===----------------------------------------------------------------------===//
-//                             Operator Class
-//===----------------------------------------------------------------------===//
-
-Operator::~Operator() {
-  llvm_unreachable("should never destroy an Operator");
 }
 
 } // End llvm namespace

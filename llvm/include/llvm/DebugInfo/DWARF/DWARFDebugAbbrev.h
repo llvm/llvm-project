@@ -1,4 +1,4 @@
-//===-- DWARFDebugAbbrev.h --------------------------------------*- C++ -*-===//
+//===- DWARFDebugAbbrev.h ---------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,15 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_DEBUGINFO_DWARFDEBUGABBREV_H
-#define LLVM_LIB_DEBUGINFO_DWARFDEBUGABBREV_H
+#ifndef LLVM_DEBUGINFO_DWARFDEBUGABBREV_H
+#define LLVM_DEBUGINFO_DWARFDEBUGABBREV_H
 
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
-#include <list>
+#include "llvm/Support/DataExtractor.h"
+#include <cstdint>
 #include <map>
 #include <vector>
 
 namespace llvm {
+
+class raw_ostream;
 
 class DWARFAbbreviationDeclarationSet {
   uint32_t Offset;
@@ -23,6 +26,9 @@ class DWARFAbbreviationDeclarationSet {
   /// consecutive codes. UINT32_MAX otherwise.
   uint32_t FirstAbbrCode;
   std::vector<DWARFAbbreviationDeclaration> Decls;
+
+  using const_iterator =
+      std::vector<DWARFAbbreviationDeclaration>::const_iterator;
 
 public:
   DWARFAbbreviationDeclarationSet();
@@ -34,13 +40,21 @@ public:
   const DWARFAbbreviationDeclaration *
   getAbbreviationDeclaration(uint32_t AbbrCode) const;
 
+  const_iterator begin() const {
+    return Decls.begin();
+  }
+
+  const_iterator end() const {
+    return Decls.end();
+  }
+
 private:
   void clear();
 };
 
 class DWARFDebugAbbrev {
-  typedef std::map<uint64_t, DWARFAbbreviationDeclarationSet>
-    DWARFAbbreviationDeclarationSetMap;
+  using DWARFAbbreviationDeclarationSetMap =
+      std::map<uint64_t, DWARFAbbreviationDeclarationSet>;
 
   DWARFAbbreviationDeclarationSetMap AbbrDeclSets;
   mutable DWARFAbbreviationDeclarationSetMap::const_iterator PrevAbbrOffsetPos;
@@ -54,10 +68,18 @@ public:
   void dump(raw_ostream &OS) const;
   void extract(DataExtractor Data);
 
+  DWARFAbbreviationDeclarationSetMap::const_iterator begin() const {
+    return AbbrDeclSets.begin();
+  }
+
+  DWARFAbbreviationDeclarationSetMap::const_iterator end() const {
+    return AbbrDeclSets.end();
+  }
+
 private:
   void clear();
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_DEBUGINFO_DWARFDEBUGABBREV_H

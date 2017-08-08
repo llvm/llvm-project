@@ -1,0 +1,133 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !mach-o
+FileHeader:      
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           4
+  sizeofcmds:      224
+  flags:           0x00218085
+  reserved:        0x00000000
+LoadCommands:    
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294979584
+    vmsize:          4096
+    fileoff:         1024
+    filesize:        2508
+    maxprot:         7
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      1024
+    rebase_size:     8
+    bind_off:        1032
+    bind_size:       96
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   1128
+    lazy_bind_size:  624
+    export_off:      1752
+    export_size:     48
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          1816
+    nsyms:           30
+    stroff:          2436
+    strsize:         1096
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       9
+    iextdefsym:      9
+    nextdefsym:      2
+    iundefsym:       11
+    nundefsym:       19
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  2296
+    nindirectsyms:   35
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:    
+  BindOpcodes:     
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZNSt3__14coutE
+    - Opcode:          BIND_OPCODE_SET_TYPE_IMM
+      Imm:             1
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   
+        - 0x0000000000000000
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __ZNSt3__15ctypeIcE2idE
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          ___gxx_personality_v0
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             2
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          dyld_stub_binder
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+...
+
+#CHECK: LinkEditData:    
+#CHECK:   BindOpcodes:     
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          __ZNSt3__14coutE
+#CHECK:     - Opcode:          BIND_OPCODE_SET_TYPE_IMM
+#CHECK:       Imm:             1
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+#CHECK:       Imm:             2
+#CHECK:       ULEBExtraData:   
+#CHECK:         - 0x0000000000000000
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          __ZNSt3__15ctypeIcE2idE
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          ___gxx_personality_v0
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+#CHECK:       Imm:             2
+#CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+#CHECK:       Imm:             0
+#CHECK:       Symbol:          dyld_stub_binder
+#CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+#CHECK:       Imm:             0
+#CHECK:     - Opcode:          BIND_OPCODE_DONE
+#CHECK:       Imm:             0
+

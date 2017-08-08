@@ -41,6 +41,10 @@
 ; CHECK-NOT: invalid value for 'append'-type module flag (expected a metadata node)
 !18 = !{i32 5, !"flag-4", !{i32 57}}
 
+; Check that any 'max' module flags are valid.
+; CHECK: invalid value for 'max' module flag (expected constant integer)
+!19 = !{i32 7, !"max", !"max"}
+
 ; Check that any 'require' module flags are valid.
 ; CHECK: invalid requirement on flag, flag is not present in module
 !11 = !{i32 3, !"bar", !{!"no-such-flag", i32 52}}
@@ -54,4 +58,4 @@
 
 !llvm.module.flags = !{
   !0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15,
-  !16, !17, !18 }
+  !16, !17, !18, !19 }

@@ -1,6 +1,8 @@
 // When a module depends on another, check that we dump the dependency header
 // files for both.
 
+// REQUIRES: shell
+
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -module-dependency-dir %t/vfs -F %S/Inputs -I %S/Inputs -verify %s
 // expected-no-diagnostics
@@ -14,9 +16,3 @@
 // VFS: 'name': "Sub2.h"
 
 @import AlsoDependsOnModule;
-
-// FIXME: This fails on win32 due to ERROR_FILENAME_EXCED_RANGE
-// if the working directory is too deep.
-// We should make Win32/Path.inc capable of long pathnames with '\\?\'.
-// For now, this is suppressed on win32.
-// REQUIRES: shell

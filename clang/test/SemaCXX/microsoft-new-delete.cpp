@@ -16,7 +16,7 @@ void *operator new(size_t, const noncopyable&);
 void *q = new (nc) int[4]; // expected-error {{calling a private constructor}}
 
 struct bitfield { int n : 3; } bf; // expected-note {{here}}
-void *operator new[](size_t, int &);
+void *operator new[](size_t, int &); // expected-note {{passing argument to parameter here}}
 void *operator new(size_t, const int &);
 void *r = new (bf.n) int[4]; // expected-error {{non-const reference cannot bind to bit-field}}
 

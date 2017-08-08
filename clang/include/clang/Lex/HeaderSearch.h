@@ -47,7 +47,7 @@ struct HeaderFileInfo {
   /// whether it is C++ clean or not.  This can be set by the include paths or
   /// by \#pragma gcc system_header.  This is an instance of
   /// SrcMgr::CharacteristicKind.
-  unsigned DirInfo : 2;
+  unsigned DirInfo : 3;
 
   /// \brief Whether this header file info was supplied by an external source,
   /// and has not changed since.
@@ -147,7 +147,7 @@ class HeaderSearch {
   };
 
   /// \brief Header-search options used to initialize this header search.
-  IntrusiveRefCntPtr<HeaderSearchOptions> HSOpts;
+  std::shared_ptr<HeaderSearchOptions> HSOpts;
 
   DiagnosticsEngine &Diags;
   FileManager &FileMgr;
@@ -241,8 +241,6 @@ class HeaderSearch {
   unsigned NumMultiIncludeFileOptzn;
   unsigned NumFrameworkLookups, NumSubFrameworkLookups;
 
-  const LangOptions &LangOpts;
-
   // HeaderSearch doesn't support default or copy construction.
   HeaderSearch(const HeaderSearch&) = delete;
   void operator=(const HeaderSearch&) = delete;
@@ -250,7 +248,7 @@ class HeaderSearch {
   friend class DirectoryLookup;
   
 public:
-  HeaderSearch(IntrusiveRefCntPtr<HeaderSearchOptions> HSOpts,
+  HeaderSearch(std::shared_ptr<HeaderSearchOptions> HSOpts,
                SourceManager &SourceMgr, DiagnosticsEngine &Diags,
                const LangOptions &LangOpts, const TargetInfo *Target);
   ~HeaderSearch();
@@ -377,13 +375,16 @@ public:
   /// \param SuggestedModule If non-null, and the file found is semantically
   /// part of a known module, this will be set to the module that should
   /// be imported instead of preprocessing/parsing the file found.
+  ///
+  /// \param IsMapped If non-null, and the search involved header maps, set to
+  /// true.
   const FileEntry *LookupFile(
       StringRef Filename, SourceLocation IncludeLoc, bool isAngled,
       const DirectoryLookup *FromDir, const DirectoryLookup *&CurDir,
       ArrayRef<std::pair<const FileEntry *, const DirectoryEntry *>> Includers,
       SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
-      bool SkipCache = false);
+      bool *IsMapped, bool SkipCache = false, bool BuildSystemModule = false);
 
   /// \brief Look up a subframework for the specified \#include file.
   ///
@@ -408,7 +409,8 @@ public:
   /// \return false if \#including the file will have no effect or true
   /// if we should include it.
   bool ShouldEnterIncludeFile(Preprocessor &PP, const FileEntry *File,
-                              bool isImport, Module *CorrespondingModule);
+                              bool isImport, bool ModulesEnabled,
+                              Module *CorrespondingModule);
 
   /// \brief Return whether the specified file is a normal header,
   /// a system header, or a C++ friendly system header.
@@ -466,6 +468,9 @@ public:
   /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
   const HeaderMap *CreateHeaderMap(const FileEntry *FE);
 
+  /// \brief Get filenames for all registered header maps.
+  void getHeaderMapFileNames(SmallVectorImpl<std::string> &Names) const;
+
   /// \brief Retrieve the name of the module file that should be used to 
   /// load the given module.
   ///
@@ -483,9 +488,12 @@ public:
   /// \param ModuleMapPath A path that when combined with \c ModuleName
   /// uniquely identifies this module. See Module::ModuleMap.
   ///
+  /// \param UsePrebuiltPath Whether we should use the prebuilt module path.
+  ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getModuleFileName(StringRef ModuleName, StringRef ModuleMapPath);
+  std::string getModuleFileName(StringRef ModuleName, StringRef ModuleMapPath,
+                                bool UsePrebuiltPath);
 
   /// \brief Lookup a module Search for a module with the given name.
   ///
@@ -522,15 +530,26 @@ public:
   /// \brief Retrieve the module that corresponds to the given file, if any.
   ///
   /// \param File The header that we wish to map to a module.
-  ModuleMap::KnownHeader findModuleForHeader(const FileEntry *File) const;
-  
+  /// \param AllowTextual Whether we want to find textual headers too.
+  ModuleMap::KnownHeader findModuleForHeader(const FileEntry *File,
+                                             bool AllowTextual = false) const;
+
   /// \brief Read the contents of the given module map file.
   ///
   /// \param File The module map file.
   /// \param IsSystem Whether this file is in a system header directory.
-  ///
+  /// \param ID If the module map file is already mapped (perhaps as part of
+  ///        processing a preprocessed module), the ID of the file.
+  /// \param Offset [inout] An offset within ID to start parsing. On exit,
+  ///        filled by the end of the parsed contents (either EOF or the
+  ///        location of an end-of-module-map pragma).
+  /// \param OriginalModuleMapFile The original path to the module map file,
+  ///        used to resolve paths within the module (this is required when
+  ///        building the module from preprocessed source).
   /// \returns true if an error occurred, false otherwise.
-  bool loadModuleMapFile(const FileEntry *File, bool IsSystem);
+  bool loadModuleMapFile(const FileEntry *File, bool IsSystem,
+                         FileID ID = FileID(), unsigned *Offset = nullptr,
+                         StringRef OriginalModuleMapFile = StringRef());
 
   /// \brief Collect the set of all known, top-level modules.
   ///
@@ -541,6 +560,19 @@ public:
   void loadTopLevelSystemModules();
 
 private:
+
+  /// \brief Lookup a module with the given module name and search-name.
+  ///
+  /// \param ModuleName The name of the module we're looking for.
+  ///
+  /// \param SearchName The "search-name" to derive filesystem paths from
+  /// when looking for the module map; this is usually equal to ModuleName,
+  /// but for compatibility with some buggy frameworks, additional attempts
+  /// may be made to find the module under a related-but-different search-name.
+  ///
+  /// \returns The module named ModuleName.
+  Module *lookupModule(StringRef ModuleName, StringRef SearchName);
+
   /// \brief Retrieve a module with the given name, which may be part of the
   /// given framework.
   ///
@@ -582,8 +614,9 @@ private:
   /// \brief Look up the file with the specified name and determine its owning
   /// module.
   const FileEntry *
-  getFileAndSuggestModule(StringRef FileName, const DirectoryEntry *Dir,
-                          bool IsSystemHeaderDir, Module *RequestingModule,
+  getFileAndSuggestModule(StringRef FileName, SourceLocation IncludeLoc,
+                          const DirectoryEntry *Dir, bool IsSystemHeaderDir,
+                          Module *RequestingModule,
                           ModuleMap::KnownHeader *SuggestedModule);
 
 public:
@@ -634,12 +667,17 @@ public:
   /// \brief Retrieve a uniqued framework name.
   StringRef getUniqueFrameworkName(StringRef Framework);
   
+  /// \brief Suggest a path by which the specified file could be found, for
+  /// use in diagnostics to suggest a #include.
+  ///
+  /// \param IsSystem If non-null, filled in to indicate whether the suggested
+  ///        path is relative to a system header directory.
+  std::string suggestPathToFileForDiagnostics(const FileEntry *File,
+                                              bool *IsSystem = nullptr);
+
   void PrintStats();
   
   size_t getTotalMemory() const;
-
-  static std::string NormalizeDashIncludePath(StringRef File,
-                                              FileManager &FileMgr);
 
 private:
   /// \brief Describes what happened when we tried to load a module map file.
@@ -657,7 +695,9 @@ private:
 
   LoadModuleMapResult loadModuleMapFileImpl(const FileEntry *File,
                                             bool IsSystem,
-                                            const DirectoryEntry *Dir);
+                                            const DirectoryEntry *Dir,
+                                            FileID ID = FileID(),
+                                            unsigned *Offset = nullptr);
 
   /// \brief Try to load the module map file in the given directory.
   ///

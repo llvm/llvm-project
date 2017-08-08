@@ -2,7 +2,7 @@
 // rdar://13075400
 
 @protocol FooAsID
-@property (copy) id foo; // expected-note 2 {{it could also be property of type 'id' declared here}} \\
+@property (assign) id foo; // expected-note 2 {{it could also be property of type 'id' declared here}} \\
 			 // expected-warning {{property of type 'id' was selected for synthesis}}
 @end
 

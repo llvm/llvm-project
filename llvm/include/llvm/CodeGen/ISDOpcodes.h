@@ -70,7 +70,7 @@ namespace ISD {
     /// of the frame or return address to return.  An index of zero corresponds
     /// to the current function's frame or return address, an index of one to
     /// the parent's frame or return address, and so on.
-    FRAMEADDR, RETURNADDR,
+    FRAMEADDR, RETURNADDR, ADDROFRETURNADDR,
 
     /// LOCAL_RECOVER - Represents the llvm.localrecover intrinsic.
     /// Materializes the offset from the local object pointer of another
@@ -89,6 +89,11 @@ namespace ISD {
     /// first (possible) on-stack argument. This is needed for correct stack
     /// adjustment during unwind.
     FRAME_TO_ARGS_OFFSET,
+
+    /// EH_DWARF_CFA - This node represents the pointer to the DWARF Canonical
+    /// Frame Address (CFA), generally the value of the stack pointer at the
+    /// call site in the previous frame.
+    EH_DWARF_CFA,
 
     /// OUTCHAIN = EH_RETURN(INCHAIN, OFFSET, HANDLER) - This node represents
     /// 'eh_return' gcc dwarf builtin, which is used to return from
@@ -211,6 +216,9 @@ namespace ISD {
     /// These nodes take two operands of the same value type, and produce two
     /// results.  The first result is the normal add or sub result, the second
     /// result is the carry flag result.
+    /// FIXME: These nodes are deprecated in favor of ADDCARRY and SUBCARRY.
+    /// They are kept around for now to provide a smooth transition path
+    /// toward the use of ADDCARRY/SUBCARRY and will eventually be removed.
     ADDC, SUBC,
 
     /// Carry-using nodes for multiple precision addition and subtraction. These
@@ -221,6 +229,16 @@ namespace ISD {
     /// to them to be chained together for add and sub of arbitrarily large
     /// values.
     ADDE, SUBE,
+
+    /// Carry-using nodes for multiple precision addition and subtraction.
+    /// These nodes take three operands: The first two are the normal lhs and
+    /// rhs to the add or sub, and the third is a boolean indicating if there
+    /// is an incoming carry. These nodes produce two results: the normal
+    /// result of the add or sub, and the output carry so they can be chained
+    /// together. The use of this opcode is preferable to adde/sube if the
+    /// target supports it, as the carry is a regular value rather than a
+    /// glue, which allows further optimisation.
+    ADDCARRY, SUBCARRY,
 
     /// RESULT, BOOL = [SU]ADDO(LHS, RHS) - Overflow-aware nodes for addition.
     /// These nodes take two operands: the normal LHS and RHS to the add. They
@@ -240,6 +258,20 @@ namespace ISD {
     /// Simple binary floating point operators.
     FADD, FSUB, FMUL, FDIV, FREM,
 
+    /// Constrained versions of the binary floating point operators.
+    /// These will be lowered to the simple operators before final selection.
+    /// They are used to limit optimizations while the DAG is being
+    /// optimized.
+    STRICT_FADD, STRICT_FSUB, STRICT_FMUL, STRICT_FDIV, STRICT_FREM,
+
+    /// Constrained versions of libm-equivalent floating point intrinsics.
+    /// These will be lowered to the equivalent non-constrained pseudo-op
+    /// (or expanded to the equivalent library call) before final selection.
+    /// They are used to limit optimizations while the DAG is being optimized.
+    STRICT_FSQRT, STRICT_FPOW, STRICT_FPOWI, STRICT_FSIN, STRICT_FCOS,
+    STRICT_FEXP, STRICT_FEXP2, STRICT_FLOG, STRICT_FLOG10, STRICT_FLOG2,
+    STRICT_FRINT, STRICT_FNEARBYINT,
+
     /// FMA - Perform a * b + c with no intermediate rounding step.
     FMA,
 
@@ -257,6 +289,9 @@ namespace ISD {
     /// value as an integer 0/1 value.
     FGETSIGN,
 
+    /// Returns platform specific canonical encoding of a floating point number.
+    FCANONICALIZE,
+
     /// BUILD_VECTOR(ELT0, ELT1, ELT2, ELT3,...) - Return a vector with the
     /// specified, possibly variable, elements.  The number of elements is
     /// required to be a power of two.  The types of the operands must all be
@@ -273,7 +308,8 @@ namespace ISD {
     /// EXTRACT_VECTOR_ELT(VECTOR, IDX) - Returns a single element from VECTOR
     /// identified by the (potentially variable) element number IDX.  If the
     /// return type is an integer type larger than the element type of the
-    /// vector, the result is extended to the width of the return type.
+    /// vector, the result is extended to the width of the return type. In
+    /// that case, the high bits are undefined.
     EXTRACT_VECTOR_ELT,
 
     /// CONCAT_VECTORS(VECTOR0, VECTOR1, ...) - Given a number of values of
@@ -324,6 +360,12 @@ namespace ISD {
     /// Bitwise operators - logical and, logical or, logical xor.
     AND, OR, XOR,
 
+    /// ABS - Determine the unsigned absolute value of a signed integer value of
+    /// the same bitwidth.
+    /// Note: A value of INT_MIN will return INT_MIN, no saturation or overflow
+    /// is performed.
+    ABS,
+
     /// Shift and rotation operations.  After legalization, the type of the
     /// shift amount is known to be TLI.getShiftAmountTy().  Before legalization
     /// the shift amount can be any type, but care must be taken to ensure it is
@@ -336,11 +378,7 @@ namespace ISD {
     SHL, SRA, SRL, ROTL, ROTR,
 
     /// Byte Swap and Counting operators.
-    BSWAP, CTTZ, CTLZ, CTPOP,
-
-    /// [SU]ABSDIFF - Signed/Unsigned absolute difference of two input integer
-    /// vector. These nodes are generated from llvm.*absdiff* intrinsics.
-    SABSDIFF, UABSDIFF,
+    BSWAP, CTTZ, CTLZ, CTPOP, BITREVERSE,
 
     /// Bit counting operators with an undefined result for zero inputs.
     CTTZ_ZERO_UNDEF, CTLZ_ZERO_UNDEF,
@@ -372,9 +410,24 @@ namespace ISD {
     /// then the result type must also be a vector type.
     SETCC,
 
+    /// Like SetCC, ops #0 and #1 are the LHS and RHS operands to compare, and
+    /// op #2 is a *carry value*. This operator checks the result of
+    /// "LHS - RHS - Carry", and can be used to compare two wide integers:
+    /// (setcce lhshi rhshi (subc lhslo rhslo) cc). Only valid for integers.
+    /// FIXME: This node is deprecated in favor of SETCCCARRY.
+    /// It is kept around for now to provide a smooth transition path
+    /// toward the use of SETCCCARRY and will eventually be removed.
+    SETCCE,
+
+    /// Like SetCC, ops #0 and #1 are the LHS and RHS operands to compare, but
+    /// op #2 is a boolean indicating if there is an incoming carry. This
+    /// operator checks the result of "LHS - RHS - Carry", and can be used to
+    /// compare two wide integers: (setcce lhshi rhshi (subc lhslo rhslo) cc).
+    /// Only valid for integers.
+    SETCCCARRY,
+
     /// SHL_PARTS/SRA_PARTS/SRL_PARTS - These operators are used for expanded
-    /// integer shift operations, just like ADD/SUB_PARTS.  The operation
-    /// ordering is:
+    /// integer shift operations.  The operation ordering is:
     ///       [Lo,Hi] = op [LoLHS,HiLHS], Amt
     SHL_PARTS, SRA_PARTS, SRL_PARTS,
 
@@ -482,24 +535,17 @@ namespace ISD {
     /// the same bit size (e.g.  f32 <-> i32).  This can also be used for
     /// int-to-int or fp-to-fp conversions, but that is a noop, deleted by
     /// getNode().
+    ///
+    /// This operator is subtly different from the bitcast instruction from
+    /// LLVM-IR since this node may change the bits in the register. For
+    /// example, this occurs on big-endian NEON and big-endian MSA where the
+    /// layout of the bits in the register depends on the vector type and this
+    /// operator acts as a shuffle operation for some vector type combinations.
     BITCAST,
 
     /// ADDRSPACECAST - This operator converts between pointers of different
     /// address spaces.
     ADDRSPACECAST,
-
-    /// CONVERT_RNDSAT - This operator is used to support various conversions
-    /// between various types (float, signed, unsigned and vectors of those
-    /// types) with rounding and saturation. NOTE: Avoid using this operator as
-    /// most target don't support it and the operator might be removed in the
-    /// future. It takes the following arguments:
-    ///   0) value
-    ///   1) dest type (type to convert to)
-    ///   2) src type (type to convert from)
-    ///   3) rounding imm
-    ///   4) saturation imm
-    ///   5) ISD::CvtCode indicating the type of conversion to do
-    CONVERT_RNDSAT,
 
     /// FP16_TO_FP, FP_TO_FP16 - These operators are used to perform promotions
     /// and truncation for half-precision (16 bit) floating numbers. These nodes
@@ -591,6 +637,9 @@ namespace ISD {
     /// take a chain as input and return a chain.
     EH_LABEL,
 
+    /// CATCHPAD - Represents a catchpad instruction.
+    CATCHPAD,
+
     /// CATCHRET - Represents a return from a catch block funclet. Used for
     /// MSVC compatible exception handling. Takes a chain operand and a
     /// destination basic block operand.
@@ -613,6 +662,13 @@ namespace ISD {
     /// of a call sequence, and carry arbitrary information that target might
     /// want to know.  The first operand is a chain, the rest are specified by
     /// the target and not touched by the DAG optimizers.
+    /// Targets that may use stack to pass call arguments define additional
+    /// operands:
+    /// - size of the call frame part that must be set up within the
+    ///   CALLSEQ_START..CALLSEQ_END pair,
+    /// - part of the call frame prepared prior to CALLSEQ_START.
+    /// Both these parameters must be constants, their sum is the total call
+    /// frame size.
     /// CALLSEQ_START..CALLSEQ_END pairs may not be nested.
     CALLSEQ_START,  // Beginning of a call sequence
     CALLSEQ_END,    // End of a call sequence
@@ -746,6 +802,26 @@ namespace ISD {
     GC_TRANSITION_START,
     GC_TRANSITION_END,
 
+    /// GET_DYNAMIC_AREA_OFFSET - get offset from native SP to the address of
+    /// the most recent dynamic alloca. For most targets that would be 0, but
+    /// for some others (e.g. PowerPC, PowerPC64) that would be compile-time
+    /// known nonzero constant. The only operand here is the chain.
+    GET_DYNAMIC_AREA_OFFSET,
+
+    /// Generic reduction nodes. These nodes represent horizontal vector
+    /// reduction operations, producing a scalar result.
+    /// The STRICT variants perform reductions in sequential order. The first
+    /// operand is an initial scalar accumulator value, and the second operand
+    /// is the vector to reduce.
+    VECREDUCE_STRICT_FADD, VECREDUCE_STRICT_FMUL,
+    /// These reductions are non-strict, and have a single vector operand.
+    VECREDUCE_FADD, VECREDUCE_FMUL,
+    VECREDUCE_ADD, VECREDUCE_MUL,
+    VECREDUCE_AND, VECREDUCE_OR, VECREDUCE_XOR,
+    VECREDUCE_SMAX, VECREDUCE_SMIN, VECREDUCE_UMAX, VECREDUCE_UMIN,
+    /// FMIN/FMAX nodes can have flags, for NaN/NoNaN variants.
+    VECREDUCE_FMAX, VECREDUCE_FMIN,
+
     /// BUILTIN_OP_END - This must be the last enum value in this list.
     /// The target-specific pre-isel opcode values start here.
     BUILTIN_OP_END
@@ -790,9 +866,10 @@ namespace ISD {
     PRE_INC,
     PRE_DEC,
     POST_INC,
-    POST_DEC,
-    LAST_INDEXED_MODE
+    POST_DEC
   };
+
+  static const int LAST_INDEXED_MODE = POST_DEC + 1;
 
   //===--------------------------------------------------------------------===//
   /// LoadExtType enum - This enum defines the three variants of LOADEXT
@@ -808,9 +885,10 @@ namespace ISD {
     NON_EXTLOAD = 0,
     EXTLOAD,
     SEXTLOAD,
-    ZEXTLOAD,
-    LAST_LOADEXT_TYPE
+    ZEXTLOAD
   };
+
+  static const int LAST_LOADEXT_TYPE = ZEXTLOAD + 1;
 
   NodeType getExtForLoadExtType(bool IsFP, LoadExtType);
 
@@ -859,68 +937,49 @@ namespace ISD {
     SETCC_INVALID       // Marker value.
   };
 
-  /// isSignedIntSetCC - Return true if this is a setcc instruction that
-  /// performs a signed comparison when used with integer operands.
+  /// Return true if this is a setcc instruction that performs a signed
+  /// comparison when used with integer operands.
   inline bool isSignedIntSetCC(CondCode Code) {
     return Code == SETGT || Code == SETGE || Code == SETLT || Code == SETLE;
   }
 
-  /// isUnsignedIntSetCC - Return true if this is a setcc instruction that
-  /// performs an unsigned comparison when used with integer operands.
+  /// Return true if this is a setcc instruction that performs an unsigned
+  /// comparison when used with integer operands.
   inline bool isUnsignedIntSetCC(CondCode Code) {
     return Code == SETUGT || Code == SETUGE || Code == SETULT || Code == SETULE;
   }
 
-  /// isTrueWhenEqual - Return true if the specified condition returns true if
-  /// the two operands to the condition are equal.  Note that if one of the two
-  /// operands is a NaN, this value is meaningless.
+  /// Return true if the specified condition returns true if the two operands to
+  /// the condition are equal. Note that if one of the two operands is a NaN,
+  /// this value is meaningless.
   inline bool isTrueWhenEqual(CondCode Cond) {
     return ((int)Cond & 1) != 0;
   }
 
-  /// getUnorderedFlavor - This function returns 0 if the condition is always
-  /// false if an operand is a NaN, 1 if the condition is always true if the
-  /// operand is a NaN, and 2 if the condition is undefined if the operand is a
-  /// NaN.
+  /// This function returns 0 if the condition is always false if an operand is
+  /// a NaN, 1 if the condition is always true if the operand is a NaN, and 2 if
+  /// the condition is undefined if the operand is a NaN.
   inline unsigned getUnorderedFlavor(CondCode Cond) {
     return ((int)Cond >> 3) & 3;
   }
 
-  /// getSetCCInverse - Return the operation corresponding to !(X op Y), where
-  /// 'op' is a valid SetCC operation.
+  /// Return the operation corresponding to !(X op Y), where 'op' is a valid
+  /// SetCC operation.
   CondCode getSetCCInverse(CondCode Operation, bool isInteger);
 
-  /// getSetCCSwappedOperands - Return the operation corresponding to (Y op X)
-  /// when given the operation for (X op Y).
+  /// Return the operation corresponding to (Y op X) when given the operation
+  /// for (X op Y).
   CondCode getSetCCSwappedOperands(CondCode Operation);
 
-  /// getSetCCOrOperation - Return the result of a logical OR between different
-  /// comparisons of identical values: ((X op1 Y) | (X op2 Y)).  This
-  /// function returns SETCC_INVALID if it is not possible to represent the
-  /// resultant comparison.
+  /// Return the result of a logical OR between different comparisons of
+  /// identical values: ((X op1 Y) | (X op2 Y)). This function returns
+  /// SETCC_INVALID if it is not possible to represent the resultant comparison.
   CondCode getSetCCOrOperation(CondCode Op1, CondCode Op2, bool isInteger);
 
-  /// getSetCCAndOperation - Return the result of a logical AND between
-  /// different comparisons of identical values: ((X op1 Y) & (X op2 Y)).  This
-  /// function returns SETCC_INVALID if it is not possible to represent the
-  /// resultant comparison.
+  /// Return the result of a logical AND between different comparisons of
+  /// identical values: ((X op1 Y) & (X op2 Y)). This function returns
+  /// SETCC_INVALID if it is not possible to represent the resultant comparison.
   CondCode getSetCCAndOperation(CondCode Op1, CondCode Op2, bool isInteger);
-
-  //===--------------------------------------------------------------------===//
-  /// CvtCode enum - This enum defines the various converts CONVERT_RNDSAT
-  /// supports.
-  enum CvtCode {
-    CVT_FF,     /// Float from Float
-    CVT_FS,     /// Float from Signed
-    CVT_FU,     /// Float from Unsigned
-    CVT_SF,     /// Signed from Float
-    CVT_UF,     /// Unsigned from Float
-    CVT_SS,     /// Signed from Signed
-    CVT_SU,     /// Signed from Unsigned
-    CVT_US,     /// Unsigned from Signed
-    CVT_UU,     /// Unsigned from Unsigned
-    CVT_INVALID /// Marker - Invalid opcode
-  };
 
 } // end llvm::ISD namespace
 

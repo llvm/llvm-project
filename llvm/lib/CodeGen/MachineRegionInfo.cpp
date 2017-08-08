@@ -1,10 +1,21 @@
+//===- lib/Codegen/MachineRegionInfo.cpp ----------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineRegionInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/RegionInfoImpl.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
 
-#define DEBUG_TYPE "region"
+#define DEBUG_TYPE "machine-region-info"
 
 using namespace llvm;
 
@@ -12,36 +23,29 @@ STATISTIC(numMachineRegions,       "The # of machine regions");
 STATISTIC(numMachineSimpleRegions, "The # of simple machine regions");
 
 namespace llvm {
+
 template class RegionBase<RegionTraits<MachineFunction>>;
 template class RegionNodeBase<RegionTraits<MachineFunction>>;
 template class RegionInfoBase<RegionTraits<MachineFunction>>;
-}
+
+} // end namespace llvm
 
 //===----------------------------------------------------------------------===//
 // MachineRegion implementation
-//
 
 MachineRegion::MachineRegion(MachineBasicBlock *Entry, MachineBasicBlock *Exit,
                              MachineRegionInfo* RI,
                              MachineDominatorTree *DT, MachineRegion *Parent) :
-  RegionBase<RegionTraits<MachineFunction>>(Entry, Exit, RI, DT, Parent) {
+  RegionBase<RegionTraits<MachineFunction>>(Entry, Exit, RI, DT, Parent) {}
 
-}
-
-MachineRegion::~MachineRegion() { }
+MachineRegion::~MachineRegion() = default;
 
 //===----------------------------------------------------------------------===//
 // MachineRegionInfo implementation
-//
 
-MachineRegionInfo::MachineRegionInfo() :
-  RegionInfoBase<RegionTraits<MachineFunction>>() {
+MachineRegionInfo::MachineRegionInfo() = default;
 
-}
-
-MachineRegionInfo::~MachineRegionInfo() {
-
-}
+MachineRegionInfo::~MachineRegionInfo() = default;
 
 void MachineRegionInfo::updateStatistics(MachineRegion *R) {
   ++numMachineRegions;
@@ -74,9 +78,7 @@ MachineRegionInfoPass::MachineRegionInfoPass() : MachineFunctionPass(ID) {
   initializeMachineRegionInfoPassPass(*PassRegistry::getPassRegistry());
 }
 
-MachineRegionInfoPass::~MachineRegionInfoPass() {
-
-}
+MachineRegionInfoPass::~MachineRegionInfoPass() = default;
 
 bool MachineRegionInfoPass::runOnMachineFunction(MachineFunction &F) {
   releaseMemory();
@@ -86,6 +88,9 @@ bool MachineRegionInfoPass::runOnMachineFunction(MachineFunction &F) {
   auto DF = &getAnalysis<MachineDominanceFrontier>();
 
   RI.recalculate(F, DT, PDT, DF);
+
+  DEBUG(RI.dump());
+
   return false;
 }
 
@@ -103,9 +108,10 @@ void MachineRegionInfoPass::verifyAnalysis() const {
 
 void MachineRegionInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequiredTransitive<DominatorTreeWrapperPass>();
-  AU.addRequired<PostDominatorTree>();
-  AU.addRequired<DominanceFrontier>();
+  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<MachinePostDominatorTree>();
+  AU.addRequired<MachineDominanceFrontier>();
+  MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 void MachineRegionInfoPass::print(raw_ostream &OS, const Module *) const {
@@ -113,28 +119,30 @@ void MachineRegionInfoPass::print(raw_ostream &OS, const Module *) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void MachineRegionInfoPass::dump() const {
+LLVM_DUMP_METHOD void MachineRegionInfoPass::dump() const {
   RI.dump();
 }
 #endif
 
 char MachineRegionInfoPass::ID = 0;
+char &MachineRegionInfoPassID = MachineRegionInfoPass::ID;
 
-INITIALIZE_PASS_BEGIN(MachineRegionInfoPass, "regions",
-                "Detect single entry single exit regions", true, true)
+INITIALIZE_PASS_BEGIN(MachineRegionInfoPass, DEBUG_TYPE,
+                      "Detect single entry single exit regions", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
-INITIALIZE_PASS_END(MachineRegionInfoPass, "regions",
-                "Detect single entry single exit regions", true, true)
+INITIALIZE_PASS_END(MachineRegionInfoPass, DEBUG_TYPE,
+                    "Detect single entry single exit regions", true, true)
 
 // Create methods available outside of this file, to use them
 // "include/llvm/LinkAllPasses.h". Otherwise the pass would be deleted by
 // the link time optimization.
 
 namespace llvm {
-  FunctionPass *createMachineRegionInfoPass() {
-    return new MachineRegionInfoPass();
-  }
+
+FunctionPass *createMachineRegionInfoPass() {
+  return new MachineRegionInfoPass();
 }
 
+} // end namespace llvm

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection -verify -Wno-objc-literal-conversion %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify -Wno-objc-literal-conversion %s
 
 void clang_analyzer_eval(bool);
 @class NSString;

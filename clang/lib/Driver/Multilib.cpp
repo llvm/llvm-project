@@ -8,17 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Multilib.h"
-#include "Tools.h"
+#include "ToolChains/CommonArgs.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/YAMLParser.h"
@@ -80,6 +78,10 @@ Multilib &Multilib::includeSuffix(StringRef S) {
   IncludeSuffix = S;
   normalizePathSegment(IncludeSuffix);
   return *this;
+}
+
+LLVM_DUMP_METHOD void Multilib::dump() const {
+  print(llvm::errs());
 }
 
 void Multilib::print(raw_ostream &OS) const {
@@ -270,6 +272,10 @@ bool MultilibSet::select(const Multilib::flags_list &Flags, Multilib &M) const {
   // TODO: pick the "best" multlib when more than one is suitable
   assert(false);
   return false;
+}
+
+LLVM_DUMP_METHOD void MultilibSet::dump() const {
+  print(llvm::errs());
 }
 
 void MultilibSet::print(raw_ostream &OS) const {

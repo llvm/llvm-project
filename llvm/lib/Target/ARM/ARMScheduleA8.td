@@ -1065,11 +1065,11 @@ def CortexA8Itineraries : ProcessorItineraries<
 // Cortex-A8 machine model for scheduling and other instruction cost heuristics.
 def CortexA8Model : SchedMachineModel {
   let IssueWidth = 2; // 2 micro-ops are dispatched per cycle.
-  let MinLatency = -1; // OperandCycles are interpreted as MinLatency.
   let LoadLatency = 2; // Optimistic load latency assuming bypass.
                        // This is overriden by OperandCycles if the
                        // Itineraries are queried instead.
   let MispredictPenalty = 13; // Based on estimate of pipeline depth.
+  let CompleteModel = 0;
 
   let Itineraries = CortexA8Itineraries;
 }

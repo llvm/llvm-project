@@ -1,4 +1,5 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/discriminator.prof | opt -analyze -branch-prob | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/discriminator.prof | opt -analyze -branch-prob | FileCheck %s
 
 ; Original code
 ;
@@ -34,15 +35,15 @@ while.cond:                                       ; preds = %if.end, %entry
   %0 = load i32, i32* %i.addr, align 4, !dbg !12
   %cmp = icmp slt i32 %0, 100, !dbg !12
   br i1 %cmp, label %while.body, label %while.end, !dbg !12
-; CHECK: edge while.cond -> while.body probability is 0x7ebb907a / 0x80000000 = 99.01% [HOT edge]
-; CHECK: edge while.cond -> while.end probability is 0x01446f86 / 0x80000000 = 0.99%
+; CHECK: edge while.cond -> while.body probability is 0x7d83ba68 / 0x80000000 = 98.06% [HOT edge]
+; CHECK: edge while.cond -> while.end probability is 0x027c4598 / 0x80000000 = 1.94%
 
 while.body:                                       ; preds = %while.cond
   %1 = load i32, i32* %i.addr, align 4, !dbg !14
   %cmp1 = icmp slt i32 %1, 50, !dbg !14
   br i1 %cmp1, label %if.then, label %if.end, !dbg !14
-; CHECK: edge while.body -> if.then probability is 0x06666666 / 0x80000000 = 5.00%
-; CHECK: edge while.body -> if.end probability is 0x7999999a / 0x80000000 = 95.00% [HOT edge]
+; CHECK: edge while.body -> if.then probability is 0x07878788 / 0x80000000 = 5.88%
+; CHECK: edge while.body -> if.end probability is 0x78787878 / 0x80000000 = 94.12% [HOT edge]
 
 if.then:                                          ; preds = %while.body
   %2 = load i32, i32* %x, align 4, !dbg !17
@@ -66,11 +67,10 @@ while.end:                                        ; preds = %while.cond
 !llvm.module.flags = !{!7, !8}
 !llvm.ident = !{!9}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5 ", isOptimized: false, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5 ", isOptimized: false, emissionKind: NoDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "discriminator.c", directory: ".")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "discriminator.c", directory: ".")
 !6 = !DISubroutineType(types: !2)
 !7 = !{i32 2, !"Dwarf Version", i32 4}
@@ -79,12 +79,12 @@ while.end:                                        ; preds = %while.cond
 !10 = !DILocation(line: 2, scope: !4)
 !11 = !DILocation(line: 3, scope: !4)
 !12 = !DILocation(line: 3, scope: !13)
-!13 = !DILexicalBlockFile(discriminator: 1, file: !1, scope: !4)
+!13 = !DILexicalBlockFile(discriminator: 2, file: !1, scope: !4)
 !14 = !DILocation(line: 4, scope: !15)
 !15 = distinct !DILexicalBlock(line: 4, column: 0, file: !1, scope: !16)
 !16 = distinct !DILexicalBlock(line: 3, column: 0, file: !1, scope: !4)
 !17 = !DILocation(line: 4, scope: !18)
-!18 = !DILexicalBlockFile(discriminator: 1, file: !1, scope: !15)
+!18 = !DILexicalBlockFile(discriminator: 2, file: !1, scope: !15)
 !19 = !DILocation(line: 5, scope: !16)
 !20 = !DILocation(line: 6, scope: !16)
 !21 = !DILocation(line: 7, scope: !4)

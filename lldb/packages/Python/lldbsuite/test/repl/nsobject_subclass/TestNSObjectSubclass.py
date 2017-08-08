@@ -15,20 +15,20 @@ import os
 import time
 import unittest2
 import lldb
-from lldbsuite.test.lldbrepl import REPLTest, load_tests
+import lldbsuite.test.lldbrepl as lldbrepl
 import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbtest as lldbtest
 
 
-class REPLNSObjectSubclassTest (REPLTest):
+class REPLNSObjectSubclassTest (lldbrepl.REPLTest):
 
-    mydir = REPLTest.compute_mydir(__file__)
+    mydir = lldbrepl.REPLTest.compute_mydir(__file__)
 
     @decorators.swiftTest
     @decorators.skipUnlessDarwin
     @decorators.no_debug_info_test
     def testREPL(self):
-        REPLTest.testREPL(self)
+        lldbrepl.REPLTest.testREPL(self)
 
     def doTest(self):
         self.command('import Foundation', timeout=20)

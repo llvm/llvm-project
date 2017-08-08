@@ -19,7 +19,6 @@
 #include "clang/Tooling/Refactoring.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <string>
-#include <vector>
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::tooling::Replacement)
 
@@ -66,7 +65,6 @@ template <> struct MappingTraits<clang::tooling::TranslationUnitReplacements> {
   static void mapping(IO &Io,
                       clang::tooling::TranslationUnitReplacements &Doc) {
     Io.mapRequired("MainSourceFile", Doc.MainSourceFile);
-    Io.mapOptional("Context", Doc.Context, std::string());
     Io.mapRequired("Replacements", Doc.Replacements);
   }
 };

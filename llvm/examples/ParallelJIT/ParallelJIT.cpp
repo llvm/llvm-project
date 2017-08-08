@@ -16,17 +16,33 @@
 // wakes them up. This complicated work is performed so that all three threads
 // call into the JIT at the same time (or the best possible approximation of the
 // same time). This test had assertion errors until I got the locking right.
+//
+//===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
-#include "llvm/ExecutionEngine/Interpreter.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/TargetSelect.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
+#include <memory>
+#include <vector>
 #include <pthread.h>
 
 using namespace llvm;
@@ -38,8 +54,7 @@ static Function* createAdd1(Module *M) {
   Function *Add1F =
     cast<Function>(M->getOrInsertFunction("add1",
                                           Type::getInt32Ty(M->getContext()),
-                                          Type::getInt32Ty(M->getContext()),
-                                          nullptr));
+                                          Type::getInt32Ty(M->getContext())));
 
   // Add a basic block to the function. As before, it automatically inserts
   // because of the last argument.
@@ -69,8 +84,7 @@ static Function *CreateFibFunction(Module *M) {
   Function *FibF = 
     cast<Function>(M->getOrInsertFunction("fib",
                                           Type::getInt32Ty(M->getContext()),
-                                          Type::getInt32Ty(M->getContext()),
-                                          nullptr));
+                                          Type::getInt32Ty(M->getContext())));
 
   // Add a basic block to the function.
   BasicBlock *BB = BasicBlock::Create(M->getContext(), "EntryBlock", FibF);
@@ -131,6 +145,7 @@ public:
     waitFor = 0;
 
     int result = pthread_cond_init( &condition, nullptr );
+    (void)result;
     assert( result == 0 );
 
     result = pthread_mutex_init( &mutex, nullptr );

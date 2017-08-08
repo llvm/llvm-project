@@ -14,27 +14,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64TargetStreamer.h"
-#include "llvm/MC/MCELFStreamer.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/StringExtras.h"
+#include "AArch64WinCOFFStreamer.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSection.h"
-#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/MC/MCValue.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ELF.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/MC/MCWinCOFFStreamer.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -106,15 +104,27 @@ public:
   /// This function is the one used to emit instruction data into the ELF
   /// streamer. We override it to add the appropriate mapping symbol if
   /// necessary.
-  void EmitInstruction(const MCInst &Inst,
-                       const MCSubtargetInfo &STI) override {
+  void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                       bool) override {
     EmitA64MappingSymbol();
     MCELFStreamer::EmitInstruction(Inst, STI);
   }
 
+  /// Emit a 32-bit value as an instruction. This is only used for the .inst
+  /// directive, EmitInstruction should be used in other cases.
   void emitInst(uint32_t Inst) {
+    char Buffer[4];
+
+    // We can't just use EmitIntValue here, as that will emit a data mapping
+    // symbol, and swap the endianness on big-endian systems (instructions are
+    // always little-endian).
+    for (unsigned I = 0; I < 4; ++I) {
+      Buffer[I] = uint8_t(Inst);
+      Inst >>= 8;
+    }
+
     EmitA64MappingSymbol();
-    MCELFStreamer::EmitIntValue(Inst, 4);
+    MCELFStreamer::EmitBytes(StringRef(Buffer, 4));
   }
 
   /// This is one of the functions used to emit data into an ELF section, so the
@@ -130,7 +140,7 @@ public:
   /// if necessary.
   void EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
     EmitDataMappingSymbol();
-    MCELFStreamer::EmitValueImpl(Value, Size);
+    MCELFStreamer::EmitValueImpl(Value, Size, Loc);
   }
 
 private:
@@ -168,6 +178,7 @@ private:
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
   ElfMappingSymbol LastEMS;
 };
+
 } // end anonymous namespace
 
 AArch64ELFStreamer &AArch64TargetELFStreamer::getStreamer() {
@@ -179,6 +190,7 @@ void AArch64TargetELFStreamer::emitInst(uint32_t Inst) {
 }
 
 namespace llvm {
+
 MCTargetStreamer *createAArch64AsmTargetStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS,
                                                  MCInstPrinter *InstPrint,
@@ -200,6 +212,9 @@ createAArch64ObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSBinFormatELF())
     return new AArch64TargetELFStreamer(S);
+  if (TT.isOSBinFormatCOFF())
+    return new AArch64TargetWinCOFFStreamer(S);
   return nullptr;
 }
-}
+
+} // end namespace llvm

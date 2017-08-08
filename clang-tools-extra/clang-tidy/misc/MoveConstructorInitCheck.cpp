@@ -25,7 +25,7 @@ MoveConstructorInitCheck::MoveConstructorInitCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
+          Options.get("IncludeStyle", "llvm"))) {}
 
 void MoveConstructorInitCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++11; the functionality currently does not

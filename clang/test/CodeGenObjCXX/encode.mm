@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=gnu++98 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
 
 // CHECK: v17@0:8{vector<float, float, float>=}16
 // CHECK: {vector<float, float, float>=}
@@ -213,7 +213,7 @@ public:
   dynamic_class dynamic_class_ivar;
 }
 @end
-// CHECK: private global [41 x i8] c"{dynamic_class=\22_vptr$dynamic_class\22^^?}\00"
+// CHECK: private unnamed_addr constant [41 x i8] c"{dynamic_class=\22_vptr$dynamic_class\22^^?}\00"
 
 namespace PR17142 {
   struct A { virtual ~A(); };
@@ -223,4 +223,25 @@ namespace PR17142 {
   struct E : D {};
   // CHECK: @_ZN7PR171421xE = constant [14 x i8] c"{E=^^?i^^?ii}\00"
   extern const char x[] = @encode(E);
+}
+
+// This test used to cause infinite recursion.
+template<typename T>
+struct S {
+  typedef T Ty;
+  Ty *t;
+};
+
+@interface N
+{
+  S<N> a;
+}
+@end
+
+@implementation N
+@end
+
+const char *expand_struct() {
+  // CHECK: @{{.*}} = private unnamed_addr constant [16 x i8] c"{N={S<N>=^{N}}}\00"
+  return @encode(N);
 }

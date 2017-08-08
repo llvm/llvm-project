@@ -24,18 +24,11 @@
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_mac.h"
 
-#if !SANITIZER_IOS
-#include <crt_externs.h>  // for _NSGetArgv and _NSGetEnviron
-#else
-extern "C" {
-  extern char ***_NSGetArgv(void);
-}
-#endif
-
-#include <dlfcn.h>  // for dladdr()
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <libkern/OSAtomic.h>
 #include <mach-o/dyld.h>
+#include <mach-o/getsect.h>
 #include <mach-o/loader.h>
 #include <pthread.h>
 #include <stdlib.h>  // for free()
@@ -45,192 +38,44 @@ extern "C" {
 #include <sys/ucontext.h>
 #include <unistd.h>
 
+// from <crt_externs.h>, but we don't have that file on iOS
+extern "C" {
+  extern char ***_NSGetArgv(void);
+  extern char ***_NSGetEnviron(void);
+}
+
 namespace __asan {
 
 void InitializePlatformInterceptors() {}
-
-bool PlatformHasDifferentMemcpyAndMemmove() {
-  // On OS X 10.7 memcpy() and memmove() are both resolved
-  // into memmove$VARIANT$sse42.
-  // See also http://code.google.com/p/address-sanitizer/issues/detail?id=34.
-  // TODO(glider): need to check dynamically that memcpy() and memmove() are
-  // actually the same function.
-  return GetMacosVersion() == MACOS_VERSION_SNOW_LEOPARD;
-}
-
-extern "C"
-void __asan_init();
-
-static const char kDyldInsertLibraries[] = "DYLD_INSERT_LIBRARIES";
-LowLevelAllocator allocator_for_env;
-
-// Change the value of the env var |name|, leaking the original value.
-// If |name_value| is NULL, the variable is deleted from the environment,
-// otherwise the corresponding "NAME=value" string is replaced with
-// |name_value|.
-void LeakyResetEnv(const char *name, const char *name_value) {
-  char **env = GetEnviron();
-  uptr name_len = internal_strlen(name);
-  while (*env != 0) {
-    uptr len = internal_strlen(*env);
-    if (len > name_len) {
-      const char *p = *env;
-      if (!internal_memcmp(p, name, name_len) && p[name_len] == '=') {
-        // Match.
-        if (name_value) {
-          // Replace the old value with the new one.
-          *env = const_cast<char*>(name_value);
-        } else {
-          // Shift the subsequent pointers back.
-          char **del = env;
-          do {
-            del[0] = del[1];
-          } while (*del++);
-        }
-      }
-    }
-    env++;
-  }
-}
-
-static bool reexec_disabled = false;
-
-void DisableReexec() {
-  reexec_disabled = true;
-}
-
-extern "C" double dyldVersionNumber;
-static const double kMinDyldVersionWithAutoInterposition = 360.0;
-
-bool DyldNeedsEnvVariable() {
-  // If running on OS X 10.11+ or iOS 9.0+, dyld will interpose even if
-  // DYLD_INSERT_LIBRARIES is not set. However, checking OS version via
-  // GetMacosVersion() doesn't work for the simulator. Let's instead check
-  // `dyldVersionNumber`, which is exported by dyld, against a known version
-  // number from the first OS release where this appeared.
-  return dyldVersionNumber < kMinDyldVersionWithAutoInterposition;
-}
-
-void MaybeReexec() {
-  if (reexec_disabled) return;
-
-  // Make sure the dynamic ASan runtime library is preloaded so that the
-  // wrappers work. If it is not, set DYLD_INSERT_LIBRARIES and re-exec
-  // ourselves.
-  Dl_info info;
-  CHECK(dladdr((void*)((uptr)__asan_init), &info));
-  char *dyld_insert_libraries =
-      const_cast<char*>(GetEnv(kDyldInsertLibraries));
-  uptr old_env_len = dyld_insert_libraries ?
-      internal_strlen(dyld_insert_libraries) : 0;
-  uptr fname_len = internal_strlen(info.dli_fname);
-  const char *dylib_name = StripModuleName(info.dli_fname);
-  uptr dylib_name_len = internal_strlen(dylib_name);
-
-  bool lib_is_in_env =
-      dyld_insert_libraries && REAL(strstr)(dyld_insert_libraries, dylib_name);
-  if (DyldNeedsEnvVariable() && !lib_is_in_env) {
-    // DYLD_INSERT_LIBRARIES is not set or does not contain the runtime
-    // library.
-    char program_name[1024];
-    uint32_t buf_size = sizeof(program_name);
-    _NSGetExecutablePath(program_name, &buf_size);
-    char *new_env = const_cast<char*>(info.dli_fname);
-    if (dyld_insert_libraries) {
-      // Append the runtime dylib name to the existing value of
-      // DYLD_INSERT_LIBRARIES.
-      new_env = (char*)allocator_for_env.Allocate(old_env_len + fname_len + 2);
-      internal_strncpy(new_env, dyld_insert_libraries, old_env_len);
-      new_env[old_env_len] = ':';
-      // Copy fname_len and add a trailing zero.
-      internal_strncpy(new_env + old_env_len + 1, info.dli_fname,
-                       fname_len + 1);
-      // Ok to use setenv() since the wrappers don't depend on the value of
-      // asan_inited.
-      setenv(kDyldInsertLibraries, new_env, /*overwrite*/1);
-    } else {
-      // Set DYLD_INSERT_LIBRARIES equal to the runtime dylib name.
-      setenv(kDyldInsertLibraries, info.dli_fname, /*overwrite*/0);
-    }
-    VReport(1, "exec()-ing the program with\n");
-    VReport(1, "%s=%s\n", kDyldInsertLibraries, new_env);
-    VReport(1, "to enable ASan wrappers.\n");
-    execv(program_name, *_NSGetArgv());
-
-    // We get here only if execv() failed.
-    Report("ERROR: The process is launched without DYLD_INSERT_LIBRARIES, "
-           "which is required for ASan to work. ASan tried to set the "
-           "environment variable and re-execute itself, but execv() failed, "
-           "possibly because of sandbox restrictions. Make sure to launch the "
-           "executable with:\n%s=%s\n", kDyldInsertLibraries, new_env);
-    CHECK("execv failed" && 0);
-  }
-
-  if (!lib_is_in_env)
-    return;
-
-  // DYLD_INSERT_LIBRARIES is set and contains the runtime library. Let's remove
-  // the dylib from the environment variable, because interceptors are installed
-  // and we don't want our children to inherit the variable.
-
-  uptr env_name_len = internal_strlen(kDyldInsertLibraries);
-  // Allocate memory to hold the previous env var name, its value, the '='
-  // sign and the '\0' char.
-  char *new_env = (char*)allocator_for_env.Allocate(
-      old_env_len + 2 + env_name_len);
-  CHECK(new_env);
-  internal_memset(new_env, '\0', old_env_len + 2 + env_name_len);
-  internal_strncpy(new_env, kDyldInsertLibraries, env_name_len);
-  new_env[env_name_len] = '=';
-  char *new_env_pos = new_env + env_name_len + 1;
-
-  // Iterate over colon-separated pieces of |dyld_insert_libraries|.
-  char *piece_start = dyld_insert_libraries;
-  char *piece_end = NULL;
-  char *old_env_end = dyld_insert_libraries + old_env_len;
-  do {
-    if (piece_start[0] == ':') piece_start++;
-    piece_end = REAL(strchr)(piece_start, ':');
-    if (!piece_end) piece_end = dyld_insert_libraries + old_env_len;
-    if ((uptr)(piece_start - dyld_insert_libraries) > old_env_len) break;
-    uptr piece_len = piece_end - piece_start;
-
-    char *filename_start =
-        (char *)internal_memrchr(piece_start, '/', piece_len);
-    uptr filename_len = piece_len;
-    if (filename_start) {
-      filename_start += 1;
-      filename_len = piece_len - (filename_start - piece_start);
-    } else {
-      filename_start = piece_start;
-    }
-
-    // If the current piece isn't the runtime library name,
-    // append it to new_env.
-    if ((dylib_name_len != filename_len) ||
-        (internal_memcmp(filename_start, dylib_name, dylib_name_len) != 0)) {
-      if (new_env_pos != new_env + env_name_len + 1) {
-        new_env_pos[0] = ':';
-        new_env_pos++;
-      }
-      internal_strncpy(new_env_pos, piece_start, piece_len);
-      new_env_pos += piece_len;
-    }
-    // Move on to the next piece.
-    piece_start = piece_end;
-  } while (piece_start < old_env_end);
-
-  // Can't use setenv() here, because it requires the allocator to be
-  // initialized.
-  // FIXME: instead of filtering DYLD_INSERT_LIBRARIES here, do it in
-  // a separate function called after InitializeAllocator().
-  if (new_env_pos == new_env + env_name_len + 1) new_env = NULL;
-  LeakyResetEnv(kDyldInsertLibraries, new_env);
-}
+void InitializePlatformExceptionHandlers() {}
+bool IsSystemHeapAddress (uptr addr) { return false; }
 
 // No-op. Mac does not support static linkage anyway.
 void *AsanDoesNotSupportStaticLinkage() {
   return 0;
+}
+
+uptr FindDynamicShadowStart() {
+  uptr granularity = GetMmapGranularity();
+  uptr alignment = 8 * granularity;
+  uptr left_padding = granularity;
+  uptr space_size = kHighShadowEnd + left_padding;
+
+  uptr largest_gap_found = 0;
+  uptr shadow_start = FindAvailableMemoryRange(space_size, alignment,
+                                               granularity, &largest_gap_found);
+  // If the shadow doesn't fit, restrict the address space to make it fit.
+  if (shadow_start == 0) {
+    uptr new_max_vm = RoundDownTo(largest_gap_found << SHADOW_SCALE, alignment);
+    RestrictMemoryToMaxAddress(new_max_vm);
+    kHighMemEnd = new_max_vm - 1;
+    space_size = kHighShadowEnd + left_padding;
+    shadow_start =
+        FindAvailableMemoryRange(space_size, alignment, granularity, nullptr);
+  }
+  CHECK_NE((uptr)0, shadow_start);
+  CHECK(IsAligned(shadow_start, alignment));
+  return shadow_start;
 }
 
 // No-op. Mac does not support static linkage anyway.
@@ -238,6 +83,30 @@ void AsanCheckDynamicRTPrereqs() {}
 
 // No-op. Mac does not support static linkage anyway.
 void AsanCheckIncompatibleRT() {}
+
+void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
+  // Find the Mach-O header for the image containing the needle
+  Dl_info info;
+  int err = dladdr(needle, &info);
+  if (err == 0) return;
+
+#if __LP64__
+  const struct mach_header_64 *mh = (struct mach_header_64 *)info.dli_fbase;
+#else
+  const struct mach_header *mh = (struct mach_header *)info.dli_fbase;
+#endif
+
+  // Look up the __asan_globals section in that image and register its globals
+  unsigned long size = 0;
+  __asan_global *globals = (__asan_global *)getsectiondata(
+      mh,
+      "__DATA", "__asan_globals",
+      &size);
+
+  if (!globals) return;
+  if (size % sizeof(__asan_global) != 0) return;
+  op(globals, size / sizeof(__asan_global));
+}
 
 void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
   UNIMPLEMENTED();
@@ -293,7 +162,8 @@ void asan_register_worker_thread(int parent_tid, StackTrace *stack) {
     t = AsanThread::Create(/* start_routine */ nullptr, /* arg */ nullptr,
                            parent_tid, stack, /* detached */ true);
     t->Init();
-    asanThreadRegistry().StartThread(t->tid(), 0, 0);
+    asanThreadRegistry().StartThread(t->tid(), GetTid(),
+                                     /* workerthread */ true, 0);
     SetCurrentThread(t);
   }
 }

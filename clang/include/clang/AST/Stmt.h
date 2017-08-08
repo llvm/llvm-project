@@ -39,6 +39,7 @@ namespace clang {
   class Expr;
   class IdentifierInfo;
   class LabelDecl;
+  class ODRHash;
   class ParmVarDecl;
   class PrinterHelper;
   struct PrintingPolicy;
@@ -56,7 +57,7 @@ namespace clang {
 
 /// Stmt - This represents one statement.
 ///
-class LLVM_ALIGNAS(LLVM_PTR_SIZE) Stmt {
+class alignas(void *) Stmt {
 public:
   enum StmtClass {
     NoStmtClass = 0,
@@ -71,10 +72,10 @@ public:
 
   // Make vanilla 'new' and 'delete' illegal for Stmts.
 protected:
-  void *operator new(size_t bytes) LLVM_NOEXCEPT {
+  void *operator new(size_t bytes) noexcept {
     llvm_unreachable("Stmts cannot be allocated with regular 'new'.");
   }
-  void operator delete(void *data) LLVM_NOEXCEPT {
+  void operator delete(void *data) noexcept {
     llvm_unreachable("Stmts cannot be released with regular 'delete'.");
   }
 
@@ -91,6 +92,13 @@ protected:
     unsigned : NumStmtBits;
 
     unsigned NumStmts : 32 - NumStmtBits;
+  };
+
+  class IfStmtBitfields {
+    friend class IfStmt;
+    unsigned : NumStmtBits;
+
+    unsigned IsConstexpr : 1;
   };
 
   class ExprBitfields {
@@ -115,22 +123,23 @@ protected:
     friend class OverloadExpr; // ctor
     friend class PseudoObjectExpr; // ctor
     friend class AtomicExpr; // ctor
+    friend class OpaqueValueExpr; // ctor
     unsigned : NumStmtBits;
 
     unsigned ValueKind : 2;
-    unsigned ObjectKind : 2;
+    unsigned ObjectKind : 3;
     unsigned TypeDependent : 1;
     unsigned ValueDependent : 1;
     unsigned InstantiationDependent : 1;
     unsigned ContainsUnexpandedParameterPack : 1;
   };
-  enum { NumExprBits = 16 };
+  enum { NumExprBits = 17 };
 
   class CharacterLiteralBitfields {
     friend class CharacterLiteral;
     unsigned : NumExprBits;
 
-    unsigned Kind : 2;
+    unsigned Kind : 3;
   };
 
   enum APFloatSemantics {
@@ -191,7 +200,10 @@ protected:
 
     unsigned : NumExprBits;
 
-    unsigned NumObjects : 32 - NumExprBits;
+    // When false, it must not have side effects.
+    unsigned CleanupsHaveSideEffects : 1;
+
+    unsigned NumObjects : 32 - 1 - NumExprBits;
   };
 
   class PseudoObjectExprBitfields {
@@ -241,9 +253,18 @@ protected:
     unsigned NumArgs : 32 - 8 - 1 - NumExprBits;
   };
 
+  class CoawaitExprBitfields {
+    friend class CoawaitExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned IsImplicit : 1;
+  };
+
   union {
     StmtBitfields StmtBits;
     CompoundStmtBitfields CompoundStmtBits;
+    IfStmtBitfields IfStmtBits;
     ExprBitfields ExprBits;
     CharacterLiteralBitfields CharacterLiteralBits;
     FloatingLiteralBitfields FloatingLiteralBits;
@@ -256,6 +277,7 @@ protected:
     ObjCIndirectCopyRestoreExprBitfields ObjCIndirectCopyRestoreExprBits;
     InitListExprBitfields InitListExprBits;
     TypeTraitExprBitfields TypeTraitExprBits;
+    CoawaitExprBitfields CoawaitBits;
   };
 
   friend class ASTStmtReader;
@@ -272,12 +294,12 @@ public:
     return operator new(bytes, *C, alignment);
   }
 
-  void *operator new(size_t bytes, void *mem) LLVM_NOEXCEPT { return mem; }
+  void *operator new(size_t bytes, void *mem) noexcept { return mem; }
 
-  void operator delete(void *, const ASTContext &, unsigned) LLVM_NOEXCEPT {}
-  void operator delete(void *, const ASTContext *, unsigned) LLVM_NOEXCEPT {}
-  void operator delete(void *, size_t) LLVM_NOEXCEPT {}
-  void operator delete(void *, void *) LLVM_NOEXCEPT {}
+  void operator delete(void *, const ASTContext &, unsigned) noexcept {}
+  void operator delete(void *, const ASTContext *, unsigned) noexcept {}
+  void operator delete(void *, size_t) noexcept {}
+  void operator delete(void *, void *) noexcept {}
 
 public:
   /// \brief A placeholder type used to construct an empty shell of a
@@ -328,7 +350,9 @@ protected:
 
 public:
   Stmt(StmtClass SC) {
-    static_assert(sizeof(*this) % llvm::AlignOf<void *>::Alignment == 0,
+    static_assert(sizeof(*this) == sizeof(void *),
+                  "changing bitfields changed sizeof(Stmt)");
+    static_assert(sizeof(*this) % alignof(void *) == 0,
                   "Insufficient alignment!");
     StmtBits.sClass = SC;
     if (StatisticsEnabled) Stmt::addStmtClass(SC);
@@ -375,6 +399,9 @@ public:
   /// Skip past any implicit AST nodes which might surround this
   /// statement, such as ExprWithCleanups or ImplicitCastExpr nodes.
   Stmt *IgnoreImplicit();
+  const Stmt *IgnoreImplicit() const {
+    return const_cast<Stmt *>(this)->IgnoreImplicit();
+  }
 
   /// \brief Skip no-op (attributed, compound) container stmts and skip captured
   /// stmt at the top, if \a IgnoreCaptured is true.
@@ -421,6 +448,15 @@ public:
   /// written in the source.
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                bool Canonical) const;
+
+  /// \brief Calculate a unique representation for a statement that is
+  /// stable across compiler invocations.
+  ///
+  /// \param ID profile information will be stored in ID.
+  ///
+  /// \param Hash an ODRHash object which will be called where pointers would
+  /// have been used in the Profile function.
+  void ProcessODRHash(llvm::FoldingSetNodeID &ID, ODRHash& Hash) const;
 };
 
 /// DeclStmt - Adaptor class for mixing declarations with statements and
@@ -558,7 +594,7 @@ public:
     CompoundStmtBits.NumStmts = 0;
   }
 
-  void setStmts(const ASTContext &C, Stmt **Stmts, unsigned NumStmts);
+  void setStmts(const ASTContext &C, ArrayRef<Stmt *> Stmts);
 
   bool body_empty() const { return CompoundStmtBits.NumStmts == 0; }
   unsigned size() const { return CompoundStmtBits.NumStmts; }
@@ -825,18 +861,20 @@ class AttributedStmt : public Stmt {
   AttributedStmt(SourceLocation Loc, ArrayRef<const Attr*> Attrs, Stmt *SubStmt)
     : Stmt(AttributedStmtClass), SubStmt(SubStmt), AttrLoc(Loc),
       NumAttrs(Attrs.size()) {
-    memcpy(getAttrArrayPtr(), Attrs.data(), Attrs.size() * sizeof(Attr *));
+    std::copy(Attrs.begin(), Attrs.end(), getAttrArrayPtr());
   }
 
   explicit AttributedStmt(EmptyShell Empty, unsigned NumAttrs)
     : Stmt(AttributedStmtClass, Empty), NumAttrs(NumAttrs) {
-    memset(getAttrArrayPtr(), 0, NumAttrs * sizeof(Attr *));
+    std::fill_n(getAttrArrayPtr(), NumAttrs, nullptr);
   }
 
-  Attr *const *getAttrArrayPtr() const {
-    return reinterpret_cast<Attr *const *>(this + 1);
+  const Attr *const *getAttrArrayPtr() const {
+    return reinterpret_cast<const Attr *const *>(this + 1);
   }
-  Attr **getAttrArrayPtr() { return reinterpret_cast<Attr **>(this + 1); }
+  const Attr **getAttrArrayPtr() {
+    return reinterpret_cast<const Attr **>(this + 1);
+  }
 
 public:
   static AttributedStmt *Create(const ASTContext &C, SourceLocation Loc,
@@ -865,14 +903,15 @@ public:
 /// IfStmt - This represents an if/then/else.
 ///
 class IfStmt : public Stmt {
-  enum { VAR, COND, THEN, ELSE, END_EXPR };
+  enum { INIT, VAR, COND, THEN, ELSE, END_EXPR };
   Stmt* SubExprs[END_EXPR];
 
   SourceLocation IfLoc;
   SourceLocation ElseLoc;
 
 public:
-  IfStmt(const ASTContext &C, SourceLocation IL, VarDecl *var, Expr *cond,
+  IfStmt(const ASTContext &C, SourceLocation IL,
+         bool IsConstexpr, Stmt *init, VarDecl *var, Expr *cond,
          Stmt *then, SourceLocation EL = SourceLocation(),
          Stmt *elsev = nullptr);
 
@@ -896,6 +935,9 @@ public:
     return reinterpret_cast<DeclStmt*>(SubExprs[VAR]);
   }
 
+  Stmt *getInit() { return SubExprs[INIT]; }
+  const Stmt *getInit() const { return SubExprs[INIT]; }
+  void setInit(Stmt *S) { SubExprs[INIT] = S; }
   const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
   void setCond(Expr *E) { SubExprs[COND] = reinterpret_cast<Stmt *>(E); }
   const Stmt *getThen() const { return SubExprs[THEN]; }
@@ -911,6 +953,11 @@ public:
   void setIfLoc(SourceLocation L) { IfLoc = L; }
   SourceLocation getElseLoc() const { return ElseLoc; }
   void setElseLoc(SourceLocation L) { ElseLoc = L; }
+
+  bool isConstexpr() const { return IfStmtBits.IsConstexpr; }
+  void setConstexpr(bool C) { IfStmtBits.IsConstexpr = C; }
+
+  bool isObjCAvailabilityCheck() const;
 
   SourceLocation getLocStart() const LLVM_READONLY { return IfLoc; }
   SourceLocation getLocEnd() const LLVM_READONLY {
@@ -935,7 +982,7 @@ public:
 ///
 class SwitchStmt : public Stmt {
   SourceLocation SwitchLoc;
-  enum { VAR, COND, BODY, END_EXPR };
+  enum { INIT, VAR, COND, BODY, END_EXPR };
   Stmt* SubExprs[END_EXPR];
   // This points to a linked list of case and default statements and, if the
   // SwitchStmt is a switch on an enum value, records whether all the enum
@@ -944,7 +991,7 @@ class SwitchStmt : public Stmt {
   llvm::PointerIntPair<SwitchCase *, 1, bool> FirstCase;
 
 public:
-  SwitchStmt(const ASTContext &C, VarDecl *Var, Expr *cond);
+  SwitchStmt(const ASTContext &C, Stmt *Init, VarDecl *Var, Expr *cond);
 
   /// \brief Build a empty switch statement.
   explicit SwitchStmt(EmptyShell Empty) : Stmt(SwitchStmtClass, Empty) { }
@@ -967,6 +1014,9 @@ public:
     return reinterpret_cast<DeclStmt*>(SubExprs[VAR]);
   }
 
+  Stmt *getInit() { return SubExprs[INIT]; }
+  const Stmt *getInit() const { return SubExprs[INIT]; }
+  void setInit(Stmt *S) { SubExprs[INIT] = S; }
   const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
   const Stmt *getBody() const { return SubExprs[BODY]; }
   const SwitchCase *getSwitchCaseList() const { return FirstCase.getPointer(); }
@@ -1986,6 +2036,7 @@ public:
   enum VariableCaptureKind {
     VCK_This,
     VCK_ByRef,
+    VCK_ByCopy,
     VCK_VLAType,
   };
 
@@ -2005,24 +2056,10 @@ public:
     /// \param Var The variable being captured, or null if capturing this.
     ///
     Capture(SourceLocation Loc, VariableCaptureKind Kind,
-            VarDecl *Var = nullptr)
-      : VarAndKind(Var, Kind), Loc(Loc) {
-      switch (Kind) {
-      case VCK_This:
-        assert(!Var && "'this' capture cannot have a variable!");
-        break;
-      case VCK_ByRef:
-        assert(Var && "capturing by reference must have a variable!");
-        break;
-      case VCK_VLAType:
-        assert(!Var &&
-               "Variable-length array type capture cannot have a variable!");
-        break;
-      }
-    }
+            VarDecl *Var = nullptr);
 
     /// \brief Determine the kind of capture.
-    VariableCaptureKind getCaptureKind() const { return VarAndKind.getInt(); }
+    VariableCaptureKind getCaptureKind() const;
 
     /// \brief Retrieve the source location at which the variable or 'this' was
     /// first used.
@@ -2031,8 +2068,13 @@ public:
     /// \brief Determine whether this capture handles the C++ 'this' pointer.
     bool capturesThis() const { return getCaptureKind() == VCK_This; }
 
-    /// \brief Determine whether this capture handles a variable.
+    /// \brief Determine whether this capture handles a variable (by reference).
     bool capturesVariable() const { return getCaptureKind() == VCK_ByRef; }
+
+    /// \brief Determine whether this capture handles a variable by copy.
+    bool capturesVariableByCopy() const {
+      return getCaptureKind() == VCK_ByCopy;
+    }
 
     /// \brief Determine whether this capture handles a variable-length array
     /// type.
@@ -2043,11 +2085,8 @@ public:
     /// \brief Retrieve the declaration of the variable being captured.
     ///
     /// This operation is only valid if this capture captures a variable.
-    VarDecl *getCapturedVar() const {
-      assert(capturesVariable() &&
-             "No variable available for 'this' or VAT capture");
-      return VarAndKind.getPointer();
-    }
+    VarDecl *getCapturedVar() const;
+
     friend class ASTStmtReader;
   };
 
@@ -2094,26 +2133,17 @@ public:
   const Stmt *getCapturedStmt() const { return getStoredStmts()[NumCaptures]; }
 
   /// \brief Retrieve the outlined function declaration.
-  CapturedDecl *getCapturedDecl() { return CapDeclAndKind.getPointer(); }
-  const CapturedDecl *getCapturedDecl() const {
-    return CapDeclAndKind.getPointer();
-  }
+  CapturedDecl *getCapturedDecl();
+  const CapturedDecl *getCapturedDecl() const;
 
   /// \brief Set the outlined function declaration.
-  void setCapturedDecl(CapturedDecl *D) {
-    assert(D && "null CapturedDecl");
-    CapDeclAndKind.setPointer(D);
-  }
+  void setCapturedDecl(CapturedDecl *D);
 
   /// \brief Retrieve the captured region kind.
-  CapturedRegionKind getCapturedRegionKind() const {
-    return CapDeclAndKind.getInt();
-  }
+  CapturedRegionKind getCapturedRegionKind() const;
 
   /// \brief Set the captured region kind.
-  void setCapturedRegionKind(CapturedRegionKind Kind) {
-    CapDeclAndKind.setInt(Kind);
-  }
+  void setCapturedRegionKind(CapturedRegionKind Kind);
 
   /// \brief Retrieve the record declaration for captured variables.
   const RecordDecl *getCapturedRecordDecl() const { return TheRecordDecl; }

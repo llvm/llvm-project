@@ -46,6 +46,10 @@ namespace clang {
     /// \brief The template argument lists, stored from the innermost template
     /// argument list (first) to the outermost template argument list (last).
     SmallVector<ArgList, 4> TemplateArgumentLists;
+
+    /// \brief The number of outer levels of template arguments that are not
+    /// being substituted.
+    unsigned NumRetainedOuterLevels = 0;
     
   public:
     /// \brief Construct an empty set of template argument lists.
@@ -59,11 +63,19 @@ namespace clang {
     
     /// \brief Determine the number of levels in this template argument
     /// list.
-    unsigned getNumLevels() const { return TemplateArgumentLists.size(); }
-    
+    unsigned getNumLevels() const {
+      return TemplateArgumentLists.size() + NumRetainedOuterLevels;
+    }
+
+    /// \brief Determine the number of substituted levels in this template
+    /// argument list.
+    unsigned getNumSubstitutedLevels() const {
+      return TemplateArgumentLists.size();
+    }
+
     /// \brief Retrieve the template argument at a given depth and index.
     const TemplateArgument &operator()(unsigned Depth, unsigned Index) const {
-      assert(Depth < TemplateArgumentLists.size());
+      assert(NumRetainedOuterLevels <= Depth && Depth < getNumLevels());
       assert(Index < TemplateArgumentLists[getNumLevels() - Depth - 1].size());
       return TemplateArgumentLists[getNumLevels() - Depth - 1][Index];
     }
@@ -73,7 +85,10 @@ namespace clang {
     ///
     /// There must exist a template argument list at the given depth.
     bool hasTemplateArgument(unsigned Depth, unsigned Index) const {
-      assert(Depth < TemplateArgumentLists.size());
+      assert(Depth < getNumLevels());
+
+      if (Depth < NumRetainedOuterLevels)
+        return false;
       
       if (Index >= TemplateArgumentLists[getNumLevels() - Depth - 1].size())
         return false;
@@ -84,7 +99,7 @@ namespace clang {
     /// \brief Clear out a specific template argument.
     void setArgument(unsigned Depth, unsigned Index,
                      TemplateArgument Arg) {
-      assert(Depth < TemplateArgumentLists.size());
+      assert(NumRetainedOuterLevels <= Depth && Depth < getNumLevels());
       assert(Index < TemplateArgumentLists[getNumLevels() - Depth - 1].size());
       const_cast<TemplateArgument&>(
                 TemplateArgumentLists[getNumLevels() - Depth - 1][Index])
@@ -101,7 +116,16 @@ namespace clang {
     /// \brief Add a new outmost level to the multi-level template argument
     /// list.
     void addOuterTemplateArguments(ArgList Args) {
+      assert(!NumRetainedOuterLevels &&
+             "substituted args outside retained args?");
       TemplateArgumentLists.push_back(Args);
+    }
+
+    /// \brief Add an outermost level that we are not substituting. We have no
+    /// arguments at this level, and do not remove it from the depth of inner
+    /// template parameters that we instantiate.
+    void addOuterRetainedLevel() {
+      ++NumRetainedOuterLevels;
     }
 
     /// \brief Retrieve the innermost template argument list.
@@ -410,6 +434,7 @@ namespace clang {
 #define OBJCCONTAINER(DERIVED, BASE)
 #define FILESCOPEASM(DERIVED, BASE)
 #define IMPORT(DERIVED, BASE)
+#define EXPORT(DERIVED, BASE)
 #define LINKAGESPEC(DERIVED, BASE)
 #define OBJCCOMPATIBLEALIAS(DERIVED, BASE)
 #define OBJCMETHOD(DERIVED, BASE)
@@ -433,7 +458,8 @@ namespace clang {
     Decl *VisitFunctionDecl(FunctionDecl *D,
                             TemplateParameterList *TemplateParams);
     Decl *VisitDecl(Decl *D);
-    Decl *VisitVarDecl(VarDecl *D, bool InstantiatingVarTemplate);
+    Decl *VisitVarDecl(VarDecl *D, bool InstantiatingVarTemplate,
+                       ArrayRef<BindingDecl *> *Bindings = nullptr);
 
     // Enable late instantiation of attributes.  Late instantiated attributes
     // will be stored in LA.
@@ -513,6 +539,11 @@ namespace clang {
         VarTemplateDecl *VarTemplate,
         VarTemplatePartialSpecializationDecl *PartialSpec);
     void InstantiateEnumDefinition(EnumDecl *Enum, EnumDecl *Pattern);
+
+  private:
+    template<typename T>
+    Decl *instantiateUnresolvedUsingDecl(T *D,
+                                         bool InstantiatingPackElement = false);
   };  
 }
 

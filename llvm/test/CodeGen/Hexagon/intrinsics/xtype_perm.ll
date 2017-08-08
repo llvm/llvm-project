@@ -141,28 +141,28 @@ define i64 @S2_shuffeb(i64 %a, i64 %b) {
   %z = call i64 @llvm.hexagon.S2.shuffeb(i64 %a, i64 %b)
   ret i64 %z
 }
-; CHECK: = shuffeb({{.*}}, {{.*}})
+; CHECK: = shuffeb({{.*}},{{.*}})
 
 declare i64 @llvm.hexagon.S2.shuffob(i64, i64)
 define i64 @S2_shuffob(i64 %a, i64 %b) {
   %z = call i64 @llvm.hexagon.S2.shuffob(i64 %a, i64 %b)
   ret i64 %z
 }
-; CHECK: = shuffob({{.*}}, {{.*}})
+; CHECK: = shuffob({{.*}},{{.*}})
 
 declare i64 @llvm.hexagon.S2.shuffeh(i64, i64)
 define i64 @S2_shuffeh(i64 %a, i64 %b) {
   %z = call i64 @llvm.hexagon.S2.shuffeh(i64 %a, i64 %b)
   ret i64 %z
 }
-; CHECK: = shuffeh({{.*}}, {{.*}})
+; CHECK: = shuffeh({{.*}},{{.*}})
 
 declare i64 @llvm.hexagon.S2.shuffoh(i64, i64)
 define i64 @S2_shuffoh(i64 %a, i64 %b) {
   %z = call i64 @llvm.hexagon.S2.shuffoh(i64 %a, i64 %b)
   ret i64 %z
 }
-; CHECK: = shuffoh({{.*}}, {{.*}})
+; CHECK: = shuffoh({{.*}},{{.*}})
 
 ; Vector splat bytes
 declare i32 @llvm.hexagon.S2.vsplatrb(i32)
@@ -186,14 +186,14 @@ define i64 @S2_vspliceib(i64 %a, i64 %b) {
   %z = call i64 @llvm.hexagon.S2.vspliceib(i64 %a, i64 %b, i32 0)
   ret i64 %z
 }
-; CHECK: = vspliceb({{.*}}, {{.*}}, #0)
+; CHECK: = vspliceb({{.*}},{{.*}},#0)
 
 declare i64 @llvm.hexagon.S2.vsplicerb(i64, i64, i32)
 define i64 @S2_vsplicerb(i64 %a, i64 %b, i32 %c) {
   %z = call i64 @llvm.hexagon.S2.vsplicerb(i64 %a, i64 %b, i32 %c)
   ret i64 %z
 }
-; CHECK: = vspliceb({{.*}}, {{.*}}, {{.*}})
+; CHECK: = vspliceb({{.*}},{{.*}},{{.*}})
 
 ; Vector sign extend
 declare i64 @llvm.hexagon.S2.vsxtbh(i32)
@@ -230,14 +230,14 @@ define i64 @S2_vtrunowh(i64 %a, i64 %b) {
   %z = call i64 @llvm.hexagon.S2.vtrunowh(i64 %a, i64 %b)
   ret i64 %z
 }
-; CHECK: = vtrunowh({{.*}}, {{.*}})
+; CHECK: = vtrunowh({{.*}},{{.*}})
 
 declare i64 @llvm.hexagon.S2.vtrunewh(i64, i64)
 define i64 @S2_vtrunewh(i64 %a, i64 %b) {
   %z = call i64 @llvm.hexagon.S2.vtrunewh(i64 %a, i64 %b)
   ret i64 %z
 }
-; CHECK: = vtrunewh({{.*}}, {{.*}})
+; CHECK: = vtrunewh({{.*}},{{.*}})
 
 ; Vector zero extend
 declare i64 @llvm.hexagon.S2.vzxtbh(i32)

@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===------------ gttf2_test.c - Test __gttf2------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

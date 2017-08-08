@@ -15,9 +15,6 @@
 
 using namespace __dsan;
 
-extern "C" void *__libc_malloc(uptr size);
-extern "C" void __libc_free(void *ptr);
-
 __attribute__((tls_model("initial-exec")))
 static __thread Thread *thr;
 __attribute__((tls_model("initial-exec")))
@@ -273,20 +270,19 @@ namespace __dsan {
 
 static void InitDataSeg() {
   MemoryMappingLayout proc_maps(true);
-  uptr start, end, offset;
   char name[128];
+  MemoryMappedSegment segment(name, ARRAY_SIZE(name));
   bool prev_is_data = false;
-  while (proc_maps.Next(&start, &end, &offset, name, ARRAY_SIZE(name),
-                        /*protection*/ 0)) {
-    bool is_data = offset != 0 && name[0] != 0;
+  while (proc_maps.Next(&segment)) {
+    bool is_data = segment.offset != 0 && segment.filename[0] != 0;
     // BSS may get merged with [heap] in /proc/self/maps. This is not very
     // reliable.
-    bool is_bss = offset == 0 &&
-      (name[0] == 0 || internal_strcmp(name, "[heap]") == 0) && prev_is_data;
-    if (g_data_start == 0 && is_data)
-      g_data_start = start;
-    if (is_bss)
-      g_data_end = end;
+    bool is_bss = segment.offset == 0 &&
+                  (segment.filename[0] == 0 ||
+                   internal_strcmp(segment.filename, "[heap]") == 0) &&
+                  prev_is_data;
+    if (g_data_start == 0 && is_data) g_data_start = segment.start;
+    if (is_bss) g_data_end = segment.end;
     prev_is_data = is_data;
   }
   VPrintf(1, "guessed data_start=%p data_end=%p\n",  g_data_start, g_data_end);

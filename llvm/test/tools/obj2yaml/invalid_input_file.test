@@ -1,0 +1,4 @@
+# RUN: not obj2yaml  %p/path/does/not/exist 2>&1 | FileCheck %s
+
+# Don't check the OS-dependent message "No such file or directory".
+# CHECK: Error reading file: {{.*}}/path/does/not/exist: {{.*}}

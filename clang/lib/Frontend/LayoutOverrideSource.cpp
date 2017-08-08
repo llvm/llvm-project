@@ -188,7 +188,7 @@ LayoutOverrideSource::layoutRecordType(const RecordDecl *Record,
   return true;
 }
 
-void LayoutOverrideSource::dump() {
+LLVM_DUMP_METHOD void LayoutOverrideSource::dump() {
   raw_ostream &OS = llvm::errs();
   for (llvm::StringMap<Layout>::iterator L = Layouts.begin(), 
                                       LEnd = Layouts.end();

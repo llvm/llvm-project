@@ -1,4 +1,4 @@
-//===- lib/MC/MCLabel.cpp - MCLabel implementation ----------------------===//
+//===- lib/MC/MCLabel.cpp - MCLabel implementation ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,8 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCLabel.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 void MCLabel::print(raw_ostream &OS) const {
@@ -17,7 +19,7 @@ void MCLabel::print(raw_ostream &OS) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void MCLabel::dump() const {
+LLVM_DUMP_METHOD void MCLabel::dump() const {
   print(dbgs());
 }
 #endif

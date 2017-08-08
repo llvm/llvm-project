@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -O1 -disable-llvm-optzns -emit-llvm -std=c++11 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -O1 -disable-llvm-passes -emit-llvm -std=c++11 -o - %s | FileCheck %s
 
 template<typename T>
 struct X0 {

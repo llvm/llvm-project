@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SpecialCaseList.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -130,6 +130,63 @@ TEST_F(SpecialCaseListTest, MultipleBlacklists) {
   EXPECT_TRUE(SCL->inSection("src", "ban", "init"));
   EXPECT_TRUE(SCL->inSection("src", "tomfoolery"));
   EXPECT_TRUE(SCL->inSection("src", "tomfoglery"));
+  for (auto &Path : Files)
+    sys::fs::remove(Path);
+}
+
+TEST_F(SpecialCaseListTest, NoTrigramsInRules) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:b.r\n"
+                                                             "fun:za*az\n");
+  EXPECT_TRUE(SCL->inSection("fun", "bar"));
+  EXPECT_FALSE(SCL->inSection("fun", "baz"));
+  EXPECT_TRUE(SCL->inSection("fun", "zakaz"));
+  EXPECT_FALSE(SCL->inSection("fun", "zaraza"));
+}
+
+TEST_F(SpecialCaseListTest, NoTrigramsInARule) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:*bar*\n"
+                                                             "fun:za*az\n");
+  EXPECT_TRUE(SCL->inSection("fun", "abara"));
+  EXPECT_FALSE(SCL->inSection("fun", "bor"));
+  EXPECT_TRUE(SCL->inSection("fun", "zakaz"));
+  EXPECT_FALSE(SCL->inSection("fun", "zaraza"));
+}
+
+TEST_F(SpecialCaseListTest, RepetitiveRule) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:*bar*bar*bar*bar*\n"
+                                                             "fun:bar*\n");
+  EXPECT_TRUE(SCL->inSection("fun", "bara"));
+  EXPECT_FALSE(SCL->inSection("fun", "abara"));
+  EXPECT_TRUE(SCL->inSection("fun", "barbarbarbar"));
+  EXPECT_TRUE(SCL->inSection("fun", "abarbarbarbar"));
+  EXPECT_FALSE(SCL->inSection("fun", "abarbarbar"));
+}
+
+TEST_F(SpecialCaseListTest, SpecialSymbolRule) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("src:*c\\+\\+abi*\n");
+  EXPECT_TRUE(SCL->inSection("src", "c++abi"));
+  EXPECT_FALSE(SCL->inSection("src", "c\\+\\+abi"));
+}
+
+TEST_F(SpecialCaseListTest, PopularTrigram) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:*aaaaaa*\n"
+                                                             "fun:*aaaaa*\n"
+                                                             "fun:*aaaa*\n"
+                                                             "fun:*aaa*\n");
+  EXPECT_TRUE(SCL->inSection("fun", "aaa"));
+  EXPECT_TRUE(SCL->inSection("fun", "aaaa"));
+  EXPECT_TRUE(SCL->inSection("fun", "aaaabbbaaa"));
+}
+
+TEST_F(SpecialCaseListTest, EscapedSymbols) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("src:*c\\+\\+abi*\n"
+                                                             "src:*hello\\\\world*\n");
+  EXPECT_TRUE(SCL->inSection("src", "dir/c++abi"));
+  EXPECT_FALSE(SCL->inSection("src", "dir/c\\+\\+abi"));
+  EXPECT_FALSE(SCL->inSection("src", "c\\+\\+abi"));
+  EXPECT_TRUE(SCL->inSection("src", "C:\\hello\\world"));
+  EXPECT_TRUE(SCL->inSection("src", "hello\\world"));
+  EXPECT_FALSE(SCL->inSection("src", "hello\\\\world"));
 }
 
 }

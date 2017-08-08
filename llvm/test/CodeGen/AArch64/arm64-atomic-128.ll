@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -mtriple=arm64-linux-gnu -verify-machineinstrs -mcpu=cyclone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-linux-gnu -verify-machineinstrs -mcpu=cyclone | FileCheck %s
 
 @var = global i128 0
 
@@ -173,10 +173,13 @@ define i128 @atomic_load_seq_cst(i128* %p) {
    ret i128 %r
 }
 
-define i128 @atomic_load_relaxed(i128* %p) {
+define i128 @atomic_load_relaxed(i64, i64, i128* %p) {
 ; CHECK-LABEL: atomic_load_relaxed:
 ; CHECK-NOT: dmb
-; CHECK: ldxp [[LO:x[0-9]+]], [[HI:x[0-9]+]], [x0]
+; CHECK: [[LABEL:.?LBB[0-9]+_[0-9]+]]:
+; CHECK: ldxp [[LO:x[0-9]+]], [[HI:x[0-9]+]], [x2]
+; CHECK-NEXT: stxp [[SUCCESS:w[0-9]+]], [[LO]], [[HI]], [x2]
+; CHECK: cbnz [[SUCCESS]], [[LABEL]]
 ; CHECK-NOT: dmb
    %r = load atomic i128, i128* %p monotonic, align 16
    ret i128 %r
@@ -187,7 +190,7 @@ define void @atomic_store_seq_cst(i128 %in, i128* %p) {
 ; CHECK-LABEL: atomic_store_seq_cst:
 ; CHECK-NOT: dmb
 ; CHECK: [[LABEL:.?LBB[0-9]+_[0-9]+]]:
-; CHECK: ldaxp xzr, xzr, [x2]
+; CHECK: ldaxp xzr, [[IGNORED:x[0-9]+]], [x2]
 ; CHECK: stlxp [[SUCCESS:w[0-9]+]], x0, x1, [x2]
 ; CHECK: cbnz [[SUCCESS]], [[LABEL]]
 ; CHECK-NOT: dmb
@@ -199,7 +202,7 @@ define void @atomic_store_release(i128 %in, i128* %p) {
 ; CHECK-LABEL: atomic_store_release:
 ; CHECK-NOT: dmb
 ; CHECK: [[LABEL:.?LBB[0-9]+_[0-9]+]]:
-; CHECK: ldxp xzr, xzr, [x2]
+; CHECK: ldxp xzr, [[IGNORED:x[0-9]+]], [x2]
 ; CHECK: stlxp [[SUCCESS:w[0-9]+]], x0, x1, [x2]
 ; CHECK: cbnz [[SUCCESS]], [[LABEL]]
 ; CHECK-NOT: dmb
@@ -211,7 +214,7 @@ define void @atomic_store_relaxed(i128 %in, i128* %p) {
 ; CHECK-LABEL: atomic_store_relaxed:
 ; CHECK-NOT: dmb
 ; CHECK: [[LABEL:.?LBB[0-9]+_[0-9]+]]:
-; CHECK: ldxp xzr, xzr, [x2]
+; CHECK: ldxp xzr, [[IGNORED:x[0-9]+]], [x2]
 ; CHECK: stxp [[SUCCESS:w[0-9]+]], x0, x1, [x2]
 ; CHECK: cbnz [[SUCCESS]], [[LABEL]]
 ; CHECK-NOT: dmb

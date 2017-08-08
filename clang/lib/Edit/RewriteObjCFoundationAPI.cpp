@@ -798,24 +798,28 @@ static bool rewriteToNumberLiteral(const ObjCMessageExpr *Msg,
   case NSAPI::NSNumberWithUnsignedInt:
   case NSAPI::NSNumberWithUnsignedInteger:
     CallIsUnsigned = true;
+    LLVM_FALLTHROUGH;
   case NSAPI::NSNumberWithInt:
   case NSAPI::NSNumberWithInteger:
     break;
 
   case NSAPI::NSNumberWithUnsignedLong:
     CallIsUnsigned = true;
+    LLVM_FALLTHROUGH;
   case NSAPI::NSNumberWithLong:
     CallIsLong = true;
     break;
 
   case NSAPI::NSNumberWithUnsignedLongLong:
     CallIsUnsigned = true;
+    LLVM_FALLTHROUGH;
   case NSAPI::NSNumberWithLongLong:
     CallIsLongLong = true;
     break;
 
   case NSAPI::NSNumberWithDouble:
     CallIsDouble = true;
+    LLVM_FALLTHROUGH;
   case NSAPI::NSNumberWithFloat:
     CallIsFloating = true;
     break;
@@ -1076,7 +1080,12 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
     case CK_CopyAndAutoreleaseBlockObject:
     case CK_BuiltinFnToFnPtr:
     case CK_ZeroToOCLEvent:
+    case CK_ZeroToOCLQueue:
+    case CK_IntToOCLSampler:
       return false;
+
+    case CK_BooleanToSignedIntegral:
+      llvm_unreachable("OpenCL-specific cast in Objective-C?");
     }
   }
 

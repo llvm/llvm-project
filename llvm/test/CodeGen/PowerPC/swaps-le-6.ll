@@ -1,4 +1,12 @@
-; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu -O3 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 \
+; RUN:   -mtriple=powerpc64le-unknown-linux-gnu -O3 < %s | FileCheck %s
+
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu -O3 \
+; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK-P9 \
+; RUN:   --implicit-check-not xxswapd
+
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu -O3 \
+; RUN:   -verify-machineinstrs -mattr=-power9-vector < %s | FileCheck %s
 
 ; These tests verify that VSX swap optimization works when loading a scalar
 ; into a vector register.
@@ -20,10 +28,16 @@ entry:
 ; CHECK-LABEL: @bar0
 ; CHECK-DAG: lxvd2x [[REG1:[0-9]+]]
 ; CHECK-DAG: lxsdx [[REG2:[0-9]+]]
-; CHECK: xxswapd [[REG3:[0-9]+]], [[REG2]]
-; CHECK: xxspltd [[REG4:[0-9]+]], [[REG3]], 1
+; CHECK: xxspltd [[REG4:[0-9]+]], [[REG2]], 0
 ; CHECK: xxpermdi [[REG5:[0-9]+]], [[REG4]], [[REG1]], 1
 ; CHECK: stxvd2x [[REG5]]
+
+; CHECK-P9-LABEL: @bar0
+; CHECK-P9-DAG: lxvx [[REG1:[0-9]+]]
+; CHECK-P9-DAG: lfd [[REG2:[0-9]+]], 0(3)
+; CHECK-P9: xxspltd [[REG4:[0-9]+]], [[REG2]], 0
+; CHECK-P9: xxpermdi [[REG5:[0-9]+]], [[REG1]], [[REG4]], 1
+; CHECK-P9: stxvx [[REG5]]
 
 define void @bar1() {
 entry:
@@ -37,8 +51,14 @@ entry:
 ; CHECK-LABEL: @bar1
 ; CHECK-DAG: lxvd2x [[REG1:[0-9]+]]
 ; CHECK-DAG: lxsdx [[REG2:[0-9]+]]
-; CHECK: xxswapd [[REG3:[0-9]+]], [[REG2]]
-; CHECK: xxspltd [[REG4:[0-9]+]], [[REG3]], 1
+; CHECK: xxspltd [[REG4:[0-9]+]], [[REG2]], 0
 ; CHECK: xxmrghd [[REG5:[0-9]+]], [[REG1]], [[REG4]]
 ; CHECK: stxvd2x [[REG5]]
+
+; CHECK-P9-LABEL: @bar1
+; CHECK-P9-DAG: lxvx [[REG1:[0-9]+]]
+; CHECK-P9-DAG: lfd [[REG2:[0-9]+]], 0(3)
+; CHECK-P9: xxspltd [[REG4:[0-9]+]], [[REG2]], 0
+; CHECK-P9: xxmrgld [[REG5:[0-9]+]], [[REG4]], [[REG1]]
+; CHECK-P9: stxvx [[REG5]]
 

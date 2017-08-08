@@ -32,10 +32,10 @@ using namespace clang::ast_matchers;
 /// \brief Finds the definition of a record by name.
 ///
 /// \returns nullptr if the name is ambiguous or not found.
-static const RecordDecl *findDefinition(StringRef RecordName,
-                                        ASTContext &Context) {
+static const CXXRecordDecl *findDefinition(StringRef RecordName,
+                                           ASTContext &Context) {
   auto Results = match(
-      recordDecl(hasName(RecordName), isDefinition()).bind("recordDecl"),
+      recordDecl(hasName(RecordName), isDefinition()).bind("cxxRecordDecl"),
       Context);
   if (Results.empty()) {
     llvm::errs() << "Definition of " << RecordName << "  not found\n";
@@ -46,14 +46,14 @@ static const RecordDecl *findDefinition(StringRef RecordName,
                  << " is ambiguous, several definitions found\n";
     return nullptr;
   }
-  return selectFirst<RecordDecl>("recordDecl", Results);
+  return selectFirst<CXXRecordDecl>("cxxRecordDecl", Results);
 }
 
 /// \brief Calculates the new order of fields.
 ///
 /// \returns empty vector if the list of fields doesn't match the definition.
 static SmallVector<unsigned, 4>
-getNewFieldsOrder(const RecordDecl *Definition,
+getNewFieldsOrder(const CXXRecordDecl *Definition,
                   ArrayRef<std::string> DesiredFieldsOrder) {
   assert(Definition && "Definition is null");
 
@@ -97,7 +97,7 @@ addReplacement(SourceRange Old, SourceRange New, const ASTContext &Context,
 /// different accesses (public/protected/private) is not supported.
 /// \returns true on success.
 static bool reorderFieldsInDefinition(
-    const RecordDecl *Definition, ArrayRef<unsigned> NewFieldsOrder,
+    const CXXRecordDecl *Definition, ArrayRef<unsigned> NewFieldsOrder,
     const ASTContext &Context,
     std::map<std::string, tooling::Replacements> &Replacements) {
   assert(Definition && "Definition is null");
@@ -223,7 +223,7 @@ public:
   ReorderingConsumer &operator=(const ReorderingConsumer &) = delete;
 
   void HandleTranslationUnit(ASTContext &Context) override {
-    const RecordDecl *RD = findDefinition(RecordName, Context);
+    const CXXRecordDecl *RD = findDefinition(RecordName, Context);
     if (!RD)
       return;
     SmallVector<unsigned, 4> NewFieldsOrder =
@@ -232,21 +232,16 @@ public:
       return;
     if (!reorderFieldsInDefinition(RD, NewFieldsOrder, Context, Replacements))
       return;
+    for (const auto *C : RD->ctors())
+      if (const auto *D = dyn_cast<CXXConstructorDecl>(C->getDefinition()))
+        reorderFieldsInConstructor(cast<const CXXConstructorDecl>(D),
+                                   NewFieldsOrder, Context, Replacements);
 
-    // CXXRD will be nullptr if C code (not C++) is being processed.
-    const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD);
-    if (CXXRD)
-      for (const auto *C : CXXRD->ctors())
-        if (const auto *D = dyn_cast<CXXConstructorDecl>(C->getDefinition()))
-          reorderFieldsInConstructor(cast<const CXXConstructorDecl>(D),
-                                      NewFieldsOrder, Context, Replacements);
-
-    // We only need to reorder init list expressions for 
-    // plain C structs or C++ aggregate types.
+    // We only need to reorder init list expressions for aggregate types.
     // For other types the order of constructor parameters is used,
     // which we don't change at the moment.
     // Now (v0) partial initialization is not supported.
-    if (!CXXRD || CXXRD->isAggregate())
+    if (RD->isAggregate())
       for (auto Result :
            match(initListExpr(hasType(equalsNode(RD))).bind("initListExpr"),
                  Context))

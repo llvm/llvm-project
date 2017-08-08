@@ -1,0 +1,77 @@
+# RUN: llc -O0 -run-pass=legalizer -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  define void @test_constant() {
+  entry:
+    ret void
+  }
+  define void @test_fconstant() {
+  entry:
+    ret void
+  }
+  @var = global i8 0
+  define i8* @test_global() { ret i8* undef }
+...
+
+---
+name:            test_constant
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_constant
+    ; CHECK: [[TMP:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; CHECK: %0(s1) = G_TRUNC [[TMP]]
+    ; CHECK: [[TMP:%[0-9]+]](s32) = G_CONSTANT i32 42
+    ; CHECK: %1(s8) = G_TRUNC [[TMP]]
+    ; CHECK: [[TMP:%[0-9]+]](s32) = G_CONSTANT i32 -1
+    ; CHECK: %2(s16) = G_TRUNC [[TMP]]
+    ; CHECK: %3(s32) = G_CONSTANT i32 -1
+    ; CHECK: %4(s64) = G_CONSTANT i64 1
+    ; CHECK: %5(s64) = G_CONSTANT i64 0
+
+    %0(s1) = G_CONSTANT i1 0
+    %1(s8) = G_CONSTANT i8 42
+    %2(s16) = G_CONSTANT i16 65535
+    %3(s32) = G_CONSTANT i32 -1
+    %4(s64) = G_CONSTANT i64 1
+    %5(s64) = G_CONSTANT i64 0
+...
+
+---
+name:            test_fconstant
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_fconstant
+    ; CHECK: %0(s32) = G_FCONSTANT  float 1.000000e+00
+    ; CHECK: %1(s64) = G_FCONSTANT  double 2.000000e+00
+    ; CHECK: [[TMP:%[0-9]+]](s32) = G_FCONSTANT half 0xH0000
+    ; CHECK: %2(s16) = G_FPTRUNC [[TMP]]
+
+    %0(s32) = G_FCONSTANT float 1.0
+    %1(s64) = G_FCONSTANT double 2.0
+    %2(s16) = G_FCONSTANT half 0.0
+...
+
+---
+name:            test_global
+registers:
+  - { id: 0, class: _ }
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_global
+    ; CHECK: %0(p0) = G_GLOBAL_VALUE @var
+
+    %0(p0) = G_GLOBAL_VALUE @var
+...

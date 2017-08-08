@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=arm64-apple-ios7.0 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -disable-post-ra | FileCheck %s
 
 define void @bar(<8 x i16> %arg, <8 x i8>* %p) nounwind {
 ; CHECK-LABEL: bar:

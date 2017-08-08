@@ -33,10 +33,27 @@
 // RUN: %clang -fmodules-validate-system-headers -### %s 2>&1 | FileCheck -check-prefix=MODULES_VALIDATE_SYSTEM_HEADERS %s
 // MODULES_VALIDATE_SYSTEM_HEADERS: -fmodules-validate-system-headers
 
+// RUN: %clang -### %s 2>&1 | FileCheck -check-prefix=MODULES_DISABLE_DIAGNOSTIC_VALIDATION_DEFAULT %s
+// MODULES_DISABLE_DIAGNOSTIC_VALIDATION_DEFAULT-NOT: -fmodules-disable-diagnostic-validation
+
+// RUN: %clang -fmodules-disable-diagnostic-validation -### %s 2>&1 | FileCheck -check-prefix=MODULES_DISABLE_DIAGNOSTIC_VALIDATION %s
+// MODULES_DISABLE_DIAGNOSTIC_VALIDATION: -fmodules-disable-diagnostic-validation
+
+// RUN: %clang -fmodules -### %s 2>&1 | FileCheck -check-prefix=MODULES_PREBUILT_PATH_DEFAULT %s
+// MODULES_PREBUILT_PATH_DEFAULT-NOT: -fprebuilt-module-path
+
+// RUN: %clang -fmodules -fprebuilt-module-path=foo -fprebuilt-module-path=bar -### %s 2>&1 | FileCheck -check-prefix=MODULES_PREBUILT_PATH %s
+// MODULES_PREBUILT_PATH: "-fprebuilt-module-path=foo"
+// MODULES_PREBUILT_PATH: "-fprebuilt-module-path=bar"
+
 // RUN: %clang -fmodules -fmodule-map-file=foo.map -fmodule-map-file=bar.map -### %s 2>&1 | FileCheck -check-prefix=CHECK-MODULE-MAP-FILES %s
 // CHECK-MODULE-MAP-FILES: "-fmodules"
 // CHECK-MODULE-MAP-FILES: "-fmodule-map-file=foo.map"
 // CHECK-MODULE-MAP-FILES: "-fmodule-map-file=bar.map"
+
+// RUN: %clang -fmodules -fbuiltin-module-map -### %s 2>&1 | FileCheck -check-prefix=CHECK-BUILTIN-MODULE-MAP %s
+// CHECK-BUILTIN-MODULE-MAP: "-fmodules"
+// CHECK-BUILTIN-MODULE-MAP: "-fmodule-map-file={{.*}}include{{/|\\\\}}module.modulemap"
 
 // RUN: %clang -fmodules -fmodule-file=foo.pcm -fmodule-file=bar.pcm -### %s 2>&1 | FileCheck -check-prefix=CHECK-MODULE-FILES %s
 // CHECK-MODULE-FILES: "-fmodules"

@@ -251,3 +251,24 @@ define <4 x i32> @zextload_v8i8tov8i32_fake_update(<4 x i8>** %ptr) {
         %zlA = zext <4 x i8> %lA to <4 x i32>
 	ret <4 x i32> %zlA
 }
+
+; CHECK-LABEL: test_silly_load:
+; CHECK: vldr d{{[0-9]+}}, [r0, #16]
+; CHECK: movs r1, #24
+; CHECK: vld1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0:128], r1
+; CHECK: ldr {{r[0-9]+}}, [r0]
+
+define void @test_silly_load(<28 x i8>* %addr) {
+  load volatile <28 x i8>, <28 x i8>* %addr
+  ret void
+}
+
+define <4 x i32>* @test_vld1_immoffset(<4 x i32>* %ptr.in, <4 x i32>* %ptr.out) {
+; CHECK-LABEL: test_vld1_immoffset:
+; CHECK: movs [[INC:r[0-9]+]], #32
+; CHECK: vld1.32 {{{d[0-9]+}}, {{d[0-9]+}}}, [r0], [[INC]]
+  %val = load <4 x i32>, <4 x i32>* %ptr.in
+  store <4 x i32> %val, <4 x i32>* %ptr.out
+  %next = getelementptr <4 x i32>, <4 x i32>* %ptr.in, i32 2
+  ret <4 x i32>* %next
+}

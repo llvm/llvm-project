@@ -1,0 +1,29 @@
+# RUN: llc -o /dev/null %s -mtriple=aarch64-- -run-pass=machine-scheduler -enable-misched -debug-only=machine-scheduler 2>&1 | FileCheck %s
+# REQUIRES: asserts
+--- |
+  define void @func() { ret void }
+...
+---
+# Check that the instructions are not dependent on each other, even though
+# they all read/write to the zero register.
+# CHECK-LABEL: MI Scheduling
+# CHECK: SU(0): %WZR<def,dead> = SUBSWri %W1, 0, 0, %NZCV<imp-def,dead>
+# CHECK: # succs left : 0
+# CHECK-NOT: Successors:
+# CHECK: SU(1): %W2<def> = COPY %WZR
+# CHECK: # succs left : 0
+# CHECK-NOT: Successors:
+# CHECK: SU(2): %WZR<def,dead> = SUBSWri %W3, 0, 0, %NZCV<imp-def,dead>
+# CHECK: # succs left : 0
+# CHECK-NOT: Successors:
+# CHECK: SU(3): %W4<def> = COPY %WZR
+# CHECK: # succs left : 0
+# CHECK-NOT: Successors:
+name: func
+body: |
+  bb.0:
+    dead %wzr = SUBSWri %w1, 0, 0, implicit-def dead %nzcv
+    %w2 = COPY %wzr
+    dead %wzr = SUBSWri %w3, 0, 0, implicit-def dead %nzcv
+    %w4 = COPY %wzr
+...

@@ -1,0 +1,18 @@
+# RUN: llvm-nm %p/Inputs/Strip-ST.dylib.macho-x86_64 | FileCheck --check-prefix=DEFAULT %s
+# RUN: llvm-nm -no-dyldinfo %p/Inputs/Strip-ST.dylib.macho-x86_64 | FileCheck --check-prefix=NO-DYLDINFO %s
+# RUN: llvm-nm -dyldinfo-only %p/Inputs/Strip-ST.dylib.macho-x86_64 | FileCheck --check-prefix=DYLDINFO-ONLY %s
+
+# DEFAULT: 0000000000000f90 T __Bob_is_slow
+# DEFAULT: 0000000000001008 D __T0ims_data
+# DEFAULT: 0000000000000f80 T __T0om_is_not_swift
+# DEFAULT: U dyld_stub_binder
+
+# NO-DYLDINFO: 0000000000000f90 T __Bob_is_slow
+# NO-DYLDINFO-NOT: __T0ims_data
+# NO-DYLDINFO-NOT: __T0om_is_not_swift
+# NO-DYLDINFO: U dyld_stub_binder
+
+# DYLDINFO-ONLY: 0000000000000f90 T __Bob_is_slow
+# DYLDINFO-ONLY: 0000000000001008 D __T0ims_data
+# DYLDINFO-ONLY: 0000000000000f80 T __T0om_is_not_swift
+# DYLDINFO-ONLY-NOT: U dyld_stub_binder

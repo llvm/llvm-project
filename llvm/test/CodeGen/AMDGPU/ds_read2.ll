@@ -9,11 +9,11 @@
 ; SI-LABEL: @simple_read2_f32
 ; SI: ds_read2_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:8
 ; SI: s_waitcnt lgkmcnt(0)
-; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[HI_VREG]], v[[LO_VREG]]
+; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
-define void @simple_read2_f32(float addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @simple_read2_f32(float addrspace(1)* %out) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
   %val0 = load float, float addrspace(3)* %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 8
@@ -28,11 +28,11 @@ define void @simple_read2_f32(float addrspace(1)* %out) #0 {
 ; SI-LABEL: @simple_read2_f32_max_offset
 ; SI: ds_read2_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:255
 ; SI: s_waitcnt lgkmcnt(0)
-; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[HI_VREG]], v[[LO_VREG]]
+; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
-define void @simple_read2_f32_max_offset(float addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @simple_read2_f32_max_offset(float addrspace(1)* %out) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
   %val0 = load float, float addrspace(3)* %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 255
@@ -49,8 +49,8 @@ define void @simple_read2_f32_max_offset(float addrspace(1)* %out) #0 {
 ; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
 ; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:1028
 ; SI: s_endpgm
-define void @simple_read2_f32_too_far(float addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @simple_read2_f32_too_far(float addrspace(1)* %out) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
   %val0 = load float, float addrspace(3)* %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 257
@@ -66,8 +66,8 @@ define void @simple_read2_f32_too_far(float addrspace(1)* %out) #0 {
 ; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR:v[0-9]+]] offset1:8
 ; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR]] offset0:11 offset1:27
 ; SI: s_endpgm
-define void @simple_read2_f32_x2(float addrspace(1)* %out) #0 {
-  %tid.x = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @simple_read2_f32_x2(float addrspace(1)* %out) #0 {
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 0
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.0
   %val0 = load float, float addrspace(3)* %arrayidx0, align 4
@@ -98,8 +98,8 @@ define void @simple_read2_f32_x2(float addrspace(1)* %out) #0 {
 ; SI: s_barrier
 ; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR]] offset0:11 offset1:27
 ; SI: s_endpgm
-define void @simple_read2_f32_x2_barrier(float addrspace(1)* %out) #0 {
-  %tid.x = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @simple_read2_f32_x2_barrier(float addrspace(1)* %out) #0 {
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 0
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.0
   %val0 = load float, float addrspace(3)* %arrayidx0, align 4
@@ -109,7 +109,7 @@ define void @simple_read2_f32_x2_barrier(float addrspace(1)* %out) #0 {
   %val1 = load float, float addrspace(3)* %arrayidx1, align 4
   %sum.0 = fadd float %val0, %val1
 
-  call void @llvm.AMDGPU.barrier.local() #2
+  call void @llvm.amdgcn.s.barrier() #2
 
   %idx.2 = add nsw i32 %tid.x, 11
   %arrayidx2 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.2
@@ -133,8 +133,8 @@ define void @simple_read2_f32_x2_barrier(float addrspace(1)* %out) #0 {
 ; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR:v[0-9]+]] offset0:2 offset1:8
 ; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR]] offset0:11 offset1:27
 ; SI: s_endpgm
-define void @simple_read2_f32_x2_nonzero_base(float addrspace(1)* %out) #0 {
-  %tid.x = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @simple_read2_f32_x2_nonzero_base(float addrspace(1)* %out) #0 {
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %idx.0
   %val0 = load float, float addrspace(3)* %arrayidx0, align 4
@@ -170,8 +170,8 @@ define void @simple_read2_f32_x2_nonzero_base(float addrspace(1)* %out) #0 {
 ; SI: ds_read_b32
 ; SI: ds_read_b32
 ; SI: s_endpgm
-define void @read2_ptr_is_subreg_arg_f32(float addrspace(1)* %out, <2 x float addrspace(3)*> %lds.ptr) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @read2_ptr_is_subreg_arg_f32(float addrspace(1)* %out, <2 x float addrspace(3)*> %lds.ptr) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %index.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
   %index.1 = insertelement <2 x i32> %index.0, i32 8, i32 0
   %gep = getelementptr inbounds float, <2 x float addrspace(3)*> %lds.ptr, <2 x i32> %index.1
@@ -196,8 +196,8 @@ define void @read2_ptr_is_subreg_arg_f32(float addrspace(1)* %out, <2 x float ad
 ; SI: ds_read_b32
 ; SI: ds_read_b32
 ; SI: s_endpgm
-define void @read2_ptr_is_subreg_arg_offset_f32(float addrspace(1)* %out, <2 x float addrspace(3)*> %lds.ptr) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @read2_ptr_is_subreg_arg_offset_f32(float addrspace(1)* %out, <2 x float addrspace(3)*> %lds.ptr) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %index.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
   %index.1 = insertelement <2 x i32> %index.0, i32 8, i32 0
   %gep = getelementptr inbounds float, <2 x float addrspace(3)*> %lds.ptr, <2 x i32> %index.1
@@ -219,8 +219,8 @@ define void @read2_ptr_is_subreg_arg_offset_f32(float addrspace(1)* %out, <2 x f
 ; SI-LABEL: {{^}}read2_ptr_is_subreg_f32:
 ; SI: ds_read2_b32 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset1:8{{$}}
 ; SI: s_endpgm
-define void @read2_ptr_is_subreg_f32(float addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @read2_ptr_is_subreg_f32(float addrspace(1)* %out) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %ptr.0 = insertelement <2 x [512 x float] addrspace(3)*> undef, [512 x float] addrspace(3)* @lds, i32 0
   %ptr.1 = insertelement <2 x [512 x float] addrspace(3)*> %ptr.0, [512 x float] addrspace(3)* @lds, i32 1
   %x.i.v.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
@@ -243,8 +243,8 @@ define void @read2_ptr_is_subreg_f32(float addrspace(1)* %out) #0 {
 ; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
 ; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
 ; SI: s_endpgm
-define void @simple_read2_f32_volatile_0(float addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @simple_read2_f32_volatile_0(float addrspace(1)* %out) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
   %val0 = load volatile float, float addrspace(3)* %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 8
@@ -261,8 +261,8 @@ define void @simple_read2_f32_volatile_0(float addrspace(1)* %out) #0 {
 ; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
 ; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
 ; SI: s_endpgm
-define void @simple_read2_f32_volatile_1(float addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @simple_read2_f32_volatile_1(float addrspace(1)* %out) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
   %val0 = load float, float addrspace(3)* %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 8
@@ -280,8 +280,8 @@ define void @simple_read2_f32_volatile_1(float addrspace(1)* %out) #0 {
 ; SI-LABEL: @unaligned_read2_f32
 ; SI-NOT: ds_read2_b32
 ; SI: s_endpgm
-define void @unaligned_read2_f32(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @unaligned_read2_f32(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds float, float addrspace(3)* %lds, i32 %x.i
   %val0 = load float, float addrspace(3)* %arrayidx0, align 1
   %add.x = add nsw i32 %x.i, 8
@@ -296,8 +296,8 @@ define void @unaligned_read2_f32(float addrspace(1)* %out, float addrspace(3)* %
 ; SI-LABEL: @misaligned_2_simple_read2_f32
 ; SI-NOT: ds_read2_b32
 ; SI: s_endpgm
-define void @misaligned_2_simple_read2_f32(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @misaligned_2_simple_read2_f32(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds float, float addrspace(3)* %lds, i32 %x.i
   %val0 = load float, float addrspace(3)* %arrayidx0, align 2
   %add.x = add nsw i32 %x.i, 8
@@ -315,8 +315,8 @@ define void @misaligned_2_simple_read2_f32(float addrspace(1)* %out, float addrs
 ; SI: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO_VREG]]:{{[0-9]+\]}}, v{{\[[0-9]+}}:[[HI_VREG]]{{\]}}
 ; SI: buffer_store_dwordx2 [[RESULT]]
 ; SI: s_endpgm
-define void @simple_read2_f64(double addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @simple_read2_f64(double addrspace(1)* %out) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %x.i
   %val0 = load double, double addrspace(3)* %arrayidx0, align 8
   %add.x = add nsw i32 %x.i, 8
@@ -331,8 +331,8 @@ define void @simple_read2_f64(double addrspace(1)* %out) #0 {
 ; SI-LABEL: @simple_read2_f64_max_offset
 ; SI: ds_read2_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:255
 ; SI: s_endpgm
-define void @simple_read2_f64_max_offset(double addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @simple_read2_f64_max_offset(double addrspace(1)* %out) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %x.i
   %val0 = load double, double addrspace(3)* %arrayidx0, align 8
   %add.x = add nsw i32 %x.i, 255
@@ -349,8 +349,8 @@ define void @simple_read2_f64_max_offset(double addrspace(1)* %out) #0 {
 ; SI: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
 ; SI: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset:2056
 ; SI: s_endpgm
-define void @simple_read2_f64_too_far(double addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @simple_read2_f64_too_far(double addrspace(1)* %out) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %x.i
   %val0 = load double, double addrspace(3)* %arrayidx0, align 8
   %add.x = add nsw i32 %x.i, 257
@@ -367,8 +367,8 @@ define void @simple_read2_f64_too_far(double addrspace(1)* %out) #0 {
 ; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset1:1
 ; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset0:14 offset1:15
 ; SI: s_endpgm
-define void @misaligned_read2_f64(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+define amdgpu_kernel void @misaligned_read2_f64(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds double, double addrspace(3)* %lds, i32 %x.i
   %val0 = load double, double addrspace(3)* %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 7
@@ -385,7 +385,7 @@ define void @misaligned_read2_f64(double addrspace(1)* %out, double addrspace(3)
 ; SI-LABEL: @load_constant_adjacent_offsets
 ; SI: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
 ; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]] offset1:1
-define void @load_constant_adjacent_offsets(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @load_constant_adjacent_offsets(i32 addrspace(1)* %out) {
   %val0 = load i32, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 0), align 4
   %val1 = load i32, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 1), align 4
   %sum = add i32 %val0, %val1
@@ -396,7 +396,7 @@ define void @load_constant_adjacent_offsets(i32 addrspace(1)* %out) {
 ; SI-LABEL: @load_constant_disjoint_offsets
 ; SI: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
 ; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]] offset1:2
-define void @load_constant_disjoint_offsets(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @load_constant_disjoint_offsets(i32 addrspace(1)* %out) {
   %val0 = load i32, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 0), align 4
   %val1 = load i32, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 2), align 4
   %sum = add i32 %val0, %val1
@@ -410,7 +410,7 @@ define void @load_constant_disjoint_offsets(i32 addrspace(1)* %out) {
 ; SI: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
 ; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]] offset1:1
 ; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]] offset0:2 offset1:3
-define void @load_misaligned64_constant_offsets(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @load_misaligned64_constant_offsets(i64 addrspace(1)* %out) {
   %val0 = load i64, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 0), align 4
   %val1 = load i64, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 1), align 4
   %sum = add i64 %val0, %val1
@@ -426,7 +426,7 @@ define void @load_misaligned64_constant_offsets(i64 addrspace(1)* %out) {
 ; SI-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASE0]] offset1:1
 ; SI-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASE1]] offset1:1
 ; SI: s_endpgm
-define void @load_misaligned64_constant_large_offsets(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @load_misaligned64_constant_large_offsets(i64 addrspace(1)* %out) {
   %val0 = load i64, i64 addrspace(3)* getelementptr inbounds ([4096 x i64], [4096 x i64] addrspace(3)* @bar.large, i32 0, i32 2048), align 4
   %val1 = load i64, i64 addrspace(3)* getelementptr inbounds ([4096 x i64], [4096 x i64] addrspace(3)* @bar.large, i32 0, i32 4095), align 4
   %sum = add i64 %val0, %val1
@@ -437,9 +437,9 @@ define void @load_misaligned64_constant_large_offsets(i64 addrspace(1)* %out) {
 @sgemm.lA = internal unnamed_addr addrspace(3) global [264 x float] undef, align 4
 @sgemm.lB = internal unnamed_addr addrspace(3) global [776 x float] undef, align 4
 
-define void @sgemm_inner_loop_read2_sequence(float addrspace(1)* %C, i32 %lda, i32 %ldb) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tgid.x() #1
-  %y.i = tail call i32 @llvm.r600.read.tidig.y() #1
+define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(float addrspace(1)* %C, i32 %lda, i32 %ldb) #0 {
+  %x.i = tail call i32 @llvm.amdgcn.workgroup.id.x() #1
+  %y.i = tail call i32 @llvm.amdgcn.workitem.id.y() #1
   %arrayidx44 = getelementptr inbounds [264 x float], [264 x float] addrspace(3)* @sgemm.lA, i32 0, i32 %x.i
   %tmp16 = load float, float addrspace(3)* %arrayidx44, align 4
   %add47 = add nsw i32 %x.i, 1
@@ -481,33 +481,73 @@ define void @sgemm_inner_loop_read2_sequence(float addrspace(1)* %C, i32 %lda, i
   ret void
 }
 
-define void @misaligned_read2_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(3)* %in) #0 {
+define amdgpu_kernel void @misaligned_read2_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(3)* %in) #0 {
   %load = load <2 x i32>, <2 x i32> addrspace(3)* %in, align 4
   store <2 x i32> %load, <2 x i32> addrspace(1)* %out, align 8
   ret void
 }
 
-define void @misaligned_read2_i64(i64 addrspace(1)* %out, i64 addrspace(3)* %in) #0 {
+define amdgpu_kernel void @misaligned_read2_i64(i64 addrspace(1)* %out, i64 addrspace(3)* %in) #0 {
   %load = load i64, i64 addrspace(3)* %in, align 4
   store i64 %load, i64 addrspace(1)* %out, align 8
   ret void
 }
 
-; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tgid.x() #1
+; SI-LABEL: ds_read_diff_base_interleaving
+; SI-NOT: ds_read_b32
+define amdgpu_kernel void @ds_read_diff_base_interleaving(
+  float addrspace(1)* nocapture %arg,
+  [4 x [4 x float]] addrspace(3)* %arg1,
+  [4 x [4 x float]] addrspace(3)* %arg2,
+  [4 x [4 x float]] addrspace(3)* %arg3,
+  [4 x [4 x float]] addrspace(3)* %arg4) #1 {
+bb:
+  %tmp = getelementptr float, float addrspace(1)* %arg, i64 10
+  %tmp5 = tail call i32 @llvm.amdgcn.workitem.id.x() #2
+  %tmp6 = tail call i32 @llvm.amdgcn.workitem.id.y() #2
+  %tmp7 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg1, i32 0, i32 %tmp6, i32 0
+  %tmp8 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg2, i32 0, i32 0, i32 %tmp5
+  %tmp9 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg3, i32 0, i32 %tmp6, i32 0
+  %tmp10 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg4, i32 0, i32 0, i32 %tmp5
+  %tmp11 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg1, i32 0, i32 %tmp6, i32 1
+  %tmp12 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg2, i32 0, i32 1, i32 %tmp5
+  %tmp13 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg3, i32 0, i32 %tmp6, i32 1
+  %tmp14 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg4, i32 0, i32 1, i32 %tmp5
+  %tmp15 = load float, float addrspace(3)* %tmp7
+  %tmp16 = load float, float addrspace(3)* %tmp8
+  %tmp17 = fmul float %tmp15, %tmp16
+  %tmp18 = fadd float 2.000000e+00, %tmp17
+  %tmp19 = load float, float addrspace(3)* %tmp9
+  %tmp20 = load float, float addrspace(3)* %tmp10
+  %tmp21 = fmul float %tmp19, %tmp20
+  %tmp22 = fsub float %tmp18, %tmp21
+  %tmp23 = load float, float addrspace(3)* %tmp11
+  %tmp24 = load float, float addrspace(3)* %tmp12
+  %tmp25 = fmul float %tmp23, %tmp24
+  %tmp26 = fsub float %tmp22, %tmp25
+  %tmp27 = load float, float addrspace(3)* %tmp13
+  %tmp28 = load float, float addrspace(3)* %tmp14
+  %tmp29 = fmul float %tmp27, %tmp28
+  %tmp30 = fsub float %tmp26, %tmp29
+  store float %tmp30, float addrspace(1)* %tmp
+  ret void
+}
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tgid.y() #1
+declare i32 @llvm.amdgcn.workgroup.id.x() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workgroup.id.y() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tidig.y() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
-; Function Attrs: noduplicate nounwind
-declare void @llvm.AMDGPU.barrier.local() #2
+; Function Attrs: nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.y() #1
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+; Function Attrs: convergent nounwind
+declare void @llvm.amdgcn.s.barrier() #2
+
+attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
-attributes #2 = { noduplicate nounwind }
+attributes #2 = { convergent nounwind }

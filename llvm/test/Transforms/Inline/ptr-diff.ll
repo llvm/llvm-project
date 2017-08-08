@@ -4,7 +4,7 @@ target datalayout = "p:32:32-p1:64:64-p2:16:16-n16:32:64"
 
 define i32 @outer1() {
 ; CHECK-LABEL: @outer1(
-; CHECK-NOT: call
+; CHECK-NOT: call i32
 ; CHECK: ret i32
 
   %ptr = alloca i32
@@ -15,6 +15,7 @@ define i32 @outer1() {
 }
 
 define i32 @inner1(i32* %begin, i32* %end) {
+  call void @extern()
   %begin.i = ptrtoint i32* %begin to i32
   %end.i = ptrtoint i32* %end to i32
   %distance = sub i32 %end.i, %begin.i
@@ -43,6 +44,7 @@ define i32 @outer2(i32* %ptr) {
 }
 
 define i32 @inner2(i32* %begin, i32* %end) {
+  call void @extern()
   %begin.i = ptrtoint i32* %begin to i32
   %end.i = ptrtoint i32* %end to i32
   %distance = sub i32 %end.i, %begin.i
@@ -60,6 +62,7 @@ else:
 ; The inttoptrs are free since it is a smaller integer to a larger
 ; pointer size
 define i32 @inttoptr_free_cost(i32 %a, i32 %b, i32 %c) {
+  call void @extern()
   %p1 = inttoptr i32 %a to i32 addrspace(1)*
   %p2 = inttoptr i32 %b to i32 addrspace(1)*
   %p3 = inttoptr i32 %c to i32 addrspace(1)*
@@ -73,7 +76,7 @@ define i32 @inttoptr_free_cost(i32 %a, i32 %b, i32 %c) {
 
 define i32 @inttoptr_free_cost_user(i32 %begin, i32 %end) {
 ; CHECK-LABEL: @inttoptr_free_cost_user(
-; CHECK-NOT: call
+; CHECK-NOT: call i32
   %x = call i32 @inttoptr_free_cost(i32 %begin, i32 %end, i32 9)
   ret i32 %x
 }
@@ -81,6 +84,7 @@ define i32 @inttoptr_free_cost_user(i32 %begin, i32 %end) {
 ; The inttoptrs have a cost since it is a larger integer to a smaller
 ; pointer size
 define i32 @inttoptr_cost_smaller_ptr(i32 %a, i32 %b, i32 %c) {
+  call void @extern()
   %p1 = inttoptr i32 %a to i32 addrspace(2)*
   %p2 = inttoptr i32 %b to i32 addrspace(2)*
   %p3 = inttoptr i32 %c to i32 addrspace(2)*
@@ -94,8 +98,9 @@ define i32 @inttoptr_cost_smaller_ptr(i32 %a, i32 %b, i32 %c) {
 
 define i32 @inttoptr_cost_smaller_ptr_user(i32 %begin, i32 %end) {
 ; CHECK-LABEL: @inttoptr_cost_smaller_ptr_user(
-; CHECK: call
+; CHECK: call i32
   %x = call i32 @inttoptr_cost_smaller_ptr(i32 %begin, i32 %end, i32 9)
   ret i32 %x
 }
 
+declare void @extern()

@@ -1,17 +1,10 @@
-// Clang doesn't support SEH on Windows yet, so for the time being we
-// build this program in two parts: the code with SEH is built with CL,
-// the rest is built with Clang.  This represents the typical scenario when we
-// build a large project using "clang-cl -fallback -fsanitize=address".
-//
 // RUN: %clang_cl_asan -O0 %p/dll_host.cc -Fe%t
 //
 // Check both -GS and -GS- builds:
-// RUN: cl -LD -c %s -Fo%t.obj
-// RUN: %clang_cl_asan -LD -O0 %s -Fe%t.dll %t.obj
+// RUN: %clang_cl_asan -GS  -LD -O0 %s -Fe%t.dll
 // RUN: %run %t %t.dll
 //
-// RUN: cl -LD -GS- -c %s -Fo%t.obj
-// RUN: %clang_cl_asan -LD -O0 %s -Fe%t.dll %t.obj
+// RUN: %clang_cl_asan -GS- -LD -O0 %s -Fe%t.dll
 // RUN: %run %t %t.dll
 
 #include <windows.h>
@@ -24,7 +17,6 @@ extern "C" bool __asan_address_is_poisoned(void *p);
 
 void ThrowAndCatch();
 
-#if !defined(__clang__)
 __declspec(noinline)
 void Throw() {
   int local, zero = 0;
@@ -41,7 +33,6 @@ void ThrowAndCatch() {
     fprintf(stderr, "__except:  %p\n", &local);
   }
 }
-#else
 
 extern "C" __declspec(dllexport)
 int test_function() {
@@ -57,4 +48,3 @@ int test_function() {
   assert(!__asan_address_is_poisoned(x + 32));
   return 0;
 }
-#endif

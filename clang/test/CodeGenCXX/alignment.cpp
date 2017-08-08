@@ -32,7 +32,7 @@ namespace test0 {
     // CHECK: [[T2:%.*]] = or i8 [[T1]], [[T0]]
     // CHECK: store i8 [[T2]], i8* [[FIELD_P]], align 4
     b.onebit = int_source();
-    
+
     // CHECK: [[B_P:%.*]] = load [[B]]*, [[B]]**
     // CHECK: [[FIELD_P:%.*]] = bitcast [[B]]* [[B_P]] to i8*
     // CHECK: [[VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 4
@@ -60,7 +60,7 @@ namespace test0 {
     // CHECK: [[T2:%.*]] = or i8 [[T1]], [[T0]]
     // CHECK: store i8 [[T2]], i8* [[FIELD_P]], align 2
     c.onebit = int_source();
-    
+
     // CHECK: [[C_P:%.*]] = load [[C]]*, [[C]]**
     // CHECK: [[T0:%.*]] = bitcast [[C]]* [[C_P]] to i8*
     // CHECK: [[T1:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 8

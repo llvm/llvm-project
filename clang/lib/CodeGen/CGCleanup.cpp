@@ -51,8 +51,7 @@ DominatingValue<RValue>::saved_type::save(CodeGenFunction &CGF, RValue rv) {
   if (rv.isComplex()) {
     CodeGenFunction::ComplexPairTy V = rv.getComplexVal();
     llvm::Type *ComplexTy =
-      llvm::StructType::get(V.first->getType(), V.second->getType(),
-                            (void*) nullptr);
+        llvm::StructType::get(V.first->getType(), V.second->getType());
     Address addr = CGF.CreateDefaultAlignTempAlloca(ComplexTy, "saved-complex");
     CGF.Builder.CreateStore(V.first,
                             CGF.Builder.CreateStructGEP(addr, 0, CharUnits()));
@@ -112,7 +111,7 @@ RValue DominatingValue<RValue>::saved_type::restore(CodeGenFunction &CGF) {
 
 /// Push an entry of the given size onto this protected-scope stack.
 char *EHScopeStack::allocate(size_t Size) {
-  Size = llvm::RoundUpToAlignment(Size, ScopeStackAlignment);
+  Size = llvm::alignTo(Size, ScopeStackAlignment);
   if (!StartOfBuffer) {
     unsigned Capacity = 1024;
     while (Capacity < Size) Capacity *= 2;
@@ -143,7 +142,7 @@ char *EHScopeStack::allocate(size_t Size) {
 }
 
 void EHScopeStack::deallocate(size_t Size) {
-  StartOfData += llvm::RoundUpToAlignment(Size, ScopeStackAlignment);
+  StartOfData += llvm::alignTo(Size, ScopeStackAlignment);
 }
 
 bool EHScopeStack::containsOnlyLifetimeMarkers(
@@ -155,6 +154,20 @@ bool EHScopeStack::containsOnlyLifetimeMarkers(
   }
 
   return true;
+}
+
+bool EHScopeStack::requiresLandingPad() const {
+  for (stable_iterator si = getInnermostEHScope(); si != stable_end(); ) {
+    // Skip lifetime markers.
+    if (auto *cleanup = dyn_cast<EHCleanupScope>(&*find(si)))
+      if (cleanup->isLifetimeMarker()) {
+        si = cleanup->getEnclosingEHScope();
+        continue;
+      }
+    return true;
+  }
+
+  return false;
 }
 
 EHScopeStack::stable_iterator
@@ -174,6 +187,7 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
   bool IsNormalCleanup = Kind & NormalCleanup;
   bool IsEHCleanup = Kind & EHCleanup;
   bool IsActive = !(Kind & InactiveCleanup);
+  bool IsLifetimeMarker = Kind & LifetimeMarker;
   EHCleanupScope *Scope =
     new (Buffer) EHCleanupScope(IsNormalCleanup,
                                 IsEHCleanup,
@@ -186,6 +200,8 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
     InnermostNormalCleanup = stable_begin();
   if (IsEHCleanup)
     InnermostEHScope = stable_begin();
+  if (IsLifetimeMarker)
+    Scope->setLifetimeMarker();
 
   return Scope->getCleanupBuffer();
 }
@@ -243,13 +259,6 @@ EHCatchScope *EHScopeStack::pushCatch(unsigned numHandlers) {
 void EHScopeStack::pushTerminate() {
   char *Buffer = allocate(EHTerminateScope::getSize());
   new (Buffer) EHTerminateScope(InnermostEHScope);
-  InnermostEHScope = stable_begin();
-}
-
-void EHScopeStack::pushPadEnd(llvm::BasicBlock *PadEndBB) {
-  char *Buffer = allocate(EHPadEndScope::getSize());
-  auto *CES = new (Buffer) EHPadEndScope(InnermostEHScope);
-  CES->setCachedEHDispatchBlock(PadEndBB);
   InnermostEHScope = stable_begin();
 }
 
@@ -408,11 +417,15 @@ void CodeGenFunction::ResolveBranchFixups(llvm::BasicBlock *Block) {
 }
 
 /// Pops cleanup blocks until the given savepoint is reached.
-void CodeGenFunction::PopCleanupBlocks(EHScopeStack::stable_iterator Old) {
+void CodeGenFunction::PopCleanupBlocks(
+    EHScopeStack::stable_iterator Old,
+    std::initializer_list<llvm::Value **> ValuesToReload) {
   assert(Old.isValid());
 
+  bool HadBranches = false;
   while (EHStack.stable_begin() != Old) {
     EHCleanupScope &Scope = cast<EHCleanupScope>(*EHStack.begin());
+    HadBranches |= Scope.hasBranches();
 
     // As long as Old strictly encloses the scope's enclosing normal
     // cleanup, we're going to emit another normal cleanup which
@@ -422,20 +435,54 @@ void CodeGenFunction::PopCleanupBlocks(EHScopeStack::stable_iterator Old) {
 
     PopCleanupBlock(FallThroughIsBranchThrough);
   }
+
+  // If we didn't have any branches, the insertion point before cleanups must
+  // dominate the current insertion point and we don't need to reload any
+  // values.
+  if (!HadBranches)
+    return;
+
+  // Spill and reload all values that the caller wants to be live at the current
+  // insertion point.
+  for (llvm::Value **ReloadedValue : ValuesToReload) {
+    auto *Inst = dyn_cast_or_null<llvm::Instruction>(*ReloadedValue);
+    if (!Inst)
+      continue;
+
+    // Don't spill static allocas, they dominate all cleanups. These are created
+    // by binding a reference to a local variable or temporary.
+    auto *AI = dyn_cast<llvm::AllocaInst>(Inst);
+    if (AI && AI->isStaticAlloca())
+      continue;
+
+    Address Tmp =
+        CreateDefaultAlignTempAlloca(Inst->getType(), "tmp.exprcleanup");
+
+    // Find an insertion point after Inst and spill it to the temporary.
+    llvm::BasicBlock::iterator InsertBefore;
+    if (auto *Invoke = dyn_cast<llvm::InvokeInst>(Inst))
+      InsertBefore = Invoke->getNormalDest()->getFirstInsertionPt();
+    else
+      InsertBefore = std::next(Inst->getIterator());
+    CGBuilderTy(CGM, &*InsertBefore).CreateStore(Inst, Tmp);
+
+    // Reload the value at the current insertion point.
+    *ReloadedValue = Builder.CreateLoad(Tmp);
+  }
 }
 
 /// Pops cleanup blocks until the given savepoint is reached, then add the
 /// cleanups from the given savepoint in the lifetime-extended cleanups stack.
-void
-CodeGenFunction::PopCleanupBlocks(EHScopeStack::stable_iterator Old,
-                                  size_t OldLifetimeExtendedSize) {
-  PopCleanupBlocks(Old);
+void CodeGenFunction::PopCleanupBlocks(
+    EHScopeStack::stable_iterator Old, size_t OldLifetimeExtendedSize,
+    std::initializer_list<llvm::Value **> ValuesToReload) {
+  PopCleanupBlocks(Old, ValuesToReload);
 
   // Move our deferred cleanups onto the EH stack.
   for (size_t I = OldLifetimeExtendedSize,
               E = LifetimeExtendedCleanupStack.size(); I != E; /**/) {
     // Alignment should be guaranteed by the vptrs in the individual cleanups.
-    assert((I % llvm::alignOf<LifetimeExtendedCleanupHeader>() == 0) &&
+    assert((I % alignof(LifetimeExtendedCleanupHeader) == 0) &&
            "misaligned cleanup stack entry");
 
     LifetimeExtendedCleanupHeader &Header =
@@ -568,7 +615,7 @@ static void destroyOptimisticNormalEntry(CodeGenFunction &CGF,
     llvm::SwitchInst *si = cast<llvm::SwitchInst>(use.getUser());
     if (si->getNumCases() == 1 && si->getDefaultDest() == unreachableBB) {
       // Replace the switch with a branch.
-      llvm::BranchInst::Create(si->case_begin().getCaseSuccessor(), si);
+      llvm::BranchInst::Create(si->case_begin()->getCaseSuccessor(), si);
 
       // The switch operand is a load from the cleanup-dest alloca.
       llvm::LoadInst *condition = cast<llvm::LoadInst>(si->getCondition());
@@ -683,13 +730,25 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     return;
   }
 
-  // Copy the cleanup emission data out.  Note that SmallVector
-  // guarantees maximal alignment for its buffer regardless of its
-  // type parameter.
+  // Copy the cleanup emission data out.  This uses either a stack
+  // array or malloc'd memory, depending on the size, which is
+  // behavior that SmallVector would provide, if we could use it
+  // here. Unfortunately, if you ask for a SmallVector<char>, the
+  // alignment isn't sufficient.
   auto *CleanupSource = reinterpret_cast<char *>(Scope.getCleanupBuffer());
-  SmallVector<char, 8 * sizeof(void *)> CleanupBuffer(
-      CleanupSource, CleanupSource + Scope.getCleanupSize());
-  auto *Fn = reinterpret_cast<EHScopeStack::Cleanup *>(CleanupBuffer.data());
+  llvm::AlignedCharArray<EHScopeStack::ScopeStackAlignment, 8 * sizeof(void *)> CleanupBufferStack;
+  std::unique_ptr<char[]> CleanupBufferHeap;
+  size_t CleanupSize = Scope.getCleanupSize();
+  EHScopeStack::Cleanup *Fn;
+
+  if (CleanupSize <= sizeof(CleanupBufferStack)) {
+    memcpy(CleanupBufferStack.buffer, CleanupSource, CleanupSize);
+    Fn = reinterpret_cast<EHScopeStack::Cleanup *>(CleanupBufferStack.buffer);
+  } else {
+    CleanupBufferHeap.reset(new char[CleanupSize]);
+    memcpy(CleanupBufferHeap.get(), CleanupSource, CleanupSize);
+    Fn = reinterpret_cast<EHScopeStack::Cleanup *>(CleanupBufferHeap.get());
+  }
 
   EHScopeStack::Cleanup::Flags cleanupFlags;
   if (Scope.isNormalCleanup())
@@ -909,24 +968,17 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     // throwing cleanups. For funclet EH personalities, the cleanupendpad models
     // program termination when cleanups throw.
     bool PushedTerminate = false;
-    SaveAndRestore<bool> RestoreIsCleanupPadScope(IsCleanupPadScope);
+    SaveAndRestore<llvm::Instruction *> RestoreCurrentFuncletPad(
+        CurrentFuncletPad);
     llvm::CleanupPadInst *CPI = nullptr;
-    llvm::BasicBlock *CleanupEndBB = nullptr;
     if (!EHPersonality::get(*this).usesFuncletPads()) {
       EHStack.pushTerminate();
       PushedTerminate = true;
     } else {
-      CPI = Builder.CreateCleanupPad({});
-
-      // Build a cleanupendpad to unwind through. Our insertion point should be
-      // in the cleanuppad block.
-      CleanupEndBB = createBasicBlock("ehcleanup.end");
-      CGBuilderTy(*this, CleanupEndBB).CreateCleanupEndPad(CPI, NextAction);
-      EHStack.pushPadEnd(CleanupEndBB);
-
-      // Mark that we're inside a cleanuppad to block inlining.
-      // FIXME: Remove this once the inliner knows when it's safe to do so.
-      IsCleanupPadScope = true;
+      llvm::Value *ParentPad = CurrentFuncletPad;
+      if (!ParentPad)
+        ParentPad = llvm::ConstantTokenNone::get(CGM.getLLVMContext());
+      CurrentFuncletPad = CPI = Builder.CreateCleanupPad(ParentPad);
     }
 
     // We only actually emit the cleanup code if the cleanup is either
@@ -940,17 +992,6 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
       Builder.CreateCleanupRet(CPI, NextAction);
     else
       Builder.CreateBr(NextAction);
-
-    // Insert the cleanupendpad block here, if it has any uses.
-    if (CleanupEndBB) {
-      EHStack.popPadEnd();
-      if (CleanupEndBB->hasNUsesOrMore(1)) {
-        CurFn->getBasicBlockList().insertAfter(
-            Builder.GetInsertBlock()->getIterator(), CleanupEndBB);
-      } else {
-        delete CleanupEndBB;
-      }
-    }
 
     // Leave the terminate scope.
     if (PushedTerminate)

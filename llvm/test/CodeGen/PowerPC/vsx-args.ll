@@ -1,5 +1,6 @@
-; RUN: llc < %s -mcpu=pwr7 -mattr=+vsx | FileCheck %s
-; RUN: llc < %s -mcpu=pwr7 -mattr=+vsx -fast-isel -O0 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mcpu=pwr7 -mattr=+vsx | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mcpu=pwr7 -mattr=+vsx -fast-isel -O0 | \
+; RUN:   FileCheck -check-prefix=CHECK-FISL %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -12,14 +13,24 @@ entry:
   ret <2 x double> %v
 
 ; CHECK-LABEL: @main
-; CHECK-DAG: vor [[V:[0-9]+]], 2, 2
-; CHECK-DAG: xxlor 34, 35, 35
-; CHECK-DAG: xxlor 35, 36, 36
-; CHECK-DAG: vor 4, [[V]], [[V]]
-; CHECK-DAG: bl sv
-; CHECK-DAG: lxvd2x [[VC:[0-9]+]],
+; CHECK-DAG: vmr [[V:[0-9]+]], 2
+; CHECK-DAG: vmr 2, 3
+; CHECK-DAG: vmr 3, 4
+; CHECK-DAG: vmr 4, [[V]]
+; CHECK: bl sv
+; CHECK: lxvd2x [[VC:[0-9]+]],
 ; CHECK: xvadddp 34, 34, [[VC]]
 ; CHECK: blr
+
+; CHECK-FISL-LABEL: @main
+; CHECK-FISL: stxvd2x 34
+; CHECK-FISL: vmr 2, 3
+; CHECK-FISL: vmr 3, 4
+; CHECK-FISL: lxvd2x 36
+; CHECK-FISL: bl sv
+; CHECK-FISL: lxvd2x [[VC:[0-9]+]],
+; CHECK-FISL: xvadddp 34, 34, [[VC]]
+; CHECK-FISL: blr
 }
 
 attributes #0 = { noinline nounwind readnone }

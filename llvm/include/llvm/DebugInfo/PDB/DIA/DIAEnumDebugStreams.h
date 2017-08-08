@@ -11,9 +11,11 @@
 #define LLVM_DEBUGINFO_PDB_DIA_DIAENUMDEBUGSTREAMS_H
 
 #include "DIASupport.h"
+#include "llvm/DebugInfo/PDB/IPDBDataStream.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 
 namespace llvm {
+namespace pdb {
 
 class IPDBDataStream;
 
@@ -30,6 +32,7 @@ public:
 private:
   CComPtr<IDiaEnumDebugStreams> Enumerator;
 };
+}
 }
 
 #endif

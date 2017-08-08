@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsTargetMachine.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
@@ -28,16 +29,16 @@ namespace {
   public:
     static char ID;
 
-    Mips16HardFloat(MipsTargetMachine &TM_) : ModulePass(ID), TM(TM_) {}
+    Mips16HardFloat() : ModulePass(ID) {}
 
-    const char *getPassName() const override {
-      return "MIPS16 Hard Float Pass";
+    StringRef getPassName() const override { return "MIPS16 Hard Float Pass"; }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addRequired<TargetPassConfig>();
+      ModulePass::getAnalysisUsage(AU);
     }
 
     bool runOnModule(Module &M) override;
-
-  protected:
-    const MipsTargetMachine &TM;
   };
 
   static void EmitInlineAsm(LLVMContext &C, BasicBlock *BB, StringRef AsmText) {
@@ -261,7 +262,7 @@ static std::string swapFPIntParams(FPParamVariant PV, Module *M, bool LE,
 static void assureFPCallStub(Function &F, Module *M,
                              const MipsTargetMachine &TM) {
   // for now we only need them for static relocation
-  if (TM.getRelocationModel() == Reloc::PIC_)
+  if (TM.isPositionIndependent())
     return;
   LLVMContext &Context = M->getContext();
   bool LE = TM.isLittleEndian();
@@ -387,11 +388,9 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
   bool Modified = false;
   LLVMContext &C = M->getContext();
   Type *MyVoid = Type::getVoidTy(C);
-  for (Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end();
-         I != E; ++I) {
-      Instruction &Inst = *I;
-      if (const ReturnInst *RI = dyn_cast<ReturnInst>(I)) {
+  for (auto &BB: F)
+    for (auto &I: BB) {
+      if (const ReturnInst *RI = dyn_cast<ReturnInst>(&I)) {
         Value *RVal = RI->getReturnValue();
         if (!RVal) continue;
         //
@@ -409,7 +408,7 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
           "__mips16_ret_dc"
         };
         const char *Name = Helper[RV];
-        AttributeSet A;
+        AttributeList A;
         Value *Params[] = {RVal};
         Modified = true;
         //
@@ -418,24 +417,18 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
         // during call setup, the proper call lowering to the helper
         // functions will take place.
         //
-        A = A.addAttribute(C, AttributeSet::FunctionIndex,
+        A = A.addAttribute(C, AttributeList::FunctionIndex,
                            "__Mips16RetHelper");
-        A = A.addAttribute(C, AttributeSet::FunctionIndex,
+        A = A.addAttribute(C, AttributeList::FunctionIndex,
                            Attribute::ReadNone);
-        A = A.addAttribute(C, AttributeSet::FunctionIndex,
+        A = A.addAttribute(C, AttributeList::FunctionIndex,
                            Attribute::NoInline);
-        Value *F = (M->getOrInsertFunction(Name, A, MyVoid, T, nullptr));
-        CallInst::Create(F, Params, "", &Inst );
-      } else if (const CallInst *CI = dyn_cast<CallInst>(I)) {
-        const Value* V = CI->getCalledValue();
-        Type* T = nullptr;
-        if (V) T = V->getType();
-        PointerType *PFT = nullptr;
-        if (T) PFT = dyn_cast<PointerType>(T);
-        FunctionType *FT = nullptr;
-        if (PFT) FT = dyn_cast<FunctionType>(PFT->getElementType());
+        Value *F = (M->getOrInsertFunction(Name, A, MyVoid, T));
+        CallInst::Create(F, Params, "", &I);
+      } else if (const CallInst *CI = dyn_cast<CallInst>(&I)) {
+        FunctionType *FT = CI->getFunctionType();
         Function *F_ =  CI->getCalledFunction();
-        if (FT && needsFPReturnHelper(*FT) &&
+        if (needsFPReturnHelper(*FT) &&
             !(F_ && isIntrinsicInline(F_))) {
           Modified=true;
           F.addFnAttr("saveS2");
@@ -447,7 +440,7 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
             Modified=true;
             F.addFnAttr("saveS2");
           }
-          if (TM.getRelocationModel() != Reloc::PIC_ ) {
+          if (!TM.isPositionIndependent()) {
             if (needsFPHelperFromSig(*F_)) {
               assureFPCallStub(*F_, M, TM);
               Modified=true;
@@ -461,7 +454,7 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
 
 static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
                            const MipsTargetMachine &TM) {
-  bool PicMode = TM.getRelocationModel() == Reloc::PIC_;
+  bool PicMode = TM.isPositionIndependent();
   bool LE = TM.isLittleEndian();
   LLVMContext &Context = M->getContext();
   std::string Name = F->getName();
@@ -500,15 +493,14 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
 // remove the use-soft-float attribute
 //
 static void removeUseSoftFloat(Function &F) {
-  AttributeSet A;
+  AttrBuilder B;
   DEBUG(errs() << "removing -use-soft-float\n");
-  A = A.addAttribute(F.getContext(), AttributeSet::FunctionIndex,
-                     "use-soft-float", "false");
-  F.removeAttributes(AttributeSet::FunctionIndex, A);
+  B.addAttribute("use-soft-float", "false");
+  F.removeAttributes(AttributeList::FunctionIndex, B);
   if (F.hasFnAttribute("use-soft-float")) {
     DEBUG(errs() << "still has -use-soft-float\n");
   }
-  F.addAttributes(AttributeSet::FunctionIndex, A);
+  F.addAttributes(AttributeList::FunctionIndex, B);
 }
 
 
@@ -531,6 +523,8 @@ static void removeUseSoftFloat(Function &F) {
 //       during call lowering but it should be moved here in the future.
 //
 bool Mips16HardFloat::runOnModule(Module &M) {
+  auto &TM = static_cast<const MipsTargetMachine &>(
+      getAnalysis<TargetPassConfig>().getTM<TargetMachine>());
   DEBUG(errs() << "Run on Module Mips16HardFloat\n");
   bool Modified = false;
   for (Module::iterator F = M.begin(), E = M.end(); F != E; ++F) {
@@ -552,6 +546,6 @@ bool Mips16HardFloat::runOnModule(Module &M) {
 }
 
 
-ModulePass *llvm::createMips16HardFloatPass(MipsTargetMachine &TM) {
-  return new Mips16HardFloat(TM);
+ModulePass *llvm::createMips16HardFloatPass() {
+  return new Mips16HardFloat();
 }

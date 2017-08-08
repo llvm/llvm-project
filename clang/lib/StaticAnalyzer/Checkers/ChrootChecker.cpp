@@ -1,4 +1,4 @@
-//===- Chrootchecker.cpp -------- Basic security checks ----------*- C++ -*-==//
+//===- Chrootchecker.cpp -------- Basic security checks ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,7 +19,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
-#include "llvm/ADT/ImmutableMap.h"
+
 using namespace clang;
 using namespace ento;
 
@@ -148,8 +148,6 @@ void ChrootChecker::checkPreStmt(const CallExpr *CE, CheckerContext &C) const {
         C.emitReport(llvm::make_unique<BugReport>(
             *BT_BreakJail, BT_BreakJail->getDescription(), N));
       }
-
-  return;
 }
 
 void ento::registerChrootChecker(CheckerManager &mgr) {

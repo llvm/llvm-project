@@ -459,12 +459,12 @@ Export parseExport(StringRef Arg) {
   if (E.Name.empty())
     goto err;
 
-  if (E.Name.contains('=')) {
+  if (E.Name.find('=') != StringRef::npos) {
     StringRef X, Y;
     std::tie(X, Y) = E.Name.split("=");
 
     // If "<name>=<dllname>.<name>".
-    if (Y.contains(".")) {
+    if (Y.find(".") != StringRef::npos) {
       E.Name = X;
       E.ForwardTo = Y;
       return E;

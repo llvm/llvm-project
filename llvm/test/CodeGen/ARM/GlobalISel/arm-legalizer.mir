@@ -1,0 +1,950 @@
+# RUN: llc -mtriple arm-- -global-isel -run-pass=legalizer %s -o - | FileCheck %s
+--- |
+  define void @test_sext_s8() { ret void }
+  define void @test_zext_s16() { ret void }
+
+  define void @test_add_s8() { ret void }
+  define void @test_add_s16() { ret void }
+  define void @test_add_s32() { ret void }
+
+  define void @test_sub_s8() { ret void }
+  define void @test_sub_s16() { ret void }
+  define void @test_sub_s32() { ret void }
+
+  define void @test_mul_s8() { ret void }
+  define void @test_mul_s16() { ret void }
+  define void @test_mul_s32() { ret void }
+
+  define void @test_and_s8() { ret void }
+  define void @test_and_s16() { ret void }
+  define void @test_and_s32() { ret void }
+
+  define void @test_or_s8() { ret void }
+  define void @test_or_s16() { ret void }
+  define void @test_or_s32() { ret void }
+
+  define void @test_xor_s8() { ret void }
+  define void @test_xor_s16() { ret void }
+  define void @test_xor_s32() { ret void }
+
+  define void @test_load_from_stack() { ret void }
+  define void @test_legal_loads() #0 { ret void }
+  define void @test_legal_stores() #0 { ret void }
+
+  define void @test_gep() { ret void }
+
+  define void @test_constants() { ret void }
+
+  define void @test_icmp_s8() { ret void }
+  define void @test_icmp_s16() { ret void }
+  define void @test_icmp_s32() { ret void }
+
+  define void @test_select_s32() { ret void }
+  define void @test_select_ptr() { ret void }
+
+  define void @test_brcond() { ret void }
+
+  define void @test_fadd_s32() #0 { ret void }
+  define void @test_fadd_s64() #0 { ret void }
+
+  attributes #0 = { "target-features"="+vfp2" }
+...
+---
+name:            test_sext_s8
+# CHECK-LABEL: name: test_sext_s8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s8) = COPY %r0
+    %1(s32) = G_SEXT %0
+    ; G_SEXT with s8 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_SEXT {{%[0-9]+}}
+    %r0 = COPY %1(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_zext_s16
+# CHECK-LABEL: name: test_zext_s16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s16) = COPY %r0
+    %1(s32) = G_ZEXT %0
+    ; G_ZEXT with s16 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_ZEXT {{%[0-9]+}}
+    %r0 = COPY %1(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_add_s8
+# CHECK-LABEL: name: test_add_s8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s8) = COPY %r0
+    %1(s8) = COPY %r1
+    %2(s8) = G_ADD %0, %1
+    ; G_ADD with s8 should widen
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_ADD {{%[0-9]+, %[0-9]+}}
+    ; CHECK: {{%[0-9]+}}(s32) = G_ADD {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_ADD {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s8)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_add_s16
+# CHECK-LABEL: name: test_add_s16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s16) = COPY %r0
+    %1(s16) = COPY %r1
+    %2(s16) = G_ADD %0, %1
+    ; G_ADD with s16 should widen
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_ADD {{%[0-9]+, %[0-9]+}}
+    ; CHECK: {{%[0-9]+}}(s32) = G_ADD {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_ADD {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s16)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_add_s32
+# CHECK-LABEL: name: test_add_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = G_ADD %0, %1
+    ; G_ADD with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_ADD {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_sub_s8
+# CHECK-LABEL: name: test_sub_s8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s8) = COPY %r0
+    %1(s8) = COPY %r1
+    %2(s8) = G_SUB %0, %1
+    ; G_SUB with s8 should widen
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_SUB {{%[0-9]+, %[0-9]+}}
+    ; CHECK: {{%[0-9]+}}(s32) = G_SUB {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_SUB {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s8)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_sub_s16
+# CHECK-LABEL: name: test_sub_s16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s16) = COPY %r0
+    %1(s16) = COPY %r1
+    %2(s16) = G_SUB %0, %1
+    ; G_SUB with s16 should widen
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_SUB {{%[0-9]+, %[0-9]+}}
+    ; CHECK: {{%[0-9]+}}(s32) = G_SUB {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_SUB {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s16)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_sub_s32
+# CHECK-LABEL: name: test_sub_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = G_SUB %0, %1
+    ; G_SUB with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_SUB {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_mul_s8
+# CHECK-LABEL: name: test_mul_s8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s8) = COPY %r0
+    %1(s8) = COPY %r1
+    %2(s8) = G_MUL %0, %1
+    ; G_MUL with s8 should widen
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_MUL {{%[0-9]+, %[0-9]+}}
+    ; CHECK: {{%[0-9]+}}(s32) = G_MUL {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_MUL {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s8)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_mul_s16
+# CHECK-LABEL: name: test_mul_s16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s16) = COPY %r0
+    %1(s16) = COPY %r1
+    %2(s16) = G_MUL %0, %1
+    ; G_MUL with s16 should widen
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_MUL {{%[0-9]+, %[0-9]+}}
+    ; CHECK: {{%[0-9]+}}(s32) = G_MUL {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_MUL {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s16)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_mul_s32
+# CHECK-LABEL: name: test_mul_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = G_MUL %0, %1
+    ; G_MUL with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_MUL {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_and_s8
+# CHECK-LABEL: name: test_and_s8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s8) = COPY %r0
+    %1(s8) = COPY %r1
+    %2(s8) = G_AND %0, %1
+    ; G_AND with s8 should widen
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_AND {{%[0-9]+, %[0-9]+}}
+    ; CHECK: {{%[0-9]+}}(s32) = G_AND {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_AND {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s8)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_and_s16
+# CHECK-LABEL: name: test_and_s16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s16) = COPY %r0
+    %1(s16) = COPY %r1
+    %2(s16) = G_AND %0, %1
+    ; G_AND with s16 should widen
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_AND {{%[0-9]+, %[0-9]+}}
+    ; CHECK: {{%[0-9]+}}(s32) = G_AND {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_AND {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s16)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_and_s32
+# CHECK-LABEL: name: test_and_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = G_AND %0, %1
+    ; G_AND with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_AND {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_or_s8
+# CHECK-LABEL: name: test_or_s8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s8) = COPY %r0
+    %1(s8) = COPY %r1
+    %2(s8) = G_OR %0, %1
+    ; G_OR with s8 should widen
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_OR {{%[0-9]+, %[0-9]+}}
+    ; CHECK: {{%[0-9]+}}(s32) = G_OR {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_OR {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s8)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_or_s16
+# CHECK-LABEL: name: test_or_s16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s16) = COPY %r0
+    %1(s16) = COPY %r1
+    %2(s16) = G_OR %0, %1
+    ; G_OR with s16 should widen
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_OR {{%[0-9]+, %[0-9]+}}
+    ; CHECK: {{%[0-9]+}}(s32) = G_OR {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_OR {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s16)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_or_s32
+# CHECK-LABEL: name: test_or_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = G_OR %0, %1
+    ; G_OR with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_OR {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_xor_s8
+# CHECK-LABEL: name: test_xor_s8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s8) = COPY %r0
+    %1(s8) = COPY %r1
+    %2(s8) = G_XOR %0, %1
+    ; G_XOR with s8 should widen
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_XOR {{%[0-9]+, %[0-9]+}}
+    ; CHECK: {{%[0-9]+}}(s32) = G_XOR {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s8) = G_XOR {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s8)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_xor_s16
+# CHECK-LABEL: name: test_xor_s16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s16) = COPY %r0
+    %1(s16) = COPY %r1
+    %2(s16) = G_XOR %0, %1
+    ; G_XOR with s16 should widen
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_XOR {{%[0-9]+, %[0-9]+}}
+    ; CHECK: {{%[0-9]+}}(s32) = G_XOR {{%[0-9]+, %[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s16) = G_XOR {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s16)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_xor_s32
+# CHECK-LABEL: name: test_xor_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = G_XOR %0, %1
+    ; G_XOR with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_XOR {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_load_from_stack
+# CHECK-LABEL: name: test_load_from_stack
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+fixedStack:
+  - { id: 0, offset: 0, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  - { id: 1, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  - { id: 2, offset: 8, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  # CHECK: id: [[FRAME_INDEX:[0-9]+]], type: default, offset: 8
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3
+
+    ; This is legal, so we should find it unchanged in the output
+    ; CHECK: [[FIVREG:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[FRAME_INDEX]]
+    ; CHECK: {{%[0-9]+}}(s32) = G_LOAD [[FIVREG]](p0) :: (load 4)
+    %0(p0) = G_FRAME_INDEX %fixed-stack.2
+    %1(s32) = G_LOAD %0(p0) :: (load 4)
+    BX_RET 14, _
+...
+---
+name:            test_legal_loads
+# CHECK-LABEL: name: test_legal_loads
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3
+
+    ; These are all legal, so we should find them unchanged in the output
+    ; CHECK-DAG: {{%[0-9]+}}(s64) = G_LOAD %0
+    ; CHECK-DAG: {{%[0-9]+}}(s32) = G_LOAD %0
+    ; CHECK-DAG: {{%[0-9]+}}(s16) = G_LOAD %0
+    ; CHECK-DAG: {{%[0-9]+}}(s8) = G_LOAD %0
+    ; CHECK-DAG: {{%[0-9]+}}(s1) = G_LOAD %0
+    ; CHECK-DAG: {{%[0-9]+}}(p0) = G_LOAD %0
+    %0(p0) = COPY %r0
+    %1(s32) = G_LOAD %0(p0) :: (load 4)
+    %2(s16) = G_LOAD %0(p0) :: (load 2)
+    %3(s8)  = G_LOAD %0(p0) :: (load 1)
+    %4(s1)  = G_LOAD %0(p0) :: (load 1)
+    %5(p0)  = G_LOAD %0(p0) :: (load 4)
+    %6(s64) = G_LOAD %0(p0) :: (load 8)
+    BX_RET 14, _
+...
+---
+name:            test_legal_stores
+# CHECK-LABEL: name: test_legal_stores
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3, %r4, %r5, %r6, %d1
+
+    ; These are all legal, so we should find them unchanged in the output
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s64), %0(p0)
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s32), %0(p0)
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s16), %0(p0)
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s8), %0(p0)
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s1), %0(p0)
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(p0), %0(p0)
+    %0(p0) = COPY %r0
+    %1(s64) = COPY %d1
+    G_STORE %1(s64), %0(p0) :: (store 8)
+    %2(s32) = COPY %r2
+    G_STORE %2(s32), %0(p0) :: (store 4)
+    %3(s16) = COPY %r3
+    G_STORE %3(s16), %0(p0) :: (store 2)
+    %4(s8) = COPY %r4
+    G_STORE %4(s8), %0(p0) :: (store 1)
+    %5(s1) = COPY %r5
+    G_STORE %5(s1), %0(p0) :: (store 1)
+    %6(p0) = COPY %r6
+    G_STORE %6(p0), %0(p0) :: (store 4)
+    BX_RET 14, _
+...
+---
+name:            test_gep
+# CHECK-LABEL: name: test_gep
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(p0) = COPY %r0
+    %1(s32) = COPY %r1
+
+    ; CHECK: {{%[0-9]+}}(p0) = G_GEP {{%[0-9]+}}, {{%[0-9]+}}(s32)
+    %2(p0) = G_GEP %0, %1(s32)
+
+    %r0 = COPY %2(p0)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_constants
+# CHECK-LABEL: name: test_constants
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    %0(s32) = G_CONSTANT 42
+    ; CHECK: {{%[0-9]+}}(s32) = G_CONSTANT 42
+
+    %1(s16) = G_CONSTANT i16 21
+    ; CHECK-NOT: G_CONSTANT i16
+    ; CHECK: [[EXT:%[0-9]+]](s32) = G_CONSTANT i32 21
+    ; CHECK: {{%[0-9]+}}(s16) = G_TRUNC [[EXT]](s32)
+    ; CHECK-NOT: G_CONSTANT i16
+
+    %2(s8) = G_CONSTANT i8 10
+    ; CHECK-NOT: G_CONSTANT i8
+    ; CHECK: [[EXT:%[0-9]+]](s32) = G_CONSTANT i32 10
+    ; CHECK: {{%[0-9]+}}(s8) = G_TRUNC [[EXT]](s32)
+    ; CHECK-NOT: G_CONSTANT i8
+
+    %3(s1) = G_CONSTANT i1 1
+    ; CHECK-NOT: G_CONSTANT i1
+    ; CHECK: [[EXT:%[0-9]+]](s32) = G_CONSTANT i32 -1
+    ; CHECK: {{%[0-9]+}}(s1) = G_TRUNC [[EXT]](s32)
+    ; CHECK-NOT: G_CONSTANT i1
+
+    %r0 = COPY %0(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_icmp_s8
+# CHECK-LABEL: name: test_icmp_s8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s8) = COPY %r0
+    %1(s8) = COPY %r1
+    %2(s1) = G_ICMP intpred(ne), %0(s8), %1
+    ; G_ICMP with s8 should widen
+    ; CHECK: {{%[0-9]+}}(s1) = G_ICMP intpred(ne), {{%[0-9]+}}(s32), {{%[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s1) = G_ICMP intpred(ne), {{%[0-9]+}}(s8), {{%[0-9]+}}
+    %3(s32) = G_ZEXT %2(s1)
+    %r0 = COPY %3(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_icmp_s16
+# CHECK-LABEL: name: test_icmp_s16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s16) = COPY %r0
+    %1(s16) = COPY %r1
+    %2(s1) = G_ICMP intpred(slt), %0(s16), %1
+    ; G_ICMP with s16 should widen
+    ; CHECK: {{%[0-9]+}}(s1) = G_ICMP intpred(slt), {{%[0-9]+}}(s32), {{%[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}(s1) = G_ICMP intpred(slt), {{%[0-9]+}}(s16), {{%[0-9]+}}
+    %3(s32) = G_ZEXT %2(s1)
+    %r0 = COPY %3(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_icmp_s32
+# CHECK-LABEL: name: test_icmp_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s1) = G_ICMP intpred(eq), %0(s32), %1
+    ; G_ICMP with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s1) = G_ICMP intpred(eq), {{%[0-9]+}}(s32), {{%[0-9]+}}
+    %3(s32) = G_ZEXT %2(s1)
+    %r0 = COPY %3(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_select_s32
+# CHECK-LABEL: name: test_select_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s1) = COPY %r2
+    %3(s32) = G_SELECT %2(s1), %0, %1
+    ; G_SELECT with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_SELECT {{%[0-9]+}}(s1), {{%[0-9]+}}, {{%[0-9]+}}
+    %r0 = COPY %3(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_select_ptr
+# CHECK-LABEL: name: test_select_ptr
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2
+
+    %0(p0) = COPY %r0
+    %1(p0) = COPY %r1
+    %2(s1) = COPY %r2
+    %3(p0) = G_SELECT %2(s1), %0, %1
+    ; G_SELECT with p0 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(p0) = G_SELECT {{%[0-9]+}}(s1), {{%[0-9]+}}, {{%[0-9]+}}
+    %r0 = COPY %3(p0)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_brcond
+# CHECK-LABEL: name: test_brcond
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s1) = G_ICMP intpred(sgt), %0(s32), %1
+    G_BRCOND %2(s1), %bb.1
+    ; G_BRCOND with s1 is legal, so we should find it unchanged in the output
+    ; CHECK: G_BRCOND {{%[0-9]+}}(s1), %bb.1
+    G_BR %bb.2
+
+  bb.1:
+    %r0 = COPY %1(s32)
+    BX_RET 14, _, implicit %r0
+
+  bb.2:
+    %r0 = COPY %0(s32)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_fadd_s32
+# CHECK-LABEL: name: test_fadd_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = G_FADD %0, %1
+    ; G_FADD with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_FADD {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_fadd_s64
+# CHECK-LABEL: name: test_fadd_s64
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    %1(s64) = COPY %d1
+    %2(s64) = G_FADD %0, %1
+    ; G_FADD with s64 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s64) = G_FADD {{%[0-9]+, %[0-9]+}}
+    %d0 = COPY %2(s64)
+    BX_RET 14, _, implicit %d0
+
+...

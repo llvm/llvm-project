@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=powerpc64-none-linux < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-none-linux < %s | FileCheck %s
 
 ; Check that all current floating-point types are correctly emitted to assembly
 ; on a big-endian target. x86_fp80 can't actually print for unrelated reasons,

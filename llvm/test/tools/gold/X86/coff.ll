@@ -3,7 +3,7 @@
 ; RUN:    -shared %t.o -o %t2.o
 ; RUN: llvm-dis %t2.o -o - | FileCheck %s
 
-
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target datalayout = "m:w"
 
 ; CHECK: define void @f() {
@@ -17,6 +17,6 @@ define hidden void @g() {
 }
 
 ; CHECK: define internal void @h() {
-define linkonce_odr void @h() {
+define linkonce_odr void @h() local_unnamed_addr {
   ret void
 }

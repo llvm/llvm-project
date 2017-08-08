@@ -16,6 +16,10 @@
 #define DFSAN_H
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
+#include "dfsan_platform.h"
+
+using __sanitizer::uptr;
+using __sanitizer::u16;
 
 // Copy declarations from public sanitizer/dfsan_interface.h header here.
 typedef u16 dfsan_label;
@@ -44,17 +48,7 @@ namespace __dfsan {
 void InitializeInterceptors();
 
 inline dfsan_label *shadow_for(void *ptr) {
-#if defined(__x86_64__)
-  return (dfsan_label *) ((((uptr) ptr) & ~0x700000000000) << 1);
-#elif defined(__mips64)
-  return (dfsan_label *) ((((uptr) ptr) & ~0xF000000000) << 1);
-#elif defined(__aarch64__)
-# if SANITIZER_AARCH64_VMA == 39
-  return (dfsan_label *) ((((uptr) ptr) & ~0x7800000000) << 1);
-# elif SANITIZER_AARCH64_VMA == 42
-  return (dfsan_label *) ((((uptr) ptr) & ~0x3c000000000) << 1);
-# endif
-#endif
+  return (dfsan_label *) ((((uptr) ptr) & ShadowMask()) << 1);
 }
 
 inline const dfsan_label *shadow_for(const void *ptr) {

@@ -12,10 +12,9 @@
 // form.
 //===----------------------------------------------------------------------===//
 
-
-#include "llvm/ADT/DenseMap.h"
 #include "Hexagon.h"
 #include "HexagonTargetMachine.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -45,7 +44,12 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
-    const char *getPassName() const override {
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::NoVRegs);
+    }
+
+    StringRef getPassName() const override {
       return "Hexagon Hardware Loop Fixup";
     }
 
@@ -77,14 +81,16 @@ FunctionPass *llvm::createHexagonFixupHwLoops() {
 }
 
 /// \brief Returns true if the instruction is a hardware loop instruction.
-static bool isHardwareLoop(const MachineInstr *MI) {
-  return MI->getOpcode() == Hexagon::J2_loop0r ||
-         MI->getOpcode() == Hexagon::J2_loop0i ||
-         MI->getOpcode() == Hexagon::J2_loop1r ||
-         MI->getOpcode() == Hexagon::J2_loop1i;
+static bool isHardwareLoop(const MachineInstr &MI) {
+  return MI.getOpcode() == Hexagon::J2_loop0r ||
+         MI.getOpcode() == Hexagon::J2_loop0i ||
+         MI.getOpcode() == Hexagon::J2_loop1r ||
+         MI.getOpcode() == Hexagon::J2_loop1i;
 }
 
 bool HexagonFixupHwLoops::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
   return fixupLoopInstrs(MF);
 }
 
@@ -118,12 +124,11 @@ bool HexagonFixupHwLoops::fixupLoopInstrs(MachineFunction &MF) {
 
     BlockToInstOffset[&MBB] = InstOffset;
     for (const MachineInstr &MI : MBB)
-      InstOffset += HII->getSize(&MI);
+      InstOffset += HII->getSize(MI);
   }
 
   // Second pass - check each loop instruction to see if it needs to be
   // converted.
-  InstOffset = 0;
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     InstOffset = BlockToInstOffset[&MBB];
@@ -132,12 +137,12 @@ bool HexagonFixupHwLoops::fixupLoopInstrs(MachineFunction &MF) {
     MachineBasicBlock::iterator MII = MBB.begin();
     MachineBasicBlock::iterator MIE = MBB.end();
     while (MII != MIE) {
-      InstOffset += HII->getSize(&*MII);
+      InstOffset += HII->getSize(*MII);
       if (MII->isDebugValue()) {
         ++MII;
         continue;
       }
-      if (isHardwareLoop(MII)) {
+      if (isHardwareLoop(*MII)) {
         assert(MII->getOperand(0).isMBB() &&
                "Expect a basic block as loop operand");
         int diff = InstOffset - BlockToInstOffset[MII->getOperand(0).getMBB()];
@@ -184,5 +189,5 @@ void HexagonFixupHwLoops::useExtLoopInstr(MachineFunction &MF,
   MIB = BuildMI(*MBB, MII, DL, TII->get(newOp));
 
   for (unsigned i = 0; i < MII->getNumOperands(); ++i)
-    MIB.addOperand(MII->getOperand(i));
+    MIB.add(MII->getOperand(i));
 }

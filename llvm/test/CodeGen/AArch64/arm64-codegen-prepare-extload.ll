@@ -258,8 +258,7 @@ false:
 ;    => We have one zext of %zextld left and we created one sext of %ld2.
 ; 2. We try to promote the operand of %sextaddza.
 ;    a. This creates one sext of %zexta and one of %zextld
-;    b. The sext of %zexta does not lead to any load, it stays here, even if it
-;       could have been combine with the zext of %a.
+;    b. The sext of %zexta can be combined with the zext of %a.
 ;    c. The sext of %zextld leads to %ld and can be combined with it. This is
 ;       done by promoting %zextld. This is fine with the current heuristic:
 ;       neutral.
@@ -281,16 +280,14 @@ false:
 ; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %addr1
 ; OPT-NEXT: [[ZEXTLD1_1:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
 ; OPT-NEXT: [[ZEXTLD1_2:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
-; OPT-NEXT: [[ZEXTLD1_3:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
 ; OPT-NEXT: [[LD2:%[a-zA-Z_0-9-]+]] = load i32, i32* %addr2
 ; OPT-NEXT: [[SEXTLD2:%[a-zA-Z_0-9-]+]] = sext i32 [[LD2]] to i64
-; OPT-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = add nsw i64 [[SEXTLD2]], [[ZEXTLD1_1]]
-; We do not combine this one: see 2.b.
-; OPT-NEXT: [[ZEXTA:%[a-zA-Z_0-9-]+]] = zext i8 %a to i32
-; OPT-NEXT: [[SEXTZEXTA:%[a-zA-Z_0-9-]+]] = sext i32 [[ZEXTA]] to i64
-; OPT-NEXT: [[RESZA:%[a-zA-Z_0-9-]+]] = add nsw i64 [[SEXTZEXTA]], [[ZEXTLD1_3]]
+; OPT-NEXT: [[ZEXTLD1_3:%[a-zA-Z_0-9-]+]] = zext i8 [[LD]] to i64
+; OPT-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = add nsw i64 [[SEXTLD2]], [[ZEXTLD1_3]]
+; OPT-NEXT: [[ZEXTLD1_4:%[a-zA-Z_0-9-]+]] = zext i8 %a to i64
+; OPT-NEXT: [[RESZA:%[a-zA-Z_0-9-]+]] = add nsw i64 [[ZEXTLD1_4]], [[ZEXTLD1_2]]
 ; OPT-NEXT: [[SEXTB:%[a-zA-Z_0-9-]+]] = sext i32 %b to i64
-; OPT-NEXT: [[RESB:%[a-zA-Z_0-9-]+]] = add nsw i64 [[SEXTB]], [[ZEXTLD1_2]]
+; OPT-NEXT: [[RESB:%[a-zA-Z_0-9-]+]] = add nsw i64 [[SEXTB]], [[ZEXTLD1_1]]
 ;
 ; DISABLE: [[ADD:%[a-zA-Z_0-9-]+]] = add nsw i32
 ; DISABLE: [[RES:%[a-zA-Z_0-9-]+]]  = sext i32 [[ADD]] to i64
@@ -635,4 +632,25 @@ define i64 @doNotPromoteBecauseOfPairedLoad(i32* %p, i32 %cst) {
   %zextLd0 = zext i32 %ld0 to i64
   %final = add i64 %sextres, %zextLd0
   ret i64 %final
+}
+
+define i64 @promoteZextShl(i1 %c, i16* %P) {
+entry:
+; OPTALL-LABEL: promoteZextShl
+; OPTALL-LABEL: entry:
+; OPT: %[[LD:.*]] = load i16, i16* %P
+; OPT: %[[EXT:.*]] = zext i16 %[[LD]] to i64
+; OPT-LABEL: if.then:
+; OPT: shl nsw i64 %[[EXT]], 1
+; DISABLE-LABEL: if.then:
+; DISABLE: %r = sext i32 %shl2 to i64
+  %ld = load i16, i16* %P
+  br i1 %c, label %end, label %if.then
+if.then:
+  %z = zext i16 %ld to i32
+  %shl2 = shl nsw i32 %z, 1
+  %r = sext i32 %shl2 to i64
+  ret i64 %r
+end:
+  ret i64 0
 }

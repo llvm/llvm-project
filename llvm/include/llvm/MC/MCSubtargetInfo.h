@@ -1,4 +1,4 @@
-//==-- llvm/MC/MCSubtargetInfo.h - Subtarget Information ---------*- C++ -*-==//
+//===- llvm/MC/MCSubtargetInfo.h - Subtarget Information --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,13 +14,21 @@
 #ifndef LLVM_MC_MCSUBTARGETINFO_H
 #define LLVM_MC_MCSUBTARGETINFO_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
 #include <string>
 
 namespace llvm {
 
-class StringRef;
+class MachineInstr;
+class MCInst;
 
 //===----------------------------------------------------------------------===//
 ///
@@ -44,10 +52,6 @@ class MCSubtargetInfo {
   const unsigned *ForwardingPaths;     // Forwarding paths
   FeatureBitset FeatureBits;           // Feature bits for current CPU + FS
 
-  MCSubtargetInfo() = delete;
-  MCSubtargetInfo &operator=(MCSubtargetInfo &&) = delete;
-  MCSubtargetInfo &operator=(const MCSubtargetInfo &) = delete;
-
 public:
   MCSubtargetInfo(const MCSubtargetInfo &) = default;
   MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS,
@@ -57,6 +61,10 @@ public:
                   const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
                   const MCReadAdvanceEntry *RA, const InstrStage *IS,
                   const unsigned *OC, const unsigned *FP);
+  MCSubtargetInfo() = delete;
+  MCSubtargetInfo &operator=(const MCSubtargetInfo &) = delete;
+  MCSubtargetInfo &operator=(MCSubtargetInfo &&) = delete;
+  virtual ~MCSubtargetInfo() = default;
 
   /// getTargetTriple - Return the target triple string.
   const Triple &getTargetTriple() const { return TargetTriple; }
@@ -78,6 +86,10 @@ public:
     FeatureBits = FeatureBits_;
   }
 
+  bool hasFeature(unsigned Feature) const {
+    return FeatureBits[Feature];
+  }
+
 protected:
   /// Initialize the scheduling model and feature bits.
   ///
@@ -86,8 +98,9 @@ protected:
   void InitMCProcessorInfo(StringRef CPU, StringRef FS);
 
 public:
-  /// Set the features to the default for the given CPU.
-  void setDefaultFeatures(StringRef CPU);
+  /// Set the features to the default for the given CPU with an appended feature
+  /// string.
+  void setDefaultFeatures(StringRef CPU, StringRef FS);
 
   /// ToggleFeature - Toggle a feature and returns the re-computed feature
   /// bits. This version does not change the implied bits.
@@ -162,8 +175,17 @@ public:
     auto Found = std::lower_bound(ProcDesc.begin(), ProcDesc.end(), CPU);
     return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
   }
+
+  /// Returns string representation of scheduler comment
+  virtual std::string getSchedInfoStr(const MachineInstr &MI) const {
+    return {};
+  }
+
+  virtual std::string getSchedInfoStr(MCInst const &MCI) const {
+    return {};
+  }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCSUBTARGETINFO_H

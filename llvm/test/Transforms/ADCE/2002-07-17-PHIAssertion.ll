@@ -1,6 +1,6 @@
 ; This testcase was extracted from the gzip SPEC benchmark
 ;
-; RUN: opt < %s -adce
+; RUN: opt < %s -adce | FileCheck %s
 
 @bk = external global i32               ; <i32*> [#uses=2]
 @hufts = external global i32            ; <i32*> [#uses=1]
@@ -16,6 +16,8 @@ bb2:            ; preds = %bb6, %bb0
 bb3:            ; preds = %bb2
         br label %UnifiedExitNode
 
+; CHECK-NOT: bb4:
+; CHECK-NOT: bb5:
 bb4:            ; preds = %bb2
         %reg117 = load i32, i32* @hufts              ; <i32> [#uses=2]
         %cond241 = icmp ule i32 %reg117, %reg128                ; <i1> [#uses=1]

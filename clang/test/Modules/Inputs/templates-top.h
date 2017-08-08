@@ -58,3 +58,8 @@ namespace EmitDefaultedSpecialMembers {
 template<typename T> struct WithUndefinedStaticDataMember {
   static T undefined;
 };
+
+template<typename T> struct __attribute__((packed, aligned(2))) WithAttributes {
+  T value;
+};
+WithAttributes<int> *get_with_attributes();

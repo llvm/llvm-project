@@ -12,24 +12,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_R600MACHINESCHEDULER_H
-#define LLVM_LIB_TARGET_R600_R600MACHINESCHEDULER_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_R600MACHINESCHEDULER_H
+#define LLVM_LIB_TARGET_AMDGPU_R600MACHINESCHEDULER_H
 
-#include "R600InstrInfo.h"
-#include "llvm/ADT/PriorityQueue.h"
 #include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/Support/Debug.h"
+#include <vector>
 
 using namespace llvm;
 
 namespace llvm {
 
-class R600SchedStrategy : public MachineSchedStrategy {
+class R600InstrInfo;
+struct R600RegisterInfo;
 
-  const ScheduleDAGMILive *DAG;
-  const R600InstrInfo *TII;
-  const R600RegisterInfo *TRI;
-  MachineRegisterInfo *MRI;
+class R600SchedStrategy final : public MachineSchedStrategy {
+  const ScheduleDAGMILive *DAG = nullptr;
+  const R600InstrInfo *TII = nullptr;
+  const R600RegisterInfo *TRI = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
 
   enum InstKind {
     IDAlu,
@@ -67,11 +67,8 @@ class R600SchedStrategy : public MachineSchedStrategy {
   int OccupedSlotsMask;
 
 public:
-  R600SchedStrategy() :
-    DAG(nullptr), TII(nullptr), TRI(nullptr), MRI(nullptr) {
-  }
-
-  virtual ~R600SchedStrategy() {}
+  R600SchedStrategy() = default;
+  ~R600SchedStrategy() override = default;
 
   void initialize(ScheduleDAGMI *dag) override;
   SUnit *pickNode(bool &IsTopNode) override;
@@ -98,6 +95,6 @@ private:
   void MoveUnits(std::vector<SUnit *> &QSrc, std::vector<SUnit *> &QDst);
 };
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif /* R600MACHINESCHEDULER_H_ */
+#endif // LLVM_LIB_TARGET_AMDGPU_R600MACHINESCHEDULER_H

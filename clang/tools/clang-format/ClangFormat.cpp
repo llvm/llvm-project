@@ -20,9 +20,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/Format/Format.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Signals.h"
 
@@ -98,9 +96,11 @@ static cl::opt<unsigned>
                     "clang-format from an editor integration"),
            cl::init(0), cl::cat(ClangFormatCategory));
 
-static cl::opt<bool> SortIncludes("sort-includes",
-                                  cl::desc("Sort touched include lines"),
-                                  cl::cat(ClangFormatCategory));
+static cl::opt<bool> SortIncludes(
+    "sort-includes",
+    cl::desc("If set, overrides the include sorting behavior determined by the "
+             "SortIncludes style flag"),
+    cl::cat(ClangFormatCategory));
 
 static cl::list<std::string> FileNames(cl::Positional, cl::desc("[<file> ...]"),
                                        cl::cat(ClangFormatCategory));
@@ -138,18 +138,18 @@ static bool fillRanges(MemoryBuffer *Code,
                                  InMemoryFileSystem.get());
   if (!LineRanges.empty()) {
     if (!Offsets.empty() || !Lengths.empty()) {
-      llvm::errs() << "error: cannot use -lines with -offset/-length\n";
+      errs() << "error: cannot use -lines with -offset/-length\n";
       return true;
     }
 
     for (unsigned i = 0, e = LineRanges.size(); i < e; ++i) {
       unsigned FromLine, ToLine;
       if (parseLineRange(LineRanges[i], FromLine, ToLine)) {
-        llvm::errs() << "error: invalid <start line>:<end line> pair\n";
+        errs() << "error: invalid <start line>:<end line> pair\n";
         return true;
       }
       if (FromLine > ToLine) {
-        llvm::errs() << "error: start line should be less than end line\n";
+        errs() << "error: start line should be less than end line\n";
         return true;
       }
       SourceLocation Start = Sources.translateLineCol(ID, FromLine, 1);
@@ -167,14 +167,12 @@ static bool fillRanges(MemoryBuffer *Code,
     Offsets.push_back(0);
   if (Offsets.size() != Lengths.size() &&
       !(Offsets.size() == 1 && Lengths.empty())) {
-    llvm::errs()
-        << "error: number of -offset and -length arguments must match.\n";
+    errs() << "error: number of -offset and -length arguments must match.\n";
     return true;
   }
   for (unsigned i = 0, e = Offsets.size(); i != e; ++i) {
     if (Offsets[i] >= Code->getBufferSize()) {
-      llvm::errs() << "error: offset " << Offsets[i]
-                   << " is outside the file\n";
+      errs() << "error: offset " << Offsets[i] << " is outside the file\n";
       return true;
     }
     SourceLocation Start =
@@ -182,9 +180,9 @@ static bool fillRanges(MemoryBuffer *Code,
     SourceLocation End;
     if (i < Lengths.size()) {
       if (Offsets[i] + Lengths[i] > Code->getBufferSize()) {
-        llvm::errs() << "error: invalid length " << Lengths[i]
-                     << ", offset + length (" << Offsets[i] + Lengths[i]
-                     << ") is outside the file.\n";
+        errs() << "error: invalid length " << Lengths[i]
+               << ", offset + length (" << Offsets[i] + Lengths[i]
+               << ") is outside the file.\n";
         return true;
       }
       End = Start.getLocWithOffset(Lengths[i]);
@@ -204,26 +202,26 @@ static void outputReplacementXML(StringRef Text) {
   size_t From = 0;
   size_t Index;
   while ((Index = Text.find_first_of("\n\r<&", From)) != StringRef::npos) {
-    llvm::outs() << Text.substr(From, Index - From);
+    outs() << Text.substr(From, Index - From);
     switch (Text[Index]) {
     case '\n':
-      llvm::outs() << "&#10;";
+      outs() << "&#10;";
       break;
     case '\r':
-      llvm::outs() << "&#13;";
+      outs() << "&#13;";
       break;
     case '<':
-      llvm::outs() << "&lt;";
+      outs() << "&lt;";
       break;
     case '&':
-      llvm::outs() << "&amp;";
+      outs() << "&amp;";
       break;
     default:
       llvm_unreachable("Unexpected character encountered!");
     }
     From = Index + 1;
   }
-  llvm::outs() << Text.substr(From);
+  outs() << Text.substr(From);
 }
 
 static void outputReplacementsXML(const Replacements &Replaces) {
@@ -238,10 +236,17 @@ static void outputReplacementsXML(const Replacements &Replaces) {
 
 // Returns true on error.
 static bool format(StringRef FileName) {
+  if (!OutputXML && Inplace && FileName == "-") {
+    errs() << "error: cannot use -i when reading from stdin.\n";
+    return false;
+  }
+  // On Windows, overwriting a file with an open file mapping doesn't work,
+  // so read the whole file into memory when formatting in-place.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-      MemoryBuffer::getFileOrSTDIN(FileName);
+      !OutputXML && Inplace ? MemoryBuffer::getFileAsStream(FileName) :
+                              MemoryBuffer::getFileOrSTDIN(FileName);
   if (std::error_code EC = CodeOrErr.getError()) {
-    llvm::errs() << EC.message() << "\n";
+    errs() << EC.message() << "\n";
     return true;
   }
   std::unique_ptr<llvm::MemoryBuffer> Code = std::move(CodeOrErr.get());
@@ -251,34 +256,44 @@ static bool format(StringRef FileName) {
   if (fillRanges(Code.get(), Ranges))
     return true;
   StringRef AssumedFileName = (FileName == "-") ? AssumeFileName : FileName;
-  FormatStyle FormatStyle = getStyle(Style, AssumedFileName, FallbackStyle);
-  Replacements Replaces;
-  std::string ChangedCode;
-  if (SortIncludes) {
-    Replaces =
-        sortIncludes(FormatStyle, Code->getBuffer(), Ranges, AssumedFileName);
-    ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);
-    for (const auto &R : Replaces)
-      Ranges.push_back({R.getOffset(), R.getLength()});
-  } else {
-    ChangedCode = Code->getBuffer().str();
+
+  llvm::Expected<FormatStyle> FormatStyle =
+      getStyle(Style, AssumedFileName, FallbackStyle, Code->getBuffer());
+  if (!FormatStyle) {
+    llvm::errs() << llvm::toString(FormatStyle.takeError()) << "\n";
+    return true;
   }
 
-  bool IncompleteFormat = false;
-  Replaces = tooling::mergeReplacements(
-      Replaces, reformat(FormatStyle, ChangedCode, Ranges, AssumedFileName,
-                         &IncompleteFormat));
+  if (SortIncludes.getNumOccurrences() != 0)
+    FormatStyle->SortIncludes = SortIncludes;
+  unsigned CursorPosition = Cursor;
+  Replacements Replaces = sortIncludes(*FormatStyle, Code->getBuffer(), Ranges,
+                                       AssumedFileName, &CursorPosition);
+  auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);
+  if (!ChangedCode) {
+    llvm::errs() << llvm::toString(ChangedCode.takeError()) << "\n";
+    return true;
+  }
+  // Get new affected ranges after sorting `#includes`.
+  Ranges = tooling::calculateRangesAfterReplacements(Replaces, Ranges);
+  FormattingAttemptStatus Status;
+  Replacements FormatChanges = reformat(*FormatStyle, *ChangedCode, Ranges,
+                                        AssumedFileName, &Status);
+  Replaces = Replaces.merge(FormatChanges);
   if (OutputXML) {
-    llvm::outs() << "<?xml version='1.0'?>\n<replacements "
-                    "xml:space='preserve' incomplete_format='"
-                 << (IncompleteFormat ? "true" : "false") << "'>\n";
+    outs() << "<?xml version='1.0'?>\n<replacements "
+              "xml:space='preserve' incomplete_format='"
+           << (Status.FormatComplete ? "false" : "true") << "'";
+    if (!Status.FormatComplete)
+      outs() << " line=" << Status.Line;
+    outs() << ">\n";
     if (Cursor.getNumOccurrences() != 0)
-      llvm::outs() << "<cursor>"
-                   << tooling::shiftedCodePosition(Replaces, Cursor)
-                   << "</cursor>\n";
+      outs() << "<cursor>"
+             << FormatChanges.getShiftedCodePosition(CursorPosition)
+             << "</cursor>\n";
 
-    outputReplacementsXML(Replaces); 
-    llvm::outs() << "</replacements>\n";
+    outputReplacementsXML(Replaces);
+    outs() << "</replacements>\n";
   } else {
     IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
         new vfs::InMemoryFileSystem);
@@ -292,16 +307,18 @@ static bool format(StringRef FileName) {
     Rewriter Rewrite(Sources, LangOptions());
     tooling::applyAllReplacements(Replaces, Rewrite);
     if (Inplace) {
-      if (FileName == "-")
-        llvm::errs() << "error: cannot use -i when reading from stdin.\n";
-      else if (Rewrite.overwriteChangedFiles())
+      if (Rewrite.overwriteChangedFiles())
         return true;
     } else {
-      if (Cursor.getNumOccurrences() != 0)
+      if (Cursor.getNumOccurrences() != 0) {
         outs() << "{ \"Cursor\": "
-               << tooling::shiftedCodePosition(Replaces, Cursor)
+               << FormatChanges.getShiftedCodePosition(CursorPosition)
                << ", \"IncompleteFormat\": "
-               << (IncompleteFormat ? "true" : "false") << " }\n";
+               << (Status.FormatComplete ? "false" : "true");
+        if (!Status.FormatComplete)
+          outs() << ", \"Line\": " << Status.Line;
+        outs() << " }\n";
+      }
       Rewrite.getEditBuffer(ID).write(outs());
     }
   }
@@ -317,7 +334,7 @@ static void PrintVersion() {
 }
 
 int main(int argc, const char **argv) {
-  llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   cl::HideUnrelatedOptions(ClangFormatCategory);
 
@@ -335,11 +352,16 @@ int main(int argc, const char **argv) {
     cl::PrintHelpMessage();
 
   if (DumpConfig) {
-    std::string Config =
-        clang::format::configurationAsText(clang::format::getStyle(
+    llvm::Expected<clang::format::FormatStyle> FormatStyle =
+        clang::format::getStyle(
             Style, FileNames.empty() ? AssumeFileName : FileNames[0],
-            FallbackStyle));
-    llvm::outs() << Config << "\n";
+            FallbackStyle);
+    if (!FormatStyle) {
+      llvm::errs() << llvm::toString(FormatStyle.takeError()) << "\n";
+      return 1;
+    }
+    std::string Config = clang::format::configurationAsText(*FormatStyle);
+    outs() << Config << "\n";
     return 0;
   }
 
@@ -353,8 +375,8 @@ int main(int argc, const char **argv) {
     break;
   default:
     if (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty()) {
-      llvm::errs() << "error: -offset, -length and -lines can only be used for "
-                      "single file.\n";
+      errs() << "error: -offset, -length and -lines can only be used for "
+                "single file.\n";
       return 1;
     }
     for (unsigned i = 0; i < FileNames.size(); ++i)

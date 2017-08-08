@@ -70,10 +70,10 @@ public:
     ID.Add(SFC);
   }
 
-  PathDiagnosticPiece *VisitNode(const ExplodedNode *Succ,
-                                 const ExplodedNode *Pred,
-                                 BugReporterContext &BRC,
-                                 BugReport &BR) override;
+  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
+                                                 const ExplodedNode *Pred,
+                                                 BugReporterContext &BRC,
+                                                 BugReport &BR) override;
 };
 
 class TestAfterDivZeroChecker
@@ -94,10 +94,9 @@ public:
 
 REGISTER_SET_WITH_PROGRAMSTATE(DivZeroMap, ZeroState)
 
-PathDiagnosticPiece *DivisionBRVisitor::VisitNode(const ExplodedNode *Succ,
-                                                  const ExplodedNode *Pred,
-                                                  BugReporterContext &BRC,
-                                                  BugReport &BR) {
+std::shared_ptr<PathDiagnosticPiece>
+DivisionBRVisitor::VisitNode(const ExplodedNode *Succ, const ExplodedNode *Pred,
+                             BugReporterContext &BRC, BugReport &BR) {
   if (Satisfied)
     return nullptr;
 
@@ -128,7 +127,7 @@ PathDiagnosticPiece *DivisionBRVisitor::VisitNode(const ExplodedNode *Succ,
     if (!L.isValid() || !L.asLocation().isValid())
       return nullptr;
 
-    return new PathDiagnosticEventPiece(
+    return std::make_shared<PathDiagnosticEventPiece>(
         L, "Division with compared value made here");
   }
 

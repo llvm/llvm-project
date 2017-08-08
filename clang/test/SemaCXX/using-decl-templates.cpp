@@ -90,5 +90,14 @@ namespace aliastemplateinst {
   template<typename T> struct A { };
   template<typename T> using APtr = A<T*>; // expected-note{{previous use is here}}
 
-  template struct APtr<int>; // expected-error{{elaborated type refers to a non-tag type}}
+  template struct APtr<int>; // expected-error{{type alias template 'APtr' cannot be referenced with a struct specifier}}
 }
+
+namespace DontDiagnoseInvalidTest {
+template <bool Value> struct Base {
+  static_assert(Value, ""); // expected-error {{static_assert failed}}
+};
+struct Derived : Base<false> { // expected-note {{requested here}}
+  using Base<false>::Base; // OK. Don't diagnose that 'Base' isn't a base class of Derived.
+};
+} // namespace DontDiagnoseInvalidTest

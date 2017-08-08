@@ -1,4 +1,4 @@
-//===--- llvm/ADT/SparseSet.h - Sparse set ----------------------*- C++ -*-===//
+//===- llvm/ADT/SparseSet.h - Sparse set ------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -22,8 +22,11 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/DataTypes.h"
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
 #include <limits>
+#include <utility>
 
 namespace llvm {
 
@@ -115,35 +118,32 @@ struct SparseSetValFunctor<KeyT, KeyT, KeyFunctorT> {
 /// @tparam SparseT     An unsigned integer type. See above.
 ///
 template<typename ValueT,
-         typename KeyFunctorT = llvm::identity<unsigned>,
+         typename KeyFunctorT = identity<unsigned>,
          typename SparseT = uint8_t>
 class SparseSet {
   static_assert(std::numeric_limits<SparseT>::is_integer &&
                 !std::numeric_limits<SparseT>::is_signed,
                 "SparseT must be an unsigned integer type");
 
-  typedef typename KeyFunctorT::argument_type KeyT;
-  typedef SmallVector<ValueT, 8> DenseT;
-  typedef unsigned size_type;
+  using KeyT = typename KeyFunctorT::argument_type;
+  using DenseT = SmallVector<ValueT, 8>;
+  using size_type = unsigned;
   DenseT Dense;
-  SparseT *Sparse;
-  unsigned Universe;
+  SparseT *Sparse = nullptr;
+  unsigned Universe = 0;
   KeyFunctorT KeyIndexOf;
   SparseSetValFunctor<KeyT, ValueT, KeyFunctorT> ValIndexOf;
 
-  // Disable copy construction and assignment.
-  // This data structure is not meant to be used that way.
-  SparseSet(const SparseSet&) = delete;
-  SparseSet &operator=(const SparseSet&) = delete;
-
 public:
-  typedef ValueT value_type;
-  typedef ValueT &reference;
-  typedef const ValueT &const_reference;
-  typedef ValueT *pointer;
-  typedef const ValueT *const_pointer;
+  using value_type = ValueT;
+  using reference = ValueT &;
+  using const_reference = const ValueT &;
+  using pointer = ValueT *;
+  using const_pointer = const ValueT *;
 
-  SparseSet() : Sparse(nullptr), Universe(0) {}
+  SparseSet() = default;
+  SparseSet(const SparseSet &) = delete;
+  SparseSet &operator=(const SparseSet &) = delete;
   ~SparseSet() { free(Sparse); }
 
   /// setUniverse - Set the universe size which determines the largest key the
@@ -168,8 +168,8 @@ public:
   }
 
   // Import trivial vector stuff from DenseT.
-  typedef typename DenseT::iterator iterator;
-  typedef typename DenseT::const_iterator const_iterator;
+  using iterator = typename DenseT::iterator;
+  using const_iterator = typename DenseT::const_iterator;
 
   const_iterator begin() const { return Dense.begin(); }
   const_iterator end() const { return Dense.end(); }
@@ -263,6 +263,11 @@ public:
     return *insert(ValueT(Key)).first;
   }
 
+  ValueT pop_back_val() {
+    // Sparse does not need to be cleared, see find().
+    return Dense.pop_back_val();
+  }
+
   /// erase - Erases an existing element identified by a valid iterator.
   ///
   /// This invalidates all iterators, but erase() returns an iterator pointing
@@ -303,9 +308,8 @@ public:
     erase(I);
     return true;
   }
-
 };
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_SPARSESET_H

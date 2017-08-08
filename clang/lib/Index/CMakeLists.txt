@@ -1,18 +1,38 @@
 set(LLVM_LINK_COMPONENTS
+  Core
   Support
   )
 
 add_clang_library(clangIndex
+  ClangIndexRecordWriter.cpp
+  CodegenNameGenerator.cpp
   CommentToXML.cpp
+  FileIndexRecord.cpp
+  IndexBody.cpp
+  IndexDataStore.cpp
+  IndexDataStoreUtils.cpp
+  IndexDecl.cpp
+  IndexingAction.cpp
+  IndexingContext.cpp
+  IndexRecordHasher.cpp
+  IndexRecordReader.cpp
+  IndexRecordWriter.cpp
+  IndexSymbol.cpp
+  IndexTypeSourceInfo.cpp
+  IndexUnitReader.cpp
+  IndexUnitWriter.cpp
   USRGeneration.cpp
 
   ADDITIONAL_HEADERS
+  IndexingContext.h
   SimpleFormatContext.h
 
   LINK_LIBS
   clangAST
   clangBasic
   clangFormat
+  clangFrontend
   clangRewrite
+  clangSerialization
   clangToolingCore
   )

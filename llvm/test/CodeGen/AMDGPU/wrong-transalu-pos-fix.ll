@@ -4,7 +4,7 @@
 ;CHECK: {{^}}fill3d:
 ;CHECK-NOT: MULLO_INT T[0-9]+
 
-define void @fill3d(i32 addrspace(1)* nocapture %out) #0 {
+define amdgpu_kernel void @fill3d(i32 addrspace(1)* nocapture %out) #0 {
 entry:
   %x.i = tail call i32 @llvm.r600.read.global.size.x() #1
   %y.i18 = tail call i32 @llvm.r600.read.global.size.y() #1
@@ -71,7 +71,7 @@ declare i32 @llvm.r600.read.global.size.y() #1
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.r600.read.global.size.z() #1
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-frame-pointer-elim-non-leaf"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 
 !opencl.kernels = !{!0, !1, !2}

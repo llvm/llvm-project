@@ -1,4 +1,4 @@
-//===---------- CostAllocator.h - PBQP Cost Allocator -----------*- C++ -*-===//
+//===- CostAllocator.h - PBQP Cost Allocator --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,26 +19,28 @@
 #define LLVM_CODEGEN_PBQP_COSTALLOCATOR_H
 
 #include "llvm/ADT/DenseSet.h"
+#include <algorithm>
+#include <cstdint>
 #include <memory>
-#include <type_traits>
 
 namespace llvm {
 namespace PBQP {
 
-template <typename ValueT>
-class ValuePool {
+template <typename ValueT> class ValuePool {
 public:
-  typedef std::shared_ptr<const ValueT> PoolRef;
+  using PoolRef = std::shared_ptr<const ValueT>;
 
 private:
-
   class PoolEntry : public std::enable_shared_from_this<PoolEntry> {
   public:
     template <typename ValueKeyT>
     PoolEntry(ValuePool &Pool, ValueKeyT Value)
         : Pool(Pool), Value(std::move(Value)) {}
+
     ~PoolEntry() { Pool.removeEntry(this); }
-    const ValueT& getValue() const { return Value; }
+
+    const ValueT &getValue() const { return Value; }
+
   private:
     ValuePool &Pool;
     ValueT Value;
@@ -46,10 +48,10 @@ private:
 
   class PoolEntryDSInfo {
   public:
-    static inline PoolEntry* getEmptyKey() { return nullptr; }
+    static inline PoolEntry *getEmptyKey() { return nullptr; }
 
-    static inline PoolEntry* getTombstoneKey() {
-      return reinterpret_cast<PoolEntry*>(static_cast<uintptr_t>(1));
+    static inline PoolEntry *getTombstoneKey() {
+      return reinterpret_cast<PoolEntry *>(static_cast<uintptr_t>(1));
     }
 
     template <typename ValueKeyT>
@@ -66,8 +68,7 @@ private:
     }
 
     template <typename ValueKeyT1, typename ValueKeyT2>
-    static
-    bool isEqual(const ValueKeyT1 &C1, const ValueKeyT2 &C2) {
+    static bool isEqual(const ValueKeyT1 &C1, const ValueKeyT2 &C2) {
       return C1 == C2;
     }
 
@@ -83,10 +84,9 @@ private:
         return P1 == P2;
       return isEqual(P1->getValue(), P2);
     }
-
   };
 
-  typedef DenseSet<PoolEntry*, PoolEntryDSInfo> EntrySetT;
+  using EntrySetT = DenseSet<PoolEntry *, PoolEntryDSInfo>;
 
   EntrySetT EntrySet;
 
@@ -105,28 +105,31 @@ public:
   }
 };
 
-template <typename VectorT, typename MatrixT>
-class PoolCostAllocator {
+template <typename VectorT, typename MatrixT> class PoolCostAllocator {
 private:
-  typedef ValuePool<VectorT> VectorCostPool;
-  typedef ValuePool<MatrixT> MatrixCostPool;
+  using VectorCostPool = ValuePool<VectorT>;
+  using MatrixCostPool = ValuePool<MatrixT>;
+
 public:
-  typedef VectorT Vector;
-  typedef MatrixT Matrix;
-  typedef typename VectorCostPool::PoolRef VectorPtr;
-  typedef typename MatrixCostPool::PoolRef MatrixPtr;
+  using Vector = VectorT;
+  using Matrix = MatrixT;
+  using VectorPtr = typename VectorCostPool::PoolRef;
+  using MatrixPtr = typename MatrixCostPool::PoolRef;
 
-  template <typename VectorKeyT>
-  VectorPtr getVector(VectorKeyT v) { return VectorPool.getValue(std::move(v)); }
+  template <typename VectorKeyT> VectorPtr getVector(VectorKeyT v) {
+    return VectorPool.getValue(std::move(v));
+  }
 
-  template <typename MatrixKeyT>
-  MatrixPtr getMatrix(MatrixKeyT m) { return MatrixPool.getValue(std::move(m)); }
+  template <typename MatrixKeyT> MatrixPtr getMatrix(MatrixKeyT m) {
+    return MatrixPool.getValue(std::move(m));
+  }
+
 private:
   VectorCostPool VectorPool;
   MatrixCostPool MatrixPool;
 };
 
-} // namespace PBQP
-} // namespace llvm
+} // end namespace PBQP
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_PBQP_COSTALLOCATOR_H

@@ -28,7 +28,7 @@ namespace llvm {
   class MachineInstr;
 
   FunctionPass *createSparcISelDag(SparcTargetMachine &TM);
-  FunctionPass *createSparcDelaySlotFillerPass(TargetMachine &TM);
+  FunctionPass *createSparcDelaySlotFillerPass();
 
   void LowerSparcMachineInstrToMCInst(const MachineInstr *MI,
                                       MCInst &OutMI,
@@ -72,7 +72,24 @@ namespace llvm {
       FCC_UGE = 12+16,  // Unordered or Greater or Equal
       FCC_LE  = 13+16,  // Less or Equal
       FCC_ULE = 14+16,  // Unordered or Less or Equal
-      FCC_O   = 15+16   // Ordered
+      FCC_O   = 15+16,  // Ordered
+        
+      CPCC_A   =  8+32,  // Always
+      CPCC_N   =  0+32,  // Never
+      CPCC_3   =  7+32,
+      CPCC_2   =  6+32,
+      CPCC_23  =  5+32,
+      CPCC_1   =  4+32,
+      CPCC_13  =  3+32,
+      CPCC_12  =  2+32,
+      CPCC_123 =  1+32,
+      CPCC_0   =  9+32,
+      CPCC_03  = 10+32,
+      CPCC_02  = 11+32,
+      CPCC_023 = 12+32,
+      CPCC_01  = 13+32,
+      CPCC_013 = 14+32,
+      CPCC_012 = 15+32
     };
   }
 
@@ -110,6 +127,22 @@ namespace llvm {
     case SPCC::FCC_LE:  return "le";
     case SPCC::FCC_ULE: return "ule";
     case SPCC::FCC_O:   return "o";
+    case SPCC::CPCC_A:   return "a";
+    case SPCC::CPCC_N:   return "n";
+    case SPCC::CPCC_3:   return "3";
+    case SPCC::CPCC_2:   return "2";
+    case SPCC::CPCC_23:  return "23";
+    case SPCC::CPCC_1:   return "1";
+    case SPCC::CPCC_13:  return "13";
+    case SPCC::CPCC_12:  return "12";
+    case SPCC::CPCC_123: return "123";
+    case SPCC::CPCC_0:   return "0";
+    case SPCC::CPCC_03:  return "03";
+    case SPCC::CPCC_02:  return "02";
+    case SPCC::CPCC_023: return "023";
+    case SPCC::CPCC_01:  return "01";
+    case SPCC::CPCC_013: return "013";
+    case SPCC::CPCC_012: return "012";
     }
     llvm_unreachable("Invalid cond code");
   }

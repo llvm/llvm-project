@@ -142,8 +142,10 @@ void CodeGenFunction::EmitStmt(const Stmt *S) {
   case Stmt::GCCAsmStmtClass:   // Intentional fall-through.
   case Stmt::MSAsmStmtClass:    EmitAsmStmt(cast<AsmStmt>(*S));           break;
   case Stmt::CoroutineBodyStmtClass:
+    EmitCoroutineBody(cast<CoroutineBodyStmt>(*S));
+    break;
   case Stmt::CoreturnStmtClass:
-    CGM.ErrorUnsupported(S, "coroutine");
+    EmitCoreturnStmt(cast<CoreturnStmt>(*S));
     break;
   case Stmt::CapturedStmtClass: {
     const CapturedStmt *CS = cast<CapturedStmt>(S);
@@ -255,6 +257,82 @@ void CodeGenFunction::EmitStmt(const Stmt *S) {
     break;
   case Stmt::OMPTargetDataDirectiveClass:
     EmitOMPTargetDataDirective(cast<OMPTargetDataDirective>(*S));
+    break;
+  case Stmt::OMPTargetEnterDataDirectiveClass:
+    EmitOMPTargetEnterDataDirective(cast<OMPTargetEnterDataDirective>(*S));
+    break;
+  case Stmt::OMPTargetExitDataDirectiveClass:
+    EmitOMPTargetExitDataDirective(cast<OMPTargetExitDataDirective>(*S));
+    break;
+  case Stmt::OMPTargetParallelDirectiveClass:
+    EmitOMPTargetParallelDirective(cast<OMPTargetParallelDirective>(*S));
+    break;
+  case Stmt::OMPTargetParallelForDirectiveClass:
+    EmitOMPTargetParallelForDirective(cast<OMPTargetParallelForDirective>(*S));
+    break;
+  case Stmt::OMPTaskLoopDirectiveClass:
+    EmitOMPTaskLoopDirective(cast<OMPTaskLoopDirective>(*S));
+    break;
+  case Stmt::OMPTaskLoopSimdDirectiveClass:
+    EmitOMPTaskLoopSimdDirective(cast<OMPTaskLoopSimdDirective>(*S));
+    break;
+  case Stmt::OMPDistributeDirectiveClass:
+    EmitOMPDistributeDirective(cast<OMPDistributeDirective>(*S));
+    break;
+  case Stmt::OMPTargetUpdateDirectiveClass:
+    EmitOMPTargetUpdateDirective(cast<OMPTargetUpdateDirective>(*S));
+    break;
+  case Stmt::OMPDistributeParallelForDirectiveClass:
+    EmitOMPDistributeParallelForDirective(
+        cast<OMPDistributeParallelForDirective>(*S));
+    break;
+  case Stmt::OMPDistributeParallelForSimdDirectiveClass:
+    EmitOMPDistributeParallelForSimdDirective(
+        cast<OMPDistributeParallelForSimdDirective>(*S));
+    break;
+  case Stmt::OMPDistributeSimdDirectiveClass:
+    EmitOMPDistributeSimdDirective(cast<OMPDistributeSimdDirective>(*S));
+    break;
+  case Stmt::OMPTargetParallelForSimdDirectiveClass:
+    EmitOMPTargetParallelForSimdDirective(
+        cast<OMPTargetParallelForSimdDirective>(*S));
+    break;
+  case Stmt::OMPTargetSimdDirectiveClass:
+    EmitOMPTargetSimdDirective(cast<OMPTargetSimdDirective>(*S));
+    break;
+  case Stmt::OMPTeamsDistributeDirectiveClass:
+    EmitOMPTeamsDistributeDirective(cast<OMPTeamsDistributeDirective>(*S));
+    break;
+  case Stmt::OMPTeamsDistributeSimdDirectiveClass:
+    EmitOMPTeamsDistributeSimdDirective(
+        cast<OMPTeamsDistributeSimdDirective>(*S));
+    break;
+  case Stmt::OMPTeamsDistributeParallelForSimdDirectiveClass:
+    EmitOMPTeamsDistributeParallelForSimdDirective(
+        cast<OMPTeamsDistributeParallelForSimdDirective>(*S));
+    break;
+  case Stmt::OMPTeamsDistributeParallelForDirectiveClass:
+    EmitOMPTeamsDistributeParallelForDirective(
+        cast<OMPTeamsDistributeParallelForDirective>(*S));
+    break;
+  case Stmt::OMPTargetTeamsDirectiveClass:
+    EmitOMPTargetTeamsDirective(cast<OMPTargetTeamsDirective>(*S));
+    break;
+  case Stmt::OMPTargetTeamsDistributeDirectiveClass:
+    EmitOMPTargetTeamsDistributeDirective(
+        cast<OMPTargetTeamsDistributeDirective>(*S));
+    break;
+  case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
+    EmitOMPTargetTeamsDistributeParallelForDirective(
+        cast<OMPTargetTeamsDistributeParallelForDirective>(*S));
+    break;
+  case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
+    EmitOMPTargetTeamsDistributeParallelForSimdDirective(
+        cast<OMPTargetTeamsDistributeParallelForSimdDirective>(*S));
+    break;
+  case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
+    EmitOMPTargetTeamsDistributeSimdDirective(
+        cast<OMPTargetTeamsDistributeSimdDirective>(*S));
     break;
   }
 }
@@ -533,13 +611,17 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   // unequal to 0.  The condition must be a scalar type.
   LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
 
+  if (S.getInit())
+    EmitStmt(S.getInit());
+
   if (S.getConditionVariable())
     EmitAutoVarDecl(*S.getConditionVariable());
 
   // If the condition constant folds and can be elided, try to avoid emitting
   // the condition and the dead arm of the if/else.
   bool CondConstant;
-  if (ConstantFoldsToSimpleInteger(S.getCond(), CondConstant)) {
+  if (ConstantFoldsToSimpleInteger(S.getCond(), CondConstant,
+                                   S.isConstexpr())) {
     // Figure out which block (then or else) is executed.
     const Stmt *Executed = S.getThen();
     const Stmt *Skipped  = S.getElse();
@@ -548,7 +630,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
 
     // If the skipped block has no labels in it, just emit the executed block.
     // This avoids emitting dead code and simplifies the CFG substantially.
-    if (!ContainsLabel(Skipped)) {
+    if (S.isConstexpr() || !ContainsLabel(Skipped)) {
       if (CondConstant)
         incrementProfileCounter(&S);
       if (Executed) {
@@ -608,7 +690,10 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   JumpDest LoopHeader = getJumpDestInCurrentScope("while.cond");
   EmitBlock(LoopHeader.getBlock());
 
-  LoopStack.push(LoopHeader.getBlock(), CGM.getContext(), WhileAttrs);
+  const SourceRange &R = S.getSourceRange();
+  LoopStack.push(LoopHeader.getBlock(), CGM.getContext(), WhileAttrs,
+                 SourceLocToDebugLoc(R.getBegin()),
+                 SourceLocToDebugLoc(R.getEnd()));
 
   // Create an exit block for when the condition fails, which will
   // also become the break target.
@@ -699,7 +784,10 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // Emit the body of the loop.
   llvm::BasicBlock *LoopBody = createBasicBlock("do.body");
 
-  LoopStack.push(LoopBody, CGM.getContext(), DoAttrs);
+  const SourceRange &R = S.getSourceRange();
+  LoopStack.push(LoopBody, CGM.getContext(), DoAttrs,
+                 SourceLocToDebugLoc(R.getBegin()),
+                 SourceLocToDebugLoc(R.getEnd()));
 
   EmitBlockWithFallThrough(LoopBody, &S);
   {
@@ -762,7 +850,10 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   llvm::BasicBlock *CondBlock = Continue.getBlock();
   EmitBlock(CondBlock);
 
-  LoopStack.push(CondBlock, CGM.getContext(), ForAttrs);
+  const SourceRange &R = S.getSourceRange();
+  LoopStack.push(CondBlock, CGM.getContext(), ForAttrs,
+                 SourceLocToDebugLoc(R.getBegin()),
+                 SourceLocToDebugLoc(R.getEnd()));
 
   // If the for loop doesn't have an increment we can just use the
   // condition as the continue block.  Otherwise we'll need to create
@@ -849,7 +940,8 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   // Evaluate the first pieces before the loop.
   EmitStmt(S.getRangeStmt());
-  EmitStmt(S.getBeginEndStmt());
+  EmitStmt(S.getBeginStmt());
+  EmitStmt(S.getEndStmt());
 
   // Start the loop with a block that tests the condition.
   // If there's an increment, the continue scope will be overwritten
@@ -857,7 +949,10 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   llvm::BasicBlock *CondBlock = createBasicBlock("for.cond");
   EmitBlock(CondBlock);
 
-  LoopStack.push(CondBlock, CGM.getContext(), ForAttrs);
+  const SourceRange &R = S.getSourceRange();
+  LoopStack.push(CondBlock, CGM.getContext(), ForAttrs,
+                 SourceLocToDebugLoc(R.getBegin()),
+                 SourceLocToDebugLoc(R.getEnd()));
 
   // If there are any cleanups between here and the loop-exit scope,
   // create a block to stage a loop exit along.
@@ -929,6 +1024,18 @@ void CodeGenFunction::EmitReturnOfRValue(RValue RV, QualType Ty) {
 /// if the function returns void, or may be missing one if the function returns
 /// non-void.  Fun stuff :).
 void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
+  if (requiresReturnValueCheck()) {
+    llvm::Constant *SLoc = EmitCheckSourceLocation(S.getLocStart());
+    auto *SLocPtr =
+        new llvm::GlobalVariable(CGM.getModule(), SLoc->getType(), false,
+                                 llvm::GlobalVariable::PrivateLinkage, SLoc);
+    SLocPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    CGM.getSanitizerMetadata()->disableSanitizerForGlobal(SLocPtr);
+    assert(ReturnLocation.isValid() && "No valid return location");
+    Builder.CreateStore(Builder.CreateBitCast(SLocPtr, Int8PtrTy),
+                        ReturnLocation);
+  }
+
   // Returning from an outlined SEH helper is UB, and we already warn on it.
   if (IsOutlinedSEHHelper) {
     Builder.CreateUnreachable();
@@ -1071,7 +1178,7 @@ void CodeGenFunction::EmitCaseStmtRange(const CaseStmt &S) {
       if (Rem)
         Rem--;
       SwitchInsn->addCase(Builder.getInt(LHS), CaseDest);
-      LHS++;
+      ++LHS;
     }
     return;
   }
@@ -1138,7 +1245,7 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S) {
   // If the body of the case is just a 'break', try to not emit an empty block.
   // If we're profiling or we're not optimizing, leave the block in for better
   // debug and coverage analysis.
-  if (!CGM.getCodeGenOpts().ProfileInstrGenerate &&
+  if (!CGM.getCodeGenOpts().hasProfileClangInstr() &&
       CGM.getCodeGenOpts().OptimizationLevel > 0 &&
       isa<BreakStmt>(S.getSubStmt())) {
     JumpDest Block = BreakContinueStack.back().BreakBlock;
@@ -1185,7 +1292,7 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S) {
 
     if (SwitchWeights)
       SwitchWeights->push_back(getProfileCount(NextCase));
-    if (CGM.getCodeGenOpts().ProfileInstrGenerate) {
+    if (CGM.getCodeGenOpts().hasProfileClangInstr()) {
       CaseDest = createBasicBlock("sw.bb");
       EmitBlockWithFallThrough(CaseDest, &S);
     }
@@ -1199,6 +1306,14 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S) {
 }
 
 void CodeGenFunction::EmitDefaultStmt(const DefaultStmt &S) {
+  // If there is no enclosing switch instance that we're aware of, then this
+  // default statement can be elided. This situation only happens when we've
+  // constant-folded the switch.
+  if (!SwitchInsn) {
+    EmitStmt(S.getSubStmt());
+    return;
+  }
+
   llvm::BasicBlock *DefaultBlock = SwitchInsn->getDefaultDest();
   assert(DefaultBlock->empty() &&
          "EmitDefaultStmt: Default block already defined?");
@@ -1265,6 +1380,10 @@ static CSFC_Result CollectStatementsForCase(const Stmt *S,
     // Handle this as two cases: we might be looking for the SwitchCase (if so
     // the skipped statements must be skippable) or we might already have it.
     CompoundStmt::const_body_iterator I = CS->body_begin(), E = CS->body_end();
+    bool StartedInLiveCode = FoundCase;
+    unsigned StartSize = ResultStmts.size();
+
+    // If we've not found the case yet, scan through looking for it.
     if (Case) {
       // Keep track of whether we see a skipped declaration.  The code could be
       // using the declaration even if it is skipped, so we can't optimize out
@@ -1274,7 +1393,7 @@ static CSFC_Result CollectStatementsForCase(const Stmt *S,
       // If we're looking for the case, just see if we can skip each of the
       // substatements.
       for (; Case && I != E; ++I) {
-        HadSkippedDecl |= isa<DeclStmt>(*I);
+        HadSkippedDecl |= CodeGenFunction::mightAddDeclToScope(*I);
 
         switch (CollectStatementsForCase(*I, Case, FoundCase, ResultStmts)) {
         case CSFC_Failure: return CSFC_Failure;
@@ -1310,11 +1429,19 @@ static CSFC_Result CollectStatementsForCase(const Stmt *S,
           break;
         }
       }
+
+      if (!FoundCase)
+        return CSFC_Success;
+
+      assert(!HadSkippedDecl && "fallthrough after skipping decl");
     }
 
     // If we have statements in our range, then we know that the statements are
     // live and need to be added to the set of statements we're tracking.
+    bool AnyDecls = false;
     for (; I != E; ++I) {
+      AnyDecls |= CodeGenFunction::mightAddDeclToScope(*I);
+
       switch (CollectStatementsForCase(*I, nullptr, FoundCase, ResultStmts)) {
       case CSFC_Failure: return CSFC_Failure;
       case CSFC_FallThrough:
@@ -1332,7 +1459,24 @@ static CSFC_Result CollectStatementsForCase(const Stmt *S,
       }
     }
 
-    return Case ? CSFC_Success : CSFC_FallThrough;
+    // If we're about to fall out of a scope without hitting a 'break;', we
+    // can't perform the optimization if there were any decls in that scope
+    // (we'd lose their end-of-lifetime).
+    if (AnyDecls) {
+      // If the entire compound statement was live, there's one more thing we
+      // can try before giving up: emit the whole thing as a single statement.
+      // We can do that unless the statement contains a 'break;'.
+      // FIXME: Such a break must be at the end of a construct within this one.
+      // We could emit this by just ignoring the BreakStmts entirely.
+      if (StartedInLiveCode && !CodeGenFunction::containsBreak(S)) {
+        ResultStmts.resize(StartSize);
+        ResultStmts.push_back(S);
+      } else {
+        return CSFC_Failure;
+      }
+    }
+
+    return CSFC_FallThrough;
   }
 
   // Okay, this is some other statement that we don't handle explicitly, like a
@@ -1429,6 +1573,9 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
         incrementProfileCounter(Case);
       RunCleanupsScope ExecutedScope(*this);
 
+      if (S.getInit())
+        EmitStmt(S.getInit());
+
       // Emit the condition variable if needed inside the entire cleanup scope
       // used by this special case for constant folded switches.
       if (S.getConditionVariable())
@@ -1456,6 +1603,10 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   JumpDest SwitchExit = getJumpDestInCurrentScope("sw.epilog");
 
   RunCleanupsScope ConditionScope(*this);
+
+  if (S.getInit())
+    EmitStmt(S.getInit());
+
   if (S.getConditionVariable())
     EmitAutoVarDecl(*S.getConditionVariable());
   llvm::Value *CondV = EmitScalarExpr(S.getCond());
@@ -1528,16 +1679,13 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   // If the switch has a condition wrapped by __builtin_unpredictable,
   // create metadata that specifies that the switch is unpredictable.
   // Don't bother if not optimizing because that metadata would not be used.
-  if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
-    if (const CallExpr *Call = dyn_cast<CallExpr>(S.getCond())) {
-      const Decl *TargetDecl = Call->getCalleeDecl();
-      if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-        if (FD->getBuiltinID() == Builtin::BI__builtin_unpredictable) {
-          llvm::MDBuilder MDHelper(getLLVMContext());
-          SwitchInsn->setMetadata(llvm::LLVMContext::MD_unpredictable,
-                                  MDHelper.createUnpredictable());
-        }
-      }
+  auto *Call = dyn_cast<CallExpr>(S.getCond());
+  if (Call && CGM.getCodeGenOpts().OptimizationLevel != 0) {
+    auto *FD = dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl());
+    if (FD && FD->getBuiltinID() == Builtin::BI__builtin_unpredictable) {
+      llvm::MDBuilder MDHelper(getLLVMContext());
+      SwitchInsn->setMetadata(llvm::LLVMContext::MD_unpredictable,
+                              MDHelper.createUnpredictable());
     }
   }
 
@@ -1687,7 +1835,8 @@ llvm::Value* CodeGenFunction::EmitAsmInput(
   if (Info.allowsRegister() || !Info.allowsMemory())
     if (CodeGenFunction::hasScalarEvaluationKind(InputExpr->getType()))
       return EmitScalarExpr(InputExpr);
-
+  if (InputExpr->getStmtClass() == Expr::CXXThisExprClass)
+    return EmitScalarExpr(InputExpr);
   InputExpr = InputExpr->IgnoreParenNoopCasts(getContext());
   LValue Dest = EmitLValue(InputExpr);
   return EmitAsmInputLValue(Info, Dest, InputExpr->getType(), ConstraintStr,
@@ -1708,13 +1857,15 @@ static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
   if (!StrVal.empty()) {
     const SourceManager &SM = CGF.CGM.getContext().getSourceManager();
     const LangOptions &LangOpts = CGF.CGM.getLangOpts();
+    unsigned StartToken = 0;
+    unsigned ByteOffset = 0;
 
     // Add the location of the start of each subsequent line of the asm to the
     // MDNode.
-    for (unsigned i = 0, e = StrVal.size()-1; i != e; ++i) {
+    for (unsigned i = 0, e = StrVal.size() - 1; i != e; ++i) {
       if (StrVal[i] != '\n') continue;
-      SourceLocation LineLoc = Str->getLocationOfByte(i+1, SM, LangOpts,
-                                                      CGF.getTarget());
+      SourceLocation LineLoc = Str->getLocationOfByte(
+          i + 1, SM, LangOpts, CGF.getTarget(), &StartToken, &ByteOffset);
       Locs.push_back(llvm::ConstantAsMetadata::get(
           llvm::ConstantInt::get(CGF.Int32Ty, LineLoc.getRawEncoding())));
     }
@@ -1988,16 +2139,16 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     llvm::InlineAsm::get(FTy, AsmString, Constraints, HasSideEffect,
                          /* IsAlignStack */ false, AsmDialect);
   llvm::CallInst *Result = Builder.CreateCall(IA, Args);
-  Result->addAttribute(llvm::AttributeSet::FunctionIndex,
+  Result->addAttribute(llvm::AttributeList::FunctionIndex,
                        llvm::Attribute::NoUnwind);
 
   // Attach readnone and readonly attributes.
   if (!HasSideEffect) {
     if (ReadNone)
-      Result->addAttribute(llvm::AttributeSet::FunctionIndex,
+      Result->addAttribute(llvm::AttributeList::FunctionIndex,
                            llvm::Attribute::ReadNone);
     else if (ReadOnly)
-      Result->addAttribute(llvm::AttributeSet::FunctionIndex,
+      Result->addAttribute(llvm::AttributeList::FunctionIndex,
                            llvm::Attribute::ReadOnly);
   }
 
@@ -2012,6 +2163,14 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     Result->setMetadata("srcloc",
                         llvm::MDNode::get(getLLVMContext(),
                                           llvm::ConstantAsMetadata::get(Loc)));
+  }
+
+  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
+    // Conservatively, mark all inline asm blocks in CUDA as convergent
+    // (meaning, they may call an intrinsically convergent op, such as bar.sync,
+    // and so can't have certain optimizations applied around them).
+    Result->addAttribute(llvm::AttributeList::FunctionIndex,
+                         llvm::Attribute::Convergent);
   }
 
   // Extract all of the register value results from the asm.
@@ -2078,7 +2237,7 @@ LValue CodeGenFunction::InitCapturedStruct(const CapturedStmt &S) {
       auto VAT = CurField->getCapturedVLAType();
       EmitStoreThroughLValue(RValue::get(VLASizeMap[VAT->getSizeExpr()]), LV);
     } else {
-      EmitInitializerForField(*CurField, LV, *I, None);
+      EmitInitializerForField(*CurField, LV, *I);
     }
   }
 
@@ -2126,8 +2285,7 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   // Create the function declaration.
   FunctionType::ExtInfo ExtInfo;
   const CGFunctionInfo &FuncInfo =
-      CGM.getTypes().arrangeFreeFunctionDeclaration(Ctx.VoidTy, Args, ExtInfo,
-                                                    /*IsVariadic=*/false);
+    CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, Args);
   llvm::FunctionType *FuncLLVMTy = CGM.getTypes().GetFunctionType(FuncInfo);
 
   llvm::Function *F =
@@ -2164,7 +2322,7 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
     CXXThisValue = EmitLoadOfLValue(ThisLValue, Loc).getScalarVal();
   }
 
-  PGO.assignRegionCounters(CD, F);
+  PGO.assignRegionCounters(GlobalDecl(CD), F);
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
   FinishFunction(CD->getBodyRBrace());
 

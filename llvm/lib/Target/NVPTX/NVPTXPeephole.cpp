@@ -36,8 +36,8 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 
 using namespace llvm;
 
@@ -57,7 +57,7 @@ struct NVPTXPeephole : public MachineFunctionPass {
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "NVPTX optimize redundant cvta.to.local instruction";
   }
 
@@ -113,7 +113,7 @@ static void CombineCVTAToLocal(MachineInstr &Root) {
       BuildMI(MF, Root.getDebugLoc(), TII->get(Prev.getOpcode()),
               Root.getOperand(0).getReg())
           .addReg(NVPTX::VRFrameLocal)
-          .addOperand(Prev.getOperand(2));
+          .add(Prev.getOperand(2));
 
   MBB.insert((MachineBasicBlock::iterator)&Root, MIB);
 
@@ -125,6 +125,9 @@ static void CombineCVTAToLocal(MachineInstr &Root) {
 }
 
 bool NVPTXPeephole::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   bool Changed = false;
   // Loop over all of the basic blocks.
   for (auto &MBB : MF) {

@@ -31,11 +31,11 @@ entry:
   %call = call i8* @_Znwm(i64 4) #4, !dbg !19
   %_msret = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @__msan_retval_tls, i64 0, i64 0), align 8, !dbg !19
   %3 = bitcast i8* %call to i32*, !dbg !19
-  tail call void @llvm.dbg.value(metadata i32* %3, i64 0, metadata !9, metadata !DIExpression()), !dbg !19
+  tail call void @llvm.dbg.value(metadata i32* %3, metadata !9, metadata !DIExpression()), !dbg !19
   %4 = inttoptr i64 %1 to i64*, !dbg !19
   store i64 %_msret, i64* %4, align 8, !dbg !19
   store volatile i32* %3, i32** %p, align 8, !dbg !19
-  tail call void @llvm.dbg.value(metadata i32** %p, i64 0, metadata !9, metadata !DIExpression()), !dbg !19
+  tail call void @llvm.dbg.value(metadata i32** %p, metadata !9, metadata !DIExpression()), !dbg !19
   %p.0.p.0. = load volatile i32*, i32** %p, align 8, !dbg !20
   %_msld = load i64, i64* %4, align 8, !dbg !20
   %_mscmp = icmp eq i64 %_msld, 0, !dbg !20
@@ -96,11 +96,11 @@ entry:
   %call.i = call i8* @_Znwm(i64 4) #4, !dbg !30
   %_msret = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @__msan_retval_tls, i64 0, i64 0), align 8, !dbg !30
   %3 = bitcast i8* %call.i to i32*, !dbg !30
-  tail call void @llvm.dbg.value(metadata i32* %3, i64 0, metadata !32, metadata !DIExpression()), !dbg !30
+  tail call void @llvm.dbg.value(metadata i32* %3, metadata !32, metadata !DIExpression()), !dbg !30
   %4 = inttoptr i64 %1 to i64*, !dbg !30
   store i64 %_msret, i64* %4, align 8, !dbg !30
   store volatile i32* %3, i32** %p.i, align 8, !dbg !30
-  tail call void @llvm.dbg.value(metadata i32** %p.i, i64 0, metadata !32, metadata !DIExpression()), !dbg !30
+  tail call void @llvm.dbg.value(metadata i32** %p.i, metadata !32, metadata !DIExpression()), !dbg !30
   %p.i.0.p.0.p.0..i = load volatile i32*, i32** %p.i, align 8, !dbg !33
   %_msld = load i64, i64* %4, align 8, !dbg !33
   %_mscmp = icmp eq i64 %_msld, 0, !dbg !33
@@ -148,7 +148,7 @@ _Z1fv.exit:                                       ; preds = %16, %if.then.i
 declare void @__msan_init()
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 ; Function Attrs: nounwind
 declare i32 @puts(i8* nocapture readonly) #3
@@ -202,11 +202,10 @@ attributes #4 = { builtin }
 !llvm.module.flags = !{!16, !17}
 !llvm.ident = !{!18}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 207243) (llvm/trunk 207259)", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 207243) (llvm/trunk 207259)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "foo.cpp", directory: "/usr/local/google/home/echristo/tmp")
 !2 = !{}
-!3 = !{!4, !13}
-!4 = distinct !DISubprogram(name: "f", linkageName: "_Z1fv", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 3, file: !1, scope: !5, type: !6, variables: !8)
+!4 = distinct !DISubprogram(name: "f", linkageName: "_Z1fv", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !1, scope: !5, type: !6, variables: !8)
 !5 = !DIFile(filename: "foo.cpp", directory: "/usr/local/google/home/echristo/tmp")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
@@ -215,7 +214,7 @@ attributes #4 = { builtin }
 !10 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !11)
 !11 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !12)
 !12 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!13 = distinct !DISubprogram(name: "main", line: 9, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 9, file: !1, scope: !5, type: !14, variables: !2)
+!13 = distinct !DISubprogram(name: "main", line: 9, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 9, file: !1, scope: !5, type: !14, variables: !2)
 !14 = !DISubroutineType(types: !15)
 !15 = !{!12}
 !16 = !{i32 2, !"Dwarf Version", i32 4}

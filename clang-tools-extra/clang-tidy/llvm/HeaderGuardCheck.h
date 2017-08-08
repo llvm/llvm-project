@@ -29,8 +29,14 @@ class LLVMHeaderGuardCheck : public utils::HeaderGuardCheck {
 public:
   LLVMHeaderGuardCheck(StringRef Name, ClangTidyContext *Context);
 
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   bool shouldSuggestEndifComment(StringRef Filename) override { return false; }
+  bool shouldFixHeaderGuard(StringRef Filename) override;
   std::string getHeaderGuard(StringRef Filename, StringRef OldGuard) override;
+
+private:
+  std::string RawStringHeaderFileExtensions;
+  utils::HeaderFileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace llvm

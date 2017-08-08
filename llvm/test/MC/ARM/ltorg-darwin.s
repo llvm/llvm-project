@@ -12,7 +12,7 @@
 .section __TEXT,a,regular,pure_instructions
 @ CHECK-LABEL: f2:
 f2:
-  ldr r0, =0x10001
+  ldr r0, =0x10002
 @ CHECK: ldr r0, Ltmp0
   adds r0, r0, #1
   adds r0, r0, #1
@@ -20,9 +20,9 @@ f2:
 .ltorg
 @ constant pool
 @ CHECK: .data_region
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK-LABEL: Ltmp0:
-@ CHECK: .long 65537
+@ CHECK: .long 65538
 @ CHECK: .end_data_region
 
 @ CHECK-LABEL: f3:
@@ -34,7 +34,7 @@ f3:
 .section __TEXT,b,regular,pure_instructions
 @ CHECK-LABEL: f4:
 f4:
-  ldr r0, =0x10002
+  ldr r0, =0x10003
 @ CHECK: ldr r0, Ltmp1
   adds r0, r0, #1
   adds r0, r0, #1
@@ -42,25 +42,25 @@ f4:
 .ltorg
 @ constant pool
 @ CHECK: .data_region
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK-LABEL: Ltmp1:
-@ CHECK: .long 65538
+@ CHECK: .long 65539
 @ CHECK: .end_data_region
 
 @ CHECK-LABEL: f5:
 f5:
   adds r0, r0, #1
   adds r0, r0, #1
-  ldr r0, =0x10003
+  ldr r0, =0x10004
 @ CHECK: ldr r0, Ltmp2
   adds r0, r0, #1
   b f6
 .ltorg
 @ constant pool
 @ CHECK: .data_region
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK-LABEL: Ltmp2:
-@ CHECK: .long 65539
+@ CHECK: .long 65540
 @ CHECK: .end_data_region
 
 @ CHECK-LABEL: f6:
@@ -93,7 +93,7 @@ f9:
 .ltorg
 @ constant pool
 @ CHECK: .data_region
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK-LABEL: Ltmp3:
 @ CHECK: .long bar
 @ CHECK: .end_data_region
@@ -109,21 +109,21 @@ f10:
 f11:
   adds r0, r0, #1
   adds r0, r0, #1
-  ldr r0, =0x10004
+  ldr r0, =0x10005
 @ CHECK: ldr r0, Ltmp4
   b f12
   .ltorg
 @ constant pool
 @ CHECK: .data_region
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK-LABEL: Ltmp4:
-@ CHECK: .long 65540
+@ CHECK: .long 65541
 @ CHECK: .end_data_region
 
 @ CHECK-LABEL: f12:
 f12:
   adds r0, r0, #1
-  ldr r0, =0x10005
+  ldr r0, =0x10006
 @ CHECK: ldr r0, Ltmp5
 
 .section __TEXT,f,regular,pure_instructions
@@ -142,9 +142,9 @@ f13:
 @ CHECK: .section __TEXT,e,regular,pure_instructions
 @ constant pool
 @ CHECK: .data_region
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK-LABEL: Ltmp5:
-@ CHECK: .long 65541
+@ CHECK: .long 65542
 @ CHECK: .end_data_region
 
 @ should not have a constant pool at end of section with empty constant pools

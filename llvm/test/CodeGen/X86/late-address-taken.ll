@@ -1,4 +1,6 @@
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s -enable-shrink-wrap=false | FileCheck %s
+; Make sure shrink-wrapping does not break the lowering of exception handling.
+; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s -enable-shrink-wrap=true | FileCheck %s
 
 ; Repro cases from PR25168
 
@@ -20,19 +22,17 @@ body:
   invoke void @f()
           to label %exit unwind label %catch.pad
 catch.pad:
-  %catch = catchpad [i32 33554467]
-          to label %catch.body unwind label %catch.end
+  %cs1 = catchswitch within none [label %catch.body] unwind to caller
 catch.body:
-  catchret %catch to label %exit
-catch.end:
-  catchendpad unwind to caller
+  %catch = catchpad within %cs1 [i32 33554467]
+  catchret from %catch to label %exit
 exit:
   ret void
 }
 ; CHECK-LABEL: catchret:  # @catchret
 ; CHECK: [[Exit:^[^ :]+]]: # Block address taken
 ; CHECK-NEXT:              # %exit
-; CHECK: # %catch.pad
+; CHECK: # %catch.body
 ; CHECK: .seh_endprolog
 ; CHECK: leaq [[Exit]](%rip), %rax
 ; CHECK: retq # CATCHRET

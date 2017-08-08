@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- truncdfsf2vfp_test.c - Test __truncdfsf2vfp -----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -19,7 +20,7 @@
 
 extern COMPILER_RT_ABI float __truncdfsf2vfp(double a);
 
-#if __arm__
+#if __arm__ && __VFP_FP__
 int test__truncdfsf2vfp(double a)
 {
     float actual = __truncdfsf2vfp(a);
@@ -33,7 +34,7 @@ int test__truncdfsf2vfp(double a)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__truncdfsf2vfp(0.0))
         return 1;
     if (test__truncdfsf2vfp(1.0))

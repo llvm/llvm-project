@@ -3,38 +3,46 @@
 
 ; ModuleID = 'test.c'
 
-@GLB = common global i32 0, align 4
+source_filename = "test/DebugInfo/X86/2011-09-26-GlobalVarContext.ll"
 
-define i32 @f() nounwind !dbg !5 {
+@GLB = common global i32 0, align 4, !dbg !0
+
+; Function Attrs: nounwind
+define i32 @f() #0 !dbg !8 {
   %LOC = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %LOC, metadata !15, metadata !DIExpression()), !dbg !17
-  %1 = load i32, i32* @GLB, align 4, !dbg !18
-  store i32 %1, i32* %LOC, align 4, !dbg !18
-  %2 = load i32, i32* @GLB, align 4, !dbg !19
-  ret i32 %2, !dbg !19
+  call void @llvm.dbg.declare(metadata i32* %LOC, metadata !11, metadata !13), !dbg !14
+  %1 = load i32, i32* @GLB, align 4, !dbg !15
+  store i32 %1, i32* %LOC, align 4, !dbg !15
+  %2 = load i32, i32* @GLB, align 4, !dbg !16
+  ret i32 %2, !dbg !16
 }
 
-declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
+; Function Attrs: nounwind readnone
+declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!21}
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk)", isOptimized: false, emissionKind: 0, file: !20, enums: !1, retainedTypes: !1, subprograms: !3, globals: !12, imports:  !1)
-!1 = !{}
-!3 = !{!5}
-!5 = distinct !DISubprogram(name: "f", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !6, scope: !6, type: !7)
-!6 = !DIFile(filename: "test.c", directory: "/work/llvm/vanilla/test/DebugInfo")
-!7 = !DISubroutineType(types: !8)
-!8 = !{!9}
-!9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!12 = !{!14}
-!14 = !DIGlobalVariable(name: "GLB", line: 1, isLocal: false, isDefinition: true, scope: null, file: !6, type: !9, variable: i32* @GLB)
-!15 = !DILocalVariable(name: "LOC", line: 4, scope: !16, file: !6, type: !9)
-!16 = distinct !DILexicalBlock(line: 3, column: 9, file: !20, scope: !5)
-!17 = !DILocation(line: 4, column: 9, scope: !16)
-!18 = !DILocation(line: 4, column: 23, scope: !16)
-!19 = !DILocation(line: 5, column: 5, scope: !16)
-!20 = !DIFile(filename: "test.c", directory: "/work/llvm/vanilla/test/DebugInfo")
+!llvm.dbg.cu = !{!4}
+!llvm.module.flags = !{!7}
+
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "GLB", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
+!2 = !DIFile(filename: "test.c", directory: "/work/llvm/vanilla/test/DebugInfo")
+!3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!4 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang version 3.0 (trunk)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !6, imports: !5)
+!5 = !{}
+!6 = !{!0}
+!7 = !{i32 1, !"Debug Info Version", i32 3}
+!8 = distinct !DISubprogram(name: "f", scope: !2, file: !2, line: 3, type: !9, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !4)
+!9 = !DISubroutineType(types: !10)
+!10 = !{!3}
+!11 = !DILocalVariable(name: "LOC", scope: !12, file: !2, line: 4, type: !3)
+!12 = distinct !DILexicalBlock(scope: !8, file: !2, line: 3, column: 9)
+!13 = !DIExpression()
+!14 = !DILocation(line: 4, column: 9, scope: !12)
+!15 = !DILocation(line: 4, column: 23, scope: !12)
+!16 = !DILocation(line: 5, column: 5, scope: !12)
 
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
@@ -52,4 +60,3 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_decl_line [DW_FORM_data1]     (4)
 
-!21 = !{i32 1, !"Debug Info Version", i32 3}

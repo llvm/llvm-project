@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 -mcpu=g5 | not grep vperm
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5 | not grep vperm
 
 define <4 x float> @test_uu72(<4 x float>* %P1, <4 x float>* %P2) {
 	%V1 = load <4 x float>, <4 x float>* %P1		; <<4 x float>> [#uses=1]

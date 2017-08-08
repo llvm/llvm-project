@@ -116,7 +116,7 @@ public:
     using mutex_type = Mutex;  // If MutexTypes... consists of the single type Mutex
 
     explicit scoped_lock(MutexTypes&... m);
-    scoped_lock(MutexTypes&... m, adopt_lock_t);
+    scoped_lock(adopt_lock_t, MutexTypes&... m);
     ~scoped_lock();
     scoped_lock(scoped_lock const&) = delete;
     scoped_lock& operator=(scoped_lock const&) = delete;
@@ -500,7 +500,7 @@ public:
     ~scoped_lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability()) {__m_.unlock();}
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit scoped_lock(mutex_type& __m, adopt_lock_t) _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
+    explicit scoped_lock(adopt_lock_t, mutex_type& __m) _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
         : __m_(__m) {}
 
     scoped_lock(scoped_lock const&) = delete;
@@ -522,7 +522,7 @@ public:
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    scoped_lock(_MArgs&... __margs, adopt_lock_t)
+    scoped_lock(adopt_lock_t, _MArgs&... __margs)
         : __t_(__margs...)
     {
     }

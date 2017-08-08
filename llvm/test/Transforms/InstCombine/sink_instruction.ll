@@ -54,3 +54,26 @@ bb4:                                              ; preds = %bb2
 }
 
 declare i32 @bar()
+
+define i32 @test3(i32* nocapture readonly %P, i32 %i) {
+entry:
+  %idxprom = sext i32 %i to i64
+  %arrayidx = getelementptr inbounds i32, i32* %P, i64 %idxprom
+  %0 = load i32, i32* %arrayidx, align 4
+  switch i32 %i, label %sw.epilog [
+    i32 5, label %sw.bb
+    i32 2, label %sw.bb
+  ]
+
+sw.bb:                                            ; preds = %entry, %entry
+; CHECK-LABEL: sw.bb:
+; CHECK: %idxprom = sext i32 %i to i64
+; CHECK: %arrayidx = getelementptr inbounds i32, i32* %P, i64 %idxprom
+; CHECK: %0 = load i32, i32* %arrayidx, align 4
+  %add = add nsw i32 %0, %i
+  br label %sw.epilog
+
+sw.epilog:                                        ; preds = %entry, %sw.bb
+  %sum.0 = phi i32 [ %add, %sw.bb ], [ 0, %entry ]
+  ret i32 %sum.0
+}

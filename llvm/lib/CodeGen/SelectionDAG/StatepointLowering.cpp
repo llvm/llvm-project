@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCStrategy.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/CallingConv.h"
@@ -52,13 +53,11 @@ void StatepointLoweringState::startNewStatepoint(SelectionDAGBuilder &Builder) {
          "Trying to visit statepoint before finished processing previous one");
   Locations.clear();
   NextSlotToAllocate = 0;
-  // Need to resize this on each safepoint - we need the two to stay in
-  // sync and the clear patterns of a SelectionDAGBuilder have no relation
-  // to FunctionLoweringInfo.
+  // Need to resize this on each safepoint - we need the two to stay in sync and
+  // the clear patterns of a SelectionDAGBuilder have no relation to
+  // FunctionLoweringInfo.  Also need to ensure used bits get cleared.
+  AllocatedStackSlots.clear();
   AllocatedStackSlots.resize(Builder.FuncInfo.StatepointStackSlots.size());
-  for (size_t i = 0; i < AllocatedStackSlots.size(); i++) {
-    AllocatedStackSlots[i] = false;
-  }
 }
 
 void StatepointLoweringState::clear() {
@@ -71,46 +70,50 @@ void StatepointLoweringState::clear() {
 SDValue
 StatepointLoweringState::allocateStackSlot(EVT ValueType,
                                            SelectionDAGBuilder &Builder) {
-
   NumSlotsAllocatedForStatepoints++;
+  MachineFrameInfo &MFI = Builder.DAG.getMachineFunction().getFrameInfo();
 
-  // The basic scheme here is to first look for a previously created stack slot
-  // which is not in use (accounting for the fact arbitrary slots may already
-  // be reserved), or to create a new stack slot and use it.
+  unsigned SpillSize = ValueType.getSizeInBits() / 8;
+  assert((SpillSize * 8) == ValueType.getSizeInBits() && "Size not in bytes?");
 
-  // If this doesn't succeed in 40000 iterations, something is seriously wrong
-  for (int i = 0; i < 40000; i++) {
-    assert(Builder.FuncInfo.StatepointStackSlots.size() ==
-               AllocatedStackSlots.size() &&
-           "broken invariant");
-    const size_t NumSlots = AllocatedStackSlots.size();
-    assert(NextSlotToAllocate <= NumSlots && "broken invariant");
+  // First look for a previously created stack slot which is not in
+  // use (accounting for the fact arbitrary slots may already be
+  // reserved), or to create a new stack slot and use it.
 
-    if (NextSlotToAllocate >= NumSlots) {
-      assert(NextSlotToAllocate == NumSlots);
-      // record stats
-      if (NumSlots + 1 > StatepointMaxSlotsRequired) {
-        StatepointMaxSlotsRequired = NumSlots + 1;
-      }
+  const size_t NumSlots = AllocatedStackSlots.size();
+  assert(NextSlotToAllocate <= NumSlots && "Broken invariant");
 
-      SDValue SpillSlot = Builder.DAG.CreateStackTemporary(ValueType);
-      const unsigned FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
-      Builder.FuncInfo.StatepointStackSlots.push_back(FI);
-      AllocatedStackSlots.push_back(true);
-      return SpillSlot;
-    }
-    if (!AllocatedStackSlots[NextSlotToAllocate]) {
+  assert(AllocatedStackSlots.size() ==
+         Builder.FuncInfo.StatepointStackSlots.size() &&
+         "Broken invariant");
+
+  for (; NextSlotToAllocate < NumSlots; NextSlotToAllocate++) {
+    if (!AllocatedStackSlots.test(NextSlotToAllocate)) {
       const int FI = Builder.FuncInfo.StatepointStackSlots[NextSlotToAllocate];
-      AllocatedStackSlots[NextSlotToAllocate] = true;
-      return Builder.DAG.getFrameIndex(FI, ValueType);
+      if (MFI.getObjectSize(FI) == SpillSize) {
+        AllocatedStackSlots.set(NextSlotToAllocate);
+        // TODO: Is ValueType the right thing to use here?
+        return Builder.DAG.getFrameIndex(FI, ValueType);
+      }
     }
-    // Note: We deliberately choose to advance this only on the failing path.
-    // Doing so on the succeeding path involves a bit of complexity that caused
-    // a minor bug previously.  Unless performance shows this matters, please
-    // keep this code as simple as possible.
-    NextSlotToAllocate++;
   }
-  llvm_unreachable("infinite loop?");
+
+  // Couldn't find a free slot, so create a new one:
+
+  SDValue SpillSlot = Builder.DAG.CreateStackTemporary(ValueType);
+  const unsigned FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
+  MFI.markAsStatepointSpillSlotObjectIndex(FI);
+
+  Builder.FuncInfo.StatepointStackSlots.push_back(FI);
+  AllocatedStackSlots.resize(AllocatedStackSlots.size()+1, true);
+  assert(AllocatedStackSlots.size() ==
+         Builder.FuncInfo.StatepointStackSlots.size() &&
+         "Broken invariant");
+
+  StatepointMaxSlotsRequired.updateMax(
+      Builder.FuncInfo.StatepointStackSlots.size());
+
+  return SpillSlot;
 }
 
 /// Utility function for reservePreviousStackSlotForValue. Tries to find
@@ -121,26 +124,23 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
                                            int LookUpDepth) {
   // Can not look any further - give up now
   if (LookUpDepth <= 0)
-    return Optional<int>();
+    return None;
 
   // Spill location is known for gc relocates
-  if (isGCRelocate(Val)) {
-    GCRelocateOperands RelocOps(cast<Instruction>(Val));
+  if (const auto *Relocate = dyn_cast<GCRelocateInst>(Val)) {
+    const auto &SpillMap =
+        Builder.FuncInfo.StatepointSpillMaps[Relocate->getStatepoint()];
 
-    FunctionLoweringInfo::StatepointSpilledValueMapTy &SpillMap =
-        Builder.FuncInfo.StatepointRelocatedValues[RelocOps.getStatepoint()];
-
-    auto It = SpillMap.find(RelocOps.getDerivedPtr());
+    auto It = SpillMap.find(Relocate->getDerivedPtr());
     if (It == SpillMap.end())
-      return Optional<int>();
+      return None;
 
     return It->second;
   }
 
   // Look through bitcast instructions.
-  if (const BitCastInst *Cast = dyn_cast<BitCastInst>(Val)) {
+  if (const BitCastInst *Cast = dyn_cast<BitCastInst>(Val))
     return findPreviousSpillSlot(Cast->getOperand(0), Builder, LookUpDepth - 1);
-  }
 
   // Look through phi nodes
   // All incoming values should have same known stack slot, otherwise result
@@ -152,10 +152,10 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
       Optional<int> SpillSlot =
           findPreviousSpillSlot(IncomingValue, Builder, LookUpDepth - 1);
       if (!SpillSlot.hasValue())
-        return Optional<int>();
+        return None;
 
       if (MergedResult.hasValue() && *MergedResult != *SpillSlot)
-        return Optional<int>();
+        return None;
 
       MergedResult = SpillSlot;
     }
@@ -190,7 +190,7 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
   // which we visit values is unspecified.
 
   // Don't know any information about this instruction
-  return Optional<int>();
+  return None;
 }
 
 /// Try to find existing copies of the incoming values in stack slots used for
@@ -211,7 +211,7 @@ static void reservePreviousStackSlotForValue(const Value *IncomingValue,
 
   SDValue OldLocation = Builder.StatepointLowering.getLocation(Incoming);
   if (OldLocation.getNode())
-    // duplicates in input
+    // Duplicates in input
     return;
 
   const int LookUpDepth = 6;
@@ -220,14 +220,14 @@ static void reservePreviousStackSlotForValue(const Value *IncomingValue,
   if (!Index.hasValue())
     return;
 
-  auto Itr = std::find(Builder.FuncInfo.StatepointStackSlots.begin(),
-                       Builder.FuncInfo.StatepointStackSlots.end(), *Index);
-  assert(Itr != Builder.FuncInfo.StatepointStackSlots.end() &&
-         "value spilled to the unknown stack slot");
+  const auto &StatepointSlots = Builder.FuncInfo.StatepointStackSlots;
+
+  auto SlotIt = find(StatepointSlots, *Index);
+  assert(SlotIt != StatepointSlots.end() &&
+         "Value spilled to the unknown stack slot");
 
   // This is one of our dedicated lowering slots
-  const int Offset =
-      std::distance(Builder.FuncInfo.StatepointStackSlots.begin(), Itr);
+  const int Offset = std::distance(StatepointSlots.begin(), SlotIt);
   if (Builder.StatepointLowering.isStackSlotAllocated(Offset)) {
     // stack slot already assigned to someone else, can't use it!
     // TODO: currently we reserve space for gc arguments after doing
@@ -242,7 +242,8 @@ static void reservePreviousStackSlotForValue(const Value *IncomingValue,
 
   // Cache this slot so we find it when going through the normal
   // assignment loop.
-  SDValue Loc = Builder.DAG.getTargetFrameIndex(*Index, Incoming.getValueType());
+  SDValue Loc =
+      Builder.DAG.getTargetFrameIndex(*Index, Builder.getFrameIndexTy());
   Builder.StatepointLowering.setLocation(Incoming, Loc);
 }
 
@@ -250,24 +251,30 @@ static void reservePreviousStackSlotForValue(const Value *IncomingValue,
 /// is not required for correctness.  It's purpose is to reduce the size of
 /// StackMap section.  It has no effect on the number of spill slots required
 /// or the actual lowering.
-static void removeDuplicatesGCPtrs(SmallVectorImpl<const Value *> &Bases,
-                                   SmallVectorImpl<const Value *> &Ptrs,
-                                   SmallVectorImpl<const Value *> &Relocs,
-                                   SelectionDAGBuilder &Builder) {
+static void
+removeDuplicateGCPtrs(SmallVectorImpl<const Value *> &Bases,
+                      SmallVectorImpl<const Value *> &Ptrs,
+                      SmallVectorImpl<const GCRelocateInst *> &Relocs,
+                      SelectionDAGBuilder &Builder,
+                      FunctionLoweringInfo::StatepointSpillMap &SSM) {
+  DenseMap<SDValue, const Value *> Seen;
 
-  // This is horribly inefficient, but I don't care right now
-  SmallSet<SDValue, 64> Seen;
-
-  SmallVector<const Value *, 64> NewBases, NewPtrs, NewRelocs;
-  for (size_t i = 0; i < Ptrs.size(); i++) {
+  SmallVector<const Value *, 64> NewBases, NewPtrs;
+  SmallVector<const GCRelocateInst *, 64> NewRelocs;
+  for (size_t i = 0, e = Ptrs.size(); i < e; i++) {
     SDValue SD = Builder.getValue(Ptrs[i]);
-    // Only add non-duplicates
-    if (Seen.count(SD) == 0) {
+    auto SeenIt = Seen.find(SD);
+
+    if (SeenIt == Seen.end()) {
+      // Only add non-duplicates
       NewBases.push_back(Bases[i]);
       NewPtrs.push_back(Ptrs[i]);
       NewRelocs.push_back(Relocs[i]);
+      Seen[SD] = Ptrs[i];
+    } else {
+      // Duplicate pointer found, note in SSM and move on:
+      SSM.DuplicateMap[Ptrs[i]] = SeenIt->second;
     }
-    Seen.insert(SD);
   }
   assert(Bases.size() >= NewBases.size());
   assert(Ptrs.size() >= NewPtrs.size());
@@ -282,43 +289,13 @@ static void removeDuplicatesGCPtrs(SmallVectorImpl<const Value *> &Bases,
 /// Extract call from statepoint, lower it and return pointer to the
 /// call node. Also update NodeMap so that getValue(statepoint) will
 /// reference lowered call result
-static SDNode *
-lowerCallFromStatepoint(ImmutableStatepoint ISP, const BasicBlock *EHPadBB,
-                        SelectionDAGBuilder &Builder,
-                        SmallVectorImpl<SDValue> &PendingExports) {
-
-  ImmutableCallSite CS(ISP.getCallSite());
-
-  SDValue ActualCallee;
-
-  if (ISP.getNumPatchBytes() > 0) {
-    // If we've been asked to emit a nop sequence instead of a call instruction
-    // for this statepoint then don't lower the call target, but use a constant
-    // `null` instead.  Not lowering the call target lets statepoint clients get
-    // away without providing a physical address for the symbolic call target at
-    // link time.
-
-    const auto &TLI = Builder.DAG.getTargetLoweringInfo();
-    const auto &DL = Builder.DAG.getDataLayout();
-
-    unsigned AS = ISP.getCalledValue()->getType()->getPointerAddressSpace();
-    ActualCallee = Builder.DAG.getConstant(0, Builder.getCurSDLoc(),
-                                           TLI.getPointerTy(DL, AS));
-  } else
-    ActualCallee = Builder.getValue(ISP.getCalledValue());
-
-  assert(CS.getCallingConv() != CallingConv::AnyReg &&
-         "anyregcc is not supported on statepoints!");
-
-  Type *DefTy = ISP.getActualReturnType();
-  bool HasDef = !DefTy->isVoidTy();
+static std::pair<SDValue, SDNode *> lowerCallFromStatepointLoweringInfo(
+    SelectionDAGBuilder::StatepointLoweringInfo &SI,
+    SelectionDAGBuilder &Builder, SmallVectorImpl<SDValue> &PendingExports) {
 
   SDValue ReturnValue, CallEndVal;
-  std::tie(ReturnValue, CallEndVal) = Builder.lowerCallOperands(
-      ISP.getCallSite(), ImmutableStatepoint::CallArgsBeginPos,
-      ISP.getNumCallArgs(), ActualCallee, DefTy, EHPadBB,
-      false /* IsPatchPoint */);
-
+  std::tie(ReturnValue, CallEndVal) =
+      Builder.lowerInvokable(SI.CLI, SI.EHPadBB);
   SDNode *CallEnd = CallEndVal.getNode();
 
   // Get a call instruction from the call sequence chain.  Tail calls are not
@@ -333,79 +310,21 @@ lowerCallFromStatepoint(ImmutableStatepoint ISP, const BasicBlock *EHPadBB,
   //   ch, glue = callseq_end ch, glue
   //   get_return_value ch, glue
   //
-  // get_return_value can either be a CopyFromReg to grab the return value from
-  // %RAX, or it can be a LOAD to load a value returned by reference via a stack
-  // slot.
+  // get_return_value can either be a sequence of CopyFromReg instructions
+  // to grab the return value from the return register(s), or it can be a LOAD
+  // to load a value returned by reference via a stack slot.
 
-  if (HasDef && (CallEnd->getOpcode() == ISD::CopyFromReg ||
-                 CallEnd->getOpcode() == ISD::LOAD))
-    CallEnd = CallEnd->getOperand(0).getNode();
+  bool HasDef = !SI.CLI.RetTy->isVoidTy();
+  if (HasDef) {
+    if (CallEnd->getOpcode() == ISD::LOAD)
+      CallEnd = CallEnd->getOperand(0).getNode();
+    else
+      while (CallEnd->getOpcode() == ISD::CopyFromReg)
+        CallEnd = CallEnd->getOperand(0).getNode();
+  }
 
   assert(CallEnd->getOpcode() == ISD::CALLSEQ_END && "expected!");
-
-  // Export the result value if needed
-  const Instruction *GCResult = ISP.getGCResult();
-  if (HasDef && GCResult) {
-    if (GCResult->getParent() != CS.getParent()) {
-      // Result value will be used in a different basic block so we need to
-      // export it now.
-      // Default exporting mechanism will not work here because statepoint call
-      // has a different type than the actual call. It means that by default
-      // llvm will create export register of the wrong type (always i32 in our
-      // case). So instead we need to create export register with correct type
-      // manually.
-      // TODO: To eliminate this problem we can remove gc.result intrinsics
-      //       completely and make statepoint call to return a tuple.
-      unsigned Reg = Builder.FuncInfo.CreateRegs(ISP.getActualReturnType());
-      RegsForValue RFV(
-          *Builder.DAG.getContext(), Builder.DAG.getTargetLoweringInfo(),
-          Builder.DAG.getDataLayout(), Reg, ISP.getActualReturnType());
-      SDValue Chain = Builder.DAG.getEntryNode();
-
-      RFV.getCopyToRegs(ReturnValue, Builder.DAG, Builder.getCurSDLoc(), Chain,
-                        nullptr);
-      PendingExports.push_back(Chain);
-      Builder.FuncInfo.ValueMap[CS.getInstruction()] = Reg;
-    } else {
-      // Result value will be used in a same basic block. Don't export it or
-      // perform any explicit register copies.
-      // We'll replace the actuall call node shortly. gc_result will grab
-      // this value.
-      Builder.setValue(CS.getInstruction(), ReturnValue);
-    }
-  } else {
-    // The token value is never used from here on, just generate a poison value
-    Builder.setValue(CS.getInstruction(),
-                     Builder.DAG.getIntPtrConstant(-1, Builder.getCurSDLoc()));
-  }
-
-  return CallEnd->getOperand(0).getNode();
-}
-
-/// Callect all gc pointers coming into statepoint intrinsic, clean them up,
-/// and return two arrays:
-///   Bases - base pointers incoming to this statepoint
-///   Ptrs - derived pointers incoming to this statepoint
-///   Relocs - the gc_relocate corresponding to each base/ptr pair
-/// Elements of this arrays should be in one-to-one correspondence with each
-/// other i.e Bases[i], Ptrs[i] are from the same gcrelocate call
-static void getIncomingStatepointGCValues(
-    SmallVectorImpl<const Value *> &Bases, SmallVectorImpl<const Value *> &Ptrs,
-    SmallVectorImpl<const Value *> &Relocs, ImmutableStatepoint StatepointSite,
-    SelectionDAGBuilder &Builder) {
-  for (GCRelocateOperands relocateOpers : StatepointSite.getRelocates()) {
-    Relocs.push_back(relocateOpers.getUnderlyingCallSite().getInstruction());
-    Bases.push_back(relocateOpers.getBasePtr());
-    Ptrs.push_back(relocateOpers.getDerivedPtr());
-  }
-
-  // Remove any redundant llvm::Values which map to the same SDValue as another
-  // input.  Also has the effect of removing duplicates in the original
-  // llvm::Value input list as well.  This is a useful optimization for
-  // reducing the size of the StackMap section.  It has no other impact.
-  removeDuplicatesGCPtrs(Bases, Ptrs, Relocs, Builder);
-
-  assert(Bases.size() == Ptrs.size() && Ptrs.size() == Relocs.size());
+  return std::make_pair(ReturnValue, CallEnd->getOperand(0).getNode());
 }
 
 /// Spill a value incoming to the statepoint. It might be either part of
@@ -423,18 +342,28 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
   if (!Loc.getNode()) {
     Loc = Builder.StatepointLowering.allocateStackSlot(Incoming.getValueType(),
                                                        Builder);
-    assert(isa<FrameIndexSDNode>(Loc));
     int Index = cast<FrameIndexSDNode>(Loc)->getIndex();
     // We use TargetFrameIndex so that isel will not select it into LEA
-    Loc = Builder.DAG.getTargetFrameIndex(Index, Incoming.getValueType());
+    Loc = Builder.DAG.getTargetFrameIndex(Index, Builder.getFrameIndexTy());
 
     // TODO: We can create TokenFactor node instead of
     //       chaining stores one after another, this may allow
     //       a bit more optimal scheduling for them
+
+#ifndef NDEBUG
+    // Right now we always allocate spill slots that are of the same
+    // size as the value we're about to spill (the size of spillee can
+    // vary since we spill vectors of pointers too).  At some point we
+    // can consider allowing spills of smaller values to larger slots
+    // (i.e. change the '==' in the assert below to a '>=').
+    MachineFrameInfo &MFI = Builder.DAG.getMachineFunction().getFrameInfo();
+    assert((MFI.getObjectSize(Index) * 8) == Incoming.getValueSizeInBits() &&
+           "Bad spill:  stack slot does not match!");
+#endif
+
     Chain = Builder.DAG.getStore(Chain, Builder.getCurSDLoc(), Incoming, Loc,
                                  MachinePointerInfo::getFixedStack(
-                                     Builder.DAG.getMachineFunction(), Index),
-                                 false, false, 0);
+                                     Builder.DAG.getMachineFunction(), Index));
 
     Builder.StatepointLowering.setLocation(Incoming, Loc);
   }
@@ -446,7 +375,7 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
 /// Lower a single value incoming to a statepoint node.  This value can be
 /// either a deopt value or a gc value, the handling is the same.  We special
 /// case constants and allocas, then fall back to spilling if required.
-static void lowerIncomingStatepointValue(SDValue Incoming,
+static void lowerIncomingStatepointValue(SDValue Incoming, bool LiveInOnly,
                                          SmallVectorImpl<SDValue> &Ops,
                                          SelectionDAGBuilder &Builder) {
   SDValue Chain = Builder.getRoot();
@@ -455,14 +384,26 @@ static void lowerIncomingStatepointValue(SDValue Incoming,
     // If the original value was a constant, make sure it gets recorded as
     // such in the stackmap.  This is required so that the consumer can
     // parse any internal format to the deopt state.  It also handles null
-    // pointers and other constant pointers in GC states
+    // pointers and other constant pointers in GC states.  Note the constant
+    // vectors do not appear to actually hit this path and that anything larger
+    // than an i64 value (not type!) will fail asserts here.
     pushStackMapConstant(Ops, Builder, C->getSExtValue());
   } else if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Incoming)) {
     // This handles allocas as arguments to the statepoint (this is only
     // really meaningful for a deopt value.  For GC, we'd be trying to
     // relocate the address of the alloca itself?)
+    assert(Incoming.getValueType() == Builder.getFrameIndexTy() &&
+           "Incoming value is a frame index!");
     Ops.push_back(Builder.DAG.getTargetFrameIndex(FI->getIndex(),
-                                                  Incoming.getValueType()));
+                                                  Builder.getFrameIndexTy()));
+  } else if (LiveInOnly) {
+    // If this value is live in (not live-on-return, or live-through), we can
+    // treat it the same way patchpoint treats it's "live in" values.  We'll 
+    // end up folding some of these into stack references, but they'll be 
+    // handled by the register allocator.  Note that we do not have the notion
+    // of a late use so these values might be placed in registers which are 
+    // clobbered by the call.  This is fine for live-in.
+    Ops.push_back(Incoming);
   } else {
     // Otherwise, locate a spill slot and explicitly spill it so it
     // can be found by the runtime later.  We currently do not support
@@ -470,8 +411,7 @@ static void lowerIncomingStatepointValue(SDValue Incoming,
     // spill location.  This would be a useful optimization, but would
     // need to be optional since it requires a lot of complexity on the
     // runtime side which not all would support.
-    std::pair<SDValue, SDValue> Res =
-        spillIncomingStatepointValue(Incoming, Chain, Builder);
+    auto Res = spillIncomingStatepointValue(Incoming, Chain, Builder);
     Ops.push_back(Res.first);
     Chain = Res.second;
   }
@@ -486,77 +426,84 @@ static void lowerIncomingStatepointValue(SDValue Incoming,
 /// completion, 'Ops' will contain ready to use operands for machine code
 /// statepoint. The chain nodes will have already been created and the DAG root
 /// will be set to the last value spilled (if any were).
-static void lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
-                                    ImmutableStatepoint StatepointSite,
-                                    SelectionDAGBuilder &Builder) {
-
-  // Lower the deopt and gc arguments for this statepoint.  Layout will
-  // be: deopt argument length, deopt arguments.., gc arguments...
-
-  SmallVector<const Value *, 64> Bases, Ptrs, Relocations;
-  getIncomingStatepointGCValues(Bases, Ptrs, Relocations, StatepointSite,
-                                Builder);
-
+static void
+lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
+                        SelectionDAGBuilder::StatepointLoweringInfo &SI,
+                        SelectionDAGBuilder &Builder) {
+  // Lower the deopt and gc arguments for this statepoint.  Layout will be:
+  // deopt argument length, deopt arguments.., gc arguments...
 #ifndef NDEBUG
-  // Check that each of the gc pointer and bases we've gotten out of the
-  // safepoint is something the strategy thinks might be a pointer into the GC
-  // heap.  This is basically just here to help catch errors during statepoint
-  // insertion. TODO: This should actually be in the Verifier, but we can't get
-  // to the GCStrategy from there (yet).
-  GCStrategy &S = Builder.GFI->getStrategy();
-  for (const Value *V : Bases) {
-    auto Opt = S.isGCManagedPointer(V);
-    if (Opt.hasValue()) {
-      assert(Opt.getValue() &&
-             "non gc managed base pointer found in statepoint");
+  if (auto *GFI = Builder.GFI) {
+    // Check that each of the gc pointer and bases we've gotten out of the
+    // safepoint is something the strategy thinks might be a pointer (or vector
+    // of pointers) into the GC heap.  This is basically just here to help catch
+    // errors during statepoint insertion. TODO: This should actually be in the
+    // Verifier, but we can't get to the GCStrategy from there (yet).
+    GCStrategy &S = GFI->getStrategy();
+    for (const Value *V : SI.Bases) {
+      auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
+      if (Opt.hasValue()) {
+        assert(Opt.getValue() &&
+               "non gc managed base pointer found in statepoint");
+      }
     }
-  }
-  for (const Value *V : Ptrs) {
-    auto Opt = S.isGCManagedPointer(V);
-    if (Opt.hasValue()) {
-      assert(Opt.getValue() &&
-             "non gc managed derived pointer found in statepoint");
+    for (const Value *V : SI.Ptrs) {
+      auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
+      if (Opt.hasValue()) {
+        assert(Opt.getValue() &&
+               "non gc managed derived pointer found in statepoint");
+      }
     }
-  }
-  for (const Value *V : Relocations) {
-    auto Opt = S.isGCManagedPointer(V);
-    if (Opt.hasValue()) {
-      assert(Opt.getValue() && "non gc managed pointer relocated");
-    }
+    assert(SI.Bases.size() == SI.Ptrs.size() && "Pointer without base!");
+  } else {
+    assert(SI.Bases.empty() && "No gc specified, so cannot relocate pointers!");
+    assert(SI.Ptrs.empty() && "No gc specified, so cannot relocate pointers!");
   }
 #endif
 
+  // Figure out what lowering strategy we're going to use for each part
+  // Note: Is is conservatively correct to lower both "live-in" and "live-out"
+  // as "live-through". A "live-through" variable is one which is "live-in",
+  // "live-out", and live throughout the lifetime of the call (i.e. we can find
+  // it from any PC within the transitive callee of the statepoint).  In
+  // particular, if the callee spills callee preserved registers we may not
+  // be able to find a value placed in that register during the call.  This is
+  // fine for live-out, but not for live-through.  If we were willing to make
+  // assumptions about the code generator producing the callee, we could
+  // potentially allow live-through values in callee saved registers.
+  const bool LiveInDeopt =
+    SI.StatepointFlags & (uint64_t)StatepointFlags::DeoptLiveIn;
+
+  auto isGCValue =[&](const Value *V) {
+    return is_contained(SI.Ptrs, V) || is_contained(SI.Bases, V);
+  };
+  
   // Before we actually start lowering (and allocating spill slots for values),
   // reserve any stack slots which we judge to be profitable to reuse for a
   // particular value.  This is purely an optimization over the code below and
   // doesn't change semantics at all.  It is important for performance that we
   // reserve slots for both deopt and gc values before lowering either.
-  for (const Value *V : StatepointSite.vm_state_args()) {
-    reservePreviousStackSlotForValue(V, Builder);
+  for (const Value *V : SI.DeoptState) {
+    if (!LiveInDeopt || isGCValue(V))
+      reservePreviousStackSlotForValue(V, Builder);
   }
-  for (unsigned i = 0; i < Bases.size(); ++i) {
-    reservePreviousStackSlotForValue(Bases[i], Builder);
-    reservePreviousStackSlotForValue(Ptrs[i], Builder);
+  for (unsigned i = 0; i < SI.Bases.size(); ++i) {
+    reservePreviousStackSlotForValue(SI.Bases[i], Builder);
+    reservePreviousStackSlotForValue(SI.Ptrs[i], Builder);
   }
 
   // First, prefix the list with the number of unique values to be
   // lowered.  Note that this is the number of *Values* not the
   // number of SDValues required to lower them.
-  const int NumVMSArgs = StatepointSite.getNumTotalVMSArgs();
+  const int NumVMSArgs = SI.DeoptState.size();
   pushStackMapConstant(Ops, Builder, NumVMSArgs);
 
-  assert(NumVMSArgs == std::distance(StatepointSite.vm_state_begin(),
-                                     StatepointSite.vm_state_end()));
-
-  // The vm state arguments are lowered in an opaque manner.  We do
-  // not know what type of values are contained within.  We skip the
-  // first one since that happens to be the total number we lowered
-  // explicitly just above.  We could have left it in the loop and
-  // not done it explicitly, but it's far easier to understand this
-  // way.
-  for (const Value *V : StatepointSite.vm_state_args()) {
+  // The vm state arguments are lowered in an opaque manner.  We do not know
+  // what type of values are contained within.
+  for (const Value *V : SI.DeoptState) {
     SDValue Incoming = Builder.getValue(V);
-    lowerIncomingStatepointValue(Incoming, Ops, Builder);
+    const bool LiveInValue = LiveInDeopt && !isGCValue(V);
+    lowerIncomingStatepointValue(Incoming, LiveInValue, Ops, Builder);
   }
 
   // Finally, go ahead and lower all the gc arguments.  There's no prefixed
@@ -564,12 +511,14 @@ static void lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // arrays interwoven with each (lowered) base pointer immediately followed by
   // it's (lowered) derived pointer.  i.e
   // (base[0], ptr[0], base[1], ptr[1], ...)
-  for (unsigned i = 0; i < Bases.size(); ++i) {
-    const Value *Base = Bases[i];
-    lowerIncomingStatepointValue(Builder.getValue(Base), Ops, Builder);
+  for (unsigned i = 0; i < SI.Bases.size(); ++i) {
+    const Value *Base = SI.Bases[i];
+    lowerIncomingStatepointValue(Builder.getValue(Base), /*LiveInOnly*/ false,
+                                 Ops, Builder);
 
-    const Value *Ptr = Ptrs[i];
-    lowerIncomingStatepointValue(Builder.getValue(Ptr), Ops, Builder);
+    const Value *Ptr = SI.Ptrs[i];
+    lowerIncomingStatepointValue(Builder.getValue(Ptr), /*LiveInOnly*/ false,
+                                 Ops, Builder);
   }
 
   // If there are any explicit spill slots passed to the statepoint, record
@@ -577,30 +526,30 @@ static void lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // allocas and give control over placement to the consumer.  In this case,
   // it is the contents of the slot which may get updated, not the pointer to
   // the alloca
-  for (Value *V : StatepointSite.gc_args()) {
+  for (Value *V : SI.GCArgs) {
     SDValue Incoming = Builder.getValue(V);
     if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Incoming)) {
       // This handles allocas as arguments to the statepoint
+      assert(Incoming.getValueType() == Builder.getFrameIndexTy() &&
+             "Incoming value is a frame index!");
       Ops.push_back(Builder.DAG.getTargetFrameIndex(FI->getIndex(),
-                                                    Incoming.getValueType()));
+                                                    Builder.getFrameIndexTy()));
     }
   }
 
   // Record computed locations for all lowered values.
   // This can not be embedded in lowering loops as we need to record *all*
   // values, while previous loops account only values with unique SDValues.
-  const Instruction *StatepointInstr =
-    StatepointSite.getCallSite().getInstruction();
-  FunctionLoweringInfo::StatepointSpilledValueMapTy &SpillMap =
-    Builder.FuncInfo.StatepointRelocatedValues[StatepointInstr];
+  const Instruction *StatepointInstr = SI.StatepointInstr;
+  auto &SpillMap = Builder.FuncInfo.StatepointSpillMaps[StatepointInstr];
 
-  for (GCRelocateOperands RelocateOpers : StatepointSite.getRelocates()) {
-    const Value *V = RelocateOpers.getDerivedPtr();
+  for (const GCRelocateInst *Relocate : SI.GCRelocates) {
+    const Value *V = Relocate->getDerivedPtr();
     SDValue SDV = Builder.getValue(V);
     SDValue Loc = Builder.StatepointLowering.getLocation(SDV);
 
     if (Loc.getNode()) {
-      SpillMap[V] = cast<FrameIndexSDNode>(Loc)->getIndex();
+      SpillMap.SlotMap[V] = cast<FrameIndexSDNode>(Loc)->getIndex();
     } else {
       // Record value as visited, but not spilled. This is case for allocas
       // and constants. For this values we can avoid emitting spill load while
@@ -608,7 +557,7 @@ static void lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
       // Actually we do not need to record them in this map at all.
       // We do this only to check that we are not relocating any unvisited
       // value.
-      SpillMap[V] = None;
+      SpillMap.SlotMap[V] = None;
 
       // Default llvm mechanisms for exporting values which are used in
       // different basic blocks does not work for gc relocates.
@@ -616,23 +565,14 @@ static void lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
       // uses of the corresponding values so that it would automatically
       // export them. Relocates of the spilled values does not use original
       // value.
-      if (RelocateOpers.getUnderlyingCallSite().getParent() !=
-          StatepointInstr->getParent())
+      if (Relocate->getParent() != StatepointInstr->getParent())
         Builder.ExportFromCurrentBlock(V);
     }
   }
 }
 
-void SelectionDAGBuilder::visitStatepoint(const CallInst &CI) {
-  // Check some preconditions for sanity
-  assert(isStatepoint(&CI) &&
-         "function called must be the statepoint function");
-
-  LowerStatepoint(ImmutableStatepoint(&CI));
-}
-
-void SelectionDAGBuilder::LowerStatepoint(
-    ImmutableStatepoint ISP, const BasicBlock *EHPadBB /*= nullptr*/) {
+SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
+    SelectionDAGBuilder::StatepointLoweringInfo &SI) {
   // The basic scheme here is that information about both the original call and
   // the safepoint is encoded in the CallInst.  We create a temporary call and
   // lower it, then reverse engineer the calling sequence.
@@ -641,36 +581,36 @@ void SelectionDAGBuilder::LowerStatepoint(
   // Clear state
   StatepointLowering.startNewStatepoint(*this);
 
-  ImmutableCallSite CS(ISP.getCallSite());
-
 #ifndef NDEBUG
-  // Consistency check. Check only relocates in the same basic block as thier
-  // statepoint.
-  for (const User *U : CS->users()) {
-    const CallInst *Call = cast<CallInst>(U);
-    if (isGCRelocate(Call) && Call->getParent() == CS.getParent())
-      StatepointLowering.scheduleRelocCall(*Call);
-  }
+  // We schedule gc relocates before removeDuplicateGCPtrs since we _will_
+  // encounter the duplicate gc relocates we elide in removeDuplicateGCPtrs.
+  for (auto *Reloc : SI.GCRelocates)
+    if (Reloc->getParent() == SI.StatepointInstr->getParent())
+      StatepointLowering.scheduleRelocCall(*Reloc);
 #endif
 
-#ifndef NDEBUG
-  // If this is a malformed statepoint, report it early to simplify debugging.
-  // This should catch any IR level mistake that's made when constructing or
-  // transforming statepoints.
-  ISP.verify();
-
-  // Check that the associated GCStrategy expects to encounter statepoints.
-  assert(GFI->getStrategy().useStatepoints() &&
-         "GCStrategy does not expect to encounter statepoints");
-#endif
+  // Remove any redundant llvm::Values which map to the same SDValue as another
+  // input.  Also has the effect of removing duplicates in the original
+  // llvm::Value input list as well.  This is a useful optimization for
+  // reducing the size of the StackMap section.  It has no other impact.
+  removeDuplicateGCPtrs(SI.Bases, SI.Ptrs, SI.GCRelocates, *this,
+                        FuncInfo.StatepointSpillMaps[SI.StatepointInstr]);
+  assert(SI.Bases.size() == SI.Ptrs.size() &&
+         SI.Ptrs.size() == SI.GCRelocates.size());
 
   // Lower statepoint vmstate and gcstate arguments
   SmallVector<SDValue, 10> LoweredMetaArgs;
-  lowerStatepointMetaArgs(LoweredMetaArgs, ISP, *this);
+  lowerStatepointMetaArgs(LoweredMetaArgs, SI, *this);
+
+  // Now that we've emitted the spills, we need to update the root so that the
+  // call sequence is ordered correctly.
+  SI.CLI.setChain(getRoot());
 
   // Get call node, we will replace it later with statepoint
-  SDNode *CallNode =
-      lowerCallFromStatepoint(ISP, EHPadBB, *this, PendingExports);
+  SDValue ReturnVal;
+  SDNode *CallNode;
+  std::tie(ReturnVal, CallNode) =
+      lowerCallFromStatepointLoweringInfo(SI, *this, PendingExports);
 
   // Construct the actual GC_TRANSITION_START, STATEPOINT, and GC_TRANSITION_END
   // nodes with all the appropriate arguments and return values.
@@ -693,8 +633,8 @@ void SelectionDAGBuilder::LowerStatepoint(
   // followed by a SRCVALUE for the pointer that may be used during lowering
   // (e.g. to form MachinePointerInfo values for loads/stores).
   const bool IsGCTransition =
-      (ISP.getFlags() & (uint64_t)StatepointFlags::GCTransition) ==
-          (uint64_t)StatepointFlags::GCTransition;
+      (SI.StatepointFlags & (uint64_t)StatepointFlags::GCTransition) ==
+      (uint64_t)StatepointFlags::GCTransition;
   if (IsGCTransition) {
     SmallVector<SDValue, 8> TSOps;
 
@@ -702,7 +642,7 @@ void SelectionDAGBuilder::LowerStatepoint(
     TSOps.push_back(Chain);
 
     // Add GC transition arguments
-    for (const Value *V : ISP.gc_transition_args()) {
+    for (const Value *V : SI.GCTransitionArgs) {
       TSOps.push_back(getValue(V));
       if (V->getType()->isPointerTy())
         TSOps.push_back(DAG.getSrcValue(V));
@@ -727,9 +667,9 @@ void SelectionDAGBuilder::LowerStatepoint(
   SmallVector<SDValue, 40> Ops;
 
   // Add the <id> and <numBytes> constants.
-  Ops.push_back(DAG.getTargetConstant(ISP.getID(), getCurSDLoc(), MVT::i64));
+  Ops.push_back(DAG.getTargetConstant(SI.ID, getCurSDLoc(), MVT::i64));
   Ops.push_back(
-      DAG.getTargetConstant(ISP.getNumPatchBytes(), getCurSDLoc(), MVT::i32));
+      DAG.getTargetConstant(SI.NumPatchBytes, getCurSDLoc(), MVT::i32));
 
   // Calculate and push starting position of vmstate arguments
   // Get number of arguments incoming directly into call node
@@ -751,13 +691,12 @@ void SelectionDAGBuilder::LowerStatepoint(
   Ops.insert(Ops.end(), CallNode->op_begin() + 2, RegMaskIt);
 
   // Add a constant argument for the calling convention
-  pushStackMapConstant(Ops, *this, CS.getCallingConv());
+  pushStackMapConstant(Ops, *this, SI.CLI.CallConv);
 
   // Add a constant argument for the flags
-  uint64_t Flags = ISP.getFlags();
-  assert(
-      ((Flags & ~(uint64_t)StatepointFlags::MaskAll) == 0)
-          && "unknown flag used");
+  uint64_t Flags = SI.StatepointFlags;
+  assert(((Flags & ~(uint64_t)StatepointFlags::MaskAll) == 0) &&
+         "Unknown flag used");
   pushStackMapConstant(Ops, *this, Flags);
 
   // Insert all vmstate and gcstate arguments
@@ -793,7 +732,7 @@ void SelectionDAGBuilder::LowerStatepoint(
     TEOps.push_back(SDValue(StatepointMCNode, 0));
 
     // Add GC transition arguments
-    for (const Value *V : ISP.gc_transition_args()) {
+    for (const Value *V : SI.GCTransitionArgs) {
       TEOps.push_back(getValue(V));
       if (V->getType()->isPointerTy())
         TEOps.push_back(DAG.getSrcValue(V));
@@ -823,19 +762,154 @@ void SelectionDAGBuilder::LowerStatepoint(
   // return value of each gc.relocate to the respective output of the
   // previously emitted STATEPOINT value.  Unfortunately, this doesn't appear
   // to actually be possible today.
+
+  return ReturnVal;
 }
 
-void SelectionDAGBuilder::visitGCResult(const CallInst &CI) {
+void
+SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
+                                     const BasicBlock *EHPadBB /*= nullptr*/) {
+  assert(ISP.getCallSite().getCallingConv() != CallingConv::AnyReg &&
+         "anyregcc is not supported on statepoints!");
+
+#ifndef NDEBUG
+  // If this is a malformed statepoint, report it early to simplify debugging.
+  // This should catch any IR level mistake that's made when constructing or
+  // transforming statepoints.
+  ISP.verify();
+
+  // Check that the associated GCStrategy expects to encounter statepoints.
+  assert(GFI->getStrategy().useStatepoints() &&
+         "GCStrategy does not expect to encounter statepoints");
+#endif
+
+  SDValue ActualCallee;
+
+  if (ISP.getNumPatchBytes() > 0) {
+    // If we've been asked to emit a nop sequence instead of a call instruction
+    // for this statepoint then don't lower the call target, but use a constant
+    // `null` instead.  Not lowering the call target lets statepoint clients get
+    // away without providing a physical address for the symbolic call target at
+    // link time.
+
+    const auto &TLI = DAG.getTargetLoweringInfo();
+    const auto &DL = DAG.getDataLayout();
+
+    unsigned AS = ISP.getCalledValue()->getType()->getPointerAddressSpace();
+    ActualCallee = DAG.getConstant(0, getCurSDLoc(), TLI.getPointerTy(DL, AS));
+  } else {
+    ActualCallee = getValue(ISP.getCalledValue());
+  }
+
+  StatepointLoweringInfo SI(DAG);
+  populateCallLoweringInfo(SI.CLI, ISP.getCallSite(),
+                           ImmutableStatepoint::CallArgsBeginPos,
+                           ISP.getNumCallArgs(), ActualCallee,
+                           ISP.getActualReturnType(), false /* IsPatchPoint */);
+
+  for (const GCRelocateInst *Relocate : ISP.getRelocates()) {
+    SI.GCRelocates.push_back(Relocate);
+    SI.Bases.push_back(Relocate->getBasePtr());
+    SI.Ptrs.push_back(Relocate->getDerivedPtr());
+  }
+
+  SI.GCArgs = ArrayRef<const Use>(ISP.gc_args_begin(), ISP.gc_args_end());
+  SI.StatepointInstr = ISP.getInstruction();
+  SI.GCTransitionArgs =
+      ArrayRef<const Use>(ISP.gc_args_begin(), ISP.gc_args_end());
+  SI.ID = ISP.getID();
+  SI.DeoptState = ArrayRef<const Use>(ISP.deopt_begin(), ISP.deopt_end());
+  SI.StatepointFlags = ISP.getFlags();
+  SI.NumPatchBytes = ISP.getNumPatchBytes();
+  SI.EHPadBB = EHPadBB;
+
+  SDValue ReturnValue = LowerAsSTATEPOINT(SI);
+
+  // Export the result value if needed
+  const GCResultInst *GCResult = ISP.getGCResult();
+  Type *RetTy = ISP.getActualReturnType();
+  if (!RetTy->isVoidTy() && GCResult) {
+    if (GCResult->getParent() != ISP.getCallSite().getParent()) {
+      // Result value will be used in a different basic block so we need to
+      // export it now.  Default exporting mechanism will not work here because
+      // statepoint call has a different type than the actual call. It means
+      // that by default llvm will create export register of the wrong type
+      // (always i32 in our case). So instead we need to create export register
+      // with correct type manually.
+      // TODO: To eliminate this problem we can remove gc.result intrinsics
+      //       completely and make statepoint call to return a tuple.
+      unsigned Reg = FuncInfo.CreateRegs(RetTy);
+      RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
+                       DAG.getDataLayout(), Reg, RetTy, true);
+      SDValue Chain = DAG.getEntryNode();
+
+      RFV.getCopyToRegs(ReturnValue, DAG, getCurSDLoc(), Chain, nullptr);
+      PendingExports.push_back(Chain);
+      FuncInfo.ValueMap[ISP.getInstruction()] = Reg;
+    } else {
+      // Result value will be used in a same basic block. Don't export it or
+      // perform any explicit register copies.
+      // We'll replace the actuall call node shortly. gc_result will grab
+      // this value.
+      setValue(ISP.getInstruction(), ReturnValue);
+    }
+  } else {
+    // The token value is never used from here on, just generate a poison value
+    setValue(ISP.getInstruction(), DAG.getIntPtrConstant(-1, getCurSDLoc()));
+  }
+}
+
+void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
+    ImmutableCallSite CS, SDValue Callee, const BasicBlock *EHPadBB,
+    bool VarArgDisallowed, bool ForceVoidReturnTy) {
+  StatepointLoweringInfo SI(DAG);
+  unsigned ArgBeginIndex = CS.arg_begin() - CS.getInstruction()->op_begin();
+  populateCallLoweringInfo(
+      SI.CLI, CS, ArgBeginIndex, CS.getNumArgOperands(), Callee,
+      ForceVoidReturnTy ? Type::getVoidTy(*DAG.getContext()) : CS.getType(),
+      false);
+  if (!VarArgDisallowed)
+    SI.CLI.IsVarArg = CS.getFunctionType()->isVarArg();
+
+  auto DeoptBundle = *CS.getOperandBundle(LLVMContext::OB_deopt);
+
+  unsigned DefaultID = StatepointDirectives::DeoptBundleStatepointID;
+
+  auto SD = parseStatepointDirectivesFromAttrs(CS.getAttributes());
+  SI.ID = SD.StatepointID.getValueOr(DefaultID);
+  SI.NumPatchBytes = SD.NumPatchBytes.getValueOr(0);
+
+  SI.DeoptState =
+      ArrayRef<const Use>(DeoptBundle.Inputs.begin(), DeoptBundle.Inputs.end());
+  SI.StatepointFlags = static_cast<uint64_t>(StatepointFlags::None);
+  SI.EHPadBB = EHPadBB;
+
+  // NB! The GC arguments are deliberately left empty.
+
+  if (SDValue ReturnVal = LowerAsSTATEPOINT(SI)) {
+    const Instruction *Inst = CS.getInstruction();
+    ReturnVal = lowerRangeToAssertZExt(DAG, *Inst, ReturnVal);
+    setValue(Inst, ReturnVal);
+  }
+}
+
+void SelectionDAGBuilder::LowerCallSiteWithDeoptBundle(
+    ImmutableCallSite CS, SDValue Callee, const BasicBlock *EHPadBB) {
+  LowerCallSiteWithDeoptBundleImpl(CS, Callee, EHPadBB,
+                                   /* VarArgDisallowed = */ false,
+                                   /* ForceVoidReturnTy  = */ false);
+}
+
+void SelectionDAGBuilder::visitGCResult(const GCResultInst &CI) {
   // The result value of the gc_result is simply the result of the actual
   // call.  We've already emitted this, so just grab the value.
-  Instruction *I = cast<Instruction>(CI.getArgOperand(0));
-  assert(isStatepoint(I) && "first argument must be a statepoint token");
+  const Instruction *I = CI.getStatepoint();
 
   if (I->getParent() != CI.getParent()) {
     // Statepoint is in different basic block so we should have stored call
     // result in a virtual register.
     // We can not use default getValue() functionality to copy value from this
-    // register because statepoint and actuall call return types can be
+    // register because statepoint and actual call return types can be
     // different, and getValue() will use CopyFromReg of the wrong type,
     // which is always i32 in our case.
     PointerType *CalleeType = cast<PointerType>(
@@ -851,38 +925,37 @@ void SelectionDAGBuilder::visitGCResult(const CallInst &CI) {
   }
 }
 
-void SelectionDAGBuilder::visitGCRelocate(const CallInst &CI) {
-  GCRelocateOperands RelocateOpers(&CI);
-
+void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 #ifndef NDEBUG
   // Consistency check
-  // We skip this check for relocates not in the same basic block as thier
+  // We skip this check for relocates not in the same basic block as their
   // statepoint. It would be too expensive to preserve validation info through
   // different basic blocks.
-  if (RelocateOpers.getStatepoint()->getParent() == CI.getParent()) {
-    StatepointLowering.relocCallVisited(CI);
-  }
+  if (Relocate.getStatepoint()->getParent() == Relocate.getParent())
+    StatepointLowering.relocCallVisited(Relocate);
+
+  auto *Ty = Relocate.getType()->getScalarType();
+  if (auto IsManaged = GFI->getStrategy().isGCManagedPointer(Ty))
+    assert(*IsManaged && "Non gc managed pointer relocated!");
 #endif
 
-  const Value *DerivedPtr = RelocateOpers.getDerivedPtr();
+  const Value *DerivedPtr = Relocate.getDerivedPtr();
   SDValue SD = getValue(DerivedPtr);
 
-  FunctionLoweringInfo::StatepointSpilledValueMapTy &SpillMap =
-    FuncInfo.StatepointRelocatedValues[RelocateOpers.getStatepoint()];
-
-  // We should have recorded location for this pointer
-  assert(SpillMap.count(DerivedPtr) && "Relocating not lowered gc value");
-  Optional<int> DerivedPtrLocation = SpillMap[DerivedPtr];
+  auto &SpillMap = FuncInfo.StatepointSpillMaps[Relocate.getStatepoint()];
+  auto SlotIt = SpillMap.find(DerivedPtr);
+  assert(SlotIt != SpillMap.end() && "Relocating not lowered gc value");
+  Optional<int> DerivedPtrLocation = SlotIt->second;
 
   // We didn't need to spill these special cases (constants and allocas).
   // See the handling in spillIncomingValueForStatepoint for detail.
   if (!DerivedPtrLocation) {
-    setValue(&CI, SD);
+    setValue(&Relocate, SD);
     return;
   }
 
-  SDValue SpillSlot = DAG.getTargetFrameIndex(*DerivedPtrLocation,
-                                              SD.getValueType());
+  SDValue SpillSlot =
+      DAG.getTargetFrameIndex(*DerivedPtrLocation, getFrameIndexTy());
 
   // Be conservative: flush all pending loads
   // TODO: Probably we can be less restrictive on this,
@@ -890,14 +963,37 @@ void SelectionDAGBuilder::visitGCRelocate(const CallInst &CI) {
   SDValue Chain = getRoot();
 
   SDValue SpillLoad =
-      DAG.getLoad(SpillSlot.getValueType(), getCurSDLoc(), Chain, SpillSlot,
+      DAG.getLoad(DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
+                                                           Relocate.getType()),
+                  getCurSDLoc(), Chain, SpillSlot,
                   MachinePointerInfo::getFixedStack(DAG.getMachineFunction(),
-                                                    *DerivedPtrLocation),
-                  false, false, false, 0);
+                                                    *DerivedPtrLocation));
 
   // Again, be conservative, don't emit pending loads
   DAG.setRoot(SpillLoad.getValue(1));
 
   assert(SpillLoad.getNode());
-  setValue(&CI, SpillLoad);
+  setValue(&Relocate, SpillLoad);
+}
+
+void SelectionDAGBuilder::LowerDeoptimizeCall(const CallInst *CI) {
+  const auto &TLI = DAG.getTargetLoweringInfo();
+  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(RTLIB::DEOPTIMIZE),
+                                         TLI.getPointerTy(DAG.getDataLayout()));
+
+  // We don't lower calls to __llvm_deoptimize as varargs, but as a regular
+  // call.  We also do not lower the return value to any virtual register, and
+  // change the immediately following return to a trap instruction.
+  LowerCallSiteWithDeoptBundleImpl(CI, Callee, /* EHPadBB = */ nullptr,
+                                   /* VarArgDisallowed = */ true,
+                                   /* ForceVoidReturnTy = */ true);
+}
+
+void SelectionDAGBuilder::LowerDeoptimizingReturn() {
+  // We do not lower the return value from llvm.deoptimize to any virtual
+  // register, and change the immediately following return to a trap
+  // instruction.
+  if (DAG.getTarget().Options.TrapUnreachable)
+    DAG.setRoot(
+        DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, DAG.getRoot()));
 }

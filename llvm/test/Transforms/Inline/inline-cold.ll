@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S -inlinecold-threshold=75 | FileCheck %s
+; RUN: opt < %s -inline -S -inlinecold-threshold=25 | FileCheck %s
 ; Test that functions with attribute Cold are not inlined while the 
 ; same function without attribute Cold will be inlined.
 
@@ -17,6 +17,7 @@
 ; Function Attrs: nounwind readnone uwtable
 define i32 @simpleFunction(i32 %a) #0 {
 entry:
+  call void @extern()
   %a1 = load volatile i32, i32* @a
   %x1 = add i32 %a1,  %a1
   %a2 = load volatile i32, i32* @a
@@ -54,6 +55,7 @@ define i32 @ColdFunction(i32 %a) #1 {
 ; DEFAULT-LABEL: @ColdFunction
 ; DEFAULT: ret
 entry:
+  call void @extern()
   %a1 = load volatile i32, i32* @a
   %x1 = add i32 %a1,  %a1
   %a2 = load volatile i32, i32* @a
@@ -62,23 +64,7 @@ entry:
   %x3 = add i32 %x2, %a3
   %a4 = load volatile i32, i32* @a
   %x4 = add i32 %x3, %a4
-  %a5 = load volatile i32, i32* @a
-  %x5 = add i32 %x4, %a5
-  %a6 = load volatile i32, i32* @a
-  %x6 = add i32 %x5, %a6
-  %a7 = load volatile i32, i32* @a
-  %x7 = add i32 %x6, %a6
-  %a8 = load volatile i32, i32* @a
-  %x8 = add i32 %x7, %a8
-  %a9 = load volatile i32, i32* @a
-  %x9 = add i32 %x8, %a9
-  %a10 = load volatile i32, i32* @a
-  %x10 = add i32 %x9, %a10
-  %a11 = load volatile i32, i32* @a
-  %x11 = add i32 %x10, %a11
-  %a12 = load volatile i32, i32* @a
-  %x12 = add i32 %x11, %a12
-  %add = add i32 %x12, %a
+  %add = add i32 %x4, %a
   ret i32 %add
 }
 
@@ -91,6 +77,7 @@ define i32 @ColdFunction2(i32 %a) #1 {
 ; DEFAULT-LABEL: @ColdFunction2
 ; DEFAULT: ret
 entry:
+  call void @extern()
   %a1 = load volatile i32, i32* @a
   %x1 = add i32 %a1,  %a1
   %a2 = load volatile i32, i32* @a
@@ -196,5 +183,6 @@ entry:
   ret i32 %add
 }
 
+declare void @extern()
 attributes #0 = { nounwind readnone uwtable }
 attributes #1 = { nounwind cold readnone uwtable }

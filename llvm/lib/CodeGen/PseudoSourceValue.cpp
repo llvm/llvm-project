@@ -11,16 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Mutex.h"
 #include "llvm/Support/raw_ostream.h"
-#include <map>
 using namespace llvm;
 
 static const char *const PSVNames[] = {
@@ -32,7 +29,10 @@ PseudoSourceValue::PseudoSourceValue(PSVKind Kind) : Kind(Kind) {}
 PseudoSourceValue::~PseudoSourceValue() {}
 
 void PseudoSourceValue::printCustom(raw_ostream &O) const {
-  O << PSVNames[Kind];
+  if (Kind < TargetCustom)
+    O << PSVNames[Kind];
+  else
+    O << "TargetCustom" << Kind;
 }
 
 bool PseudoSourceValue::isConstant(const MachineFrameInfo *) const {

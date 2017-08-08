@@ -1,4 +1,4 @@
-//===- llvm/Transforms/Utils/VectorUtils.h - Vector utilities -*- C++ -*-=====//
+//===- llvm/Analysis/VectorUtils.h - Vector utilities -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,23 +11,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_VECTORUTILS_H
-#define LLVM_TRANSFORMS_UTILS_VECTORUTILS_H
+#ifndef LLVM_ANALYSIS_VECTORUTILS_H
+#define LLVM_ANALYSIS_VECTORUTILS_H
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
 
-struct DemandedBits;
+template <typename T> class ArrayRef;
+class DemandedBits;
 class GetElementPtrInst;
 class Loop;
 class ScalarEvolution;
 class TargetTransformInfo;
 class Type;
 class Value;
+
+namespace Intrinsic {
+enum ID : unsigned;
+}
 
 /// \brief Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all
@@ -39,26 +43,11 @@ bool isTriviallyVectorizable(Intrinsic::ID ID);
 /// ctlz,cttz and powi special intrinsics whose argument is scalar.
 bool hasVectorInstrinsicScalarOpd(Intrinsic::ID ID, unsigned ScalarOpdIdx);
 
-/// \brief Identify if call has a unary float signature
-/// It returns input intrinsic ID if call has a single argument,
-/// argument type and call instruction type should be floating
-/// point type and call should only reads memory.
-/// else return not_intrinsic.
-Intrinsic::ID checkUnaryFloatSignature(const CallInst &I,
-                                       Intrinsic::ID ValidIntrinsicID);
-
-/// \brief Identify if call has a binary float signature
-/// It returns input intrinsic ID if call has two arguments,
-/// arguments type and call instruction type should be floating
-/// point type and call should only reads memory.
-/// else return not_intrinsic.
-Intrinsic::ID checkBinaryFloatSignature(const CallInst &I,
-                                        Intrinsic::ID ValidIntrinsicID);
-
 /// \brief Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
 /// its intrinsic ID, in case it does not found it return not_intrinsic.
-Intrinsic::ID getIntrinsicIDForCall(CallInst *CI, const TargetLibraryInfo *TLI);
+Intrinsic::ID getVectorIntrinsicIDForCall(const CallInst *CI,
+                                          const TargetLibraryInfo *TLI);
 
 /// \brief Find the operand of the GEP that should be checked for consecutive
 /// stores. This ignores trailing indices that have no effect on the final
@@ -85,7 +74,7 @@ Value *findScalarElement(Value *V, unsigned EltNo);
 /// \brief Get splat value if the input is a splat vector or return nullptr.
 /// The value may be extracted from a splat constants vector or from
 /// a sequence of instructions that broadcast a single value into a vector.
-Value *getSplatValue(Value *V);
+const Value *getSplatValue(const Value *V);
 
 /// \brief Compute a map of integer instructions to their minimum legal type
 /// size.
@@ -121,11 +110,72 @@ Value *getSplatValue(Value *V);
 ///
 /// If the optional TargetTransformInfo is provided, this function tries harder
 /// to do less work by only looking at illegal types.
-DenseMap<Instruction*, uint64_t>
+MapVector<Instruction*, uint64_t>
 computeMinimumValueSizes(ArrayRef<BasicBlock*> Blocks,
                          DemandedBits &DB,
                          const TargetTransformInfo *TTI=nullptr);
-    
+
+/// Specifically, let Kinds = [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath,
+/// MD_nontemporal].  For K in Kinds, we get the MDNode for K from each of the
+/// elements of VL, compute their "intersection" (i.e., the most generic
+/// metadata value that covers all of the individual values), and set I's
+/// metadata for M equal to the intersection value.
+///
+/// This function always sets a (possibly null) value for each K in Kinds.
+Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
+
+/// \brief Create an interleave shuffle mask.
+///
+/// This function creates a shuffle mask for interleaving \p NumVecs vectors of
+/// vectorization factor \p VF into a single wide vector. The mask is of the
+/// form:
+///
+///   <0, VF, VF * 2, ..., VF * (NumVecs - 1), 1, VF + 1, VF * 2 + 1, ...>
+///
+/// For example, the mask for VF = 4 and NumVecs = 2 is:
+///
+///   <0, 4, 1, 5, 2, 6, 3, 7>.
+Constant *createInterleaveMask(IRBuilder<> &Builder, unsigned VF,
+                               unsigned NumVecs);
+
+/// \brief Create a stride shuffle mask.
+///
+/// This function creates a shuffle mask whose elements begin at \p Start and
+/// are incremented by \p Stride. The mask can be used to deinterleave an
+/// interleaved vector into separate vectors of vectorization factor \p VF. The
+/// mask is of the form:
+///
+///   <Start, Start + Stride, ..., Start + Stride * (VF - 1)>
+///
+/// For example, the mask for Start = 0, Stride = 2, and VF = 4 is:
+///
+///   <0, 2, 4, 6>
+Constant *createStrideMask(IRBuilder<> &Builder, unsigned Start,
+                           unsigned Stride, unsigned VF);
+
+/// \brief Create a sequential shuffle mask.
+///
+/// This function creates shuffle mask whose elements are sequential and begin
+/// at \p Start.  The mask contains \p NumInts integers and is padded with \p
+/// NumUndefs undef values. The mask is of the form:
+///
+///   <Start, Start + 1, ... Start + NumInts - 1, undef_1, ... undef_NumUndefs>
+///
+/// For example, the mask for Start = 0, NumInsts = 4, and NumUndefs = 4 is:
+///
+///   <0, 1, 2, 3, undef, undef, undef, undef>
+Constant *createSequentialMask(IRBuilder<> &Builder, unsigned Start,
+                               unsigned NumInts, unsigned NumUndefs);
+
+/// \brief Concatenate a list of vectors.
+///
+/// This function generates code that concatenate the vectors in \p Vecs into a
+/// single large vector. The number of vectors should be greater than one, and
+/// their element types should be the same. The number of elements in the
+/// vectors should also be the same; however, if the last vector has fewer
+/// elements, it will be padded with undefs.
+Value *concatenateVectors(IRBuilder<> &Builder, ArrayRef<Value *> Vecs);
+
 } // llvm namespace
 
 #endif

@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 < %s -triple armv5e-none-linux-gnueabi -emit-llvm -O1 | FileCheck %s
 
+// FIXME: This file should not be checking -O1 output.
+// Ie, it is testing many IR optimizer passes as part of front-end verification.
+
 enum memory_order {
   memory_order_relaxed, memory_order_consume, memory_order_acquire,
   memory_order_release, memory_order_acq_rel, memory_order_seq_cst
@@ -74,36 +77,44 @@ int test_atomic_fetch_nand(int *p) {
 
 int test_atomic_add_fetch(int *p) {
   // CHECK: test_atomic_add_fetch
-  // CHECK: {{%[^ ]*}} = tail call i32 @__atomic_add_fetch_4(i8* {{%[0-9]+}}, i32 55, i32 5)
+  // CHECK: [[CALL:%[^ ]*]] = tail call i32 @__atomic_fetch_add_4(i8* {{%[0-9]+}}, i32 55, i32 5)
+  // CHECK: {{%[^ ]*}} = add i32 [[CALL]], 55
   return __atomic_add_fetch(p, 55, memory_order_seq_cst);
 }
 
 int test_atomic_sub_fetch(int *p) {
   // CHECK: test_atomic_sub_fetch
-  // CHECK: {{%[^ ]*}} = tail call i32 @__atomic_sub_fetch_4(i8* {{%[0-9]+}}, i32 55, i32 5)
+  // CHECK: [[CALL:%[^ ]*]] = tail call i32 @__atomic_fetch_sub_4(i8* {{%[0-9]+}}, i32 55, i32 5)
+  // CHECK: {{%[^ ]*}} = add i32 [[CALL]], -55
   return __atomic_sub_fetch(p, 55, memory_order_seq_cst);
 }
 
 int test_atomic_and_fetch(int *p) {
   // CHECK: test_atomic_and_fetch
-  // CHECK: {{%[^ ]*}} = tail call i32 @__atomic_and_fetch_4(i8* {{%[0-9]+}}, i32 55, i32 5)
+  // CHECK: [[CALL:%[^ ]*]] = tail call i32 @__atomic_fetch_and_4(i8* {{%[0-9]+}}, i32 55, i32 5)
+  // CHECK: {{%[^ ]*}} = and i32 [[CALL]], 55
   return __atomic_and_fetch(p, 55, memory_order_seq_cst);
 }
 
 int test_atomic_or_fetch(int *p) {
   // CHECK: test_atomic_or_fetch
-  // CHECK: {{%[^ ]*}} = tail call i32 @__atomic_or_fetch_4(i8* {{%[0-9]+}}, i32 55, i32 5)
+  // CHECK: [[CALL:%[^ ]*]] = tail call i32 @__atomic_fetch_or_4(i8* {{%[0-9]+}}, i32 55, i32 5)
+  // CHECK: {{%[^ ]*}} = or i32 [[CALL]], 55
   return __atomic_or_fetch(p, 55, memory_order_seq_cst);
 }
 
 int test_atomic_xor_fetch(int *p) {
   // CHECK: test_atomic_xor_fetch
-  // CHECK: {{%[^ ]*}} = tail call i32 @__atomic_xor_fetch_4(i8* {{%[0-9]+}}, i32 55, i32 5)
+  // CHECK: [[CALL:%[^ ]*]] = tail call i32 @__atomic_fetch_xor_4(i8* {{%[0-9]+}}, i32 55, i32 5)
+  // CHECK: {{%[^ ]*}} = xor i32 [[CALL]], 55
   return __atomic_xor_fetch(p, 55, memory_order_seq_cst);
 }
 
 int test_atomic_nand_fetch(int *p) {
   // CHECK: test_atomic_nand_fetch
-  // CHECK: {{%[^ ]*}} = tail call i32 @__atomic_nand_fetch_4(i8* {{%[0-9]+}}, i32 55, i32 5)
+  // CHECK: [[CALL:%[^ ]*]] = tail call i32 @__atomic_fetch_nand_4(i8* {{%[0-9]+}}, i32 55, i32 5)
+  // FIXME: We should not be checking optimized IR. It changes independently of clang.
+  // FIXME-CHECK: [[AND:%[^ ]*]] = and i32 [[CALL]], 55
+  // FIXME-CHECK: {{%[^ ]*}} = xor i32 [[AND]], -1
   return __atomic_nand_fetch(p, 55, memory_order_seq_cst);
 }

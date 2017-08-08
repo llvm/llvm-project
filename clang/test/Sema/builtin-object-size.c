@@ -52,3 +52,42 @@ void f6(void)
   __builtin___memccpy_chk (buf, b, '\0', sizeof(b), __builtin_object_size (buf, 0));
   __builtin___memccpy_chk (b, buf, '\0', sizeof(buf), __builtin_object_size (b, 0));  // expected-warning {{'__builtin___memccpy_chk' will always overflow destination buffer}}
 }
+
+int pr28314(void) {
+  struct {
+    struct InvalidField a; // expected-error{{has incomplete type}} expected-note 3{{forward declaration of 'struct InvalidField'}}
+    char b[0];
+  } *p;
+
+  struct {
+    struct InvalidField a; // expected-error{{has incomplete type}}
+    char b[1];
+  } *p2;
+
+  struct {
+    struct InvalidField a; // expected-error{{has incomplete type}}
+    char b[2];
+  } *p3;
+
+  int a = 0;
+  a += __builtin_object_size(&p->a, 0);
+  a += __builtin_object_size(p->b, 0);
+  a += __builtin_object_size(p2->b, 0);
+  a += __builtin_object_size(p3->b, 0);
+  return a;
+}
+
+int pr31843() {
+  int n = 0;
+
+  struct { int f; } a;
+  int b;
+  n += __builtin_object_size(({&(b ? &a : &a)->f; pr31843;}), 0); // expected-warning{{expression result unused}}
+
+  struct statfs { char f_mntonname[1024];};
+  struct statfs *outStatFSBuf;
+  n += __builtin_object_size(outStatFSBuf->f_mntonname ? "" : "", 1); // expected-warning{{address of array}}
+  n += __builtin_object_size(outStatFSBuf->f_mntonname ?: "", 1);
+
+  return n;
+}

@@ -16,6 +16,7 @@
 namespace llvm {
 
 class raw_ostream;
+namespace pdb {
 
 class PDBSymbolTypeBuiltin : public PDBSymbol {
 public:
@@ -29,12 +30,12 @@ public:
   FORWARD_SYMBOL_METHOD(getBuiltinType)
   FORWARD_SYMBOL_METHOD(isConstType)
   FORWARD_SYMBOL_METHOD(getLength)
-  FORWARD_SYMBOL_METHOD(getLexicalParentId)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
+  FORWARD_SYMBOL_ID_METHOD(getLexicalParent)
   FORWARD_SYMBOL_METHOD(isUnalignedType)
   FORWARD_SYMBOL_METHOD(isVolatileType)
 };
 
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEBUILTIN_H

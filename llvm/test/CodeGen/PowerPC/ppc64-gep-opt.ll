@@ -1,6 +1,6 @@
-; RUN: llc -O3 -mcpu=pwr7 < %s | FileCheck %s
-; RUN: llc -O3 -print-after=codegenprepare -mcpu=ppc64 < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-NoAA <%t %s
-; RUN: llc -O3 -print-after=codegenprepare -mcpu=pwr7  < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-UseAA <%t %s
+; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr7 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O3 -print-after=codegenprepare -mcpu=ppc64 < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-NoAA <%t %s
+; RUN: llc -verify-machineinstrs -O3 -print-after=codegenprepare -mcpu=pwr7  < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-UseAA <%t %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -84,9 +84,9 @@ exit:
 ; CHECK-NoAA: add i64 [[TMP:%[a-zA-Z0-9]+]], 528
 ; CHECK-NoAA: add i64 [[TMP]], 532
 ; CHECK-NoAA: if.true:
-; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = add i64 [[TMP]], 532
+; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = getelementptr i8, i8* {{.*}}, i64 532
 ; CHECK-NoAA: exit:
-; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = add i64 [[TMP]], 528
+; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = getelementptr i8, i8* {{.*}}, i64 528
 
 ; CHECK-UseAA-LABEL: test_GEP_across_BB(
 ; CHECK-UseAA: [[PTR0:%[a-zA-Z0-9]+]] = getelementptr

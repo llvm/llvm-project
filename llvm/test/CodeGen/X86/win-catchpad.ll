@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-pc-windows-msvc < %s | FileCheck --check-prefix=X86 %s
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck --check-prefix=X64 %s
+; RUN: llc -stack-symbol-ordering=0 -verify-machineinstrs -mtriple=i686-pc-windows-msvc < %s | FileCheck --check-prefix=X86 %s
+; RUN: llc -stack-symbol-ordering=0 -verify-machineinstrs -mtriple=x86_64-pc-windows-msvc < %s | FileCheck --check-prefix=X64 %s
 
 ; Loosely based on IR for this C++ source code:
 ;   void f(int p);
@@ -28,7 +28,7 @@ declare void @f(i32 %p, i32* %l)
 declare i1 @getbool()
 declare i32 @__CxxFrameHandler3(...)
 
-define i32 @try_catch_catch() personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define i32 @try_catch_catch() personality i32 (...)* @__CxxFrameHandler3 {
 entry:
   %e.addr = alloca i32
   %local = alloca i32
@@ -36,87 +36,78 @@ entry:
           to label %try.cont unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %0 = catchpad [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i32* %e.addr]
-          to label %catch unwind label %catch.dispatch.2
+  %cs = catchswitch within none [label %handler1, label %handler2] unwind to caller
 
-catch:                                            ; preds = %catch.dispatch
+handler1:
+  %h1 = catchpad within %cs [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i32* %e.addr]
   %e = load i32, i32* %e.addr
-  invoke void @f(i32 %e, i32* %local)
-          to label %invoke.cont.2 unwind label %catchendblock
+  call void @f(i32 %e, i32* %local) [ "funclet"(token %h1) ]
+  catchret from %h1 to label %try.cont
 
-invoke.cont.2:                                    ; preds = %catch
-  catchret %0 to label %try.cont
+handler2:
+  %h2 = catchpad within %cs [i8* null, i32 64, i8* null]
+  call void @f(i32 3, i32* %local) [ "funclet"(token %h2) ]
+  catchret from %h2 to label %try.cont
 
-catch.dispatch.2:                                   ; preds = %catch.dispatch
-  %1 = catchpad [i8* null, i32 u0x40, i8* null]
-          to label %catch.2 unwind label %catchendblock
-
-catch.2:                                            ; preds = %catch.dispatch.2
-  invoke void @f(i32 3, i32* %local)
-          to label %invoke.cont.3 unwind label %catchendblock
-
-invoke.cont.3:                                    ; preds = %catch.2
-  catchret %1 to label %try.cont
-
-try.cont:                                         ; preds = %entry, %invoke.cont.2, %invoke.cont.3
+try.cont:
   ret i32 0
-
-catchendblock:                                    ; preds = %catch, %catch.2, %catch.dispatch.2
-  catchendpad unwind to caller
 }
 
 ; X86-LABEL: _try_catch_catch:
+; X86: movl %esp, -[[sp_offset:[0-9]+]](%ebp)
 ; X86: movl $0, -{{[0-9]+}}(%ebp)
 ; X86: leal -[[local_offs:[0-9]+]](%ebp), %[[addr_reg:[a-z]+]]
-; X86-DAG: movl %[[addr_reg]], 4(%esp)
-; X86-DAG: movl $1, (%esp)
+; X86-DAG: pushl %[[addr_reg]]
+; X86-DAG: pushl $1
 ; X86: calll _f
 ; X86: [[contbb:LBB0_[0-9]+]]: # %try.cont
 ; X86: retl
 
-; X86: [[restorebb1:LBB0_[0-9]+]]: # Block address taken
-; X86-NEXT:                        # %invoke.cont.2
-; X86: movl -16(%ebp), %esp
-; X86: addl $12, %ebp
-; X86: jmp [[contbb]]
-
 ; FIXME: These should be de-duplicated.
 ; X86: [[restorebb2:LBB0_[0-9]+]]: # Block address taken
-; X86-NEXT:                        # %invoke.cont.3
-; X86: movl -16(%ebp), %esp
-; X86: addl $12, %ebp
+; X86-NEXT:                        # %handler2
+; X86-NEXT: addl $12, %ebp
+; X86: jmp [[contbb]]
+
+; X86: [[restorebb1:LBB0_[0-9]+]]: # Block address taken
+; X86-NEXT:                        # %handler1
+; X86-NEXT: addl $12, %ebp
 ; X86: jmp [[contbb]]
 
 ; X86: "?catch$[[catch1bb:[0-9]+]]@?0?try_catch_catch@4HA":
-; X86: LBB0_[[catch1bb]]: # %catch.dispatch{{$}}
+; X86: LBB0_[[catch1bb]]: # %handler1{{$}}
 ; X86: pushl %ebp
 ; X86: subl $8, %esp
 ; X86: addl $12, %ebp
-; X86: leal -[[local_offs]](%ebp), %[[addr_reg:[a-z]+]]
-; X86: movl -32(%ebp), %[[e_reg:[a-z]+]]
-; X86: movl $1, -{{[0-9]+}}(%ebp)
-; X86-DAG: movl %[[addr_reg]], 4(%esp)
-; X86-DAG: movl %[[e_reg]], (%esp)
+; X86: movl %esp, -[[sp_offset]](%ebp)
+; X86-DAG: movl -32(%ebp), %[[e_reg:[a-z]+]]
+; X86-DAG: leal -[[local_offs]](%ebp), %[[addr_reg:[a-z]+]]
+; X86-DAG: movl $1, -{{[0-9]+}}(%ebp)
+; X86: pushl %[[addr_reg]]
+; X86: pushl %[[e_reg]]
 ; X86: calll _f
-; X86-NEXT: movl $[[restorebb1]], %eax
-; X86-NEXT: addl $8, %esp
-; X86-NEXT: popl %ebp
-; X86-NEXT: retl
+; X86: addl $8, %esp
+; X86: movl $[[restorebb1]], %eax
+; X86: addl $8, %esp
+; X86: popl %ebp
+; X86: retl
 
 ; X86: "?catch$[[catch2bb:[0-9]+]]@?0?try_catch_catch@4HA":
-; X86: LBB0_[[catch2bb]]: # %catch.dispatch.2{{$}}
+; X86: LBB0_[[catch2bb]]: # %handler2{{$}}
 ; X86: pushl %ebp
 ; X86: subl $8, %esp
 ; X86: addl $12, %ebp
-; X86: leal -[[local_offs]](%ebp), %[[addr_reg:[a-z]+]]
-; X86: movl $1, -{{[0-9]+}}(%ebp)
-; X86-DAG: movl %[[addr_reg]], 4(%esp)
-; X86-DAG: movl $3, (%esp)
+; X86: movl %esp, -[[sp_offset]](%ebp)
+; X86-DAG: leal -[[local_offs]](%ebp), %[[addr_reg:[a-z]+]]
+; X86-DAG: movl $1, -{{[0-9]+}}(%ebp)
+; X86: pushl %[[addr_reg]]
+; X86: pushl $3
 ; X86: calll _f
-; X86-NEXT: movl $[[restorebb2]], %eax
-; X86-NEXT: addl $8, %esp
-; X86-NEXT: popl %ebp
-; X86-NEXT: retl
+; X86: addl $8, %esp
+; X86: movl $[[restorebb2]], %eax
+; X86: addl $8, %esp
+; X86: popl %ebp
+; X86: retl
 
 ; X86: L__ehtable$try_catch_catch:
 ; X86: $handlerMap$0$try_catch_catch:
@@ -133,31 +124,31 @@ catchendblock:                                    ; preds = %catch, %catch.2, %c
 ; X64: Lfunc_begin0:
 ; X64: pushq %rbp
 ; X64: .seh_pushreg 5
-; X64: subq $48, %rsp
-; X64: .seh_stackalloc 48
-; X64: leaq 48(%rsp), %rbp
-; X64: .seh_setframe 5, 48
+; X64: subq $[[STCK_ALLOC:.*]], %rsp
+; X64: .seh_stackalloc [[STCK_ALLOC]]
+; X64: leaq [[STCK_ALLOC]](%rsp), %rbp
+; X64: .seh_setframe 5, [[STCK_ALLOC]]
 ; X64: .seh_endprologue
+; X64: movq $-2, -16(%rbp)
 ; X64: .Ltmp0
 ; X64-DAG: leaq -[[local_offs:[0-9]+]](%rbp), %rdx
 ; X64-DAG: movl $1, %ecx
 ; X64: callq f
 ; X64: [[contbb:\.LBB0_[0-9]+]]: # Block address taken
 ; X64-NEXT:                      # %try.cont
-; X64: addq $48, %rsp
+; X64: addq $[[STCK_ALLOC]], %rsp
 ; X64: popq %rbp
 ; X64: retq
 
 ; X64: "?catch$[[catch1bb:[0-9]+]]@?0?try_catch_catch@4HA":
-; X64: LBB0_[[catch1bb]]: # %catch.dispatch{{$}}
+; X64: LBB0_[[catch1bb]]: # %handler1{{$}}
 ; X64: movq %rdx, 16(%rsp)
 ; X64: pushq %rbp
 ; X64: .seh_pushreg 5
 ; X64: subq $32, %rsp
 ; X64: .seh_stackalloc 32
-; X64: leaq 48(%rdx), %rbp
+; X64: leaq [[STCK_ALLOC]](%rdx), %rbp
 ; X64: .seh_endprologue
-; X64-DAG: .Ltmp4
 ; X64-DAG: leaq -[[local_offs]](%rbp), %rdx
 ; X64-DAG: movl -4(%rbp), %ecx
 ; X64: callq f
@@ -167,18 +158,17 @@ catchendblock:                                    ; preds = %catch, %catch.2, %c
 ; X64-NEXT: retq
 
 ; X64: "?catch$[[catch2bb:[0-9]+]]@?0?try_catch_catch@4HA":
-; X64: LBB0_[[catch2bb]]: # %catch.dispatch.2{{$}}
+; X64: LBB0_[[catch2bb]]: # %handler2{{$}}
 ; X64: movq %rdx, 16(%rsp)
 ; X64: pushq %rbp
 ; X64: .seh_pushreg 5
 ; X64: subq $32, %rsp
 ; X64: .seh_stackalloc 32
-; X64: leaq 48(%rdx), %rbp
+; X64: leaq [[STCK_ALLOC]](%rdx), %rbp
 ; X64: .seh_endprologue
 ; X64-DAG: leaq -[[local_offs]](%rbp), %rdx
 ; X64-DAG: movl $3, %ecx
 ; X64: callq f
-; X64: .Ltmp3
 ; X64: leaq [[contbb]](%rip), %rax
 ; X64-NEXT: addq $32, %rsp
 ; X64-NEXT: popq %rbp
@@ -190,9 +180,9 @@ catchendblock:                                    ; preds = %catch, %catch.2, %c
 ; X64-NEXT: .long   ($stateUnwindMap$try_catch_catch)@IMGREL
 ; X64-NEXT: .long   1
 ; X64-NEXT: .long   ($tryMap$try_catch_catch)@IMGREL
-; X64-NEXT: .long   4
+; X64-NEXT: .long   5
 ; X64-NEXT: .long   ($ip2state$try_catch_catch)@IMGREL
-; X64-NEXT: .long   32
+; X64-NEXT: .long   48
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   1
 
@@ -206,8 +196,7 @@ catchendblock:                                    ; preds = %catch, %catch.2, %c
 ; X64: $handlerMap$0$try_catch_catch:
 ; X64-NEXT:   .long   0
 ; X64-NEXT:   .long   "??_R0H@8"@IMGREL
-; FIXME: This should probably be offset from rsp, not rbp.
-; X64-NEXT:   .long   44
+; X64-NEXT:   .long   60
 ; X64-NEXT:   .long   "?catch$[[catch1bb]]@?0?try_catch_catch@4HA"@IMGREL
 ; X64-NEXT:   .long   56
 ; X64-NEXT:   .long   64
@@ -221,33 +210,35 @@ catchendblock:                                    ; preds = %catch, %catch.2, %c
 ; X64-NEXT: .long   -1
 ; X64-NEXT: .long   .Ltmp0@IMGREL+1
 ; X64-NEXT: .long   0
-; X64-NEXT: .long   .Ltmp4@IMGREL+1
-; X64-NEXT: .long   1
-; X64-NEXT: .long   .Ltmp3@IMGREL+1
+; X64-NEXT: .long   .Ltmp1@IMGREL+1
 ; X64-NEXT: .long   -1
+; X64-NEXT: .long   "?catch$[[catch1bb]]@?0?try_catch_catch@4HA"@IMGREL
+; X64-NEXT: .long   1
+; X64-NEXT: .long   "?catch$[[catch2bb]]@?0?try_catch_catch@4HA"@IMGREL
+; X64-NEXT: .long   1
 
 
-define i32 @branch_to_normal_dest() personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define i32 @branch_to_normal_dest() personality i32 (...)* @__CxxFrameHandler3 {
 entry:
   invoke void @f(i32 1, i32* null)
           to label %try.cont unwind label %catch.dispatch
 
 catch.dispatch:
-  %0 = catchpad [i8* null, i32 64, i8* null]
-          to label %catch unwind label %catchendblock
+  %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:
-  %V = call i1 @getbool()
-  br i1 %V, label %catch, label %catch.done
+  %cp1 = catchpad within %cs1 [i8* null, i32 64, i8* null]
+  br label %loop
+
+loop:
+  %V = call i1 @getbool() [ "funclet"(token %cp1) ]
+  br i1 %V, label %loop, label %catch.done
 
 catch.done:
-  catchret %0 to label %try.cont
+  catchret from %cp1 to label %try.cont
 
 try.cont:
   ret i32 0
-
-catchendblock:
-  catchendpad unwind to caller
 }
 
 ; X86-LABEL: _branch_to_normal_dest:
@@ -258,21 +249,19 @@ catchendblock:
 
 ; X86: [[restorebb:LBB1_[0-9]+]]: # Block address taken
 ; X86-NEXT:                       # %catch.done
-; X86: movl -16(%ebp), %esp
-; X86: addl $12, %ebp
+; X86-NEXT: addl $12, %ebp
 ; X86: jmp [[contbb]]
 
-; X86: "?catch$[[catchdispbb:[0-9]+]]@?0?branch_to_normal_dest@4HA":
-; X86: LBB1_[[catchdispbb]]: # %catch.dispatch{{$}}
+; X86: "?catch$[[catchbb:[0-9]+]]@?0?branch_to_normal_dest@4HA":
+; X86: LBB1_[[catchbb]]: # %catch{{$}}
 ; X86: pushl %ebp
 ; X86: subl $8, %esp
 ; X86: addl $12, %ebp
-
-; X86: LBB1_[[catchbb:[0-9]+]]: # %catch
-; X86: movl    $-1, -16(%ebp)
+; X86: movl    $1, -16(%ebp)
+; X86: LBB1_[[loopbb:[0-9]+]]: # %loop
 ; X86: calll   _getbool
 ; X86: testb   $1, %al
-; X86: jne LBB1_[[catchbb]]
+; X86: jne LBB1_[[loopbb]]
 ; X86: # %catch.done
 ; X86-NEXT: movl $[[restorebb]], %eax
 ; X86-NEXT: addl $8, %esp
@@ -284,7 +273,7 @@ catchendblock:
 ; X86-NEXT:   .long   64
 ; X86-NEXT:   .long   0
 ; X86-NEXT:   .long   0
-; X86-NEXT:   .long   "?catch$[[catchdispbb]]@?0?branch_to_normal_dest@4HA"
+; X86-NEXT:   .long   "?catch$[[catchbb]]@?0?branch_to_normal_dest@4HA"
 
 ; X64-LABEL: branch_to_normal_dest:
 ; X64: # %entry
@@ -305,7 +294,7 @@ catchendblock:
 ; X64: retq
 
 ; X64: "?catch$[[catchbb:[0-9]+]]@?0?branch_to_normal_dest@4HA":
-; X64: LBB1_[[catchbb]]: # %catch.dispatch{{$}}
+; X64: LBB1_[[catchbb]]: # %catch{{$}}
 ; X64: movq %rdx, 16(%rsp)
 ; X64: pushq %rbp
 ; X64: .seh_pushreg 5
@@ -313,7 +302,7 @@ catchendblock:
 ; X64: .seh_stackalloc 32
 ; X64: leaq 48(%rdx), %rbp
 ; X64: .seh_endprologue
-; X64: .LBB1_[[normal_dest_bb:[0-9]+]]: # %catch
+; X64: .LBB1_[[normal_dest_bb:[0-9]+]]: # %loop
 ; X64: callq   getbool
 ; X64: testb   $1, %al
 ; X64: jne     .LBB1_[[normal_dest_bb]]
@@ -329,7 +318,7 @@ catchendblock:
 ; X64-NEXT: .long   ($stateUnwindMap$branch_to_normal_dest)@IMGREL
 ; X64-NEXT: .long   1
 ; X64-NEXT: .long   ($tryMap$branch_to_normal_dest)@IMGREL
-; X64-NEXT: .long   3
+; X64-NEXT: .long   4
 ; X64-NEXT: .long   ($ip2state$branch_to_normal_dest)@IMGREL
 ; X64-NEXT: .long   40
 ; X64-NEXT: .long   0
@@ -362,3 +351,5 @@ catchendblock:
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   .Ltmp[[after_call]]@IMGREL+1
 ; X64-NEXT: .long   -1
+; X64-NEXT: .long   "?catch$[[catchbb]]@?0?branch_to_normal_dest@4HA"@IMGREL
+; X64-NEXT: .long   1

@@ -77,7 +77,7 @@
 @end
 // CHECK:      ObjCCategoryDecl{{.*}} TestObjCCategoryDecl
 // CHECK-NEXT:   ObjCInterface{{.*}} 'TestObjCClass'
-// CHECK-NEXT:   ObjCCategoryImpl{{.*}} 'TestObjCClass'
+// CHECK-NEXT:   ObjCCategoryImpl{{.*}} 'TestObjCCategoryDecl'
 // CHECK-NEXT:   ObjCProtocol{{.*}} 'P'
 // CHECK-NEXT:   ObjCMethodDecl{{.*}} bar
 
@@ -85,7 +85,7 @@
 - (void) bar {
 }
 @end
-// CHECK:      ObjCCategoryImplDecl{{.*}} TestObjCClass
+// CHECK:      ObjCCategoryImplDecl{{.*}} TestObjCCategoryDecl
 // CHECK-NEXT:   ObjCInterface{{.*}} 'TestObjCClass'
 // CHECK-NEXT:   ObjCCategory{{.*}} 'TestObjCCategoryDecl'
 // CHECK-NEXT:   ObjCMethodDecl{{.*}} bar
@@ -143,3 +143,6 @@ void f() {
   __typeof__(B.foo) Test;
 }
 // CHECK: VarDecl{{.*}}Test 'typeof (B.foo)':'int'
+
+@compatibility_alias TestCompatibilityAlias A;
+// CHECK: ObjCCompatibleAliasDecl{{.*}}col:22 TestCompatibilityAlias col:45

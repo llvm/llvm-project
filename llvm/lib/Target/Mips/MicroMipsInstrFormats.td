@@ -278,7 +278,6 @@ class MOVEP_FM_MM16 {
 
 class MMArch {
   string Arch = "micromips";
-  list<dag> Pattern = [];
 }
 
 class ADD_FM_MM<bits<6> op, bits<10> funct> : MMArch {
@@ -380,13 +379,15 @@ class SRLV_FM_MM<bits<10> funct, bit rotate> : MMArch {
 class LW_FM_MM<bits<6> op> : MMArch {
   bits<5> rt;
   bits<21> addr;
+  bits<5> base = addr{20-16};
+  bits<16> offset = addr{15-0};
 
   bits<32> Inst;
 
   let Inst{31-26} = op;
   let Inst{25-21} = rt;
-  let Inst{20-16} = addr{20-16};
-  let Inst{15-0}  = addr{15-0};
+  let Inst{20-16} = base;
+  let Inst{15-0}  = offset;
 }
 
 class POOL32C_LHUE_FM_MM<bits<6> op, bits<4> fmt, bits<3> funct> : MMArch {
@@ -598,6 +599,17 @@ class SYNC_FM_MM : MMArch {
   let Inst{5-0}   = 0x3c;
 }
 
+class SYNCI_FM_MM : MMArch {
+  bits<5> rs;
+  bits<16> offset;
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b010000;
+  let Inst{25-21} = 0b10000;
+  let Inst{20-16} = rs;
+  let Inst{15-0}  = offset;
+}
+
 class BRK_FM_MM : MMArch {
   bits<10> code_1;
   bits<10> code_2;
@@ -674,7 +686,7 @@ class TEQI_FM_MM<bits<5> funct> : MMArch {
   let Inst{15-0}  = imm16;
 }
 
-class LL_FM_MM<bits<4> funct> {
+class LL_FM_MM<bits<4> funct> : MMArch {
   bits<5> rt;
   bits<21> addr;
 
@@ -754,6 +766,7 @@ class SWXC1_FM_MM<bits<9> funct> : MMArch {
 class CEQS_FM_MM<bits<2> fmt> : MMArch {
   bits<5> fs;
   bits<5> ft;
+  bits<3> fcc;
   bits<4> cond;
 
   bits<32> Inst;
@@ -761,11 +774,15 @@ class CEQS_FM_MM<bits<2> fmt> : MMArch {
   let Inst{31-26} = 0x15;
   let Inst{25-21} = ft;
   let Inst{20-16} = fs;
-  let Inst{15-13} = 0x0;  // cc
+  let Inst{15-13} = fcc;
   let Inst{12}    = 0;
   let Inst{11-10} = fmt;
   let Inst{9-6}   = cond;
   let Inst{5-0}   = 0x3c;
+}
+
+class C_COND_FM_MM<bits <2> fmt, bits<4> c> : CEQS_FM_MM<fmt> {
+  let cond = c;
 }
 
 class BC1F_FM_MM<bits<5> tf> : MMArch {
@@ -943,7 +960,7 @@ class LWM_FM_MM<bits<4> funct> : MMArch {
   let Inst{11-0}  = addr{11-0};
 }
 
-class LWM_FM_MM16<bits<4> funct> : MMArch {
+class LWM_FM_MM16<bits<4> funct> : MMArch, PredicateControl {
   bits<2> rt;
   bits<4> addr;
 
@@ -1021,4 +1038,17 @@ class ADDIUPC_FM_MM {
   let Inst{31-26} = 0x1e;
   let Inst{25-23} = rs;
   let Inst{22-0} = imm;
+}
+
+class POOL32A_CFTC2_FM_MM<bits<10> funct> : MMArch {
+  bits<5> rt;
+  bits<5> impl;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b000000;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = impl;
+  let Inst{15-6}  = funct;
+  let Inst{5-0}   = 0b111100;
 }

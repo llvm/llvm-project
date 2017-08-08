@@ -73,9 +73,10 @@ def XCoreLdwsp        : SDNode<"XCoreISD::LDWSP", SDT_XCoreLdwsp,
                                [SDNPHasChain, SDNPMayLoad]>;
 
 // These are target-independent nodes, but have target-specific formats.
-def SDT_XCoreCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32> ]>;
+def SDT_XCoreCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
+                                             SDTCisVT<1, i32> ]>;
 def SDT_XCoreCallSeqEnd   : SDCallSeqEnd<[ SDTCisVT<0, i32>,
-                                        SDTCisVT<1, i32> ]>;
+                                           SDTCisVT<1, i32> ]>;
 
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_XCoreCallSeqStart,
                            [SDNPHasChain, SDNPOutGlue]>;
@@ -146,16 +147,8 @@ def immU6 : PatLeaf<(imm), [{
   return (uint32_t)N->getZExtValue() < (1 << 6);
 }]>;
 
-def immU10 : PatLeaf<(imm), [{
-  return (uint32_t)N->getZExtValue() < (1 << 10);
-}]>;
-
 def immU16 : PatLeaf<(imm), [{
   return (uint32_t)N->getZExtValue() < (1 << 16);
-}]>;
-
-def immU20 : PatLeaf<(imm), [{
-  return (uint32_t)N->getZExtValue() < (1 << 20);
 }]>;
 
 def immMskBitp : PatLeaf<(imm), [{ return immMskBitp(N); }]>;
@@ -331,9 +324,9 @@ class F2R_np<bits<6> opc, string OpcStr> :
 //===----------------------------------------------------------------------===//
 
 let Defs = [SP], Uses = [SP] in {
-def ADJCALLSTACKDOWN : PseudoInstXCore<(outs), (ins i32imm:$amt),
-                               "# ADJCALLSTACKDOWN $amt",
-                               [(callseq_start timm:$amt)]>;
+def ADJCALLSTACKDOWN : PseudoInstXCore<(outs), (ins i32imm:$amt, i32imm:$amt2),
+                               "# ADJCALLSTACKDOWN $amt, $amt2",
+                               [(callseq_start timm:$amt, timm:$amt2)]>;
 def ADJCALLSTACKUP : PseudoInstXCore<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                             "# ADJCALLSTACKUP $amt1",
                             [(callseq_end timm:$amt1, timm:$amt2)]>;

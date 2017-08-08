@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPCFixupKinds.h"
 #include "PPCMCExpr.h"
+#include "PPCFixupKinds.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"

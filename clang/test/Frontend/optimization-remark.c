@@ -27,9 +27,10 @@
 // CHECK: , !dbg !
 // CHECK-NOT: DW_TAG_base_type
 
-// But llvm.dbg.cu should be missing (to prevent writing debug info to
+// The CU should be marked NoDebug (to prevent writing debug info to
 // the final output).
-// CHECK-NOT: !llvm.dbg.cu = !{
+// CHECK: !llvm.dbg.cu = !{![[CU:.*]]}
+// CHECK: ![[CU]] = distinct !DICompileUnit({{.*}}emissionKind: NoDebug
 
 int foo(int x, int y) __attribute__((always_inline));
 int foo(int x, int y) { return x + y; }
@@ -41,10 +42,8 @@ float foz(int x, int y) { return x * y; }
 // twice.
 //
 int bar(int j) {
-// expected-remark@+6 {{foz should never be inlined (cost=never)}}
-// expected-remark@+5 {{foz will not be inlined into bar}}
-// expected-remark@+4 {{foz should never be inlined}}
-// expected-remark@+3 {{foz will not be inlined into bar}}
+// expected-remark@+4 {{foz not inlined into bar because it should never be inlined (cost=never)}}
+// expected-remark@+3 {{foz not inlined into bar because it should never be inlined (cost=never)}}
 // expected-remark@+2 {{foo should always be inlined}}
 // expected-remark@+1 {{foo inlined into bar}}
   return foo(j, j - 2) * foz(j - 2, j);

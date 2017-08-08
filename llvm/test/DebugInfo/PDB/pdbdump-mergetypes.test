@@ -1,0 +1,34 @@
++; RUN: llvm-pdbutil yaml2pdb -pdb=%t.1.pdb %p/Inputs/merge-types-1.yaml
+; RUN: llvm-pdbutil yaml2pdb -pdb=%t.2.pdb %p/Inputs/merge-types-2.yaml
+; RUN: llvm-pdbutil merge -pdb=%t.3.pdb %t.1.pdb %t.2.pdb
+; RUN: llvm-pdbutil dump -types %t.3.pdb | FileCheck -check-prefix=MERGED %s
+
+
+MERGED:                          Types (TPI Stream)
+MERGED-NEXT: ============================================================
+MERGED-NEXT:   Showing 9 records
+MERGED-NEXT:   0x1000 | LF_POINTER [size = 12]
+MERGED-NEXT:            referent = 0x0075 (unsigned), mode = pointer, opts = None, kind = ptr32
+MERGED-NEXT:   0x1001 | LF_POINTER [size = 12]
+MERGED-NEXT:            referent = 0x0076 (__int64), mode = pointer, opts = None, kind = ptr32
+MERGED-NEXT:   0x1002 | LF_STRUCTURE [size = 48] `OnlyInMerge1`
+MERGED-NEXT:            unique name: `OnlyInMerge1`
+MERGED-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+MERGED-NEXT:            options: forward ref | has unique name
+MERGED-NEXT:   0x1003 | LF_POINTER [size = 12]
+MERGED-NEXT:            referent = 0x1000, mode = pointer, opts = None, kind = ptr32
+MERGED-NEXT:   0x1004 | LF_POINTER [size = 12]
+MERGED-NEXT:            referent = 0x1003, mode = pointer, opts = None, kind = ptr32
+MERGED-NEXT:   0x1005 | LF_POINTER [size = 12]
+MERGED-NEXT:            referent = 0x1001, mode = pointer, opts = None, kind = ptr32
+MERGED-NEXT:   0x1006 | LF_ARGLIST [size = 20]
+MERGED-NEXT:            0x0075 (unsigned): `unsigned`
+MERGED-NEXT:            0x1000: `unsigned*`
+MERGED-NEXT:            0x1003: `unsigned**`
+MERGED-NEXT:   0x1007 | LF_PROCEDURE [size = 16]
+MERGED-NEXT:            return type = 0x0075 (unsigned), # args = 0, param list = 0x1006
+MERGED-NEXT:            calling conv = cdecl, options = None
+MERGED-NEXT:   0x1008 | LF_STRUCTURE [size = 48] `OnlyInMerge2`
+MERGED-NEXT:            unique name: `OnlyInMerge2`
+MERGED-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+MERGED-NEXT:            options: forward ref | has unique name

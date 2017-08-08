@@ -133,14 +133,16 @@ public:
   /// from.  Currently this is only used by _Pragma handling.
   SourceLocation getFileLoc() const { return FileLoc; }
 
-private:
   /// Lex - Return the next token in the file.  If this is the end of file, it
   /// return the tok::eof token.  This implicitly involves the preprocessor.
   bool Lex(Token &Result);
 
-public:
   /// isPragmaLexer - Returns true if this Lexer is being used to lex a pragma.
   bool isPragmaLexer() const { return Is_PragmaLexer; }
+
+  /// Note that this Lexer is being used to lex a pragma, or something like it
+  /// that has simple end-of-file behavior.
+  void setIsPragmaLexer(bool value) { Is_PragmaLexer = value; }
 
 private:
   /// IndirectLex - An indirect call to 'Lex' that can be invoked via
@@ -410,6 +412,26 @@ public:
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts);
 
+  /// \brief Retrieve the name of the immediate macro expansion.
+  ///
+  /// This routine starts from a source location, and finds the name of the
+  /// macro responsible for its immediate expansion. It looks through any
+  /// intervening macro argument expansions to compute this. It returns a
+  /// StringRef which refers to the SourceManager-owned buffer of the source
+  /// where that macro name is spelled. Thus, the result shouldn't out-live
+  /// that SourceManager.
+  ///
+  /// This differs from Lexer::getImmediateMacroName in that any macro argument
+  /// location will result in the topmost function macro that accepted it.
+  /// e.g.
+  /// \code
+  ///   MAC1( MAC2(foo) )
+  /// \endcode
+  /// for location of 'foo' token, this function will return "MAC1" while
+  /// Lexer::getImmediateMacroName will return "MAC2".
+  static StringRef getImmediateMacroNameForDiagnostics(
+      SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts);
+
   /// \brief Compute the preamble of the given file.
   ///
   /// The preamble of a file contains the initial comments, include directives,
@@ -440,6 +462,14 @@ public:
                                          const LangOptions &LangOpts,
                                          bool SkipTrailingWhitespaceAndNewLine);
 
+  /// \brief Returns the source location of the token that comes after the
+  /// token located at the given location \p Loc (excluding any comments and
+  /// whitespace). The returned source location will be invalid if the location
+  /// is inside a macro.
+  static SourceLocation
+  findNextTokenLocationAfterTokenAt(SourceLocation Loc, const SourceManager &SM,
+                                    const LangOptions &LangOpts);
+
   /// \brief Returns true if the given character could appear in an identifier.
   static bool isIdentifierBodyChar(char c, const LangOptions &LangOpts);
 
@@ -457,6 +487,11 @@ public:
     Size = 0;
     return getCharAndSizeSlowNoWarn(Ptr, Size, LangOpts);
   }
+
+  /// Returns the leading whitespace for line that corresponds to the given
+  /// location \p Loc.
+  static StringRef getIndentationForLine(SourceLocation Loc,
+                                         const SourceManager &SM);
 
   //===--------------------------------------------------------------------===//
   // Internal implementation interfaces.
@@ -617,6 +652,8 @@ private:
   
   bool IsStartOfConflictMarker(const char *CurPtr);
   bool HandleEndOfConflictMarker(const char *CurPtr);
+
+  bool lexEditorPlaceholder(Token &Result, const char *CurPtr);
 
   bool isCodeCompletionPoint(const char *CurPtr) const;
   void cutOffLexing() { BufferPtr = BufferEnd; }

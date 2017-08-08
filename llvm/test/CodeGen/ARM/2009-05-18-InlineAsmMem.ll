@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=arm-eabi %s -o - | FileCheck %s
-; RUN: llc -mtriple=thumb-eabi %s -o - | FileCheck %s
 ; PR4091
 
 define void @foo(i32 %i, i32* %p) nounwind {

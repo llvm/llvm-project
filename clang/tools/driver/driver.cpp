@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -25,7 +24,6 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
@@ -37,7 +35,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
@@ -49,14 +46,22 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <set>
 #include <system_error>
 using namespace clang;
 using namespace clang::driver;
 using namespace llvm::opt;
 
 std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
-  if (!CanonicalPrefixes)
-    return Argv0;
+  if (!CanonicalPrefixes) {
+    SmallString<128> ExecutablePath(Argv0);
+    // Do a PATH lookup if Argv0 isn't a valid path.
+    if (!llvm::sys::fs::exists(ExecutablePath))
+      if (llvm::ErrorOr<std::string> P =
+              llvm::sys::findProgramByName(ExecutablePath))
+        ExecutablePath = *P;
+    return ExecutablePath.str();
+  }
 
   // This just needs to be some symbol in the binary; C++ doesn't
   // allow taking the address of ::main however.
@@ -130,7 +135,7 @@ static void ApplyOneQAOverride(raw_ostream &OS,
       }
     }
   } else if (Edit[0] == 'x' || Edit[0] == 'X') {
-    std::string Option = Edit.substr(1, std::string::npos);
+    auto Option = Edit.substr(1);
     for (unsigned i = 1; i < Args.size();) {
       if (Option == Args[i]) {
         OS << "### Deleting argument " << Args[i] << '\n';
@@ -200,6 +205,8 @@ extern int cc1_main(ArrayRef<const char *> Argv, const char *Argv0,
                     void *MainAddr);
 extern int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0,
                       void *MainAddr);
+extern int cc1apinotes_main(ArrayRef<const char *> Argv, const char *Argv0,
+                            void *MainAddr);
 
 static void insertTargetAndModeArgs(StringRef Target, StringRef Mode,
                                     SmallVectorImpl<const char *> &ArgVector,
@@ -290,9 +297,9 @@ static void SetInstallDir(SmallVectorImpl<const char *> &argv,
   if (CanonicalPrefixes)
     llvm::sys::fs::make_absolute(InstalledPath);
 
-  InstalledPath = llvm::sys::path::parent_path(InstalledPath);
-  if (llvm::sys::fs::exists(InstalledPath.c_str()))
-    TheDriver.setInstalledDir(InstalledPath);
+  StringRef InstalledPathParent(llvm::sys::path::parent_path(InstalledPath));
+  if (llvm::sys::fs::exists(InstalledPathParent))
+    TheDriver.setInstalledDir(InstalledPathParent);
 }
 
 static int ExecuteCC1Tool(ArrayRef<const char *> argv, StringRef Tool) {
@@ -301,6 +308,8 @@ static int ExecuteCC1Tool(ArrayRef<const char *> argv, StringRef Tool) {
     return cc1_main(argv.slice(2), argv[0], GetExecutablePathVP);
   if (Tool == "as")
     return cc1as_main(argv.slice(2), argv[0], GetExecutablePathVP);
+  if (Tool == "apinotes")
+    return cc1apinotes_main(argv.slice(2), argv[0], GetExecutablePathVP);
 
   // Reject unknown tools.
   llvm::errs() << "error: unknown integrated tool '" << Tool << "'\n";
@@ -308,8 +317,9 @@ static int ExecuteCC1Tool(ArrayRef<const char *> argv, StringRef Tool) {
 }
 
 int main(int argc_, const char **argv_) {
-  llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::sys::PrintStackTraceOnErrorSignal(argv_[0]);
   llvm::PrettyStackTraceProgram X(argc_, argv_);
+  llvm::llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
   if (llvm::sys::Process::FixupStandardFileDescriptors())
     return 1;
@@ -338,18 +348,33 @@ int main(int argc_, const char **argv_) {
   // have to manually search for a --driver-mode=cl argument the hard way.
   // Finally, our -cc1 tools don't care which tokenization mode we use because
   // response files written by clang will tokenize the same way in either mode.
-  llvm::cl::TokenizerCallback Tokenizer = &llvm::cl::TokenizeGNUCommandLine;
+  bool ClangCLMode = false;
   if (TargetAndMode.second == "--driver-mode=cl" ||
       std::find_if(argv.begin(), argv.end(), [](const char *F) {
         return F && strcmp(F, "--driver-mode=cl") == 0;
       }) != argv.end()) {
-    Tokenizer = &llvm::cl::TokenizeWindowsCommandLine;
+    ClangCLMode = true;
+  }
+  enum { Default, POSIX, Windows } RSPQuoting = Default;
+  for (const char *F : argv) {
+    if (strcmp(F, "--rsp-quoting=posix") == 0)
+      RSPQuoting = POSIX;
+    else if (strcmp(F, "--rsp-quoting=windows") == 0)
+      RSPQuoting = Windows;
   }
 
   // Determines whether we want nullptr markers in argv to indicate response
-  // files end-of-lines. We only use this for the /LINK driver argument.
-  bool MarkEOLs = true;
-  if (argv.size() > 1 && StringRef(argv[1]).startswith("-cc1"))
+  // files end-of-lines. We only use this for the /LINK driver argument with
+  // clang-cl.exe on Windows.
+  bool MarkEOLs = ClangCLMode;
+
+  llvm::cl::TokenizerCallback Tokenizer;
+  if (RSPQuoting == Windows || (RSPQuoting == Default && ClangCLMode))
+    Tokenizer = &llvm::cl::TokenizeWindowsCommandLine;
+  else
+    Tokenizer = &llvm::cl::TokenizeGNUCommandLine;
+
+  if (MarkEOLs && argv.size() > 1 && StringRef(argv[1]).startswith("-cc1"))
     MarkEOLs = false;
   llvm::cl::ExpandResponseFiles(Saver, Tokenizer, argv, MarkEOLs);
 
@@ -379,7 +404,7 @@ int main(int argc_, const char **argv_) {
 
   // Handle CL and _CL_ which permits additional command line options to be
   // prepended or appended.
-  if (Tokenizer == &llvm::cl::TokenizeWindowsCommandLine) {
+  if (ClangCLMode) {
     // Arguments in "CL" are prepended.
     llvm::Optional<std::string> OptCL = llvm::sys::Process::GetEnv("CL");
     if (OptCL.hasValue()) {
@@ -440,39 +465,41 @@ int main(int argc_, const char **argv_) {
   SetBackdoorDriverOutputsFromEnvVars(TheDriver);
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(argv));
-  int Res = 0;
-  SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
-  if (C.get())
+  int Res = 1;
+  if (C && !C->containsError()) {
+    SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
     Res = TheDriver.ExecuteCompilation(*C, FailingCommands);
 
-  // Force a crash to test the diagnostics.
-  if (::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH")) {
-    Diags.Report(diag::err_drv_force_crash) << "FORCE_CLANG_DIAGNOSTICS_CRASH";
+    // Force a crash to test the diagnostics.
+    if (TheDriver.GenReproducer) {
+      Diags.Report(diag::err_drv_force_crash)
+        << !::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH");
 
-    // Pretend that every command failed.
-    FailingCommands.clear();
-    for (const auto &J : C->getJobs())
-      if (const Command *C = dyn_cast<Command>(&J))
-        FailingCommands.push_back(std::make_pair(-1, C));
-  }
+      // Pretend that every command failed.
+      FailingCommands.clear();
+      for (const auto &J : C->getJobs())
+        if (const Command *C = dyn_cast<Command>(&J))
+          FailingCommands.push_back(std::make_pair(-1, C));
+    }
 
-  for (const auto &P : FailingCommands) {
-    int CommandRes = P.first;
-    const Command *FailingCommand = P.second;
-    if (!Res)
-      Res = CommandRes;
+    for (const auto &P : FailingCommands) {
+      int CommandRes = P.first;
+      const Command *FailingCommand = P.second;
+      if (!Res)
+        Res = CommandRes;
 
-    // If result status is < 0, then the driver command signalled an error.
-    // If result status is 70, then the driver command reported a fatal error.
-    // On Windows, abort will return an exit code of 3.  In these cases,
-    // generate additional diagnostic information if possible.
-    bool DiagnoseCrash = CommandRes < 0 || CommandRes == 70;
+      // If result status is < 0, then the driver command signalled an error.
+      // If result status is 70, then the driver command reported a fatal error.
+      // On Windows, abort will return an exit code of 3.  In these cases,
+      // generate additional diagnostic information if possible.
+      bool DiagnoseCrash = CommandRes < 0 || CommandRes == 70;
 #ifdef LLVM_ON_WIN32
-    DiagnoseCrash |= CommandRes == 3;
+      DiagnoseCrash |= CommandRes == 3;
 #endif
-    if (DiagnoseCrash) {
-      TheDriver.generateCompilationDiagnostics(*C, *FailingCommand);
-      break;
+      if (DiagnoseCrash) {
+        TheDriver.generateCompilationDiagnostics(*C, *FailingCommand);
+        break;
+      }
     }
   }
 
@@ -481,8 +508,6 @@ int main(int argc_, const char **argv_) {
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
   llvm::TimerGroup::printAll(llvm::errs());
-
-  llvm::llvm_shutdown();
 
 #ifdef LLVM_ON_WIN32
   // Exit status should not be negative on Win32, unless abnormal termination.

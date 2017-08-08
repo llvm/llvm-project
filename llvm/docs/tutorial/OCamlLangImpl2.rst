@@ -130,7 +130,7 @@ We start with numeric literals, because they are the simplest to
 process. For each production in our grammar, we'll define a function
 which parses that production. We call this class of expressions
 "primary" expressions, for reasons that will become more clear `later in
-the tutorial <OCamlLangImpl6.html#unary>`_. In order to parse an
+the tutorial <OCamlLangImpl6.html#user-defined-unary-operators>`_. In order to parse an
 arbitrary primary expression, we need to determine what sort of
 expression it is. For numeric literals, we have:
 
@@ -280,7 +280,7 @@ fixed-size array).
 With the helper above defined, we can now start parsing binary
 expressions. The basic idea of operator precedence parsing is to break
 down an expression with potentially ambiguous binary operators into
-pieces. Consider ,for example, the expression "a+b+(c+d)\*e\*f+g".
+pieces. Consider, for example, the expression "a+b+(c+d)\*e\*f+g".
 Operator precedence parsing considers this as a stream of primary
 expressions separated by binary operators. As such, it will first parse
 the leading primary expression "a", then it will see the pairs [+, b]
@@ -505,7 +505,7 @@ The Driver
 
 The driver for this simply invokes all of the parsing pieces with a
 top-level dispatch loop. There isn't much interesting here, so I'll just
-include the top-level loop. See `below <#code>`_ for full code in the
+include the top-level loop. See `below <#full-code-listing>`_ for full code in the
 "Top-Level Parsing" section.
 
 .. code-block:: ocaml

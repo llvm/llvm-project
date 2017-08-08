@@ -190,3 +190,19 @@ int run() {
 }
 
 }
+
+namespace N3922 {
+  struct X { X(); explicit X(const X&); int n; };
+  auto a = [x{X()}] { return x.n; }; // ok
+  auto b = [x = {X()}] {}; // expected-error{{<initializer_list>}}
+}
+
+namespace init_capture_non_mutable {
+void test(double weight) {
+  double init;
+  auto find = [max = init](auto current) {
+    max = current; // expected-error{{cannot assign to a variable captured by copy in a non-mutable lambda}}
+  };
+  find(weight); // expected-note {{in instantiation of function template specialization}}
+}
+}

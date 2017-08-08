@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 -fp-contract=fast | FileCheck %s
+; RUN: llc < %s -march=nvptx -mcpu=sm_20 -fp-contract=fast -verify-machineinstrs | FileCheck %s
 
 declare float @dummy_f32(float, float) #0
 declare double @dummy_f64(double, double) #0

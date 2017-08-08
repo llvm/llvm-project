@@ -1,5 +1,5 @@
-// RUN: %clang_cc1  -fsyntax-only -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fobjc-weak -verify -Weverything -Wno-objc-weak-compat  %s
-// RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fobjc-weak -fsyntax-only -verify -Weverything -Wno-objc-weak-compat %s
+// RUN: %clang_cc1  -fsyntax-only -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fobjc-weak -verify -Weverything %s
+// RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fobjc-weak -fsyntax-only -verify -Weverything %s
 // rdar://12103400
 
 @class NSString;
@@ -58,6 +58,6 @@
 @property (atomic, nonatomic, readonly, readwrite) float propertyName; // expected-error {{property attributes 'readonly' and 'readwrite' are mutually exclusive}} \
 		// expected-error {{property attributes 'atomic' and 'nonatomic' are mutually exclusive}}
 
-@property (atomic, readwrite) float propertyName2; // expected-warning {{'atomic' attribute on property 'propertyName2' does not match the property inherited from radar12214070}}
+@property (atomic, readwrite) float propertyName2; // expected-warning {{'atomic' attribute on property 'propertyName2' does not match the property inherited from 'radar12214070'}}
 @end
 

@@ -979,3 +979,20 @@ define void @fadd_64stack() {
   store atomic i64 %bc1, i64* %ptr release, align 8
   ret void
 }
+
+define void @fadd_array(i64* %arg, double %arg1, i64 %arg2) {
+; X64-LABEL: fadd_array:
+; X64-NOT: lock
+; X64: addsd ([[ADDR:%r..,%r..,8]]), %[[XMM:xmm[0-9]+]]
+; X64-NEXT: movsd %[[XMM]], ([[ADDR]])
+; X32-LABEL: fadd_array:
+; Don't check x86-32 (see comment above).
+bb:
+  %tmp4 = getelementptr inbounds i64, i64* %arg, i64 %arg2
+  %tmp6 = load atomic i64, i64* %tmp4 monotonic, align 8
+  %tmp7 = bitcast i64 %tmp6 to double
+  %tmp8 = fadd double %tmp7, %arg1
+  %tmp9 = bitcast double %tmp8 to i64
+  store atomic i64 %tmp9, i64* %tmp4 monotonic, align 8
+  ret void
+}

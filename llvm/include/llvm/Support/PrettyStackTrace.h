@@ -16,6 +16,7 @@
 #ifndef LLVM_SUPPORT_PRETTYSTACKTRACE_H
 #define LLVM_SUPPORT_PRETTYSTACKTRACE_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -29,9 +30,11 @@ namespace llvm {
   /// constructed and destructed, they will add their symbolic frames to a
   /// virtual stack trace.  This gets dumped out if the program crashes.
   class PrettyStackTraceEntry {
-    const PrettyStackTraceEntry *NextEntry;
+    friend PrettyStackTraceEntry *ReverseStackTrace(PrettyStackTraceEntry *);
+
+    PrettyStackTraceEntry *NextEntry;
     PrettyStackTraceEntry(const PrettyStackTraceEntry &) = delete;
-    void operator=(const PrettyStackTraceEntry&) = delete;
+    void operator=(const PrettyStackTraceEntry &) = delete;
   public:
     PrettyStackTraceEntry();
     virtual ~PrettyStackTraceEntry();
@@ -53,6 +56,16 @@ namespace llvm {
     void print(raw_ostream &OS) const override;
   };
 
+  /// PrettyStackTraceFormat - This object prints a string (which may use
+  /// printf-style formatting but should not contain newlines) to the stream
+  /// as the stack trace when a crash occurs.
+  class PrettyStackTraceFormat : public PrettyStackTraceEntry {
+    llvm::SmallVector<char, 32> Str;
+  public:
+    PrettyStackTraceFormat(const char *Format, ...);
+    void print(raw_ostream &OS) const override;
+  };
+
   /// PrettyStackTraceProgram - This object prints a specified program arguments
   /// to the stream as the stack trace when a crash occurs.
   class PrettyStackTraceProgram : public PrettyStackTraceEntry {
@@ -67,7 +80,7 @@ namespace llvm {
   };
 
   /// Returns the topmost element of the "pretty" stack state.
-  const void* SavePrettyStackState();
+  const void *SavePrettyStackState();
 
   /// Restores the topmost element of the "pretty" stack state to State, which
   /// should come from a previous call to SavePrettyStackState().  This is
@@ -76,7 +89,7 @@ namespace llvm {
   /// happens after a crash that's been recovered by CrashRecoveryContext
   /// doesn't have frames on it that were added in code unwound by the
   /// CrashRecoveryContext.
-  void RestorePrettyStackState(const void* State);
+  void RestorePrettyStackState(const void *State);
 
 } // end namespace llvm
 

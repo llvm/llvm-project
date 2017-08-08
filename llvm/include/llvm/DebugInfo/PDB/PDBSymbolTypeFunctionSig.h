@@ -16,6 +16,7 @@
 namespace llvm {
 
 class raw_ostream;
+namespace pdb {
 
 class PDBSymbolTypeFunctionSig : public PDBSymbol {
 public:
@@ -24,27 +25,26 @@ public:
 
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::FunctionSig)
 
-  std::unique_ptr<PDBSymbol> getReturnType() const;
   std::unique_ptr<IPDBEnumSymbols> getArguments() const;
-  std::unique_ptr<PDBSymbol> getClassParent() const;
 
   void dump(PDBSymDumper &Dumper) const override;
+  void dumpRight(PDBSymDumper &Dumper) const override;
   void dumpArgList(raw_ostream &OS) const;
 
   FORWARD_SYMBOL_METHOD(getCallingConvention)
-  FORWARD_SYMBOL_METHOD(getClassParentId)
-  FORWARD_SYMBOL_METHOD(getUnmodifiedTypeId)
+  FORWARD_SYMBOL_ID_METHOD(getClassParent)
+  FORWARD_SYMBOL_ID_METHOD(getUnmodifiedType)
   FORWARD_SYMBOL_METHOD(isConstType)
   FORWARD_SYMBOL_METHOD(getCount)
-  FORWARD_SYMBOL_METHOD(getLexicalParentId)
+  FORWARD_SYMBOL_ID_METHOD(getLexicalParent)
   // FORWARD_SYMBOL_METHOD(getObjectPointerType)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
   FORWARD_SYMBOL_METHOD(getThisAdjust)
-  FORWARD_SYMBOL_METHOD(getTypeId)
+  FORWARD_SYMBOL_ID_METHOD_WITH_NAME(getType, getReturnType)
   FORWARD_SYMBOL_METHOD(isUnalignedType)
   FORWARD_SYMBOL_METHOD(isVolatileType)
 };
 
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEFUNCTIONSIG_H

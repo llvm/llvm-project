@@ -20,50 +20,43 @@ using namespace clang;
 using namespace sema;
 
 DelayedDiagnostic
-DelayedDiagnostic::makeAvailability(Sema::AvailabilityDiagnostic AD,
+DelayedDiagnostic::makeAvailability(AvailabilityResult AR,
                                     SourceLocation Loc,
-                                    const NamedDecl *D,
+                                    const NamedDecl *ReferringDecl,
+                                    const NamedDecl *OffendingDecl,
                                     const ObjCInterfaceDecl *UnknownObjCClass,
                                     const ObjCPropertyDecl  *ObjCProperty,
                                     StringRef Msg,
                                     bool ObjCPropertyAccess) {
   DelayedDiagnostic DD;
-  switch (AD) {
-    case Sema::AD_Deprecation:
-      DD.Kind = Deprecation;
-      break;
-    case Sema::AD_Unavailable:
-      DD.Kind = Unavailable;
-      break;
-    case Sema::AD_Partial:
-      llvm_unreachable("AD_Partial diags should not be delayed");
-  }
+  DD.Kind = Availability;
   DD.Triggered = false;
   DD.Loc = Loc;
-  DD.DeprecationData.Decl = D;
-  DD.DeprecationData.UnknownObjCClass = UnknownObjCClass;
-  DD.DeprecationData.ObjCProperty = ObjCProperty;
+  DD.AvailabilityData.ReferringDecl = ReferringDecl;
+  DD.AvailabilityData.OffendingDecl = OffendingDecl;
+  DD.AvailabilityData.UnknownObjCClass = UnknownObjCClass;
+  DD.AvailabilityData.ObjCProperty = ObjCProperty;
   char *MessageData = nullptr;
   if (Msg.size()) {
     MessageData = new char [Msg.size()];
     memcpy(MessageData, Msg.data(), Msg.size());
   }
 
-  DD.DeprecationData.Message = MessageData;
-  DD.DeprecationData.MessageLen = Msg.size();
-  DD.DeprecationData.ObjCPropertyAccess = ObjCPropertyAccess;
+  DD.AvailabilityData.Message = MessageData;
+  DD.AvailabilityData.MessageLen = Msg.size();
+  DD.AvailabilityData.AR = AR;
+  DD.AvailabilityData.ObjCPropertyAccess = ObjCPropertyAccess;
   return DD;
 }
 
 void DelayedDiagnostic::Destroy() {
-  switch (static_cast<DDKind>(Kind)) {
+  switch (Kind) {
   case Access: 
     getAccessData().~AccessedEntity(); 
     break;
 
-  case Deprecation:
-  case Unavailable:
-    delete [] DeprecationData.Message;
+  case Availability:
+    delete[] AvailabilityData.Message;
     break;
 
   case ForbiddenType:

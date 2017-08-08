@@ -5,14 +5,14 @@
 ; then merge if-regions with the same bodies.
 
 ; FIXME: For some reason having the allocas here allowed the flatten cfg pass
-; to do its transfomation, however now that we are using local memory for
+; to do its transformation, however now that we are using local memory for
 ; allocas, the transformation isn't happening.
 ; XFAIL: *
 ;
 ; CHECK: OR_INT
 ; CHECK-NEXT: OR_INT
 ; CHECK-NEXT: OR_INT
-define void @_Z9chk1D_512v() #0 {
+define amdgpu_kernel void @_Z9chk1D_512v() #0 {
 entry:
   %a0 = alloca i32, align 4
   %b0 = alloca i32, align 4

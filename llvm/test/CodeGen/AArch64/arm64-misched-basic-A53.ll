@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a53 -pre-RA-sched=source -enable-misched -verify-misched -debug-only=misched -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a53 -pre-RA-sched=source -enable-misched -verify-misched -debug-only=machine-scheduler -disable-machine-dce -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a53 -pre-RA-sched=source -enable-misched -verify-misched -debug-only=machine-scheduler -disable-machine-dce -o - -misched-limit=2 2>&1 > /dev/null | FileCheck %s
 ;
 ; The Cortex-A53 machine model will cause the MADD instruction to be scheduled
 ; much higher than the ADD instructions in order to hide latency. When not
@@ -181,22 +182,22 @@ declare void @llvm.trap()
 ; CHECK: LD4Fourv2d
 ; CHECK: STRQui
 ; CHECK: ********** INTERVALS **********
-define void @testLdStConflict() {
+define void @testLdStConflict(<2 x i64> %v) {
 entry:
   br label %loop
 
 loop:
   %0 = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld4.v2i64.p0i8(i8* null)
   %ptr = bitcast i8* undef to <2 x i64>*
-  store <2 x i64> zeroinitializer, <2 x i64>* %ptr, align 4
+  store <2 x i64> %v, <2 x i64>* %ptr, align 4
   %ptr1 = bitcast i8* undef to <2 x i64>*
-  store <2 x i64> zeroinitializer, <2 x i64>* %ptr1, align 4
+  store <2 x i64> %v, <2 x i64>* %ptr1, align 4
   %ptr2 = bitcast i8* undef to <2 x i64>*
-  store <2 x i64> zeroinitializer, <2 x i64>* %ptr2, align 4
+  store <2 x i64> %v, <2 x i64>* %ptr2, align 4
   %ptr3 = bitcast i8* undef to <2 x i64>*
-  store <2 x i64> zeroinitializer, <2 x i64>* %ptr3, align 4
+  store <2 x i64> %v, <2 x i64>* %ptr3, align 4
   %ptr4 = bitcast i8* undef to <2 x i64>*
-  store <2 x i64> zeroinitializer, <2 x i64>* %ptr4, align 4
+  store <2 x i64> %v, <2 x i64>* %ptr4, align 4
   br label %loop
 }
 

@@ -382,7 +382,6 @@ def P7Model : SchedMachineModel {
                        // branches), but the total internal issue bandwidth per
                        // cycle (from all queues) is 8.
 
-  let MinLatency = 0;  // Out-of-order dispatch.
   let LoadLatency = 3; // Optimistic load latency assuming bypass.
                        // This is overriden by OperandCycles if the
                        // Itineraries are queried instead.
@@ -390,6 +389,8 @@ def P7Model : SchedMachineModel {
 
   // Try to make sure we have at least 10 dispatch groups in a loop.
   let LoopMicroOpBufferSize = 40;
+
+  let CompleteModel = 0;
 
   let Itineraries = P7Itineraries;
 }

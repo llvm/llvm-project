@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a53 -pre-RA-sched=source -enable-misched -verify-misched -debug-only=misched -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a53 -pre-RA-sched=source -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 ;
 ; For Cortex-A53, shiftable operands that are not actually shifted
 ; are not needed for an additional two cycles.
@@ -8,8 +8,8 @@
 ; CHECK: shiftable
 ; CHECK: SU(2):   %vreg2<def> = SUBXri %vreg1, 20, 0
 ; CHECK:   Successors:
-; CHECK-NEXT:    val SU(4): Latency=1 Reg=%vreg2
-; CHECK-NEXT:    val SU(3): Latency=2 Reg=%vreg2
+; CHECK-NEXT:    SU(4): Data Latency=1 Reg=%vreg2
+; CHECK-NEXT:    SU(3): Data Latency=2 Reg=%vreg2
 ; CHECK: ********** INTERVALS **********
 define i64 @shiftable(i64 %A, i64 %B) {
         %tmp0 = sub i64 %B, 20

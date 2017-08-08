@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wall -Wuninitialized -Wno-unused-value -std=c++11 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wall -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -std=c++1z -verify %s
 
 // definitions for std::move
 namespace std {
@@ -955,7 +955,7 @@ namespace record_fields {
     A a13 = rref(std::move(a13));  // expected-warning {{uninitialized}}
     A a14 = std::move(x ? a13 : (22, a14));  // expected-warning {{uninitialized}}
   };
-  D d;
+  D d; // expected-note {{in implicit default constructor for 'record_fields::D' first required here}}
   struct E {
     A a1 = a1;
     A a2 = a2.get();
@@ -1436,4 +1436,14 @@ void array_capture(bool b) {
   } else {
     [fname]{};
   }
+}
+
+void if_switch_init_stmt(int k) {
+  if (int n = 0; (n == k || k > 5)) {}
+
+  if (int n; (n == k || k > 5)) {} // expected-warning {{uninitialized}} expected-note {{initialize}}
+
+  switch (int n = 0; (n == k || k > 5)) {} // expected-warning {{boolean}}
+
+  switch (int n; (n == k || k > 5)) {} // expected-warning {{uninitialized}} expected-note {{initialize}} expected-warning {{boolean}}
 }

@@ -10,7 +10,7 @@
 //    Transform the following pattern
 //    %vreg170<def> = SXTW %vreg166
 //    ...
-//    %vreg176<def> = COPY %vreg170:subreg_loreg
+//    %vreg176<def> = COPY %vreg170:isub_lo
 //
 //    Into
 //    %vreg176<def> = COPY vreg166
@@ -67,11 +67,11 @@ static cl::opt<bool> DisablePNotP("disable-hexagon-pnotp",
     cl::desc("Disable Optimization of PNotP"));
 
 static cl::opt<bool> DisableOptSZExt("disable-hexagon-optszext",
-    cl::Hidden, cl::ZeroOrMore, cl::init(false),
+    cl::Hidden, cl::ZeroOrMore, cl::init(true),
     cl::desc("Disable Optimization of Sign/Zero Extends"));
 
 static cl::opt<bool> DisableOptExtTo64("disable-hexagon-opt-ext-to-64",
-    cl::Hidden, cl::ZeroOrMore, cl::init(false),
+    cl::Hidden, cl::ZeroOrMore, cl::init(true),
     cl::desc("Disable Optimization of extensions to i64."));
 
 namespace llvm {
@@ -93,16 +93,13 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "Hexagon optimize redundant zero and size extends";
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       MachineFunctionPass::getAnalysisUsage(AU);
     }
-
-  private:
-    void ChangeOpInto(MachineOperand &Dst, MachineOperand &Src);
   };
 }
 
@@ -112,6 +109,9 @@ INITIALIZE_PASS(HexagonPeephole, "hexagon-peephole", "Hexagon Peephole",
                 false, false)
 
 bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   QII = static_cast<const HexagonInstrInfo *>(MF.getSubtarget().getInstrInfo());
   QRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   MRI = &MF.getRegInfo();
@@ -129,15 +129,15 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
     PeepholeDoubleRegsMap.clear();
 
     // Traverse the basic block.
-    for (MachineBasicBlock::iterator MII = MBB->begin(); MII != MBB->end();
-                                     ++MII) {
-      MachineInstr *MI = MII;
+    for (auto I = MBB->begin(), E = MBB->end(), NextI = I; I != E; I = NextI) {
+      NextI = std::next(I);
+      MachineInstr &MI = *I;
       // Look for sign extends:
       // %vreg170<def> = SXTW %vreg166
-      if (!DisableOptSZExt && MI->getOpcode() == Hexagon::A2_sxtw) {
-        assert (MI->getNumOperands() == 2);
-        MachineOperand &Dst = MI->getOperand(0);
-        MachineOperand &Src  = MI->getOperand(1);
+      if (!DisableOptSZExt && MI.getOpcode() == Hexagon::A2_sxtw) {
+        assert(MI.getNumOperands() == 2);
+        MachineOperand &Dst = MI.getOperand(0);
+        MachineOperand &Src = MI.getOperand(1);
         unsigned DstReg = Dst.getReg();
         unsigned SrcReg = Src.getReg();
         // Just handle virtual registers.
@@ -152,12 +152,11 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
 
       // Look for  %vreg170<def> = COMBINE_ir_V4 (0, %vreg169)
       // %vreg170:DoublRegs, %vreg169:IntRegs
-      if (!DisableOptExtTo64 &&
-          MI->getOpcode () == Hexagon::A4_combineir) {
-        assert (MI->getNumOperands() == 3);
-        MachineOperand &Dst = MI->getOperand(0);
-        MachineOperand &Src1 = MI->getOperand(1);
-        MachineOperand &Src2 = MI->getOperand(2);
+      if (!DisableOptExtTo64 && MI.getOpcode() == Hexagon::A4_combineir) {
+        assert(MI.getNumOperands() == 3);
+        MachineOperand &Dst = MI.getOperand(0);
+        MachineOperand &Src1 = MI.getOperand(1);
+        MachineOperand &Src2 = MI.getOperand(2);
         if (Src1.getImm() != 0)
           continue;
         unsigned DstReg = Dst.getReg();
@@ -167,28 +166,27 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
 
       // Look for this sequence below
       // %vregDoubleReg1 = LSRd_ri %vregDoubleReg0, 32
-      // %vregIntReg = COPY %vregDoubleReg1:subreg_loreg.
+      // %vregIntReg = COPY %vregDoubleReg1:isub_lo.
       // and convert into
-      // %vregIntReg = COPY %vregDoubleReg0:subreg_hireg.
-      if (MI->getOpcode() == Hexagon::S2_lsr_i_p) {
-        assert(MI->getNumOperands() == 3);
-        MachineOperand &Dst = MI->getOperand(0);
-        MachineOperand &Src1 = MI->getOperand(1);
-        MachineOperand &Src2 = MI->getOperand(2);
+      // %vregIntReg = COPY %vregDoubleReg0:isub_hi.
+      if (MI.getOpcode() == Hexagon::S2_lsr_i_p) {
+        assert(MI.getNumOperands() == 3);
+        MachineOperand &Dst = MI.getOperand(0);
+        MachineOperand &Src1 = MI.getOperand(1);
+        MachineOperand &Src2 = MI.getOperand(2);
         if (Src2.getImm() != 32)
           continue;
         unsigned DstReg = Dst.getReg();
         unsigned SrcReg = Src1.getReg();
         PeepholeDoubleRegsMap[DstReg] =
-          std::make_pair(*&SrcReg, Hexagon::subreg_hireg);
+          std::make_pair(*&SrcReg, Hexagon::isub_hi);
       }
 
       // Look for P=NOT(P).
-      if (!DisablePNotP &&
-          (MI->getOpcode() == Hexagon::C2_not)) {
-        assert (MI->getNumOperands() == 2);
-        MachineOperand &Dst = MI->getOperand(0);
-        MachineOperand &Src  = MI->getOperand(1);
+      if (!DisablePNotP && MI.getOpcode() == Hexagon::C2_not) {
+        assert(MI.getNumOperands() == 2);
+        MachineOperand &Dst = MI.getOperand(0);
+        MachineOperand &Src = MI.getOperand(1);
         unsigned DstReg = Dst.getReg();
         unsigned SrcReg = Src.getReg();
         // Just handle virtual registers.
@@ -202,14 +200,14 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
       }
 
       // Look for copy:
-      // %vreg176<def> = COPY %vreg170:subreg_loreg
-      if (!DisableOptSZExt && MI->isCopy()) {
-        assert (MI->getNumOperands() == 2);
-        MachineOperand &Dst = MI->getOperand(0);
-        MachineOperand &Src  = MI->getOperand(1);
+      // %vreg176<def> = COPY %vreg170:isub_lo
+      if (!DisableOptSZExt && MI.isCopy()) {
+        assert(MI.getNumOperands() == 2);
+        MachineOperand &Dst = MI.getOperand(0);
+        MachineOperand &Src = MI.getOperand(1);
 
         // Make sure we are copying the lower 32 bits.
-        if (Src.getSubReg() != Hexagon::subreg_loreg)
+        if (Src.getSubReg() != Hexagon::isub_lo)
           continue;
 
         unsigned DstReg = Dst.getReg();
@@ -219,22 +217,18 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
           // Try to find in the map.
           if (unsigned PeepholeSrc = PeepholeMap.lookup(SrcReg)) {
             // Change the 1st operand.
-            MI->RemoveOperand(1);
-            MI->addOperand(MachineOperand::CreateReg(PeepholeSrc, false));
+            MI.RemoveOperand(1);
+            MI.addOperand(MachineOperand::CreateReg(PeepholeSrc, false));
           } else  {
             DenseMap<unsigned, std::pair<unsigned, unsigned> >::iterator DI =
               PeepholeDoubleRegsMap.find(SrcReg);
             if (DI != PeepholeDoubleRegsMap.end()) {
               std::pair<unsigned,unsigned> PeepholeSrc = DI->second;
-              MI->RemoveOperand(1);
-              MI->addOperand(MachineOperand::CreateReg(PeepholeSrc.first,
-                                                       false /*isDef*/,
-                                                       false /*isImp*/,
-                                                       false /*isKill*/,
-                                                       false /*isDead*/,
-                                                       false /*isUndef*/,
-                                                       false /*isEarlyClobber*/,
-                                                       PeepholeSrc.second));
+              MI.RemoveOperand(1);
+              MI.addOperand(MachineOperand::CreateReg(
+                  PeepholeSrc.first, false /*isDef*/, false /*isImp*/,
+                  false /*isKill*/, false /*isDead*/, false /*isUndef*/,
+                  false /*isEarlyClobber*/, PeepholeSrc.second));
             }
           }
         }
@@ -244,7 +238,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
       if (!DisablePNotP) {
         bool Done = false;
         if (QII->isPredicated(MI)) {
-          MachineOperand &Op0 = MI->getOperand(0);
+          MachineOperand &Op0 = MI.getOperand(0);
           unsigned Reg0 = Op0.getReg();
           const TargetRegisterClass *RC0 = MRI->getRegClass(Reg0);
           if (RC0->getID() == Hexagon::PredRegsRegClassID) {
@@ -254,9 +248,10 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
               // Try to find in the map.
               if (unsigned PeepholeSrc = PeepholeMap.lookup(Reg0)) {
                 // Change the 1st operand and, flip the opcode.
-                MI->getOperand(0).setReg(PeepholeSrc);
-                int NewOp = QII->getInvertedPredicatedOpcode(MI->getOpcode());
-                MI->setDesc(QII->get(NewOp));
+                MI.getOperand(0).setReg(PeepholeSrc);
+                MRI->clearKillFlags(PeepholeSrc);
+                int NewOp = QII->getInvertedPredicatedOpcode(MI.getOpcode());
+                MI.setDesc(QII->get(NewOp));
                 Done = true;
               }
             }
@@ -265,7 +260,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
 
         if (!Done) {
           // Handle special instructions.
-          unsigned Op = MI->getOpcode();
+          unsigned Op = MI.getOpcode();
           unsigned NewOp = 0;
           unsigned PR = 1, S1 = 2, S2 = 3;   // Operand indices.
 
@@ -282,15 +277,15 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
               break;
           }
           if (NewOp) {
-            unsigned PSrc = MI->getOperand(PR).getReg();
+            unsigned PSrc = MI.getOperand(PR).getReg();
             if (unsigned POrig = PeepholeMap.lookup(PSrc)) {
-              MI->getOperand(PR).setReg(POrig);
-              MI->setDesc(QII->get(NewOp));
-              // Swap operands S1 and S2.
-              MachineOperand Op1 = MI->getOperand(S1);
-              MachineOperand Op2 = MI->getOperand(S2);
-              ChangeOpInto(MI->getOperand(S1), Op2);
-              ChangeOpInto(MI->getOperand(S2), Op1);
+              BuildMI(*MBB, MI.getIterator(), MI.getDebugLoc(),
+                      QII->get(NewOp), MI.getOperand(0).getReg())
+                .addReg(POrig)
+                .add(MI.getOperand(S2))
+                .add(MI.getOperand(S1));
+              MRI->clearKillFlags(POrig);
+              MI.eraseFromParent();
             }
           } // if (NewOp)
         } // if (!Done)
@@ -300,37 +295,6 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
     } // Instruction
   } // Basic Block
   return true;
-}
-
-void HexagonPeephole::ChangeOpInto(MachineOperand &Dst, MachineOperand &Src) {
-  assert (&Dst != &Src && "Cannot duplicate into itself");
-  switch (Dst.getType()) {
-    case MachineOperand::MO_Register:
-      if (Src.isReg()) {
-        Dst.setReg(Src.getReg());
-      } else if (Src.isImm()) {
-        Dst.ChangeToImmediate(Src.getImm());
-      } else {
-        llvm_unreachable("Unexpected src operand type");
-      }
-      break;
-
-    case MachineOperand::MO_Immediate:
-      if (Src.isImm()) {
-        Dst.setImm(Src.getImm());
-      } else if (Src.isReg()) {
-        Dst.ChangeToRegister(Src.getReg(), Src.isDef(), Src.isImplicit(),
-                             Src.isKill(), Src.isDead(), Src.isUndef(),
-                             Src.isDebug());
-      } else {
-        llvm_unreachable("Unexpected src operand type");
-      }
-      break;
-
-    default:
-      llvm_unreachable("Unexpected dst operand type");
-      break;
-  }
 }
 
 FunctionPass *llvm::createHexagonPeephole() {

@@ -10,21 +10,21 @@ define i32 @A2_addi(i32 %a) {
   %z = call i32 @llvm.hexagon.A2.addi(i32 %a, i32 0)
   ret i32 %z
 }
-; CHECK: = add({{.*}}, #0)
+; CHECK: = add({{.*}},#0)
 
 declare i32 @llvm.hexagon.A2.add(i32, i32)
 define i32 @A2_add(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.add(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = add({{.*}}, {{.*}})
+; CHECK: = add({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.A2.addsat(i32, i32)
 define i32 @A2_addsat(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.addsat(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = add({{.*}}, {{.*}}):sat
+; CHECK: = add({{.*}},{{.*}}):sat
 
 ; Logical operations
 declare i32 @llvm.hexagon.A2.and(i32, i32)
@@ -32,35 +32,35 @@ define i32 @A2_and(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.and(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = and({{.*}}, {{.*}})
+; CHECK: = and({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.A2.or(i32, i32)
 define i32 @A2_or(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.or(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = or({{.*}}, {{.*}})
+; CHECK: = or({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.A2.xor(i32, i32)
 define i32 @A2_xor(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.xor(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = xor({{.*}}, {{.*}})
+; CHECK: = xor({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.A4.andn(i32, i32)
 define i32 @A4_andn(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A4.andn(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = and({{.*}}, ~{{.*}})
+; CHECK: = and({{.*}},~{{.*}})
 
 declare i32 @llvm.hexagon.A4.orn(i32, i32)
 define i32 @A4_orn(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A4.orn(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = or({{.*}}, ~{{.*}})
+; CHECK: = or({{.*}},~{{.*}})
 
 ; Subtract
 declare i32 @llvm.hexagon.A2.sub(i32, i32)
@@ -68,14 +68,14 @@ define i32 @A2_sub(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.sub(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = sub({{.*}}, {{.*}})
+; CHECK: = sub({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.A2.subsat(i32, i32)
 define i32 @A2_subsat(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.subsat(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = sub({{.*}}, {{.*}}):sat
+; CHECK: = sub({{.*}},{{.*}}):sat
 
 ; Sign extend
 declare i32 @llvm.hexagon.A2.sxtb(i32)
@@ -128,21 +128,21 @@ define i32 @A2_svaddh(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.svaddh(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = vaddh({{.*}}, {{.*}})
+; CHECK: = vaddh({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.A2.svaddhs(i32, i32)
 define i32 @A2_svaddhs(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.svaddhs(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = vaddh({{.*}}, {{.*}}):sat
+; CHECK: = vaddh({{.*}},{{.*}}):sat
 
 declare i32 @llvm.hexagon.A2.svadduhs(i32, i32)
 define i32 @A2_svadduhs(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.svadduhs(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = vadduh({{.*}}, {{.*}}):sat
+; CHECK: = vadduh({{.*}},{{.*}}):sat
 
 ; Vector average halfwords
 declare i32 @llvm.hexagon.A2.svavgh(i32, i32)
@@ -150,21 +150,21 @@ define i32 @A2_svavgh(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.svavgh(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = vavgh({{.*}}, {{.*}})
+; CHECK: = vavgh({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.A2.svavghs(i32, i32)
 define i32 @A2_svavghs(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.svavghs(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = vavgh({{.*}}, {{.*}}):rnd
+; CHECK: = vavgh({{.*}},{{.*}}):rnd
 
 declare i32 @llvm.hexagon.A2.svnavgh(i32, i32)
 define i32 @A2_svnavgh(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.svnavgh(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = vnavgh({{.*}}, {{.*}})
+; CHECK: = vnavgh({{.*}},{{.*}})
 
 ; Vector subtract halfwords
 declare i32 @llvm.hexagon.A2.svsubh(i32, i32)
@@ -172,21 +172,21 @@ define i32 @A2_svsubh(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.svsubh(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = vsubh({{.*}}, {{.*}})
+; CHECK: = vsubh({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.A2.svsubhs(i32, i32)
 define i32 @A2_svsubhs(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.svsubhs(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = vsubh({{.*}}, {{.*}}):sat
+; CHECK: = vsubh({{.*}},{{.*}}):sat
 
 declare i32 @llvm.hexagon.A2.svsubuhs(i32, i32)
 define i32 @A2_svsubuhs(i32 %a, i32 %b) {
   %z = call i32 @llvm.hexagon.A2.svsubuhs(i32 %a, i32 %b)
   ret i32 %z
 }
-; CHECK: = vsubuh({{.*}}, {{.*}}):sat
+; CHECK: = vsubuh({{.*}},{{.*}}):sat
 
 ; Zero extend
 declare i32 @llvm.hexagon.A2.zxth(i32)

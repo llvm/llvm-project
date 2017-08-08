@@ -71,11 +71,22 @@ namespace reference {
     static_assert(sizeof(h({1, 2})) == sizeof(two), "bad overload resolution");
   }
 
+  struct X {};
+
   void edge_cases() {
-    // FIXME: very poor error message
-    int const &b({0}); // expected-error {{could not bind}}
+    int const &b({0}); // expected-error {{cannot initialize reference type 'const int &' with a parenthesized initializer list}}
+    const int (&arr)[3] ({1, 2, 3}); // expected-error {{cannot initialize reference type 'const int (&)[3]' with a parenthesized initializer list}}
+    const X &x({}); // expected-error {{cannot initialize reference type 'const reference::X &' with a parenthesized initializer list}}
   }
 
+  template<typename T> void dependent_edge_cases() {
+    T b({}); // expected-error-re 3{{cannot initialize reference type {{.*}} with a parenthesized init}}
+    T({}); // expected-error-re 3{{cannot initialize reference type {{.*}} with a parenthesized init}}
+  }
+  template void dependent_edge_cases<X>(); // ok
+  template void dependent_edge_cases<const int&>(); // expected-note {{instantiation of}}
+  template void dependent_edge_cases<const int(&)[1]>(); // expected-note {{instantiation of}}
+  template void dependent_edge_cases<const X&>(); // expected-note {{instantiation of}}
 }
 
 namespace PR12182 {

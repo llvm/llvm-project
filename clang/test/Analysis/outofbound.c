@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-array-bounds -analyze -analyzer-checker=core,unix,alpha.security.ArrayBound -analyzer-store=region -verify -analyzer-config unix:Optimistic=true %s
+// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,unix,alpha.security.ArrayBound -analyzer-store=region -verify -analyzer-config unix:Optimistic=true %s
 
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);

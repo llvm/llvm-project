@@ -6,10 +6,10 @@
 ; private memory.  We want to make sure these kinds of loops are always
 ; unrolled, because private memory is slow.
 
-; CHECK-LABEL: @test
+; CHECK-LABEL: @private_memory
 ; CHECK-NOT: alloca
 ; CHECK: store i32 5, i32 addrspace(1)* %out
-define void @test(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @private_memory(i32 addrspace(1)* %out) {
 entry:
   %0 = alloca [32 x i32]
   br label %loop.header
@@ -32,5 +32,69 @@ exit:
   %2 = getelementptr [32 x i32], [32 x i32]* %0, i32 0, i32 5
   %3 = load i32, i32* %2
   store i32 %3, i32 addrspace(1)* %out
+  ret void
+}
+
+; Check that loop is unrolled for local memory references
+
+; CHECK-LABEL: @local_memory
+; CHECK: getelementptr i32, i32 addrspace(1)* %out, i32 128
+; CHECK-NEXT: store
+; CHECK-NEXT: ret
+define amdgpu_kernel void @local_memory(i32 addrspace(1)* %out, i32 addrspace(3)* %lds) {
+entry:
+  br label %loop.header
+
+loop.header:
+  %counter = phi i32 [0, %entry], [%inc, %loop.inc]
+  br label %loop.body
+
+loop.body:
+  %ptr_lds = getelementptr i32, i32 addrspace(3)* %lds, i32 %counter
+  %val = load i32, i32 addrspace(3)* %ptr_lds
+  %ptr_out = getelementptr i32, i32 addrspace(1)* %out, i32 %counter
+  store i32 %val, i32 addrspace(1)* %ptr_out
+  br label %loop.inc
+
+loop.inc:
+  %inc = add i32 %counter, 1
+  %cond = icmp sge i32 %counter, 128
+  br i1 %cond, label  %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+; Check that a loop with if inside completely unrolled to eliminate phi and if
+
+; CHECK-LABEL: @unroll_for_if
+; CHECK: entry:
+; CHECK-NEXT: getelementptr
+; CHECK-NEXT: store
+; CHECK-NEXT: getelementptr
+; CHECK-NEXT: store
+; CHECK-NOT: br
+define amdgpu_kernel void @unroll_for_if(i32* %a) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.inc
+  %i1 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
+  %and = and i32 %i1, 1
+  %tobool = icmp eq i32 %and, 0
+  br i1 %tobool, label %for.inc, label %if.then
+
+if.then:                                          ; preds = %for.body
+  %0 = sext i32 %i1 to i64
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %0
+  store i32 0, i32* %arrayidx, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.then
+  %inc = add nuw nsw i32 %i1, 1
+  %cmp = icmp ult i32 %inc, 48
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.cond
   ret void
 }

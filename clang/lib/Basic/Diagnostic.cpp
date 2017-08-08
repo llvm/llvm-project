@@ -16,6 +16,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -55,26 +56,23 @@ static void DummyArgToStringFn(DiagnosticsEngine::ArgumentKind AK, intptr_t QT,
   Output.append(Str.begin(), Str.end());
 }
 
-DiagnosticsEngine::DiagnosticsEngine(
-    const IntrusiveRefCntPtr<DiagnosticIDs> &diags, DiagnosticOptions *DiagOpts,
-    DiagnosticConsumer *client, bool ShouldOwnClient)
-    : Diags(diags), DiagOpts(DiagOpts), Client(nullptr), SourceMgr(nullptr) {
+DiagnosticsEngine::DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> diags,
+                                     DiagnosticOptions *DiagOpts,
+                                     DiagnosticConsumer *client,
+                                     bool ShouldOwnClient)
+    : Diags(std::move(diags)), DiagOpts(DiagOpts), Client(nullptr),
+      SourceMgr(nullptr) {
   setClient(client, ShouldOwnClient);
   ArgToStringFn = DummyArgToStringFn;
   ArgToStringCookie = nullptr;
 
   AllExtensionsSilenced = 0;
-  IgnoreAllWarnings = false;
-  WarningsAsErrors = false;
-  EnableAllWarnings = false;
-  ErrorsAsFatal = false;
-  SuppressSystemWarnings = false;
+  SuppressAfterFatalError = true;
   SuppressAllDiagnostics = false;
   ElideType = true;
   PrintTemplateTree = false;
   ShowColors = false;
   ShowOverloads = Ovl_All;
-  ExtBehavior = diag::Severity::Ignored;
 
   ErrorLimit = 0;
   TemplateBacktraceLimit = 0;
@@ -128,13 +126,13 @@ void DiagnosticsEngine::Reset() {
 
   // Clear state related to #pragma diagnostic.
   DiagStates.clear();
-  DiagStatePoints.clear();
+  DiagStatesByLoc.clear();
   DiagStateOnPushStack.clear();
 
   // Create a DiagState and DiagStatePoint representing diagnostic changes
   // through command-line.
   DiagStates.emplace_back();
-  DiagStatePoints.push_back(DiagStatePoint(&DiagStates.back(), FullSourceLoc()));
+  DiagStatesByLoc.appendFirst(&DiagStates.back());
 }
 
 void DiagnosticsEngine::SetDelayedDiagnostic(unsigned DiagID, StringRef Arg1,
@@ -148,33 +146,99 @@ void DiagnosticsEngine::SetDelayedDiagnostic(unsigned DiagID, StringRef Arg1,
 }
 
 void DiagnosticsEngine::ReportDelayed() {
-  Report(DelayedDiagID) << DelayedDiagArg1 << DelayedDiagArg2;
+  unsigned ID = DelayedDiagID;
   DelayedDiagID = 0;
-  DelayedDiagArg1.clear();
-  DelayedDiagArg2.clear();
+  Report(ID) << DelayedDiagArg1 << DelayedDiagArg2;
 }
 
-DiagnosticsEngine::DiagStatePointsTy::iterator
-DiagnosticsEngine::GetDiagStatePointForLoc(SourceLocation L) const {
-  assert(!DiagStatePoints.empty());
-  assert(DiagStatePoints.front().Loc.isInvalid() &&
-         "Should have created a DiagStatePoint for command-line");
+void DiagnosticsEngine::DiagStateMap::appendFirst(
+                                             DiagState *State) {
+  assert(Files.empty() && "not first");
+  FirstDiagState = CurDiagState = State;
+  CurDiagStateLoc = SourceLocation();
+}
 
-  if (!SourceMgr)
-    return DiagStatePoints.end() - 1;
+void DiagnosticsEngine::DiagStateMap::append(SourceManager &SrcMgr,
+                                             SourceLocation Loc,
+                                             DiagState *State) {
+  CurDiagState = State;
+  CurDiagStateLoc = Loc;
 
-  FullSourceLoc Loc(L, *SourceMgr);
-  if (Loc.isInvalid())
-    return DiagStatePoints.end() - 1;
+  std::pair<FileID, unsigned> Decomp = SrcMgr.getDecomposedLoc(Loc);
+  unsigned Offset = Decomp.second;
+  for (File *F = getFile(SrcMgr, Decomp.first); F;
+       Offset = F->ParentOffset, F = F->Parent) {
+    F->HasLocalTransitions = true;
+    auto &Last = F->StateTransitions.back();
+    assert(Last.Offset <= Offset && "state transitions added out of order");
 
-  DiagStatePointsTy::iterator Pos = DiagStatePoints.end();
-  FullSourceLoc LastStateChangePos = DiagStatePoints.back().Loc;
-  if (LastStateChangePos.isValid() &&
-      Loc.isBeforeInTranslationUnitThan(LastStateChangePos))
-    Pos = std::upper_bound(DiagStatePoints.begin(), DiagStatePoints.end(),
-                           DiagStatePoint(nullptr, Loc));
-  --Pos;
-  return Pos;
+    if (Last.Offset == Offset) {
+      if (Last.State == State)
+        break;
+      Last.State = State;
+      continue;
+    }
+
+    F->StateTransitions.push_back({State, Offset});
+  }
+}
+
+DiagnosticsEngine::DiagState *
+DiagnosticsEngine::DiagStateMap::lookup(SourceManager &SrcMgr,
+                                        SourceLocation Loc) const {
+  // Common case: we have not seen any diagnostic pragmas.
+  if (Files.empty())
+    return FirstDiagState;
+
+  std::pair<FileID, unsigned> Decomp = SrcMgr.getDecomposedLoc(Loc);
+  const File *F = getFile(SrcMgr, Decomp.first);
+  return F->lookup(Decomp.second);
+}
+
+DiagnosticsEngine::DiagState *
+DiagnosticsEngine::DiagStateMap::File::lookup(unsigned Offset) const {
+  auto OnePastIt = std::upper_bound(
+      StateTransitions.begin(), StateTransitions.end(), Offset,
+      [](unsigned Offset, const DiagStatePoint &P) {
+        return Offset < P.Offset;
+      });
+  assert(OnePastIt != StateTransitions.begin() && "missing initial state");
+  return OnePastIt[-1].State;
+}
+
+DiagnosticsEngine::DiagStateMap::File *
+DiagnosticsEngine::DiagStateMap::getFile(SourceManager &SrcMgr,
+                                         FileID ID) const {
+  // Get or insert the File for this ID.
+  auto Range = Files.equal_range(ID);
+  if (Range.first != Range.second)
+    return &Range.first->second;
+  auto &F = Files.insert(Range.first, std::make_pair(ID, File()))->second;
+
+  // We created a new File; look up the diagnostic state at the start of it and
+  // initialize it.
+  if (ID.isValid()) {
+    std::pair<FileID, unsigned> Decomp = SrcMgr.getDecomposedIncludedLoc(ID);
+    F.Parent = getFile(SrcMgr, Decomp.first);
+    F.ParentOffset = Decomp.second;
+    F.StateTransitions.push_back({F.Parent->lookup(Decomp.second), 0});
+  } else {
+    // This is the (imaginary) root file into which we pretend all top-level
+    // files are included; it descends from the initial state.
+    //
+    // FIXME: This doesn't guarantee that we use the same ordering as
+    // isBeforeInTranslationUnit in the cases where someone invented another
+    // top-level file and added diagnostic pragmas to it. See the code at the
+    // end of isBeforeInTranslationUnit for the quirks it deals with.
+    F.StateTransitions.push_back({FirstDiagState, 0});
+  }
+  return &F;
+}
+
+void DiagnosticsEngine::PushDiagStatePoint(DiagState *State,
+                                           SourceLocation Loc) {
+  assert(Loc.isValid() && "Adding invalid loc point");
+  DiagStatesByLoc.append(*SourceMgr, Loc, State);
 }
 
 void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
@@ -184,65 +248,38 @@ void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
   assert((Diags->isBuiltinWarningOrExtension(Diag) ||
           (Map == diag::Severity::Fatal || Map == diag::Severity::Error)) &&
          "Cannot map errors into warnings!");
-  assert(!DiagStatePoints.empty());
   assert((L.isInvalid() || SourceMgr) && "No SourceMgr for valid location");
 
-  FullSourceLoc Loc = SourceMgr? FullSourceLoc(L, *SourceMgr) : FullSourceLoc();
-  FullSourceLoc LastStateChangePos = DiagStatePoints.back().Loc;
   // Don't allow a mapping to a warning override an error/fatal mapping.
+  bool WasUpgradedFromWarning = false;
   if (Map == diag::Severity::Warning) {
     DiagnosticMapping &Info = GetCurDiagState()->getOrAddMapping(Diag);
     if (Info.getSeverity() == diag::Severity::Error ||
-        Info.getSeverity() == diag::Severity::Fatal)
+        Info.getSeverity() == diag::Severity::Fatal) {
       Map = Info.getSeverity();
+      WasUpgradedFromWarning = true;
+    }
   }
   DiagnosticMapping Mapping = makeUserMapping(Map, L);
+  Mapping.setUpgradedFromWarning(WasUpgradedFromWarning);
 
   // Common case; setting all the diagnostics of a group in one place.
-  if (Loc.isInvalid() || Loc == LastStateChangePos) {
-    GetCurDiagState()->setMapping(Diag, Mapping);
+  if ((L.isInvalid() || L == DiagStatesByLoc.getCurDiagStateLoc()) &&
+      DiagStatesByLoc.getCurDiagState()) {
+    // FIXME: This is theoretically wrong: if the current state is shared with
+    // some other location (via push/pop) we will change the state for that
+    // other location as well. This cannot currently happen, as we can't update
+    // the diagnostic state at the same location at which we pop.
+    DiagStatesByLoc.getCurDiagState()->setMapping(Diag, Mapping);
     return;
   }
 
-  // Another common case; modifying diagnostic state in a source location
-  // after the previous one.
-  if ((Loc.isValid() && LastStateChangePos.isInvalid()) ||
-      LastStateChangePos.isBeforeInTranslationUnitThan(Loc)) {
-    // A diagnostic pragma occurred, create a new DiagState initialized with
-    // the current one and a new DiagStatePoint to record at which location
-    // the new state became active.
-    DiagStates.push_back(*GetCurDiagState());
-    PushDiagStatePoint(&DiagStates.back(), Loc);
-    GetCurDiagState()->setMapping(Diag, Mapping);
-    return;
-  }
-
-  // We allow setting the diagnostic state in random source order for
-  // completeness but it should not be actually happening in normal practice.
-
-  DiagStatePointsTy::iterator Pos = GetDiagStatePointForLoc(Loc);
-  assert(Pos != DiagStatePoints.end());
-
-  // Update all diagnostic states that are active after the given location.
-  for (DiagStatePointsTy::iterator
-         I = Pos+1, E = DiagStatePoints.end(); I != E; ++I) {
-    GetCurDiagState()->setMapping(Diag, Mapping);
-  }
-
-  // If the location corresponds to an existing point, just update its state.
-  if (Pos->Loc == Loc) {
-    GetCurDiagState()->setMapping(Diag, Mapping);
-    return;
-  }
-
-  // Create a new state/point and fit it into the vector of DiagStatePoints
-  // so that the vector is always ordered according to location.
-  assert(Pos->Loc.isBeforeInTranslationUnitThan(Loc));
-  DiagStates.push_back(*Pos->State);
-  DiagState *NewState = &DiagStates.back();
-  GetCurDiagState()->setMapping(Diag, Mapping);
-  DiagStatePoints.insert(Pos+1, DiagStatePoint(NewState,
-                                               FullSourceLoc(Loc, *SourceMgr)));
+  // A diagnostic pragma occurred, create a new DiagState initialized with
+  // the current one and a new DiagStatePoint to record at which location
+  // the new state became active.
+  DiagStates.push_back(*GetCurDiagState());
+  DiagStates.back().setMapping(Diag, Mapping);
+  PushDiagStatePoint(&DiagStates.back(), L);
 }
 
 bool DiagnosticsEngine::setSeverityForGroup(diag::Flavor Flavor,
@@ -278,8 +315,8 @@ bool DiagnosticsEngine::setDiagnosticGroupWarningAsError(StringRef Group,
     return true;
 
   // Perform the mapping change.
-  for (unsigned i = 0, e = GroupDiags.size(); i != e; ++i) {
-    DiagnosticMapping &Info = GetCurDiagState()->getOrAddMapping(GroupDiags[i]);
+  for (diag::kind Diag : GroupDiags) {
+    DiagnosticMapping &Info = GetCurDiagState()->getOrAddMapping(Diag);
 
     if (Info.getSeverity() == diag::Severity::Error ||
         Info.getSeverity() == diag::Severity::Fatal)
@@ -299,8 +336,8 @@ bool DiagnosticsEngine::setDiagnosticGroupErrorAsFatal(StringRef Group,
     return setSeverityForGroup(diag::Flavor::WarningOrError, Group,
                                diag::Severity::Fatal);
 
-  // Otherwise, we want to set the diagnostic mapping's "no Werror" bit, and
-  // potentially downgrade anything already mapped to be an error.
+  // Otherwise, we want to set the diagnostic mapping's "no Wfatal-errors" bit,
+  // and potentially downgrade anything already mapped to be a fatal error.
 
   // Get the diagnostics in this group.
   SmallVector<diag::kind, 8> GroupDiags;
@@ -309,8 +346,8 @@ bool DiagnosticsEngine::setDiagnosticGroupErrorAsFatal(StringRef Group,
     return true;
 
   // Perform the mapping change.
-  for (unsigned i = 0, e = GroupDiags.size(); i != e; ++i) {
-    DiagnosticMapping &Info = GetCurDiagState()->getOrAddMapping(GroupDiags[i]);
+  for (diag::kind Diag : GroupDiags) {
+    DiagnosticMapping &Info = GetCurDiagState()->getOrAddMapping(Diag);
 
     if (Info.getSeverity() == diag::Severity::Fatal)
       Info.setSeverity(diag::Severity::Error);
@@ -329,9 +366,9 @@ void DiagnosticsEngine::setSeverityForAll(diag::Flavor Flavor,
   Diags->getAllDiagnostics(Flavor, AllDiags);
 
   // Set the mapping.
-  for (unsigned i = 0, e = AllDiags.size(); i != e; ++i)
-    if (Diags->isBuiltinWarningOrExtension(AllDiags[i]))
-      setSeverity(AllDiags[i], Map, Loc);
+  for (diag::kind Diag : AllDiags)
+    if (Diags->isBuiltinWarningOrExtension(Diag))
+      setSeverity(Diag, Map, Loc);
 }
 
 void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {
@@ -382,11 +419,10 @@ bool DiagnosticsEngine::EmitCurrentDiagnostic(bool Force) {
   }
 
   // Clear out the current diagnostic object.
-  unsigned DiagID = CurDiagID;
   Clear();
 
   // If there was a delayed diagnostic, emit it now.
-  if (!Force && DelayedDiagID && DelayedDiagID != DiagID)
+  if (!Force && DelayedDiagID)
     ReportDelayed();
 
   return Emitted;
@@ -739,7 +775,10 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
         //   "%diff{compare $ to $|other text}1,2"
         // treat it as:
         //   "compare %1 to %2"
-        const char *Pipe = ScanFormat(Argument, Argument + ArgumentLen, '|');
+        const char *ArgumentEnd = Argument + ArgumentLen;
+        const char *Pipe = ScanFormat(Argument, ArgumentEnd, '|');
+        assert(ScanFormat(Pipe + 1, ArgumentEnd, '|') == ArgumentEnd &&
+               "Found too many '|'s in a %diff modifier!");
         const char *FirstDollar = ScanFormat(Argument, Pipe, '$');
         const char *SecondDollar = ScanFormat(FirstDollar + 1, Pipe, '$');
         const char ArgStr1[] = { '%', static_cast<char>('0' + ArgNo) };
@@ -1007,7 +1046,7 @@ PartialDiagnostic::StorageAllocator::StorageAllocator() {
 PartialDiagnostic::StorageAllocator::~StorageAllocator() {
   // Don't assert if we are in a CrashRecovery context, as this invariant may
   // be invalidated during a crash.
-  assert((NumFreeListEntries == NumCached || 
-          llvm::CrashRecoveryContext::isRecoveringFromCrash()) && 
-         "A partial is on the lamb");
+  assert((NumFreeListEntries == NumCached ||
+          llvm::CrashRecoveryContext::isRecoveringFromCrash()) &&
+         "A partial is on the lam");
 }

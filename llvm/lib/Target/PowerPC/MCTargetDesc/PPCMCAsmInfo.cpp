@@ -20,7 +20,7 @@ void PPCMCAsmInfoDarwin::anchor() { }
 
 PPCMCAsmInfoDarwin::PPCMCAsmInfoDarwin(bool is64Bit, const Triple& T) {
   if (is64Bit) {
-    PointerSize = CalleeSaveStackSlotSize = 8;
+    CodePointerSize = CalleeSaveStackSlotSize = 8;
   }
   IsLittleEndian = false;
 
@@ -50,7 +50,7 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   NeedsLocalForSize = true;
 
   if (is64Bit) {
-    PointerSize = CalleeSaveStackSlotSize = 8;
+    CodePointerSize = CalleeSaveStackSlotSize = 8;
   }
   IsLittleEndian = T.getArch() == Triple::ppc64le;
 

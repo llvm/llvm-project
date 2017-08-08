@@ -9,14 +9,14 @@
 // Print out the region tree of a function using dotty/graphviz.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/Passes.h"
+#include "llvm/Analysis/RegionPrinter.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DOTGraphTraitsPass.h"
+#include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
-#include "llvm/Analysis/RegionPrinter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -117,8 +117,8 @@ struct DOTGraphTraits<RegionInfo *> : public DOTGraphTraits<RegionNode *> {
         << ((R.getDepth() * 2 % 12) + 2) << "\n";
     }
 
-    for (Region::const_iterator RI = R.begin(), RE = R.end(); RI != RE; ++RI)
-      printRegionCluster(**RI, GW, depth + 1);
+    for (const auto &RI : R)
+      printRegionCluster(*RI, GW, depth + 1);
 
     const RegionInfo &RI = *static_cast<const RegionInfo*>(R.getRegionInfo());
 

@@ -262,7 +262,7 @@ namespace PR6757 {
   struct Foo2 { };
 
   struct Foo3 {
-    Foo3();
+    Foo3(); // expected-note{{requires 0 arguments}}
     Foo3(Foo3&); // expected-note{{would lose const qualifier}}
   };
 
@@ -383,4 +383,13 @@ namespace PR17052 {
 
     int &test() { return b_ ? i_ : throw 1; }
   };
+}
+
+namespace PR26448 {
+struct Base {};
+struct Derived : Base {};
+Base b;
+Derived d;
+typedef decltype(true ? static_cast<Base&&>(b) : static_cast<Derived&&>(d)) x;
+typedef Base &&x;
 }

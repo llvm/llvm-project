@@ -1,6 +1,8 @@
 ; Test 32-bit square root.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 \
+; RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK-SCALAR %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
 
 declare float @llvm.sqrt.f32(float)
 declare float @sqrtf(float)
@@ -77,7 +79,7 @@ define float @f6(float *%base, i64 %index) {
 ; to use SQEB if possible.
 define void @f7(float *%ptr) {
 ; CHECK-LABEL: f7:
-; CHECK: sqeb {{%f[0-9]+}}, 16{{[04]}}(%r15)
+; CHECK-SCALAR: sqeb {{%f[0-9]+}}, 16{{[04]}}(%r15)
 ; CHECK: br %r14
   %val0 = load volatile float , float *%ptr
   %val1 = load volatile float , float *%ptr
@@ -159,10 +161,8 @@ define float @f8(float %dummy, float %val) {
 ; CHECK-LABEL: f8:
 ; CHECK: sqebr %f0, %f2
 ; CHECK: cebr %f0, %f0
-; CHECK: jo [[LABEL:\.L.*]]
-; CHECK: br %r14
-; CHECK: [[LABEL]]:
-; CHECK: ler %f0, %f2
+; CHECK: bnor %r14
+; CHECK: {{ler|ldr}} %f0, %f2
 ; CHECK: jg sqrtf@PLT
   %res = tail call float @sqrtf(float %val)
   ret float %res

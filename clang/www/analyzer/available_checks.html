@@ -38,12 +38,14 @@ Experimental (Alpha) Checkers</a>.
 <li><a href="#core_checkers">Core Checkers</a> model core language features and perform general-purpose checks such as division by zero, null pointer dereference, usage of uninitialized values, etc.</li>
 <li><a href="#cplusplus_checkers">C++ Checkers</a> perform C++-specific checks</li>
 <li><a href="#deadcode_checkers">Dead Code Checkers</a> check for unused code</li>
+<li><a href="#nullability_checkers">Nullability Checkers</a> </li>
+<li><a href="#optin_checkers">Optin Checkers</a> </li>
 <li><a href="#osx_checkers">OS X Checkers</a> perform Objective-C-specific checks and check the use of Apple's SDKs (OS X and iOS)</li>
 <li><a href="#security_checkers">Security Checkers</a> check for insecure API usage and perform checks based on the CERT Secure Coding Standards</li>
 <li><a href="#unix_checkers">Unix Checkers</a> check the use of Unix and POSIX APIs</li>
 </ul>
 
-<!------------------------------------ core ----------------------------------->
+<!-- =========================== core =========================== -->
 <h3 id="core_checkers">Core Checkers</h3>
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>
@@ -360,7 +362,7 @@ int test() {
 
 </tbody></table>
 
-<!------------------------------------ C++ ------------------------------------>
+<!-- =========================== C++ =========================== -->
 <h3 id="cplusplus_checkers">C++ Checkers</h3>
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>
@@ -421,9 +423,21 @@ void test() {
 }
 </pre></div></div></td></tr>
 
+<tr><td><div class="namedescr expandable"><span class="name">
+cplusplus.NewDeleteLeaks</span><span class="lang">
+(C++)</span><div class="descr">
+Check for memory leaks. Traces memory managed by <code>new</code>/<code>
+delete</code>.</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+void test() {
+  int *p = new int;
+} // warn
+</pre></div></div></td></tr>
+
 </tbody></table>
 
-<!--------------------------------- dead code --------------------------------->
+<!-- =========================== dead code =========================== -->
 <h3 id="deadcode_checkers">Dead Code Checkers</h3>
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>
@@ -444,7 +458,161 @@ void test() {
 
 </tbody></table>
 
-<!---------------------------------- OS X ------------------------------------>
+<!-- =========================== nullability =========================== -->
+<h3 id="nullability_checkers">Nullability Checkers</h3>
+<table class="checkers">
+<colgroup><col class="namedescr"><col class="example"></colgroup>
+<thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
+
+<tbody>
+<tr><td><div class="namedescr expandable"><span class="name">
+nullability.NullPassedToNonnull</span><span class="lang">
+(ObjC)</span><div class="descr">
+Warns when a null pointer is passed to a pointer which has a 
+_Nonnull type.</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+if (name != nil)
+  return;
+// Warning: nil passed to a callee that requires a non-null 1st parameter
+NSString *greeting = [@"Hello " stringByAppendingString:name];
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+nullability.NullReturnedFromNonnull</span><span class="lang">
+(ObjC)</span><div class="descr">
+Warns when a null pointer is returned from a function that has 
+_Nonnull return type.</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+- (nonnull id)firstChild {
+  id result = nil;
+  if ([_children count] > 0)
+    result = _children[0];
+
+  // Warning: nil returned from a method that is expected 
+  // to return a non-null value
+  return result;
+}
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+nullability.NullableDereferenced</span><span class="lang">
+(ObjC)</span><div class="descr">
+Warns when a nullable pointer is dereferenced.</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+struct LinkedList {
+  int data;
+  struct LinkedList *next;
+};
+
+struct LinkedList * _Nullable getNext(struct LinkedList *l);
+
+void updateNextData(struct LinkedList *list, int newData) {
+  struct LinkedList *next = getNext(list);
+  // Warning: Nullable pointer is dereferenced
+  next->data = 7;
+}
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+nullability.NullablePassedToNonnull</span><span class="lang">
+(ObjC)</span><div class="descr">
+Warns when a nullable pointer is passed to a pointer which has a _Nonnull type.</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+typedef struct Dummy { int val; } Dummy;
+Dummy *_Nullable returnsNullable();
+void takesNonnull(Dummy *_Nonnull);
+
+void test() {
+  Dummy *p = returnsNullable();
+  takesNonnull(p); // warn
+}
+</pre></div></div></td></tr>
+
+</tbody></table>
+
+<!-- =========================== optin =========================== -->
+<h3 id="optin_checkers">Optin Checkers</h3>
+<table class="checkers">
+<colgroup><col class="namedescr"><col class="example"></colgroup>
+<thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
+
+<tbody>
+<tr><td><div class="namedescr expandable"><span class="name">
+optin.mpi.MPI-Checker</span><span class="lang">
+(C)</span><div class="descr">
+Checks MPI code</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+void test() {
+  double buf = 0;
+  MPI_Request sendReq1;
+  MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 
+      0, MPI_COMM_WORLD, &sendReq1);
+} // warn: request 'sendReq1' has no matching wait.
+</pre></div><div class="separator"></div>
+<div class="example"><pre>
+void test() {
+  double buf = 0;
+  MPI_Request sendReq;
+  MPI_Isend(&buf, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &sendReq);
+  MPI_Irecv(&buf, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &sendReq); // warn
+  MPI_Isend(&buf, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &sendReq); // warn
+  MPI_Wait(&sendReq, MPI_STATUS_IGNORE);
+}
+</pre></div><div class="separator"></div>
+<div class="example"><pre>
+void missingNonBlocking() {
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Request sendReq1[10][10][10];
+  MPI_Wait(&sendReq1[1][7][9], MPI_STATUS_IGNORE); // warn
+}
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+optin.osx.cocoa.localizability.EmptyLocalizationContextChecker</span><span class="lang">
+(ObjC)</span><div class="descr">
+Check that NSLocalizedString macros include a comment for context.</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+- (void)test {
+  NSString *string = NSLocalizedString(@"LocalizedString", nil); // warn
+  NSString *string2 = NSLocalizedString(@"LocalizedString", @" "); // warn
+  NSString *string3 = NSLocalizedStringWithDefaultValue(
+    @"LocalizedString", nil, [[NSBundle alloc] init], nil,@""); // warn
+}
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+optin.osx.cocoa.localizability.NonLocalizedStringChecker</span><span class="lang">
+(ObjC)</span><div class="descr">
+Warns about uses of non-localized NSStrings passed to UI methods 
+expecting localized NSStrings</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+NSString *alarmText = 
+  NSLocalizedString(@"Enabled", @"Indicates alarm is turned on");
+if (!isEnabled) {
+  alarmText = @"Disabled";
+}
+UILabel *alarmStateLabel = [[UILabel alloc] init];
+
+// Warning: User-facing text should use localized string macro
+[alarmStateLabel setText:alarmText];
+</pre></div></div></td></tr>
+
+</tbody></table>
+
+<!-- =========================== OS X =========================== -->
 <h3 id="osx_checkers">OS X Checkers</h3>
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>
@@ -461,6 +629,22 @@ dispatch_once</div></div></div></td>
 void test() {
   dispatch_once_t pred = 0;
   dispatch_once(&amp;pred, ^(){}); // warn: dispatch_once uses local
+}
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+osx.NumberObjectConversion</span><span class="lang">
+(C, C++, ObjC)</span><div class="descr">
+Check for erroneous conversions of objects representing numbers 
+into numbers</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+NSNumber *photoCount = [albumDescriptor objectForKey:@"PhotoCount"];
+// Warning: Comparing a pointer value of type 'NSNumber *' 
+// to a scalar integer value
+if (photoCount > 0) {
+  [self displayPhotos];
 }
 </pre></div></div></td></tr>
 
@@ -581,6 +765,66 @@ void test(void) {
 
 
 <tr><td><div class="namedescr expandable"><span class="name">
+osx.cocoa.Dealloc</span><span class="lang">
+(ObjC)</span><div class="descr">
+Warn about Objective-C classes that lack a correct implementation 
+of <code>-dealloc</code>.
+</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+@interface MyObject : NSObject {
+  id _myproperty;  
+}
+@end
+
+@implementation MyObject // warn: lacks 'dealloc'
+@end
+</pre></div><div class="separator"></div>
+<div class="example"><pre>
+@interface MyObject : NSObject {}
+@property(assign) id myproperty;
+@end
+
+@implementation MyObject // warn: does not send 'dealloc' to super
+- (void)dealloc {
+  self.myproperty = 0;
+}
+@end
+</pre></div><div class="separator"></div>
+<div class="example"><pre>
+@interface MyObject : NSObject {
+  id _myproperty;
+}
+@property(retain) id myproperty;
+@end
+
+@implementation MyObject
+@synthesize myproperty = _myproperty;
+  // warn: var was retained but wasn't released
+- (void)dealloc {
+  [super dealloc];
+}
+@end
+</pre></div><div class="separator"></div>
+<div class="example"><pre>
+@interface MyObject : NSObject {
+  id _myproperty;
+}
+@property(assign) id myproperty;
+@end
+
+@implementation MyObject
+@synthesize myproperty = _myproperty;
+  // warn: var wasn't retained but was released
+- (void)dealloc {
+  [_myproperty release];
+  [super dealloc];
+}
+@end
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
 osx.cocoa.IncompatibleMethodTypes</span><span class="lang">
 (ObjC)</span><div class="descr">
 Check for an incompatible type signature when overriding an Objective-C method.</div></div></td>
@@ -688,6 +932,21 @@ NSComparisonResult test(NSString *s) {
 
 
 <tr><td><div class="namedescr expandable"><span class="name">
+osx.cocoa.ObjCGenerics</span><span class="lang">
+(ObjC)</span><div class="descr">
+Check for type errors when using Objective-C generics</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+NSMutableArray<NSString *> *names = [NSMutableArray array];
+NSMutableArray *birthDates = names;
+
+// Warning: Conversion from value of type 'NSDate *' 
+// to incompatible type 'NSString *'
+[birthDates addObject: [NSDate date]];
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
 osx.cocoa.RetainCount</span><span class="lang">
 (ObjC)</span><div class="descr">
 Check for leaks and violations of the Cocoa Memory Management rules.</div></div></td>
@@ -736,6 +995,26 @@ method.</div></div></td>
 - (id)init {
   [super init];
   return self; // warn: returning uninitialized 'self'
+}
+@end
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+osx.cocoa.SuperDealloc</span><span class="lang">
+(ObjC)</span><div class="descr">
+Warn about improper use of '[super dealloc]' in Objective-C</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+@interface SuperDeallocThenReleaseIvarClass : NSObject {
+  NSObject *_ivar;
+}
+@end
+
+@implementation SuperDeallocThenReleaseIvarClass
+- (void)dealloc {
+  [super dealloc];
+  [_ivar release]; // warn
 }
 @end
 </pre></div></div></td></tr>
@@ -855,7 +1134,7 @@ void test() {
 
 </tbody></table>
 
-<!------------------------------- security ------------------------------------>
+<!-- =========================== security =========================== -->
 <h3 id="security_checkers">Security Checkers</h3>
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>
@@ -995,7 +1274,7 @@ void test() {
 
 </tbody></table>
 
-<!--------------------------------- unix -------------------------------------->
+<!-- =========================== unix =========================== -->
 <h3 id="unix_checkers">Unix Checkers</h3>
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>
@@ -1183,6 +1462,38 @@ void test(NSUInteger dataLength) {
                length:sizeof(int) freeWhenDone:1];
     // warn +dataWithBytesNoCopy:length:freeWhenDone: cannot take
     // ownership of memory allocated by 'new'
+}
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+unix.Vfork</span><span class="lang">
+(C)</span><div class="descr">
+Check for proper usage of vfork</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+int test(int x) {
+  pid_t pid = vfork(); // warn
+  if (pid != 0)
+    return 0;
+
+  switch (x) {
+  case 0:
+    pid = 1;
+    execl("", "", 0);
+    _exit(1);
+    break;
+  case 1:
+    x = 0; // warn: this assignment is prohibited
+    break;
+  case 2:
+    foo(); // warn: this function call is prohibited
+    break;
+  default:
+    return 0; // warn: return is prohibited
+  }
+
+  while(1);
 }
 </pre></div></div></td></tr>
 

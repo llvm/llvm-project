@@ -12,11 +12,11 @@
 
 #include "PDBSymbol.h"
 #include "PDBTypes.h"
-#include <string>
 
 namespace llvm {
 
 class raw_ostream;
+namespace pdb {
 
 class PDBSymbolThunk : public PDBSymbol {
 public:
@@ -30,22 +30,21 @@ public:
   FORWARD_SYMBOL_METHOD(getAccess)
   FORWARD_SYMBOL_METHOD(getAddressOffset)
   FORWARD_SYMBOL_METHOD(getAddressSection)
-  FORWARD_SYMBOL_METHOD(getClassParentId)
+  FORWARD_SYMBOL_ID_METHOD(getClassParent)
   FORWARD_SYMBOL_METHOD(isConstType)
   FORWARD_SYMBOL_METHOD(isIntroVirtualFunction)
   FORWARD_SYMBOL_METHOD(isStatic)
   FORWARD_SYMBOL_METHOD(getLength)
-  FORWARD_SYMBOL_METHOD(getLexicalParentId)
+  FORWARD_SYMBOL_ID_METHOD(getLexicalParent)
   FORWARD_SYMBOL_METHOD(getName)
   FORWARD_SYMBOL_METHOD(isPureVirtual)
   FORWARD_SYMBOL_METHOD(getRelativeVirtualAddress)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
   FORWARD_SYMBOL_METHOD(getTargetOffset)
   FORWARD_SYMBOL_METHOD(getTargetRelativeVirtualAddress)
   FORWARD_SYMBOL_METHOD(getTargetVirtualAddress)
   FORWARD_SYMBOL_METHOD(getTargetSection)
   FORWARD_SYMBOL_METHOD(getThunkOrdinal)
-  FORWARD_SYMBOL_METHOD(getTypeId)
+  FORWARD_SYMBOL_ID_METHOD(getType)
   FORWARD_SYMBOL_METHOD(isUnalignedType)
   FORWARD_SYMBOL_METHOD(isVirtual)
   FORWARD_SYMBOL_METHOD(getVirtualAddress)
@@ -53,5 +52,6 @@ public:
   FORWARD_SYMBOL_METHOD(isVolatileType)
 };
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLTHUNK_H

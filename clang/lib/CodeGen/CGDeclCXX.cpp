@@ -86,13 +86,21 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
   llvm::Constant *function;
   llvm::Constant *argument;
 
-  // Special-case non-array C++ destructors, where there's a function
-  // with the right signature that we can just call.
-  const CXXRecordDecl *record = nullptr;
-  if (dtorKind == QualType::DK_cxx_destructor &&
-      (record = type->getAsCXXRecordDecl())) {
-    assert(!record->hasTrivialDestructor());
-    CXXDestructorDecl *dtor = record->getDestructor();
+  // Special-case non-array C++ destructors, if they have the right signature.
+  // Under some ABIs, destructors return this instead of void, and cannot be
+  // passed directly to __cxa_atexit if the target does not allow this mismatch.
+  const CXXRecordDecl *Record = type->getAsCXXRecordDecl();
+  bool CanRegisterDestructor =
+      Record && (!CGM.getCXXABI().HasThisReturn(
+                     GlobalDecl(Record->getDestructor(), Dtor_Complete)) ||
+                 CGM.getCXXABI().canCallMismatchedFunctionType());
+  // If __cxa_atexit is disabled via a flag, a different helper function is
+  // generated elsewhere which uses atexit instead, and it takes the destructor
+  // directly.
+  bool UsingExternalHelper = !CGM.getCodeGenOpts().CXAAtExit;
+  if (Record && (CanRegisterDestructor || UsingExternalHelper)) {
+    assert(!Record->hasTrivialDestructor());
+    CXXDestructorDecl *dtor = Record->getDestructor();
 
     function = CGM.getAddrOfCXXStructor(dtor, StructorType::Complete);
     argument = llvm::ConstantExpr::getBitCast(
@@ -113,13 +121,15 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
 /// constant from this point onwards.
 static void EmitDeclInvariant(CodeGenFunction &CGF, const VarDecl &D,
                               llvm::Constant *Addr) {
-  // Don't emit the intrinsic if we're not optimizing.
+  // Do not emit the intrinsic if we're not optimizing.
   if (!CGF.CGM.getCodeGenOpts().OptimizationLevel)
     return;
 
   // Grab the llvm.invariant.start intrinsic.
   llvm::Intrinsic::ID InvStartID = llvm::Intrinsic::invariant_start;
-  llvm::Constant *InvariantStart = CGF.CGM.getIntrinsic(InvStartID);
+  // Overloaded address space type.
+  llvm::Type *ObjectPtr[1] = {CGF.Int8PtrTy};
+  llvm::Constant *InvariantStart = CGF.CGM.getIntrinsic(InvStartID, ObjectPtr);
 
   // Emit a call with the size in bytes of the object.
   CharUnits WidthChars = CGF.getContext().getTypeSizeInChars(D.getType());
@@ -227,7 +237,8 @@ void CodeGenFunction::registerGlobalDtorWithAtExit(const VarDecl &VD,
     llvm::FunctionType::get(IntTy, dtorStub->getType(), false);
 
   llvm::Constant *atexit =
-    CGM.CreateRuntimeFunction(atexitTy, "atexit");
+      CGM.CreateRuntimeFunction(atexitTy, "atexit", llvm::AttributeList(),
+                                /*Local=*/true);
   if (llvm::Function *atexitFn = dyn_cast<llvm::Function>(atexit))
     atexitFn->setDoesNotThrow();
 
@@ -304,6 +315,17 @@ void
 CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
                                             llvm::GlobalVariable *Addr,
                                             bool PerformInit) {
+
+  // According to E.2.3.1 in CUDA-7.5 Programming guide: __device__,
+  // __constant__ and __shared__ variables defined in namespace scope,
+  // that are of class type, cannot have a non-empty constructor. All
+  // the checks have been done in Sema by now. Whatever initializers
+  // are allowed are empty and we just need to ignore them here.
+  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
+      (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
+       D->hasAttr<CUDASharedAttr>()))
+    return;
+
   // Check if we've already initialized this decl.
   auto I = DelayedCXXInitPosition.find(D);
   if (I != DelayedCXXInitPosition.end() && I->second == ~0U)
@@ -331,13 +353,10 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
 
   if (D->getTLSKind()) {
     // FIXME: Should we support init_priority for thread_local?
-    // FIXME: Ideally, initialization of instantiated thread_local static data
-    // members of class templates should not trigger initialization of other
-    // entities in the TU.
     // FIXME: We only need to register one __cxa_thread_atexit function for the
     // entire TU.
     CXXThreadLocalInits.push_back(Fn);
-    CXXThreadLocalInitVars.push_back(Addr);
+    CXXThreadLocalInitVars.push_back(D);
   } else if (PerformInit && ISA) {
     EmitPointerToInitFunc(D, Addr, Fn, ISA);
   } else if (auto *IPA = D->getAttr<InitPriorityAttr>()) {
@@ -518,14 +537,14 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       llvm::Value *GuardVal = Builder.CreateLoad(Guard);
       llvm::Value *Uninit = Builder.CreateIsNull(GuardVal,
                                                  "guard.uninitialized");
-      // Mark as initialized before initializing anything else. If the
-      // initializers use previously-initialized thread_local vars, that's
-      // probably supposed to be OK, but the standard doesn't say.
-      Builder.CreateStore(llvm::ConstantInt::get(GuardVal->getType(),1), Guard);
       llvm::BasicBlock *InitBlock = createBasicBlock("init");
       ExitBlock = createBasicBlock("exit");
       Builder.CreateCondBr(Uninit, InitBlock, ExitBlock);
       EmitBlock(InitBlock);
+      // Mark as initialized before initializing anything else. If the
+      // initializers use previously-initialized thread_local vars, that's
+      // probably supposed to be OK, but the standard doesn't say.
+      Builder.CreateStore(llvm::ConstantInt::get(GuardVal->getType(),1), Guard);
     }
 
     RunCleanupsScope Scope(*this);
@@ -552,9 +571,10 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
   FinishFunction();
 }
 
-void CodeGenFunction::GenerateCXXGlobalDtorsFunc(llvm::Function *Fn,
-                  const std::vector<std::pair<llvm::WeakVH, llvm::Constant*> >
-                                                &DtorsAndObjects) {
+void CodeGenFunction::GenerateCXXGlobalDtorsFunc(
+    llvm::Function *Fn,
+    const std::vector<std::pair<llvm::WeakTrackingVH, llvm::Constant *>>
+        &DtorsAndObjects) {
   {
     auto NL = ApplyDebugLocation::CreateEmpty(*this);
     StartFunction(GlobalDecl(), getContext().VoidTy, Fn,
@@ -583,12 +603,12 @@ llvm::Function *CodeGenFunction::generateDestroyHelper(
     Address addr, QualType type, Destroyer *destroyer,
     bool useEHCleanupForArray, const VarDecl *VD) {
   FunctionArgList args;
-  ImplicitParamDecl dst(getContext(), nullptr, SourceLocation(), nullptr,
-                        getContext().VoidPtrTy);
-  args.push_back(&dst);
+  ImplicitParamDecl Dst(getContext(), getContext().VoidPtrTy,
+                        ImplicitParamDecl::Other);
+  args.push_back(&Dst);
 
-  const CGFunctionInfo &FI = CGM.getTypes().arrangeFreeFunctionDeclaration(
-      getContext().VoidTy, args, FunctionType::ExtInfo(), /*variadic=*/false);
+  const CGFunctionInfo &FI =
+    CGM.getTypes().arrangeBuiltinFunctionDeclaration(getContext().VoidTy, args);
   llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
   llvm::Function *fn = CGM.CreateGlobalInitOrDestructFunction(
       FTy, "__cxx_global_array_dtor", FI, VD->getLocation());

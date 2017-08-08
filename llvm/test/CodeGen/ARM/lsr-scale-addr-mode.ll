@@ -1,6 +1,11 @@
 ; RUN: llc -mtriple=arm-eabi %s -o - | FileCheck %s
 ; Should use scaled addressing mode.
 
+; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a53 %s -o - | FileCheck %s -check-prefix CHECK-NONEGOFF
+; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a57 %s -o - | FileCheck %s -check-prefix CHECK-NONEGOFF
+; RUN: llc -mtriple=arm-eabi -mcpu=cortex-r52 %s -o - | FileCheck %s -check-prefix CHECK-NONEGOFF
+; Should not generate negated register offset
+
 define void @sintzero(i32* %a) nounwind {
 entry:
 	store i32 0, i32* %a
@@ -19,4 +24,5 @@ return:		; preds = %cond_next
 }
 
 ; CHECK: lsl{{.*}}#2]
+; CHECK-NONEGOFF: [{{r[0-9]+}}, {{r[0-9]+}}, lsl{{.*}}#2]
 

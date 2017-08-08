@@ -1,0 +1,13 @@
+!<arch>
+//                                              26        `
+1234567890123456hello.c/
+
+/&a25*          0           0     0     644     102       `
+#include <stdio.h>
+#include <stdlib.h>
+int
+main()
+{
+	printf("Hello World\n");
+	return EXIT_SUCCESS;
+}

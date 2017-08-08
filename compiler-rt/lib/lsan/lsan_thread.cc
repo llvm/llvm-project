@@ -17,14 +17,13 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_thread_registry.h"
+#include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "lsan_allocator.h"
+#include "lsan_common.h"
 
 namespace __lsan {
 
-const u32 kInvalidTid = (u32) -1;
-
 static ThreadRegistry *thread_registry;
-static THREADLOCAL u32 current_thread_tid = kInvalidTid;
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {
   void *mem = MmapOrDie(sizeof(ThreadContext), "ThreadContext");
@@ -35,32 +34,26 @@ static const uptr kMaxThreads = 1 << 13;
 static const uptr kThreadQuarantineSize = 64;
 
 void InitializeThreadRegistry() {
-  static char thread_registry_placeholder[sizeof(ThreadRegistry)] ALIGNED(64);
+  static ALIGNED(64) char thread_registry_placeholder[sizeof(ThreadRegistry)];
   thread_registry = new(thread_registry_placeholder)
     ThreadRegistry(CreateThreadContext, kMaxThreads, kThreadQuarantineSize);
 }
 
-u32 GetCurrentThread() {
-  return current_thread_tid;
-}
-
-void SetCurrentThread(u32 tid) {
-  current_thread_tid = tid;
-}
-
 ThreadContext::ThreadContext(int tid)
-  : ThreadContextBase(tid),
-    stack_begin_(0),
-    stack_end_(0),
-    cache_begin_(0),
-    cache_end_(0),
-    tls_begin_(0),
-    tls_end_(0) {}
+    : ThreadContextBase(tid),
+      stack_begin_(0),
+      stack_end_(0),
+      cache_begin_(0),
+      cache_end_(0),
+      tls_begin_(0),
+      tls_end_(0),
+      dtls_(nullptr) {}
 
 struct OnStartedArgs {
   uptr stack_begin, stack_end,
        cache_begin, cache_end,
        tls_begin, tls_end;
+  DTLS *dtls;
 };
 
 void ThreadContext::OnStarted(void *arg) {
@@ -71,10 +64,12 @@ void ThreadContext::OnStarted(void *arg) {
   tls_end_ = args->tls_end;
   cache_begin_ = args->cache_begin;
   cache_end_ = args->cache_end;
+  dtls_ = args->dtls;
 }
 
 void ThreadContext::OnFinished() {
   AllocatorThreadFinish();
+  DTLS_Destroy();
 }
 
 u32 ThreadCreate(u32 parent_tid, uptr user_id, bool detached) {
@@ -82,7 +77,7 @@ u32 ThreadCreate(u32 parent_tid, uptr user_id, bool detached) {
                                        /* arg */ nullptr);
 }
 
-void ThreadStart(u32 tid, uptr os_id) {
+void ThreadStart(u32 tid, tid_t os_id, bool workerthread) {
   OnStartedArgs args;
   uptr stack_size = 0;
   uptr tls_size = 0;
@@ -91,11 +86,13 @@ void ThreadStart(u32 tid, uptr os_id) {
   args.stack_end = args.stack_begin + stack_size;
   args.tls_end = args.tls_begin + tls_size;
   GetAllocatorCacheRange(&args.cache_begin, &args.cache_end);
-  thread_registry->StartThread(tid, os_id, &args);
+  args.dtls = DTLS_Get();
+  thread_registry->StartThread(tid, os_id, workerthread, &args);
 }
 
 void ThreadFinish() {
   thread_registry->FinishThread(GetCurrentThread());
+  SetCurrentThread(kInvalidTid);
 }
 
 ThreadContext *CurrentThreadContext() {
@@ -130,9 +127,9 @@ void EnsureMainThreadIDIsCorrect() {
 
 ///// Interface to the common LSan module. /////
 
-bool GetThreadRangesLocked(uptr os_id, uptr *stack_begin, uptr *stack_end,
-                           uptr *tls_begin, uptr *tls_end,
-                           uptr *cache_begin, uptr *cache_end) {
+bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
+                           uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
+                           uptr *cache_end, DTLS **dtls) {
   ThreadContext *context = static_cast<ThreadContext *>(
       thread_registry->FindThreadContextByOsIDLocked(os_id));
   if (!context) return false;
@@ -142,10 +139,11 @@ bool GetThreadRangesLocked(uptr os_id, uptr *stack_begin, uptr *stack_end,
   *tls_end = context->tls_end();
   *cache_begin = context->cache_begin();
   *cache_end = context->cache_end();
+  *dtls = context->dtls();
   return true;
 }
 
-void ForEachExtraStackRange(uptr os_id, RangeIteratorCallback callback,
+void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
                             void *arg) {
 }
 

@@ -1,0 +1,86 @@
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52 -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-topdown 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=TOPDOWN
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52 -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-bottomup 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=BOTTOMUP
+# REQUIRES: asserts
+--- |
+  ; ModuleID = 'foo.ll'
+  source_filename = "foo.ll"
+  target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "arm---eabi"
+
+  %struct.__neon_int8x8x4_t = type { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> }
+  ; Function Attrs: nounwind
+  define <8 x i8> @foo(i8* %A) {
+    %tmp1 = call %struct.__neon_int8x8x4_t @llvm.arm.neon.vld4.v8i8.p0i8(i8* %A, i32 8)
+    %tmp2 = extractvalue %struct.__neon_int8x8x4_t %tmp1, 0
+    %tmp3 = extractvalue %struct.__neon_int8x8x4_t %tmp1, 1
+    %tmp4 = add <8 x i8> %tmp2, %tmp3
+    ret <8 x i8> %tmp4
+  }
+  declare %struct.__neon_int8x8x4_t @llvm.arm.neon.vld4.v8i8.p0i8(i8*, i32)
+
+# CHECK: ********** MI Scheduling **********
+# CHECK: ScheduleDAGMILive::schedule starting
+# CHECK: SU(1):   %vreg1<def> = VLD4d8Pseudo %vreg0, 8, pred:14, pred:%noreg; mem:LD32[%A](align=8) QQPR:%vreg1 GPR:%vreg0
+# CHECK: Latency            : 8
+# CHECK: Single Issue       : true;
+# CHECK: SU(2):   %vreg4<def> = VADDv8i8 %vreg1:dsub_0, %vreg1:dsub_1, pred:14, pred:%noreg; DPR:%vreg4 QQPR:%vreg1
+# CHECK: Latency            : 5
+# CHECK: Single Issue       : false;
+# CHECK: SU(3):   %vreg5<def>, %vreg6<def> = VMOVRRD %vreg4, pred:14, pred:%noreg; GPR:%vreg5,%vreg6 DPR:%vreg4
+# CHECK: Latency            : 4
+# CHECK: Single Issue       : false;
+
+# TOPDOWN: Scheduling SU(1) %vreg1<def> = VLD4d8Pseudo
+# TOPDOWN: Bump cycle to end group
+# TOPDOWN: Scheduling SU(2) %vreg4<def> = VADDv8i8
+
+# BOTTOMUP: Scheduling SU(2) %vreg4<def> = VADDv8i8
+# BOTTOMUP: Scheduling SU(1) %vreg1<def> = VLD4d8Pseudo
+# BOTTOMUP: Bump cycle to begin group
+
+...
+---
+name:            foo
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: qqpr }
+  - { id: 2, class: dpr }
+  - { id: 3, class: dpr }
+  - { id: 4, class: dpr }
+  - { id: 5, class: gpr }
+  - { id: 6, class: gpr }
+liveins:
+  - { reg: '%r0', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %r0
+
+    %0 = COPY %r0
+    %1 = VLD4d8Pseudo %0, 8, 14, _ :: (load 32 from %ir.A, align 8)
+    %4 = VADDv8i8 %1.dsub_0, %1.dsub_1, 14, _
+    %5, %6 = VMOVRRD %4, 14, _
+    %r0 = COPY %5
+    %r1 = COPY %6
+    BX_RET 14, _, implicit %r0, implicit killed %r1
+
+...

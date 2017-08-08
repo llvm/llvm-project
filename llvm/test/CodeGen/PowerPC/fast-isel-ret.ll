@@ -186,3 +186,12 @@ entry:
 ; ELF64: blr
   ret i32 -1
 }
+
+define zeroext i16 @ret20() nounwind {
+entry:
+; ELF64-LABEL: ret20
+; ELF64: lis{{.*}}0
+; ELF64: ori{{.*}}32768
+; ELF64: blr
+  ret i16 32768
+}

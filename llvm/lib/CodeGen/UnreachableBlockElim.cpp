@@ -20,14 +20,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Dominators.h"
@@ -38,30 +40,8 @@
 #include "llvm/Target/TargetInstrInfo.h"
 using namespace llvm;
 
-namespace {
-  class UnreachableBlockElim : public FunctionPass {
-    bool runOnFunction(Function &F) override;
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    UnreachableBlockElim() : FunctionPass(ID) {
-      initializeUnreachableBlockElimPass(*PassRegistry::getPassRegistry());
-    }
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addPreserved<DominatorTreeWrapperPass>();
-    }
-  };
-}
-char UnreachableBlockElim::ID = 0;
-INITIALIZE_PASS(UnreachableBlockElim, "unreachableblockelim",
-                "Remove unreachable blocks from the CFG", false, false)
-
-FunctionPass *llvm::createUnreachableBlockEliminationPass() {
-  return new UnreachableBlockElim();
-}
-
-bool UnreachableBlockElim::runOnFunction(Function &F) {
-  SmallPtrSet<BasicBlock*, 8> Reachable;
+static bool eliminateUnreachableBlock(Function &F) {
+  df_iterator_default_set<BasicBlock*> Reachable;
 
   // Mark all reachable blocks.
   for (BasicBlock *BB : depth_first_ext(&F, Reachable))
@@ -91,6 +71,41 @@ bool UnreachableBlockElim::runOnFunction(Function &F) {
   return !DeadBlocks.empty();
 }
 
+namespace {
+class UnreachableBlockElimLegacyPass : public FunctionPass {
+  bool runOnFunction(Function &F) override {
+    return eliminateUnreachableBlock(F);
+  }
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+  UnreachableBlockElimLegacyPass() : FunctionPass(ID) {
+    initializeUnreachableBlockElimLegacyPassPass(
+        *PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<DominatorTreeWrapperPass>();
+  }
+};
+}
+char UnreachableBlockElimLegacyPass::ID = 0;
+INITIALIZE_PASS(UnreachableBlockElimLegacyPass, "unreachableblockelim",
+                "Remove unreachable blocks from the CFG", false, false)
+
+FunctionPass *llvm::createUnreachableBlockEliminationPass() {
+  return new UnreachableBlockElimLegacyPass();
+}
+
+PreservedAnalyses UnreachableBlockElimPass::run(Function &F,
+                                                FunctionAnalysisManager &AM) {
+  bool Changed = eliminateUnreachableBlock(F);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
+}
 
 namespace {
   class UnreachableMachineBlockElim : public MachineFunctionPass {
@@ -116,7 +131,7 @@ void UnreachableMachineBlockElim::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
-  SmallPtrSet<MachineBasicBlock*, 8> Reachable;
+  df_iterator_default_set<MachineBasicBlock*> Reachable;
   bool ModifiedPHI = false;
 
   MMI = getAnalysisIfAvailable<MachineModuleInfo>();
@@ -181,20 +196,31 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
         }
 
       if (phi->getNumOperands() == 3) {
-        unsigned Input = phi->getOperand(1).getReg();
-        unsigned Output = phi->getOperand(0).getReg();
-
-        MachineInstr* temp = phi;
-        ++phi;
-        temp->eraseFromParent();
+        const MachineOperand &Input = phi->getOperand(1);
+        const MachineOperand &Output = phi->getOperand(0);
+        unsigned InputReg = Input.getReg();
+        unsigned OutputReg = Output.getReg();
+        assert(Output.getSubReg() == 0 && "Cannot have output subregister");
         ModifiedPHI = true;
 
-        if (Input != Output) {
+        if (InputReg != OutputReg) {
           MachineRegisterInfo &MRI = F.getRegInfo();
-          MRI.constrainRegClass(Input, MRI.getRegClass(Output));
-          MRI.replaceRegWith(Output, Input);
+          unsigned InputSub = Input.getSubReg();
+          if (InputSub == 0 &&
+              MRI.constrainRegClass(InputReg, MRI.getRegClass(OutputReg))) {
+            MRI.replaceRegWith(OutputReg, InputReg);
+          } else {
+            // The input register to the PHI has a subregister or it can't be
+            // constrained to the proper register class:
+            // insert a COPY instead of simply replacing the output
+            // with the input.
+            const TargetInstrInfo *TII = F.getSubtarget().getInstrInfo();
+            BuildMI(*BB, BB->getFirstNonPHI(), phi->getDebugLoc(),
+                    TII->get(TargetOpcode::COPY), OutputReg)
+                .addReg(InputReg, getRegState(Input), InputSub);
+          }
+          phi++->eraseFromParent();
         }
-
         continue;
       }
 

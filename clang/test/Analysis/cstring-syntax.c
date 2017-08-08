@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=unix.cstring.BadSizeArg -analyzer-store=region -Wno-strncat-size -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument -Wno-sizeof-pointer-memaccess -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=unix.cstring.BadSizeArg -analyzer-store=region -Wno-strncat-size -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument -Wno-sizeof-pointer-memaccess -verify %s
 
 typedef __SIZE_TYPE__ size_t;
 char  *strncat(char *, const char *, size_t);
@@ -10,4 +10,6 @@ void testStrncat(const char *src) {
   strncat(dest, "AAAAAAAAAAAAAAAAAAAAAAAAAAA", sizeof(dest)); // expected-warning {{Potential buffer overflow. Replace with}}
   strncat(dest, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", sizeof(dest) - strlen(dest)); // expected-warning {{Potential buffer overflow. Replace with}}
   strncat(dest, src, sizeof(src)); // expected-warning {{Potential buffer overflow. Replace with}}
+  // Should not crash when sizeof has a type argument.
+  strncat(dest, "AAAAAAAAAAAAAAAAAAAAAAAAAAA", sizeof(char));
 }

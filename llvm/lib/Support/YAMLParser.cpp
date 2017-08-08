@@ -1,4 +1,4 @@
-//===--- YAMLParser.cpp - Simple YAML parser ------------------------------===//
+//===- YAMLParser.cpp - Simple YAML parser --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,16 +12,30 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/YAMLParser.h"
+#include "llvm/ADT/AllocatorList.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/ilist.h"
-#include "llvm/ADT/ilist_node.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <utility>
 
 using namespace llvm;
 using namespace yaml;
@@ -37,7 +51,7 @@ enum UnicodeEncodingForm {
 
 /// EncodingInfo - Holds the encoding type and length of the byte order mark if
 ///                it exists. Length is in {0, 2, 3, 4}.
-typedef std::pair<UnicodeEncodingForm, unsigned> EncodingInfo;
+using EncodingInfo = std::pair<UnicodeEncodingForm, unsigned>;
 
 /// getUnicodeEncoding - Reads up to the first 4 bytes to determine the Unicode
 ///                      encoding form of \a Input.
@@ -46,7 +60,7 @@ typedef std::pair<UnicodeEncodingForm, unsigned> EncodingInfo;
 /// @returns An EncodingInfo indicating the Unicode encoding form of the input
 ///          and how long the byte order mark is if one exists.
 static EncodingInfo getUnicodeEncoding(StringRef Input) {
-  if (Input.size() == 0)
+  if (Input.empty())
     return std::make_pair(UEF_Unknown, 0);
 
   switch (uint8_t(Input[0])) {
@@ -95,8 +109,6 @@ static EncodingInfo getUnicodeEncoding(StringRef Input) {
   return std::make_pair(UEF_UTF8, 0);
 }
 
-namespace llvm {
-namespace yaml {
 /// Pin the vtables to this file.
 void Node::anchor() {}
 void NullNode::anchor() {}
@@ -107,8 +119,11 @@ void MappingNode::anchor() {}
 void SequenceNode::anchor() {}
 void AliasNode::anchor() {}
 
+namespace llvm {
+namespace yaml {
+
 /// Token - A single YAML token.
-struct Token : ilist_node<Token> {
+struct Token {
   enum TokenKind {
     TK_Error, // Uninitialized token.
     TK_StreamStart,
@@ -133,7 +148,7 @@ struct Token : ilist_node<Token> {
     TK_Alias,
     TK_Anchor,
     TK_Tag
-  } Kind;
+  } Kind = TK_Error;
 
   /// A string of length 0 or more whose begin() points to the logical location
   /// of the token in the input.
@@ -142,47 +157,16 @@ struct Token : ilist_node<Token> {
   /// The value of a block scalar node.
   std::string Value;
 
-  Token() : Kind(TK_Error) {}
-};
-}
-}
-
-namespace llvm {
-template<>
-struct ilist_sentinel_traits<Token> {
-  Token *createSentinel() const {
-    return &Sentinel;
-  }
-  static void destroySentinel(Token*) {}
-
-  Token *provideInitialHead() const { return createSentinel(); }
-  Token *ensureHead(Token*) const { return createSentinel(); }
-  static void noteHead(Token*, Token*) {}
-
-private:
-  mutable Token Sentinel;
+  Token() = default;
 };
 
-template<>
-struct ilist_node_traits<Token> {
-  Token *createNode(const Token &V) {
-    return new (Alloc.Allocate<Token>()) Token(V);
-  }
-  static void deleteNode(Token *V) { V->~Token(); }
+} // end namespace yaml
+} // end namespace llvm
 
-  void addNodeToList(Token *) {}
-  void removeNodeFromList(Token *) {}
-  void transferNodesFromList(ilist_node_traits &    /*SrcTraits*/,
-                             ilist_iterator<Token> /*first*/,
-                             ilist_iterator<Token> /*last*/) {}
-
-  BumpPtrAllocator Alloc;
-};
-}
-
-typedef ilist<Token> TokenQueueT;
+using TokenQueueT = BumpPtrList<Token>;
 
 namespace {
+
 /// @brief This struct is used to track simple keys.
 ///
 /// Simple keys are handled by creating an entry in SimpleKeys for each Token
@@ -203,12 +187,13 @@ struct SimpleKey {
     return Tok == Other.Tok;
   }
 };
-}
+
+} // end anonymous namespace
 
 /// @brief The Unicode scalar value of a UTF-8 minimal well-formed code unit
 ///        subsequence and the subsequence's length in code units (uint8_t).
 ///        A length of 0 represents an error.
-typedef std::pair<uint32_t, unsigned> UTF8Decoded;
+using UTF8Decoded = std::pair<uint32_t, unsigned>;
 
 static UTF8Decoded decodeUTF8(StringRef Range) {
   StringRef::iterator Position= Range.begin();
@@ -262,11 +247,14 @@ static UTF8Decoded decodeUTF8(StringRef Range) {
 
 namespace llvm {
 namespace yaml {
+
 /// @brief Scans YAML tokens from a MemoryBuffer.
 class Scanner {
 public:
-  Scanner(StringRef Input, SourceMgr &SM, bool ShowColors = true);
-  Scanner(MemoryBufferRef Buffer, SourceMgr &SM_, bool ShowColors = true);
+  Scanner(StringRef Input, SourceMgr &SM, bool ShowColors = true,
+          std::error_code *EC = nullptr);
+  Scanner(MemoryBufferRef Buffer, SourceMgr &SM_, bool ShowColors = true,
+          std::error_code *EC = nullptr);
 
   /// @brief Parse the next token and return it without popping it.
   Token &peekNext();
@@ -282,6 +270,10 @@ public:
   void setError(const Twine &Message, StringRef::iterator Position) {
     if (Current >= End)
       Current = End - 1;
+
+    // propagate the error if possible
+    if (EC)
+      *EC = make_error_code(std::errc::invalid_argument);
 
     // Don't print out more errors after the first one we encounter. The rest
     // are just the result of the first, and have no meaning.
@@ -377,7 +369,8 @@ private:
   ///          ns-char.
   StringRef::iterator skip_ns_char(StringRef::iterator Position);
 
-  typedef StringRef::iterator (Scanner::*SkipWhileFunc)(StringRef::iterator);
+  using SkipWhileFunc = StringRef::iterator (Scanner::*)(StringRef::iterator);
+
   /// @brief Skip minimal well-formed code unit subsequences until Func
   ///        returns its input.
   ///
@@ -393,10 +386,7 @@ private:
   /// @brief Scan ns-uri-char[39]s starting at Cur.
   ///
   /// This updates Cur and Column while scanning.
-  ///
-  /// @returns A StringRef starting at Cur which covers the longest contiguous
-  ///          sequence of ns-uri-char.
-  StringRef scan_ns_uri_char();
+  void scan_ns_uri_char();
 
   /// @brief Consume a minimal well-formed code unit subsequence starting at
   ///        \a Cur. Return false if it is not the same Unicode scalar value as
@@ -564,6 +554,8 @@ private:
 
   /// @brief Potential simple keys.
   SmallVector<SimpleKey, 4> SimpleKeys;
+
+  std::error_code *EC;
 };
 
 } // end namespace yaml
@@ -683,10 +675,10 @@ bool yaml::dumpTokens(StringRef Input, raw_ostream &OS) {
 }
 
 bool yaml::scanTokens(StringRef Input) {
-  llvm::SourceMgr SM;
-  llvm::yaml::Scanner scanner(Input, SM);
-  for (;;) {
-    llvm::yaml::Token T = scanner.getNext();
+  SourceMgr SM;
+  Scanner scanner(Input, SM);
+  while (true) {
+    Token T = scanner.getNext();
     if (T.Kind == Token::TK_StreamEnd)
       break;
     else if (T.Kind == Token::TK_Error)
@@ -758,13 +750,15 @@ std::string yaml::escape(StringRef Input) {
   return EscapedInput;
 }
 
-Scanner::Scanner(StringRef Input, SourceMgr &sm, bool ShowColors)
-    : SM(sm), ShowColors(ShowColors) {
+Scanner::Scanner(StringRef Input, SourceMgr &sm, bool ShowColors,
+                 std::error_code *EC)
+    : SM(sm), ShowColors(ShowColors), EC(EC) {
   init(MemoryBufferRef(Input, "YAML"));
 }
 
-Scanner::Scanner(MemoryBufferRef Buffer, SourceMgr &SM_, bool ShowColors)
-    : SM(SM_), ShowColors(ShowColors) {
+Scanner::Scanner(MemoryBufferRef Buffer, SourceMgr &SM_, bool ShowColors,
+                 std::error_code *EC)
+    : SM(SM_), ShowColors(ShowColors), EC(EC) {
   init(Buffer);
 }
 
@@ -802,8 +796,7 @@ Token &Scanner::peekNext() {
     removeStaleSimpleKeyCandidates();
     SimpleKey SK;
     SK.Tok = TokenQueue.begin();
-    if (std::find(SimpleKeys.begin(), SimpleKeys.end(), SK)
-        == SimpleKeys.end())
+    if (!is_contained(SimpleKeys, SK))
       break;
     else
       NeedMore = true;
@@ -819,9 +812,8 @@ Token Scanner::getNext() {
 
   // There cannot be any referenced Token's if the TokenQueue is empty. So do a
   // quick deallocation of them all.
-  if (TokenQueue.empty()) {
-    TokenQueue.Alloc.Reset();
-  }
+  if (TokenQueue.empty())
+    TokenQueue.resetAlloc();
 
   return Ret;
 }
@@ -918,8 +910,7 @@ static bool is_ns_word_char(const char C) {
          || (C >= 'A' && C <= 'Z');
 }
 
-StringRef Scanner::scan_ns_uri_char() {
-  StringRef::iterator Start = Current;
+void Scanner::scan_ns_uri_char() {
   while (true) {
     if (Current == End)
       break;
@@ -935,7 +926,6 @@ StringRef Scanner::scan_ns_uri_char() {
     } else
       break;
   }
-  return StringRef(Start, Current - Start);
 }
 
 bool Scanner::consume(uint32_t Expected) {
@@ -962,10 +952,8 @@ void Scanner::skip(uint32_t Distance) {
 bool Scanner::isBlankOrBreak(StringRef::iterator Position) {
   if (Position == End)
     return false;
-  if (   *Position == ' ' || *Position == '\t'
-      || *Position == '\r' || *Position == '\n')
-    return true;
-  return false;
+  return *Position == ' ' || *Position == '\t' || *Position == '\r' ||
+         *Position == '\n';
 }
 
 bool Scanner::consumeLineBreakIfPresent() {
@@ -1768,13 +1756,15 @@ bool Scanner::fetchMoreTokens() {
   return false;
 }
 
-Stream::Stream(StringRef Input, SourceMgr &SM, bool ShowColors)
-    : scanner(new Scanner(Input, SM, ShowColors)), CurrentDoc() {}
+Stream::Stream(StringRef Input, SourceMgr &SM, bool ShowColors,
+               std::error_code *EC)
+    : scanner(new Scanner(Input, SM, ShowColors, EC)), CurrentDoc() {}
 
-Stream::Stream(MemoryBufferRef InputBuffer, SourceMgr &SM, bool ShowColors)
-    : scanner(new Scanner(InputBuffer, SM, ShowColors)), CurrentDoc() {}
+Stream::Stream(MemoryBufferRef InputBuffer, SourceMgr &SM, bool ShowColors,
+               std::error_code *EC)
+    : scanner(new Scanner(InputBuffer, SM, ShowColors, EC)), CurrentDoc() {}
 
-Stream::~Stream() {}
+Stream::~Stream() = default;
 
 bool Stream::failed() { return scanner->failed(); }
 
@@ -1881,8 +1871,6 @@ bool Node::failed() const {
   return Doc->failed();
 }
 
-
-
 StringRef ScalarNode::getValue(SmallVectorImpl<char> &Storage) const {
   // TODO: Handle newlines properly. We need to remove leading whitespace.
   if (Value[0] == '"') { // Double quoted.
@@ -1913,7 +1901,7 @@ StringRef ScalarNode::getValue(SmallVectorImpl<char> &Storage) const {
     return UnquotedValue;
   }
   // Plain or block.
-  return Value.rtrim(" ");
+  return Value.rtrim(' ');
 }
 
 StringRef ScalarNode::unescapeDoubleQuoted( StringRef UnquotedValue
@@ -2146,6 +2134,7 @@ void MappingNode::increment() {
       break;
     default:
       setError("Unexpected token. Expected Key or Block End", T);
+      LLVM_FALLTHROUGH;
     case Token::TK_Error:
       IsAtEnd = true;
       CurrentEntry = nullptr;
@@ -2158,6 +2147,7 @@ void MappingNode::increment() {
       return increment();
     case Token::TK_FlowMappingEnd:
       getNext();
+      LLVM_FALLTHROUGH;
     case Token::TK_Error:
       // Set this to end iterator.
       IsAtEnd = true;
@@ -2200,6 +2190,7 @@ void SequenceNode::increment() {
     default:
       setError( "Unexpected token. Expected Block Entry or Block End."
               , T);
+      LLVM_FALLTHROUGH;
     case Token::TK_Error:
       IsAtEnd = true;
       CurrentEntry = nullptr;
@@ -2228,6 +2219,7 @@ void SequenceNode::increment() {
       return increment();
     case Token::TK_FlowSequenceEnd:
       getNext();
+      LLVM_FALLTHROUGH;
     case Token::TK_Error:
       // Set this to end iterator.
       IsAtEnd = true;

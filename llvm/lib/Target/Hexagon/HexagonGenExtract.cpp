@@ -7,20 +7,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cstdint>
+#include <iterator>
 
 using namespace llvm;
 
@@ -41,28 +46,34 @@ static cl::opt<bool> NeedAnd("extract-needand", cl::init(true), cl::Hidden,
   cl::desc("Require & in extract patterns"));
 
 namespace llvm {
+
   void initializeHexagonGenExtractPass(PassRegistry&);
   FunctionPass *createHexagonGenExtract();
-}
 
+} // end namespace llvm
 
 namespace {
+
   class HexagonGenExtract : public FunctionPass {
   public:
     static char ID;
+
     HexagonGenExtract() : FunctionPass(ID), ExtractCount(0) {
       initializeHexagonGenExtractPass(*PassRegistry::getPassRegistry());
     }
-    virtual const char *getPassName() const override {
+
+    StringRef getPassName() const override {
       return "Hexagon generate \"extract\" instructions";
     }
-    virtual bool runOnFunction(Function &F) override;
-    virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
+
+    bool runOnFunction(Function &F) override;
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<DominatorTreeWrapperPass>();
       AU.addPreserved<DominatorTreeWrapperPass>();
-      AU.addPreserved<MachineFunctionAnalysis>();
       FunctionPass::getAnalysisUsage(AU);
     }
+
   private:
     bool visitBlock(BasicBlock *B);
     bool convert(Instruction *In);
@@ -72,7 +83,8 @@ namespace {
   };
 
   char HexagonGenExtract::ID = 0;
-}
+
+} // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(HexagonGenExtract, "hextract", "Hexagon generate "
   "\"extract\" instructions", false, false)
@@ -80,11 +92,11 @@ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(HexagonGenExtract, "hextract", "Hexagon generate "
   "\"extract\" instructions", false, false)
 
-
 bool HexagonGenExtract::convert(Instruction *In) {
   using namespace PatternMatch;
-  Value *BF = 0;
-  ConstantInt *CSL = 0, *CSR = 0, *CM = 0;
+
+  Value *BF = nullptr;
+  ConstantInt *CSL = nullptr, *CSR = nullptr, *CM = nullptr;
   BasicBlock *BB = In->getParent();
   LLVMContext &Ctx = BB->getContext();
   bool LogicalSR;
@@ -126,14 +138,14 @@ bool HexagonGenExtract::convert(Instruction *In) {
                             m_ConstantInt(CM)));
   }
   if (!Match) {
-    CM = 0;
+    CM = nullptr;
     // (shl (lshr x, #sr), #sl)
     LogicalSR = true;
     Match = match(In, m_Shl(m_LShr(m_Value(BF), m_ConstantInt(CSR)),
                             m_ConstantInt(CSL)));
   }
   if (!Match) {
-    CM = 0;
+    CM = nullptr;
     // (shl (ashr x, #sr), #sl)
     LogicalSR = false;
     Match = match(In, m_Shl(m_AShr(m_Value(BF), m_ConstantInt(CSR)),
@@ -185,13 +197,13 @@ bool HexagonGenExtract::convert(Instruction *In) {
     // It is still ok to generate extract, but only if the mask eliminates
     // those bits (i.e. M does not have any bits set beyond U).
     APInt C = APInt::getHighBitsSet(BW, BW-U);
-    if (M.intersects(C) || !APIntOps::isMask(W, M))
+    if (M.intersects(C) || !M.isMask(W))
       return false;
   } else {
     // Check if M starts with a contiguous sequence of W times 1 bits. Get
     // the low U bits of M (which eliminates the 0 bits shifted in on the
     // left), and check if the result is APInt's "mask":
-    if (!APIntOps::isMask(W, M.getLoBits(U)))
+    if (!M.getLoBits(U).isMask(W))
       return false;
   }
 
@@ -207,14 +219,10 @@ bool HexagonGenExtract::convert(Instruction *In) {
   return true;
 }
 
-
 bool HexagonGenExtract::visitBlock(BasicBlock *B) {
   // Depth-first, bottom-up traversal.
-  DomTreeNode *DTN = DT->getNode(B);
-  typedef GraphTraits<DomTreeNode*> GTN;
-  typedef GTN::ChildIteratorType Iter;
-  for (Iter I = GTN::child_begin(DTN), E = GTN::child_end(DTN); I != E; ++I)
-    visitBlock((*I)->getBlock());
+  for (auto *DTN : children<DomTreeNode*>(DT->getNode(B)))
+    visitBlock(DTN->getBlock());
 
   // Allow limiting the number of generated extracts for debugging purposes.
   bool HasCutoff = ExtractCutoff.getPosition();
@@ -240,8 +248,10 @@ bool HexagonGenExtract::visitBlock(BasicBlock *B) {
   return Changed;
 }
 
-
 bool HexagonGenExtract::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   bool Changed;
 
@@ -252,7 +262,6 @@ bool HexagonGenExtract::runOnFunction(Function &F) {
 
   return Changed;
 }
-
 
 FunctionPass *llvm::createHexagonGenExtract() {
   return new HexagonGenExtract();

@@ -15,10 +15,10 @@ define void @foo(float* noalias nocapture %a, float* noalias nocapture readonly 
 entry:
 ;CHECK-LABEL: @foo
 
-  tail call void @llvm.dbg.value(metadata float* %a, i64 0, metadata !12, metadata !22), !dbg !23
-  tail call void @llvm.dbg.value(metadata float* %b, i64 0, metadata !13, metadata !22), !dbg !24
-  tail call void @llvm.dbg.value(metadata i32 %n, i64 0, metadata !14, metadata !22), !dbg !25
-  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !15, metadata !22), !dbg !26
+  tail call void @llvm.dbg.value(metadata float* %a, metadata !12, metadata !22), !dbg !23
+  tail call void @llvm.dbg.value(metadata float* %b, metadata !13, metadata !22), !dbg !24
+  tail call void @llvm.dbg.value(metadata i32 %n, metadata !14, metadata !22), !dbg !25
+  tail call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !22), !dbg !26
   %cmp.30 = icmp sgt i32 %n, 0, !dbg !27
   br i1 %cmp.30, label %for.body.preheader, label %for.cond.cleanup, !dbg !29
 
@@ -70,13 +70,13 @@ for.body:                                         ; preds = %for.body.preheader,
   %11 = bitcast float* %arrayidx12 to i32*, !dbg !50
   store i32 %10, i32* %11, align 4, !dbg !50, !tbaa !33
   %add13 = add nuw nsw i32 %i.031, 4, !dbg !51
-  tail call void @llvm.dbg.value(metadata i32 %add13, i64 0, metadata !15, metadata !22), !dbg !26
+  tail call void @llvm.dbg.value(metadata i32 %add13, metadata !15, metadata !22), !dbg !26
   %cmp = icmp slt i32 %add13, %n, !dbg !27
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !dbg !29
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="arm7tdmi" "target-features"="+strict-align" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
@@ -85,11 +85,10 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!17, !18, !19, !20}
 !llvm.ident = !{!21}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (http://llvm.org/git/clang.git b1fbc23058e7fa1cdd954ab97ba84f1c549c9879) (http://llvm.org/git/llvm.git 054da58c5398a721d4dab7af63d7de8d7a1e1a1c)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (http://llvm.org/git/clang.git b1fbc23058e7fa1cdd954ab97ba84f1c549c9879) (http://llvm.org/git/llvm.git 054da58c5398a721d4dab7af63d7de8d7a1e1a1c)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "test.c", directory: "/home/weimingz/llvm-build/release/community-tip")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, variables: !11)
+!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !11)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null, !7, !7, !10}
 !7 = !DIDerivedType(tag: DW_TAG_restrict_type, baseType: !8)

@@ -30,7 +30,8 @@ class TestModuleFileExtension : public ModuleFileExtension {
     Writer(ModuleFileExtension *Ext) : ModuleFileExtensionWriter(Ext) { }
     ~Writer() override;
 
-    void writeExtensionContents(llvm::BitstreamWriter &Stream) override;
+    void writeExtensionContents(Sema &SemaRef,
+                                llvm::BitstreamWriter &Stream) override;
   };
 
   class Reader : public ModuleFileExtensionReader {

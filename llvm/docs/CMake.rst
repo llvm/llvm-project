@@ -12,11 +12,19 @@ Introduction
 does not build the project, it generates the files needed by your build tool
 (GNU make, Visual Studio, etc.) for building LLVM.
 
+If **you are a new contributor**, please start with the :doc:`GettingStarted` 
+page.  This page is geared for existing contributors moving from the 
+legacy configure/make system.
+
 If you are really anxious about getting a functional LLVM build, go to the
 `Quick start`_ section. If you are a CMake novice, start with `Basic CMake usage`_
 and then go back to the `Quick start`_ section once you know what you are doing. The
 `Options and variables`_ section is a reference for customizing your build. If
 you already have experience with CMake, this is the recommended starting point.
+
+This page is geared towards users of the LLVM CMake build. If you're looking for
+information about modifying the LLVM CMake build system you may want to see the
+:doc:`CMakePrimer` page. It has a basic overview of the CMake language.
 
 .. _Quick start:
 
@@ -26,7 +34,7 @@ Quick start
 We use here the command-line, non-interactive CMake interface.
 
 #. `Download <http://www.cmake.org/cmake/resources/software.html>`_ and install
-   CMake. Version 2.8.8 is the minimum required.
+   CMake. Version 3.4.3 is the minimum required.
 
 #. Open a shell. Your development tools must be reachable from this shell
    through the PATH environment variable.
@@ -178,6 +186,8 @@ CMake manual, or execute ``cmake --help-variable VARIABLE_NAME``.
   Sets the build type for ``make``-based generators. Possible values are
   Release, Debug, RelWithDebInfo and MinSizeRel. If you are using an IDE such as
   Visual Studio, you should use the IDE settings to set the build type.
+  Be aware that Release and RelWithDebInfo use different optimization levels on
+  most platforms.
 
 **CMAKE_INSTALL_PREFIX**:PATH
   Path where LLVM will be installed if "make install" is invoked or the
@@ -193,12 +203,6 @@ CMake manual, or execute ``cmake --help-variable VARIABLE_NAME``.
 
 **CMAKE_CXX_FLAGS**:STRING
   Extra flags to use when compiling C++ source files.
-
-**BUILD_SHARED_LIBS**:BOOL
-  Flag indicating if shared libraries will be built. Its default value is
-  OFF. This option is only recommended for use by LLVM developers.
-  On Windows, shared libraries may be used when building with MinGW, including
-  mingw-w64, but not when building with the Microsoft toolchain.
 
 .. _LLVM-specific variables:
 
@@ -243,9 +247,10 @@ LLVM-specific variables
   tests.
 
 **LLVM_APPEND_VC_REV**:BOOL
-  Append version control revision info (svn revision number or Git revision id)
-  to LLVM version string (stored in the PACKAGE_VERSION macro). For this to work
-  cmake must be invoked before the build. Defaults to OFF.
+  Embed version control revision info (svn revision number or Git revision id).
+  This is used among other things in the LLVM version string (stored in the
+  PACKAGE_VERSION macro). For this to work cmake must be invoked before the
+  build. Defaults to ON.
 
 **LLVM_ENABLE_THREADS**:BOOL
   Build with threads support, if available. Defaults to ON.
@@ -261,6 +266,9 @@ LLVM-specific variables
   Build LLVM with exception-handling support. This is necessary if you wish to
   link against LLVM libraries and make use of C++ exceptions in your own code
   that need to propagate through LLVM code. Defaults to OFF.
+
+**LLVM_ENABLE_EXPENSIVE_CHECKS**:BOOL
+  Enable additional time/memory expensive checking. Defaults to OFF.
 
 **LLVM_ENABLE_PIC**:BOOL
   Add the ``-fPIC`` flag to the compiler command-line, if the compiler supports
@@ -331,6 +339,22 @@ LLVM-specific variables
   will not be used.  If the variable for an external project does not point
   to a valid path, then that project will not be built.
 
+**LLVM_ENABLE_PROJECTS**:STRING
+  Semicolon-separated list of projects to build, or *all* for building all
+  (clang, libcxx, libcxxabi, lldb, compiler-rt, lld, polly) projects.
+  This flag assumes that projects are checked out side-by-side and not nested,
+  i.e. clang needs to be in parallel of llvm instead of nested in `llvm/tools`.
+  This feature allows to have one build for only LLVM and another for clang+llvm
+  using the same source checkout.
+
+**LLVM_EXTERNAL_PROJECTS**:STRING
+  Semicolon-separated list of additional external projects to build as part of
+  llvm. For each project LLVM_EXTERNAL_<NAME>_SOURCE_DIR have to be specified
+  with the path for the source code of the project. Example:
+  ``-DLLVM_EXTERNAL_PROJECTS="Foo;Bar"
+  -DLLVM_EXTERNAL_FOO_SOURCE_DIR=/src/foo
+  -DLLVM_EXTERNAL_BAR_SOURCE_DIR=/src/bar``.
+
 **LLVM_USE_OPROFILE**:BOOL
   Enable building OProfile JIT support. Defaults to OFF.
 
@@ -345,10 +369,31 @@ LLVM-specific variables
   Enable building with zlib to support compression/uncompression in LLVM tools.
   Defaults to ON.
 
+**LLVM_ENABLE_DIA_SDK**:BOOL
+  Enable building with MSVC DIA SDK for PDB debugging support. Available
+  only with MSVC. Defaults to ON.
+
 **LLVM_USE_SANITIZER**:STRING
   Define the sanitizer used to build LLVM binaries and tests. Possible values
   are ``Address``, ``Memory``, ``MemoryWithOrigins``, ``Undefined``, ``Thread``,
   and ``Address;Undefined``. Defaults to empty string.
+
+**LLVM_ENABLE_LTO**:STRING
+  Add ``-flto`` or ``-flto=`` flags to the compile and link command
+  lines, enabling link-time optimization. Possible values are ``Off``,
+  ``On``, ``Thin`` and ``Full``. Defaults to OFF.
+
+**LLVM_USE_LINKER**:STRING
+  Add ``-fuse-ld={name}`` to the link invocation. The possible value depend on
+  your compiler, for clang the value can be an absolute path to your custom
+  linker, otherwise clang will prefix the name with ``ld.`` and apply its usual
+  search. For example to link LLVM with the Gold linker, cmake can be invoked
+  with ``-DLLVM_USE_LINKER=gold``.
+
+**LLVM_ENABLE_LLD**:BOOL
+  This option is equivalent to `-DLLVM_USE_LINKER=lld`, except during a 2-stage
+  build where a dependency is added from the first stage to the second ensuring
+  that lld is built before stage2 begins.
 
 **LLVM_PARALLEL_COMPILE_JOBS**:STRING
   Define the maximum number of concurrent compilation jobs.
@@ -357,10 +402,12 @@ LLVM-specific variables
   Define the maximum number of concurrent link jobs.
 
 **LLVM_BUILD_DOCS**:BOOL
-  Enables all enabled documentation targets (i.e. Doxgyen and Sphinx targets) to
-  be built as part of the normal build. If the ``install`` target is run then
-  this also enables all built documentation targets to be installed. Defaults to
-  OFF.
+  Adds all *enabled* documentation targets (i.e. Doxgyen and Sphinx targets) as
+  dependencies of the default build targets.  This results in all of the (enabled)
+  documentation targets being as part of a normal build.  If the ``install`` 
+  target is run then this also enables all built documentation targets to be 
+  installed. Defaults to OFF.  To enable a particular documentation target, see 
+  see LLVM_ENABLE_SPHINX and LLVM_ENABLE_DOXYGEN.  
 
 **LLVM_ENABLE_DOXYGEN**:BOOL
   Enables the generation of browsable HTML documentation using doxygen.
@@ -411,13 +458,20 @@ LLVM-specific variables
   Uses .svg files instead of .png files for graphs in the Doxygen output.
   Defaults to OFF.
 
+**LLVM_INSTALL_DOXYGEN_HTML_DIR**:STRING
+  The path to install Doxygen-generated HTML documentation to. This path can
+  either be absolute or relative to the CMAKE_INSTALL_PREFIX. Defaults to
+  `share/doc/llvm/doxygen-html`.
+
 **LLVM_ENABLE_SPHINX**:BOOL
-  If enabled CMake will search for the ``sphinx-build`` executable and will make
+  If specified, CMake will search for the ``sphinx-build`` executable and will make
   the ``SPHINX_OUTPUT_HTML`` and ``SPHINX_OUTPUT_MAN`` CMake options available.
   Defaults to OFF.
 
 **SPHINX_EXECUTABLE**:STRING
   The path to the ``sphinx-build`` executable detected by CMake.
+  For installation instructions, see
+  http://www.sphinx-doc.org/en/latest/install.html
 
 **SPHINX_OUTPUT_HTML**:BOOL
   If enabled (and ``LLVM_ENABLE_SPHINX`` is enabled) then the targets for
@@ -436,11 +490,91 @@ LLVM-specific variables
   If enabled then sphinx documentation warnings will be treated as
   errors. Defaults to ON.
 
+**LLVM_INSTALL_SPHINX_HTML_DIR**:STRING
+  The path to install Sphinx-generated HTML documentation to. This path can
+  either be absolute or relative to the CMAKE_INSTALL_PREFIX. Defaults to
+  `share/doc/llvm/html`.
+
+**LLVM_INSTALL_OCAMLDOC_HTML_DIR**:STRING
+  The path to install OCamldoc-generated HTML documentation to. This path can
+  either be absolute or relative to the CMAKE_INSTALL_PREFIX. Defaults to
+  `share/doc/llvm/ocaml-html`.
+
 **LLVM_CREATE_XCODE_TOOLCHAIN**:BOOL
   OS X Only: If enabled CMake will generate a target named
   'install-xcode-toolchain'. This target will create a directory at
   $CMAKE_INSTALL_PREFIX/Toolchains containing an xctoolchain directory which can
   be used to override the default system tools. 
+
+**LLVM_BUILD_LLVM_DYLIB**:BOOL
+  If enabled, the target for building the libLLVM shared library is added.
+  This library contains all of LLVM's components in a single shared library.
+  Defaults to OFF. This cannot be used in conjunction with BUILD_SHARED_LIBS.
+  Tools will only be linked to the libLLVM shared library if LLVM_LINK_LLVM_DYLIB
+  is also ON.
+  The components in the library can be customised by setting LLVM_DYLIB_COMPONENTS
+  to a list of the desired components.
+
+**LLVM_LINK_LLVM_DYLIB**:BOOL
+  If enabled, tools will be linked with the libLLVM shared library. Defaults
+  to OFF. Setting LLVM_LINK_LLVM_DYLIB to ON also sets LLVM_BUILD_LLVM_DYLIB
+  to ON.
+
+**BUILD_SHARED_LIBS**:BOOL
+  Flag indicating if each LLVM component (e.g. Support) is built as a shared
+  library (ON) or as a static library (OFF). Its default value is OFF. On
+  Windows, shared libraries may be used when building with MinGW, including
+  mingw-w64, but not when building with the Microsoft toolchain.
+ 
+  .. note:: BUILD_SHARED_LIBS is only recommended for use by LLVM developers.
+            If you want to build LLVM as a shared library, you should use the
+            ``LLVM_BUILD_LLVM_DYLIB`` option.
+
+**LLVM_OPTIMIZED_TABLEGEN**:BOOL
+  If enabled and building a debug or asserts build the CMake build system will
+  generate a Release build tree to build a fully optimized tablegen for use
+  during the build. Enabling this option can significantly speed up build times
+  especially when building LLVM in Debug configurations.
+
+**LLVM_REVERSE_ITERATION**:BOOL
+  If enabled, all supported unordered llvm containers would be iterated in
+  reverse order. This is useful for uncovering non-determinism caused by
+  iteration of unordered containers.
+
+CMake Caches
+============
+
+Recently LLVM and Clang have been adding some more complicated build system
+features. Utilizing these new features often involves a complicated chain of
+CMake variables passed on the command line. Clang provides a collection of CMake
+cache scripts to make these features more approachable.
+
+CMake cache files are utilized using CMake's -C flag:
+
+.. code-block:: console
+
+  $ cmake -C <path to cache file> <path to sources>
+
+CMake cache scripts are processed in an isolated scope, only cached variables
+remain set when the main configuration runs. CMake cached variables do not reset
+variables that are already set unless the FORCE option is specified.
+
+A few notes about CMake Caches:
+
+- Order of command line arguments is important
+
+  - -D arguments specified before -C are set before the cache is processed and
+    can be read inside the cache file
+  - -D arguments specified after -C are set after the cache is processed and
+    are unset inside the cache file
+
+- All -D arguments will override cache file settings
+- CMAKE_TOOLCHAIN_FILE is evaluated after both the cache file and the command
+  line arguments
+- It is recommended that all -D options should be specified *before* -C
+
+For more information about some of the advanced build configurations supported
+via Cache files see :doc:`AdvancedBuilds`.
 
 Executing the test suite
 ========================
@@ -481,7 +615,7 @@ and uses them to build a simple application ``simple-tool``.
 
 .. code-block:: cmake
 
-  cmake_minimum_required(VERSION 2.8.8)
+  cmake_minimum_required(VERSION 3.4.3)
   project(SimpleProject)
 
   find_package(LLVM REQUIRED CONFIG)
@@ -511,16 +645,16 @@ The ``find_package(...)`` directive when used in CONFIG mode (as in the above
 example) will look for the ``LLVMConfig.cmake`` file in various locations (see
 cmake manual for details).  It creates a ``LLVM_DIR`` cache entry to save the
 directory where ``LLVMConfig.cmake`` is found or allows the user to specify the
-directory (e.g. by passing ``-DLLVM_DIR=/usr/share/llvm/cmake`` to
+directory (e.g. by passing ``-DLLVM_DIR=/usr/lib/cmake/llvm`` to
 the ``cmake`` command or by setting it directly in ``ccmake`` or ``cmake-gui``).
 
 This file is available in two different locations.
 
-* ``<INSTALL_PREFIX>/share/llvm/cmake/LLVMConfig.cmake`` where
+* ``<INSTALL_PREFIX>/lib/cmake/llvm/LLVMConfig.cmake`` where
   ``<INSTALL_PREFIX>`` is the install prefix of an installed version of LLVM.
-  On Linux typically this is ``/usr/share/llvm/cmake/LLVMConfig.cmake``.
+  On Linux typically this is ``/usr/lib/cmake/llvm/LLVMConfig.cmake``.
 
-* ``<LLVM_BUILD_ROOT>/share/llvm/cmake/LLVMConfig.cmake`` where
+* ``<LLVM_BUILD_ROOT>/lib/cmake/llvm/LLVMConfig.cmake`` where
   ``<LLVM_BUILD_ROOT>`` is the root of the LLVM build tree. **Note: this is only
   available when building LLVM with CMake.**
 

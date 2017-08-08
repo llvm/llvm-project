@@ -18,25 +18,33 @@
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
+
+static llvm::cl::opt<bool> EnableValueProfiling(
+  "enable-value-profiling", llvm::cl::ZeroOrMore,
+  llvm::cl::desc("Enable value profiling"), llvm::cl::init(false));
 
 using namespace clang;
 using namespace CodeGen;
 
 void CodeGenPGO::setFuncName(StringRef Name,
                              llvm::GlobalValue::LinkageTypes Linkage) {
-  FuncName = llvm::getPGOFuncName(Name, Linkage, CGM.getCodeGenOpts().MainFileName);
+  llvm::IndexedInstrProfReader *PGOReader = CGM.getPGOReader();
+  FuncName = llvm::getPGOFuncName(
+      Name, Linkage, CGM.getCodeGenOpts().MainFileName,
+      PGOReader ? PGOReader->getVersion() : llvm::IndexedInstrProf::Version);
 
   // If we're generating a profile, create a variable for the name.
-  if (CGM.getCodeGenOpts().ProfileInstrGenerate)
+  if (CGM.getCodeGenOpts().hasProfileClangInstr())
     FuncNameVar = llvm::createPGOFuncNameVar(CGM.getModule(), Linkage, FuncName);
 }
 
 void CodeGenPGO::setFuncName(llvm::Function *Fn) {
   setFuncName(Fn->getName(), Fn->getLinkage());
+  // Create PGOFuncName meta data.
+  llvm::createPGOFuncNameMetadata(*Fn, FuncName);
 }
 
 namespace {
@@ -403,7 +411,8 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     RecordStmtCount(S);
     Visit(S->getLoopVarStmt());
     Visit(S->getRangeStmt());
-    Visit(S->getBeginEndStmt());
+    Visit(S->getBeginStmt());
+    Visit(S->getEndStmt());
 
     uint64_t ParentCount = CurrentCount;
     BreakContinueStack.push_back(BreakContinue());
@@ -449,6 +458,8 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
 
   void VisitSwitchStmt(const SwitchStmt *S) {
     RecordStmtCount(S);
+    if (S->getInit())
+      Visit(S->getInit());
     Visit(S->getCond());
     CurrentCount = 0;
     BreakContinueStack.push_back(BreakContinue());
@@ -479,6 +490,8 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
   void VisitIfStmt(const IfStmt *S) {
     RecordStmtCount(S);
     uint64_t ParentCount = CurrentCount;
+    if (S->getInit())
+      Visit(S->getInit());
     Visit(S->getCond());
 
     // Counter tracks the "then" part of an if statement. The count for
@@ -599,30 +612,32 @@ uint64_t PGOHash::finalize() {
   llvm::MD5::MD5Result Result;
   MD5.final(Result);
   using namespace llvm::support;
-  return endian::read<uint64_t, little, unaligned>(Result);
+  return Result.low();
 }
 
-void CodeGenPGO::checkGlobalDecl(GlobalDecl GD) {
-  // Make sure we only emit coverage mapping for one constructor/destructor.
-  // Clang emits several functions for the constructor and the destructor of
-  // a class. Every function is instrumented, but we only want to provide
-  // coverage for one of them. Because of that we only emit the coverage mapping
-  // for the base constructor/destructor.
-  if ((isa<CXXConstructorDecl>(GD.getDecl()) &&
-       GD.getCtorType() != Ctor_Base) ||
-      (isa<CXXDestructorDecl>(GD.getDecl()) &&
-       GD.getDtorType() != Dtor_Base)) {
-    SkipCoverageMapping = true;
-  }
-}
+void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
+  const Decl *D = GD.getDecl();
+  if (!D->hasBody())
+    return;
 
-void CodeGenPGO::assignRegionCounters(const Decl *D, llvm::Function *Fn) {
-  bool InstrumentRegions = CGM.getCodeGenOpts().ProfileInstrGenerate;
+  bool InstrumentRegions = CGM.getCodeGenOpts().hasProfileClangInstr();
   llvm::IndexedInstrProfReader *PGOReader = CGM.getPGOReader();
   if (!InstrumentRegions && !PGOReader)
     return;
   if (D->isImplicit())
     return;
+  // Constructors and destructors may be represented by several functions in IR.
+  // If so, instrument only base variant, others are implemented by delegation
+  // to the base one, it would be counted twice otherwise.
+  if (CGM.getTarget().getCXXABI().hasConstructorVariants()) {
+    if (isa<CXXDestructorDecl>(D) && GD.getDtorType() != Dtor_Base)
+      return;
+
+    if (const auto *CCD = dyn_cast<CXXConstructorDecl>(D))
+      if (GD.getCtorType() != Ctor_Base &&
+          CodeGenFunction::IsConstructorDelegationValid(CCD))
+        return;
+  }
   CGM.ClearUnusedCoverageMapping(D);
   setFuncName(Fn);
 
@@ -653,12 +668,18 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   FunctionHash = Walker.Hash.finalize();
 }
 
-void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
-  if (SkipCoverageMapping)
-    return;
-  // Don't map the functions inside the system headers
+bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {
+  if (!D->getBody())
+    return true;
+
+  // Don't map the functions in system headers.
+  const auto &SM = CGM.getContext().getSourceManager();
   auto Loc = D->getBody()->getLocStart();
-  if (CGM.getContext().getSourceManager().isInSystemHeader(Loc))
+  return SM.isInSystemHeader(Loc);
+}
+
+void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
+  if (skipRegionMappingForDecl(D))
     return;
 
   std::string CoverageMapping;
@@ -679,11 +700,7 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
 void
 CodeGenPGO::emitEmptyCounterMapping(const Decl *D, StringRef Name,
                                     llvm::GlobalValue::LinkageTypes Linkage) {
-  if (SkipCoverageMapping)
-    return;
-  // Don't map the functions inside the system headers
-  auto Loc = D->getBody()->getLocStart();
-  if (CGM.getContext().getSourceManager().isInSystemHeader(Loc))
+  if (skipRegionMappingForDecl(D))
     return;
 
   std::string CoverageMapping;
@@ -699,7 +716,7 @@ CodeGenPGO::emitEmptyCounterMapping(const Decl *D, StringRef Name,
 
   setFuncName(Name, Linkage);
   CGM.getCoverageMapping()->addFunctionMappingRecord(
-      FuncNameVar, FuncName, FunctionHash, CoverageMapping);
+      FuncNameVar, FuncName, FunctionHash, CoverageMapping, false);
 }
 
 void CodeGenPGO::computeRegionCounts(const Decl *D) {
@@ -721,50 +738,103 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
   if (!haveRegionCounts())
     return;
 
-  uint64_t MaxFunctionCount = PGOReader->getMaximumFunctionCount();
   uint64_t FunctionCount = getRegionCount(nullptr);
-  if (FunctionCount >= (uint64_t)(0.3 * (double)MaxFunctionCount))
-    // Turn on InlineHint attribute for hot functions.
-    // FIXME: 30% is from preliminary tuning on SPEC, it may not be optimal.
-    Fn->addFnAttr(llvm::Attribute::InlineHint);
-  else if (FunctionCount <= (uint64_t)(0.01 * (double)MaxFunctionCount))
-    // Turn on Cold attribute for cold functions.
-    // FIXME: 1% is from preliminary tuning on SPEC, it may not be optimal.
-    Fn->addFnAttr(llvm::Attribute::Cold);
-
   Fn->setEntryCount(FunctionCount);
 }
 
-void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S) {
-  if (!CGM.getCodeGenOpts().ProfileInstrGenerate || !RegionCounterMap)
+void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
+                                      llvm::Value *StepV) {
+  if (!CGM.getCodeGenOpts().hasProfileClangInstr() || !RegionCounterMap)
     return;
   if (!Builder.GetInsertBlock())
     return;
 
   unsigned Counter = (*RegionCounterMap)[S];
   auto *I8PtrTy = llvm::Type::getInt8PtrTy(CGM.getLLVMContext());
-  Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
-                     {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
-                      Builder.getInt64(FunctionHash),
-                      Builder.getInt32(NumRegionCounters),
-                      Builder.getInt32(Counter)});
+
+  llvm::Value *Args[] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
+                         Builder.getInt64(FunctionHash),
+                         Builder.getInt32(NumRegionCounters),
+                         Builder.getInt32(Counter), StepV};
+  if (!StepV)
+    Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
+                       makeArrayRef(Args, 4));
+  else
+    Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step),
+        makeArrayRef(Args));
+}
+
+// This method either inserts a call to the profile run-time during
+// instrumentation or puts profile data into metadata for PGO use.
+void CodeGenPGO::valueProfile(CGBuilderTy &Builder, uint32_t ValueKind,
+    llvm::Instruction *ValueSite, llvm::Value *ValuePtr) {
+
+  if (!EnableValueProfiling)
+    return;
+
+  if (!ValuePtr || !ValueSite || !Builder.GetInsertBlock())
+    return;
+
+  if (isa<llvm::Constant>(ValuePtr))
+    return;
+
+  bool InstrumentValueSites = CGM.getCodeGenOpts().hasProfileClangInstr();
+  if (InstrumentValueSites && RegionCounterMap) {
+    auto BuilderInsertPoint = Builder.saveIP();
+    Builder.SetInsertPoint(ValueSite);
+    llvm::Value *Args[5] = {
+        llvm::ConstantExpr::getBitCast(FuncNameVar, Builder.getInt8PtrTy()),
+        Builder.getInt64(FunctionHash),
+        Builder.CreatePtrToInt(ValuePtr, Builder.getInt64Ty()),
+        Builder.getInt32(ValueKind),
+        Builder.getInt32(NumValueSites[ValueKind]++)
+    };
+    Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::instrprof_value_profile), Args);
+    Builder.restoreIP(BuilderInsertPoint);
+    return;
+  }
+
+  llvm::IndexedInstrProfReader *PGOReader = CGM.getPGOReader();
+  if (PGOReader && haveRegionCounts()) {
+    // We record the top most called three functions at each call site.
+    // Profile metadata contains "VP" string identifying this metadata
+    // as value profiling data, then a uint32_t value for the value profiling
+    // kind, a uint64_t value for the total number of times the call is
+    // executed, followed by the function hash and execution count (uint64_t)
+    // pairs for each function.
+    if (NumValueSites[ValueKind] >= ProfRecord->getNumValueSites(ValueKind))
+      return;
+
+    llvm::annotateValueSite(CGM.getModule(), *ValueSite, *ProfRecord,
+                            (llvm::InstrProfValueKind)ValueKind,
+                            NumValueSites[ValueKind]);
+
+    NumValueSites[ValueKind]++;
+  }
 }
 
 void CodeGenPGO::loadRegionCounts(llvm::IndexedInstrProfReader *PGOReader,
                                   bool IsInMainFile) {
   CGM.getPGOStats().addVisited(IsInMainFile);
   RegionCounts.clear();
-  if (std::error_code EC =
-          PGOReader->getFunctionCounts(FuncName, FunctionHash, RegionCounts)) {
-    if (EC == llvm::instrprof_error::unknown_function)
+  llvm::Expected<llvm::InstrProfRecord> RecordExpected =
+      PGOReader->getInstrProfRecord(FuncName, FunctionHash);
+  if (auto E = RecordExpected.takeError()) {
+    auto IPE = llvm::InstrProfError::take(std::move(E));
+    if (IPE == llvm::instrprof_error::unknown_function)
       CGM.getPGOStats().addMissing(IsInMainFile);
-    else if (EC == llvm::instrprof_error::hash_mismatch)
+    else if (IPE == llvm::instrprof_error::hash_mismatch)
       CGM.getPGOStats().addMismatched(IsInMainFile);
-    else if (EC == llvm::instrprof_error::malformed)
+    else if (IPE == llvm::instrprof_error::malformed)
       // TODO: Consider a more specific warning for this case.
       CGM.getPGOStats().addMismatched(IsInMainFile);
-    RegionCounts.clear();
+    return;
   }
+  ProfRecord =
+      llvm::make_unique<llvm::InstrProfRecord>(std::move(RecordExpected.get()));
+  RegionCounts = ProfRecord->Counts;
 }
 
 /// \brief Calculate what to divide by to scale weights.

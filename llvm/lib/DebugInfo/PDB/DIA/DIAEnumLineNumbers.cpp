@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumLineNumbers.h"
 #include "llvm/DebugInfo/PDB/DIA/DIALineNumber.h"
+#include "llvm/DebugInfo/PDB/PDBSymbol.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 DIAEnumLineNumbers::DIAEnumLineNumbers(
     CComPtr<IDiaEnumLineNumbers> DiaEnumerator)

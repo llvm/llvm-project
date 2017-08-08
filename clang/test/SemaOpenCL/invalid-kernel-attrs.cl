@@ -28,10 +28,12 @@ constant int foo3 __attribute__((vec_type_hint(char))) = 0; // expected-error {{
 
 void f_kernel_image2d_t( kernel image2d_t image ) { // expected-error {{'kernel' attribute only applies to functions}}
   int __kernel x; // expected-error {{'__kernel' attribute only applies to functions}}
-  read_only int i; // expected-error {{'read_only' attribute only applies to parameters}}
-  __write_only int j; // expected-error {{'__write_only' attribute only applies to parameters}}
 }
 
 kernel __attribute__((reqd_work_group_size(1,2,0))) void kernel11(){} // expected-error {{'reqd_work_group_size' attribute must be greater than 0}}
 kernel __attribute__((reqd_work_group_size(1,0,2))) void kernel12(){} // expected-error {{'reqd_work_group_size' attribute must be greater than 0}}
 kernel __attribute__((reqd_work_group_size(0,1,2))) void kernel13(){} // expected-error {{'reqd_work_group_size' attribute must be greater than 0}}
+
+__attribute__((intel_reqd_sub_group_size(8))) void kernel14(){} // expected-error {{attribute 'intel_reqd_sub_group_size' can only be applied to a kernel}}
+kernel __attribute__((intel_reqd_sub_group_size(0))) void kernel15(){} // expected-error {{'intel_reqd_sub_group_size' attribute must be greater than 0}}
+kernel __attribute__((intel_reqd_sub_group_size(8))) __attribute__((intel_reqd_sub_group_size(16))) void kernel16() {}  //expected-warning{{attribute 'intel_reqd_sub_group_size' is already applied with different parameters}}

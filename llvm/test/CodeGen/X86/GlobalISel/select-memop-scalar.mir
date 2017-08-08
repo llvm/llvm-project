@@ -1,0 +1,604 @@
+# RUN: llc -mtriple=x86_64-linux-gnu                                  -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NO_AVX512VL --check-prefix=NO_AVX512F --check-prefix=SSE
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx                      -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NO_AVX512VL --check-prefix=NO_AVX512F --check-prefix=AVX
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f                  -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NO_AVX512VL --check-prefix=AVX512ALL --check-prefix=AVX512F
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -mattr=+avx512vl -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512ALL --check-prefix=AVX512VL
+
+--- |
+  define i8 @test_load_i8(i8* %p1) {
+    %r = load i8, i8* %p1
+    ret i8 %r
+  }
+
+  define i16 @test_load_i16(i16* %p1) {
+    %r = load i16, i16* %p1
+    ret i16 %r
+  }
+
+  define i32 @test_load_i32(i32* %p1) {
+    %r = load i32, i32* %p1
+    ret i32 %r
+  }
+
+  define i64 @test_load_i64(i64* %p1) {
+    %r = load i64, i64* %p1
+    ret i64 %r
+  }
+
+  define float @test_load_float(float* %p1) {
+    %r = load float, float* %p1
+    ret float %r
+  }
+
+  define float @test_load_float_vecreg(float* %p1) {
+    %r = load float, float* %p1
+    ret float %r
+  }
+
+  define double @test_load_double(double* %p1) {
+    %r = load double, double* %p1
+    ret double %r
+  }
+
+  define double @test_load_double_vecreg(double* %p1) {
+    %r = load double, double* %p1
+    ret double %r
+  }
+
+  define i32* @test_store_i32(i32 %val, i32* %p1) {
+    store i32 %val, i32* %p1
+    ret i32* %p1
+  }
+
+  define i64* @test_store_i64(i64 %val, i64* %p1) {
+    store i64 %val, i64* %p1
+    ret i64* %p1
+  }
+
+  define float* @test_store_float(float %val, float* %p1) {
+    store float %val, float* %p1
+    ret float* %p1
+  }
+
+  define float* @test_store_float_vec(float %val, float* %p1) {
+    store float %val, float* %p1
+    ret float* %p1
+  }
+
+  define double* @test_store_double(double %val, double* %p1) {
+    store double %val, double* %p1
+    ret double* %p1
+  }
+
+  define double* @test_store_double_vec(double %val, double* %p1) {
+    store double %val, double* %p1
+    ret double* %p1
+  }
+
+  define i32* @test_load_ptr(i32** %ptr1) {
+    %p = load i32*, i32** %ptr1
+    ret i32* %p
+  }
+
+  define void @test_store_ptr(i32** %ptr1, i32* %a) {
+    store i32* %a, i32** %ptr1
+    ret void
+  }
+
+  define i32 @test_gep_folding(i32* %arr, i32 %val) {
+    %arrayidx = getelementptr i32, i32* %arr, i32 5
+    store i32 %val, i32* %arrayidx
+    %r = load i32, i32* %arrayidx
+    ret i32 %r
+  }
+
+  define i32 @test_gep_folding_largeGepIndex(i32* %arr, i32 %val) #0 {
+    %arrayidx = getelementptr i32, i32* %arr, i64 57179869180
+    store i32 %val, i32* %arrayidx
+    %r = load i32, i32* %arrayidx
+    ret i32 %r
+  }
+...
+---
+# ALL-LABEL: name:            test_load_i8
+name:            test_load_i8
+alignment:       4
+legalized:       true
+regBankSelected: true
+registers:
+# ALL:   - { id: 0, class: gr64, preferred-register: '' }
+# ALL:   - { id: 1, class: gr8, preferred-register: '' }
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL:     %0 = COPY %rdi
+# ALL:     %1 = MOV8rm %0, 1, _, 0, _ :: (load 1 from %ir.p1)
+# ALL:     %al = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s8) = G_LOAD %0(p0) :: (load 1 from %ir.p1)
+    %al = COPY %1(s8)
+    RET 0, implicit %al
+
+...
+---
+# ALL-LABEL: name:            test_load_i16
+name:            test_load_i16
+alignment:       4
+legalized:       true
+regBankSelected: true
+registers:
+# ALL:   - { id: 0, class: gr64, preferred-register: '' }
+# ALL:   - { id: 1, class: gr16, preferred-register: '' }
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL:     %0 = COPY %rdi
+# ALL:     %1 = MOV16rm %0, 1, _, 0, _ :: (load 2 from %ir.p1)
+# ALL:     %ax = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s16) = G_LOAD %0(p0) :: (load 2 from %ir.p1)
+    %ax = COPY %1(s16)
+    RET 0, implicit %ax
+
+...
+---
+# ALL-LABEL: name:            test_load_i32
+name:            test_load_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+registers:
+# ALL:   - { id: 0, class: gr64, preferred-register: '' }
+# ALL:   - { id: 1, class: gr32, preferred-register: '' }
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL:     %0 = COPY %rdi
+# ALL:     %1 = MOV32rm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
+# ALL:     %eax = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s32) = G_LOAD %0(p0) :: (load 4 from %ir.p1)
+    %eax = COPY %1(s32)
+    RET 0, implicit %eax
+
+...
+---
+# ALL-LABEL: name:            test_load_i64
+name:            test_load_i64
+alignment:       4
+legalized:       true
+regBankSelected: true
+registers:
+# ALL:   - { id: 0, class: gr64, preferred-register: '' }
+# ALL:   - { id: 1, class: gr64, preferred-register: '' }
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL:     %0 = COPY %rdi
+# ALL:     %1 = MOV64rm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
+# ALL:     %rax = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s64) = G_LOAD %0(p0) :: (load 8 from %ir.p1)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
+---
+# ALL-LABEL: name:            test_load_float
+name:            test_load_float
+alignment:       4
+legalized:       true
+regBankSelected: true
+registers:
+# ALL:   - { id: 0, class: gr64, preferred-register: '' }
+# ALL:   - { id: 1, class: gr32, preferred-register: '' }
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL:     %0 = COPY %rdi
+# ALL:     %1 = MOV32rm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
+# ALL:     %xmm0 = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s32) = G_LOAD %0(p0) :: (load 4 from %ir.p1)
+    %xmm0 = COPY %1(s32)
+    RET 0, implicit %xmm0
+
+...
+---
+# ALL-LABEL: name:            test_load_float_vecreg
+name:            test_load_float_vecreg
+alignment:       4
+legalized:       true
+regBankSelected: true
+registers:
+# ALL:          - { id: 0, class: gr64, preferred-register: '' }
+# NO_AVX512F:   - { id: 1, class: fr32, preferred-register: '' }
+# AVX512ALL:    - { id: 1, class: fr32x, preferred-register: '' }
+  - { id: 0, class: gpr }
+  - { id: 1, class: vecr }
+# ALL:       %0 = COPY %rdi
+# SSE:       %1 = MOVSSrm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
+# AVX:       %1 = VMOVSSrm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
+# AVX512ALL: %1 = VMOVSSZrm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
+# ALL: %xmm0 = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s32) = G_LOAD %0(p0) :: (load 4 from %ir.p1)
+    %xmm0 = COPY %1(s32)
+    RET 0, implicit %xmm0
+
+...
+---
+# ALL-LABEL: name:            test_load_double
+name:            test_load_double
+alignment:       4
+legalized:       true
+regBankSelected: true
+registers:
+# ALL:   - { id: 0, class: gr64, preferred-register: '' }
+# ALL:   - { id: 1, class: gr64, preferred-register: '' }
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL:     %0 = COPY %rdi
+# ALL:     %1 = MOV64rm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
+# ALL:     %xmm0 = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s64) = G_LOAD %0(p0) :: (load 8 from %ir.p1)
+    %xmm0 = COPY %1(s64)
+    RET 0, implicit %xmm0
+
+...
+---
+# ALL-LABEL: name:            test_load_double_vecreg
+name:            test_load_double_vecreg
+alignment:       4
+legalized:       true
+regBankSelected: true
+registers:
+# ALL:          - { id: 0, class: gr64, preferred-register: '' }
+# NO_AVX512F:   - { id: 1, class: fr64, preferred-register: '' }
+# AVX512ALL:    - { id: 1, class: fr64x, preferred-register: '' }
+  - { id: 0, class: gpr }
+  - { id: 1, class: vecr }
+# ALL:       %0 = COPY %rdi
+# SSE:       %1 = MOVSDrm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
+# AVX:       %1 = VMOVSDrm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
+# AVX512ALL: %1 = VMOVSDZrm %0, 1, _, 0, _ :: (load 8 from %ir.p1)
+# ALL: %xmm0 = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s64) = G_LOAD %0(p0) :: (load 8 from %ir.p1)
+    %xmm0 = COPY %1(s64)
+    RET 0, implicit %xmm0
+
+...
+---
+# ALL-LABEL: name:            test_store_i32
+name:            test_store_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+registers:
+# ALL:   - { id: 0, class: gr32, preferred-register: '' }
+# ALL:   - { id: 1, class: gr64, preferred-register: '' }
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL:     %0 = COPY %edi
+# ALL:     %1 = COPY %rsi
+# ALL:     MOV32mr %1, 1, _, 0, _, %0 :: (store 4 into %ir.p1)
+# ALL:     %rax = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %rsi
+
+    %0(s32) = COPY %edi
+    %1(p0) = COPY %rsi
+    G_STORE %0(s32), %1(p0) :: (store 4 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+# ALL-LABEL: name:            test_store_i64
+name:            test_store_i64
+alignment:       4
+legalized:       true
+regBankSelected: true
+registers:
+# ALL:   - { id: 0, class: gr64, preferred-register: '' }
+# ALL:   - { id: 1, class: gr64, preferred-register: '' }
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL:     %0 = COPY %rdi
+# ALL:     %1 = COPY %rsi
+# ALL:     MOV64mr %1, 1, _, 0, _, %0 :: (store 8 into %ir.p1)
+# ALL:     %rax = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %rsi
+
+    %0(s64) = COPY %rdi
+    %1(p0) = COPY %rsi
+    G_STORE %0(s64), %1(p0) :: (store 8 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+# ALL-LABEL: name:            test_store_float
+name:            test_store_float
+alignment:       4
+legalized:       true
+regBankSelected: true
+# NO_AVX512F:       registers:
+# NO_AVX512F-NEXT:    - { id: 0, class: fr32, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 1, class: gr64, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 2, class: gr32, preferred-register: '' }
+#
+# AVX512ALL:        registers:
+# AVX512ALL-NEXT:     - { id: 0, class: fr32x, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 1, class: gr64, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 2, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:     %0 = COPY %xmm0
+# ALL:     %1 = COPY %rdi
+# ALL:     %2 = COPY %0
+# ALL:     MOV32mr %1, 1, _, 0, _, %2 :: (store 4 into %ir.p1)
+# ALL:     %rax = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %xmm0
+
+    %0(s32) = COPY %xmm0
+    %1(p0) = COPY %rdi
+    %2(s32) = COPY %0(s32)
+    G_STORE %2(s32), %1(p0) :: (store 4 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+# ALL-LABEL: name:            test_store_float_vec
+name:            test_store_float_vec
+alignment:       4
+legalized:       true
+regBankSelected: true
+registers:
+# NO_AVX512F:   - { id: 0, class: fr32, preferred-register: '' }
+# AVX512ALL:    - { id: 0, class: fr32x, preferred-register: '' }
+# ALL:   - { id: 1, class: gr64, preferred-register: '' }
+  - { id: 0, class: vecr }
+  - { id: 1, class: gpr }
+# ALL:       %0 = COPY %xmm0
+# ALL:       %1 = COPY %rdi
+# SSE:       MOVSSmr %1, 1, _, 0, _, %0 :: (store 4 into %ir.p1)
+# AVX:       VMOVSSmr %1, 1, _, 0, _, %0 :: (store 4 into %ir.p1)
+# AVX512ALL: VMOVSSZmr %1, 1, _, 0, _, %0 :: (store 4 into %ir.p1)
+# ALL:       %rax = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %xmm0
+
+    %0(s32) = COPY %xmm0
+    %1(p0) = COPY %rdi
+    G_STORE %0(s32), %1(p0) :: (store 4 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+# ALL-LABEL: name:            test_store_double
+name:            test_store_double
+alignment:       4
+legalized:       true
+regBankSelected: true
+# NO_AVX512F:       registers:
+# NO_AVX512F-NEXT:    - { id: 0, class: fr64, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 1, class: gr64, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 2, class: gr64, preferred-register: '' }
+#
+# AVX512ALL:        registers:
+# AVX512ALL-NEXT:     - { id: 0, class: fr64x, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 1, class: gr64, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 2, class: gr64, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:     %0 = COPY %xmm0
+# ALL:     %1 = COPY %rdi
+# ALL:     %2 = COPY %0
+# ALL:     MOV64mr %1, 1, _, 0, _, %2 :: (store 8 into %ir.p1)
+# ALL:     %rax = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %xmm0
+
+    %0(s64) = COPY %xmm0
+    %1(p0) = COPY %rdi
+    %2(s64) = COPY %0(s64)
+    G_STORE %2(s64), %1(p0) :: (store 8 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+# ALL-LABEL: name:            test_store_double_vec
+name:            test_store_double_vec
+alignment:       4
+legalized:       true
+regBankSelected: true
+registers:
+# NO_AVX512F:   - { id: 0, class: fr64, preferred-register: '' }
+# AVX512ALL:    - { id: 0, class: fr64x, preferred-register: '' }
+# ALL:   - { id: 1, class: gr64, preferred-register: '' }
+  - { id: 0, class: vecr }
+  - { id: 1, class: gpr }
+# ALL:       %0 = COPY %xmm0
+# ALL:       %1 = COPY %rdi
+# SSE:       MOVSDmr %1, 1, _, 0, _, %0 :: (store 8 into %ir.p1)
+# AVX:       VMOVSDmr %1, 1, _, 0, _, %0 :: (store 8 into %ir.p1)
+# AVX512ALL: VMOVSDZmr %1, 1, _, 0, _, %0 :: (store 8 into %ir.p1)
+# ALL:       %rax = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %xmm0
+
+    %0(s64) = COPY %xmm0
+    %1(p0) = COPY %rdi
+    G_STORE %0(s64), %1(p0) :: (store 8 into %ir.p1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+# ALL-LABEL: name:            test_load_ptr
+name:            test_load_ptr
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        false
+registers:
+# ALL:   - { id: 0, class: gr64, preferred-register: '' }
+# ALL:   - { id: 1, class: gr64, preferred-register: '' }
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL: %1 = MOV64rm %0, 1, _, 0, _ :: (load 8 from %ir.ptr1)
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi
+
+    %0(p0) = COPY %rdi
+    %1(p0) = G_LOAD %0(p0) :: (load 8 from %ir.ptr1)
+    %rax = COPY %1(p0)
+    RET 0, implicit %rax
+
+...
+---
+# ALL-LABEL: name:            test_store_ptr
+name:            test_store_ptr
+alignment:       4
+legalized:       true
+regBankSelected: true
+selected:        false
+registers:
+# ALL:   - { id: 0, class: gr64, preferred-register: '' }
+# ALL:   - { id: 1, class: gr64, preferred-register: '' }
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# ALL: MOV64mr %0, 1, _, 0, _, %1 :: (store 8 into %ir.ptr1)
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %rsi
+
+    %0(p0) = COPY %rdi
+    %1(p0) = COPY %rsi
+    G_STORE %1(p0), %0(p0) :: (store 8 into %ir.ptr1)
+    RET 0
+
+...
+---
+name:            test_gep_folding
+# ALL-LABEL: name:  test_gep_folding
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:              registers:
+# ALL-NEXT:           - { id: 0, class: gr64, preferred-register: '' }
+# ALL-NEXT:           - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:           - { id: 2, class: gpr, preferred-register: '' }
+# ALL-NEXT:           - { id: 3, class: gpr, preferred-register: '' }
+# ALL-NEXT:           - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+# ALL:                  %0 = COPY %rdi
+# ALL-NEXT:             %1 = COPY %esi
+# ALL-NEXT:             MOV32mr %0, 1, _, 20, _, %1 :: (store 4 into %ir.arrayidx)
+# ALL-NEXT:             %4 = MOV32rm %0, 1, _, 20, _ :: (load 4 from %ir.arrayidx)
+# ALL-NEXT:             %eax = COPY %4
+# ALL-NEXT:             RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %esi, %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s32) = COPY %esi
+    %2(s64) = G_CONSTANT i64 20
+    %3(p0) = G_GEP %0, %2(s64)
+    G_STORE %1(s32), %3(p0) :: (store 4 into %ir.arrayidx)
+    %4(s32) = G_LOAD %3(p0) :: (load 4 from %ir.arrayidx)
+    %eax = COPY %4(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_gep_folding_largeGepIndex
+# ALL-LABEL: name:  test_gep_folding_largeGepIndex
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:              registers:
+# ALL-NEXT:           - { id: 0, class: gr64, preferred-register: '' }
+# ALL-NEXT:           - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:           - { id: 2, class: gr64_nosp, preferred-register: '' }
+# ALL-NEXT:           - { id: 3, class: gr64, preferred-register: '' }
+# ALL-NEXT:           - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+# ALL:                  %0 = COPY %rdi
+# ALL-NEXT:             %1 = COPY %esi
+# ALL-NEXT:             %2 = MOV64ri 228719476720
+# ALL-NEXT:             %3 = LEA64r %0, 1, %2, 0, _
+# ALL-NEXT:             MOV32mr %3, 1, _, 0, _, %1 :: (store 4 into %ir.arrayidx)
+# ALL-NEXT:             %4 = MOV32rm %3, 1, _, 0, _ :: (load 4 from %ir.arrayidx)
+# ALL-NEXT:             %eax = COPY %4
+# ALL-NEXT:             RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %esi, %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s32) = COPY %esi
+    %2(s64) = G_CONSTANT i64 228719476720
+    %3(p0) = G_GEP %0, %2(s64)
+    G_STORE %1(s32), %3(p0) :: (store 4 into %ir.arrayidx)
+    %4(s32) = G_LOAD %3(p0) :: (load 4 from %ir.arrayidx)
+    %eax = COPY %4(s32)
+    RET 0, implicit %eax
+
+...

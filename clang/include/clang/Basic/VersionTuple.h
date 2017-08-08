@@ -17,6 +17,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include <string>
 #include <tuple>
 
@@ -25,45 +26,53 @@ namespace clang {
 /// \brief Represents a version number in the form major[.minor[.subminor[.build]]].
 class VersionTuple {
   unsigned Major : 31;
-  unsigned Minor : 31;
-  unsigned Subminor : 31;
-  unsigned Build : 31;
-  unsigned HasMinor : 1;
-  unsigned HasSubminor : 1;
-  unsigned HasBuild : 1;
+
   unsigned UsesUnderscores : 1;
+
+  unsigned Minor : 31;
+  unsigned HasMinor : 1;
+
+  unsigned Subminor : 31;
+  unsigned HasSubminor : 1;
+
+  unsigned Build : 31;
+  unsigned HasBuild : 1;
 
 public:
   VersionTuple()
-      : Major(0), Minor(0), Subminor(0), Build(0), HasMinor(false),
-        HasSubminor(false), HasBuild(false), UsesUnderscores(false) {}
+      : Major(0), UsesUnderscores(false), Minor(0), HasMinor(false),
+        Subminor(0), HasSubminor(false), Build(0), HasBuild(false) {}
 
   explicit VersionTuple(unsigned Major)
-      : Major(Major), Minor(0), Subminor(0), Build(0), HasMinor(false),
-        HasSubminor(false), HasBuild(false), UsesUnderscores(false) {}
+      : Major(Major), UsesUnderscores(false), Minor(0), HasMinor(false),
+        Subminor(0), HasSubminor(false), Build(0), HasBuild(false) {}
 
   explicit VersionTuple(unsigned Major, unsigned Minor,
                         bool UsesUnderscores = false)
-      : Major(Major), Minor(Minor), Subminor(0), Build(0), HasMinor(true),
-        HasSubminor(false), HasBuild(false), UsesUnderscores(UsesUnderscores) {}
+      : Major(Major), UsesUnderscores(UsesUnderscores), Minor(Minor),
+        HasMinor(true), Subminor(0), HasSubminor(false), Build(0),
+        HasBuild(false) {}
 
   explicit VersionTuple(unsigned Major, unsigned Minor, unsigned Subminor,
                         bool UsesUnderscores = false)
-      : Major(Major), Minor(Minor), Subminor(Subminor), Build(0),
-        HasMinor(true), HasSubminor(true), HasBuild(false),
-        UsesUnderscores(UsesUnderscores) {}
+      : Major(Major), UsesUnderscores(UsesUnderscores), Minor(Minor),
+        HasMinor(true), Subminor(Subminor), HasSubminor(true), Build(0),
+        HasBuild(false) {}
 
   explicit VersionTuple(unsigned Major, unsigned Minor, unsigned Subminor,
                         unsigned Build, bool UsesUnderscores = false)
-      : Major(Major), Minor(Minor), Subminor(Subminor), Build(Build),
-        HasMinor(true), HasSubminor(true), HasBuild(true),
-        UsesUnderscores(UsesUnderscores) {}
+      : Major(Major), UsesUnderscores(UsesUnderscores), Minor(Minor),
+        HasMinor(true), Subminor(Subminor), HasSubminor(true), Build(Build),
+        HasBuild(true) {}
 
   /// \brief Determine whether this version information is empty
   /// (e.g., all version components are zero).
   bool empty() const {
     return Major == 0 && Minor == 0 && Subminor == 0 && Build == 0;
   }
+
+  /// Whether this is a non-empty version tuple.
+  explicit operator bool () const { return !empty(); }
 
   /// \brief Retrieve the major version number.
   unsigned getMajor() const { return Major; }
@@ -160,4 +169,35 @@ public:
 raw_ostream& operator<<(raw_ostream &Out, const VersionTuple &V);
 
 } // end namespace clang
+
+namespace llvm {
+  // Provide DenseMapInfo for version tuples.
+  template<>
+  struct DenseMapInfo<clang::VersionTuple> {
+    static inline clang::VersionTuple getEmptyKey() {
+      return clang::VersionTuple(0x7FFFFFFF);
+    }
+    static inline clang::VersionTuple getTombstoneKey() {
+      return clang::VersionTuple(0x7FFFFFFE);
+    }
+    static unsigned getHashValue(const clang::VersionTuple& value) {
+      unsigned result = value.getMajor();
+      if (auto minor = value.getMinor())
+        result = combineHashValue(result, *minor);
+      if (auto subminor = value.getSubminor())
+        result = combineHashValue(result, *subminor);
+      if (auto build = value.getBuild())
+        result = combineHashValue(result, *build);
+
+      return result;
+    }
+
+    static bool isEqual(const clang::VersionTuple &lhs,
+                        const clang::VersionTuple &rhs) {
+      return lhs == rhs;
+    }
+  };
+
+} // end namespace llvm
+
 #endif // LLVM_CLANG_BASIC_VERSIONTUPLE_H

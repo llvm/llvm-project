@@ -15,6 +15,7 @@
 #include "MSP430.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -22,18 +23,29 @@ using namespace llvm;
 
 extern "C" void LLVMInitializeMSP430Target() {
   // Register the target.
-  RegisterTargetMachine<MSP430TargetMachine> X(TheMSP430Target);
+  RegisterTargetMachine<MSP430TargetMachine> X(getTheMSP430Target());
+}
+
+static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
+  if (!RM.hasValue())
+    return Reloc::Static;
+  return *RM;
+}
+
+static std::string computeDataLayout(const Triple &TT, StringRef CPU,
+                                     const TargetOptions &Options) {
+  return "e-m:e-p:16:16-i32:16-i64:16-f32:16-f64:16-a:8-n8:16-S16";
 }
 
 MSP430TargetMachine::MSP430TargetMachine(const Target &T, const Triple &TT,
                                          StringRef CPU, StringRef FS,
                                          const TargetOptions &Options,
-                                         Reloc::Model RM, CodeModel::Model CM,
+                                         Optional<Reloc::Model> RM,
+                                         CodeModel::Model CM,
                                          CodeGenOpt::Level OL)
-    : LLVMTargetMachine(T, "e-m:e-p:16:16-i32:16:32-a:16-n8:16", TT, CPU, FS,
-                        Options, RM, CM, OL),
+    : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options), TT, CPU, FS,
+                        Options, getEffectiveRelocModel(RM), CM, OL),
       TLOF(make_unique<TargetLoweringObjectFileELF>()),
-      // FIXME: Check DataLayout string.
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
 }
@@ -44,7 +56,7 @@ namespace {
 /// MSP430 Code Generator Pass Configuration Options.
 class MSP430PassConfig : public TargetPassConfig {
 public:
-  MSP430PassConfig(MSP430TargetMachine *TM, PassManagerBase &PM)
+  MSP430PassConfig(MSP430TargetMachine &TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {}
 
   MSP430TargetMachine &getMSP430TargetMachine() const {
@@ -57,7 +69,7 @@ public:
 } // namespace
 
 TargetPassConfig *MSP430TargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new MSP430PassConfig(this, PM);
+  return new MSP430PassConfig(*this, PM);
 }
 
 bool MSP430PassConfig::addInstSelector() {

@@ -15,7 +15,7 @@ define void @test_zext_sext_amounts255(i8* %mem) {
 }
 
 ; CHECK-LABEL: test_zext_sext_amounts
-; CHECK: PartialAlias: i8* %a, i8* %b
+; CHECK: MayAlias: i8* %a, i8* %b
 ; %a and %b only PartialAlias as, although they're both zext(sext(%num)) they'll extend the sign by a different
 ; number of bits before zext-ing the remainder.
 define void @test_zext_sext_amounts(i8* %mem, i8 %num) {
@@ -44,9 +44,9 @@ define void @based_on_pr18068(i32 %loaded, i8* %mem) {
 }
 
 ; CHECK-LABEL: test_path_dependence
-; CHECK: PartialAlias: i8* %a, i8* %b
+; CHECK: MayAlias: i8* %a, i8* %b
 ; CHECK: MustAlias: i8* %a, i8* %c
-; CHECK: PartialAlias: i8* %a, i8* %d
+; CHECK: MayAlias: i8* %a, i8* %d
 define void @test_path_dependence(i32 %p, i8* %mem) {
   %p.minus1 = add i32 %p, -1 ; this will always unsigned-wrap, unless %p == 0
   %p.minus1.64 = zext i32 %p.minus1 to i64
@@ -83,7 +83,7 @@ define void @test_zext_sext_255(i8* %mem) {
 }
 
 ; CHECK-LABEL: test_zext_sext_num
-; CHECK: PartialAlias: i8* %a, i8* %b
+; CHECK: MayAlias: i8* %a, i8* %b
 ; %a and %b NoAlias if %num == 255 (see @test_zext_sext_255), but %a and %b NoAlias for other values of %num (e.g. 0)
 define void @test_zext_sext_num(i8* %mem, i8 %num) {
   %zext.num = zext i8 %num to i16
@@ -142,9 +142,9 @@ define void @constantOffsetHeuristic_i8_i32(i32* %mem, i8 %val) {
 }
 
 ; CHECK-LABEL: constantOffsetHeuristic_i3_i8
-; CHECK: PartialAlias:  i32* %a, i32* %b
+; CHECK: MayAlias:  i32* %a, i32* %b
 ; CHECK: NoAlias:  i32* %a, i32* %c
-; CHECK: PartialAlias:  i32* %b, i32* %c
+; CHECK: MayAlias:  i32* %b, i32* %c
 define void @constantOffsetHeuristic_i3_i8(i8* %mem, i3 %val) {
   %zext.plus.7 = add nsw i3 %val, 7
   %zext.plus.4 = add nsw i3 %val, 4
@@ -161,7 +161,7 @@ define void @constantOffsetHeuristic_i3_i8(i8* %mem, i3 %val) {
 }
 
 ; CHECK-LABEL: constantOffsetHeuristic_i8_i8
-; CHECK: PartialAlias:  i32* %a, i32* %b
+; CHECK: MayAlias:  i32* %a, i32* %b
 ; CHECK: NoAlias:  i32* %a, i32* %c
 ; CHECK: NoAlias:  i32* %b, i32* %c
 define void @constantOffsetHeuristic_i8_i8(i8* %mem, i8 %val) {

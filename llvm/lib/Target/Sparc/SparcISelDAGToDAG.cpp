@@ -15,7 +15,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -42,7 +41,7 @@ public:
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
-  SDNode *Select(SDNode *N) override;
+  void Select(SDNode *N) override;
 
   // Complex Pattern Selectors.
   bool SelectADDRrr(SDValue N, SDValue &R1, SDValue &R2);
@@ -54,7 +53,7 @@ public:
                                     unsigned ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "SPARC DAG->DAG Pattern Instruction Selection";
   }
 
@@ -63,7 +62,7 @@ public:
 
 private:
   SDNode* getGlobalBaseReg();
-  SDNode *SelectInlineAsm(SDNode *N);
+  bool tryInlineAsm(SDNode *N);
 };
 }  // end anonymous namespace
 
@@ -155,7 +154,7 @@ bool SparcDAGToDAGISel::SelectADDRrr(SDValue Addr, SDValue &R1, SDValue &R2) {
 // TODO: fix inline asm support so I can simply tell it that 'i64'
 // inputs to asm need to be allocated to the IntPair register type,
 // and have that work. Then, delete this function.
-SDNode *SparcDAGToDAGISel::SelectInlineAsm(SDNode *N){
+bool SparcDAGToDAGISel::tryInlineAsm(SDNode *N){
   std::vector<SDValue> AsmNodeOperands;
   unsigned Flag, Kind;
   bool Changed = false;
@@ -310,31 +309,32 @@ SDNode *SparcDAGToDAGISel::SelectInlineAsm(SDNode *N){
   if (Glue.getNode())
     AsmNodeOperands.push_back(Glue);
   if (!Changed)
-    return nullptr;
+    return false;
 
   SDValue New = CurDAG->getNode(ISD::INLINEASM, SDLoc(N),
       CurDAG->getVTList(MVT::Other, MVT::Glue), AsmNodeOperands);
   New->setNodeId(-1);
-  return New.getNode();
+  ReplaceNode(N, New.getNode());
+  return true;
 }
 
-SDNode *SparcDAGToDAGISel::Select(SDNode *N) {
+void SparcDAGToDAGISel::Select(SDNode *N) {
   SDLoc dl(N);
   if (N->isMachineOpcode()) {
     N->setNodeId(-1);
-    return nullptr;   // Already selected.
+    return;   // Already selected.
   }
 
   switch (N->getOpcode()) {
   default: break;
-    case ISD::INLINEASM: {
-    SDNode *ResNode = SelectInlineAsm(N);
-    if (ResNode)
-      return ResNode;
+  case ISD::INLINEASM: {
+    if (tryInlineAsm(N))
+      return;
     break;
   }
   case SPISD::GLOBAL_BASE_REG:
-    return getGlobalBaseReg();
+    ReplaceNode(N, getGlobalBaseReg());
+    return;
 
   case ISD::SDIV:
   case ISD::UDIV: {
@@ -360,24 +360,18 @@ SDNode *SparcDAGToDAGISel::Select(SDNode *N) {
 
     // FIXME: Handle div by immediate.
     unsigned Opcode = N->getOpcode() == ISD::SDIV ? SP::SDIVrr : SP::UDIVrr;
-    return CurDAG->SelectNodeTo(N, Opcode, MVT::i32, DivLHS, DivRHS,
-                                TopPart);
-  }
-  case ISD::MULHU:
-  case ISD::MULHS: {
-    // FIXME: Handle mul by immediate.
-    SDValue MulLHS = N->getOperand(0);
-    SDValue MulRHS = N->getOperand(1);
-    unsigned Opcode = N->getOpcode() == ISD::MULHU ? SP::UMULrr : SP::SMULrr;
-    SDNode *Mul =
-        CurDAG->getMachineNode(Opcode, dl, MVT::i32, MVT::i32, MulLHS, MulRHS);
-    SDValue ResultHigh = SDValue(Mul, 1);
-    ReplaceUses(SDValue(N, 0), ResultHigh);
-    return nullptr;
+    // SDIV is a hardware erratum on some LEON2 processors. Replace it with SDIVcc here.
+    if (((SparcTargetMachine&)TM).getSubtargetImpl()->performSDIVReplace()
+        &&
+        Opcode == SP::SDIVrr) {
+      Opcode = SP::SDIVCCrr;
+    }
+    CurDAG->SelectNodeTo(N, Opcode, MVT::i32, DivLHS, DivRHS, TopPart);
+    return;
   }
   }
 
-  return SelectCode(N);
+  SelectCode(N);
 }
 
 
@@ -391,6 +385,7 @@ SparcDAGToDAGISel::SelectInlineAsmMemoryOperand(const SDValue &Op,
   switch (ConstraintID) {
   default: return true;
   case InlineAsm::Constraint_i:
+  case InlineAsm::Constraint_o:
   case InlineAsm::Constraint_m: // memory
    if (!SelectADDRrr(Op, Op0, Op1))
      SelectADDRri(Op, Op0, Op1);

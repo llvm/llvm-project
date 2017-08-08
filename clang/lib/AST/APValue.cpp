@@ -17,8 +17,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/Diagnostic.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
@@ -29,6 +27,7 @@ namespace {
     CharUnits Offset;
     unsigned PathLength;
     unsigned CallIndex;
+    bool IsNullPtr;
   };
 }
 
@@ -151,10 +150,11 @@ APValue::APValue(const APValue &RHS) : Kind(Uninitialized) {
     MakeLValue();
     if (RHS.hasLValuePath())
       setLValue(RHS.getLValueBase(), RHS.getLValueOffset(), RHS.getLValuePath(),
-                RHS.isLValueOnePastTheEnd(), RHS.getLValueCallIndex());
+                RHS.isLValueOnePastTheEnd(), RHS.getLValueCallIndex(),
+                RHS.isNullPointer());
     else
       setLValue(RHS.getLValueBase(), RHS.getLValueOffset(), NoLValuePath(),
-                RHS.getLValueCallIndex());
+                RHS.getLValueCallIndex(), RHS.isNullPointer());
     break;
   case Array:
     MakeArray(RHS.getArrayInitializedElts(), RHS.getArraySize());
@@ -255,7 +255,7 @@ void APValue::swap(APValue &RHS) {
   memcpy(RHS.Data.buffer, TmpData, DataSize);
 }
 
-void APValue::dump() const {
+LLVM_DUMP_METHOD void APValue::dump() const {
   dump(llvm::errs());
   llvm::errs() << '\n';
 }
@@ -263,7 +263,7 @@ void APValue::dump() const {
 static double GetApproxValue(const llvm::APFloat &F) {
   llvm::APFloat V = F;
   bool ignored;
-  V.convert(llvm::APFloat::IEEEdouble, llvm::APFloat::rmNearestTiesToEven,
+  V.convert(llvm::APFloat::IEEEdouble(), llvm::APFloat::rmNearestTiesToEven,
             &ignored);
   return V.convertToDouble();
 }
@@ -581,8 +581,13 @@ unsigned APValue::getLValueCallIndex() const {
   return ((const LV*)(const char*)Data.buffer)->CallIndex;
 }
 
+bool APValue::isNullPointer() const {
+  assert(isLValue() && "Invalid usage");
+  return ((const LV*)(const char*)Data.buffer)->IsNullPtr;
+}
+
 void APValue::setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
-                        unsigned CallIndex) {
+                        unsigned CallIndex, bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
   LV &LVal = *((LV*)(char*)Data.buffer);
   LVal.BaseAndIsOnePastTheEnd.setPointer(B);
@@ -590,11 +595,12 @@ void APValue::setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
   LVal.Offset = O;
   LVal.CallIndex = CallIndex;
   LVal.resizePath((unsigned)-1);
+  LVal.IsNullPtr = IsNullPtr;
 }
 
 void APValue::setLValue(LValueBase B, const CharUnits &O,
                         ArrayRef<LValuePathEntry> Path, bool IsOnePastTheEnd,
-                        unsigned CallIndex) {
+                        unsigned CallIndex, bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
   LV &LVal = *((LV*)(char*)Data.buffer);
   LVal.BaseAndIsOnePastTheEnd.setPointer(B);
@@ -603,6 +609,7 @@ void APValue::setLValue(LValueBase B, const CharUnits &O,
   LVal.CallIndex = CallIndex;
   LVal.resizePath(Path.size());
   memcpy(LVal.getPath(), Path.data(), Path.size() * sizeof(LValuePathEntry));
+  LVal.IsNullPtr = IsNullPtr;
 }
 
 const ValueDecl *APValue::getMemberPointerDecl() const {

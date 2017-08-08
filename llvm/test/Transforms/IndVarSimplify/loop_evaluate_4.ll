@@ -1,7 +1,9 @@
-; RUN: opt < %s -indvars -S | grep "ret i32 9900"
+; RUN: opt < %s -indvars -S | FileCheck %s
 ; PR1179
 
 define i32 @test4() {
+; CHECK-LABEL: @test4(
+; CHECK: ret i32 9900
 entry:
         br label %bb7
 

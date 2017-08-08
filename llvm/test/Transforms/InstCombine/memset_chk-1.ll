@@ -69,7 +69,7 @@ define i32 @test_rauw(i8* %a, i8* %b, i8** %c) {
 entry:
   %call49 = call i64 @strlen(i8* %a)
   %add180 = add i64 %call49, 1
-  %yo107 = call i64 @llvm.objectsize.i64.p0i8(i8* %b, i1 false)
+  %yo107 = call i64 @llvm.objectsize.i64.p0i8(i8* %b, i1 false, i1 false)
   %call50 = call i8* @__memmove_chk(i8* %b, i8* %a, i64 %add180, i64 %yo107)
 ; CHECK: %strlen = call i64 @strlen(i8* %b)
 ; CHECK-NEXT: %strchr2 = getelementptr i8, i8* %b, i64 %strlen
@@ -87,6 +87,44 @@ entry:
 declare i8* @__memmove_chk(i8*, i8*, i64, i64)
 declare i8* @strrchr(i8*, i32)
 declare i64 @strlen(i8* nocapture)
-declare i64 @llvm.objectsize.i64.p0i8(i8*, i1)
+declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1)
 
 declare i8* @__memset_chk(i8*, i32, i64, i64)
+
+; FIXME: memset(malloc(x), 0, x) -> calloc(1, x)
+
+define float* @pr25892(i64 %size) #0 {
+entry:
+  %call = tail call i8* @malloc(i64 %size) #1
+  %cmp = icmp eq i8* %call, null
+  br i1 %cmp, label %cleanup, label %if.end
+if.end:
+  %bc = bitcast i8* %call to float*
+  %call2 = tail call i64 @llvm.objectsize.i64.p0i8(i8* nonnull %call, i1 false, i1 false)
+  %call3 = tail call i8* @__memset_chk(i8* nonnull %call, i32 0, i64 %size, i64 %call2) #1
+  br label %cleanup
+cleanup:
+  %retval.0 = phi float* [ %bc, %if.end ], [ null, %entry ]
+  ret float* %retval.0
+
+; CHECK-LABEL: @pr25892(
+; CHECK:       entry:
+; CHECK-NEXT:    %call = tail call i8* @malloc(i64 %size)
+; CHECK-NEXT:    %cmp = icmp eq i8* %call, null
+; CHECK-NEXT:    br i1 %cmp, label %cleanup, label %if.end
+; CHECK:       if.end:
+; CHECK-NEXT:    %bc = bitcast i8* %call to float*
+; CHECK-NEXT:    %call2 = tail call i64 @llvm.objectsize.i64.p0i8(i8* nonnull %call, i1 false, i1 false)
+; CHECK-NEXT:    %call3 = tail call i8* @__memset_chk(i8* nonnull %call, i32 0, i64 %size, i64 %call2)
+; CHECK-NEXT:    br label %cleanup
+; CHECK:       cleanup:
+; CHECK-NEXT:    %retval.0 = phi float* [ %bc, %if.end ], [ null, %entry ]
+; CHECK-NEXT:    ret float* %retval.0
+}
+
+declare noalias i8* @malloc(i64) #1
+
+attributes #0 = { nounwind ssp uwtable }
+attributes #1 = { nounwind }
+attributes #2 = { nounwind readnone }
+

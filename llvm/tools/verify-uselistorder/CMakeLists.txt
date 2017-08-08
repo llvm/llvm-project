@@ -9,4 +9,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(verify-uselistorder
   verify-uselistorder.cpp
+
+  DEPENDS
+  intrinsics_gen
   )

@@ -111,24 +111,29 @@ ProgramStateManager::removeDeadBindings(ProgramStateRef state,
   return ConstraintMgr->removeDeadBindings(Result, SymReaper);
 }
 
-ProgramStateRef ProgramState::bindLoc(Loc LV, SVal V, bool notifyChanges) const {
+ProgramStateRef ProgramState::bindLoc(Loc LV,
+                                      SVal V,
+                                      const LocationContext *LCtx,
+                                      bool notifyChanges) const {
   ProgramStateManager &Mgr = getStateManager();
   ProgramStateRef newState = makeWithStore(Mgr.StoreMgr->Bind(getStore(),
                                                              LV, V));
   const MemRegion *MR = LV.getAsRegion();
   if (MR && Mgr.getOwningEngine() && notifyChanges)
-    return Mgr.getOwningEngine()->processRegionChange(newState, MR);
+    return Mgr.getOwningEngine()->processRegionChange(newState, MR, LCtx);
 
   return newState;
 }
 
-ProgramStateRef ProgramState::bindDefault(SVal loc, SVal V) const {
+ProgramStateRef ProgramState::bindDefault(SVal loc,
+                                          SVal V,
+                                          const LocationContext *LCtx) const {
   ProgramStateManager &Mgr = getStateManager();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
   const StoreRef &newStore = Mgr.StoreMgr->BindDefault(getStore(), R, V);
   ProgramStateRef new_state = makeWithStore(newStore);
   return Mgr.getOwningEngine() ?
-           Mgr.getOwningEngine()->processRegionChange(new_state, R) :
+           Mgr.getOwningEngine()->processRegionChange(new_state, R, LCtx) :
            new_state;
 }
 
@@ -202,7 +207,7 @@ ProgramState::invalidateRegionsImpl(ValueList Values,
     }
 
     return Eng->processRegionChanges(newState, IS, TopLevelInvalidated,
-                                     Invalidated, Call);
+                                     Invalidated, LCtx, Call);
   }
 
   const StoreRef &newStore =
@@ -439,7 +444,7 @@ void ProgramState::printDOT(raw_ostream &Out) const {
   print(Out, "\\l", "\\|");
 }
 
-void ProgramState::dump() const {
+LLVM_DUMP_METHOD void ProgramState::dump() const {
   print(llvm::errs());
 }
 
@@ -527,32 +532,17 @@ bool ScanReachableSymbols::scan(nonloc::CompoundVal val) {
 }
 
 bool ScanReachableSymbols::scan(const SymExpr *sym) {
-  bool wasVisited = !visited.insert(sym).second;
-  if (wasVisited)
-    return true;
+  for (SymExpr::symbol_iterator SI = sym->symbol_begin(),
+                                SE = sym->symbol_end();
+       SI != SE; ++SI) {
+    bool wasVisited = !visited.insert(*SI).second;
+    if (wasVisited)
+      continue;
 
-  if (!visitor.VisitSymbol(sym))
-    return false;
-
-  // TODO: should be rewritten using SymExpr::symbol_iterator.
-  switch (sym->getKind()) {
-    case SymExpr::RegionValueKind:
-    case SymExpr::ConjuredKind:
-    case SymExpr::DerivedKind:
-    case SymExpr::ExtentKind:
-    case SymExpr::MetadataKind:
-      break;
-    case SymExpr::CastSymbolKind:
-      return scan(cast<SymbolCast>(sym)->getOperand());
-    case SymExpr::SymIntKind:
-      return scan(cast<SymIntExpr>(sym)->getLHS());
-    case SymExpr::IntSymKind:
-      return scan(cast<IntSymExpr>(sym)->getRHS());
-    case SymExpr::SymSymKind: {
-      const SymSymExpr *x = cast<SymSymExpr>(sym);
-      return scan(x->getLHS()) && scan(x->getRHS());
-    }
+    if (!visitor.VisitSymbol(*SI))
+      return false;
   }
+
   return true;
 }
 
@@ -654,15 +644,33 @@ ProgramStateRef ProgramState::addTaint(const Stmt *S,
   if (const Expr *E = dyn_cast_or_null<Expr>(S))
     S = E->IgnoreParens();
 
-  SymbolRef Sym = getSVal(S, LCtx).getAsSymbol();
+  return addTaint(getSVal(S, LCtx), Kind);
+}
+
+ProgramStateRef ProgramState::addTaint(SVal V,
+                                       TaintTagType Kind) const {
+  SymbolRef Sym = V.getAsSymbol();
   if (Sym)
     return addTaint(Sym, Kind);
 
-  const MemRegion *R = getSVal(S, LCtx).getAsRegion();
-  addTaint(R, Kind);
+  // If the SVal represents a structure, try to mass-taint all values within the
+  // structure. For now it only works efficiently on lazy compound values that
+  // were conjured during a conservative evaluation of a function - either as
+  // return values of functions that return structures or arrays by value, or as
+  // values of structures or arrays passed into the function by reference,
+  // directly or through pointer aliasing. Such lazy compound values are
+  // characterized by having exactly one binding in their captured store within
+  // their parent region, which is a conjured symbol default-bound to the base
+  // region of the parent region.
+  if (auto LCV = V.getAs<nonloc::LazyCompoundVal>()) {
+    if (Optional<SVal> binding = getStateManager().StoreMgr->getDefaultBinding(*LCV)) {
+      if (SymbolRef Sym = binding->getAsSymbol())
+        return addPartialTaint(Sym, LCV->getRegion(), Kind);
+    }
+  }
 
-  // Cannot add taint, so just return the state.
-  return this;
+  const MemRegion *R = V.getAsRegion();
+  return addTaint(R, Kind);
 }
 
 ProgramStateRef ProgramState::addTaint(const MemRegion *R,
@@ -680,6 +688,27 @@ ProgramStateRef ProgramState::addTaint(SymbolRef Sym,
     Sym = SC->getOperand();
 
   ProgramStateRef NewState = set<TaintMap>(Sym, Kind);
+  assert(NewState);
+  return NewState;
+}
+
+ProgramStateRef ProgramState::addPartialTaint(SymbolRef ParentSym,
+                                              const SubRegion *SubRegion,
+                                              TaintTagType Kind) const {
+  // Ignore partial taint if the entire parent symbol is already tainted.
+  if (contains<TaintMap>(ParentSym) && *get<TaintMap>(ParentSym) == Kind)
+    return this;
+
+  // Partial taint applies if only a portion of the symbol is tainted.
+  if (SubRegion == SubRegion->getBaseRegion())
+    return addTaint(ParentSym, Kind);
+
+  const TaintedSubRegions *SavedRegs = get<DerivedSymTaint>(ParentSym);
+  TaintedSubRegions Regs =
+      SavedRegs ? *SavedRegs : stateMgr->TSRFactory.getEmptyMap();
+
+  Regs = stateMgr->TSRFactory.add(Regs, SubRegion, Kind);
+  ProgramStateRef NewState = set<DerivedSymTaint>(ParentSym, Regs);
   assert(NewState);
   return NewState;
 }
@@ -724,31 +753,52 @@ bool ProgramState::isTainted(SymbolRef Sym, TaintTagType Kind) const {
     return false;
 
   // Traverse all the symbols this symbol depends on to see if any are tainted.
-  bool Tainted = false;
   for (SymExpr::symbol_iterator SI = Sym->symbol_begin(), SE =Sym->symbol_end();
        SI != SE; ++SI) {
     if (!isa<SymbolData>(*SI))
       continue;
 
-    const TaintTagType *Tag = get<TaintMap>(*SI);
-    Tainted = (Tag && *Tag == Kind);
+    if (const TaintTagType *Tag = get<TaintMap>(*SI)) {
+      if (*Tag == Kind)
+        return true;
+    }
 
-    // If this is a SymbolDerived with a tainted parent, it's also tainted.
-    if (const SymbolDerived *SD = dyn_cast<SymbolDerived>(*SI))
-      Tainted = Tainted || isTainted(SD->getParentSymbol(), Kind);
+    if (const SymbolDerived *SD = dyn_cast<SymbolDerived>(*SI)) {
+      // If this is a SymbolDerived with a tainted parent, it's also tainted.
+      if (isTainted(SD->getParentSymbol(), Kind))
+        return true;
+
+      // If this is a SymbolDerived with the same parent symbol as another
+      // tainted SymbolDerived and a region that's a sub-region of that tainted
+      // symbol, it's also tainted.
+      if (const TaintedSubRegions *Regs =
+              get<DerivedSymTaint>(SD->getParentSymbol())) {
+        const TypedValueRegion *R = SD->getRegion();
+        for (auto I : *Regs) {
+          // FIXME: The logic to identify tainted regions could be more
+          // complete. For example, this would not currently identify
+          // overlapping fields in a union as tainted. To identify this we can
+          // check for overlapping/nested byte offsets.
+          if (Kind == I.second &&
+              (R == I.first || R->isSubRegionOf(I.first)))
+            return true;
+        }
+      }
+    }
 
     // If memory region is tainted, data is also tainted.
-    if (const SymbolRegionValue *SRV = dyn_cast<SymbolRegionValue>(*SI))
-      Tainted = Tainted || isTainted(SRV->getRegion(), Kind);
+    if (const SymbolRegionValue *SRV = dyn_cast<SymbolRegionValue>(*SI)) {
+      if (isTainted(SRV->getRegion(), Kind))
+        return true;
+    }
 
-    // If If this is a SymbolCast from a tainted value, it's also tainted.
-    if (const SymbolCast *SC = dyn_cast<SymbolCast>(*SI))
-      Tainted = Tainted || isTainted(SC->getOperand(), Kind);
-
-    if (Tainted)
-      return true;
+    // If this is a SymbolCast from a tainted value, it's also tainted.
+    if (const SymbolCast *SC = dyn_cast<SymbolCast>(*SI)) {
+      if (isTainted(SC->getOperand(), Kind))
+        return true;
+    }
   }
 
-  return Tainted;
+  return false;
 }
 

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \brief Compute iterated dominance frontiers using a linear time algorithm.
+// Compute iterated dominance frontiers using a linear time algorithm.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,17 +16,10 @@
 #include "llvm/IR/Dominators.h"
 #include <queue>
 
-using namespace llvm;
-
-void IDFCalculator::calculate(SmallVectorImpl<BasicBlock *> &PHIBlocks) {
-  // If we haven't computed dominator tree levels, do so now.
-  if (DomLevels.empty()) {
-    for (auto DFI = df_begin(DT.getRootNode()), DFE = df_end(DT.getRootNode());
-         DFI != DFE; ++DFI) {
-      DomLevels[*DFI] = DFI.getPathLength() - 1;
-    }
-  }
-
+namespace llvm {
+template <class NodeTy, bool IsPostDom>
+void IDFCalculator<NodeTy, IsPostDom>::calculate(
+    SmallVectorImpl<BasicBlock *> &PHIBlocks) {
   // Use a priority queue keyed on dominator tree level so that inserted nodes
   // are handled from the bottom of the dominator tree upwards.
   typedef std::pair<DomTreeNode *, unsigned> DomTreeNodePair;
@@ -36,7 +29,7 @@ void IDFCalculator::calculate(SmallVectorImpl<BasicBlock *> &PHIBlocks) {
 
   for (BasicBlock *BB : *DefBlocks) {
     if (DomTreeNode *Node = DT.getNode(BB))
-      PQ.push(std::make_pair(Node, DomLevels.lookup(Node)));
+      PQ.push({Node, Node->getLevel()});
   }
 
   SmallVector<DomTreeNode *, 32> Worklist;
@@ -61,8 +54,9 @@ void IDFCalculator::calculate(SmallVectorImpl<BasicBlock *> &PHIBlocks) {
     while (!Worklist.empty()) {
       DomTreeNode *Node = Worklist.pop_back_val();
       BasicBlock *BB = Node->getBlock();
-
-      for (auto Succ : successors(BB)) {
+      // Succ is the successor in the direction we are calculating IDF, so it is
+      // successor for IDF, and predecessor for Reverse IDF.
+      for (auto *Succ : children<NodeTy>(BB)) {
         DomTreeNode *SuccNode = DT.getNode(Succ);
 
         // Quickly skip all CFG edges that are also dominator tree edges instead
@@ -70,7 +64,7 @@ void IDFCalculator::calculate(SmallVectorImpl<BasicBlock *> &PHIBlocks) {
         if (SuccNode->getIDom() == Node)
           continue;
 
-        unsigned SuccLevel = DomLevels.lookup(SuccNode);
+        const unsigned SuccLevel = SuccNode->getLevel();
         if (SuccLevel > RootLevel)
           continue;
 
@@ -92,4 +86,8 @@ void IDFCalculator::calculate(SmallVectorImpl<BasicBlock *> &PHIBlocks) {
       }
     }
   }
+}
+
+template class IDFCalculator<BasicBlock *, false>;
+template class IDFCalculator<Inverse<BasicBlock *>, true>;
 }

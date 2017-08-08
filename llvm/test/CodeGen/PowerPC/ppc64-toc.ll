@@ -1,4 +1,4 @@
-; RUN: llc -code-model=small < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -code-model=small < %s | FileCheck %s
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -9,7 +9,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 define i64 @access_int64(i64 %a) nounwind readonly {
 entry:
 ; CHECK-LABEL: access_int64:
-; CHECK-NEXT: .align  3
+; CHECK-NEXT: .p2align  3
 ; CHECK-NEXT: .quad   .L[[BEGIN:.*]]
 ; CHECK-NEXT: .quad   .TOC.@tocbase
 ; CHECK-NEXT: .quad   0

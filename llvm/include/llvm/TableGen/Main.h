@@ -16,13 +16,15 @@
 
 namespace llvm {
 
-class RecordKeeper;
 class raw_ostream;
-/// \brief Perform the action using Records, and write output to OS.
-/// \returns true on error, false otherwise
-typedef bool TableGenMainFn(raw_ostream &OS, RecordKeeper &Records);
+class RecordKeeper;
+
+/// Perform the action using Records, and write output to OS.
+/// Returns true on error, false otherwise.
+using TableGenMainFn = bool (raw_ostream &OS, RecordKeeper &Records);
 
 int TableGenMain(char *argv0, TableGenMainFn *MainFn);
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_TABLEGEN_MAIN_H

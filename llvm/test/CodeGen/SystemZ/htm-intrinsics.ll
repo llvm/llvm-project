@@ -67,7 +67,7 @@ define void @test_tbegin_nofloat3(i32 *%ptr) {
 ; CHECK-NOT: stmg
 ; CHECK-NOT: std
 ; CHECK: tbegin 0, 65292
-; CHECK: jnh  {{\.L*}}
+; CHECK: bnhr %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %res = call i32 @llvm.s390.tbegin.nofloat(i8 *null, i32 65292)
@@ -90,7 +90,7 @@ define i32 @test_tbegin_nofloat4(i32 %pad, i32 *%ptr) {
 ; CHECK: tbegin 0, 65292
 ; CHECK: ipm %r2
 ; CHECK: srl %r2, 28
-; CHECK: cijlh %r2, 2,  {{\.L*}}
+; CHECK: ciblh %r2, 2, 0(%r14)
 ; CHECK: mvhi 0(%r3), 0
 ; CHECK: br %r14
   %res = call i32 @llvm.s390.tbegin.nofloat(i8 *null, i32 65292)
@@ -198,7 +198,7 @@ define i32 @test_tend1() {
 define void @test_tend3(i32 *%ptr) {
 ; CHECK-LABEL: test_tend3:
 ; CHECK: tend
-; CHECK: je  {{\.L*}}
+; CHECK: ber %r14
 ; CHECK: mvhi 0(%r2), 0
 ; CHECK: br %r14
   %res = call i32 @llvm.s390.tend()
@@ -219,7 +219,7 @@ define i32 @test_tend2(i32 %pad, i32 *%ptr) {
 ; CHECK: tend
 ; CHECK: ipm %r2
 ; CHECK: srl %r2, 28
-; CHECK: cijlh %r2, 2,  {{\.L*}}
+; CHECK: ciblh %r2, 2, 0(%r14)
 ; CHECK: mvhi 0(%r3), 0
 ; CHECK: br %r14
   %res = call i32 @llvm.s390.tend()

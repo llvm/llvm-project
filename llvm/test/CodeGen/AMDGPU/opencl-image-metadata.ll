@@ -1,12 +1,12 @@
+; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck --check-prefix=SI --check-prefix=FUNC %s
 ; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=EG --check-prefix=FUNC %s
-; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck --check-prefix=SI --check-prefix=FUNC %s
 
 ; Make sure the OpenCL Image lowering pass doesn't crash when argument metadata
 ; is not in expected order.
 
 ; EG: CF_END
 ; SI: s_endpgm
-define void @kernel(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @kernel(i32 addrspace(1)* %out) {
 entry:
   store i32 0, i32 addrspace(1)* %out
   ret void

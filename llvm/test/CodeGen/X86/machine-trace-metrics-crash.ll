@@ -31,7 +31,7 @@ if.end:
   %add.i = fadd fast float %add, %n0
   store float %add.i, float* undef, align 4
   %n1 = bitcast %struct.A* %i to i8*
-  call void @llvm.lifetime.start(i64 16, i8* %n1)
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* %n1)
   %n2 = load <2 x float>, <2 x float>* undef, align 8
   %conv = uitofp i1 %tobool to float
   %bitcast = extractelement <2 x float> %n2, i32 0
@@ -45,16 +45,16 @@ if.end:
 
 declare void @bar(float)
 declare void @foo(%struct.A*)
-declare void @llvm.lifetime.start(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: 1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 !1 = !DIFile(filename: "24199.cpp", directory: "/bin")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
-!3 = distinct !DISubprogram(linkageName: "foo", file: !1, line: 18, isLocal: false, isDefinition: true, scopeLine: 18)
+!3 = distinct !DISubprogram(linkageName: "foo", file: !1, line: 18, isLocal: false, isDefinition: true, scopeLine: 18, unit: !0)
 !4 = !DIExpression()
 !5 = !DILocalVariable(name: "this", arg: 1, scope: !3, flags: DIFlagArtificial | DIFlagObjectPointer)
 !6 = !DILocation(line: 0, scope: !3)

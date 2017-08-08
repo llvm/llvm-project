@@ -11,13 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
@@ -31,16 +30,10 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 using namespace llvm;
-
-// Enable or disable FastISel. Both options are needed, because
-// FastISel is enabled by default with -fast, and we wish to be
-// able to enable or disable fast-isel independently from -O0.
-static cl::opt<cl::boolOrDefault>
-EnableFastISelOption("fast-isel", cl::Hidden,
-  cl::desc("Enable the \"fast\" instruction selector"));
 
 void LLVMTargetMachine::initAsmInfo() {
   MRI = TheTarget.createMCRegInfo(getTargetTriple().str());
@@ -65,8 +58,14 @@ void LLVMTargetMachine::initAsmInfo() {
   if (Options.DisableIntegratedAS)
     TmpAsmInfo->setUseIntegratedAssembler(false);
 
-  if (Options.CompressDebugSections)
-    TmpAsmInfo->setCompressDebugSections(true);
+  TmpAsmInfo->setPreserveAsmComments(Options.MCOptions.PreserveAsmComments);
+
+  TmpAsmInfo->setCompressDebugSections(Options.CompressDebugSections);
+
+  TmpAsmInfo->setRelaxELFRelocations(Options.RelaxELFRelocations);
+
+  if (Options.ExceptionModel != ExceptionHandling::None)
+    TmpAsmInfo->setExceptionsType(Options.ExceptionModel);
 
   AsmInfo = TmpAsmInfo;
 }
@@ -74,11 +73,14 @@ void LLVMTargetMachine::initAsmInfo() {
 LLVMTargetMachine::LLVMTargetMachine(const Target &T,
                                      StringRef DataLayoutString,
                                      const Triple &TT, StringRef CPU,
-                                     StringRef FS, TargetOptions Options,
+                                     StringRef FS, const TargetOptions &Options,
                                      Reloc::Model RM, CodeModel::Model CM,
                                      CodeGenOpt::Level OL)
     : TargetMachine(T, DataLayoutString, TT, CPU, FS, Options) {
-  CodeGenInfo = T.createMCCodeGenInfo(TT.str(), RM, CM, OL);
+  T.adjustCodeGenOpts(TT, RM, CM);
+  this->RM = RM;
+  this->CMModel = CM;
+  this->OptLevel = OL;
 }
 
 TargetIRAnalysis LLVMTargetMachine::getTargetIRAnalysis() {
@@ -91,74 +93,32 @@ TargetIRAnalysis LLVMTargetMachine::getTargetIRAnalysis() {
 static MCContext *
 addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
                         bool DisableVerify, AnalysisID StartBefore,
-                        AnalysisID StartAfter, AnalysisID StopAfter,
-                        MachineFunctionInitializer *MFInitializer = nullptr) {
-
-  // Add internal analysis passes from the target machine.
-  PM.add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
-
+                        AnalysisID StartAfter, AnalysisID StopBefore,
+                        AnalysisID StopAfter) {
   // Targets may override createPassConfig to provide a target-specific
   // subclass.
   TargetPassConfig *PassConfig = TM->createPassConfig(PM);
-  PassConfig->setStartStopPasses(StartBefore, StartAfter, StopAfter);
-
+  PassConfig->setStartStopPasses(StartBefore, StartAfter, StopBefore,
+                                 StopAfter);
   // Set PassConfig options provided by TargetMachine.
   PassConfig->setDisableVerify(DisableVerify);
-
   PM.add(PassConfig);
-
-  PassConfig->addIRPasses();
-
-  PassConfig->addCodeGenPrepare();
-
-  PassConfig->addPassesToHandleExceptions();
-
-  PassConfig->addISelPrepare();
-
-  // Install a MachineModuleInfo class, which is an immutable pass that holds
-  // all the per-module stuff we're generating, including MCContext.
-  MachineModuleInfo *MMI = new MachineModuleInfo(
-      *TM->getMCAsmInfo(), *TM->getMCRegisterInfo(), TM->getObjFileLowering());
+  MachineModuleInfo *MMI = new MachineModuleInfo(TM);
   PM.add(MMI);
 
-  // Set up a MachineFunction for the rest of CodeGen to work on.
-  PM.add(new MachineFunctionAnalysis(*TM, MFInitializer));
-
-  // Enable FastISel with -fast, but allow that to be overridden.
-  if (EnableFastISelOption == cl::BOU_TRUE ||
-      (TM->getOptLevel() == CodeGenOpt::None &&
-       EnableFastISelOption != cl::BOU_FALSE))
-    TM->setFastISel(true);
-
-  // Ask the target for an isel.
-  if (PassConfig->addInstSelector())
+  if (PassConfig->addISelPasses())
     return nullptr;
-
   PassConfig->addMachinePasses();
-
   PassConfig->setInitialized();
 
   return &MMI->getContext();
 }
 
-bool LLVMTargetMachine::addPassesToEmitFile(
-    PassManagerBase &PM, raw_pwrite_stream &Out, CodeGenFileType FileType,
-    bool DisableVerify, AnalysisID StartBefore, AnalysisID StartAfter,
-    AnalysisID StopAfter, MachineFunctionInitializer *MFInitializer) {
-  // Add common CodeGen passes.
-  MCContext *Context =
-      addPassesToGenerateCode(this, PM, DisableVerify, StartBefore, StartAfter,
-                              StopAfter, MFInitializer);
-  if (!Context)
-    return true;
-
-  if (StopAfter) {
-    PM.add(createPrintMIRPass(outs()));
-    return false;
-  }
-
+bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
+    raw_pwrite_stream &Out, CodeGenFileType FileType,
+    MCContext &Context) {
   if (Options.MCOptions.MCSaveTempLabels)
-    Context->setAllowTemporaryLabels(false);
+    Context.setAllowTemporaryLabels(false);
 
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
   const MCAsmInfo &MAI = *getMCAsmInfo();
@@ -175,13 +135,14 @@ bool LLVMTargetMachine::addPassesToEmitFile(
     // Create a code emitter if asked to show the encoding.
     MCCodeEmitter *MCE = nullptr;
     if (Options.MCOptions.ShowMCEncoding)
-      MCE = getTarget().createMCCodeEmitter(MII, MRI, *Context);
+      MCE = getTarget().createMCCodeEmitter(MII, MRI, Context);
 
     MCAsmBackend *MAB =
-        getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU);
+        getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU,
+                                       Options.MCOptions);
     auto FOut = llvm::make_unique<formatted_raw_ostream>(Out);
     MCStreamer *S = getTarget().createAsmStreamer(
-        *Context, std::move(FOut), Options.MCOptions.AsmVerbose,
+        Context, std::move(FOut), Options.MCOptions.AsmVerbose,
         Options.MCOptions.MCUseDwarfDirectory, InstPrinter, MCE, MAB,
         Options.MCOptions.ShowMCInst);
     AsmStreamer.reset(S);
@@ -190,25 +151,27 @@ bool LLVMTargetMachine::addPassesToEmitFile(
   case CGFT_ObjectFile: {
     // Create the code emitter for the target if it exists.  If not, .o file
     // emission fails.
-    MCCodeEmitter *MCE = getTarget().createMCCodeEmitter(MII, MRI, *Context);
+    MCCodeEmitter *MCE = getTarget().createMCCodeEmitter(MII, MRI, Context);
     MCAsmBackend *MAB =
-        getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU);
+        getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU,
+                                       Options.MCOptions);
     if (!MCE || !MAB)
       return true;
 
     // Don't waste memory on names of temp labels.
-    Context->setUseNamesOnTempLabels(false);
+    Context.setUseNamesOnTempLabels(false);
 
     Triple T(getTargetTriple().str());
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
-        T, *Context, *MAB, Out, MCE, STI, Options.MCOptions.MCRelaxAll,
+        T, Context, *MAB, Out, MCE, STI, Options.MCOptions.MCRelaxAll,
+        Options.MCOptions.MCIncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ true));
     break;
   }
   case CGFT_Null:
     // The Null output is intended for use for performance analysis and testing,
     // not real users.
-    AsmStreamer.reset(getTarget().createNullStreamer(*Context));
+    AsmStreamer.reset(getTarget().createNullStreamer(Context));
     break;
   }
 
@@ -219,7 +182,28 @@ bool LLVMTargetMachine::addPassesToEmitFile(
     return true;
 
   PM.add(Printer);
+  return false;
+}
 
+bool LLVMTargetMachine::addPassesToEmitFile(
+    PassManagerBase &PM, raw_pwrite_stream &Out, CodeGenFileType FileType,
+    bool DisableVerify, AnalysisID StartBefore, AnalysisID StartAfter,
+    AnalysisID StopBefore, AnalysisID StopAfter) {
+  // Add common CodeGen passes.
+  MCContext *Context =
+      addPassesToGenerateCode(this, PM, DisableVerify, StartBefore, StartAfter,
+                              StopBefore, StopAfter);
+  if (!Context)
+    return true;
+
+  if (StopBefore || StopAfter) {
+    PM.add(createPrintMIRPass(Out));
+  } else {
+    if (addAsmPrinter(PM, Out, FileType, *Context))
+      return true;
+  }
+
+  PM.add(createFreeMachineFunctionPass());
   return false;
 }
 
@@ -233,7 +217,7 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
                                           bool DisableVerify) {
   // Add common CodeGen passes.
   Ctx = addPassesToGenerateCode(this, PM, DisableVerify, nullptr, nullptr,
-                                nullptr);
+                                nullptr, nullptr);
   if (!Ctx)
     return true;
 
@@ -246,7 +230,8 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   MCCodeEmitter *MCE =
       getTarget().createMCCodeEmitter(*getMCInstrInfo(), MRI, *Ctx);
   MCAsmBackend *MAB =
-      getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU);
+      getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU,
+                                     Options.MCOptions);
   if (!MCE || !MAB)
     return true;
 
@@ -254,6 +239,7 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
   std::unique_ptr<MCStreamer> AsmStreamer(getTarget().createMCObjectStreamer(
       T, *Ctx, *MAB, Out, MCE, STI, Options.MCOptions.MCRelaxAll,
+      Options.MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ true));
 
   // Create the AsmPrinter, which takes ownership of AsmStreamer if successful.
@@ -263,6 +249,7 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
     return true;
 
   PM.add(Printer);
+  PM.add(createFreeMachineFunctionPass());
 
   return false; // success!
 }

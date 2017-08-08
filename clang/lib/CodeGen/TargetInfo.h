@@ -29,15 +29,14 @@ class Value;
 }
 
 namespace clang {
-class ABIInfo;
 class Decl;
 
 namespace CodeGen {
+class ABIInfo;
 class CallArgList;
 class CodeGenModule;
 class CodeGenFunction;
 class CGFunctionInfo;
-}
 
 /// TargetCodeGenInfo - This class organizes various target-specific
 /// codegeneration issues, like target-specific attributes, builtins and so
@@ -218,7 +217,51 @@ public:
   virtual void getDetectMismatchOption(llvm::StringRef Name,
                                        llvm::StringRef Value,
                                        llvm::SmallString<32> &Opt) const {}
+
+  /// Get LLVM calling convention for OpenCL kernel.
+  virtual unsigned getOpenCLKernelCallingConv() const;
+
+  /// Get target specific null pointer.
+  /// \param T is the LLVM type of the null pointer.
+  /// \param QT is the clang QualType of the null pointer.
+  /// \return ConstantPointerNull with the given type \p T.
+  /// Each target can override it to return its own desired constant value.
+  virtual llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
+      llvm::PointerType *T, QualType QT) const;
+
+  /// Get target favored AST address space of a global variable for languages
+  /// other than OpenCL and CUDA.
+  /// If \p D is nullptr, returns the default target favored address space
+  /// for global variable.
+  virtual unsigned getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                            const VarDecl *D) const;
+
+  /// Get the AST address space for alloca.
+  virtual unsigned getASTAllocaAddressSpace() const { return LangAS::Default; }
+
+  /// Perform address space cast of an expression of pointer type.
+  /// \param V is the LLVM value to be casted to another address space.
+  /// \param SrcAddr is the language address space of \p V.
+  /// \param DestAddr is the targeted language address space.
+  /// \param DestTy is the destination LLVM pointer type.
+  /// \param IsNonNull is the flag indicating \p V is known to be non null.
+  virtual llvm::Value *performAddrSpaceCast(CodeGen::CodeGenFunction &CGF,
+                                            llvm::Value *V, unsigned SrcAddr,
+                                            unsigned DestAddr,
+                                            llvm::Type *DestTy,
+                                            bool IsNonNull = false) const;
+
+  /// Perform address space cast of a constant expression of pointer type.
+  /// \param V is the LLVM constant to be casted to another address space.
+  /// \param SrcAddr is the language address space of \p V.
+  /// \param DestAddr is the targeted language address space.
+  /// \param DestTy is the destination LLVM pointer type.
+  virtual llvm::Constant *
+  performAddrSpaceCast(CodeGenModule &CGM, llvm::Constant *V, unsigned SrcAddr,
+                       unsigned DestAddr, llvm::Type *DestTy) const;
 };
+
+} // namespace CodeGen
 } // namespace clang
 
 #endif // LLVM_CLANG_LIB_CODEGEN_TARGETINFO_H

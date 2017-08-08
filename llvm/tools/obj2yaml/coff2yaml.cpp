@@ -8,8 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "obj2yaml.h"
+#include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
+#include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Object/COFFYAML.h"
+#include "llvm/ObjectYAML/COFFYAML.h"
+#include "llvm/ObjectYAML/CodeViewYAMLSymbols.h"
+#include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -99,8 +104,45 @@ void COFFDumper::dumpHeader() {
   YAMLObj.Header.Characteristics = Obj.getCharacteristics();
 }
 
+static void
+initializeFileAndStringTable(const llvm::object::COFFObjectFile &Obj,
+                             codeview::StringsAndChecksumsRef &SC) {
+
+  ExitOnError Err("Invalid .debug$S section!");
+  // Iterate all .debug$S sections looking for the checksums and string table.
+  // Exit as soon as both sections are found.
+  for (const auto &S : Obj.sections()) {
+    if (SC.hasStrings() && SC.hasChecksums())
+      break;
+
+    StringRef SectionName;
+    S.getName(SectionName);
+    ArrayRef<uint8_t> sectionData;
+    if (SectionName != ".debug$S")
+      continue;
+
+    const object::coff_section *COFFSection = Obj.getCOFFSection(S);
+
+    Obj.getSectionContents(COFFSection, sectionData);
+
+    BinaryStreamReader Reader(sectionData, support::little);
+    uint32_t Magic;
+
+    Err(Reader.readInteger(Magic));
+    assert(Magic == COFF::DEBUG_SECTION_MAGIC && "Invalid .debug$S section!");
+
+    codeview::DebugSubsectionArray Subsections;
+    Err(Reader.readArray(Subsections, Reader.bytesRemaining()));
+
+    SC.initialize(Subsections);
+  }
+}
+
 void COFFDumper::dumpSections(unsigned NumSections) {
   std::vector<COFFYAML::Section> &YAMLSections = YAMLObj.Sections;
+  codeview::StringsAndChecksumsRef SC;
+  initializeFileAndStringTable(Obj, SC);
+
   for (const auto &ObjSection : Obj.sections()) {
     const object::coff_section *COFFSection = Obj.getCOFFSection(ObjSection);
     COFFYAML::Section NewYAMLSection;
@@ -108,21 +150,42 @@ void COFFDumper::dumpSections(unsigned NumSections) {
     NewYAMLSection.Header.Characteristics = COFFSection->Characteristics;
     NewYAMLSection.Header.VirtualAddress = ObjSection.getAddress();
     NewYAMLSection.Header.VirtualSize = COFFSection->VirtualSize;
+    NewYAMLSection.Header.NumberOfLineNumbers =
+        COFFSection->NumberOfLinenumbers;
+    NewYAMLSection.Header.NumberOfRelocations =
+        COFFSection->NumberOfRelocations;
+    NewYAMLSection.Header.PointerToLineNumbers =
+        COFFSection->PointerToLinenumbers;
+    NewYAMLSection.Header.PointerToRawData = COFFSection->PointerToRawData;
+    NewYAMLSection.Header.PointerToRelocations =
+        COFFSection->PointerToRelocations;
+    NewYAMLSection.Header.SizeOfRawData = COFFSection->SizeOfRawData;
     NewYAMLSection.Alignment = ObjSection.getAlignment();
+    assert(NewYAMLSection.Alignment <= 8192);
 
     ArrayRef<uint8_t> sectionData;
     if (!ObjSection.isBSS())
       Obj.getSectionContents(COFFSection, sectionData);
     NewYAMLSection.SectionData = yaml::BinaryRef(sectionData);
 
+    if (NewYAMLSection.Name == ".debug$S")
+      NewYAMLSection.DebugS = CodeViewYAML::fromDebugS(sectionData, SC);
+    else if (NewYAMLSection.Name == ".debug$T")
+      NewYAMLSection.DebugT = CodeViewYAML::fromDebugT(sectionData);
+
     std::vector<COFFYAML::Relocation> Relocations;
     for (const auto &Reloc : ObjSection.relocations()) {
       const object::coff_relocation *reloc = Obj.getCOFFRelocation(Reloc);
       COFFYAML::Relocation Rel;
       object::symbol_iterator Sym = Reloc.getSymbol();
-      ErrorOr<StringRef> SymbolNameOrErr = Sym->getName();
-      if (std::error_code EC = SymbolNameOrErr.getError())
-        report_fatal_error(EC.message());
+      Expected<StringRef> SymbolNameOrErr = Sym->getName();
+      if (!SymbolNameOrErr) {
+       std::string Buf;
+       raw_string_ostream OS(Buf);
+       logAllUnhandledErrors(SymbolNameOrErr.takeError(), OS, "");
+       OS.flush();
+       report_fatal_error(Buf);
+      }
       Rel.SymbolName = *SymbolNameOrErr;
       Rel.VirtualAddress = reloc->VirtualAddress;
       Rel.Type = reloc->Type;

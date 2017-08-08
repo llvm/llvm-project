@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -target-cpu power8 \
-// RUN:     -faltivec -verify %s
+// RUN:     -target-feature +altivec -verify %s
 
 // Test special behavior of Altivec intrinsics in this file.
 

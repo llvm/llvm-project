@@ -1,0 +1,298 @@
+# RUN: llc -mtriple=i386-linux-gnu  -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
+
+--- |
+  define i8 @test_load_i8(i8* %p1) {
+    %r = load i8, i8* %p1
+    ret i8 %r
+  }
+
+  define i16 @test_load_i16(i16* %p1) {
+    %r = load i16, i16* %p1
+    ret i16 %r
+  }
+
+  define i32 @test_load_i32(i32* %p1) {
+    %r = load i32, i32* %p1
+    ret i32 %r
+  }
+
+  define i8* @test_store_i8(i8 %val, i8* %p1) {
+    store i8 %val, i8* %p1
+    ret i8* %p1
+  }
+
+  define i16* @test_store_i16(i16 %val, i16* %p1) {
+    store i16 %val, i16* %p1
+    ret i16* %p1
+  }
+
+  define i32* @test_store_i32(i32 %val, i32* %p1) {
+    store i32 %val, i32* %p1
+    ret i32* %p1
+  }
+
+  define i32* @test_load_ptr(i32** %ptr1) {
+    %p = load i32*, i32** %ptr1
+    ret i32* %p
+  }
+
+  define void @test_store_ptr(i32** %ptr1, i32* %a) {
+    store i32* %a, i32** %ptr1
+    ret void
+  }
+
+...
+---
+name:            test_load_i8
+# ALL-LABEL: name:  test_load_i8
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+fixedStack:
+  - { id: 0, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
+# ALL:          %0 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+# ALL-NEXT:     %2 = MOV8rm %0, 1, _, 0, _ :: (load 1 from %ir.p1)
+# ALL-NEXT:     %al = COPY %2
+# ALL-NEXT:     RET 0, implicit %al
+body:             |
+  bb.1 (%ir-block.0):
+    %1(p0) = G_FRAME_INDEX %fixed-stack.0
+    %0(p0) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    %2(s8) = G_LOAD %0(p0) :: (load 1 from %ir.p1)
+    %al = COPY %2(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            test_load_i16
+# ALL-LABEL: name:  test_load_i16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gr16, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+fixedStack:
+  - { id: 0, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
+# ALL:          %0 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+# ALL-NEXT:     %2 = MOV16rm %0, 1, _, 0, _ :: (load 2 from %ir.p1)
+# ALL-NEXT:     %ax = COPY %2
+# ALL-NEXT:     RET 0, implicit %ax
+body:             |
+  bb.1 (%ir-block.0):
+    %1(p0) = G_FRAME_INDEX %fixed-stack.0
+    %0(p0) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    %2(s16) = G_LOAD %0(p0) :: (load 2 from %ir.p1)
+    %ax = COPY %2(s16)
+    RET 0, implicit %ax
+
+...
+---
+name:            test_load_i32
+# ALL-LABEL: name:  test_load_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+fixedStack:
+  - { id: 0, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
+# ALL:          %0 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+# ALL-NEXT:     %2 = MOV32rm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
+# ALL-NEXT:     %eax = COPY %2
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    %1(p0) = G_FRAME_INDEX %fixed-stack.0
+    %0(p0) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    %2(s32) = G_LOAD %0(p0) :: (load 4 from %ir.p1)
+    %eax = COPY %2(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_store_i8
+# ALL-LABEL: name:  test_store_i8
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+# ALL-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+fixedStack:
+  - { id: 0, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  - { id: 1, offset: 0, size: 1, alignment: 16, isImmutable: true, isAliased: false }
+# ALL:          %0 = MOV8rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 1 from %fixed-stack.0, align 0)
+# ALL-NEXT:     %1 = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
+# ALL-NEXT:     MOV8mr %1, 1, _, 0, _, %0 :: (store 1 into %ir.p1)
+# ALL-NEXT:     %eax = COPY %1
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    %2(p0) = G_FRAME_INDEX %fixed-stack.1
+    %0(s8) = G_LOAD %2(p0) :: (invariant load 1 from %fixed-stack.1, align 0)
+    %3(p0) = G_FRAME_INDEX %fixed-stack.0
+    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    G_STORE %0(s8), %1(p0) :: (store 1 into %ir.p1)
+    %eax = COPY %1(p0)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_store_i16
+# ALL-LABEL: name:  test_store_i16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr16, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+# ALL-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+fixedStack:
+  - { id: 0, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  - { id: 1, offset: 0, size: 2, alignment: 16, isImmutable: true, isAliased: false }
+# ALL:          %0 = MOV16rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 2 from %fixed-stack.0, align 0)
+# ALL-NEXT:     %1 = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
+# ALL-NEXT:     MOV16mr %1, 1, _, 0, _, %0 :: (store 2 into %ir.p1)
+# ALL-NEXT:     %eax = COPY %1
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    %2(p0) = G_FRAME_INDEX %fixed-stack.1
+    %0(s16) = G_LOAD %2(p0) :: (invariant load 2 from %fixed-stack.1, align 0)
+    %3(p0) = G_FRAME_INDEX %fixed-stack.0
+    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    G_STORE %0(s16), %1(p0) :: (store 2 into %ir.p1)
+    %eax = COPY %1(p0)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_store_i32
+# ALL-LABEL: name:  test_store_i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+# ALL-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+fixedStack:
+  - { id: 0, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  - { id: 1, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
+# ALL:          %0 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+# ALL-NEXT:     %1 = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
+# ALL-NEXT:     MOV32mr %1, 1, _, 0, _, %0 :: (store 4 into %ir.p1)
+# ALL-NEXT:     %eax = COPY %1
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    %2(p0) = G_FRAME_INDEX %fixed-stack.1
+    %0(s32) = G_LOAD %2(p0) :: (invariant load 4 from %fixed-stack.1, align 0)
+    %3(p0) = G_FRAME_INDEX %fixed-stack.0
+    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    G_STORE %0(s32), %1(p0) :: (store 4 into %ir.p1)
+    %eax = COPY %1(p0)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_load_ptr
+# ALL-LABEL: name:  test_load_ptr
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+fixedStack:
+  - { id: 0, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
+# ALL:          %0 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+# ALL-NEXT:     %2 = MOV32rm %0, 1, _, 0, _ :: (load 4 from %ir.ptr1)
+# ALL-NEXT:     %eax = COPY %2
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    %1(p0) = G_FRAME_INDEX %fixed-stack.0
+    %0(p0) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    %2(p0) = G_LOAD %0(p0) :: (load 4 from %ir.ptr1)
+    %eax = COPY %2(p0)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_store_ptr
+# ALL-LABEL: name:  test_store_ptr
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+# ALL-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+fixedStack:
+  - { id: 0, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  - { id: 1, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
+# ALL:          %0 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+# ALL-NEXT:     %1 = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
+# ALL-NEXT:     MOV32mr %0, 1, _, 0, _, %1 :: (store 4 into %ir.ptr1)
+# ALL-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+    %2(p0) = G_FRAME_INDEX %fixed-stack.1
+    %0(p0) = G_LOAD %2(p0) :: (invariant load 4 from %fixed-stack.1, align 0)
+    %3(p0) = G_FRAME_INDEX %fixed-stack.0
+    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    G_STORE %1(p0), %0(p0) :: (store 4 into %ir.ptr1)
+    RET 0
+
+...

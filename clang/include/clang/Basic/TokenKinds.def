@@ -30,6 +30,9 @@
 #ifndef CONCEPTS_KEYWORD
 #define CONCEPTS_KEYWORD(X) KEYWORD(X,KEYCONCEPTS)
 #endif
+#ifndef MODULES_KEYWORD
+#define MODULES_KEYWORD(X) KEYWORD(X,KEYMODULES)
+#endif
 #ifndef TYPE_TRAIT
 #define TYPE_TRAIT(N,I,K) KEYWORD(I,K)
 #endif
@@ -219,6 +222,9 @@ PUNCTUATOR(at,                  "@")
 PUNCTUATOR(lesslessless,          "<<<")
 PUNCTUATOR(greatergreatergreater, ">>>")
 
+// CL support
+PUNCTUATOR(caretcaret,            "^^")
+
 // C99 6.4.1: Keywords.  These turn into kw_* tokens.
 // Flags allowed:
 //   KEYALL   - This is a keyword in all variants of C and C++, or it
@@ -232,6 +238,8 @@ PUNCTUATOR(greatergreatergreater, ">>>")
 //   KEYCXX11 - This is a C++ keyword introduced to C++ in C++11
 //   KEYCONCEPTS - This is a keyword if the C++ extensions for concepts
 //                 are enabled.
+//   KEYMODULES - This is a keyword if the C++ extensions for modules
+//                are enabled.
 //   KEYGNU   - This is a keyword if GNU extensions are enabled
 //   KEYMS    - This is a keyword if Microsoft extensions are enabled
 //   KEYNOMS18 - This is a keyword that must never be enabled under
@@ -363,6 +371,10 @@ KEYWORD(co_await                    , KEYCOROUTINES)
 KEYWORD(co_return                   , KEYCOROUTINES)
 KEYWORD(co_yield                    , KEYCOROUTINES)
 
+// C++ modules TS keywords
+MODULES_KEYWORD(module)
+MODULES_KEYWORD(import)
+
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(_Decimal32                  , KEYALL)
 KEYWORD(_Decimal64                  , KEYALL)
@@ -377,6 +389,7 @@ KEYWORD(__builtin_offsetof          , KEYALL)
 TYPE_TRAIT_2(__builtin_types_compatible_p, TypeCompatible, KEYNOCXX)
 KEYWORD(__builtin_va_arg            , KEYALL)
 KEYWORD(__extension__               , KEYALL)
+KEYWORD(__float128                  , KEYALL)
 KEYWORD(__imag                      , KEYALL)
 KEYWORD(__int128                    , KEYALL)
 KEYWORD(__label__                   , KEYALL)
@@ -384,6 +397,7 @@ KEYWORD(__real                      , KEYALL)
 KEYWORD(__thread                    , KEYALL)
 KEYWORD(__FUNCTION__                , KEYALL)
 KEYWORD(__PRETTY_FUNCTION__         , KEYALL)
+KEYWORD(__auto_type                 , KEYALL)
 
 // GNU Extensions (outside impl-reserved namespace)
 KEYWORD(typeof                      , KEYGNU)
@@ -397,10 +411,14 @@ TYPE_TRAIT_1(__is_sealed, IsSealed, KEYMS)
 
 // MSVC12.0 / VS2013 Type Traits
 TYPE_TRAIT_1(__is_destructible, IsDestructible, KEYMS)
+TYPE_TRAIT_1(__is_trivially_destructible, IsTriviallyDestructible, KEYCXX)
 TYPE_TRAIT_1(__is_nothrow_destructible, IsNothrowDestructible, KEYMS)
 TYPE_TRAIT_2(__is_nothrow_assignable, IsNothrowAssignable, KEYCXX)
 TYPE_TRAIT_N(__is_constructible, IsConstructible, KEYCXX)
 TYPE_TRAIT_N(__is_nothrow_constructible, IsNothrowConstructible, KEYCXX)
+
+// MSVC14.0 / VS2015 Type Traits
+TYPE_TRAIT_2(__is_assignable, IsAssignable, KEYCXX)
 
 // GNU and MS Type Traits
 TYPE_TRAIT_1(__has_nothrow_assign, HasNothrowAssign, KEYCXX)
@@ -415,13 +433,13 @@ TYPE_TRAIT_1(__has_trivial_move_constructor, HasTrivialMoveConstructor, KEYCXX)
 TYPE_TRAIT_1(__has_trivial_destructor, HasTrivialDestructor, KEYCXX)
 TYPE_TRAIT_1(__has_virtual_destructor, HasVirtualDestructor, KEYCXX)
 TYPE_TRAIT_1(__is_abstract, IsAbstract, KEYCXX)
+TYPE_TRAIT_1(__is_aggregate, IsAggregate, KEYCXX)
 TYPE_TRAIT_2(__is_base_of, IsBaseOf, KEYCXX)
 TYPE_TRAIT_1(__is_class, IsClass, KEYCXX)
 TYPE_TRAIT_2(__is_convertible_to, IsConvertibleTo, KEYCXX)
 TYPE_TRAIT_1(__is_empty, IsEmpty, KEYCXX)
 TYPE_TRAIT_1(__is_enum, IsEnum, KEYCXX)
 TYPE_TRAIT_1(__is_final, IsFinal, KEYCXX)
-// Tentative name - there's no implementation of std::is_literal_type yet.
 TYPE_TRAIT_1(__is_literal, IsLiteral, KEYCXX)
 // Name for GCC 4.6 compatibility - people have already written libraries using
 // this name unfortunately.
@@ -485,6 +503,7 @@ KEYWORD(__cdecl                     , KEYALL)
 KEYWORD(__stdcall                   , KEYALL)
 KEYWORD(__fastcall                  , KEYALL)
 KEYWORD(__thiscall                  , KEYALL)
+KEYWORD(__regcall                   , KEYALL)
 KEYWORD(__vectorcall                , KEYALL)
 KEYWORD(__forceinline               , KEYMS)
 KEYWORD(__unaligned                 , KEYMS)
@@ -514,9 +533,13 @@ ALIAS("read_write", __read_write    , KEYOPENCL)
 // OpenCL builtins
 KEYWORD(__builtin_astype            , KEYOPENCL)
 KEYWORD(vec_step                    , KEYOPENCL|KEYALTIVEC|KEYZVECTOR)
+#define GENERIC_IMAGE_TYPE(ImgType, Id) KEYWORD(ImgType##_t, KEYOPENCL)
+#include "clang/Basic/OpenCLImageTypes.def"
 
 // OpenMP Type Traits
 KEYWORD(__builtin_omp_required_simd_align, KEYALL)
+
+KEYWORD(pipe                        , KEYOPENCL)
 
 // Borland Extensions.
 KEYWORD(__pascal                    , KEYALL)
@@ -618,6 +641,8 @@ KEYWORD(__builtin_convertvector   , KEYALL)
 ALIAS("__char16_t"   , char16_t   , KEYCXX)
 ALIAS("__char32_t"   , char32_t   , KEYCXX)
 
+KEYWORD(__builtin_available       , KEYALL)
+
 // Clang-specific keywords enabled only in testing.
 TESTING_KEYWORD(__unknown_anytype , KEYALL)
 
@@ -656,6 +681,7 @@ OBJC2_AT_KEYWORD(optional)
 OBJC2_AT_KEYWORD(synthesize)
 OBJC2_AT_KEYWORD(dynamic)
 OBJC2_AT_KEYWORD(import)
+OBJC2_AT_KEYWORD(available)
 
 // TODO: What to do about context-sensitive keywords like:
 //       bycopy/byref/in/inout/oneway/out?
@@ -695,6 +721,11 @@ ANNOTATION(pragma_parser_crash)
 // The lexer produces these so that they only take effect when the parser
 // handles them.
 ANNOTATION(pragma_captured)
+
+// Annotation for #pragma clang __debug dump...
+// The lexer produces these so that the parser and semantic analysis can
+// look up and dump the operand.
+ANNOTATION(pragma_dump)
 
 // Annotation for #pragma ms_struct...
 // The lexer produces these so that they only take effect when the parser
@@ -756,6 +787,11 @@ ANNOTATION(pragma_openmp_end)
 // The lexer produces these so that they only take effect when the parser
 // handles #pragma loop ... directives.
 ANNOTATION(pragma_loop_hint)
+
+ANNOTATION(pragma_fp)
+
+// Annotation for the attribute pragma directives - #pragma clang attribute ...
+ANNOTATION(pragma_attribute)
 
 // Annotations for module import translated from #include etc.
 ANNOTATION(module_include)

@@ -32,9 +32,6 @@ typedef clk_event_t clkevt_t;
 // queue_t
 typedef queue_t q_t;
 
-// ndrange_t
-typedef ndrange_t range_t;
-
 // reserve_id_t
 typedef reserve_id_t reserveid_t;
 
@@ -44,6 +41,7 @@ typedef image2d_depth_t img2ddep_t;
 // image2d_array_depth_t
 typedef image2d_array_depth_t img2darr_dep_t;
 
+#pragma OPENCL EXTENSION cl_khr_gl_msaa_sharing : enable
 // image2d_msaa_t
 typedef image2d_msaa_t img2dmsaa_t;
 
@@ -56,4 +54,14 @@ typedef image2d_msaa_depth_t img2dmsaadep_t;
 // image2d_array_msaa_depth_t
 typedef image2d_array_msaa_depth_t img2darrmsaadep_t;
 
+// pipe specifier
+
+typedef struct _person {
+  int id;
+  const char *name;
+} Person;
+
+void int_pipe_function(pipe int);
+
+void person_pipe_function(pipe Person);
 #endif

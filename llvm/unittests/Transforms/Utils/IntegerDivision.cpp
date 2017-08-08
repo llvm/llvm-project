@@ -21,7 +21,7 @@ namespace {
 
 
 TEST(IntegerDivision, SDiv) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test division", C);
   IRBuilder<> Builder(C);
 
@@ -29,7 +29,7 @@ TEST(IntegerDivision, SDiv) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt32Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -51,7 +51,7 @@ TEST(IntegerDivision, SDiv) {
 }
 
 TEST(IntegerDivision, UDiv) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test division", C);
   IRBuilder<> Builder(C);
 
@@ -59,7 +59,7 @@ TEST(IntegerDivision, UDiv) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt32Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -81,7 +81,7 @@ TEST(IntegerDivision, UDiv) {
 }
 
 TEST(IntegerDivision, SRem) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test remainder", C);
   IRBuilder<> Builder(C);
 
@@ -89,7 +89,7 @@ TEST(IntegerDivision, SRem) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt32Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -111,7 +111,7 @@ TEST(IntegerDivision, SRem) {
 }
 
 TEST(IntegerDivision, URem) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test remainder", C);
   IRBuilder<> Builder(C);
 
@@ -119,7 +119,7 @@ TEST(IntegerDivision, URem) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt32Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -142,7 +142,7 @@ TEST(IntegerDivision, URem) {
 
 
 TEST(IntegerDivision, SDiv64) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test division", C);
   IRBuilder<> Builder(C);
 
@@ -150,7 +150,7 @@ TEST(IntegerDivision, SDiv64) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt64Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -172,7 +172,7 @@ TEST(IntegerDivision, SDiv64) {
 }
 
 TEST(IntegerDivision, UDiv64) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test division", C);
   IRBuilder<> Builder(C);
 
@@ -180,7 +180,7 @@ TEST(IntegerDivision, UDiv64) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt64Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -202,7 +202,7 @@ TEST(IntegerDivision, UDiv64) {
 }
 
 TEST(IntegerDivision, SRem64) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test remainder", C);
   IRBuilder<> Builder(C);
 
@@ -210,7 +210,7 @@ TEST(IntegerDivision, SRem64) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt64Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -232,7 +232,7 @@ TEST(IntegerDivision, SRem64) {
 }
 
 TEST(IntegerDivision, URem64) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test remainder", C);
   IRBuilder<> Builder(C);
 
@@ -240,7 +240,7 @@ TEST(IntegerDivision, URem64) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt64Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);

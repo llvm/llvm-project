@@ -10,32 +10,33 @@
 #ifndef LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H_
 #define LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H_
 
+#include "clang/APINotes/APINotesOptions.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/LangStandard.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
-#include "clang/Lex/HeaderSearchOptions.h"
-#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include <string>
-#include <vector>
 
 namespace llvm {
+class Triple;
+
 namespace opt {
 class ArgList;
 }
 }
 
 namespace clang {
+class PreprocessorOptions;
+class HeaderSearchOptions;
+class TargetOptions;
+class LangOptions;
 class CompilerInvocation;
 class DiagnosticsEngine;
 
@@ -47,9 +48,11 @@ class DiagnosticsEngine;
 /// When errors are encountered, return false and, if Diags is non-null,
 /// report the error(s).
 bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
-                         DiagnosticsEngine *Diags = nullptr);
+                         DiagnosticsEngine *Diags = nullptr,
+                         bool DefaultDiagColor = true,
+                         bool DefaultShowOpt = true);
 
-class CompilerInvocationBase : public RefCountedBase<CompilerInvocation> {
+class CompilerInvocationBase {
   void operator=(const CompilerInvocationBase &) = delete;
 
 public:
@@ -63,10 +66,10 @@ public:
   IntrusiveRefCntPtr<DiagnosticOptions> DiagnosticOpts;
 
   /// Options controlling the \#include directive.
-  IntrusiveRefCntPtr<HeaderSearchOptions> HeaderSearchOpts;
+  std::shared_ptr<HeaderSearchOptions> HeaderSearchOpts;
 
   /// Options controlling the preprocessor (aside from \#include handling).
-  IntrusiveRefCntPtr<PreprocessorOptions> PreprocessorOpts;
+  std::shared_ptr<PreprocessorOptions> PreprocessorOpts;
 
   CompilerInvocationBase();
   ~CompilerInvocationBase();
@@ -87,7 +90,13 @@ public:
   const HeaderSearchOptions &getHeaderSearchOpts() const {
     return *HeaderSearchOpts;
   }
+  std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() const {
+    return HeaderSearchOpts;
+  }
 
+  std::shared_ptr<PreprocessorOptions> getPreprocessorOptsPtr() {
+    return PreprocessorOpts;
+  }
   PreprocessorOptions &getPreprocessorOpts() { return *PreprocessorOpts; }
   const PreprocessorOptions &getPreprocessorOpts() const {
     return *PreprocessorOpts;
@@ -105,6 +114,9 @@ class CompilerInvocation : public CompilerInvocationBase {
 
   MigratorOptions MigratorOpts;
   
+  /// Options controlling API notes.
+  APINotesOptions APINotesOpts;
+
   /// Options controlling IRgen and the backend.
   CodeGenOptions CodeGenOpts;
 
@@ -153,13 +165,16 @@ public:
   ///
   /// \param Opts - The LangOptions object to set up.
   /// \param IK - The input language.
+  /// \param T - The target triple.
+  /// \param PPOpts - The PreprocessorOptions affected.
   /// \param LangStd - The input language standard.
   static void setLangDefaults(LangOptions &Opts, InputKind IK,
+                   const llvm::Triple &T, PreprocessorOptions &PPOpts,
                    LangStandard::Kind LangStd = LangStandard::lang_unspecified);
   
   /// \brief Retrieve a module hash string that is suitable for uniquely 
   /// identifying the conditions under which the module was built.
-  std::string getModuleHash() const;
+  std::string getModuleHash(DiagnosticsEngine &Diags) const;
   
   /// @}
   /// @name Option Subgroups
@@ -172,6 +187,11 @@ public:
   MigratorOptions &getMigratorOpts() { return MigratorOpts; }
   const MigratorOptions &getMigratorOpts() const {
     return MigratorOpts;
+  }
+
+  APINotesOptions &getAPINotesOpts() { return APINotesOpts; }
+  const APINotesOptions &getAPINotesOpts() const {
+    return APINotesOpts;
   }
   
   CodeGenOptions &getCodeGenOpts() { return CodeGenOpts; }
@@ -213,6 +233,11 @@ namespace vfs {
 IntrusiveRefCntPtr<vfs::FileSystem>
 createVFSFromCompilerInvocation(const CompilerInvocation &CI,
                                 DiagnosticsEngine &Diags);
+
+IntrusiveRefCntPtr<vfs::FileSystem>
+createVFSFromCompilerInvocation(const CompilerInvocation &CI,
+                                DiagnosticsEngine &Diags,
+                                IntrusiveRefCntPtr<vfs::FileSystem> BaseFS);
 
 } // end namespace clang
 

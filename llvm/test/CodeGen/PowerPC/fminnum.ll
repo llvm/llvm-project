@@ -1,4 +1,4 @@
-; RUN: llc -march=ppc32 -mtriple=powerpc-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -march=ppc32 -mtriple=powerpc-unknown-linux-gnu < %s | FileCheck %s
 
 declare float @fminf(float, float)
 declare double @fmin(double, double)

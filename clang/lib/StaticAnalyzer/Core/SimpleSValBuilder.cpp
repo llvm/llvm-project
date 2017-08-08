@@ -14,6 +14,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 
 using namespace clang;
 using namespace ento;
@@ -44,6 +45,10 @@ public:
   ///  (integer) value, that value is returned. Otherwise, returns NULL.
   const llvm::APSInt *getKnownValue(ProgramStateRef state, SVal V) override;
 
+  /// Recursively descends into symbolic expressions and replaces symbols
+  /// with their known values (in the sense of the getKnownValue() method).
+  SVal simplifySVal(ProgramStateRef State, SVal V) override;
+
   SVal MakeSymIntVal(const SymExpr *LHS, BinaryOperator::Opcode op,
                      const llvm::APSInt &RHS, QualType resultTy);
 };
@@ -66,15 +71,15 @@ SVal SimpleSValBuilder::dispatchCast(SVal Val, QualType CastTy) {
 }
 
 SVal SimpleSValBuilder::evalCastFromNonLoc(NonLoc val, QualType castTy) {
-
   bool isLocType = Loc::isLocType(castTy);
+  if (val.getAs<nonloc::PointerToMember>())
+    return val;
 
   if (Optional<nonloc::LocAsInteger> LI = val.getAs<nonloc::LocAsInteger>()) {
     if (isLocType)
       return LI->getLoc();
-
     // FIXME: Correctly support promotions/truncations.
-    unsigned castSize = Context.getTypeSize(castTy);
+    unsigned castSize = Context.getIntWidth(castTy);
     if (castSize == LI->getNumBits())
       return val;
     return makeLocAsInteger(LI->getLoc(), castSize);
@@ -141,9 +146,9 @@ SVal SimpleSValBuilder::evalCastFromLoc(Loc val, QualType castTy) {
   // unless this is a weak function or a symbolic region.
   if (castTy->isBooleanType()) {
     switch (val.getSubKind()) {
-      case loc::MemRegionKind: {
+      case loc::MemRegionValKind: {
         const MemRegion *R = val.castAs<loc::MemRegionVal>().getRegion();
-        if (const FunctionTextRegion *FTR = dyn_cast<FunctionTextRegion>(R))
+        if (const FunctionCodeRegion *FTR = dyn_cast<FunctionCodeRegion>(R))
           if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(FTR->getDecl()))
             if (FD->isWeak())
               // FIXME: Currently we are using an extent symbol here,
@@ -155,6 +160,7 @@ SVal SimpleSValBuilder::evalCastFromLoc(Loc val, QualType castTy) {
           return nonloc::SymbolVal(SymR->getSymbol());
 
         // FALL-THROUGH
+        LLVM_FALLTHROUGH;
       }
 
       case loc::GotoLabelKind:
@@ -164,7 +170,7 @@ SVal SimpleSValBuilder::evalCastFromLoc(Loc val, QualType castTy) {
   }
 
   if (castTy->isIntegralOrEnumerationType()) {
-    unsigned BitWidth = Context.getTypeSize(castTy);
+    unsigned BitWidth = Context.getIntWidth(castTy);
 
     if (!val.getAs<loc::ConcreteInt>())
       return makeLocAsInteger(val, BitWidth);
@@ -335,6 +341,21 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
     switch (lhs.getSubKind()) {
     default:
       return makeSymExprValNN(state, op, lhs, rhs, resultTy);
+    case nonloc::PointerToMemberKind: {
+      assert(rhs.getSubKind() == nonloc::PointerToMemberKind &&
+             "Both SVals should have pointer-to-member-type");
+      auto LPTM = lhs.castAs<nonloc::PointerToMember>(),
+           RPTM = rhs.castAs<nonloc::PointerToMember>();
+      auto LPTMD = LPTM.getPTMData(), RPTMD = RPTM.getPTMData();
+      switch (op) {
+        case BO_EQ:
+          return makeTruthVal(LPTMD == RPTMD, resultTy);
+        case BO_NE:
+          return makeTruthVal(LPTMD != RPTMD, resultTy);
+        default:
+          return UnknownVal();
+      }
+    }
     case nonloc::LocAsIntegerKind: {
       Loc lhsL = lhs.castAs<nonloc::LocAsInteger>().getLoc();
       switch (rhs.getSubKind()) {
@@ -344,6 +365,9 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
                              resultTy);
         case nonloc::ConcreteIntKind: {
           // Transform the integer into a location and compare.
+          // FIXME: This only makes sense for comparisons. If we want to, say,
+          // add 1 to a LocAsInteger, we'd better unpack the Loc and add to it,
+          // then pack it back into a LocAsInteger.
           llvm::APSInt i = rhs.castAs<nonloc::ConcreteInt>().getValue();
           BasicVals.getAPSIntType(Context.VoidPtrTy).apply(i);
           return evalBinOpLL(state, op, lhsL, makeLoc(i), resultTy);
@@ -516,11 +540,12 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
       // Does the symbolic expression simplify to a constant?
       // If so, "fold" the constant by setting 'lhs' to a ConcreteInt
       // and try again.
-      ConstraintManager &CMgr = state->getConstraintManager();
-      if (const llvm::APSInt *Constant = CMgr.getSymVal(state, Sym)) {
-        lhs = nonloc::ConcreteInt(*Constant);
-        continue;
-      }
+      SVal simplifiedLhs = simplifySVal(state, lhs);
+      if (simplifiedLhs != lhs)
+        if (auto simplifiedLhsAsNonLoc = simplifiedLhs.getAs<NonLoc>()) {
+          lhs = *simplifiedLhsAsNonLoc;
+          continue;
+        }
 
       // Is the RHS a constant?
       if (const llvm::APSInt *RHSValue = getKnownValue(state, rhs))
@@ -689,7 +714,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     // completely unknowable.
     return UnknownVal();
   }
-  case loc::MemRegionKind: {
+  case loc::MemRegionValKind: {
     if (Optional<loc::ConcreteInt> rInt = rhs.getAs<loc::ConcreteInt>()) {
       // If one of the operands is a symbol and the other is a constant,
       // build an expression for use by the constraint manager.
@@ -718,7 +743,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
 
     // Get both values as regions, if possible.
     const MemRegion *LeftMR = lhs.getAsRegion();
-    assert(LeftMR && "MemRegionKind SVal doesn't have a region!");
+    assert(LeftMR && "MemRegionValKind SVal doesn't have a region!");
 
     const MemRegion *RightMR = rhs.getAsRegion();
     if (!RightMR)
@@ -753,6 +778,12 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     // Note, heap base symbolic regions are assumed to not alias with
     // each other; for example, we assume that malloc returns different address
     // on each invocation.
+    // FIXME: ObjC object pointers always reside on the heap, but currently
+    // we treat their memory space as unknown, because symbolic pointers
+    // to ObjC objects may alias. There should be a way to construct
+    // possibly-aliasing heap-based regions. For instance, MacOSXApiChecker
+    // guesses memory space for ObjC object pointers manually instead of
+    // relying on us.
     if (LeftBase != RightBase &&
         ((!isa<SymbolicRegion>(LeftBase) && !isa<SymbolicRegion>(RightBase)) ||
          (isa<HeapSpaceRegion>(LeftMS) || isa<HeapSpaceRegion>(RightMS))) ){
@@ -857,6 +888,23 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
 SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
                                   BinaryOperator::Opcode op,
                                   Loc lhs, NonLoc rhs, QualType resultTy) {
+  if (op >= BO_PtrMemD && op <= BO_PtrMemI) {
+    if (auto PTMSV = rhs.getAs<nonloc::PointerToMember>()) {
+      if (PTMSV->isNullMemberPointer())
+        return UndefinedVal();
+      if (const FieldDecl *FD = PTMSV->getDeclAs<FieldDecl>()) {
+        SVal Result = lhs;
+
+        for (const auto &I : *PTMSV)
+          Result = StateMgr.getStoreManager().evalDerivedToBase(
+              Result, I->getType(),I->isVirtual());
+        return state->getLValue(FD, Result);
+      }
+    }
+
+    return rhs;
+  }
+
   assert(!BinaryOperator::isComparisonOp(op) &&
          "arguments to comparison ops must be of the same type");
 
@@ -900,20 +948,26 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
   if (const MemRegion *region = lhs.getAsRegion()) {
     rhs = convertToArrayIndex(rhs).castAs<NonLoc>();
     SVal index = UnknownVal();
-    const MemRegion *superR = nullptr;
+    const SubRegion *superR = nullptr;
+    // We need to know the type of the pointer in order to add an integer to it.
+    // Depending on the type, different amount of bytes is added.
     QualType elementType;
 
     if (const ElementRegion *elemReg = dyn_cast<ElementRegion>(region)) {
       assert(op == BO_Add || op == BO_Sub);
       index = evalBinOpNN(state, op, elemReg->getIndex(), rhs,
                           getArrayIndexType());
-      superR = elemReg->getSuperRegion();
+      superR = cast<SubRegion>(elemReg->getSuperRegion());
       elementType = elemReg->getElementType();
     }
     else if (isa<SubRegion>(region)) {
       assert(op == BO_Add || op == BO_Sub);
       index = (op == BO_Add) ? rhs : evalMinus(rhs);
-      superR = region;
+      superR = cast<SubRegion>(region);
+      // TODO: Is this actually reliable? Maybe improving our MemRegion
+      // hierarchy to provide typed regions for all non-void pointers would be
+      // better. For instance, we cannot extend this towards LocAsInteger
+      // operations, where result type of the expression is integer.
       if (resultTy->isAnyPointerType())
         elementType = resultTy->getPointeeType();
     }
@@ -942,4 +996,75 @@ const llvm::APSInt *SimpleSValBuilder::getKnownValue(ProgramStateRef state,
 
   // FIXME: Add support for SymExprs.
   return nullptr;
+}
+
+SVal SimpleSValBuilder::simplifySVal(ProgramStateRef State, SVal V) {
+  // For now, this function tries to constant-fold symbols inside a
+  // nonloc::SymbolVal, and does nothing else. More simplifications should
+  // be possible, such as constant-folding an index in an ElementRegion.
+
+  class Simplifier : public FullSValVisitor<Simplifier, SVal> {
+    ProgramStateRef State;
+    SValBuilder &SVB;
+
+  public:
+    Simplifier(ProgramStateRef State)
+        : State(State), SVB(State->getStateManager().getSValBuilder()) {}
+
+    SVal VisitSymbolData(const SymbolData *S) {
+      if (const llvm::APSInt *I =
+              SVB.getKnownValue(State, nonloc::SymbolVal(S)))
+        return Loc::isLocType(S->getType()) ? (SVal)SVB.makeIntLocVal(*I)
+                                            : (SVal)SVB.makeIntVal(*I);
+      return nonloc::SymbolVal(S);
+    }
+
+    // TODO: Support SymbolCast. Support IntSymExpr when/if we actually
+    // start producing them.
+
+    SVal VisitSymIntExpr(const SymIntExpr *S) {
+      SVal LHS = Visit(S->getLHS());
+      SVal RHS;
+      // By looking at the APSInt in the right-hand side of S, we cannot
+      // figure out if it should be treated as a Loc or as a NonLoc.
+      // So make our guess by recalling that we cannot multiply pointers
+      // or compare a pointer to an integer.
+      if (Loc::isLocType(S->getLHS()->getType()) &&
+          BinaryOperator::isComparisonOp(S->getOpcode())) {
+        // The usual conversion of $sym to &SymRegion{$sym}, as they have
+        // the same meaning for Loc-type symbols, but the latter form
+        // is preferred in SVal computations for being Loc itself.
+        if (SymbolRef Sym = LHS.getAsSymbol()) {
+          assert(Loc::isLocType(Sym->getType()));
+          LHS = SVB.makeLoc(Sym);
+        }
+        RHS = SVB.makeIntLocVal(S->getRHS());
+      } else {
+        RHS = SVB.makeIntVal(S->getRHS());
+      }
+      return SVB.evalBinOp(State, S->getOpcode(), LHS, RHS, S->getType());
+    }
+
+    SVal VisitSymSymExpr(const SymSymExpr *S) {
+      SVal LHS = Visit(S->getLHS());
+      SVal RHS = Visit(S->getRHS());
+      return SVB.evalBinOp(State, S->getOpcode(), LHS, RHS, S->getType());
+    }
+
+    SVal VisitSymExpr(SymbolRef S) { return nonloc::SymbolVal(S); }
+
+    SVal VisitMemRegion(const MemRegion *R) { return loc::MemRegionVal(R); }
+
+    SVal VisitNonLocSymbolVal(nonloc::SymbolVal V) {
+      // Simplification is much more costly than computing complexity.
+      // For high complexity, it may be not worth it.
+      if (V.getSymbol()->computeComplexity() > 100)
+        return V;
+      return Visit(V.getSymbol());
+    }
+
+    SVal VisitSVal(SVal V) { return V; }
+  };
+
+  return Simplifier(State).Visit(V);
 }

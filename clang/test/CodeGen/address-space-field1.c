@@ -37,4 +37,4 @@ void test_addrspace(__addr1 S* p1, __addr2 S*p2) {
   p1->b = p2->a;
 }
 
-// CHECK: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }

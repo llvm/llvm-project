@@ -1,4 +1,4 @@
-//=-- InstrProfWriter.h - Instrumented profiling writer -----------*- C++ -*-=//
+//===- InstrProfWriter.h - Instrumented profiling writer --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,40 +16,87 @@
 #define LLVM_PROFILEDATA_INSTRPROFWRITER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
+#include <cstdint>
+#include <memory>
 
 namespace llvm {
 
 /// Writer for instrumentation based profile data.
+class InstrProfRecordWriterTrait;
+class ProfOStream;
+class raw_fd_ostream;
+
 class InstrProfWriter {
 public:
-  typedef SmallDenseMap<uint64_t, InstrProfRecord, 1> ProfilingData;
+  using ProfilingData = SmallDenseMap<uint64_t, InstrProfRecord>;
+  enum ProfKind { PF_Unknown = 0, PF_FE, PF_IRLevel };
 
 private:
-  InstrProfStringTable StringTable;
+  bool Sparse;
   StringMap<ProfilingData> FunctionData;
-  uint64_t MaxFunctionCount;
-public:
-  InstrProfWriter() : MaxFunctionCount(0) {}
+  ProfKind ProfileKind = PF_Unknown;
+  // Use raw pointer here for the incomplete type object.
+  InstrProfRecordWriterTrait *InfoObj;
 
-  /// Update string entries in profile data with references to StringTable.
-  void updateStringTableReferences(InstrProfRecord &I);
+public:
+  InstrProfWriter(bool Sparse = false);
+  ~InstrProfWriter();
+
   /// Add function counts for the given function. If there are already counts
   /// for this function and the hash and number of counts match, each counter is
-  /// summed.
-  std::error_code addRecord(InstrProfRecord &&I);
+  /// summed. Optionally scale counts by \p Weight.
+  void addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
+                 function_ref<void(Error)> Warn);
+  void addRecord(NamedInstrProfRecord &&I, function_ref<void(Error)> Warn) {
+    addRecord(std::move(I), 1, Warn);
+  }
+
+  /// Merge existing function counts from the given writer.
+  void mergeRecordsFromWriter(InstrProfWriter &&IPW,
+                              function_ref<void(Error)> Warn);
+
   /// Write the profile to \c OS
   void write(raw_fd_ostream &OS);
+
+  /// Write the profile in text format to \c OS
+  Error writeText(raw_fd_ostream &OS);
+
+  /// Write \c Record in text format to \c OS
+  static void writeRecordInText(StringRef Name, uint64_t Hash,
+                                const InstrProfRecord &Counters,
+                                InstrProfSymtab &Symtab, raw_fd_ostream &OS);
+
   /// Write the profile, returning the raw data. For testing.
   std::unique_ptr<MemoryBuffer> writeBuffer();
 
+  /// Set the ProfileKind. Report error if mixing FE and IR level profiles.
+  Error setIsIRLevelProfile(bool IsIRLevel) {
+    if (ProfileKind == PF_Unknown) {
+      ProfileKind = IsIRLevel ? PF_IRLevel: PF_FE;
+      return Error::success();
+    }
+    return (IsIRLevel == (ProfileKind == PF_IRLevel))
+               ? Error::success()
+               : make_error<InstrProfError>(
+                     instrprof_error::unsupported_version);
+  }
+
+  // Internal interface for testing purpose only.
+  void setValueProfDataEndianness(support::endianness Endianness);
+  void setOutputSparse(bool Sparse);
+
 private:
-  std::pair<uint64_t, uint64_t> writeImpl(raw_ostream &OS);
+  void addRecord(StringRef Name, uint64_t Hash, InstrProfRecord &&I,
+                 uint64_t Weight, function_ref<void(Error)> Warn);
+  bool shouldEncodeData(const ProfilingData &PD);
+  void writeImpl(ProfOStream &OS);
 };
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_PROFILEDATA_INSTRPROFWRITER_H

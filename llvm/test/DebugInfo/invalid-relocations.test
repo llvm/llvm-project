@@ -1,0 +1,35 @@
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-dwarfdump %t.o 2>&1 | FileCheck %s
+# CHECK: failed to compute relocation: Unknown
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_386
+Sections:
+  - Type:            SHT_PROGBITS
+    Name:            .text
+    Flags:           [ ]
+    AddressAlign:    0x04
+    Content:         "0000"
+  - Type:            SHT_PROGBITS
+    Name:            .debug_info
+    Flags:           [ ]
+    AddressAlign:    0x04
+    Content:         "0000"
+  - Type:            SHT_REL
+    Name:            .rel.debug_info
+    Link:            .symtab
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0
+        Symbol:          _start
+        Type:            0xFF
+Symbols:
+  Global:
+    - Name:     _start
+      Type:     STT_FUNC
+      Section:  .text
+      Value:    0x0

@@ -1,4 +1,4 @@
-//===-- GCStrategy.cpp - Garbage Collector Description --------------------===//
+//===- GCStrategy.cpp - Garbage Collector Description ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,7 +16,6 @@
 
 using namespace llvm;
 
-GCStrategy::GCStrategy()
-    : UseStatepoints(false), NeededSafePoints(0), CustomReadBarriers(false),
-      CustomWriteBarriers(false), CustomRoots(false), InitRoots(true),
-      UsesMetadata(false) {}
+LLVM_INSTANTIATE_REGISTRY(GCRegistry)
+
+GCStrategy::GCStrategy() = default;

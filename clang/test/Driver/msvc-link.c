@@ -10,3 +10,9 @@
 // DLL: "-defaultlib:libcmt"
 // DLL: "-nologo"
 // DLL: "-dll"
+
+// RUN: %clang -target i686-pc-windows-msvc -L/var/empty -L/usr/lib -### %s 2>&1 | FileCheck --check-prefix LIBPATH %s
+// LIBPATH: "-libpath:/var/empty"
+// LIBPATH: "-libpath:/usr/lib"
+// LIBPATH: "-nologo"
+

@@ -1,0 +1,7 @@
+RUN: llvm-config --link-static --system-libs 2>&1 | FileCheck %s
+REQUIRES: static-libs
+REQUIRES: system-windows
+CHECK-NOT: -l
+CHECK: psapi.lib shell32.lib ole32.lib uuid.lib
+CHECK-NOT: error
+CHECK-NOT: warning

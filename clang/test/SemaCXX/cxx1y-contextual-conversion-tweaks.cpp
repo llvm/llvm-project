@@ -172,6 +172,6 @@ namespace extended_examples_array_bounds {
 #ifdef CXX1Y
 #else
 //expected-error@168 {{ambiguous conversion of array size expression of type 'extended_examples_array_bounds::Foo' to an integral or enumeration type}}
-//expected-note@162 {{conversion to integral type 'size_t'}}
+//expected-note@162 {{conversion to integral type 'extended_examples_array_bounds::size_t'}}
 //expected-note@163 {{conversion to integral type 'unsigned short' declared here}}
 #endif

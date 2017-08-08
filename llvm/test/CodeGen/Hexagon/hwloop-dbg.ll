@@ -37,10 +37,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!29}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "QuIC LLVM Hexagon Clang version 6.1-pre-unknown, (git://git-hexagon-aus.quicinc.com/llvm/clang-mainline.git e9382867661454cdf44addb39430741578e9765c) (llvm/llvm-mainline.git 36412bb1fcf03ed426d4437b41198bae066675ac)", isOptimized: true, emissionKind: 1, file: !28, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "QuIC LLVM Hexagon Clang version 6.1-pre-unknown, (git://git-hexagon-aus.quicinc.com/llvm/clang-mainline.git e9382867661454cdf44addb39430741578e9765c) (llvm/llvm-mainline.git 36412bb1fcf03ed426d4437b41198bae066675ac)", isOptimized: true, emissionKind: FullDebug, file: !28, enums: !2, retainedTypes: !2, globals: !2)
 !2 = !{}
-!3 = !{!5}
-!5 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 1, file: !28, scope: null, type: !7, variables: !11)
+!5 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 1, file: !28, scope: null, type: !7, variables: !11)
 !6 = !DIFile(filename: "hwloop-dbg.c", directory: "/usr2/kparzysz/s.hex/t")
 !7 = !DISubroutineType(types: !8)
 !8 = !{null, !9, !9}

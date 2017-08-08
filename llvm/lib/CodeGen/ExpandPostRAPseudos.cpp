@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
@@ -51,30 +51,26 @@ private:
   bool LowerSubregToReg(MachineInstr *MI);
   bool LowerCopy(MachineInstr *MI);
 
-  void TransferImplicitDefs(MachineInstr *MI);
+  void TransferImplicitOperands(MachineInstr *MI);
 };
 } // end anonymous namespace
 
 char ExpandPostRA::ID = 0;
 char &llvm::ExpandPostRAPseudosID = ExpandPostRA::ID;
 
-INITIALIZE_PASS(ExpandPostRA, "postrapseudos",
+INITIALIZE_PASS(ExpandPostRA, DEBUG_TYPE,
                 "Post-RA pseudo instruction expansion pass", false, false)
 
-/// TransferImplicitDefs - MI is a pseudo-instruction, and the lowered
-/// replacement instructions immediately precede it.  Copy any implicit-def
+/// TransferImplicitOperands - MI is a pseudo-instruction, and the lowered
+/// replacement instructions immediately precede it.  Copy any implicit
 /// operands from MI to the replacement instruction.
-void
-ExpandPostRA::TransferImplicitDefs(MachineInstr *MI) {
+void ExpandPostRA::TransferImplicitOperands(MachineInstr *MI) {
   MachineBasicBlock::iterator CopyMI = MI;
   --CopyMI;
 
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = MI->getOperand(i);
-    if (!MO.isReg() || !MO.isImplicit() || MO.isUse())
-      continue;
-    CopyMI->addOperand(MachineOperand::CreateReg(MO.getReg(), true, true));
-  }
+  for (const MachineOperand &MO : MI->implicit_operands())
+    if (MO.isReg())
+      CopyMI->addOperand(MO);
 }
 
 bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
@@ -146,8 +142,9 @@ bool ExpandPostRA::LowerCopy(MachineInstr *MI) {
   MachineOperand &DstMO = MI->getOperand(0);
   MachineOperand &SrcMO = MI->getOperand(1);
 
-  if (SrcMO.getReg() == DstMO.getReg()) {
-    DEBUG(dbgs() << "identity copy: " << *MI);
+  bool IdentityCopy = (SrcMO.getReg() == DstMO.getReg());
+  if (IdentityCopy || SrcMO.isUndef()) {
+    DEBUG(dbgs() << (IdentityCopy ? "identity copy: " : "undef copy:    ") << *MI);
     // No need to insert an identity copy instruction, but replace with a KILL
     // if liveness is changed.
     if (SrcMO.isUndef() || MI->getNumOperands() > 2) {
@@ -167,7 +164,7 @@ bool ExpandPostRA::LowerCopy(MachineInstr *MI) {
                    DstMO.getReg(), SrcMO.getReg(), SrcMO.isKill());
 
   if (MI->getNumOperands() > 2)
-    TransferImplicitDefs(MI);
+    TransferImplicitOperands(MI);
   DEBUG({
     MachineBasicBlock::iterator dMI = MI;
     dbgs() << "replaced by: " << *(--dMI);
@@ -192,12 +189,12 @@ bool ExpandPostRA::runOnMachineFunction(MachineFunction &MF) {
        mbbi != mbbe; ++mbbi) {
     for (MachineBasicBlock::iterator mi = mbbi->begin(), me = mbbi->end();
          mi != me;) {
-      MachineInstr *MI = mi;
+      MachineInstr &MI = *mi;
       // Advance iterator here because MI may be erased.
       ++mi;
 
       // Only expand pseudos.
-      if (!MI->isPseudo())
+      if (!MI.isPseudo())
         continue;
 
       // Give targets a chance to expand even standard pseudos.
@@ -207,12 +204,12 @@ bool ExpandPostRA::runOnMachineFunction(MachineFunction &MF) {
       }
 
       // Expand standard pseudos.
-      switch (MI->getOpcode()) {
+      switch (MI.getOpcode()) {
       case TargetOpcode::SUBREG_TO_REG:
-        MadeChange |= LowerSubregToReg(MI);
+        MadeChange |= LowerSubregToReg(&MI);
         break;
       case TargetOpcode::COPY:
-        MadeChange |= LowerCopy(MI);
+        MadeChange |= LowerCopy(&MI);
         break;
       case TargetOpcode::DBG_VALUE:
         continue;

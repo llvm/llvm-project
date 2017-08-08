@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin
 
 	%struct.CGLDI = type { %struct.cgli*, i32, i32, i32, i32, i32, i8*, i32, void (%struct.CGLSI*, i32, %struct.CGLDI*)*, i8*, %struct.vv_t }
 	%struct.cgli = type { i32, %struct.cgli*, void (%struct.cgli*, i8*, i8*, i32, i32, i32, i32, i32, i32, i32, i32)*, i32, i8*, i8*, i8*, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, i8*, i32*, %struct._cgro*, %struct._cgro*, float, float, float, float, i32, i8*, float, i8*, [16 x i32] }

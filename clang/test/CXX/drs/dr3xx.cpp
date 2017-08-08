@@ -908,18 +908,21 @@ namespace dr372 { // dr372: no
   }
 }
 
-namespace dr373 { // dr373: no
-  // FIXME: This is valid.
-  namespace X { int dr373; } // expected-note 2{{here}}
+namespace dr373 { // dr373: 5
+  namespace X { int dr373; }
   struct dr373 { // expected-note {{here}}
     void f() {
-      using namespace dr373::X; // expected-error {{no namespace named 'X' in 'dr373::dr373'}}
+      using namespace dr373::X;
       int k = dr373; // expected-error {{does not refer to a value}}
 
-      namespace Y = dr373::X; // expected-error {{no namespace named 'X' in 'dr373::dr373'}}
+      namespace Y = dr373::X;
       k = Y::dr373;
     }
   };
+
+  struct A { struct B {}; }; // expected-note 2{{here}}
+  namespace X = A::B;   // expected-error {{expected namespace name}}
+  using namespace A::B; // expected-error {{expected namespace name}}
 }
 
 namespace dr374 { // dr374: yes c++11

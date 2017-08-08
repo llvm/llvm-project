@@ -2,6 +2,8 @@ RUN: yaml2obj %p/Inputs/COFF/i386.yaml | llvm-nm -a -S - \
 RUN:         | FileCheck %s -check-prefix COFF32
 RUN: yaml2obj %p/Inputs/COFF/x86-64.yaml | llvm-nm -a -S - \
 RUN:         | FileCheck %s -check-prefix COFF64
+RUN: llvm-nm %p/Inputs/trivial-object-test.wasm \
+RUN:         | FileCheck %s -check-prefix WASM
 RUN: llvm-nm %p/Inputs/trivial-object-test.elf-i386 \
 RUN:         | FileCheck %s -check-prefix ELF
 RUN: llvm-nm %p/Inputs/trivial-object-test.elf-i386 -S \
@@ -57,6 +59,11 @@ COFF32-NEXT:          U _SomeOtherFunction
 COFF32-NEXT: 00000000 T _main
 COFF32-NEXT:          U _puts
 
+WASM:               U SomeOtherFunction
+WASM-NEXT: 00000002 T main
+WASM-NEXT:          U puts
+WASM-NEXT: 00000001 D var
+
 COFF64: 00000000 d .data
 COFF64-NEXT: 00000000 t .text
 COFF64-NEXT: 00000000 r ??__Ex@@YAXXZ
@@ -79,10 +86,9 @@ ELF:          U SomeOtherFunction
 ELF: 00000000 T main
 ELF:          U puts
 
-FIXME: we should not print the size of undefined symbols.
-ELF-SIZE:               00000000 U SomeOtherFunction
+ELF-SIZE:                        U SomeOtherFunction
 ELF-SIZE-NEXT: 00000000 00000024 T main
-ELF-SIZE-NEXT:          00000000 U puts
+ELF-SIZE-NEXT:                   U puts
 
 ELF-o: {{.*}}/trivial-object-test.elf-i386:          U SomeOtherFunction
 ELF-o: {{.*}}/trivial-object-test.elf-i386: 00000000 T main

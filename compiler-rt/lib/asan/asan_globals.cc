@@ -25,6 +25,7 @@
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
+#include "sanitizer_common/sanitizer_symbolizer.h"
 
 namespace __asan {
 
@@ -123,16 +124,68 @@ int GetGlobalsForAddress(uptr addr, Global *globals, u32 *reg_sites,
   return res;
 }
 
-bool GetInfoForAddressIfGlobal(uptr addr, AddressDescription *descr) {
-  Global g = {};
-  if (GetGlobalsForAddress(addr, &g, nullptr, 1)) {
-    internal_strncpy(descr->name, g.name, descr->name_size);
-    descr->region_address = g.beg;
-    descr->region_size = g.size;
-    descr->region_kind = "global";
-    return true;
+enum GlobalSymbolState {
+  UNREGISTERED = 0,
+  REGISTERED = 1
+};
+
+// Check ODR violation for given global G via special ODR indicator. We use
+// this method in case compiler instruments global variables through their
+// local aliases.
+static void CheckODRViolationViaIndicator(const Global *g) {
+  u8 *odr_indicator = reinterpret_cast<u8 *>(g->odr_indicator);
+  if (*odr_indicator == UNREGISTERED) {
+    *odr_indicator = REGISTERED;
+    return;
   }
-  return false;
+  // If *odr_indicator is DEFINED, some module have already registered
+  // externally visible symbol with the same name. This is an ODR violation.
+  for (ListOfGlobals *l = list_of_all_globals; l; l = l->next) {
+    if (g->odr_indicator == l->g->odr_indicator &&
+        (flags()->detect_odr_violation >= 2 || g->size != l->g->size) &&
+        !IsODRViolationSuppressed(g->name))
+      ReportODRViolation(g, FindRegistrationSite(g),
+                         l->g, FindRegistrationSite(l->g));
+  }
+}
+
+// Check ODR violation for given global G by checking if it's already poisoned.
+// We use this method in case compiler doesn't use private aliases for global
+// variables.
+static void CheckODRViolationViaPoisoning(const Global *g) {
+  if (__asan_region_is_poisoned(g->beg, g->size_with_redzone)) {
+    // This check may not be enough: if the first global is much larger
+    // the entire redzone of the second global may be within the first global.
+    for (ListOfGlobals *l = list_of_all_globals; l; l = l->next) {
+      if (g->beg == l->g->beg &&
+          (flags()->detect_odr_violation >= 2 || g->size != l->g->size) &&
+          !IsODRViolationSuppressed(g->name))
+        ReportODRViolation(g, FindRegistrationSite(g),
+                           l->g, FindRegistrationSite(l->g));
+    }
+  }
+}
+
+// Clang provides two different ways for global variables protection:
+// it can poison the global itself or its private alias. In former
+// case we may poison same symbol multiple times, that can help us to
+// cheaply detect ODR violation: if we try to poison an already poisoned
+// global, we have ODR violation error.
+// In latter case, we poison each symbol exactly once, so we use special
+// indicator symbol to perform similar check.
+// In either case, compiler provides a special odr_indicator field to Global
+// structure, that can contain two kinds of values:
+//   1) Non-zero value. In this case, odr_indicator is an address of
+//      corresponding indicator variable for given global.
+//   2) Zero. This means that we don't use private aliases for global variables
+//      and can freely check ODR violation with the first method.
+//
+// This routine chooses between two different methods of ODR violation
+// detection.
+static inline bool UseODRIndicator(const Global *g) {
+  // Use ODR indicator method iff use_odr_indicator flag is set and
+  // indicator symbol address is not 0.
+  return flags()->use_odr_indicator && g->odr_indicator > 0;
 }
 
 // Register a global variable.
@@ -144,22 +197,24 @@ static void RegisterGlobal(const Global *g) {
     ReportGlobal(*g, "Added");
   CHECK(flags()->report_globals);
   CHECK(AddrIsInMem(g->beg));
-  CHECK(AddrIsAlignedByGranularity(g->beg));
+  if (!AddrIsAlignedByGranularity(g->beg)) {
+    Report("The following global variable is not properly aligned.\n");
+    Report("This may happen if another global with the same name\n");
+    Report("resides in another non-instrumented module.\n");
+    Report("Or the global comes from a C file built w/o -fno-common.\n");
+    Report("In either case this is likely an ODR violation bug,\n");
+    Report("but AddressSanitizer can not provide more details.\n");
+    ReportODRViolation(g, FindRegistrationSite(g), g, FindRegistrationSite(g));
+    CHECK(AddrIsAlignedByGranularity(g->beg));
+  }
   CHECK(AddrIsAlignedByGranularity(g->size_with_redzone));
   if (flags()->detect_odr_violation) {
     // Try detecting ODR (One Definition Rule) violation, i.e. the situation
     // where two globals with the same name are defined in different modules.
-    if (__asan_region_is_poisoned(g->beg, g->size_with_redzone)) {
-      // This check may not be enough: if the first global is much larger
-      // the entire redzone of the second global may be within the first global.
-      for (ListOfGlobals *l = list_of_all_globals; l; l = l->next) {
-        if (g->beg == l->g->beg &&
-            (flags()->detect_odr_violation >= 2 || g->size != l->g->size) &&
-            !IsODRViolationSuppressed(g->name))
-          ReportODRViolation(g, FindRegistrationSite(g),
-                             l->g, FindRegistrationSite(l->g));
-      }
-    }
+    if (UseODRIndicator(g))
+      CheckODRViolationViaIndicator(g);
+    else
+      CheckODRViolationViaPoisoning(g);
   }
   if (CanPoisonMemory())
     PoisonRedZones(*g);
@@ -190,6 +245,12 @@ static void UnregisterGlobal(const Global *g) {
   // We unpoison the shadow memory for the global but we do not remove it from
   // the list because that would require O(n^2) time with the current list
   // implementation. It might not be worth doing anyway.
+
+  // Release ODR indicator.
+  if (UseODRIndicator(g)) {
+    u8 *odr_indicator = reinterpret_cast<u8 *>(g->odr_indicator);
+    *odr_indicator = UNREGISTERED;
+  }
 }
 
 void StopInitOrderChecking() {
@@ -207,10 +268,89 @@ void StopInitOrderChecking() {
   }
 }
 
+static bool IsASCII(unsigned char c) { return /*0x00 <= c &&*/ c <= 0x7F; }
+
+const char *MaybeDemangleGlobalName(const char *name) {
+  // We can spoil names of globals with C linkage, so use an heuristic
+  // approach to check if the name should be demangled.
+  bool should_demangle = false;
+  if (name[0] == '_' && name[1] == 'Z')
+    should_demangle = true;
+  else if (SANITIZER_WINDOWS && name[0] == '\01' && name[1] == '?')
+    should_demangle = true;
+
+  return should_demangle ? Symbolizer::GetOrInit()->Demangle(name) : name;
+}
+
+// Check if the global is a zero-terminated ASCII string. If so, print it.
+void PrintGlobalNameIfASCII(InternalScopedString *str, const __asan_global &g) {
+  for (uptr p = g.beg; p < g.beg + g.size - 1; p++) {
+    unsigned char c = *(unsigned char *)p;
+    if (c == '\0' || !IsASCII(c)) return;
+  }
+  if (*(char *)(g.beg + g.size - 1) != '\0') return;
+  str->append("  '%s' is ascii string '%s'\n", MaybeDemangleGlobalName(g.name),
+              (char *)g.beg);
+}
+
+static const char *GlobalFilename(const __asan_global &g) {
+  const char *res = g.module_name;
+  // Prefer the filename from source location, if is available.
+  if (g.location) res = g.location->filename;
+  CHECK(res);
+  return res;
+}
+
+void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g) {
+  str->append("%s", GlobalFilename(g));
+  if (!g.location) return;
+  if (g.location->line_no) str->append(":%d", g.location->line_no);
+  if (g.location->column_no) str->append(":%d", g.location->column_no);
+}
+
 } // namespace __asan
 
 // ---------------------- Interface ---------------- {{{1
 using namespace __asan;  // NOLINT
+
+
+// Apply __asan_register_globals to all globals found in the same loaded
+// executable or shared library as `flag'. The flag tracks whether globals have
+// already been registered or not for this image.
+void __asan_register_image_globals(uptr *flag) {
+  if (*flag)
+    return;
+  AsanApplyToGlobals(__asan_register_globals, flag);
+  *flag = 1;
+}
+
+// This mirrors __asan_register_image_globals.
+void __asan_unregister_image_globals(uptr *flag) {
+  if (!*flag)
+    return;
+  AsanApplyToGlobals(__asan_unregister_globals, flag);
+  *flag = 0;
+}
+
+void __asan_register_elf_globals(uptr *flag, void *start, void *stop) {
+  if (*flag) return;
+  if (!start) return;
+  CHECK_EQ(0, ((uptr)stop - (uptr)start) % sizeof(__asan_global));
+  __asan_global *globals_start = (__asan_global*)start;
+  __asan_global *globals_stop = (__asan_global*)stop;
+  __asan_register_globals(globals_start, globals_stop - globals_start);
+  *flag = 1;
+}
+
+void __asan_unregister_elf_globals(uptr *flag, void *start, void *stop) {
+  if (!*flag) return;
+  if (!start) return;
+  CHECK_EQ(0, ((uptr)stop - (uptr)start) % sizeof(__asan_global));
+  __asan_global *globals_start = (__asan_global*)start;
+  __asan_global *globals_stop = (__asan_global*)stop;
+  __asan_unregister_globals(globals_start, globals_stop - globals_start);
+  *flag = 0;
+}
 
 // Register an array of globals.
 void __asan_register_globals(__asan_global *globals, uptr n) {
@@ -228,6 +368,20 @@ void __asan_register_globals(__asan_global *globals, uptr n) {
     Printf("=== ID %d; %p %p\n", stack_id, &globals[0], &globals[n - 1]);
   }
   for (uptr i = 0; i < n; i++) {
+    if (SANITIZER_WINDOWS && globals[i].beg == 0) {
+      // The MSVC incremental linker may pad globals out to 256 bytes. As long
+      // as __asan_global is less than 256 bytes large and its size is a power
+      // of two, we can skip over the padding.
+      static_assert(
+          sizeof(__asan_global) < 256 &&
+              (sizeof(__asan_global) & (sizeof(__asan_global) - 1)) == 0,
+          "sizeof(__asan_global) incompatible with incremental linker padding");
+      // If these are padding bytes, the rest of the global should be zero.
+      CHECK(globals[i].size == 0 && globals[i].size_with_redzone == 0 &&
+            globals[i].name == nullptr && globals[i].module_name == nullptr &&
+            globals[i].odr_indicator == 0);
+      continue;
+    }
     RegisterGlobal(&globals[i]);
   }
 }
@@ -238,6 +392,11 @@ void __asan_unregister_globals(__asan_global *globals, uptr n) {
   if (!flags()->report_globals) return;
   BlockingMutexLock lock(&mu_for_globals);
   for (uptr i = 0; i < n; i++) {
+    if (SANITIZER_WINDOWS && globals[i].beg == 0) {
+      // Skip globals that look like padding from the MSVC incremental linker.
+      // See comment in __asan_register_globals.
+      continue;
+    }
     UnregisterGlobal(&globals[i]);
   }
 }
@@ -248,10 +407,10 @@ void __asan_unregister_globals(__asan_global *globals, uptr n) {
 // initializer can only touch global variables in the same TU.
 void __asan_before_dynamic_init(const char *module_name) {
   if (!flags()->check_initialization_order ||
-      !CanPoisonMemory())
+      !CanPoisonMemory() ||
+      !dynamic_init_globals)
     return;
   bool strict_init_order = flags()->strict_init_order;
-  CHECK(dynamic_init_globals);
   CHECK(module_name);
   CHECK(asan_inited);
   BlockingMutexLock lock(&mu_for_globals);
@@ -274,7 +433,8 @@ void __asan_before_dynamic_init(const char *module_name) {
 // TU are poisoned.  It simply unpoisons all dynamically initialized globals.
 void __asan_after_dynamic_init() {
   if (!flags()->check_initialization_order ||
-      !CanPoisonMemory())
+      !CanPoisonMemory() ||
+      !dynamic_init_globals)
     return;
   CHECK(asan_inited);
   BlockingMutexLock lock(&mu_for_globals);

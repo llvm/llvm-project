@@ -202,6 +202,12 @@ void test7() {
     if (true) continue;
     i--;
   }
+
+  // But do warn if the continue is in a nested loop.
+  for (;;i--) { // expected-note{{decremented here}}
+    for (int j = 0; j < 10; ++j) continue;
+    i--; // expected-warning{{decremented both}}
+  }
 }
 
 struct iterator {
@@ -259,4 +265,16 @@ void test8() {
     if (true) continue;
     i--;
   }
+
+  // But do warn if the continue is in a nested loop.
+  for (;;i--) { // expected-note{{decremented here}}
+    for (int j = 0; j < 10; ++j) continue;
+    i--; // expected-warning{{decremented both}}
+  }
+}
+
+int f(int);
+void test9() {
+  // Don't warn when variable is defined by the loop condition.
+  for (int i = 0; int x = f(i); ++i) {}
 }

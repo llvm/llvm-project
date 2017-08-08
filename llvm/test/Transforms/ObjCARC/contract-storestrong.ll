@@ -217,6 +217,45 @@ entry:
   ret i1 %t
 }
 
+; Make sure that we form the store strong even if there are bitcasts on
+; the pointers.
+; CHECK-LABEL: define void @test12(
+; CHECK: entry:
+; CHECK-NEXT: %p16 = bitcast i8** @x to i16**
+; CHECK-NEXT: %tmp16 = load i16*, i16** %p16, align 8
+; CHECK-NEXT: %tmp8 = bitcast i16* %tmp16 to i8*
+; CHECK-NEXT: %p32 = bitcast i8** @x to i32**
+; CHECK-NEXT: %v32 = bitcast i8* %p to i32*
+; CHECK-NEXT: %0 = bitcast i16** %p16 to i8**
+; CHECK-NEXT: tail call void @objc_storeStrong(i8** %0, i8* %p)
+; CHECK-NEXT: ret void
+; CHECK-NEXT: }
+define void @test12(i8* %p) {
+entry:
+  %retain = tail call i8* @objc_retain(i8* %p) nounwind
+  %p16 = bitcast i8** @x to i16**
+  %tmp16 = load i16*, i16** %p16, align 8
+  %tmp8 = bitcast i16* %tmp16 to i8*
+  %p32 = bitcast i8** @x to i32**
+  %v32 = bitcast i8* %retain to i32*
+  store i32* %v32, i32** %p32, align 8
+  tail call void @objc_release(i8* %tmp8) nounwind
+  ret void
+}
+
+; This used to crash.
+; CHECK-LABEL: define i8* @test13(
+; CHECK: tail call void @objc_storeStrong(i8** %{{.*}}, i8* %[[NEW:.*]])
+; CHECK-NEXT: ret i8* %[[NEW]]
+
+define i8* @test13(i8* %a0, i8* %a1, i8** %addr, i8* %new) {
+  %old = load i8*, i8** %addr, align 8
+  call void @objc_release(i8* %old)
+  %retained = call i8* @objc_retain(i8* %new)
+  store i8* %retained, i8** %addr, align 8
+  ret i8* %retained
+}
+
 !0 = !{}
 
 ; CHECK: attributes [[NUW]] = { nounwind }

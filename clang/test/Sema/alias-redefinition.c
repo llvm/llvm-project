@@ -19,9 +19,8 @@ void f4() {}
 void fun4(void) __attribute((alias("f4")));
 void fun4(void);
 
-// FIXME: We should produce a special case error for this.
 void f5() {}
-void __attribute((alias("f5"))) fun5(void) {} // expected-error {{redefinition of 'fun5'}} // expected-note {{previous definition}}
+void __attribute((alias("f5"))) fun5(void) {} // expected-error {{definition 'fun5' cannot also be an alias}}
 
 int var1 __attribute((alias("v1"))); // expected-error {{definition 'var1' cannot also be an alias}}
 static int var2 __attribute((alias("v2"))) = 2; // expected-error {{definition 'var2' cannot also be an alias}}

@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- fixunstfti_test.c - Test __fixunstfti -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -12,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <stdio.h>
+
+// UNSUPPORTED: mips
 
 #if __LDBL_MANT_DIG__ == 113
 

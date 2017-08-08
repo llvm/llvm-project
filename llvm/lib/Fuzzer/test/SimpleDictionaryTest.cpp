@@ -1,10 +1,13 @@
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+
 // Simple test for a fuzzer.
 // The fuzzer must find a string based on dictionary words:
 //   "Elvis"
 //   "Presley"
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstddef>
 #include <cstring>
 #include <iostream>
 

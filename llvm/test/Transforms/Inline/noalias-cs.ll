@@ -34,13 +34,13 @@ entry:
 ; CHECK:   %arrayidx.i = getelementptr inbounds float, float* %a, i64 7
 ; CHECK:   store float %1, float* %arrayidx.i, align 4, !noalias !16
 ; CHECK:   %2 = load float, float* %a, align 4, !alias.scope !16, !noalias !17
-; CHECK:   %arrayidx.i.i.1 = getelementptr inbounds float, float* %b, i64 5
-; CHECK:   store float %2, float* %arrayidx.i.i.1, align 4, !alias.scope !21, !noalias !22
-; CHECK:   %arrayidx1.i.i.2 = getelementptr inbounds float, float* %b, i64 8
-; CHECK:   store float %2, float* %arrayidx1.i.i.2, align 4, !alias.scope !23, !noalias !24
+; CHECK:   %arrayidx.i.i1 = getelementptr inbounds float, float* %b, i64 5
+; CHECK:   store float %2, float* %arrayidx.i.i1, align 4, !alias.scope !21, !noalias !22
+; CHECK:   %arrayidx1.i.i2 = getelementptr inbounds float, float* %b, i64 8
+; CHECK:   store float %2, float* %arrayidx1.i.i2, align 4, !alias.scope !23, !noalias !24
 ; CHECK:   %3 = load float, float* %a, align 4, !alias.scope !16
-; CHECK:   %arrayidx.i.3 = getelementptr inbounds float, float* %b, i64 7
-; CHECK:   store float %3, float* %arrayidx.i.3, align 4, !alias.scope !16
+; CHECK:   %arrayidx.i3 = getelementptr inbounds float, float* %b, i64 7
+; CHECK:   store float %3, float* %arrayidx.i3, align 4, !alias.scope !16
 ; CHECK:   ret void
 ; CHECK: }
 

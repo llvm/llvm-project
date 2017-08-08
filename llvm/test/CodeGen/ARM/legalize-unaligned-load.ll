@@ -1,4 +1,4 @@
-; RUN:  llc -O3 -code-model=default -relocation-model=default -mtriple=armv7l-unknown-linux-gnueabihf -mcpu=generic %s -o - | FileCheck %s
+; RUN:  llc -O3 -code-model=default -mtriple=armv7l-unknown-linux-gnueabihf -mcpu=generic %s -o - | FileCheck %s
 ; Check that we respect the existing chain between loads and stores when we
 ; legalize unaligned loads.
 ; Test case from PR24669.
@@ -10,7 +10,7 @@
 ; CHECK-NOT: str
 ; CHECK: ldr
 ; CHECK: str
-; CHECK: bx
+; CHECK: {{bx|pop.*pc}}
 define i32 @get_set_complex({ float, float }* noalias nocapture %retptr,
                             { i8*, i32 }** noalias nocapture readnone %excinfo,
                             i8* noalias nocapture readnone %env,

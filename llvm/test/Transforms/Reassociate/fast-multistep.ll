@@ -3,9 +3,9 @@
 define float @fmultistep1(float %a, float %b, float %c) {
 ; Check that a*a*b+a*a*c is turned into a*(a*(b+c)).
 ; CHECK-LABEL: @fmultistep1
-; CHECK-NEXT: fadd fast float %c, %b
-; CHECK-NEXT: fmul fast float %a, %tmp2
-; CHECK-NEXT: fmul fast float %tmp3, %a
+; CHECK-NEXT: [[TMP1:%tmp.*]] = fadd fast float %c, %b
+; CHECK-NEXT: [[TMP2:%tmp.*]] = fmul fast float %a, %a
+; CHECK-NEXT: fmul fast float [[TMP2]], [[TMP1]]
 ; CHECK-NEXT: ret float
 
   %t0 = fmul fast float %a, %b

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MSP430.h"
 #include "InstPrinter/MSP430InstPrinter.h"
+#include "MSP430.h"
 #include "MSP430InstrInfo.h"
 #include "MSP430MCInstLower.h"
 #include "MSP430TargetMachine.h"
@@ -42,9 +42,7 @@ namespace {
     MSP430AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
         : AsmPrinter(TM, std::move(Streamer)) {}
 
-    const char *getPassName() const override {
-      return "MSP430 Assembly Printer";
-    }
+    StringRef getPassName() const override { return "MSP430 Assembly Printer"; }
 
     void printOperand(const MachineInstr *MI, int OpNum,
                       raw_ostream &O, const char* Modifier = nullptr);
@@ -157,5 +155,5 @@ void MSP430AsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
 // Force static initialization.
 extern "C" void LLVMInitializeMSP430AsmPrinter() {
-  RegisterAsmPrinter<MSP430AsmPrinter> X(TheMSP430Target);
+  RegisterAsmPrinter<MSP430AsmPrinter> X(getTheMSP430Target());
 }

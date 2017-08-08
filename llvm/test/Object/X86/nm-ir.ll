@@ -6,11 +6,13 @@
 ; CHECK-NEXT: t f2
 ; CHECK-NEXT: W f3
 ; CHECK-NEXT: U f4
+; CHECK-NEXT: w f5
 ; CHECK-NEXT: D g1
 ; CHECK-NEXT: d g2
 ; CHECK-NEXT: C g3
 ; CHECK-NOT: g4
 ; CHECK-NEXT: T global_asm_sym
+; CHECK-NEXT: T ifunc_f1
 ; CHECK-NEXT: t local_asm_sym
 ; CHECK-NEXT: U undef_asm_sy
 
@@ -31,8 +33,11 @@ module asm ".long undef_asm_sym"
 @a2 = internal alias i32, i32* @g1
 
 define void @f1() {
+  call void @f5()
   ret void
 }
+
+@ifunc_f1 = ifunc void (), void ()* @f1
 
 define internal void @f2() {
   ret void
@@ -43,3 +48,5 @@ define linkonce_odr void @f3() {
 }
 
 declare void @f4()
+
+declare extern_weak void @f5()

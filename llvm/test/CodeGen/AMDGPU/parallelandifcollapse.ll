@@ -1,5 +1,4 @@
-; Function Attrs: nounwind
-; RUN: llc -march=r600 -mcpu=redwood -mattr=-promote-alloca < %s | FileCheck %s
+; RUN: llc -march=r600 -mcpu=redwood -mattr=-promote-alloca -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck %s
 ;
 ; CFG flattening should use parallel-and mode to generate branch conditions and
 ; then merge if-regions with the same bodies.
@@ -9,10 +8,10 @@
 ; CHECK-NEXT: OR_INT
 
 ; FIXME: For some reason having the allocas here allowed the flatten cfg pass
-; to do its transfomation, however now that we are using local memory for
+; to do its transformation, however now that we are using local memory for
 ; allocas, the transformation isn't happening.
 
-define void @_Z9chk1D_512v() #0 {
+define amdgpu_kernel void @_Z9chk1D_512v() #0 {
 entry:
   %a0 = alloca i32, align 4
   %b0 = alloca i32, align 4

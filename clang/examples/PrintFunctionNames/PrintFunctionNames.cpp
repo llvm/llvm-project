@@ -69,8 +69,9 @@ public:
     v.TraverseDecl(context.getTranslationUnitDecl());
     clang::Sema &sema = Instance.getSema();
     for (const FunctionDecl *FD : v.LateParsedDecls) {
-      clang::LateParsedTemplate* LPT = sema.LateParsedTemplateMap.lookup(FD);
-      sema.LateTemplateParser(sema.OpaqueParser, *LPT);
+      clang::LateParsedTemplate &LPT =
+          *sema.LateParsedTemplateMap.find(FD)->second;
+      sema.LateTemplateParser(sema.OpaqueParser, LPT);
       llvm::errs() << "late-parsed-decl: \"" << FD->getNameAsString() << "\"\n";
     }   
   }

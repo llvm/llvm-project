@@ -99,7 +99,7 @@
 ; Function Attrs: uwtable
 define void @_Z1bv() #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata i1 false, i64 0, metadata !25, metadata !DIExpression()), !dbg !27
+  tail call void @llvm.dbg.value(metadata i1 false, metadata !25, metadata !DIExpression()), !dbg !27
   tail call void @_Z1fi(i32 0), !dbg !28
   ret void, !dbg !29
 }
@@ -107,13 +107,13 @@ entry:
 ; Function Attrs: uwtable
 define void @_Z1ab(i1 zeroext %u) #0 !dbg !8 {
 entry:
-  tail call void @llvm.dbg.value(metadata i1 %u, i64 0, metadata !13, metadata !DIExpression()), !dbg !30
-  tail call void @llvm.dbg.value(metadata i1 %u, i64 0, metadata !31, metadata !DIExpression()), !dbg !33
+  tail call void @llvm.dbg.value(metadata i1 %u, metadata !13, metadata !DIExpression()), !dbg !30
+  tail call void @llvm.dbg.value(metadata i1 %u, metadata !31, metadata !DIExpression()), !dbg !33
   br i1 %u, label %if.then.i, label %_Z1xb.exit, !dbg !34
 
 if.then.i:                                        ; preds = %entry
   %0 = load i32, i32* @t, align 4, !dbg !35, !tbaa !36
-  tail call void @llvm.dbg.value(metadata i32 %0, i64 0, metadata !40, metadata !DIExpression()), !dbg !35
+  tail call void @llvm.dbg.value(metadata i32 %0, metadata !40, metadata !DIExpression()), !dbg !35
   tail call void @_Z1fi(i32 %0), !dbg !41
   br label %_Z1xb.exit, !dbg !42
 
@@ -125,7 +125,7 @@ _Z1xb.exit:                                       ; preds = %entry, %if.then.i
 declare void @_Z1fi(i32) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
@@ -135,21 +135,20 @@ attributes #2 = { nounwind readnone }
 !llvm.module.flags = !{!21, !22}
 !llvm.ident = !{!23}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "missing-abstract-variables.cc", directory: "/tmp/dbginfo")
 !2 = !{}
-!3 = !{!4, !8, !14}
-!4 = distinct !DISubprogram(name: "b", linkageName: "_Z1bv", line: 13, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 13, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "b", linkageName: "_Z1bv", line: 13, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 13, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "missing-abstract-variables.cc", directory: "/tmp/dbginfo")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
-!8 = distinct !DISubprogram(name: "a", linkageName: "_Z1ab", line: 17, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 17, file: !1, scope: !5, type: !9, variables: !12)
+!8 = distinct !DISubprogram(name: "a", linkageName: "_Z1ab", line: 17, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 17, file: !1, scope: !5, type: !9, variables: !12)
 !9 = !DISubroutineType(types: !10)
 !10 = !{null, !11}
 !11 = !DIBasicType(tag: DW_TAG_base_type, name: "bool", size: 8, align: 8, encoding: DW_ATE_boolean)
 !12 = !{!13}
 !13 = !DILocalVariable(name: "u", line: 17, arg: 1, scope: !8, file: !5, type: !11)
-!14 = distinct !DISubprogram(name: "x", linkageName: "_Z1xb", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 5, file: !1, scope: !5, type: !9, variables: !15)
+!14 = distinct !DISubprogram(name: "x", linkageName: "_Z1xb", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 5, file: !1, scope: !5, type: !9, variables: !15)
 !15 = !{!16, !17}
 !16 = !DILocalVariable(name: "b", line: 5, arg: 1, scope: !14, file: !5, type: !11)
 !17 = !DILocalVariable(name: "s", line: 7, scope: !18, file: !5, type: !20)

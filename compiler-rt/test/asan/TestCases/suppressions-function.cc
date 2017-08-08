@@ -8,6 +8,7 @@
 
 // FIXME: Windows symbolizer needs work to make this pass.
 // XFAIL: android,win32
+// UNSUPPORTED: ios
 
 #include <stdio.h>
 #include <stdlib.h>

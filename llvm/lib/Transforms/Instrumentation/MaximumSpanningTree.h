@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_MAXIMUMSPANNINGTREE_H
-#define LLVM_ANALYSIS_MAXIMUMSPANNINGTREE_H
+#ifndef LLVM_LIB_TRANSFORMS_INSTRUMENTATION_MAXIMUMSPANNINGTREE_H
+#define LLVM_LIB_TRANSFORMS_INSTRUMENTATION_MAXIMUMSPANNINGTREE_H
 
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/IR/BasicBlock.h"
@@ -108,4 +108,4 @@ namespace llvm {
 
 } // End llvm namespace
 
-#endif
+#endif // LLVM_LIB_TRANSFORMS_INSTRUMENTATION_MAXIMUMSPANNINGTREE_H

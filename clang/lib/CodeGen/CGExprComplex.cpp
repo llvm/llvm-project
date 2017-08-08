@@ -13,12 +13,9 @@
 
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -113,6 +110,16 @@ public:
   VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *PE) {
     return Visit(PE->getReplacement());
   }
+  ComplexPairTy VisitCoawaitExpr(CoawaitExpr *S) {
+    return CGF.EmitCoawaitExpr(*S).getComplexVal();
+  }
+  ComplexPairTy VisitCoyieldExpr(CoyieldExpr *S) {
+    return CGF.EmitCoyieldExpr(*S).getComplexVal();
+  }
+  ComplexPairTy VisitUnaryCoawait(const UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+
 
   // l-values.
   ComplexPairTy VisitDeclRefExpr(DeclRefExpr *E) {
@@ -201,7 +208,11 @@ public:
   ComplexPairTy VisitExprWithCleanups(ExprWithCleanups *E) {
     CGF.enterFullExpression(E);
     CodeGenFunction::RunCleanupsScope Scope(CGF);
-    return Visit(E->getSubExpr());
+    ComplexPairTy Vals = Visit(E->getSubExpr());
+    // Defend against dominance problems caused by jumps out of expression
+    // evaluation through the shared cleanup block.
+    Scope.ForceCleanup({&Vals.first, &Vals.second});
+    return Vals;
   }
   ComplexPairTy VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *E) {
     assert(E->getType()->isAnyComplexType() && "Expected complex type!");
@@ -462,6 +473,7 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_ToVoid:
   case CK_VectorSplat:
   case CK_IntegralCast:
+  case CK_BooleanToSignedIntegral:
   case CK_IntegralToBoolean:
   case CK_IntegralToFloating:
   case CK_FloatingToIntegral:
@@ -482,7 +494,9 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_CopyAndAutoreleaseBlockObject:
   case CK_BuiltinFnToFnPtr:
   case CK_ZeroToOCLEvent:
+  case CK_ZeroToOCLQueue:
   case CK_AddressSpaceConversion:
+  case CK_IntToOCLSampler:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_FloatingRealToComplex:
@@ -585,19 +599,25 @@ ComplexPairTy ComplexExprEmitter::EmitComplexBinOpLibCall(StringRef LibCallName,
   // We *must* use the full CG function call building logic here because the
   // complex type has special ABI handling. We also should not forget about
   // special calling convention which may be used for compiler builtins.
-  const CGFunctionInfo &FuncInfo =
-    CGF.CGM.getTypes().arrangeFreeFunctionCall(
-      Op.Ty, Args, FunctionType::ExtInfo(/* No CC here - will be added later */),
-      RequiredArgs::All);
+
+  // We create a function qualified type to state that this call does not have
+  // any exceptions.
+  FunctionProtoType::ExtProtoInfo EPI;
+  EPI = EPI.withExceptionSpec(
+      FunctionProtoType::ExceptionSpecInfo(EST_BasicNoexcept));
+  SmallVector<QualType, 4> ArgsQTys(
+      4, Op.Ty->castAs<ComplexType>()->getElementType());
+  QualType FQTy = CGF.getContext().getFunctionType(Op.Ty, ArgsQTys, EPI);
+  const CGFunctionInfo &FuncInfo = CGF.CGM.getTypes().arrangeFreeFunctionCall(
+      Args, cast<FunctionType>(FQTy.getTypePtr()), false);
+
   llvm::FunctionType *FTy = CGF.CGM.getTypes().GetFunctionType(FuncInfo);
   llvm::Constant *Func = CGF.CGM.CreateBuiltinFunction(FTy, LibCallName);
+  CGCallee Callee = CGCallee::forDirect(Func, FQTy->getAs<FunctionProtoType>());
+
   llvm::Instruction *Call;
-
-  RValue Res = CGF.EmitCall(FuncInfo, Func, ReturnValueSlot(), Args,
-                            nullptr, &Call);
+  RValue Res = CGF.EmitCall(FuncInfo, Callee, ReturnValueSlot(), Args, &Call);
   cast<llvm::CallInst>(Call)->setCallingConv(CGF.CGM.getBuiltinCC());
-  cast<llvm::CallInst>(Call)->setDoesNotThrow();
-
   return Res.getComplexVal();
 }
 

@@ -1,6 +1,12 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -Wnon-pod-varargs
-class X { }; // expected-note {{the implicit copy constructor}} \
-             // expected-note{{the implicit default constructor}}
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s -Wnon-pod-varargs
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s -Wnon-pod-varargs
+
+class X { }; // expected-note {{the implicit copy constructor}}
+// expected-note@-1 {{the implicit default constructor}}
+#if __cplusplus >= 201103L // C++11 or later
+// expected-note@-3 {{candidate constructor (the implicit move constructor) not viable}}
+#endif
 
 int& copycon(X x); // expected-note{{passing argument to parameter}}
 float& copycon(...);

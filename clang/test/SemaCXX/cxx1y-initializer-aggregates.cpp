@@ -61,3 +61,19 @@ namespace nested_aggregate_init {
   };
   static_assert(B(6).f() == 18, "");
 }
+
+namespace use_self {
+  struct FibTree {
+    int n;
+    FibTree *l = // expected-note {{declared here}}
+      n > 1 ? new FibTree{n-1} : &fib0; // expected-error {{default member initializer for 'l' needed}}
+    FibTree *r = // expected-note {{declared here}}
+      n > 2 ? new FibTree{n-2} : &fib0; // expected-error {{default member initializer for 'r' needed}}
+    int v = l->v + r->v;
+
+    static FibTree fib0;
+  };
+  FibTree FibTree::fib0{0, nullptr, nullptr, 1};
+
+  int fib(int n) { return FibTree{n}.v; }
+}

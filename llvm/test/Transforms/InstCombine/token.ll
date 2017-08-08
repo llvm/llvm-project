@@ -9,14 +9,14 @@ bb:
   unreachable
 
 unreachable:
-  %cl = cleanuppad []
-  cleanupret %cl unwind to caller
+  %cl = cleanuppad within none []
+  cleanupret from %cl unwind to caller
 }
 
 ; CHECK-LABEL: define void @test1(
 ; CHECK: unreachable:
-; CHECK:   %cl = cleanuppad []
-; CHECK:   cleanupret %cl unwind to caller
+; CHECK:   %cl = cleanuppad within none []
+; CHECK:   cleanupret from %cl unwind to caller
 
 define void @test2(i8 %A, i8 %B) personality i32 (...)* @__CxxFrameHandler3 {
 bb:
@@ -33,19 +33,15 @@ cont:
 
 catch:
   %phi = phi i32 [ %X, %bb ], [ %Y, %cont ]
-  %cl = catchpad []
-   to label %doit
-   unwind label %endpad
+  %cs = catchswitch within none [label %doit] unwind to caller
 
 doit:
+  %cl = catchpad within %cs []
   call void @g(i32 %phi)
   unreachable
 
 unreachable:
   unreachable
-
-endpad:
-  catchendpad unwind to caller
 }
 
 ; CHECK-LABEL: define void @test2(
@@ -73,25 +69,38 @@ cont2:
 
 catch:
   %phi = phi i32 [ %X, %bb ], [ %Y, %cont ], [ %Y, %cont2 ]
-  %cl = catchpad []
-   to label %doit
-   unwind label %endpad
+  %cs = catchswitch within none [label %doit] unwind to caller
 
 doit:
+  %cl = catchpad within %cs []
   call void @g(i32 %phi)
   unreachable
 
 unreachable:
   unreachable
-
-endpad:
-  catchendpad unwind to caller
 }
 
 ; CHECK-LABEL: define void @test3(
 ; CHECK:  %X = zext i8 %A to i32
 ; CHECK:  %Y = zext i8 %B to i32
 ; CHECK:  %phi = phi i32 [ %X, %bb ], [ %Y, %cont ], [ %Y, %cont2 ]
+
+declare void @foo()
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+
+define void @test4(i8 addrspace(1)* %obj) gc "statepoint-example" {
+bb:
+  unreachable
+
+unreachable:
+  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+  ret void
+}
+
+; CHECK-LABEL: define void @test4(
+; CHECK: unreachable:
+; CHECK:   call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+; CHECK:   ret void
 
 
 declare void @g(i32)

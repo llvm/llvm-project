@@ -55,6 +55,8 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg, void *res, uptr static_tls_begin,
 void DTLS_on_libc_memalign(void *ptr, uptr size);
 DTLS *DTLS_Get();
 void DTLS_Destroy();  // Make sure to call this before the thread is destroyed.
+// Returns true if DTLS of suspended thread is in destruction process.
+bool DTLSInDestruction(DTLS *dtls);
 
 }  // namespace __sanitizer
 

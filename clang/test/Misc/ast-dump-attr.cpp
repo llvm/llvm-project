@@ -150,3 +150,54 @@ void f() {
   // CHECK: DeprecatedAttr
 }
 }
+
+struct __attribute__((objc_bridge_related(NSParagraphStyle,,))) TestBridgedRef;
+// CHECK: CXXRecordDecl{{.*}} struct TestBridgedRef
+// CHECK-NEXT: ObjCBridgeRelatedAttr{{.*}} NSParagraphStyle
+
+void TestExternalSourceSymbolAttr1()
+__attribute__((external_source_symbol(language="Swift", defined_in="module", generated_declaration)));
+// CHECK: FunctionDecl{{.*}} TestExternalSourceSymbolAttr1
+// CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Swift" "module" GeneratedDeclaration
+
+void TestExternalSourceSymbolAttr2()
+__attribute__((external_source_symbol(defined_in="module", language="Swift")));
+// CHECK: FunctionDecl{{.*}} TestExternalSourceSymbolAttr2
+// CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Swift" "module"{{$}}
+
+void TestExternalSourceSymbolAttr3()
+__attribute__((external_source_symbol(generated_declaration, language="Objective-C++", defined_in="module")));
+// CHECK: FunctionDecl{{.*}} TestExternalSourceSymbolAttr3
+// CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Objective-C++" "module" GeneratedDeclaration
+
+void TestExternalSourceSymbolAttr4()
+__attribute__((external_source_symbol(defined_in="Some external file.cs", generated_declaration, language="C Sharp")));
+// CHECK: FunctionDecl{{.*}} TestExternalSourceSymbolAttr4
+// CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "C Sharp" "Some external file.cs" GeneratedDeclaration
+
+void TestExternalSourceSymbolAttr5()
+__attribute__((external_source_symbol(generated_declaration, defined_in="module", language="Swift")));
+// CHECK: FunctionDecl{{.*}} TestExternalSourceSymbolAttr5
+// CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Swift" "module" GeneratedDeclaration
+
+namespace TestSuppress {
+  [[gsl::suppress("at-namespace")]];
+  // CHECK: NamespaceDecl{{.*}} TestSuppress
+  // CHECK-NEXT: EmptyDecl{{.*}}
+  // CHECK-NEXT: SuppressAttr{{.*}} at-namespace
+  [[gsl::suppress("on-decl")]]
+  void TestSuppressFunction();
+  // CHECK: FunctionDecl{{.*}} TestSuppressFunction
+  // CHECK-NEXT SuppressAttr{{.*}} on-decl
+
+  void f() {
+      int *i;
+
+      [[gsl::suppress("on-stmt")]] {
+      // CHECK: AttributedStmt
+      // CHECK-NEXT: SuppressAttr{{.*}} on-stmt
+      // CHECK-NEXT: CompoundStmt
+        i = reinterpret_cast<int*>(7);
+      }
+    }
+}

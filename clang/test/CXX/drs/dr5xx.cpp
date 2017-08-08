@@ -8,6 +8,12 @@
 // with -verify.
 __extension__ typedef __SIZE_TYPE__ size_t;
 void *operator new(size_t); // expected-error 0-1{{missing exception spec}} expected-note{{candidate}}
+#if __cplusplus > 201402L
+namespace std {
+  enum class align_val_t : size_t {};
+}
+void *operator new(size_t, std::align_val_t); // expected-note{{candidate}}
+#endif
 
 namespace dr500 { // dr500: dup 372
   class D;
@@ -148,8 +154,7 @@ namespace dr522 { // dr522: yes
   template<typename T> void b2(volatile T * const *);
   template<typename T> void b2(volatile T * const S::*);
   template<typename T> void b2(volatile T * const S::* const *);
-  // FIXME: This diagnostic isn't very good. The problem is not substitution failure.
-  template<typename T> void b2a(volatile T *S::* const *); // expected-note {{substitution failure}}
+  template<typename T> void b2a(volatile T *S::* const *); // expected-note {{candidate template ignored: deduced type 'volatile int *dr522::S::*const *' of 1st parameter does not match adjusted type 'int *dr522::S::**' of argument}}
 
   template<typename T> struct Base {};
   struct Derived : Base<int> {};
@@ -519,23 +524,12 @@ namespace dr546 { // dr546: yes
 }
 
 namespace dr547 { // dr547: yes
-  // When targeting the MS x86 ABI, the type of a member function includes a
-  // __thiscall qualifier. This is non-conforming, but we still implement
-  // the intent of dr547
-#if defined(_M_IX86) || (defined(__MINGW32__) && !defined(__MINGW64__))
-#define THISCALL __thiscall
-#else
-#define THISCALL
-#endif
-
   template<typename T> struct X;
-  template<typename T> struct X<THISCALL T() const> {};
+  template<typename T> struct X<T() const> {};
   template<typename T, typename C> X<T> f(T C::*) { return X<T>(); }
 
   struct S { void f() const; };
-  X<THISCALL void() const> x = f(&S::f);
-
-#undef THISCALL
+  X<void() const> x = f(&S::f);
 }
 
 namespace dr548 { // dr548: dup 482
@@ -826,7 +820,7 @@ namespace dr577 { // dr577: yes
   }
 }
 
-namespace dr580 { // dr580: no
+namespace dr580 { // dr580: partial
   class C;
   struct A { static C c; };
   struct B { static C c; };
@@ -834,7 +828,7 @@ namespace dr580 { // dr580: no
     C(); // expected-note {{here}}
     ~C(); // expected-note {{here}}
 
-    typedef int I; // expected-note {{here}}
+    typedef int I; // expected-note 2{{here}}
     template<int> struct X;
     template<int> friend struct Y;
     template<int> void f();
@@ -844,7 +838,20 @@ namespace dr580 { // dr580: no
 
   template<C::I> struct C::X {};
   template<C::I> struct Y {};
-  template<C::I> struct Z {}; // FIXME: should reject, accepted because C befriends A!
+  template<C::I> struct Z {}; // expected-error {{private}}
+
+  struct C2 {
+    class X {
+      struct A;
+      typedef int I;
+      friend struct A;
+    };
+    class Y {
+      template<X::I> struct A {}; // FIXME: We incorrectly accept this
+                                  // because we think C2::Y::A<...> might
+                                  // instantiate to C2::X::A
+    };
+  };
 
   template<C::I> void C::f() {}
   template<C::I> void g() {}
@@ -856,14 +863,13 @@ namespace dr580 { // dr580: no
 
 // dr582: na
 
-namespace dr583 { // dr583: no
+namespace dr583 { // dr583: 4
   // see n3624
   int *p;
-  // FIXME: These are all ill-formed.
-  bool b1 = p < 0;
-  bool b2 = p > 0;
-  bool b3 = p <= 0;
-  bool b4 = p >= 0;
+  bool b1 = p < 0; // expected-error {{ordered comparison between pointer and zero}}
+  bool b2 = p > 0; // expected-error {{ordered comparison between pointer and zero}}
+  bool b3 = p <= 0; // expected-error {{ordered comparison between pointer and zero}}
+  bool b4 = p >= 0; // expected-error {{ordered comparison between pointer and zero}}
 }
 
 // dr584: na
@@ -871,13 +877,25 @@ namespace dr583 { // dr583: no
 namespace dr585 { // dr585: yes
   template<typename> struct T;
   struct A {
-    friend T; // expected-error {{requires a type specifier}} expected-error {{can only be classes or functions}}
+    friend T;
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{requires a type specifier}} expected-error@-2 {{can only be classes or functions}}
+#else
+    // expected-error@-4 {{use of class template 'T' requires template arguments; argument deduction not allowed in friend declaration}}
+    // expected-note@-7 {{here}}
+#endif
     // FIXME: It's not clear whether the standard allows this or what it means,
     // but the DR585 writeup suggests it as an alternative.
     template<typename U> friend T<U>; // expected-error {{must use an elaborated type}}
   };
   template<template<typename> class T> struct B {
-    friend T; // expected-error {{requires a type specifier}} expected-error {{can only be classes or functions}}
+    friend T;
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{requires a type specifier}} expected-error@-2 {{can only be classes or functions}}
+#else
+    // expected-error@-4 {{use of template template parameter 'T' requires template arguments; argument deduction not allowed in friend declaration}}
+    // expected-note@-6 {{here}}
+#endif
     template<typename U> friend T<U>; // expected-error {{must use an elaborated type}}
   };
 }
@@ -936,7 +954,7 @@ namespace dr591 { // dr591: no
 
   template<typename T> struct A<T>::B::C : A<T> {
     // FIXME: Should find member of non-dependent base class A<T>.
-    M m; // expected-error {{incomplete type 'M' (aka 'void'}}
+    M m; // expected-error {{incomplete type 'dr591::A::B::M' (aka 'void'}}
   };
 }
 
@@ -947,6 +965,9 @@ namespace dr591 { // dr591: no
 namespace dr595 { // dr595: dup 1330
   template<class T> struct X {
     void f() throw(T) {}
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
   };
   struct S {
     X<S> xs;

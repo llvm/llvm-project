@@ -1,0 +1,24 @@
+; RUN: llvm-xray convert %S/Inputs/fdr-log-version-1.xray -f=yaml -o - | FileCheck %s
+
+; CHECK:      ---
+; CHECK-NEXT: header:
+; CHECK-NEXT:   version:         1
+; CHECK-NEXT:   type:            1
+; CHECK-NEXT:   constant-tsc:    true
+; CHECK-NEXT:   nonstop-tsc:     true
+; CHECK-NEXT:   cycle-frequency: 5678
+; CHECK-NEXT: records:
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407340 }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', cpu: 5, thread: 5, kind: function-exit, tsc: 7238225556407346 }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '2', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407347 }
+; CHECK-NEXT:   - { type: 0, func-id: 3, function: '3', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407387 }
+; CHECK-NEXT:   - { type: 0, func-id: 3, function: '3', cpu: 5, thread: 5, kind: function-exit, tsc: 7238225556407437 }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '2', cpu: 5, thread: 5, kind: function-exit, tsc: 7238225556407467 }
+; CHECK-NEXT:   - { type: 0, func-id: 4, function: '4', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407492 }
+; CHECK-NEXT:   - { type: 0, func-id: 5, function: '5', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407517 }
+; CHECK-NEXT:   - { type: 0, func-id: 5, function: '5', cpu: 5, thread: 5, kind: function-exit, tsc: 7238225556407542 }
+; CHECK-NEXT:   - { type: 0, func-id: 268435455, function: '268435455', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407552 }
+; CHECK-NEXT:   - { type: 0, func-id: 268435455, function: '268435455', cpu: 5, thread: 5, kind: function-exit, tsc: 7238225556407562 }
+; CHECK-NEXT:   - { type: 0, func-id: 6, function: '6', cpu: 6, thread: 5, kind: function-enter, tsc: 7238225556407682 }
+; CHECK-NEXT:   - { type: 0, func-id: 6, function: '6', cpu: 6, thread: 5, kind: function-exit, tsc: 7238225556407755 }
+; CHECK-NEXT: ...

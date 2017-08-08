@@ -25,8 +25,8 @@ define i32 @depth(double* nocapture %A, i32 %m) #0 !dbg !4 {
 entry:
   tail call void @llvm.dbg.value(metadata double* %A, i64 0, metadata !12, metadata !DIExpression()), !dbg !19
   tail call void @llvm.dbg.value(metadata i32 %m, i64 0, metadata !13, metadata !DIExpression()), !dbg !19
-  tail call void @llvm.dbg.value(metadata i32 00, i64 0, metadata !14, metadata !DIExpression()), !dbg !21
-  tail call void @llvm.dbg.value(metadata i32 02, i64 0, metadata !15, metadata !DIExpression()), !dbg !21
+  tail call void @llvm.dbg.value(metadata double 0.0, i64 0, metadata !14, metadata !DIExpression()), !dbg !21
+  tail call void @llvm.dbg.value(metadata double 0.2, i64 0, metadata !15, metadata !DIExpression()), !dbg !21
   tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !16, metadata !DIExpression()), !dbg !23
   %cmp8 = icmp sgt i32 %m, 0, !dbg !23
   br i1 %cmp8, label %for.body.lr.ph, label %for.end, !dbg !23
@@ -57,11 +57,10 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!18, !32}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.4 (trunk 187335) (llvm/trunk 187335:187340M)", isOptimized: true, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.4 (trunk 187335) (llvm/trunk 187335:187340M)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "file.c", directory: "/Users/nadav")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "depth", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !11)
+!4 = distinct !DISubprogram(name: "depth", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !11)
 !5 = !DIFile(filename: "file.c", directory: "/Users/nadav")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !9, !8}

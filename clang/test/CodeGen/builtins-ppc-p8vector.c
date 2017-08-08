@@ -1,11 +1,12 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -faltivec -target-feature +power8-vector -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -faltivec -target-feature +power8-vector -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-LE
-// RUN: not %clang_cc1 -faltivec -target-feature +vsx -triple powerpc64-unknown-unknown -emit-llvm %s -o - 2>&1 | FileCheck %s -check-prefix=CHECK-PPC
+// RUN: %clang_cc1 -target-feature +altivec -target-feature +power8-vector -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -target-feature +altivec -target-feature +power8-vector -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-LE
+// RUN: not %clang_cc1 -target-feature +altivec -target-feature +vsx -triple powerpc64-unknown-unknown -emit-llvm %s -o - 2>&1 | FileCheck %s -check-prefix=CHECK-PPC
 // Added -target-feature +vsx above to avoid errors about "vector double" and to
 // generate the correct errors for functions that are only overloaded with VSX
 // (vec_cmpge, vec_cmple). Without this option, there is only one overload so
 // it is selected.
+#include <altivec.h>
 
 void dummy() { }
 signed int si;
@@ -72,13 +73,6 @@ void test1() {
 // CHECK-LE: call <2 x i64> @llvm.ppc.altivec.vmaxsd(<2 x i64> %{{[0-9]*}}, <2 x i64>
 // CHECK-PPC: error: call to 'vec_abs' is ambiguous
 
-  res_vd = vec_abs(vda);
-// CHECK: store <2 x i64> <i64 9223372036854775807, i64 9223372036854775807>, <2 x i64>*
-// CHECK: and <2 x i64>
-// CHECK-LE: store <2 x i64> <i64 9223372036854775807, i64 9223372036854775807>, <2 x i64>*
-// CHECK-LE: and <2 x i64>
-// CHECK-PPC: error: call to 'vec_abs' is ambiguous
-
   /* vec_add */
   res_vsll = vec_add(vsll, vsll);
 // CHECK: add <2 x i64>
@@ -135,6 +129,26 @@ void test1() {
 // CHECK-LE: @llvm.ppc.altivec.vperm
 // CHECK-PPC: warning: implicit declaration of function 'vec_mergee'
 
+  res_vbll = vec_mergee(vbll, vbll);
+// CHECK: @llvm.ppc.altivec.vperm
+// CHECK-LE: @llvm.ppc.altivec.vperm
+
+  res_vsll = vec_mergee(vsll, vsll);
+// CHECK: @llvm.ppc.altivec.vperm
+// CHECK-LE: @llvm.ppc.altivec.vperm
+
+  res_vull = vec_mergee(vull, vull);
+// CHECK: @llvm.ppc.altivec.vperm
+// CHECK-LE: @llvm.ppc.altivec.vperm
+
+  res_vf = vec_mergee(vfa, vfa);
+// CHECK: @llvm.ppc.altivec.vperm
+// CHECK-LE: @llvm.ppc.altivec.vperm
+
+  res_vd = vec_mergee(vda, vda);
+// CHECK: @llvm.ppc.altivec.vperm
+// CHECK-LE: @llvm.ppc.altivec.vperm
+
   /* vec_mergeo */
   res_vbi = vec_mergeo(vbi, vbi);
 // CHECK: @llvm.ppc.altivec.vperm
@@ -150,6 +164,11 @@ void test1() {
 // CHECK-PPC: warning: implicit declaration of function 'vec_mergeo'
   
   /* vec_cmpeq */
+  res_vbll = vec_cmpeq(vbll, vbll);
+// CHECK: @llvm.ppc.altivec.vcmpequd
+// CHECK-LE: @llvm.ppc.altivec.vcmpequd
+// CHECK-PPC: error: call to 'vec_cmpeq' is ambiguous
+
   res_vbll = vec_cmpeq(vsll, vsll);
 // CHECK: @llvm.ppc.altivec.vcmpequd
 // CHECK-LE: @llvm.ppc.altivec.vcmpequd
@@ -203,15 +222,6 @@ void test1() {
 // CHECK: call <2 x i64> @llvm.ppc.altivec.vcmpgtud(<2 x i64> %{{[0-9]*}}, <2 x i64> %{{[0-9]*}})
 // CHECK-LE: call <2 x i64> @llvm.ppc.altivec.vcmpgtud(<2 x i64> %{{[0-9]*}}, <2 x i64> %{{[0-9]*}})
 // CHECK-PPC: error: call to 'vec_cmplt' is ambiguous
-
-  /* vec_double */
-  res_vd = vec_double(vsll);
-// CHECK: sitofp i64 {{.+}} to double
-// CHECK-BE: sitofp i64 {{.+}} to double
-
-  res_vd = vec_double(vull);
-// CHECK: uitofp i64 {{.+}} to double
-// CHECK-BE: uitofp i64 {{.+}} to double
 
   /* vec_eqv */
   res_vsc =  vec_eqv(vsc, vsc);
@@ -1265,6 +1275,12 @@ void test1() {
 // CHECK-LE: [[T1:%.+]] = and <4 x i32>
 // CHECK-LE: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
 
+  res_vf = vec_nand(vfa, vfa);
+// CHECK: [[T1:%.+]] = and <4 x i32>
+// CHECK: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: [[T1:%.+]] = and <4 x i32>
+// CHECK-LE: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+
   res_vsll = vec_nand(vsll, vsll);
 // CHECK: [[T1:%.+]] = and <2 x i64>
 // CHECK: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
@@ -1278,6 +1294,12 @@ void test1() {
 // CHECK-LE: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
 
   res_vull = vec_nand(vull, vull);
+// CHECK: [[T1:%.+]] = and <2 x i64>
+// CHECK: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
+// CHECK-LE: [[T1:%.+]] = and <2 x i64>
+// CHECK-LE: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
+
+  res_vd = vec_nand(vda, vda);
 // CHECK: [[T1:%.+]] = and <2 x i64>
 // CHECK: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
 // CHECK-LE: [[T1:%.+]] = and <2 x i64>
@@ -1411,6 +1433,18 @@ void test1() {
 // CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
 // CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
 
+  res_vf = vec_orc(vbi, vfa);
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: or <4 x i32> {{%.+}}, [[T1]]
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
+
+  res_vf = vec_orc(vfa, vbi);
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: or <4 x i32> {{%.+}}, [[T1]]
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
+
   res_vsll = vec_orc(vsll, vsll);
 // CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
@@ -1448,6 +1482,18 @@ void test1() {
 // CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
 
   res_vbll = vec_orc(vbll, vbll);
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: or <2 x i64> {{%.+}}, [[T1]]
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
+
+  res_vd = vec_orc(vbll, vda);
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: or <2 x i64> {{%.+}}, [[T1]]
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
+
+  res_vd = vec_orc(vda, vbll);
 // CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
 // CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
@@ -1503,4 +1549,77 @@ void test1() {
 // CHECK: llvm.ppc.altivec.vbpermq
 // CHECK-LE: llvm.ppc.altivec.vbpermq
 // CHECK-PPC: warning: implicit declaration of function 'vec_bperm'
+
+  res_vsll = vec_neg(vsll);
+// CHECK: sub <2 x i64> zeroinitializer, {{%[0-9]+}}
+// CHECK-LE: sub <2 x i64> zeroinitializer, {{%[0-9]+}}
+// CHECK_PPC: call to 'vec_neg' is ambiguous
+
+
+}
+
+
+vector signed int test_vec_addec_signed (vector signed int a, vector signed int b, vector signed int c) {
+  return vec_addec(a, b, c);
+// CHECK-LABEL: @test_vec_addec_signed
+// CHECK: icmp slt i32 {{%[0-9]+}}, 4
+// CHECK: extractelement
+// CHECK: extractelement
+// CHECK: extractelement
+// CHECK: and i32 {{%[0-9]+}}, 1
+// CHECK: zext
+// CHECK: zext
+// CHECK: zext
+// CHECK: add i64
+// CHECK: add i64
+// CHECK: lshr i64
+// CHECK: and i64
+// CHECK: trunc i64 {{%[0-9]+}} to i32
+// CHECK: zext i32
+// CHECK: trunc i64 {{%[0-9]+}} to i32
+// CHECK: sext i32
+// CHECK: add nsw i32
+// CHECK: br label
+// CHECK: ret <4 x i32>
+
+}
+
+
+vector unsigned int test_vec_addec_unsigned (vector unsigned int a, vector unsigned int b, vector unsigned int c) {
+  return vec_addec(a, b, c);
+
+// CHECK-LABEL: @test_vec_addec_unsigned
+// CHECK: icmp slt i32 {{%[0-9]+}}, 4
+// CHECK: extractelement
+// CHECK: and i32
+// CHECK: extractelement
+// CHECK: zext i32
+// CHECK: extractelement
+// CHECK: zext i32
+// CHECK: zext i32
+// CHECK: add i64
+// CHECK: lshr i64
+// CHECK: and i64
+// CHECK: trunc i64 {{%[0-9]+}} to i32
+// CHECK: zext i32
+// CHECK: trunc i64 {{%[0-9]+}} to i32
+// CHECK: sext i32
+// CHECK: add nsw i32
+// CHECK: br label
+// CHECK: ret <4 x i32>
+}
+
+vector signed int test_vec_subec_signed (vector signed int a, vector signed int b, vector signed int c) {
+  return vec_subec(a, b, c);
+// CHECK-LABEL: @test_vec_subec_signed
+// CHECK: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: ret <4 x i32>
+}
+
+vector unsigned int test_vec_subec_unsigned (vector unsigned int a, vector unsigned int b, vector unsigned int c) {
+  return vec_subec(a, b, c);
+
+// CHECK-LABEL: @test_vec_subec_unsigned
+// CHECK: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: ret <4 x i32>
 }

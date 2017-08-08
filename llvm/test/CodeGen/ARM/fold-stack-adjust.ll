@@ -1,4 +1,6 @@
-; RUN: llc -mtriple=thumbv7-apple-none-macho < %s | FileCheck %s
+; Disable shrink-wrapping on the first test otherwise we wouldn't
+; exerce the path for PR18136.
+; RUN: llc -mtriple=thumbv7-apple-none-macho < %s -enable-shrink-wrap=false | FileCheck %s
 ; RUN: llc -mtriple=thumbv6m-apple-none-macho -disable-fp-elim < %s | FileCheck %s --check-prefix=CHECK-T1
 ; RUN: llc -mtriple=thumbv7-apple-darwin-ios -disable-fp-elim < %s | FileCheck %s --check-prefix=CHECK-IOS
 ; RUN: llc -mtriple=thumbv7--linux-gnueabi -disable-fp-elim < %s | FileCheck %s --check-prefix=CHECK-LINUX
@@ -133,7 +135,7 @@ define void @test_fold_point(i1 %tst) minsize {
 
   ; Important to check for beginning of basic block, because if it gets
   ; if-converted the test is probably no longer checking what it should.
-; CHECK: {{LBB[0-9]+_2}}:
+; CHECK: %end
 ; CHECK-NEXT: vpop {d7, d8}
 ; CHECK-NEXT: pop {r4, pc}
 
@@ -214,6 +216,20 @@ if.then:                                          ; preds = %entry
 
 exit:                                             ; preds = %if.then, %entry
   ret float %call1
+}
+
+declare void @use_arr(i32*)
+define void @test_fold_reuse() minsize {
+; CHECK-LABEL: test_fold_reuse:
+; CHECK: push.w {r4, r7, r8, lr}
+; CHECK: sub sp, #24
+; [...]
+; CHECK: add sp, #24
+; CHECK: pop.w {r4, r7, r8, pc}
+  %arr = alloca i8, i32 24
+  call void asm sideeffect "", "~{r8},~{r4}"()
+  call void @bar(i8* %arr)
+  ret void
 }
 
 declare void @llvm.va_start(i8*) nounwind

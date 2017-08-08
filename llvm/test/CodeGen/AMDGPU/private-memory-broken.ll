@@ -1,4 +1,4 @@
-; RUN: not llc -verify-machineinstrs -march=amdgcn -mcpu=SI %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc -verify-machineinstrs -march=amdgcn %s -o /dev/null 2>&1 | FileCheck %s
 ; RUN: not llc -verify-machineinstrs -march=amdgcn -mcpu=tonga %s -o /dev/null 2>&1 | FileCheck %s
 
 ; Make sure promote alloca pass doesn't crash
@@ -7,7 +7,7 @@
 
 declare i32 @foo(i32*) nounwind
 
-define void @call_private(i32 addrspace(1)* %out, i32 %in) nounwind {
+define amdgpu_kernel void @call_private(i32 addrspace(1)* %out, i32 %in) nounwind {
 entry:
   %tmp = alloca [2 x i32]
   %tmp1 = getelementptr [2 x i32], [2 x i32]* %tmp, i32 0, i32 0

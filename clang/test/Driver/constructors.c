@@ -74,3 +74,11 @@
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1       \
 // RUN:     -target arm64-none-none-eabi \
 // RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s
+//
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1        \
+// RUN:     -target sparc-sun-solaris2.11 \
+// RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s
+//
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1        \
+// RUN:     -target i386-pc-solaris2.11 \
+// RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s

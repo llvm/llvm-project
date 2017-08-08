@@ -42,27 +42,43 @@ struct MappingDesc {
 
 #if SANITIZER_LINUX && defined(__mips64)
 
-// Everything is above 0x00e000000000.
+// MIPS64 maps:
+// - 0x0000000000-0x0200000000: Program own segments
+// - 0xa200000000-0xc000000000: PIE program segments
+// - 0xe200000000-0xffffffffff: libraries segments.
 const MappingDesc kMemoryLayout[] = {
-    {0x000000000000ULL, 0x00a000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x00a000000000ULL, 0x00c000000000ULL, MappingDesc::SHADOW, "shadow"},
-    {0x00c000000000ULL, 0x00e000000000ULL, MappingDesc::ORIGIN, "origin"},
-    {0x00e000000000ULL, 0x010000000000ULL, MappingDesc::APP, "app"}};
+    {0x000000000000ULL, 0x000200000000ULL, MappingDesc::APP, "app-1"},
+    {0x000200000000ULL, 0x002200000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x002200000000ULL, 0x004000000000ULL, MappingDesc::SHADOW, "shadow-2"},
+    {0x004000000000ULL, 0x004200000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x004200000000ULL, 0x006000000000ULL, MappingDesc::ORIGIN, "origin-2"},
+    {0x006000000000ULL, 0x006200000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x006200000000ULL, 0x008000000000ULL, MappingDesc::SHADOW, "shadow-3"},
+    {0x008000000000ULL, 0x008200000000ULL, MappingDesc::SHADOW, "shadow-1"},
+    {0x008200000000ULL, 0x00a000000000ULL, MappingDesc::ORIGIN, "origin-3"},
+    {0x00a000000000ULL, 0x00a200000000ULL, MappingDesc::ORIGIN, "origin-1"},
+    {0x00a200000000ULL, 0x00c000000000ULL, MappingDesc::APP, "app-2"},
+    {0x00c000000000ULL, 0x00e200000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x00e200000000ULL, 0x00ffffffffffULL, MappingDesc::APP, "app-3"}};
 
-#define MEM_TO_SHADOW(mem) (((uptr)(mem)) & ~0x4000000000ULL)
-#define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x002000000000)
+#define MEM_TO_SHADOW(mem) (((uptr)(mem)) ^ 0x8000000000ULL)
+#define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x2000000000ULL)
 
 #elif SANITIZER_LINUX && defined(__aarch64__)
 
-// The mapping describes both 39-bits and 42-bits.  AArch64 maps:
-// - 0x00000000000-0x00010000000: 39/42-bits program own segments
-// - 0x05500000000-0x05600000000: 39-bits PIE program segments
-// - 0x07f80000000-0x07fffffffff: 39-bits libraries segments
-// - 0x2aa00000000-0x2ab00000000: 42-bits PIE program segments
-// - 0x3ff00000000-0x3ffffffffff: 42-bits libraries segments
+// The mapping describes both 39-bits, 42-bits, and 48-bits VMA.  AArch64
+// maps:
+// - 0x0000000000000-0x0000010000000: 39/42/48-bits program own segments
+// - 0x0005500000000-0x0005600000000: 39-bits PIE program segments
+// - 0x0007f80000000-0x0007fffffffff: 39-bits libraries segments
+// - 0x002aa00000000-0x002ab00000000: 42-bits PIE program segments
+// - 0x003ff00000000-0x003ffffffffff: 42-bits libraries segments
+// - 0x0aaaaa0000000-0x0aaab00000000: 48-bits PIE program segments
+// - 0xffff000000000-0x1000000000000: 48-bits libraries segments
 // It is fragmented in multiples segments to increase the memory available
 // on 42-bits (12.21% of total VMA available for 42-bits and 13.28 for
-// 39 bits).
+// 39 bits). The 48-bits segments only cover the usual PIE/default segments
+// plus some more segments (262144GB total, 0.39% total VMA).
 const MappingDesc kMemoryLayout[] = {
     {0x00000000000ULL, 0x01000000000ULL, MappingDesc::INVALID, "invalid"},
     {0x01000000000ULL, 0x02000000000ULL, MappingDesc::SHADOW, "shadow-2"},
@@ -103,11 +119,47 @@ const MappingDesc kMemoryLayout[] = {
     {0x3D000000000ULL, 0x3E000000000ULL, MappingDesc::SHADOW, "shadow-8"},
     {0x3E000000000ULL, 0x3F000000000ULL, MappingDesc::ORIGIN, "origin-8"},
     {0x3F000000000ULL, 0x40000000000ULL, MappingDesc::APP, "app-9"},
+    // The mappings below are used only for 48-bits VMA.
+    // TODO(unknown): 48-bit mapping ony covers the usual PIE, non-PIE
+    // segments and some more segments totalizing 262144GB of VMA (which cover
+    // only 0.32% of all 48-bit VMA). Memory avaliability can be increase by
+    // adding multiple application segments like 39 and 42 mapping.
+    {0x0040000000000ULL, 0x0041000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x0041000000000ULL, 0x0042000000000ULL, MappingDesc::APP, "app-10"},
+    {0x0042000000000ULL, 0x0047000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x0047000000000ULL, 0x0048000000000ULL, MappingDesc::SHADOW, "shadow-10"},
+    {0x0048000000000ULL, 0x0049000000000ULL, MappingDesc::ORIGIN, "origin-10"},
+    {0x0049000000000ULL, 0x0050000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x0050000000000ULL, 0x0051000000000ULL, MappingDesc::APP, "app-11"},
+    {0x0051000000000ULL, 0x0056000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x0056000000000ULL, 0x0057000000000ULL, MappingDesc::SHADOW, "shadow-11"},
+    {0x0057000000000ULL, 0x0058000000000ULL, MappingDesc::ORIGIN, "origin-11"},
+    {0x0058000000000ULL, 0x0059000000000ULL, MappingDesc::APP, "app-12"},
+    {0x0059000000000ULL, 0x005E000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x005E000000000ULL, 0x005F000000000ULL, MappingDesc::SHADOW, "shadow-12"},
+    {0x005F000000000ULL, 0x0060000000000ULL, MappingDesc::ORIGIN, "origin-12"},
+    {0x0060000000000ULL, 0x0061000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x0061000000000ULL, 0x0062000000000ULL, MappingDesc::APP, "app-13"},
+    {0x0062000000000ULL, 0x0067000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x0067000000000ULL, 0x0068000000000ULL, MappingDesc::SHADOW, "shadow-13"},
+    {0x0068000000000ULL, 0x0069000000000ULL, MappingDesc::ORIGIN, "origin-13"},
+    {0x0069000000000ULL, 0x0AAAAA0000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x0AAAAA0000000ULL, 0x0AAAB00000000ULL, MappingDesc::APP, "app-14"},
+    {0x0AAAB00000000ULL, 0x0AACAA0000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x0AACAA0000000ULL, 0x0AACB00000000ULL, MappingDesc::SHADOW, "shadow-14"},
+    {0x0AACB00000000ULL, 0x0AADAA0000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x0AADAA0000000ULL, 0x0AADB00000000ULL, MappingDesc::ORIGIN, "origin-14"},
+    {0x0AADB00000000ULL, 0x0FF9F00000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x0FF9F00000000ULL, 0x0FFA000000000ULL, MappingDesc::SHADOW, "shadow-15"},
+    {0x0FFA000000000ULL, 0x0FFAF00000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x0FFAF00000000ULL, 0x0FFB000000000ULL, MappingDesc::ORIGIN, "origin-15"},
+    {0x0FFB000000000ULL, 0x0FFFF00000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x0FFFF00000000ULL, 0x1000000000000ULL, MappingDesc::APP, "app-15"},
 };
 # define MEM_TO_SHADOW(mem) ((uptr)mem ^ 0x6000000000ULL)
 # define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x1000000000ULL)
 
-#elif SANITIZER_LINUX && defined(__powerpc64__)
+#elif SANITIZER_LINUX && SANITIZER_PPC64
 
 const MappingDesc kMemoryLayout[] = {
     {0x000000000000ULL, 0x000100000000ULL, MappingDesc::APP, "low memory"},
@@ -228,10 +280,18 @@ void InitializeInterceptors();
 
 void MsanAllocatorInit();
 void MsanAllocatorThreadFinish();
-void *MsanCalloc(StackTrace *stack, uptr nmemb, uptr size);
-void *MsanReallocate(StackTrace *stack, void *oldp, uptr size,
-                     uptr alignment, bool zeroise);
 void MsanDeallocate(StackTrace *stack, void *ptr);
+
+void *msan_malloc(uptr size, StackTrace *stack);
+void *msan_calloc(uptr nmemb, uptr size, StackTrace *stack);
+void *msan_realloc(void *ptr, uptr size, StackTrace *stack);
+void *msan_valloc(uptr size, StackTrace *stack);
+void *msan_pvalloc(uptr size, StackTrace *stack);
+void *msan_aligned_alloc(uptr alignment, uptr size, StackTrace *stack);
+void *msan_memalign(uptr alignment, uptr size, StackTrace *stack);
+int msan_posix_memalign(void **memptr, uptr alignment, uptr size,
+                        StackTrace *stack);
+
 void InstallTrapHandler();
 void InstallAtExitHandler();
 
@@ -277,11 +337,20 @@ const int STACK_TRACE_TAG_POISON = StackTrace::TAG_CUSTOM + 1;
                 StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(),               \
                 common_flags()->fast_unwind_on_malloc)
 
+// For platforms which support slow unwinder only, we restrict the store context
+// size to 1, basically only storing the current pc. We do this because the slow
+// unwinder which is based on libunwind is not async signal safe and causes
+// random freezes in forking applications as well as in signal handlers.
 #define GET_STORE_STACK_TRACE_PC_BP(pc, bp)                                    \
   BufferedStackTrace stack;                                                    \
-  if (__msan_get_track_origins() > 1 && msan_inited)                           \
-  GetStackTrace(&stack, flags()->store_context_size, pc, bp,                   \
-                common_flags()->fast_unwind_on_malloc)
+  if (__msan_get_track_origins() > 1 && msan_inited) {                         \
+    if (!SANITIZER_CAN_FAST_UNWIND)                                            \
+      GetStackTrace(&stack, Min(1, flags()->store_context_size), pc, bp,       \
+                    false);                                                    \
+    else                                                                       \
+      GetStackTrace(&stack, flags()->store_context_size, pc, bp,               \
+                    common_flags()->fast_unwind_on_malloc);                    \
+  }
 
 #define GET_FATAL_STACK_TRACE_PC_BP(pc, bp)                                    \
   BufferedStackTrace stack;                                                    \
@@ -309,9 +378,21 @@ void MsanTSDDtor(void *tsd);
 
 }  // namespace __msan
 
-#define MSAN_MALLOC_HOOK(ptr, size) \
-  if (&__sanitizer_malloc_hook) __sanitizer_malloc_hook(ptr, size)
-#define MSAN_FREE_HOOK(ptr) \
-  if (&__sanitizer_free_hook) __sanitizer_free_hook(ptr)
+#define MSAN_MALLOC_HOOK(ptr, size)       \
+  do {                                    \
+    if (&__sanitizer_malloc_hook) {       \
+      UnpoisonParam(2);                   \
+      __sanitizer_malloc_hook(ptr, size); \
+    }                                     \
+    RunMallocHooks(ptr, size);            \
+  } while (false)
+#define MSAN_FREE_HOOK(ptr)       \
+  do {                            \
+    if (&__sanitizer_free_hook) { \
+      UnpoisonParam(1);           \
+      __sanitizer_free_hook(ptr); \
+    }                             \
+    RunFreeHooks(ptr);            \
+  } while (false)
 
 #endif  // MSAN_H

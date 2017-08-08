@@ -28,7 +28,7 @@ define void @f2(i8 *%src1, i8 *%src2, i32 *%dest) {
 ; CHECK: clst %r2, %r3
 ; CHECK-NEXT: jo [[LABEL]]
 ; CHECK-NEXT: BB#{{[0-9]+}}
-; CHECK-NEXT: je {{\.L.*}}
+; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
   %res = call i32 @strcmp(i8 *%src1, i8 *%src2)
   %cmp = icmp eq i32 %res, 0
@@ -54,7 +54,7 @@ define i32 @f3(i8 *%src1, i8 *%src2, i32 *%dest) {
 ; CHECK-NEXT: ipm [[REG:%r[0-5]]]
 ; CHECK: srl [[REG]], 28
 ; CHECK: rll %r2, [[REG]], 31
-; CHECK: jl {{\.L*}}
+; CHECK: blr %r14
 ; CHECK: br %r14
 entry:
   %res = call i32 @strcmp(i8 *%src1, i8 *%src2)

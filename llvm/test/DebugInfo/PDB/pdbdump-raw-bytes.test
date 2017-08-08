@@ -1,0 +1,25 @@
+; RUN: llvm-pdbutil bytes -byte-range=20-60 %p/Inputs/empty.pdb | FileCheck --check-prefix=VALID %s
+; RUN: not llvm-pdbutil bytes -byte-range=100-20 %p/Inputs/empty.pdb 2>&1 | FileCheck --check-prefix=INVALID %s
+; RUN: not llvm-pdbutil bytes -byte-range=100000-200000 %p/Inputs/empty.pdb 2>&1 | FileCheck --check-prefix=INVALID-RANGE %s
+
+; RUN: llvm-pdbutil bytes -name-map %p/Inputs/empty.pdb | FileCheck --check-prefix=NAME-MAP %s
+
+
+VALID:                               MSF Bytes
+VALID-NEXT: ============================================================
+VALID-NEXT:  Bytes (
+VALID-NEXT:    0014: 372E3030 0D0A1A44 53000000 00100000 02000000 19000000 88000000 00000000  |7.00...DS.......................|
+VALID-NEXT:    0034: 18000000 00000000 00                                                     |.........|
+VALID-NEXT:  )
+
+INVALID: llvm-pdbutil: Invalid byte range specified.  Max < Min
+
+INVALID-RANGE: llvm-pdbutil: Invalid byte range specified.  Requested byte larger than file size
+
+NAME-MAP:                            Named Stream Map
+NAME-MAP-NEXT: ============================================================
+NAME-MAP-NEXT:   Named Stream Map (
+NAME-MAP-NEXT:     1301C: 22000000 2F4C696E 6B496E66 6F002F6E 616D6573 002F7372 632F6865 61646572  |".../LinkInfo./names./src/header|
+NAME-MAP-NEXT:     1303C: 626C6F63 6B000300 00000600 00000100 00001A00 00000000 00001100 00000900  |block...........................|
+NAME-MAP-NEXT:     1305C: 00000A00 00000D00 00000000 00000500 0000                                 |..................|
+NAME-MAP-NEXT:   )

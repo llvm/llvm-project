@@ -10,7 +10,6 @@ A a;
 // CHECK-SAME:           baseType: [[ARRAY_TYPE:![0-9]+]]
 // CHECK: [[ARRAY_TYPE]] = !DICompositeType(tag: DW_TAG_array_type,
 // CHECK-NOT:                               size:
-// CHECK-SAME:                              align: 32
 // CHECK-SAME:                              elements: [[ELEM_TYPE:![0-9]+]]
 // CHECK: [[ELEM_TYPE]] = !{[[SUBRANGE:.*]]}
 // CHECK: [[SUBRANGE]] = !DISubrange(count: -1)

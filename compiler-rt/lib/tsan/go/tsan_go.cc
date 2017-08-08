@@ -28,10 +28,6 @@ bool IsExpectedReport(uptr addr, uptr size) {
   return false;
 }
 
-ReportLocation *SymbolizeData(uptr addr) {
-  return 0;
-}
-
 void *internal_alloc(MBlockType typ, uptr sz) {
   return InternalAlloc(sz);
 }
@@ -40,7 +36,16 @@ void internal_free(void *p) {
   InternalFree(p);
 }
 
-struct SymbolizeContext {
+// Callback into Go.
+static void (*go_runtime_cb)(uptr cmd, void *ctx);
+
+enum {
+  CallbackGetProc = 0,
+  CallbackSymbolizeCode = 1,
+  CallbackSymbolizeData = 2,
+};
+
+struct SymbolizeCodeContext {
   uptr pc;
   char *func;
   char *file;
@@ -49,30 +54,82 @@ struct SymbolizeContext {
   uptr res;
 };
 
-// Callback into Go.
-static void (*symbolize_cb)(SymbolizeContext *ctx);
-
 SymbolizedStack *SymbolizeCode(uptr addr) {
   SymbolizedStack *s = SymbolizedStack::New(addr);
-  SymbolizeContext ctx;
-  internal_memset(&ctx, 0, sizeof(ctx));
-  ctx.pc = addr;
-  symbolize_cb(&ctx);
-  if (ctx.res) {
+  SymbolizeCodeContext cbctx;
+  internal_memset(&cbctx, 0, sizeof(cbctx));
+  cbctx.pc = addr;
+  go_runtime_cb(CallbackSymbolizeCode, &cbctx);
+  if (cbctx.res) {
     AddressInfo &info = s->info;
-    info.module_offset = ctx.off;
-    info.function = internal_strdup(ctx.func ? ctx.func : "??");
-    info.file = internal_strdup(ctx.file ? ctx.file : "-");
-    info.line = ctx.line;
+    info.module_offset = cbctx.off;
+    info.function = internal_strdup(cbctx.func ? cbctx.func : "??");
+    info.file = internal_strdup(cbctx.file ? cbctx.file : "-");
+    info.line = cbctx.line;
     info.column = 0;
   }
   return s;
 }
 
-extern "C" {
+struct SymbolizeDataContext {
+  uptr addr;
+  uptr heap;
+  uptr start;
+  uptr size;
+  char *name;
+  char *file;
+  uptr line;
+  uptr res;
+};
+
+ReportLocation *SymbolizeData(uptr addr) {
+  SymbolizeDataContext cbctx;
+  internal_memset(&cbctx, 0, sizeof(cbctx));
+  cbctx.addr = addr;
+  go_runtime_cb(CallbackSymbolizeData, &cbctx);
+  if (!cbctx.res)
+    return 0;
+  if (cbctx.heap) {
+    MBlock *b = ctx->metamap.GetBlock(cbctx.start);
+    if (!b)
+      return 0;
+    ReportLocation *loc = ReportLocation::New(ReportLocationHeap);
+    loc->heap_chunk_start = cbctx.start;
+    loc->heap_chunk_size = b->siz;
+    loc->tid = b->tid;
+    loc->stack = SymbolizeStackId(b->stk);
+    return loc;
+  } else {
+    ReportLocation *loc = ReportLocation::New(ReportLocationGlobal);
+    loc->global.name = internal_strdup(cbctx.name ? cbctx.name : "??");
+    loc->global.file = internal_strdup(cbctx.file ? cbctx.file : "??");
+    loc->global.line = cbctx.line;
+    loc->global.start = cbctx.start;
+    loc->global.size = cbctx.size;
+    return loc;
+  }
+}
 
 static ThreadState *main_thr;
 static bool inited;
+
+static Processor* get_cur_proc() {
+  if (UNLIKELY(!inited)) {
+    // Running Initialize().
+    // We have not yet returned the Processor to Go, so we cannot ask it back.
+    // Currently, Initialize() does not use the Processor, so return nullptr.
+    return nullptr;
+  }
+  Processor *proc;
+  go_runtime_cb(CallbackGetProc, &proc);
+  return proc;
+}
+
+Processor *ThreadState::proc() {
+  return get_cur_proc();
+}
+
+extern "C" {
 
 static ThreadState *AllocGoroutine() {
   ThreadState *thr = (ThreadState*)internal_alloc(MBlockThreadContex,
@@ -81,11 +138,13 @@ static ThreadState *AllocGoroutine() {
   return thr;
 }
 
-void __tsan_init(ThreadState **thrp, void (*cb)(SymbolizeContext *cb)) {
-  symbolize_cb = cb;
+void __tsan_init(ThreadState **thrp, Processor **procp,
+                 void (*cb)(uptr cmd, void *cb)) {
+  go_runtime_cb = cb;
   ThreadState *thr = AllocGoroutine();
   main_thr = *thrp = thr;
   Initialize(thr);
+  *procp = thr->proc1;
   inited = true;
 }
 
@@ -140,22 +199,35 @@ void __tsan_func_exit(ThreadState *thr) {
   FuncExit(thr);
 }
 
-void __tsan_malloc(void *p, uptr sz) {
-  if (!inited)
-    return;
+void __tsan_malloc(ThreadState *thr, uptr pc, uptr p, uptr sz) {
+  CHECK(inited);
+  if (thr && pc)
+    ctx->metamap.AllocBlock(thr, pc, p, sz);
   MemoryResetRange(0, 0, (uptr)p, sz);
+}
+
+void __tsan_free(uptr p, uptr sz) {
+  ctx->metamap.FreeRange(get_cur_proc(), p, sz);
 }
 
 void __tsan_go_start(ThreadState *parent, ThreadState **pthr, void *pc) {
   ThreadState *thr = AllocGoroutine();
   *pthr = thr;
   int goid = ThreadCreate(parent, (uptr)pc, 0, true);
-  ThreadStart(thr, goid, 0);
+  ThreadStart(thr, goid, 0, /*workerthread*/ false);
 }
 
 void __tsan_go_end(ThreadState *thr) {
   ThreadFinish(thr);
   internal_free(thr);
+}
+
+void __tsan_proc_create(Processor **pproc) {
+  *pproc = ProcCreate();
+}
+
+void __tsan_proc_destroy(Processor *proc) {
+  ProcDestroy(proc);
 }
 
 void __tsan_acquire(ThreadState *thr, void *addr) {
@@ -175,13 +247,17 @@ void __tsan_finalizer_goroutine(ThreadState *thr) {
 }
 
 void __tsan_mutex_before_lock(ThreadState *thr, uptr addr, uptr write) {
+  if (write)
+    MutexPreLock(thr, 0, addr);
+  else
+    MutexPreReadLock(thr, 0, addr);
 }
 
 void __tsan_mutex_after_lock(ThreadState *thr, uptr addr, uptr write) {
   if (write)
-    MutexLock(thr, 0, addr);
+    MutexPostLock(thr, 0, addr);
   else
-    MutexReadLock(thr, 0, addr);
+    MutexPostReadLock(thr, 0, addr);
 }
 
 void __tsan_mutex_before_unlock(ThreadState *thr, uptr addr, uptr write) {
@@ -197,6 +273,11 @@ void __tsan_go_ignore_sync_begin(ThreadState *thr) {
 
 void __tsan_go_ignore_sync_end(ThreadState *thr) {
   ThreadIgnoreSyncEnd(thr, 0);
+}
+
+void __tsan_report_count(u64 *pn) {
+  Lock lock(&ctx->report_mtx);
+  *pn = ctx->nreported;
 }
 
 }  // extern "C"

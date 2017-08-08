@@ -24,7 +24,7 @@ is good or bad. In this tutorial we'll assume that it is okay to use
 this as a way to show some interesting parsing techniques.
 
 At the end of this tutorial, we'll run through an example Kaleidoscope
-application that `renders the Mandelbrot set <#example>`_. This gives an
+application that `renders the Mandelbrot set <#kicking-the-tires>`_. This gives an
 example of what you can build with Kaleidoscope and its feature set.
 
 User-defined Operators: the Idea
@@ -32,7 +32,7 @@ User-defined Operators: the Idea
 
 The "operator overloading" that we will add to Kaleidoscope is more
 general than languages like C++. In C++, you are only allowed to
-redefine existing operators: you can't programatically change the
+redefine existing operators: you can't programmatically change the
 grammar, introduce new operators, change precedence levels, etc. In this
 chapter, we will add this capability to Kaleidoscope, which will let the
 user round out the set of operators that are supported.
@@ -108,7 +108,7 @@ keywords:
           | "unary" -> [< 'Token.Unary; stream >]
 
 This just adds lexer support for the unary and binary keywords, like we
-did in `previous chapters <OCamlLangImpl5.html#iflexer>`_. One nice
+did in `previous chapters <OCamlLangImpl5.html#lexer-extensions-for-if-then-else>`_. One nice
 thing about our current AST, is that we represent binary operators with
 full generalisation by using their ASCII code as the opcode. For our
 extended operators, we'll use this same representation, so we don't need
@@ -496,17 +496,17 @@ converge:
 
     # determine whether the specific location diverges.
     # Solve for z = z^2 + c in the complex plane.
-    def mandleconverger(real imag iters creal cimag)
+    def mandelconverger(real imag iters creal cimag)
       if iters > 255 | (real*real + imag*imag > 4) then
         iters
       else
-        mandleconverger(real*real - imag*imag + creal,
+        mandelconverger(real*real - imag*imag + creal,
                         2*real*imag + cimag,
                         iters+1, creal, cimag);
 
     # return the number of iterations required for the iteration to escape
-    def mandleconverge(real imag)
-      mandleconverger(real, imag, 0, real, imag);
+    def mandelconverge(real imag)
+      mandelconverger(real, imag, 0, real, imag);
 
 This "z = z\ :sup:`2`\  + c" function is a beautiful little creature
 that is the basis for computation of the `Mandelbrot
@@ -520,12 +520,12 @@ but we can whip together something using the density plotter above:
 
 ::
 
-    # compute and plot the mandlebrot set with the specified 2 dimensional range
+    # compute and plot the mandelbrot set with the specified 2 dimensional range
     # info.
     def mandelhelp(xmin xmax xstep   ymin ymax ystep)
       for y = ymin, y < ymax, ystep in (
         (for x = xmin, x < xmax, xstep in
-           printdensity(mandleconverge(x,y)))
+           printdensity(mandelconverge(x,y)))
         : putchard(10)
       )
 
@@ -535,7 +535,7 @@ but we can whip together something using the density plotter above:
       mandelhelp(realstart, realstart+realmag*78, realmag,
                  imagstart, imagstart+imagmag*40, imagmag);
 
-Given this, we can try plotting out the mandlebrot set! Lets try it out:
+Given this, we can try plotting out the mandelbrot set! Lets try it out:
 
 ::
 

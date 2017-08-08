@@ -15,10 +15,10 @@ define void @floating_lits() {
 ; CHECK: ldr [[LIT128:s[0-9]+]], [x[[LITBASE]], {{#?}}:lo12:[[CURLIT]]]
 ; CHECK-NOFP-NOT: ldr {{s[0-9]+}},
 
-; CHECK-LARGE: movz x[[LITADDR:[0-9]+]], #:abs_g3:[[CURLIT:.LCPI[0-9]+_[0-9]+]]
-; CHECK-LARGE: movk x[[LITADDR]], #:abs_g2_nc:[[CURLIT]]
+; CHECK-LARGE: movz x[[LITADDR:[0-9]+]], #:abs_g0_nc:[[CURLIT:.LCPI[0-9]+_[0-9]+]]
 ; CHECK-LARGE: movk x[[LITADDR]], #:abs_g1_nc:[[CURLIT]]
-; CHECK-LARGE: movk x[[LITADDR]], #:abs_g0_nc:[[CURLIT]]
+; CHECK-LARGE: movk x[[LITADDR]], #:abs_g2_nc:[[CURLIT]]
+; CHECK-LARGE: movk x[[LITADDR]], #:abs_g3:[[CURLIT]]
 ; CHECK-LARGE: ldr {{s[0-9]+}}, [x[[LITADDR]]]
 ; CHECK-LARGE: fadd
 ; CHECK-NOFP-LARGE-NOT: ldr {{s[0-9]+}},
@@ -33,10 +33,10 @@ define void @floating_lits() {
 ; CHECK-NOFP-NOT: ldr {{d[0-9]+}},
 ; CHECK-NOFP-NOT: fadd
 
-; CHECK-LARGE: movz x[[LITADDR:[0-9]+]], #:abs_g3:[[CURLIT:.LCPI[0-9]+_[0-9]+]]
-; CHECK-LARGE: movk x[[LITADDR]], #:abs_g2_nc:[[CURLIT]]
+; CHECK-LARGE: movz x[[LITADDR:[0-9]+]], #:abs_g0_nc:[[CURLIT:.LCPI[0-9]+_[0-9]+]]
 ; CHECK-LARGE: movk x[[LITADDR]], #:abs_g1_nc:[[CURLIT]]
-; CHECK-LARGE: movk x[[LITADDR]], #:abs_g0_nc:[[CURLIT]]
+; CHECK-LARGE: movk x[[LITADDR]], #:abs_g2_nc:[[CURLIT]]
+; CHECK-LARGE: movk x[[LITADDR]], #:abs_g3:[[CURLIT]]
 ; CHECK-LARGE: ldr {{d[0-9]+}}, [x[[LITADDR]]]
 ; CHECK-NOFP-LARGE-NOT: ldr {{d[0-9]+}},
 

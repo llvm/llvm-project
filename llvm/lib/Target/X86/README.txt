@@ -50,8 +50,8 @@ Some isel ideas:
 2. Code duplication (addressing mode) during isel.
 3. Other ideas from "Register-Sensitive Selection, Duplication, and
    Sequencing of Instructions".
-4. Scheduling for reduced register pressure.  E.g. "Minimum Register 
-   Instruction Sequence Problem: Revisiting Optimal Code Generation for DAGs" 
+4. Scheduling for reduced register pressure.  E.g. "Minimum Register
+   Instruction Sequence Problem: Revisiting Optimal Code Generation for DAGs"
    and other related papers.
    http://citeseer.ist.psu.edu/govindarajan01minimum.html
 
@@ -73,7 +73,7 @@ It appears icc use push for parameter passing. Need to investigate.
 //===---------------------------------------------------------------------===//
 
 The instruction selector sometimes misses folding a load into a compare.  The
-pattern is written as (cmp reg, (load p)).  Because the compare isn't 
+pattern is written as (cmp reg, (load p)).  Because the compare isn't
 commutative, it is not matched with the load on both sides.  The dag combiner
 should be made smart enough to canonicalize the load into the RHS of a compare
 when it can invert the result of the compare for free.

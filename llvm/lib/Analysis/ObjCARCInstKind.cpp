@@ -20,8 +20,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ObjCARCInstKind.h"
-#include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/IR/Intrinsics.h"
 
 using namespace llvm;
@@ -34,6 +34,8 @@ raw_ostream &llvm::objcarc::operator<<(raw_ostream &OS,
     return OS << "ARCInstKind::Retain";
   case ARCInstKind::RetainRV:
     return OS << "ARCInstKind::RetainRV";
+  case ARCInstKind::ClaimRV:
+    return OS << "ARCInstKind::ClaimRV";
   case ARCInstKind::RetainBlock:
     return OS << "ARCInstKind::RetainBlock";
   case ARCInstKind::Release:
@@ -94,41 +96,47 @@ ARCInstKind llvm::objcarc::GetFunctionClass(const Function *F) {
 
   // One argument.
   const Argument *A0 = &*AI++;
-  if (AI == AE)
+  if (AI == AE) {
     // Argument is a pointer.
-    if (PointerType *PTy = dyn_cast<PointerType>(A0->getType())) {
-      Type *ETy = PTy->getElementType();
-      // Argument is i8*.
-      if (ETy->isIntegerTy(8))
+    PointerType *PTy = dyn_cast<PointerType>(A0->getType());
+    if (!PTy)
+      return ARCInstKind::CallOrUser;
+
+    Type *ETy = PTy->getElementType();
+    // Argument is i8*.
+    if (ETy->isIntegerTy(8))
+      return StringSwitch<ARCInstKind>(F->getName())
+          .Case("objc_retain", ARCInstKind::Retain)
+          .Case("objc_retainAutoreleasedReturnValue", ARCInstKind::RetainRV)
+          .Case("objc_unsafeClaimAutoreleasedReturnValue", ARCInstKind::ClaimRV)
+          .Case("objc_retainBlock", ARCInstKind::RetainBlock)
+          .Case("objc_release", ARCInstKind::Release)
+          .Case("objc_autorelease", ARCInstKind::Autorelease)
+          .Case("objc_autoreleaseReturnValue", ARCInstKind::AutoreleaseRV)
+          .Case("objc_autoreleasePoolPop", ARCInstKind::AutoreleasepoolPop)
+          .Case("objc_retainedObject", ARCInstKind::NoopCast)
+          .Case("objc_unretainedObject", ARCInstKind::NoopCast)
+          .Case("objc_unretainedPointer", ARCInstKind::NoopCast)
+          .Case("objc_retain_autorelease", ARCInstKind::FusedRetainAutorelease)
+          .Case("objc_retainAutorelease", ARCInstKind::FusedRetainAutorelease)
+          .Case("objc_retainAutoreleaseReturnValue",
+                ARCInstKind::FusedRetainAutoreleaseRV)
+          .Case("objc_sync_enter", ARCInstKind::User)
+          .Case("objc_sync_exit", ARCInstKind::User)
+          .Default(ARCInstKind::CallOrUser);
+
+    // Argument is i8**
+    if (PointerType *Pte = dyn_cast<PointerType>(ETy))
+      if (Pte->getElementType()->isIntegerTy(8))
         return StringSwitch<ARCInstKind>(F->getName())
-            .Case("objc_retain", ARCInstKind::Retain)
-            .Case("objc_retainAutoreleasedReturnValue", ARCInstKind::RetainRV)
-            .Case("objc_retainBlock", ARCInstKind::RetainBlock)
-            .Case("objc_release", ARCInstKind::Release)
-            .Case("objc_autorelease", ARCInstKind::Autorelease)
-            .Case("objc_autoreleaseReturnValue", ARCInstKind::AutoreleaseRV)
-            .Case("objc_autoreleasePoolPop", ARCInstKind::AutoreleasepoolPop)
-            .Case("objc_retainedObject", ARCInstKind::NoopCast)
-            .Case("objc_unretainedObject", ARCInstKind::NoopCast)
-            .Case("objc_unretainedPointer", ARCInstKind::NoopCast)
-            .Case("objc_retain_autorelease",
-                  ARCInstKind::FusedRetainAutorelease)
-            .Case("objc_retainAutorelease", ARCInstKind::FusedRetainAutorelease)
-            .Case("objc_retainAutoreleaseReturnValue",
-                  ARCInstKind::FusedRetainAutoreleaseRV)
-            .Case("objc_sync_enter", ARCInstKind::User)
-            .Case("objc_sync_exit", ARCInstKind::User)
+            .Case("objc_loadWeakRetained", ARCInstKind::LoadWeakRetained)
+            .Case("objc_loadWeak", ARCInstKind::LoadWeak)
+            .Case("objc_destroyWeak", ARCInstKind::DestroyWeak)
             .Default(ARCInstKind::CallOrUser);
 
-      // Argument is i8**
-      if (PointerType *Pte = dyn_cast<PointerType>(ETy))
-        if (Pte->getElementType()->isIntegerTy(8))
-          return StringSwitch<ARCInstKind>(F->getName())
-              .Case("objc_loadWeakRetained", ARCInstKind::LoadWeakRetained)
-              .Case("objc_loadWeak", ARCInstKind::LoadWeak)
-              .Case("objc_destroyWeak", ARCInstKind::DestroyWeak)
-              .Default(ARCInstKind::CallOrUser);
-    }
+    // Anything else with one argument.
+    return ARCInstKind::CallOrUser;
+  }
 
   // Two arguments, first is i8**.
   const Argument *A1 = &*AI++;
@@ -176,6 +184,7 @@ static bool isInertIntrinsic(unsigned ID) {
   // TODO: Make this into a covered switch.
   switch (ID) {
   case Intrinsic::returnaddress:
+  case Intrinsic::addressofreturnaddress:
   case Intrinsic::frameaddress:
   case Intrinsic::stacksave:
   case Intrinsic::stackrestore:
@@ -350,6 +359,7 @@ bool llvm::objcarc::IsUser(ARCInstKind Class) {
   case ARCInstKind::StoreStrong:
   case ARCInstKind::Call:
   case ARCInstKind::None:
+  case ARCInstKind::ClaimRV:
     return false;
   }
   llvm_unreachable("covered switch isn't covered?");
@@ -385,6 +395,7 @@ bool llvm::objcarc::IsRetain(ARCInstKind Class) {
   case ARCInstKind::Call:
   case ARCInstKind::User:
   case ARCInstKind::None:
+  case ARCInstKind::ClaimRV:
     return false;
   }
   llvm_unreachable("covered switch isn't covered?");
@@ -398,6 +409,7 @@ bool llvm::objcarc::IsAutorelease(ARCInstKind Class) {
     return true;
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
+  case ARCInstKind::ClaimRV:
   case ARCInstKind::RetainBlock:
   case ARCInstKind::Release:
   case ARCInstKind::AutoreleasepoolPush:
@@ -429,6 +441,7 @@ bool llvm::objcarc::IsForwarding(ARCInstKind Class) {
   switch (Class) {
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
+  case ARCInstKind::ClaimRV:
   case ARCInstKind::Autorelease:
   case ARCInstKind::AutoreleaseRV:
   case ARCInstKind::NoopCast:
@@ -463,6 +476,7 @@ bool llvm::objcarc::IsNoopOnNull(ARCInstKind Class) {
   switch (Class) {
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
+  case ARCInstKind::ClaimRV:
   case ARCInstKind::Release:
   case ARCInstKind::Autorelease:
   case ARCInstKind::AutoreleaseRV:
@@ -498,6 +512,7 @@ bool llvm::objcarc::IsAlwaysTail(ARCInstKind Class) {
   switch (Class) {
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
+  case ARCInstKind::ClaimRV:
   case ARCInstKind::AutoreleaseRV:
     return true;
   case ARCInstKind::Release:
@@ -538,6 +553,7 @@ bool llvm::objcarc::IsNeverTail(ARCInstKind Class) {
     return true;
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
+  case ARCInstKind::ClaimRV:
   case ARCInstKind::AutoreleaseRV:
   case ARCInstKind::Release:
   case ARCInstKind::RetainBlock:
@@ -572,6 +588,7 @@ bool llvm::objcarc::IsNoThrow(ARCInstKind Class) {
   switch (Class) {
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
+  case ARCInstKind::ClaimRV:
   case ARCInstKind::Release:
   case ARCInstKind::Autorelease:
   case ARCInstKind::AutoreleaseRV:
@@ -616,6 +633,7 @@ bool llvm::objcarc::CanInterruptRV(ARCInstKind Class) {
     return true;
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
+  case ARCInstKind::ClaimRV:
   case ARCInstKind::Release:
   case ARCInstKind::AutoreleasepoolPush:
   case ARCInstKind::RetainBlock:
@@ -668,6 +686,7 @@ bool llvm::objcarc::CanDecrementRefCount(ARCInstKind Kind) {
   case ARCInstKind::StoreStrong:
   case ARCInstKind::CallOrUser:
   case ARCInstKind::Call:
+  case ARCInstKind::ClaimRV:
     return true;
   }
 

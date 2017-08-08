@@ -37,7 +37,7 @@ define double @test_simplify2(double %x) {
 define float @test_simplify3(float %x) {
 ; CHECK-LABEL: @test_simplify3(
   %retval = call float @powf(float 2.0, float %x)
-; CHECK-NEXT: [[EXP2F:%[a-z0-9]+]] = call float @exp2f(float %x) [[NUW_RO:#[0-9]+]]
+; CHECK-NEXT: [[EXP2F:%[a-z0-9]+]] = call float @llvm.exp2.f32(float %x)
   ret float %retval
 ; CHECK-NEXT: ret float [[EXP2F]]
 }
@@ -45,7 +45,7 @@ define float @test_simplify3(float %x) {
 define double @test_simplify4(double %x) {
 ; CHECK-LABEL: @test_simplify4(
   %retval = call double @pow(double 2.0, double %x)
-; CHECK-NEXT: [[EXP2:%[a-z0-9]+]] = call double @exp2(double %x) [[NUW_RO]]
+; CHECK-NEXT: [[EXP2:%[a-z0-9]+]] = call double @llvm.exp2.f64(double %x)
   ret double %retval
 ; CHECK-NEXT: ret double [[EXP2]]
 }
@@ -71,8 +71,8 @@ define double @test_simplify6(double %x) {
 define float @test_simplify7(float %x) {
 ; CHECK-LABEL: @test_simplify7(
   %retval = call float @powf(float %x, float 0.5)
-; CHECK-NEXT: [[SQRTF:%[a-z0-9]+]] = call float @sqrtf(float %x) [[NUW_RO]]
-; CHECK-NEXT: [[FABSF:%[a-z0-9]+]] = call float @fabsf(float [[SQRTF]]) [[NUW_RO]]
+; CHECK-NEXT: [[SQRTF:%[a-z0-9]+]] = call float @sqrtf(float %x) [[NUW_RO:#[0-9]+]]
+; CHECK-NEXT: [[FABSF:%[a-z0-9]+]] = call float @llvm.fabs.f32(float [[SQRTF]])
 ; CHECK-NEXT: [[FCMP:%[a-z0-9]+]] = fcmp oeq float %x, 0xFFF0000000000000
 ; CHECK-NEXT: [[SELECT:%[a-z0-9]+]] = select i1 [[FCMP]], float 0x7FF0000000000000, float [[FABSF]]
   ret float %retval
@@ -83,7 +83,7 @@ define double @test_simplify8(double %x) {
 ; CHECK-LABEL: @test_simplify8(
   %retval = call double @pow(double %x, double 0.5)
 ; CHECK-NEXT: [[SQRT:%[a-z0-9]+]] = call double @sqrt(double %x) [[NUW_RO]]
-; CHECK-NEXT: [[FABS:%[a-z0-9]+]] = call double @fabs(double [[SQRT]]) [[NUW_RO]]
+; CHECK-NEXT: [[FABS:%[a-z0-9]+]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; CHECK-NEXT: [[FCMP:%[a-z0-9]+]] = fcmp oeq double %x, 0xFFF0000000000000
 ; CHECK-NEXT: [[SELECT:%[a-z0-9]+]] = select i1 [[FCMP]], double 0x7FF0000000000000, double [[FABS]]
   ret double %retval
@@ -163,7 +163,7 @@ define double @test_simplify17(double %x) {
 ; CHECK-LABEL: @test_simplify17(
   %retval = call double @llvm.pow.f64(double %x, double 0.5)
 ; CHECK-NEXT: [[SQRT:%[a-z0-9]+]] = call double @sqrt(double %x)
-; CHECK-NEXT: [[FABS:%[a-z0-9]+]] = call double @fabs(double [[SQRT]])
+; CHECK-NEXT: [[FABS:%[a-z0-9]+]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; CHECK-NEXT: [[FCMP:%[a-z0-9]+]] = fcmp oeq double %x, 0xFFF0000000000000
 ; CHECK-NEXT: [[SELECT:%[a-z0-9]+]] = select i1 [[FCMP]], double 0x7FF0000000000000, double [[FABS]]
   ret double %retval

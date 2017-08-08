@@ -1,4 +1,4 @@
-//===- MIParser.h - Machine Instructions Parser ---------------------------===//
+//===- MIParser.h - Machine Instructions Parser -----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,26 +15,58 @@
 #define LLVM_LIB_CODEGEN_MIRPARSER_MIPARSER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Allocator.h"
 
 namespace llvm {
 
-class BasicBlock;
 class MachineBasicBlock;
-class MachineInstr;
 class MachineFunction;
 class MDNode;
+class RegisterBank;
 struct SlotMapping;
 class SMDiagnostic;
 class SourceMgr;
+class StringRef;
+class TargetRegisterClass;
+
+struct VRegInfo {
+  enum uint8_t {
+    UNKNOWN, NORMAL, GENERIC, REGBANK
+  } Kind = UNKNOWN;
+  bool Explicit = false; ///< VReg was explicitly specified in the .mir file.
+  union {
+    const TargetRegisterClass *RC;
+    const RegisterBank *RegBank;
+  } D;
+  unsigned VReg;
+  unsigned PreferredReg = 0;
+};
+
+using Name2RegClassMap = StringMap<const TargetRegisterClass *>;
+using Name2RegBankMap = StringMap<const RegisterBank *>;
 
 struct PerFunctionMIParsingState {
+  BumpPtrAllocator Allocator;
+  MachineFunction &MF;
+  SourceMgr *SM;
+  const SlotMapping &IRSlots;
+  const Name2RegClassMap &Names2RegClasses;
+  const Name2RegBankMap &Names2RegBanks;
+
   DenseMap<unsigned, MachineBasicBlock *> MBBSlots;
-  DenseMap<unsigned, unsigned> VirtualRegisterSlots;
+  DenseMap<unsigned, VRegInfo*> VRegInfos;
   DenseMap<unsigned, int> FixedStackObjectSlots;
   DenseMap<unsigned, int> StackObjectSlots;
   DenseMap<unsigned, unsigned> ConstantPoolSlots;
   DenseMap<unsigned, unsigned> JumpTableSlots;
+
+  PerFunctionMIParsingState(MachineFunction &MF, SourceMgr &SM,
+                            const SlotMapping &IRSlots,
+                            const Name2RegClassMap &Names2RegClasses,
+                            const Name2RegBankMap &Names2RegBanks);
+
+  VRegInfo &getVRegInfo(unsigned VReg);
 };
 
 /// Parse the machine basic block definitions, and skip the machine
@@ -49,10 +81,8 @@ struct PerFunctionMIParsingState {
 /// resolve the machine basic block references.
 ///
 /// Return true if an error occurred.
-bool parseMachineBasicBlockDefinitions(MachineFunction &MF, StringRef Src,
-                                       PerFunctionMIParsingState &PFS,
-                                       const SlotMapping &IRSlots,
-                                       SMDiagnostic &Error);
+bool parseMachineBasicBlockDefinitions(PerFunctionMIParsingState &PFS,
+                                       StringRef Src, SMDiagnostic &Error);
 
 /// Parse the machine instructions.
 ///
@@ -64,36 +94,30 @@ bool parseMachineBasicBlockDefinitions(MachineFunction &MF, StringRef Src,
 /// on the given source string.
 ///
 /// Return true if an error occurred.
-bool parseMachineInstructions(MachineFunction &MF, StringRef Src,
-                              const PerFunctionMIParsingState &PFS,
-                              const SlotMapping &IRSlots, SMDiagnostic &Error);
+bool parseMachineInstructions(PerFunctionMIParsingState &PFS, StringRef Src,
+                              SMDiagnostic &Error);
 
-bool parseMBBReference(MachineBasicBlock *&MBB, SourceMgr &SM,
-                       MachineFunction &MF, StringRef Src,
-                       const PerFunctionMIParsingState &PFS,
-                       const SlotMapping &IRSlots, SMDiagnostic &Error);
+bool parseMBBReference(PerFunctionMIParsingState &PFS,
+                       MachineBasicBlock *&MBB, StringRef Src,
+                       SMDiagnostic &Error);
 
-bool parseNamedRegisterReference(unsigned &Reg, SourceMgr &SM,
-                                 MachineFunction &MF, StringRef Src,
-                                 const PerFunctionMIParsingState &PFS,
-                                 const SlotMapping &IRSlots,
-                                 SMDiagnostic &Error);
+bool parseRegisterReference(PerFunctionMIParsingState &PFS,
+                            unsigned &Reg, StringRef Src,
+                            SMDiagnostic &Error);
 
-bool parseVirtualRegisterReference(unsigned &Reg, SourceMgr &SM,
-                                   MachineFunction &MF, StringRef Src,
-                                   const PerFunctionMIParsingState &PFS,
-                                   const SlotMapping &IRSlots,
+bool parseNamedRegisterReference(PerFunctionMIParsingState &PFS, unsigned &Reg,
+                                 StringRef Src, SMDiagnostic &Error);
+
+bool parseVirtualRegisterReference(PerFunctionMIParsingState &PFS,
+                                   VRegInfo *&Info, StringRef Src,
                                    SMDiagnostic &Error);
 
-bool parseStackObjectReference(int &FI, SourceMgr &SM, MachineFunction &MF,
-                               StringRef Src,
-                               const PerFunctionMIParsingState &PFS,
-                               const SlotMapping &IRSlots, SMDiagnostic &Error);
+bool parseStackObjectReference(PerFunctionMIParsingState &PFS, int &FI,
+                               StringRef Src, SMDiagnostic &Error);
 
-bool parseMDNode(MDNode *&Node, SourceMgr &SM, MachineFunction &MF,
-                 StringRef Src, const PerFunctionMIParsingState &PFS,
-                 const SlotMapping &IRSlots, SMDiagnostic &Error);
+bool parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node, StringRef Src,
+                 SMDiagnostic &Error);
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_CODEGEN_MIRPARSER_MIPARSER_H

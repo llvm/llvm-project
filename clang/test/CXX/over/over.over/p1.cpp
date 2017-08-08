@@ -1,7 +1,9 @@
-// RUN: %clang_cc1 -fsyntax-only %s
+// RUN: %clang_cc1 -fsyntax-only -DNOEXCEPT= -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++1z -DNOEXCEPT= -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++1z -DNOEXCEPT=noexcept -verify %s
 
-template<typename T> T f0(T);
-int f0(int);
+template<typename T> T f0(T) NOEXCEPT;
+int f0(int) NOEXCEPT;
 
 // -- an object or reference being initialized 
 struct S {
@@ -92,3 +94,18 @@ Y1<f0> y1;
 Y1<&f0> y1a;
 Y2<f0> y2;
 Y3<f0> y3;
+
+#if __cplusplus > 201402L
+namespace MixedNoexcept {
+  inline namespace A {
+    void f() noexcept; // expected-note {{candidate}}
+  }
+  inline namespace B {
+    void f(); // expected-note {{candidate}}
+  }
+  void (*p)() noexcept = &f; // ok
+  void (*q)() = &f; // expected-error {{ambiguous}}
+}
+#else
+// expected-no-diagnostics
+#endif

@@ -20,8 +20,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DemandedBits.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -39,28 +37,33 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "demanded-bits"
 
-char DemandedBits::ID = 0;
-INITIALIZE_PASS_BEGIN(DemandedBits, "demanded-bits", "Demanded bits analysis",
-                      false, false)
+char DemandedBitsWrapperPass::ID = 0;
+INITIALIZE_PASS_BEGIN(DemandedBitsWrapperPass, "demanded-bits",
+                      "Demanded bits analysis", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(DemandedBits, "demanded-bits", "Demanded bits analysis",
-                    false, false)
+INITIALIZE_PASS_END(DemandedBitsWrapperPass, "demanded-bits",
+                    "Demanded bits analysis", false, false)
 
-DemandedBits::DemandedBits() : FunctionPass(ID), F(nullptr), Analyzed(false) {
-  initializeDemandedBitsPass(*PassRegistry::getPassRegistry());
+DemandedBitsWrapperPass::DemandedBitsWrapperPass() : FunctionPass(ID) {
+  initializeDemandedBitsWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-void DemandedBits::getAnalysisUsage(AnalysisUsage &AU) const {
+void DemandedBitsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.setPreservesAll();
+}
+
+void DemandedBitsWrapperPass::print(raw_ostream &OS, const Module *M) const {
+  DB->print(OS);
 }
 
 static bool isAlwaysLive(Instruction *I) {
@@ -70,8 +73,7 @@ static bool isAlwaysLive(Instruction *I) {
 
 void DemandedBits::determineLiveOperandBits(
     const Instruction *UserI, const Instruction *I, unsigned OperandNo,
-    const APInt &AOut, APInt &AB, APInt &KnownZero, APInt &KnownOne,
-    APInt &KnownZero2, APInt &KnownOne2) {
+    const APInt &AOut, APInt &AB, KnownBits &Known, KnownBits &Known2) {
   unsigned BitWidth = AB.getBitWidth();
 
   // We're called once per operand, but for some instructions, we need to
@@ -83,16 +85,12 @@ void DemandedBits::determineLiveOperandBits(
   auto ComputeKnownBits =
       [&](unsigned BitWidth, const Value *V1, const Value *V2) {
         const DataLayout &DL = I->getModule()->getDataLayout();
-        KnownZero = APInt(BitWidth, 0);
-        KnownOne = APInt(BitWidth, 0);
-        computeKnownBits(const_cast<Value *>(V1), KnownZero, KnownOne, DL, 0,
-                         AC, UserI, DT);
+        Known = KnownBits(BitWidth);
+        computeKnownBits(V1, Known, DL, 0, &AC, UserI, &DT);
 
         if (V2) {
-          KnownZero2 = APInt(BitWidth, 0);
-          KnownOne2 = APInt(BitWidth, 0);
-          computeKnownBits(const_cast<Value *>(V2), KnownZero2, KnownOne2, DL,
-                           0, AC, UserI, DT);
+          Known2 = KnownBits(BitWidth);
+          computeKnownBits(V2, Known2, DL, 0, &AC, UserI, &DT);
         }
       };
 
@@ -108,6 +106,11 @@ void DemandedBits::determineLiveOperandBits(
         // the output.
         AB = AOut.byteSwap();
         break;
+      case Intrinsic::bitreverse:
+        // The alive bits of the input are the reversed alive bits of
+        // the output.
+        AB = AOut.reverseBits();
+        break;
       case Intrinsic::ctlz:
         if (OperandNo == 0) {
           // We need some output bits, so we need all bits of the
@@ -115,7 +118,7 @@ void DemandedBits::determineLiveOperandBits(
           // known to be one.
           ComputeKnownBits(BitWidth, I, nullptr);
           AB = APInt::getHighBitsSet(BitWidth,
-                 std::min(BitWidth, KnownOne.countLeadingZeros()+1));
+                 std::min(BitWidth, Known.countMaxLeadingZeros()+1));
         }
         break;
       case Intrinsic::cttz:
@@ -125,7 +128,7 @@ void DemandedBits::determineLiveOperandBits(
           // known to be one.
           ComputeKnownBits(BitWidth, I, nullptr);
           AB = APInt::getLowBitsSet(BitWidth,
-                 std::min(BitWidth, KnownOne.countTrailingZeros()+1));
+                 std::min(BitWidth, Known.countMaxTrailingZeros()+1));
         }
         break;
       }
@@ -140,9 +143,8 @@ void DemandedBits::determineLiveOperandBits(
     break;
   case Instruction::Shl:
     if (OperandNo == 0)
-      if (ConstantInt *CI =
-            dyn_cast<ConstantInt>(UserI->getOperand(1))) {
-        uint64_t ShiftAmt = CI->getLimitedValue(BitWidth-1);
+      if (auto *ShiftAmtC = dyn_cast<ConstantInt>(UserI->getOperand(1))) {
+        uint64_t ShiftAmt = ShiftAmtC->getLimitedValue(BitWidth - 1);
         AB = AOut.lshr(ShiftAmt);
 
         // If the shift is nuw/nsw, then the high bits are not dead
@@ -156,9 +158,8 @@ void DemandedBits::determineLiveOperandBits(
     break;
   case Instruction::LShr:
     if (OperandNo == 0)
-      if (ConstantInt *CI =
-            dyn_cast<ConstantInt>(UserI->getOperand(1))) {
-        uint64_t ShiftAmt = CI->getLimitedValue(BitWidth-1);
+      if (auto *ShiftAmtC = dyn_cast<ConstantInt>(UserI->getOperand(1))) {
+        uint64_t ShiftAmt = ShiftAmtC->getLimitedValue(BitWidth - 1);
         AB = AOut.shl(ShiftAmt);
 
         // If the shift is exact, then the low bits are not dead
@@ -169,16 +170,15 @@ void DemandedBits::determineLiveOperandBits(
     break;
   case Instruction::AShr:
     if (OperandNo == 0)
-      if (ConstantInt *CI =
-            dyn_cast<ConstantInt>(UserI->getOperand(1))) {
-        uint64_t ShiftAmt = CI->getLimitedValue(BitWidth-1);
+      if (auto *ShiftAmtC = dyn_cast<ConstantInt>(UserI->getOperand(1))) {
+        uint64_t ShiftAmt = ShiftAmtC->getLimitedValue(BitWidth - 1);
         AB = AOut.shl(ShiftAmt);
         // Because the high input bit is replicated into the
         // high-order bits of the result, if we need any of those
         // bits, then we must keep the highest input bit.
         if ((AOut & APInt::getHighBitsSet(BitWidth, ShiftAmt))
             .getBoolValue())
-          AB.setBit(BitWidth-1);
+          AB.setSignBit();
 
         // If the shift is exact, then the low bits are not dead
         // (they must be zero).
@@ -195,11 +195,11 @@ void DemandedBits::determineLiveOperandBits(
     // dead).
     if (OperandNo == 0) {
       ComputeKnownBits(BitWidth, I, UserI->getOperand(1));
-      AB &= ~KnownZero2;
+      AB &= ~Known2.Zero;
     } else {
       if (!isa<Instruction>(UserI->getOperand(0)))
         ComputeKnownBits(BitWidth, UserI->getOperand(0), I);
-      AB &= ~(KnownZero & ~KnownZero2);
+      AB &= ~(Known.Zero & ~Known2.Zero);
     }
     break;
   case Instruction::Or:
@@ -211,11 +211,11 @@ void DemandedBits::determineLiveOperandBits(
     // dead).
     if (OperandNo == 0) {
       ComputeKnownBits(BitWidth, I, UserI->getOperand(1));
-      AB &= ~KnownOne2;
+      AB &= ~Known2.One;
     } else {
       if (!isa<Instruction>(UserI->getOperand(0)))
         ComputeKnownBits(BitWidth, UserI->getOperand(0), I);
-      AB &= ~(KnownOne & ~KnownOne2);
+      AB &= ~(Known.One & ~Known2.One);
     }
     break;
   case Instruction::Xor:
@@ -236,26 +236,24 @@ void DemandedBits::determineLiveOperandBits(
     if ((AOut & APInt::getHighBitsSet(AOut.getBitWidth(),
                                       AOut.getBitWidth() - BitWidth))
         .getBoolValue())
-      AB.setBit(BitWidth-1);
+      AB.setSignBit();
     break;
   case Instruction::Select:
     if (OperandNo != 0)
       AB = AOut;
     break;
-  case Instruction::ICmp:
-    // Count the number of leading zeroes in each operand.
-    ComputeKnownBits(BitWidth, I, UserI->getOperand(1));
-    auto NumLeadingZeroes = std::min(KnownZero.countLeadingOnes(),
-                                     KnownZero2.countLeadingOnes());
-    AB = ~APInt::getHighBitsSet(BitWidth, NumLeadingZeroes);
-    break;
   }
 }
 
-bool DemandedBits::runOnFunction(Function& Fn) {
-  F = &Fn;
-  Analyzed = false;
+bool DemandedBitsWrapperPass::runOnFunction(Function &F) {
+  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  DB.emplace(F, AC, DT);
   return false;
+}
+
+void DemandedBitsWrapperPass::releaseMemory() {
+  DB.reset();
 }
 
 void DemandedBits::performAnalysis() {
@@ -263,8 +261,6 @@ void DemandedBits::performAnalysis() {
     // Analysis already completed for this function.
     return;
   Analyzed = true;
-  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(*F);
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   
   Visited.clear();
   AliveBits.clear();
@@ -272,7 +268,7 @@ void DemandedBits::performAnalysis() {
   SmallVector<Instruction*, 128> Worklist;
 
   // Collect the set of "root" instructions that are known live.
-  for (Instruction &I : instructions(*F)) {
+  for (Instruction &I : instructions(F)) {
     if (!isAlwaysLive(&I))
       continue;
 
@@ -282,10 +278,8 @@ void DemandedBits::performAnalysis() {
     // add their operands to the work list (for integer values operands, mark
     // all bits as live).
     if (IntegerType *IT = dyn_cast<IntegerType>(I.getType())) {
-      if (!AliveBits.count(&I)) {
-        AliveBits[&I] = APInt(IT->getBitWidth(), 0);
+      if (AliveBits.try_emplace(&I, IT->getBitWidth(), 0).second)
         Worklist.push_back(&I);
-      }
 
       continue;
     }
@@ -319,7 +313,7 @@ void DemandedBits::performAnalysis() {
     if (!UserI->getType()->isIntegerTy())
       Visited.insert(UserI);
 
-    APInt KnownZero, KnownOne, KnownZero2, KnownOne2;
+    KnownBits Known, Known2;
     // Compute the set of alive bits for each operand. These are anded into the
     // existing set, if any, and if that changes the set of alive bits, the
     // operand is added to the work-list.
@@ -336,8 +330,7 @@ void DemandedBits::performAnalysis() {
             // Bits of each operand that are used to compute alive bits of the
             // output are alive, all others are dead.
             determineLiveOperandBits(UserI, I, OI.getOperandNo(), AOut, AB,
-                                     KnownZero, KnownOne,
-                                     KnownZero2, KnownOne2);
+                                     Known, Known2);
           }
 
           // If we've added to the set of alive bits (or the operand has not
@@ -365,8 +358,9 @@ APInt DemandedBits::getDemandedBits(Instruction *I) {
   performAnalysis();
   
   const DataLayout &DL = I->getParent()->getModule()->getDataLayout();
-  if (AliveBits.count(I))
-    return AliveBits[I];
+  auto Found = AliveBits.find(I);
+  if (Found != AliveBits.end())
+    return Found->second;
   return APInt::getAllOnesValue(DL.getTypeSizeInBits(I->getType()));
 }
 
@@ -377,16 +371,29 @@ bool DemandedBits::isInstructionDead(Instruction *I) {
     !isAlwaysLive(I);
 }
 
-void DemandedBits::print(raw_ostream &OS, const Module *M) const {
-  // This is gross. But the alternative is making all the state mutable
-  // just because of this one debugging method.
-  const_cast<DemandedBits*>(this)->performAnalysis();
+void DemandedBits::print(raw_ostream &OS) {
+  performAnalysis();
   for (auto &KV : AliveBits) {
     OS << "DemandedBits: 0x" << utohexstr(KV.second.getLimitedValue()) << " for "
        << *KV.first << "\n";
   }
 }
 
-FunctionPass *llvm::createDemandedBitsPass() {
-  return new DemandedBits();
+FunctionPass *llvm::createDemandedBitsWrapperPass() {
+  return new DemandedBitsWrapperPass();
+}
+
+AnalysisKey DemandedBitsAnalysis::Key;
+
+DemandedBits DemandedBitsAnalysis::run(Function &F,
+                                             FunctionAnalysisManager &AM) {
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  return DemandedBits(F, AC, DT);
+}
+
+PreservedAnalyses DemandedBitsPrinterPass::run(Function &F,
+                                               FunctionAnalysisManager &AM) {
+  AM.getResult<DemandedBitsAnalysis>(F).print(OS);
+  return PreservedAnalyses::all();
 }

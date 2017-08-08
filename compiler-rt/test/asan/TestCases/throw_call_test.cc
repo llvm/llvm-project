@@ -1,12 +1,6 @@
 // RUN: %clangxx_asan %s -o %t && %run %t
 // http://code.google.com/p/address-sanitizer/issues/detail?id=147 (not fixed).
 // BROKEN: %clangxx_asan %s -o %t -static-libstdc++ && %run %t
-//
-// Android builds with static libstdc++ by default.
-// XFAIL: android
-
-// Clang doesn't support exceptions on Windows yet.
-// XFAIL: win32
 
 #include <stdio.h>
 static volatile int zero = 0;

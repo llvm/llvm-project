@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- divdc3_test.c - Test __divdc3 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -15,6 +16,8 @@
 #include <math.h>
 #include <complex.h>
 #include <stdio.h>
+
+// REQUIRES: c99-complex
 
 // Returns: the quotient of (a + ib) / (c + id)
 

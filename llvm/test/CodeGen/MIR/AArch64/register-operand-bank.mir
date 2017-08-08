@@ -1,0 +1,20 @@
+# RUN: llc -o - %s -mtriple=aarch64-- -run-pass=none | FileCheck %s
+# REQUIRES: global-isel
+# Test various aspects of register bank specification on machine operands.
+--- |
+  define void @func() { ret void }
+...
+---
+# CHECK-LABEL: name: func
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
+name: func
+body: |
+  bb.0:
+    %0 : gpr(s64) = COPY %x9
+    %x9 = COPY %0
+
+    %3 : fpr(s64) = COPY %d0
+    %d1 = COPY %3 : fpr
+...

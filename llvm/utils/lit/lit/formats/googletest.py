@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import os
+import subprocess
 import sys
 
 import lit.Test
@@ -10,8 +11,8 @@ from .base import TestFormat
 kIsWindows = sys.platform in ['win32', 'cygwin']
 
 class GoogleTest(TestFormat):
-    def __init__(self, test_sub_dir, test_suffix):
-        self.test_sub_dir = os.path.normcase(str(test_sub_dir)).split(';')
+    def __init__(self, test_sub_dirs, test_suffix):
+        self.test_sub_dirs = os.path.normcase(str(test_sub_dirs)).split(';')
         self.test_suffix = str(test_suffix)
 
         # On Windows, assume tests will also end in '.exe'.
@@ -29,21 +30,33 @@ class GoogleTest(TestFormat):
           localConfig: TestingConfig instance"""
 
         try:
-            lines = lit.util.capture([path, '--gtest_list_tests'],
-                                     env=localConfig.environment)
-            if kIsWindows:
-              lines = lines.replace('\r', '')
-            lines = lines.split('\n')
-        except:
-            litConfig.error("unable to discover google-tests in %r" % path)
+            output = subprocess.check_output([path, '--gtest_list_tests'],
+                                             env=localConfig.environment)
+        except subprocess.CalledProcessError as exc:
+            litConfig.warning(
+                "unable to discover google-tests in %r: %s. Process output: %s"
+                % (path, sys.exc_info()[1], exc.output))
             raise StopIteration
 
         nested_tests = []
-        for ln in lines:
-            if not ln.strip():
+        for ln in output.splitlines(False):  # Don't keep newlines.
+            ln = lit.util.to_string(ln)
+
+            if 'Running main() from gtest_main.cc' in ln:
+                # Upstream googletest prints this to stdout prior to running
+                # tests. LLVM removed that print statement in r61540, but we
+                # handle it here in case upstream googletest is being used.
                 continue
 
-            prefix = ''
+            # The test name list includes trailing comments beginning with
+            # a '#' on some lines, so skip those. We don't support test names
+            # that use escaping to embed '#' into their name as the names come
+            # from C++ class and method names where such things are hard and
+            # uninteresting to support.
+            ln = ln.split('#', 1)[0].rstrip()
+            if not ln.lstrip():
+                continue
+
             index = 0
             while ln[index*2:index*2+2] == '  ':
                 index += 1
@@ -61,38 +74,22 @@ class GoogleTest(TestFormat):
             else:
                 yield ''.join(nested_tests) + ln
 
-    # Note: path_in_suite should not include the executable name.
-    def getTestsInExecutable(self, testSuite, path_in_suite, execpath,
-                             litConfig, localConfig):
-        if not execpath.endswith(self.test_suffix):
-            return
-        (dirname, basename) = os.path.split(execpath)
-        # Discover the tests in this executable.
-        for testname in self.getGTestTests(execpath, litConfig, localConfig):
-            testPath = path_in_suite + (basename, testname)
-            yield lit.Test.Test(testSuite, testPath, localConfig, file_path=execpath)
-
     def getTestsInDirectory(self, testSuite, path_in_suite,
                             litConfig, localConfig):
         source_path = testSuite.getSourcePath(path_in_suite)
-        for filename in os.listdir(source_path):
-            filepath = os.path.join(source_path, filename)
-            if os.path.isdir(filepath):
-                # Iterate over executables in a directory.
-                if not os.path.normcase(filename) in self.test_sub_dir:
-                    continue
-                dirpath_in_suite = path_in_suite + (filename, )
-                for subfilename in os.listdir(filepath):
-                    execpath = os.path.join(filepath, subfilename)
-                    for test in self.getTestsInExecutable(
-                            testSuite, dirpath_in_suite, execpath,
-                            litConfig, localConfig):
-                      yield test
-            elif ('.' in self.test_sub_dir):
-                for test in self.getTestsInExecutable(
-                        testSuite, path_in_suite, filepath,
-                        litConfig, localConfig):
-                    yield test
+        for subdir in self.test_sub_dirs:
+            dir_path = os.path.join(source_path, subdir)
+            if not os.path.isdir(dir_path):
+                continue
+            for fn in lit.util.listdir_files(dir_path,
+                                             suffixes={self.test_suffix}):
+                # Discover the tests in this executable.
+                execpath = os.path.join(source_path, subdir, fn)
+                testnames = self.getGTestTests(execpath, litConfig, localConfig)
+                for testname in testnames:
+                    testPath = path_in_suite + (subdir, fn, testname)
+                    yield lit.Test.Test(testSuite, testPath, localConfig,
+                                        file_path=execpath)
 
     def execute(self, test, litConfig):
         testPath,testName = os.path.split(test.getSourcePath())
@@ -109,8 +106,15 @@ class GoogleTest(TestFormat):
         if litConfig.noExecute:
             return lit.Test.PASS, ''
 
-        out, err, exitCode = lit.util.executeCommand(
-            cmd, env=test.config.environment)
+        try:
+            out, err, exitCode = lit.util.executeCommand(
+                cmd, env=test.config.environment,
+                timeout=litConfig.maxIndividualTestTime)
+        except lit.util.ExecuteCommandTimeoutException:
+            return (lit.Test.TIMEOUT,
+                    'Reached timeout of {} seconds'.format(
+                        litConfig.maxIndividualTestTime)
+                   )
 
         if exitCode:
             return lit.Test.FAIL, out + err
@@ -122,4 +126,3 @@ class GoogleTest(TestFormat):
             return lit.Test.UNRESOLVED, msg
 
         return lit.Test.PASS,''
-

@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++11 %s
+
 typedef char char16 __attribute__ ((__vector_size__ (16)));
 typedef long long longlong16 __attribute__ ((__vector_size__ (16)));
 typedef char char16_e __attribute__ ((__ext_vector_type__ (16)));
@@ -101,7 +104,10 @@ void casts(longlong16 ll16, longlong16_e ll16e) {
 }
 
 template<typename T>
-struct convertible_to { // expected-note 3 {{candidate function (the implicit copy assignment operator)}}
+struct convertible_to { // expected-note 3 {{candidate function (the implicit copy assignment operator) not viable}}
+#if __cplusplus >= 201103L // C++11 or later
+// expected-note@-2 3 {{candidate function (the implicit move assignment operator) not viable}}
+#endif
   operator T() const;
 };
 

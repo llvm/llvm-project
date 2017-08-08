@@ -24,8 +24,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/TaintTag.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableMap.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/Allocator.h"
+#include <utility>
 
 namespace llvm {
 class APSInt;
@@ -43,6 +43,7 @@ typedef std::unique_ptr<ConstraintManager>(*ConstraintManagerCreator)(
     ProgramStateManager &, SubEngine *);
 typedef std::unique_ptr<StoreManager>(*StoreManagerCreator)(
     ProgramStateManager &);
+typedef llvm::ImmutableMap<const SubRegion*, TaintTagType> TaintedSubRegions;
 
 //===----------------------------------------------------------------------===//
 // ProgramStateTrait - Traits used by the Generic Data Map of a ProgramState.
@@ -98,18 +99,18 @@ public:
   /// This ctor is used when creating the first ProgramState object.
   ProgramState(ProgramStateManager *mgr, const Environment& env,
           StoreRef st, GenericDataMap gdm);
-    
+
   /// Copy ctor - We must explicitly define this or else the "Next" ptr
   ///  in FoldingSetNode will also get copied.
   ProgramState(const ProgramState &RHS);
-  
+
   ~ProgramState();
 
   /// Return the ProgramStateManager associated with this state.
   ProgramStateManager &getStateManager() const {
     return *stateMgr;
   }
-  
+
   /// Return the ConstraintManager.
   ConstraintManager &getConstraintManager() const;
 
@@ -121,7 +122,7 @@ public:
   ///  is a mapping from locations to values.
   Store getStore() const { return store; }
 
-  
+
   /// getGDM - Return the generic data map associated with this state.
   GenericDataMap getGDM() const { return GDM; }
 
@@ -197,10 +198,10 @@ public:
   ///
   /// This returns a new state with the added constraint on \p cond.
   /// If no new state is feasible, NULL is returned.
-  ProgramStateRef assumeWithinInclusiveRange(DefinedOrUnknownSVal Val,
-                                             const llvm::APSInt &From,
-                                             const llvm::APSInt &To,
-                                             bool assumption) const;
+  ProgramStateRef assumeInclusiveRange(DefinedOrUnknownSVal Val,
+                                       const llvm::APSInt &From,
+                                       const llvm::APSInt &To,
+                                       bool assumption) const;
 
   /// Assumes given range both "true" and "false" for \p Val, and returns both
   /// corresponding states (respectively).
@@ -208,14 +209,13 @@ public:
   /// This is more efficient than calling assume() twice. Note that one (but not
   /// both) of the returned states may be NULL.
   std::pair<ProgramStateRef, ProgramStateRef>
-  assumeWithinInclusiveRange(DefinedOrUnknownSVal Val, const llvm::APSInt &From,
-                             const llvm::APSInt &To) const;
+  assumeInclusiveRange(DefinedOrUnknownSVal Val, const llvm::APSInt &From,
+                       const llvm::APSInt &To) const;
 
-  
   /// \brief Check if the given SVal is constrained to zero or is a zero
   ///        constant.
   ConditionTruthVal isNull(SVal V) const;
-  
+
   /// Utility method for getting regions.
   const VarRegion* getRegion(const VarDecl *D, const LocationContext *LC) const;
 
@@ -230,11 +230,12 @@ public:
 
   ProgramStateRef bindLoc(Loc location,
                           SVal V,
+                          const LocationContext *LCtx,
                           bool notifyChanges = true) const;
 
-  ProgramStateRef bindLoc(SVal location, SVal V) const;
+  ProgramStateRef bindLoc(SVal location, SVal V, const LocationContext *LCtx) const;
 
-  ProgramStateRef bindDefault(SVal loc, SVal V) const;
+  ProgramStateRef bindDefault(SVal loc, SVal V, const LocationContext *LCtx) const;
 
   ProgramStateRef killBinding(Loc LV) const;
 
@@ -254,7 +255,7 @@ public:
   /// \param IS the set of invalidated symbols.
   /// \param Call if non-null, the invalidated regions represent parameters to
   ///        the call and should be considered directly invalidated.
-  /// \param ITraits information about special handling for a particular 
+  /// \param ITraits information about special handling for a particular
   ///        region/symbol.
   ProgramStateRef
   invalidateRegions(ArrayRef<const MemRegion *> Regions, const Expr *E,
@@ -278,7 +279,7 @@ public:
   /// Get the lvalue for a variable reference.
   Loc getLValue(const VarDecl *D, const LocationContext *LC) const;
 
-  Loc getLValue(const CompoundLiteralExpr *literal, 
+  Loc getLValue(const CompoundLiteralExpr *literal,
                 const LocationContext *LC) const;
 
   /// Get the lvalue for an ivar reference.
@@ -295,7 +296,7 @@ public:
 
   /// Returns the SVal bound to the statement 'S' in the state's environment.
   SVal getSVal(const Stmt *S, const LocationContext *LCtx) const;
-  
+
   SVal getSValAsScalarOrLoc(const Stmt *Ex, const LocationContext *LCtx) const;
 
   /// \brief Return the value bound to the specified location.
@@ -310,7 +311,7 @@ public:
   SVal getSVal(const MemRegion* R) const;
 
   SVal getSValAsScalarOrLoc(const MemRegion *R) const;
-  
+
   /// \brief Visits the symbols reachable from the given SVal using the provided
   /// SymbolVisitor.
   ///
@@ -319,22 +320,22 @@ public:
   /// visitor to avoid repeated initialization cost.
   /// \sa ScanReachableSymbols
   bool scanReachableSymbols(SVal val, SymbolVisitor& visitor) const;
-  
+
   /// \brief Visits the symbols reachable from the SVals in the given range
   /// using the provided SymbolVisitor.
   bool scanReachableSymbols(const SVal *I, const SVal *E,
                             SymbolVisitor &visitor) const;
-  
+
   /// \brief Visits the symbols reachable from the regions in the given
   /// MemRegions range using the provided SymbolVisitor.
-  bool scanReachableSymbols(const MemRegion * const *I, 
+  bool scanReachableSymbols(const MemRegion * const *I,
                             const MemRegion * const *E,
                             SymbolVisitor &visitor) const;
 
   template <typename CB> CB scanReachableSymbols(SVal val) const;
   template <typename CB> CB scanReachableSymbols(const SVal *beg,
                                                  const SVal *end) const;
-  
+
   template <typename CB> CB
   scanReachableSymbols(const MemRegion * const *beg,
                        const MemRegion * const *end) const;
@@ -343,6 +344,9 @@ public:
   ProgramStateRef addTaint(const Stmt *S, const LocationContext *LCtx,
                                TaintTagType Kind = TaintTagGeneric) const;
 
+  /// Create a new state in which the value is marked as tainted.
+  ProgramStateRef addTaint(SVal V, TaintTagType Kind = TaintTagGeneric) const;
+
   /// Create a new state in which the symbol is marked as tainted.
   ProgramStateRef addTaint(SymbolRef S,
                                TaintTagType Kind = TaintTagGeneric) const;
@@ -350,6 +354,14 @@ public:
   /// Create a new state in which the region symbol is marked as tainted.
   ProgramStateRef addTaint(const MemRegion *R,
                                TaintTagType Kind = TaintTagGeneric) const;
+
+  /// Create a new state in a which a sub-region of a given symbol is tainted.
+  /// This might be necessary when referring to regions that can not have an
+  /// individual symbol, e.g. if they are represented by the default binding of
+  /// a LazyCompoundVal.
+  ProgramStateRef addPartialTaint(SymbolRef ParentSym,
+                                  const SubRegion *SubRegion,
+                                  TaintTagType Kind = TaintTagGeneric) const;
 
   /// Check if the statement is tainted in the current state.
   bool isTainted(const Stmt *S, const LocationContext *LCtx,
@@ -453,6 +465,7 @@ private:
   std::unique_ptr<ConstraintManager>   ConstraintMgr;
 
   ProgramState::GenericDataMap::Factory     GDMFactory;
+  TaintedSubRegions::Factory TSRFactory;
 
   typedef llvm::DenseMap<void*,std::pair<void*,void (*)(void*)> > GDMContextsTy;
   GDMContextsTy GDMContexts;
@@ -469,7 +482,7 @@ private:
 
   /// A BumpPtrAllocator to allocate states.
   llvm::BumpPtrAllocator &Alloc;
-  
+
   /// A vector of ProgramStates that we can reuse.
   std::vector<ProgramState *> freeStates;
 
@@ -632,9 +645,9 @@ public:
 inline ConstraintManager &ProgramState::getConstraintManager() const {
   return stateMgr->getConstraintManager();
 }
-  
+
 inline const VarRegion* ProgramState::getRegion(const VarDecl *D,
-                                                const LocationContext *LC) const 
+                                                const LocationContext *LC) const
 {
   return getStateManager().getRegionManager().getVarRegion(D, LC);
 }
@@ -647,7 +660,7 @@ inline ProgramStateRef ProgramState::assume(DefinedOrUnknownSVal Cond,
   return getStateManager().ConstraintMgr
       ->assume(this, Cond.castAs<DefinedSVal>(), Assumption);
 }
-  
+
 inline std::pair<ProgramStateRef , ProgramStateRef >
 ProgramState::assume(DefinedOrUnknownSVal Cond) const {
   if (Cond.isUnknown())
@@ -657,36 +670,34 @@ ProgramState::assume(DefinedOrUnknownSVal Cond) const {
       ->assumeDual(this, Cond.castAs<DefinedSVal>());
 }
 
-inline ProgramStateRef
-ProgramState::assumeWithinInclusiveRange(DefinedOrUnknownSVal Val,
-                                         const llvm::APSInt &From,
-                                         const llvm::APSInt &To,
-                                         bool Assumption) const {
+inline ProgramStateRef ProgramState::assumeInclusiveRange(
+    DefinedOrUnknownSVal Val, const llvm::APSInt &From, const llvm::APSInt &To,
+    bool Assumption) const {
   if (Val.isUnknown())
     return this;
 
   assert(Val.getAs<NonLoc>() && "Only NonLocs are supported!");
 
-  return getStateManager().ConstraintMgr->assumeWithinInclusiveRange(
-        this, Val.castAs<NonLoc>(), From, To, Assumption);
+  return getStateManager().ConstraintMgr->assumeInclusiveRange(
+      this, Val.castAs<NonLoc>(), From, To, Assumption);
 }
 
 inline std::pair<ProgramStateRef, ProgramStateRef>
-ProgramState::assumeWithinInclusiveRange(DefinedOrUnknownSVal Val,
-                                         const llvm::APSInt &From,
-                                         const llvm::APSInt &To) const {
+ProgramState::assumeInclusiveRange(DefinedOrUnknownSVal Val,
+                                   const llvm::APSInt &From,
+                                   const llvm::APSInt &To) const {
   if (Val.isUnknown())
     return std::make_pair(this, this);
 
   assert(Val.getAs<NonLoc>() && "Only NonLocs are supported!");
 
-  return getStateManager().ConstraintMgr
-      ->assumeWithinInclusiveRangeDual(this, Val.castAs<NonLoc>(), From, To);
+  return getStateManager().ConstraintMgr->assumeInclusiveRangeDual(
+      this, Val.castAs<NonLoc>(), From, To);
 }
 
-inline ProgramStateRef ProgramState::bindLoc(SVal LV, SVal V) const {
+inline ProgramStateRef ProgramState::bindLoc(SVal LV, SVal V, const LocationContext *LCtx) const {
   if (Optional<Loc> L = LV.getAs<Loc>())
-    return bindLoc(*L, V);
+    return bindLoc(*L, V, LCtx);
   return this;
 }
 
@@ -810,7 +821,7 @@ CB ProgramState::scanReachableSymbols(SVal val) const {
   scanReachableSymbols(val, cb);
   return cb;
 }
-  
+
 template <typename CB>
 CB ProgramState::scanReachableSymbols(const SVal *beg, const SVal *end) const {
   CB cb(this);
@@ -827,8 +838,9 @@ CB ProgramState::scanReachableSymbols(const MemRegion * const *beg,
 }
 
 /// \class ScanReachableSymbols
-/// A Utility class that allows to visit the reachable symbols using a custom
-/// SymbolVisitor.
+/// A utility class that visits the reachable symbols using a custom
+/// SymbolVisitor. Terminates recursive traversal when the visitor function
+/// returns false.
 class ScanReachableSymbols {
   typedef llvm::DenseSet<const void*> VisitedItems;
 
@@ -836,9 +848,8 @@ class ScanReachableSymbols {
   ProgramStateRef state;
   SymbolVisitor &visitor;
 public:
-
-  ScanReachableSymbols(ProgramStateRef st, SymbolVisitor& v)
-    : state(st), visitor(v) {}
+  ScanReachableSymbols(ProgramStateRef st, SymbolVisitor &v)
+      : state(std::move(st)), visitor(v) {}
 
   bool scan(nonloc::LazyCompoundVal val);
   bool scan(nonloc::CompoundVal val);

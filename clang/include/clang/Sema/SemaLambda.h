@@ -18,7 +18,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/Sema/ScopeInfo.h"
 namespace clang {
- 
+class Sema;
 
 /// \brief Examines the FunctionScopeInfo stack to determine the nearest
 /// enclosing lambda (to the current lambda) that is 'capture-capable' for 

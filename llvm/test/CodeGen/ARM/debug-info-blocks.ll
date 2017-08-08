@@ -1,5 +1,21 @@
-; RUN: llc -O0 < %s | FileCheck %s
-; CHECK: @DEBUG_VALUE: foobar_func_block_invoke_0:mydata <- [SP+{{[0-9]+}}]
+; RUN: llc -filetype=obj -O0 < %s | llvm-dwarfdump - | FileCheck %s
+
+; debug_info content
+; CHECK: DW_AT_name {{.*}} "foobar_func_block_invoke_0"
+; CHECK-NOT: DW_TAG_subprogram
+; CHECK: DW_TAG_variable
+; CHECK-NOT: DW_TAG
+; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]	([[MYDATA_LOC:0x[0-9a-f]*]])
+; CHECK-NEXT: DW_AT_name {{.*}} "mydata"
+
+; debug_loc content
+; CHECK: .debug_loc contents:
+; CHECK: [[MYDATA_LOC]]: Beginning address offset: {{.*}}
+; CHECK-NOT: {{0x[0-9a-f]*}}: Beginning address offset
+; CHECK: Location description: {{.*}} 23 04 06 23 18
+; CHECK-NOT: {{0x[0-9a-f]*}}: Beginning address offset
+; CHECK: Location description: {{.*}} 23 04 06 23 18
+
 ; Radar 9331779
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:64-v128:32:128-a0:0:32-n32"
 target triple = "thumbv7-apple-ios"
@@ -23,7 +39,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 declare i8* @objc_msgSend(i8*, i8*, ...)
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
 
@@ -31,7 +47,7 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
   %1 = alloca %0*, align 4
   %bounds = alloca %struct.CR, align 4
   %data = alloca %struct.CR, align 4
-  call void @llvm.dbg.value(metadata i8* %.block_descriptor, i64 0, metadata !27, metadata !DIExpression()), !dbg !129
+  call void @llvm.dbg.value(metadata i8* %.block_descriptor, metadata !27, metadata !DIExpression()), !dbg !129
   store %0* %loadedMydata, %0** %1, align 4
   call void @llvm.dbg.declare(metadata %0** %1, metadata !130, metadata !DIExpression()), !dbg !131
   %2 = bitcast %struct.CR* %bounds to %1*
@@ -95,7 +111,7 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!162}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "Apple clang version 2.1", isOptimized: false, runtimeVersion: 2, emissionKind: 1, file: !153, enums: !147, retainedTypes: !{}, subprograms: !148)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "Apple clang version 2.1", isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, file: !153, enums: !147, retainedTypes: !{})
 !1 = !DICompositeType(tag: DW_TAG_enumeration_type, line: 248, size: 32, align: 32, file: !160, scope: !0, elements: !3)
 !2 = !DIFile(filename: "header.h", directory: "/Volumes/Sandbox/llvm")
 !3 = !{!4}
@@ -118,7 +134,7 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
 !20 = !DIFile(filename: "header4.h", directory: "/Volumes/Sandbox/llvm")
 !21 = !{!22}
 !22 = !DIEnumerator(name: "Eleven", value: 0) ; [ DW_TAG_enumerator ]
-!23 = distinct !DISubprogram(name: "foobar_func_block_invoke_0", line: 609, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 609, file: !152, scope: !24, type: !25)
+!23 = distinct !DISubprogram(name: "foobar_func_block_invoke_0", line: 609, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 609, file: !152, scope: !24, type: !25)
 !24 = !DIFile(filename: "MyLibrary.m", directory: "/Volumes/Sandbox/llvm")
 !25 = !DISubroutineType(types: !26)
 !26 = !{null}
@@ -243,7 +259,6 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
 !145 = !DILocation(line: 613, column: 17, scope: !142)
 !146 = !DILocation(line: 615, column: 13, scope: !142)
 !147 = !{!1, !1, !5, !5, !9, !14, !19, !19, !14, !14, !14, !19, !19, !19}
-!148 = !{!23}
 !149 = !DIFile(filename: "header3.h", directory: "/Volumes/Sandbox/llvm")
 !150 = !DIFile(filename: "Private.h", directory: "/Volumes/Sandbox/llvm")
 !151 = !DIFile(filename: "header4.h", directory: "/Volumes/Sandbox/llvm")
@@ -258,6 +273,6 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
 !160 = !DIFile(filename: "header.h", directory: "/Volumes/Sandbox/llvm")
 !161 = !{!"header2.h", !"/Volumes/Sandbox/llvm"}
 !162 = !{i32 1, !"Debug Info Version", i32 3}
-!163 = !DIExpression(DW_OP_plus, 20, DW_OP_deref, DW_OP_plus, 4, DW_OP_deref, DW_OP_plus, 24)
-!164 = !DIExpression(DW_OP_deref, DW_OP_plus, 24)
-!165 = !DIExpression(DW_OP_deref, DW_OP_plus, 28)
+!163 = !DIExpression(DW_OP_plus_uconst, 20, DW_OP_deref, DW_OP_plus_uconst, 4, DW_OP_deref, DW_OP_plus_uconst, 24)
+!164 = !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 24)
+!165 = !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 28)

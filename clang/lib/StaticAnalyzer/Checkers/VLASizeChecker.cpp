@@ -76,7 +76,6 @@ void VLASizeChecker::reportBug(VLASize_Kind Kind,
   report->addRange(SizeE->getSourceRange());
   bugreporter::trackNullOrUndefValue(N, SizeE, *report);
   C.emitReport(std::move(report));
-  return;
 }
 
 void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {

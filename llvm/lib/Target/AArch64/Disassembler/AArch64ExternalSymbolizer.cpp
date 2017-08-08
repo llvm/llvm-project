@@ -134,9 +134,11 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
       if (ReferenceType == LLVMDisassembler_ReferenceType_Out_LitPool_SymAddr)
         CommentStream << "literal pool symbol address: " << ReferenceName;
       else if (ReferenceType ==
-               LLVMDisassembler_ReferenceType_Out_LitPool_CstrAddr)
-        CommentStream << "literal pool for: \"" << ReferenceName << "\"";
-      else if (ReferenceType ==
+               LLVMDisassembler_ReferenceType_Out_LitPool_CstrAddr) {
+        CommentStream << "literal pool for: \"";
+        CommentStream.write_escaped(ReferenceName);
+        CommentStream << "\"";
+      } else if (ReferenceType ==
                LLVMDisassembler_ReferenceType_Out_Objc_CFString_Ref)
         CommentStream << "Objc cfstring ref: @\"" << ReferenceName << "\"";
       else if (ReferenceType ==

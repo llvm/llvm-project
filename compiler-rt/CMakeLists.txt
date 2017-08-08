@@ -1,116 +1,41 @@
 # CMake build for CompilerRT.
 #
 # This build assumes that CompilerRT is checked out into the
-# 'projects/compiler-rt' inside of an LLVM tree.
+# 'projects/compiler-rt' or 'runtimes/compiler-rt' inside of an LLVM tree.
 # Standalone build system for CompilerRT is not yet ready.
 #
 # An important constraint of the build is that it only produces libraries
 # based on the ability of the host toolchain to target various platforms.
 
+cmake_minimum_required(VERSION 3.4.3)
+
 # Check if compiler-rt is built as a standalone project.
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR COMPILER_RT_STANDALONE_BUILD)
   project(CompilerRT C CXX ASM)
   set(COMPILER_RT_STANDALONE_BUILD TRUE)
-else()
-  set(COMPILER_RT_STANDALONE_BUILD FALSE)
 endif()
 
-# The CompilerRT build system requires CMake version 2.8.8 or higher in order
-# to use its support for building convenience "libraries" as a collection of
-# .o files. This is particularly useful in producing larger, more complex
-# runtime libraries.
-if (NOT MSVC)
-  cmake_minimum_required(VERSION 2.8.8)
-else()
-  # Version 2.8.12.1 is required to build with Visual Studio 2013.
-  cmake_minimum_required(VERSION 2.8.12.1)
-endif()
+# Add path for custom compiler-rt modules.
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
+  )
 
-# FIXME: It may be removed when we use 2.8.12.
-if(CMAKE_VERSION VERSION_LESS 2.8.12)
-  # Invalidate a couple of keywords.
-  set(cmake_2_8_12_INTERFACE)
-  set(cmake_2_8_12_PRIVATE)
-else()
-  # Use ${cmake_2_8_12_KEYWORD} intead of KEYWORD in target_link_libraries().
-  set(cmake_2_8_12_INTERFACE INTERFACE)
-  set(cmake_2_8_12_PRIVATE PRIVATE)
-  if(POLICY CMP0022)
-    cmake_policy(SET CMP0022 NEW) # automatic when 2.8.12 is required
-  endif()
-endif()
-
-# Top level target used to build all compiler-rt libraries.
-add_custom_target(compiler-rt ALL)
+include(base-config-ix)
+include(CompilerRTUtils)
 
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
 option(COMPILER_RT_BUILD_SANITIZERS "Build sanitizers" ON)
 mark_as_advanced(COMPILER_RT_BUILD_SANITIZERS)
+option(COMPILER_RT_BUILD_XRAY "Build xray" ON)
+mark_as_advanced(COMPILER_RT_BUILD_XRAY)
 
-if (NOT COMPILER_RT_STANDALONE_BUILD)
-  # Compute the Clang version from the LLVM version.
-  # FIXME: We should be able to reuse CLANG_VERSION variable calculated
-  #        in Clang cmake files, instead of copying the rules here.
-  string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CLANG_VERSION
-         ${PACKAGE_VERSION})
-  # Setup the paths where compiler-rt runtimes and headers should be stored.
-  set(COMPILER_RT_OUTPUT_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION})
-  set(COMPILER_RT_EXEC_OUTPUT_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
-  set(COMPILER_RT_INSTALL_PATH lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION})
-  option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests."
-         ${LLVM_INCLUDE_TESTS})
- option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered"
-        ${LLVM_ENABLE_WERROR})
-  # Use just-built Clang to compile/link tests on all platforms, except for
-  # Windows where we need to use clang-cl instead.
-  if(NOT MSVC)
-    set(COMPILER_RT_TEST_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
-  else()
-    set(COMPILER_RT_TEST_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang.exe)
-  endif()
-else()
-  # Take output dir and install path from the user.
-  set(COMPILER_RT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH
-    "Path where built compiler-rt libraries should be stored.")
-  set(COMPILER_RT_EXEC_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin CACHE PATH
-    "Path where built compiler-rt executables should be stored.")
-  set(COMPILER_RT_INSTALL_PATH ${CMAKE_INSTALL_PREFIX} CACHE PATH
-    "Path where built compiler-rt libraries should be installed.")
-  option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests." OFF)
-  option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered" OFF)
-  # Use a host compiler to compile/link tests.
-  set(COMPILER_RT_TEST_COMPILER ${CMAKE_C_COMPILER} CACHE PATH "Compiler to use for testing")
+set(COMPILER_RT_BAREMETAL_BUILD OFF CACHE BOOLEAN
+  "Build for a bare-metal target.")
 
-  if (NOT LLVM_CONFIG_PATH)
-    find_program(LLVM_CONFIG_PATH "llvm-config"
-                 DOC "Path to llvm-config binary")
-    if (NOT LLVM_CONFIG_PATH)
-      message(FATAL_ERROR "llvm-config not found: specify LLVM_CONFIG_PATH")
-    endif()
-  endif()
-  execute_process(
-    COMMAND ${LLVM_CONFIG_PATH} "--obj-root" "--bindir" "--libdir" "--src-root"
-    RESULT_VARIABLE HAD_ERROR
-    OUTPUT_VARIABLE CONFIG_OUTPUT)
-  if (HAD_ERROR)
-    message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
-  endif()
-  string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";" CONFIG_OUTPUT ${CONFIG_OUTPUT})
-  list(GET CONFIG_OUTPUT 0 LLVM_BINARY_DIR)
-  list(GET CONFIG_OUTPUT 1 LLVM_TOOLS_BINARY_DIR)
-  list(GET CONFIG_OUTPUT 2 LLVM_LIBRARY_DIR)
-  list(GET CONFIG_OUTPUT 3 LLVM_MAIN_SRC_DIR)
-
-  # Make use of LLVM CMake modules.
-  file(TO_CMAKE_PATH ${LLVM_BINARY_DIR} LLVM_BINARY_DIR_CMAKE_STYLE)
-  set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR_CMAKE_STYLE}/share/llvm/cmake")
-  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
-  # Get some LLVM variables from LLVMConfig.
-  include("${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
-
-  set(LLVM_LIBRARY_OUTPUT_INTDIR
-    ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
+if (COMPILER_RT_STANDALONE_BUILD)
+  load_llvm_config()
 
   # Find Python interpreter.
   set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5)
@@ -129,51 +54,10 @@ else()
   set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 endif()
 
-if("${COMPILER_RT_TEST_COMPILER}" MATCHES "clang[+]*$")
-  set(COMPILER_RT_TEST_COMPILER_ID Clang)
-elseif("${COMPILER_RT_TEST_COMPILER}" MATCHES "clang.*.exe$")
-  set(COMPILER_RT_TEST_COMPILER_ID Clang)
-else()
-  set(COMPILER_RT_TEST_COMPILER_ID GNU)
-endif()
-
-set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${TARGET_TRIPLE} CACHE STRING
-    "Default triple for which compiler-rt runtimes will be built.")
-if(DEFINED COMPILER_RT_TEST_TARGET_TRIPLE)
-  # Backwards compatibility: this variable used to be called
-  # COMPILER_RT_TEST_TARGET_TRIPLE.
-  set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${COMPILER_RT_TEST_TARGET_TRIPLE})
-endif()
-
-string(REPLACE "-" ";" TARGET_TRIPLE_LIST ${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
-list(GET TARGET_TRIPLE_LIST 0 COMPILER_RT_DEFAULT_TARGET_ARCH)
-list(GET TARGET_TRIPLE_LIST 1 COMPILER_RT_DEFAULT_TARGET_OS)
-list(GET TARGET_TRIPLE_LIST 2 COMPILER_RT_DEFAULT_TARGET_ABI)
-# Determine if test target triple is specified explicitly, and doesn't match the
-# default.
-if(NOT COMPILER_RT_DEFAULT_TARGET_TRIPLE STREQUAL TARGET_TRIPLE)
-  set(COMPILER_RT_HAS_EXPLICIT_DEFAULT_TARGET_TRIPLE TRUE)
-else()
-  set(COMPILER_RT_HAS_EXPLICIT_DEFAULT_TARGET_TRIPLE FALSE)
-endif()
-
+construct_compiler_rt_default_triple()
 if ("${COMPILER_RT_DEFAULT_TARGET_ABI}" STREQUAL "androideabi")
   set(ANDROID 1)
 endif()
-
-string(TOLOWER ${CMAKE_SYSTEM_NAME} COMPILER_RT_OS_DIR)
-set(COMPILER_RT_LIBRARY_OUTPUT_DIR
-  ${COMPILER_RT_OUTPUT_DIR}/lib/${COMPILER_RT_OS_DIR})
-set(COMPILER_RT_LIBRARY_INSTALL_DIR
-  ${COMPILER_RT_INSTALL_PATH}/lib/${COMPILER_RT_OS_DIR})
-
-# Add path for custom compiler-rt modules.
-set(CMAKE_MODULE_PATH
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
-  ${CMAKE_MODULE_PATH}
-  )
-include(CompilerRTUtils)
 
 set(COMPILER_RT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(COMPILER_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -189,19 +73,39 @@ else()
 endif()
 
 option(COMPILER_RT_DEBUG "Build runtimes with full debug info" OFF)
+option(COMPILER_RT_EXTERNALIZE_DEBUGINFO
+  "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 # COMPILER_RT_DEBUG_PYBOOL is used by lit.common.configured.in.
 pythonize_bool(COMPILER_RT_DEBUG)
+
+include(config-ix)
+
+if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
+  # Mac OS X prior to 10.9 had problems with exporting symbols from
+  # libc++/libc++abi.
+  set(use_cxxabi_default OFF)
+elseif(MSVC)
+  set(use_cxxabi_default OFF)
+else()
+  set(use_cxxabi_default ON)
+endif()
+
+option(SANITIZER_CAN_USE_CXXABI "Sanitizers can use cxxabi" ${use_cxxabi_default})
+pythonize_bool(SANITIZER_CAN_USE_CXXABI)
 
 #================================
 # Setup Compiler Flags
 #================================
-include(CheckIncludeFile)
-check_include_file(unwind.h HAVE_UNWIND_H)
-
-include(config-ix)
 
 if(MSVC)
-  append_string_if(COMPILER_RT_HAS_W3_FLAG /W3 CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  # Override any existing /W flags with /W4. This is what LLVM does.  Failing to
+  # remove other /W[0-4] flags will result in a warning about overriding a
+  # previous flag.
+  if (COMPILER_RT_HAS_W4_FLAG)
+    string(REGEX REPLACE " /W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    string(REGEX REPLACE " /W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    append_string_if(COMPILER_RT_HAS_W4_FLAG /W4 CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  endif()
 else()
   append_string_if(COMPILER_RT_HAS_WALL_FLAG -Wall CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
@@ -218,16 +122,28 @@ if(NOT COMPILER_RT_HAS_FUNC_SYMBOL)
 endif()
 
 # Provide some common commmandline flags for Sanitizer runtimes.
-append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC SANITIZER_COMMON_CFLAGS)
+if(NOT WIN32)
+  append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC SANITIZER_COMMON_CFLAGS)
+endif()
 append_list_if(COMPILER_RT_HAS_FNO_BUILTIN_FLAG -fno-builtin SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FNO_EXCEPTIONS_FLAG -fno-exceptions SANITIZER_COMMON_CFLAGS)
-append_list_if(COMPILER_RT_HAS_FOMIT_FRAME_POINTER_FLAG -fomit-frame-pointer SANITIZER_COMMON_CFLAGS)
+if(NOT COMPILER_RT_DEBUG AND NOT APPLE)
+  append_list_if(COMPILER_RT_HAS_FOMIT_FRAME_POINTER_FLAG -fomit-frame-pointer SANITIZER_COMMON_CFLAGS)
+endif()
 append_list_if(COMPILER_RT_HAS_FUNWIND_TABLES_FLAG -funwind-tables SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FNO_STACK_PROTECTOR_FLAG -fno-stack-protector SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FNO_SANITIZE_SAFE_STACK_FLAG -fno-sanitize=safe-stack SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG -fvisibility=hidden SANITIZER_COMMON_CFLAGS)
-append_list_if(COMPILER_RT_HAS_FNO_FUNCTION_SECTIONS_FLAG -fno-function-sections SANITIZER_COMMON_CFLAGS)
+append_list_if(COMPILER_RT_HAS_FVISIBILITY_INLINES_HIDDEN_FLAG -fvisibility-inlines-hidden SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
+
+# The following is a workaround for powerpc64le. This is the only architecture
+# that requires -fno-function-sections to work properly. If lacking, the ASan
+# Linux test function-sections-are-bad.cc fails with the following error:
+# 'undefined symbol: __sanitizer_unaligned_load32'.
+if(DEFINED TARGET_powerpc64le_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_FNO_FUNCTION_SECTIONS_FLAG -fno-function-sections TARGET_powerpc64le_CFLAGS)
+endif()
 
 if(MSVC)
   # Replace the /M[DT][d] flags with /MT, and strip any definitions of _DEBUG,
@@ -235,6 +151,8 @@ if(MSVC)
   # FIXME: In fact, sanitizers should support both /MT and /MD, see PR20214.
   if(COMPILER_RT_HAS_MT_FLAG)
     foreach(flag_var
+      CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+      CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
       CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
       CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
       string(REGEX REPLACE "/M[DT]d" "/MT" ${flag_var} "${${flag_var}}")
@@ -244,14 +162,26 @@ if(MSVC)
   endif()
   append_list_if(COMPILER_RT_HAS_Oy_FLAG /Oy- SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_GS_FLAG /GS- SANITIZER_COMMON_CFLAGS)
+  # VS 2015 (version 1900) added support for thread safe static initialization.
+  # However, ASan interceptors run before CRT initialization, which causes the
+  # new thread safe code to crash. Disable this feature for now.
+  if (MSVC_VERSION GREATER 1899 OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    list(APPEND SANITIZER_COMMON_CFLAGS /Zc:threadSafeInit-)
+  endif()
 endif()
 
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 SANITIZER_COMMON_CFLAGS)
 
-# Build with optimization, unless we're in debug mode. If we're using MSVC,
+# If we're using MSVC,
 # always respect the optimization flags set by CMAKE_BUILD_TYPE instead.
-if(NOT COMPILER_RT_DEBUG AND NOT MSVC)
-  list(APPEND SANITIZER_COMMON_CFLAGS -O3)
+if (NOT MSVC)
+
+  # Build with optimization, unless we're in debug mode. 
+  if(COMPILER_RT_DEBUG)
+    list(APPEND SANITIZER_COMMON_CFLAGS -O0)
+  else()
+    list(APPEND SANITIZER_COMMON_CFLAGS -O3)
+  endif()
 endif()
 
 # Determine if we should restrict stack frame sizes.
@@ -271,8 +201,20 @@ if(COMPILER_RT_HAS_GLINE_TABLES_ONLY_FLAG AND NOT COMPILER_RT_DEBUG)
   list(APPEND SANITIZER_COMMON_CFLAGS -gline-tables-only)
 elseif(COMPILER_RT_HAS_G_FLAG)
   list(APPEND SANITIZER_COMMON_CFLAGS -g)
-elseif(COMPILER_RT_HAS_Zi_FLAG)
-  list(APPEND SANITIZER_COMMON_CFLAGS /Zi)
+elseif(MSVC)
+  # Use /Z7 instead of /Zi for the asan runtime. This avoids the LNK4099
+  # warning from the MS linker complaining that it can't find the 'vc140.pdb'
+  # file used by our object library compilations.
+  list(APPEND SANITIZER_COMMON_CFLAGS /Z7)
+  llvm_replace_compiler_option(CMAKE_CXX_FLAGS "/Z[i7I]" "/Z7")
+  llvm_replace_compiler_option(CMAKE_CXX_FLAGS_DEBUG "/Z[i7I]" "/Z7")
+  llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/Z[i7I]" "/Z7")
+endif()
+
+if(LLVM_ENABLE_MODULES)
+  # Sanitizers cannot be built with -fmodules. The interceptors intentionally
+  # don't include system headers, which is incompatible with modules.
+  list(APPEND SANITIZER_COMMON_CFLAGS -fno-modules)
 endif()
 
 # Turn off several warnings.
@@ -286,14 +228,19 @@ append_list_if(COMPILER_RT_HAS_WD4391_FLAG /wd4391 SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WD4722_FLAG /wd4722 SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WD4800_FLAG /wd4800 SANITIZER_COMMON_CFLAGS)
 
-if(APPLE AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
-  # Mac OS X prior to 10.9 had problems with exporting symbols from
-  # libc++/libc++abi.
-  set(SANITIZER_CAN_USE_CXXABI FALSE)
-else()
-  set(SANITIZER_CAN_USE_CXXABI TRUE)
+# Warnings to turn off for all libraries, not just sanitizers.
+append_string_if(COMPILER_RT_HAS_WUNUSED_PARAMETER_FLAG -Wno-unused-parameter CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
+if (CMAKE_LINKER MATCHES "link.exe$")
+  # Silence MSVC linker warnings caused by empty object files. The
+  # sanitizer libraries intentionally use ifdefs that result in empty
+  # files, rather than skipping these files in the build system.
+  # Ideally, we would pass this flag only for the libraries that need
+  # it, but CMake doesn't seem to have a way to set linker flags for
+  # individual static libraries, so we enable the suppression flag for
+  # the whole compiler-rt project.
+  append("/IGNORE:4221" CMAKE_STATIC_LINKER_FLAGS)
 endif()
-pythonize_bool(SANITIZER_CAN_USE_CXXABI)
 
 add_subdirectory(include)
 
@@ -301,16 +248,26 @@ set(COMPILER_RT_LIBCXX_PATH ${LLVM_MAIN_SRC_DIR}/projects/libcxx)
 if(EXISTS ${COMPILER_RT_LIBCXX_PATH}/)
   set(COMPILER_RT_HAS_LIBCXX_SOURCES TRUE)
 else()
-  set(COMPILER_RT_HAS_LIBCXX_SOURCES FALSE)
+  set(COMPILER_RT_LIBCXX_PATH ${LLVM_MAIN_SRC_DIR}/../libcxx)
+  if(EXISTS ${COMPILER_RT_LIBCXX_PATH}/)
+    set(COMPILER_RT_HAS_LIBCXX_SOURCES TRUE)
+  else()
+    set(COMPILER_RT_HAS_LIBCXX_SOURCES FALSE)
+  endif()
 endif()
 
 set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/tools/lld)
-if(EXISTS ${COMPILER_RT_LLD_PATH}/)
-  set(COMPILER_RT_HAS_LLD_SOURCES TRUE)
+if(EXISTS ${COMPILER_RT_LLD_PATH}/ AND LLVM_TOOL_LLD_BUILD)
+  set(COMPILER_RT_HAS_LLD TRUE)
 else()
-  set(COMPILER_RT_HAS_LLD_SOURCES FALSE)
+  set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/../lld)
+  if(EXISTS ${COMPILER_RT_LLD_PATH}/ AND LLVM_TOOL_LLD_BUILD)
+    set(COMPILER_RT_HAS_LLD TRUE)
+  else()
+    set(COMPILER_RT_HAS_LLD FALSE)
+  endif()
 endif()
-pythonize_bool(COMPILER_RT_HAS_LLD_SOURCES)
+pythonize_bool(COMPILER_RT_HAS_LLD)
 
 add_subdirectory(lib)
 

@@ -32,9 +32,9 @@ entry:
 !llvm.module.flags = !{!30}
 
 !0 = !DILocalVariable(name: "__dest", line: 78, arg: 1, scope: !1, file: !2, type: !6)
-!1 = distinct !DISubprogram(name: "foobar", line: 79, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 79, file: !27, scope: !2, type: !4, variables: !25)
+!1 = distinct !DISubprogram(name: "foobar", line: 79, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !3, scopeLine: 79, file: !27, scope: !2, type: !4, variables: !25)
 !2 = !DIFile(filename: "string.h", directory: "Game")
-!3 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 127710)", isOptimized: true, emissionKind: 0, file: !28, enums: !29, retainedTypes: !29, subprograms: !24)
+!3 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 127710)", isOptimized: true, emissionKind: FullDebug, file: !28, enums: !29, retainedTypes: !29)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6}
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, scope: !3, baseType: null)
@@ -50,7 +50,6 @@ entry:
 !21 = !DILocation(line: 80, column: 3, scope: !22)
 !22 = distinct !DILexicalBlock(line: 80, column: 3, file: !27, scope: !23)
 !23 = distinct !DILexicalBlock(line: 79, column: 1, file: !27, scope: !1)
-!24 = !{!1}
 !25 = !{!0, !7, !9}
 !26 = !DIFile(filename: "bits.c", directory: "Game")
 !27 = !DIFile(filename: "string.h", directory: "Game")

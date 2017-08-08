@@ -36,7 +36,8 @@
     drotr32     $1, $14, 15
     .set arch=mips64r6
     mod         $2, $4, $6
-    .set arch=cnmips
+    .set arch=octeon
+    baddu $9, $6, $7
     .set arch=r4000
     dadd        $2, $2, $2
 
@@ -62,6 +63,7 @@
 # CHECK: drotr32     $1, $14, 15
 # CHECK: .set arch=mips64r6
 # CHECK: mod         $2, $4, $6
-# CHECK: .set arch=cnmips
+# CHECK: .set arch=octeon
+# CHECK: baddu $9, $6, $7
 # CHECK: .set arch=r4000
 # CHECK: dadd        $2, $2, $2

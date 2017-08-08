@@ -26,6 +26,9 @@ def note_constexpr_lshift_discards : Note<"signed left shift discards bits">;
 def note_constexpr_invalid_function : Note<
   "%select{non-constexpr|undefined}0 %select{function|constructor}1 %2 cannot "
   "be used in a constant expression">;
+def note_constexpr_invalid_inhctor : Note<
+  "constructor inherited from base class %0 cannot be used in a "
+  "constant expression; derived class cannot be implicitly initialized">;
 def note_constexpr_no_return : Note<
   "control reached end of constexpr function">;
 def note_constexpr_virtual_call : Note<
@@ -41,7 +44,8 @@ def note_constexpr_non_global : Note<
 def note_constexpr_uninitialized : Note<
   "%select{|sub}0object of type %1 is not initialized">;
 def note_constexpr_array_index : Note<"cannot refer to element %0 of "
-  "%select{array of %2 elements|non-array object}1 in a constant expression">;
+  "%select{array of %2 element%plural{1:|:s}2|non-array object}1 "
+  "in a constant expression">;
 def note_constexpr_float_arithmetic : Note<
   "floating point arithmetic produces %select{an infinity|a NaN}0">;
 def note_constexpr_pointer_subtraction_not_same_array : Note<
@@ -141,6 +145,8 @@ def note_constexpr_calls_suppressed : Note<
   "(skipping %0 call%s0 in backtrace; use -fconstexpr-backtrace-limit=0 to "
   "see all)">;
 def note_constexpr_call_here : Note<"in call to '%0'">;
+def note_constexpr_inherited_ctor_call_here : Note<
+  "in implicit initialization for inherited constructor of %0">;
 def note_constexpr_baa_insufficient_alignment : Note<
   "%select{alignment of|offset of the aligned pointer from}0 the base pointee "
   "object (%1 %plural{1:byte|:bytes}1) is %select{less than|not a multiple of}0 the "
@@ -152,6 +158,12 @@ def note_constexpr_baa_value_insufficient_alignment : Note<
 def warn_integer_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,
   InGroup<DiagGroup<"integer-overflow">>;
+
+// This is a temporary diagnostic, and shall be removed once our 
+// implementation is complete, and like the preceding constexpr notes belongs
+// in Sema.
+def note_unimplemented_constexpr_lambda_feature_ast : Note<
+    "unimplemented constexpr lambda feature: %0 (coming soon!)">;
 
 // inline asm related.
 let CategoryName = "Inline Assembly Issue" in {
@@ -188,12 +200,17 @@ def note_odr_defined_here : Note<"also defined here">;
 def err_odr_function_type_inconsistent : Error<
   "external function %0 declared with incompatible types in different "
   "translation units (%1 vs. %2)">;
-def warn_odr_tag_type_inconsistent : Warning<
-  "type %0 has incompatible definitions in different translation units">,
-  InGroup<DiagGroup<"odr">>;
+def warn_odr_tag_type_inconsistent
+    : Warning<"type %0 has incompatible definitions in different translation "
+              "units">,
+      InGroup<DiagGroup<"odr">>;
+def err_odr_tag_type_inconsistent
+    : Error<"type %0 has incompatible definitions in different translation "
+            "units">;
 def note_odr_tag_kind_here: Note<
   "%0 is a %select{struct|interface|union|class|enum}1 here">;
 def note_odr_field : Note<"field %0 has type %1 here">;
+def note_odr_field_name : Note<"field has name %0 here">;
 def note_odr_missing_field : Note<"no corresponding field here">;
 def note_odr_bit_field : Note<"bit-field %0 with type %1 and length %2 here">;
 def note_odr_not_bit_field : Note<"field %0 is not a bit-field">;

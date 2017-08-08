@@ -1,5 +1,5 @@
-; RUN: llc -O1 < %s -march=mips64 -mcpu=octeon | FileCheck %s -check-prefix=ALL -check-prefix=OCTEON
-; RUN: llc -O1 < %s -march=mips64 -mcpu=mips64 | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64
+; RUN: llc -O1 < %s -march=mips64 -mcpu=octeon | FileCheck %s -check-prefixes=ALL,OCTEON
+; RUN: llc -O1 < %s -march=mips64 -mcpu=mips64 | FileCheck %s -check-prefixes=ALL,MIPS64
 
 define i64 @addi64(i64 %a, i64 %b) nounwind {
 entry:
@@ -91,9 +91,9 @@ entry:
 define i64 @bbit0(i64 %a) nounwind {
 entry:
 ; ALL-LABEL: bbit0:
-; OCTEON: bbit0   $4, 3, $[[BB0:BB[0-9_]+]]
+; OCTEON: bbit0   $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
 ; MIPS64: andi  $[[T0:[0-9]+]], $4, 8
-; MIPS64: bnez  $[[T0]], $[[BB0:BB[0-9_]+]]
+; MIPS64: bnez  $[[T0]], [[BB0:(\$|\.L)BB[0-9_]+]]
   %bit = and i64 %a, 8
   %res = icmp eq i64 %bit, 0
   br i1 %res, label %endif, label %if
@@ -107,11 +107,11 @@ endif:
 define i64 @bbit032(i64 %a) nounwind {
 entry:
 ; ALL-LABEL: bbit032:
-; OCTEON: bbit032 $4, 3, $[[BB0:BB[0-9_]+]]
+; OCTEON: bbit032 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
 ; MIPS64: daddiu  $[[T0:[0-9]+]], $zero, 1
 ; MIPS64: dsll    $[[T1:[0-9]+]], $[[T0]], 35
 ; MIPS64: and     $[[T2:[0-9]+]], $4, $[[T1]]
-; MIPS64: bnez    $[[T2]], $[[BB0:BB[0-9_]+]]
+; MIPS64: bnez    $[[T2]], [[BB0:(\$|\.L)BB[0-9_]+]]
   %bit = and i64 %a, 34359738368
   %res = icmp eq i64 %bit, 0
   br i1 %res, label %endif, label %if
@@ -125,9 +125,9 @@ endif:
 define i64 @bbit1(i64 %a) nounwind {
 entry:
 ; ALL-LABEL: bbit1:
-; OCTEON: bbit1 $4, 3, $[[BB0:BB[0-9_]+]]
+; OCTEON: bbit1 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
 ; MIPS64: andi  $[[T0:[0-9]+]], $4, 8
-; MIPS64: beqz  $[[T0]], $[[BB0:BB[0-9_]+]]
+; MIPS64: beqz  $[[T0]], [[BB0:(\$|\.L)BB[0-9_]+]]
   %bit = and i64 %a, 8
   %res = icmp ne i64 %bit, 0
   br i1 %res, label %endif, label %if
@@ -141,11 +141,11 @@ endif:
 define i64 @bbit132(i64 %a) nounwind {
 entry:
 ; ALL-LABEL: bbit132:
-; OCTEON: bbit132 $4, 3, $[[BB0:BB[0-9_]+]]
+; OCTEON: bbit132 $4, 3, [[BB0:(\$|\.L)BB[0-9_]+]]
 ; MIPS64: daddiu  $[[T0:[0-9]+]], $zero, 1
 ; MIPS64: dsll    $[[T1:[0-9]+]], $[[T0]], 35
 ; MIPS64: and     $[[T2:[0-9]+]], $4, $[[T1]]
-; MIPS64: beqz    $[[T2]], $[[BB0:BB[0-9_]+]]
+; MIPS64: beqz    $[[T2]], [[BB0:(\$|\.L)BB[0-9_]+]]
   %bit = and i64 %a, 34359738368
   %res = icmp ne i64 %bit, 0
   br i1 %res, label %endif, label %if

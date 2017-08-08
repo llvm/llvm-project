@@ -25,7 +25,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstring>
-#include <string>
 
 using namespace clang;
 using namespace SrcMgr;
@@ -74,11 +73,11 @@ void ContentCache::replaceBuffer(llvm::MemoryBuffer *B, bool DoNotFree) {
     Buffer.setInt(DoNotFree? DoNotFreeFlag : 0);
     return;
   }
-  
+
   if (shouldFreeBuffer())
     delete Buffer.getPointer();
   Buffer.setPointer(B);
-  Buffer.setInt(DoNotFree? DoNotFreeFlag : 0);
+  Buffer.setInt((B && DoNotFree) ? DoNotFreeFlag : 0);
 }
 
 llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
@@ -184,47 +183,21 @@ unsigned LineTableInfo::getLineTableFilenameID(StringRef Name) {
   return IterBool.first->second;
 }
 
-/// AddLineNote - Add a line note to the line table that indicates that there
-/// is a \#line at the specified FID/Offset location which changes the presumed
-/// location to LineNo/FilenameID.
-void LineTableInfo::AddLineNote(FileID FID, unsigned Offset,
-                                unsigned LineNo, int FilenameID) {
-  std::vector<LineEntry> &Entries = LineEntries[FID];
-
-  assert((Entries.empty() || Entries.back().FileOffset < Offset) &&
-         "Adding line entries out of order!");
-
-  SrcMgr::CharacteristicKind Kind = SrcMgr::C_User;
-  unsigned IncludeOffset = 0;
-
-  if (!Entries.empty()) {
-    // If this is a '#line 4' after '#line 42 "foo.h"', make sure to remember
-    // that we are still in "foo.h".
-    if (FilenameID == -1)
-      FilenameID = Entries.back().FilenameID;
-
-    // If we are after a line marker that switched us to system header mode, or
-    // that set #include information, preserve it.
-    Kind = Entries.back().FileKind;
-    IncludeOffset = Entries.back().IncludeOffset;
-  }
-
-  Entries.push_back(LineEntry::get(Offset, LineNo, FilenameID, Kind,
-                                   IncludeOffset));
-}
-
-/// AddLineNote This is the same as the previous version of AddLineNote, but is
-/// used for GNU line markers.  If EntryExit is 0, then this doesn't change the
-/// presumed \#include stack.  If it is 1, this is a file entry, if it is 2 then
-/// this is a file exit.  FileKind specifies whether this is a system header or
-/// extern C system header.
-void LineTableInfo::AddLineNote(FileID FID, unsigned Offset,
-                                unsigned LineNo, int FilenameID,
-                                unsigned EntryExit,
+/// Add a line note to the line table that indicates that there is a \#line or
+/// GNU line marker at the specified FID/Offset location which changes the
+/// presumed location to LineNo/FilenameID. If EntryExit is 0, then this doesn't
+/// change the presumed \#include stack.  If it is 1, this is a file entry, if
+/// it is 2 then this is a file exit. FileKind specifies whether this is a
+/// system header or extern C system header.
+void LineTableInfo::AddLineNote(FileID FID, unsigned Offset, unsigned LineNo,
+                                int FilenameID, unsigned EntryExit,
                                 SrcMgr::CharacteristicKind FileKind) {
-  assert(FilenameID != -1 && "Unspecified filename should use other accessor");
-
   std::vector<LineEntry> &Entries = LineEntries[FID];
+
+  // An unspecified FilenameID means use the last filename if available, or the
+  // main source file otherwise.
+  if (FilenameID == -1 && !Entries.empty())
+    FilenameID = Entries.back().FilenameID;
 
   assert((Entries.empty() || Entries.back().FileOffset < Offset) &&
          "Adding line entries out of order!");
@@ -279,69 +252,29 @@ void LineTableInfo::AddEntry(FileID FID,
 /// getLineTableFilenameID - Return the uniqued ID for the specified filename.
 ///
 unsigned SourceManager::getLineTableFilenameID(StringRef Name) {
-  if (!LineTable)
-    LineTable = new LineTableInfo();
-  return LineTable->getLineTableFilenameID(Name);
+  return getLineTable().getLineTableFilenameID(Name);
 }
-
 
 /// AddLineNote - Add a line note to the line table for the FileID and offset
 /// specified by Loc.  If FilenameID is -1, it is considered to be
 /// unspecified.
 void SourceManager::AddLineNote(SourceLocation Loc, unsigned LineNo,
-                                int FilenameID) {
-  std::pair<FileID, unsigned> LocInfo = getDecomposedExpansionLoc(Loc);
-
-  bool Invalid = false;
-  const SLocEntry &Entry = getSLocEntry(LocInfo.first, &Invalid);
-  if (!Entry.isFile() || Invalid)
-    return;
-  
-  const SrcMgr::FileInfo &FileInfo = Entry.getFile();
-
-  // Remember that this file has #line directives now if it doesn't already.
-  const_cast<SrcMgr::FileInfo&>(FileInfo).setHasLineDirectives();
-
-  if (!LineTable)
-    LineTable = new LineTableInfo();
-  LineTable->AddLineNote(LocInfo.first, LocInfo.second, LineNo, FilenameID);
-}
-
-/// AddLineNote - Add a GNU line marker to the line table.
-void SourceManager::AddLineNote(SourceLocation Loc, unsigned LineNo,
                                 int FilenameID, bool IsFileEntry,
-                                bool IsFileExit, bool IsSystemHeader,
-                                bool IsExternCHeader) {
-  // If there is no filename and no flags, this is treated just like a #line,
-  // which does not change the flags of the previous line marker.
-  if (FilenameID == -1) {
-    assert(!IsFileEntry && !IsFileExit && !IsSystemHeader && !IsExternCHeader &&
-           "Can't set flags without setting the filename!");
-    return AddLineNote(Loc, LineNo, FilenameID);
-  }
-
+                                bool IsFileExit,
+                                SrcMgr::CharacteristicKind FileKind) {
   std::pair<FileID, unsigned> LocInfo = getDecomposedExpansionLoc(Loc);
 
   bool Invalid = false;
   const SLocEntry &Entry = getSLocEntry(LocInfo.first, &Invalid);
   if (!Entry.isFile() || Invalid)
     return;
-  
+
   const SrcMgr::FileInfo &FileInfo = Entry.getFile();
 
   // Remember that this file has #line directives now if it doesn't already.
   const_cast<SrcMgr::FileInfo&>(FileInfo).setHasLineDirectives();
 
-  if (!LineTable)
-    LineTable = new LineTableInfo();
-
-  SrcMgr::CharacteristicKind FileKind;
-  if (IsExternCHeader)
-    FileKind = SrcMgr::C_ExternCSystem;
-  else if (IsSystemHeader)
-    FileKind = SrcMgr::C_System;
-  else
-    FileKind = SrcMgr::C_User;
+  (void) getLineTable();
 
   unsigned EntryExit = 0;
   if (IsFileEntry)
@@ -366,7 +299,7 @@ LineTableInfo &SourceManager::getLineTable() {
 SourceManager::SourceManager(DiagnosticsEngine &Diag, FileManager &FileMgr,
                              bool UserFilesAreVolatile)
   : Diag(Diag), FileMgr(FileMgr), OverridenFilesKeepOriginalName(true),
-    UserFilesAreVolatile(UserFilesAreVolatile),
+    UserFilesAreVolatile(UserFilesAreVolatile), FilesAreTransient(false),
     ExternalSLocEntries(nullptr), LineTable(nullptr), NumLinearScans(0),
     NumBinaryProbes(0) {
   clearIDTables();
@@ -392,8 +325,6 @@ SourceManager::~SourceManager() {
       ContentCacheAlloc.Deallocate(I->second);
     }
   }
-
-  llvm::DeleteContainerSeconds(MacroArgsCacheMap);
 }
 
 void SourceManager::clearIDTables() {
@@ -412,6 +343,34 @@ void SourceManager::clearIDTables() {
   NextLocalOffset = 0;
   CurrentLoadedOffset = MaxLoadedOffset;
   createExpansionLoc(SourceLocation(),SourceLocation(),SourceLocation(), 1);
+}
+
+void SourceManager::initializeForReplay(const SourceManager &Old) {
+  assert(MainFileID.isInvalid() && "expected uninitialized SourceManager");
+
+  auto CloneContentCache = [&](const ContentCache *Cache) -> ContentCache * {
+    auto *Clone = new (ContentCacheAlloc.Allocate<ContentCache>()) ContentCache;
+    Clone->OrigEntry = Cache->OrigEntry;
+    Clone->ContentsEntry = Cache->ContentsEntry;
+    Clone->BufferOverridden = Cache->BufferOverridden;
+    Clone->IsSystemFile = Cache->IsSystemFile;
+    Clone->IsTransient = Cache->IsTransient;
+    Clone->replaceBuffer(Cache->getRawBuffer(), /*DoNotFree*/true);
+    return Clone;
+  };
+
+  // Ensure all SLocEntries are loaded from the external source.
+  for (unsigned I = 0, N = Old.LoadedSLocEntryTable.size(); I != N; ++I)
+    if (!Old.SLocEntryLoaded[I])
+      Old.loadSLocEntry(I, nullptr);
+
+  // Inherit any content cache data from the old source manager.
+  for (auto &FileInfo : Old.FileInfos) {
+    SrcMgr::ContentCache *&Slot = FileInfos[FileInfo.first];
+    if (Slot)
+      continue;
+    Slot = CloneContentCache(FileInfo.second);
+  }
 }
 
 /// getOrCreateContentCache - Create or return a cached ContentCache for the
@@ -444,6 +403,7 @@ SourceManager::getOrCreateContentCache(const FileEntry *FileEnt,
   }
 
   Entry->IsSystemFile = isSystemFile;
+  Entry->IsTransient = FilesAreTransient;
 
   return Entry;
 }
@@ -678,11 +638,9 @@ void SourceManager::disableFileContentsOverride(const FileEntry *File) {
   OverriddenFilesInfo->OverriddenFilesWithBuffer.erase(File);
 }
 
-void SourceManager::embedFileContentsInModule(const FileEntry *File) {
-  // We model an embedded file as a file whose buffer has been overridden
-  // by its contents as they are now.
+void SourceManager::setFileIsTransient(const FileEntry *File) {
   const SrcMgr::ContentCache *CC = getOrCreateContentCache(File);
-  const_cast<SrcMgr::ContentCache *>(CC)->BufferOverridden = true;
+  const_cast<SrcMgr::ContentCache *>(CC)->IsTransient = true;
 }
 
 StringRef SourceManager::getBufferData(FileID FID, bool *Invalid) const {
@@ -1145,6 +1103,7 @@ unsigned SourceManager::getColumnNumber(FileID FID, unsigned FilePos,
     return 1;
   }
 
+  const char *Buf = MemBuf->getBufferStart();
   // See if we just calculated the line number for this FilePos and can use
   // that to lookup the start of the line instead of searching for it.
   if (LastLineNoFileIDQuery == FID &&
@@ -1153,11 +1112,19 @@ unsigned SourceManager::getColumnNumber(FileID FID, unsigned FilePos,
     unsigned *SourceLineCache = LastLineNoContentCache->SourceLineCache;
     unsigned LineStart = SourceLineCache[LastLineNoResult - 1];
     unsigned LineEnd = SourceLineCache[LastLineNoResult];
-    if (FilePos >= LineStart && FilePos < LineEnd)
+    if (FilePos >= LineStart && FilePos < LineEnd) {
+      // LineEnd is the LineStart of the next line.
+      // A line ends with separator LF or CR+LF on Windows.
+      // FilePos might point to the last separator,
+      // but we need a column number at most 1 + the last column.
+      if (FilePos + 1 == LineEnd && FilePos > LineStart) {
+        if (Buf[FilePos - 1] == '\r' || Buf[FilePos - 1] == '\n')
+          --FilePos;
+      }
       return FilePos - LineStart + 1;
+    }
   }
 
-  const char *Buf = MemBuf->getBufferStart();
   unsigned LineStart = FilePos;
   while (LineStart && Buf[LineStart-1] != '\n' && Buf[LineStart-1] != '\r')
     --LineStart;
@@ -1166,7 +1133,8 @@ unsigned SourceManager::getColumnNumber(FileID FID, unsigned FilePos,
 
 // isInvalid - Return the result of calling loc.isInvalid(), and
 // if Invalid is not null, set its value to same.
-static bool isInvalid(SourceLocation Loc, bool *Invalid) {
+template<typename LocType>
+static bool isInvalid(LocType Loc, bool *Invalid) {
   bool MyInvalid = Loc.isInvalid();
   if (Invalid)
     *Invalid = MyInvalid;
@@ -1189,8 +1157,9 @@ unsigned SourceManager::getExpansionColumnNumber(SourceLocation Loc,
 
 unsigned SourceManager::getPresumedColumnNumber(SourceLocation Loc,
                                                 bool *Invalid) const {
-  if (isInvalid(Loc, Invalid)) return 0;
-  return getPresumedLoc(Loc).getColumn();
+  PresumedLoc PLoc = getPresumedLoc(Loc);
+  if (isInvalid(PLoc, Invalid)) return 0;
+  return PLoc.getColumn();
 }
 
 #ifdef __SSE2__
@@ -1264,15 +1233,19 @@ FoundSpecialChar:
 
     if (Buf[0] == '\n' || Buf[0] == '\r') {
       // If this is \n\r or \r\n, skip both characters.
-      if ((Buf[1] == '\n' || Buf[1] == '\r') && Buf[0] != Buf[1])
-        ++Offs, ++Buf;
-      ++Offs, ++Buf;
+      if ((Buf[1] == '\n' || Buf[1] == '\r') && Buf[0] != Buf[1]) {
+        ++Offs;
+        ++Buf;
+      }
+      ++Offs;
+      ++Buf;
       LineOffsets.push_back(Offs);
     } else {
       // Otherwise, this is a null.  If end of file, exit.
       if (Buf == End) break;
       // Otherwise, skip the null.
-      ++Offs, ++Buf;
+      ++Offs;
+      ++Buf;
     }
   }
 
@@ -1394,8 +1367,9 @@ unsigned SourceManager::getExpansionLineNumber(SourceLocation Loc,
 }
 unsigned SourceManager::getPresumedLineNumber(SourceLocation Loc,
                                               bool *Invalid) const {
-  if (isInvalid(Loc, Invalid)) return 0;
-  return getPresumedLoc(Loc).getLine();
+  PresumedLoc PLoc = getPresumedLoc(Loc);
+  if (isInvalid(PLoc, Invalid)) return 0;
+  return PLoc.getLine();
 }
 
 /// getFileCharacteristic - return the file characteristic of the specified
@@ -1437,8 +1411,8 @@ SourceManager::getFileCharacteristic(SourceLocation Loc) const {
 /// Return the filename or buffer identifier of the buffer the location is in.
 /// Note that this name does not respect \#line directives.  Use getPresumedLoc
 /// for normal clients.
-const char *SourceManager::getBufferName(SourceLocation Loc, 
-                                         bool *Invalid) const {
+StringRef SourceManager::getBufferName(SourceLocation Loc,
+                                       bool *Invalid) const {
   if (isInvalid(Loc, Invalid)) return "<invalid loc>";
 
   return getBuffer(getFileID(Loc), Invalid)->getBufferIdentifier();
@@ -1470,7 +1444,7 @@ PresumedLoc SourceManager::getPresumedLoc(SourceLocation Loc,
   // To get the source name, first consult the FileEntry (if one exists)
   // before the MemBuffer as this will avoid unnecessarily paging in the
   // MemBuffer.
-  const char *Filename;
+  StringRef Filename;
   if (C->OrigEntry)
     Filename = C->OrigEntry->getName();
   else
@@ -1513,7 +1487,7 @@ PresumedLoc SourceManager::getPresumedLoc(SourceLocation Loc,
     }
   }
 
-  return PresumedLoc(Filename, LineNo, ColNo, IncludeLoc);
+  return PresumedLoc(Filename.data(), LineNo, ColNo, IncludeLoc);
 }
 
 /// \brief Returns whether the PresumedLoc for a given SourceLocation is
@@ -1723,7 +1697,7 @@ SourceLocation SourceManager::translateLineCol(FileID FID,
                                                unsigned Col) const {
   // Lines are used as a one-based index into a zero-based array. This assert
   // checks for possible buffer underruns.
-  assert(Line != 0 && "Passed a zero-based line");
+  assert(Line && Col && "Line and column should start from 1!");
 
   if (FID.isInvalid())
     return SourceLocation();
@@ -1784,13 +1758,10 @@ SourceLocation SourceManager::translateLineCol(FileID FID,
 ///     0   -> SourceLocation()
 ///     100 -> Expanded macro arg location
 ///     110 -> SourceLocation()
-void SourceManager::computeMacroArgsCache(MacroArgsMap *&CachePtr,
+void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
                                           FileID FID) const {
   assert(FID.isValid());
-  assert(!CachePtr);
 
-  CachePtr = new MacroArgsMap();
-  MacroArgsMap &MacroArgsCache = *CachePtr;
   // Initially no macro argument chunk is present.
   MacroArgsCache.insert(std::make_pair(0, SourceLocation()));
 
@@ -1940,9 +1911,11 @@ SourceManager::getMacroArgExpandedLocation(SourceLocation Loc) const {
   if (FID.isInvalid())
     return Loc;
 
-  MacroArgsMap *&MacroArgsCache = MacroArgsCacheMap[FID];
-  if (!MacroArgsCache)
-    computeMacroArgsCache(MacroArgsCache, FID);
+  std::unique_ptr<MacroArgsMap> &MacroArgsCache = MacroArgsCacheMap[FID];
+  if (!MacroArgsCache) {
+    MacroArgsCache = llvm::make_unique<MacroArgsMap>();
+    computeMacroArgsCache(*MacroArgsCache, FID);
+  }
 
   assert(!MacroArgsCache->empty());
   MacroArgsMap::iterator I = MacroArgsCache->upper_bound(Offset);
@@ -2045,9 +2018,51 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
   if (LOffs.first.isInvalid() || ROffs.first.isInvalid())
     return LOffs.first.isInvalid() && !ROffs.first.isInvalid();
 
+  std::pair<bool, bool> InSameTU = isInTheSameTranslationUnit(LOffs, ROffs);
+  if (InSameTU.first)
+    return InSameTU.second;
+
+  // If we arrived here, the location is either in a built-ins buffer or
+  // associated with global inline asm. PR5662 and PR22576 are examples.
+
+  StringRef LB = getBuffer(LOffs.first)->getBufferIdentifier();
+  StringRef RB = getBuffer(ROffs.first)->getBufferIdentifier();
+  bool LIsBuiltins = LB == "<built-in>";
+  bool RIsBuiltins = RB == "<built-in>";
+  // Sort built-in before non-built-in.
+  if (LIsBuiltins || RIsBuiltins) {
+    if (LIsBuiltins != RIsBuiltins)
+      return LIsBuiltins;
+    // Both are in built-in buffers, but from different files. We just claim that
+    // lower IDs come first.
+    return LOffs.first < ROffs.first;
+  }
+  bool LIsAsm = LB == "<inline asm>";
+  bool RIsAsm = RB == "<inline asm>";
+  // Sort assembler after built-ins, but before the rest.
+  if (LIsAsm || RIsAsm) {
+    if (LIsAsm != RIsAsm)
+      return RIsAsm;
+    assert(LOffs.first == ROffs.first);
+    return false;
+  }
+  bool LIsScratch = LB == "<scratch space>";
+  bool RIsScratch = RB == "<scratch space>";
+  // Sort scratch after inline asm, but before the rest.
+  if (LIsScratch || RIsScratch) {
+    if (LIsScratch != RIsScratch)
+      return LIsScratch;
+    return LOffs.second < ROffs.second;
+  }
+  llvm_unreachable("Unsortable locations found");
+}
+
+std::pair<bool, bool> SourceManager::isInTheSameTranslationUnit(
+    std::pair<FileID, unsigned> &LOffs,
+    std::pair<FileID, unsigned> &ROffs) const {
   // If the source locations are in the same file, just compare offsets.
   if (LOffs.first == ROffs.first)
-    return LOffs.second < ROffs.second;
+    return std::make_pair(true, LOffs.second < ROffs.second);
 
   // If we are comparing a source location with multiple locations in the same
   // file, we get a big win by caching the result.
@@ -2057,7 +2072,8 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
   // If we are comparing a source location with multiple locations in the same
   // file, we get a big win by caching the result.
   if (IsBeforeInTUCache.isCacheValid(LOffs.first, ROffs.first))
-    return IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second);
+    return std::make_pair(
+        true, IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second));
 
   // Okay, we missed in the cache, start updating the cache for this query.
   IsBeforeInTUCache.setQueryFIDs(LOffs.first, ROffs.first,
@@ -2087,36 +2103,12 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
   // locations within the common file and cache them.
   if (LOffs.first == ROffs.first) {
     IsBeforeInTUCache.setCommonLoc(LOffs.first, LOffs.second, ROffs.second);
-    return IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second);
+    return std::make_pair(
+        true, IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second));
   }
-
-  // If we arrived here, the location is either in a built-ins buffer or
-  // associated with global inline asm. PR5662 and PR22576 are examples.
-
   // Clear the lookup cache, it depends on a common location.
   IsBeforeInTUCache.clear();
-  llvm::MemoryBuffer *LBuf = getBuffer(LOffs.first);
-  llvm::MemoryBuffer *RBuf = getBuffer(ROffs.first);
-  bool LIsBuiltins = strcmp("<built-in>", LBuf->getBufferIdentifier()) == 0;
-  bool RIsBuiltins = strcmp("<built-in>", RBuf->getBufferIdentifier()) == 0;
-  // Sort built-in before non-built-in.
-  if (LIsBuiltins || RIsBuiltins) {
-    if (LIsBuiltins != RIsBuiltins)
-      return LIsBuiltins;
-    // Both are in built-in buffers, but from different files. We just claim that
-    // lower IDs come first.
-    return LOffs.first < ROffs.first;
-  }
-  bool LIsAsm = strcmp("<inline asm>", LBuf->getBufferIdentifier()) == 0;
-  bool RIsAsm = strcmp("<inline asm>", RBuf->getBufferIdentifier()) == 0;
-  // Sort assembler after built-ins, but before the rest.
-  if (LIsAsm || RIsAsm) {
-    if (LIsAsm != RIsAsm)
-      return RIsAsm;
-    assert(LOffs.first == ROffs.first);
-    return false;
-  }
-  llvm_unreachable("Unsortable locations found");
+  return std::make_pair(false, false);
 }
 
 void SourceManager::PrintStats() const {

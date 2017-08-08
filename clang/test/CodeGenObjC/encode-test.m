@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple i686-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o %t %s
 // RUN: FileCheck < %t %s
 //
-// CHECK: @OBJC_METH_VAR_TYPE_.34 = private global [16 x i8] c"v12@0:4[3[4@]]8\00"
+// CHECK: @OBJC_METH_VAR_TYPE_{{.*}} = private unnamed_addr constant [16 x i8] c"v12@0:4[3[4@]]8\00"
 
 @class Int1;
 
@@ -180,3 +180,14 @@ const char g14[] = @encode(__typeof__(*test_id));
 
 // CHECK: @g15 = constant [2 x i8] c":\00"
 const char g15[] = @encode(SEL);
+
+typedef typeof(sizeof(int)) size_t;
+size_t strlen(const char *s);
+
+// CHECK-LABEL: @test_strlen(
+// CHECK: %[[i:.*]] = alloca i32
+// CHECK: store i32 1, i32* %[[i]]
+void test_strlen() {
+  const char array[] = @encode(int);
+  int i = strlen(array);
+}

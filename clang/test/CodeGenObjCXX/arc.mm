@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -O2 -disable-llvm-optzns -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -O2 -disable-llvm-passes -o - %s | FileCheck %s
 
 struct NSFastEnumerationState;
 @interface NSArray
@@ -65,10 +65,10 @@ void test34(int cond) {
   // CHECK-NEXT: [[CONDCLEANUP:%.*]] = alloca i1
   // CHECK-NEXT: store i32
   // CHECK-NEXT: [[STRONGP:%.*]] = bitcast i8** [[STRONG]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 8, i8* [[STRONGP]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[STRONGP]])
   // CHECK-NEXT: store i8* null, i8** [[STRONG]]
   // CHECK-NEXT: [[WEAKP:%.*]] = bitcast i8** [[WEAK]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 8, i8* [[WEAKP]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[WEAKP]])
   // CHECK-NEXT: call i8* @objc_initWeak(i8** [[WEAK]], i8* null)
 
   // CHECK-NEXT: [[T0:%.*]] = load i32, i32* [[COND]]
@@ -316,7 +316,7 @@ template void test40_helper<int>();
 // CHECK:      [[X:%.*]] = alloca i8*
 // CHECK-NEXT: [[TEMP:%.*]] = alloca i8*
 // CHECK-NEXT: [[XP:%.*]] = bitcast i8** [[X]] to i8*
-// CHECK-NEXT: call void @llvm.lifetime.start(i64 8, i8* [[XP]])
+// CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[XP]])
 // CHECK-NEXT: store i8* null, i8** [[X]]
 // CHECK:      [[T0:%.*]] = load i8*, i8** [[X]]
 // CHECK-NEXT: store i8* [[T0]], i8** [[TEMP]]

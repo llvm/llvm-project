@@ -53,8 +53,6 @@
 using namespace clang;
 using namespace clang::cxindex;
 
-extern "C" {
-
 enum CXCompletionChunkKind
 clang_getCompletionChunkKind(CXCompletionString completion_string,
                              unsigned chunk_number) {
@@ -272,22 +270,17 @@ struct AllocatedCXCodeCompleteResults : public CXCodeCompleteResults {
   /// \brief Source manager, used for diagnostics.
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
   
-  /// \brief Temporary files that should be removed once we have finished
-  /// with the code-completion results.
-  std::vector<std::string> TemporaryFiles;
-
   /// \brief Temporary buffers that will be deleted once we have finished with
   /// the code-completion results.
   SmallVector<const llvm::MemoryBuffer *, 1> TemporaryBuffers;
   
   /// \brief Allocator used to store globally cached code-completion results.
-  IntrusiveRefCntPtr<clang::GlobalCodeCompletionAllocator>
-    CachedCompletionAllocator;
-  
+  std::shared_ptr<clang::GlobalCodeCompletionAllocator>
+      CachedCompletionAllocator;
+
   /// \brief Allocator used to store code completion results.
-  IntrusiveRefCntPtr<clang::GlobalCodeCompletionAllocator>
-    CodeCompletionAllocator;
-  
+  std::shared_ptr<clang::GlobalCodeCompletionAllocator> CodeCompletionAllocator;
+
   /// \brief Context under which completion occurred.
   enum clang::CodeCompletionContext::Kind ContextKind;
   
@@ -317,15 +310,16 @@ struct AllocatedCXCodeCompleteResults : public CXCodeCompleteResults {
 ///
 /// Used for debugging purposes only.
 static std::atomic<unsigned> CodeCompletionResultObjects;
-  
+
 AllocatedCXCodeCompleteResults::AllocatedCXCodeCompleteResults(
     IntrusiveRefCntPtr<FileManager> FileMgr)
-    : CXCodeCompleteResults(),
-      DiagOpts(new DiagnosticOptions),
+    : CXCodeCompleteResults(), DiagOpts(new DiagnosticOptions),
       Diag(new DiagnosticsEngine(
           IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts)),
-      FileMgr(FileMgr), SourceMgr(new SourceManager(*Diag, *FileMgr)),
-      CodeCompletionAllocator(new clang::GlobalCodeCompletionAllocator),
+      FileMgr(std::move(FileMgr)),
+      SourceMgr(new SourceManager(*Diag, *this->FileMgr)),
+      CodeCompletionAllocator(
+          std::make_shared<clang::GlobalCodeCompletionAllocator>()),
       Contexts(CXCompletionContext_Unknown),
       ContainerKind(CXCursor_InvalidCode), ContainerIsIncomplete(1) {
   if (getenv("LIBCLANG_OBJTRACKING"))
@@ -337,8 +331,6 @@ AllocatedCXCodeCompleteResults::~AllocatedCXCodeCompleteResults() {
   llvm::DeleteContainerPointers(DiagnosticsWrappers);
   delete [] Results;
 
-  for (unsigned I = 0, N = TemporaryFiles.size(); I != N; ++I)
-    llvm::sys::fs::remove(TemporaryFiles[I]);
   for (unsigned I = 0, N = TemporaryBuffers.size(); I != N; ++I)
     delete TemporaryBuffers[I];
 
@@ -346,8 +338,6 @@ AllocatedCXCodeCompleteResults::~AllocatedCXCodeCompleteResults() {
     fprintf(stderr, "--- %u completion results\n",
             --CodeCompletionResultObjects);
 }
-  
-} // end extern "C"
 
 static unsigned long long getContextsForContextKind(
                                           enum CodeCompletionContext::Kind kind, 
@@ -794,7 +784,6 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
   return Results;
 }
 
-extern "C" {
 CXCodeCompleteResults *clang_codeCompleteAt(CXTranslationUnit TU,
                                             const char *complete_filename,
                                             unsigned complete_line,
@@ -916,8 +905,6 @@ CXString clang_codeCompleteGetObjCSelector(CXCodeCompleteResults *ResultsIn) {
   return cxstring::createDup(Results->Selector);
 }
   
-} // end extern "C"
-
 /// \brief Simple utility function that appends a \p New string to the given
 /// \p Old string, using the \p Buffer for storage.
 ///
@@ -990,9 +977,7 @@ namespace {
   };
 }
 
-extern "C" {
-  void clang_sortCodeCompletionResults(CXCompletionResult *Results,
-                                       unsigned NumResults) {
-    std::stable_sort(Results, Results + NumResults, OrderCompletionResults());
-  }
+void clang_sortCodeCompletionResults(CXCompletionResult *Results,
+                                     unsigned NumResults) {
+  std::stable_sort(Results, Results + NumResults, OrderCompletionResults());
 }

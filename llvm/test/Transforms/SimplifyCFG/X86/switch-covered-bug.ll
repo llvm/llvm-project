@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg < %s -mtriple=x86_64-apple-darwin12.0.0 | FileCheck %s
+; RUN: opt -S -latesimplifycfg < %s -mtriple=x86_64-apple-darwin12.0.0 | FileCheck %s
 ; rdar://17887153
 target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f16:16:16-f32:32:32-f64:64:64-f128:128:128-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin12.0.0"
@@ -9,7 +9,7 @@ target triple = "x86_64-apple-darwin12.0.0"
 ; CHECK: entry:
 ; CHECK-NEXT: sub i3 %arg, -4
 ; CHECK-NEXT: zext i3 %switch.tableidx to i4
-; CHECK-NEXT: getelementptr inbounds [8 x i64], [8 x i64]* @switch.table, i32 0, i4 %switch.tableidx.zext
+; CHECK-NEXT: getelementptr inbounds [8 x i64], [8 x i64]* @switch.table.test, i32 0, i4 %switch.tableidx.zext
 ; CHECK-NEXT: load i64, i64* %switch.gep
 ; CHECK-NEXT: add i64
 ; CHECK-NEXT: ret i64

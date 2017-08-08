@@ -31,6 +31,6 @@ do basic error checking and AST dumping.
   1 error generated.
   Error while processing snippet.cc.
 
-The '--' at the end is important as it prevents `clang-check` from search for a
-compilation database. For more information on how to setup and use `clang-check`
-in a project, see :doc:`HowToSetupToolingForLLVM`.
+The '--' at the end is important as it prevents :program:`clang-check` from
+searching for a compilation database. For more information on how to setup and
+use :program:`clang-check` in a project, see :doc:`HowToSetupToolingForLLVM`.

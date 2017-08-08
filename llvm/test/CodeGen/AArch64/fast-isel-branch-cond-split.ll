@@ -19,8 +19,8 @@ bb4:
 }
 
 ; CHECK-LABEL: test_and
-; CHECK:       cbz w0, {{LBB[0-9]+_2}}
-; CHECK:       cbnz w1, {{LBB[0-9]+_3}}
+; CHECK:       cbnz w0, {{LBB[0-9]+_2}}
+; CHECK:       cbz w1, {{LBB[0-9]+_1}}
 define i64 @test_and(i32 %a, i32 %b) {
 bb1:
   %0 = icmp ne i32 %a, 0
@@ -44,9 +44,7 @@ bb4:
 ; CHECK-NEXT:  cmp   w1, #0
 ; CHECK-NEXT:  cset  w9, eq
 ; CHECK-NEXT:  orr   w8, w8, w9
-; CHECK-NEXT:  and   w8, w8, #0x1
-; CHECK-NEXT:  cmp   w8, #0
-; CHECK-NEXT:  b.ne 
+; CHECK-NEXT:  tbnz w8, #0,
 define i64 @test_or_unpredictable(i32 %a, i32 %b) {
 bb1:
   %0 = icmp eq i32 %a, 0
@@ -68,9 +66,7 @@ bb4:
 ; CHECK-NEXT:  cmp   w1, #0
 ; CHECK-NEXT:  cset  w9, ne
 ; CHECK-NEXT:  and   w8, w8, w9
-; CHECK-NEXT:  and   w8, w8, #0x1
-; CHECK-NEXT:  cmp   w8, #0
-; CHECK-NEXT:  b.eq 
+; CHECK-NEXT:  tbz w8, #0,
 define i64 @test_and_unpredictable(i32 %a, i32 %b) {
 bb1:
   %0 = icmp ne i32 %a, 0

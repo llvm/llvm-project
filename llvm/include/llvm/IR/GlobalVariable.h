@@ -20,36 +20,36 @@
 #ifndef LLVM_IR_GLOBALVARIABLE_H
 #define LLVM_IR_GLOBALVARIABLE_H
 
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/OperandTraits.h"
+#include "llvm/IR/Value.h"
+#include <cassert>
+#include <cstddef>
 
 namespace llvm {
 
-class Module;
 class Constant;
+class Module;
+
 template <typename ValueSubClass> class SymbolTableListTraits;
+class DIGlobalVariable;
+class DIGlobalVariableExpression;
 
 class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {
   friend class SymbolTableListTraits<GlobalVariable>;
-  void *operator new(size_t, unsigned) = delete;
-  void operator=(const GlobalVariable &) = delete;
-  GlobalVariable(const GlobalVariable &) = delete;
 
-  void setParent(Module *parent);
-
+  AttributeSet Attrs;
   bool isConstantGlobal : 1;                   // Is this a global constant?
   bool isExternallyInitializedConstant : 1;    // Is this a global whose value
                                                // can change from its initial
                                                // value before global
                                                // initializers are run?
-public:
-  // allocate space for exactly one operand
-  void *operator new(size_t s) {
-    return User::operator new(s, 1);
-  }
 
+public:
   /// GlobalVariable ctor - If a parent module is specified, the global is
   /// automatically inserted into the end of the specified modules global list.
   GlobalVariable(Type *Ty, bool isConstant, LinkageTypes Linkage,
@@ -63,10 +63,19 @@ public:
                  const Twine &Name = "", GlobalVariable *InsertBefore = nullptr,
                  ThreadLocalMode = NotThreadLocal, unsigned AddressSpace = 0,
                  bool isExternallyInitialized = false);
+  GlobalVariable(const GlobalVariable &) = delete;
+  GlobalVariable &operator=(const GlobalVariable &) = delete;
 
-  ~GlobalVariable() override {
+  ~GlobalVariable() {
+    dropAllReferences();
+
     // FIXME: needed by operator delete
     setGlobalVariableNumOperands(1);
+  }
+
+  // allocate space for exactly one operand
+  void *operator new(size_t s) {
+    return User::operator new(s, 1);
   }
 
   /// Provide fast operand accessors
@@ -94,9 +103,9 @@ public:
   /// unique.
   inline bool hasDefinitiveInitializer() const {
     return hasInitializer() &&
-      // The initializer of a global variable with weak linkage may change at
-      // link time.
-      !mayBeOverridden() &&
+      // The initializer of a global variable may change to something arbitrary
+      // at link time.
+      !isInterposable() &&
       // The initializer of a global variable with the externally_initialized
       // marker may change at runtime before C++ initializers are evaluated.
       !isExternallyInitialized();
@@ -105,18 +114,13 @@ public:
   /// hasUniqueInitializer - Whether the global variable has an initializer, and
   /// any changes made to the initializer will turn up in the final executable.
   inline bool hasUniqueInitializer() const {
-    return hasInitializer() &&
-      // It's not safe to modify initializers of global variables with weak
-      // linkage, because the linker might choose to discard the initializer and
-      // use the initializer from another instance of the global variable
-      // instead. It is wrong to modify the initializer of a global variable
-      // with *_odr linkage because then different instances of the global may
-      // have different initializers, breaking the One Definition Rule.
-      !isWeakForLinker() &&
-      // It is not safe to modify initializers of global variables with the
-      // external_initializer marker since the value may be changed at runtime
-      // before C++ initializers are evaluated.
-      !isExternallyInitialized();
+    return
+        // We need to be sure this is the definition that will actually be used
+        isStrongDefinitionForLinker() &&
+        // It is not safe to modify initializers of global variables with the
+        // external_initializer marker since the value may be changed at runtime
+        // before C++ initializers are evaluated.
+        !isExternallyInitialized();
   }
 
   /// getInitializer - Return the initializer for this global variable.  It is
@@ -152,20 +156,92 @@ public:
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a GlobalVariable) from the GlobalVariable Src to this one.
-  void copyAttributesFrom(const GlobalValue *Src) override;
+  void copyAttributesFrom(const GlobalVariable *Src);
 
   /// removeFromParent - This method unlinks 'this' from the containing module,
   /// but does not delete it.
   ///
-  void removeFromParent() override;
+  void removeFromParent();
 
   /// eraseFromParent - This method unlinks 'this' from the containing module
   /// and deletes it.
   ///
-  void eraseFromParent() override;
+  void eraseFromParent();
+
+  /// Drop all references in preparation to destroy the GlobalVariable. This
+  /// drops not only the reference to the initializer but also to any metadata.
+  void dropAllReferences();
+
+  /// Attach a DIGlobalVariableExpression.
+  void addDebugInfo(DIGlobalVariableExpression *GV);
+
+  /// Fill the vector with all debug info attachements.
+  void getDebugInfo(SmallVectorImpl<DIGlobalVariableExpression *> &GVs) const;
+
+  /// Add attribute to this global.
+  void addAttribute(Attribute::AttrKind Kind) {
+    Attrs = Attrs.addAttribute(getContext(), Kind);
+  }
+
+  /// Add attribute to this global.
+  void addAttribute(StringRef Kind, StringRef Val = StringRef()) {
+    Attrs = Attrs.addAttribute(getContext(), Kind, Val);
+  }
+
+  /// Return true if the attribute exists.
+  bool hasAttribute(Attribute::AttrKind Kind) const {
+    return Attrs.hasAttribute(Kind);
+  }
+
+  /// Return true if the attribute exists.
+  bool hasAttribute(StringRef Kind) const {
+    return Attrs.hasAttribute(Kind);
+  }
+
+  /// Return true if any attributes exist.
+  bool hasAttributes() const {
+    return Attrs.hasAttributes();
+  }
+
+  /// Return the attribute object.
+  Attribute getAttribute(Attribute::AttrKind Kind) const {
+    return Attrs.getAttribute(Kind);
+  }
+
+  /// Return the attribute object.
+  Attribute getAttribute(StringRef Kind) const {
+    return Attrs.getAttribute(Kind);
+  }
+
+  /// Return the attribute set for this global
+  AttributeSet getAttributes() const {
+    return Attrs;
+  }
+
+  /// Return attribute set as list with index.
+  /// FIXME: This may not be required once ValueEnumerators
+  /// in bitcode-writer can enumerate attribute-set.
+  AttributeList getAttributesAsList(unsigned index) const {
+    if (!hasAttributes())
+      return AttributeList();
+    std::pair<unsigned, AttributeSet> AS[1] = {{index, Attrs}};
+    return AttributeList::get(getContext(), AS);
+  }
+
+  /// Set attribute list for this global
+  void setAttributes(AttributeSet A) {
+    Attrs = A;
+  }
+
+  /// Check if section name is present
+  bool hasImplicitSection() const {
+    return getAttributes().hasAttribute("bss-section") ||
+           getAttributes().hasAttribute("data-section") ||
+           getAttributes().hasAttribute("rodata-section");
+  }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return V->getValueID() == Value::GlobalVariableVal;
   }
 };
@@ -177,6 +253,6 @@ struct OperandTraits<GlobalVariable> :
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GlobalVariable, Value)
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_GLOBALVARIABLE_H

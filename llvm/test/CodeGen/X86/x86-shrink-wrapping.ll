@@ -270,8 +270,6 @@ if.end:                                           ; preds = %if.else, %for.end
   ret i32 %sum.1
 }
 
-declare void @somethingElse(...)
-
 ; Check with a more complex case that we do not have restore within the loop and
 ; save outside.
 ; CHECK-LABEL: loopInfoRestoreOutsideLoop:
@@ -445,9 +443,9 @@ if.end:                                           ; preds = %for.body, %if.else
 ; CHECK-NEXT: xorl %eax, %eax
 ; CHECK-NEXT: %esi, %edi
 ; CHECK-NEXT: %esi, %edx
+; CHECK-NEXT: %esi, %ecx
 ; CHECK-NEXT: %esi, %r8d
 ; CHECK-NEXT: %esi, %r9d
-; CHECK-NEXT: %esi, %ecx
 ; CHECK-NEXT: callq _someVariadicFunc
 ; CHECK-NEXT: movl %eax, %esi
 ; CHECK-NEXT: shll $3, %esi
@@ -788,3 +786,248 @@ end:
   %tmp.0 = phi i32 [ %tmp4, %true ], [ %tmp5, %false ]
   ret i32 %tmp.0
 }
+
+@b = internal unnamed_addr global i1 false
+@c = internal unnamed_addr global i8 0, align 1
+@a = common global i32 0, align 4
+
+; Make sure the prologue does not clobber the EFLAGS when
+; it is live accross.
+; PR25629.
+; Note: The registers may change in the following patterns, but
+; because they imply register hierarchy (e.g., eax, al) this is
+; tricky to write robust patterns.
+;
+; CHECK-LABEL: useLEAForPrologue:
+;
+; Prologue is at the beginning of the function when shrink-wrapping
+; is disabled.
+; DISABLE: pushq
+; The stack adjustment can use SUB instr because we do not need to
+; preserve the EFLAGS at this point.
+; DISABLE-NEXT: subq $16, %rsp
+;
+; Load the value of b.
+; CHECK: movb _b(%rip), [[BOOL:%cl]]
+; Create the zero value for the select assignment.
+; CHECK-NEXT: xorl [[CMOVE_VAL:%eax]], [[CMOVE_VAL]]
+; CHECK-NEXT: testb [[BOOL]], [[BOOL]]
+; CHECK-NEXT: jne [[STOREC_LABEL:LBB[0-9_]+]]
+;
+; CHECK: movb $48, [[CMOVE_VAL:%al]]
+;
+; CHECK: [[STOREC_LABEL]]:
+;
+; ENABLE-NEXT: pushq
+; For the stack adjustment, we need to preserve the EFLAGS.
+; ENABLE-NEXT: leaq -16(%rsp), %rsp
+;
+; Technically, we should use CMOVE_VAL here or its subregister.
+; CHECK-NEXT: movb %al, _c(%rip)
+; testb set the EFLAGS read here.
+; CHECK-NEXT: je [[VARFUNC_CALL:LBB[0-9_]+]]
+;
+; The code of the loop is not interesting.
+; [...]
+;
+; CHECK: [[VARFUNC_CALL]]:
+; Set the null parameter.
+; CHECK-NEXT: xorl %edi, %edi
+; CHECK-NEXT: callq _varfunc
+;
+; Set the return value.
+; CHECK-NEXT: xorl %eax, %eax
+;
+; Epilogue code.
+; CHECK-NEXT: addq $16, %rsp
+; CHECK-NEXT: popq
+; CHECK-NEXT: retq
+define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
+entry:
+  %tmp = alloca i3
+  %.b = load i1, i1* @b, align 1
+  %bool = select i1 %.b, i8 0, i8 48
+  store i8 %bool, i8* @c, align 1
+  br i1 %.b, label %for.body.lr.ph, label %for.end
+
+for.body.lr.ph:                                   ; preds = %entry
+  tail call void asm sideeffect "nop", "~{ebx}"()
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.lr.ph, %for.body
+  %inc6 = phi i8 [ %c, %for.body.lr.ph ], [ %inc, %for.body ]
+  %cond5 = phi i32 [ %a, %for.body.lr.ph ], [ %conv3, %for.body ]
+  %cmp2 = icmp slt i32 %d, %cond5
+  %conv3 = zext i1 %cmp2 to i32
+  %inc = add i8 %inc6, 1
+  %cmp = icmp slt i8 %inc, 45
+  br i1 %cmp, label %for.body, label %for.cond.for.end_crit_edge
+
+for.cond.for.end_crit_edge:                       ; preds = %for.body
+  store i32 %conv3, i32* @a, align 4
+  br label %for.end
+
+for.end:                                          ; preds = %for.cond.for.end_crit_edge, %entry
+  %call = tail call i32 (i8*) @varfunc(i8* null)
+  ret i32 0
+}
+
+declare i32 @varfunc(i8* nocapture readonly)
+
+@sum1 = external hidden thread_local global i32, align 4
+
+
+; Function Attrs: nounwind
+; Make sure the TLS call used to access @sum1 happens after the prologue
+; and before the epilogue.
+; TLS calls used to be wrongly model and shrink-wrapping would have inserted
+; the prologue and epilogue just around the call to doSomething.
+; PR25820.
+;
+; CHECK-LABEL: tlsCall:
+; CHECK: pushq
+; CHECK: testb $1, %dil
+; CHECK: je [[ELSE_LABEL:LBB[0-9_]+]]
+;
+; master bb
+; CHECK: movq _sum1@TLVP(%rip), %rdi
+; CHECK-NEXT: callq *(%rdi)
+; CHECK: jmp [[EXIT_LABEL:LBB[0-9_]+]]
+;
+; [[ELSE_LABEL]]:
+; CHECK: callq _doSomething
+;
+; [[EXIT_LABEL]]:
+; CHECK: popq
+; CHECK-NEXT: retq
+define i32 @tlsCall(i1 %bool1, i32 %arg, i32* readonly dereferenceable(4) %sum1) #3 {
+entry:
+  br i1 %bool1, label %master, label %else
+
+master:
+  %tmp1 = load i32, i32* %sum1, align 4
+  store i32 %tmp1, i32* @sum1, align 4
+  br label %exit
+
+else:
+  %call = call i32 @doSomething(i32 0, i32* null)
+  br label %exit
+
+exit:
+  %res = phi i32 [ %arg, %master], [ %call, %else ]
+  ret i32 %res
+}
+
+attributes #3 = { nounwind }
+
+@irreducibleCFGa = common global i32 0, align 4
+@irreducibleCFGf = common global i8 0, align 1
+@irreducibleCFGb = common global i32 0, align 4
+
+; Check that we do not run shrink-wrapping on irreducible CFGs until
+; it is actually supported.
+; At the moment, on those CFGs the loop information may be incorrect
+; and since we use that information to do the placement, we may end up
+; inserting the prologue/epilogue at incorrect places.
+; PR25988.
+;
+; CHECK-LABEL: irreducibleCFG:
+; CHECK: %entry
+; Make sure the prologue happens in the entry block.
+; CHECK-NEXT: pushq
+; ...
+; Make sure the epilogue happens in the exit block.
+; CHECK-NOT: popq
+; CHECK: popq
+; CHECK-NEXT: popq
+; CHECK-NEXT: retq
+define i32 @irreducibleCFG() #4 {
+entry:
+  %i0 = load i32, i32* @irreducibleCFGa, align 4
+  %.pr = load i8, i8* @irreducibleCFGf, align 1
+  %bool = icmp eq i8 %.pr, 0
+  br i1 %bool, label %split, label %preheader
+
+preheader:
+  br label %preheader
+
+split:
+  %i1 = load i32, i32* @irreducibleCFGb, align 4
+  %tobool1.i = icmp ne i32 %i1, 0
+  br i1 %tobool1.i, label %for.body4.i, label %for.cond8.i.preheader
+
+for.body4.i:
+  %call.i = tail call i32 (...) @something(i32 %i0)
+  br label %for.cond8
+
+for.cond8:
+  %p1 = phi i32 [ %inc18.i, %for.inc ], [ 0, %for.body4.i ]
+  %.pr1.pr = load i32, i32* @irreducibleCFGb, align 4
+  br label %for.cond8.i.preheader
+
+for.cond8.i.preheader:
+  %.pr1 = phi i32 [ %.pr1.pr, %for.cond8 ], [ %i1, %split ]
+  %p13 = phi i32 [ %p1, %for.cond8 ], [ 0, %split ]
+  br label %for.inc
+
+fn1.exit:
+  ret i32 0
+
+for.inc:
+  %inc18.i = add nuw nsw i32 %p13, 1
+  %cmp = icmp slt i32 %inc18.i, 7
+  br i1 %cmp, label %for.cond8, label %fn1.exit
+}
+
+attributes #4 = { "no-frame-pointer-elim"="true" }
+
+@x = external global i32, align 4
+@y = external global i32, align 4
+
+; The post-dominator tree does not include the branch containing the infinite
+; loop, which can occur into a misplacement of the restore block, if we're
+; looking for the nearest common post-dominator of an "unreachable" block.
+
+; CHECK-LABEL: infiniteLoopNoSuccessor:
+; CHECK: ## BB#0:
+; Make sure the prologue happens in the entry block.
+; CHECK-NEXT: pushq %rbp
+; ...
+; Make sure we don't shrink-wrap.
+; CHECK: ## BB#1
+; CHECK-NOT: pushq %rbp
+; ...
+; Make sure the epilogue happens in the exit block.
+; CHECK: ## BB#5
+; CHECK: popq %rbp
+; CHECK-NEXT: retq
+define void @infiniteLoopNoSuccessor() #5 {
+  %1 = load i32, i32* @x, align 4
+  %2 = icmp ne i32 %1, 0
+  br i1 %2, label %3, label %4
+
+; <label>:3:
+  store i32 0, i32* @x, align 4
+  br label %4
+
+; <label>:4:
+  call void (...) @somethingElse()
+  %5 = load i32, i32* @y, align 4
+  %6 = icmp ne i32 %5, 0
+  br i1 %6, label %10, label %7
+
+; <label>:7:
+  %8 = call i32 (...) @something()
+  br label %9
+
+; <label>:9:
+  call void (...) @somethingElse()
+  br label %9
+
+; <label>:10:
+  ret void
+}
+
+declare void @somethingElse(...)
+
+attributes #5 = { nounwind  "no-frame-pointer-elim-non-leaf" }

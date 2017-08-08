@@ -18,20 +18,31 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 
 class ListRecTy;
 struct MultiClass;
 class Record;
-class RecordVal;
 class RecordKeeper;
+class RecordVal;
+class StringInit;
 
 //===----------------------------------------------------------------------===//
 //  Type Classes
@@ -43,6 +54,7 @@ public:
   enum RecTyKind {
     BitRecTyKind,
     BitsRecTyKind,
+    CodeRecTyKind,
     IntRecTyKind,
     StringRecTyKind,
     ListRecTyKind,
@@ -52,23 +64,23 @@ public:
 
 private:
   RecTyKind Kind;
-  std::unique_ptr<ListRecTy> ListTy;
+  ListRecTy *ListTy = nullptr;
 
 public:
-  RecTyKind getRecTyKind() const { return Kind; }
-
   RecTy(RecTyKind K) : Kind(K) {}
-  virtual ~RecTy() {}
+  virtual ~RecTy() = default;
+
+  RecTyKind getRecTyKind() const { return Kind; }
 
   virtual std::string getAsString() const = 0;
   void print(raw_ostream &OS) const { OS << getAsString(); }
   void dump() const;
 
-  /// typeIsConvertibleTo - Return true if all values of 'this' type can be
-  /// converted to the specified type.
+  /// Return true if all values of 'this' type can be converted to the specified
+  /// type.
   virtual bool typeIsConvertibleTo(const RecTy *RHS) const;
 
-  /// getListTy - Returns the type representing list<this>.
+  /// Returns the type representing list<this>.
   ListRecTy *getListTy();
 };
 
@@ -77,10 +89,10 @@ inline raw_ostream &operator<<(raw_ostream &OS, const RecTy &Ty) {
   return OS;
 }
 
-/// BitRecTy - 'bit' - Represent a single bit
-///
+/// 'bit' - Represent a single bit
 class BitRecTy : public RecTy {
   static BitRecTy Shared;
+
   BitRecTy() : RecTy(BitRecTyKind) {}
 
 public:
@@ -95,10 +107,10 @@ public:
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
 };
 
-/// BitsRecTy - 'bits<n>' - Represent a fixed number of bits
-///
+/// 'bits<n>' - Represent a fixed number of bits
 class BitsRecTy : public RecTy {
   unsigned Size;
+
   explicit BitsRecTy(unsigned Sz) : RecTy(BitsRecTyKind), Size(Sz) {}
 
 public:
@@ -115,10 +127,26 @@ public:
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
 };
 
-/// IntRecTy - 'int' - Represent an integer value of no particular size
-///
+/// 'code' - Represent a code fragment
+class CodeRecTy : public RecTy {
+  static CodeRecTy Shared;
+
+  CodeRecTy() : RecTy(CodeRecTyKind) {}
+
+public:
+  static bool classof(const RecTy *RT) {
+    return RT->getRecTyKind() == CodeRecTyKind;
+  }
+
+  static CodeRecTy *get() { return &Shared; }
+
+  std::string getAsString() const override { return "code"; }
+};
+
+/// 'int' - Represent an integer value of no particular size
 class IntRecTy : public RecTy {
   static IntRecTy Shared;
+
   IntRecTy() : RecTy(IntRecTyKind) {}
 
 public:
@@ -133,15 +161,16 @@ public:
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
 };
 
-/// StringRecTy - 'string' - Represent an string value
-///
+/// 'string' - Represent an string value
 class StringRecTy : public RecTy {
   static StringRecTy Shared;
+
   StringRecTy() : RecTy(StringRecTyKind) {}
 
 public:
   static bool classof(const RecTy *RT) {
-    return RT->getRecTyKind() == StringRecTyKind;
+    return RT->getRecTyKind() == StringRecTyKind ||
+           RT->getRecTyKind() == CodeRecTyKind;
   }
 
   static StringRecTy *get() { return &Shared; }
@@ -149,13 +178,14 @@ public:
   std::string getAsString() const override;
 };
 
-/// ListRecTy - 'list<Ty>' - Represent a list of values, all of which must be of
+/// 'list<Ty>' - Represent a list of values, all of which must be of
 /// the specified type.
-///
 class ListRecTy : public RecTy {
-  RecTy *Ty;
-  explicit ListRecTy(RecTy *T) : RecTy(ListRecTyKind), Ty(T) {}
   friend ListRecTy *RecTy::getListTy();
+
+  RecTy *Ty;
+
+  explicit ListRecTy(RecTy *T) : RecTy(ListRecTyKind), Ty(T) {}
 
 public:
   static bool classof(const RecTy *RT) {
@@ -170,10 +200,10 @@ public:
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
 };
 
-/// DagRecTy - 'dag' - Represent a dag fragment
-///
+/// 'dag' - Represent a dag fragment
 class DagRecTy : public RecTy {
   static DagRecTy Shared;
+
   DagRecTy() : RecTy(DagRecTyKind) {}
 
 public:
@@ -186,13 +216,14 @@ public:
   std::string getAsString() const override;
 };
 
-/// RecordRecTy - '[classname]' - Represent an instance of a class, such as:
+/// '[classname]' - Represent an instance of a class, such as:
 /// (R32 X = EAX).
-///
 class RecordRecTy : public RecTy {
-  Record *Rec;
-  explicit RecordRecTy(Record *R) : RecTy(RecordRecTyKind), Rec(R) {}
   friend class Record;
+
+  Record *Rec;
+
+  explicit RecordRecTy(Record *R) : RecTy(RecordRecTyKind), Rec(R) {}
 
 public:
   static bool classof(const RecTy *RT) {
@@ -208,9 +239,8 @@ public:
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
 };
 
-/// resolveTypes - Find a common type that T1 and T2 convert to.
+/// Find a common type that T1 and T2 convert to.
 /// Return 0 if no such type exists.
-///
 RecTy *resolveTypes(RecTy *T1, RecTy *T2);
 
 //===----------------------------------------------------------------------===//
@@ -232,10 +262,11 @@ protected:
   /// We could pack these a bit tighter by not having the IK_FirstXXXInit
   /// and IK_LastXXXInit be their own values, but that would degrade
   /// readability for really no benefit.
-  enum InitKind {
+  enum InitKind : uint8_t {
     IK_BitInit,
     IK_FirstTypedInit,
     IK_BitsInit,
+    IK_CodeInit,
     IK_DagInit,
     IK_DefInit,
     IK_FieldInit,
@@ -256,97 +287,95 @@ protected:
 
 private:
   const InitKind Kind;
-  Init(const Init &) = delete;
-  Init &operator=(const Init &) = delete;
+
+protected:
+  uint8_t Opc; // Used by UnOpInit, BinOpInit, and TernOpInit
+
+private:
   virtual void anchor();
 
 public:
   InitKind getKind() const { return Kind; }
 
 protected:
-  explicit Init(InitKind K) : Kind(K) {}
+  explicit Init(InitKind K, uint8_t Opc = 0) : Kind(K), Opc(Opc) {}
 
 public:
-  virtual ~Init() {}
+  Init(const Init &) = delete;
+  Init &operator=(const Init &) = delete;
+  virtual ~Init() = default;
 
-  /// isComplete - This virtual method should be overridden by values that may
+  /// This virtual method should be overridden by values that may
   /// not be completely specified yet.
   virtual bool isComplete() const { return true; }
 
-  /// print - Print out this value.
+  /// Print out this value.
   void print(raw_ostream &OS) const { OS << getAsString(); }
 
-  /// getAsString - Convert this value to a string form.
+  /// Convert this value to a string form.
   virtual std::string getAsString() const = 0;
-  /// getAsUnquotedString - Convert this value to a string form,
+  /// Convert this value to a string form,
   /// without adding quote markers.  This primaruly affects
   /// StringInits where we will not surround the string value with
   /// quotes.
   virtual std::string getAsUnquotedString() const { return getAsString(); }
 
-  /// dump - Debugging method that may be called through a debugger, just
+  /// Debugging method that may be called through a debugger, just
   /// invokes print on stderr.
   void dump() const;
 
-  /// convertInitializerTo - This virtual function converts to the appropriate
+  /// This virtual function converts to the appropriate
   /// Init based on the passed in type.
   virtual Init *convertInitializerTo(RecTy *Ty) const = 0;
 
-  /// convertInitializerBitRange - This method is used to implement the bitrange
+  /// This method is used to implement the bitrange
   /// selection operator.  Given an initializer, it selects the specified bits
   /// out, returning them as a new init of bits type.  If it is not legal to use
   /// the bit subscript operator on this initializer, return null.
-  ///
-  virtual Init *
-  convertInitializerBitRange(const std::vector<unsigned> &Bits) const {
+  virtual Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
     return nullptr;
   }
 
-  /// convertInitListSlice - This method is used to implement the list slice
+  /// This method is used to implement the list slice
   /// selection operator.  Given an initializer, it selects the specified list
   /// elements, returning them as a new init of list type.  If it is not legal
   /// to take a slice of this, return null.
-  ///
-  virtual Init *
-  convertInitListSlice(const std::vector<unsigned> &Elements) const {
+  virtual Init *convertInitListSlice(ArrayRef<unsigned> Elements) const {
     return nullptr;
   }
 
-  /// getFieldType - This method is used to implement the FieldInit class.
+  /// This method is used to implement the FieldInit class.
   /// Implementors of this method should return the type of the named field if
   /// they are of record type.
-  ///
-  virtual RecTy *getFieldType(const std::string &FieldName) const {
+  virtual RecTy *getFieldType(StringInit *FieldName) const {
     return nullptr;
   }
 
-  /// getFieldInit - This method complements getFieldType to return the
+  /// This method complements getFieldType to return the
   /// initializer for the specified field.  If getFieldType returns non-null
   /// this method should return non-null, otherwise it returns null.
-  ///
   virtual Init *getFieldInit(Record &R, const RecordVal *RV,
-                             const std::string &FieldName) const {
+                             StringInit *FieldName) const {
     return nullptr;
   }
 
-  /// resolveReferences - This method is used by classes that refer to other
+  /// This method is used by classes that refer to other
   /// variables which may not be defined at the time the expression is formed.
   /// If a value is set for the variable later, this method will be called on
   /// users of the value to allow the value to propagate out.
-  ///
   virtual Init *resolveReferences(Record &R, const RecordVal *RV) const {
     return const_cast<Init *>(this);
   }
 
-  /// getBit - This method is used to return the initializer for the specified
+  /// This method is used to return the initializer for the specified
   /// bit.
   virtual Init *getBit(unsigned Bit) const = 0;
 
-  /// getBitVar - This method is used to retrieve the initializer for bit
+  /// This method is used to retrieve the initializer for bit
   /// reference. For non-VarBitInit, it simply returns itself.
   virtual Init *getBitVar() const { return const_cast<Init*>(this); }
 
-  /// getBitNum - This method is used to retrieve the bit number of a bit
+  /// This method is used to retrieve the bit number of a bit
   /// reference. For non-VarBitInit, it simply returns 0.
   virtual unsigned getBitNum() const { return 0; }
 };
@@ -355,61 +384,56 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Init &I) {
   I.print(OS); return OS;
 }
 
-/// TypedInit - This is the common super-class of types that have a specific,
+/// This is the common super-class of types that have a specific,
 /// explicit, type.
-///
 class TypedInit : public Init {
   RecTy *Ty;
 
-  TypedInit(const TypedInit &Other) = delete;
-  TypedInit &operator=(const TypedInit &Other) = delete;
-
 protected:
-  explicit TypedInit(InitKind K, RecTy *T) : Init(K), Ty(T) {}
-  ~TypedInit() override {
-    // If this is a DefInit we need to delete the RecordRecTy.
-    if (getKind() == IK_DefInit)
-      delete Ty;
-  }
+  explicit TypedInit(InitKind K, RecTy *T, uint8_t Opc = 0)
+    : Init(K, Opc), Ty(T) {}
 
 public:
+  TypedInit(const TypedInit &) = delete;
+  TypedInit &operator=(const TypedInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() >= IK_FirstTypedInit &&
            I->getKind() <= IK_LastTypedInit;
   }
+
   RecTy *getType() const { return Ty; }
 
   Init *convertInitializerTo(RecTy *Ty) const override;
 
-  Init *
-  convertInitializerBitRange(const std::vector<unsigned> &Bits) const override;
-  Init *
-  convertInitListSlice(const std::vector<unsigned> &Elements) const override;
+  Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
+  Init *convertInitListSlice(ArrayRef<unsigned> Elements) const override;
 
-  /// getFieldType - This method is used to implement the FieldInit class.
+  /// This method is used to implement the FieldInit class.
   /// Implementors of this method should return the type of the named field if
   /// they are of record type.
   ///
-  RecTy *getFieldType(const std::string &FieldName) const override;
+  RecTy *getFieldType(StringInit *FieldName) const override;
 
-  /// resolveListElementReference - This method is used to implement
+  /// This method is used to implement
   /// VarListElementInit::resolveReferences.  If the list element is resolvable
   /// now, we return the resolved value, otherwise we return null.
   virtual Init *resolveListElementReference(Record &R, const RecordVal *RV,
                                             unsigned Elt) const = 0;
 };
 
-/// UnsetInit - ? - Represents an uninitialized value
-///
+/// '?' - Represents an uninitialized value
 class UnsetInit : public Init {
   UnsetInit() : Init(IK_UnsetInit) {}
-  UnsetInit(const UnsetInit &) = delete;
-  UnsetInit &operator=(const UnsetInit &Other) = delete;
 
 public:
+  UnsetInit(const UnsetInit &) = delete;
+  UnsetInit &operator=(const UnsetInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_UnsetInit;
   }
+
   static UnsetInit *get();
 
   Init *convertInitializerTo(RecTy *Ty) const override;
@@ -422,19 +446,20 @@ public:
   std::string getAsString() const override { return "?"; }
 };
 
-/// BitInit - true/false - Represent a concrete initializer for a bit.
-///
+/// 'true'/'false' - Represent a concrete initializer for a bit.
 class BitInit : public Init {
   bool Value;
 
   explicit BitInit(bool V) : Init(IK_BitInit), Value(V) {}
-  BitInit(const BitInit &Other) = delete;
-  BitInit &operator=(BitInit &Other) = delete;
 
 public:
+  BitInit(const BitInit &) = delete;
+  BitInit &operator=(BitInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_BitInit;
   }
+
   static BitInit *get(bool V);
 
   bool getValue() const { return Value; }
@@ -449,46 +474,50 @@ public:
   std::string getAsString() const override { return Value ? "1" : "0"; }
 };
 
-/// BitsInit - { a, b, c } - Represents an initializer for a BitsRecTy value.
+/// '{ a, b, c }' - Represents an initializer for a BitsRecTy value.
 /// It contains a vector of bits, whose size is determined by the type.
-///
-class BitsInit : public TypedInit, public FoldingSetNode {
-  std::vector<Init*> Bits;
+class BitsInit final : public TypedInit, public FoldingSetNode,
+                       public TrailingObjects<BitsInit, Init *> {
+  unsigned NumBits;
 
-  BitsInit(ArrayRef<Init *> Range)
-    : TypedInit(IK_BitsInit, BitsRecTy::get(Range.size())),
-      Bits(Range.begin(), Range.end()) {}
-
-  BitsInit(const BitsInit &Other) = delete;
-  BitsInit &operator=(const BitsInit &Other) = delete;
+  BitsInit(unsigned N)
+    : TypedInit(IK_BitsInit, BitsRecTy::get(N)), NumBits(N) {}
 
 public:
+  BitsInit(const BitsInit &) = delete;
+  BitsInit &operator=(const BitsInit &) = delete;
+
+  // Do not use sized deallocation due to trailing objects.
+  void operator delete(void *p) { ::operator delete(p); }
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_BitsInit;
   }
+
   static BitsInit *get(ArrayRef<Init *> Range);
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  unsigned getNumBits() const { return Bits.size(); }
+  unsigned getNumBits() const { return NumBits; }
 
   Init *convertInitializerTo(RecTy *Ty) const override;
-  Init *
-  convertInitializerBitRange(const std::vector<unsigned> &Bits) const override;
+  Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
 
   bool isComplete() const override {
     for (unsigned i = 0; i != getNumBits(); ++i)
       if (!getBit(i)->isComplete()) return false;
     return true;
   }
+
   bool allInComplete() const {
     for (unsigned i = 0; i != getNumBits(); ++i)
       if (getBit(i)->isComplete()) return false;
     return true;
   }
+
   std::string getAsString() const override;
 
-  /// resolveListElementReference - This method is used to implement
+  /// This method is used to implement
   /// VarListElementInit::resolveReferences.  If the list element is resolvable
   /// now, we return the resolved value, otherwise we return null.
   Init *resolveListElementReference(Record &R, const RecordVal *RV,
@@ -499,37 +528,36 @@ public:
   Init *resolveReferences(Record &R, const RecordVal *RV) const override;
 
   Init *getBit(unsigned Bit) const override {
-    assert(Bit < Bits.size() && "Bit index out of range!");
-    return Bits[Bit];
+    assert(Bit < NumBits && "Bit index out of range!");
+    return getTrailingObjects<Init *>()[Bit];
   }
 };
 
-/// IntInit - 7 - Represent an initialization by a literal integer value.
-///
+/// '7' - Represent an initialization by a literal integer value.
 class IntInit : public TypedInit {
   int64_t Value;
 
   explicit IntInit(int64_t V)
     : TypedInit(IK_IntInit, IntRecTy::get()), Value(V) {}
 
-  IntInit(const IntInit &Other) = delete;
-  IntInit &operator=(const IntInit &Other) = delete;
-
 public:
+  IntInit(const IntInit &) = delete;
+  IntInit &operator=(const IntInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_IntInit;
   }
+
   static IntInit *get(int64_t V);
 
   int64_t getValue() const { return Value; }
 
   Init *convertInitializerTo(RecTy *Ty) const override;
-  Init *
-  convertInitializerBitRange(const std::vector<unsigned> &Bits) const override;
+  Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
 
   std::string getAsString() const override;
 
-  /// resolveListElementReference - This method is used to implement
+  /// This method is used to implement
   /// VarListElementInit::resolveReferences.  If the list element is resolvable
   /// now, we return the resolved value, otherwise we return null.
   Init *resolveListElementReference(Record &R, const RecordVal *RV,
@@ -542,28 +570,29 @@ public:
   }
 };
 
-/// StringInit - "foo" - Represent an initialization by a string value.
-///
+/// "foo" - Represent an initialization by a string value.
 class StringInit : public TypedInit {
-  std::string Value;
+  StringRef Value;
 
   explicit StringInit(StringRef V)
-    : TypedInit(IK_StringInit, StringRecTy::get()), Value(V) {}
-
-  StringInit(const StringInit &Other) = delete;
-  StringInit &operator=(const StringInit &Other) = delete;
+      : TypedInit(IK_StringInit, StringRecTy::get()), Value(V) {}
 
 public:
+  StringInit(const StringInit &) = delete;
+  StringInit &operator=(const StringInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_StringInit;
   }
+
   static StringInit *get(StringRef);
 
-  const std::string &getValue() const { return Value; }
+  StringRef getValue() const { return Value; }
 
   Init *convertInitializerTo(RecTy *Ty) const override;
 
-  std::string getAsString() const override { return "\"" + Value + "\""; }
+  std::string getAsString() const override { return "\"" + Value.str() + "\""; }
+
   std::string getAsUnquotedString() const override { return Value; }
 
   /// resolveListElementReference - This method is used to implement
@@ -579,23 +608,66 @@ public:
   }
 };
 
-/// ListInit - [AL, AH, CL] - Represent a list of defs
-///
-class ListInit : public TypedInit, public FoldingSetNode {
-  std::vector<Init*> Values;
+class CodeInit : public TypedInit {
+  StringRef Value;
+
+  explicit CodeInit(StringRef V)
+      : TypedInit(IK_CodeInit, static_cast<RecTy *>(CodeRecTy::get())),
+        Value(V) {}
 
 public:
-  typedef std::vector<Init*>::const_iterator const_iterator;
+  CodeInit(const StringInit &) = delete;
+  CodeInit &operator=(const StringInit &) = delete;
+
+  static bool classof(const Init *I) {
+    return I->getKind() == IK_CodeInit;
+  }
+
+  static CodeInit *get(StringRef);
+
+  StringRef getValue() const { return Value; }
+
+  Init *convertInitializerTo(RecTy *Ty) const override;
+
+  std::string getAsString() const override {
+    return "[{" + Value.str() + "}]";
+  }
+
+  std::string getAsUnquotedString() const override { return Value; }
+
+  /// This method is used to implement
+  /// VarListElementInit::resolveReferences.  If the list element is resolvable
+  /// now, we return the resolved value, otherwise we return null.
+  Init *resolveListElementReference(Record &R, const RecordVal *RV,
+                                    unsigned Elt) const override {
+    llvm_unreachable("Illegal element reference off string");
+  }
+
+  Init *getBit(unsigned Bit) const override {
+    llvm_unreachable("Illegal bit reference off string");
+  }
+};
+
+/// [AL, AH, CL] - Represent a list of defs
+///
+class ListInit final : public TypedInit, public FoldingSetNode,
+                       public TrailingObjects<ListInit, Init *> {
+  unsigned NumValues;
+
+public:
+  using const_iterator = Init *const *;
 
 private:
-  explicit ListInit(ArrayRef<Init *> Range, RecTy *EltTy)
-    : TypedInit(IK_ListInit, ListRecTy::get(EltTy)),
-      Values(Range.begin(), Range.end()) {}
-
-  ListInit(const ListInit &Other) = delete;
-  ListInit &operator=(const ListInit &Other) = delete;
+  explicit ListInit(unsigned N, RecTy *EltTy)
+    : TypedInit(IK_ListInit, ListRecTy::get(EltTy)), NumValues(N) {}
 
 public:
+  ListInit(const ListInit &) = delete;
+  ListInit &operator=(const ListInit &) = delete;
+
+  // Do not use sized deallocation due to trailing objects.
+  void operator delete(void *p) { ::operator delete(p); }
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_ListInit;
   }
@@ -604,18 +676,17 @@ public:
   void Profile(FoldingSetNodeID &ID) const;
 
   Init *getElement(unsigned i) const {
-    assert(i < Values.size() && "List element index out of range!");
-    return Values[i];
+    assert(i < NumValues && "List element index out of range!");
+    return getTrailingObjects<Init *>()[i];
   }
 
   Record *getElementAsRecord(unsigned i) const;
 
-  Init *
-    convertInitListSlice(const std::vector<unsigned> &Elements) const override;
+  Init *convertInitListSlice(ArrayRef<unsigned> Elements) const override;
 
   Init *convertInitializerTo(RecTy *Ty) const override;
 
-  /// resolveReferences - This method is used by classes that refer to other
+  /// This method is used by classes that refer to other
   /// variables which may not be defined at the time they expression is formed.
   /// If a value is set for the variable later, this method will be called on
   /// users of the value to allow the value to propagate out.
@@ -624,15 +695,17 @@ public:
 
   std::string getAsString() const override;
 
-  ArrayRef<Init*> getValues() const { return Values; }
+  ArrayRef<Init*> getValues() const {
+    return makeArrayRef(getTrailingObjects<Init *>(), NumValues);
+  }
 
-  const_iterator begin() const { return Values.begin(); }
-  const_iterator end  () const { return Values.end();   }
+  const_iterator begin() const { return getTrailingObjects<Init *>(); }
+  const_iterator end  () const { return begin() + NumValues; }
 
-  size_t         size () const { return Values.size();  }
-  bool           empty() const { return Values.empty(); }
+  size_t         size () const { return NumValues;  }
+  bool           empty() const { return NumValues == 0; }
 
-  /// resolveListElementReference - This method is used to implement
+  /// This method is used to implement
   /// VarListElementInit::resolveReferences.  If the list element is resolvable
   /// now, we return the resolved value, otherwise we return null.
   Init *resolveListElementReference(Record &R, const RecordVal *RV,
@@ -643,22 +716,24 @@ public:
   }
 };
 
-/// OpInit - Base class for operators
+/// Base class for operators
 ///
 class OpInit : public TypedInit {
-  OpInit(const OpInit &Other) = delete;
-  OpInit &operator=(OpInit &Other) = delete;
-
 protected:
-  explicit OpInit(InitKind K, RecTy *Type) : TypedInit(K, Type) {}
+  explicit OpInit(InitKind K, RecTy *Type, uint8_t Opc)
+    : TypedInit(K, Type, Opc) {}
 
 public:
+  OpInit(const OpInit &) = delete;
+  OpInit &operator=(OpInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() >= IK_FirstOpInit &&
            I->getKind() <= IK_LastOpInit;
   }
+
   // Clone - Clone this operator, replacing arguments with the new list
-  virtual OpInit *clone(std::vector<Init *> &Operands) const = 0;
+  virtual OpInit *clone(ArrayRef<Init *> Operands) const = 0;
 
   virtual unsigned getNumOperands() const = 0;
   virtual Init *getOperand(unsigned i) const = 0;
@@ -673,42 +748,45 @@ public:
   Init *getBit(unsigned Bit) const override;
 };
 
-/// UnOpInit - !op (X) - Transform an init.
+/// !op (X) - Transform an init.
 ///
-class UnOpInit : public OpInit {
+class UnOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum UnaryOp { CAST, HEAD, TAIL, EMPTY };
+  enum UnaryOp : uint8_t { CAST, HEAD, TAIL, EMPTY };
 
 private:
-  UnaryOp Opc;
   Init *LHS;
 
   UnOpInit(UnaryOp opc, Init *lhs, RecTy *Type)
-    : OpInit(IK_UnOpInit, Type), Opc(opc), LHS(lhs) {}
-
-  UnOpInit(const UnOpInit &Other) = delete;
-  UnOpInit &operator=(const UnOpInit &Other) = delete;
+    : OpInit(IK_UnOpInit, Type, opc), LHS(lhs) {}
 
 public:
+  UnOpInit(const UnOpInit &) = delete;
+  UnOpInit &operator=(const UnOpInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_UnOpInit;
   }
+
   static UnOpInit *get(UnaryOp opc, Init *lhs, RecTy *Type);
 
+  void Profile(FoldingSetNodeID &ID) const;
+
   // Clone - Clone this operator, replacing arguments with the new list
-  OpInit *clone(std::vector<Init *> &Operands) const override {
+  OpInit *clone(ArrayRef<Init *> Operands) const override {
     assert(Operands.size() == 1 &&
            "Wrong number of operands for unary operation");
     return UnOpInit::get(getOpcode(), *Operands.begin(), getType());
   }
 
   unsigned getNumOperands() const override { return 1; }
+
   Init *getOperand(unsigned i) const override {
     assert(i == 0 && "Invalid operand id for unary operator");
     return getOperand();
   }
 
-  UnaryOp getOpcode() const { return Opc; }
+  UnaryOp getOpcode() const { return (UnaryOp)Opc; }
   Init *getOperand() const { return LHS; }
 
   // Fold - If possible, fold this to a simpler init.  Return this if not
@@ -720,31 +798,33 @@ public:
   std::string getAsString() const override;
 };
 
-/// BinOpInit - !op (X, Y) - Combine two inits.
-///
-class BinOpInit : public OpInit {
+/// !op (X, Y) - Combine two inits.
+class BinOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum BinaryOp { ADD, AND, SHL, SRA, SRL, LISTCONCAT, STRCONCAT, CONCAT, EQ };
+  enum BinaryOp : uint8_t { ADD, AND, OR, SHL, SRA, SRL, LISTCONCAT,
+                            STRCONCAT, CONCAT, EQ };
 
 private:
-  BinaryOp Opc;
   Init *LHS, *RHS;
 
   BinOpInit(BinaryOp opc, Init *lhs, Init *rhs, RecTy *Type) :
-      OpInit(IK_BinOpInit, Type), Opc(opc), LHS(lhs), RHS(rhs) {}
-
-  BinOpInit(const BinOpInit &Other) = delete;
-  BinOpInit &operator=(const BinOpInit &Other) = delete;
+      OpInit(IK_BinOpInit, Type, opc), LHS(lhs), RHS(rhs) {}
 
 public:
+  BinOpInit(const BinOpInit &) = delete;
+  BinOpInit &operator=(const BinOpInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_BinOpInit;
   }
+
   static BinOpInit *get(BinaryOp opc, Init *lhs, Init *rhs,
                         RecTy *Type);
 
+  void Profile(FoldingSetNodeID &ID) const;
+
   // Clone - Clone this operator, replacing arguments with the new list
-  OpInit *clone(std::vector<Init *> &Operands) const override {
+  OpInit *clone(ArrayRef<Init *> Operands) const override {
     assert(Operands.size() == 2 &&
            "Wrong number of operands for binary operation");
     return BinOpInit::get(getOpcode(), Operands[0], Operands[1], getType());
@@ -759,7 +839,7 @@ public:
     }
   }
 
-  BinaryOp getOpcode() const { return Opc; }
+  BinaryOp getOpcode() const { return (BinaryOp)Opc; }
   Init *getLHS() const { return LHS; }
   Init *getRHS() const { return RHS; }
 
@@ -772,33 +852,34 @@ public:
   std::string getAsString() const override;
 };
 
-/// TernOpInit - !op (X, Y, Z) - Combine two inits.
-///
-class TernOpInit : public OpInit {
+/// !op (X, Y, Z) - Combine two inits.
+class TernOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum TernaryOp { SUBST, FOREACH, IF };
+  enum TernaryOp : uint8_t { SUBST, FOREACH, IF };
 
 private:
-  TernaryOp Opc;
   Init *LHS, *MHS, *RHS;
 
   TernOpInit(TernaryOp opc, Init *lhs, Init *mhs, Init *rhs,
              RecTy *Type) :
-      OpInit(IK_TernOpInit, Type), Opc(opc), LHS(lhs), MHS(mhs), RHS(rhs) {}
-
-  TernOpInit(const TernOpInit &Other) = delete;
-  TernOpInit &operator=(const TernOpInit &Other) = delete;
+      OpInit(IK_TernOpInit, Type, opc), LHS(lhs), MHS(mhs), RHS(rhs) {}
 
 public:
+  TernOpInit(const TernOpInit &) = delete;
+  TernOpInit &operator=(const TernOpInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_TernOpInit;
   }
+
   static TernOpInit *get(TernaryOp opc, Init *lhs,
                          Init *mhs, Init *rhs,
                          RecTy *Type);
 
+  void Profile(FoldingSetNodeID &ID) const;
+
   // Clone - Clone this operator, replacing arguments with the new list
-  OpInit *clone(std::vector<Init *> &Operands) const override {
+  OpInit *clone(ArrayRef<Init *> Operands) const override {
     assert(Operands.size() == 3 &&
            "Wrong number of operands for ternary operation");
     return TernOpInit::get(getOpcode(), Operands[0], Operands[1], Operands[2],
@@ -815,7 +896,7 @@ public:
     }
   }
 
-  TernaryOp getOpcode() const { return Opc; }
+  TernaryOp getOpcode() const { return (TernaryOp)Opc; }
   Init *getLHS() const { return LHS; }
   Init *getMHS() const { return MHS; }
   Init *getRHS() const { return RHS; }
@@ -831,26 +912,27 @@ public:
   std::string getAsString() const override;
 };
 
-/// VarInit - 'Opcode' - Represent a reference to an entire variable object.
-///
+/// 'Opcode' - Represent a reference to an entire variable object.
 class VarInit : public TypedInit {
   Init *VarName;
 
   explicit VarInit(Init *VN, RecTy *T)
       : TypedInit(IK_VarInit, T), VarName(VN) {}
 
-  VarInit(const VarInit &Other) = delete;
-  VarInit &operator=(const VarInit &Other) = delete;
-
 public:
+  VarInit(const VarInit &) = delete;
+  VarInit &operator=(const VarInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_VarInit;
   }
-  static VarInit *get(const std::string &VN, RecTy *T);
+
+  static VarInit *get(StringRef VN, RecTy *T);
   static VarInit *get(Init *VN, RecTy *T);
 
-  const std::string &getName() const;
+  StringRef getName() const;
   Init *getNameInit() const { return VarName; }
+
   std::string getNameInitAsString() const {
     return getNameInit()->getAsUnquotedString();
   }
@@ -858,11 +940,11 @@ public:
   Init *resolveListElementReference(Record &R, const RecordVal *RV,
                                     unsigned Elt) const override;
 
-  RecTy *getFieldType(const std::string &FieldName) const override;
+  RecTy *getFieldType(StringInit *FieldName) const override;
   Init *getFieldInit(Record &R, const RecordVal *RV,
-                     const std::string &FieldName) const override;
+                     StringInit *FieldName) const override;
 
-  /// resolveReferences - This method is used by classes that refer to other
+  /// This method is used by classes that refer to other
   /// variables which may not be defined at the time they expression is formed.
   /// If a value is set for the variable later, this method will be called on
   /// users of the value to allow the value to propagate out.
@@ -874,8 +956,7 @@ public:
   std::string getAsString() const override { return getName(); }
 };
 
-/// VarBitInit - Opcode{0} - Represent access to one bit of a variable or field.
-///
+/// Opcode{0} - Represent access to one bit of a variable or field.
 class VarBitInit : public Init {
   TypedInit *TI;
   unsigned Bit;
@@ -888,13 +969,14 @@ class VarBitInit : public Init {
            "Illegal VarBitInit expression!");
   }
 
-  VarBitInit(const VarBitInit &Other) = delete;
-  VarBitInit &operator=(const VarBitInit &Other) = delete;
-
 public:
+  VarBitInit(const VarBitInit &) = delete;
+  VarBitInit &operator=(const VarBitInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_VarBitInit;
   }
+
   static VarBitInit *get(TypedInit *T, unsigned B);
 
   Init *convertInitializerTo(RecTy *Ty) const override;
@@ -911,7 +993,7 @@ public:
   }
 };
 
-/// VarListElementInit - List[4] - Represent access to one element of a var or
+/// List[4] - Represent access to one element of a var or
 /// field.
 class VarListElementInit : public TypedInit {
   TypedInit *TI;
@@ -925,19 +1007,20 @@ class VarListElementInit : public TypedInit {
            "Illegal VarBitInit expression!");
   }
 
-  VarListElementInit(const VarListElementInit &Other) = delete;
-  void operator=(const VarListElementInit &Other) = delete;
-
 public:
+  VarListElementInit(const VarListElementInit &) = delete;
+  VarListElementInit &operator=(const VarListElementInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_VarListElementInit;
   }
+
   static VarListElementInit *get(TypedInit *T, unsigned E);
 
   TypedInit *getVariable() const { return TI; }
   unsigned getElementNum() const { return Element; }
 
-  /// resolveListElementReference - This method is used to implement
+  /// This method is used to implement
   /// VarListElementInit::resolveReferences.  If the list element is resolvable
   /// now, we return the resolved value, otherwise we return null.
   Init *resolveListElementReference(Record &R, const RecordVal *RV,
@@ -949,32 +1032,33 @@ public:
   Init *getBit(unsigned Bit) const override;
 };
 
-/// DefInit - AL - Represent a reference to a 'def' in the description
-///
+/// AL - Represent a reference to a 'def' in the description
 class DefInit : public TypedInit {
+  friend class Record;
+
   Record *Def;
 
   DefInit(Record *D, RecordRecTy *T) : TypedInit(IK_DefInit, T), Def(D) {}
-  friend class Record;
-
-  DefInit(const DefInit &Other) = delete;
-  DefInit &operator=(const DefInit &Other) = delete;
 
 public:
+  DefInit(const DefInit &) = delete;
+  DefInit &operator=(const DefInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_DefInit;
   }
+
   static DefInit *get(Record*);
 
   Init *convertInitializerTo(RecTy *Ty) const override;
 
   Record *getDef() const { return Def; }
 
-  //virtual Init *convertInitializerBitRange(const std::vector<unsigned> &Bits);
+  //virtual Init *convertInitializerBitRange(ArrayRef<unsigned> Bits);
 
-  RecTy *getFieldType(const std::string &FieldName) const override;
+  RecTy *getFieldType(StringInit *FieldName) const override;
   Init *getFieldInit(Record &R, const RecordVal *RV,
-                     const std::string &FieldName) const override;
+                     StringInit *FieldName) const override;
 
   std::string getAsString() const override;
 
@@ -982,7 +1066,7 @@ public:
     llvm_unreachable("Illegal bit reference off def");
   }
 
-  /// resolveListElementReference - This method is used to implement
+  /// This method is used to implement
   /// VarListElementInit::resolveReferences.  If the list element is resolvable
   /// now, we return the resolved value, otherwise we return null.
   Init *resolveListElementReference(Record &R, const RecordVal *RV,
@@ -991,25 +1075,25 @@ public:
   }
 };
 
-/// FieldInit - X.Y - Represent a reference to a subfield of a variable
-///
+/// X.Y - Represent a reference to a subfield of a variable
 class FieldInit : public TypedInit {
   Init *Rec;                // Record we are referring to
-  std::string FieldName;    // Field we are accessing
+  StringInit *FieldName;    // Field we are accessing
 
-  FieldInit(Init *R, const std::string &FN)
+  FieldInit(Init *R, StringInit *FN)
       : TypedInit(IK_FieldInit, R->getFieldType(FN)), Rec(R), FieldName(FN) {
     assert(getType() && "FieldInit with non-record type!");
   }
 
-  FieldInit(const FieldInit &Other) = delete;
-  FieldInit &operator=(const FieldInit &Other) = delete;
-
 public:
+  FieldInit(const FieldInit &) = delete;
+  FieldInit &operator=(const FieldInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_FieldInit;
   }
-  static FieldInit *get(Init *R, const std::string &FN);
+
+  static FieldInit *get(Init *R, StringInit *FN);
 
   Init *getBit(unsigned Bit) const override;
 
@@ -1019,40 +1103,40 @@ public:
   Init *resolveReferences(Record &R, const RecordVal *RV) const override;
 
   std::string getAsString() const override {
-    return Rec->getAsString() + "." + FieldName;
+    return Rec->getAsString() + "." + FieldName->getValue().str();
   }
 };
 
-/// DagInit - (v a, b) - Represent a DAG tree value.  DAG inits are required
+/// (v a, b) - Represent a DAG tree value.  DAG inits are required
 /// to have at least one value then a (possibly empty) list of arguments.  Each
 /// argument can have a name associated with it.
-///
-class DagInit : public TypedInit, public FoldingSetNode {
+class DagInit final : public TypedInit, public FoldingSetNode,
+                      public TrailingObjects<DagInit, Init *, StringInit *> {
+  friend TrailingObjects;
+
   Init *Val;
-  std::string ValName;
-  std::vector<Init*> Args;
-  std::vector<std::string> ArgNames;
+  StringInit *ValName;
+  unsigned NumArgs;
+  unsigned NumArgNames;
 
-  DagInit(Init *V, const std::string &VN,
-          ArrayRef<Init *> ArgRange,
-          ArrayRef<std::string> NameRange)
+  DagInit(Init *V, StringInit *VN, unsigned NumArgs, unsigned NumArgNames)
       : TypedInit(IK_DagInit, DagRecTy::get()), Val(V), ValName(VN),
-          Args(ArgRange.begin(), ArgRange.end()),
-          ArgNames(NameRange.begin(), NameRange.end()) {}
+        NumArgs(NumArgs), NumArgNames(NumArgNames) {}
 
-  DagInit(const DagInit &Other) = delete;
-  DagInit &operator=(const DagInit &Other) = delete;
+  size_t numTrailingObjects(OverloadToken<Init *>) const { return NumArgs; }
 
 public:
+  DagInit(const DagInit &) = delete;
+  DagInit &operator=(const DagInit &) = delete;
+
   static bool classof(const Init *I) {
     return I->getKind() == IK_DagInit;
   }
-  static DagInit *get(Init *V, const std::string &VN,
-                      ArrayRef<Init *> ArgRange,
-                      ArrayRef<std::string> NameRange);
-  static DagInit *get(Init *V, const std::string &VN,
-                      const std::vector<
-                        std::pair<Init*, std::string> > &args);
+
+  static DagInit *get(Init *V, StringInit *VN, ArrayRef<Init *> ArgRange,
+                      ArrayRef<StringInit*> NameRange);
+  static DagInit *get(Init *V, StringInit *VN,
+                      ArrayRef<std::pair<Init*, StringInit*>> Args);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -1060,36 +1144,55 @@ public:
 
   Init *getOperator() const { return Val; }
 
-  const std::string &getName() const { return ValName; }
+  StringInit *getName() const { return ValName; }
 
-  unsigned getNumArgs() const { return Args.size(); }
-  Init *getArg(unsigned Num) const {
-    assert(Num < Args.size() && "Arg number out of range!");
-    return Args[Num];
+  StringRef getNameStr() const {
+    return ValName ? ValName->getValue() : StringRef();
   }
-  const std::string &getArgName(unsigned Num) const {
-    assert(Num < ArgNames.size() && "Arg number out of range!");
-    return ArgNames[Num];
+
+  unsigned getNumArgs() const { return NumArgs; }
+
+  Init *getArg(unsigned Num) const {
+    assert(Num < NumArgs && "Arg number out of range!");
+    return getTrailingObjects<Init *>()[Num];
+  }
+
+  StringInit *getArgName(unsigned Num) const {
+    assert(Num < NumArgNames && "Arg number out of range!");
+    return getTrailingObjects<StringInit *>()[Num];
+  }
+
+  StringRef getArgNameStr(unsigned Num) const {
+    StringInit *Init = getArgName(Num);
+    return Init ? Init->getValue() : StringRef();
+  }
+
+  ArrayRef<Init *> getArgs() const {
+    return makeArrayRef(getTrailingObjects<Init *>(), NumArgs);
+  }
+
+  ArrayRef<StringInit *> getArgNames() const {
+    return makeArrayRef(getTrailingObjects<StringInit *>(), NumArgNames);
   }
 
   Init *resolveReferences(Record &R, const RecordVal *RV) const override;
 
   std::string getAsString() const override;
 
-  typedef std::vector<Init*>::const_iterator       const_arg_iterator;
-  typedef std::vector<std::string>::const_iterator const_name_iterator;
+  using const_arg_iterator = SmallVectorImpl<Init*>::const_iterator;
+  using const_name_iterator = SmallVectorImpl<StringInit*>::const_iterator;
 
-  inline const_arg_iterator  arg_begin() const { return Args.begin(); }
-  inline const_arg_iterator  arg_end  () const { return Args.end();   }
+  inline const_arg_iterator  arg_begin() const { return getArgs().begin(); }
+  inline const_arg_iterator  arg_end  () const { return getArgs().end(); }
 
-  inline size_t              arg_size () const { return Args.size();  }
-  inline bool                arg_empty() const { return Args.empty(); }
+  inline size_t              arg_size () const { return NumArgs; }
+  inline bool                arg_empty() const { return NumArgs == 0; }
 
-  inline const_name_iterator name_begin() const { return ArgNames.begin(); }
-  inline const_name_iterator name_end  () const { return ArgNames.end();   }
+  inline const_name_iterator name_begin() const { return getArgNames().begin();}
+  inline const_name_iterator name_end  () const { return getArgNames().end(); }
 
-  inline size_t              name_size () const { return ArgNames.size();  }
-  inline bool                name_empty() const { return ArgNames.empty(); }
+  inline size_t              name_size () const { return NumArgNames; }
+  inline bool                name_empty() const { return NumArgNames == 0; }
 
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off dag");
@@ -1106,27 +1209,29 @@ public:
 //===----------------------------------------------------------------------===//
 
 class RecordVal {
-  PointerIntPair<Init *, 1, bool> NameAndPrefix;
-  RecTy *Ty;
+  friend class Record;
+
+  Init *Name;
+  PointerIntPair<RecTy *, 1, bool> TyAndPrefix;
   Init *Value;
 
 public:
   RecordVal(Init *N, RecTy *T, bool P);
-  RecordVal(const std::string &N, RecTy *T, bool P);
 
-  const std::string &getName() const;
-  const Init *getNameInit() const { return NameAndPrefix.getPointer(); }
+  StringRef getName() const;
+  Init *getNameInit() const { return Name; }
+
   std::string getNameInitAsString() const {
     return getNameInit()->getAsUnquotedString();
   }
 
-  bool getPrefix() const { return NameAndPrefix.getInt(); }
-  RecTy *getType() const { return Ty; }
+  bool getPrefix() const { return TyAndPrefix.getInt(); }
+  RecTy *getType() const { return TyAndPrefix.getPointer(); }
   Init *getValue() const { return Value; }
 
   bool setValue(Init *V) {
     if (V) {
-      Value = V->convertInitializerTo(Ty);
+      Value = V->convertInitializerTo(getType());
       return Value == nullptr;
     }
     Value = nullptr;
@@ -1145,21 +1250,22 @@ inline raw_ostream &operator<<(raw_ostream &OS, const RecordVal &RV) {
 class Record {
   static unsigned LastID;
 
-  // Unique record ID.
-  unsigned ID;
   Init *Name;
   // Location where record was instantiated, followed by the location of
   // multiclass prototypes used.
   SmallVector<SMLoc, 4> Locs;
-  std::vector<Init *> TemplateArgs;
-  std::vector<RecordVal> Values;
-  std::vector<Record *> SuperClasses;
-  std::vector<SMRange> SuperClassRanges;
+  SmallVector<Init *, 0> TemplateArgs;
+  SmallVector<RecordVal, 0> Values;
+  SmallVector<std::pair<Record *, SMRange>, 0> SuperClasses;
 
   // Tracks Record instances. Not owned by Record.
   RecordKeeper &TrackedRecords;
 
-  std::unique_ptr<DefInit> TheInit;
+  DefInit *TheInit = nullptr;
+
+  // Unique record ID.
+  unsigned ID;
+
   bool IsAnonymous;
 
   // Class-instance values can be used by other defs.  For example, Struct<i>
@@ -1172,7 +1278,7 @@ class Record {
   // definitions that use them (e.g. Def).  However, inside a multiclass they
   // can't be immediately resolved so we mark them ResolveFirst to fully
   // resolve them later as soon as the multiclass is instantiated.
-  bool ResolveFirst;
+  bool ResolveFirst = false;
 
   void init();
   void checkName();
@@ -1181,39 +1287,39 @@ public:
   // Constructs a record.
   explicit Record(Init *N, ArrayRef<SMLoc> locs, RecordKeeper &records,
                   bool Anonymous = false) :
-    ID(LastID++), Name(N), Locs(locs.begin(), locs.end()),
-    TrackedRecords(records), IsAnonymous(Anonymous), ResolveFirst(false) {
+    Name(N), Locs(locs.begin(), locs.end()), TrackedRecords(records),
+    ID(LastID++), IsAnonymous(Anonymous) {
     init();
   }
-  explicit Record(const std::string &N, ArrayRef<SMLoc> locs,
-                  RecordKeeper &records, bool Anonymous = false)
-    : Record(StringInit::get(N), locs, records, Anonymous) {}
 
+  explicit Record(StringRef N, ArrayRef<SMLoc> locs, RecordKeeper &records,
+                  bool Anonymous = false)
+    : Record(StringInit::get(N), locs, records, Anonymous) {}
 
   // When copy-constructing a Record, we must still guarantee a globally unique
   // ID number.  Don't copy TheInit either since it's owned by the original
   // record. All other fields can be copied normally.
   Record(const Record &O) :
-    ID(LastID++), Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
+    Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
     Values(O.Values), SuperClasses(O.SuperClasses),
-    SuperClassRanges(O.SuperClassRanges), TrackedRecords(O.TrackedRecords),
-    IsAnonymous(O.IsAnonymous),
-    ResolveFirst(O.ResolveFirst) { }
+    TrackedRecords(O.TrackedRecords), ID(LastID++),
+    IsAnonymous(O.IsAnonymous), ResolveFirst(O.ResolveFirst) { }
 
   static unsigned getNewUID() { return LastID++; }
 
   unsigned getID() const { return ID; }
 
-  const std::string &getName() const;
+  StringRef getName() const;
+
   Init *getNameInit() const {
     return Name;
   }
+
   const std::string getNameInitAsString() const {
     return getNameInit()->getAsUnquotedString();
   }
 
-  void setName(Init *Name);               // Also updates RecordKeeper.
-  void setName(const std::string &Name);  // Also updates RecordKeeper.
+  void setName(Init *Name);      // Also updates RecordKeeper.
 
   ArrayRef<SMLoc> getLoc() const { return Locs; }
 
@@ -1223,42 +1329,40 @@ public:
   ArrayRef<Init *> getTemplateArgs() const {
     return TemplateArgs;
   }
+
   ArrayRef<RecordVal> getValues() const { return Values; }
-  ArrayRef<Record *>  getSuperClasses() const { return SuperClasses; }
-  ArrayRef<SMRange> getSuperClassRanges() const { return SuperClassRanges; }
+
+  ArrayRef<std::pair<Record *, SMRange>>  getSuperClasses() const {
+    return SuperClasses;
+  }
 
   bool isTemplateArg(Init *Name) const {
     for (Init *TA : TemplateArgs)
       if (TA == Name) return true;
     return false;
   }
-  bool isTemplateArg(StringRef Name) const {
-    return isTemplateArg(StringInit::get(Name));
-  }
 
   const RecordVal *getValue(const Init *Name) const {
     for (const RecordVal &Val : Values)
-      if (Val.getNameInit() == Name) return &Val;
+      if (Val.Name == Name) return &Val;
     return nullptr;
   }
+
   const RecordVal *getValue(StringRef Name) const {
     return getValue(StringInit::get(Name));
   }
+
   RecordVal *getValue(const Init *Name) {
-    for (RecordVal &Val : Values)
-      if (Val.getNameInit() == Name) return &Val;
-    return nullptr;
+    return const_cast<RecordVal *>(static_cast<const Record *>(this)->getValue(Name));
   }
+
   RecordVal *getValue(StringRef Name) {
-    return getValue(StringInit::get(Name));
+    return const_cast<RecordVal *>(static_cast<const Record *>(this)->getValue(Name));
   }
 
   void addTemplateArg(Init *Name) {
     assert(!isTemplateArg(Name) && "Template arg already defined!");
     TemplateArgs.push_back(Name);
-  }
-  void addTemplateArg(StringRef Name) {
-    addTemplateArg(StringInit::get(Name));
   }
 
   void addValue(const RecordVal &RV) {
@@ -1287,31 +1391,34 @@ public:
   }
 
   bool isSubClassOf(const Record *R) const {
-    for (const Record *SC : SuperClasses)
-      if (SC == R)
+    for (const auto &SCPair : SuperClasses)
+      if (SCPair.first == R)
         return true;
     return false;
   }
 
   bool isSubClassOf(StringRef Name) const {
-    for (const Record *SC : SuperClasses)
-      if (SC->getNameInitAsString() == Name)
+    for (const auto &SCPair : SuperClasses) {
+      if (const auto *SI = dyn_cast<StringInit>(SCPair.first->getNameInit())) {
+        if (SI->getValue() == Name)
+          return true;
+      } else if (SCPair.first->getNameInitAsString() == Name) {
         return true;
+      }
+    }
     return false;
   }
 
   void addSuperClass(Record *R, SMRange Range) {
     assert(!isSubClassOf(R) && "Already subclassing record!");
-    SuperClasses.push_back(R);
-    SuperClassRanges.push_back(Range);
+    SuperClasses.push_back(std::make_pair(R, Range));
   }
 
-  /// resolveReferences - If there are any field references that refer to fields
+  /// If there are any field references that refer to fields
   /// that have been filled in, we can propagate the values now.
-  ///
   void resolveReferences() { resolveReferencesTo(nullptr); }
 
-  /// resolveReferencesTo - If anything in this record refers to RV, replace the
+  /// If anything in this record refers to RV, replace the
   /// reference to RV with the RHS of RV.  If RV is null, we resolve all
   /// possible references.
   void resolveReferencesTo(const RecordVal *RV);
@@ -1332,15 +1439,15 @@ public:
     ResolveFirst = b;
   }
 
+  void print(raw_ostream &OS) const;
   void dump() const;
 
   //===--------------------------------------------------------------------===//
   // High-level methods useful to tablegen back-ends
   //
 
-  /// getValueInit - Return the initializer for a value with the specified name,
+  /// Return the initializer for a value with the specified name,
   /// or throw an exception if the field does not exist.
-  ///
   Init *getValueInit(StringRef FieldName) const;
 
   /// Return true if the named field is unset.
@@ -1348,70 +1455,59 @@ public:
     return isa<UnsetInit>(getValueInit(FieldName));
   }
 
-  /// getValueAsString - This method looks up the specified field and returns
+  /// This method looks up the specified field and returns
   /// its value as a string, throwing an exception if the field does not exist
   /// or if the value is not a string.
-  ///
-  std::string getValueAsString(StringRef FieldName) const;
+  StringRef getValueAsString(StringRef FieldName) const;
 
-  /// getValueAsBitsInit - This method looks up the specified field and returns
+  /// This method looks up the specified field and returns
   /// its value as a BitsInit, throwing an exception if the field does not exist
   /// or if the value is not the right type.
-  ///
   BitsInit *getValueAsBitsInit(StringRef FieldName) const;
 
-  /// getValueAsListInit - This method looks up the specified field and returns
+  /// This method looks up the specified field and returns
   /// its value as a ListInit, throwing an exception if the field does not exist
   /// or if the value is not the right type.
-  ///
   ListInit *getValueAsListInit(StringRef FieldName) const;
 
-  /// getValueAsListOfDefs - This method looks up the specified field and
+  /// This method looks up the specified field and
   /// returns its value as a vector of records, throwing an exception if the
   /// field does not exist or if the value is not the right type.
-  ///
   std::vector<Record*> getValueAsListOfDefs(StringRef FieldName) const;
 
-  /// getValueAsListOfInts - This method looks up the specified field and
+  /// This method looks up the specified field and
   /// returns its value as a vector of integers, throwing an exception if the
   /// field does not exist or if the value is not the right type.
-  ///
   std::vector<int64_t> getValueAsListOfInts(StringRef FieldName) const;
 
-  /// getValueAsListOfStrings - This method looks up the specified field and
+  /// This method looks up the specified field and
   /// returns its value as a vector of strings, throwing an exception if the
   /// field does not exist or if the value is not the right type.
-  ///
-  std::vector<std::string> getValueAsListOfStrings(StringRef FieldName) const;
+  std::vector<StringRef> getValueAsListOfStrings(StringRef FieldName) const;
 
-  /// getValueAsDef - This method looks up the specified field and returns its
+  /// This method looks up the specified field and returns its
   /// value as a Record, throwing an exception if the field does not exist or if
   /// the value is not the right type.
-  ///
   Record *getValueAsDef(StringRef FieldName) const;
 
-  /// getValueAsBit - This method looks up the specified field and returns its
+  /// This method looks up the specified field and returns its
   /// value as a bit, throwing an exception if the field does not exist or if
   /// the value is not the right type.
-  ///
   bool getValueAsBit(StringRef FieldName) const;
 
-  /// getValueAsBitOrUnset - This method looks up the specified field and
+  /// This method looks up the specified field and
   /// returns its value as a bit. If the field is unset, sets Unset to true and
   /// returns false.
-  ///
   bool getValueAsBitOrUnset(StringRef FieldName, bool &Unset) const;
 
-  /// getValueAsInt - This method looks up the specified field and returns its
+  /// This method looks up the specified field and returns its
   /// value as an int64_t, throwing an exception if the field does not exist or
   /// if the value is not the right type.
-  ///
   int64_t getValueAsInt(StringRef FieldName) const;
 
-  /// getValueAsDag - This method looks up the specified field and returns its
+  /// This method looks up the specified field and returns its
   /// value as an Dag, throwing an exception if the field does not exist or if
   /// the value is not the right type.
-  ///
   DagInit *getValueAsDag(StringRef FieldName) const;
 };
 
@@ -1419,37 +1515,40 @@ raw_ostream &operator<<(raw_ostream &OS, const Record &R);
 
 struct MultiClass {
   Record Rec;  // Placeholder for template args and Name.
-  typedef std::vector<std::unique_ptr<Record>> RecordVector;
+  using RecordVector = std::vector<std::unique_ptr<Record>>;
   RecordVector DefPrototypes;
 
   void dump() const;
 
-  MultiClass(const std::string &Name, SMLoc Loc, RecordKeeper &Records) :
+  MultiClass(StringRef Name, SMLoc Loc, RecordKeeper &Records) :
     Rec(Name, Loc, Records) {}
 };
 
 class RecordKeeper {
-  typedef std::map<std::string, std::unique_ptr<Record>> RecordMap;
+  using RecordMap = std::map<std::string, std::unique_ptr<Record>>;
   RecordMap Classes, Defs;
 
 public:
   const RecordMap &getClasses() const { return Classes; }
   const RecordMap &getDefs() const { return Defs; }
 
-  Record *getClass(const std::string &Name) const {
+  Record *getClass(StringRef Name) const {
     auto I = Classes.find(Name);
     return I == Classes.end() ? nullptr : I->second.get();
   }
-  Record *getDef(const std::string &Name) const {
+
+  Record *getDef(StringRef Name) const {
     auto I = Defs.find(Name);
     return I == Defs.end() ? nullptr : I->second.get();
   }
+
   void addClass(std::unique_ptr<Record> R) {
     bool Ins = Classes.insert(std::make_pair(R->getName(),
                                              std::move(R))).second;
     (void)Ins;
     assert(Ins && "Class already exists");
   }
+
   void addDef(std::unique_ptr<Record> R) {
     bool Ins = Defs.insert(std::make_pair(R->getName(),
                                           std::move(R))).second;
@@ -1460,24 +1559,22 @@ public:
   //===--------------------------------------------------------------------===//
   // High-level helper methods, useful for tablegen backends...
 
-  /// getAllDerivedDefinitions - This method returns all concrete definitions
-  /// that derive from the specified class name.  If a class with the specified
-  /// name does not exist, an exception is thrown.
-  std::vector<Record*>
-  getAllDerivedDefinitions(const std::string &ClassName) const;
+  /// This method returns all concrete definitions
+  /// that derive from the specified class name.  A class with the specified
+  /// name must exist.
+  std::vector<Record *> getAllDerivedDefinitions(StringRef ClassName) const;
 
   void dump() const;
 };
 
-/// LessRecord - Sorting predicate to sort record pointers by name.
-///
+/// Sorting predicate to sort record pointers by name.
 struct LessRecord {
   bool operator()(const Record *Rec1, const Record *Rec2) const {
     return StringRef(Rec1->getName()).compare_numeric(Rec2->getName()) < 0;
   }
 };
 
-/// LessRecordByID - Sorting predicate to sort record pointers by their
+/// Sorting predicate to sort record pointers by their
 /// unique ID. If you just need a deterministic order, use this, since it
 /// just compares two `unsigned`; the other sorting predicates require
 /// string manipulation.
@@ -1487,9 +1584,8 @@ struct LessRecordByID {
   }
 };
 
-/// LessRecordFieldName - Sorting predicate to sort record pointers by their
+/// Sorting predicate to sort record pointers by their
 /// name field.
-///
 struct LessRecordFieldName {
   bool operator()(const Record *Rec1, const Record *Rec2) const {
     return Rec1->getValueAsString("Name") < Rec2->getValueAsString("Name");
@@ -1577,16 +1673,11 @@ struct LessRecordRegister {
 
 raw_ostream &operator<<(raw_ostream &OS, const RecordKeeper &RK);
 
-/// QualifyName - Return an Init with a qualifier prefix referring
+/// Return an Init with a qualifier prefix referring
 /// to CurRec's name.
 Init *QualifyName(Record &CurRec, MultiClass *CurMultiClass,
-                  Init *Name, const std::string &Scoper);
+                  Init *Name, StringRef Scoper);
 
-/// QualifyName - Return an Init with a qualifier prefix referring
-/// to CurRec's name.
-Init *QualifyName(Record &CurRec, MultiClass *CurMultiClass,
-                  const std::string &Name, const std::string &Scoper);
-
-} // end llvm namespace
+} // end namespace llvm
 
 #endif // LLVM_TABLEGEN_RECORD_H

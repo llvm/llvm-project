@@ -272,26 +272,107 @@ void CodeGenTypes::UpdateCompletedType(const TagDecl *TD) {
     DI->completeType(RD);
 }
 
+void CodeGenTypes::RefreshTypeCacheForClass(const CXXRecordDecl *RD) {
+  QualType T = Context.getRecordType(RD);
+  T = Context.getCanonicalType(T);
+
+  const Type *Ty = T.getTypePtr();
+  if (RecordsWithOpaqueMemberPointers.count(Ty)) {
+    TypeCache.clear();
+    RecordsWithOpaqueMemberPointers.clear();
+  }
+}
+
 static llvm::Type *getTypeForFormat(llvm::LLVMContext &VMContext,
                                     const llvm::fltSemantics &format,
                                     bool UseNativeHalf = false) {
-  if (&format == &llvm::APFloat::IEEEhalf) {
+  if (&format == &llvm::APFloat::IEEEhalf()) {
     if (UseNativeHalf)
       return llvm::Type::getHalfTy(VMContext);
     else
       return llvm::Type::getInt16Ty(VMContext);
   }
-  if (&format == &llvm::APFloat::IEEEsingle)
+  if (&format == &llvm::APFloat::IEEEsingle())
     return llvm::Type::getFloatTy(VMContext);
-  if (&format == &llvm::APFloat::IEEEdouble)
+  if (&format == &llvm::APFloat::IEEEdouble())
     return llvm::Type::getDoubleTy(VMContext);
-  if (&format == &llvm::APFloat::IEEEquad)
+  if (&format == &llvm::APFloat::IEEEquad())
     return llvm::Type::getFP128Ty(VMContext);
-  if (&format == &llvm::APFloat::PPCDoubleDouble)
+  if (&format == &llvm::APFloat::PPCDoubleDouble())
     return llvm::Type::getPPC_FP128Ty(VMContext);
-  if (&format == &llvm::APFloat::x87DoubleExtended)
+  if (&format == &llvm::APFloat::x87DoubleExtended())
     return llvm::Type::getX86_FP80Ty(VMContext);
   llvm_unreachable("Unknown float format!");
+}
+
+llvm::Type *CodeGenTypes::ConvertFunctionType(QualType QFT,
+                                              const FunctionDecl *FD) {
+  assert(QFT.isCanonical());
+  const Type *Ty = QFT.getTypePtr();
+  const FunctionType *FT = cast<FunctionType>(QFT.getTypePtr());
+  // First, check whether we can build the full function type.  If the
+  // function type depends on an incomplete type (e.g. a struct or enum), we
+  // cannot lower the function type.
+  if (!isFuncTypeConvertible(FT)) {
+    // This function's type depends on an incomplete tag type.
+
+    // Force conversion of all the relevant record types, to make sure
+    // we re-convert the FunctionType when appropriate.
+    if (const RecordType *RT = FT->getReturnType()->getAs<RecordType>())
+      ConvertRecordDeclType(RT->getDecl());
+    if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(FT))
+      for (unsigned i = 0, e = FPT->getNumParams(); i != e; i++)
+        if (const RecordType *RT = FPT->getParamType(i)->getAs<RecordType>())
+          ConvertRecordDeclType(RT->getDecl());
+
+    SkippedLayout = true;
+
+    // Return a placeholder type.
+    return llvm::StructType::get(getLLVMContext());
+  }
+
+  // While we're converting the parameter types for a function, we don't want
+  // to recursively convert any pointed-to structs.  Converting directly-used
+  // structs is ok though.
+  if (!RecordsBeingLaidOut.insert(Ty).second) {
+    SkippedLayout = true;
+    return llvm::StructType::get(getLLVMContext());
+  }
+
+  // The function type can be built; call the appropriate routines to
+  // build it.
+  const CGFunctionInfo *FI;
+  if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(FT)) {
+    FI = &arrangeFreeFunctionType(
+        CanQual<FunctionProtoType>::CreateUnsafe(QualType(FPT, 0)), FD);
+  } else {
+    const FunctionNoProtoType *FNPT = cast<FunctionNoProtoType>(FT);
+    FI = &arrangeFreeFunctionType(
+        CanQual<FunctionNoProtoType>::CreateUnsafe(QualType(FNPT, 0)));
+  }
+
+  llvm::Type *ResultType = nullptr;
+  // If there is something higher level prodding our CGFunctionInfo, then
+  // don't recurse into it again.
+  if (FunctionsBeingProcessed.count(FI)) {
+
+    ResultType = llvm::StructType::get(getLLVMContext());
+    SkippedLayout = true;
+  } else {
+
+    // Otherwise, we're good to go, go ahead and convert it.
+    ResultType = GetFunctionType(*FI);
+  }
+
+  RecordsBeingLaidOut.erase(Ty);
+
+  if (SkippedLayout)
+    TypeCache.clear();
+
+  if (RecordsBeingLaidOut.empty())
+    while (!DeferredRecords.empty())
+      ConvertRecordDeclType(DeferredRecords.pop_back_val());
+  return ResultType;
 }
 
 /// ConvertType - Convert the specified type to its LLVM form.
@@ -368,6 +449,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::Float:
     case BuiltinType::Double:
     case BuiltinType::LongDouble:
+    case BuiltinType::Float128:
       ResultType = getTypeForFormat(getLLVMContext(),
                                     Context.getFloatTypeSemantics(T),
                                     /* UseNativeHalf = */ false);
@@ -383,23 +465,13 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       ResultType = llvm::IntegerType::get(getLLVMContext(), 128);
       break;
 
-    case BuiltinType::OCLImage1d:
-    case BuiltinType::OCLImage1dArray:
-    case BuiltinType::OCLImage1dBuffer:
-    case BuiltinType::OCLImage2d:
-    case BuiltinType::OCLImage2dArray:
-    case BuiltinType::OCLImage2dDepth:
-    case BuiltinType::OCLImage2dArrayDepth:
-    case BuiltinType::OCLImage2dMSAA:
-    case BuiltinType::OCLImage2dArrayMSAA:
-    case BuiltinType::OCLImage2dMSAADepth:
-    case BuiltinType::OCLImage2dArrayMSAADepth:
-    case BuiltinType::OCLImage3d:
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+    case BuiltinType::Id:
+#include "clang/Basic/OpenCLImageTypes.def"
     case BuiltinType::OCLSampler:
     case BuiltinType::OCLEvent:
     case BuiltinType::OCLClkEvent:
     case BuiltinType::OCLQueue:
-    case BuiltinType::OCLNDRange:
     case BuiltinType::OCLReserveID:
       ResultType = CGM.getOpenCLRuntime().convertOpenCLSpecificType(Ty);
       break;
@@ -414,10 +486,11 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     break;
   }
   case Type::Auto:
-    llvm_unreachable("Unexpected undeduced auto type!");
+  case Type::DeducedTemplateSpecialization:
+    llvm_unreachable("Unexpected undeduced type!");
   case Type::Complex: {
     llvm::Type *EltTy = ConvertType(cast<ComplexType>(Ty)->getElementType());
-    ResultType = llvm::StructType::get(EltTy, EltTy, nullptr);
+    ResultType = llvm::StructType::get(EltTy, EltTy);
     break;
   }
   case Type::LValueReference:
@@ -485,75 +558,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     break;
   }
   case Type::FunctionNoProto:
-  case Type::FunctionProto: {
-    const FunctionType *FT = cast<FunctionType>(Ty);
-    // First, check whether we can build the full function type.  If the
-    // function type depends on an incomplete type (e.g. a struct or enum), we
-    // cannot lower the function type.
-    if (!isFuncTypeConvertible(FT)) {
-      // This function's type depends on an incomplete tag type.
-
-      // Force conversion of all the relevant record types, to make sure
-      // we re-convert the FunctionType when appropriate.
-      if (const RecordType *RT = FT->getReturnType()->getAs<RecordType>())
-        ConvertRecordDeclType(RT->getDecl());
-      if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(FT))
-        for (unsigned i = 0, e = FPT->getNumParams(); i != e; i++)
-          if (const RecordType *RT = FPT->getParamType(i)->getAs<RecordType>())
-            ConvertRecordDeclType(RT->getDecl());
-
-      // Return a placeholder type.
-      ResultType = llvm::StructType::get(getLLVMContext());
-
-      SkippedLayout = true;
-      break;
-    }
-
-    // While we're converting the parameter types for a function, we don't want
-    // to recursively convert any pointed-to structs.  Converting directly-used
-    // structs is ok though.
-    if (!RecordsBeingLaidOut.insert(Ty).second) {
-      ResultType = llvm::StructType::get(getLLVMContext());
-      
-      SkippedLayout = true;
-      break;
-    }
-    
-    // The function type can be built; call the appropriate routines to
-    // build it.
-    const CGFunctionInfo *FI;
-    if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(FT)) {
-      FI = &arrangeFreeFunctionType(
-                   CanQual<FunctionProtoType>::CreateUnsafe(QualType(FPT, 0)));
-    } else {
-      const FunctionNoProtoType *FNPT = cast<FunctionNoProtoType>(FT);
-      FI = &arrangeFreeFunctionType(
-                CanQual<FunctionNoProtoType>::CreateUnsafe(QualType(FNPT, 0)));
-    }
-    
-    // If there is something higher level prodding our CGFunctionInfo, then
-    // don't recurse into it again.
-    if (FunctionsBeingProcessed.count(FI)) {
-
-      ResultType = llvm::StructType::get(getLLVMContext());
-      SkippedLayout = true;
-    } else {
-
-      // Otherwise, we're good to go, go ahead and convert it.
-      ResultType = GetFunctionType(*FI);
-    }
-
-    RecordsBeingLaidOut.erase(Ty);
-
-    if (SkippedLayout)
-      TypeCache.clear();
-    
-    if (RecordsBeingLaidOut.empty())
-      while (!DeferredRecords.empty())
-        ConvertRecordDeclType(DeferredRecords.pop_back_val());
+  case Type::FunctionProto:
+    ResultType = ConvertFunctionType(T);
     break;
-  }
-
   case Type::ObjCObject:
     ResultType = ConvertType(cast<ObjCObjectType>(Ty)->getBaseType());
     break;
@@ -599,10 +606,13 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   }
 
   case Type::MemberPointer: {
-    if (!getCXXABI().isMemberPointerConvertible(cast<MemberPointerType>(Ty)))
-      return llvm::StructType::create(getLLVMContext());
-    ResultType = 
-      getCXXABI().ConvertMemberPointerType(cast<MemberPointerType>(Ty));
+    auto *MPTy = cast<MemberPointerType>(Ty);
+    if (!getCXXABI().isMemberPointerConvertible(MPTy)) {
+      RecordsWithOpaqueMemberPointers.insert(MPTy->getClass());
+      ResultType = llvm::StructType::create(getLLVMContext());
+    } else {
+      ResultType = getCXXABI().ConvertMemberPointerType(MPTy);
+    }
     break;
   }
 
@@ -622,6 +632,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       ResultType = llvm::StructType::get(getLLVMContext(),
                                          llvm::makeArrayRef(elts));
     }
+    break;
+  }
+  case Type::Pipe: {
+    ResultType = CGM.getOpenCLRuntime().getPipeType();
     break;
   }
   }
@@ -722,10 +736,14 @@ CodeGenTypes::getCGRecordLayout(const RecordDecl *RD) {
   return *Layout;
 }
 
+bool CodeGenTypes::isPointerZeroInitializable(QualType T) {
+  assert((T->isAnyPointerType() || T->isBlockPointerType()) && "Invalid type");
+  return isZeroInitializable(T);
+}
+
 bool CodeGenTypes::isZeroInitializable(QualType T) {
-  // No need to check for member pointers when not compiling C++.
-  if (!Context.getLangOpts().CPlusPlus)
-    return true;
+  if (T->getAs<PointerType>())
+    return Context.getTargetNullPointerValue(T) == 0;
 
   if (const auto *AT = Context.getAsArrayType(T)) {
     if (isa<IncompleteArrayType>(AT))
@@ -739,7 +757,7 @@ bool CodeGenTypes::isZeroInitializable(QualType T) {
   // Records are non-zero-initializable if they contain any
   // non-zero-initializable subobjects.
   if (const RecordType *RT = T->getAs<RecordType>()) {
-    const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
+    auto RD = cast<RecordDecl>(RT->getDecl());
     return isZeroInitializable(RD);
   }
 

@@ -174,6 +174,9 @@ Command-line parameters
 ``-fmodules``
   Enable the modules feature.
 
+``-fbuiltin-module-map``
+  Load the Clang builtins module map file. (Equivalent to ``-fmodule-map-file=<resource dir>/include/module.modulemap``)
+
 ``-fimplicit-module-maps``
   Enable implicit search for module map files named ``module.modulemap`` and similar. This option is implied by ``-fmodules``. If this is disabled with ``-fno-implicit-module-maps``, module map files will only be loaded if they are explicitly specified via ``-fmodule-map-file`` or transitively used by another module map file.
 
@@ -212,6 +215,9 @@ Command-line parameters
 
 ``-fmodule-file=<file>``
   Load the given precompiled module file.
+
+``-fprebuilt-module-path=<directory>``
+  Specify the path to the prebuilt modules. If specified, we will look for modules in this directory for a given top-level module name. We don't need a module map for loading prebuilt modules in this directory and the compiler will not try to rebuild these modules. This can be specified multiple times.
 
 Module Semantics
 ================
@@ -354,6 +360,7 @@ The ``framework`` qualifier specifies that this module corresponds to a Darwin-s
   Name.framework/
     Modules/module.modulemap  Module map for the framework
     Headers/                  Subdirectory containing framework headers
+    PrivateHeaders/           Subdirectory containing framework private headers
     Frameworks/               Subdirectory containing embedded frameworks
     Resources/                Subdirectory containing additional resources
     Name                      Symbolic link to the shared library for the framework
@@ -361,6 +368,8 @@ The ``framework`` qualifier specifies that this module corresponds to a Darwin-s
 The ``system`` attribute specifies that the module is a system module. When a system module is rebuilt, all of the module's headers will be considered system headers, which suppresses warnings. This is equivalent to placing ``#pragma GCC system_header`` in each of the module's headers. The form of attributes is described in the section Attributes_, below.
 
 The ``extern_c`` attribute specifies that the module contains C code that can be used from within C++. When such a module is built for use in C++ code, all of the module's headers will be treated as if they were contained within an implicit ``extern "C"`` block. An import for a module with this attribute can appear within an ``extern "C"`` block. No other restrictions are lifted, however: the module currently cannot be imported within an ``extern "C"`` block in a namespace.
+
+The ``no_undeclared_includes`` attribute specifies that the module can only reach non-modular headers and headers from used modules. Since some headers could be present in more than one search path and map to different modules in each path, this mechanism helps clang to find the right header, i.e., prefer the one for the current module or in a submodule instead of the first usual match in the search paths.
 
 Modules can have a number of different kinds of members, each of which is described below:
 
@@ -394,7 +403,7 @@ A *requires-declaration* specifies the requirements that an importing translatio
   *feature*:
     ``!``:sub:`opt` *identifier*
 
-The requirements clause allows specific modules or submodules to specify that they are only accessible with certain language dialects or on certain platforms. The feature list is a set of identifiers, defined below. If any of the features is not available in a given translation unit, that translation unit shall not import the module. The optional ``!`` indicates that a feature is incompatible with the module.
+The requirements clause allows specific modules or submodules to specify that they are only accessible with certain language dialects or on certain platforms. The feature list is a set of identifiers, defined below. If any of the features is not available in a given translation unit, that translation unit shall not import the module. When building a module for use by a compilation, submodules requiring unavailable features are ignored. The optional ``!`` indicates that a feature is incompatible with the module.
 
 The following features are defined:
 
@@ -404,11 +413,20 @@ altivec
 blocks
   The "blocks" language feature is available.
 
+coroutines
+  Support for the coroutines TS is available.
+
 cplusplus
   C++ support is available.
 
 cplusplus11
   C++11 support is available.
+
+freestanding
+  A freestanding environment is available.
+
+gnuinlineasm
+  GNU inline ASM is available.
 
 objc
   Objective-C support is available.
@@ -451,9 +469,16 @@ A header declaration specifies that a particular header is associated with the e
 .. parsed-literal::
 
   *header-declaration*:
-    ``private``:sub:`opt` ``textual``:sub:`opt` ``header`` *string-literal*
-    ``umbrella`` ``header`` *string-literal*
-    ``exclude`` ``header`` *string-literal*
+    ``private``:sub:`opt` ``textual``:sub:`opt` ``header`` *string-literal* *header-attrs*:sub:`opt`
+    ``umbrella`` ``header`` *string-literal* *header-attrs*:sub:`opt`
+    ``exclude`` ``header`` *string-literal* *header-attrs*:sub:`opt`
+
+  *header-attrs*:
+    '{' *header-attr** '}'
+
+  *header-attr*:
+    ``size`` *integer-literal*
+    ``mtime`` *integer-literal*
 
 A header declaration that does not contain ``exclude`` nor ``textual`` specifies a header that contributes to the enclosing module. Specifically, when the module is built, the named header will be parsed and its declarations will be (logically) placed into the enclosing submodule.
 
@@ -485,6 +510,18 @@ A header with the ``exclude`` specifier is excluded from the module. It will not
   }
 
 A given header shall not be referenced by more than one *header-declaration*.
+
+Two *header-declaration*\s, or a *header-declaration* and a ``#include``, are
+considered to refer to the same file if the paths resolve to the same file
+and the specified *header-attr*\s (if any) match the attributes of that file,
+even if the file is named differently (for instance, by a relative path or
+via symlinks).
+
+.. note::
+    The use of *header-attr*\s avoids the need for Clang to speculatively
+    ``stat`` every header referenced by a module map. It is recommended that
+    *header-attr*\s only be used in machine-generated module maps, to avoid
+    mismatches between attribute values and the corresponding files.
 
 Umbrella directory declaration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -827,6 +864,16 @@ file. In our example library, the ``module.private.modulemap`` file
 would be available when ``Foo_Private.h`` is available, making it
 easier to split a library's public and private APIs along header
 boundaries.
+
+When writing a private module as part of a *framework*, it's recommended that:
+
+* Headers for this module are present in the ``PrivateHeaders``
+  framework subdirectory.
+* The private module is defined as a *submodule* of the public framework (if
+  there's one), similar to how ``Foo.Private`` is defined in the example above.
+* The ``explicit`` keyword should be used to guarantee that its content will
+  only be available when the submodule itself is explicitly named (through a
+  ``@import`` for example).
 
 Modularizing a Platform
 =======================

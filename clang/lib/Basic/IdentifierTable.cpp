@@ -42,6 +42,7 @@ IdentifierInfo::IdentifierInfo() {
   NeedsHandleIdentifier = false;
   IsFromAST = false;
   ChangedAfterLoad = false;
+  FEChangedAfterLoad = false;
   RevertedTokenID = false;
   OutOfDate = false;
   IsModulesImport = false;
@@ -112,7 +113,8 @@ namespace {
     KEYOBJC2    = 0x20000,
     KEYZVECTOR  = 0x40000,
     KEYCOROUTINES = 0x80000,
-    KEYALL = (0xfffff & ~KEYNOMS18 &
+    KEYMODULES = 0x100000,
+    KEYALL = (0x1fffff & ~KEYNOMS18 &
               ~KEYNOOPENCL) // KEYNOMS18 and KEYNOOPENCL are used to exclude.
   };
 
@@ -146,9 +148,10 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   // We treat bridge casts as objective-C keywords so we can warn on them
   // in non-arc mode.
   if (LangOpts.ObjC2 && (Flags & KEYARC)) return KS_Enabled;
-  if (LangOpts.ConceptsTS && (Flags & KEYCONCEPTS)) return KS_Enabled;
   if (LangOpts.ObjC2 && (Flags & KEYOBJC2)) return KS_Enabled;
-  if (LangOpts.Coroutines && (Flags & KEYCOROUTINES)) return KS_Enabled;
+  if (LangOpts.ConceptsTS && (Flags & KEYCONCEPTS)) return KS_Enabled;
+  if (LangOpts.CoroutinesTS && (Flags & KEYCOROUTINES)) return KS_Enabled;
+  if (LangOpts.ModulesTS && (Flags & KEYMODULES)) return KS_Enabled;
   if (LangOpts.CPlusPlus && (Flags & KEYCXX11)) return KS_Future;
   return KS_Disabled;
 }
@@ -241,7 +244,7 @@ static KeywordStatus getTokenKwStatus(const LangOptions &LangOpts,
 
 /// \brief Returns true if the identifier represents a keyword in the
 /// specified language.
-bool IdentifierInfo::isKeyword(const LangOptions &LangOpts) {
+bool IdentifierInfo::isKeyword(const LangOptions &LangOpts) const {
   switch (getTokenKwStatus(LangOpts, getTokenID())) {
   case KS_Enabled:
   case KS_Extension:
@@ -249,6 +252,19 @@ bool IdentifierInfo::isKeyword(const LangOptions &LangOpts) {
   default:
     return false;
   }
+}
+
+/// \brief Returns true if the identifier represents a C++ keyword in the
+/// specified language.
+bool IdentifierInfo::isCPlusPlusKeyword(const LangOptions &LangOpts) const {
+  if (!LangOpts.CPlusPlus || !isKeyword(LangOpts))
+    return false;
+  // This is a C++ keyword if this identifier is not a keyword when checked
+  // using LangOptions without C++ support.
+  LangOptions LangOptsNoCPP = LangOpts;
+  LangOptsNoCPP.CPlusPlus = false;
+  LangOptsNoCPP.CPlusPlus11 = false;
+  return !isKeyword(LangOptsNoCPP);
 }
 
 tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
@@ -440,9 +456,11 @@ std::string Selector::getAsString() const {
   if (getIdentifierInfoFlag() < MultiArg) {
     IdentifierInfo *II = getAsIdentifierInfo();
 
-    // If the number of arguments is 0 then II is guaranteed to not be null.
-    if (getNumArgs() == 0)
+    if (getNumArgs() == 0) {
+      assert(II && "If the number of arguments is 0 then II is guaranteed to "
+                   "not be null.");
       return II->getName();
+    }
 
     if (!II)
       return ":";
@@ -482,8 +500,10 @@ ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
     if (name == "self") return OMF_self;
     if (name == "initialize") return OMF_initialize;
   }
- 
-  if (name == "performSelector") return OMF_performSelector;
+
+  if (name == "performSelector" || name == "performSelectorInBackground" ||
+      name == "performSelectorOnMainThread")
+    return OMF_performSelector;
 
   // The other method families may begin with a prefix of underscores.
   while (!name.empty() && name.front() == '_')
@@ -531,6 +551,7 @@ ObjCInstanceTypeFamily Selector::getInstTypeMethodFamily(Selector sel) {
     case 's':
       if (startsWithWord(name, "shared")) return OIT_ReturnsSelf;
       if (startsWithWord(name, "standard")) return OIT_Singleton;
+      break;
     case 'i':
       if (startsWithWord(name, "init")) return OIT_Init;
     default:
@@ -618,8 +639,8 @@ Selector SelectorTable::getSelector(unsigned nKeys, IdentifierInfo **IIV) {
   // variable size array (for parameter types) at the end of them.
   unsigned Size = sizeof(MultiKeywordSelector) + nKeys*sizeof(IdentifierInfo *);
   MultiKeywordSelector *SI =
-    (MultiKeywordSelector*)SelTabImpl.Allocator.Allocate(Size,
-                                         llvm::alignOf<MultiKeywordSelector>());
+      (MultiKeywordSelector *)SelTabImpl.Allocator.Allocate(
+          Size, alignof(MultiKeywordSelector));
   new (SI) MultiKeywordSelector(nKeys, IIV);
   SelTabImpl.Table.InsertNode(SI, InsertPos);
   return Selector(SI);

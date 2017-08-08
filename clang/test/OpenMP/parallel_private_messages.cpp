@@ -13,7 +13,7 @@ class S2 {
   mutable int a;
 public:
   S2():a(0) { }
-  static float S2s;
+  static float S2s; // expected-note {{static data member is predetermined as shared}}
 };
 const S2 b;
 const S2 ba[5];
@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
   #pragma omp parallel private(ba)
   #pragma omp parallel private(ca) // expected-error {{shared variable cannot be private}}
   #pragma omp parallel private(da) // expected-error {{shared variable cannot be private}}
-  #pragma omp parallel private(S2::S2s)
+  #pragma omp parallel private(S2::S2s) // expected-error {{shared variable cannot be private}}
   #pragma omp parallel private(e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}}
   #pragma omp parallel private(threadvar, B::x) // expected-error 2 {{threadprivate or thread local variable cannot be private}}
   #pragma omp parallel shared(i), private(i) // expected-error {{shared variable cannot be private}} expected-note {{defined as shared}}

@@ -11,23 +11,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-c/Index.h"
 #include "CXComment.h"
 #include "CXCursor.h"
 #include "CXString.h"
 #include "clang-c/Documentation.h"
+#include "clang-c/Index.h"
 #include "clang/AST/Decl.h"
 #include "clang/Index/CommentToXML.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <climits>
 
 using namespace clang;
 using namespace clang::comments;
 using namespace clang::cxcomment;
-
-extern "C" {
 
 CXComment clang_Cursor_getParsedComment(CXCursor C) {
   using namespace clang::cxcursor;
@@ -406,6 +403,4 @@ CXString clang_FullComment_getAsXML(CXComment CXC) {
       ->convertCommentToXML(FC, XML, cxtu::getASTUnit(TU)->getASTContext());
   return cxstring::createDup(XML.str());
 }
-
-} // end extern "C"
 

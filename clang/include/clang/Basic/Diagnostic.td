@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// See the Internals Manual, section The Diagnostics Subsystem for an overview.
+
 // Define the diagnostic severities.
 class Severity<string N> {
   string Name = N;
@@ -48,10 +50,13 @@ class DiagGroup<string Name, list<DiagGroup> subgroups = []> {
   string GroupName = Name;
   list<DiagGroup> SubGroups = subgroups;
   string CategoryName = "";
+  code Documentation = [{}];
 }
 class InGroup<DiagGroup G> { DiagGroup Group = G; }
 //class IsGroup<string Name> { DiagGroup Group = DiagGroup<Name>; }
 
+// This defines documentation for diagnostic groups.
+include "DiagnosticDocs.td"
 
 // This defines all of the named diagnostic categories.
 include "DiagnosticCategories.td"
@@ -97,10 +102,20 @@ class SuppressInSystemHeader {
 class Error<string str>     : Diagnostic<str, CLASS_ERROR, SEV_Error>, SFINAEFailure {
   bit ShowInSystemHeader = 1;
 }
+// Warnings default to on (but can be default-off'd with DefaultIgnore).
+// This is used for warnings about questionable code; warnings about
+// accepted language extensions should use Extension or ExtWarn below instead.
 class Warning<string str>   : Diagnostic<str, CLASS_WARNING, SEV_Warning>;
+// Remarks can be turned on with -R flags and provide commentary, e.g. on
+// optimizer decisions.
 class Remark<string str>    : Diagnostic<str, CLASS_REMARK, SEV_Ignored>;
+// Extensions are warnings about accepted language extensions.
+// Extension warnings are default-off but enabled by -pedantic.
 class Extension<string str> : Diagnostic<str, CLASS_EXTENSION, SEV_Ignored>;
+// ExtWarns are warnings about accepted language extensions.
+// ExtWarn warnings are default-on.
 class ExtWarn<string str>   : Diagnostic<str, CLASS_EXTENSION, SEV_Warning>;
+// Notes can provide supplementary information on errors, warnings, and remarks.
 class Note<string str>      : Diagnostic<str, CLASS_NOTE, SEV_Fatal/*ignored*/>;
 
 
@@ -124,4 +139,4 @@ include "DiagnosticLexKinds.td"
 include "DiagnosticParseKinds.td"
 include "DiagnosticSemaKinds.td"
 include "DiagnosticSerializationKinds.td"
-
+include "DiagnosticRefactoringKinds.td"

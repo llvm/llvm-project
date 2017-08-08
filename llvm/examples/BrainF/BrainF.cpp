@@ -1,11 +1,11 @@
-//===-- BrainF.cpp - BrainF compiler example ----------------------------===//
+//===-- BrainF.cpp - BrainF compiler example ------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // This class compiles the BrainF language into LLVM assembly.
 //
@@ -21,13 +21,25 @@
 // [         while(*h) {     Start loop
 // ]         }               End loop
 //
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "BrainF.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/Support/Casting.h"
+#include <cstdlib>
 #include <iostream>
 
 using namespace llvm;
@@ -62,18 +74,18 @@ void BrainF::header(LLVMContext& C) {
 
   //declare i32 @getchar()
   getchar_func = cast<Function>(module->
-    getOrInsertFunction("getchar", IntegerType::getInt32Ty(C), NULL));
+    getOrInsertFunction("getchar", IntegerType::getInt32Ty(C)));
 
   //declare i32 @putchar(i32)
   putchar_func = cast<Function>(module->
     getOrInsertFunction("putchar", IntegerType::getInt32Ty(C),
-                        IntegerType::getInt32Ty(C), NULL));
+                        IntegerType::getInt32Ty(C)));
 
   //Function header
 
   //define void @brainf()
   brainf_func = cast<Function>(module->
-    getOrInsertFunction("brainf", Type::getVoidTy(C), NULL));
+    getOrInsertFunction("brainf", Type::getVoidTy(C)));
 
   builder = new IRBuilder<>(BasicBlock::Create(C, label, brainf_func));
 
@@ -144,7 +156,7 @@ void BrainF::header(LLVMContext& C) {
     //declare i32 @puts(i8 *)
     Function *puts_func = cast<Function>(module->
       getOrInsertFunction("puts", IntegerType::getInt32Ty(C),
-                      PointerType::getUnqual(IntegerType::getInt8Ty(C)), NULL));
+                      PointerType::getUnqual(IntegerType::getInt8Ty(C))));
 
     //brainf.aberror:
     aberrorbb = BasicBlock::Create(C, label, brainf_func);
@@ -327,7 +339,7 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
         switch(c) {
           case '-':
             direction = -1;
-            // Fall through
+            LLVM_FALLTHROUGH;
 
           case '+':
             if (cursym == SYM_CHANGE) {
@@ -348,7 +360,7 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
 
           case '<':
             direction = -1;
-            // Fall through
+            LLVM_FALLTHROUGH;
 
           case '>':
             if (cursym == SYM_MOVE) {

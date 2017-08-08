@@ -1,4 +1,4 @@
-//===-- MCAsmLexer.cpp - Abstract Asm Lexer Interface ---------------------===//
+//===- MCAsmLexer.cpp - Abstract Asm Lexer Interface ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,16 +8,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCParser/MCAsmLexer.h"
-#include "llvm/Support/SourceMgr.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/SMLoc.h"
 
 using namespace llvm;
 
-MCAsmLexer::MCAsmLexer() : TokStart(nullptr), SkipSpace(true) {
-  CurTok.emplace_back(AsmToken::Error, StringRef());
+MCAsmLexer::MCAsmLexer() : AltMacroMode(false) {
+  CurTok.emplace_back(AsmToken::Space, StringRef());
 }
 
-MCAsmLexer::~MCAsmLexer() {
-}
+MCAsmLexer::~MCAsmLexer() = default;
 
 SMLoc MCAsmLexer::getLoc() const {
   return SMLoc::getFromPointer(TokStart);

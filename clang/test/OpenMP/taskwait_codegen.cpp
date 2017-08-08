@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 // expected-no-diagnostics
-// REQUIRES: x86-registered-target
 #ifndef HEADER
 #define HEADER
 

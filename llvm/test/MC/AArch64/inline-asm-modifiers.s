@@ -30,7 +30,7 @@ test_inline_modifier_L:                 // @test_inline_modifier_L
 
 // CHECK: R_AARCH64_ADD_ABS_LO12_NC var_simple
 // CHECK: R_AARCH64_LD64_GOT_LO12_NC var_got
-// CHECK: R_AARCH64_TLSDESC_ADD_LO12_NC var_tlsgd
+// CHECK: R_AARCH64_TLSDESC_ADD_LO12 var_tlsgd
 // CHECK: R_AARCH64_TLSLD_ADD_DTPREL_LO12 var_tlsld
 // CHECK: R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC var_tlsie
 // CHECK: R_AARCH64_TLSLE_ADD_TPREL_LO12 var_tlsle

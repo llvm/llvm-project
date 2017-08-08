@@ -55,8 +55,50 @@
 #endif
 
 #ifdef VERIFY
-// expected-error@+2 {{builtin feature check macro requires a parenthesized identifier}}
-// expected-error@+1 {{expected value in expression}}
+// expected-error@+1 {{builtin feature check macro requires a parenthesized identifier}}
 #if __has_feature('x')
 #endif
+
+// The following are not identifiers:
+_Static_assert(!__is_identifier("string"), "oops");
+_Static_assert(!__is_identifier('c'), "oops");
+_Static_assert(!__is_identifier(123), "oops");
+_Static_assert(!__is_identifier(int), "oops");
+
+// The following are:
+_Static_assert(__is_identifier(abc /* comment */), "oops");
+_Static_assert(__is_identifier /* comment */ (xyz), "oops");
+
+// expected-error@+1 {{too few arguments}}
+#if __is_identifier()
+#endif
+
+// expected-error@+1 {{too many arguments}}
+#if __is_identifier(,())
+#endif
+
+// expected-error@+1 {{missing ')' after 'abc'}} 
+#if __is_identifier(abc xyz) // expected-note {{to match this '('}}
+#endif
+
+// expected-error@+1 {{missing ')' after 'abc'}} 
+#if __is_identifier(abc())   // expected-note {{to match this '('}}
+#endif
+
+// expected-error@+1 {{missing ')' after '.'}} 
+#if __is_identifier(.abc)    // expected-note {{to match this '('}}
+#endif
+
+// expected-error@+1 {{nested parentheses not permitted in '__is_identifier'}} 
+#if __is_identifier((abc))
+#endif
+
+// expected-error@+1 {{missing '(' after '__is_identifier'}} expected-error@+1 {{expected value}}
+#if __is_identifier
+#endif
+
+// expected-error@+1 {{unterminated}} expected-error@+1 {{expected value}}
+#if __is_identifier(
+#endif
+
 #endif

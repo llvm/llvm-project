@@ -10,7 +10,7 @@
 ;   Capture(buf);
 ; }
 ; }
-; The interesting part is !DIExpression(DW_OP_deref, DW_OP_minus, 400)
+; The interesting part is !DIExpression(DW_OP_constu, 400, DW_OP_minus)
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -40,11 +40,10 @@ declare void @Capture(i32*)
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!13, !14}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 248518) (llvm/trunk 248512)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 248518) (llvm/trunk 248512)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "1.cc", directory: "/tmp")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, variables: !7)
+!4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !7)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}
 !7 = !{!8}
@@ -57,20 +56,17 @@ declare void @Capture(i32*)
 !14 = !{i32 2, !"Debug Info Version", i32 3}
 !15 = !{!"clang version 3.8.0 (trunk 248518) (llvm/trunk 248512)"}
 !16 = !DILocation(line: 5, column: 3, scope: !4)
-!17 = !DIExpression(DW_OP_deref, DW_OP_minus, 400)
+!17 = !DIExpression(DW_OP_constu, 400, DW_OP_minus)
 !18 = !DILocation(line: 5, column: 7, scope: !4)
 !19 = !DILocation(line: 6, column: 11, scope: !4)
 !20 = !DILocation(line: 6, column: 3, scope: !4)
 !21 = !DILocation(line: 7, column: 1, scope: !4)
 
 ; RCX - 400
-; CHECK:      .short	6                       # Loc expr size
+; CHECK:      .short	3                       # Loc expr size
 ; CHECK-NEXT: .byte	114                     # DW_OP_breg2
-; CHECK-NEXT: .byte	0                       # 0
-; CHECK-NEXT: .byte	16                      # DW_OP_constu
-; CHECK-NEXT: .byte	144                     # 400
-; CHECK-NEXT: .byte	3                       # DW_OP_minus
-; CHECK-NEXT: .byte	28
+; CHECK-NEXT: .byte	240                     # -400
+; CHECK-NEXT: .byte	124
 
 ; RCX is clobbered in call @Capture, but there is a spilled copy.
 ; *(RSP + 8) - 400

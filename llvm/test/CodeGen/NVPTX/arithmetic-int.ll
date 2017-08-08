@@ -29,6 +29,30 @@ define i64 @mul_i64(i64 %a, i64 %b) {
   ret i64 %ret
 }
 
+define i64 @umul_lohi_i64(i64 %a) {
+; CHECK-LABEL: umul_lohi_i64(
+entry:
+  %0 = zext i64 %a to i128
+  %1 = mul i128 %0, 288
+; CHECK: mul.lo.{{u|s}}64
+; CHECK: mul.hi.{{u|s}}64
+  %2 = lshr i128 %1, 1
+  %3 = trunc i128 %2 to i64
+  ret i64 %3
+}
+
+define i64 @smul_lohi_i64(i64 %a) {
+; CHECK-LABEL: smul_lohi_i64(
+entry:
+  %0 = sext i64 %a to i128
+  %1 = mul i128 %0, 288
+; CHECK: mul.lo.{{u|s}}64
+; CHECK: mul.hi.{{u|s}}64
+  %2 = ashr i128 %1, 1
+  %3 = trunc i128 %2 to i64
+  ret i64 %3
+}
+
 define i64 @sdiv_i64(i64 %a, i64 %b) {
 ; CHECK: div.s64 %rd{{[0-9]+}}, %rd{{[0-9]+}}, %rd{{[0-9]+}}
 ; CHECK: ret

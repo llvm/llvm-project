@@ -7,13 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "gtest/gtest.h"
-
 
 using llvm::yaml::Input;
 using llvm::yaml::Output;
@@ -233,6 +232,22 @@ TEST(YAMLIO, TestSequenceMapWriteAndRead) {
   }
 }
 
+//
+// Test YAML filename handling.
+//
+static void testErrorFilename(const llvm::SMDiagnostic &Error, void *) {
+  EXPECT_EQ(Error.getFilename(), "foo.yaml");
+}
+
+TEST(YAMLIO, TestGivenFilename) {
+  auto Buffer = llvm::MemoryBuffer::getMemBuffer("{ x: 42 }", "foo.yaml");
+  Input yin(*Buffer, nullptr, testErrorFilename);
+  FooBar Value;
+  yin >> Value;
+
+  EXPECT_TRUE(!!yin.error());
+}
+
 
 //===----------------------------------------------------------------------===//
 //  Test built-in types
@@ -386,6 +401,111 @@ TEST(YAMLIO, TestReadWriteBuiltInTypes) {
     EXPECT_EQ(map.h16,      Hex16(50000));
     EXPECT_EQ(map.h32,      Hex32(3000000000U));
     EXPECT_EQ(map.h64,      Hex64(6000000000LL));
+  }
+}
+
+//===----------------------------------------------------------------------===//
+//  Test endian-aware types
+//===----------------------------------------------------------------------===//
+
+struct EndianTypes {
+  typedef llvm::support::detail::packed_endian_specific_integral<
+      float, llvm::support::little, llvm::support::unaligned>
+      ulittle_float;
+  typedef llvm::support::detail::packed_endian_specific_integral<
+      double, llvm::support::little, llvm::support::unaligned>
+      ulittle_double;
+
+  llvm::support::ulittle64_t u64;
+  llvm::support::ulittle32_t u32;
+  llvm::support::ulittle16_t u16;
+  llvm::support::little64_t s64;
+  llvm::support::little32_t s32;
+  llvm::support::little16_t s16;
+  ulittle_float f;
+  ulittle_double d;
+};
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<EndianTypes> {
+  static void mapping(IO &io, EndianTypes &et) {
+    io.mapRequired("u64", et.u64);
+    io.mapRequired("u32", et.u32);
+    io.mapRequired("u16", et.u16);
+    io.mapRequired("s64", et.s64);
+    io.mapRequired("s32", et.s32);
+    io.mapRequired("s16", et.s16);
+    io.mapRequired("f", et.f);
+    io.mapRequired("d", et.d);
+  }
+};
+}
+}
+
+//
+// Test the reading of all endian scalar conversions
+//
+TEST(YAMLIO, TestReadEndianTypes) {
+  EndianTypes map;
+  Input yin("---\n"
+            "u64:      5000000000\n"
+            "u32:      4000000000\n"
+            "u16:      65000\n"
+            "s64:      -5000000000\n"
+            "s32:      -2000000000\n"
+            "s16:      -32000\n"
+            "f:        3.25\n"
+            "d:        -2.8625\n"
+            "...\n");
+  yin >> map;
+
+  EXPECT_FALSE(yin.error());
+  EXPECT_EQ(map.u64, 5000000000ULL);
+  EXPECT_EQ(map.u32, 4000000000U);
+  EXPECT_EQ(map.u16, 65000);
+  EXPECT_EQ(map.s64, -5000000000LL);
+  EXPECT_EQ(map.s32, -2000000000L);
+  EXPECT_EQ(map.s16, -32000);
+  EXPECT_EQ(map.f, 3.25f);
+  EXPECT_EQ(map.d, -2.8625);
+}
+
+//
+// Test writing then reading back all endian-aware scalar types
+//
+TEST(YAMLIO, TestReadWriteEndianTypes) {
+  std::string intermediate;
+  {
+    EndianTypes map;
+    map.u64 = 6000000000ULL;
+    map.u32 = 3000000000U;
+    map.u16 = 50000;
+    map.s64 = -6000000000LL;
+    map.s32 = -2000000000;
+    map.s16 = -32000;
+    map.f = 3.25f;
+    map.d = -2.8625;
+
+    llvm::raw_string_ostream ostr(intermediate);
+    Output yout(ostr);
+    yout << map;
+  }
+
+  {
+    Input yin(intermediate);
+    EndianTypes map;
+    yin >> map;
+
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(map.u64, 6000000000ULL);
+    EXPECT_EQ(map.u32, 3000000000U);
+    EXPECT_EQ(map.u16, 50000);
+    EXPECT_EQ(map.s64, -6000000000LL);
+    EXPECT_EQ(map.s32, -2000000000L);
+    EXPECT_EQ(map.s16, -32000);
+    EXPECT_EQ(map.f, 3.25f);
+    EXPECT_EQ(map.d, -2.8625);
   }
 }
 
@@ -925,7 +1045,8 @@ TEST(YAMLIO, TestReadWriteBlockScalarValue) {
 
 LLVM_YAML_STRONG_TYPEDEF(int, MyNumber)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(MyNumber)
-LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::StringRef)
+LLVM_YAML_STRONG_TYPEDEF(llvm::StringRef, MyString)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(MyString)
 
 namespace llvm {
 namespace yaml {
@@ -945,12 +1066,23 @@ namespace yaml {
 
     static bool mustQuote(StringRef) { return false; }
   };
+
+  template <> struct ScalarTraits<MyString> {
+    using Impl = ScalarTraits<StringRef>;
+    static void output(const MyString &V, void *Ctx, raw_ostream &OS) {
+      Impl::output(V, Ctx, OS);
+    }
+    static StringRef input(StringRef S, void *Ctx, MyString &V) {
+      return Impl::input(S, Ctx, V.value);
+    }
+    static bool mustQuote(StringRef S) { return Impl::mustQuote(S); }
+  };
 }
 }
 
 struct NameAndNumbers {
   llvm::StringRef               name;
-  std::vector<llvm::StringRef>  strings;
+  std::vector<MyString>         strings;
   std::vector<MyNumber>         single;
   std::vector<MyNumber>         numbers;
 };
@@ -1024,8 +1156,8 @@ TEST(YAMLIO, TestReadWriteMyFlowSequence) {
     EXPECT_FALSE(yin.error());
     EXPECT_TRUE(map2.name.equals("hello"));
     EXPECT_EQ(map2.strings.size(), 2UL);
-    EXPECT_TRUE(map2.strings[0].equals("one"));
-    EXPECT_TRUE(map2.strings[1].equals("two"));
+    EXPECT_TRUE(map2.strings[0].value.equals("one"));
+    EXPECT_TRUE(map2.strings[1].value.equals("two"));
     EXPECT_EQ(map2.single.size(), 1UL);
     EXPECT_EQ(1,       map2.single[0]);
     EXPECT_EQ(map2.numbers.size(), 3UL);
@@ -1635,7 +1767,6 @@ TEST(YAMLIO, TestFlagsReadError) {
 //
 // Test error handling reading built-in uint8_t type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(uint8_t)
 TEST(YAMLIO, TestReadBuiltInTypesUint8Error) {
   std::vector<uint8_t> seq;
   Input yin("---\n"
@@ -1654,7 +1785,6 @@ TEST(YAMLIO, TestReadBuiltInTypesUint8Error) {
 //
 // Test error handling reading built-in uint16_t type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(uint16_t)
 TEST(YAMLIO, TestReadBuiltInTypesUint16Error) {
   std::vector<uint16_t> seq;
   Input yin("---\n"
@@ -1673,7 +1803,6 @@ TEST(YAMLIO, TestReadBuiltInTypesUint16Error) {
 //
 // Test error handling reading built-in uint32_t type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(uint32_t)
 TEST(YAMLIO, TestReadBuiltInTypesUint32Error) {
   std::vector<uint32_t> seq;
   Input yin("---\n"
@@ -1692,7 +1821,6 @@ TEST(YAMLIO, TestReadBuiltInTypesUint32Error) {
 //
 // Test error handling reading built-in uint64_t type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(uint64_t)
 TEST(YAMLIO, TestReadBuiltInTypesUint64Error) {
   std::vector<uint64_t> seq;
   Input yin("---\n"
@@ -1711,7 +1839,6 @@ TEST(YAMLIO, TestReadBuiltInTypesUint64Error) {
 //
 // Test error handling reading built-in int8_t type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(int8_t)
 TEST(YAMLIO, TestReadBuiltInTypesint8OverError) {
   std::vector<int8_t> seq;
   Input yin("---\n"
@@ -1749,7 +1876,6 @@ TEST(YAMLIO, TestReadBuiltInTypesint8UnderError) {
 //
 // Test error handling reading built-in int16_t type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(int16_t)
 TEST(YAMLIO, TestReadBuiltInTypesint16UnderError) {
   std::vector<int16_t> seq;
   Input yin("---\n"
@@ -1788,7 +1914,6 @@ TEST(YAMLIO, TestReadBuiltInTypesint16OverError) {
 //
 // Test error handling reading built-in int32_t type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(int32_t)
 TEST(YAMLIO, TestReadBuiltInTypesint32UnderError) {
   std::vector<int32_t> seq;
   Input yin("---\n"
@@ -1826,7 +1951,6 @@ TEST(YAMLIO, TestReadBuiltInTypesint32OverError) {
 //
 // Test error handling reading built-in int64_t type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(int64_t)
 TEST(YAMLIO, TestReadBuiltInTypesint64UnderError) {
   std::vector<int64_t> seq;
   Input yin("---\n"
@@ -1863,7 +1987,6 @@ TEST(YAMLIO, TestReadBuiltInTypesint64OverError) {
 //
 // Test error handling reading built-in float type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(float)
 TEST(YAMLIO, TestReadBuiltInTypesFloatError) {
   std::vector<float> seq;
   Input yin("---\n"
@@ -1882,7 +2005,6 @@ TEST(YAMLIO, TestReadBuiltInTypesFloatError) {
 //
 // Test error handling reading built-in float type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(double)
 TEST(YAMLIO, TestReadBuiltInTypesDoubleError) {
   std::vector<double> seq;
   Input yin("---\n"
@@ -2193,4 +2315,143 @@ TEST(YAMLIO, TestWrapFlow) {
               "...\n");
     out.clear();
   }
+}
+
+struct MappingContext {
+  int A = 0;
+};
+struct SimpleMap {
+  int B = 0;
+  int C = 0;
+};
+
+struct NestedMap {
+  NestedMap(MappingContext &Context) : Context(Context) {}
+  SimpleMap Simple;
+  MappingContext &Context;
+};
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingContextTraits<SimpleMap, MappingContext> {
+  static void mapping(IO &io, SimpleMap &sm, MappingContext &Context) {
+    io.mapRequired("B", sm.B);
+    io.mapRequired("C", sm.C);
+    ++Context.A;
+    io.mapRequired("Context", Context.A);
+  }
+};
+
+template <> struct MappingTraits<NestedMap> {
+  static void mapping(IO &io, NestedMap &nm) {
+    io.mapRequired("Simple", nm.Simple, nm.Context);
+  }
+};
+}
+}
+
+TEST(YAMLIO, TestMapWithContext) {
+  MappingContext Context;
+  NestedMap Nested(Context);
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+
+  Output yout(ostr, nullptr, 15);
+
+  yout << Nested;
+  ostr.flush();
+  EXPECT_EQ(1, Context.A);
+  EXPECT_EQ("---\n"
+            "Simple:          \n"
+            "  B:               0\n"
+            "  C:               0\n"
+            "  Context:         1\n"
+            "...\n",
+            out);
+
+  out.clear();
+
+  Nested.Simple.B = 2;
+  Nested.Simple.C = 3;
+  yout << Nested;
+  ostr.flush();
+  EXPECT_EQ(2, Context.A);
+  EXPECT_EQ("---\n"
+            "Simple:          \n"
+            "  B:               2\n"
+            "  C:               3\n"
+            "  Context:         2\n"
+            "...\n",
+            out);
+  out.clear();
+}
+
+LLVM_YAML_IS_STRING_MAP(int)
+
+TEST(YAMLIO, TestCustomMapping) {
+  std::map<std::string, int> x;
+  x["foo"] = 1;
+  x["bar"] = 2;
+
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+
+  xout << x;
+  ostr.flush();
+  EXPECT_EQ("---\n"
+            "bar:             2\n"
+            "foo:             1\n"
+            "...\n",
+            out);
+
+  Input yin(out);
+  std::map<std::string, int> y;
+  yin >> y;
+  EXPECT_EQ(2ul, y.size());
+  EXPECT_EQ(1, y["foo"]);
+  EXPECT_EQ(2, y["bar"]);
+}
+
+LLVM_YAML_IS_STRING_MAP(FooBar)
+
+TEST(YAMLIO, TestCustomMappingStruct) {
+  std::map<std::string, FooBar> x;
+  x["foo"].foo = 1;
+  x["foo"].bar = 2;
+  x["bar"].foo = 3;
+  x["bar"].bar = 4;
+
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+
+  xout << x;
+  ostr.flush();
+  EXPECT_EQ("---\n"
+            "bar:             \n"
+            "  foo:             3\n"
+            "  bar:             4\n"
+            "foo:             \n"
+            "  foo:             1\n"
+            "  bar:             2\n"
+            "...\n",
+            out);
+
+  Input yin(out);
+  std::map<std::string, FooBar> y;
+  yin >> y;
+  EXPECT_EQ(2ul, y.size());
+  EXPECT_EQ(1, y["foo"].foo);
+  EXPECT_EQ(2, y["foo"].bar);
+  EXPECT_EQ(3, y["bar"].foo);
+  EXPECT_EQ(4, y["bar"].bar);
+}
+
+TEST(YAMLIO, InvalidInput) {
+  // polluting 1 value in the sequence
+  Input yin("---\n- foo:  3\n  bar:  5\n1\n- foo:  3\n  bar:  5\n...\n");
+  std::vector<FooBar> Data;
+  yin >> Data;
+  EXPECT_TRUE((bool)yin.error());
 }

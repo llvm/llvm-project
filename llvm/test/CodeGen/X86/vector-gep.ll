@@ -114,3 +114,12 @@ entry:
   ret <4 x i16*> %A
 ;CHECK: ret
 }
+
+;CHECK-LABEL: AGEP9:
+define <64 x i16*> @AGEP9(i16* %param, <64 x i32> %off) nounwind {
+entry:
+;CHECK: vbroadcastss
+  %A = getelementptr i16, i16* %param, <64 x i32> %off
+  ret <64 x i16*> %A
+;CHECK: ret
+}

@@ -66,6 +66,7 @@ public:
   typedef SmallVector<std::unique_ptr<BugReporterVisitor>, 8> VisitorList;
   typedef VisitorList::iterator visitor_iterator;
   typedef SmallVector<StringRef, 2> ExtraTextList;
+  typedef SmallVector<std::shared_ptr<PathDiagnosticNotePiece>, 4> NoteList;
 
 protected:
   friend class BugReporter;
@@ -82,7 +83,8 @@ protected:
   const ExplodedNode *ErrorNode;
   SmallVector<SourceRange, 4> Ranges;
   ExtraTextList ExtraText;
-  
+  NoteList Notes;
+
   typedef llvm::DenseSet<SymbolRef> Symbols;
   typedef llvm::DenseSet<const MemRegion *> Regions;
 
@@ -177,6 +179,18 @@ public:
   const BugType& getBugType() const { return BT; }
   BugType& getBugType() { return BT; }
 
+  /// \brief True when the report has an execution path associated with it.
+  ///
+  /// A report is said to be path-sensitive if it was thrown against a
+  /// particular exploded node in the path-sensitive analysis graph.
+  /// Path-sensitive reports have their intermediate path diagnostics
+  /// auto-generated, perhaps with the help of checker-defined visitors,
+  /// and may contain extra notes.
+  /// Path-insensitive reports consist only of a single warning message
+  /// in a specific location, and perhaps extra notes.
+  /// Path-sensitive checkers are allowed to throw path-insensitive reports.
+  bool isPathSensitive() const { return ErrorNode != nullptr; }
+
   const ExplodedNode *getErrorNode() const { return ErrorNode; }
 
   StringRef getDescription() const { return Description; }
@@ -245,7 +259,33 @@ public:
   void setDeclWithIssue(const Decl *declWithIssue) {
     DeclWithIssue = declWithIssue;
   }
-  
+
+  /// Add new item to the list of additional notes that need to be attached to
+  /// this path-insensitive report. If you want to add extra notes to a
+  /// path-sensitive report, you need to use a BugReporterVisitor because it
+  /// allows you to specify where exactly in the auto-generated path diagnostic
+  /// the extra note should appear.
+  void addNote(StringRef Msg, const PathDiagnosticLocation &Pos,
+               ArrayRef<SourceRange> Ranges) {
+    auto P = std::make_shared<PathDiagnosticNotePiece>(Pos, Msg);
+
+    for (const auto &R : Ranges)
+      P->addRange(R);
+
+    Notes.push_back(std::move(P));
+  }
+
+  // FIXME: Instead of making an override, we could have default-initialized
+  // Ranges with {}, however it crashes the MSVC 2013 compiler.
+  void addNote(StringRef Msg, const PathDiagnosticLocation &Pos) {
+    std::vector<SourceRange> Ranges;
+    addNote(Msg, Pos, Ranges);
+  }
+
+  virtual const NoteList &getNotes() {
+    return Notes;
+  }
+
   /// \brief This allows for addition of meta data to the diagnostic.
   ///
   /// Currently, only the HTMLDiagnosticClient knows how to display it. 
@@ -310,31 +350,6 @@ public:
   /// for each bug.
   virtual void Profile(llvm::FoldingSetNodeID& hash) const;
 };
-
-} // end ento namespace
-} // end clang namespace
-
-namespace llvm {
-  template<> struct ilist_traits<clang::ento::BugReport>
-    : public ilist_default_traits<clang::ento::BugReport> {
-    clang::ento::BugReport *createSentinel() const {
-      return static_cast<clang::ento::BugReport *>(&Sentinel);
-    }
-    void destroySentinel(clang::ento::BugReport *) const {}
-
-    clang::ento::BugReport *provideInitialHead() const {
-      return createSentinel();
-    }
-    clang::ento::BugReport *ensureHead(clang::ento::BugReport *) const {
-      return createSentinel();
-    }
-  private:
-    mutable ilist_half_node<clang::ento::BugReport> Sentinel;
-  };
-}
-
-namespace clang {
-namespace ento {
 
 //===----------------------------------------------------------------------===//
 // BugTypes (collections of related reports).

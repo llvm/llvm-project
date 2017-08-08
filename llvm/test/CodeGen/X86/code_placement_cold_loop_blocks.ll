@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s -check-prefix=CHECK
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s
 
 define void @foo() !prof !1 {
 ; Test if a cold block in a loop will be placed at the end of the function
@@ -37,7 +37,7 @@ end:
   ret void
 }
 
-define void @nested_loop_0() !prof !1 {
+define void @nested_loop_0(i1 %flag) !prof !1 {
 ; Test if a block that is cold in the inner loop but not cold in the outer loop
 ; will merged to the outer loop chain.
 ;
@@ -68,8 +68,7 @@ if.then:
 
 if.else:
   call void @e()
-  %call2 = call zeroext i1 @a()
-  br i1 %call2, label %header2, label %header, !prof !3
+  br i1 %flag, label %header2, label %header, !prof !3
 
 end:
   call void @f()

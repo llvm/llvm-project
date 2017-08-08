@@ -3,7 +3,7 @@
 
 # CABAC decode bin
 0xd0 0xde 0xd4 0xc1
-# CHECK: r17:16 = decbin(r21:20, r31:30)
+# CHECK: r17:16 = decbin(r21:20,r31:30)
 
 # Saturate
 0x11 0xc0 0xd4 0x88
@@ -23,9 +23,9 @@
 
 # Vector align
 0x70 0xd4 0x1e 0xc2
-# CHECK: r17:16 = valignb(r21:20, r31:30, p3)
+# CHECK: r17:16 = valignb(r21:20,r31:30,p3)
 0x70 0xde 0x94 0xc2
-# CHECK: r17:16 = vspliceb(r21:20, r31:30, p3)
+# CHECK: r17:16 = vspliceb(r21:20,r31:30,p3)
 
 # Vector round and pack
 0x91 0xc0 0x94 0x88
@@ -59,13 +59,13 @@
 
 # Vector shuffle
 0x50 0xde 0x14 0xc1
-# CHECK: r17:16 = shuffeb(r21:20, r31:30)
+# CHECK: r17:16 = shuffeb(r21:20,r31:30)
 0x90 0xd4 0x1e 0xc1
-# CHECK: r17:16 = shuffob(r21:20, r31:30)
+# CHECK: r17:16 = shuffob(r21:20,r31:30)
 0xd0 0xde 0x14 0xc1
-# CHECK: r17:16 = shuffeh(r21:20, r31:30)
+# CHECK: r17:16 = shuffeh(r21:20,r31:30)
 0x10 0xd4 0x9e 0xc1
-# CHECK: r17:16 = shuffoh(r21:20, r31:30)
+# CHECK: r17:16 = shuffoh(r21:20,r31:30)
 
 # Vector splat bytes
 0xf1 0xc0 0x55 0x8c
@@ -77,9 +77,9 @@
 
 # Vector splice
 0x70 0xde 0x94 0xc0
-# CHECK: r17:16 = vspliceb(r21:20, r31:30, #3)
+# CHECK: r17:16 = vspliceb(r21:20,r31:30,#3)
 0x70 0xde 0x94 0xc2
-# CHECK: r17:16 = vspliceb(r21:20, r31:30, p3)
+# CHECK: r17:16 = vspliceb(r21:20,r31:30,p3)
 
 # Vector sign extend
 0x10 0xc0 0x15 0x84
@@ -93,9 +93,9 @@
 0x51 0xc0 0x94 0x88
 # CHECK: r17 = vtrunehb(r21:20)
 0x50 0xde 0x94 0xc1
-# CHECK: r17:16 = vtrunewh(r21:20, r31:30)
+# CHECK: r17:16 = vtrunewh(r21:20,r31:30)
 0x90 0xde 0x94 0xc1
-# CHECK: r17:16 = vtrunowh(r21:20, r31:30)
+# CHECK: r17:16 = vtrunowh(r21:20,r31:30)
 
 # Vector zero extend
 0x50 0xc0 0x15 0x84

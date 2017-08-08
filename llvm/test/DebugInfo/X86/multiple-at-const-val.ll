@@ -27,14 +27,14 @@ entry:
 
 declare %"class.std::basic_ostream"* @test(%"class.std::basic_ostream"*, i8*, i64)
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!1803}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 174207)", isOptimized: true, emissionKind: 0, file: !1802, enums: !1, retainedTypes: !955, subprograms: !956, globals: !1786, imports:  !955)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 174207)", isOptimized: true, emissionKind: FullDebug, file: !1802, enums: !1, retainedTypes: !955, globals: !1786, imports:  !955)
 !1 = !{!26}
-!4 = !DINamespace(name: "std", line: 48, scope: !5)
+!4 = !DINamespace(name: "std", scope: !5)
 !5 = !DIFile(filename: "os_base.h", directory: "/privite/tmp")
 !25 = !DIEnumerator(name: "_S_os_fmtflags_end", value: 65536) ; [ DW_TAG_enumerator ]
 !26 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "_Ios_Iostate", line: 146, size: 32, align: 32, file: !1801, scope: !4, elements: !27)
@@ -53,11 +53,11 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !78 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !79)
 !79 = !DIDerivedType(tag: DW_TAG_typedef, name: "ostate", line: 327, file: !1801, scope: !49, baseType: !26)
 !955 = !{}
-!956 = !{!960}
-!960 = distinct !DISubprogram(name: "main", line: 73, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 73, file: !1802, scope: null, type: !54, variables: !955)
+!960 = distinct !DISubprogram(name: "main", line: 73, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 73, file: !1802, scope: null, type: !54, variables: !955)
 !961 = !DIFile(filename: "student2.cpp", directory: "/privite/tmp")
 !1786 = !{!1800}
-!1800 = !DIGlobalVariable(name: "badbit", linkageName: "badbit", line: 331, isLocal: true, isDefinition: true, scope: !5, file: !5, type: !78, variable: i32 1, declaration: !77)
+!1800 = !DIGlobalVariableExpression(var: !1804, expr: !DIExpression(DW_OP_constu, 1, DW_OP_stack_value))
 !1801 = !DIFile(filename: "os_base.h", directory: "/privite/tmp")
 !1802 = !DIFile(filename: "student2.cpp", directory: "/privite/tmp")
 !1803 = !{i32 1, !"Debug Info Version", i32 3}
+!1804 = distinct !DIGlobalVariable(name: "badbit", linkageName: "badbit", line: 331, isLocal: true, isDefinition: true, scope: !5, file: !5, type: !78, declaration: !77)

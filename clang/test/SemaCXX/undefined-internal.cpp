@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wbind-to-temporary-copy %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wbind-to-temporary-copy -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wbind-to-temporary-copy -std=c++11 %s
 
 // Make sure we don't produce invalid IR.
 // RUN: %clang_cc1 -emit-llvm-only %s
+// RUN: %clang_cc1 -emit-llvm-only -std=c++98 %s
+// RUN: %clang_cc1 -emit-llvm-only -std=c++11 %s
 
 namespace test1 {
   static void foo(); // expected-warning {{function 'test1::foo' has internal linkage but is not defined}}
@@ -78,6 +82,7 @@ namespace test5 {
     static int var; // expected-warning {{variable 'test5::B<test5::(anonymous namespace)::A>::var' has internal linkage but is not defined}}
     static void foo(); // expected-warning {{function 'test5::B<test5::(anonymous namespace)::A>::foo' has internal linkage but is not defined}}
   };
+  extern template int B<A>::var;
 
   void test() {
     B<A>::var = 0; // expected-note {{used here}}
@@ -119,7 +124,12 @@ namespace PR9323 {
   }
   void f(const Uncopyable&) {}
   void test() {
-    f(Uncopyable()); // expected-warning {{C++98 requires an accessible copy constructor}}
+    f(Uncopyable()); 
+#if __cplusplus <= 199711L // C++03 or earlier modes
+    // expected-warning@-2 {{C++98 requires an accessible copy constructor}}
+#else
+    // expected-warning@-4 {{copying parameter of type 'PR9323::(anonymous namespace)::Uncopyable' when binding a reference to a temporary would invoke an inaccessible constructor in C++98}}
+#endif
   };
 }
 
@@ -176,10 +186,15 @@ namespace OverloadUse {
   namespace {
     void f();
     void f(int); // expected-warning {{function 'OverloadUse::(anonymous namespace)::f' has internal linkage but is not defined}}
+    void f(int, int); // expected-warning {{function 'OverloadUse::(anonymous namespace)::f' has internal linkage but is not defined}}
   }
-  template<void x()> void t(int*) { x(); }
-  template<void x(int)> void t(long*) { x(10); } // expected-note {{used here}}
-  void g() { long a; t<f>(&a); }
+  template<void x()> void t() { x(); }
+  template<void x(int)> void t(int*) { x(10); }
+  template<void x(int, int)> void t(int*, int*) {}
+  void g(int n) {
+    t<f>(&n); // expected-note {{used here}}
+    t<f>(&n, &n); // expected-note {{used here}}
+  }
 }
 
 namespace test7 {

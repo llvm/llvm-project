@@ -27,17 +27,12 @@ class SystemZTTIImpl : public BasicTTIImplBase<SystemZTTIImpl> {
   const SystemZSubtarget *getST() const { return ST; }
   const SystemZTargetLowering *getTLI() const { return TLI; }
 
+  unsigned const LIBCALL_COST = 30;
+
 public:
   explicit SystemZTTIImpl(const SystemZTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
-
-  // Provide value semantics. MSVC requires that we spell all of these out.
-  SystemZTTIImpl(const SystemZTTIImpl &Arg)
-      : BaseT(static_cast<const BaseT &>(Arg)), ST(Arg.ST), TLI(Arg.TLI) {}
-  SystemZTTIImpl(SystemZTTIImpl &&Arg)
-      : BaseT(std::move(static_cast<BaseT &>(Arg))), ST(std::move(Arg.ST)),
-        TLI(std::move(Arg.TLI)) {}
 
   /// \name Scalar TTI Implementations
   /// @{
@@ -50,14 +45,48 @@ public:
 
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
 
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TTI::UnrollingPreferences &UP);
+
   /// @}
 
   /// \name Vector TTI Implementations
   /// @{
 
   unsigned getNumberOfRegisters(bool Vector);
-  unsigned getRegisterBitWidth(bool Vector);
+  unsigned getRegisterBitWidth(bool Vector) const;
 
+  unsigned getCacheLineSize() { return 256; }
+  unsigned getPrefetchDistance() { return 2000; }
+  unsigned getMinPrefetchStride() { return 2048; }
+
+  bool prefersVectorizedAddressing() { return false; }
+  bool supportsEfficientVectorElementLoadStore() { return true; }
+  bool enableInterleavedAccessVectorization() { return true; }
+
+  int getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty,
+      TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
+      TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
+      TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
+      TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
+      ArrayRef<const Value *> Args = ArrayRef<const Value *>());
+  int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);
+  unsigned getVectorTruncCost(Type *SrcTy, Type *DstTy);
+  unsigned getVectorBitmaskConversionCost(Type *SrcTy, Type *DstTy);
+  int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                       const Instruction *I = nullptr);
+  int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                         const Instruction *I = nullptr);
+  int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
+  int getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
+                      unsigned AddressSpace, const Instruction *I = nullptr);
+
+  int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
+                                 unsigned Factor,
+                                 ArrayRef<unsigned> Indices,
+                                 unsigned Alignment,
+                                 unsigned AddressSpace);
   /// @}
 };
 

@@ -17,27 +17,22 @@ invoke.cont:                                      ; preds = %entry
   ret i32 0
 
 lpad:                                             ; preds = %entry
-  %p = cleanuppad []
-  %call2 = invoke i32 @puts(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @str_recovered, i64 0, i64 0))
-          to label %invoke.cont1 unwind label %endpad
-
-invoke.cont1:                                     ; preds = %lpad
-  cleanupret %p unwind to caller
-
-endpad:                                   ; preds = %lpad
-  cleanupendpad %p unwind to caller
+  %p = cleanuppad within none []
+  %call2 = call i32 @puts(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @str_recovered, i64 0, i64 0)) [ "funclet"(token %p) ]
+  cleanupret from %p unwind to caller
 }
 
 ; X64-LABEL: main:
 ; X64: retq
 
 ; X64: .seh_handlerdata
-; X64-NEXT: .long   (.Llsda_end0-.Llsda_begin0)/16
+; X64-NEXT: .Lmain$parent_frame_offset = 32
+; X64-NEXT: .long   (.Llsda_end0-.Llsda_begin0)/16 # Number of call sites
 ; X64-NEXT: .Llsda_begin0:
-; X64-NEXT: .long   .Ltmp0@IMGREL+1
-; X64-NEXT: .long   .Ltmp1@IMGREL+1
-; X64-NEXT: .long   "?dtor$2@?0?main@4HA"@IMGREL
-; X64-NEXT: .long   0
+; X64-NEXT: .long   .Ltmp0@IMGREL+1 # LabelStart
+; X64-NEXT: .long   .Ltmp1@IMGREL+1 # LabelEnd
+; X64-NEXT: .long   "?dtor$2@?0?main@4HA"@IMGREL # FinallyFunclet
+; X64-NEXT: .long   0               # Null
 ; X64-NEXT: .Llsda_end0:
 
 ; X64-LABEL: "?dtor$2@?0?main@4HA":
@@ -54,9 +49,9 @@ endpad:                                   ; preds = %lpad
 
 ; X86: .section .xdata,"dr"
 ; X86: L__ehtable$main:
-; X86-NEXT: .long -1
-; X86-NEXT: .long 0
-; X86-NEXT: .long LBB0_2
+; X86-NEXT: .long -1 # ToState
+; X86-NEXT: .long 0  # Null
+; X86-NEXT: .long "?dtor$2@?0?main@4HA" # FinallyFunclet
 
 declare i32 @__C_specific_handler(...)
 

@@ -1,4 +1,4 @@
-//===-- HexagonTargetAsmInfo.h - Hexagon asm properties --------*- C++ -*--===//
+//===-- HexagonTargetObjectFile.h -----------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,24 +16,42 @@
 namespace llvm {
 
   class HexagonTargetObjectFile : public TargetLoweringObjectFileELF {
-    MCSectionELF *SmallDataSection;
-    MCSectionELF *SmallBSSSection;
-
   public:
     void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 
-    /// IsGlobalInSmallSection - Return true if this global address should be
-    /// placed into small data/bss section.
-    bool IsGlobalInSmallSection(const GlobalValue *GV,
-                                const TargetMachine &TM,
-                                SectionKind Kind) const;
-    bool IsGlobalInSmallSection(const GlobalValue *GV,
+    MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
+                                      const TargetMachine &TM) const override;
+
+    MCSection *getExplicitSectionGlobal(const GlobalObject *GO,
+                                        SectionKind Kind,
+                                        const TargetMachine &TM) const override;
+
+    bool isGlobalInSmallSection(const GlobalObject *GO,
                                 const TargetMachine &TM) const;
 
-    bool IsSmallDataEnabled () const;
-    MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
-                                      Mangler &Mang,
-                                      const TargetMachine &TM) const override;
+    bool isSmallDataEnabled() const;
+
+    unsigned getSmallDataSize() const;
+
+    bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
+                                             const Function &F) const override;
+
+    const Function *getLutUsedFunction(const GlobalObject *GO) const;
+
+  private:
+    MCSectionELF *SmallDataSection;
+    MCSectionELF *SmallBSSSection;
+
+    unsigned getSmallestAddressableSize(const Type *Ty, const GlobalValue *GV,
+        const TargetMachine &TM) const;
+
+    MCSection *selectSmallSectionForGlobal(const GlobalObject *GO,
+                                           SectionKind Kind,
+                                           const TargetMachine &TM) const;
+
+    MCSection *selectSectionForLookupTable(const GlobalObject *GO,
+                                           const TargetMachine &TM,
+                                           const Function *Fn) const;
   };
 
 } // namespace llvm

@@ -45,12 +45,26 @@ void f3(t3 Y) {
 }
 
 typedef float float2 __attribute__ ((vector_size (8)));
+typedef __attribute__((vector_size(8))) double float64x1_t;
+typedef __attribute__((vector_size(16))) double float64x2_t;
+float64x1_t vget_low_f64(float64x2_t __p0);
+typedef float float16 __attribute__((__vector_size__(16)));
+typedef signed int vSInt32 __attribute__((__vector_size__(16)));
+typedef unsigned int vUInt32 __attribute__((__vector_size__(16)));
 
 void f4() {
   float2 f2;
-  double d;
-  f2 += d;
-  d += f2;
+  double d, a, b, c;
+  float64x2_t v = {0.0, 1.0};
+  f2 += d; // expected-error {{cannot convert between scalar type 'double' and vector type 'float2' (vector of 2 'float' values) as implicit conversion would cause truncation}}
+  d += f2; // expected-error {{assigning to 'double' from incompatible type 'float2' (vector of 2 'float' values)}}
+  a = 3.0 + vget_low_f64(v);
+  b = vget_low_f64(v) + 3.0;
+  c = vget_low_f64(v);
+  c -= vget_low_f64(v);
+  // LAX conversions between scalar and vector types require same size and one element sized vectors.
+  d = f2; // expected-error {{assigning to 'double' from incompatible type 'float2'}}
+  d = d + f2; // expected-error {{assigning to 'double' from incompatible type 'float2'}}
 }
 
 // rdar://15931426
@@ -61,4 +75,9 @@ void f5() {
   void *ptr;
   v = ptr; // expected-error-re {{assigning to 'short_sizeof_pointer' (vector of {{[0-9]+}} 'short' values) from incompatible type 'void *'}}
   ptr = v; // expected-error {{assigning to 'void *' from incompatible type 'short_sizeof_pointer'}}
+}
+
+void f6(vSInt32 a0) {
+  vUInt32 counter = (float16){0.0f, 0.0f, 0.0f, 0.0f}; // expected-warning {{incompatible vector types initializing 'vUInt32' (vector of 4 'unsigned int' values) with an expression of type 'float16' (vector of 4 'float' values)}}
+  counter -= a0;
 }

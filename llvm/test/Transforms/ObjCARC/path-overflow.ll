@@ -341,7 +341,7 @@ msgSend.cont507:                                  ; preds = %msgSend.nullinit506
 }
 
 ; Function Attrs: optsize ssp uwtable
-define void @test2() unnamed_addr align 2 {
+define void @test2() unnamed_addr align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*) {
 bb:
   br i1 undef, label %bb3, label %bb2
 

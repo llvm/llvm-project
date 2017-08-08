@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -analyze -analyzer-checker=core,debug.ExprInspection -analyzer-config inline-lambdas=true -verify %s 
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -analyze -analyzer-checker=core,debug.DumpCFG -analyzer-config inline-lambdas=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,deadcode,debug.ExprInspection -analyzer-config inline-lambdas=true -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -analyzer-config inline-lambdas=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 void clang_analyzer_warnIfReached();
@@ -90,6 +90,17 @@ void testReturnValue() {
   clang_analyzer_eval(b == 8); // expected-warning{{TRUE}}
 }
 
+void testAliasingBetweenParameterAndCapture() {
+  int i = 5;
+
+  auto l = [&i](int &p) {
+    i++;
+    p++;
+  };
+  l(i);
+  clang_analyzer_eval(i == 7); // expected-warning{{TRUE}}
+}
+
 // Nested lambdas.
 
 void testNestedLambdas() {
@@ -162,6 +173,19 @@ void testFunctionPointerCapture() {
   clang_analyzer_eval(i == 6); // expected-warning{{TRUE}}
 }
 
+// Captured variable-length array.
+
+void testVariableLengthArrayCaptured() {
+  int n = 2;
+  int array[n];
+  array[0] = 7;
+
+  int i = [&]{
+    return array[0];
+  }();
+
+  clang_analyzer_eval(i == 7); // expected-warning{{TRUE}}
+}
 
 // Test inline defensive checks
 int getNum();
@@ -188,7 +212,7 @@ struct DontCrash {
     callLambda([&](){ ++x; });
     callLambdaFromStatic([&](){ ++x; });
   }
-  
+
   template<typename T>
   static void callLambdaFromStatic(T t) {
     t();
@@ -209,6 +233,110 @@ void captureConstants() {
       clang_analyzer_warnIfReached();
   }();
 }
+
+void captureReferenceByCopy(int &p) {
+  int v = 7;
+  p = 8;
+
+  // p is a reference captured by copy
+  [&v,p]() mutable {
+    v = p;
+    p = 22;
+  }();
+
+  clang_analyzer_eval(v == 8); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p == 8); // expected-warning{{TRUE}}
+}
+
+void captureReferenceByReference(int &p) {
+  int v = 7;
+  p = 8;
+
+  // p is a reference captured by reference
+  [&v,&p]() {
+    v = p;
+    p = 22;
+  }();
+
+  clang_analyzer_eval(v == 8); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p == 22); // expected-warning{{TRUE}}
+}
+
+void callMutableLambdaMultipleTimes(int &p) {
+  int v = 0;
+  p = 8;
+
+  auto l = [&v, p]() mutable {
+    v = p;
+    p++;
+  };
+
+  l();
+
+  clang_analyzer_eval(v == 8); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p == 8); // expected-warning{{TRUE}}
+
+  l();
+
+  clang_analyzer_eval(v == 9); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p == 8); // expected-warning{{TRUE}}
+}
+
+// PR 24914
+struct StructPR24914{
+  int x;
+};
+
+void takesConstStructArgument(const StructPR24914&);
+void captureStructReference(const StructPR24914& s) {
+  [s]() {
+    takesConstStructArgument(s);
+  }();
+}
+
+// Lambda capture counts as use for dead-store checking.
+
+int returnsValue();
+
+void captureByCopyCausesUse() {
+  int local1 = returnsValue(); // no-warning
+  int local2 = returnsValue(); // no-warning
+  int local3 = returnsValue(); // expected-warning{{Value stored to 'local3' during its initialization is never read}}
+
+  (void)[local1, local2]() { }; // Explicit capture by copy counts as use.
+
+  int local4 = returnsValue(); // no-warning
+  int local5 = returnsValue(); // expected-warning{{Value stored to 'local5' during its initialization is never read}}
+
+  (void)[=]() {
+    (void)local4; // Implicit capture by copy counts as use
+  };
+}
+
+void captureByReference() {
+  int local1 = returnsValue(); // no-warning
+
+  auto lambda1 = [&local1]() { // Explicit capture by reference
+    local1++;
+  };
+
+  // Don't treat as a dead store because local1 was was captured by reference.
+  local1 = 7; // no-warning
+
+  lambda1();
+
+  int local2 = returnsValue(); // no-warning
+
+  auto lambda2 = [&]() {
+    local2++; // Implicit capture by reference
+  };
+
+  // Don't treat as a dead store because local2 was was captured by reference.
+  local2 = 7; // no-warning
+
+  lambda2();
+}
+
 
 // CHECK: [B2 (ENTRY)]
 // CHECK:   Succs (1): B1

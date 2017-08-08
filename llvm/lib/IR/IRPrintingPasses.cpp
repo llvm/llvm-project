@@ -26,9 +26,15 @@ PrintModulePass::PrintModulePass(raw_ostream &OS, const std::string &Banner,
     : OS(OS), Banner(Banner),
       ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {}
 
-PreservedAnalyses PrintModulePass::run(Module &M) {
+PreservedAnalyses PrintModulePass::run(Module &M, ModuleAnalysisManager &) {
   OS << Banner;
-  M.print(OS, nullptr, ShouldPreserveUseListOrder);
+  if (llvm::isFunctionInPrintList("*"))
+    M.print(OS, nullptr, ShouldPreserveUseListOrder);
+  else {
+    for(const auto &F : M.functions())
+      if (llvm::isFunctionInPrintList(F.getName()))
+        F.print(OS);
+  }
   return PreservedAnalyses::all();
 }
 
@@ -36,8 +42,10 @@ PrintFunctionPass::PrintFunctionPass() : OS(dbgs()) {}
 PrintFunctionPass::PrintFunctionPass(raw_ostream &OS, const std::string &Banner)
     : OS(OS), Banner(Banner) {}
 
-PreservedAnalyses PrintFunctionPass::run(Function &F) {
-  OS << Banner << static_cast<Value &>(F);
+PreservedAnalyses PrintFunctionPass::run(Function &F,
+                                         FunctionAnalysisManager &) {
+  if (isFunctionInPrintList(F.getName()))
+    OS << Banner << static_cast<Value &>(F);
   return PreservedAnalyses::all();
 }
 
@@ -54,13 +62,16 @@ public:
       : ModulePass(ID), P(OS, Banner, ShouldPreserveUseListOrder) {}
 
   bool runOnModule(Module &M) override {
-    P.run(M);
+    ModuleAnalysisManager DummyMAM;
+    P.run(M, DummyMAM);
     return false;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
+
+  StringRef getPassName() const override { return "Print Module IR"; }
 };
 
 class PrintFunctionPassWrapper : public FunctionPass {
@@ -74,13 +85,16 @@ public:
 
   // This pass just prints a banner followed by the function as it's processed.
   bool runOnFunction(Function &F) override {
-    P.run(F);
+    FunctionAnalysisManager DummyFAM;
+    P.run(F, DummyFAM);
     return false;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
+
+  StringRef getPassName() const override { return "Print Function IR"; }
 };
 
 class PrintBasicBlockPass : public BasicBlockPass {
@@ -101,6 +115,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
+
+  StringRef getPassName() const override { return "Print BasicBlock IR"; }
 };
 
 }

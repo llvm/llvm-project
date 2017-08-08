@@ -1,4 +1,4 @@
-//===-- llvm/IR/TypeFinder.h - Class to find used struct types --*- C++ -*-===//
+//===- llvm/IR/TypeFinder.h - Class to find used struct types ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,6 +15,7 @@
 #define LLVM_IR_TYPEFINDER_H
 
 #include "llvm/ADT/DenseSet.h"
+#include <cstddef>
 #include <vector>
 
 namespace llvm {
@@ -35,16 +36,16 @@ class TypeFinder {
   DenseSet<Type*> VisitedTypes;
 
   std::vector<StructType*> StructTypes;
-  bool OnlyNamed;
+  bool OnlyNamed = false;
 
 public:
-  TypeFinder() : OnlyNamed(false) {}
+  TypeFinder() = default;
 
   void run(const Module &M, bool onlyNamed);
   void clear();
 
-  typedef std::vector<StructType*>::iterator iterator;
-  typedef std::vector<StructType*>::const_iterator const_iterator;
+  using iterator = std::vector<StructType*>::iterator;
+  using const_iterator = std::vector<StructType*>::const_iterator;
 
   iterator begin() { return StructTypes.begin(); }
   iterator end() { return StructTypes.end(); }
@@ -57,6 +58,8 @@ public:
   iterator erase(iterator I, iterator E) { return StructTypes.erase(I, E); }
 
   StructType *&operator[](unsigned Idx) { return StructTypes[Idx]; }
+
+  DenseSet<const MDNode *> &getVisitedMetadata() { return VisitedMetadata; }
 
 private:
   /// incorporateType - This method adds the type to the list of used
@@ -74,6 +77,6 @@ private:
   void incorporateMDNode(const MDNode *V);
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_TYPEFINDER_H

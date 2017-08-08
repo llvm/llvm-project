@@ -20,12 +20,13 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
 
 namespace llvm {
 
-// Forward declarations.
+class MachObjectWriter;
 class MCAsmLayout;
 class MCSymbol;
 
@@ -110,7 +111,7 @@ class MCLOHDirective {
                  const MCAsmLayout &Layout) const;
 
 public:
-  typedef SmallVectorImpl<MCSymbol *> LOHArgs;
+  using LOHArgs = SmallVectorImpl<MCSymbol *>;
 
   MCLOHDirective(MCLOHType Kind, const LOHArgs &Args)
       : Kind(Kind), Args(Args.begin(), Args.end()) {
@@ -123,44 +124,25 @@ public:
 
   /// Emit this directive as:
   /// <kind, numArgs, addr1, ..., addrN>
-  void emit(MachObjectWriter &ObjWriter, const MCAsmLayout &Layout) const {
-    raw_ostream &OutStream = ObjWriter.getStream();
-    emit_impl(OutStream, ObjWriter, Layout);
-  }
+  void emit(MachObjectWriter &ObjWriter, const MCAsmLayout &Layout) const;
 
   /// Get the size in bytes of this directive if emitted in \p ObjWriter with
   /// the given \p Layout.
   uint64_t getEmitSize(const MachObjectWriter &ObjWriter,
-                       const MCAsmLayout &Layout) const {
-    class raw_counting_ostream : public raw_ostream {
-      uint64_t Count;
-
-      void write_impl(const char *, size_t size) override { Count += size; }
-
-      uint64_t current_pos() const override { return Count; }
-
-    public:
-      raw_counting_ostream() : Count(0) {}
-      ~raw_counting_ostream() override { flush(); }
-    };
-
-    raw_counting_ostream OutStream;
-    emit_impl(OutStream, ObjWriter, Layout);
-    return OutStream.tell();
-  }
+                       const MCAsmLayout &Layout) const;
 };
 
 class MCLOHContainer {
   /// Keep track of the emit size of all the LOHs.
-  mutable uint64_t EmitSize;
+  mutable uint64_t EmitSize = 0;
 
   /// Keep track of all LOH directives.
   SmallVector<MCLOHDirective, 32> Directives;
 
 public:
-  typedef SmallVectorImpl<MCLOHDirective> LOHDirectives;
+  using LOHDirectives = SmallVectorImpl<MCLOHDirective>;
 
-  MCLOHContainer() : EmitSize(0) {}
+  MCLOHContainer() = default;
 
   /// Const accessor to the directives.
   const LOHDirectives &getDirectives() const {
@@ -197,9 +179,9 @@ public:
 };
 
 // Add types for specialized template using MCSymbol.
-typedef MCLOHDirective::LOHArgs MCLOHArgs;
-typedef MCLOHContainer::LOHDirectives MCLOHDirectives;
+using MCLOHArgs = MCLOHDirective::LOHArgs;
+using MCLOHDirectives = MCLOHContainer::LOHDirectives;
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCLINKEROPTIMIZATIONHINT_H

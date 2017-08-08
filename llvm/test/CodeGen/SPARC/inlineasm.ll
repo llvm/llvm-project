@@ -8,6 +8,18 @@ entry:
   ret i32 %0
 }
 
+;; Check tests only that the constraints are accepted without a compiler failure.
+; CHECK-LABEL: test_constraints_nro:
+%struct.anon = type { i32, i32 }
+@v = external global %struct.anon, align 4
+define void @test_constraints_nro() {
+entry:
+  %0 = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @v, i32 0, i32 0);
+  %1 = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @v, i32 0, i32 1);
+  tail call void asm sideeffect "", "nro,nro"(i32 %0, i32 %1)
+  ret void
+}
+
 ; CHECK-LABEL: test_constraint_I:
 ; CHECK:       add %o0, 1023, %o0
 define i32 @test_constraint_I(i32 %a) {
@@ -81,4 +93,22 @@ define i64 @test_i64_inout() {
 entry:
   %0 = call i64 asm sideeffect "xor $1, %g0, $0", "=r,0,~{i1}"(i64 5);
   ret i64 %0
+}
+
+
+;; Ensures that inline-asm accepts and uses 'f' and 'e' register constraints.
+; CHECK-LABEL: fadds:
+; CHECK: fadds  %f0, %f1, %f0
+define float @fadds(float, float) local_unnamed_addr #2 {
+entry:
+  %2 = tail call float asm sideeffect "fadds  $1, $2, $0;", "=f,f,e"(float %0, float %1) #7
+  ret float %2
+}
+
+; CHECK-LABEL: faddd:
+; CHECK: faddd  %f0, %f2, %f0
+define double @faddd(double, double) local_unnamed_addr #2 {
+entry:
+  %2 = tail call double asm sideeffect "faddd  $1, $2, $0;", "=f,f,e"(double %0, double %1) #7
+  ret double %2
 }

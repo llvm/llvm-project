@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i686-pc-linux-gnu -fsyntax-only -verify %s -Wabsolute-value
-// RUN: %clang_cc1 -triple i686-pc-linux-gnu -fsyntax-only %s -Wabsolute-value -fdiagnostics-parseable-fixits 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple i686-pc-linux-gnu -fsyntax-only -verify %s -Wabsolute-value -Wno-int-conversion
+// RUN: %clang_cc1 -triple i686-pc-linux-gnu -fsyntax-only %s -Wabsolute-value -Wno-int-conversion -fdiagnostics-parseable-fixits 2>&1 | FileCheck %s
 
 int abs(int);
 long int labs(long int);
@@ -780,3 +780,19 @@ void test_unsigned_long(unsigned long x) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:9-[[@LINE-3]]:24}:""
 }
 
+long long test_array() {
+  return llabs((long long[]){1});
+  // expected-warning@-1 {{absolute value of array type}}
+}
+long long test_function_pointer() {
+  return llabs(&test_function_pointer);
+  // expected-warning@-1 {{absolute value of pointer type}}
+}
+long long test_void_pointer(void *x) {
+  return llabs(x);
+  // expected-warning@-1 {{absolute value of pointer type}}
+}
+long long test_function() {
+  return llabs(test_function);
+  // expected-warning@-1 {{absolute value of function type}}
+}

@@ -1,68 +1,95 @@
-// Check that we error when -faltivec is specified on non-ppc platforms.
+// check -msoft-float option for ppc32
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTFLOAT %s
+// CHECK-SOFTFLOAT: "-target-feature" "-hard-float"
 
-// RUN: %clang -target powerpc-unk-unk -faltivec -fsyntax-only %s
-// RUN: %clang -target powerpc64-linux-gnu -faltivec -fsyntax-only %s
-// RUN: %clang -target powerpc64-linux-gnu -maltivec -fsyntax-only %s
+// check -mfloat-abi=soft option for ppc32
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -mfloat-abi=soft -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-FLOATABISOFT %s
+// CHECK-FLOATABISOFT: "-target-feature" "-hard-float"
 
-// RUN: not %clang -target i386-pc-win32 -faltivec -fsyntax-only %s 2>&1 | FileCheck %s
-// RUN: not %clang -target x86_64-unknown-freebsd -faltivec -fsyntax-only %s 2>&1 | FileCheck %s
-// RUN: not %clang -target armv6-apple-darwin -faltivec -fsyntax-only %s 2>&1 | FileCheck %s
-// RUN: not %clang -target armv7-apple-darwin -faltivec -fsyntax-only %s 2>&1 | FileCheck %s
-// RUN: not %clang -target mips-linux-gnu -faltivec -fsyntax-only %s 2>&1 | FileCheck %s
-// RUN: not %clang -target mips64-linux-gnu -faltivec -fsyntax-only %s 2>&1 | FileCheck %s
-// RUN: not %clang -target sparc-unknown-solaris -faltivec -fsyntax-only %s 2>&1 | FileCheck %s
+// check -mhard-float option for ppc32
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -mhard-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-HARDFLOAT %s
+// CHECK-HARDFLOAT-NOT: "-target-feature" "-hard-float"
 
-// CHECK: invalid argument '-faltivec' only allowed with 'ppc/ppc64/ppc64le'
+// check -mfloat-abi=hard option for ppc32
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -mfloat-abi=hard -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-FLOATABIHARD %s
+// CHECK-FLOATABIHARD-NOT: "-target-feature" "-hard-float"
 
-// Check that -fno-altivec and -mno-altivec correctly disable the altivec
-// target feature on powerpc.
+// check combine -mhard-float -msoft-float option for ppc32
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -mhard-float -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-HARDSOFT %s
+// CHECK-HARDSOFT: "-target-feature" "-hard-float"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -fno-altivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-1 %s
+// check combine -msoft-float -mhard-float option for ppc32
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -msoft-float -mhard-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTHARD %s
+// CHECK-SOFTHARD-NOT: "-target-feature" "-hard-float"
+
+// check -mfloat-abi=x option
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -mfloat-abi=x -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ERRMSG %s
+// CHECK-ERRMSG: error: invalid float ABI '-mfloat-abi=x'
+
+// check -msoft-float option for ppc64
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTFLOAT64 %s
+// CHECK-SOFTFLOAT64: "-target-feature" "-hard-float"
+
+// check -mfloat-abi=soft option for ppc64
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mfloat-abi=soft -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-FLOATABISOFT64 %s
+// CHECK-FLOATABISOFT64: "-target-feature" "-hard-float"
+
+// check -msoft-float option for ppc64
+// RUN: %clang -target powerpc64le-unknown-linux-gnu %s -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTFLOAT64le %s
+// CHECK-SOFTFLOAT64le: "-target-feature" "-hard-float"
+
+// check -mfloat-abi=soft option for ppc64
+// RUN: %clang -target powerpc64le-unknown-linux-gnu %s -mfloat-abi=soft -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-FLOATABISOFT64le %s
+// CHECK-FLOATABISOFT64le: "-target-feature" "-hard-float"
+
+// Check that -mno-altivec correctly disables the altivec target feature on powerpc.
+
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-1 %s
 // CHECK-1: "-target-feature" "-altivec"
 
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-2 %s
 // CHECK-2: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -faltivec -mno-altivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-3 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -maltivec -mno-altivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-3 %s
 // CHECK-3: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -maltivec -fno-altivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-4 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -maltivec -mno-altivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-4 %s
 // CHECK-4: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -faltivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-5 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -maltivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-5 %s
 // CHECK-5-NOT: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -fno-altivec -maltivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-6 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -maltivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-6 %s
 // CHECK-6-NOT: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -fno-altivec -mcpu=7400 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-7 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=7400 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-7 %s
 // CHECK-7: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -fno-altivec -mcpu=g4 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-8 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=g4 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-8 %s
 // CHECK-8: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -fno-altivec -mcpu=7450 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-9 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=7450 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-9 %s
 // CHECK-9: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -fno-altivec -mcpu=g4+ -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-10 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=g4+ -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-10 %s
 // CHECK-10: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -fno-altivec -mcpu=970 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-11 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=970 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-11 %s
 // CHECK-11: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -fno-altivec -mcpu=g5 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-12 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=g5 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-12 %s
 // CHECK-12: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -fno-altivec -mcpu=pwr6 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-13 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=pwr6 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-13 %s
 // CHECK-13: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -fno-altivec -mcpu=pwr7 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-14 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=pwr7 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-14 %s
 // CHECK-14: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -fno-altivec -mcpu=pwr8 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-15 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=pwr8 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-15 %s
 // CHECK-15: "-target-feature" "-altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -fno-altivec -mcpu=ppc64 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-16 %s
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=ppc64 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-16 %s
 // CHECK-16: "-target-feature" "-altivec"
 
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-qpx -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOQPX %s
@@ -107,6 +134,12 @@
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-vsx -mvsx -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-VSX %s
 // CHECK-VSX: "-target-feature" "+vsx"
 
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-htm -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOHTM %s
+// CHECK-NOHTM: "-target-feature" "-htm"
+
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-htm -mhtm -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-HTM %s
+// CHECK-HTM: "-target-feature" "+htm"
+
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-power8-vector -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOP8VECTOR %s
 // CHECK-NOP8VECTOR: "-target-feature" "-power8-vector"
 
@@ -118,6 +151,12 @@
 
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-crbits -mcrbits -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-CRBITS %s
 // CHECK-CRBITS: "-target-feature" "+crbits"
+
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-longcall -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOLONGCALL %s
+// CHECK-NOLONGCALL: "-target-feature" "-longcall"
+
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-longcall -mlongcall -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-LONGCALL %s
+// CHECK-LONGCALL: "-target-feature" "+longcall"
 
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-invariant-function-descriptors -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOINVFUNCDESC %s
 // CHECK-NOINVFUNCDESC: "-target-feature" "-invariant-function-descriptors"

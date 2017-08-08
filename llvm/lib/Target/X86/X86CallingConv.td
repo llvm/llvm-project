@@ -18,6 +18,179 @@ class CCIfSubtarget<string F, CCAction A>
                        "(State.getMachineFunction().getSubtarget()).", F),
            A>;
 
+// Register classes for RegCall
+class RC_X86_RegCall {
+  list<Register> GPR_8 = [];
+  list<Register> GPR_16 = [];
+  list<Register> GPR_32 = [];
+  list<Register> GPR_64 = [];
+  list<Register> FP_CALL = [FP0];
+  list<Register> FP_RET = [FP0, FP1];
+  list<Register> XMM = [];
+  list<Register> YMM = [];
+  list<Register> ZMM = [];
+}
+
+// RegCall register classes for 32 bits
+def RC_X86_32_RegCall : RC_X86_RegCall {
+  let GPR_8 = [AL, CL, DL, DIL, SIL];
+  let GPR_16 = [AX, CX, DX, DI, SI];
+  let GPR_32 = [EAX, ECX, EDX, EDI, ESI];
+  let GPR_64 = [RAX]; ///< Not actually used, but AssignToReg can't handle []
+                      ///< \todo Fix AssignToReg to enable empty lists
+  let XMM = [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7];
+  let YMM = [YMM0, YMM1, YMM2, YMM3, YMM4, YMM5, YMM6, YMM7];
+  let ZMM = [ZMM0, ZMM1, ZMM2, ZMM3, ZMM4, ZMM5, ZMM6, ZMM7];
+}
+
+class RC_X86_64_RegCall : RC_X86_RegCall {
+  let XMM = [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
+             XMM8, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15];
+  let YMM = [YMM0, YMM1, YMM2, YMM3, YMM4, YMM5, YMM6, YMM7,
+             YMM8, YMM9, YMM10, YMM11, YMM12, YMM13, YMM14, YMM15];
+  let ZMM = [ZMM0, ZMM1, ZMM2, ZMM3, ZMM4, ZMM5, ZMM6, ZMM7,
+             ZMM8, ZMM9, ZMM10, ZMM11, ZMM12, ZMM13, ZMM14, ZMM15];
+}
+
+def RC_X86_64_RegCall_Win : RC_X86_64_RegCall {
+  let GPR_8 = [AL, CL, DL, DIL, SIL, R8B, R9B, R10B, R11B, R12B, R14B, R15B];
+  let GPR_16 = [AX, CX, DX, DI, SI, R8W, R9W, R10W, R11W, R12W, R14W, R15W];
+  let GPR_32 = [EAX, ECX, EDX, EDI, ESI, R8D, R9D, R10D, R11D, R12D, R14D, R15D];
+  let GPR_64 = [RAX, RCX, RDX, RDI, RSI, R8, R9, R10, R11, R12, R14, R15];
+}
+
+def RC_X86_64_RegCall_SysV : RC_X86_64_RegCall {
+  let GPR_8 = [AL, CL, DL, DIL, SIL, R8B, R9B, R12B, R13B, R14B, R15B];
+  let GPR_16 = [AX, CX, DX, DI, SI, R8W, R9W, R12W, R13W, R14W, R15W];
+  let GPR_32 = [EAX, ECX, EDX, EDI, ESI, R8D, R9D, R12D, R13D, R14D, R15D];
+  let GPR_64 = [RAX, RCX, RDX, RDI, RSI, R8, R9, R12, R13, R14, R15];
+}
+
+// X86-64 Intel regcall calling convention.
+multiclass X86_RegCall_base<RC_X86_RegCall RC> {
+def CC_#NAME : CallingConv<[
+  // Handles byval parameters.
+    CCIfSubtarget<"is64Bit()", CCIfByVal<CCPassByVal<8, 8>>>,
+    CCIfByVal<CCPassByVal<4, 4>>,
+
+    // Promote i1/i8/i16/v1i1 arguments to i32.
+    CCIfType<[i1, i8, i16, v1i1], CCPromoteToType<i32>>,
+
+    // Promote v8i1/v16i1/v32i1 arguments to i32.
+    CCIfType<[v8i1, v16i1, v32i1], CCPromoteToType<i32>>,
+
+    // bool, char, int, enum, long, pointer --> GPR
+    CCIfType<[i32], CCAssignToReg<RC.GPR_32>>,
+
+    // long long, __int64 --> GPR
+    CCIfType<[i64], CCAssignToReg<RC.GPR_64>>,
+
+    // __mmask64 (v64i1) --> GPR64 (for x64) or 2 x GPR32 (for IA32)
+    CCIfType<[v64i1], CCPromoteToType<i64>>,
+    CCIfSubtarget<"is64Bit()", CCIfType<[i64], 
+      CCAssignToReg<RC.GPR_64>>>,
+    CCIfSubtarget<"is32Bit()", CCIfType<[i64], 
+      CCCustom<"CC_X86_32_RegCall_Assign2Regs">>>,
+
+    // float, double, float128 --> XMM
+    // In the case of SSE disabled --> save to stack
+    CCIfType<[f32, f64, f128], 
+      CCIfSubtarget<"hasSSE1()", CCAssignToReg<RC.XMM>>>,
+
+    // long double --> FP
+    CCIfType<[f80], CCAssignToReg<RC.FP_CALL>>,
+
+    // __m128, __m128i, __m128d --> XMM
+    // In the case of SSE disabled --> save to stack
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], 
+      CCIfSubtarget<"hasSSE1()", CCAssignToReg<RC.XMM>>>,
+
+    // __m256, __m256i, __m256d --> YMM
+    // In the case of SSE disabled --> save to stack
+    CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64], 
+      CCIfSubtarget<"hasAVX()", CCAssignToReg<RC.YMM>>>,
+
+    // __m512, __m512i, __m512d --> ZMM
+    // In the case of SSE disabled --> save to stack
+    CCIfType<[v64i8, v32i16, v16i32, v8i64, v16f32, v8f64], 
+      CCIfSubtarget<"hasAVX512()",CCAssignToReg<RC.ZMM>>>,
+
+    // If no register was found -> assign to stack
+
+    // In 64 bit, assign 64/32 bit values to 8 byte stack
+    CCIfSubtarget<"is64Bit()", CCIfType<[i32, i64, f32, f64], 
+      CCAssignToStack<8, 8>>>,
+
+    // In 32 bit, assign 64/32 bit values to 8/4 byte stack
+    CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
+    CCIfType<[i64, f64], CCAssignToStack<8, 4>>,
+
+    // MMX type gets 8 byte slot in stack , while alignment depends on target
+    CCIfSubtarget<"is64Bit()", CCIfType<[x86mmx], CCAssignToStack<8, 8>>>,
+    CCIfType<[x86mmx], CCAssignToStack<8, 4>>,
+
+    // float 128 get stack slots whose size and alignment depends 
+    // on the subtarget.
+    CCIfType<[f80, f128], CCAssignToStack<0, 0>>,
+
+    // Vectors get 16-byte stack slots that are 16-byte aligned.
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], 
+      CCAssignToStack<16, 16>>,
+
+    // 256-bit vectors get 32-byte stack slots that are 32-byte aligned.
+    CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64], 
+      CCAssignToStack<32, 32>>,
+
+    // 512-bit vectors get 64-byte stack slots that are 64-byte aligned.
+    CCIfType<[v16i32, v8i64, v16f32, v8f64], CCAssignToStack<64, 64>>
+]>;
+
+def RetCC_#NAME : CallingConv<[
+    // Promote i1, v1i1, v8i1 arguments to i8.
+    CCIfType<[i1, v1i1, v8i1], CCPromoteToType<i8>>,
+
+    // Promote v16i1 arguments to i16.
+    CCIfType<[v16i1], CCPromoteToType<i16>>,
+
+    // Promote v32i1 arguments to i32.
+    CCIfType<[v32i1], CCPromoteToType<i32>>,
+
+    // bool, char, int, enum, long, pointer --> GPR
+    CCIfType<[i8], CCAssignToReg<RC.GPR_8>>,
+    CCIfType<[i16], CCAssignToReg<RC.GPR_16>>,
+    CCIfType<[i32], CCAssignToReg<RC.GPR_32>>,
+
+    // long long, __int64 --> GPR
+    CCIfType<[i64], CCAssignToReg<RC.GPR_64>>,
+
+    // __mmask64 (v64i1) --> GPR64 (for x64) or 2 x GPR32 (for IA32)
+    CCIfType<[v64i1], CCPromoteToType<i64>>,
+    CCIfSubtarget<"is64Bit()", CCIfType<[i64], 
+      CCAssignToReg<RC.GPR_64>>>,
+    CCIfSubtarget<"is32Bit()", CCIfType<[i64], 
+      CCCustom<"CC_X86_32_RegCall_Assign2Regs">>>,
+
+    // long double --> FP
+    CCIfType<[f80], CCAssignToReg<RC.FP_RET>>,
+
+    // float, double, float128 --> XMM
+    CCIfType<[f32, f64, f128], 
+      CCIfSubtarget<"hasSSE1()", CCAssignToReg<RC.XMM>>>,
+
+    // __m128, __m128i, __m128d --> XMM
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], 
+      CCIfSubtarget<"hasSSE1()", CCAssignToReg<RC.XMM>>>,
+
+    // __m256, __m256i, __m256d --> YMM
+    CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64], 
+      CCIfSubtarget<"hasAVX()", CCAssignToReg<RC.YMM>>>,
+
+    // __m512, __m512i, __m512d --> ZMM
+    CCIfType<[v64i8, v32i16, v16i32, v8i64, v16f32, v8f64], 
+      CCIfSubtarget<"hasAVX512()", CCAssignToReg<RC.ZMM>>>
+]>;
+}
+
 //===----------------------------------------------------------------------===//
 // Return Value Calling Conventions
 //===----------------------------------------------------------------------===//
@@ -34,6 +207,7 @@ def RetCC_X86Common : CallingConv<[
   //
   // For code that doesn't care about the ABI, we allow returning more than two
   // integer values in registers.
+  CCIfType<[v1i1],  CCPromoteToType<i8>>,
   CCIfType<[i1],  CCPromoteToType<i8>>,
   CCIfType<[i8] , CCAssignToReg<[AL, DL, CL]>>,
   CCIfType<[i16], CCAssignToReg<[AX, DX, CX]>>,
@@ -135,19 +309,11 @@ def RetCC_X86_32_HiPE : CallingConv<[
   CCIfType<[i32], CCAssignToReg<[ESI, EBP, EAX, EDX]>>
 ]>;
 
-// X86-32 HiPE return-value convention.
+// X86-32 Vectorcall return-value convention.
 def RetCC_X86_32_VectorCall : CallingConv<[
-  // Vector types are returned in XMM0,XMM1,XMMM2 and XMM3.
-  CCIfType<[f32, f64, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+  // Floating Point types are returned in XMM0,XMM1,XMMM2 and XMM3.
+  CCIfType<[f32, f64, f128],
             CCAssignToReg<[XMM0,XMM1,XMM2,XMM3]>>,
-
-  // 256-bit FP vectors
-  CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
-            CCAssignToReg<[YMM0,YMM1,YMM2,YMM3]>>,
-
-  // 512-bit FP vectors
-  CCIfType<[v64i8, v32i16, v16i32, v8i64, v16f32, v8f64],
-            CCAssignToReg<[ZMM0,ZMM1,ZMM2,ZMM3]>>,
 
   // Return integers in the standard way.
   CCDelegateTo<RetCC_X86Common>
@@ -158,9 +324,13 @@ def RetCC_X86_64_C : CallingConv<[
   // The X86-64 calling convention always returns FP values in XMM0.
   CCIfType<[f32], CCAssignToReg<[XMM0, XMM1]>>,
   CCIfType<[f64], CCAssignToReg<[XMM0, XMM1]>>,
+  CCIfType<[f128], CCAssignToReg<[XMM0, XMM1]>>,
 
   // MMX vector types are always returned in XMM0.
   CCIfType<[x86mmx], CCAssignToReg<[XMM0, XMM1]>>,
+
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R12]>>>,
+
   CCDelegateTo<RetCC_X86Common>
 ]>;
 
@@ -171,6 +341,16 @@ def RetCC_X86_Win64_C : CallingConv<[
 
   // Otherwise, everything is the same as 'normal' X86-64 C CC.
   CCDelegateTo<RetCC_X86_64_C>
+]>;
+
+// X86-64 vectorcall return-value convention.
+def RetCC_X86_64_Vectorcall : CallingConv<[
+  // Vectorcall calling convention always returns FP values in XMMs.
+  CCIfType<[f32, f64, f128], 
+    CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
+
+  // Otherwise, everything is the same as Windows X86-64 C CC.
+  CCDelegateTo<RetCC_X86_Win64_C>
 ]>;
 
 // X86-64 HiPE return-value convention.
@@ -189,6 +369,28 @@ def RetCC_X86_64_WebKit_JS : CallingConv<[
 
   // Return: RAX
   CCIfType<[i64], CCAssignToReg<[RAX]>>
+]>;
+
+def RetCC_X86_64_Swift : CallingConv<[
+
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R12]>>>,
+
+  // For integers, ECX, R8D can be used as extra return registers.
+  CCIfType<[v1i1],  CCPromoteToType<i8>>,
+  CCIfType<[i1],  CCPromoteToType<i8>>,
+  CCIfType<[i8] , CCAssignToReg<[AL, DL, CL, R8B]>>,
+  CCIfType<[i16], CCAssignToReg<[AX, DX, CX, R8W]>>,
+  CCIfType<[i32], CCAssignToReg<[EAX, EDX, ECX, R8D]>>,
+  CCIfType<[i64], CCAssignToReg<[RAX, RDX, RCX, R8]>>,
+
+  // XMM0, XMM1, XMM2 and XMM3 can be used to return FP values.
+  CCIfType<[f32], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
+  CCIfType<[f64], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
+  CCIfType<[f128], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
+
+  // MMX vector types are returned in XMM0, XMM1, XMM2 and XMM3.
+  CCIfType<[x86mmx], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
+  CCDelegateTo<RetCC_X86Common>
 ]>;
 
 // X86-64 AnyReg return-value convention. No explicit register is specified for
@@ -212,6 +414,14 @@ def RetCC_X86_64_HHVM: CallingConv<[
                                  RAX, R10, R11, R13, R14, R15]>>
 ]>;
 
+
+defm X86_32_RegCall :
+	 X86_RegCall_base<RC_X86_32_RegCall>;
+defm X86_Win64_RegCall :
+     X86_RegCall_base<RC_X86_64_RegCall_Win>;
+defm X86_SysV64_RegCall :
+     X86_RegCall_base<RC_X86_64_RegCall_SysV>;
+
 // This is the root return-value convention for the X86-32 backend.
 def RetCC_X86_32 : CallingConv<[
   // If FastCC, use RetCC_X86_32_Fast.
@@ -219,6 +429,7 @@ def RetCC_X86_32 : CallingConv<[
   // If HiPE, use RetCC_X86_32_HiPE.
   CCIfCC<"CallingConv::HiPE", CCDelegateTo<RetCC_X86_32_HiPE>>,
   CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<RetCC_X86_32_VectorCall>>,
+  CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<RetCC_X86_32_RegCall>>,
 
   // Otherwise, use RetCC_X86_32_C.
   CCDelegateTo<RetCC_X86_32_C>
@@ -233,13 +444,24 @@ def RetCC_X86_64 : CallingConv<[
   CCIfCC<"CallingConv::WebKit_JS", CCDelegateTo<RetCC_X86_64_WebKit_JS>>,
   CCIfCC<"CallingConv::AnyReg", CCDelegateTo<RetCC_X86_64_AnyReg>>,
 
+  // Handle Swift calls.
+  CCIfCC<"CallingConv::Swift", CCDelegateTo<RetCC_X86_64_Swift>>,
+
   // Handle explicit CC selection
-  CCIfCC<"CallingConv::X86_64_Win64", CCDelegateTo<RetCC_X86_Win64_C>>,
+  CCIfCC<"CallingConv::Win64", CCDelegateTo<RetCC_X86_Win64_C>>,
   CCIfCC<"CallingConv::X86_64_SysV", CCDelegateTo<RetCC_X86_64_C>>,
+
+  // Handle Vectorcall CC
+  CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<RetCC_X86_64_Vectorcall>>,
 
   // Handle HHVM calls.
   CCIfCC<"CallingConv::HHVM", CCDelegateTo<RetCC_X86_64_HHVM>>,
 
+  CCIfCC<"CallingConv::X86_RegCall",
+          CCIfSubtarget<"isTargetWin64()",
+                        CCDelegateTo<RetCC_X86_Win64_RegCall>>>,
+  CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<RetCC_X86_SysV64_RegCall>>,
+          
   // Mingw64 and native Win64 use Win64 CC
   CCIfSubtarget<"isTargetWin64()", CCDelegateTo<RetCC_X86_Win64_C>>,
 
@@ -265,12 +487,22 @@ def CC_X86_64_C : CallingConv<[
   // Handles byval parameters.
   CCIfByVal<CCPassByVal<8, 8>>,
 
-  // Promote i1/i8/i16 arguments to i32.
-  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+  // Promote i1/i8/i16/v1i1 arguments to i32.
+  CCIfType<[i1, i8, i16, v1i1], CCPromoteToType<i32>>,
 
   // The 'nest' parameter, if any, is passed in R10.
   CCIfNest<CCIfSubtarget<"isTarget64BitILP32()", CCAssignToReg<[R10D]>>>,
   CCIfNest<CCAssignToReg<[R10]>>,
+
+  // Pass SwiftSelf in a callee saved register.
+  CCIfSwiftSelf<CCIfType<[i64], CCAssignToReg<[R13]>>>,
+
+  // A SwiftError is passed in R12.
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R12]>>>,
+
+  // For Swift Calling Convention, pass sret in %RAX.
+  CCIfCC<"CallingConv::Swift",
+    CCIfSRet<CCIfType<[i64], CCAssignToReg<[RAX]>>>>,
 
   // The first 6 integer arguments are passed in integer registers.
   CCIfType<[i32], CCAssignToReg<[EDI, ESI, EDX, ECX, R8D, R9D]>>,
@@ -293,7 +525,7 @@ def CC_X86_64_C : CallingConv<[
   CCIfType<[v64i1], CCPromoteToType<v64i8>>,
 
   // The first 8 FP/Vector arguments are passed in XMM registers.
-  CCIfType<[f32, f64, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+  CCIfType<[f32, f64, f128, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
             CCIfSubtarget<"hasSSE1()",
             CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>>,
 
@@ -318,7 +550,7 @@ def CC_X86_64_C : CallingConv<[
 
   // Long doubles get stack slots whose size and alignment depends on the
   // subtarget.
-  CCIfType<[f80], CCAssignToStack<0, 0>>,
+  CCIfType<[f80, f128], CCAssignToStack<0, 0>>,
 
   // Vectors get 16-byte stack slots that are 16-byte aligned.
   CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], CCAssignToStack<16, 16>>,
@@ -354,8 +586,8 @@ def CC_X86_Win64_C : CallingConv<[
   // FIXME: Handle byval stuff.
   // FIXME: Handle varargs.
 
-  // Promote i1/i8/i16 arguments to i32.
-  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+  // Promote i1/i8/i16/v1i1 arguments to i32.
+  CCIfType<[i1, i8, i16, v1i1], CCPromoteToType<i32>>,
 
   // The 'nest' parameter, if any, is passed in R10.
   CCIfNest<CCAssignToReg<[R10]>>,
@@ -401,18 +633,7 @@ def CC_X86_Win64_C : CallingConv<[
 ]>;
 
 def CC_X86_Win64_VectorCall : CallingConv<[
-  // The first 6 floating point and vector types of 128 bits or less use
-  // XMM0-XMM5.
-  CCIfType<[f32, f64, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
-           CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5]>>,
-
-  // 256-bit vectors use YMM registers.
-  CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
-           CCAssignToReg<[YMM0, YMM1, YMM2, YMM3, YMM4, YMM5]>>,
-
-  // 512-bit vectors use ZMM registers.
-  CCIfType<[v64i8, v32i16, v16i32, v8i64, v16f32, v8f64],
-           CCAssignToReg<[ZMM0, ZMM1, ZMM2, ZMM3, ZMM4, ZMM5]>>,
+  CCCustom<"CC_X86_64_VectorCall">,
 
   // Delegate to fastcall to handle integer types.
   CCDelegateTo<CC_X86_Win64_C>
@@ -430,7 +651,15 @@ def CC_X86_64_GHC : CallingConv<[
   // Pass in STG registers: F1, F2, F3, F4, D1, D2
   CCIfType<[f32, f64, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
             CCIfSubtarget<"hasSSE1()",
-            CCAssignToReg<[XMM1, XMM2, XMM3, XMM4, XMM5, XMM6]>>>
+            CCAssignToReg<[XMM1, XMM2, XMM3, XMM4, XMM5, XMM6]>>>,
+  // AVX
+  CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
+            CCIfSubtarget<"hasAVX()",
+            CCAssignToReg<[YMM1, YMM2, YMM3, YMM4, YMM5, YMM6]>>>,
+  // AVX-512
+  CCIfType<[v64i8, v32i16, v16i32, v8i64, v16f32, v8f64],
+            CCIfSubtarget<"hasAVX512()",
+            CCAssignToReg<[ZMM1, ZMM2, ZMM3, ZMM4, ZMM5, ZMM6]>>>
 ]>;
 
 def CC_X86_64_HiPE : CallingConv<[
@@ -577,8 +806,8 @@ def CC_X86_32_Common : CallingConv<[
 ]>;
 
 def CC_X86_32_C : CallingConv<[
-  // Promote i1/i8/i16 arguments to i32.
-  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+  // Promote i1/i8/i16/v1i1 arguments to i32.
+  CCIfType<[i1, i8, i16, v1i1], CCPromoteToType<i32>>,
 
   // The 'nest' parameter, if any, is passed in ECX.
   CCIfNest<CCAssignToReg<[ECX]>>,
@@ -591,9 +820,26 @@ def CC_X86_32_C : CallingConv<[
   CCDelegateTo<CC_X86_32_Common>
 ]>;
 
+def CC_X86_32_MCU : CallingConv<[
+  // Handles byval parameters.  Note that, like FastCC, we can't rely on
+  // the delegation to CC_X86_32_Common because that happens after code that
+  // puts arguments in registers.
+  CCIfByVal<CCPassByVal<4, 4>>,
+
+  // Promote i1/i8/i16/v1i1 arguments to i32.
+  CCIfType<[i1, i8, i16, v1i1], CCPromoteToType<i32>>,
+
+  // If the call is not a vararg call, some arguments may be passed
+  // in integer registers.
+  CCIfNotVarArg<CCIfType<[i32], CCCustom<"CC_X86_32_MCUInReg">>>,
+
+  // Otherwise, same as everything else.
+  CCDelegateTo<CC_X86_32_Common>
+]>;
+
 def CC_X86_32_FastCall : CallingConv<[
-  // Promote i1/i8/i16 arguments to i32.
-  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+  // Promote i1/i8/i16/v1i1 arguments to i32.
+  CCIfType<[i1, i8, i16, v1i1], CCPromoteToType<i32>>,
 
   // The 'nest' parameter, if any, is passed in EAX.
   CCIfNest<CCAssignToReg<[EAX]>>,
@@ -605,25 +851,9 @@ def CC_X86_32_FastCall : CallingConv<[
   CCDelegateTo<CC_X86_32_Common>
 ]>;
 
-def CC_X86_32_VectorCall : CallingConv<[
-  // The first 6 floating point and vector types of 128 bits or less use
-  // XMM0-XMM5.
-  CCIfType<[f32, f64, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
-           CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5]>>,
-
-  // 256-bit vectors use YMM registers.
-  CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
-           CCAssignToReg<[YMM0, YMM1, YMM2, YMM3, YMM4, YMM5]>>,
-
-  // 512-bit vectors use ZMM registers.
-  CCIfType<[v64i8, v32i16, v16i32, v8i64, v16f32, v8f64],
-           CCAssignToReg<[ZMM0, ZMM1, ZMM2, ZMM3, ZMM4, ZMM5]>>,
-
-  // Otherwise, pass it indirectly.
-  CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64,
-            v32i8, v16i16, v8i32, v4i64, v8f32, v4f64,
-            v64i8, v32i16, v16i32, v8i64, v16f32, v8f64],
-           CCCustom<"CC_X86_32_VectorCallIndirect">>,
+def CC_X86_Win32_VectorCall : CallingConv<[
+  // Pass floating point in XMMs
+  CCCustom<"CC_X86_32_VectorCall">,
 
   // Delegate to fastcall to handle integer types.
   CCDelegateTo<CC_X86_32_FastCall>
@@ -638,15 +868,15 @@ def CC_X86_32_ThisCall_Common : CallingConv<[
 ]>;
 
 def CC_X86_32_ThisCall_Mingw : CallingConv<[
-  // Promote i1/i8/i16 arguments to i32.
-  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+  // Promote i1/i8/i16/v1i1 arguments to i32.
+  CCIfType<[i1, i8, i16, v1i1], CCPromoteToType<i32>>,
 
   CCDelegateTo<CC_X86_32_ThisCall_Common>
 ]>;
 
 def CC_X86_32_ThisCall_Win : CallingConv<[
-  // Promote i1/i8/i16 arguments to i32.
-  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+  // Promote i1/i8/i16/v1i1 arguments to i32.
+  CCIfType<[i1, i8, i16, v1i1], CCPromoteToType<i32>>,
 
   // Pass sret arguments indirectly through stack.
   CCIfSRet<CCAssignToStack<4, 4>>,
@@ -665,8 +895,8 @@ def CC_X86_32_FastCC : CallingConv<[
   // puts arguments in registers.
   CCIfByVal<CCPassByVal<4, 4>>,
 
-  // Promote i1/i8/i16 arguments to i32.
-  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+  // Promote i1/i8/i16/v1i1 arguments to i32.
+  CCIfType<[i1, i8, i16, v1i1], CCPromoteToType<i32>>,
 
   // The 'nest' parameter, if any, is passed in EAX.
   CCIfNest<CCAssignToReg<[EAX]>>,
@@ -738,18 +968,31 @@ def CC_Intel_OCL_BI : CallingConv<[
   CCDelegateTo<CC_X86_32_C>
 ]>;
 
+def CC_X86_32_Intr : CallingConv<[
+  CCAssignToStack<4, 4>
+]>;
+
+def CC_X86_64_Intr : CallingConv<[
+  CCAssignToStack<8, 8>
+]>;
+
 //===----------------------------------------------------------------------===//
 // X86 Root Argument Calling Conventions
 //===----------------------------------------------------------------------===//
 
 // This is the root argument convention for the X86-32 backend.
 def CC_X86_32 : CallingConv<[
+  // X86_INTR calling convention is valid in MCU target and should override the
+  // MCU calling convention. Thus, this should be checked before isTargetMCU().
+  CCIfCC<"CallingConv::X86_INTR", CCDelegateTo<CC_X86_32_Intr>>,
+  CCIfSubtarget<"isTargetMCU()", CCDelegateTo<CC_X86_32_MCU>>,
   CCIfCC<"CallingConv::X86_FastCall", CCDelegateTo<CC_X86_32_FastCall>>,
-  CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<CC_X86_32_VectorCall>>,
+  CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<CC_X86_Win32_VectorCall>>,
   CCIfCC<"CallingConv::X86_ThisCall", CCDelegateTo<CC_X86_32_ThisCall>>,
   CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_X86_32_FastCC>>,
   CCIfCC<"CallingConv::GHC", CCDelegateTo<CC_X86_32_GHC>>,
   CCIfCC<"CallingConv::HiPE", CCDelegateTo<CC_X86_32_HiPE>>,
+  CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_32_RegCall>>,
 
   // Otherwise, drop to normal X86-32 CC
   CCDelegateTo<CC_X86_32_C>
@@ -761,11 +1004,15 @@ def CC_X86_64 : CallingConv<[
   CCIfCC<"CallingConv::HiPE", CCDelegateTo<CC_X86_64_HiPE>>,
   CCIfCC<"CallingConv::WebKit_JS", CCDelegateTo<CC_X86_64_WebKit_JS>>,
   CCIfCC<"CallingConv::AnyReg", CCDelegateTo<CC_X86_64_AnyReg>>,
-  CCIfCC<"CallingConv::X86_64_Win64", CCDelegateTo<CC_X86_Win64_C>>,
+  CCIfCC<"CallingConv::Win64", CCDelegateTo<CC_X86_Win64_C>>,
   CCIfCC<"CallingConv::X86_64_SysV", CCDelegateTo<CC_X86_64_C>>,
   CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<CC_X86_Win64_VectorCall>>,
   CCIfCC<"CallingConv::HHVM", CCDelegateTo<CC_X86_64_HHVM>>,
   CCIfCC<"CallingConv::HHVM_C", CCDelegateTo<CC_X86_64_HHVM_C>>,
+  CCIfCC<"CallingConv::X86_RegCall",
+    CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_RegCall>>>,
+  CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_SysV64_RegCall>>,
+  CCIfCC<"CallingConv::X86_INTR", CCDelegateTo<CC_X86_64_Intr>>,
 
   // Mingw64 and native Win64 use Win64 CC
   CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_C>>,
@@ -790,11 +1037,27 @@ def CSR_NoRegs : CalleeSavedRegs<(add)>;
 def CSR_32 : CalleeSavedRegs<(add ESI, EDI, EBX, EBP)>;
 def CSR_64 : CalleeSavedRegs<(add RBX, R12, R13, R14, R15, RBP)>;
 
+def CSR_64_SwiftError : CalleeSavedRegs<(sub CSR_64, R12)>;
+
 def CSR_32EHRet : CalleeSavedRegs<(add EAX, EDX, CSR_32)>;
 def CSR_64EHRet : CalleeSavedRegs<(add RAX, RDX, CSR_64)>;
 
-def CSR_Win64 : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12, R13, R14, R15,
+def CSR_Win64_NoSSE : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12, R13, R14, R15)>;
+
+def CSR_Win64 : CalleeSavedRegs<(add CSR_Win64_NoSSE,
                                      (sequence "XMM%u", 6, 15))>;
+
+// The function used by Darwin to obtain the address of a thread-local variable
+// uses rdi to pass a single parameter and rax for the return value. All other
+// GPRs are preserved.
+def CSR_64_TLS_Darwin : CalleeSavedRegs<(add CSR_64, RCX, RDX, RSI,
+                                             R8, R9, R10, R11)>;
+
+// CSRs that are handled by prologue, epilogue.
+def CSR_64_CXX_TLS_Darwin_PE : CalleeSavedRegs<(add RBP)>;
+
+// CSRs that are handled explicitly via copies.
+def CSR_64_CXX_TLS_Darwin_ViaCopy : CalleeSavedRegs<(sub CSR_64_TLS_Darwin, RBP)>;
 
 // All GPRs - except r11
 def CSR_64_RT_MostRegs : CalleeSavedRegs<(add CSR_64, RAX, RCX, RDX, RSI, RDI,
@@ -810,11 +1073,26 @@ def CSR_64_MostRegs : CalleeSavedRegs<(add RBX, RCX, RDX, RSI, RDI, R8, R9, R10,
                                            R11, R12, R13, R14, R15, RBP,
                                            (sequence "XMM%u", 0, 15))>;
 
-def CSR_64_AllRegs     : CalleeSavedRegs<(add CSR_64_MostRegs, RAX, RSP,
-                                              (sequence "XMM%u", 16, 31))>;
-def CSR_64_AllRegs_AVX : CalleeSavedRegs<(sub (add CSR_64_MostRegs, RAX, RSP,
-                                                   (sequence "YMM%u", 0, 31)),
+def CSR_32_AllRegs     : CalleeSavedRegs<(add EAX, EBX, ECX, EDX, EBP, ESI,
+                                              EDI)>;
+def CSR_32_AllRegs_SSE : CalleeSavedRegs<(add CSR_32_AllRegs,
+                                              (sequence "XMM%u", 0, 7))>;
+def CSR_32_AllRegs_AVX : CalleeSavedRegs<(add CSR_32_AllRegs,
+                                              (sequence "YMM%u", 0, 7))>;
+def CSR_32_AllRegs_AVX512 : CalleeSavedRegs<(add CSR_32_AllRegs,
+                                                 (sequence "ZMM%u", 0, 7),
+                                                 (sequence "K%u", 0, 7))>;
+
+def CSR_64_AllRegs     : CalleeSavedRegs<(add CSR_64_MostRegs, RAX)>;
+def CSR_64_AllRegs_NoSSE : CalleeSavedRegs<(add RAX, RBX, RCX, RDX, RSI, RDI, R8, R9,
+                                                R10, R11, R12, R13, R14, R15, RBP)>;
+def CSR_64_AllRegs_AVX : CalleeSavedRegs<(sub (add CSR_64_MostRegs, RAX,
+                                                   (sequence "YMM%u", 0, 15)),
                                               (sequence "XMM%u", 0, 15))>;
+def CSR_64_AllRegs_AVX512 : CalleeSavedRegs<(sub (add CSR_64_MostRegs, RAX,
+                                                      (sequence "ZMM%u", 0, 31),
+                                                      (sequence "K%u", 0, 7)),
+                                                 (sequence "XMM%u", 0, 15))>;
 
 // Standard C + YMM6-15
 def CSR_Win64_Intel_OCL_BI_AVX : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12,
@@ -839,3 +1117,17 @@ def CSR_64_Intel_OCL_BI_AVX512 : CalleeSavedRegs<(add RBX, RDI, RSI, R14, R15,
 
 // Only R12 is preserved for PHP calls in HHVM.
 def CSR_64_HHVM : CalleeSavedRegs<(add R12)>;
+
+// Register calling convention preserves few GPR and XMM8-15
+def CSR_32_RegCall_NoSSE : CalleeSavedRegs<(add ESI, EDI, EBX, EBP, ESP)>;
+def CSR_32_RegCall       : CalleeSavedRegs<(add CSR_32_RegCall_NoSSE,
+                                           (sequence "XMM%u", 4, 7))>;                                            
+def CSR_Win64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP, RSP,
+                                              (sequence "R%u", 10, 15))>;
+def CSR_Win64_RegCall       : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE,                                  
+                                              (sequence "XMM%u", 8, 15))>;
+def CSR_SysV64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP, RSP,
+                                               (sequence "R%u", 12, 15))>;
+def CSR_SysV64_RegCall       : CalleeSavedRegs<(add CSR_SysV64_RegCall_NoSSE,               
+                                               (sequence "XMM%u", 8, 15))>;
+                                               

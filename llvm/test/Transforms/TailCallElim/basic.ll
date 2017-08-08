@@ -188,3 +188,13 @@ define void @test11() {
 ; CHECK: call void @test11_helper2
   ret void
 }
+
+; PR25928
+define void @test12() {
+entry:
+; CHECK-LABEL: @test12
+; CHECK: {{^ *}} call void undef(i8* undef) [ "foo"(i8* %e) ]
+  %e = alloca i8
+  call void undef(i8* undef) [ "foo"(i8* %e) ]
+  unreachable
+}

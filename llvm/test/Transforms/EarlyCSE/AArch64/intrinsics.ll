@@ -1,5 +1,7 @@
 ; RUN: opt < %s -S -mtriple=aarch64-none-linux-gnu -mattr=+neon -early-cse | FileCheck %s
+; RUN: opt < %s -S -mtriple=aarch64-none-linux-gnu -mattr=+neon -basicaa -early-cse-memssa | FileCheck %s
 ; RUN: opt < %s -S -mtriple=aarch64-none-linux-gnu -mattr=+neon -passes=early-cse | FileCheck %s
+; RUN: opt < %s -S -mtriple=aarch64-none-linux-gnu -mattr=+neon -aa-pipeline=basic-aa -passes=early-cse-memssa | FileCheck %s
 
 define <4 x i32> @test_cse(i32* %a, [2 x <4 x i32>] %s.coerce, i32 %n) {
 entry:
@@ -40,7 +42,7 @@ entry:
 ; Check that the first @llvm.aarch64.neon.st2 is optimized away by Early CSE.
 ; CHECK-LABEL: @test_cse2
 ; CHECK-NOT: call void @llvm.aarch64.neon.st2.v4i32.p0i8(<4 x i32> %3, <4 x i32> %3, i8* %0)
-; CHECK: call void @llvm.aarch64.neon.st2.v4i32.p0i8(<4 x i32> %3, <4 x i32> %4, i8* %0)
+; CHECK: call void @llvm.aarch64.neon.st2.v4i32.p0i8(<4 x i32> %s.coerce.fca.0.extract, <4 x i32> %s.coerce.fca.1.extract, i8* %0)
   %s.coerce.fca.0.extract = extractvalue [2 x <4 x i32>] %s.coerce, 0
   %s.coerce.fca.1.extract = extractvalue [2 x <4 x i32>] %s.coerce, 1
   br label %for.cond

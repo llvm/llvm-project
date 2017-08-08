@@ -14,6 +14,20 @@ using namespace llvm;
 
 namespace {
 
+// Ensure that there is a default constructor and we can test for a null
+// function_ref.
+TEST(FunctionRefTest, Null) {
+  function_ref<int()> F;
+  EXPECT_FALSE(F);
+
+  auto L = [] { return 1; };
+  F = L;
+  EXPECT_TRUE(F);
+
+  F = {};
+  EXPECT_FALSE(F);
+}
+
 // Ensure that copies of a function_ref copy the underlying state rather than
 // causing one function_ref to chain to the next.
 TEST(FunctionRefTest, Copy) {

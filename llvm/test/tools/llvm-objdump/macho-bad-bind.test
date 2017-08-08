@@ -1,0 +1,101 @@
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-dylib-ordinal-uleb 2>&1 | FileCheck -check-prefix DYLIB-ORDINAL-ULEB %s 
+DYLIB-ORDINAL-ULEB: macho-bind-dylib-ordinal-uleb': truncated or malformed object (for BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB bad library ordinal: 355 (max 1) for opcode at: 0x0)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-dylib-ordinal-uleb-malformed-uleb128 2>&1 | FileCheck -check-prefix DYLIB-ORDINAL-ULEB-MALFORMED-ULEB128 %s 
+DYLIB-ORDINAL-ULEB-MALFORMED-ULEB128: macho-bind-dylib-ordinal-uleb-malformed-uleb128': truncated or malformed object (for BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB malformed uleb128, extends past end for opcode at: 0x0)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-dylib-ordinal-uleb-too-big 2>&1 | FileCheck -check-prefix DYLIB-ORDINAL-ULEB-TOO-BIG %s 
+DYLIB-ORDINAL-ULEB-TOO-BIG: macho-bind-dylib-ordinal-uleb-too-big': truncated or malformed object (for BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB uleb128 too big for uint64 for opcode at: 0x0)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-dylib-special-imm 2>&1 | FileCheck -check-prefix DYLIB-SPECIAL-IMM %s 
+DYLIB-SPECIAL-IMM: macho-bind-dylib-special-imm': truncated or malformed object (for BIND_OPCODE_SET_DYLIB_SPECIAL_IMM unknown special ordinal: -5 for opcode at: 0x0)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-set-symbol 2>&1 | FileCheck -check-prefix BIND-SET-SYMBOL %s 
+BIND-SET-SYMBOL: macho-bind-set-symbol': truncated or malformed object (for BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM symbol name extends past opcodes for opcode at: 0x2)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-set-type-imm 2>&1 | FileCheck -check-prefix SET-TYPE-IMM %s 
+SET-TYPE-IMM: macho-bind-set-type-imm': truncated or malformed object (for BIND_OPCODE_SET_TYPE_IMM bad bind type: 5 for opcode at: 0x14)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-set-addend-sleb 2>&1 | FileCheck -check-prefix SET-ADDEND-SLEB %s 
+SET-ADDEND-SLEB: macho-bind-set-addend-sleb': truncated or malformed object (for BIND_OPCODE_SET_ADDEND_SLEB malformed sleb128, extends past end for opcode at: 0x14)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-seg-too-big 2>&1 | FileCheck -check-prefix SEG-TOO-BIG %s 
+SEG-TOO-BIG: macho-bind-seg-too-big': truncated or malformed object (for BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB bad segIndex (too large) for opcode at: 0x15)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-segoff-too-big 2>&1 | FileCheck -check-prefix SEGOFF-TOO-BIG %s 
+SEGOFF-TOO-BIG: macho-bind-segoff-too-big': truncated or malformed object (for BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB bad segOffset, too large for opcode at: 0x15)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-add_addr_uleb 2>&1 | FileCheck -check-prefix ADD_ADDR_ULEB %s 
+ADD_ADDR_ULEB: macho-bind-add_addr_uleb': truncated or malformed object (for BIND_OPCODE_ADD_ADDR_ULEB bad segOffset, too large for opcode at: 0x17)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-do-bind-no-segIndex 2>&1 | FileCheck -check-prefix BIND-NO-SEGINDEX %s 
+BIND-NO-SEGINDEX: macho-bind-do-bind-no-segIndex': truncated or malformed object (for BIND_OPCODE_DO_BIND missing preceding *_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB for opcode at: 0x15)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-bind-add-addr-uleb 2>&1 | FileCheck -check-prefix ADD-ADDR-ULEB %s 
+ADD-ADDR-ULEB: macho-bind-bind-add-addr-uleb': truncated or malformed object (for BIND_OPCODE_ADD_ADDR_ULEB (after adding ULEB) bad segOffset, too large for opcode at: 0x18)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-add-addr-imm-scaled 2>&1 | FileCheck -check-prefix ADD-ADDR-IMM-SCALED %s 
+ADD-ADDR-IMM-SCALED: macho-bind-add-addr-imm-scaled': truncated or malformed object (for BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED  (after adding immediate times the pointer size) bad segOffset, too large for opcode at: 0x17)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-uleb-times-skipping-uleb 2>&1 | FileCheck -check-prefix ULEB-TIMES-SKIPPING-ULEB %s 
+ULEB-TIMES-SKIPPING-ULEB: macho-bind-uleb-times-skipping-uleb': truncated or malformed object (for BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB bad count and skip, too large for opcode at: 0x17)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-do-bind-no-symbol 2>&1 | FileCheck -check-prefix DO-BIND-NO-SYMBOL %s 
+DO-BIND-NO-SYMBOL: macho-do-bind-no-symbol': truncated or malformed object (for BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB missing preceding BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM for opcode at: 0x5)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-do-bind-no-dylib-ordinal 2>&1 | FileCheck -check-prefix DO-BIND-NO-DYLIB-ORDINAL %s 
+DO-BIND-NO-DYLIB-ORDINAL: macho-do-bind-no-dylib-ordinal': truncated or malformed object (for BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB missing preceding BIND_OPCODE_SET_DYLIB_ORDINAL_* for opcode at: 0x15)
+
+RUN: not llvm-objdump -macho -bind %p/Inputs/macho-bind-bad-opcode-value 2>&1 | FileCheck -check-prefix BAD-OPCODE-VALUE %s 
+BAD-OPCODE-VALUE: macho-bind-bad-opcode-value': truncated or malformed object (bad bind info (bad opcode value 0xD0 for opcode at: 0x18)
+
+RUN: not llvm-objdump -macho -lazy-bind %p/Inputs/macho-lazy-do_bind_add_addr_uleb 2>&1 | FileCheck -check-prefix LAZY_DO_BIND_ADD_ADDR_ULEB %s 
+LAZY_DO_BIND_ADD_ADDR_ULEB: macho-lazy-do_bind_add_addr_uleb': truncated or malformed object (BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB not allowed in lazy bind table for opcode at: 0xC)
+
+RUN: not llvm-objdump -macho -lazy-bind %p/Inputs/macho-lazy-do-bind-add-addr-imm-scaled 2>&1 | FileCheck -check-prefix LAZY-DO-BIND-ADD-ADDR-IMM-SCALED %s 
+LAZY-DO-BIND-ADD-ADDR-IMM-SCALED: macho-lazy-do-bind-add-addr-imm-scaled': truncated or malformed object (BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED not allowed in lazy bind table for opcode at: 0xC)
+
+RUN: not llvm-objdump -macho -lazy-bind %p/Inputs/macho-lazy-do-bind-uleb-times-skipping-uleb 2>&1 | FileCheck -check-prefix LAZY-DO-BIND-ULEB-TIMES-SKIPPING-ULEB %s 
+LAZY-DO-BIND-ULEB-TIMES-SKIPPING-ULEB: macho-lazy-do-bind-uleb-times-skipping-uleb': truncated or malformed object (BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB not allowed in lazy bind table for opcode at: 0xC)
+
+RUN: not llvm-objdump -macho -weak-bind %p/Inputs/macho-weak-bind-set-dylib-ordinal-imm 2>&1 | FileCheck -check-prefix WEAK-BIND-SET-DYLIB-ORDINAL-IMM %s 
+WEAK-BIND-SET-DYLIB-ORDINAL-IMM: macho-weak-bind-set-dylib-ordinal-imm': truncated or malformed object (BIND_OPCODE_SET_DYLIB_ORDINAL_IMM not allowed in weak bind table for opcode at: 0x2)
+
+RUN: not llvm-objdump -macho -weak-bind %p/Inputs/macho-weak-bind-set-dylib-ordinal-uleb 2>&1 | FileCheck -check-prefix WEAK-BIND-SET-DYLIB-ORDINAL-ULEB %s 
+WEAK-BIND-SET-DYLIB-ORDINAL-ULEB: macho-weak-bind-set-dylib-ordinal-uleb': truncated or malformed object (BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB not allowed in weak bind table for opcode at: 0x2)
+
+RUN: not llvm-objdump -macho -weak-bind %p/Inputs/macho-weak-bind-set-dylib-special-imm 2>&1 | FileCheck -check-prefix WEAK-BIND-SET-DYLIB-SPECIAL-IMM %s 
+WEAK-BIND-SET-DYLIB-SPECIAL-IMM: macho-weak-bind-set-dylib-special-imm': truncated or malformed object (BIND_OPCODE_SET_DYLIB_SPECIAL_IMM not allowed in weak bind table for opcode at: 0x2)
+
+RUN: not llvm-objdump -macho -rebase %p/Inputs/macho-rebase-set-type-imm 2>&1 | FileCheck -check-prefix REBASE-SET-TYPE-IMM %s 
+REBASE-SET-TYPE-IMM: macho-rebase-set-type-imm': truncated or malformed object (for REBASE_OPCODE_SET_TYPE_IMM bad bind type: 5 for opcode at: 0x0)
+
+RUN: not llvm-objdump -macho -rebase %p/Inputs/macho-rebase-uleb-malformed-uleb128 2>&1 | FileCheck -check-prefix REBASE-ULEB-MALFORMED-ULEB128 %s 
+REBASE-ULEB-MALFORMED-ULEB128: macho-rebase-uleb-malformed-uleb128': truncated or malformed object (for REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB malformed uleb128, extends past end for opcode at: 0x1)
+
+RUN: not llvm-objdump -macho -rebase %p/Inputs/macho-rebase-seg-too-big 2>&1 | FileCheck -check-prefix REBASE-SEG-TOO-BIG %s 
+REBASE-SEG-TOO-BIG: macho-rebase-seg-too-big': truncated or malformed object (for REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB bad segIndex (too large) for opcode at: 0x1)
+
+RUN: not llvm-objdump -macho -rebase %p/Inputs/macho-rebase-segoff-too-big 2>&1 | FileCheck -check-prefix REBASE-SEGOFF-TOO-BIG %s 
+REBASE-SEGOFF-TOO-BIG: macho-rebase-segoff-too-big': truncated or malformed object (for REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB bad segOffset, too large for opcode at: 0x1)
+
+RUN: not llvm-objdump -macho -rebase %p/Inputs/macho-rebase-add-addr-uleb 2>&1 | FileCheck -check-prefix REBASE-ADD-ADDR-ULEB %s 
+REBASE-ADD-ADDR-ULEB: macho-rebase-add-addr-uleb': truncated or malformed object (for REBASE_OPCODE_ADD_ADDR_ULEB bad segOffset, too large for opcode at: 0x3)
+
+RUN: not llvm-objdump -macho -rebase %p/Inputs/macho-rebase-add-addr-imm-scaled 2>&1 | FileCheck -check-prefix REBASE-ADD-ADDR-IMM-SCALED %s 
+REBASE-ADD-ADDR-IMM-SCALED: macho-rebase-add-addr-imm-scaled': truncated or malformed object (for REBASE_OPCODE_ADD_ADDR_IMM_SCALED  (after adding immediate times the pointer size) bad segOffset, too large for opcode at: 0x3)
+
+RUN: not llvm-objdump -macho -rebase %p/Inputs/macho-rebase-imm-times 2>&1 | FileCheck -check-prefix REBASE-IMM-TIMES %s 
+REBASE-IMM-TIMES: macho-rebase-imm-times': truncated or malformed object (for REBASE_OPCODE_DO_REBASE_IMM_TIMES bad count and skip, too large for opcode at: 0x3)
+
+RUN: not llvm-objdump -macho -rebase %p/Inputs/macho-rebase-uleb-times 2>&1 | FileCheck -check-prefix REBASE-ULEB-TIMES %s 
+REBASE-ULEB-TIMES: macho-rebase-uleb-times': truncated or malformed object (for REBASE_OPCODE_DO_REBASE_ULEB_TIMES bad count and skip, too large for opcode at: 0x3)
+
+RUN: not llvm-objdump -macho -rebase %p/Inputs/macho-rebase-add-addr-uleb-too-big 2>&1 | FileCheck -check-prefix REBASE-ADD-ADDR-ULEB-TOO-BIG %s 
+REBASE-ADD-ADDR-ULEB-TOO-BIG: macho-rebase-add-addr-uleb-too-big': truncated or malformed object (for REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB bad count and skip, too large for opcode at: 0x3)
+
+RUN: not llvm-objdump -macho -rebase %p/Inputs/macho-rebase-uleb-times-skipping-uleb 2>&1 | FileCheck -check-prefix REBASE-ULEB-TIMES-SKIPPING-ULEB %s 
+REBASE-ULEB-TIMES-SKIPPING-ULEB: macho-rebase-uleb-times-skipping-uleb': truncated or malformed object (for REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB bad count and skip, too large for opcode at: 0x3)
+
+RUN: not llvm-objdump -macho -rebase %p/Inputs/macho-rebase-bad-opcode-value 2>&1 | FileCheck -check-prefix REBASE-BAD-OPCODE-VALUE %s 
+REBASE-BAD-OPCODE-VALUE: macho-rebase-bad-opcode-value': truncated or malformed object (bad rebase info (bad opcode value 0xD0 for opcode at: 0x4)

@@ -25,9 +25,11 @@
 #
 # It operates on the current, potentially unsaved buffer and does not create
 # or save any files. To revert a formatting, just undo.
+from __future__ import print_function
 
 import difflib
 import json
+import platform
 import subprocess
 import sys
 import vim
@@ -47,21 +49,38 @@ fallback_style = None
 if vim.eval('exists("g:clang_format_fallback_style")') == "1":
   fallback_style = vim.eval('g:clang_format_fallback_style')
 
+def get_buffer(encoding):
+  if platform.python_version_tuple()[0] == '3':
+    return vim.current.buffer
+  return [ line.decode(encoding) for line in vim.current.buffer ]
+
 def main():
   # Get the current text.
-  buf = vim.current.buffer
+  encoding = vim.eval("&encoding")
+  buf = get_buffer(encoding)
   text = '\n'.join(buf)
 
   # Determine range to format.
   if vim.eval('exists("l:lines")') == '1':
     lines = vim.eval('l:lines')
+  elif vim.eval('exists("l:formatdiff")') == '1':
+    with open(vim.current.buffer.name, 'r') as f:
+      ondisk = f.read().splitlines();
+    sequence = difflib.SequenceMatcher(None, ondisk, vim.current.buffer)
+    lines = []
+    for op in reversed(sequence.get_opcodes()):
+      if op[0] not in ['equal', 'delete']:
+        lines += ['-lines', '%s:%s' % (op[3] + 1, op[4])]
+    if lines == []:
+      return
   else:
-    lines = '%s:%s' % (vim.current.range.start + 1, vim.current.range.end + 1)
+    lines = ['-lines', '%s:%s' % (vim.current.range.start + 1,
+                                  vim.current.range.end + 1)]
 
   # Determine the cursor position.
   cursor = int(vim.eval('line2byte(line("."))+col(".")')) - 2
   if cursor < 0:
-    print 'Couldn\'t determine cursor position. Is your file empty?'
+    print('Couldn\'t determine cursor position. Is your file empty?')
     return
 
   # Avoid flashing an ugly, ugly cmd prompt on Windows when invoking clang-format.
@@ -72,9 +91,9 @@ def main():
     startupinfo.wShowWindow = subprocess.SW_HIDE
 
   # Call formatter.
-  command = [binary, '-style', style, '-cursor', str(cursor), '-sort-includes']
+  command = [binary, '-style', style, '-cursor', str(cursor)]
   if lines != 'all':
-    command.extend(['-lines', lines])
+    command += lines
   if fallback_style:
     command.extend(['-fallback-style', fallback_style])
   if vim.current.buffer.name:
@@ -82,25 +101,27 @@ def main():
   p = subprocess.Popen(command,
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        stdin=subprocess.PIPE, startupinfo=startupinfo)
-  stdout, stderr = p.communicate(input=text)
+  stdout, stderr = p.communicate(input=text.encode(encoding))
 
   # If successful, replace buffer contents.
   if stderr:
-    print stderr
+    print(stderr)
 
   if not stdout:
-    print ('No output from clang-format (crashed?).\n' +
-        'Please report to bugs.llvm.org.')
+    print(
+        'No output from clang-format (crashed?).\n'
+        'Please report to bugs.llvm.org.'
+    )
   else:
-    lines = stdout.split('\n')
+    lines = stdout.decode(encoding).split('\n')
     output = json.loads(lines[0])
     lines = lines[1:]
-    sequence = difflib.SequenceMatcher(None, vim.current.buffer, lines)
+    sequence = difflib.SequenceMatcher(None, buf, lines)
     for op in reversed(sequence.get_opcodes()):
       if op[0] is not 'equal':
         vim.current.buffer[op[1]:op[2]] = lines[op[3]:op[4]]
     if output.get('IncompleteFormat'):
-      print 'clang-format: incomplete (syntax errors)'
+      print('clang-format: incomplete (syntax errors)')
     vim.command('goto %d' % (output['Cursor'] + 1))
 
 main()

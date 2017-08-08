@@ -1,3 +1,5 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
+
 //===-- fixdfsivfp_test.c - Test __fixdfsivfp -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -18,7 +20,7 @@
 
 extern int __fixdfsivfp(double a);
 
-#if __arm__
+#if __arm__ && __VFP_FP__
 int test__fixdfsivfp(double a)
 {
 	int actual = __fixdfsivfp(a);
@@ -32,7 +34,7 @@ int test__fixdfsivfp(double a)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__fixdfsivfp(0.0))
         return 1;
     if (test__fixdfsivfp(1.0))

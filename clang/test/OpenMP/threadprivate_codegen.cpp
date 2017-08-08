@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -fopenmp -DBODY -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix=CHECK-TLS %s
 
 // expected-no-diagnostics
-// REQUIRES: x86-registered-target
+//
 #ifndef HEADER
 #define HEADER
 // CHECK-DAG: [[IDENT:%.+]] = type { i32, i32, i32, i32, i8* }
@@ -176,12 +176,12 @@ struct S5 {
 // CHECK-TLS-DAG:  [[ST_S4_ST:@.+]] = linkonce_odr thread_local global %struct.S4 zeroinitializer
 // CHECK-TLS-DAG:  [[ST_S4_ST_GUARD:@_ZGVN2STI2S4E2stE]] = linkonce_odr thread_local global i64 0
 // CHECK-TLS-DAG:  @__tls_guard = internal thread_local global i8 0
-// CHECK-TLS-DAG:  @__dso_handle = external global i8
+// CHECK-TLS-DAG:  @__dso_handle = external hidden global i8
 // CHECK-TLS-DAG:  [[GS1_TLS_INIT:@_ZTHL3gs1]] = internal alias void (), void ()* @__tls_init
 // CHECK-TLS-DAG:  [[ARR_X_TLS_INIT:@_ZTH5arr_x]] = alias void (), void ()* @__tls_init
-// CHECK-TLS-DAG:  [[ST_INT_ST_TLS_INIT:@_ZTHN2STIiE2stE]] = linkonce_odr alias void (), void ()* @__tls_init
-// CHECK-TLS-DAG:  [[ST_FLOAT_ST_TLS_INIT:@_ZTHN2STIfE2stE]] = linkonce_odr alias void (), void ()* @__tls_init
-// CHECK-TLS-DAG:  [[ST_S4_ST_TLS_INIT:@_ZTHN2STI2S4E2stE]] = linkonce_odr alias void (), void ()* @__tls_init
+
+
+// CHECK-TLS-DAG:  [[ST_S4_ST_TLS_INIT:@_ZTHN2STI2S4E2stE]] = linkonce_odr alias void (), void ()* [[ST_S4_ST_CXX_INIT:@[^, ]*]]
 
 struct Static {
   static S3 s;
@@ -221,7 +221,7 @@ static S1 gs1(5);
 // CHECK-DEBUG:      store i8* %0, i8** [[ARG_ADDR:%.*]],
 // CHECK-DEBUG:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK-DEBUG:      [[RES:%.*]] = bitcast i8* [[ARG]] to [[S1]]*
-// CHECK-DEBUG-NEXT: call {{.*}} [[S1_CTOR:@.+]]([[S1]]* [[RES]], {{.*}} 5)
+// CHECK-DEBUG-NEXT: call {{.*}} [[S1_CTOR:@.+]]([[S1]]* [[RES]], {{.*}} 5){{.*}}, !dbg
 // CHECK-DEBUG:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK-DEBUG:      ret i8* [[ARG]]
 // CHECK-DEBUG-NEXT: }
@@ -230,7 +230,7 @@ static S1 gs1(5);
 // CHECK-DEBUG:      store i8* %0, i8** [[ARG_ADDR:%.*]],
 // CHECK-DEBUG:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK-DEBUG:      [[RES:%.*]] = bitcast i8* [[ARG]] to [[S1]]*
-// CHECK-DEBUG-NEXT: call {{.*}} [[S1_DTOR:@.+]]([[S1]]* [[RES]])
+// CHECK-DEBUG-NEXT: call {{.*}} [[S1_DTOR:@.+]]([[S1]]* [[RES]]){{.*}}, !dbg
 // CHECK-DEBUG-NEXT: ret void
 // CHECK-DEBUG-NEXT: }
 // CHECK-DEBUG:      define {{.*}} [[S1_DTOR]]([[S1]]* {{.*}})
@@ -275,7 +275,7 @@ S1 arr_x[2][3] = { { 1, 2, 3 }, { 4, 5, 6 } };
 // CHECK:      {{.*}}[[ARR_LOOP]]{{.*}}
 // CHECK-NEXT: [[ARR_ELEMENTPAST:%.*]] = phi [[S1]]* [ [[ARR_CUR]], {{.*}} ], [ [[ARR_ELEMENT:%.*]], {{.*}} ]
 // CHECK-NEXT: [[ARR_ELEMENT:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[ARR_ELEMENTPAST]], i{{.*}} -1
-// CHECK-NEXT: invoke {{.*}} [[S1_DTOR]]([[S1]]* [[ARR_ELEMENT]])
+// CHECK-NEXT: {{call|invoke}} {{.*}} [[S1_DTOR]]([[S1]]* [[ARR_ELEMENT]])
 // CHECK:      [[ARR_DONE:%.*]] = icmp eq [[S1]]* [[ARR_ELEMENT]], [[ARR_BEGIN]]
 // CHECK-NEXT: br i1 [[ARR_DONE]], label %[[ARR_EXIT:.*]], label %[[ARR_LOOP]]
 // CHECK:      {{.*}}[[ARR_EXIT]]{{.*}}
@@ -617,7 +617,7 @@ int main() {
 // CHECK-DEBUG:      call {{.*}} [[SMAIN_DTOR:@.+]]([[SMAIN]]*
 // CHECK-DEBUG:      }
 // CHECK-DEBUG:      define {{.*}} [[SMAIN_DTOR]]([[SMAIN]]* {{.*}})
-// CHECK-TLS:      define internal [[S1]]* [[GS1_TLS_INITD]] {
+// CHECK-TLS:      define internal [[S1]]* [[GS1_TLS_INITD]] {{#[0-9]+}} {
 // CHECK-TLS-NEXT: call void [[GS1_TLS_INIT]]
 // CHECK-TLS-NEXT: ret [[S1]]* [[GS1]]
 // CHECK-TLS-NEXT: }
@@ -639,15 +639,15 @@ int main() {
 // CHECK-TLS:   call void [[ARR_X_TLS_INIT]]
 // CHECK-TLS:   ret [2 x [3 x [[S1]]]]* [[ARR_X]]
 // CHECK-TLS: }
-// CHECK-TLS: define {{.*}} i32* [[ST_INT_ST_TLS_INITD]] {
-// CHECK-TLS:   call void [[ST_INT_ST_TLS_INIT]]
+// CHECK-TLS: define {{.*}} i32* [[ST_INT_ST_TLS_INITD]] {{#[0-9]+}} {
+// CHECK-TLS-NOT:   call
 // CHECK-TLS:   ret i32* [[ST_INT_ST]]
 // CHECK-TLS: }
-// CHECK-TLS: define {{.*}} float* [[ST_FLOAT_ST_TLS_INITD]] {
-// CHECK-TLS:   call void [[ST_FLOAT_ST_TLS_INIT]]
+// CHECK-TLS: define {{.*}} float* [[ST_FLOAT_ST_TLS_INITD]] {{#[0-9]+}} {
+// CHECK-TLS-NOT:   call
 // CHECK-TLS:   ret float* [[ST_FLOAT_ST]]
 // CHECK-TLS: }
-// CHECK-TLS: define {{.*}} [[S4]]* [[ST_S4_ST_TLS_INITD]] {
+// CHECK-TLS: define {{.*}} [[S4]]* [[ST_S4_ST_TLS_INITD]] {{#[0-9]+}} {
 // CHECK-TLS:   call void [[ST_S4_ST_TLS_INIT]]
 // CHECK-TLS:   ret [[S4]]* [[ST_S4_ST]]
 // CHECK-TLS: }
@@ -923,7 +923,7 @@ int foobar() {
 // CHECK-TLS: define {{.*}}void [[SM_CTOR2]]([[SMAIN]]* {{.*}}, i32 {{.*}})
 // CHECK-TLS: define {{.*}}void [[SM_DTOR2]]([[SMAIN]]* {{.*}})
 
-// CHECK-TLS: define internal void [[ST_S4_ST_CXX_INIT:@.*]]()
+// CHECK-TLS: define internal void [[ST_S4_ST_CXX_INIT]]()
 // CHECK-TLS: call void [[ST_S4_ST_CTOR1:@.*]]([[S4]]* [[ST_S4_ST]], i32 23)
 // CHECK-TLS: call i32 @__cxa_thread_atexit(void (i8*)* bitcast (void ([[S4]]*)* [[ST_S4_ST_DTOR1:.*]] to void (i8*)*), i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*)
 // CHECK-TLS: }
@@ -939,14 +939,14 @@ int foobar() {
 // CHECK-TLS:      define internal void @__tls_init()
 // CHECK-TLS:      [[GRD:%.*]] = load i8, i8* @__tls_guard
 // CHECK-TLS-NEXT: [[IS_INIT:%.*]] = icmp eq i8 [[GRD]], 0
-// CHECK-TLS-NEXT: store i8 1, i8* @__tls_guard
 // CHECK-TLS-NEXT: br i1 [[IS_INIT]], label %[[INIT_LABEL:[^,]+]], label %[[DONE_LABEL:[^,]+]]{{.*}}
 // CHECK-TLS:      [[INIT_LABEL]]
+// CHECK-TLS-NEXT: store i8 1, i8* @__tls_guard
 // CHECK-TLS:      call void [[GS1_CXX_INIT]]
 // CHECK-TLS-NOT:  call void [[GS2_CXX_INIT]]
 // CHECK-TLS:      call void [[ARR_X_CXX_INIT]]
-// CHECK-TLS:      call void [[ST_S4_ST_CXX_INIT]]
+// CHECK-TLS-NOT:  call void [[ST_S4_ST_CXX_INIT]]
 // CHECK-TLS:      [[DONE_LABEL]]
 
-// CHECK-TLS:      declare {{.*}} void [[GS3_TLS_INIT]]
-// CHECK-TLS:      declare {{.*}} void [[STATIC_S_TLS_INIT]]
+// CHECK-TLS-DAG:      declare {{.*}} void [[GS3_TLS_INIT]]
+// CHECK-TLS-DAG:      declare {{.*}} void [[STATIC_S_TLS_INIT]]

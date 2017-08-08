@@ -13,23 +13,23 @@ define void @test(i32 *%d) {
 entry:
   %arr = alloca [1024 x i32], align 16
   %0 = bitcast [1024 x i32]* %arr to i8*
-  call void @llvm.lifetime.start(i64 4096, i8* %0) #1
+  call void @llvm.lifetime.start.p0i8(i64 4096, i8* %0) #1
   br label %for.body
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  call void @llvm.lifetime.end(i64 4096, i8* %0) #1
+  call void @llvm.lifetime.end.p0i8(i64 4096, i8* %0) #1
   %arrayidx = getelementptr inbounds i32, i32* %d, i64 %indvars.iv
   %1 = load i32, i32* %arrayidx, align 8
   store i32 100, i32* %arrayidx, align 8
-  call void @llvm.lifetime.start(i64 4096, i8* %0) #1
+  call void @llvm.lifetime.start.p0i8(i64 4096, i8* %0) #1
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp ne i32 %lftr.wideiv, 128
   br i1 %exitcond, label %for.body, label %for.end
 
 for.end:
-  call void @llvm.lifetime.end(i64 4096, i8* %0) #1
+  call void @llvm.lifetime.end.p0i8(i64 4096, i8* %0) #1
   ret void
 }
 
@@ -42,24 +42,24 @@ define void @testbitcast(i32 *%d) {
 entry:
   %arr = alloca [1024 x i32], align 16
   %0 = bitcast [1024 x i32]* %arr to i8*
-  call void @llvm.lifetime.start(i64 4096, i8* %0) #1
+  call void @llvm.lifetime.start.p0i8(i64 4096, i8* %0) #1
   br label %for.body
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %1 = bitcast [1024 x i32]* %arr to i8*
-  call void @llvm.lifetime.end(i64 4096, i8* %1) #1
+  call void @llvm.lifetime.end.p0i8(i64 4096, i8* %1) #1
   %arrayidx = getelementptr inbounds i32, i32* %d, i64 %indvars.iv
   %2 = load i32, i32* %arrayidx, align 8
   store i32 100, i32* %arrayidx, align 8
-  call void @llvm.lifetime.start(i64 4096, i8* %1) #1
+  call void @llvm.lifetime.start.p0i8(i64 4096, i8* %1) #1
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp ne i32 %lftr.wideiv, 128
   br i1 %exitcond, label %for.body, label %for.end
 
 for.end:
-  call void @llvm.lifetime.end(i64 4096, i8* %0) #1
+  call void @llvm.lifetime.end.p0i8(i64 4096, i8* %0) #1
   ret void
 }
 
@@ -77,11 +77,11 @@ for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = getelementptr [1024 x i32], [1024 x i32]* %arr, i32 0, i64 %indvars.iv
   %1 = bitcast [1024 x i32]* %arr to i8*
-  call void @llvm.lifetime.end(i64 4096, i8* %1) #1
+  call void @llvm.lifetime.end.p0i8(i64 4096, i8* %1) #1
   %arrayidx = getelementptr inbounds i32, i32* %d, i64 %indvars.iv
   %2 = load i32, i32* %arrayidx, align 8
   store i32 100, i32* %arrayidx, align 8
-  call void @llvm.lifetime.start(i64 4096, i8* %1) #1
+  call void @llvm.lifetime.start.p0i8(i64 4096, i8* %1) #1
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp ne i32 %lftr.wideiv, 128
@@ -91,6 +91,6 @@ for.end:
   ret void
 }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1

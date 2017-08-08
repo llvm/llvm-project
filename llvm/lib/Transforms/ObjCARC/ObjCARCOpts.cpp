@@ -24,10 +24,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "ObjCARC.h"
 #include "ARCRuntimeEntryPoints.h"
 #include "BlotMapVector.h"
 #include "DependencyAnalysis.h"
+#include "ObjCARC.h"
 #include "ProvenanceAnalysis.h"
 #include "PtrState.h"
 #include "llvm/ADT/DenseMap.h"
@@ -53,6 +53,11 @@ using namespace llvm::objcarc;
 /// \brief This is similar to GetRCIdentityRoot but it stops as soon
 /// as it finds a value with multiple uses.
 static const Value *FindSingleUseIdentifiedObject(const Value *Arg) {
+  // ConstantData (like ConstantPointerNull and UndefValue) is used across
+  // modules.  It's never a single-use value.
+  if (isa<ConstantData>(Arg))
+    return nullptr;
+
   if (Arg->hasOneUse()) {
     if (const BitCastInst *BC = dyn_cast<BitCastInst>(Arg))
       return FindSingleUseIdentifiedObject(BC->getOperand(0));
@@ -79,41 +84,6 @@ static const Value *FindSingleUseIdentifiedObject(const Value *Arg) {
 
   return nullptr;
 }
-
-/// This is a wrapper around getUnderlyingObjCPtr along the lines of
-/// GetUnderlyingObjects except that it returns early when it sees the first
-/// alloca.
-static inline bool AreAnyUnderlyingObjectsAnAlloca(const Value *V,
-                                                   const DataLayout &DL) {
-  SmallPtrSet<const Value *, 4> Visited;
-  SmallVector<const Value *, 4> Worklist;
-  Worklist.push_back(V);
-  do {
-    const Value *P = Worklist.pop_back_val();
-    P = GetUnderlyingObjCPtr(P, DL);
-
-    if (isa<AllocaInst>(P))
-      return true;
-
-    if (!Visited.insert(P).second)
-      continue;
-
-    if (const SelectInst *SI = dyn_cast<const SelectInst>(P)) {
-      Worklist.push_back(SI->getTrueValue());
-      Worklist.push_back(SI->getFalseValue());
-      continue;
-    }
-
-    if (const PHINode *PN = dyn_cast<const PHINode>(P)) {
-      for (Value *IncValue : PN->incoming_values())
-        Worklist.push_back(IncValue);
-      continue;
-    }
-  } while (!Worklist.empty());
-
-  return false;
-}
-
 
 /// @}
 ///
@@ -476,9 +446,6 @@ namespace {
     /// MDKind identifiers.
     ARCMDKindCache MDKindCache;
 
-    // This is used to track if a pointer is stored into an alloca.
-    DenseSet<const Value *> MultiOwnersSet;
-
     /// A flag indicating whether this optimization pass should run.
     bool Run;
 
@@ -519,8 +486,7 @@ namespace {
     PairUpRetainsAndReleases(DenseMap<const BasicBlock *, BBState> &BBStates,
                              BlotMapVector<Value *, RRInfo> &Retains,
                              DenseMap<Value *, RRInfo> &Releases, Module *M,
-                             SmallVectorImpl<Instruction *> &NewRetains,
-                             SmallVectorImpl<Instruction *> &NewReleases,
+                             Instruction * Retain,
                              SmallVectorImpl<Instruction *> &DeadInsts,
                              RRInfo &RetainsToMove, RRInfo &ReleasesToMove,
                              Value *Arg, bool KnownSafe,
@@ -644,6 +610,12 @@ void ObjCARCOpt::OptimizeAutoreleaseRVCall(Function &F,
                                            ARCInstKind &Class) {
   // Check for a return of the pointer value.
   const Value *Ptr = GetArgRCIdentityRoot(AutoreleaseRV);
+
+  // If the argument is ConstantPointerNull or UndefValue, its other users
+  // aren't actually interesting to look at.
+  if (isa<ConstantData>(Ptr))
+    return;
+
   SmallVector<const Value *, 2> Users;
   Users.push_back(Ptr);
   do {
@@ -889,6 +861,7 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
                            Inst->getParent(), Inst,
                            DependingInstructions, Visited, PA);
           break;
+        case ARCInstKind::ClaimRV:
         case ARCInstKind::RetainRV:
         case ARCInstKind::AutoreleaseRV:
           // Don't move these; the RV optimization depends on the autoreleaseRV
@@ -1143,29 +1116,6 @@ bool ObjCARCOpt::VisitInstructionBottomUp(
   case ARCInstKind::None:
     // These are irrelevant.
     return NestingDetected;
-  case ARCInstKind::User:
-    // If we have a store into an alloca of a pointer we are tracking, the
-    // pointer has multiple owners implying that we must be more conservative.
-    //
-    // This comes up in the context of a pointer being ``KnownSafe''. In the
-    // presence of a block being initialized, the frontend will emit the
-    // objc_retain on the original pointer and the release on the pointer loaded
-    // from the alloca. The optimizer will through the provenance analysis
-    // realize that the two are related, but since we only require KnownSafe in
-    // one direction, will match the inner retain on the original pointer with
-    // the guard release on the original pointer. This is fixed by ensuring that
-    // in the presence of allocas we only unconditionally remove pointers if
-    // both our retain and our release are KnownSafe.
-    if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
-      const DataLayout &DL = BB->getModule()->getDataLayout();
-      if (AreAnyUnderlyingObjectsAnAlloca(SI->getPointerOperand(), DL)) {
-        auto I = MyStates.findPtrBottomUpState(
-            GetRCIdentityRoot(SI->getValueOperand()));
-        if (I != MyStates.bottom_up_ptr_end())
-          MultiOwnersSet.insert(I->first);
-      }
-    }
-    break;
   default:
     break;
   }
@@ -1459,17 +1409,13 @@ bool ObjCARCOpt::Visit(Function &F,
 
   // Use reverse-postorder on the reverse CFG for bottom-up.
   bool BottomUpNestingDetected = false;
-  for (SmallVectorImpl<BasicBlock *>::const_reverse_iterator I =
-       ReverseCFGPostOrder.rbegin(), E = ReverseCFGPostOrder.rend();
-       I != E; ++I)
-    BottomUpNestingDetected |= VisitBottomUp(*I, BBStates, Retains);
+  for (BasicBlock *BB : reverse(ReverseCFGPostOrder))
+    BottomUpNestingDetected |= VisitBottomUp(BB, BBStates, Retains);
 
   // Use reverse-postorder for top-down.
   bool TopDownNestingDetected = false;
-  for (SmallVectorImpl<BasicBlock *>::const_reverse_iterator I =
-       PostOrder.rbegin(), E = PostOrder.rend();
-       I != E; ++I)
-    TopDownNestingDetected |= VisitTopDown(*I, BBStates, Releases);
+  for (BasicBlock *BB : reverse(PostOrder))
+    TopDownNestingDetected |= VisitTopDown(BB, BBStates, Releases);
 
   return TopDownNestingDetected && BottomUpNestingDetected;
 }
@@ -1532,8 +1478,7 @@ bool ObjCARCOpt::PairUpRetainsAndReleases(
     DenseMap<const BasicBlock *, BBState> &BBStates,
     BlotMapVector<Value *, RRInfo> &Retains,
     DenseMap<Value *, RRInfo> &Releases, Module *M,
-    SmallVectorImpl<Instruction *> &NewRetains,
-    SmallVectorImpl<Instruction *> &NewReleases,
+    Instruction *Retain,
     SmallVectorImpl<Instruction *> &DeadInsts, RRInfo &RetainsToMove,
     RRInfo &ReleasesToMove, Value *Arg, bool KnownSafe,
     bool &AnyPairsCompletelyEliminated) {
@@ -1541,7 +1486,6 @@ bool ObjCARCOpt::PairUpRetainsAndReleases(
   // is already incremented, we can similarly ignore possible decrements unless
   // we are dealing with a retainable object with multiple provenance sources.
   bool KnownSafeTD = true, KnownSafeBU = true;
-  bool MultipleOwners = false;
   bool CFGHazardAfflicted = false;
 
   // Connect the dots between the top-down-collected RetainsToMove and
@@ -1553,16 +1497,13 @@ bool ObjCARCOpt::PairUpRetainsAndReleases(
   unsigned OldCount = 0;
   unsigned NewCount = 0;
   bool FirstRelease = true;
-  for (;;) {
-    for (SmallVectorImpl<Instruction *>::const_iterator
-           NI = NewRetains.begin(), NE = NewRetains.end(); NI != NE; ++NI) {
-      Instruction *NewRetain = *NI;
+  for (SmallVector<Instruction *, 4> NewRetains{Retain};;) {
+    SmallVector<Instruction *, 4> NewReleases;
+    for (Instruction *NewRetain : NewRetains) {
       auto It = Retains.find(NewRetain);
       assert(It != Retains.end());
       const RRInfo &NewRetainRRI = It->second;
       KnownSafeTD &= NewRetainRRI.KnownSafe;
-      MultipleOwners =
-        MultipleOwners || MultiOwnersSet.count(GetArgRCIdentityRoot(NewRetain));
       for (Instruction *NewRetainRelease : NewRetainRRI.Calls) {
         auto Jt = Releases.find(NewRetainRelease);
         if (Jt == Releases.end())
@@ -1630,9 +1571,7 @@ bool ObjCARCOpt::PairUpRetainsAndReleases(
     if (NewReleases.empty()) break;
 
     // Back the other way.
-    for (SmallVectorImpl<Instruction *>::const_iterator
-           NI = NewReleases.begin(), NE = NewReleases.end(); NI != NE; ++NI) {
-      Instruction *NewRelease = *NI;
+    for (Instruction *NewRelease : NewReleases) {
       auto It = Releases.find(NewRelease);
       assert(It != Releases.end());
       const RRInfo &NewReleaseRRI = It->second;
@@ -1687,7 +1626,6 @@ bool ObjCARCOpt::PairUpRetainsAndReleases(
         }
       }
     }
-    NewReleases.clear();
     if (NewRetains.empty()) break;
   }
 
@@ -1741,10 +1679,6 @@ bool ObjCARCOpt::PerformCodePlacement(
   DEBUG(dbgs() << "\n== ObjCARCOpt::PerformCodePlacement ==\n");
 
   bool AnyPairsCompletelyEliminated = false;
-  RRInfo RetainsToMove;
-  RRInfo ReleasesToMove;
-  SmallVector<Instruction *, 4> NewRetains;
-  SmallVector<Instruction *, 4> NewReleases;
   SmallVector<Instruction *, 8> DeadInsts;
 
   // Visit each retain.
@@ -1776,9 +1710,10 @@ bool ObjCARCOpt::PerformCodePlacement(
 
     // Connect the dots between the top-down-collected RetainsToMove and
     // bottom-up-collected ReleasesToMove to form sets of related calls.
-    NewRetains.push_back(Retain);
+    RRInfo RetainsToMove, ReleasesToMove;
+
     bool PerformMoveCalls = PairUpRetainsAndReleases(
-        BBStates, Retains, Releases, M, NewRetains, NewReleases, DeadInsts,
+        BBStates, Retains, Releases, M, Retain, DeadInsts,
         RetainsToMove, ReleasesToMove, Arg, KnownSafe,
         AnyPairsCompletelyEliminated);
 
@@ -1788,12 +1723,6 @@ bool ObjCARCOpt::PerformCodePlacement(
       MoveCalls(Arg, RetainsToMove, ReleasesToMove,
                 Retains, Releases, DeadInsts, M);
     }
-
-    // Clean up state for next retain.
-    NewReleases.clear();
-    NewRetains.clear();
-    RetainsToMove.clear();
-    ReleasesToMove.clear();
   }
 
   // Now that we're done moving everything, we can delete the newly dead
@@ -1983,9 +1912,6 @@ bool ObjCARCOpt::OptimizeSequences(Function &F) {
                                                            Releases,
                                                            F.getParent());
 
-  // Cleanup.
-  MultiOwnersSet.clear();
-
   return AnyPairsCompletelyEliminated && NestingDetected;
 }
 
@@ -2010,10 +1936,7 @@ HasSafePathToPredecessorCall(const Value *Arg, Instruction *Retain,
 
   // Check that the call is a regular call.
   ARCInstKind Class = GetBasicARCInstKind(Call);
-  if (Class != ARCInstKind::CallOrUser && Class != ARCInstKind::Call)
-    return false;
-
-  return true;
+  return Class == ARCInstKind::CallOrUser || Class == ARCInstKind::Call;
 }
 
 /// Find a dependent retain that precedes the given autorelease for which there
@@ -2085,11 +2008,10 @@ void ObjCARCOpt::OptimizeReturns(Function &F) {
   SmallPtrSet<const BasicBlock *, 4> Visited;
   for (BasicBlock &BB: F) {
     ReturnInst *Ret = dyn_cast<ReturnInst>(&BB.back());
-
-    DEBUG(dbgs() << "Visiting: " << *Ret << "\n");
-
     if (!Ret)
       continue;
+
+    DEBUG(dbgs() << "Visiting: " << *Ret << "\n");
 
     const Value *Arg = GetRCIdentityRoot(Ret->getOperand(0));
 

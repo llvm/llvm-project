@@ -14,11 +14,11 @@ T tmain(T argc) {
 #pragma omp taskwait
   return a + argc;
 }
+// CHECK:      static T a;
+// CHECK-NEXT: #pragma omp taskwait
 // CHECK:      static int a;
 // CHECK-NEXT: #pragma omp taskwait
 // CHECK:      static char a;
-// CHECK-NEXT: #pragma omp taskwait
-// CHECK:      static T a;
 // CHECK-NEXT: #pragma omp taskwait
 
 int main(int argc, char **argv) {

@@ -91,6 +91,9 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::LongDouble:
     ID = PREDEF_TYPE_LONGDOUBLE_ID;
     break;
+  case BuiltinType::Float128:
+    ID = PREDEF_TYPE_FLOAT128_ID;
+    break;
   case BuiltinType::NullPtr:
     ID = PREDEF_TYPE_NULLPTR_ID;
     break;
@@ -127,42 +130,11 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::ObjCSel:
     ID = PREDEF_TYPE_OBJC_SEL;
     break;
-  case BuiltinType::OCLImage1d:
-    ID = PREDEF_TYPE_IMAGE1D_ID;
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+  case BuiltinType::Id: \
+    ID = PREDEF_TYPE_##Id##_ID; \
     break;
-  case BuiltinType::OCLImage1dArray:
-    ID = PREDEF_TYPE_IMAGE1D_ARR_ID;
-    break;
-  case BuiltinType::OCLImage1dBuffer:
-    ID = PREDEF_TYPE_IMAGE1D_BUFF_ID;
-    break;
-  case BuiltinType::OCLImage2d:
-    ID = PREDEF_TYPE_IMAGE2D_ID;
-    break;
-  case BuiltinType::OCLImage2dArray:
-    ID = PREDEF_TYPE_IMAGE2D_ARR_ID;
-    break;
-  case BuiltinType::OCLImage2dDepth:
-    ID = PREDEF_TYPE_IMAGE2D_DEP_ID;
-    break;
-  case BuiltinType::OCLImage2dArrayDepth:
-    ID = PREDEF_TYPE_IMAGE2D_ARR_DEP_ID;
-    break;
-  case BuiltinType::OCLImage2dMSAA:
-    ID = PREDEF_TYPE_IMAGE2D_MSAA_ID;
-    break;
-  case BuiltinType::OCLImage2dArrayMSAA:
-    ID = PREDEF_TYPE_IMAGE2D_ARR_MSAA_ID;
-    break;
-  case BuiltinType::OCLImage2dMSAADepth:
-    ID = PREDEF_TYPE_IMAGE2D_MSAA_DEP_ID;
-    break;
-  case BuiltinType::OCLImage2dArrayMSAADepth:
-    ID = PREDEF_TYPE_IMAGE2D_ARR_MSAA_DEPTH_ID;
-    break;
-  case BuiltinType::OCLImage3d:
-    ID = PREDEF_TYPE_IMAGE3D_ID;
-    break;
+#include "clang/Basic/OpenCLImageTypes.def"
   case BuiltinType::OCLSampler:
     ID = PREDEF_TYPE_SAMPLER_ID;
     break;
@@ -174,9 +146,6 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
     break;
   case BuiltinType::OCLQueue:
     ID = PREDEF_TYPE_QUEUE_ID;
-    break;
-  case BuiltinType::OCLNDRange:
-    ID = PREDEF_TYPE_NDRANGE_ID;
     break;
   case BuiltinType::OCLReserveID:
     ID = PREDEF_TYPE_RESERVE_ID_ID;
@@ -211,6 +180,7 @@ serialization::getDefinitiveDeclContext(const DeclContext *DC) {
   case Decl::ExternCContext:
   case Decl::Namespace:
   case Decl::LinkageSpec:
+  case Decl::Export:
     return nullptr;
 
   // C/C++ tag types can only be defined in one place.
@@ -281,11 +251,13 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::VarTemplateSpecialization:
   case Decl::VarTemplatePartialSpecialization:
   case Decl::Function:
+  case Decl::CXXDeductionGuide:
   case Decl::CXXMethod:
   case Decl::CXXConstructor:
   case Decl::CXXDestructor:
   case Decl::CXXConversion:
   case Decl::UsingShadow:
+  case Decl::ConstructorUsingShadow:
   case Decl::Var:
   case Decl::FunctionTemplate:
   case Decl::ClassTemplate:
@@ -311,6 +283,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::NonTypeTemplateParm:
   case Decl::TemplateTemplateParm:
   case Decl::Using:
+  case Decl::UsingPack:
   case Decl::ObjCMethod:
   case Decl::ObjCCategory:
   case Decl::ObjCCategoryImpl:
@@ -318,7 +291,10 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::ObjCProperty:
   case Decl::ObjCCompatibleAlias:
   case Decl::LinkageSpec:
+  case Decl::Export:
   case Decl::ObjCPropertyImpl:
+  case Decl::PragmaComment:
+  case Decl::PragmaDetectMismatch:
   case Decl::FileScopeAsm:
   case Decl::AccessSpec:
   case Decl::Friend:
@@ -329,7 +305,11 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::ClassScopeFunctionSpecialization:
   case Decl::Import:
   case Decl::OMPThreadPrivate:
+  case Decl::OMPCapturedExpr:
+  case Decl::OMPDeclareReduction:
   case Decl::BuiltinTemplate:
+  case Decl::Decomposition:
+  case Decl::Binding:
     return false;
 
   // These indirectly derive from Redeclarable<T> but are not actually

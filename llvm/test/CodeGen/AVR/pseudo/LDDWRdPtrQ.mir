@@ -1,0 +1,25 @@
+# RUN: llc -O0  %s -o - -march=avr | FileCheck %s
+
+# This test checks the expansion of the 16-bit 'LDDWRdPtrQ' pseudo instruction.
+
+--- |
+  target triple = "avr--"
+  define void @test_lddwrdptrq() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_lddwrdptrq
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test_lddwrdptrq
+
+    ; CHECK:      ldd     r30, Y+10
+    ; CHECK-NEXT: ldd     r31, Y+11
+
+    early-clobber %r31r30 = LDDWRdPtrQ undef %r29r28, 10
+...

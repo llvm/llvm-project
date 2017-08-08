@@ -7,6 +7,7 @@ RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-i386     | FileChec
 RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-x86_64   | FileCheck %s -check-prefix ELF-64
 RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-aarch64  | FileCheck %s -check-prefix ELF-AARCH64
 RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-arm      | FileCheck %s -check-prefix ELF-ARM
+RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-lanai    | FileCheck %s -check-prefix ELF-LANAI
 RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-mips     | FileCheck %s -check-prefix ELF-MIPS
 RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-mips64el | FileCheck %s -check-prefix ELF-MIPS64EL
 RUN: llvm-readobj -r -expand-relocs %p/Inputs/relocs.obj.elf-ppc64    | FileCheck %s -check-prefix ELF-PPC64
@@ -252,8 +253,8 @@ ELF-AARCH64: Type: R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC (559)
 ELF-AARCH64: Type: R_AARCH64_TLSDESC_LD_PREL19 (560)
 ELF-AARCH64: Type: R_AARCH64_TLSDESC_ADR_PREL21 (561)
 ELF-AARCH64: Type: R_AARCH64_TLSDESC_ADR_PAGE21 (562)
-ELF-AARCH64: Type: R_AARCH64_TLSDESC_LD64_LO12_NC (563)
-ELF-AARCH64: Type: R_AARCH64_TLSDESC_ADD_LO12_NC (564)
+ELF-AARCH64: Type: R_AARCH64_TLSDESC_LD64_LO12 (563)
+ELF-AARCH64: Type: R_AARCH64_TLSDESC_ADD_LO12 (564)
 ELF-AARCH64: Type: R_AARCH64_TLSDESC_OFF_G1 (565)
 ELF-AARCH64: Type: R_AARCH64_TLSDESC_OFF_G0_NC (566)
 ELF-AARCH64: Type: R_AARCH64_TLSDESC_LDR (567)
@@ -404,6 +405,14 @@ ELF-ARM: Type: R_ARM_ME_TOO (128)
 ELF-ARM: Type: R_ARM_THM_TLS_DESCSEQ16 (129)
 ELF-ARM: Type: R_ARM_THM_TLS_DESCSEQ32 (130)
 ELF-ARM: Type: R_ARM_IRELATIVE (160)
+
+ELF-LANAI: Type: R_LANAI_NONE (0)
+ELF-LANAI: Type: R_LANAI_21 (1)
+ELF-LANAI: Type: R_LANAI_21_F (2)
+ELF-LANAI: Type: R_LANAI_25 (3)
+ELF-LANAI: Type: R_LANAI_32 (4)
+ELF-LANAI: Type: R_LANAI_HI16 (5)
+ELF-LANAI: Type: R_LANAI_LO16 (6)
 
 ELF-MIPS: Type: R_MIPS_NONE (0)
 ELF-MIPS: Type: R_MIPS_16 (1)

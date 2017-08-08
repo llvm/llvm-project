@@ -1,0 +1,92 @@
+//===--- BuiltinsX86_64.def - X86-64 Builtin function database --*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the X86-64-specific builtin function database. Users of
+// this file must define the BUILTIN macro to make use of this information.
+//
+//===----------------------------------------------------------------------===//
+
+// The format of this database matches clang/Basic/Builtins.def.
+
+#if defined(BUILTIN) && !defined(TARGET_BUILTIN)
+#   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
+
+#if defined(BUILTIN) && !defined(TARGET_HEADER_BUILTIN)
+#  define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANG, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
+
+TARGET_HEADER_BUILTIN(_BitScanForward64, "UcUNi*ULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_BitScanReverse64, "UcUNi*ULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(__mulh,  "LLiLLiLLi",    "nch", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__umulh, "ULLiULLiULLi", "nch", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_mul128, "LLiLLiLLiLLi*",      "nh",   "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_umul128, "ULLiULLiULLiULLi*", "nh",   "intrin.h", ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(__faststorefence, "v", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(_InterlockedAnd64,         "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedDecrement64,   "LLiLLiD*",    "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchange64,    "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangeAdd64, "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangeSub64, "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedIncrement64,   "LLiLLiD*",    "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedOr64,          "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedXor64,         "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+
+TARGET_BUILTIN(__builtin_ia32_readeflags_u64, "ULLi", "n", "")
+TARGET_BUILTIN(__builtin_ia32_writeeflags_u64, "vULLi", "n", "")
+TARGET_BUILTIN(__builtin_ia32_cvtss2si64, "LLiV4f", "", "sse")
+TARGET_BUILTIN(__builtin_ia32_cvttss2si64, "LLiV4f", "", "sse")
+TARGET_BUILTIN(__builtin_ia32_cvtsd2si64, "LLiV2d", "", "sse2")
+TARGET_BUILTIN(__builtin_ia32_cvttsd2si64, "LLiV2d", "", "sse2")
+TARGET_BUILTIN(__builtin_ia32_crc32di, "ULLiULLiULLi", "", "sse4.2")
+TARGET_BUILTIN(__builtin_ia32_rdfsbase64, "ULLi", "", "fsgsbase")
+TARGET_BUILTIN(__builtin_ia32_rdgsbase64, "ULLi", "", "fsgsbase")
+TARGET_BUILTIN(__builtin_ia32_wrfsbase64, "vULLi", "", "fsgsbase")
+TARGET_BUILTIN(__builtin_ia32_wrgsbase64, "vULLi", "", "fsgsbase")
+TARGET_BUILTIN(__builtin_ia32_fxrstor64, "vv*", "", "fxsr")
+TARGET_BUILTIN(__builtin_ia32_fxsave64, "vv*", "", "fxsr")
+TARGET_BUILTIN(__builtin_ia32_xsave64, "vv*ULLi", "", "xsave")
+TARGET_BUILTIN(__builtin_ia32_xrstor64, "vv*ULLi", "", "xsave")
+TARGET_BUILTIN(__builtin_ia32_xsaveopt64, "vv*ULLi", "", "xsaveopt")
+TARGET_BUILTIN(__builtin_ia32_xrstors64, "vv*ULLi", "", "xsaves")
+TARGET_BUILTIN(__builtin_ia32_xsavec64, "vv*ULLi", "", "xsavec")
+TARGET_BUILTIN(__builtin_ia32_xsaves64, "vv*ULLi", "", "xsaves")
+TARGET_BUILTIN(__builtin_ia32_addcarryx_u64, "UcUcULLiULLiULLi*", "", "adx")
+TARGET_BUILTIN(__builtin_ia32_addcarry_u64, "UcUcULLiULLiULLi*", "", "")
+TARGET_BUILTIN(__builtin_ia32_subborrow_u64, "UcUcULLiULLiULLi*", "", "")
+TARGET_BUILTIN(__builtin_ia32_rdseed64_step, "UiULLi*", "", "rdseed")
+TARGET_BUILTIN(__builtin_ia32_bextr_u64, "ULLiULLiULLi", "", "bmi")
+TARGET_BUILTIN(__builtin_ia32_bzhi_di, "ULLiULLiULLi", "", "bmi2")
+TARGET_BUILTIN(__builtin_ia32_pdep_di, "ULLiULLiULLi", "", "bmi2")
+TARGET_BUILTIN(__builtin_ia32_pext_di, "ULLiULLiULLi", "", "bmi2")
+TARGET_BUILTIN(__builtin_ia32_bextri_u64, "ULLiULLiIULLi", "", "tbm")
+TARGET_BUILTIN(__builtin_ia32_lwpins64, "UcULLiUiUi", "", "lwp")
+TARGET_BUILTIN(__builtin_ia32_lwpval64, "vULLiUiUi", "", "lwp")
+TARGET_BUILTIN(__builtin_ia32_pbroadcastq512_gpr_mask, "V8LLiLLiV8LLiUc", "", "avx512f")
+TARGET_BUILTIN(__builtin_ia32_pbroadcastq128_gpr_mask, "V2LLiULLiV2LLiUc","","avx512vl")
+TARGET_BUILTIN(__builtin_ia32_pbroadcastq256_gpr_mask, "V4LLiULLiV4LLiUc","","avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vcvtsd2si64, "LLiV2dIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_vcvtsd2usi64, "ULLiV2dIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_vcvtss2si64, "LLiV4fIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_vcvtss2usi64, "ULLiV4fIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_vcvttsd2si64, "LLiV2dIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_vcvttsd2usi64, "ULLiV2dIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_vcvttss2si64, "LLiV4fIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_vcvttss2usi64, "ULLiV4fIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_cvtsi2sd64, "V2dV2dLLiIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_cvtsi2ss64, "V4fV4fLLiIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_cvtusi2sd64, "V2dV2dULLiIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_cvtusi2ss64, "V4fV4fULLiIi","","avx512f")
+
+#undef BUILTIN
+#undef TARGET_BUILTIN
+#undef TARGET_HEADER_BUILTIN

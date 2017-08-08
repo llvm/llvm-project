@@ -162,8 +162,9 @@ unsigned PPCDispatchGroupSBHazardRecognizer::PreEmitNoops(SUnit *SU) {
     unsigned Directive =
         DAG->MF.getSubtarget<PPCSubtarget>().getDarwinDirective();
     // If we're using a special group-terminating nop, then we need only one.
+    // FIXME: the same for P9 as previous gen until POWER9 scheduling is ready
     if (Directive == PPC::DIR_PWR6 || Directive == PPC::DIR_PWR7 ||
-        Directive == PPC::DIR_PWR8 )
+        Directive == PPC::DIR_PWR8 || Directive == PPC::DIR_PWR9)
       return 1;
 
     return 5 - CurSlots;
@@ -223,8 +224,10 @@ void PPCDispatchGroupSBHazardRecognizer::EmitNoop() {
       DAG->MF.getSubtarget<PPCSubtarget>().getDarwinDirective();
   // If the group has now filled all of its slots, or if we're using a special
   // group-terminating nop, the group is complete.
+  // FIXME: the same for P9 as previous gen until POWER9 scheduling is ready
   if (Directive == PPC::DIR_PWR6 || Directive == PPC::DIR_PWR7 ||
-      Directive == PPC::DIR_PWR8 || CurSlots == 6)  {
+      Directive == PPC::DIR_PWR8 || Directive == PPC::DIR_PWR9 ||
+      CurSlots == 6) {
     CurGroup.clear();
     CurSlots = CurBranches = 0;
   } else {

@@ -1,9 +1,9 @@
-; RUN: llc < %s -march=mipsel   -mcpu=mips32   | FileCheck %s -check-prefix=ALL -check-prefix=32
-; RUN: llc < %s -march=mipsel   -mcpu=mips32r2 | FileCheck %s -check-prefix=ALL -check-prefix=32R2
-; RUN: llc < %s -march=mipsel   -mcpu=mips32r6 | FileCheck %s -check-prefix=ALL -check-prefix=32R6
-; RUN: llc < %s -march=mips64el -mcpu=mips64   | FileCheck %s -check-prefix=ALL -check-prefix=64
-; RUN: llc < %s -march=mips64el -mcpu=mips64r2 | FileCheck %s -check-prefix=ALL -check-prefix=64R2
-; RUN: llc < %s -march=mips64el -mcpu=mips64r6 | FileCheck %s -check-prefix=ALL -check-prefix=64R6
+; RUN: llc < %s -march=mipsel   -mcpu=mips32   -relocation-model=pic | FileCheck %s -check-prefixes=ALL,32
+; RUN: llc < %s -march=mipsel   -mcpu=mips32r2 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,32R2
+; RUN: llc < %s -march=mipsel   -mcpu=mips32r6 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,32R6
+; RUN: llc < %s -march=mips64el -mcpu=mips64   -relocation-model=pic | FileCheck %s -check-prefixes=ALL,64
+; RUN: llc < %s -march=mips64el -mcpu=mips64r2 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,64R2
+; RUN: llc < %s -march=mips64el -mcpu=mips64r6 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,64R6
 
 @d2 = external global double
 @d3 = external global double
@@ -140,9 +140,10 @@ entry:
 ; 32R2-DAG:      mtc1 $6, $[[F1:f0]]
 ; 32R2:          movn.s $[[F1]], $[[F0]], $4
 
+; 32R6:          sltu $[[T0:[0-9]+]], $zero, $4
+; 32R6:          negu $[[T0]], $[[T0]]
 ; 32R6-DAG:      mtc1 $5, $[[F0:f[0-9]+]]
 ; 32R6-DAG:      mtc1 $6, $[[F1:f[0-9]+]]
-; 32R6:          sltu $[[T0:[0-9]+]], $zero, $4
 ; 32R6:          mtc1 $[[T0]], $[[CC:f0]]
 ; 32R6:          sel.s $[[CC]], $[[F1]], $[[F0]]
 

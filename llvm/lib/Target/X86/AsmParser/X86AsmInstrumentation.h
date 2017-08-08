@@ -1,4 +1,4 @@
-//===- X86AsmInstrumentation.h - Instrument X86 inline assembly *- C++ -*-===//
+//===- X86AsmInstrumentation.h - Instrument X86 inline assembly -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,7 +11,6 @@
 #define LLVM_LIB_TARGET_X86_ASMPARSER_X86ASMINSTRUMENTATION_H
 
 #include "llvm/ADT/SmallVector.h"
-
 #include <memory>
 
 namespace llvm {
@@ -23,12 +22,12 @@ class MCParsedAsmOperand;
 class MCStreamer;
 class MCSubtargetInfo;
 class MCTargetOptions;
-
 class X86AsmInstrumentation;
 
 X86AsmInstrumentation *
 CreateX86AsmInstrumentation(const MCTargetOptions &MCOptions,
-                            const MCContext &Ctx, const MCSubtargetInfo &STI);
+                            const MCContext &Ctx,
+                            const MCSubtargetInfo *&STI);
 
 class X86AsmInstrumentation {
 public:
@@ -42,25 +41,26 @@ public:
   // Tries to instrument and emit instruction.
   virtual void InstrumentAndEmitInstruction(
       const MCInst &Inst,
-      SmallVectorImpl<std::unique_ptr<MCParsedAsmOperand> > &Operands,
+      SmallVectorImpl<std::unique_ptr<MCParsedAsmOperand>> &Operands,
       MCContext &Ctx, const MCInstrInfo &MII, MCStreamer &Out);
 
 protected:
   friend X86AsmInstrumentation *
   CreateX86AsmInstrumentation(const MCTargetOptions &MCOptions,
-                              const MCContext &Ctx, const MCSubtargetInfo &STI);
+                              const MCContext &Ctx,
+                              const MCSubtargetInfo *&STI);
 
-  X86AsmInstrumentation(const MCSubtargetInfo &STI);
+  X86AsmInstrumentation(const MCSubtargetInfo *&STI);
 
   unsigned GetFrameRegGeneric(const MCContext &Ctx, MCStreamer &Out);
 
   void EmitInstruction(MCStreamer &Out, const MCInst &Inst);
 
-  const MCSubtargetInfo &STI;
+  const MCSubtargetInfo *&STI;
 
-  unsigned InitialFrameReg;
+  unsigned InitialFrameReg = 0;
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_X86_ASMPARSER_X86ASMINSTRUMENTATION_H

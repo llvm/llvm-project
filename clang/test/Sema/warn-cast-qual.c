@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -Wcast-qual -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -x c++ -fsyntax-only -Wcast-qual -verify %s
 
 #include <stdint.h>
 
@@ -26,4 +27,34 @@ void foo() {
 
   const char **charptrptrc;
   char **charptrptr = (char **)charptrptrc; // expected-warning {{cast from 'const char *' to 'char *' drops const qualifier}}
+
+  const char *constcharptr;
+  char *charptr = (char *)constcharptr; // expected-warning {{cast from 'const char *' to 'char *' drops const qualifier}}
+  const char *constcharptr2 = (char *)constcharptr; // expected-warning {{cast from 'const char *' to 'char *' drops const qualifier}}
+  const char *charptr2 = (char *)charptr; // no warning
+}
+
+void bar_0() {
+  struct C {
+    const int a;
+    int b;
+  };
+
+  const struct C S = {0, 0};
+
+  *(int *)(&S.a) = 0; // expected-warning {{cast from 'const int *' to 'int *' drops const qualifier}}
+  *(int *)(&S.b) = 0; // expected-warning {{cast from 'const int *' to 'int *' drops const qualifier}}
+}
+
+void bar_1() {
+  struct C {
+    const int a;
+    int b;
+  };
+
+  struct C S = {0, 0};
+  S.b = 0; // no warning
+
+  *(int *)(&S.a) = 0; // expected-warning {{cast from 'const int *' to 'int *' drops const qualifier}}
+  *(int *)(&S.b) = 0; // no warning
 }

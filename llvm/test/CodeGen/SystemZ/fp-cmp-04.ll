@@ -9,7 +9,7 @@ declare float @llvm.fabs.f32(float %f)
 define float @f1(float %a, float %b, float *%dest) {
 ; CHECK-LABEL: f1:
 ; CHECK: aebr %f0, %f2
-; CHECK-NEXT: je .L{{.*}}
+; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
 entry:
   %res = fadd float %a, %b
@@ -28,7 +28,7 @@ exit:
 define float @f2(float %a, float %b, float *%dest) {
 ; CHECK-LABEL: f2:
 ; CHECK: aebr %f0, %f2
-; CHECK-NEXT: jl .L{{.*}}
+; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
   %res = fadd float %a, %b
@@ -47,7 +47,7 @@ exit:
 define float @f3(float %a, float %b, float *%dest) {
 ; CHECK-LABEL: f3:
 ; CHECK: aebr %f0, %f2
-; CHECK-NEXT: jh .L{{.*}}
+; CHECK-NEXT: bhr %r14
 ; CHECK: br %r14
 entry:
   %res = fadd float %a, %b
@@ -66,7 +66,7 @@ exit:
 define float @f4(float %a, float %b, float *%dest) {
 ; CHECK-LABEL: f4:
 ; CHECK: aebr %f0, %f2
-; CHECK-NEXT: jnlh .L{{.*}}
+; CHECK-NEXT: bnlhr %r14
 ; CHECK: br %r14
 entry:
   %res = fadd float %a, %b
@@ -85,7 +85,7 @@ exit:
 define float @f5(float %a, float %b, float *%dest) {
 ; CHECK-LABEL: f5:
 ; CHECK: seb %f0, 0(%r2)
-; CHECK-NEXT: jnhe .L{{.*}}
+; CHECK-NEXT: bnher %r14
 ; CHECK: br %r14
 entry:
   %cur = load float , float *%dest
@@ -105,7 +105,7 @@ exit:
 define float @f6(float %dummy, float %a, float *%dest) {
 ; CHECK-LABEL: f6:
 ; CHECK: lpebr %f0, %f2
-; CHECK-NEXT: jh .L{{.*}}
+; CHECK-NEXT: bhr %r14
 ; CHECK: br %r14
 entry:
   %res = call float @llvm.fabs.f32(float %a)
@@ -124,7 +124,7 @@ exit:
 define float @f7(float %dummy, float %a, float *%dest) {
 ; CHECK-LABEL: f7:
 ; CHECK: lnebr %f0, %f2
-; CHECK-NEXT: jl .L{{.*}}
+; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
   %abs = call float @llvm.fabs.f32(float %a)
@@ -144,7 +144,7 @@ exit:
 define float @f8(float %dummy, float %a, float *%dest) {
 ; CHECK-LABEL: f8:
 ; CHECK: lcebr %f0, %f2
-; CHECK-NEXT: jle .L{{.*}}
+; CHECK-NEXT: bler %r14
 ; CHECK: br %r14
 entry:
   %res = fsub float -0.0, %a
@@ -164,7 +164,7 @@ define float @f9(float %a, float %b, float *%dest) {
 ; CHECK-LABEL: f9:
 ; CHECK: meebr %f0, %f2
 ; CHECK-NEXT: ltebr %f0, %f0
-; CHECK-NEXT: jlh .L{{.*}}
+; CHECK-NEXT: blhr %r14
 ; CHECK: br %r14
 entry:
   %res = fmul float %a, %b
@@ -186,7 +186,7 @@ define float @f10(float %a, float %b, float %c, float *%dest) {
 ; CHECK: aebr %f0, %f2
 ; CHECK-NEXT: debr %f0, %f4
 ; CHECK-NEXT: ltebr %f0, %f0
-; CHECK-NEXT: jne .L{{.*}}
+; CHECK-NEXT: bner %r14
 ; CHECK: br %r14
 entry:
   %add = fadd float %a, %b
@@ -210,7 +210,7 @@ define float @f11(float %a, float %b, float %c, float *%dest1, float *%dest2) {
 ; CHECK-NEXT: sebr %f4, %f0
 ; CHECK-NEXT: ste %f4, 0(%r2)
 ; CHECK-NEXT: ltebr %f0, %f0
-; CHECK-NEXT: je .L{{.*}}
+; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
 entry:
   %add = fadd float %a, %b
@@ -234,7 +234,7 @@ define float @f12(float %dummy, float %val, float *%dest) {
 ; CHECK-NEXT: #APP
 ; CHECK-NEXT: blah %f0
 ; CHECK-NEXT: #NO_APP
-; CHECK-NEXT: jl .L{{.*}}
+; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
   call void asm sideeffect "blah $0", "{f0}"(float %val)
@@ -256,7 +256,7 @@ define double @f13(double %dummy, double %val, double *%dest) {
 ; CHECK-NEXT: #APP
 ; CHECK-NEXT: blah %f0
 ; CHECK-NEXT: #NO_APP
-; CHECK-NEXT: jl .L{{.*}}
+; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
   call void asm sideeffect "blah $0", "{f0}"(double %val)
@@ -281,7 +281,7 @@ define void @f14(fp128 *%ptr1, fp128 *%ptr2) {
 ; CHECK-NEXT: mxbr
 ; CHECK-NEXT: std
 ; CHECK-NEXT: std
-; CHECK-NEXT: jl .L{{.*}}
+; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
   %val1 = load fp128 , fp128 *%ptr1
@@ -309,7 +309,7 @@ define float @f15(float %val, float %dummy, float *%dest) {
 ; CHECK-NEXT: #APP
 ; CHECK-NEXT: blah %f2
 ; CHECK-NEXT: #NO_APP
-; CHECK-NEXT: jl .L{{.*}}
+; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
   call void asm sideeffect "blah $0", "{f2}"(float %val)
@@ -332,7 +332,7 @@ define double @f16(double %val, double %dummy, double *%dest) {
 ; CHECK-NEXT: #APP
 ; CHECK-NEXT: blah %f2
 ; CHECK-NEXT: #NO_APP
-; CHECK-NEXT: jl .L{{.*}}
+; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
   call void asm sideeffect "blah $0", "{f2}"(double %val)
@@ -351,7 +351,7 @@ exit:
 define float @f17(float %a, float %b, float *%dest) {
 ; CHECK-LABEL: f17:
 ; CHECK: aebr %f0, %f2
-; CHECK-NEXT: jl .L{{.*}}
+; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
   %res = fadd float %a, %b
@@ -371,7 +371,7 @@ exit:
 define float @f18(float %dummy, float %a, float *%dest) {
 ; CHECK-LABEL: f18:
 ; CHECK: lnebr %f0, %f2
-; CHECK-NEXT: jl .L{{.*}}
+; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
   %abs = call float @llvm.fabs.f32(float %a)
@@ -391,7 +391,7 @@ exit:
 define float @f19(float %dummy, float %a, float *%dest) {
 ; CHECK-LABEL: f19:
 ; CHECK: lcebr %f0, %f2
-; CHECK-NEXT: jle .L{{.*}}
+; CHECK-NEXT: bler %r14
 ; CHECK: br %r14
 entry:
   %res = fsub float -0.0, %a

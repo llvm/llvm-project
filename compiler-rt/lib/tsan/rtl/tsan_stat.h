@@ -74,15 +74,12 @@ enum StatType {
   StatClockAcquire,
   StatClockAcquireEmpty,
   StatClockAcquireFastRelease,
-  StatClockAcquireLarge,
-  StatClockAcquireRepeat,
   StatClockAcquireFull,
   StatClockAcquiredSomething,
   // Clocks - release.
   StatClockRelease,
   StatClockReleaseResize,
-  StatClockReleaseFast1,
-  StatClockReleaseFast2,
+  StatClockReleaseFast,
   StatClockReleaseSlow,
   StatClockReleaseFull,
   StatClockReleaseAcquired,
@@ -157,6 +154,16 @@ enum StatType {
   StatAnnotatePublishMemoryRange,
   StatAnnotateUnpublishMemoryRange,
   StatAnnotateThreadName,
+  Stat__tsan_mutex_create,
+  Stat__tsan_mutex_destroy,
+  Stat__tsan_mutex_pre_lock,
+  Stat__tsan_mutex_post_lock,
+  Stat__tsan_mutex_pre_unlock,
+  Stat__tsan_mutex_post_unlock,
+  Stat__tsan_mutex_pre_signal,
+  Stat__tsan_mutex_post_signal,
+  Stat__tsan_mutex_pre_divert,
+  Stat__tsan_mutex_post_divert,
 
   // Internal mutex contentionz.
   StatMtxTotal,
@@ -173,6 +180,7 @@ enum StatType {
   StatMtxFired,
   StatMtxRacy,
   StatMtxFD,
+  StatMtxGlobalProc,
 
   // This must be the last.
   StatCnt

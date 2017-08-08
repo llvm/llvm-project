@@ -138,6 +138,109 @@ ExprInspection checks
       clang_analyzer_warnIfReached();  // no-warning
     }
 
+- void clang_analyzer_numTimesReached();
+
+  Same as above, but include the number of times this call expression
+  gets reached by the analyzer during the current analysis.
+
+  Example usage::
+
+    for (int x = 0; x < 3; ++x) {
+      clang_analyzer_numTimesReached(); // expected-warning{{3}}
+    }
+
+- void clang_analyzer_warnOnDeadSymbol(int);
+
+  Subscribe for a delayed warning when the symbol that represents the value of
+  the argument is garbage-collected by the analyzer.
+
+  When calling 'clang_analyzer_warnOnDeadSymbol(x)', if value of 'x' is a
+  symbol, then this symbol is marked by the ExprInspection checker. Then,
+  during each garbage collection run, the checker sees if the marked symbol is
+  being collected and issues the 'SYMBOL DEAD' warning if it does.
+  This way you know where exactly, up to the line of code, the symbol dies.
+
+  It is unlikely that you call this function after the symbol is already dead,
+  because the very reference to it as the function argument prevents it from
+  dying. However, if the argument is not a symbol but a concrete value,
+  no warning would be issued.
+
+  Example usage::
+
+    do {
+      int x = generate_some_integer();
+      clang_analyzer_warnOnDeadSymbol(x);
+    } while(0);  // expected-warning{{SYMBOL DEAD}}
+
+
+- void clang_analyzer_explain(a single argument of any type);
+
+  This function explains the value of its argument in a human-readable manner
+  in the warning message. You can make as many overrides of its prototype
+  in the test code as necessary to explain various integral, pointer,
+  or even record-type values. To simplify usage in C code (where overloading
+  the function declaration is not allowed), you may append an arbitrary suffix
+  to the function name, without affecting functionality.
+
+  Example usage::
+
+    void clang_analyzer_explain(int);
+    void clang_analyzer_explain(void *);
+
+    // Useful in C code
+    void clang_analyzer_explain_int(int);
+
+    void foo(int param, void *ptr) {
+      clang_analyzer_explain(param); // expected-warning{{argument 'param'}}
+      clang_analyzer_explain_int(param); // expected-warning{{argument 'param'}}
+      if (!ptr)
+        clang_analyzer_explain(ptr); // expected-warning{{memory address '0'}}
+    }
+
+- void clang_analyzer_dump(a single argument of any type);
+
+  Similar to clang_analyzer_explain, but produces a raw dump of the value,
+  same as SVal::dump().
+
+  Example usage::
+
+    void clang_analyzer_dump(int);
+    void foo(int x) {
+      clang_analyzer_dump(x); // expected-warning{{reg_$0<x>}}
+    }
+
+- size_t clang_analyzer_getExtent(void *);
+
+  This function returns the value that represents the extent of a memory region
+  pointed to by the argument. This value is often difficult to obtain otherwise,
+  because no valid code that produces this value. However, it may be useful
+  for testing purposes, to see how well does the analyzer model region extents.
+
+  Example usage::
+
+    void foo() {
+      int x, *y;
+      size_t xs = clang_analyzer_getExtent(&x);
+      clang_analyzer_explain(xs); // expected-warning{{'4'}}
+      size_t ys = clang_analyzer_getExtent(&y);
+      clang_analyzer_explain(ys); // expected-warning{{'8'}}
+    }
+
+- void clang_analyzer_printState();
+
+  Dumps the current ProgramState to the stderr. Quickly lookup the program state
+  at any execution point without ViewExplodedGraph or re-compiling the program.
+  This is not very useful for writing tests (apart from testing how ProgramState
+  gets printed), but useful for debugging tests. Also, this method doesn't
+  produce a warning, so it gets printed on the console before all other
+  ExprInspection warnings.
+
+  Example usage::
+
+    void foo() {
+      int x = 1;
+      clang_analyzer_printState(); // Read the stderr!
+    }
 
 Statistics
 ==========

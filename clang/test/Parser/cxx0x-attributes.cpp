@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 -Wc++14-compat %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 -Wc++14-compat -Wc++14-extensions -Wc++1z-extensions %s
 
 // Need std::initializer_list
 namespace std {
@@ -99,11 +99,13 @@ void fn_with_structs() {
 }
 [[]];
 struct ctordtor {
-  [[]] ctordtor();
-  [[]] ~ctordtor();
+  [[]] ctordtor [[]] () [[]];
+  ctordtor (C) [[]];
+  [[]] ~ctordtor [[]] () [[]];
 };
-[[]] ctordtor::ctordtor() {}
-[[]] ctordtor::~ctordtor() {}
+[[]] ctordtor::ctordtor [[]] () [[]] {}
+[[]] ctordtor::ctordtor (C) [[]] try {} catch (...) {}
+[[]] ctordtor::~ctordtor [[]] () [[]] {}
 extern "C++" [[]] int extern_attr;
 template <typename T> [[]] void template_attr ();
 [[]] [[]] int [[]] [[]] multi_attr [[]] [[]];
@@ -336,7 +338,6 @@ namespace {
   // expected-warning@-1 {{use of the 'deprecated' attribute is a C++14 extension}}
   [[deprecated()]] void foo();
   // expected-error@-1 {{parentheses must be omitted if 'deprecated' attribute's argument list is empty}}
-  // expected-warning@-2 {{use of the 'deprecated' attribute is a C++14 extension}}
   [[gnu::deprecated()]] void quux();
 }
 
@@ -345,6 +346,18 @@ namespace {
 #pragma pack(pop)
 deprecated
 ]] void bad();
+}
+
+int fallthru(int n) {
+  switch (n) {
+  case 0:
+    n += 5;
+    [[fallthrough]]; // expected-warning {{use of the 'fallthrough' attribute is a C++1z extension}}
+  case 1:
+    n *= 2;
+    break;
+  }
+  return n;
 }
 
 #define attr_name bitand

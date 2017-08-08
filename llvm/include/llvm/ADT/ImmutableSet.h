@@ -16,11 +16,15 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
+#include <cstdint>
 #include <functional>
+#include <iterator>
+#include <new>
 #include <vector>
 
 namespace llvm {
@@ -37,17 +41,15 @@ template <typename ImutInfo> class ImutAVLTreeGenericIterator;
 template <typename ImutInfo >
 class ImutAVLTree {
 public:
-  typedef typename ImutInfo::key_type_ref   key_type_ref;
-  typedef typename ImutInfo::value_type     value_type;
-  typedef typename ImutInfo::value_type_ref value_type_ref;
+  using key_type_ref = typename ImutInfo::key_type_ref;
+  using value_type = typename ImutInfo::value_type;
+  using value_type_ref = typename ImutInfo::value_type_ref;
+  using Factory = ImutAVLFactory<ImutInfo>;
+  using iterator = ImutAVLTreeInOrderIterator<ImutInfo>;
 
-  typedef ImutAVLFactory<ImutInfo>          Factory;
   friend class ImutAVLFactory<ImutInfo>;
   friend class ImutIntervalAVLFactory<ImutInfo>;
-
   friend class ImutAVLTreeGenericIterator<ImutInfo>;
-
-  typedef ImutAVLTreeInOrderIterator<ImutInfo>  iterator;
 
   //===----------------------------------------------------===//
   // Public Interface.
@@ -221,17 +223,17 @@ private:
   Factory *factory;
   ImutAVLTree *left;
   ImutAVLTree *right;
-  ImutAVLTree *prev;
-  ImutAVLTree *next;
+  ImutAVLTree *prev = nullptr;
+  ImutAVLTree *next = nullptr;
 
-  unsigned height         : 28;
-  unsigned IsMutable      : 1;
-  unsigned IsDigestCached : 1;
-  unsigned IsCanonicalized : 1;
+  unsigned height : 28;
+  bool IsMutable : 1;
+  bool IsDigestCached : 1;
+  bool IsCanonicalized : 1;
 
   value_type value;
-  uint32_t digest;
-  uint32_t refCount;
+  uint32_t digest = 0;
+  uint32_t refCount = 0;
 
   //===----------------------------------------------------===//
   // Internal methods (node manipulation; used by Factory).
@@ -242,9 +244,8 @@ private:
   ///   ImutAVLFactory.
   ImutAVLTree(Factory *f, ImutAVLTree* l, ImutAVLTree* r, value_type_ref v,
               unsigned height)
-    : factory(f), left(l), right(r), prev(nullptr), next(nullptr),
-      height(height), IsMutable(true), IsDigestCached(false),
-      IsCanonicalized(0), value(v), digest(0), refCount(0)
+    : factory(f), left(l), right(r), height(height), IsMutable(true),
+      IsDigestCached(false), IsCanonicalized(false), value(v)
   {
     if (left) left->retain();
     if (right) right->retain();
@@ -329,11 +330,13 @@ private:
 
 public:
   void retain() { ++refCount; }
+
   void release() {
     assert(refCount > 0);
     if (--refCount == 0)
       destroy();
   }
+
   void destroy() {
     if (left)
       left->release();
@@ -363,11 +366,11 @@ public:
 template <typename ImutInfo >
 class ImutAVLFactory {
   friend class ImutAVLTree<ImutInfo>;
-  typedef ImutAVLTree<ImutInfo> TreeTy;
-  typedef typename TreeTy::value_type_ref value_type_ref;
-  typedef typename TreeTy::key_type_ref   key_type_ref;
 
-  typedef DenseMap<unsigned, TreeTy*> CacheTy;
+  using TreeTy = ImutAVLTree<ImutInfo>;
+  using value_type_ref = typename TreeTy::value_type_ref;
+  using key_type_ref = typename TreeTy::key_type_ref;
+  using CacheTy = DenseMap<unsigned, TreeTy*>;
 
   CacheTy Cache;
   uintptr_t Allocator;
@@ -375,7 +378,7 @@ class ImutAVLFactory {
   std::vector<TreeTy*> freeNodes;
 
   bool ownsAllocator() const {
-    return Allocator & 0x1 ? false : true;
+    return (Allocator & 0x1) == 0;
   }
 
   BumpPtrAllocator& getAllocator() const {
@@ -414,7 +417,6 @@ public:
   TreeTy* getEmptyTree() const { return nullptr; }
 
 protected:
-
   //===--------------------------------------------------===//
   // A bunch of quick helper functions used for reasoning
   // about the properties of trees and their children.
@@ -649,13 +651,14 @@ class ImutAVLTreeGenericIterator
     : public std::iterator<std::bidirectional_iterator_tag,
                            ImutAVLTree<ImutInfo>> {
   SmallVector<uintptr_t,20> stack;
+
 public:
   enum VisitFlag { VisitedNone=0x0, VisitedLeft=0x1, VisitedRight=0x3,
                    Flags=0x3 };
 
-  typedef ImutAVLTree<ImutInfo> TreeTy;
+  using TreeTy = ImutAVLTree<ImutInfo>;
 
-  ImutAVLTreeGenericIterator() {}
+  ImutAVLTreeGenericIterator() = default;
   ImutAVLTreeGenericIterator(const TreeTy *Root) {
     if (Root) stack.push_back(reinterpret_cast<uintptr_t>(Root));
   }
@@ -670,7 +673,6 @@ public:
     assert(!stack.empty());
     return stack.back() & Flags;
   }
-
 
   bool atEnd() const { return stack.empty(); }
 
@@ -759,11 +761,12 @@ template <typename ImutInfo>
 class ImutAVLTreeInOrderIterator
     : public std::iterator<std::bidirectional_iterator_tag,
                            ImutAVLTree<ImutInfo>> {
-  typedef ImutAVLTreeGenericIterator<ImutInfo> InternalIteratorTy;
+  using InternalIteratorTy = ImutAVLTreeGenericIterator<ImutInfo>;
+
   InternalIteratorTy InternalItr;
 
 public:
-  typedef ImutAVLTree<ImutInfo> TreeTy;
+  using TreeTy = ImutAVLTree<ImutInfo>;
 
   ImutAVLTreeInOrderIterator(const TreeTy* Root) : InternalItr(Root) {
     if (Root)
@@ -835,8 +838,8 @@ struct ImutAVLValueIterator
 /// and generic handling of pointers is done below.
 template <typename T>
 struct ImutProfileInfo {
-  typedef const T  value_type;
-  typedef const T& value_type_ref;
+  using value_type = const T;
+  using value_type_ref = const T&;
 
   static void Profile(FoldingSetNodeID &ID, value_type_ref X) {
     FoldingSetTrait<T>::Profile(X,ID);
@@ -846,8 +849,8 @@ struct ImutProfileInfo {
 /// Profile traits for integers.
 template <typename T>
 struct ImutProfileInteger {
-  typedef const T  value_type;
-  typedef const T& value_type_ref;
+  using value_type = const T;
+  using value_type_ref = const T&;
 
   static void Profile(FoldingSetNodeID &ID, value_type_ref X) {
     ID.AddInteger(X);
@@ -873,21 +876,20 @@ PROFILE_INTEGER_INFO(unsigned long long)
 /// Profile traits for booleans.
 template <>
 struct ImutProfileInfo<bool> {
-  typedef const bool  value_type;
-  typedef const bool& value_type_ref;
+  using value_type = const bool;
+  using value_type_ref = const bool&;
 
   static void Profile(FoldingSetNodeID &ID, value_type_ref X) {
     ID.AddBoolean(X);
   }
 };
 
-
 /// Generic profile trait for pointer types.  We treat pointers as
 /// references to unique objects.
 template <typename T>
 struct ImutProfileInfo<T*> {
-  typedef const T*   value_type;
-  typedef value_type value_type_ref;
+  using value_type = const T*;
+  using value_type_ref = value_type;
 
   static void Profile(FoldingSetNodeID &ID, value_type_ref X) {
     ID.AddPointer(X);
@@ -901,18 +903,17 @@ struct ImutProfileInfo<T*> {
 //  for element profiling.
 //===----------------------------------------------------------------------===//
 
-
 /// ImutContainerInfo - Generic definition of comparison operations for
 ///   elements of immutable containers that defaults to using
 ///   std::equal_to<> and std::less<> to perform comparison of elements.
 template <typename T>
 struct ImutContainerInfo : public ImutProfileInfo<T> {
-  typedef typename ImutProfileInfo<T>::value_type      value_type;
-  typedef typename ImutProfileInfo<T>::value_type_ref  value_type_ref;
-  typedef value_type      key_type;
-  typedef value_type_ref  key_type_ref;
-  typedef bool            data_type;
-  typedef bool            data_type_ref;
+  using value_type = typename ImutProfileInfo<T>::value_type;
+  using value_type_ref = typename ImutProfileInfo<T>::value_type_ref;
+  using key_type = value_type;
+  using key_type_ref = value_type_ref;
+  using data_type = bool;
+  using data_type_ref = bool;
 
   static key_type_ref KeyOfValue(value_type_ref D) { return D; }
   static data_type_ref DataOfValue(value_type_ref) { return true; }
@@ -933,12 +934,12 @@ struct ImutContainerInfo : public ImutProfileInfo<T> {
 ///  their addresses.
 template <typename T>
 struct ImutContainerInfo<T*> : public ImutProfileInfo<T*> {
-  typedef typename ImutProfileInfo<T*>::value_type      value_type;
-  typedef typename ImutProfileInfo<T*>::value_type_ref  value_type_ref;
-  typedef value_type      key_type;
-  typedef value_type_ref  key_type_ref;
-  typedef bool            data_type;
-  typedef bool            data_type_ref;
+  using value_type = typename ImutProfileInfo<T*>::value_type;
+  using value_type_ref = typename ImutProfileInfo<T*>::value_type_ref;
+  using key_type = value_type;
+  using key_type_ref = value_type_ref;
+  using data_type = bool;
+  using data_type_ref = bool;
 
   static key_type_ref KeyOfValue(value_type_ref D) { return D; }
   static data_type_ref DataOfValue(value_type_ref) { return true; }
@@ -954,12 +955,12 @@ struct ImutContainerInfo<T*> : public ImutProfileInfo<T*> {
 // Immutable Set
 //===----------------------------------------------------------------------===//
 
-template <typename ValT, typename ValInfo = ImutContainerInfo<ValT> >
+template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>>
 class ImmutableSet {
 public:
-  typedef typename ValInfo::value_type      value_type;
-  typedef typename ValInfo::value_type_ref  value_type_ref;
-  typedef ImutAVLTree<ValInfo> TreeTy;
+  using value_type = typename ValInfo::value_type;
+  using value_type_ref = typename ValInfo::value_type_ref;
+  using TreeTy = ImutAVLTree<ValInfo>;
 
 private:
   TreeTy *Root;
@@ -972,9 +973,15 @@ public:
   explicit ImmutableSet(TreeTy* R) : Root(R) {
     if (Root) { Root->retain(); }
   }
+
   ImmutableSet(const ImmutableSet &X) : Root(X.Root) {
     if (Root) { Root->retain(); }
   }
+
+  ~ImmutableSet() {
+    if (Root) { Root->release(); }
+  }
+
   ImmutableSet &operator=(const ImmutableSet &X) {
     if (Root != X.Root) {
       if (X.Root) { X.Root->retain(); }
@@ -982,9 +989,6 @@ public:
       Root = X.Root;
     }
     return *this;
-  }
-  ~ImmutableSet() {
-    if (Root) { Root->release(); }
   }
 
   class Factory {
@@ -997,6 +1001,9 @@ public:
 
     Factory(BumpPtrAllocator& Alloc, bool canonicalize = true)
       : F(Alloc), Canonicalize(canonicalize) {}
+
+    Factory(const Factory& RHS) = delete;
+    void operator=(const Factory& RHS) = delete;
 
     /// getEmptySet - Returns an immutable set that contains no elements.
     ImmutableSet getEmptySet() {
@@ -1032,10 +1039,6 @@ public:
     typename TreeTy::Factory *getTreeFactory() const {
       return const_cast<typename TreeTy::Factory *>(&F);
     }
-
-  private:
-    Factory(const Factory& RHS) = delete;
-    void operator=(const Factory& RHS) = delete;
   };
 
   friend class Factory;
@@ -1079,7 +1082,7 @@ public:
   // Iterators.
   //===--------------------------------------------------===//
 
-  typedef ImutAVLValueIterator<ImmutableSet> iterator;
+  using iterator = ImutAVLValueIterator<ImmutableSet>;
 
   iterator begin() const { return iterator(Root); }
   iterator end() const { return iterator(); }
@@ -1104,13 +1107,13 @@ public:
 };
 
 // NOTE: This may some day replace the current ImmutableSet.
-template <typename ValT, typename ValInfo = ImutContainerInfo<ValT> >
+template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>>
 class ImmutableSetRef {
 public:
-  typedef typename ValInfo::value_type      value_type;
-  typedef typename ValInfo::value_type_ref  value_type_ref;
-  typedef ImutAVLTree<ValInfo> TreeTy;
-  typedef typename TreeTy::Factory          FactoryTy;
+  using value_type = typename ValInfo::value_type;
+  using value_type_ref = typename ValInfo::value_type_ref;
+  using TreeTy = ImutAVLTree<ValInfo>;
+  using FactoryTy = typename TreeTy::Factory;
 
 private:
   TreeTy *Root;
@@ -1126,11 +1129,17 @@ public:
       Factory(F) {
     if (Root) { Root->retain(); }
   }
+
   ImmutableSetRef(const ImmutableSetRef &X)
     : Root(X.Root),
       Factory(X.Factory) {
     if (Root) { Root->retain(); }
   }
+
+  ~ImmutableSetRef() {
+    if (Root) { Root->release(); }
+  }
+
   ImmutableSetRef &operator=(const ImmutableSetRef &X) {
     if (Root != X.Root) {
       if (X.Root) { X.Root->retain(); }
@@ -1139,9 +1148,6 @@ public:
       Factory = X.Factory;
     }
     return *this;
-  }
-  ~ImmutableSetRef() {
-    if (Root) { Root->release(); }
   }
 
   static ImmutableSetRef getEmptySet(FactoryTy *F) {
@@ -1189,7 +1195,7 @@ public:
   // Iterators.
   //===--------------------------------------------------===//
 
-  typedef ImutAVLValueIterator<ImmutableSetRef> iterator;
+  using iterator = ImutAVLValueIterator<ImmutableSetRef>;
 
   iterator begin() const { return iterator(Root); }
   iterator end() const { return iterator(); }
@@ -1215,4 +1221,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_IMMUTABLESET_H

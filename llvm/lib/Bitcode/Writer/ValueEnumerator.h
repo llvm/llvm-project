@@ -15,9 +15,10 @@
 #define LLVM_LIB_BITCODE_WRITER_VALUEENUMERATOR_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/UseListOrder.h"
 #include <vector>
 
@@ -33,8 +34,9 @@ class Module;
 class Metadata;
 class LocalAsMetadata;
 class MDNode;
+class MDOperand;
 class NamedMDNode;
-class AttributeSet;
+class AttributeList;
 class ValueSymbolTable;
 class MDSymbolTable;
 class raw_ostream;
@@ -45,6 +47,10 @@ public:
 
   // For each value, we remember its Value* and occurrence frequency.
   typedef std::vector<std::pair<const Value*, unsigned> > ValueList;
+
+  /// Attribute groups as encoded in bitcode are almost AttributeSets, but they
+  /// include the AttributeList index, so we have to track that in our map.
+  typedef std::pair<unsigned, AttributeSet> IndexAndAttrSet;
 
   UseListOrderStack UseListOrders;
 
@@ -61,21 +67,52 @@ private:
   ComdatSetType Comdats;
 
   std::vector<const Metadata *> MDs;
-  SmallVector<const LocalAsMetadata *, 8> FunctionLocalMDs;
-  typedef DenseMap<const Metadata *, unsigned> MetadataMapType;
-  MetadataMapType MDValueMap;
-  bool HasMDString;
-  bool HasDILocation;
-  bool HasGenericDINode;
+  std::vector<const Metadata *> FunctionMDs;
+
+  /// Index of information about a piece of metadata.
+  struct MDIndex {
+    unsigned F = 0;  ///< The ID of the function for this metadata, if any.
+    unsigned ID = 0; ///< The implicit ID of this metadata in bitcode.
+
+    MDIndex() = default;
+    explicit MDIndex(unsigned F) : F(F) {}
+
+    /// Check if this has a function tag, and it's different from NewF.
+    bool hasDifferentFunction(unsigned NewF) const { return F && F != NewF; }
+
+    /// Fetch the MD this references out of the given metadata array.
+    const Metadata *get(ArrayRef<const Metadata *> MDs) const {
+      assert(ID && "Expected non-zero ID");
+      assert(ID <= MDs.size() && "Expected valid ID");
+      return MDs[ID - 1];
+    }
+  };
+
+  typedef DenseMap<const Metadata *, MDIndex> MetadataMapType;
+  MetadataMapType MetadataMap;
+
+  /// Range of metadata IDs, as a half-open range.
+  struct MDRange {
+    unsigned First = 0;
+    unsigned Last = 0;
+
+    /// Number of strings in the prefix of the metadata range.
+    unsigned NumStrings = 0;
+
+    MDRange() {}
+    explicit MDRange(unsigned First) : First(First) {}
+  };
+  SmallDenseMap<unsigned, MDRange, 1> FunctionMDInfo;
+
   bool ShouldPreserveUseListOrder;
 
-  typedef DenseMap<AttributeSet, unsigned> AttributeGroupMapType;
+  typedef DenseMap<IndexAndAttrSet, unsigned> AttributeGroupMapType;
   AttributeGroupMapType AttributeGroupMap;
-  std::vector<AttributeSet> AttributeGroups;
+  std::vector<IndexAndAttrSet> AttributeGroups;
 
-  typedef DenseMap<AttributeSet, unsigned> AttributeMapType;
-  AttributeMapType AttributeMap;
-  std::vector<AttributeSet> Attribute;
+  typedef DenseMap<AttributeList, unsigned> AttributeListMapType;
+  AttributeListMapType AttributeListMap;
+  std::vector<AttributeList> AttributeLists;
 
   /// GlobalBasicBlockIDs - This map memoizes the basic block ID's referenced by
   /// the "getGlobalBasicBlockID" method.
@@ -93,9 +130,10 @@ private:
   /// before incorporation.
   unsigned NumModuleValues;
 
-  /// When a function is incorporated, this is the size of the MDValues list
+  /// When a function is incorporated, this is the size of the Metadatas list
   /// before incorporation.
-  unsigned NumModuleMDs;
+  unsigned NumModuleMDs = 0;
+  unsigned NumMDStrings = 0;
 
   unsigned FirstFuncConstantID;
   unsigned FirstInstID;
@@ -117,12 +155,9 @@ public:
     return ID - 1;
   }
   unsigned getMetadataOrNullID(const Metadata *MD) const {
-    return MDValueMap.lookup(MD);
+    return MetadataMap.lookup(MD).ID;
   }
-
-  bool hasMDString() const { return HasMDString; }
-  bool hasDILocation() const { return HasDILocation; }
-  bool hasGenericDINode() const { return HasGenericDINode; }
+  unsigned numMDs() const { return MDs.size(); }
 
   bool shouldPreserveUseListOrder() const { return ShouldPreserveUseListOrder; }
 
@@ -135,16 +170,17 @@ public:
   unsigned getInstructionID(const Instruction *I) const;
   void setInstructionID(const Instruction *I);
 
-  unsigned getAttributeID(AttributeSet PAL) const {
+  unsigned getAttributeListID(AttributeList PAL) const {
     if (PAL.isEmpty()) return 0;  // Null maps to zero.
-    AttributeMapType::const_iterator I = AttributeMap.find(PAL);
-    assert(I != AttributeMap.end() && "Attribute not in ValueEnumerator!");
+    AttributeListMapType::const_iterator I = AttributeListMap.find(PAL);
+    assert(I != AttributeListMap.end() && "Attribute not in ValueEnumerator!");
     return I->second;
   }
 
-  unsigned getAttributeGroupID(AttributeSet PAL) const {
-    if (PAL.isEmpty()) return 0;  // Null maps to zero.
-    AttributeGroupMapType::const_iterator I = AttributeGroupMap.find(PAL);
+  unsigned getAttributeGroupID(IndexAndAttrSet Group) const {
+    if (!Group.second.hasAttributes())
+      return 0; // Null maps to zero.
+    AttributeGroupMapType::const_iterator I = AttributeGroupMap.find(Group);
     assert(I != AttributeGroupMap.end() && "Attribute not in ValueEnumerator!");
     return I->second;
   }
@@ -157,18 +193,26 @@ public:
   }
 
   const ValueList &getValues() const { return Values; }
-  const std::vector<const Metadata *> &getMDs() const { return MDs; }
-  const SmallVectorImpl<const LocalAsMetadata *> &getFunctionLocalMDs() const {
-    return FunctionLocalMDs;
+
+  /// Check whether the current block has any metadata to emit.
+  bool hasMDs() const { return NumModuleMDs < MDs.size(); }
+
+  /// Get the MDString metadata for this block.
+  ArrayRef<const Metadata *> getMDStrings() const {
+    return makeArrayRef(MDs).slice(NumModuleMDs, NumMDStrings);
   }
+
+  /// Get the non-MDString metadata for this block.
+  ArrayRef<const Metadata *> getNonMDStrings() const {
+    return makeArrayRef(MDs).slice(NumModuleMDs).slice(NumMDStrings);
+  }
+
   const TypeList &getTypes() const { return Types; }
   const std::vector<const BasicBlock*> &getBasicBlocks() const {
     return BasicBlocks;
   }
-  const std::vector<AttributeSet> &getAttributes() const {
-    return Attribute;
-  }
-  const std::vector<AttributeSet> &getAttributeGroups() const {
+  const std::vector<AttributeList> &getAttributeLists() const { return AttributeLists; }
+  const std::vector<IndexAndAttrSet> &getAttributeGroups() const {
     return AttributeGroups;
   }
 
@@ -190,14 +234,59 @@ public:
 private:
   void OptimizeConstants(unsigned CstStart, unsigned CstEnd);
 
-  void EnumerateMDNodeOperands(const MDNode *N);
-  void EnumerateMetadata(const Metadata *MD);
-  void EnumerateFunctionLocalMetadata(const LocalAsMetadata *Local);
+  /// Reorder the reachable metadata.
+  ///
+  /// This is not just an optimization, but is mandatory for emitting MDString
+  /// correctly.
+  void organizeMetadata();
+
+  /// Drop the function tag from the transitive operands of the given node.
+  void dropFunctionFromMetadata(MetadataMapType::value_type &FirstMD);
+
+  /// Incorporate the function metadata.
+  ///
+  /// This should be called before enumerating LocalAsMetadata for the
+  /// function.
+  void incorporateFunctionMetadata(const Function &F);
+
+  /// Enumerate a single instance of metadata with the given function tag.
+  ///
+  /// If \c MD has already been enumerated, check that \c F matches its
+  /// function tag.  If not, call \a dropFunctionFromMetadata().
+  ///
+  /// Otherwise, mark \c MD as visited.  Assign it an ID, or just return it if
+  /// it's an \a MDNode.
+  const MDNode *enumerateMetadataImpl(unsigned F, const Metadata *MD);
+
+  unsigned getMetadataFunctionID(const Function *F) const;
+
+  /// Enumerate reachable metadata in (almost) post-order.
+  ///
+  /// Enumerate all the metadata reachable from MD.  We want to minimize the
+  /// cost of reading bitcode records, and so the primary consideration is that
+  /// operands of uniqued nodes are resolved before the nodes are read.  This
+  /// avoids re-uniquing them on the context and factors away RAUW support.
+  ///
+  /// This algorithm guarantees that subgraphs of uniqued nodes are in
+  /// post-order.  Distinct subgraphs reachable only from a single uniqued node
+  /// will be in post-order.
+  ///
+  /// \note The relative order of a distinct and uniqued node is irrelevant.
+  /// \a organizeMetadata() will later partition distinct nodes ahead of
+  /// uniqued ones.
+  ///{
+  void EnumerateMetadata(const Function *F, const Metadata *MD);
+  void EnumerateMetadata(unsigned F, const Metadata *MD);
+  ///}
+
+  void EnumerateFunctionLocalMetadata(const Function &F,
+                                      const LocalAsMetadata *Local);
+  void EnumerateFunctionLocalMetadata(unsigned F, const LocalAsMetadata *Local);
   void EnumerateNamedMDNode(const NamedMDNode *NMD);
   void EnumerateValue(const Value *V);
   void EnumerateType(Type *T);
   void EnumerateOperandType(const Value *V);
-  void EnumerateAttributes(AttributeSet PAL);
+  void EnumerateAttributes(AttributeList PAL);
 
   void EnumerateValueSymbolTable(const ValueSymbolTable &ST);
   void EnumerateNamedMetadata(const Module &M);

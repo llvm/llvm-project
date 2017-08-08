@@ -14,44 +14,39 @@
 #ifndef LLVM_OBJECT_IROBJECTFILE_H
 #define LLVM_OBJECT_IROBJECTFILE_H
 
+#include "llvm/ADT/PointerUnion.h"
+#include "llvm/Object/IRSymtab.h"
+#include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Object/SymbolicFile.h"
 
 namespace llvm {
+class BitcodeModule;
 class Mangler;
 class Module;
 class GlobalValue;
+class Triple;
 
 namespace object {
 class ObjectFile;
 
 class IRObjectFile : public SymbolicFile {
-  std::unique_ptr<Module> M;
-  std::unique_ptr<Mangler> Mang;
-  std::vector<std::pair<std::string, uint32_t>> AsmSymbols;
+  std::vector<std::unique_ptr<Module>> Mods;
+  ModuleSymbolTable SymTab;
+  IRObjectFile(MemoryBufferRef Object,
+               std::vector<std::unique_ptr<Module>> Mods);
 
 public:
-  IRObjectFile(MemoryBufferRef Object, std::unique_ptr<Module> M);
   ~IRObjectFile() override;
   void moveSymbolNext(DataRefImpl &Symb) const override;
   std::error_code printSymbolName(raw_ostream &OS,
                                   DataRefImpl Symb) const override;
   uint32_t getSymbolFlags(DataRefImpl Symb) const override;
-  GlobalValue *getSymbolGV(DataRefImpl Symb);
-  const GlobalValue *getSymbolGV(DataRefImpl Symb) const {
-    return const_cast<IRObjectFile *>(this)->getSymbolGV(Symb);
-  }
-  basic_symbol_iterator symbol_begin_impl() const override;
-  basic_symbol_iterator symbol_end_impl() const override;
+  basic_symbol_iterator symbol_begin() const override;
+  basic_symbol_iterator symbol_end() const override;
 
-  const Module &getModule() const {
-    return const_cast<IRObjectFile*>(this)->getModule();
-  }
-  Module &getModule() {
-    return *M;
-  }
-  std::unique_ptr<Module> takeModule();
+  StringRef getTargetTriple() const;
 
-  static inline bool classof(const Binary *v) {
+  static bool classof(const Binary *v) {
     return v->isIR();
   }
 
@@ -65,10 +60,23 @@ public:
   static ErrorOr<MemoryBufferRef>
   findBitcodeInMemBuffer(MemoryBufferRef Object);
 
-  static ErrorOr<std::unique_ptr<IRObjectFile>> create(MemoryBufferRef Object,
-                                                       LLVMContext &Context);
+  static Expected<std::unique_ptr<IRObjectFile>> create(MemoryBufferRef Object,
+                                                        LLVMContext &Context);
 };
+
+/// The contents of a bitcode file and its irsymtab. Any underlying data
+/// for the irsymtab are owned by Symtab and Strtab.
+struct IRSymtabFile {
+  std::vector<BitcodeModule> Mods;
+  SmallVector<char, 0> Symtab, Strtab;
+  irsymtab::Reader TheReader;
+};
+
+/// Reads a bitcode file, creating its irsymtab if necessary.
+Expected<IRSymtabFile> readIRSymtab(MemoryBufferRef MBRef);
+
 }
+
 }
 
 #endif

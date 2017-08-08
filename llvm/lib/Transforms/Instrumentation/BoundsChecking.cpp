@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetFolder.h"
@@ -25,6 +24,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Instrumentation.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "bounds-checking"
@@ -36,7 +36,7 @@ STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
 STATISTIC(ChecksUnable, "Bounds checks unable to add");
 
-typedef IRBuilder<true, TargetFolder> BuilderTy;
+typedef IRBuilder<TargetFolder> BuilderTy;
 
 namespace {
   struct BoundsChecking : public FunctionPass {
@@ -185,9 +185,8 @@ bool BoundsChecking::runOnFunction(Function &F) {
   }
 
   bool MadeChange = false;
-  for (std::vector<Instruction*>::iterator i = WorkList.begin(),
-       e = WorkList.end(); i != e; ++i) {
-    Inst = *i;
+  for (Instruction *i : WorkList) {
+    Inst = i;
 
     Builder->SetInsertPoint(Inst);
     if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {

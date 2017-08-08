@@ -14,40 +14,13 @@
 #include "IRBindings.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 
 using namespace llvm;
-
-void LLVMAddFunctionAttr2(LLVMValueRef Fn, uint64_t PA) {
-  Function *Func = unwrap<Function>(Fn);
-  const AttributeSet PAL = Func->getAttributes();
-  AttrBuilder B(PA);
-  const AttributeSet PALnew =
-    PAL.addAttributes(Func->getContext(), AttributeSet::FunctionIndex,
-                      AttributeSet::get(Func->getContext(),
-                                        AttributeSet::FunctionIndex, B));
-  Func->setAttributes(PALnew);
-}
-
-uint64_t LLVMGetFunctionAttr2(LLVMValueRef Fn) {
-  Function *Func = unwrap<Function>(Fn);
-  const AttributeSet PAL = Func->getAttributes();
-  return PAL.Raw(AttributeSet::FunctionIndex);
-}
-
-void LLVMRemoveFunctionAttr2(LLVMValueRef Fn, uint64_t PA) {
-  Function *Func = unwrap<Function>(Fn);
-  const AttributeSet PAL = Func->getAttributes();
-  AttrBuilder B(PA);
-  const AttributeSet PALnew =
-    PAL.removeAttributes(Func->getContext(), AttributeSet::FunctionIndex,
-                         AttributeSet::get(Func->getContext(),
-                                           AttributeSet::FunctionIndex, B));
-  Func->setAttributes(PALnew);
-}
 
 LLVMMetadataRef LLVMConstantAsMetadata(LLVMValueRef C) {
   return wrap(ConstantAsMetadata::get(unwrap<Constant>(C)));
@@ -97,6 +70,18 @@ void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Bref, unsigned Line,
   unwrap(Bref)->SetCurrentDebugLocation(
       DebugLoc::get(Line, Col, Scope ? unwrap<MDNode>(Scope) : nullptr,
                     InlinedAt ? unwrap<MDNode>(InlinedAt) : nullptr));
+}
+
+LLVMDebugLocMetadata LLVMGetCurrentDebugLocation2(LLVMBuilderRef Bref) {
+  const auto& Loc = unwrap(Bref)->getCurrentDebugLocation();
+  const auto* InlinedAt = Loc.getInlinedAt();
+  const LLVMDebugLocMetadata md{
+    Loc.getLine(),
+    Loc.getCol(),
+    wrap(Loc.getScope()),
+    InlinedAt == nullptr ? nullptr : wrap(InlinedAt->getRawInlinedAt()),
+  };
+  return md;
 }
 
 void LLVMSetSubprogram(LLVMValueRef Func, LLVMMetadataRef SP) {

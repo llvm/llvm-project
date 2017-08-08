@@ -1,4 +1,4 @@
-//===-- Module.cpp - Implement the Module class ---------------------------===//
+//===- Module.cpp - Implement the Module class ----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,22 +13,44 @@
 
 #include "llvm/IR/Module.h"
 #include "SymbolTableListTraitsImpl.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GVMaterializer.h"
-#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalIFunc.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/SymbolTableListTraits.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/TypeFinder.h"
-#include "llvm/Support/Dwarf.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include <algorithm>
-#include <cstdarg>
-#include <cstdlib>
+#include <cassert>
+#include <cstdint>
+#include <memory>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -41,13 +63,14 @@ using namespace llvm;
 template class llvm::SymbolTableListTraits<Function>;
 template class llvm::SymbolTableListTraits<GlobalVariable>;
 template class llvm::SymbolTableListTraits<GlobalAlias>;
+template class llvm::SymbolTableListTraits<GlobalIFunc>;
 
 //===----------------------------------------------------------------------===//
 // Primitive Module methods.
 //
 
 Module::Module(StringRef MID, LLVMContext &C)
-    : Context(C), Materializer(), ModuleID(MID), DL("") {
+    : Context(C), Materializer(), ModuleID(MID), SourceFileName(MID), DL("") {
   ValSymTab = new ValueSymbolTable();
   NamedMDSymTab = new StringMap<NamedMDNode *>();
   Context.addModule(this);
@@ -59,12 +82,13 @@ Module::~Module() {
   GlobalList.clear();
   FunctionList.clear();
   AliasList.clear();
+  IFuncList.clear();
   NamedMDList.clear();
   delete ValSymTab;
   delete static_cast<StringMap<NamedMDNode *> *>(NamedMDSymTab);
 }
 
-RandomNumberGenerator *Module::createRNG(const Pass* P) const {
+std::unique_ptr<RandomNumberGenerator> Module::createRNG(const Pass* P) const {
   SmallString<32> Salt(P->getPassName());
 
   // This RNG is guaranteed to produce the same random stream only
@@ -79,7 +103,7 @@ RandomNumberGenerator *Module::createRNG(const Pass* P) const {
   // store salt metadata from the Module constructor.
   Salt += sys::path::filename(getModuleIdentifier());
 
-  return new RandomNumberGenerator(Salt);
+  return std::unique_ptr<RandomNumberGenerator>(new RandomNumberGenerator(Salt));
 }
 
 /// getNamedValue - Return the first global value in the module with
@@ -115,9 +139,8 @@ void Module::getOperandBundleTags(SmallVectorImpl<StringRef> &Result) const {
 // it.  This is nice because it allows most passes to get away with not handling
 // the symbol table directly for this common task.
 //
-Constant *Module::getOrInsertFunction(StringRef Name,
-                                      FunctionType *Ty,
-                                      AttributeSet AttributeList) {
+Constant *Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
+                                      AttributeList AttributeList) {
   // See if we have a definition for the specified function already.
   GlobalValue *F = getNamedValue(Name);
   if (!F) {
@@ -140,49 +163,7 @@ Constant *Module::getOrInsertFunction(StringRef Name,
 
 Constant *Module::getOrInsertFunction(StringRef Name,
                                       FunctionType *Ty) {
-  return getOrInsertFunction(Name, Ty, AttributeSet());
-}
-
-// getOrInsertFunction - Look up the specified function in the module symbol
-// table.  If it does not exist, add a prototype for the function and return it.
-// This version of the method takes a null terminated list of function
-// arguments, which makes it easier for clients to use.
-//
-Constant *Module::getOrInsertFunction(StringRef Name,
-                                      AttributeSet AttributeList,
-                                      Type *RetTy, ...) {
-  va_list Args;
-  va_start(Args, RetTy);
-
-  // Build the list of argument types...
-  std::vector<Type*> ArgTys;
-  while (Type *ArgTy = va_arg(Args, Type*))
-    ArgTys.push_back(ArgTy);
-
-  va_end(Args);
-
-  // Build the function type and chain to the other getOrInsertFunction...
-  return getOrInsertFunction(Name,
-                             FunctionType::get(RetTy, ArgTys, false),
-                             AttributeList);
-}
-
-Constant *Module::getOrInsertFunction(StringRef Name,
-                                      Type *RetTy, ...) {
-  va_list Args;
-  va_start(Args, RetTy);
-
-  // Build the list of argument types...
-  std::vector<Type*> ArgTys;
-  while (Type *ArgTy = va_arg(Args, Type*))
-    ArgTys.push_back(ArgTy);
-
-  va_end(Args);
-
-  // Build the function type and chain to the other getOrInsertFunction...
-  return getOrInsertFunction(Name,
-                             FunctionType::get(RetTy, ArgTys, false),
-                             AttributeSet());
+  return getOrInsertFunction(Name, Ty, AttributeList());
 }
 
 // getFunction - Look up the specified function in the module symbol table.
@@ -203,7 +184,8 @@ Function *Module::getFunction(StringRef Name) const {
 /// If AllowLocal is set to true, this function will return types that
 /// have an local. By default, these types are not returned.
 ///
-GlobalVariable *Module::getGlobalVariable(StringRef Name, bool AllowLocal) {
+GlobalVariable *Module::getGlobalVariable(StringRef Name,
+                                          bool AllowLocal) const {
   if (GlobalVariable *Result =
       dyn_cast_or_null<GlobalVariable>(getNamedValue(Name)))
     if (AllowLocal || !Result->hasLocalLinkage())
@@ -248,6 +230,10 @@ Constant *Module::getOrInsertGlobal(StringRef Name, Type *Ty) {
 //
 GlobalAlias *Module::getNamedAlias(StringRef Name) const {
   return dyn_cast_or_null<GlobalAlias>(getNamedValue(Name));
+}
+
+GlobalIFunc *Module::getNamedIFunc(StringRef Name) const {
+  return dyn_cast_or_null<GlobalIFunc>(getNamedValue(Name));
 }
 
 /// getNamedMetadata - Return the first NamedMDNode in the module with the
@@ -374,51 +360,46 @@ void Module::setDataLayout(const DataLayout &Other) { DL = Other; }
 
 const DataLayout &Module::getDataLayout() const { return DL; }
 
+DICompileUnit *Module::debug_compile_units_iterator::operator*() const {
+  return cast<DICompileUnit>(CUs->getOperand(Idx));
+}
+DICompileUnit *Module::debug_compile_units_iterator::operator->() const {
+  return cast<DICompileUnit>(CUs->getOperand(Idx));
+}
+
+void Module::debug_compile_units_iterator::SkipNoDebugCUs() {
+  while (CUs && (Idx < CUs->getNumOperands()) &&
+         ((*this)->getEmissionKind() == DICompileUnit::NoDebug))
+    ++Idx;
+}
+
 //===----------------------------------------------------------------------===//
 // Methods to control the materialization of GlobalValues in the Module.
 //
 void Module::setMaterializer(GVMaterializer *GVM) {
   assert(!Materializer &&
-         "Module already has a GVMaterializer.  Call MaterializeAllPermanently"
+         "Module already has a GVMaterializer.  Call materializeAll"
          " to clear it out before setting another one.");
   Materializer.reset(GVM);
 }
 
-bool Module::isDematerializable(const GlobalValue *GV) const {
-  if (Materializer)
-    return Materializer->isDematerializable(GV);
-  return false;
-}
-
-std::error_code Module::materialize(GlobalValue *GV) {
+Error Module::materialize(GlobalValue *GV) {
   if (!Materializer)
-    return std::error_code();
+    return Error::success();
 
   return Materializer->materialize(GV);
 }
 
-void Module::dematerialize(GlobalValue *GV) {
-  if (Materializer)
-    return Materializer->dematerialize(GV);
-}
-
-std::error_code Module::materializeAll() {
+Error Module::materializeAll() {
   if (!Materializer)
-    return std::error_code();
-  return Materializer->materializeModule(this);
+    return Error::success();
+  std::unique_ptr<GVMaterializer> M = std::move(Materializer);
+  return M->materializeModule();
 }
 
-std::error_code Module::materializeAllPermanently() {
-  if (std::error_code EC = materializeAll())
-    return EC;
-
-  Materializer.reset();
-  return std::error_code();
-}
-
-std::error_code Module::materializeMetadata() {
+Error Module::materializeMetadata() {
   if (!Materializer)
-    return std::error_code();
+    return Error::success();
   return Materializer->materializeMetadata();
 }
 
@@ -456,6 +437,17 @@ void Module::dropAllReferences() {
 
   for (GlobalAlias &GA : aliases())
     GA.dropAllReferences();
+
+  for (GlobalIFunc &GIF : ifuncs())
+    GIF.dropAllReferences();
+}
+
+unsigned Module::getNumberRegisterParameters() const {
+  auto *Val =
+      cast_or_null<ConstantAsMetadata>(getModuleFlag("NumRegisterParameters"));
+  if (!Val)
+    return 0;
+  return cast<ConstantInt>(Val->getValue())->getZExtValue();
 }
 
 unsigned Module::getDwarfVersion() const {
@@ -482,12 +474,53 @@ PICLevel::Level Module::getPICLevel() const {
   auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("PIC Level"));
 
   if (!Val)
-    return PICLevel::Default;
+    return PICLevel::NotPIC;
 
   return static_cast<PICLevel::Level>(
       cast<ConstantInt>(Val->getValue())->getZExtValue());
 }
 
 void Module::setPICLevel(PICLevel::Level PL) {
-  addModuleFlag(ModFlagBehavior::Error, "PIC Level", PL);
+  addModuleFlag(ModFlagBehavior::Max, "PIC Level", PL);
+}
+
+PIELevel::Level Module::getPIELevel() const {
+  auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("PIE Level"));
+
+  if (!Val)
+    return PIELevel::Default;
+
+  return static_cast<PIELevel::Level>(
+      cast<ConstantInt>(Val->getValue())->getZExtValue());
+}
+
+void Module::setPIELevel(PIELevel::Level PL) {
+  addModuleFlag(ModFlagBehavior::Max, "PIE Level", PL);
+}
+
+void Module::setProfileSummary(Metadata *M) {
+  addModuleFlag(ModFlagBehavior::Error, "ProfileSummary", M);
+}
+
+Metadata *Module::getProfileSummary() {
+  return getModuleFlag("ProfileSummary");
+}
+
+void Module::setOwnedMemoryBuffer(std::unique_ptr<MemoryBuffer> MB) {
+  OwnedMemoryBuffer = std::move(MB);
+}
+
+GlobalVariable *llvm::collectUsedGlobalVariables(
+    const Module &M, SmallPtrSetImpl<GlobalValue *> &Set, bool CompilerUsed) {
+  const char *Name = CompilerUsed ? "llvm.compiler.used" : "llvm.used";
+  GlobalVariable *GV = M.getGlobalVariable(Name);
+  if (!GV || !GV->hasInitializer())
+    return GV;
+
+  const ConstantArray *Init = cast<ConstantArray>(GV->getInitializer());
+  for (Value *Op : Init->operands()) {
+    GlobalValue *G = cast<GlobalValue>(Op->stripPointerCastsNoFollowAliases());
+    Set.insert(G);
+  }
+  return GV;
 }

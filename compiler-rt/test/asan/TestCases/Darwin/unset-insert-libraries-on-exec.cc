@@ -10,7 +10,7 @@
 // execl().
 
 // RUN: %run %t %T/echo-env >/dev/null 2>&1
-// RUN: env DYLD_INSERT_LIBRARIES=%t-darwin-dummy-shared-lib-so.dylib \
+// RUN: %env DYLD_INSERT_LIBRARIES=%t-darwin-dummy-shared-lib-so.dylib \
 // RUN:     %run %t %T/echo-env 2>&1 | FileCheck %s || exit 1
 
 #if !defined(SHARED_LIB)

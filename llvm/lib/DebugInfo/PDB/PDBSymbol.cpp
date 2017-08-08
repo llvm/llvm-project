@@ -8,9 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
-
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
+#include "llvm/DebugInfo/PDB/IPDBSession.h"
+#include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolAnnotation.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolBlock.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
@@ -42,20 +43,21 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeVTableShape.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolUnknown.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolUsingNamespace.h"
-#include "llvm/DebugInfo/PDB/PDBSymDumper.h"
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include <algorithm>
 #include <memory>
-#include <utility>
-
-#include <memory>
-#include <utility>
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 PDBSymbol::PDBSymbol(const IPDBSession &PDBSession,
                      std::unique_ptr<IPDBRawSymbol> Symbol)
     : Session(PDBSession), RawSymbol(std::move(Symbol)) {}
 
-PDBSymbol::~PDBSymbol() {}
+PDBSymbol::PDBSymbol(PDBSymbol &Symbol)
+    : Session(Symbol.Session), RawSymbol(std::move(Symbol.RawSymbol)) {}
+
+PDBSymbol::~PDBSymbol() = default;
 
 #define FACTORY_SYMTAG_CASE(Tag, Type)                                         \
   case PDB_SymType::Tag:                                                       \
@@ -101,17 +103,32 @@ PDBSymbol::create(const IPDBSession &PDBSession,
   }
 }
 
-#define TRY_DUMP_TYPE(Type)                                                    \
-  if (const Type *DerivedThis = dyn_cast<Type>(this))                          \
-    Dumper.dump(OS, Indent, *DerivedThis);
-
-#define ELSE_TRY_DUMP_TYPE(Type, Dumper) else TRY_DUMP_TYPE(Type, Dumper)
-
 void PDBSymbol::defaultDump(raw_ostream &OS, int Indent) const {
   RawSymbol->dump(OS, Indent);
 }
 
+void PDBSymbol::dumpProperties() const {
+  outs() << "\n";
+  defaultDump(outs(), 0);
+  outs().flush();
+}
+
+void PDBSymbol::dumpChildStats() const {
+  TagStats Stats;
+  getChildStats(Stats);
+  outs() << "\n";
+  for (auto &Stat : Stats) {
+    outs() << Stat.first << ": " << Stat.second << "\n";
+  }
+  outs().flush();
+}
+
+std::unique_ptr<PDBSymbol> PDBSymbol::clone() const {
+  return Session.getSymbolById(getSymIndexId());
+}
+
 PDB_SymType PDBSymbol::getSymTag() const { return RawSymbol->getSymTag(); }
+uint32_t PDBSymbol::getSymIndexId() const { return RawSymbol->getSymIndexId(); }
 
 std::unique_ptr<IPDBEnumSymbols> PDBSymbol::findAllChildren() const {
   return findAllChildren(PDB_SymType::None);
@@ -142,10 +159,16 @@ PDBSymbol::findInlineFramesByRVA(uint32_t RVA) const {
 std::unique_ptr<IPDBEnumSymbols>
 PDBSymbol::getChildStats(TagStats &Stats) const {
   std::unique_ptr<IPDBEnumSymbols> Result(findAllChildren());
+  if (!Result)
+    return nullptr;
   Stats.clear();
   while (auto Child = Result->getNext()) {
     ++Stats[Child->getSymTag()];
   }
   Result->reset();
   return Result;
+}
+
+std::unique_ptr<PDBSymbol> PDBSymbol::getSymbolByIdHelper(uint32_t Id) const {
+  return Session.getSymbolById(Id);
 }

@@ -11,34 +11,34 @@
 #define LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
-/// VecDesc - Describes a possible vectorization of a function.
+template <typename T> class ArrayRef;
+
+/// Describes a possible vectorization of a function.
 /// Function 'VectorFnName' is equivalent to 'ScalarFnName' vectorized
 /// by a factor 'VectorizationFactor'.
 struct VecDesc {
-  const char *ScalarFnName;
-  const char *VectorFnName;
+  StringRef ScalarFnName;
+  StringRef VectorFnName;
   unsigned VectorizationFactor;
 };
-class PreservedAnalyses;
 
-  namespace LibFunc {
-    enum Func {
+  enum LibFunc {
 #define TLI_DEFINE_ENUM
 #include "llvm/Analysis/TargetLibraryInfo.def"
 
-      NumLibFuncs
-    };
-  }
+    NumLibFuncs
+  };
 
-/// \brief Implementation of the target library information.
+/// Implementation of the target library information.
 ///
 /// This class constructs tables that hold the target library information and
 /// make it available. However, it is somewhat expensive to compute and only
@@ -47,20 +47,21 @@ class PreservedAnalyses;
 class TargetLibraryInfoImpl {
   friend class TargetLibraryInfo;
 
-  unsigned char AvailableArray[(LibFunc::NumLibFuncs+3)/4];
+  unsigned char AvailableArray[(NumLibFuncs+3)/4];
   llvm::DenseMap<unsigned, std::string> CustomNames;
-  static const char *const StandardNames[LibFunc::NumLibFuncs];
+  static StringRef const StandardNames[NumLibFuncs];
+  bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param;
 
   enum AvailabilityState {
     StandardName = 3, // (memset to all ones)
     CustomName = 1,
     Unavailable = 0  // (memset to all zeros)
   };
-  void setState(LibFunc::Func F, AvailabilityState State) {
+  void setState(LibFunc F, AvailabilityState State) {
     AvailableArray[F/4] &= ~(3 << 2*(F&3));
     AvailableArray[F/4] |= State << 2*(F&3);
   }
-  AvailabilityState getState(LibFunc::Func F) const {
+  AvailabilityState getState(LibFunc F) const {
     return static_cast<AvailabilityState>((AvailableArray[F/4] >> 2*(F&3)) & 3);
   }
 
@@ -70,8 +71,13 @@ class TargetLibraryInfoImpl {
   /// on VectorFnName rather than ScalarFnName.
   std::vector<VecDesc> ScalarDescs;
 
+  /// Return true if the function type FTy is valid for the library function
+  /// F, regardless of whether the function is available.
+  bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
+                              const DataLayout *DL) const;
+
 public:
-  /// \brief  List of known vector-functions libraries.
+  /// List of known vector-functions libraries.
   ///
   /// The vector-functions library defines, which functions are vectorizable
   /// and with which factor. The library can be specified by either frontend,
@@ -79,8 +85,9 @@ public:
   /// addVectorizableFunctionsFromVecLib for filling up the tables of
   /// vectorizable functions.
   enum VectorLibrary {
-    NoLibrary, // Don't use any vector library.
-    Accelerate // Use Accelerate framework.
+    NoLibrary,  // Don't use any vector library.
+    Accelerate, // Use Accelerate framework.
+    SVML        // Intel short vector math library.
   };
 
   TargetLibraryInfoImpl();
@@ -92,25 +99,32 @@ public:
   TargetLibraryInfoImpl &operator=(const TargetLibraryInfoImpl &TLI);
   TargetLibraryInfoImpl &operator=(TargetLibraryInfoImpl &&TLI);
 
-  /// \brief Searches for a particular function name.
+  /// Searches for a particular function name.
   ///
   /// If it is one of the known library functions, return true and set F to the
   /// corresponding value.
-  bool getLibFunc(StringRef funcName, LibFunc::Func &F) const;
+  bool getLibFunc(StringRef funcName, LibFunc &F) const;
 
-  /// \brief Forces a function to be marked as unavailable.
-  void setUnavailable(LibFunc::Func F) {
+  /// Searches for a particular function name, also checking that its type is
+  /// valid for the library function matching that name.
+  ///
+  /// If it is one of the known library functions, return true and set F to the
+  /// corresponding value.
+  bool getLibFunc(const Function &FDecl, LibFunc &F) const;
+
+  /// Forces a function to be marked as unavailable.
+  void setUnavailable(LibFunc F) {
     setState(F, Unavailable);
   }
 
-  /// \brief Forces a function to be marked as available.
-  void setAvailable(LibFunc::Func F) {
+  /// Forces a function to be marked as available.
+  void setAvailable(LibFunc F) {
     setState(F, StandardName);
   }
 
-  /// \brief Forces a function to be marked as available and provide an
-  /// alternate name that must be used.
-  void setAvailableWithName(LibFunc::Func F, StringRef Name) {
+  /// Forces a function to be marked as available and provide an alternate name
+  /// that must be used.
+  void setAvailableWithName(LibFunc F, StringRef Name) {
     if (StandardNames[F] != Name) {
       setState(F, CustomName);
       CustomNames[F] = Name;
@@ -120,48 +134,75 @@ public:
     }
   }
 
-  /// \brief Disables all builtins.
+  /// Disables all builtins.
   ///
   /// This can be used for options like -fno-builtin.
   void disableAllFunctions();
 
-  /// addVectorizableFunctions - Add a set of scalar -> vector mappings,
-  /// queryable via getVectorizedFunction and getScalarizedFunction.
+  /// Add a set of scalar -> vector mappings, queryable via
+  /// getVectorizedFunction and getScalarizedFunction.
   void addVectorizableFunctions(ArrayRef<VecDesc> Fns);
 
   /// Calls addVectorizableFunctions with a known preset of functions for the
   /// given vector library.
   void addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib);
 
-  /// isFunctionVectorizable - Return true if the function F has a
-  /// vector equivalent with vectorization factor VF.
+  /// Return true if the function F has a vector equivalent with vectorization
+  /// factor VF.
   bool isFunctionVectorizable(StringRef F, unsigned VF) const {
     return !getVectorizedFunction(F, VF).empty();
   }
 
-  /// isFunctionVectorizable - Return true if the function F has a
-  /// vector equivalent with any vectorization factor.
+  /// Return true if the function F has a vector equivalent with any
+  /// vectorization factor.
   bool isFunctionVectorizable(StringRef F) const;
 
-  /// getVectorizedFunction - Return the name of the equivalent of
-  /// F, vectorized with factor VF. If no such mapping exists,
-  /// return the empty string.
+  /// Return the name of the equivalent of F, vectorized with factor VF. If no
+  /// such mapping exists, return the empty string.
   StringRef getVectorizedFunction(StringRef F, unsigned VF) const;
 
-  /// isFunctionScalarizable - Return true if the function F has a
-  /// scalar equivalent, and set VF to be the vectorization factor.
+  /// Return true if the function F has a scalar equivalent, and set VF to be
+  /// the vectorization factor.
   bool isFunctionScalarizable(StringRef F, unsigned &VF) const {
     return !getScalarizedFunction(F, VF).empty();
   }
 
-  /// getScalarizedFunction - Return the name of the equivalent of
-  /// F, scalarized. If no such mapping exists, return the empty string.
+  /// Return the name of the equivalent of F, scalarized. If no such mapping
+  /// exists, return the empty string.
   ///
   /// Set VF to the vectorization factor.
   StringRef getScalarizedFunction(StringRef F, unsigned &VF) const;
+
+  /// Set to true iff i32 parameters to library functions should have signext
+  /// or zeroext attributes if they correspond to C-level int or unsigned int,
+  /// respectively.
+  void setShouldExtI32Param(bool Val) {
+    ShouldExtI32Param = Val;
+  }
+
+  /// Set to true iff i32 results from library functions should have signext
+  /// or zeroext attributes if they correspond to C-level int or unsigned int,
+  /// respectively.
+  void setShouldExtI32Return(bool Val) {
+    ShouldExtI32Return = Val;
+  }
+
+  /// Set to true iff i32 parameters to library functions should have signext
+  /// attribute if they correspond to C-level int or unsigned int.
+  void setShouldSignExtI32Param(bool Val) {
+    ShouldSignExtI32Param = Val;
+  }
+
+  /// Returns the size of the wchar_t type in bytes.
+  unsigned getWCharSize(const Module &M) const;
+
+  /// Returns size of the default wchar_t type on target \p T. This is mostly
+  /// intended to verify that the size in the frontend matches LLVM. All other
+  /// queries should use getWCharSize() instead.
+  static unsigned getTargetWCharSize(const Triple &T);
 };
 
-/// \brief Provides information about what library functions are available for
+/// Provides information about what library functions are available for
 /// the current target.
 ///
 /// This both allows optimizations to handle them specially and frontends to
@@ -187,16 +228,27 @@ public:
     return *this;
   }
 
-  /// \brief Searches for a particular function name.
+  /// Searches for a particular function name.
   ///
   /// If it is one of the known library functions, return true and set F to the
   /// corresponding value.
-  bool getLibFunc(StringRef funcName, LibFunc::Func &F) const {
+  bool getLibFunc(StringRef funcName, LibFunc &F) const {
     return Impl->getLibFunc(funcName, F);
   }
 
-  /// \brief Tests whether a library function is available.
-  bool has(LibFunc::Func F) const {
+  bool getLibFunc(const Function &FDecl, LibFunc &F) const {
+    return Impl->getLibFunc(FDecl, F);
+  }
+
+  /// If a callsite does not have the 'nobuiltin' attribute, return if the
+  /// called function is a known library function and set F to that function.
+  bool getLibFunc(ImmutableCallSite CS, LibFunc &F) const {
+    return !CS.isNoBuiltin() && CS.getCalledFunction() &&
+           getLibFunc(*(CS.getCalledFunction()), F);
+  }
+
+  /// Tests whether a library function is available.
+  bool has(LibFunc F) const {
     return Impl->getState(F) != TargetLibraryInfoImpl::Unavailable;
   }
   bool isFunctionVectorizable(StringRef F, unsigned VF) const {
@@ -209,39 +261,39 @@ public:
     return Impl->getVectorizedFunction(F, VF);
   }
 
-  /// \brief Tests if the function is both available and a candidate for
-  /// optimized code generation.
-  bool hasOptimizedCodeGen(LibFunc::Func F) const {
+  /// Tests if the function is both available and a candidate for optimized code
+  /// generation.
+  bool hasOptimizedCodeGen(LibFunc F) const {
     if (Impl->getState(F) == TargetLibraryInfoImpl::Unavailable)
       return false;
     switch (F) {
     default: break;
-    case LibFunc::copysign:  case LibFunc::copysignf:  case LibFunc::copysignl:
-    case LibFunc::fabs:      case LibFunc::fabsf:      case LibFunc::fabsl:
-    case LibFunc::sin:       case LibFunc::sinf:       case LibFunc::sinl:
-    case LibFunc::cos:       case LibFunc::cosf:       case LibFunc::cosl:
-    case LibFunc::sqrt:      case LibFunc::sqrtf:      case LibFunc::sqrtl:
-    case LibFunc::sqrt_finite: case LibFunc::sqrtf_finite:
-                                                  case LibFunc::sqrtl_finite:
-    case LibFunc::fmax:      case LibFunc::fmaxf:      case LibFunc::fmaxl:
-    case LibFunc::fmin:      case LibFunc::fminf:      case LibFunc::fminl:
-    case LibFunc::floor:     case LibFunc::floorf:     case LibFunc::floorl:
-    case LibFunc::nearbyint: case LibFunc::nearbyintf: case LibFunc::nearbyintl:
-    case LibFunc::ceil:      case LibFunc::ceilf:      case LibFunc::ceill:
-    case LibFunc::rint:      case LibFunc::rintf:      case LibFunc::rintl:
-    case LibFunc::round:     case LibFunc::roundf:     case LibFunc::roundl:
-    case LibFunc::trunc:     case LibFunc::truncf:     case LibFunc::truncl:
-    case LibFunc::log2:      case LibFunc::log2f:      case LibFunc::log2l:
-    case LibFunc::exp2:      case LibFunc::exp2f:      case LibFunc::exp2l:
-    case LibFunc::memcmp:    case LibFunc::strcmp:     case LibFunc::strcpy:
-    case LibFunc::stpcpy:    case LibFunc::strlen:     case LibFunc::strnlen:
-    case LibFunc::memchr:
+    case LibFunc_copysign:     case LibFunc_copysignf:  case LibFunc_copysignl:
+    case LibFunc_fabs:         case LibFunc_fabsf:      case LibFunc_fabsl:
+    case LibFunc_sin:          case LibFunc_sinf:       case LibFunc_sinl:
+    case LibFunc_cos:          case LibFunc_cosf:       case LibFunc_cosl:
+    case LibFunc_sqrt:         case LibFunc_sqrtf:      case LibFunc_sqrtl:
+    case LibFunc_sqrt_finite:  case LibFunc_sqrtf_finite:
+                                                   case LibFunc_sqrtl_finite:
+    case LibFunc_fmax:         case LibFunc_fmaxf:      case LibFunc_fmaxl:
+    case LibFunc_fmin:         case LibFunc_fminf:      case LibFunc_fminl:
+    case LibFunc_floor:        case LibFunc_floorf:     case LibFunc_floorl:
+    case LibFunc_nearbyint:    case LibFunc_nearbyintf: case LibFunc_nearbyintl:
+    case LibFunc_ceil:         case LibFunc_ceilf:      case LibFunc_ceill:
+    case LibFunc_rint:         case LibFunc_rintf:      case LibFunc_rintl:
+    case LibFunc_round:        case LibFunc_roundf:     case LibFunc_roundl:
+    case LibFunc_trunc:        case LibFunc_truncf:     case LibFunc_truncl:
+    case LibFunc_log2:         case LibFunc_log2f:      case LibFunc_log2l:
+    case LibFunc_exp2:         case LibFunc_exp2f:      case LibFunc_exp2l:
+    case LibFunc_memcmp:       case LibFunc_strcmp:     case LibFunc_strcpy:
+    case LibFunc_stpcpy:       case LibFunc_strlen:     case LibFunc_strnlen:
+    case LibFunc_memchr:       case LibFunc_mempcpy:
       return true;
     }
     return false;
   }
 
-  StringRef getName(LibFunc::Func F) const {
+  StringRef getName(LibFunc F) const {
     auto State = Impl->getState(F);
     if (State == TargetLibraryInfoImpl::Unavailable)
       return StringRef();
@@ -251,60 +303,78 @@ public:
     return Impl->CustomNames.find(F)->second;
   }
 
-  /// \brief Handle invalidation from the pass manager.
+  /// Returns extension attribute kind to be used for i32 parameters
+  /// corresponding to C-level int or unsigned int.  May be zeroext, signext,
+  /// or none.
+  Attribute::AttrKind getExtAttrForI32Param(bool Signed = true) const {
+    if (Impl->ShouldExtI32Param)
+      return Signed ? Attribute::SExt : Attribute::ZExt;
+    if (Impl->ShouldSignExtI32Param)
+      return Attribute::SExt;
+    return Attribute::None;
+  }
+
+  /// Returns extension attribute kind to be used for i32 return values
+  /// corresponding to C-level int or unsigned int.  May be zeroext, signext,
+  /// or none.
+  Attribute::AttrKind getExtAttrForI32Return(bool Signed = true) const {
+    if (Impl->ShouldExtI32Return)
+      return Signed ? Attribute::SExt : Attribute::ZExt;
+    return Attribute::None;
+  }
+
+  /// \copydoc TargetLibraryInfoImpl::getWCharSize()
+  unsigned getWCharSize(const Module &M) const {
+    return Impl->getWCharSize(M);
+  }
+
+  /// Handle invalidation from the pass manager.
   ///
   /// If we try to invalidate this info, just return false. It cannot become
-  /// invalid even if the module changes.
-  bool invalidate(Module &, const PreservedAnalyses &) { return false; }
+  /// invalid even if the module or function changes.
+  bool invalidate(Module &, const PreservedAnalyses &,
+                  ModuleAnalysisManager::Invalidator &) {
+    return false;
+  }
+  bool invalidate(Function &, const PreservedAnalyses &,
+                  FunctionAnalysisManager::Invalidator &) {
+    return false;
+  }
 };
 
-/// \brief Analysis pass providing the \c TargetLibraryInfo.
+/// Analysis pass providing the \c TargetLibraryInfo.
 ///
 /// Note that this pass's result cannot be invalidated, it is immutable for the
 /// life of the module.
-class TargetLibraryAnalysis {
+class TargetLibraryAnalysis : public AnalysisInfoMixin<TargetLibraryAnalysis> {
 public:
   typedef TargetLibraryInfo Result;
 
-  /// \brief Opaque, unique identifier for this analysis pass.
-  static void *ID() { return (void *)&PassID; }
-
-  /// \brief Default construct the library analysis.
+  /// Default construct the library analysis.
   ///
   /// This will use the module's triple to construct the library info for that
   /// module.
   TargetLibraryAnalysis() {}
 
-  /// \brief Construct a library analysis with preset info.
+  /// Construct a library analysis with preset info.
   ///
   /// This will directly copy the preset info into the result without
   /// consulting the module's triple.
   TargetLibraryAnalysis(TargetLibraryInfoImpl PresetInfoImpl)
       : PresetInfoImpl(std::move(PresetInfoImpl)) {}
 
-  // Move semantics. We spell out the constructors for MSVC.
-  TargetLibraryAnalysis(TargetLibraryAnalysis &&Arg)
-      : PresetInfoImpl(std::move(Arg.PresetInfoImpl)), Impls(std::move(Arg.Impls)) {}
-  TargetLibraryAnalysis &operator=(TargetLibraryAnalysis &&RHS) {
-    PresetInfoImpl = std::move(RHS.PresetInfoImpl);
-    Impls = std::move(RHS.Impls);
-    return *this;
-  }
-
-  TargetLibraryInfo run(Module &M);
-  TargetLibraryInfo run(Function &F);
-
-  /// \brief Provide access to a name for this pass for debugging purposes.
-  static StringRef name() { return "TargetLibraryAnalysis"; }
+  TargetLibraryInfo run(Module &M, ModuleAnalysisManager &);
+  TargetLibraryInfo run(Function &F, FunctionAnalysisManager &);
 
 private:
-  static char PassID;
+  friend AnalysisInfoMixin<TargetLibraryAnalysis>;
+  static AnalysisKey Key;
 
   Optional<TargetLibraryInfoImpl> PresetInfoImpl;
 
   StringMap<std::unique_ptr<TargetLibraryInfoImpl>> Impls;
 
-  TargetLibraryInfoImpl &lookupInfoImpl(Triple T);
+  TargetLibraryInfoImpl &lookupInfoImpl(const Triple &T);
 };
 
 class TargetLibraryInfoWrapperPass : public ImmutablePass {

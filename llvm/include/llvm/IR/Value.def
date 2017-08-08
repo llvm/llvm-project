@@ -20,8 +20,12 @@
 #if !(defined HANDLE_GLOBAL_VALUE || defined HANDLE_CONSTANT ||                \
       defined HANDLE_INSTRUCTION || defined HANDLE_INLINE_ASM_VALUE ||         \
       defined HANDLE_METADATA_VALUE || defined HANDLE_VALUE ||                 \
-      defined HANDLE_CONSTANT_MARKER)
+      defined HANDLE_CONSTANT_MARKER || defined HANDLE_MEMORY_VALUE)
 #error "Missing macro definition of HANDLE_VALUE*"
+#endif
+
+#ifndef HANDLE_MEMORY_VALUE
+#define HANDLE_MEMORY_VALUE(ValueName) HANDLE_VALUE(ValueName)
 #endif
 
 #ifndef HANDLE_GLOBAL_VALUE
@@ -55,21 +59,34 @@
 HANDLE_VALUE(Argument)
 HANDLE_VALUE(BasicBlock)
 
+// FIXME: It's awkward that Value.def knows about classes in Analysis. While
+// this doesn't introduce a strict link or include dependency, we should remove
+// the circular dependency eventually.
+HANDLE_MEMORY_VALUE(MemoryUse)
+HANDLE_MEMORY_VALUE(MemoryDef)
+HANDLE_MEMORY_VALUE(MemoryPhi)
+
 HANDLE_GLOBAL_VALUE(Function)
 HANDLE_GLOBAL_VALUE(GlobalAlias)
+HANDLE_GLOBAL_VALUE(GlobalIFunc)
 HANDLE_GLOBAL_VALUE(GlobalVariable)
-HANDLE_CONSTANT(UndefValue)
 HANDLE_CONSTANT(BlockAddress)
 HANDLE_CONSTANT(ConstantExpr)
+
+// ConstantAggregate.
+HANDLE_CONSTANT(ConstantArray)
+HANDLE_CONSTANT(ConstantStruct)
+HANDLE_CONSTANT(ConstantVector)
+
+// ConstantData.
+HANDLE_CONSTANT(UndefValue)
 HANDLE_CONSTANT(ConstantAggregateZero)
 HANDLE_CONSTANT(ConstantDataArray)
 HANDLE_CONSTANT(ConstantDataVector)
 HANDLE_CONSTANT(ConstantInt)
 HANDLE_CONSTANT(ConstantFP)
-HANDLE_CONSTANT(ConstantArray)
-HANDLE_CONSTANT(ConstantStruct)
-HANDLE_CONSTANT(ConstantVector)
 HANDLE_CONSTANT(ConstantPointerNull)
+HANDLE_CONSTANT(ConstantTokenNone)
 
 HANDLE_METADATA_VALUE(MetadataAsValue)
 HANDLE_INLINE_ASM_VALUE(InlineAsm)
@@ -79,8 +96,13 @@ HANDLE_INSTRUCTION(Instruction)
 // don't add new values here!
 
 HANDLE_CONSTANT_MARKER(ConstantFirstVal, Function)
-HANDLE_CONSTANT_MARKER(ConstantLastVal, ConstantPointerNull)
+HANDLE_CONSTANT_MARKER(ConstantLastVal, ConstantTokenNone)
+HANDLE_CONSTANT_MARKER(ConstantDataFirstVal, UndefValue)
+HANDLE_CONSTANT_MARKER(ConstantDataLastVal, ConstantTokenNone)
+HANDLE_CONSTANT_MARKER(ConstantAggregateFirstVal, ConstantArray)
+HANDLE_CONSTANT_MARKER(ConstantAggregateLastVal, ConstantVector)
 
+#undef HANDLE_MEMORY_VALUE
 #undef HANDLE_GLOBAL_VALUE
 #undef HANDLE_CONSTANT
 #undef HANDLE_INSTRUCTION

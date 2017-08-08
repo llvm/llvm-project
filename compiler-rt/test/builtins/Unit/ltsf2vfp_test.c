@@ -1,3 +1,5 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
+
 //===-- ltsf2vfp_test.c - Test __ltsf2vfp ---------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -19,7 +21,7 @@
 
 extern int __ltsf2vfp(float a, float b);
 
-#if __arm__
+#if __arm__ && __VFP_FP__
 int test__ltsf2vfp(float a, float b)
 {
     int actual = __ltsf2vfp(a, b);
@@ -33,7 +35,7 @@ int test__ltsf2vfp(float a, float b)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__ltsf2vfp(0.0, 0.0))
         return 1;
     if (test__ltsf2vfp(-1.0, 1.0))

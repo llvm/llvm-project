@@ -225,12 +225,14 @@ void CheckFoldableChainNodeMatcher::printImpl(raw_ostream &OS,
 }
 
 void EmitIntegerMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
-  OS.indent(indent) << "EmitInteger " << Val << " VT=" << VT << '\n';
+  OS.indent(indent) << "EmitInteger " << Val << " VT=" << getEnumName(VT)
+                    << '\n';
 }
 
 void EmitStringIntegerMatcher::
 printImpl(raw_ostream &OS, unsigned indent) const {
-  OS.indent(indent) << "EmitStringInteger " << Val << " VT=" << VT << '\n';
+  OS.indent(indent) << "EmitStringInteger " << Val << " VT=" << getEnumName(VT)
+                    << '\n';
 }
 
 void EmitRegisterMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
@@ -239,7 +241,7 @@ void EmitRegisterMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
     OS << Reg->getName();
   else
     OS << "zero_reg";
-  OS << " VT=" << VT << '\n';
+  OS << " VT=" << getEnumName(VT) << '\n';
 }
 
 void EmitConvertToTargetMatcher::
@@ -275,52 +277,10 @@ void EmitNodeMatcherCommon::printImpl(raw_ostream &OS, unsigned indent) const {
   OS << ")\n";
 }
 
-void MarkGlueResultsMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
-  OS.indent(indent) << "MarkGlueResults <todo: args>\n";
-}
-
 void CompleteMatchMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "CompleteMatch <todo args>\n";
   OS.indent(indent) << "Src = " << *Pattern.getSrcPattern() << "\n";
   OS.indent(indent) << "Dst = " << *Pattern.getDstPattern() << "\n";
-}
-
-// getHashImpl Implementation.
-
-unsigned CheckPatternPredicateMatcher::getHashImpl() const {
-  return HashString(Predicate);
-}
-
-unsigned CheckPredicateMatcher::getHashImpl() const {
-  return HashString(getPredicate().getFnName());
-}
-
-unsigned CheckOpcodeMatcher::getHashImpl() const {
-  return HashString(Opcode.getEnumName());
-}
-
-unsigned CheckCondCodeMatcher::getHashImpl() const {
-  return HashString(CondCodeName);
-}
-
-unsigned CheckValueTypeMatcher::getHashImpl() const {
-  return HashString(TypeName);
-}
-
-unsigned EmitStringIntegerMatcher::getHashImpl() const {
-  return HashString(Val) ^ VT;
-}
-
-template<typename It>
-static unsigned HashUnsigneds(It I, It E) {
-  unsigned Result = 0;
-  for (; I != E; ++I)
-    Result = (Result<<3) ^ *I;
-  return Result;
-}
-
-unsigned EmitMergeInputChainsMatcher::getHashImpl() const {
-  return HashUnsigneds(ChainNodes.begin(), ChainNodes.end());
 }
 
 bool CheckOpcodeMatcher::isEqualImpl(const Matcher *M) const {
@@ -339,23 +299,9 @@ bool EmitNodeMatcherCommon::isEqualImpl(const Matcher *m) const {
          M->NumFixedArityOperands == NumFixedArityOperands;
 }
 
-unsigned EmitNodeMatcherCommon::getHashImpl() const {
-  return (HashString(OpcodeName) << 4) | Operands.size();
-}
-
-
 void EmitNodeMatcher::anchor() { }
 
 void MorphNodeToMatcher::anchor() { }
-
-unsigned MarkGlueResultsMatcher::getHashImpl() const {
-  return HashUnsigneds(GlueResultNodes.begin(), GlueResultNodes.end());
-}
-
-unsigned CompleteMatchMatcher::getHashImpl() const {
-  return HashUnsigneds(Results.begin(), Results.end()) ^
-          ((unsigned)(intptr_t)&Pattern << 8);
-}
 
 // isContradictoryImpl Implementations.
 

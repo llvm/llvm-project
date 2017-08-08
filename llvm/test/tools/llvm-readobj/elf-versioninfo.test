@@ -47,35 +47,60 @@ CHECK-NEXT:     }
 CHECK-NEXT:   ]
 CHECK-NEXT: }
 
-CHECK: Version definition {
-CHECK-NEXT:   Section Name: .gnu.version_d (70)
-CHECK-NEXT:   Address: 0x25C
-CHECK-NEXT:   Offset: 0x25C
-CHECK-NEXT:   Link: 2
-CHECK-NEXT:   Entries [
-CHECK-NEXT:     Entry {
-CHECK-NEXT:       Offset: 0x0
-CHECK-NEXT:       Rev: 1
-CHECK-NEXT:       Flags: 1
-CHECK-NEXT:       Index: 1
-CHECK-NEXT:       Cnt: 1
-CHECK-NEXT:       Name: blah
-CHECK-NEXT:     }
-CHECK-NEXT:     Entry {
-CHECK-NEXT:       Offset: 0x1C
-CHECK-NEXT:       Rev: 1
-CHECK-NEXT:       Flags: 0
-CHECK-NEXT:       Index: 2
-CHECK-NEXT:       Cnt: 1
-CHECK-NEXT:       Name: VERSION1
-CHECK-NEXT:     }
-CHECK-NEXT:     Entry {
-CHECK-NEXT:       Offset: 0x38
-CHECK-NEXT:       Rev: 1
-CHECK-NEXT:       Flags: 0
-CHECK-NEXT:       Index: 3
-CHECK-NEXT:       Cnt: 2
-CHECK-NEXT:       Name: VERSION2
-CHECK-NEXT:     }
-CHECK-NEXT:   ]
+CHECK:      SHT_GNU_verdef {
+CHECK-NEXT:   Definition {
+CHECK-NEXT:     Version: 1
+CHECK-NEXT:     Flags: Base (0x1)
+CHECK-NEXT:     Index: 1
+CHECK-NEXT:     Hash: 430712
+CHECK-NEXT:     Name: blah
+CHECK-NEXT:   }
+CHECK-NEXT:   Definition {
+CHECK-NEXT:     Version: 1
+CHECK-NEXT:     Flags: 0x0
+CHECK-NEXT:     Index: 2
+CHECK-NEXT:     Hash: 175630257
+CHECK-NEXT:     Name: VERSION1
+CHECK-NEXT:   }
+CHECK-NEXT:   Definition {
+CHECK-NEXT:     Version: 1
+CHECK-NEXT:     Flags: 0x0
+CHECK-NEXT:     Index: 3
+CHECK-NEXT:     Hash: 175630258
+CHECK-NEXT:     Name: VERSION2
+CHECK-NEXT:     Predecessor: VERSION1
+CHECK-NEXT:   }
 CHECK-NEXT: }
+
+RUN: llvm-readobj -V %p/Inputs/verneed.elf-x86-64 | FileCheck %s --check-prefix=VERNEED
+
+VERNEED:       SHT_GNU_verneed {
+VERNEED-NEXT:   Dependency {
+VERNEED-NEXT:     Version: 1
+VERNEED-NEXT:     Count: 2
+VERNEED-NEXT:     FileName: verneed1.so.0
+VERNEED-NEXT:     Entry {
+VERNEED-NEXT:       Hash: 1938
+VERNEED-NEXT:       Flags: 0x0
+VERNEED-NEXT:       Index: 3
+VERNEED-NEXT:       Name: v2
+VERNEED-NEXT:     }
+VERNEED-NEXT:     Entry {
+VERNEED-NEXT:       Hash: 1939
+VERNEED-NEXT:       Flags: 0x0
+VERNEED-NEXT:       Index: 2
+VERNEED-NEXT:       Name: v3
+VERNEED-NEXT:     }
+VERNEED-NEXT:   }
+VERNEED-NEXT:   Dependency {
+VERNEED-NEXT:     Version: 1
+VERNEED-NEXT:     Count: 1
+VERNEED-NEXT:     FileName: verneed2.so.0
+VERNEED-NEXT:     Entry {
+VERNEED-NEXT:       Hash: 1937
+VERNEED-NEXT:       Flags: 0x0
+VERNEED-NEXT:       Index: 4
+VERNEED-NEXT:       Name: v1
+VERNEED-NEXT:     }
+VERNEED-NEXT:   }
+VERNEED-NEXT: }

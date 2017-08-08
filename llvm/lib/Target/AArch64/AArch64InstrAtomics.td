@@ -14,6 +14,9 @@
 //===----------------------------------
 // Atomic fences
 //===----------------------------------
+let AddedComplexity = 15, Size = 0 in
+def CompilerBarrier : Pseudo<(outs), (ins i32imm:$ordering),
+                             [(atomic_fence imm:$ordering, 0)]>, Sched<[]>;
 def : Pat<(atomic_fence (i64 4), (imm)), (DMB (i32 0x9))>;
 def : Pat<(atomic_fence (imm), (imm)), (DMB (i32 0xb))>;
 
@@ -29,7 +32,7 @@ def : Pat<(atomic_fence (imm), (imm)), (DMB (i32 0xb))>;
 class acquiring_load<PatFrag base>
   : PatFrag<(ops node:$ptr), (base node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  return isAtLeastAcquire(Ordering);
+  return isAcquireOrStronger(Ordering);
 }]>;
 
 // An atomic load operation that does not need either acquire or release
@@ -37,7 +40,7 @@ class acquiring_load<PatFrag base>
 class relaxed_load<PatFrag base>
   : PatFrag<(ops node:$ptr), (base node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  return !isAtLeastAcquire(Ordering);
+  return !isAcquireOrStronger(Ordering);
 }]>;
 
 // 8-bit loads
@@ -112,15 +115,16 @@ def : Pat<(relaxed_load<atomic_load_64>
 class releasing_store<PatFrag base>
   : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  assert(Ordering != AcquireRelease && "unexpected store ordering");
-  return isAtLeastRelease(Ordering);
+  assert(Ordering != AtomicOrdering::AcquireRelease &&
+         "unexpected store ordering");
+  return isReleaseOrStronger(Ordering);
 }]>;
 
 // An atomic store operation that doesn't actually need to be atomic on AArch64.
 class relaxed_store<PatFrag base>
   : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  return !isAtLeastRelease(Ordering);
+  return !isReleaseOrStronger(Ordering);
 }]>;
 
 // 8-bit stores
@@ -361,3 +365,99 @@ def : Pat<(stlxr_4 (and GPR64:$val, 0xffffffff), GPR64sp:$addr),
 // And clear exclusive.
 
 def : Pat<(int_aarch64_clrex), (CLREX 0xf)>;
+
+//===----------------------------------
+// Atomic cmpxchg for -O0
+//===----------------------------------
+
+// The fast register allocator used during -O0 inserts spills to cover any VRegs
+// live across basic block boundaries. When this happens between an LDXR and an
+// STXR it can clear the exclusive monitor, causing all cmpxchg attempts to
+// fail.
+
+// Unfortunately, this means we have to have an alternative (expanded
+// post-regalloc) path for -O0 compilations. Fortunately this path can be
+// significantly more naive than the standard expansion: we conservatively
+// assume seq_cst, strong cmpxchg and omit clrex on failure.
+
+let Constraints = "@earlyclobber $Rd,@earlyclobber $scratch",
+    mayLoad = 1, mayStore = 1 in {
+def CMP_SWAP_8 : Pseudo<(outs GPR32:$Rd, GPR32:$scratch),
+                        (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>,
+                 Sched<[WriteAtomic]>;
+
+def CMP_SWAP_16 : Pseudo<(outs GPR32:$Rd, GPR32:$scratch),
+                         (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>,
+                  Sched<[WriteAtomic]>;
+
+def CMP_SWAP_32 : Pseudo<(outs GPR32:$Rd, GPR32:$scratch),
+                         (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>,
+                  Sched<[WriteAtomic]>;
+
+def CMP_SWAP_64 : Pseudo<(outs GPR64:$Rd, GPR32:$scratch),
+                         (ins GPR64:$addr, GPR64:$desired, GPR64:$new), []>,
+                  Sched<[WriteAtomic]>;
+}
+
+let Constraints = "@earlyclobber $RdLo,@earlyclobber $RdHi,@earlyclobber $scratch",
+    mayLoad = 1, mayStore = 1 in
+def CMP_SWAP_128 : Pseudo<(outs GPR64:$RdLo, GPR64:$RdHi, GPR32:$scratch),
+                          (ins GPR64:$addr, GPR64:$desiredLo, GPR64:$desiredHi,
+                               GPR64:$newLo, GPR64:$newHi), []>,
+                   Sched<[WriteAtomic]>;
+
+// v8.1 Atomic instructions:
+def : Pat<(atomic_load_add_8 GPR64:$Rn, GPR32:$Rs), (LDADDALb GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_add_16 GPR64:$Rn, GPR32:$Rs), (LDADDALh GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_add_32 GPR64:$Rn, GPR32:$Rs), (LDADDALs GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_add_64 GPR64:$Rn, GPR64:$Rs), (LDADDALd GPR64:$Rs, GPR64sp:$Rn)>;
+
+def : Pat<(atomic_load_or_8 GPR64:$Rn, GPR32:$Rs), (LDSETALb GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_or_16 GPR64:$Rn, GPR32:$Rs), (LDSETALh GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_or_32 GPR64:$Rn, GPR32:$Rs), (LDSETALs GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_or_64 GPR64:$Rn, GPR64:$Rs), (LDSETALd GPR64:$Rs, GPR64sp:$Rn)>;
+
+def : Pat<(atomic_load_xor_8 GPR64:$Rn, GPR32:$Rs), (LDEORALb GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_xor_16 GPR64:$Rn, GPR32:$Rs), (LDEORALh GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_xor_32 GPR64:$Rn, GPR32:$Rs), (LDEORALs GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_xor_64 GPR64:$Rn, GPR64:$Rs), (LDEORALd GPR64:$Rs, GPR64sp:$Rn)>;
+
+def : Pat<(atomic_load_max_8 GPR64:$Rn, GPR32:$Rs), (LDSMAXALb GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_max_16 GPR64:$Rn, GPR32:$Rs), (LDSMAXALh GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_max_32 GPR64:$Rn, GPR32:$Rs), (LDSMAXALs GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_max_64 GPR64:$Rn, GPR64:$Rs), (LDSMAXALd GPR64:$Rs, GPR64sp:$Rn)>;
+
+def : Pat<(atomic_load_umax_8 GPR64:$Rn, GPR32:$Rs), (LDUMAXALb GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_umax_16 GPR64:$Rn, GPR32:$Rs), (LDUMAXALh GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_umax_32 GPR64:$Rn, GPR32:$Rs), (LDUMAXALs GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_umax_64 GPR64:$Rn, GPR64:$Rs), (LDUMAXALd GPR64:$Rs, GPR64sp:$Rn)>;
+
+def : Pat<(atomic_load_min_8 GPR64:$Rn, GPR32:$Rs), (LDSMINALb GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_min_16 GPR64:$Rn, GPR32:$Rs), (LDSMINALh GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_min_32 GPR64:$Rn, GPR32:$Rs), (LDSMINALs GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_min_64 GPR64:$Rn, GPR64:$Rs), (LDSMINALd GPR64:$Rs, GPR64sp:$Rn)>;
+
+def : Pat<(atomic_load_umin_8 GPR64:$Rn, GPR32:$Rs), (LDUMINALb GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_umin_16 GPR64:$Rn, GPR32:$Rs), (LDUMINALh GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_umin_32 GPR64:$Rn, GPR32:$Rs), (LDUMINALs GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_load_umin_64 GPR64:$Rn, GPR64:$Rs), (LDUMINALd GPR64:$Rs, GPR64sp:$Rn)>;
+
+def : Pat<(atomic_cmp_swap_8 GPR64:$Rn, GPR32:$Rold, GPR32:$Rnew), (CASALb GPR32:$Rold, GPR32:$Rnew, GPR64sp:$Rn)>;
+def : Pat<(atomic_cmp_swap_16 GPR64:$Rn, GPR32:$Rold, GPR32:$Rnew), (CASALh GPR32:$Rold, GPR32:$Rnew, GPR64sp:$Rn)>;
+def : Pat<(atomic_cmp_swap_32 GPR64:$Rn, GPR32:$Rold, GPR32:$Rnew), (CASALs GPR32:$Rold, GPR32:$Rnew, GPR64sp:$Rn)>;
+def : Pat<(atomic_cmp_swap_64 GPR64:$Rn, GPR64:$Rold, GPR64:$Rnew), (CASALd GPR64:$Rold, GPR64:$Rnew, GPR64sp:$Rn)>;
+
+def : Pat<(atomic_swap_8 GPR64:$Rn, GPR32:$Rs), (SWPALb GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_swap_16 GPR64:$Rn, GPR32:$Rs), (SWPALh GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_swap_32 GPR64:$Rn, GPR32:$Rs), (SWPALs GPR32:$Rs, GPR64sp:$Rn)>;
+def : Pat<(atomic_swap_64 GPR64:$Rn, GPR64:$Rs), (SWPALd GPR64:$Rs, GPR64sp:$Rn)>;
+
+def : Pat<(atomic_load_sub_8 GPR64:$Rn, GPR32:$Rs), (LDADDALb (SUBWrr WZR, GPR32:$Rs), GPR64sp:$Rn)>;
+def : Pat<(atomic_load_sub_16 GPR64:$Rn, GPR32:$Rs), (LDADDALh (SUBWrr WZR, GPR32:$Rs), GPR64sp:$Rn)>;
+def : Pat<(atomic_load_sub_32 GPR64:$Rn, GPR32:$Rs), (LDADDALs (SUBWrr WZR, GPR32:$Rs), GPR64sp:$Rn)>;
+def : Pat<(atomic_load_sub_64 GPR64:$Rn, GPR64:$Rs), (LDADDALd (SUBXrr XZR, GPR64:$Rs), GPR64sp:$Rn)>;
+
+def : Pat<(atomic_load_and_8 GPR64:$Rn, GPR32:$Rs), (LDCLRALb (ORNWrr WZR, GPR32:$Rs), GPR64sp:$Rn)>;
+def : Pat<(atomic_load_and_16 GPR64:$Rn, GPR32:$Rs), (LDCLRALh (ORNWrr WZR, GPR32:$Rs), GPR64sp:$Rn)>;
+def : Pat<(atomic_load_and_32 GPR64:$Rn, GPR32:$Rs), (LDCLRALs (ORNWrr WZR, GPR32:$Rs), GPR64sp:$Rn)>;
+def : Pat<(atomic_load_and_64 GPR64:$Rn, GPR64:$Rs), (LDCLRALd (ORNXrr XZR, GPR64:$Rs), GPR64sp:$Rn)>;

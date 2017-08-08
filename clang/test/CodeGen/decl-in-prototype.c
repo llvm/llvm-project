@@ -1,4 +1,4 @@
-// RUN: %clang -target i386-unknown-unknown -emit-llvm -S -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-linux -debug-info-kind=limited -emit-llvm -o - %s | FileCheck %s
 
 const int AA = 5;
 
@@ -18,4 +18,9 @@ int f2(enum {AA=7,BB} E) {
 int f(void (*g)(), enum {AA,BB} h) {
     // CHECK: ret i32 0
     return AA;
+}
+
+// This used to crash with debug info enabled.
+int pr31366(struct { enum { a = 1 } b; } c) {
+  return a;
 }

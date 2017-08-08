@@ -1,8 +1,8 @@
 ; Test the MSA intrinsics that are encoded with the 3R instruction format.
 ; There are lots of these so this covers those beginning with 'b'
 
-; RUN: llc -march=mips -mattr=+msa,+fp64 < %s | FileCheck %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64 < %s | FileCheck %s
+; RUN: llc -march=mips -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -march=mipsel -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck %s
 
 @llvm_mips_bclr_b_ARG1 = global <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, align 16
 @llvm_mips_bclr_b_ARG2 = global <16 x i8> <i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31>, align 16

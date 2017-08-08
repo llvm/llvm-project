@@ -7,7 +7,7 @@
 // RUN: FileCheck --check-prefix DTORS3 %s < %t
 // RUN: FileCheck --check-prefix DTORS4 %s < %t
 //
-// RUN: %clang_cc1 -emit-llvm %s -o - -mconstructor-aliases -triple=x86_64-pc-win32 -fno-rtti | FileCheck --check-prefix DTORS-X64 %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -mconstructor-aliases -triple=x86_64-pc-win32 -fno-rtti -std=c++11 | FileCheck --check-prefix DTORS-X64 %s
 
 namespace basic {
 
@@ -77,7 +77,7 @@ void check_vftable_offset() {
   C c;
 // The vftable pointer should point at the beginning of the vftable.
 // CHECK: [[THIS_PTR:%[0-9]+]] = bitcast %"struct.basic::C"* {{.*}} to i32 (...)***
-// CHECK: store i32 (...)** bitcast ([2 x i8*]* @"\01??_7C@basic@@6B@" to i32 (...)**), i32 (...)*** [[THIS_PTR]]
+// CHECK: store i32 (...)** bitcast ({ [2 x i8*] }* @"\01??_7C@basic@@6B@" to i32 (...)**), i32 (...)*** [[THIS_PTR]]
 }
 
 void call_complete_dtor(C *obj_ptr) {
@@ -196,7 +196,7 @@ struct E : virtual C { int e; };
 struct F : D, E { ~F(); int f; };
 
 F::~F() {
-// CHECK-LABEL: define x86_thiscallcc void @"\01??1F@test2@@UAE@XZ"(%"struct.test2::F"*)
+// CHECK-LABEL: define x86_thiscallcc void @"\01??1F@test2@@UAE@XZ"(%"struct.test2::F"*{{[^,]*}})
 //      Do an adjustment from C vbase subobject to F as though F was the
 //      complete type.
 // CHECK:   getelementptr inbounds i8, i8* %{{.*}}, i32 -20
@@ -207,7 +207,7 @@ F::~F() {
 void foo() {
   F f;
 }
-// DTORS3-LABEL: define linkonce_odr x86_thiscallcc void @"\01??_DF@test2@@UAE@XZ"({{.*}} {{.*}} comdat
+// DTORS3-LABEL: define linkonce_odr x86_thiscallcc void @"\01??_DF@test2@@QAEXXZ"({{.*}} {{.*}} comdat
 //      Do an adjustment from C* to F*.
 // DTORS3:   getelementptr i8, i8* %{{.*}}, i32 20
 // DTORS3:   bitcast i8* %{{.*}} to %"struct.test2::F"*
@@ -361,12 +361,12 @@ struct D : B, C { ~D(); };
 void call_vbase_complete(D *d) {
   d->~D();
 // CHECK: define void @"\01?call_vbase_complete@dtors@@YAXPAUD@1@@Z"
-// CHECK: call x86_thiscallcc void @"\01??_DD@dtors@@QAE@XZ"(%"struct.dtors::D"* %{{[^,]+}})
+// CHECK: call x86_thiscallcc void @"\01??_DD@dtors@@QAEXXZ"(%"struct.dtors::D"* %{{[^,]+}})
 // CHECK: ret
 }
 
 // The complete dtor should call the base dtors for D and the vbase A (once).
-// CHECK: define linkonce_odr x86_thiscallcc void @"\01??_DD@dtors@@QAE@XZ"({{.*}}) {{.*}} comdat
+// CHECK: define linkonce_odr x86_thiscallcc void @"\01??_DD@dtors@@QAEXXZ"({{.*}}) {{.*}} comdat
 // CHECK-NOT: call
 // CHECK: call x86_thiscallcc void @"\01??1D@dtors@@QAE@XZ"
 // CHECK-NOT: call
@@ -377,7 +377,7 @@ void call_vbase_complete(D *d) {
 void destroy_d_complete() {
   D d;
 // CHECK: define void @"\01?destroy_d_complete@dtors@@YAXXZ"
-// CHECK: call x86_thiscallcc void @"\01??_DD@dtors@@QAE@XZ"(%"struct.dtors::D"* %{{[^,]+}})
+// CHECK: call x86_thiscallcc void @"\01??_DD@dtors@@QAEXXZ"(%"struct.dtors::D"* %{{[^,]+}})
 // CHECK: ret
 }
 
@@ -387,7 +387,7 @@ void destroy_d_complete() {
 void call_nv_deleting_dtor(D *d) {
   delete d;
 // CHECK: define void @"\01?call_nv_deleting_dtor@dtors@@YAXPAUD@1@@Z"
-// CHECK: call x86_thiscallcc void @"\01??_DD@dtors@@QAE@XZ"(%"struct.dtors::D"* %{{[^,]+}})
+// CHECK: call x86_thiscallcc void @"\01??_DD@dtors@@QAEXXZ"(%"struct.dtors::D"* %{{[^,]+}})
 // CHECK: call void @"\01??3@YAXPAX@Z"
 // CHECK: ret
 }
@@ -443,6 +443,20 @@ void g() { new MoveOnly(f()); }
 // CHECK: store {{.*}} @"\01??_7MoveOnly@implicit_copy_vtable@@6B@"
 }
 
+namespace delegating_ctor {
+struct Y {};
+struct X : virtual Y {
+  X(int);
+  X();
+};
+X::X(int) : X() {}
+}
+// CHECK: define x86_thiscallcc %"struct.delegating_ctor::X"* @"\01??0X@delegating_ctor@@QAE@H@Z"(
+// CHECK:  %[[is_most_derived_addr:.*]] = alloca i32, align 4
+// CHECK:  store i32 %is_most_derived, i32* %[[is_most_derived_addr]]
+// CHECK:  %[[is_most_derived:.*]] = load i32, i32* %[[is_most_derived_addr]]
+// CHECK:  call x86_thiscallcc {{.*}}* @"\01??0X@delegating_ctor@@QAE@XZ"({{.*}} i32 %[[is_most_derived]])
+
 // Dtor thunks for classes in anonymous namespaces should be internal, not
 // linkonce_odr.
 namespace {
@@ -471,4 +485,3 @@ class G {
 extern void testG() {
   G g;
 }
-

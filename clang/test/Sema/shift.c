@@ -67,3 +67,14 @@ void test_shift_too_much(char x) {
     (void) (x >> 80); // no-warning
   (void) (x >> 80); // expected-warning {{shift count >= width of type}}
 }
+
+typedef unsigned vec16 __attribute__((vector_size(16)));
+typedef unsigned vec8 __attribute__((vector_size(8)));
+
+void vect_shift_1(vec16 *x) { *x = *x << 4; }
+
+void vect_shift_2(vec16 *x, vec16 y) { *x = *x << y; }
+
+void vect_shift_3(vec16 *x, vec8 y) {
+  *x = *x << y; // expected-error {{vector operands do not have the same number of elements}}
+}

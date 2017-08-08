@@ -1,0 +1,403 @@
+# RUN: llc -march=amdgcn -run-pass detect-dead-lanes -o - %s | FileCheck %s
+...
+---
+# Combined use/def transfer check, the basics.
+# CHECK-LABEL: name: test0
+# CHECK: S_NOP 0, implicit-def %0
+# CHECK: S_NOP 0, implicit-def %1
+# CHECK: S_NOP 0, implicit-def dead %2
+# CHECK: %3 = REG_SEQUENCE %0, {{[0-9]+}}, %1, {{[0-9]+}}, undef %2, {{[0-9]+}}
+# CHECK: S_NOP 0, implicit %3.sub0
+# CHECK: S_NOP 0, implicit %3.sub1
+# CHECK: S_NOP 0, implicit undef %3.sub2
+# CHECK: %4 = COPY %3.sub0_sub1
+# CHECK: %5 = COPY undef %3.sub2_sub3
+# CHECK: S_NOP 0, implicit %4.sub0
+# CHECK: S_NOP 0, implicit %4.sub1
+# CHECK: S_NOP 0, implicit undef %5.sub0
+name: test0
+registers:
+  - { id: 0, class: sreg_32_xm0 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sreg_32_xm0 }
+  - { id: 3, class: sreg_128 }
+  - { id: 4, class: sreg_64 }
+  - { id: 5, class: sreg_64 }
+body: |
+  bb.0:
+    S_NOP 0, implicit-def %0
+    S_NOP 0, implicit-def %1
+    S_NOP 0, implicit-def %2
+    %3 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub3
+    S_NOP 0, implicit %3.sub0
+    S_NOP 0, implicit %3.sub1
+    S_NOP 0, implicit %3.sub2
+    %4 = COPY %3.sub0_sub1
+    %5 = COPY %3.sub2_sub3
+    S_NOP 0, implicit %4.sub0
+    S_NOP 0, implicit %4.sub1
+    S_NOP 0, implicit %5.sub0
+...
+---
+# Check defined lanes transfer; Includes checking for some special cases like
+# undef operands or IMPLICIT_DEF definitions.
+# CHECK-LABEL: name: test1
+# CHECK: %0 = REG_SEQUENCE %sgpr0, {{[0-9]+}}, %sgpr0, {{[0-9]+}}
+# CHECK: %1 = INSERT_SUBREG %0, %sgpr1, {{[0-9]+}}
+# CHECK: %2 = INSERT_SUBREG %0.sub2_sub3, %sgpr42, {{[0-9]+}}
+# CHECK: S_NOP 0, implicit %1.sub0
+# CHECK: S_NOP 0, implicit undef %1.sub1
+# CHECK: S_NOP 0, implicit %1.sub2
+# CHECK: S_NOP 0, implicit %1.sub3
+# CHECK: S_NOP 0, implicit %2.sub0
+# CHECK: S_NOP 0, implicit undef %2.sub1
+
+# CHECK: %3 = IMPLICIT_DEF
+# CHECK: %4 = INSERT_SUBREG %0, undef %3, {{[0-9]+}}
+# CHECK: S_NOP 0, implicit undef %4.sub0
+# CHECK: S_NOP 0, implicit undef %4.sub1
+# CHECK: S_NOP 0, implicit %4.sub2
+# CHECK: S_NOP 0, implicit undef %4.sub3
+
+# CHECK: %5 = EXTRACT_SUBREG %0, {{[0-9]+}}
+# CHECK: %6 = EXTRACT_SUBREG %5, {{[0-9]+}}
+# CHECK: %7 = EXTRACT_SUBREG %5, {{[0-9]+}}
+# CHECK: S_NOP 0, implicit %5
+# CHECK: S_NOP 0, implicit %6
+# CHECK: S_NOP 0, implicit undef %7
+
+# CHECK: %8 = IMPLICIT_DEF
+# CHECK: %9 = EXTRACT_SUBREG undef %8, {{[0-9]+}}
+# CHECK: S_NOP 0, implicit undef %9
+
+# CHECK: %10 = EXTRACT_SUBREG undef %0, {{[0-9]+}}
+# CHECK: S_NOP 0, implicit undef %10
+name: test1
+registers:
+  - { id: 0, class: sreg_128 }
+  - { id: 1, class: sreg_128 }
+  - { id: 2, class: sreg_64 }
+  - { id: 3, class: sreg_32_xm0 }
+  - { id: 4, class: sreg_128 }
+  - { id: 5, class: sreg_64 }
+  - { id: 6, class: sreg_32_xm0 }
+  - { id: 7, class: sreg_32_xm0 }
+  - { id: 8, class: sreg_64 }
+  - { id: 9, class: sreg_32_xm0 }
+  - { id: 10, class: sreg_128 }
+body: |
+  bb.0:
+    %0 = REG_SEQUENCE %sgpr0, %subreg.sub0, %sgpr0, %subreg.sub2
+    %1 = INSERT_SUBREG %0, %sgpr1, %subreg.sub3
+    %2 = INSERT_SUBREG %0.sub2_sub3, %sgpr42, %subreg.sub0
+    S_NOP 0, implicit %1.sub0
+    S_NOP 0, implicit %1.sub1
+    S_NOP 0, implicit %1.sub2
+    S_NOP 0, implicit %1.sub3
+    S_NOP 0, implicit %2.sub0
+    S_NOP 0, implicit %2.sub1
+
+    %3 = IMPLICIT_DEF
+    %4 = INSERT_SUBREG %0, %3, %subreg.sub0
+    S_NOP 0, implicit %4.sub0
+    S_NOP 0, implicit %4.sub1
+    S_NOP 0, implicit %4.sub2
+    S_NOP 0, implicit %4.sub3
+
+    %5 = EXTRACT_SUBREG %0, %subreg.sub0_sub1
+    %6 = EXTRACT_SUBREG %5, %subreg.sub0
+    %7 = EXTRACT_SUBREG %5, %subreg.sub1
+    S_NOP 0, implicit %5
+    S_NOP 0, implicit %6
+    S_NOP 0, implicit %7
+
+    %8 = IMPLICIT_DEF
+    %9 = EXTRACT_SUBREG %8, %subreg.sub1
+    S_NOP 0, implicit %9
+
+    %10 = EXTRACT_SUBREG undef %0, %subreg.sub2_sub3
+    S_NOP 0, implicit %10
+...
+---
+# Check used lanes transfer; Includes checking for some special cases like
+# undef operands.
+# CHECK-LABEL: name: test2
+# CHECK: S_NOP 0, implicit-def dead %0
+# CHECK: S_NOP 0, implicit-def %1
+# CHECK: S_NOP 0, implicit-def %2
+# CHECK: %3 = REG_SEQUENCE undef %0, {{[0-9]+}}, %1, {{[0-9]+}}, %2, {{[0-9]+}}
+# CHECK: S_NOP 0, implicit %3.sub1
+# CHECK: S_NOP 0, implicit %3.sub3
+
+# CHECK: S_NOP 0, implicit-def %4
+# CHECK: S_NOP 0, implicit-def dead %5
+# CHECK: %6 = REG_SEQUENCE %4, {{[0-9]+}}, undef %5, {{[0-9]+}}
+# CHECK: S_NOP 0, implicit %6
+
+# CHECK: S_NOP 0, implicit-def dead %7
+# CHECK: S_NOP 0, implicit-def %8
+# CHECK: %9 = INSERT_SUBREG undef %7, %8, {{[0-9]+}}
+# CHECK: S_NOP 0, implicit %9.sub2
+
+# CHECK: S_NOP 0, implicit-def %10
+# CHECK: S_NOP 0, implicit-def dead %11
+# CHECK: %12 = INSERT_SUBREG %10, undef %11, {{[0-9]+}}
+# CHECK: S_NOP 0, implicit %12.sub3
+
+# CHECK: S_NOP 0, implicit-def %13
+# CHECK: S_NOP 0, implicit-def dead %14
+# CHECK: %15 = REG_SEQUENCE %13, {{[0-9]+}}, undef %14, {{[0-9]+}}
+# CHECK: %16 = EXTRACT_SUBREG %15, {{[0-9]+}}
+# CHECK: S_NOP 0, implicit %16.sub1
+
+name: test2
+registers:
+  - { id: 0, class: sreg_32_xm0 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sreg_64 }
+  - { id: 3, class: sreg_128 }
+  - { id: 4, class: sreg_32_xm0 }
+  - { id: 5, class: sreg_32_xm0 }
+  - { id: 6, class: sreg_64 }
+  - { id: 7, class: sreg_128 }
+  - { id: 8, class: sreg_64 }
+  - { id: 9, class: sreg_128 }
+  - { id: 10, class: sreg_128 }
+  - { id: 11, class: sreg_64 }
+  - { id: 12, class: sreg_128 }
+  - { id: 13, class: sreg_64 }
+  - { id: 14, class: sreg_64 }
+  - { id: 15, class: sreg_128 }
+  - { id: 16, class: sreg_64 }
+body: |
+  bb.0:
+    S_NOP 0, implicit-def %0
+    S_NOP 0, implicit-def %1
+    S_NOP 0, implicit-def %2
+    %3 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2_sub3
+    S_NOP 0, implicit %3.sub1
+    S_NOP 0, implicit %3.sub3
+
+    S_NOP 0, implicit-def %4
+    S_NOP 0, implicit-def %5
+    %6 = REG_SEQUENCE %4, %subreg.sub0, undef %5, %subreg.sub1
+    S_NOP 0, implicit %6
+
+    S_NOP 0, implicit-def %7
+    S_NOP 0, implicit-def %8
+    %9 = INSERT_SUBREG %7, %8, %subreg.sub2_sub3
+    S_NOP 0, implicit %9.sub2
+
+    S_NOP 0, implicit-def %10
+    S_NOP 0, implicit-def %11
+    %12 = INSERT_SUBREG %10, %11, %subreg.sub0_sub1
+    S_NOP 0, implicit %12.sub3
+
+    S_NOP 0, implicit-def %13
+    S_NOP 0, implicit-def %14
+    %15 = REG_SEQUENCE %13, %subreg.sub0_sub1, %14, %subreg.sub2_sub3
+    %16 = EXTRACT_SUBREG %15, %subreg.sub0_sub1
+    S_NOP 0, implicit %16.sub1
+...
+---
+# Check that copies to physregs use all lanes, copies from physregs define all
+# lanes. So we should not get a dead/undef flag here.
+# CHECK-LABEL: name: test3
+# CHECK: S_NOP 0, implicit-def %0
+# CHECK: %vcc = COPY %0
+# CHECK: %1 = COPY %vcc
+# CHECK: S_NOP 0, implicit %1
+name: test3
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_64 }
+  - { id: 1, class: sreg_64 }
+body: |
+  bb.0:
+    S_NOP 0, implicit-def %0
+    %vcc = COPY %0
+
+    %1 = COPY %vcc
+    S_NOP 0, implicit %1
+...
+---
+# Check that implicit-def/kill do not count as def/uses.
+# CHECK-LABEL: name: test4
+# CHECK: S_NOP 0, implicit-def dead %0
+# CHECK: KILL undef %0
+# CHECK: %1 = IMPLICIT_DEF
+# CHECK: S_NOP 0, implicit undef %1
+name: test4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_64 }
+  - { id: 1, class: sreg_64 }
+body: |
+  bb.0:
+    S_NOP 0, implicit-def %0
+    KILL %0
+
+    %1 = IMPLICIT_DEF
+    S_NOP 0, implicit %1
+...
+---
+# Check that unused inputs are marked as undef, even if the vreg itself is
+# used.
+# CHECK-LABEL: name: test5
+# CHECK: S_NOP 0, implicit-def %0
+# CHECK: %1 = REG_SEQUENCE undef %0, {{[0-9]+}}, %0, {{[0-9]+}}
+# CHECK: S_NOP 0, implicit %1.sub1
+name: test5
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_32_xm0 }
+  - { id: 1, class: sreg_64 }
+body: |
+  bb.0:
+    S_NOP 0, implicit-def %0
+    %1 = REG_SEQUENCE %0, %subreg.sub0, %0, %subreg.sub1
+    S_NOP 0, implicit %1.sub1
+...
+---
+# Check "optimistic" dataflow fixpoint in phi-loops.
+# CHECK-LABEL: name: loop0
+# CHECK: bb.0:
+# CHECK: S_NOP 0, implicit-def %0
+# CHECK: S_NOP 0, implicit-def dead %1
+# CHECK: S_NOP 0, implicit-def dead %2
+# CHECK: %3 = REG_SEQUENCE %0, {{[0-9]+}}, undef %1, {{[0-9]+}}, undef %2, {{[0-9]+}}
+
+# CHECK: bb.1:
+# CHECK: %4 = PHI %3, %bb.0, %5, %bb.1
+
+# CHECK: bb.2:
+# CHECK:   S_NOP 0, implicit %4.sub0
+# CHECK:   S_NOP 0, implicit undef %4.sub3
+name: loop0
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_32_xm0 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sreg_32_xm0 }
+  - { id: 3, class: sreg_128 }
+  - { id: 4, class: sreg_128 }
+  - { id: 5, class: sreg_128 }
+body: |
+  bb.0:
+    S_NOP 0, implicit-def %0
+    S_NOP 0, implicit-def %1
+    S_NOP 0, implicit-def %2
+    %3 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2
+    S_BRANCH %bb.1
+
+  bb.1:
+    %4 = PHI %3, %bb.0, %5, %bb.1
+
+    ; let's swiffle some lanes around for fun...
+    %5 = REG_SEQUENCE %4.sub0, %subreg.sub0, %4.sub2, %subreg.sub1, %4.sub1, %subreg.sub2, %4.sub3, %subreg.sub3
+
+    S_CBRANCH_VCCNZ %bb.1, implicit undef %vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_NOP 0, implicit %4.sub0
+    S_NOP 0, implicit %4.sub3
+...
+---
+# Check a loop that needs to be traversed multiple times to reach the fixpoint
+# for the used lanes. The example reads sub3 lane at the end, however with each
+# loop iteration we should get 1 more lane marked as we cycles the sublanes
+# along. Sublanes sub0, sub1 and sub3 are rotate in the loop so only sub2
+# should be dead.
+# CHECK-LABEL: name: loop1
+# CHECK: bb.0:
+# CHECK: S_NOP 0, implicit-def %0
+# CHECK: S_NOP 0, implicit-def %1
+# CHECK: S_NOP 0, implicit-def dead %2
+# CHECK: S_NOP 0, implicit-def %3
+# CHECK: %4 = REG_SEQUENCE %0, {{[0-9]+}}, %1, {{[0-9]+}}, undef %2, {{[0-9]+}}, %3, {{[0-9]+}}
+
+# CHECK: bb.1:
+# CHECK: %5 = PHI %4, %bb.0, %6, %bb.1
+
+# CHECK: %6 = REG_SEQUENCE %5.sub1, {{[0-9]+}}, %5.sub3, {{[0-9]+}}, undef %5.sub2, {{[0-9]+}}, %5.sub0, {{[0-9]+}}
+
+# CHECK: bb.2:
+# CHECK:   S_NOP 0, implicit %6.sub3
+name: loop1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_32_xm0 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sreg_32_xm0 }
+  - { id: 3, class: sreg_32_xm0 }
+  - { id: 4, class: sreg_128 }
+  - { id: 5, class: sreg_128 }
+  - { id: 6, class: sreg_128 }
+body: |
+  bb.0:
+    S_NOP 0, implicit-def %0
+    S_NOP 0, implicit-def %1
+    S_NOP 0, implicit-def dead %2
+    S_NOP 0, implicit-def %3
+    %4 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
+    S_BRANCH %bb.1
+
+  bb.1:
+    %5 = PHI %4, %bb.0, %6, %bb.1
+
+    ; rotate lanes, but skip sub2 lane...
+    %6 = REG_SEQUENCE %5.sub1, %subreg.sub0, %5.sub3, %subreg.sub1, %5.sub2, %subreg.sub2, %5.sub0, %subreg.sub3
+
+    S_CBRANCH_VCCNZ %bb.1, implicit undef %vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_NOP 0, implicit %6.sub3
+...
+---
+# Similar to loop1 test, but check for fixpoint of defined lanes.
+# Lanes are rotate between sub0, sub2, sub3 so only sub1 should be dead/undef.
+# CHECK-LABEL: name: loop2
+# CHECK: bb.0:
+# CHECK: S_NOP 0, implicit-def %0
+# CHECK: %1 = REG_SEQUENCE %0, {{[0-9]+}}
+
+# CHECK: bb.1:
+# CHECK: %2 = PHI %1, %bb.0, %3, %bb.1
+
+# CHECK: %3 = REG_SEQUENCE %2.sub3, {{[0-9]+}}, undef %2.sub1, {{[0-9]+}}, %2.sub0, {{[0-9]+}}, %2.sub2, {{[0-9]+}}
+
+# CHECK: bb.2:
+# CHECK:   S_NOP 0, implicit %2.sub0
+# CHECK:   S_NOP 0, implicit undef %2.sub1
+# CHECK:   S_NOP 0, implicit %2.sub2
+# CHECK:   S_NOP 0, implicit %2.sub3
+name: loop2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_32_xm0 }
+  - { id: 1, class: sreg_128 }
+  - { id: 2, class: sreg_128 }
+  - { id: 3, class: sreg_128 }
+body: |
+  bb.0:
+    S_NOP 0, implicit-def %0
+    %1 = REG_SEQUENCE %0, %subreg.sub0
+    S_BRANCH %bb.1
+
+  bb.1:
+    %2 = PHI %1, %bb.0, %3, %bb.1
+
+    ; rotate subreg lanes, skipping sub1
+    %3 = REG_SEQUENCE %2.sub3, %subreg.sub0, %2.sub1, %subreg.sub1, %2.sub0, %subreg.sub2, %2.sub2, %subreg.sub3
+
+    S_CBRANCH_VCCNZ %bb.1, implicit undef %vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_NOP 0, implicit %2.sub0
+    S_NOP 0, implicit undef %2.sub1
+    S_NOP 0, implicit %2.sub2
+    S_NOP 0, implicit %2.sub3
+...

@@ -3,7 +3,7 @@
 ; CHECK: _f
 ; CHECK: adds
 ; CHECK-NOT: cmp
-; CHECK: blxeq _h
+; CHECK: bleq _h
 
 define i32 @f(i32 %a, i32 %b) nounwind ssp {
 entry:
@@ -22,7 +22,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: _g
 ; CHECK: orrs
 ; CHECK-NOT: cmp
-; CHECK: blxeq _h
+; CHECK: bleq _h
 
 define i32 @g(i32 %a, i32 %b) nounwind ssp {
 entry:

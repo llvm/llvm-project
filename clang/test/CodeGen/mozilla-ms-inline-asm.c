@@ -18,25 +18,25 @@ void invoke(void* that, unsigned methodIndex,
 // CHECK: store i32 %2, i32* %7, align 4
 // CHECK: store i8* %3, i8** %8, align 4
 // CHECK: call void asm sideeffect inteldialect
-// CHECK: mov edx,dword ptr $1
-// CHECK: test edx,edx
-// CHECK: jz {{[^_]*}}__MSASMLABEL_.0__noparams
-//             ^ Can't use {{.*}} here because the matching is greedy.
-// CHECK: mov eax,edx
-// CHECK: shl eax,$$3
-// CHECK: sub esp,eax
-// CHECK: mov ecx,esp
-// CHECK: push dword ptr $0
-// CHECK: call dword ptr $2
-// CHECK: {{.*}}__MSASMLABEL_.0__noparams:
-// CHECK: mov ecx,dword ptr $3
-// CHECK: push ecx
-// CHECK: mov edx,[ecx]
-// CHECK: mov eax,dword ptr $4
-// CHECK: call dword ptr[edx+eax*$$4]
-// CHECK: mov esp,ebp
-// CHECK: pop ebp
-// CHECK: ret
+// CHECK-SAME: mov edx,$1
+// CHECK-SAME: test edx,edx
+// CHECK-SAME: jz {{[^_]*}}__MSASMLABEL_.${:uid}__noparams
+//                ^ Can't use {{.*}} here because the matching is greedy.
+// CHECK-SAME: mov eax,edx
+// CHECK-SAME: shl eax,$$3
+// CHECK-SAME: sub esp,eax
+// CHECK-SAME: mov ecx,esp
+// CHECK-SAME: push $0
+// CHECK-SAME: call dword ptr $2
+// CHECK-SAME: {{.*}}__MSASMLABEL_.${:uid}__noparams:
+// CHECK-SAME: mov ecx,$3
+// CHECK-SAME: push ecx
+// CHECK-SAME: mov edx,[ecx]
+// CHECK-SAME: mov eax,$4
+// CHECK-SAME: call dword ptr[edx+eax*$$4]
+// CHECK-SAME: mov esp,ebp
+// CHECK-SAME: pop ebp
+// CHECK-SAME: ret
 // CHECK: "=*m,*m,*m,*m,*m,~{eax},~{ebp},~{ecx},~{edx},~{flags},~{esp},~{dirflag},~{fpsr},~{flags}"
 // CHECK: (i8** %8, i32* %7, void (...)* bitcast (void ()* @invoke_copy_to_stack to void (...)*), i8** %5, i32* %6)
 // CHECK: ret void

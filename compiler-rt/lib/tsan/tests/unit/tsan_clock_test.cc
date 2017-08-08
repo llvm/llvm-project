@@ -13,6 +13,7 @@
 #include "tsan_clock.h"
 #include "tsan_rtl.h"
 #include "gtest/gtest.h"
+#include <sys/time.h>
 #include <time.h>
 
 namespace __tsan {
@@ -25,13 +26,13 @@ TEST(Clock, VectorBasic) {
   clk.tick();
   ASSERT_EQ(clk.size(), 1U);
   ASSERT_EQ(clk.get(0), 1U);
-  clk.set(3, clk.get(3) + 1);
+  clk.set(&cache, 3, clk.get(3) + 1);
   ASSERT_EQ(clk.size(), 4U);
   ASSERT_EQ(clk.get(0), 1U);
   ASSERT_EQ(clk.get(1), 0U);
   ASSERT_EQ(clk.get(2), 0U);
   ASSERT_EQ(clk.get(3), 1U);
-  clk.set(3, clk.get(3) + 1);
+  clk.set(&cache, 3, clk.get(3) + 1);
   ASSERT_EQ(clk.get(3), 2U);
 }
 
@@ -50,6 +51,31 @@ TEST(Clock, ChunkedBasic) {
   ASSERT_EQ(vector.size(), 1U);
   ASSERT_EQ(chunked.size(), 1U);
   chunked.Reset(&cache);
+}
+
+static const uptr interesting_sizes[] = {0, 1, 2, 30, 61, 62, 63, 64, 65, 66,
+    100, 124, 125, 126, 127, 128, 129, 130, 188, 189, 190, 191, 192, 193, 254,
+    255};
+
+TEST(Clock, Iter) {
+  const uptr n = ARRAY_SIZE(interesting_sizes);
+  for (uptr fi = 0; fi < n; fi++) {
+    const uptr size = interesting_sizes[fi];
+    SyncClock sync;
+    ThreadClock vector(0);
+    for (uptr i = 0; i < size; i++)
+      vector.set(&cache, i, i + 1);
+    if (size != 0)
+      vector.release(&cache, &sync);
+    uptr i = 0;
+    for (ClockElem &ce : sync) {
+      ASSERT_LT(i, size);
+      ASSERT_EQ(sync.get_clean(i), ce.epoch);
+      i++;
+    }
+    ASSERT_EQ(i, size);
+    sync.Reset(&cache);
+  }
 }
 
 TEST(Clock, AcquireRelease) {
@@ -85,24 +111,26 @@ TEST(Clock, RepeatedAcquire) {
 
 TEST(Clock, ManyThreads) {
   SyncClock chunked;
-  for (unsigned i = 0; i < 100; i++) {
+  for (unsigned i = 0; i < 200; i++) {
     ThreadClock vector(0);
     vector.tick();
-    vector.set(i, 1);
+    vector.set(&cache, i, i + 1);
     vector.release(&cache, &chunked);
     ASSERT_EQ(i + 1, chunked.size());
     vector.acquire(&cache, &chunked);
     ASSERT_EQ(i + 1, vector.size());
   }
 
-  for (unsigned i = 0; i < 100; i++)
-    ASSERT_EQ(1U, chunked.get(i));
+  for (unsigned i = 0; i < 200; i++) {
+    printf("i=%d\n", i);
+    ASSERT_EQ(i + 1, chunked.get(i));
+  }
 
   ThreadClock vector(1);
   vector.acquire(&cache, &chunked);
-  ASSERT_EQ(100U, vector.size());
-  for (unsigned i = 0; i < 100; i++)
-    ASSERT_EQ(1U, vector.get(i));
+  ASSERT_EQ(200U, vector.size());
+  for (unsigned i = 0; i < 200; i++)
+    ASSERT_EQ(i + 1, vector.get(i));
 
   chunked.Reset(&cache);
 }
@@ -150,7 +178,7 @@ TEST(Clock, Growth) {
   {
     ThreadClock vector(10);
     vector.tick();
-    vector.set(5, 42);
+    vector.set(&cache, 5, 42);
     SyncClock sync;
     vector.release(&cache, &sync);
     ASSERT_EQ(sync.size(), 11U);
@@ -179,8 +207,8 @@ TEST(Clock, Growth) {
   {
     ThreadClock vector(100);
     vector.tick();
-    vector.set(5, 42);
-    vector.set(90, 84);
+    vector.set(&cache, 5, 42);
+    vector.set(&cache, 90, 84);
     SyncClock sync;
     vector.release(&cache, &sync);
     ASSERT_EQ(sync.size(), 101U);
@@ -208,6 +236,40 @@ TEST(Clock, Growth) {
     ASSERT_EQ(sync.get(99), 0ULL);
     ASSERT_EQ(sync.get(100), 1ULL);
     sync.Reset(&cache);
+  }
+}
+
+TEST(Clock, Growth2) {
+  // Test clock growth for every pair of sizes:
+  const uptr n = ARRAY_SIZE(interesting_sizes);
+  for (uptr fi = 0; fi < n; fi++) {
+    for (uptr ti = fi + 1; ti < n; ti++) {
+      const uptr from = interesting_sizes[fi];
+      const uptr to = interesting_sizes[ti];
+      SyncClock sync;
+      ThreadClock vector(0);
+      for (uptr i = 0; i < from; i++)
+        vector.set(&cache, i, i + 1);
+      if (from != 0)
+        vector.release(&cache, &sync);
+      ASSERT_EQ(sync.size(), from);
+      for (uptr i = 0; i < from; i++)
+        ASSERT_EQ(sync.get(i), i + 1);
+      for (uptr i = 0; i < to; i++)
+        vector.set(&cache, i, i + 1);
+      vector.release(&cache, &sync);
+      ASSERT_EQ(sync.size(), to);
+      for (uptr i = 0; i < to; i++)
+        ASSERT_EQ(sync.get(i), i + 1);
+      vector.set(&cache, to + 1, to + 1);
+      vector.release(&cache, &sync);
+      ASSERT_EQ(sync.size(), to + 2);
+      for (uptr i = 0; i < to; i++)
+        ASSERT_EQ(sync.get(i), i + 1);
+      ASSERT_EQ(sync.get(to), 0U);
+      ASSERT_EQ(sync.get(to + 1), to + 1);
+      sync.Reset(&cache);
+    }
   }
 }
 
@@ -416,9 +478,9 @@ static bool ClockFuzzer(bool printing) {
 }
 
 TEST(Clock, Fuzzer) {
-  timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  int seed = ts.tv_sec + ts.tv_nsec;
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  int seed = tv.tv_sec + tv.tv_usec;
   printf("seed=%d\n", seed);
   srand(seed);
   if (!ClockFuzzer(false)) {

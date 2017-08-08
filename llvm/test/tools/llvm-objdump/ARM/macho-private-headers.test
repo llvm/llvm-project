@@ -1,6 +1,8 @@
 // RUN: llvm-objdump -p %p/Inputs/hello.obj.macho-arm | FileCheck %s
 // RUN: llvm-objdump -p %p/Inputs/hello.exe.macho-arm \
 // RUN:     | FileCheck %s -check-prefix=EXE
+// RUN: llvm-objdump -macho -private-headers %p/Inputs/thumb.armv7m \
+// RUN:     | FileCheck %s -check-prefix=THREAD
 
 CHECK: Mach header
 CHECK:       magic cputype cpusubtype  caps    filetype ncmds sizeofcmds      flags
@@ -343,3 +345,14 @@ EXE:       cmd LC_DYLIB_CODE_SIGN_DRS
 EXE:   cmdsize 16
 EXE:   dataoff 49244
 EXE:  datasize 20
+
+THREAD: Load command 6
+THREAD:         cmd LC_UNIXTHREAD
+THREAD:     cmdsize 84
+THREAD:      flavor ARM_THREAD_STATE
+THREAD:      count ARM_THREAD_STATE_COUNT
+THREAD:	    r0  0x00000000 r1     0x00000000 r2  0x00000000 r3  0x00000000
+THREAD:	    r4  0x00000000 r5     0x00000000 r6  0x00000000 r7  0x00000000
+THREAD:	    r8  0x00000000 r9     0x00000000 r10 0x00000000 r11 0x00000000
+THREAD:	    r12 0x00000000 sp     0x00000000 lr  0x00000000 pc  0x00001fff
+THREAD:	   cpsr 0x00000000

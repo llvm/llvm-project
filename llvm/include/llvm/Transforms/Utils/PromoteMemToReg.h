@@ -15,10 +15,9 @@
 #ifndef LLVM_TRANSFORMS_UTILS_PROMOTEMEMTOREG_H
 #define LLVM_TRANSFORMS_UTILS_PROMOTEMEMTOREG_H
 
-#include "llvm/ADT/ArrayRef.h"
-
 namespace llvm {
 
+template <typename T> class ArrayRef;
 class AllocaInst;
 class DominatorTree;
 class AliasSetTracker;
@@ -39,10 +38,7 @@ bool isAllocaPromotable(const AllocaInst *AI);
 /// does not modify the CFG of the function at all.  All allocas must be from
 /// the same function.
 ///
-/// If AST is specified, the specified tracker is updated to reflect changes
-/// made to the IR.
 void PromoteMemToReg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
-                     AliasSetTracker *AST = nullptr,
                      AssumptionCache *AC = nullptr);
 
 } // End llvm namespace

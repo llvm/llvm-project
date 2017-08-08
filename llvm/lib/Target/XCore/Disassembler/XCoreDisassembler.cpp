@@ -15,7 +15,7 @@
 #include "XCore.h"
 #include "XCoreRegisterInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -769,7 +769,7 @@ MCDisassembler::DecodeStatus XCoreDisassembler::getInstruction(
 }
 
 namespace llvm {
-  extern Target TheXCoreTarget;
+  Target &getTheXCoreTarget();
 }
 
 static MCDisassembler *createXCoreDisassembler(const Target &T,
@@ -780,6 +780,6 @@ static MCDisassembler *createXCoreDisassembler(const Target &T,
 
 extern "C" void LLVMInitializeXCoreDisassembler() {
   // Register the disassembler.
-  TargetRegistry::RegisterMCDisassembler(TheXCoreTarget,
+  TargetRegistry::RegisterMCDisassembler(getTheXCoreTarget(),
                                          createXCoreDisassembler);
 }

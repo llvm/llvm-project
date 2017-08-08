@@ -348,7 +348,8 @@ public:
 }
 
 static const DeclRefExpr *getSelfInitExpr(VarDecl *VD) {
-  if (VD->getType()->isRecordType()) return nullptr;
+  if (VD->getType()->isRecordType())
+    return nullptr;
   if (Expr *Init = VD->getInit()) {
     const DeclRefExpr *DRE
       = dyn_cast<DeclRefExpr>(stripCasts(VD->getASTContext(), Init));

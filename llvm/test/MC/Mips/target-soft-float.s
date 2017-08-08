@@ -269,10 +269,10 @@ foo:
   # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   ldc1       $f2, 16($7)
   # FIXME: LDC1 is correctly rejected but the wrong error message is emitted.
-  # 32: :[[@LINE-2]]:19: error: invalid operand for instruction
+  # 32: :[[@LINE-2]]:19: error: expected memory with 16-bit signed offset
   lwc1       $f2, 16($7)
   # FIXME: LWC1 is correctly rejected but the wrong error message is emitted.
-  # 32: :[[@LINE-2]]:19: error: invalid operand for instruction
+  # 32: :[[@LINE-2]]:19: error: expected memory with 16-bit signed offset
   madd.s     $f2, $f2, $f2, $f2
   # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   mfc1       $7, $f2
@@ -313,7 +313,7 @@ foo:
   # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   sdc1       $f2, 16($7)
   # FIXME: SDC1 is correctly rejected but the wrong error message is emitted.
-  # 32: :[[@LINE-2]]:19: error: invalid operand for instruction
+  # 32: :[[@LINE-2]]:19: error: expected memory with 16-bit signed offset
   sqrt.d     $f2, $f2
   # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   sqrt.s     $f2, $f2
@@ -324,7 +324,7 @@ foo:
   # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   swc1       $f2, 16($7)
   # FIXME: SWC1 is correctly rejected but the wrong error message is emitted.
-  # 32: :[[@LINE-2]]:19: error: invalid operand for instruction
+  # 32: :[[@LINE-2]]:19: error: expected memory with 16-bit signed offset
   trunc.w.d  $f2, $f2
   # 32: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
   trunc.w.s  $f2, $f2

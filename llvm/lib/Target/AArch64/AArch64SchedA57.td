@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// The Cortex-A57 is a traditional superscaler microprocessor with a
+// The Cortex-A57 is a traditional superscalar microprocessor with a
 // conservative 3-wide in-order stage for decode and dispatch. Combined with the
 // much wider out-of-order issue stage, this produced a need to carefully
 // schedule micro-ops so that all three decoded each cycle are successfully
@@ -30,6 +30,7 @@ def CortexA57Model : SchedMachineModel {
   // Enable partial & runtime unrolling. The magic number is chosen based on
   // experiments and benchmarking data.
   let LoopMicroOpBufferSize = 16;
+  let CompleteModel = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -91,10 +92,12 @@ def : SchedAlias<WriteFCvt,  A57Write_5cyc_1V>;
 def : SchedAlias<WriteFCopy, A57Write_5cyc_1L>;
 def : SchedAlias<WriteFImm,  A57Write_3cyc_1V>;
 def : SchedAlias<WriteFMul,  A57Write_5cyc_1V>;
-def : SchedAlias<WriteFDiv,  A57Write_18cyc_1X>;
+def : SchedAlias<WriteFDiv,  A57Write_17cyc_1W>;
 def : SchedAlias<WriteV,     A57Write_3cyc_1V>;
 def : SchedAlias<WriteVLD,   A57Write_5cyc_1L>;
 def : SchedAlias<WriteVST,   A57Write_1cyc_1S>;
+
+def : WriteRes<WriteAtomic,  []> { let Unsupported = 1; }
 
 def : WriteRes<WriteSys,     []> { let Latency = 1; }
 def : WriteRes<WriteBarrier, []> { let Latency = 1; }
@@ -159,7 +162,9 @@ def : InstRW<[A57Write_2cyc_1M],    (instregex "BFM")>;
 // Cryptography Extensions
 // -----------------------------------------------------------------------------
 
-def : InstRW<[A57Write_3cyc_1W], (instregex "^AES")>;
+def A57ReadAES  : SchedReadAdvance<3, [A57Write_3cyc_1W]>;
+def : InstRW<[A57Write_3cyc_1W], (instregex "^AES[DE]")>;
+def : InstRW<[A57Write_3cyc_1W, A57ReadAES], (instregex "^AESI?MC")>;
 def : InstRW<[A57Write_6cyc_2V], (instregex "^SHA1SU0")>;
 def : InstRW<[A57Write_3cyc_1W], (instregex "^SHA1(H|SU1)")>;
 def : InstRW<[A57Write_6cyc_2W], (instregex "^SHA1[CMP]")>;
@@ -441,19 +446,19 @@ def : InstRW<[A57Write_5cyc_1V], (instregex "^[FVSU]CVT([AMNPZ][SU])?(_Int)?(v2f
 def : InstRW<[A57Write_5cyc_2V], (instregex "^[FVSU]CVT([AMNPZ][SU])?(_Int)?(v4f32|v2f64|v4i32|v2i64)")>;
 
 // ASIMD FP divide, D-form, F32
-def : InstRW<[A57Write_18cyc_1X], (instregex "FDIVv2f32")>;
+def : InstRW<[A57Write_17cyc_1W], (instregex "FDIVv2f32")>;
 // ASIMD FP divide, Q-form, F32
-def : InstRW<[A57Write_36cyc_2X], (instregex "FDIVv4f32")>;
+def : InstRW<[A57Write_34cyc_2W], (instregex "FDIVv4f32")>;
 // ASIMD FP divide, Q-form, F64
-def : InstRW<[A57Write_64cyc_2X], (instregex "FDIVv2f64")>;
+def : InstRW<[A57Write_64cyc_2W], (instregex "FDIVv2f64")>;
 
 // Note: These were simply duplicated from ASIMD FDIV because of missing documentation
 // ASIMD FP square root, D-form, F32
-def : InstRW<[A57Write_18cyc_1X], (instregex "FSQRTv2f32")>;
+def : InstRW<[A57Write_17cyc_1W], (instregex "FSQRTv2f32")>;
 // ASIMD FP square root, Q-form, F32
-def : InstRW<[A57Write_36cyc_2X], (instregex "FSQRTv4f32")>;
+def : InstRW<[A57Write_34cyc_2W], (instregex "FSQRTv4f32")>;
 // ASIMD FP square root, Q-form, F64
-def : InstRW<[A57Write_64cyc_2X], (instregex "FSQRTv2f64")>;
+def : InstRW<[A57Write_64cyc_2W], (instregex "FSQRTv2f64")>;
 
 // ASIMD FP max/min, normal, D-form
 def : InstRW<[A57Write_5cyc_1V], (instregex "^(FMAX|FMIN)(NM)?(v2f32)")>;
@@ -548,15 +553,15 @@ def : InstRW<[A57WriteFPMA, A57ReadFPM, A57ReadFPM, A57ReadFPMA5], (instregex "^
 def : InstRW<[A57Write_10cyc_1L_1V], (instregex "^[FSU]CVT[AMNPZ][SU](_Int)?[SU]?[XW]?[DS]?[rds]i?")>;
 def : InstRW<[A57Write_10cyc_1L_1V], (instregex "^[SU]CVTF")>;
 
-def : InstRW<[A57Write_32cyc_1X], (instrs FDIVDrr)>;
-def : InstRW<[A57Write_18cyc_1X], (instrs FDIVSrr)>;
+def : InstRW<[A57Write_32cyc_1W], (instrs FDIVDrr)>;
+def : InstRW<[A57Write_17cyc_1W], (instrs FDIVSrr)>;
 
 def : InstRW<[A57Write_5cyc_1V], (instregex "^F(MAX|MIN).+rr")>;
 
 def : InstRW<[A57Write_5cyc_1V], (instregex "^FRINT.+r")>;
 
-def : InstRW<[A57Write_32cyc_1X], (instrs FSQRTDr)>;
-def : InstRW<[A57Write_18cyc_1X], (instrs FSQRTSr)>;
+def : InstRW<[A57Write_32cyc_1W], (instrs FSQRTDr)>;
+def : InstRW<[A57Write_17cyc_1W], (instrs FSQRTSr)>;
 
 def : InstRW<[A57Write_5cyc_1L, WriteLDHi], (instrs LDNPDi)>;
 def : InstRW<[A57Write_6cyc_2L, WriteLDHi], (instrs LDNPQi)>;

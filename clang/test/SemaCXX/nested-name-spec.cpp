@@ -169,6 +169,13 @@ void N::f() { } // okay
 struct Y;  // expected-note{{forward declaration of 'Y'}}
 Y::foo y; // expected-error{{incomplete type 'Y' named in nested name specifier}}
 
+namespace PR25156 {
+struct Y;  // expected-note{{forward declaration of 'PR25156::Y'}}
+void foo() {
+  Y::~Y(); // expected-error{{incomplete type 'PR25156::Y' named in nested name specifier}}
+}
+}
+
 X::X() : a(5) { } // expected-error{{use of undeclared identifier 'X'}}
 
 struct foo_S {
@@ -310,7 +317,7 @@ namespace N {
 }
 
 namespace TypedefNamespace { typedef int F; };
-TypedefNamespace::F::NonexistentName BadNNSWithCXXScopeSpec; // expected-error {{'F' (aka 'int') is not a class, namespace, or enumeration}}
+TypedefNamespace::F::NonexistentName BadNNSWithCXXScopeSpec; // expected-error {{'TypedefNamespace::F' (aka 'int') is not a class, namespace, or enumeration}}
 
 namespace PR18587 {
 
@@ -434,4 +441,22 @@ namespace PR16951 {
   int x5 = enumerator_2::X2; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}} \
                              // expected-error{{no member named 'X2' in 'PR16951::enumerator_2'}}
 
+}
+
+namespace PR30619 {
+c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d;
+// expected-error@-1 16{{unknown type name 'c'}}
+c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d;
+// expected-error@-1 16{{unknown type name 'c'}}
+c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d;
+// expected-error@-1 16{{unknown type name 'c'}}
+c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d; c d;
+// expected-error@-1 16{{unknown type name 'c'}}
+namespace A {
+class B {
+  typedef C D; // expected-error{{unknown type name 'C'}}
+  A::D::F;
+  // expected-error@-1{{'PR30619::A::B::D' (aka 'int') is not a class, namespace, or enumeration}}
+};
+}
 }

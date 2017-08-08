@@ -15,7 +15,9 @@
 #include "lsan_allocator.h"
 
 #include "sanitizer_common/sanitizer_allocator.h"
+#include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
+#include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
@@ -24,44 +26,27 @@
 extern "C" void *memset(void *ptr, int value, uptr num);
 
 namespace __lsan {
-
-struct ChunkMetadata {
-  u8 allocated : 8;  // Must be first.
-  ChunkTag tag : 2;
-  uptr requested_size : 54;
-  u32 stack_trace_id;
-};
-
-#if defined(__mips64) || defined(__aarch64__)
+#if defined(__i386__) || defined(__arm__)
+static const uptr kMaxAllowedMallocSize = 1UL << 30;
+#elif defined(__mips64) || defined(__aarch64__)
 static const uptr kMaxAllowedMallocSize = 4UL << 30;
-static const uptr kRegionSizeLog = 20;
-static const uptr kNumRegions = SANITIZER_MMAP_RANGE_SIZE >> kRegionSizeLog;
-typedef TwoLevelByteMap<(kNumRegions >> 12), 1 << 12> ByteMap;
-typedef CompactSizeClassMap SizeClassMap;
-typedef SizeClassAllocator32<0, SANITIZER_MMAP_RANGE_SIZE,
-    sizeof(ChunkMetadata), SizeClassMap, kRegionSizeLog, ByteMap>
-    PrimaryAllocator;
 #else
 static const uptr kMaxAllowedMallocSize = 8UL << 30;
-static const uptr kAllocatorSpace = 0x600000000000ULL;
-static const uptr kAllocatorSize = 0x40000000000ULL; // 4T.
-typedef SizeClassAllocator64<kAllocatorSpace, kAllocatorSize,
-        sizeof(ChunkMetadata), DefaultSizeClassMap> PrimaryAllocator;
 #endif
-typedef SizeClassAllocatorLocalCache<PrimaryAllocator> AllocatorCache;
 typedef LargeMmapAllocator<> SecondaryAllocator;
 typedef CombinedAllocator<PrimaryAllocator, AllocatorCache,
           SecondaryAllocator> Allocator;
 
 static Allocator allocator;
-static THREADLOCAL AllocatorCache cache;
 
 void InitializeAllocator() {
-  allocator.InitLinkerInitialized(common_flags()->allocator_may_return_null);
+  SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
+  allocator.InitLinkerInitialized(
+      common_flags()->allocator_release_to_os_interval_ms);
 }
 
 void AllocatorThreadFinish() {
-  allocator.SwallowCache(&cache);
+  allocator.SwallowCache(GetAllocatorCache());
 }
 
 static ChunkMetadata *Metadata(const void *p) {
@@ -91,21 +76,30 @@ void *Allocate(const StackTrace &stack, uptr size, uptr alignment,
     size = 1;
   if (size > kMaxAllowedMallocSize) {
     Report("WARNING: LeakSanitizer failed to allocate %zu bytes\n", size);
-    return nullptr;
+    return Allocator::FailureHandler::OnBadRequest();
   }
-  void *p = allocator.Allocate(&cache, size, alignment, false);
+  void *p = allocator.Allocate(GetAllocatorCache(), size, alignment);
   // Do not rely on the allocator to clear the memory (it's slow).
   if (cleared && allocator.FromPrimary(p))
     memset(p, 0, size);
   RegisterAllocation(stack, p, size);
   if (&__sanitizer_malloc_hook) __sanitizer_malloc_hook(p, size);
+  RunMallocHooks(p, size);
   return p;
+}
+
+static void *Calloc(uptr nmemb, uptr size, const StackTrace &stack) {
+  if (UNLIKELY(CheckForCallocOverflow(size, nmemb)))
+    return Allocator::FailureHandler::OnBadRequest();
+  size *= nmemb;
+  return Allocate(stack, size, 1, true);
 }
 
 void Deallocate(void *p) {
   if (&__sanitizer_free_hook) __sanitizer_free_hook(p);
+  RunFreeHooks(p);
   RegisterDeallocation(p);
-  allocator.Deallocate(&cache, p);
+  allocator.Deallocate(GetAllocatorCache(), p);
 }
 
 void *Reallocate(const StackTrace &stack, void *p, uptr new_size,
@@ -113,23 +107,56 @@ void *Reallocate(const StackTrace &stack, void *p, uptr new_size,
   RegisterDeallocation(p);
   if (new_size > kMaxAllowedMallocSize) {
     Report("WARNING: LeakSanitizer failed to allocate %zu bytes\n", new_size);
-    allocator.Deallocate(&cache, p);
-    return nullptr;
+    allocator.Deallocate(GetAllocatorCache(), p);
+    return Allocator::FailureHandler::OnBadRequest();
   }
-  p = allocator.Reallocate(&cache, p, new_size, alignment);
+  p = allocator.Reallocate(GetAllocatorCache(), p, new_size, alignment);
   RegisterAllocation(stack, p, new_size);
   return p;
 }
 
 void GetAllocatorCacheRange(uptr *begin, uptr *end) {
-  *begin = (uptr)&cache;
-  *end = *begin + sizeof(cache);
+  *begin = (uptr)GetAllocatorCache();
+  *end = *begin + sizeof(AllocatorCache);
 }
 
 uptr GetMallocUsableSize(const void *p) {
   ChunkMetadata *m = Metadata(p);
   if (!m) return 0;
   return m->requested_size;
+}
+
+void *lsan_memalign(uptr alignment, uptr size, const StackTrace &stack) {
+  if (UNLIKELY(!IsPowerOfTwo(alignment))) {
+    errno = errno_EINVAL;
+    return Allocator::FailureHandler::OnBadRequest();
+  }
+  return SetErrnoOnNull(Allocate(stack, size, alignment, kAlwaysClearMemory));
+}
+
+void *lsan_malloc(uptr size, const StackTrace &stack) {
+  return SetErrnoOnNull(Allocate(stack, size, 1, kAlwaysClearMemory));
+}
+
+void lsan_free(void *p) {
+  Deallocate(p);
+}
+
+void *lsan_realloc(void *p, uptr size, const StackTrace &stack) {
+  return SetErrnoOnNull(Reallocate(stack, p, size, 1));
+}
+
+void *lsan_calloc(uptr nmemb, uptr size, const StackTrace &stack) {
+  return SetErrnoOnNull(Calloc(nmemb, size, stack));
+}
+
+void *lsan_valloc(uptr size, const StackTrace &stack) {
+  return SetErrnoOnNull(
+      Allocate(stack, size, GetPageSizeCached(), kAlwaysClearMemory));
+}
+
+uptr lsan_mz_size(const void *p) {
+  return GetMallocUsableSize(p);
 }
 
 ///// Interface to the common LSan module. /////
@@ -247,4 +274,17 @@ SANITIZER_INTERFACE_ATTRIBUTE
 uptr __sanitizer_get_allocated_size(const void *p) {
   return GetMallocUsableSize(p);
 }
+
+#if !SANITIZER_SUPPORTS_WEAK_HOOKS
+// Provide default (no-op) implementation of malloc hooks.
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_malloc_hook(void *ptr, uptr size) {
+  (void)ptr;
+  (void)size;
+}
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_free_hook(void *ptr) {
+  (void)ptr;
+}
+#endif
 } // extern "C"

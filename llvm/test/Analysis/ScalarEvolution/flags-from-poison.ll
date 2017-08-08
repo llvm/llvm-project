@@ -57,6 +57,30 @@ exit:
   ret void
 }
 
+define void @test-add-nuw-from-icmp(float* %input, i32 %offset,
+                                    i32 %numIterations) {
+; CHECK-LABEL: @test-add-nuw-from-icmp
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %nexti, %loop ], [ 0, %entry ]
+
+; CHECK: %index32 =
+; CHECK: --> {%offset,+,1}<nuw>
+  %index32 = add nuw i32 %i, %offset
+  %cmp = icmp sgt i32 %index32, 0
+  %cmp.idx = sext i1 %cmp to i32
+
+  %ptr = getelementptr inbounds float, float* %input, i32 %cmp.idx
+  %nexti = add nuw i32 %i, 1
+  %f = load float, float* %ptr, align 4
+  %exitcond = icmp eq i32 %nexti, %numIterations
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; With no load to trigger UB from poison, we cannot infer nsw.
 define void @test-add-no-load(float* %input, i32 %offset, i32 %numIterations) {
 ; CHECK-LABEL: @test-add-no-load
@@ -113,7 +137,7 @@ loop:
   %i = phi i32 [ %nexti, %loop2 ], [ 0, %entry ]
 
 ; CHECK: %index32 =
-; CHECK: --> {%offset,+,1}<nw>
+; CHECK: --> {%offset,+,1}<nsw>
   %index32 = add nsw i32 %i, %offset
 
   %ptr = getelementptr inbounds float, float* %input, i32 %index32
@@ -123,6 +147,80 @@ loop2:
   %f = load float, float* %ptr, align 4
   %exitcond = icmp eq i32 %nexti, %numIterations
   br i1 %exitcond, label %exit, label %loop
+exit:
+  ret void
+}
+
+; Similar to test-add-not-header, but in this case the load
+; instruction may not be executed.
+define void @test-add-not-header3(float* %input, i32 %offset, i32 %numIterations,
+                                 i1* %cond_buf) {
+; CHECK-LABEL: @test-add-not-header3
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %nexti, %loop2 ], [ 0, %entry ]
+
+; CHECK: %index32 =
+; CHECK: --> {%offset,+,1}<nw>
+  %index32 = add nsw i32 %i, %offset
+
+  %ptr = getelementptr inbounds float, float* %input, i32 %index32
+  %nexti = add nsw i32 %i, 1
+  %cond = load volatile i1, i1* %cond_buf
+  br i1 %cond, label %loop2, label %exit
+loop2:
+  %f = load float, float* %ptr, align 4
+  %exitcond = icmp eq i32 %nexti, %numIterations
+  br i1 %exitcond, label %exit, label %loop
+exit:
+  ret void
+}
+
+; Same thing as test-add-not-header2, except we have a few extra
+; blocks.
+define void @test-add-not-header4(float* %input, i32 %offset, i32 %numIterations) {
+; CHECK-LABEL: @test-add-not-header4
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %nexti, %loop2 ], [ 0, %entry ]
+
+; CHECK: %index32 =
+; CHECK: --> {%offset,+,1}<nsw>
+  %index32 = add nsw i32 %i, %offset
+
+  %ptr = getelementptr inbounds float, float* %input, i32 %index32
+  %nexti = add nsw i32 %i, 1
+  br label %loop3
+loop3:
+  br label %loop4
+loop4:
+  br label %loop2
+loop2:
+  %f = load float, float* %ptr, align 4
+  %exitcond = icmp eq i32 %nexti, %numIterations
+  br i1 %exitcond, label %exit, label %loop
+exit:
+  ret void
+}
+
+; Demonstrate why we need a Visited set in llvm::programUndefinedIfFullPoison.
+define void @test-add-not-header5(float* %input, i32 %offset) {
+; CHECK-LABEL: @test-add-not-header5
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %nexti, %loop ], [ 0, %entry ]
+
+; CHECK: %index32 =
+; CHECK: --> {%offset,+,1}<nw>
+  %index32 = add nsw i32 %i, %offset
+
+  %ptr = getelementptr inbounds float, float* %input, i32 %index32
+  %nexti = add nsw i32 %i, 1
+  br label %loop
+
 exit:
   ret void
 }
@@ -174,17 +272,16 @@ exit:
   ret void
 }
 
-; Without inbounds, GEP does not propagate poison in the very
-; conservative approach used here.
-define void @test-add-no-inbounds(float* %input, i32 %offset, i32 %numIterations) {
-; CHECK-LABEL: @test-add-no-inbounds
+; Any poison input makes getelementptr produce poison
+define void @test-gep-propagates-poison(float* %input, i32 %offset, i32 %numIterations) {
+; CHECK-LABEL: @test-gep-propagates-poison
 entry:
   br label %loop
 loop:
   %i = phi i32 [ %nexti, %loop ], [ 0, %entry ]
 
 ; CHECK: %index32 =
-; CHECK: --> {%offset,+,1}<nw>
+; CHECK: --> {%offset,+,1}<nsw>
   %index32 = add nsw i32 %i, %offset
 
   %ptr = getelementptr float, float* %input, i32 %index32
@@ -219,17 +316,16 @@ exit:
   ret void
 }
 
-; Multiplication by a non-constant should not propagate poison in the
-; very conservative approach used here.
-define void @test-add-mul-no-propagation(float* %input, i32 %offset, i32 %numIterations) {
-; CHECK-LABEL: @test-add-mul-no-propagation
+; Any poison input to multiplication propages poison.
+define void @test-mul-propagates-poison(float* %input, i32 %offset, i32 %numIterations) {
+; CHECK-LABEL: @test-mul-propagates-poison
 entry:
   br label %loop
 loop:
   %i = phi i32 [ %nexti, %loop ], [ 0, %entry ]
 
 ; CHECK: %index32 =
-; CHECK: --> {%offset,+,1}<nw>
+; CHECK: --> {%offset,+,1}<nsw>
   %index32 = add nsw i32 %i, %offset
 
   %indexmul = mul nsw i32 %index32, %offset
@@ -242,17 +338,15 @@ exit:
   ret void
 }
 
-; Multiplication by a non-zero constant does not propagate poison
-; without a no-wrap flag.
-define void @test-add-mul-no-propagation2(float* %input, i32 %offset, i32 %numIterations) {
-; CHECK-LABEL: @test-add-mul-no-propagation2
+define void @test-mul-propagates-poison-2(float* %input, i32 %offset, i32 %numIterations) {
+; CHECK-LABEL: @test-mul-propagates-poison-2
 entry:
   br label %loop
 loop:
   %i = phi i32 [ %nexti, %loop ], [ 0, %entry ]
 
 ; CHECK: %index32 =
-; CHECK: --> {%offset,+,1}<nw>
+; CHECK: --> {%offset,+,1}<nsw>
   %index32 = add nsw i32 %i, %offset
 
   %indexmul = mul i32 %index32, 2
@@ -346,7 +440,7 @@ loop:
 
   %j = add nsw i32 %i, 1
 ; CHECK: %index32 =
-; CHECK: --> {(1 + %offset),+,1}<nsw>
+; CHECK: --> {(1 + %offset)<nsw>,+,1}<nsw>
   %index32 = add nsw i32 %j, %offset
 
   %ptr = getelementptr inbounds float, float* %input, i32 %index32
@@ -488,7 +582,7 @@ loop:
   %i = phi i32 [ %nexti, %loop ], [ %start, %entry ]
 
 ; CHECK: %index32 =
-; CHECK: --> {((-1 * %halfsub)<nsw> + %start),+,1}<nsw>
+; CHECK: --> {((-1 * %halfsub)<nsw> + %start)<nsw>,+,1}<nsw>
   %index32 = sub nsw i32 %i, %halfsub
   %index64 = sext i32 %index32 to i64
 
@@ -547,7 +641,7 @@ loop:
 
   %j = add nsw i32 %i, 1
 ; CHECK: %index32 =
-; CHECK: --> {(1 + (-1 * %offset)),+,1}<nsw>
+; CHECK: --> {(1 + (-1 * %offset))<nsw>,+,1}<nsw>
   %index32 = sub nsw i32 %j, %offset
 
   %ptr = getelementptr inbounds float, float* %input, i32 %index32
@@ -589,4 +683,53 @@ outer.be:
 
 exit:
   ret void
+}
+
+
+; PR28932: Don't assert on non-SCEV-able value %2.
+%struct.anon = type { i8* }
+@a = common global %struct.anon* null, align 8
+@b = common global i32 0, align 4
+declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32)
+declare void @llvm.trap()
+define i32 @pr28932() {
+entry:
+  %.pre = load %struct.anon*, %struct.anon** @a, align 8
+  %.pre7 = load i32, i32* @b, align 4
+  br label %for.cond
+
+for.cond:                                         ; preds = %cont6, %entry
+  %0 = phi i32 [ %3, %cont6 ], [ %.pre7, %entry ]
+  %1 = phi %struct.anon* [ %.ph, %cont6 ], [ %.pre, %entry ]
+  %tobool = icmp eq %struct.anon* %1, null
+  %2 = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %0, i32 1)
+  %3 = extractvalue { i32, i1 } %2, 0
+  %4 = extractvalue { i32, i1 } %2, 1
+  %idxprom = sext i32 %3 to i64
+  %5 = getelementptr inbounds %struct.anon, %struct.anon* %1, i64 0, i32 0
+  %6 = load i8*, i8** %5, align 8
+  %7 = getelementptr inbounds i8, i8* %6, i64 %idxprom
+  %8 = load i8, i8* %7, align 1
+  br i1 %tobool, label %if.else, label %if.then
+
+if.then:                                          ; preds = %for.cond
+  br i1 %4, label %trap, label %cont6
+
+trap:                                             ; preds = %if.else, %if.then
+  tail call void @llvm.trap()
+  unreachable
+
+if.else:                                          ; preds = %for.cond
+  br i1 %4, label %trap, label %cont1
+
+cont1:                                            ; preds = %if.else
+  %conv5 = sext i8 %8 to i64
+  %9 = inttoptr i64 %conv5 to %struct.anon*
+  store %struct.anon* %9, %struct.anon** @a, align 8
+  br label %cont6
+
+cont6:                                            ; preds = %cont1, %if.then
+  %.ph = phi %struct.anon* [ %9, %cont1 ], [ %1, %if.then ]
+  store i32 %3, i32* @b, align 4
+  br label %for.cond
 }

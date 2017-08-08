@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -101,14 +102,12 @@ enum class ObjCMessageVisitKind {
 
 class CheckerManager {
   const LangOptions LangOpts;
-  AnalyzerOptionsRef AOptions;
+  AnalyzerOptions &AOptions;
   CheckName CurrentCheckName;
 
 public:
-  CheckerManager(const LangOptions &langOpts,
-                 AnalyzerOptionsRef AOptions)
-    : LangOpts(langOpts),
-      AOptions(AOptions) {}
+  CheckerManager(const LangOptions &langOpts, AnalyzerOptions &AOptions)
+      : LangOpts(langOpts), AOptions(AOptions) {}
 
   ~CheckerManager();
 
@@ -120,7 +119,7 @@ public:
   void finishedCheckerRegistration();
 
   const LangOptions &getLangOpts() const { return LangOpts; }
-  AnalyzerOptions &getAnalyzerOptions() { return *AOptions; }
+  AnalyzerOptions &getAnalyzerOptions() { return AOptions; }
 
   typedef CheckerBase *CheckerRef;
   typedef const void *CheckerTag;
@@ -287,6 +286,12 @@ public:
   void runCheckersForEndAnalysis(ExplodedGraph &G, BugReporter &BR,
                                  ExprEngine &Eng);
 
+  /// \brief Run checkers on beginning of function.
+  void runCheckersForBeginFunction(ExplodedNodeSet &Dst,
+                                   const BlockEdge &L,
+                                   ExplodedNode *Pred,
+                                   ExprEngine &Eng);
+
   /// \brief Run checkers on end of function.
   void runCheckersForEndFunction(NodeBuilderContext &BC,
                                  ExplodedNodeSet &Dst,
@@ -317,9 +322,6 @@ public:
                                  ExprEngine &Eng,
                                  ProgramPoint::Kind K);
 
-  /// \brief True if at least one checker wants to check region changes.
-  bool wantsRegionChangeUpdate(ProgramStateRef state);
-
   /// \brief Run checkers for region changes.
   ///
   /// This corresponds to the check::RegionChanges callback.
@@ -336,6 +338,7 @@ public:
                               const InvalidatedSymbols *invalidated,
                               ArrayRef<const MemRegion *> ExplicitRegions,
                               ArrayRef<const MemRegion *> Regions,
+                              const LocationContext *LCtx,
                               const CallEvent *Call);
 
   /// \brief Run checkers when pointers escape.
@@ -425,7 +428,10 @@ public:
   
   typedef CheckerFn<void (ExplodedGraph &, BugReporter &, ExprEngine &)>
       CheckEndAnalysisFunc;
-  
+
+  typedef CheckerFn<void (CheckerContext &)>
+      CheckBeginFunctionFunc;
+
   typedef CheckerFn<void (CheckerContext &)>
       CheckEndFunctionFunc;
   
@@ -438,14 +444,13 @@ public:
   typedef CheckerFn<void (ProgramStateRef,SymbolReaper &)> CheckLiveSymbolsFunc;
   
   typedef CheckerFn<ProgramStateRef (ProgramStateRef,
-                                const InvalidatedSymbols *symbols,
-                                ArrayRef<const MemRegion *> ExplicitRegions,
-                                ArrayRef<const MemRegion *> Regions,
-                                const CallEvent *Call)>
+                                     const InvalidatedSymbols *symbols,
+                                     ArrayRef<const MemRegion *> ExplicitRegions,
+                                     ArrayRef<const MemRegion *> Regions,
+                                     const LocationContext *LCtx,
+                                     const CallEvent *Call)>
       CheckRegionChangesFunc;
   
-  typedef CheckerFn<bool (ProgramStateRef)> WantsRegionChangeUpdateFunc;
-
   typedef CheckerFn<ProgramStateRef (ProgramStateRef,
                                      const InvalidatedSymbols &Escaped,
                                      const CallEvent *Call,
@@ -484,6 +489,7 @@ public:
 
   void _registerForEndAnalysis(CheckEndAnalysisFunc checkfn);
 
+  void _registerForBeginFunction(CheckEndFunctionFunc checkfn);
   void _registerForEndFunction(CheckEndFunctionFunc checkfn);
 
   void _registerForBranchCondition(CheckBranchConditionFunc checkfn);
@@ -492,8 +498,7 @@ public:
 
   void _registerForDeadSymbols(CheckDeadSymbolsFunc checkfn);
 
-  void _registerForRegionChanges(CheckRegionChangesFunc checkfn,
-                                 WantsRegionChangeUpdateFunc wantUpdateFn);
+  void _registerForRegionChanges(CheckRegionChangesFunc checkfn);
 
   void _registerForPointerEscape(CheckPointerEscapeFunc checkfn);
 
@@ -593,6 +598,7 @@ private:
 
   std::vector<CheckEndAnalysisFunc> EndAnalysisCheckers;
 
+  std::vector<CheckBeginFunctionFunc> BeginFunctionCheckers;
   std::vector<CheckEndFunctionFunc> EndFunctionCheckers;
 
   std::vector<CheckBranchConditionFunc> BranchConditionCheckers;
@@ -601,11 +607,7 @@ private:
 
   std::vector<CheckDeadSymbolsFunc> DeadSymbolsCheckers;
 
-  struct RegionChangesCheckerInfo {
-    CheckRegionChangesFunc CheckFn;
-    WantsRegionChangeUpdateFunc WantUpdateFn;
-  };
-  std::vector<RegionChangesCheckerInfo> RegionChangesCheckers;
+  std::vector<CheckRegionChangesFunc> RegionChangesCheckers;
 
   std::vector<CheckPointerEscapeFunc> PointerEscapeCheckers;
 

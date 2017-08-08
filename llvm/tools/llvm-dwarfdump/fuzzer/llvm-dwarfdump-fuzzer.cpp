@@ -24,11 +24,13 @@ extern "C" void LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   std::unique_ptr<MemoryBuffer> Buff = MemoryBuffer::getMemBuffer(
       StringRef((const char *)data, size), "", false);
 
-  ErrorOr<std::unique_ptr<ObjectFile>> ObjOrErr =
+  Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
       ObjectFile::createObjectFile(Buff->getMemBufferRef());
-  if (!ObjOrErr)
+  if (auto E = ObjOrErr.takeError()) {
+    consumeError(std::move(E));
     return;
+  }
   ObjectFile &Obj = *ObjOrErr.get();
-  std::unique_ptr<DIContext> DICtx(new DWARFContextInMemory(Obj));
+  std::unique_ptr<DIContext> DICtx = DWARFContext::create(Obj);
   DICtx->dump(nulls(), DIDT_All);
 }

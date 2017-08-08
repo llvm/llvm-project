@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
@@ -32,6 +32,7 @@ static void UpdatePosition(std::pair<unsigned, unsigned> &Position, const char *
     switch (*Ptr) {
     case '\n':
       Line += 1;
+      LLVM_FALLTHROUGH;
     case '\r':
       Column = 0;
       break;

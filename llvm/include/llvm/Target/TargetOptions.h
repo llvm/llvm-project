@@ -15,14 +15,11 @@
 #ifndef LLVM_TARGET_TARGETOPTIONS_H
 #define LLVM_TARGET_TARGETOPTIONS_H
 
-#include "llvm/Target/TargetRecip.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include <string>
 
 namespace llvm {
   class MachineFunction;
   class Module;
-  class StringRef;
 
   namespace FloatABI {
     enum ABIType {
@@ -58,24 +55,60 @@ namespace llvm {
     };
   }
 
+  namespace FPDenormal {
+    enum DenormalMode {
+      IEEE,           // IEEE 754 denormal numbers
+      PreserveSign,   // the sign of a flushed-to-zero number is preserved in
+                      // the sign of 0
+      PositiveZero    // denormals are flushed to positive zero
+    };
+  }
+
+  enum class EABI {
+    Unknown,
+    Default, // Default means not specified
+    EABI4,   // Target-specific (either 4, 5 or gnu depending on triple).
+    EABI5,
+    GNU
+  };
+
+  /// Identify a debugger for "tuning" the debug info.
+  ///
+  /// The "debugger tuning" concept allows us to present a more intuitive
+  /// interface that unpacks into different sets of defaults for the various
+  /// individual feature-flag settings, that suit the preferences of the
+  /// various debuggers.  However, it's worth remembering that debuggers are
+  /// not the only consumers of debug info, and some variations in DWARF might
+  /// better be treated as target/platform issues. Fundamentally,
+  /// o if the feature is useful (or not) to a particular debugger, regardless
+  ///   of the target, that's a tuning decision;
+  /// o if the feature is useful (or not) on a particular platform, regardless
+  ///   of the debugger, that's a target decision.
+  /// It's not impossible to see both factors in some specific case.
+  ///
+  /// The "tuning" should be used to set defaults for individual feature flags
+  /// in DwarfDebug; if a given feature has a more specific command-line option,
+  /// that option should take precedence over the tuning.
+  enum class DebuggerKind {
+    Default,  // No specific tuning requested.
+    GDB,      // Tune debug info for gdb.
+    LLDB,     // Tune debug info for lldb.
+    SCE       // Tune debug info for SCE targets (e.g. PS4).
+  };
+
   class TargetOptions {
   public:
     TargetOptions()
-        : PrintMachineCode(false),
-          LessPreciseFPMADOption(false), UnsafeFPMath(false),
-          NoInfsFPMath(false), NoNaNsFPMath(false),
-          HonorSignDependentRoundingFPMathOption(false),
-          NoZerosInBSS(false),
-          GuaranteedTailCallOpt(false),
-          StackAlignmentOverride(0),
-          EnableFastISel(false), PositionIndependentExecutable(false),
-          UseInitArray(false), DisableIntegratedAS(false),
-          CompressDebugSections(false), FunctionSections(false),
-          DataSections(false), UniqueSectionNames(true), TrapUnreachable(false),
-          EmulatedTLS(false), FloatABIType(FloatABI::Default),
-          AllowFPOpFusion(FPOpFusion::Standard), Reciprocals(TargetRecip()),
-          JTType(JumpTable::Single),
-          ThreadModel(ThreadModel::POSIX) {}
+        : PrintMachineCode(false), UnsafeFPMath(false), NoInfsFPMath(false),
+          NoNaNsFPMath(false), NoTrappingFPMath(false),
+          NoSignedZerosFPMath(false),
+          HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
+          GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
+          EnableFastISel(false), UseInitArray(false),
+          DisableIntegratedAS(false), RelaxELFRelocations(false),
+          FunctionSections(false), DataSections(false),
+          UniqueSectionNames(true), TrapUnreachable(false), EmulatedTLS(false),
+          EnableIPRA(false) {}
 
     /// PrintMachineCode - This flag is enabled when the -print-machineinstrs
     /// option is specified on the command line, and should enable debugging
@@ -86,20 +119,11 @@ namespace llvm {
     /// optimization should be disabled for the given machine function.
     bool DisableFramePointerElim(const MachineFunction &MF) const;
 
-    /// LessPreciseFPMAD - This flag is enabled when the
-    /// -enable-fp-mad is specified on the command line.  When this flag is off
-    /// (the default), the code generator is not allowed to generate mad
-    /// (multiply add) if the result is "less precise" than doing those
-    /// operations individually.
-    unsigned LessPreciseFPMADOption : 1;
-    bool LessPreciseFPMAD() const;
-
     /// UnsafeFPMath - This flag is enabled when the
     /// -enable-unsafe-fp-math flag is specified on the command line.  When
     /// this flag is off (the default), the code generator is not allowed to
     /// produce results that are "less precise" than IEEE allows.  This includes
     /// use of X86 instructions like FSIN and FCOS instead of libcalls.
-    /// UnsafeFPMath implies LessPreciseFPMAD.
     unsigned UnsafeFPMath : 1;
 
     /// NoInfsFPMath - This flag is enabled when the
@@ -113,6 +137,17 @@ namespace llvm {
     /// this flag is off (the default), the code generator is not allowed to
     /// assume the FP arithmetic arguments and results are never NaNs.
     unsigned NoNaNsFPMath : 1;
+
+    /// NoTrappingFPMath - This flag is enabled when the
+    /// -enable-no-trapping-fp-math is specified on the command line. This
+    /// specifies that there are no trap handlers to handle exceptions.
+    unsigned NoTrappingFPMath : 1;
+
+    /// NoSignedZerosFPMath - This flag is enabled when the
+    /// -enable-no-signed-zeros-fp-math is specified on the command line. This
+    /// specifies that optimizations are allowed to treat the sign of a zero
+    /// argument or result as insignificant.
+    unsigned NoSignedZerosFPMath : 1;
 
     /// HonorSignDependentRoundingFPMath - This returns true when the
     /// -enable-sign-dependent-rounding-fp-math is specified.  If this returns
@@ -138,18 +173,18 @@ namespace llvm {
     unsigned GuaranteedTailCallOpt : 1;
 
     /// StackAlignmentOverride - Override default stack alignment for target.
-    unsigned StackAlignmentOverride;
+    unsigned StackAlignmentOverride = 0;
+
+    /// StackSymbolOrdering - When true, this will allow CodeGen to order
+    /// the local stack symbols (for code size, code locality, or any other
+    /// heuristics). When false, the local symbols are left in whatever order
+    /// they were generated. Default is true.
+    unsigned StackSymbolOrdering : 1;
 
     /// EnableFastISel - This flag enables fast-path instruction selection
     /// which trades away generated code quality in favor of reducing
     /// compile time.
     unsigned EnableFastISel : 1;
-
-    /// PositionIndependentExecutable - This flag indicates whether the code
-    /// will eventually be linked into a single executable, despite the PIC
-    /// relocation model being in use. It's value is undefined (and irrelevant)
-    /// if the relocation model is anything other than PIC.
-    unsigned PositionIndependentExecutable : 1;
 
     /// UseInitArray - Use .init_array instead of .ctors for static
     /// constructors.
@@ -159,7 +194,9 @@ namespace llvm {
     unsigned DisableIntegratedAS : 1;
 
     /// Compress DWARF debug sections.
-    unsigned CompressDebugSections : 1;
+    DebugCompressionType CompressDebugSections = DebugCompressionType::None;
+
+    unsigned RelaxELFRelocations : 1;
 
     /// Emit functions into separate sections.
     unsigned FunctionSections : 1;
@@ -176,13 +213,16 @@ namespace llvm {
     /// function in the runtime library..
     unsigned EmulatedTLS : 1;
 
+    /// This flag enables InterProcedural Register Allocation (IPRA).
+    unsigned EnableIPRA : 1;
+
     /// FloatABIType - This setting is set by -float-abi=xxx option is specfied
     /// on the command line. This setting may either be Default, Soft, or Hard.
     /// Default selects the target's default behavior. Soft selects the ABI for
     /// software floating point, but does not indicate that FP hardware may not
     /// be used. Such a combination is unfortunately popular (e.g.
     /// arm-apple-darwin). Hard presumes that the normal FP ABI is used.
-    FloatABI::ABIType FloatABIType;
+    FloatABI::ABIType FloatABIType = FloatABI::Default;
 
     /// AllowFPOpFusion - This flag is set by the -fuse-fp-ops=xxx option.
     /// This controls the creation of fused FP ops that store intermediate
@@ -200,55 +240,28 @@ namespace llvm {
     /// optimizers.  Fused operations that are explicitly specified (e.g. FMA
     /// via the llvm.fma.* intrinsic) will always be honored, regardless of
     /// the value of this option.
-    FPOpFusion::FPOpFusionMode AllowFPOpFusion;
-
-    /// This class encapsulates options for reciprocal-estimate code generation.
-    TargetRecip Reciprocals;
-
-    /// JTType - This flag specifies the type of jump-instruction table to
-    /// create for functions that have the jumptable attribute.
-    JumpTable::JumpTableType JTType;
+    FPOpFusion::FPOpFusionMode AllowFPOpFusion = FPOpFusion::Standard;
 
     /// ThreadModel - This flag specifies the type of threading model to assume
     /// for things like atomics
-    ThreadModel::Model ThreadModel;
+    ThreadModel::Model ThreadModel = ThreadModel::POSIX;
+
+    /// EABIVersion - This flag specifies the EABI version
+    EABI EABIVersion = EABI::Default;
+
+    /// Which debugger to tune for.
+    DebuggerKind DebuggerTuning = DebuggerKind::Default;
+
+    /// FPDenormalMode - This flags specificies which denormal numbers the code
+    /// is permitted to require.
+    FPDenormal::DenormalMode FPDenormalMode = FPDenormal::IEEE;
+
+    /// What exception model to use
+    ExceptionHandling ExceptionModel = ExceptionHandling::None;
 
     /// Machine level options.
     MCTargetOptions MCOptions;
   };
-
-// Comparison operators:
-
-
-inline bool operator==(const TargetOptions &LHS,
-                       const TargetOptions &RHS) {
-#define ARE_EQUAL(X) LHS.X == RHS.X
-  return
-    ARE_EQUAL(UnsafeFPMath) &&
-    ARE_EQUAL(NoInfsFPMath) &&
-    ARE_EQUAL(NoNaNsFPMath) &&
-    ARE_EQUAL(HonorSignDependentRoundingFPMathOption) &&
-    ARE_EQUAL(NoZerosInBSS) &&
-    ARE_EQUAL(GuaranteedTailCallOpt) &&
-    ARE_EQUAL(StackAlignmentOverride) &&
-    ARE_EQUAL(EnableFastISel) &&
-    ARE_EQUAL(PositionIndependentExecutable) &&
-    ARE_EQUAL(UseInitArray) &&
-    ARE_EQUAL(TrapUnreachable) &&
-    ARE_EQUAL(EmulatedTLS) &&
-    ARE_EQUAL(FloatABIType) &&
-    ARE_EQUAL(AllowFPOpFusion) &&
-    ARE_EQUAL(Reciprocals) &&
-    ARE_EQUAL(JTType) &&
-    ARE_EQUAL(ThreadModel) &&
-    ARE_EQUAL(MCOptions);
-#undef ARE_EQUAL
-}
-
-inline bool operator!=(const TargetOptions &LHS,
-                       const TargetOptions &RHS) {
-  return !(LHS == RHS);
-}
 
 } // End llvm namespace
 

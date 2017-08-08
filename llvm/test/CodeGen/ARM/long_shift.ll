@@ -28,15 +28,15 @@ define i32 @f1(i64 %x, i64 %y) {
 
 define i32 @f2(i64 %x, i64 %y) {
 ; CHECK-LABEL: f2:
-; CHECK-LE:      lsr{{.*}}r2
-; CHECK-LE-NEXT: rsb     r3, r2, #32
+; CHECK-LE:      rsb     r3, r2, #32
+; CHECK-LE-NEXT: lsr{{.*}}r2
 ; CHECK-LE-NEXT: sub     r2, r2, #32
 ; CHECK-LE-NEXT: orr     r0, r0, r1, lsl r3
 ; CHECK-LE-NEXT: cmp     r2, #0
 ; CHECK-LE-NEXT: asrge   r0, r1, r2
 
-; CHECK-BE:      lsr{{.*}}r3
-; CHECK-BE-NEXT: rsb     r2, r3, #32
+; CHECK-BE:      rsb     r2, r3, #32
+; CHECK-BE-NEXT: lsr{{.*}}r3
 ; CHECK-BE-NEXT: orr     r1, r1, r0, lsl r2
 ; CHECK-BE-NEXT: sub     r2, r3, #32
 ; CHECK-BE-NEXT: cmp     r2, #0
@@ -49,15 +49,15 @@ define i32 @f2(i64 %x, i64 %y) {
 
 define i32 @f3(i64 %x, i64 %y) {
 ; CHECK-LABEL: f3:
-; CHECK-LE:      lsr{{.*}}r2
-; CHECK-LE-NEXT: rsb     r3, r2, #32
+; CHECK-LE:      rsb     r3, r2, #32
+; CHECK-LE-NEXT: lsr{{.*}}r2
 ; CHECK-LE-NEXT: sub     r2, r2, #32
 ; CHECK-LE-NEXT: orr     r0, r0, r1, lsl r3
 ; CHECK-LE-NEXT: cmp     r2, #0
 ; CHECK-LE-NEXT: lsrge   r0, r1, r2
 
-; CHECK-BE:      lsr{{.*}}r3
-; CHECK-BE-NEXT: rsb     r2, r3, #32
+; CHECK-BE:      rsb     r2, r3, #32
+; CHECK-BE-NEXT: lsr{{.*}}r3
 ; CHECK-BE-NEXT: orr     r1, r1, r0, lsl r2
 ; CHECK-BE-NEXT: sub     r2, r3, #32
 ; CHECK-BE-NEXT: cmp     r2, #0

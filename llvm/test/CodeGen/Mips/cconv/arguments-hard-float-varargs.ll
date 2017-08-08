@@ -1,14 +1,14 @@
-; RUN: llc -march=mips -relocation-model=static < %s | FileCheck --check-prefix=ALL --check-prefix=SYM32 --check-prefix=O32 --check-prefix=O32BE %s
-; RUN: llc -march=mipsel -relocation-model=static < %s | FileCheck --check-prefix=ALL --check-prefix=SYM32 --check-prefix=O32 --check-prefix=O32LE %s
+; RUN: llc -march=mips -relocation-model=static < %s | FileCheck --check-prefixes=ALL,SYM32,O32,O32BE %s
+; RUN: llc -march=mipsel -relocation-model=static < %s | FileCheck --check-prefixes=ALL,SYM32,O32,O32LE %s
 
-; RUN-TODO: llc -march=mips64 -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=SYM32 --check-prefix=O32 %s
-; RUN-TODO: llc -march=mips64el -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=SYM32 --check-prefix=O32 %s
+; RUN-TODO: llc -march=mips64 -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,SYM32,O32 %s
+; RUN-TODO: llc -march=mips64el -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,SYM32,O32 %s
 
-; RUN: llc -march=mips64 -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=SYM32 --check-prefix=N32 --check-prefix=NEW --check-prefix=NEWBE %s
-; RUN: llc -march=mips64el -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=SYM32 --check-prefix=N32 --check-prefix=NEW --check-prefix=NEWLE %s
+; RUN: llc -march=mips64 -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,SYM32,N32,NEW,NEWBE %s
+; RUN: llc -march=mips64el -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,SYM32,N32,NEW,NEWLE %s
 
-; RUN: llc -march=mips64 -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=SYM64 --check-prefix=N64 --check-prefix=NEW --check-prefix=NEWBE %s
-; RUN: llc -march=mips64el -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=SYM64 --check-prefix=N64 --check-prefix=NEW --check-prefix=NEWLE %s
+; RUN: llc -march=mips64 -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefixes=ALL,SYM64,N64,NEW,NEWBE %s
+; RUN: llc -march=mips64el -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefixes=ALL,SYM64,N64,NEW,NEWLE %s
 
 ; Test the effect of varargs on floating point types in the non-variable part
 ; of the argument list as specified by section 2 of the MIPSpro N32 Handbook.
@@ -42,7 +42,7 @@ entry:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
 ; SYM32-DAG:         addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(doubles)
-; SYM64-DAG:         ld [[R2:\$[0-9]]], %got_disp(doubles)(
+; SYM64-DAG:         daddiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(doubles)
 
 ; O32 forbids using floating point registers for the non-variable portion.
 ; N32/N64 allow it.
@@ -107,7 +107,7 @@ entry:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
 ; SYM32-DAG:         addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(floats)
-; SYM64-DAG:         ld [[R2:\$[0-9]]], %got_disp(floats)(
+; SYM64-DAG:         daddiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(floats)
 
 ; The first four arguments are the same in O32/N32/N64.
 ; The non-variable portion should be unaffected.

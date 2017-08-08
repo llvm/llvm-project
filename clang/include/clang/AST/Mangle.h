@@ -17,10 +17,11 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/raw_ostream.h"
+
+namespace llvm {
+  class raw_ostream;
+}
 
 namespace clang {
   class ASTContext;
@@ -123,6 +124,7 @@ public:
   void mangleBlock(const DeclContext *DC, const BlockDecl *BD,
                    raw_ostream &Out);
 
+  void mangleObjCMethodNameWithoutSize(const ObjCMethodDecl *MD, raw_ostream &);
   void mangleObjCMethodName(const ObjCMethodDecl *MD, raw_ostream &);
 
   virtual void mangleStaticGuardVariable(const VarDecl *D, raw_ostream &) = 0;
@@ -206,7 +208,8 @@ public:
                                                raw_ostream &Out) = 0;
 
   virtual void mangleCXXThrowInfo(QualType T, bool IsConst, bool IsVolatile,
-                                  uint32_t NumEntries, raw_ostream &Out) = 0;
+                                  bool IsUnaligned, uint32_t NumEntries,
+                                  raw_ostream &Out) = 0;
 
   virtual void mangleCXXCatchableTypeArray(QualType T, uint32_t NumEntries,
                                            raw_ostream &Out) = 0;
@@ -215,9 +218,6 @@ public:
                                       CXXCtorType CT, uint32_t Size,
                                       uint32_t NVOffset, int32_t VBPtrOffset,
                                       uint32_t VBIndex, raw_ostream &Out) = 0;
-
-  virtual void mangleCXXCatchHandlerType(QualType T, uint32_t Flags,
-                                         raw_ostream &Out) = 0;
 
   virtual void mangleCXXRTTIBaseClassDescriptor(
       const CXXRecordDecl *Derived, uint32_t NVOffset, int32_t VBPtrOffset,

@@ -133,6 +133,13 @@ class BDLMode<string type, string bitsize, string dispsize, string suffix,
                         !cast<Immediate>("disp"##dispsize##"imm"##bitsize),
                         !cast<Immediate>("imm"##bitsize))>;
 
+// A BDMode paired with a register length operand.
+class BDRMode<string type, string bitsize, string dispsize, string suffix>
+  : AddressingMode<type, bitsize, dispsize, suffix, "", 3, "BDRAddr",
+                   (ops !cast<RegisterOperand>("ADDR"##bitsize),
+                        !cast<Immediate>("disp"##dispsize##"imm"##bitsize),
+                        !cast<RegisterOperand>("GR"##bitsize))>;
+
 // An addressing mode with a base, displacement and a vector index.
 class BDVMode<string bitsize, string dispsize>
   : AddressOperand<bitsize, dispsize, "", "BDVAddr",
@@ -230,6 +237,12 @@ def UIMM32 : SDNodeXForm<imm, [{
                                    MVT::i64);
 }]>;
 
+// Truncate an immediate to a 48-bit unsigned quantity.
+def UIMM48 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(uint64_t(N->getZExtValue()) & 0xffffffffffff,
+                                   SDLoc(N), MVT::i64);
+}]>;
+
 // Negate and then truncate an immediate to a 32-bit unsigned quantity.
 def NEGIMM32 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(uint32_t(-N->getZExtValue()), SDLoc(N),
@@ -252,6 +265,7 @@ def S16Imm : ImmediateAsmOperand<"S16Imm">;
 def U16Imm : ImmediateAsmOperand<"U16Imm">;
 def S32Imm : ImmediateAsmOperand<"S32Imm">;
 def U32Imm : ImmediateAsmOperand<"U32Imm">;
+def U48Imm : ImmediateAsmOperand<"U48Imm">;
 
 //===----------------------------------------------------------------------===//
 // i32 immediates
@@ -425,6 +439,10 @@ def imm64zx32n : Immediate<i64, [{
   return isUInt<32>(-N->getSExtValue());
 }], NEGIMM32, "U32Imm">;
 
+def imm64zx48 : Immediate<i64, [{
+  return isUInt<64>(N->getZExtValue());
+}], UIMM48, "U48Imm">;
+
 def imm64 : ImmLeaf<i64, [{}]>, Operand<i64>;
 
 //===----------------------------------------------------------------------===//
@@ -442,7 +460,9 @@ def fpimmneg0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(-0.0); }]>;
 //===----------------------------------------------------------------------===//
 
 // PC-relative asm operands.
+def PCRel12 : PCRelAsmOperand<"12">;
 def PCRel16 : PCRelAsmOperand<"16">;
+def PCRel24 : PCRelAsmOperand<"24">;
 def PCRel32 : PCRelAsmOperand<"32">;
 def PCRelTLS16 : PCRelTLSAsmOperand<"16">;
 def PCRelTLS32 : PCRelTLSAsmOperand<"32">;
@@ -451,11 +471,25 @@ def PCRelTLS32 : PCRelTLSAsmOperand<"32">;
 // and multiplied by 2.
 def brtarget16 : PCRelOperand<OtherVT, PCRel16> {
   let EncoderMethod = "getPC16DBLEncoding";
-  let DecoderMethod = "decodePC16DBLOperand";
+  let DecoderMethod = "decodePC16DBLBranchOperand";
 }
 def brtarget32 : PCRelOperand<OtherVT, PCRel32> {
   let EncoderMethod = "getPC32DBLEncoding";
-  let DecoderMethod = "decodePC32DBLOperand";
+  let DecoderMethod = "decodePC32DBLBranchOperand";
+}
+
+// Variants of brtarget for use with branch prediction preload.
+def brtarget12bpp : PCRelOperand<OtherVT, PCRel12> {
+  let EncoderMethod = "getPC12DBLBPPEncoding";
+  let DecoderMethod = "decodePC12DBLBranchOperand";
+}
+def brtarget16bpp : PCRelOperand<OtherVT, PCRel16> {
+  let EncoderMethod = "getPC16DBLBPPEncoding";
+  let DecoderMethod = "decodePC16DBLBranchOperand";
+}
+def brtarget24bpp : PCRelOperand<OtherVT, PCRel24> {
+  let EncoderMethod = "getPC24DBLBPPEncoding";
+  let DecoderMethod = "decodePC24DBLBranchOperand";
 }
 
 // Variants of brtarget16/32 with an optional additional TLS symbol.
@@ -464,12 +498,12 @@ def tlssym : Operand<i64> { }
 def brtarget16tls : PCRelTLSOperand<OtherVT, PCRelTLS16> {
   let MIOperandInfo = (ops brtarget16:$func, tlssym:$sym);
   let EncoderMethod = "getPC16DBLTLSEncoding";
-  let DecoderMethod = "decodePC16DBLOperand";
+  let DecoderMethod = "decodePC16DBLBranchOperand";
 }
 def brtarget32tls : PCRelTLSOperand<OtherVT, PCRelTLS32> {
   let MIOperandInfo = (ops brtarget32:$func, tlssym:$sym);
   let EncoderMethod = "getPC32DBLTLSEncoding";
-  let DecoderMethod = "decodePC32DBLOperand";
+  let DecoderMethod = "decodePC32DBLBranchOperand";
 }
 
 // A PC-relative offset of a global value.  The offset is sign-extended
@@ -497,7 +531,9 @@ def BDAddr64Disp12      : AddressAsmOperand<"BDAddr",   "64", "12">;
 def BDAddr64Disp20      : AddressAsmOperand<"BDAddr",   "64", "20">;
 def BDXAddr64Disp12     : AddressAsmOperand<"BDXAddr",  "64", "12">;
 def BDXAddr64Disp20     : AddressAsmOperand<"BDXAddr",  "64", "20">;
+def BDLAddr64Disp12Len4 : AddressAsmOperand<"BDLAddr",  "64", "12", "Len4">;
 def BDLAddr64Disp12Len8 : AddressAsmOperand<"BDLAddr",  "64", "12", "Len8">;
+def BDRAddr64Disp12     : AddressAsmOperand<"BDRAddr",  "64", "12">;
 def BDVAddr64Disp12     : AddressAsmOperand<"BDVAddr",  "64", "12">;
 
 // DAG patterns and operands for addressing modes.  Each mode has
@@ -543,23 +579,14 @@ def bdxaddr20pair     : BDXMode<"BDXAddr",  "64", "20", "Pair">;
 def dynalloc12only    : BDXMode<"DynAlloc", "64", "12", "Only">;
 def laaddr12pair      : BDXMode<"LAAddr",   "64", "12", "Pair">;
 def laaddr20pair      : BDXMode<"LAAddr",   "64", "20", "Pair">;
+def bdladdr12onlylen4 : BDLMode<"BDLAddr",  "64", "12", "Only", "4">;
 def bdladdr12onlylen8 : BDLMode<"BDLAddr",  "64", "12", "Only", "8">;
+def bdraddr12only     : BDRMode<"BDRAddr",  "64", "12", "Only">;
 def bdvaddr12only     : BDVMode<            "64", "12">;
 
 //===----------------------------------------------------------------------===//
 // Miscellaneous
 //===----------------------------------------------------------------------===//
-
-// Access registers.  At present we just use them for accessing the thread
-// pointer, so we don't expose them as register to LLVM.
-def AccessReg : AsmOperandClass {
-  let Name = "AccessReg";
-  let ParserMethod = "parseAccessReg";
-}
-def access_reg : Immediate<i32, [{ return N->getZExtValue() < 16; }],
-                           NOOP_SDNodeXForm, "AccessReg"> {
-  let ParserMatchClass = AccessReg;
-}
 
 // A 4-bit condition-code mask.
 def cond4 : PatLeaf<(i32 imm), [{ return (N->getZExtValue() < 16); }]>,

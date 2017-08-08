@@ -224,3 +224,35 @@ entry:
   %conv = zext i8 %0 to i32
   ret i32 %conv
 }
+
+
+define void @test_well_formed_dag(i32 %in1, i32 %in2, i32* %addr) {
+; CHECK-LABEL: test_well_formed_dag:
+; CHECK-ARM: movw [[SMALL_CONST:r[0-9]+]], #675
+; CHECK-ARM: mul [[SMALL_PROD:r[0-9]+]], r0, [[SMALL_CONST]]
+; CHECK-ARM: add {{r[0-9]+}}, r1, [[SMALL_PROD]], lsl #7
+
+  %mul.small = mul i32 %in1, 675
+  store i32 %mul.small, i32* %addr
+  %mul.big = mul i32 %in1, 86400
+  %add = add i32 %in2, %mul.big
+  store i32 %add, i32* %addr
+  ret void
+}
+
+define { i32, i32 } @test_multi_use_add(i32 %base, i32 %offset) {
+; CHECK-LABEL: test_multi_use_add:
+; CHECK-THUMB: movs [[CONST:r[0-9]+]], #28
+; CHECK-THUMB: movt [[CONST]], #1
+
+  %prod = mul i32 %offset, 65564
+  %sum = add i32 %base, %prod
+
+  %ptr = inttoptr i32 %sum to i32*
+  %loaded = load i32, i32* %ptr
+
+  %ret.tmp = insertvalue { i32, i32 } undef, i32 %sum, 0
+  %ret = insertvalue { i32, i32 } %ret.tmp, i32 %loaded, 1
+
+  ret { i32, i32 } %ret
+}

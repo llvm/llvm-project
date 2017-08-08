@@ -14,19 +14,20 @@
 
 #include "R600MachineScheduler.h"
 #include "AMDGPUSubtarget.h"
+#include "R600InstrInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Pass.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "misched"
+#define DEBUG_TYPE "machine-scheduler"
 
 void R600SchedStrategy::initialize(ScheduleDAGMI *dag) {
   assert(dag->hasVRegLiveness() && "R600SchedStrategy needs vreg liveness");
   DAG = static_cast<ScheduleDAGMILive*>(dag);
-  const AMDGPUSubtarget &ST = DAG->MF.getSubtarget<AMDGPUSubtarget>();
+  const R600Subtarget &ST = DAG->MF.getSubtarget<R600Subtarget>();
   TII = static_cast<const R600InstrInfo*>(DAG->TII);
   TRI = static_cast<const R600RegisterInfo*>(DAG->TRI);
   VLIW5 = !ST.hasCaymanISA();
@@ -48,8 +49,7 @@ void R600SchedStrategy::MoveUnits(std::vector<SUnit *> &QSrc,
   QSrc.clear();
 }
 
-static
-unsigned getWFCountLimitedByGPR(unsigned GPRCount) {
+static unsigned getWFCountLimitedByGPR(unsigned GPRCount) {
   assert (GPRCount && "GPRCount cannot be 0");
   return 248 / GPRCount;
 }
@@ -222,75 +222,74 @@ bool R600SchedStrategy::regBelongsToClass(unsigned Reg,
 R600SchedStrategy::AluKind R600SchedStrategy::getAluKind(SUnit *SU) const {
   MachineInstr *MI = SU->getInstr();
 
-  if (TII->isTransOnly(MI))
+  if (TII->isTransOnly(*MI))
     return AluTrans;
 
-    switch (MI->getOpcode()) {
-    case AMDGPU::PRED_X:
-      return AluPredX;
-    case AMDGPU::INTERP_PAIR_XY:
-    case AMDGPU::INTERP_PAIR_ZW:
-    case AMDGPU::INTERP_VEC_LOAD:
-    case AMDGPU::DOT_4:
-      return AluT_XYZW;
-    case AMDGPU::COPY:
-      if (MI->getOperand(1).isUndef()) {
-        // MI will become a KILL, don't considers it in scheduling
-        return AluDiscarded;
-      }
-    default:
-      break;
+  switch (MI->getOpcode()) {
+  case AMDGPU::PRED_X:
+    return AluPredX;
+  case AMDGPU::INTERP_PAIR_XY:
+  case AMDGPU::INTERP_PAIR_ZW:
+  case AMDGPU::INTERP_VEC_LOAD:
+  case AMDGPU::DOT_4:
+    return AluT_XYZW;
+  case AMDGPU::COPY:
+    if (MI->getOperand(1).isUndef()) {
+      // MI will become a KILL, don't considers it in scheduling
+      return AluDiscarded;
     }
+  default:
+    break;
+  }
 
-    // Does the instruction take a whole IG ?
-    // XXX: Is it possible to add a helper function in R600InstrInfo that can
-    // be used here and in R600PacketizerList::isSoloInstruction() ?
-    if(TII->isVector(*MI) ||
-        TII->isCubeOp(MI->getOpcode()) ||
-        TII->isReductionOp(MI->getOpcode()) ||
-        MI->getOpcode() == AMDGPU::GROUP_BARRIER) {
-      return AluT_XYZW;
-    }
+  // Does the instruction take a whole IG ?
+  // XXX: Is it possible to add a helper function in R600InstrInfo that can
+  // be used here and in R600PacketizerList::isSoloInstruction() ?
+  if(TII->isVector(*MI) ||
+     TII->isCubeOp(MI->getOpcode()) ||
+     TII->isReductionOp(MI->getOpcode()) ||
+     MI->getOpcode() == AMDGPU::GROUP_BARRIER) {
+    return AluT_XYZW;
+  }
 
-    if (TII->isLDSInstr(MI->getOpcode())) {
-      return AluT_X;
-    }
+  if (TII->isLDSInstr(MI->getOpcode())) {
+    return AluT_X;
+  }
 
-    // Is the result already assigned to a channel ?
-    unsigned DestSubReg = MI->getOperand(0).getSubReg();
-    switch (DestSubReg) {
-    case AMDGPU::sub0:
-      return AluT_X;
-    case AMDGPU::sub1:
-      return AluT_Y;
-    case AMDGPU::sub2:
-      return AluT_Z;
-    case AMDGPU::sub3:
-      return AluT_W;
-    default:
-      break;
-    }
+  // Is the result already assigned to a channel ?
+  unsigned DestSubReg = MI->getOperand(0).getSubReg();
+  switch (DestSubReg) {
+  case AMDGPU::sub0:
+    return AluT_X;
+  case AMDGPU::sub1:
+    return AluT_Y;
+  case AMDGPU::sub2:
+    return AluT_Z;
+  case AMDGPU::sub3:
+    return AluT_W;
+  default:
+    break;
+  }
 
-    // Is the result already member of a X/Y/Z/W class ?
-    unsigned DestReg = MI->getOperand(0).getReg();
-    if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_XRegClass) ||
-        regBelongsToClass(DestReg, &AMDGPU::R600_AddrRegClass))
-      return AluT_X;
-    if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_YRegClass))
-      return AluT_Y;
-    if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_ZRegClass))
-      return AluT_Z;
-    if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_WRegClass))
-      return AluT_W;
-    if (regBelongsToClass(DestReg, &AMDGPU::R600_Reg128RegClass))
-      return AluT_XYZW;
+  // Is the result already member of a X/Y/Z/W class ?
+  unsigned DestReg = MI->getOperand(0).getReg();
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_XRegClass) ||
+      regBelongsToClass(DestReg, &AMDGPU::R600_AddrRegClass))
+    return AluT_X;
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_YRegClass))
+    return AluT_Y;
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_ZRegClass))
+    return AluT_Z;
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_WRegClass))
+    return AluT_W;
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_Reg128RegClass))
+    return AluT_XYZW;
 
-    // LDS src registers cannot be used in the Trans slot.
-    if (TII->readsLDSSrcReg(MI))
-      return AluT_XYZW;
+  // LDS src registers cannot be used in the Trans slot.
+  if (TII->readsLDSSrcReg(*MI))
+    return AluT_XYZW;
 
-    return AluAny;
-
+  return AluAny;
 }
 
 int R600SchedStrategy::getInstKind(SUnit* SU) {
@@ -324,9 +323,8 @@ SUnit *R600SchedStrategy::PopInst(std::vector<SUnit *> &Q, bool AnyALU) {
       It != E; ++It) {
     SUnit *SU = *It;
     InstructionsGroupCandidate.push_back(SU->getInstr());
-    if (TII->fitsConstReadLimitations(InstructionsGroupCandidate)
-        && (!AnyALU || !TII->isVectorOnly(SU->getInstr()))
-    ) {
+    if (TII->fitsConstReadLimitations(InstructionsGroupCandidate) &&
+        (!AnyALU || !TII->isVectorOnly(*SU->getInstr()))) {
       InstructionsGroupCandidate.pop_back();
       Q.erase((It + 1).base());
       return SU;
@@ -350,7 +348,7 @@ void R600SchedStrategy::PrepareNextSlot() {
   DEBUG(dbgs() << "New Slot\n");
   assert (OccupedSlotsMask && "Slot wasn't filled");
   OccupedSlotsMask = 0;
-//  if (HwGen == AMDGPUSubtarget::NORTHERN_ISLANDS)
+//  if (HwGen == R600Subtarget::NORTHERN_ISLANDS)
 //    OccupedSlotsMask |= 16;
   InstructionsGroupCandidate.clear();
   LoadAlu();

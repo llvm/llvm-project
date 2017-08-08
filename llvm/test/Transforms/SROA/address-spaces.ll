@@ -66,3 +66,66 @@ for.end:
   ret void
 }
  
+%union.anon = type { i32* }
+
+@g = common global i32 0, align 4
+@l = common addrspace(3) global i32 0, align 4
+
+; Make sure an illegal bitcast isn't introduced
+define void @pr27557() {
+; CHECK-LABEL: @pr27557(
+; CHECK: %[[CAST:.*]] = bitcast i32** {{.*}} to i32 addrspace(3)**
+; CHECK: store i32 addrspace(3)* @l, i32 addrspace(3)** %[[CAST]]
+  %1 = alloca %union.anon, align 8
+  %2 = bitcast %union.anon* %1 to i32**
+  store i32* @g, i32** %2, align 8
+  %3 = bitcast %union.anon* %1 to i32 addrspace(3)**
+  store i32 addrspace(3)* @l, i32 addrspace(3)** %3, align 8
+  ret void
+}
+
+; Make sure pre-splitting doesn't try to introduce an illegal bitcast
+define float @presplit(i64 addrspace(1)* %p) {
+entry:
+; CHECK-LABEL: @presplit(
+; CHECK: %[[CAST:.*]] = bitcast i64 addrspace(1)* {{.*}} to i32 addrspace(1)*
+; CHECK: load i32, i32 addrspace(1)* %[[CAST]]
+   %b = alloca i64
+   %b.cast = bitcast i64* %b to [2 x float]*
+   %b.gep1 = getelementptr [2 x float], [2 x float]* %b.cast, i32 0, i32 0
+   %b.gep2 = getelementptr [2 x float], [2 x float]* %b.cast, i32 0, i32 1
+   %l = load i64, i64 addrspace(1)* %p
+   store i64 %l, i64* %b
+   %f1 = load float, float* %b.gep1
+   %f2 = load float, float* %b.gep2
+   %ret = fadd float %f1, %f2
+   ret float %ret
+}
+
+; Test load from and store to non-zero address space.
+define void @test_load_store_diff_addr_space([2 x float] addrspace(1)* %complex1, [2 x float] addrspace(1)* %complex2) {
+; CHECK-LABEL: @test_load_store_diff_addr_space
+; CHECK-NOT: alloca
+; CHECK: load i32, i32 addrspace(1)*
+; CHECK: load i32, i32 addrspace(1)*
+; CHECK: store i32 %{{.*}}, i32 addrspace(1)*
+; CHECK: store i32 %{{.*}}, i32 addrspace(1)*
+  %a = alloca i64
+  %a.cast = bitcast i64* %a to [2 x float]*
+  %a.gep1 = getelementptr [2 x float], [2 x float]* %a.cast, i32 0, i32 0
+  %a.gep2 = getelementptr [2 x float], [2 x float]* %a.cast, i32 0, i32 1
+  %complex1.gep = getelementptr [2 x float], [2 x float] addrspace(1)* %complex1, i32 0, i32 0
+  %p1 = bitcast float addrspace(1)* %complex1.gep to i64 addrspace(1)*
+  %v1 = load i64, i64 addrspace(1)* %p1
+  store i64 %v1, i64* %a
+  %f1 = load float, float* %a.gep1
+  %f2 = load float, float* %a.gep2
+  %sum = fadd float %f1, %f2
+  store float %sum, float* %a.gep1
+  store float %sum, float* %a.gep2
+  %v2 = load i64, i64* %a
+  %complex2.gep = getelementptr [2 x float], [2 x float] addrspace(1)* %complex2, i32 0, i32 0
+  %p2 = bitcast float addrspace(1)* %complex2.gep to i64 addrspace(1)*
+  store i64 %v2, i64 addrspace(1)* %p2
+  ret void
+}

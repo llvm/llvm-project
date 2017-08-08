@@ -1,7 +1,5 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck --check-prefix=GCN --check-prefix=DEFAULT-SCRATCH %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck --check-prefix=GCN --check-prefix=DEFAULT-SCRATCH %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mattr=+huge-scratch-buffer -mcpu=SI < %s | FileCheck --check-prefix=GCN --check-prefix=HUGE-SCRATCH %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mattr=+huge-scratch-buffer -mcpu=tonga < %s | FileCheck --check-prefix=GCN --check-prefix=HUGE-SCRATCH %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -march=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
 
 ; When a frame index offset is more than 12-bits, make sure we don't store
 ; it in mubuf's offset field.
@@ -11,12 +9,11 @@
 ; should be able to reuse the same regiser for each scratch buffer access.
 
 ; GCN-LABEL: {{^}}legal_offset_fi:
-; GCN: v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0{{$}}
-; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen
-; GCN: v_mov_b32_e32 [[OFFSET]], 0x8000
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offset:4{{$}}
+; GCN: v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0x8004
 ; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
 
-define void @legal_offset_fi(i32 addrspace(1)* %out, i32 %cond, i32 %if_offset, i32 %else_offset) {
+define amdgpu_kernel void @legal_offset_fi(i32 addrspace(1)* %out, i32 %cond, i32 %if_offset, i32 %else_offset) {
 entry:
   %scratch0 = alloca [8192 x i32]
   %scratch1 = alloca [8192 x i32]
@@ -49,12 +46,14 @@ done:
 
 }
 
-; GCN-LABEL: {{^}}legal_offset_fi_offset
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen
-; GCN: v_add_i32_e32 [[OFFSET:v[0-9]+]], vcc, 0x8000
+; GCN-LABEL: {{^}}legal_offset_fi_offset:
+; GCN-DAG: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
+; This constant isn't folded, because it has multiple uses.
+; GCN-DAG: v_mov_b32_e32 [[K8000:v[0-9]+]], 0x8004
+; GCN-DAG: v_add_i32_e32 [[OFFSET:v[0-9]+]], vcc, [[K8000]]
 ; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
 
-define void @legal_offset_fi_offset(i32 addrspace(1)* %out, i32 %cond, i32 addrspace(1)* %offsets, i32 %if_offset, i32 %else_offset) {
+define amdgpu_kernel void @legal_offset_fi_offset(i32 addrspace(1)* %out, i32 %cond, i32 addrspace(1)* %offsets, i32 %if_offset, i32 %else_offset) {
 entry:
   %scratch0 = alloca [8192 x i32]
   %scratch1 = alloca [8192 x i32]
@@ -87,12 +86,9 @@ done:
   ret void
 }
 
-; GCN-LABEL: @neg_vaddr_offset
-; We can't prove %offset is positive, so we must do the computation with the
-; immediate in an add instruction instead of folding offset and the immediate into
-; the store instruction.
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen{{$}}
-define void @neg_vaddr_offset(i32 %offset) {
+; GCN-LABEL: {{^}}neg_vaddr_offset:
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:16{{$}}
+define amdgpu_kernel void @neg_vaddr_offset(i32 %offset) {
 entry:
   %array = alloca [8192 x i32]
   %ptr_offset = add i32 %offset, 4
@@ -101,10 +97,9 @@ entry:
   ret void
 }
 
-; GCN-LABEL: @pos_vaddr_offse
-; DEFAULT-SCRATCH: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:16
-; HUGE-SCRATCH: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen{{$}}
-define void @pos_vaddr_offset(i32 addrspace(1)* %out, i32 %offset) {
+; GCN-LABEL: {{^}}pos_vaddr_offset:
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:20
+define amdgpu_kernel void @pos_vaddr_offset(i32 addrspace(1)* %out, i32 %offset) {
 entry:
   %array = alloca [8192 x i32]
   %ptr = getelementptr [8192 x i32], [8192 x i32]* %array, i32 0, i32 4

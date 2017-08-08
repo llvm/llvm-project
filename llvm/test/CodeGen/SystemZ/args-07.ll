@@ -1,6 +1,6 @@
 ; Test multiple return values (LLVM ABI extension)
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -verify-machineinstrs| FileCheck %s
 
 ; Up to four integer return values fit into GPRs.
 define { i64, i64, i64, i64 } @f1() {

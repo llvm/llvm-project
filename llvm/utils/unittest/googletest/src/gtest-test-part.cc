@@ -35,9 +35,9 @@
 
 // Indicates that this translation unit is part of Google Test's
 // implementation.  It must come before gtest-internal-inl.h is
-// included, or there will be a compiler error.  This trick is to
-// prevent a user from accidentally including gtest-internal-inl.h in
-// his code.
+// included, or there will be a compiler error.  This trick exists to
+// prevent the accidental inclusion of gtest-internal-inl.h in the
+// user's code.
 #define GTEST_IMPLEMENTATION_ 1
 #include "src/gtest-internal-inl.h"
 #undef GTEST_IMPLEMENTATION_
@@ -48,10 +48,10 @@ using internal::GetUnitTestImpl;
 
 // Gets the summary of the failure message by omitting the stack trace
 // in it.
-internal::String TestPartResult::ExtractSummary(const char* message) {
+std::string TestPartResult::ExtractSummary(const char* message) {
   const char* const stack_trace = strstr(message, internal::kStackTraceMarker);
-  return stack_trace == NULL ? internal::String(message) :
-      internal::String(message, stack_trace - message);
+  return stack_trace == NULL ? message :
+      std::string(message, stack_trace);
 }
 
 // Prints a TestPartResult object.

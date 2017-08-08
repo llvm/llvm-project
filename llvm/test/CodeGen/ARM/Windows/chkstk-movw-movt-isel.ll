@@ -1,4 +1,4 @@
-; RUN: llc -mtriple thumbv7--windows-itanium -code-model large -filetype obj -o - %s \
+; RUN: llc -mtriple thumbv7--windows-itanium -code-model large -verify-machineinstrs -filetype obj -o - %s \
 ; RUN:    | llvm-objdump -no-show-raw-insn -d - | FileCheck %s
 
 ; ModuleID = 'reduced.c'
@@ -19,9 +19,9 @@ entry:
 
 ; CHECK-LABEL: isel
 ; CHECK: push {r4, r5}
-; CHECK: movw r4, #{{\d*}}
 ; CHECK: movw r12, #0
 ; CHECK: movt r12, #0
+; CHECK: movw r4, #{{\d*}}
 ; CHECK: blx r12
 ; CHECK: sub.w sp, sp, r4
 

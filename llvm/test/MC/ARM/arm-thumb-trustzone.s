@@ -16,11 +16,11 @@ _func:
 @ SMC
 @------------------------------------------------------------------------------
         smc #0xf
-        ite eq
+        it eq
         smceq #0
 
 @ NOTZ-NOT: smc 	#15
 @ NOTZ-NOT: smceq	#0
 @ TZ: smc	#15                     @ encoding: [0xff,0xf7,0x00,0x80]
-@ TZ: ite	eq                      @ encoding: [0x0c,0xbf]
+@ TZ: it	eq                      @ encoding: [0x08,0xbf]
 @ TZ: smceq	#0                      @ encoding: [0xf0,0xf7,0x00,0x80]

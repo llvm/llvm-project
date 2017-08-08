@@ -12,6 +12,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -23,7 +24,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 using namespace clang;
 
 namespace {
@@ -51,37 +51,21 @@ protected:
   IntrusiveRefCntPtr<TargetInfo> Target;
 };
 
-class VoidModuleLoader : public ModuleLoader {
-  ModuleLoadResult loadModule(SourceLocation ImportLoc, 
-                              ModuleIdPath Path,
-                              Module::NameVisibilityKind Visibility,
-                              bool IsInclusionDirective) override {
-    return ModuleLoadResult();
-  }
-
-  void makeModuleVisible(Module *Mod,
-                         Module::NameVisibilityKind Visibility,
-                         SourceLocation ImportLoc) override { }
-
-  GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override
-    { return nullptr; }
-  bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override
-    { return 0; }
-};
-
 TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   const char *source =
     "#define M(x) [x]\n"
     "M(foo)";
-  std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(source);
+  std::unique_ptr<llvm::MemoryBuffer> Buf =
+      llvm::MemoryBuffer::getMemBuffer(source);
   FileID mainFileID = SourceMgr.createFileID(std::move(Buf));
   SourceMgr.setMainFileID(mainFileID);
 
-  VoidModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(new HeaderSearchOptions, SourceMgr, Diags, LangOpts, 
-                          &*Target);
-  Preprocessor PP(new PreprocessorOptions(), Diags, LangOpts, SourceMgr,
-                  HeaderInfo, ModLoader,
+  TrivialModuleLoader ModLoader;
+  MemoryBufferCache PCMCache;
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, &*Target);
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                  SourceMgr, PCMCache, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
@@ -126,7 +110,8 @@ TEST_F(SourceManagerTest, getColumnNumber) {
     "int x;\n"
     "int y;";
 
-  std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Source);
+  std::unique_ptr<llvm::MemoryBuffer> Buf =
+      llvm::MemoryBuffer::getMemBuffer(Source);
   FileID MainFileID = SourceMgr.createFileID(std::move(Buf));
   SourceMgr.setMainFileID(MainFileID);
 
@@ -185,8 +170,10 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
     "#define CONCAT(X, Y) X##Y\n"
     "CONCAT(1,1)\n";
 
-  std::unique_ptr<MemoryBuffer> HeaderBuf = MemoryBuffer::getMemBuffer(header);
-  std::unique_ptr<MemoryBuffer> MainBuf = MemoryBuffer::getMemBuffer(main);
+  std::unique_ptr<llvm::MemoryBuffer> HeaderBuf =
+      llvm::MemoryBuffer::getMemBuffer(header);
+  std::unique_ptr<llvm::MemoryBuffer> MainBuf =
+      llvm::MemoryBuffer::getMemBuffer(main);
   FileID mainFileID = SourceMgr.createFileID(std::move(MainBuf));
   SourceMgr.setMainFileID(mainFileID);
 
@@ -194,11 +181,12 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
                                                  HeaderBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
-  VoidModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(new HeaderSearchOptions, SourceMgr, Diags, LangOpts, 
-                          &*Target);
-  Preprocessor PP(new PreprocessorOptions(), Diags, LangOpts, SourceMgr,
-                  HeaderInfo, ModLoader,
+  TrivialModuleLoader ModLoader;
+  MemoryBufferCache PCMCache;
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, &*Target);
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                  SourceMgr, PCMCache, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
@@ -243,12 +231,18 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
 namespace {
 
 struct MacroAction {
+  enum Kind { kExpansion, kDefinition, kUnDefinition};
+
   SourceLocation Loc;
   std::string Name;
-  bool isDefinition; // if false, it is expansion.
-  
-  MacroAction(SourceLocation Loc, StringRef Name, bool isDefinition)
-    : Loc(Loc), Name(Name), isDefinition(isDefinition) { }
+  unsigned MAKind : 3;
+
+  MacroAction(SourceLocation Loc, StringRef Name, unsigned K)
+    : Loc(Loc), Name(Name), MAKind(K) { }
+
+  bool isExpansion() const { return MAKind == kExpansion; }
+  bool isDefinition() const { return MAKind & kDefinition; }
+  bool isUnDefinition() const { return MAKind & kUnDefinition; }
 };
 
 class MacroTracker : public PPCallbacks {
@@ -261,13 +255,22 @@ public:
                     const MacroDirective *MD) override {
     Macros.push_back(MacroAction(MD->getLocation(),
                                  MacroNameTok.getIdentifierInfo()->getName(),
-                                 true));
+                                 MacroAction::kDefinition));
+  }
+  void MacroUndefined(const Token &MacroNameTok,
+                      const MacroDefinition &MD,
+                      const MacroDirective  *UD) override {
+    Macros.push_back(
+        MacroAction(UD ? UD->getLocation() : SourceLocation(),
+                    MacroNameTok.getIdentifierInfo()->getName(),
+                    UD ? MacroAction::kDefinition | MacroAction::kUnDefinition
+                       : MacroAction::kUnDefinition));
   }
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange Range, const MacroArgs *Args) override {
     Macros.push_back(MacroAction(MacroNameTok.getLocation(),
                                  MacroNameTok.getIdentifierInfo()->getName(),
-                                 false));
+                                 MacroAction::kExpansion));
   }
 };
 
@@ -275,7 +278,10 @@ public:
 
 TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
   const char *header =
-    "#define MACRO_IN_INCLUDE 0\n";
+    "#define MACRO_IN_INCLUDE 0\n"
+    "#define MACRO_DEFINED\n"
+    "#undef MACRO_DEFINED\n"
+    "#undef MACRO_UNDEFINED\n";
 
   const char *main =
     "#define M(x) x\n"
@@ -284,19 +290,22 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
     "#define INC2 </test-header.h>\n"
     "#include M(INC2)\n";
 
-  std::unique_ptr<MemoryBuffer> HeaderBuf = MemoryBuffer::getMemBuffer(header);
-  std::unique_ptr<MemoryBuffer> MainBuf = MemoryBuffer::getMemBuffer(main);
+  std::unique_ptr<llvm::MemoryBuffer> HeaderBuf =
+      llvm::MemoryBuffer::getMemBuffer(header);
+  std::unique_ptr<llvm::MemoryBuffer> MainBuf =
+      llvm::MemoryBuffer::getMemBuffer(main);
   SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(MainBuf)));
 
   const FileEntry *headerFile = FileMgr.getVirtualFile("/test-header.h",
                                                  HeaderBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
-  VoidModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(new HeaderSearchOptions, SourceMgr, Diags, LangOpts, 
-                          &*Target);
-  Preprocessor PP(new PreprocessorOptions(), Diags, LangOpts, SourceMgr,
-                  HeaderInfo, ModLoader,
+  TrivialModuleLoader ModLoader;
+  MemoryBufferCache PCMCache;
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, &*Target);
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                  SourceMgr, PCMCache, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
@@ -318,34 +327,46 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
   // Make sure we got the tokens that we expected.
   ASSERT_EQ(0U, toks.size());
 
-  ASSERT_EQ(9U, Macros.size());
+  ASSERT_EQ(15U, Macros.size());
   // #define M(x) x
-  ASSERT_TRUE(Macros[0].isDefinition);
+  ASSERT_TRUE(Macros[0].isDefinition());
   ASSERT_EQ("M", Macros[0].Name);
   // #define INC "/test-header.h"
-  ASSERT_TRUE(Macros[1].isDefinition);
+  ASSERT_TRUE(Macros[1].isDefinition());
   ASSERT_EQ("INC", Macros[1].Name);
   // M expansion in #include M(INC)
-  ASSERT_FALSE(Macros[2].isDefinition);
+  ASSERT_FALSE(Macros[2].isDefinition());
   ASSERT_EQ("M", Macros[2].Name);
   // INC expansion in #include M(INC)
-  ASSERT_FALSE(Macros[3].isDefinition);
+  ASSERT_TRUE(Macros[3].isExpansion());
   ASSERT_EQ("INC", Macros[3].Name);
   // #define MACRO_IN_INCLUDE 0
-  ASSERT_TRUE(Macros[4].isDefinition);
+  ASSERT_TRUE(Macros[4].isDefinition());
   ASSERT_EQ("MACRO_IN_INCLUDE", Macros[4].Name);
+  // #define MACRO_DEFINED
+  ASSERT_TRUE(Macros[5].isDefinition());
+  ASSERT_FALSE(Macros[5].isUnDefinition());
+  ASSERT_EQ("MACRO_DEFINED", Macros[5].Name);
+  // #undef MACRO_DEFINED
+  ASSERT_TRUE(Macros[6].isDefinition());
+  ASSERT_TRUE(Macros[6].isUnDefinition());
+  ASSERT_EQ("MACRO_DEFINED", Macros[6].Name);
+  // #undef MACRO_UNDEFINED
+  ASSERT_FALSE(Macros[7].isDefinition());
+  ASSERT_TRUE(Macros[7].isUnDefinition());
+  ASSERT_EQ("MACRO_UNDEFINED", Macros[7].Name);
   // #define INC2 </test-header.h>
-  ASSERT_TRUE(Macros[5].isDefinition);
-  ASSERT_EQ("INC2", Macros[5].Name);
+  ASSERT_TRUE(Macros[8].isDefinition());
+  ASSERT_EQ("INC2", Macros[8].Name);
   // M expansion in #include M(INC2)
-  ASSERT_FALSE(Macros[6].isDefinition);
-  ASSERT_EQ("M", Macros[6].Name);
+  ASSERT_FALSE(Macros[9].isDefinition());
+  ASSERT_EQ("M", Macros[9].Name);
   // INC2 expansion in #include M(INC2)
-  ASSERT_FALSE(Macros[7].isDefinition);
-  ASSERT_EQ("INC2", Macros[7].Name);
+  ASSERT_TRUE(Macros[10].isExpansion());
+  ASSERT_EQ("INC2", Macros[10].Name);
   // #define MACRO_IN_INCLUDE 0
-  ASSERT_TRUE(Macros[8].isDefinition);
-  ASSERT_EQ("MACRO_IN_INCLUDE", Macros[8].Name);
+  ASSERT_TRUE(Macros[11].isDefinition());
+  ASSERT_EQ("MACRO_IN_INCLUDE", Macros[11].Name);
 
   // The INC expansion in #include M(INC) comes before the first
   // MACRO_IN_INCLUDE definition of the included file.
@@ -353,7 +374,7 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
 
   // The INC2 expansion in #include M(INC2) comes before the second
   // MACRO_IN_INCLUDE definition of the included file.
-  EXPECT_TRUE(SourceMgr.isBeforeInTranslationUnit(Macros[7].Loc, Macros[8].Loc));
+  EXPECT_TRUE(SourceMgr.isBeforeInTranslationUnit(Macros[10].Loc, Macros[11].Loc));
 }
 
 #endif

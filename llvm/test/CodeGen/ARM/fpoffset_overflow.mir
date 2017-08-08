@@ -1,0 +1,96 @@
+# RUN: llc -o - %s -mtriple=thumbv7-- -run-pass=stack-protector -run-pass=prologepilog | FileCheck %s
+---
+# This should trigger an emergency spill in the register scavenger because the
+# frame offset into the large argument is too large.
+# CHECK-LABEL: name: func0
+# CHECK: t2STRi12 killed [[SPILLED:%r[0-9]+]], %sp, 0, 14, _ :: (store 4 into %stack.0)
+# CHECK: [[SPILLED]] = t2ADDri killed %sp, 4096, 14, _, _
+# CHECK: %sp = t2LDRi12 killed [[SPILLED]], 40, 14, _ :: (load 4)
+# CHECK: [[SPILLED]] = t2LDRi12 %sp, 0, 14, _ :: (load 4 from %stack.0)
+name: func0
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, offset: 4084, size: 4, alignment: 4, isImmutable: true,
+      isAliased: false }
+  - { id: 1, offset: -12, size: 4096, alignment: 4, isImmutable: false,
+      isAliased: false }
+body: |
+  bb.0:
+    %r0 = IMPLICIT_DEF
+    %r1 = IMPLICIT_DEF
+    %r2 = IMPLICIT_DEF
+    %r3 = IMPLICIT_DEF
+    %r4 = IMPLICIT_DEF
+    %r5 = IMPLICIT_DEF
+    %r6 = IMPLICIT_DEF
+    %r7 = IMPLICIT_DEF
+    %r8 = IMPLICIT_DEF
+    %r9 = IMPLICIT_DEF
+    %r10 = IMPLICIT_DEF
+    %r11 = IMPLICIT_DEF
+    %r12 = IMPLICIT_DEF
+    %lr = IMPLICIT_DEF
+
+    %sp = t2LDRi12 %fixed-stack.0, 0, 14, _ :: (load 4)
+
+    KILL %r0
+    KILL %r1
+    KILL %r2
+    KILL %r3
+    KILL %r4
+    KILL %r5
+    KILL %r6
+    KILL %r7
+    KILL %r8
+    KILL %r9
+    KILL %r10
+    KILL %r11
+    KILL %r12
+    KILL %lr
+...
+---
+# This should not trigger an emergency spill yet.
+# CHECK-LABEL: name: func1
+# CHECK-NOT: t2STRi12
+# CHECK-NOT: t2ADDri
+# CHECK: %r11 = t2LDRi12 %sp, 4092, 14, _ :: (load 4)
+# CHECK-NOT: t2LDRi12
+name: func1
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, offset: 4044, size: 4, alignment: 4, isImmutable: true,
+      isAliased: false }
+  - { id: 1, offset: -12, size: 4056, alignment: 4, isImmutable: false,
+      isAliased: false }
+body: |
+  bb.0:
+    %r0 = IMPLICIT_DEF
+    %r1 = IMPLICIT_DEF
+    %r2 = IMPLICIT_DEF
+    %r3 = IMPLICIT_DEF
+    %r4 = IMPLICIT_DEF
+    %r5 = IMPLICIT_DEF
+    %r6 = IMPLICIT_DEF
+    %r8 = IMPLICIT_DEF
+    %r9 = IMPLICIT_DEF
+    %r10 = IMPLICIT_DEF
+    %r11 = IMPLICIT_DEF
+    %r12 = IMPLICIT_DEF
+    %lr = IMPLICIT_DEF
+
+    %r11 = t2LDRi12 %fixed-stack.0, 0, 14, _ :: (load 4)
+
+    KILL %r0
+    KILL %r1
+    KILL %r2
+    KILL %r3
+    KILL %r4
+    KILL %r5
+    KILL %r6
+    KILL %r8
+    KILL %r9
+    KILL %r10
+    KILL %r11
+    KILL %r12
+    KILL %lr
+...

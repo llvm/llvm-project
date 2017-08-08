@@ -229,6 +229,19 @@ void testSignedness(long i, unsigned long u) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:11-[[@LINE-2]]:14}:"%+ld"
 }
 
+void testSizeTypes() {
+  printf("%zu", 0.f); // expected-warning-re{{format specifies type 'size_t' (aka '{{.+}}') but the argument has type 'float'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:14}:"%f"
+
+  printf("%zd", 0.f); // expected-warning-re{{format specifies type 'ssize_t' (aka '{{.+}}') but the argument has type 'float'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:14}:"%f"
+  
+  short x;
+  printf("%zn", &x); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'short *'}}
+  // PrintfSpecifier::fixType doesn't handle %n, so a fix-it is not emitted, 
+  // see the comment in PrintfSpecifier::fixType in PrintfFormatString.cpp.
+}
+
 void testEnum() {
   typedef enum {
     ImplicitA = 1,

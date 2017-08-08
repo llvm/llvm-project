@@ -4,7 +4,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: @llvm.global_ctors {{.*}} @msan.module_ctor
+; CHECK: @llvm.global_ctors {{.*}} { i32 0, void ()* @msan.module_ctor, i8* null }
 
 ; Check the presence and the linkage type of __msan_track_origins and
 ; other interface symbols.
@@ -237,6 +237,41 @@ declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32,
 ; CHECK-LABEL: @MemMove
 ; CHECK: call i8* @__msan_memmove
 ; CHECK: ret void
+
+;; ------------
+;; Placeholder tests that will fail once element atomic @llvm.mem[cpy|move|set] instrinsics have
+;; been added to the MemIntrinsic class hierarchy. These will act as a reminder to
+;; verify that MSAN handles these intrinsics properly once they have been
+;; added to that class hierarchy.
+declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture writeonly, i8, i64, i32) nounwind
+declare void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
+declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
+
+define void @atomic_memcpy(i8* nocapture %x, i8* nocapture %y) nounwind {
+  ; CHECK-LABEL: atomic_memcpy
+  ; CHECK-NEXT: call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
+  ; CHECK-NEXT: ret void
+  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
+  ret void
+}
+
+define void @atomic_memmove(i8* nocapture %x, i8* nocapture %y) nounwind {
+  ; CHECK-LABEL: atomic_memmove
+  ; CHECK-NEXT: call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
+  ; CHECK-NEXT: ret void
+  call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
+  ret void
+}
+
+define void @atomic_memset(i8* nocapture %x) nounwind {
+  ; CHECK-LABEL: atomic_memset
+  ; CHECK-NEXT: call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %x, i8 88, i64 16, i32 1)
+  ; CHECK-NEXT: ret void
+  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %x, i8 88, i64 16, i32 1)
+  ret void
+}
+
+;; ------------
 
 
 ; Check that we propagate shadow for "select"
@@ -535,8 +570,8 @@ entry:
 ; CHECK: ret i1
 
 
-; Check that loads of shadow have the same aligment as the original loads.
-; Check that loads of origin have the aligment of max(4, original alignment).
+; Check that loads of shadow have the same alignment as the original loads.
+; Check that loads of origin have the alignment of max(4, original alignment).
 
 define i32 @ShadowLoadAlignmentLarge() nounwind uwtable sanitize_memory {
   %y = alloca i32, align 64
@@ -616,70 +651,6 @@ declare i32 @llvm.bswap.i32(i32) nounwind readnone
 ; CHECK: @llvm.bswap.i32
 ; CHECK-NOT: call void @__msan_warning
 ; CHECK: ret i32
-
-
-; Store intrinsic.
-
-define void @StoreIntrinsic(i8* %p, <4 x float> %x) nounwind uwtable sanitize_memory {
-  call void @llvm.x86.sse.storeu.ps(i8* %p, <4 x float> %x)
-  ret void
-}
-
-declare void @llvm.x86.sse.storeu.ps(i8*, <4 x float>) nounwind
-
-; CHECK-LABEL: @StoreIntrinsic
-; CHECK-NOT: br
-; CHECK-NOT: = or
-; CHECK: store <4 x i32> {{.*}} align 1
-; CHECK: call void @llvm.x86.sse.storeu.ps
-; CHECK: ret void
-
-
-; Load intrinsic.
-
-define <16 x i8> @LoadIntrinsic(i8* %p) nounwind uwtable sanitize_memory {
-  %call = call <16 x i8> @llvm.x86.sse3.ldu.dq(i8* %p)
-  ret <16 x i8> %call
-}
-
-declare <16 x i8> @llvm.x86.sse3.ldu.dq(i8* %p) nounwind
-
-; CHECK-LABEL: @LoadIntrinsic
-; CHECK: load <16 x i8>, <16 x i8>* {{.*}} align 1
-; CHECK-ORIGINS: [[ORIGIN:%[01-9a-z]+]] = load i32, i32* {{.*}}
-; CHECK-NOT: br
-; CHECK-NOT: = or
-; CHECK: call <16 x i8> @llvm.x86.sse3.ldu.dq
-; CHECK: store <16 x i8> {{.*}} @__msan_retval_tls
-; CHECK-ORIGINS: store i32 {{.*}}[[ORIGIN]], i32* @__msan_retval_origin_tls
-; CHECK: ret <16 x i8>
-
-
-; Simple NoMem intrinsic
-; Check that shadow is OR'ed, and origin is Select'ed
-; And no shadow checks!
-
-define <8 x i16> @Paddsw128(<8 x i16> %a, <8 x i16> %b) nounwind uwtable sanitize_memory {
-  %call = call <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16> %a, <8 x i16> %b)
-  ret <8 x i16> %call
-}
-
-declare <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16> %a, <8 x i16> %b) nounwind
-
-; CHECK-LABEL: @Paddsw128
-; CHECK-NEXT: load <8 x i16>, <8 x i16>* {{.*}} @__msan_param_tls
-; CHECK-ORIGINS: load i32, i32* {{.*}} @__msan_param_origin_tls
-; CHECK-NEXT: load <8 x i16>, <8 x i16>* {{.*}} @__msan_param_tls
-; CHECK-ORIGINS: load i32, i32* {{.*}} @__msan_param_origin_tls
-; CHECK-NEXT: = or <8 x i16>
-; CHECK-ORIGINS: = bitcast <8 x i16> {{.*}} to i128
-; CHECK-ORIGINS-NEXT: = icmp ne i128 {{.*}}, 0
-; CHECK-ORIGINS-NEXT: = select i1 {{.*}}, i32 {{.*}}, i32
-; CHECK-NEXT: call <8 x i16> @llvm.x86.sse2.padds.w
-; CHECK-NEXT: store <8 x i16> {{.*}} @__msan_retval_tls
-; CHECK-ORIGINS: store i32 {{.*}} @__msan_retval_origin_tls
-; CHECK-NEXT: ret <8 x i16>
-
 
 ; Test handling of vectors of pointers.
 ; Check that shadow of such vector is a vector of integers.
@@ -914,8 +885,7 @@ entry:
 ; the third struct goes to the overflow area byval
 
 ; CHECK-LABEL: @VAArgStruct
-; undef
-; CHECK: store i32 -1, i32* {{.*}}@__msan_va_arg_tls {{.*}}, align 8
+; undef not stored to __msan_va_arg_tls - it's a fixed argument
 ; first struct through general purpose registers
 ; CHECK: store i64 {{.*}}, i64* {{.*}}@__msan_va_arg_tls{{.*}}, i64 8){{.*}}, align 8
 ; CHECK: store i64 {{.*}}, i64* {{.*}}@__msan_va_arg_tls{{.*}}, i64 16){{.*}}, align 8
@@ -981,5 +951,5 @@ define i8* @MismatchingCallMustTailCall(i32 %a) sanitize_memory {
 ; CHECK-NEXT: ret i8*
 
 
-; CHECK-LABEL: define internal void @msan.module_ctor
+; CHECK-LABEL: define internal void @msan.module_ctor() {
 ; CHECK: call void @__msan_init()

@@ -1,47 +1,49 @@
 ; RUN: opt < %s -constprop -S | FileCheck %s
 ; RUN: opt < %s -constprop -disable-simplify-libcalls -S | FileCheck %s --check-prefix=FNOBUILTIN
 
-declare double @acos(double)
-declare double @asin(double)
-declare double @atan(double)
-declare double @atan2(double, double)
-declare double @ceil(double)
-declare double @cos(double)
-declare double @cosh(double)
-declare double @exp(double)
-declare double @exp2(double)
-declare double @fabs(double)
-declare double @floor(double)
-declare double @fmod(double, double)
-declare double @log(double)
-declare double @log10(double)
-declare double @pow(double, double)
-declare double @sin(double)
-declare double @sinh(double)
-declare double @sqrt(double)
-declare double @tan(double)
-declare double @tanh(double)
+declare double @acos(double) readnone nounwind
+declare double @asin(double) readnone nounwind
+declare double @atan(double) readnone nounwind
+declare double @atan2(double, double) readnone nounwind
+declare double @ceil(double) readnone nounwind
+declare double @cos(double) readnone nounwind
+declare double @cosh(double) readnone nounwind
+declare double @exp(double) readnone nounwind
+declare double @exp2(double) readnone nounwind
+declare double @fabs(double) readnone nounwind
+declare double @floor(double) readnone nounwind
+declare double @fmod(double, double) readnone nounwind
+declare double @log(double) readnone nounwind
+declare double @log10(double) readnone nounwind
+declare double @pow(double, double) readnone nounwind
+declare double @round(double) readnone nounwind
+declare double @sin(double) readnone nounwind
+declare double @sinh(double) readnone nounwind
+declare double @sqrt(double) readnone nounwind
+declare double @tan(double) readnone nounwind
+declare double @tanh(double) readnone nounwind
 
-declare float @acosf(float)
-declare float @asinf(float)
-declare float @atanf(float)
-declare float @atan2f(float, float)
-declare float @ceilf(float)
-declare float @cosf(float)
-declare float @coshf(float)
-declare float @expf(float)
-declare float @exp2f(float)
-declare float @fabsf(float)
-declare float @floorf(float)
-declare float @fmodf(float, float)
-declare float @logf(float)
-declare float @log10f(float)
-declare float @powf(float, float)
-declare float @sinf(float)
-declare float @sinhf(float)
-declare float @sqrtf(float)
-declare float @tanf(float)
-declare float @tanhf(float)
+declare float @acosf(float) readnone nounwind
+declare float @asinf(float) readnone nounwind
+declare float @atanf(float) readnone nounwind
+declare float @atan2f(float, float) readnone nounwind
+declare float @ceilf(float) readnone nounwind
+declare float @cosf(float) readnone nounwind
+declare float @coshf(float) readnone nounwind
+declare float @expf(float) readnone nounwind
+declare float @exp2f(float) readnone nounwind
+declare float @fabsf(float) readnone nounwind
+declare float @floorf(float) readnone nounwind
+declare float @fmodf(float, float) readnone nounwind
+declare float @logf(float) readnone nounwind
+declare float @log10f(float) readnone nounwind
+declare float @powf(float, float) readnone nounwind
+declare float @roundf(float) readnone nounwind
+declare float @sinf(float) readnone nounwind
+declare float @sinhf(float) readnone nounwind
+declare float @sqrtf(float) readnone nounwind
+declare float @tanf(float) readnone nounwind
+declare float @tanhf(float) readnone nounwind
 
 define double @T() {
 ; CHECK-LABEL: @T(
@@ -102,6 +104,9 @@ define double @T() {
   %14 = call double @pow(double 3.000000e+00, double 4.000000e+00)
   store double %14, double* %slot
 ; FNOBUILTIN: call
+  %round_val = call double @round(double 3.000000e+00)
+  store double %round_val, double* %slot
+; FNOBUILTIN: call
   %15 = call double @sinh(double 3.000000e+00)
   store double %15, double* %slot
 ; FNOBUILTIN: call
@@ -153,6 +158,9 @@ define double @T() {
   %31 = call float @powf(float 3.000000e+00, float 4.000000e+00)
   store float %31, float* %slotf
 ; FNOBUILTIN: call
+  %roundf_val = call float @roundf(float 3.000000e+00)
+  store float %roundf_val, float* %slotf
+; FNOBUILTIN: call
   %32 = call float @sinf(float 3.000000e+00)
   store float %32, float* %slotf
 ; FNOBUILTIN: call
@@ -175,39 +183,6 @@ define double @T() {
   %d = fadd double %c, %E 
   ret double %d
 }
-
-define i1 @test_sse_cvt() nounwind readnone {
-; CHECK-LABEL: @test_sse_cvt(
-; CHECK-NOT: call
-; CHECK: ret i1 true
-entry:
-  %i0 = tail call i32 @llvm.x86.sse.cvtss2si(<4 x float> <float 1.75, float undef, float undef, float undef>) nounwind
-  %i1 = tail call i32 @llvm.x86.sse.cvttss2si(<4 x float> <float 1.75, float undef, float undef, float undef>) nounwind
-  %i2 = tail call i64 @llvm.x86.sse.cvtss2si64(<4 x float> <float 1.75, float undef, float undef, float undef>) nounwind
-  %i3 = tail call i64 @llvm.x86.sse.cvttss2si64(<4 x float> <float 1.75, float undef, float undef, float undef>) nounwind
-  %i4 = call i32 @llvm.x86.sse2.cvtsd2si(<2 x double> <double 1.75, double undef>) nounwind
-  %i5 = call i32 @llvm.x86.sse2.cvttsd2si(<2 x double> <double 1.75, double undef>) nounwind
-  %i6 = call i64 @llvm.x86.sse2.cvtsd2si64(<2 x double> <double 1.75, double undef>) nounwind
-  %i7 = call i64 @llvm.x86.sse2.cvttsd2si64(<2 x double> <double 1.75, double undef>) nounwind
-  %sum11 = add i32 %i0, %i1
-  %sum12 = add i32 %i4, %i5
-  %sum1 = add i32 %sum11, %sum12
-  %sum21 = add i64 %i2, %i3
-  %sum22 = add i64 %i6, %i7
-  %sum2 = add i64 %sum21, %sum22
-  %sum1.sext = sext i32 %sum1 to i64
-  %b = icmp eq i64 %sum1.sext, %sum2
-  ret i1 %b
-}
-
-declare i32 @llvm.x86.sse.cvtss2si(<4 x float>) nounwind readnone
-declare i32 @llvm.x86.sse.cvttss2si(<4 x float>) nounwind readnone
-declare i64 @llvm.x86.sse.cvtss2si64(<4 x float>) nounwind readnone
-declare i64 @llvm.x86.sse.cvttss2si64(<4 x float>) nounwind readnone
-declare i32 @llvm.x86.sse2.cvtsd2si(<2 x double>) nounwind readnone
-declare i32 @llvm.x86.sse2.cvttsd2si(<2 x double>) nounwind readnone
-declare i64 @llvm.x86.sse2.cvtsd2si64(<2 x double>) nounwind readnone
-declare i64 @llvm.x86.sse2.cvttsd2si64(<2 x double>) nounwind readnone
 
 define double @test_intrinsic_pow() nounwind uwtable ssp {
 entry:

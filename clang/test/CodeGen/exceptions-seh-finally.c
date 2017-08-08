@@ -25,14 +25,11 @@ void basic_finally(void) {
 // CHECK: [[lpad]]
 // CHECK-NEXT: %[[pad:[^ ]*]] = cleanuppad
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: invoke void @"\01?fin$0@0@basic_finally@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
-// CHECK-NEXT: to label %{{.*}} unwind label %[[end:[^ ]*]]
-// CHECK: cleanupret %[[pad]] unwind to caller
-//
-// CHECK: [[end]]
-// CHECK: cleanupendpad %[[pad]] unwind to caller
+// CHECK: call void @"\01?fin$0@0@basic_finally@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
+// CHECK-NEXT: cleanupret from %[[pad]] unwind to caller
 
 // CHECK: define internal void @"\01?fin$0@0@basic_finally@@"({{.*}})
+// CHECK-SAME: [[finally_attrs:#[0-9]+]]
 // CHECK: call void @cleanup()
 
 // Mostly check that we don't double emit 'r' which would crash.
@@ -66,6 +63,7 @@ l:
 // CHECK: ret void
 
 // CHECK: define internal void @"\01?fin$0@0@label_in_finally@@"({{.*}})
+// CHECK-SAME: [[finally_attrs]]
 // CHECK: br label %[[l:[^ ]*]]
 //
 // CHECK: [[l]]
@@ -95,14 +93,11 @@ void use_abnormal_termination(void) {
 // CHECK: [[lpad]]
 // CHECK-NEXT: %[[pad:[^ ]*]] = cleanuppad
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
-// CHECK: invoke void @"\01?fin$0@0@use_abnormal_termination@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
-// CHECK-NEXT: to label %{{.*}} unwind label %[[end:[^ ]*]]
-// CHECK: cleanupret %[[pad]] unwind to caller
-//
-// CHECK: [[end]]
-// CHECK: cleanupendpad %[[pad]] unwind to caller
+// CHECK: call void @"\01?fin$0@0@use_abnormal_termination@@"({{i8( zeroext)?}} 1, i8* %[[fp]])
+// CHECK-NEXT: cleanupret from %[[pad]] unwind to caller
 
 // CHECK: define internal void @"\01?fin$0@0@use_abnormal_termination@@"({{i8( zeroext)?}} %[[abnormal:abnormal_termination]], i8* %frame_pointer)
+// CHECK-SAME: [[finally_attrs]]
 // CHECK: %[[abnormal_zext:[^ ]*]] = zext i8 %[[abnormal]] to i32
 // CHECK: store i32 %[[abnormal_zext]], i32* @crashed
 // CHECK-NEXT: ret void
@@ -120,6 +115,7 @@ void noreturn_noop_finally() {
 // CHECK: ret void
 
 // CHECK: define internal void @"\01?fin$0@0@noreturn_noop_finally@@"({{.*}})
+// CHECK-SAME: [[finally_attrs]]
 // CHECK: call void @abort()
 // CHECK: unreachable
 
@@ -141,14 +137,11 @@ void noreturn_finally() {
 //
 // CHECK: [[lpad]]
 // CHECK-NEXT: %[[pad:[^ ]*]] = cleanuppad
-// CHECK: invoke void @"\01?fin$0@0@noreturn_finally@@"({{.*}})
-// CHECK-NEXT: to label %{{.*}} unwind label %[[end:[^ ]*]]
-// CHECK: cleanupret %[[pad]] unwind to caller
-//
-// CHECK: [[end]]
-// CHECK: cleanupendpad %[[pad]] unwind to caller
+// CHECK: call void @"\01?fin$0@0@noreturn_finally@@"({{.*}})
+// CHECK-NEXT: cleanupret from %[[pad]] unwind to caller
 
 // CHECK: define internal void @"\01?fin$0@0@noreturn_finally@@"({{.*}})
+// CHECK-SAME: [[finally_attrs]]
 // CHECK: call void @abort()
 // CHECK: unreachable
 
@@ -163,6 +156,7 @@ int finally_with_return() {
 // CHECK-NEXT: ret i32 42
 
 // CHECK: define internal void @"\01?fin$0@0@finally_with_return@@"({{.*}})
+// CHECK-SAME: [[finally_attrs]]
 // CHECK-NOT: br i1
 // CHECK-NOT: br label
 // CHECK: ret void
@@ -189,17 +183,15 @@ int nested___finally___finally() {
 //
 // CHECK: [[lpad]]
 // CHECK-NEXT: %[[pad:[^ ]*]] = cleanuppad
-// CHECK: invoke void @"\01?fin$0@0@nested___finally___finally@@"({{.*}})
-// CHECK-NEXT: to label %{{.*}} unwind label %[[end:[^ ]*]]
-// CHECK: cleanupret %[[pad]] unwind to caller
-//
-// CHECK: [[end]]
-// CHECK: cleanupendpad %[[pad]] unwind to caller
+// CHECK: call void @"\01?fin$0@0@nested___finally___finally@@"({{.*}})
+// CHECK-NEXT: cleanupret from %[[pad]] unwind to caller
 
 // CHECK-LABEL: define internal void @"\01?fin$0@0@nested___finally___finally@@"({{.*}})
+// CHECK-SAME: [[finally_attrs]]
 // CHECK: ret void
 
 // CHECK-LABEL: define internal void @"\01?fin$1@0@nested___finally___finally@@"({{.*}})
+// CHECK-SAME: [[finally_attrs]]
 // CHECK: unreachable
 
 // FIXME: Our behavior seems suspiciously different.
@@ -231,27 +223,52 @@ int nested___finally___finally_with_eh_edge() {
 // CHECK: [[lpad1]]
 // CHECK-NEXT: %[[innerpad:[^ ]*]] = cleanuppad
 // CHECK: invoke void @"\01?fin$1@0@nested___finally___finally_with_eh_edge@@"({{.*}})
-// CHECK-NEXT:     to label %[[innercleanupretbb:[^ ]*]] unwind label %[[innerend:[^ ]*]]
+// CHECK-NEXT:    label %[[innercleanupretbb:[^ ]*]] unwind label %[[lpad2:[^ ]*]]
 //
 // CHECK: [[innercleanupretbb]]
-// CHECK-NEXT: cleanupret %[[innerpad]] unwind label %[[lpad2]]
-//
-// CHECK: [[innerend]]
-// CHECK-NEXT: cleanupendpad %[[innerpad]] unwind label %[[lpad2:[^ ]*]]
+// CHECK-NEXT: cleanupret from %[[innerpad]] unwind label %[[lpad2]]
 //
 // CHECK: [[lpad2]]
 // CHECK-NEXT: %[[outerpad:[^ ]*]] = cleanuppad
-// CHECK: invoke void @"\01?fin$0@0@nested___finally___finally_with_eh_edge@@"({{.*}})
-// CHECK-NEXT:     to label %[[outercleanupretbb:[^ ]*]] unwind label %[[outerend:[^ ]*]]
-//
-// CHECK: [[outercleanupretbb]]
-// CHECK-NEXT: cleanupret %[[outerpad]] unwind to caller
-//
-// CHECK: [[outerend]]
-// CHECK-NEXT: cleanupendpad %[[outerpad]] unwind to caller
+// CHECK: call void @"\01?fin$0@0@nested___finally___finally_with_eh_edge@@"({{.*}})
+// CHECK-NEXT: cleanupret from %[[outerpad]] unwind to caller
 
 // CHECK-LABEL: define internal void @"\01?fin$0@0@nested___finally___finally_with_eh_edge@@"({{.*}})
+// CHECK-SAME: [[finally_attrs]]
 // CHECK: ret void
 
 // CHECK-LABEL: define internal void @"\01?fin$1@0@nested___finally___finally_with_eh_edge@@"({{.*}})
+// CHECK-SAME: [[finally_attrs]]
 // CHECK: unreachable
+
+void finally_within_finally() {
+  __try {
+    might_crash();
+  } __finally {
+    __try {
+      might_crash();
+    } __finally {
+    }
+  }
+}
+
+// CHECK-LABEL: define void @finally_within_finally(
+// CHECK: invoke void @might_crash(
+
+// CHECK: call void @"\01?fin$0@0@finally_within_finally@@"(
+// CHECK: call void @"\01?fin$0@0@finally_within_finally@@"({{.*}}) [ "funclet"(
+
+// CHECK-LABEL: define internal void @"\01?fin$0@0@finally_within_finally@@"({{[^)]*}})
+// CHECK-SAME: [[finally_attrs]]
+// CHECK: invoke void @might_crash(
+
+// CHECK: call void @"\01?fin$1@0@finally_within_finally@@"(
+// CHECK: call void @"\01?fin$1@0@finally_within_finally@@"({{.*}}) [ "funclet"(
+
+// CHECK-LABEL: define internal void @"\01?fin$1@0@finally_within_finally@@"({{[^)]*}})
+// CHECK-SAME: [[finally_attrs]]
+
+// Look for the absence of noinline. Enum attributes come first, so check that
+// a string attribute is the first to verify that no enum attributes are
+// present.
+// CHECK: attributes [[finally_attrs]] = { "{{.*}}" }

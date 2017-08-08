@@ -4,8 +4,8 @@
 ; CHECK-LABEL: test1:
 ; CHECK-NOT: bfc
 ; CHECK: add	[[REG:(r[0-9]+)|(lr)]], {{(r[0-9]+)|(lr)}}, #7
-; CHECK: bfc	[[REG]], #0, #3
-; CHECK-NOT: bfc
+; CHECK: bic	{{(r[0-9]+)|(lr)}}, [[REG]], #7
+; CHECK-NOT: bic
 
 define i64 @test1(i32 %i, ...) nounwind optsize {
 entry:
@@ -20,8 +20,8 @@ entry:
 ; CHECK-LABEL: test2:
 ; CHECK-NOT: bfc
 ; CHECK: add	[[REG:(r[0-9]+)|(lr)]], {{(r[0-9]+)|(lr)}}, #7
-; CHECK: bfc	[[REG]], #0, #3
-; CHECK-NOT:	bfc
+; CHECK: bic	{{(r[0-9]+)|(lr)}}, [[REG]], #7
+; CHECK-NOT:	bic
 ; CHECK: bx	lr
 
 define double @test2(i32 %a, i32* %b, ...) nounwind optsize {

@@ -78,13 +78,13 @@ declare i32 @puts(i8* nocapture) nounwind
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!33}
 
-!0 = distinct !DISubprogram(name: "gcd", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, file: !31, scope: !1, type: !3, variables: !29)
+!0 = distinct !DISubprogram(name: "gcd", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !31, scope: !1, type: !3, variables: !29)
 !1 = !DIFile(filename: "rem_small.c", directory: "/private/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 124117)", isOptimized: true, emissionKind: 1, file: !31, enums: !32, retainedTypes: !32, subprograms: !28, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 124117)", isOptimized: true, emissionKind: FullDebug, file: !31, enums: !32, retainedTypes: !32, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "long int", size: 64, align: 64, encoding: DW_ATE_signed)
-!6 = distinct !DISubprogram(name: "main", line: 25, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, file: !31, scope: !1, type: !7, variables: !30)
+!6 = distinct !DISubprogram(name: "main", line: 25, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !2, file: !31, scope: !1, type: !7, variables: !30)
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9}
 !9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -106,7 +106,6 @@ declare i32 @puts(i8* nocapture) nounwind
 !25 = !DILocation(line: 27, column: 38, scope: !15)
 !26 = !DILocation(line: 28, column: 9, scope: !15)
 !27 = !DILocation(line: 30, column: 1, scope: !15)
-!28 = !{!0, !6}
 !29 = !{!10, !11, !12}
 !30 = !{!14, !17}
 !31 = !DIFile(filename: "rem_small.c", directory: "/private/tmp")

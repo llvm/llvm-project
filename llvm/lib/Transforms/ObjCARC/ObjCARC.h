@@ -24,7 +24,6 @@
 #define LLVM_LIB_TRANSFORMS_OBJCARC_OBJCARC_H
 
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
@@ -68,6 +67,19 @@ static inline void EraseInstruction(Instruction *CI) {
 
   if (Unused)
     RecursivelyDeleteTriviallyDeadInstructions(OldArg);
+}
+
+/// If Inst is a ReturnRV and its operand is a call or invoke, return the
+/// operand. Otherwise return null.
+static inline const Instruction *getreturnRVOperand(const Instruction &Inst,
+                                                    ARCInstKind Class) {
+  if (Class != ARCInstKind::RetainRV)
+    return nullptr;
+
+  const auto *Opnd = Inst.getOperand(0)->stripPointerCasts();
+  if (const auto *C = dyn_cast<CallInst>(Opnd))
+    return C;
+  return dyn_cast<InvokeInst>(Opnd);
 }
 
 } // end namespace objcarc

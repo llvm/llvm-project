@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.security.MallocOverflow -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.security.MallocOverflow -verify %s
 
 #define NULL ((void *) 0)
 typedef __typeof__(sizeof(int)) size_t;

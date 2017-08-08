@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.MismatchedDeallocator -analyzer-output=text -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.MismatchedDeallocator -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false %s -o %t.plist
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.MismatchedDeallocator -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.MismatchedDeallocator -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false %s -o %t.plist
 // RUN: FileCheck --input-file=%t.plist %s
 
 void changePointee(int *p);
@@ -287,7 +287,7 @@ void test() {
 // CHECK-NEXT:    </dict>
 // CHECK-NEXT:   </array>
 // CHECK-NEXT:   <key>description</key><string>Memory allocated by &apos;new[]&apos; should be deallocated by &apos;delete[]&apos;, not &apos;delete&apos;</string>
-// CHECK-NEXT:   <key>category</key><string>Memory Error</string>
+// CHECK-NEXT:   <key>category</key><string>Memory error</string>
 // CHECK-NEXT:   <key>type</key><string>Bad deallocator</string>
 // CHECK-NEXT:   <key>check_name</key><string>unix.MismatchedDeallocator</string>
 // CHECK-NEXT:   <!-- This hash is experimental and going to change! -->

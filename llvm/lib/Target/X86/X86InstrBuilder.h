@@ -24,9 +24,15 @@
 #ifndef LLVM_LIB_TARGET_X86_X86INSTRBUILDER_H
 #define LLVM_LIB_TARGET_X86_X86INSTRBUILDER_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include <cassert>
 
 namespace llvm {
 
@@ -57,12 +63,11 @@ struct X86AddressMode {
     Base.Reg = 0;
   }
 
-
   void getFullAddress(SmallVectorImpl<MachineOperand> &MO) {
     assert(Scale == 1 || Scale == 2 || Scale == 4 || Scale == 8);
 
     if (BaseType == X86AddressMode::RegBase)
-      MO.push_back(MachineOperand::CreateReg(Base.Reg, false, false,
+      MO.push_back(MachineOperand::CreateReg(Base.Reg, false, false, false,
                                              false, false, false, 0, false));
     else {
       assert(BaseType == X86AddressMode::FrameIndexBase);
@@ -70,18 +75,47 @@ struct X86AddressMode {
     }
 
     MO.push_back(MachineOperand::CreateImm(Scale));
-    MO.push_back(MachineOperand::CreateReg(IndexReg, false, false,
-                                           false, false, false, 0, false));
+    MO.push_back(MachineOperand::CreateReg(IndexReg, false, false, false, false,
+                                           false, false, 0, false));
 
     if (GV)
       MO.push_back(MachineOperand::CreateGA(GV, Disp, GVOpFlags));
     else
       MO.push_back(MachineOperand::CreateImm(Disp));
 
-    MO.push_back(MachineOperand::CreateReg(0, false, false,
-                                           false, false, false, 0, false));
+    MO.push_back(MachineOperand::CreateReg(0, false, false, false, false, false,
+                                           false, 0, false));
   }
 };
+
+/// Compute the addressing mode from an machine instruction starting with the
+/// given operand.
+static inline X86AddressMode getAddressFromInstr(const MachineInstr *MI,
+                                                 unsigned Operand) {
+  X86AddressMode AM;
+  const MachineOperand &Op0 = MI->getOperand(Operand);
+  if (Op0.isReg()) {
+    AM.BaseType = X86AddressMode::RegBase;
+    AM.Base.Reg = Op0.getReg();
+  } else {
+    AM.BaseType = X86AddressMode::FrameIndexBase;
+    AM.Base.FrameIndex = Op0.getIndex();
+  }
+
+  const MachineOperand &Op1 = MI->getOperand(Operand + 1);
+  AM.Scale = Op1.getImm();
+
+  const MachineOperand &Op2 = MI->getOperand(Operand + 2);
+  AM.IndexReg = Op2.getReg();
+
+  const MachineOperand &Op3 = MI->getOperand(Operand + 3);
+  if (Op3.isGlobal())
+    AM.GV = Op3.getGlobal();
+  else
+    AM.Disp = Op3.getImm();
+
+  return AM;
+}
 
 /// addDirectMem - This function is used to add a direct memory reference to the
 /// current instruction -- that is, a dereference of an address in a register,
@@ -94,10 +128,26 @@ addDirectMem(const MachineInstrBuilder &MIB, unsigned Reg) {
   return MIB.addReg(Reg).addImm(1).addReg(0).addImm(0).addReg(0);
 }
 
+/// Replace the address used in the instruction with the direct memory
+/// reference.
+static inline void setDirectAddressInInstr(MachineInstr *MI, unsigned Operand,
+                                           unsigned Reg) {
+  // Direct memory address is in a form of: Reg, 1 (Scale), NoReg, 0, NoReg.
+  MI->getOperand(Operand).setReg(Reg);
+  MI->getOperand(Operand + 1).setImm(1);
+  MI->getOperand(Operand + 2).setReg(0);
+  MI->getOperand(Operand + 3).setImm(0);
+  MI->getOperand(Operand + 4).setReg(0);
+}
 
 static inline const MachineInstrBuilder &
 addOffset(const MachineInstrBuilder &MIB, int Offset) {
   return MIB.addImm(1).addReg(0).addImm(Offset).addReg(0);
+}
+
+static inline const MachineInstrBuilder &
+addOffset(const MachineInstrBuilder &MIB, const MachineOperand& Offset) {
+  return MIB.addImm(1).addReg(0).add(Offset).addReg(0);
 }
 
 /// addRegOffset - This function is used to add a memory reference of the form
@@ -149,9 +199,9 @@ static inline const MachineInstrBuilder &
 addFrameReference(const MachineInstrBuilder &MIB, int FI, int Offset = 0) {
   MachineInstr *MI = MIB;
   MachineFunction &MF = *MI->getParent()->getParent();
-  MachineFrameInfo &MFI = *MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const MCInstrDesc &MCID = MI->getDesc();
-  unsigned Flags = 0;
+  auto Flags = MachineMemOperand::MONone;
   if (MCID.mayLoad())
     Flags |= MachineMemOperand::MOLoad;
   if (MCID.mayStore())
@@ -178,6 +228,6 @@ addConstantPoolReference(const MachineInstrBuilder &MIB, unsigned CPI,
     .addConstantPoolIndex(CPI, 0, OpFlags).addReg(0);
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_X86_X86INSTRBUILDER_H

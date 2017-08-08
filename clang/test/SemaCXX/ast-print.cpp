@@ -227,3 +227,14 @@ template <typename T> struct Foo : T {
   using T::operator-;
 };
 }
+
+namespace dont_crash_on_auto_vars {
+struct T { enum E {X = 12ll }; };
+struct S {
+  struct  { int I; } ADecl;
+  static const auto Y = T::X;
+};
+//CHECK: static const auto Y = T::X;
+constexpr auto var = T::X;
+//CHECK: constexpr auto var = T::X;
+}

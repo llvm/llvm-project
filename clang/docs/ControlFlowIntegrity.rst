@@ -20,22 +20,84 @@ program's control flow. These schemes have been optimized for performance,
 allowing developers to enable them in release builds.
 
 To enable Clang's available CFI schemes, use the flag ``-fsanitize=cfi``.
-As currently implemented, all of Clang's CFI schemes (``cfi-vcall``,
-``cfi-derived-cast``, ``cfi-unrelated-cast``, ``cfi-nvcall``, ``cfi-icall``)
-rely on link-time optimization (LTO); so it is required to specify
-``-flto``, and the linker used must support LTO, for example via the `gold
-plugin`_. To allow the checks to be implemented efficiently, the program must
-be structured such that certain object files are compiled with CFI enabled,
-and are statically linked into the program. This may preclude the use of
-shared libraries in some cases.
+You can also enable a subset of available :ref:`schemes <cfi-schemes>`.
+As currently implemented, all schemes rely on link-time optimization (LTO);
+so it is required to specify ``-flto``, and the linker used must support LTO,
+for example via the `gold plugin`_.
 
-Clang currently implements forward-edge CFI for member function calls and
-bad cast checking. More schemes are under development.
+To allow the checks to be implemented efficiently, the program must
+be structured such that certain object files are compiled with CFI
+enabled, and are statically linked into the program. This may preclude
+the use of shared libraries in some cases.
+
+The compiler will only produce CFI checks for a class if it can infer hidden
+LTO visibility for that class. LTO visibility is a property of a class that
+is inferred from flags and attributes. For more details, see the documentation
+for :doc:`LTO visibility <LTOVisibility>`.
+
+The ``-fsanitize=cfi-{vcall,nvcall,derived-cast,unrelated-cast}`` flags
+require that a ``-fvisibility=`` flag also be specified. This is because the
+default visibility setting is ``-fvisibility=default``, which would disable
+CFI checks for classes without visibility attributes. Most users will want
+to specify ``-fvisibility=hidden``, which enables CFI checks for such classes.
+
+Experimental support for :ref:`cross-DSO control flow integrity
+<cfi-cross-dso>` exists that does not require classes to have hidden LTO
+visibility. This cross-DSO support has unstable ABI at this time.
 
 .. _gold plugin: http://llvm.org/docs/GoldPlugin.html
 
+.. _cfi-schemes:
+
+Available schemes
+=================
+
+Available schemes are:
+
+  -  ``-fsanitize=cfi-cast-strict``: Enables :ref:`strict cast checks
+     <cfi-strictness>`.
+  -  ``-fsanitize=cfi-derived-cast``: Base-to-derived cast to the wrong
+     dynamic type.
+  -  ``-fsanitize=cfi-unrelated-cast``: Cast from ``void*`` or another
+     unrelated type to the wrong dynamic type.
+  -  ``-fsanitize=cfi-nvcall``: Non-virtual call via an object whose vptr is of
+     the wrong dynamic type.
+  -  ``-fsanitize=cfi-vcall``: Virtual call via an object whose vptr is of the
+     wrong dynamic type.
+  -  ``-fsanitize=cfi-icall``: Indirect call of a function with wrong dynamic
+     type.
+
+You can use ``-fsanitize=cfi`` to enable all the schemes and use
+``-fno-sanitize`` flag to narrow down the set of schemes as desired.
+For example, you can build your program with
+``-fsanitize=cfi -fno-sanitize=cfi-nvcall,cfi-icall``
+to use all schemes except for non-virtual member function call and indirect call
+checking.
+
+Remember that you have to provide ``-flto`` if at least one CFI scheme is
+enabled.
+
+Trapping and Diagnostics
+========================
+
+By default, CFI will abort the program immediately upon detecting a control
+flow integrity violation. You can use the :ref:`-fno-sanitize-trap=
+<controlling-code-generation>` flag to cause CFI to print a diagnostic
+similar to the one below before the program aborts.
+
+.. code-block:: console
+
+    bad-cast.cpp:109:7: runtime error: control flow integrity check for type 'B' failed during base-to-derived cast (vtable address 0x000000425a50)
+    0x000000425a50: note: vtable is of type 'A'
+     00 00 00 00  f0 f1 41 00 00 00 00 00  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  20 5a 42 00
+                  ^ 
+
+If diagnostics are enabled, you can also configure CFI to continue program
+execution instead of aborting by using the :ref:`-fsanitize-recover=
+<controlling-code-generation>` flag.
+
 Forward-Edge CFI for Virtual Calls
-----------------------------------
+==================================
 
 This scheme checks that virtual calls take place using a vptr of the correct
 dynamic type; that is, the dynamic type of the called object must be a
@@ -48,7 +110,7 @@ of :ref:`blacklisted <cfi-blacklist>` types, must be compiled with
 ``-fsanitize=cfi-vcall`` enabled and be statically linked into the program.
 
 Performance
-~~~~~~~~~~~
+-----------
 
 A performance overhead of less than 1% has been measured by running the
 Dromaeo benchmark suite against an instrumented version of the Chromium
@@ -59,7 +121,7 @@ Note that this scheme has not yet been optimized for binary size; an increase
 of up to 15% has been observed for Chromium.
 
 Bad Cast Checking
------------------
+=================
 
 This scheme checks that pointer casts are made to an object of the correct
 dynamic type; that is, the dynamic type of the object must be a derived class
@@ -79,7 +141,8 @@ type ``void*`` or another unrelated type (which can be checked with
 The difference between these two types of casts is that the first is defined
 by the C++ standard to produce an undefined value, while the second is not
 in itself undefined behavior (it is well defined to cast the pointer back
-to its original type).
+to its original type) unless the object is uninitialized and the cast is a
+``static_cast`` (see C++14 [basic.life]p5).
 
 If a program as a matter of policy forbids the second type of cast, that
 restriction can normally be enforced. However it may in some cases be necessary
@@ -94,7 +157,7 @@ of :ref:`blacklisted <cfi-blacklist>` types, must be compiled with
 and be statically linked into the program.
 
 Non-Virtual Member Function Call Checking
------------------------------------------
+=========================================
 
 This scheme checks that non-virtual calls take place using an object of
 the correct dynamic type; that is, the dynamic type of the called object
@@ -111,7 +174,7 @@ of :ref:`blacklisted <cfi-blacklist>` types, must be compiled with
 .. _cfi-strictness:
 
 Strictness
-~~~~~~~~~~
+----------
 
 If a class has a single non-virtual base and does not introduce or override
 virtual member functions or fields other than an implicitly defined virtual
@@ -126,7 +189,7 @@ most compilers and should not have security implications, so we allow it by
 default. It can be disabled with ``-fsanitize=cfi-cast-strict``.
 
 Indirect Function Call Checking
--------------------------------
+===============================
 
 This scheme checks that function calls take place using a function of the
 correct dynamic type; that is, the dynamic type of the function must match
@@ -153,7 +216,7 @@ shared library boundaries are handled as if the callee was not compiled with
 This scheme is currently only supported on the x86 and x86_64 architectures.
 
 ``-fsanitize=cfi-icall`` and ``-fsanitize=function``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------------------------------
 
 This tool is similar to ``-fsanitize=function`` in that both tools check
 the types of function calls. However, the two tools occupy different points
@@ -176,16 +239,11 @@ shared library.
 .. _cfi-blacklist:
 
 Blacklist
----------
+=========
 
 A :doc:`SanitizerSpecialCaseList` can be used to relax CFI checks for certain
 source files, functions and types using the ``src``, ``fun`` and ``type``
 entity types.
-
-In addition, if a type has a ``uuid`` attribute and the blacklist contains
-the type entry ``attr:uuid``, CFI checks are suppressed for that type. This
-allows all COM types to be easily blacklisted, which is useful as COM types
-are typically defined outside of the linked program.
 
 .. code-block:: bash
 
@@ -196,16 +254,29 @@ are typically defined outside of the linked program.
     fun:*MyFooBar*
     # Ignore all types in the standard library.
     type:std::*
-    # Ignore all types with a uuid attribute.
-    type:attr:uuid
+
+.. _cfi-cross-dso:
+
+Shared library support
+======================
+
+Use **-f[no-]sanitize-cfi-cross-dso** to enable the cross-DSO control
+flow integrity mode, which allows all CFI schemes listed above to
+apply across DSO boundaries. As in the regular CFI, each DSO must be
+built with ``-flto``.
+
+Normally, CFI checks will only be performed for classes that have hidden LTO
+visibility. With this flag enabled, the compiler will emit cross-DSO CFI
+checks for all classes, except for those which appear in the CFI blacklist
+or which use a ``no_sanitize`` attribute.
 
 Design
-------
+======
 
 Please refer to the :doc:`design document<ControlFlowIntegrityDesign>`.
 
 Publications
-------------
+============
 
 `Control-Flow Integrity: Principles, Implementations, and Applications <http://research.microsoft.com/pubs/64250/ccs05.pdf>`_.
 Martin Abadi, Mihai Budiu, Úlfar Erlingsson, Jay Ligatti.

@@ -1,7 +1,7 @@
 // RUN: llvm-mc -triple x86_64-apple-darwin %s 2>&1 | FileCheck %s
 # ensure that single '#' comments are worink as expected on x86 darwin
-.align 3            # test single hash after align
-// CHECK: .align 3
+.p2align 3            # test single hash after align
+// CHECK: .p2align 3
 foo:                # single hash should be ignored as comment
 // CHECK-LABEL: foo:
     movl %esp, %ebp # same after an instruction

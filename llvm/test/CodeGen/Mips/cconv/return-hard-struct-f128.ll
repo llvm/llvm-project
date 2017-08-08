@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=N32 %s
-; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=N32 %s
+; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
+; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
 
-; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=N64 %s
-; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=N64 %s
+; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64 %s
+; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64 %s
 
 ; Test return of {fp128} agrees with de-facto N32/N64 ABI.
 
@@ -29,8 +29,8 @@ entry:
 ; N32-DAG:        ld  [[R4:\$[0-9]+]], 8([[R3]])
 ; N32-DAG:        dmtc1 [[R4]], $f1
 
-; N64-DAG:        ld  [[R1:\$[0-9]+]], %got_disp(struct_fp128)($1)
-; N64-DAG:        ld  [[R2:\$[0-9]+]], 0([[R1]])
+; N64-DAG:        lui  [[R1:\$[0-9]+]], %highest(struct_fp128)
+; N64-DAG:        ld  [[R2:\$[0-9]+]], %lo(struct_fp128)([[R1]])
 ; N64-DAG:        dmtc1 [[R2]], $f0
 ; N64-DAG:        ld  [[R4:\$[0-9]+]], 8([[R1]])
 ; N64-DAG:        dmtc1 [[R4]], $f1

@@ -52,7 +52,7 @@ function adb_remount {
     local STORAGE=`$ADB shell mount | grep /system | cut -d ' ' -f1`
     if [ "$STORAGE" != "" ]; then
       echo Remounting $STORAGE at /system
-      $ADB shell su -c "mount -o remount,rw $STORAGE /system"
+      $ADB shell su -c "mount -o rw,remount $STORAGE /system"
     else
       echo Failed to get storage device name for "/system" mount point
     fi
@@ -222,8 +222,13 @@ elif [[ -f "$HERE/$ASAN_RT" ]]; then
     ASAN_RT_PATH="$HERE"
 elif [[ $(basename "$HERE") == "bin" ]]; then
     # We could be in the toolchain's base directory.
-    # Consider ../lib, ../lib/asan, ../lib/linux and ../lib/clang/$VERSION/lib/linux.
-    P=$(ls "$HERE"/../lib/"$ASAN_RT" "$HERE"/../lib/asan/"$ASAN_RT" "$HERE"/../lib/linux/"$ASAN_RT" "$HERE"/../lib/clang/*/lib/linux/"$ASAN_RT" 2>/dev/null | sort | tail -1)
+    # Consider ../lib, ../lib/asan, ../lib/linux,
+    # ../lib/clang/$VERSION/lib/linux, and ../lib64/clang/$VERSION/lib/linux.
+    P=$(ls "$HERE"/../lib/"$ASAN_RT" \
+           "$HERE"/../lib/asan/"$ASAN_RT" \
+           "$HERE"/../lib/linux/"$ASAN_RT" \
+           "$HERE"/../lib/clang/*/lib/linux/"$ASAN_RT" \
+           "$HERE"/../lib64/clang/*/lib/linux/"$ASAN_RT" 2>/dev/null | sort | tail -1)
     if [[ -n "$P" ]]; then
         ASAN_RT_PATH="$(dirname "$P")"
     fi
@@ -295,28 +300,32 @@ if [[ -n "$ASAN_RT64" ]]; then
   cp "$ASAN_RT_PATH/$ASAN_RT64" "$TMPDIR/"
 fi
 
-# FIXME: alloc_dealloc_mismatch=0 prevents a failure in libdvm startup,
-# which may or may not be a real bug (probably not).
-ASAN_OPTIONS=start_deactivated=1,alloc_dealloc_mismatch=0,malloc_context_size=0
+ASAN_OPTIONS=start_deactivated=1,malloc_context_size=0
 
-function generate_zygote_wrapper { # from, to, asan_rt
+# The name of a symlink to libclang_rt.asan-$ARCH-android.so used in LD_PRELOAD.
+# The idea is to have the same name in lib and lib64 to keep it from falling
+# apart when a 64-bit process spawns a 32-bit one, inheriting the environment.
+ASAN_RT_SYMLINK=symlink-to-libclang_rt.asan
+
+function generate_zygote_wrapper { # from, to
   local _from=$1
   local _to=$2
-  local _asan_rt=$3
+  if [[ PRE_L -eq 0 ]]; then
+    # LD_PRELOAD parsing is broken in N if it starts with ":". Luckily, it is
+    # unset in the system environment since L.
+    local _ld_preload=$ASAN_RT_SYMLINK
+  else
+    local _ld_preload=\$LD_PRELOAD:$ASAN_RT_SYMLINK
+  fi
   cat <<EOF >"$TMPDIR/$_from"
 #!/system/bin/sh-from-zygote
 ASAN_OPTIONS=$ASAN_OPTIONS \\
 ASAN_ACTIVATION_OPTIONS=include_if_exists=/data/local/tmp/asan.options.%b \\
-LD_PRELOAD=\$LD_PRELOAD:$_asan_rt \\
+LD_PRELOAD=$_ld_preload \\
 exec $_to \$@
 
 EOF
 }
-
-# On Android-L not allowing user segv handler breaks some applications.
-if [[ PRE_L -eq 0 ]]; then
-    ASAN_OPTIONS="$ASAN_OPTIONS,allow_user_segv_handler=1"
-fi
 
 if [[ x$extra_options != x ]] ; then
     ASAN_OPTIONS="$ASAN_OPTIONS,$extra_options"
@@ -330,18 +339,18 @@ if [[ -f "$TMPDIR/app_process64" ]]; then
     mv "$TMPDIR/app_process32" "$TMPDIR/app_process32.real"
     mv "$TMPDIR/app_process64" "$TMPDIR/app_process64.real"
   fi
-  generate_zygote_wrapper "app_process32" "/system/bin/app_process32.real" "$ASAN_RT"
-  generate_zygote_wrapper "app_process64" "/system/bin/app_process64.real" "$ASAN_RT64"
+  generate_zygote_wrapper "app_process32" "/system/bin/app_process32.real"
+  generate_zygote_wrapper "app_process64" "/system/bin/app_process64.real"
 else
   # A 32-bit device.
-  generate_zygote_wrapper "app_process.wrap" "/system/bin/app_process32" "$ASAN_RT"
+  generate_zygote_wrapper "app_process.wrap" "/system/bin/app_process32"
 fi
 
 # General command-line tool wrapper (use for anything that's not started as
 # zygote).
 cat <<EOF >"$TMPDIR/asanwrapper"
 #!/system/bin/sh
-LD_PRELOAD=$ASAN_RT \\
+LD_PRELOAD=$ASAN_RT_SYMLINK \\
 exec \$@
 
 EOF
@@ -349,7 +358,7 @@ EOF
 if [[ -n "$ASAN_RT64" ]]; then
   cat <<EOF >"$TMPDIR/asanwrapper64"
 #!/system/bin/sh
-LD_PRELOAD=$ASAN_RT64 \\
+LD_PRELOAD=$ASAN_RT_SYMLINK \\
 exec \$@
 
 EOF
@@ -400,11 +409,16 @@ if ! ( cd "$TMPDIRBASE" && diff -qr old/ new/ ) ; then
       install "$TMPDIR/app_process64.real" /system/bin 755 $CTX
       install "$TMPDIR/asanwrapper" /system/bin 755
       install "$TMPDIR/asanwrapper64" /system/bin 755
+
+      adb_shell ln -sf $ASAN_RT /system/lib/$ASAN_RT_SYMLINK
+      adb_shell ln -sf $ASAN_RT64 /system/lib64/$ASAN_RT_SYMLINK
     else
       install "$TMPDIR/$ASAN_RT" /system/lib 644
       install "$TMPDIR/app_process32" /system/bin 755 $CTX
       install "$TMPDIR/app_process.wrap" /system/bin 755 $CTX
       install "$TMPDIR/asanwrapper" /system/bin 755 $CTX
+
+      adb_shell ln -sf $ASAN_RT /system/lib/$ASAN_RT_SYMLINK
 
       adb_shell rm /system/bin/app_process
       adb_shell ln -s /system/bin/app_process.wrap /system/bin/app_process

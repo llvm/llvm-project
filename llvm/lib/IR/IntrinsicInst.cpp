@@ -22,34 +22,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
 /// DbgInfoIntrinsic - This is the common base class for debug info intrinsics
 ///
 
-static Value *CastOperand(Value *C) {
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C))
-    if (CE->isCast())
-      return CE->getOperand(0);
-  return nullptr;
-}
+Value *DbgInfoIntrinsic::getVariableLocation(bool AllowNullOp) const {
+  Value *Op = getArgOperand(0);
+  if (AllowNullOp && !Op)
+    return nullptr;
 
-Value *DbgInfoIntrinsic::StripCast(Value *C) {
-  if (Value *CO = CastOperand(C)) {
-    C = StripCast(CO);
-  } else if (GlobalVariable *GV = dyn_cast<GlobalVariable>(C)) {
-    if (GV->hasInitializer())
-      if (Value *CO = CastOperand(GV->getInitializer()))
-        C = StripCast(CO);
-  }
-  return dyn_cast<GlobalVariable>(C);
-}
-
-static Value *getValueImpl(Value *Op) {
   auto *MD = cast<MetadataAsValue>(Op)->getMetadata();
   if (auto *V = dyn_cast<ValueAsMetadata>(MD))
     return V->getValue();
@@ -59,23 +48,102 @@ static Value *getValueImpl(Value *Op) {
   return nullptr;
 }
 
-//===----------------------------------------------------------------------===//
-/// DbgDeclareInst - This represents the llvm.dbg.declare instruction.
-///
+int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
+                                               StringRef Name) {
+  assert(Name.startswith("llvm."));
 
-Value *DbgDeclareInst::getAddress() const {
-  if (!getArgOperand(0))
-    return nullptr;
+  // Do successive binary searches of the dotted name components. For
+  // "llvm.gc.experimental.statepoint.p1i8.p1i32", we will find the range of
+  // intrinsics starting with "llvm.gc", then "llvm.gc.experimental", then
+  // "llvm.gc.experimental.statepoint", and then we will stop as the range is
+  // size 1. During the search, we can skip the prefix that we already know is
+  // identical. By using strncmp we consider names with differing suffixes to
+  // be part of the equal range.
+  size_t CmpStart = 0;
+  size_t CmpEnd = 4; // Skip the "llvm" component.
+  const char *const *Low = NameTable.begin();
+  const char *const *High = NameTable.end();
+  const char *const *LastLow = Low;
+  while (CmpEnd < Name.size() && High - Low > 0) {
+    CmpStart = CmpEnd;
+    CmpEnd = Name.find('.', CmpStart + 1);
+    CmpEnd = CmpEnd == StringRef::npos ? Name.size() : CmpEnd;
+    auto Cmp = [CmpStart, CmpEnd](const char *LHS, const char *RHS) {
+      return strncmp(LHS + CmpStart, RHS + CmpStart, CmpEnd - CmpStart) < 0;
+    };
+    LastLow = Low;
+    std::tie(Low, High) = std::equal_range(Low, High, Name.data(), Cmp);
+  }
+  if (High - Low > 0)
+    LastLow = Low;
 
-  return getValueImpl(getArgOperand(0));
+  if (LastLow == NameTable.end())
+    return -1;
+  StringRef NameFound = *LastLow;
+  if (Name == NameFound ||
+      (Name.startswith(NameFound) && Name[NameFound.size()] == '.'))
+    return LastLow - NameTable.begin();
+  return -1;
 }
 
-//===----------------------------------------------------------------------===//
-/// DbgValueInst - This represents the llvm.dbg.value instruction.
-///
-
-const Value *DbgValueInst::getValue() const {
-  return const_cast<DbgValueInst *>(this)->getValue();
+Value *InstrProfIncrementInst::getStep() const {
+  if (InstrProfIncrementInstStep::classof(this)) {
+    return const_cast<Value *>(getArgOperand(4));
+  }
+  const Module *M = getModule();
+  LLVMContext &Context = M->getContext();
+  return ConstantInt::get(Type::getInt64Ty(Context), 1);
 }
 
-Value *DbgValueInst::getValue() { return getValueImpl(getArgOperand(0)); }
+ConstrainedFPIntrinsic::RoundingMode
+ConstrainedFPIntrinsic::getRoundingMode() const {
+  unsigned NumOperands = getNumArgOperands();
+  Metadata *MD = 
+      dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 2))->getMetadata();
+  if (!MD || !isa<MDString>(MD))
+    return rmInvalid;
+  StringRef RoundingArg = cast<MDString>(MD)->getString();
+
+  // For dynamic rounding mode, we use round to nearest but we will set the
+  // 'exact' SDNodeFlag so that the value will not be rounded.
+  return StringSwitch<RoundingMode>(RoundingArg)
+    .Case("round.dynamic",    rmDynamic)
+    .Case("round.tonearest",  rmToNearest)
+    .Case("round.downward",   rmDownward)
+    .Case("round.upward",     rmUpward)
+    .Case("round.towardzero", rmTowardZero)
+    .Default(rmInvalid);
+}
+
+ConstrainedFPIntrinsic::ExceptionBehavior
+ConstrainedFPIntrinsic::getExceptionBehavior() const {
+  unsigned NumOperands = getNumArgOperands();
+  Metadata *MD = 
+      dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 1))->getMetadata();
+  if (!MD || !isa<MDString>(MD))
+    return ebInvalid;
+  StringRef ExceptionArg = cast<MDString>(MD)->getString();
+  return StringSwitch<ExceptionBehavior>(ExceptionArg)
+    .Case("fpexcept.ignore",  ebIgnore)
+    .Case("fpexcept.maytrap", ebMayTrap)
+    .Case("fpexcept.strict",  ebStrict)
+    .Default(ebInvalid);
+}
+
+bool ConstrainedFPIntrinsic::isUnaryOp() const {
+  switch (getIntrinsicID()) {
+    default: 
+      return false;
+    case Intrinsic::experimental_constrained_sqrt:
+    case Intrinsic::experimental_constrained_sin:
+    case Intrinsic::experimental_constrained_cos:
+    case Intrinsic::experimental_constrained_exp:
+    case Intrinsic::experimental_constrained_exp2:
+    case Intrinsic::experimental_constrained_log:
+    case Intrinsic::experimental_constrained_log10:
+    case Intrinsic::experimental_constrained_log2:
+    case Intrinsic::experimental_constrained_rint:
+    case Intrinsic::experimental_constrained_nearbyint:
+      return true;
+  }
+}

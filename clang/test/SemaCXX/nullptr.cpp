@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 -ffreestanding -Wno-null-conversion %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 -ffreestanding -Wno-null-conversion -Wno-tautological-compare %s
 #include <stdint.h>
 
 typedef decltype(nullptr) nullptr_t;
@@ -32,17 +32,17 @@ nullptr_t f(nullptr_t null)
 
   // Operators
   (void)(null == nullptr);
-  (void)(null <= nullptr);
+  (void)(null <= nullptr); // expected-error {{invalid operands to binary expression}}
   (void)(null == 0);
   (void)(null == (void*)0);
   (void)((void*)0 == nullptr);
-  (void)(null <= 0);
-  (void)(null <= (void*)0);
-  (void)((void*)0 <= nullptr);
+  (void)(null <= 0); // expected-error {{invalid operands to binary expression}}
+  (void)(null <= (void*)0); // expected-error {{invalid operands to binary expression}}
+  (void)((void*)0 <= nullptr); // expected-error {{invalid operands to binary expression}}
   (void)(0 == nullptr);
   (void)(nullptr == 0);
-  (void)(nullptr <= 0);
-  (void)(0 <= nullptr);
+  (void)(nullptr <= 0); // expected-error {{invalid operands to binary expression}}
+  (void)(0 <= nullptr); // expected-error {{invalid operands to binary expression}}
   (void)(1 > nullptr); // expected-error {{invalid operands to binary expression}}
   (void)(1 != nullptr); // expected-error {{invalid operands to binary expression}}
   (void)(1 + nullptr); // expected-error {{invalid operands to binary expression}}
@@ -118,24 +118,24 @@ static_assert(__is_scalar(nullptr_t), "");
 static_assert(__is_pod(nullptr_t), "");
 static_assert(sizeof(nullptr_t) == sizeof(void*), "");
 
-static_assert(!(nullptr < nullptr), "");
-static_assert(!(nullptr > nullptr), "");
-static_assert(  nullptr <= nullptr, "");
-static_assert(  nullptr >= nullptr, "");
+static_assert(!(nullptr < nullptr), ""); // expected-error {{invalid operands to binary expression}}
+static_assert(!(nullptr > nullptr), ""); // expected-error {{invalid operands to binary expression}}
+static_assert(  nullptr <= nullptr, ""); // expected-error {{invalid operands to binary expression}}
+static_assert(  nullptr >= nullptr, ""); // expected-error {{invalid operands to binary expression}}
 static_assert(  nullptr == nullptr, "");
 static_assert(!(nullptr != nullptr), "");
 
-static_assert(!(0 < nullptr), "");
-static_assert(!(0 > nullptr), "");
-static_assert(  0 <= nullptr, "");
-static_assert(  0 >= nullptr, "");
+static_assert(!(0 < nullptr), ""); // expected-error {{invalid operands to binary expression}}
+static_assert(!(0 > nullptr), ""); // expected-error {{invalid operands to binary expression}}
+static_assert(  0 <= nullptr, ""); // expected-error {{invalid operands to binary expression}}
+static_assert(  0 >= nullptr, ""); // expected-error {{invalid operands to binary expression}}
 static_assert(  0 == nullptr, "");
 static_assert(!(0 != nullptr), "");
 
-static_assert(!(nullptr < 0), "");
-static_assert(!(nullptr > 0), "");
-static_assert(  nullptr <= 0, "");
-static_assert(  nullptr >= 0, "");
+static_assert(!(nullptr < 0), ""); // expected-error {{invalid operands to binary expression}}
+static_assert(!(nullptr > 0), ""); // expected-error {{invalid operands to binary expression}}
+static_assert(  nullptr <= 0, ""); // expected-error {{invalid operands to binary expression}}
+static_assert(  nullptr >= 0, ""); // expected-error {{invalid operands to binary expression}}
 static_assert(  nullptr == 0, "");
 static_assert(!(nullptr != 0), "");
 
@@ -154,10 +154,10 @@ namespace overloading {
   void test_conversion(ConvertsToNullPtr ctn) {
     (void)(ctn == ctn);
     (void)(ctn != ctn);
-    (void)(ctn <= ctn);
-    (void)(ctn >= ctn);
-    (void)(ctn < ctn);
-    (void)(ctn > ctn);
+    (void)(ctn <= ctn); // expected-error {{invalid operands to binary expression}}
+    (void)(ctn >= ctn); // expected-error {{invalid operands to binary expression}}
+    (void)(ctn < ctn); // expected-error {{invalid operands to binary expression}}
+    (void)(ctn > ctn); // expected-error {{invalid operands to binary expression}}
   }
 }
 

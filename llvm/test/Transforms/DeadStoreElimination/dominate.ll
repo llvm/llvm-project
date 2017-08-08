@@ -9,12 +9,12 @@ bb1:
   br label %bb3
 
 bb2:
-  call void @llvm.lifetime.end(i64 -1, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0)
   br label %bb3
 
 bb3:
   call void @bar()
-  call void @llvm.lifetime.end(i64 -1, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0)
   br label %bb4
 
 bb4:
@@ -22,4 +22,4 @@ bb4:
 
 }
 
-declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind

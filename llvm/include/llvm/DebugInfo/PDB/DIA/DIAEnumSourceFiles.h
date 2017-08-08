@@ -12,9 +12,10 @@
 
 #include "DIASupport.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
+#include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 
 namespace llvm {
-
+namespace pdb {
 class DIASession;
 
 class DIAEnumSourceFiles : public IPDBEnumChildren<IPDBSourceFile> {
@@ -32,6 +33,7 @@ private:
   const DIASession &Session;
   CComPtr<IDiaEnumSourceFiles> Enumerator;
 };
+}
 }
 
 #endif

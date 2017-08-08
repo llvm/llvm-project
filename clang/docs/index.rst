@@ -17,21 +17,29 @@ Using Clang as a Compiler
    :maxdepth: 1
 
    UsersManual
+   Toolchain
    LanguageExtensions
+   ClangCommandLineReference
    AttributeReference
+   DiagnosticsReference
    CrossCompilation
    ThreadSafetyAnalysis
    AddressSanitizer
    ThreadSanitizer
    MemorySanitizer
+   UndefinedBehaviorSanitizer
    DataFlowSanitizer
    LeakSanitizer
    SanitizerCoverage
+   SanitizerStats
    SanitizerSpecialCaseList
    ControlFlowIntegrity
+   LTOVisibility
    SafeStack
+   SourceBasedCodeCoverage
    Modules
    MSVCCompatibility
+   ThinLTO
    CommandGuide/index
    FAQ
 
@@ -74,6 +82,7 @@ Design Documents
    DriverInternals
    PTHInternals
    PCHInternals
+   ItaniumMangleAbiTags
 
 
 Indices and tables

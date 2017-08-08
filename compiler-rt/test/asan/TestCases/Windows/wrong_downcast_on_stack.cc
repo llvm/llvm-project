@@ -20,7 +20,7 @@ int main(void) {
 // CHECK-NEXT:  {{#0 0x[0-9a-f]* in main .*wrong_downcast_on_stack.cc}}:[[@LINE-3]]
 // CHECK: [[ADDR]] is located in stack of thread T0 at offset [[OFFSET:[0-9]+]] in frame
 // CHECK-NEXT:  {{#0 0x[0-9a-f]* in main }}
-// CHECK:  'p' <== Memory access at offset [[OFFSET]] overflows this variable
+// CHECK:  'p'{{.*}} <== Memory access at offset [[OFFSET]] overflows this variable
   return 0;
 }
 

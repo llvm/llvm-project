@@ -6,10 +6,10 @@ typedef struct Foo {
     float z;
 } Foo;
 
-// CHECK-DAG: @test.lds_int = internal addrspace(2) global i32 undef
-// CHECK-DAG: @test.lds_int_arr = internal addrspace(2) global [128 x i32] undef
-// CHECK-DAG: @test.lds_struct = internal addrspace(2) global %struct.Foo undef
-// CHECK-DAG: @test.lds_struct_arr = internal addrspace(2) global [64 x %struct.Foo] undef
+// CHECK-DAG: @test.lds_int = internal addrspace(3) global i32 undef
+// CHECK-DAG: @test.lds_int_arr = internal addrspace(3) global [128 x i32] undef
+// CHECK-DAG: @test.lds_struct = internal addrspace(3) global %struct.Foo undef
+// CHECK-DAG: @test.lds_struct_arr = internal addrspace(3) global [64 x %struct.Foo] undef
 __kernel void test()
 {
     __local int lds_int;

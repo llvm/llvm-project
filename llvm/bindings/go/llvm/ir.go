@@ -58,7 +58,9 @@ type (
 	Metadata struct {
 		C C.LLVMMetadataRef
 	}
-	Attribute        uint64
+	Attribute struct {
+		C C.LLVMAttributeRef
+	}
 	Opcode           C.LLVMOpcode
 	TypeKind         C.LLVMTypeKind
 	Linkage          C.LLVMLinkage
@@ -79,6 +81,7 @@ func (c ModuleProvider) IsNil() bool { return c.C == nil }
 func (c MemoryBuffer) IsNil() bool   { return c.C == nil }
 func (c PassManager) IsNil() bool    { return c.C == nil }
 func (c Use) IsNil() bool            { return c.C == nil }
+func (c Attribute) IsNil() bool      { return c.C == nil }
 
 // helpers
 func llvmTypeRefPtr(t *Type) *C.LLVMTypeRef    { return (*C.LLVMTypeRef)(unsafe.Pointer(t)) }
@@ -113,56 +116,6 @@ func llvmMetadataRefs(mds []Metadata) (*C.LLVMMetadataRef, C.unsigned) {
 	}
 	return pt, ptlen
 }
-
-//-------------------------------------------------------------------------
-// llvm.Attribute
-//-------------------------------------------------------------------------
-
-const (
-	NoneAttribute               Attribute = 0
-	ZExtAttribute               Attribute = C.LLVMZExtAttribute
-	SExtAttribute               Attribute = C.LLVMSExtAttribute
-	NoReturnAttribute           Attribute = C.LLVMNoReturnAttribute
-	InRegAttribute              Attribute = C.LLVMInRegAttribute
-	StructRetAttribute          Attribute = C.LLVMStructRetAttribute
-	NoUnwindAttribute           Attribute = C.LLVMNoUnwindAttribute
-	NoAliasAttribute            Attribute = C.LLVMNoAliasAttribute
-	ByValAttribute              Attribute = C.LLVMByValAttribute
-	NestAttribute               Attribute = C.LLVMNestAttribute
-	ReadNoneAttribute           Attribute = C.LLVMReadNoneAttribute
-	ReadOnlyAttribute           Attribute = C.LLVMReadOnlyAttribute
-	NoInlineAttribute           Attribute = C.LLVMNoInlineAttribute
-	AlwaysInlineAttribute       Attribute = C.LLVMAlwaysInlineAttribute
-	OptimizeForSizeAttribute    Attribute = C.LLVMOptimizeForSizeAttribute
-	StackProtectAttribute       Attribute = C.LLVMStackProtectAttribute
-	StackProtectReqAttribute    Attribute = C.LLVMStackProtectReqAttribute
-	Alignment                   Attribute = C.LLVMAlignment
-	NoCaptureAttribute          Attribute = C.LLVMNoCaptureAttribute
-	NoRedZoneAttribute          Attribute = C.LLVMNoRedZoneAttribute
-	NoImplicitFloatAttribute    Attribute = C.LLVMNoImplicitFloatAttribute
-	NakedAttribute              Attribute = C.LLVMNakedAttribute
-	InlineHintAttribute         Attribute = C.LLVMInlineHintAttribute
-	StackAlignment              Attribute = C.LLVMStackAlignment
-	ReturnsTwiceAttribute       Attribute = C.LLVMReturnsTwice
-	UWTableAttribute            Attribute = C.LLVMUWTable
-	NonLazyBindAttribute        Attribute = 1 << 31
-	SanitizeAddressAttribute    Attribute = 1 << 32
-	MinSizeAttribute            Attribute = 1 << 33
-	NoDuplicateAttribute        Attribute = 1 << 34
-	StackProtectStrongAttribute Attribute = 1 << 35
-	SanitizeThreadAttribute     Attribute = 1 << 36
-	SanitizeMemoryAttribute     Attribute = 1 << 37
-	NoBuiltinAttribute          Attribute = 1 << 38
-	ReturnedAttribute           Attribute = 1 << 39
-	ColdAttribute               Attribute = 1 << 40
-	BuiltinAttribute            Attribute = 1 << 41
-	OptimizeNoneAttribute       Attribute = 1 << 42
-	InAllocaAttribute           Attribute = 1 << 43
-	NonNullAttribute            Attribute = 1 << 44
-	JumpTableAttribute          Attribute = 1 << 45
-	ConvergentAttribute         Attribute = 1 << 46
-	SafeStackAttribute          Attribute = 1 << 47
-)
 
 //-------------------------------------------------------------------------
 // llvm.Opcode
@@ -364,6 +317,63 @@ func MDKindID(name string) (id int) {
 	defer C.free(unsafe.Pointer(cname))
 	id = int(C.LLVMGetMDKindID(cname, C.unsigned(len(name))))
 	return
+}
+
+//-------------------------------------------------------------------------
+// llvm.Attribute
+//-------------------------------------------------------------------------
+
+func AttributeKindID(name string) (id uint) {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	id = uint(C.LLVMGetEnumAttributeKindForName(cname, C.size_t(len(name))))
+	return
+}
+
+func (c Context) CreateEnumAttribute(kind uint, val uint64) (a Attribute) {
+  a.C = C.LLVMCreateEnumAttribute(c.C, C.unsigned(kind), C.uint64_t(val))
+  return
+}
+
+func (a Attribute) GetEnumKind() (id int) {
+  id = int(C.LLVMGetEnumAttributeKind(a.C))
+  return
+}
+
+func (a Attribute) GetEnumValue() (val uint64) {
+  val = uint64(C.LLVMGetEnumAttributeValue(a.C))
+  return
+}
+
+func (c Context) CreateStringAttribute(kind string, val string) (a Attribute) {
+  ckind := C.CString(kind)
+  defer C.free(unsafe.Pointer(ckind))
+  cval := C.CString(val)
+  defer C.free(unsafe.Pointer(cval))
+  a.C = C.LLVMCreateStringAttribute(c.C,
+                                    ckind, C.unsigned(len(kind)),
+                                    cval, C.unsigned(len(val)))
+  return
+}
+
+func (a Attribute) GetStringKind() string {
+  length := C.unsigned(0)
+  ckind := C.LLVMGetStringAttributeKind(a.C, &length)
+  return C.GoStringN(ckind, C.int(length))
+}
+
+func (a Attribute) GetStringValue() string {
+  length := C.unsigned(0)
+  ckind := C.LLVMGetStringAttributeValue(a.C, &length)
+  return C.GoStringN(ckind, C.int(length))
+}
+
+func (a Attribute) IsEnum() bool {
+  return C.LLVMIsEnumAttribute(a.C) != 0;
+}
+
+func (a Attribute) IsString() bool {
+  return C.LLVMIsStringAttribute(a.C) != 0;
 }
 
 //-------------------------------------------------------------------------
@@ -601,6 +611,12 @@ func (t Type) StructElementTypes() []Type {
 }
 
 // Operations on array, pointer, and vector types (sequence types)
+func (t Type) Subtypes() (ret []Type) {
+	ret = make([]Type, C.LLVMGetNumContainedTypes(t.C))
+	C.LLVMGetSubtypes(t.C, llvmTypeRefPtr(&ret[0]))
+	return
+}
+
 func ArrayType(elementType Type, elementCount int) (t Type) {
 	t.C = C.LLVMArrayType(elementType.C, C.unsigned(elementCount))
 	return
@@ -1044,9 +1060,38 @@ func (v Value) SetGC(name string) {
 	defer C.free(unsafe.Pointer(cname))
 	C.LLVMSetGC(v.C, cname)
 }
-func (v Value) AddFunctionAttr(a Attribute)    { C.LLVMAddFunctionAttr2(v.C, C.uint64_t(a)) }
-func (v Value) FunctionAttr() Attribute        { return Attribute(C.LLVMGetFunctionAttr2(v.C)) }
-func (v Value) RemoveFunctionAttr(a Attribute) { C.LLVMRemoveFunctionAttr2(v.C, C.uint64_t(a)) }
+func (v Value) AddAttributeAtIndex(i int, a Attribute) {
+  C.LLVMAddAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), a.C)
+}
+func (v Value) AddFunctionAttr(a Attribute) {
+  v.AddAttributeAtIndex(C.LLVMAttributeFunctionIndex, a);
+}
+func (v Value) GetEnumAttributeAtIndex(i int, kind uint) (a Attribute) {
+  a.C = C.LLVMGetEnumAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), C.unsigned(kind))
+  return
+}
+func (v Value) GetEnumFunctionAttribute(kind uint) Attribute {
+  return v.GetEnumAttributeAtIndex(C.LLVMAttributeFunctionIndex, kind)
+}
+func (v Value) GetStringAttributeAtIndex(i int, kind string) (a Attribute) {
+  ckind := C.CString(kind)
+  defer C.free(unsafe.Pointer(ckind))
+  a.C = C.LLVMGetStringAttributeAtIndex(v.C, C.LLVMAttributeIndex(i),
+                                        ckind, C.unsigned(len(kind)))
+  return
+}
+func (v Value) RemoveEnumAttributeAtIndex(i int, kind uint) {
+  C.LLVMRemoveEnumAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), C.unsigned(kind))
+}
+func (v Value) RemoveEnumFunctionAttribute(kind uint) {
+  v.RemoveEnumAttributeAtIndex(C.LLVMAttributeFunctionIndex, kind);
+}
+func (v Value) RemoveStringAttributeAtIndex(i int, kind string) {
+  ckind := C.CString(kind)
+  defer C.free(unsafe.Pointer(ckind))
+  C.LLVMRemoveStringAttributeAtIndex(v.C, C.LLVMAttributeIndex(i),
+                                     ckind, C.unsigned(len(kind)))
+}
 func (v Value) AddTargetDependentFunctionAttr(attr, value string) {
 	cattr := C.CString(attr)
 	defer C.free(unsafe.Pointer(cattr))
@@ -1076,19 +1121,6 @@ func (v Value) FirstParam() (rv Value)  { rv.C = C.LLVMGetFirstParam(v.C); retur
 func (v Value) LastParam() (rv Value)   { rv.C = C.LLVMGetLastParam(v.C); return }
 func NextParam(v Value) (rv Value)      { rv.C = C.LLVMGetNextParam(v.C); return }
 func PrevParam(v Value) (rv Value)      { rv.C = C.LLVMGetPreviousParam(v.C); return }
-func (v Value) AddAttribute(a Attribute) {
-	if a >= 1<<32 {
-		panic("attribute value currently unsupported")
-	}
-	C.LLVMAddAttribute(v.C, C.LLVMAttribute(a))
-}
-func (v Value) RemoveAttribute(a Attribute) {
-	if a >= 1<<32 {
-		panic("attribute value currently unsupported")
-	}
-	C.LLVMRemoveAttribute(v.C, C.LLVMAttribute(a))
-}
-func (v Value) Attribute() Attribute        { return Attribute(C.LLVMGetAttribute(v.C)) }
 func (v Value) SetParamAlignment(align int) { C.LLVMSetParamAlignment(v.C, C.unsigned(align)) }
 
 // Operations on basic blocks
@@ -1149,17 +1181,8 @@ func (v Value) SetInstructionCallConv(cc CallConv) {
 func (v Value) InstructionCallConv() CallConv {
 	return CallConv(C.LLVMCallConv(C.LLVMGetInstructionCallConv(v.C)))
 }
-func (v Value) AddInstrAttribute(i int, a Attribute) {
-	if a >= 1<<32 {
-		panic("attribute value currently unsupported")
-	}
-	C.LLVMAddInstrAttribute(v.C, C.unsigned(i), C.LLVMAttribute(a))
-}
-func (v Value) RemoveInstrAttribute(i int, a Attribute) {
-	if a >= 1<<32 {
-		panic("attribute value currently unsupported")
-	}
-	C.LLVMRemoveInstrAttribute(v.C, C.unsigned(i), C.LLVMAttribute(a))
+func (v Value) AddCallSiteAttribute(i int, a Attribute) {
+	C.LLVMAddCallSiteAttribute(v.C, C.LLVMAttributeIndex(i), a.C)
 }
 func (v Value) SetInstrParamAlignment(i int, align int) {
 	C.LLVMSetInstrParamAlignment(v.C, C.unsigned(i), C.unsigned(align))
@@ -1209,8 +1232,22 @@ func (b Builder) InsertWithName(instr Value, name string) {
 func (b Builder) Dispose() { C.LLVMDisposeBuilder(b.C) }
 
 // Metadata
+type DebugLoc struct {
+	Line, Col      uint
+	Scope          Metadata
+	InlinedAt      Metadata
+}
 func (b Builder) SetCurrentDebugLocation(line, col uint, scope, inlinedAt Metadata) {
 	C.LLVMSetCurrentDebugLocation2(b.C, C.unsigned(line), C.unsigned(col), scope.C, inlinedAt.C)
+}
+// Get current debug location. Please do not call this function until setting debug location with SetCurrentDebugLocation()
+func (b Builder) GetCurrentDebugLocation() (loc DebugLoc) {
+	md := C.LLVMGetCurrentDebugLocation2(b.C)
+	loc.Line = uint(md.Line)
+	loc.Col = uint(md.Col)
+	loc.Scope = Metadata{C: md.Scope}
+	loc.InlinedAt = Metadata{C: md.InlinedAt}
+	return
 }
 func (b Builder) SetInstDebugLocation(v Value) { C.LLVMSetInstDebugLocation(b.C, v.C) }
 func (b Builder) InsertDeclare(module Module, storage Value, md Value) Value {

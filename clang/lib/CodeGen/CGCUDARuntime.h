@@ -18,6 +18,7 @@
 
 namespace llvm {
 class Function;
+class GlobalVariable;
 }
 
 namespace clang {
@@ -37,6 +38,12 @@ protected:
   CodeGenModule &CGM;
 
 public:
+  // Global variable properties that must be passed to CUDA runtime.
+  enum DeviceVarFlags {
+    ExternDeviceVar = 0x01,   // extern
+    ConstantDeviceVar = 0x02, // __constant__
+  };
+
   CGCUDARuntime(CodeGenModule &CGM) : CGM(CGM) {}
   virtual ~CGCUDARuntime();
 
@@ -46,6 +53,7 @@ public:
 
   /// Emits a kernel launch stub.
   virtual void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) = 0;
+  virtual void registerDeviceVar(llvm::GlobalVariable &Var, unsigned Flags) = 0;
 
   /// Constructs and returns a module initialization function or nullptr if it's
   /// not needed. Must be called after all kernels have been emitted.

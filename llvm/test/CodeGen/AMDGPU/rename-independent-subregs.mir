@@ -1,0 +1,69 @@
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass simple-register-coalescing,rename-independent-subregs -o - %s | FileCheck %s
+--- |
+  define amdgpu_kernel void @test0() { ret void }
+  define amdgpu_kernel void @test1() { ret void }
+...
+---
+# In the test below we have two independent def+use pairs of subregister1 which
+# can be moved to a new virtual register. The third def of sub1 however is used
+# in combination with sub0 and needs to stay with the original vreg.
+# CHECK-LABEL: name: test0
+# CHECK: S_NOP 0, implicit-def undef %0.sub0
+# CHECK: S_NOP 0, implicit-def undef %2.sub1
+# CHECK: S_NOP 0, implicit %2.sub1
+# CHECK: S_NOP 0, implicit-def undef %1.sub1
+# CHECK: S_NOP 0, implicit %1.sub1
+# CHECK: S_NOP 0, implicit-def %0.sub1
+# CHECK: S_NOP 0, implicit %0
+name: test0
+registers:
+  - { id: 0, class: sreg_128 }
+body: |
+  bb.0:
+    S_NOP 0, implicit-def undef %0.sub0
+    S_NOP 0, implicit-def %0.sub1
+    S_NOP 0, implicit %0.sub1
+    S_NOP 0, implicit-def %0.sub1
+    S_NOP 0, implicit %0.sub1
+    S_NOP 0, implicit-def %0.sub1
+    S_NOP 0, implicit %0
+...
+---
+# Test for a bug where we would incorrectly query liveness at the instruction
+# index in rewriteOperands(). This should pass the verifier afterwards.
+# CHECK-LABEL: test1
+# CHECK: bb.0
+# CHECK: S_NOP 0, implicit-def undef %2.sub2
+# CHECK: bb.1
+# CHECK: S_NOP 0, implicit-def %2.sub1
+# CHECK-NEXT: S_NOP 0, implicit-def %2.sub3
+# CHECK-NEXT: S_NOP 0, implicit %2
+# CHECK-NEXT: S_NOP 0, implicit-def undef %0.sub0
+# CHECK-NEXT: S_NOP 0, implicit %2.sub1
+# CHECK-NEXT: S_NOP 0, implicit %0.sub0
+# CHECK: bb.2
+# CHECK: S_NOP 0, implicit %2.sub
+name: test1
+registers:
+  - { id: 0, class: sreg_128 }
+  - { id: 1, class: sreg_128 }
+body: |
+  bb.0:
+    S_NOP 0, implicit-def undef %0.sub2
+    S_CBRANCH_VCCNZ %bb.1, implicit undef %vcc
+    S_BRANCH %bb.2
+
+  bb.1:
+    S_NOP 0, implicit-def %0.sub1
+    S_NOP 0, implicit-def %0.sub3
+    %1 = COPY %0
+    S_NOP 0, implicit %1
+
+    S_NOP 0, implicit-def %1.sub0
+    S_NOP 0, implicit %1.sub1
+    S_NOP 0, implicit %1.sub0
+
+  bb.2:
+    S_NOP 0, implicit %0.sub2
+
+...

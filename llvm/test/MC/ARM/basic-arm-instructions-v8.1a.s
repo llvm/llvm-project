@@ -192,10 +192,10 @@
 //CHECK-ERROR: error: too few operands for instruction
 //CHECK-ERROR:  setpan
 //CHECK-ERROR:  ^
-//CHECK-ERROR: error: invalid operand for instruction
+//CHECK-ERROR: error: immediate operand must be in the range [0,1]
 //CHECK-ERROR:  setpan #-1
 //CHECK-ERROR:         ^
-//CHECK-ERROR: error: invalid operand for instruction
+//CHECK-ERROR: error: immediate operand must be in the range [0,1]
 //CHECK-ERROR:  setpan #2
 //CHECK-ERROR:         ^
 

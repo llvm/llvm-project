@@ -16,7 +16,7 @@
 namespace llvm {
 
 class raw_ostream;
-
+namespace pdb {
 class PDBSymbolCompilandEnv : public PDBSymbol {
 public:
   PDBSymbolCompilandEnv(const IPDBSession &PDBSession,
@@ -26,12 +26,12 @@ public:
 
   void dump(PDBSymDumper &Dumper) const override;
 
-  FORWARD_SYMBOL_METHOD(getLexicalParentId)
+  FORWARD_SYMBOL_ID_METHOD(getLexicalParent)
   FORWARD_SYMBOL_METHOD(getName)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
   std::string getValue() const;
 };
 
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLCOMPILANDENV_H

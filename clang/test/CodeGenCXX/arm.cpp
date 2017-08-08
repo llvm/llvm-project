@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -triple=thumbv7-apple-ios6.0 -fno-use-cxa-atexit -target-abi apcs-gnu -emit-llvm -o - -fexceptions | FileCheck %s
+// RUN: %clang_cc1 %s -triple=thumbv7-apple-ios6.0 -fno-use-cxa-atexit -target-abi apcs-gnu -emit-llvm -std=gnu++98 -o - -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
+// RUN: %clang_cc1 %s -triple=thumbv7-apple-ios6.0 -fno-use-cxa-atexit -target-abi apcs-gnu -emit-llvm -std=gnu++11 -o - -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
 
 // CHECK: @_ZZN5test74testEvE1x = internal global i32 0, align 4
 // CHECK: @_ZGVZN5test74testEvE1x = internal global i32 0
@@ -109,7 +110,7 @@ namespace test3 {
 
   void a() {
     // CHECK-LABEL: define void @_ZN5test31aEv()
-    // CHECK: call noalias i8* @_Znam(i32 48)
+    // CHECK: call i8* @_Znam(i32 48)
     // CHECK: store i32 4
     // CHECK: store i32 10
     A *x = new A[10];
@@ -122,7 +123,7 @@ namespace test3 {
     // CHECK: @llvm.uadd.with.overflow.i32(i32 {{.*}}, i32 8)
     // CHECK: [[OR:%.*]] = or i1
     // CHECK: [[SZ:%.*]] = select i1 [[OR]]
-    // CHECK: call noalias i8* @_Znam(i32 [[SZ]])
+    // CHECK: call i8* @_Znam(i32 [[SZ]])
     // CHECK: store i32 4
     // CHECK: store i32 [[N]]
     A *x = new A[n];
@@ -130,7 +131,7 @@ namespace test3 {
 
   void c() {
     // CHECK-LABEL: define void @_ZN5test31cEv()
-    // CHECK: call  noalias i8* @_Znam(i32 808)
+    // CHECK: call  i8* @_Znam(i32 808)
     // CHECK: store i32 4
     // CHECK: store i32 200
     A (*x)[20] = new A[10][20];
@@ -143,7 +144,7 @@ namespace test3 {
     // CHECK: [[NE:%.*]] = mul i32 [[N]], 20
     // CHECK: @llvm.uadd.with.overflow.i32(i32 {{.*}}, i32 8)
     // CHECK: [[SZ:%.*]] = select
-    // CHECK: call noalias i8* @_Znam(i32 [[SZ]])
+    // CHECK: call i8* @_Znam(i32 [[SZ]])
     // CHECK: store i32 4
     // CHECK: store i32 [[NE]]
     A (*x)[20] = new A[n][20];
@@ -156,7 +157,8 @@ namespace test3 {
     // CHECK: getelementptr {{.*}}, i32 4
     // CHECK: bitcast {{.*}} to i32*
     // CHECK: load
-    // CHECK: invoke {{.*}} @_ZN5test31AD1Ev
+    // CHECK98: invoke {{.*}} @_ZN5test31AD1Ev
+    // CHECK11: call {{.*}} @_ZN5test31AD1Ev
     // CHECK: call void @_ZdaPv
     delete [] x;
   }
@@ -168,7 +170,8 @@ namespace test3 {
     // CHECK: getelementptr {{.*}}, i32 4
     // CHECK: bitcast {{.*}} to i32*
     // CHECK: load
-    // CHECK: invoke {{.*}} @_ZN5test31AD1Ev
+    // CHECK98: invoke {{.*}} @_ZN5test31AD1Ev
+    // CHECK11: call {{.*}} @_ZN5test31AD1Ev
     // CHECK: call void @_ZdaPv
     delete [] x;
   }
@@ -182,7 +185,7 @@ namespace test4 {
 
   void a() {
     // CHECK-LABEL: define void @_ZN5test41aEv()
-    // CHECK: call noalias i8* @_Znam(i32 48)
+    // CHECK: call i8* @_Znam(i32 48)
     // CHECK: store i32 4
     // CHECK: store i32 10
     A *x = new A[10];
@@ -194,7 +197,7 @@ namespace test4 {
     // CHECK: @llvm.umul.with.overflow.i32(i32 [[N]], i32 4)
     // CHECK: @llvm.uadd.with.overflow.i32(i32 {{.*}}, i32 8)
     // CHECK: [[SZ:%.*]] = select
-    // CHECK: call noalias i8* @_Znam(i32 [[SZ]])
+    // CHECK: call i8* @_Znam(i32 [[SZ]])
     // CHECK: store i32 4
     // CHECK: store i32 [[N]]
     A *x = new A[n];
@@ -202,7 +205,7 @@ namespace test4 {
 
   void c() {
     // CHECK-LABEL: define void @_ZN5test41cEv()
-    // CHECK: call  noalias i8* @_Znam(i32 808)
+    // CHECK: call  i8* @_Znam(i32 808)
     // CHECK: store i32 4
     // CHECK: store i32 200
     A (*x)[20] = new A[10][20];
@@ -215,7 +218,7 @@ namespace test4 {
     // CHECK: [[NE:%.*]] = mul i32 [[N]], 20
     // CHECK: @llvm.uadd.with.overflow.i32(i32 {{.*}}, i32 8)
     // CHECK: [[SZ:%.*]] = select
-    // CHECK: call noalias i8* @_Znam(i32 [[SZ]])
+    // CHECK: call i8* @_Znam(i32 [[SZ]])
     // CHECK: store i32 4
     // CHECK: store i32 [[NE]]
     A (*x)[20] = new A[n][20];
@@ -383,7 +386,7 @@ namespace test9 {
 // CHECK-NEXT: [[OVERFLOW:%.*]] = or i1 [[O0]], [[O1]]
 // CHECK-NEXT: [[T3:%.*]] = extractvalue { i32, i1 } [[T2]], 0
 // CHECK-NEXT: [[T4:%.*]] = select i1 [[OVERFLOW]], i32 -1, i32 [[T3]]
-// CHECK-NEXT: [[ALLOC:%.*]] = call noalias i8* @_Znam(i32 [[T4]])
+// CHECK-NEXT: [[ALLOC:%.*]] = call i8* @_Znam(i32 [[T4]])
 // CHECK-NEXT: [[T0:%.*]] = bitcast i8* [[ALLOC]] to i32*
 // CHECK-NEXT: store i32 16, i32* [[T0]]
 // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds i32, i32* [[T0]], i32 1

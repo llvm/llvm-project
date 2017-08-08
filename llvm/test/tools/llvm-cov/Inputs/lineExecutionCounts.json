@@ -1,0 +1,39 @@
+// Metadata section
+// CHECK: {"version":"{{[0-9]\.[0-9]\.[0-9]}}","type":"llvm.coverage.json.export","data":[
+
+// Open Export
+// CHECK-SAME: {"files":[
+
+// File Object
+// CHECK-SAME: {"filename":"{{[^"]+}}showLineExecutionCounts.cpp",
+// CHECK-SAME: "segments":[
+// CHECK-SAME: {{(\[[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+\],?)+}}],
+// CHECK-SAME: "expansions":[],
+
+// Verify the Summary Section for the first file
+// CHECK-SAME: "summary":{
+// CHECK-SAME: "lines":{"count":20,"covered":16,"percent":80},
+// CHECK-SAME: "functions":{"count":1,"covered":1,"percent":100},
+// CHECK-SAME: "regions":{"count":10,"covered":7,"notcovered":3,"percent":70}}}
+
+// Close Files Array
+// CHECK-SAME: ],
+
+// Functions List
+// CHECK-SAME: "functions":[
+// CHECK-SAME: {"name":"main","count":161,"regions":[
+// CHECK-SAME: {{(\[[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+\],?)+}}
+// CHECK-SAME: ],
+// CHECK-SAME: "filenames":["{{[^"]+}}showLineExecutionCounts.cpp"]
+// CHECK-SAME: }],
+
+
+// Full Export Summary
+// CHECK-SAME: "totals":{
+// CHECK-SAME: "lines":{"count":20,"covered":16,"percent":80},
+// CHECK-SAME: "functions":{"count":1,"covered":1,"percent":100},
+// CHECK-SAME: "instantiations":{"count":1,"covered":1,"percent":100},
+// CHECK-SAME: "regions":{"count":10,"covered":7,"notcovered":3,"percent":70}}
+
+// Close the export object, data array, and root object
+// CHECK-SAME: }]}

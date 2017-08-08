@@ -1,15 +1,4 @@
 //
-// Verify defaults
-//
-
-// RUN: %clang -target i686-windows -fms-compatibility -dM -E - </dev/null -o - | FileCheck %s -check-prefix CHECK-NO-MSC-VERSION
-
-// CHECK-NO-MSC-VERSION: _MSC_BUILD 1
-// CHECK-NO-MSC-VERSION: _MSC_FULL_VER 180000000
-// CHECK-NO-MSC-VERSION: _MSC_VER 1800
-
-
-//
 // Verify -fms-compatibility-version parsing
 //
 
@@ -66,3 +55,12 @@
 // CHECK-MSC-15-NOT: "-fmsc-version=150020706"
 // CHECK-MSC-15: "-fms-compatibility-version=15.0.20706"
 
+//
+// Verify default version with -fms-extensions
+//
+
+// RUN: %clang -target i686-windows -fms-extensions -dM -E - </dev/null -o - | FileCheck %s -check-prefix CHECK-MS-EXTENSIONS
+
+// CHECK-MS-EXTENSIONS: _MSC_BUILD 1
+// CHECK-MS-EXTENSIONS: _MSC_FULL_VER {{.+}}
+// CHECK-MS-EXTENSIONS: _MSC_VER {{....}}

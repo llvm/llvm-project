@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
 // Race between an aligned access and an unaligned access, which
 // touches the same memory region.
 #include "test.h"
@@ -28,7 +28,7 @@ int main() {
   pthread_create(&t[1], NULL, Thread2, NULL);
   pthread_join(t[0], NULL);
   pthread_join(t[1], NULL);
-  printf("Pass\n");
+  fprintf(stderr, "Pass\n");
   // CHECK: ThreadSanitizer: data race
   // CHECK: Pass
   return 0;

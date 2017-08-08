@@ -19,10 +19,10 @@
 ; STRESS-LABEL: t1:
 ; Load out[out_start + 8].real, this is base + 8 * 8 + 0.
 ; STRESS: vmovss 64([[BASE:[^(]+]]), [[OUT_Real:%xmm[0-9]+]]
-; Add low slice: out[out_start].real, this is base + 0.
-; STRESS-NEXT: vaddss ([[BASE]]), [[OUT_Real]], [[RES_Real:%xmm[0-9]+]]
 ; Load out[out_start + 8].imm, this is base + 8 * 8 + 4.
 ; STRESS-NEXT: vmovss 68([[BASE]]), [[OUT_Imm:%xmm[0-9]+]]
+; Add low slice: out[out_start].real, this is base + 0.
+; STRESS-NEXT: vaddss ([[BASE]]), [[OUT_Real]], [[RES_Real:%xmm[0-9]+]]
 ; Add high slice: out[out_start].imm, this is base + 4.
 ; STRESS-NEXT: vaddss 4([[BASE]]), [[OUT_Imm]], [[RES_Imm:%xmm[0-9]+]]
 ; Swap Imm and Real.
@@ -34,10 +34,10 @@
 ; REGULAR-LABEL: t1:
 ; Load out[out_start + 8].real, this is base + 8 * 8 + 0.
 ; REGULAR: vmovss 64([[BASE:[^)]+]]), [[OUT_Real:%xmm[0-9]+]]
-; Add low slice: out[out_start].real, this is base + 0.
-; REGULAR-NEXT: vaddss ([[BASE]]), [[OUT_Real]], [[RES_Real:%xmm[0-9]+]]
 ; Load out[out_start + 8].imm, this is base + 8 * 8 + 4.
 ; REGULAR-NEXT: vmovss 68([[BASE]]), [[OUT_Imm:%xmm[0-9]+]]
+; Add low slice: out[out_start].real, this is base + 0.
+; REGULAR-NEXT: vaddss ([[BASE]]), [[OUT_Real]], [[RES_Real:%xmm[0-9]+]]
 ; Add high slice: out[out_start].imm, this is base + 4.
 ; REGULAR-NEXT: vaddss 4([[BASE]]), [[OUT_Imm]], [[RES_Imm:%xmm[0-9]+]]
 ; Swap Imm and Real.
@@ -73,10 +73,10 @@ entry:
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 
 ; Check that we do not read outside of the chunk of bits of the original loads.
 ;

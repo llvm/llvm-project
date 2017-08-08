@@ -13,6 +13,7 @@
 
 #include "llvm/IR/Mangler.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -99,7 +100,7 @@ static void addByteCountSuffix(raw_ostream &OS, const Function *F,
       Ty = cast<PointerType>(Ty)->getElementType();
     // Size should be aligned to pointer size.
     unsigned PtrSize = DL.getPointerSize();
-    ArgWords += RoundUpToAlignment(DL.getTypeAllocSize(Ty), PtrSize);
+    ArgWords += alignTo(DL.getTypeAllocSize(Ty), PtrSize);
   }
 
   OS << '@' << ArgWords;
@@ -121,7 +122,7 @@ void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
     // already.
     unsigned &ID = AnonGlobalIDs[GV];
     if (ID == 0)
-      ID = NextAnonGlobalID++;
+      ID = AnonGlobalIDs.size();
 
     // Must mangle the global into a unique ID.
     getNameWithPrefixImpl(OS, "__unnamed_" + Twine(ID), DL, PrefixTy);
@@ -171,4 +172,35 @@ void Mangler::getNameWithPrefix(SmallVectorImpl<char> &OutName,
                                 bool CannotUsePrivateLabel) const {
   raw_svector_ostream OS(OutName);
   getNameWithPrefix(OS, GV, CannotUsePrivateLabel);
+}
+
+void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
+                                        const Triple &TT, Mangler &Mangler) {
+  if (!GV->hasDLLExportStorageClass() || GV->isDeclaration())
+    return;
+
+  if (TT.isKnownWindowsMSVCEnvironment())
+    OS << " /EXPORT:";
+  else
+    OS << " -export:";
+
+  if (TT.isWindowsGNUEnvironment() || TT.isWindowsCygwinEnvironment()) {
+    std::string Flag;
+    raw_string_ostream FlagOS(Flag);
+    Mangler.getNameWithPrefix(FlagOS, GV, false);
+    FlagOS.flush();
+    if (Flag[0] == GV->getParent()->getDataLayout().getGlobalPrefix())
+      OS << Flag.substr(1);
+    else
+      OS << Flag;
+  } else {
+    Mangler.getNameWithPrefix(OS, GV, false);
+  }
+
+  if (!GV->getValueType()->isFunctionTy()) {
+    if (TT.isKnownWindowsMSVCEnvironment())
+      OS << ",DATA";
+    else
+      OS << ",data";
+  }
 }

@@ -1,4 +1,4 @@
-//===-- SymbolizableModule.h ------------------------------------ C++ -----===//
+//===- SymbolizableModule.h -------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,14 +14,7 @@
 #define LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEMODULE_H
 
 #include "llvm/DebugInfo/DIContext.h"
-#include <memory>
-#include <string>
-
-namespace llvm {
-namespace object {
-class ObjectFile;
-}
-}
+#include <cstdint>
 
 namespace llvm {
 namespace symbolize {
@@ -30,7 +23,8 @@ using FunctionNameKind = DILineInfoSpecifier::FunctionNameKind;
 
 class SymbolizableModule {
 public:
-  virtual ~SymbolizableModule() {}
+  virtual ~SymbolizableModule() = default;
+
   virtual DILineInfo symbolizeCode(uint64_t ModuleOffset,
                                    FunctionNameKind FNKind,
                                    bool UseSymbolTable) const = 0;
@@ -47,7 +41,7 @@ public:
   virtual uint64_t getModulePreferredBase() const = 0;
 };
 
-}  // namespace symbolize
-}  // namespace llvm
+} // end namespace symbolize
+} // end namespace llvm
 
 #endif  // LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEMODULE_H

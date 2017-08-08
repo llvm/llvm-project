@@ -86,3 +86,13 @@ int PR17415 = (int){PR17415}; // expected-error {{initializer element is not a c
 template<unsigned> struct Value { };
 template<typename T>
 int &check_narrowed(Value<sizeof((T){1.1})>);
+
+#if __cplusplus >= 201103L
+// Compound literals in global lambdas have automatic storage duration
+// and are not subject to the constant-initialization rules.
+int computed_with_lambda = [] {
+  int x = 5;
+  int result = ((int[]) { x, x + 2, x + 4, x + 6 })[0];
+  return result;
+}();
+#endif

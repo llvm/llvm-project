@@ -1,4 +1,4 @@
-//===- IPDBSourceFile.cpp - base interface for a PDB source file *- C++ -*-===//
+//===- IPDBSourceFile.cpp - base interface for a PDB source file ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,14 +8,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
-
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
+#include <string>
 
 using namespace llvm;
+using namespace llvm::pdb;
 
-IPDBSourceFile::~IPDBSourceFile() {}
+IPDBSourceFile::~IPDBSourceFile() = default;
 
 void IPDBSourceFile::dump(raw_ostream &OS, int Indent) const {
   OS.indent(Indent);

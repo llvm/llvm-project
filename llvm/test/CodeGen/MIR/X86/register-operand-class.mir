@@ -1,0 +1,27 @@
+# RUN: llc  -o - %s -march=x86-64 -run-pass none | FileCheck %s
+# Test various aspects of register class specification on machine operands.
+--- |
+  define void @func() { ret void }
+...
+---
+# CHECK-LABEL: name: func
+# CHECK: registers:
+# CHECK:   - { id: 0, class: gr32, preferred-register: '' }
+# CHECK:   - { id: 1, class: gr64, preferred-register: '' }
+# CHECK:   - { id: 2, class: gr32, preferred-register: '' }
+# CHECK:   - { id: 3, class: gr16, preferred-register: '' }
+# CHECK:   - { id: 4, class: _, preferred-register: '' }
+name: func
+body: |
+  bb.0:
+    %0 : gr32 = COPY %rax
+    %1.sub_32bit : gr64 = COPY %eax
+    %rdx = COPY %1
+    %2 = COPY %ecx
+    %ecx = COPY %2 : gr32
+
+    %3 : gr16 = COPY %bx
+    %bx = COPY %3 : gr16
+
+    %4 : _(s32) = COPY %edx
+...

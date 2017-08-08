@@ -11,9 +11,9 @@
 define void @test_i16_2cmp_signed_1() {
 ; CHECK-LABEL: test_i16_2cmp_signed_1
 ; CHECK: cmp {{w[0-9]+}}, {{w[0-9]+}}
-; CHECK-NEXT: b.gt
+; CHECK-NEXT: b.lt
 ; CHECK-NOT: cmp
-; CHECK: b.ne
+; CHECK: ret
 entry:
   %0 = load i16, i16* getelementptr inbounds (%struct.s_signed_i16, %struct.s_signed_i16* @cost_s_i8_i16, i64 0, i32 1), align 2
   %1 = load i16, i16* getelementptr inbounds (%struct.s_signed_i16, %struct.s_signed_i16* @cost_s_i8_i16, i64 0, i32 2), align 2
@@ -39,7 +39,7 @@ if.end8:                                          ; preds = %if.else, %if.then7,
 define void @test_i16_2cmp_signed_2() {
 ; CHECK-LABEL: test_i16_2cmp_signed_2
 ; CHECK: cmp {{w[0-9]+}}, {{w[0-9]+}}
-; CHECK-NEXT: b.le
+; CHECK-NEXT: b.gt
 ; CHECK-NOT: cmp
 ; CHECK: b.ge
 entry:
@@ -67,9 +67,9 @@ if.end8:                                          ; preds = %if.else, %if.then7,
 define void @test_i16_2cmp_unsigned_1() {
 ; CHECK-LABEL: test_i16_2cmp_unsigned_1
 ; CHECK: cmp {{w[0-9]+}}, {{w[0-9]+}}
-; CHECK-NEXT: b.hi
+; CHECK-NEXT: b.lo
 ; CHECK-NOT: cmp
-; CHECK: b.ne
+; CHECK: ret
 entry:
   %0 = load i16, i16* getelementptr inbounds (%struct.s_unsigned_i16, %struct.s_unsigned_i16* @cost_u_i16, i64 0, i32 1), align 2
   %1 = load i16, i16* getelementptr inbounds (%struct.s_unsigned_i16, %struct.s_unsigned_i16* @cost_u_i16, i64 0, i32 2), align 2
@@ -95,7 +95,7 @@ if.end8:                                          ; preds = %if.else, %if.then7,
 define void @test_i16_2cmp_unsigned_2() {
 ; CHECK-LABEL: test_i16_2cmp_unsigned_2
 ; CHECK: cmp {{w[0-9]+}}, {{w[0-9]+}}
-; CHECK-NEXT: b.ls
+; CHECK-NEXT: b.hi
 ; CHECK-NOT: cmp
 ; CHECK: b.hs
 entry:
@@ -132,9 +132,9 @@ if.end8:                                          ; preds = %if.else, %if.then7,
 define void @test_i8_2cmp_signed_1() {
 ; CHECK-LABEL: test_i8_2cmp_signed_1
 ; CHECK: cmp {{w[0-9]+}}, {{w[0-9]+}}
-; CHECK-NEXT: b.gt
+; CHECK-NEXT: b.lt
 ; CHECK-NOT: cmp
-; CHECK: b.ne
+; CHECK: ret
 entry:
   %0 = load i8, i8* getelementptr inbounds (%struct.s_signed_i8, %struct.s_signed_i8* @cost_s, i64 0, i32 1), align 2
   %1 = load i8, i8* getelementptr inbounds (%struct.s_signed_i8, %struct.s_signed_i8* @cost_s, i64 0, i32 2), align 2
@@ -160,7 +160,7 @@ if.end8:                                          ; preds = %if.else, %if.then7,
 define void @test_i8_2cmp_signed_2() {
 ; CHECK-LABEL: test_i8_2cmp_signed_2
 ; CHECK: cmp {{w[0-9]+}}, {{w[0-9]+}}
-; CHECK-NEXT: b.le
+; CHECK-NEXT: b.gt
 ; CHECK-NOT: cmp
 ; CHECK: b.ge
 entry:
@@ -188,9 +188,9 @@ if.end8:                                          ; preds = %if.else, %if.then7,
 define void @test_i8_2cmp_unsigned_1() {
 ; CHECK-LABEL: test_i8_2cmp_unsigned_1
 ; CHECK: cmp {{w[0-9]+}}, {{w[0-9]+}}
-; CHECK-NEXT: b.hi
+; CHECK-NEXT: b.lo
 ; CHECK-NOT: cmp
-; CHECK: b.ne
+; CHECK: ret
 entry:
   %0 = load i8, i8* getelementptr inbounds (%struct.s_unsigned_i8, %struct.s_unsigned_i8* @cost_u_i8, i64 0, i32 1), align 2
   %1 = load i8, i8* getelementptr inbounds (%struct.s_unsigned_i8, %struct.s_unsigned_i8* @cost_u_i8, i64 0, i32 2), align 2
@@ -216,7 +216,7 @@ if.end8:                                          ; preds = %if.else, %if.then7,
 define void @test_i8_2cmp_unsigned_2() {
 ; CHECK-LABEL: test_i8_2cmp_unsigned_2
 ; CHECK: cmp {{w[0-9]+}}, {{w[0-9]+}}
-; CHECK-NEXT: b.ls
+; CHECK-NEXT: b.hi
 ; CHECK-NOT: cmp
 ; CHECK: b.hs
 entry:

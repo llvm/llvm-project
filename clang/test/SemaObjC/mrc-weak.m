@@ -12,7 +12,7 @@ __attribute__((objc_root_class))
 @property (unsafe_unretained) id ud;
 @property (strong) id sa;
 @property (strong) id sb; // expected-note {{property declared here}}
-@property (strong) id sc; // expected-note {{property declared here}}
+@property (strong) id sc;
 @property (strong) id sd;
 @end
 
@@ -25,7 +25,7 @@ __attribute__((objc_root_class))
   __unsafe_unretained id _uc;
   id _sa;
   __weak id _sb; // expected-error {{existing instance variable '_sb' for strong property 'sb' may not be __weak}}
-  __unsafe_unretained id _sc; // expected-error {{existing instance variable '_sc' for strong property 'sc' may not be __unsafe_unretained}}
+  __unsafe_unretained id _sc;
 }
 @synthesize wa = _wa; // expected-note {{property synthesized here}}
 @synthesize wb = _wb;
@@ -37,7 +37,7 @@ __attribute__((objc_root_class))
 @synthesize ud = _ud;
 @synthesize sa = _sa;
 @synthesize sb = _sb; // expected-note {{property synthesized here}}
-@synthesize sc = _sc; // expected-note {{property synthesized here}}
+@synthesize sc = _sc;
 @synthesize sd = _sd;
 @end
 
@@ -62,6 +62,6 @@ void test_unsafe_unretained_cast(id *value) {
 
 void test_cast_qualifier_inference(__weak id *value) {
   __weak id *a = (id*) value;
-  __unsafe_unretained id *b = (id*) value; // expected-error {{initializing '__unsafe_unretained id *' with an expression of type '__weak id *' changes retain/release properties of pointer}}
+  __unsafe_unretained id *b = (id*) value; // expected-error {{initializing 'id *' with an expression of type '__weak id *' changes retain/release properties of pointer}}
 }
 

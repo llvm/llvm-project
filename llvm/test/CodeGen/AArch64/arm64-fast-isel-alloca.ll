@@ -1,5 +1,5 @@
 ; This test should cause the TargetMaterializeAlloca to be invoked
-; RUN: llc -O0 -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin < %s | FileCheck %s
+; RUN: llc -O0 -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin -disable-fp-elim < %s | FileCheck %s
 
 %struct.S1Ty = type { i64 }
 %struct.S2Ty = type { %struct.S1Ty, %struct.S1Ty }
@@ -14,7 +14,7 @@ entry:
 define void @main() nounwind {
 entry:
 ; CHECK: main
-; CHECK: mov x29, sp
+; CHECK: add x29, sp, #16
 ; CHECK: mov [[REG:x[0-9]+]], sp
 ; CHECK-NEXT: add x0, [[REG]], #8
   %E = alloca %struct.S2Ty, align 4

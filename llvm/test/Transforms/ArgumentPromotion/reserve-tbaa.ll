@@ -1,4 +1,5 @@
-; RUN: opt < %s -argpromotion -S
+; RUN: opt < %s -argpromotion -S | FileCheck %s
+; RUN: opt < %s -passes=argpromotion -S | FileCheck %s
 
 ; PR17906
 ; When we promote two arguments in a single function with different types,

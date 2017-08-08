@@ -27,6 +27,8 @@ class StringToOffsetTable {
   std::string AggregateString;
 
 public:
+  bool Empty() const { return StringOffset.empty(); }
+
   unsigned GetOrAddStringOffset(StringRef Str, bool appendZero = true) {
     auto IterBool =
         StringOffset.insert(std::make_pair(Str, AggregateString.size()));
@@ -60,10 +62,10 @@ public:
       if (AggregateString[i] != '\\')
         continue;
 
-      assert(i+1 < AggregateString.size() && "Incomplete escape sequence!");
-      if (isdigit(AggregateString[i+1])) {
-        assert(isdigit(AggregateString[i+2]) && 
-               isdigit(AggregateString[i+3]) &&
+      assert(i + 1 < AggregateString.size() && "Incomplete escape sequence!");
+      if (isdigit(AggregateString[i + 1])) {
+        assert(isdigit(AggregateString[i + 2]) &&
+               isdigit(AggregateString[i + 3]) &&
                "Expected 3 digit octal escape!");
         O << AggregateString[++i];
         O << AggregateString[++i];
@@ -75,6 +77,26 @@ public:
       }
     }
     O << "\"";
+  }
+
+  /// Emit the string using character literals. MSVC has a limitation that
+  /// string literals cannot be longer than 64K.
+  void EmitCharArray(raw_ostream &O) {
+    assert(AggregateString.find(')') == std::string::npos &&
+           "can't emit raw string with closing parens");
+    int Count = 0;
+    O << ' ';
+    for (char C : AggregateString) {
+      O << " \'";
+      O.write_escaped(StringRef(&C, 1));
+      O << "\',";
+      Count++;
+      if (Count > 14) {
+        O << "\n ";
+        Count = 0;
+      }
+    }
+    O << '\n';
   }
 };
 

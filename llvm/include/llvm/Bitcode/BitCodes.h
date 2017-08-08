@@ -18,13 +18,20 @@
 #ifndef LLVM_BITCODE_BITCODES_H
 #define LLVM_BITCODE_BITCODES_H
 
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
 namespace llvm {
+/// Offsets of the 32-bit fields of bitcode wrapper header.
+static const unsigned BWH_MagicField = 0 * 4;
+static const unsigned BWH_VersionField = 1 * 4;
+static const unsigned BWH_OffsetField = 2 * 4;
+static const unsigned BWH_SizeField = 3 * 4;
+static const unsigned BWH_CPUTypeField = 4 * 4;
+static const unsigned BWH_HeaderSize = 5 * 4;
+
 namespace bitc {
   enum StandardWidths {
     BlockIDWidth   = 8,  // We use VBR-8 for block IDs.
@@ -147,12 +154,8 @@ public:
 
   static char DecodeChar6(unsigned V) {
     assert((V & ~63) == 0 && "Not a Char6 encoded character!");
-    if (V < 26)       return V+'a';
-    if (V < 26+26)    return V-26+'A';
-    if (V < 26+26+10) return V-26-26+'0';
-    if (V == 62)      return '.';
-    if (V == 63)      return '_';
-    llvm_unreachable("Not a value Char6 character!");
+    return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._"
+        [V];
   }
 
 };
@@ -162,11 +165,8 @@ template <> struct isPodLike<BitCodeAbbrevOp> { static const bool value=true; };
 /// BitCodeAbbrev - This class represents an abbreviation record.  An
 /// abbreviation allows a complex record that has redundancy to be stored in a
 /// specialized format instead of the fully-general, fully-vbr, format.
-class BitCodeAbbrev : public RefCountedBase<BitCodeAbbrev> {
+class BitCodeAbbrev {
   SmallVector<BitCodeAbbrevOp, 32> OperandList;
-  // Only RefCountedBase is allowed to delete.
-  ~BitCodeAbbrev() = default;
-  friend class RefCountedBase<BitCodeAbbrev>;
 
 public:
   unsigned getNumOperandInfos() const {

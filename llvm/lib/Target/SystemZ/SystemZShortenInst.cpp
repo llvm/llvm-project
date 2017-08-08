@@ -14,9 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZTargetMachine.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 
 using namespace llvm;
@@ -29,12 +29,16 @@ public:
   static char ID;
   SystemZShortenInst(const SystemZTargetMachine &tm);
 
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "SystemZ Instruction Shortening";
   }
 
   bool processBlock(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &F) override;
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoVRegs);
+  }
 
 private:
   bool shortenIIF(MachineInstr &MI, unsigned LLIxL, unsigned LLIxH);
@@ -68,18 +72,20 @@ static void tieOpsIfNeeded(MachineInstr &MI) {
 
 // MI loads one word of a GPR using an IIxF instruction and LLIxL and LLIxH
 // are the halfword immediate loads for the same word.  Try to use one of them
-// instead of IIxF. 
-bool SystemZShortenInst::shortenIIF(MachineInstr &MI,
-                                    unsigned LLIxL, unsigned LLIxH) {
+// instead of IIxF.
+bool SystemZShortenInst::shortenIIF(MachineInstr &MI, unsigned LLIxL,
+                                    unsigned LLIxH) {
   unsigned Reg = MI.getOperand(0).getReg();
   // The new opcode will clear the other half of the GR64 reg, so
   // cancel if that is live.
-  unsigned thisSubRegIdx = (SystemZ::GRH32BitRegClass.contains(Reg) ?
-			    SystemZ::subreg_h32 : SystemZ::subreg_l32);
-  unsigned otherSubRegIdx = (thisSubRegIdx == SystemZ::subreg_l32 ?
-			     SystemZ::subreg_h32 : SystemZ::subreg_l32);
-  unsigned GR64BitReg = TRI->getMatchingSuperReg(Reg, thisSubRegIdx,
-						 &SystemZ::GR64BitRegClass);
+  unsigned thisSubRegIdx =
+      (SystemZ::GRH32BitRegClass.contains(Reg) ? SystemZ::subreg_h32
+                                               : SystemZ::subreg_l32);
+  unsigned otherSubRegIdx =
+      (thisSubRegIdx == SystemZ::subreg_l32 ? SystemZ::subreg_h32
+                                            : SystemZ::subreg_l32);
+  unsigned GR64BitReg =
+      TRI->getMatchingSuperReg(Reg, thisSubRegIdx, &SystemZ::GR64BitRegClass);
   unsigned OtherReg = TRI->getSubReg(GR64BitReg, otherSubRegIdx);
   if (LiveRegs.contains(OtherReg))
     return false;
@@ -135,11 +141,10 @@ bool SystemZShortenInst::shortenOn001(MachineInstr &MI, unsigned Opcode) {
 
 // Calls shortenOn001 if CCLive is false. CC def operand is added in
 // case of success.
-bool SystemZShortenInst::shortenOn001AddCC(MachineInstr &MI,
-					   unsigned Opcode) {
+bool SystemZShortenInst::shortenOn001AddCC(MachineInstr &MI, unsigned Opcode) {
   if (!LiveRegs.contains(SystemZ::CC) && shortenOn001(MI, Opcode)) {
     MachineInstrBuilder(*MI.getParent()->getParent(), &MI)
-      .addReg(SystemZ::CC, RegState::ImplicitDefine);
+      .addReg(SystemZ::CC, RegState::ImplicitDefine | RegState::Dead);
     return true;
   }
   return false;
@@ -162,10 +167,10 @@ bool SystemZShortenInst::shortenFPConv(MachineInstr &MI, unsigned Opcode) {
     MI.RemoveOperand(0);
     MI.setDesc(TII->get(Opcode));
     MachineInstrBuilder(*MI.getParent()->getParent(), &MI)
-      .addOperand(Dest)
-      .addOperand(Mode)
-      .addOperand(Src)
-      .addOperand(Suppress);
+        .add(Dest)
+        .add(Mode)
+        .add(Src)
+        .add(Suppress);
     return true;
   }
   return false;
@@ -177,7 +182,7 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
 
   // Set up the set of live registers at the end of MBB (live out)
   LiveRegs.clear();
-  LiveRegs.addLiveOuts(&MBB);
+  LiveRegs.addLiveOuts(MBB);
 
   // Iterate backwards through the block looking for instructions to change.
   for (auto MBBI = MBB.rbegin(), MBBE = MBB.rend(); MBBI != MBBE; ++MBBI) {
@@ -195,12 +200,24 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
       Changed |= shortenOn001AddCC(MI, SystemZ::ADBR);
       break;
 
+    case SystemZ::WFASB:
+      Changed |= shortenOn001AddCC(MI, SystemZ::AEBR);
+      break;
+
     case SystemZ::WFDDB:
       Changed |= shortenOn001(MI, SystemZ::DDBR);
       break;
 
+    case SystemZ::WFDSB:
+      Changed |= shortenOn001(MI, SystemZ::DEBR);
+      break;
+
     case SystemZ::WFIDB:
       Changed |= shortenFPConv(MI, SystemZ::FIDBRA);
+      break;
+
+    case SystemZ::WFISB:
+      Changed |= shortenFPConv(MI, SystemZ::FIEBRA);
       break;
 
     case SystemZ::WLDEB:
@@ -215,28 +232,56 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
       Changed |= shortenOn001(MI, SystemZ::MDBR);
       break;
 
+    case SystemZ::WFMSB:
+      Changed |= shortenOn001(MI, SystemZ::MEEBR);
+      break;
+
     case SystemZ::WFLCDB:
       Changed |= shortenOn01(MI, SystemZ::LCDFR);
+      break;
+
+    case SystemZ::WFLCSB:
+      Changed |= shortenOn01(MI, SystemZ::LCDFR_32);
       break;
 
     case SystemZ::WFLNDB:
       Changed |= shortenOn01(MI, SystemZ::LNDFR);
       break;
 
+    case SystemZ::WFLNSB:
+      Changed |= shortenOn01(MI, SystemZ::LNDFR_32);
+      break;
+
     case SystemZ::WFLPDB:
       Changed |= shortenOn01(MI, SystemZ::LPDFR);
+      break;
+
+    case SystemZ::WFLPSB:
+      Changed |= shortenOn01(MI, SystemZ::LPDFR_32);
       break;
 
     case SystemZ::WFSQDB:
       Changed |= shortenOn01(MI, SystemZ::SQDBR);
       break;
 
+    case SystemZ::WFSQSB:
+      Changed |= shortenOn01(MI, SystemZ::SQEBR);
+      break;
+
     case SystemZ::WFSDB:
       Changed |= shortenOn001AddCC(MI, SystemZ::SDBR);
       break;
 
+    case SystemZ::WFSSB:
+      Changed |= shortenOn001AddCC(MI, SystemZ::SEBR);
+      break;
+
     case SystemZ::WFCDB:
       Changed |= shortenOn01(MI, SystemZ::CDBR);
+      break;
+
+    case SystemZ::WFCSB:
+      Changed |= shortenOn01(MI, SystemZ::CEBR);
       break;
 
     case SystemZ::VL32:
@@ -264,10 +309,13 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
 }
 
 bool SystemZShortenInst::runOnMachineFunction(MachineFunction &F) {
+  if (skipFunction(*F.getFunction()))
+    return false;
+
   const SystemZSubtarget &ST = F.getSubtarget<SystemZSubtarget>();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
-  LiveRegs.init(TRI);
+  LiveRegs.init(*TRI);
 
   bool Changed = false;
   for (auto &MBB : F)

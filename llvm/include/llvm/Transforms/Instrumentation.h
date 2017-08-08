@@ -16,6 +16,10 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
+#include <cassert>
+#include <cstdint>
+#include <limits>
+#include <string>
 #include <vector>
 
 #if defined(__GNUC__) && defined(__linux__) && !defined(ANDROID)
@@ -34,7 +38,8 @@ inline void *getDFSanRetValTLSPtrForJIT() {
 
 namespace llvm {
 
-class TargetMachine;
+class FunctionPass;
+class ModulePass;
 
 /// Instrumentation passes often insert conditional checks into entry blocks.
 /// Call this function before splitting the entry block to move instructions
@@ -43,9 +48,6 @@ class TargetMachine;
 /// block.
 BasicBlock::iterator PrepareToSplitEntryBlock(BasicBlock &BB,
                                               BasicBlock::iterator IP);
-
-class ModulePass;
-class FunctionPass;
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {
@@ -76,30 +78,68 @@ struct GCOVOptions {
   // all of the function body's blocks.
   bool ExitBlockBeforeBody;
 };
+
 ModulePass *createGCOVProfilerPass(const GCOVOptions &Options =
                                    GCOVOptions::getDefault());
 
+// PGO Instrumention
+ModulePass *createPGOInstrumentationGenLegacyPass();
+ModulePass *
+createPGOInstrumentationUseLegacyPass(StringRef Filename = StringRef(""));
+ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false,
+                                                     bool SamplePGO = false);
+FunctionPass *createPGOMemOPSizeOptLegacyPass();
+
+// Helper function to check if it is legal to promote indirect call \p Inst
+// to a direct call of function \p F. Stores the reason in \p Reason.
+bool isLegalToPromote(Instruction *Inst, Function *F, const char **Reason);
+
+// Helper function that transforms Inst (either an indirect-call instruction, or
+// an invoke instruction , to a conditional call to F. This is like:
+//     if (Inst.CalledValue == F)
+//        F(...);
+//     else
+//        Inst(...);
+//     end
+// TotalCount is the profile count value that the instruction executes.
+// Count is the profile count value that F is the target function.
+// These two values are used to update the branch weight.
+// If \p AttachProfToDirectCall is true, a prof metadata is attached to the
+// new direct call to contain \p Count.
+// Returns the promoted direct call instruction.
+Instruction *promoteIndirectCall(Instruction *Inst, Function *F, uint64_t Count,
+                                 uint64_t TotalCount,
+                                 bool AttachProfToDirectCall);
+
 /// Options for the frontend instrumentation based profiling pass.
 struct InstrProfOptions {
-  InstrProfOptions() : NoRedZone(false) {}
-
   // Add the 'noredzone' attribute to added runtime library calls.
-  bool NoRedZone;
+  bool NoRedZone = false;
+
+  // Do counter register promotion
+  bool DoCounterPromotion = false;
 
   // Name of the profile file to use as output
   std::string InstrProfileOutput;
+
+  InstrProfOptions() = default;
 };
 
 /// Insert frontend instrumentation based profiling.
-ModulePass *createInstrProfilingPass(
+ModulePass *createInstrProfilingLegacyPass(
     const InstrProfOptions &Options = InstrProfOptions());
 
 // Insert AddressSanitizer (address sanity checking) instrumentation
-FunctionPass *createAddressSanitizerFunctionPass(bool CompileKernel = false);
-ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false);
+FunctionPass *createAddressSanitizerFunctionPass(bool CompileKernel = false,
+                                                 bool Recover = false,
+                                                 bool UseAfterScope = false);
+ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false,
+                                             bool Recover = false,
+                                             bool UseGlobalsGC = true);
 
 // Insert MemorySanitizer instrumentation (detection of uninitialized reads)
-FunctionPass *createMemorySanitizerPass(int TrackOrigins = 0);
+FunctionPass *createMemorySanitizerPass(int TrackOrigins = 0,
+                                        bool Recover = false);
 
 // Insert ThreadSanitizer (race detection) instrumentation
 FunctionPass *createThreadSanitizerPass();
@@ -109,22 +149,41 @@ ModulePass *createDataFlowSanitizerPass(
     const std::vector<std::string> &ABIListFiles = std::vector<std::string>(),
     void *(*getArgTLS)() = nullptr, void *(*getRetValTLS)() = nullptr);
 
+// Options for EfficiencySanitizer sub-tools.
+struct EfficiencySanitizerOptions {
+  enum Type {
+    ESAN_None = 0,
+    ESAN_CacheFrag,
+    ESAN_WorkingSet,
+  } ToolType = ESAN_None;
+
+  EfficiencySanitizerOptions() = default;
+};
+
+// Insert EfficiencySanitizer instrumentation.
+ModulePass *createEfficiencySanitizerPass(
+    const EfficiencySanitizerOptions &Options = EfficiencySanitizerOptions());
+
 // Options for sanitizer coverage instrumentation.
 struct SanitizerCoverageOptions {
-  SanitizerCoverageOptions()
-      : CoverageType(SCK_None), IndirectCalls(false), TraceBB(false),
-        TraceCmp(false), Use8bitCounters(false) {}
-
   enum Type {
     SCK_None = 0,
     SCK_Function,
     SCK_BB,
     SCK_Edge
-  } CoverageType;
-  bool IndirectCalls;
-  bool TraceBB;
-  bool TraceCmp;
-  bool Use8bitCounters;
+  } CoverageType = SCK_None;
+  bool IndirectCalls = false;
+  bool TraceBB = false;
+  bool TraceCmp = false;
+  bool TraceDiv = false;
+  bool TraceGep = false;
+  bool Use8bitCounters = false;
+  bool TracePC = false;
+  bool TracePCGuard = false;
+  bool Inline8bitCounters = false;
+  bool NoPrune = false;
+
+  SanitizerCoverageOptions() = default;
 };
 
 // Insert SanitizerCoverage instrumentation.
@@ -143,10 +202,26 @@ inline ModulePass *createDataFlowSanitizerPassForJIT(
 // checking on loads, stores, and other memory intrinsics.
 FunctionPass *createBoundsCheckingPass();
 
-/// \brief This pass splits the stack into a safe stack and an unsafe stack to
-/// protect against stack-based overflow vulnerabilities.
-FunctionPass *createSafeStackPass(const TargetMachine *TM = nullptr);
+/// \brief Calculate what to divide by to scale counts.
+///
+/// Given the maximum count, calculate a divisor that will scale all the
+/// weights to strictly less than std::numeric_limits<uint32_t>::max().
+static inline uint64_t calculateCountScale(uint64_t MaxCount) {
+  return MaxCount < std::numeric_limits<uint32_t>::max()
+             ? 1
+             : MaxCount / std::numeric_limits<uint32_t>::max() + 1;
+}
 
-} // End llvm namespace
+/// \brief Scale an individual branch count.
+///
+/// Scale a 64-bit weight down to 32-bits using \c Scale.
+///
+static inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
+  uint64_t Scaled = Count / Scale;
+  assert(Scaled <= std::numeric_limits<uint32_t>::max() && "overflow 32-bits");
+  return Scaled;
+}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_TRANSFORMS_INSTRUMENTATION_H

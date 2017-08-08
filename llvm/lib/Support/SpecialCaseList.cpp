@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/TrigramIndex.h"
 #include <string>
 #include <system_error>
 #include <utility>
@@ -32,15 +33,16 @@ namespace llvm {
 /// reason for doing so is efficiency; StringSet is much faster at matching
 /// literal strings than Regex.
 struct SpecialCaseList::Entry {
-  Entry() {}
-  Entry(Entry &&Other)
-      : Strings(std::move(Other.Strings)), RegEx(std::move(Other.RegEx)) {}
-
   StringSet<> Strings;
+  TrigramIndex Trigrams;
   std::unique_ptr<Regex> RegEx;
 
   bool match(StringRef Query) const {
-    return Strings.count(Query) || (RegEx && RegEx->match(Query));
+    if (Strings.count(Query))
+      return true;
+    if (Trigrams.isDefinitelyOut(Query))
+      return false;
+    return RegEx && RegEx->match(Query);
   }
 };
 
@@ -50,7 +52,7 @@ std::unique_ptr<SpecialCaseList>
 SpecialCaseList::create(const std::vector<std::string> &Paths,
                         std::string &Error) {
   std::unique_ptr<SpecialCaseList> SCL(new SpecialCaseList());
-  for (auto Path : Paths) {
+  for (const auto &Path : Paths) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
         MemoryBuffer::getFile(Path);
     if (std::error_code EC = FileOrErr.getError()) {
@@ -108,13 +110,15 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB, std::string &Error) {
     StringRef Category = SplitRegexp.second;
 
     // See if we can store Regexp in Strings.
+    auto &Entry = Entries[Prefix][Category];
     if (Regex::isLiteralERE(Regexp)) {
-      Entries[Prefix][Category].Strings.insert(Regexp);
+      Entry.Strings.insert(Regexp);
       continue;
     }
+    Entry.Trigrams.insert(Regexp);
 
     // Replace * with .*
-    for (size_t pos = 0; (pos = Regexp.find("*", pos)) != std::string::npos;
+    for (size_t pos = 0; (pos = Regexp.find('*', pos)) != std::string::npos;
          pos += strlen(".*")) {
       Regexp.replace(pos, strlen("*"), ".*");
     }

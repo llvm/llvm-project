@@ -16,8 +16,10 @@ bool copy_construct_int = n::is_trivially_constructible<int, const int&>::value;
 
 // The built-ins should still work too:
 bool _is_abstract_result = __is_abstract(int);
+bool _is_aggregate_result = __is_aggregate(int);
 bool _is_arithmetic_result = __is_arithmetic(int);
 bool _is_array_result = __is_array(int);
+bool _is_assignable_result = __is_assignable(int, int);
 bool _is_base_of_result = __is_base_of(int, int);
 bool _is_class_result = __is_class(int);
 bool _is_complete_type_result = __is_complete_type(int);

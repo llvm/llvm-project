@@ -1944,6 +1944,16 @@ def A9WriteMHi : SchedWriteRes<[A9UnitMul]> { let Latency = 5;
 def A9WriteM16   : SchedWriteRes<[A9UnitMul]> { let Latency = 3; }
 def A9WriteM16Hi : SchedWriteRes<[A9UnitMul]> { let Latency = 4;
                                                 let NumMicroOps = 0; }
+def : SchedAlias<WriteMUL16, A9WriteM16>;
+def : SchedAlias<WriteMUL32, A9WriteM>;
+def : SchedAlias<WriteMUL64Lo, A9WriteM>;
+def : SchedAlias<WriteMUL64Hi, A9WriteMHi>;
+def : SchedAlias<WriteMAC16, A9WriteM16>;
+def : SchedAlias<WriteMAC32, A9WriteM>;
+def : SchedAlias<WriteMAC64Lo, A9WriteM>;
+def : SchedAlias<WriteMAC64Hi, A9WriteMHi>;
+def : ReadAdvance<ReadMUL, 0>;
+def : ReadAdvance<ReadMAC, 0>;
 
 // Floating-point
 // Only one FP or AGU instruction may issue per cycle. We model this
@@ -1953,6 +1963,7 @@ def A9WriteFMov   : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 1; }
 def A9WriteFMulS  : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 5; }
 def A9WriteFMulD  : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 6; }
 def A9WriteFMAS   : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 8; }
+
 def A9WriteFMAD   : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 9; }
 def A9WriteFDivS  : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 15; }
 def A9WriteFDivD  : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 25; }
@@ -1969,6 +1980,15 @@ def A9WriteV6 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 6; }
 def A9WriteV7 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 7; }
 def A9WriteV9 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 9; }
 def A9WriteV10 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 10; }
+
+def : WriteRes<WriteVLD1, []>;
+def : WriteRes<WriteVLD2, []>;
+def : WriteRes<WriteVLD3, []>;
+def : WriteRes<WriteVLD4, []>;
+def : WriteRes<WriteVST1, []>;
+def : WriteRes<WriteVST2, []>;
+def : WriteRes<WriteVST3, []>;
+def : WriteRes<WriteVST4, []>;
 
 // Reserve A9UnitFP for 2 consecutive cycles.
 def A9Write2V4 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> {
@@ -1992,6 +2012,7 @@ def A9WriteAdr : SchedWriteRes<[A9UnitAGU]> { let NumMicroOps = 0; }
 
 // Load Integer.
 def A9WriteL : SchedWriteRes<[A9UnitLS]> { let Latency = 3; }
+def : SchedAlias<WriteLd, A9WriteL>;
 // Load the upper 32-bits using the same micro-op.
 def A9WriteLHi : SchedWriteRes<[]> { let Latency = 3;
                                      let NumMicroOps = 0; }
@@ -2025,12 +2046,12 @@ def A9WriteAdr#NumAddr : WriteSequence<[A9WriteAdr], NumAddr>;
 
 // Define a predicate to select the LDM based on number of memory addresses.
 def A9LMAdr#NumAddr#Pred :
-  SchedPredicate<"(TII->getNumLDMAddresses(MI)+1)/2 == "#NumAddr>;
+  SchedPredicate<"(TII->getNumLDMAddresses(*MI)+1)/2 == "#NumAddr>;
 
 } // foreach NumAddr
 
 // Fall-back for unknown LDMs.
-def A9LMUnknownPred : SchedPredicate<"TII->getNumLDMAddresses(MI) == 0">;
+def A9LMUnknownPred : SchedPredicate<"TII->getNumLDMAddresses(*MI) == 0">;
 
 // LDM/VLDM/VLDn address generation latency & resources.
 // Dynamically select the A9WriteAdrN sequence using a predicate.
@@ -2471,6 +2492,34 @@ def : SchedAlias<WriteALUsr, A9WriteALUsr>;
 def : SchedAlias<WriteALUSsr, A9WriteALUsr>;
 def : SchedAlias<ReadALU, A9ReadALU>;
 def : SchedAlias<ReadALUsr, A9ReadALU>;
+def : SchedAlias<WriteST, A9WriteS>;
+
+// ===---------------------------------------------------------------------===//
+// Floating-point. Map target defined SchedReadWrite to processor specific ones
+//
+def : WriteRes<WriteFPCVT, [A9UnitFP, A9UnitAGU]> { let Latency = 4; }
+def : SchedAlias<WriteFPMOV, A9WriteFMov>;
+
+def : SchedAlias<WriteFPALU32, A9WriteF>;
+def : SchedAlias<WriteFPALU64, A9WriteF>;
+
+def : SchedAlias<WriteFPMUL32, A9WriteFMulS>;
+def : SchedAlias<WriteFPMUL64, A9WriteFMulD>;
+
+def : SchedAlias<WriteFPMAC32, A9WriteFMAS>;
+def : SchedAlias<WriteFPMAC64, A9WriteFMAD>;
+
+def : SchedAlias<WriteFPDIV32, A9WriteFDivS>;
+def : SchedAlias<WriteFPDIV64, A9WriteFDivD>;
+def : SchedAlias<WriteFPSQRT32, A9WriteFSqrtS>;
+def : SchedAlias<WriteFPSQRT64, A9WriteFSqrtD>;
+
+def : ReadAdvance<ReadFPMUL, 0>;
+def : ReadAdvance<ReadFPMAC, 0>;
+
+// ===---------------------------------------------------------------------===//
+// Subtarget-specific overrides. Map opcodes to list of SchedReadWrite types.
+//
 def : InstRW< [WriteALU],
       (instregex "ANDri", "ORRri", "EORri", "BICri", "ANDrr", "ORRrr", "EORrr",
                  "BICrr")>;
@@ -2518,12 +2567,11 @@ def : InstRW<[A9WriteLb],
       "LDRH", "LDRSH", "LDRSB")>;
 def : InstRW<[A9WriteLbsi], (instregex "LDRrs")>;
 
-def : WriteRes<WriteDiv, []> { let Latency = 0; }
+def : WriteRes<WriteDIV, []> { let Latency = 0; }
 
 def : WriteRes<WriteBr, [A9UnitB]>;
 def : WriteRes<WriteBrL, [A9UnitB]>;
 def : WriteRes<WriteBrTbl, [A9UnitB]>;
 def : WriteRes<WritePreLd, []>;
-def : SchedAlias<WriteCvtFP, A9WriteF>;
 def : WriteRes<WriteNoop, []> { let Latency = 0; let NumMicroOps = 0; }
 } // SchedModel = CortexA9Model

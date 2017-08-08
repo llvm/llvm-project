@@ -1,4 +1,4 @@
-//===-- MCDisassembler.cpp - Disassembler interface -----------------------===//
+//===- MCDisassembler.cpp - Disassembler interface ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCDisassembler.h"
-#include "llvm/MC/MCExternalSymbolizer.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 
 using namespace llvm;
 
-MCDisassembler::~MCDisassembler() {
-}
+MCDisassembler::~MCDisassembler() = default;
 
 bool MCDisassembler::tryAddingSymbolicOperand(MCInst &Inst, int64_t Value,
                                               uint64_t Address, bool IsBranch,

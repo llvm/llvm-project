@@ -1,4 +1,4 @@
-//==- HexagonInstrFormats.td - Hexagon Instruction Formats --*- tablegen -*-==//
+//==- HexagonInstrFormatsV4.td - Hexagon Instruction Formats --*- tablegen -==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,20 +10,6 @@
 // This file describes the Hexagon V4 instruction classes in TableGen format.
 //
 //===----------------------------------------------------------------------===//
-
-//----------------------------------------------------------------------------//
-//                         Hexagon Instruction Flags
-//
-//                        *** Must match BaseInfo.h ***
-//----------------------------------------------------------------------------//
-
-def TypeMEMOP    : IType<9>;
-def TypeNV       : IType<10>;
-def TypeDUPLEX   : IType<11>;
-def TypeCOMPOUND : IType<12>;
-def TypeAG_VX    : IType<28>;
-def TypeAG_VM    : IType<29>;
-def TypePREFIX   : IType<30>;
 
 //                      Duplex Instruction Class Declaration
 //===----------------------------------------------------------------------===//
@@ -63,7 +49,7 @@ class InstDuplex<bits<4> iClass, list<dag> pattern = [],
 
   // *** Must match MCTargetDesc/HexagonBaseInfo.h ***
 
-  let TSFlags{4-0} = Type.Value;
+  let TSFlags{5-0} = Type.Value;
 
   // Predicated instructions.
   bits<1> isPredicated = 0;
@@ -99,59 +85,3 @@ class InstDuplex<bits<4> iClass, list<dag> pattern = [],
   bits<2> opExtentAlign = 0;
   let TSFlags{28-27} = opExtentAlign; // Alignment exponent before extending.
 }
-
-//----------------------------------------------------------------------------//
-//                         Instruction Classes Definitions
-//----------------------------------------------------------------------------//
-
-//
-// NV type instructions.
-//
-class NVInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-             string cstr = "", InstrItinClass itin = NCJ_tc_3or4stall_SLOT0>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeNV>, OpcodeHexagon;
-
-class NVInst_V4<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "", InstrItinClass itin = NCJ_tc_3or4stall_SLOT0>
-  : NVInst<outs, ins, asmstr, pattern, cstr, itin>;
-
-// Definition of Post increment new value store.
-class NVInstPost_V4<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-               string cstr = "", InstrItinClass itin = ST_tc_st_SLOT0>
-  : NVInst<outs, ins, asmstr, pattern, cstr, itin>;
-
-// Post increment ST Instruction.
-let mayStore = 1 in
-class NVInstPI_V4<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-               string cstr = "", InstrItinClass itin = ST_tc_st_SLOT0>
-  : NVInst<outs, ins, asmstr, pattern, cstr, itin>;
-
-// New-value conditional branch.
-class NCJInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "">
-  : NVInst<outs, ins, asmstr, pattern, cstr>;
-
-let mayLoad = 1, mayStore = 1 in
-class MEMInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "", InstrItinClass itin = V4LDST_tc_st_SLOT0>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeMEMOP>,
-    OpcodeHexagon;
-
-class MEMInst_V4<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                 string cstr = "", InstrItinClass itin = V4LDST_tc_st_SLOT0>
-  : MEMInst<outs, ins, asmstr, pattern, cstr, itin>;
-
-let isCodeGenOnly = 1 in
-class EXTENDERInst<dag outs, dag ins, string asmstr, list<dag> pattern = []>
-  : InstHexagon<outs, ins, asmstr, pattern, "", EXTENDER_tc_1_SLOT0123,
-                TypePREFIX>, OpcodeHexagon;
-
-class SUBInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "">
-  : InstHexagon<outs, ins, asmstr, pattern, "", PREFIX, TypeDUPLEX>,
-    OpcodeHexagon;
-
-class CJInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-              string cstr = "">
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, COMPOUND, TypeCOMPOUND>,
-    OpcodeHexagon;

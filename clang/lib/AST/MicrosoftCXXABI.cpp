@@ -67,8 +67,6 @@ public:
 class MicrosoftCXXABI : public CXXABI {
   ASTContext &Context;
   llvm::SmallDenseMap<CXXRecordDecl *, CXXConstructorDecl *> RecordToCopyCtor;
-  llvm::SmallDenseMap<std::pair<const CXXConstructorDecl *, unsigned>, Expr *>
-      CtorToDefaultArgExpr;
 
   llvm::SmallDenseMap<TagDecl *, DeclaratorDecl *>
       UnnamedTagDeclToDeclaratorDecl;
@@ -90,16 +88,6 @@ public:
 
   bool isNearlyEmpty(const CXXRecordDecl *RD) const override {
     llvm_unreachable("unapplicable to the MS ABI");
-  }
-
-  void addDefaultArgExprForConstructor(const CXXConstructorDecl *CD,
-                                       unsigned ParmIdx, Expr *DAE) override {
-    CtorToDefaultArgExpr[std::make_pair(CD, ParmIdx)] = DAE;
-  }
-
-  Expr *getDefaultArgExprForConstructor(const CXXConstructorDecl *CD,
-                                        unsigned ParmIdx) override {
-    return CtorToDefaultArgExpr[std::make_pair(CD, ParmIdx)];
   }
 
   const CXXConstructorDecl *
@@ -143,8 +131,9 @@ public:
         const_cast<TagDecl *>(TD->getCanonicalDecl()));
   }
 
-  MangleNumberingContext *createMangleNumberingContext() const override {
-    return new MicrosoftNumberingContext();
+  std::unique_ptr<MangleNumberingContext>
+  createMangleNumberingContext() const override {
+    return llvm::make_unique<MicrosoftNumberingContext>();
   }
 };
 }
@@ -262,7 +251,7 @@ std::pair<uint64_t, unsigned> MicrosoftCXXABI::getMemberPointerWidthAndAlign(
     Align = Target.getIntAlign();
 
   if (Target.getTriple().isArch64Bit())
-    Width = llvm::RoundUpToAlignment(Width, Align);
+    Width = llvm::alignTo(Width, Align);
   return std::make_pair(Width, Align);
 }
 

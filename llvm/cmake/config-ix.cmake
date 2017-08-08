@@ -11,9 +11,10 @@ include(CheckFunctionExists)
 include(CheckCXXSourceCompiles)
 include(TestBigEndian)
 
+include(CheckCompilerVersion)
 include(HandleLLVMStdlib)
 
-if( UNIX AND NOT BEOS )
+if( UNIX AND NOT (BEOS OR HAIKU) )
   # Used by check_symbol_exists:
   set(CMAKE_REQUIRED_LIBRARIES m)
 endif()
@@ -45,10 +46,8 @@ endfunction()
 check_include_file(dirent.h HAVE_DIRENT_H)
 check_include_file(dlfcn.h HAVE_DLFCN_H)
 check_include_file(errno.h HAVE_ERRNO_H)
-check_include_file(execinfo.h HAVE_EXECINFO_H)
 check_include_file(fcntl.h HAVE_FCNTL_H)
 check_include_file(inttypes.h HAVE_INTTYPES_H)
-check_include_file(limits.h HAVE_LIMITS_H)
 check_include_file(link.h HAVE_LINK_H)
 check_include_file(malloc.h HAVE_MALLOC_H)
 check_include_file(malloc/malloc.h HAVE_MALLOC_MALLOC_H)
@@ -66,10 +65,10 @@ check_include_file(sys/param.h HAVE_SYS_PARAM_H)
 check_include_file(sys/resource.h HAVE_SYS_RESOURCE_H)
 check_include_file(sys/stat.h HAVE_SYS_STAT_H)
 check_include_file(sys/time.h HAVE_SYS_TIME_H)
+check_include_file(sys/types.h HAVE_SYS_TYPES_H)
 check_include_file(sys/uio.h HAVE_SYS_UIO_H)
 check_include_file(termios.h HAVE_TERMIOS_H)
 check_include_file(unistd.h HAVE_UNISTD_H)
-check_include_file(utime.h HAVE_UTIME_H)
 check_include_file(valgrind/valgrind.h HAVE_VALGRIND_VALGRIND_H)
 check_include_file(zlib.h HAVE_ZLIB_H)
 check_include_file(fenv.h HAVE_FENV_H)
@@ -77,15 +76,25 @@ check_symbol_exists(FE_ALL_EXCEPT "fenv.h" HAVE_DECL_FE_ALL_EXCEPT)
 check_symbol_exists(FE_INEXACT "fenv.h" HAVE_DECL_FE_INEXACT)
 
 check_include_file(mach/mach.h HAVE_MACH_MACH_H)
-check_include_file(mach-o/dyld.h HAVE_MACH_O_DYLD_H)
 check_include_file(histedit.h HAVE_HISTEDIT_H)
+check_include_file(CrashReporterClient.h HAVE_CRASHREPORTERCLIENT_H)
+if(APPLE)
+  include(CheckCSourceCompiles)
+  CHECK_C_SOURCE_COMPILES("
+     static const char *__crashreporter_info__ = 0;
+     asm(\".desc ___crashreporter_info__, 0x10\");
+     int main() { return 0; }"
+    HAVE_CRASHREPORTER_INFO)
+endif()
 
-# size_t must be defined before including cxxabi.h on FreeBSD 10.0.
-check_cxx_source_compiles("
-#include <stddef.h>
-#include <cxxabi.h>
-int main() { return 0; }
-" HAVE_CXXABI_H)
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+  check_include_file(linux/magic.h HAVE_LINUX_MAGIC_H)
+  if(NOT HAVE_LINUX_MAGIC_H)
+    # older kernels use split files
+    check_include_file(linux/nfs_fs.h HAVE_LINUX_NFS_FS_H)
+    check_include_file(linux/smb.h HAVE_LINUX_SMB_H)
+  endif()
+endif()
 
 # library checks
 if( NOT PURE_WINDOWS )
@@ -105,13 +114,32 @@ if( NOT PURE_WINDOWS )
   endif()
   check_library_exists(dl dlopen "" HAVE_LIBDL)
   check_library_exists(rt clock_gettime "" HAVE_LIBRT)
+endif()
+
+if(HAVE_LIBPTHREAD)
+  # We want to find pthreads library and at the moment we do want to
+  # have it reported as '-l<lib>' instead of '-pthread'.
+  # TODO: switch to -pthread once the rest of the build system can deal with it.
+  set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+  set(THREADS_HAVE_PTHREAD_ARG Off)
+  find_package(Threads REQUIRED)
+  set(LLVM_PTHREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
+endif()
+
+# Don't look for these libraries on Windows. Also don't look for them if we're
+# using MSan, since uninstrumented third party code may call MSan interceptors
+# like strlen, leading to false positives.
+if( NOT PURE_WINDOWS AND NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
   if (LLVM_ENABLE_ZLIB)
     check_library_exists(z compress2 "" HAVE_LIBZ)
   else()
     set(HAVE_LIBZ 0)
   endif()
-  if (HAVE_HISTEDIT_H)
+  # Skip libedit if using ASan as it contains memory leaks.
+  if (LLVM_ENABLE_LIBEDIT AND HAVE_HISTEDIT_H AND NOT LLVM_USE_SANITIZER MATCHES ".*Address.*")
     check_library_exists(edit el_init "" HAVE_LIBEDIT)
+  else()
+    set(HAVE_LIBEDIT 0)
   endif()
   if(LLVM_ENABLE_TERMINFO)
     set(HAVE_TERMINFO 0)
@@ -129,24 +157,38 @@ if( NOT PURE_WINDOWS )
   endif()
 endif()
 
+check_library_exists(xar xar_open "" HAVE_LIBXAR)
+if(HAVE_LIBXAR)
+  set(XAR_LIB xar)
+endif()
+
 # function checks
 check_symbol_exists(arc4random "stdlib.h" HAVE_DECL_ARC4RANDOM)
-check_symbol_exists(backtrace "execinfo.h" HAVE_BACKTRACE)
+find_package(Backtrace)
+set(HAVE_BACKTRACE ${Backtrace_FOUND})
+set(BACKTRACE_HEADER ${Backtrace_HEADER})
+check_symbol_exists(_Unwind_Backtrace "unwind.h" HAVE__UNWIND_BACKTRACE)
 check_symbol_exists(getpagesize unistd.h HAVE_GETPAGESIZE)
+check_symbol_exists(sysconf unistd.h HAVE_SYSCONF)
 check_symbol_exists(getrusage sys/resource.h HAVE_GETRUSAGE)
 check_symbol_exists(setrlimit sys/resource.h HAVE_SETRLIMIT)
 check_symbol_exists(isatty unistd.h HAVE_ISATTY)
 check_symbol_exists(futimens sys/stat.h HAVE_FUTIMENS)
 check_symbol_exists(futimes sys/time.h HAVE_FUTIMES)
-if( HAVE_SETJMP_H )
-  check_symbol_exists(longjmp setjmp.h HAVE_LONGJMP)
-  check_symbol_exists(setjmp setjmp.h HAVE_SETJMP)
-  check_symbol_exists(siglongjmp setjmp.h HAVE_SIGLONGJMP)
-  check_symbol_exists(sigsetjmp setjmp.h HAVE_SIGSETJMP)
+check_symbol_exists(posix_fallocate fcntl.h HAVE_POSIX_FALLOCATE)
+# AddressSanitizer conflicts with lib/Support/Unix/Signals.inc
+# Avoid sigaltstack on Apple platforms, where backtrace() cannot handle it
+# (rdar://7089625) and _Unwind_Backtrace is unusable because it cannot unwind
+# past the signal handler after an assertion failure (rdar://29866587).
+if( HAVE_SIGNAL_H AND NOT LLVM_USE_SANITIZER MATCHES ".*Address.*" AND NOT APPLE )
+  check_symbol_exists(sigaltstack signal.h HAVE_SIGALTSTACK)
 endif()
 if( HAVE_SYS_UIO_H )
   check_symbol_exists(writev sys/uio.h HAVE_WRITEV)
 endif()
+set(CMAKE_REQUIRED_DEFINITIONS "-D_LARGEFILE64_SOURCE")
+check_symbol_exists(lseek64 "sys/types.h;unistd.h" HAVE_LSEEK64)
+set(CMAKE_REQUIRED_DEFINITIONS "")
 check_symbol_exists(mallctl malloc_np.h HAVE_MALLCTL)
 check_symbol_exists(mallinfo malloc.h HAVE_MALLINFO)
 check_symbol_exists(malloc_zone_statistics malloc/malloc.h
@@ -154,9 +196,6 @@ check_symbol_exists(malloc_zone_statistics malloc/malloc.h
 check_symbol_exists(mkdtemp "stdlib.h;unistd.h" HAVE_MKDTEMP)
 check_symbol_exists(mkstemp "stdlib.h;unistd.h" HAVE_MKSTEMP)
 check_symbol_exists(mktemp "stdlib.h;unistd.h" HAVE_MKTEMP)
-check_symbol_exists(closedir "sys/types.h;dirent.h" HAVE_CLOSEDIR)
-check_symbol_exists(opendir "sys/types.h;dirent.h" HAVE_OPENDIR)
-check_symbol_exists(readdir "sys/types.h;dirent.h" HAVE_READDIR)
 check_symbol_exists(getcwd unistd.h HAVE_GETCWD)
 check_symbol_exists(gettimeofday sys/time.h HAVE_GETTIMEOFDAY)
 check_symbol_exists(getrlimit "sys/types.h;sys/time.h;sys/resource.h" HAVE_GETRLIMIT)
@@ -164,18 +203,7 @@ check_symbol_exists(posix_spawn spawn.h HAVE_POSIX_SPAWN)
 check_symbol_exists(pread unistd.h HAVE_PREAD)
 check_symbol_exists(realpath stdlib.h HAVE_REALPATH)
 check_symbol_exists(sbrk unistd.h HAVE_SBRK)
-check_symbol_exists(srand48 stdlib.h HAVE_RAND48_SRAND48)
-if( HAVE_RAND48_SRAND48 )
-  check_symbol_exists(lrand48 stdlib.h HAVE_RAND48_LRAND48)
-  if( HAVE_RAND48_LRAND48 )
-    check_symbol_exists(drand48 stdlib.h HAVE_RAND48_DRAND48)
-    if( HAVE_RAND48_DRAND48 )
-      set(HAVE_RAND48 1 CACHE INTERNAL "are srand48/lrand48/drand48 available?")
-    endif()
-  endif()
-endif()
 check_symbol_exists(strtoll stdlib.h HAVE_STRTOLL)
-check_symbol_exists(strtoq stdlib.h HAVE_STRTOQ)
 check_symbol_exists(strerror string.h HAVE_STRERROR)
 check_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
 check_symbol_exists(strerror_s string.h HAVE_DECL_STRERROR_S)
@@ -208,8 +236,8 @@ if( HAVE_DLFCN_H )
   if( HAVE_LIBDL )
     list(APPEND CMAKE_REQUIRED_LIBRARIES dl)
   endif()
-  check_symbol_exists(dlerror dlfcn.h HAVE_DLERROR)
   check_symbol_exists(dlopen dlfcn.h HAVE_DLOPEN)
+  check_symbol_exists(dladdr dlfcn.h HAVE_DLADDR)
   if( HAVE_LIBDL )
     list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES dl)
   endif()
@@ -217,7 +245,15 @@ endif()
 
 check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
 if( LLVM_USING_GLIBC )
-  add_llvm_definitions( -D_GNU_SOURCE )
+  add_definitions( -D_GNU_SOURCE )
+endif()
+# This check requires _GNU_SOURCE
+if(HAVE_LIBPTHREAD)
+  check_library_exists(pthread pthread_getname_np "" HAVE_PTHREAD_GETNAME_NP)
+  check_library_exists(pthread pthread_setname_np "" HAVE_PTHREAD_SETNAME_NP)
+elseif(PTHREAD_IN_LIBC)
+  check_library_exists(c pthread_getname_np "" HAVE_PTHREAD_GETNAME_NP)
+  check_library_exists(c pthread_setname_np "" HAVE_PTHREAD_SETNAME_NP)
 endif()
 
 set(headers "sys/types.h")
@@ -293,9 +329,15 @@ if( LLVM_ENABLE_PIC )
   set(ENABLE_PIC 1)
 else()
   set(ENABLE_PIC 0)
+  check_cxx_compiler_flag("-fno-pie" SUPPORTS_NO_PIE_FLAG)
+  if(SUPPORTS_NO_PIE_FLAG)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fno-pie")
+  endif()
 endif()
 
-check_cxx_compiler_flag("-Wno-variadic-macros" SUPPORTS_NO_VARIADIC_MACROS_FLAG)
+check_cxx_compiler_flag("-Wvariadic-macros" SUPPORTS_VARIADIC_MACROS_FLAG)
+check_cxx_compiler_flag("-Wgnu-zero-variadic-macro-arguments"
+                        SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG)
 
 set(USE_NO_MAYBE_UNINITIALIZED 0)
 set(USE_NO_UNINITIALIZED 0)
@@ -385,12 +427,12 @@ else ()
   set(LLVM_NATIVE_ASMPRINTER LLVMInitialize${LLVM_NATIVE_ARCH}AsmPrinter)
 
   # We don't have an ASM parser for all architectures yet.
-  if (EXISTS ${CMAKE_SOURCE_DIR}/lib/Target/${LLVM_NATIVE_ARCH}/AsmParser/CMakeLists.txt)
+  if (EXISTS ${PROJECT_SOURCE_DIR}/lib/Target/${LLVM_NATIVE_ARCH}/AsmParser/CMakeLists.txt)
     set(LLVM_NATIVE_ASMPARSER LLVMInitialize${LLVM_NATIVE_ARCH}AsmParser)
   endif ()
 
   # We don't have an disassembler for all architectures yet.
-  if (EXISTS ${CMAKE_SOURCE_DIR}/lib/Target/${LLVM_NATIVE_ARCH}/Disassembler/CMakeLists.txt)
+  if (EXISTS ${PROJECT_SOURCE_DIR}/lib/Target/${LLVM_NATIVE_ARCH}/Disassembler/CMakeLists.txt)
     set(LLVM_NATIVE_DISASSEMBLER LLVMInitialize${LLVM_NATIVE_ARCH}Disassembler)
   endif ()
 endif ()
@@ -432,24 +474,16 @@ if( MSVC )
   else()
     set(HAVE_DIA_SDK 0)
   endif()
-else()
-  set(HAVE_DIA_SDK 0)
-endif( MSVC )
 
-if( PURE_WINDOWS )
-  CHECK_CXX_SOURCE_COMPILES("
-    #include <windows.h>
-    #include <imagehlp.h>
-    extern \"C\" void foo(PENUMLOADED_MODULES_CALLBACK);
-    extern \"C\" void foo(BOOL(CALLBACK*)(PCSTR,ULONG_PTR,ULONG,PVOID));
-    int main(){return 0;}"
-    HAVE_ELMCB_PCSTR)
-  if( HAVE_ELMCB_PCSTR )
-    set(WIN32_ELMCB_PCSTR "PCSTR")
-  else()
-    set(WIN32_ELMCB_PCSTR "PSTR")
+  option(LLVM_ENABLE_DIA_SDK "Use MSVC DIA SDK for debugging if available."
+                             ${HAVE_DIA_SDK})
+
+  if(LLVM_ENABLE_DIA_SDK AND NOT HAVE_DIA_SDK)
+    message(FATAL_ERROR "DIA SDK not found. If you have both VS 2012 and 2013 installed, you may need to uninstall the former and re-install the latter afterwards.")
   endif()
-endif( PURE_WINDOWS )
+else()
+  set(LLVM_ENABLE_DIA_SDK 0)
+endif( MSVC )
 
 # FIXME: Signal handler return type, currently hardcoded to 'void'
 set(RETSIGTYPE void)
@@ -474,8 +508,6 @@ if (LLVM_ENABLE_ZLIB )
   endif()
 endif()
 
-set(LLVM_PREFIX ${CMAKE_INSTALL_PREFIX})
-
 if (LLVM_ENABLE_DOXYGEN)
   message(STATUS "Doxygen enabled.")
   find_package(Doxygen REQUIRED)
@@ -498,16 +530,6 @@ else()
   message(STATUS "Doxygen disabled.")
 endif()
 
-if (LLVM_ENABLE_SPHINX)
-  message(STATUS "Sphinx enabled.")
-  find_package(Sphinx REQUIRED)
-  if (LLVM_BUILD_DOCS)
-    add_custom_target(sphinx ALL)
-  endif()
-else()
-  message(STATUS "Sphinx disabled.")
-endif()
-
 set(LLVM_BINDINGS "")
 if(WIN32)
   message(STATUS "Go bindings disabled.")
@@ -516,7 +538,7 @@ else()
   if(GO_EXECUTABLE STREQUAL "GO_EXECUTABLE-NOTFOUND")
     message(STATUS "Go bindings disabled.")
   else()
-    execute_process(COMMAND ${GO_EXECUTABLE} run ${CMAKE_SOURCE_DIR}/bindings/go/conftest.go
+    execute_process(COMMAND ${GO_EXECUTABLE} run ${PROJECT_SOURCE_DIR}/bindings/go/conftest.go
                     RESULT_VARIABLE GO_CONFTEST)
     if(GO_CONFTEST STREQUAL "0")
       set(LLVM_BINDINGS "${LLVM_BINDINGS} go")
@@ -531,10 +553,25 @@ find_program(GOLD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.gold ld.gold
 set(LLVM_BINUTILS_INCDIR "" CACHE PATH
 	"PATH to binutils/include containing plugin-api.h for gold plugin.")
 
-if(APPLE)
-  find_program(LD64_EXECUTABLE NAMES ld DOC "The ld64 linker")
+if(CMAKE_HOST_APPLE AND APPLE)
+  if(NOT CMAKE_XCRUN)
+    find_program(CMAKE_XCRUN NAMES xcrun)
+  endif()
+  if(CMAKE_XCRUN)
+    execute_process(COMMAND ${CMAKE_XCRUN} -find ld
+      OUTPUT_VARIABLE LD64_EXECUTABLE
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+  else()
+    find_program(LD64_EXECUTABLE NAMES ld DOC "The ld64 linker")
+  endif()
+
+  if(LD64_EXECUTABLE)
+    set(LD64_EXECUTABLE ${LD64_EXECUTABLE} CACHE PATH "ld64 executable")
+    message(STATUS "Found ld64 - ${LD64_EXECUTABLE}")
+  endif()
 endif()
 
+# Keep the version requirements in sync with bindings/ocaml/README.txt.
 include(FindOCaml)
 include(AddOCaml)
 if(WIN32)
@@ -552,6 +589,9 @@ else()
         message(STATUS "OCaml bindings enabled.")
         find_ocamlfind_package(oUnit VERSION 2 OPTIONAL)
         set(LLVM_BINDINGS "${LLVM_BINDINGS} ocaml")
+
+        set(LLVM_OCAML_INSTALL_PATH "${OCAML_STDLIB_PATH}" CACHE STRING
+            "Install directory for LLVM OCaml packages")
       else()
         message(STATUS "OCaml bindings disabled, need ctypes >=0.4.")
       endif()

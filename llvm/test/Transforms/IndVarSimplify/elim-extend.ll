@@ -22,7 +22,7 @@ loop:
   store i8 0, i8* %postadr
   %postivnsw = add nsw i32 %ivnsw, 1
   %postofsnsw = sext i32 %postivnsw to i64
-  %postadrnsw = getelementptr i8, i8* %base, i64 %postofsnsw
+  %postadrnsw = getelementptr inbounds i8, i8* %base, i64 %postofsnsw
   store i8 0, i8* %postadrnsw
   %cond = icmp sgt i32 %limit, %iv
   br i1 %cond, label %loop, label %exit
@@ -40,6 +40,8 @@ entry:
   %precond = icmp sgt i32 %limit, %init
   br i1 %precond, label %loop, label %return
 ; CHECK: loop:
+; CHECK-NOT: sext
+; CHECK: wide.trip.count = sext
 ; CHECK-NOT: sext
 ; CHECK: exit:
 loop:

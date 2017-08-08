@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   BitWriter
   CodeGen
   Core
+  Coroutines
   IPO
   IRReader
   InstCombine
@@ -29,14 +30,12 @@ add_llvm_tool(opt
   PassPrinters.cpp
   PrintSCC.cpp
   opt.cpp
+
+  DEPENDS
+  intrinsics_gen
   )
 export_executable_symbols(opt)
 
 if(WITH_POLLY AND LINK_POLLY_INTO_TOOLS)
   target_link_libraries(opt Polly)
-  if(POLLY_LINK_LIBS)
-    foreach(lib ${POLLY_LINK_LIBS})
-      target_link_libraries(opt ${lib})
-    endforeach(lib)
-  endif(POLLY_LINK_LIBS)
 endif(WITH_POLLY AND LINK_POLLY_INTO_TOOLS)

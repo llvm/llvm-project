@@ -23,9 +23,9 @@ TEST(Printf, Basic) {
   char buf[1024];
   uptr len = internal_snprintf(buf, sizeof(buf),
       "a%db%zdc%ue%zuf%xh%zxq%pe%sr",
-      (int)-1, (long)-2, // NOLINT
-      (unsigned)-4, (unsigned long)5, // NOLINT
-      (unsigned)10, (unsigned long)11, // NOLINT
+      (int)-1, (uptr)-2, // NOLINT
+      (unsigned)-4, (uptr)5, // NOLINT
+      (unsigned)10, (uptr)11, // NOLINT
       (void*)0x123, "_string_");
   EXPECT_EQ(len, strlen(buf));
 

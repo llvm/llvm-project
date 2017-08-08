@@ -6,7 +6,7 @@
 define i8 @f(i8 %v1, i8 %v2) nounwind {
 entry:
 ; CHECK: callq
-; CHECK: movb %{{.*}}, %al
+; CHECK: movl %{{.*}}, %eax
 ; CHECK: mulb
 ; CHECK: mulb
         %rval = tail call i8 @bar() nounwind

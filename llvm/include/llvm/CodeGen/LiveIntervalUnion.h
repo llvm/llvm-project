@@ -1,4 +1,4 @@
-//===-- LiveIntervalUnion.h - Live interval union data struct --*- C++ -*--===//
+//===- LiveIntervalUnion.h - Live interval union data struct ---*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,24 +18,23 @@
 #define LLVM_CODEGEN_LIVEINTERVALUNION_H
 
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include <cassert>
+#include <limits>
 
 namespace llvm {
 
+class raw_ostream;
 class TargetRegisterInfo;
 
 #ifndef NDEBUG
 // forward declaration
 template <unsigned Element> class SparseBitVector;
-typedef SparseBitVector<128> LiveVirtRegBitSet;
-#endif
 
-/// Compare a live virtual register segment to a LiveIntervalUnion segment.
-inline bool
-overlap(const LiveInterval::Segment &VRSeg,
-        const IntervalMap<SlotIndex, LiveInterval*>::const_iterator &LUSeg) {
-  return VRSeg.start < LUSeg.stop() && LUSeg.start() < VRSeg.end;
-}
+using LiveVirtRegBitSet = SparseBitVector<128>;
+#endif
 
 /// Union of live intervals that are strong candidates for coalescing into a
 /// single register (either physical or virtual depending on the context).  We
@@ -45,37 +44,42 @@ class LiveIntervalUnion {
   // A set of live virtual register segments that supports fast insertion,
   // intersection, and removal.
   // Mapping SlotIndex intervals to virtual register numbers.
-  typedef IntervalMap<SlotIndex, LiveInterval*> LiveSegments;
+  using LiveSegments = IntervalMap<SlotIndex, LiveInterval*>;
 
 public:
   // SegmentIter can advance to the next segment ordered by starting position
   // which may belong to a different live virtual register. We also must be able
   // to reach the current segment's containing virtual register.
-  typedef LiveSegments::iterator SegmentIter;
+  using SegmentIter = LiveSegments::iterator;
+
+  /// Const version of SegmentIter.
+  using ConstSegmentIter = LiveSegments::const_iterator;
 
   // LiveIntervalUnions share an external allocator.
-  typedef LiveSegments::Allocator Allocator;
-
-  class Query;
+  using Allocator = LiveSegments::Allocator;
 
 private:
-  unsigned Tag;           // unique tag for current contents.
+  unsigned Tag = 0;       // unique tag for current contents.
   LiveSegments Segments;  // union of virtual reg segments
 
 public:
-  explicit LiveIntervalUnion(Allocator &a) : Tag(0), Segments(a) {}
+  explicit LiveIntervalUnion(Allocator &a) : Segments(a) {}
 
   // Iterate over all segments in the union of live virtual registers ordered
   // by their starting position.
   SegmentIter begin() { return Segments.begin(); }
   SegmentIter end() { return Segments.end(); }
   SegmentIter find(SlotIndex x) { return Segments.find(x); }
+  ConstSegmentIter begin() const { return Segments.begin(); }
+  ConstSegmentIter end() const { return Segments.end(); }
+  ConstSegmentIter find(SlotIndex x) const { return Segments.find(x); }
+
   bool empty() const { return Segments.empty(); }
   SlotIndex startIndex() const { return Segments.start(); }
 
   // Provide public access to the underlying map to allow overlap iteration.
-  typedef LiveSegments Map;
-  const Map &getMap() { return Segments; }
+  using Map = LiveSegments;
+  const Map &getMap() const { return Segments; }
 
   /// getTag - Return an opaque tag representing the current state of the union.
   unsigned getTag() const { return Tag; }
@@ -85,15 +89,9 @@ public:
 
   // Add a live virtual register to this union and merge its segments.
   void unify(LiveInterval &VirtReg, const LiveRange &Range);
-  void unify(LiveInterval &VirtReg) {
-    unify(VirtReg, VirtReg);
-  }
 
   // Remove a live virtual register's segments from this union.
   void extract(LiveInterval &VirtReg, const LiveRange &Range);
-  void extract(LiveInterval &VirtReg) {
-    extract(VirtReg, VirtReg);
-  }
 
   // Remove all inserted virtual registers.
   void clear() { Segments.clear(); ++Tag; }
@@ -109,52 +107,42 @@ public:
   /// Query interferences between a single live virtual register and a live
   /// interval union.
   class Query {
-    LiveIntervalUnion *LiveUnion;
-    LiveInterval *VirtReg;
-    LiveInterval::iterator VirtRegI; // current position in VirtReg
-    SegmentIter LiveUnionI;          // current position in LiveUnion
+    const LiveIntervalUnion *LiveUnion = nullptr;
+    const LiveRange *LR = nullptr;
+    LiveRange::const_iterator LRI;  ///< current position in LR
+    ConstSegmentIter LiveUnionI;    ///< current position in LiveUnion
     SmallVector<LiveInterval*,4> InterferingVRegs;
-    bool CheckedFirstInterference;
-    bool SeenAllInterferences;
-    bool SeenUnspillableVReg;
-    unsigned Tag, UserTag;
+    bool CheckedFirstInterference = false;
+    bool SeenAllInterferences = false;
+    unsigned Tag = 0;
+    unsigned UserTag = 0;
 
-  public:
-    Query(): LiveUnion(), VirtReg(), Tag(0), UserTag(0) {}
-
-    Query(LiveInterval *VReg, LiveIntervalUnion *LIU):
-      LiveUnion(LIU), VirtReg(VReg), CheckedFirstInterference(false),
-      SeenAllInterferences(false), SeenUnspillableVReg(false)
-    {}
-
-    void clear() {
-      LiveUnion = nullptr;
-      VirtReg = nullptr;
+    void reset(unsigned NewUserTag, const LiveRange &NewLR,
+               const LiveIntervalUnion &NewLiveUnion) {
+      LiveUnion = &NewLiveUnion;
+      LR = &NewLR;
       InterferingVRegs.clear();
       CheckedFirstInterference = false;
       SeenAllInterferences = false;
-      SeenUnspillableVReg = false;
-      Tag = 0;
-      UserTag = 0;
+      Tag = NewLiveUnion.getTag();
+      UserTag = NewUserTag;
     }
 
-    void init(unsigned UTag, LiveInterval *VReg, LiveIntervalUnion *LIU) {
-      assert(VReg && LIU && "Invalid arguments");
-      if (UserTag == UTag && VirtReg == VReg &&
-          LiveUnion == LIU && !LIU->changedSince(Tag)) {
+  public:
+    Query() = default;
+    Query(const LiveRange &LR, const LiveIntervalUnion &LIU):
+      LiveUnion(&LIU), LR(&LR) {}
+    Query(const Query &) = delete;
+    Query &operator=(const Query &) = delete;
+
+    void init(unsigned NewUserTag, const LiveRange &NewLR,
+              const LiveIntervalUnion &NewLiveUnion) {
+      if (UserTag == NewUserTag && LR == &NewLR && LiveUnion == &NewLiveUnion &&
+          !NewLiveUnion.changedSince(Tag)) {
         // Retain cached results, e.g. firstInterference.
         return;
       }
-      clear();
-      LiveUnion = LIU;
-      VirtReg = VReg;
-      Tag = LIU->getTag();
-      UserTag = UTag;
-    }
-
-    LiveInterval &virtReg() const {
-      assert(VirtReg && "uninitialized");
-      return *VirtReg;
+      reset(NewUserTag, NewLR, NewLiveUnion);
     }
 
     // Does this live virtual register interfere with the union?
@@ -162,7 +150,8 @@ public:
 
     // Count the virtual registers in this union that interfere with this
     // query's live virtual register, up to maxInterferingRegs.
-    unsigned collectInterferingVRegs(unsigned MaxInterferingRegs = UINT_MAX);
+    unsigned collectInterferingVRegs(
+        unsigned MaxInterferingRegs = std::numeric_limits<unsigned>::max());
 
     // Was this virtual register visited during collectInterferingVRegs?
     bool isSeenInterference(LiveInterval *VReg) const;
@@ -170,25 +159,19 @@ public:
     // Did collectInterferingVRegs collect all interferences?
     bool seenAllInterferences() const { return SeenAllInterferences; }
 
-    // Did collectInterferingVRegs encounter an unspillable vreg?
-    bool seenUnspillableVReg() const { return SeenUnspillableVReg; }
-
     // Vector generated by collectInterferingVRegs.
     const SmallVectorImpl<LiveInterval*> &interferingVRegs() const {
       return InterferingVRegs;
     }
-
-  private:
-    Query(const Query&) = delete;
-    void operator=(const Query&) = delete;
   };
 
   // Array of LiveIntervalUnions.
   class Array {
-    unsigned Size;
-    LiveIntervalUnion *LIUs;
+    unsigned Size = 0;
+    LiveIntervalUnion *LIUs = nullptr;
+
   public:
-    Array() : Size(0), LIUs(nullptr) {}
+    Array() = default;
     ~Array() { clear(); }
 
     // Initialize the array to have Size entries.
@@ -213,4 +196,4 @@ public:
 
 } // end namespace llvm
 
-#endif // !defined(LLVM_CODEGEN_LIVEINTERVALUNION_H)
+#endif // LLVM_CODEGEN_LIVEINTERVALUNION_H

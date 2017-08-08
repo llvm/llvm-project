@@ -15,11 +15,11 @@
 
 using namespace llvm;
 
-bool OrcExecutionTest::NativeTargetInitialized = false;
+bool OrcNativeTarget::NativeTargetInitialized = false;
 
 ModuleBuilder::ModuleBuilder(LLVMContext &Context, StringRef Triple,
                              StringRef Name)
-  : M(new Module(Name, Context)),
-    Builder(Context) {
-  M->setTargetTriple(Triple);
+  : M(new Module(Name, Context)) {
+  if (Triple != "")
+    M->setTargetTriple(Triple);
 }

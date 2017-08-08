@@ -1,5 +1,4 @@
-; RUN: llc -aarch64-extr-generation=true -verify-machineinstrs < %s \
-; RUN: -march=arm64 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -verify-machineinstrs | FileCheck %s
 
 define i64 @ror_i64(i64 %in) {
 ; CHECK-LABEL: ror_i64:

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -analyze -analyzer-checker=debug.DumpCFG %s 2>&1 | FileCheck %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=debug.DumpCFG %s 2>&1 | FileCheck %s
 
 class A {
 public:
@@ -61,7 +61,7 @@ class TestDelegating {
 // CHECK:    6: B([B1.5]) (Base initializer)
 // CHECK:    7:  (CXXConstructExpr, class A)
 // CHECK:    8: A([B1.7]) (Base initializer)
-// CHECK:    9: /*implicit*/int()
+// CHECK:    9: /*implicit*/(int)0
 // CHECK:   10: i([B1.9]) (Member initializer)
 // CHECK:   11: this
 // CHECK:   12: [B1.11]->i

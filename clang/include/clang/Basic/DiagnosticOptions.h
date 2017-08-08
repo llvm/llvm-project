@@ -63,11 +63,15 @@ public:
   enum TextDiagnosticFormat { Clang, MSVC, Vi };
 
   // Default values.
-  enum { DefaultTabStop = 8, MaxTabStop = 100,
+  enum {
+    DefaultTabStop = 8,
+    MaxTabStop = 100,
     DefaultMacroBacktraceLimit = 6,
     DefaultTemplateBacktraceLimit = 10,
     DefaultConstexprBacktraceLimit = 10,
-    DefaultSpellCheckingLimit = 50 };
+    DefaultSpellCheckingLimit = 50,
+    DefaultSnippetLineLimit = 1,
+  };
 
   // Define simple diagnostic options (with no accessors).
 #define DIAGOPT(Name, Bits, Default) unsigned Name : Bits;

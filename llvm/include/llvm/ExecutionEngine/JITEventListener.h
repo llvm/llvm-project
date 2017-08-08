@@ -15,21 +15,23 @@
 #ifndef LLVM_EXECUTIONENGINE_JITEVENTLISTENER_H
 #define LLVM_EXECUTIONENGINE_JITEVENTLISTENER_H
 
-#include "RuntimeDyld.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/Support/DataTypes.h"
+#include <cstdint>
 #include <vector>
 
 namespace llvm {
-class Function;
+
+class IntelJITEventsWrapper;
 class MachineFunction;
 class OProfileWrapper;
-class IntelJITEventsWrapper;
 
 namespace object {
-  class ObjectFile;
-}
+
+class ObjectFile;
+
+} // end namespace object
 
 /// JITEvent_EmittedFunctionDetails - Helper struct for containing information
 /// about a generated machine code function.
@@ -57,11 +59,11 @@ struct JITEvent_EmittedFunctionDetails {
 /// The default implementation of each method does nothing.
 class JITEventListener {
 public:
-  typedef JITEvent_EmittedFunctionDetails EmittedFunctionDetails;
+  using EmittedFunctionDetails = JITEvent_EmittedFunctionDetails;
 
 public:
-  JITEventListener() {}
-  virtual ~JITEventListener() {}
+  JITEventListener() = default;
+  virtual ~JITEventListener() = default;
 
   /// NotifyObjectEmitted - Called after an object has been successfully
   /// emitted to memory.  NotifyFunctionEmitted will not be called for
@@ -105,7 +107,6 @@ public:
   static JITEventListener *createOProfileJITEventListener(
                                       OProfileWrapper* AlternativeImpl);
 #else
-
   static JITEventListener *createOProfileJITEventListener() { return nullptr; }
 
   static JITEventListener *createOProfileJITEventListener(
@@ -113,10 +114,11 @@ public:
     return nullptr;
   }
 #endif // USE_OPROFILE
+
 private:
   virtual void anchor();
 };
 
-} // end namespace llvm.
+} // end namespace llvm
 
-#endif // defined LLVM_EXECUTIONENGINE_JITEVENTLISTENER_H
+#endif // LLVM_EXECUTIONENGINE_JITEVENTLISTENER_H

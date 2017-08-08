@@ -119,7 +119,7 @@ collectParamDecls(const CXXConstructorDecl *Ctor,
 PassByValueCheck::PassByValueCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.getLocalOrGlobal("IncludeStyle", "llvm"))),
+          Options.get("IncludeStyle", "llvm"))),
       ValuesOnly(Options.get("ValuesOnly", 0) != 0) {}
 
 void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

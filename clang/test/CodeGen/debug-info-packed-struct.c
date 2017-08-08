@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -x c -debug-info-kind=limited -emit-llvm -triple x86_64-apple-darwin -o - %s | FileCheck %s
 
+// CHECK: %struct.layout3 = type <{ i8, [3 x i8], %struct.size8_pack4, i8, [3 x i8] }>
 // CHECK: %struct.layout0 = type { i8, %struct.size8, i8 }
 // CHECK: %struct.layout1 = type <{ i8, %struct.size8_anon, i8, [2 x i8] }>
 // CHECK: %struct.layout2 = type <{ i8, %struct.size8_pack1, i8 }>
-// CHECK: %struct.layout3 = type <{ i8, [3 x i8], %struct.size8_pack4, i8, [3 x i8] }>
 
 // ---------------------------------------------------------------------
 // Not packed.
@@ -19,9 +19,9 @@ struct layout0 {
 };
 // CHECK: l0_ofs0
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "l0_ofs8",
-// CHECK-SAME:     {{.*}}size: 64, align: 64, offset: 64)
+// CHECK-SAME:     {{.*}}size: 64, offset: 64)
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "l0_ofs16",
-// CHECK-SAME:     {{.*}}size: 1, align: 32, offset: 128)
+// CHECK-SAME:     {{.*}}size: 1, offset: 128, flags: DIFlagBitField, extraData: i64 128)
 
 
 // ---------------------------------------------------------------------
@@ -38,9 +38,9 @@ struct layout1 {
 };
 // CHECK: l1_ofs0
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "l1_ofs1",
-// CHECK-SAME:     {{.*}}size: 64, align: 8, offset: 8)
+// CHECK-SAME:     {{.*}}size: 64, offset: 8)
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "l1_ofs9",
-// CHECK-SAME:     {{.*}}size: 1, align: 32, offset: 72)
+// CHECK-SAME:     {{.*}}size: 1, offset: 72, flags: DIFlagBitField, extraData: i64 72)
 
 
 // ---------------------------------------------------------------------
@@ -59,9 +59,9 @@ struct layout2 {
 #pragma pack()
 // CHECK: l2_ofs0
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "l2_ofs1",
-// CHECK-SAME:     {{.*}}size: 64, align: 8, offset: 8)
+// CHECK-SAME:     {{.*}}size: 64, offset: 8)
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "l2_ofs9",
-// CHECK-SAME:     {{.*}}size: 1, align: 32, offset: 72)
+// CHECK-SAME:     {{.*}}size: 1, offset: 72, flags: DIFlagBitField, extraData: i64 72)
 
 
 
@@ -81,11 +81,11 @@ struct layout3 {
 #pragma pack()
 // CHECK: l3_ofs0
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "l3_ofs4",
-// CHECK-SAME:     {{.*}}size: 64, align: 32, offset: 32)
+// CHECK-SAME:     {{.*}}size: 64, offset: 32)
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "l3_ofs12",
-// CHECK-SAME:     {{.*}}size: 1, align: 32, offset: 96)
+// CHECK-SAME:     {{.*}}size: 1, offset: 96, flags: DIFlagBitField, extraData: i64 96)
 
+struct layout3 l3;
 struct layout0 l0;
 struct layout1 l1;
 struct layout2 l2;
-struct layout3 l3;

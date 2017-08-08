@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/Passes.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/Analysis/Passes.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
@@ -50,7 +50,7 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequiredTransitive<AAResultsWrapperPass>();
-      AU.addRequiredTransitive<MemoryDependenceAnalysis>();
+      AU.addRequiredTransitive<MemoryDependenceWrapperPass>();
       AU.setPreservesAll();
     }
 
@@ -79,7 +79,7 @@ namespace {
 char MemDepPrinter::ID = 0;
 INITIALIZE_PASS_BEGIN(MemDepPrinter, "print-memdeps",
                       "Print MemDeps of function", false, true)
-INITIALIZE_PASS_DEPENDENCY(MemoryDependenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_END(MemDepPrinter, "print-memdeps",
                       "Print MemDeps of function", false, true)
 
@@ -92,7 +92,7 @@ const char *const MemDepPrinter::DepTypeStr[]
 
 bool MemDepPrinter::runOnFunction(Function &F) {
   this->F = &F;
-  MemoryDependenceAnalysis &MDA = getAnalysis<MemoryDependenceAnalysis>();
+  MemoryDependenceResults &MDA = getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
 
   // All this code uses non-const interfaces because MemDep is not
   // const-friendly, though nothing is actually modified.
@@ -107,14 +107,13 @@ bool MemDepPrinter::runOnFunction(Function &F) {
       Deps[Inst].insert(std::make_pair(getInstTypePair(Res),
                                        static_cast<BasicBlock *>(nullptr)));
     } else if (auto CS = CallSite(Inst)) {
-      const MemoryDependenceAnalysis::NonLocalDepInfo &NLDI =
+      const MemoryDependenceResults::NonLocalDepInfo &NLDI =
         MDA.getNonLocalCallDependency(CS);
 
       DepSet &InstDeps = Deps[Inst];
-      for (MemoryDependenceAnalysis::NonLocalDepInfo::const_iterator
-           I = NLDI.begin(), E = NLDI.end(); I != E; ++I) {
-        const MemDepResult &Res = I->getResult();
-        InstDeps.insert(std::make_pair(getInstTypePair(Res), I->getBB()));
+      for (const NonLocalDepEntry &I : NLDI) {
+        const MemDepResult &Res = I.getResult();
+        InstDeps.insert(std::make_pair(getInstTypePair(Res), I.getBB()));
       }
     } else {
       SmallVector<NonLocalDepResult, 4> NLDI;
@@ -123,10 +122,9 @@ bool MemDepPrinter::runOnFunction(Function &F) {
       MDA.getNonLocalPointerDependency(Inst, NLDI);
 
       DepSet &InstDeps = Deps[Inst];
-      for (SmallVectorImpl<NonLocalDepResult>::const_iterator
-           I = NLDI.begin(), E = NLDI.end(); I != E; ++I) {
-        const MemDepResult &Res = I->getResult();
-        InstDeps.insert(std::make_pair(getInstTypePair(Res), I->getBB()));
+      for (const NonLocalDepResult &I : NLDI) {
+        const MemDepResult &Res = I.getResult();
+        InstDeps.insert(std::make_pair(getInstTypePair(Res), I.getBB()));
       }
     }
   }

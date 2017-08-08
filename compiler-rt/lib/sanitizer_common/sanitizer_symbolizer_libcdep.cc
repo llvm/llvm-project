@@ -64,15 +64,16 @@ SymbolizedStack *Symbolizer::SymbolizePC(uptr addr) {
   BlockingMutexLock l(&mu_);
   const char *module_name;
   uptr module_offset;
+  ModuleArch arch;
   SymbolizedStack *res = SymbolizedStack::New(addr);
-  if (!FindModuleNameAndOffsetForAddress(addr, &module_name, &module_offset))
+  if (!FindModuleNameAndOffsetForAddress(addr, &module_name, &module_offset,
+                                         &arch))
     return res;
   // Always fill data about module name and offset.
-  res->info.FillModuleInfo(module_name, module_offset);
-  for (auto iter = Iterator(&tools_); iter.hasNext();) {
-    auto *tool = iter.next();
+  res->info.FillModuleInfo(module_name, module_offset, arch);
+  for (auto &tool : tools_) {
     SymbolizerScope sym_scope(this);
-    if (tool->SymbolizePC(addr, res)) {
+    if (tool.SymbolizePC(addr, res)) {
       return res;
     }
   }
@@ -83,15 +84,17 @@ bool Symbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   BlockingMutexLock l(&mu_);
   const char *module_name;
   uptr module_offset;
-  if (!FindModuleNameAndOffsetForAddress(addr, &module_name, &module_offset))
+  ModuleArch arch;
+  if (!FindModuleNameAndOffsetForAddress(addr, &module_name, &module_offset,
+                                         &arch))
     return false;
   info->Clear();
   info->module = internal_strdup(module_name);
   info->module_offset = module_offset;
-  for (auto iter = Iterator(&tools_); iter.hasNext();) {
-    auto *tool = iter.next();
+  info->module_arch = arch;
+  for (auto &tool : tools_) {
     SymbolizerScope sym_scope(this);
-    if (tool->SymbolizeData(addr, info)) {
+    if (tool.SymbolizeData(addr, info)) {
       return true;
     }
   }
@@ -102,8 +105,9 @@ bool Symbolizer::GetModuleNameAndOffsetForPC(uptr pc, const char **module_name,
                                              uptr *module_address) {
   BlockingMutexLock l(&mu_);
   const char *internal_module_name = nullptr;
+  ModuleArch arch;
   if (!FindModuleNameAndOffsetForAddress(pc, &internal_module_name,
-                                         module_address))
+                                         module_address, &arch))
     return false;
 
   if (module_name)
@@ -113,19 +117,17 @@ bool Symbolizer::GetModuleNameAndOffsetForPC(uptr pc, const char **module_name,
 
 void Symbolizer::Flush() {
   BlockingMutexLock l(&mu_);
-  for (auto iter = Iterator(&tools_); iter.hasNext();) {
-    auto *tool = iter.next();
+  for (auto &tool : tools_) {
     SymbolizerScope sym_scope(this);
-    tool->Flush();
+    tool.Flush();
   }
 }
 
 const char *Symbolizer::Demangle(const char *name) {
   BlockingMutexLock l(&mu_);
-  for (auto iter = Iterator(&tools_); iter.hasNext();) {
-    auto *tool = iter.next();
+  for (auto &tool : tools_) {
     SymbolizerScope sym_scope(this);
-    if (const char *demangled = tool->Demangle(name))
+    if (const char *demangled = tool.Demangle(name))
       return demangled;
   }
   return PlatformDemangle(name);
@@ -138,28 +140,26 @@ void Symbolizer::PrepareForSandboxing() {
 
 bool Symbolizer::FindModuleNameAndOffsetForAddress(uptr address,
                                                    const char **module_name,
-                                                   uptr *module_offset) {
-  LoadedModule *module = FindModuleForAddress(address);
-  if (module == 0)
+                                                   uptr *module_offset,
+                                                   ModuleArch *module_arch) {
+  const LoadedModule *module = FindModuleForAddress(address);
+  if (module == nullptr)
     return false;
   *module_name = module->full_name();
   *module_offset = address - module->base_address();
+  *module_arch = module->arch();
   return true;
 }
 
-LoadedModule *Symbolizer::FindModuleForAddress(uptr address) {
+const LoadedModule *Symbolizer::FindModuleForAddress(uptr address) {
   bool modules_were_reloaded = false;
   if (!modules_fresh_) {
-    for (uptr i = 0; i < n_modules_; i++)
-      modules_[i].clear();
-    n_modules_ =
-        GetListOfModules(modules_, kMaxNumberOfModules, /* filter */ nullptr);
-    CHECK_GT(n_modules_, 0);
-    CHECK_LT(n_modules_, kMaxNumberOfModules);
+    modules_.init();
+    RAW_CHECK(modules_.size() > 0);
     modules_fresh_ = true;
     modules_were_reloaded = true;
   }
-  for (uptr i = 0; i < n_modules_; i++) {
+  for (uptr i = 0; i < modules_.size(); i++) {
     if (modules_[i].containsAddress(address)) {
       return &modules_[i];
     }
@@ -205,6 +205,8 @@ class LLVMSymbolizerProcess : public SymbolizerProcess {
            buffer[length - 2] == '\n';
   }
 
+  // When adding a new architecture, don't forget to also update
+  // script/asan_symbolize.py and sanitizer_common.h.
   void GetArgV(const char *path_to_binary,
                const char *(&argv)[kArgVMax]) const override {
 #if defined(__x86_64h__)
@@ -213,10 +215,18 @@ class LLVMSymbolizerProcess : public SymbolizerProcess {
     const char* const kSymbolizerArch = "--default-arch=x86_64";
 #elif defined(__i386__)
     const char* const kSymbolizerArch = "--default-arch=i386";
-#elif defined(__powerpc64__) && defined(__BIG_ENDIAN__)
+#elif defined(__aarch64__)
+    const char* const kSymbolizerArch = "--default-arch=arm64";
+#elif defined(__arm__)
+    const char* const kSymbolizerArch = "--default-arch=arm";
+#elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
     const char* const kSymbolizerArch = "--default-arch=powerpc64";
-#elif defined(__powerpc64__) && defined(__LITTLE_ENDIAN__)
+#elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     const char* const kSymbolizerArch = "--default-arch=powerpc64le";
+#elif defined(__s390x__)
+    const char* const kSymbolizerArch = "--default-arch=s390x";
+#elif defined(__s390__)
+    const char* const kSymbolizerArch = "--default-arch=s390";
 #else
     const char* const kSymbolizerArch = "--default-arch=unknown";
 #endif
@@ -242,25 +252,21 @@ static const char *ParseFileLineInfo(AddressInfo *info, const char *str) {
   char *file_line_info = 0;
   str = ExtractToken(str, "\n", &file_line_info);
   CHECK(file_line_info);
-  // Parse the last :<int>, which must be there.
-  char *last_colon = internal_strrchr(file_line_info, ':');
-  CHECK(last_colon);
-  int line_or_column = internal_atoll(last_colon + 1);
-  // Truncate the string at the last colon and find the next-to-last colon.
-  *last_colon = '\0';
-  last_colon = internal_strrchr(file_line_info, ':');
-  if (last_colon && IsDigit(last_colon[1])) {
-    // If the second-to-last colon is followed by a digit, it must be the line
-    // number, and the previous parsed number was a column.
-    info->line = internal_atoll(last_colon + 1);
-    info->column = line_or_column;
-    *last_colon = '\0';
-  } else {
-    // Otherwise, we have line info but no column info.
-    info->line = line_or_column;
-    info->column = 0;
+
+  if (uptr size = internal_strlen(file_line_info)) {
+    char *back = file_line_info + size - 1;
+    for (int i = 0; i < 2; ++i) {
+      while (back > file_line_info && IsDigit(*back)) --back;
+      if (*back != ':' || !IsDigit(back[1])) break;
+      info->column = info->line;
+      info->line = internal_atoll(back + 1);
+      // Truncate the string at the colon to keep only filename.
+      *back = '\0';
+      --back;
+    }
+    ExtractToken(file_line_info, "", &info->file);
   }
-  ExtractToken(file_line_info, "", &info->file);
+
   InternalFree(file_line_info);
   return str;
 }
@@ -288,7 +294,8 @@ void ParseSymbolizePCOutput(const char *str, SymbolizedStack *res) {
       top_frame = false;
     } else {
       cur = SymbolizedStack::New(res->info.address);
-      cur->info.FillModuleInfo(res->info.module, res->info.module_offset);
+      cur->info.FillModuleInfo(res->info.module, res->info.module_offset,
+                               res->info.module_arch);
       last->next = cur;
       last = cur;
     }
@@ -321,8 +328,10 @@ void ParseSymbolizeDataOutput(const char *str, DataInfo *info) {
 }
 
 bool LLVMSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
-  if (const char *buf = SendCommand(/*is_data*/ false, stack->info.module,
-                                    stack->info.module_offset)) {
+  AddressInfo *info = &stack->info;
+  const char *buf = FormatAndSendCommand(
+      /*is_data*/ false, info->module, info->module_offset, info->module_arch);
+  if (buf) {
     ParseSymbolizePCOutput(buf, stack);
     return true;
   }
@@ -330,8 +339,9 @@ bool LLVMSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
 }
 
 bool LLVMSymbolizer::SymbolizeData(uptr addr, DataInfo *info) {
-  if (const char *buf =
-          SendCommand(/*is_data*/ true, info->module, info->module_offset)) {
+  const char *buf = FormatAndSendCommand(
+      /*is_data*/ true, info->module, info->module_offset, info->module_arch);
+  if (buf) {
     ParseSymbolizeDataOutput(buf, info);
     info->start += (addr - info->module_offset); // Add the base address.
     return true;
@@ -339,11 +349,27 @@ bool LLVMSymbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   return false;
 }
 
-const char *LLVMSymbolizer::SendCommand(bool is_data, const char *module_name,
-                                        uptr module_offset) {
+const char *LLVMSymbolizer::FormatAndSendCommand(bool is_data,
+                                                 const char *module_name,
+                                                 uptr module_offset,
+                                                 ModuleArch arch) {
   CHECK(module_name);
-  internal_snprintf(buffer_, kBufferSize, "%s\"%s\" 0x%zx\n",
-                    is_data ? "DATA " : "", module_name, module_offset);
+  const char *is_data_str = is_data ? "DATA " : "";
+  if (arch == kModuleArchUnknown) {
+    if (internal_snprintf(buffer_, kBufferSize, "%s\"%s\" 0x%zx\n", is_data_str,
+                          module_name,
+                          module_offset) >= static_cast<int>(kBufferSize)) {
+      Report("WARNING: Command buffer too small");
+      return nullptr;
+    }
+  } else {
+    if (internal_snprintf(buffer_, kBufferSize, "%s\"%s:%s\" 0x%zx\n",
+                          is_data_str, module_name, ModuleArchToString(arch),
+                          module_offset) >= static_cast<int>(kBufferSize)) {
+      Report("WARNING: Command buffer too small");
+      return nullptr;
+    }
+  }
   return symbolizer_process_->SendCommand(buffer_);
 }
 
@@ -359,7 +385,23 @@ SymbolizerProcess::SymbolizerProcess(const char *path, bool use_forkpty)
   CHECK_NE(path_[0], '\0');
 }
 
+static bool IsSameModule(const char* path) {
+  if (const char* ProcessName = GetProcessName()) {
+    if (const char* SymbolizerName = StripModuleName(path)) {
+      return !internal_strcmp(ProcessName, SymbolizerName);
+    }
+  }
+  return false;
+}
+
 const char *SymbolizerProcess::SendCommand(const char *command) {
+  if (failed_to_start_)
+    return nullptr;
+  if (IsSameModule(path_)) {
+    Report("WARNING: Symbolizer was blocked from starting itself!\n");
+    failed_to_start_ = true;
+    return nullptr;
+  }
   for (; times_restarted_ < kMaxTimesRestarted; times_restarted_++) {
     // Start or restart symbolizer if we failed to send command to it.
     if (const char *res = SendCommandImpl(command))
@@ -408,6 +450,11 @@ bool SymbolizerProcess::ReadFromSymbolizer(char *buffer, uptr max_length) {
     read_len += just_read;
     if (ReachedEndOfOutput(buffer, read_len))
       break;
+    if (read_len + 1 == max_length) {
+      Report("WARNING: Symbolizer buffer too small");
+      read_len = 0;
+      break;
+    }
   }
   buffer[read_len] = '\0';
   return true;

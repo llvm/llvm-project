@@ -30,7 +30,7 @@ void J() {
 // CHECK: skip-function-bodies.mm:3:7: ClassDecl=A:3:7 (Definition) Extent=[3:1 - 14:2]
 // CHECK: skip-function-bodies.mm:4:9: ClassDecl=B:4:9 (Definition) Extent=[4:3 - 4:13]
 // CHECK: skip-function-bodies.mm:6:1: CXXAccessSpecifier=:6:1 (Definition) Extent=[6:1 - 6:8]
-// CHECK: skip-function-bodies.mm:7:3: CXXConstructor=A:7:3 Extent=[7:3 - 7:6]
+// CHECK: skip-function-bodies.mm:7:3: CXXConstructor=A:7:3 (default constructor) Extent=[7:3 - 7:6]
 // CHECK-NOT: skip-function-bodies.mm:8:12: StructDecl=C:8:12 (Definition) Extent=[8:5 - 10:6]
 // CHECK-NOT: skip-function-bodies.mm:9:12: CXXMethod=d:9:12 (Definition) Extent=[9:7 - 9:18]
 // CHECK: skip-function-bodies.mm:13:13: TypedefDecl=E:13:13 (Definition) Extent=[13:3 - 13:14]

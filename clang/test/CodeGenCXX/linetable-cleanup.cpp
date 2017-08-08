@@ -1,10 +1,12 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-apple-darwin10 -std=c++98 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-apple-darwin10 -std=c++11 %s -o - | FileCheck %s
 
 // Check the line numbers for cleanup code with EH in combination with
 // simple return expressions.
 
 // CHECK: define {{.*}}foo
-// CHECK: call void @_ZN1CD1Ev(%class.C* {{.*}}), !dbg ![[RET:[0-9]+]]
+// CHECK: call void @_ZN1CD1Ev(%class.C* {{.*}}){{( #[0-9])?}}, !dbg ![[RET:[0-9]+]]
 // CHECK: ret i32 0, !dbg ![[RET]]
 
 // CHECK: define {{.*}}bar

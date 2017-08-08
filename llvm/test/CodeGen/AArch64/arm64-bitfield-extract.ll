@@ -1,5 +1,5 @@
 ; RUN: opt -codegenprepare -mtriple=arm64-apple=ios -S -o - %s | FileCheck --check-prefix=OPT %s
-; RUN: llc < %s -march=arm64 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
 %struct.X = type { i8, i8, [2 x i8] }
 %struct.Y = type { i32, i8 }
 %struct.Z = type { i8, i8, [2 x i8], i16 }
@@ -41,7 +41,7 @@ define i32 @bar(i64 %cav1.coerce) nounwind {
 
 define void @fct1(%struct.Z* nocapture %x, %struct.A* nocapture %y) nounwind optsize ssp {
 ; CHECK-LABEL: fct1:
-; CHECK: ubfx
+; CHECK: ubfx x{{[0-9]+}}, x{{[0-9]+}}
 ; CHECK-NOT: and
 ; CHECK: ret
 
@@ -348,8 +348,8 @@ entry:
 ; CHECK-LABEL: fct16:
 ; CHECK: ldr [[REG1:w[0-9]+]],
 ; Create the constant
-; CHECK: movz [[REGCST:w[0-9]+]], #0x1a, lsl #16
-; CHECK: movk [[REGCST]], #0x8160
+; CHECK: mov [[REGCST:w[0-9]+]], #33120
+; CHECK: movk [[REGCST]], #26, lsl #16
 ; Do the masking
 ; CHECK: and [[REG2:w[0-9]+]], [[REG1]], [[REGCST]]
 ; CHECK-NEXT: bfxil [[REG2]], w1, #16, #3
@@ -377,8 +377,8 @@ entry:
 ; CHECK-LABEL: fct17:
 ; CHECK: ldr [[REG1:x[0-9]+]],
 ; Create the constant
-; CHECK: movz w[[REGCST:[0-9]+]], #0x1a, lsl #16
-; CHECK: movk w[[REGCST]], #0x8160
+; CHECK: mov w[[REGCST:[0-9]+]], #33120
+; CHECK: movk w[[REGCST]], #26, lsl #16
 ; Do the masking
 ; CHECK: and [[REG2:x[0-9]+]], [[REG1]], x[[REGCST]]
 ; CHECK-NEXT: bfxil [[REG2]], x1, #16, #3
@@ -529,4 +529,34 @@ define i16 @test_ignored_rightbits(i32 %dst, i32 %in) {
 ; CHECK: bfi {{w[0-9]+}}, {{w[0-9]+}}, #8, #7
 
   ret i16 %conv19
+}
+
+; The following test excercises the case where we have a BFI
+; instruction with the same input in both operands. We need to
+; track the useful bits through both operands.
+; CHECK-LABEL: sameOperandBFI
+; CHECK: lsr
+; CHECK: and
+; CHECK: bfi
+; CHECK: bfi
+define void @sameOperandBFI(i64 %src, i64 %src2, i16 *%ptr) {
+entry:
+  %shr47 = lshr i64 %src, 47
+  %src2.trunc = trunc i64 %src2 to i32
+  br i1 undef, label %end, label %if.else
+
+if.else:
+  %and3 = and i32 %src2.trunc, 3
+  %shl2 = shl nuw nsw i64 %shr47, 2
+  %shl2.trunc = trunc i64 %shl2 to i32
+  %and12 = and i32 %shl2.trunc, 12
+  %BFISource = or i32 %and3, %and12         ; ...00000ABCD
+  %BFIRHS = shl nuw nsw i32 %BFISource, 4   ; ...0ABCD0000
+  %BFI = or i32 %BFIRHS, %BFISource         ; ...0ABCDABCD
+  %BFItrunc = trunc i32 %BFI to i16
+  store i16 %BFItrunc, i16* %ptr, align 4
+  br label %end
+
+end:
+  ret void
 }

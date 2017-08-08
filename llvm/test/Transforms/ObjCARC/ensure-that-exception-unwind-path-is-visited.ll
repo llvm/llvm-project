@@ -41,10 +41,10 @@ entry:
   %tmp2 = bitcast %struct._class_t* %tmp to i8*, !dbg !37
 ; CHECK: call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %tmp2, i8* %tmp1)
   %call = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %tmp2, i8* %tmp1), !dbg !37, !clang.arc.no_objc_arc_exceptions !38
-  call void @llvm.dbg.value(metadata i8* %call, i64 0, metadata !25, metadata !DIExpression()), !dbg !37
+  call void @llvm.dbg.value(metadata i8* %call, metadata !25, metadata !DIExpression()), !dbg !37
 ; CHECK: call i8* @objc_retain(i8* %call) [[NUW:#[0-9]+]]
   %tmp3 = call i8* @objc_retain(i8* %call) nounwind, !dbg !39
-  call void @llvm.dbg.value(metadata i8* %call, i64 0, metadata !25, metadata !DIExpression()), !dbg !39
+  call void @llvm.dbg.value(metadata i8* %call, metadata !25, metadata !DIExpression()), !dbg !39
   invoke fastcc void @ThrowFunc(i8* %call)
           to label %eh.cont unwind label %lpad, !dbg !40, !clang.arc.no_objc_arc_exceptions !38
 
@@ -58,7 +58,7 @@ lpad:                                             ; preds = %entry
           catch i8* null, !dbg !40
   %tmp5 = extractvalue { i8*, i32 } %tmp4, 0, !dbg !40
   %exn.adjusted = call i8* @objc_begin_catch(i8* %tmp5) nounwind, !dbg !44
-  call void @llvm.dbg.value(metadata i8 0, i64 0, metadata !21, metadata !DIExpression()), !dbg !46
+  call void @llvm.dbg.value(metadata i8 0, metadata !21, metadata !DIExpression()), !dbg !46
   call void @objc_end_catch(), !dbg !49, !clang.arc.no_objc_arc_exceptions !38
 ; CHECK: call void @objc_release(i8* %call)
   call void @objc_release(i8* %call) nounwind, !dbg !42, !clang.imprecise_release !38
@@ -87,7 +87,7 @@ declare void @objc_exception_rethrow()
 define internal fastcc void @ThrowFunc(i8* %obj) uwtable noinline ssp !dbg !27 {
 entry:
   %tmp = call i8* @objc_retain(i8* %obj) nounwind
-  call void @llvm.dbg.value(metadata i8* %obj, i64 0, metadata !32, metadata !DIExpression()), !dbg !55
+  call void @llvm.dbg.value(metadata i8* %obj, metadata !32, metadata !DIExpression()), !dbg !55
   %tmp1 = load %struct._class_t*, %struct._class_t** @"\01L_OBJC_CLASSLIST_REFERENCES_$_1", align 8, !dbg !56
   %tmp2 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_5", align 8, !dbg !56, !invariant.load !38
   %tmp3 = bitcast %struct._class_t* %tmp1 to i8*, !dbg !56
@@ -102,10 +102,10 @@ declare void @objc_release(i8*) nonlazybind
 
 declare void @NSLog(i8*, ...)
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 ; CHECK: attributes #0 = { ssp uwtable }
-; CHECK: attributes #1 = { nounwind readnone }
+; CHECK: attributes #1 = { nounwind readnone speculatable }
 ; CHECK: attributes #2 = { nonlazybind }
 ; CHECK: attributes #3 = { noinline ssp uwtable }
 ; CHECK: attributes [[NUW]] = { nounwind }
@@ -113,10 +113,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!33, !34, !35, !36, !61}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 3.3 ", isOptimized: true, runtimeVersion: 2, emissionKind: 0, file: !60, enums: !1, retainedTypes: !1, subprograms: !3, globals: !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 3.3 ", isOptimized: true, runtimeVersion: 2, emissionKind: FullDebug, file: !60, enums: !1, retainedTypes: !1, globals: !1)
 !1 = !{}
-!3 = !{!5, !27}
-!5 = distinct !DISubprogram(name: "main", line: 9, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, scopeLine: 10, file: !60, scope: !6, type: !7, variables: !11)
+!5 = distinct !DISubprogram(name: "main", line: 9, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !0, scopeLine: 10, file: !60, scope: !6, type: !7, variables: !11)
 !6 = !DIFile(filename: "test.m", directory: "/Volumes/Files/gottesmmcab/Radar/12906997")
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9}
@@ -137,7 +136,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !24 = !DIBasicType(tag: DW_TAG_base_type, name: "signed char", size: 8, align: 8, encoding: DW_ATE_signed_char)
 !25 = !DILocalVariable(name: "obj2", line: 15, scope: !26, file: !6, type: !14)
 !26 = distinct !DILexicalBlock(line: 14, column: 0, file: !60, scope: !22)
-!27 = distinct !DISubprogram(name: "ThrowFunc", line: 4, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 5, file: !60, scope: !6, type: !28, variables: !31)
+!27 = distinct !DISubprogram(name: "ThrowFunc", line: 4, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 5, file: !60, scope: !6, type: !28, variables: !31)
 !28 = !DISubroutineType(types: !29)
 !29 = !{null, !14}
 !31 = !{!32}

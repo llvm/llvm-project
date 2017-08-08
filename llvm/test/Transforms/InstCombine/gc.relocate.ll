@@ -6,19 +6,8 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 ; then the return attribute of gc.relocate is dereferenceable(N).
 
 declare zeroext i1 @return_i1()
-declare i32 @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
-declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32, i32, i32)
-
-define i32 addrspace(1)* @deref(i32 addrspace(1)* dereferenceable(8) %dparam) gc "statepoint-example" {
-; Checks that a dereferenceabler pointer
-; CHECK-LABEL: @deref
-; CHECK: call dereferenceable(8)
-entry:
-    %load = load i32, i32 addrspace(1)* %dparam
-    %tok = tail call i32 (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %dparam)
-    %relocate = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %tok,  i32 7, i32 7)
-    ret i32 addrspace(1)* %relocate
-}
+declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
+declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
 
 define i32 @explicit_nonnull(i32 addrspace(1)* nonnull %dparam) gc "statepoint-example" {
 ; Checks that a nonnull pointer
@@ -26,8 +15,8 @@ define i32 @explicit_nonnull(i32 addrspace(1)* nonnull %dparam) gc "statepoint-e
 ; CHECK: ret i32 1
 entry:
     %load = load i32, i32 addrspace(1)* %dparam
-    %tok = tail call i32 (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %dparam)
-    %relocate = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %tok,  i32 7, i32 7)
+    %tok = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %dparam)
+    %relocate = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok,  i32 7, i32 7)
     %cmp = icmp eq i32 addrspace(1)* %relocate, null
     %ret_val = select i1 %cmp, i32 0, i32 1
     ret i32 %ret_val
@@ -42,11 +31,29 @@ entry:
     br i1 %cond, label %no_gc, label %gc
 gc:
     %load = load i32, i32 addrspace(1)* %dparam
-    %tok = tail call i32 (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %dparam)
-    %relocate = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(i32 %tok,  i32 7, i32 7)
+    %tok = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %dparam)
+    %relocate = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok,  i32 7, i32 7)
     %cmp = icmp eq i32 addrspace(1)* %relocate, null
     %ret_val = select i1 %cmp, i32 0, i32 1
     ret i32 %ret_val
 no_gc:
     unreachable
 }
+
+
+; Make sure we don't crash when processing vectors
+define <2 x i8 addrspace(1)*> @vector(<2 x i8 addrspace(1)*> %obj) gc "statepoint-example" {
+entry:
+; CHECK-LABEL: @vector
+; CHECK: gc.statepoint
+; CHECK: gc.relocate
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0, <2 x i8 addrspace(1)*> %obj)
+  %obj.relocated = call coldcc <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token %safepoint_token, i32 7, i32 7) ; (%obj, %obj)
+  ret <2 x i8 addrspace(1)*> %obj.relocated
+}
+
+declare void @do_safepoint()
+
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
+declare <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token, i32, i32)

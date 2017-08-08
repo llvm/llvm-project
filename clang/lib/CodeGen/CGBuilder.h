@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGBUILDER_H
 #define LLVM_CLANG_LIB_CODEGEN_CGBUILDER_H
 
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRBuilder.h"
 #include "Address.h"
 #include "CodeGenTypeCache.h"
@@ -22,9 +23,7 @@ class CodeGenFunction;
 /// \brief This is an IRBuilder insertion helper that forwards to
 /// CodeGenFunction::InsertHelper, which adds necessary metadata to
 /// instructions.
-template <bool PreserveNames>
-class CGBuilderInserter
-    : protected llvm::IRBuilderDefaultInserter<PreserveNames> {
+class CGBuilderInserter : protected llvm::IRBuilderDefaultInserter {
 public:
   CGBuilderInserter() = default;
   explicit CGBuilderInserter(CodeGenFunction *CGF) : CGF(CGF) {}
@@ -38,17 +37,10 @@ private:
   CodeGenFunction *CGF = nullptr;
 };
 
-// Don't preserve names on values in an optimized build.
-#ifdef NDEBUG
-#define PreserveNames false
-#else
-#define PreserveNames true
-#endif
+typedef CGBuilderInserter CGBuilderInserterTy;
 
-typedef CGBuilderInserter<PreserveNames> CGBuilderInserterTy;
-
-typedef llvm::IRBuilder<PreserveNames, llvm::ConstantFolder,
-                        CGBuilderInserterTy> CGBuilderBaseTy;
+typedef llvm::IRBuilder<llvm::ConstantFolder, CGBuilderInserterTy>
+    CGBuilderBaseTy;
 
 class CGBuilderTy : public CGBuilderBaseTy {
   /// Storing a reference to the type cache here makes it a lot easier
@@ -110,11 +102,6 @@ public:
     assert(Addr->getType()->getPointerElementType() == Ty);
     return CreateAlignedLoad(Addr, Align.getQuantity(), Name);
   }
-  llvm::LoadInst *CreateAlignedLoad(llvm::Value *Addr, CharUnits Align,
-                                    bool IsVolatile,
-                                    const llvm::Twine &Name = "") {
-    return CreateAlignedLoad(Addr, Align.getQuantity(), IsVolatile, Name);
-  }
 
   // Note that we intentionally hide the CreateStore APIs that don't
   // take an alignment.
@@ -132,19 +119,6 @@ public:
   
   // FIXME: these "default-aligned" APIs should be removed,
   // but I don't feel like fixing all the builtin code right now.
-  llvm::LoadInst *CreateDefaultAlignedLoad(llvm::Value *Addr,
-                                           const llvm::Twine &Name = "") {
-    return CGBuilderBaseTy::CreateLoad(Addr, false, Name);
-  }
-  llvm::LoadInst *CreateDefaultAlignedLoad(llvm::Value *Addr,
-                                           const char *Name) {
-    return CGBuilderBaseTy::CreateLoad(Addr, false, Name);
-  }
-  llvm::LoadInst *CreateDefaultAlignedLoad(llvm::Value *Addr, bool IsVolatile,
-                                           const llvm::Twine &Name = "") {
-    return CGBuilderBaseTy::CreateLoad(Addr, IsVolatile, Name);
-  }
-
   llvm::StoreInst *CreateDefaultAlignedStore(llvm::Value *Val,
                                              llvm::Value *Addr,
                                              bool IsVolatile = false) {
@@ -193,6 +167,12 @@ public:
     return Address(CreateStructGEP(Addr.getElementType(),
                                    Addr.getPointer(), Index, Name),
                    Addr.getAlignment().alignmentAtOffset(Offset));
+  }
+  Address CreateStructGEP(Address Addr, unsigned Index,
+                          const llvm::StructLayout *Layout,
+                          const llvm::Twine &Name = "") {
+    auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
+    return CreateStructGEP(Addr, Index, Offset, Name);
   }
 
   /// Given
@@ -297,8 +277,6 @@ public:
                         Dest.getAlignment().getQuantity(), IsVolatile);
   }
 };
-
-#undef PreserveNames
 
 }  // end namespace CodeGen
 }  // end namespace clang

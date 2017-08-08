@@ -4,6 +4,8 @@
 ; RUN: opt -regions -print-region-style=bb  -analyze < %s 2>&1 | FileCheck -check-prefix=BBIT %s
 ; RUN: opt -regions -print-region-style=rn  -analyze < %s 2>&1 | FileCheck -check-prefix=RNIT %s
 
+; RUN: opt < %s -passes='print<regions>' 2>&1 | FileCheck %s
+
 define internal fastcc void @compress() nounwind {
 end33:
   br i1 1, label %end124, label %lor.lhs.false95

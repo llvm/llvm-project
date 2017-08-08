@@ -1,4 +1,4 @@
-//===-- StringTableBuilder.h - String table building utility ------*- C++ -*-=//
+//===- StringTableBuilder.h - String table building utility -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,11 +10,15 @@
 #ifndef LLVM_MC_STRINGTABLEBUILDER_H
 #define LLVM_MC_STRINGTABLEBUILDER_H
 
-#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
-#include <cassert>
+#include "llvm/ADT/StringRef.h"
+#include <cstddef>
+#include <cstdint>
 
 namespace llvm {
+
+class raw_ostream;
 
 /// \brief Utility for building string tables with deduplicated suffixes.
 class StringTableBuilder {
@@ -22,44 +26,50 @@ public:
   enum Kind { ELF, WinCOFF, MachO, RAW };
 
 private:
-  SmallString<256> StringTable;
-  DenseMap<StringRef, size_t> StringIndexMap;
+  DenseMap<CachedHashStringRef, size_t> StringIndexMap;
   size_t Size = 0;
   Kind K;
+  unsigned Alignment;
+  bool Finalized = false;
+
+  void finalizeStringTable(bool Optimize);
+  void initSize();
 
 public:
-  StringTableBuilder(Kind K);
+  StringTableBuilder(Kind K, unsigned Alignment = 1);
+  ~StringTableBuilder();
 
   /// \brief Add a string to the builder. Returns the position of S in the
   /// table. The position will be changed if finalize is used.
   /// Can only be used before the table is finalized.
-  size_t add(StringRef S);
+  size_t add(CachedHashStringRef S);
+  size_t add(StringRef S) { return add(CachedHashStringRef(S)); }
 
   /// \brief Analyze the strings and build the final table. No more strings can
   /// be added after this point.
   void finalize();
 
-  /// \brief Retrieve the string table data. Can only be used after the table
-  /// is finalized.
-  StringRef data() const {
-    assert(isFinalized());
-    return StringTable;
-  }
+  /// Finalize the string table without reording it. In this mode, offsets
+  /// returned by add will still be valid.
+  void finalizeInOrder();
 
   /// \brief Get the offest of a string in the string table. Can only be used
   /// after the table is finalized.
-  size_t getOffset(StringRef S) const;
+  size_t getOffset(CachedHashStringRef S) const;
+  size_t getOffset(StringRef S) const {
+    return getOffset(CachedHashStringRef(S));
+  }
 
-  const DenseMap<StringRef, size_t> &getMap() const { return StringIndexMap; }
   size_t getSize() const { return Size; }
   void clear();
 
+  void write(raw_ostream &OS) const;
+  void write(uint8_t *Buf) const;
+
 private:
-  bool isFinalized() const {
-    return !StringTable.empty();
-  }
+  bool isFinalized() const { return Finalized; }
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_MC_STRINGTABLEBUILDER_H

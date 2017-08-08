@@ -66,9 +66,8 @@ class WalkAST : public StmtVisitor<WalkAST> {
     // The type must be an array/pointer type.
 
     // This could be a null constant, which is allowed.
-    if (E->isNullPointerConstant(ASTC, Expr::NPC_ValueDependentIsNull))
-      return true;
-    return false;
+    return static_cast<bool>(
+        E->isNullPointerConstant(ASTC, Expr::NPC_ValueDependentIsNull));
   }
 
 public:

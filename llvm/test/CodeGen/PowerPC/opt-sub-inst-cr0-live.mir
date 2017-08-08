@@ -1,0 +1,139 @@
+# RUN: llc -start-after=machine-sink -stop-after=peephole-opt -mtriple=powerpc64-unknown-linux-gnu -o - %s | FileCheck %s
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "E-m:e-i64:64-n32:64"
+  target triple = "powerpc64-unknown-linux-gnu"
+
+  ; Function Attrs: nounwind readnone
+  declare i128 @llvm.cttz.i128(i128, i1) #0
+
+  define void @fn1(i128, i128, i1) {
+  top:
+    br label %loop
+
+  loop:                                             ; preds = %loop, %top
+    %v = phi i128 [ %3, %loop ], [ %0, %top ]
+    %u = phi i128 [ %3, %loop ], [ %1, %top ]
+    %s = sub i128 %v, %u
+    %3 = call i128 @llvm.cttz.i128(i128 %s, i1 false)
+    br label %loop
+  }
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #1
+
+  attributes #0 = { nounwind readnone }
+  attributes #1 = { nounwind }
+
+...
+---
+name:            fn1
+alignment:       2
+exposesReturnsTwice: false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: g8rc }
+  - { id: 1, class: g8rc }
+  - { id: 2, class: g8rc }
+  - { id: 3, class: g8rc }
+  - { id: 4, class: g8rc }
+  - { id: 5, class: g8rc }
+  - { id: 6, class: g8rc }
+  - { id: 7, class: g8rc }
+  - { id: 8, class: g8rc }
+  - { id: 9, class: g8rc }
+  - { id: 10, class: g8rc }
+  - { id: 11, class: g8rc }
+  - { id: 12, class: g8rc }
+  - { id: 13, class: g8rc }
+  - { id: 14, class: g8rc }
+  - { id: 15, class: g8rc_and_g8rc_nox0 }
+  - { id: 16, class: g8rc_and_g8rc_nox0 }
+  - { id: 17, class: g8rc }
+  - { id: 18, class: g8rc }
+  - { id: 19, class: g8rc }
+  - { id: 20, class: g8rc }
+  - { id: 21, class: g8rc }
+  - { id: 22, class: g8rc }
+  - { id: 23, class: g8rc }
+  - { id: 24, class: g8rc }
+  - { id: 25, class: crrc }
+  - { id: 26, class: g8rc_and_g8rc_nox0 }
+  - { id: 27, class: g8rc_and_g8rc_nox0 }
+liveins:
+  - { reg: '%x3', virtual-reg: '%6' }
+  - { reg: '%x4', virtual-reg: '%7' }
+  - { reg: '%x5', virtual-reg: '%8' }
+  - { reg: '%x6', virtual-reg: '%9' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.top:
+    successors: %bb.1.loop
+    liveins: %x3, %x4, %x5, %x6
+
+    %9 = COPY %x6
+    %8 = COPY %x5
+    %7 = COPY %x4
+    %6 = COPY %x3
+    %14 = COPY %9
+    %13 = COPY %8
+    %12 = COPY %7
+    %11 = COPY %6
+    %21 = LI8 128
+    %23 = LI8 64
+
+  bb.1.loop:
+    successors: %bb.2.loop, %bb.4
+
+    %0 = PHI %11, %bb.0.top, %4, %bb.3.loop
+    %1 = PHI %12, %bb.0.top, %5, %bb.3.loop
+    %2 = PHI %13, %bb.0.top, %4, %bb.3.loop
+    %3 = PHI %14, %bb.0.top, %5, %bb.3.loop
+    %15 = SUBFC8 %3, %1, implicit-def %carry
+    %16 = SUBFE8 %2, %0, implicit-def dead %carry, implicit %carry
+    %17 = ADDI8 %16, -1
+    %18 = ADDI8 %15, -1
+    %19 = ANDC8 killed %17, %16
+    %20 = ANDC8 killed %18, %15
+    %22 = CNTLZD killed %19
+    %24 = CNTLZD killed %20
+    %25 = CMPLDI %15, 0
+    BCC 76, %25, %bb.2.loop
+    ; CHECK: SUBFC8o %3, %1, implicit-def %carry, implicit-def %cr0
+    ; CHECK: COPY killed %cr0
+    ; CHECK: BCC
+
+  bb.4:
+    successors: %bb.3.loop
+
+    %27 = SUBF8 %24, %23
+    B %bb.3.loop
+
+  bb.2.loop:
+    successors: %bb.3.loop
+
+    %26 = SUBF8 %22, %21
+
+  bb.3.loop:
+    successors: %bb.1.loop
+
+    %5 = PHI %26, %bb.2.loop, %27, %bb.4
+    %4 = LI8 0
+    B %bb.1.loop
+
+...

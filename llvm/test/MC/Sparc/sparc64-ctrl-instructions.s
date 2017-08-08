@@ -770,6 +770,18 @@
         ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bpos,a,pt %xcc, .BB0
 
+        ! CHECK:             fba %fcc0, .BB0                        ! encoding: [0x11,0b01001AAA,A,A]
+        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
+        fba %fcc0, .BB0
+
+        ! CHECK:             fba %fcc0, .BB0                        ! encoding: [0x11,0b01001AAA,A,A]
+        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
+        fb %fcc0, .BB0
+
+        ! CHECK:             fbn %fcc0, .BB0                        ! encoding: [0x01,0b01001AAA,A,A]
+        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
+        fbn %fcc0, .BB0
+
         ! CHECK:             fbu %fcc0, .BB0                      ! encoding: [0x0f,0b01001AAA,A,A]
         ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbu %fcc0, .BB0
@@ -1217,10 +1229,4 @@
 
         ! CHECK:  rett %i7+8   ! encoding: [0x81,0xcf,0xe0,0x08]
         return %i7 + 8
-
-        ! CHECK: ta %icc, %g0 + 5               ! encoding: [0x91,0xd0,0x20,0x05]
-        ta 5
-
-        ! CHECK: te %xcc, %g0 + 3               ! encoding: [0x83,0xd0,0x30,0x03]
-        te %xcc, 3
 

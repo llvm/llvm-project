@@ -1,6 +1,6 @@
 ;RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG --check-prefix=FUNC
 ;RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s --check-prefix=CM --check-prefix=FUNC
-;RUN: llc < %s -march=amdgcn -mcpu=SI | FileCheck %s --check-prefix=SI --check-prefix=FUNC
+;RUN: llc < %s -march=amdgcn | FileCheck %s --check-prefix=SI --check-prefix=FUNC
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga | FileCheck %s --check-prefix=SI --check-prefix=FUNC
 
 ;FUNC-LABEL: {{^}}test:
@@ -11,7 +11,7 @@
 ;CM-DAG: EXP_IEEE T{{[0-9]+\.[XYZW]}}
 ;SI: v_exp_f32
 
-define void @test(float addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @test(float addrspace(1)* %out, float %in) {
 entry:
    %0 = call float @llvm.exp2.f32(float %in)
    store float %0, float addrspace(1)* %out
@@ -34,7 +34,7 @@ entry:
 ;SI: v_exp_f32
 ;SI: v_exp_f32
 
-define void @testv2(<2 x float> addrspace(1)* %out, <2 x float> %in) {
+define amdgpu_kernel void @testv2(<2 x float> addrspace(1)* %out, <2 x float> %in) {
 entry:
   %0 = call <2 x float> @llvm.exp2.v2f32(<2 x float> %in)
   store <2 x float> %0, <2 x float> addrspace(1)* %out
@@ -68,7 +68,7 @@ entry:
 ;SI: v_exp_f32
 ;SI: v_exp_f32
 ;SI: v_exp_f32
-define void @testv4(<4 x float> addrspace(1)* %out, <4 x float> %in) {
+define amdgpu_kernel void @testv4(<4 x float> addrspace(1)* %out, <4 x float> %in) {
 entry:
   %0 = call <4 x float> @llvm.exp2.v4f32(<4 x float> %in)
   store <4 x float> %0, <4 x float> addrspace(1)* %out

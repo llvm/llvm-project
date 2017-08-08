@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- negdf2vfp_test.c - Test __negdf2vfp -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,14 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "int_lib.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 
 
+#if __arm__ && __VFP_FP__
 extern COMPILER_RT_ABI double __negdf2vfp(double a);
 
-#if __arm__
 int test__negdf2vfp(double a)
 {
     double actual = __negdf2vfp(a);
@@ -32,7 +34,7 @@ int test__negdf2vfp(double a)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__negdf2vfp(1.0))
         return 1;
     if (test__negdf2vfp(HUGE_VALF))

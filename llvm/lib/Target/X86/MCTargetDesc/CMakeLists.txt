@@ -7,6 +7,4 @@ add_llvm_library(LLVMX86Desc
   X86ELFObjectWriter.cpp
   X86WinCOFFStreamer.cpp
   X86WinCOFFObjectWriter.cpp
-  X86MachORelocationInfo.cpp
-  X86ELFRelocationInfo.cpp
   )

@@ -32,3 +32,30 @@ int main ()
     Class<Test2Protocol> c2 = [c2 alloc]; //  ok
     return 0;
 }
+
+// rdar://22812517
+
+@protocol NSObject
+
+- (int)respondsToSelector:(SEL)aSelector;
+
+@end
+
+__attribute__((objc_root_class))
+@interface NSObject <NSObject>
+
+@end
+
+@protocol OtherProto
+
+- (void)otherInstanceMethod; // expected-note {{method 'otherInstanceMethod' declared here}}
+
+@end
+
+@protocol MyProto <NSObject, OtherProto>
+@end
+
+void allowInstanceMethodsFromRootProtocols(Class<MyProto> c) {
+  [c respondsToSelector: @selector(instanceMethod)]; // no warning
+  [c otherInstanceMethod]; //  expected-warning {{instance method 'otherInstanceMethod' found instead of class method 'otherInstanceMethod'}}
+}

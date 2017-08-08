@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=unix.Malloc %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=unix.Malloc %s
 // Do not crash due to division by zero
 
 int f(unsigned int a) {

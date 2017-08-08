@@ -60,6 +60,12 @@ struct CodeGenTypeCache {
     llvm::PointerType *Int8PtrPtrTy;
   };
 
+  /// void* in alloca address space
+  union {
+    llvm::PointerType *AllocaVoidPtrTy;
+    llvm::PointerType *AllocaInt8PtrTy;
+  };
+
   /// The size and alignment of the builtin C type 'int'.  This comes
   /// up enough in various ABI lowering tasks to be worth pre-computing.
   union {
@@ -80,9 +86,16 @@ struct CodeGenTypeCache {
   union {
     unsigned char PointerAlignInBytes;
     unsigned char PointerSizeInBytes;
+  };
+
+  /// The size and alignment of size_t.
+  union {
     unsigned char SizeSizeInBytes; // sizeof(size_t)
     unsigned char SizeAlignInBytes;
   };
+
+  unsigned ASTAllocaAddressSpace;
+
   CharUnits getSizeSize() const {
     return CharUnits::fromQuantity(SizeSizeInBytes);
   }
@@ -100,6 +113,8 @@ struct CodeGenTypeCache {
   llvm::CallingConv::ID getRuntimeCC() const { return RuntimeCC; }
   llvm::CallingConv::ID BuiltinCC;
   llvm::CallingConv::ID getBuiltinCC() const { return BuiltinCC; }
+
+  unsigned getASTAllocaAddressSpace() const { return ASTAllocaAddressSpace; }
 };
 
 }  // end namespace CodeGen

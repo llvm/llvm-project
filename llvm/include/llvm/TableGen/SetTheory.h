@@ -50,8 +50,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
 #include <map>
+#include <memory>
 #include <vector>
 
 namespace llvm {
@@ -62,19 +64,20 @@ class Record;
 
 class SetTheory {
 public:
-  typedef std::vector<Record*> RecVec;
-  typedef SmallSetVector<Record*, 16> RecSet;
+  using RecVec = std::vector<Record *>;
+  using RecSet = SmallSetVector<Record *, 16>;
 
   /// Operator - A callback representing a DAG operator.
   class Operator {
     virtual void anchor();
+
   public:
-    virtual ~Operator() {}
+    virtual ~Operator() = default;
 
     /// apply - Apply this operator to Expr's arguments and insert the result
     /// in Elts.
     virtual void apply(SetTheory&, DagInit *Expr, RecSet &Elts,
-                       ArrayRef<SMLoc> Loc) =0;
+                       ArrayRef<SMLoc> Loc) = 0;
   };
 
   /// Expander - A callback function that can transform a Record representing a
@@ -82,16 +85,17 @@ public:
   /// users to define named sets that can be used in DAG expressions.
   class Expander {
     virtual void anchor();
-  public:
-    virtual ~Expander() {}
 
-    virtual void expand(SetTheory&, Record*, RecSet &Elts) =0;
+  public:
+    virtual ~Expander() = default;
+
+    virtual void expand(SetTheory&, Record*, RecSet &Elts) = 0;
   };
 
 private:
   // Map set defs to their fully expanded contents. This serves as a memoization
   // cache and it makes it possible to return const references on queries.
-  typedef std::map<Record*, RecVec> ExpandMap;
+  using ExpandMap = std::map<Record *, RecVec>;
   ExpandMap Expansions;
 
   // Known DAG operators by name.
@@ -138,5 +142,4 @@ public:
 
 } // end namespace llvm
 
-#endif
-
+#endif // LLVM_TABLEGEN_SETTHEORY_H

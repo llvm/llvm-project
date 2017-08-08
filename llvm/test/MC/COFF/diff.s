@@ -42,11 +42,11 @@ _rust_crate:
 // CHECK:        Name: .data
 // CHECK:        Relocations [
 // CHECK-NEXT:     0x4 IMAGE_REL_I386_DIR32 _foobar
-// CHECK-NEXT:     0x8 IMAGE_REL_I386_REL32 .text
-// CHECK-NEXT:     0xC IMAGE_REL_I386_REL32 .text
+// CHECK-NEXT:     0x8 IMAGE_REL_I386_REL32 _foobar
+// CHECK-NEXT:     0xC IMAGE_REL_I386_REL32 _foobar
 // CHECK-NEXT:   ]
 // CHECK:        SectionData (
-// CHECK-NEXT:     0000: 00000000 00000000 1C000000 20000000
+// CHECK-NEXT:     0000: 00000000 00000000 0C000000 10000000
 // CHECK-NEXT:   )
 
 // CHECK:        Name: baz

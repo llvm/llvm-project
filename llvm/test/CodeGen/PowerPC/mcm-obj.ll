@@ -1,12 +1,12 @@
-; RUN: llc -O0 -mcpu=pwr7 -code-model=medium -filetype=obj -fast-isel=false %s -o - | \
+; RUN: llc -relocation-model=static -verify-machineinstrs -O0 -mcpu=pwr7 -code-model=medium -filetype=obj -fast-isel=false %s -o - | \
 ; RUN: llvm-readobj -r | FileCheck -check-prefix=MEDIUM %s
-; RUN: llc -O0 -mcpu=pwr7 -code-model=large -filetype=obj -fast-isel=false %s -o - | \
+; RUN: llc -relocation-model=static -verify-machineinstrs -O0 -mcpu=pwr7 -code-model=large -filetype=obj -fast-isel=false %s -o - | \
 ; RUN: llvm-readobj -r | FileCheck -check-prefix=LARGE %s
 
 ; Run jump table test separately since jump tables aren't generated at -O0.
-; RUN: llc -mcpu=pwr7 -code-model=medium -filetype=obj -fast-isel=false %s -o - | \
+; RUN: llc -relocation-model=static -verify-machineinstrs -mcpu=pwr7 -code-model=medium -filetype=obj -fast-isel=false %s -o - | \
 ; RUN: llvm-readobj -r | FileCheck -check-prefix=MEDIUM-JT %s
-; RUN: llc -mcpu=pwr7 -code-model=large -filetype=obj -fast-isel=false %s -o - | \
+; RUN: llc -relocation-model=static -verify-machineinstrs -mcpu=pwr7 -code-model=large -filetype=obj -fast-isel=false %s -o - | \
 ; RUN: llvm-readobj -r | FileCheck -check-prefix=LARGE-JT %s
 
 ; FIXME: When asm-parse is available, could make this an assembly test.
@@ -108,11 +108,10 @@ entry:
   ret i32 %0
 }
 
-; Verify generation of R_PPC64_TOC16_HA and R_PPC64_TOC16_LO_DS for
-; accessing tentatively declared variable ti.
+; Verify generation of relocations foraccessing variable ti.
 ;
 ; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM6:[^ ]+]]
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS [[SYM6]]
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO [[SYM6]]
 ;
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM6:[^ ]+]]
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS [[SYM6]]

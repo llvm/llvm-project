@@ -1099,7 +1099,7 @@ define void @binsl_v16i8_i(<16 x i8>* %c, <16 x i8>* %a, <16 x i8>* %b) nounwind
                           i8 63, i8 63, i8 63, i8 63,
                           i8 63, i8 63, i8 63, i8 63>
   %5 = or <16 x i8> %3, %4
-  ; CHECK-DAG: binsli.b [[R2]], [[R1]], 2
+  ; CHECK-DAG: binsli.b [[R2]], [[R1]], 1
   store <16 x i8> %5, <16 x i8>* %c
   ; CHECK-DAG: st.b [[R2]], 0($4)
 
@@ -1119,7 +1119,7 @@ define void @binsl_v8i16_i(<8 x i16>* %c, <8 x i16>* %a, <8 x i16>* %b) nounwind
   %4 = and <8 x i16> %2, <i16 16383, i16 16383, i16 16383, i16 16383,
                           i16 16383, i16 16383, i16 16383, i16 16383>
   %5 = or <8 x i16> %3, %4
-  ; CHECK-DAG: binsli.h [[R2]], [[R1]], 2
+  ; CHECK-DAG: binsli.h [[R2]], [[R1]], 1
   store <8 x i16> %5, <8 x i16>* %c
   ; CHECK-DAG: st.h [[R2]], 0($4)
 
@@ -1137,7 +1137,7 @@ define void @binsl_v4i32_i(<4 x i32>* %c, <4 x i32>* %a, <4 x i32>* %b) nounwind
   %3 = and <4 x i32> %1, <i32 3221225472, i32 3221225472, i32 3221225472, i32 3221225472>
   %4 = and <4 x i32> %2, <i32 1073741823, i32 1073741823, i32 1073741823, i32 1073741823>
   %5 = or <4 x i32> %3, %4
-  ; CHECK-DAG: binsli.w [[R2]], [[R1]], 2
+  ; CHECK-DAG: binsli.w [[R2]], [[R1]], 1
   store <4 x i32> %5, <4 x i32>* %c
   ; CHECK-DAG: st.w [[R2]], 0($4)
 
@@ -1159,7 +1159,7 @@ define void @binsl_v2i64_i(<2 x i64>* %c, <2 x i64>* %a, <2 x i64>* %b) nounwind
   ;       issue. If the mask doesn't fit within a 10-bit immediate, it gets
   ;       legalized into a constant pool. We should add a test to cover the
   ;       other cases once they correctly select binsli.d.
-  ; CHECK-DAG: binsli.d [[R2]], [[R1]], 61
+  ; CHECK-DAG: binsli.d [[R2]], [[R1]], 60
   store <2 x i64> %5, <2 x i64>* %c
   ; CHECK-DAG: st.d [[R2]], 0($4)
 
@@ -1181,7 +1181,7 @@ define void @binsr_v16i8_i(<16 x i8>* %c, <16 x i8>* %a, <16 x i8>* %b) nounwind
                           i8 252, i8 252, i8 252, i8 252,
                           i8 252, i8 252, i8 252, i8 252>
   %5 = or <16 x i8> %3, %4
-  ; CHECK-DAG: binsri.b [[R2]], [[R1]], 2
+  ; CHECK-DAG: binsri.b [[R2]], [[R1]], 1
   store <16 x i8> %5, <16 x i8>* %c
   ; CHECK-DAG: st.b [[R2]], 0($4)
 
@@ -1201,7 +1201,7 @@ define void @binsr_v8i16_i(<8 x i16>* %c, <8 x i16>* %a, <8 x i16>* %b) nounwind
   %4 = and <8 x i16> %2, <i16 65532, i16 65532, i16 65532, i16 65532,
                           i16 65532, i16 65532, i16 65532, i16 65532>
   %5 = or <8 x i16> %3, %4
-  ; CHECK-DAG: binsri.h [[R2]], [[R1]], 2
+  ; CHECK-DAG: binsri.h [[R2]], [[R1]], 1
   store <8 x i16> %5, <8 x i16>* %c
   ; CHECK-DAG: st.h [[R2]], 0($4)
 
@@ -1219,7 +1219,7 @@ define void @binsr_v4i32_i(<4 x i32>* %c, <4 x i32>* %a, <4 x i32>* %b) nounwind
   %3 = and <4 x i32> %1, <i32 3, i32 3, i32 3, i32 3>
   %4 = and <4 x i32> %2, <i32 4294967292, i32 4294967292, i32 4294967292, i32 4294967292>
   %5 = or <4 x i32> %3, %4
-  ; CHECK-DAG: binsri.w [[R2]], [[R1]], 2
+  ; CHECK-DAG: binsri.w [[R2]], [[R1]], 1
   store <4 x i32> %5, <4 x i32>* %c
   ; CHECK-DAG: st.w [[R2]], 0($4)
 
@@ -1237,7 +1237,7 @@ define void @binsr_v2i64_i(<2 x i64>* %c, <2 x i64>* %a, <2 x i64>* %b) nounwind
   %3 = and <2 x i64> %1, <i64 3, i64 3>
   %4 = and <2 x i64> %2, <i64 18446744073709551612, i64 18446744073709551612>
   %5 = or <2 x i64> %3, %4
-  ; CHECK-DAG: binsri.d [[R2]], [[R1]], 2
+  ; CHECK-DAG: binsri.d [[R2]], [[R1]], 1
   store <2 x i64> %5, <2 x i64>* %c
   ; CHECK-DAG: st.d [[R2]], 0($4)
 

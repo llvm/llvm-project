@@ -21,27 +21,72 @@ TEST(Attributes, Uniquing) {
   Attribute AttrB = Attribute::get(C, Attribute::AlwaysInline);
   EXPECT_EQ(AttrA, AttrB);
 
-  AttributeSet ASs[] = {
-    AttributeSet::get(C, 1, Attribute::ZExt),
-    AttributeSet::get(C, 2, Attribute::SExt)
-  };
+  AttributeList ASs[] = {AttributeList::get(C, 1, Attribute::ZExt),
+                         AttributeList::get(C, 2, Attribute::SExt)};
 
-  AttributeSet SetA = AttributeSet::get(C, ASs);
-  AttributeSet SetB = AttributeSet::get(C, ASs);
+  AttributeList SetA = AttributeList::get(C, ASs);
+  AttributeList SetB = AttributeList::get(C, ASs);
   EXPECT_EQ(SetA, SetB);
 }
 
 TEST(Attributes, Ordering) {
   LLVMContext C;
 
-  AttributeSet ASs[] = {
-    AttributeSet::get(C, 2, Attribute::ZExt),
-    AttributeSet::get(C, 1, Attribute::SExt)
-  };
+  Attribute Align4 = Attribute::get(C, Attribute::Alignment, 4);
+  Attribute Align5 = Attribute::get(C, Attribute::Alignment, 5);
+  Attribute Deref4 = Attribute::get(C, Attribute::Dereferenceable, 4);
+  Attribute Deref5 = Attribute::get(C, Attribute::Dereferenceable, 5);
+  EXPECT_TRUE(Align4 < Align5);
+  EXPECT_TRUE(Align4 < Deref4);
+  EXPECT_TRUE(Align4 < Deref5);
+  EXPECT_TRUE(Align5 < Deref4);
 
-  AttributeSet SetA = AttributeSet::get(C, ASs);
-  AttributeSet SetB = SetA.removeAttributes(C, 1, ASs[1]);
+  AttributeList ASs[] = {AttributeList::get(C, 2, Attribute::ZExt),
+                         AttributeList::get(C, 1, Attribute::SExt)};
+
+  AttributeList SetA = AttributeList::get(C, ASs);
+  AttributeList SetB = SetA.removeAttributes(C, 1, ASs[1].getAttributes(1));
   EXPECT_NE(SetA, SetB);
+}
+
+TEST(Attributes, AddAttributes) {
+  LLVMContext C;
+  AttributeList AL;
+  AttrBuilder B;
+  B.addAttribute(Attribute::NoReturn);
+  AL = AL.addAttributes(C, AttributeList::FunctionIndex, AttributeSet::get(C, B));
+  EXPECT_TRUE(AL.hasFnAttribute(Attribute::NoReturn));
+  B.clear();
+  B.addAttribute(Attribute::SExt);
+  AL = AL.addAttributes(C, AttributeList::ReturnIndex, B);
+  EXPECT_TRUE(AL.hasAttribute(AttributeList::ReturnIndex, Attribute::SExt));
+  EXPECT_TRUE(AL.hasFnAttribute(Attribute::NoReturn));
+}
+
+TEST(Attributes, AddMatchingAlignAttr) {
+  LLVMContext C;
+  AttributeList AL;
+  AL = AL.addAttribute(C, AttributeList::FirstArgIndex,
+                       Attribute::getWithAlignment(C, 8));
+  AL = AL.addAttribute(C, AttributeList::FirstArgIndex + 1,
+                       Attribute::getWithAlignment(C, 32));
+  EXPECT_EQ(8U, AL.getParamAlignment(0));
+  EXPECT_EQ(32U, AL.getParamAlignment(1));
+
+  AttrBuilder B;
+  B.addAttribute(Attribute::NonNull);
+  B.addAlignmentAttr(8);
+  AL = AL.addAttributes(C, AttributeList::FirstArgIndex, B);
+  EXPECT_EQ(8U, AL.getParamAlignment(0));
+  EXPECT_EQ(32U, AL.getParamAlignment(1));
+  EXPECT_TRUE(AL.hasParamAttribute(0, Attribute::NonNull));
+}
+
+TEST(Attributes, EmptyGet) {
+  LLVMContext C;
+  AttributeList EmptyLists[] = {AttributeList(), AttributeList()};
+  AttributeList AL = AttributeList::get(C, EmptyLists);
+  EXPECT_TRUE(AL.isEmpty());
 }
 
 } // end anonymous namespace

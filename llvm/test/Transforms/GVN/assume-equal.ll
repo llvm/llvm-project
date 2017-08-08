@@ -65,22 +65,20 @@ if.then:                                          ; preds = %entry
   %vtable1 = load i8**, i8*** %1, align 8, !invariant.group !0
   %vtable2.cast = bitcast i8** %vtable1 to i32 (%struct.A*)**
   %call1 = load i32 (%struct.A*)*, i32 (%struct.A*)** %vtable2.cast, align 8
-; FIXME: those loads could be also direct, but right now the invariant.group
-; analysis works only on single block
-; CHECK-NOT: call i32 @_ZN1A3fooEv(
+; CHECK: call i32 @_ZN1A3fooEv(
   %callx = tail call i32 %call1(%struct.A* %0) #1
   
   %vtable2 = load i8**, i8*** %1, align 8, !invariant.group !0
   %vtable3.cast = bitcast i8** %vtable2 to i32 (%struct.A*)**
   %call4 = load i32 (%struct.A*)*, i32 (%struct.A*)** %vtable3.cast, align 8
-; CHECK-NOT: call i32 @_ZN1A3fooEv(
+; CHECK: call i32 @_ZN1A3fooEv(
   %cally = tail call i32 %call4(%struct.A* %0) #1
   
   %b = bitcast i8* %call to %struct.A**
   %vtable3 = load %struct.A*, %struct.A** %b, align 8, !invariant.group !0
   %vtable4.cast = bitcast %struct.A* %vtable3 to i32 (%struct.A*)**
   %vfun = load i32 (%struct.A*)*, i32 (%struct.A*)** %vtable4.cast, align 8
-; CHECK-NOT: call i32 @_ZN1A3fooEv(
+; CHECK: call i32 @_ZN1A3fooEv(
   %unknown = tail call i32 %vfun(%struct.A* %0) #1
   
   br label %if.end
@@ -224,6 +222,46 @@ bb2:
   ret i32 15
 bb3:
   ret i32 17
+}
+
+; This test checks if GVN can do the constant propagation correctly
+; when there are multiple uses of the same assume value in the 
+; basic block that has a loop back-edge pointing to itself.
+;
+; CHECK-LABEL: define i32 @_Z1il(i32 %val, i1 %k)
+define i32 @_Z1il(i32 %val, i1 %k) {
+  br label %next
+
+next:
+; CHECK: tail call void @llvm.assume(i1 %k)
+; CHECK-NEXT: %cmp = icmp eq i32 %val, 50
+  tail call void @llvm.assume(i1 %k)
+  tail call void @llvm.assume(i1 %k)
+  %cmp = icmp eq i32 %val, 50
+  br i1 %cmp, label %next, label %meh
+
+meh:
+  ret i32 0 
+}
+
+; This test checks if GVN can prevent the constant propagation correctly
+; in the successor blocks that are not dominated by the basic block
+; with the assume instruction.
+;
+; CHECK-LABEL: define i1 @_z1im(i32 %val, i1 %k, i1 %j)
+define i1 @_z1im(i32 %val, i1 %k, i1 %j) {
+  br i1 %j, label %next, label %meh
+
+next:
+; CHECK: tail call void @llvm.assume(i1 %k)
+; CHECK-NEXT: br label %meh
+  tail call void @llvm.assume(i1 %k)
+  tail call void @llvm.assume(i1 %k)
+  br label %meh
+
+meh:
+; CHECK: ret i1 %k
+  ret i1 %k
 }
 
 declare noalias i8* @_Znwm(i64)

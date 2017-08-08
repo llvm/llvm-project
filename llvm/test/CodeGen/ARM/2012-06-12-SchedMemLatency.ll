@@ -6,23 +6,23 @@
 
 ; CHECK: ** List Scheduling
 ; CHECK: SU(2){{.*}}STR{{.*}}Volatile
-; CHECK-NOT: ch SU
-; CHECK: ch SU(3): Latency=1
-; CHECK-NOT: ch SU
+; CHECK-NOT: SU({{.*}}): Ord
+; CHECK: SU(3): Ord Latency=1
+; CHECK-NOT: SU({{.*}}): Ord
 ; CHECK: SU(3){{.*}}LDR{{.*}}Volatile
-; CHECK-NOT: ch SU
-; CHECK: ch SU(2): Latency=1
-; CHECK-NOT: ch SU
+; CHECK-NOT: SU({{.*}}): Ord
+; CHECK: SU(2): Ord Latency=1
+; CHECK-NOT: SU({{.*}}): Ord
 ; CHECK: Successors:
 ; CHECK: ** List Scheduling
 ; CHECK: SU(2){{.*}}STR{{.*}}
-; CHECK-NOT: ch SU
-; CHECK: ch SU(3): Latency=1
-; CHECK-NOT: ch SU
+; CHECK-NOT: SU({{.*}}): Ord
+; CHECK: SU(3): Ord Latency=1
+; CHECK-NOT: SU({{.*}}): Ord
 ; CHECK: SU(3){{.*}}LDR{{.*}}
-; CHECK-NOT: ch SU
-; CHECK: ch SU(2): Latency=1
-; CHECK-NOT: ch SU
+; CHECK-NOT: SU({{.*}}): Ord
+; CHECK: SU(2): Ord Latency=1
+; CHECK-NOT: SU({{.*}}): Ord
 ; CHECK: Successors:
 define i32 @f1(i32* nocapture %p1, i32* nocapture %p2) nounwind {
 entry:

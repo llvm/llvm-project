@@ -73,7 +73,7 @@ CGCXXABI::ConvertMemberPointerType(const MemberPointerType *MPT) {
   return CGM.getTypes().ConvertType(CGM.getContext().getPointerDiffType());
 }
 
-llvm::Value *CGCXXABI::EmitLoadOfMemberFunctionPointer(
+CGCallee CGCXXABI::EmitLoadOfMemberFunctionPointer(
     CodeGenFunction &CGF, const Expr *E, Address This,
     llvm::Value *&ThisPtrForCall,
     llvm::Value *MemPtr, const MemberPointerType *MPT) {
@@ -85,8 +85,9 @@ llvm::Value *CGCXXABI::EmitLoadOfMemberFunctionPointer(
   const CXXRecordDecl *RD = 
     cast<CXXRecordDecl>(MPT->getClass()->getAs<RecordType>()->getDecl());
   llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(
-                              CGM.getTypes().arrangeCXXMethodType(RD, FPT));
-  return llvm::Constant::getNullValue(FTy->getPointerTo());
+      CGM.getTypes().arrangeCXXMethodType(RD, FPT, /*FD=*/nullptr));
+  llvm::Constant *FnPtr = llvm::Constant::getNullValue(FTy->getPointerTo());
+  return CGCallee::forDirect(FnPtr, FPT);
 }
 
 llvm::Value *
@@ -158,10 +159,10 @@ void CGCXXABI::buildThisParam(CodeGenFunction &CGF, FunctionArgList &params) {
 
   // FIXME: I'm not entirely sure I like using a fake decl just for code
   // generation. Maybe we can come up with a better way?
-  ImplicitParamDecl *ThisDecl
-    = ImplicitParamDecl::Create(CGM.getContext(), nullptr, MD->getLocation(),
-                                &CGM.getContext().Idents.get("this"),
-                                MD->getThisType(CGM.getContext()));
+  auto *ThisDecl = ImplicitParamDecl::Create(
+      CGM.getContext(), nullptr, MD->getLocation(),
+      &CGM.getContext().Idents.get("this"), MD->getThisType(CGM.getContext()),
+      ImplicitParamDecl::CXXThis);
   params.push_back(ThisDecl);
   CGF.CXXABIThisDecl = ThisDecl;
 

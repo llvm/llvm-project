@@ -83,6 +83,6 @@ declare void @_ZSt9terminatev()
 
 !0 = !{!"any pointer", !1}
 !1 = !{!"omnipotent char", !2}
-!2 = !{!"Simple C/C++ TBAA", null}
+!2 = !{!"Simple C/C++ TBAA"}
 !3 = !{!"bool", !1}
 !4 = !{!"int", !1}

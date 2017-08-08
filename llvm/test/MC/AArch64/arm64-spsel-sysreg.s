@@ -8,11 +8,11 @@ msr ESR_EL1, x0
 mrs x0, SPSel
 mrs x0, ESR_EL1
 
-// CHECK: msr SPSEL, #0               // encoding: [0xbf,0x40,0x00,0xd5]
-// CHECK: msr SPSEL, x0               // encoding: [0x00,0x42,0x18,0xd5]
-// CHECK: msr DAIFSET, #0             // encoding: [0xdf,0x40,0x03,0xd5]
+// CHECK: msr SPSel, #0               // encoding: [0xbf,0x40,0x00,0xd5]
+// CHECK: msr SPSel, x0               // encoding: [0x00,0x42,0x18,0xd5]
+// CHECK: msr DAIFSet, #0             // encoding: [0xdf,0x40,0x03,0xd5]
 // CHECK: msr ESR_EL1, x0             // encoding: [0x00,0x52,0x18,0xd5]
-// CHECK: mrs x0, SPSEL               // encoding: [0x00,0x42,0x38,0xd5]
+// CHECK: mrs x0, SPSel               // encoding: [0x00,0x42,0x38,0xd5]
 // CHECK: mrs x0, ESR_EL1             // encoding: [0x00,0x52,0x38,0xd5]
 
 

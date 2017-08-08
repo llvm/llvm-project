@@ -201,3 +201,40 @@ entry:
 
   ret void
 }
+
+; Check that we don't try change the type of the load by inserting a bitcast
+; generating invalid IR.
+; CHECK-LABEL: @test18(
+; CHECK-NOT: bitcast
+; CHECK: ret
+%swift.error = type opaque
+declare void @useSwiftError(%swift.error** swifterror)
+
+define void @test18(%swift.error** swifterror %err) {
+entry:
+  %swifterror = alloca swifterror %swift.error*, align 8
+  store %swift.error* null, %swift.error** %swifterror, align 8
+  call void @useSwiftError(%swift.error** nonnull swifterror %swifterror)
+  %err.res = load %swift.error*, %swift.error** %swifterror, align 8
+  store %swift.error* %err.res, %swift.error** %err, align 8
+  ret void
+}
+
+; Make sure we preseve the type of the store to a swifterror pointer.
+; CHECK-LABEL: @test19(
+; CHECK: [[A:%.*]] = alloca
+; CHECK: call
+; CHECK: [[BC:%.*]] = bitcast i8** [[A]] to
+; CHECK: [[ERRVAL:%.*]] =  load {{.*}}[[BC]]
+; CHECK: store {{.*}}[[ERRVAL]]
+; CHECK: ret
+declare void @initi8(i8**)
+define void @test19(%swift.error** swifterror %err) {
+entry:
+  %tmp = alloca i8*, align 8
+  call void @initi8(i8** %tmp)
+  %swifterror = bitcast i8** %tmp to %swift.error**
+  %err.res = load %swift.error*, %swift.error** %swifterror, align 8
+  store %swift.error* %err.res, %swift.error** %err, align 8
+  ret void
+}

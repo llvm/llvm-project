@@ -33,8 +33,8 @@ __attribute ((objc_requires_property_definitions))  // redundant, just for testi
 - (id) DeepMustSynthProperty { return 0; }
 @end
 
-__attribute ((objc_requires_property_definitions)) 
-@interface Deep(CAT)  // expected-error {{attributes may not be specified on a category}}
+__attribute ((objc_requires_property_definitions)) // expected-error {{'objc_requires_property_definitions' attribute only applies to Objective-C interfaces}}
+@interface Deep(CAT)
 @end
 
 __attribute ((objc_requires_property_definitions)) // expected-error {{'objc_requires_property_definitions' attribute only applies to Objective-C interfaces}}
@@ -173,13 +173,13 @@ typedef NSObject<Fooing> FooObject;
 @end
 
 @implementation Okay // expected-warning {{auto property synthesis will not synthesize property 'muahahaha' declared in protocol 'Fooing'}} expected-warning {{auto property synthesis will not synthesize property 'hoho' declared in protocol 'SubFooling'}}
-@end
+@end // expected-note 2 {{add a '@synthesize' directive}}
 
 @interface Fail : FooObject
 @end
 
 @implementation Fail // expected-warning {{auto property synthesis will not synthesize property 'muahahaha' declared in protocol 'Fooing'}} expected-warning {{auto property synthesis will not synthesize property 'hoho' declared in protocol 'SubFooling'}}
-@end
+@end // expected-note 2 {{add a '@synthesize' directive}}
 
 // rdar://16089191
 @class NSURL;

@@ -32,7 +32,7 @@ namespace PackExpansionNotAtEnd {
 
   template<typename ... Types, // expected-note{{non-deducible template parameter 'Types'}}
            typename Tail> // expected-note{{non-deducible template parameter 'Tail'}}
-  struct UselessPartialSpec<Types..., Tail>; // expected-warning{{class template partial specialization contains template parameters that cannot be deduced; this partial specialization will never be used}}
+  struct UselessPartialSpec<Types..., Tail>; // expected-error{{class template partial specialization contains template parameters that cannot be deduced; this partial specialization will never be used}}
 }
 
 namespace DeduceNonTypeTemplateArgsInArray {
@@ -55,7 +55,7 @@ namespace DeduceNonTypeTemplateArgsInArray {
 }
 
 namespace DeduceWithDefaultArgs {
-  template<template<typename...> class Container> void f(Container<int>); // expected-note {{substitution failure [with Container = X]}}
+  template<template<typename...> class Container> void f(Container<int>); // expected-note {{deduced type 'X<[...], (default) int>' of 1st parameter does not match adjusted type 'X<[...], double>' of argument [with Container = X]}}
   template<typename, typename = int> struct X {};
   void g() {
     // OK, use default argument for the second template parameter.

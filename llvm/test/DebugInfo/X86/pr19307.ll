@@ -14,7 +14,7 @@
 ; Location of "range" string is spilled from %rdx to stack and is
 ; addressed via %rbp.
 ; CHECK: movq %rdx, {{[-0-9]+}}(%rbp)
-; CHECK-NEXT: [[START_LABEL:.Ltmp[0-9]+]]
+; CHECK-NEXT: [[START_LABEL:.Ltmp[0-9]+]]:
 ; This location should be valid until the end of the function.
 
 ; Verify that we have proper range in debug_loc section:
@@ -84,7 +84,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !llvm.module.flags = !{!42, !43}
 !llvm.ident = !{!44}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (209308)", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !12, globals: !2, imports: !21)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (209308)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, globals: !2, imports: !21)
 !1 = !DIFile(filename: "pr19307.cc", directory: "/llvm_cmake_gcc")
 !2 = !{}
 !3 = !{!4, !6, !8}
@@ -94,38 +94,37 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !7 = !DIFile(filename: "/usr/include/locale.h", directory: "/llvm_cmake_gcc")
 !8 = !DICompositeType(tag: DW_TAG_class_type, name: "basic_string<char, std::char_traits<char>, std::allocator<char> >", line: 1134, flags: DIFlagFwdDecl, file: !9, scope: !10, identifier: "_ZTSSs")
 !9 = !DIFile(filename: "/usr/lib/gcc/x86_64-linux-gnu/4.6/../../../../include/c++/4.6/bits/basic_string.tcc", directory: "/llvm_cmake_gcc")
-!10 = !DINamespace(name: "std", line: 153, file: !11, scope: null)
+!10 = !DINamespace(name: "std", scope: null)
 !11 = !DIFile(filename: "/usr/lib/gcc/x86_64-linux-gnu/4.6/../../../../include/c++/4.6/x86_64-linux-gnu/bits/c++config.h", directory: "/llvm_cmake_gcc")
-!12 = !{!13}
-!13 = distinct !DISubprogram(name: "parse_range", linkageName: "_Z11parse_rangeRyS_Ss", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 4, file: !1, scope: !14, type: !15, variables: !2)
+!13 = distinct !DISubprogram(name: "parse_range", linkageName: "_Z11parse_rangeRyS_Ss", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 4, file: !1, scope: !14, type: !15, variables: !2)
 !14 = !DIFile(filename: "pr19307.cc", directory: "/llvm_cmake_gcc")
 !15 = !DISubroutineType(types: !16)
 !16 = !{null, !17, !17, !19}
 !17 = !DIDerivedType(tag: DW_TAG_reference_type, baseType: !18)
 !18 = !DIBasicType(tag: DW_TAG_base_type, name: "long long unsigned int", size: 64, align: 64, encoding: DW_ATE_unsigned)
-!19 = !DIDerivedType(tag: DW_TAG_typedef, name: "string", line: 65, file: !20, scope: !10, baseType: !"_ZTSSs")
+!19 = !DIDerivedType(tag: DW_TAG_typedef, name: "string", line: 65, file: !20, scope: !10, baseType: !8)
 !20 = !DIFile(filename: "/usr/lib/gcc/x86_64-linux-gnu/4.6/../../../../include/c++/4.6/bits/stringfwd.h", directory: "/llvm_cmake_gcc")
 !21 = !{!22, !26, !29, !33, !38, !41}
-!22 = !DIImportedEntity(tag: DW_TAG_imported_module, line: 57, scope: !23, entity: !25)
-!23 = !DINamespace(name: "__gnu_debug", line: 55, file: !24, scope: null)
+!22 = !DIImportedEntity(tag: DW_TAG_imported_module, file: !1, line: 57, scope: !23, entity: !25)
+!23 = !DINamespace(name: "__gnu_debug", scope: null)
 !24 = !DIFile(filename: "/usr/lib/gcc/x86_64-linux-gnu/4.6/../../../../include/c++/4.6/debug/debug.h", directory: "/llvm_cmake_gcc")
-!25 = !DINamespace(name: "__debug", line: 49, file: !24, scope: !10)
-!26 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 66, scope: !10, entity: !27)
+!25 = !DINamespace(name: "__debug", scope: !10)
+!26 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !1, line: 66, scope: !10, entity: !27)
 !27 = !DIDerivedType(tag: DW_TAG_typedef, name: "mbstate_t", line: 106, file: !5, baseType: !28)
-!28 = !DIDerivedType(tag: DW_TAG_typedef, name: "__mbstate_t", line: 95, file: !5, baseType: !"_ZTS11__mbstate_t")
-!29 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 141, scope: !10, entity: !30)
+!28 = !DIDerivedType(tag: DW_TAG_typedef, name: "__mbstate_t", line: 95, file: !5, baseType: !4)
+!29 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !1, line: 141, scope: !10, entity: !30)
 !30 = !DIDerivedType(tag: DW_TAG_typedef, name: "wint_t", line: 141, file: !31, baseType: !32)
 !31 = !DIFile(filename: "/llvm_cmake_gcc/bin/../lib/clang/3.5.0/include/stddef.h", directory: "/llvm_cmake_gcc")
 !32 = !DIBasicType(tag: DW_TAG_base_type, name: "unsigned int", size: 32, align: 32, encoding: DW_ATE_unsigned)
-!33 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 42, scope: !34, entity: !36)
-!34 = !DINamespace(name: "__gnu_cxx", line: 69, file: !35, scope: null)
+!33 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !1, line: 42, scope: !34, entity: !36)
+!34 = !DINamespace(name: "__gnu_cxx", scope: null)
 !35 = !DIFile(filename: "/usr/lib/gcc/x86_64-linux-gnu/4.6/../../../../include/c++/4.6/bits/cpp_type_traits.h", directory: "/llvm_cmake_gcc")
 !36 = !DIDerivedType(tag: DW_TAG_typedef, name: "size_t", line: 155, file: !11, scope: !10, baseType: !37)
 !37 = !DIBasicType(tag: DW_TAG_base_type, name: "long unsigned int", size: 64, align: 64, encoding: DW_ATE_unsigned)
-!38 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 43, scope: !34, entity: !39)
+!38 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !1, line: 43, scope: !34, entity: !39)
 !39 = !DIDerivedType(tag: DW_TAG_typedef, name: "ptrdiff_t", line: 156, file: !11, scope: !10, baseType: !40)
 !40 = !DIBasicType(tag: DW_TAG_base_type, name: "long int", size: 64, align: 64, encoding: DW_ATE_signed)
-!41 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 55, scope: !10, entity: !"_ZTS5lconv")
+!41 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !1, line: 55, scope: !10, entity: !6)
 !42 = !{i32 2, !"Dwarf Version", i32 4}
 !43 = !{i32 2, !"Debug Info Version", i32 3}
 !44 = !{!"clang version 3.5.0 (209308)"}

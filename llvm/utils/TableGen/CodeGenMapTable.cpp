@@ -337,10 +337,20 @@ Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
     }
 
     if (MatchFound) {
-      if (MatchInstr) // Already had a match
+      if (MatchInstr) {
+        // Already had a match
         // Error if multiple matches are found for a column.
+        std::string KeyValueStr;
+        for (Init *Value : KeyValue) {
+          if (!KeyValueStr.empty())
+            KeyValueStr += ", ";
+          KeyValueStr += Value->getAsString();
+        }
+
         PrintFatalError("Multiple matches found for `" + KeyInstr->getName() +
-              "', for the relation `" + InstrMapDesc.getName());
+              "', for the relation `" + InstrMapDesc.getName() + "', row fields [" +
+              KeyValueStr + "], column `" + CurValueCol->getAsString() + "'");
+      }
       MatchInstr = CurInstr;
     }
   }
@@ -355,9 +365,9 @@ Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
 
 unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
 
-  const std::vector<const CodeGenInstruction*> &NumberedInstructions =
+  ArrayRef<const CodeGenInstruction*> NumberedInstructions =
                                             Target.getInstructionsByEnumValue();
-  std::string TargetName = Target.getName();
+  StringRef Namespace = Target.getInstNamespace();
   const std::vector<ListInit*> &ValueCols = InstrMapDesc.getValueCols();
   unsigned NumCol = ValueCols.size();
   unsigned TotalNumInstr = NumberedInstructions.size();
@@ -377,22 +387,22 @@ unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
         if (ColInstrs[j] != nullptr) {
           RelExists = 1;
           OutStr += ", ";
-          OutStr += TargetName;
+          OutStr += Namespace;
           OutStr += "::";
           OutStr += ColInstrs[j]->getName();
         } else { OutStr += ", (uint16_t)-1U";}
       }
 
       if (RelExists) {
-        OS << "  { " << TargetName << "::" << CurInstr->getName();
+        OS << "  { " << Namespace << "::" << CurInstr->getName();
         OS << OutStr <<" },\n";
         TableSize++;
       }
     }
   }
   if (!TableSize) {
-    OS << "  { " << TargetName << "::" << "INSTRUCTION_LIST_END, ";
-    OS << TargetName << "::" << "INSTRUCTION_LIST_END }";
+    OS << "  { " << Namespace << "::" << "INSTRUCTION_LIST_END, ";
+    OS << Namespace << "::" << "INSTRUCTION_LIST_END }";
   }
   OS << "}; // End of " << InstrMapDesc.getName() << "Table\n\n";
   return TableSize;
@@ -499,8 +509,7 @@ static void emitEnums(raw_ostream &OS, RecordKeeper &Records) {
 
   // Iterate over all InstrMapping records and create a map between column
   // fields and their possible values across all records.
-  for (unsigned i = 0, e = InstrMapVec.size(); i < e; i++) {
-    Record *CurMap = InstrMapVec[i];
+  for (Record *CurMap : InstrMapVec) {
     ListInit *ColFields;
     ColFields = CurMap->getValueAsListInit("ColFields");
     ListInit *List = CurMap->getValueAsListInit("ValueCols");
@@ -524,10 +533,8 @@ static void emitEnums(raw_ostream &OS, RecordKeeper &Records) {
     }
   }
 
-  for (std::map<std::string, std::vector<Init*> >::iterator
-       II = ColFieldValueMap.begin(), IE = ColFieldValueMap.end();
-       II != IE; II++) {
-    std::vector<Init*> FieldValues = (*II).second;
+  for (auto &Entry : ColFieldValueMap) {
+    std::vector<Init*> FieldValues = Entry.second;
 
     // Delete duplicate entries from ColFieldValueMap
     for (unsigned i = 0; i < FieldValues.size() - 1; i++) {
@@ -535,14 +542,15 @@ static void emitEnums(raw_ostream &OS, RecordKeeper &Records) {
       for (unsigned j = i+1; j < FieldValues.size(); j++) {
         if (CurVal == FieldValues[j]) {
           FieldValues.erase(FieldValues.begin()+j);
+          --j;
         }
       }
     }
 
     // Emit enumerated values for the column fields.
-    OS << "enum " << (*II).first << " {\n";
+    OS << "enum " << Entry.first << " {\n";
     for (unsigned i = 0, endFV = FieldValues.size(); i < endFV; i++) {
-      OS << "\t" << (*II).first << "_" << FieldValues[i]->getAsUnquotedString();
+      OS << "\t" << Entry.first << "_" << FieldValues[i]->getAsUnquotedString();
       if (i != endFV - 1)
         OS << ",\n";
       else
@@ -559,7 +567,7 @@ namespace llvm {
 //===----------------------------------------------------------------------===//
 void EmitMapTable(RecordKeeper &Records, raw_ostream &OS) {
   CodeGenTarget Target(Records);
-  std::string TargetName = Target.getName();
+  StringRef NameSpace = Target.getInstNamespace();
   std::vector<Record*> InstrMapVec;
   InstrMapVec = Records.getAllDerivedDefinitions("InstrMapping");
 
@@ -569,7 +577,7 @@ void EmitMapTable(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef GET_INSTRMAP_INFO\n";
   OS << "#undef GET_INSTRMAP_INFO\n";
   OS << "namespace llvm {\n\n";
-  OS << "namespace " << TargetName << " {\n\n";
+  OS << "namespace " << NameSpace << " {\n\n";
 
   // Emit coulumn field names and their values as enums.
   emitEnums(OS, Records);
@@ -577,8 +585,8 @@ void EmitMapTable(RecordKeeper &Records, raw_ostream &OS) {
   // Iterate over all instruction mapping records and construct relationship
   // maps based on the information specified there.
   //
-  for (unsigned i = 0, e = InstrMapVec.size(); i < e; i++) {
-    MapTableEmitter IMap(Target, Records, InstrMapVec[i]);
+  for (Record *CurMap : InstrMapVec) {
+    MapTableEmitter IMap(Target, Records, CurMap);
 
     // Build RowInstrMap to group instructions based on their values for
     // RowFields. In the process, also collect key instructions into
@@ -592,7 +600,7 @@ void EmitMapTable(RecordKeeper &Records, raw_ostream &OS) {
     // Emit map tables and the functions to query them.
     IMap.emitTablesWithFunc(OS);
   }
-  OS << "} // End " << TargetName << " namespace\n";
+  OS << "} // End " << NameSpace << " namespace\n";
   OS << "} // End llvm namespace\n";
   OS << "#endif // GET_INSTRMAP_INFO\n\n";
 }

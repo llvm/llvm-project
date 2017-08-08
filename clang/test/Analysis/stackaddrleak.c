@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -verify -std=c99 -Dbool=_Bool -Wno-bool-conversion %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -verify -x c++ -Wno-bool-conversion %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify -std=c99 -Dbool=_Bool -Wno-bool-conversion %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify -x c++ -Wno-bool-conversion %s
 
 typedef __INTPTR_TYPE__ intptr_t;
 char const *p;
@@ -19,7 +19,7 @@ void f2() {
   p = (const char *) __builtin_alloca(12);
 } // expected-warning{{Address of stack memory allocated by call to alloca() on line 19 is still referred to by the global variable 'p' upon returning to the caller.  This will be a dangling reference}}
 
-// PR 7383 - previosly the stack address checker would crash on this example
+// PR 7383 - previously the stack address checker would crash on this example
 //  because it would attempt to do a direct load from 'pr7383_list'. 
 static int pr7383(__const char *__)
 {
@@ -33,7 +33,7 @@ void test_multi_return() {
   int x;
   a = &x;
   b = &x;
-} // expected-warning{{Address of stack memory associated with local variable 'x' is still referred to by the global variable 'a' upon returning}} expected-warning{{Address of stack memory associated with local variable 'x' is still referred to by the global variable 'b' upon returning}}
+} // expected-warning{{Address of stack memory associated with local variable 'x' is still referred to by the static variable 'a' upon returning}} expected-warning{{Address of stack memory associated with local variable 'x' is still referred to by the static variable 'b' upon returning}}
 
 intptr_t returnAsNonLoc() {
   int x;

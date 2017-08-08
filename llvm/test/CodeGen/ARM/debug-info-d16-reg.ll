@@ -12,9 +12,9 @@ target triple = "thumbv7-apple-darwin10"
 
 define i32 @inlineprinter(i8* %ptr, double %val, i8 zeroext %c) nounwind optsize !dbg !9 {
 entry:
-  tail call void @llvm.dbg.value(metadata i8* %ptr, i64 0, metadata !19, metadata !DIExpression()), !dbg !26
-  tail call void @llvm.dbg.value(metadata double %val, i64 0, metadata !20, metadata !DIExpression()), !dbg !26
-  tail call void @llvm.dbg.value(metadata i8 %c, i64 0, metadata !21, metadata !DIExpression()), !dbg !26
+  tail call void @llvm.dbg.value(metadata i8* %ptr, metadata !19, metadata !DIExpression()), !dbg !26
+  tail call void @llvm.dbg.value(metadata double %val, metadata !20, metadata !DIExpression()), !dbg !26
+  tail call void @llvm.dbg.value(metadata i8 %c, metadata !21, metadata !DIExpression()), !dbg !26
   %0 = zext i8 %c to i32, !dbg !27
   %1 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i8* %ptr, double %val, i32 %0) nounwind, !dbg !27
   ret i32 0, !dbg !29
@@ -22,9 +22,9 @@ entry:
 
 define i32 @printer(i8* %ptr, double %val, i8 zeroext %c) nounwind optsize noinline !dbg !0 {
 entry:
-  tail call void @llvm.dbg.value(metadata i8* %ptr, i64 0, metadata !16, metadata !DIExpression()), !dbg !30
-  tail call void @llvm.dbg.value(metadata double %val, i64 0, metadata !17, metadata !DIExpression()), !dbg !30
-  tail call void @llvm.dbg.value(metadata i8 %c, i64 0, metadata !18, metadata !DIExpression()), !dbg !30
+  tail call void @llvm.dbg.value(metadata i8* %ptr, metadata !16, metadata !DIExpression()), !dbg !30
+  tail call void @llvm.dbg.value(metadata double %val, metadata !17, metadata !DIExpression()), !dbg !30
+  tail call void @llvm.dbg.value(metadata i8 %c, metadata !18, metadata !DIExpression()), !dbg !30
   %0 = zext i8 %c to i32, !dbg !31
   %1 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i8* %ptr, double %val, i32 %0) nounwind, !dbg !31
   ret i32 0, !dbg !33
@@ -32,22 +32,22 @@ entry:
 
 declare i32 @printf(i8* nocapture, ...) nounwind
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 define i32 @main(i32 %argc, i8** nocapture %argv) nounwind optsize !dbg !10 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %argc, i64 0, metadata !22, metadata !DIExpression()), !dbg !34
-  tail call void @llvm.dbg.value(metadata i8** %argv, i64 0, metadata !23, metadata !DIExpression()), !dbg !34
+  tail call void @llvm.dbg.value(metadata i32 %argc, metadata !22, metadata !DIExpression()), !dbg !34
+  tail call void @llvm.dbg.value(metadata i8** %argv, metadata !23, metadata !DIExpression()), !dbg !34
   %0 = sitofp i32 %argc to double, !dbg !35
   %1 = fadd double %0, 5.555552e+05, !dbg !35
-  tail call void @llvm.dbg.value(metadata double %1, i64 0, metadata !24, metadata !DIExpression()), !dbg !35
+  tail call void @llvm.dbg.value(metadata double %1, metadata !24, metadata !DIExpression()), !dbg !35
   %2 = tail call i32 @puts(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str1, i32 0, i32 0)) nounwind, !dbg !36
   %3 = getelementptr inbounds i8, i8* bitcast (i32 (i32, i8**)* @main to i8*), i32 %argc, !dbg !37
   %4 = trunc i32 %argc to i8, !dbg !37
   %5 = add i8 %4, 97, !dbg !37
-  tail call void @llvm.dbg.value(metadata i8* %3, i64 0, metadata !49, metadata !DIExpression()) nounwind, !dbg !38
-  tail call void @llvm.dbg.value(metadata double %1, i64 0, metadata !50, metadata !DIExpression()) nounwind, !dbg !38
-  tail call void @llvm.dbg.value(metadata i8 %5, i64 0, metadata !51, metadata !DIExpression()) nounwind, !dbg !38
+  tail call void @llvm.dbg.value(metadata i8* %3, metadata !49, metadata !DIExpression()) nounwind, !dbg !38
+  tail call void @llvm.dbg.value(metadata double %1, metadata !50, metadata !DIExpression()) nounwind, !dbg !38
+  tail call void @llvm.dbg.value(metadata i8 %5, metadata !51, metadata !DIExpression()) nounwind, !dbg !38
   %6 = zext i8 %5 to i32, !dbg !39
   %7 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i8* %3, double %1, i32 %6) nounwind, !dbg !39
   %8 = tail call i32 @printer(i8* %3, double %1, i8 zeroext %5) nounwind, !dbg !40
@@ -59,17 +59,17 @@ declare i32 @puts(i8* nocapture) nounwind
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!48}
 
-!0 = distinct !DISubprogram(name: "printer", linkageName: "printer", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 12, file: !46, scope: !1, type: !3, variables: !43)
+!0 = distinct !DISubprogram(name: "printer", linkageName: "printer", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 12, file: !46, scope: !1, type: !3, variables: !43)
 !1 = !DIFile(filename: "a.c", directory: "/tmp/")
-!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "(LLVM build 00)", isOptimized: true, emissionKind: 1, file: !46, enums: !47, retainedTypes: !47, subprograms: !42, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "(LLVM build 00)", isOptimized: true, emissionKind: FullDebug, file: !46, enums: !47, retainedTypes: !47, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5, !6, !7, !8}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, file: !46, scope: !1, baseType: null)
 !7 = !DIBasicType(tag: DW_TAG_base_type, name: "double", size: 64, align: 32, encoding: DW_ATE_float)
 !8 = !DIBasicType(tag: DW_TAG_base_type, name: "unsigned char", size: 8, align: 8, encoding: DW_ATE_unsigned_char)
-!9 = distinct !DISubprogram(name: "inlineprinter", linkageName: "inlineprinter", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 5, file: !46, scope: !1, type: !3, variables: !44)
-!10 = distinct !DISubprogram(name: "main", linkageName: "main", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 18, file: !46, scope: !1, type: !11, variables: !45)
+!9 = distinct !DISubprogram(name: "inlineprinter", linkageName: "inlineprinter", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 5, file: !46, scope: !1, type: !3, variables: !44)
+!10 = distinct !DISubprogram(name: "main", linkageName: "main", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 18, file: !46, scope: !1, type: !11, variables: !45)
 !11 = !DISubroutineType(types: !12)
 !12 = !{!5, !5, !13}
 !13 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, file: !46, scope: !1, baseType: !14)
@@ -106,7 +106,6 @@ declare i32 @puts(i8* nocapture) nounwind
 !39 = !DILocation(line: 6, scope: !28, inlinedAt: !37)
 !40 = !DILocation(line: 22, scope: !25)
 !41 = !DILocation(line: 23, scope: !25)
-!42 = !{!0, !9, !10}
 !43 = !{!16, !17, !18}
 !44 = !{!19, !20, !21}
 !45 = !{!22, !23, !24}

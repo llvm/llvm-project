@@ -1,7 +1,7 @@
 ; RUN: llc -O0 -march=hexagon < %s | FileCheck %s
-; CHECK: and(r29, #-32)
-; CHECK-DAG: add(r29, #0)
-; CHECK-DAG: add(r29, #28)
+; CHECK: and(r29,#-32)
+; CHECK-DAG: add(r29,#0)
+; CHECK-DAG: add(r29,#28)
 
 target triple = "hexagon-unknown-unknown"
 

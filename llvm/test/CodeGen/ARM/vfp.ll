@@ -40,8 +40,8 @@ define void @test_add(float* %P, double* %D) {
 define void @test_ext_round(float* %P, double* %D) {
 ;CHECK-LABEL: test_ext_round:
 	%a = load float, float* %P		; <float> [#uses=1]
-;CHECK: vcvt.f64.f32
-;CHECK: vcvt.f32.f64
+;CHECK-DAG: vcvt.f64.f32
+;CHECK-DAG: vcvt.f32.f64
 	%b = fpext float %a to double		; <double> [#uses=1]
 	%A = load double, double* %D		; <double> [#uses=1]
 	%B = fptrunc double %A to float		; <float> [#uses=1]

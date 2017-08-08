@@ -41,7 +41,7 @@ public:
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
-  void
+  MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF,
                                 MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
@@ -52,6 +52,11 @@ public:
   /// This method is used by the shrink-wrapping pass to decide if
   /// \p MBB will be correctly handled by the target.
   bool canUseAsEpilogue(const MachineBasicBlock &MBB) const override;
+
+  /// Disable shrink wrap as tBfar/BL will be used to adjust for long jumps.
+  bool enableShrinkWrapping(const MachineFunction &MF) const override {
+    return false;
+  }
 
 private:
   /// Check if the frame lowering of \p MF needs a special fixup

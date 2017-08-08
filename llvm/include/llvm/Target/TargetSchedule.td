@@ -13,7 +13,7 @@
 // The SchedMachineModel is defined by subtargets for three categories of data:
 // 1. Basic properties for coarse grained instruction cost model.
 // 2. Scheduler Read/Write resources for simple per-opcode cost model.
-// 3. Instruction itineraties for detailed reservation tables.
+// 3. Instruction itineraries for detailed reservation tables.
 //
 // (1) Basic properties are defined by the SchedMachineModel
 // class. Target hooks allow subtargets to associate opcodes with
@@ -55,6 +55,8 @@ include "llvm/Target/TargetItinerary.td"
 
 class Instruction; // Forward def
 
+class Predicate; // Forward def
+
 // DAG operator that interprets the DAG args as Instruction defs.
 def instrs;
 
@@ -76,8 +78,6 @@ def instregex;
 // See MCSchedule.h for detailed comments.
 class SchedMachineModel {
   int IssueWidth = -1; // Max micro-ops that may be scheduled per cycle.
-  int MinLatency = -1; // Determines which instructions are allowed in a group.
-                       // (-1) inorder (0) ooo, (1): inorder +var latencies.
   int MicroOpBufferSize = -1; // Max micro-ops that can be buffered.
   int LoopMicroOpBufferSize = -1; // Max micro-ops that can be buffered for
                                   // optimized loop dispatch/execution.
@@ -99,11 +99,26 @@ class SchedMachineModel {
   // resulting from changes to the instruction definitions.
   bit CompleteModel = 1;
 
+  // A processor may only implement part of published ISA, due to either new ISA
+  // extensions, (e.g. Pentium 4 doesn't have AVX) or implementation
+  // (ARM/MIPS/PowerPC/SPARC soft float cores).
+  //
+  // For a processor which doesn't support some feature(s), the schedule model
+  // can use:
+  //
+  // let<Predicate> UnsupportedFeatures = [HaveA,..,HaveY];
+  //
+  // to skip the checks for scheduling information when building LLVM for
+  // instructions which have any of the listed predicates in their Predicates
+  // field.
+  list<Predicate> UnsupportedFeatures = [];
+
   bit NoModel = 0; // Special tag to indicate missing machine model.
 }
 
 def NoSchedModel : SchedMachineModel {
   let NoModel = 1;
+  let CompleteModel = 0;
 }
 
 // Define a kind of processor resource that may be common across
@@ -124,7 +139,7 @@ class ProcResourceKind;
 // changes this to an in-order issue/dispatch resource. In this case,
 // the scheduler counts down from the cycle that the instruction
 // issues in-order, forcing a stall whenever a subsequent instruction
-// requires the same resource until the number of ResourceCyles
+// requires the same resource until the number of ResourceCycles
 // specified in WriteRes expire. Setting BufferSize=1 changes this to
 // an in-order latency resource. In this case, the scheduler models
 // producer/consumer stalls between instructions that use the
@@ -240,6 +255,9 @@ class ProcWriteResources<list<ProcResourceKind> resources> {
   // Allow a processor to mark some scheduling classes as unsupported
   // for stronger verification.
   bit Unsupported = 0;
+  // Allow a processor to mark some scheduling classes as single-issue.
+  // SingleIssue is an alias for Begin/End Group.
+  bit SingleIssue = 0;
   SchedMachineModel SchedModel = ?;
 }
 
@@ -316,7 +334,7 @@ class ReadAdvance<SchedRead read, int cycles, list<SchedWrite> writes = []>
 }
 
 // Directly associate a new SchedRead type with a delay and optional
-// pipeline bypess. For use with InstRW or ItinRW.
+// pipeline bypass. For use with InstRW or ItinRW.
 class SchedReadAdvance<int cycles, list<SchedWrite> writes = []> : SchedRead,
   ProcReadAdvance<cycles, writes>;
 
@@ -392,6 +410,8 @@ class InstRW<list<SchedReadWrite> rw, dag instrlist> {
   list<SchedReadWrite> OperandReadWrites = rw;
   dag Instrs = instrlist;
   SchedMachineModel SchedModel = ?;
+  // Allow a subtarget to mark some instructions as unsupported.
+  bit Unsupported = 0;
 }
 
 // Map a set of itinerary classes to SchedReadWrite resources. This is

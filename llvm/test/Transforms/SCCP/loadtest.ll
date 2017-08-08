@@ -1,7 +1,7 @@
 ; This test makes sure that these instructions are properly constant propagated.
 
-; RUN: opt < %s -default-data-layout="e-p:32:32" -sccp -S | FileCheck %s
-; RUN: opt < %s -default-data-layout="E-p:32:32" -sccp -S | FileCheck %s
+; RUN: opt < %s -data-layout="e-p:32:32" -sccp -S | FileCheck %s
+; RUN: opt < %s -data-layout="E-p:32:32" -sccp -S | FileCheck %s
 
 ; CHECK-NOT: load
 

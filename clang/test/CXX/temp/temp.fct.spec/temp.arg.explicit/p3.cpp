@@ -1,11 +1,24 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 template<class X, class Y, class Z> X f(Y,Z); // expected-note {{candidate template ignored: couldn't infer template argument 'X'}}
 
 void g() {
-  f<int,char*,double>("aa",3.0); // expected-warning{{conversion from string literal to 'char *' is deprecated}}
-  f<int,char*>("aa",3.0); // Z is deduced to be double  \
-                          // expected-warning{{conversion from string literal to 'char *' is deprecated}}
+  f<int,char*,double>("aa",3.0);
+#if __cplusplus <= 199711L // C++03 or earlier modes
+  // expected-warning@-2{{conversion from string literal to 'char *' is deprecated}}
+#else
+  // expected-warning@-4{{ISO C++11 does not allow conversion from string literal to 'char *'}}
+#endif
+
+  f<int,char*>("aa",3.0); // Z is deduced to be double
+#if __cplusplus <= 199711L
+  // expected-warning@-2{{conversion from string literal to 'char *' is deprecated}}
+#else
+  // expected-warning@-4{{ISO C++11 does not allow conversion from string literal to 'char *'}}
+#endif
+ 
   f<int>("aa",3.0);       // Y is deduced to be char*, and
                           // Z is deduced to be double 
   f("aa",3.0); // expected-error{{no matching}}

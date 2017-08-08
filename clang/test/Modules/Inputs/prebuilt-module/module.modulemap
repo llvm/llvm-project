@@ -1,0 +1,1 @@
+module prebuilt { header "a.h" }

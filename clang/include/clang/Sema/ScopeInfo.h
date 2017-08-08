@@ -19,10 +19,12 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Sema/CleanupInfo.h"
 #include "clang/Sema/Ownership.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include <algorithm>
 
 namespace clang {
@@ -104,6 +106,16 @@ public:
   /// \brief Whether a statement was dropped because it was invalid.
   bool HasDroppedStmt : 1;
 
+  /// \brief True if current scope is for OpenMP declare reduction combiner.
+  bool HasOMPDeclareReductionCombiner : 1;
+
+  /// \brief Whether there is a fallthrough statement in this function.
+  bool HasFallthroughStmt : 1;
+
+  /// \brief Whether we make reference to a declaration that could be
+  /// unavailable.
+  bool HasPotentialAvailabilityViolations : 1;
+
   /// A flag that is set when parsing a method that must call super's
   /// implementation, such as \c -dealloc, \c -finalize, or any method marked
   /// with \c __attribute__((objc_requires_super)).
@@ -123,6 +135,18 @@ public:
   /// This starts true for a secondary initializer method and will be set to
   /// false if there is an invocation of an initializer on 'self'.
   bool ObjCWarnForNoInitDelegation : 1;
+
+  /// \brief True only when this function has not already built, or attempted
+  /// to build, the initial and final coroutine suspend points
+  bool NeedsCoroutineSuspends : 1;
+
+  /// \brief An enumeration represeting the kind of the first coroutine statement
+  /// in the function. One of co_return, co_await, or co_yield.
+  unsigned char FirstCoroutineStmtKind : 2;
+
+  /// First coroutine statement in the current function.
+  /// (ex co_return, co_await, co_yield)
+  SourceLocation FirstCoroutineStmtLoc;
 
   /// First 'return' statement in the current function.
   SourceLocation FirstReturnLoc;
@@ -146,12 +170,10 @@ public:
   SmallVector<ReturnStmt*, 4> Returns;
 
   /// \brief The promise object for this coroutine, if any.
-  VarDecl *CoroutinePromise;
+  VarDecl *CoroutinePromise = nullptr;
 
-  /// \brief The list of coroutine control flow constructs (co_await, co_yield,
-  /// co_return) that occur within the function or block. Empty if and only if
-  /// this function or block is not (yet known to be) a coroutine.
-  SmallVector<Stmt*, 4> CoroutineStmts;
+  /// \brief The initial and final coroutine suspend points.
+  std::pair<Stmt *, Stmt *> CoroutineSuspends;
 
   /// \brief The stack of currently active compound stamement scopes in the
   /// function.
@@ -164,7 +186,7 @@ public:
   
   /// \brief A list of parameters which have the nonnull attribute and are
   /// modified in the function.
-  llvm::SmallPtrSet<const ParmVarDecl*, 8>  ModifiedNonNullParams;
+  llvm::SmallPtrSet<const ParmVarDecl*, 8> ModifiedNonNullParams;
 
 public:
   /// Represents a simple identification of a weak object.
@@ -183,6 +205,7 @@ public:
   /// [self foo].prop   | 0 (unknown)         | prop (ObjCPropertyDecl)
   /// self.prop1.prop2  | prop1 (ObjCPropertyDecl)    | prop2 (ObjCPropertyDecl)
   /// MyClass.prop      | MyClass (ObjCInterfaceDecl) | -prop (ObjCMethodDecl)
+  /// MyClass.foo.prop  | +foo (ObjCMethodDecl)       | -prop (ObjCPropertyDecl)
   /// weakVar           | 0 (known)           | weakVar (VarDecl)
   /// self->weakIvar    | self (VarDecl)      | weakIvar (ObjCIvarDecl)
   ///
@@ -341,6 +364,14 @@ public:
     HasDroppedStmt = true;
   }
 
+  void setHasOMPDeclareReductionCombiner() {
+    HasOMPDeclareReductionCombiner = true;
+  }
+
+  void setHasFallthroughStmt() {
+    HasFallthroughStmt = true;
+  }
+
   void setHasCXXTry(SourceLocation TryLoc) {
     setHasBranchProtectedScope();
     FirstCXXTryLoc = TryLoc;
@@ -356,18 +387,64 @@ public:
         (HasIndirectGoto ||
           (HasBranchProtectedScope && HasBranchIntoScope));
   }
-  
+
+  bool isCoroutine() const { return !FirstCoroutineStmtLoc.isInvalid(); }
+
+  void setFirstCoroutineStmt(SourceLocation Loc, StringRef Keyword) {
+    assert(FirstCoroutineStmtLoc.isInvalid() &&
+                   "first coroutine statement location already set");
+    FirstCoroutineStmtLoc = Loc;
+    FirstCoroutineStmtKind = llvm::StringSwitch<unsigned char>(Keyword)
+            .Case("co_return", 0)
+            .Case("co_await", 1)
+            .Case("co_yield", 2);
+  }
+
+  StringRef getFirstCoroutineStmtKeyword() const {
+    assert(FirstCoroutineStmtLoc.isValid()
+                   && "no coroutine statement available");
+    switch (FirstCoroutineStmtKind) {
+    case 0: return "co_return";
+    case 1: return "co_await";
+    case 2: return "co_yield";
+    default:
+      llvm_unreachable("FirstCoroutineStmtKind has an invalid value");
+    };
+  }
+
+  void setNeedsCoroutineSuspends(bool value = true) {
+    assert((!value || CoroutineSuspends.first == nullptr) &&
+            "we already have valid suspend points");
+    NeedsCoroutineSuspends = value;
+  }
+
+  bool hasInvalidCoroutineSuspends() const {
+    return !NeedsCoroutineSuspends && CoroutineSuspends.first == nullptr;
+  }
+
+  void setCoroutineSuspends(Stmt *Initial, Stmt *Final) {
+    assert(Initial && Final && "suspend points cannot be null");
+    assert(CoroutineSuspends.first == nullptr && "suspend points already set");
+    NeedsCoroutineSuspends = false;
+    CoroutineSuspends.first = Initial;
+    CoroutineSuspends.second = Final;
+  }
+
   FunctionScopeInfo(DiagnosticsEngine &Diag)
     : Kind(SK_Function),
       HasBranchProtectedScope(false),
       HasBranchIntoScope(false),
       HasIndirectGoto(false),
       HasDroppedStmt(false),
+      HasOMPDeclareReductionCombiner(false),
+      HasFallthroughStmt(false),
+      HasPotentialAvailabilityViolations(false),
       ObjCShouldCallSuper(false),
       ObjCIsDesignatedInit(false),
       ObjCWarnForNoDesignatedInitChain(false),
       ObjCIsSecondaryInit(false),
       ObjCWarnForNoInitDelegation(false),
+      NeedsCoroutineSuspends(true),
       ErrorTrap(Diag) { }
 
   virtual ~FunctionScopeInfo();
@@ -404,19 +481,21 @@ public:
     // variables of reference type are captured by reference, and other
     // variables are captured by copy.
     enum CaptureKind {
-      Cap_ByCopy, Cap_ByRef, Cap_Block, Cap_This
+      Cap_ByCopy, Cap_ByRef, Cap_Block, Cap_VLA
     };
-
+    enum {
+      IsNestedCapture = 0x1,
+      IsThisCaptured = 0x2
+    };
     /// The variable being captured (if we are not capturing 'this') and whether
-    /// this is a nested capture.
-    llvm::PointerIntPair<VarDecl*, 1, bool> VarAndNested;
-
+    /// this is a nested capture, and whether we are capturing 'this'
+    llvm::PointerIntPair<VarDecl*, 2> VarAndNestedAndThis;
     /// Expression to initialize a field of the given type, and the kind of
     /// capture (if this is a capture and not an init-capture). The expression
     /// is only required if we are capturing ByVal and the variable's type has
     /// a non-trivial copy constructor.
     llvm::PointerIntPair<void *, 2, CaptureKind> InitExprAndCaptureKind;
-
+    
     /// \brief The source location at which the first capture occurred.
     SourceLocation Loc;
 
@@ -427,31 +506,42 @@ public:
     /// non-static data member that would hold the capture.
     QualType CaptureType;
 
+    /// \brief Whether an explicit capture has been odr-used in the body of the
+    /// lambda.
+    bool ODRUsed;
+
+    /// \brief Whether an explicit capture has been non-odr-used in the body of
+    /// the lambda.
+    bool NonODRUsed;
+
   public:
     Capture(VarDecl *Var, bool Block, bool ByRef, bool IsNested,
             SourceLocation Loc, SourceLocation EllipsisLoc,
             QualType CaptureType, Expr *Cpy)
-        : VarAndNested(Var, IsNested),
-          InitExprAndCaptureKind(Cpy, Block ? Cap_Block :
-                                      ByRef ? Cap_ByRef : Cap_ByCopy),
-          Loc(Loc), EllipsisLoc(EllipsisLoc), CaptureType(CaptureType) {}
+        : VarAndNestedAndThis(Var, IsNested ? IsNestedCapture : 0),
+          InitExprAndCaptureKind(
+              Cpy, !Var ? Cap_VLA : Block ? Cap_Block : ByRef ? Cap_ByRef
+                                                              : Cap_ByCopy),
+          Loc(Loc), EllipsisLoc(EllipsisLoc), CaptureType(CaptureType),
+          ODRUsed(false), NonODRUsed(false) {}
 
     enum IsThisCapture { ThisCapture };
     Capture(IsThisCapture, bool IsNested, SourceLocation Loc,
-            QualType CaptureType, Expr *Cpy)
-        : VarAndNested(nullptr, IsNested),
-          InitExprAndCaptureKind(Cpy, Cap_This),
-          Loc(Loc), EllipsisLoc(), CaptureType(CaptureType) {}
+            QualType CaptureType, Expr *Cpy, const bool ByCopy)
+        : VarAndNestedAndThis(
+              nullptr, (IsThisCaptured | (IsNested ? IsNestedCapture : 0))),
+          InitExprAndCaptureKind(Cpy, ByCopy ? Cap_ByCopy : Cap_ByRef),
+          Loc(Loc), EllipsisLoc(), CaptureType(CaptureType), ODRUsed(false),
+          NonODRUsed(false) {}
 
     bool isThisCapture() const {
-      return InitExprAndCaptureKind.getInt() == Cap_This;
+      return VarAndNestedAndThis.getInt() & IsThisCaptured;
     }
     bool isVariableCapture() const {
-      return InitExprAndCaptureKind.getInt() != Cap_This && !isVLATypeCapture();
+      return !isThisCapture() && !isVLATypeCapture();
     }
     bool isCopyCapture() const {
-      return InitExprAndCaptureKind.getInt() == Cap_ByCopy &&
-             !isVLATypeCapture();
+      return InitExprAndCaptureKind.getInt() == Cap_ByCopy;
     }
     bool isReferenceCapture() const {
       return InitExprAndCaptureKind.getInt() == Cap_ByRef;
@@ -460,13 +550,17 @@ public:
       return InitExprAndCaptureKind.getInt() == Cap_Block;
     }
     bool isVLATypeCapture() const {
-      return InitExprAndCaptureKind.getInt() == Cap_ByCopy &&
-             getVariable() == nullptr;
+      return InitExprAndCaptureKind.getInt() == Cap_VLA;
     }
-    bool isNested() const { return VarAndNested.getInt(); }
+    bool isNested() const {
+      return VarAndNestedAndThis.getInt() & IsNestedCapture;
+    }
+    bool isODRUsed() const { return ODRUsed; }
+    bool isNonODRUsed() const { return NonODRUsed; }
+    void markUsed(bool IsODRUse) { (IsODRUse ? ODRUsed : NonODRUsed) = true; }
 
     VarDecl *getVariable() const {
-      return VarAndNested.getPointer();
+      return VarAndNestedAndThis.getPointer();
     }
     
     /// \brief Retrieve the location at which this variable was captured.
@@ -479,8 +573,11 @@ public:
     /// \brief Retrieve the capture type for this capture, which is effectively
     /// the type of the non-static data member in the lambda/block structure
     /// that would store this capture.
-    QualType getCaptureType() const { return CaptureType; }
-    
+    QualType getCaptureType() const {
+      assert(!isThisCapture());
+      return CaptureType;
+    }
+
     Expr *getInitExpr() const {
       assert(!isVLATypeCapture() && "no init expression for type capture");
       return static_cast<Expr *>(InitExprAndCaptureKind.getPointer());
@@ -525,8 +622,11 @@ public:
                                /*Cpy*/ nullptr));
   }
 
-  void addThisCapture(bool isNested, SourceLocation Loc, QualType CaptureType,
-                      Expr *Cpy);
+  // Note, we do not need to add the type of 'this' since that is always
+  // retrievable from Sema::getCurrentThisType - and is also encoded within the
+  // type of the corresponding FieldDecl.
+  void addThisCapture(bool isNested, SourceLocation Loc,
+                      Expr *Cpy, bool ByCopy);
 
   /// \brief Determine whether the C++ 'this' is captured.
   bool isCXXThisCaptured() const { return CXXThisCaptureIndex != 0; }
@@ -604,14 +704,15 @@ public:
   /// \brief The implicit parameter for the captured variables.
   ImplicitParamDecl *ContextParam;
   /// \brief The kind of captured region.
-  CapturedRegionKind CapRegionKind;
+  unsigned short CapRegionKind;
+  unsigned short OpenMPLevel;
 
   CapturedRegionScopeInfo(DiagnosticsEngine &Diag, Scope *S, CapturedDecl *CD,
                           RecordDecl *RD, ImplicitParamDecl *Context,
-                          CapturedRegionKind K)
+                          CapturedRegionKind K, unsigned OpenMPLevel)
     : CapturingScopeInfo(Diag, ImpCap_CapturedRegion),
       TheCapturedDecl(CD), TheRecordDecl(RD), TheScope(S),
-      ContextParam(Context), CapRegionKind(K)
+      ContextParam(Context), CapRegionKind(K), OpenMPLevel(OpenMPLevel)
   {
     Kind = SK_CapturedRegion;
   }
@@ -660,7 +761,7 @@ public:
   bool ExplicitParams;
 
   /// \brief Whether any of the capture expressions requires cleanups.
-  bool ExprNeedsCleanups;
+  CleanupInfo Cleanup;
 
   /// \brief Whether the lambda contains an unexpanded parameter pack.
   bool ContainsUnexpandedParameterPack;
@@ -701,14 +802,23 @@ public:
   ///  to local variables that are usable as constant expressions and
   ///  do not involve an odr-use (they may still need to be captured
   ///  if the enclosing full-expression is instantiation dependent).
-  llvm::SmallSet<Expr*, 8> NonODRUsedCapturingExprs; 
+  llvm::SmallSet<Expr *, 8> NonODRUsedCapturingExprs;
+
+  /// Contains all of the variables defined in this lambda that shadow variables
+  /// that were defined in parent contexts. Used to avoid warnings when the
+  /// shadowed variables are uncaptured by this lambda.
+  struct ShadowedOuterDecl {
+    const VarDecl *VD;
+    const VarDecl *ShadowedDecl;
+  };
+  llvm::SmallVector<ShadowedOuterDecl, 4> ShadowingDecls;
 
   SourceLocation PotentialThisCaptureLocation;
 
   LambdaScopeInfo(DiagnosticsEngine &Diag)
     : CapturingScopeInfo(Diag, ImpCap_None), Lambda(nullptr),
       CallOperator(nullptr), NumExplicitCaptures(0), Mutable(false),
-      ExplicitParams(false), ExprNeedsCleanups(false),
+      ExplicitParams(false), Cleanup{},
       ContainsUnexpandedParameterPack(false), AutoTemplateParameterDepth(0),
       GLTemplateParameterList(nullptr) {
     Kind = SK_Lambda;
@@ -846,9 +956,10 @@ void FunctionScopeInfo::recordUseOfWeak(const ExprT *E, bool IsRead) {
 
 inline void
 CapturingScopeInfo::addThisCapture(bool isNested, SourceLocation Loc,
-                                   QualType CaptureType, Expr *Cpy) {
-  Captures.push_back(Capture(Capture::ThisCapture, isNested, Loc, CaptureType,
-                             Cpy));
+                                   Expr *Cpy,
+                                   const bool ByCopy) {
+  Captures.push_back(Capture(Capture::ThisCapture, isNested, Loc, QualType(),
+                             Cpy, ByCopy));
   CXXThisCaptureIndex = Captures.size();
 }
 

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -mcpu=ppc
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=ppc64
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -mcpu=ppc
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=ppc64
 
 define <4 x float> @foo1(<2 x float> %a, <2 x float> %b) nounwind readnone {
 entry:

@@ -16,23 +16,22 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
-#include "llvm/Support/DataTypes.h"
 #include <string>
 
 namespace llvm {
-class MemoryBuffer;
+
 class MCAsmInfo;
 
 /// AsmLexer - Lexer class for assembly files.
 class AsmLexer : public MCAsmLexer {
   const MCAsmInfo &MAI;
 
-  const char *CurPtr;
+  const char *CurPtr = nullptr;
   StringRef CurBuf;
-  bool isAtStartOfLine;
-
-  void operator=(const AsmLexer&) = delete;
-  AsmLexer(const AsmLexer&) = delete;
+  bool IsAtStartOfLine = true;
+  bool IsAtStartOfStatement = true;
+  bool IsParsingMSInlineAsm = false;
+  bool IsPeeking = false;
 
 protected:
   /// LexToken - Read the next token and return its code.
@@ -40,22 +39,23 @@ protected:
 
 public:
   AsmLexer(const MCAsmInfo &MAI);
+  AsmLexer(const AsmLexer &) = delete;
+  AsmLexer &operator=(const AsmLexer &) = delete;
   ~AsmLexer() override;
 
   void setBuffer(StringRef Buf, const char *ptr = nullptr);
+  void setParsingMSInlineAsm(bool V) { IsParsingMSInlineAsm = V; }
 
   StringRef LexUntilEndOfStatement() override;
-  StringRef LexUntilEndOfLine();
 
   size_t peekTokens(MutableArrayRef<AsmToken> Buf,
                     bool ShouldSkipSpace = true) override;
 
-  bool isAtStartOfComment(const char *Ptr);
-  bool isAtStatementSeparator(const char *Ptr);
-
   const MCAsmInfo &getMAI() const { return MAI; }
 
 private:
+  bool isAtStartOfComment(const char *Ptr);
+  bool isAtStatementSeparator(const char *Ptr);
   int getNextChar();
   AsmToken ReturnError(const char *Loc, const std::string &Msg);
 
@@ -67,8 +67,10 @@ private:
   AsmToken LexQuote();
   AsmToken LexFloatLiteral();
   AsmToken LexHexFloatLiteral(bool NoIntDigits);
+
+  StringRef LexUntilEndOfLine();
 };
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCPARSER_ASMLEXER_H

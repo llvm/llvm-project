@@ -13,7 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -24,6 +23,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include <algorithm>
@@ -58,12 +58,6 @@ namespace {
     } 
 
     bool runOnFunction(Function &F) override;
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      // This is a cluster of orthogonal Transforms
-      AU.addPreserved<UnifyFunctionExitNodes>();
-      AU.addPreservedID(LowerInvokePassID);
-    }
 
     struct CaseRange {
       ConstantInt* Low;
@@ -192,8 +186,8 @@ static void fixPhis(BasicBlock *SuccBB, BasicBlock *OrigBB, BasicBlock *NewBB,
       }
     // Remove incoming values in the reverse order to prevent invalidating
     // *successive* index.
-    for (auto III = Indices.rbegin(), IIE = Indices.rend(); III != IIE; ++III)
-      PN->removeIncomingValue(*III);
+    for (unsigned III : reverse(Indices))
+      PN->removeIncomingValue(III);
   }
 }
 
@@ -362,10 +356,10 @@ unsigned LowerSwitch::Clusterify(CaseVector& Cases, SwitchInst *SI) {
   unsigned numCmps = 0;
 
   // Start with "simple" cases
-  for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end(); i != e; ++i)
-    Cases.push_back(CaseRange(i.getCaseValue(), i.getCaseValue(),
-                              i.getCaseSuccessor()));
-  
+  for (auto Case : SI->cases())
+    Cases.push_back(CaseRange(Case.getCaseValue(), Case.getCaseValue(),
+                              Case.getCaseSuccessor()));
+
   std::sort(Cases.begin(), Cases.end(), CaseCmp());
 
   // Merge case into clusters
@@ -408,6 +402,14 @@ void LowerSwitch::processSwitchInst(SwitchInst *SI,
   Function *F = CurBlock->getParent();
   Value *Val = SI->getCondition();  // The value we are switching on...
   BasicBlock* Default = SI->getDefaultDest();
+
+  // Don't handle unreachable blocks. If there are successors with phis, this
+  // would leave them behind with missing predecessors.
+  if ((CurBlock != &F->getEntryBlock() && pred_empty(CurBlock)) ||
+      CurBlock->getSinglePredecessor() == CurBlock) {
+    DeleteList.insert(CurBlock);
+    return;
+  }
 
   // If there is only the default destination, just branch.
   if (!SI->getNumCases()) {
@@ -484,10 +486,10 @@ void LowerSwitch::processSwitchInst(SwitchInst *SI,
     // cases.
     assert(MaxPop > 0 && PopSucc);
     Default = PopSucc;
-    Cases.erase(std::remove_if(
-                    Cases.begin(), Cases.end(),
-                    [PopSucc](const CaseRange &R) { return R.BB == PopSucc; }),
-                Cases.end());
+    Cases.erase(
+        remove_if(Cases,
+                  [PopSucc](const CaseRange &R) { return R.BB == PopSucc; }),
+        Cases.end());
 
     // If there are no cases left, just branch.
     if (Cases.empty()) {

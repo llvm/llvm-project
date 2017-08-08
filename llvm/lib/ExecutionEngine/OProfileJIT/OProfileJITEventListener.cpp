@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Config/config.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/Config/config.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/OProfileWrapper.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
@@ -88,15 +88,15 @@ void OProfileJITEventListener::NotifyObjectEmitted(
   // Use symbol info to iterate functions in the object.
   for (const std::pair<SymbolRef, uint64_t> &P : computeSymbolSizes(DebugObj)) {
     SymbolRef Sym = P.first;
-    if (Sym.getType() != SymbolRef::ST_Function)
+    if (!Sym.getType() || *Sym.getType() != SymbolRef::ST_Function)
       continue;
 
-    ErrorOr<StringRef> NameOrErr = Sym.getName();
-    if (NameOrErr.getError())
+    Expected<StringRef> NameOrErr = Sym.getName();
+    if (!NameOrErr)
       continue;
     StringRef Name = *NameOrErr;
-    ErrorOr<uint64_t> AddrOrErr = Sym.getAddress();
-    if (AddrOrErr.getError())
+    Expected<uint64_t> AddrOrErr = Sym.getAddress();
+    if (!AddrOrErr)
       continue;
     uint64_t Addr = *AddrOrErr;
     uint64_t Size = P.second;
@@ -128,9 +128,9 @@ void OProfileJITEventListener::NotifyFreeingObject(const ObjectFile &Obj) {
     for (symbol_iterator I = DebugObj.symbol_begin(),
                          E = DebugObj.symbol_end();
          I != E; ++I) {
-      if (I->getType() == SymbolRef::ST_Function) {
-        ErrorOr<uint64_t> AddrOrErr = I->getAddress();
-        if (AddrOrErr.getError())
+      if (I->getType() && *I->getType() == SymbolRef::ST_Function) {
+        Expected<uint64_t> AddrOrErr = I->getAddress();
+        if (!AddrOrErr)
           continue;
         uint64_t Addr = *AddrOrErr;
 

@@ -44,6 +44,10 @@ ArgumentsAdjuster getClangSyntaxOnlyAdjuster();
 /// arguments.
 ArgumentsAdjuster getClangStripOutputAdjuster();
 
+/// \brief Gets an argument adjuster which removes dependency-file
+/// related command line arguments.
+ArgumentsAdjuster getClangStripDependencyFileAdjuster();
+
 enum class ArgumentInsertPosition { BEGIN, END };
 
 /// \brief Gets an argument adjuster which inserts \p Extra arguments in the

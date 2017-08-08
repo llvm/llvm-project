@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -march=x86-64 -mattr=+sse3,+sse4.1 -mcpu=penryn -stats 2>&1 | grep "9 machine-licm"
+; RUN: llc < %s -march=x86-64 -mattr=+sse3,+sse4.1 -mcpu=penryn -stats 2>&1 | grep "9 machinelicm"
 ; RUN: llc < %s -march=x86-64 -mattr=+sse3,+sse4.1 -mcpu=penryn | FileCheck %s
 ; rdar://6627786
 ; rdar://7792037

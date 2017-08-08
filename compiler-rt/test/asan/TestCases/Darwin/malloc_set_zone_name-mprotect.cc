@@ -47,5 +47,6 @@ int main() {
     memset(mem[i], 'a', 8 * (i % kNumIter));
     free(mem[i]);
   }
+  malloc_destroy_zone(zone);
   return 0;
 }

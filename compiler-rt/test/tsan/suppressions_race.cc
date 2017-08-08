@@ -1,4 +1,4 @@
-// RUN: %clang_tsan -O1 %s -o %t && TSAN_OPTIONS="$TSAN_OPTIONS suppressions='%s.supp'" %run %t 2>&1 | FileCheck %s
+// RUN: %clang_tsan -O1 %s -o %t && %env_tsan_opts=suppressions='%s.supp' %run %t 2>&1 | FileCheck %s
 #include "test.h"
 
 int Global;
@@ -22,7 +22,7 @@ int main() {
   pthread_create(&t[1], NULL, Thread2, NULL);
   pthread_join(t[0], NULL);
   pthread_join(t[1], NULL);
-  printf("OK\n");
+  fprintf(stderr, "OK\n");
   return 0;
 }
 

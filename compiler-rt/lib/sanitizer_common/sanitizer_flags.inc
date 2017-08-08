@@ -56,13 +56,13 @@ COMMON_FLAG(
     "Mention name of executable when reporting error and "
     "append executable name to logs (as in \"log_path.exe_name.pid\").")
 COMMON_FLAG(
-    bool, log_to_syslog, SANITIZER_ANDROID,
+    bool, log_to_syslog, SANITIZER_ANDROID || SANITIZER_MAC,
     "Write all sanitizer output to syslog in addition to other means of "
     "logging.")
 COMMON_FLAG(
     int, verbosity, 0,
     "Verbosity level (0 - silent, 1 - a bit of output, 2+ - more output).")
-COMMON_FLAG(bool, detect_leaks, true, "Enable memory leak detection.")
+COMMON_FLAG(bool, detect_leaks, !SANITIZER_MAC, "Enable memory leak detection.")
 COMMON_FLAG(
     bool, leak_check_at_exit, true,
     "Invoke leak checking in an atexit handler. Has no effect if "
@@ -74,16 +74,28 @@ COMMON_FLAG(bool, allocator_may_return_null, false,
 COMMON_FLAG(bool, print_summary, true,
             "If false, disable printing error summaries in addition to error "
             "reports.")
+COMMON_FLAG(int, print_module_map, 0,
+            "OS X only (0 - don't print, 1 - print only once before process "
+            "exits, 2 - print after each report).")
 COMMON_FLAG(bool, check_printf, true, "Check printf arguments.")
-COMMON_FLAG(bool, handle_segv, SANITIZER_NEEDS_SEGV,
-            "If set, registers the tool's custom SIGSEGV/SIGBUS handler.")
-COMMON_FLAG(bool, handle_abort, false,
-            "If set, registers the tool's custom SIGABRT handler.")
-COMMON_FLAG(bool, handle_sigfpe, true,
-            "If set, registers the tool's custom SIGFPE handler.")
-COMMON_FLAG(bool, allow_user_segv_handler, false,
-            "If set, allows user to register a SEGV handler even if the tool "
-            "registers one.")
+#define COMMON_FLAG_HANDLE_SIGNAL_HELP(signal) \
+    "Controls custom tool's " #signal " handler (0 - do not registers the " \
+    "handler, 1 - register the handler and allow user to set own, " \
+    "2 - registers the handler and block user from changing it). "
+COMMON_FLAG(HandleSignalMode, handle_segv, kHandleSignalYes,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGSEGV))
+COMMON_FLAG(HandleSignalMode, handle_sigbus, kHandleSignalYes,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGBUS))
+COMMON_FLAG(HandleSignalMode, handle_abort, kHandleSignalNo,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGABRT))
+COMMON_FLAG(HandleSignalMode, handle_sigill, kHandleSignalNo,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGILL))
+COMMON_FLAG(HandleSignalMode, handle_sigfpe, kHandleSignalYes,
+            COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGFPE))
+#undef COMMON_FLAG_HANDLE_SIGNAL_HELP
+COMMON_FLAG(bool, allow_user_segv_handler, true,
+            "Deprecated. True has no effect, use handle_sigbus=1. If false, "
+            "handle_*=1 will be upgraded to handle_*=2.")
 COMMON_FLAG(bool, use_sigaltstack, true,
             "If set, uses alternate stack for signal handling.")
 COMMON_FLAG(bool, detect_deadlocks, false,
@@ -116,6 +128,12 @@ COMMON_FLAG(uptr, soft_rss_limit_mb, 0,
             " until the RSS goes below the soft limit."
             " This limit does not affect memory allocations other than"
             " malloc/new.")
+COMMON_FLAG(bool, heap_profile, false, "Experimental heap profiler, asan-only")
+COMMON_FLAG(s32, allocator_release_to_os_interval_ms, kReleaseToOSIntervalNever,
+            "Experimental. Only affects a 64-bit allocator. If set, tries to "
+            "release unused memory to the OS, but not more often than this "
+            "interval (in milliseconds). Negative values mean do not attempt "
+            "to release memory to the OS.\n")
 COMMON_FLAG(bool, can_use_proc_maps_statm, true,
             "If false, do not attempt to read /proc/maps/statm."
             " Mostly useful for testing sanitizers.")
@@ -123,22 +141,6 @@ COMMON_FLAG(
     bool, coverage, false,
     "If set, coverage information will be dumped at program shutdown (if the "
     "coverage instrumentation was enabled at compile time).")
-COMMON_FLAG(bool, coverage_pcs, true,
-            "If set (and if 'coverage' is set too), the coverage information "
-            "will be dumped as a set of PC offsets for every module.")
-COMMON_FLAG(bool, coverage_order_pcs, false,
-             "If true, the PCs will be dumped in the order they've"
-             " appeared during the execution.")
-COMMON_FLAG(bool, coverage_bitset, false,
-            "If set (and if 'coverage' is set too), the coverage information "
-            "will also be dumped as a bitset to a separate file.")
-COMMON_FLAG(bool, coverage_counters, false,
-            "If set (and if 'coverage' is set too), the bitmap that corresponds"
-            " to coverage counters will be dumped.")
-COMMON_FLAG(bool, coverage_direct, SANITIZER_ANDROID,
-            "If set, coverage information will be dumped directly to a memory "
-            "mapped file. This way data is not lost even if the process is "
-            "suddenly killed.")
 COMMON_FLAG(const char *, coverage_dir, ".",
             "Target directory for coverage dumps. Defaults to the current "
             "directory.")
@@ -148,10 +150,10 @@ COMMON_FLAG(bool, full_address_space, false,
 COMMON_FLAG(bool, print_suppressions, true,
             "Print matched suppressions at exit.")
 COMMON_FLAG(
-    bool, disable_coredump, (SANITIZER_WORDSIZE == 64),
-    "Disable core dumping. By default, disable_core=1 on 64-bit to avoid "
-    "dumping a 16T+ core file. Ignored on OSes that don't dump core by"
-    "default and for sanitizers that don't reserve lots of virtual memory.")
+    bool, disable_coredump, (SANITIZER_WORDSIZE == 64) && !SANITIZER_GO,
+    "Disable core dumping. By default, disable_coredump=1 on 64-bit to avoid"
+    " dumping a 16T+ core file. Ignored on OSes that don't dump core by"
+    " default and for sanitizers that don't reserve lots of virtual memory.")
 COMMON_FLAG(bool, use_madv_dontdump, true,
           "If set, instructs kernel to not store the (huge) shadow "
           "in core file.")
@@ -160,6 +162,11 @@ COMMON_FLAG(bool, symbolize_inline_frames, true,
 COMMON_FLAG(bool, symbolize_vs_style, false,
             "Print file locations in Visual Studio style (e.g: "
             " file(10,42): ...")
+COMMON_FLAG(int, dedup_token_length, 0,
+            "If positive, after printing a stack trace also print a short "
+            "string token based on this number of frames that will simplify "
+            "deduplication of the reports. "
+            "Example: 'DEDUP_TOKEN: foo-bar-main'. Default is 0.")
 COMMON_FLAG(const char *, stack_trace_format, "DEFAULT",
             "Format string used to render stack frames. "
             "See sanitizer_stacktrace_printer.h for the format description. "
@@ -174,21 +181,51 @@ COMMON_FLAG(bool, intercept_strstr, true,
 COMMON_FLAG(bool, intercept_strspn, true,
             "If set, uses custom wrappers for strspn and strcspn function "
             "to find more errors.")
+COMMON_FLAG(bool, intercept_strtok, true,
+            "If set, uses a custom wrapper for the strtok function "
+            "to find more errors.")
 COMMON_FLAG(bool, intercept_strpbrk, true,
             "If set, uses custom wrappers for strpbrk function "
             "to find more errors.")
+COMMON_FLAG(bool, intercept_strlen, true,
+            "If set, uses custom wrappers for strlen and strnlen functions "
+            "to find more errors.")
+COMMON_FLAG(bool, intercept_strndup, true,
+            "If set, uses custom wrappers for strndup functions "
+            "to find more errors.")
+COMMON_FLAG(bool, intercept_strchr, true,
+            "If set, uses custom wrappers for strchr, strchrnul, and strrchr "
+            "functions to find more errors.")
 COMMON_FLAG(bool, intercept_memcmp, true,
             "If set, uses custom wrappers for memcmp function "
             "to find more errors.")
 COMMON_FLAG(bool, strict_memcmp, true,
           "If true, assume that memcmp(p1, p2, n) always reads n bytes before "
           "comparing p1 and p2.")
+COMMON_FLAG(bool, intercept_memmem, true,
+            "If set, uses a wrapper for memmem() to find more errors.")
+COMMON_FLAG(bool, intercept_intrin, true,
+            "If set, uses custom wrappers for memset/memcpy/memmove "
+            "intrinsics to find more errors.")
+COMMON_FLAG(bool, intercept_stat, true,
+            "If set, uses custom wrappers for *stat functions "
+            "to find more errors.")
+COMMON_FLAG(bool, intercept_send, true,
+            "If set, uses custom wrappers for send* functions "
+            "to find more errors.")
 COMMON_FLAG(bool, decorate_proc_maps, false, "If set, decorate sanitizer "
                                              "mappings in /proc/self/maps with "
                                              "user-readable names")
 COMMON_FLAG(int, exitcode, 1, "Override the program exit status if the tool "
                               "found an error")
 COMMON_FLAG(
-    bool, abort_on_error, SANITIZER_MAC,
+    bool, abort_on_error, SANITIZER_ANDROID || SANITIZER_MAC,
     "If set, the tool calls abort() instead of _exit() after printing the "
     "error report.")
+COMMON_FLAG(bool, suppress_equal_pcs, true,
+            "Deduplicate multiple reports for single source location in "
+            "halt_on_error=false mode (asan only).")
+COMMON_FLAG(bool, print_cmdline, false, "Print command line on crash "
+            "(asan only).")
+COMMON_FLAG(bool, html_cov_report, false, "Generate html coverage report.")
+COMMON_FLAG(const char *, sancov_path, "sancov", "Sancov tool location.")

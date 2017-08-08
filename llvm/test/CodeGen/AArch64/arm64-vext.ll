@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 -aarch64-neon-syntax=apple < %s | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define void @test_vext_s8() nounwind ssp {
   ; CHECK-LABEL: test_vext_s8:
@@ -116,7 +116,7 @@ define void @test_vext_p16() nounwind ssp {
 
 define void @test_vext_s32() nounwind ssp {
   ; CHECK-LABEL: test_vext_s32:
-  ; CHECK: {{ext.8.*#4}}
+  ; CHECK: {{rev64.2s.*}}
   %xS32x2 = alloca <2 x i32>, align 8
   %__a = alloca <2 x i32>, align 8
   %__b = alloca <2 x i32>, align 8
@@ -137,7 +137,7 @@ define void @test_vext_s32() nounwind ssp {
 
 define void @test_vext_u32() nounwind ssp {
   ; CHECK-LABEL: test_vext_u32:
-  ; CHECK: {{ext.8.*#4}}
+  ; CHECK: {{rev64.2s.*}}
   %xU32x2 = alloca <2 x i32>, align 8
   %__a = alloca <2 x i32>, align 8
   %__b = alloca <2 x i32>, align 8
@@ -158,7 +158,7 @@ define void @test_vext_u32() nounwind ssp {
 
 define void @test_vext_f32() nounwind ssp {
   ; CHECK-LABEL: test_vext_f32:
-  ; CHECK: {{ext.8.*#4}}
+  ; CHECK: {{rev64.2s.*}}
   %xF32x2 = alloca <2 x float>, align 8
   %__a = alloca <2 x float>, align 8
   %__b = alloca <2 x float>, align 8
@@ -179,7 +179,7 @@ define void @test_vext_f32() nounwind ssp {
 
 define void @test_vext_s64() nounwind ssp {
   ; CHECK-LABEL: test_vext_s64:
-  ; CHECK_FIXME: {{ext.8.*#1}}
+  ; CHECK_FIXME: {{rev64.2s.*}}
   ; this just turns into a load of the second element
   %xS64x1 = alloca <1 x i64>, align 8
   %__a = alloca <1 x i64>, align 8

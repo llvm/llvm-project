@@ -1,16 +1,16 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=Enable < %s | llvm-dwarfdump - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump - | FileCheck %s
 ; CHECK: debug_info contents
+; CHECK: DW_AT_name{{.*}}= [[F1:.*]])
 ; CHECK: [[NS1:0x[0-9a-f]*]]:{{ *}}DW_TAG_namespace
-; CHECK-NEXT: DW_AT_name{{.*}} = "A"
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F1:".*debug-info-namespace.cpp"]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(5)
+; CHECK-NOT: DW_AT_decl_file
+; CHECK-NOT: DW_AT_decl_line
 ; CHECK-NOT: NULL
 ; CHECK: [[NS2:0x[0-9a-f]*]]:{{ *}}DW_TAG_namespace
 ; CHECK-NEXT: DW_AT_name{{.*}} = "B"
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2:".*foo.cpp"]])
-; CHECK-NEXT: DW_AT_decl_line{{.*}}(1)
+; CHECK-NOT: DW_AT_decl_file
+; CHECK-NOT: DW_AT_decl_line
 ; CHECK-NOT: NULL
 ; CHECK: [[I:0x[0-9a-f]*]]:{{ *}}DW_TAG_variable
 ; CHECK-NEXT: DW_AT_name{{.*}}= "i"
@@ -23,6 +23,11 @@
 ; CHECK-NOT: NULL
 ; CHECK: [[BAR:0x[0-9a-f]*]]:{{ *}}DW_TAG_structure_type
 ; CHECK-NEXT: DW_AT_name{{.*}}= "bar"
+; CHECK: DW_TAG_subprogram
+; CHECK-NOT: DW_TAG
+; CHECK: DW_AT_MIPS_linkage_name
+; CHECK-NOT: DW_TAG
+; CHECK: DW_AT_name{{.*}}= "f1"
 ; CHECK: [[FUNC1:.*]]: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_MIPS_linkage_name
@@ -45,30 +50,24 @@
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name{{.*}}= "func_fwd"
 ; CHECK-NOT: DW_AT_declaration
-; CHECK: DW_TAG_subprogram
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_MIPS_linkage_name
-; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name{{.*}}= "f1"
 ; CHECK: NULL
 
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_module
-; This is a bug, it should be in F2 but it inherits the file from its
-; enclosing scope
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F1]])
+; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2:.*]])
 ; CHECK-NEXT: DW_AT_decl_line{{.*}}(15)
 ; CHECK-NEXT: DW_AT_import{{.*}}=> {[[NS2]]})
 ; CHECK: NULL
 ; CHECK-NOT: NULL
 
 ; CHECK: DW_TAG_imported_module
-; Same bug as above, this should be F2, not F1
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F1]])
+; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2:.*]])
 ; CHECK-NEXT: DW_AT_decl_line{{.*}}(18)
 ; CHECK-NEXT: DW_AT_import{{.*}}=> {[[NS1]]})
 ; CHECK-NOT: NULL
 
+; CHECK: DW_TAG_subprogram
+; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_MIPS_linkage_name
@@ -76,7 +75,7 @@
 ; CHECK: DW_AT_name{{.*}}= "func"
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_module
-; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2]])
+; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2:.*]])
 ; CHECK-NEXT: DW_AT_decl_line{{.*}}(26)
 ; CHECK-NEXT: DW_AT_import{{.*}}=> {[[NS1]]})
 ; CHECK-NOT: NULL
@@ -200,8 +199,8 @@
 ; }
 ; void B::func_fwd() {}
 
-@_ZN1A1B1iE = global i32 0, align 4
-@_ZN1A1B7var_fwdE = global i32 0, align 4
+@_ZN1A1B1iE = global i32 0, align 4, !dbg !131
+@_ZN1A1B7var_fwdE = global i32 0, align 4, !dbg !132
 @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_debug_info_namespace.cpp, i8* null }]
 
 ; Function Attrs: nounwind ssp uwtable
@@ -287,63 +286,62 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!57, !58}
 !llvm.ident = !{!59}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !9, globals: !30, imports: !33)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, globals: !30, imports: !33)
 !1 = !DIFile(filename: "debug-info-namespace.cpp", directory: "/tmp")
 !2 = !{}
 !3 = !{!4, !8}
 !4 = !DICompositeType(tag: DW_TAG_structure_type, name: "foo", line: 5, flags: DIFlagFwdDecl, file: !5, scope: !6, identifier: "_ZTSN1A1B3fooE")
 !5 = !DIFile(filename: "foo.cpp", directory: "/tmp")
-!6 = !DINamespace(name: "B", line: 1, file: !5, scope: !7)
-!7 = !DINamespace(name: "A", line: 5, file: !1, scope: null)
+!6 = !DINamespace(name: "B", scope: !7)
+!7 = !DINamespace(name: "A", scope: null)
 !8 = !DICompositeType(tag: DW_TAG_structure_type, name: "bar", line: 6, size: 8, align: 8, file: !5, scope: !6, elements: !2, identifier: "_ZTSN1A1B3barE")
-!9 = !{!10, !14, !17, !21, !25, !26, !27}
-!10 = distinct !DISubprogram(name: "f1", linkageName: "_ZN1A1B2f1Ev", line: 3, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 3, file: !5, scope: !6, type: !11, variables: !2)
+!10 = distinct !DISubprogram(name: "f1", linkageName: "_ZN1A1B2f1Ev", line: 3, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !11, variables: !2)
 !11 = !DISubroutineType(types: !12)
 !12 = !{!13}
 !13 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!14 = distinct !DISubprogram(name: "f1", linkageName: "_ZN1A1B2f1Ei", line: 4, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 4, file: !5, scope: !6, type: !15, variables: !2)
+!14 = distinct !DISubprogram(name: "f1", linkageName: "_ZN1A1B2f1Ei", line: 4, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 4, file: !5, scope: !6, type: !15, variables: !2)
 !15 = !DISubroutineType(types: !16)
 !16 = !{null, !13}
-!17 = distinct !DISubprogram(name: "__cxx_global_var_init", line: 20, isLocal: true, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 20, file: !5, scope: !18, type: !19, variables: !2)
+!17 = distinct !DISubprogram(name: "__cxx_global_var_init", line: 20, isLocal: true, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 20, file: !5, scope: !18, type: !19, variables: !2)
 !18 = !DIFile(filename: "foo.cpp", directory: "/tmp")
 !19 = !DISubroutineType(types: !20)
 !20 = !{null}
-!21 = distinct !DISubprogram(name: "func", linkageName: "_Z4funcb", line: 21, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 21, file: !5, scope: !18, type: !22, variables: !2)
+!21 = distinct !DISubprogram(name: "func", linkageName: "_Z4funcb", line: 21, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 21, file: !5, scope: !18, type: !22, variables: !2)
 !22 = !DISubroutineType(types: !23)
 !23 = !{!13, !24}
 !24 = !DIBasicType(tag: DW_TAG_base_type, name: "bool", size: 8, align: 8, encoding: DW_ATE_boolean)
-!25 = distinct !DISubprogram(name: "__cxx_global_var_init1", line: 44, isLocal: true, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 44, file: !5, scope: !18, type: !19, variables: !2)
-!26 = distinct !DISubprogram(name: "func_fwd", linkageName: "_ZN1A1B8func_fwdEv", line: 47, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 47, file: !5, scope: !6, type: !19, variables: !2)
-!27 = distinct !DISubprogram(name: "", linkageName: "_GLOBAL__sub_I_debug_info_namespace.cpp", isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, file: !1, scope: !28, type: !29, variables: !2)
+!25 = distinct !DISubprogram(name: "__cxx_global_var_init1", line: 44, isLocal: true, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 44, file: !5, scope: !18, type: !19, variables: !2)
+!26 = distinct !DISubprogram(name: "func_fwd", linkageName: "_ZN1A1B8func_fwdEv", line: 47, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 47, file: !5, scope: !6, type: !19, variables: !2)
+!27 = distinct !DISubprogram(name: "", linkageName: "_GLOBAL__sub_I_debug_info_namespace.cpp", isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !0, file: !1, scope: !28, type: !29, variables: !2)
 !28 = !DIFile(filename: "debug-info-namespace.cpp", directory: "/tmp")
 !29 = !DISubroutineType(types: !2)
-!30 = !{!31, !32}
-!31 = !DIGlobalVariable(name: "i", linkageName: "_ZN1A1B1iE", line: 20, isLocal: false, isDefinition: true, scope: !6, file: !18, type: !13, variable: i32* @_ZN1A1B1iE)
-!32 = !DIGlobalVariable(name: "var_fwd", linkageName: "_ZN1A1B7var_fwdE", line: 44, isLocal: false, isDefinition: true, scope: !6, file: !18, type: !13, variable: i32* @_ZN1A1B7var_fwdE)
+!30 = !{!131, !132}
+!31 = !DIGlobalVariable(name: "i", linkageName: "_ZN1A1B1iE", line: 20, isLocal: false, isDefinition: true, scope: !6, file: !18, type: !13)
+!32 = !DIGlobalVariable(name: "var_fwd", linkageName: "_ZN1A1B7var_fwdE", line: 44, isLocal: false, isDefinition: true, scope: !6, file: !18, type: !13)
 !33 = !{!34, !35, !36, !37, !40, !41, !42, !43, !44, !45, !47, !48, !49, !51, !54, !55, !56}
-!34 = !DIImportedEntity(tag: DW_TAG_imported_module, line: 15, scope: !7, entity: !6)
-!35 = !DIImportedEntity(tag: DW_TAG_imported_module, line: 18, scope: !0, entity: !7)
-!36 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 19, name: "E", scope: !0, entity: !7)
-!37 = !DIImportedEntity(tag: DW_TAG_imported_module, line: 23, scope: !38, entity: !6)
+!34 = !DIImportedEntity(tag: DW_TAG_imported_module, file: !5, line: 15, scope: !7, entity: !6)
+!35 = !DIImportedEntity(tag: DW_TAG_imported_module, file: !5, line: 18, scope: !0, entity: !7)
+!36 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 19, name: "E", scope: !0, entity: !7)
+!37 = !DIImportedEntity(tag: DW_TAG_imported_module, file: !5, line: 23, scope: !38, entity: !6)
 !38 = distinct !DILexicalBlock(line: 22, column: 10, file: !5, scope: !39)
 !39 = distinct !DILexicalBlock(line: 22, column: 7, file: !5, scope: !21)
-!40 = !DIImportedEntity(tag: DW_TAG_imported_module, line: 26, scope: !21, entity: !7)
-!41 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 27, scope: !21, entity: !"_ZTSN1A1B3fooE")
-!42 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 28, scope: !21, entity: !"_ZTSN1A1B3barE")
-!43 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 29, scope: !21, entity: !14)
-!44 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 30, scope: !21, entity: !31)
-!45 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 31, scope: !21, entity: !46)
-!46 = !DIDerivedType(tag: DW_TAG_typedef, name: "baz", line: 7, file: !5, scope: !6, baseType: !"_ZTSN1A1B3barE")
-!47 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 32, name: "X", scope: !21, entity: !7)
-!48 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 33, name: "Y", scope: !21, entity: !47)
-!49 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 34, scope: !21, entity: !50)
+!40 = !DIImportedEntity(tag: DW_TAG_imported_module, file: !5, line: 26, scope: !21, entity: !7)
+!41 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 27, scope: !21, entity: !4)
+!42 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 28, scope: !21, entity: !8)
+!43 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 29, scope: !21, entity: !14)
+!44 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 30, scope: !21, entity: !31)
+!45 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 31, scope: !21, entity: !46)
+!46 = !DIDerivedType(tag: DW_TAG_typedef, name: "baz", line: 7, file: !5, scope: !6, baseType: !8)
+!47 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 32, name: "X", scope: !21, entity: !7)
+!48 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 33, name: "Y", scope: !21, entity: !47)
+!49 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 34, scope: !21, entity: !50)
 !50 = !DIGlobalVariable(name: "var_decl", linkageName: "_ZN1A1B8var_declE", line: 8, isLocal: false, isDefinition: false, scope: !6, file: !18, type: !13)
-!51 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 35, scope: !21, entity: !52)
+!51 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 35, scope: !21, entity: !52)
 !52 = !DISubprogram(name: "func_decl", linkageName: "_ZN1A1B9func_declEv", line: 9, isLocal: false, isDefinition: false, flags: DIFlagPrototyped, isOptimized: false, file: !5, scope: !6, type: !19, variables: !53)
 !53 = !{} ; previously: invalid DW_TAG_base_type
-!54 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 36, scope: !21, entity: !32)
-!55 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 37, scope: !21, entity: !26)
-!56 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 42, scope: !7, entity: !31)
+!54 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 36, scope: !21, entity: !32)
+!55 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 37, scope: !21, entity: !26)
+!56 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 42, scope: !7, entity: !31)
 !57 = !{i32 2, !"Dwarf Version", i32 2}
 !58 = !{i32 2, !"Debug Info Version", i32 3}
 !59 = !{!"clang version 3.6.0 "}
@@ -363,3 +361,5 @@ attributes #1 = { nounwind readnone }
 !73 = !DILocation(line: 47, column: 21, scope: !26)
 !74 = !DILocation(line: 0, scope: !75)
 !75 = !DILexicalBlockFile(discriminator: 0, file: !5, scope: !27)
+!131 = !DIGlobalVariableExpression(var: !31)
+!132 = !DIGlobalVariableExpression(var: !32)

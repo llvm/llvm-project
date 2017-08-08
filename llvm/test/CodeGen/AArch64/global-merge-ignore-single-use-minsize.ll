@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=aarch64-apple-ios -asm-verbose=false -aarch64-collect-loh=false \
-; RUN:   -O1 -global-merge-group-by-use -global-merge-ignore-single-use \
-; RUN:   %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-apple-ios -asm-verbose=false \
+; RUN:   -aarch64-enable-collect-loh=false -O1 -global-merge-group-by-use \
+; RUN:   -global-merge-ignore-single-use %s -o - | FileCheck %s
 
 ; Check that, at -O1, we only merge globals used in minsize functions.
 ; We assume that globals of the same size aren't reordered inside a set.
@@ -11,7 +11,7 @@
 
 ; CHECK-LABEL: f1:
 define void @f1(i32 %a1, i32 %a2) minsize nounwind {
-; CHECK-NEXT: adrp x8, [[SET:l__MergedGlobals]]@PAGE
+; CHECK-NEXT: adrp x8, [[SET:__MergedGlobals]]@PAGE
 ; CHECK-NEXT: add x8, x8, [[SET]]@PAGEOFF
 ; CHECK-NEXT: stp w0, w1, [x8]
 ; CHECK-NEXT: ret

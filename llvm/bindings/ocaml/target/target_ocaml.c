@@ -15,6 +15,7 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
+#include "llvm-c/Core.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
 #include "caml/alloc.h"
@@ -64,13 +65,6 @@ CAMLprim value llvm_datalayout_as_string(value TD) {
   return Copy;
 }
 
-/* [<Llvm.PassManager.any] Llvm.PassManager.t -> DataLayout.t -> unit */
-CAMLprim value llvm_datalayout_add_to_pass_manager(LLVMPassManagerRef PM,
-                                                   value DL) {
-  LLVMAddTargetData(DataLayout_val(DL), PM);
-  return Val_unit;
-}
-
 /* DataLayout.t -> Endian.t */
 CAMLprim value llvm_datalayout_byte_order(value DL) {
   return Val_int(LLVMByteOrder(DataLayout_val(DL)));
@@ -83,7 +77,7 @@ CAMLprim value llvm_datalayout_pointer_size(value DL) {
 
 /* Llvm.llcontext -> DataLayout.t -> Llvm.lltype */
 CAMLprim LLVMTypeRef llvm_datalayout_intptr_type(LLVMContextRef C, value DL) {
-  return LLVMIntPtrTypeInContext(C, DataLayout_val(DL));;
+  return LLVMIntPtrTypeInContext(C, DataLayout_val(DL));
 }
 
 /* int -> DataLayout.t -> int */
@@ -304,21 +298,8 @@ CAMLprim value llvm_targetmachine_features(value Machine) {
 
 /* TargetMachine.t -> DataLayout.t */
 CAMLprim value llvm_targetmachine_data_layout(value Machine) {
-  CAMLparam1(Machine);
-  CAMLlocal1(DataLayout);
-  char *TargetDataCStr;
-
-  /* LLVMGetTargetMachineData returns a pointer owned by the TargetMachine,
-     so it is impossible to wrap it with llvm_alloc_target_data, which assumes
-     that OCaml owns the pointer. */
-  LLVMTargetDataRef OrigDataLayout;
-  OrigDataLayout = LLVMGetTargetMachineData(TargetMachine_val(Machine));
-
-  TargetDataCStr = LLVMCopyStringRepOfTargetData(OrigDataLayout);
-  DataLayout = llvm_alloc_data_layout(LLVMCreateTargetData(TargetDataCStr));
-  LLVMDisposeMessage(TargetDataCStr);
-
-  CAMLreturn(DataLayout);
+  return llvm_alloc_data_layout(LLVMCreateTargetDataLayout(
+                                TargetMachine_val(Machine)));
 }
 
 /* bool -> TargetMachine.t -> unit */

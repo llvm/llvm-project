@@ -11,3 +11,15 @@ struct {
     (void)&i;
   }
 } x;
+
+namespace dotPointerDestructor {
+
+struct Bar {
+  ~Bar() = delete;
+};
+
+void bar(Bar *o) {
+  o.~Bar(); // no fixit
+}
+
+}

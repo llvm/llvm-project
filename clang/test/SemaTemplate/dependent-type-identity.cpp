@@ -80,11 +80,20 @@ namespace PR6851 {
     S< S<w>::cond && 1 > foo();
   };
 
+  struct Arrow { Arrow *operator->(); int n; };
+  template<typename T> struct M {
+    Arrow a;
+    auto f() -> M<decltype(a->n)>;
+  };
+
   struct Alien;
   bool operator&&(const Alien&, const Alien&);
 
   template <bool w>
   S< S<w>::cond && 1 > N::foo() { }
+
+  template<typename T>
+  auto M<T>::f() -> M<decltype(a->n)> {}
 }
 
 namespace PR7460 {

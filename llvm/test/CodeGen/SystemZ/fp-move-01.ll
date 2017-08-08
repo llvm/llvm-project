@@ -1,7 +1,6 @@
 ; Test moves between FPRs.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | FileCheck %s
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
 
 ; Test f32 moves.
 define float @f1(float %a, float %b) {

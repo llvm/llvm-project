@@ -21,4 +21,4 @@
 type = OptionalLibrary
 name = IntelJITEvents
 parent = ExecutionEngine
-required_libraries = Core DebugInfoDWARF Support Object ExecutionEngine
+required_libraries = CodeGen Core DebugInfoDWARF Support Object ExecutionEngine

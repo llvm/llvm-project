@@ -1,4 +1,6 @@
 ; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc  -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj < %s \
+; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 
 ; Verify that we have correct debug info for local variables in code
 ; instrumented with AddressSanitizer.
@@ -7,16 +9,19 @@
 ; int bar(int y) {
 ;   return y + 2;
 ; }
-; with "clang++ -S -emit-llvm -fsanitize=address -O0 -g test.cc"
+; with "clang++ -S -emit-llvm -mllvm -asan-skip-promotable-allocas=0 -fsanitize=address -O0 -g test.cc"
 
-; First, argument variable "y" resides in %rdi:
-; CHECK: DEBUG_VALUE: bar:y <- RDI
-
-; Then its address is stored in a location on a stack:
+; The address of the (potentially now malloc'ed) alloca ends up
+; in RDI, after which it is spilled to the stack. We record the
+; spill OFFSET on the stack for checking the debug info below.
+; CHECK: #DEBUG_VALUE: bar:y <- [DW_OP_deref] [%RDI+0]
 ; CHECK: movq %rdi, [[OFFSET:[0-9]+]](%rsp)
 ; CHECK-NEXT: [[START_LABEL:.Ltmp[0-9]+]]
-; CHECK-NEXT: DEBUG_VALUE: bar:y <- [RSP+[[OFFSET]]]
+; CHECK-NEXT: #DEBUG_VALUE: bar:y <- [DW_OP_plus_uconst [[OFFSET]], DW_OP_deref, DW_OP_deref]
 ; This location should be valid until the end of the function.
+
+; CHECK:        movq    %rbp, %rsp
+; CHECK-NEXT: [[END_LABEL:.Ltmp[0-9]+]]:
 
 ; CHECK: .Ldebug_loc{{[0-9]+}}:
 ; We expect two location ranges for the variable.
@@ -25,13 +30,17 @@
 ; CHECK:      .quad .Lfunc_begin0-.Lfunc_begin0
 ; CHECK-NEXT: .quad [[START_LABEL]]-.Lfunc_begin0
 ; CHECK: DW_OP_breg5
+; DWARF: Location description: 75 00 06
+;                              DW_OP_breg5+0 DW_OP_deref
 
 ; Then it's addressed via %rsp:
 ; CHECK:      .quad [[START_LABEL]]-.Lfunc_begin0
-; CHECK-NEXT: .Lfunc_end0-.Lfunc_begin0
+; CHECK-NEXT: .quad [[END_LABEL]]-.Lfunc_begin0
 ; CHECK: DW_OP_breg7
 ; CHECK-NEXT: [[OFFSET]]
 ; CHECK: DW_OP_deref
+; DWARF: Location description: {{77 .. 06 06}}
+;                              DW_OP_breg7+OFFSET DW_OP_deref DW_OP_deref
 
 ; ModuleID = 'test.cc'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -165,11 +174,10 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!9, !10}
 !llvm.ident = !{!11}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (209308)", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (209308)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "test.cc", directory: "/llvm_cmake_gcc")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3bari", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3bari", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "test.cc", directory: "/llvm_cmake_gcc")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !8}

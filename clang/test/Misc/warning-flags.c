@@ -6,8 +6,8 @@ This test serves two purposes:
 (1) It documents all existing warnings that currently have no associated -W flag,
     and ensures that the list never grows.
 
-    If take an existing warning and add a flag, this test will fail.  To
-    fix this test, simply remove that warning from the list below.
+    If you take an existing warning and add a flag, this test will fail.
+    To fix this test, simply remove that warning from the list below.
 
 (2) It prevents us adding new warnings to Clang that have no -W flag.  All
     new warnings should have -W flags.
@@ -18,7 +18,7 @@ This test serves two purposes:
 
 The list of warnings below should NEVER grow.  It should gradually shrink to 0.
 
-CHECK: Warnings without flags (85):
+CHECK: Warnings without flags (78):
 CHECK-NEXT:   ext_excess_initializers
 CHECK-NEXT:   ext_excess_initializers_in_char_array_initializer
 CHECK-NEXT:   ext_expected_semi_decl_list
@@ -31,14 +31,12 @@ CHECK-NEXT:   ext_plain_complex
 CHECK-NEXT:   ext_template_arg_extra_parens
 CHECK-NEXT:   ext_typecheck_comparison_of_pointer_integer
 CHECK-NEXT:   ext_typecheck_cond_incompatible_operands
-CHECK-NEXT:   ext_typecheck_cond_incompatible_operands_nonstandard
 CHECK-NEXT:   ext_typecheck_ordered_comparison_of_function_pointers
 CHECK-NEXT:   ext_typecheck_ordered_comparison_of_pointer_integer
 CHECK-NEXT:   ext_using_undefined_std
 CHECK-NEXT:   pp_invalid_string_literal
 CHECK-NEXT:   pp_out_of_date_dependency
 CHECK-NEXT:   pp_poisoning_existing_macro
-CHECK-NEXT:   w_asm_qualifier_ignored
 CHECK-NEXT:   warn_accessor_property_type_mismatch
 CHECK-NEXT:   warn_arcmt_nsalloc_realloc
 CHECK-NEXT:   warn_asm_label_on_auto_decl
@@ -56,17 +54,14 @@ CHECK-NEXT:   warn_delete_array_type
 CHECK-NEXT:   warn_double_const_requires_fp64
 CHECK-NEXT:   warn_drv_assuming_mfloat_abi_is
 CHECK-NEXT:   warn_drv_clang_unsupported
-CHECK-NEXT:   warn_drv_objc_gc_unsupported
 CHECK-NEXT:   warn_drv_pch_not_first_include
 CHECK-NEXT:   warn_dup_category_def
-CHECK-NEXT:   warn_duplicate_protocol_def
 CHECK-NEXT:   warn_enum_value_overflow
 CHECK-NEXT:   warn_expected_qualified_after_typename
 CHECK-NEXT:   warn_extraneous_char_constant
 CHECK-NEXT:   warn_fe_cc_log_diagnostics_failure
 CHECK-NEXT:   warn_fe_cc_print_header_failure
 CHECK-NEXT:   warn_fe_macro_contains_embedded_newline
-CHECK-NEXT:   warn_file_asm_volatile
 CHECK-NEXT:   warn_ignoring_ftabstop_value
 CHECK-NEXT:   warn_implements_nscopying
 CHECK-NEXT:   warn_incompatible_qualified_id
@@ -83,9 +78,7 @@ CHECK-NEXT:   warn_not_compound_assign
 CHECK-NEXT:   warn_objc_property_copy_missing_on_block
 CHECK-NEXT:   warn_objc_protocol_qualifier_missing_id
 CHECK-NEXT:   warn_on_superclass_use
-CHECK-NEXT:   warn_partial_specs_not_deducible
-CHECK-NEXT:   warn_pp_convert_lhs_to_positive
-CHECK-NEXT:   warn_pp_convert_rhs_to_positive
+CHECK-NEXT:   warn_pp_convert_to_positive
 CHECK-NEXT:   warn_pp_expr_overflow
 CHECK-NEXT:   warn_pp_line_decimal
 CHECK-NEXT:   warn_pragma_pack_pop_identifer_and_alignment

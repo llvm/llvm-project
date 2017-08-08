@@ -15,6 +15,7 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
+#include "llvm-c/Core.h"
 #include "llvm-c/Linker.h"
 #include "caml/alloc.h"
 #include "caml/memory.h"
@@ -25,10 +26,8 @@ void llvm_raise(value Prototype, char *Message);
 
 /* llmodule -> llmodule -> unit */
 CAMLprim value llvm_link_modules(LLVMModuleRef Dst, LLVMModuleRef Src) {
-  char* Message;
-
-  if (LLVMLinkModules(Dst, Src, 0, &Message))
-    llvm_raise(*caml_named_value("Llvm_linker.Error"), Message);
+  if (LLVMLinkModules2(Dst, Src))
+    llvm_raise(*caml_named_value("Llvm_linker.Error"), LLVMCreateMessage("Linking failed"));
 
   return Val_unit;
 }

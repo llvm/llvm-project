@@ -320,9 +320,10 @@ TEST_F(CommentLexerTest, DoxygenCommand4) {
     ASSERT_EQ(array_lengthof(Text), Toks.size());
 
     for (size_t j = 0, e = Toks.size(); j != e; j++) {
-      if(Toks[j].is(tok::text))
+      if(Toks[j].is(tok::text)) {
         ASSERT_EQ(StringRef(Text[j]), Toks[j].getText())
           << "index " << i;
+      }
     }
   }
 }

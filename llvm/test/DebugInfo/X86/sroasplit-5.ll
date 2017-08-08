@@ -19,11 +19,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; When SROA is creating new smaller allocas, it may add padding.
 ;
 ; There should be no debug info for the padding.
-; CHECK-NOT: DW_OP_bit_piece, 56
-; CHECK: DIExpression(DW_OP_bit_piece, 32, 24)
-; CHECK-NOT: DW_OP_bit_piece, 56
-; CHECK: DIExpression(DW_OP_bit_piece, 0, 32)
-; CHECK-NOT: DW_OP_bit_piece, 56
+; CHECK-NOT: DW_OP_LLVM_fragment, 56
+; CHECK: DIExpression(DW_OP_LLVM_fragment, 32, 24)
+; CHECK-NOT: DW_OP_LLVM_fragment, 56
+; CHECK: DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; CHECK-NOT: DW_OP_LLVM_fragment, 56
 %struct.prog_src_register = type { i32, i24 }
 
 ; Function Attrs: nounwind
@@ -66,11 +66,10 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!13, !14}
 !llvm.ident = !{!15}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.7.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.7.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "<stdin>", directory: "")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "src_reg_for_float", line: 7, isLocal: false, isDefinition: true, isOptimized: false, scopeLine: 7, file: !5, scope: !6, type: !7, variables: !2)
+!4 = distinct !DISubprogram(name: "src_reg_for_float", line: 7, isLocal: false, isDefinition: true, isOptimized: false, unit: !0, scopeLine: 7, file: !5, scope: !6, type: !7, variables: !2)
 !5 = !DIFile(filename: "pr22495.c", directory: "")
 !6 = !DIFile(filename: "pr22495.c", directory: "")
 !7 = !DISubroutineType(types: !8)

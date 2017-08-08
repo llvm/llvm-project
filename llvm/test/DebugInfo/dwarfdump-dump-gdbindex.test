@@ -1,0 +1,35 @@
+RUN: llvm-dwarfdump -debug-dump=gdb_index %p/Inputs/dwarfdump-gdbindex-v7.elf-x86-64 | FileCheck %s
+
+; test.cpp:
+; int main() { return 0; }
+; test2.cpp:
+; int main2() { return 0; }
+; Compiled with:
+; gcc -gsplit-dwarf -c test.cpp test2.cpp
+; gold --gdb-index test.o test2.o -o dwarfdump-gdbindex-v7.elf-x86-64
+; gcc version 5.3.1 20160413, GNU gold (GNU Binutils for Ubuntu 2.26) 1.11
+; Info about gdb-index: https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html
+
+; CHECK-LABEL: .gnu_index contents:
+; CHECK: Version = 7
+
+; CHECK:      CU list offset = 0x18, has 2 entries:
+; CHECK-NEXT:   0: Offset = 0x0, Length = 0x34
+; CHECK-NEXT:   1: Offset = 0x34, Length = 0x34
+
+; CHECK:      Address area offset = 0x38, has 2 entries:
+; CHECK-NEXT:   Low/High address = [0x4000e8, 0x4000f3) (Size: 0xb), CU id = 0
+; CHECK-NEXT:   Low/High address = [0x4000f3, 0x4000fe) (Size: 0xb), CU id = 1
+
+; CHECK:      Symbol table offset = 0x60, size = 1024, filled slots:
+; CHECK-NEXT:   489: Name offset = 0x1d, CU vector offset = 0x0
+; CHECK-NEXT:     String name: main, CU vector index: 0
+; CHECK-NEXT:   754: Name offset = 0x22, CU vector offset = 0x8
+; CHECK-NEXT:     String name: int, CU vector index: 1
+; CHECK-NEXT:   956: Name offset = 0x26, CU vector offset = 0x14
+; CHECK-NEXT:     String name: main2, CU vector index: 2
+
+; CHECK:      Constant pool offset = 0x2060, has 3 CU vectors:
+; CHECK-NEXT:   0(0x0): 0x30000000 
+; CHECK-NEXT:   1(0x8): 0x90000000 0x90000001
+; CHECK-NEXT:   2(0x14): 0x30000001

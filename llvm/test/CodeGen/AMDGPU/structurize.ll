@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood -mattr=disable-irstructurizer | FileCheck %s
+; RUN: llc < %s -march=r600 -mcpu=redwood -r600-ir-structurize=0 | FileCheck %s
 ; Test case for a crash in the AMDILCFGStructurizer from a CFG like this:
 ;
 ;                            entry
@@ -45,7 +45,7 @@
 ; CHECK: CF_END
 
 
-define void @branch_into_diamond(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
+define amdgpu_kernel void @branch_into_diamond(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
 entry:
 %0 = icmp ne i32 %a, 0
   br i1 %0, label %diamond_head, label %branch_from

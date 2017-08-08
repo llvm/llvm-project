@@ -1,7 +1,17 @@
 #!/bin/bash
+#
+# Script that checks that critical functions in TSan runtime have correct number
+# of push/pop/rsp instructions to verify that runtime is efficient enough.
+
 set -u
 
-RES=$(./analyze_libtsan.sh)
+if [[ "$#" != 1 ]]; then
+  echo "Usage: $0 /path/to/binary/built/with/tsan"
+  exit 1
+fi
+
+SCRIPTDIR=$(dirname $0)
+RES=$(${SCRIPTDIR}/analyze_libtsan.sh $1)
 PrintRes() {
   printf "%s\n" "$RES"
 }
@@ -16,22 +26,16 @@ check() {
   fi
 }
 
-for f in write1; do
+for f in write1 write2 write4 write8; do
   check $f rsp 1
   check $f push 2
-  check $f pop 2
-done
-
-for f in write2 write4 write8; do
-  check $f rsp 1
-  check $f push 3
-  check $f pop 3
+  check $f pop 12
 done
 
 for f in read1 read2 read4 read8; do
   check $f rsp 1
-  check $f push 5
-  check $f pop 5
+  check $f push 3
+  check $f pop 3
 done
 
 for f in func_entry func_exit; do

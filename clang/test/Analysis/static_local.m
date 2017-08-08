@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify -Wno-objc-root-class %s
 // expected-no-diagnostics
 
 // Test reasoning about static locals in ObjCMethods. 

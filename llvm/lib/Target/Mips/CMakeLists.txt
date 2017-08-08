@@ -27,6 +27,7 @@ add_llvm_target(MipsCodeGen
   MipsConstantIslandPass.cpp
   MipsDelaySlotFiller.cpp
   MipsFastISel.cpp
+  MipsHazardSchedule.cpp
   MipsInstrInfo.cpp
   MipsISelDAGToDAG.cpp
   MipsISelLowering.cpp
@@ -46,6 +47,7 @@ add_llvm_target(MipsCodeGen
   MipsSubtarget.cpp
   MipsTargetMachine.cpp
   MipsTargetObjectFile.cpp
+  MicroMipsSizeReduction.cpp
   )
 
 add_subdirectory(InstPrinter)

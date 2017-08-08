@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -ast-print %s > %t
+// RUN: %clang_cc1 -std=c++1z -ast-print %s > %t
 // RUN: FileCheck < %t %s -check-prefix=CHECK1
 // RUN: FileCheck < %t %s -check-prefix=CHECK2
-// RUN: %clang_cc1 -ast-dump %s | FileCheck --check-prefix=DUMP %s
+// RUN: %clang_cc1 -std=c++1z -ast-dump %s | FileCheck --check-prefix=DUMP %s
 
 template <int X, typename Y, int Z = 5>
 struct foo {
@@ -21,23 +21,23 @@ void baz() {
   double z = foo<2, double, 3>().getSum();
 }
 
-// Template instantiation - foo
-// Since the order of instantiation may vary during runs, run FileCheck twice
-// to make sure each instantiation is in the correct spot.
-// CHECK1: template <int X = 5, typename Y = int, int Z = 5> struct foo {
-// CHECK2: template <int X = 2, typename Y = double, int Z = 3> struct foo {
-
 // Template definition - foo
 // CHECK1: template <int X, typename Y, int Z = 5> struct foo {
 // CHECK2: template <int X, typename Y, int Z = 5> struct foo {
 
-// Template instantiation - bar
-// CHECK1: template <int A = 5, typename B = int> int bar()
-// CHECK2: template <int A = 5, typename B = int> int bar()
+// Template instantiation - foo
+// Since the order of instantiation may vary during runs, run FileCheck twice
+// to make sure each instantiation is in the correct spot.
+// CHECK1: template<> struct foo<5, int, 5> {
+// CHECK2: template<> struct foo<2, double, 3> {
 
 // Template definition - bar
 // CHECK1: template <int A, typename B> B bar()
 // CHECK2: template <int A, typename B> B bar()
+
+// Template instantiation - bar
+// CHECK1: template<> int bar<5, int>()
+// CHECK2: template<> int bar<5, int>()
 
 // CHECK1-LABEL: template <typename ...T> struct A {
 // CHECK1-NEXT:    template <T ...x[3]> struct B {
@@ -60,4 +60,10 @@ void tmpl() {
 }
 
 // DUMP: UnresolvedLookupExpr {{.*}} <col:3> '<overloaded function type>' lvalue (ADL) = 'func'
+}
+
+namespace test3 {
+  template<typename T> struct A {};
+  template<typename T> A(T) -> A<int>;
+  // CHECK1: template <typename T> A(T) -> A<int>;
 }

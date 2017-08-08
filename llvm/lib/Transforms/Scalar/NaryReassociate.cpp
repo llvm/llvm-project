@@ -76,12 +76,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Transforms/Scalar/NaryReassociate.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
@@ -94,16 +90,15 @@ using namespace PatternMatch;
 #define DEBUG_TYPE "nary-reassociate"
 
 namespace {
-class NaryReassociate : public FunctionPass {
+class NaryReassociateLegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  NaryReassociate(): FunctionPass(ID) {
-    initializeNaryReassociatePass(*PassRegistry::getPassRegistry());
+  NaryReassociateLegacyPass() : FunctionPass(ID) {
+    initializeNaryReassociateLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   bool doInitialization(Module &M) override {
-    DL = &M.getDataLayout();
     return false;
   }
   bool runOnFunction(Function &F) override;
@@ -121,101 +116,65 @@ public:
   }
 
 private:
-  // Runs only one iteration of the dominator-based algorithm. See the header
-  // comments for why we need multiple iterations.
-  bool doOneIteration(Function &F);
-
-  // Reassociates I for better CSE.
-  Instruction *tryReassociate(Instruction *I);
-
-  // Reassociate GEP for better CSE.
-  Instruction *tryReassociateGEP(GetElementPtrInst *GEP);
-  // Try splitting GEP at the I-th index and see whether either part can be
-  // CSE'ed. This is a helper function for tryReassociateGEP.
-  //
-  // \p IndexedType The element type indexed by GEP's I-th index. This is
-  //                equivalent to
-  //                  GEP->getIndexedType(GEP->getPointerOperand(), 0-th index,
-  //                                      ..., i-th index).
-  GetElementPtrInst *tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
-                                              unsigned I, Type *IndexedType);
-  // Given GEP's I-th index = LHS + RHS, see whether &Base[..][LHS][..] or
-  // &Base[..][RHS][..] can be CSE'ed and rewrite GEP accordingly.
-  GetElementPtrInst *tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
-                                              unsigned I, Value *LHS,
-                                              Value *RHS, Type *IndexedType);
-
-  // Reassociate binary operators for better CSE.
-  Instruction *tryReassociateBinaryOp(BinaryOperator *I);
-
-  // A helper function for tryReassociateBinaryOp. LHS and RHS are explicitly
-  // passed.
-  Instruction *tryReassociateBinaryOp(Value *LHS, Value *RHS,
-                                      BinaryOperator *I);
-  // Rewrites I to (LHS op RHS) if LHS is computed already.
-  Instruction *tryReassociatedBinaryOp(const SCEV *LHS, Value *RHS,
-                                       BinaryOperator *I);
-
-  // Tries to match Op1 and Op2 by using V.
-  bool matchTernaryOp(BinaryOperator *I, Value *V, Value *&Op1, Value *&Op2);
-
-  // Gets SCEV for (LHS op RHS).
-  const SCEV *getBinarySCEV(BinaryOperator *I, const SCEV *LHS,
-                            const SCEV *RHS);
-
-  // Returns the closest dominator of \c Dominatee that computes
-  // \c CandidateExpr. Returns null if not found.
-  Instruction *findClosestMatchingDominator(const SCEV *CandidateExpr,
-                                            Instruction *Dominatee);
-  // GetElementPtrInst implicitly sign-extends an index if the index is shorter
-  // than the pointer size. This function returns whether Index is shorter than
-  // GEP's pointer size, i.e., whether Index needs to be sign-extended in order
-  // to be an index of GEP.
-  bool requiresSignExtension(Value *Index, GetElementPtrInst *GEP);
-
-  AssumptionCache *AC;
-  const DataLayout *DL;
-  DominatorTree *DT;
-  ScalarEvolution *SE;
-  TargetLibraryInfo *TLI;
-  TargetTransformInfo *TTI;
-  // A lookup table quickly telling which instructions compute the given SCEV.
-  // Note that there can be multiple instructions at different locations
-  // computing to the same SCEV, so we map a SCEV to an instruction list.  For
-  // example,
-  //
-  //   if (p1)
-  //     foo(a + b);
-  //   if (p2)
-  //     bar(a + b);
-  DenseMap<const SCEV *, SmallVector<WeakVH, 2>> SeenExprs;
+  NaryReassociatePass Impl;
 };
 } // anonymous namespace
 
-char NaryReassociate::ID = 0;
-INITIALIZE_PASS_BEGIN(NaryReassociate, "nary-reassociate", "Nary reassociation",
-                      false, false)
+char NaryReassociateLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(NaryReassociateLegacyPass, "nary-reassociate",
+                      "Nary reassociation", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(NaryReassociate, "nary-reassociate", "Nary reassociation",
-                    false, false)
+INITIALIZE_PASS_END(NaryReassociateLegacyPass, "nary-reassociate",
+                    "Nary reassociation", false, false)
 
 FunctionPass *llvm::createNaryReassociatePass() {
-  return new NaryReassociate();
+  return new NaryReassociateLegacyPass();
 }
 
-bool NaryReassociate::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
+bool NaryReassociateLegacyPass::runOnFunction(Function &F) {
+  if (skipFunction(F))
     return false;
 
-  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-  TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+
+  return Impl.runImpl(F, AC, DT, SE, TLI, TTI);
+}
+
+PreservedAnalyses NaryReassociatePass::run(Function &F,
+                                           FunctionAnalysisManager &AM) {
+  auto *AC = &AM.getResult<AssumptionAnalysis>(F);
+  auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  auto *SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
+  auto *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
+  auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
+
+  if (!runImpl(F, AC, DT, SE, TLI, TTI))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<ScalarEvolutionAnalysis>();
+  return PA;
+}
+
+bool NaryReassociatePass::runImpl(Function &F, AssumptionCache *AC_,
+                                  DominatorTree *DT_, ScalarEvolution *SE_,
+                                  TargetLibraryInfo *TLI_,
+                                  TargetTransformInfo *TTI_) {
+  AC = AC_;
+  DT = DT_;
+  SE = SE_;
+  TLI = TLI_;
+  TTI = TTI_;
+  DL = &F.getParent()->getDataLayout();
 
   bool Changed = false, ChangedInThisIteration;
   do {
@@ -237,13 +196,13 @@ static bool isPotentiallyNaryReassociable(Instruction *I) {
   }
 }
 
-bool NaryReassociate::doOneIteration(Function &F) {
+bool NaryReassociatePass::doOneIteration(Function &F) {
   bool Changed = false;
   SeenExprs.clear();
-  // Process the basic blocks in pre-order of the dominator tree. This order
-  // ensures that all bases of a candidate are in Candidates when we process it.
-  for (auto Node = GraphTraits<DominatorTree *>::nodes_begin(DT);
-       Node != GraphTraits<DominatorTree *>::nodes_end(DT); ++Node) {
+  // Process the basic blocks in a depth first traversal of the dominator
+  // tree. This order ensures that all bases of a candidate are in Candidates
+  // when we process it.
+  for (const auto Node : depth_first(DT)) {
     BasicBlock *BB = Node->getBlock();
     for (auto I = BB->begin(); I != BB->end(); ++I) {
       if (SE->isSCEVable(I->getType()) && isPotentiallyNaryReassociable(&*I)) {
@@ -252,7 +211,8 @@ bool NaryReassociate::doOneIteration(Function &F) {
           Changed = true;
           SE->forgetValue(&*I);
           I->replaceAllUsesWith(NewI);
-          // If SeenExprs constains I's WeakVH, that entry will be replaced with
+          // If SeenExprs constains I's WeakTrackingVH, that entry will be
+          // replaced with
           // nullptr.
           RecursivelyDeleteTriviallyDeadInstructions(&*I, TLI);
           I = NewI->getIterator();
@@ -260,7 +220,7 @@ bool NaryReassociate::doOneIteration(Function &F) {
         // Add the rewritten instruction to SeenExprs; the original instruction
         // is deleted.
         const SCEV *NewSCEV = SE->getSCEV(&*I);
-        SeenExprs[NewSCEV].push_back(WeakVH(&*I));
+        SeenExprs[NewSCEV].push_back(WeakTrackingVH(&*I));
         // Ideally, NewSCEV should equal OldSCEV because tryReassociate(I)
         // is equivalent to I. However, ScalarEvolution::getSCEV may
         // weaken nsw causing NewSCEV not to equal OldSCEV. For example, suppose
@@ -280,14 +240,14 @@ bool NaryReassociate::doOneIteration(Function &F) {
         //
         // This improvement is exercised in @reassociate_gep_nsw in nary-gep.ll.
         if (NewSCEV != OldSCEV)
-          SeenExprs[OldSCEV].push_back(WeakVH(&*I));
+          SeenExprs[OldSCEV].push_back(WeakTrackingVH(&*I));
       }
     }
   }
   return Changed;
 }
 
-Instruction *NaryReassociate::tryReassociate(Instruction *I) {
+Instruction *NaryReassociatePass::tryReassociate(Instruction *I) {
   switch (I->getOpcode()) {
   case Instruction::Add:
   case Instruction::Mul:
@@ -299,55 +259,25 @@ Instruction *NaryReassociate::tryReassociate(Instruction *I) {
   }
 }
 
-// FIXME: extract this method into TTI->getGEPCost.
 static bool isGEPFoldable(GetElementPtrInst *GEP,
-                          const TargetTransformInfo *TTI,
-                          const DataLayout *DL) {
-  GlobalVariable *BaseGV = nullptr;
-  int64_t BaseOffset = 0;
-  bool HasBaseReg = false;
-  int64_t Scale = 0;
-
-  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(GEP->getPointerOperand()))
-    BaseGV = GV;
-  else
-    HasBaseReg = true;
-
-  gep_type_iterator GTI = gep_type_begin(GEP);
-  for (auto I = GEP->idx_begin(); I != GEP->idx_end(); ++I, ++GTI) {
-    if (isa<SequentialType>(*GTI)) {
-      int64_t ElementSize = DL->getTypeAllocSize(GTI.getIndexedType());
-      if (ConstantInt *ConstIdx = dyn_cast<ConstantInt>(*I)) {
-        BaseOffset += ConstIdx->getSExtValue() * ElementSize;
-      } else {
-        // Needs scale register.
-        if (Scale != 0) {
-          // No addressing mode takes two scale registers.
-          return false;
-        }
-        Scale = ElementSize;
-      }
-    } else {
-      StructType *STy = cast<StructType>(*GTI);
-      uint64_t Field = cast<ConstantInt>(*I)->getZExtValue();
-      BaseOffset += DL->getStructLayout(STy)->getElementOffset(Field);
-    }
-  }
-
-  unsigned AddrSpace = GEP->getPointerAddressSpace();
-  return TTI->isLegalAddressingMode(GEP->getType()->getElementType(), BaseGV,
-                                    BaseOffset, HasBaseReg, Scale, AddrSpace);
+                          const TargetTransformInfo *TTI) {
+  SmallVector<const Value*, 4> Indices;
+  for (auto I = GEP->idx_begin(); I != GEP->idx_end(); ++I)
+    Indices.push_back(*I);
+  return TTI->getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
+                         Indices) == TargetTransformInfo::TCC_Free;
 }
 
-Instruction *NaryReassociate::tryReassociateGEP(GetElementPtrInst *GEP) {
+Instruction *NaryReassociatePass::tryReassociateGEP(GetElementPtrInst *GEP) {
   // Not worth reassociating GEP if it is foldable.
-  if (isGEPFoldable(GEP, TTI, DL))
+  if (isGEPFoldable(GEP, TTI))
     return nullptr;
 
   gep_type_iterator GTI = gep_type_begin(*GEP);
-  for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I) {
-    if (isa<SequentialType>(*GTI++)) {
-      if (auto *NewGEP = tryReassociateGEPAtIndex(GEP, I - 1, *GTI)) {
+  for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I, ++GTI) {
+    if (GTI.isSequential()) {
+      if (auto *NewGEP = tryReassociateGEPAtIndex(GEP, I - 1,
+                                                  GTI.getIndexedType())) {
         return NewGEP;
       }
     }
@@ -355,16 +285,16 @@ Instruction *NaryReassociate::tryReassociateGEP(GetElementPtrInst *GEP) {
   return nullptr;
 }
 
-bool NaryReassociate::requiresSignExtension(Value *Index,
-                                            GetElementPtrInst *GEP) {
+bool NaryReassociatePass::requiresSignExtension(Value *Index,
+                                                GetElementPtrInst *GEP) {
   unsigned PointerSizeInBits =
       DL->getPointerSizeInBits(GEP->getType()->getPointerAddressSpace());
   return cast<IntegerType>(Index->getType())->getBitWidth() < PointerSizeInBits;
 }
 
 GetElementPtrInst *
-NaryReassociate::tryReassociateGEPAtIndex(GetElementPtrInst *GEP, unsigned I,
-                                          Type *IndexedType) {
+NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
+                                              unsigned I, Type *IndexedType) {
   Value *IndexToSplit = GEP->getOperand(I + 1);
   if (SExtInst *SExt = dyn_cast<SExtInst>(IndexToSplit)) {
     IndexToSplit = SExt->getOperand(0);
@@ -397,9 +327,10 @@ NaryReassociate::tryReassociateGEPAtIndex(GetElementPtrInst *GEP, unsigned I,
   return nullptr;
 }
 
-GetElementPtrInst *NaryReassociate::tryReassociateGEPAtIndex(
-    GetElementPtrInst *GEP, unsigned I, Value *LHS, Value *RHS,
-    Type *IndexedType) {
+GetElementPtrInst *
+NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
+                                              unsigned I, Value *LHS,
+                                              Value *RHS, Type *IndexedType) {
   // Look for GEP's closest dominator that has the same SCEV as GEP except that
   // the I-th index is replaced with LHS.
   SmallVector<const SCEV *, 4> IndexExprs;
@@ -417,23 +348,23 @@ GetElementPtrInst *NaryReassociate::tryReassociateGEPAtIndex(
     IndexExprs[I] =
         SE->getZeroExtendExpr(IndexExprs[I], GEP->getOperand(I)->getType());
   }
-  const SCEV *CandidateExpr = SE->getGEPExpr(
-      GEP->getSourceElementType(), SE->getSCEV(GEP->getPointerOperand()),
-      IndexExprs, GEP->isInBounds());
+  const SCEV *CandidateExpr = SE->getGEPExpr(cast<GEPOperator>(GEP),
+                                             IndexExprs);
 
-  auto *Candidate = findClosestMatchingDominator(CandidateExpr, GEP);
+  Value *Candidate = findClosestMatchingDominator(CandidateExpr, GEP);
   if (Candidate == nullptr)
     return nullptr;
 
-  PointerType *TypeOfCandidate = dyn_cast<PointerType>(Candidate->getType());
-  // Pretty rare but theoretically possible when a numeric value happens to
-  // share CandidateExpr.
-  if (TypeOfCandidate == nullptr)
-    return nullptr;
+  IRBuilder<> Builder(GEP);
+  // Candidate does not necessarily have the same pointer type as GEP. Use
+  // bitcast or pointer cast to make sure they have the same type, so that the
+  // later RAUW doesn't complain.
+  Candidate = Builder.CreateBitOrPointerCast(Candidate, GEP->getType());
+  assert(Candidate->getType() == GEP->getType());
 
   // NewGEP = (char *)Candidate + RHS * sizeof(IndexedType)
   uint64_t IndexedSize = DL->getTypeAllocSize(IndexedType);
-  Type *ElementType = TypeOfCandidate->getElementType();
+  Type *ElementType = GEP->getResultElementType();
   uint64_t ElementSize = DL->getTypeAllocSize(ElementType);
   // Another less rare case: because I is not necessarily the last index of the
   // GEP, the size of the type at the I-th index (IndexedSize) is not
@@ -453,8 +384,7 @@ GetElementPtrInst *NaryReassociate::tryReassociateGEPAtIndex(
     return nullptr;
 
   // NewGEP = &Candidate[RHS * (sizeof(IndexedType) / sizeof(Candidate[0])));
-  IRBuilder<> Builder(GEP);
-  Type *IntPtrTy = DL->getIntPtrType(TypeOfCandidate);
+  Type *IntPtrTy = DL->getIntPtrType(GEP->getType());
   if (RHS->getType() != IntPtrTy)
     RHS = Builder.CreateSExtOrTrunc(RHS, IntPtrTy);
   if (IndexedSize != ElementSize) {
@@ -468,7 +398,7 @@ GetElementPtrInst *NaryReassociate::tryReassociateGEPAtIndex(
   return NewGEP;
 }
 
-Instruction *NaryReassociate::tryReassociateBinaryOp(BinaryOperator *I) {
+Instruction *NaryReassociatePass::tryReassociateBinaryOp(BinaryOperator *I) {
   Value *LHS = I->getOperand(0), *RHS = I->getOperand(1);
   if (auto *NewI = tryReassociateBinaryOp(LHS, RHS, I))
     return NewI;
@@ -477,8 +407,8 @@ Instruction *NaryReassociate::tryReassociateBinaryOp(BinaryOperator *I) {
   return nullptr;
 }
 
-Instruction *NaryReassociate::tryReassociateBinaryOp(Value *LHS, Value *RHS,
-                                                     BinaryOperator *I) {
+Instruction *NaryReassociatePass::tryReassociateBinaryOp(Value *LHS, Value *RHS,
+                                                         BinaryOperator *I) {
   Value *A = nullptr, *B = nullptr;
   // To be conservative, we reassociate I only when it is the only user of (A op
   // B).
@@ -501,9 +431,9 @@ Instruction *NaryReassociate::tryReassociateBinaryOp(Value *LHS, Value *RHS,
   return nullptr;
 }
 
-Instruction *NaryReassociate::tryReassociatedBinaryOp(const SCEV *LHSExpr,
-                                                      Value *RHS,
-                                                      BinaryOperator *I) {
+Instruction *NaryReassociatePass::tryReassociatedBinaryOp(const SCEV *LHSExpr,
+                                                          Value *RHS,
+                                                          BinaryOperator *I) {
   // Look for the closest dominator LHS of I that computes LHSExpr, and replace
   // I with LHS op RHS.
   auto *LHS = findClosestMatchingDominator(LHSExpr, I);
@@ -525,8 +455,8 @@ Instruction *NaryReassociate::tryReassociatedBinaryOp(const SCEV *LHSExpr,
   return NewI;
 }
 
-bool NaryReassociate::matchTernaryOp(BinaryOperator *I, Value *V, Value *&Op1,
-                                     Value *&Op2) {
+bool NaryReassociatePass::matchTernaryOp(BinaryOperator *I, Value *V,
+                                         Value *&Op1, Value *&Op2) {
   switch (I->getOpcode()) {
   case Instruction::Add:
     return match(V, m_Add(m_Value(Op1), m_Value(Op2)));
@@ -538,8 +468,9 @@ bool NaryReassociate::matchTernaryOp(BinaryOperator *I, Value *V, Value *&Op1,
   return false;
 }
 
-const SCEV *NaryReassociate::getBinarySCEV(BinaryOperator *I, const SCEV *LHS,
-                                           const SCEV *RHS) {
+const SCEV *NaryReassociatePass::getBinarySCEV(BinaryOperator *I,
+                                               const SCEV *LHS,
+                                               const SCEV *RHS) {
   switch (I->getOpcode()) {
   case Instruction::Add:
     return SE->getAddExpr(LHS, RHS);
@@ -552,8 +483,8 @@ const SCEV *NaryReassociate::getBinarySCEV(BinaryOperator *I, const SCEV *LHS,
 }
 
 Instruction *
-NaryReassociate::findClosestMatchingDominator(const SCEV *CandidateExpr,
-                                              Instruction *Dominatee) {
+NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
+                                                  Instruction *Dominatee) {
   auto Pos = SeenExprs.find(CandidateExpr);
   if (Pos == SeenExprs.end())
     return nullptr;
@@ -564,7 +495,8 @@ NaryReassociate::findClosestMatchingDominator(const SCEV *CandidateExpr,
   // future instruction either. Therefore, we pop it out of the stack. This
   // optimization makes the algorithm O(n).
   while (!Candidates.empty()) {
-    // Candidates stores WeakVHs, so a candidate can be nullptr if it's removed
+    // Candidates stores WeakTrackingVHs, so a candidate can be nullptr if it's
+    // removed
     // during rewriting.
     if (Value *Candidate = Candidates.back()) {
       Instruction *CandidateInstruction = cast<Instruction>(Candidate);

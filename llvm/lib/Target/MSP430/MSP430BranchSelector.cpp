@@ -27,62 +27,84 @@ using namespace llvm;
 
 #define DEBUG_TYPE "msp430-branch-select"
 
+static cl::opt<bool>
+    BranchSelectEnabled("msp430-branch-select", cl::Hidden, cl::init(true),
+                        cl::desc("Expand out of range branches"));
+
+STATISTIC(NumSplit, "Number of machine basic blocks split");
 STATISTIC(NumExpanded, "Number of branches expanded to long format");
 
 namespace {
-  struct MSP430BSel : public MachineFunctionPass {
-    static char ID;
-    MSP430BSel() : MachineFunctionPass(ID) {}
+class MSP430BSel : public MachineFunctionPass {
 
-    /// BlockSizes - The sizes of the basic blocks in the function.
-    std::vector<unsigned> BlockSizes;
+  typedef SmallVector<int, 16> OffsetVector;
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
+  MachineFunction *MF;
+  const MSP430InstrInfo *TII;
 
-    const char *getPassName() const override {
-      return "MSP430 Branch Selector";
-    }
-  };
-  char MSP430BSel::ID = 0;
+  unsigned measureFunction(OffsetVector &BlockOffsets,
+                           MachineBasicBlock *FromBB = nullptr);
+  bool expandBranches(OffsetVector &BlockOffsets);
+
+public:
+  static char ID;
+  MSP430BSel() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoVRegs);
+  }
+
+  StringRef getPassName() const override { return "MSP430 Branch Selector"; }
+};
+char MSP430BSel::ID = 0;
 }
 
-/// createMSP430BranchSelectionPass - returns an instance of the Branch
-/// Selection Pass
-///
-FunctionPass *llvm::createMSP430BranchSelectionPass() {
-  return new MSP430BSel();
+static bool isInRage(int DistanceInBytes) {
+  // According to CC430 Family User's Guide, Section 4.5.1.3, branch
+  // instructions have the signed 10-bit word offset field, so first we need to
+  // convert the distance from bytes to words, then check if it fits in 10-bit
+  // signed integer.
+  const int WordSize = 2;
+
+  assert((DistanceInBytes % WordSize == 0) &&
+         "Branch offset should be word aligned!");
+
+  int Words = DistanceInBytes / WordSize;
+  return isInt<10>(Words);
 }
 
-bool MSP430BSel::runOnMachineFunction(MachineFunction &Fn) {
-  const MSP430InstrInfo *TII =
-      static_cast<const MSP430InstrInfo *>(Fn.getSubtarget().getInstrInfo());
+/// Measure each basic block, fill the BlockOffsets, and return the size of
+/// the function, starting with BB
+unsigned MSP430BSel::measureFunction(OffsetVector &BlockOffsets,
+                                     MachineBasicBlock *FromBB) {
   // Give the blocks of the function a dense, in-order, numbering.
-  Fn.RenumberBlocks();
-  BlockSizes.resize(Fn.getNumBlockIDs());
+  MF->RenumberBlocks(FromBB);
 
-  // Measure each MBB and compute a size for the entire function.
-  unsigned FuncSize = 0;
-  for (MachineFunction::iterator MFI = Fn.begin(), E = Fn.end(); MFI != E;
-       ++MFI) {
-    MachineBasicBlock *MBB = &*MFI;
-
-    unsigned BlockSize = 0;
-    for (MachineBasicBlock::iterator MBBI = MBB->begin(), EE = MBB->end();
-         MBBI != EE; ++MBBI)
-      BlockSize += TII->GetInstSizeInBytes(MBBI);
-
-    BlockSizes[MBB->getNumber()] = BlockSize;
-    FuncSize += BlockSize;
+  MachineFunction::iterator Begin;
+  if (FromBB == nullptr) {
+    Begin = MF->begin();
+  } else {
+    Begin = FromBB->getIterator();
   }
 
-  // If the entire function is smaller than the displacement of a branch field,
-  // we know we don't need to shrink any branches in this function.  This is a
-  // common case.
-  if (FuncSize < (1 << 9)) {
-    BlockSizes.clear();
-    return false;
-  }
+  BlockOffsets.resize(MF->getNumBlockIDs());
 
+  unsigned TotalSize = BlockOffsets[Begin->getNumber()];
+  for (auto &MBB : make_range(Begin, MF->end())) {
+    BlockOffsets[MBB.getNumber()] = TotalSize;
+    for (MachineInstr &MI : MBB) {
+      TotalSize += TII->getInstSizeInBytes(MI);
+    }
+  }
+  return TotalSize;
+}
+
+/// Do expand branches and split the basic blocks if necessary.
+/// Returns true if made any change.
+bool MSP430BSel::expandBranches(OffsetVector &BlockOffsets) {
   // For each conditional branch, if the offset to its destination is larger
   // than the offset field allows, transform it into a long branch sequence
   // like this:
@@ -92,91 +114,144 @@ bool MSP430BSel::runOnMachineFunction(MachineFunction &Fn) {
   //     b!CC $PC+6
   //     b MBB
   //
-  bool MadeChange = true;
-  bool EverMadeChange = false;
-  while (MadeChange) {
-    // Iteratively expand branches until we reach a fixed point.
-    MadeChange = false;
+  bool MadeChange = false;
+  for (auto MBB = MF->begin(), E = MF->end(); MBB != E; ++MBB) {
+    unsigned MBBStartOffset = 0;
+    for (auto MI = MBB->begin(), EE = MBB->end(); MI != EE; ++MI) {
+      MBBStartOffset += TII->getInstSizeInBytes(*MI);
 
-    for (MachineFunction::iterator MFI = Fn.begin(), E = Fn.end(); MFI != E;
-         ++MFI) {
-      MachineBasicBlock &MBB = *MFI;
-      unsigned MBBStartOffset = 0;
-      for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
-           I != E; ++I) {
-        if ((I->getOpcode() != MSP430::JCC || I->getOperand(0).isImm()) &&
-            I->getOpcode() != MSP430::JMP) {
-          MBBStartOffset += TII->GetInstSizeInBytes(I);
-          continue;
-        }
-
-        // Determine the offset from the current branch to the destination
-        // block.
-        MachineBasicBlock *Dest = I->getOperand(0).getMBB();
-
-        int BranchSize;
-        if (Dest->getNumber() <= MBB.getNumber()) {
-          // If this is a backwards branch, the delta is the offset from the
-          // start of this block to this branch, plus the sizes of all blocks
-          // from this block to the dest.
-          BranchSize = MBBStartOffset;
-
-          for (unsigned i = Dest->getNumber(), e = MBB.getNumber(); i != e; ++i)
-            BranchSize += BlockSizes[i];
-        } else {
-          // Otherwise, add the size of the blocks between this block and the
-          // dest to the number of bytes left in this block.
-          BranchSize = -MBBStartOffset;
-
-          for (unsigned i = MBB.getNumber(), e = Dest->getNumber(); i != e; ++i)
-            BranchSize += BlockSizes[i];
-        }
-
-        // If this branch is in range, ignore it.
-        if (isInt<10>(BranchSize)) {
-          MBBStartOffset += 2;
-          continue;
-        }
-
-        // Otherwise, we have to expand it to a long branch.
-        unsigned NewSize;
-        MachineInstr *OldBranch = I;
-        DebugLoc dl = OldBranch->getDebugLoc();
-
-        if (I->getOpcode() == MSP430::JMP) {
-          NewSize = 4;
-        } else {
-          // The BCC operands are:
-          // 0. MSP430 branch predicate
-          // 1. Target MBB
-          SmallVector<MachineOperand, 1> Cond;
-          Cond.push_back(I->getOperand(1));
-
-          // Jump over the uncond branch inst (i.e. $+6) on opposite condition.
-          TII->ReverseBranchCondition(Cond);
-          BuildMI(MBB, I, dl, TII->get(MSP430::JCC))
-            .addImm(4).addOperand(Cond[0]);
-
-          NewSize = 6;
-        }
-        // Uncond branch to the real destination.
-        I = BuildMI(MBB, I, dl, TII->get(MSP430::Bi)).addMBB(Dest);
-
-        // Remove the old branch from the function.
-        OldBranch->eraseFromParent();
-
-        // Remember that this instruction is NewSize bytes, increase the size of the
-        // block by NewSize-2, remember to iterate.
-        BlockSizes[MBB.getNumber()] += NewSize-2;
-        MBBStartOffset += NewSize;
-
-        ++NumExpanded;
-        MadeChange = true;
+      // If this instruction is not a short branch then skip it.
+      if (MI->getOpcode() != MSP430::JCC && MI->getOpcode() != MSP430::JMP) {
+        continue;
       }
+
+      MachineBasicBlock *DestBB = MI->getOperand(0).getMBB();
+      // Determine the distance from the current branch to the destination
+      // block. MBBStartOffset already includes the size of the current branch
+      // instruction.
+      int BlockDistance =
+          BlockOffsets[DestBB->getNumber()] - BlockOffsets[MBB->getNumber()];
+      int BranchDistance = BlockDistance - MBBStartOffset;
+
+      // If this branch is in range, ignore it.
+      if (isInRage(BranchDistance)) {
+        continue;
+      }
+
+      DEBUG(dbgs() << "  Found a branch that needs expanding, BB#"
+                   << DestBB->getNumber() << ", Distance " << BranchDistance
+                   << "\n");
+
+      // If JCC is not the last instruction we need to split the MBB.
+      if (MI->getOpcode() == MSP430::JCC && std::next(MI) != EE) {
+
+        DEBUG(dbgs() << "  Found a basic block that needs to be split, BB#"
+                     << MBB->getNumber() << "\n");
+
+        // Create a new basic block.
+        MachineBasicBlock *NewBB =
+            MF->CreateMachineBasicBlock(MBB->getBasicBlock());
+        MF->insert(std::next(MBB), NewBB);
+
+        // Splice the instructions following MI over to the NewBB.
+        NewBB->splice(NewBB->end(), &*MBB, std::next(MI), MBB->end());
+
+        // Update the successor lists.
+        for (MachineBasicBlock *Succ : MBB->successors()) {
+          if (Succ == DestBB) {
+            continue;
+          }
+          MBB->replaceSuccessor(Succ, NewBB);
+          NewBB->addSuccessor(Succ);
+        }
+
+        // We introduced a new MBB so all following blocks should be numbered
+        // and measured again.
+        measureFunction(BlockOffsets, &*MBB);
+
+        ++NumSplit;
+
+        // It may be not necessary to start all over at this point, but it's
+        // safer do this anyway.
+        return true;
+      }
+
+      MachineInstr &OldBranch = *MI;
+      DebugLoc dl = OldBranch.getDebugLoc();
+      int InstrSizeDiff = -TII->getInstSizeInBytes(OldBranch);
+
+      if (MI->getOpcode() == MSP430::JCC) {
+        MachineBasicBlock *NextMBB = &*std::next(MBB);
+        assert(MBB->isSuccessor(NextMBB) &&
+               "This block must have a layout successor!");
+
+        // The BCC operands are:
+        // 0. Target MBB
+        // 1. MSP430 branch predicate
+        SmallVector<MachineOperand, 1> Cond;
+        Cond.push_back(MI->getOperand(1));
+
+        // Jump over the long branch on the opposite condition
+        TII->reverseBranchCondition(Cond);
+        MI = BuildMI(*MBB, MI, dl, TII->get(MSP430::JCC))
+                 .addMBB(NextMBB)
+                 .add(Cond[0]);
+        InstrSizeDiff += TII->getInstSizeInBytes(*MI);
+        ++MI;
+      }
+
+      // Unconditional branch to the real destination.
+      MI = BuildMI(*MBB, MI, dl, TII->get(MSP430::Bi)).addMBB(DestBB);
+      InstrSizeDiff += TII->getInstSizeInBytes(*MI);
+
+      // Remove the old branch from the function.
+      OldBranch.eraseFromParent();
+
+      // The size of a new instruction is different from the old one, so we need
+      // to correct all block offsets.
+      for (int i = MBB->getNumber() + 1, e = BlockOffsets.size(); i < e; ++i) {
+        BlockOffsets[i] += InstrSizeDiff;
+      }
+      MBBStartOffset += InstrSizeDiff;
+
+      ++NumExpanded;
+      MadeChange = true;
     }
-    EverMadeChange |= MadeChange;
+  }
+  return MadeChange;
+}
+
+bool MSP430BSel::runOnMachineFunction(MachineFunction &mf) {
+  MF = &mf;
+  TII = static_cast<const MSP430InstrInfo *>(MF->getSubtarget().getInstrInfo());
+
+  // If the pass is disabled, just bail early.
+  if (!BranchSelectEnabled)
+    return false;
+
+  DEBUG(dbgs() << "\n********** " << getPassName() << " **********\n");
+
+  // BlockOffsets - Contains the distance from the beginning of the function to
+  // the beginning of each basic block.
+  OffsetVector BlockOffsets;
+
+  unsigned FunctionSize = measureFunction(BlockOffsets);
+  // If the entire function is smaller than the displacement of a branch field,
+  // we know we don't need to expand any branches in this
+  // function. This is a common case.
+  if (isInRage(FunctionSize)) {
+    return false;
   }
 
-  BlockSizes.clear();
-  return true;
+  // Iteratively expand branches until we reach a fixed point.
+  bool MadeChange = false;
+  while (expandBranches(BlockOffsets))
+    MadeChange = true;
+
+  return MadeChange;
+}
+
+/// Returns an instance of the Branch Selection Pass
+FunctionPass *llvm::createMSP430BranchSelectionPass() {
+  return new MSP430BSel();
 }

@@ -1,4 +1,4 @@
-//===---- LiveRangeEdit.h - Basic tools for split and spill -----*- C++ -*-===//
+//===- LiveRangeEdit.h - Basic tools for split and spill --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,19 +19,28 @@
 #define LLVM_CODEGEN_LIVERANGEEDIT_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
 
 namespace llvm {
 
 class LiveIntervals;
 class MachineBlockFrequencyInfo;
+class MachineInstr;
 class MachineLoopInfo;
+class MachineOperand;
+class TargetInstrInfo;
+class TargetRegisterInfo;
 class VirtRegMap;
 
 class LiveRangeEdit : private MachineRegisterInfo::Delegate {
@@ -39,7 +48,10 @@ public:
   /// Callback methods for LiveRangeEdit owners.
   class Delegate {
     virtual void anchor();
+
   public:
+    virtual ~Delegate() = default;
+
     /// Called immediately before erasing a dead machine instruction.
     virtual void LRE_WillEraseInstruction(MachineInstr *MI) {}
 
@@ -53,8 +65,6 @@ public:
     /// Called after cloning a virtual register.
     /// This is used for new registers representing connected components of Old.
     virtual void LRE_DidCloneVirtReg(unsigned New, unsigned Old) {}
-
-    virtual ~Delegate() {}
   };
 
 private:
@@ -70,15 +80,19 @@ private:
   const unsigned FirstNew;
 
   /// ScannedRemattable - true when remattable values have been identified.
-  bool ScannedRemattable;
+  bool ScannedRemattable = false;
+
+  /// DeadRemats - The saved instructions which have already been dead after
+  /// rematerialization but not deleted yet -- to be done in postOptimization.
+  SmallPtrSet<MachineInstr *, 32> *DeadRemats;
 
   /// Remattable - Values defined by remattable instructions as identified by
   /// tii.isTriviallyReMaterializable().
-  SmallPtrSet<const VNInfo*,4> Remattable;
+  SmallPtrSet<const VNInfo *, 4> Remattable;
 
   /// Rematted - Values that were actually rematted, and so need to have their
   /// live range trimmed or entirely removed.
-  SmallPtrSet<const VNInfo*,4> Rematted;
+  SmallPtrSet<const VNInfo *, 4> Rematted;
 
   /// scanRemattable - Identify the Parent values that may rematerialize.
   void scanRemattable(AliasAnalysis *aa);
@@ -90,13 +104,14 @@ private:
 
   /// foldAsLoad - If LI has a single use and a single def that can be folded as
   /// a load, eliminate the register by folding the def into the use.
-  bool foldAsLoad(LiveInterval *LI, SmallVectorImpl<MachineInstr*> &Dead);
+  bool foldAsLoad(LiveInterval *LI, SmallVectorImpl<MachineInstr *> &Dead);
 
-  typedef SetVector<LiveInterval*,
-                    SmallVector<LiveInterval*, 8>,
-                    SmallPtrSet<LiveInterval*, 8> > ToShrinkSet;
+  using ToShrinkSet = SetVector<LiveInterval *, SmallVector<LiveInterval *, 8>,
+                                SmallPtrSet<LiveInterval *, 8>>;
+
   /// Helper for eliminateDeadDefs.
-  void eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink);
+  void eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
+                        AliasAnalysis *AA);
 
   /// MachineRegisterInfo callback to notify when new virtual
   /// registers are created.
@@ -116,31 +131,44 @@ public:
   /// @param vrm Map of virtual registers to physical registers for this
   ///            function.  If NULL, no virtual register map updates will
   ///            be done.  This could be the case if called before Regalloc.
+  /// @param deadRemats The collection of all the instructions defining an
+  ///                   original reg and are dead after remat.
   LiveRangeEdit(LiveInterval *parent, SmallVectorImpl<unsigned> &newRegs,
                 MachineFunction &MF, LiveIntervals &lis, VirtRegMap *vrm,
-                Delegate *delegate = nullptr)
+                Delegate *delegate = nullptr,
+                SmallPtrSet<MachineInstr *, 32> *deadRemats = nullptr)
       : Parent(parent), NewRegs(newRegs), MRI(MF.getRegInfo()), LIS(lis),
-        VRM(vrm), TII(*MF.getSubtarget().getInstrInfo()),
-        TheDelegate(delegate), FirstNew(newRegs.size()),
-        ScannedRemattable(false) {
+        VRM(vrm), TII(*MF.getSubtarget().getInstrInfo()), TheDelegate(delegate),
+        FirstNew(newRegs.size()), DeadRemats(deadRemats) {
     MRI.setDelegate(this);
   }
 
   ~LiveRangeEdit() override { MRI.resetDelegate(this); }
 
   LiveInterval &getParent() const {
-   assert(Parent && "No parent LiveInterval");
-   return *Parent;
+    assert(Parent && "No parent LiveInterval");
+    return *Parent;
   }
+
   unsigned getReg() const { return getParent().reg; }
 
   /// Iterator for accessing the new registers added by this edit.
-  typedef SmallVectorImpl<unsigned>::const_iterator iterator;
-  iterator begin() const { return NewRegs.begin()+FirstNew; }
+  using iterator = SmallVectorImpl<unsigned>::const_iterator;
+  iterator begin() const { return NewRegs.begin() + FirstNew; }
   iterator end() const { return NewRegs.end(); }
-  unsigned size() const { return NewRegs.size()-FirstNew; }
+  unsigned size() const { return NewRegs.size() - FirstNew; }
   bool empty() const { return size() == 0; }
-  unsigned get(unsigned idx) const { return NewRegs[idx+FirstNew]; }
+  unsigned get(unsigned idx) const { return NewRegs[idx + FirstNew]; }
+
+  /// pop_back - It allows LiveRangeEdit users to drop new registers.
+  /// The context is when an original def instruction of a register is
+  /// dead after rematerialization, we still want to keep it for following
+  /// rematerializations. We save the def instruction in DeadRemats,
+  /// and replace the original dst register with a new dummy register so
+  /// the live range of original dst register can be shrinked normally.
+  /// We don't want to allocate phys register for the dummy register, so
+  /// we want to drop it from the NewRegs set.
+  void pop_back() { NewRegs.pop_back(); }
 
   ArrayRef<unsigned> regs() const {
     return makeArrayRef(NewRegs).slice(FirstNew);
@@ -158,32 +186,31 @@ public:
     return createEmptyIntervalFrom(getReg());
   }
 
-  unsigned create() {
-    return createFrom(getReg());
-  }
+  unsigned create() { return createFrom(getReg()); }
 
   /// anyRematerializable - Return true if any parent values may be
   /// rematerializable.
   /// This function must be called before any rematerialization is attempted.
-  bool anyRematerializable(AliasAnalysis*);
+  bool anyRematerializable(AliasAnalysis *);
 
   /// checkRematerializable - Manually add VNI to the list of rematerializable
   /// values if DefMI may be rematerializable.
   bool checkRematerializable(VNInfo *VNI, const MachineInstr *DefMI,
-                             AliasAnalysis*);
+                             AliasAnalysis *);
 
   /// Remat - Information needed to rematerialize at a specific location.
   struct Remat {
-    VNInfo *ParentVNI;      // parent_'s value at the remat location.
-    MachineInstr *OrigMI;   // Instruction defining ParentVNI.
-    explicit Remat(VNInfo *ParentVNI) : ParentVNI(ParentVNI), OrigMI(nullptr) {}
+    VNInfo *ParentVNI;              // parent_'s value at the remat location.
+    MachineInstr *OrigMI = nullptr; // Instruction defining OrigVNI. It contains
+                                    // the real expr for remat.
+
+    explicit Remat(VNInfo *ParentVNI) : ParentVNI(ParentVNI) {}
   };
 
   /// canRematerializeAt - Determine if ParentVNI can be rematerialized at
   /// UseIdx. It is assumed that parent_.getVNINfoAt(UseIdx) == ParentVNI.
   /// When cheapAsAMove is set, only cheap remats are allowed.
-  bool canRematerializeAt(Remat &RM,
-                          SlotIndex UseIdx,
+  bool canRematerializeAt(Remat &RM, VNInfo *OrigVNI, SlotIndex UseIdx,
                           bool cheapAsAMove);
 
   /// rematerializeAt - Rematerialize RM.ParentVNI into DestReg by inserting an
@@ -191,10 +218,8 @@ public:
   /// liveness is not updated.
   /// Return the SlotIndex of the new instruction.
   SlotIndex rematerializeAt(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI,
-                            unsigned DestReg,
-                            const Remat &RM,
-                            const TargetRegisterInfo&,
+                            MachineBasicBlock::iterator MI, unsigned DestReg,
+                            const Remat &RM, const TargetRegisterInfo &,
                             bool Late = false);
 
   /// markRematerialized - explicitly mark a value as rematerialized after doing
@@ -208,6 +233,12 @@ public:
     return Rematted.count(ParentVNI);
   }
 
+  void markDeadRemat(MachineInstr *inst) {
+    // DeadRemats is an optional field.
+    if (DeadRemats)
+      DeadRemats->insert(inst);
+  }
+
   /// eraseVirtReg - Notify the delegate that Reg is no longer in use, and try
   /// to erase it from LIS.
   void eraseVirtReg(unsigned Reg);
@@ -218,16 +249,16 @@ public:
   /// RegsBeingSpilled lists registers currently being spilled by the register
   /// allocator.  These registers should not be split into new intervals
   /// as currently those new intervals are not guaranteed to spill.
-  void eliminateDeadDefs(SmallVectorImpl<MachineInstr*> &Dead,
-                         ArrayRef<unsigned> RegsBeingSpilled = None);
+  void eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
+                         ArrayRef<unsigned> RegsBeingSpilled = None,
+                         AliasAnalysis *AA = nullptr);
 
   /// calculateRegClassAndHint - Recompute register class and hint for each new
   /// register.
-  void calculateRegClassAndHint(MachineFunction&,
-                                const MachineLoopInfo&,
-                                const MachineBlockFrequencyInfo&);
+  void calculateRegClassAndHint(MachineFunction &, const MachineLoopInfo &,
+                                const MachineBlockFrequencyInfo &);
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_LIVERANGEEDIT_H

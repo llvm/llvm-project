@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/MD5.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/MD5.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -56,5 +56,17 @@ TEST(MD5Test, MD5) {
                           (size_t) 27),
              "81948d1f1554f58cd1a56ebb01f808cb");
   TestMD5Sum("abcdefghijklmnopqrstuvwxyz", "c3fcd3d76192e4007dfb496cca67e13b");
+}
+
+TEST(MD5HashTest, MD5) {
+  ArrayRef<uint8_t> Input((const uint8_t *)"abcdefghijklmnopqrstuvwxyz", 26);
+  std::array<uint8_t, 16> Vec = MD5::hash(Input);
+  MD5::MD5Result MD5Res;
+  SmallString<32> Res;
+  memcpy(MD5Res.Bytes.data(), Vec.data(), Vec.size());
+  MD5::stringifyResult(MD5Res, Res);
+  EXPECT_EQ(Res, "c3fcd3d76192e4007dfb496cca67e13b");
+  EXPECT_EQ(0x3be167ca6c49fb7dULL, MD5Res.high());
+  EXPECT_EQ(0x00e49261d7d3fcc3ULL, MD5Res.low());
 }
 }

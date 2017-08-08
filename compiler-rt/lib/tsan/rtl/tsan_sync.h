@@ -23,6 +23,29 @@
 
 namespace __tsan {
 
+// These need to match __tsan_mutex_* flags defined in tsan_interface.h.
+// See documentation there as well.
+enum MutexFlags {
+  MutexFlagLinkerInit          = 1 << 0, // __tsan_mutex_linker_init
+  MutexFlagWriteReentrant      = 1 << 1, // __tsan_mutex_write_reentrant
+  MutexFlagReadReentrant       = 1 << 2, // __tsan_mutex_read_reentrant
+  MutexFlagReadLock            = 1 << 3, // __tsan_mutex_read_lock
+  MutexFlagTryLock             = 1 << 4, // __tsan_mutex_try_lock
+  MutexFlagTryLockFailed       = 1 << 5, // __tsan_mutex_try_lock_failed
+  MutexFlagRecursiveLock       = 1 << 6, // __tsan_mutex_recursive_lock
+  MutexFlagRecursiveUnlock     = 1 << 7, // __tsan_mutex_recursive_unlock
+
+  // The following flags are runtime private.
+  // Mutex API misuse was detected, so don't report any more.
+  MutexFlagBroken              = 1 << 30,
+  // We did not intercept pre lock event, so handle it on post lock.
+  MutexFlagDoPreLockOnPostLock = 1 << 29,
+  // Must list all mutex creation flags.
+  MutexCreationFlagMask        = MutexFlagLinkerInit |
+                                 MutexFlagWriteReentrant |
+                                 MutexFlagReadReentrant,
+};
+
 struct SyncVar {
   SyncVar();
 
@@ -35,10 +58,7 @@ struct SyncVar {
   int owner_tid;  // Set only by exclusive owners.
   u64 last_lock;
   int recursion;
-  bool is_rw;
-  bool is_recursive;
-  bool is_broken;
-  bool is_linker_init;
+  atomic_uint32_t flags;
   u32 next;  // in MetaMap
   DDMutex dd;
   SyncClock read_clock;  // Used for rw mutexes only.
@@ -47,19 +67,39 @@ struct SyncVar {
   SyncClock clock;
 
   void Init(ThreadState *thr, uptr pc, uptr addr, u64 uid);
-  void Reset(ThreadState *thr);
+  void Reset(Processor *proc);
 
   u64 GetId() const {
-    // 47 lsb is addr, then 14 bits is low part of uid, then 3 zero bits.
-    return GetLsb((u64)addr | (uid << 47), 61);
+    // 48 lsb is addr, then 14 bits is low part of uid, then 2 zero bits.
+    return GetLsb((u64)addr | (uid << 48), 60);
   }
   bool CheckId(u64 uid) const {
     CHECK_EQ(uid, GetLsb(uid, 14));
     return GetLsb(this->uid, 14) == uid;
   }
   static uptr SplitId(u64 id, u64 *uid) {
-    *uid = id >> 47;
-    return (uptr)GetLsb(id, 47);
+    *uid = id >> 48;
+    return (uptr)GetLsb(id, 48);
+  }
+
+  bool IsFlagSet(u32 f) const {
+    return atomic_load_relaxed(&flags) & f;
+  }
+
+  void SetFlags(u32 f) {
+    atomic_store_relaxed(&flags, atomic_load_relaxed(&flags) | f);
+  }
+
+  void UpdateFlags(u32 flagz) {
+    // Filter out operation flags.
+    if (!(flagz & MutexCreationFlagMask))
+      return;
+    u32 current = atomic_load_relaxed(&flags);
+    if (current & MutexCreationFlagMask)
+      return;
+    // Note: this can be called from MutexPostReadLock which holds only read
+    // lock on the SyncVar.
+    atomic_store_relaxed(&flags, current | (flagz & MutexCreationFlagMask));
   }
 };
 
@@ -72,18 +112,18 @@ class MetaMap {
   MetaMap();
 
   void AllocBlock(ThreadState *thr, uptr pc, uptr p, uptr sz);
-  uptr FreeBlock(ThreadState *thr, uptr pc, uptr p);
-  bool FreeRange(ThreadState *thr, uptr pc, uptr p, uptr sz);
-  void ResetRange(ThreadState *thr, uptr pc, uptr p, uptr sz);
+  uptr FreeBlock(Processor *proc, uptr p);
+  bool FreeRange(Processor *proc, uptr p, uptr sz);
+  void ResetRange(Processor *proc, uptr p, uptr sz);
   MBlock* GetBlock(uptr p);
 
   SyncVar* GetOrCreateAndLock(ThreadState *thr, uptr pc,
                               uptr addr, bool write_lock);
-  SyncVar* GetIfExistsAndLock(uptr addr);
+  SyncVar* GetIfExistsAndLock(uptr addr, bool write_lock);
 
   void MoveMemory(uptr src, uptr dst, uptr sz);
 
-  void OnThreadIdle(ThreadState *thr);
+  void OnProcIdle(Processor *proc);
 
  private:
   static const u32 kFlagMask  = 3u << 30;

@@ -288,6 +288,7 @@ public:
 
   bool shouldKeep(InputSectionBase *S);
   void assignOffsets(OutputSectionCommand *Cmd);
+  void processNonSectionCommands();
   void assignAddresses();
   void allocateHeaders(std::vector<PhdrEntry> &Phdrs);
   void addSymbol(SymbolAssignment *Cmd);

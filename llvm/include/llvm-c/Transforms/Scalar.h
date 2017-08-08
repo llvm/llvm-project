@@ -19,7 +19,7 @@
 #ifndef LLVM_C_TRANSFORMS_SCALAR_H
 #define LLVM_C_TRANSFORMS_SCALAR_H
 
-#include "llvm-c/Core.h"
+#include "llvm-c/Types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,6 +44,9 @@ void LLVMAddAlignmentFromAssumptionsPass(LLVMPassManagerRef PM);
 /** See llvm::createCFGSimplificationPass function. */
 void LLVMAddCFGSimplificationPass(LLVMPassManagerRef PM);
 
+/** See llvm::createLateCFGSimplificationPass function. */
+void LLVMAddLateCFGSimplificationPass(LLVMPassManagerRef PM);
+
 /** See llvm::createDeadStoreEliminationPass function. */
 void LLVMAddDeadStoreEliminationPass(LLVMPassManagerRef PM);
 
@@ -55,6 +58,9 @@ void LLVMAddMergedLoadStoreMotionPass(LLVMPassManagerRef PM);
 
 /** See llvm::createGVNPass function. */
 void LLVMAddGVNPass(LLVMPassManagerRef PM);
+
+/** See llvm::createGVNPass function. */
+void LLVMAddNewGVNPass(LLVMPassManagerRef PM);
 
 /** See llvm::createIndVarSimplifyPass function. */
 void LLVMAddIndVarSimplifyPass(LLVMPassManagerRef PM);
@@ -104,13 +110,13 @@ void LLVMAddReassociatePass(LLVMPassManagerRef PM);
 /** See llvm::createSCCPPass function. */
 void LLVMAddSCCPPass(LLVMPassManagerRef PM);
 
-/** See llvm::createScalarReplAggregatesPass function. */
+/** See llvm::createSROAPass function. */
 void LLVMAddScalarReplAggregatesPass(LLVMPassManagerRef PM);
 
-/** See llvm::createScalarReplAggregatesPass function. */
+/** See llvm::createSROAPass function. */
 void LLVMAddScalarReplAggregatesPassSSA(LLVMPassManagerRef PM);
 
-/** See llvm::createScalarReplAggregatesPass function. */
+/** See llvm::createSROAPass function. */
 void LLVMAddScalarReplAggregatesPassWithThreshold(LLVMPassManagerRef PM,
                                                   int Threshold);
 
@@ -134,6 +140,9 @@ void LLVMAddCorrelatedValuePropagationPass(LLVMPassManagerRef PM);
 
 /** See llvm::createEarlyCSEPass function */
 void LLVMAddEarlyCSEPass(LLVMPassManagerRef PM);
+
+/** See llvm::createEarlyCSEPass function */
+void LLVMAddEarlyCSEMemSSAPass(LLVMPassManagerRef PM);
 
 /** See llvm::createLowerExpectIntrinsicPass function */
 void LLVMAddLowerExpectIntrinsicPass(LLVMPassManagerRef PM);

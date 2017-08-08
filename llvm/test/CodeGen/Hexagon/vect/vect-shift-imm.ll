@@ -6,12 +6,12 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s --check-prefix=CHECK-LSRH
 ;
 ; Make sure that the instructions with immediate operands are generated.
-; CHECK-ASLW: vaslw({{.*}}, #9)
-; CHECK-ASRW: vasrw({{.*}}, #8)
-; CHECK-LSRW: vlsrw({{.*}}, #7)
-; CHECK-ASLH: vaslh({{.*}}, #6)
-; CHECK-ASRH: vasrh({{.*}}, #5)
-; CHECK-LSRH: vlsrh({{.*}}, #4)
+; CHECK-ASLW: vaslw({{.*}},#9)
+; CHECK-ASRW: vasrw({{.*}},#8)
+; CHECK-LSRW: vlsrw({{.*}},#7)
+; CHECK-ASLH: vaslh({{.*}},#6)
+; CHECK-ASRH: vasrh({{.*}},#5)
+; CHECK-LSRH: vlsrh({{.*}},#4)
 
 target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
 target triple = "hexagon"

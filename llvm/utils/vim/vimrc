@@ -74,13 +74,13 @@ command! DeleteTrailingWs :%s/\s\+$//
 command! Untab :%s/\t/  /g
 
 " Enable syntax highlighting for LLVM files. To use, copy
-" utils/vim/llvm.vim to ~/.vim/syntax .
+" utils/vim/syntax/llvm.vim to ~/.vim/syntax .
 augroup filetype
   au! BufRead,BufNewFile *.ll     set filetype=llvm
 augroup END
 
 " Enable syntax highlighting for tablegen files. To use, copy
-" utils/vim/tablegen.vim to ~/.vim/syntax .
+" utils/vim/syntax/tablegen.vim to ~/.vim/syntax .
 augroup filetype
   au! BufRead,BufNewFile *.td     set filetype=tablegen
 augroup END

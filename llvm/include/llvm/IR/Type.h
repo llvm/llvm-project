@@ -1,4 +1,4 @@
-//===-- llvm/Type.h - Classes for handling data types -----------*- C++ -*-===//
+//===- llvm/Type.h - Classes for handling data types ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,24 +15,25 @@
 #ifndef LLVM_IR_TYPE_H
 #define LLVM_IR_TYPE_H
 
-#include "llvm-c/Core.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 
 namespace llvm {
 
-class PointerType;
-class IntegerType;
-class raw_ostream;
-class Module;
-class LLVMContext;
-class LLVMContextImpl;
-class StringRef;
 template<class GraphType> struct GraphTraits;
+class IntegerType;
+class LLVMContext;
+class PointerType;
+class raw_ostream;
+class StringRef;
 
 /// The instances of the Type class are immutable: once they are created,
 /// they are never changed.  Also note that only one instance of a particular
@@ -76,17 +77,19 @@ public:
   };
 
 private:
-  /// Context - This refers to the LLVMContext in which this type was uniqued.
+  /// This refers to the LLVMContext in which this type was uniqued.
   LLVMContext &Context;
 
   TypeID   ID : 8;            // The current base type of this type.
   unsigned SubclassData : 24; // Space for subclasses to store data.
+                              // Note that this should be synchronized with
+                              // MAX_INT_BITS value in IntegerType class.
 
 protected:
   friend class LLVMContextImpl;
+
   explicit Type(LLVMContext &C, TypeID tid)
-    : Context(C), ID(tid), SubclassData(0),
-      NumContainedTys(0), ContainedTys(nullptr) {}
+    : Context(C), ID(tid), SubclassData(0) {}
   ~Type() = default;
 
   unsigned getSubclassData() const { return SubclassData; }
@@ -97,56 +100,65 @@ protected:
     assert(getSubclassData() == val && "Subclass data too large for field");
   }
 
-  /// NumContainedTys - Keeps track of how many Type*'s there are in the
-  /// ContainedTys list.
-  unsigned NumContainedTys;
+  /// Keeps track of how many Type*'s there are in the ContainedTys list.
+  unsigned NumContainedTys = 0;
 
-  /// ContainedTys - A pointer to the array of Types contained by this Type.
-  /// For example, this includes the arguments of a function type, the elements
-  /// of a structure, the pointee of a pointer, the element type of an array,
-  /// etc.  This pointer may be 0 for types that don't contain other types
-  /// (Integer, Double, Float).
-  Type * const *ContainedTys;
+  /// A pointer to the array of Types contained by this Type. For example, this
+  /// includes the arguments of a function type, the elements of a structure,
+  /// the pointee of a pointer, the element type of an array, etc. This pointer
+  /// may be 0 for types that don't contain other types (Integer, Double,
+  /// Float).
+  Type * const *ContainedTys = nullptr;
+
+  static bool isSequentialType(TypeID TyID) {
+    return TyID == ArrayTyID || TyID == VectorTyID;
+  }
 
 public:
-  void print(raw_ostream &O, bool IsForDebug = false) const;
+  /// Print the current type.
+  /// Omit the type details if \p NoDetails == true.
+  /// E.g., let %st = type { i32, i16 }
+  /// When \p NoDetails is true, we only print %st.
+  /// Put differently, \p NoDetails prints the type as if
+  /// inlined with the operands when printing an instruction.
+  void print(raw_ostream &O, bool IsForDebug = false,
+             bool NoDetails = false) const;
+
   void dump() const;
 
-  /// getContext - Return the LLVMContext in which this type was uniqued.
+  /// Return the LLVMContext in which this type was uniqued.
   LLVMContext &getContext() const { return Context; }
 
   //===--------------------------------------------------------------------===//
   // Accessors for working with types.
   //
 
-  /// getTypeID - Return the type id for the type.  This will return one
-  /// of the TypeID enum elements defined above.
-  ///
+  /// Return the type id for the type. This will return one of the TypeID enum
+  /// elements defined above.
   TypeID getTypeID() const { return ID; }
 
-  /// isVoidTy - Return true if this is 'void'.
+  /// Return true if this is 'void'.
   bool isVoidTy() const { return getTypeID() == VoidTyID; }
 
-  /// isHalfTy - Return true if this is 'half', a 16-bit IEEE fp type.
+  /// Return true if this is 'half', a 16-bit IEEE fp type.
   bool isHalfTy() const { return getTypeID() == HalfTyID; }
 
-  /// isFloatTy - Return true if this is 'float', a 32-bit IEEE fp type.
+  /// Return true if this is 'float', a 32-bit IEEE fp type.
   bool isFloatTy() const { return getTypeID() == FloatTyID; }
 
-  /// isDoubleTy - Return true if this is 'double', a 64-bit IEEE fp type.
+  /// Return true if this is 'double', a 64-bit IEEE fp type.
   bool isDoubleTy() const { return getTypeID() == DoubleTyID; }
 
-  /// isX86_FP80Ty - Return true if this is x86 long double.
+  /// Return true if this is x86 long double.
   bool isX86_FP80Ty() const { return getTypeID() == X86_FP80TyID; }
 
-  /// isFP128Ty - Return true if this is 'fp128'.
+  /// Return true if this is 'fp128'.
   bool isFP128Ty() const { return getTypeID() == FP128TyID; }
 
-  /// isPPC_FP128Ty - Return true if this is powerpc long double.
+  /// Return true if this is powerpc long double.
   bool isPPC_FP128Ty() const { return getTypeID() == PPC_FP128TyID; }
 
-  /// isFloatingPointTy - Return true if this is one of the six floating point
-  /// types
+  /// Return true if this is one of the six floating-point types
   bool isFloatingPointTy() const {
     return getTypeID() == HalfTyID || getTypeID() == FloatTyID ||
            getTypeID() == DoubleTyID ||
@@ -156,109 +168,97 @@ public:
 
   const fltSemantics &getFltSemantics() const {
     switch (getTypeID()) {
-    case HalfTyID: return APFloat::IEEEhalf;
-    case FloatTyID: return APFloat::IEEEsingle;
-    case DoubleTyID: return APFloat::IEEEdouble;
-    case X86_FP80TyID: return APFloat::x87DoubleExtended;
-    case FP128TyID: return APFloat::IEEEquad;
-    case PPC_FP128TyID: return APFloat::PPCDoubleDouble;
+    case HalfTyID: return APFloat::IEEEhalf();
+    case FloatTyID: return APFloat::IEEEsingle();
+    case DoubleTyID: return APFloat::IEEEdouble();
+    case X86_FP80TyID: return APFloat::x87DoubleExtended();
+    case FP128TyID: return APFloat::IEEEquad();
+    case PPC_FP128TyID: return APFloat::PPCDoubleDouble();
     default: llvm_unreachable("Invalid floating type");
     }
   }
 
-  /// isX86_MMXTy - Return true if this is X86 MMX.
+  /// Return true if this is X86 MMX.
   bool isX86_MMXTy() const { return getTypeID() == X86_MMXTyID; }
 
-  /// isFPOrFPVectorTy - Return true if this is a FP type or a vector of FP.
-  ///
+  /// Return true if this is a FP type or a vector of FP.
   bool isFPOrFPVectorTy() const { return getScalarType()->isFloatingPointTy(); }
 
-  /// isLabelTy - Return true if this is 'label'.
+  /// Return true if this is 'label'.
   bool isLabelTy() const { return getTypeID() == LabelTyID; }
 
-  /// isMetadataTy - Return true if this is 'metadata'.
+  /// Return true if this is 'metadata'.
   bool isMetadataTy() const { return getTypeID() == MetadataTyID; }
 
-  /// isTokenTy - Return true if this is 'token'.
+  /// Return true if this is 'token'.
   bool isTokenTy() const { return getTypeID() == TokenTyID; }
 
-  /// isIntegerTy - True if this is an instance of IntegerType.
-  ///
+  /// True if this is an instance of IntegerType.
   bool isIntegerTy() const { return getTypeID() == IntegerTyID; }
 
-  /// isIntegerTy - Return true if this is an IntegerType of the given width.
+  /// Return true if this is an IntegerType of the given width.
   bool isIntegerTy(unsigned Bitwidth) const;
 
-  /// isIntOrIntVectorTy - Return true if this is an integer type or a vector of
-  /// integer types.
-  ///
+  /// Return true if this is an integer type or a vector of integer types.
   bool isIntOrIntVectorTy() const { return getScalarType()->isIntegerTy(); }
 
-  /// isFunctionTy - True if this is an instance of FunctionType.
-  ///
+  /// Return true if this is an integer type or a vector of integer types of
+  /// the given width.
+  bool isIntOrIntVectorTy(unsigned BitWidth) const {
+    return getScalarType()->isIntegerTy(BitWidth);
+  }
+
+  /// True if this is an instance of FunctionType.
   bool isFunctionTy() const { return getTypeID() == FunctionTyID; }
 
-  /// isStructTy - True if this is an instance of StructType.
-  ///
+  /// True if this is an instance of StructType.
   bool isStructTy() const { return getTypeID() == StructTyID; }
 
-  /// isArrayTy - True if this is an instance of ArrayType.
-  ///
+  /// True if this is an instance of ArrayType.
   bool isArrayTy() const { return getTypeID() == ArrayTyID; }
 
-  /// isPointerTy - True if this is an instance of PointerType.
-  ///
+  /// True if this is an instance of PointerType.
   bool isPointerTy() const { return getTypeID() == PointerTyID; }
 
-  /// isPtrOrPtrVectorTy - Return true if this is a pointer type or a vector of
-  /// pointer types.
-  ///
+  /// Return true if this is a pointer type or a vector of pointer types.
   bool isPtrOrPtrVectorTy() const { return getScalarType()->isPointerTy(); }
 
-  /// isVectorTy - True if this is an instance of VectorType.
-  ///
+  /// True if this is an instance of VectorType.
   bool isVectorTy() const { return getTypeID() == VectorTyID; }
 
-  /// canLosslesslyBitCastTo - Return true if this type could be converted
-  /// with a lossless BitCast to type 'Ty'. For example, i8* to i32*. BitCasts
-  /// are valid for types of the same size only where no re-interpretation of
-  /// the bits is done.
+  /// Return true if this type could be converted with a lossless BitCast to
+  /// type 'Ty'. For example, i8* to i32*. BitCasts are valid for types of the
+  /// same size only where no re-interpretation of the bits is done.
   /// @brief Determine if this type could be losslessly bitcast to Ty
   bool canLosslesslyBitCastTo(Type *Ty) const;
 
-  /// isEmptyTy - Return true if this type is empty, that is, it has no
-  /// elements or all its elements are empty.
+  /// Return true if this type is empty, that is, it has no elements or all of
+  /// its elements are empty.
   bool isEmptyTy() const;
 
-  /// isFirstClassType - Return true if the type is "first class", meaning it
-  /// is a valid type for a Value.
-  ///
+  /// Return true if the type is "first class", meaning it is a valid type for a
+  /// Value.
   bool isFirstClassType() const {
     return getTypeID() != FunctionTyID && getTypeID() != VoidTyID;
   }
 
-  /// isSingleValueType - Return true if the type is a valid type for a
-  /// register in codegen.  This includes all first-class types except struct
-  /// and array types.
-  ///
+  /// Return true if the type is a valid type for a register in codegen. This
+  /// includes all first-class types except struct and array types.
   bool isSingleValueType() const {
     return isFloatingPointTy() || isX86_MMXTy() || isIntegerTy() ||
            isPointerTy() || isVectorTy();
   }
 
-  /// isAggregateType - Return true if the type is an aggregate type. This
-  /// means it is valid as the first operand of an insertvalue or
-  /// extractvalue instruction. This includes struct and array types, but
-  /// does not include vector types.
-  ///
+  /// Return true if the type is an aggregate type. This means it is valid as
+  /// the first operand of an insertvalue or extractvalue instruction. This
+  /// includes struct and array types, but does not include vector types.
   bool isAggregateType() const {
     return getTypeID() == StructTyID || getTypeID() == ArrayTyID;
   }
 
-  /// isSized - Return true if it makes sense to take the size of this type.  To
-  /// get the actual size for a particular target, it is reasonable to use the
+  /// Return true if it makes sense to take the size of this type. To get the
+  /// actual size for a particular target, it is reasonable to use the
   /// DataLayout subsystem to do this.
-  ///
   bool isSized(SmallPtrSetImpl<Type*> *Visited = nullptr) const {
     // If it's a primitive, it is always sized.
     if (getTypeID() == IntegerTyID || isFloatingPointTy() ||
@@ -274,8 +274,8 @@ public:
     return isSizedDerivedType(Visited);
   }
 
-  /// getPrimitiveSizeInBits - Return the basic size of this type if it is a
-  /// primitive type.  These are fixed by LLVM and are not target dependent.
+  /// Return the basic size of this type if it is a primitive type. These are
+  /// fixed by LLVM and are not target-dependent.
   /// This will return zero if the type does not have a size or is not a
   /// primitive type.
   ///
@@ -286,31 +286,37 @@ public:
   ///
   unsigned getPrimitiveSizeInBits() const LLVM_READONLY;
 
-  /// getScalarSizeInBits - If this is a vector type, return the
-  /// getPrimitiveSizeInBits value for the element type. Otherwise return the
-  /// getPrimitiveSizeInBits value for this type.
+  /// If this is a vector type, return the getPrimitiveSizeInBits value for the
+  /// element type. Otherwise return the getPrimitiveSizeInBits value for this
+  /// type.
   unsigned getScalarSizeInBits() const LLVM_READONLY;
 
-  /// getFPMantissaWidth - Return the width of the mantissa of this type.  This
-  /// is only valid on floating point types.  If the FP type does not
-  /// have a stable mantissa (e.g. ppc long double), this method returns -1.
+  /// Return the width of the mantissa of this type. This is only valid on
+  /// floating-point types. If the FP type does not have a stable mantissa (e.g.
+  /// ppc long double), this method returns -1.
   int getFPMantissaWidth() const;
 
-  /// getScalarType - If this is a vector type, return the element type,
-  /// otherwise return 'this'.
-  Type *getScalarType() const LLVM_READONLY;
+  /// If this is a vector type, return the element type, otherwise return
+  /// 'this'.
+  Type *getScalarType() const {
+    if (isVectorTy())
+      return getVectorElementType();
+    return const_cast<Type*>(this);
+  }
 
   //===--------------------------------------------------------------------===//
   // Type Iteration support.
   //
-  typedef Type * const *subtype_iterator;
+  using subtype_iterator = Type * const *;
+
   subtype_iterator subtype_begin() const { return ContainedTys; }
   subtype_iterator subtype_end() const { return &ContainedTys[NumContainedTys];}
   ArrayRef<Type*> subtypes() const {
     return makeArrayRef(subtype_begin(), subtype_end());
   }
 
-  typedef std::reverse_iterator<subtype_iterator> subtype_reverse_iterator;
+  using subtype_reverse_iterator = std::reverse_iterator<subtype_iterator>;
+
   subtype_reverse_iterator subtype_rbegin() const {
     return subtype_reverse_iterator(subtype_end());
   }
@@ -318,17 +324,15 @@ public:
     return subtype_reverse_iterator(subtype_begin());
   }
 
-  /// getContainedType - This method is used to implement the type iterator
-  /// (defined at the end of the file).  For derived types, this returns the
-  /// types 'contained' in the derived type.
-  ///
+  /// This method is used to implement the type iterator (defined at the end of
+  /// the file). For derived types, this returns the types 'contained' in the
+  /// derived type.
   Type *getContainedType(unsigned i) const {
     assert(i < NumContainedTys && "Index out of range!");
     return ContainedTys[i];
   }
 
-  /// getNumContainedTypes - Return the number of types in the derived type.
-  ///
+  /// Return the number of types in the derived type.
   unsigned getNumContainedTypes() const { return NumContainedTys; }
 
   //===--------------------------------------------------------------------===//
@@ -338,35 +342,48 @@ public:
   // only intended to cover the core methods that are frequently used, helper
   // methods should not be added here.
 
-  unsigned getIntegerBitWidth() const;
+  inline unsigned getIntegerBitWidth() const;
 
-  Type *getFunctionParamType(unsigned i) const;
-  unsigned getFunctionNumParams() const;
-  bool isFunctionVarArg() const;
+  inline Type *getFunctionParamType(unsigned i) const;
+  inline unsigned getFunctionNumParams() const;
+  inline bool isFunctionVarArg() const;
 
-  StringRef getStructName() const;
-  unsigned getStructNumElements() const;
-  Type *getStructElementType(unsigned N) const;
+  inline StringRef getStructName() const;
+  inline unsigned getStructNumElements() const;
+  inline Type *getStructElementType(unsigned N) const;
 
-  Type *getSequentialElementType() const;
+  inline Type *getSequentialElementType() const {
+    assert(isSequentialType(getTypeID()) && "Not a sequential type!");
+    return ContainedTys[0];
+  }
 
-  uint64_t getArrayNumElements() const;
-  Type *getArrayElementType() const { return getSequentialElementType(); }
+  inline uint64_t getArrayNumElements() const;
 
-  unsigned getVectorNumElements() const;
-  Type *getVectorElementType() const { return getSequentialElementType(); }
+  Type *getArrayElementType() const {
+    assert(getTypeID() == ArrayTyID);
+    return ContainedTys[0];
+  }
 
-  Type *getPointerElementType() const { return getSequentialElementType(); }
+  inline unsigned getVectorNumElements() const;
+  Type *getVectorElementType() const {
+    assert(getTypeID() == VectorTyID);
+    return ContainedTys[0];
+  }
 
-  /// \brief Get the address space of this pointer or pointer vector type.
-  unsigned getPointerAddressSpace() const;
+  Type *getPointerElementType() const {
+    assert(getTypeID() == PointerTyID);
+    return ContainedTys[0];
+  }
+
+  /// Get the address space of this pointer or pointer vector type.
+  inline unsigned getPointerAddressSpace() const;
 
   //===--------------------------------------------------------------------===//
   // Static members exported by the Type class itself.  Useful for getting
   // instances of Type.
   //
 
-  /// getPrimitiveType - Return a type based on an identifier.
+  /// Return a type based on an identifier.
   static Type *getPrimitiveType(LLVMContext &C, TypeID IDNumber);
 
   //===--------------------------------------------------------------------===//
@@ -409,19 +426,19 @@ public:
   static PointerType *getInt32PtrTy(LLVMContext &C, unsigned AS = 0);
   static PointerType *getInt64PtrTy(LLVMContext &C, unsigned AS = 0);
 
-  /// getPointerTo - Return a pointer to the current type.  This is equivalent
-  /// to PointerType::get(Foo, AddrSpace).
+  /// Return a pointer to the current type. This is equivalent to
+  /// PointerType::get(Foo, AddrSpace).
   PointerType *getPointerTo(unsigned AddrSpace = 0) const;
 
 private:
-  /// isSizedDerivedType - Derived types like structures and arrays are sized
-  /// iff all of the members of the type are sized as well.  Since asking for
-  /// their size is relatively uncommon, move this operation out of line.
+  /// Derived types like structures and arrays are sized iff all of the members
+  /// of the type are sized as well. Since asking for their size is relatively
+  /// uncommon, move this operation out-of-line.
   bool isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited = nullptr) const;
 };
 
 // Printing of types.
-static inline raw_ostream &operator<<(raw_ostream &OS, Type &T) {
+static inline raw_ostream &operator<<(raw_ostream &OS, const Type &T) {
   T.print(OS);
   return OS;
 }
@@ -438,29 +455,21 @@ template <> struct isa_impl<PointerType, Type> {
 // graph of sub types.
 
 template <> struct GraphTraits<Type *> {
-  typedef Type NodeType;
-  typedef Type::subtype_iterator ChildIteratorType;
+  using NodeRef = Type *;
+  using ChildIteratorType = Type::subtype_iterator;
 
-  static inline NodeType *getEntryNode(Type *T) { return T; }
-  static inline ChildIteratorType child_begin(NodeType *N) {
-    return N->subtype_begin();
-  }
-  static inline ChildIteratorType child_end(NodeType *N) {
-    return N->subtype_end();
-  }
+  static NodeRef getEntryNode(Type *T) { return T; }
+  static ChildIteratorType child_begin(NodeRef N) { return N->subtype_begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->subtype_end(); }
 };
 
 template <> struct GraphTraits<const Type*> {
-  typedef const Type NodeType;
-  typedef Type::subtype_iterator ChildIteratorType;
+  using NodeRef = const Type *;
+  using ChildIteratorType = Type::subtype_iterator;
 
-  static inline NodeType *getEntryNode(NodeType *T) { return T; }
-  static inline ChildIteratorType child_begin(NodeType *N) {
-    return N->subtype_begin();
-  }
-  static inline ChildIteratorType child_end(NodeType *N) {
-    return N->subtype_end();
-  }
+  static NodeRef getEntryNode(NodeRef T) { return T; }
+  static ChildIteratorType child_begin(NodeRef N) { return N->subtype_begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->subtype_end(); }
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -476,6 +485,6 @@ inline LLVMTypeRef *wrap(Type **Tys) {
   return reinterpret_cast<LLVMTypeRef*>(const_cast<Type**>(Tys));
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_TYPE_H

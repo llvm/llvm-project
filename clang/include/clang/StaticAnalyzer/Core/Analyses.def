@@ -22,6 +22,7 @@ ANALYSIS_STORE(RegionStore, "region", "Use region-based analyzer store", CreateR
 #endif
 
 ANALYSIS_CONSTRAINTS(RangeConstraints, "range", "Use constraint tracking of concrete value ranges", CreateRangeConstraintManager)
+ANALYSIS_CONSTRAINTS(Z3Constraints, "z3", "Use Z3 contraint solver", CreateZ3ConstraintManager)
 
 #ifndef ANALYSIS_DIAGNOSTICS
 #define ANALYSIS_DIAGNOSTICS(NAME, CMDFLAG, DESC, CREATEFN)

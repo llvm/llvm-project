@@ -1,10 +1,13 @@
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+
 // This test computes a checksum of the data (all but the last 4 bytes),
 // and then compares the last 4 bytes with the computed value.
 // A fuzzer with cmp traces is expected to defeat this check.
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cstdio>
 
 // A modified jenkins_one_at_a_time_hash initialized by non-zero,
 // so that simple_hash(0) != 0. See also
@@ -23,7 +26,7 @@ static uint32_t simple_hash(const uint8_t *Data, size_t Size) {
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-  if (Size < 14)
+  if (Size < 14 || Size > 64)
     return 0;
 
   uint32_t Hash = simple_hash(&Data[0], Size - 4);

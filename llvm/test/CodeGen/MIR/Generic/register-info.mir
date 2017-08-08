@@ -1,4 +1,4 @@
-# RUN: llc -start-after branch-folder -stop-after branch-folder -o /dev/null %s | FileCheck %s
+# RUN: llc -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses machine register info properties
 # correctly.
 
@@ -17,24 +17,14 @@
 ...
 ---
 # CHECK: name: foo
-# CHECK:      isSSA: false
-# CHECK-NEXT: tracksRegLiveness: false
-# CHECK-NEXT: tracksSubRegLiveness: false
+# CHECK: tracksRegLiveness: false
 # CHECK: ...
 name:            foo
-body: |
-  bb.0:
 ...
 ---
 # CHECK: name: bar
-# CHECK:      isSSA: false
-# CHECK-NEXT: tracksRegLiveness: true
-# CHECK-NEXT: tracksSubRegLiveness: true
+# CHECK: tracksRegLiveness: true
 # CHECK: ...
 name: bar
-isSSA: false
 tracksRegLiveness: true
-tracksSubRegLiveness: true
-body: |
-  bb.0:
 ...

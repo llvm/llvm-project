@@ -17,7 +17,6 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/MutexGuard.h"
-#include "llvm/Support/TimeValue.h"
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -60,22 +59,14 @@
 using namespace llvm;
 using namespace sys;
 
-static std::pair<TimeValue, TimeValue> getRUsageTimes() {
+static std::pair<std::chrono::microseconds, std::chrono::microseconds> getRUsageTimes() {
 #if defined(HAVE_GETRUSAGE)
   struct rusage RU;
   ::getrusage(RUSAGE_SELF, &RU);
-  return std::make_pair(
-      TimeValue(
-          static_cast<TimeValue::SecondsType>(RU.ru_utime.tv_sec),
-          static_cast<TimeValue::NanoSecondsType>(
-              RU.ru_utime.tv_usec * TimeValue::NANOSECONDS_PER_MICROSECOND)),
-      TimeValue(
-          static_cast<TimeValue::SecondsType>(RU.ru_stime.tv_sec),
-          static_cast<TimeValue::NanoSecondsType>(
-              RU.ru_stime.tv_usec * TimeValue::NANOSECONDS_PER_MICROSECOND)));
+  return { toDuration(RU.ru_utime), toDuration(RU.ru_stime) };
 #else
 #warning Cannot get usage times on this platform
-  return std::make_pair(TimeValue(), TimeValue());
+  return { std::chrono::microseconds::zero(), std::chrono::microseconds::zero() };
 #endif
 }
 
@@ -121,9 +112,9 @@ size_t Process::GetMallocUsage() {
 #endif
 }
 
-void Process::GetTimeUsage(TimeValue &elapsed, TimeValue &user_time,
-                           TimeValue &sys_time) {
-  elapsed = TimeValue::now();
+void Process::GetTimeUsage(TimePoint<> &elapsed, std::chrono::nanoseconds &user_time,
+                           std::chrono::nanoseconds &sys_time) {
+  elapsed = std::chrono::system_clock::now();
   std::tie(user_time, sys_time) = getRUsageTimes();
 }
 
@@ -169,6 +160,8 @@ void Process::PreventCoreFiles() {
   signal(SIGSEGV, _exit);
   signal(SIGBUS,  _exit);
 #endif
+
+  coreFilesPrevented = true;
 }
 
 Optional<std::string> Process::GetEnv(StringRef Name) {
@@ -214,13 +207,10 @@ std::error_code Process::FixupStandardFileDescriptors() {
   for (int StandardFD : StandardFDs) {
     struct stat st;
     errno = 0;
-    while (fstat(StandardFD, &st) < 0) {
+    if (RetryAfterSignal(-1, fstat, StandardFD, &st) < 0) {
       assert(errno && "expected errno to be set if fstat failed!");
       // fstat should return EBADF if the file descriptor is closed.
-      if (errno == EBADF)
-        break;
-      // retry fstat if we got EINTR, otherwise bubble up the failure.
-      if (errno != EINTR)
+      if (errno != EBADF)
         return std::error_code(errno, std::generic_category());
     }
     // if fstat succeeds, move on to the next FD.
@@ -229,11 +219,8 @@ std::error_code Process::FixupStandardFileDescriptors() {
     assert(errno == EBADF && "expected errno to have EBADF at this point!");
 
     if (NullFD < 0) {
-      while ((NullFD = open("/dev/null", O_RDWR)) < 0) {
-        if (errno == EINTR)
-          continue;
+      if ((NullFD = RetryAfterSignal(-1, open, "/dev/null", O_RDWR)) < 0)
         return std::error_code(errno, std::generic_category());
-      }
     }
 
     if (NullFD == StandardFD)
@@ -354,7 +341,7 @@ static bool terminalHasColors(int fd) {
   MutexGuard G(*TermColorMutex);
 
   int errret = 0;
-  if (setupterm((char *)nullptr, fd, &errret) != 0)
+  if (setupterm(nullptr, fd, &errret) != 0)
     // Regardless of why, if we can't get terminfo, we shouldn't try to print
     // colors.
     return false;
@@ -376,7 +363,7 @@ static bool terminalHasColors(int fd) {
 
   // Now extract the structure allocated by setupterm and free its memory
   // through a really silly dance.
-  struct term *termp = set_curterm((struct term *)nullptr);
+  struct term *termp = set_curterm(nullptr);
   (void)del_curterm(termp); // Drop any errors here.
 
   // Return true if we found a color capabilities for the current terminal.
@@ -427,31 +414,36 @@ const char *Process::ResetColor() {
   return "\033[0m";
 }
 
-#if !defined(HAVE_DECL_ARC4RANDOM) || !HAVE_DECL_ARC4RANDOM
+#if !HAVE_DECL_ARC4RANDOM
 static unsigned GetRandomNumberSeed() {
   // Attempt to get the initial seed from /dev/urandom, if possible.
-  if (FILE *RandomSource = ::fopen("/dev/urandom", "r")) {
+  int urandomFD = open("/dev/urandom", O_RDONLY);
+
+  if (urandomFD != -1) {
     unsigned seed;
-    int count = ::fread((void *)&seed, sizeof(seed), 1, RandomSource);
-    ::fclose(RandomSource);
+    // Don't use a buffered read to avoid reading more data
+    // from /dev/urandom than we need.
+    int count = read(urandomFD, (void *)&seed, sizeof(seed));
+
+    close(urandomFD);
 
     // Return the seed if the read was successful.
-    if (count == 1)
+    if (count == sizeof(seed))
       return seed;
   }
 
   // Otherwise, swizzle the current time and the process ID to form a reasonable
   // seed.
-  TimeValue Now = TimeValue::now();
-  return hash_combine(Now.seconds(), Now.nanoseconds(), ::getpid());
+  const auto Now = std::chrono::high_resolution_clock::now();
+  return hash_combine(Now.time_since_epoch().count(), ::getpid());
 }
 #endif
 
 unsigned llvm::sys::Process::GetRandomNumber() {
-#if defined(HAVE_DECL_ARC4RANDOM) && HAVE_DECL_ARC4RANDOM
+#if HAVE_DECL_ARC4RANDOM
   return arc4random();
 #else
-  static int x = (::srand(GetRandomNumberSeed()), 0);
+  static int x = (static_cast<void>(::srand(GetRandomNumberSeed())), 0);
   (void)x;
   return ::rand();
 #endif

@@ -14,14 +14,13 @@
 #ifndef LLVM_SUPPORT_RWMUTEX_H
 #define LLVM_SUPPORT_RWMUTEX_H
 
-#include "llvm/Support/Compiler.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Threading.h"
 #include <cassert>
 
-namespace llvm
-{
-  namespace sys
-  {
+namespace llvm {
+namespace sys {
+
     /// @brief Platform agnostic RWMutex class.
     class RWMutexImpl
     {
@@ -32,6 +31,13 @@ namespace llvm
       /// Initializes the lock but doesn't acquire it.
       /// @brief Default Constructor.
       explicit RWMutexImpl();
+
+    /// @}
+    /// @name Do Not Implement
+    /// @{
+      RWMutexImpl(const RWMutexImpl & original) = delete;
+      RWMutexImpl &operator=(const RWMutexImpl &) = delete;
+    /// @}
 
       /// Releases and removes the lock
       /// @brief Destructor
@@ -71,16 +77,8 @@ namespace llvm
     /// @{
     private:
 #if defined(LLVM_ENABLE_THREADS) && LLVM_ENABLE_THREADS != 0
-      void* data_; ///< We don't know what the data will be
+      void* data_ = nullptr; ///< We don't know what the data will be
 #endif
-
-    /// @}
-    /// @name Do Not Implement
-    /// @{
-    private:
-      RWMutexImpl(const RWMutexImpl & original) = delete;
-      void operator=(const RWMutexImpl &) = delete;
-    /// @}
     };
 
     /// SmartMutex - An R/W mutex with a compile time constant parameter that
@@ -89,9 +87,13 @@ namespace llvm
     template<bool mt_only>
     class SmartRWMutex {
       RWMutexImpl impl;
-      unsigned readers, writers;
+      unsigned readers = 0;
+      unsigned writers = 0;
+
     public:
-      explicit SmartRWMutex() : impl(), readers(0), writers(0) { }
+      explicit SmartRWMutex() = default;
+      SmartRWMutex(const SmartRWMutex<mt_only> & original) = delete;
+      SmartRWMutex<mt_only> &operator=(const SmartRWMutex<mt_only> &) = delete;
 
       bool lock_shared() {
         if (!mt_only || llvm_is_multithreaded())
@@ -135,11 +137,8 @@ namespace llvm
         --writers;
         return true;
       }
-
-    private:
-      SmartRWMutex(const SmartRWMutex<mt_only> & original);
-      void operator=(const SmartRWMutex<mt_only> &);
     };
+
     typedef SmartRWMutex<false> RWMutex;
 
     /// ScopedReader - RAII acquisition of a reader lock
@@ -155,6 +154,7 @@ namespace llvm
         mutex.unlock_shared();
       }
     };
+
     typedef SmartScopedReader<false> ScopedReader;
 
     /// ScopedWriter - RAII acquisition of a writer lock
@@ -170,8 +170,10 @@ namespace llvm
         mutex.unlock();
       }
     };
-    typedef SmartScopedWriter<false> ScopedWriter;
-  }
-}
 
-#endif
+    typedef SmartScopedWriter<false> ScopedWriter;
+
+} // end namespace sys
+} // end namespace llvm
+
+#endif // LLVM_SUPPORT_RWMUTEX_H

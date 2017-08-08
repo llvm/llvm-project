@@ -23,8 +23,8 @@
 #ifndef LLVM_LIB_ANALYSIS_OBJCARCANALYSISUTILS_H
 #define LLVM_LIB_ANALYSIS_OBJCARCANALYSISUTILS_H
 
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
 #include "llvm/Analysis/Passes.h"
@@ -54,6 +54,7 @@ inline bool ModuleHasARC(const Module &M) {
     M.getNamedValue("objc_release") ||
     M.getNamedValue("objc_autorelease") ||
     M.getNamedValue("objc_retainAutoreleasedReturnValue") ||
+    M.getNamedValue("objc_unsafeClaimAutoreleasedReturnValue") ||
     M.getNamedValue("objc_retainBlock") ||
     M.getNamedValue("objc_autoreleaseReturnValue") ||
     M.getNamedValue("objc_autoreleasePoolPush") ||

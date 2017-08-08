@@ -1,4 +1,4 @@
-//===--- ParsedTemplate.h - Template Parsing Data Types -------------------===//
+//===--- ParsedTemplate.h - Template Parsing Data Types ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,12 +11,19 @@
 //  templates.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_SEMA_PARSEDTEMPLATE_H
 #define LLVM_CLANG_SEMA_PARSEDTEMPLATE_H
 
+#include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TemplateKinds.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Ownership.h"
+#include "llvm/ADT/SmallVector.h"
 #include <cassert>
+#include <cstdlib>
+#include <new>
 
 namespace clang {  
   /// \brief Represents the parsed form of a C++ template argument.
@@ -114,8 +121,8 @@ namespace clang {
     KindType Kind;
     
     /// \brief The actual template argument representation, which may be
-    /// an \c ActionBase::TypeTy* (for a type), an Expr* (for an
-    /// expression), or an ActionBase::TemplateTy (for a template).
+    /// an \c Sema::TypeTy* (for a type), an Expr* (for an
+    /// expression), or an Sema::TemplateTy (for a template).
     void *Arg;
 
     /// \brief The nested-name-specifier that can accompany a template template
@@ -138,12 +145,15 @@ namespace clang {
   /// expressions, or template names, and the source locations for important 
   /// tokens. All of the information about template arguments is allocated 
   /// directly after this structure.
-  struct TemplateIdAnnotation {
+  struct TemplateIdAnnotation final
+      : private llvm::TrailingObjects<TemplateIdAnnotation,
+                                      ParsedTemplateArgument> {
+    friend TrailingObjects;
     /// \brief The nested-name-specifier that precedes the template name.
     CXXScopeSpec SS;
 
-    /// TemplateKWLoc - The location of the template keyword within the
-    /// source.
+    /// TemplateKWLoc - The location of the template keyword.
+    /// For e.g. typename T::template Y<U>
     SourceLocation TemplateKWLoc;
 
     /// TemplateNameLoc - The location of the template name within the
@@ -176,39 +186,61 @@ namespace clang {
     
     /// \brief Retrieves a pointer to the template arguments
     ParsedTemplateArgument *getTemplateArgs() { 
-      return reinterpret_cast<ParsedTemplateArgument *>(this + 1); 
+      return getTrailingObjects<ParsedTemplateArgument>(); 
     }
 
     /// \brief Creates a new TemplateIdAnnotation with NumArgs arguments and
     /// appends it to List.
     static TemplateIdAnnotation *
-    Allocate(unsigned NumArgs, SmallVectorImpl<TemplateIdAnnotation*> &List) {
-      TemplateIdAnnotation *TemplateId
-        = (TemplateIdAnnotation *)std::malloc(sizeof(TemplateIdAnnotation) +
-                                      sizeof(ParsedTemplateArgument) * NumArgs);
-      TemplateId->NumArgs = NumArgs;
-      
-      // Default-construct nested-name-specifier.
-      new (&TemplateId->SS) CXXScopeSpec();
-      
-      // Default-construct parsed template arguments.
-      ParsedTemplateArgument *TemplateArgs = TemplateId->getTemplateArgs();
-      for (unsigned I = 0; I != NumArgs; ++I)
-        new (TemplateArgs + I) ParsedTemplateArgument();
-      
-      List.push_back(TemplateId);
+    Create(CXXScopeSpec SS, SourceLocation TemplateKWLoc,
+           SourceLocation TemplateNameLoc, IdentifierInfo *Name,
+           OverloadedOperatorKind OperatorKind,
+           ParsedTemplateTy OpaqueTemplateName, TemplateNameKind TemplateKind,
+           SourceLocation LAngleLoc, SourceLocation RAngleLoc,
+           ArrayRef<ParsedTemplateArgument> TemplateArgs,
+           SmallVectorImpl<TemplateIdAnnotation *> &CleanupList) {
+
+      TemplateIdAnnotation *TemplateId = new (std::malloc(
+          totalSizeToAlloc<ParsedTemplateArgument>(TemplateArgs.size())))
+          TemplateIdAnnotation(SS, TemplateKWLoc, TemplateNameLoc, Name,
+                               OperatorKind, OpaqueTemplateName, TemplateKind,
+                               LAngleLoc, RAngleLoc, TemplateArgs);
+      CleanupList.push_back(TemplateId);
       return TemplateId;
     }
-    
-    void Destroy() { 
-      SS.~CXXScopeSpec();
+
+    void Destroy() {
+      std::for_each(
+          getTemplateArgs(), getTemplateArgs() + NumArgs,
+          [](ParsedTemplateArgument &A) { A.~ParsedTemplateArgument(); });
+      this->~TemplateIdAnnotation();
       free(this); 
     }
+  private:
+    TemplateIdAnnotation(const TemplateIdAnnotation &) = delete;
+
+    TemplateIdAnnotation(CXXScopeSpec SS, SourceLocation TemplateKWLoc,
+                         SourceLocation TemplateNameLoc, IdentifierInfo *Name,
+                         OverloadedOperatorKind OperatorKind,
+                         ParsedTemplateTy OpaqueTemplateName,
+                         TemplateNameKind TemplateKind,
+                         SourceLocation LAngleLoc, SourceLocation RAngleLoc,
+                         ArrayRef<ParsedTemplateArgument> TemplateArgs) noexcept
+        : SS(SS), TemplateKWLoc(TemplateKWLoc),
+          TemplateNameLoc(TemplateNameLoc), Name(Name), Operator(OperatorKind),
+          Template(OpaqueTemplateName), Kind(TemplateKind),
+          LAngleLoc(LAngleLoc), RAngleLoc(RAngleLoc),
+          NumArgs(TemplateArgs.size()) {
+
+      std::uninitialized_copy(TemplateArgs.begin(), TemplateArgs.end(),
+                              getTemplateArgs());
+    }
+    ~TemplateIdAnnotation() = default;
   };
 
   /// Retrieves the range of the given template parameter lists.
   SourceRange getTemplateParamsRange(TemplateParameterList const *const *Params,
                                      unsigned NumParams);  
-}
+} // end namespace clang
 
-#endif
+#endif // LLVM_CLANG_SEMA_PARSEDTEMPLATE_H

@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @c = external global i32
 
 ; CHECK-LABEL: f
-; CHECK: PartialAlias: i32* %arrayidx, i32* %arrayidx6
+; CHECK: MayAlias: i32* %arrayidx, i32* %arrayidx6
 define void @f() {
   %idxprom = zext i32 undef to i64
   %add4 = add i32 0, 1

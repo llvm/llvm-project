@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -O2 -disable-llvm-optzns -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -O2 -disable-llvm-passes -o - %s | FileCheck %s
 
 @interface A
 @end
@@ -21,7 +21,7 @@ void test0() {
   // CHECK: call void @_Z6calleev
   callee();
   // CHECK: call void @objc_release
-  // CHECK-NEXT: ret
+  // CHECK: ret
 }
 
 // No lifetime extension when we're binding a reference to an lvalue.
@@ -44,9 +44,9 @@ void test3() {
   const __weak id &ref = strong_id();
   // CHECK-NEXT: call void @_Z6calleev()
   callee();
-  // CHECK-NEXT: [[PTR:%.*]] = bitcast i8*** [[REF]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 8, i8* [[PTR]])
   // CHECK-NEXT: call void @objc_destroyWeak
+  // CHECK-NEXT: [[PTR:%.*]] = bitcast i8*** [[REF]] to i8*
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PTR]])
   // CHECK-NEXT: ret void
 }
 
@@ -75,11 +75,11 @@ void test5(__strong id &x) {
   // CHECK-NEXT: [[OBJ_ID:%[a-zA-Z0-9]+]] = bitcast [[A]]* [[OBJ_A]] to i8*
   // CHECK-NEXT: call void @objc_release
   // CHECK-NEXT: [[IPTR1:%.*]] = bitcast i32* [[I]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 4, i8* [[IPTR1]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 4, i8* [[IPTR1]])
   // CHECK-NEXT: store i32 17, i32
   int i = 17;
   // CHECK-NEXT: [[IPTR2:%.*]] = bitcast i32* [[I]] to i8*
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 4, i8* [[IPTR2]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 4, i8* [[IPTR2]])
   // CHECK-NEXT: ret void
 }
 

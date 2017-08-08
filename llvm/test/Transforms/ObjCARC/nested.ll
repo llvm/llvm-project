@@ -820,6 +820,6 @@ entry:
 }
 
 
-; CHECK: attributes #0 = { nounwind argmemonly }
+; CHECK: attributes #0 = { argmemonly nounwind }
 ; CHECK: attributes #1 = { nonlazybind }
 ; CHECK: attributes [[NUW]] = { nounwind }

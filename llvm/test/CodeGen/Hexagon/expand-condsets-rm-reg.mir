@@ -1,0 +1,49 @@
+# RUN: llc -march=hexagon -run-pass expand-condsets -o - %s -verify-machineinstrs -debug-only=expand-condsets 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Check that coalesced registers are removed from live intervals.
+#
+# Check that vreg3 is coalesced into vreg4, and that after coalescing
+# it is no longer in live intervals.
+
+# CHECK-LABEL: After expand-condsets
+# CHECK: INTERVALS
+# CHECK-NOT: vreg3
+# CHECK: MACHINEINSTRS
+
+
+--- |
+  define void @fred() { ret void }
+
+...
+---
+
+name: fred
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: intregs }
+  - { id: 1, class: intregs }
+  - { id: 2, class: predregs }
+  - { id: 3, class: intregs }
+  - { id: 4, class: intregs }
+liveins:
+  - { reg: '%r0', virtual-reg: '%0' }
+  - { reg: '%r1', virtual-reg: '%1' }
+  - { reg: '%p0', virtual-reg: '%2' }
+
+body: |
+  bb.0:
+    liveins: %r0, %r1, %p0
+        %0 = COPY %r0
+        %0 = COPY %r0  ; Force isSSA = false.
+        %1 = COPY %r1
+        %2 = COPY %p0
+        ; Check that %3 was coalesced into %4.
+        ; CHECK: %4 = A2_abs %1
+        ; CHECK: %4 = A2_tfrt killed %2, killed %0, implicit %4
+        %3 = A2_abs %1
+        %4 = C2_mux %2, %0, %3
+        %r0 = COPY %4
+        J2_jumpr %r31, implicit %r0, implicit-def %pc
+...
+

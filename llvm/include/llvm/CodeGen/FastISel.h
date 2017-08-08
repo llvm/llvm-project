@@ -1,4 +1,4 @@
-//===-- FastISel.h - Definition of the FastISel class ---*- C++ -*---------===//
+//===- FastISel.h - Definition of the FastISel class ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,67 +16,81 @@
 #define LLVM_CODEGEN_FASTISEL_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Target/TargetLowering.h"
+#include <algorithm>
+#include <cstdint>
+#include <utility>
 
 namespace llvm {
+
+class AllocaInst;
+class BasicBlock;
+class CallInst;
+class Constant;
+class ConstantFP;
+class DataLayout;
+class FunctionLoweringInfo;
+class LoadInst;
+class MachineConstantPool;
+class MachineFrameInfo;
+class MachineFunction;
+class MachineInstr;
+class MachineMemOperand;
+class MachineOperand;
+class MachineRegisterInfo;
+class MCContext;
+class MCInstrDesc;
+class MCSymbol;
+class TargetInstrInfo;
+class TargetLibraryInfo;
+class TargetMachine;
+class TargetRegisterClass;
+class TargetRegisterInfo;
+class Type;
+class User;
+class Value;
 
 /// \brief This is a fast-path instruction selection class that generates poor
 /// code and doesn't support illegal types or non-trivial lowering, but runs
 /// quickly.
 class FastISel {
 public:
-  struct ArgListEntry {
-    Value *Val;
-    Type *Ty;
-    bool IsSExt : 1;
-    bool IsZExt : 1;
-    bool IsInReg : 1;
-    bool IsSRet : 1;
-    bool IsNest : 1;
-    bool IsByVal : 1;
-    bool IsInAlloca : 1;
-    bool IsReturned : 1;
-    uint16_t Alignment;
-
-    ArgListEntry()
-        : Val(nullptr), Ty(nullptr), IsSExt(false), IsZExt(false),
-          IsInReg(false), IsSRet(false), IsNest(false), IsByVal(false),
-          IsInAlloca(false), IsReturned(false), Alignment(0) {}
-
-    /// \brief Set CallLoweringInfo attribute flags based on a call instruction
-    /// and called function attributes.
-    void setAttributes(ImmutableCallSite *CS, unsigned AttrIdx);
-  };
-  typedef std::vector<ArgListEntry> ArgListTy;
-
+  using ArgListEntry = TargetLoweringBase::ArgListEntry;
+  using ArgListTy = TargetLoweringBase::ArgListTy;
   struct CallLoweringInfo {
-    Type *RetTy;
+    Type *RetTy = nullptr;
     bool RetSExt : 1;
     bool RetZExt : 1;
     bool IsVarArg : 1;
     bool IsInReg : 1;
     bool DoesNotReturn : 1;
     bool IsReturnValueUsed : 1;
+    bool IsPatchPoint : 1;
 
     // \brief IsTailCall Should be modified by implementations of FastLowerCall
     // that perform tail call conversions.
-    bool IsTailCall;
+    bool IsTailCall = false;
 
-    unsigned NumFixedArgs;
-    CallingConv::ID CallConv;
-    const Value *Callee;
-    MCSymbol *Symbol;
+    unsigned NumFixedArgs = -1;
+    CallingConv::ID CallConv = CallingConv::C;
+    const Value *Callee = nullptr;
+    MCSymbol *Symbol = nullptr;
     ArgListTy Args;
-    ImmutableCallSite *CS;
-    MachineInstr *Call;
-    unsigned ResultReg;
-    unsigned NumResultRegs;
-
-    bool IsPatchPoint;
+    ImmutableCallSite *CS = nullptr;
+    MachineInstr *Call = nullptr;
+    unsigned ResultReg = 0;
+    unsigned NumResultRegs = 0;
 
     SmallVector<Value *, 16> OutVals;
     SmallVector<ISD::ArgFlagsTy, 16> OutFlags;
@@ -85,11 +99,8 @@ public:
     SmallVector<unsigned, 4> InRegs;
 
     CallLoweringInfo()
-        : RetTy(nullptr), RetSExt(false), RetZExt(false), IsVarArg(false),
-          IsInReg(false), DoesNotReturn(false), IsReturnValueUsed(true),
-          IsTailCall(false), NumFixedArgs(-1), CallConv(CallingConv::C),
-          Callee(nullptr), Symbol(nullptr), CS(nullptr), Call(nullptr),
-          ResultReg(0), NumResultRegs(0), IsPatchPoint(false) {}
+        : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
+          DoesNotReturn(false), IsReturnValueUsed(true), IsPatchPoint(false) {}
 
     CallLoweringInfo &setCallee(Type *ResultTy, FunctionType *FuncTy,
                                 const Value *Target, ArgListTy &&ArgsList,
@@ -97,12 +108,12 @@ public:
       RetTy = ResultTy;
       Callee = Target;
 
-      IsInReg = Call.paramHasAttr(0, Attribute::InReg);
+      IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn = Call.doesNotReturn();
       IsVarArg = FuncTy->isVarArg();
       IsReturnValueUsed = !Call.getInstruction()->use_empty();
-      RetSExt = Call.paramHasAttr(0, Attribute::SExt);
-      RetZExt = Call.paramHasAttr(0, Attribute::ZExt);
+      RetSExt = Call.hasRetAttr(Attribute::SExt);
+      RetZExt = Call.hasRetAttr(Attribute::ZExt);
 
       CallConv = Call.getCallingConv();
       Args = std::move(ArgsList);
@@ -121,12 +132,12 @@ public:
       Callee = Call.getCalledValue();
       Symbol = Target;
 
-      IsInReg = Call.paramHasAttr(0, Attribute::InReg);
+      IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn = Call.doesNotReturn();
       IsVarArg = FuncTy->isVarArg();
       IsReturnValueUsed = !Call.getInstruction()->use_empty();
-      RetSExt = Call.paramHasAttr(0, Attribute::SExt);
-      RetZExt = Call.paramHasAttr(0, Attribute::ZExt);
+      RetSExt = Call.hasRetAttr(Attribute::SExt);
+      RetZExt = Call.hasRetAttr(Attribute::ZExt);
 
       CallConv = Call.getCallingConv();
       Args = std::move(ArgsList);
@@ -150,7 +161,7 @@ public:
 
     CallLoweringInfo &setCallee(const DataLayout &DL, MCContext &Ctx,
                                 CallingConv::ID CC, Type *ResultTy,
-                                const char *Target, ArgListTy &&ArgsList,
+                                StringRef Target, ArgListTy &&ArgsList,
                                 unsigned FixedArgs = ~0U);
 
     CallLoweringInfo &setCallee(CallingConv::ID CC, Type *ResultTy,
@@ -216,6 +227,8 @@ protected:
   MachineInstr *EmitStartPt;
 
 public:
+  virtual ~FastISel();
+
   /// \brief Return the position of the last instruction emitted for
   /// materializing constants for use in the current block.
   MachineInstr *getLastLocalValue() { return LastLocalValue; }
@@ -307,8 +320,6 @@ public:
   /// \brief Reset InsertPt to the given old insert position.
   void leaveLocalValueArea(SavePoint Old);
 
-  virtual ~FastISel();
-
 protected:
   explicit FastISel(FunctionLoweringInfo &FuncInfo,
                     const TargetLibraryInfo *LibInfo,
@@ -348,22 +359,9 @@ protected:
 
   /// \brief This method is called by target-independent code to request that an
   /// instruction with the given type, opcode, and register and immediate
-  // operands be emitted.
+  /// operands be emitted.
   virtual unsigned fastEmit_ri(MVT VT, MVT RetVT, unsigned Opcode, unsigned Op0,
                                bool Op0IsKill, uint64_t Imm);
-
-  /// \brief This method is called by target-independent code to request that an
-  /// instruction with the given type, opcode, and register and floating-point
-  /// immediate operands be emitted.
-  virtual unsigned fastEmit_rf(MVT VT, MVT RetVT, unsigned Opcode, unsigned Op0,
-                               bool Op0IsKill, const ConstantFP *FPImm);
-
-  /// \brief This method is called by target-independent code to request that an
-  /// instruction with the given type, opcode, and register and immediate
-  /// operands be emitted.
-  virtual unsigned fastEmit_rri(MVT VT, MVT RetVT, unsigned Opcode,
-                                unsigned Op0, bool Op0IsKill, unsigned Op1,
-                                bool Op1IsKill, uint64_t Imm);
 
   /// \brief This method is a wrapper of fastEmit_ri.
   ///
@@ -448,7 +446,7 @@ protected:
 
   /// \brief Emit an unconditional branch to the given block, unless it is the
   /// immediate (fall-through) successor, and update the CFG.
-  void fastEmitBranch(MachineBasicBlock *MBB, DebugLoc DL);
+  void fastEmitBranch(MachineBasicBlock *MBB, const DebugLoc &DL);
 
   /// Emit an unconditional branch to \p FalseMBB, obtains the branch weight
   /// and adds TrueMBB and FalseMBB to the successor list.
@@ -519,7 +517,6 @@ protected:
     }
   }
 
-
   bool lowerCall(const CallInst *I);
   /// \brief Select and emit code for a binary operator instruction, which has
   /// an opcode which directly corresponds to the given ISD opcode.
@@ -534,6 +531,7 @@ protected:
   bool selectCast(const User *I, unsigned Opcode);
   bool selectExtractValue(const User *I);
   bool selectInsertValue(const User *I);
+  bool selectXRayCustomEvent(const CallInst *II);
 
 private:
   /// \brief Handle PHI nodes in successor blocks.
@@ -559,6 +557,9 @@ private:
   /// across heavy instructions like calls.
   void flushLocalValueMap();
 
+  /// \brief Removes dead local value instructions after SavedLastLocalvalue.
+  void removeDeadLocalValueCode(MachineInstr *SavedLastLocalValue);
+
   /// \brief Insertion point before trying to select the current instruction.
   MachineBasicBlock::iterator SavedInsertPt;
 
@@ -573,4 +574,4 @@ private:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_FASTISEL_H

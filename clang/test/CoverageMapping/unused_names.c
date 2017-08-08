@@ -1,14 +1,16 @@
-// RUN: %clang_cc1 -fprofile-instr-generate -fcoverage-mapping -emit-llvm -main-file-name unused_names.c -o - %s > %t
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -emit-llvm -main-file-name unused_names.c -o - %s > %t
 // RUN: FileCheck -input-file %t %s
 // RUN: FileCheck -check-prefix=SYSHEADER -input-file %t %s
 
-// Since foo is never emitted, there should not be a profile name for it.
+// CHECK-DAG: @__profc_bar
+// CHECK-DAG: @__llvm_prf_nm = private constant {{.*}}, section "{{.*__llvm_prf_names|.*lprfn}}"
 
-// CHECK-DAG: @__llvm_profile_name_bar = {{.*}} [3 x i8] c"bar", section "{{.*}}__llvm_prf_names"
-// CHECK-DAG: @__llvm_profile_name_baz = {{.*}} [3 x i8] c"baz", section "{{.*}}__llvm_prf_names"
-// CHECK-DAG: @"__llvm_profile_name_unused_names.c:qux" = {{.*}} [18 x i8] c"unused_names.c:qux", section "{{.*}}__llvm_prf_names"
+// These are never instantiated, so we shouldn't get counters for them.
+//
+// CHECK-NOT: @__profc_baz
+// CHECK-NOT: @__profc_unused_names.c_qux
 
-// SYSHEADER-NOT: @__llvm_profile_name_foo =
+// SYSHEADER-NOT: @__profc_foo =
 
 
 #ifdef IS_SYSHEADER

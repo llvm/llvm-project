@@ -14,200 +14,89 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "WebAssembly.h"
-#include "WebAssemblyMachineFunctionInfo.h"
-#include "WebAssemblyRegisterInfo.h"
-#include "WebAssemblySubtarget.h"
+#include "WebAssemblyAsmPrinter.h"
 #include "InstPrinter/WebAssemblyInstPrinter.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-
-#include "llvm/ADT/SmallString.h"
+#include "MCTargetDesc/WebAssemblyTargetStreamer.h"
+#include "WebAssembly.h"
+#include "WebAssemblyMCInstLower.h"
+#include "WebAssemblyMachineFunctionInfo.h"
+#include "WebAssemblyRegisterInfo.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolWasm.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
-
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
-
-namespace {
-
-class WebAssemblyAsmPrinter final : public AsmPrinter {
-  const WebAssemblyInstrInfo *TII;
-  const MachineRegisterInfo *MRI;
-  unsigned NumArgs;
-
-public:
-  WebAssemblyAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), TII(nullptr), MRI(nullptr) {}
-
-private:
-  const char *getPassName() const override {
-    return "WebAssembly Assembly Printer";
-  }
-
-  //===------------------------------------------------------------------===//
-  // MachineFunctionPass Implementation.
-  //===------------------------------------------------------------------===//
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AsmPrinter::getAnalysisUsage(AU);
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    const auto &Subtarget = MF.getSubtarget<WebAssemblySubtarget>();
-    TII = Subtarget.getInstrInfo();
-    MRI = &MF.getRegInfo();
-    NumArgs = MF.getInfo<WebAssemblyFunctionInfo>()->getNumArguments();
-    return AsmPrinter::runOnMachineFunction(MF);
-  }
-
-  //===------------------------------------------------------------------===//
-  // AsmPrinter Implementation.
-  //===------------------------------------------------------------------===//
-
-  void EmitJumpTableInfo() override;
-  void EmitConstantPool() override;
-  void EmitFunctionBodyStart() override;
-  void EmitInstruction(const MachineInstr *MI) override;
-  void EmitEndOfAsmFile(Module &M) override;
-
-  std::string getRegTypeName(unsigned RegNo) const;
-  static std::string toString(const APFloat &APF);
-  const char *toString(Type *Ty) const;
-  std::string regToString(const MachineOperand &MO);
-  std::string argToString(const MachineOperand &MO);
-};
-
-} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 // Helpers.
 //===----------------------------------------------------------------------===//
 
-// Operand type (if any), followed by the lower-case version of the opcode's
-// name matching the names WebAssembly opcodes are expected to have. The
-// tablegen names are uppercase and suffixed with their type (after an
-// underscore). Conversions are additionally prefixed with their input type
-// (before a double underscore).
-static std::string OpcodeName(const WebAssemblyInstrInfo *TII,
-                              const MachineInstr *MI) {
-  std::string N(StringRef(TII->getName(MI->getOpcode())).lower());
-  std::string::size_type Len = N.length();
-  std::string::size_type Under = N.rfind('_');
-  bool HasType = std::string::npos != Under;
-  std::string::size_type NameEnd = HasType ? Under : Len;
-  std::string Name(&N[0], &N[NameEnd]);
-  if (!HasType)
-    return Name;
-  for (const char *typelessOpcode : { "return", "call", "br_if" })
-    if (Name == typelessOpcode)
-      return Name;
-  std::string Type(&N[NameEnd + 1], &N[Len]);
-  std::string::size_type DoubleUnder = Name.find("__");
-  bool IsConv = std::string::npos != DoubleUnder;
-  if (!IsConv)
-    return Type + '.' + Name;
-  std::string InType(&Name[0], &Name[DoubleUnder]);
-  return Type + '.' + std::string(&Name[DoubleUnder + 2], &Name[NameEnd]) +
-      '/' + InType;
-}
-
-static std::string toSymbol(StringRef S) { return ("$" + S).str(); }
-
-std::string WebAssemblyAsmPrinter::getRegTypeName(unsigned RegNo) const {
+MVT WebAssemblyAsmPrinter::getRegType(unsigned RegNo) const {
+  const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const TargetRegisterClass *TRC = MRI->getRegClass(RegNo);
-  for (MVT T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64})
-    if (TRC->hasType(T))
-      return EVT(T).getEVTString();
+  for (MVT T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64, MVT::v16i8, MVT::v8i16,
+                MVT::v4i32, MVT::v4f32})
+    if (TRI->isTypeLegalForClass(*TRC, T))
+      return T;
   DEBUG(errs() << "Unknown type for register number: " << RegNo);
   llvm_unreachable("Unknown register type");
-  return "?";
-}
-
-std::string WebAssemblyAsmPrinter::toString(const APFloat &FP) {
-  static const size_t BufBytes = 128;
-  char buf[BufBytes];
-  if (FP.isNaN())
-    assert((FP.bitwiseIsEqual(APFloat::getQNaN(FP.getSemantics())) ||
-            FP.bitwiseIsEqual(
-                APFloat::getQNaN(FP.getSemantics(), /*Negative=*/true))) &&
-           "convertToHexString handles neither SNaN nor NaN payloads");
-  // Use C99's hexadecimal floating-point representation.
-  auto Written = FP.convertToHexString(
-      buf, /*hexDigits=*/0, /*upperCase=*/false, APFloat::rmNearestTiesToEven);
-  (void)Written;
-  assert(Written != 0);
-  assert(Written < BufBytes);
-  return buf;
+  return MVT::Other;
 }
 
 std::string WebAssemblyAsmPrinter::regToString(const MachineOperand &MO) {
   unsigned RegNo = MO.getReg();
-  if (TargetRegisterInfo::isPhysicalRegister(RegNo))
-    return WebAssemblyInstPrinter::getRegisterName(RegNo);
-
-  // WebAssembly arguments and local variables are in the same index space, and
-  // there are no explicit varargs, so we just add the number of arguments to
-  // the virtual register number to get the local variable number.
-  return utostr(TargetRegisterInfo::virtReg2Index(RegNo) + NumArgs);
+  assert(TargetRegisterInfo::isVirtualRegister(RegNo) &&
+         "Unlowered physical register encountered during assembly printing");
+  assert(!MFI->isVRegStackified(RegNo));
+  unsigned WAReg = MFI->getWAReg(RegNo);
+  assert(WAReg != WebAssemblyFunctionInfo::UnusedReg);
+  return '$' + utostr(WAReg);
 }
 
-std::string WebAssemblyAsmPrinter::argToString(const MachineOperand &MO) {
-  unsigned ArgNo = MO.getImm();
-  // Same as above, but we don't need to add NumArgs here.
-  return utostr(ArgNo);
-}
-
-const char *WebAssemblyAsmPrinter::toString(Type *Ty) const {
-  switch (Ty->getTypeID()) {
-  default:
-    break;
-  // Treat all pointers as the underlying integer into linear memory.
-  case Type::PointerTyID:
-    switch (getPointerSize()) {
-    case 4:
-      return "i32";
-    case 8:
-      return "i64";
-    default:
-      llvm_unreachable("unsupported pointer size");
-    }
-    break;
-  case Type::FloatTyID:
-    return "f32";
-  case Type::DoubleTyID:
-    return "f64";
-  case Type::IntegerTyID:
-    switch (Ty->getIntegerBitWidth()) {
-    case 8:
-      return "i8";
-    case 16:
-      return "i16";
-    case 32:
-      return "i32";
-    case 64:
-      return "i64";
-    default:
-      break;
-    }
-  }
-  DEBUG(dbgs() << "Invalid type "; Ty->print(dbgs()); dbgs() << '\n');
-  llvm_unreachable("invalid type");
-  return "<invalid>";
+WebAssemblyTargetStreamer *WebAssemblyAsmPrinter::getTargetStreamer() {
+  MCTargetStreamer *TS = OutStreamer->getTargetStreamer();
+  return static_cast<WebAssemblyTargetStreamer *>(TS);
 }
 
 //===----------------------------------------------------------------------===//
 // WebAssemblyAsmPrinter Implementation.
 //===----------------------------------------------------------------------===//
+
+void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
+  for (const auto &F : M) {
+    // Emit function type info for all undefined functions
+    if (F.isDeclarationForLinker() && !F.isIntrinsic()) {
+      SmallVector<MVT, 4> Results;
+      SmallVector<MVT, 4> Params;
+      ComputeSignatureVTs(F, TM, Params, Results);
+      getTargetStreamer()->emitIndirectFunctionType(getSymbol(&F), Params,
+                                                    Results);
+    }
+  }
+  for (const auto &G : M.globals()) {
+    if (!G.hasInitializer() && G.hasExternalLinkage()) {
+      uint16_t Size = M.getDataLayout().getTypeAllocSize(G.getValueType());
+      getTargetStreamer()->emitGlobalImport(G.getGlobalIdentifier());
+      OutStreamer->emitELFSize(getSymbol(&G),
+                               MCConstantExpr::create(Size, OutContext));
+    }
+  }
+}
 
 void WebAssemblyAsmPrinter::EmitConstantPool() {
   assert(MF->getConstantPool()->getConstants().empty() &&
@@ -219,162 +108,177 @@ void WebAssemblyAsmPrinter::EmitJumpTableInfo() {
 }
 
 void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
-  const Function *F = MF->getFunction();
-  Type *Rt = F->getReturnType();
-  SmallString<128> Str;
-  raw_svector_ostream OS(Str);
-  bool First = true;
+  getTargetStreamer()->emitParam(CurrentFnSym, MFI->getParams());
 
-  if (!Rt->isVoidTy() || !F->arg_empty()) {
-    for (const Argument &A : F->args()) {
-      OS << (First ? "" : "\n") << "\t.param " << toString(A.getType());
-      First = false;
-    }
-    if (!Rt->isVoidTy()) {
-      OS << (First ? "" : "\n") << "\t.result " << toString(Rt);
-      First = false;
+  SmallVector<MVT, 4> ResultVTs;
+  const Function &F(*MF->getFunction());
+
+  // Emit the function index.
+  if (MDNode *Idx = F.getMetadata("wasm.index")) {
+    assert(Idx->getNumOperands() == 1);
+
+    getTargetStreamer()->emitIndIdx(AsmPrinter::lowerConstant(
+        cast<ConstantAsMetadata>(Idx->getOperand(0))->getValue()));
+  }
+
+  ComputeLegalValueVTs(F, TM, F.getReturnType(), ResultVTs);
+
+  // If the return type needs to be legalized it will get converted into
+  // passing a pointer.
+  if (ResultVTs.size() == 1)
+    getTargetStreamer()->emitResult(CurrentFnSym, ResultVTs);
+  else
+    getTargetStreamer()->emitResult(CurrentFnSym, ArrayRef<MVT>());
+
+  if (TM.getTargetTriple().isOSBinFormatELF()) {
+    assert(MFI->getLocals().empty());
+    for (unsigned Idx = 0, IdxE = MRI->getNumVirtRegs(); Idx != IdxE; ++Idx) {
+      unsigned VReg = TargetRegisterInfo::index2VirtReg(Idx);
+      unsigned WAReg = MFI->getWAReg(VReg);
+      // Don't declare unused registers.
+      if (WAReg == WebAssemblyFunctionInfo::UnusedReg)
+        continue;
+      // Don't redeclare parameters.
+      if (WAReg < MFI->getParams().size())
+        continue;
+      // Don't declare stackified registers.
+      if (int(WAReg) < 0)
+        continue;
+      MFI->addLocal(getRegType(VReg));
     }
   }
 
-  bool FirstVReg = true;
-  for (unsigned Idx = 0, IdxE = MRI->getNumVirtRegs(); Idx != IdxE; ++Idx) {
-    unsigned VReg = TargetRegisterInfo::index2VirtReg(Idx);
-    // FIXME: Don't skip dead virtual registers for now: that would require
-    //        remapping all locals' numbers.
-    //if (!MRI->use_empty(VReg)) {
-      if (FirstVReg) {
-        OS << (First ? "" : "\n") << "\t.local ";
-        First = false;
-      }
-      OS << (FirstVReg ? "" : ", ") << getRegTypeName(VReg);
-      FirstVReg = false;
-    //}
-  }
+  getTargetStreamer()->emitLocal(MFI->getLocals());
 
-  if (!First)
-    OutStreamer->EmitRawText(OS.str());
   AsmPrinter::EmitFunctionBodyStart();
+}
+
+void WebAssemblyAsmPrinter::EmitFunctionBodyEnd() {
+  if (TM.getTargetTriple().isOSBinFormatELF())
+    getTargetStreamer()->emitEndFunc();
 }
 
 void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   DEBUG(dbgs() << "EmitInstruction: " << *MI << '\n');
-  SmallString<128> Str;
-  raw_svector_ostream OS(Str);
-
-  unsigned NumDefs = MI->getDesc().getNumDefs();
-  assert(NumDefs <= 1 &&
-         "Instructions with multiple result values not implemented");
-
-  OS << '\t';
 
   switch (MI->getOpcode()) {
-  case TargetOpcode::COPY:
-    OS << "get_local push, " << regToString(MI->getOperand(1));
-    break;
-  case WebAssembly::GLOBAL:
-    // TODO: wasm64
-    OS << "i32.const push, " << toSymbol(MI->getOperand(1).getGlobal()->getName());
-    break;
   case WebAssembly::ARGUMENT_I32:
   case WebAssembly::ARGUMENT_I64:
   case WebAssembly::ARGUMENT_F32:
   case WebAssembly::ARGUMENT_F64:
-    OS << "get_local push, " << argToString(MI->getOperand(1));
+  case WebAssembly::ARGUMENT_v16i8:
+  case WebAssembly::ARGUMENT_v8i16:
+  case WebAssembly::ARGUMENT_v4i32:
+  case WebAssembly::ARGUMENT_v4f32:
+    // These represent values which are live into the function entry, so there's
+    // no instruction to emit.
     break;
-  case WebAssembly::Const_I32:
-    OS << "i32.const push, " << MI->getOperand(1).getImm();
+  case WebAssembly::FALLTHROUGH_RETURN_I32:
+  case WebAssembly::FALLTHROUGH_RETURN_I64:
+  case WebAssembly::FALLTHROUGH_RETURN_F32:
+  case WebAssembly::FALLTHROUGH_RETURN_F64:
+  case WebAssembly::FALLTHROUGH_RETURN_v16i8:
+  case WebAssembly::FALLTHROUGH_RETURN_v8i16:
+  case WebAssembly::FALLTHROUGH_RETURN_v4i32:
+  case WebAssembly::FALLTHROUGH_RETURN_v4f32: {
+    // These instructions represent the implicit return at the end of a
+    // function body. The operand is always a pop.
+    assert(MFI->isVRegStackified(MI->getOperand(0).getReg()));
+
+    if (isVerbose()) {
+      OutStreamer->AddComment("fallthrough-return: $pop" +
+                              utostr(MFI->getWARegStackId(
+                                  MFI->getWAReg(MI->getOperand(0).getReg()))));
+      OutStreamer->AddBlankLine();
+    }
     break;
-  case WebAssembly::Const_I64:
-    OS << "i64.const push, " << MI->getOperand(1).getImm();
-    break;
-  case WebAssembly::Const_F32:
-    OS << "f32.const push, " << toString(MI->getOperand(1).getFPImm()->getValueAPF());
-    break;
-  case WebAssembly::Const_F64:
-    OS << "f64.const push, " << toString(MI->getOperand(1).getFPImm()->getValueAPF());
+  }
+  case WebAssembly::FALLTHROUGH_RETURN_VOID:
+    // This instruction represents the implicit return at the end of a
+    // function body with no return value.
+    if (isVerbose()) {
+      OutStreamer->AddComment("fallthrough-return");
+      OutStreamer->AddBlankLine();
+    }
     break;
   default: {
-    OS << OpcodeName(TII, MI);
-    bool NeedComma = false;
-    bool DefsPushed = false;
-    if (NumDefs != 0 && !MI->isCall()) {
-      OS << " push";
-      NeedComma = true;
-      DefsPushed = true;
-    }
-    for (const MachineOperand &MO : MI->uses()) {
-      if (MO.isReg() && MO.isImplicit())
-        continue;
-      if (NeedComma)
-        OS << ',';
-      NeedComma = true;
-      OS << ' ';
-      switch (MO.getType()) {
-      default:
-        llvm_unreachable("unexpected machine operand type");
-      case MachineOperand::MO_Register:
-        OS << "(get_local " << regToString(MO) << ')';
-        break;
-      case MachineOperand::MO_Immediate:
-        OS << MO.getImm();
-        break;
-      case MachineOperand::MO_FPImmediate:
-        OS << toString(MO.getFPImm()->getValueAPF());
-        break;
-      case MachineOperand::MO_GlobalAddress:
-        OS << toSymbol(MO.getGlobal()->getName());
-        break;
-      case MachineOperand::MO_MachineBasicBlock:
-        OS << toSymbol(MO.getMBB()->getSymbol()->getName());
-        break;
-      }
-      if (NumDefs != 0 && !DefsPushed) {
-        // Special-case for calls; print the push after the callee.
-        assert(MI->isCall());
-        OS << ", push";
-        DefsPushed = true;
-      }
-    }
+    WebAssemblyMCInstLower MCInstLowering(OutContext, *this);
+    MCInst TmpInst;
+    MCInstLowering.Lower(MI, TmpInst);
+    EmitToStreamer(*OutStreamer, TmpInst);
     break;
   }
-  }
-
-  OutStreamer->EmitRawText(OS.str());
-
-  if (NumDefs != 0) {
-    SmallString<128> Str;
-    raw_svector_ostream OS(Str);
-    const MachineOperand &Operand = MI->getOperand(0);
-    OS << "\tset_local " << regToString(Operand) << ", pop";
-    OutStreamer->EmitRawText(OS.str());
   }
 }
 
-void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
-  SmallString<128> Str;
-  raw_svector_ostream OS(Str);
-  for (const Function &F : M)
-    if (F.isDeclarationForLinker()) {
-      assert(F.hasName() && "imported functions must have a name");
-      if (F.getName().startswith("llvm."))
-        continue;
-      if (Str.empty())
-        OS << "\t.imports\n";
-      Type *Rt = F.getReturnType();
-      OS << "\t.import " << toSymbol(F.getName()) << " \"\" \"" << F.getName()
-         << "\" (param";
-      for (const Argument &A : F.args())
-        OS << ' ' << toString(A.getType());
-      OS << ')';
-      if (!Rt->isVoidTy())
-        OS << " (result " << toString(Rt) << ')';
-      OS << '\n';
+const MCExpr *WebAssemblyAsmPrinter::lowerConstant(const Constant *CV) {
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV))
+    if (GV->getValueType()->isFunctionTy()) {
+      return MCSymbolRefExpr::create(
+          getSymbol(GV), MCSymbolRefExpr::VK_WebAssembly_FUNCTION, OutContext);
     }
-  OutStreamer->EmitRawText(OS.str());
+  return AsmPrinter::lowerConstant(CV);
+}
+
+bool WebAssemblyAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                            unsigned OpNo, unsigned AsmVariant,
+                                            const char *ExtraCode,
+                                            raw_ostream &OS) {
+  if (AsmVariant != 0)
+    report_fatal_error("There are no defined alternate asm variants");
+
+  // First try the generic code, which knows about modifiers like 'c' and 'n'.
+  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, AsmVariant, ExtraCode, OS))
+    return false;
+
+  if (!ExtraCode) {
+    const MachineOperand &MO = MI->getOperand(OpNo);
+    switch (MO.getType()) {
+    case MachineOperand::MO_Immediate:
+      OS << MO.getImm();
+      return false;
+    case MachineOperand::MO_Register:
+      OS << regToString(MO);
+      return false;
+    case MachineOperand::MO_GlobalAddress:
+      getSymbol(MO.getGlobal())->print(OS, MAI);
+      printOffset(MO.getOffset(), OS);
+      return false;
+    case MachineOperand::MO_ExternalSymbol:
+      GetExternalSymbolSymbol(MO.getSymbolName())->print(OS, MAI);
+      printOffset(MO.getOffset(), OS);
+      return false;
+    case MachineOperand::MO_MachineBasicBlock:
+      MO.getMBB()->getSymbol()->print(OS, MAI);
+      return false;
+    default:
+      break;
+    }
+  }
+
+  return true;
+}
+
+bool WebAssemblyAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
+                                                  unsigned OpNo,
+                                                  unsigned AsmVariant,
+                                                  const char *ExtraCode,
+                                                  raw_ostream &OS) {
+  if (AsmVariant != 0)
+    report_fatal_error("There are no defined alternate asm variants");
+
+  if (!ExtraCode) {
+    // TODO: For now, we just hard-code 0 as the constant offset; teach
+    // SelectInlineAsmMemoryOperand how to do address mode matching.
+    OS << "0(" + regToString(MI->getOperand(OpNo)) + ')';
+    return false;
+  }
+
+  return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, AsmVariant, ExtraCode, OS);
 }
 
 // Force static initialization.
 extern "C" void LLVMInitializeWebAssemblyAsmPrinter() {
-  RegisterAsmPrinter<WebAssemblyAsmPrinter> X(TheWebAssemblyTarget32);
-  RegisterAsmPrinter<WebAssemblyAsmPrinter> Y(TheWebAssemblyTarget64);
+  RegisterAsmPrinter<WebAssemblyAsmPrinter> X(getTheWebAssemblyTarget32());
+  RegisterAsmPrinter<WebAssemblyAsmPrinter> Y(getTheWebAssemblyTarget64());
 }

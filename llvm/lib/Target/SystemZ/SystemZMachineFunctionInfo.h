@@ -22,14 +22,15 @@ class SystemZMachineFunctionInfo : public MachineFunctionInfo {
   unsigned VarArgsFirstFPR;
   unsigned VarArgsFrameIndex;
   unsigned RegSaveFrameIndex;
+  int FramePointerSaveIndex;
   bool ManipulatesSP;
   unsigned NumLocalDynamics;
 
 public:
   explicit SystemZMachineFunctionInfo(MachineFunction &MF)
     : LowSavedGPR(0), HighSavedGPR(0), VarArgsFirstGPR(0), VarArgsFirstFPR(0),
-      VarArgsFrameIndex(0), RegSaveFrameIndex(0), ManipulatesSP(false),
-      NumLocalDynamics(0) {}
+      VarArgsFrameIndex(0), RegSaveFrameIndex(0), FramePointerSaveIndex(0),
+      ManipulatesSP(false), NumLocalDynamics(0) {}
 
   // Get and set the first call-saved GPR that should be saved and restored
   // by this function.  This is 0 if no GPRs need to be saved or restored.
@@ -58,6 +59,10 @@ public:
   // (i.e. the incoming stack pointer).
   unsigned getRegSaveFrameIndex() const { return RegSaveFrameIndex; }
   void setRegSaveFrameIndex(unsigned FI) { RegSaveFrameIndex = FI; }
+
+  // Get and set the frame index of where the old frame pointer is stored.
+  int getFramePointerSaveIndex() const { return FramePointerSaveIndex; }
+  void setFramePointerSaveIndex(int Idx) { FramePointerSaveIndex = Idx; }
 
   // Get and set whether the function directly manipulates the stack pointer,
   // e.g. through STACKSAVE or STACKRESTORE.

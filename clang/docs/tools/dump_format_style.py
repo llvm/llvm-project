@@ -4,11 +4,13 @@
 # Run from the directory in which this file is located to update the docs.
 
 import collections
+import os
 import re
 import urllib2
 
-FORMAT_STYLE_FILE = '../../include/clang/Format/Format.h'
-DOC_FILE = '../ClangFormatStyleOptions.rst'
+CLANG_DIR = os.path.join(os.path.dirname(__file__), '../..')
+FORMAT_STYLE_FILE = os.path.join(CLANG_DIR, 'include/clang/Format/Format.h')
+DOC_FILE = os.path.join(CLANG_DIR, 'docs/ClangFormatStyleOptions.rst')
 
 
 def substitute(text, tag, contents):
@@ -17,16 +19,15 @@ def substitute(text, tag, contents):
   return re.sub(pattern, '%s', text, flags=re.S) % replacement
 
 def doxygen2rst(text):
-  text = re.sub(r'([^/\*])\*', r'\1\\*', text)
   text = re.sub(r'<tt>\s*(.*?)\s*<\/tt>', r'``\1``', text)
   text = re.sub(r'\\c ([^ ,;\.]+)', r'``\1``', text)
   text = re.sub(r'\\\w+ ', '', text)
   return text
 
-def indent(text, columns):
+def indent(text, columns, indent_first_line=True):
   indent = ' ' * columns
   s = re.sub(r'\n([^\n])', '\n' + indent + '\\1', text, flags=re.S)
-  if s.startswith('\n'):
+  if not indent_first_line or s.startswith('\n'):
     return s
   return indent + s
 
@@ -63,7 +64,9 @@ class NestedField:
     self.comment = comment.strip()
 
   def __str__(self):
-    return '* ``%s`` %s' % (self.name, doxygen2rst(self.comment))
+    return '\n* ``%s`` %s' % (
+        self.name,
+        doxygen2rst(indent(self.comment, 2, indent_first_line=False)))
 
 class Enum:
   def __init__(self, name, comment):
@@ -77,7 +80,7 @@ class Enum:
 class EnumValue:
   def __init__(self, name, comment):
     self.name = name
-    self.comment = comment.strip()
+    self.comment = comment
 
   def __str__(self):
     return '* ``%s`` (in configuration: ``%s``)\n%s' % (
@@ -86,8 +89,12 @@ class EnumValue:
         doxygen2rst(indent(self.comment, 2)))
 
 def clean_comment_line(line):
-  if line == '/// \\code':
-    return '\n.. code-block:: c++\n\n'
+  match = re.match(r'^/// \\code(\{.(\w+)\})?$', line)
+  if match:
+    lang = match.groups()[1]
+    if not lang:
+      lang = 'c++'
+    return '\n.. code-block:: %s\n\n' % lang
   if line == '/// \\endcode':
     return ''
   return line[4:] + '\n'
@@ -174,7 +181,7 @@ def read_options(header):
       if enums.has_key(option.type):
         option.enum = enums[option.type]
       elif nested_structs.has_key(option.type):
-        option.nested_struct = nested_structs[option.type];
+        option.nested_struct = nested_structs[option.type]
       else:
         raise Exception('Unknown type: %s' % option.type)
   return options
@@ -188,6 +195,5 @@ contents = open(DOC_FILE).read()
 
 contents = substitute(contents, 'FORMAT_STYLE_OPTIONS', options_text)
 
-with open(DOC_FILE, 'w') as output:
+with open(DOC_FILE, 'wb') as output:
   output.write(contents)
-

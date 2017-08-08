@@ -1,7 +1,9 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
+  BitReader
   BitWriter
   Core
+  IRReader
   LTO
   MC
   Object
@@ -11,5 +13,8 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-lto
   llvm-lto.cpp
+
+  DEPENDS
+  intrinsics_gen
   )
 

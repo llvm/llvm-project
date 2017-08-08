@@ -193,4 +193,4 @@ namespace PR10650 {
   // CHECK: store i64
 }
 
-// CHECK: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }

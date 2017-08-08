@@ -17,33 +17,34 @@
 // GCC #defines PPC on Linux but we use it as our namespace name
 #undef PPC
 
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/MathExtras.h"
+#include <cstdint>
 
 namespace llvm {
+
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
 class MCObjectWriter;
 class MCRegisterInfo;
-class MCSubtargetInfo;
+class MCTargetOptions;
 class Target;
 class Triple;
 class StringRef;
 class raw_pwrite_stream;
-class raw_ostream;
 
-extern Target ThePPC32Target;
-extern Target ThePPC64Target;
-extern Target ThePPC64LETarget;
+Target &getThePPC32Target();
+Target &getThePPC64Target();
+Target &getThePPC64LETarget();
 
 MCCodeEmitter *createPPCMCCodeEmitter(const MCInstrInfo &MCII,
                                       const MCRegisterInfo &MRI,
                                       MCContext &Ctx);
 
 MCAsmBackend *createPPCAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                  const Triple &TT, StringRef CPU);
+                                  const Triple &TT, StringRef CPU,
+                                  const MCTargetOptions &Options);
 
 /// Construct an PPC ELF object writer.
 MCObjectWriter *createPPCELFObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,
@@ -81,7 +82,7 @@ static inline bool isRunOfOnes(unsigned Val, unsigned &MB, unsigned &ME) {
   return false;
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
 // Generated files will use "namespace PPC". To avoid symbol clash,
 // undefine PPC here. PPC may be predefined on some hosts.
@@ -101,4 +102,4 @@ static inline bool isRunOfOnes(unsigned Val, unsigned &MB, unsigned &ME) {
 #define GET_SUBTARGETINFO_ENUM
 #include "PPCGenSubtargetInfo.inc"
 
-#endif
+#endif // LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCMCTARGETDESC_H

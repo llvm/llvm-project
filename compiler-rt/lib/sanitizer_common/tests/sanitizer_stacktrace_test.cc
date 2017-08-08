@@ -82,7 +82,7 @@ TEST_F(FastUnwindTest, Basic) {
   }
 }
 
-// From: http://code.google.com/p/address-sanitizer/issues/detail?id=162
+// From: https://github.com/google/sanitizers/issues/162
 TEST_F(FastUnwindTest, FramePointerLoop) {
   // Make one fp point to itself.
   fake_stack[4] = (uhwptr)&fake_stack[4];
@@ -134,6 +134,19 @@ TEST_F(FastUnwindTest, FPBelowPrevFP) {
   EXPECT_EQ(2U, trace.size);
   EXPECT_EQ(PC(0), trace.trace[0]);
   EXPECT_EQ(PC(1), trace.trace[1]);
+}
+
+TEST_F(FastUnwindTest, CloseToZeroFrame) {
+  // Make one pc a NULL pointer.
+  fake_stack[5] = 0x0;
+  if (!TryFastUnwind(kStackTraceMax))
+    return;
+  // The stack should be truncated at the NULL pointer (and not include it).
+  EXPECT_EQ(3U, trace.size);
+  EXPECT_EQ(start_pc, trace.trace[0]);
+  for (uptr i = 1; i < 3U; i++) {
+    EXPECT_EQ(PC(i*2 - 1), trace.trace[i]);
+  }
 }
 
 TEST(SlowUnwindTest, ShortStackTrace) {

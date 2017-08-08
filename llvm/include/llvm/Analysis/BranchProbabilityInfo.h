@@ -15,14 +15,18 @@
 #define LLVM_ANALYSIS_BRANCHPROBABILITYINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
 
 namespace llvm {
 class LoopInfo;
+class TargetLibraryInfo;
 class raw_ostream;
 
 /// \brief Analysis providing branch probability information.
@@ -40,7 +44,23 @@ class raw_ostream;
 class BranchProbabilityInfo {
 public:
   BranchProbabilityInfo() {}
-  BranchProbabilityInfo(Function &F, const LoopInfo &LI) { calculate(F, LI); }
+  BranchProbabilityInfo(const Function &F, const LoopInfo &LI,
+                        const TargetLibraryInfo *TLI = nullptr) {
+    calculate(F, LI, TLI);
+  }
+
+  BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
+      : Probs(std::move(Arg.Probs)), LastF(Arg.LastF),
+        PostDominatedByUnreachable(std::move(Arg.PostDominatedByUnreachable)),
+        PostDominatedByColdCall(std::move(Arg.PostDominatedByColdCall)) {}
+
+  BranchProbabilityInfo &operator=(BranchProbabilityInfo &&RHS) {
+    releaseMemory();
+    Probs = std::move(RHS.Probs);
+    PostDominatedByColdCall = std::move(RHS.PostDominatedByColdCall);
+    PostDominatedByUnreachable = std::move(RHS.PostDominatedByUnreachable);
+    return *this;
+  }
 
   void releaseMemory();
 
@@ -61,6 +81,9 @@ public:
   BranchProbability getEdgeProbability(const BasicBlock *Src,
                                        const BasicBlock *Dst) const;
 
+  BranchProbability getEdgeProbability(const BasicBlock *Src,
+                                       succ_const_iterator Dst) const;
+
   /// \brief Test if an edge is hot relative to other out-edges of the Src.
   ///
   /// Check whether this edge out of the source block is 'hot'. We define hot
@@ -71,7 +94,7 @@ public:
   ///
   /// Given a basic block, look through its successors and if one exists for
   /// which \see isEdgeHot would return true, return that successor block.
-  BasicBlock *getHotSucc(BasicBlock *BB) const;
+  const BasicBlock *getHotSucc(const BasicBlock *BB) const;
 
   /// \brief Print an edge's probability.
   ///
@@ -81,40 +104,46 @@ public:
   raw_ostream &printEdgeProbability(raw_ostream &OS, const BasicBlock *Src,
                                     const BasicBlock *Dst) const;
 
-  /// \brief Get the raw edge weight calculated for the edge.
+  /// \brief Set the raw edge probability for the given edge.
   ///
-  /// This returns the raw edge weight. It is guaranteed to fall between 1 and
-  /// UINT32_MAX. Note that the raw edge weight is not meaningful in isolation.
-  /// This interface should be very carefully, and primarily by routines that
-  /// are updating the analysis by later calling setEdgeWeight.
-  uint32_t getEdgeWeight(const BasicBlock *Src,
-                         unsigned IndexInSuccessors) const;
-
-  /// \brief Get the raw edge weight calculated for the block pair.
-  ///
-  /// This returns the sum of all raw edge weights from Src to Dst.
-  /// It is guaranteed to fall between 1 and UINT32_MAX.
-  uint32_t getEdgeWeight(const BasicBlock *Src, const BasicBlock *Dst) const;
-
-  uint32_t getEdgeWeight(const BasicBlock *Src,
-                         succ_const_iterator Dst) const;
-
-  /// \brief Set the raw edge weight for a given edge.
-  ///
-  /// This allows a pass to explicitly set the edge weight for an edge. It can
-  /// be used when updating the CFG to update and preserve the branch
+  /// This allows a pass to explicitly set the edge probability for an edge. It
+  /// can be used when updating the CFG to update and preserve the branch
   /// probability information. Read the implementation of how these edge
-  /// weights are calculated carefully before using!
-  void setEdgeWeight(const BasicBlock *Src, unsigned IndexInSuccessors,
-                     uint32_t Weight);
+  /// probabilities are calculated carefully before using!
+  void setEdgeProbability(const BasicBlock *Src, unsigned IndexInSuccessors,
+                          BranchProbability Prob);
 
-  static uint32_t getBranchWeightStackProtector(bool IsLikely) {
-    return IsLikely ? (1u << 20) - 1 : 1;
+  static BranchProbability getBranchProbStackProtector(bool IsLikely) {
+    static const BranchProbability LikelyProb((1u << 20) - 1, 1u << 20);
+    return IsLikely ? LikelyProb : LikelyProb.getCompl();
   }
 
-  void calculate(Function &F, const LoopInfo& LI);
+  void calculate(const Function &F, const LoopInfo &LI,
+                 const TargetLibraryInfo *TLI = nullptr);
+
+  /// Forget analysis results for the given basic block.
+  void eraseBlock(const BasicBlock *BB);
 
 private:
+  void operator=(const BranchProbabilityInfo &) = delete;
+  BranchProbabilityInfo(const BranchProbabilityInfo &) = delete;
+
+  // We need to store CallbackVH's in order to correctly handle basic block
+  // removal.
+  class BasicBlockCallbackVH final : public CallbackVH {
+    BranchProbabilityInfo *BPI;
+    void deleted() override {
+      assert(BPI != nullptr);
+      BPI->eraseBlock(cast<BasicBlock>(getValPtr()));
+      BPI->Handles.erase(*this);
+    }
+
+  public:
+    BasicBlockCallbackVH(const Value *V, BranchProbabilityInfo *BPI=nullptr)
+        : CallbackVH(const_cast<Value *>(V)), BPI(BPI) {}
+  };
+  DenseSet<BasicBlockCallbackVH, DenseMapInfo<Value*>> Handles;
+
   // Since we allow duplicate edges from one basic block to another, we use
   // a pair (PredBlock and an index in the successors) to specify an edge.
   typedef std::pair<const BasicBlock *, unsigned> Edge;
@@ -127,28 +156,51 @@ private:
   // weight to just "inherit" the non-zero weight of an adjacent successor.
   static const uint32_t DEFAULT_WEIGHT = 16;
 
-  DenseMap<Edge, uint32_t> Weights;
+  DenseMap<Edge, BranchProbability> Probs;
 
   /// \brief Track the last function we run over for printing.
-  Function *LastF;
+  const Function *LastF;
 
   /// \brief Track the set of blocks directly succeeded by a returning block.
-  SmallPtrSet<BasicBlock *, 16> PostDominatedByUnreachable;
+  SmallPtrSet<const BasicBlock *, 16> PostDominatedByUnreachable;
 
   /// \brief Track the set of blocks that always lead to a cold call.
-  SmallPtrSet<BasicBlock *, 16> PostDominatedByColdCall;
+  SmallPtrSet<const BasicBlock *, 16> PostDominatedByColdCall;
 
-  /// \brief Get sum of the block successors' weights.
-  uint32_t getSumForBlock(const BasicBlock *BB) const;
+  void updatePostDominatedByUnreachable(const BasicBlock *BB);
+  void updatePostDominatedByColdCall(const BasicBlock *BB);
+  bool calcUnreachableHeuristics(const BasicBlock *BB);
+  bool calcMetadataWeights(const BasicBlock *BB);
+  bool calcColdCallHeuristics(const BasicBlock *BB);
+  bool calcPointerHeuristics(const BasicBlock *BB);
+  bool calcLoopBranchHeuristics(const BasicBlock *BB, const LoopInfo &LI);
+  bool calcZeroHeuristics(const BasicBlock *BB, const TargetLibraryInfo *TLI);
+  bool calcFloatingPointHeuristics(const BasicBlock *BB);
+  bool calcInvokeHeuristics(const BasicBlock *BB);
+};
 
-  bool calcUnreachableHeuristics(BasicBlock *BB);
-  bool calcMetadataWeights(BasicBlock *BB);
-  bool calcColdCallHeuristics(BasicBlock *BB);
-  bool calcPointerHeuristics(BasicBlock *BB);
-  bool calcLoopBranchHeuristics(BasicBlock *BB, const LoopInfo &LI);
-  bool calcZeroHeuristics(BasicBlock *BB);
-  bool calcFloatingPointHeuristics(BasicBlock *BB);
-  bool calcInvokeHeuristics(BasicBlock *BB);
+/// \brief Analysis pass which computes \c BranchProbabilityInfo.
+class BranchProbabilityAnalysis
+    : public AnalysisInfoMixin<BranchProbabilityAnalysis> {
+  friend AnalysisInfoMixin<BranchProbabilityAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  /// \brief Provide the result typedef for this analysis pass.
+  typedef BranchProbabilityInfo Result;
+
+  /// \brief Run the analysis pass over a function and produce BPI.
+  BranchProbabilityInfo run(Function &F, FunctionAnalysisManager &AM);
+};
+
+/// \brief Printer pass for the \c BranchProbabilityAnalysis results.
+class BranchProbabilityPrinterPass
+    : public PassInfoMixin<BranchProbabilityPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit BranchProbabilityPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// \brief Legacy analysis pass which computes \c BranchProbabilityInfo.

@@ -1,4 +1,4 @@
-//===----- TargetFrameLoweringImpl.cpp - Implement target frame interface --==//
+//===- TargetFrameLoweringImpl.cpp - Implement target frame interface ------==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,20 +12,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/BitVector.h"
-#include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include <cstdlib>
+
 using namespace llvm;
 
-TargetFrameLowering::~TargetFrameLowering() {
-}
+TargetFrameLowering::~TargetFrameLowering() = default;
 
 /// The default implementation just looks at attribute "no-frame-pointer-elim".
 bool TargetFrameLowering::noFramePointerElim(const MachineFunction &MF) const {
@@ -39,7 +42,7 @@ bool TargetFrameLowering::noFramePointerElim(const MachineFunction &MF) const {
 /// is overridden for some targets.
 int TargetFrameLowering::getFrameIndexReference(const MachineFunction &MF,
                                              int FI, unsigned &FrameReg) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
 
   // By default, assume all frame indices are referenced via whatever
@@ -47,34 +50,43 @@ int TargetFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   // something different.
   FrameReg = RI->getFrameRegister(MF);
 
-  return MFI->getObjectOffset(FI) + MFI->getStackSize() -
-         getOffsetOfLocalArea() + MFI->getOffsetAdjustment();
+  return MFI.getObjectOffset(FI) + MFI.getStackSize() -
+         getOffsetOfLocalArea() + MFI.getOffsetAdjustment();
 }
 
 bool TargetFrameLowering::needsFrameIndexResolution(
     const MachineFunction &MF) const {
-  return MF.getFrameInfo()->hasStackObjects();
+  return MF.getFrameInfo().hasStackObjects();
 }
 
 void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                BitVector &SavedRegs,
                                                RegScavenger *RS) const {
-  // Get the callee saved register list...
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-  const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(&MF);
+
+  // Resize before the early returns. Some backends expect that
+  // SavedRegs.size() == TRI.getNumRegs() after this call even if there are no
+  // saved registers.
+  SavedRegs.resize(TRI.getNumRegs());
+
+  // When interprocedural register allocation is enabled caller saved registers
+  // are preferred over callee saved registers.
+  if (MF.getTarget().Options.EnableIPRA && isSafeForNoCSROpt(MF.getFunction()))
+    return;
+
+  // Get the callee saved register list...
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
 
   // Early exit if there are no callee saved registers.
   if (!CSRegs || CSRegs[0] == 0)
     return;
-
-  SavedRegs.resize(TRI.getNumRegs());
 
   // In Naked functions we aren't going to save any registers.
   if (MF.getFunction()->hasFnAttribute(Attribute::Naked))
     return;
 
   // Functions which call __builtin_unwind_init get all their registers saved.
-  bool CallsUnwindInit = MF.getMMI().callsUnwindInit();
+  bool CallsUnwindInit = MF.callsUnwindInit();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (unsigned i = 0; CSRegs[i]; ++i) {
     unsigned Reg = CSRegs[i];

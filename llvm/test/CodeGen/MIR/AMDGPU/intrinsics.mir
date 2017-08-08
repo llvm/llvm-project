@@ -1,0 +1,19 @@
+# RUN: llc -mtriple=amdgcn -run-pass none -o - %s | FileCheck %s
+
+--- |
+
+  define amdgpu_kernel void @use_intrin() {
+    ret void
+  }
+
+...
+---
+# Completely invalid code, but it checks that intrinsics round-trip properly.
+# CHECK: %0(s64) = COPY intrinsic(@llvm.amdgcn.sbfe)
+name:            use_intrin
+registers:
+  - { id: 0, class: _ }
+body: |
+  bb.0:
+    %0(s64) = COPY intrinsic(@llvm.amdgcn.sbfe.i32)
+...

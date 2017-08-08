@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
 
 struct T {
   T();
@@ -70,4 +70,11 @@ namespace test1 {
   };
 
   D d;
+}
+
+namespace test2 {
+  // CHECK:  define linkonce_odr void @_ZN5test21AIiED2Ev(
+  template <typename T> struct A { A() {} ~A() {} };
+  template <typename> void f(const A<int> & = {}) {}
+  void g() { f<int>(); }
 }

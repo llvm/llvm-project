@@ -173,6 +173,16 @@ namespace PR12123 {
 
 // CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %"struct.PR12123::A"* @_ZZN7PR121231B1fERKSt9type_infoEd_NKUlvE_clEv
 
+// CHECK-LABEL: define {{.*}} @_Z{{[0-9]*}}testVarargsLambdaNumberingv(
+inline int testVarargsLambdaNumbering() {
+  // CHECK: testVarargsLambdaNumberingvE{{.*}}UlzE_
+  auto a = [](...) { static int n; return ++n; };
+  // CHECK: testVarargsLambdaNumberingvE{{.*}}UlvE_
+  auto b = []() { static int n; return ++n; };
+  return a() + b();
+}
+int k = testVarargsLambdaNumbering();
+
 // Check linkage of the various lambdas.
 // CHECK-LABEL: define linkonce_odr i32 @_ZZ11inline_funciENKUlvE_clEv
 // CHECK: ret i32 1

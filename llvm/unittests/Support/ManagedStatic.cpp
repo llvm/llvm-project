@@ -57,4 +57,45 @@ TEST(Initialize, MultipleThreads) {
 }
 #endif
 
+namespace NestedStatics {
+static ManagedStatic<int> Ms1;
+struct Nest {
+  Nest() {
+    ++(*Ms1);
+  }
+
+  ~Nest() {
+    assert(Ms1.isConstructed());
+    ++(*Ms1);
+  }
+};
+static ManagedStatic<Nest> Ms2;
+
+TEST(ManagedStaticTest, NestedStatics) {
+  EXPECT_FALSE(Ms1.isConstructed());
+  EXPECT_FALSE(Ms2.isConstructed());
+
+  *Ms2;
+  EXPECT_TRUE(Ms1.isConstructed());
+  EXPECT_TRUE(Ms2.isConstructed());
+}
+} // namespace NestedStatics
+
+namespace CustomCreatorDeletor {
+struct CustomCreate {
+  static void *call() {
+    void *Mem = std::malloc(sizeof(int));
+    *((int *)Mem) = 42;
+    return Mem;
+  }
+};
+struct CustomDelete {
+  static void call(void *P) { std::free(P); }
+};
+static ManagedStatic<int, CustomCreate, CustomDelete> Custom;
+TEST(ManagedStaticTest, CustomCreatorDeletor) {
+  EXPECT_EQ(42, *Custom);
+}
+} // namespace CustomCreatorDeletor
+
 } // anonymous namespace

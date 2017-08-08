@@ -17,7 +17,7 @@ void noreturn_f() {
 //
 // CHECK: Address [[ADDR]] is located in stack of thread T0 at offset [[OFFSET:.*]] in frame
 // CHECK-NEXT:  noreturn_f{{.*}}dll_noreturn.cc
-// CHECK: 'buffer' <== Memory access at offset [[OFFSET]] underflows this variable
+// CHECK: 'buffer'{{.*}} <== Memory access at offset [[OFFSET]] underflows this variable
 // CHECK-LABEL: SUMMARY
 }
 

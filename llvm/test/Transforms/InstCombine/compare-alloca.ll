@@ -72,15 +72,15 @@ define i1 @alloca_argument_compare_escaped_through_store(i64* %arg, i64** %ptr) 
   ; CHECK: ret i1 %cmp
 }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture)
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 define i1 @alloca_argument_compare_benign_instrs(i8* %arg) {
   %alloc = alloca i8
-  call void @llvm.lifetime.start(i64 1, i8* %alloc)
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %alloc)
   %cmp = icmp eq i8* %arg, %alloc
   %x = load i8, i8* %arg
   store i8 %x, i8* %alloc
-  call void @llvm.lifetime.end(i64 1, i8* %alloc)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %alloc)
   ret i1 %cmp
   ; CHECK-LABEL: alloca_argument_compare_benign_instrs
   ; CHECK: ret i1 false

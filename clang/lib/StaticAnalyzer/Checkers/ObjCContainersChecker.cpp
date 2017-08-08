@@ -79,7 +79,6 @@ void ObjCContainersChecker::addSizeInfo(const Expr *Array, const Expr *Size,
 
   C.addTransition(
       State->set<ArraySizeMap>(ArraySym, SizeV.castAs<DefinedSVal>()));
-  return;
 }
 
 void ObjCContainersChecker::checkPostStmt(const CallExpr *CE,
@@ -156,10 +155,7 @@ ObjCContainersChecker::checkPointerEscape(ProgramStateRef State,
                                           const InvalidatedSymbols &Escaped,
                                           const CallEvent *Call,
                                           PointerEscapeKind Kind) const {
-  for (InvalidatedSymbols::const_iterator I = Escaped.begin(),
-                                          E = Escaped.end();
-                                          I != E; ++I) {
-    SymbolRef Sym = *I;
+  for (const auto &Sym : Escaped) {
     // When a symbol for a mutable array escapes, we can't reason precisely
     // about its size any more -- so remove it from the map.
     // Note that we aren't notified here when a CFMutableArrayRef escapes as a
@@ -169,6 +165,7 @@ ObjCContainersChecker::checkPointerEscape(ProgramStateRef State,
   }
   return State;
 }
+
 /// Register checker.
 void ento::registerObjCContainersChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCContainersChecker>();

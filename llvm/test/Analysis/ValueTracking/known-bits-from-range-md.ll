@@ -1,4 +1,4 @@
-; RUN: opt -S -instsimplify < %s | FileCheck %s
+; RUN: opt -S -instsimplify -instcombine < %s | FileCheck %s
 
 define i1 @test0(i8* %ptr) {
 ; CHECK-LABEL: @test0(
@@ -23,10 +23,10 @@ define i1 @test1(i8* %ptr) {
 define i1 @test2(i8* %ptr) {
 ; CHECK-LABEL: @test2(
  entry:
-; CHECK: load
-; CHECK: and
-; CHECK: icmp eq
-; CHECK: ret
+; CHECK: %val = load i8
+; CHECK: %and = and i8 %val
+; CHECK: %is.eq = icmp ne i8 %and, 0
+; CHECK: ret i1 %is.eq
   %val = load i8, i8* %ptr, !range !{i8 64, i8 129}
   %and = and i8 %val, 64
   %is.eq = icmp eq i8 %and, 64

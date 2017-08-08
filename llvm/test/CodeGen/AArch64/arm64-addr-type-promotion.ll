@@ -1,9 +1,8 @@
-; RUN: llc -march arm64 < %s -aarch64-collect-loh=false | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios3.0.0 -aarch64-enable-collect-loh=false | FileCheck %s
 ; rdar://13452552
 ; Disable the collecting of LOH so that the labels do not get in the
 ; way of the NEXT patterns.
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n32:64-S128"
-target triple = "arm64-apple-ios3.0.0"
 
 @block = common global i8* null, align 8
 
@@ -11,14 +10,17 @@ define zeroext i8 @fullGtU(i32 %i1, i32 %i2) {
 ; CHECK: fullGtU
 ; CHECK: adrp [[PAGE:x[0-9]+]], _block@GOTPAGE
 ; CHECK: ldr [[ADDR:x[0-9]+]], {{\[}}[[PAGE]], _block@GOTPAGEOFF]
+; CHECK: sxtw [[I1:x[0-9]+]], w0
+; CHECK: sxtw [[I2:x[0-9]+]], w1
 ; CHECK-NEXT: ldr [[BLOCKBASE:x[0-9]+]], {{\[}}[[ADDR]]]
-; CHECK-NEXT: ldrb [[BLOCKVAL1:w[0-9]+]], {{\[}}[[BLOCKBASE]],  w0, sxtw]
-; CHECK-NEXT: ldrb [[BLOCKVAL2:w[0-9]+]], {{\[}}[[BLOCKBASE]], w1, sxtw]
+; CHECK-NEXT: ldrb [[BLOCKVAL1:w[0-9]+]], {{\[}}[[BLOCKBASE]], [[I1]]]
+; CHECK-NEXT: ldrb [[BLOCKVAL2:w[0-9]+]], {{\[}}[[BLOCKBASE]], [[I2]]]
+
 ; CHECK-NEXT: cmp [[BLOCKVAL1]], [[BLOCKVAL2]]
 ; CHECK-NEXT: b.ne
 ; Next BB
-; CHECK: add [[BLOCKBASE2:x[0-9]+]], [[BLOCKBASE]], w1, sxtw
-; CHECK-NEXT: add [[BLOCKBASE1:x[0-9]+]], [[BLOCKBASE]], w0, sxtw
+; CHECK: add [[BLOCKBASE2:x[0-9]+]], [[BLOCKBASE]], [[I2]]
+; CHECK-NEXT: add [[BLOCKBASE1:x[0-9]+]], [[BLOCKBASE]], [[I1]]
 ; CHECK-NEXT: ldrb [[LOADEDVAL1:w[0-9]+]], {{\[}}[[BLOCKBASE1]], #1]
 ; CHECK-NEXT: ldrb [[LOADEDVAL2:w[0-9]+]], {{\[}}[[BLOCKBASE2]], #1]
 ; CHECK-NEXT: cmp [[LOADEDVAL1]], [[LOADEDVAL2]]

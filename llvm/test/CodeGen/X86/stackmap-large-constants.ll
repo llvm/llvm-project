@@ -3,7 +3,7 @@
 ; CHECK-LABEL:	.section	__LLVM_STACKMAPS,__llvm_stackmaps
 ; CHECK-NEXT: __LLVM_StackMaps:
 ; version
-; CHECK-NEXT: 	.byte	1
+; CHECK-NEXT: 	.byte	3
 ; reserved
 ; CHECK-NEXT: 	.byte	0
 ; reserved
@@ -17,9 +17,11 @@
 ; function address & stack size
 ; CHECK-NEXT: 	.quad	_foo
 ; CHECK-NEXT: 	.quad	8
+; CHECK-NEXT:   .quad	1
 ; function address & stack size
 ; CHECK-NEXT: 	.quad	_bar
 ; CHECK-NEXT: 	.quad	8
+; CHECK-NEXT:   .quad	1
 
 ; Constants Array:
 ; CHECK-NEXT: 	.quad	9223372036854775807
@@ -36,17 +38,22 @@
 ; ConstantIndex
 ; CHECK-NEXT: 	.byte	5
 ; reserved
-; CHECK-NEXT: 	.byte	8
+; CHECK-NEXT:   .byte	0
+; size
+; CHECK-NEXT: 	.short	8
 ; Dwarf RegNum
 ; CHECK-NEXT: 	.short	0
+; reserved
+; CHECK-NEXT:   .short  0
 ; Offset
 ; CHECK-NEXT: 	.long	0
 ; padding
+; CHECK-NEXT: 	.p2align 3
 ; CHECK-NEXT: 	.short	0
 ; NumLiveOuts
 ; CHECK-NEXT: 	.short	0
 
-; CHECK-NEXT: 	.align	3
+; CHECK-NEXT: 	.p2align	3
 
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 
@@ -66,12 +73,17 @@ define void @foo() {
 ; ConstantIndex
 ; CHECK-NEXT: 	.byte	5
 ; reserved
-; CHECK-NEXT: 	.byte	8
+; CHECK-NEXT:   .byte	0
+; size
+; CHECK-NEXT: 	.short	8
 ; Dwarf RegNum
 ; CHECK-NEXT: 	.short	0
+; reserved
+; CHECK-NEXT:    .short 0
 ; Offset
 ; CHECK-NEXT: 	.long	1
 ; padding
+; CHECK-NEXT:  .p2align 3
 ; CHECK-NEXT: 	.short	0
 ; NumLiveOuts
 ; CHECK-NEXT: 	.short	0

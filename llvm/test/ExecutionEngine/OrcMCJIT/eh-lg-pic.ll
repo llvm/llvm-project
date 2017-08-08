@@ -1,5 +1,5 @@
 ; RUN: %lli -jit-kind=orc-mcjit -relocation-model=pic -code-model=large %s
-; XFAIL: cygwin, win32, mingw, mips-, mipsel-, i686, i386, aarch64, arm, asan, msan
+; XFAIL: cygwin, win32, mingw, mips-, mipsel-, i686, i386, aarch64, arm
 declare i8* @__cxa_allocate_exception(i64)
 declare void @__cxa_throw(i8*, i8*, i8*)
 declare i32 @__gxx_personality_v0(...)

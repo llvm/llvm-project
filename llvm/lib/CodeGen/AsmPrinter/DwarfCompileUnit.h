@@ -15,12 +15,12 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DWARFCOMPILEUNIT_H
 
 #include "DwarfUnit.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfo.h"
-#include "llvm/Support/Dwarf.h"
 
 namespace llvm {
 
+class StringRef;
 class AsmPrinter;
 class DIE;
 class DwarfDebug;
@@ -28,7 +28,10 @@ class DwarfFile;
 class MCSymbol;
 class LexicalScope;
 
-class DwarfCompileUnit : public DwarfUnit {
+class DwarfCompileUnit final : public DwarfUnit {
+  /// A numeric ID unique among all CUs in the module
+  unsigned UniqueID;
+
   /// The attribute index of DW_AT_stmt_list in the compile unit DIE, avoiding
   /// the need to search for it in applyStmtList.
   DIE::value_iterator StmtListValue;
@@ -38,6 +41,9 @@ class DwarfCompileUnit : public DwarfUnit {
 
   /// The start of the unit within its section.
   MCSymbol *LabelBegin;
+
+  /// The start of the unit macro info within macro section.
+  MCSymbol *MacroLabelBegin;
 
   typedef llvm::SmallVector<const MDNode *, 8> ImportedEntityList;
   typedef llvm::DenseMap<const MDNode *, ImportedEntityList>
@@ -62,29 +68,54 @@ class DwarfCompileUnit : public DwarfUnit {
   // ranges/locs.
   const MCSymbol *BaseAddress;
 
+  DenseMap<const MDNode *, DIE *> AbstractSPDies;
+  DenseMap<const MDNode *, std::unique_ptr<DbgVariable>> AbstractVariables;
+
   /// \brief Construct a DIE for the given DbgVariable without initializing the
   /// DbgVariable's DIE reference.
   DIE *constructVariableDIEImpl(const DbgVariable &DV, bool Abstract);
 
   bool isDwoUnit() const override;
 
-  bool includeMinimalInlineScopes() const;
+  DenseMap<const MDNode *, DIE *> &getAbstractSPDies() {
+    if (isDwoUnit() && !DD->shareAcrossDWOCUs())
+      return AbstractSPDies;
+    return DU->getAbstractSPDies();
+  }
+
+  DenseMap<const MDNode *, std::unique_ptr<DbgVariable>> &getAbstractVariables() {
+    if (isDwoUnit() && !DD->shareAcrossDWOCUs())
+      return AbstractVariables;
+    return DU->getAbstractVariables();
+  }
 
 public:
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
                    DwarfDebug *DW, DwarfFile *DWU);
 
+  unsigned getUniqueID() const { return UniqueID; }
+
   DwarfCompileUnit *getSkeleton() const {
     return Skeleton;
   }
+
+  bool includeMinimalInlineScopes() const;
 
   void initStmtList();
 
   /// Apply the DW_AT_stmt_list from this compile unit to the specified DIE.
   void applyStmtList(DIE &D);
 
-  /// getOrCreateGlobalVariableDIE - get or create global variable DIE.
-  DIE *getOrCreateGlobalVariableDIE(const DIGlobalVariable *GV);
+  /// A pair of GlobalVariable and DIExpression.
+  struct GlobalExpr {
+    const GlobalVariable *Var;
+    const DIExpression *Expr;
+  };
+
+  /// Get or create global variable DIE.
+  DIE *
+  getOrCreateGlobalVariableDIE(const DIGlobalVariable *GV,
+                               ArrayRef<GlobalExpr> GlobalExprs);
 
   /// addLabelAddress - Add a dwarf label attribute data and value using
   /// either DW_FORM_addr or DW_FORM_GNU_addr_index.
@@ -96,28 +127,25 @@ public:
   void addLocalLabelAddress(DIE &Die, dwarf::Attribute Attribute,
                             const MCSymbol *Label);
 
-  /// addSectionDelta - Add a label delta attribute data and value.
-  DIE::value_iterator addSectionDelta(DIE &Die, dwarf::Attribute Attribute,
-                                      const MCSymbol *Hi, const MCSymbol *Lo);
-
   DwarfCompileUnit &getCU() override { return *this; }
 
   unsigned getOrCreateSourceID(StringRef FileName, StringRef DirName) override;
 
   void addImportedEntity(const DIImportedEntity* IE) {
-    ImportedEntities[IE->getScope()].push_back(IE);
+    DIScope *Scope = IE->getScope();
+    assert(Scope && "Invalid Scope encoding!");
+    if (!isa<DILocalScope>(Scope))
+      // No need to add imported enities that are not local declaration.
+      return;
+
+    auto *LocalScope = cast<DILocalScope>(Scope)->getNonLexicalBlockFileScope();
+    ImportedEntities[LocalScope].push_back(IE);
   }
 
   /// addRange - Add an address range to the list of ranges for this unit.
   void addRange(RangeSpan Range);
 
   void attachLowHighPC(DIE &D, const MCSymbol *Begin, const MCSymbol *End);
-
-  /// addSectionLabel - Add a Dwarf section label attribute data and value.
-  ///
-  DIE::value_iterator addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
-                                      const MCSymbol *Label,
-                                      const MCSymbol *Sec);
 
   /// \brief Find DIE for the given subprogram and attach appropriate
   /// DW_AT_low_pc and DW_AT_high_pc attributes. If there are global
@@ -153,10 +181,10 @@ public:
   /// A helper function to create children of a Scope DIE.
   DIE *createScopeChildrenDIE(LexicalScope *Scope,
                               SmallVectorImpl<DIE *> &Children,
-                              unsigned *ChildScopeCount = nullptr);
+                              bool *HasNonScopeChildren = nullptr);
 
   /// \brief Construct a DIE for this subprogram scope.
-  void constructSubprogramScopeDIE(LexicalScope *Scope);
+  void constructSubprogramScopeDIE(const DISubprogram *Sub, LexicalScope *Scope);
 
   DIE *createAndAddScopeChildren(LexicalScope *Scope, DIE &ScopeDIE);
 
@@ -166,35 +194,46 @@ public:
   DIE *constructImportedEntityDIE(const DIImportedEntity *Module);
 
   void finishSubprogramDefinition(const DISubprogram *SP);
-
-  void collectDeadVariables(const DISubprogram *SP);
+  void finishVariableDefinition(const DbgVariable &Var);
+  /// Find abstract variable associated with Var.
+  typedef DbgValueHistoryMap::InlinedVariable InlinedVariable;
+  DbgVariable *getExistingAbstractVariable(InlinedVariable IV,
+                                           const DILocalVariable *&Cleansed);
+  DbgVariable *getExistingAbstractVariable(InlinedVariable IV);
+  void createAbstractVariable(const DILocalVariable *DV, LexicalScope *Scope);
 
   /// Set the skeleton unit associated with this unit.
   void setSkeleton(DwarfCompileUnit &Skel) { Skeleton = &Skel; }
 
-  const MCSymbol *getSectionSym() const {
-    assert(Section);
-    return Section->getBeginSymbol();
-  }
-
   unsigned getLength() {
     return sizeof(uint32_t) + // Length field
-        getHeaderSize() + UnitDie.getSize();
+        getHeaderSize() + getUnitDie().getSize();
   }
 
   void emitHeader(bool UseOffsets) override;
 
   MCSymbol *getLabelBegin() const {
-    assert(Section);
+    assert(getSection());
     return LabelBegin;
   }
 
+  MCSymbol *getMacroLabelBegin() const {
+    return MacroLabelBegin;
+  }
+
   /// Add a new global name to the compile unit.
-  void addGlobalName(StringRef Name, DIE &Die, const DIScope *Context) override;
+  void addGlobalName(StringRef Name, const DIE &Die,
+                     const DIScope *Context) override;
+
+  /// Add a new global name present in a type unit to this compile unit.
+  void addGlobalNameForTypeUnit(StringRef Name, const DIScope *Context);
 
   /// Add a new global type to the compile unit.
   void addGlobalType(const DIType *Ty, const DIE &Die,
                      const DIScope *Context) override;
+
+  /// Add a new global type present in a type unit to this compile unit.
+  void addGlobalTypeUnitType(const DIType *Ty, const DIScope *Context);
 
   const StringMap<const DIE *> &getGlobalNames() const { return GlobalNames; }
   const StringMap<const DIE *> &getGlobalTypes() const { return GlobalTypes; }

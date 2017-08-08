@@ -1,4 +1,4 @@
-; RUN: llc -O3 -aarch64-gep-opt=true  -print-after=codegenprepare -mcpu=cortex-a53 < %s >%t 2>&1 && FileCheck <%t %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true  -print-after=codegenprepare -mcpu=cortex-a53 < %s >%t 2>&1 && FileCheck <%t %s
 ; REQUIRES: asserts
 target triple = "aarch64--linux-android"
 
@@ -19,9 +19,9 @@ entry:
 
 do.body.i:
 ; CHECK-LABEL: do.body.i:
-; CHECK:          %uglygep2 = getelementptr i8, i8* %uglygep, i64 %3
-; CHECK-NEXT:     %4 = bitcast i8* %uglygep2 to i32*
-; CHECK-NOT:      %uglygep2 = getelementptr i8, i8* %uglygep, i64 1032
+; CHECK:          %uglygep1 = getelementptr i8, i8* %uglygep, i64 %3
+; CHECK-NEXT:     %4 = bitcast i8* %uglygep1 to i32*
+; CHECK-NOT:      %uglygep1 = getelementptr i8, i8* %uglygep, i64 1032
 
 
   %0 = phi i32 [ 256, %entry ], [ %.be, %do.body.i.backedge ]

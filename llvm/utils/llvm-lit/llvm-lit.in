@@ -39,6 +39,16 @@ if os.path.exists(compilerrt_obj_root):
     builtin_parameters['compilerrt_site_basedir'] = \
             os.path.join(compilerrt_obj_root, 'test')
 
+libcxx_obj_root = os.path.join(llvm_obj_root, 'projects', 'libcxx')
+if os.path.exists(libcxx_obj_root):
+    builtin_parameters['libcxx_site_config'] = \
+        os.path.join(libcxx_obj_root, 'test', 'lit.site.cfg')
+
+libcxxabi_obj_root = os.path.join(llvm_obj_root, 'projects', 'libcxxabi')
+if os.path.exists(libcxxabi_obj_root):
+    builtin_parameters['libcxxabi_site_config'] = \
+        os.path.join(libcxxabi_obj_root, 'test', 'lit.site.cfg')
+
 if __name__=='__main__':
-    import lit
-    lit.main(builtin_parameters)
+    from lit.main import main
+    main(builtin_parameters)

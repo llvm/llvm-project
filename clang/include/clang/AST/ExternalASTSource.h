@@ -16,6 +16,7 @@
 
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/Basic/Module.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace clang {
@@ -149,25 +150,29 @@ public:
     StringRef PCHModuleName;
     StringRef Path;
     StringRef ASTFile;
-    uint64_t Signature = 0;
+    ASTFileSignature Signature;
     const Module *ClangModule = nullptr;
 
   public:
     ASTSourceDescriptor(){};
     ASTSourceDescriptor(StringRef Name, StringRef Path, StringRef ASTFile,
-                        uint64_t Signature)
+                        ASTFileSignature Signature)
         : PCHModuleName(std::move(Name)), Path(std::move(Path)),
           ASTFile(std::move(ASTFile)), Signature(Signature){};
     ASTSourceDescriptor(const Module &M);
     std::string getModuleName() const;
     StringRef getPath() const { return Path; }
     StringRef getASTFile() const { return ASTFile; }
-    uint64_t getSignature() const { return Signature; }
+    ASTFileSignature getSignature() const { return Signature; }
     const Module *getModuleOrNull() const { return ClangModule; }
   };
 
   /// Return a descriptor for the corresponding module, if one exists.
   virtual llvm::Optional<ASTSourceDescriptor> getSourceDescriptor(unsigned ID);
+
+  enum ExtKind { EK_Always, EK_Never, EK_ReplyHazy };
+
+  virtual ExtKind hasExternalDefinitions(const Decl *D);
 
   /// \brief Finds all declarations lexically contained within the given
   /// DeclContext, after applying an optional filter predicate.
@@ -503,8 +508,9 @@ public:
   /// We define this as a wrapping iterator around an int. The
   /// iterator_adaptor_base class forwards the iterator methods to basic integer
   /// arithmetic.
-  class iterator : public llvm::iterator_adaptor_base<
-                       iterator, int, std::random_access_iterator_tag, T, int> {
+  class iterator
+      : public llvm::iterator_adaptor_base<
+            iterator, int, std::random_access_iterator_tag, T, int, T *, T &> {
     LazyVector *Self;
 
     iterator(LazyVector *Self, int Position)

@@ -29,33 +29,49 @@
 #endif
 
 #ifndef TSAN_CONTAINS_UBSAN
-# define TSAN_CONTAINS_UBSAN (CAN_SANITIZE_UB && !defined(SANITIZER_GO))
+# if CAN_SANITIZE_UB && !SANITIZER_GO
+#  define TSAN_CONTAINS_UBSAN 1
+# else
+#  define TSAN_CONTAINS_UBSAN 0
+# endif
 #endif
 
 namespace __tsan {
 
-#ifdef SANITIZER_GO
-const bool kGoMode = true;
-const bool kCppMode = false;
-const char *const kTsanOptionsEnv = "GORACE";
-// Go linker does not support weak symbols.
-#define CPP_WEAK
-#else
-const bool kGoMode = false;
-const bool kCppMode = true;
-const char *const kTsanOptionsEnv = "TSAN_OPTIONS";
-#define CPP_WEAK WEAK
-#endif
+const int kClkBits = 42;
+const unsigned kMaxTidReuse = (1 << (64 - kClkBits)) - 1;
+
+struct ClockElem {
+  u64 epoch  : kClkBits;
+  u64 reused : 64 - kClkBits;  // tid reuse count
+};
+
+struct ClockBlock {
+  static const uptr kSize = 512;
+  static const uptr kTableSize = kSize / sizeof(u32);
+  static const uptr kClockCount = kSize / sizeof(ClockElem);
+  static const uptr kRefIdx = kTableSize - 1;
+  static const uptr kBlockIdx = kTableSize - 2;
+
+  union {
+    u32       table[kTableSize];
+    ClockElem clock[kClockCount];
+  };
+
+  ClockBlock() {
+  }
+};
 
 const int kTidBits = 13;
-const unsigned kMaxTid = 1 << kTidBits;
-#ifndef SANITIZER_GO
+// Reduce kMaxTid by kClockCount because one slot in ClockBlock table is
+// occupied by reference counter, so total number of elements we can store
+// in SyncClock is kClockCount * (kTableSize - 1).
+const unsigned kMaxTid = (1 << kTidBits) - ClockBlock::kClockCount;
+#if !SANITIZER_GO
 const unsigned kMaxTidInClock = kMaxTid * 2;  // This includes msb 'freed' bit.
 #else
 const unsigned kMaxTidInClock = kMaxTid;  // Go does not track freed memory.
 #endif
-const int kClkBits = 42;
-const unsigned kMaxTidReuse = (1 << (64 - kClkBits)) - 1;
 const uptr kShadowStackSize = 64 * 1024;
 
 // Count of shadow values in a shadow cell.
@@ -83,7 +99,7 @@ const bool kCollectHistory = false;
 const bool kCollectHistory = true;
 #endif
 
-const unsigned kInvalidTid = (unsigned)-1;
+const u16 kInvalidTid = kMaxTid + 1;
 
 // The following "build consistency" machinery ensures that all source files
 // are built in the same configuration. Inconsistent builds lead to
@@ -148,6 +164,7 @@ struct MD5Hash {
 
 MD5Hash md5_hash(const void *data, uptr size);
 
+struct Processor;
 struct ThreadState;
 class ThreadContext;
 struct Context;
@@ -157,12 +174,22 @@ class RegionAlloc;
 
 // Descriptor of user's memory block.
 struct MBlock {
-  u64  siz;
+  u64  siz : 48;
+  u64  tag : 16;
   u32  stk;
   u16  tid;
 };
 
 COMPILER_CHECK(sizeof(MBlock) == 16);
+
+enum ExternalTag : uptr {
+  kExternalTagNone = 0,
+  kExternalTagSwiftModifyingAccess = 1,
+  kExternalTagFirstUserAvailable = 2,
+  kExternalTagMax = 1024,
+  // Don't set kExternalTagMax over 65,536, since MBlock only stores tags
+  // as 16-bit values, see tsan_defs.h.
+};
 
 }  // namespace __tsan
 

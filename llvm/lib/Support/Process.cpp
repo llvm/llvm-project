@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/Process.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 
 using namespace llvm;
@@ -72,6 +72,13 @@ static const char colorcodes[2][2][8][10] = {
  { ALLCOLORS("3",""), ALLCOLORS("3","1;") },
  { ALLCOLORS("4",""), ALLCOLORS("4","1;") }
 };
+
+// This is set to true when Process::PreventCoreFiles() is called.
+static bool coreFilesPrevented = false;
+
+bool Process::AreCoreFilesPrevented() {
+  return coreFilesPrevented;
+}
 
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX

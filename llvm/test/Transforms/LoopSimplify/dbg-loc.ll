@@ -23,6 +23,7 @@ entry:
 
 for.body:                                         ; preds = %entry, %length.exit
   %begin.sink5 = phi %"Length"* [ %incdec.ptr, %length.exit ], [ %begin, %entry ]
+  tail call void @llvm.dbg.value(metadata %"Length"* %begin.sink5, metadata !15, metadata !16), !dbg !17
   %m_type.i.i.i = getelementptr inbounds %"Length", %"Length"* %begin.sink5, i64 0, i32 2, !dbg !9
   %0 = load i8, i8* %m_type.i.i.i, align 1, !dbg !9
   %cmp.i.i = icmp eq i8 %0, 9, !dbg !7
@@ -68,11 +69,15 @@ eh.resume:                                        ; preds = %catch
   resume { i8*, i32 } undef, !dbg !13
 }
 
+; Function Attrs: nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata)
+
 ; CHECK-DAG: [[PREHEADER_LOC]] = !DILocation(line: 73, column: 27, scope: !{{[0-9]+}})
 ; CHECK-DAG: [[LOOPEXIT_LOC]] = !DILocation(line: 75, column: 9, scope: !{{[0-9]+}})
 ; CHECK-DAG: [[LPAD_PREHEADER_LOC]] = !DILocation(line: 85, column: 1, scope: !{{[0-9]+}})
 
 !llvm.module.flags = !{!0, !1, !2}
+!llvm.dbg.cu = !{!14}
 !0 = !{i32 2, !"Dwarf Version", i32 4}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 !2 = !{i32 1, !"PIC Level", i32 2}
@@ -80,7 +85,7 @@ eh.resume:                                        ; preds = %catch
 !3 = !{}
 !4 = !DISubroutineType(types: !3)
 !5 = !DIFile(filename: "Vector.h", directory: "/tmp")
-!6 = distinct !DISubprogram(name: "destruct", scope: !5, file: !5, line: 71, type: !4, isLocal: false, isDefinition: true, scopeLine: 72, flags: DIFlagPrototyped, isOptimized: false, variables: !3)
+!6 = distinct !DISubprogram(name: "destruct", scope: !5, file: !5, line: 71, type: !4, isLocal: false, isDefinition: true, scopeLine: 72, flags: DIFlagPrototyped, isOptimized: false, unit: !14, variables: !3)
 !7 = !DILocation(line: 73, column: 38, scope: !6)
 !8 = !DILocation(line: 73, column: 13, scope: !6)
 !9 = !DILocation(line: 73, column: 27, scope: !6)
@@ -88,3 +93,10 @@ eh.resume:                                        ; preds = %catch
 !11 = !DILocation(line: 73, column: 46, scope: !6)
 !12 = !DILocation(line: 75, column: 9, scope: !6)
 !13 = !DILocation(line: 85, column: 1, scope: !6)
+!14 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
+                             file: !5,
+                             isOptimized: true, flags: "-O2",
+                             splitDebugFilename: "abc.debug", emissionKind: 2)
+!15 = !DILocalVariable(name: "begin", arg: 1, scope: !6, file: !5, line: 71)
+!16 = !DIExpression()
+!17 = !DILocation(line: 71, column: 32, scope: !6)

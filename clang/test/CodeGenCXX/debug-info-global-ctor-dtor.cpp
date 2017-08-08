@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -debug-info-kind=limited -triple %itanium_abi_triple -fno-use-cxa-atexit -S -emit-llvm -o - \
+// RUN: %clang_cc1 %s -debug-info-kind=limited -triple %itanium_abi_triple -fno-use-cxa-atexit -S -disable-O0-optnone  -emit-llvm -o - \
 // RUN:     | FileCheck %s --check-prefix=CHECK-NOKEXT
-// RUN: %clang_cc1 %s -debug-info-kind=limited -triple %itanium_abi_triple -fno-use-cxa-atexit -fapple-kext -S -emit-llvm -o - \
+// RUN: %clang_cc1 %s -debug-info-kind=limited -triple %itanium_abi_triple -fno-use-cxa-atexit -fapple-kext -S -disable-O0-optnone -emit-llvm -o - \
 // RUN:     | FileCheck %s --check-prefix=CHECK-KEXT
 
 class A {

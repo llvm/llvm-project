@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++98 -verify -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify -triple x86_64-apple-darwin %s
 enum E { // expected-note{{previous definition is here}}
   Val1,
   Val2
@@ -88,10 +89,24 @@ typedef enum { }; // expected-warning{{typedef requires a name}}
 
 // PR7921
 enum PR7921E {
-    PR7921V = (PR7921E)(123) // expected-error {{expression is not an integral constant expression}}
+    PR7921V = (PR7921E)(123)
+#if __cplusplus < 201103L
+// expected-error@-2 {{expression is not an integral constant expression}}
+#else
+// expected-error@-4 {{must have integral or unscoped enumeration type}}
+// FIXME: The above diagnostic isn't very good; we should instead complain about the type being incomplete.
+#endif
 };
 
 void PR8089() {
   enum E; // expected-error{{ISO C++ forbids forward references to 'enum' types}}
   int a = (E)3; // expected-error{{cannot initialize a variable of type 'int' with an rvalue of type 'E'}}
 }
+
+// This is accepted as a GNU extension. In C++98, there was no provision for
+// expressions with UB to be non-constant.
+enum { overflow = 123456 * 234567 };
+#if __cplusplus >= 201103L
+// expected-warning@-2 {{not an integral constant expression}}
+// expected-note@-3 {{value 28958703552 is outside the range of representable values}}
+#endif

@@ -1,3 +1,16 @@
+
+# Create sphinx target
+if (LLVM_ENABLE_SPHINX)
+  message(STATUS "Sphinx enabled.")
+  find_package(Sphinx REQUIRED)
+  if (LLVM_BUILD_DOCS AND NOT TARGET sphinx)
+    add_custom_target(sphinx ALL)
+  endif()
+else()
+  message(STATUS "Sphinx disabled.")
+endif()
+
+
 # Handy function for creating the different Sphinx targets.
 #
 # ``builder`` should be one of the supported builders used by
@@ -6,7 +19,7 @@
 # ``project`` should be the project name
 function (add_sphinx_target builder project)
   set(SPHINX_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/${builder}")
-  set(SPHINX_DOC_TREE_DIR "${CMAKE_CURRENT_BINARY_DIR}/_doctrees")
+  set(SPHINX_DOC_TREE_DIR "${CMAKE_CURRENT_BINARY_DIR}/_doctrees-${builder}")
   set(SPHINX_TARGET_NAME docs-${project}-${builder})
 
   if (SPHINX_WARNINGS_AS_ERRORS)
@@ -48,13 +61,27 @@ function (add_sphinx_target builder project)
     # Handle installation
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
       if (builder STREQUAL man)
+        if (CMAKE_INSTALL_MANDIR)
+          set(INSTALL_MANDIR ${CMAKE_INSTALL_MANDIR}/)
+        else()
+          set(INSTALL_MANDIR share/man/)
+        endif()
         # FIXME: We might not ship all the tools that these man pages describe
         install(DIRECTORY "${SPHINX_BUILD_DIR}/" # Slash indicates contents of
-                DESTINATION share/man/man1)
+                COMPONENT "${project}-sphinx-man"
+                DESTINATION ${INSTALL_MANDIR}man1)
 
       elseif (builder STREQUAL html)
-        install(DIRECTORY "${SPHINX_BUILD_DIR}"
-                DESTINATION "share/doc/${project}")
+        string(TOUPPER "${project}" project_upper)
+        set(${project_upper}_INSTALL_SPHINX_HTML_DIR "share/doc/${project}/html"
+            CACHE STRING "HTML documentation install directory for ${project}")
+
+        # '/.' indicates: copy the contents of the directory directly into
+        # the specified destination, without recreating the last component
+        # of ${SPHINX_BUILD_DIR} implicitly.
+        install(DIRECTORY "${SPHINX_BUILD_DIR}/."
+                COMPONENT "${project}-sphinx-html"
+                DESTINATION "${${project_upper}_INSTALL_SPHINX_HTML_DIR}")
       else()
         message(WARNING Installation of ${builder} not supported)
       endif()

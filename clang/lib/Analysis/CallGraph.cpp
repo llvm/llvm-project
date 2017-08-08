@@ -55,13 +55,14 @@ public:
   void addCalledDecl(Decl *D) {
     if (G->includeInGraph(D)) {
       CallGraphNode *CalleeNode = G->getOrInsertNode(D);
-      CallerNode->addCallee(CalleeNode, G);
+      CallerNode->addCallee(CalleeNode);
     }
   }
 
   void VisitCallExpr(CallExpr *CE) {
     if (Decl *D = getDeclFromCall(CE))
       addCalledDecl(D);
+    VisitChildren(CE);
   }
 
   // Adds may-call edges for the ObjC message sends.
@@ -104,9 +105,7 @@ CallGraph::CallGraph() {
   Root = getOrInsertNode(nullptr);
 }
 
-CallGraph::~CallGraph() {
-  llvm::DeleteContainerSeconds(FunctionMap);
-}
+CallGraph::~CallGraph() {}
 
 bool CallGraph::includeInGraph(const Decl *D) {
   assert(D);
@@ -142,22 +141,22 @@ void CallGraph::addNodeForDecl(Decl* D, bool IsGlobal) {
 CallGraphNode *CallGraph::getNode(const Decl *F) const {
   FunctionMapTy::const_iterator I = FunctionMap.find(F);
   if (I == FunctionMap.end()) return nullptr;
-  return I->second;
+  return I->second.get();
 }
 
 CallGraphNode *CallGraph::getOrInsertNode(Decl *F) {
   if (F && !isa<ObjCMethodDecl>(F))
     F = F->getCanonicalDecl();
 
-  CallGraphNode *&Node = FunctionMap[F];
+  std::unique_ptr<CallGraphNode> &Node = FunctionMap[F];
   if (Node)
-    return Node;
+    return Node.get();
 
-  Node = new CallGraphNode(F);
+  Node = llvm::make_unique<CallGraphNode>(F);
   // Make Root node a parent of all functions to make sure all are reachable.
   if (F)
-    Root->addCallee(Node, this);
-  return Node;
+    Root->addCallee(Node.get());
+  return Node.get();
 }
 
 void CallGraph::print(raw_ostream &OS) const {
@@ -188,7 +187,7 @@ void CallGraph::print(raw_ostream &OS) const {
   OS.flush();
 }
 
-void CallGraph::dump() const {
+LLVM_DUMP_METHOD void CallGraph::dump() const {
   print(llvm::errs());
 }
 
@@ -202,7 +201,7 @@ void CallGraphNode::print(raw_ostream &os) const {
   os << "< >";
 }
 
-void CallGraphNode::dump() const {
+LLVM_DUMP_METHOD void CallGraphNode::dump() const {
   print(llvm::errs());
 }
 

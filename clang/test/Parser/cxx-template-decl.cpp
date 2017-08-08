@@ -238,3 +238,13 @@ struct t2 : base<int,
 // expected-error@-1 {{expected '{' after base class list}}
 
 }
+
+namespace class_scope_instantiation {
+  struct A {
+    template<typename T> void f(T);
+    template void f<int>(int); // expected-error {{expected '<' after 'template'}}
+    template void f(float); // expected-error {{expected '<' after 'template'}}
+    extern template // expected-error {{expected member name or ';'}}
+      void f(double);
+  };
+}

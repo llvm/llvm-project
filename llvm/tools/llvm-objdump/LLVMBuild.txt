@@ -19,4 +19,4 @@
 type = Tool
 name = llvm-objdump
 parent = Tools
-required_libraries = DebugInfoDWARF MC MCDisassembler MCParser Object all-targets
+required_libraries = DebugInfoDWARF MC MCDisassembler MCParser Object all-targets Demangle

@@ -1,5 +1,5 @@
 // RUN: %clangxx -fsanitize=integer -fsanitize-recover=integer %s -o %t
-// RUN: not %t 2>&1 | FileCheck %s
+// RUN: not %run %t 2>&1 | FileCheck %s
 
 // __ubsan_default_options() doesn't work on Darwin.
 // XFAIL: darwin

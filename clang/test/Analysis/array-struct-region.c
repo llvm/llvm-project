@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core,debug.ExprInspection -analyzer-constraints=range -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
 

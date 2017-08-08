@@ -18,7 +18,7 @@ entry:
 
 define <4 x i32> @test_vmull_high_n_s16_imm(<8 x i16> %a) #0 {
 ; CHECK-LABEL: test_vmull_high_n_s16_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #29
 ; CHECK-NEXT: smull2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, [[REPLICATE]].8h
 ; CHECK-NEXT: ret
 entry:
@@ -42,7 +42,7 @@ entry:
 
 define <2 x i64> @test_vmull_high_n_s32_imm(<4 x i32> %a) #0 {
 ; CHECK-LABEL: test_vmull_high_n_s32_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #0x1, msl #8
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #1, msl #8
 ; CHECK-NEXT: smull2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, [[REPLICATE]].4s
 ; CHECK-NEXT: ret
 entry:
@@ -68,7 +68,7 @@ entry:
 
 define <4 x i32> @test_vmull_high_n_u16_imm(<8 x i16> %a) #0 {
 ; CHECK-LABEL: test_vmull_high_n_u16_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #0x11, lsl #8
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #17, lsl #8
 ; CHECK-NEXT: umull2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, [[REPLICATE]].8h
 ; CHECK-NEXT: ret
 entry:
@@ -92,7 +92,7 @@ entry:
 
 define <2 x i64> @test_vmull_high_n_u32_imm(<4 x i32> %a) #0 {
 ; CHECK-LABEL: test_vmull_high_n_u32_imm:
-; CHECK-NEXT: mvni [[REPLICATE:v[0-9]+]].4s, #0x1, msl #8
+; CHECK-NEXT: mvni [[REPLICATE:v[0-9]+]].4s, #1, msl #8
 ; CHECK-NEXT: umull2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, [[REPLICATE]].4s
 ; CHECK-NEXT: ret
 entry:
@@ -118,7 +118,7 @@ entry:
 
 define <4 x i32> @test_vqdmull_high_n_s16_imm(<8 x i16> %a) #0 {
 ; CHECK-LABEL: test_vqdmull_high_n_s16_imm:
-; CHECK-NEXT: mvni [[REPLICATE:v[0-9]+]].8h, #0x11, lsl #8
+; CHECK-NEXT: mvni [[REPLICATE:v[0-9]+]].8h, #17, lsl #8
 ; CHECK-NEXT: sqdmull2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, [[REPLICATE]].8h
 ; CHECK-NEXT: ret
 entry:
@@ -142,7 +142,7 @@ entry:
 
 define <2 x i64> @test_vqdmull_high_n_s32_imm(<4 x i32> %a) #0 {
 ; CHECK-LABEL: test_vqdmull_high_n_s32_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #29
 ; CHECK-NEXT: sqdmull2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, [[REPLICATE]].4s
 ; CHECK-NEXT: ret
 entry:
@@ -169,7 +169,7 @@ entry:
 
 define <4 x i32> @test_vmlal_high_n_s16_imm(<4 x i32> %a, <8 x i16> %b) #0 {
 ; CHECK-LABEL: test_vmlal_high_n_s16_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #29
 ; CHECK-NEXT: smlal2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, [[REPLICATE]].8h
 ; CHECK-NEXT: ret
 entry:
@@ -195,7 +195,7 @@ entry:
 
 define <2 x i64> @test_vmlal_high_n_s32_imm(<2 x i64> %a, <4 x i32> %b) #0 {
 ; CHECK-LABEL: test_vmlal_high_n_s32_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #29
 ; CHECK-NEXT: smlal2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, [[REPLICATE]].4s
 ; CHECK-NEXT: ret
 entry:
@@ -223,7 +223,7 @@ entry:
 
 define <4 x i32> @test_vmlal_high_n_u16_imm(<4 x i32> %a, <8 x i16> %b) #0 {
 ; CHECK-LABEL: test_vmlal_high_n_u16_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #29
 ; CHECK-NEXT: umlal2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, [[REPLICATE]].8h
 ; CHECK-NEXT: ret
 entry:
@@ -249,7 +249,7 @@ entry:
 
 define <2 x i64> @test_vmlal_high_n_u32_imm(<2 x i64> %a, <4 x i32> %b) #0 {
 ; CHECK-LABEL: test_vmlal_high_n_u32_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #29
 ; CHECK-NEXT: umlal2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, [[REPLICATE]].4s
 ; CHECK-NEXT: ret
 entry:
@@ -277,7 +277,7 @@ entry:
 
 define <4 x i32> @test_vqdmlal_high_n_s16_imm(<4 x i32> %a, <8 x i16> %b) #0 {
 ; CHECK-LABEL: test_vqdmlal_high_n_s16_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #29
 ; CHECK-NEXT: sqdmlal2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, [[REPLICATE]].8h
 ; CHECK-NEXT: ret
 entry:
@@ -303,7 +303,7 @@ entry:
 
 define <2 x i64> @test_vqdmlal_high_n_s32_imm(<2 x i64> %a, <4 x i32> %b) #0 {
 ; CHECK-LABEL: test_vqdmlal_high_n_s32_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #29
 ; CHECK-NEXT: sqdmlal2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, [[REPLICATE]].4s
 ; CHECK-NEXT: ret
 entry:
@@ -331,7 +331,7 @@ entry:
 
 define <4 x i32> @test_vmlsl_high_n_s16_imm(<4 x i32> %a, <8 x i16> %b) #0 {
 ; CHECK-LABEL: test_vmlsl_high_n_s16_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #29
 ; CHECK-NEXT: smlsl2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, [[REPLICATE]].8h
 ; CHECK-NEXT: ret
 entry:
@@ -357,7 +357,7 @@ entry:
 
 define <2 x i64> @test_vmlsl_high_n_s32_imm(<2 x i64> %a, <4 x i32> %b) #0 {
 ; CHECK-LABEL: test_vmlsl_high_n_s32_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #29
 ; CHECK-NEXT: smlsl2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, [[REPLICATE]].4s
 ; CHECK-NEXT: ret
 entry:
@@ -385,7 +385,7 @@ entry:
 
 define <4 x i32> @test_vmlsl_high_n_u16_imm(<4 x i32> %a, <8 x i16> %b) #0 {
 ; CHECK-LABEL: test_vmlsl_high_n_u16_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #29
 ; CHECK-NEXT: umlsl2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, [[REPLICATE]].8h
 ; CHECK-NEXT: ret
 entry:
@@ -411,7 +411,7 @@ entry:
 
 define <2 x i64> @test_vmlsl_high_n_u32_imm(<2 x i64> %a, <4 x i32> %b) #0 {
 ; CHECK-LABEL: test_vmlsl_high_n_u32_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #29
 ; CHECK-NEXT: umlsl2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, [[REPLICATE]].4s
 ; CHECK-NEXT: ret
 entry:
@@ -439,7 +439,7 @@ entry:
 
 define <4 x i32> @test_vqdmlsl_high_n_s16_imm(<4 x i32> %a, <8 x i16> %b) #0 {
 ; CHECK-LABEL: test_vqdmlsl_high_n_s16_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].8h, #29
 ; CHECK-NEXT: sqdmlsl2 {{v[0-9]+}}.4s, {{v[0-9]+}}.8h, [[REPLICATE]].8h
 ; CHECK-NEXT: ret
 entry:
@@ -465,7 +465,7 @@ entry:
 
 define <2 x i64> @test_vqdmlsl_high_n_s32_imm(<2 x i64> %a, <4 x i32> %b) #0 {
 ; CHECK-LABEL: test_vqdmlsl_high_n_s32_imm:
-; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #0x1d
+; CHECK-NEXT: movi [[REPLICATE:v[0-9]+]].4s, #29
 ; CHECK-NEXT: sqdmlsl2 {{v[0-9]+}}.2d, {{v[0-9]+}}.4s, [[REPLICATE]].4s
 ; CHECK-NEXT: ret
 entry:

@@ -73,10 +73,10 @@ bar:
 # OBJ: Other: 0
 
 # OBJ: Name: f_mm_insn_data
-# OBJ: Other: 128
+# OBJ: Other [ (0x80)
 
 # OBJ: Name: f_mm_insn_instr
-# OBJ: Other: 128
+# OBJ: Other [ (0x80)
 
 # OBJ: Name: f_normal_insn_data
 # OBJ: Other: 0
@@ -85,10 +85,10 @@ bar:
 # OBJ: Other: 0
 
 # OBJ: Name: o_mm_insn_data
-# OBJ: Other: 128
+# OBJ: Other [ (0x80)
 
 # OBJ: Name: o_mm_insn_instr
-# OBJ: Other: 128
+# OBJ: Other [ (0x80)
 
 # OBJ: Name: o_normal_insn_data
 # OBJ: Other: 0

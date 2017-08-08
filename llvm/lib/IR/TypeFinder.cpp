@@ -1,4 +1,4 @@
-//===-- TypeFinder.cpp - Implement the TypeFinder class -------------------===//
+//===- TypeFinder.cpp - Implement the TypeFinder class --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,10 +14,19 @@
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include <utility>
+
 using namespace llvm;
 
 void TypeFinder::run(const Module &M, bool onlyNamed) {
@@ -41,29 +50,19 @@ void TypeFinder::run(const Module &M, bool onlyNamed) {
 
   // Get types from functions.
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDForInst;
-  for (Module::const_iterator FI = M.begin(), E = M.end(); FI != E; ++FI) {
-    incorporateType(FI->getType());
+  for (const Function &FI : M) {
+    incorporateType(FI.getType());
 
-    if (FI->hasPrefixData())
-      incorporateValue(FI->getPrefixData());
-
-    if (FI->hasPrologueData())
-      incorporateValue(FI->getPrologueData());
-
-    if (FI->hasPersonalityFn())
-      incorporateValue(FI->getPersonalityFn());
+    for (const Use &U : FI.operands())
+      incorporateValue(U.get());
 
     // First incorporate the arguments.
-    for (Function::const_arg_iterator AI = FI->arg_begin(),
-           AE = FI->arg_end(); AI != AE; ++AI)
+    for (Function::const_arg_iterator AI = FI.arg_begin(), AE = FI.arg_end();
+         AI != AE; ++AI)
       incorporateValue(&*AI);
 
-    for (Function::const_iterator BB = FI->begin(), E = FI->end();
-         BB != E;++BB)
-      for (BasicBlock::const_iterator II = BB->begin(),
-             E = BB->end(); II != E; ++II) {
-        const Instruction &I = *II;
-
+    for (const BasicBlock &BB : FI)
+      for (const Instruction &I : BB) {
         // Incorporate the type of the instruction.
         incorporateType(I.getType());
 

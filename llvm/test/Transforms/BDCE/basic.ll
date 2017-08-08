@@ -136,6 +136,44 @@ entry:
 declare i32 @llvm.bswap.i32(i32) #0
 
 ; Function Attrs: nounwind readnone
+define signext i32 @tim(i32 signext %x) #0 {
+entry:
+  %call = tail call signext i32 @foo(i32 signext 5) #0
+  %and = and i32 %call, 536870912
+  %or = or i32 %and, %x
+  %call1 = tail call signext i32 @foo(i32 signext 3) #0
+  %and2 = and i32 %call1, 1073741824
+  %or3 = or i32 %or, %and2
+  %call4 = tail call signext i32 @foo(i32 signext 2) #0
+  %and5 = and i32 %call4, 16
+  %or6 = or i32 %or3, %and5
+  %call7 = tail call signext i32 @foo(i32 signext 1) #0
+  %and8 = and i32 %call7, 32
+  %or9 = or i32 %or6, %and8
+  %call10 = tail call signext i32 @foo(i32 signext 0) #0
+  %and11 = and i32 %call10, 64
+  %or12 = or i32 %or9, %and11
+  %call13 = tail call signext i32 @foo(i32 signext 4) #0
+  %and14 = and i32 %call13, 128
+  %or15 = or i32 %or12, %and14
+  %bs = tail call i32 @llvm.bitreverse.i32(i32 %or15) #0
+  %shr = ashr i32 %bs, 4
+  ret i32 %shr
+
+; CHECK-LABEL: @tim
+; CHECK-NOT: tail call signext i32 @foo(i32 signext 5)
+; CHECK-NOT: tail call signext i32 @foo(i32 signext 3)
+; CHECK: tail call signext i32 @foo(i32 signext 2)
+; CHECK: tail call signext i32 @foo(i32 signext 1)
+; CHECK: tail call signext i32 @foo(i32 signext 0)
+; CHECK: tail call signext i32 @foo(i32 signext 4)
+; CHECK: ret i32
+}
+
+; Function Attrs: nounwind readnone
+declare i32 @llvm.bitreverse.i32(i32) #0
+
+; Function Attrs: nounwind readnone
 define signext i32 @tar2(i32 signext %x) #0 {
 entry:
   %call = tail call signext i32 @foo(i32 signext 5) #0

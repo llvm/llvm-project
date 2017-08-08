@@ -6,8 +6,6 @@
 using namespace clang;
 using namespace clang::tooling;
 
-extern "C" {
-
 // FIXME: do something more useful with the error message
 CXCompilationDatabase
 clang_CompilationDatabase_fromDirectory(const char *BuildDir,
@@ -147,38 +145,23 @@ clang_CompileCommand_getArg(CXCompileCommand CCmd, unsigned Arg)
 unsigned
 clang_CompileCommand_getNumMappedSources(CXCompileCommand CCmd)
 {
-  if (!CCmd)
-    return 0;
-
-  return static_cast<CompileCommand *>(CCmd)->MappedSources.size();
+  // Left here for backward compatibility. No mapped sources exists in the C++
+  // backend anymore.
+  return 0;
 }
 
 CXString
 clang_CompileCommand_getMappedSourcePath(CXCompileCommand CCmd, unsigned I)
 {
-  if (!CCmd)
-    return cxstring::createNull();
-
-  CompileCommand *Cmd = static_cast<CompileCommand *>(CCmd);
-
-  if (I >= Cmd->MappedSources.size())
-    return cxstring::createNull();
-
-  return cxstring::createRef(Cmd->MappedSources[I].first.c_str());
+  // Left here for backward compatibility. No mapped sources exists in the C++
+  // backend anymore.
+  return cxstring::createNull();
 }
 
 CXString
 clang_CompileCommand_getMappedSourceContent(CXCompileCommand CCmd, unsigned I)
 {
-  if (!CCmd)
-    return cxstring::createNull();
-
-  CompileCommand *Cmd = static_cast<CompileCommand *>(CCmd);
-
-  if (I >= Cmd->MappedSources.size())
-    return cxstring::createNull();
-
-  return cxstring::createRef(Cmd->MappedSources[I].second.c_str());
+  // Left here for backward compatibility. No mapped sources exists in the C++
+  // backend anymore.
+  return cxstring::createNull();
 }
-
-} // end: extern "C"

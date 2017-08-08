@@ -7,90 +7,32 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Processor and feature definitions.
+// Processor definitions.
+//
+// For compatibility with other compilers on the platform, each model can
+// be identifed either by the system name (e.g. z10) or the level of the
+// architecture the model supports, as identified by the edition level
+// of the z/Architecture Principles of Operation document (e.g. arch8).
+//
+// The minimum architecture level supported by LLVM is as defined in
+// the Eighth Edition of the PoP (i.e. as implemented on z10).
 //
 //===----------------------------------------------------------------------===//
 
-class SystemZFeature<string extname, string intname, string desc>
-  : Predicate<"Subtarget->has"##intname##"()">,
-    AssemblerPredicate<"Feature"##intname, extname>,
-    SubtargetFeature<extname, "Has"##intname, "true", desc>;
+def : ProcessorModel<"generic", NoSchedModel, []>;
 
-class SystemZMissingFeature<string intname>
-  : Predicate<"!Subtarget->has"##intname##"()">;
+def : ProcessorModel<"arch8", NoSchedModel, Arch8SupportedFeatures.List>;
+def : ProcessorModel<"z10", NoSchedModel, Arch8SupportedFeatures.List>;
 
-def FeatureDistinctOps : SystemZFeature<
-  "distinct-ops", "DistinctOps",
-  "Assume that the distinct-operands facility is installed"
->;
+def : ProcessorModel<"arch9", Z196Model, Arch9SupportedFeatures.List>;
+def : ProcessorModel<"z196", Z196Model, Arch9SupportedFeatures.List>;
 
-def FeatureLoadStoreOnCond : SystemZFeature<
-  "load-store-on-cond", "LoadStoreOnCond",
-  "Assume that the load/store-on-condition facility is installed"
->;
+def : ProcessorModel<"arch10", ZEC12Model, Arch10SupportedFeatures.List>;
+def : ProcessorModel<"zEC12", ZEC12Model, Arch10SupportedFeatures.List>;
 
-def FeatureHighWord : SystemZFeature<
-  "high-word", "HighWord",
-  "Assume that the high-word facility is installed"
->;
+def : ProcessorModel<"arch11", Z13Model, Arch11SupportedFeatures.List>;
+def : ProcessorModel<"z13", Z13Model, Arch11SupportedFeatures.List>;
 
-def FeatureFPExtension : SystemZFeature<
-  "fp-extension", "FPExtension",
-  "Assume that the floating-point extension facility is installed"
->;
+def : ProcessorModel<"arch12", Z14Model, Arch12SupportedFeatures.List>;
+def : ProcessorModel<"z14", Z14Model, Arch12SupportedFeatures.List>;
 
-def FeaturePopulationCount : SystemZFeature<
-  "population-count", "PopulationCount",
-  "Assume that the population-count facility is installed"
->;
-
-def FeatureFastSerialization : SystemZFeature<
-  "fast-serialization", "FastSerialization",
-  "Assume that the fast-serialization facility is installed"
->;
-
-def FeatureInterlockedAccess1 : SystemZFeature<
-  "interlocked-access1", "InterlockedAccess1",
-  "Assume that interlocked-access facility 1 is installed"
->;
-def FeatureNoInterlockedAccess1 : SystemZMissingFeature<"InterlockedAccess1">;
-
-def FeatureMiscellaneousExtensions : SystemZFeature<
-  "miscellaneous-extensions", "MiscellaneousExtensions",
-  "Assume that the miscellaneous-extensions facility is installed"
->;
-
-def FeatureTransactionalExecution : SystemZFeature<
-  "transactional-execution", "TransactionalExecution",
-  "Assume that the transactional-execution facility is installed"
->;
-
-def FeatureProcessorAssist : SystemZFeature<
-  "processor-assist", "ProcessorAssist",
-  "Assume that the processor-assist facility is installed"
->;
-
-def FeatureVector : SystemZFeature<
-  "vector", "Vector",
-  "Assume that the vectory facility is installed"
->;
-def FeatureNoVector : SystemZMissingFeature<"Vector">;
-
-def : Processor<"generic", NoItineraries, []>;
-def : Processor<"z10", NoItineraries, []>;
-def : Processor<"z196", NoItineraries,
-                [FeatureDistinctOps, FeatureLoadStoreOnCond, FeatureHighWord,
-                 FeatureFPExtension, FeaturePopulationCount,
-                 FeatureFastSerialization, FeatureInterlockedAccess1]>;
-def : Processor<"zEC12", NoItineraries,
-                [FeatureDistinctOps, FeatureLoadStoreOnCond, FeatureHighWord,
-                 FeatureFPExtension, FeaturePopulationCount,
-                 FeatureFastSerialization, FeatureInterlockedAccess1,
-                 FeatureMiscellaneousExtensions,
-                 FeatureTransactionalExecution, FeatureProcessorAssist]>;
-def : Processor<"z13", NoItineraries,
-                [FeatureDistinctOps, FeatureLoadStoreOnCond, FeatureHighWord,
-                 FeatureFPExtension, FeaturePopulationCount,
-                 FeatureFastSerialization, FeatureInterlockedAccess1,
-                 FeatureTransactionalExecution, FeatureProcessorAssist,
-                 FeatureVector]>;

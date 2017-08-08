@@ -55,3 +55,10 @@ namespace PR19966 {
     // expected-error@-2 {{constant expression}}
   };
 }
+
+template<typename T> void f(__underlying_type(T));
+template<typename T> void f(__underlying_type(T));
+enum E {};
+void PR26014() { f<E>(0); } // should not yield an ambiguity error.
+
+template<typename ...T> void f(__underlying_type(T) v); // expected-error {{declaration type contains unexpanded parameter pack 'T'}}

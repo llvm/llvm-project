@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-windows | FileCheck %s -check-prefix=CHECK 
+; RUN: llc < %s -mtriple=i686-windows | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s -check-prefix=LINUX64
 
 declare void @param1(i32 %a)
@@ -7,6 +7,7 @@ declare i64 @param2_ret64(i32 %a, i32 %b)
 declare void @param2(i32 %a, i32 %b)
 declare void @param3(i32 %a, i32 %b, i32 %c)
 declare void @param8(i64, i64, i64, i64, i64, i64, i64, i64)
+declare i32 @param8_ret(i64, i64, i64, i64, i64, i64, i64, i64)
 
 
 define void @test() minsize nounwind {
@@ -73,4 +74,14 @@ define void @test_linux64(i32 %size) minsize nounwind {
   %a = alloca i64, i32 %size, align 8
   call void @param8(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8)
   ret void
+}
+
+define i32 @test_linux64_i32(i32 %size) minsize nounwind {
+; LINUX64-LABEL: test_linux64_i32:
+; LINUX64: callq param8_ret
+; LINUX64-NOT: popq %rax
+; LINUX64: retq
+  %a = alloca i64, i32 %size, align 8
+  %r = call i32 @param8_ret(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8)
+  ret i32 %r
 }

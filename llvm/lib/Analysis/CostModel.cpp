@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -89,14 +90,35 @@ CostModelAnalysis::runOnFunction(Function &F) {
  return false;
 }
 
-static bool isReverseVectorMask(SmallVectorImpl<int> &Mask) {
+static bool isReverseVectorMask(ArrayRef<int> Mask) {
   for (unsigned i = 0, MaskSize = Mask.size(); i < MaskSize; ++i)
-    if (Mask[i] > 0 && Mask[i] != (int)(MaskSize - 1 - i))
+    if (Mask[i] >= 0 && Mask[i] != (int)(MaskSize - 1 - i))
       return false;
   return true;
 }
 
-static bool isAlternateVectorMask(SmallVectorImpl<int> &Mask) {
+static bool isSingleSourceVectorMask(ArrayRef<int> Mask) {
+  bool Vec0 = false;
+  bool Vec1 = false;
+  for (unsigned i = 0, NumVecElts = Mask.size(); i < NumVecElts; ++i) {
+    if (Mask[i] >= 0) {
+      if ((unsigned)Mask[i] >= NumVecElts)
+        Vec1 = true;
+      else
+        Vec0 = true;
+    }
+  }
+  return !(Vec0 && Vec1);
+}
+
+static bool isZeroEltBroadcastVectorMask(ArrayRef<int> Mask) {
+  for (unsigned i = 0; i < Mask.size(); ++i)
+    if (Mask[i] > 0)
+      return false;
+  return true;
+}
+
+static bool isAlternateVectorMask(ArrayRef<int> Mask) {
   bool isAlternate = true;
   unsigned MaskSize = Mask.size();
 
@@ -123,7 +145,7 @@ static bool isAlternateVectorMask(SmallVectorImpl<int> &Mask) {
 
 static TargetTransformInfo::OperandValueKind getOperandInfo(Value *V) {
   TargetTransformInfo::OperandValueKind OpInfo =
-    TargetTransformInfo::OK_AnyValue;
+      TargetTransformInfo::OK_AnyValue;
 
   // Check for a splat of a constant or for a non uniform vector of constants.
   if (isa<ConstantVector>(V) || isa<ConstantDataVector>(V)) {
@@ -131,6 +153,12 @@ static TargetTransformInfo::OperandValueKind getOperandInfo(Value *V) {
     if (cast<Constant>(V)->getSplatValue() != nullptr)
       OpInfo = TargetTransformInfo::OK_UniformConstantValue;
   }
+
+  // Check for a splat of a uniform value. This is not loop aware, so return
+  // true only for the obviously uniform cases (argument, globalvalue)
+  const Value *Splat = getSplatValue(V);
+  if (Splat && (isa<Argument>(Splat) || isa<GlobalValue>(Splat)))
+    OpInfo = TargetTransformInfo::OK_UniformValue;
 
   return OpInfo;
 }
@@ -410,31 +438,34 @@ unsigned CostModelAnalysis::getInstructionCost(const Instruction *I) const {
       getOperandInfo(I->getOperand(0));
     TargetTransformInfo::OperandValueKind Op2VK =
       getOperandInfo(I->getOperand(1));
+    SmallVector<const Value*, 2> Operands(I->operand_values()); 
     return TTI->getArithmeticInstrCost(I->getOpcode(), I->getType(), Op1VK,
-                                       Op2VK);
+                                       Op2VK, TargetTransformInfo::OP_None, 
+                                       TargetTransformInfo::OP_None, 
+                                       Operands);
   }
   case Instruction::Select: {
     const SelectInst *SI = cast<SelectInst>(I);
     Type *CondTy = SI->getCondition()->getType();
-    return TTI->getCmpSelInstrCost(I->getOpcode(), I->getType(), CondTy);
+    return TTI->getCmpSelInstrCost(I->getOpcode(), I->getType(), CondTy, I);
   }
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Type *ValTy = I->getOperand(0)->getType();
-    return TTI->getCmpSelInstrCost(I->getOpcode(), ValTy);
+    return TTI->getCmpSelInstrCost(I->getOpcode(), ValTy, I->getType(), I);
   }
   case Instruction::Store: {
     const StoreInst *SI = cast<StoreInst>(I);
     Type *ValTy = SI->getValueOperand()->getType();
     return TTI->getMemoryOpCost(I->getOpcode(), ValTy,
-                                 SI->getAlignment(),
-                                 SI->getPointerAddressSpace());
+                                SI->getAlignment(),
+                                SI->getPointerAddressSpace(), I);
   }
   case Instruction::Load: {
     const LoadInst *LI = cast<LoadInst>(I);
     return TTI->getMemoryOpCost(I->getOpcode(), I->getType(),
-                                 LI->getAlignment(),
-                                 LI->getPointerAddressSpace());
+                                LI->getAlignment(),
+                                LI->getPointerAddressSpace(), I);
   }
   case Instruction::ZExt:
   case Instruction::SExt:
@@ -450,7 +481,7 @@ unsigned CostModelAnalysis::getInstructionCost(const Instruction *I) const {
   case Instruction::BitCast:
   case Instruction::AddrSpaceCast: {
     Type *SrcTy = I->getOperand(0)->getType();
-    return TTI->getCastInstrCost(I->getOpcode(), I->getType(), SrcTy);
+    return TTI->getCastInstrCost(I->getOpcode(), I->getType(), SrcTy, I);
   }
   case Instruction::ExtractElement: {
     const ExtractElementInst * EEI = cast<ExtractElementInst>(I);
@@ -494,18 +525,31 @@ unsigned CostModelAnalysis::getInstructionCost(const Instruction *I) const {
       if (isAlternateVectorMask(Mask))
         return TTI->getShuffleCost(TargetTransformInfo::SK_Alternate,
                                    VecTypOp0, 0, nullptr);
+
+      if (isZeroEltBroadcastVectorMask(Mask))
+        return TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast,
+                                   VecTypOp0, 0, nullptr);
+
+      if (isSingleSourceVectorMask(Mask))
+        return TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                   VecTypOp0, 0, nullptr);
+
+      return TTI->getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
+                                 VecTypOp0, 0, nullptr);
     }
 
     return -1;
   }
   case Instruction::Call:
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-      SmallVector<Type*, 4> Tys;
-      for (unsigned J = 0, JE = II->getNumArgOperands(); J != JE; ++J)
-        Tys.push_back(II->getArgOperand(J)->getType());
+      SmallVector<Value *, 4> Args(II->arg_operands());
+
+      FastMathFlags FMF;
+      if (auto *FPMO = dyn_cast<FPMathOperator>(II))
+        FMF = FPMO->getFastMathFlags();
 
       return TTI->getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(),
-                                        Tys);
+                                        Args, FMF);
     }
     return -1;
   default:
@@ -518,16 +562,15 @@ void CostModelAnalysis::print(raw_ostream &OS, const Module*) const {
   if (!F)
     return;
 
-  for (Function::iterator B = F->begin(), BE = F->end(); B != BE; ++B) {
-    for (BasicBlock::iterator it = B->begin(), e = B->end(); it != e; ++it) {
-      Instruction *Inst = &*it;
-      unsigned Cost = getInstructionCost(Inst);
+  for (BasicBlock &B : *F) {
+    for (Instruction &Inst : B) {
+      unsigned Cost = getInstructionCost(&Inst);
       if (Cost != (unsigned)-1)
         OS << "Cost Model: Found an estimated cost of " << Cost;
       else
         OS << "Cost Model: Unknown cost";
 
-      OS << " for instruction: "<< *Inst << "\n";
+      OS << " for instruction: " << Inst << "\n";
     }
   }
 }

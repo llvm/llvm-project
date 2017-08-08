@@ -4,14 +4,13 @@ char *funk(int format);
 enum Test {A=-1};
 char *funk(enum Test x);
 
-int eli(float b); // expected-note {{previous declaration is here}} \
-// expected-note{{passing argument to parameter 'b' here}}
+int eli(float b); // expected-note {{previous declaration is here}}
 int b(int c) {return 1;}
 
 int foo();
 int foo() {
   int eli(int (int)); // expected-error {{conflicting types for 'eli'}}
-  eli(b); // expected-error{{passing 'int (int)' to parameter of incompatible type 'float'}}
+  eli(b);
   return 0;
 }
 

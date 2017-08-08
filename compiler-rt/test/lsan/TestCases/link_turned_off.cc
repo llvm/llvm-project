@@ -1,8 +1,10 @@
 // Test for disabling LSan at link-time.
 // RUN: LSAN_BASE="use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: LSAN_OPTIONS=$LSAN_BASE %run %t
-// RUN: LSAN_OPTIONS=$LSAN_BASE not %run %t foo 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=$LSAN_BASE %run %t
+// RUN: %env_lsan_opts=$LSAN_BASE not %run %t foo 2>&1 | FileCheck %s
+//
+// UNSUPPORTED: darwin
 
 #include <sanitizer/lsan_interface.h>
 

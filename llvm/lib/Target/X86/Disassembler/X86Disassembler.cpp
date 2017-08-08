@@ -10,14 +10,74 @@
 // This file is part of the X86 Disassembler.
 // It contains code to translate the data produced by the decoder into
 //  MCInsts.
-// Documentation for the disassembler can be found in X86Disassembler.h.
+//
+//
+// The X86 disassembler is a table-driven disassembler for the 16-, 32-, and
+// 64-bit X86 instruction sets.  The main decode sequence for an assembly
+// instruction in this disassembler is:
+//
+// 1. Read the prefix bytes and determine the attributes of the instruction.
+//    These attributes, recorded in enum attributeBits
+//    (X86DisassemblerDecoderCommon.h), form a bitmask.  The table CONTEXTS_SYM
+//    provides a mapping from bitmasks to contexts, which are represented by
+//    enum InstructionContext (ibid.).
+//
+// 2. Read the opcode, and determine what kind of opcode it is.  The
+//    disassembler distinguishes four kinds of opcodes, which are enumerated in
+//    OpcodeType (X86DisassemblerDecoderCommon.h): one-byte (0xnn), two-byte
+//    (0x0f 0xnn), three-byte-38 (0x0f 0x38 0xnn), or three-byte-3a
+//    (0x0f 0x3a 0xnn).  Mandatory prefixes are treated as part of the context.
+//
+// 3. Depending on the opcode type, look in one of four ClassDecision structures
+//    (X86DisassemblerDecoderCommon.h).  Use the opcode class to determine which
+//    OpcodeDecision (ibid.) to look the opcode in.  Look up the opcode, to get
+//    a ModRMDecision (ibid.).
+//
+// 4. Some instructions, such as escape opcodes or extended opcodes, or even
+//    instructions that have ModRM*Reg / ModRM*Mem forms in LLVM, need the
+//    ModR/M byte to complete decode.  The ModRMDecision's type is an entry from
+//    ModRMDecisionType (X86DisassemblerDecoderCommon.h) that indicates if the
+//    ModR/M byte is required and how to interpret it.
+//
+// 5. After resolving the ModRMDecision, the disassembler has a unique ID
+//    of type InstrUID (X86DisassemblerDecoderCommon.h).  Looking this ID up in
+//    INSTRUCTIONS_SYM yields the name of the instruction and the encodings and
+//    meanings of its operands.
+//
+// 6. For each operand, its encoding is an entry from OperandEncoding
+//    (X86DisassemblerDecoderCommon.h) and its type is an entry from
+//    OperandType (ibid.).  The encoding indicates how to read it from the
+//    instruction; the type indicates how to interpret the value once it has
+//    been read.  For example, a register operand could be stored in the R/M
+//    field of the ModR/M byte, the REG field of the ModR/M byte, or added to
+//    the main opcode.  This is orthogonal from its meaning (an GPR or an XMM
+//    register, for instance).  Given this information, the operands can be
+//    extracted and interpreted.
+//
+// 7. As the last step, the disassembler translates the instruction information
+//    and operands into a format understandable by the client - in this case, an
+//    MCInst for use by the MC infrastructure.
+//
+// The disassembler is broken broadly into two parts: the table emitter that
+// emits the instruction decode tables discussed above during compilation, and
+// the disassembler itself.  The table emitter is documented in more detail in
+// utils/TableGen/X86DisassemblerEmitter.h.
+//
+// X86Disassembler.cpp contains the code responsible for step 7, and for
+//   invoking the decoder to execute steps 1-6.
+// X86DisassemblerDecoderCommon.h contains the definitions needed by both the
+//   table emitter and the disassembler.
+// X86DisassemblerDecoder.h contains the public interface of the decoder,
+//   factored out into C for possible use by other projects.
+// X86DisassemblerDecoder.c contains the source code of the decoder, which is
+//   responsible for steps 1-6.
 //
 //===----------------------------------------------------------------------===//
 
-#include "X86Disassembler.h"
+#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86DisassemblerDecoder.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -31,19 +91,12 @@ using namespace llvm::X86Disassembler;
 
 #define DEBUG_TYPE "x86-disassembler"
 
-#define GET_REGINFO_ENUM
-#include "X86GenRegisterInfo.inc"
-#define GET_INSTRINFO_ENUM
-#include "X86GenInstrInfo.inc"
-#define GET_SUBTARGETINFO_ENUM
-#include "X86GenSubtargetInfo.inc"
-
 void llvm::X86Disassembler::Debug(const char *file, unsigned line,
                                   const char *s) {
   dbgs() << file << ":" << line << ": " << s;
 }
 
-const char *llvm::X86Disassembler::GetInstrName(unsigned Opcode,
+StringRef llvm::X86Disassembler::GetInstrName(unsigned Opcode,
                                                 const void *mii) {
   const MCInstrInfo *MII = static_cast<const MCInstrInfo *>(mii);
   return MII->getName(Opcode);
@@ -67,13 +120,33 @@ namespace X86 {
   };
 }
 
-extern Target TheX86_32Target, TheX86_64Target;
-
 }
 
 static bool translateInstruction(MCInst &target,
                                 InternalInstruction &source,
                                 const MCDisassembler *Dis);
+
+namespace {
+
+/// Generic disassembler for all X86 platforms. All each platform class should
+/// have to do is subclass the constructor, and provide a different
+/// disassemblerMode value.
+class X86GenericDisassembler : public MCDisassembler {
+  std::unique_ptr<const MCInstrInfo> MII;
+public:
+  X86GenericDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
+                         std::unique_ptr<const MCInstrInfo> MII);
+public:
+  DecodeStatus getInstruction(MCInst &instr, uint64_t &size,
+                              ArrayRef<uint8_t> Bytes, uint64_t Address,
+                              raw_ostream &vStream,
+                              raw_ostream &cStream) const override;
+
+private:
+  DisassemblerMode              fMode;
+};
+
+}
 
 X86GenericDisassembler::X86GenericDisassembler(
                                          const MCSubtargetInfo &STI,
@@ -295,32 +368,49 @@ static void translateImmediate(MCInst &mcInst, uint64_t immediate,
 
   bool isBranch = false;
   uint64_t pcrel = 0;
-  if (type == TYPE_RELv) {
+  if (type == TYPE_REL) {
     isBranch = true;
     pcrel = insn.startLocation +
             insn.immediateOffset + insn.immediateSize;
-    switch (insn.displacementSize) {
+    switch (operand.encoding) {
     default:
       break;
-    case 1:
+    case ENCODING_Iv:
+      switch (insn.displacementSize) {
+      default:
+        break;
+      case 1:
+        if(immediate & 0x80)
+          immediate |= ~(0xffull);
+        break;
+      case 2:
+        if(immediate & 0x8000)
+          immediate |= ~(0xffffull);
+        break;
+      case 4:
+        if(immediate & 0x80000000)
+          immediate |= ~(0xffffffffull);
+        break;
+      case 8:
+        break;
+      }
+      break;
+    case ENCODING_IB:
       if(immediate & 0x80)
         immediate |= ~(0xffull);
       break;
-    case 2:
+    case ENCODING_IW:
       if(immediate & 0x8000)
         immediate |= ~(0xffffull);
       break;
-    case 4:
+    case ENCODING_ID:
       if(immediate & 0x80000000)
         immediate |= ~(0xffffffffull);
-      break;
-    case 8:
       break;
     }
   }
   // By default sign-extend all X86 immediates based on their encoding.
-  else if (type == TYPE_IMM8 || type == TYPE_IMM16 || type == TYPE_IMM32 ||
-           type == TYPE_IMM64 || type == TYPE_IMMv) {
+  else if (type == TYPE_IMM) {
     switch (operand.encoding) {
     default:
       break;
@@ -397,10 +487,20 @@ static void translateImmediate(MCInst &mcInst, uint64_t immediate,
       case X86::VCMPPSZrmi:  NewOpc = X86::VCMPPSZrmi_alt;  break;
       case X86::VCMPPSZrri:  NewOpc = X86::VCMPPSZrri_alt;  break;
       case X86::VCMPPSZrrib: NewOpc = X86::VCMPPSZrrib_alt; break;
-      case X86::VCMPSDZrm:   NewOpc = X86::VCMPSDZrmi_alt;  break;
-      case X86::VCMPSDZrr:   NewOpc = X86::VCMPSDZrri_alt;  break;
-      case X86::VCMPSSZrm:   NewOpc = X86::VCMPSSZrmi_alt;  break;
-      case X86::VCMPSSZrr:   NewOpc = X86::VCMPSSZrri_alt;  break;
+      case X86::VCMPPDZ128rmi:  NewOpc = X86::VCMPPDZ128rmi_alt;  break;
+      case X86::VCMPPDZ128rri:  NewOpc = X86::VCMPPDZ128rri_alt;  break;
+      case X86::VCMPPSZ128rmi:  NewOpc = X86::VCMPPSZ128rmi_alt;  break;
+      case X86::VCMPPSZ128rri:  NewOpc = X86::VCMPPSZ128rri_alt;  break;
+      case X86::VCMPPDZ256rmi:  NewOpc = X86::VCMPPDZ256rmi_alt;  break;
+      case X86::VCMPPDZ256rri:  NewOpc = X86::VCMPPDZ256rri_alt;  break;
+      case X86::VCMPPSZ256rmi:  NewOpc = X86::VCMPPSZ256rmi_alt;  break;
+      case X86::VCMPPSZ256rri:  NewOpc = X86::VCMPPSZ256rri_alt;  break;
+      case X86::VCMPSDZrm_Int:  NewOpc = X86::VCMPSDZrmi_alt;  break;
+      case X86::VCMPSDZrr_Int:  NewOpc = X86::VCMPSDZrri_alt;  break;
+      case X86::VCMPSDZrrb_Int: NewOpc = X86::VCMPSDZrrb_alt;  break;
+      case X86::VCMPSSZrm_Int:  NewOpc = X86::VCMPSSZrmi_alt;  break;
+      case X86::VCMPSSZrr_Int:  NewOpc = X86::VCMPSSZrri_alt;  break;
+      case X86::VCMPSSZrrb_Int: NewOpc = X86::VCMPSSZrrb_alt;  break;
       }
       // Switch opcode to the one that doesn't get special printing.
       mcInst.setOpcode(NewOpc);
@@ -537,38 +637,17 @@ static void translateImmediate(MCInst &mcInst, uint64_t immediate,
   }
 
   switch (type) {
-  case TYPE_XMM32:
-  case TYPE_XMM64:
-  case TYPE_XMM128:
+  case TYPE_XMM:
     mcInst.addOperand(MCOperand::createReg(X86::XMM0 + (immediate >> 4)));
     return;
-  case TYPE_XMM256:
+  case TYPE_YMM:
     mcInst.addOperand(MCOperand::createReg(X86::YMM0 + (immediate >> 4)));
     return;
-  case TYPE_XMM512:
+  case TYPE_ZMM:
     mcInst.addOperand(MCOperand::createReg(X86::ZMM0 + (immediate >> 4)));
     return;
   case TYPE_BNDR:
     mcInst.addOperand(MCOperand::createReg(X86::BND0 + (immediate >> 4)));
-  case TYPE_REL8:
-    isBranch = true;
-    pcrel = insn.startLocation + insn.immediateOffset + insn.immediateSize;
-    if (immediate & 0x80)
-      immediate |= ~(0xffull);
-    break;
-  case TYPE_REL16:
-    isBranch = true;
-    pcrel = insn.startLocation + insn.immediateOffset + insn.immediateSize;
-    if (immediate & 0x8000)
-      immediate |= ~(0xffffull);
-    break;
-  case TYPE_REL32:
-  case TYPE_REL64:
-    isBranch = true;
-    pcrel = insn.startLocation + insn.immediateOffset + insn.immediateSize;
-    if(immediate & 0x80000000)
-      immediate |= ~(0xffffffffull);
-    break;
   default:
     // operand is 64 bits wide.  Do nothing.
     break;
@@ -579,8 +658,7 @@ static void translateImmediate(MCInst &mcInst, uint64_t immediate,
                                mcInst, Dis))
     mcInst.addOperand(MCOperand::createImm(immediate));
 
-  if (type == TYPE_MOFFS8 || type == TYPE_MOFFS16 ||
-      type == TYPE_MOFFS32 || type == TYPE_MOFFS64) {
+  if (type == TYPE_MOFFS) {
     MCOperand segmentReg;
     segmentReg = MCOperand::createReg(segmentRegnums[insn.segmentOverride]);
     mcInst.addOperand(segmentReg);
@@ -684,7 +762,27 @@ static bool translateRMMemory(MCInst &mcInst, InternalInstruction &insn,
                        Opcode == X86::VPGATHERDQYrm ||
                        Opcode == X86::VPGATHERQQrm ||
                        Opcode == X86::VPGATHERDDrm ||
-                       Opcode == X86::VPGATHERQDrm);
+                       Opcode == X86::VPGATHERQDrm ||
+                       Opcode == X86::VGATHERDPDZ128rm ||
+                       Opcode == X86::VGATHERDPDZ256rm ||
+                       Opcode == X86::VGATHERDPSZ128rm ||
+                       Opcode == X86::VGATHERQPDZ128rm ||
+                       Opcode == X86::VGATHERQPSZ128rm ||
+                       Opcode == X86::VPGATHERDDZ128rm ||
+                       Opcode == X86::VPGATHERDQZ128rm ||
+                       Opcode == X86::VPGATHERDQZ256rm ||
+                       Opcode == X86::VPGATHERQDZ128rm ||
+                       Opcode == X86::VPGATHERQQZ128rm ||
+                       Opcode == X86::VSCATTERDPDZ128mr ||
+                       Opcode == X86::VSCATTERDPDZ256mr ||
+                       Opcode == X86::VSCATTERDPSZ128mr ||
+                       Opcode == X86::VSCATTERQPDZ128mr ||
+                       Opcode == X86::VSCATTERQPSZ128mr ||
+                       Opcode == X86::VPSCATTERDDZ128mr ||
+                       Opcode == X86::VPSCATTERDQZ128mr ||
+                       Opcode == X86::VPSCATTERDQZ256mr ||
+                       Opcode == X86::VPSCATTERQDZ128mr ||
+                       Opcode == X86::VPSCATTERQQZ128mr);
     bool IndexIs256 = (Opcode == X86::VGATHERQPDYrm ||
                        Opcode == X86::VGATHERDPSYrm ||
                        Opcode == X86::VGATHERQPSYrm ||
@@ -692,13 +790,49 @@ static bool translateRMMemory(MCInst &mcInst, InternalInstruction &insn,
                        Opcode == X86::VPGATHERDQZrm ||
                        Opcode == X86::VPGATHERQQYrm ||
                        Opcode == X86::VPGATHERDDYrm ||
-                       Opcode == X86::VPGATHERQDYrm);
+                       Opcode == X86::VPGATHERQDYrm ||
+                       Opcode == X86::VGATHERDPSZ256rm ||
+                       Opcode == X86::VGATHERQPDZ256rm ||
+                       Opcode == X86::VGATHERQPSZ256rm ||
+                       Opcode == X86::VPGATHERDDZ256rm ||
+                       Opcode == X86::VPGATHERQQZ256rm ||
+                       Opcode == X86::VPGATHERQDZ256rm ||
+                       Opcode == X86::VSCATTERDPDZmr ||
+                       Opcode == X86::VPSCATTERDQZmr ||
+                       Opcode == X86::VSCATTERDPSZ256mr ||
+                       Opcode == X86::VSCATTERQPDZ256mr ||
+                       Opcode == X86::VSCATTERQPSZ256mr ||
+                       Opcode == X86::VPSCATTERDDZ256mr ||
+                       Opcode == X86::VPSCATTERQQZ256mr ||
+                       Opcode == X86::VPSCATTERQDZ256mr ||
+                       Opcode == X86::VGATHERPF0DPDm ||
+                       Opcode == X86::VGATHERPF1DPDm ||
+                       Opcode == X86::VSCATTERPF0DPDm ||
+                       Opcode == X86::VSCATTERPF1DPDm);
     bool IndexIs512 = (Opcode == X86::VGATHERQPDZrm ||
                        Opcode == X86::VGATHERDPSZrm ||
                        Opcode == X86::VGATHERQPSZrm ||
                        Opcode == X86::VPGATHERQQZrm ||
                        Opcode == X86::VPGATHERDDZrm ||
-                       Opcode == X86::VPGATHERQDZrm);
+                       Opcode == X86::VPGATHERQDZrm ||
+                       Opcode == X86::VSCATTERQPDZmr ||
+                       Opcode == X86::VSCATTERDPSZmr ||
+                       Opcode == X86::VSCATTERQPSZmr ||
+                       Opcode == X86::VPSCATTERQQZmr ||
+                       Opcode == X86::VPSCATTERDDZmr ||
+                       Opcode == X86::VPSCATTERQDZmr ||
+                       Opcode == X86::VGATHERPF0DPSm ||
+                       Opcode == X86::VGATHERPF0QPDm ||
+                       Opcode == X86::VGATHERPF0QPSm ||
+                       Opcode == X86::VGATHERPF1DPSm ||
+                       Opcode == X86::VGATHERPF1QPDm ||
+                       Opcode == X86::VGATHERPF1QPSm ||
+                       Opcode == X86::VSCATTERPF0DPSm ||
+                       Opcode == X86::VSCATTERPF0QPDm ||
+                       Opcode == X86::VSCATTERPF0QPSm ||
+                       Opcode == X86::VSCATTERPF1DPSm ||
+                       Opcode == X86::VSCATTERPF1QPDm ||
+                       Opcode == X86::VSCATTERPF1QPSm);
     if (IndexIs128 || IndexIs256 || IndexIs512) {
       unsigned IndexOffset = insn.sibIndex -
                          (insn.addressSize == 8 ? SIB_INDEX_RAX:SIB_INDEX_EAX);
@@ -827,34 +961,14 @@ static bool translateRM(MCInst &mcInst, const OperandSpecifier &operand,
   case TYPE_Rv:
   case TYPE_MM64:
   case TYPE_XMM:
-  case TYPE_XMM32:
-  case TYPE_XMM64:
-  case TYPE_XMM128:
-  case TYPE_XMM256:
-  case TYPE_XMM512:
-  case TYPE_VK1:
-  case TYPE_VK8:
-  case TYPE_VK16:
+  case TYPE_YMM:
+  case TYPE_ZMM:
+  case TYPE_VK:
   case TYPE_DEBUGREG:
   case TYPE_CONTROLREG:
   case TYPE_BNDR:
     return translateRMRegister(mcInst, insn);
   case TYPE_M:
-  case TYPE_M8:
-  case TYPE_M16:
-  case TYPE_M32:
-  case TYPE_M64:
-  case TYPE_M128:
-  case TYPE_M256:
-  case TYPE_M512:
-  case TYPE_Mv:
-  case TYPE_M32FP:
-  case TYPE_M64FP:
-  case TYPE_M80FP:
-  case TYPE_M1616:
-  case TYPE_M1632:
-  case TYPE_M1664:
-  case TYPE_LEA:
     return translateRMMemory(mcInst, insn, Dis);
   }
 }
@@ -906,15 +1020,8 @@ static bool translateOperand(MCInst &mcInst, const OperandSpecifier &operand,
   case ENCODING_WRITEMASK:
     return translateMaskRegister(mcInst, insn.writemask);
   CASE_ENCODING_RM:
+  CASE_ENCODING_VSIB:
     return translateRM(mcInst, operand, insn, Dis);
-  case ENCODING_CB:
-  case ENCODING_CW:
-  case ENCODING_CD:
-  case ENCODING_CP:
-  case ENCODING_CO:
-  case ENCODING_CT:
-    debug("Translation of code offsets isn't supported.");
-    return true;
   case ENCODING_IB:
   case ENCODING_IW:
   case ENCODING_ID:
@@ -993,13 +1100,13 @@ static MCDisassembler *createX86Disassembler(const Target &T,
                                              const MCSubtargetInfo &STI,
                                              MCContext &Ctx) {
   std::unique_ptr<const MCInstrInfo> MII(T.createMCInstrInfo());
-  return new X86Disassembler::X86GenericDisassembler(STI, Ctx, std::move(MII));
+  return new X86GenericDisassembler(STI, Ctx, std::move(MII));
 }
 
 extern "C" void LLVMInitializeX86Disassembler() {
   // Register the disassembler.
-  TargetRegistry::RegisterMCDisassembler(TheX86_32Target,
+  TargetRegistry::RegisterMCDisassembler(getTheX86_32Target(),
                                          createX86Disassembler);
-  TargetRegistry::RegisterMCDisassembler(TheX86_64Target,
+  TargetRegistry::RegisterMCDisassembler(getTheX86_64Target(),
                                          createX86Disassembler);
 }

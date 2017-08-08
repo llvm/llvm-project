@@ -37,9 +37,9 @@ code. By default, the back-end will emit device functions. Metadata is used to
 declare a function as a kernel function. This metadata is attached to the
 ``nvvm.annotations`` named metadata object, and has the following format:
 
-.. code-block:: llvm
+.. code-block:: text
 
-   !0 = metadata !{<function-ref>, metadata !"kernel", i32 1}
+   !0 = !{<function-ref>, metadata !"kernel", i32 1}
 
 The first parameter is a reference to the kernel function. The following
 example shows a kernel function calling a device function in LLVM IR. The
@@ -54,14 +54,14 @@ function ``@my_kernel`` is callable from host code, but ``@my_fmad`` is not.
     }
 
     define void @my_kernel(float* %ptr) {
-      %val = load float* %ptr
+      %val = load float, float* %ptr
       %ret = call float @my_fmad(float %val, float %val, float %val)
       store float %ret, float* %ptr
       ret void
     }
 
     !nvvm.annotations = !{!1}
-    !1 = metadata !{void (float*)* @my_kernel, metadata !"kernel", i32 1}
+    !1 = !{void (float*)* @my_kernel, !"kernel", i32 1}
 
 When compiled, the PTX kernel functions are callable by host-side code.
 
@@ -289,7 +289,7 @@ code often follows a pattern:
       return my_function_precise(a);
   }
 
-The default value for all unspecified reflection parameters is zero. 
+The default value for all unspecified reflection parameters is zero.
 
 The ``NVVMReflect`` pass should be executed early in the optimization
 pipeline, immediately after the link stage. The ``internalize`` pass is also
@@ -326,6 +326,16 @@ often leave behind dead code of the form:
 Therefore, it is recommended that ``NVVMReflect`` is executed early in the
 optimization pipeline before dead-code elimination.
 
+The NVPTX TargetMachine knows how to schedule ``NVVMReflect`` at the beginning
+of your pass manager; just use the following code when setting up your pass
+manager:
+
+.. code-block:: c++
+
+    std::unique_ptr<TargetMachine> TM = ...;
+    PassManagerBuilder PMBuilder(...);
+    if (TM)
+      TM->adjustPassManager(PMBuilder);
 
 Reflection Parameters
 ---------------------
@@ -339,35 +349,17 @@ Flag                 Description
 ``__CUDA_FTZ=[0,1]`` Use optimized code paths that flush subnormals to zero
 ==================== ======================================================
 
+The value of this flag is determined by the "nvvm-reflect-ftz" module flag.
+The following sets the ftz flag to 1.
 
-Invoking NVVMReflect
---------------------
+.. code-block:: llvm
 
-To ensure that all dead code caused by the reflection pass is eliminated, it
-is recommended that the reflection pass is executed early in the LLVM IR
-optimization pipeline. The pass takes an optional mapping of reflection
-parameter name to an integer value. This mapping can be specified as either a
-command-line option to ``opt`` or as an LLVM ``StringMap<int>`` object when
-programmatically creating a pass pipeline.
+    !llvm.module.flag = !{!0}
+    !0 = !{i32 4, !"nvvm-reflect-ftz", i32 1}
 
-With ``opt``:
-
-.. code-block:: text
-
-  # opt -nvvm-reflect -nvvm-reflect-list=<var>=<value>,<var>=<value> module.bc -o module.reflect.bc
-
-
-With programmatic pass pipeline:
-
-.. code-block:: c++
-
-  extern ModulePass *llvm::createNVVMReflectPass(const StringMap<int>& Mapping);
-
-  StringMap<int> ReflectParams;
-  ReflectParams["__CUDA_FTZ"] = 1;
-  Passes.add(createNVVMReflectPass(ReflectParams));
-
-
+(``i32 4`` indicates that the value set here overrides the value in another
+module we link with.  See the `LangRef <LangRef.html#module-flags-metadata>`
+for details.)
 
 Executing PTX
 =============
@@ -395,7 +387,7 @@ JIT compiling a PTX string to a device binary:
 .. code-block:: c++
 
     CUmodule module;
-    CUfunction funcion;
+    CUfunction function;
 
     // JIT compile a null-terminated PTX string
     cuModuleLoadData(&module, (void*)PTXString);
@@ -446,13 +438,13 @@ The Kernel
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
     ; Compute pointers into A, B, and C
-    %ptrA = getelementptr float addrspace(1)* %A, i32 %id
-    %ptrB = getelementptr float addrspace(1)* %B, i32 %id
-    %ptrC = getelementptr float addrspace(1)* %C, i32 %id
+    %ptrA = getelementptr float, float addrspace(1)* %A, i32 %id
+    %ptrB = getelementptr float, float addrspace(1)* %B, i32 %id
+    %ptrC = getelementptr float, float addrspace(1)* %C, i32 %id
 
     ; Read A, B
-    %valA = load float addrspace(1)* %ptrA, align 4
-    %valB = load float addrspace(1)* %ptrB, align 4
+    %valA = load float, float addrspace(1)* %ptrA, align 4
+    %valB = load float, float addrspace(1)* %ptrB, align 4
 
     ; Compute C = A + B
     %valC = fadd float %valA, %valB
@@ -464,9 +456,9 @@ The Kernel
   }
 
   !nvvm.annotations = !{!0}
-  !0 = metadata !{void (float addrspace(1)*,
-                        float addrspace(1)*,
-                        float addrspace(1)*)* @kernel, metadata !"kernel", i32 1}
+  !0 = !{void (float addrspace(1)*,
+               float addrspace(1)*,
+               float addrspace(1)*)* @kernel, !"kernel", i32 1}
 
 
 We can use the LLVM ``llc`` tool to directly run the NVPTX code generator:
@@ -566,7 +558,7 @@ Intrinsic                                        CUDA Equivalent
 ``i32 @llvm.nvvm.read.ptx.sreg.ctaid.{x,y,z}``   blockIdx.{x,y,z}
 ``i32 @llvm.nvvm.read.ptx.sreg.ntid.{x,y,z}``    blockDim.{x,y,z}
 ``i32 @llvm.nvvm.read.ptx.sreg.nctaid.{x,y,z}``  gridDim.{x,y,z}
-``void @llvm.cuda.syncthreads()``                __syncthreads()
+``void @llvm.nvvm.barrier0()``                   __syncthreads()
 ================================================ ====================
 
 
@@ -608,16 +600,16 @@ as a PTX `kernel` function. These metadata nodes take the form:
 
 .. code-block:: text
 
-  metadata !{<function ref>, metadata !"kernel", i32 1}
+  !{<function ref>, metadata !"kernel", i32 1}
 
 For the previous example, we have:
 
 .. code-block:: llvm
 
   !nvvm.annotations = !{!0}
-  !0 = metadata !{void (float addrspace(1)*,
-                        float addrspace(1)*,
-                        float addrspace(1)*)* @kernel, metadata !"kernel", i32 1}
+  !0 = !{void (float addrspace(1)*,
+               float addrspace(1)*,
+               float addrspace(1)*)* @kernel, !"kernel", i32 1}
 
 Here, we have a single metadata declaration in ``nvvm.annotations``. This
 metadata annotates our ``@kernel`` function with the ``kernel`` attribute.
@@ -830,13 +822,13 @@ Libdevice provides an ``__nv_powf`` function that we will use.
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
     ; Compute pointers into A, B, and C
-    %ptrA = getelementptr float addrspace(1)* %A, i32 %id
-    %ptrB = getelementptr float addrspace(1)* %B, i32 %id
-    %ptrC = getelementptr float addrspace(1)* %C, i32 %id
+    %ptrA = getelementptr float, float addrspace(1)* %A, i32 %id
+    %ptrB = getelementptr float, float addrspace(1)* %B, i32 %id
+    %ptrC = getelementptr float, float addrspace(1)* %C, i32 %id
 
     ; Read A, B
-    %valA = load float addrspace(1)* %ptrA, align 4
-    %valB = load float addrspace(1)* %ptrB, align 4
+    %valA = load float, float addrspace(1)* %ptrA, align 4
+    %valB = load float, float addrspace(1)* %ptrB, align 4
 
     ; Compute C = pow(A, B)
     %valC = call float @__nv_powf(float %valA, float %valB)
@@ -848,9 +840,9 @@ Libdevice provides an ``__nv_powf`` function that we will use.
   }
 
   !nvvm.annotations = !{!0}
-  !0 = metadata !{void (float addrspace(1)*,
-                        float addrspace(1)*,
-                        float addrspace(1)*)* @kernel, metadata !"kernel", i32 1}
+  !0 = !{void (float addrspace(1)*,
+               float addrspace(1)*,
+               float addrspace(1)*)* @kernel, !"kernel", i32 1}
 
 
 To compile this kernel, we perform the following steps:

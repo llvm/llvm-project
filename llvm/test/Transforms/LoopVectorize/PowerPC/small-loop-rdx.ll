@@ -1,5 +1,6 @@
 ; RUN: opt < %s -loop-vectorize -S | FileCheck %s
 
+; CHECK: vector.body:
 ; CHECK: fadd
 ; CHECK-NEXT: fadd
 ; CHECK-NEXT: fadd
@@ -12,7 +13,8 @@
 ; CHECK-NEXT: fadd
 ; CHECK-NEXT: fadd
 ; CHECK-NEXT: fadd
-; CHECK-NEXT-NOT: fadd
+; CHECK-NOT: fadd
+; CHECK: middle.block
 
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-ibm-linux-gnu"

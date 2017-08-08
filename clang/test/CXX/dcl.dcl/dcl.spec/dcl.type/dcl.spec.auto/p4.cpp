@@ -36,7 +36,7 @@ class X {
 };
 
 struct S {
-  static const auto a; // expected-error {{declaration of variable 'a' with type 'const auto' requires an initializer}}
+  static const auto a; // expected-error {{declaration of variable 'a' with deduced type 'const auto' requires an initializer}}
   static const auto b = 0;
   static const int c;
 };

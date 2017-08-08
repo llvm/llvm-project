@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfFile.h"
+#include "DwarfCompileUnit.h"
 #include "DwarfDebug.h"
 #include "DwarfUnit.h"
 #include "llvm/ADT/STLExtras.h"
@@ -18,54 +19,27 @@
 
 namespace llvm {
 DwarfFile::DwarfFile(AsmPrinter *AP, StringRef Pref, BumpPtrAllocator &DA)
-    : Asm(AP), StrPool(DA, *Asm, Pref) {}
+    : Asm(AP), Abbrevs(AbbrevAllocator), StrPool(DA, *Asm, Pref) {}
 
-DwarfFile::~DwarfFile() {
-  for (DIEAbbrev *Abbrev : Abbreviations)
-    Abbrev->~DIEAbbrev();
-}
-
-// Define a unique number for the abbreviation.
-//
-DIEAbbrev &DwarfFile::assignAbbrevNumber(DIE &Die) {
-  FoldingSetNodeID ID;
-  DIEAbbrev Abbrev = Die.generateAbbrev();
-  Abbrev.Profile(ID);
-
-  void *InsertPos;
-  if (DIEAbbrev *Existing =
-          AbbreviationsSet.FindNodeOrInsertPos(ID, InsertPos)) {
-    Die.setAbbrevNumber(Existing->getNumber());
-    return *Existing;
-  }
-
-  // Move the abbreviation to the heap and assign a number.
-  DIEAbbrev *New = new (AbbrevAllocator) DIEAbbrev(std::move(Abbrev));
-  Abbreviations.push_back(New);
-  New->setNumber(Abbreviations.size());
-  Die.setAbbrevNumber(Abbreviations.size());
-
-  // Store it for lookup.
-  AbbreviationsSet.InsertNode(New, InsertPos);
-  return *New;
-}
-
-void DwarfFile::addUnit(std::unique_ptr<DwarfUnit> U) {
+void DwarfFile::addUnit(std::unique_ptr<DwarfCompileUnit> U) {
   CUs.push_back(std::move(U));
 }
 
 // Emit the various dwarf units to the unit section USection with
 // the abbreviations going into ASection.
 void DwarfFile::emitUnits(bool UseOffsets) {
-  for (const auto &TheU : CUs) {
-    DIE &Die = TheU->getUnitDie();
-    MCSection *USection = TheU->getSection();
-    Asm->OutStreamer->SwitchSection(USection);
+  for (const auto &TheU : CUs)
+    emitUnit(TheU.get(), UseOffsets);
+}
 
-    TheU->emitHeader(UseOffsets);
+void DwarfFile::emitUnit(DwarfUnit *TheU, bool UseOffsets) {
+  DIE &Die = TheU->getUnitDie();
+  MCSection *USection = TheU->getSection();
+  Asm->OutStreamer->SwitchSection(USection);
 
-    Asm->emitDwarfDIE(Die);
-  }
+  TheU->emitHeader(UseOffsets);
+
+  Asm->emitDwarfDIE(Die);
 }
 
 // Compute the size and offset for each DIE.
@@ -76,59 +50,28 @@ void DwarfFile::computeSizeAndOffsets() {
   // Iterate over each compile unit and set the size and offsets for each
   // DIE within each compile unit. All offsets are CU relative.
   for (const auto &TheU : CUs) {
-    TheU->setDebugInfoOffset(SecOffset);
-
-    // CU-relative offset is reset to 0 here.
-    unsigned Offset = sizeof(int32_t) +      // Length of Unit Info
-                      TheU->getHeaderSize(); // Unit-specific headers
-
-    // EndOffset here is CU-relative, after laying out
-    // all of the CU DIE.
-    unsigned EndOffset = computeSizeAndOffset(TheU->getUnitDie(), Offset);
-    SecOffset += EndOffset;
+    TheU->setDebugSectionOffset(SecOffset);
+    SecOffset += computeSizeAndOffsetsForUnit(TheU.get());
   }
 }
+
+unsigned DwarfFile::computeSizeAndOffsetsForUnit(DwarfUnit *TheU) {
+  // CU-relative offset is reset to 0 here.
+  unsigned Offset = sizeof(int32_t) +      // Length of Unit Info
+                    TheU->getHeaderSize(); // Unit-specific headers
+
+  // The return value here is CU-relative, after laying out
+  // all of the CU DIE.
+  return computeSizeAndOffset(TheU->getUnitDie(), Offset);
+}
+
 // Compute the size and offset of a DIE. The offset is relative to start of the
 // CU. It returns the offset after laying out the DIE.
 unsigned DwarfFile::computeSizeAndOffset(DIE &Die, unsigned Offset) {
-  // Record the abbreviation.
-  const DIEAbbrev &Abbrev = assignAbbrevNumber(Die);
-
-  // Set DIE offset
-  Die.setOffset(Offset);
-
-  // Start the size with the size of abbreviation code.
-  Offset += getULEB128Size(Die.getAbbrevNumber());
-
-  // Size the DIE attribute values.
-  for (const auto &V : Die.values())
-    // Size attribute value.
-    Offset += V.SizeOf(Asm);
-
-  // Size the DIE children if any.
-  if (Die.hasChildren()) {
-    (void)Abbrev;
-    assert(Abbrev.hasChildren() && "Children flag not set");
-
-    for (auto &Child : Die.children())
-      Offset = computeSizeAndOffset(Child, Offset);
-
-    // End of children marker.
-    Offset += sizeof(int8_t);
-  }
-
-  Die.setSize(Offset - Die.getOffset());
-  return Offset;
+  return Die.computeOffsetsAndAbbrevs(Asm, Abbrevs, Offset);
 }
 
-void DwarfFile::emitAbbrevs(MCSection *Section) {
-  // Check to see if it is worth the effort.
-  if (!Abbreviations.empty()) {
-    // Start the debug abbrev section.
-    Asm->OutStreamer->SwitchSection(Section);
-    Asm->emitDwarfAbbrevs(Abbreviations);
-  }
-}
+void DwarfFile::emitAbbrevs(MCSection *Section) { Abbrevs.Emit(Asm, Section); }
 
 // Emit strings into a string section.
 void DwarfFile::emitStrings(MCSection *StrSection, MCSection *OffsetSection) {

@@ -33,8 +33,31 @@ namespace clang {
 class AnalysisDeclContext;
 class FunctionDecl;
 class LocationContext;
-class ProgramPointTag;
   
+/// ProgramPoints can be "tagged" as representing points specific to a given
+/// analysis entity.  Tags are abstract annotations, with an associated
+/// description and potentially other information.
+class ProgramPointTag {
+public:
+  ProgramPointTag(void *tagKind = nullptr) : TagKind(tagKind) {}
+  virtual ~ProgramPointTag();
+  virtual StringRef getTagDescription() const = 0;    
+
+protected:
+  /// Used to implement 'isKind' in subclasses.
+  const void *getTagKind() { return TagKind; }
+  
+private:
+  const void *TagKind;
+};
+
+class SimpleProgramPointTag : public ProgramPointTag {
+  std::string Desc;
+public:
+  SimpleProgramPointTag(StringRef MsgProvider, StringRef Msg);
+  StringRef getTagDescription() const override;
+};
+
 class ProgramPoint {
 public:
   enum Kind { BlockEdgeKind,
@@ -572,6 +595,13 @@ public:
     return static_cast<const StackFrameContext *>(getData2());
   }
 
+  /// Returns the entry block in the CFG for the entered function.
+  const CFGBlock *getEntry() const {
+    const StackFrameContext *CalleeCtx = getCalleeContext();
+    const CFG *CalleeCFG = CalleeCtx->getCFG();
+    return &(CalleeCFG->getEntry());
+  }
+
 private:
   friend class ProgramPoint;
   CallEnter() {}
@@ -592,8 +622,8 @@ private:
 class CallExitBegin : public ProgramPoint {
 public:
   // CallExitBegin uses the callee's location context.
-  CallExitBegin(const StackFrameContext *L)
-    : ProgramPoint(nullptr, CallExitBeginKind, L, nullptr) {}
+  CallExitBegin(const StackFrameContext *L, const ReturnStmt *RS)
+    : ProgramPoint(RS, CallExitBeginKind, L, nullptr) { }
 
 private:
   friend class ProgramPoint;
@@ -641,30 +671,6 @@ private:
   static bool isKind(const ProgramPoint &Location) {
     return Location.getKind() == EpsilonKind;
   }
-};
-
-/// ProgramPoints can be "tagged" as representing points specific to a given
-/// analysis entity.  Tags are abstract annotations, with an associated
-/// description and potentially other information.
-class ProgramPointTag {
-public:
-  ProgramPointTag(void *tagKind = nullptr) : TagKind(tagKind) {}
-  virtual ~ProgramPointTag();
-  virtual StringRef getTagDescription() const = 0;    
-
-protected:
-  /// Used to implement 'isKind' in subclasses.
-  const void *getTagKind() { return TagKind; }
-  
-private:
-  const void *TagKind;
-};
-
-class SimpleProgramPointTag : public ProgramPointTag {
-  std::string Desc;
-public:
-  SimpleProgramPointTag(StringRef MsgProvider, StringRef Msg);
-  StringRef getTagDescription() const override;
 };
 
 } // end namespace clang

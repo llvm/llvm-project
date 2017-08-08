@@ -1,12 +1,19 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin9 | grep non_lazy_ptr | count 6
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin9 | FileCheck %s
 
-@x = external hidden global i32		; <i32*> [#uses=1]
-@y = extern_weak hidden global i32	; <i32*> [#uses=1]
+; CHECK: lis r2, ha16(L_x$non_lazy_ptr)
+; CHECK: lis r3, ha16(L_y$non_lazy_ptr)
+; CHECK: lwz r2, lo16(L_x$non_lazy_ptr)(r2)
+; CHECK: lwz r3, lo16(L_y$non_lazy_ptr)(r3)
+; CHECK: L_x$non_lazy_ptr:
+; CHECK: L_y$non_lazy_ptr:
+
+@x = external hidden global i32
+@y = extern_weak hidden global i32
 
 define i32 @t() nounwind readonly {
 entry:
-	%0 = load i32, i32* @x, align 4		; <i32> [#uses=1]
-	%1 = load i32, i32* @y, align 4		; <i32> [#uses=1]
-	%2 = add i32 %1, %0		; <i32> [#uses=1]
-	ret i32 %2
+        %0 = load i32, i32* @x, align 4
+        %1 = load i32, i32* @y, align 4
+        %2 = add i32 %1, %0
+        ret i32 %2
 }

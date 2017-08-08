@@ -1,4 +1,4 @@
-//===-- CodeGen/MachineConstantPool.h - Abstract Constant Pool --*- C++ -*-===//
+//===- CodeGen/MachineConstantPool.h - Abstract Constant Pool ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,39 +18,32 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/MC/SectionKind.h"
-#include <cassert>
 #include <climits>
 #include <vector>
 
 namespace llvm {
 
 class Constant;
-class FoldingSetNodeID;
 class DataLayout;
-class TargetMachine;
-class Type;
+class FoldingSetNodeID;
 class MachineConstantPool;
 class raw_ostream;
+class Type;
 
 /// Abstract base class for all machine specific constantpool value subclasses.
 ///
 class MachineConstantPoolValue {
   virtual void anchor();
+
   Type *Ty;
 
 public:
   explicit MachineConstantPoolValue(Type *ty) : Ty(ty) {}
-  virtual ~MachineConstantPoolValue() {}
+  virtual ~MachineConstantPoolValue() = default;
 
   /// getType - get type of this MachineConstantPoolValue.
   ///
   Type *getType() const { return Ty; }
-
-  /// getRelocationInfo - This method classifies the entry according to
-  /// whether or not it may generate a relocation entry.  This must be
-  /// conservative, so if it might codegen to a relocatable entry, it should say
-  /// so.  The return values are the same as Constant::getRelocationInfo().
-  virtual unsigned getRelocationInfo() const = 0;
 
   virtual int getExistingMachineCPValue(MachineConstantPool *CP,
                                         unsigned Alignment) = 0;
@@ -87,6 +80,7 @@ public:
     : Alignment(A) {
     Val.ConstVal = V;
   }
+
   MachineConstantPoolEntry(MachineConstantPoolValue *V, unsigned A)
       : Alignment(A) {
     Val.MachineCPVal = V;
@@ -106,18 +100,10 @@ public:
 
   Type *getType() const;
 
-  /// getRelocationInfo - This method classifies the entry according to
-  /// whether or not it may generate a relocation entry.  This must be
-  /// conservative, so if it might codegen to a relocatable entry, it should say
-  /// so.  The return values are:
-  ///
-  ///  0: This constant pool entry is guaranteed to never have a relocation
-  ///     applied to it (because it holds a simple constant like '4').
-  ///  1: This entry has relocations, but the entries are guaranteed to be
-  ///     resolvable by the static linker, so the dynamic linker will never see
-  ///     them.
-  ///  2: This entry may have arbitrary relocations.
-  unsigned getRelocationInfo() const;
+  /// This method classifies the entry according to whether or not it may
+  /// generate a relocation entry.  This must be conservative, so if it might
+  /// codegen to a relocatable entry, it should say so.
+  bool needsRelocation() const;
 
   SectionKind getSectionKind(const DataLayout *DL) const;
 };
@@ -167,13 +153,12 @@ public:
 
   /// print - Used by the MachineFunction printer to print information about
   /// constant pool objects.  Implemented in MachineFunction.cpp
-  ///
   void print(raw_ostream &OS) const;
 
   /// dump - Call print(cerr) to be called from the debugger.
   void dump() const;
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINECONSTANTPOOL_H

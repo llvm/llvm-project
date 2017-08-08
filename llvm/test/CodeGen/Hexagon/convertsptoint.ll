@@ -17,8 +17,8 @@ entry:
   %0 = load float, float* %a, align 4
   %1 = load float, float* %b, align 4
   %add = fadd float %0, %1
-  store float %add, float* %c, align 4
-  %2 = load float, float* %c, align 4
+  store volatile float %add, float* %c, align 4
+  %2 = load volatile float, float* %c, align 4
   %conv = fptosi float %2 to i32
   store i32 %conv, i32* %i, align 4
   %3 = load i32, i32* %i, align 4

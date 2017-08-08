@@ -13,16 +13,23 @@
 
 #include "CodeGenTarget.h"
 #include "CodeGenSchedule.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 #include <map>
 #include <string>
 #include <vector>
@@ -32,12 +39,13 @@ using namespace llvm;
 #define DEBUG_TYPE "subtarget-emitter"
 
 namespace {
+
 class SubtargetEmitter {
   // Each processor has a SchedClassDesc table with an entry for each SchedClass.
   // The SchedClassDesc table indexes into a global write resource table, write
   // latency table, and read advance table.
   struct SchedClassTables {
-    std::vector<std::vector<MCSchedClassDesc> > ProcSchedClasses;
+    std::vector<std::vector<MCSchedClassDesc>> ProcSchedClasses;
     std::vector<MCWriteProcResEntry> WriteProcResources;
     std::vector<MCWriteLatencyEntry> WriteLatencies;
     std::vector<std::string> WriterNames;
@@ -64,7 +72,7 @@ class SubtargetEmitter {
   CodeGenSchedModels &SchedModels;
   std::string Target;
 
-  void Enumeration(raw_ostream &OS, const char *ClassName);
+  void Enumeration(raw_ostream &OS);
   unsigned FeatureKeyValues(raw_ostream &OS);
   unsigned CPUKeyValues(raw_ostream &OS);
   void FormItineraryStageString(const std::string &Names,
@@ -76,12 +84,12 @@ class SubtargetEmitter {
                                  Record *ItinData,
                                  std::string &ItinString, unsigned NOperandCycles);
   void EmitStageAndOperandCycleData(raw_ostream &OS,
-                                    std::vector<std::vector<InstrItinerary> >
+                                    std::vector<std::vector<InstrItinerary>>
                                       &ProcItinLists);
   void EmitItineraries(raw_ostream &OS,
-                       std::vector<std::vector<InstrItinerary> >
+                       std::vector<std::vector<InstrItinerary>>
                          &ProcItinLists);
-  void EmitProcessorProp(raw_ostream &OS, const Record *R, const char *Name,
+  void EmitProcessorProp(raw_ostream &OS, const Record *R, StringRef Name,
                          char Separator);
   void EmitProcessorResources(const CodeGenProcModel &ProcModel,
                               raw_ostream &OS);
@@ -96,7 +104,7 @@ class SubtargetEmitter {
   void EmitSchedClassTables(SchedClassTables &SchedTables, raw_ostream &OS);
   void EmitProcessorModels(raw_ostream &OS);
   void EmitProcessorLookup(raw_ostream &OS);
-  void EmitSchedModelHelpers(std::string ClassName, raw_ostream &OS);
+  void EmitSchedModelHelpers(const std::string &ClassName, raw_ostream &OS);
   void EmitSchedModel(raw_ostream &OS);
   void ParseFeaturesFunction(raw_ostream &OS, unsigned NumFeatures,
                              unsigned NumProcs);
@@ -107,15 +115,16 @@ public:
 
   void run(raw_ostream &o);
 };
+
 } // end anonymous namespace
 
 //
 // Enumeration - Emit the specified class as an enumeration.
 //
-void SubtargetEmitter::Enumeration(raw_ostream &OS,
-                                   const char *ClassName) {
+void SubtargetEmitter::Enumeration(raw_ostream &OS) {
   // Get all records of class and sort
-  std::vector<Record*> DefList = Records.getAllDerivedDefinitions(ClassName);
+  std::vector<Record*> DefList =
+    Records.getAllDerivedDefinitions("SubtargetFeature");
   std::sort(DefList.begin(), DefList.end(), LessRecord());
 
   unsigned N = DefList.size();
@@ -126,8 +135,8 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS,
 
   OS << "namespace " << Target << " {\n";
 
-  // Open enumeration. Use a 64-bit underlying type.
-  OS << "enum : uint64_t {\n";
+  // Open enumeration.
+  OS << "enum {\n";
 
   // For each record
   for (unsigned i = 0; i < N;) {
@@ -142,7 +151,8 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS,
   }
 
   // Close enumeration and namespace
-  OS << "};\n}\n";
+  OS << "};\n";
+  OS << "} // end namespace " << Target << "\n";
 }
 
 //
@@ -170,9 +180,9 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
     // Next feature
     Record *Feature = FeatureList[i];
 
-    const std::string &Name = Feature->getName();
-    const std::string &CommandLineName = Feature->getValueAsString("Name");
-    const std::string &Desc = Feature->getValueAsString("Desc");
+    StringRef Name = Feature->getName();
+    StringRef CommandLineName = Feature->getValueAsString("Name");
+    StringRef Desc = Feature->getValueAsString("Desc");
 
     if (CommandLineName.empty()) continue;
 
@@ -185,16 +195,12 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
     const std::vector<Record*> &ImpliesList =
       Feature->getValueAsListOfDefs("Implies");
 
-    if (ImpliesList.empty()) {
-      OS << "{ }";
-    } else {
-      OS << "{ ";
-      for (unsigned j = 0, M = ImpliesList.size(); j < M;) {
-        OS << Target << "::" << ImpliesList[j]->getName();
-        if (++j < M) OS << ", ";
-      }
-      OS << " }";
+    OS << "{";
+    for (unsigned j = 0, M = ImpliesList.size(); j < M;) {
+      OS << " " << Target << "::" << ImpliesList[j]->getName();
+      if (++j < M) OS << ",";
     }
+    OS << " }";
 
     OS << " }";
     ++NumFeatures;
@@ -231,7 +237,7 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
     // Next processor
     Record *Processor = ProcessorList[i];
 
-    const std::string &Name = Processor->getValueAsString("Name");
+    StringRef Name = Processor->getValueAsString("Name");
     const std::vector<Record*> &FeatureList =
       Processor->getValueAsListOfDefs("Features");
 
@@ -240,16 +246,12 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
        << "\"" << Name << "\", "
        << "\"Select the " << Name << " processor\", ";
 
-    if (FeatureList.empty()) {
-      OS << "{ }";
-    } else {
-      OS << "{ ";
-      for (unsigned j = 0, M = FeatureList.size(); j < M;) {
-        OS << Target << "::" << FeatureList[j]->getName();
-        if (++j < M) OS << ", ";
-      }
-      OS << " }";
+    OS << "{";
+    for (unsigned j = 0, M = FeatureList.size(); j < M;) {
+      OS << " " << Target << "::" << FeatureList[j]->getName();
+      if (++j < M) OS << ",";
     }
+    OS << " }";
 
     // The { } is for the "implies" section of this data structure.
     OS << ", { } }";
@@ -295,7 +297,7 @@ void SubtargetEmitter::FormItineraryStageString(const std::string &Name,
     // For each unit
     for (unsigned j = 0, M = UnitList.size(); j < M;) {
       // Add name and bitwise or
-      ItinString += Name + "FU::" + UnitList[j]->getName();
+      ItinString += Name + "FU::" + UnitList[j]->getName().str();
       if (++j < M) ItinString += " | ";
     }
 
@@ -342,7 +344,7 @@ void SubtargetEmitter::FormItineraryBypassString(const std::string &Name,
   unsigned N = BypassList.size();
   unsigned i = 0;
   for (; i < N;) {
-    ItinString += Name + "Bypass::" + BypassList[i]->getName();
+    ItinString += Name + "Bypass::" + BypassList[i]->getName().str();
     if (++i < NOperandCycles) ItinString += ", ";
   }
   for (; i < NOperandCycles;) {
@@ -358,24 +360,22 @@ void SubtargetEmitter::FormItineraryBypassString(const std::string &Name,
 //
 void SubtargetEmitter::
 EmitStageAndOperandCycleData(raw_ostream &OS,
-                             std::vector<std::vector<InstrItinerary> >
+                             std::vector<std::vector<InstrItinerary>>
                                &ProcItinLists) {
-
   // Multiple processor models may share an itinerary record. Emit it once.
   SmallPtrSet<Record*, 8> ItinsDefSet;
 
   // Emit functional units for all the itineraries.
-  for (CodeGenSchedModels::ProcIter PI = SchedModels.procModelBegin(),
-         PE = SchedModels.procModelEnd(); PI != PE; ++PI) {
+  for (const CodeGenProcModel &ProcModel : SchedModels.procModels()) {
 
-    if (!ItinsDefSet.insert(PI->ItinsDef).second)
+    if (!ItinsDefSet.insert(ProcModel.ItinsDef).second)
       continue;
 
-    std::vector<Record*> FUs = PI->ItinsDef->getValueAsListOfDefs("FU");
+    std::vector<Record*> FUs = ProcModel.ItinsDef->getValueAsListOfDefs("FU");
     if (FUs.empty())
       continue;
 
-    const std::string &Name = PI->ItinsDef->getName();
+    StringRef Name = ProcModel.ItinsDef->getName();
     OS << "\n// Functional units for \"" << Name << "\"\n"
        << "namespace " << Name << "FU {\n";
 
@@ -383,9 +383,9 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
       OS << "  const unsigned " << FUs[j]->getName()
          << " = 1 << " << j << ";\n";
 
-    OS << "}\n";
+    OS << "} // end namespace " << Name << "FU\n";
 
-    std::vector<Record*> BPs = PI->ItinsDef->getValueAsListOfDefs("BP");
+    std::vector<Record*> BPs = ProcModel.ItinsDef->getValueAsListOfDefs("BP");
     if (!BPs.empty()) {
       OS << "\n// Pipeline forwarding pathes for itineraries \"" << Name
          << "\"\n" << "namespace " << Name << "Bypass {\n";
@@ -395,7 +395,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
         OS << "  const unsigned " << BPs[j]->getName()
            << " = 1 << " << j << ";\n";
 
-      OS << "}\n";
+      OS << "} // end namespace " << Name << "Bypass\n";
     }
   }
 
@@ -415,14 +415,11 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
   BypassTable += " 0, // No itinerary\n";
 
   // For each Itinerary across all processors, add a unique entry to the stages,
-  // operand cycles, and pipepine bypess tables. Then add the new Itinerary
+  // operand cycles, and pipeline bypass tables. Then add the new Itinerary
   // object with computed offsets to the ProcItinLists result.
   unsigned StageCount = 1, OperandCycleCount = 1;
   std::map<std::string, unsigned> ItinStageMap, ItinOperandMap;
-  for (CodeGenSchedModels::ProcIter PI = SchedModels.procModelBegin(),
-         PE = SchedModels.procModelEnd(); PI != PE; ++PI) {
-    const CodeGenProcModel &ProcModel = *PI;
-
+  for (const CodeGenProcModel &ProcModel : SchedModels.procModels()) {
     // Add process itinerary to the list.
     ProcItinLists.resize(ProcItinLists.size()+1);
 
@@ -432,7 +429,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
     if (!ProcModel.hasItineraries())
       continue;
 
-    const std::string &Name = ProcModel.ItinsDef->getName();
+    StringRef Name = ProcModel.ItinsDef->getName();
 
     ItinList.resize(SchedModels.numInstrSchedClasses());
     assert(ProcModel.ItinDefList.size() == ItinList.size() && "bad Itins");
@@ -503,7 +500,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
       int NumUOps = ItinData ? ItinData->getValueAsInt("NumMicroOps") : 0;
       InstrItinerary Intinerary = { NumUOps, FindStage, FindStage + NStages,
                                     FindOperandCycle,
-                                    FindOperandCycle + NOperandCycles};
+                                    FindOperandCycle + NOperandCycles };
 
       // Inject - empty slots will be 0, 0
       ItinList[SchedClassIdx] = Intinerary;
@@ -535,13 +532,12 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
 //
 void SubtargetEmitter::
 EmitItineraries(raw_ostream &OS,
-                std::vector<std::vector<InstrItinerary> > &ProcItinLists) {
-
+                std::vector<std::vector<InstrItinerary>> &ProcItinLists) {
   // Multiple processor models may share an itinerary record. Emit it once.
   SmallPtrSet<Record*, 8> ItinsDefSet;
 
   // For each processor's machine model
-  std::vector<std::vector<InstrItinerary> >::iterator
+  std::vector<std::vector<InstrItinerary>>::iterator
       ProcItinListsIter = ProcItinLists.begin();
   for (CodeGenSchedModels::ProcIter PI = SchedModels.procModelBegin(),
          PE = SchedModels.procModelEnd(); PI != PE; ++PI, ++ProcItinListsIter) {
@@ -549,9 +545,6 @@ EmitItineraries(raw_ostream &OS,
     Record *ItinsDef = PI->ItinsDef;
     if (!ItinsDefSet.insert(ItinsDef).second)
       continue;
-
-    // Get processor itinerary name
-    const std::string &Name = ItinsDef->getName();
 
     // Get the itinerary list for the processor.
     assert(ProcItinListsIter != ProcItinLists.end() && "bad iterator");
@@ -566,7 +559,7 @@ EmitItineraries(raw_ostream &OS,
     OS << "static const llvm::InstrItinerary ";
 
     // Begin processor itinerary table
-    OS << Name << "[] = {\n";
+    OS << ItinsDef->getName() << "[] = {\n";
 
     // For each itinerary class in CodeGenSchedClass::Index order.
     for (unsigned j = 0, M = ItinList.size(); j < M; ++j) {
@@ -592,7 +585,7 @@ EmitItineraries(raw_ostream &OS,
 // value defined in the C++ header. The Record is null if the processor does not
 // define a model.
 void SubtargetEmitter::EmitProcessorProp(raw_ostream &OS, const Record *R,
-                                         const char *Name, char Separator) {
+                                         StringRef Name, char Separator) {
   OS << "  ";
   int V = R ? R->getValueAsInt(Name) : -1;
   if (V >= 0)
@@ -620,9 +613,8 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
     int BufferSize = PRDef->getValueAsInt("BufferSize");
     if (PRDef->isSubClassOf("ProcResGroup")) {
       RecVec ResUnits = PRDef->getValueAsListOfDefs("Resources");
-      for (RecIter RUI = ResUnits.begin(), RUE = ResUnits.end();
-           RUI != RUE; ++RUI) {
-        NumUnits += (*RUI)->getValueAsInt("NumUnits");
+      for (Record *RU : ResUnits) {
+        NumUnits += RU->getValueAsInt("NumUnits");
       }
     }
     else {
@@ -660,10 +652,9 @@ Record *SubtargetEmitter::FindWriteResources(
     return SchedWrite.TheDef;
 
   Record *AliasDef = nullptr;
-  for (RecIter AI = SchedWrite.Aliases.begin(), AE = SchedWrite.Aliases.end();
-       AI != AE; ++AI) {
+  for (Record *A : SchedWrite.Aliases) {
     const CodeGenSchedRW &AliasRW =
-      SchedModels.getSchedRW((*AI)->getValueAsDef("AliasRW"));
+      SchedModels.getSchedRW(A->getValueAsDef("AliasRW"));
     if (AliasRW.TheDef->getValueInit("SchedModel")->isComplete()) {
       Record *ModelDef = AliasRW.TheDef->getValueAsDef("SchedModel");
       if (&SchedModels.getProcModel(ModelDef) != &ProcModel)
@@ -680,18 +671,17 @@ Record *SubtargetEmitter::FindWriteResources(
 
   // Check this processor's list of write resources.
   Record *ResDef = nullptr;
-  for (RecIter WRI = ProcModel.WriteResDefs.begin(),
-         WRE = ProcModel.WriteResDefs.end(); WRI != WRE; ++WRI) {
-    if (!(*WRI)->isSubClassOf("WriteRes"))
+  for (Record *WR : ProcModel.WriteResDefs) {
+    if (!WR->isSubClassOf("WriteRes"))
       continue;
-    if (AliasDef == (*WRI)->getValueAsDef("WriteType")
-        || SchedWrite.TheDef == (*WRI)->getValueAsDef("WriteType")) {
+    if (AliasDef == WR->getValueAsDef("WriteType")
+        || SchedWrite.TheDef == WR->getValueAsDef("WriteType")) {
       if (ResDef) {
-        PrintFatalError((*WRI)->getLoc(), "Resources are defined for both "
+        PrintFatalError(WR->getLoc(), "Resources are defined for both "
                       "SchedWrite and its alias on processor " +
                       ProcModel.ModelName);
       }
-      ResDef = *WRI;
+      ResDef = WR;
     }
   }
   // TODO: If ProcModel has a base model (previous generation processor),
@@ -714,10 +704,9 @@ Record *SubtargetEmitter::FindReadAdvance(const CodeGenSchedRW &SchedRead,
 
   // Check this processor's list of aliases for SchedRead.
   Record *AliasDef = nullptr;
-  for (RecIter AI = SchedRead.Aliases.begin(), AE = SchedRead.Aliases.end();
-       AI != AE; ++AI) {
+  for (Record *A : SchedRead.Aliases) {
     const CodeGenSchedRW &AliasRW =
-      SchedModels.getSchedRW((*AI)->getValueAsDef("AliasRW"));
+      SchedModels.getSchedRW(A->getValueAsDef("AliasRW"));
     if (AliasRW.TheDef->getValueInit("SchedModel")->isComplete()) {
       Record *ModelDef = AliasRW.TheDef->getValueAsDef("SchedModel");
       if (&SchedModels.getProcModel(ModelDef) != &ProcModel)
@@ -734,18 +723,17 @@ Record *SubtargetEmitter::FindReadAdvance(const CodeGenSchedRW &SchedRead,
 
   // Check this processor's ReadAdvanceList.
   Record *ResDef = nullptr;
-  for (RecIter RAI = ProcModel.ReadAdvanceDefs.begin(),
-         RAE = ProcModel.ReadAdvanceDefs.end(); RAI != RAE; ++RAI) {
-    if (!(*RAI)->isSubClassOf("ReadAdvance"))
+  for (Record *RA : ProcModel.ReadAdvanceDefs) {
+    if (!RA->isSubClassOf("ReadAdvance"))
       continue;
-    if (AliasDef == (*RAI)->getValueAsDef("ReadType")
-        || SchedRead.TheDef == (*RAI)->getValueAsDef("ReadType")) {
+    if (AliasDef == RA->getValueAsDef("ReadType")
+        || SchedRead.TheDef == RA->getValueAsDef("ReadType")) {
       if (ResDef) {
-        PrintFatalError((*RAI)->getLoc(), "Resources are defined for both "
+        PrintFatalError(RA->getLoc(), "Resources are defined for both "
                       "SchedRead and its alias on processor " +
                       ProcModel.ModelName);
       }
-      ResDef = *RAI;
+      ResDef = RA;
     }
   }
   // TODO: If ProcModel has a base model (previous generation processor),
@@ -787,21 +775,18 @@ void SubtargetEmitter::ExpandProcResources(RecVec &PRVec,
         SubDef = SuperDef;
       }
     }
-    for (RecIter PRI = PM.ProcResourceDefs.begin(),
-           PRE = PM.ProcResourceDefs.end();
-         PRI != PRE; ++PRI) {
-      if (*PRI == PRDef || !(*PRI)->isSubClassOf("ProcResGroup"))
+    for (Record *PR : PM.ProcResourceDefs) {
+      if (PR == PRDef || !PR->isSubClassOf("ProcResGroup"))
         continue;
-      RecVec SuperResources = (*PRI)->getValueAsListOfDefs("Resources");
+      RecVec SuperResources = PR->getValueAsListOfDefs("Resources");
       RecIter SubI = SubResources.begin(), SubE = SubResources.end();
       for( ; SubI != SubE; ++SubI) {
-        if (std::find(SuperResources.begin(), SuperResources.end(), *SubI)
-            == SuperResources.end()) {
+        if (!is_contained(SuperResources, *SubI)) {
           break;
         }
       }
       if (SubI == SubE) {
-        PRVec.push_back(*PRI);
+        PRVec.push_back(PR);
         Cycles.push_back(Cycles[i]);
       }
     }
@@ -817,9 +802,9 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     return;
 
   std::vector<MCSchedClassDesc> &SCTab = SchedTables.ProcSchedClasses.back();
-  for (CodeGenSchedModels::SchedClassIter SCI = SchedModels.schedClassBegin(),
-         SCE = SchedModels.schedClassEnd(); SCI != SCE; ++SCI) {
-    DEBUG(SCI->dump(&SchedModels));
+  DEBUG(dbgs() << "\n+++ SCHED CLASSES (GenSchedClassTables) +++\n");
+  for (const CodeGenSchedClass &SC : SchedModels.schedClasses()) {
+    DEBUG(SC.dump(&SchedModels));
 
     SCTab.resize(SCTab.size() + 1);
     MCSchedClassDesc &SCDesc = SCTab.back();
@@ -834,15 +819,13 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     // A Variant SchedClass has no resources of its own.
     bool HasVariants = false;
     for (std::vector<CodeGenSchedTransition>::const_iterator
-           TI = SCI->Transitions.begin(), TE = SCI->Transitions.end();
+           TI = SC.Transitions.begin(), TE = SC.Transitions.end();
          TI != TE; ++TI) {
       if (TI->ProcIndices[0] == 0) {
         HasVariants = true;
         break;
       }
-      IdxIter PIPos = std::find(TI->ProcIndices.begin(),
-                                TI->ProcIndices.end(), ProcModel.Index);
-      if (PIPos != TI->ProcIndices.end()) {
+      if (is_contained(TI->ProcIndices, ProcModel.Index)) {
         HasVariants = true;
         break;
       }
@@ -855,24 +838,21 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     // Determine if the SchedClass is actually reachable on this processor. If
     // not don't try to locate the processor resources, it will fail.
     // If ProcIndices contains 0, this class applies to all processors.
-    assert(!SCI->ProcIndices.empty() && "expect at least one procidx");
-    if (SCI->ProcIndices[0] != 0) {
-      IdxIter PIPos = std::find(SCI->ProcIndices.begin(),
-                                SCI->ProcIndices.end(), ProcModel.Index);
-      if (PIPos == SCI->ProcIndices.end())
+    assert(!SC.ProcIndices.empty() && "expect at least one procidx");
+    if (SC.ProcIndices[0] != 0) {
+      if (!is_contained(SC.ProcIndices, ProcModel.Index))
         continue;
     }
-    IdxVec Writes = SCI->Writes;
-    IdxVec Reads = SCI->Reads;
-    if (!SCI->InstRWs.empty()) {
+    IdxVec Writes = SC.Writes;
+    IdxVec Reads = SC.Reads;
+    if (!SC.InstRWs.empty()) {
       // This class has a default ReadWrite list which can be overriden by
       // InstRW definitions.
       Record *RWDef = nullptr;
-      for (RecIter RWI = SCI->InstRWs.begin(), RWE = SCI->InstRWs.end();
-           RWI != RWE; ++RWI) {
-        Record *RWModelDef = (*RWI)->getValueAsDef("SchedModel");
+      for (Record *RW : SC.InstRWs) {
+        Record *RWModelDef = RW->getValueAsDef("SchedModel");
         if (&ProcModel == &SchedModels.getProcModel(RWModelDef)) {
-          RWDef = *RWI;
+          RWDef = RW;
           break;
         }
       }
@@ -885,19 +865,17 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     }
     if (Writes.empty()) {
       // Check this processor's itinerary class resources.
-      for (RecIter II = ProcModel.ItinRWDefs.begin(),
-             IE = ProcModel.ItinRWDefs.end(); II != IE; ++II) {
-        RecVec Matched = (*II)->getValueAsListOfDefs("MatchedItinClasses");
-        if (std::find(Matched.begin(), Matched.end(), SCI->ItinClassDef)
-            != Matched.end()) {
-          SchedModels.findRWs((*II)->getValueAsListOfDefs("OperandReadWrites"),
+      for (Record *I : ProcModel.ItinRWDefs) {
+        RecVec Matched = I->getValueAsListOfDefs("MatchedItinClasses");
+        if (is_contained(Matched, SC.ItinClassDef)) {
+          SchedModels.findRWs(I->getValueAsListOfDefs("OperandReadWrites"),
                               Writes, Reads);
           break;
         }
       }
       if (Writes.empty()) {
         DEBUG(dbgs() << ProcModel.ModelName
-              << " does not have resources for class " << SCI->Name << '\n');
+              << " does not have resources for class " << SC.Name << '\n');
       }
     }
     // Sum resources across all operand writes.
@@ -905,9 +883,9 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     std::vector<MCWriteLatencyEntry> WriteLatencies;
     std::vector<std::string> WriterNames;
     std::vector<MCReadAdvanceEntry> ReadAdvanceEntries;
-    for (IdxIter WI = Writes.begin(), WE = Writes.end(); WI != WE; ++WI) {
+    for (unsigned W : Writes) {
       IdxVec WriteSeq;
-      SchedModels.expandRWSeqForProc(*WI, WriteSeq, /*IsRead=*/false,
+      SchedModels.expandRWSeqForProc(W, WriteSeq, /*IsRead=*/false,
                                      ProcModel);
 
       // For each operand, create a latency entry.
@@ -923,11 +901,10 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
       }
       WLEntry.WriteResourceID = WriteID;
 
-      for (IdxIter WSI = WriteSeq.begin(), WSE = WriteSeq.end();
-           WSI != WSE; ++WSI) {
+      for (unsigned WS : WriteSeq) {
 
         Record *WriteRes =
-          FindWriteResources(SchedModels.getSchedWrite(*WSI), ProcModel);
+          FindWriteResources(SchedModels.getSchedWrite(WS), ProcModel);
 
         // Mark the parent class as invalid for unsupported write types.
         if (WriteRes->getValueAsBit("Unsupported")) {
@@ -938,6 +915,8 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         SCDesc.NumMicroOps += WriteRes->getValueAsInt("NumMicroOps");
         SCDesc.BeginGroup |= WriteRes->getValueAsBit("BeginGroup");
         SCDesc.EndGroup |= WriteRes->getValueAsBit("EndGroup");
+        SCDesc.BeginGroup |= WriteRes->getValueAsBit("SingleIssue");
+        SCDesc.EndGroup |= WriteRes->getValueAsBit("SingleIssue");
 
         // Create an entry for each ProcResource listed in WriteRes.
         RecVec PRVec = WriteRes->getValueAsListOfDefs("ProcResources");
@@ -989,16 +968,15 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
       if (ValidWrites.empty())
         WriteIDs.push_back(0);
       else {
-        for (RecIter VWI = ValidWrites.begin(), VWE = ValidWrites.end();
-             VWI != VWE; ++VWI) {
-          WriteIDs.push_back(SchedModels.getSchedRWIdx(*VWI, /*IsRead=*/false));
+        for (Record *VW : ValidWrites) {
+          WriteIDs.push_back(SchedModels.getSchedRWIdx(VW, /*IsRead=*/false));
         }
       }
       std::sort(WriteIDs.begin(), WriteIDs.end());
-      for(IdxIter WI = WriteIDs.begin(), WE = WriteIDs.end(); WI != WE; ++WI) {
+      for(unsigned W : WriteIDs) {
         MCReadAdvanceEntry RAEntry;
         RAEntry.UseIdx = UseIdx;
-        RAEntry.WriteResourceID = *WI;
+        RAEntry.WriteResourceID = W;
         RAEntry.Cycles = ReadAdvance->getValueAsInt("Cycles");
         ReadAdvanceEntries.push_back(RAEntry);
       }
@@ -1138,7 +1116,7 @@ void SubtargetEmitter::EmitSchedClassTables(SchedClassTables &SchedTables,
            && "invalid class not first");
     OS << "  {DBGFIELD(\"InvalidSchedClass\")  "
        << MCSchedClassDesc::InvalidNumMicroOps
-       << ", 0, 0,  0, 0,  0, 0,  0, 0},\n";
+       << ", false, false,  0, 0,  0, 0,  0, 0},\n";
 
     for (unsigned SCIdx = 1, SCEnd = SCTab.size(); SCIdx != SCEnd; ++SCIdx) {
       MCSchedClassDesc &MCDesc = SCTab[SCIdx];
@@ -1147,7 +1125,8 @@ void SubtargetEmitter::EmitSchedClassTables(SchedClassTables &SchedTables,
       if (SchedClass.Name.size() < 18)
         OS.indent(18 - SchedClass.Name.size());
       OS << MCDesc.NumMicroOps
-         << ", " << MCDesc.BeginGroup << ", " << MCDesc.EndGroup
+         << ", " << ( MCDesc.BeginGroup ? "true" : "false" )
+         << ", " << ( MCDesc.EndGroup ? "true" : "false" )
          << ", " << format("%2d", MCDesc.WriteProcResIdx)
          << ", " << MCDesc.NumWriteProcResEntries
          << ", " << format("%2d", MCDesc.WriteLatencyIdx)
@@ -1164,45 +1143,48 @@ void SubtargetEmitter::EmitSchedClassTables(SchedClassTables &SchedTables,
 
 void SubtargetEmitter::EmitProcessorModels(raw_ostream &OS) {
   // For each processor model.
-  for (CodeGenSchedModels::ProcIter PI = SchedModels.procModelBegin(),
-         PE = SchedModels.procModelEnd(); PI != PE; ++PI) {
+  for (const CodeGenProcModel &PM : SchedModels.procModels()) {
     // Emit processor resource table.
-    if (PI->hasInstrSchedModel())
-      EmitProcessorResources(*PI, OS);
-    else if(!PI->ProcResourceDefs.empty())
-      PrintFatalError(PI->ModelDef->getLoc(), "SchedMachineModel defines "
+    if (PM.hasInstrSchedModel())
+      EmitProcessorResources(PM, OS);
+    else if(!PM.ProcResourceDefs.empty())
+      PrintFatalError(PM.ModelDef->getLoc(), "SchedMachineModel defines "
                     "ProcResources without defining WriteRes SchedWriteRes");
 
     // Begin processor itinerary properties
     OS << "\n";
-    OS << "static const llvm::MCSchedModel " << PI->ModelName << " = {\n";
-    EmitProcessorProp(OS, PI->ModelDef, "IssueWidth", ',');
-    EmitProcessorProp(OS, PI->ModelDef, "MicroOpBufferSize", ',');
-    EmitProcessorProp(OS, PI->ModelDef, "LoopMicroOpBufferSize", ',');
-    EmitProcessorProp(OS, PI->ModelDef, "LoadLatency", ',');
-    EmitProcessorProp(OS, PI->ModelDef, "HighLatency", ',');
-    EmitProcessorProp(OS, PI->ModelDef, "MispredictPenalty", ',');
+    OS << "static const llvm::MCSchedModel " << PM.ModelName << " = {\n";
+    EmitProcessorProp(OS, PM.ModelDef, "IssueWidth", ',');
+    EmitProcessorProp(OS, PM.ModelDef, "MicroOpBufferSize", ',');
+    EmitProcessorProp(OS, PM.ModelDef, "LoopMicroOpBufferSize", ',');
+    EmitProcessorProp(OS, PM.ModelDef, "LoadLatency", ',');
+    EmitProcessorProp(OS, PM.ModelDef, "HighLatency", ',');
+    EmitProcessorProp(OS, PM.ModelDef, "MispredictPenalty", ',');
 
-    OS << "  " << (bool)(PI->ModelDef ?
-                         PI->ModelDef->getValueAsBit("PostRAScheduler") : 0)
-       << ", // " << "PostRAScheduler\n";
+    bool PostRAScheduler =
+      (PM.ModelDef ? PM.ModelDef->getValueAsBit("PostRAScheduler") : false);
 
-    OS << "  " << (bool)(PI->ModelDef ?
-                         PI->ModelDef->getValueAsBit("CompleteModel") : 0)
-       << ", // " << "CompleteModel\n";
+    OS << "  " << (PostRAScheduler ? "true" : "false")  << ", // "
+       << "PostRAScheduler\n";
 
-    OS << "  " << PI->Index << ", // Processor ID\n";
-    if (PI->hasInstrSchedModel())
-      OS << "  " << PI->ModelName << "ProcResources" << ",\n"
-         << "  " << PI->ModelName << "SchedClasses" << ",\n"
-         << "  " << PI->ProcResourceDefs.size()+1 << ",\n"
+    bool CompleteModel =
+      (PM.ModelDef ? PM.ModelDef->getValueAsBit("CompleteModel") : false);
+
+    OS << "  " << (CompleteModel ? "true" : "false") << ", // "
+       << "CompleteModel\n";
+
+    OS << "  " << PM.Index << ", // Processor ID\n";
+    if (PM.hasInstrSchedModel())
+      OS << "  " << PM.ModelName << "ProcResources" << ",\n"
+         << "  " << PM.ModelName << "SchedClasses" << ",\n"
+         << "  " << PM.ProcResourceDefs.size()+1 << ",\n"
          << "  " << (SchedModels.schedClassEnd()
                      - SchedModels.schedClassBegin()) << ",\n";
     else
       OS << "  nullptr, nullptr, 0, 0,"
          << " // No instruction-level machine model.\n";
-    if (PI->hasItineraries())
-      OS << "  " << PI->ItinsDef->getName() << "};\n";
+    if (PM.hasItineraries())
+      OS << "  " << PM.ItinsDef->getName() << "};\n";
     else
       OS << "  nullptr}; // No Itinerary\n";
   }
@@ -1228,7 +1210,7 @@ void SubtargetEmitter::EmitProcessorLookup(raw_ostream &OS) {
     // Next processor
     Record *Processor = ProcessorList[i];
 
-    const std::string &Name = Processor->getValueAsString("Name");
+    StringRef Name = Processor->getValueAsString("Name");
     const std::string &ProcModelName =
       SchedModels.getModelForProc(Processor).ModelName;
 
@@ -1259,7 +1241,7 @@ void SubtargetEmitter::EmitSchedModel(raw_ostream &OS) {
      << "#endif\n";
 
   if (SchedModels.hasItineraries()) {
-    std::vector<std::vector<InstrItinerary> > ProcItinLists;
+    std::vector<std::vector<InstrItinerary>> ProcItinLists;
     // Emit the stage data
     EmitStageAndOperandCycleData(OS, ProcItinLists);
     EmitItineraries(OS, ProcItinLists);
@@ -1268,9 +1250,8 @@ void SubtargetEmitter::EmitSchedModel(raw_ostream &OS) {
      << "// Data tables for the new per-operand machine model.\n";
 
   SchedClassTables SchedTables;
-  for (CodeGenSchedModels::ProcIter PI = SchedModels.procModelBegin(),
-         PE = SchedModels.procModelEnd(); PI != PE; ++PI) {
-    GenSchedClassTables(*PI, SchedTables);
+  for (const CodeGenProcModel &ProcModel : SchedModels.procModels()) {
+    GenSchedClassTables(ProcModel, SchedTables);
   }
   EmitSchedClassTables(SchedTables, OS);
 
@@ -1282,7 +1263,7 @@ void SubtargetEmitter::EmitSchedModel(raw_ostream &OS) {
   OS << "#undef DBGFIELD";
 }
 
-void SubtargetEmitter::EmitSchedModelHelpers(std::string ClassName,
+void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
                                              raw_ostream &OS) {
   OS << "unsigned " << ClassName
      << "\n::resolveSchedClass(unsigned SchedClass, const MachineInstr *MI,"
@@ -1290,60 +1271,52 @@ void SubtargetEmitter::EmitSchedModelHelpers(std::string ClassName,
 
   std::vector<Record*> Prologs = Records.getAllDerivedDefinitions("PredicateProlog");
   std::sort(Prologs.begin(), Prologs.end(), LessRecord());
-  for (std::vector<Record*>::const_iterator
-         PI = Prologs.begin(), PE = Prologs.end(); PI != PE; ++PI) {
-    OS << (*PI)->getValueAsString("Code") << '\n';
+  for (Record *P : Prologs) {
+    OS << P->getValueAsString("Code") << '\n';
   }
   IdxVec VariantClasses;
-  for (CodeGenSchedModels::SchedClassIter SCI = SchedModels.schedClassBegin(),
-         SCE = SchedModels.schedClassEnd(); SCI != SCE; ++SCI) {
-    if (SCI->Transitions.empty())
+  for (const CodeGenSchedClass &SC : SchedModels.schedClasses()) {
+    if (SC.Transitions.empty())
       continue;
-    VariantClasses.push_back(SCI->Index);
+    VariantClasses.push_back(SC.Index);
   }
   if (!VariantClasses.empty()) {
     OS << "  switch (SchedClass) {\n";
-    for (IdxIter VCI = VariantClasses.begin(), VCE = VariantClasses.end();
-         VCI != VCE; ++VCI) {
-      const CodeGenSchedClass &SC = SchedModels.getSchedClass(*VCI);
-      OS << "  case " << *VCI << ": // " << SC.Name << '\n';
+    for (unsigned VC : VariantClasses) {
+      const CodeGenSchedClass &SC = SchedModels.getSchedClass(VC);
+      OS << "  case " << VC << ": // " << SC.Name << '\n';
       IdxVec ProcIndices;
-      for (std::vector<CodeGenSchedTransition>::const_iterator
-             TI = SC.Transitions.begin(), TE = SC.Transitions.end();
-           TI != TE; ++TI) {
+      for (const CodeGenSchedTransition &T : SC.Transitions) {
         IdxVec PI;
-        std::set_union(TI->ProcIndices.begin(), TI->ProcIndices.end(),
+        std::set_union(T.ProcIndices.begin(), T.ProcIndices.end(),
                        ProcIndices.begin(), ProcIndices.end(),
                        std::back_inserter(PI));
         ProcIndices.swap(PI);
       }
-      for (IdxIter PI = ProcIndices.begin(), PE = ProcIndices.end();
-           PI != PE; ++PI) {
+      for (unsigned PI : ProcIndices) {
         OS << "    ";
-        if (*PI != 0)
-          OS << "if (SchedModel->getProcessorID() == " << *PI << ") ";
-        OS << "{ // " << (SchedModels.procModelBegin() + *PI)->ModelName
+        if (PI != 0)
+          OS << "if (SchedModel->getProcessorID() == " << PI << ") ";
+        OS << "{ // " << (SchedModels.procModelBegin() + PI)->ModelName
            << '\n';
-        for (std::vector<CodeGenSchedTransition>::const_iterator
-               TI = SC.Transitions.begin(), TE = SC.Transitions.end();
-             TI != TE; ++TI) {
-          if (*PI != 0 && !std::count(TI->ProcIndices.begin(),
-                                      TI->ProcIndices.end(), *PI)) {
+        for (const CodeGenSchedTransition &T : SC.Transitions) {
+          if (PI != 0 && !std::count(T.ProcIndices.begin(),
+                                     T.ProcIndices.end(), PI)) {
               continue;
           }
           OS << "      if (";
-          for (RecIter RI = TI->PredTerm.begin(), RE = TI->PredTerm.end();
+          for (RecIter RI = T.PredTerm.begin(), RE = T.PredTerm.end();
                RI != RE; ++RI) {
-            if (RI != TI->PredTerm.begin())
+            if (RI != T.PredTerm.begin())
               OS << "\n          && ";
             OS << "(" << (*RI)->getValueAsString("Predicate") << ")";
           }
           OS << ")\n"
-             << "        return " << TI->ToClassIdx << "; // "
-             << SchedModels.getSchedClass(TI->ToClassIdx).Name << '\n';
+             << "        return " << T.ToClassIdx << "; // "
+             << SchedModels.getSchedClass(T.ToClassIdx).Name << '\n';
         }
         OS << "    }\n";
-        if (*PI == 0)
+        if (PI == 0)
           break;
       }
       if (SC.isInferred())
@@ -1383,12 +1356,11 @@ void SubtargetEmitter::ParseFeaturesFunction(raw_ostream &OS,
   OS << "  InitMCProcessorInfo(CPU, FS);\n"
      << "  const FeatureBitset& Bits = getFeatureBits();\n";
 
-  for (unsigned i = 0; i < Features.size(); i++) {
+  for (Record *R : Features) {
     // Next record
-    Record *R = Features[i];
-    const std::string &Instance = R->getName();
-    const std::string &Value = R->getValueAsString("Value");
-    const std::string &Attribute = R->getValueAsString("Attribute");
+    StringRef Instance = R->getName();
+    StringRef Value = R->getValueAsString("Value");
+    StringRef Attribute = R->getValueAsString("Attribute");
 
     if (Value=="true" || Value=="false")
       OS << "  if (Bits[" << Target << "::"
@@ -1411,15 +1383,15 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("Subtarget Enumeration Source Fragment", OS);
 
   OS << "\n#ifdef GET_SUBTARGETINFO_ENUM\n";
-  OS << "#undef GET_SUBTARGETINFO_ENUM\n";
+  OS << "#undef GET_SUBTARGETINFO_ENUM\n\n";
 
   OS << "namespace llvm {\n";
-  Enumeration(OS, "SubtargetFeature");
-  OS << "} // end llvm namespace\n";
+  Enumeration(OS);
+  OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_SUBTARGETINFO_ENUM\n\n";
 
   OS << "\n#ifdef GET_SUBTARGETINFO_MC_DESC\n";
-  OS << "#undef GET_SUBTARGETINFO_MC_DESC\n";
+  OS << "#undef GET_SUBTARGETINFO_MC_DESC\n\n";
 
   OS << "namespace llvm {\n";
 #if 0
@@ -1432,7 +1404,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   EmitSchedModel(OS);
   OS << "\n";
 #if 0
-  OS << "}\n";
+  OS << "} // end anonymous namespace\n\n";
 #endif
 
   // MCInstrInfo initialization routine.
@@ -1453,31 +1425,31 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << Target << "WriteProcResTable, "
      << Target << "WriteLatencyTable, "
      << Target << "ReadAdvanceTable, ";
+  OS << '\n'; OS.indent(22);
   if (SchedModels.hasItineraries()) {
-    OS << '\n'; OS.indent(22);
     OS << Target << "Stages, "
        << Target << "OperandCycles, "
        << Target << "ForwardingPaths";
   } else
-    OS << "0, 0, 0";
+    OS << "nullptr, nullptr, nullptr";
   OS << ");\n}\n\n";
 
-  OS << "} // end llvm namespace\n";
+  OS << "} // end namespace llvm\n\n";
 
   OS << "#endif // GET_SUBTARGETINFO_MC_DESC\n\n";
 
   OS << "\n#ifdef GET_SUBTARGETINFO_TARGET_DESC\n";
-  OS << "#undef GET_SUBTARGETINFO_TARGET_DESC\n";
+  OS << "#undef GET_SUBTARGETINFO_TARGET_DESC\n\n";
 
   OS << "#include \"llvm/Support/Debug.h\"\n";
-  OS << "#include \"llvm/Support/raw_ostream.h\"\n";
+  OS << "#include \"llvm/Support/raw_ostream.h\"\n\n";
   ParseFeaturesFunction(OS, NumFeatures, NumProcs);
 
   OS << "#endif // GET_SUBTARGETINFO_TARGET_DESC\n\n";
 
   // Create a TargetSubtargetInfo subclass to hide the MC layer initialization.
   OS << "\n#ifdef GET_SUBTARGETINFO_HEADER\n";
-  OS << "#undef GET_SUBTARGETINFO_HEADER\n";
+  OS << "#undef GET_SUBTARGETINFO_HEADER\n\n";
 
   std::string ClassName = Target + "GenSubtargetInfo";
   OS << "namespace llvm {\n";
@@ -1492,14 +1464,14 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << "  DFAPacketizer *createDFAPacketizer(const InstrItineraryData *IID)"
      << " const;\n"
      << "};\n";
-  OS << "} // end llvm namespace\n";
+  OS << "} // end namespace llvm\n\n";
 
   OS << "#endif // GET_SUBTARGETINFO_HEADER\n\n";
 
   OS << "\n#ifdef GET_SUBTARGETINFO_CTOR\n";
-  OS << "#undef GET_SUBTARGETINFO_CTOR\n";
+  OS << "#undef GET_SUBTARGETINFO_CTOR\n\n";
 
-  OS << "#include \"llvm/CodeGen/TargetSchedule.h\"\n";
+  OS << "#include \"llvm/CodeGen/TargetSchedule.h\"\n\n";
   OS << "namespace llvm {\n";
   OS << "extern const llvm::SubtargetFeatureKV " << Target << "FeatureKV[];\n";
   OS << "extern const llvm::SubtargetFeatureKV " << Target << "SubTypeKV[];\n";
@@ -1539,12 +1511,12 @@ void SubtargetEmitter::run(raw_ostream &OS) {
        << Target << "OperandCycles, "
        << Target << "ForwardingPaths";
   } else
-    OS << "0, 0, 0";
+    OS << "nullptr, nullptr, nullptr";
   OS << ") {}\n\n";
 
   EmitSchedModelHelpers(ClassName, OS);
 
-  OS << "} // end llvm namespace\n";
+  OS << "} // end namespace llvm\n\n";
 
   OS << "#endif // GET_SUBTARGETINFO_CTOR\n\n";
 }
@@ -1556,4 +1528,4 @@ void EmitSubtarget(RecordKeeper &RK, raw_ostream &OS) {
   SubtargetEmitter(RK, CGTarget).run(OS);
 }
 
-} // end llvm namespace
+} // end namespace llvm

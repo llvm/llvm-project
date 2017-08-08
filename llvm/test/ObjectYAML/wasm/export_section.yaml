@@ -1,0 +1,39 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            EXPORT
+    Exports:         
+      - Name:            function_export
+        Kind:            FUNCTION
+        Index:           1
+      - Name:            global_export
+        Kind:            GLOBAL
+        Index:           1
+      - Name:            memory_export
+        Kind:            MEMORY
+        Index:           0
+      - Name:            table_export
+        Kind:            TABLE
+        Index:           0
+...
+# CHECK: --- !WASM
+# CHECK: FileHeader:
+# CHECK:   Version:           0x00000001
+# CHECK: Sections:
+# CHECK:   - Type:            EXPORT
+# CHECK:     Exports:         
+# CHECK:       - Name:            function_export
+# CHECK:         Kind:            FUNCTION
+# CHECK:         Index:           1
+# CHECK:       - Name:            global_export
+# CHECK:         Kind:            GLOBAL
+# CHECK:         Index:           1
+# CHECK:       - Name:            memory_export
+# CHECK:         Kind:            MEMORY
+# CHECK:         Index:           0
+# CHECK:       - Name:            table_export
+# CHECK:         Kind:            TABLE
+# CHECK:         Index:           0
+# CHECK: ...

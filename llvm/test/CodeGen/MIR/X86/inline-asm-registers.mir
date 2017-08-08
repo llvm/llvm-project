@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -start-after block-placement -stop-after block-placement -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
 
 --- |
   define i64 @test(i64 %x, i64 %y) #0 {
@@ -19,7 +19,6 @@
 ...
 ---
 name:            test
-hasInlineAsm:    true
 tracksRegLiveness: true
 liveins:
   - { reg: '%rdi' }
@@ -36,7 +35,6 @@ body: |
 ...
 ---
 name:            test2
-hasInlineAsm:    true
 tracksRegLiveness: true
 liveins:
   - { reg: '%rdi' }

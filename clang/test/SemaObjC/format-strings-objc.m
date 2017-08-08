@@ -47,7 +47,7 @@ int printf(const char * restrict, ...) ;
 
 void check_nslog(unsigned k) {
   NSLog(@"%d%%", k); // no-warning
-  NSLog(@"%s%lb%d", "unix", 10,20); // expected-warning {{invalid conversion specifier 'b'}}
+  NSLog(@"%s%lb%d", "unix", 10, 20); // expected-warning {{invalid conversion specifier 'b'}} expected-warning {{data argument not used by format string}}
 }
 
 // Check type validation
@@ -116,6 +116,7 @@ NSString *test_literal_propagation(void) {
   NSLog(ns2); // expected-warning {{more '%' conversions than data arguments}}
   NSString * ns3 = ns1;
   NSLog(ns3); // expected-warning {{format string is not a string literal}}}
+  // expected-note@-1{{treat the string as an argument to avoid this}}
 
   NSString * const ns6 = @"split" " string " @"%s"; // expected-note {{format string is defined here}}
   NSLog(ns6); // expected-warning {{more '%' conversions than data arguments}}
@@ -264,3 +265,55 @@ void testObjCModifierFlags() {
   NSLog(@"%2$[tt]@ %1$[tt]s", @"Foo", @"Bar"); // expected-warning {{object format flags cannot be used with 's' conversion specifier}}
 }
 
+// Test os_log_format primitive with ObjC string literal format argument.
+void test_os_log_format(char c, const char *pc, int i, int *pi, void *p, void *buf, NSString *nss) {
+  __builtin_os_log_format(buf, @"");
+  __builtin_os_log_format(buf, @"%d"); // expected-warning {{more '%' conversions than data arguments}}
+  __builtin_os_log_format(buf, @"%d", i);
+  __builtin_os_log_format(buf, @"%P", p); // expected-warning {{using '%P' format specifier without precision}}
+  __builtin_os_log_format(buf, @"%.10P", p);
+  __builtin_os_log_format(buf, @"%.*P", p); // expected-warning {{field precision should have type 'int', but argument has type 'void *'}}
+  __builtin_os_log_format(buf, @"%.*P", i, p);
+  __builtin_os_log_format(buf, @"%.*P", i, i); // expected-warning {{format specifies type 'void *' but the argument has type 'int'}}
+
+  __builtin_os_log_format(buf, @"%{private}s", pc);
+  __builtin_os_log_format(buf, @"%@", nss);
+}
+
+// rdar://23622446
+@interface RD23622446_Tester: NSObject
+
++ (void)stringWithFormat:(const char *)format, ... __attribute__((format(__printf__, 1, 2)));
+
+@end
+
+@implementation RD23622446_Tester
+
+__attribute__ ((format_arg(1)))
+const char *rd23622446(const char *format) {
+  return format;
+}
+
++ (void)stringWithFormat:(const char *)format, ... {
+  return;
+}
+
+- (const char *)test:(const char *)format __attribute__ ((format_arg(1))) {
+  return format;
+}
+
+- (NSString *)str:(NSString *)format __attribute__ ((format_arg(1))) {
+  return format;
+}
+
+- (void)foo {
+  [RD23622446_Tester stringWithFormat:rd23622446("%u"), 1, 2]; // expected-warning {{data argument not used by format string}}
+  [RD23622446_Tester stringWithFormat:[self test: "%u"], 1, 2]; // expected-warning {{data argument not used by format string}}
+  [RD23622446_Tester stringWithFormat:[self test: "%s %s"], "name"]; // expected-warning {{more '%' conversions than data arguments}}
+  NSLog([self str: @"%@ %@"], @"name"); // expected-warning {{more '%' conversions than data arguments}}
+  [RD23622446_Tester stringWithFormat:rd23622446("%d"), 1]; // ok
+  [RD23622446_Tester stringWithFormat:[self test: "%d %d"], 1, 2]; // ok
+  NSLog([self str: @"%@"], @"string"); // ok
+}
+
+@end

@@ -1,8 +1,8 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-freebsd9 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-netbsd | FileCheck %s
 
 ; Check that our compiler never emits global constructors
-; inside the .init_array section when building for a non-Linux ELF target.
-; Because of this, the test depends on UseInitArray behavior under FreeBSD
+; inside the .init_array section when building for a non supported target.
+; Because of this, the test depends on UseInitArray behavior under NetBSD
 ; as found in Generic_ELF::addClangTargetOptions().
 
 ; This is to workaround a Visual Studio bug which causes field

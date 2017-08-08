@@ -78,7 +78,7 @@ struct Base {
 
 void Base::foo_outofline(int RRR) {}
 
-// CHECK: FullCommentAsXML=[<Function isInstanceMethod="1" file="{{[^"]+}}overriding-method-comments.mm" line="[[@LINE-2]]" column="12"><Name>foo_outofline</Name><USR>c:@S@Base@F@foo_outofline#I#</USR><Declaration>void foo_outofline(int RRR)</Declaration><Abstract><Para> Does something. </Para></Abstract><Parameters><Parameter><Name>RRR</Name><Index>0</Index><Direction isExplicit="0">in</Direction><Discussion><Para> argument to undefined virtual.</Para></Discussion></Parameter></Parameters></Function>]
+// CHECK: FullCommentAsXML=[<Function isInstanceMethod="1" file="{{[^"]+}}overriding-method-comments.mm" line="[[@LINE-2]]" column="12"><Name>foo_outofline</Name><USR>c:@S@Base@F@foo_outofline#I#</USR><Declaration>void Base::foo_outofline(int RRR)</Declaration><Abstract><Para> Does something. </Para></Abstract><Parameters><Parameter><Name>RRR</Name><Index>0</Index><Direction isExplicit="0">in</Direction><Discussion><Para> argument to undefined virtual.</Para></Discussion></Parameter></Parameters></Function>]
 
 struct Derived : public Base {
   virtual void foo_pure(int PPP);

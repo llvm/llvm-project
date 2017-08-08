@@ -10,6 +10,41 @@
 // RUN: %clang -target armv6-apple-darwin9 -miphoneos-version-min=3.0 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-IOS3 %s
 // CHECK-VERSION-IOS3: "armv6k-apple-ios3.0.0"
+
+// RUN: env IPHONEOS_DEPLOYMENT_TARGET=11.0 \
+// RUN:   %clang -target armv7-apple-ios9.0 -c -### %s 2> %t.err
+// RUN:   FileCheck --input-file=%t.err --check-prefix=CHECK-VERSION-IOS4 %s
+// CHECK-VERSION-IOS4: invalid iOS deployment version 'IPHONEOS_DEPLOYMENT_TARGET=11.0'
+
+// RUN: %clang -target armv7-apple-ios9.0 -miphoneos-version-min=11.0 -c -### %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-VERSION-IOS5 %s
+// CHECK-VERSION-IOS5: invalid iOS deployment version '-miphoneos-version-min=11.0'
+
+// RUN: %clang -target i386-apple-darwin -mios-simulator-version-min=11.0 -c -### %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-VERSION-IOS6 %s
+// CHECK-VERSION-IOS6: invalid iOS deployment version '-mios-simulator-version-min=11.0'
+
+// RUN: %clang -target armv7-apple-ios11.1 -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-IOS7 %s
+// CHECK-VERSION-IOS7: thumbv7-apple-ios10.99.99
+
+// RUN: env IPHONEOS_DEPLOYMENT_TARGET=11.0 \
+// RUN:   %clang -target arm64-apple-ios11.0 -c -### %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-IOS8 %s
+// CHECK-VERSION-IOS8: arm64-apple-ios11.0.0
+
+// RUN: %clang -target arm64-apple-ios11.0 -miphoneos-version-min=11.0 -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-IOS9 %s
+// CHECK-VERSION-IOS9: arm64-apple-ios11.0.0
+
+// RUN: %clang -target x86_64-apple-darwin -mios-simulator-version-min=11.0 -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-IOS10 %s
+// CHECK-VERSION-IOS10: x86_64-apple-ios11.0.0
+
+// RUN: %clang -target arm64-apple-ios11.1 -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-IOS11 %s
+// CHECK-VERSION-IOS11: arm64-apple-ios11.1.0
+
 // RUN: %clang -target i686-apple-darwin8 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX4 %s
 // RUN: %clang -target i686-apple-darwin9 -mmacosx-version-min=10.4 -c %s -### 2>&1 | \
@@ -29,8 +64,12 @@
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX10 %s
 // RUN: %clang -target x86_64-apple-macosx -mmacosx-version-min=10.10 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX10 %s
+// RUN: %clang -target x86_64-apple-macosx -mmacos-version-min=10.10 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX10 %s
 // CHECK-VERSION-OSX10: "x86_64-apple-macosx10.10.0"
 // RUN: %clang -target x86_64-apple-macosx -mmacosx-version-min= -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-MISSING %s
+// RUN: %clang -target x86_64-apple-macosx -mmacos-version-min= -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-MISSING %s
 // CHECK-VERSION-MISSING: invalid version number
 // RUN: %clang -target armv7k-apple-darwin -mwatchos-version-min=2.0 -c %s -### 2>&1 | \
@@ -82,3 +121,15 @@
 // RUN:   %clang -target i386-apple-darwin9 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-WATCHOSSIM %s
 // CHECK-VERSION-WATCHOSSIM: "i386-apple-watchos2.0.0"
+
+// RUN: %clang -target x86_64-apple-ios11.0.0 -c %s -### 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-IOS-TARGET %s
+// CHECK-VERSION-IOS-TARGET: "x86_64-apple-ios11.0.0"
+
+// RUN: %clang -target x86_64-apple-tvos11.0 -c %s -### 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-TVOS-TARGET %s
+// CHECK-VERSION-TVOS-TARGET: "x86_64-apple-tvos11.0.0"
+
+// RUN: %clang -target x86_64-apple-watchos4.0 -c %s -### 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-WATCHOS-TARGET %s
+// CHECK-VERSION-WATCHOS-TARGET: "x86_64-apple-watchos4.0.0"

@@ -27,17 +27,14 @@ g4:
 	.globl	t1                      # @t1
 	.align	8
 t1:
-	.quad	(g3-t1)+4
 
 	.globl	t2                      # @t2
 	.align	8
 t2:
-	.quad	g3-t2
 
 	.globl	t3                      # @t3
 	.align	8
 t3:
-	.quad	(g3-t3)-4
 
 	.globl	t4                      # @t4
 	.align	4
@@ -58,61 +55,53 @@ t6:
 	.long	g3-(t6+16)
 	.zero	4
 
+.long foobar - .
 
-// READOBJ:  Section {
-// READOBJ:    Number: 5
-// READOBJ:    Name: .fix (2E 66 69 78 00 00 00 00)
-// READOBJ:    VirtualSize: 0x0
-// READOBJ:    VirtualAddress: 0x0
-// READOBJ:    RawDataSize: 56
-// READOBJ:    PointerToRawData: 0xEC
-// READOBJ:    PointerToRelocations: 0x124
-// READOBJ:    PointerToLineNumbers: 0x0
-// READOBJ:    RelocationCount: 6
-// READOBJ:    LineNumberCount: 0
-// READOBJ:    Characteristics [ (0xC0500040)
-// READOBJ:      IMAGE_SCN_ALIGN_16BYTES (0x500000)
-// READOBJ:      IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-// READOBJ:      IMAGE_SCN_MEM_READ (0x40000000)
-// READOBJ:      IMAGE_SCN_MEM_WRITE (0x80000000)
-// READOBJ:    ]
-// READOBJ:    SectionData (
-// READOBJ:      0000: 10000000 00000000 0C000000 00000000  |................|
-// READOBJ:      0010: 08000000 00000000 0C000000 00000000  |................|
-// READOBJ:      0020: 01020000 00000000 00010000 00000000  |................|
-// READOBJ:      0030: 0C000000 00000000                    |........|
-// READOBJ:    )
-// READOBJ:  }
-// READOBJ:  ]
-// READOBJ:  Relocations [
-// READOBJ:  Section (5) .fix {
-// READOBJ:    Relocation {
-// READOBJ:      Offset: 0x0
-// READOBJ:      Type: IMAGE_REL_AMD64_REL32 (4)
-// READOBJ:      Symbol: .rdata
-// READOBJ:    }
-// READOBJ:    Relocation {
-// READOBJ:      Offset: 0x8
-// READOBJ:      Type: IMAGE_REL_AMD64_REL32 (4)
-// READOBJ:      Symbol: .rdata
-// READOBJ:    }
-// READOBJ:    Relocation {
-// READOBJ:      Offset: 0x10
-// READOBJ:      Type: IMAGE_REL_AMD64_REL32 (4)
-// READOBJ:      Symbol: .rdata
-// READOBJ:    }
-// READOBJ:    Relocation {
-// READOBJ:      Offset: 0x18
-// READOBJ:      Type: IMAGE_REL_AMD64_REL32 (4)
-// READOBJ:      Symbol: .rdata
-// READOBJ:    }
-// READOBJ:    Relocation {
-// READOBJ:      Offset: 0x1C
-// READOBJ:      Type: IMAGE_REL_AMD64_ADDR32NB (3)
-// READOBJ:      Symbol: g3
-// READOBJ:    }
-// READOBJ:    Relocation {
-// READOBJ:      Offset: 0x30
-// READOBJ:      Type: IMAGE_REL_AMD64_REL32 (4)
-// READOBJ:      Symbol: .rdata
-// READOBJ:    }
+// READOBJ:       Section {
+// READOBJ:         Number:
+// READOBJ:         Name: .fix (2E 66 69 78 00 00 00 00)
+// READOBJ-NEXT:    VirtualSize: 0x0
+// READOBJ-NEXT:    VirtualAddress: 0x0
+// READOBJ-NEXT:    RawDataSize:
+// READOBJ-NEXT:    PointerToRawData: 0xEC
+// READOBJ-NEXT:    PointerToRelocations:
+// READOBJ-NEXT:    PointerToLineNumbers: 0x0
+// READOBJ-NEXT:    RelocationCount:
+// READOBJ-NEXT:    LineNumberCount: 0
+// READOBJ-NEXT:    Characteristics [ (0xC0500040)
+// READOBJ-NEXT:      IMAGE_SCN_ALIGN_16BYTES (0x500000)
+// READOBJ-NEXT:      IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+// READOBJ-NEXT:      IMAGE_SCN_MEM_READ (0x40000000)
+// READOBJ-NEXT:      IMAGE_SCN_MEM_WRITE (0x80000000)
+// READOBJ-NEXT:    ]
+// READOBJ-NEXT:    SectionData (
+// READOBJ-NEXT:      0000: 04000000 00000000 00000000 00000000  |
+// READOBJ-NEXT:      0010: 01020000 00000000 00010000 00000000  |
+// READOBJ-NEXT:      0020: 04000000 00000000 04000000           |
+// READOBJ-NEXT:    )
+// READOBJ-NEXT:  }
+// READOBJ-NEXT:  ]
+// READOBJ-NEXT:  Relocations [
+// READOBJ-NEXT:  Section (5) .fix {
+// READOBJ-NEXT:    Relocation {
+// READOBJ-NEXT:      Offset: 0x0
+// READOBJ-NEXT:      Type: IMAGE_REL_AMD64_REL32 (4)
+// READOBJ-NEXT:      Symbol: g3
+// READOBJ-NEXT:    }
+// READOBJ-NEXT:    Relocation {
+// READOBJ-NEXT:      Offset: 0x4
+// READOBJ-NEXT:      Type: IMAGE_REL_AMD64_ADDR32NB (3)
+// READOBJ-NEXT:      Symbol: g3
+// READOBJ-NEXT:    }
+// READOBJ-NEXT:    Relocation {
+// READOBJ-NEXT:      Offset: 0x20
+// READOBJ-NEXT:      Type: IMAGE_REL_AMD64_REL32 (4)
+// READOBJ-NEXT:      Symbol: g3
+// READOBJ-NEXT:    }
+// READOBJ-NEXT:    Relocation {
+// READOBJ-NEXT:      Offset: 0x28
+// READOBJ-NEXT:      Type: IMAGE_REL_AMD64_REL32 (4)
+// READOBJ-NEXT:      Symbol: foobar
+// READOBJ-NEXT:    }
+// READOBJ-NEXT:  }
+// READOBJ-NEXT:]

@@ -107,29 +107,29 @@ entry:
 ; CHECK-NEXT: %res8 = load atomic volatile i8, i8* %ptr1 seq_cst, align 1
   %res8 = load atomic volatile i8, i8* %ptr1 seq_cst, align 1
 
-; CHECK-NEXT: %res9 = load atomic i8, i8* %ptr1 singlethread unordered, align 1
-  %res9 = load atomic i8, i8* %ptr1 singlethread unordered, align 1
+; CHECK-NEXT: %res9 = load atomic i8, i8* %ptr1 syncscope("singlethread") unordered, align 1
+  %res9 = load atomic i8, i8* %ptr1 syncscope("singlethread") unordered, align 1
 
-; CHECK-NEXT: %res10 = load atomic i8, i8* %ptr1 singlethread monotonic, align 1
-  %res10 = load atomic i8, i8* %ptr1 singlethread monotonic, align 1
+; CHECK-NEXT: %res10 = load atomic i8, i8* %ptr1 syncscope("singlethread") monotonic, align 1
+  %res10 = load atomic i8, i8* %ptr1 syncscope("singlethread") monotonic, align 1
 
-; CHECK-NEXT: %res11 = load atomic i8, i8* %ptr1 singlethread acquire, align 1
-  %res11 = load atomic i8, i8* %ptr1 singlethread acquire, align 1
+; CHECK-NEXT: %res11 = load atomic i8, i8* %ptr1 syncscope("singlethread") acquire, align 1
+  %res11 = load atomic i8, i8* %ptr1 syncscope("singlethread") acquire, align 1
 
-; CHECK-NEXT: %res12 = load atomic i8, i8* %ptr1 singlethread seq_cst, align 1
-  %res12 = load atomic i8, i8* %ptr1 singlethread seq_cst, align 1
+; CHECK-NEXT: %res12 = load atomic i8, i8* %ptr1 syncscope("singlethread") seq_cst, align 1
+  %res12 = load atomic i8, i8* %ptr1 syncscope("singlethread") seq_cst, align 1
 
-; CHECK-NEXT: %res13 = load atomic volatile i8, i8* %ptr1 singlethread unordered, align 1
-  %res13 = load atomic volatile i8, i8* %ptr1 singlethread unordered, align 1
+; CHECK-NEXT: %res13 = load atomic volatile i8, i8* %ptr1 syncscope("singlethread") unordered, align 1
+  %res13 = load atomic volatile i8, i8* %ptr1 syncscope("singlethread") unordered, align 1
 
-; CHECK-NEXT: %res14 = load atomic volatile i8, i8* %ptr1 singlethread monotonic, align 1
-  %res14 = load atomic volatile i8, i8* %ptr1 singlethread monotonic, align 1
+; CHECK-NEXT: %res14 = load atomic volatile i8, i8* %ptr1 syncscope("singlethread") monotonic, align 1
+  %res14 = load atomic volatile i8, i8* %ptr1 syncscope("singlethread") monotonic, align 1
 
-; CHECK-NEXT: %res15 = load atomic volatile i8, i8* %ptr1 singlethread acquire, align 1
-  %res15 = load atomic volatile i8, i8* %ptr1 singlethread acquire, align 1
+; CHECK-NEXT: %res15 = load atomic volatile i8, i8* %ptr1 syncscope("singlethread") acquire, align 1
+  %res15 = load atomic volatile i8, i8* %ptr1 syncscope("singlethread") acquire, align 1
 
-; CHECK-NEXT: %res16 = load atomic volatile i8, i8* %ptr1 singlethread seq_cst, align 1
-  %res16 = load atomic volatile i8, i8* %ptr1 singlethread seq_cst, align 1
+; CHECK-NEXT: %res16 = load atomic volatile i8, i8* %ptr1 syncscope("singlethread") seq_cst, align 1
+  %res16 = load atomic volatile i8, i8* %ptr1 syncscope("singlethread") seq_cst, align 1
 
   ret void
 }
@@ -193,29 +193,29 @@ entry:
 ; CHECK-NEXT: store atomic volatile i8 2, i8* %ptr1 seq_cst, align 1
   store atomic volatile i8 2, i8* %ptr1 seq_cst, align 1
 
-; CHECK-NEXT: store atomic i8 2, i8* %ptr1 singlethread unordered, align 1
-  store atomic i8 2, i8* %ptr1 singlethread unordered, align 1
+; CHECK-NEXT: store atomic i8 2, i8* %ptr1 syncscope("singlethread") unordered, align 1
+  store atomic i8 2, i8* %ptr1 syncscope("singlethread") unordered, align 1
 
-; CHECK-NEXT: store atomic i8 2, i8* %ptr1 singlethread monotonic, align 1
-  store atomic i8 2, i8* %ptr1 singlethread monotonic, align 1
+; CHECK-NEXT: store atomic i8 2, i8* %ptr1 syncscope("singlethread") monotonic, align 1
+  store atomic i8 2, i8* %ptr1 syncscope("singlethread") monotonic, align 1
 
-; CHECK-NEXT: store atomic i8 2, i8* %ptr1 singlethread release, align 1
-  store atomic i8 2, i8* %ptr1 singlethread release, align 1
+; CHECK-NEXT: store atomic i8 2, i8* %ptr1 syncscope("singlethread") release, align 1
+  store atomic i8 2, i8* %ptr1 syncscope("singlethread") release, align 1
 
-; CHECK-NEXT: store atomic i8 2, i8* %ptr1 singlethread seq_cst, align 1
-  store atomic i8 2, i8* %ptr1 singlethread seq_cst, align 1
+; CHECK-NEXT: store atomic i8 2, i8* %ptr1 syncscope("singlethread") seq_cst, align 1
+  store atomic i8 2, i8* %ptr1 syncscope("singlethread") seq_cst, align 1
 
-; CHECK-NEXT: store atomic volatile i8 2, i8* %ptr1 singlethread unordered, align 1
-  store atomic volatile i8 2, i8* %ptr1 singlethread unordered, align 1
+; CHECK-NEXT: store atomic volatile i8 2, i8* %ptr1 syncscope("singlethread") unordered, align 1
+  store atomic volatile i8 2, i8* %ptr1 syncscope("singlethread") unordered, align 1
 
-; CHECK-NEXT: store atomic volatile i8 2, i8* %ptr1 singlethread monotonic, align 1
-  store atomic volatile i8 2, i8* %ptr1 singlethread monotonic, align 1
+; CHECK-NEXT: store atomic volatile i8 2, i8* %ptr1 syncscope("singlethread") monotonic, align 1
+  store atomic volatile i8 2, i8* %ptr1 syncscope("singlethread") monotonic, align 1
 
-; CHECK-NEXT: store atomic volatile i8 2, i8* %ptr1 singlethread release, align 1
-  store atomic volatile i8 2, i8* %ptr1 singlethread release, align 1
+; CHECK-NEXT: store atomic volatile i8 2, i8* %ptr1 syncscope("singlethread") release, align 1
+  store atomic volatile i8 2, i8* %ptr1 syncscope("singlethread") release, align 1
 
-; CHECK-NEXT: store atomic volatile i8 2, i8* %ptr1 singlethread seq_cst, align 1
-  store atomic volatile i8 2, i8* %ptr1 singlethread seq_cst, align 1
+; CHECK-NEXT: store atomic volatile i8 2, i8* %ptr1 syncscope("singlethread") seq_cst, align 1
+  store atomic volatile i8 2, i8* %ptr1 syncscope("singlethread") seq_cst, align 1
 
   ret void
 }
@@ -232,13 +232,13 @@ entry:
 ; CHECK-NEXT: %res2 = extractvalue { i32, i1 } [[TMP]], 0
   %res2 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new monotonic monotonic
 
-; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new singlethread monotonic monotonic
+; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") monotonic monotonic
 ; CHECK-NEXT: %res3 = extractvalue { i32, i1 } [[TMP]], 0
-  %res3 = cmpxchg i32* %ptr, i32 %cmp, i32 %new singlethread monotonic monotonic
+  %res3 = cmpxchg i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") monotonic monotonic
 
-; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new singlethread monotonic monotonic
+; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") monotonic monotonic
 ; CHECK-NEXT: %res4 = extractvalue { i32, i1 } [[TMP]], 0
-  %res4 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new singlethread monotonic monotonic
+  %res4 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") monotonic monotonic
 
 
 ; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new acquire acquire
@@ -249,13 +249,13 @@ entry:
 ; CHECK-NEXT: %res6 = extractvalue { i32, i1 } [[TMP]], 0
   %res6 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new acquire acquire
 
-; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new singlethread acquire acquire
+; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") acquire acquire
 ; CHECK-NEXT: %res7 = extractvalue { i32, i1 } [[TMP]], 0
-  %res7 = cmpxchg i32* %ptr, i32 %cmp, i32 %new singlethread acquire acquire
+  %res7 = cmpxchg i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") acquire acquire
 
-; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new singlethread acquire acquire
+; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") acquire acquire
 ; CHECK-NEXT: %res8 = extractvalue { i32, i1 } [[TMP]], 0
-  %res8 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new singlethread acquire acquire
+  %res8 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") acquire acquire
 
 
 ; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new release monotonic
@@ -266,13 +266,13 @@ entry:
 ; CHECK-NEXT: %res10 = extractvalue { i32, i1 } [[TMP]], 0
   %res10 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new release monotonic
 
-; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new singlethread release monotonic
+; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") release monotonic
 ; CHECK-NEXT: %res11 = extractvalue { i32, i1 } [[TMP]], 0
-  %res11 = cmpxchg i32* %ptr, i32 %cmp, i32 %new singlethread release monotonic
+  %res11 = cmpxchg i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") release monotonic
 
-; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new singlethread release monotonic
+; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") release monotonic
 ; CHECK-NEXT: %res12 = extractvalue { i32, i1 } [[TMP]], 0
-  %res12 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new singlethread release monotonic
+  %res12 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") release monotonic
 
 
 ; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new acq_rel acquire
@@ -283,13 +283,13 @@ entry:
 ; CHECK-NEXT: %res14 = extractvalue { i32, i1 } [[TMP]], 0
   %res14 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new acq_rel acquire
 
-; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new singlethread acq_rel acquire
+; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") acq_rel acquire
 ; CHECK-NEXT: %res15 = extractvalue { i32, i1 } [[TMP]], 0
-  %res15 = cmpxchg i32* %ptr, i32 %cmp, i32 %new singlethread acq_rel acquire
+  %res15 = cmpxchg i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") acq_rel acquire
 
-; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new singlethread acq_rel acquire
+; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") acq_rel acquire
 ; CHECK-NEXT: %res16 = extractvalue { i32, i1 } [[TMP]], 0
-  %res16 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new singlethread acq_rel acquire
+  %res16 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") acq_rel acquire
 
 
 ; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new seq_cst seq_cst
@@ -300,13 +300,13 @@ entry:
 ; CHECK-NEXT: %res18 = extractvalue { i32, i1 } [[TMP]], 0
   %res18 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new seq_cst seq_cst
 
-; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new singlethread seq_cst seq_cst
+; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") seq_cst seq_cst
 ; CHECK-NEXT: %res19 = extractvalue { i32, i1 } [[TMP]], 0
-  %res19 = cmpxchg i32* %ptr, i32 %cmp, i32 %new singlethread seq_cst seq_cst
+  %res19 = cmpxchg i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") seq_cst seq_cst
 
-; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new singlethread seq_cst seq_cst
+; CHECK-NEXT: [[TMP:%[a-z0-9]+]] = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") seq_cst seq_cst
 ; CHECK-NEXT: %res20 = extractvalue { i32, i1 } [[TMP]], 0
-  %res20 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new singlethread seq_cst seq_cst
+  %res20 = cmpxchg volatile i32* %ptr, i32 %cmp, i32 %new syncscope("singlethread") seq_cst seq_cst
 
   ret void
 }

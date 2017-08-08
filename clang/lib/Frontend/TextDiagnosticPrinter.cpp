@@ -13,13 +13,11 @@
 
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 using namespace clang;
@@ -152,10 +150,9 @@ void TextDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
          "Unexpected diagnostic with no source manager");
   assert(TextDiag && "Unexpected diagnostic outside source file processing");
 
-  TextDiag->emitDiagnostic(Info.getLocation(), Level, DiagMessageStream.str(),
-                           Info.getRanges(),
-                           Info.getFixItHints(),
-                           &Info.getSourceManager());
+  TextDiag->emitDiagnostic(
+      FullSourceLoc(Info.getLocation(), Info.getSourceManager()), Level,
+      DiagMessageStream.str(), Info.getRanges(), Info.getFixItHints());
 
   OS.flush();
 }

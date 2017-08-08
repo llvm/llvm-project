@@ -73,6 +73,8 @@ public:
 
 namespace abi = __cxxabiv1;
 
+using namespace __sanitizer;
+
 // We implement a simple two-level cache for type-checking results. For each
 // (vptr,type) pair, a hash is computed. This hash is assumed to be globally
 // unique; if it collides, we will get false negatives, but:
@@ -115,7 +117,9 @@ static __ubsan::HashValue *getTypeCacheHashTableBucket(__ubsan::HashValue V) {
 static bool isDerivedFromAtOffset(const abi::__class_type_info *Derived,
                                   const abi::__class_type_info *Base,
                                   sptr Offset) {
-  if (Derived->__type_name == Base->__type_name)
+  if (Derived->__type_name == Base->__type_name ||
+      (SANITIZER_NON_UNIQUE_TYPEINFO &&
+       !internal_strcmp(Derived->__type_name, Base->__type_name)))
     return Offset == 0;
 
   if (const abi::__si_class_type_info *SI =
@@ -163,7 +167,7 @@ static const abi::__class_type_info *findBaseAtOffset(
     dynamic_cast<const abi::__vmi_class_type_info*>(Derived);
   if (!VTI)
     // No base class subobjects.
-    return 0;
+    return nullptr;
 
   for (unsigned int base = 0; base != VTI->base_count; ++base) {
     sptr OffsetHere = VTI->base_info[base].__offset_flags >>
@@ -178,7 +182,7 @@ static const abi::__class_type_info *findBaseAtOffset(
       return Base;
   }
 
-  return 0;
+  return nullptr;
 }
 
 namespace {
@@ -193,12 +197,12 @@ struct VtablePrefix {
 };
 VtablePrefix *getVtablePrefix(void *Vtable) {
   VtablePrefix *Vptr = reinterpret_cast<VtablePrefix*>(Vtable);
-  if (!Vptr)
-    return 0;
   VtablePrefix *Prefix = Vptr - 1;
+  if (!IsAccessibleMemoryRange((uptr)Prefix, sizeof(VtablePrefix)))
+    return nullptr;
   if (!Prefix->TypeInfo)
     // This can't possibly be a valid vtable.
-    return 0;
+    return nullptr;
   return Prefix;
 }
 
@@ -219,6 +223,10 @@ bool __ubsan::checkDynamicType(void *Object, void *Type, HashValue Hash) {
   VtablePrefix *Vtable = getVtablePrefix(VtablePtr);
   if (!Vtable)
     return false;
+  if (Vtable->Offset < -VptrMaxOffsetToTop || Vtable->Offset > VptrMaxOffsetToTop) {
+    // Too large or too small offset are signs of Vtable corruption.
+    return false;
+  }
 
   // Check that this is actually a type_info object for a class type.
   abi::__class_type_info *Derived =
@@ -240,7 +248,9 @@ __ubsan::DynamicTypeInfo
 __ubsan::getDynamicTypeInfoFromVtable(void *VtablePtr) {
   VtablePrefix *Vtable = getVtablePrefix(VtablePtr);
   if (!Vtable)
-    return DynamicTypeInfo(0, 0, 0);
+    return DynamicTypeInfo(nullptr, 0, nullptr);
+  if (Vtable->Offset < -VptrMaxOffsetToTop || Vtable->Offset > VptrMaxOffsetToTop)
+    return DynamicTypeInfo(nullptr, Vtable->Offset, nullptr);
   const abi::__class_type_info *ObjectType = findBaseAtOffset(
     static_cast<const abi::__class_type_info*>(Vtable->TypeInfo),
     -Vtable->Offset);

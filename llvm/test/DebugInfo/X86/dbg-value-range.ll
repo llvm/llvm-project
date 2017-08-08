@@ -4,10 +4,10 @@
 
 define i32 @bar(%struct.a* nocapture %b) nounwind ssp !dbg !0 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.a* %b, i64 0, metadata !6, metadata !DIExpression()), !dbg !13
+  tail call void @llvm.dbg.value(metadata %struct.a* %b, metadata !6, metadata !DIExpression()), !dbg !13
   %tmp1 = getelementptr inbounds %struct.a, %struct.a* %b, i64 0, i32 0, !dbg !14
   %tmp2 = load i32, i32* %tmp1, align 4, !dbg !14
-  tail call void @llvm.dbg.value(metadata i32 %tmp2, i64 0, metadata !11, metadata !DIExpression()), !dbg !14
+  tail call void @llvm.dbg.value(metadata i32 %tmp2, metadata !11, metadata !DIExpression()), !dbg !14
   %call = tail call i32 (...) @foo(i32 %tmp2) nounwind , !dbg !18
   %add = add nsw i32 %tmp2, 1, !dbg !19
   ret i32 %add, !dbg !19
@@ -15,14 +15,14 @@ entry:
 
 declare i32 @foo(...) 
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!24}
 
-!0 = distinct !DISubprogram(name: "bar", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, file: !22, scope: !1, type: !3, variables: !21)
+!0 = distinct !DISubprogram(name: "bar", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !22, scope: !1, type: !3, variables: !21)
 !1 = !DIFile(filename: "bar.c", directory: "/private/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 122997)", isOptimized: true, emissionKind: 1, file: !22, enums: !23, retainedTypes: !23, subprograms: !20, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 122997)", isOptimized: true, emissionKind: FullDebug, file: !22, enums: !23, retainedTypes: !23, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -37,7 +37,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !14 = !DILocation(line: 6, column: 14, scope: !12)
 !18 = !DILocation(line: 7, column: 2, scope: !12)
 !19 = !DILocation(line: 8, column: 2, scope: !12)
-!20 = !{!0}
 !21 = !{!6, !11}
 !22 = !DIFile(filename: "bar.c", directory: "/private/tmp")
 !23 = !{}

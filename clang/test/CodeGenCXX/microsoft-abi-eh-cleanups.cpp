@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 -mconstructor-aliases -fexceptions -fcxx-exceptions -fno-rtti | FileCheck -check-prefix WIN32 %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 -mconstructor-aliases -fexceptions -fcxx-exceptions -fno-rtti | FileCheck -check-prefix WIN32 -check-prefix WIN32-O0 %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm -O3 -disable-llvm-passes %s -o - -triple=i386-pc-win32 -mconstructor-aliases -fexceptions -fcxx-exceptions -fno-rtti | FileCheck -check-prefix WIN32 -check-prefix WIN32-O3 -check-prefix WIN32-LIFETIME %s
 
 struct A {
   A();
@@ -27,7 +28,7 @@ void HasEHCleanup() {
 //
 //    There should be one dtor call for unwinding from the second getA.
 // WIN32:   cleanuppad
-// WIN32:   call x86_thiscallcc void @"\01??1A@@QAE@XZ"({{.*}}) #[[noinline:[0-9]+]]
+// WIN32:   call x86_thiscallcc void @"\01??1A@@QAE@XZ"({{.*}})
 // WIN32-NOT: @"\01??1A@@QAE@XZ"
 // WIN32: }
 
@@ -62,7 +63,7 @@ int HasDeactivatedCleanups() {
 //        Conditionally destroy arg1.
 // WIN32:   %[[cond:.*]] = load i1, i1* %[[isactive]]
 // WIN32:   br i1 %[[cond]]
-// WIN32:   call x86_thiscallcc void @"\01??1A@@QAE@XZ"(%struct.A* %[[arg1]]) #[[noinline]]
+// WIN32:   call x86_thiscallcc void @"\01??1A@@QAE@XZ"(%struct.A* %[[arg1]])
 // WIN32: }
 
 // Test putting the cleanups inside a conditional.
@@ -85,7 +86,7 @@ int HasConditionalCleanup(bool cond) {
 // WIN32:   call i32 @"\01?CouldThrow@@YAHXZ"()
 //
 //        Only one dtor in the invoke for arg1
-// WIN32:   call x86_thiscallcc void @"\01??1A@@QAE@XZ"({{.*}}) #[[noinline]]
+// WIN32:   call x86_thiscallcc void @"\01??1A@@QAE@XZ"({{.*}})
 // WIN32-NOT: invoke x86_thiscallcc void @"\01??1A@@QAE@XZ"
 // WIN32: }
 
@@ -94,40 +95,78 @@ int HasConditionalDeactivatedCleanups(bool cond) {
   return (cond ? TakesTwo((TakeRef(A()), A()), (TakeRef(A()), A())) : CouldThrow());
 }
 
-// WIN32-LABEL: define i32 @"\01?HasConditionalDeactivatedCleanups@@YAH_N@Z"{{.*}} {
-// WIN32:   alloca i1
-// WIN32:   %[[arg1_cond:.*]] = alloca i1
+// WIN32-O0-LABEL: define i32 @"\01?HasConditionalDeactivatedCleanups@@YAH_N@Z"{{.*}} {
+// WIN32-O0:   alloca i1
+// WIN32-O0:   %[[arg1_cond:.*]] = alloca i1
 //        Start all four cleanups as deactivated.
-// WIN32:   store i1 false
-// WIN32:   store i1 false
-// WIN32:   store i1 false
-// WIN32:   store i1 false
-// WIN32:   br i1
+// WIN32-O0:   store i1 false
+// WIN32-O0:   store i1 false
+// WIN32-O0:   store i1 false
+// WIN32-O0:   store i1 false
+// WIN32-O0:   br i1
 //        True condition.
-// WIN32:   call x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"
-// WIN32:   store i1 true
-// WIN32:   invoke void @"\01?TakeRef@@YAXABUA@@@Z"
-// WIN32:   invoke x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"
-// WIN32:   store i1 true, i1* %[[arg1_cond]]
-// WIN32:   invoke x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"
-// WIN32:   store i1 true
-// WIN32:   invoke void @"\01?TakeRef@@YAXABUA@@@Z"
-// WIN32:   invoke x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"
-// WIN32:   store i1 true
-// WIN32:   store i1 false, i1* %[[arg1_cond]]
-// WIN32:   invoke i32 @"\01?TakesTwo@@YAHUA@@0@Z"
+// WIN32-O0:   call x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"
+// WIN32-O0:   store i1 true
+// WIN32-O0:   invoke void @"\01?TakeRef@@YAXABUA@@@Z"
+// WIN32-O0:   invoke x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"
+// WIN32-O0:   store i1 true, i1* %[[arg1_cond]]
+// WIN32-O0:   invoke x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"
+// WIN32-O0:   store i1 true
+// WIN32-O0:   invoke void @"\01?TakeRef@@YAXABUA@@@Z"
+// WIN32-O0:   invoke x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"
+// WIN32-O0:   store i1 true
+// WIN32-O0:   store i1 false, i1* %[[arg1_cond]]
+// WIN32-O0:   invoke i32 @"\01?TakesTwo@@YAHUA@@0@Z"
 //        False condition.
-// WIN32:   invoke i32 @"\01?CouldThrow@@YAHXZ"()
+// WIN32-O0:   invoke i32 @"\01?CouldThrow@@YAHXZ"()
 //        Two normal cleanups for TakeRef args.
-// WIN32:   call x86_thiscallcc void @"\01??1A@@QAE@XZ"({{.*}})
-// WIN32-NOT:   invoke x86_thiscallcc void @"\01??1A@@QAE@XZ"
-// WIN32:   ret i32
+// WIN32-O0:   call x86_thiscallcc void @"\01??1A@@QAE@XZ"({{.*}})
+// WIN32-O0-NOT:   invoke x86_thiscallcc void @"\01??1A@@QAE@XZ"
+// WIN32-O0:   ret i32
 //
 //        Somewhere in the landing pad soup, we conditionally destroy arg1.
-// WIN32:   %[[isactive:.*]] = load i1, i1* %[[arg1_cond]]
-// WIN32:   br i1 %[[isactive]]
-// WIN32:   call x86_thiscallcc void @"\01??1A@@QAE@XZ"({{.*}}) #[[noinline]]
-// WIN32: }
+// WIN32-O0:   %[[isactive:.*]] = load i1, i1* %[[arg1_cond]]
+// WIN32-O0:   br i1 %[[isactive]]
+// WIN32-O0:   call x86_thiscallcc void @"\01??1A@@QAE@XZ"({{.*}})
+// WIN32-O0: }
+
+// WIN32-O3-LABEL: define i32 @"\01?HasConditionalDeactivatedCleanups@@YAH_N@Z"{{.*}} {
+// WIN32-O3:   alloca i1
+// WIN32-O3:   alloca i1
+// WIN32-O3:   %[[arg1_cond:.*]] = alloca i1
+//        Start all four cleanups as deactivated.
+// WIN32-O3:   store i1 false
+// WIN32-O3:   store i1 false
+// WIN32-O3:   store i1 false
+// WIN32-O3:   store i1 false
+// WIN32-O3:   store i1 false
+// WIN32-O3:   store i1 false
+// WIN32-O3:   br i1
+//        True condition.
+// WIN32-O3:   call x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"
+// WIN32-O3:   store i1 true
+// WIN32-O3:   invoke void @"\01?TakeRef@@YAXABUA@@@Z"
+// WIN32-O3:   invoke x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"
+// WIN32-O3:   store i1 true, i1* %[[arg1_cond]]
+// WIN32-O3:   invoke x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"
+// WIN32-O3:   store i1 true
+// WIN32-O3:   invoke void @"\01?TakeRef@@YAXABUA@@@Z"
+// WIN32-O3:   invoke x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"
+// WIN32-O3:   store i1 true
+// WIN32-O3:   store i1 false, i1* %[[arg1_cond]]
+// WIN32-O3:   invoke i32 @"\01?TakesTwo@@YAHUA@@0@Z"
+//        False condition.
+// WIN32-O3:   invoke i32 @"\01?CouldThrow@@YAHXZ"()
+//        Two normal cleanups for TakeRef args.
+// WIN32-O3:   call x86_thiscallcc void @"\01??1A@@QAE@XZ"({{.*}})
+// WIN32-O3-NOT:   invoke x86_thiscallcc void @"\01??1A@@QAE@XZ"
+// WIN32-O3:   ret i32
+//
+//        Somewhere in the landing pad soup, we conditionally destroy arg1.
+// WIN32-O3:   %[[isactive:.*]] = load i1, i1* %[[arg1_cond]]
+// WIN32-O3:   br i1 %[[isactive]]
+// WIN32-O3:   call x86_thiscallcc void @"\01??1A@@QAE@XZ"({{.*}})
+// WIN32-O3: }
 
 namespace crash_on_partial_destroy {
 struct A {
@@ -164,7 +203,7 @@ C::C() { foo(); }
 // WIN32:      getelementptr inbounds i8, i8* %{{.*}}, i32 4
 // WIN32-NOT:  load
 // WIN32:      bitcast i8* %{{.*}} to %"struct.crash_on_partial_destroy::A"*
-// WIN32:      call x86_thiscallcc void @"\01??1A@crash_on_partial_destroy@@UAE@XZ"({{.*}}) #[[noinline]]
+// WIN32:      call x86_thiscallcc void @"\01??1A@crash_on_partial_destroy@@UAE@XZ"({{.*}})
 // WIN32: }
 }
 
@@ -187,7 +226,7 @@ void f() {
 //
 // WIN32: [[lpad]]
 // WIN32-NEXT: cleanuppad
-// WIN32: call x86_thiscallcc void @"\01??1C@dont_call_terminate@@QAE@XZ"({{.*}}) #[[noinline]]
+// WIN32: call x86_thiscallcc void @"\01??1C@dont_call_terminate@@QAE@XZ"({{.*}})
 }
 
 namespace noexcept_false_dtor {
@@ -204,9 +243,73 @@ void f() {
 // WIN32: invoke i32 @"\01?CouldThrow@@YAHXZ"()
 // WIN32: call x86_thiscallcc void @"\01??1D@noexcept_false_dtor@@QAE@XZ"(%"struct.noexcept_false_dtor::D"* %{{.*}})
 // WIN32: cleanuppad
-// WIN32: invoke x86_thiscallcc void @"\01??1D@noexcept_false_dtor@@QAE@XZ"(%"struct.noexcept_false_dtor::D"* %{{.*}}) #[[invoke_noinline:[0-9]+]]
+// WIN32: call x86_thiscallcc void @"\01??1D@noexcept_false_dtor@@QAE@XZ"(%"struct.noexcept_false_dtor::D"* %{{.*}})
 // WIN32: cleanupret
-// WIN32: cleanupendpad
 
-// WIN32: attributes #[[noinline]] = { noinline nounwind }
-// WIN32: attributes #[[invoke_noinline]] = { noinline }
+namespace lifetime_marker {
+struct C {
+  ~C();
+};
+void g();
+void f() {
+  C c;
+  g();
+}
+
+// WIN32-LIFETIME-LABEL: define void @"\01?f@lifetime_marker@@YAXXZ"()
+// WIN32-LIFETIME: %[[c:.*]] = alloca %"struct.lifetime_marker::C"
+// WIN32-LIFETIME: %[[bc0:.*]] = bitcast %"struct.lifetime_marker::C"* %c to i8*
+// WIN32-LIFETIME: call void @llvm.lifetime.start.p0i8(i64 1, i8* %[[bc0]])
+// WIN32-LIFETIME: invoke void @"\01?g@lifetime_marker@@YAXXZ"()
+// WIN32-LIFETIME-NEXT: to label %[[cont:[^ ]*]] unwind label %[[lpad0:[^ ]*]]
+//
+// WIN32-LIFETIME: [[cont]]
+// WIN32-LIFETIME: call x86_thiscallcc void @"\01??1C@lifetime_marker@@QAE@XZ"({{.*}})
+// WIN32-LIFETIME: %[[bc1:.*]] = bitcast %"struct.lifetime_marker::C"* %[[c]] to i8*
+// WIN32-LIFETIME: call void @llvm.lifetime.end.p0i8(i64 1, i8* %[[bc1]])
+//
+// WIN32-LIFETIME: [[lpad0]]
+// WIN32-LIFETIME-NEXT: cleanuppad
+// WIN32-LIFETIME: call x86_thiscallcc void @"\01??1C@lifetime_marker@@QAE@XZ"({{.*}})
+// WIN32-LIFETIME: cleanupret {{.*}} unwind label %[[lpad1:[^ ]*]]
+//
+// WIN32-LIFETIME: [[lpad1]]
+// WIN32-LIFETIME-NEXT: cleanuppad
+// WIN32-LIFETIME: %[[bc2:.*]] = bitcast %"struct.lifetime_marker::C"* %[[c]] to i8*
+// WIN32-LIFETIME: call void @llvm.lifetime.end.p0i8(i64 1, i8* %[[bc2]])
+}
+
+struct class_2 {
+  class_2();
+  virtual ~class_2();
+};
+struct class_1 : virtual class_2 {
+  class_1(){throw "Unhandled exception";}
+  virtual ~class_1() {}
+};
+struct class_0 : class_1 {
+  class_0() ;
+  virtual ~class_0() {}
+};
+
+class_0::class_0() {
+  // WIN32: define x86_thiscallcc %struct.class_0* @"\01??0class_0@@QAE@XZ"(%struct.class_0* returned %this, i32 %is_most_derived) 
+  // WIN32: store i32 %is_most_derived, i32* %[[IS_MOST_DERIVED_VAR:.*]], align 4
+  // WIN32: %[[IS_MOST_DERIVED_VAL:.*]] = load i32, i32* %[[IS_MOST_DERIVED_VAR]]
+  // WIN32: %[[SHOULD_CALL_VBASE_CTORS:.*]] = icmp ne i32 %[[IS_MOST_DERIVED_VAL]], 0
+  // WIN32: br i1 %[[SHOULD_CALL_VBASE_CTORS]], label %[[INIT_VBASES:.*]], label %[[SKIP_VBASES:.*]]
+  // WIN32: [[INIT_VBASES]]
+  // WIN32: br label %[[SKIP_VBASES]]
+  // WIN32: [[SKIP_VBASES]]
+// ehcleanup:
+  // WIN32: %[[CLEANUPPAD:.*]] = cleanuppad within none []
+  // WIN32-NEXT: bitcast %{{.*}}* %{{.*}} to i8*
+  // WIN32-NEXT: getelementptr inbounds i8, i8* %{{.*}}, i{{.*}} {{.}} 
+  // WIN32-NEXT: bitcast i8* %{{.*}} to %{{.*}}*
+  // WIN32-NEXT: %[[SHOULD_CALL_VBASE_DTOR:.*]] = icmp ne i32 %[[IS_MOST_DERIVED_VAL]], 0
+  // WIN32-NEXT: br i1 %[[SHOULD_CALL_VBASE_DTOR]], label %[[DTOR_VBASE:.*]], label %[[SKIP_VBASE:.*]]
+  // WIN32: [[DTOR_VBASE]]
+  // WIN32-NEXT: call x86_thiscallcc void @"\01??1class_2@@UAE@XZ"
+  // WIN32: br label %[[SKIP_VBASE]]
+  // WIN32: [[SKIP_VBASE]]
+}

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple %ms_abi_triple -emit-llvm -o - %s | FileCheck %s -check-prefix MS
 // CHECK-NOT: _ZN1CC1ERK1C
 // CHECK-NOT: _ZN1SC1ERK1S

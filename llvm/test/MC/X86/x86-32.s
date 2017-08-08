@@ -367,6 +367,18 @@ cmovnae	%bx,%bx
 // CHECK:  encoding: [0x8e,0xc8]
         movl %eax, %cs
 
+// CHECK: movl	%eax, %cs
+// CHECK:  encoding: [0x8e,0xc8]
+        movw %ax, %cs
+
+// CHECK: movl	%eax, %cs
+// CHECK:  encoding: [0x8e,0xc8]
+        mov %eax, %cs
+
+// CHECK: movl	%eax, %cs
+// CHECK:  encoding: [0x8e,0xc8]
+        mov %ax, %cs
+
 // CHECK: movl	(%eax), %cs
 // CHECK:  encoding: [0x8e,0x08]
         movl (%eax), %cs
@@ -431,6 +443,14 @@ cmovnae	%bx,%bx
 // CHECK: movl	%dr7, %eax
 // CHECK:  encoding: [0x0f,0x21,0xf8]
         movl %dr7,%eax
+
+// CHECK:       clzero
+// CHECK:  encoding: [0x0f,0x01,0xfc]
+                clzero
+
+// CHECK:       clzero
+// CHECK:  encoding: [0x0f,0x01,0xfc]
+                clzero %eax
 
 // radr://8017522
 // CHECK: wait
@@ -593,6 +613,55 @@ popfl
 	setnaeb	%bl // CHECK: setb %bl
 
 
+// PR8114
+
+out	%al, (%dx)
+// CHECK: outb	%al, %dx
+outb	%al, (%dx)
+// CHECK: outb	%al, %dx
+out	%ax, (%dx)
+// CHECK: outw	%ax, %dx
+outw	%ax, (%dx)
+// CHECK: outw	%ax, %dx
+out	%eax, (%dx)
+// CHECK: outl	%eax, %dx
+outl	%eax, (%dx)
+// CHECK: outl	%eax, %dx
+
+
+in	(%dx), %al
+// CHECK: inb	%dx, %al
+inb	(%dx), %al
+// CHECK: inb	%dx, %al
+in	(%dx), %ax
+// CHECK: inw	%dx, %ax
+inw	(%dx), %ax
+// CHECK: inw	%dx, %ax
+in	(%dx), %eax
+// CHECK: inl	%dx, %eax
+inl	(%dx), %eax
+// CHECK: inl	%dx, %eax
+
+//PR15455
+
+outs	(%esi), (%dx)
+// CHECK: outsw	(%esi), %dx
+outsb	(%esi), (%dx)
+// CHECK: outsb	(%esi), %dx
+outsw	(%esi), (%dx)
+// CHECK: outsw	(%esi), %dx
+outsl	(%esi), (%dx)
+// CHECK: outsl	(%esi), %dx
+
+ins 	(%dx), %es:(%edi)
+// CHECK: insw	%dx, %es:(%edi)
+insb	(%dx), %es:(%edi)
+// CHECK: insb	%dx, %es:(%edi)
+insw	(%dx), %es:(%edi)
+// CHECK: insw	%dx, %es:(%edi)
+insl	(%dx), %es:(%edi)
+// CHECK: insl	%dx, %es:(%edi)	
+	
 // CHECK: lcalll	$31438, $31438
 // CHECK: lcalll	$31438, $31438
 // CHECK: ljmpl	$31438, $31438
@@ -1018,3 +1087,13 @@ retw
 // CHECK: lretw
 // CHECK: encoding: [0x66,0xcb]
 lretw
+
+// CHECK: data16
+// CHECK: encoding: [0x66]
+data16
+
+// CHECK: data16
+// CHECK: encoding: [0x66]
+// CHECK: lgdtl 4(%eax)
+// CHECK:  encoding: [0x0f,0x01,0x50,0x04]
+data16 lgdt 4(%eax)

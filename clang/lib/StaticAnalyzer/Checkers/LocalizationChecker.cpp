@@ -19,6 +19,9 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/StmtVisitor.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -26,11 +29,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "clang/Lex/Lexer.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/AST/StmtVisitor.h"
 #include "llvm/Support/Unicode.h"
-#include "llvm/ADT/StringSet.h"
 
 using namespace clang;
 using namespace ento;
@@ -58,7 +57,7 @@ public:
 };
 
 class NonLocalizedStringChecker
-    : public Checker<check::PostCall, check::PreObjCMessage,
+    : public Checker<check::PreCall, check::PostCall, check::PreObjCMessage,
                      check::PostObjCMessage,
                      check::PostStmt<ObjCStringLiteral>> {
 
@@ -80,9 +79,10 @@ class NonLocalizedStringChecker
   void setNonLocalizedState(SVal S, CheckerContext &C) const;
   void setLocalizedState(SVal S, CheckerContext &C) const;
 
-  bool isAnnotatedAsLocalized(const Decl *D) const;
-  void reportLocalizationError(SVal S, const ObjCMethodCall &M,
-                               CheckerContext &C, int argumentNumber = 0) const;
+  bool isAnnotatedAsReturningLocalized(const Decl *D) const;
+  bool isAnnotatedAsTakingLocalized(const Decl *D) const;
+  void reportLocalizationError(SVal S, const CallEvent &M, CheckerContext &C,
+                               int argumentNumber = 0) const;
 
   int getLocalizedArgumentForSelector(const IdentifierInfo *Receiver,
                                       Selector S) const;
@@ -98,6 +98,7 @@ public:
   void checkPreObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
   void checkPostObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
   void checkPostStmt(const ObjCStringLiteral *SL, CheckerContext &C) const;
+  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
 };
 
@@ -110,6 +111,30 @@ NonLocalizedStringChecker::NonLocalizedStringChecker() {
   BT.reset(new BugType(this, "Unlocalizable string",
                        "Localizability Issue (Apple)"));
 }
+
+namespace {
+class NonLocalizedStringBRVisitor final
+    : public BugReporterVisitorImpl<NonLocalizedStringBRVisitor> {
+
+  const MemRegion *NonLocalizedString;
+  bool Satisfied;
+
+public:
+  NonLocalizedStringBRVisitor(const MemRegion *NonLocalizedString)
+      : NonLocalizedString(NonLocalizedString), Satisfied(false) {
+        assert(NonLocalizedString);
+  }
+
+  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
+                                                 const ExplodedNode *Pred,
+                                                 BugReporterContext &BRC,
+                                                 BugReport &BR) override;
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    ID.Add(NonLocalizedString);
+  }
+};
+} // End anonymous namespace.
 
 #define NEW_RECEIVER(receiver)                                                 \
   llvm::DenseMap<Selector, uint8_t> &receiver##M =                             \
@@ -165,6 +190,22 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   NEW_RECEIVER(NSButton)
   ADD_UNARY_METHOD(NSButton, setTitle, 0)
   ADD_UNARY_METHOD(NSButton, setAlternateTitle, 0)
+  IdentifierInfo *radioButtonWithTitleNSButton[] = {
+      &Ctx.Idents.get("radioButtonWithTitle"), &Ctx.Idents.get("target"),
+      &Ctx.Idents.get("action")};
+  ADD_METHOD(NSButton, radioButtonWithTitleNSButton, 3, 0)
+  IdentifierInfo *buttonWithTitleNSButtonImage[] = {
+      &Ctx.Idents.get("buttonWithTitle"), &Ctx.Idents.get("image"),
+      &Ctx.Idents.get("target"), &Ctx.Idents.get("action")};
+  ADD_METHOD(NSButton, buttonWithTitleNSButtonImage, 4, 0)
+  IdentifierInfo *checkboxWithTitleNSButton[] = {
+      &Ctx.Idents.get("checkboxWithTitle"), &Ctx.Idents.get("target"),
+      &Ctx.Idents.get("action")};
+  ADD_METHOD(NSButton, checkboxWithTitleNSButton, 3, 0)
+  IdentifierInfo *buttonWithTitleNSButtonTarget[] = {
+      &Ctx.Idents.get("buttonWithTitle"), &Ctx.Idents.get("target"),
+      &Ctx.Idents.get("action")};
+  ADD_METHOD(NSButton, buttonWithTitleNSButtonTarget, 3, 0)
 
   NEW_RECEIVER(NSSavePanel)
   ADD_UNARY_METHOD(NSSavePanel, setPrompt, 0)
@@ -242,10 +283,16 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   IdentifierInfo *setLabelNSSegmentedControl[] = {
       &Ctx.Idents.get("setLabel"), &Ctx.Idents.get("forSegment")};
   ADD_METHOD(NSSegmentedControl, setLabelNSSegmentedControl, 2, 0)
+  IdentifierInfo *setToolTipNSSegmentedControl[] = {
+      &Ctx.Idents.get("setToolTip"), &Ctx.Idents.get("forSegment")};
+  ADD_METHOD(NSSegmentedControl, setToolTipNSSegmentedControl, 2, 0)
 
   NEW_RECEIVER(NSButtonCell)
   ADD_UNARY_METHOD(NSButtonCell, setTitle, 0)
   ADD_UNARY_METHOD(NSButtonCell, setAlternateTitle, 0)
+
+  NEW_RECEIVER(NSDatePickerCell)
+  ADD_UNARY_METHOD(NSDatePickerCell, initTextCell, 0)
 
   NEW_RECEIVER(NSSliderCell)
   ADD_UNARY_METHOD(NSSliderCell, setTitle, 0)
@@ -312,9 +359,6 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(UIActionSheet, addButtonWithTitle, 0)
   ADD_UNARY_METHOD(UIActionSheet, setTitle, 0)
 
-  NEW_RECEIVER(NSURLSessionTask)
-  ADD_UNARY_METHOD(NSURLSessionTask, setTaskDescription, 0)
-
   NEW_RECEIVER(UIAccessibilityCustomAction)
   IdentifierInfo *initWithNameUIAccessibilityCustomAction[] = {
       &Ctx.Idents.get("initWithName"), &Ctx.Idents.get("target"),
@@ -339,6 +383,9 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
 
   NEW_RECEIVER(NSTextField)
   ADD_UNARY_METHOD(NSTextField, setPlaceholderString, 0)
+  ADD_UNARY_METHOD(NSTextField, textFieldWithString, 0)
+  ADD_UNARY_METHOD(NSTextField, wrappingLabelWithString, 0)
+  ADD_UNARY_METHOD(NSTextField, labelWithString, 0)
 
   NEW_RECEIVER(NSAttributedString)
   ADD_UNARY_METHOD(NSAttributedString, initWithString, 0)
@@ -499,9 +546,6 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_METHOD(NSUserNotificationAction,
              actionWithIdentifierNSUserNotificationAction, 2, 1)
 
-  NEW_RECEIVER(NSURLSession)
-  ADD_UNARY_METHOD(NSURLSession, setSessionDescription, 0)
-
   NEW_RECEIVER(UITextField)
   ADD_UNARY_METHOD(UITextField, setText, 0)
   ADD_UNARY_METHOD(UITextField, setPlaceholder, 0)
@@ -523,6 +567,46 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   IdentifierInfo *setTitleUISegmentedControl[] = {
       &Ctx.Idents.get("setTitle"), &Ctx.Idents.get("forSegmentAtIndex")};
   ADD_METHOD(UISegmentedControl, setTitleUISegmentedControl, 2, 0)
+
+  NEW_RECEIVER(NSAccessibilityCustomRotorItemResult)
+  IdentifierInfo
+      *initWithItemLoadingTokenNSAccessibilityCustomRotorItemResult[] = {
+          &Ctx.Idents.get("initWithItemLoadingToken"),
+          &Ctx.Idents.get("customLabel")};
+  ADD_METHOD(NSAccessibilityCustomRotorItemResult,
+             initWithItemLoadingTokenNSAccessibilityCustomRotorItemResult, 2, 1)
+  ADD_UNARY_METHOD(NSAccessibilityCustomRotorItemResult, setCustomLabel, 0)
+
+  NEW_RECEIVER(UIContextualAction)
+  IdentifierInfo *contextualActionWithStyleUIContextualAction[] = {
+      &Ctx.Idents.get("contextualActionWithStyle"), &Ctx.Idents.get("title"),
+      &Ctx.Idents.get("handler")};
+  ADD_METHOD(UIContextualAction, contextualActionWithStyleUIContextualAction, 3,
+             1)
+  ADD_UNARY_METHOD(UIContextualAction, setTitle, 0)
+
+  NEW_RECEIVER(NSAccessibilityCustomRotor)
+  IdentifierInfo *initWithLabelNSAccessibilityCustomRotor[] = {
+      &Ctx.Idents.get("initWithLabel"), &Ctx.Idents.get("itemSearchDelegate")};
+  ADD_METHOD(NSAccessibilityCustomRotor,
+             initWithLabelNSAccessibilityCustomRotor, 2, 0)
+  ADD_UNARY_METHOD(NSAccessibilityCustomRotor, setLabel, 0)
+
+  NEW_RECEIVER(NSWindowTab)
+  ADD_UNARY_METHOD(NSWindowTab, setTitle, 0)
+  ADD_UNARY_METHOD(NSWindowTab, setToolTip, 0)
+
+  NEW_RECEIVER(NSAccessibilityCustomAction)
+  IdentifierInfo *initWithNameNSAccessibilityCustomAction[] = {
+      &Ctx.Idents.get("initWithName"), &Ctx.Idents.get("handler")};
+  ADD_METHOD(NSAccessibilityCustomAction,
+             initWithNameNSAccessibilityCustomAction, 2, 0)
+  IdentifierInfo *initWithNameTargetNSAccessibilityCustomAction[] = {
+      &Ctx.Idents.get("initWithName"), &Ctx.Idents.get("target"),
+      &Ctx.Idents.get("selector")};
+  ADD_METHOD(NSAccessibilityCustomAction,
+             initWithNameTargetNSAccessibilityCustomAction, 3, 0)
+  ADD_UNARY_METHOD(NSAccessibilityCustomAction, setName, 0)
 }
 
 #define LSF_INSERT(function_name) LSF.insert(&Ctx.Idents.get(function_name));
@@ -562,13 +646,27 @@ void NonLocalizedStringChecker::initLocStringsMethods(ASTContext &Ctx) const {
 
 /// Checks to see if the method / function declaration includes
 /// __attribute__((annotate("returns_localized_nsstring")))
-bool NonLocalizedStringChecker::isAnnotatedAsLocalized(const Decl *D) const {
+bool NonLocalizedStringChecker::isAnnotatedAsReturningLocalized(
+    const Decl *D) const {
   if (!D)
     return false;
   return std::any_of(
       D->specific_attr_begin<AnnotateAttr>(),
       D->specific_attr_end<AnnotateAttr>(), [](const AnnotateAttr *Ann) {
         return Ann->getAnnotation() == "returns_localized_nsstring";
+      });
+}
+
+/// Checks to see if the method / function declaration includes
+/// __attribute__((annotate("takes_localized_nsstring")))
+bool NonLocalizedStringChecker::isAnnotatedAsTakingLocalized(
+    const Decl *D) const {
+  if (!D)
+    return false;
+  return std::any_of(
+      D->specific_attr_begin<AnnotateAttr>(),
+      D->specific_attr_end<AnnotateAttr>(), [](const AnnotateAttr *Ann) {
+        return Ann->getAnnotation() == "takes_localized_nsstring";
       });
 }
 
@@ -619,10 +717,44 @@ void NonLocalizedStringChecker::setNonLocalizedState(const SVal S,
   }
 }
 
+
+static bool isDebuggingName(std::string name) {
+  return StringRef(name).lower().find("debug") != StringRef::npos;
+}
+
+/// Returns true when, heuristically, the analyzer may be analyzing debugging
+/// code. We use this to suppress localization diagnostics in un-localized user
+/// interfaces that are only used for debugging and are therefore not user
+/// facing.
+static bool isDebuggingContext(CheckerContext &C) {
+  const Decl *D = C.getCurrentAnalysisDeclContext()->getDecl();
+  if (!D)
+    return false;
+
+  if (auto *ND = dyn_cast<NamedDecl>(D)) {
+    if (isDebuggingName(ND->getNameAsString()))
+      return true;
+  }
+
+  const DeclContext *DC = D->getDeclContext();
+
+  if (auto *CD = dyn_cast<ObjCContainerDecl>(DC)) {
+    if (isDebuggingName(CD->getNameAsString()))
+      return true;
+  }
+
+  return false;
+}
+
+
 /// Reports a localization error for the passed in method call and SVal
 void NonLocalizedStringChecker::reportLocalizationError(
-    SVal S, const ObjCMethodCall &M, CheckerContext &C,
-    int argumentNumber) const {
+    SVal S, const CallEvent &M, CheckerContext &C, int argumentNumber) const {
+
+  // Don't warn about localization errors in classes and methods that
+  // may be debug code.
+  if (isDebuggingContext(C))
+    return;
 
   ExplodedNode *ErrNode = C.getPredecessor();
   static CheckerProgramPointTag Tag("NonLocalizedStringChecker",
@@ -641,6 +773,11 @@ void NonLocalizedStringChecker::reportLocalizationError(
     R->addRange(M.getSourceRange());
   }
   R->markInteresting(S);
+
+  const MemRegion *StringRegion = S.getAsRegion();
+  if (StringRegion)
+    R->addVisitor(llvm::make_unique<NonLocalizedStringBRVisitor>(StringRegion));
+
   C.emitReport(std::move(R));
 }
 
@@ -710,7 +847,21 @@ void NonLocalizedStringChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     }
   }
 
-  if (argumentNumber < 0) // There was no match in UIMethods
+  if (argumentNumber < 0) { // There was no match in UIMethods
+    if (const Decl *D = msg.getDecl()) {
+      if (const ObjCMethodDecl *OMD = dyn_cast_or_null<ObjCMethodDecl>(D)) {
+        auto formals = OMD->parameters();
+        for (unsigned i = 0, ei = formals.size(); i != ei; ++i) {
+          if (isAnnotatedAsTakingLocalized(formals[i])) {
+            argumentNumber = i;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (argumentNumber < 0) // Still no match
     return;
 
   SVal svTitle = msg.getArgSVal(argumentNumber);
@@ -730,6 +881,25 @@ void NonLocalizedStringChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
 
   if (isNonLocalized) {
     reportLocalizationError(svTitle, msg, C, argumentNumber + 1);
+  }
+}
+
+void NonLocalizedStringChecker::checkPreCall(const CallEvent &Call,
+                                             CheckerContext &C) const {
+  const Decl *D = Call.getDecl();
+  if (D && isa<FunctionDecl>(D)) {
+    const FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
+    auto formals = FD->parameters();
+    for (unsigned i = 0,
+                  ei = std::min(unsigned(formals.size()), Call.getNumArgs());
+         i != ei; ++i) {
+      if (isAnnotatedAsTakingLocalized(formals[i])) {
+        auto actual = Call.getArgSVal(i);
+        if (hasNonLocalizedState(actual, C)) {
+          reportLocalizationError(actual, Call, C, i + 1);
+        }
+      }
+    }
   }
 }
 
@@ -784,7 +954,7 @@ void NonLocalizedStringChecker::checkPostCall(const CallEvent &Call,
   const IdentifierInfo *Identifier = Call.getCalleeIdentifier();
 
   SVal sv = Call.getReturnValue();
-  if (isAnnotatedAsLocalized(D) || LSF.count(Identifier) != 0) {
+  if (isAnnotatedAsReturningLocalized(D) || LSF.count(Identifier) != 0) {
     setLocalizedState(sv, C);
   } else if (isNSStringType(RT, C.getASTContext()) &&
              !hasLocalizedState(sv, C)) {
@@ -818,7 +988,8 @@ void NonLocalizedStringChecker::checkPostObjCMessage(const ObjCMethodCall &msg,
 
   std::pair<const IdentifierInfo *, Selector> MethodDescription = {odInfo, S};
 
-  if (LSM.count(MethodDescription) || isAnnotatedAsLocalized(msg.getDecl())) {
+  if (LSM.count(MethodDescription) ||
+      isAnnotatedAsReturningLocalized(msg.getDecl())) {
     SVal sv = msg.getReturnValue();
     setLocalizedState(sv, C);
   }
@@ -829,6 +1000,41 @@ void NonLocalizedStringChecker::checkPostStmt(const ObjCStringLiteral *SL,
                                               CheckerContext &C) const {
   SVal sv = C.getSVal(SL);
   setNonLocalizedState(sv, C);
+}
+
+std::shared_ptr<PathDiagnosticPiece>
+NonLocalizedStringBRVisitor::VisitNode(const ExplodedNode *Succ,
+                                       const ExplodedNode *Pred,
+                                       BugReporterContext &BRC, BugReport &BR) {
+  if (Satisfied)
+    return nullptr;
+
+  Optional<StmtPoint> Point = Succ->getLocation().getAs<StmtPoint>();
+  if (!Point.hasValue())
+    return nullptr;
+
+  auto *LiteralExpr = dyn_cast<ObjCStringLiteral>(Point->getStmt());
+  if (!LiteralExpr)
+    return nullptr;
+
+  ProgramStateRef State = Succ->getState();
+  SVal LiteralSVal = State->getSVal(LiteralExpr, Succ->getLocationContext());
+  if (LiteralSVal.getAsRegion() != NonLocalizedString)
+    return nullptr;
+
+  Satisfied = true;
+
+  PathDiagnosticLocation L =
+      PathDiagnosticLocation::create(*Point, BRC.getSourceManager());
+
+  if (!L.isValid() || !L.asLocation().isValid())
+    return nullptr;
+
+  auto Piece = std::make_shared<PathDiagnosticEventPiece>(
+      L, "Non-localized string literal here");
+  Piece->addRange(LiteralExpr->getSourceRange());
+
+  return std::move(Piece);
 }
 
 namespace {
@@ -902,6 +1108,8 @@ void EmptyLocalizationContextChecker::checkASTDecl(
 void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
     const ObjCMessageExpr *ME) {
 
+  // FIXME: We may be able to use PPCallbacks to check for empy context
+  // comments as part of preprocessing and avoid this re-lexing hack.
   const ObjCInterfaceDecl *OD = ME->getReceiverInterface();
   if (!OD)
     return;
@@ -936,7 +1144,12 @@ void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
     SE = Mgr.getSourceManager().getSLocEntry(SLInfo.first);
   }
 
-  llvm::MemoryBuffer *BF = SE.getFile().getContentCache()->getRawBuffer();
+  bool Invalid = false;
+  llvm::MemoryBuffer *BF =
+      Mgr.getSourceManager().getBuffer(SLInfo.first, SL, &Invalid);
+  if (Invalid)
+    return;
+
   Lexer TheLexer(SL, LangOptions(), BF->getBufferStart(),
                  BF->getBufferStart() + SLInfo.second, BF->getBufferEnd());
 
@@ -965,7 +1178,7 @@ void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
     return;
 
   StringRef Comment =
-      StringRef(Result.getLiteralData(), Result.getLength()).trim("\"");
+      StringRef(Result.getLiteralData(), Result.getLength()).trim('"');
 
   if ((Comment.trim().size() == 0 && Comment.size() > 0) || // Is Whitespace
       Comment.empty()) {

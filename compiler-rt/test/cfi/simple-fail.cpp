@@ -52,6 +52,9 @@
 // RUN: %clangxx -o %t18 %s
 // RUN: %t18 2>&1 | FileCheck --check-prefix=NCFI %s
 
+// RUN: %clangxx_cfi -DCHECK_NO_SANITIZE_CFI -o %t19 %s
+// RUN: %t19 2>&1 | FileCheck --check-prefix=NCFI %s
+
 // Tests that the CFI mechanism crashes the program when making a virtual call
 // to an object of the wrong class but with a compatible vtable, by casting a
 // pointer to such an object and attempting to make a call through it.
@@ -73,6 +76,9 @@ struct B {
 
 void B::f() {}
 
+#if defined(CHECK_NO_SANITIZE_CFI)
+__attribute__((no_sanitize("cfi")))
+#endif
 int main() {
   create_derivers<B>();
 

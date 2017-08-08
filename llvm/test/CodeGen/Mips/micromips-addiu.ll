@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=+micromips \
+; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=+micromips -verify-machineinstrs \
 ; RUN:   -relocation-model=pic -O3 < %s | FileCheck %s
 
 @x = global i32 65504, align 4

@@ -192,14 +192,14 @@ static DWORD getProtection(const void *addr) {
 
 bool Memory::setWritable(MemoryBlock &M, std::string *ErrMsg) {
   if (!setRangeWritable(M.Address, M.Size)) {
-    return MakeErrMsg(ErrMsg, "Cannot set memory to writeable: ");
+    return MakeErrMsg(ErrMsg, "Cannot set memory to writeable");
   }
   return true;
 }
 
 bool Memory::setExecutable(MemoryBlock &M, std::string *ErrMsg) {
   if (!setRangeExecutable(M.Address, M.Size)) {
-    return MakeErrMsg(ErrMsg, "Cannot set memory to executable: ");
+    return MakeErrMsg(ErrMsg, "Cannot set memory to executable");
   }
   return true;
 }

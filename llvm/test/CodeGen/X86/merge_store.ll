@@ -1,5 +1,4 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64 | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -addr-sink-using-gep=1 | FileCheck %s
 
 define void @merge_store(i32* nocapture %a) {
 ; CHECK-LABEL: merge_store:
@@ -27,5 +26,27 @@ entry:
   br i1 %cmp, label %for.body, label %for.end
 
   for.end:
+  ret void
+}
+
+;; CHECK-LABEL: indexed-store-merge
+;; CHECK: movl	$0, 2(%rsi,%rdi)
+;; CHECK: movb	$0, (%rsi)
+define void @indexed-store-merge(i64 %p, i8* %v) {
+entry:
+  %p2 = add nsw i64 %p, 2
+  %v2 = getelementptr i8, i8* %v, i64 %p2
+  store i8 0, i8* %v2, align 2
+  %p3 = add nsw i64 %p, 3
+  %v3 = getelementptr i8, i8* %v, i64 %p3
+  store i8 0, i8* %v3, align 1
+  %p4 = add nsw i64 %p, 4
+  %v4 = getelementptr i8, i8* %v, i64 %p4
+  store i8 0, i8* %v4, align 2
+  %p5 = add nsw i64 %p, 5
+  %v5 = getelementptr i8, i8* %v, i64 %p5
+  store i8 0, i8* %v5, align 1
+  %v0 = getelementptr i8, i8* %v, i64 0
+  store i8 0, i8* %v0, align 2
   ret void
 }

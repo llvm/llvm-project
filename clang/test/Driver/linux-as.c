@@ -100,6 +100,33 @@
 // RUN:   | FileCheck -check-prefix=CHECK-ARM-HARDFP %s
 // CHECK-ARM-HARDFP: as{{(.exe)?}}" "-mfloat-abi=hard"
 //
+// RUN: %clang -target aarch64-linux-gnu -mcpu=cortex-a53 -### \
+// RUN:   -no-integrated-as -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ARM64-MCPU %s
+// CHECK-ARM64-MCPU: as{{(.exe)?}}" "-mcpu=cortex-a53"
+//
+// RUN: %clang -target aarch64-linux-gnu -march=armv8-a -### \
+// RUN:   -no-integrated-as -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ARM64-MARCH %s
+// CHECK-ARM64-MARCH: as{{(.exe)?}}" "-march=armv8-a"
+//
+// RUN: %clang -target aarch64-linux-gnu -mcpu=cortex-a53 -march=armv8-a -### \
+// RUN:   -no-integrated-as -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ARM64-ALL %s
+// CHECK-ARM64-ALL: as{{(.exe)?}}" "-march=armv8-a" "-mcpu=cortex-a53"
+//
+// RUN: %clang -target aarch64_be-linux-gnu -mcpu=cortex-a53 -### \
+// RUN:   -no-integrated-as -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ARM64-MCPU %s
+//
+// RUN: %clang -target aarch64_be-linux-gnu -march=armv8-a -### \
+// RUN:   -no-integrated-as -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ARM64-MARCH %s
+//
+// RUN: %clang -target aarch64_be-linux-gnu -mcpu=cortex-a53 -march=armv8-a -### \
+// RUN:   -no-integrated-as -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ARM64-ALL %s
+//
 // RUN: %clang -target ppc-linux -mcpu=invalid-cpu -### \
 // RUN:   -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-PPC-NO-MCPU %s
@@ -110,7 +137,7 @@
 // RUN:   | FileCheck -check-prefix=CHECK-SPARCV9 %s
 // CHECK-SPARCV9: as
 // CHECK-SPARCV9: -64
-// CHECK-SPARCV9: -Av9a
+// CHECK-SPARCV9: -Av9
 // CHECK-SPARCV9-NOT: -KPIC
 // CHECK-SPARCV9: -o
 //
@@ -119,7 +146,7 @@
 // RUN:   | FileCheck -check-prefix=CHECK-SPARCV9PIC %s
 // CHECK-SPARCV9PIC: as
 // CHECK-SPARCV9PIC: -64
-// CHECK-SPARCV9PIC: -Av9a
+// CHECK-SPARCV9PIC: -Av9
 // CHECK-SPARCV9PIC: -KPIC
 // CHECK-SPARCV9PIC: -o
 //
@@ -128,7 +155,7 @@
 // RUN:   | FileCheck -check-prefix=CHECK-SPARCV8 %s
 // CHECK-SPARCV8: as
 // CHECK-SPARCV8: -32
-// CHECK-SPARCV8: -Av8plusa
+// CHECK-SPARCV8: -Av8
 // CHECK-SPARCV8: -o
 //
 // RUN: %clang -target sparcel-linux -mcpu=invalid-cpu -### \
@@ -136,7 +163,7 @@
 // RUN:   | FileCheck -check-prefix=CHECK-SPARCV8EL %s
 // CHECK-SPARCV8EL: as
 // CHECK-SPARCV8EL: -32
-// CHECK-SPARCV8EL: -Av8plusa
+// CHECK-SPARCV8EL: -Av8
 // CHECK-SPARCV8EL: -o
 //
 // RUN: %clang -target s390x-linux -### -no-integrated-as -c %s 2>&1 \

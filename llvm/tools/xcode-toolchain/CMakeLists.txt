@@ -40,6 +40,35 @@ if(NOT LLVM_CREATE_XCODE_TOOLCHAIN)
   return()
 endif()
 
+# XCODE_VERSION is set by CMake when using the Xcode generator, otherwise we need
+# to detect it manually here.
+if(NOT XCODE_VERSION)
+  execute_process(
+    COMMAND xcodebuild -version
+    OUTPUT_VARIABLE xcodebuild_version
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_FILE /dev/null
+  )
+  string(REGEX MATCH "Xcode ([0-9]([.][0-9])+)" version_match ${xcodebuild_version})
+  if(version_match)
+    message(STATUS "Identified Xcode Version: ${CMAKE_MATCH_1}")
+    set(XCODE_VERSION ${CMAKE_MATCH_1})
+  else()
+    # If detecting Xcode version failed, set a crazy high version so we default
+    # to the newest.
+    set(XCODE_VERSION 99)
+    message(WARNING "Failed to detect the version of an installed copy of Xcode, falling back to highest supported version. Set XCODE_VERSION to override.")
+  endif()
+endif()
+
+# Xcode 8 requires CompatibilityVersion 2
+set(COMPAT_VERSION 2)
+if(XCODE_VERSION VERSION_LESS 8.0.0)
+  # Xcode 7.3 (the first version supporting external toolchains) requires
+  # CompatibilityVersion 1
+  set(COMPAT_VERSION 1)
+endif()
+
 execute_process(
   COMMAND xcrun -find otool
   OUTPUT_VARIABLE clang_path
@@ -52,21 +81,42 @@ if(NOT toolchains_match)
 endif()
 set(toolchains_dir ${CMAKE_MATCH_1})
 
-set(XcodeDefaultInfo "${toolchains_dir}/XcodeDefault.xctoolchain/ToolchainInfo.plist")
 set(LLVMToolchainDir "${CMAKE_INSTALL_PREFIX}/Toolchains/LLVM${PACKAGE_VERSION}.xctoolchain/")
 
 add_custom_command(OUTPUT ${LLVMToolchainDir}
                     COMMAND ${CMAKE_COMMAND} -E make_directory ${LLVMToolchainDir})
 
-add_custom_command(OUTPUT ${LLVMToolchainDir}/ToolchainInfo.plist
+add_custom_command(OUTPUT ${LLVMToolchainDir}/Info.plist
                   DEPENDS ${LLVMToolchainDir}
-                  COMMAND ${CMAKE_COMMAND} -E copy "${XcodeDefaultInfo}" "${LLVMToolchainDir}/ToolchainInfo.plist"
-                  COMMAND /usr/libexec/PlistBuddy -c "Set:Identifier org.llvm.${PACKAGE_VERSION}" "${LLVMToolchainDir}/ToolchainInfo.plist")
+                  COMMAND ${CMAKE_COMMAND} -E remove ${LLVMToolchainDir}/Info.plist
+                  COMMAND /usr/libexec/PlistBuddy -c "Add:CFBundleIdentifier string org.llvm.${PACKAGE_VERSION}" "${LLVMToolchainDir}/Info.plist"
+                  COMMAND /usr/libexec/PlistBuddy -c "Add:CompatibilityVersion integer ${COMPAT_VERSION}" "${LLVMToolchainDir}/Info.plist"
+                  )
 
 add_custom_target(install-xcode-toolchain
-                  DEPENDS ${LLVMToolchainDir}/ToolchainInfo.plist
+                  DEPENDS ${LLVMToolchainDir}/Info.plist
                   COMMAND "${CMAKE_COMMAND}" --build ${CMAKE_BINARY_DIR} --target all
                   COMMAND "${CMAKE_COMMAND}"
                           -DCMAKE_INSTALL_PREFIX=${LLVMToolchainDir}/usr/
                           -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                  ${cmake_3_2_USES_TERMINAL})
+                  USES_TERMINAL)
+
+if(LLVM_DISTRIBUTION_COMPONENTS)
+  if(CMAKE_CONFIGURATION_TYPES)
+    message(FATAL_ERROR "LLVM_DISTRIBUTION_COMPONENTS cannot be specified with multi-configuration generators (i.e. Xcode or Visual Studio)")
+  endif()
+
+  add_custom_target(install-distribution-toolchain
+                  DEPENDS ${LLVMToolchainDir}/Info.plist distribution)
+
+  foreach(target ${LLVM_DISTRIBUTION_COMPONENTS})
+    add_custom_target(install-distribution-${target}
+                DEPENDS ${target}
+                COMMAND "${CMAKE_COMMAND}"
+                        -DCMAKE_INSTALL_COMPONENT=${target}
+                        -DCMAKE_INSTALL_PREFIX=${LLVMToolchainDir}/usr/
+                        -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+                USES_TERMINAL)
+    add_dependencies(install-distribution-toolchain install-distribution-${target})
+  endforeach()
+endif()

@@ -34,7 +34,6 @@
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
@@ -164,15 +163,10 @@ static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
   // Start the TPI or IPI stream header.
   TpiBuilder.setVersionHeader(pdb::PdbTpiV80);
 
-  // Flatten the in memory type table and hash each type.
+  // Flatten the in memory type table.
   TypeTable.ForEachRecord([&](TypeIndex TI, ArrayRef<uint8_t> Rec) {
-    assert(Rec.size() >= sizeof(RecordPrefix));
-    const RecordPrefix *P = reinterpret_cast<const RecordPrefix *>(Rec.data());
-    CVType Type(static_cast<TypeLeafKind>(unsigned(P->RecordKind)), Rec);
-    auto Hash = pdb::hashTypeRecord(Type);
-    if (auto E = Hash.takeError())
-      fatal("type hashing error");
-    TpiBuilder.addTypeRecord(Rec, *Hash);
+    // FIXME: Hash types.
+    TpiBuilder.addTypeRecord(Rec, None);
   });
 }
 

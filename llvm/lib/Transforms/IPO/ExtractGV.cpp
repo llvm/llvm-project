@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/IPO.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/IPO.h"
 #include <algorithm>
 using namespace llvm;
 
@@ -53,21 +53,24 @@ static void makeVisible(GlobalValue &GV, bool Delete) {
 }
 
 namespace {
-  /// @brief A pass to extract specific functions and their dependencies.
+  /// @brief A pass to extract specific global values and their dependencies.
   class GVExtractorPass : public ModulePass {
     SetVector<GlobalValue *> Named;
     bool deleteStuff;
   public:
     static char ID; // Pass identification, replacement for typeid
 
-    /// FunctionExtractorPass - If deleteFn is true, this pass deletes as the
-    /// specified function. Otherwise, it deletes as much of the module as
-    /// possible, except for the function specified.
-    ///
-    explicit GVExtractorPass(std::vector<GlobalValue*>& GVs, bool deleteS = true)
+    /// If deleteS is true, this pass deletes the specified global values.
+    /// Otherwise, it deletes as much of the module as possible, except for the
+    /// global values specified.
+    explicit GVExtractorPass(std::vector<GlobalValue*> &GVs,
+                             bool deleteS = true)
       : ModulePass(ID), Named(GVs.begin(), GVs.end()), deleteStuff(deleteS) {}
 
     bool runOnModule(Module &M) override {
+      if (skipModule(M))
+        return false;
+
       // Visit the global inline asm.
       if (!deleteStuff)
         M.setModuleInlineAsm("");
@@ -101,20 +104,20 @@ namespace {
       }
 
       // Visit the Functions.
-      for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
+      for (Function &F : M) {
         bool Delete =
-            deleteStuff == (bool)Named.count(&*I) && !I->isDeclaration();
+            deleteStuff == (bool)Named.count(&F) && !F.isDeclaration();
         if (!Delete) {
-          if (I->hasAvailableExternallyLinkage())
+          if (F.hasAvailableExternallyLinkage())
             continue;
         }
 
-        makeVisible(*I, Delete);
+        makeVisible(F, Delete);
 
         if (Delete) {
           // Make this a declaration and drop it's comdat.
-          I->deleteBody();
-          I->setComdat(nullptr);
+          F.deleteBody();
+          F.setComdat(nullptr);
         }
       }
 
@@ -128,7 +131,7 @@ namespace {
         makeVisible(*CurI, Delete);
 
         if (Delete) {
-          Type *Ty =  CurI->getType()->getElementType();
+          Type *Ty =  CurI->getValueType();
 
           CurI->removeFromParent();
           llvm::Value *Declaration;

@@ -3,8 +3,8 @@
 // "normal" mode (LSan runs in "strict" mode by default).
 // RUN: LSAN_BASE="use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: LSAN_OPTIONS=$LSAN_BASE not %run %t 2>&1 | FileCheck --check-prefix=CHECK-strict %s
-// RUN: LSAN_OPTIONS=$LSAN_BASE not %run %t foo 2>&1 | FileCheck --check-prefix=CHECK-normal %s
+// RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck --check-prefix=CHECK-strict %s
+// RUN: %env_lsan_opts=$LSAN_BASE not %run %t foo 2>&1 | FileCheck --check-prefix=CHECK-normal %s
 
 #include <stdio.h>
 #include <stdlib.h>

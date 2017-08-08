@@ -14,15 +14,21 @@ struct Foo {
 };
 
 void t1() {
+// CHECK-LABEL: define void @_Z2t1v()
   Foo::ptr = (int *)0xDEADBEEF;
   Foo::Bar::ptr = (int *)0xDEADBEEF;
+// CHECK: call void asm sideeffect inteldialect
+// CHECK-SAME: mov eax, $0
+// CHECK-SAME: mov eax, $1
+// CHECK-SAME: mov eax, $2
+// CHECK-SAME: mov eax, dword ptr $3
+// CHECK-SAME: mov eax, dword ptr $4
+// CHECK-SAME: "*m,*m,*m,*m,*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32** @_ZN3Foo3ptrE, i32** @_ZN3Foo3Bar3ptrE, i32** @_ZN3Foo3ptrE, i32** @_ZN3Foo3ptrE, i32** @_ZN3Foo3ptrE)
   __asm mov eax, Foo ::ptr
   __asm mov eax, Foo :: Bar :: ptr
   __asm mov eax, [Foo:: ptr]
   __asm mov eax, dword ptr [Foo :: ptr]
   __asm mov eax, dword ptr [Foo :: ptr]
-// CHECK: @_Z2t1v
-// CHECK: call void asm sideeffect inteldialect "mov eax, dword ptr $0\0A\09mov eax, dword ptr $1\0A\09mov eax, dword ptr $2\0A\09mov eax, dword ptr $3\0A\09mov eax, dword ptr $4", "*m,*m,*m,*m,*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32** @_ZN3Foo3ptrE, i32** @_ZN3Foo3Bar3ptrE, i32** @_ZN3Foo3ptrE, i32** @_ZN3Foo3ptrE, i32** @_ZN3Foo3ptrE)
 }
 
 int gvar = 10;
@@ -30,8 +36,11 @@ void t2() {
   int lvar = 10;
   __asm mov eax, offset Foo::ptr
   __asm mov eax, offset Foo::Bar::ptr
-// CHECK: t2
-// CHECK: call void asm sideeffect inteldialect "mov eax, $0\0A\09mov eax, $1", "r,r,~{eax},~{dirflag},~{fpsr},~{flags}"(i32** @_ZN3Foo3ptrE, i32** @_ZN3Foo3Bar3ptrE)
+// CHECK-LABEL: define void @_Z2t2v()
+// CHECK: call void asm sideeffect inteldialect
+// CHECK-SAME: mov eax, $0
+// CHECK-SAME: mov eax, $1
+// CHECK-SAME: "r,r,~{eax},~{dirflag},~{fpsr},~{flags}"(i32** @_ZN3Foo3ptrE, i32** @_ZN3Foo3Bar3ptrE)
 }
 
 // CHECK-LABEL: define void @_Z2t3v()
@@ -50,7 +59,20 @@ void t3() {
   __asm mov eax, SIZE Foo::Bar::ptr
   __asm mov eax, SIZE Foo::arr
   __asm mov eax, SIZE Foo::Bar::arr
-// CHECK: call void asm sideeffect inteldialect "mov eax, $$1\0A\09mov eax, $$1\0A\09mov eax, $$4\0A\09mov eax, $$2\0A\09mov eax, $$4\0A\09mov eax, $$4\0A\09mov eax, $$4\0A\09mov eax, $$1\0A\09mov eax, $$4\0A\09mov eax, $$4\0A\09mov eax, $$16\0A\09mov eax, $$2", "~{eax},~{dirflag},~{fpsr},~{flags}"()
+// CHECK: call void asm sideeffect inteldialect
+// CHECK-SAME: mov eax, $$1
+// CHECK-SAME: mov eax, $$1
+// CHECK-SAME: mov eax, $$4
+// CHECK-SAME: mov eax, $$2
+// CHECK-SAME: mov eax, $$4
+// CHECK-SAME: mov eax, $$4
+// CHECK-SAME: mov eax, $$4
+// CHECK-SAME: mov eax, $$1
+// CHECK-SAME: mov eax, $$4
+// CHECK-SAME: mov eax, $$4
+// CHECK-SAME: mov eax, $$16
+// CHECK-SAME: mov eax, $$2
+// CHECK-SAME: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 
 }
 
@@ -67,7 +89,10 @@ void T4::test() {
 // CHECK: [[X:%.*]] = getelementptr inbounds [[T4]], [[T4]]* [[THIS]], i32 0, i32 0
   __asm mov eax, x;
   __asm mov y, eax;
-// CHECK: call void asm sideeffect inteldialect "mov eax, dword ptr $1\0A\09mov dword ptr $0, eax", "=*m,*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* @_ZN2T41yE, i32* {{.*}})
+// CHECK: call void asm sideeffect inteldialect
+// CHECK-SAME: mov eax, $1
+// CHECK-SAME: mov $0, eax
+// CHECK-SAME: "=*m,*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* @_ZN2T41yE, i32* {{.*}})
 }
 
 template <class T> struct T5 {
@@ -82,7 +107,11 @@ void test5() {
   __asm push y
   __asm call T5<int>::create<float>
   __asm mov x, eax
-  // CHECK: call void asm sideeffect inteldialect "push dword ptr $0\0A\09call dword ptr $2\0A\09mov dword ptr $1, eax", "=*m,=*m,*m,~{esp},~{dirflag},~{fpsr},~{flags}"(i32* %y, i32* %x, i32 (float)* @_ZN2T5IiE6createIfEEiT_)
+  // CHECK: call void asm sideeffect inteldialect
+  // CHECK-SAME: push $0
+  // CHECK-SAME: call dword ptr $2
+  // CHECK-SAME: mov $1, eax
+  // CHECK-SAME: "=*m,=*m,*m,~{esp},~{dirflag},~{fpsr},~{flags}"(i32* %y, i32* %x, i32 (float)* @_ZN2T5IiE6createIfEEiT_)
 }
 
 // Just verify this doesn't emit an error.
@@ -100,7 +129,9 @@ void t7_struct() {
   };
   __asm mov eax, [eax].A.b
   // CHECK-LABEL: define void @_Z9t7_structv
-  // CHECK: call void asm sideeffect inteldialect "mov eax, [eax].4", "~{eax},~{dirflag},~{fpsr},~{flags}"()
+  // CHECK: call void asm sideeffect inteldialect
+  // CHECK-SAME: mov eax, [eax].4
+  // CHECK-SAME: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
 void t7_typedef() {
@@ -110,7 +141,9 @@ void t7_typedef() {
   } A;
   __asm mov eax, [eax].A.b
   // CHECK-LABEL: define void @_Z10t7_typedefv
-  // CHECK: call void asm sideeffect inteldialect "mov eax, [eax].4", "~{eax},~{dirflag},~{fpsr},~{flags}"()
+  // CHECK: call void asm sideeffect inteldialect
+  // CHECK-SAME: mov eax, [eax].4
+  // CHECK-SAME: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
 void t7_using() {
@@ -120,20 +153,28 @@ void t7_using() {
   };
   __asm mov eax, [eax].A.b
   // CHECK-LABEL: define void @_Z8t7_usingv
-  // CHECK: call void asm sideeffect inteldialect "mov eax, [eax].4", "~{eax},~{dirflag},~{fpsr},~{flags}"()
+  // CHECK: call void asm sideeffect inteldialect
+  // CHECK-SAME: mov eax, [eax].4
+  // CHECK-SAME: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
 void t8() {
   __asm some_label:
   // CHECK-LABEL: define void @_Z2t8v()
-  // CHECK: call void asm sideeffect inteldialect "L__MSASMLABEL_.1__some_label:", "~{dirflag},~{fpsr},~{flags}"()
+  // CHECK: call void asm sideeffect inteldialect
+  // CHECK-SAME: L__MSASMLABEL_.${:uid}__some_label:
+  // CHECK-SAME: "~{dirflag},~{fpsr},~{flags}"()
   struct A {
     static void g() {
       __asm jmp some_label ; This should jump forwards
       __asm some_label:
       __asm nop
       // CHECK-LABEL: define internal void @_ZZ2t8vEN1A1gEv()
-      // CHECK: call void asm sideeffect inteldialect "jmp L__MSASMLABEL_.2__some_label\0A\09L__MSASMLABEL_.2__some_label:\0A\09nop", "~{dirflag},~{fpsr},~{flags}"()
+      // CHECK: call void asm sideeffect inteldialect
+      // CHECK-SAME: jmp L__MSASMLABEL_.${:uid}__some_label
+      // CHECK-SAME: L__MSASMLABEL_.${:uid}__some_label:
+      // CHECK-SAME: nop
+      // CHECK-SAME: "~{dirflag},~{fpsr},~{flags}"()
     }
   };
   A::g();

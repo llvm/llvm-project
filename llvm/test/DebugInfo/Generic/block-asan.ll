@@ -13,7 +13,7 @@
 
 ; Check that the location of the ASAN instrumented __block variable is
 ; correct.
-; CHECK: !DIExpression(DW_OP_deref, DW_OP_plus, 8, DW_OP_deref, DW_OP_plus, 24)
+; CHECK: !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_plus_uconst, 24)
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -58,11 +58,10 @@ attributes #3 = { nounwind }
 !llvm.module.flags = !{!8, !9, !10}
 !llvm.ident = !{!11}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0 (trunk 223120) (llvm/trunk 223119)", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0 (trunk 223120) (llvm/trunk 223119)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "block.c", directory: "/tmp")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", line: 3, isLocal: false, isDefinition: true, isOptimized: false, scopeLine: 3, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "foo", line: 3, isLocal: false, isDefinition: true, isOptimized: false, unit: !0, scopeLine: 3, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "block.c", directory: "/tmp")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
@@ -80,7 +79,7 @@ attributes #3 = { nounwind }
 !19 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !20 = !DIDerivedType(tag: DW_TAG_member, name: "__size", size: 32, align: 32, offset: 160, file: !1, scope: !5, baseType: !19)
 !21 = !DIDerivedType(tag: DW_TAG_member, name: "x", size: 32, align: 32, offset: 192, file: !1, scope: !5, baseType: !19)
-!22 = !DIExpression(DW_OP_plus, 8, DW_OP_deref, DW_OP_plus, 24)
+!22 = !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_plus_uconst, 24)
 !23 = !DILocation(line: 4, column: 15, scope: !4)
 !24 = !DILocation(line: 4, column: 3, scope: !4)
 !25 = !DILocation(line: 5, column: 3, scope: !4)

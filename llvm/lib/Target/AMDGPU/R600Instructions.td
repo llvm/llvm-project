@@ -15,7 +15,7 @@
 include "R600Intrinsics.td"
 include "R600InstrFormats.td"
 
-class InstR600ISA <dag outs, dag ins, string asm, list<dag> pattern> :
+class InstR600ISA <dag outs, dag ins, string asm, list<dag> pattern = []> :
     InstR600 <outs, ins, asm, pattern, NullALU> {
 
   let Namespace = "AMDGPU";
@@ -160,7 +160,8 @@ class R600_2OP <bits<11> inst, string opName, list<dag> pattern,
   let Inst{63-32} = Word1;
 }
 
-class R600_2OP_Helper <bits<11> inst, string opName, SDPatternOperator node,
+class R600_2OP_Helper <bits<11> inst, string opName,
+                       SDPatternOperator node = null_frag,
                        InstrItinClass itin = AnyALU> :
     R600_2OP <inst, opName,
               [(set R600_Reg32:$dst, (node R600_Reg32:$src0,
@@ -241,20 +242,6 @@ def TEX_SHADOW_ARRAY : PatLeaf<
   }]
 >;
 
-def TEX_MSAA : PatLeaf<
-  (imm),
-  [{uint32_t TType = (uint32_t)N->getZExtValue();
-    return TType == 14;
-  }]
->;
-
-def TEX_ARRAY_MSAA : PatLeaf<
-  (imm),
-  [{uint32_t TType = (uint32_t)N->getZExtValue();
-    return TType == 15;
-  }]
->;
-
 class EG_CF_RAT <bits <8> cfinst, bits <6> ratinst, bits<4> ratid, bits<4> mask,
                  dag outs, dag ins, string asm, list<dag> pattern> :
     InstR600ISA <outs, ins, asm, pattern>,
@@ -282,8 +269,8 @@ class EG_CF_RAT <bits <8> cfinst, bits <6> ratinst, bits<4> ratid, bits<4> mask,
 
 }
 
-class VTX_READ <string name, bits<8> buffer_id, dag outs, list<dag> pattern>
-    : InstR600ISA <outs, (ins MEMxi:$src_gpr), name, pattern>,
+class VTX_READ <string name, dag outs, list<dag> pattern>
+    : InstR600ISA <outs, (ins MEMxi:$src_gpr, i8imm:$buffer_id), !strconcat("  ", name, ", #$buffer_id"), pattern>,
       VTX_WORD1_GPR {
 
   // Static fields
@@ -328,18 +315,44 @@ class VTX_READ <string name, bits<8> buffer_id, dag outs, list<dag> pattern>
 
 class LoadParamFrag <PatFrag load_type> : PatFrag <
   (ops node:$ptr), (load_type node:$ptr),
-  [{ return isConstantLoad(dyn_cast<LoadSDNode>(N), 0); }]
+  [{ return isConstantLoad(cast<LoadSDNode>(N), 0) ||
+            (cast<LoadSDNode>(N)->getAddressSpace() == AMDGPUASI.PARAM_I_ADDRESS); }]
 >;
 
-def load_param : LoadParamFrag<load>;
-def load_param_exti8 : LoadParamFrag<az_extloadi8>;
-def load_param_exti16 : LoadParamFrag<az_extloadi16>;
+def vtx_id3_az_extloadi8 : LoadParamFrag<az_extloadi8>;
+def vtx_id3_az_extloadi16 : LoadParamFrag<az_extloadi16>;
+def vtx_id3_load : LoadParamFrag<load>;
 
-def isR600 : Predicate<"Subtarget->getGeneration() <= AMDGPUSubtarget::R700">;
+class LoadVtxId1 <PatFrag load> : PatFrag <
+  (ops node:$ptr), (load node:$ptr), [{
+  const MemSDNode *LD = cast<MemSDNode>(N);
+  return LD->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS ||
+         (LD->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS &&
+           !isa<GlobalValue>(GetUnderlyingObject(
+           LD->getMemOperand()->getValue(), CurDAG->getDataLayout())));
+}]>;
+
+def vtx_id1_az_extloadi8 : LoadVtxId1 <az_extloadi8>;
+def vtx_id1_az_extloadi16 : LoadVtxId1 <az_extloadi16>;
+def vtx_id1_load : LoadVtxId1 <load>;
+
+class LoadVtxId2 <PatFrag load> : PatFrag <
+  (ops node:$ptr), (load node:$ptr), [{
+  const MemSDNode *LD = cast<MemSDNode>(N);
+  return LD->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS &&
+         isa<GlobalValue>(GetUnderlyingObject(
+         LD->getMemOperand()->getValue(), CurDAG->getDataLayout()));
+}]>;
+
+def vtx_id2_az_extloadi8 : LoadVtxId2 <az_extloadi8>;
+def vtx_id2_az_extloadi16 : LoadVtxId2 <az_extloadi16>;
+def vtx_id2_load : LoadVtxId2 <load>;
+
+def isR600 : Predicate<"Subtarget->getGeneration() <= R600Subtarget::R700">;
 
 def isR600toCayman
     : Predicate<
-          "Subtarget->getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS">;
+          "Subtarget->getGeneration() <= R600Subtarget::NORTHERN_ISLANDS">;
 
 //===----------------------------------------------------------------------===//
 // R600 SDNodes
@@ -407,8 +420,7 @@ def : Pat<(TEXTURE_FETCH (i32 TextureOp), vt:$SRC_GPR,
 def INTERP_VEC_LOAD :  AMDGPUShaderInst <
   (outs R600_Reg128:$dst),
   (ins i32imm:$src0),
-  "INTERP_LOAD $src0 : $dst",
-  [(set R600_Reg128:$dst, (int_R600_interp_const imm:$src0))]>;
+  "INTERP_LOAD $src0 : $dst">;
 
 def INTERP_XY : R600_2OP <0xD6, "INTERP_XY", []> {
   let bank_swizzle = 5;
@@ -423,11 +435,6 @@ def INTERP_LOAD_P0 : R600_1OP <0xE0, "INTERP_LOAD_P0", []>;
 //===----------------------------------------------------------------------===//
 // Export Instructions
 //===----------------------------------------------------------------------===//
-
-def ExportType : SDTypeProfile<0, 7, [SDTCisFP<0>, SDTCisInt<1>]>;
-
-def EXPORT: SDNode<"AMDGPUISD::EXPORT", ExportType,
-  [SDNPHasChain, SDNPSideEffect]>;
 
 class ExportWord0 {
   field bits<32> Word0;
@@ -474,29 +481,7 @@ class ExportBufWord1 {
 }
 
 multiclass ExportPattern<Instruction ExportInst, bits<8> cf_inst> {
-  def : Pat<(int_R600_store_pixel_depth R600_Reg32:$reg),
-    (ExportInst
-        (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), $reg, sub0),
-        0, 61, 0, 7, 7, 7, cf_inst, 0)
-  >;
-
-  def : Pat<(int_R600_store_pixel_stencil R600_Reg32:$reg),
-    (ExportInst
-        (INSERT_SUBREG (v4f32 (IMPLICIT_DEF)), $reg, sub0),
-        0, 61, 7, 0, 7, 7, cf_inst, 0)
-  >;
-
-  def : Pat<(int_R600_store_dummy (i32 imm:$type)),
-    (ExportInst
-        (v4f32 (IMPLICIT_DEF)), imm:$type, 0, 7, 7, 7, 7, cf_inst, 0)
-  >;
-
-  def : Pat<(int_R600_store_dummy 1),
-    (ExportInst
-        (v4f32 (IMPLICIT_DEF)), 1, 60, 7, 7, 7, 7, cf_inst, 0)
-  >;
-
-  def : Pat<(EXPORT (v4f32 R600_Reg128:$src), (i32 imm:$base), (i32 imm:$type),
+  def : Pat<(R600_EXPORT (v4f32 R600_Reg128:$src), (i32 imm:$base), (i32 imm:$type),
     (i32 imm:$swz_x), (i32 imm:$swz_y), (i32 imm:$swz_z), (i32 imm:$swz_w)),
         (ExportInst R600_Reg128:$src, imm:$type, imm:$base,
         imm:$swz_x, imm:$swz_y, imm:$swz_z, imm:$swz_w, cf_inst, 0)
@@ -507,22 +492,22 @@ multiclass ExportPattern<Instruction ExportInst, bits<8> cf_inst> {
 multiclass SteamOutputExportPattern<Instruction ExportInst,
     bits<8> buf0inst, bits<8> buf1inst, bits<8> buf2inst, bits<8> buf3inst> {
 // Stream0
-  def : Pat<(int_R600_store_stream_output (v4f32 R600_Reg128:$src),
+  def : Pat<(int_r600_store_stream_output (v4f32 R600_Reg128:$src),
       (i32 imm:$arraybase), (i32 0), (i32 imm:$mask)),
       (ExportInst R600_Reg128:$src, 0, imm:$arraybase,
       4095, imm:$mask, buf0inst, 0)>;
 // Stream1
-  def : Pat<(int_R600_store_stream_output (v4f32 R600_Reg128:$src),
+  def : Pat<(int_r600_store_stream_output (v4f32 R600_Reg128:$src),
       (i32 imm:$arraybase), (i32 1), (i32 imm:$mask)),
       (ExportInst $src, 0, imm:$arraybase,
       4095, imm:$mask, buf1inst, 0)>;
 // Stream2
-  def : Pat<(int_R600_store_stream_output (v4f32 R600_Reg128:$src),
+  def : Pat<(int_r600_store_stream_output (v4f32 R600_Reg128:$src),
       (i32 imm:$arraybase), (i32 2), (i32 imm:$mask)),
       (ExportInst $src, 0, imm:$arraybase,
       4095, imm:$mask, buf2inst, 0)>;
 // Stream3
-  def : Pat<(int_R600_store_stream_output (v4f32 R600_Reg128:$src),
+  def : Pat<(int_r600_store_stream_output (v4f32 R600_Reg128:$src),
       (i32 imm:$arraybase), (i32 3), (i32 imm:$mask)),
       (ExportInst $src, 0, imm:$arraybase,
       4095, imm:$mask, buf3inst, 0)>;
@@ -678,7 +663,7 @@ let Predicates = [isR600toCayman] in {
 
 def ADD : R600_2OP_Helper <0x0, "ADD", fadd>;
 // Non-IEEE MUL: 0 * anything = 0
-def MUL : R600_2OP_Helper <0x1, "MUL NON-IEEE", int_AMDGPU_mul>;
+def MUL : R600_2OP_Helper <0x1, "MUL NON-IEEE">;
 def MUL_IEEE : R600_2OP_Helper <0x2, "MUL_IEEE", fmul>;
 // TODO: Do these actually match the regular fmin/fmax behavior?
 def MAX : R600_2OP_Helper <0x3, "MAX", AMDGPUfmax_legacy>;
@@ -733,6 +718,7 @@ def SETNE_DX10 : R600_2OP <
   [(set i32:$dst, (selectcc f32:$src0, f32:$src1, -1, 0, COND_UNE_NE))]
 >;
 
+// FIXME: Need combine for AMDGPUfract
 def FRACT : R600_1OP_Helper <0x10, "FRACT", AMDGPUfract>;
 def TRUNC : R600_1OP_Helper <0x11, "TRUNC", ftrunc>;
 def CEIL : R600_1OP_Helper <0x12, "CEIL", fceil>;
@@ -740,6 +726,20 @@ def RNDNE : R600_1OP_Helper <0x13, "RNDNE", frint>;
 def FLOOR : R600_1OP_Helper <0x14, "FLOOR", ffloor>;
 
 def MOV : R600_1OP <0x19, "MOV", []>;
+
+
+// This is a hack to get rid of DUMMY_CHAIN nodes.
+// Most DUMMY_CHAINs should be eliminated during legalization, but undef
+// values can sneak in some to selection.
+let isPseudo = 1, isCodeGenOnly = 1 in {
+def DUMMY_CHAIN : AMDGPUInst <
+  (outs),
+  (ins),
+  "DUMMY_CHAIN",
+  [(R600dummy_chain)]
+>;
+} // end let isPseudo = 1, isCodeGenOnly = 1
+
 
 let isPseudo = 1, isCodeGenOnly = 1, usesCustomInserter = 1 in {
 
@@ -757,6 +757,13 @@ def : Pat <
   (imm:$val),
   (MOV_IMM_I32 imm:$val)
 >;
+
+def MOV_IMM_GLOBAL_ADDR : MOV_IMM<iPTR, i32imm>;
+def : Pat <
+  (AMDGPUconstdata_ptr tglobaladdr:$addr),
+  (MOV_IMM_GLOBAL_ADDR tglobaladdr:$addr)
+>;
+
 
 def MOV_IMM_F32 : MOV_IMM<f32, f32imm>;
 def : Pat <
@@ -851,7 +858,7 @@ class R600_TEX <bits<11> inst, string opName> :
           i32imm:$RESOURCE_ID, i32imm:$SAMPLER_ID,
           CT:$COORD_TYPE_X, CT:$COORD_TYPE_Y, CT:$COORD_TYPE_Z,
           CT:$COORD_TYPE_W),
-          !strconcat(opName,
+          !strconcat("  ", opName,
           " $DST_GPR.$DST_SEL_X$DST_SEL_Y$DST_SEL_Z$DST_SEL_W, "
           "$SRC_GPR.$srcx$srcy$srcz$srcw "
           "RID:$RESOURCE_ID SID:$SAMPLER_ID "
@@ -1006,7 +1013,7 @@ multiclass CUBE_Common <bits<11> inst> {
     (outs R600_Reg128:$dst),
     (ins R600_Reg128:$src0),
     "CUBE $dst $src0",
-    [(set v4f32:$dst, (int_AMDGPU_cube v4f32:$src0))],
+    [(set v4f32:$dst, (int_r600_cube v4f32:$src0))],
     VecALU
   > {
     let isPseudo = 1;
@@ -1061,18 +1068,27 @@ class LSHL_Common <bits<11> inst> : R600_2OP_Helper <inst, "LSHL", shl>;
 class LSHR_Common <bits<11> inst> : R600_2OP_Helper <inst, "LSHR", srl>;
 class ASHR_Common <bits<11> inst> : R600_2OP_Helper <inst, "ASHR", sra>;
 class MULHI_INT_Common <bits<11> inst> : R600_2OP_Helper <
-  inst, "MULHI_INT", mulhs
-> {
+  inst, "MULHI_INT", mulhs> {
   let Itinerary = TransALU;
 }
+
+class MULHI_INT24_Common <bits<11> inst> : R600_2OP_Helper <
+  inst, "MULHI_INT24", AMDGPUmulhi_i24> {
+  let Itinerary = VecALU;
+}
+
 class MULHI_UINT_Common <bits<11> inst> : R600_2OP_Helper <
-  inst, "MULHI", mulhu
-> {
+  inst, "MULHI", mulhu> {
   let Itinerary = TransALU;
 }
+
+class MULHI_UINT24_Common <bits<11> inst> : R600_2OP_Helper <
+  inst, "MULHI_UINT24", AMDGPUmulhi_u24> {
+  let Itinerary = VecALU;
+}
+
 class MULLO_INT_Common <bits<11> inst> : R600_2OP_Helper <
-  inst, "MULLO_INT", mul
-> {
+  inst, "MULLO_INT", mul> {
   let Itinerary = TransALU;
 }
 class MULLO_UINT_Common <bits<11> inst> : R600_2OP <inst, "MULLO_UINT", []> {
@@ -1099,14 +1115,13 @@ class RECIP_UINT_Common <bits<11> inst> : R600_1OP_Helper <
 
 // Clamped to maximum.
 class RECIPSQRT_CLAMPED_Common <bits<11> inst> : R600_1OP_Helper <
-  inst, "RECIPSQRT_CLAMPED", AMDGPUrsq_clamped
+  inst, "RECIPSQRT_CLAMPED", AMDGPUrsq_clamp
 > {
   let Itinerary = TransALU;
 }
 
 class RECIPSQRT_IEEE_Common <bits<11> inst> : R600_1OP_Helper <
-  inst, "RECIPSQRT_IEEE", AMDGPUrsq_legacy
-> {
+  inst, "RECIPSQRT_IEEE", AMDGPUrsq> {
   let Itinerary = TransALU;
 }
 
@@ -1135,23 +1150,12 @@ def FNEG_R600 : FNEG<R600_Reg32>;
 // FIXME: Should be predicated on unsafe fp math.
 multiclass DIV_Common <InstR600 recip_ieee> {
 def : Pat<
-  (int_AMDGPU_div f32:$src0, f32:$src1),
-  (MUL_IEEE $src0, (recip_ieee $src1))
->;
-
-def : Pat<
   (fdiv f32:$src0, f32:$src1),
   (MUL_IEEE $src0, (recip_ieee $src1))
 >;
 
 def : RcpPat<recip_ieee, f32>;
 }
-
-class TGSI_LIT_Z_Common <InstR600 mul_lit, InstR600 log_clamped, InstR600 exp_ieee>
-  : Pat <
-  (int_TGSI_lit_z f32:$src_x, f32:$src_y, f32:$src_w),
-  (exp_ieee (mul_lit (log_clamped (MAX $src_y, (f32 ZERO))), $src_w, $src_x))
->;
 
 //===----------------------------------------------------------------------===//
 // R600 / R700 Instructions
@@ -1191,7 +1195,6 @@ let Predicates = [isR600] in {
 
   defm DIV_r600 : DIV_Common<RECIP_IEEE_r600>;
   def : POW_Common <LOG_IEEE_r600, EXP_IEEE_r600, MUL>;
-  def TGSI_LIT_Z_r600 : TGSI_LIT_Z_Common<MUL_LIT_r600, LOG_CLAMPED_r600, EXP_IEEE_r600>;
 
   def : Pat<(fsqrt f32:$src), (MUL $src, (RECIPSQRT_CLAMPED_r600 $src))>;
   def : RsqPat<RECIPSQRT_IEEE_r600, f32>;
@@ -1279,6 +1282,17 @@ let Predicates = [isR600] in {
 
 defm R600_ : RegisterLoadStore <R600_Reg32, FRAMEri, ADDRIndirect>;
 
+// Hardcode channel to 0
+// NOTE: LSHR is not available here. LSHR is per family instruction
+def : Pat <
+  (i32 (load_private ADDRIndirect:$addr) ),
+  (R600_RegisterLoad FRAMEri:$addr, (i32 0))
+>;
+def : Pat <
+  (store_private i32:$val, ADDRIndirect:$addr),
+  (R600_RegisterStore i32:$val, FRAMEri:$addr, (i32 0))
+>;
+
 
 //===----------------------------------------------------------------------===//
 // Pseudo instructions
@@ -1332,9 +1346,7 @@ def TXD: InstR600 <
   (outs R600_Reg128:$dst),
   (ins R600_Reg128:$src0, R600_Reg128:$src1, R600_Reg128:$src2,
        i32imm:$resourceId, i32imm:$samplerId, i32imm:$textureTarget),
-  "TXD $dst, $src0, $src1, $src2, $resourceId, $samplerId, $textureTarget",
-  [(set v4f32:$dst, (int_AMDGPU_txd v4f32:$src0, v4f32:$src1, v4f32:$src2,
-                     imm:$resourceId, imm:$samplerId, imm:$textureTarget))],
+  "TXD $dst, $src0, $src1, $src2, $resourceId, $samplerId, $textureTarget", [],
   NullALU > {
   let TEXInst = 1;
 }
@@ -1344,10 +1356,7 @@ def TXD_SHADOW: InstR600 <
   (ins R600_Reg128:$src0, R600_Reg128:$src1, R600_Reg128:$src2,
        i32imm:$resourceId, i32imm:$samplerId, i32imm:$textureTarget),
   "TXD_SHADOW $dst, $src0, $src1, $src2, $resourceId, $samplerId, $textureTarget",
-  [(set v4f32:$dst, (int_AMDGPU_txd v4f32:$src0, v4f32:$src1, v4f32:$src2,
-        imm:$resourceId, imm:$samplerId, TEX_SHADOW:$textureTarget))],
-   NullALU
-> {
+  [], NullALU> {
   let TEXInst = 1;
 }
 } // End isPseudo = 1
@@ -1372,8 +1381,8 @@ def CONST_COPY : Instruction {
 } // end usesCustomInserter = 1, isCodeGenOnly = 1, isPseudo = 1, Namespace = "AMDGPU"
 
 def TEX_VTX_CONSTBUF :
-  InstR600ISA <(outs R600_Reg128:$dst), (ins MEMxi:$ptr, i32imm:$BUFFER_ID), "VTX_READ_eg $dst, $ptr",
-      [(set v4i32:$dst, (CONST_ADDRESS ADDRGA_VAR_OFFSET:$ptr, (i32 imm:$BUFFER_ID)))]>,
+  InstR600ISA <(outs R600_Reg128:$dst), (ins MEMxi:$ptr, i32imm:$buffer_id), "VTX_READ_eg $dst, $ptr",
+      [(set v4i32:$dst, (CONST_ADDRESS ADDRGA_VAR_OFFSET:$ptr, (i32 imm:$buffer_id)))]>,
   VTX_WORD1_GPR, VTX_WORD0_eg {
 
   let VC_INST = 0;
@@ -1426,8 +1435,7 @@ def TEX_VTX_CONSTBUF :
 }
 
 def TEX_VTX_TEXBUF:
-  InstR600ISA <(outs R600_Reg128:$dst), (ins MEMxi:$ptr, i32imm:$BUFFER_ID), "TEX_VTX_EXPLICIT_READ $dst, $ptr",
-      [(set v4f32:$dst, (int_R600_load_texbuf ADDRGA_VAR_OFFSET:$ptr, imm:$BUFFER_ID))]>,
+  InstR600ISA <(outs R600_Reg128:$dst), (ins MEMxi:$ptr, i32imm:$buffer_id), "TEX_VTX_EXPLICIT_READ $dst, $ptr">,
 VTX_WORD1_GPR, VTX_WORD0_eg {
 
 let VC_INST = 0;
@@ -1542,8 +1550,9 @@ let isTerminator = 1, usesCustomInserter = 1, isBranch = 1, isBarrier = 1 in {
 //===---------------------------------------------------------------------===//
 let isTerminator = 1, isReturn = 1, hasCtrlDep = 1,
     usesCustomInserter = 1 in {
-  def RETURN          : ILFormat<(outs), (ins variable_ops),
-      "RETURN", [(IL_retflag)]>;
+  def RETURN : ILFormat<(outs), (ins variable_ops),
+    "RETURN", [(AMDGPUendpgm)]
+  >;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1728,12 +1737,6 @@ def : BitConvert <v4i32, v4f32, R600_Reg128>;
 def : DwordAddrPat  <i32, R600_Reg32>;
 
 } // End isR600toCayman Predicate
-
-let Predicates = [isR600] in {
-// Intrinsic patterns
-defm : Expand24IBitOps<MULLO_INT_r600, ADD_INT>;
-defm : Expand24UBitOps<MULLO_UINT_r600, ADD_INT>;
-} // End isR600
 
 def getLDSNoRetOp : InstrMapping {
   let FilterClass = "R600_LDS_1A1D";

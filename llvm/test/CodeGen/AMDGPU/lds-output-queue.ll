@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood -verify-machineinstrs | FileCheck %s
+; RUN: llc -march=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck %s
 ;
 ; This test checks that the lds input queue will is empty at the end of
 ; the ALU clause.
@@ -10,11 +10,11 @@
 
 @local_mem = internal unnamed_addr addrspace(3) global [2 x i32] undef, align 4
 
-define void @lds_input_queue(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %index) {
+define amdgpu_kernel void @lds_input_queue(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %index) {
 entry:
   %0 = getelementptr inbounds [2 x i32], [2 x i32] addrspace(3)* @local_mem, i32 0, i32 %index
   %1 = load i32, i32 addrspace(3)* %0
-  call void @llvm.AMDGPU.barrier.local()
+  call void @llvm.r600.group.barrier()
 
   ; This will start a new clause for the vertex fetch
   %2 = load i32, i32 addrspace(1)* %in
@@ -23,7 +23,7 @@ entry:
   ret void
 }
 
-declare void @llvm.AMDGPU.barrier.local()
+declare void @llvm.r600.group.barrier() nounwind convergent
 
 ; The machine scheduler does not do proper alias analysis and assumes that
 ; loads from global values (Note that a global value is different that a
@@ -88,7 +88,7 @@ declare void @llvm.AMDGPU.barrier.local()
 ; CHECK: LDS_READ_RET
 ; CHECK-NOT: ALU clause
 ; CHECK: MOV * T{{[0-9]\.[XYZW]}}, OQAP
-define void @local_global_alias(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @local_global_alias(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 entry:
   %0 = getelementptr inbounds [2 x i32], [2 x i32] addrspace(3)* @local_mem, i32 0, i32 0
   %1 = load i32, i32 addrspace(3)* %0

@@ -218,13 +218,13 @@ void test_Nullability(Nullability *n, A* a) {
 // CHECK-CC2-NEXT: Container Kind: ObjCInterfaceDecl
 // CHECK-CC2-NEXT: Container is complete
 // CHECK-CC2-NEXT: Container USR: c:objc(cs)Foo
-// RUN: c-index-test -code-completion-at=%s:61:16 %s | FileCheck -check-prefix=CHECK-CC3 %s
+// RUN: c-index-test -code-completion-at=%s:61:17 %s | FileCheck -check-prefix=CHECK-CC3 %s
 // CHECK-CC3: ObjCClassMethodDecl:{ResultType int}{TypedText MyClassMethod:}{Placeholder (id)}
 // CHECK-CC3: ObjCClassMethodDecl:{ResultType int}{TypedText MyPrivateMethod}
-// RUN: c-index-test -code-completion-at=%s:65:16 %s | FileCheck -check-prefix=CHECK-CC4 %s
+// RUN: c-index-test -code-completion-at=%s:65:17 %s | FileCheck -check-prefix=CHECK-CC4 %s
 // CHECK-CC4: ObjCInstanceMethodDecl:{ResultType int}{TypedText MyInstMethod:}{Placeholder (id)}{HorizontalSpace  }{TypedText second:}{Placeholder (id)}
 // CHECK-CC4: ObjCInstanceMethodDecl:{ResultType int}{TypedText MyPrivateInstMethod}
-// RUN: c-index-test -code-completion-at=%s:74:9 %s | FileCheck -check-prefix=CHECK-CC5 %s
+// RUN: c-index-test -code-completion-at=%s:74:10 %s | FileCheck -check-prefix=CHECK-CC5 %s
 // CHECK-CC5: ObjCInstanceMethodDecl:{ResultType int}{TypedText MyInstMethod:}{Placeholder (id)}{HorizontalSpace  }{TypedText second:}{Placeholder (id)}
 // CHECK-CC5: ObjCInstanceMethodDecl:{ResultType int}{TypedText MySubInstMethod}
 // RUN: c-index-test -code-completion-at=%s:82:8 %s | FileCheck -check-prefix=CHECK-CC6 %s
@@ -311,7 +311,7 @@ void test_Nullability(Nullability *n, A* a) {
 // CHECK-CCI: ObjCInstanceMethodDecl:{ResultType void}{TypedText method1} (37)
 // CHECK-CCI: ObjCInstanceMethodDecl:{ResultType void}{TypedText method2} (35)
 
-// RUN: c-index-test -code-completion-at=%s:150:5 %s | FileCheck -check-prefix=CHECK-REDUNDANT %s
+// RUN: c-index-test -code-completion-at=%s:150:6 %s | FileCheck -check-prefix=CHECK-REDUNDANT %s
 // CHECK-REDUNDANT: ObjCInstanceMethodDecl:{ResultType void}{TypedText method2} (35)
 // CHECK-REDUNDANT-NOT: ObjCInstanceMethodDecl:{ResultType void}{TypedText method2}
 // CHECK-REDUNDANT: ObjCInstanceMethodDecl:{ResultType void}{TypedText method3} (35)
@@ -346,3 +346,54 @@ void test_Nullability(Nullability *n, A* a) {
 
 // RUN: c-index-test -code-completion-at=%s:197:6 %s | FileCheck -check-prefix=CHECK-NULLABLE %s
 // CHECK-NULLABLE: ObjCInstanceMethodDecl:{ResultType A * _Nonnull}{TypedText method:}{Placeholder (nullable A *)}
+
+// rdar://28012953
+// Code completion results should include instance methods from RootProtocol and
+// RootClass when completing a method invocation for a RootClass object because
+// RootClasses metaclass subclasses from RootClass (i.e. RootClass is actually
+// an instance of RootClass).
+
+@protocol SubRootProtocol
+
+- (void)subProtocolInstanceMethod;
+
+@end
+
+@protocol RootProtocol <SubRootProtocol>
+
+- (void)protocolInstanceMethod;
++ (void)protocolClassMethod;
+
+@end
+
+@interface RootClass <RootProtocol>
+
+- (void)instanceMethod;
++ (void)classMethod;
+
+@end
+
+@protocol RootCategoryProtocol
+
+- (void)categoryProtocolInstanceMethod;
+
+@end
+
+@interface RootClass (Cat) <RootCategoryProtocol>
+
+- (void)categoryInstanceMethod;
+
+@end
+
+void completeAllTheRootThings() {
+  [RootClass classMethod];
+}
+
+// RUN: c-index-test -code-completion-at=%s:389:14 %s | FileCheck -check-prefix=CHECK-ROOT %s
+// CHECK-ROOT: ObjCInstanceMethodDecl:{ResultType void}{TypedText categoryInstanceMethod} (35)
+// CHECK-ROOT-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText categoryProtocolInstanceMethod} (37)
+// CHECK-ROOT-NEXT: ObjCClassMethodDecl:{ResultType void}{TypedText classMethod} (35)
+// CHECK-ROOT-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText instanceMethod} (35)
+// CHECK-ROOT-NEXT: ObjCClassMethodDecl:{ResultType void}{TypedText protocolClassMethod} (37)
+// CHECK-ROOT-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText protocolInstanceMethod} (37)
+// CHECK-ROOT-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText subProtocolInstanceMethod} (37)

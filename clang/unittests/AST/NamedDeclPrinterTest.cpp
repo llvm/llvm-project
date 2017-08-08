@@ -131,3 +131,45 @@ TEST(NamedDeclPrinter, TestNamespace2) {
     "A",
     "A"));
 }
+
+TEST(NamedDeclPrinter, TestUnscopedUnnamedEnum) {
+  ASSERT_TRUE(PrintedWrittenNamedDeclCXX11Matches(
+    "enum { A };",
+    "A",
+    "A"));
+}
+
+TEST(NamedDeclPrinter, TestNamedEnum) {
+  ASSERT_TRUE(PrintedWrittenNamedDeclCXX11Matches(
+    "enum X { A };",
+    "A",
+    "X::A"));
+}
+
+TEST(NamedDeclPrinter, TestScopedNamedEnum) {
+  ASSERT_TRUE(PrintedWrittenNamedDeclCXX11Matches(
+    "enum class X { A };",
+    "A",
+    "X::A"));
+}
+
+TEST(NamedDeclPrinter, TestClassWithUnscopedUnnamedEnum) {
+  ASSERT_TRUE(PrintedWrittenNamedDeclCXX11Matches(
+    "class X { enum { A }; };",
+    "A",
+    "X::A"));
+}
+
+TEST(NamedDeclPrinter, TestClassWithUnscopedNamedEnum) {
+  ASSERT_TRUE(PrintedWrittenNamedDeclCXX11Matches(
+    "class X { enum Y { A }; };",
+    "A",
+    "X::Y::A"));
+}
+
+TEST(NamedDeclPrinter, TestClassWithScopedNamedEnum) {
+  ASSERT_TRUE(PrintedWrittenNamedDeclCXX11Matches(
+    "class X { enum class Y { A }; };",
+    "A",
+    "X::Y::A"));
+}

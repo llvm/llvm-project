@@ -13,6 +13,8 @@
 #ifndef LLVM_PASSINFO_H
 #define LLVM_PASSINFO_H
 
+#include "llvm/ADT/StringRef.h"
+
 #include <cassert>
 #include <vector>
 
@@ -30,11 +32,10 @@ class TargetMachine;
 class PassInfo {
 public:
   typedef Pass* (*NormalCtor_t)();
-  typedef Pass *(*TargetMachineCtor_t)(TargetMachine *);
 
 private:
-  const char *const PassName;     // Nice name for Pass
-  const char *const PassArgument; // Command Line argument to run this pass
+  StringRef PassName;     // Nice name for Pass
+  StringRef PassArgument; // Command Line argument to run this pass
   const void *PassID;
   const bool IsCFGOnlyPass;              // Pass only looks at the CFG.
   const bool IsAnalysis;                 // True if an analysis pass.
@@ -42,34 +43,30 @@ private:
   std::vector<const PassInfo *> ItfImpl; // Interfaces implemented by this pass
 
   NormalCtor_t NormalCtor;
-  TargetMachineCtor_t TargetMachineCtor;
 
 public:
   /// PassInfo ctor - Do not call this directly, this should only be invoked
   /// through RegisterPass.
-  PassInfo(const char *name, const char *arg, const void *pi,
-           NormalCtor_t normal, bool isCFGOnly, bool is_analysis,
-           TargetMachineCtor_t machine = nullptr)
+  PassInfo(StringRef name, StringRef arg, const void *pi, NormalCtor_t normal,
+           bool isCFGOnly, bool is_analysis)
       : PassName(name), PassArgument(arg), PassID(pi), IsCFGOnlyPass(isCFGOnly),
-        IsAnalysis(is_analysis), IsAnalysisGroup(false), NormalCtor(normal),
-        TargetMachineCtor(machine) {}
+        IsAnalysis(is_analysis), IsAnalysisGroup(false), NormalCtor(normal) {}
   /// PassInfo ctor - Do not call this directly, this should only be invoked
   /// through RegisterPass. This version is for use by analysis groups; it
   /// does not auto-register the pass.
-  PassInfo(const char *name, const void *pi)
+  PassInfo(StringRef name, const void *pi)
       : PassName(name), PassArgument(""), PassID(pi), IsCFGOnlyPass(false),
-        IsAnalysis(false), IsAnalysisGroup(true), NormalCtor(nullptr),
-        TargetMachineCtor(nullptr) {}
+        IsAnalysis(false), IsAnalysisGroup(true), NormalCtor(nullptr) {}
 
   /// getPassName - Return the friendly name for the pass, never returns null
   ///
-  const char *getPassName() const { return PassName; }
+  StringRef getPassName() const { return PassName; }
 
   /// getPassArgument - Return the command line option that may be passed to
   /// 'opt' that will cause this pass to be run.  This will return null if there
   /// is no argument.
   ///
-  const char *getPassArgument() const { return PassArgument; }
+  StringRef getPassArgument() const { return PassArgument; }
 
   /// getTypeInfo - Return the id object for the pass...
   /// TODO : Rename
@@ -97,16 +94,6 @@ public:
   }
   void setNormalCtor(NormalCtor_t Ctor) {
     NormalCtor = Ctor;
-  }
-
-  /// getTargetMachineCtor - Return a pointer to a function, that when called
-  /// with a TargetMachine, creates an instance of the pass and returns it.
-  /// This pointer may be null if there is no constructor with a TargetMachine
-  /// for the pass.
-  ///
-  TargetMachineCtor_t getTargetMachineCtor() const { return TargetMachineCtor; }
-  void setTargetMachineCtor(TargetMachineCtor_t Ctor) {
-    TargetMachineCtor = Ctor;
   }
 
   /// createPass() - Use this method to create an instance of this pass.

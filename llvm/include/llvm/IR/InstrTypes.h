@@ -1,4 +1,4 @@
-//===-- llvm/InstrTypes.h - Important Instruction subclasses ----*- C++ -*-===//
+//===- llvm/InstrTypes.h - Important Instruction subclasses -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,16 +16,33 @@
 #ifndef LLVM_IR_INSTRTYPES_H
 #define LLVM_IR_INSTRTYPES_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/OperandTraits.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <string>
+#include <vector>
 
 namespace llvm {
-
-class LLVMContext;
 
 //===----------------------------------------------------------------------===//
 //                            TerminatorInst Class
@@ -45,50 +62,32 @@ protected:
                  Use *Ops, unsigned NumOps, BasicBlock *InsertAtEnd)
     : Instruction(Ty, iType, Ops, NumOps, InsertAtEnd) {}
 
-  // Out of line virtual method, so the vtable, etc has a home.
-  ~TerminatorInst() override;
-
-  /// Virtual methods - Terminators should overload these and provide inline
-  /// overrides of non-V methods.
-  virtual BasicBlock *getSuccessorV(unsigned idx) const = 0;
-  virtual unsigned getNumSuccessorsV() const = 0;
-  virtual void setSuccessorV(unsigned idx, BasicBlock *B) = 0;
-
 public:
   /// Return the number of successors that this terminator has.
-  unsigned getNumSuccessors() const {
-    return getNumSuccessorsV();
-  }
+  unsigned getNumSuccessors() const;
 
   /// Return the specified successor.
-  BasicBlock *getSuccessor(unsigned idx) const {
-    return getSuccessorV(idx);
-  }
+  BasicBlock *getSuccessor(unsigned idx) const;
 
   /// Update the specified successor to point at the provided block.
-  void setSuccessor(unsigned idx, BasicBlock *B) {
-    setSuccessorV(idx, B);
-  }
+  void setSuccessor(unsigned idx, BasicBlock *B);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return I->isTerminator();
   }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 
   // \brief Returns true if this terminator relates to exception handling.
   bool isExceptional() const {
     switch (getOpcode()) {
-    case Instruction::CatchPad:
-    case Instruction::CatchEndPad:
+    case Instruction::CatchSwitch:
     case Instruction::CatchRet:
-    case Instruction::CleanupEndPad:
     case Instruction::CleanupRet:
     case Instruction::Invoke:
     case Instruction::Resume:
-    case Instruction::TerminatePad:
       return true;
     default:
       return false;
@@ -102,17 +101,17 @@ public:
   template <class Term, class BB> // Successor Iterator
   class SuccIterator : public std::iterator<std::random_access_iterator_tag, BB,
                                             int, BB *, BB *> {
-    typedef std::iterator<std::random_access_iterator_tag, BB, int, BB *, BB *>
-        super;
+    using super =
+        std::iterator<std::random_access_iterator_tag, BB, int, BB *, BB *>;
 
   public:
-    typedef typename super::pointer pointer;
-    typedef typename super::reference reference;
+    using pointer = typename super::pointer;
+    using reference = typename super::reference;
 
   private:
     Term TermInst;
     unsigned idx;
-    typedef SuccIterator<Term, BB> Self;
+    using Self = SuccIterator<Term, BB>;
 
     inline bool index_is_valid(unsigned idx) {
       return idx < TermInst->getNumSuccessors();
@@ -248,11 +247,11 @@ public:
     }
   };
 
-  typedef SuccIterator<TerminatorInst *, BasicBlock> succ_iterator;
-  typedef SuccIterator<const TerminatorInst *, const BasicBlock>
-      succ_const_iterator;
-  typedef llvm::iterator_range<succ_iterator> succ_range;
-  typedef llvm::iterator_range<succ_const_iterator> succ_const_range;
+  using succ_iterator = SuccIterator<TerminatorInst *, BasicBlock>;
+  using succ_const_iterator =
+      SuccIterator<const TerminatorInst *, const BasicBlock>;
+  using succ_range = iterator_range<succ_iterator>;
+  using succ_const_range = iterator_range<succ_const_iterator>;
 
 private:
   inline succ_iterator succ_begin() { return succ_iterator(this); }
@@ -278,8 +277,6 @@ public:
 //===----------------------------------------------------------------------===//
 
 class UnaryInstruction : public Instruction {
-  void *operator new(size_t, unsigned) = delete;
-
 protected:
   UnaryInstruction(Type *Ty, unsigned iType, Value *V,
                    Instruction *IB = nullptr)
@@ -297,21 +294,18 @@ public:
     return User::operator new(s, 1);
   }
 
-  // Out of line virtual method, so the vtable, etc has a home.
-  ~UnaryInstruction() override;
-
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Alloca ||
            I->getOpcode() == Instruction::Load ||
            I->getOpcode() == Instruction::VAArg ||
            I->getOpcode() == Instruction::ExtractValue ||
            (I->getOpcode() >= CastOpsBegin && I->getOpcode() < CastOpsEnd);
   }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 };
@@ -328,10 +322,9 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(UnaryInstruction, Value)
 //===----------------------------------------------------------------------===//
 
 class BinaryOperator : public Instruction {
-  void *operator new(size_t, unsigned) = delete;
+  void AssertOK();
 
 protected:
-  void init(BinaryOps iType);
   BinaryOperator(BinaryOps iType, Value *S1, Value *S2, Type *Ty,
                  const Twine &Name, Instruction *InsertBefore);
   BinaryOperator(BinaryOps iType, Value *S1, Value *S2, Type *Ty,
@@ -339,6 +332,7 @@ protected:
 
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
+
   BinaryOperator *cloneImpl() const;
 
 public:
@@ -387,6 +381,15 @@ public:
     return Create(Instruction::OPC, V1, V2, Name, I);\
   }
 #include "llvm/IR/Instruction.def"
+
+  static BinaryOperator *CreateWithCopiedFlags(BinaryOps Opc,
+                                               Value *V1, Value *V2,
+                                               BinaryOperator *CopyBO,
+                                               const Twine &Name = "") {
+    BinaryOperator *BO = Create(Opc, V1, V2, Name);
+    BO->copyIRFlags(CopyBO);
+    return BO;
+  }
 
   static BinaryOperator *CreateNSW(BinaryOps Opc, Value *V1, Value *V2,
                                    const Twine &Name = "") {
@@ -528,40 +531,11 @@ public:
   ///
   bool swapOperands();
 
-  /// Set or clear the nsw flag on this instruction, which must be an operator
-  /// which supports this flag. See LangRef.html for the meaning of this flag.
-  void setHasNoUnsignedWrap(bool b = true);
-
-  /// Set or clear the nsw flag on this instruction, which must be an operator
-  /// which supports this flag. See LangRef.html for the meaning of this flag.
-  void setHasNoSignedWrap(bool b = true);
-
-  /// Set or clear the exact flag on this instruction, which must be an operator
-  /// which supports this flag. See LangRef.html for the meaning of this flag.
-  void setIsExact(bool b = true);
-
-  /// Determine whether the no unsigned wrap flag is set.
-  bool hasNoUnsignedWrap() const;
-
-  /// Determine whether the no signed wrap flag is set.
-  bool hasNoSignedWrap() const;
-
-  /// Determine whether the exact flag is set.
-  bool isExact() const;
-
-  /// Convenience method to copy supported wrapping, exact, and fast-math flags
-  /// from V to this instruction.
-  void copyIRFlags(const Value *V);
-
-  /// Logical 'and' of any supported wrapping, exact, and fast-math flags of
-  /// V and this instruction.
-  void andIRFlags(const Value *V);
-
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return I->isBinaryOp();
   }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 };
@@ -584,8 +558,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BinaryOperator, Value)
 /// if (isa<CastInst>(Instr)) { ... }
 /// @brief Base class of casting instructions.
 class CastInst : public UnaryInstruction {
-  void anchor() override;
-
 protected:
   /// @brief Constructor with insert-before-instruction semantics for subclasses
   CastInst(Type *Ty, unsigned iType, Value *S,
@@ -861,10 +833,10 @@ public:
   static bool castIsValid(Instruction::CastOps op, Value *S, Type *DstTy);
 
   /// @brief Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return I->isCast();
   }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 };
@@ -876,25 +848,15 @@ public:
 /// This class is the base class for the comparison instructions.
 /// @brief Abstract base class of comparison instructions.
 class CmpInst : public Instruction {
-  void *operator new(size_t, unsigned) = delete;
-  CmpInst() = delete;
-
-protected:
-  CmpInst(Type *ty, Instruction::OtherOps op, unsigned short pred,
-          Value *LHS, Value *RHS, const Twine &Name = "",
-          Instruction *InsertBefore = nullptr);
-
-  CmpInst(Type *ty, Instruction::OtherOps op, unsigned short pred,
-          Value *LHS, Value *RHS, const Twine &Name,
-          BasicBlock *InsertAtEnd);
-
-  void anchor() override; // Out of line virtual method.
-
 public:
   /// This enumeration lists the possible predicates for CmpInst subclasses.
   /// Values in the range 0-31 are reserved for FCmpInst, while values in the
   /// range 32-64 are reserved for ICmpInst. This is necessary to ensure the
   /// predicate values are not overlapping between the classes.
+  ///
+  /// Some passes (e.g. InstCombine) depend on the bit-wise characteristics of
+  /// FCMP_* values. Changing the bit patterns requires a potential change to
+  /// those passes.
   enum Predicate {
     // Opcode              U L G E    Intuitive operation
     FCMP_FALSE =  0,  ///< 0 0 0 0    Always false (always folded)
@@ -931,17 +893,28 @@ public:
     BAD_ICMP_PREDICATE = ICMP_SLE + 1
   };
 
+protected:
+  CmpInst(Type *ty, Instruction::OtherOps op, Predicate pred,
+          Value *LHS, Value *RHS, const Twine &Name = "",
+          Instruction *InsertBefore = nullptr);
+
+  CmpInst(Type *ty, Instruction::OtherOps op, Predicate pred,
+          Value *LHS, Value *RHS, const Twine &Name,
+          BasicBlock *InsertAtEnd);
+
+public:
   // allocate space for exactly two operands
   void *operator new(size_t s) {
     return User::operator new(s, 2);
   }
+
   /// Construct a compare instruction, given the opcode, the predicate and
   /// the two operands.  Optionally (if InstBefore is specified) insert the
   /// instruction into a BasicBlock right before the specified instruction.
   /// The specified Instruction is allowed to be a dereferenced end iterator.
   /// @brief Create a CmpInst
   static CmpInst *Create(OtherOps Op,
-                         unsigned short predicate, Value *S1,
+                         Predicate predicate, Value *S1,
                          Value *S2, const Twine &Name = "",
                          Instruction *InsertBefore = nullptr);
 
@@ -949,7 +922,7 @@ public:
   /// two operands.  Also automatically insert this instruction to the end of
   /// the BasicBlock specified.
   /// @brief Create a CmpInst
-  static CmpInst *Create(OtherOps Op, unsigned short predicate, Value *S1,
+  static CmpInst *Create(OtherOps Op, Predicate predicate, Value *S1,
                          Value *S2, const Twine &Name, BasicBlock *InsertAtEnd);
 
   /// @brief Get the opcode casted to the right type
@@ -972,6 +945,8 @@ public:
   static bool isIntPredicate(Predicate P) {
     return P >= FIRST_ICMP_PREDICATE && P <= LAST_ICMP_PREDICATE;
   }
+
+  static StringRef getPredicateName(Predicate P);
 
   bool isFPPredicate() const { return isFPPredicate(getPredicate()); }
   bool isIntPredicate() const { return isIntPredicate(getPredicate()); }
@@ -1060,30 +1035,38 @@ public:
 
   /// @returns true if the predicate is unsigned, false otherwise.
   /// @brief Determine if the predicate is an unsigned operation.
-  static bool isUnsigned(unsigned short predicate);
+  static bool isUnsigned(Predicate predicate);
 
   /// @returns true if the predicate is signed, false otherwise.
   /// @brief Determine if the predicate is an signed operation.
-  static bool isSigned(unsigned short predicate);
+  static bool isSigned(Predicate predicate);
 
   /// @brief Determine if the predicate is an ordered operation.
-  static bool isOrdered(unsigned short predicate);
+  static bool isOrdered(Predicate predicate);
 
   /// @brief Determine if the predicate is an unordered operation.
-  static bool isUnordered(unsigned short predicate);
+  static bool isUnordered(Predicate predicate);
 
   /// Determine if the predicate is true when comparing a value with itself.
-  static bool isTrueWhenEqual(unsigned short predicate);
+  static bool isTrueWhenEqual(Predicate predicate);
 
   /// Determine if the predicate is false when comparing a value with itself.
-  static bool isFalseWhenEqual(unsigned short predicate);
+  static bool isFalseWhenEqual(Predicate predicate);
+
+  /// Determine if Pred1 implies Pred2 is true when two compares have matching
+  /// operands.
+  static bool isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2);
+
+  /// Determine if Pred1 implies Pred2 is false when two compares have matching
+  /// operands.
+  static bool isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2);
 
   /// @brief Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::ICmp ||
            I->getOpcode() == Instruction::FCmp;
   }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 
@@ -1111,25 +1094,123 @@ struct OperandTraits<CmpInst> : public FixedNumOperandTraits<CmpInst, 2> {
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CmpInst, Value)
 
+//===----------------------------------------------------------------------===//
+//                           FuncletPadInst Class
+//===----------------------------------------------------------------------===//
+class FuncletPadInst : public Instruction {
+private:
+  FuncletPadInst(const FuncletPadInst &CPI);
+
+  explicit FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
+                          ArrayRef<Value *> Args, unsigned Values,
+                          const Twine &NameStr, Instruction *InsertBefore);
+  explicit FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
+                          ArrayRef<Value *> Args, unsigned Values,
+                          const Twine &NameStr, BasicBlock *InsertAtEnd);
+
+  void init(Value *ParentPad, ArrayRef<Value *> Args, const Twine &NameStr);
+
+protected:
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+  friend class CatchPadInst;
+  friend class CleanupPadInst;
+
+  FuncletPadInst *cloneImpl() const;
+
+public:
+  /// Provide fast operand accessors
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
+  /// getNumArgOperands - Return the number of funcletpad arguments.
+  ///
+  unsigned getNumArgOperands() const { return getNumOperands() - 1; }
+
+  /// Convenience accessors
+
+  /// \brief Return the outer EH-pad this funclet is nested within.
+  ///
+  /// Note: This returns the associated CatchSwitchInst if this FuncletPadInst
+  /// is a CatchPadInst.
+  Value *getParentPad() const { return Op<-1>(); }
+  void setParentPad(Value *ParentPad) {
+    assert(ParentPad);
+    Op<-1>() = ParentPad;
+  }
+
+  /// getArgOperand/setArgOperand - Return/set the i-th funcletpad argument.
+  ///
+  Value *getArgOperand(unsigned i) const { return getOperand(i); }
+  void setArgOperand(unsigned i, Value *v) { setOperand(i, v); }
+
+  /// arg_operands - iteration adapter for range-for loops.
+  op_range arg_operands() { return op_range(op_begin(), op_end() - 1); }
+
+  /// arg_operands - iteration adapter for range-for loops.
+  const_op_range arg_operands() const {
+    return const_op_range(op_begin(), op_end() - 1);
+  }
+
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Instruction *I) { return I->isFuncletPad(); }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+template <>
+struct OperandTraits<FuncletPadInst>
+    : public VariadicOperandTraits<FuncletPadInst, /*MINARITY=*/1> {};
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(FuncletPadInst, Value)
+
 /// \brief A lightweight accessor for an operand bundle meant to be passed
 /// around by value.
 struct OperandBundleUse {
-  StringRef Tag;
   ArrayRef<Use> Inputs;
 
-  OperandBundleUse() {}
-  explicit OperandBundleUse(StringRef Tag, ArrayRef<Use> Inputs)
-      : Tag(Tag), Inputs(Inputs) {}
+  OperandBundleUse() = default;
+  explicit OperandBundleUse(StringMapEntry<uint32_t> *Tag, ArrayRef<Use> Inputs)
+      : Inputs(Inputs), Tag(Tag) {}
 
-  /// \brief Return true if all the operands in this operand bundle have the
-  /// attribute A.
-  ///
-  /// Currently there is no way to have attributes on operand bundles differ on
-  /// a per operand granularity.
-  bool operandsHaveAttr(Attribute::AttrKind A) const {
+  /// \brief Return true if the operand at index \p Idx in this operand bundle
+  /// has the attribute A.
+  bool operandHasAttr(unsigned Idx, Attribute::AttrKind A) const {
+    if (isDeoptOperandBundle())
+      if (A == Attribute::ReadOnly || A == Attribute::NoCapture)
+        return Inputs[Idx]->getType()->isPointerTy();
+
     // Conservative answer:  no operands have any attributes.
     return false;
-  };
+  }
+
+  /// \brief Return the tag of this operand bundle as a string.
+  StringRef getTagName() const {
+    return Tag->getKey();
+  }
+
+  /// \brief Return the tag of this operand bundle as an integer.
+  ///
+  /// Operand bundle tags are interned by LLVMContextImpl::getOrInsertBundleTag,
+  /// and this function returns the unique integer getOrInsertBundleTag
+  /// associated the tag of this operand bundle to.
+  uint32_t getTagID() const {
+    return Tag->getValue();
+  }
+
+  /// \brief Return true if this is a "deopt" operand bundle.
+  bool isDeoptOperandBundle() const {
+    return getTagID() == LLVMContext::OB_deopt;
+  }
+
+  /// \brief Return true if this is a "funclet" operand bundle.
+  bool isFuncletOperandBundle() const {
+    return getTagID() == LLVMContext::OB_funclet;
+  }
+
+private:
+  /// \brief Pointer to an entry in LLVMContextImpl::getOrInsertBundleTag.
+  StringMapEntry<uint32_t> *Tag;
 };
 
 /// \brief A container for an operand bundle being viewed as a set of values
@@ -1138,17 +1219,34 @@ struct OperandBundleUse {
 /// Unlike OperandBundleUse, OperandBundleDefT owns the memory it carries, and
 /// so it is possible to create and pass around "self-contained" instances of
 /// OperandBundleDef and ConstOperandBundleDef.
-template <typename InputTy> struct OperandBundleDefT {
+template <typename InputTy> class OperandBundleDefT {
   std::string Tag;
   std::vector<InputTy> Inputs;
 
-  OperandBundleDefT() {}
-  explicit OperandBundleDefT(StringRef Tag, const std::vector<InputTy> &Inputs)
-      : Tag(Tag), Inputs(Inputs) {}
+public:
+  explicit OperandBundleDefT(std::string Tag, std::vector<InputTy> Inputs)
+      : Tag(std::move(Tag)), Inputs(std::move(Inputs)) {}
+  explicit OperandBundleDefT(std::string Tag, ArrayRef<InputTy> Inputs)
+      : Tag(std::move(Tag)), Inputs(Inputs) {}
+
+  explicit OperandBundleDefT(const OperandBundleUse &OBU) {
+    Tag = OBU.getTagName();
+    Inputs.insert(Inputs.end(), OBU.Inputs.begin(), OBU.Inputs.end());
+  }
+
+  ArrayRef<InputTy> inputs() const { return Inputs; }
+
+  using input_iterator = typename std::vector<InputTy>::const_iterator;
+
+  size_t input_size() const { return Inputs.size(); }
+  input_iterator input_begin() const { return Inputs.begin(); }
+  input_iterator input_end() const { return Inputs.end(); }
+
+  StringRef getTag() const { return Tag; }
 };
 
-typedef OperandBundleDefT<Value *> OperandBundleDef;
-typedef OperandBundleDefT<const Value *> ConstOperandBundleDef;
+using OperandBundleDef = OperandBundleDefT<Value *>;
+using ConstOperandBundleDef = OperandBundleDefT<const Value *>;
 
 /// \brief A mixin to add operand bundle functionality to llvm instruction
 /// classes.
@@ -1218,6 +1316,12 @@ public:
     return bundle_op_info_end()[-1].End;
   }
 
+  /// Return true if the operand at index \p Idx is a bundle operand.
+  bool isBundleOperand(unsigned Idx) const {
+    return hasOperandBundles() && Idx >= getBundleOperandsStartIndex() &&
+           Idx < getBundleOperandsEndIndex();
+  }
+
   /// \brief Return the total number operands (not operand bundles) used by
   /// every operand bundle in this OperandBundleUser.
   unsigned getNumTotalBundleOperands() const {
@@ -1242,7 +1346,18 @@ public:
   unsigned countOperandBundlesOfType(StringRef Name) const {
     unsigned Count = 0;
     for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i)
-      if (getOperandBundleAt(i).Tag == Name)
+      if (getOperandBundleAt(i).getTagName() == Name)
+        Count++;
+
+    return Count;
+  }
+
+  /// \brief Return the number of operand bundles with the tag ID attached to
+  /// this instruction.
+  unsigned countOperandBundlesOfType(uint32_t ID) const {
+    unsigned Count = 0;
+    for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i)
+      if (getOperandBundleAt(i).getTagID() == ID)
         Count++;
 
     return Count;
@@ -1257,11 +1372,39 @@ public:
 
     for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i) {
       OperandBundleUse U = getOperandBundleAt(i);
-      if (U.Tag == Name)
+      if (U.getTagName() == Name)
         return U;
     }
 
     return None;
+  }
+
+  /// \brief Return an operand bundle by tag ID, if present.
+  ///
+  /// It is an error to call this for operand bundle types that may have
+  /// multiple instances of them on the same instruction.
+  Optional<OperandBundleUse> getOperandBundle(uint32_t ID) const {
+    assert(countOperandBundlesOfType(ID) < 2 && "Precondition violated!");
+
+    for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i) {
+      OperandBundleUse U = getOperandBundleAt(i);
+      if (U.getTagID() == ID)
+        return U;
+    }
+
+    return None;
+  }
+
+  /// \brief Return the list of operand bundles attached to this instruction as
+  /// a vector of OperandBundleDefs.
+  ///
+  /// This function copies the OperandBundeUse instances associated with this
+  /// OperandBundleUser to a vector of OperandBundleDefs.  Note:
+  /// OperandBundeUses and OperandBundleDefs are non-trivially *different*
+  /// representations of operand bundles (see documentation above).
+  void getOperandBundlesAsDefs(SmallVectorImpl<OperandBundleDef> &Defs) const {
+    for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i)
+      Defs.emplace_back(getOperandBundleAt(i));
   }
 
   /// \brief Return the operand bundle for the operand at index OpIdx.
@@ -1269,11 +1412,7 @@ public:
   /// It is an error to call this with an OpIdx that does not correspond to an
   /// bundle operand.
   OperandBundleUse getOperandBundleForOperand(unsigned OpIdx) const {
-    for (auto &BOI : bundle_op_infos())
-      if (BOI.Begin <= OpIdx && OpIdx < BOI.End)
-        return operandBundleFromBundleOpInfo(BOI);
-
-    llvm_unreachable("Did not find operand bundle for operand!");
+    return operandBundleFromBundleOpInfo(getBundleOpInfoForOperand(OpIdx));
   }
 
   /// \brief Return true if this operand bundle user has operand bundles that
@@ -1288,10 +1427,48 @@ public:
   /// \brief Return true if this operand bundle user has operand bundles that
   /// may write to the heap.
   bool hasClobberingOperandBundles() const {
-    // Implementation note: this is a conservative implementation of operand
-    // bundle semantics, where *any* operand bundle forces a callsite to be
-    // read-write.
-    return hasOperandBundles();
+    for (auto &BOI : bundle_op_infos()) {
+      if (BOI.Tag->second == LLVMContext::OB_deopt ||
+          BOI.Tag->second == LLVMContext::OB_funclet)
+        continue;
+
+      // This instruction has an operand bundle that is not known to us.
+      // Assume the worst.
+      return true;
+    }
+
+    return false;
+  }
+
+  /// \brief Return true if the bundle operand at index \p OpIdx has the
+  /// attribute \p A.
+  bool bundleOperandHasAttr(unsigned OpIdx,  Attribute::AttrKind A) const {
+    auto &BOI = getBundleOpInfoForOperand(OpIdx);
+    auto OBU = operandBundleFromBundleOpInfo(BOI);
+    return OBU.operandHasAttr(OpIdx - BOI.Begin, A);
+  }
+
+  /// \brief Return true if \p Other has the same sequence of operand bundle
+  /// tags with the same number of operands on each one of them as this
+  /// OperandBundleUser.
+  bool hasIdenticalOperandBundleSchema(
+      const OperandBundleUser<InstrTy, OpIteratorTy> &Other) const {
+    if (getNumOperandBundles() != Other.getNumOperandBundles())
+      return false;
+
+    return std::equal(bundle_op_info_begin(), bundle_op_info_end(),
+                      Other.bundle_op_info_begin());
+  }
+
+  /// \brief Return true if this operand bundle user contains operand bundles
+  /// with tags other than those specified in \p IDs.
+  bool hasOperandBundlesOtherThan(ArrayRef<uint32_t> IDs) const {
+    for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i) {
+      uint32_t ID = getOperandBundleAt(i).getTagID();
+      if (!is_contained(IDs, ID))
+        return true;
+    }
+    return false;
   }
 
 protected:
@@ -1337,6 +1514,10 @@ protected:
     /// \brief The index in the Use& vector where operands for this operand
     /// bundle ends.
     uint32_t End;
+
+    bool operator==(const BundleOpInfo &Other) const {
+      return Tag == Other.Tag && Begin == Other.Begin && End == Other.End;
+    }
   };
 
   /// \brief Simple helper function to map a BundleOpInfo to an
@@ -1345,11 +1526,11 @@ protected:
   operandBundleFromBundleOpInfo(const BundleOpInfo &BOI) const {
     auto op_begin = static_cast<const InstrTy *>(this)->op_begin();
     ArrayRef<Use> Inputs(op_begin + BOI.Begin, op_begin + BOI.End);
-    return OperandBundleUse(BOI.Tag->getKey(), Inputs);
+    return OperandBundleUse(BOI.Tag, Inputs);
   }
 
-  typedef BundleOpInfo *bundle_op_iterator;
-  typedef const BundleOpInfo *const_bundle_op_iterator;
+  using bundle_op_iterator = BundleOpInfo *;
+  using const_bundle_op_iterator = const BundleOpInfo *;
 
   /// \brief Return the start of the list of BundleOpInfo instances associated
   /// with this OperandBundleUser.
@@ -1389,14 +1570,12 @@ protected:
 
   /// \brief Return the range [\p bundle_op_info_begin, \p bundle_op_info_end).
   iterator_range<bundle_op_iterator> bundle_op_infos() {
-    return iterator_range<bundle_op_iterator>(bundle_op_info_begin(),
-                                              bundle_op_info_end());
+    return make_range(bundle_op_info_begin(), bundle_op_info_end());
   }
 
   /// \brief Return the range [\p bundle_op_info_begin, \p bundle_op_info_end).
   iterator_range<const_bundle_op_iterator> bundle_op_infos() const {
-    return iterator_range<const_bundle_op_iterator>(bundle_op_info_begin(),
-                                                    bundle_op_info_end());
+    return make_range(bundle_op_info_begin(), bundle_op_info_end());
   }
 
   /// \brief Populate the BundleOpInfo instances and the Use& vector from \p
@@ -1409,7 +1588,7 @@ protected:
                                           const unsigned BeginIndex) {
     auto It = static_cast<InstrTy *>(this)->op_begin() + BeginIndex;
     for (auto &B : Bundles)
-      It = std::copy(B.Inputs.begin(), B.Inputs.end(), It);
+      It = std::copy(B.input_begin(), B.input_end(), It);
 
     auto *ContextImpl = static_cast<InstrTy *>(this)->getContext().pImpl;
     auto BI = Bundles.begin();
@@ -1418,9 +1597,9 @@ protected:
     for (auto &BOI : bundle_op_infos()) {
       assert(BI != Bundles.end() && "Incorrect allocation?");
 
-      BOI.Tag = ContextImpl->getOrInsertBundleTag(BI->Tag);
+      BOI.Tag = ContextImpl->getOrInsertBundleTag(BI->getTag());
       BOI.Begin = CurrentIndex;
-      BOI.End = CurrentIndex + BI->Inputs.size();
+      BOI.End = CurrentIndex + BI->input_size();
       CurrentIndex = BOI.End;
       BI++;
     }
@@ -1430,15 +1609,27 @@ protected:
     return It;
   }
 
+  /// \brief Return the BundleOpInfo for the operand at index OpIdx.
+  ///
+  /// It is an error to call this with an OpIdx that does not correspond to an
+  /// bundle operand.
+  const BundleOpInfo &getBundleOpInfoForOperand(unsigned OpIdx) const {
+    for (auto &BOI : bundle_op_infos())
+      if (BOI.Begin <= OpIdx && OpIdx < BOI.End)
+        return BOI;
+
+    llvm_unreachable("Did not find operand bundle for operand!");
+  }
+
   /// \brief Return the total number of values used in \p Bundles.
   static unsigned CountBundleInputs(ArrayRef<OperandBundleDef> Bundles) {
     unsigned Total = 0;
     for (auto &B : Bundles)
-      Total += B.Inputs.size();
+      Total += B.input_size();
     return Total;
   }
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
 #endif // LLVM_IR_INSTRTYPES_H

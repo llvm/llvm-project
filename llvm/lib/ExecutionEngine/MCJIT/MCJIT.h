@@ -10,7 +10,6 @@
 #ifndef LLVM_LIB_EXECUTIONENGINE_MCJIT_MCJIT_H
 #define LLVM_LIB_EXECUTIONENGINE_MCJIT_MCJIT_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
@@ -27,23 +26,22 @@ class MCJIT;
 // functions across modules that it owns.  It aggregates the memory manager
 // that is passed in to the MCJIT constructor and defers most functionality
 // to that object.
-class LinkingSymbolResolver : public RuntimeDyld::SymbolResolver {
+class LinkingSymbolResolver : public JITSymbolResolver {
 public:
   LinkingSymbolResolver(MCJIT &Parent,
-                        std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver)
+                        std::shared_ptr<JITSymbolResolver> Resolver)
     : ParentEngine(Parent), ClientResolver(std::move(Resolver)) {}
 
-  RuntimeDyld::SymbolInfo findSymbol(const std::string &Name) override;
+  JITSymbol findSymbol(const std::string &Name) override;
 
   // MCJIT doesn't support logical dylibs.
-  RuntimeDyld::SymbolInfo
-  findSymbolInLogicalDylib(const std::string &Name) override {
+  JITSymbol findSymbolInLogicalDylib(const std::string &Name) override {
     return nullptr;
   }
 
 private:
   MCJIT &ParentEngine;
-  std::shared_ptr<RuntimeDyld::SymbolResolver> ClientResolver;
+  std::shared_ptr<JITSymbolResolver> ClientResolver;
 };
 
 // About Module states: added->loaded->finalized.
@@ -69,7 +67,7 @@ private:
 class MCJIT : public ExecutionEngine {
   MCJIT(std::unique_ptr<Module> M, std::unique_ptr<TargetMachine> tm,
         std::shared_ptr<MCJITMemoryManager> MemMgr,
-        std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver);
+        std::shared_ptr<JITSymbolResolver> Resolver);
 
   typedef llvm::SmallPtrSet<Module *, 4> ModulePtrSet;
 
@@ -86,7 +84,7 @@ class MCJIT : public ExecutionEngine {
     ModulePtrSet::iterator begin_added() { return AddedModules.begin(); }
     ModulePtrSet::iterator end_added() { return AddedModules.end(); }
     iterator_range<ModulePtrSet::iterator> added() {
-      return iterator_range<ModulePtrSet::iterator>(begin_added(), end_added());
+      return make_range(begin_added(), end_added());
     }
 
     ModulePtrSet::iterator begin_loaded() { return LoadedModules.begin(); }
@@ -196,11 +194,11 @@ class MCJIT : public ExecutionEngine {
   // perform lookup of pre-compiled code to avoid re-compilation.
   ObjectCache *ObjCache;
 
-  Function *FindFunctionNamedInModulePtrSet(const char *FnName,
+  Function *FindFunctionNamedInModulePtrSet(StringRef FnName,
                                             ModulePtrSet::iterator I,
                                             ModulePtrSet::iterator E);
 
-  GlobalVariable *FindGlobalVariableNamedInModulePtrSet(const char *Name,
+  GlobalVariable *FindGlobalVariableNamedInModulePtrSet(StringRef Name,
                                                         bool AllowInternal,
                                                         ModulePtrSet::iterator I,
                                                         ModulePtrSet::iterator E);
@@ -223,12 +221,12 @@ public:
   /// FindFunctionNamed - Search all of the active modules to find the function that
   /// defines FnName.  This is very slow operation and shouldn't be used for
   /// general code.
-  Function *FindFunctionNamed(const char *FnName) override;
+  Function *FindFunctionNamed(StringRef FnName) override;
 
   /// FindGlobalVariableNamed - Search all of the active modules to find the
   /// global variable that defines Name.  This is very slow operation and
   /// shouldn't be used for general code.
-  GlobalVariable *FindGlobalVariableNamed(const char *Name,
+  GlobalVariable *FindGlobalVariableNamed(StringRef Name,
                                           bool AllowInternal = false) override;
 
   /// Sets the object manager that MCJIT should use to avoid compilation.
@@ -306,16 +304,22 @@ public:
   createJIT(std::unique_ptr<Module> M,
             std::string *ErrorStr,
             std::shared_ptr<MCJITMemoryManager> MemMgr,
-            std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver,
+            std::shared_ptr<JITSymbolResolver> Resolver,
             std::unique_ptr<TargetMachine> TM);
 
   // @}
 
-  RuntimeDyld::SymbolInfo findSymbol(const std::string &Name,
-                                     bool CheckFunctionsOnly);
+  // Takes a mangled name and returns the corresponding JITSymbol (if a
+  // definition of that mangled name has been added to the JIT).
+  JITSymbol findSymbol(const std::string &Name, bool CheckFunctionsOnly);
+
   // DEPRECATED - Please use findSymbol instead.
+  //
   // This is not directly exposed via the ExecutionEngine API, but it is
   // used by the LinkingMemoryManager.
+  //
+  // getSymbolAddress takes an unmangled name and returns the corresponding
+  // JITSymbol if a definition of the name has been added to the JIT.
   uint64_t getSymbolAddress(const std::string &Name,
                             bool CheckFunctionsOnly);
 
@@ -331,9 +335,8 @@ protected:
                            const RuntimeDyld::LoadedObjectInfo &L);
   void NotifyFreeingObject(const object::ObjectFile& Obj);
 
-  RuntimeDyld::SymbolInfo findExistingSymbol(const std::string &Name);
-  Module *findModuleForSymbol(const std::string &Name,
-                              bool CheckFunctionsOnly);
+  JITSymbol findExistingSymbol(const std::string &Name);
+  Module *findModuleForSymbol(const std::string &Name, bool CheckFunctionsOnly);
 };
 
 } // end llvm namespace

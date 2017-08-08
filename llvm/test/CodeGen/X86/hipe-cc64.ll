@@ -1,4 +1,4 @@
-; RUN: llc < %s -tailcallopt -code-model=medium -stack-alignment=8 -mtriple=x86_64-linux-gnu -mcpu=opteron | FileCheck %s
+; RUN: llc < %s -stack-symbol-ordering=0 -tailcallopt -code-model=medium -stack-alignment=8 -mtriple=x86_64-linux-gnu -mcpu=opteron | FileCheck %s
 
 ; Check the HiPE calling convention works (x86-64)
 
@@ -57,11 +57,7 @@ entry:
   store i64 %arg2, i64* %arg2_var
   store i64 %arg3, i64* %arg3_var
 
-  ; CHECK:      movq  40(%rsp), %r15
-  ; CHECK-NEXT: movq  32(%rsp), %rbp
-  ; CHECK-NEXT: movq  24(%rsp), %rsi
-  ; CHECK-NEXT: movq  16(%rsp), %rdx
-  ; CHECK-NEXT: movq  8(%rsp), %rcx
+  ; Loads are reading values just writen from corresponding register and are therefore noops. 
   %0 = load i64, i64* %hp_var
   %1 = load i64, i64* %p_var
   %2 = load i64, i64* %arg0_var
@@ -83,5 +79,24 @@ define cc 11 void @baz() nounwind {
   ret void
 }
 
+; Sanity-check the tail call sequence. Number of arguments was chosen as to
+; expose a bug where the tail call sequence clobbered the stack.
+define cc 11 { i64, i64, i64 } @tailcaller(i64 %hp, i64 %p) #0 {
+  ; CHECK:      movl	$15, %esi
+  ; CHECK-NEXT: movl	$31, %edx
+  ; CHECK-NEXT: movl	$47, %ecx
+  ; CHECK-NEXT: movl	$63, %r8d
+  ; CHECK-NEXT: popq	%rax
+  ; CHECK-NEXT: jmp	tailcallee
+  %ret = tail call cc11 { i64, i64, i64 } @tailcallee(i64 %hp, i64 %p, i64 15,
+     i64 31, i64 47, i64 63, i64 79) #1
+  ret { i64, i64, i64 } %ret
+}
+
+!hipe.literals = !{ !0, !1, !2 }
+!0 = !{ !"P_NSP_LIMIT", i32 160 }
+!1 = !{ !"X86_LEAF_WORDS", i32 24 }
+!2 = !{ !"AMD64_LEAF_WORDS", i32 24 }
 @clos = external constant i64
 declare cc 11 void @bar(i64, i64, i64, i64, i64, i64)
+declare cc 11 { i64, i64, i64 } @tailcallee(i64, i64, i64, i64, i64, i64, i64)

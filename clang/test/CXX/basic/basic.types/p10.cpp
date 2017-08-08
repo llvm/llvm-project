@@ -141,3 +141,45 @@ constexpr int arb(int n) {
 }
 constexpr long Overflow[ // expected-error {{constexpr variable cannot have non-literal type 'long const[(1 << 30) << 2]'}}
     (1 << 30) << 2]{};   // expected-warning {{requires 34 bits to represent}}
+
+namespace inherited_ctor {
+  struct A { constexpr A(int); };
+  struct B : A {
+    B();
+    using A::A;
+  };
+  constexpr int f(B) { return 0; } // ok
+
+  struct C { constexpr C(int); };
+  struct D : C { // expected-note {{because}}
+    D(int);
+    using C::C;
+  };
+  constexpr int f(D) { return 0; } // expected-error {{not a literal type}}
+
+  // This one is a bit odd: F inherits E's default constructor, which is
+  // constexpr. Because F has a constructor of its own, it doesn't declare a
+  // default constructor hiding E's one.
+  struct E {};
+  struct F : E {
+    F(int);
+    using E::E;
+  };
+  constexpr int f(F) { return 0; }
+
+  // FIXME: Is this really the right behavior? We presumably should be checking
+  // whether the inherited constructor would be a copy or move constructor for
+  // the derived class, not for the base class.
+  struct G { constexpr G(const G&); };
+  struct H : G { // expected-note {{because}}
+    using G::G;
+  };
+  constexpr int f(H) { return 0; } // expected-error {{not a literal type}}
+
+  struct J;
+  struct I { constexpr I(const J&); };
+  struct J : I {
+    using I::I;
+  };
+  constexpr int f(J) { return 0; }
+}

@@ -102,10 +102,10 @@ using D1 = drop<3, int, char, double, long>::type;
 using D1 = types<long>;
 
 using T2 = take<4, int, char, double, long>::type; // expected-note {{previous}}
-using T2 = types<int, char, double, long>;
 // FIXME: Desguar the types on the RHS in this diagnostic.
 // desired-error {{'types<void, void, void, void>' vs 'types<int, char, double, long>'}}
 using T2 = types<void, void, void, void>; // expected-error {{'types<void, void, void, void>' vs 'types<typename inner<_>::type, typename inner<_>::type, typename inner<_>::type, typename inner<_>::type>'}}
+using T2 = types<int, char, double, long>;
 using D2 = drop<4, int, char, double, long>::type;
 using D2 = types<>;
 

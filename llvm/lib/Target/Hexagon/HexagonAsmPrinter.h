@@ -33,7 +33,7 @@ namespace llvm {
       return AsmPrinter::runOnMachineFunction(Fn);
     }
 
-    const char *getPassName() const override {
+    StringRef getPassName() const override {
       return "Hexagon Assembly Printer";
     }
 
@@ -41,6 +41,10 @@ namespace llvm {
                                    const MachineBasicBlock *MBB) const override;
 
     void EmitInstruction(const MachineInstr *MI) override;
+
+    void HexagonProcessInstruction(MCInst &Inst,
+                                   const MachineInstr &MBB);
+
 
     void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
     bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

@@ -1,4 +1,4 @@
-//===-- llvm/MC/MCAsmParserExtension.h - Asm Parser Hooks -------*- C++ -*-===//
+//===- llvm/MC/MCAsmParserExtension.h - Asm Parser Hooks --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,20 +10,20 @@
 #ifndef LLVM_MC_MCPARSER_MCASMPARSEREXTENSION_H
 #define LLVM_MC_MCPARSER_MCASMPARSEREXTENSION_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/Support/SMLoc.h"
 
 namespace llvm {
+
 class Twine;
 
 /// \brief Generic interface for extending the MCAsmParser,
 /// which is implemented by target and object file assembly parser
 /// implementations.
 class MCAsmParserExtension {
-  MCAsmParserExtension(const MCAsmParserExtension &) = delete;
-  void operator=(const MCAsmParserExtension &) = delete;
-
   MCAsmParser *Parser;
 
 protected:
@@ -38,9 +38,11 @@ protected:
     return (Obj->*Handler)(Directive, DirectiveLoc);
   }
 
-  bool BracketExpressionsSupported;
+  bool BracketExpressionsSupported = false;
 
 public:
+  MCAsmParserExtension(const MCAsmParserExtension &) = delete;
+  MCAsmParserExtension &operator=(const MCAsmParserExtension &) = delete;
   virtual ~MCAsmParserExtension();
 
   /// \brief Initialize the extension for parsing using the given \p Parser.
@@ -65,28 +67,55 @@ public:
 
   SourceMgr &getSourceManager() { return getParser().getSourceManager(); }
   MCStreamer &getStreamer() { return getParser().getStreamer(); }
+
   bool Warning(SMLoc L, const Twine &Msg) {
     return getParser().Warning(L, Msg);
   }
-  bool Error(SMLoc L, const Twine &Msg) {
-    return getParser().Error(L, Msg);
+
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = SMRange()) {
+    return getParser().Error(L, Msg, Range);
   }
+
   void Note(SMLoc L, const Twine &Msg) {
     getParser().Note(L, Msg);
   }
+
   bool TokError(const Twine &Msg) {
     return getParser().TokError(Msg);
   }
 
   const AsmToken &Lex() { return getParser().Lex(); }
-
   const AsmToken &getTok() { return getParser().getTok(); }
+  bool parseToken(AsmToken::TokenKind T,
+                  const Twine &Msg = "unexpected token") {
+    return getParser().parseToken(T, Msg);
+  }
+
+  bool parseMany(function_ref<bool()> parseOne, bool hasComma = true) {
+    return getParser().parseMany(parseOne, hasComma);
+  }
+
+  bool parseOptionalToken(AsmToken::TokenKind T) {
+    return getParser().parseOptionalToken(T);
+  }
+
+  bool check(bool P, const Twine &Msg) {
+    return getParser().check(P, Msg);
+  }
+
+  bool check(bool P, SMLoc Loc, const Twine &Msg) {
+    return getParser().check(P, Loc, Msg);
+  }
+
+  bool addErrorSuffix(const Twine &Suffix) {
+    return getParser().addErrorSuffix(Suffix);
+  }
 
   bool HasBracketExpressions() const { return BracketExpressionsSupported; }
 
   /// @}
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCPARSER_MCASMPARSEREXTENSION_H

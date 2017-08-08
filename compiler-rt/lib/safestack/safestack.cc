@@ -18,6 +18,7 @@
 #include <pthread.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/user.h>
@@ -68,6 +69,9 @@ const unsigned kStackAlign = 16;
 /// size rlimit is set to infinity.
 const unsigned kDefaultUnsafeStackSize = 0x2800000;
 
+/// Runtime page size obtained through sysconf
+static unsigned pageSize;
+
 // TODO: To make accessing the unsafe stack pointer faster, we plan to
 // eventually store it directly in the thread control block data structure on
 // platforms where this structure is pointed to by %fs or %gs. This is exactly
@@ -87,6 +91,8 @@ __attribute__((visibility(
 static __thread void *unsafe_stack_start = nullptr;
 static __thread size_t unsafe_stack_size = 0;
 static __thread size_t unsafe_stack_guard = 0;
+
+using namespace __sanitizer;
 
 static inline void *unsafe_stack_alloc(size_t size, size_t guard) {
   CHECK_GE(size + guard, size);
@@ -185,7 +191,7 @@ INTERCEPTOR(int, pthread_create, pthread_t *thread,
 
   CHECK_NE(size, 0);
   CHECK_EQ((size & (kStackAlign - 1)), 0);
-  CHECK_EQ((guard & (PAGE_SIZE - 1)), 0);
+  CHECK_EQ((guard & (pageSize - 1)), 0);
 
   void *addr = unsafe_stack_alloc(size, guard);
   struct tinfo *tinfo =
@@ -217,6 +223,7 @@ void __safestack_init() {
   void *addr = unsafe_stack_alloc(size, guard);
 
   unsafe_stack_setup(addr, size, guard);
+  pageSize = sysconf(_SC_PAGESIZE);
 
   // Initialize pthread interceptors for thread allocation
   INTERCEPT_FUNCTION(pthread_create);

@@ -47,6 +47,9 @@ void TestFlag(const char *start_value, const char *env,
   parser.ParseString(env);
 
   EXPECT_EQ(0, internal_strcmp(final_value, flag));
+
+  // Reporting unrecognized flags is needed to reset them.
+  ReportUnrecognizedFlags();
 }
 
 TEST(SanitizerCommon, BooleanFlags) {
@@ -56,6 +59,38 @@ TEST(SanitizerCommon, BooleanFlags) {
   TestFlag(true, "flag_name=0", false);
   TestFlag(true, "flag_name=no", false);
   TestFlag(true, "flag_name=false", false);
+
+  EXPECT_DEATH(TestFlag(false, "flag_name", true), "expected '='");
+  EXPECT_DEATH(TestFlag(false, "flag_name=", true),
+               "Invalid value for bool option: ''");
+  EXPECT_DEATH(TestFlag(false, "flag_name=2", true),
+               "Invalid value for bool option: '2'");
+  EXPECT_DEATH(TestFlag(false, "flag_name=-1", true),
+               "Invalid value for bool option: '-1'");
+  EXPECT_DEATH(TestFlag(false, "flag_name=on", true),
+               "Invalid value for bool option: 'on'");
+}
+
+TEST(SanitizerCommon, HandleSignalMode) {
+  TestFlag(kHandleSignalNo, "flag_name=1", kHandleSignalYes);
+  TestFlag(kHandleSignalNo, "flag_name=yes", kHandleSignalYes);
+  TestFlag(kHandleSignalNo, "flag_name=true", kHandleSignalYes);
+  TestFlag(kHandleSignalYes, "flag_name=0", kHandleSignalNo);
+  TestFlag(kHandleSignalYes, "flag_name=no", kHandleSignalNo);
+  TestFlag(kHandleSignalYes, "flag_name=false", kHandleSignalNo);
+  TestFlag(kHandleSignalNo, "flag_name=2", kHandleSignalExclusive);
+  TestFlag(kHandleSignalYes, "flag_name=exclusive", kHandleSignalExclusive);
+
+  EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name", kHandleSignalNo),
+               "expected '='");
+  EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name=", kHandleSignalNo),
+               "Invalid value for signal handler option: ''");
+  EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name=3", kHandleSignalNo),
+               "Invalid value for signal handler option: '3'");
+  EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name=-1", kHandleSignalNo),
+               "Invalid value for signal handler option: '-1'");
+  EXPECT_DEATH(TestFlag(kHandleSignalNo, "flag_name=on", kHandleSignalNo),
+               "Invalid value for signal handler option: 'on'");
 }
 
 TEST(SanitizerCommon, IntFlags) {
@@ -97,6 +132,9 @@ static void TestTwoFlags(const char *env, bool expected_flag1,
 
   EXPECT_EQ(expected_flag1, flag1);
   EXPECT_EQ(0, internal_strcmp(flag2, expected_flag2));
+
+  // Reporting unrecognized flags is needed to reset them.
+  ReportUnrecognizedFlags();
 }
 
 TEST(SanitizerCommon, MultipleFlags) {
@@ -129,13 +167,13 @@ TEST(SanitizerCommon, CommonFlags) {
 
   cf.symbolize = false;
   cf.coverage = true;
-  cf.coverage_direct = true;
+  cf.heap_profile = true;
   cf.log_path = "path/one";
 
-  parser.ParseString("symbolize=1:coverage_direct=false log_path='path/two'");
+  parser.ParseString("symbolize=1:heap_profile=false log_path='path/two'");
   EXPECT_TRUE(cf.symbolize);
   EXPECT_TRUE(cf.coverage);
-  EXPECT_FALSE(cf.coverage_direct);
+  EXPECT_FALSE(cf.heap_profile);
   EXPECT_STREQ("path/two", cf.log_path);
 }
 

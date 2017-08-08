@@ -1,4 +1,4 @@
-//===-- MCMachObjectTargetWriter.cpp - Mach-O Target Writer Subclass ------===//
+//===- MCMachObjectTargetWriter.cpp - Mach-O Target Writer Subclass -------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,4 +16,4 @@ MCMachObjectTargetWriter::MCMachObjectTargetWriter(bool Is64Bit_,
                                                    uint32_t CPUSubtype_)
     : Is64Bit(Is64Bit_), CPUType(CPUType_), CPUSubtype(CPUSubtype_) {}
 
-MCMachObjectTargetWriter::~MCMachObjectTargetWriter() {}
+MCMachObjectTargetWriter::~MCMachObjectTargetWriter() = default;

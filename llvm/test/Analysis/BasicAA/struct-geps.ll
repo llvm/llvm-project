@@ -6,20 +6,20 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; CHECK-LABEL: test_simple
 
-; CHECK-DAG: PartialAlias: %struct* %st, i32* %x
-; CHECK-DAG: PartialAlias: %struct* %st, i32* %y
-; CHECK-DAG: PartialAlias: %struct* %st, i32* %z
+; CHECK-DAG: MayAlias: %struct* %st, i32* %x
+; CHECK-DAG: MayAlias: %struct* %st, i32* %y
+; CHECK-DAG: MayAlias: %struct* %st, i32* %z
 
 ; CHECK-DAG: NoAlias: i32* %x, i32* %y
 ; CHECK-DAG: NoAlias: i32* %x, i32* %z
 ; CHECK-DAG: NoAlias: i32* %y, i32* %z
 
-; CHECK-DAG: PartialAlias: %struct* %st, %struct* %y_12
-; CHECK-DAG: PartialAlias: %struct* %y_12, i32* %x
-; CHECK-DAG: PartialAlias: i32* %x, i80* %y_10
+; CHECK-DAG: MayAlias: %struct* %st, %struct* %y_12
+; CHECK-DAG: MayAlias: %struct* %y_12, i32* %x
+; CHECK-DAG: MayAlias: i32* %x, i80* %y_10
 
-; CHECK-DAG: PartialAlias: %struct* %st, i64* %y_8
-; CHECK-DAG: PartialAlias: i32* %z, i64* %y_8
+; CHECK-DAG: MayAlias: %struct* %st, i64* %y_8
+; CHECK-DAG: MayAlias: i32* %z, i64* %y_8
 ; CHECK-DAG: NoAlias: i32* %x, i64* %y_8
 
 ; CHECK-DAG: MustAlias: %struct* %y_12, i32* %y
@@ -38,20 +38,20 @@ define void @test_simple(%struct* %st, i64 %i, i64 %j, i64 %k) {
 
 ; CHECK-LABEL: test_in_array
 
-; CHECK-DAG: PartialAlias: [1 x %struct]* %st, i32* %x
-; CHECK-DAG: PartialAlias: [1 x %struct]* %st, i32* %y
-; CHECK-DAG: PartialAlias: [1 x %struct]* %st, i32* %z
+; CHECK-DAG: MayAlias: [1 x %struct]* %st, i32* %x
+; CHECK-DAG: MayAlias: [1 x %struct]* %st, i32* %y
+; CHECK-DAG: MayAlias: [1 x %struct]* %st, i32* %z
 
 ; CHECK-DAG: NoAlias: i32* %x, i32* %y
 ; CHECK-DAG: NoAlias: i32* %x, i32* %z
 ; CHECK-DAG: NoAlias: i32* %y, i32* %z
 
-; CHECK-DAG: PartialAlias: %struct* %y_12, [1 x %struct]* %st
-; CHECK-DAG: PartialAlias: %struct* %y_12, i32* %x
-; CHECK-DAG: PartialAlias: i32* %x, i80* %y_10
+; CHECK-DAG: MayAlias: %struct* %y_12, [1 x %struct]* %st
+; CHECK-DAG: MayAlias: %struct* %y_12, i32* %x
+; CHECK-DAG: MayAlias: i32* %x, i80* %y_10
 
-; CHECK-DAG: PartialAlias: [1 x %struct]* %st, i64* %y_8
-; CHECK-DAG: PartialAlias: i32* %z, i64* %y_8
+; CHECK-DAG: MayAlias: [1 x %struct]* %st, i64* %y_8
+; CHECK-DAG: MayAlias: i32* %z, i64* %y_8
 ; CHECK-DAG: NoAlias: i32* %x, i64* %y_8
 
 ; CHECK-DAG: MustAlias: %struct* %y_12, i32* %y
@@ -70,20 +70,20 @@ define void @test_in_array([1 x %struct]* %st, i64 %i, i64 %j, i64 %k, i64 %i1, 
 
 ; CHECK-LABEL: test_in_3d_array
 
-; CHECK-DAG: PartialAlias: [1 x [1 x [1 x %struct]]]* %st, i32* %x
-; CHECK-DAG: PartialAlias: [1 x [1 x [1 x %struct]]]* %st, i32* %y
-; CHECK-DAG: PartialAlias: [1 x [1 x [1 x %struct]]]* %st, i32* %z
+; CHECK-DAG: MayAlias: [1 x [1 x [1 x %struct]]]* %st, i32* %x
+; CHECK-DAG: MayAlias: [1 x [1 x [1 x %struct]]]* %st, i32* %y
+; CHECK-DAG: MayAlias: [1 x [1 x [1 x %struct]]]* %st, i32* %z
 
 ; CHECK-DAG: NoAlias: i32* %x, i32* %y
 ; CHECK-DAG: NoAlias: i32* %x, i32* %z
 ; CHECK-DAG: NoAlias: i32* %y, i32* %z
 
-; CHECK-DAG: PartialAlias: %struct* %y_12, [1 x [1 x [1 x %struct]]]* %st
-; CHECK-DAG: PartialAlias: %struct* %y_12, i32* %x
-; CHECK-DAG: PartialAlias: i32* %x, i80* %y_10
+; CHECK-DAG: MayAlias: %struct* %y_12, [1 x [1 x [1 x %struct]]]* %st
+; CHECK-DAG: MayAlias: %struct* %y_12, i32* %x
+; CHECK-DAG: MayAlias: i32* %x, i80* %y_10
 
-; CHECK-DAG: PartialAlias: [1 x [1 x [1 x %struct]]]* %st, i64* %y_8
-; CHECK-DAG: PartialAlias: i32* %z, i64* %y_8
+; CHECK-DAG: MayAlias: [1 x [1 x [1 x %struct]]]* %st, i64* %y_8
+; CHECK-DAG: MayAlias: i32* %z, i64* %y_8
 ; CHECK-DAG: NoAlias: i32* %x, i64* %y_8
 
 ; CHECK-DAG: MustAlias: %struct* %y_12, i32* %y
@@ -106,14 +106,14 @@ define void @test_in_3d_array([1 x [1 x [1 x %struct]]]* %st, i64 %i, i64 %j, i6
 ; CHECK-DAG: NoAlias: i32* %y, i32* %y2
 ; CHECK-DAG: NoAlias: i32* %z, i32* %z2
 
-; CHECK-DAG: PartialAlias: i32* %x, i32* %y2
-; CHECK-DAG: PartialAlias: i32* %x, i32* %z2
+; CHECK-DAG: MayAlias: i32* %x, i32* %y2
+; CHECK-DAG: MayAlias: i32* %x, i32* %z2
 
-; CHECK-DAG: PartialAlias: i32* %x2, i32* %y
-; CHECK-DAG: PartialAlias: i32* %y, i32* %z2
+; CHECK-DAG: MayAlias: i32* %x2, i32* %y
+; CHECK-DAG: MayAlias: i32* %y, i32* %z2
 
-; CHECK-DAG: PartialAlias: i32* %x2, i32* %z
-; CHECK-DAG: PartialAlias: i32* %y2, i32* %z
+; CHECK-DAG: MayAlias: i32* %x2, i32* %z
+; CHECK-DAG: MayAlias: i32* %y2, i32* %z
 
 define void @test_same_underlying_object_same_indices(%struct* %st, i64 %i, i64 %j, i64 %k) {
   %st2 = getelementptr %struct, %struct* %st, i32 10
@@ -128,18 +128,18 @@ define void @test_same_underlying_object_same_indices(%struct* %st, i64 %i, i64 
 
 ; CHECK-LABEL: test_same_underlying_object_different_indices
 
-; CHECK-DAG: PartialAlias: i32* %x, i32* %x2
-; CHECK-DAG: PartialAlias: i32* %y, i32* %y2
-; CHECK-DAG: PartialAlias: i32* %z, i32* %z2
+; CHECK-DAG: MayAlias: i32* %x, i32* %x2
+; CHECK-DAG: MayAlias: i32* %y, i32* %y2
+; CHECK-DAG: MayAlias: i32* %z, i32* %z2
 
-; CHECK-DAG: PartialAlias: i32* %x, i32* %y2
-; CHECK-DAG: PartialAlias: i32* %x, i32* %z2
+; CHECK-DAG: MayAlias: i32* %x, i32* %y2
+; CHECK-DAG: MayAlias: i32* %x, i32* %z2
 
-; CHECK-DAG: PartialAlias: i32* %x2, i32* %y
-; CHECK-DAG: PartialAlias: i32* %y, i32* %z2
+; CHECK-DAG: MayAlias: i32* %x2, i32* %y
+; CHECK-DAG: MayAlias: i32* %y, i32* %z2
 
-; CHECK-DAG: PartialAlias: i32* %x2, i32* %z
-; CHECK-DAG: PartialAlias: i32* %y2, i32* %z
+; CHECK-DAG: MayAlias: i32* %x2, i32* %z
+; CHECK-DAG: MayAlias: i32* %y2, i32* %z
 
 define void @test_same_underlying_object_different_indices(%struct* %st, i64 %i1, i64 %j1, i64 %k1, i64 %i2, i64 %k2, i64 %j2) {
   %st2 = getelementptr %struct, %struct* %st, i32 10
@@ -160,5 +160,14 @@ define void @test_same_underlying_object_different_indices(%struct* %st, i64 %i1
 define void @test_struct_in_array(%struct2* %st, i64 %i, i64 %j, i64 %k) {
   %x = getelementptr %struct2, %struct2* %st, i32 0, i32 1, i32 1, i32 0
   %y = getelementptr %struct2, %struct2* %st, i32 0, i32 0, i32 1, i32 1
+  ret void
+}
+
+; PR27418 - Treat GEP indices with the same value but different types the same
+; CHECK-LABEL: test_different_index_types
+; CHECK: MustAlias: i16* %tmp1, i16* %tmp2
+define void @test_different_index_types([2 x i16]* %arr) {
+  %tmp1 = getelementptr [2 x i16], [2 x i16]* %arr, i16 0, i32 1
+  %tmp2 = getelementptr [2 x i16], [2 x i16]* %arr, i16 0, i16 1
   ret void
 }

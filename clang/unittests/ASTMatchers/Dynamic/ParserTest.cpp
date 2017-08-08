@@ -11,7 +11,6 @@
 #include "clang/ASTMatchers/Dynamic/Parser.h"
 #include "clang/ASTMatchers/Dynamic/Registry.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringMap.h"
 #include "gtest/gtest.h"
 #include <string>
 #include <vector>
@@ -76,6 +75,30 @@ public:
   ExpectedMatchersTy ExpectedMatchers;
 };
 
+TEST(ParserTest, ParseBoolean) {
+  MockSema Sema;
+  Sema.parse("true");
+  Sema.parse("false");
+  EXPECT_EQ(2U, Sema.Values.size());
+  EXPECT_TRUE(Sema.Values[0].getBoolean());
+  EXPECT_FALSE(Sema.Values[1].getBoolean());
+}
+
+TEST(ParserTest, ParseDouble) {
+  MockSema Sema;
+  Sema.parse("1.0");
+  Sema.parse("2.0f");
+  Sema.parse("34.56e-78");
+  Sema.parse("4.E+6");
+  Sema.parse("1");
+  EXPECT_EQ(5U, Sema.Values.size());
+  EXPECT_EQ(1.0, Sema.Values[0].getDouble());
+  EXPECT_EQ("1:1: Error parsing numeric literal: <2.0f>", Sema.Errors[1]);
+  EXPECT_EQ(34.56e-78, Sema.Values[2].getDouble());
+  EXPECT_EQ(4e+6, Sema.Values[3].getDouble());
+  EXPECT_FALSE(Sema.Values[4].isDouble());
+}
+
 TEST(ParserTest, ParseUnsigned) {
   MockSema Sema;
   Sema.parse("0");
@@ -87,8 +110,8 @@ TEST(ParserTest, ParseUnsigned) {
   EXPECT_EQ(0U, Sema.Values[0].getUnsigned());
   EXPECT_EQ(123U, Sema.Values[1].getUnsigned());
   EXPECT_EQ(31U, Sema.Values[2].getUnsigned());
-  EXPECT_EQ("1:1: Error parsing unsigned token: <12345678901>", Sema.Errors[3]);
-  EXPECT_EQ("1:1: Error parsing unsigned token: <1a1>", Sema.Errors[4]);
+  EXPECT_EQ("1:1: Error parsing numeric literal: <12345678901>", Sema.Errors[3]);
+  EXPECT_EQ("1:1: Error parsing numeric literal: <1a1>", Sema.Errors[4]);
 }
 
 TEST(ParserTest, ParseString) {
@@ -263,7 +286,7 @@ TEST(ParserTest, Errors) {
             "1:1: Matcher does not support binding.",
             ParseWithError("isArrow().bind(\"foo\")"));
   EXPECT_EQ("Input value has unresolved overloaded type: "
-            "Matcher<DoStmt|ForStmt|WhileStmt|CXXForRangeStmt>",
+            "Matcher<DoStmt|ForStmt|WhileStmt|CXXForRangeStmt|FunctionDecl>",
             ParseMatcherWithError("hasBody(stmt())"));
 }
 
@@ -320,7 +343,7 @@ TEST(ParserTest, CompletionNamedValues) {
   EXPECT_EQ("arent(", Comps[2].TypedText);
   EXPECT_EQ(
       "Matcher<Decl> "
-      "hasParent(Matcher<TemplateArgument|NestedNameSpecifierLoc|Decl|...>)",
+      "hasParent(Matcher<NestedNameSpecifierLoc|TypeLoc|Decl|...>)",
       Comps[2].MatcherDecl);
 }
 

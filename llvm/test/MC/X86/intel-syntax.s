@@ -1,4 +1,6 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -x86-asm-syntax=intel %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown -x86-asm-syntax=intel %s > %t 2> %t.err
+// RUN: FileCheck < %t %s
+// RUN: FileCheck --check-prefix=CHECK-STDERR < %t.err %s
 
 _test:
 	xor	EAX, EAX
@@ -17,6 +19,8 @@ _main:
 	mov	EAX, DWORD PTR [RSP - 4]
 // CHECK:	movq    (%rsp), %rax
 	mov     RAX, QWORD PTR [RSP]
+// CHECK: movabsq $4294967289, %rax
+	mov     RAX, 4294967289
 // CHECK:	movl	$-4, -4(%rsp)
 	mov	DWORD PTR [RSP - 4], -4
 // CHECK:	movq	0, %rcx
@@ -72,9 +76,11 @@ _main:
 // CHECK: vshufpd $1, %xmm2, %xmm1, %xmm0
     vshufpd XMM0, XMM1, XMM2, 1
 // CHECK: vpgatherdd %xmm8, (%r15,%xmm9,2), %xmm1
-    vpgatherdd XMM10, DWORD PTR [R15 + 2*XMM9], XMM8
-// CHECK: movsd	-8, %xmm5
+    vpgatherdd XMM10, XMMWORD PTR [R15 + 2*XMM9], XMM8
+// CHECK: movsd -8, %xmm5
     movsd   XMM5, QWORD PTR [-8]
+// CHECK: movsl (%rsi), %es:(%rdi)
+    movsd
 // CHECK: movl %ecx, (%eax)
     mov [eax], ecx
 // CHECK: movl %ecx, (,%ebx,4)
@@ -489,10 +495,12 @@ test [ECX], AL
 // CHECK: fnstsw %ax
 // CHECK: fnstsw %ax
 // CHECK: fnstsw %ax
+// CHECK: fnstsw (%eax)
 fnstsw
 fnstsw AX
 fnstsw EAX
 fnstsw AL
+fnstsw WORD PTR [EAX]
 
 // CHECK: faddp %st(1)
 // CHECK: fmulp %st(1)
@@ -532,6 +540,20 @@ fsubp ST(1)
 fsubrp ST(1)
 fdivp ST(1)
 fdivrp ST(1)
+
+
+// CHECK: faddp %st(1)
+// CHECK: fmulp %st(1)
+// CHECK: fsubrp %st(1)
+// CHECK: fsubp %st(1)
+// CHECK: fdivrp %st(1)
+// CHECK: fdivp %st(1)
+fadd 
+fmul
+fsub
+fsubr
+fdiv
+fdivr
 
 // CHECK: faddp %st(1)
 // CHECK: fmulp %st(1)
@@ -722,3 +744,57 @@ fbld tbyte ptr [eax]
 fbstp tbyte ptr [eax]
 // CHECK: fbld (%eax)
 // CHECK: fbstp (%eax)
+
+fcomip st, st(2)
+fucomip st, st(2)
+// CHECK: fcompi  %st(2)
+// CHECK: fucompi  %st(2)
+
+loopz _foo
+loopnz _foo
+// CHECK: loope _foo
+// CHECK: loopne _foo
+
+sidt fword ptr [eax]
+// CHECK: sidtq (%eax)
+
+ins byte ptr [eax], dx
+// CHECK: insb %dx, %es:(%edi)
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)DI will be used for the location
+// CHECK-STDERR-NEXT: ins byte ptr [eax], dx
+outs dx, word ptr [eax]
+// CHECK: outsw (%esi), %dx
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)SI will be used for the location
+// CHECK-STDERR-NEXT: outs dx, word ptr [eax]
+lods dword ptr [eax]
+// CHECK: lodsl (%esi), %eax
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)SI will be used for the location
+// CHECK-STDERR-NEXT: lods dword ptr [eax]
+stos qword ptr [eax]
+// CHECK: stosq %rax, %es:(%edi)
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)DI will be used for the location
+// CHECK-STDERR-NEXT: stos qword ptr [eax]
+scas byte ptr [eax]
+// CHECK: scasb %es:(%edi), %al
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)DI will be used for the location
+// CHECK-STDERR-NEXT: scas byte ptr [eax]
+cmps word ptr [eax], word ptr [ebx]
+// CHECK: cmpsw %es:(%edi), (%esi)
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)SI will be used for the location
+// CHECK-STDERR-NEXT: cmps word ptr [eax], word ptr [ebx]
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)DI will be used for the location
+// CHECK-STDERR-NEXT: cmps word ptr [eax], word ptr [ebx]
+movs dword ptr [eax], dword ptr [ebx]
+// CHECK: movsl (%esi), %es:(%edi)
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)DI will be used for the location
+// CHECK-STDERR-NEXT: movs dword ptr [eax], dword ptr [ebx]
+// CHECK-STDERR: memory operand is only for determining the size, ES:(R|E)SI will be used for the location
+// CHECK-STDERR-NEXT: movs dword ptr [eax], dword ptr [ebx]
+
+movsd  qword ptr [rax], xmm0
+// CHECK: movsd %xmm0, (%rax)
+// CHECK-STDERR-NOT: movsd qword ptr [rax], xmm0
+
+xlat byte ptr [eax]
+// CHECK: xlatb
+// CHECK-STDERR: memory operand is only for determining the size, (R|E)BX will be used for the location

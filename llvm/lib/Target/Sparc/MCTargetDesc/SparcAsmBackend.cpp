@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCAsmBackend.h"
 #include "MCTargetDesc/SparcFixupKinds.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -61,14 +61,6 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case Sparc::fixup_sparc_lo10:
     return Value & 0x3ff;
 
-  case Sparc::fixup_sparc_tls_ldo_hix22:
-  case Sparc::fixup_sparc_tls_le_hix22:
-    return (~Value >> 10) & 0x3fffff;
-
-  case Sparc::fixup_sparc_tls_ldo_lox10:
-  case Sparc::fixup_sparc_tls_le_lox10:
-    return (~(~Value & 0x3ff)) & 0x1fff;
-
   case Sparc::fixup_sparc_h44:
     return (Value >> 22) & 0x3fffff;
 
@@ -83,6 +75,13 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
 
   case Sparc::fixup_sparc_hm:
     return (Value >> 32) & 0x3ff;
+
+  case Sparc::fixup_sparc_tls_ldo_hix22:
+  case Sparc::fixup_sparc_tls_le_hix22:
+  case Sparc::fixup_sparc_tls_ldo_lox10:
+  case Sparc::fixup_sparc_tls_le_lox10:
+    assert(Value == 0 && "Sparc TLS relocs expect zero Value");
+    return 0;
 
   case Sparc::fixup_sparc_tls_gd_add:
   case Sparc::fixup_sparc_tls_gd_call:
@@ -203,15 +202,15 @@ namespace {
       return InfosBE[Kind - FirstTargetFixupKind];
     }
 
-    void processFixupValue(const MCAssembler &Asm, const MCAsmLayout &Layout,
-                           const MCFixup &Fixup, const MCFragment *DF,
-                           const MCValue &Target, uint64_t &Value,
-                           bool &IsResolved) override {
+    bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                               const MCValue &Target) override {
       switch ((Sparc::Fixups)Fixup.getKind()) {
-      default: break;
+      default:
+        return false;
       case Sparc::fixup_sparc_wplt30:
         if (Target.getSymA()->getSymbol().isTemporary())
-          return;
+          return false;
+        LLVM_FALLTHROUGH;
       case Sparc::fixup_sparc_tls_gd_hi22:
       case Sparc::fixup_sparc_tls_gd_lo10:
       case Sparc::fixup_sparc_tls_gd_add:
@@ -229,7 +228,8 @@ namespace {
       case Sparc::fixup_sparc_tls_ie_ldx:
       case Sparc::fixup_sparc_tls_ie_add:
       case Sparc::fixup_sparc_tls_le_hix22:
-      case Sparc::fixup_sparc_tls_le_lox10:  IsResolved = false; break;
+      case Sparc::fixup_sparc_tls_le_lox10:
+        return true;
       }
     }
 
@@ -248,7 +248,8 @@ namespace {
       llvm_unreachable("fixupNeedsRelaxation() unimplemented");
       return false;
     }
-    void relaxInstruction(const MCInst &Inst, MCInst &Res) const override {
+    void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                          MCInst &Res) const override {
       // FIXME.
       llvm_unreachable("relaxInstruction() unimplemented");
     }
@@ -272,8 +273,9 @@ namespace {
     ELFSparcAsmBackend(const Target &T, Triple::OSType OSType) :
       SparcAsmBackend(T), OSType(OSType) { }
 
-    void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                    uint64_t Value, bool IsPCRel) const override {
+    void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                    const MCValue &Target, MutableArrayRef<char> Data,
+                    uint64_t Value, bool IsResolved) const override {
 
       Value = adjustFixupValue(Fixup.getKind(), Value);
       if (!Value) return;           // Doesn't change encoding.
@@ -299,6 +301,7 @@ namespace {
 
 MCAsmBackend *llvm::createSparcAsmBackend(const Target &T,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU) {
+                                          const Triple &TT, StringRef CPU,
+                                          const MCTargetOptions &Options) {
   return new ELFSparcAsmBackend(T, TT.getOS());
 }

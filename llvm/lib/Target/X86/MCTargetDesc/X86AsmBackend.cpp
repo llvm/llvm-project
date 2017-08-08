@@ -10,6 +10,8 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86FixupKinds.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
@@ -21,10 +23,8 @@
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ELF.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -43,8 +43,11 @@ static unsigned getFixupKindLog2Size(unsigned Kind) {
     return 1;
   case FK_PCRel_4:
   case X86::reloc_riprel_4byte:
+  case X86::reloc_riprel_4byte_relax:
+  case X86::reloc_riprel_4byte_relax_rex:
   case X86::reloc_riprel_4byte_movq_load:
   case X86::reloc_signed_4byte:
+  case X86::reloc_signed_4byte_relax:
   case X86::reloc_global_offset_table:
   case FK_SecRel_4:
   case FK_Data_4:
@@ -72,12 +75,13 @@ class X86AsmBackend : public MCAsmBackend {
   const uint64_t MaxNopLength;
 public:
   X86AsmBackend(const Target &T, StringRef CPU)
-      : MCAsmBackend(), CPU(CPU), MaxNopLength(CPU == "slm" ? 7 : 15) {
+      : MCAsmBackend(), CPU(CPU),
+        MaxNopLength((CPU == "slm") ? 7 : 15) {
     HasNopl = CPU != "generic" && CPU != "i386" && CPU != "i486" &&
               CPU != "i586" && CPU != "pentium" && CPU != "pentium-mmx" &&
               CPU != "i686" && CPU != "k6" && CPU != "k6-2" && CPU != "k6-3" &&
               CPU != "geode" && CPU != "winchip-c6" && CPU != "winchip2" &&
-              CPU != "c3" && CPU != "c3-2";
+              CPU != "c3" && CPU != "c3-2" && CPU != "lakemont";
   }
 
   unsigned getNumFixupKinds() const override {
@@ -86,10 +90,14 @@ public:
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[X86::NumTargetFixupKinds] = {
-      { "reloc_riprel_4byte", 0, 4 * 8, MCFixupKindInfo::FKF_IsPCRel },
-      { "reloc_riprel_4byte_movq_load", 0, 4 * 8, MCFixupKindInfo::FKF_IsPCRel},
-      { "reloc_signed_4byte", 0, 4 * 8, 0},
-      { "reloc_global_offset_table", 0, 4 * 8, 0}
+        {"reloc_riprel_4byte", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+        {"reloc_riprel_4byte_movq_load", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+        {"reloc_riprel_4byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+        {"reloc_riprel_4byte_relax_rex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+        {"reloc_signed_4byte", 0, 32, 0},
+        {"reloc_signed_4byte_relax", 0, 32, 0},
+        {"reloc_global_offset_table", 0, 32, 0},
+        {"reloc_global_offset_table8", 0, 64, 0},
     };
 
     if (Kind < FirstTargetFixupKind)
@@ -100,12 +108,12 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t Value, bool IsPCRel) const override {
+  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                  const MCValue &Target, MutableArrayRef<char> Data,
+                  uint64_t Value, bool IsResolved) const override {
     unsigned Size = 1 << getFixupKindLog2Size(Fixup.getKind());
 
-    assert(Fixup.getOffset() + Size <= DataSize &&
-           "Invalid fixup offset!");
+    assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
 
     // Check that uppper bits are either all zeros or all ones.
     // Specifically ignore overflow/underflow as long as the leakage is
@@ -124,38 +132,57 @@ public:
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override;
 
-  void relaxInstruction(const MCInst &Inst, MCInst &Res) const override;
+  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                        MCInst &Res) const override;
 
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
 };
 } // end anonymous namespace
 
-static unsigned getRelaxedOpcodeBranch(unsigned Op) {
+static unsigned getRelaxedOpcodeBranch(const MCInst &Inst, bool is16BitMode) {
+  unsigned Op = Inst.getOpcode();
   switch (Op) {
   default:
     return Op;
-
-  case X86::JAE_1: return X86::JAE_4;
-  case X86::JA_1:  return X86::JA_4;
-  case X86::JBE_1: return X86::JBE_4;
-  case X86::JB_1:  return X86::JB_4;
-  case X86::JE_1:  return X86::JE_4;
-  case X86::JGE_1: return X86::JGE_4;
-  case X86::JG_1:  return X86::JG_4;
-  case X86::JLE_1: return X86::JLE_4;
-  case X86::JL_1:  return X86::JL_4;
-  case X86::JMP_1: return X86::JMP_4;
-  case X86::JNE_1: return X86::JNE_4;
-  case X86::JNO_1: return X86::JNO_4;
-  case X86::JNP_1: return X86::JNP_4;
-  case X86::JNS_1: return X86::JNS_4;
-  case X86::JO_1:  return X86::JO_4;
-  case X86::JP_1:  return X86::JP_4;
-  case X86::JS_1:  return X86::JS_4;
+  case X86::JAE_1:
+    return (is16BitMode) ? X86::JAE_2 : X86::JAE_4;
+  case X86::JA_1:
+    return (is16BitMode) ? X86::JA_2 : X86::JA_4;
+  case X86::JBE_1:
+    return (is16BitMode) ? X86::JBE_2 : X86::JBE_4;
+  case X86::JB_1:
+    return (is16BitMode) ? X86::JB_2 : X86::JB_4;
+  case X86::JE_1:
+    return (is16BitMode) ? X86::JE_2 : X86::JE_4;
+  case X86::JGE_1:
+    return (is16BitMode) ? X86::JGE_2 : X86::JGE_4;
+  case X86::JG_1:
+    return (is16BitMode) ? X86::JG_2 : X86::JG_4;
+  case X86::JLE_1:
+    return (is16BitMode) ? X86::JLE_2 : X86::JLE_4;
+  case X86::JL_1:
+    return (is16BitMode) ? X86::JL_2 : X86::JL_4;
+  case X86::JMP_1:
+    return (is16BitMode) ? X86::JMP_2 : X86::JMP_4;
+  case X86::JNE_1:
+    return (is16BitMode) ? X86::JNE_2 : X86::JNE_4;
+  case X86::JNO_1:
+    return (is16BitMode) ? X86::JNO_2 : X86::JNO_4;
+  case X86::JNP_1:
+    return (is16BitMode) ? X86::JNP_2 : X86::JNP_4;
+  case X86::JNS_1:
+    return (is16BitMode) ? X86::JNS_2 : X86::JNS_4;
+  case X86::JO_1:
+    return (is16BitMode) ? X86::JO_2 : X86::JO_4;
+  case X86::JP_1:
+    return (is16BitMode) ? X86::JP_2 : X86::JP_4;
+  case X86::JS_1:
+    return (is16BitMode) ? X86::JS_2 : X86::JS_4;
   }
 }
 
-static unsigned getRelaxedOpcodeArith(unsigned Op) {
+static unsigned getRelaxedOpcodeArith(const MCInst &Inst) {
+  unsigned Op = Inst.getOpcode();
   switch (Op) {
   default:
     return Op;
@@ -200,6 +227,14 @@ static unsigned getRelaxedOpcodeArith(unsigned Op) {
   case X86::ADD64ri8: return X86::ADD64ri32;
   case X86::ADD64mi8: return X86::ADD64mi32;
 
+   // ADC
+  case X86::ADC16ri8: return X86::ADC16ri;
+  case X86::ADC16mi8: return X86::ADC16mi;
+  case X86::ADC32ri8: return X86::ADC32ri;
+  case X86::ADC32mi8: return X86::ADC32mi;
+  case X86::ADC64ri8: return X86::ADC64ri32;
+  case X86::ADC64mi8: return X86::ADC64mi32;
+
     // SUB
   case X86::SUB16ri8: return X86::SUB16ri;
   case X86::SUB16mi8: return X86::SUB16mi;
@@ -207,6 +242,14 @@ static unsigned getRelaxedOpcodeArith(unsigned Op) {
   case X86::SUB32mi8: return X86::SUB32mi;
   case X86::SUB64ri8: return X86::SUB64ri32;
   case X86::SUB64mi8: return X86::SUB64mi32;
+
+   // SBB
+  case X86::SBB16ri8: return X86::SBB16ri;
+  case X86::SBB16mi8: return X86::SBB16mi;
+  case X86::SBB32ri8: return X86::SBB32ri;
+  case X86::SBB32mi8: return X86::SBB32mi;
+  case X86::SBB64ri8: return X86::SBB64ri32;
+  case X86::SBB64mi8: return X86::SBB64mi32;
 
     // CMP
   case X86::CMP16ri8: return X86::CMP16ri;
@@ -223,20 +266,20 @@ static unsigned getRelaxedOpcodeArith(unsigned Op) {
   }
 }
 
-static unsigned getRelaxedOpcode(unsigned Op) {
-  unsigned R = getRelaxedOpcodeArith(Op);
-  if (R != Op)
+static unsigned getRelaxedOpcode(const MCInst &Inst, bool is16BitMode) {
+  unsigned R = getRelaxedOpcodeArith(Inst);
+  if (R != Inst.getOpcode())
     return R;
-  return getRelaxedOpcodeBranch(Op);
+  return getRelaxedOpcodeBranch(Inst, is16BitMode);
 }
 
 bool X86AsmBackend::mayNeedRelaxation(const MCInst &Inst) const {
-  // Branches can always be relaxed.
-  if (getRelaxedOpcodeBranch(Inst.getOpcode()) != Inst.getOpcode())
+  // Branches can always be relaxed in either mode.
+  if (getRelaxedOpcodeBranch(Inst, false) != Inst.getOpcode())
     return true;
 
   // Check if this instruction is ever relaxable.
-  if (getRelaxedOpcodeArith(Inst.getOpcode()) == Inst.getOpcode())
+  if (getRelaxedOpcodeArith(Inst) == Inst.getOpcode())
     return false;
 
 
@@ -259,9 +302,12 @@ bool X86AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
 
 // FIXME: Can tblgen help at all here to verify there aren't other instructions
 // we can relax?
-void X86AsmBackend::relaxInstruction(const MCInst &Inst, MCInst &Res) const {
+void X86AsmBackend::relaxInstruction(const MCInst &Inst,
+                                     const MCSubtargetInfo &STI,
+                                     MCInst &Res) const {
   // The only relaxations X86 does is from a 1byte pcrel to a 4byte pcrel.
-  unsigned RelaxedOp = getRelaxedOpcode(Inst.getOpcode());
+  bool is16BitMode = STI.getFeatureBits()[X86::Mode16Bit];
+  unsigned RelaxedOp = getRelaxedOpcode(Inst, is16BitMode);
 
   if (RelaxedOp == Inst.getOpcode()) {
     SmallString<256> Tmp;
@@ -389,6 +435,14 @@ public:
     , Is64Bit(is64Bit) {
   }
 
+  Optional<MCFixupKind> getFixupKind(StringRef Name) const override {
+    return StringSwitch<Optional<MCFixupKind>>(Name)
+        .Case("dir32", FK_Data_4)
+        .Case("secrel32", FK_SecRel_4)
+        .Case("secidx", FK_SecRel_2)
+        .Default(MCAsmBackend::getFixupKind(Name));
+  }
+
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
     return createX86WinCOFFObjectWriter(OS, Is64Bit);
   }
@@ -492,8 +546,12 @@ protected:
         //     .cfi_def_cfa_register %rbp
         //
         HasFP = true;
-        assert(MRI.getLLVMRegNum(Inst.getRegister(), true) ==
-               (Is64Bit ? X86::RBP : X86::EBP) && "Invalid frame pointer!");
+
+        // If the frame pointer is other than esp/rsp, we do not have a way to
+        // generate a compact unwinding representation, so bail out.
+        if (MRI.getLLVMRegNum(Inst.getRegister(), true) !=
+            (Is64Bit ? X86::RBP : X86::EBP))
+          return 0;
 
         // Reset the counts.
         memset(SavedRegs, 0, sizeof(SavedRegs));
@@ -621,13 +679,13 @@ private:
   /// \brief Get the compact unwind number for a given register. The number
   /// corresponds to the enum lists in compact_unwind_encoding.h.
   int getCompactUnwindRegNum(unsigned Reg) const {
-    static const uint16_t CU32BitRegs[7] = {
+    static const MCPhysReg CU32BitRegs[7] = {
       X86::EBX, X86::ECX, X86::EDX, X86::EDI, X86::ESI, X86::EBP, 0
     };
-    static const uint16_t CU64BitRegs[] = {
+    static const MCPhysReg CU64BitRegs[] = {
       X86::RBX, X86::R12, X86::R13, X86::R14, X86::R15, X86::RBP, 0
     };
-    const uint16_t *CURegs = Is64Bit ? CU64BitRegs : CU32BitRegs;
+    const MCPhysReg *CURegs = Is64Bit ? CU64BitRegs : CU32BitRegs;
     for (int Idx = 1; *CURegs; ++CURegs, ++Idx)
       if (*CURegs == Reg)
         return Idx;
@@ -783,11 +841,12 @@ public:
 MCAsmBackend *llvm::createX86_32AsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const Triple &TheTriple,
-                                           StringRef CPU) {
+                                           StringRef CPU,
+                                           const MCTargetOptions &Options) {
   if (TheTriple.isOSBinFormatMachO())
     return new DarwinX86_32AsmBackend(T, MRI, CPU);
 
-  if (TheTriple.isOSWindows() && !TheTriple.isOSBinFormatELF())
+  if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
     return new WindowsX86AsmBackend(T, false, CPU);
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
@@ -801,7 +860,8 @@ MCAsmBackend *llvm::createX86_32AsmBackend(const Target &T,
 MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const Triple &TheTriple,
-                                           StringRef CPU) {
+                                           StringRef CPU,
+                                           const MCTargetOptions &Options) {
   if (TheTriple.isOSBinFormatMachO()) {
     MachO::CPUSubTypeX86 CS =
         StringSwitch<MachO::CPUSubTypeX86>(TheTriple.getArchName())
@@ -810,7 +870,7 @@ MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
     return new DarwinX86_64AsmBackend(T, MRI, CPU, CS);
   }
 
-  if (TheTriple.isOSWindows() && !TheTriple.isOSBinFormatELF())
+  if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
     return new WindowsX86AsmBackend(T, true, CPU);
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());

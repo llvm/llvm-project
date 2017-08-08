@@ -1,0 +1,65 @@
+# ADJCALLSTACKDOWN and ADJCALLSTACKUP should not be generated around TLS pseudo code if it is located within existing ADJCALLSTACKDOWN/ADJCALLSTACKUP pair.
+# RUN: llc -mtriple=powerpc64le-linux-gnu -run-pass=ppc-tls-dynamic-call -verify-machineinstrs -o - %s | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-i64:64-n32:64"
+  target triple = "powerpc64le-unknown-linux-gnu"
+  
+  @tls_var = external thread_local local_unnamed_addr global i32
+  
+  define i32 @tls_func() local_unnamed_addr {
+  entry:
+    %0 = load i32, i32* @tls_var
+    ret i32 %0
+  }
+
+...
+---
+name:            tls_func
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 2, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '%x2' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: %x2
+    ADJCALLSTACKDOWN 32, 0, implicit-def %r1, implicit %r1
+    %0 = ADDIStlsgdHA %x2, @tls_var
+    %1 = ADDItlsgdLADDR killed %0, @tls_var, @tls_var, implicit-def dead %x0, implicit-def dead %x3, implicit-def dead %x4, implicit-def dead %x5, implicit-def dead %x6, implicit-def dead %x7, implicit-def dead %x8, implicit-def dead %x9, implicit-def dead %x10, implicit-def dead %x11, implicit-def dead %x12, implicit-def dead %lr8, implicit-def dead %ctr8, implicit-def dead %cr0, implicit-def dead %cr1, implicit-def dead %cr5, implicit-def dead %cr6, implicit-def dead %cr7
+    %2 = LWZ8 0, killed %1 :: (dereferenceable load 4 from @tls_var)
+    %x3 = COPY %2
+    ADJCALLSTACKUP 32, 0, implicit-def %r1, implicit %r1
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
+    ; CHECK-LABEL: bb.0.entry
+    ; CHECK-NOT: ADJCALLSTACKDOWN 0, 0
+    ; CHECK-NOT: ADJCALLSTACKUP 0, 0
+    ; CHECK: BLR8
+...

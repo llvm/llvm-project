@@ -1,7 +1,6 @@
 ; RUN: opt < %s  -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine -S | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.8.0"
 
 ;CHECK-LABEL: @reduction_sum(
 ;CHECK: phi <4 x i32>
@@ -493,4 +492,50 @@ for.body:
 exit:
   %inc.2 = add nsw i32 %inc511.1.inc4.1, 2
   ret i32 %inc.2
+}
+
+;CHECK-LABEL: @reduction_sum_multiuse(
+;CHECK: phi <4 x i32>
+;CHECK: load <4 x i32>
+;CHECK: add <4 x i32>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+;CHECK: add <4 x i32>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+;CHECK: add <4 x i32>
+;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
+;CHECK: %sum.lcssa = phi i32 [ %[[SCALAR:.*]], %.lr.ph ], [ %[[VECTOR:.*]], %middle.block ]
+;CHECK: %sum.copy = phi i32 [ %[[SCALAR]], %.lr.ph ], [ %[[VECTOR]], %middle.block ]
+;CHECK: ret i32
+define i32 @reduction_sum_multiuse(i32 %n, i32* noalias nocapture %A, i32* noalias nocapture %B) {
+  %1 = icmp sgt i32 %n, 0
+  br i1 %1, label %.lr.ph.preheader, label %end
+.lr.ph.preheader:                                 ; preds = %0
+  br label %.lr.ph
+
+.lr.ph:                                           ; preds = %0, %.lr.ph
+  %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %.lr.ph.preheader ]
+  %sum.02 = phi i32 [ %9, %.lr.ph ], [ 0, %.lr.ph.preheader ]
+  %2 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
+  %3 = load i32, i32* %2, align 4
+  %4 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
+  %5 = load i32, i32* %4, align 4
+  %6 = trunc i64 %indvars.iv to i32
+  %7 = add i32 %sum.02, %6
+  %8 = add i32 %7, %3
+  %9 = add i32 %8, %5
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %._crit_edge, label %.lr.ph
+
+._crit_edge:                                      ; preds = %.lr.ph, %0
+  %sum.lcssa = phi i32 [ %9, %.lr.ph ]
+  %sum.copy = phi i32 [ %9, %.lr.ph ]
+  br label %end
+
+end:
+  %f1 = phi i32 [ 0, %0 ], [ %sum.lcssa, %._crit_edge ]
+  %f2 = phi i32 [ 0, %0 ], [ %sum.copy, %._crit_edge ]
+  %final = add i32 %f1, %f2
+  ret i32 %final
 }

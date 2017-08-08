@@ -9,9 +9,9 @@ define void @test() nounwind {
 entry:
 ; CHECK-LABEL: test:
   %0 = load i8*, i8** @buf, align 2
-; CHECK: mov.w &buf, r15
-; CHECK-NEXT: mov.w #5, r14
-; CHECK-NEXT: mov.w #128, r13
+; CHECK: mov.w &buf, r12
+; CHECK-NEXT: mov.w #5, r13
+; CHECK-NEXT: mov.w #128, r14
 ; CHECK-NEXT: call #memset
   call void @llvm.memset.p0i8.i16(i8* %0, i8 5, i16 128, i32 1, i1 false)
   ret void

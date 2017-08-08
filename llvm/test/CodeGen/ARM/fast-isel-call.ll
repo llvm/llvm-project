@@ -1,8 +1,8 @@
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios | FileCheck %s --check-prefix=ARM
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi | FileCheck %s --check-prefix=ARM
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios | FileCheck %s --check-prefix=THUMB
-; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG
-; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-MACHO
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-ELF
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=THUMB-LONG
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=-vfp2 | FileCheck %s --check-prefix=ARM-NOVFP
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=-vfp2 | FileCheck %s --check-prefix=ARM-NOVFP
@@ -111,9 +111,14 @@ entry:
 ; ARM: str [[R4]], [sp, #4]
 ; ARM: bl {{_?}}bar
 ; ARM-LONG: @t10
-; ARM-LONG: {{(movw)|(ldr)}} [[R:l?r[0-9]*]], {{(:lower16:L_bar\$non_lazy_ptr)|(.LCPI)}}
-; ARM-LONG: {{(movt [[R]], :upper16:L_bar\$non_lazy_ptr)?}}
-; ARM-LONG: ldr [[R]], {{\[}}[[R]]{{\]}}
+
+; ARM-LONG-MACHO: {{(movw)|(ldr)}} [[R:l?r[0-9]*]], {{(:lower16:L_bar\$non_lazy_ptr)|(.LCPI)}}
+; ARM-LONG-MACHO: {{(movt [[R]], :upper16:L_bar\$non_lazy_ptr)?}}
+; ARM-LONG-MACHO: ldr [[R]], {{\[}}[[R]]{{\]}}
+
+; ARM-LONG-ELF: movw [[R:l?r[0-9]*]], :lower16:bar
+; ARM-LONG-ELF: {{(movt [[R]], :upper16:L_bar\$non_lazy_ptr)?}}
+
 ; ARM-LONG: blx [[R]]
 ; THUMB: @t10
 ; THUMB: movs [[R0:l?r[0-9]*]], #0
@@ -167,9 +172,14 @@ entry:
 ; ARM: LibCall
 ; ARM: bl {{___udivsi3|__aeabi_uidiv}}
 ; ARM-LONG: LibCall
-; ARM-LONG: {{(movw r2, :lower16:L___udivsi3\$non_lazy_ptr)|(ldr r2, .LCPI)}}
-; ARM-LONG: {{(movt r2, :upper16:L___udivsi3\$non_lazy_ptr)?}}
-; ARM-LONG: ldr r2, [r2]
+
+; ARM-LONG-MACHO: {{(movw r2, :lower16:L___udivsi3\$non_lazy_ptr)|(ldr r2, .LCPI)}}
+; ARM-LONG-MACHO: {{(movt r2, :upper16:L___udivsi3\$non_lazy_ptr)?}}
+; ARM-LONG-MACHO: ldr r2, [r2]
+
+; ARM-LONG-ELF: movw r2, :lower16:__aeabi_uidiv
+; ARM-LONG-ELF: movt r2, :upper16:__aeabi_uidiv
+
 ; ARM-LONG: blx r2
 ; THUMB: LibCall
 ; THUMB: bl {{___udivsi3|__aeabi_uidiv}}

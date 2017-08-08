@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -o - %s -mtriple=arm64-apple-ios7.0 | FileCheck %s --check-prefix=CHECK
+; RUN: llc -verify-machineinstrs -o - %s -mtriple=arm64-apple-ios7.0 | FileCheck %s
 
 define i64 @test0() {
 ; CHECK-LABEL: test0:
@@ -53,19 +53,19 @@ define i64 @test7() {
 ; couldn't. Useful even for i64
 define i64 @test8() {
 ; CHECK-LABEL: test8:
-; CHECK: movn w0, #{{60875|0xedcb}}
+; CHECK: mov w0, #-60876
   ret i64 4294906420
 }
 
 define i64 @test9() {
 ; CHECK-LABEL: test9:
-; CHECK: movn x0, #0
+; CHECK: mov x0, #-1
   ret i64 -1
 }
 
 define i64 @test10() {
 ; CHECK-LABEL: test10:
-; CHECK: movn x0, #{{60875|0xedcb}}, lsl #16
+; CHECK: mov x0, #-3989504001
   ret i64 18446744069720047615
 }
 
@@ -110,7 +110,7 @@ define void @test15() {
 
 define void @test16() {
 ; CHECK-LABEL: test16:
-; CHECK: movn {{w[0-9]+}}, #0
+; CHECK: mov {{w[0-9]+}}, #-1
   store i32 -1, i32* @var32
   ret void
 }

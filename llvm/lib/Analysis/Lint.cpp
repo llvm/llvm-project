@@ -35,27 +35,49 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/Lint.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <string>
+
 using namespace llvm;
 
 namespace {
@@ -64,7 +86,7 @@ namespace {
     static const unsigned Write    = 2;
     static const unsigned Callee   = 4;
     static const unsigned Branchee = 8;
-  }
+  } // end namespace MemRef
 
   class Lint : public FunctionPass, public InstVisitor<Lint> {
     friend class InstVisitor<Lint>;
@@ -159,7 +181,7 @@ namespace {
       WriteValues({V1, Vs...});
     }
   };
-}
+} // end anonymous namespace
 
 char Lint::ID = 0;
 INITIALIZE_PASS_BEGIN(Lint, "lint", "Statically lint-checks LLVM IR",
@@ -173,7 +195,7 @@ INITIALIZE_PASS_END(Lint, "lint", "Statically lint-checks LLVM IR",
 
 // Assert - We know that cond should be true, if not print an error message.
 #define Assert(C, ...) \
-    do { if (!(C)) { CheckFailed(__VA_ARGS__); return; } } while (0)
+    do { if (!(C)) { CheckFailed(__VA_ARGS__); return; } } while (false)
 
 // Lint::run - This is the main Analysis entry point for a
 // function.
@@ -383,7 +405,7 @@ void Lint::visitMemoryReference(Instruction &I,
   Assert(!isa<UndefValue>(UnderlyingObject),
          "Undefined behavior: Undef pointer dereference", &I);
   Assert(!isa<ConstantInt>(UnderlyingObject) ||
-             !cast<ConstantInt>(UnderlyingObject)->isAllOnesValue(),
+             !cast<ConstantInt>(UnderlyingObject)->isMinusOne(),
          "Unusual: All-ones pointer dereference", &I);
   Assert(!isa<ConstantInt>(UnderlyingObject) ||
              !cast<ConstantInt>(UnderlyingObject)->isOne(),
@@ -435,7 +457,7 @@ void Lint::visitMemoryReference(Instruction &I,
       // If the global may be defined differently in another compilation unit
       // then don't warn about funky memory accesses.
       if (GV->hasDefinitiveInitializer()) {
-        Type *GTy = GV->getType()->getElementType();
+        Type *GTy = GV->getValueType();
         if (GTy->isSized())
           BaseSize = DL->getTypeAllocSize(GTy);
         BaseAlign = GV->getAlignment();
@@ -512,11 +534,8 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 
   VectorType *VecTy = dyn_cast<VectorType>(V->getType());
   if (!VecTy) {
-    unsigned BitWidth = V->getType()->getIntegerBitWidth();
-    APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
-    computeKnownBits(V, KnownZero, KnownOne, DL, 0, AC,
-                     dyn_cast<Instruction>(V), DT);
-    return KnownZero.isAllOnesValue();
+    KnownBits Known = computeKnownBits(V, DL, 0, AC, dyn_cast<Instruction>(V), DT);
+    return Known.isZero();
   }
 
   // Per-component check doesn't work with zeroinitializer
@@ -529,15 +548,13 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 
   // For a vector, KnownZero will only be true if all values are zero, so check
   // this per component
-  unsigned BitWidth = VecTy->getElementType()->getIntegerBitWidth();
   for (unsigned I = 0, N = VecTy->getNumElements(); I != N; ++I) {
     Constant *Elem = C->getAggregateElement(I);
     if (isa<UndefValue>(Elem))
       return true;
 
-    APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
-    computeKnownBits(Elem, KnownZero, KnownOne, DL);
-    if (KnownZero.isAllOnesValue())
+    KnownBits Known = computeKnownBits(Elem, DL);
+    if (Known.isZero())
       return true;
   }
 
@@ -642,8 +659,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
       if (!VisitedBlocks.insert(BB).second)
         break;
       if (Value *U =
-          FindAvailableLoadedValue(L->getPointerOperand(),
-                                   BB, BBI, DefMaxInstsToScan, AA))
+          FindAvailableLoadedValue(L, BB, BBI, DefMaxInstsToScan, AA))
         return findValueImpl(U, OffsetOk, Visited);
       if (BBI != BB->begin()) break;
       BB = BB->getUniquePredecessor();
@@ -679,11 +695,11 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
 
   // As a last resort, try SimplifyInstruction or constant folding.
   if (Instruction *Inst = dyn_cast<Instruction>(V)) {
-    if (Value *W = SimplifyInstruction(Inst, *DL, TLI, DT, AC))
+    if (Value *W = SimplifyInstruction(Inst, {*DL, TLI, DT, AC}))
       return findValueImpl(W, OffsetOk, Visited);
-  } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V)) {
-    if (Value *W = ConstantFoldConstantExpression(CE, *DL, TLI))
-      if (W != V)
+  } else if (auto *C = dyn_cast<Constant>(V)) {
+    if (Value *W = ConstantFoldConstant(C, *DL, TLI))
+      if (W && W != V)
         return findValueImpl(W, OffsetOk, Visited);
   }
 

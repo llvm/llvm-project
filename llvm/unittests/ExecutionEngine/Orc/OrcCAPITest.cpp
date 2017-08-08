@@ -8,10 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "OrcTestCommon.h"
-#include "gtest/gtest.h"
+#include "llvm-c/Core.h"
 #include "llvm-c/OrcBindings.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
+#include "gtest/gtest.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,11 +25,11 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(TargetMachine, LLVMTargetMachineRef)
 class OrcCAPIExecutionTest : public testing::Test, public OrcExecutionTest {
 protected:
   std::unique_ptr<Module> createTestModule(const Triple &TT) {
-    ModuleBuilder MB(getGlobalContext(), TT.str(), "");
+    ModuleBuilder MB(Context, TT.str(), "");
     Function *TestFunc = MB.createFunctionDecl<int()>("testFunc");
     Function *Main = MB.createFunctionDecl<int(int, char*[])>("main");
 
-    Main->getBasicBlockList().push_back(BasicBlock::Create(getGlobalContext()));
+    Main->getBasicBlockList().push_back(BasicBlock::Create(Context));
     IRBuilder<> B(&Main->back());
     Value* Result = B.CreateCall(TestFunc);
     B.CreateRet(Result);
@@ -64,10 +65,12 @@ protected:
     CompileContext *CCtx = static_cast<CompileContext*>(Ctx);
     auto *ET = CCtx->APIExecTest;
     CCtx->M = ET->createTestModule(ET->TM->getTargetTriple());
-    CCtx->H = LLVMOrcAddEagerlyCompiledIR(JITStack, wrap(CCtx->M.get()),
-                                          myResolver, nullptr);
+    LLVMSharedModuleRef SM = LLVMOrcMakeSharedModule(wrap(CCtx->M.release()));
+    LLVMOrcAddEagerlyCompiledIR(JITStack, &CCtx->H, SM, myResolver, nullptr);
+    LLVMOrcDisposeSharedModuleRef(SM);
     CCtx->Compiled = true;
-    LLVMOrcTargetAddress MainAddr = LLVMOrcGetSymbolAddress(JITStack, "main");
+    LLVMOrcTargetAddress MainAddr;
+    LLVMOrcGetSymbolAddress(JITStack, &MainAddr, "main");
     LLVMOrcSetIndirectStubPointer(JITStack, "foo", MainAddr);
     return MainAddr;
   }
@@ -86,9 +89,13 @@ TEST_F(OrcCAPIExecutionTest, TestEagerIRCompilation) {
 
   LLVMOrcGetMangledSymbol(JIT, &testFuncName, "testFunc");
 
-  LLVMOrcModuleHandle H =
-    LLVMOrcAddEagerlyCompiledIR(JIT, wrap(M.get()), myResolver, nullptr);
-  MainFnTy MainFn = (MainFnTy)LLVMOrcGetSymbolAddress(JIT, "main");
+  LLVMSharedModuleRef SM = LLVMOrcMakeSharedModule(wrap(M.release()));
+  LLVMOrcModuleHandle H;
+  LLVMOrcAddEagerlyCompiledIR(JIT, &H, SM, myResolver, nullptr);
+  LLVMOrcDisposeSharedModuleRef(SM);
+  LLVMOrcTargetAddress MainAddr;
+  LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
+  MainFnTy MainFn = (MainFnTy)MainAddr;
   int Result = MainFn();
   EXPECT_EQ(Result, 42)
     << "Eagerly JIT'd code did not return expected result";
@@ -110,9 +117,13 @@ TEST_F(OrcCAPIExecutionTest, TestLazyIRCompilation) {
 
   LLVMOrcGetMangledSymbol(JIT, &testFuncName, "testFunc");
 
-  LLVMOrcModuleHandle H =
-    LLVMOrcAddLazilyCompiledIR(JIT, wrap(M.get()), myResolver, nullptr);
-  MainFnTy MainFn = (MainFnTy)LLVMOrcGetSymbolAddress(JIT, "main");
+  LLVMSharedModuleRef SM = LLVMOrcMakeSharedModule(wrap(M.release()));
+  LLVMOrcModuleHandle H;
+  LLVMOrcAddLazilyCompiledIR(JIT, &H, SM, myResolver, nullptr);
+  LLVMOrcDisposeSharedModuleRef(SM);
+  LLVMOrcTargetAddress MainAddr;
+  LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
+  MainFnTy MainFn = (MainFnTy)MainAddr;
   int Result = MainFn();
   EXPECT_EQ(Result, 42)
     << "Lazily JIT'd code did not return expected result";
@@ -134,11 +145,12 @@ TEST_F(OrcCAPIExecutionTest, TestDirectCallbacksAPI) {
 
   CompileContext C;
   C.APIExecTest = this;
-  LLVMOrcCreateIndirectStub(JIT, "foo",
-                            LLVMOrcCreateLazyCompileCallback(JIT,
-                                                             myCompileCallback,
-                                                             &C));
-  MainFnTy FooFn = (MainFnTy)LLVMOrcGetSymbolAddress(JIT, "foo");
+  LLVMOrcTargetAddress CCAddr;
+  LLVMOrcCreateLazyCompileCallback(JIT, &CCAddr, myCompileCallback, &C);
+  LLVMOrcCreateIndirectStub(JIT, "foo", CCAddr);
+  LLVMOrcTargetAddress MainAddr;
+  LLVMOrcGetSymbolAddress(JIT, &MainAddr, "foo");
+  MainFnTy FooFn = (MainFnTy)MainAddr;
   int Result = FooFn();
   EXPECT_TRUE(C.Compiled)
     << "Function wasn't lazily compiled";

@@ -1,4 +1,4 @@
-//===-- DIContext.h ---------------------------------------------*- C++ -*-===//
+//===- DIContext.h ----------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,13 +15,14 @@
 #ifndef LLVM_DEBUGINFO_DICONTEXT_H
 #define LLVM_DEBUGINFO_DICONTEXT_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Object/RelocVisitor.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/DataTypes.h"
+#include <cassert>
+#include <cstdint>
+#include <memory>
 #include <string>
+#include <tuple>
+#include <utility>
 
 namespace llvm {
 
@@ -31,39 +32,54 @@ class raw_ostream;
 struct DILineInfo {
   std::string FileName;
   std::string FunctionName;
-  uint32_t Line;
-  uint32_t Column;
+  uint32_t Line = 0;
+  uint32_t Column = 0;
+  uint32_t StartLine = 0;
 
-  DILineInfo()
-      : FileName("<invalid>"), FunctionName("<invalid>"), Line(0), Column(0) {}
+  // DWARF-specific.
+  uint32_t Discriminator = 0;
+
+  DILineInfo() : FileName("<invalid>"), FunctionName("<invalid>") {}
 
   bool operator==(const DILineInfo &RHS) const {
     return Line == RHS.Line && Column == RHS.Column &&
-           FileName == RHS.FileName && FunctionName == RHS.FunctionName;
+           FileName == RHS.FileName && FunctionName == RHS.FunctionName &&
+           StartLine == RHS.StartLine && Discriminator == RHS.Discriminator;
   }
   bool operator!=(const DILineInfo &RHS) const {
     return !(*this == RHS);
   }
+  bool operator<(const DILineInfo &RHS) const {
+    return std::tie(FileName, FunctionName, Line, Column, StartLine,
+                    Discriminator) <
+           std::tie(RHS.FileName, RHS.FunctionName, RHS.Line, RHS.Column,
+                    RHS.StartLine, RHS.Discriminator);
+  }
 };
 
-typedef SmallVector<std::pair<uint64_t, DILineInfo>, 16> DILineInfoTable;
+using DILineInfoTable = SmallVector<std::pair<uint64_t, DILineInfo>, 16>;
 
 /// DIInliningInfo - a format-neutral container for inlined code description.
 class DIInliningInfo {
   SmallVector<DILineInfo, 4> Frames;
- public:
-  DIInliningInfo() {}
+
+public:
+  DIInliningInfo() = default;
+
   DILineInfo getFrame(unsigned Index) const {
     assert(Index < Frames.size());
     return Frames[Index];
   }
+
   DILineInfo *getMutableFrame(unsigned Index) {
     assert(Index < Frames.size());
     return &Frames[Index];
   }
+
   uint32_t getNumberOfFrames() const {
     return Frames.size();
   }
+
   void addFrame(const DILineInfo &Frame) {
     Frames.push_back(Frame);
   }
@@ -72,10 +88,10 @@ class DIInliningInfo {
 /// DIGlobal - container for description of a global variable.
 struct DIGlobal {
   std::string Name;
-  uint64_t Start;
-  uint64_t Size;
+  uint64_t Start = 0;
+  uint64_t Size = 0;
 
-  DIGlobal() : Name("<invalid>"), Start(0), Size(0) {}
+  DIGlobal() : Name("<invalid>") {}
 };
 
 /// A DINameKind is passed to name search methods to specify a
@@ -86,7 +102,7 @@ enum class DINameKind { None, ShortName, LinkageName };
 /// should be filled with data.
 struct DILineInfoSpecifier {
   enum class FileLineInfoKind { None, Default, AbsoluteFilePath };
-  typedef DINameKind FunctionNameKind;
+  using FunctionNameKind = DINameKind;
 
   FileLineInfoKind FLIKind;
   FunctionNameKind FNKind;
@@ -112,18 +128,32 @@ enum DIDumpType {
   DIDT_LineDwo,
   DIDT_Loc,
   DIDT_LocDwo,
+  DIDT_Macro,
   DIDT_Ranges,
   DIDT_Pubnames,
   DIDT_Pubtypes,
   DIDT_GnuPubnames,
   DIDT_GnuPubtypes,
   DIDT_Str,
+  DIDT_StrOffsets,
   DIDT_StrDwo,
   DIDT_StrOffsetsDwo,
   DIDT_AppleNames,
   DIDT_AppleTypes,
   DIDT_AppleNamespaces,
-  DIDT_AppleObjC
+  DIDT_AppleObjC,
+  DIDT_CUIndex,
+  DIDT_GdbIndex,
+  DIDT_TUIndex,
+};
+
+/// Container for dump options that control which debug information will be
+/// dumped.
+struct DIDumpOptions {
+    DIDumpType DumpType = DIDT_All;
+    bool DumpEH = false;
+    bool SummarizeTypes = false;
+    bool Brief = false;
 };
 
 class DIContext {
@@ -132,12 +162,18 @@ public:
     CK_DWARF,
     CK_PDB
   };
-  DIContextKind getKind() const { return Kind; }
 
   DIContext(DIContextKind K) : Kind(K) {}
-  virtual ~DIContext() {}
+  virtual ~DIContext() = default;
 
-  virtual void dump(raw_ostream &OS, DIDumpType DumpType = DIDT_All) = 0;
+  DIContextKind getKind() const { return Kind; }
+
+  virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) = 0;
+
+  virtual bool verify(raw_ostream &OS, DIDumpType DumpType = DIDT_All) {
+    // No verifier? Just say things went well.
+    return true;
+  }
 
   virtual DILineInfo getLineInfoForAddress(uint64_t Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
@@ -145,6 +181,7 @@ public:
       uint64_t Size, DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
   virtual DIInliningInfo getInliningInfoForAddress(uint64_t Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
+
 private:
   const DIContextKind Kind;
 };
@@ -154,8 +191,8 @@ private:
 /// on the fly.
 class LoadedObjectInfo {
 protected:
-  LoadedObjectInfo(const LoadedObjectInfo &) = default;
   LoadedObjectInfo() = default;
+  LoadedObjectInfo(const LoadedObjectInfo &) = default;
 
 public:
   virtual ~LoadedObjectInfo() = default;
@@ -167,7 +204,9 @@ public:
   /// need to be consistent with the addresses used to query the DIContext and
   /// the output of this function should be deterministic, i.e. repeated calls with
   /// the same Sec should give the same address.
-  virtual uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const = 0;
+  virtual uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const {
+    return 0;
+  }
 
   /// If conveniently available, return the content of the given Section.
   ///
@@ -184,12 +223,28 @@ public:
     return false;
   }
 
+  // FIXME: This is untested and unused anywhere in the LLVM project, it's
+  // used/needed by Julia (an external project). It should have some coverage
+  // (at least tests, but ideally example functionality).
   /// Obtain a copy of this LoadedObjectInfo.
-  ///
-  /// The caller is responsible for deallocation once the copy is no longer required.
   virtual std::unique_ptr<LoadedObjectInfo> clone() const = 0;
 };
 
-}
+template <typename Derived, typename Base = LoadedObjectInfo>
+struct LoadedObjectInfoHelper : Base {
+protected:
+  LoadedObjectInfoHelper(const LoadedObjectInfoHelper &) = default;
+  LoadedObjectInfoHelper() = default;
 
-#endif
+public:
+  template <typename... Ts>
+  LoadedObjectInfoHelper(Ts &&... Args) : Base(std::forward<Ts>(Args)...) {}
+
+  std::unique_ptr<llvm::LoadedObjectInfo> clone() const override {
+    return llvm::make_unique<Derived>(static_cast<const Derived &>(*this));
+  }
+};
+
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_DICONTEXT_H

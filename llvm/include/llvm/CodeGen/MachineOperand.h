@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_MACHINEOPERAND_H
 #define LLVM_CODEGEN_MACHINEOPERAND_H
 
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 
@@ -29,6 +30,7 @@ class MachineRegisterInfo;
 class MDNode;
 class ModuleSlotTracker;
 class TargetMachine;
+class TargetIntrinsicInfo;
 class TargetRegisterInfo;
 class hash_code;
 class raw_ostream;
@@ -60,7 +62,9 @@ public:
     MO_RegisterLiveOut,   ///< Mask of live-out registers.
     MO_Metadata,          ///< Metadata reference (for debug info)
     MO_MCSymbol,          ///< MCSymbol reference (for debug/eh info)
-    MO_CFIIndex           ///< MCCFIInstruction index.
+    MO_CFIIndex,          ///< MCCFIInstruction index.
+    MO_IntrinsicID,       ///< Intrinsic ID for ISel
+    MO_Predicate,         ///< Generic predicate for ISel
   };
 
 private:
@@ -160,6 +164,8 @@ private:
     const MDNode *MD;        // For MO_Metadata.
     MCSymbol *Sym;           // For MO_MCSymbol.
     unsigned CFIIndex;       // For MO_CFI.
+    Intrinsic::ID IntrinsicID; // For MO_IntrinsicID.
+    unsigned Pred;           // For MO_Predicate
 
     struct {                  // For MO_Register.
       // Register number is in SmallContents.RegNo.
@@ -218,9 +224,12 @@ public:
   ///
   void clearParent() { ParentMI = nullptr; }
 
-  void print(raw_ostream &os, const TargetRegisterInfo *TRI = nullptr) const;
+  void print(raw_ostream &os, const TargetRegisterInfo *TRI = nullptr,
+             const TargetIntrinsicInfo *IntrinsicInfo = nullptr) const;
   void print(raw_ostream &os, ModuleSlotTracker &MST,
-             const TargetRegisterInfo *TRI = nullptr) const;
+             const TargetRegisterInfo *TRI = nullptr,
+             const TargetIntrinsicInfo *IntrinsicInfo = nullptr) const;
+  void dump() const;
 
   //===--------------------------------------------------------------------===//
   // Accessors that tell you what kind of MachineOperand you're looking at.
@@ -258,7 +267,8 @@ public:
   bool isMetadata() const { return OpKind == MO_Metadata; }
   bool isMCSymbol() const { return OpKind == MO_MCSymbol; }
   bool isCFIIndex() const { return OpKind == MO_CFIIndex; }
-
+  bool isIntrinsicID() const { return OpKind == MO_IntrinsicID; }
+  bool isPredicate() const { return OpKind == MO_Predicate; }
   //===--------------------------------------------------------------------===//
   // Accessors for Register Operands
   //===--------------------------------------------------------------------===//
@@ -345,7 +355,7 @@ public:
   void setReg(unsigned Reg);
 
   void setSubReg(unsigned subReg) {
-    assert(isReg() && "Wrong MachineOperand accessor");
+    assert(isReg() && "Wrong MachineOperand mutator");
     SubReg_TargetFlags = subReg;
     assert(SubReg_TargetFlags == subReg && "SubReg out of range");
   }
@@ -368,38 +378,38 @@ public:
   void setIsDef(bool Val = true);
 
   void setImplicit(bool Val = true) {
-    assert(isReg() && "Wrong MachineOperand accessor");
+    assert(isReg() && "Wrong MachineOperand mutator");
     IsImp = Val;
   }
 
   void setIsKill(bool Val = true) {
-    assert(isReg() && !IsDef && "Wrong MachineOperand accessor");
+    assert(isReg() && !IsDef && "Wrong MachineOperand mutator");
     assert((!Val || !isDebug()) && "Marking a debug operation as kill");
     IsKill = Val;
   }
 
   void setIsDead(bool Val = true) {
-    assert(isReg() && IsDef && "Wrong MachineOperand accessor");
+    assert(isReg() && IsDef && "Wrong MachineOperand mutator");
     IsDead = Val;
   }
 
   void setIsUndef(bool Val = true) {
-    assert(isReg() && "Wrong MachineOperand accessor");
+    assert(isReg() && "Wrong MachineOperand mutator");
     IsUndef = Val;
   }
 
   void setIsInternalRead(bool Val = true) {
-    assert(isReg() && "Wrong MachineOperand accessor");
+    assert(isReg() && "Wrong MachineOperand mutator");
     IsInternalRead = Val;
   }
 
   void setIsEarlyClobber(bool Val = true) {
-    assert(isReg() && IsDef && "Wrong MachineOperand accessor");
+    assert(isReg() && IsDef && "Wrong MachineOperand mutator");
     IsEarlyClobber = Val;
   }
 
   void setIsDebug(bool Val = true) {
-    assert(isReg() && !IsDef && "Wrong MachineOperand accessor");
+    assert(isReg() && !IsDef && "Wrong MachineOperand mutator");
     IsDebug = Val;
   }
 
@@ -451,6 +461,16 @@ public:
   unsigned getCFIIndex() const {
     assert(isCFIIndex() && "Wrong MachineOperand accessor");
     return Contents.CFIIndex;
+  }
+
+  Intrinsic::ID getIntrinsicID() const {
+    assert(isIntrinsicID() && "Wrong MachineOperand accessor");
+    return Contents.IntrinsicID;
+  }
+
+  unsigned getPredicate() const {
+    assert(isPredicate() && "Wrong MachineOperand accessor");
+    return Contents.Pred;
   }
 
   /// Return the offset from the symbol in this operand. This always returns 0
@@ -518,28 +538,42 @@ public:
   void setOffset(int64_t Offset) {
     assert((isGlobal() || isSymbol() || isMCSymbol() || isCPI() ||
             isTargetIndex() || isBlockAddress()) &&
-           "Wrong MachineOperand accessor");
+           "Wrong MachineOperand mutator");
     SmallContents.OffsetLo = unsigned(Offset);
     Contents.OffsetedInfo.OffsetHi = int(Offset >> 32);
   }
 
   void setIndex(int Idx) {
     assert((isFI() || isCPI() || isTargetIndex() || isJTI()) &&
-           "Wrong MachineOperand accessor");
+           "Wrong MachineOperand mutator");
     Contents.OffsetedInfo.Val.Index = Idx;
   }
 
+  void setMetadata(const MDNode *MD) {
+    assert(isMetadata() && "Wrong MachineOperand mutator");
+    Contents.MD = MD;
+  }
+
   void setMBB(MachineBasicBlock *MBB) {
-    assert(isMBB() && "Wrong MachineOperand accessor");
+    assert(isMBB() && "Wrong MachineOperand mutator");
     Contents.MBB = MBB;
+  }
+
+  /// Sets value of register mask operand referencing Mask.  The
+  /// operand does not take ownership of the memory referenced by Mask, it must
+  /// remain valid for the lifetime of the operand. See CreateRegMask().
+  /// Any physreg with a 0 bit in the mask is clobbered by the instruction.
+  void setRegMask(const uint32_t *RegMaskPtr) {
+    assert(isRegMask() && "Wrong MachineOperand mutator");
+    Contents.RegMask = RegMaskPtr;
   }
 
   //===--------------------------------------------------------------------===//
   // Other methods.
   //===--------------------------------------------------------------------===//
 
-  /// isIdenticalTo - Return true if this operand is identical to the specified
-  /// operand. Note: This method ignores isKill and isDead properties.
+  /// Returns true if this operand is identical to the specified operand except
+  /// for liveness related flags (isKill, isUndef and isDead).
   bool isIdenticalTo(const MachineOperand &Other) const;
 
   /// \brief MachineOperand hash_value overload.
@@ -564,6 +598,9 @@ public:
 
   /// ChangeToMCSymbol - Replace this operand with a new MC symbol operand.
   void ChangeToMCSymbol(MCSymbol *Sym);
+
+  /// Replace this operand with a frame index.
+  void ChangeToFrameIndex(int Idx);
 
   /// ChangeToRegister - Replace this operand with a new register operand of
   /// the specified value.  If an operand is known to be an register already,
@@ -720,6 +757,18 @@ public:
   static MachineOperand CreateCFIIndex(unsigned CFIIndex) {
     MachineOperand Op(MachineOperand::MO_CFIIndex);
     Op.Contents.CFIIndex = CFIIndex;
+    return Op;
+  }
+
+  static MachineOperand CreateIntrinsicID(Intrinsic::ID ID) {
+    MachineOperand Op(MachineOperand::MO_IntrinsicID);
+    Op.Contents.IntrinsicID = ID;
+    return Op;
+  }
+
+  static MachineOperand CreatePredicate(unsigned Pred) {
+    MachineOperand Op(MachineOperand::MO_Predicate);
+    Op.Contents.Pred = Pred;
     return Op;
   }
 

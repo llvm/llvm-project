@@ -1,4 +1,4 @@
-; RUN: llc  -march=mipsel -mattr=mips16 -relocation-model=pic -O3 < %s | FileCheck %s -check-prefix=PIC16
+; RUN: llc  -mtriple=mipsel-- -mattr=mips16 -relocation-model=pic -O3 < %s | FileCheck %s -check-prefix=PIC16
 
 @a = thread_local global i32 4, align 4
 

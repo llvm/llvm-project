@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 ; LowerCONCAT_VECTORS() was reversing the order of two parts.
 ; rdar://11558157

@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===--------------- extendhfsf2_test.c - Test __extendhfsf2 --------------===//
 //
 //                     The LLVM Compiler Infrastructure

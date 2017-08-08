@@ -1,4 +1,4 @@
-//===--- ArgList.cpp - Argument List Management ---------------------------===//
+//===- ArgList.cpp - Argument List Management -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,214 +7,67 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Option/ArgList.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Option/OptSpecifier.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::opt;
 
-void arg_iterator::SkipToNextArg() {
-  for (; Current != Args.end(); ++Current) {
-    // Done if there are no filters.
-    if (!Id0.isValid())
-      break;
-
-    // Otherwise require a match.
-    const Option &O = (*Current)->getOption();
-    if (O.matches(Id0) ||
-        (Id1.isValid() && O.matches(Id1)) ||
-        (Id2.isValid() && O.matches(Id2)))
-      break;
-  }
-}
-
 void ArgList::append(Arg *A) {
   Args.push_back(A);
+
+  // Update ranges for the option and all of its groups.
+  for (Option O = A->getOption().getUnaliasedOption(); O.isValid();
+       O = O.getGroup()) {
+    auto &R =
+        OptRanges.insert(std::make_pair(O.getID(), emptyRange())).first->second;
+    R.first = std::min<unsigned>(R.first, Args.size() - 1);
+    R.second = Args.size();
+  }
 }
 
 void ArgList::eraseArg(OptSpecifier Id) {
-  Args.erase(std::remove_if(begin(), end(),
-                            [=](Arg *A) { return A->getOption().matches(Id); }),
-             end());
+  // Zero out the removed entries but keep them around so that we don't
+  // need to invalidate OptRanges.
+  for (Arg *const &A : filtered(Id)) {
+    // Avoid the need for a non-const filtered iterator variant.
+    Arg **ArgsBegin = Args.data();
+    ArgsBegin[&A - ArgsBegin] = nullptr;
+  }
+  OptRanges.erase(Id.getID());
 }
 
-Arg *ArgList::getLastArgNoClaim(OptSpecifier Id) const {
-  // FIXME: Make search efficient?
-  for (const_reverse_iterator it = rbegin(), ie = rend(); it != ie; ++it)
-    if ((*it)->getOption().matches(Id))
-      return *it;
-  return nullptr;
-}
-
-Arg *ArgList::getLastArgNoClaim(OptSpecifier Id0, OptSpecifier Id1) const {
-  // FIXME: Make search efficient?
-  for (const_reverse_iterator it = rbegin(), ie = rend(); it != ie; ++it)
-    if ((*it)->getOption().matches(Id0) ||
-        (*it)->getOption().matches(Id1))
-      return *it;
-  return nullptr;
-}
-
-Arg *ArgList::getLastArgNoClaim(OptSpecifier Id0, OptSpecifier Id1,
-                                OptSpecifier Id2) const {
-  // FIXME: Make search efficient?
-  for (const_reverse_iterator it = rbegin(), ie = rend(); it != ie; ++it)
-    if ((*it)->getOption().matches(Id0) || (*it)->getOption().matches(Id1) ||
-        (*it)->getOption().matches(Id2))
-      return *it;
-  return nullptr;
-}
-
-Arg *ArgList::getLastArgNoClaim(OptSpecifier Id0, OptSpecifier Id1,
-                                OptSpecifier Id2, OptSpecifier Id3) const {
-  // FIXME: Make search efficient?
-  for (const_reverse_iterator it = rbegin(), ie = rend(); it != ie; ++it)
-    if ((*it)->getOption().matches(Id0) || (*it)->getOption().matches(Id1) ||
-        (*it)->getOption().matches(Id2) || (*it)->getOption().matches(Id3))
-      return *it;
-  return nullptr;
-}
-
-Arg *ArgList::getLastArg(OptSpecifier Id) const {
-  Arg *Res = nullptr;
-  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
-    if ((*it)->getOption().matches(Id)) {
-      Res = *it;
-      Res->claim();
+ArgList::OptRange
+ArgList::getRange(std::initializer_list<OptSpecifier> Ids) const {
+  OptRange R = emptyRange();
+  for (auto Id : Ids) {
+    auto I = OptRanges.find(Id.getID());
+    if (I != OptRanges.end()) {
+      R.first = std::min(R.first, I->second.first);
+      R.second = std::max(R.second, I->second.second);
     }
   }
-
-  return Res;
-}
-
-Arg *ArgList::getLastArg(OptSpecifier Id0, OptSpecifier Id1) const {
-  Arg *Res = nullptr;
-  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
-    if ((*it)->getOption().matches(Id0) ||
-        (*it)->getOption().matches(Id1)) {
-      Res = *it;
-      Res->claim();
-
-    }
-  }
-
-  return Res;
-}
-
-Arg *ArgList::getLastArg(OptSpecifier Id0, OptSpecifier Id1,
-                         OptSpecifier Id2) const {
-  Arg *Res = nullptr;
-  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
-    if ((*it)->getOption().matches(Id0) ||
-        (*it)->getOption().matches(Id1) ||
-        (*it)->getOption().matches(Id2)) {
-      Res = *it;
-      Res->claim();
-    }
-  }
-
-  return Res;
-}
-
-Arg *ArgList::getLastArg(OptSpecifier Id0, OptSpecifier Id1,
-                         OptSpecifier Id2, OptSpecifier Id3) const {
-  Arg *Res = nullptr;
-  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
-    if ((*it)->getOption().matches(Id0) ||
-        (*it)->getOption().matches(Id1) ||
-        (*it)->getOption().matches(Id2) ||
-        (*it)->getOption().matches(Id3)) {
-      Res = *it;
-      Res->claim();
-    }
-  }
-
-  return Res;
-}
-
-Arg *ArgList::getLastArg(OptSpecifier Id0, OptSpecifier Id1,
-                         OptSpecifier Id2, OptSpecifier Id3,
-                         OptSpecifier Id4) const {
-  Arg *Res = nullptr;
-  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
-    if ((*it)->getOption().matches(Id0) ||
-        (*it)->getOption().matches(Id1) ||
-        (*it)->getOption().matches(Id2) ||
-        (*it)->getOption().matches(Id3) ||
-        (*it)->getOption().matches(Id4)) {
-      Res = *it;
-      Res->claim();
-    }
-  }
-
-  return Res;
-}
-
-Arg *ArgList::getLastArg(OptSpecifier Id0, OptSpecifier Id1,
-                         OptSpecifier Id2, OptSpecifier Id3,
-                         OptSpecifier Id4, OptSpecifier Id5) const {
-  Arg *Res = nullptr;
-  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
-    if ((*it)->getOption().matches(Id0) ||
-        (*it)->getOption().matches(Id1) ||
-        (*it)->getOption().matches(Id2) ||
-        (*it)->getOption().matches(Id3) ||
-        (*it)->getOption().matches(Id4) ||
-        (*it)->getOption().matches(Id5)) {
-      Res = *it;
-      Res->claim();
-    }
-  }
-
-  return Res;
-}
-
-Arg *ArgList::getLastArg(OptSpecifier Id0, OptSpecifier Id1,
-                         OptSpecifier Id2, OptSpecifier Id3,
-                         OptSpecifier Id4, OptSpecifier Id5,
-                         OptSpecifier Id6) const {
-  Arg *Res = nullptr;
-  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
-    if ((*it)->getOption().matches(Id0) ||
-        (*it)->getOption().matches(Id1) ||
-        (*it)->getOption().matches(Id2) ||
-        (*it)->getOption().matches(Id3) ||
-        (*it)->getOption().matches(Id4) ||
-        (*it)->getOption().matches(Id5) ||
-        (*it)->getOption().matches(Id6)) {
-      Res = *it;
-      Res->claim();
-    }
-  }
-
-  return Res;
-}
-
-Arg *ArgList::getLastArg(OptSpecifier Id0, OptSpecifier Id1,
-                         OptSpecifier Id2, OptSpecifier Id3,
-                         OptSpecifier Id4, OptSpecifier Id5,
-                         OptSpecifier Id6, OptSpecifier Id7) const {
-  Arg *Res = nullptr;
-  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
-    if ((*it)->getOption().matches(Id0) ||
-        (*it)->getOption().matches(Id1) ||
-        (*it)->getOption().matches(Id2) ||
-        (*it)->getOption().matches(Id3) ||
-        (*it)->getOption().matches(Id4) ||
-        (*it)->getOption().matches(Id5) ||
-        (*it)->getOption().matches(Id6) ||
-        (*it)->getOption().matches(Id7)) {
-      Res = *it;
-      Res->claim();
-    }
-  }
-
-  return Res;
+  // Map an empty {-1, 0} range to {0, 0} so it can be used to form iterators.
+  if (R.first == -1u)
+    R.first = 0;
+  return R;
 }
 
 bool ArgList::hasFlag(OptSpecifier Pos, OptSpecifier Neg, bool Default) const {
@@ -230,8 +83,7 @@ bool ArgList::hasFlag(OptSpecifier Pos, OptSpecifier PosAlias, OptSpecifier Neg,
   return Default;
 }
 
-StringRef ArgList::getLastArgValue(OptSpecifier Id,
-                                         StringRef Default) const {
+StringRef ArgList::getLastArgValue(OptSpecifier Id, StringRef Default) const {
   if (Arg *A = getLastArg(Id))
     return A->getValue();
   return Default;
@@ -258,17 +110,34 @@ void ArgList::AddLastArg(ArgStringList &Output, OptSpecifier Id0,
   }
 }
 
-void ArgList::AddAllArgs(ArgStringList &Output,
-                         ArrayRef<OptSpecifier> Ids) const {
-  for (const Arg *Arg : Args) {
-    for (OptSpecifier Id : Ids) {
+void ArgList::AddAllArgsExcept(ArgStringList &Output,
+                               ArrayRef<OptSpecifier> Ids,
+                               ArrayRef<OptSpecifier> ExcludeIds) const {
+  for (const Arg *Arg : *this) {
+    bool Excluded = false;
+    for (OptSpecifier Id : ExcludeIds) {
       if (Arg->getOption().matches(Id)) {
-        Arg->claim();
-        Arg->render(*this, Output);
+        Excluded = true;
         break;
       }
     }
+    if (!Excluded) {
+      for (OptSpecifier Id : Ids) {
+        if (Arg->getOption().matches(Id)) {
+          Arg->claim();
+          Arg->render(*this, Output);
+          break;
+        }
+      }
+    }
   }
+}
+
+/// This is a nicer interface when you don't have a list of Ids to exclude.
+void ArgList::AddAllArgs(ArgStringList &Output,
+                         ArrayRef<OptSpecifier> Ids) const {
+  ArrayRef<OptSpecifier> Exclude = None;
+  AddAllArgsExcept(Output, Ids, Exclude);
 }
 
 /// This 3-opt variant of AddAllArgs could be eliminated in favor of one
@@ -307,14 +176,14 @@ void ArgList::AddAllArgsTranslated(ArgStringList &Output, OptSpecifier Id0,
 }
 
 void ArgList::ClaimAllArgs(OptSpecifier Id0) const {
-  for (auto Arg : filtered(Id0))
+  for (auto *Arg : filtered(Id0))
     Arg->claim();
 }
 
 void ArgList::ClaimAllArgs() const {
-  for (const_iterator it = begin(), ie = end(); it != ie; ++it)
-    if (!(*it)->isClaimed())
-      (*it)->claim();
+  for (auto *Arg : *this)
+    if (!Arg->isClaimed())
+      Arg->claim();
 }
 
 const char *ArgList::GetOrMakeJoinedArgString(unsigned Index,
@@ -328,7 +197,16 @@ const char *ArgList::GetOrMakeJoinedArgString(unsigned Index,
   return MakeArgString(LHS + RHS);
 }
 
-//
+void ArgList::print(raw_ostream &O) const {
+  for (Arg *A : *this) {
+    O << "* ";
+    A->print(O);
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
+#endif
 
 void InputArgList::releaseMemory() {
   // An InputArgList always owns its arguments.
@@ -364,8 +242,6 @@ unsigned InputArgList::MakeIndex(StringRef String0,
 const char *InputArgList::MakeArgStringRef(StringRef Str) const {
   return getArgString(MakeIndex(Str));
 }
-
-//
 
 DerivedArgList::DerivedArgList(const InputArgList &BaseArgs)
     : BaseArgs(BaseArgs) {}

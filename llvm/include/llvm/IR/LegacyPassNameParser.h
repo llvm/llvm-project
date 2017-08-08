@@ -60,20 +60,20 @@ public:
   inline bool ignorablePass(const PassInfo *P) const {
     // Ignore non-selectable and non-constructible passes!  Ignore
     // non-optimizations.
-    return P->getPassArgument() == nullptr || *P->getPassArgument() == 0 ||
-           P->getNormalCtor() == nullptr || ignorablePassImpl(P);
+    return P->getPassArgument().empty() || P->getNormalCtor() == nullptr ||
+           ignorablePassImpl(P);
   }
 
   // Implement the PassRegistrationListener callbacks used to populate our map
   //
   void passRegistered(const PassInfo *P) override {
     if (ignorablePass(P)) return;
-    if (findOption(P->getPassArgument()) != getNumOptions()) {
+    if (findOption(P->getPassArgument().data()) != getNumOptions()) {
       errs() << "Two passes with the same argument (-"
            << P->getPassArgument() << ") attempted to be registered!\n";
       llvm_unreachable(nullptr);
     }
-    addLiteralOption(P->getPassArgument(), P, P->getPassName());
+    addLiteralOption(P->getPassArgument().data(), P, P->getPassName().data());
   }
   void passEnumerate(const PassInfo *P) override { passRegistered(P); }
 
@@ -81,15 +81,15 @@ public:
   // default implementation to sort the table before we print...
   void printOptionInfo(const cl::Option &O, size_t GlobalWidth) const override {
     PassNameParser *PNP = const_cast<PassNameParser*>(this);
-    array_pod_sort(PNP->Values.begin(), PNP->Values.end(), ValLessThan);
+    array_pod_sort(PNP->Values.begin(), PNP->Values.end(), ValCompare);
     cl::parser<const PassInfo*>::printOptionInfo(O, GlobalWidth);
   }
 
 private:
-  // ValLessThan - Provide a sorting comparator for Values elements...
-  static int ValLessThan(const PassNameParser::OptionInfo *VT1,
-                         const PassNameParser::OptionInfo *VT2) {
-    return std::strcmp(VT1->Name, VT2->Name);
+  // ValCompare - Provide a sorting comparator for Values elements...
+  static int ValCompare(const PassNameParser::OptionInfo *VT1,
+                        const PassNameParser::OptionInfo *VT2) {
+    return VT1->Name.compare(VT2->Name);
   }
 };
 
@@ -130,7 +130,7 @@ template<const char *Args>
 class PassArgFilter {
 public:
   bool operator()(const PassInfo &P) const {
-    return(std::strstr(Args, P.getPassArgument()));
+    return StringRef(Args).contains(P.getPassArgument());
   }
 };
 

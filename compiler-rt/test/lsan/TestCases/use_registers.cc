@@ -1,15 +1,16 @@
 // Test that registers of running threads are included in the root set.
 // RUN: LSAN_BASE="report_objects=1:use_stacks=0"
 // RUN: %clangxx_lsan -pthread %s -o %t
-// RUN: LSAN_OPTIONS=$LSAN_BASE:"use_registers=0" not %run %t 2>&1 | FileCheck %s
-// RUN: LSAN_OPTIONS=$LSAN_BASE:"use_registers=1" %run %t 2>&1
-// RUN: LSAN_OPTIONS="" %run %t 2>&1
+// RUN: %env_lsan_opts=$LSAN_BASE:"use_registers=0" not %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=$LSAN_BASE:"use_registers=1" %run %t 2>&1
+// RUN: %env_lsan_opts="" %run %t 2>&1
 
 #include <assert.h>
 #include <pthread.h>
 #include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "sanitizer_common/print_address.h"
 
 extern "C"
 void *registers_thread_func(void *arg) {
@@ -27,10 +28,20 @@ void *registers_thread_func(void *arg) {
       :
       : "r" (p)
       );
+#elif defined(__mips__)
+  asm ( "move $16, %0"
+      :
+      : "r" (p)
+      );
+#elif defined(__arm__)
+  asm ( "mov r5, %0"
+      :
+      : "r" (p)
+      );
 #else
 #error "Test is not supported on this architecture."
 #endif
-  fprintf(stderr, "Test alloc: %p.\n", p);
+  print_address("Test alloc: ", 1, p);
   fflush(stderr);
   __sync_fetch_and_xor(sync, 1);
   while (true)
@@ -46,7 +57,7 @@ int main() {
     sched_yield();
   return 0;
 }
-// CHECK: Test alloc: [[ADDR:.*]].
+// CHECK: Test alloc: [[ADDR:0x[0-9,a-f]+]]
 // CHECK: LeakSanitizer: detected memory leaks
 // CHECK: [[ADDR]] (1337 bytes)
 // CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:

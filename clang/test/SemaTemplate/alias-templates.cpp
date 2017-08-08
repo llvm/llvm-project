@@ -220,4 +220,48 @@ namespace PR14858 {
 
   template<typename ...T, typename ...U> void h(X<T...> &) {}
   template<typename ...T, typename ...U> void h(X<U...> &) {} // ok, different
+
+  template<typename ...T> void i(auto (T ...t) -> int(&)[sizeof...(t)]);
+  auto mk_arr(int, int) -> int(&)[2];
+  void test_i() { i<int, int>(mk_arr); }
+
+#if 0 // FIXME: This causes clang to assert.
+  template<typename ...T> using Z = auto (T ...p) -> int (&)[sizeof...(p)];
+  template<typename ...T, typename ...U> void j(Z<T..., U...> &) {}
+  void test_j() { j<int, int>(mk_arr); }
+#endif
+
+  template<typename ...T> struct Q {
+    template<typename ...U> using V = int[sizeof...(U)];
+    template<typename ...U> void f(V<typename U::type..., typename T::type...> *);
+  };
+  struct B { typedef int type; };
+  void test_q(int (&a)[5]) { Q<B, B, B>().f<B, B>(&a); }
+}
+
+namespace redecl {
+  template<typename> using A = int;
+  template<typename = void> using A = int;
+  A<> a; // ok
+}
+
+namespace PR31514 {
+  template<typename T, typename> using EnableTupleSize = T;
+
+  template<typename T> struct tuple_size { static const int value = 0; };
+  template<typename T> struct tuple_size<EnableTupleSize<const T, decltype(tuple_size<T>::value)>> {};
+  template<typename T> struct tuple_size<EnableTupleSize<volatile T, decltype(tuple_size<T>::value)>> {};
+
+  tuple_size<const int> t;
+}
+
+namespace an_alias_template_is_not_a_class_template {
+  template<typename T> using Foo = int; // expected-note 2{{here}}
+  Foo x; // expected-error {{use of alias template 'Foo' requires template arguments}}
+  Foo<> y; // expected-error {{too few template arguments for alias template 'Foo'}}
+
+  template<template<typename> class Bar> void f() { // expected-note 2{{here}}
+    Bar x; // expected-error {{use of template template parameter 'Bar' requires template arguments}}
+    Bar<> y; // expected-error {{too few template arguments for template template parameter 'Bar'}}
+  }
 }

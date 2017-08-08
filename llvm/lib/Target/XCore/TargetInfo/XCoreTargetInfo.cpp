@@ -12,8 +12,11 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-Target llvm::TheXCoreTarget;
+Target &llvm::getTheXCoreTarget() {
+  static Target TheXCoreTarget;
+  return TheXCoreTarget;
+}
 
 extern "C" void LLVMInitializeXCoreTargetInfo() {
-  RegisterTarget<Triple::xcore> X(TheXCoreTarget, "xcore", "XCore");
+  RegisterTarget<Triple::xcore> X(getTheXCoreTarget(), "xcore", "XCore");
 }

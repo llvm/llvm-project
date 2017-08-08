@@ -1,4 +1,5 @@
 ; RUN: opt -S -inline -inline-threshold=275 < %s | FileCheck %s
+; RUN: opt -S -passes='cgscc(inline)' -inline-threshold=275 < %s | FileCheck %s
 ; PR13095
 
 ; The performance of the c-ray benchmark largely depends on the inlining of a

@@ -8,13 +8,13 @@ entry:
 ; CHECK: test:
 
 ; CHECK: call #f_i16
-; CHECK: mov.w r15, &g_i16
+; CHECK: mov.w r12, &g_i16
   %0 = call i16 @f_i16()
   store volatile i16 %0, i16* @g_i16
 
 ; CHECK: call #f_i32
-; CHECK: mov.w r15, &g_i32+2
-; CHECK: mov.w r14, &g_i32
+; CHECK: mov.w r13, &g_i32+2
+; CHECK: mov.w r12, &g_i32
   %1 = call i32 @f_i32()
   store volatile i32 %1, i32* @g_i32
 
@@ -35,15 +35,15 @@ entry:
 
 define i16 @f_i16() #0 {
 ; CHECK: f_i16:
-; CHECK: mov.w #1, r15
+; CHECK: mov.w #1, r12
 ; CHECK: ret
   ret i16 1
 }
 
 define i32 @f_i32() #0 {
 ; CHECK: f_i32:
-; CHECK: mov.w #772, r14
-; CHECK: mov.w #258, r15
+; CHECK: mov.w #772, r12
+; CHECK: mov.w #258, r13
 ; CHECK: ret
   ret i32 16909060
 }

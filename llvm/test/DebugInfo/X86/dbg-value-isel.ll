@@ -13,7 +13,7 @@ target triple = "x86_64-apple-darwin10.0.0"
 
 define void @__OpenCL_nbt02_kernel(i32 addrspace(1)* %ip) nounwind !dbg !0 {
 entry:
-  call void @llvm.dbg.value(metadata i32 addrspace(1)* %ip, i64 0, metadata !8, metadata !DIExpression()), !dbg !9
+  call void @llvm.dbg.value(metadata i32 addrspace(1)* %ip, metadata !8, metadata !DIExpression()), !dbg !9
   %0 = call <4 x i32> @__amdil_get_local_id_int() nounwind
   %1 = extractelement <4 x i32> %0, i32 0
   br label %2
@@ -28,7 +28,7 @@ entry:
 
 get_local_id.exit:                                ; preds = %4
   %6 = phi i32 [ %5, %4 ]
-  call void @llvm.dbg.value(metadata i32 %6, i64 0, metadata !10, metadata !DIExpression()), !dbg !12
+  call void @llvm.dbg.value(metadata i32 %6, metadata !10, metadata !DIExpression()), !dbg !12
   %7 = call <4 x i32> @__amdil_get_global_id_int() nounwind, !dbg !12
   %8 = extractelement <4 x i32> %7, i32 0, !dbg !12
   br label %9
@@ -43,7 +43,7 @@ get_local_id.exit:                                ; preds = %4
 
 get_global_id.exit:                               ; preds = %11
   %13 = phi i32 [ %12, %11 ]
-  call void @llvm.dbg.value(metadata i32 %13, i64 0, metadata !13, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata i32 %13, metadata !13, metadata !DIExpression()), !dbg !14
   %14 = call <4 x i32> @__amdil_get_local_size_int() nounwind
   %15 = extractelement <4 x i32> %14, i32 0
   br label %16
@@ -58,7 +58,7 @@ get_global_id.exit:                               ; preds = %11
 
 get_local_size.exit:                              ; preds = %18
   %20 = phi i32 [ %19, %18 ]
-  call void @llvm.dbg.value(metadata i32 %20, i64 0, metadata !15, metadata !DIExpression()), !dbg !16
+  call void @llvm.dbg.value(metadata i32 %20, metadata !15, metadata !DIExpression()), !dbg !16
   %tmp5 = add i32 %6, %13, !dbg !17
   %tmp7 = add i32 %tmp5, %20, !dbg !17
   store i32 %tmp7, i32 addrspace(1)* %ip, align 4, !dbg !17
@@ -76,17 +76,17 @@ declare <4 x i32> @__amdil_get_local_id_int() nounwind
 
 declare <4 x i32> @__amdil_get_global_id_int() nounwind
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!22}
 
-!0 = distinct !DISubprogram(name: "__OpenCL_nbt02_kernel", linkageName: "__OpenCL_nbt02_kernel", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !20, scope: !1, type: !3)
+!0 = distinct !DISubprogram(name: "__OpenCL_nbt02_kernel", linkageName: "__OpenCL_nbt02_kernel", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !2, file: !20, scope: !1, type: !3)
 !1 = !DIFile(filename: "OCLlLwTXZ.cl", directory: "/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "clc", isOptimized: false, emissionKind: 1, file: !20, enums: !21, retainedTypes: !21, subprograms: !19, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "clc", isOptimized: false, emissionKind: FullDebug, file: !20, enums: !21, retainedTypes: !21, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{null, !5}
-!5 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, scope: !2, baseType: !6)
+!5 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align:64, scope: !2, baseType: !6)
 !6 = !DIDerivedType(tag: DW_TAG_typedef, name: "uint", file: !20, scope: !2, baseType: !7)
 !7 = !DIBasicType(tag: DW_TAG_base_type, name: "unsigned int", size: 32, align: 32, encoding: DW_ATE_unsigned)
 !8 = !DILocalVariable(name: "ip", line: 1, arg: 1, scope: !0, file: !1, type: !5)
@@ -100,7 +100,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !16 = !DILocation(line: 7, column: 26, scope: !11)
 !17 = !DILocation(line: 9, column: 24, scope: !11)
 !18 = !DILocation(line: 10, column: 1, scope: !0)
-!19 = !{!0}
 !20 = !DIFile(filename: "OCLlLwTXZ.cl", directory: "/tmp")
 !21 = !{}
 !22 = !{i32 1, !"Debug Info Version", i32 3}

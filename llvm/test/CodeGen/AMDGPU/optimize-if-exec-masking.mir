@@ -1,0 +1,735 @@
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-optimize-exec-masking -o -  %s | FileCheck %s
+
+--- |
+  target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
+
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor(i32 %z, i32 %v) #0 {
+  main_body:
+    %id = call i32 @llvm.amdgcn.workitem.id.x()
+    %cc = icmp eq i32 %id, 0
+    %0 = call { i1, i64 } @llvm.amdgcn.if(i1 %cc)
+    %1 = extractvalue { i1, i64 } %0, 0
+    %2 = extractvalue { i1, i64 } %0, 1
+    br i1 %1, label %if, label %end
+
+  if:                                               ; preds = %main_body
+    %v.if = load volatile i32, i32 addrspace(1)* undef
+    br label %end
+
+  end:                                              ; preds = %if, %main_body
+    %r = phi i32 [ 4, %main_body ], [ %v.if, %if ]
+    call void @llvm.amdgcn.end.cf(i64 %2)
+    store i32 %r, i32 addrspace(1)* undef
+    ret void
+  }
+
+  define amdgpu_kernel void @optimize_if_and_saveexec(i32 %z, i32 %v)  #0 {
+  main_body:
+      br i1 undef, label %if, label %end
+
+  if:
+    br label %end
+
+  end:
+    ret void
+  }
+
+  define amdgpu_kernel void @optimize_if_or_saveexec(i32 %z, i32 %v)  #0 {
+  main_body:
+      br i1 undef, label %if, label %end
+
+  if:
+    br label %end
+
+  end:
+    ret void
+  }
+
+
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor_valu_middle(i32 %z, i32 %v) #0 {
+  main_body:
+    %id = call i32 @llvm.amdgcn.workitem.id.x()
+    %cc = icmp eq i32 %id, 0
+    %0 = call { i1, i64 } @llvm.amdgcn.if(i1 %cc)
+    %1 = extractvalue { i1, i64 } %0, 0
+    %2 = extractvalue { i1, i64 } %0, 1
+    store i32 %id, i32 addrspace(1)* undef
+    br i1 %1, label %if, label %end
+
+  if:                                               ; preds = %main_body
+    %v.if = load volatile i32, i32 addrspace(1)* undef
+    br label %end
+
+  end:                                              ; preds = %if, %main_body
+    %r = phi i32 [ 4, %main_body ], [ %v.if, %if ]
+    call void @llvm.amdgcn.end.cf(i64 %2)
+    store i32 %r, i32 addrspace(1)* undef
+    ret void
+  }
+
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor_wrong_reg(i32 %z, i32 %v)  #0 {
+  main_body:
+      br i1 undef, label %if, label %end
+
+  if:
+    br label %end
+
+  end:
+    ret void
+  }
+
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor_modify_copy_to_exec(i32 %z, i32 %v)  #0 {
+  main_body:
+      br i1 undef, label %if, label %end
+
+  if:
+    br label %end
+
+  end:
+    ret void
+  }
+
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor_live_out_setexec(i32 %z, i32 %v)  #0 {
+  main_body:
+      br i1 undef, label %if, label %end
+
+  if:
+    br label %end
+
+  end:
+    ret void
+  }
+
+  define amdgpu_kernel void @optimize_if_unknown_saveexec(i32 %z, i32 %v)  #0 {
+  main_body:
+      br i1 undef, label %if, label %end
+
+  if:
+    br label %end
+
+  end:
+    ret void
+  }
+
+  define amdgpu_kernel void @optimize_if_andn2_saveexec(i32 %z, i32 %v)  #0 {
+  main_body:
+      br i1 undef, label %if, label %end
+
+  if:
+    br label %end
+
+  end:
+    ret void
+  }
+
+  define amdgpu_kernel void @optimize_if_andn2_saveexec_no_commute(i32 %z, i32 %v)  #0 {
+  main_body:
+      br i1 undef, label %if, label %end
+
+  if:
+    br label %end
+
+  end:
+    ret void
+  }
+
+  ; Function Attrs: nounwind readnone
+  declare i32 @llvm.amdgcn.workitem.id.x() #1
+
+  declare { i1, i64 } @llvm.amdgcn.if(i1)
+
+  declare void @llvm.amdgcn.end.cf(i64)
+
+
+  attributes #0 = { nounwind }
+  attributes #1 = { nounwind readnone }
+
+...
+---
+# CHECK-LABEL: name: optimize_if_and_saveexec_xor{{$}}
+# CHECK: %sgpr0_sgpr1 = S_AND_SAVEEXEC_B64 %vcc, implicit-def %exec, implicit-def %scc, implicit %exec
+# CHECK-NEXT: %sgpr0_sgpr1 = S_XOR_B64 %exec, killed %sgpr0_sgpr1, implicit-def %scc
+# CHECK-NEXT: SI_MASK_BRANCH
+
+name:            optimize_if_and_saveexec_xor
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '%vgpr0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.main_body:
+    liveins: %vgpr0
+
+    %sgpr0_sgpr1 = COPY %exec
+    %vcc = V_CMP_EQ_I32_e64 0, killed %vgpr0, implicit %exec
+    %vgpr0 = V_MOV_B32_e32 4, implicit %exec
+    %sgpr2_sgpr3 = S_AND_B64 %sgpr0_sgpr1, killed %vcc, implicit-def %scc
+    %sgpr0_sgpr1 = S_XOR_B64 %sgpr2_sgpr3, killed %sgpr0_sgpr1, implicit-def %scc
+    %exec = S_MOV_B64_term killed %sgpr2_sgpr3
+    SI_MASK_BRANCH %bb.2.end, implicit %exec
+    S_BRANCH %bb.1.if
+
+  bb.1.if:
+    liveins: %sgpr0_sgpr1
+
+    %sgpr7 = S_MOV_B32 61440
+    %sgpr6 = S_MOV_B32 -1
+    %vgpr0 = BUFFER_LOAD_DWORD_OFFSET %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+
+  bb.2.end:
+    liveins: %vgpr0, %sgpr0_sgpr1
+
+    %exec = S_OR_B64 %exec, killed %sgpr0_sgpr1, implicit-def %scc
+    %sgpr3 = S_MOV_B32 61440
+    %sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into `i32 addrspace(1)* undef`)
+    S_ENDPGM
+
+...
+---
+# CHECK-LABEL: name: optimize_if_and_saveexec{{$}}
+# CHECK: %sgpr0_sgpr1 = S_AND_SAVEEXEC_B64 %vcc, implicit-def %exec, implicit-def %scc, implicit %exec
+# CHECK-NEXT: SI_MASK_BRANCH
+
+name:            optimize_if_and_saveexec
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '%vgpr0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.main_body:
+    liveins: %vgpr0
+
+    %sgpr0_sgpr1 = COPY %exec
+    %vcc = V_CMP_EQ_I32_e64 0, killed %vgpr0, implicit %exec
+    %vgpr0 = V_MOV_B32_e32 4, implicit %exec
+    %sgpr2_sgpr3 = S_AND_B64 %sgpr0_sgpr1, killed %vcc, implicit-def %scc
+    %exec = S_MOV_B64_term killed %sgpr2_sgpr3
+    SI_MASK_BRANCH %bb.2.end, implicit %exec
+    S_BRANCH %bb.1.if
+
+  bb.1.if:
+    liveins: %sgpr0_sgpr1
+
+    %sgpr7 = S_MOV_B32 61440
+    %sgpr6 = S_MOV_B32 -1
+    %vgpr0 = BUFFER_LOAD_DWORD_OFFSET %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+
+  bb.2.end:
+    liveins: %vgpr0, %sgpr0_sgpr1
+
+    %exec = S_OR_B64 %exec, killed %sgpr0_sgpr1, implicit-def %scc
+    %sgpr3 = S_MOV_B32 61440
+    %sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into `i32 addrspace(1)* undef`)
+    S_ENDPGM
+
+...
+---
+# CHECK-LABEL: name: optimize_if_or_saveexec{{$}}
+# CHECK: %sgpr0_sgpr1 = S_OR_SAVEEXEC_B64 %vcc, implicit-def %exec, implicit-def %scc, implicit %exec
+# CHECK-NEXT: SI_MASK_BRANCH
+
+name:            optimize_if_or_saveexec
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '%vgpr0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.main_body:
+    liveins: %vgpr0
+
+    %sgpr0_sgpr1 = COPY %exec
+    %vcc = V_CMP_EQ_I32_e64 0, killed %vgpr0, implicit %exec
+    %vgpr0 = V_MOV_B32_e32 4, implicit %exec
+    %sgpr2_sgpr3 = S_OR_B64 %sgpr0_sgpr1, killed %vcc, implicit-def %scc
+    %exec = S_MOV_B64_term killed %sgpr2_sgpr3
+    SI_MASK_BRANCH %bb.2.end, implicit %exec
+    S_BRANCH %bb.1.if
+
+  bb.1.if:
+    liveins: %sgpr0_sgpr1
+
+    %sgpr7 = S_MOV_B32 61440
+    %sgpr6 = S_MOV_B32 -1
+    %vgpr0 = BUFFER_LOAD_DWORD_OFFSET %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+
+  bb.2.end:
+    liveins: %vgpr0, %sgpr0_sgpr1
+
+    %exec = S_OR_B64 %exec, killed %sgpr0_sgpr1, implicit-def %scc
+    %sgpr3 = S_MOV_B32 61440
+    %sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into `i32 addrspace(1)* undef`)
+    S_ENDPGM
+
+...
+---
+# CHECK-LABEL: name: optimize_if_and_saveexec_xor_valu_middle
+# CHECK: %sgpr2_sgpr3 = S_AND_B64 %sgpr0_sgpr1, killed %vcc, implicit-def %scc
+# CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET %vgpr0, undef %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into `i32 addrspace(1)* undef`)
+# CHECK-NEXT: %sgpr0_sgpr1 = S_XOR_B64 %sgpr2_sgpr3, killed %sgpr0_sgpr1, implicit-def %scc
+# CHECK-NEXT: %exec = COPY killed %sgpr2_sgpr3
+# CHECK-NEXT: SI_MASK_BRANCH
+name:            optimize_if_and_saveexec_xor_valu_middle
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '%vgpr0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.main_body:
+    liveins: %vgpr0
+
+    %sgpr0_sgpr1 = COPY %exec
+    %vcc = V_CMP_EQ_I32_e64 0, killed %vgpr0, implicit %exec
+    %vgpr0 = V_MOV_B32_e32 4, implicit %exec
+    %sgpr2_sgpr3 = S_AND_B64 %sgpr0_sgpr1, killed %vcc, implicit-def %scc
+    BUFFER_STORE_DWORD_OFFSET %vgpr0, undef %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into `i32 addrspace(1)* undef`)
+    %sgpr0_sgpr1 = S_XOR_B64 %sgpr2_sgpr3, killed %sgpr0_sgpr1, implicit-def %scc
+    %exec = S_MOV_B64_term killed %sgpr2_sgpr3
+    SI_MASK_BRANCH %bb.2.end, implicit %exec
+    S_BRANCH %bb.1.if
+
+  bb.1.if:
+    liveins: %sgpr0_sgpr1
+
+    %sgpr7 = S_MOV_B32 61440
+    %sgpr6 = S_MOV_B32 -1
+    %vgpr0 = BUFFER_LOAD_DWORD_OFFSET %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+
+  bb.2.end:
+    liveins: %vgpr0, %sgpr0_sgpr1
+
+    %exec = S_OR_B64 %exec, killed %sgpr0_sgpr1, implicit-def %scc
+    %sgpr3 = S_MOV_B32 61440
+    %sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into `i32 addrspace(1)* undef`)
+    S_ENDPGM
+
+...
+---
+# CHECK-LABEL: name: optimize_if_and_saveexec_xor_wrong_reg{{$}}
+# CHECK: %sgpr0_sgpr1 = S_AND_B64 %sgpr0_sgpr1, killed %vcc, implicit-def %scc
+# CHECK-NEXT: %sgpr0_sgpr1 = S_XOR_B64 undef %sgpr2_sgpr3, killed %sgpr0_sgpr1, implicit-def %scc
+# CHECK-NEXT: %exec = COPY %sgpr0_sgpr1
+# CHECK-NEXT: SI_MASK_BRANCH %bb.2.end, implicit %exec
+name:            optimize_if_and_saveexec_xor_wrong_reg
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '%vgpr0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.main_body:
+    liveins: %vgpr0
+
+    %sgpr6 = S_MOV_B32 -1
+    %sgpr7 = S_MOV_B32 61440
+    %sgpr0_sgpr1 = COPY %exec
+    %vcc = V_CMP_EQ_I32_e64 0, killed %vgpr0, implicit %exec
+    %vgpr0 = V_MOV_B32_e32 4, implicit %exec
+    %sgpr0_sgpr1 = S_AND_B64 %sgpr0_sgpr1, killed %vcc, implicit-def %scc
+    %sgpr0_sgpr1 = S_XOR_B64 undef %sgpr2_sgpr3, killed %sgpr0_sgpr1, implicit-def %scc
+    %exec = S_MOV_B64_term %sgpr0_sgpr1
+    SI_MASK_BRANCH %bb.2.end, implicit %exec
+    S_BRANCH %bb.1.if
+
+  bb.1.if:
+    liveins: %sgpr0_sgpr1 , %sgpr4_sgpr5_sgpr6_sgpr7
+    %vgpr0 = BUFFER_LOAD_DWORD_OFFSET %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+
+  bb.2.end:
+    liveins: %vgpr0, %sgpr0_sgpr1, %sgpr4_sgpr5_sgpr6_sgpr7
+
+    %exec = S_OR_B64 %exec, killed %sgpr0_sgpr1, implicit-def %scc
+    %sgpr3 = S_MOV_B32 61440
+    %sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into `i32 addrspace(1)* undef`)
+    S_ENDPGM
+
+...
+---
+# CHECK-LABEL: name: optimize_if_and_saveexec_xor_modify_copy_to_exec{{$}}
+# CHECK: %sgpr2_sgpr3 = S_AND_B64 %sgpr0_sgpr1, killed %vcc, implicit-def %scc
+# CHECK-NEXT: %sgpr2_sgpr3 = S_OR_B64 killed %sgpr2_sgpr3, 1, implicit-def %scc
+# CHECK-NEXT: %sgpr0_sgpr1 = S_XOR_B64 %sgpr2_sgpr3, killed %sgpr0_sgpr1, implicit-def %scc
+# CHECK-NEXT: %exec = COPY killed %sgpr2_sgpr3
+# CHECK-NEXT: SI_MASK_BRANCH %bb.2.end, implicit %exec
+
+name:            optimize_if_and_saveexec_xor_modify_copy_to_exec
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '%vgpr0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.main_body:
+    liveins: %vgpr0
+
+    %sgpr0_sgpr1 = COPY %exec
+    %vcc = V_CMP_EQ_I32_e64 0, killed %vgpr0, implicit %exec
+    %vgpr0 = V_MOV_B32_e32 4, implicit %exec
+    %sgpr2_sgpr3 = S_AND_B64 %sgpr0_sgpr1, killed %vcc, implicit-def %scc
+    %sgpr2_sgpr3 = S_OR_B64 killed %sgpr2_sgpr3, 1, implicit-def %scc
+    %sgpr0_sgpr1 = S_XOR_B64 %sgpr2_sgpr3, killed %sgpr0_sgpr1, implicit-def %scc
+    %exec = S_MOV_B64_term killed %sgpr2_sgpr3
+    SI_MASK_BRANCH %bb.2.end, implicit %exec
+    S_BRANCH %bb.1.if
+
+  bb.1.if:
+    liveins: %sgpr0_sgpr1
+
+    %sgpr7 = S_MOV_B32 61440
+    %sgpr6 = S_MOV_B32 -1
+    %vgpr0 = BUFFER_LOAD_DWORD_OFFSET %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+
+  bb.2.end:
+    liveins: %vgpr0, %sgpr0_sgpr1
+
+    %exec = S_OR_B64 %exec, killed %sgpr0_sgpr1, implicit-def %scc
+    %sgpr0 = S_MOV_B32 0
+    %sgpr1 = S_MOV_B32 1
+    %sgpr2 = S_MOV_B32 -1
+    %sgpr3 = S_MOV_B32 61440
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into `i32 addrspace(1)* undef`)
+    S_ENDPGM
+
+...
+---
+# CHECK-LABEL: name: optimize_if_and_saveexec_xor_live_out_setexec{{$}}
+# CHECK: %sgpr2_sgpr3 = S_AND_B64 %sgpr0_sgpr1, killed %vcc, implicit-def %scc
+# CHECK-NEXT: %sgpr0_sgpr1 = S_XOR_B64 %sgpr2_sgpr3, killed %sgpr0_sgpr1, implicit-def %scc
+# CHECK-NEXT: %exec = COPY %sgpr2_sgpr3
+# CHECK-NEXT: SI_MASK_BRANCH
+name:            optimize_if_and_saveexec_xor_live_out_setexec
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '%vgpr0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.main_body:
+    liveins: %vgpr0
+
+    %sgpr0_sgpr1 = COPY %exec
+    %vcc = V_CMP_EQ_I32_e64 0, killed %vgpr0, implicit %exec
+    %vgpr0 = V_MOV_B32_e32 4, implicit %exec
+    %sgpr2_sgpr3 = S_AND_B64 %sgpr0_sgpr1, killed %vcc, implicit-def %scc
+    %sgpr0_sgpr1 = S_XOR_B64 %sgpr2_sgpr3, killed %sgpr0_sgpr1, implicit-def %scc
+    %exec = S_MOV_B64_term %sgpr2_sgpr3
+    SI_MASK_BRANCH %bb.2.end, implicit %exec
+    S_BRANCH %bb.1.if
+
+  bb.1.if:
+    liveins: %sgpr0_sgpr1, %sgpr2_sgpr3
+    S_SLEEP 0, implicit %sgpr2_sgpr3
+    %sgpr7 = S_MOV_B32 61440
+    %sgpr6 = S_MOV_B32 -1
+    %vgpr0 = BUFFER_LOAD_DWORD_OFFSET %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+
+  bb.2.end:
+    liveins: %vgpr0, %sgpr0_sgpr1
+
+    %exec = S_OR_B64 %exec, killed %sgpr0_sgpr1, implicit-def %scc
+    %sgpr3 = S_MOV_B32 61440
+    %sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into `i32 addrspace(1)* undef`)
+    S_ENDPGM
+
+...
+
+# CHECK-LABEL: name: optimize_if_unknown_saveexec{{$}}
+# CHECK: %sgpr0_sgpr1 = COPY %exec
+# CHECK: %sgpr2_sgpr3 = S_LSHR_B64 %sgpr0_sgpr1, killed %vcc_lo, implicit-def %scc
+# CHECK-NEXT: %exec = COPY killed %sgpr2_sgpr3
+# CHECK-NEXT: SI_MASK_BRANCH %bb.2.end, implicit %exec
+
+name:            optimize_if_unknown_saveexec
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '%vgpr0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.main_body:
+    liveins: %vgpr0
+
+    %sgpr0_sgpr1 = COPY %exec
+    %vcc = V_CMP_EQ_I32_e64 0, killed %vgpr0, implicit %exec
+    %vgpr0 = V_MOV_B32_e32 4, implicit %exec
+    %sgpr2_sgpr3 = S_LSHR_B64 %sgpr0_sgpr1, killed %vcc_lo, implicit-def %scc
+    %exec = S_MOV_B64_term killed %sgpr2_sgpr3
+    SI_MASK_BRANCH %bb.2.end, implicit %exec
+    S_BRANCH %bb.1.if
+
+  bb.1.if:
+    liveins: %sgpr0_sgpr1
+
+    %sgpr7 = S_MOV_B32 61440
+    %sgpr6 = S_MOV_B32 -1
+    %vgpr0 = BUFFER_LOAD_DWORD_OFFSET %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+
+  bb.2.end:
+    liveins: %vgpr0, %sgpr0_sgpr1
+
+    %exec = S_OR_B64 %exec, killed %sgpr0_sgpr1, implicit-def %scc
+    %sgpr3 = S_MOV_B32 61440
+    %sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into `i32 addrspace(1)* undef`)
+    S_ENDPGM
+
+...
+---
+# CHECK-LABEL: name: optimize_if_andn2_saveexec{{$}}
+# CHECK: %sgpr0_sgpr1 = S_ANDN2_SAVEEXEC_B64 %vcc, implicit-def %exec, implicit-def %scc, implicit %exec
+# CHECK-NEXT: SI_MASK_BRANCH
+
+name:            optimize_if_andn2_saveexec
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '%vgpr0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.main_body:
+    liveins: %vgpr0
+
+    %sgpr0_sgpr1 = COPY %exec
+    %vcc = V_CMP_EQ_I32_e64 0, killed %vgpr0, implicit %exec
+    %vgpr0 = V_MOV_B32_e32 4, implicit %exec
+    %sgpr2_sgpr3 = S_ANDN2_B64 %sgpr0_sgpr1, killed %vcc, implicit-def %scc
+    %exec = S_MOV_B64_term killed %sgpr2_sgpr3
+    SI_MASK_BRANCH %bb.2.end, implicit %exec
+    S_BRANCH %bb.1.if
+
+  bb.1.if:
+    liveins: %sgpr0_sgpr1
+
+    %sgpr7 = S_MOV_B32 61440
+    %sgpr6 = S_MOV_B32 -1
+    %vgpr0 = BUFFER_LOAD_DWORD_OFFSET %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+
+  bb.2.end:
+    liveins: %vgpr0, %sgpr0_sgpr1
+
+    %exec = S_OR_B64 %exec, killed %sgpr0_sgpr1, implicit-def %scc
+    %sgpr3 = S_MOV_B32 61440
+    %sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into `i32 addrspace(1)* undef`)
+    S_ENDPGM
+
+...
+---
+# CHECK-LABEL: name: optimize_if_andn2_saveexec_no_commute{{$}}
+# CHECK: %sgpr2_sgpr3 = S_ANDN2_B64 killed %vcc, %sgpr0_sgpr1, implicit-def %scc
+# CHECK-NEXT: %exec = COPY killed %sgpr2_sgpr3
+# CHECK-NEXT: SI_MASK_BRANCH %bb.2.end, implicit %exec
+name:            optimize_if_andn2_saveexec_no_commute
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '%vgpr0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.main_body:
+    liveins: %vgpr0
+
+    %sgpr0_sgpr1 = COPY %exec
+    %vcc = V_CMP_EQ_I32_e64 0, killed %vgpr0, implicit %exec
+    %vgpr0 = V_MOV_B32_e32 4, implicit %exec
+    %sgpr2_sgpr3 = S_ANDN2_B64 killed %vcc, %sgpr0_sgpr1, implicit-def %scc
+    %exec = S_MOV_B64_term killed %sgpr2_sgpr3
+    SI_MASK_BRANCH %bb.2.end, implicit %exec
+    S_BRANCH %bb.1.if
+
+  bb.1.if:
+    liveins: %sgpr0_sgpr1
+
+    %sgpr7 = S_MOV_B32 61440
+    %sgpr6 = S_MOV_B32 -1
+    %vgpr0 = BUFFER_LOAD_DWORD_OFFSET %sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit %exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+
+  bb.2.end:
+    liveins: %vgpr0, %sgpr0_sgpr1
+
+    %exec = S_OR_B64 %exec, killed %sgpr0_sgpr1, implicit-def %scc
+    %sgpr3 = S_MOV_B32 61440
+    %sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed %vgpr0, %sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into `i32 addrspace(1)* undef`)
+    S_ENDPGM
+
+...

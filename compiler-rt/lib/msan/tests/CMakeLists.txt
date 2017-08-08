@@ -20,7 +20,7 @@ set(MSAN_UNITTEST_HEADERS
 set(MSAN_UNITTEST_COMMON_CFLAGS
   -nostdinc++
   -isystem ${COMPILER_RT_LIBCXX_PATH}/include
-  ${COMPILER_RT_TEST_CFLAGS}
+  ${COMPILER_RT_UNITTEST_CFLAGS}
   ${COMPILER_RT_GTEST_CFLAGS}
   -I${COMPILER_RT_SOURCE_DIR}/include
   -I${COMPILER_RT_SOURCE_DIR}/lib
@@ -35,6 +35,7 @@ set(MSAN_UNITTEST_COMMON_CFLAGS
   -Wno-zero-length-array
   -Wno-uninitialized
   -Werror=sign-compare
+  -Wno-gnu-zero-variadic-macro-arguments
 )
 set(MSAN_UNITTEST_INSTRUMENTED_CFLAGS
   ${MSAN_UNITTEST_COMMON_CFLAGS}
@@ -69,15 +70,15 @@ macro(msan_compile obj_list source arch kind)
 endmacro()
 
 macro(msan_link_shared so_list so_name arch kind)
-  cmake_parse_arguments(SOURCE "" "" "OBJECTS;LINKFLAGS;DEPS" ${ARGN})
+  cmake_parse_arguments(SOURCE "" "" "OBJECTS;LINK_FLAGS;DEPS" ${ARGN})
   set(output_so "${CMAKE_CURRENT_BINARY_DIR}/${so_name}.${arch}${kind}.so")
-  get_target_flags_for_arch(${arch} TARGET_LINKFLAGS)
+  get_target_flags_for_arch(${arch} TARGET_LINK_FLAGS)
   if(NOT COMPILER_RT_STANDALONE_BUILD)
     list(APPEND SOURCE_DEPS msan)
   endif()
   clang_link_shared(${output_so}
                 OBJECTS ${SOURCE_OBJECTS}
-                LINKFLAGS ${TARGET_LINKFLAGS} ${SOURCE_LINKFLAGS}
+                LINK_FLAGS ${TARGET_LINK_FLAGS} ${SOURCE_LINK_FLAGS}
                 DEPS ${SOURCE_DEPS})
   list(APPEND ${so_list} ${output_so})
 endmacro()

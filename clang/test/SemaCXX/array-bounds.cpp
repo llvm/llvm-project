@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify %s
+// RUN: %clang_cc1 -verify -std=c++11 %s
 
 int foo() {
   int x[2]; // expected-note 4 {{array 'x' declared here}}
@@ -164,7 +164,7 @@ enum enumB { enumB_X, enumB_Y, enumB_Z };
 static enum enumB myVal = enumB_X;
 void test_nested_switch() {
   switch (enumA_E) { // expected-warning {{no case matching constant}}
-    switch (myVal) { // expected-warning {{enumeration values 'enumB_X' and 'enumB_Z' not handled in switch}}
+    switch (myVal) { // expected-warning {{enumeration values 'enumB_X' and 'enumB_Z' not handled in switch}} expected-note {{add missing switch cases}}
       case enumB_Y: ;
     }
   }
@@ -252,4 +252,20 @@ void test_rdar10916006(void)
 {
 	int a[128]; // expected-note {{array 'a' declared here}}
 	a[(unsigned char)'\xA1'] = 1; // expected-warning {{array index 161 is past the end of the array}}
+}
+
+struct P {
+  int a;
+  int b;
+};
+
+void test_struct_array_index() {
+  struct P p[10]; // expected-note {{array 'p' declared here}}
+  p[11] = {0, 1}; // expected-warning {{array index 11 is past the end of the array (which contains 10 elements)}}
+}
+
+int operator+(const struct P &s1, const struct P &s2);
+int test_operator_overload_struct_array_index() {
+  struct P x[10] = {0}; // expected-note {{array 'x' declared here}}
+  return x[1] + x[11]; // expected-warning {{array index 11 is past the end of the array (which contains 10 elements)}}
 }

@@ -172,9 +172,14 @@
 
         // A relocation should be provided for symbols
         add x3, x9, #variable
+        add x3, x9, #variable-16
 // CHECK-ERROR: error: expected compatible register, symbol or integer in range [0, 4095]
 // CHECK-ERROR-NEXT:         add x3, x9, #variable
 // CHECK-ERROR-NEXT:                      ^
+// CHECK-ERROR-NEXT: error: expected compatible register, symbol or integer in range [0, 4095]
+// CHECK-ERROR-NEXT:         add x3, x9, #variable-16
+// CHECK-ERROR-NEXT:                 ^
+
 
 
 //------------------------------------------------------------------------------
@@ -1603,7 +1608,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         fcsel q3, q20, q9, pl
 // CHECK-ERROR-NEXT:               ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
+// CHECK-ERROR-NEXT: error: instruction requires: fullfp16
 // CHECK-ERROR-NEXT:         fcsel h9, h10, h11, mi
 // CHECK-ERROR-NEXT:               ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
@@ -1652,7 +1657,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         fmadd b3, b4, b5, b6
 // CHECK-ERROR-NEXT:               ^
-// CHECK-ERROR-NEXT: error: invalid operand for instruction
+// CHECK-ERROR-NEXT: error: instruction requires: fullfp16
 // CHECK-ERROR-NEXT:         fmsub h1, h2, h3, h4
 // CHECK-ERROR-NEXT:               ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
@@ -1776,12 +1781,20 @@
         ;; Exponent too large
         fmov d3, #0.0625
         fmov s2, #32.0
+        fmov s2, #32
+        fmov v0.4s, #-32
 // CHECK-ERROR: error: expected compatible register or floating-point constant
 // CHECK-ERROR-NEXT:           fmov d3, #0.0625
 // CHECK-ERROR-NEXT:                    ^
 // CHECK-ERROR-NEXT: error: expected compatible register or floating-point constant
 // CHECK-ERROR-NEXT:           fmov s2, #32.0
 // CHECK-ERROR-NEXT:                    ^
+// CHECK-ERROR-NEXT: error: expected compatible register or floating-point constant
+// CHECK-ERROR-NEXT:           fmov s2, #32
+// CHECK-ERROR-NEXT:                    ^
+// CHECK-ERROR-NEXT: error: expected compatible register or floating-point constant
+// CHECK-ERROR-NEXT:           fmov v0.4s, #-32
+// CHECK-ERROR-NEXT:                       ^
 
         ;; Fraction too precise
         fmov s9, #1.03125
@@ -1793,11 +1806,17 @@
 // CHECK-ERROR-NEXT:           fmov s28, #1.96875
 // CHECK-ERROR-NEXT:                     ^
 
-        ;; No particular reason, but a striking omission
-        fmov d0, #0.0
-// CHECK-ERROR-AARCH64: error: expected compatible register or floating-point constant
-// CHECK-ERROR-AARCH64-NEXT:           fmov d0, #0.0
-// CHECK-ERROR-AARCH64-NEXT:                    ^
+        ;; Explicitly encoded value too large
+        fmov s15, #0x100
+// CHECK-ERROR: error: encoded floating point value out of range
+// CHECK-ERROR-NEXT:           fmov s15, #0x100
+// CHECK-ERROR-NEXT:                     ^
+
+        ;; Not possible to fmov ZR to a whole vector
+        fmov v0.4s, #0.0
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR-NEXT:           fmov v0.4s, #0.0
+// CHECK-ERROR-NEXT:                       ^
 
 //------------------------------------------------------------------------------
 // Floating-point <-> integer conversion
@@ -3254,13 +3273,18 @@
 
         dsb #-1
         dsb #16
+        dsb foo
         dmb #-1
         dmb #16
+        dmb foo
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         dsb #-1
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         dsb #16
+// CHECK-ERROR-NEXT:             ^
+// CHECK-ERROR-NEXT: error: invalid barrier option name
+// CHECK-ERROR-NEXT:         dsb foo
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         dmb #-1
@@ -3268,32 +3292,31 @@
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         dmb #16
 // CHECK-ERROR-NEXT:             ^
+// CHECK-ERROR-NEXT: error: invalid barrier option name
+// CHECK-ERROR-NEXT:         dmb foo
+// CHECK-ERROR-NEXT:             ^
 
         isb #-1
         isb #16
+        isb foo
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         isb #-1
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         isb #16
 // CHECK-ERROR-NEXT:             ^
+// CHECK-ERROR-NEXT: error: 'sy' or #imm operand expected
+// CHECK-ERROR-NEXT:        isb foo
+// CHECK-ERROR-NEXT:            ^
 
         msr daifset, x4
         msr spsel, #-1
         msr spsel #-1
         msr daifclr, #16
-// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 15]
-// CHECK-ERROR-NEXT:         msr daifset, x4
-// CHECK-ERROR-NEXT:                      ^
-// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 15]
-// CHECK-ERROR-NEXT:         msr spsel, #-1
-// CHECK-ERROR-NEXT:                    ^
-// CHECK-ERROR-NEXT: error: {{expected comma before next operand|unexpected token in argument list}}
-// CHECK-ERROR-NEXT:         msr spsel #-1
-// CHECK-ERROR-NEXT:                   ^
-// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [0, 15]
-// CHECK-ERROR-NEXT:         msr daifclr, #16
-// CHECK-ERROR-NEXT:                      ^
+// CHECK-ERROR: [[@LINE-4]]:22: error: {{expected|immediate must be an}} integer in range [0, 15]
+// CHECK-ERROR: [[@LINE-4]]:20: error: {{expected|immediate must be an}} integer in range [0, 15]
+// CHECK-ERROR: [[@LINE-4]]:{{9|19}}: error: {{too few operands for instruction|expected comma before next operand|unexpected token in argument list}}
+// CHECK-ERROR: [[@LINE-4]]:22: error: {{expected|immediate must be an}} integer in range [0, 15]
 
         sys #8, c1, c2, #7, x9
         sys #3, c16, c2, #3, x10
@@ -3303,7 +3326,7 @@
         sysl x13, #3, c16, c2, #3
         sysl x9, #2, c11, c16, #5
         sysl x4, #4, c9, c8, #8
-// CHECK-ERROR-NEXT: error:  {{expected|immediate must be an}} integer in range [0, 7]
+// CHECK-ERROR: error:  {{expected|immediate must be an}} integer in range [0, 7]
 // CHECK-ERROR-NEXT:         sys #8, c1, c2, #7, x9
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: Expected cN operand where 0 <= N <= 15

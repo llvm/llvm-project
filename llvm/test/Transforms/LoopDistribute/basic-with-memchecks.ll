@@ -1,7 +1,7 @@
-; RUN: opt -basicaa -loop-distribute -verify-loop-info -verify-dom-info -S \
+; RUN: opt -basicaa -loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S \
 ; RUN:   < %s | FileCheck %s
 
-; RUN: opt -basicaa -loop-distribute -loop-vectorize -force-vector-width=4 \
+; RUN: opt -basicaa -loop-distribute -enable-loop-distribute -loop-vectorize -force-vector-width=4 \
 ; RUN:   -verify-loop-info -verify-dom-info -S < %s | \
 ; RUN:   FileCheck --check-prefix=VECTORIZE %s
 
@@ -36,7 +36,7 @@ entry:
 ; Since the checks to A and A + 4 get merged, this will give us a
 ; total of 8 compares.
 ;
-; CHECK: for.body.lver.memcheck:
+; CHECK: for.body.lver.check:
 ; CHECK:     = icmp
 ; CHECK:     = icmp
 

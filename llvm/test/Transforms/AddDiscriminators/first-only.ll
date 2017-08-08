@@ -1,4 +1,5 @@
 ; RUN: opt < %s -add-discriminators -S | FileCheck %s
+; RUN: opt < %s -passes=add-discriminators -S | FileCheck %s
 
 ; Test that the only instructions that receive a new discriminator in
 ; the block 'if.then' are those that share the same line number as
@@ -50,11 +51,10 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !llvm.module.flags = !{!7, !8}
 !llvm.ident = !{!9}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5 (trunk 199750) (llvm/trunk 199751)", isOptimized: false, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5 (trunk 199750) (llvm/trunk 199751)", isOptimized: false, emissionKind: NoDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "first-only.c", directory: ".")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "first-only.c", directory: ".")
 !6 = !DISubroutineType(types: !{null})
 !7 = !{i32 2, !"Dwarf Version", i32 4}
@@ -69,7 +69,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !12 = !DILocation(line: 3, scope: !13)
 
 !13 = distinct !DILexicalBlock(line: 3, column: 0, file: !1, scope: !11)
-; CHECK: !DILexicalBlockFile(scope: ![[BLOCK2:[0-9]+]],{{.*}} discriminator: 1)
+; CHECK: !DILexicalBlockFile(scope: ![[BLOCK2:[0-9]+]],{{.*}} discriminator: 2)
 
 !14 = !DILocation(line: 4, scope: !13)
 ; CHECK: ![[BLOCK2]] = distinct !DILexicalBlock(scope: ![[BLOCK1]],{{.*}} line: 3)

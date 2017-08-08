@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm-linux-gnu < %s | FileCheck %s --check-prefix=APCS
+; RUN: llc -mtriple=arm-linux-gnu < %s | FileCheck %s --check-prefix=AAPCS
 ; RUN: llc -mtriple=arm-linux-gnu -target-abi=apcs < %s | \
 ; RUN: FileCheck %s --check-prefix=APCS
 ; RUN: llc -mtriple=arm-linux-gnueabi -target-abi=apcs < %s | \

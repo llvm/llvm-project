@@ -220,3 +220,29 @@ Csprintf(pMsgBuf,"\nEnter minimum anagram length (2-%1d): ", strlen_test(pKeepBu
 // CHECK-NEXT:    {{.*}}:206:56: note: expanded from macro 'sprintf2'
 // CHECK-NEXT:      __builtin___sprintf_chk (str, 0, __darwin_obsz(str), __VA_ARGS__)
 // CHECK-NEXT: {{^                                                       \^~~~~~~~~~~}}
+
+#define SWAP_AND_APPLY(arg, macro) macro arg
+#define APPLY(macro, arg) macro arg
+#define DECLARE_HELPER() __builtin_printf("%d\n", mylong);
+void use_evil_macros(long mylong) {
+  SWAP_AND_APPLY((), DECLARE_HELPER)
+  APPLY(DECLARE_HELPER, ())
+}
+// CHECK:      {{.*}}:228:22: warning: format specifies type 'int' but the argument has type 'long'
+// CHECK-NEXT:   SWAP_AND_APPLY((), DECLARE_HELPER)
+// CHECK-NEXT:   ~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~
+// CHECK-NEXT: {{.*}}:224:36: note: expanded from macro 'SWAP_AND_APPLY'
+// CHECK-NEXT: #define SWAP_AND_APPLY(arg, macro) macro arg
+// CHECK-NEXT:                                    ^~~~~~~~~
+// CHECK-NEXT: {{.*}}:226:51: note: expanded from macro 'DECLARE_HELPER'
+// CHECK-NEXT: #define DECLARE_HELPER() __builtin_printf("%d\n", mylong);
+// CHECK-NEXT:                                            ~~     ^~~~~~
+// CHECK-NEXT: {{.*}}:229:9: warning: format specifies type 'int' but the argument has type 'long'
+// CHECK-NEXT:   APPLY(DECLARE_HELPER, ())
+// CHECK-NEXT:   ~~~~~~^~~~~~~~~~~~~~~~~~~
+// CHECK-NEXT: {{.*}}:225:27: note: expanded from macro 'APPLY'
+// CHECK-NEXT: #define APPLY(macro, arg) macro arg
+// CHECK-NEXT:                           ^~~~~~~~~
+// CHECK-NEXT: {{.*}}:226:51: note: expanded from macro 'DECLARE_HELPER'
+// CHECK-NEXT: #define DECLARE_HELPER() __builtin_printf("%d\n", mylong);
+// CHECK-NEXT:                                            ~~     ^~~~~~

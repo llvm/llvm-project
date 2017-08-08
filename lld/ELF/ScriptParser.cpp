@@ -139,13 +139,11 @@ static void moveAbsRight(ExprValue &A, ExprValue &B) {
 
 static ExprValue add(ExprValue A, ExprValue B) {
   moveAbsRight(A, B);
-  uint64_t Val = alignTo(A.Val, A.Alignment) + B.getValue();
-  return {A.Sec, A.ForceAbsolute, Val, A.Loc};
+  return {A.Sec, A.ForceAbsolute, A.Val + B.getValue(), A.Loc};
 }
 
 static ExprValue sub(ExprValue A, ExprValue B) {
-  uint64_t Val = alignTo(A.Val, A.Alignment) - B.getValue();
-  return {A.Sec, Val, A.Loc};
+  return {A.Sec, A.Val - B.getValue(), A.Loc};
 }
 
 static ExprValue mul(ExprValue A, ExprValue B) {
@@ -258,7 +256,7 @@ void ScriptParser::addFile(StringRef S) {
     }
   }
 
-  if (S.startswith("/")) {
+  if (sys::path::is_absolute(S)) {
     Driver->addFile(S, /*WithLOption=*/false);
   } else if (S.startswith("=")) {
     if (Config->Sysroot.empty())

@@ -33,7 +33,7 @@ entry:
   %block.addr = alloca <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>*, align 8
   store i8* %.block_descriptor, i8** %.block_descriptor.addr, align 8
   %0 = load i8*, i8** %.block_descriptor.addr
-  call void @llvm.dbg.value(metadata i8* %0, i64 0, metadata !47, metadata !43), !dbg !66
+  call void @llvm.dbg.value(metadata i8* %0, metadata !47, metadata !43), !dbg !66
   call void @llvm.dbg.declare(metadata i8* %.block_descriptor, metadata !47, metadata !43), !dbg !66
   %block = bitcast i8* %.block_descriptor to <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>*, !dbg !67
   store <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>* %block, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, void (...)* }>** %block.addr, align 8
@@ -50,7 +50,7 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 
 attributes #0 = { nounwind ssp uwtable }
@@ -62,14 +62,13 @@ attributes #3 = { nounwind }
 !llvm.module.flags = !{!16, !17, !18, !19, !20, !21, !22}
 !llvm.ident = !{!23}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 3.6.0 (trunk 223471)", isOptimized: false, runtimeVersion: 2, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 3.6.0 (trunk 223471)", isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "foo.m", directory: "")
 !2 = !{}
-!3 = !{!8}
 !5 = !DIFile(filename: "foo.m", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
-!8 = distinct !DISubprogram(name: "__foo_block_invoke", line: 2, isLocal: true, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 2, file: !1, scope: !5, type: !9, variables: !2)
+!8 = distinct !DISubprogram(name: "__foo_block_invoke", line: 2, isLocal: true, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 2, file: !1, scope: !5, type: !9, variables: !2)
 !9 = !DISubroutineType(types: !10)
 !10 = !{null, !11}
 !11 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: null)
@@ -124,7 +123,7 @@ attributes #3 = { nounwind }
 !66 = !DILocation(line: 2, column: 20, scope: !8)
 !67 = !DILocation(line: 2, column: 21, scope: !8)
 !68 = !DILocalVariable(name: "block", line: 2, scope: !8, file: !5, type: !25)
-!69 = !DIExpression(DW_OP_deref, DW_OP_plus, 32)
+!69 = !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32)
 !70 = !DILocation(line: 2, column: 9, scope: !8)
 !71 = !DILocation(line: 2, column: 23, scope: !72)
 !72 = distinct !DILexicalBlock(line: 2, column: 21, file: !1, scope: !8)

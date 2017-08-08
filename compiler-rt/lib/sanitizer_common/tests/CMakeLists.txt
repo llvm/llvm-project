@@ -26,6 +26,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_posix_test.cc
   sanitizer_printf_test.cc
   sanitizer_procmaps_test.cc
+  sanitizer_quarantine_test.cc
   sanitizer_stackdepot_test.cc
   sanitizer_stacktrace_printer_test.cc
   sanitizer_stacktrace_test.cc
@@ -44,7 +45,7 @@ foreach(header ${SANITIZER_HEADERS})
 endforeach()
 
 set(SANITIZER_TEST_CFLAGS_COMMON
-  ${COMPILER_RT_TEST_CFLAGS}
+  ${COMPILER_RT_UNITTEST_CFLAGS}
   ${COMPILER_RT_GTEST_CFLAGS}
   -I${COMPILER_RT_SOURCE_DIR}/include
   -I${COMPILER_RT_SOURCE_DIR}/lib
@@ -65,6 +66,10 @@ if(COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")
 else()
   list(APPEND SANITIZER_TEST_CFLAGS_COMMON -g)
 endif()
+if(MSVC)
+  list(APPEND SANITIZER_TEST_CFLAGS_COMMON -gcodeview)
+endif()
+list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -g)
 
 if(NOT MSVC)
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON --driver-mode=g++)
@@ -72,6 +77,21 @@ endif()
 
 if(ANDROID)
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -pie)
+endif()
+
+if(APPLE)
+  list(APPEND SANITIZER_TEST_CFLAGS_COMMON ${DARWIN_osx_CFLAGS})
+  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON ${DARWIN_osx_LINK_FLAGS})
+
+  add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
+  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON ${WEAK_SYMBOL_LINK_FLAGS})
+endif()
+
+# MSVC linker is allocating 1M for the stack by default, which is not
+# enough for the unittests. Some unittests require more than 2M.
+# The default stack size for clang is 8M.
+if(MSVC)
+  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -Wl,/STACK:0xC00000)
 endif()
 
 set(SANITIZER_TEST_LINK_LIBS)
@@ -96,7 +116,8 @@ include_directories(../..)
 macro(add_sanitizer_common_lib library)
   add_library(${library} STATIC ${ARGN})
   set_target_properties(${library} PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    FOLDER "Compiler-RT Runtime tests")
 endmacro()
 
 function(get_sanitizer_common_lib_for_arch arch lib lib_name)
@@ -106,21 +127,34 @@ function(get_sanitizer_common_lib_for_arch arch lib lib_name)
     set(tgt_name "RTSanitizerCommon.test.${arch}")
   endif()
   set(${lib} "${tgt_name}" PARENT_SCOPE)
-  if(NOT MSVC)
-    set(${lib_name} "lib${tgt_name}.a" PARENT_SCOPE)
+  if(CMAKE_CONFIGURATION_TYPES)
+   set(configuration_path "${CMAKE_CFG_INTDIR}/")
   else()
-    set(${lib_name} "${tgt_name}.lib" PARENT_SCOPE)
+   set(configuration_path "")
+  endif()
+  if(NOT MSVC)
+    set(${lib_name} "${configuration_path}lib${tgt_name}.a" PARENT_SCOPE)
+  else()
+    set(${lib_name} "${configuration_path}${tgt_name}.lib" PARENT_SCOPE)
   endif()
 endfunction()
 
 # Sanitizer_common unit tests testsuite.
 add_custom_target(SanitizerUnitTests)
-set_target_properties(SanitizerUnitTests PROPERTIES
-  FOLDER "Sanitizer unittests")
+set_target_properties(SanitizerUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
 
 # Adds sanitizer tests for architecture.
 macro(add_sanitizer_tests_for_arch arch)
   get_target_flags_for_arch(${arch} TARGET_FLAGS)
+
+  # If the sanitizer library was built with _FILE_OFFSET_BITS=64 we need
+  # to ensure that the library and tests agree on the layout of certain
+  # structures such as 'struct stat'.
+  if( CMAKE_SIZEOF_VOID_P EQUAL 4 )
+    list(APPEND TARGET_FLAGS "-D_LARGEFILE_SOURCE")
+    list(APPEND TARGET_FLAGS "-D_FILE_OFFSET_BITS=64")
+  endif()
+
   set(SANITIZER_TEST_SOURCES ${SANITIZER_UNITTESTS}
                              ${COMPILER_RT_GTEST_SOURCE})
   set(SANITIZER_TEST_COMPILE_DEPS ${SANITIZER_TEST_HEADERS})
@@ -130,7 +164,11 @@ macro(add_sanitizer_tests_for_arch arch)
   set(SANITIZER_TEST_OBJECTS)
   foreach(source ${SANITIZER_TEST_SOURCES})
     get_filename_component(basename ${source} NAME)
-    set(output_obj "${basename}.${arch}.o")
+    if(CMAKE_CONFIGURATION_TYPES)
+      set(output_obj "${CMAKE_CFG_INTDIR}/${basename}.${arch}.o")
+    else()
+      set(output_obj "${basename}.${arch}.o")
+    endif()
     clang_compile(${output_obj} ${source}
                   CFLAGS ${SANITIZER_TEST_CFLAGS_COMMON} ${TARGET_FLAGS}
                   DEPS ${SANITIZER_TEST_COMPILE_DEPS})

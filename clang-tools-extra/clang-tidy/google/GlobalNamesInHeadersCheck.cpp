@@ -23,8 +23,8 @@ namespace readability {
 GlobalNamesInHeadersCheck::GlobalNamesInHeadersCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
-          "HeaderFileExtensions", utils::defaultHeaderFileExtensions())) {
+      RawStringHeaderFileExtensions(
+          Options.getLocalOrGlobal("HeaderFileExtensions", "h")) {
   if (!utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
                                         HeaderFileExtensions, ',')) {
     llvm::errs() << "Invalid header file extension: "

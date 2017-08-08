@@ -201,7 +201,7 @@ void LinkerDriver::parseDirectives(StringRef S) {
   opt::InputArgList Args = Parser.parse(S);
 
   for (auto *Arg : Args) {
-    switch (Arg->getOption().getUnaliasedOption().getID()) {
+    switch (Arg->getOption().getID()) {
     case OPT_alternatename:
       parseAlternateName(Arg->getValue());
       break;
@@ -247,7 +247,7 @@ StringRef LinkerDriver::doFindFile(StringRef Filename) {
   bool HasPathSep = (Filename.find_first_of("/\\") != StringRef::npos);
   if (HasPathSep)
     return Filename;
-  bool HasExt = Filename.contains('.');
+  bool HasExt = (Filename.find('.') != StringRef::npos);
   for (StringRef Dir : SearchPaths) {
     SmallString<128> Path = Dir;
     sys::path::append(Path, Filename);
@@ -275,7 +275,7 @@ Optional<StringRef> LinkerDriver::findFile(StringRef Filename) {
 // Find library file from search path.
 StringRef LinkerDriver::doFindLib(StringRef Filename) {
   // Add ".lib" to Filename if that has no file extension.
-  bool HasExt = Filename.contains('.');
+  bool HasExt = (Filename.find('.') != StringRef::npos);
   if (!HasExt)
     Filename = Saver.save(Filename + ".lib");
   return doFindFile(Filename);
@@ -899,17 +899,24 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   for (auto *Arg : Args.filtered(OPT_section))
     parseSection(Arg->getValue());
 
-  // Handle /manifest
-  if (auto *Arg = Args.getLastArg(OPT_manifest_colon))
-    parseManifest(Arg->getValue());
+  // Handle /manifestdependency. This enables /manifest unless /manifest:no is
+  // also passed.
+  if (auto *Arg = Args.getLastArg(OPT_manifestdependency)) {
+    Config->ManifestDependency = Arg->getValue();
+    Config->Manifest = Configuration::SideBySide;
+  }
+
+  // Handle /manifest and /manifest:
+  if (auto *Arg = Args.getLastArg(OPT_manifest, OPT_manifest_colon)) {
+    if (Arg->getOption().getID() == OPT_manifest)
+      Config->Manifest = Configuration::SideBySide;
+    else
+      parseManifest(Arg->getValue());
+  }
 
   // Handle /manifestuac
   if (auto *Arg = Args.getLastArg(OPT_manifestuac))
     parseManifestUAC(Arg->getValue());
-
-  // Handle /manifestdependency
-  if (auto *Arg = Args.getLastArg(OPT_manifestdependency))
-    Config->ManifestDependency = Arg->getValue();
 
   // Handle /manifestfile
   if (auto *Arg = Args.getLastArg(OPT_manifestfile))
@@ -918,6 +925,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Handle /manifestinput
   for (auto *Arg : Args.filtered(OPT_manifestinput))
     Config->ManifestInput.push_back(Arg->getValue());
+
+  if (!Config->ManifestInput.empty() &&
+      Config->Manifest != Configuration::Embed) {
+    fatal("/MANIFESTINPUT: requires /MANIFEST:EMBED");
+  }
 
   // Handle miscellaneous boolean flags.
   if (Args.hasArg(OPT_allowisolation_no))

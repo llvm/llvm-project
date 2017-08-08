@@ -1,0 +1,54 @@
+; RUN: llvm-pdbutil pdb2yaml -stream-metadata -stream-directory -string-table -pdb-stream \
+; RUN: %p/Inputs/empty.pdb | FileCheck -check-prefix=YAML %s
+; RUN: llvm-pdbutil pdb2yaml -no-file-headers -stream-metadata -stream-directory -pdb-stream \
+; RUN:   %p/Inputs/empty.pdb | FileCheck -check-prefix=NO-HEADERS %s
+
+; YAML:      ---
+; YAML-NEXT: MSF:
+; YAML-NEXT:   SuperBlock:
+; YAML-NEXT:     BlockSize:       4096
+; YAML-NEXT:     FreeBlockMap:     2
+; YAML-NEXT:     NumBlocks:       25
+; YAML-NEXT:     NumDirectoryBytes: 136
+; YAML-NEXT:     Unknown1:        0
+; YAML-NEXT:     BlockMapAddr:    24
+; YAML-NEXT:   NumDirectoryBlocks: 1
+; YAML-NEXT:   DirectoryBlocks: [ 23 ]
+; YAML-NEXT:   NumStreams:      17
+; YAML-NEXT:   FileSize:        102400
+; YAML-NEXT: StreamSizes: [ 40, 118, 5392, 739, 784, 0, 556, 604, 104, 0, 160, 32,
+; YAML-NEXT:                308, 239, 520, 308, 68 ]
+; YAML-NEXT: StreamMap:
+; YAML-NEXT:   - Stream: [ 8 ]
+; YAML-NEXT:   - Stream: [ 19 ]
+; YAML-NEXT:   - Stream: [ 18, 17 ]
+; YAML-NEXT:   - Stream: [ 14 ]
+; YAML-NEXT:   - Stream: [ 20 ]
+; YAML-NEXT:   - Stream: [ ]
+; YAML-NEXT:   - Stream: [ 11 ]
+; YAML-NEXT:   - Stream: [ 13 ]
+; YAML-NEXT:   - Stream: [ 12 ]
+; YAML-NEXT:   - Stream: [ ]
+; YAML-NEXT:   - Stream: [ 10 ]
+; YAML-NEXT:   - Stream: [ 15 ]
+; YAML-NEXT:   - Stream: [ 6 ]
+; YAML-NEXT:   - Stream: [ 16 ]
+; YAML-NEXT:   - Stream: [ 7 ]
+; YAML-NEXT:   - Stream: [ 21 ]
+; YAML-NEXT:   - Stream: [ 22 ]
+; YAML-NEXT: StringTable:
+; YAML-NEXT:   - 'd:\src\llvm\test\debuginfo\pdb\inputs\predefined c++ attributes (compiler internal)'
+; YAML-NEXT:   - 'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
+; YAML-NEXT:   - '$T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + = '
+; YAML-NEXT: PdbStream:
+; YAML-NEXT:   Age:             1
+; YAML-NEXT:   Guid:            '{0B355641-86A0-A249-896F-9988FAE52FF0}'
+; YAML-NEXT:   Signature:       1424295906
+; YAML-NEXT:   Features:        [ VC110 ]
+; YAML-NEXT:   Version:         VC70
+; YAML-NEXT: ...
+
+; NO-HEADERS: ---
+; NO-HEADERS-NOT: MSF:
+; NO-HEADERS-NOT:   SuperBlock:
+; NO-HEADERS: ...

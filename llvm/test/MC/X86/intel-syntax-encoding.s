@@ -76,3 +76,8 @@ LBB0_3:
 // CHECK: encoding: [0xca,0x08,0x00]
     retf 8
 
+    .set FOO, 2
+    cmp eax, FOO
+// CHECK: encoding: [0x83,0xf8,0x02]
+    cmp eax, FOO[eax]
+// CHECK: encoding: [0x67,0x3b,0x40,0x02]

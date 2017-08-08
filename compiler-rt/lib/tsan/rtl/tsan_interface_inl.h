@@ -108,6 +108,14 @@ void __tsan_func_exit() {
   FuncExit(cur_thread());
 }
 
+void __tsan_ignore_thread_begin() {
+  ThreadIgnoreBegin(cur_thread(), CALLERPC);
+}
+
+void __tsan_ignore_thread_end() {
+  ThreadIgnoreEnd(cur_thread(), CALLERPC);
+}
+
 void __tsan_read_range(void *addr, uptr size) {
   MemoryAccessRange(cur_thread(), CALLERPC, (uptr)addr, size, false);
 }

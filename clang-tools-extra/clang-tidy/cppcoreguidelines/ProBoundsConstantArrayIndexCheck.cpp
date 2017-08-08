@@ -23,7 +23,7 @@ ProBoundsConstantArrayIndexCheck::ProBoundsConstantArrayIndexCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), GslHeader(Options.get("GslHeader", "")),
       IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
+          Options.get("IncludeStyle", "llvm"))) {}
 
 void ProBoundsConstantArrayIndexCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

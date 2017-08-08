@@ -37,11 +37,11 @@ void ARMWinCOFFStreamer::EmitThumbFunc(MCSymbol *Symbol) {
 }
 }
 
-MCStreamer *llvm::createARMWinCOFFStreamer(MCContext &Context,
-                                           MCAsmBackend &MAB,
-                                           raw_pwrite_stream &OS,
-                                           MCCodeEmitter *Emitter,
-                                           bool RelaxAll) {
-  return new ARMWinCOFFStreamer(Context, MAB, *Emitter, OS);
+MCStreamer *llvm::createARMWinCOFFStreamer(
+    MCContext &Context, MCAsmBackend &MAB, raw_pwrite_stream &OS,
+    MCCodeEmitter *Emitter, bool RelaxAll, bool IncrementalLinkerCompatible) {
+  auto *S = new ARMWinCOFFStreamer(Context, MAB, *Emitter, OS);
+  S->getAssembler().setIncrementalLinkerCompatible(IncrementalLinkerCompatible);
+  return S;
 }
 

@@ -1,0 +1,40 @@
+# RUN: llc -run-pass arm-prera-ldst-opt %s -o - | FileCheck %s
+--- |
+  target triple = "thumbv7---eabi"
+
+  define void @ldrd_strd_aa(i32* noalias nocapture %x, i32* noalias nocapture readonly %y) {
+  entry:
+    %0 = load i32, i32* %y, align 4
+    store i32 %0, i32* %x, align 4
+    %arrayidx2 = getelementptr inbounds i32, i32* %y, i32 1
+    %1 = load i32, i32* %arrayidx2, align 4
+    %arrayidx3 = getelementptr inbounds i32, i32* %x, i32 1
+    store i32 %1, i32* %arrayidx3, align 4
+    ret void
+  }
+...
+---
+name:            ldrd_strd_aa
+alignment:       1
+tracksRegLiveness: true
+liveins:
+  - { reg: '%r0', virtual-reg: '%0' }
+  - { reg: '%r1', virtual-reg: '%1' }
+body:             |
+  bb.0.entry:
+    liveins: %r0, %r1
+
+    %1 : gpr = COPY %r1
+    %0 : gpr = COPY %r0
+    %2 : gpr = t2LDRi12 %1, 0, 14, _ :: (load 4 from %ir.y)
+    t2STRi12 killed %2, %0, 0, 14, _ :: (store 4 into %ir.x)
+    %3 : gpr = t2LDRi12 %1, 4, 14, _ :: (load 4 from %ir.arrayidx2)
+    t2STRi12 killed %3, %0, 4, 14, _ :: (store 4 into %ir.arrayidx3)
+    ; CHECK: t2LDRi12
+    ; CHECK-NEXT: t2LDRi12
+    ; CHECK-NEXT: t2STRi12
+    ; CHECK-NEXT: t2STRi12
+    tBX_RET 14, _
+
+...
+

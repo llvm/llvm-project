@@ -1,0 +1,96 @@
+# RUN: llc -mtriple=i586-linux-gnu -mcpu=haswell -mattr=-slow-incdec -global-isel -run-pass=instruction-select %s -o - | FileCheck %s --check-prefix=CHECK
+#
+# This is necessary to test that attribute-based rule predicates work and that
+# they properly reset between functions.
+
+--- |
+  define i32 @const_i32_1() {
+    ret i32 1
+  }
+
+  define i32 @const_i32_1_optsize() #0 {
+    ret i32 1
+  }
+
+  define i32 @const_i32_1b() {
+    ret i32 1
+  }
+
+  define i32 @const_i32_1_optsizeb() #0 {
+    ret i32 1
+  }
+
+  attributes #0 = { optsize }
+...
+---
+name:            const_i32_1
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name: const_i32_1
+# CHECK:       registers:
+# CHECK-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV32ri 1
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = G_CONSTANT i32 1
+    %eax = COPY %0(s32)
+    RET 0, implicit %eax
+...
+---
+name:            const_i32_1_optsize
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name: const_i32_1_optsize
+# CHECK:       registers:
+# CHECK-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV32r1
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = G_CONSTANT i32 1
+    %eax = COPY %0(s32)
+    RET 0, implicit %eax
+...
+---
+name:            const_i32_1b
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name: const_i32_1b
+# CHECK:       registers:
+# CHECK-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV32ri 1
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = G_CONSTANT i32 1
+    %eax = COPY %0(s32)
+    RET 0, implicit %eax
+...
+---
+name:            const_i32_1_optsizeb
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK-LABEL: name: const_i32_1_optsizeb
+# CHECK:       registers:
+# CHECK-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = MOV32r1
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = G_CONSTANT i32 1
+    %eax = COPY %0(s32)
+    RET 0, implicit %eax
+...

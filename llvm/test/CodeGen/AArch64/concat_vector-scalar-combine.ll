@@ -38,7 +38,7 @@ entry:
 define <8 x i8> @test_concat_scalars_2x_v2i8_to_v8i8(i32 %x, i32 %y) #0 {
 entry:
 ; CHECK-LABEL: test_concat_scalars_2x_v2i8_to_v8i8:
-; CHECK-NEXT: ins.h v0[0], w0
+; CHECK-NEXT: fmov  s0, w0
 ; CHECK-NEXT: ins.h v0[1], w1
 ; CHECK-NEXT: ins.h v0[3], w1
 ; CHECK-NEXT: ret
@@ -84,7 +84,7 @@ define <8 x i8> @test_concat_scalars_mixed_2x_v2i8_to_v8i8(float %dummy, i32 %x,
 entry:
 ; CHECK-LABEL: test_concat_scalars_mixed_2x_v2i8_to_v8i8:
 ; CHECK-NEXT: fmov s[[X:[0-9]+]], w0
-; CHECK-NEXT: ins.h v0[0], v[[X]][0]
+; CHECK-NEXT: mov.16b v0, v[[X]]
 ; CHECK-NEXT: ins.h v0[1], v1[0]
 ; CHECK-NEXT: ins.h v0[2], v[[X]][0]
 ; CHECK-NEXT: ins.h v0[3], v1[0]
@@ -99,7 +99,7 @@ entry:
 define <2 x float> @test_concat_scalars_fp_2x_v2i8_to_v8i8(float %dummy, half %x, half %y) #0 {
 entry:
 ; CHECK-LABEL: test_concat_scalars_fp_2x_v2i8_to_v8i8:
-; CHECK-NEXT: ins.h v0[0], v1[0]
+; CHECK-NEXT: mov.16b v0, v1
 ; CHECK-NEXT: ins.h v0[1], v2[0]
 ; CHECK-NEXT: ins.h v0[2], v1[0]
 ; CHECK-NEXT: ins.h v0[3], v2[0]

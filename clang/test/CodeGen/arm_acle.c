@@ -76,7 +76,7 @@ void test_dbg(void) {
 // AArch32: call i32 @llvm.arm.strex
 // AArch64: call i64 @llvm.aarch64.ldxr
 // AArch64: call i32 @llvm.aarch64.stxr
-uint32_t test_swp(uint32_t x, volatile void *p) {
+void test_swp(uint32_t x, volatile void *p) {
   __swp(x, p);
 }
 
@@ -118,6 +118,7 @@ void test_nop(void) {
 }
 
 /* 9 DATA-PROCESSING INTRINSICS */
+
 /* 9.2 Miscellaneous data-processing intrinsics */
 // ARM-LABEL: test_ror
 // ARM: lshr
@@ -186,27 +187,53 @@ uint64_t test_revll(uint64_t t) {
 
 // ARM-LABEL: test_rev16
 // ARM: llvm.bswap
-// ARM: lshr
-// ARM: shl
+// ARM: lshr {{.*}}, 16
+// ARM: shl {{.*}}, 16
 // ARM: or
 uint32_t test_rev16(uint32_t t) {
   return __rev16(t);
 }
 
 // ARM-LABEL: test_rev16l
-// ARM: llvm.bswap
-// ARM: lshr
-// ARM: shl
-// ARM: or
+// AArch32: llvm.bswap
+// AArch32: lshr {{.*}}, 16
+// AArch32: shl {{.*}}, 16
+// AArch32: or
+// AArch64: [[T1:%.*]] = lshr i64 [[IN:%.*]], 32
+// AArch64: [[T2:%.*]] = trunc i64 [[T1]] to i32
+// AArch64: [[T3:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[T2]])
+// AArch64: [[T4:%.*]] = lshr i32 [[T3]], 16
+// AArch64: [[T5:%.*]] = shl i32 [[T3]], 16
+// AArch64: [[T6:%.*]] = or i32 [[T5]], [[T4]]
+// AArch64: [[T7:%.*]] = zext i32 [[T6]] to i64
+// AArch64: [[T8:%.*]] = shl nuw i64 [[T7]], 32
+// AArch64: [[T9:%.*]] = trunc i64 [[IN]] to i32
+// AArch64: [[T10:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[T9]])
+// AArch64: [[T11:%.*]] = lshr i32 [[T10]], 16
+// AArch64: [[T12:%.*]] = shl i32 [[T10]], 16
+// AArch64: [[T13:%.*]] = or i32 [[T12]], [[T11]]
+// AArch64: [[T14:%.*]] = zext i32 [[T13]] to i64
+// AArch64: [[T15:%.*]] = or i64 [[T8]], [[T14]]
 long test_rev16l(long t) {
   return __rev16l(t);
 }
 
 // ARM-LABEL: test_rev16ll
-// ARM: llvm.bswap
-// ARM: lshr
-// ARM: shl
-// ARM: or
+// ARM: [[T1:%.*]] = lshr i64 [[IN:%.*]], 32
+// ARM: [[T2:%.*]] = trunc i64 [[T1]] to i32
+// ARM: [[T3:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[T2]])
+// ARM: [[T4:%.*]] = lshr i32 [[T3]], 16
+// ARM: [[T5:%.*]] = shl i32 [[T3]], 16
+// ARM: [[T6:%.*]] = or i32 [[T5]], [[T4]]
+// ARM: [[T7:%.*]] = zext i32 [[T6]] to i64
+// ARM: [[T8:%.*]] = shl nuw i64 [[T7]], 32
+// ARM: [[T9:%.*]] = trunc i64 [[IN]] to i32
+// ARM: [[T10:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[T9]])
+// ARM: [[T11:%.*]] = lshr i32 [[T10]], 16
+// ARM: [[T12:%.*]] = shl i32 [[T10]], 16
+// ARM: [[T13:%.*]] = or i32 [[T12]], [[T11]]
+// ARM: [[T14:%.*]] = zext i32 [[T13]] to i64
+// ARM: [[T15:%.*]] = or i64 [[T8]], [[T14]]
 uint64_t test_rev16ll(uint64_t t) {
   return __rev16ll(t);
 }
@@ -218,30 +245,29 @@ int16_t test_revsh(int16_t t) {
 }
 
 // ARM-LABEL: test_rbit
-// AArch32: call i32 @llvm.arm.rbit
-// AArch64: call i32 @llvm.aarch64.rbit.i32
+// AArch32: call i32 @llvm.bitreverse.i32
+// AArch64: call i32 @llvm.bitreverse.i32
 uint32_t test_rbit(uint32_t t) {
   return __rbit(t);
 }
 
 // ARM-LABEL: test_rbitl
-// AArch32: call i32 @llvm.arm.rbit
-// AArch64: call i64 @llvm.aarch64.rbit.i64
+// AArch32: call i32 @llvm.bitreverse.i32
+// AArch64: call i64 @llvm.bitreverse.i64
 long test_rbitl(long t) {
   return __rbitl(t);
 }
 
 // ARM-LABEL: test_rbitll
-// AArch32: call i32 @llvm.arm.rbit
-// AArch32: call i32 @llvm.arm.rbit
-// AArch64: call i64 @llvm.aarch64.rbit.i64
+// AArch32: call i32 @llvm.bitreverse.i32
+// AArch32: call i32 @llvm.bitreverse.i32
+// AArch64: call i64 @llvm.bitreverse.i64
 uint64_t test_rbitll(uint64_t t) {
   return __rbitll(t);
 }
 
 /* 9.4 Saturating intrinsics */
-#ifdef __ARM_32BIT_STATE
-
+#ifdef __ARM_FEATURE_SAT
 /* 9.4.1 Width-specified saturation intrinsics */
 // AArch32-LABEL: test_ssat
 // AArch32: call i32 @llvm.arm.ssat(i32 %t, i32 1)
@@ -251,11 +277,13 @@ int32_t test_ssat(int32_t t) {
 
 // AArch32-LABEL: test_usat
 // AArch32: call i32 @llvm.arm.usat(i32 %t, i32 2)
-int32_t test_usat(int32_t t) {
+uint32_t test_usat(int32_t t) {
   return __usat(t, 2);
 }
+#endif
 
 /* 9.4.2 Saturating addition and subtraction intrinsics */
+#ifdef __ARM_FEATURE_DSP
 // AArch32-LABEL: test_qadd
 // AArch32: call i32 @llvm.arm.qadd(i32 %a, i32 %b)
 int32_t test_qadd(int32_t a, int32_t b) {
@@ -275,6 +303,389 @@ extern int32_t f();
 // AArch32: call i32 @llvm.arm.qadd(i32 [[VAR]], i32 [[VAR]])
 int32_t test_qdbl() {
   return __qdbl(f());
+}
+#endif
+
+/*
+ * 9.3 16-bit multiplications
+ */
+#if __ARM_FEATURE_DSP
+// AArch32-LABEL: test_smulbb
+// AArch32: call i32 @llvm.arm.smulbb
+int32_t test_smulbb(int32_t a, int32_t b) {
+  return __smulbb(a, b);
+}
+// AArch32-LABEL: test_smulbt
+// AArch32: call i32 @llvm.arm.smulbt
+int32_t test_smulbt(int32_t a, int32_t b) {
+  return __smulbt(a, b);
+}
+// AArch32-LABEL: test_smultb
+// AArch32: call i32 @llvm.arm.smultb
+int32_t test_smultb(int32_t a, int32_t b) {
+  return __smultb(a, b);
+}
+// AArch32-LABEL: test_smultt
+// AArch32: call i32 @llvm.arm.smultt
+int32_t test_smultt(int32_t a, int32_t b) {
+  return __smultt(a, b);
+}
+// AArch32-LABEL: test_smulwb
+// AArch32: call i32 @llvm.arm.smulwb
+int32_t test_smulwb(int32_t a, int32_t b) {
+  return __smulwb(a, b);
+}
+// AArch32-LABEL: test_smulwt
+// AArch32: call i32 @llvm.arm.smulwt
+int32_t test_smulwt(int32_t a, int32_t b) {
+  return __smulwt(a, b);
+}
+#endif
+
+/* 9.4.3 Accumultating multiplications */
+#if __ARM_FEATURE_DSP
+// AArch32-LABEL: test_smlabb
+// AArch32: call i32 @llvm.arm.smlabb(i32 %a, i32 %b, i32 %c)
+int32_t test_smlabb(int32_t a, int32_t b, int32_t c) {
+  return __smlabb(a, b, c);
+}
+// AArch32-LABEL: test_smlabt
+// AArch32: call i32 @llvm.arm.smlabt(i32 %a, i32 %b, i32 %c)
+int32_t test_smlabt(int32_t a, int32_t b, int32_t c) {
+  return __smlabt(a, b, c);
+}
+// AArch32-LABEL: test_smlatb
+// AArch32: call i32 @llvm.arm.smlatb(i32 %a, i32 %b, i32 %c)
+int32_t test_smlatb(int32_t a, int32_t b, int32_t c) {
+  return __smlatb(a, b, c);
+}
+// AArch32-LABEL: test_smlatt
+// AArch32: call i32 @llvm.arm.smlatt(i32 %a, i32 %b, i32 %c)
+int32_t test_smlatt(int32_t a, int32_t b, int32_t c) {
+  return __smlatt(a, b, c);
+}
+// AArch32-LABEL: test_smlawb
+// AArch32: call i32 @llvm.arm.smlawb(i32 %a, i32 %b, i32 %c)
+int32_t test_smlawb(int32_t a, int32_t b, int32_t c) {
+  return __smlawb(a, b, c);
+}
+// AArch32-LABEL: test_smlawt
+// AArch32: call i32 @llvm.arm.smlawt(i32 %a, i32 %b, i32 %c)
+int32_t test_smlawt(int32_t a, int32_t b, int32_t c) {
+  return __smlawt(a, b, c);
+}
+#endif
+
+/* 9.5.4 Parallel 16-bit saturation */
+#if __ARM_FEATURE_SIMD32
+// AArch32-LABEL: test_ssat16
+// AArch32: call i32 @llvm.arm.ssat16
+int16x2_t test_ssat16(int16x2_t a) {
+  return __ssat16(a, 15);
+}
+// AArch32-LABEL: test_usat16
+// AArch32: call i32 @llvm.arm.usat16
+uint16x2_t test_usat16(int16x2_t a) {
+  return __usat16(a, 15);
+}
+#endif
+
+/* 9.5.5 Packing and unpacking */
+#if __ARM_FEATURE_SIMD32
+// AArch32-LABEL: test_sxtab16
+// AArch32: call i32 @llvm.arm.sxtab16
+int16x2_t test_sxtab16(int16x2_t a, int8x4_t b) {
+  return __sxtab16(a, b);
+}
+// AArch32-LABEL: test_sxtb16
+// AArch32: call i32 @llvm.arm.sxtb16
+int16x2_t test_sxtb16(int8x4_t a) {
+  return __sxtb16(a);
+}
+// AArch32-LABEL: test_uxtab16
+// AArch32: call i32 @llvm.arm.uxtab16
+int16x2_t test_uxtab16(int16x2_t a, int8x4_t b) {
+  return __uxtab16(a, b);
+}
+// AArch32-LABEL: test_uxtb16
+// AArch32: call i32 @llvm.arm.uxtb16
+int16x2_t test_uxtb16(int8x4_t a) {
+  return __uxtb16(a);
+}
+#endif
+
+/* 9.5.6 Parallel selection */
+#if __ARM_FEATURE_SIMD32
+// AArch32-LABEL: test_sel
+// AArch32: call i32 @llvm.arm.sel
+uint8x4_t test_sel(uint8x4_t a, uint8x4_t b) {
+  return __sel(a, b);
+}
+#endif
+
+/* 9.5.7 Parallel 8-bit addition and subtraction */
+#if __ARM_FEATURE_SIMD32
+// AArch32-LABEL: test_qadd8
+// AArch32: call i32 @llvm.arm.qadd8
+int16x2_t test_qadd8(int8x4_t a, int8x4_t b) {
+  return __qadd8(a, b);
+}
+// AArch32-LABEL: test_qsub8
+// AArch32: call i32 @llvm.arm.qsub8
+int8x4_t test_qsub8(int8x4_t a, int8x4_t b) {
+  return __qsub8(a, b);
+}
+// AArch32-LABEL: test_sadd8
+// AArch32: call i32 @llvm.arm.sadd8
+int8x4_t test_sadd8(int8x4_t a, int8x4_t b) {
+  return __sadd8(a, b);
+}
+// AArch32-LABEL: test_shadd8
+// AArch32: call i32 @llvm.arm.shadd8
+int8x4_t test_shadd8(int8x4_t a, int8x4_t b) {
+  return __shadd8(a, b);
+}
+// AArch32-LABEL: test_shsub8
+// AArch32: call i32 @llvm.arm.shsub8
+int8x4_t test_shsub8(int8x4_t a, int8x4_t b) {
+  return __shsub8(a, b);
+}
+// AArch32-LABEL: test_ssub8
+// AArch32: call i32 @llvm.arm.ssub8
+int8x4_t test_ssub8(int8x4_t a, int8x4_t b) {
+  return __ssub8(a, b);
+}
+// AArch32-LABEL: test_uadd8
+// AArch32: call i32 @llvm.arm.uadd8
+uint8x4_t test_uadd8(uint8x4_t a, uint8x4_t b) {
+  return __uadd8(a, b);
+}
+// AArch32-LABEL: test_uhadd8
+// AArch32: call i32 @llvm.arm.uhadd8
+uint8x4_t test_uhadd8(uint8x4_t a, uint8x4_t b) {
+  return __uhadd8(a, b);
+}
+// AArch32-LABEL: test_uhsub8
+// AArch32: call i32 @llvm.arm.uhsub8
+uint8x4_t test_uhsub8(uint8x4_t a, uint8x4_t b) {
+  return __uhsub8(a, b);
+}
+// AArch32-LABEL: test_uqadd8
+// AArch32: call i32 @llvm.arm.uqadd8
+uint8x4_t test_uqadd8(uint8x4_t a, uint8x4_t b) {
+  return __uqadd8(a, b);
+}
+// AArch32-LABEL: test_uqsub8
+// AArch32: call i32 @llvm.arm.uqsub8
+uint8x4_t test_uqsub8(uint8x4_t a, uint8x4_t b) {
+  return __uqsub8(a, b);
+}
+// AArch32-LABEL: test_usub8
+// AArch32: call i32 @llvm.arm.usub8
+uint8x4_t test_usub8(uint8x4_t a, uint8x4_t b) {
+  return __usub8(a, b);
+}
+#endif
+
+/* 9.5.8 Sum of 8-bit absolute differences */
+#if __ARM_FEATURE_SIMD32
+// AArch32-LABEL: test_usad8
+// AArch32: call i32 @llvm.arm.usad8
+uint32_t test_usad8(uint8x4_t a, uint8x4_t b) {
+  return __usad8(a, b);
+}
+// AArch32-LABEL: test_usada8
+// AArch32: call i32 @llvm.arm.usada8
+uint32_t test_usada8(uint8_t a, uint8_t b, uint8_t c) {
+  return __usada8(a, b, c);
+}
+#endif
+
+/* 9.5.9 Parallel 16-bit addition and subtraction */
+#if __ARM_FEATURE_SIMD32
+// AArch32-LABEL: test_qadd16
+// AArch32: call i32 @llvm.arm.qadd16
+int16x2_t test_qadd16(int16x2_t a, int16x2_t b) {
+  return __qadd16(a, b);
+}
+// AArch32-LABEL: test_qasx
+// AArch32: call i32 @llvm.arm.qasx
+int16x2_t test_qasx(int16x2_t a, int16x2_t b) {
+  return __qasx(a, b);
+}
+// AArch32-LABEL: test_qsax
+// AArch32: call i32 @llvm.arm.qsax
+int16x2_t test_qsax(int16x2_t a, int16x2_t b) {
+  return __qsax(a, b);
+}
+// AArch32-LABEL: test_qsub16
+// AArch32: call i32 @llvm.arm.qsub16
+int16x2_t test_qsub16(int16x2_t a, int16x2_t b) {
+  return __qsub16(a, b);
+}
+// AArch32-LABEL: test_sadd16
+// AArch32: call i32 @llvm.arm.sadd16
+int16x2_t test_sadd16(int16x2_t a, int16x2_t b) {
+  return __sadd16(a, b);
+}
+// AArch32-LABEL: test_sasx
+// AArch32: call i32 @llvm.arm.sasx
+int16x2_t test_sasx(int16x2_t a, int16x2_t b) {
+  return __sasx(a, b);
+}
+// AArch32-LABEL: test_shadd16
+// AArch32: call i32 @llvm.arm.shadd16
+int16x2_t test_shadd16(int16x2_t a, int16x2_t b) {
+  return __shadd16(a, b);
+}
+// AArch32-LABEL: test_shasx
+// AArch32: call i32 @llvm.arm.shasx
+int16x2_t test_shasx(int16x2_t a, int16x2_t b) {
+  return __shasx(a, b);
+}
+// AArch32-LABEL: test_shsax
+// AArch32: call i32 @llvm.arm.shsax
+int16x2_t test_shsax(int16x2_t a, int16x2_t b) {
+  return __shsax(a, b);
+}
+// AArch32-LABEL: test_shsub16
+// AArch32: call i32 @llvm.arm.shsub16
+int16x2_t test_shsub16(int16x2_t a, int16x2_t b) {
+  return __shsub16(a, b);
+}
+// AArch32-LABEL: test_ssax
+// AArch32: call i32 @llvm.arm.ssax
+int16x2_t test_ssax(int16x2_t a, int16x2_t b) {
+  return __ssax(a, b);
+}
+// AArch32-LABEL: test_ssub16
+// AArch32: call i32 @llvm.arm.ssub16
+int16x2_t test_ssub16(int16x2_t a, int16x2_t b) {
+  return __ssub16(a, b);
+}
+// AArch32-LABEL: test_uadd16
+// AArch32: call i32 @llvm.arm.uadd16
+uint16x2_t test_uadd16(uint16x2_t a, uint16x2_t b) {
+  return __uadd16(a, b);
+}
+// AArch32-LABEL: test_uasx
+// AArch32: call i32 @llvm.arm.uasx
+uint16x2_t test_uasx(uint16x2_t a, uint16x2_t b) {
+  return __uasx(a, b);
+}
+// AArch32-LABEL: test_uhadd16
+// AArch32: call i32 @llvm.arm.uhadd16
+uint16x2_t test_uhadd16(uint16x2_t a, uint16x2_t b) {
+  return __uhadd16(a, b);
+}
+// AArch32-LABEL: test_uhasx
+// AArch32: call i32 @llvm.arm.uhasx
+uint16x2_t test_uhasx(uint16x2_t a, uint16x2_t b) {
+  return __uhasx(a, b);
+}
+// AArch32-LABEL: test_uhsax
+// AArch32: call i32 @llvm.arm.uhsax
+uint16x2_t test_uhsax(uint16x2_t a, uint16x2_t b) {
+  return __uhsax(a, b);
+}
+// AArch32-LABEL: test_uhsub16
+// AArch32: call i32 @llvm.arm.uhsub16
+uint16x2_t test_uhsub16(uint16x2_t a, uint16x2_t b) {
+  return __uhsub16(a, b);
+}
+// AArch32-LABEL: test_uqadd16
+// AArch32: call i32 @llvm.arm.uqadd16
+uint16x2_t test_uqadd16(uint16x2_t a, uint16x2_t b) {
+  return __uqadd16(a, b);
+}
+// AArch32-LABEL: test_uqasx
+// AArch32: call i32 @llvm.arm.uqasx
+uint16x2_t test_uqasx(uint16x2_t a, uint16x2_t b) {
+  return __uqasx(a, b);
+}
+// AArch32-LABEL: test_uqsax
+// AArch32: call i32 @llvm.arm.uqsax
+uint16x2_t test_uqsax(uint16x2_t a, uint16x2_t b) {
+  return __uqsax(a, b);
+}
+// AArch32-LABEL: test_uqsub16
+// AArch32: call i32 @llvm.arm.uqsub16
+uint16x2_t test_uqsub16(uint16x2_t a, uint16x2_t b) {
+  return __uqsub16(a, b);
+}
+// AArch32-LABEL: test_usax
+// AArch32: call i32 @llvm.arm.usax
+uint16x2_t test_usax(uint16x2_t a, uint16x2_t b) {
+  return __usax(a, b);
+}
+// AArch32-LABEL: test_usub16
+// AArch32: call i32 @llvm.arm.usub16
+uint16x2_t test_usub16(uint16x2_t a, uint16x2_t b) {
+  return __usub16(a, b);
+}
+#endif
+
+/* 9.5.10 Parallel 16-bit multiplications */
+#if __ARM_FEATURE_SIMD32
+// AArch32-LABEL: test_smlad
+// AArch32: call i32 @llvm.arm.smlad
+int32_t test_smlad(int16x2_t a, int16x2_t b, int32_t c) {
+  return __smlad(a, b, c);
+}
+// AArch32-LABEL: test_smladx
+// AArch32: call i32 @llvm.arm.smladx
+int32_t test_smladx(int16x2_t a, int16x2_t b, int32_t c) {
+  return __smladx(a, b, c);
+}
+// AArch32-LABEL: test_smlald
+// AArch32: call i64 @llvm.arm.smlald
+int64_t test_smlald(int16x2_t a, int16x2_t b, int64_t c) {
+  return __smlald(a, b, c);
+}
+// AArch32-LABEL: test_smlaldx
+// AArch32: call i64 @llvm.arm.smlaldx
+int64_t test_smlaldx(int16x2_t a, int16x2_t b, int64_t c) {
+  return __smlaldx(a, b, c);
+}
+// AArch32-LABEL: test_smlsd
+// AArch32: call i32 @llvm.arm.smlsd
+int32_t test_smlsd(int16x2_t a, int16x2_t b, int32_t c) {
+  return __smlsd(a, b, c);
+}
+// AArch32-LABEL: test_smlsdx
+// AArch32: call i32 @llvm.arm.smlsdx
+int32_t test_smlsdx(int16x2_t a, int16x2_t b, int32_t c) {
+  return __smlsdx(a, b, c);
+}
+// AArch32-LABEL: test_smlsld
+// AArch32: call i64 @llvm.arm.smlsld
+int64_t test_smlsld(int16x2_t a, int16x2_t b, int64_t c) {
+  return __smlsld(a, b, c);
+}
+// AArch32-LABEL: test_smlsldx
+// AArch32: call i64 @llvm.arm.smlsldx
+int64_t test_smlsldx(int16x2_t a, int16x2_t b, int64_t c) {
+  return __smlsldx(a, b, c);
+}
+// AArch32-LABEL: test_smuad
+// AArch32: call i32 @llvm.arm.smuad
+int32_t test_smuad(int16x2_t a, int16x2_t b) {
+  return __smuad(a, b);
+}
+// AArch32-LABEL: test_smuadx
+// AArch32: call i32 @llvm.arm.smuadx
+int32_t test_smuadx(int16x2_t a, int16x2_t b) {
+  return __smuadx(a, b);
+}
+// AArch32-LABEL: test_smusd
+// AArch32: call i32 @llvm.arm.smusd
+int32_t test_smusd(int16x2_t a, int16x2_t b) {
+  return __smusd(a, b);
+}
+// AArch32-LABEL: test_smusdx
+// AArch32: call i32 @llvm.arm.smusdx
+int32_t test_smusdx(int16x2_t a, int16x2_t b) {
+  return __smusdx(a, b);
 }
 #endif
 

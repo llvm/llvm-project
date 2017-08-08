@@ -26,21 +26,21 @@ for.body:                                         ; preds = %entry, %for.body
   %idxprom = sext i32 %sub to i64
   %half = bitcast %union.vector_t* %vb to [8 x i16]*
   %arrayidx = getelementptr inbounds [8 x i16], [8 x i16]* %half, i64 0, i64 %idxprom
-  %tmp4 = load i16, i16* %arrayidx, align 2, !tbaa !0
+  %tmp4 = load i16, i16* %arrayidx, align 2, !tbaa !10
   %conv = zext i16 %tmp4 to i32
   %and = and i32 %conv, 15
   %sub6 = sub nsw i32 7, %i.01
   %idxprom7 = sext i32 %sub6 to i64
   %half9 = bitcast %union.vector_t* %va to [8 x i16]*
   %arrayidx10 = getelementptr inbounds [8 x i16], [8 x i16]* %half9, i64 0, i64 %idxprom7
-  %tmp11 = load i16, i16* %arrayidx10, align 2, !tbaa !0
+  %tmp11 = load i16, i16* %arrayidx10, align 2, !tbaa !10
   %conv12 = zext i16 %tmp11 to i32
   %shl = shl i32 %conv12, %and
   %sub15 = sub nsw i32 7, %i.01
   %idxprom16 = sext i32 %sub15 to i64
   %half18 = bitcast %union.vector_t* %va to [8 x i16]*
   %arrayidx19 = getelementptr inbounds [8 x i16], [8 x i16]* %half18, i64 0, i64 %idxprom16
-  %tmp20 = load i16, i16* %arrayidx19, align 2, !tbaa !0
+  %tmp20 = load i16, i16* %arrayidx19, align 2, !tbaa !10
   %conv21 = zext i16 %tmp20 to i32
   %sub23 = sub nsw i32 16, %and
   %shr = lshr i32 %conv21, %sub23
@@ -50,20 +50,20 @@ for.body:                                         ; preds = %entry, %for.body
   %idxprom27 = sext i32 %sub26 to i64
   %half28 = bitcast %union.vector_t* %t to [8 x i16]*
   %arrayidx29 = getelementptr inbounds [8 x i16], [8 x i16]* %half28, i64 0, i64 %idxprom27
-  store i16 %conv24, i16* %arrayidx29, align 2, !tbaa !0
+  store i16 %conv24, i16* %arrayidx29, align 2, !tbaa !10
   %inc = add nsw i32 %i.01, 1
   %cmp = icmp slt i32 %inc, 8
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body
   %arrayidx31 = getelementptr inbounds %union.vector_t, %union.vector_t* %t, i64 0, i32 0, i64 1
-  %tmp32 = load i64, i64* %arrayidx31, align 8, !tbaa !3
+  %tmp32 = load i64, i64* %arrayidx31, align 8, !tbaa !10
   %arrayidx35 = getelementptr inbounds %union.vector_t, %union.vector_t* %vd, i64 0, i32 0, i64 1
-  store i64 %tmp32, i64* %arrayidx35, align 8, !tbaa !3
+  store i64 %tmp32, i64* %arrayidx35, align 8, !tbaa !10
   %arrayidx37 = getelementptr inbounds %union.vector_t, %union.vector_t* %t, i64 0, i32 0, i64 0
-  %tmp38 = load i64, i64* %arrayidx37, align 8, !tbaa !3
+  %tmp38 = load i64, i64* %arrayidx37, align 8, !tbaa !10
   %arrayidx41 = getelementptr inbounds %union.vector_t, %union.vector_t* %vd, i64 0, i32 0, i64 0
-  store i64 %tmp38, i64* %arrayidx41, align 8, !tbaa !3
+  store i64 %tmp38, i64* %arrayidx41, align 8, !tbaa !10
   ret void
 }
 
@@ -124,10 +124,10 @@ for.end:                                          ; preds = %for.body
 }
 
 ; CHECK: [[TAG]] = !{[[TYPE_LL:!.*]], [[TYPE_LL]], i64 0}
-; CHECK: [[TYPE_LL]] = !{!"long long", {{!.*}}}
+; CHECK: [[TYPE_LL]] = !{!"omnipotent char", {{!.*}}}
 !0 = !{!6, !6, i64 0}
 !1 = !{!"omnipotent char", !2}
-!2 = !{!"Simple C/C++ TBAA", null}
+!2 = !{!"Simple C/C++ TBAA"}
 !3 = !{!7, !7, i64 0}
 !4 = !{!8, !8, i64 0}
 !5 = !{!9, !9, i64 0}
@@ -135,3 +135,4 @@ for.end:                                          ; preds = %for.body
 !7 = !{!"long long", !1}
 !8 = !{!"int", !1}
 !9 = !{!"float", !1}
+!10 = !{!1, !1, i64 0}

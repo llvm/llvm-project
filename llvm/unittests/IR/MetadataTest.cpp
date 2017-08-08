@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/Metadata.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -14,7 +15,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/Type.h"
@@ -80,26 +80,30 @@ protected:
 
   MDTuple *getTuple() { return MDTuple::getDistinct(Context, None); }
   DISubroutineType *getSubroutineType() {
-    return DISubroutineType::getDistinct(Context, 0, getNode(nullptr));
+    return DISubroutineType::getDistinct(Context, DINode::FlagZero, 0,
+                                         getNode(nullptr));
   }
   DISubprogram *getSubprogram() {
     return DISubprogram::getDistinct(Context, nullptr, "", "", nullptr, 0,
                                      nullptr, false, false, 0, nullptr, 0, 0, 0,
-                                     0);
+                                     DINode::FlagZero, false, nullptr);
   }
-  DIScopeRef getSubprogramRef() { return getSubprogram()->getRef(); }
   DIFile *getFile() {
     return DIFile::getDistinct(Context, "file.c", "/path/to/dir");
   }
-  DITypeRef getBasicType(StringRef Name) {
-    return DIBasicType::get(Context, dwarf::DW_TAG_unspecified_type, Name)
-        ->getRef();
+  DICompileUnit *getUnit() {
+    return DICompileUnit::getDistinct(Context, 1, getFile(), "clang", false,
+                                      "-g", 2, "", DICompileUnit::FullDebug,
+                                      getTuple(), getTuple(), getTuple(),
+                                      getTuple(), getTuple(), 0, true, false);
   }
-  DITypeRef getDerivedType() {
-    return DIDerivedType::getDistinct(Context, dwarf::DW_TAG_pointer_type, "",
-                                      nullptr, 0, nullptr,
-                                      getBasicType("basictype"), 1, 2, 0, 0)
-        ->getRef();
+  DIType *getBasicType(StringRef Name) {
+    return DIBasicType::get(Context, dwarf::DW_TAG_unspecified_type, Name);
+  }
+  DIType *getDerivedType() {
+    return DIDerivedType::getDistinct(
+        Context, dwarf::DW_TAG_pointer_type, "", nullptr, 0, nullptr,
+        getBasicType("basictype"), 1, 2, 0, None, DINode::FlagZero);
   }
   Constant *getConstant() {
     return ConstantInt::get(Type::getInt32Ty(Context), Counter++);
@@ -107,11 +111,10 @@ protected:
   ConstantAsMetadata *getConstantAsMetadata() {
     return ConstantAsMetadata::get(getConstant());
   }
-  DITypeRef getCompositeType() {
+  DIType *getCompositeType() {
     return DICompositeType::getDistinct(
-               Context, dwarf::DW_TAG_structure_type, "", nullptr, 0, nullptr,
-               nullptr, 32, 32, 0, 0, nullptr, 0, nullptr, nullptr, "")
-        ->getRef();
+        Context, dwarf::DW_TAG_structure_type, "", nullptr, 0, nullptr, nullptr,
+        32, 32, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr, "");
   }
   Function *getFunction(StringRef Name) {
     return cast<Function>(M.getOrInsertFunction(
@@ -174,8 +177,8 @@ TEST_F(MDNodeTest, Simple) {
 
   MDString *s1 = MDString::get(Context, StringRef(&x[0], 3));
   MDString *s2 = MDString::get(Context, StringRef(&y[0], 3));
-  ConstantAsMetadata *CI = ConstantAsMetadata::get(
-      ConstantInt::get(getGlobalContext(), APInt(8, 0)));
+  ConstantAsMetadata *CI =
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
 
   std::vector<Metadata *> V;
   V.push_back(s1);
@@ -206,8 +209,8 @@ TEST_F(MDNodeTest, Simple) {
 }
 
 TEST_F(MDNodeTest, Delete) {
-  Constant *C = ConstantInt::get(Type::getInt32Ty(getGlobalContext()), 1);
-  Instruction *I = new BitCastInst(C, Type::getInt32Ty(getGlobalContext()));
+  Constant *C = ConstantInt::get(Type::getInt32Ty(Context), 1);
+  Instruction *I = new BitCastInst(C, Type::getInt32Ty(Context));
 
   Metadata *const V = LocalAsMetadata::get(I);
   MDNode *n = MDNode::get(Context, V);
@@ -215,7 +218,7 @@ TEST_F(MDNodeTest, Delete) {
 
   EXPECT_EQ(n, wvh);
 
-  delete I;
+  I->deleteValue();
 }
 
 TEST_F(MDNodeTest, SelfReference) {
@@ -447,6 +450,40 @@ TEST_F(MDNodeTest, DistinctOnUniquingCollision) {
   EXPECT_FALSE(Wrapped1->isDistinct());
 }
 
+TEST_F(MDNodeTest, UniquedOnDeletedOperand) {
+  // temp !{}
+  TempMDTuple T = MDTuple::getTemporary(Context, None);
+
+  // !{temp !{}}
+  Metadata *Ops[] = {T.get()};
+  MDTuple *N = MDTuple::get(Context, Ops);
+
+  // !{temp !{}} => !{null}
+  T.reset();
+  ASSERT_TRUE(N->isUniqued());
+  Metadata *NullOps[] = {nullptr};
+  ASSERT_EQ(N, MDTuple::get(Context, NullOps));
+}
+
+TEST_F(MDNodeTest, DistinctOnDeletedValueOperand) {
+  // i1* @GV
+  Type *Ty = Type::getInt1PtrTy(Context);
+  std::unique_ptr<GlobalVariable> GV(
+      new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
+  ConstantAsMetadata *Op = ConstantAsMetadata::get(GV.get());
+
+  // !{i1* @GV}
+  Metadata *Ops[] = {Op};
+  MDTuple *N = MDTuple::get(Context, Ops);
+
+  // !{i1* @GV} => !{null}
+  GV.reset();
+  ASSERT_TRUE(N->isDistinct());
+  ASSERT_EQ(nullptr, N->getOperand(0));
+  Metadata *NullOps[] = {nullptr};
+  ASSERT_NE(N, MDTuple::get(Context, NullOps));
+}
+
 TEST_F(MDNodeTest, getDistinct) {
   // !{}
   MDNode *Empty = MDNode::get(Context, None);
@@ -667,7 +704,7 @@ TEST_F(MDNodeTest, replaceWithUniquedResolvingOperand) {
   EXPECT_TRUE(N->isResolved());
 }
 
-TEST_F(MDNodeTest, replaceWithUniquedChangingOperand) {
+TEST_F(MDNodeTest, replaceWithUniquedDeletedOperand) {
   // i1* @GV
   Type *Ty = Type::getInt1PtrTy(Context);
   std::unique_ptr<GlobalVariable> GV(
@@ -684,8 +721,33 @@ TEST_F(MDNodeTest, replaceWithUniquedChangingOperand) {
 
   // !{i1* @GV} => !{null}
   GV.reset();
-  ASSERT_TRUE(N->isUniqued());
+  ASSERT_TRUE(N->isDistinct());
+  ASSERT_EQ(nullptr, N->getOperand(0));
   Metadata *NullOps[] = {nullptr};
+  ASSERT_NE(N, MDTuple::get(Context, NullOps));
+}
+
+TEST_F(MDNodeTest, replaceWithUniquedChangedOperand) {
+  // i1* @GV
+  Type *Ty = Type::getInt1PtrTy(Context);
+  std::unique_ptr<GlobalVariable> GV(
+      new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
+  ConstantAsMetadata *Op = ConstantAsMetadata::get(GV.get());
+
+  // temp !{i1* @GV}
+  Metadata *Ops[] = {Op};
+  MDTuple *N = MDTuple::getTemporary(Context, Ops).release();
+
+  // temp !{i1* @GV} => !{i1* @GV}
+  ASSERT_EQ(N, MDNode::replaceWithUniqued(TempMDTuple(N)));
+  ASSERT_TRUE(N->isUniqued());
+
+  // !{i1* @GV} => !{i1* @GV2}
+  std::unique_ptr<GlobalVariable> GV2(
+      new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
+  GV->replaceAllUsesWith(GV2.get());
+  ASSERT_TRUE(N->isUniqued());
+  Metadata *NullOps[] = {ConstantAsMetadata::get(GV2.get())};
   ASSERT_EQ(N, MDTuple::get(Context, NullOps));
 }
 
@@ -813,6 +875,14 @@ TEST_F(DILocationTest, getTemporary) {
   EXPECT_FALSE(L->isResolved());
 }
 
+TEST_F(DILocationTest, cloneTemporary) {
+  MDNode *N = MDNode::get(Context, None);
+  auto L = DILocation::getTemporary(Context, 2, 7, N);
+  EXPECT_TRUE(L->isTemporary());
+  auto L2 = L->clone();
+  EXPECT_TRUE(L2->isTemporary());
+}
+
 typedef MetadataTest GenericDINodeTest;
 
 TEST_F(GenericDINodeTest, get) {
@@ -927,9 +997,9 @@ TEST_F(DIBasicTypeTest, get) {
 
 TEST_F(DIBasicTypeTest, getWithLargeValues) {
   auto *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special",
-                             UINT64_MAX, UINT64_MAX - 1, 7);
+                             UINT64_MAX, UINT32_MAX - 1, 7);
   EXPECT_EQ(UINT64_MAX, N->getSizeInBits());
-  EXPECT_EQ(UINT64_MAX - 1, N->getAlignInBits());
+  EXPECT_EQ(UINT32_MAX - 1, N->getAlignInBits());
 }
 
 TEST_F(DIBasicTypeTest, getUnspecified) {
@@ -959,31 +1029,38 @@ TEST_F(DITypeTest, setFlags) {
   Metadata *TypesOps[] = {nullptr};
   Metadata *Types = MDTuple::get(Context, TypesOps);
 
-  DIType *D = DISubroutineType::getDistinct(Context, 0u, Types);
-  EXPECT_EQ(0u, D->getFlags());
+  DIType *D =
+      DISubroutineType::getDistinct(Context, DINode::FlagZero, 0, Types);
+  EXPECT_EQ(DINode::FlagZero, D->getFlags());
   D->setFlags(DINode::FlagRValueReference);
   EXPECT_EQ(DINode::FlagRValueReference, D->getFlags());
-  D->setFlags(0u);
-  EXPECT_EQ(0u, D->getFlags());
+  D->setFlags(DINode::FlagZero);
+  EXPECT_EQ(DINode::FlagZero, D->getFlags());
 
-  TempDIType T = DISubroutineType::getTemporary(Context, 0u, Types);
-  EXPECT_EQ(0u, T->getFlags());
+  TempDIType T =
+      DISubroutineType::getTemporary(Context, DINode::FlagZero, 0, Types);
+  EXPECT_EQ(DINode::FlagZero, T->getFlags());
   T->setFlags(DINode::FlagRValueReference);
   EXPECT_EQ(DINode::FlagRValueReference, T->getFlags());
-  T->setFlags(0u);
-  EXPECT_EQ(0u, T->getFlags());
+  T->setFlags(DINode::FlagZero);
+  EXPECT_EQ(DINode::FlagZero, T->getFlags());
 }
 
 typedef MetadataTest DIDerivedTypeTest;
 
 TEST_F(DIDerivedTypeTest, get) {
   DIFile *File = getFile();
-  DIScopeRef Scope = getSubprogramRef();
-  DITypeRef BaseType = getBasicType("basic");
+  DIScope *Scope = getSubprogram();
+  DIType *BaseType = getBasicType("basic");
   MDTuple *ExtraData = getTuple();
+  unsigned DWARFAddressSpace = 8;
+  DINode::DIFlags Flags5 = static_cast<DINode::DIFlags>(5);
+  DINode::DIFlags Flags4 = static_cast<DINode::DIFlags>(4);
 
-  auto *N = DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type, "something",
-                               File, 1, Scope, BaseType, 2, 3, 4, 5, ExtraData);
+  auto *N =
+      DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type, "something", File,
+                         1, Scope, BaseType, 2, 3, 4, DWARFAddressSpace, Flags5,
+                         ExtraData);
   EXPECT_EQ(dwarf::DW_TAG_pointer_type, N->getTag());
   EXPECT_EQ("something", N->getName());
   EXPECT_EQ(File, N->getFile());
@@ -993,45 +1070,51 @@ TEST_F(DIDerivedTypeTest, get) {
   EXPECT_EQ(2u, N->getSizeInBits());
   EXPECT_EQ(3u, N->getAlignInBits());
   EXPECT_EQ(4u, N->getOffsetInBits());
+  EXPECT_EQ(DWARFAddressSpace, N->getDWARFAddressSpace().getValue());
   EXPECT_EQ(5u, N->getFlags());
   EXPECT_EQ(ExtraData, N->getExtraData());
   EXPECT_EQ(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, 5, ExtraData));
+                                  4, DWARFAddressSpace, Flags5, ExtraData));
 
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_reference_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, 5, ExtraData));
+                                  4, DWARFAddressSpace, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type, "else",
-                                  File, 1, Scope, BaseType, 2, 3, 4, 5,
-                                  ExtraData));
+                                  File, 1, Scope, BaseType, 2, 3,
+                                  4, DWARFAddressSpace, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", getFile(), 1, Scope, BaseType, 2,
-                                  3, 4, 5, ExtraData));
+                                  3, 4, DWARFAddressSpace, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 2, Scope, BaseType, 2, 3,
-                                  4, 5, ExtraData));
+                                  4, DWARFAddressSpace, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
-                                  "something", File, 1, getSubprogramRef(),
-                                  BaseType, 2, 3, 4, 5, ExtraData));
+                                  "something", File, 1, getSubprogram(),
+                                  BaseType, 2, 3, 4, DWARFAddressSpace, Flags5,
+                                  ExtraData));
   EXPECT_NE(N, DIDerivedType::get(
                    Context, dwarf::DW_TAG_pointer_type, "something", File, 1,
-                   Scope, getBasicType("basic2"), 2, 3, 4, 5, ExtraData));
+                   Scope, getBasicType("basic2"), 2, 3, 4, DWARFAddressSpace,
+                   Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 3, 3,
-                                  4, 5, ExtraData));
+                                  4, DWARFAddressSpace, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 2,
-                                  4, 5, ExtraData));
+                                  4, DWARFAddressSpace, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  5, 5, ExtraData));
+                                  5, DWARFAddressSpace, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, 4, ExtraData));
+                                  4, DWARFAddressSpace + 1, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, 5, getTuple()));
+                                  4, DWARFAddressSpace, Flags4, ExtraData));
+  EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
+                                  "something", File, 1, Scope, BaseType, 2, 3,
+                                  4, DWARFAddressSpace, Flags5, getTuple()));
 
   TempDIDerivedType Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
@@ -1039,16 +1122,19 @@ TEST_F(DIDerivedTypeTest, get) {
 
 TEST_F(DIDerivedTypeTest, getWithLargeValues) {
   DIFile *File = getFile();
-  DIScopeRef Scope = getSubprogramRef();
-  DITypeRef BaseType = getBasicType("basic");
+  DIScope *Scope = getSubprogram();
+  DIType *BaseType = getBasicType("basic");
   MDTuple *ExtraData = getTuple();
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(5);
 
-  auto *N = DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type, "something",
-                               File, 1, Scope, BaseType, UINT64_MAX,
-                               UINT64_MAX - 1, UINT64_MAX - 2, 5, ExtraData);
+  auto *N = DIDerivedType::get(
+      Context, dwarf::DW_TAG_pointer_type, "something", File, 1, Scope,
+      BaseType, UINT64_MAX, UINT32_MAX - 1, UINT64_MAX - 2, UINT32_MAX - 3,
+      Flags, ExtraData);
   EXPECT_EQ(UINT64_MAX, N->getSizeInBits());
-  EXPECT_EQ(UINT64_MAX - 1, N->getAlignInBits());
+  EXPECT_EQ(UINT32_MAX - 1, N->getAlignInBits());
   EXPECT_EQ(UINT64_MAX - 2, N->getOffsetInBits());
+  EXPECT_EQ(UINT32_MAX - 3, N->getDWARFAddressSpace().getValue());
 }
 
 typedef MetadataTest DICompositeTypeTest;
@@ -1058,15 +1144,15 @@ TEST_F(DICompositeTypeTest, get) {
   StringRef Name = "some name";
   DIFile *File = getFile();
   unsigned Line = 1;
-  DIScopeRef Scope = getSubprogramRef();
-  DITypeRef BaseType = getCompositeType();
+  DIScope *Scope = getSubprogram();
+  DIType *BaseType = getCompositeType();
   uint64_t SizeInBits = 2;
-  uint64_t AlignInBits = 3;
+  uint32_t AlignInBits = 3;
   uint64_t OffsetInBits = 4;
-  unsigned Flags = 5;
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(5);
   MDTuple *Elements = getTuple();
   unsigned RuntimeLang = 6;
-  DITypeRef VTableHolder = getCompositeType();
+  DIType *VTableHolder = getCompositeType();
   MDTuple *TemplateParams = getTuple();
   StringRef Identifier = "some id";
 
@@ -1112,7 +1198,7 @@ TEST_F(DICompositeTypeTest, get) {
                                     OffsetInBits, Flags, Elements, RuntimeLang,
                                     VTableHolder, TemplateParams, Identifier));
   EXPECT_NE(N, DICompositeType::get(
-                   Context, Tag, Name, File, Line, getSubprogramRef(), BaseType,
+                   Context, Tag, Name, File, Line, getSubprogram(), BaseType,
                    SizeInBits, AlignInBits, OffsetInBits, Flags, Elements,
                    RuntimeLang, VTableHolder, TemplateParams, Identifier));
   EXPECT_NE(N, DICompositeType::get(
@@ -1131,9 +1217,10 @@ TEST_F(DICompositeTypeTest, get) {
                    Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                    AlignInBits, OffsetInBits + 1, Flags, Elements, RuntimeLang,
                    VTableHolder, TemplateParams, Identifier));
+  DINode::DIFlags FlagsPOne = static_cast<DINode::DIFlags>(Flags + 1);
   EXPECT_NE(N, DICompositeType::get(
                    Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                   AlignInBits, OffsetInBits, Flags + 1, Elements, RuntimeLang,
+                   AlignInBits, OffsetInBits, FlagsPOne, Elements, RuntimeLang,
                    VTableHolder, TemplateParams, Identifier));
   EXPECT_NE(N, DICompositeType::get(
                    Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
@@ -1177,15 +1264,15 @@ TEST_F(DICompositeTypeTest, getWithLargeValues) {
   StringRef Name = "some name";
   DIFile *File = getFile();
   unsigned Line = 1;
-  DIScopeRef Scope = getSubprogramRef();
-  DITypeRef BaseType = getCompositeType();
+  DIScope *Scope = getSubprogram();
+  DIType *BaseType = getCompositeType();
   uint64_t SizeInBits = UINT64_MAX;
-  uint64_t AlignInBits = UINT64_MAX - 1;
+  uint32_t AlignInBits = UINT32_MAX - 1;
   uint64_t OffsetInBits = UINT64_MAX - 2;
-  unsigned Flags = 5;
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(5);
   MDTuple *Elements = getTuple();
   unsigned RuntimeLang = 6;
-  DITypeRef VTableHolder = getCompositeType();
+  DIType *VTableHolder = getCompositeType();
   MDTuple *TemplateParams = getTuple();
   StringRef Identifier = "some id";
 
@@ -1203,12 +1290,12 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
   StringRef Name = "some name";
   DIFile *File = getFile();
   unsigned Line = 1;
-  DIScopeRef Scope = getSubprogramRef();
-  DITypeRef BaseType = getCompositeType();
+  DIScope *Scope = getSubprogram();
+  DIType *BaseType = getCompositeType();
   uint64_t SizeInBits = 2;
-  uint64_t AlignInBits = 3;
+  uint32_t AlignInBits = 3;
   uint64_t OffsetInBits = 4;
-  unsigned Flags = 5;
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(5);
   unsigned RuntimeLang = 6;
   StringRef Identifier = "some id";
 
@@ -1223,7 +1310,7 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
   N->replaceElements(nullptr);
   EXPECT_EQ(nullptr, N->getElements().get());
 
-  DITypeRef VTableHolder = getCompositeType();
+  DIType *VTableHolder = getCompositeType();
   EXPECT_EQ(nullptr, N->getVTableHolder());
   N->replaceVTableHolder(VTableHolder);
   EXPECT_EQ(VTableHolder, N->getVTableHolder());
@@ -1241,17 +1328,33 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
 typedef MetadataTest DISubroutineTypeTest;
 
 TEST_F(DISubroutineTypeTest, get) {
-  unsigned Flags = 1;
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(1);
+  DINode::DIFlags FlagsPOne = static_cast<DINode::DIFlags>(Flags + 1);
   MDTuple *TypeArray = getTuple();
 
-  auto *N = DISubroutineType::get(Context, Flags, TypeArray);
+  auto *N = DISubroutineType::get(Context, Flags, 0, TypeArray);
   EXPECT_EQ(dwarf::DW_TAG_subroutine_type, N->getTag());
   EXPECT_EQ(Flags, N->getFlags());
   EXPECT_EQ(TypeArray, N->getTypeArray().get());
-  EXPECT_EQ(N, DISubroutineType::get(Context, Flags, TypeArray));
+  EXPECT_EQ(N, DISubroutineType::get(Context, Flags, 0, TypeArray));
 
-  EXPECT_NE(N, DISubroutineType::get(Context, Flags + 1, TypeArray));
-  EXPECT_NE(N, DISubroutineType::get(Context, Flags, getTuple()));
+  EXPECT_NE(N, DISubroutineType::get(Context, FlagsPOne, 0, TypeArray));
+  EXPECT_NE(N, DISubroutineType::get(Context, Flags, 0, getTuple()));
+
+  // Test the hashing of calling conventions.
+  auto *Fast = DISubroutineType::get(
+      Context, Flags, dwarf::DW_CC_BORLAND_msfastcall, TypeArray);
+  auto *Std = DISubroutineType::get(Context, Flags,
+                                    dwarf::DW_CC_BORLAND_stdcall, TypeArray);
+  EXPECT_EQ(Fast,
+            DISubroutineType::get(Context, Flags,
+                                  dwarf::DW_CC_BORLAND_msfastcall, TypeArray));
+  EXPECT_EQ(Std, DISubroutineType::get(
+                     Context, Flags, dwarf::DW_CC_BORLAND_stdcall, TypeArray));
+
+  EXPECT_NE(N, Fast);
+  EXPECT_NE(N, Std);
+  EXPECT_NE(Fast, Std);
 
   TempDISubroutineType Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
@@ -1267,15 +1370,21 @@ typedef MetadataTest DIFileTest;
 TEST_F(DIFileTest, get) {
   StringRef Filename = "file";
   StringRef Directory = "dir";
-  auto *N = DIFile::get(Context, Filename, Directory);
+  DIFile::ChecksumKind CSKind = DIFile::CSK_MD5;
+  StringRef Checksum = "000102030405060708090a0b0c0d0e0f";
+  auto *N = DIFile::get(Context, Filename, Directory, CSKind, Checksum);
 
   EXPECT_EQ(dwarf::DW_TAG_file_type, N->getTag());
   EXPECT_EQ(Filename, N->getFilename());
   EXPECT_EQ(Directory, N->getDirectory());
-  EXPECT_EQ(N, DIFile::get(Context, Filename, Directory));
+  EXPECT_EQ(CSKind, N->getChecksumKind());
+  EXPECT_EQ(Checksum, N->getChecksum());
+  EXPECT_EQ(N, DIFile::get(Context, Filename, Directory, CSKind, Checksum));
 
-  EXPECT_NE(N, DIFile::get(Context, "other", Directory));
-  EXPECT_NE(N, DIFile::get(Context, Filename, "other"));
+  EXPECT_NE(N, DIFile::get(Context, "other", Directory, CSKind, Checksum));
+  EXPECT_NE(N, DIFile::get(Context, Filename, "other", CSKind, Checksum));
+  EXPECT_NE(N, DIFile::get(Context, Filename, Directory, DIFile::CSK_SHA1, Checksum));
+  EXPECT_NE(N, DIFile::get(Context, Filename, Directory));
 
   TempDIFile Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
@@ -1297,17 +1406,18 @@ TEST_F(DICompileUnitTest, get) {
   StringRef Flags = "flag after flag";
   unsigned RuntimeVersion = 2;
   StringRef SplitDebugFilename = "another/file";
-  unsigned EmissionKind = 3;
+  auto EmissionKind = DICompileUnit::FullDebug;
   MDTuple *EnumTypes = getTuple();
   MDTuple *RetainedTypes = getTuple();
-  MDTuple *Subprograms = getTuple();
   MDTuple *GlobalVariables = getTuple();
   MDTuple *ImportedEntities = getTuple();
   uint64_t DWOId = 0x10000000c0ffee;
+  MDTuple *Macros = getTuple();
   auto *N = DICompileUnit::getDistinct(
       Context, SourceLanguage, File, Producer, IsOptimized, Flags,
       RuntimeVersion, SplitDebugFilename, EmissionKind, EnumTypes,
-      RetainedTypes, Subprograms, GlobalVariables, ImportedEntities, DWOId);
+      RetainedTypes, GlobalVariables, ImportedEntities, Macros, DWOId, true,
+      false);
 
   EXPECT_EQ(dwarf::DW_TAG_compile_unit, N->getTag());
   EXPECT_EQ(SourceLanguage, N->getSourceLanguage());
@@ -1320,9 +1430,9 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(EmissionKind, N->getEmissionKind());
   EXPECT_EQ(EnumTypes, N->getEnumTypes().get());
   EXPECT_EQ(RetainedTypes, N->getRetainedTypes().get());
-  EXPECT_EQ(Subprograms, N->getSubprograms().get());
   EXPECT_EQ(GlobalVariables, N->getGlobalVariables().get());
   EXPECT_EQ(ImportedEntities, N->getImportedEntities().get());
+  EXPECT_EQ(Macros, N->getMacros().get());
   EXPECT_EQ(DWOId, N->getDWOId());
 
   TempDICompileUnit Temp = N->clone();
@@ -1337,9 +1447,9 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(EmissionKind, Temp->getEmissionKind());
   EXPECT_EQ(EnumTypes, Temp->getEnumTypes().get());
   EXPECT_EQ(RetainedTypes, Temp->getRetainedTypes().get());
-  EXPECT_EQ(Subprograms, Temp->getSubprograms().get());
   EXPECT_EQ(GlobalVariables, Temp->getGlobalVariables().get());
   EXPECT_EQ(ImportedEntities, Temp->getImportedEntities().get());
+  EXPECT_EQ(Macros, Temp->getMacros().get());
   EXPECT_EQ(DWOId, Temp->getDWOId());
 
   auto *TempAddress = Temp.get();
@@ -1356,7 +1466,7 @@ TEST_F(DICompileUnitTest, replaceArrays) {
   StringRef Flags = "flag after flag";
   unsigned RuntimeVersion = 2;
   StringRef SplitDebugFilename = "another/file";
-  unsigned EmissionKind = 3;
+  auto EmissionKind = DICompileUnit::FullDebug;
   MDTuple *EnumTypes = MDTuple::getDistinct(Context, None);
   MDTuple *RetainedTypes = MDTuple::getDistinct(Context, None);
   MDTuple *ImportedEntities = MDTuple::getDistinct(Context, None);
@@ -1364,14 +1474,7 @@ TEST_F(DICompileUnitTest, replaceArrays) {
   auto *N = DICompileUnit::getDistinct(
       Context, SourceLanguage, File, Producer, IsOptimized, Flags,
       RuntimeVersion, SplitDebugFilename, EmissionKind, EnumTypes,
-      RetainedTypes, nullptr, nullptr, ImportedEntities, DWOId);
-
-  auto *Subprograms = MDTuple::getDistinct(Context, None);
-  EXPECT_EQ(nullptr, N->getSubprograms().get());
-  N->replaceSubprograms(Subprograms);
-  EXPECT_EQ(Subprograms, N->getSubprograms().get());
-  N->replaceSubprograms(nullptr);
-  EXPECT_EQ(nullptr, N->getSubprograms().get());
+      RetainedTypes, nullptr, ImportedEntities, nullptr, DWOId, true, false);
 
   auto *GlobalVariables = MDTuple::getDistinct(Context, None);
   EXPECT_EQ(nullptr, N->getGlobalVariables().get());
@@ -1379,12 +1482,19 @@ TEST_F(DICompileUnitTest, replaceArrays) {
   EXPECT_EQ(GlobalVariables, N->getGlobalVariables().get());
   N->replaceGlobalVariables(nullptr);
   EXPECT_EQ(nullptr, N->getGlobalVariables().get());
+
+  auto *Macros = MDTuple::getDistinct(Context, None);
+  EXPECT_EQ(nullptr, N->getMacros().get());
+  N->replaceMacros(Macros);
+  EXPECT_EQ(Macros, N->getMacros().get());
+  N->replaceMacros(nullptr);
+  EXPECT_EQ(nullptr, N->getMacros().get());
 }
 
 typedef MetadataTest DISubprogramTest;
 
 TEST_F(DISubprogramTest, get) {
-  DIScopeRef Scope = getCompositeType();
+  DIScope *Scope = getCompositeType();
   StringRef Name = "name";
   StringRef LinkageName = "linkage";
   DIFile *File = getFile();
@@ -1393,19 +1503,23 @@ TEST_F(DISubprogramTest, get) {
   bool IsLocalToUnit = false;
   bool IsDefinition = true;
   unsigned ScopeLine = 3;
-  DITypeRef ContainingType = getCompositeType();
-  unsigned Virtuality = 4;
+  DIType *ContainingType = getCompositeType();
+  unsigned Virtuality = 2;
   unsigned VirtualIndex = 5;
-  unsigned Flags = 6;
+  int ThisAdjustment = -3;
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(6);
   bool IsOptimized = false;
   MDTuple *TemplateParams = getTuple();
   DISubprogram *Declaration = getSubprogram();
   MDTuple *Variables = getTuple();
+  MDTuple *ThrownTypes = getTuple();
+  DICompileUnit *Unit = getUnit();
 
   auto *N = DISubprogram::get(
       Context, Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
-      IsDefinition, ScopeLine, ContainingType, Virtuality, VirtualIndex, Flags,
-      IsOptimized, TemplateParams, Declaration, Variables);
+      IsDefinition, ScopeLine, ContainingType, Virtuality, VirtualIndex,
+      ThisAdjustment, Flags, IsOptimized, Unit, TemplateParams, Declaration,
+      Variables, ThrownTypes);
 
   EXPECT_EQ(dwarf::DW_TAG_subprogram, N->getTag());
   EXPECT_EQ(Scope, N->getScope());
@@ -1420,102 +1534,116 @@ TEST_F(DISubprogramTest, get) {
   EXPECT_EQ(ContainingType, N->getContainingType());
   EXPECT_EQ(Virtuality, N->getVirtuality());
   EXPECT_EQ(VirtualIndex, N->getVirtualIndex());
+  EXPECT_EQ(ThisAdjustment, N->getThisAdjustment());
   EXPECT_EQ(Flags, N->getFlags());
   EXPECT_EQ(IsOptimized, N->isOptimized());
+  EXPECT_EQ(Unit, N->getUnit());
   EXPECT_EQ(TemplateParams, N->getTemplateParams().get());
   EXPECT_EQ(Declaration, N->getDeclaration());
   EXPECT_EQ(Variables, N->getVariables().get());
-  EXPECT_EQ(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
-                                 Type, IsLocalToUnit, IsDefinition, ScopeLine,
-                                 ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, TemplateParams,
-                                 Declaration, Variables));
+  EXPECT_EQ(ThrownTypes, N->getThrownTypes().get());
+  EXPECT_EQ(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, File, Line, Type,
+                   IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables, ThrownTypes));
 
-  EXPECT_NE(N, DISubprogram::get(Context, getCompositeType(), Name, LinkageName,
-                                 File, Line, Type, IsLocalToUnit, IsDefinition,
-                                 ScopeLine, ContainingType, Virtuality,
-                                 VirtualIndex, Flags, IsOptimized,
-                                 TemplateParams, Declaration, Variables));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, "other", LinkageName, File,
-                                 Line, Type, IsLocalToUnit, IsDefinition,
-                                 ScopeLine, ContainingType, Virtuality,
-                                 VirtualIndex, Flags, IsOptimized,
-                                 TemplateParams, Declaration, Variables));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, "other", File, Line,
-                                 Type, IsLocalToUnit, IsDefinition, ScopeLine,
-                                 ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, TemplateParams,
-                                 Declaration, Variables));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, getFile(),
-                                 Line, Type, IsLocalToUnit, IsDefinition,
-                                 ScopeLine, ContainingType, Virtuality,
-                                 VirtualIndex, Flags, IsOptimized,
-                                 TemplateParams, Declaration, Variables));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File,
-                                 Line + 1, Type, IsLocalToUnit, IsDefinition,
-                                 ScopeLine, ContainingType, Virtuality,
-                                 VirtualIndex, Flags, IsOptimized,
-                                 TemplateParams, Declaration, Variables));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, getCompositeType(), Name, LinkageName, File, Line,
+                   Type, IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables, ThrownTypes));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, "other", LinkageName, File, Line, Type,
+                   IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables, ThrownTypes));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, "other", File, Line, Type,
+                   IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables, ThrownTypes));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, getFile(), Line, Type,
+                   IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables, ThrownTypes));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, File, Line + 1, Type,
+                   IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables, ThrownTypes));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  getSubroutineType(), IsLocalToUnit,
                                  IsDefinition, ScopeLine, ContainingType,
-                                 Virtuality, VirtualIndex, Flags, IsOptimized,
-                                 TemplateParams, Declaration, Variables));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
-                                 Type, !IsLocalToUnit, IsDefinition, ScopeLine,
-                                 ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, TemplateParams,
-                                 Declaration, Variables));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
-                                 Type, IsLocalToUnit, !IsDefinition, ScopeLine,
-                                 ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, TemplateParams,
-                                 Declaration, Variables));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
-                                 Type, IsLocalToUnit, IsDefinition,
-                                 ScopeLine + 1, ContainingType, Virtuality,
-                                 VirtualIndex, Flags, IsOptimized,
-                                 TemplateParams, Declaration, Variables));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
-                                 Type, IsLocalToUnit, IsDefinition, ScopeLine,
-                                 getCompositeType(), Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, TemplateParams,
-                                 Declaration, Variables));
+                                 Virtuality, VirtualIndex, ThisAdjustment,
+                                 Flags, IsOptimized, Unit, TemplateParams,
+                                 Declaration, Variables, ThrownTypes));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, File, Line, Type,
+                   !IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables, ThrownTypes));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, File, Line, Type,
+                   IsLocalToUnit, !IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables, ThrownTypes));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, File, Line, Type,
+                   IsLocalToUnit, IsDefinition, ScopeLine + 1, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables, ThrownTypes));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, File, Line, Type,
+                   IsLocalToUnit, IsDefinition, ScopeLine, getCompositeType(),
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables, ThrownTypes));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality + 1, VirtualIndex,
-                                 Flags, IsOptimized, TemplateParams,
-                                 Declaration, Variables));
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
+                                 TemplateParams, Declaration, Variables,
+                                 ThrownTypes));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex + 1,
-                                 Flags, IsOptimized, TemplateParams,
-                                 Declaration, Variables));
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
+                                 TemplateParams, Declaration, Variables,
+                                 ThrownTypes));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 ~Flags, IsOptimized, TemplateParams,
-                                 Declaration, Variables));
+                                 ThisAdjustment, Flags, !IsOptimized, Unit,
+                                 TemplateParams, Declaration, Variables,
+                                 ThrownTypes));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 Flags, !IsOptimized, TemplateParams,
-                                 Declaration, Variables));
-  EXPECT_NE(N,
-            DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
-                              Type, IsLocalToUnit, IsDefinition, ScopeLine,
-                              ContainingType, Virtuality, VirtualIndex, Flags,
-                              IsOptimized, getTuple(), Declaration, Variables));
+                                 ThisAdjustment, Flags, IsOptimized, nullptr,
+                                 TemplateParams, Declaration, Variables,
+                                 ThrownTypes));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, File, Line, Type,
+                   IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, getTuple(), Declaration, Variables, ThrownTypes));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, TemplateParams,
-                                 getSubprogram(), Variables));
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
+                                 TemplateParams, getSubprogram(), Variables,
+                                 ThrownTypes));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, TemplateParams,
-                                 Declaration, getTuple()));
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
+                                 TemplateParams, Declaration, getTuple()));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, File, Line, Type,
+                   IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables, getTuple()));
 
   TempDISubprogram Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
@@ -1604,23 +1732,18 @@ typedef MetadataTest DINamespaceTest;
 
 TEST_F(DINamespaceTest, get) {
   DIScope *Scope = getFile();
-  DIFile *File = getFile();
   StringRef Name = "namespace";
-  unsigned Line = 5;
+  bool ExportSymbols = true;
 
-  auto *N = DINamespace::get(Context, Scope, File, Name, Line);
+  auto *N = DINamespace::get(Context, Scope, Name, ExportSymbols);
 
   EXPECT_EQ(dwarf::DW_TAG_namespace, N->getTag());
   EXPECT_EQ(Scope, N->getScope());
-  EXPECT_EQ(File, N->getFile());
   EXPECT_EQ(Name, N->getName());
-  EXPECT_EQ(Line, N->getLine());
-  EXPECT_EQ(N, DINamespace::get(Context, Scope, File, Name, Line));
-
-  EXPECT_NE(N, DINamespace::get(Context, getFile(), File, Name, Line));
-  EXPECT_NE(N, DINamespace::get(Context, Scope, getFile(), Name, Line));
-  EXPECT_NE(N, DINamespace::get(Context, Scope, File, "other", Line));
-  EXPECT_NE(N, DINamespace::get(Context, Scope, File, Name, Line + 1));
+  EXPECT_EQ(N, DINamespace::get(Context, Scope, Name, ExportSymbols));
+  EXPECT_NE(N, DINamespace::get(Context, getFile(), Name, ExportSymbols));
+  EXPECT_NE(N, DINamespace::get(Context, Scope, "other", ExportSymbols));
+  EXPECT_NE(N, DINamespace::get(Context, Scope, Name, !ExportSymbols));
 
   TempDINamespace Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
@@ -1664,7 +1787,7 @@ typedef MetadataTest DITemplateTypeParameterTest;
 
 TEST_F(DITemplateTypeParameterTest, get) {
   StringRef Name = "template";
-  DITypeRef Type = getBasicType("basic");
+  DIType *Type = getBasicType("basic");
 
   auto *N = DITemplateTypeParameter::get(Context, Name, Type);
 
@@ -1686,7 +1809,7 @@ typedef MetadataTest DITemplateValueParameterTest;
 TEST_F(DITemplateValueParameterTest, get) {
   unsigned Tag = dwarf::DW_TAG_template_value_parameter;
   StringRef Name = "template";
-  DITypeRef Type = getBasicType("basic");
+  DIType *Type = getBasicType("basic");
   Metadata *Value = getConstantAsMetadata();
 
   auto *N = DITemplateValueParameter::get(Context, Tag, Name, Type, Value);
@@ -1718,16 +1841,16 @@ TEST_F(DIGlobalVariableTest, get) {
   StringRef LinkageName = "linkage";
   DIFile *File = getFile();
   unsigned Line = 5;
-  DITypeRef Type = getDerivedType();
+  DIType *Type = getDerivedType();
   bool IsLocalToUnit = false;
   bool IsDefinition = true;
-  Constant *Variable = getConstant();
   DIDerivedType *StaticDataMemberDeclaration =
       cast<DIDerivedType>(getDerivedType());
+  uint32_t AlignInBits = 8;
 
   auto *N = DIGlobalVariable::get(Context, Scope, Name, LinkageName, File, Line,
-                                  Type, IsLocalToUnit, IsDefinition, Variable,
-                                  StaticDataMemberDeclaration);
+                                  Type, IsLocalToUnit, IsDefinition,
+                                  StaticDataMemberDeclaration, AlignInBits);
   EXPECT_EQ(dwarf::DW_TAG_variable, N->getTag());
   EXPECT_EQ(Scope, N->getScope());
   EXPECT_EQ(Name, N->getName());
@@ -1737,50 +1860,85 @@ TEST_F(DIGlobalVariableTest, get) {
   EXPECT_EQ(Type, N->getType());
   EXPECT_EQ(IsLocalToUnit, N->isLocalToUnit());
   EXPECT_EQ(IsDefinition, N->isDefinition());
-  EXPECT_EQ(Variable, N->getVariable());
   EXPECT_EQ(StaticDataMemberDeclaration, N->getStaticDataMemberDeclaration());
+  EXPECT_EQ(AlignInBits, N->getAlignInBits());
   EXPECT_EQ(N, DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
                                      Line, Type, IsLocalToUnit, IsDefinition,
-                                     Variable, StaticDataMemberDeclaration));
+                                     StaticDataMemberDeclaration, AlignInBits));
 
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, getSubprogram(), Name, LinkageName,
                                   File, Line, Type, IsLocalToUnit, IsDefinition,
-                                  Variable, StaticDataMemberDeclaration));
+                                  StaticDataMemberDeclaration, AlignInBits));
   EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, "other", LinkageName, File,
                                      Line, Type, IsLocalToUnit, IsDefinition,
-                                     Variable, StaticDataMemberDeclaration));
+                                     StaticDataMemberDeclaration, AlignInBits));
   EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, Name, "other", File, Line,
                                      Type, IsLocalToUnit, IsDefinition,
-                                     Variable, StaticDataMemberDeclaration));
+                                     StaticDataMemberDeclaration, AlignInBits));
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, Scope, Name, LinkageName, getFile(),
                                   Line, Type, IsLocalToUnit, IsDefinition,
-                                  Variable, StaticDataMemberDeclaration));
+                                  StaticDataMemberDeclaration, AlignInBits));
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
                                   Line + 1, Type, IsLocalToUnit, IsDefinition,
-                                  Variable, StaticDataMemberDeclaration));
+                                  StaticDataMemberDeclaration, AlignInBits));
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, Scope, Name, LinkageName, File, Line,
                                   getDerivedType(), IsLocalToUnit, IsDefinition,
-                                  Variable, StaticDataMemberDeclaration));
+                                  StaticDataMemberDeclaration, AlignInBits));
   EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
                                      Line, Type, !IsLocalToUnit, IsDefinition,
-                                     Variable, StaticDataMemberDeclaration));
+                                     StaticDataMemberDeclaration, AlignInBits));
   EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
                                      Line, Type, IsLocalToUnit, !IsDefinition,
-                                     Variable, StaticDataMemberDeclaration));
-  EXPECT_NE(N,
-            DIGlobalVariable::get(Context, Scope, Name, LinkageName, File, Line,
-                                  Type, IsLocalToUnit, IsDefinition,
-                                  getConstant(), StaticDataMemberDeclaration));
-  EXPECT_NE(N,
-            DIGlobalVariable::get(Context, Scope, Name, LinkageName, File, Line,
-                                  Type, IsLocalToUnit, IsDefinition, Variable,
-                                  cast<DIDerivedType>(getDerivedType())));
+                                     StaticDataMemberDeclaration, AlignInBits));
+  EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
+                                     Line, Type, IsLocalToUnit, IsDefinition,
+                                     cast<DIDerivedType>(getDerivedType()),
+                                     AlignInBits));
+  EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
+                                     Line, Type, IsLocalToUnit, IsDefinition,
+                                     StaticDataMemberDeclaration,
+                                     (AlignInBits << 1)));
 
   TempDIGlobalVariable Temp = N->clone();
+  EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
+}
+
+typedef MetadataTest DIGlobalVariableExpressionTest;
+
+TEST_F(DIGlobalVariableExpressionTest, get) {
+  DIScope *Scope = getSubprogram();
+  StringRef Name = "name";
+  StringRef LinkageName = "linkage";
+  DIFile *File = getFile();
+  unsigned Line = 5;
+  DIType *Type = getDerivedType();
+  bool IsLocalToUnit = false;
+  bool IsDefinition = true;
+  auto *Expr = DIExpression::get(Context, {1, 2});
+  auto *Expr2 = DIExpression::get(Context, {1, 2, 3});
+  DIDerivedType *StaticDataMemberDeclaration =
+      cast<DIDerivedType>(getDerivedType());
+  uint32_t AlignInBits = 8;
+
+  auto *Var = DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
+                                    Line, Type, IsLocalToUnit, IsDefinition,
+                                    StaticDataMemberDeclaration, AlignInBits);
+  auto *Var2 = DIGlobalVariable::get(Context, Scope, "other", LinkageName, File,
+                                     Line, Type, IsLocalToUnit, IsDefinition,
+                                     StaticDataMemberDeclaration, AlignInBits);
+  auto *N = DIGlobalVariableExpression::get(Context, Var, Expr);
+
+  EXPECT_EQ(Var, N->getVariable());
+  EXPECT_EQ(Expr, N->getExpression());
+  EXPECT_EQ(N, DIGlobalVariableExpression::get(Context, Var, Expr));
+  EXPECT_NE(N, DIGlobalVariableExpression::get(Context, Var2, Expr));
+  EXPECT_NE(N, DIGlobalVariableExpression::get(Context, Var, Expr2));
+
+  TempDIGlobalVariableExpression Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
 }
 
@@ -1791,12 +1949,14 @@ TEST_F(DILocalVariableTest, get) {
   StringRef Name = "name";
   DIFile *File = getFile();
   unsigned Line = 5;
-  DITypeRef Type = getDerivedType();
+  DIType *Type = getDerivedType();
   unsigned Arg = 6;
-  unsigned Flags = 7;
+  DINode::DIFlags Flags = static_cast<DINode::DIFlags>(7);
+  uint32_t AlignInBits = 8;
 
   auto *N =
-      DILocalVariable::get(Context, Scope, Name, File, Line, Type, Arg, Flags);
+      DILocalVariable::get(Context, Scope, Name, File, Line, Type, Arg, Flags,
+                           AlignInBits);
   EXPECT_TRUE(N->isParameter());
   EXPECT_EQ(Scope, N->getScope());
   EXPECT_EQ(Name, N->getName());
@@ -1805,26 +1965,27 @@ TEST_F(DILocalVariableTest, get) {
   EXPECT_EQ(Type, N->getType());
   EXPECT_EQ(Arg, N->getArg());
   EXPECT_EQ(Flags, N->getFlags());
+  EXPECT_EQ(AlignInBits, N->getAlignInBits());
   EXPECT_EQ(N, DILocalVariable::get(Context, Scope, Name, File, Line, Type, Arg,
-                                    Flags));
+                                    Flags, AlignInBits));
 
   EXPECT_FALSE(
-      DILocalVariable::get(Context, Scope, Name, File, Line, Type, 0, Flags)
-          ->isParameter());
+      DILocalVariable::get(Context, Scope, Name, File, Line, Type, 0, Flags,
+                           AlignInBits)->isParameter());
   EXPECT_NE(N, DILocalVariable::get(Context, getSubprogram(), Name, File, Line,
-                                    Type, Arg, Flags));
+                                    Type, Arg, Flags, AlignInBits));
   EXPECT_NE(N, DILocalVariable::get(Context, Scope, "other", File, Line, Type,
-                                    Arg, Flags));
+                                    Arg, Flags, AlignInBits));
   EXPECT_NE(N, DILocalVariable::get(Context, Scope, Name, getFile(), Line, Type,
-                                    Arg, Flags));
+                                    Arg, Flags, AlignInBits));
   EXPECT_NE(N, DILocalVariable::get(Context, Scope, Name, File, Line + 1, Type,
-                                    Arg, Flags));
+                                    Arg, Flags, AlignInBits));
   EXPECT_NE(N, DILocalVariable::get(Context, Scope, Name, File, Line,
-                                    getDerivedType(), Arg, Flags));
+                                    getDerivedType(), Arg, Flags, AlignInBits));
   EXPECT_NE(N, DILocalVariable::get(Context, Scope, Name, File, Line, Type,
-                                    Arg + 1, Flags));
-  EXPECT_NE(N, DILocalVariable::get(Context, Scope, Name, File, Line, Type, Arg,
-                                    ~Flags));
+                                    Arg + 1, Flags, AlignInBits));
+  EXPECT_NE(N, DILocalVariable::get(Context, Scope, Name, File, Line, Type,
+                                    Arg, Flags, (AlignInBits << 1)));
 
   TempDILocalVariable Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
@@ -1832,17 +1993,17 @@ TEST_F(DILocalVariableTest, get) {
 
 TEST_F(DILocalVariableTest, getArg256) {
   EXPECT_EQ(255u, DILocalVariable::get(Context, getSubprogram(), "", getFile(),
-                                       0, nullptr, 255, 0)
+                                       0, nullptr, 255, DINode::FlagZero, 0)
                       ->getArg());
   EXPECT_EQ(256u, DILocalVariable::get(Context, getSubprogram(), "", getFile(),
-                                       0, nullptr, 256, 0)
+                                       0, nullptr, 256, DINode::FlagZero, 0)
                       ->getArg());
   EXPECT_EQ(257u, DILocalVariable::get(Context, getSubprogram(), "", getFile(),
-                                       0, nullptr, 257, 0)
+                                       0, nullptr, 257, DINode::FlagZero, 0)
                       ->getArg());
   unsigned Max = UINT16_MAX;
   EXPECT_EQ(Max, DILocalVariable::get(Context, getSubprogram(), "", getFile(),
-                                      0, nullptr, Max, 0)
+                                      0, nullptr, Max, DINode::FlagZero, 0)
                      ->getArg());
 }
 
@@ -1881,21 +2042,24 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_TRUE(DIExpression::get(Context, None));
 
   // Valid constructions.
-  EXPECT_VALID(dwarf::DW_OP_plus, 6);
+  EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6);
+  EXPECT_VALID(dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus);
   EXPECT_VALID(dwarf::DW_OP_deref);
-  EXPECT_VALID(dwarf::DW_OP_bit_piece, 3, 7);
-  EXPECT_VALID(dwarf::DW_OP_plus, 6, dwarf::DW_OP_deref);
-  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus, 6);
-  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_bit_piece, 3, 7);
-  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus, 6, dwarf::DW_OP_bit_piece, 3, 7);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_fragment, 3, 7);
+  EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_deref);
+  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus_uconst, 6);
+  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_LLVM_fragment, 3, 7);
+  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus_uconst, 6,
+               dwarf::DW_OP_LLVM_fragment, 3, 7);
 
   // Invalid constructions.
   EXPECT_INVALID(~0u);
-  EXPECT_INVALID(dwarf::DW_OP_plus);
-  EXPECT_INVALID(dwarf::DW_OP_bit_piece);
-  EXPECT_INVALID(dwarf::DW_OP_bit_piece, 3);
-  EXPECT_INVALID(dwarf::DW_OP_bit_piece, 3, 7, dwarf::DW_OP_plus, 3);
-  EXPECT_INVALID(dwarf::DW_OP_bit_piece, 3, 7, dwarf::DW_OP_deref);
+  EXPECT_INVALID(dwarf::DW_OP_plus, 0);
+  EXPECT_INVALID(dwarf::DW_OP_plus_uconst);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3, 7, dwarf::DW_OP_plus_uconst, 3);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3, 7, dwarf::DW_OP_deref);
 
 #undef EXPECT_VALID
 #undef EXPECT_INVALID
@@ -1910,7 +2074,7 @@ TEST_F(DIObjCPropertyTest, get) {
   StringRef GetterName = "getter";
   StringRef SetterName = "setter";
   unsigned Attributes = 7;
-  DITypeRef Type = getBasicType("basic");
+  DIType *Type = getBasicType("basic");
 
   auto *N = DIObjCProperty::get(Context, Name, File, Line, GetterName,
                                 SetterName, Attributes, Type);
@@ -1951,30 +2115,36 @@ typedef MetadataTest DIImportedEntityTest;
 TEST_F(DIImportedEntityTest, get) {
   unsigned Tag = dwarf::DW_TAG_imported_module;
   DIScope *Scope = getSubprogram();
-  DINodeRef Entity = getCompositeType();
+  DINode *Entity = getCompositeType();
+  DIFile *File = getFile();
   unsigned Line = 5;
   StringRef Name = "name";
 
-  auto *N = DIImportedEntity::get(Context, Tag, Scope, Entity, Line, Name);
+  auto *N =
+      DIImportedEntity::get(Context, Tag, Scope, Entity, File, Line, Name);
 
   EXPECT_EQ(Tag, N->getTag());
   EXPECT_EQ(Scope, N->getScope());
   EXPECT_EQ(Entity, N->getEntity());
+  EXPECT_EQ(File, N->getFile());
   EXPECT_EQ(Line, N->getLine());
   EXPECT_EQ(Name, N->getName());
-  EXPECT_EQ(N, DIImportedEntity::get(Context, Tag, Scope, Entity, Line, Name));
+  EXPECT_EQ(
+      N, DIImportedEntity::get(Context, Tag, Scope, Entity, File, Line, Name));
 
   EXPECT_NE(N,
             DIImportedEntity::get(Context, dwarf::DW_TAG_imported_declaration,
-                                  Scope, Entity, Line, Name));
+                                  Scope, Entity, File, Line, Name));
   EXPECT_NE(N, DIImportedEntity::get(Context, Tag, getSubprogram(), Entity,
-                                     Line, Name));
+                                     File, Line, Name));
   EXPECT_NE(N, DIImportedEntity::get(Context, Tag, Scope, getCompositeType(),
-                                     Line, Name));
-  EXPECT_NE(N,
-            DIImportedEntity::get(Context, Tag, Scope, Entity, Line + 1, Name));
-  EXPECT_NE(N,
-            DIImportedEntity::get(Context, Tag, Scope, Entity, Line, "other"));
+                                     File, Line, Name));
+  EXPECT_NE(N, DIImportedEntity::get(Context, Tag, Scope, Entity, nullptr, Line,
+                                     Name));
+  EXPECT_NE(N, DIImportedEntity::get(Context, Tag, Scope, Entity, File,
+                                     Line + 1, Name));
+  EXPECT_NE(N, DIImportedEntity::get(Context, Tag, Scope, Entity, File, Line,
+                                     "other"));
 
   TempDIImportedEntity Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
@@ -2040,10 +2210,27 @@ TEST_F(ValueAsMetadataTest, UpdatesOnRAUW) {
   EXPECT_TRUE(MD->getValue() == GV1.get());
 }
 
+TEST_F(ValueAsMetadataTest, TempTempReplacement) {
+  // Create a constant.
+  ConstantAsMetadata *CI =
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
+
+  auto Temp1 = MDTuple::getTemporary(Context, None);
+  auto Temp2 = MDTuple::getTemporary(Context, {CI});
+  auto *N = MDTuple::get(Context, {Temp1.get()});
+
+  // Test replacing a temporary node with another temporary node.
+  Temp1->replaceAllUsesWith(Temp2.get());
+  EXPECT_EQ(N->getOperand(0), Temp2.get());
+
+  // Clean up Temp2 for teardown.
+  Temp2->replaceAllUsesWith(nullptr);
+}
+
 TEST_F(ValueAsMetadataTest, CollidingDoubleUpdates) {
   // Create a constant.
-  ConstantAsMetadata *CI = ConstantAsMetadata::get(
-      ConstantInt::get(getGlobalContext(), APInt(8, 0)));
+  ConstantAsMetadata *CI =
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
 
   // Create a temporary to prevent nodes from resolving.
   auto Temp = MDTuple::getTemporary(Context, None);
@@ -2205,44 +2392,23 @@ TEST_F(FunctionAttachmentTest, getAll) {
   EXPECT_EQ(T2, MDs[3].second);
 }
 
-TEST_F(FunctionAttachmentTest, dropUnknownMetadata) {
-  Function *F = getFunction("foo");
-
-  MDTuple *T1 = getTuple();
-  MDTuple *T2 = getTuple();
-  MDTuple *P = getTuple();
-  DISubprogram *SP = getSubprogram();
-
-  F->setMetadata("other1", T1);
-  F->setMetadata(LLVMContext::MD_dbg, SP);
-  F->setMetadata("other2", T2);
-  F->setMetadata(LLVMContext::MD_prof, P);
-
-  unsigned Known[] = {Context.getMDKindID("other2"), LLVMContext::MD_prof};
-  F->dropUnknownMetadata(Known);
-
-  EXPECT_EQ(T2, F->getMetadata("other2"));
-  EXPECT_EQ(P, F->getMetadata(LLVMContext::MD_prof));
-  EXPECT_EQ(nullptr, F->getMetadata("other1"));
-  EXPECT_EQ(nullptr, F->getMetadata(LLVMContext::MD_dbg));
-
-  F->setMetadata("other2", nullptr);
-  F->setMetadata(LLVMContext::MD_prof, nullptr);
-  EXPECT_FALSE(F->hasMetadata());
-}
-
 TEST_F(FunctionAttachmentTest, Verifier) {
   Function *F = getFunction("foo");
   F->setMetadata("attach", getTuple());
+  F->setIsMaterializable(true);
 
-  // Confirm this has no body.
-  ASSERT_TRUE(F->empty());
+  // Confirm this is materializable.
+  ASSERT_TRUE(F->isMaterializable());
 
-  // Functions without a body cannot have metadata attachments (they also can't
-  // be verified directly, so check that the module fails to verify).
-  EXPECT_TRUE(verifyModule(*F->getParent()));
+  // Materializable functions cannot have metadata attachments.
+  EXPECT_TRUE(verifyFunction(*F));
 
-  // Functions with a body can.
+  // Function declarations can.
+  F->setIsMaterializable(false);
+  EXPECT_FALSE(verifyModule(*F->getParent()));
+  EXPECT_FALSE(verifyFunction(*F));
+
+  // So can definitions.
   (void)new UnreachableInst(Context, BasicBlock::Create(Context, "bb", F));
   EXPECT_FALSE(verifyModule(*F->getParent()));
   EXPECT_FALSE(verifyFunction(*F));
@@ -2268,4 +2434,81 @@ TEST_F(FunctionAttachmentTest, SubprogramAttachment) {
   EXPECT_EQ(SP, F->getMetadata(LLVMContext::MD_dbg));
 }
 
+typedef MetadataTest DistinctMDOperandPlaceholderTest;
+TEST_F(DistinctMDOperandPlaceholderTest, getID) {
+  EXPECT_EQ(7u, DistinctMDOperandPlaceholder(7).getID());
 }
+
+TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWith) {
+  // Set up some placeholders.
+  DistinctMDOperandPlaceholder PH0(7);
+  DistinctMDOperandPlaceholder PH1(3);
+  DistinctMDOperandPlaceholder PH2(0);
+  Metadata *Ops[] = {&PH0, &PH1, &PH2};
+  auto *D = MDTuple::getDistinct(Context, Ops);
+  ASSERT_EQ(&PH0, D->getOperand(0));
+  ASSERT_EQ(&PH1, D->getOperand(1));
+  ASSERT_EQ(&PH2, D->getOperand(2));
+
+  // Replace them.
+  auto *N0 = MDTuple::get(Context, None);
+  auto *N1 = MDTuple::get(Context, N0);
+  PH0.replaceUseWith(N0);
+  PH1.replaceUseWith(N1);
+  PH2.replaceUseWith(nullptr);
+  EXPECT_EQ(N0, D->getOperand(0));
+  EXPECT_EQ(N1, D->getOperand(1));
+  EXPECT_EQ(nullptr, D->getOperand(2));
+}
+
+TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWithNoUser) {
+  // There is no user, but we can still call replace.
+  DistinctMDOperandPlaceholder(7).replaceUseWith(MDTuple::get(Context, None));
+}
+
+#ifndef NDEBUG
+#ifdef GTEST_HAS_DEATH_TEST
+TEST_F(DistinctMDOperandPlaceholderTest, MetadataAsValue) {
+  // This shouldn't crash.
+  DistinctMDOperandPlaceholder PH(7);
+  EXPECT_DEATH(MetadataAsValue::get(Context, &PH),
+               "Unexpected callback to owner");
+}
+
+TEST_F(DistinctMDOperandPlaceholderTest, UniquedMDNode) {
+  // This shouldn't crash.
+  DistinctMDOperandPlaceholder PH(7);
+  EXPECT_DEATH(MDTuple::get(Context, &PH), "Unexpected callback to owner");
+}
+
+TEST_F(DistinctMDOperandPlaceholderTest, SecondDistinctMDNode) {
+  // This shouldn't crash.
+  DistinctMDOperandPlaceholder PH(7);
+  MDTuple::getDistinct(Context, &PH);
+  EXPECT_DEATH(MDTuple::getDistinct(Context, &PH),
+               "Placeholders can only be used once");
+}
+
+TEST_F(DistinctMDOperandPlaceholderTest, TrackingMDRefAndDistinctMDNode) {
+  // TrackingMDRef doesn't install an owner callback, so it can't be detected
+  // as an invalid use.  However, using a placeholder in a TrackingMDRef *and*
+  // a distinct node isn't possible and we should assert.
+  //
+  // (There's no positive test for using TrackingMDRef because it's not a
+  // useful thing to do.)
+  {
+    DistinctMDOperandPlaceholder PH(7);
+    MDTuple::getDistinct(Context, &PH);
+    EXPECT_DEATH(TrackingMDRef Ref(&PH), "Placeholders can only be used once");
+  }
+  {
+    DistinctMDOperandPlaceholder PH(7);
+    TrackingMDRef Ref(&PH);
+    EXPECT_DEATH(MDTuple::getDistinct(Context, &PH),
+                 "Placeholders can only be used once");
+  }
+}
+#endif
+#endif
+
+} // end namespace

@@ -11,7 +11,6 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Frontend/SerializedDiagnostics.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/MemoryBuffer.h"
 
 using namespace clang;
 using namespace clang::serialized_diags;
@@ -25,11 +24,11 @@ std::error_code SerializedDiagnosticReader::readDiagnostics(StringRef File) {
   if (!Buffer)
     return SDError::CouldNotLoad;
 
-  llvm::BitstreamReader StreamFile;
-  StreamFile.init((const unsigned char *)(*Buffer)->getBufferStart(),
-                  (const unsigned char *)(*Buffer)->getBufferEnd());
+  llvm::BitstreamCursor Stream(**Buffer);
+  Optional<llvm::BitstreamBlockInfo> BlockInfo;
 
-  llvm::BitstreamCursor Stream(StreamFile);
+  if (Stream.AtEndOfStream())
+    return SDError::InvalidSignature;
 
   // Sniff for the signature.
   if (Stream.Read(8) != 'D' ||
@@ -45,10 +44,13 @@ std::error_code SerializedDiagnosticReader::readDiagnostics(StringRef File) {
 
     std::error_code EC;
     switch (Stream.ReadSubBlockID()) {
-    case llvm::bitc::BLOCKINFO_BLOCK_ID:
-      if (Stream.ReadBlockInfoBlock())
+    case llvm::bitc::BLOCKINFO_BLOCK_ID: {
+      BlockInfo = Stream.ReadBlockInfoBlock();
+      if (!BlockInfo)
         return SDError::MalformedBlockInfoBlock;
+      Stream.setBlockInfo(&*BlockInfo);
       continue;
+    }
     case BLOCK_META:
       if ((EC = readMetaBlock(Stream)))
         return EC;
@@ -126,6 +128,7 @@ SerializedDiagnosticReader::readMetaBlock(llvm::BitstreamCursor &Stream) {
     case Cursor::BlockBegin:
       if (Stream.SkipBlock())
         return SDError::MalformedMetadataBlock;
+      LLVM_FALLTHROUGH;
     case Cursor::BlockEnd:
       if (!VersionChecked)
         return SDError::MissingVersion;
@@ -251,7 +254,7 @@ SerializedDiagnosticReader::readDiagnosticBlock(llvm::BitstreamCursor &Stream) {
 
 namespace {
 class SDErrorCategoryType final : public std::error_category {
-  const char *name() const LLVM_NOEXCEPT override {
+  const char *name() const noexcept override {
     return "clang.serialized_diags";
   }
   std::string message(int IE) const override {

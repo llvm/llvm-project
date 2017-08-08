@@ -123,7 +123,7 @@ while.end:                                        ; preds = %if.then4
   store i64 %16, i64* %private_2, align 8
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 240, i32 8, i1 false)
   %17 = bitcast %struct._Unwind_FrameState* %fs.i to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %17)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %17)
   %personality.i = getelementptr inbounds %struct._Unwind_FrameState, %struct._Unwind_FrameState* %fs.i, i64 0, i32 6
   %retaddr_column.i22 = getelementptr inbounds %struct._Unwind_FrameState, %struct._Unwind_FrameState* %fs.i, i64 0, i32 9
   br label %while.body.i
@@ -211,7 +211,7 @@ uw_update_context.exit44:                         ; preds = %if.then10.i.i.i40, 
   br label %while.body.i
 
 do.body19:                                        ; preds = %if.then3.i
-  call void @llvm.lifetime.end(i64 -1, i8* %17)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %17)
   %call20 = call fastcc i64 @uw_install_context_1(%struct._Unwind_Context* %this_context, %struct._Unwind_Context* %cur_context)
   %32 = load i8*, i8** %ra.i, align 8
   call void @llvm.eh.return.i64(i64 %call20, i8* %32)
@@ -242,6 +242,6 @@ declare void @llvm.eh.return.i64(i64, i8*) nounwind
 
 declare fastcc void @uw_update_context_1(%struct._Unwind_Context*, %struct._Unwind_FrameState* nocapture) uwtable
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
 
-declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind

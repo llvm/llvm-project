@@ -4,7 +4,11 @@ int m = n;
 #include "c.h"
 
 #if defined(A) && !defined(ALLOW_NAME_LEAKAGE)
-#error A is defined
+#warning A is defined
 #endif
 
 #define B
+
+template<typename T> void b_template() {
+  N::C::f(0);
+}

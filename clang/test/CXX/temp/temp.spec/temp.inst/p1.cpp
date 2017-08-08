@@ -54,6 +54,16 @@ namespace ScopedEnum {
   int test2 = g<int>(); // expected-note {{here}}
 }
 
+// - static data members
+namespace StaticDataMembers {
+  template<typename T>
+  struct A {
+    static const int n = T::error; // expected-error {{has no members}}
+    static inline int m = T::error; // expected-warning {{extension}}
+  };
+  A<int> ai; // expected-note {{here}}
+}
+
 // And it cases the implicit instantiations of the definitions of:
 
 // - unscoped member enumerations

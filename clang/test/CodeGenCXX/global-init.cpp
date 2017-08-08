@@ -15,11 +15,8 @@ struct C { void *field; };
 
 struct D { ~D(); };
 
-// CHECK: @__dso_handle = external global i8
+// CHECK: @__dso_handle = external hidden global i8
 // CHECK: @c = global %struct.C zeroinitializer, align 8
-
-// It's okay if we ever implement the IR-generation optimization to remove this.
-// CHECK: @_ZN5test3L3varE = internal constant i8* getelementptr inbounds ([7 x i8], [7 x i8]* 
 
 // PR6205: The casts should not require global initializers
 // CHECK: @_ZN6PR59741cE = external global %"struct.PR5974::C"
@@ -171,6 +168,8 @@ namespace test7 {
   const int b3 = B().n;
 
   // CHECK-NOT: @_ZN5test7L2c1E
+  // CHECK: call void @llvm.memset{{.*}} @_ZN5test7L2c1E
+  // CHECK-NOT: @_ZN5test7L2c1E
   // CHECK: @_ZN5test7L2c2E
   // CHECK-NOT: @_ZN5test7L2c3E
   // CHECK: @_ZN5test7L2c4E
@@ -205,8 +204,8 @@ namespace test7 {
 // rdar://problem/8090834: this should be nounwind
 // CHECK-NOEXC: define internal void @_GLOBAL__sub_I_global_init.cpp() [[NUW:#[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 
-// CHECK-NOEXC: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK-NOEXC: attributes [[NUW]] = { noinline nounwind{{.*}} }
 
 // PR21811: attach the appropriate attribute to the global init function
 // CHECK-FP: define internal void @_GLOBAL__sub_I_global_init.cpp() [[NUX:#[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
-// CHECK-FP: attributes [[NUX]] = { nounwind {{.*}}"no-frame-pointer-elim-non-leaf"{{.*}} }
+// CHECK-FP: attributes [[NUX]] = { noinline nounwind {{.*}}"no-frame-pointer-elim-non-leaf"{{.*}} }

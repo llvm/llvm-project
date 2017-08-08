@@ -38,9 +38,11 @@ public:
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
 
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t Value, bool IsPCRel) const override;
+  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                  const MCValue &Target, MutableArrayRef<char> Data,
+                  uint64_t Value, bool IsResolved) const override;
 
+  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
   unsigned getNumFixupKinds() const override {
@@ -74,16 +76,12 @@ public:
   /// \param Inst - The instruction to relax, which may be the same
   /// as the output.
   /// \param [out] Res On return, the relaxed instruction.
-  void relaxInstruction(const MCInst &Inst, MCInst &Res) const override {}
+  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                        MCInst &Res) const override {}
 
   /// @}
 
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
-
-  void processFixupValue(const MCAssembler &Asm, const MCAsmLayout &Layout,
-                         const MCFixup &Fixup, const MCFragment *DF,
-                         const MCValue &Target, uint64_t &Value,
-                         bool &IsResolved) override;
 
 }; // class MipsAsmBackend
 

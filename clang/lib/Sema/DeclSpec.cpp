@@ -1,4 +1,4 @@
-//===--- SemaDeclSpec.cpp - Declaration Specifier Semantic Analysis -------===//
+//===--- DeclSpec.cpp - Declaration Specifier Semantic Analysis -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,27 +15,17 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/LocInfoType.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Parse/ParseDiagnostic.h" // FIXME: remove this back-dependency!
-#include "clang/Sema/LocInfoType.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <cstring>
 using namespace clang;
-
-
-static DiagnosticBuilder Diag(DiagnosticsEngine &D, SourceLocation Loc,
-                              unsigned DiagID) {
-  return D.Report(Loc, DiagID);
-}
 
 
 void UnqualifiedId::setTemplateId(TemplateIdAnnotation *TemplateId) {
@@ -183,6 +173,8 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
                                              unsigned NumExceptions,
                                              Expr *NoexceptExpr,
                                              CachedTokens *ExceptionSpecTokens,
+                                             ArrayRef<NamedDecl*>
+                                                 DeclsInPrototype,
                                              SourceLocation LocalRangeBegin,
                                              SourceLocation LocalRangeEnd,
                                              Declarator &TheDeclarator,
@@ -214,7 +206,7 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
   I.Fun.ExceptionSpecType       = ESpecType;
   I.Fun.ExceptionSpecLocBeg     = ESpecRange.getBegin().getRawEncoding();
   I.Fun.ExceptionSpecLocEnd     = ESpecRange.getEnd().getRawEncoding();
-  I.Fun.NumExceptions           = 0;
+  I.Fun.NumExceptionsOrDecls    = 0;
   I.Fun.Exceptions              = nullptr;
   I.Fun.NoexceptExpr            = nullptr;
   I.Fun.HasTrailingReturnType   = TrailingReturnType.isUsable() ||
@@ -230,16 +222,18 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
     // parameter list there (in an effort to avoid new/delete traffic).  If it
     // is already used (consider a function returning a function pointer) or too
     // small (function with too many parameters), go to the heap.
-    if (!TheDeclarator.InlineParamsUsed &&
+    if (!TheDeclarator.InlineStorageUsed &&
         NumParams <= llvm::array_lengthof(TheDeclarator.InlineParams)) {
       I.Fun.Params = TheDeclarator.InlineParams;
+      new (I.Fun.Params) ParamInfo[NumParams];
       I.Fun.DeleteParams = false;
-      TheDeclarator.InlineParamsUsed = true;
+      TheDeclarator.InlineStorageUsed = true;
     } else {
       I.Fun.Params = new DeclaratorChunk::ParamInfo[NumParams];
       I.Fun.DeleteParams = true;
     }
-    memcpy(I.Fun.Params, Params, sizeof(Params[0]) * NumParams);
+    for (unsigned i = 0; i < NumParams; i++)
+      I.Fun.Params[i] = std::move(Params[i]);    
   }
 
   // Check what exception specification information we should actually store.
@@ -248,7 +242,7 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
   case EST_Dynamic:
     // new[] an exception array if needed
     if (NumExceptions) {
-      I.Fun.NumExceptions = NumExceptions;
+      I.Fun.NumExceptionsOrDecls = NumExceptions;
       I.Fun.Exceptions = new DeclaratorChunk::TypeAndRange[NumExceptions];
       for (unsigned i = 0; i != NumExceptions; ++i) {
         I.Fun.Exceptions[i].Ty = Exceptions[i];
@@ -265,7 +259,50 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
     I.Fun.ExceptionSpecTokens = ExceptionSpecTokens;
     break;
   }
+
+  if (!DeclsInPrototype.empty()) {
+    assert(ESpecType == EST_None && NumExceptions == 0 &&
+           "cannot have exception specifiers and decls in prototype");
+    I.Fun.NumExceptionsOrDecls = DeclsInPrototype.size();
+    // Copy the array of decls into stable heap storage.
+    I.Fun.DeclsInPrototype = new NamedDecl *[DeclsInPrototype.size()];
+    for (size_t J = 0; J < DeclsInPrototype.size(); ++J)
+      I.Fun.DeclsInPrototype[J] = DeclsInPrototype[J];
+  }
+
   return I;
+}
+
+void Declarator::setDecompositionBindings(
+    SourceLocation LSquareLoc,
+    ArrayRef<DecompositionDeclarator::Binding> Bindings,
+    SourceLocation RSquareLoc) {
+  assert(!hasName() && "declarator given multiple names!");
+
+  BindingGroup.LSquareLoc = LSquareLoc;
+  BindingGroup.RSquareLoc = RSquareLoc;
+  BindingGroup.NumBindings = Bindings.size();
+  Range.setEnd(RSquareLoc);
+
+  // We're now past the identifier.
+  SetIdentifier(nullptr, LSquareLoc);
+  Name.EndLocation = RSquareLoc;
+
+  // Allocate storage for bindings and stash them away.
+  if (Bindings.size()) {
+    if (!InlineStorageUsed &&
+        Bindings.size() <= llvm::array_lengthof(InlineBindings)) {
+      BindingGroup.Bindings = InlineBindings;
+      BindingGroup.DeleteBindings = false;
+      InlineStorageUsed = true;
+    } else {
+      BindingGroup.Bindings =
+          new DecompositionDeclarator::Binding[Bindings.size()];
+      BindingGroup.DeleteBindings = true;
+    }
+    std::uninitialized_copy(Bindings.begin(), Bindings.end(),
+                            BindingGroup.Bindings);
+  }
 }
 
 bool Declarator::isDeclarationOfFunction() const {
@@ -280,6 +317,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case DeclaratorChunk::Array:
     case DeclaratorChunk::BlockPointer:
     case DeclaratorChunk::MemberPointer:
+    case DeclaratorChunk::Pipe:
       return false;
     }
     llvm_unreachable("Invalid type chunk");
@@ -288,6 +326,7 @@ bool Declarator::isDeclarationOfFunction() const {
   switch (DS.getTypeSpecType()) {
     case TST_atomic:
     case TST_auto:
+    case TST_auto_type:
     case TST_bool:
     case TST_char:
     case TST_char16:
@@ -297,6 +336,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_decimal32:
     case TST_decimal64:
     case TST_double:
+    case TST_float128:
     case TST_enum:
     case TST_error:
     case TST_float:
@@ -310,6 +350,8 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_unspecified:
     case TST_void:
     case TST_wchar:
+#define GENERIC_IMAGE_TYPE(ImgType, Id) case TST_##ImgType##_t:
+#include "clang/Basic/OpenCLImageTypes.def"
       return false;
 
     case TST_decltype_auto:
@@ -463,6 +505,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_half:        return "half";
   case DeclSpec::TST_float:       return "float";
   case DeclSpec::TST_double:      return "double";
+  case DeclSpec::TST_float128:    return "__float128";
   case DeclSpec::TST_bool:        return Policy.Bool ? "bool" : "_Bool";
   case DeclSpec::TST_decimal32:   return "_Decimal32";
   case DeclSpec::TST_decimal64:   return "_Decimal64";
@@ -476,11 +519,16 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_typeofType:
   case DeclSpec::TST_typeofExpr:  return "typeof";
   case DeclSpec::TST_auto:        return "auto";
+  case DeclSpec::TST_auto_type:   return "__auto_type";
   case DeclSpec::TST_decltype:    return "(decltype)";
   case DeclSpec::TST_decltype_auto: return "decltype(auto)";
   case DeclSpec::TST_underlyingType: return "__underlying_type";
   case DeclSpec::TST_unknown_anytype: return "__unknown_anytype";
   case DeclSpec::TST_atomic: return "_Atomic";
+#define GENERIC_IMAGE_TYPE(ImgType, Id) \
+  case DeclSpec::TST_##ImgType##_t: \
+    return #ImgType "_t";
+#include "clang/Basic/OpenCLImageTypes.def"
   case DeclSpec::TST_error:       return "(error)";
   }
   llvm_unreachable("Unknown typespec!");
@@ -493,6 +541,7 @@ const char *DeclSpec::getSpecifierName(TQ T) {
   case DeclSpec::TQ_restrict:    return "restrict";
   case DeclSpec::TQ_volatile:    return "volatile";
   case DeclSpec::TQ_atomic:      return "_Atomic";
+  case DeclSpec::TQ_unaligned:   return "__unaligned";
   }
   llvm_unreachable("Unknown typespec!");
 }
@@ -509,17 +558,17 @@ bool DeclSpec::SetStorageClassSpec(Sema &S, SCS SC, SourceLocation Loc,
   // OpenCL v1.2 s6.8 changes this to "The auto and register storage-class
   // specifiers are not supported."
   if (S.getLangOpts().OpenCL &&
-      !S.getOpenCLOptions().cl_clang_storage_class_specifiers) {
+      !S.getOpenCLOptions().isEnabled("cl_clang_storage_class_specifiers")) {
     switch (SC) {
     case SCS_extern:
     case SCS_private_extern:
     case SCS_static:
-        if (S.getLangOpts().OpenCLVersion < 120) {
-          DiagID   = diag::err_opencl_unknown_type_specifier;
-          PrevSpec = getSpecifierName(SC);
-          return true;
-        }
-        break;
+      if (S.getLangOpts().OpenCLVersion < 120) {
+        DiagID   = diag::err_opencl_unknown_type_specifier;
+        PrevSpec = getSpecifierName(SC);
+        return true;
+      }
+      break;
     case SCS_auto:
     case SCS_register:
       DiagID   = diag::err_opencl_unknown_type_specifier;
@@ -576,14 +625,16 @@ bool DeclSpec::SetTypeSpecWidth(TSW W, SourceLocation Loc,
                                 const char *&PrevSpec,
                                 unsigned &DiagID,
                                 const PrintingPolicy &Policy) {
-  // Overwrite TSWLoc only if TypeSpecWidth was unspecified, so that
+  // Overwrite TSWRange.Begin only if TypeSpecWidth was unspecified, so that
   // for 'long long' we will keep the source location of the first 'long'.
   if (TypeSpecWidth == TSW_unspecified)
-    TSWLoc = Loc;
+    TSWRange.setBegin(Loc);
   // Allow turning long -> long long.
   else if (W != TSW_longlong || TypeSpecWidth != TSW_long)
     return BadSpecifier(W, (TSW)TypeSpecWidth, PrevSpec, DiagID);
   TypeSpecWidth = W;
+  // Remember location of the last 'long'
+  TSWRange.setEnd(Loc);
   return false;
 }
 
@@ -721,6 +772,22 @@ bool DeclSpec::SetTypeAltiVecVector(bool isAltiVecVector, SourceLocation Loc,
   return false;
 }
 
+bool DeclSpec::SetTypePipe(bool isPipe, SourceLocation Loc,
+                           const char *&PrevSpec, unsigned &DiagID,
+                           const PrintingPolicy &Policy) {
+
+  if (TypeSpecType != TST_unspecified) {
+    PrevSpec = DeclSpec::getSpecifierName((TST)TypeSpecType, Policy);
+    DiagID = diag::err_invalid_decl_spec_combination;
+    return true;
+  }
+
+  if (isPipe) {
+    TypeSpecPipe = TSP_pipe;
+  }
+  return false;
+}
+
 bool DeclSpec::SetTypeAltiVecPixel(bool isAltiVecPixel, SourceLocation Loc,
                           const char *&PrevSpec, unsigned &DiagID,
                           const PrintingPolicy &Policy) {
@@ -778,6 +845,7 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc, const char *&PrevSpec,
   case TQ_const:    TQ_constLoc = Loc; return false;
   case TQ_restrict: TQ_restrictLoc = Loc; return false;
   case TQ_volatile: TQ_volatileLoc = Loc; return false;
+  case TQ_unaligned: TQ_unalignedLoc = Loc; return false;
   case TQ_atomic:   TQ_atomicLoc = Loc; return false;
   }
 
@@ -931,7 +999,7 @@ void DeclSpec::SaveWrittenBuiltinSpecs() {
 /// "_Imaginary" (lacking an FP type).  This returns a diagnostic to issue or
 /// diag::NUM_DIAGNOSTICS if there is no error.  After calling this method,
 /// DeclSpec is guaranteed self-consistent, even if an error occurred.
-void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPolicy &Policy) {
+void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   // Before possibly changing their values, save specs as written.
   SaveWrittenBuiltinSpecs();
 
@@ -944,18 +1012,18 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
        TypeSpecSign != TSS_unspecified ||
        TypeAltiVecVector || TypeAltiVecPixel || TypeAltiVecBool ||
        TypeQualifiers)) {
-    const unsigned NumLocs = 8;
+    const unsigned NumLocs = 9;
     SourceLocation ExtraLocs[NumLocs] = {
-      TSWLoc, TSCLoc, TSSLoc, AltiVecLoc,
-      TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc
-    };
+        TSWRange.getBegin(), TSCLoc,       TSSLoc,
+        AltiVecLoc,          TQ_constLoc,  TQ_restrictLoc,
+        TQ_volatileLoc,      TQ_atomicLoc, TQ_unalignedLoc};
     FixItHint Hints[NumLocs];
     SourceLocation FirstLoc;
     for (unsigned I = 0; I != NumLocs; ++I) {
       if (ExtraLocs[I].isValid()) {
         if (FirstLoc.isInvalid() ||
-            PP.getSourceManager().isBeforeInTranslationUnit(ExtraLocs[I],
-                                                            FirstLoc))
+            S.getSourceManager().isBeforeInTranslationUnit(ExtraLocs[I],
+                                                           FirstLoc))
           FirstLoc = ExtraLocs[I];
         Hints[I] = FixItHint::CreateRemoval(ExtraLocs[I]);
       }
@@ -965,7 +1033,7 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
     TypeSpecSign = TSS_unspecified;
     TypeAltiVecVector = TypeAltiVecPixel = TypeAltiVecBool = false;
     TypeQualifiers = 0;
-    Diag(D, TSTLoc, diag::err_decltype_auto_cannot_be_combined)
+    S.Diag(TSTLoc, diag::err_decltype_auto_cannot_be_combined)
       << Hints[0] << Hints[1] << Hints[2] << Hints[3]
       << Hints[4] << Hints[5] << Hints[6] << Hints[7];
   }
@@ -975,14 +1043,14 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
     if (TypeAltiVecBool) {
       // Sign specifiers are not allowed with vector bool. (PIM 2.1)
       if (TypeSpecSign != TSS_unspecified) {
-        Diag(D, TSSLoc, diag::err_invalid_vector_bool_decl_spec)
+        S.Diag(TSSLoc, diag::err_invalid_vector_bool_decl_spec)
           << getSpecifierName((TSS)TypeSpecSign);
       }
 
       // Only char/int are valid with vector bool. (PIM 2.1)
       if (((TypeSpecType != TST_unspecified) && (TypeSpecType != TST_char) &&
            (TypeSpecType != TST_int)) || TypeAltiVecPixel) {
-        Diag(D, TSTLoc, diag::err_invalid_vector_bool_decl_spec)
+        S.Diag(TSTLoc, diag::err_invalid_vector_bool_decl_spec)
           << (TypeAltiVecPixel ? "__pixel" :
                                  getSpecifierName((TST)TypeSpecType, Policy));
       }
@@ -990,15 +1058,15 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
       // Only 'short' and 'long long' are valid with vector bool. (PIM 2.1)
       if ((TypeSpecWidth != TSW_unspecified) && (TypeSpecWidth != TSW_short) &&
           (TypeSpecWidth != TSW_longlong))
-        Diag(D, TSWLoc, diag::err_invalid_vector_bool_decl_spec)
-          << getSpecifierName((TSW)TypeSpecWidth);
+        S.Diag(TSWRange.getBegin(), diag::err_invalid_vector_bool_decl_spec)
+            << getSpecifierName((TSW)TypeSpecWidth);
 
       // vector bool long long requires VSX support or ZVector.
       if ((TypeSpecWidth == TSW_longlong) &&
-          (!PP.getTargetInfo().hasFeature("vsx")) &&
-          (!PP.getTargetInfo().hasFeature("power8-vector")) &&
-          !PP.getLangOpts().ZVector)
-        Diag(D, TSTLoc, diag::err_invalid_vector_long_long_decl_spec);
+          (!S.Context.getTargetInfo().hasFeature("vsx")) &&
+          (!S.Context.getTargetInfo().hasFeature("power8-vector")) &&
+          !S.getLangOpts().ZVector)
+        S.Diag(TSTLoc, diag::err_invalid_vector_long_long_decl_spec);
 
       // Elements of vector bool are interpreted as unsigned. (PIM 2.1)
       if ((TypeSpecType == TST_char) || (TypeSpecType == TST_int) ||
@@ -1008,21 +1076,25 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
       // vector long double and vector long long double are never allowed.
       // vector double is OK for Power7 and later, and ZVector.
       if (TypeSpecWidth == TSW_long || TypeSpecWidth == TSW_longlong)
-        Diag(D, TSWLoc, diag::err_invalid_vector_long_double_decl_spec);
-      else if (!PP.getTargetInfo().hasFeature("vsx") &&
-               !PP.getLangOpts().ZVector)
-        Diag(D, TSTLoc, diag::err_invalid_vector_double_decl_spec);
+        S.Diag(TSWRange.getBegin(),
+               diag::err_invalid_vector_long_double_decl_spec);
+      else if (!S.Context.getTargetInfo().hasFeature("vsx") &&
+               !S.getLangOpts().ZVector)
+        S.Diag(TSTLoc, diag::err_invalid_vector_double_decl_spec);
     } else if (TypeSpecType == TST_float) {
-      // vector float is unsupported for ZVector.
-      if (PP.getLangOpts().ZVector)
-        Diag(D, TSTLoc, diag::err_invalid_vector_float_decl_spec);
+      // vector float is unsupported for ZVector unless we have the
+      // vector-enhancements facility 1 (ISA revision 12).
+      if (S.getLangOpts().ZVector &&
+          !S.Context.getTargetInfo().hasFeature("arch12"))
+        S.Diag(TSTLoc, diag::err_invalid_vector_float_decl_spec);
     } else if (TypeSpecWidth == TSW_long) {
       // vector long is unsupported for ZVector and deprecated for AltiVec.
-      if (PP.getLangOpts().ZVector)
-        Diag(D, TSWLoc, diag::err_invalid_vector_long_decl_spec);
+      if (S.getLangOpts().ZVector)
+        S.Diag(TSWRange.getBegin(), diag::err_invalid_vector_long_decl_spec);
       else
-        Diag(D, TSWLoc, diag::warn_vector_long_decl_spec_combination)
-          << getSpecifierName((TST)TypeSpecType, Policy);
+        S.Diag(TSWRange.getBegin(),
+               diag::warn_vector_long_decl_spec_combination)
+            << getSpecifierName((TST)TypeSpecType, Policy);
     }
 
     if (TypeAltiVecPixel) {
@@ -1040,7 +1112,7 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
       TypeSpecType = TST_int; // unsigned -> unsigned int, signed -> signed int.
     else if (TypeSpecType != TST_int  && TypeSpecType != TST_int128 &&
              TypeSpecType != TST_char && TypeSpecType != TST_wchar) {
-      Diag(D, TSSLoc, diag::err_invalid_sign_spec)
+      S.Diag(TSSLoc, diag::err_invalid_sign_spec)
         << getSpecifierName((TST)TypeSpecType, Policy);
       // signed double -> double.
       TypeSpecSign = TSS_unspecified;
@@ -1055,10 +1127,8 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
     if (TypeSpecType == TST_unspecified)
       TypeSpecType = TST_int; // short -> short int, long long -> long long int.
     else if (TypeSpecType != TST_int) {
-      Diag(D, TSWLoc,
-           TypeSpecWidth == TSW_short ? diag::err_invalid_short_spec
-                                      : diag::err_invalid_longlong_spec)
-        <<  getSpecifierName((TST)TypeSpecType, Policy);
+      S.Diag(TSWRange.getBegin(), diag::err_invalid_width_spec)
+          << (int)TypeSpecWidth << getSpecifierName((TST)TypeSpecType, Policy);
       TypeSpecType = TST_int;
       TypeSpecOwned = false;
     }
@@ -1067,8 +1137,8 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
     if (TypeSpecType == TST_unspecified)
       TypeSpecType = TST_int;  // long -> long int.
     else if (TypeSpecType != TST_int && TypeSpecType != TST_double) {
-      Diag(D, TSWLoc, diag::err_invalid_long_spec)
-        << getSpecifierName((TST)TypeSpecType, Policy);
+      S.Diag(TSWRange.getBegin(), diag::err_invalid_width_spec)
+          << (int)TypeSpecWidth << getSpecifierName((TST)TypeSpecType, Policy);
       TypeSpecType = TST_int;
       TypeSpecOwned = false;
     }
@@ -1079,17 +1149,17 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
   // disallow their use.  Need information about the backend.
   if (TypeSpecComplex != TSC_unspecified) {
     if (TypeSpecType == TST_unspecified) {
-      Diag(D, TSCLoc, diag::ext_plain_complex)
+      S.Diag(TSCLoc, diag::ext_plain_complex)
         << FixItHint::CreateInsertion(
-                              PP.getLocForEndOfToken(getTypeSpecComplexLoc()),
+                              S.getLocForEndOfToken(getTypeSpecComplexLoc()),
                                                  " double");
       TypeSpecType = TST_double;   // _Complex -> _Complex double.
     } else if (TypeSpecType == TST_int || TypeSpecType == TST_char) {
       // Note that this intentionally doesn't include _Complex _Bool.
-      if (!PP.getLangOpts().CPlusPlus)
-        Diag(D, TSTLoc, diag::ext_integer_complex);
+      if (!S.getLangOpts().CPlusPlus)
+        S.Diag(TSTLoc, diag::ext_integer_complex);
     } else if (TypeSpecType != TST_float && TypeSpecType != TST_double) {
-      Diag(D, TSCLoc, diag::err_invalid_complex_spec)
+      S.Diag(TSCLoc, diag::err_invalid_complex_spec)
         << getSpecifierName((TST)TypeSpecType, Policy);
       TypeSpecComplex = TSC_unspecified;
     }
@@ -1106,14 +1176,14 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
     case SCS_static:
       break;
     default:
-      if (PP.getSourceManager().isBeforeInTranslationUnit(
+      if (S.getSourceManager().isBeforeInTranslationUnit(
             getThreadStorageClassSpecLoc(), getStorageClassSpecLoc()))
-        Diag(D, getStorageClassSpecLoc(),
+        S.Diag(getStorageClassSpecLoc(),
              diag::err_invalid_decl_spec_combination)
           << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
           << SourceRange(getThreadStorageClassSpecLoc());
       else
-        Diag(D, getThreadStorageClassSpecLoc(),
+        S.Diag(getThreadStorageClassSpecLoc(),
              diag::err_invalid_decl_spec_combination)
           << DeclSpec::getSpecifierName(getStorageClassSpec())
           << SourceRange(getStorageClassSpecLoc());
@@ -1127,7 +1197,7 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
   // the type specifier is not optional, but we got 'auto' as a storage
   // class specifier, then assume this is an attempt to use C++0x's 'auto'
   // type specifier.
-  if (PP.getLangOpts().CPlusPlus &&
+  if (S.getLangOpts().CPlusPlus &&
       TypeSpecType == TST_unspecified && StorageClassSpec == SCS_auto) {
     TypeSpecType = TST_auto;
     StorageClassSpec = SCS_unspecified;
@@ -1136,17 +1206,17 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
   }
   // Diagnose if we've recovered from an ill-formed 'auto' storage class
   // specifier in a pre-C++11 dialect of C++.
-  if (!PP.getLangOpts().CPlusPlus11 && TypeSpecType == TST_auto)
-    Diag(D, TSTLoc, diag::ext_auto_type_specifier);
-  if (PP.getLangOpts().CPlusPlus && !PP.getLangOpts().CPlusPlus11 &&
+  if (!S.getLangOpts().CPlusPlus11 && TypeSpecType == TST_auto)
+    S.Diag(TSTLoc, diag::ext_auto_type_specifier);
+  if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11 &&
       StorageClassSpec == SCS_auto)
-    Diag(D, StorageClassSpecLoc, diag::warn_auto_storage_class)
+    S.Diag(StorageClassSpecLoc, diag::warn_auto_storage_class)
       << FixItHint::CreateRemoval(StorageClassSpecLoc);
   if (TypeSpecType == TST_char16 || TypeSpecType == TST_char32)
-    Diag(D, TSTLoc, diag::warn_cxx98_compat_unicode_type)
+    S.Diag(TSTLoc, diag::warn_cxx98_compat_unicode_type)
       << (TypeSpecType == TST_char16 ? "char16_t" : "char32_t");
   if (Constexpr_specified)
-    Diag(D, ConstexprLoc, diag::warn_cxx98_compat_constexpr);
+    S.Diag(ConstexprLoc, diag::warn_cxx98_compat_constexpr);
 
   // C++ [class.friend]p6:
   //   No storage-class-specifier shall appear in the decl-specifier-seq
@@ -1170,7 +1240,7 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
       ThreadHint = FixItHint::CreateRemoval(SCLoc);
     }
 
-    Diag(D, SCLoc, diag::err_friend_decl_spec)
+    S.Diag(SCLoc, diag::err_friend_decl_spec)
       << SpecName << StorageHint << ThreadHint;
 
     ClearStorageClassSpecs();
@@ -1196,7 +1266,7 @@ void DeclSpec::Finish(DiagnosticsEngine &D, Preprocessor &PP, const PrintingPoli
     }
 
     FixItHint Hint = FixItHint::CreateRemoval(SCLoc);
-    Diag(D, SCLoc, diag::err_friend_decl_spec)
+    S.Diag(SCLoc, diag::err_friend_decl_spec)
       << Keyword << Hint;
 
     FS_virtual_specified = FS_explicit_specified = false;
@@ -1250,6 +1320,7 @@ bool VirtSpecifiers::SetSpecifier(Specifier VS, SourceLocation Loc,
   switch (VS) {
   default: llvm_unreachable("Unknown specifier!");
   case VS_Override: VS_overrideLoc = Loc; break;
+  case VS_GNU_Final:
   case VS_Sealed:
   case VS_Final:    VS_finalLoc = Loc; break;
   }
@@ -1262,6 +1333,7 @@ const char *VirtSpecifiers::getSpecifierName(Specifier VS) {
   default: llvm_unreachable("Unknown specifier");
   case VS_Override: return "override";
   case VS_Final: return "final";
+  case VS_GNU_Final: return "__final";
   case VS_Sealed: return "sealed";
   }
 }

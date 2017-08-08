@@ -1,4 +1,4 @@
-; RUN: llc < %s -tailcallopt -code-model=medium -stack-alignment=4 -mtriple=i686-linux-gnu -mcpu=pentium | FileCheck %s
+; RUN: llc < %s -stack-symbol-ordering=0 -tailcallopt -code-model=medium -stack-alignment=4 -mtriple=i686-linux-gnu -mcpu=pentium | FileCheck %s
 
 ; Check the HiPE calling convention works (x86-32)
 
@@ -48,11 +48,7 @@ entry:
   store i32 %arg0, i32* %arg0_var
   store i32 %arg1, i32* %arg1_var
   store i32 %arg2, i32* %arg2_var
-
-  ; CHECK:      movl  16(%esp), %esi
-  ; CHECK-NEXT: movl  12(%esp), %ebp
-  ; CHECK-NEXT: movl   8(%esp), %eax
-  ; CHECK-NEXT: movl   4(%esp), %edx
+  ; These loads are loading the values from their previous stores and are optimized away.
   %0 = load i32, i32* %hp_var
   %1 = load i32, i32* %p_var
   %2 = load i32, i32* %arg0_var
@@ -73,5 +69,23 @@ define cc 11 void @baz() nounwind {
   ret void
 }
 
+; Sanity-check the tail call sequence. Number of arguments was chosen as to
+; expose a bug where the tail call sequence clobbered the stack.
+define cc 11 { i32, i32, i32 } @tailcaller(i32 %hp, i32 %p) nounwind {
+  ; CHECK:      movl	$15, %eax
+  ; CHECK-NEXT: movl	$31, %edx
+  ; CHECK-NEXT: movl	$47, %ecx
+  ; CHECK-NEXT: popl	%edi
+  ; CHECK-NEXT: jmp	tailcallee
+  %ret = tail call cc11 { i32, i32, i32 } @tailcallee(i32 %hp, i32 %p, i32 15,
+     i32 31, i32 47, i32 63) nounwind
+  ret { i32, i32, i32 } %ret
+}
+
+!hipe.literals = !{ !0, !1, !2 }
+!0 = !{ !"P_NSP_LIMIT", i32 84 }
+!1 = !{ !"X86_LEAF_WORDS", i32 24 }
+!2 = !{ !"AMD64_LEAF_WORDS", i32 24 }
 @clos = external constant i32
 declare cc 11 void @bar(i32, i32, i32, i32, i32)
+declare cc 11 { i32, i32, i32 } @tailcallee(i32, i32, i32, i32, i32, i32)

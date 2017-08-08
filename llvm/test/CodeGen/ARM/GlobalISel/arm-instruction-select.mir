@@ -1,0 +1,1256 @@
+# RUN: llc -O0 -mtriple arm-- -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  define void @test_zext_s1() { ret void }
+  define void @test_sext_s1() { ret void }
+  define void @test_sext_s8() { ret void }
+  define void @test_zext_s16() { ret void }
+  define void @test_anyext_s8() { ret void }
+  define void @test_anyext_s16() { ret void }
+
+  define void @test_trunc_s32_16() { ret void }
+
+  define void @test_add_s8() { ret void }
+  define void @test_add_s16() { ret void }
+  define void @test_add_s32() { ret void }
+
+  define void @test_fadd_s32() #0 { ret void }
+  define void @test_fadd_s64() #0 { ret void }
+
+  define void @test_sub_s8() { ret void }
+  define void @test_sub_s16() { ret void }
+  define void @test_sub_s32() { ret void }
+
+  define void @test_mul_s8() #1 { ret void }
+  define void @test_mul_s16() #1 { ret void }
+  define void @test_mul_s32() #1 { ret void }
+  define void @test_mulv5_s32() { ret void }
+
+  define void @test_sdiv_s32() #2 { ret void }
+  define void @test_udiv_s32() #2 { ret void }
+
+  define void @test_and_s32() { ret void }
+  define void @test_or_s32() { ret void }
+  define void @test_xor_s32() { ret void }
+
+  define void @test_load_from_stack() { ret void }
+  define void @test_load_f32() #0 { ret void }
+  define void @test_load_f64() #0 { ret void }
+
+  define void @test_stores() #0 { ret void }
+
+  define void @test_gep() { ret void }
+  define void @test_constant_imm() { ret void }
+  define void @test_constant_cimm() { ret void }
+
+  define void @test_select_s32() { ret void }
+  define void @test_select_ptr() { ret void }
+
+  define void @test_br() { ret void }
+
+  define void @test_soft_fp_double() #0 { ret void }
+
+  attributes #0 = { "target-features"="+vfp2,-neonfp" }
+  attributes #1 = { "target-features"="+v6" }
+  attributes #2 = { "target-features"="+hwdiv-arm" }
+...
+---
+name:            test_zext_s1
+# CHECK-LABEL: name: test_zext_s1
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s1) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = G_ZEXT %0(s1)
+    ; CHECK: [[VREGEXT:%[0-9]+]] = ANDri [[VREGX]], 1, 14, _, _
+
+    %r0 = COPY %1(s32)
+    ; CHECK: %r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_sext_s1
+# CHECK-LABEL: name: test_sext_s1
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s1) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = G_SEXT %0(s1)
+    ; CHECK: [[VREGAND:%[0-9]+]] = ANDri [[VREGX]], 1, 14, _, _
+    ; CHECK: [[VREGEXT:%[0-9]+]] = RSBri [[VREGAND]], 0, 14, _, _
+
+    %r0 = COPY %1(s32)
+    ; CHECK: %r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_sext_s8
+# CHECK-LABEL: name: test_sext_s8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s8) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = G_SEXT %0(s8)
+    ; CHECK: [[VREGEXT:%[0-9]+]] = SXTB [[VREGX]], 0, 14, _
+
+    %r0 = COPY %1(s32)
+    ; CHECK: %r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_zext_s16
+# CHECK-LABEL: name: test_zext_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s16) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = G_ZEXT %0(s16)
+    ; CHECK: [[VREGEXT:%[0-9]+]] = UXTH [[VREGX]], 0, 14, _
+
+    %r0 = COPY %1(s32)
+    ; CHECK: %r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_anyext_s8
+# CHECK-LABEL: name: test_anyext_s8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s8) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = G_ANYEXT %0(s8)
+    ; CHECK: [[VREGEXT:%[0-9]+]] = COPY [[VREGX]]
+
+    %r0 = COPY %1(s32)
+    ; CHECK: %r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_anyext_s16
+# CHECK-LABEL: name: test_anyext_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s16) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = G_ANYEXT %0(s16)
+    ; CHECK: [[VREGEXT:%[0-9]+]] = COPY [[VREGX]]
+
+    %r0 = COPY %1(s32)
+    ; CHECK: %r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_trunc_s32_16
+# CHECK-LABEL: name: test_trunc_s32_16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+# CHECK-DAG: id: 0, class: gpr
+# CHECK-DAG: id: 1, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s16) = G_TRUNC %0(s32)
+    ; CHECK: [[VREGTRUNC:%[0-9]+]] = COPY [[VREGX]]
+
+    %r0 = COPY %1(s16)
+    ; CHECK: %r0 = COPY [[VREGTRUNC]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_add_s8
+# CHECK-LABEL: name: test_add_s8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
+# CHECK-DAG: id: 0, class: gpr
+# CHECK-DAG: id: 1, class: gpr
+# CHECK-DAG: id: 2, class: gpr
+# CHECK-DAG: id: 3, class: gpr
+# CHECK-DAG: id: 4, class: gpr
+# CHECK-DAG: id: 5, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s8) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s8) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_ANYEXT %0(s8)
+    ; CHECK: [[VREGXEXT:%[0-9]+]] = COPY [[VREGX]]
+
+    %3(s32) = G_ANYEXT %1(s8)
+    ; CHECK: [[VREGYEXT:%[0-9]+]] = COPY [[VREGY]]
+
+    %4(s32) = G_ADD %2, %3
+    ; CHECK: [[VREGSUM:%[0-9]+]] = ADDrr [[VREGXEXT]], [[VREGYEXT]], 14, _, _
+
+    %5(s8) = G_TRUNC %4(s32)
+    ; CHECK: [[VREGSUMTR:%[0-9]+]] = COPY [[VREGSUM]]
+
+    %r0 = COPY %5(s8)
+    ; CHECK: %r0 = COPY [[VREGSUMTR]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_add_s16
+# CHECK-LABEL: name: test_add_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
+# CHECK-DAG: id: 0, class: gpr
+# CHECK-DAG: id: 1, class: gpr
+# CHECK-DAG: id: 2, class: gpr
+# CHECK-DAG: id: 3, class: gpr
+# CHECK-DAG: id: 4, class: gpr
+# CHECK-DAG: id: 5, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s16) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s16) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_ANYEXT %0(s16)
+    ; CHECK: [[VREGXEXT:%[0-9]+]] = COPY [[VREGX]]
+
+    %3(s32) = G_ANYEXT %1(s16)
+    ; CHECK: [[VREGYEXT:%[0-9]+]] = COPY [[VREGY]]
+
+    %4(s32) = G_ADD %2, %3
+    ; CHECK: [[VREGSUM:%[0-9]+]] = ADDrr [[VREGXEXT]], [[VREGYEXT]], 14, _, _
+
+    %5(s16) = G_TRUNC %4(s32)
+    ; CHECK: [[VREGSUMTR:%[0-9]+]] = COPY [[VREGSUM]]
+
+    %r0 = COPY %5(s16)
+    ; CHECK: %r0 = COPY [[VREGSUMTR]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_add_s32
+# CHECK-LABEL: name: test_add_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_ADD %0, %1
+    ; CHECK: [[VREGSUM:%[0-9]+]] = ADDrr [[VREGX]], [[VREGY]], 14, _, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGSUM]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fadd_s32
+# CHECK-LABEL: name: test_fadd_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: fprb }
+# CHECK: id: 0, class: spr
+# CHECK: id: 1, class: spr
+# CHECK: id: 2, class: spr
+body:             |
+  bb.0:
+    liveins: %s0, %s1
+
+    %0(s32) = COPY %s0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %s0
+
+    %1(s32) = COPY %s1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %s1
+
+    %2(s32) = G_FADD %0, %1
+    ; CHECK: [[VREGSUM:%[0-9]+]] = VADDS [[VREGX]], [[VREGY]], 14, _
+
+    %s0 = COPY %2(s32)
+    ; CHECK: %s0 = COPY [[VREGSUM]]
+
+    BX_RET 14, _, implicit %s0
+    ; CHECK: BX_RET 14, _, implicit %s0
+...
+---
+name:            test_fadd_s64
+# CHECK-LABEL: name: test_fadd_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: fprb }
+# CHECK: id: 0, class: dpr
+# CHECK: id: 1, class: dpr
+# CHECK: id: 2, class: dpr
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s64) = G_FADD %0, %1
+    ; CHECK: [[VREGSUM:%[0-9]+]] = VADDD [[VREGX]], [[VREGY]], 14, _
+
+    %d0 = COPY %2(s64)
+    ; CHECK: %d0 = COPY [[VREGSUM]]
+
+    BX_RET 14, _, implicit %d0
+    ; CHECK: BX_RET 14, _, implicit %d0
+...
+---
+name:            test_sub_s8
+# CHECK-LABEL: name: test_sub_s8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
+# CHECK-DAG: id: 0, class: gpr
+# CHECK-DAG: id: 1, class: gpr
+# CHECK-DAG: id: 2, class: gpr
+# CHECK-DAG: id: 3, class: gpr
+# CHECK-DAG: id: 4, class: gpr
+# CHECK-DAG: id: 5, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s8) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s8) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_ANYEXT %0(s8)
+    ; CHECK: [[VREGXEXT:%[0-9]+]] = COPY [[VREGX]]
+
+    %3(s32) = G_ANYEXT %1(s8)
+    ; CHECK: [[VREGYEXT:%[0-9]+]] = COPY [[VREGY]]
+
+    %4(s32) = G_SUB %2, %3
+    ; CHECK: [[VREGRES:%[0-9]+]] = SUBrr [[VREGXEXT]], [[VREGYEXT]], 14, _, _
+
+    %5(s8) = G_TRUNC %4(s32)
+    ; CHECK: [[VREGRESTR:%[0-9]+]] = COPY [[VREGRES]]
+
+    %r0 = COPY %5(s8)
+    ; CHECK: %r0 = COPY [[VREGRESTR]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_sub_s16
+# CHECK-LABEL: name: test_sub_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
+# CHECK-DAG: id: 0, class: gpr
+# CHECK-DAG: id: 1, class: gpr
+# CHECK-DAG: id: 2, class: gpr
+# CHECK-DAG: id: 3, class: gpr
+# CHECK-DAG: id: 4, class: gpr
+# CHECK-DAG: id: 5, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s16) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s16) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_ANYEXT %0(s16)
+    ; CHECK: [[VREGXEXT:%[0-9]+]] = COPY [[VREGX]]
+
+    %3(s32) = G_ANYEXT %1(s16)
+    ; CHECK: [[VREGYEXT:%[0-9]+]] = COPY [[VREGY]]
+
+    %4(s32) = G_SUB %2, %3
+    ; CHECK: [[VREGRES:%[0-9]+]] = SUBrr [[VREGXEXT]], [[VREGYEXT]], 14, _, _
+
+    %5(s16) = G_TRUNC %4(s32)
+    ; CHECK: [[VREGRESTR:%[0-9]+]] = COPY [[VREGRES]]
+
+    %r0 = COPY %5(s16)
+    ; CHECK: %r0 = COPY [[VREGRESTR]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_sub_s32
+# CHECK-LABEL: name: test_sub_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_SUB %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = SUBrr [[VREGX]], [[VREGY]], 14, _, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_mul_s8
+# CHECK-LABEL: name: test_mul_s8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
+# CHECK-DAG: id: 0, class: gpr
+# CHECK-DAG: id: 1, class: gpr
+# CHECK-DAG: id: 2, class: gprnopc
+# CHECK-DAG: id: 3, class: gprnopc
+# CHECK-DAG: id: 4, class: gprnopc
+# CHECK-DAG: id: 5, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s8) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s8) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_ANYEXT %0(s8)
+    ; CHECK: [[VREGXEXT:%[0-9]+]] = COPY [[VREGX]]
+
+    %3(s32) = G_ANYEXT %1(s8)
+    ; CHECK: [[VREGYEXT:%[0-9]+]] = COPY [[VREGY]]
+
+    %4(s32) = G_MUL %2, %3
+    ; CHECK: [[VREGRES:%[0-9]+]] = MUL [[VREGXEXT]], [[VREGYEXT]], 14, _, _
+
+    %5(s8) = G_TRUNC %4(s32)
+    ; CHECK: [[VREGRESTR:%[0-9]+]] = COPY [[VREGRES]]
+
+    %r0 = COPY %5(s8)
+    ; CHECK: %r0 = COPY [[VREGRESTR]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_mul_s16
+# CHECK-LABEL: name: test_mul_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
+# CHECK-DAG: id: 0, class: gpr
+# CHECK-DAG: id: 1, class: gpr
+# CHECK-DAG: id: 2, class: gprnopc
+# CHECK-DAG: id: 3, class: gprnopc
+# CHECK-DAG: id: 4, class: gprnopc
+# CHECK-DAG: id: 5, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s16) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s16) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_ANYEXT %0(s16)
+    ; CHECK: [[VREGXEXT:%[0-9]+]] = COPY [[VREGX]]
+
+    %3(s32) = G_ANYEXT %1(s16)
+    ; CHECK: [[VREGYEXT:%[0-9]+]] = COPY [[VREGY]]
+
+    %4(s32) = G_MUL %2, %3
+    ; CHECK: [[VREGRES:%[0-9]+]] = MUL [[VREGXEXT]], [[VREGYEXT]], 14, _, _
+
+    %5(s16) = G_TRUNC %4(s32)
+    ; CHECK: [[VREGRESTR:%[0-9]+]] = COPY [[VREGRES]]
+
+    %r0 = COPY %5(s16)
+    ; CHECK: %r0 = COPY [[VREGRESTR]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_mul_s32
+# CHECK-LABEL: name: test_mul_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gprnopc
+# CHECK: id: 1, class: gprnopc
+# CHECK: id: 2, class: gprnopc
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_MUL %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = MUL [[VREGX]], [[VREGY]], 14, _, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_mulv5_s32
+# CHECK-LABEL: name: test_mulv5_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gprnopc
+# CHECK: id: 1, class: gprnopc
+# CHECK: id: 2, class: gprnopc
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_MUL %0, %1
+    ; CHECK: early-clobber [[VREGRES:%[0-9]+]] = MULv5 [[VREGX]], [[VREGY]], 14, _, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_sdiv_s32
+# CHECK-LABEL: name: test_sdiv_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_SDIV %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = SDIV [[VREGX]], [[VREGY]], 14, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_udiv_s32
+# CHECK-LABEL: name: test_udiv_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_UDIV %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = UDIV [[VREGX]], [[VREGY]], 14, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_and_s32
+# CHECK-LABEL: name: test_and_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_AND %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = ANDrr [[VREGX]], [[VREGY]], 14, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_or_s32
+# CHECK-LABEL: name: test_or_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_OR %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = ORRrr [[VREGX]], [[VREGY]], 14, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_xor_s32
+# CHECK-LABEL: name: test_xor_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_XOR %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = EORrr [[VREGX]], [[VREGY]], 14, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_load_from_stack
+# CHECK-LABEL: name: test_load_from_stack
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+# CHECK-DAG: id: 0, class: gpr
+# CHECK-DAG: id: 1, class: gpr
+# CHECK-DAG: id: 2, class: gpr
+# CHECK-DAG: id: 3, class: gpr
+fixedStack:
+  - { id: 0, offset: 0, size: 1, alignment: 4, isImmutable: true, isAliased: false }
+  - { id: 1, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  - { id: 2, offset: 8, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+# CHECK-DAG: id: [[FI1:[0-9]+]], type: default, offset: 0, size: 1
+# CHECK-DAG: id: [[FI32:[0-9]+]], type: default, offset: 8
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3
+
+    %0(p0) = G_FRAME_INDEX %fixed-stack.2
+    ; CHECK: [[FI32VREG:%[0-9]+]] = ADDri %fixed-stack.[[FI32]], 0, 14, _, _
+
+    %1(s32) = G_LOAD %0(p0) :: (load 4)
+    ; CHECK: [[LD32VREG:%[0-9]+]] = LDRi12 [[FI32VREG]], 0, 14, _
+
+    %r0 = COPY %1
+    ; CHECK: %r0 = COPY [[LD32VREG]]
+
+    %2(p0) = G_FRAME_INDEX %fixed-stack.0
+    ; CHECK: [[FI1VREG:%[0-9]+]] = ADDri %fixed-stack.[[FI1]], 0, 14, _, _
+
+    %3(s1) = G_LOAD %2(p0) :: (load 1)
+    ; CHECK: [[LD1VREG:%[0-9]+]] = LDRBi12 [[FI1VREG]], 0, 14, _
+
+    %r0 = COPY %3
+    ; CHECK: %r0 = COPY [[LD1VREG]]
+
+    BX_RET 14, _
+    ; CHECK: BX_RET 14, _
+...
+---
+name:            test_load_f32
+# CHECK-LABEL: name: test_load_f32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: fprb }
+# CHECK-DAG: id: [[P:[0-9]+]], class: gpr
+# CHECK-DAG: id: [[V:[0-9]+]], class: spr
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3
+
+    %0(p0) = COPY %r0
+
+    %1(s32) = G_LOAD %0(p0) :: (load 4)
+    ; CHECK: %[[V]] = VLDRS %[[P]], 0, 14, _
+
+    %s0 = COPY %1
+    ; CHECK: %s0 = COPY %[[V]]
+
+    BX_RET 14, _, implicit %s0
+    ; CHECK: BX_RET 14, _, implicit %s0
+...
+---
+name:            test_load_f64
+# CHECK-LABEL: name: test_load_f64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: fprb }
+# CHECK-DAG: id: [[P:[0-9]+]], class: gpr
+# CHECK-DAG: id: [[V:[0-9]+]], class: dpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3
+
+    %0(p0) = COPY %r0
+
+    %1(s64) = G_LOAD %0(p0) :: (load 8)
+    ; CHECK: %[[V]] = VLDRD %[[P]], 0, 14, _
+
+    %d0 = COPY %1
+    ; CHECK: %d0 = COPY %[[V]]
+
+    BX_RET 14, _, implicit %d0
+    ; CHECK: BX_RET 14, _, implicit %d0
+...
+---
+name:            test_stores
+# CHECK-LABEL: name: test_stores
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: fprb }
+  - { id: 5, class: fprb }
+# CHECK: id: [[P:[0-9]+]], class: gpr
+# CHECK: id: [[I8:[0-9]+]], class: gpr
+# CHECK: id: [[I16:[0-9]+]], class: gpr
+# CHECK: id: [[I32:[0-9]+]], class: gpr
+# CHECK: id: [[F32:[0-9]+]], class: spr
+# CHECK: id: [[F64:[0-9]+]], class: dpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3
+
+    %0(p0) = COPY %r0
+    %1(s8) = COPY %r3
+    %2(s16) = COPY %r2
+    %3(s32) = COPY %r1
+    %4(s32) = COPY %s0
+    %5(s64) = COPY %d2
+
+    G_STORE %1(s8), %0(p0) :: (store 1)
+    ; CHECK: STRBi12 %[[I8]], %[[P]], 0, 14, _
+
+    G_STORE %2(s16), %0(p0) :: (store 2)
+    ; CHECK: STRH %[[I16]], %[[P]], _, 0, 14, _
+
+    G_STORE %3(s32), %0(p0) :: (store 4)
+    ; CHECK: STRi12 %[[I32]], %[[P]], 0, 14, _
+
+    G_STORE %4(s32), %0(p0) :: (store 4)
+    ; CHECK: VSTRS %[[F32]], %[[P]], 0, 14, _
+
+    G_STORE %5(s64), %0(p0) :: (store 8)
+    ; CHECK: VSTRD %[[F64]], %[[P]], 0, 14, _
+
+    BX_RET 14, _
+...
+---
+name:            test_gep
+# CHECK-LABEL: name: test_gep
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: [[PTR:[0-9]+]], class: gpr
+# CHECK: id: [[OFF:[0-9]+]], class: gpr
+# CHECK: id: [[GEP:[0-9]+]], class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(p0) = COPY %r0
+    %1(s32) = COPY %r1
+
+    %2(p0) = G_GEP %0, %1(s32)
+    ; CHECK: %[[GEP]] = ADDrr %[[PTR]], %[[OFF]], 14, _, _
+
+    %r0 = COPY %2(p0)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_constant_imm
+# CHECK-LABEL: name: test_constant_imm
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+# CHECK: id: [[C:[0-9]+]], class: gpr
+body:             |
+  bb.0:
+    %0(s32) = G_CONSTANT 42
+    ; CHECK: %[[C]] = MOVi 42, 14, _, _
+
+    %r0 = COPY %0(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_constant_cimm
+# CHECK-LABEL: name: test_constant_cimm
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+# CHECK: id: [[C:[0-9]+]], class: gpr
+body:             |
+  bb.0:
+    ; Adding a type on G_CONSTANT changes its operand from an Imm into a CImm.
+    ; We still want to see the same thing in the output though.
+    %0(s32) = G_CONSTANT i32 42
+    ; CHECK: %[[C]] = MOVi 42, 14, _, _
+
+    %r0 = COPY %0(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_select_s32
+# CHECK-LABEL: name: test_select_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s1) = COPY %r2
+    ; CHECK: [[VREGC:%[0-9]+]] = COPY %r2
+
+    %3(s32) = G_SELECT %2(s1),  %0, %1
+    ; CHECK: CMPri [[VREGC]], 0, 14, _, implicit-def %cpsr
+    ; CHECK: [[RES:%[0-9]+]] = MOVCCr [[VREGX]], [[VREGY]], 0, %cpsr
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_select_ptr
+# CHECK-LABEL: name: test_select_ptr
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2
+
+    %0(p0) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(p0) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s1) = COPY %r2
+    ; CHECK: [[VREGC:%[0-9]+]] = COPY %r2
+
+    %3(p0) = G_SELECT %2(s1),  %0, %1
+    ; CHECK: CMPri [[VREGC]], 0, 14, _, implicit-def %cpsr
+    ; CHECK: [[RES:%[0-9]+]] = MOVCCr [[VREGX]], [[VREGY]], 0, %cpsr
+
+    %r0 = COPY %3(p0)
+    ; CHECK: %r0 = COPY [[RES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_br
+# CHECK-LABEL: name: test_br
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+body:             |
+  bb.0:
+  ; CHECK: bb.0
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: %r0
+
+    %0(s1) = COPY %r0
+    ; CHECK: [[COND:%[0-9]+]] = COPY %r0
+
+    G_BRCOND %0(s1), %bb.1
+    ; CHECK: TSTri [[COND]], 1, 14, _, implicit-def %cpsr
+    ; CHECK: Bcc %bb.1, 0, %cpsr
+    G_BR %bb.2
+    ; CHECK: B %bb.2
+
+  bb.1:
+  ; CHECK: bb.1
+    successors: %bb.2(0x80000000)
+
+    G_BR %bb.2
+    ; CHECK: B %bb.2
+
+  bb.2:
+  ; CHECK: bb.2
+
+    BX_RET 14, _
+    ; CHECK: BX_RET 14, _
+...
+---
+name:            test_soft_fp_double
+# CHECK-LABEL: name: test_soft_fp_double
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: fprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+# CHECK-DAG: id: {{[0-9]+}}, class: gpr
+# CHECK-DAG: id: {{[0-9]+}}, class: gpr
+# CHECK-DAG: id: {{[0-9]+}}, class: gpr
+# CHECK-DAG: id: {{[0-9]+}}, class: gpr
+# CHECK-DAG: id: [[DREG:[0-9]+]], class: dpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3
+
+    %0(s32) = COPY %r2
+    ; CHECK: [[IN1:%[0-9]+]] = COPY %r2
+
+    %1(s32) = COPY %r3
+    ; CHECK: [[IN2:%[0-9]+]] = COPY %r3
+
+    %2(s64) = G_MERGE_VALUES %0(s32), %1(s32)
+    ; CHECK: %[[DREG]] = VMOVDRR [[IN1]], [[IN2]]
+
+    %3(s32), %4(s32) = G_UNMERGE_VALUES %2(s64)
+    ; CHECK: [[OUT1:%[0-9]+]], [[OUT2:%[0-9]+]] = VMOVRRD %[[DREG]]
+
+    %r0 = COPY %3
+    ; CHECK: %r0 = COPY [[OUT1]]
+
+    %r1 = COPY %4
+    ; CHECK: %r1 = COPY [[OUT2]]
+
+    BX_RET 14, _, implicit %r0, implicit %r1
+    ; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
+...

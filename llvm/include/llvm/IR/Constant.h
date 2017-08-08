@@ -15,11 +15,12 @@
 #define LLVM_IR_CONSTANT_H
 
 #include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 
 namespace llvm {
-  class APInt;
 
-  template<typename T> class SmallVectorImpl;
+class APInt;
 
 /// This is an important base class in LLVM. It provides the common facilities
 /// of all constant values in an LLVM program. A constant is a value that is
@@ -39,84 +40,66 @@ namespace llvm {
 /// don't have to worry about the lifetime of the objects.
 /// @brief LLVM Constant Representation
 class Constant : public User {
-  void operator=(const Constant &) = delete;
-  Constant(const Constant &) = delete;
-  void anchor() override;
-
 protected:
   Constant(Type *ty, ValueTy vty, Use *Ops, unsigned NumOps)
     : User(ty, vty, Ops, NumOps) {}
 
 public:
-  /// isNullValue - Return true if this is the value that would be returned by
-  /// getNullValue.
+  void operator=(const Constant &) = delete;
+  Constant(const Constant &) = delete;
+
+  /// Return true if this is the value that would be returned by getNullValue.
   bool isNullValue() const;
 
-  /// \brief Returns true if the value is one.
+  /// Returns true if the value is one.
   bool isOneValue() const;
 
-  /// isAllOnesValue - Return true if this is the value that would be returned by
+  /// Return true if this is the value that would be returned by
   /// getAllOnesValue.
   bool isAllOnesValue() const;
 
-  /// isNegativeZeroValue - Return true if the value is what would be returned
-  /// by getZeroValueForNegation.
+  /// Return true if the value is what would be returned by
+  /// getZeroValueForNegation.
   bool isNegativeZeroValue() const;
 
   /// Return true if the value is negative zero or null value.
   bool isZeroValue() const;
 
-  /// \brief Return true if the value is not the smallest signed value.
+  /// Return true if the value is not the smallest signed value.
   bool isNotMinSignedValue() const;
 
-  /// \brief Return true if the value is the smallest signed value.
+  /// Return true if the value is the smallest signed value.
   bool isMinSignedValue() const;
 
-  /// canTrap - Return true if evaluation of this constant could trap.  This is
-  /// true for things like constant expressions that could divide by zero.
+  /// Return true if evaluation of this constant could trap. This is true for
+  /// things like constant expressions that could divide by zero.
   bool canTrap() const;
 
-  /// isThreadDependent - Return true if the value can vary between threads.
+  /// Return true if the value can vary between threads.
   bool isThreadDependent() const;
 
   /// Return true if the value is dependent on a dllimport variable.
   bool isDLLImportDependent() const;
 
-  /// isConstantUsed - Return true if the constant has users other than constant
-  /// exprs and other dangling things.
+  /// Return true if the constant has users other than constant expressions and
+  /// other dangling things.
   bool isConstantUsed() const;
 
-  enum PossibleRelocationsTy {
-    NoRelocation = 0,
-    LocalRelocation = 1,
-    GlobalRelocations = 2
-  };
-
-  /// getRelocationInfo - This method classifies the entry according to
-  /// whether or not it may generate a relocation entry.  This must be
-  /// conservative, so if it might codegen to a relocatable entry, it should say
-  /// so.  The return values are:
+  /// This method classifies the entry according to whether or not it may
+  /// generate a relocation entry.  This must be conservative, so if it might
+  /// codegen to a relocatable entry, it should say so.
   ///
-  ///  NoRelocation: This constant pool entry is guaranteed to never have a
-  ///     relocation applied to it (because it holds a simple constant like
-  ///     '4').
-  ///  LocalRelocation: This entry has relocations, but the entries are
-  ///     guaranteed to be resolvable by the static linker, so the dynamic
-  ///     linker will never see them.
-  ///  GlobalRelocations: This entry may have arbitrary relocations.
-  ///
-  /// FIXME: This really should not be in VMCore.
-  PossibleRelocationsTy getRelocationInfo() const;
+  /// FIXME: This really should not be in IR.
+  bool needsRelocation() const;
 
-  /// getAggregateElement - For aggregates (struct/array/vector) return the
-  /// constant that corresponds to the specified element if possible, or null if
-  /// not.  This can return null if the element index is a ConstantExpr, or if
-  /// 'this' is a constant expr.
+  /// For aggregates (struct/array/vector) return the constant that corresponds
+  /// to the specified element if possible, or null if not. This can return null
+  /// if the element index is a ConstantExpr, or if 'this' is a constant expr.
   Constant *getAggregateElement(unsigned Elt) const;
   Constant *getAggregateElement(Constant *Elt) const;
 
-  /// getSplatValue - If this is a splat vector constant, meaning that all of
-  /// the elements have the same value, return that value. Otherwise return 0.
+  /// If this is a splat vector constant, meaning that all of the elements have
+  /// the same value, return that value. Otherwise return 0.
   Constant *getSplatValue() const;
 
   /// If C is a constant integer then return its value, otherwise C must be a
@@ -133,7 +116,7 @@ public:
   void destroyConstant();
 
   //// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return V->getValueID() >= ConstantFirstVal &&
            V->getValueID() <= ConstantLastVal;
   }
@@ -148,7 +131,7 @@ public:
   /// use Value::replaceAllUsesWith, which automatically dispatches to this
   /// method as needed.
   ///
-  void handleOperandChange(Value *, Value *, Use *);
+  void handleOperandChange(Value *, Value *);
 
   static Constant *getNullValue(Type* Ty);
 
@@ -157,25 +140,26 @@ public:
   /// @brief Get the all ones value
   static Constant *getAllOnesValue(Type* Ty);
 
-  /// getIntegerValue - Return the value for an integer or pointer constant,
-  /// or a vector thereof, with the given scalar value.
+  /// Return the value for an integer or pointer constant, or a vector thereof,
+  /// with the given scalar value.
   static Constant *getIntegerValue(Type *Ty, const APInt &V);
 
-  /// removeDeadConstantUsers - If there are any dead constant users dangling
-  /// off of this constant, remove them.  This method is useful for clients
-  /// that want to check to see if a global is unused, but don't want to deal
-  /// with potentially dead constants hanging off of the globals.
+  /// If there are any dead constant users dangling off of this constant, remove
+  /// them. This method is useful for clients that want to check to see if a
+  /// global is unused, but don't want to deal with potentially dead constants
+  /// hanging off of the globals.
   void removeDeadConstantUsers() const;
 
-  Constant *stripPointerCasts() {
+  const Constant *stripPointerCasts() const {
     return cast<Constant>(Value::stripPointerCasts());
   }
 
-  const Constant *stripPointerCasts() const {
-    return const_cast<Constant*>(this)->stripPointerCasts();
+  Constant *stripPointerCasts() {
+    return const_cast<Constant*>(
+                      static_cast<const Constant *>(this)->stripPointerCasts());
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_CONSTANT_H

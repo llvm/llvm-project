@@ -9,7 +9,7 @@ define void @am1(i16* %a, i16 %x) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am1:
-; CHECK:		bis.w	r14, 0(r15)
+; CHECK:		bis.w	r13, 0(r12)
 
 @foo = external global i16
 
@@ -20,7 +20,7 @@ define void @am2(i16 %x) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am2:
-; CHECK:		bis.w	r15, &foo
+; CHECK:		bis.w	r12, &foo
 
 @bar = external global [2 x i8]
 
@@ -32,7 +32,7 @@ define void @am3(i16 %i, i8 %x) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am3:
-; CHECK:		bis.b	r14, bar(r15)
+; CHECK:		bis.b	r13, bar(r12)
 
 define void @am4(i16 %x) nounwind {
 	%1 = load volatile i16, i16* inttoptr(i16 32 to i16*)
@@ -41,7 +41,7 @@ define void @am4(i16 %x) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am4:
-; CHECK:		bis.w	r15, &32
+; CHECK:		bis.w	r12, &32
 
 define void @am5(i16* %a, i16 %x) readonly {
 	%1 = getelementptr inbounds i16, i16* %a, i16 2
@@ -51,7 +51,7 @@ define void @am5(i16* %a, i16 %x) readonly {
 	ret void
 }
 ; CHECK-LABEL: am5:
-; CHECK:		bis.w	r14, 4(r15)
+; CHECK:		bis.w	r13, 4(r12)
 
 %S = type { i16, i16 }
 @baz = common global %S zeroinitializer
@@ -63,7 +63,7 @@ define void @am6(i16 %x) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am6:
-; CHECK:		bis.w	r15, &baz+2
+; CHECK:		bis.w	r12, &baz+2
 
 %T = type { i16, [2 x i8] }
 @duh = external global %T
@@ -77,5 +77,5 @@ define void @am7(i16 %n, i8 %x) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am7:
-; CHECK:		bis.b	r14, duh+2(r15)
+; CHECK:		bis.b	r13, duh+2(r12)
 

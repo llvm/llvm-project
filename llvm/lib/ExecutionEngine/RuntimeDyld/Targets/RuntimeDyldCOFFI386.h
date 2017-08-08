@@ -14,9 +14,9 @@
 #ifndef LLVM_LIB_EXECUTIONENGINE_RUNTIMEDYLD_TARGETS_RUNTIMEDYLDCOFFI386_H
 #define LLVM_LIB_EXECUTIONENGINE_RUNTIMEDYLD_TARGETS_RUNTIMEDYLDCOFFI386_H
 
-#include "llvm/Object/COFF.h"
-#include "llvm/Support/COFF.h"
 #include "../RuntimeDyldCOFF.h"
+#include "llvm/BinaryFormat/COFF.h"
+#include "llvm/Object/COFF.h"
 
 #define DEBUG_TYPE "dyld"
 
@@ -25,7 +25,7 @@ namespace llvm {
 class RuntimeDyldCOFFI386 : public RuntimeDyldCOFF {
 public:
   RuntimeDyldCOFFI386(RuntimeDyld::MemoryManager &MM,
-                      RuntimeDyld::SymbolResolver &Resolver)
+                      JITSymbolResolver &Resolver)
       : RuntimeDyldCOFF(MM, Resolver) {}
 
   unsigned getMaxStubSize() override {
@@ -34,24 +34,47 @@ public:
 
   unsigned getStubAlignment() override { return 1; }
 
-  relocation_iterator processRelocationRef(unsigned SectionID,
-                                           relocation_iterator RelI,
-                                           const ObjectFile &Obj,
-                                           ObjSectionToIDMap &ObjSectionToID,
-                                           StubMap &Stubs) override {
+  Expected<relocation_iterator>
+  processRelocationRef(unsigned SectionID,
+                       relocation_iterator RelI,
+                       const ObjectFile &Obj,
+                       ObjSectionToIDMap &ObjSectionToID,
+                       StubMap &Stubs) override {
+
     auto Symbol = RelI->getSymbol();
     if (Symbol == Obj.symbol_end())
       report_fatal_error("Unknown symbol in relocation");
 
-    ErrorOr<StringRef> TargetNameOrErr = Symbol->getName();
-    if (auto EC = TargetNameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> TargetNameOrErr = Symbol->getName();
+    if (!TargetNameOrErr)
+      return TargetNameOrErr.takeError();
     StringRef TargetName = *TargetNameOrErr;
 
-    auto Section = *Symbol->getSection();
+    auto SectionOrErr = Symbol->getSection();
+    if (!SectionOrErr)
+      return SectionOrErr.takeError();
+    auto Section = *SectionOrErr;
 
     uint64_t RelType = RelI->getType();
     uint64_t Offset = RelI->getOffset();
+
+    // Determine the Addend used to adjust the relocation value.
+    uint64_t Addend = 0;
+    SectionEntry &AddendSection = Sections[SectionID];
+    uintptr_t ObjTarget = AddendSection.getObjAddress() + Offset;
+    uint8_t *Displacement = (uint8_t *)ObjTarget;
+
+    switch (RelType) {
+    case COFF::IMAGE_REL_I386_DIR32:
+    case COFF::IMAGE_REL_I386_DIR32NB:
+    case COFF::IMAGE_REL_I386_SECREL:
+    case COFF::IMAGE_REL_I386_REL32: {
+      Addend = readBytesUnaligned(Displacement, 4);
+      break;
+    }
+    default:
+      break;
+    }
 
 #if !defined(NDEBUG)
     SmallString<32> RelTypeName;
@@ -59,15 +82,18 @@ public:
 #endif
     DEBUG(dbgs() << "\t\tIn Section " << SectionID << " Offset " << Offset
                  << " RelType: " << RelTypeName << " TargetName: " << TargetName
-                 << "\n");
+                 << " Addend " << Addend << "\n");
 
     unsigned TargetSectionID = -1;
     if (Section == Obj.section_end()) {
       RelocationEntry RE(SectionID, Offset, RelType, 0, -1, 0, 0, 0, false, 0);
       addRelocationForSymbol(RE, TargetName);
     } else {
-      TargetSectionID =
-          findOrEmitSection(Obj, *Section, Section->isText(), ObjSectionToID);
+      if (auto TargetSectionIDOrErr =
+          findOrEmitSection(Obj, *Section, Section->isText(), ObjSectionToID))
+        TargetSectionID = *TargetSectionIDOrErr;
+      else
+        return TargetSectionIDOrErr.takeError();
 
       switch (RelType) {
       case COFF::IMAGE_REL_I386_ABSOLUTE:
@@ -77,7 +103,7 @@ public:
       case COFF::IMAGE_REL_I386_DIR32NB:
       case COFF::IMAGE_REL_I386_REL32: {
         RelocationEntry RE =
-            RelocationEntry(SectionID, Offset, RelType, 0, TargetSectionID,
+            RelocationEntry(SectionID, Offset, RelType, Addend, TargetSectionID,
                             getSymbolOffset(*Symbol), 0, 0, false, 0);
         addRelocationForSection(RE, TargetSectionID);
         break;
@@ -90,7 +116,7 @@ public:
       }
       case COFF::IMAGE_REL_I386_SECREL: {
         RelocationEntry RE = RelocationEntry(SectionID, Offset, RelType,
-                                             getSymbolOffset(*Symbol));
+                                             getSymbolOffset(*Symbol) + Addend);
         addRelocationForSection(RE, TargetSectionID);
         break;
       }
@@ -105,7 +131,7 @@ public:
 
   void resolveRelocation(const RelocationEntry &RE, uint64_t Value) override {
     const auto Section = Sections[RE.SectionID];
-    uint8_t *Target = Section.Address + RE.Offset;
+    uint8_t *Target = Section.getAddressWithOffset(RE.Offset);
 
     switch (RE.RelType) {
     case COFF::IMAGE_REL_I386_ABSOLUTE:
@@ -116,7 +142,8 @@ public:
       uint64_t Result =
           RE.Sections.SectionA == static_cast<uint32_t>(-1)
               ? Value
-              : Sections[RE.Sections.SectionA].LoadAddress + RE.Addend;
+              : Sections[RE.Sections.SectionA].getLoadAddressWithOffset(
+                    RE.Addend);
       assert(static_cast<int32_t>(Result) <= INT32_MAX &&
              "relocation overflow");
       assert(static_cast<int32_t>(Result) >= INT32_MIN &&
@@ -130,9 +157,10 @@ public:
     }
     case COFF::IMAGE_REL_I386_DIR32NB: {
       // The target's 32-bit RVA.
-      // NOTE: use Section[0].LoadAddress as an approximation of ImageBase
-      uint64_t Result = Sections[RE.Sections.SectionA].LoadAddress + RE.Addend -
-                        Sections[0].LoadAddress;
+      // NOTE: use Section[0].getLoadAddress() as an approximation of ImageBase
+      uint64_t Result =
+          Sections[RE.Sections.SectionA].getLoadAddressWithOffset(RE.Addend) -
+          Sections[0].getLoadAddress();
       assert(static_cast<int32_t>(Result) <= INT32_MAX &&
              "relocation overflow");
       assert(static_cast<int32_t>(Result) >= INT32_MIN &&
@@ -146,8 +174,10 @@ public:
     }
     case COFF::IMAGE_REL_I386_REL32: {
       // 32-bit relative displacement to the target.
-      uint64_t Result = Sections[RE.Sections.SectionA].LoadAddress -
-                        Section.LoadAddress + RE.Addend - 4 - RE.Offset;
+      uint64_t Result = RE.Sections.SectionA == static_cast<uint32_t>(-1)
+                            ? Value
+                            : Sections[RE.Sections.SectionA].getLoadAddress();
+      Result = Result - Section.getLoadAddress() + RE.Addend - 4 - RE.Offset;
       assert(static_cast<int32_t>(Result) <= INT32_MAX &&
              "relocation overflow");
       assert(static_cast<int32_t>(Result) >= INT32_MIN &&
@@ -187,10 +217,6 @@ public:
   }
 
   void registerEHFrames() override {}
-  void deregisterEHFrames() override {}
-
-  void finalizeLoad(const ObjectFile &Obj,
-                    ObjSectionToIDMap &SectionMap) override {}
 };
 
 }

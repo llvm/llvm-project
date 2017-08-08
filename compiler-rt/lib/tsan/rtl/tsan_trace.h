@@ -42,7 +42,7 @@ enum EventType {
 typedef u64 Event;
 
 struct TraceHeader {
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   BufferedStackTrace stack0;  // Start stack for the trace.
 #else
   VarSizeStackTrace stack0;
@@ -55,7 +55,7 @@ struct TraceHeader {
 
 struct Trace {
   Mutex mtx;
-#ifndef SANITIZER_GO
+#if !SANITIZER_GO
   // Must be last to catch overflow as paging fault.
   // Go shadow stack is dynamically allocated.
   uptr shadow_stack[kShadowStackSize];

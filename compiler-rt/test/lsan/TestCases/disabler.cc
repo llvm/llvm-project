@@ -1,7 +1,7 @@
 // Test for ScopedDisabler.
 // RUN: LSAN_BASE="report_objects=1:use_registers=0:use_stacks=0:use_globals=0:use_tls=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: LSAN_OPTIONS=$LSAN_BASE not %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck %s
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,11 +13,13 @@ int main() {
   {
     __lsan::ScopedDisabler d;
     p = new void *;
+    fprintf(stderr, "Test alloc p: %p.\n", p);
   }
-  *reinterpret_cast<void **>(p) = malloc(666);
+  *p = malloc(666);
   void *q = malloc(1337);
-  // Break optimization.
-  fprintf(stderr, "Test alloc: %p.\n", q);
+  fprintf(stderr, "Test alloc q: %p.\n", q);
   return 0;
 }
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)
+
+// CHECK: Test alloc p: [[ADDR:.*]].
+// CHECK-NOT: [[ADDR]]

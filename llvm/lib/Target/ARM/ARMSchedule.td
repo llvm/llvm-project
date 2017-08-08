@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
-// Instruction scheduling annotations for out-of-order CPUs.
+// Instruction scheduling annotations for in-order and out-of-order CPUs.
 // These annotations are independent of the itinerary class defined below.
 // Here we define the subtarget independent read/write per-operand resources.
 // The subtarget schedule definitions will then map these to the subtarget's
@@ -54,6 +54,9 @@
 //  }
 //  def : ReadAdvance<ReadAdvanceALUsr, 3>;
 
+//===----------------------------------------------------------------------===//
+// Sched definitions for integer pipeline instructions
+//
 // Basic ALU operation.
 def WriteALU : SchedWrite;
 def ReadALU : SchedRead;
@@ -69,32 +72,87 @@ def WriteCMP : SchedWrite;
 def WriteCMPsi : SchedWrite;
 def WriteCMPsr : SchedWrite;
 
-// Division.
-def WriteDiv : SchedWrite;
+// Multiplys.
+def WriteMUL16   : SchedWrite; // 16-bit multiply.
+def WriteMUL32   : SchedWrite; // 32-bit multiply.
+def WriteMUL64Lo : SchedWrite; // 64-bit result. Low reg.
+def WriteMUL64Hi : SchedWrite; // 64-bit result. High reg.
+def ReadMUL  : SchedRead;
 
-// Loads.
+// Multiply-accumulates.
+def WriteMAC16   : SchedWrite; // 16-bit mac.
+def WriteMAC32   : SchedWrite; // 32-bit mac.
+def WriteMAC64Lo : SchedWrite; // 64-bit mac. Low reg.
+def WriteMAC64Hi : SchedWrite; // 64-bit mac. High reg.
+def ReadMAC : SchedRead;
+
+// Divisions.
+def WriteDIV : SchedWrite;
+
+// Loads/Stores.
 def WriteLd : SchedWrite;
 def WritePreLd : SchedWrite;
+def WriteST : SchedWrite;
 
 // Branches.
 def WriteBr : SchedWrite;
 def WriteBrL : SchedWrite;
 def WriteBrTbl : SchedWrite;
 
-// Fixpoint conversions.
-def WriteCvtFP : SchedWrite;
-
 // Noop.
 def WriteNoop : SchedWrite;
+
+//===----------------------------------------------------------------------===//
+// Sched definitions for floating-point and neon instructions
+//
+// Floating point conversions
+def WriteFPCVT : SchedWrite;
+def WriteFPMOV : SchedWrite; // FP -> GPR and vice-versa
+
+// ALU operations (32/64-bit)
+def WriteFPALU32 : SchedWrite;
+def WriteFPALU64 : SchedWrite;
+
+// Multiplication
+def WriteFPMUL32 : SchedWrite;
+def WriteFPMUL64 : SchedWrite;
+def ReadFPMUL    : SchedRead; // multiplier read
+def ReadFPMAC    : SchedRead; // accumulator read
+
+// Multiply-accumulate
+def WriteFPMAC32 : SchedWrite;
+def WriteFPMAC64 : SchedWrite;
+
+// Division
+def WriteFPDIV32 : SchedWrite;
+def WriteFPDIV64 : SchedWrite;
+
+// Square-root
+def WriteFPSQRT32 : SchedWrite;
+def WriteFPSQRT64 : SchedWrite;
+
+// Vector load and stores
+def WriteVLD1 : SchedWrite;
+def WriteVLD2 : SchedWrite;
+def WriteVLD3 : SchedWrite;
+def WriteVLD4 : SchedWrite;
+def WriteVST1 : SchedWrite;
+def WriteVST2 : SchedWrite;
+def WriteVST3 : SchedWrite;
+def WriteVST4 : SchedWrite;
+
 
 // Define TII for use in SchedVariant Predicates.
 def : PredicateProlog<[{
   const ARMBaseInstrInfo *TII =
     static_cast<const ARMBaseInstrInfo*>(SchedModel->getInstrInfo());
   (void)TII;
+  const ARMSubtarget *STI =
+    static_cast<const ARMSubtarget*>(SchedModel->getSubtargetInfo());
+  (void)STI;
 }]>;
 
-def IsPredicatedPred : SchedPredicate<[{TII->isPredicated(MI)}]>;
+def IsPredicatedPred : SchedPredicate<[{TII->isPredicated(*MI)}]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Itinerary classes used for ARM
@@ -186,38 +244,50 @@ def IIC_iStore_mu  : InstrItinClass;
 def IIC_Preload    : InstrItinClass;
 def IIC_Br         : InstrItinClass;
 def IIC_fpSTAT     : InstrItinClass;
+def IIC_fpUNA16    : InstrItinClass;
 def IIC_fpUNA32    : InstrItinClass;
 def IIC_fpUNA64    : InstrItinClass;
+def IIC_fpCMP16    : InstrItinClass;
 def IIC_fpCMP32    : InstrItinClass;
 def IIC_fpCMP64    : InstrItinClass;
 def IIC_fpCVTSD    : InstrItinClass;
 def IIC_fpCVTDS    : InstrItinClass;
 def IIC_fpCVTSH    : InstrItinClass;
 def IIC_fpCVTHS    : InstrItinClass;
+def IIC_fpCVTIH    : InstrItinClass;
 def IIC_fpCVTIS    : InstrItinClass;
 def IIC_fpCVTID    : InstrItinClass;
+def IIC_fpCVTHI    : InstrItinClass;
 def IIC_fpCVTSI    : InstrItinClass;
 def IIC_fpCVTDI    : InstrItinClass;
 def IIC_fpMOVIS    : InstrItinClass;
 def IIC_fpMOVID    : InstrItinClass;
 def IIC_fpMOVSI    : InstrItinClass;
 def IIC_fpMOVDI    : InstrItinClass;
+def IIC_fpALU16    : InstrItinClass;
 def IIC_fpALU32    : InstrItinClass;
 def IIC_fpALU64    : InstrItinClass;
+def IIC_fpMUL16    : InstrItinClass;
 def IIC_fpMUL32    : InstrItinClass;
 def IIC_fpMUL64    : InstrItinClass;
+def IIC_fpMAC16    : InstrItinClass;
 def IIC_fpMAC32    : InstrItinClass;
 def IIC_fpMAC64    : InstrItinClass;
+def IIC_fpFMAC16   : InstrItinClass;
 def IIC_fpFMAC32   : InstrItinClass;
 def IIC_fpFMAC64   : InstrItinClass;
+def IIC_fpDIV16    : InstrItinClass;
 def IIC_fpDIV32    : InstrItinClass;
 def IIC_fpDIV64    : InstrItinClass;
+def IIC_fpSQRT16   : InstrItinClass;
 def IIC_fpSQRT32   : InstrItinClass;
 def IIC_fpSQRT64   : InstrItinClass;
+def IIC_fpLoad16   : InstrItinClass;
 def IIC_fpLoad32   : InstrItinClass;
 def IIC_fpLoad64   : InstrItinClass;
 def IIC_fpLoad_m   : InstrItinClass;
 def IIC_fpLoad_mu  : InstrItinClass;
+def IIC_fpStore16  : InstrItinClass;
 def IIC_fpStore32  : InstrItinClass;
 def IIC_fpStore64  : InstrItinClass;
 def IIC_fpStore_m  : InstrItinClass;
@@ -352,3 +422,6 @@ include "ARMScheduleV6.td"
 include "ARMScheduleA8.td"
 include "ARMScheduleA9.td"
 include "ARMScheduleSwift.td"
+include "ARMScheduleR52.td"
+include "ARMScheduleA57.td"
+include "ARMScheduleM3.td"

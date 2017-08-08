@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple %itanium_abi_triple -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple %itanium_abi_triple -fms-extensions -O2 -disable-llvm-passes -emit-llvm -o - | FileCheck %s
 
 // Test optnone on both function declarations and function definitions.
 // Verify also that we don't generate invalid IR functions with
@@ -90,5 +90,6 @@ int user_of_forceinline_optnone_function() {
 // CHECK: @_Z28forceinline_optnone_functionii({{.*}}) [[OPTNONE]]
 
 // CHECK: attributes [[OPTNONE]] = { noinline nounwind optnone {{.*}} }
-// CHECK: attributes [[NORMAL]] = { nounwind {{.*}} }
-
+// CHECK: attributes [[NORMAL]] =
+// CHECK-NOT: noinline
+// CHECK-NOT: optnone

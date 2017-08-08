@@ -1,0 +1,23 @@
+REQUIRES: posix
+
+RUN: rm -rf  %tmp/T1 %tmp/T2
+RUN: mkdir -p %tmp/T1 %tmp/T2
+
+RUN: echo F..... > %tmp/T1/1
+RUN: echo .U.... > %tmp/T1/2
+RUN: echo ..Z... > %tmp/T1/3
+
+RUN: echo .....F > %tmp/T2/1
+RUN: echo ....U. > %tmp/T2/2
+RUN: echo ...Z.. > %tmp/T2/3
+RUN: echo ...Z.. > %tmp/T2/4
+RUN: echo ....E. > %tmp/T2/5
+RUN: echo .....R > %tmp/T2/6
+
+# Check that we can report an error if file size exceeded
+RUN: (ulimit -f 1; not LLVMFuzzer-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=SIGXFSZ)
+SIGXFSZ: ERROR: libFuzzer: file size exceeded
+
+# Check that we honor TMPDIR
+RUN: TMPDIR=DIR_DOES_NOT_EXIST not LLVMFuzzer-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=TMPDIR
+TMPDIR: MERGE-OUTER: failed to write to the control file: DIR_DOES_NOT_EXIST/libFuzzerTemp

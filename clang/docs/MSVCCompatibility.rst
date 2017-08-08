@@ -72,29 +72,31 @@ The status of major ABI-impacting C++ features:
 .. _/vm: http://msdn.microsoft.com/en-us/library/yad46a6z.aspx
 .. _pointer to a member of a virtual base class: http://llvm.org/PR15713
 
-* Debug info: :partial:`Minimal`.  Clang emits both CodeView line tables
-  (similar to what MSVC emits when given the ``/Z7`` flag) and DWARF debug
-  information into the object file.
-  Microsoft's link.exe will transform the CodeView line tables into a PDB,
-  enabling stack traces in all modern Windows debuggers.  Clang does not emit
-  any CodeView-compatible type info or description of variable layout.
-  Binaries linked with either binutils' ld or LLVM's lld should be usable with
-  GDB however sophisticated C++ expressions are likely to fail.
+* Debug info: :good:`Mostly complete`.  Clang emits relatively complete CodeView
+  debug information if ``/Z7`` or ``/Zi`` is passed. Microsoft's link.exe will
+  transform the CodeView debug information into a PDB that works in Windows
+  debuggers and other tools that consume PDB files like ETW. Work to teach lld
+  about CodeView and PDBs is ongoing.
 
 * RTTI: :good:`Complete`.  Generation of RTTI data structures has been
   finished, along with support for the ``/GR`` flag.
 
-* Exceptions and SEH: :partial:`Partial`.
-  C++ exceptions (``try`` / ``catch`` / ``throw``) and
-  structured exceptions (``__try`` / ``__except`` / ``__finally``) mostly
-  work on x64. 32-bit exception handling support is being worked on.  LLVM does
-  not model asynchronous exceptions, so it is currently impossible to catch an
-  asynchronous exception generated in the same frame as the catching ``__try``.
+* C++ Exceptions: :good:`Mostly complete`.  Support for
+  C++ exceptions (``try`` / ``catch`` / ``throw``) have been implemented for
+  x86 and x64.  Our implementation has been well tested but we still get the
+  odd bug report now and again.
   C++ exception specifications are ignored, but this is `consistent with Visual
   C++`_.
 
 .. _consistent with Visual C++:
   https://msdn.microsoft.com/en-us/library/wfa0edys.aspx
+
+* Asynchronous Exceptions (SEH): :partial:`Partial`.
+  Structured exceptions (``__try`` / ``__except`` / ``__finally``) mostly
+  work on x86 and x64.
+  LLVM does not model asynchronous exceptions, so it is currently impossible to
+  catch an asynchronous exception generated in the same frame as the catching
+  ``__try``.
 
 * Thread-safe initialization of local statics: :good:`Complete`.  MSVC 2015
   added support for thread-safe initialization of such variables by taking an

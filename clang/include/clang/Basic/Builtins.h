@@ -31,11 +31,12 @@ class QualType;
 class LangOptions;
 
 enum LanguageID {
-  GNU_LANG = 0x1,  // builtin requires GNU mode.
-  C_LANG = 0x2,    // builtin for c only.
-  CXX_LANG = 0x4,  // builtin for cplusplus only.
-  OBJC_LANG = 0x8, // builtin for objective-c and objective-c++
-  MS_LANG = 0x10,  // builtin requires MS mode.
+  GNU_LANG = 0x1,     // builtin requires GNU mode.
+  C_LANG = 0x2,       // builtin for c only.
+  CXX_LANG = 0x4,     // builtin for cplusplus only.
+  OBJC_LANG = 0x8,    // builtin for objective-c and objective-c++
+  MS_LANG = 0x10,     // builtin requires MS mode.
+  OCLC20_LANG = 0x20, // builtin for OpenCL C only.
   ALL_LANGUAGES = C_LANG | CXX_LANG | OBJC_LANG, // builtin for all languages.
   ALL_GNU_LANGUAGES = ALL_LANGUAGES | GNU_LANG,  // builtin requires GNU mode.
   ALL_MS_LANGUAGES = ALL_LANGUAGES | MS_LANG     // builtin requires MS mode.
@@ -88,9 +89,14 @@ public:
     return getRecord(ID).Type;
   }
 
-  /// \brief Return true if this function is a target-specific builtin
+  /// \brief Return true if this function is a target-specific builtin.
   bool isTSBuiltin(unsigned ID) const {
     return ID >= Builtin::FirstTSBuiltin;
+  }
+
+  /// \brief Return true if this function has no side effects.
+  bool isPure(unsigned ID) const {
+    return strchr(getRecord(ID).Attributes, 'U') != nullptr;
   }
 
   /// \brief Return true if this function has no side effects and doesn't
@@ -133,6 +139,13 @@ public:
     return strchr(getRecord(ID).Attributes, 'f') != nullptr;
   }
 
+  /// \brief Returns true if this builtin requires appropriate header in other
+  /// compilers. In Clang it will work even without including it, but we can emit
+  /// a warning about missing header.
+  bool isHeaderDependentFunction(unsigned ID) const {
+    return strchr(getRecord(ID).Attributes, 'h') != nullptr;
+  }
+
   /// \brief Determines whether this builtin is a predefined compiler-rt/libgcc
   /// function, such as "__clear_cache", where we know the signature a
   /// priori.
@@ -154,7 +167,7 @@ public:
   /// \brief Completely forget that the given ID was ever considered a builtin,
   /// e.g., because the user provided a conflicting signature.
   void forgetBuiltin(unsigned ID, IdentifierTable &Table);
-  
+
   /// \brief If this is a library function that comes from a specific
   /// header, retrieve that header name.
   const char *getHeaderName(unsigned ID) const {
@@ -192,6 +205,10 @@ public:
   /// for AuxTarget).
   unsigned getAuxBuiltinID(unsigned ID) const { return ID - TSRecords.size(); }
 
+  /// Returns true if this is a libc/libm function without the '__builtin_'
+  /// prefix.
+  static bool isBuiltinFunc(const char *Name);
+
 private:
   const Info &getRecord(unsigned ID) const;
 
@@ -209,7 +226,10 @@ private:
 /// \brief Kinds of BuiltinTemplateDecl.
 enum BuiltinTemplateKind : int {
   /// \brief This names the __make_integer_seq BuiltinTemplateDecl.
-  BTK__make_integer_seq
+  BTK__make_integer_seq,
+
+  /// \brief This names the __type_pack_element BuiltinTemplateDecl.
+  BTK__type_pack_element
 };
 
 } // end namespace clang

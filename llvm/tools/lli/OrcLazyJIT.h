@@ -1,4 +1,4 @@
-//===--- OrcLazyJIT.h - Basic Orc-based JIT for lazy execution --*- C++ -*-===//
+//===- OrcLazyJIT.h - Basic Orc-based JIT for lazy execution ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,30 +15,46 @@
 #ifndef LLVM_TOOLS_LLI_ORCLAZYJIT_H
 #define LLVM_TOOLS_LLI_ORCLAZYJIT_H
 
-#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
-#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
 namespace llvm {
 
 class OrcLazyJIT {
 public:
 
-  typedef orc::JITCompileCallbackManagerBase CompileCallbackMgr;
-  typedef orc::ObjectLinkingLayer<> ObjLayerT;
-  typedef orc::IRCompileLayer<ObjLayerT> CompileLayerT;
-  typedef std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>
-    TransformFtor;
-  typedef orc::IRTransformLayer<CompileLayerT, TransformFtor> IRDumpLayerT;
-  typedef orc::CompileOnDemandLayer<IRDumpLayerT, CompileCallbackMgr> CODLayerT;
-  typedef CODLayerT::IndirectStubsManagerBuilderT
-    IndirectStubsManagerBuilder;
-  typedef CODLayerT::ModuleSetHandleT ModuleHandleT;
+  using CompileCallbackMgr = orc::JITCompileCallbackManager;
+  using ObjLayerT = orc::RTDyldObjectLinkingLayer;
+  using CompileLayerT = orc::IRCompileLayer<ObjLayerT, orc::SimpleCompiler>;
+  using TransformFtor =
+          std::function<std::shared_ptr<Module>(std::shared_ptr<Module>)>;
+  using IRDumpLayerT = orc::IRTransformLayer<CompileLayerT, TransformFtor>;
+  using CODLayerT = orc::CompileOnDemandLayer<IRDumpLayerT, CompileCallbackMgr>;
+  using IndirectStubsManagerBuilder = CODLayerT::IndirectStubsManagerBuilderT;
+  using ModuleHandleT = CODLayerT::ModuleHandleT;
 
   OrcLazyJIT(std::unique_ptr<TargetMachine> TM,
              std::unique_ptr<CompileCallbackMgr> CCMgr,
@@ -46,7 +62,7 @@ public:
              bool InlineStubs)
       : TM(std::move(TM)), DL(this->TM->createDataLayout()),
 	CCMgr(std::move(CCMgr)),
-	ObjectLayer(),
+	ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
         CompileLayer(ObjectLayer, orc::SimpleCompiler(*this->TM)),
         IRDumpLayer(CompileLayer, createDebugDumper()),
         CODLayer(IRDumpLayer, extractSingleFunction, *this->CCMgr,
@@ -59,74 +75,92 @@ public:
     CXXRuntimeOverrides.runDestructors();
     // Run any IR destructors.
     for (auto &DtorRunner : IRStaticDestructorRunners)
-      DtorRunner.runViaLayer(CODLayer);
+      if (auto Err = DtorRunner.runViaLayer(CODLayer)) {
+        // FIXME: OrcLazyJIT should probably take a "shutdownError" callback to
+        //        report these errors on.
+        report_fatal_error(std::move(Err));
+      }
   }
 
-  static std::unique_ptr<CompileCallbackMgr> createCompileCallbackMgr(Triple T);
-  static IndirectStubsManagerBuilder createIndirectStubsMgrBuilder(Triple T);
-
-  ModuleHandleT addModule(std::unique_ptr<Module> M) {
-    // Attach a data-layout if one isn't already present.
+  Error addModule(std::shared_ptr<Module> M) {
     if (M->getDataLayout().isDefault())
       M->setDataLayout(DL);
 
-    // Record the static constructors and destructors. We have to do this before
-    // we hand over ownership of the module to the JIT.
+    // Rename, bump linkage and record static constructors and destructors.
+    // We have to do this before we hand over ownership of the module to the
+    // JIT.
     std::vector<std::string> CtorNames, DtorNames;
-    for (auto Ctor : orc::getConstructors(*M))
-      CtorNames.push_back(mangle(Ctor.Func->getName()));
-    for (auto Dtor : orc::getDestructors(*M))
-      DtorNames.push_back(mangle(Dtor.Func->getName()));
+    {
+      unsigned CtorId = 0, DtorId = 0;
+      for (auto Ctor : orc::getConstructors(*M)) {
+        std::string NewCtorName = ("$static_ctor." + Twine(CtorId++)).str();
+        Ctor.Func->setName(NewCtorName);
+        Ctor.Func->setLinkage(GlobalValue::ExternalLinkage);
+        Ctor.Func->setVisibility(GlobalValue::HiddenVisibility);
+        CtorNames.push_back(mangle(NewCtorName));
+      }
+      for (auto Dtor : orc::getDestructors(*M)) {
+        std::string NewDtorName = ("$static_dtor." + Twine(DtorId++)).str();
+        Dtor.Func->setLinkage(GlobalValue::ExternalLinkage);
+        Dtor.Func->setVisibility(GlobalValue::HiddenVisibility);
+        DtorNames.push_back(mangle(Dtor.Func->getName()));
+        Dtor.Func->setName(NewDtorName);
+      }
+    }
 
     // Symbol resolution order:
     //   1) Search the JIT symbols.
     //   2) Check for C++ runtime overrides.
     //   3) Search the host process (LLI)'s symbol table.
-    std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver =
-      orc::createLambdaResolver(
-        [this](const std::string &Name) {
-          if (auto Sym = CODLayer.findSymbol(Name, true))
-            return RuntimeDyld::SymbolInfo(Sym.getAddress(),
-                                           Sym.getFlags());
-          if (auto Sym = CXXRuntimeOverrides.searchOverrides(Name))
-            return Sym;
+    if (ModulesHandle == CODLayerT::ModuleHandleT()) {
+      auto Resolver =
+        orc::createLambdaResolver(
+          [this](const std::string &Name) -> JITSymbol {
+            if (auto Sym = CODLayer.findSymbol(Name, true))
+              return Sym;
+            return CXXRuntimeOverrides.searchOverrides(Name);
+          },
+          [](const std::string &Name) {
+            if (auto Addr =
+                RTDyldMemoryManager::getSymbolAddressInProcess(Name))
+              return JITSymbol(Addr, JITSymbolFlags::Exported);
+            return JITSymbol(nullptr);
+          }
+        );
 
-          if (auto Addr =
-              RTDyldMemoryManager::getSymbolAddressInProcess(Name))
-            return RuntimeDyld::SymbolInfo(Addr, JITSymbolFlags::Exported);
+      // Add the module to the JIT.
+      if (auto ModulesHandleOrErr =
+          CODLayer.addModule(std::move(M), std::move(Resolver)))
+        ModulesHandle = std::move(*ModulesHandleOrErr);
+      else
+        return ModulesHandleOrErr.takeError();
 
-          return RuntimeDyld::SymbolInfo(nullptr);
-        },
-        [](const std::string &Name) {
-          return RuntimeDyld::SymbolInfo(nullptr);
-        }
-      );
-
-    // Add the module to the JIT.
-    std::vector<std::unique_ptr<Module>> S;
-    S.push_back(std::move(M));
-    auto H = CODLayer.addModuleSet(std::move(S), nullptr, std::move(Resolver));
+    } else
+      if (auto Err = CODLayer.addExtraModule(ModulesHandle, std::move(M)))
+        return Err;
 
     // Run the static constructors, and save the static destructor runner for
     // execution when the JIT is torn down.
-    orc::CtorDtorRunner<CODLayerT> CtorRunner(std::move(CtorNames), H);
-    CtorRunner.runViaLayer(CODLayer);
+    orc::CtorDtorRunner<CODLayerT> CtorRunner(std::move(CtorNames),
+                                              ModulesHandle);
+    if (auto Err = CtorRunner.runViaLayer(CODLayer))
+      return Err;
 
-    IRStaticDestructorRunners.emplace_back(std::move(DtorNames), H);
+    IRStaticDestructorRunners.emplace_back(std::move(DtorNames),
+                                           ModulesHandle);
 
-    return H;
+    return Error::success();
   }
 
-  orc::JITSymbol findSymbol(const std::string &Name) {
+  JITSymbol findSymbol(const std::string &Name) {
     return CODLayer.findSymbol(mangle(Name), true);
   }
 
-  orc::JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name) {
+  JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name) {
     return CODLayer.findSymbolIn(H, mangle(Name), true);
   }
 
 private:
-
   std::string mangle(const std::string &Name) {
     std::string MangledName;
     {
@@ -156,10 +190,12 @@ private:
 
   orc::LocalCXXRuntimeOverrides CXXRuntimeOverrides;
   std::vector<orc::CtorDtorRunner<CODLayerT>> IRStaticDestructorRunners;
+  CODLayerT::ModuleHandleT ModulesHandle;
 };
 
-int runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]);
+int runOrcLazyJIT(std::vector<std::unique_ptr<Module>> Ms,
+                  const std::vector<std::string> &Args);
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_TOOLS_LLI_ORCLAZYJIT_H

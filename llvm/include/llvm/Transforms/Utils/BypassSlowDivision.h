@@ -23,11 +23,13 @@
 
 namespace llvm {
 
-/// This optimization identifies DIV instructions that can be
+/// This optimization identifies DIV instructions in a BB that can be
 /// profitably bypassed and carried out with a shorter, faster divide.
-bool bypassSlowDivision(Function &F,
-                        Function::iterator &I,
-                        const DenseMap<unsigned int, unsigned int> &BypassWidth);
+///
+/// This optimization may add basic blocks immediately after BB; for obvious
+/// reasons, you shouldn't pass those blocks to bypassSlowDivision.
+bool bypassSlowDivision(
+    BasicBlock *BB, const DenseMap<unsigned int, unsigned int> &BypassWidth);
 
 } // End llvm namespace
 

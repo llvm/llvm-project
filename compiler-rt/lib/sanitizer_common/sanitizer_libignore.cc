@@ -50,23 +50,23 @@ void LibIgnore::OnLibraryLoaded(const char *name) {
   }
 
   // Scan suppressions list and find newly loaded and unloaded libraries.
-  MemoryMappingLayout proc_maps(/*cache_enabled*/false);
-  InternalScopedString module(kMaxPathLength);
+  ListOfModules modules;
+  modules.init();
   for (uptr i = 0; i < count_; i++) {
     Lib *lib = &libs_[i];
     bool loaded = false;
-    proc_maps.Reset();
-    uptr b, e, off, prot;
-    while (proc_maps.Next(&b, &e, &off, module.data(), module.size(), &prot)) {
-      if ((prot & MemoryMappingLayout::kProtectionExecute) == 0)
-        continue;
-      if (TemplateMatch(lib->templ, module.data()) ||
-          (lib->real_name &&
-          internal_strcmp(lib->real_name, module.data()) == 0)) {
+    for (const auto &mod : modules) {
+      for (const auto &range : mod.ranges()) {
+        if (!range.executable)
+          continue;
+        if (!TemplateMatch(lib->templ, mod.full_name()) &&
+            !(lib->real_name &&
+            internal_strcmp(lib->real_name, mod.full_name()) == 0))
+          continue;
         if (loaded) {
           Report("%s: called_from_lib suppression '%s' is matched against"
                  " 2 libraries: '%s' and '%s'\n",
-                 SanitizerToolName, lib->templ, lib->name, module.data());
+                 SanitizerToolName, lib->templ, lib->name, mod.full_name());
           Die();
         }
         loaded = true;
@@ -75,13 +75,16 @@ void LibIgnore::OnLibraryLoaded(const char *name) {
         VReport(1,
                 "Matched called_from_lib suppression '%s' against library"
                 " '%s'\n",
-                lib->templ, module.data());
+                lib->templ, mod.full_name());
         lib->loaded = true;
-        lib->name = internal_strdup(module.data());
-        const uptr idx = atomic_load(&loaded_count_, memory_order_relaxed);
-        code_ranges_[idx].begin = b;
-        code_ranges_[idx].end = e;
-        atomic_store(&loaded_count_, idx + 1, memory_order_release);
+        lib->name = internal_strdup(mod.full_name());
+        const uptr idx =
+            atomic_load(&ignored_ranges_count_, memory_order_relaxed);
+        CHECK_LT(idx, kMaxLibs);
+        ignored_code_ranges_[idx].begin = range.beg;
+        ignored_code_ranges_[idx].end = range.end;
+        atomic_store(&ignored_ranges_count_, idx + 1, memory_order_release);
+        break;
       }
     }
     if (lib->loaded && !loaded) {
@@ -89,6 +92,29 @@ void LibIgnore::OnLibraryLoaded(const char *name) {
              " suppression '%s' is unloaded\n",
              SanitizerToolName, lib->name, lib->templ);
       Die();
+    }
+  }
+
+  // Track instrumented ranges.
+  if (track_instrumented_libs_) {
+    for (const auto &mod : modules) {
+      if (!mod.instrumented())
+        continue;
+      for (const auto &range : mod.ranges()) {
+        if (!range.executable)
+          continue;
+        if (IsPcInstrumented(range.beg) && IsPcInstrumented(range.end - 1))
+          continue;
+        VReport(1, "Adding instrumented range %p-%p from library '%s'\n",
+                range.beg, range.end, mod.full_name());
+        const uptr idx =
+            atomic_load(&instrumented_ranges_count_, memory_order_relaxed);
+        CHECK_LT(idx, kMaxLibs);
+        instrumented_code_ranges_[idx].begin = range.beg;
+        instrumented_code_ranges_[idx].end = range.end;
+        atomic_store(&instrumented_ranges_count_, idx + 1,
+                     memory_order_release);
+      }
     }
   }
 }

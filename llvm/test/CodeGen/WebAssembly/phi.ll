@@ -1,18 +1,16 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -verify-machineinstrs | FileCheck %s
 
 ; Test that phis are lowered.
 
-target datalayout = "e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+target triple = "wasm32-unknown-unknown-wasm"
 
 ; Basic phi triangle.
 
 ; CHECK-LABEL: test0:
-; CHECK: get_local push, 0{{$}}
-; CHECK: set_local [[REG:.*]], pop
-; CHECK: div_s push, (get_local [[REG]]), {{.*}}
-; CHECK: set_local [[REG]], pop
-; CHECK: return (get_local [[REG]])
+; CHECK: return $0
+; CHECK: div_s $push[[NUM0:[0-9]+]]=, $0, $pop[[NUM1:[0-9]+]]{{$}}
+; CHECK: return $pop[[NUM0]]{{$}}
 define i32 @test0(i32 %p) {
 entry:
   %t = icmp slt i32 %p, 0
@@ -28,13 +26,10 @@ done:
 ; Swap phis.
 
 ; CHECK-LABEL: test1:
-; CHECK: BB1_1:
-; CHECK: get_local push, [[REG1:.*]]
-; CHECK: set_local [[REG0:.*]], pop
-; CHECK: get_local push, [[REG2:.*]]
-; CHECK: set_local [[REG1]], pop
-; CHECK: [[REG0]]
-; CHECK: set_local [[REG2]], pop
+; CHECK: .LBB1_1:
+; CHECK: copy_local $[[NUM0:[0-9]+]]=, $[[NUM1:[0-9]+]]{{$}}
+; CHECK: copy_local $[[NUM1]]=, $[[NUM2:[0-9]+]]{{$}}
+; CHECK: copy_local $[[NUM2]]=, $[[NUM0]]{{$}}
 define i32 @test1(i32 %n) {
 entry:
   br label %loop

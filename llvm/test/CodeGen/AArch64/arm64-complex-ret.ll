@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 -o - %s | FileCheck %s
+; RUN: llc -mtriple=arm64-eabi -o - %s | FileCheck %s
 
 define { i192, i192, i21, i192 } @foo(i192) {
 ; CHECK-LABEL: foo:

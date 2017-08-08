@@ -27,7 +27,8 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/CFLAliasAnalysis.h"
+#include "llvm/Analysis/CFLAndersAliasAnalysis.h"
+#include "llvm/Analysis/CFLSteensAliasAnalysis.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ObjCARCAliasAnalysis.h"
@@ -52,16 +53,10 @@ using namespace llvm;
 static cl::opt<bool> DisableBasicAA("disable-basicaa", cl::Hidden,
                                     cl::init(false));
 
-AAResults::AAResults(AAResults &&Arg) : AAs(std::move(Arg.AAs)) {
+AAResults::AAResults(AAResults &&Arg)
+    : TLI(Arg.TLI), AAs(std::move(Arg.AAs)), AADeps(std::move(Arg.AADeps)) {
   for (auto &AA : AAs)
     AA->setAAResults(this);
-}
-
-AAResults &AAResults::operator=(AAResults &&Arg) {
-  AAs = std::move(Arg.AAs);
-  for (auto &AA : AAs)
-    AA->setAAResults(this);
-  return *this;
 }
 
 AAResults::~AAResults() {
@@ -73,6 +68,22 @@ AAResults::~AAResults() {
   for (auto &AA : AAs)
     AA->setAAResults(nullptr);
 #endif
+}
+
+bool AAResults::invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &Inv) {
+  // Check if the AA manager itself has been invalidated.
+  auto PAC = PA.getChecker<AAManager>();
+  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>())
+    return true; // The manager needs to be blown away, clear everything.
+
+  // Check all of the dependencies registered.
+  for (AnalysisKey *ID : AADeps)
+    if (Inv.invalidate(ID, F, PA))
+      return true;
+
+  // Everything we depend on is still fine, so are we. Nothing to invalidate.
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -116,7 +127,10 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, ImmutableCallSite Call) {
   // We may have two calls
   if (auto CS = ImmutableCallSite(I)) {
     // Check if the two calls modify the same memory
-    return getModRefInfo(Call, CS);
+    return getModRefInfo(CS, Call);
+  } else if (I->isFenceLike()) {
+    // If this is a fence, just return MRI_ModRef.
+    return MRI_ModRef;
   } else {
     // Otherwise, check if the call modifies or references the
     // location this memory access defines.  The best we can say
@@ -141,6 +155,47 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS,
       return Result;
   }
 
+  // Try to refine the mod-ref info further using other API entry points to the
+  // aggregate set of AA results.
+  auto MRB = getModRefBehavior(CS);
+  if (MRB == FMRB_DoesNotAccessMemory ||
+      MRB == FMRB_OnlyAccessesInaccessibleMem)
+    return MRI_NoModRef;
+
+  if (onlyReadsMemory(MRB))
+    Result = ModRefInfo(Result & MRI_Ref);
+  else if (doesNotReadMemory(MRB))
+    Result = ModRefInfo(Result & MRI_Mod);
+
+  if (onlyAccessesArgPointees(MRB) || onlyAccessesInaccessibleOrArgMem(MRB)) {
+    bool DoesAlias = false;
+    ModRefInfo AllArgsMask = MRI_NoModRef;
+    if (doesAccessArgPointees(MRB)) {
+      for (auto AI = CS.arg_begin(), AE = CS.arg_end(); AI != AE; ++AI) {
+        const Value *Arg = *AI;
+        if (!Arg->getType()->isPointerTy())
+          continue;
+        unsigned ArgIdx = std::distance(CS.arg_begin(), AI);
+        MemoryLocation ArgLoc = MemoryLocation::getForArgument(CS, ArgIdx, TLI);
+        AliasResult ArgAlias = alias(ArgLoc, Loc);
+        if (ArgAlias != NoAlias) {
+          ModRefInfo ArgMask = getArgModRefInfo(CS, ArgIdx);
+          DoesAlias = true;
+          AllArgsMask = ModRefInfo(AllArgsMask | ArgMask);
+        }
+      }
+    }
+    if (!DoesAlias)
+      return MRI_NoModRef;
+    Result = ModRefInfo(Result & AllArgsMask);
+  }
+
+  // If Loc is a constant memory location, the call definitely could not
+  // modify the memory location.
+  if ((Result & MRI_Mod) &&
+      pointsToConstantMemory(Loc, /*OrLocal*/ false))
+    Result = ModRefInfo(Result & ~MRI_Mod);
+
   return Result;
 }
 
@@ -154,6 +209,90 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS1,
     // Early-exit the moment we reach the bottom of the lattice.
     if (Result == MRI_NoModRef)
       return Result;
+  }
+
+  // Try to refine the mod-ref info further using other API entry points to the
+  // aggregate set of AA results.
+
+  // If CS1 or CS2 are readnone, they don't interact.
+  auto CS1B = getModRefBehavior(CS1);
+  if (CS1B == FMRB_DoesNotAccessMemory)
+    return MRI_NoModRef;
+
+  auto CS2B = getModRefBehavior(CS2);
+  if (CS2B == FMRB_DoesNotAccessMemory)
+    return MRI_NoModRef;
+
+  // If they both only read from memory, there is no dependence.
+  if (onlyReadsMemory(CS1B) && onlyReadsMemory(CS2B))
+    return MRI_NoModRef;
+
+  // If CS1 only reads memory, the only dependence on CS2 can be
+  // from CS1 reading memory written by CS2.
+  if (onlyReadsMemory(CS1B))
+    Result = ModRefInfo(Result & MRI_Ref);
+  else if (doesNotReadMemory(CS1B))
+    Result = ModRefInfo(Result & MRI_Mod);
+
+  // If CS2 only access memory through arguments, accumulate the mod/ref
+  // information from CS1's references to the memory referenced by
+  // CS2's arguments.
+  if (onlyAccessesArgPointees(CS2B)) {
+    ModRefInfo R = MRI_NoModRef;
+    if (doesAccessArgPointees(CS2B)) {
+      for (auto I = CS2.arg_begin(), E = CS2.arg_end(); I != E; ++I) {
+        const Value *Arg = *I;
+        if (!Arg->getType()->isPointerTy())
+          continue;
+        unsigned CS2ArgIdx = std::distance(CS2.arg_begin(), I);
+        auto CS2ArgLoc = MemoryLocation::getForArgument(CS2, CS2ArgIdx, TLI);
+
+        // ArgMask indicates what CS2 might do to CS2ArgLoc, and the dependence
+        // of CS1 on that location is the inverse.
+        ModRefInfo ArgMask = getArgModRefInfo(CS2, CS2ArgIdx);
+        if (ArgMask == MRI_Mod)
+          ArgMask = MRI_ModRef;
+        else if (ArgMask == MRI_Ref)
+          ArgMask = MRI_Mod;
+
+        ArgMask = ModRefInfo(ArgMask & getModRefInfo(CS1, CS2ArgLoc));
+
+        R = ModRefInfo((R | ArgMask) & Result);
+        if (R == Result)
+          break;
+      }
+    }
+    return R;
+  }
+
+  // If CS1 only accesses memory through arguments, check if CS2 references
+  // any of the memory referenced by CS1's arguments. If not, return NoModRef.
+  if (onlyAccessesArgPointees(CS1B)) {
+    ModRefInfo R = MRI_NoModRef;
+    if (doesAccessArgPointees(CS1B)) {
+      for (auto I = CS1.arg_begin(), E = CS1.arg_end(); I != E; ++I) {
+        const Value *Arg = *I;
+        if (!Arg->getType()->isPointerTy())
+          continue;
+        unsigned CS1ArgIdx = std::distance(CS1.arg_begin(), I);
+        auto CS1ArgLoc = MemoryLocation::getForArgument(CS1, CS1ArgIdx, TLI);
+
+        // ArgMask indicates what CS1 might do to CS1ArgLoc; if CS1 might Mod
+        // CS1ArgLoc, then we care about either a Mod or a Ref by CS2. If CS1
+        // might Ref, then we care only about a Mod by CS2.
+        ModRefInfo ArgMask = getArgModRefInfo(CS1, CS1ArgIdx);
+        ModRefInfo ArgR = getModRefInfo(CS2, CS1ArgLoc);
+        if (((ArgMask & MRI_Mod) != MRI_NoModRef &&
+             (ArgR & MRI_ModRef) != MRI_NoModRef) ||
+            ((ArgMask & MRI_Ref) != MRI_NoModRef &&
+             (ArgR & MRI_Mod) != MRI_NoModRef))
+          R = ModRefInfo((R | ArgMask) & Result);
+
+        if (R == Result)
+          break;
+      }
+    }
+    return R;
   }
 
   return Result;
@@ -193,8 +332,8 @@ FunctionModRefBehavior AAResults::getModRefBehavior(const Function *F) {
 
 ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
                                     const MemoryLocation &Loc) {
-  // Be conservative in the face of volatile/atomic.
-  if (!L->isUnordered())
+  // Be conservative in the face of atomic.
+  if (isStrongerThan(L->getOrdering(), AtomicOrdering::Unordered))
     return MRI_ModRef;
 
   // If the load address doesn't alias the given address, it doesn't read
@@ -208,8 +347,8 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
 
 ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
                                     const MemoryLocation &Loc) {
-  // Be conservative in the face of volatile/atomic.
-  if (!S->isUnordered())
+  // Be conservative in the face of atomic.
+  if (isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered))
     return MRI_ModRef;
 
   if (Loc.Ptr) {
@@ -226,6 +365,14 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
 
   // Otherwise, a store just writes.
   return MRI_Mod;
+}
+
+ModRefInfo AAResults::getModRefInfo(const FenceInst *S, const MemoryLocation &Loc) {
+  // If we know that the location is a constant memory location, the fence
+  // cannot modify this location.
+  if (Loc.Ptr && pointsToConstantMemory(Loc))
+    return MRI_Ref;
+  return MRI_ModRef;
 }
 
 ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
@@ -247,10 +394,36 @@ ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
   return MRI_ModRef;
 }
 
+ModRefInfo AAResults::getModRefInfo(const CatchPadInst *CatchPad,
+                                    const MemoryLocation &Loc) {
+  if (Loc.Ptr) {
+    // If the pointer is a pointer to constant memory,
+    // then it could not have been modified by this catchpad.
+    if (pointsToConstantMemory(Loc))
+      return MRI_NoModRef;
+  }
+
+  // Otherwise, a catchpad reads and writes.
+  return MRI_ModRef;
+}
+
+ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
+                                    const MemoryLocation &Loc) {
+  if (Loc.Ptr) {
+    // If the pointer is a pointer to constant memory,
+    // then it could not have been modified by this catchpad.
+    if (pointsToConstantMemory(Loc))
+      return MRI_NoModRef;
+  }
+
+  // Otherwise, a catchret reads and writes.
+  return MRI_ModRef;
+}
+
 ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
                                     const MemoryLocation &Loc) {
   // Acquire/Release cmpxchg has properties that matter for arbitrary addresses.
-  if (CX->getSuccessOrdering() > Monotonic)
+  if (isStrongerThanMonotonic(CX->getSuccessOrdering()))
     return MRI_ModRef;
 
   // If the cmpxchg address does not alias the location, it does not access it.
@@ -263,7 +436,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
 ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
                                     const MemoryLocation &Loc) {
   // Acquire/Release atomicrmw has properties that matter for arbitrary addresses.
-  if (RMW->getOrdering() > Monotonic)
+  if (isStrongerThanMonotonic(RMW->getOrdering()))
     return MRI_ModRef;
 
   // If the atomicrmw address does not alias the location, it does not access it.
@@ -306,13 +479,14 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
 
   unsigned ArgNo = 0;
   ModRefInfo R = MRI_NoModRef;
-  for (ImmutableCallSite::arg_iterator CI = CS.arg_begin(), CE = CS.arg_end();
+  for (auto CI = CS.data_operands_begin(), CE = CS.data_operands_end();
        CI != CE; ++CI, ++ArgNo) {
     // Only look at the no-capture or byval pointer arguments.  If this
     // pointer were passed to arguments that were neither of these, then it
     // couldn't be no-capture.
     if (!(*CI)->getType()->isPointerTy() ||
-        (!CS.doesNotCapture(ArgNo) && !CS.isByValArgument(ArgNo)))
+        (!CS.doesNotCapture(ArgNo) &&
+         ArgNo < CS.getNumArgOperands() && !CS.isByValArgument(ArgNo)))
       continue;
 
     // If this is a no-capture pointer argument, see if we can tell that it
@@ -364,6 +538,9 @@ bool AAResults::canInstructionRangeModRef(const Instruction &I1,
 // Provide a definition for the root virtual destructor.
 AAResults::Concept::~Concept() {}
 
+// Provide a definition for the static object used to identify passes.
+AnalysisKey AAManager::Key;
+
 namespace {
 /// A wrapper pass for external alias analyses. This just squirrels away the
 /// callback used to run any analyses and register their results.
@@ -406,7 +583,8 @@ char AAResultsWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(AAResultsWrapperPass, "aa",
                       "Function Alias Analysis Results", false, true)
 INITIALIZE_PASS_DEPENDENCY(BasicAAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(CFLAAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(CFLAndersAAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(CFLSteensAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ExternalAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ObjCARCAAWrapperPass)
@@ -435,7 +613,8 @@ bool AAResultsWrapperPass::runOnFunction(Function &F) {
   // unregistering themselves with them. We need to carefully tear down the
   // previous object first, in this case replacing it with an empty one, before
   // registering new results.
-  AAR.reset(new AAResults());
+  AAR.reset(
+      new AAResults(getAnalysis<TargetLibraryInfoWrapperPass>().getTLI()));
 
   // BasicAA is always available for function analyses. Also, we add it first
   // so that it can trump TBAA results when it proves MustAlias.
@@ -456,7 +635,9 @@ bool AAResultsWrapperPass::runOnFunction(Function &F) {
     AAR->addAAResult(WrapperPass->getResult());
   if (auto *WrapperPass = getAnalysisIfAvailable<SCEVAAWrapperPass>())
     AAR->addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = getAnalysisIfAvailable<CFLAAWrapperPass>())
+  if (auto *WrapperPass = getAnalysisIfAvailable<CFLAndersAAWrapperPass>())
+    AAR->addAAResult(WrapperPass->getResult());
+  if (auto *WrapperPass = getAnalysisIfAvailable<CFLSteensAAWrapperPass>())
     AAR->addAAResult(WrapperPass->getResult());
 
   // If available, run an external AA providing callback over the results as
@@ -472,6 +653,7 @@ bool AAResultsWrapperPass::runOnFunction(Function &F) {
 void AAResultsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<BasicAAWrapperPass>();
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
 
   // We also need to mark all the alias analysis passes we will potentially
   // probe in runOnFunction as used here to ensure the legacy pass manager
@@ -482,12 +664,13 @@ void AAResultsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addUsedIfAvailable<objcarc::ObjCARCAAWrapperPass>();
   AU.addUsedIfAvailable<GlobalsAAWrapperPass>();
   AU.addUsedIfAvailable<SCEVAAWrapperPass>();
-  AU.addUsedIfAvailable<CFLAAWrapperPass>();
+  AU.addUsedIfAvailable<CFLAndersAAWrapperPass>();
+  AU.addUsedIfAvailable<CFLSteensAAWrapperPass>();
 }
 
 AAResults llvm::createLegacyPMAAResults(Pass &P, Function &F,
                                         BasicAAResult &BAR) {
-  AAResults AAR;
+  AAResults AAR(P.getAnalysis<TargetLibraryInfoWrapperPass>().getTLI());
 
   // Add in our explicitly constructed BasicAA results.
   if (!DisableBasicAA)
@@ -504,38 +687,26 @@ AAResults llvm::createLegacyPMAAResults(Pass &P, Function &F,
     AAR.addAAResult(WrapperPass->getResult());
   if (auto *WrapperPass = P.getAnalysisIfAvailable<GlobalsAAWrapperPass>())
     AAR.addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = P.getAnalysisIfAvailable<SCEVAAWrapperPass>())
+  if (auto *WrapperPass = P.getAnalysisIfAvailable<CFLAndersAAWrapperPass>())
     AAR.addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = P.getAnalysisIfAvailable<CFLAAWrapperPass>())
+  if (auto *WrapperPass = P.getAnalysisIfAvailable<CFLSteensAAWrapperPass>())
     AAR.addAAResult(WrapperPass->getResult());
 
   return AAR;
 }
 
-/// isNoAliasCall - Return true if this pointer is returned by a noalias
-/// function.
 bool llvm::isNoAliasCall(const Value *V) {
   if (auto CS = ImmutableCallSite(V))
-    return CS.paramHasAttr(0, Attribute::NoAlias);
+    return CS.hasRetAttr(Attribute::NoAlias);
   return false;
 }
 
-/// isNoAliasArgument - Return true if this is an argument with the noalias
-/// attribute.
-bool llvm::isNoAliasArgument(const Value *V)
-{
+bool llvm::isNoAliasArgument(const Value *V) {
   if (const Argument *A = dyn_cast<Argument>(V))
     return A->hasNoAliasAttr();
   return false;
 }
 
-/// isIdentifiedObject - Return true if this pointer refers to a distinct and
-/// identifiable object.  This returns true for:
-///    Global Variables and Functions (but not Global Aliases)
-///    Allocas and Mallocs
-///    ByVal and NoAlias Arguments
-///    NoAlias returns
-///
 bool llvm::isIdentifiedObject(const Value *V) {
   if (isa<AllocaInst>(V))
     return true;
@@ -548,12 +719,19 @@ bool llvm::isIdentifiedObject(const Value *V) {
   return false;
 }
 
-/// isIdentifiedFunctionLocal - Return true if V is umabigously identified
-/// at the function-level. Different IdentifiedFunctionLocals can't alias.
-/// Further, an IdentifiedFunctionLocal can not alias with any function
-/// arguments other than itself, which is not necessarily true for
-/// IdentifiedObjects.
-bool llvm::isIdentifiedFunctionLocal(const Value *V)
-{
+bool llvm::isIdentifiedFunctionLocal(const Value *V) {
   return isa<AllocaInst>(V) || isNoAliasCall(V) || isNoAliasArgument(V);
+}
+
+void llvm::getAAResultsAnalysisUsage(AnalysisUsage &AU) {
+  // This function needs to be in sync with llvm::createLegacyPMAAResults -- if
+  // more alias analyses are added to llvm::createLegacyPMAAResults, they need
+  // to be added here also.
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
+  AU.addUsedIfAvailable<ScopedNoAliasAAWrapperPass>();
+  AU.addUsedIfAvailable<TypeBasedAAWrapperPass>();
+  AU.addUsedIfAvailable<objcarc::ObjCARCAAWrapperPass>();
+  AU.addUsedIfAvailable<GlobalsAAWrapperPass>();
+  AU.addUsedIfAvailable<CFLAndersAAWrapperPass>();
+  AU.addUsedIfAvailable<CFLSteensAAWrapperPass>();
 }

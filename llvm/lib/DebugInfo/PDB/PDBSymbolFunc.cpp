@@ -12,10 +12,10 @@
 #include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
+#include "llvm/DebugInfo/PDB/PDBSymDumper.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
-#include "llvm/DebugInfo/PDB/PDBSymDumper.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 
 #include <unordered_set>
@@ -23,6 +23,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 namespace {
 class FunctionArgEnumerator : public IPDBEnumChildren<PDBSymbolData> {
@@ -84,10 +85,8 @@ private:
 
 PDBSymbolFunc::PDBSymbolFunc(const IPDBSession &PDBSession,
                              std::unique_ptr<IPDBRawSymbol> Symbol)
-    : PDBSymbol(PDBSession, std::move(Symbol)) {}
-
-std::unique_ptr<PDBSymbolTypeFunctionSig> PDBSymbolFunc::getSignature() const {
-  return Session.getConcreteSymbolById<PDBSymbolTypeFunctionSig>(getTypeId());
+    : PDBSymbol(PDBSession, std::move(Symbol)) {
+  assert(RawSymbol->getSymTag() == PDB_SymType::Function);
 }
 
 std::unique_ptr<IPDBEnumChildren<PDBSymbolData>>
@@ -95,8 +94,15 @@ PDBSymbolFunc::getArguments() const {
   return llvm::make_unique<FunctionArgEnumerator>(Session, *this);
 }
 
-std::unique_ptr<PDBSymbolTypeUDT> PDBSymbolFunc::getClassParent() const {
-  return Session.getConcreteSymbolById<PDBSymbolTypeUDT>(getClassParentId());
-}
-
 void PDBSymbolFunc::dump(PDBSymDumper &Dumper) const { Dumper.dump(*this); }
+
+bool PDBSymbolFunc::isDestructor() const {
+  std::string Name = getName();
+  if (Name.empty())
+    return false;
+  if (Name[0] == '~')
+    return true;
+  if (Name == "__vecDelDtor")
+    return true;
+  return false;
+}

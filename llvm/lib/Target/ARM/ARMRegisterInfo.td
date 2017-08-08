@@ -245,6 +245,10 @@ def rGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, SP, PC)> {
 // the general GPR register class above (MOV, e.g.)
 def tGPR : RegisterClass<"ARM", [i32], 32, (trunc GPR, 8)>;
 
+// Thumb registers R0-R7 and the PC. Some instructions like TBB or THH allow
+// the PC to be used as a destination operand as well.
+def tGPRwithpc : RegisterClass<"ARM", [i32], 32, (add tGPR, PC)>;
+
 // The high registers in thumb mode, R8-R15.
 def hGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, tGPR)>;
 
@@ -288,7 +292,7 @@ def SPR_8 : RegisterClass<"ARM", [f32], 32, (sequence "S%u", 0, 15)>;
 // class.
 // ARM requires only word alignment for double. It's more performant if it
 // is double-word alignment though.
-def DPR : RegisterClass<"ARM", [f64, v8i8, v4i16, v2i32, v1i64, v2f32], 64,
+def DPR : RegisterClass<"ARM", [f64, v8i8, v4i16, v2i32, v1i64, v2f32, v4f16], 64,
                         (sequence "D%u", 0, 31)> {
   // Allocate non-VFP2 registers D16-D31 first, and prefer even registers on
   // Darwin platforms.
@@ -301,16 +305,16 @@ def DPR : RegisterClass<"ARM", [f64, v8i8, v4i16, v2i32, v1i64, v2f32], 64,
 
 // Subset of DPR that are accessible with VFP2 (and so that also have
 // 32-bit SPR subregs).
-def DPR_VFP2 : RegisterClass<"ARM", [f64, v8i8, v4i16, v2i32, v1i64, v2f32], 64,
+def DPR_VFP2 : RegisterClass<"ARM", [f64, v8i8, v4i16, v2i32, v1i64, v2f32, v4f16], 64,
                              (trunc DPR, 16)>;
 
 // Subset of DPR which can be used as a source of NEON scalars for 16-bit
 // operations
-def DPR_8 : RegisterClass<"ARM", [f64, v8i8, v4i16, v2i32, v1i64, v2f32], 64,
+def DPR_8 : RegisterClass<"ARM", [f64, v8i8, v4i16, v2i32, v1i64, v2f32, v4f16], 64,
                           (trunc DPR, 8)>;
 
 // Generic 128-bit vector register class.
-def QPR : RegisterClass<"ARM", [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], 128,
+def QPR : RegisterClass<"ARM", [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16], 128,
                         (sequence "Q%u", 0, 15)> {
   // Allocate non-VFP2 aliases Q8-Q15 first.
   let AltOrders = [(rotl QPR, 8)];

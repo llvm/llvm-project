@@ -17,13 +17,14 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 
-namespace llvm {
-
 #define DEBUG_TYPE "ssaupdater"
+
+namespace llvm {
 
 class CastInst;
 class PHINode;
@@ -38,6 +39,7 @@ private:
   typedef typename Traits::BlkT BlkT;
   typedef typename Traits::ValT ValT;
   typedef typename Traits::PhiT PhiT;
+  typedef typename Traits::PhiItT PhiItT;
 
   /// BBInfo - Per-basic block information used internally by SSAUpdaterImpl.
   /// The predecessors of each block are cached here since pred_iterator is
@@ -119,9 +121,8 @@ public:
       if (Info->NumPreds == 0)
         Info->Preds = nullptr;
       else
-        Info->Preds = static_cast<BBInfo**>
-          (Allocator.Allocate(Info->NumPreds * sizeof(BBInfo*),
-                              AlignOf<BBInfo*>::Alignment));
+        Info->Preds = static_cast<BBInfo **>(Allocator.Allocate(
+            Info->NumPreds * sizeof(BBInfo *), alignof(BBInfo *)));
 
       for (unsigned p = 0; p != Info->NumPreds; ++p) {
         BlkT *Pred = Preds[p];
@@ -376,7 +377,7 @@ public:
   /// FindExistingPHI - Look through the PHI nodes in a block to see if any of
   /// them match what is needed.
   void FindExistingPHI(BlkT *BB, BlockListTy *BlockList) {
-    for (typename BlkT::iterator BBI = BB->begin(), BBE = BB->end();
+    for (PhiItT BBI = Traits::PhiItT_begin(BB), BBE = Traits::PhiItT_end(BB);
          BBI != BBE; ++BBI) {
       PhiT *SomePHI = Traits::InstrIsPHI(&*BBI);
       if (!SomePHI)
@@ -453,8 +454,8 @@ public:
   }
 };
 
+} // end llvm namespace
+
 #undef DEBUG_TYPE // "ssaupdater"
 
-} // End llvm namespace
-
-#endif
+#endif // LLVM_TRANSFORMS_UTILS_SSAUPDATERIMPL_H

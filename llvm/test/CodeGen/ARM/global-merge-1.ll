@@ -11,16 +11,16 @@
 ; MERGE-NOT: .zerofill __DATA,__bss,_bar,20,2
 ; MERGE-NOT: .zerofill __DATA,__bss,_baz,20,2
 ; MERGE-NOT: .zerofill __DATA,__bss,_foo,20,2
-; MERGE: .zerofill __DATA,__bss,l__MergedGlobals,60,4
+; MERGE: .zerofill __DATA,__bss,__MergedGlobals,60,4
 ; MERGE-NOT: .zerofill __DATA,__bss,_bar,20,2
 ; MERGE-NOT: .zerofill __DATA,__bss,_baz,20,2
 ; MERGE-NOT: .zerofill __DATA,__bss,_foo,20,2
 
-; NO-MERGE-NOT: .zerofill __DATA,__bss,l__MergedGlobals,60,4
+; NO-MERGE-NOT: .zerofill __DATA,__bss,__MergedGlobals,60,4
 ; NO-MERGE: .zerofill __DATA,__bss,_bar,20,2
 ; NO-MERGE: .zerofill __DATA,__bss,_baz,20,2
 ; NO-MERGE: .zerofill __DATA,__bss,_foo,20,2
-; NO-MERGE-NOT: .zerofill __DATA,__bss,l__MergedGlobals,60,4
+; NO-MERGE-NOT: .zerofill __DATA,__bss,__MergedGlobals,60,4
 
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-n32-S32"
 target triple = "thumbv7-apple-ios3.0.0"

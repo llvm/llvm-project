@@ -7,13 +7,6 @@ for later architectures at some point.
 
 --
 
-SystemZDAGToDAGISel::SelectInlineAsmMemoryOperand() is passed "m" for all
-inline asm memory constraints; it doesn't get to see the original constraint.
-This means that it must conservatively treat all inline asm constraints
-as the most restricted type, "R".
-
---
-
 If an inline asm ties an i32 "r" result to an i64 input, the input
 will be treated as an i32, leaving the upper bits uninitialised.
 For example:
@@ -40,15 +33,6 @@ There is no scheduling support.
 --
 
 We don't use the BRANCH ON INDEX instructions.
-
---
-
-We might want to use BRANCH ON CONDITION for conditional indirect calls
-and conditional returns.
-
---
-
-We don't use the TEST DATA CLASS instructions.
 
 --
 
@@ -79,12 +63,12 @@ via a register.)
 
 --
 
-We don't use the halfword forms of LOAD REVERSED and STORE REVERSED
-(LRVH and STRVH).
+We don't use ICM, STCM, or CLM.
 
 --
 
-We don't use ICM or STCM.
+We don't use ADD (LOGICAL) HIGH, SUBTRACT (LOGICAL) HIGH,
+or COMPARE (LOGICAL) HIGH yet.
 
 --
 
@@ -123,7 +107,7 @@ ought to be implemented as:
         ngr     %r2, %r0
         br      %r14
 
-but two-address optimisations reverse the order of the AND and force:
+but two-address optimizations reverse the order of the AND and force:
 
         lhi     %r0, 1
         ngr     %r0, %r2
@@ -166,3 +150,10 @@ If needed, we can support 16-byte atomics using LPQ, STPQ and CSDG.
 
 We might want to model all access registers and use them to spill
 32-bit values.
+
+--
+
+We might want to use the 'overflow' condition of eg. AR to support
+llvm.sadd.with.overflow.i32 and related instructions - the generated code
+for signed overflow check is currently quite bad.  This would improve
+the results of using -ftrapv.

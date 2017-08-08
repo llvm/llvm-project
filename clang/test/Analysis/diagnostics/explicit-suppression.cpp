@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection -analyzer-config suppress-c++-stdlib=false -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection -analyzer-config suppress-c++-stdlib=true -DSUPPRESSED=1 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config suppress-c++-stdlib=false -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config suppress-c++-stdlib=true -DSUPPRESSED=1 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -DSUPPRESSED=1 -verify %s
 
 #ifdef SUPPRESSED
 // expected-no-diagnostics
@@ -9,9 +10,15 @@
 
 void clang_analyzer_eval(bool);
 
-void testCopyNull(int *I, int *E) {
-  std::copy(I, E, (int *)0);
+class C {
+  // The virtual function is to make C not trivially copy assignable so that we call the
+  // variant of std::copy() that does not defer to memmove().
+  virtual int f();
+};
+
+void testCopyNull(C *I, C *E) {
+  std::copy(I, E, (C *)0);
 #ifndef SUPPRESSED
-  // expected-warning@../Inputs/system-header-simulator-cxx.h:110 {{Dereference of null pointer}}
+  // expected-warning@../Inputs/system-header-simulator-cxx.h:490 {{Called C++ object pointer is null}}
 #endif
 }

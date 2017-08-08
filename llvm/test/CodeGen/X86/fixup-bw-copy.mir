@@ -1,0 +1,142 @@
+# RUN: llc -run-pass x86-fixup-bw-insts -mtriple=x86_64-- -o - %s | FileCheck %s
+
+# Verify that we correctly deal with the flag edge cases when replacing
+# copies by bigger copies, which is a pretty unusual transform.
+
+--- |
+  target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+
+  define i8 @test_movb_killed(i8 %a0) {
+    ret i8 %a0
+  }
+
+  define i8 @test_movb_impuse(i8 %a0) {
+    ret i8 %a0
+  }
+
+  define i8 @test_movb_impdef_gr64(i8 %a0) {
+    ret i8 %a0
+  }
+
+  define i8 @test_movb_impdef_gr32(i8 %a0) {
+    ret i8 %a0
+  }
+
+  define i8 @test_movb_impdef_gr16(i8 %a0) {
+    ret i8 %a0
+  }
+
+  define i16 @test_movw_impdef_gr32(i16 %a0) {
+    ret i16 %a0
+  }
+
+  define i16 @test_movw_impdef_gr64(i16 %a0) {
+    ret i16 %a0
+  }
+
+...
+
+---
+name:            test_movb_killed
+tracksRegLiveness: true
+liveins:
+  - { reg: '%edi' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %edi
+
+    ; CHECK: %eax = MOV32rr undef %edi, implicit %dil
+    %al = MOV8rr killed %dil
+    RETQ killed %al
+
+...
+
+---
+name:            test_movb_impuse
+tracksRegLiveness: true
+liveins:
+  - { reg: '%edi' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %edi
+
+    ; CHECK: %eax = MOV32rr undef %edi, implicit %dil
+    %al = MOV8rr %dil, implicit %edi
+    RETQ killed %al
+
+...
+
+---
+name:            test_movb_impdef_gr64
+tracksRegLiveness: true
+liveins:
+  - { reg: '%edi' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %edi
+
+    ; CHECK: %eax = MOV32rr undef %edi, implicit %dil, implicit-def %rax
+    %al = MOV8rr %dil, implicit-def %rax
+    RETQ killed %al
+
+...
+
+---
+name:            test_movb_impdef_gr32
+tracksRegLiveness: true
+liveins:
+  - { reg: '%edi' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %edi
+
+    ; CHECK: %eax = MOV32rr undef %edi, implicit %dil
+    %al = MOV8rr %dil, implicit-def %eax
+    RETQ killed %al
+
+...
+
+---
+name:            test_movb_impdef_gr16
+tracksRegLiveness: true
+liveins:
+  - { reg: '%edi' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %edi
+
+    ; CHECK: %eax = MOV32rr undef %edi, implicit %dil
+    %al = MOV8rr %dil, implicit-def %ax
+    RETQ killed %al
+
+...
+
+---
+name:            test_movw_impdef_gr32
+tracksRegLiveness: true
+liveins:
+  - { reg: '%edi' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %edi
+
+    ; CHECK: %eax = MOV32rr undef %edi, implicit %di
+    %ax = MOV16rr %di, implicit-def %eax
+    RETQ killed %ax
+
+...
+
+---
+name:            test_movw_impdef_gr64
+tracksRegLiveness: true
+liveins:
+  - { reg: '%edi' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %edi
+
+    ; CHECK: %eax = MOV32rr undef %edi, implicit %di, implicit-def %rax
+    %ax = MOV16rr %di, implicit-def %rax
+    RETQ killed %ax
+
+...

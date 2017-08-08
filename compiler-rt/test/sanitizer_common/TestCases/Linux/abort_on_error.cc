@@ -4,7 +4,7 @@
 // RUN: %clangxx %s -o %t
 
 // Intentionally don't inherit the default options.
-// RUN: %tool_options='' not %run %t 2>&1
+// RUN: env %tool_options='' not %run %t 2>&1
 
 // When we use lit's default options, we shouldn't crash either. On Linux
 // lit doesn't set options anyway.

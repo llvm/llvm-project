@@ -15,9 +15,10 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_INSTPRINTER_SYSTEMZINSTPRINTER_H
 
 #include "llvm/MC/MCInstPrinter.h"
-#include "llvm/Support/Compiler.h"
+#include <cstdint>
 
 namespace llvm {
+
 class MCOperand;
 
 class SystemZInstPrinter : public MCInstPrinter {
@@ -49,6 +50,7 @@ private:
   void printBDAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printBDXAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printBDLAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printBDRAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printBDVAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU1ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU2ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
@@ -62,14 +64,15 @@ private:
   void printU16ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printS32ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printU48ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printPCRelOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printPCRelTLSOperand(const MCInst *MI, int OpNum, raw_ostream &O);
-  void printAccessRegOperand(const MCInst *MI, int OpNum, raw_ostream &O);
 
   // Print the mnemonic for a condition-code mask ("ne", "lh", etc.)
   // This forms part of the instruction name rather than the operand list.
   void printCond4Operand(const MCInst *MI, int OpNum, raw_ostream &O);
 };
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_SYSTEMZ_INSTPRINTER_SYSTEMZINSTPRINTER_H

@@ -5,7 +5,7 @@
 ; Win64 nonvolatile registers get saved.
 
 ; CHECK-LABEL: bar:
-define x86_64_win64cc void @bar(i32 %a, i32 %b) {
+define win64cc void @bar(i32 %a, i32 %b) {
 ; CHECK-DAG: pushq %rdi
 ; CHECK-DAG: pushq %rsi
 ; CHECK-DAG: movaps %xmm6,

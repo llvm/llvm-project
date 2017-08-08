@@ -43,6 +43,7 @@ namespace llvm {
       BasicRegex=4
     };
 
+    Regex();
     /// Compiles the given regular expression \p Regex.
     Regex(StringRef Regex, unsigned Flags = NoFlags);
     Regex(const Regex &) = delete;
@@ -51,16 +52,12 @@ namespace llvm {
       std::swap(error, regex.error);
       return *this;
     }
-    Regex(Regex &&regex) {
-      preg = regex.preg;
-      error = regex.error;
-      regex.preg = nullptr;
-    }
+    Regex(Regex &&regex);
     ~Regex();
 
     /// isValid - returns the error encountered during regex compilation, or
     /// matching, if any.
-    bool isValid(std::string &Error);
+    bool isValid(std::string &Error) const;
 
     /// getNumMatches - In a valid regex, return the number of parenthesized
     /// matches it contains.  The number filled in by match will include this

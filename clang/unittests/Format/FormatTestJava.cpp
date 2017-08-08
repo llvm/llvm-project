@@ -25,10 +25,10 @@ protected:
     DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
     tooling::Replacements Replaces = reformat(Style, Code, Ranges);
-    std::string Result = applyAllReplacements(Code, Replaces);
-    EXPECT_NE("", Result);
-    DEBUG(llvm::errs() << "\n" << Result << "\n\n");
-    return Result;
+    auto Result = applyAllReplacements(Code, Replaces);
+    EXPECT_TRUE(static_cast<bool>(Result));
+    DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
+    return *Result;
   }
 
   static std::string
@@ -225,12 +225,22 @@ TEST_F(FormatTestJava, EnumDeclarations) {
                "    }\n"
                "  };\n"
                "}");
+  verifyFormat("public enum VeryLongEnum {\n"
+               "  ENUM_WITH_MANY_PARAMETERS(\n"
+               "      \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"bbbbbbbbbbbbbbbb\", "
+               "\"cccccccccccccccccccccccc\"),\n"
+               "  SECOND_ENUM(\"a\", \"b\", \"c\");\n"
+               "  private VeryLongEnum(String a, String b, String c) {}\n"
+               "}\n");
 }
 
 TEST_F(FormatTestJava, ArrayInitializers) {
   verifyFormat("new int[] {1, 2, 3, 4};");
   verifyFormat("new int[] {\n"
-               "    1, 2, 3, 4,\n"
+               "    1,\n"
+               "    2,\n"
+               "    3,\n"
+               "    4,\n"
                "};");
 
   FormatStyle Style = getStyleWithColumns(65);
@@ -312,6 +322,9 @@ TEST_F(FormatTestJava, Annotations) {
                "      String bbbbbbbbbbbbbbb) {}\n"
                "}",
                getStyleWithColumns(60));
+  verifyFormat("@Annotation(\"Some\"\n"
+               "    + \" text\")\n"
+               "List<Integer> list;");
 }
 
 TEST_F(FormatTestJava, Generics) {
@@ -426,6 +439,7 @@ TEST_F(FormatTestJava, CppKeywords) {
   verifyFormat("public void union(Type a, Type b);");
   verifyFormat("public void struct(Object o);");
   verifyFormat("public void delete(Object o);");
+  verifyFormat("return operator && (aa);");
 }
 
 TEST_F(FormatTestJava, NeverAlignAfterReturn) {
@@ -510,6 +524,18 @@ TEST_F(FormatTestJava, AlignsBlockComments) {
                    "   */\n"
                    "  void f() {}"));
 }
+
+TEST_F(FormatTestJava, RetainsLogicalShifts) {
+    verifyFormat("void f() {\n"
+                 "  int a = 1;\n"
+                 "  a >>>= 1;\n"
+                 "}");
+    verifyFormat("void f() {\n"
+                 "  int a = 1;\n"
+                 "  a = a >>> 1;\n"
+                 "}");
+}
+
 
 } // end namespace tooling
 } // end namespace clang

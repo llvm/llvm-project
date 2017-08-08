@@ -56,15 +56,15 @@ declare double @ceil(double %x)
 define float @float_ceil(float %x) nounwind readnone {
 ; WIN32-LABEL: @float_ceil(
 ; WIN32-NOT: float @ceilf
-; WIN32: double @ceil
+; WIN32: float @llvm.ceil.f32
 ; WIN64-LABEL: @float_ceil(
-; WIN64: float @ceilf
+; WIN64: float @llvm.ceil.f32
 ; WIN64-NOT: double @ceil
 ; MINGW32-LABEL: @float_ceil(
-; MINGW32: float @ceilf
+; MINGW32: float @llvm.ceil.f32
 ; MINGW32-NOT: double @ceil
 ; MINGW64-LABEL: @float_ceil(
-; MINGW64: float @ceilf
+; MINGW64: float @llvm.ceil.f32
 ; MINGW64-NOT: double @ceil
     %1 = fpext float %x to double
     %2 = call double @ceil(double %1)
@@ -137,15 +137,15 @@ declare double @floor(double %x)
 define float @float_floor(float %x) nounwind readnone {
 ; WIN32-LABEL: @float_floor(
 ; WIN32-NOT: float @floorf
-; WIN32: double @floor
+; WIN32: float @llvm.floor.f32
 ; WIN64-LABEL: @float_floor(
-; WIN64: float @floorf
+; WIN64: float @llvm.floor.f32
 ; WIN64-NOT: double @floor
 ; MINGW32-LABEL: @float_floor(
-; MINGW32: float @floorf
+; MINGW32: float @llvm.floor.f32
 ; MINGW32-NOT: double @floor
 ; MINGW64-LABEL: @float_floor(
-; MINGW64: float @floorf
+; MINGW64: float @llvm.floor.f32
 ; MINGW64-NOT: double @floor
     %1 = fpext float %x to double
     %2 = call double @floor(double %1)
@@ -262,10 +262,10 @@ define float @float_round(float %x) nounwind readnone {
 ; WIN64-NOT: float @roundf
 ; WIN64: double @round
 ; MINGW32-LABEL: @float_round(
-; MINGW32: float @roundf
+; MINGW32: float @llvm.round.f32
 ; MINGW32-NOT: double @round
 ; MINGW64-LABEL: @float_round(
-; MINGW64: float @roundf
+; MINGW64: float @llvm.round.f32
 ; MINGW64-NOT: double @round
     %1 = fpext float %x to double
     %2 = call double @round(double %1)
@@ -274,21 +274,26 @@ define float @float_round(float %x) nounwind readnone {
 }
 
 declare float @powf(float, float)
-; win32 lacks sqrtf&fabsf, win64 lacks fabsf
+
+; win32 lacks sqrtf&fabsf, win64 lacks fabsf, but
+; calls to the intrinsics can be emitted instead.
 define float @float_powsqrt(float %x) nounwind readnone {
 ; WIN32-LABEL: @float_powsqrt(
 ; WIN32-NOT: float @sqrtf
 ; WIN32: float @powf
+
 ; WIN64-LABEL: @float_powsqrt(
-; WIN64-NOT: float @sqrtf
-; WIN64: float @powf
+; WIN64: float @sqrtf
+; WIN64: float @llvm.fabs.f32(
+; WIN64-NOT: float @powf
+
 ; MINGW32-LABEL: @float_powsqrt(
 ; MINGW32: float @sqrtf
-; MINGW32: float @fabsf
+; MINGW32: float @llvm.fabs.f32
 ; MINGW32-NOT: float @powf
 ; MINGW64-LABEL: @float_powsqrt(
 ; MINGW64: float @sqrtf
-; MINGW64: float @fabsf
+; MINGW64: float @llvm.fabs.f32(
 ; MINGW64-NOT: float @powf
     %1 = call float @powf(float %x, float 0.5)
     ret float %1

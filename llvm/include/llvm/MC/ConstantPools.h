@@ -11,37 +11,45 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_MC_CONSTANTPOOLS_H
 #define LLVM_MC_CONSTANTPOOLS_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/SMLoc.h"
+#include <cstdint>
+#include <map>
 
 namespace llvm {
+
 class MCContext;
 class MCExpr;
 class MCSection;
 class MCStreamer;
 class MCSymbol;
+class MCSymbolRefExpr;
 
 struct ConstantPoolEntry {
-  ConstantPoolEntry(MCSymbol *L, const MCExpr *Val, unsigned Sz)
-    : Label(L), Value(Val), Size(Sz) {}
+  ConstantPoolEntry(MCSymbol *L, const MCExpr *Val, unsigned Sz, SMLoc Loc_)
+    : Label(L), Value(Val), Size(Sz), Loc(Loc_) {}
+
   MCSymbol *Label;
   const MCExpr *Value;
   unsigned Size;
+  SMLoc Loc;
 };
 
 // A class to keep track of assembler-generated constant pools that are use to
 // implement the ldr-pseudo.
 class ConstantPool {
-  typedef SmallVector<ConstantPoolEntry, 4> EntryVecTy;
+  using EntryVecTy = SmallVector<ConstantPoolEntry, 4>;
   EntryVecTy Entries;
+  std::map<int64_t, const MCSymbolRefExpr *> CachedEntries;
 
 public:
   // Initialize a new empty constant pool
-  ConstantPool() {}
+  ConstantPool() = default;
 
   // Add a new entry to the constant pool in the next slot.
   // \param Value is the new entry to put in the constant pool.
@@ -49,13 +57,15 @@ public:
   //
   // \returns a MCExpr that references the newly inserted value
   const MCExpr *addEntry(const MCExpr *Value, MCContext &Context,
-                         unsigned Size);
+                         unsigned Size, SMLoc Loc);
 
   // Emit the contents of the constant pool using the provided streamer.
   void emitEntries(MCStreamer &Streamer);
 
   // Return true if the constant pool is empty
   bool empty();
+
+  void clearCache();
 };
 
 class AssemblerConstantPools {
@@ -73,19 +83,21 @@ class AssemblerConstantPools {
   // sections in a stable order to ensure that we have print the
   // constant pools in a deterministic order when printing an assembly
   // file.
-  typedef MapVector<MCSection *, ConstantPool> ConstantPoolMapTy;
+  using ConstantPoolMapTy = MapVector<MCSection *, ConstantPool>;
   ConstantPoolMapTy ConstantPools;
 
 public:
   void emitAll(MCStreamer &Streamer);
   void emitForCurrentSection(MCStreamer &Streamer);
+  void clearCacheForCurrentSection(MCStreamer &Streamer);
   const MCExpr *addEntry(MCStreamer &Streamer, const MCExpr *Expr,
-                         unsigned Size);
+                         unsigned Size, SMLoc Loc);
 
 private:
   ConstantPool *getConstantPool(MCSection *Section);
   ConstantPool &getOrCreateConstantPool(MCSection *Section);
 };
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_CONSTANTPOOLS_H

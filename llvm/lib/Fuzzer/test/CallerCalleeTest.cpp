@@ -1,8 +1,11 @@
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+
 // Simple test for a fuzzer.
 // Try to find the target using the indirect caller-callee pairs.
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstddef>
 #include <cstring>
 #include <iostream>
 

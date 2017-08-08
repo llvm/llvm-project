@@ -118,6 +118,8 @@ public:
   REFERENCE operator->() const { return operator*(); }
 };
 
+struct ConstStmtIterator;
+
 struct StmtIterator : public StmtIteratorImpl<StmtIterator,Stmt*&> {
   explicit StmtIterator() : StmtIteratorImpl<StmtIterator,Stmt*&>() {}
 
@@ -128,6 +130,13 @@ struct StmtIterator : public StmtIteratorImpl<StmtIterator,Stmt*&> {
 
   StmtIterator(const VariableArrayType *t)
     : StmtIteratorImpl<StmtIterator,Stmt*&>(t) {}
+
+private:
+  StmtIterator(const StmtIteratorBase &RHS)
+      : StmtIteratorImpl<StmtIterator, Stmt *&>(RHS) {}
+
+  inline friend StmtIterator
+  cast_away_const(const ConstStmtIterator &RHS);
 };
 
 struct ConstStmtIterator : public StmtIteratorImpl<ConstStmtIterator,
@@ -137,8 +146,15 @@ struct ConstStmtIterator : public StmtIteratorImpl<ConstStmtIterator,
 
   ConstStmtIterator(const StmtIterator& RHS) :
     StmtIteratorImpl<ConstStmtIterator,const Stmt*>(RHS) {}
+
+  ConstStmtIterator(Stmt * const *S)
+      : StmtIteratorImpl<ConstStmtIterator, const Stmt *>(
+            const_cast<Stmt **>(S)) {}
 };
 
+inline StmtIterator cast_away_const(const ConstStmtIterator &RHS) {
+  return RHS;
+}
 } // end namespace clang
 
 #endif

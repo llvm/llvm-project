@@ -4,7 +4,7 @@
 // RUN: %clangxx_asan -DWAIT3_RUSAGE -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -DWAIT3_RUSAGE -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-// UNSUPPORTED: android
+// UNSUPPORTED: android,darwin
 
 #include <assert.h>
 #include <sys/wait.h>

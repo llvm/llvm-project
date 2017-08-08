@@ -1,4 +1,5 @@
-; RUN: llc -march=mipsel -mcpu=mips32 -mattr=+dsp < %s | FileCheck %s
+; RUN: llc -march=mipsel -mcpu=mips32 -mattr=+dsp -verify-machineinstrs < %s | \
+; RUN:     FileCheck %s
 
 define i32 @test__builtin_mips_extr_w1(i32 %i0, i32, i64 %a0) nounwind {
 entry:
@@ -1171,9 +1172,19 @@ entry:
   ret { i32 } %.fca.0.insert
 }
 
+define { i32 } @test__builtin_mips_repl_ph2(i32 %i0) nounwind readnone {
+entry:
+; CHECK: repl.ph
+
+  %0 = tail call <2 x i16> @llvm.mips.repl.ph(i32 -2)
+  %1 = bitcast <2 x i16> %0 to i32
+  %.fca.0.insert = insertvalue { i32 } undef, i32 %1, 0
+  ret { i32 } %.fca.0.insert
+}
+
 declare <2 x i16> @llvm.mips.repl.ph(i32) nounwind readnone
 
-define { i32 } @test__builtin_mips_repl_ph2(i32 %i0, i32 %a0) nounwind readnone {
+define { i32 } @test__builtin_mips_repl_ph3(i32 %i0, i32 %a0) nounwind readnone {
 entry:
 ; CHECK: replv.ph
 

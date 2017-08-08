@@ -83,7 +83,7 @@ public:
                                              const CFGBlock *DstF) = 0;
 
   /// Called by CoreEngine.  Used to processing branching behavior
-  /// at static initalizers.
+  /// at static initializers.
   virtual void processStaticInitializer(const DeclStmt *DS,
                                         NodeBuilderContext& BuilderCtx,
                                         ExplodedNode *Pred,
@@ -99,13 +99,22 @@ public:
   /// nodes by processing the 'effects' of a switch statement.
   virtual void processSwitch(SwitchNodeBuilder& builder) = 0;
 
-  /// Called by CoreEngine.  Used to generate end-of-path
-  /// nodes when the control reaches the end of a function.
+  /// Called by CoreEngine.  Used to notify checkers that processing a
+  /// function has begun. Called for both inlined and and top-level functions.
+  virtual void processBeginOfFunction(NodeBuilderContext &BC,
+                                      ExplodedNode *Pred,
+                                      ExplodedNodeSet &Dst,
+                                      const BlockEdge &L) = 0;
+
+  /// Called by CoreEngine.  Used to notify checkers that processing a
+  /// function has ended. Called for both inlined and and top-level functions.
   virtual void processEndOfFunction(NodeBuilderContext& BC,
-                                    ExplodedNode *Pred) = 0;
+                                    ExplodedNode *Pred,
+                                    const ReturnStmt *RS = nullptr) = 0;
 
   // Generate the entry node of the callee.
-  virtual void processCallEnter(CallEnter CE, ExplodedNode *Pred) = 0;
+  virtual void processCallEnter(NodeBuilderContext& BC, CallEnter CE,
+                                ExplodedNode *Pred) = 0;
 
   // Generate the first post callsite node.
   virtual void processCallExit(ExplodedNode *Pred) = 0;
@@ -115,10 +124,6 @@ public:
   virtual ProgramStateRef processAssume(ProgramStateRef state,
                                        SVal cond, bool assumption) = 0;
 
-  /// wantsRegionChangeUpdate - Called by ProgramStateManager to determine if a
-  ///  region change should trigger a processRegionChanges update.
-  virtual bool wantsRegionChangeUpdate(ProgramStateRef state) = 0;
-
   /// processRegionChanges - Called by ProgramStateManager whenever a change is
   /// made to the store. Used to update checkers that track region values.
   virtual ProgramStateRef 
@@ -126,17 +131,19 @@ public:
                        const InvalidatedSymbols *invalidated,
                        ArrayRef<const MemRegion *> ExplicitRegions,
                        ArrayRef<const MemRegion *> Regions,
+                       const LocationContext *LCtx,
                        const CallEvent *Call) = 0;
 
 
   inline ProgramStateRef 
   processRegionChange(ProgramStateRef state,
-                      const MemRegion* MR) {
-    return processRegionChanges(state, nullptr, MR, MR, nullptr);
+                      const MemRegion* MR,
+                      const LocationContext *LCtx) {
+    return processRegionChanges(state, nullptr, MR, MR, LCtx, nullptr);
   }
 
   virtual ProgramStateRef
-  processPointerEscapedOnBind(ProgramStateRef State, SVal Loc, SVal Val) = 0;
+  processPointerEscapedOnBind(ProgramStateRef State, SVal Loc, SVal Val, const LocationContext *LCtx) = 0;
 
   virtual ProgramStateRef
   notifyCheckersOfPointerEscape(ProgramStateRef State,

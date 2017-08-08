@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -analyze -analyzer-checker=core,debug.DumpBugHash -analyzer-output=plist %s -o %t.plist
+// RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,debug.DumpBugHash -analyzer-output=plist %s -o %t.plist
 // RUN: FileCheck --input-file=%t.plist %s
 
 @protocol NSObject

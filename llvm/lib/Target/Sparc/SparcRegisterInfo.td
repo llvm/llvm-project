@@ -62,6 +62,12 @@ foreach I = 0-3 in
 
 def FSR : SparcCtrlReg<0, "FSR">; // Floating-point state register.
 
+def FQ : SparcCtrlReg<0, "FQ">; // Floating-point deferred-trap queue.
+
+def CPSR : SparcCtrlReg<0, "CPSR">; // Co-processor state register.
+
+def CPQ : SparcCtrlReg<0, "CPQ">; // Co-processor queue.
+
 // Y register
 def Y : SparcCtrlReg<0, "Y">, DwarfRegNum<[64]>;
 // Ancillary state registers (implementation defined)
@@ -204,6 +210,40 @@ def D13 : Rd<26, "F26", [F26, F27]>, DwarfRegNum<[85]>;
 def D14 : Rd<28, "F28", [F28, F29]>, DwarfRegNum<[86]>;
 def D15 : Rd<30, "F30", [F30, F31]>, DwarfRegNum<[87]>;
 
+// Co-processor registers
+def C0 : Ri< 0, "C0">;
+def C1 : Ri< 1, "C1">;
+def C2 : Ri< 2, "C2">;
+def C3 : Ri< 3, "C3">;
+def C4 : Ri< 4, "C4">;
+def C5 : Ri< 5, "C5">;
+def C6 : Ri< 6, "C6">;
+def C7 : Ri< 7, "C7">;
+def C8 : Ri< 8, "C8">;
+def C9 : Ri< 9, "C9">;
+def C10 : Ri< 10, "C10">;
+def C11 : Ri< 11, "C11">;
+def C12 : Ri< 12, "C12">;
+def C13 : Ri< 13, "C13">;
+def C14 : Ri< 14, "C14">;
+def C15 : Ri< 15, "C15">;
+def C16 : Ri< 16, "C16">;
+def C17 : Ri< 17, "C17">;
+def C18 : Ri< 18, "C18">;
+def C19 : Ri< 19, "C19">;
+def C20 : Ri< 20, "C20">;
+def C21 : Ri< 21, "C21">;
+def C22 : Ri< 22, "C22">;
+def C23 : Ri< 23, "C23">;
+def C24 : Ri< 24, "C24">;
+def C25 : Ri< 25, "C25">;
+def C26 : Ri< 26, "C26">;
+def C27 : Ri< 27, "C27">;
+def C28 : Ri< 28, "C28">;
+def C29 : Ri< 29, "C29">;
+def C30 : Ri< 30, "C30">;
+def C31 : Ri< 31, "C31">;
+
 // Unaliased double precision floating point registers.
 // FIXME: Define DwarfRegNum for these registers.
 def D16 : SparcReg< 1, "F32">;
@@ -259,6 +299,24 @@ def I2_I3 : Rdi<26, "I2", [I2, I3]>;
 def I4_I5 : Rdi<28, "I4", [I4, I5]>;
 def I6_I7 : Rdi<30, "I6", [I6, I7]>;
 
+// Aliases of the co-processor registers used for LDD/STD double-word operations
+def C0_C1 : Rdi<0, "C0", [C0, C1]>;
+def C2_C3 : Rdi<2, "C2", [C2, C3]>;
+def C4_C5 : Rdi<4, "C4", [C4, C5]>;
+def C6_C7 : Rdi<6, "C6", [C6, C7]>;
+def C8_C9 : Rdi<8, "C8", [C8, C9]>;
+def C10_C11 : Rdi<10, "C10", [C10, C11]>;
+def C12_C13 : Rdi<12, "C12", [C12, C13]>;
+def C14_C15 : Rdi<14, "C14", [C14, C15]>;
+def C16_C17 : Rdi<16, "C16", [C16, C17]>;
+def C18_C19 : Rdi<18, "C18", [C18, C19]>;
+def C20_C21 : Rdi<20, "C20", [C20, C21]>;
+def C22_C23 : Rdi<22, "C22", [C22, C23]>;
+def C24_C25 : Rdi<24, "C24", [C24, C25]>;
+def C26_C27 : Rdi<26, "C26", [C26, C27]>;
+def C28_C29 : Rdi<28, "C28", [C28, C29]>;
+def C30_C31 : Rdi<30, "C30", [C30, C31]>;
+
 // Register classes.
 //
 // FIXME: the register order should be defined in terms of the preferred
@@ -288,18 +346,31 @@ def I64Regs : RegisterClass<"SP", [i64], 64, (add IntRegs)>;
 
 // Floating point register classes.
 def FPRegs : RegisterClass<"SP", [f32], 32, (sequence "F%u", 0, 31)>;
-
 def DFPRegs : RegisterClass<"SP", [f64], 64, (sequence "D%u", 0, 31)>;
-
 def QFPRegs : RegisterClass<"SP", [f128], 128, (sequence "Q%u", 0, 15)>;
+
+// The Low?FPRegs classes are used only for inline-asm constraints.
+def LowDFPRegs : RegisterClass<"SP", [f64], 64, (sequence "D%u", 0, 15)>;
+def LowQFPRegs : RegisterClass<"SP", [f128], 128, (sequence "Q%u", 0, 7)>;
 
 // Floating point control register classes.
 def FCCRegs : RegisterClass<"SP", [i1], 1, (sequence "FCC%u", 0, 3)>;
 
-// Ancillary state registers
-def ASRRegs : RegisterClass<"SP", [i32], 32,
-                            (add Y, (sequence "ASR%u", 1, 31))> {
-  let isAllocatable = 0;
+let isAllocatable = 0 in {
+  // Ancillary state registers
+  def ASRRegs : RegisterClass<"SP", [i32], 32,
+                              (add Y, (sequence "ASR%u", 1, 31))>;
+                            
+  // This register class should not be used to hold i64 values.
+  def CoprocRegs : RegisterClass<"SP", [i32], 32,
+                                (add (sequence "C%u", 0, 31))>;
+
+  // Should be in the same order as CoprocRegs.
+  def CoprocPair : RegisterClass<"SP", [v2i32], 64,
+    (add C0_C1,   C2_C3,   C4_C5,   C6_C7,   
+         C8_C9,   C10_C11, C12_C13, C14_C15,
+         C16_C17, C18_C19, C20_C21, C22_C23,
+         C24_C25, C26_C27, C28_C29, C30_C31)>;
 }
 
 // Privileged Registers

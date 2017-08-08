@@ -47,6 +47,7 @@ L3:                                               ; preds = %L4, %bb2
   br label %L2
 
 L2:                                               ; preds = %L3, %bb2
+; THUMB-LABEL: %L1.clone
 ; THUMB: muls
   %res.2 = phi i32 [ %res.1, %L3 ], [ 1, %bb2 ]   ; <i32> [#uses=1]
   %phitmp = mul i32 %res.2, 6                     ; <i32> [#uses=1]
@@ -55,9 +56,11 @@ L2:                                               ; preds = %L3, %bb2
 L1:                                               ; preds = %L2, %bb2
   %res.3 = phi i32 [ %phitmp, %L2 ], [ 2, %bb2 ]  ; <i32> [#uses=1]
 ; ARM-LABEL: %L1
+; ARM: ldr [[R_NEXTADDR:r[0-9]+]], LCPI
 ; ARM: ldr [[R1:r[0-9]+]], LCPI
+; ARM: add [[R_NEXTADDR_b:r[0-9]+]], pc, [[R_NEXTADDR]]
 ; ARM: add [[R1b:r[0-9]+]], pc, [[R1]]
-; ARM: str [[R1b]]
+; ARM: str [[R1b]], {{\[}}[[R_NEXTADDR_b]]]
 
 ; THUMB-LABEL: %L1
 ; THUMB: ldr [[R2:r[0-9]+]], LCPI

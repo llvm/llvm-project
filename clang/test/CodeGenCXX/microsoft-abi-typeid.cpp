@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -O1 -o - -triple=i386-pc-win32 %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -O1 -o - -triple=i386-pc-win32 %s -fexceptions -fcxx-exceptions | FileCheck %s
 
 struct type_info;
 namespace std { using ::type_info; }
@@ -49,3 +49,22 @@ const std::type_info* test5_typeid() { return &typeid(v); }
 // CHECK:        [[RT:%.*]] = tail call i8* @__RTtypeid(i8* bitcast (%struct.V* @"\01?v@@3UV@@A" to i8*))
 // CHECK-NEXT:   [[RET:%.*]] = bitcast i8* [[RT]] to %struct.type_info*
 // CHECK-NEXT:   ret %struct.type_info* [[RET]]
+
+namespace PR26329 {
+struct Polymorphic {
+  virtual ~Polymorphic();
+};
+
+void f(const Polymorphic &poly) {
+  try {
+    throw;
+  } catch (...) {
+    Polymorphic cleanup;
+    typeid(poly);
+  }
+}
+// CHECK-LABEL: define void @"\01?f@PR26329@@YAXABUPolymorphic@1@@Z"(
+// CHECK: %[[cs:.*]] = catchswitch within none [label %{{.*}}] unwind to caller
+// CHECK: %[[cp:.*]] = catchpad within %[[cs]] [i8* null, i32 64, i8* null]
+// CHECK: invoke i8* @__RTtypeid(i8* {{.*}}) [ "funclet"(token %[[cp]]) ]
+}

@@ -47,14 +47,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
-  class MachineInstr;
-  class MCInst;
-  class MCInstrInfo;
-  class HexagonAsmPrinter;
   class HexagonTargetMachine;
-
-  void HexagonLowerToMC(const MachineInstr *MI, MCInst &MCI,
-                        HexagonAsmPrinter &AP);
 
   /// \brief Creates a Hexagon-specific Target Transformation Info pass.
   ImmutablePass *createHexagonTargetTransformInfoPass(const HexagonTargetMachine *TM);

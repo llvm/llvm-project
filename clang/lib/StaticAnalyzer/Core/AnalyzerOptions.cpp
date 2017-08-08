@@ -23,6 +23,25 @@ using namespace clang;
 using namespace ento;
 using namespace llvm;
 
+std::vector<StringRef>
+AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental /* = false */) {
+  static const StringRef StaticAnalyzerChecks[] = {
+#define GET_CHECKERS
+#define CHECKER(FULLNAME, CLASS, DESCFILE, HELPTEXT, GROUPINDEX, HIDDEN)       \
+  FULLNAME,
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER
+#undef GET_CHECKERS
+  };
+  std::vector<StringRef> Result;
+  for (StringRef CheckName : StaticAnalyzerChecks) {
+    if (!CheckName.startswith("debug.") &&
+        (IncludeExperimental || !CheckName.startswith("alpha.")))
+      Result.push_back(CheckName);
+  }
+  return Result;
+}
+
 AnalyzerOptions::UserModeKind AnalyzerOptions::getUserMode() {
   if (UserMode == UMK_NotSet) {
     StringRef ModeStr =
@@ -153,6 +172,17 @@ bool AnalyzerOptions::includeTemporaryDtorsInCFG() {
                           /* Default = */ false);
 }
 
+bool AnalyzerOptions::includeImplicitDtorsInCFG() {
+  return getBooleanOption(IncludeImplicitDtorsInCFG,
+                          "cfg-implicit-dtors",
+                          /* Default = */ true);
+}
+
+bool AnalyzerOptions::includeLifetimeInCFG() {
+  return getBooleanOption(IncludeLifetimeInCFG, "cfg-lifetime",
+                          /* Default = */ false);
+}
+
 bool AnalyzerOptions::mayInlineCXXStandardLibrary() {
   return getBooleanOption(InlineCXXStandardLibrary,
                           "c++-stdlib-inlining",
@@ -211,7 +241,7 @@ bool AnalyzerOptions::shouldSuppressInlinedDefensiveChecks() {
 bool AnalyzerOptions::shouldSuppressFromCXXStandardLibrary() {
   return getBooleanOption(SuppressFromCXXStandardLibrary,
                           "suppress-c++-stdlib",
-                          /* Default = */ false);
+                          /* Default = */ true);
 }
 
 bool AnalyzerOptions::shouldReportIssuesInMainSourceFile() {
@@ -274,7 +304,7 @@ unsigned AnalyzerOptions::getMaxInlinableSize() {
         DefaultValue = 4;
         break;
       case UMK_Deep:
-        DefaultValue = 50;
+        DefaultValue = 100;
         break;
     }
 
@@ -313,7 +343,7 @@ unsigned AnalyzerOptions::getMaxNodesPerTopLevelFunction() {
         DefaultValue = 75000;
         break;
       case UMK_Deep:
-        DefaultValue = 150000;
+        DefaultValue = 225000;
         break;
     }
     MaxNodesPerTopLevelFunction = getOptionAsInteger("max-nodes", DefaultValue);
@@ -343,4 +373,11 @@ bool AnalyzerOptions::shouldWidenLoops() {
   if (!WidenLoops.hasValue())
     WidenLoops = getBooleanOption("widen-loops", /*Default=*/false);
   return WidenLoops.getValue();
+}
+
+bool AnalyzerOptions::shouldDisplayNotesAsEvents() {
+  if (!DisplayNotesAsEvents.hasValue())
+    DisplayNotesAsEvents =
+        getBooleanOption("notes-as-events", /*Default=*/false);
+  return DisplayNotesAsEvents.getValue();
 }

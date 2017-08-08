@@ -301,6 +301,17 @@ int no_constexpr();
 // CHECK-11: has_constexpr
 // CHECK-NO-11: no_constexpr
 
+#if __has_feature(cxx_constexpr_string_builtins)
+int has_constexpr_string_builtins();
+#else
+int no_constexpr_string_builtins();
+#endif
+
+// CHECK-1Z: has_constexpr_string_builtins
+// CHECK-14: has_constexpr_string_builtins
+// CHECK-11: has_constexpr_string_builtins
+// CHECK-NO-11: no_constexpr_string_builtins
+
 #if __has_feature(cxx_generalized_initializers)
 int has_generalized_initializers();
 #else

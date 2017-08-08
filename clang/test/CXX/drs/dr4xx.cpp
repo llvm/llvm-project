@@ -35,9 +35,7 @@ namespace dr401 { // dr401: yes
   };
 
   A<B> *b; // expected-note {{default argument}}
-  // FIXME: We're missing the "in instantiation of" note for the default
-  // argument here.
-  A<D> *d;
+  A<D> *d; // expected-note {{in instantiation of default argument}}
 
   struct E {
     template<class T, class U = typename T::type> class A : public T {};
@@ -83,14 +81,14 @@ namespace dr406 { // dr406: yes
   } A;
 }
 
-namespace dr407 { // dr407: no
+namespace dr407 { // dr407: 3.8
   struct S;
   typedef struct S S;
   void f() {
     struct S *p;
     {
       typedef struct S S; // expected-note {{here}}
-      struct S *p; // expected-error {{refers to a typedef}}
+      struct S *p; // expected-error {{typedef 'S' cannot be referenced with a struct specifier}}
     }
   }
   struct S {};
@@ -108,22 +106,22 @@ namespace dr407 { // dr407: no
       struct S s; // expected-error {{ambiguous}}
     }
     namespace D {
-      // FIXME: This is valid.
       using A::S;
-      typedef struct S S; // expected-note {{here}}
-      struct S s; // expected-error {{refers to a typedef}}
+      typedef struct S S;
+      struct S s;
     }
     namespace E {
-      // FIXME: The standard doesn't say whether this is valid.
+      // The standard doesn't say whether this is valid. We interpret
+      // DR407 as meaning "if lookup finds both a tag and a typedef with the
+      // same type, then it's OK in an elaborated-type-specifier".
       typedef A::S S;
       using A::S;
       struct S s;
     }
     namespace F {
-      typedef A::S S; // expected-note {{here}}
+      typedef A::S S;
     }
-    // FIXME: The standard doesn't say what to do in these cases, but
-    // our behavior should not depend on the order of the using-directives.
+    // The standard doesn't say what to do in these cases either.
     namespace G {
       using namespace A;
       using namespace F;
@@ -132,7 +130,7 @@ namespace dr407 { // dr407: no
     namespace H {
       using namespace F;
       using namespace A;
-      struct S s; // expected-error {{refers to a typedef}}
+      struct S s;
     }
   }
 }
@@ -327,7 +325,7 @@ namespace dr420 { // dr420: yes
 
 namespace dr421 { // dr421: yes
   struct X { X(); int n; int &r; };
-  int *p = &X().n; // expected-error {{taking the address of a temporary}}
+  int *p = &X().n; // expected-error-re {{{{taking the address of a temporary|cannot take the address of an rvalue}}}}
   int *q = &X().r;
 }
 
@@ -508,9 +506,18 @@ namespace dr437 { // dr437: sup 1308
   template<typename U> struct T : U {};
   struct S {
     void f() throw(S);
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
     void g() throw(T<S>);
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
     struct U;
     void h() throw(U);
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
     struct U {};
   };
 }
@@ -553,12 +560,21 @@ namespace dr446 { // dr446: yes
     void(b ? a : a);
     b ? A() : a; // expected-error {{deleted}}
     b ? a : A(); // expected-error {{deleted}}
-    b ? A() : A(); // expected-error {{deleted}}
+    b ? A() : A();
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{deleted}}
+#endif
 
     void(b ? a : c);
     b ? a : C(); // expected-error {{deleted}}
-    b ? c : A(); // expected-error {{deleted}}
-    b ? A() : C(); // expected-error {{deleted}}
+    b ? c : A();
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{deleted}}
+#endif
+    b ? A() : C();
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{deleted}}
+#endif
   }
 }
 
@@ -702,8 +718,8 @@ namespace dr460 { // dr460: yes
   namespace X { namespace Q { int n; } }
   namespace Y {
     using X; // expected-error {{requires a qualified name}}
-    using dr460::X; // expected-error {{cannot refer to namespace}}
-    using X::Q; // expected-error {{cannot refer to namespace}}
+    using dr460::X; // expected-error {{cannot refer to a namespace}}
+    using X::Q; // expected-error {{cannot refer to a namespace}}
   }
 }
 
@@ -874,10 +890,12 @@ namespace dr479 { // dr479: yes
   void f() {
     throw S();
     // expected-error@-1 {{temporary of type 'dr479::S' has private destructor}}
-    // expected-error@-2 {{calling a private constructor}}
-    // expected-error@-3 {{exception object of type 'dr479::S' has private destructor}}
+    // expected-error@-2 {{exception object of type 'dr479::S' has private destructor}}
 #if __cplusplus < 201103L
-    // expected-error@-5 {{C++98 requires an accessible copy constructor}}
+    // expected-error@-4 {{C++98 requires an accessible copy constructor}}
+#endif
+#if __cplusplus <= 201402L
+    // expected-error@-7 {{calling a private constructor}} (copy ctor)
 #endif
   }
   void g() {
@@ -1184,25 +1202,24 @@ namespace dr495 { // dr495: 3.5
   long n2 = s2;
 }
 
-namespace dr496 { // dr496: no
+namespace dr496 { // dr496: sup dr2094
   struct A { int n; };
   struct B { volatile int n; };
   int check1[ __is_trivially_copyable(const int) ? 1 : -1];
-  int check2[!__is_trivially_copyable(volatile int) ? 1 : -1];
+  // This checks the dr2094 behavior, not dr496
+  int check2[ __is_trivially_copyable(volatile int) ? 1 : -1];
   int check3[ __is_trivially_constructible(A, const A&) ? 1 : -1];
-  // FIXME: This is wrong.
   int check4[ __is_trivially_constructible(B, const B&) ? 1 : -1];
   int check5[ __is_trivially_assignable(A, const A&) ? 1 : -1];
-  // FIXME: This is wrong.
   int check6[ __is_trivially_assignable(B, const B&) ? 1 : -1];
 }
 
-namespace dr497 { // dr497: yes
+namespace dr497 { // dr497: sup 253
   void before() {
     struct S {
       mutable int i;
     };
-    const S cs; // expected-error {{default initialization}}
+    const S cs;
     int S::*pm = &S::i;
     cs.*pm = 88; // expected-error {{not assignable}}
   }

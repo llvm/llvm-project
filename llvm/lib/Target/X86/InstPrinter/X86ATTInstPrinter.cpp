@@ -14,17 +14,20 @@
 
 #include "X86ATTInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
-#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86InstComments.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormattedStream.h"
-#include <map>
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cinttypes>
+#include <cstdint>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -60,6 +63,17 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
       (STI.getFeatureBits()[X86::Mode64Bit])) {
     OS << "\tcallq\t";
     printPCRelImm(MI, 0, OS);
+  }
+  // data16 and data32 both have the same encoding of 0x66. While data32 is
+  // valid only in 16 bit systems, data16 is valid in the rest.
+  // There seems to be some lack of support of the Requires clause that causes
+  // 0x66 to be interpreted as "data16" by the asm printer.
+  // Thus we add an adjustment here in order to print the "right" instruction.
+  else if (MI->getOpcode() == X86::DATA16_PREFIX &&
+    (STI.getFeatureBits()[X86::Mode16Bit])) {
+    MCInst Data32MI(*MI);
+    Data32MI.setOpcode(X86::DATA32_PREFIX);
+    printInstruction(&Data32MI, OS);
   }
   // Try to print any aliases first.
   else if (!printAliasInstr(MI, OS))
@@ -135,6 +149,7 @@ void X86ATTInstPrinter::printRoundingControl(const MCInst *MI, unsigned Op,
   case 3: O << "{rz-sae}"; break;
   }
 }
+
 /// printPCRelImm - This is used to print an immediate value that ends up
 /// being encoded as a pc-relative value (e.g. for jumps and calls).  These
 /// print slightly differently than normal immediates.  For example, a $ is not
@@ -165,17 +180,25 @@ void X86ATTInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (Op.isReg()) {
     printRegName(O, Op.getReg());
   } else if (Op.isImm()) {
-    // Print X86 immediates as signed values.
-    O << markup("<imm:") << '$' << formatImm((int64_t)Op.getImm())
-      << markup(">");
+    // Print immediates as signed values.
+    int64_t Imm = Op.getImm();
+    O << markup("<imm:") << '$' << formatImm(Imm) << markup(">");
+
+    // TODO: This should be in a helper function in the base class, so it can
+    // be used by other printers.
 
     // If there are no instruction-specific comments, add a comment clarifying
     // the hex value of the immediate operand when it isn't in the range
     // [-256,255].
-    if (CommentStream && !HasCustomInstComment &&
-        (Op.getImm() > 255 || Op.getImm() < -256))
-      *CommentStream << format("imm = 0x%" PRIX64 "\n", (uint64_t)Op.getImm());
-
+    if (CommentStream && !HasCustomInstComment && (Imm > 255 || Imm < -256)) {
+      // Don't print unnecessary hex sign bits. 
+      if (Imm == (int16_t)(Imm))
+        *CommentStream << format("imm = 0x%" PRIX16 "\n", (uint16_t)Imm);
+      else if (Imm == (int32_t)(Imm))
+        *CommentStream << format("imm = 0x%" PRIX32 "\n", (uint32_t)Imm);
+      else
+        *CommentStream << format("imm = 0x%" PRIX64 "\n", (uint64_t)Imm);
+    }
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     O << markup("<imm:") << '$';
@@ -283,6 +306,9 @@ void X86ATTInstPrinter::printMemOffset(const MCInst *MI, unsigned Op,
 
 void X86ATTInstPrinter::printU8Imm(const MCInst *MI, unsigned Op,
                                    raw_ostream &O) {
+  if (MI->getOperand(Op).isExpr())
+    return printOperand(MI, Op, O);
+
   O << markup("<imm:") << '$' << formatImm(MI->getOperand(Op).getImm() & 0xff)
     << markup(">");
 }

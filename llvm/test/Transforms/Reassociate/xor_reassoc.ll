@@ -19,6 +19,19 @@ define i32 @xor1(i32 %x) {
 ;CHECK: %xor = xor i32 %and.ra, 435
 }
 
+; (x | c1) ^ (x | c2) => (x & c3) ^ c3, where c3 = c1^c2
+;   
+define <2 x i32> @xor1_vec(<2 x i32> %x) {
+  %or = or <2 x i32> %x, <i32 123, i32 123>
+  %or1 = or <2 x i32> %x, <i32 456, i32 456>
+  %xor = xor <2 x i32> %or, %or1
+  ret <2 x i32> %xor
+
+;CHECK-LABEL: @xor1_vec(
+;CHECK: %and.ra = and <2 x i32> %x, <i32 435, i32 435>
+;CHECK: %xor = xor <2 x i32> %and.ra, <i32 435, i32 435>
+}
+
 ; Test rule : (x & c1) ^ (x & c2) = (x & (c1^c2))
 ; Real testing case : (x & 123) ^ y ^ (x & 345) => (x & 435) ^ y
 define i32 @xor2(i32 %x, i32 %y) {
@@ -31,6 +44,20 @@ define i32 @xor2(i32 %x, i32 %y) {
 ;CHECK-LABEL: @xor2(
 ;CHECK: %and.ra = and i32 %x, 435
 ;CHECK: %xor2 = xor i32 %and.ra, %y
+}
+
+; Test rule : (x & c1) ^ (x & c2) = (x & (c1^c2))
+; Real testing case : (x & 123) ^ y ^ (x & 345) => (x & 435) ^ y
+define <2 x i32> @xor2_vec(<2 x i32> %x, <2 x i32> %y) {
+  %and = and <2 x i32> %x, <i32 123, i32 123>
+  %xor = xor <2 x i32> %and, %y
+  %and1 = and <2 x i32> %x, <i32 456, i32 456>
+  %xor2 = xor <2 x i32> %xor, %and1
+  ret <2 x i32> %xor2
+
+;CHECK-LABEL: @xor2_vec(
+;CHECK: %and.ra = and <2 x i32> %x, <i32 435, i32 435>
+;CHECK: %xor2 = xor <2 x i32> %and.ra, %y
 }
 
 ; Test rule: (x | c1) ^ (x & c2) = (x & c3) ^ c1, where c3 = ~c1 ^ c2
@@ -48,6 +75,21 @@ define i32 @xor3(i32 %x, i32 %y) {
 ;CHECK: %xor1 = xor i32 %xor, %and.ra
 }
 
+; Test rule: (x | c1) ^ (x & c2) = (x & c3) ^ c1, where c3 = ~c1 ^ c2
+;  c3 = ~c1 ^ c2
+define <2 x i32> @xor3_vec(<2 x i32> %x, <2 x i32> %y) {
+  %or = or <2 x i32> %x, <i32 123, i32 123>
+  %xor = xor <2 x i32> %or, %y
+  %and = and <2 x i32> %x, <i32 456, i32 456>
+  %xor1 = xor <2 x i32> %xor, %and
+  ret <2 x i32> %xor1
+
+;CHECK-LABEL: @xor3_vec(
+;CHECK: %and.ra = and <2 x i32> %x, <i32 -436, i32 -436>
+;CHECK: %xor = xor <2 x i32> %y, <i32 123, i32 123>
+;CHECK: %xor1 = xor <2 x i32> %xor, %and.ra
+}
+
 ; Test rule: (x | c1) ^ c2 = (x & ~c1) ^ (c1 ^ c2)
 define i32 @xor4(i32 %x, i32 %y) {
   %and = and i32 %x, -124
@@ -58,6 +100,18 @@ define i32 @xor4(i32 %x, i32 %y) {
 ; CHECK: %and = and i32 %x, -124
 ; CHECK: %xor = xor i32 %y, 435
 ; CHECK: %xor1 = xor i32 %xor, %and
+}
+
+; Test rule: (x | c1) ^ c2 = (x & ~c1) ^ (c1 ^ c2)
+define <2 x i32> @xor4_vec(<2 x i32> %x, <2 x i32> %y) {
+  %and = and <2 x i32> %x, <i32 -124, i32 -124>
+  %xor = xor <2 x i32> %y, <i32 435, i32 435>
+  %xor1 = xor <2 x i32> %xor, %and
+  ret <2 x i32> %xor1
+; CHECK-LABEL: @xor4_vec(
+; CHECK: %and = and <2 x i32> %x, <i32 -124, i32 -124>
+; CHECK: %xor = xor <2 x i32> %y, <i32 435, i32 435>
+; CHECK: %xor1 = xor <2 x i32> %xor, %and
 }
 
 ; ==========================================================================
@@ -80,6 +134,19 @@ define i32 @xor_special1(i32 %x, i32 %y) {
 }
 
 ; Special case1: 
+;  (x | c1) ^ (x & ~c1) = c1
+define <2 x i32> @xor_special1_vec(<2 x i32> %x, <2 x i32> %y) {
+  %or = or <2 x i32> %x, <i32 123, i32 123>
+  %xor = xor <2 x i32> %or, %y
+  %and = and <2 x i32> %x, <i32 -124, i32 -124>
+  %xor1 = xor <2 x i32> %xor, %and
+  ret <2 x i32> %xor1
+; CHECK-LABEL: @xor_special1_vec(
+; CHECK: %xor1 = xor <2 x i32> %y, <i32 123, i32 123>
+; CHECK: ret <2 x i32> %xor1
+}
+
+; Special case1: 
 ;  (x | c1) ^ (x & c1) = x ^ c1
 define i32 @xor_special2(i32 %x, i32 %y) {
   %or = or i32 %x, 123
@@ -88,9 +155,23 @@ define i32 @xor_special2(i32 %x, i32 %y) {
   %xor1 = xor i32 %xor, %and
   ret i32 %xor1
 ; CHECK-LABEL: @xor_special2(
-; CHECK: %xor = xor i32 %y, 123
-; CHECK: %xor1 = xor i32 %xor, %x
+; CHECK: %xor = xor i32 %x, 123
+; CHECK: %xor1 = xor i32 %xor, %y
 ; CHECK: ret i32 %xor1
+}
+
+; Special case1: 
+;  (x | c1) ^ (x & c1) = x ^ c1
+define <2 x i32> @xor_special2_vec(<2 x i32> %x, <2 x i32> %y) {
+  %or = or <2 x i32> %x, <i32 123, i32 123>
+  %xor = xor <2 x i32> %or, %y
+  %and = and <2 x i32> %x, <i32 123, i32 123>
+  %xor1 = xor <2 x i32> %xor, %and
+  ret <2 x i32> %xor1
+; CHECK-LABEL: @xor_special2_vec(
+; CHECK: %xor = xor <2 x i32> %x, <i32 123, i32 123>
+; CHECK: %xor1 = xor <2 x i32> %xor, %y
+; CHECK: ret <2 x i32> %xor1
 }
 
 ; (x | c1) ^ (x | c1) => 0
@@ -103,6 +184,16 @@ define i32 @xor_special3(i32 %x) {
 ;CHECK: ret i32 0
 }
 
+; (x | c1) ^ (x | c1) => 0
+define <2 x i32> @xor_special3_vec(<2 x i32> %x) {
+  %or = or <2 x i32> %x, <i32 123, i32 123>
+  %or1 = or <2 x i32> %x, <i32 123, i32 123>
+  %xor = xor <2 x i32> %or, %or1
+  ret <2 x i32> %xor
+;CHECK-LABEL: @xor_special3_vec(
+;CHECK: ret <2 x i32> zeroinitializer
+}
+
 ; (x & c1) ^ (x & c1) => 0
 define i32 @xor_special4(i32 %x) {
   %or = and i32 %x, 123
@@ -111,6 +202,16 @@ define i32 @xor_special4(i32 %x) {
   ret i32 %xor
 ;CHECK-LABEL: @xor_special4(
 ;CHECK: ret i32 0
+}
+
+; (x & c1) ^ (x & c1) => 0
+define <2 x i32> @xor_special4_vec(<2 x i32> %x) {
+  %or = and <2 x i32> %x, <i32 123, i32 123>
+  %or1 = and <2 x i32> <i32 123, i32 123>, %x
+  %xor = xor <2 x i32> %or, %or1
+  ret <2 x i32> %xor
+;CHECK-LABEL: @xor_special4_vec(
+;CHECK: ret <2 x i32> zeroinitializer
 }
 
 ; ==========================================================================

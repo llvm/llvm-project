@@ -37,3 +37,19 @@ namespace Foo {
     int y = x;
   };
 }
+
+// Instantiating another default member initializer while parsing one should
+// not cause us to mess up the 'this' override.
+template<typename> struct DefaultMemberTemplate { int n = 0; };
+class DefaultMemberInitSelf {
+  DefaultMemberTemplate<int> t = {};
+  int *p = &t.n;
+};
+
+namespace composed_templates {
+  // Regression test -- obtaining the type from composed templates should not
+  // require out-of-line definition.
+  template <typename T> struct Zero { static const typename T::type value = 0; };
+  struct Integer { using type = int; };
+  template struct Zero<Integer>;
+}

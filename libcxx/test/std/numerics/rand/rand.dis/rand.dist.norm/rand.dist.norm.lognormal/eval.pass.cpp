@@ -33,6 +33,7 @@ void
 test1()
 {
     typedef std::lognormal_distribution<> D;
+    typedef D::param_type P;
     typedef std::mt19937 G;
     G g;
     D d(-1./8192, 0.015625);
@@ -77,6 +78,7 @@ void
 test2()
 {
     typedef std::lognormal_distribution<> D;
+    typedef D::param_type P;
     typedef std::mt19937 G;
     G g;
     D d(-1./32, 0.25);
@@ -121,6 +123,7 @@ void
 test3()
 {
     typedef std::lognormal_distribution<> D;
+    typedef D::param_type P;
     typedef std::mt19937 G;
     G g;
     D d(-1./8, 0.5);
@@ -165,6 +168,7 @@ void
 test4()
 {
     typedef std::lognormal_distribution<> D;
+    typedef D::param_type P;
     typedef std::mt19937 G;
     G g;
     D d;
@@ -209,6 +213,7 @@ void
 test5()
 {
     typedef std::lognormal_distribution<> D;
+    typedef D::param_type P;
     typedef std::mt19937 G;
     G g;
     D d(-0.78125, 1.25);

@@ -6,7 +6,7 @@ target triple = "thumbv7-apple-darwin"
 
 ; CHECK-LABEL: @test(
 ; CHECK: if.end.i126:
-; CHECK: %exitcond = icmp ne i8* %incdec.ptr.i, getelementptr (i8, i8* null, i32 undef)
+; CHECK: %exitcond = icmp ne i8* %incdec.ptr.i, null
 define void @test() nounwind {
 entry:
   br label %while.cond

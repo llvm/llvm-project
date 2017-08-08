@@ -1,3 +1,5 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
+
 //===-- cmpsf2_test.c - Test __cmpsf2 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

@@ -11,8 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
+#include "gtest/gtest.h"
 
 using namespace llvm;
 
@@ -21,10 +23,7 @@ TEST(SmallPtrSetTest, Assignment) {
   for (int i = 0; i < 8; ++i)
     buf[i] = 0;
 
-  SmallPtrSet<int *, 4> s1;
-  s1.insert(&buf[0]);
-  s1.insert(&buf[1]);
-
+  SmallPtrSet<int *, 4> s1 = {&buf[0], &buf[1]};
   SmallPtrSet<int *, 4> s2;
   (s2 = s1).insert(&buf[2]);
 
@@ -38,6 +37,15 @@ TEST(SmallPtrSetTest, Assignment) {
       EXPECT_TRUE(s1.count(&buf[i]));
     else
       EXPECT_FALSE(s1.count(&buf[i]));
+
+  // Assign and insert with initializer lists, and ones that contain both
+  // duplicates and out-of-order elements.
+  (s2 = {&buf[6], &buf[7], &buf[6]}).insert({&buf[5], &buf[4]});
+  for (int i = 0; i < 8; ++i)
+    if (i < 4)
+      EXPECT_FALSE(s2.count(&buf[i]));
+    else
+      EXPECT_TRUE(s2.count(&buf[i]));
 }
 
 TEST(SmallPtrSetTest, GrowthTest) {
@@ -167,13 +175,29 @@ TEST(SmallPtrSetTest, SwapTest) {
   a.insert(&buf[1]);
   b.insert(&buf[2]);
 
+  EXPECT_EQ(2U, a.size());
+  EXPECT_EQ(1U, b.size());
+  EXPECT_TRUE(a.count(&buf[0]));
+  EXPECT_TRUE(a.count(&buf[1]));
+  EXPECT_FALSE(a.count(&buf[2]));
+  EXPECT_FALSE(a.count(&buf[3]));
+  EXPECT_FALSE(b.count(&buf[0]));
+  EXPECT_FALSE(b.count(&buf[1]));
+  EXPECT_TRUE(b.count(&buf[2]));
+  EXPECT_FALSE(b.count(&buf[3]));
+
   std::swap(a, b);
 
   EXPECT_EQ(1U, a.size());
   EXPECT_EQ(2U, b.size());
+  EXPECT_FALSE(a.count(&buf[0]));
+  EXPECT_FALSE(a.count(&buf[1]));
   EXPECT_TRUE(a.count(&buf[2]));
+  EXPECT_FALSE(a.count(&buf[3]));
   EXPECT_TRUE(b.count(&buf[0]));
   EXPECT_TRUE(b.count(&buf[1]));
+  EXPECT_FALSE(b.count(&buf[2]));
+  EXPECT_FALSE(b.count(&buf[3]));
 
   b.insert(&buf[3]);
   std::swap(a, b);
@@ -182,16 +206,24 @@ TEST(SmallPtrSetTest, SwapTest) {
   EXPECT_EQ(1U, b.size());
   EXPECT_TRUE(a.count(&buf[0]));
   EXPECT_TRUE(a.count(&buf[1]));
+  EXPECT_FALSE(a.count(&buf[2]));
   EXPECT_TRUE(a.count(&buf[3]));
+  EXPECT_FALSE(b.count(&buf[0]));
+  EXPECT_FALSE(b.count(&buf[1]));
   EXPECT_TRUE(b.count(&buf[2]));
+  EXPECT_FALSE(b.count(&buf[3]));
 
   std::swap(a, b);
 
   EXPECT_EQ(1U, a.size());
   EXPECT_EQ(3U, b.size());
+  EXPECT_FALSE(a.count(&buf[0]));
+  EXPECT_FALSE(a.count(&buf[1]));
   EXPECT_TRUE(a.count(&buf[2]));
+  EXPECT_FALSE(a.count(&buf[3]));
   EXPECT_TRUE(b.count(&buf[0]));
   EXPECT_TRUE(b.count(&buf[1]));
+  EXPECT_FALSE(b.count(&buf[2]));
   EXPECT_TRUE(b.count(&buf[3]));
 
   a.insert(&buf[4]);
@@ -209,4 +241,92 @@ TEST(SmallPtrSetTest, SwapTest) {
   EXPECT_TRUE(a.count(&buf[0]));
   EXPECT_TRUE(a.count(&buf[1]));
   EXPECT_TRUE(a.count(&buf[3]));
+}
+
+void checkEraseAndIterators(SmallPtrSetImpl<int*> &S) {
+  int buf[3];
+
+  S.insert(&buf[0]);
+  S.insert(&buf[1]);
+  S.insert(&buf[2]);
+
+  // Iterators must still be valid after erase() calls;
+  auto B = S.begin();
+  auto M = std::next(B);
+  auto E = S.end();
+  EXPECT_TRUE(*B == &buf[0] || *B == &buf[1] || *B == &buf[2]);
+  EXPECT_TRUE(*M == &buf[0] || *M == &buf[1] || *M == &buf[2]);
+  EXPECT_TRUE(*B != *M);
+  int *Removable = *std::next(M);
+  // No iterator points to Removable now.
+  EXPECT_TRUE(Removable == &buf[0] || Removable == &buf[1] ||
+              Removable == &buf[2]);
+  EXPECT_TRUE(Removable != *B && Removable != *M);
+
+  S.erase(Removable);
+
+  // B,M,E iterators should still be valid
+  EXPECT_EQ(B, S.begin());
+  EXPECT_EQ(M, std::next(B));
+  EXPECT_EQ(E, S.end());
+  EXPECT_EQ(std::next(M), E);
+}
+
+TEST(SmallPtrSetTest, EraseTest) {
+  // Test when set stays small.
+  SmallPtrSet<int *, 8> B;
+  checkEraseAndIterators(B);
+
+  // Test when set grows big.
+  SmallPtrSet<int *, 2> A;
+  checkEraseAndIterators(A);
+}
+
+// Verify that dereferencing and iteration work.
+TEST(SmallPtrSetTest, dereferenceAndIterate) {
+  int Ints[] = {0, 1, 2, 3, 4, 5, 6, 7};
+  SmallPtrSet<const int *, 4> S;
+  for (int &I : Ints) {
+    EXPECT_EQ(&I, *S.insert(&I).first);
+    EXPECT_EQ(&I, *S.find(&I));
+  }
+
+  // Iterate from each and count how many times each element is found.
+  int Found[sizeof(Ints)/sizeof(int)] = {0};
+  for (int &I : Ints)
+    for (auto F = S.find(&I), E = S.end(); F != E; ++F)
+      ++Found[*F - Ints];
+
+  // Sort.  We should hit the first element just once and the final element N
+  // times.
+  std::sort(std::begin(Found), std::end(Found));
+  for (auto F = std::begin(Found), E = std::end(Found); F != E; ++F)
+    EXPECT_EQ(F - Found + 1, *F);
+}
+
+// Verify that const pointers work for count and find even when the underlying
+// SmallPtrSet is not for a const pointer type.
+TEST(SmallPtrSetTest, ConstTest) {
+  SmallPtrSet<int *, 8> IntSet;
+  int A;
+  int *B = &A;
+  const int *C = &A;
+  IntSet.insert(B);
+  EXPECT_EQ(IntSet.count(B), 1u);
+  EXPECT_EQ(IntSet.count(C), 1u);
+  EXPECT_NE(IntSet.find(B), IntSet.end());
+  EXPECT_NE(IntSet.find(C), IntSet.end());
+}
+
+// Verify that we automatically get the const version of PointerLikeTypeTraits
+// filled in for us, even for a non-pointer type
+using TestPair = PointerIntPair<int *, 1>;
+
+TEST(SmallPtrSetTest, ConstNonPtrTest) {
+  SmallPtrSet<TestPair, 8> IntSet;
+  int A[1];
+  TestPair Pair(&A[0], 1);
+  IntSet.insert(Pair);
+  EXPECT_EQ(IntSet.count(Pair), 1u);
+  EXPECT_NE(IntSet.find(Pair), IntSet.end());
 }

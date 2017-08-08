@@ -223,21 +223,19 @@ entry:
   ret i32 %add
 }
 
-; Do not fold the xor into the select
+; Fold the xor into the select.
 define i32 @t15(i32 %p) {
 entry:
 ; ARM-LABEL: t15:
-; ARM: mov     [[REG:r[0-9]+]], #2
+; ARM: mov     [[REG:r[0-9]+]], #3
 ; ARM: cmp     r0, #8
-; ARM: movwgt  [[REG:r[0-9]+]], #1
-; ARM: eor     r0, [[REG:r[0-9]+]], #1
+; ARM: movwgt  [[REG:r[0-9]+]], #0
 
 ; T2-LABEL: t15:
-; T2: movs    [[REG:r[0-9]+]], #2
+; T2: movs    [[REG:r[0-9]+]], #3
 ; T2: cmp     [[REG:r[0-9]+]], #8
 ; T2: it      gt
-; T2: movgt   [[REG:r[0-9]+]], #1
-; T2: eor     r0, [[REG:r[0-9]+]], #1
+; T2: movgt   [[REG:r[0-9]+]], #0
   %cmp = icmp sgt i32 %p, 8
   %a = select i1 %cmp, i32 1, i32 2
   %xor = xor i32 %a, 1
@@ -280,7 +278,7 @@ entry:
 ; ARM: and r0, {{r[0-9]+}}, {{r[0-9]+}}
 
 ; T2-LABEL: t18:
-; T2: and.w r0, {{r[0-9]+}}
+; T2: and{{s|.w}} r0, {{r[0-9]+}}
   %cmp = icmp ne i32 %x, 0
   %cond = select i1 %cmp, i32 5, i32 2
   %cmp1 = icmp ne i32 %x, -1

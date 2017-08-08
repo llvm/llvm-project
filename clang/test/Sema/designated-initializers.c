@@ -351,3 +351,20 @@ overwrite_string4[] = {
   { { 'f', 'o', 'o' }, 1 },
   [0].L[4] = 'x' // no-warning
 };
+
+struct {
+  struct { } s1;
+  union {
+    int a;
+    int b;
+  } u1;
+} s = {
+  .s1 = {
+    .x = 0, // expected-error{{field designator}}
+  },
+
+  .u1 = {
+    .a = 0,
+    .b = 0,
+  },
+};

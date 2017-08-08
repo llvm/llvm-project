@@ -1,5 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | \
-; RUN:   not grep "call void @DEAD"
+; RUN: opt < %s -simplifycfg -S | FileCheck %s
 
 ; Test that we can thread a simple known condition through switch statements.
 
@@ -45,6 +44,21 @@ B:              ; preds = %T
 C:              ; preds = %B, %A, %A2, %T, %T
         call void @DEAD( )
         ret void
+
+; CHECK-LABEL: @test1(
+; CHECK-NEXT:    switch i32 %V, label %A [
+; CHECK-NEXT:    i32 4, label %T
+; CHECK-NEXT:    i32 17, label %Done
+; CHECK-NEXT:    ]
+; CHECK:       T:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    call void @foo2()
+; CHECK-NEXT:    br label %Done
+; CHECK:       A:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    br label %Done
+; CHECK:       Done:
+; CHECK-NEXT:    ret void
 }
 
 define void @test2(i32 %V) {
@@ -75,5 +89,25 @@ D:              ; preds = %A, %0
         ret void
 E:              ; preds = %A, %0
         ret void
+
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:    switch i32 %V, label %A [
+; CHECK-NEXT:    i32 4, label %T
+; CHECK-NEXT:    i32 17, label %D
+; CHECK-NEXT:    i32 1234, label %E
+; CHECK-NEXT:    ]
+; CHECK:       A:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 %V, 42
+; CHECK-NEXT:    br i1 [[COND]], label %D, label %E
+; CHECK:       T:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    ret void
+; CHECK:       D:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    ret void
+; CHECK:       E:
+; CHECK-NEXT:    ret void
 }
 

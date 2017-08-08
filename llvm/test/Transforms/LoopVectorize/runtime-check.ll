@@ -1,7 +1,6 @@
 ; RUN: opt < %s  -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine -S | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.9.0"
 
 ; Make sure we vectorize this loop:
 ; int foo(float *a, float *b, int n) {
@@ -11,7 +10,7 @@ target triple = "x86_64-apple-macosx10.9.0"
 
 ;CHECK-LABEL: define i32 @foo
 ;CHECK: for.body.preheader:
-;CHECK: br i1 %cmp.zero, label %scalar.ph, label %vector.memcheck, !dbg [[BODY_LOC:![0-9]+]]
+;CHECK: br i1 %min.iters.check, label %scalar.ph, label %vector.memcheck, !dbg [[BODY_LOC:![0-9]+]]
 ;CHECK: vector.memcheck:
 ;CHECK: br i1 %memcheck.conflict, label %scalar.ph, label %vector.ph, !dbg [[BODY_LOC]]
 ;CHECK: load <4 x float>
@@ -67,13 +66,20 @@ loopexit:
 ; CHECK: [[BODY_LOC]] = !DILocation(line: 101, column: 1, scope: !{{.*}})
 
 !llvm.module.flags = !{!0, !1}
+!llvm.dbg.cu = !{!9}
 !0 = !{i32 2, !"Dwarf Version", i32 4}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 
 !2 = !{}
 !3 = !DISubroutineType(types: !2)
 !4 = !DIFile(filename: "test.cpp", directory: "/tmp")
-!5 = distinct !DISubprogram(name: "foo", scope: !4, file: !4, line: 99, type: !3, isLocal: false, isDefinition: true, scopeLine: 100, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!5 = distinct !DISubprogram(name: "foo", scope: !4, file: !4, line: 99, type: !3, isLocal: false, isDefinition: true, scopeLine: 100, flags: DIFlagPrototyped, isOptimized: false, unit: !9, variables: !2)
 !6 = !DILocation(line: 100, column: 1, scope: !5)
 !7 = !DILocation(line: 101, column: 1, scope: !5)
 !8 = !DILocation(line: 102, column: 1, scope: !5)
+!9 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
+                             file: !10,
+                             isOptimized: true, flags: "-O2",
+                             splitDebugFilename: "abc.debug", emissionKind: 2)
+!10 = !DIFile(filename: "path/to/file", directory: "/path/to/dir")
+!11 = !{i32 2, !"Debug Info Version", i32 3}

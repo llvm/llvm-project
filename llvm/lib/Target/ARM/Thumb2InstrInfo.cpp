@@ -1,4 +1,4 @@
-//===-- Thumb2InstrInfo.cpp - Thumb-2 Instruction Information -------------===//
+//===- Thumb2InstrInfo.cpp - Thumb-2 Instruction Information --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,16 +11,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Thumb2InstrInfo.h"
-#include "ARMConstantPoolValue.h"
 #include "ARMMachineFunctionInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
+#include "Thumb2InstrInfo.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -30,10 +40,10 @@ OldT2IfCvt("old-thumb2-ifcvt", cl::Hidden,
            cl::init(false));
 
 Thumb2InstrInfo::Thumb2InstrInfo(const ARMSubtarget &STI)
-    : ARMBaseInstrInfo(STI), RI() {}
+    : ARMBaseInstrInfo(STI) {}
 
-/// getNoopForMachoTarget - Return the noop instruction to use for a noop.
-void Thumb2InstrInfo::getNoopForMachoTarget(MCInst &NopInst) const {
+/// Return the noop instruction to use for a noop.
+void Thumb2InstrInfo::getNoop(MCInst &NopInst) const {
   NopInst.setOpcode(ARM::tHINT);
   NopInst.addOperand(MCOperand::createImm(0));
   NopInst.addOperand(MCOperand::createImm(ARMCC::AL));
@@ -50,7 +60,7 @@ Thumb2InstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
                                          MachineBasicBlock *NewDest) const {
   MachineBasicBlock *MBB = Tail->getParent();
   ARMFunctionInfo *AFI = MBB->getParent()->getInfo<ARMFunctionInfo>();
-  if (!AFI->hasITBlocks()) {
+  if (!AFI->hasITBlocks() || Tail->isBranch()) {
     TargetInstrInfo::ReplaceTailWithBranchTo(Tail, NewDest);
     return;
   }
@@ -58,7 +68,7 @@ Thumb2InstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
   // If the first instruction of Tail is predicated, we may have to update
   // the IT instruction.
   unsigned PredReg = 0;
-  ARMCC::CondCodes CC = getInstrPredicate(Tail, PredReg);
+  ARMCC::CondCodes CC = getInstrPredicate(*Tail, PredReg);
   MachineBasicBlock::iterator MBBI = Tail;
   if (CC != ARMCC::AL)
     // Expecting at least the t2IT instruction before it.
@@ -106,19 +116,20 @@ Thumb2InstrInfo::isLegalToSplitMBBAt(MachineBasicBlock &MBB,
   }
 
   unsigned PredReg = 0;
-  return getITInstrPredicate(MBBI, PredReg) == ARMCC::AL;
+  return getITInstrPredicate(*MBBI, PredReg) == ARMCC::AL;
 }
 
 void Thumb2InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator I, DebugLoc DL,
-                                  unsigned DestReg, unsigned SrcReg,
-                                  bool KillSrc) const {
+                                  MachineBasicBlock::iterator I,
+                                  const DebugLoc &DL, unsigned DestReg,
+                                  unsigned SrcReg, bool KillSrc) const {
   // Handle SPR, DPR, and QPR copies.
   if (!ARM::GPRRegClass.contains(DestReg, SrcReg))
     return ARMBaseInstrInfo::copyPhysReg(MBB, I, DL, DestReg, SrcReg, KillSrc);
 
-  AddDefaultPred(BuildMI(MBB, I, DL, get(ARM::tMOVr), DestReg)
-    .addReg(SrcReg, getKillRegState(KillSrc)));
+  BuildMI(MBB, I, DL, get(ARM::tMOVr), DestReg)
+      .addReg(SrcReg, getKillRegState(KillSrc))
+      .add(predOps(ARMCC::AL));
 }
 
 void Thumb2InstrInfo::
@@ -130,7 +141,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   if (I != MBB.end()) DL = I->getDebugLoc();
 
   MachineFunction &MF = *MBB.getParent();
-  MachineFrameInfo &MFI = *MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOStore,
       MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
@@ -138,9 +149,12 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   if (RC == &ARM::GPRRegClass   || RC == &ARM::tGPRRegClass ||
       RC == &ARM::tcGPRRegClass || RC == &ARM::rGPRRegClass ||
       RC == &ARM::GPRnopcRegClass) {
-    AddDefaultPred(BuildMI(MBB, I, DL, get(ARM::t2STRi12))
-                   .addReg(SrcReg, getKillRegState(isKill))
-                   .addFrameIndex(FI).addImm(0).addMemOperand(MMO));
+    BuildMI(MBB, I, DL, get(ARM::t2STRi12))
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO)
+        .add(predOps(ARMCC::AL));
     return;
   }
 
@@ -148,14 +162,15 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     // Thumb2 STRD expects its dest-registers to be in rGPR. Not a problem for
     // gsub_0, but needs an extra constraint for gsub_1 (which could be sp
     // otherwise).
-    MachineRegisterInfo *MRI = &MF.getRegInfo();
-    MRI->constrainRegClass(SrcReg, &ARM::GPRPair_with_gsub_1_in_rGPRRegClass);
+    if (TargetRegisterInfo::isVirtualRegister(SrcReg)) {
+      MachineRegisterInfo *MRI = &MF.getRegInfo();
+      MRI->constrainRegClass(SrcReg, &ARM::GPRPair_with_gsub_1_in_rGPRRegClass);
+    }
 
     MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::t2STRDi8));
     AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill), TRI);
     AddDReg(MIB, SrcReg, ARM::gsub_1, 0, TRI);
-    MIB.addFrameIndex(FI).addImm(0).addMemOperand(MMO);
-    AddDefaultPred(MIB);
+    MIB.addFrameIndex(FI).addImm(0).addMemOperand(MMO).add(predOps(ARMCC::AL));
     return;
   }
 
@@ -168,7 +183,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                      const TargetRegisterClass *RC,
                      const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();
-  MachineFrameInfo &MFI = *MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOLoad,
       MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
@@ -178,8 +193,11 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   if (RC == &ARM::GPRRegClass   || RC == &ARM::tGPRRegClass ||
       RC == &ARM::tcGPRRegClass || RC == &ARM::rGPRRegClass ||
       RC == &ARM::GPRnopcRegClass) {
-    AddDefaultPred(BuildMI(MBB, I, DL, get(ARM::t2LDRi12), DestReg)
-                   .addFrameIndex(FI).addImm(0).addMemOperand(MMO));
+    BuildMI(MBB, I, DL, get(ARM::t2LDRi12), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO)
+        .add(predOps(ARMCC::AL));
     return;
   }
 
@@ -187,14 +205,16 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     // Thumb2 LDRD expects its dest-registers to be in rGPR. Not a problem for
     // gsub_0, but needs an extra constraint for gsub_1 (which could be sp
     // otherwise).
-    MachineRegisterInfo *MRI = &MF.getRegInfo();
-    MRI->constrainRegClass(DestReg, &ARM::GPRPair_with_gsub_1_in_rGPRRegClass);
+    if (TargetRegisterInfo::isVirtualRegister(DestReg)) {
+      MachineRegisterInfo *MRI = &MF.getRegInfo();
+      MRI->constrainRegClass(DestReg,
+                             &ARM::GPRPair_with_gsub_1_in_rGPRRegClass);
+    }
 
     MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::t2LDRDi8));
     AddDReg(MIB, DestReg, ARM::gsub_0, RegState::DefineNoRead, TRI);
     AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead, TRI);
-    MIB.addFrameIndex(FI).addImm(0).addMemOperand(MMO);
-    AddDefaultPred(MIB);
+    MIB.addFrameIndex(FI).addImm(0).addMemOperand(MMO).add(predOps(ARMCC::AL));
 
     if (TargetRegisterInfo::isPhysicalRegister(DestReg))
       MIB.addReg(DestReg, RegState::ImplicitDefine);
@@ -204,20 +224,22 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   ARMBaseInstrInfo::loadRegFromStackSlot(MBB, I, DestReg, FI, RC, TRI);
 }
 
-void
-Thumb2InstrInfo::expandLoadStackGuard(MachineBasicBlock::iterator MI,
-                                      Reloc::Model RM) const {
-  if (RM == Reloc::PIC_)
-    expandLoadStackGuardBase(MI, ARM::t2MOV_ga_pcrel, ARM::t2LDRi12, RM);
+void Thumb2InstrInfo::expandLoadStackGuard(
+    MachineBasicBlock::iterator MI) const {
+  MachineFunction &MF = *MI->getParent()->getParent();
+  if (MF.getTarget().isPositionIndependent())
+    expandLoadStackGuardBase(MI, ARM::t2MOV_ga_pcrel, ARM::t2LDRi12);
   else
-    expandLoadStackGuardBase(MI, ARM::t2MOVi32imm, ARM::t2LDRi12, RM);
+    expandLoadStackGuardBase(MI, ARM::t2MOVi32imm, ARM::t2LDRi12);
 }
 
 void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator &MBBI, DebugLoc dl,
-                               unsigned DestReg, unsigned BaseReg, int NumBytes,
-                               ARMCC::CondCodes Pred, unsigned PredReg,
-                               const ARMBaseInstrInfo &TII, unsigned MIFlags) {
+                                  MachineBasicBlock::iterator &MBBI,
+                                  const DebugLoc &dl, unsigned DestReg,
+                                  unsigned BaseReg, int NumBytes,
+                                  ARMCC::CondCodes Pred, unsigned PredReg,
+                                  const ARMBaseInstrInfo &TII,
+                                  unsigned MIFlags) {
   if (NumBytes == 0 && DestReg != BaseReg) {
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), DestReg)
       .addReg(BaseReg, RegState::Kill)
@@ -252,10 +274,11 @@ void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
     if (Fits) {
       if (isSub) {
         BuildMI(MBB, MBBI, dl, TII.get(ARM::t2SUBrr), DestReg)
-          .addReg(BaseReg)
-          .addReg(DestReg, RegState::Kill)
-          .addImm((unsigned)Pred).addReg(PredReg).addReg(0)
-          .setMIFlags(MIFlags);
+            .addReg(BaseReg)
+            .addReg(DestReg, RegState::Kill)
+            .add(predOps(Pred, PredReg))
+            .add(condCodeOp())
+            .setMIFlags(MIFlags);
       } else {
         // Here we know that DestReg is not SP but we do not
         // know anything about BaseReg. t2ADDrr is an invalid
@@ -263,10 +286,11 @@ void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
         // is fine if SP is the first argument. To be sure we
         // do not generate invalid encoding, put BaseReg first.
         BuildMI(MBB, MBBI, dl, TII.get(ARM::t2ADDrr), DestReg)
-          .addReg(BaseReg)
-          .addReg(DestReg, RegState::Kill)
-          .addImm((unsigned)Pred).addReg(PredReg).addReg(0)
-          .setMIFlags(MIFlags);
+            .addReg(BaseReg)
+            .addReg(DestReg, RegState::Kill)
+            .add(predOps(Pred, PredReg))
+            .add(condCodeOp())
+            .setMIFlags(MIFlags);
       }
       return;
     }
@@ -277,8 +301,10 @@ void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
     unsigned Opc = 0;
     if (DestReg == ARM::SP && BaseReg != ARM::SP) {
       // mov sp, rn. Note t2MOVr cannot be used.
-      AddDefaultPred(BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr),DestReg)
-        .addReg(BaseReg).setMIFlags(MIFlags));
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), DestReg)
+          .addReg(BaseReg)
+          .setMIFlags(MIFlags)
+          .add(predOps(ARMCC::AL));
       BaseReg = ARM::SP;
       continue;
     }
@@ -289,8 +315,11 @@ void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
       if (DestReg == ARM::SP && (ThisVal < ((1 << 7)-1) * 4)) {
         assert((ThisVal & 3) == 0 && "Stack update is not multiple of 4?");
         Opc = isSub ? ARM::tSUBspi : ARM::tADDspi;
-        AddDefaultPred(BuildMI(MBB, MBBI, dl, TII.get(Opc), DestReg)
-          .addReg(BaseReg).addImm(ThisVal/4).setMIFlags(MIFlags));
+        BuildMI(MBB, MBBI, dl, TII.get(Opc), DestReg)
+            .addReg(BaseReg)
+            .addImm(ThisVal / 4)
+            .setMIFlags(MIFlags)
+            .add(predOps(ARMCC::AL));
         NumBytes = 0;
         continue;
       }
@@ -327,12 +356,13 @@ void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
     }
 
     // Build the new ADD / SUB.
-    MachineInstrBuilder MIB =
-      AddDefaultPred(BuildMI(MBB, MBBI, dl, TII.get(Opc), DestReg)
-                     .addReg(BaseReg, RegState::Kill)
-                     .addImm(ThisVal)).setMIFlags(MIFlags);
+    MachineInstrBuilder MIB = BuildMI(MBB, MBBI, dl, TII.get(Opc), DestReg)
+                                  .addReg(BaseReg, RegState::Kill)
+                                  .addImm(ThisVal)
+                                  .add(predOps(ARMCC::AL))
+                                  .setMIFlags(MIFlags);
     if (HasCCOut)
-      AddDefaultCC(MIB);
+      MIB.add(condCodeOp());
 
     BaseReg = DestReg;
   }
@@ -459,7 +489,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
     Offset += MI.getOperand(FrameRegIdx+1).getImm();
 
     unsigned PredReg;
-    if (Offset == 0 && getInstrPredicate(&MI, PredReg) == ARMCC::AL) {
+    if (Offset == 0 && getInstrPredicate(MI, PredReg) == ARMCC::AL) {
       // Turn it into a move.
       MI.setDesc(TII.get(ARM::tMOVr));
       MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);
@@ -467,7 +497,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       do MI.RemoveOperand(FrameRegIdx+1);
       while (MI.getNumOperands() > FrameRegIdx+1);
       MachineInstrBuilder MIB(*MI.getParent()->getParent(), &MI);
-      AddDefaultPred(MIB);
+      MIB.add(predOps(ARMCC::AL));
       return true;
     }
 
@@ -519,9 +549,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
     // Add cc_out operand if the original instruction did not have one.
     if (!HasCCOut)
       MI.addOperand(MachineOperand::CreateReg(0, false));
-
   } else {
-
     // AddrMode4 and AddrMode6 cannot handle any offset.
     if (AddrMode == ARMII::AddrMode4 || AddrMode == ARMII::AddrMode6)
       return false;
@@ -627,9 +655,9 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   return Offset == 0;
 }
 
-ARMCC::CondCodes
-llvm::getITInstrPredicate(const MachineInstr *MI, unsigned &PredReg) {
-  unsigned Opc = MI->getOpcode();
+ARMCC::CondCodes llvm::getITInstrPredicate(const MachineInstr &MI,
+                                           unsigned &PredReg) {
+  unsigned Opc = MI.getOpcode();
   if (Opc == ARM::tBcc || Opc == ARM::t2Bcc)
     return ARMCC::AL;
   return getInstrPredicate(MI, PredReg);

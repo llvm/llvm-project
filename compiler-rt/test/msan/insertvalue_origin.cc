@@ -4,7 +4,6 @@
 // RUN: FileCheck %s < %t.out && FileCheck %s < %t.out
 
 // Test origin propagation through insertvalue IR instruction.
-// REQUIRES: stable-runtime
 
 #include <stdio.h>
 #include <stdint.h>

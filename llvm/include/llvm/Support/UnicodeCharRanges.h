@@ -18,10 +18,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
+#define DEBUG_TYPE "unicode"
+
 namespace llvm {
 namespace sys {
-
-#define DEBUG_TYPE "unicode"
 
 /// \brief Represents a closed range of Unicode code points [Lower, Upper].
 struct UnicodeCharRange {
@@ -56,7 +56,7 @@ public:
   // may get rid of NDEBUG in this header. Unfortunately there are some
   // problems to get this working with MSVC 2013. Change this when
   // the support for MSVC 2013 is dropped.
-  LLVM_CONSTEXPR UnicodeCharSet(CharRanges Ranges) : Ranges(Ranges) {}
+  constexpr UnicodeCharSet(CharRanges Ranges) : Ranges(Ranges) {}
 #else
   UnicodeCharSet(CharRanges Ranges) : Ranges(Ranges) {
     assert(rangesAreValid());
@@ -99,10 +99,9 @@ private:
   const CharRanges Ranges;
 };
 
-#undef DEBUG_TYPE // "unicode"
-
 } // namespace sys
 } // namespace llvm
 
+#undef DEBUG_TYPE // "unicode"
 
 #endif // LLVM_SUPPORT_UNICODECHARRANGES_H

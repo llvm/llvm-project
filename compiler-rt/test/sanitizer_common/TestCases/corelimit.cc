@@ -1,5 +1,5 @@
 // RUN: %clangxx -O0 %s -o %t && %run %t
-// XFAIL: lsan
+// UNSUPPORTED: lsan
 
 #include <assert.h>
 #include <sys/time.h>

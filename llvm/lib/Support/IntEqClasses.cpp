@@ -29,7 +29,7 @@ void IntEqClasses::grow(unsigned N) {
     EC.push_back(EC.size());
 }
 
-void IntEqClasses::join(unsigned a, unsigned b) {
+unsigned IntEqClasses::join(unsigned a, unsigned b) {
   assert(NumClasses == 0 && "join() called after compress().");
   unsigned eca = EC[a];
   unsigned ecb = EC[b];
@@ -37,10 +37,17 @@ void IntEqClasses::join(unsigned a, unsigned b) {
   // incrementally. The larger leader will eventually be updated, joining the
   // classes.
   while (eca != ecb)
-    if (eca < ecb)
-      EC[b] = eca, b = ecb, ecb = EC[b];
-    else
-      EC[a] = ecb, a = eca, eca = EC[a];
+    if (eca < ecb) {
+      EC[b] = eca;
+      b = ecb;
+      ecb = EC[b];
+    } else {
+      EC[a] = ecb;
+      a = eca;
+      eca = EC[a];
+    }
+
+  return eca;
 }
 
 unsigned IntEqClasses::findLeader(unsigned a) const {

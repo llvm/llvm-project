@@ -12,6 +12,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -22,7 +23,6 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 using namespace clang;
 
 namespace {
@@ -51,24 +51,6 @@ protected:
   IntrusiveRefCntPtr<TargetInfo> Target;
 };
 
-class VoidModuleLoader : public ModuleLoader {
-  ModuleLoadResult loadModule(SourceLocation ImportLoc, 
-                              ModuleIdPath Path,
-                              Module::NameVisibilityKind Visibility,
-                              bool IsInclusionDirective) override {
-    return ModuleLoadResult();
-  }
-
-  void makeModuleVisible(Module *Mod,
-                         Module::NameVisibilityKind Visibility,
-                         SourceLocation ImportLoc) override { }
-
-  GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override
-    { return nullptr; }
-  bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override
-    { return 0; }
-};
-
 TEST_F(PPConditionalDirectiveRecordTest, PPRecAPI) {
   const char *source =
       "0 1\n"
@@ -89,14 +71,16 @@ TEST_F(PPConditionalDirectiveRecordTest, PPRecAPI) {
       "#endif\n"
       "9\n";
 
-  std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(source);
+  std::unique_ptr<llvm::MemoryBuffer> Buf =
+      llvm::MemoryBuffer::getMemBuffer(source);
   SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
-  VoidModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(new HeaderSearchOptions, SourceMgr, Diags, LangOpts, 
-                          Target.get());
-  Preprocessor PP(new PreprocessorOptions(), Diags, LangOpts, SourceMgr,
-                  HeaderInfo, ModLoader,
+  TrivialModuleLoader ModLoader;
+  MemoryBufferCache PCMCache;
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, Target.get());
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                  SourceMgr, PCMCache, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);

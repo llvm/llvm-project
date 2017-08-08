@@ -53,10 +53,10 @@ public:
     NumClasses = 0;
   }
 
-  /// join - Join the equivalence classes of a and b. After joining classes,
-  /// findLeader(a) == findLeader(b).
-  /// This requires an uncompressed map.
-  void join(unsigned a, unsigned b);
+  /// Join the equivalence classes of a and b. After joining classes,
+  /// findLeader(a) == findLeader(b). This requires an uncompressed map.
+  /// Returns the new leader.
+  unsigned join(unsigned a, unsigned b);
 
   /// findLeader - Compute the leader of a's equivalence class. This is the
   /// smallest member of the class.

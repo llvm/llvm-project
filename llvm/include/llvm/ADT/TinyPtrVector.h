@@ -11,8 +11,13 @@
 #define LLVM_ADT_TINYPTRVECTOR_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include <cassert>
+#include <cstddef>
+#include <iterator>
+#include <type_traits>
 
 namespace llvm {
 
@@ -25,15 +30,16 @@ namespace llvm {
 template <typename EltTy>
 class TinyPtrVector {
 public:
-  typedef llvm::SmallVector<EltTy, 4> VecTy;
-  typedef typename VecTy::value_type value_type;
-  typedef llvm::PointerUnion<EltTy, VecTy *> PtrUnion;
+  using VecTy = SmallVector<EltTy, 4>;
+  using value_type = typename VecTy::value_type;
+  using PtrUnion = PointerUnion<EltTy, VecTy *>;
 
 private:
   PtrUnion Val;
 
 public:
-  TinyPtrVector() {}
+  TinyPtrVector() = default;
+
   ~TinyPtrVector() {
     if (VecTy *V = Val.template dyn_cast<VecTy*>())
       delete V;
@@ -43,6 +49,7 @@ public:
     if (VecTy *V = Val.template dyn_cast<VecTy*>())
       Val = new VecTy(*V);
   }
+
   TinyPtrVector &operator=(const TinyPtrVector &RHS) {
     if (this == &RHS)
       return *this;
@@ -74,6 +81,7 @@ public:
   TinyPtrVector(TinyPtrVector &&RHS) : Val(RHS.Val) {
     RHS.Val = (EltTy)nullptr;
   }
+
   TinyPtrVector &operator=(TinyPtrVector &&RHS) {
     if (this == &RHS)
       return *this;
@@ -104,8 +112,16 @@ public:
   /// This also is a constructor for individual array elements due to the single
   /// element constructor for ArrayRef.
   explicit TinyPtrVector(ArrayRef<EltTy> Elts)
-      : Val(Elts.size() == 1 ? PtrUnion(Elts[0])
-                             : PtrUnion(new VecTy(Elts.begin(), Elts.end()))) {}
+      : Val(Elts.empty()
+                ? PtrUnion()
+                : Elts.size() == 1
+                      ? PtrUnion(Elts[0])
+                      : PtrUnion(new VecTy(Elts.begin(), Elts.end()))) {}
+
+  TinyPtrVector(size_t Count, EltTy Value)
+      : Val(Count == 0 ? PtrUnion()
+                       : Count == 1 ? PtrUnion(Value)
+                                    : PtrUnion(new VecTy(Count, Value))) {}
 
   // implicit conversion operator to ArrayRef.
   operator ArrayRef<EltTy>() const {
@@ -125,6 +141,15 @@ public:
     return *Val.template get<VecTy*>();
   }
 
+  // Implicit conversion to ArrayRef<U> if EltTy* implicitly converts to U*.
+  template<typename U,
+           typename std::enable_if<
+               std::is_convertible<ArrayRef<EltTy>, ArrayRef<U>>::value,
+               bool>::type = false>
+  operator ArrayRef<U>() const {
+    return operator ArrayRef<EltTy>();
+  }
+
   bool empty() const {
     // This vector can be empty if it contains no element, or if it
     // contains a pointer to an empty vector.
@@ -142,8 +167,10 @@ public:
     return Val.template get<VecTy*>()->size();
   }
 
-  typedef const EltTy *const_iterator;
-  typedef EltTy *iterator;
+  using iterator = EltTy *;
+  using const_iterator = const EltTy *;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   iterator begin() {
     if (Val.template is<EltTy>())
@@ -151,6 +178,7 @@ public:
 
     return Val.template get<VecTy *>()->begin();
   }
+
   iterator end() {
     if (Val.template is<EltTy>())
       return begin() + (Val.isNull() ? 0 : 1);
@@ -164,6 +192,17 @@ public:
 
   const_iterator end() const {
     return (const_iterator)const_cast<TinyPtrVector*>(this)->end();
+  }
+
+  reverse_iterator rbegin() { return reverse_iterator(end()); }
+  reverse_iterator rend() { return reverse_iterator(begin()); }
+
+  const_reverse_iterator rbegin() const {
+    return const_reverse_iterator(end());
+  }
+
+  const_reverse_iterator rend() const {
+    return const_reverse_iterator(begin());
   }
 
   EltTy operator[](unsigned i) const {
@@ -301,6 +340,7 @@ public:
     return Val.template get<VecTy*>()->insert(begin() + Offset, From, To);
   }
 };
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_TINYPTRVECTOR_H

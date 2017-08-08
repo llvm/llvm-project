@@ -17,7 +17,7 @@ entry:
 
 ; This must use movl of the stub, not an lea, since the function isn't being
 ; emitted here.
-; CHECK: movl L__ZNSbIcED1Ev$non_lazy_ptr-L1$pb(
+; CHECK: movl L__ZNSbIcED1Ev$non_lazy_ptr-L0$pb(
 
 
 

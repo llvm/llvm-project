@@ -1,8 +1,23 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,debug.ExprInspection -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,debug.ExprInspection -analyzer-store=region -verify %s
 
 #include "Inputs/system-header-simulator.h"
 
 void clang_analyzer_eval(int);
+
+// Without -fms-compatibility, wchar_t isn't a builtin type. MSVC defines
+// _WCHAR_T_DEFINED if wchar_t is available. Microsoft recommends that you use
+// the builtin type: "Using the typedef version can cause portability
+// problems", but we're ok here because we're not actually running anything.
+// Also of note is this cryptic warning: "The wchar_t type is not supported
+// when you compile C code".
+//
+// See the docs for more:
+// https://msdn.microsoft.com/en-us/library/dh8che7s.aspx
+#if !defined(_WCHAR_T_DEFINED)
+// "Microsoft implements wchar_t as a two-byte unsigned value"
+typedef unsigned short wchar_t;
+#define _WCHAR_T_DEFINED
+#endif // !defined(_WCHAR_T_DEFINED)
 
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);
@@ -13,8 +28,14 @@ void *realloc(void *ptr, size_t size);
 void *reallocf(void *ptr, size_t size);
 void *calloc(size_t nmemb, size_t size);
 char *strdup(const char *s);
+wchar_t *wcsdup(const wchar_t *s);
 char *strndup(const char *s, size_t n);
 int memcmp(const void *s1, const void *s2, size_t n);
+
+// Windows variants
+char *_strdup(const char *strSource);
+wchar_t *_wcsdup(const wchar_t *strSource);
+void *_alloca(size_t size);
 
 void myfoo(int *p);
 void myfooint(int p);
@@ -53,6 +74,10 @@ void reallocNotNullPtr(unsigned sizeIn) {
 
 void allocaTest() {
   int *p = alloca(sizeof(int));
+} // no warn
+
+void winAllocaTest() {
+  int *p = _alloca(sizeof(int));
 } // no warn
 
 void allocaBuiltinTest() {
@@ -210,6 +235,11 @@ void CheckUseZeroAllocatedNoWarn2() {
   int *p = alloca(0); // no warning
 }
 
+void CheckUseZeroWinAllocatedNoWarn2() {
+  int *p = _alloca(0); // no warning
+}
+
+
 void CheckUseZeroAllocatedNoWarn3() {
   int *p = malloc(0);
   int *q = realloc(p, 8); // no warning
@@ -230,6 +260,11 @@ void CheckUseZeroAllocated1() {
 
 char CheckUseZeroAllocated2() {
   char *p = alloca(0);
+  return *p; // expected-warning {{Use of zero-allocated memory}}
+}
+
+char CheckUseZeroWinAllocated2() {
+  char *p = _alloca(0);
   return *p; // expected-warning {{Use of zero-allocated memory}}
 }
 
@@ -1076,6 +1111,21 @@ void testStrdup(const char *s, unsigned validIndex) {
   s2[validIndex + 1] = 'b';
 } // expected-warning {{Potential leak of memory pointed to by}}
 
+void testWinStrdup(const char *s, unsigned validIndex) {
+  char *s2 = _strdup(s);
+  s2[validIndex + 1] = 'b';
+} // expected-warning {{Potential leak of memory pointed to by}}
+
+void testWcsdup(const wchar_t *s, unsigned validIndex) {
+  wchar_t *s2 = wcsdup(s);
+  s2[validIndex + 1] = 'b';
+} // expected-warning {{Potential leak of memory pointed to by}}
+
+void testWinWcsdup(const wchar_t *s, unsigned validIndex) {
+  wchar_t *s2 = _wcsdup(s);
+  s2[validIndex + 1] = 'b';
+} // expected-warning {{Potential leak of memory pointed to by}}
+
 int testStrndup(const char *s, unsigned validIndex, unsigned size) {
   char *s2 = strndup(s, size);
   s2 [validIndex + 1] = 'b';
@@ -1088,6 +1138,24 @@ int testStrndup(const char *s, unsigned validIndex, unsigned size) {
 void testStrdupContentIsDefined(const char *s, unsigned validIndex) {
   char *s2 = strdup(s);
   char result = s2[1];// no warning
+  free(s2);
+}
+
+void testWinStrdupContentIsDefined(const char *s, unsigned validIndex) {
+  char *s2 = _strdup(s);
+  char result = s2[1];// no warning
+  free(s2);
+}
+
+void testWcsdupContentIsDefined(const wchar_t *s, unsigned validIndex) {
+  wchar_t *s2 = wcsdup(s);
+  wchar_t result = s2[1];// no warning
+  free(s2);
+}
+
+void testWinWcsdupContentIsDefined(const wchar_t *s, unsigned validIndex) {
+  wchar_t *s2 = _wcsdup(s);
+  wchar_t result = s2[1];// no warning
   free(s2);
 }
 
@@ -1444,6 +1512,14 @@ char *testLeakWithinReturn(char *str) {
   return strdup(strdup(str)); // expected-warning{{leak}}
 }
 
+char *testWinLeakWithinReturn(char *str) {
+  return _strdup(_strdup(str)); // expected-warning{{leak}}
+}
+
+wchar_t *testWinWideLeakWithinReturn(wchar_t *str) {
+  return _wcsdup(_wcsdup(str)); // expected-warning{{leak}}
+}
+
 void passConstPtr(const char * ptr);
 
 void testPassConstPointer() {
@@ -1674,6 +1750,40 @@ void testEscapeThroughSystemCallTakingVoidPointer3(fake_rb_tree_t *rbt) {
   fake_rb_tree_insert_node(rbt, data); // no warning
 }
 
+struct IntAndPtr {
+  int x;
+  int *p;
+};
+
+void constEscape(const void *ptr);
+
+void testConstEscapeThroughAnotherField() {
+  struct IntAndPtr s;
+  s.p = malloc(sizeof(int));
+  constEscape(&(s.x)); // could free s->p!
+} // no-warning
+
+// PR15623
+int testNoCheckerDataPropogationFromLogicalOpOperandToOpResult(void) {
+   char *param = malloc(10);
+   char *value = malloc(10);
+   int ok = (param && value);
+   free(param);
+   free(value);
+   // Previously we ended up with 'Use of memory after it is freed' on return.
+   return ok; // no warning
+}
+
+void (*fnptr)(int);
+void freeIndirectFunctionPtr() {
+  void *p = (void *)fnptr;
+  free(p); // expected-warning {{Argument to free() is a function pointer}}
+}
+
+void freeFunctionPtr() {
+  free((void *)fnptr); // expected-warning {{Argument to free() is a function pointer}}
+}
+
 // ----------------------------------------------------------------------------
 // False negatives.
 
@@ -1693,3 +1803,9 @@ void testPassToSystemHeaderFunctionIndirectly() {
   // FIXME: This is a leak: if we think a system function won't free p, it
   // won't free (p-1) either.
 }
+
+void testMallocIntoMalloc() {
+  StructWithPtr *s = malloc(sizeof(StructWithPtr));
+  s->memP = malloc(sizeof(int));
+  free(s);
+} // FIXME: should warn here

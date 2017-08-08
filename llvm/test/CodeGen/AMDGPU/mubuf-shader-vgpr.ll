@@ -1,0 +1,48 @@
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK
+
+; Test that buffer_load_format with VGPR resource descriptor is properly
+; legalized.
+
+; CHECK-LABEL: {{^}}test_none:
+; CHECK: buffer_load_format_x v0, off, {{s\[[0-9]+:[0-9]+\]}}, 0{{$}}
+define amdgpu_vs float @test_none(<4 x i32> addrspace(2)* inreg %base, i32 %i) {
+main_body:
+  %ptr = getelementptr <4 x i32>, <4 x i32> addrspace(2)* %base, i32 %i
+  %tmp2 = load <4 x i32>, <4 x i32> addrspace(2)* %ptr, align 32
+  %tmp7 = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> %tmp2, i32 0, i32 0, i1 0, i1 0)
+  ret float %tmp7
+}
+
+; CHECK-LABEL: {{^}}test_idxen:
+; CHECK: buffer_load_format_x v0, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 idxen{{$}}
+define amdgpu_vs float @test_idxen(<4 x i32> addrspace(2)* inreg %base, i32 %i) {
+main_body:
+  %ptr = getelementptr <4 x i32>, <4 x i32> addrspace(2)* %base, i32 %i
+  %tmp2 = load <4 x i32>, <4 x i32> addrspace(2)* %ptr, align 32
+  %tmp7 = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> %tmp2, i32 undef, i32 0, i1 0, i1 0)
+  ret float %tmp7
+}
+
+; CHECK-LABEL: {{^}}test_offen:
+; CHECK: buffer_load_format_x v0, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen{{$}}
+define amdgpu_vs float @test_offen(<4 x i32> addrspace(2)* inreg %base, i32 %i) {
+main_body:
+  %ptr = getelementptr <4 x i32>, <4 x i32> addrspace(2)* %base, i32 %i
+  %tmp2 = load <4 x i32>, <4 x i32> addrspace(2)* %ptr, align 32
+  %tmp7 = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> %tmp2, i32 0, i32 undef, i1 0, i1 0)
+  ret float %tmp7
+}
+
+; CHECK-LABEL: {{^}}test_both:
+; CHECK: buffer_load_format_x v0, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 idxen offen{{$}}
+define amdgpu_vs float @test_both(<4 x i32> addrspace(2)* inreg %base, i32 %i) {
+main_body:
+  %ptr = getelementptr <4 x i32>, <4 x i32> addrspace(2)* %base, i32 %i
+  %tmp2 = load <4 x i32>, <4 x i32> addrspace(2)* %ptr, align 32
+  %tmp7 = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> %tmp2, i32 undef, i32 undef, i1 0, i1 0)
+  ret float %tmp7
+}
+
+declare float @llvm.amdgcn.buffer.load.format.f32(<4 x i32>, i32, i32, i1, i1) nounwind readonly
+
+attributes #0 = { nounwind readnone }

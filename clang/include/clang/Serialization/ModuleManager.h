@@ -19,10 +19,12 @@
 #include "clang/Serialization/Module.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/iterator.h"
 
 namespace clang { 
 
 class GlobalModuleIndex;
+class MemoryBufferCache;
 class ModuleMap;
 class PCHContainerReader;
 
@@ -32,7 +34,7 @@ namespace serialization {
 class ModuleManager {
   /// \brief The chain of AST files, in the order in which we started to load
   /// them (this order isn't really useful for anything).
-  SmallVector<ModuleFile *, 2> Chain;
+  SmallVector<std::unique_ptr<ModuleFile>, 2> Chain;
 
   /// \brief The chain of non-module PCH files. The first entry is the one named
   /// by the user, the last one is the one that doesn't depend on anything
@@ -49,6 +51,9 @@ class ModuleManager {
   /// \brief FileManager that handles translating between filenames and
   /// FileEntry *.
   FileManager &FileMgr;
+
+  /// Cache of PCM files.
+  IntrusiveRefCntPtr<MemoryBufferCache> PCMCache;
 
   /// \brief Knows how to unwrap module containers.
   const PCHContainerReader &PCHContainerRdr;
@@ -111,12 +116,18 @@ class ModuleManager {
   void returnVisitState(VisitState *State);
 
 public:
-  typedef SmallVectorImpl<ModuleFile*>::iterator ModuleIterator;
-  typedef SmallVectorImpl<ModuleFile*>::const_iterator ModuleConstIterator;
-  typedef SmallVectorImpl<ModuleFile*>::reverse_iterator ModuleReverseIterator;
+  typedef llvm::pointee_iterator<
+      SmallVectorImpl<std::unique_ptr<ModuleFile>>::iterator>
+      ModuleIterator;
+  typedef llvm::pointee_iterator<
+      SmallVectorImpl<std::unique_ptr<ModuleFile>>::const_iterator>
+      ModuleConstIterator;
+  typedef llvm::pointee_iterator<
+      SmallVectorImpl<std::unique_ptr<ModuleFile>>::reverse_iterator>
+      ModuleReverseIterator;
   typedef std::pair<uint32_t, StringRef> ModuleOffset;
 
-  explicit ModuleManager(FileManager &FileMgr,
+  explicit ModuleManager(FileManager &FileMgr, MemoryBufferCache &PCMCache,
                          const PCHContainerReader &PCHContainerRdr);
   ~ModuleManager();
 
@@ -136,7 +147,8 @@ public:
   ModuleReverseIterator rend() { return Chain.rend(); }
 
   /// \brief A range covering the PCH and preamble module files loaded.
-  llvm::iterator_range<ModuleConstIterator> pch_modules() const {
+  llvm::iterator_range<SmallVectorImpl<ModuleFile *>::const_iterator>
+  pch_modules() const {
     return llvm::make_range(PCHChain.begin(), PCHChain.end());
   }
 
@@ -152,10 +164,10 @@ public:
   ModuleFile &operator[](unsigned Index) const { return *Chain[Index]; }
   
   /// \brief Returns the module associated with the given name
-  ModuleFile *lookup(StringRef Name);
+  ModuleFile *lookup(StringRef Name) const;
 
   /// \brief Returns the module associated with the given module file.
-  ModuleFile *lookup(const FileEntry *File);
+  ModuleFile *lookup(const FileEntry *File) const;
 
   /// \brief Returns the in-memory (virtual file) buffer with the given name
   std::unique_ptr<llvm::MemoryBuffer> lookupBuffer(StringRef Name);
@@ -175,7 +187,7 @@ public:
     OutOfDate
   };
 
-  typedef ASTFileSignature(*ASTFileSignatureReader)(llvm::BitstreamReader &);
+  typedef ASTFileSignature(*ASTFileSignatureReader)(StringRef);
 
   /// \brief Attempts to create a new module and add it to the list of known
   /// modules.
@@ -220,8 +232,8 @@ public:
                             ModuleFile *&Module,
                             std::string &ErrorStr);
 
-  /// \brief Remove the given set of modules.
-  void removeModules(ModuleIterator first, ModuleIterator last,
+  /// \brief Remove the modules starting from First (to the end).
+  void removeModules(ModuleIterator First,
                      llvm::SmallPtrSetImpl<ModuleFile *> &LoadedSuccessfully,
                      ModuleMap *modMap);
 
@@ -282,6 +294,8 @@ public:
 
   /// \brief View the graphviz representation of the module graph.
   void viewGraph();
+
+  MemoryBufferCache &getPCMCache() const { return *PCMCache; }
 };
 
 } } // end namespace clang::serialization

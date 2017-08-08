@@ -62,7 +62,7 @@ namespace clang {
     ICK_Lvalue_To_Rvalue,      ///< Lvalue-to-rvalue conversion (C++ 4.1)
     ICK_Array_To_Pointer,      ///< Array-to-pointer conversion (C++ 4.2)
     ICK_Function_To_Pointer,   ///< Function-to-pointer (C++ 4.3)
-    ICK_NoReturn_Adjustment,   ///< Removal of noreturn from a type (Clang)
+    ICK_Function_Conversion,   ///< Function pointer conversion (C++17 4.13)
     ICK_Qualification,         ///< Qualification conversions (C++ 4.4)
     ICK_Integral_Promotion,    ///< Integral promotions (C++ 4.5)
     ICK_Floating_Promotion,    ///< Floating point promotions (C++ 4.6)
@@ -83,7 +83,10 @@ namespace clang {
     ICK_TransparentUnionConversion, ///< Transparent Union Conversions
     ICK_Writeback_Conversion,  ///< Objective-C ARC writeback conversion
     ICK_Zero_Event_Conversion, ///< Zero constant to event (OpenCL1.2 6.12.10)
+    ICK_Zero_Queue_Conversion, ///< Zero constant to queue
     ICK_C_Only_Conversion,     ///< Conversions allowed in C, but not C++
+    ICK_Incompatible_Pointer_Conversion, ///< C-only conversion between pointers
+                                         ///  with incompatible types
     ICK_Num_Conversion_Kinds,  ///< The number of conversion kinds
   };
 
@@ -95,10 +98,13 @@ namespace clang {
     ICR_Exact_Match = 0,         ///< Exact Match
     ICR_Promotion,               ///< Promotion
     ICR_Conversion,              ///< Conversion
+    ICR_OCL_Scalar_Widening,     ///< OpenCL Scalar Widening
     ICR_Complex_Real_Conversion, ///< Complex <-> Real conversion
     ICR_Writeback_Conversion,    ///< ObjC ARC writeback conversion
-    ICR_C_Conversion             ///< Conversion only allowed in the C standard.
+    ICR_C_Conversion,            ///< Conversion only allowed in the C standard.
                                  ///  (e.g. void* to char*)
+    ICR_C_Conversion_Extension   ///< Conversion not allowed by the C standard,
+                                 ///  but that we accept as an extension anyway.
   };
 
   ImplicitConversionRank GetConversionRank(ImplicitConversionKind Kind);
@@ -117,7 +123,11 @@ namespace clang {
 
     /// A narrowing conversion, because a non-constant-expression variable might
     /// have got narrowed.
-    NK_Variable_Narrowing
+    NK_Variable_Narrowing,
+
+    /// Cannot tell whether this is a narrowing conversion because the
+    /// expression is value-dependent.
+    NK_Dependent_Narrowing,
   };
 
   /// StandardConversionSequence - represents a standard conversion
@@ -141,7 +151,8 @@ namespace clang {
     /// pointer-to-member conversion, or boolean conversion.
     ImplicitConversionKind Second : 8;
 
-    /// Third - The third conversion can be a qualification conversion.
+    /// Third - The third conversion can be a qualification conversion
+    /// or a function conversion.
     ImplicitConversionKind Third : 8;
 
     /// \brief Whether this is the deprecated conversion of a
@@ -199,6 +210,7 @@ namespace clang {
     /// conversions are either identity conversions or derived-to-base
     /// conversions.
     CXXConstructorDecl *CopyConstructor;
+    DeclAccessPair FoundCopyConstructor;
 
     void setFromType(QualType T) { FromTypePtr = T.getAsOpaquePtr(); }
     void setToType(unsigned Idx, QualType T) { 
@@ -282,7 +294,7 @@ namespace clang {
 
   /// Represents an ambiguous user-defined conversion sequence.
   struct AmbiguousConversionSequence {
-    typedef SmallVector<FunctionDecl*, 4> ConversionSet;
+    typedef SmallVector<std::pair<NamedDecl*, FunctionDecl*>, 4> ConversionSet;
 
     void *FromTypePtr;
     void *ToTypePtr;
@@ -305,8 +317,8 @@ namespace clang {
       return *reinterpret_cast<const ConversionSet*>(Buffer);
     }
 
-    void addConversion(FunctionDecl *D) {
-      conversions().push_back(D);
+    void addConversion(NamedDecl *Found, FunctionDecl *D) {
+      conversions().push_back(std::make_pair(Found, D));
     }
 
     typedef ConversionSet::iterator iterator;
@@ -396,7 +408,7 @@ namespace clang {
 
     /// \brief Whether the target is really a std::initializer_list, and the
     /// sequence only represents the worst element conversion.
-    bool StdInitializerListElement : 1;
+    unsigned StdInitializerListElement : 1;
 
     void setKind(Kind K) {
       destruct();
@@ -427,8 +439,9 @@ namespace clang {
     };
 
     ImplicitConversionSequence()
-      : ConversionKind(Uninitialized), StdInitializerListElement(false)
-    {}
+        : ConversionKind(Uninitialized), StdInitializerListElement(false) {
+      Standard.setAsIdentityConversion();
+    }
     ~ImplicitConversionSequence() {
       destruct();
     }
@@ -519,6 +532,13 @@ namespace clang {
       Ambiguous.construct();
     }
 
+    void setAsIdentityConversion(QualType T) {
+      setStandard();
+      Standard.setAsIdentityConversion();
+      Standard.setFromType(T);
+      Standard.setAllToTypes(T);
+    }
+
     /// \brief Whether the target is really a std::initializer_list, and the
     /// sequence only represents the worst element conversion.
     bool isStdInitializerListElement() const {
@@ -570,8 +590,8 @@ namespace clang {
     /// This conversion candidate is not viable because its result
     /// type is not implicitly convertible to the desired type.
     ovl_fail_bad_final_conversion,
-    
-    /// This conversion function template specialization candidate is not 
+
+    /// This conversion function template specialization candidate is not
     /// viable because the final conversion was not an exact match.
     ovl_fail_final_conversion_not_exact,
 
@@ -582,8 +602,23 @@ namespace clang {
 
     /// This candidate function was not viable because an enable_if
     /// attribute disabled it.
-    ovl_fail_enable_if
+    ovl_fail_enable_if,
+
+    /// This candidate was not viable because its address could not be taken.
+    ovl_fail_addr_not_available,
+
+    /// This candidate was not viable because its OpenCL extension is disabled.
+    ovl_fail_ext_disabled,
+
+    /// This inherited constructor is not viable because it would slice the
+    /// argument.
+    ovl_fail_inhctor_slice,
   };
+
+  /// A list of implicit conversion sequences for the arguments of an
+  /// OverloadCandidate.
+  typedef llvm::MutableArrayRef<ImplicitConversionSequence>
+      ConversionSequenceList;
 
   /// OverloadCandidate - A single candidate in an overload set (C++ 13.3).
   struct OverloadCandidate {
@@ -598,28 +633,20 @@ namespace clang {
     /// Might be a UsingShadowDecl or a FunctionTemplateDecl.
     DeclAccessPair FoundDecl;
 
-    // BuiltinTypes - Provides the return and parameter types of a
-    // built-in overload candidate. Only valid when Function is NULL.
-    struct {
-      QualType ResultTy;
-      QualType ParamTypes[3];
-    } BuiltinTypes;
+    /// BuiltinParamTypes - Provides the parameter types of a built-in overload
+    /// candidate. Only valid when Function is NULL.
+    QualType BuiltinParamTypes[3];
 
     /// Surrogate - The conversion function for which this candidate
     /// is a surrogate, but only if IsSurrogate is true.
     CXXConversionDecl *Surrogate;
 
-    /// Conversions - The conversion sequences used to convert the
-    /// function arguments to the function parameters, the pointer points to a
-    /// fixed size array with NumConversions elements. The memory is owned by
-    /// the OverloadCandidateSet.
-    ImplicitConversionSequence *Conversions;
+    /// The conversion sequences used to convert the function arguments
+    /// to the function parameters.
+    ConversionSequenceList Conversions;
 
     /// The FixIt hints which can be used to fix the Bad candidate.
     ConversionFixItGenerator Fix;
-
-    /// NumConversions - The number of elements in the Conversions array.
-    unsigned NumConversions;
 
     /// Viable - True to indicate that this overload candidate is viable.
     bool Viable;
@@ -659,9 +686,9 @@ namespace clang {
     /// hasAmbiguousConversion - Returns whether this overload
     /// candidate requires an ambiguous conversion or not.
     bool hasAmbiguousConversion() const {
-      for (unsigned i = 0, e = NumConversions; i != e; ++i) {
-        if (!Conversions[i].isInitialized()) return false;
-        if (Conversions[i].isAmbiguous()) return true;
+      for (auto &C : Conversions) {
+        if (!C.isInitialized()) return false;
+        if (C.isAmbiguous()) return true;
       }
       return false;
     }
@@ -710,16 +737,43 @@ namespace clang {
     SmallVector<OverloadCandidate, 16> Candidates;
     llvm::SmallPtrSet<Decl *, 16> Functions;
 
-    // Allocator for OverloadCandidate::Conversions. We store the first few
-    // elements inline to avoid allocation for small sets.
-    llvm::BumpPtrAllocator ConversionSequenceAllocator;
+    // Allocator for ConversionSequenceLists. We store the first few of these
+    // inline to avoid allocation for small sets.
+    llvm::BumpPtrAllocator SlabAllocator;
 
     SourceLocation Loc;
     CandidateSetKind Kind;
 
-    unsigned NumInlineSequences;
-    llvm::AlignedCharArray<llvm::AlignOf<ImplicitConversionSequence>::Alignment,
-                           16 * sizeof(ImplicitConversionSequence)> InlineSpace;
+    constexpr static unsigned NumInlineBytes =
+        24 * sizeof(ImplicitConversionSequence);
+    unsigned NumInlineBytesUsed;
+    llvm::AlignedCharArray<alignof(void *), NumInlineBytes> InlineSpace;
+
+    /// If we have space, allocates from inline storage. Otherwise, allocates
+    /// from the slab allocator.
+    /// FIXME: It would probably be nice to have a SmallBumpPtrAllocator
+    /// instead.
+    /// FIXME: Now that this only allocates ImplicitConversionSequences, do we
+    /// want to un-generalize this?
+    template <typename T>
+    T *slabAllocate(unsigned N) {
+      // It's simpler if this doesn't need to consider alignment.
+      static_assert(alignof(T) == alignof(void *),
+                    "Only works for pointer-aligned types.");
+      static_assert(std::is_trivial<T>::value ||
+                        std::is_same<ImplicitConversionSequence, T>::value,
+                    "Add destruction logic to OverloadCandidateSet::clear().");
+
+      unsigned NBytes = sizeof(T) * N;
+      if (NBytes > NumInlineBytes - NumInlineBytesUsed)
+        return SlabAllocator.Allocate<T>(N);
+      char *FreeSpaceStart = InlineSpace.buffer + NumInlineBytesUsed;
+      assert(uintptr_t(FreeSpaceStart) % alignof(void *) == 0 &&
+             "Misaligned storage!");
+
+      NumInlineBytesUsed += NBytes;
+      return reinterpret_cast<T *>(FreeSpaceStart);
+    }
 
     OverloadCandidateSet(const OverloadCandidateSet &) = delete;
     void operator=(const OverloadCandidateSet &) = delete;
@@ -728,7 +782,7 @@ namespace clang {
 
   public:
     OverloadCandidateSet(SourceLocation Loc, CandidateSetKind CSK)
-        : Loc(Loc), Kind(CSK), NumInlineSequences(0) {}
+        : Loc(Loc), Kind(CSK), NumInlineBytesUsed(0) {}
     ~OverloadCandidateSet() { destroyCandidates(); }
 
     SourceLocation getLocation() const { return Loc; }
@@ -750,30 +804,32 @@ namespace clang {
     size_t size() const { return Candidates.size(); }
     bool empty() const { return Candidates.empty(); }
 
-    /// \brief Add a new candidate with NumConversions conversion sequence slots
-    /// to the overload set.
-    OverloadCandidate &addCandidate(unsigned NumConversions = 0) {
-      Candidates.push_back(OverloadCandidate());
-      OverloadCandidate &C = Candidates.back();
-
-      // Assign space from the inline array if there are enough free slots
-      // available.
-      if (NumConversions + NumInlineSequences <= 16) {
-        ImplicitConversionSequence *I =
-            (ImplicitConversionSequence *)InlineSpace.buffer;
-        C.Conversions = &I[NumInlineSequences];
-        NumInlineSequences += NumConversions;
-      } else {
-        // Otherwise get memory from the allocator.
-        C.Conversions = ConversionSequenceAllocator
-                          .Allocate<ImplicitConversionSequence>(NumConversions);
-      }
+    /// \brief Allocate storage for conversion sequences for NumConversions
+    /// conversions.
+    ConversionSequenceList
+    allocateConversionSequences(unsigned NumConversions) {
+      ImplicitConversionSequence *Conversions =
+          slabAllocate<ImplicitConversionSequence>(NumConversions);
 
       // Construct the new objects.
-      for (unsigned i = 0; i != NumConversions; ++i)
-        new (&C.Conversions[i]) ImplicitConversionSequence();
+      for (unsigned I = 0; I != NumConversions; ++I)
+        new (&Conversions[I]) ImplicitConversionSequence();
 
-      C.NumConversions = NumConversions;
+      return ConversionSequenceList(Conversions, NumConversions);
+    }
+
+    /// \brief Add a new candidate with NumConversions conversion sequence slots
+    /// to the overload set.
+    OverloadCandidate &addCandidate(unsigned NumConversions = 0,
+                                    ConversionSequenceList Conversions = None) {
+      assert((Conversions.empty() || Conversions.size() == NumConversions) &&
+             "preallocated conversion sequence has wrong length");
+
+      Candidates.push_back(OverloadCandidate());
+      OverloadCandidate &C = Candidates.back();
+      C.Conversions = Conversions.empty()
+                          ? allocateConversionSequences(NumConversions)
+                          : Conversions;
       return C;
     }
 
@@ -786,7 +842,9 @@ namespace clang {
                         OverloadCandidateDisplayKind OCD,
                         ArrayRef<Expr *> Args,
                         StringRef Opc = "",
-                        SourceLocation Loc = SourceLocation());
+                        SourceLocation Loc = SourceLocation(),
+                        llvm::function_ref<bool(OverloadCandidate&)> Filter =
+                          [](OverloadCandidate&) { return true; });
   };
 
   bool isBetterOverloadCandidate(Sema &S,
@@ -794,6 +852,30 @@ namespace clang {
                                  const OverloadCandidate& Cand2,
                                  SourceLocation Loc,
                                  bool UserDefinedConversion = false);
+
+  struct ConstructorInfo {
+    DeclAccessPair FoundDecl;
+    CXXConstructorDecl *Constructor;
+    FunctionTemplateDecl *ConstructorTmpl;
+    explicit operator bool() const { return Constructor; }
+  };
+  // FIXME: Add an AddOverloadCandidate / AddTemplateOverloadCandidate overload
+  // that takes one of these.
+  inline ConstructorInfo getConstructorInfo(NamedDecl *ND) {
+    if (isa<UsingDecl>(ND))
+      return ConstructorInfo{};
+
+    // For constructors, the access check is performed against the underlying
+    // declaration, not the found declaration.
+    auto *D = ND->getUnderlyingDecl();
+    ConstructorInfo Info = {DeclAccessPair::make(ND, D->getAccess()), nullptr,
+                            nullptr};
+    Info.ConstructorTmpl = dyn_cast<FunctionTemplateDecl>(D);
+    if (Info.ConstructorTmpl)
+      D = Info.ConstructorTmpl->getTemplatedDecl();
+    Info.Constructor = dyn_cast<CXXConstructorDecl>(D);
+    return Info;
+  }
 } // end namespace clang
 
 #endif // LLVM_CLANG_SEMA_OVERLOAD_H

@@ -1,9 +1,9 @@
 ; Test to make sure that the 'private' is used correctly.
 ;
-; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu | \
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | \
 ; RUN: FileCheck --check-prefix=LINUX %s
 ;
-; RUN: llc < %s -mtriple=powerpc-apple-darwin | \
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin | \
 ; RUN: FileCheck --check-prefix=OSX %s
 
 ; LINUX: .Lfoo:

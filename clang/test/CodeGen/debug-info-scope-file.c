@@ -6,8 +6,8 @@
 // CHECK: ret void, !dbg [[F1_LINE:![0-9]*]]
 // CHECK: ret void, !dbg [[F2_LINE:![0-9]*]]
 // CHECK: [[F1:![0-9]*]] = distinct !DISubprogram(name: "f1",{{.*}} isDefinition: true
-// CHECK: [[F2:![0-9]*]] = distinct !DISubprogram(name: "f2",{{.*}} isDefinition: true
 // CHECK: [[F1_LINE]] = !DILocation({{.*}}, scope: [[F1]])
+// CHECK: [[F2:![0-9]*]] = distinct !DISubprogram(name: "f2",{{.*}} isDefinition: true
 // CHECK: [[F2_LINE]] = !DILocation({{.*}}, scope: [[F2]])
 
 void f1() {

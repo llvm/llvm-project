@@ -52,6 +52,16 @@
   int has_cxx14_deprecated_vers();
 #endif
 
+// CHECK: has_cxx1z_nodiscard
+#if __has_cpp_attribute(nodiscard) == 201603
+  int has_cxx1z_nodiscard();
+#endif
+
+// CHECK: has_cxx1z_fallthrough
+#if __has_cpp_attribute(fallthrough) == 201603
+  int has_cxx1z_fallthrough();
+#endif
+
 // CHECK: has_declspec_uuid
 #if __has_declspec_attribute(uuid)
   int has_declspec_uuid();

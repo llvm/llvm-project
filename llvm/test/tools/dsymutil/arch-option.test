@@ -14,14 +14,14 @@ RUN: not llvm-dsymutil -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.a
 
 ARMV7: ---
 ARMV7-NOT: ...
-ARMV7: triple:          'thumbv7-apple-darwin'
+ARMV7: triple:          'armv7-apple-darwin'
 ARMV7-NOT: ...
 ARMV7: sym: _armv7_var
 ARMV7-NOT: ---
 
 ARMV7S: ---
 ARMV7S-NOT: ...
-ARMV7S: triple:          'thumbv7s-apple-darwin'
+ARMV7S: triple:          'armv7s-apple-darwin'
 ARMV7S-NOT: ...
 ARMV7S: sym: _armv7s_var
 ARMV7S-NOT: ---

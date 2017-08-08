@@ -6,9 +6,6 @@ target triple = "powerpc64-unknown-linux-gnu"
 define void @f(i32* %end.s, i8** %loc, i32 %p) {
 ; CHECK-LABEL: @f(
 entry:
-; CHECK:  [[P_SEXT:%[0-9a-z]+]] = sext i32 %p to i64
-; CHECK:  [[END:%[0-9a-z]+]] = getelementptr i32, i32* %end.s, i64 [[P_SEXT]]
-
   %end = getelementptr inbounds i32, i32* %end.s, i32 %p
   %init = bitcast i32* %end.s to i8*
   br label %while.body.i
@@ -22,7 +19,7 @@ while.body.i:
 
 loop.exit:
 ; CHECK: loop.exit:
-; CHECK: [[END_BCASTED:%[a-z0-9]+]] = bitcast i32* %scevgep to i8*
+; CHECK: [[END_BCASTED:%[a-z0-9]+]] = bitcast i32* %end to i8*
 ; CHECK: store i8* [[END_BCASTED]], i8** %loc
   %ptr.inc.lcssa = phi i8* [ %ptr.inc, %while.body.i ]
   store i8* %ptr.inc.lcssa, i8** %loc

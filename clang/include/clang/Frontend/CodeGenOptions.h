@@ -14,8 +14,10 @@
 #ifndef LLVM_CLANG_FRONTEND_CODEGENOPTIONS_H
 #define LLVM_CLANG_FRONTEND_CODEGENOPTIONS_H
 
+#include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Target/TargetOptions.h"
 #include <map>
 #include <memory>
 #include <string>
@@ -42,44 +44,22 @@ protected:
 class CodeGenOptions : public CodeGenOptionsBase {
 public:
   enum InliningMethod {
-    NoInlining,         // Perform no inlining whatsoever.
     NormalInlining,     // Use the standard function inlining pass.
+    OnlyHintInlining,   // Inline only (implicitly) hinted functions.
     OnlyAlwaysInlining  // Only run the always inlining pass.
   };
 
   enum VectorLibrary {
-    NoLibrary, // Don't use any vector library.
-    Accelerate // Use the Accelerate framework.
+    NoLibrary,  // Don't use any vector library.
+    Accelerate, // Use the Accelerate framework.
+    SVML        // Intel short vector math library.
   };
+
 
   enum ObjCDispatchMethodKind {
     Legacy = 0,
     NonLegacy = 1,
     Mixed = 2
-  };
-
-  enum DebugInfoKind {
-    NoDebugInfo,          /// Don't generate debug info.
-
-    LocTrackingOnly,      /// Emit location information but do not generate
-                          /// debug info in the output. This is useful in
-                          /// cases where the backend wants to track source
-                          /// locations for instructions without actually
-                          /// emitting debug info for them (e.g., when -Rpass
-                          /// is used).
-
-    DebugLineTablesOnly,  /// Emit only debug info necessary for generating
-                          /// line number tables (-gline-tables-only).
-
-    LimitedDebugInfo,     /// Limit generated debug info to reduce size
-                          /// (-fno-standalone-debug). This emits
-                          /// forward decls for types that could be
-                          /// replaced with forward decls in the source
-                          /// code. For dynamic C++ classes type info
-                          /// is only emitted int the module that
-                          /// contains the classe's vtable.
-
-    FullDebugInfo         /// Generate complete debug info.
   };
 
   enum TLSModel {
@@ -89,24 +69,36 @@ public:
     LocalExecTLSModel
   };
 
-  enum FPContractModeKind {
-    FPC_Off,        // Form fused FP ops only where result will not be affected.
-    FPC_On,         // Form fused FP ops according to FP_CONTRACT rules.
-    FPC_Fast        // Aggressively fuse FP ops (E.g. FMA).
-  };
-
   enum StructReturnConventionKind {
     SRCK_Default,  // No special option was passed.
     SRCK_OnStack,  // Small structs on the stack (-fpcc-struct-return).
     SRCK_InRegs    // Small structs in registers (-freg-struct-return).
   };
 
+  enum ProfileInstrKind {
+    ProfileNone,       // Profile instrumentation is turned off.
+    ProfileClangInstr, // Clang instrumentation to generate execution counts
+                       // to use with PGO.
+    ProfileIRInstr,    // IR level PGO instrumentation in LLVM.
+  };
+
+  enum EmbedBitcodeKind {
+    Embed_Off,      // No embedded bitcode.
+    Embed_All,      // Embed both bitcode and commandline in the output.
+    Embed_Bitcode,  // Embed just the bitcode in the output.
+    Embed_Marker    // Embed a marker as a placeholder for bitcode.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
-  /// The filename with path we use for coverage files. The extension will be
-  /// replaced.
-  std::string CoverageFile;
+  /// The filename with path we use for coverage data files. The runtime
+  /// allows further manipulation with the GCOV_PREFIX and GCOV_PREFIX_STRIP
+  /// environment variables.
+  std::string CoverageDataFile;
+
+  /// The filename with path we use for coverage notes files.
+  std::string CoverageNotesFile;
 
   /// The version string to put into coverage files.
   char CoverageVersion[4];
@@ -126,11 +118,27 @@ public:
   /// The ABI to use for passing floating point arguments.
   std::string FloatABI;
 
+  /// The floating-point denormal mode to use.
+  std::string FPDenormalMode;
+
   /// The float precision limit to use, if non-empty.
   std::string LimitFloatPrecision;
 
-  /// The name of the bitcode file to link before optzns.
-  std::vector<std::pair<unsigned, std::string>> LinkBitcodeFiles;
+  struct BitcodeFileToLink {
+    /// The filename of the bitcode file to link in.
+    std::string Filename;
+    /// If true, we set attributes functions in the bitcode library according to
+    /// our CodeGenOptions, much as we set attrs on functions that we generate
+    /// ourselves.
+    bool PropagateAttrs = false;
+    /// If true, we use LLVM module internalizer.
+    bool Internalize = false;
+    /// Bitwise combination of llvm::Linker::Flags, passed to the LLVM linker.
+    unsigned LinkFlags = 0;
+  };
+
+  /// The files specified here are linked in to the module before optimizations.
+  std::vector<BitcodeFileToLink> LinkBitcodeFiles;
 
   /// The user provided name for the "main file", if non-empty. This is useful
   /// in situations where the input file name does not match the original input
@@ -157,6 +165,9 @@ public:
   /// A list of dependent libraries.
   std::vector<std::string> DependentLibraries;
 
+  /// A list of linker options to embed in the object file.
+  std::vector<std::string> LinkerOptions;
+
   /// Name of the profile file to use as output for -fprofile-instr-generate
   /// and -fprofile-generate.
   std::string InstrProfileOutput;
@@ -165,12 +176,25 @@ public:
   std::string SampleProfileFile;
 
   /// Name of the profile file to use as input for -fprofile-instr-use
-  std::string InstrProfileInput;
+  std::string ProfileInstrumentUsePath;
+
+  /// Name of the function summary index file to use for ThinLTO function
+  /// importing.
+  std::string ThinLTOIndexFile;
+
+  /// Name of a file that can optionally be written with minimized bitcode
+  /// to be used as input for the ThinLTO thin link step, which only needs
+  /// the summary and module symbol table (and not, e.g. any debug metadata).
+  std::string ThinLinkBitcodeFile;
 
   /// A list of file names passed with -fcuda-include-gpubinary options to
   /// forward to CUDA runtime back-end for incorporating them into host-side
   /// object file.
   std::vector<std::string> CudaGpuBinaryFileNames;
+
+  /// The name of the file to which the backend should save YAML optimization
+  /// records.
+  std::string OptRecordFile;
 
   /// Regular expression to select optimizations for which we should enable
   /// optimization remarks. Transformation passes whose name matches this
@@ -194,7 +218,7 @@ public:
   /// flag.
   std::shared_ptr<llvm::Regex> OptimizationRemarkAnalysisPattern;
 
-  /// Set of files definining the rules for the symbol rewriting.
+  /// Set of files defining the rules for the symbol rewriting.
   std::vector<std::string> RewriteMapFiles;
 
   /// Set of sanitizer checks that are non-fatal (i.e. execution should be
@@ -203,6 +227,12 @@ public:
 
   /// Set of sanitizer checks that trap rather than diagnose.
   SanitizerSet SanitizeTrap;
+
+  /// List of backend command-line options for -fembed-bitcode.
+  std::vector<uint8_t> CmdArgs;
+
+  /// \brief A list of all -fno-builtin-* function names (e.g., memset).
+  std::vector<std::string> NoBuiltinFuncs;
 
 public:
   // Define accessors/mutators for code generation options of enumeration type.
@@ -213,6 +243,35 @@ public:
 #include "clang/Frontend/CodeGenOptions.def"
 
   CodeGenOptions();
+
+  /// \brief Is this a libc/libm function that is no longer recognized as a
+  /// builtin because a -fno-builtin-* option has been specified?
+  bool isNoBuiltinFunc(const char *Name) const;
+
+  const std::vector<std::string> &getNoBuiltinFuncs() const {
+    return NoBuiltinFuncs;
+  }
+
+  /// \brief Check if Clang profile instrumenation is on.
+  bool hasProfileClangInstr() const {
+    return getProfileInstr() == ProfileClangInstr;
+  }
+
+  /// \brief Check if IR level profile instrumentation is on.
+  bool hasProfileIRInstr() const {
+    return getProfileInstr() == ProfileIRInstr;
+  }
+
+  /// \brief Check if Clang profile use is on.
+  bool hasProfileClangUse() const {
+    return getProfileUse() == ProfileClangInstr;
+  }
+
+  /// \brief Check if IR level profile use is on.
+  bool hasProfileIRUse() const {
+    return getProfileUse() == ProfileIRInstr;
+  }
+
 };
 
 }  // end namespace clang

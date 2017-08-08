@@ -2,7 +2,7 @@
 
 ;CHECK-NOT: MOV
 
-define void @test(<4 x float> inreg %reg0) #0 {
+define amdgpu_vs void @test(<4 x float> inreg %reg0) {
   %1 = extractelement <4 x float> %reg0, i32 0
   %2 = extractelement <4 x float> %reg0, i32 1
   %3 = extractelement <4 x float> %reg0, i32 2
@@ -16,16 +16,14 @@ define void @test(<4 x float> inreg %reg0) #0 {
   %11 = insertelement <4 x float> undef, float %7, i32 0
   %12 = insertelement <4 x float> %11, float %5, i32 1
   %13 = insertelement <4 x float> undef, float %8, i32 0
-  %14 = call <4 x float> @llvm.R600.tex(<4 x float> %10, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
-  %15 = call <4 x float> @llvm.R600.tex(<4 x float> %12, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
-  %16 = call <4 x float> @llvm.R600.tex(<4 x float> %13, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %14 = call <4 x float> @llvm.r600.tex(<4 x float> %10, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %15 = call <4 x float> @llvm.r600.tex(<4 x float> %12, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %16 = call <4 x float> @llvm.r600.tex(<4 x float> %13, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %17 = fadd <4 x float> %14, %15
   %18 = fadd <4 x float> %17, %16
-  call void @llvm.R600.store.swizzle(<4 x float> %18, i32 0, i32 0)
+  call void @llvm.r600.store.swizzle(<4 x float> %18, i32 0, i32 0)
   ret void
 }
 
-declare <4 x float> @llvm.R600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) readnone
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
-
-attributes #0 = { "ShaderType"="1" }
+declare <4 x float> @llvm.r600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) readnone
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

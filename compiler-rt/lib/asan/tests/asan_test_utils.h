@@ -30,11 +30,11 @@
 #include <stdint.h>
 #include <assert.h>
 #include <algorithm>
+#include <setjmp.h>
 
 #if !defined(_WIN32)
 # include <strings.h>
 # include <sys/mman.h>
-# include <setjmp.h>
 #endif
 
 #ifdef __linux__
@@ -62,7 +62,9 @@ typedef uint64_t  U8;
 
 static const int kPageSize = 4096;
 
-const size_t kLargeMalloc = 1 << 24;
+// Big enough to be handled by secondary allocator and small enough to fit into
+// quarantine for all configurations.
+const size_t kLargeMalloc = 1 << 22;
 
 extern void free_aaa(void *p);
 extern void *malloc_aaa(size_t size);

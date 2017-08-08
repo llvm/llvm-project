@@ -16,13 +16,11 @@
 
 /* Returns: convert a to a double, rounding toward even. */
 
-/* Assumption: double is a IEEE 64 bit floating point type 
+/* Assumption: double is a IEEE 64 bit floating point type
  *             di_int is a 64 bit integral type
  */
 
 /* seee eeee eeee mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm */
-
-ARM_EABI_FNALIAS(l2d, floatdidf)
 
 #ifndef __SOFT_FP__
 /* Support for systems that have hardware floating-point; we'll set the inexact flag
@@ -32,16 +30,16 @@ ARM_EABI_FNALIAS(l2d, floatdidf)
 COMPILER_RT_ABI double
 __floatdidf(di_int a)
 {
-	static const double twop52 = 4503599627370496.0; // 0x1.0p52
-	static const double twop32 = 4294967296.0; // 0x1.0p32
-	
-	union { int64_t x; double d; } low = { .d = twop52 };
-	
-	const double high = (int32_t)(a >> 32) * twop32;
-	low.x |= a & INT64_C(0x00000000ffffffff);
-	
-	const double result = (high - twop52) + low.d;
-	return result;
+    static const double twop52 = 4503599627370496.0; // 0x1.0p52
+    static const double twop32 = 4294967296.0; // 0x1.0p32
+
+    union { int64_t x; double d; } low = { .d = twop52 };
+
+    const double high = (int32_t)(a >> 32) * twop32;
+    low.x |= a & INT64_C(0x00000000ffffffff);
+
+    const double result = (high - twop52) + low.d;
+    return result;
 }
 
 #else
@@ -98,10 +96,17 @@ __floatdidf(di_int a)
         /* a is now rounded to DBL_MANT_DIG bits */
     }
     double_bits fb;
-    fb.u.high = ((su_int)s & 0x80000000) |        /* sign */
-                ((e + 1023) << 20)      |        /* exponent */
-                ((su_int)(a >> 32) & 0x000FFFFF); /* mantissa-high */
-    fb.u.low = (su_int)a;                         /* mantissa-low */
+    fb.u.s.high = ((su_int)s & 0x80000000) |        /* sign */
+                  ((e + 1023) << 20)       |        /* exponent */
+                  ((su_int)(a >> 32) & 0x000FFFFF); /* mantissa-high */
+    fb.u.s.low = (su_int)a;                         /* mantissa-low */
     return fb.f;
 }
 #endif
+
+#if defined(__ARM_EABI__)
+AEABI_RTABI double __aeabi_l2d(di_int a) {
+  return __floatdidf(a);
+}
+#endif
+

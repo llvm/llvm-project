@@ -44,8 +44,12 @@ llvm::MDNode *CodeGenTBAA::getRoot() {
   // if our LLVM IR is linked with LLVM IR from a different front-end
   // (or a different version of this front-end), their TBAA trees will
   // remain distinct, and the optimizer will treat them conservatively.
-  if (!Root)
-    Root = MDHelper.createTBAARoot("Simple C/C++ TBAA");
+  if (!Root) {
+    if (Features.CPlusPlus)
+      Root = MDHelper.createTBAARoot("Simple C++ TBAA");
+    else
+      Root = MDHelper.createTBAARoot("Simple C/C++ TBAA");
+  }
 
   return Root;
 }
@@ -134,6 +138,12 @@ CodeGenTBAA::getTBAAInfo(QualType QTy) {
         createTBAAScalarType(BTy->getName(Features), getChar());
     }
   }
+
+  // C++1z [basic.lval]p10: "If a program attempts to access the stored value of
+  // an object through a glvalue of other than one of the following types the
+  // behavior is undefined: [...] a char, unsigned char, or std::byte type."
+  if (Ty->isStdByteType())
+    return MetadataCache[Ty] = getChar();
 
   // Handle pointers.
   // TODO: Implement C++'s type "similarity" and consider dis-"similar"

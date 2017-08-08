@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=pwr8 -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s
-; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
 
 ; Function Attrs: nounwind
 define zeroext i8 @_Z6testcff(float %arg) {
@@ -323,7 +323,7 @@ entry:
   ret i64 %conv
 ; CHECK-LABEL: @_Z7testllff
 ; CHECK: xscvdpsxds [[CONVREG13:[0-9]+]], 1
-; CHECK: mfvsrd 3, [[CONVREG13]]
+; CHECK: mffprd 3, [[CONVREG13]]
 }
 
 ; Function Attrs: nounwind
@@ -349,7 +349,7 @@ entry:
   ret i64 %conv
 ; CHECK-LABEL: @_Z7testlldd
 ; CHECK: xscvdpsxds [[CONVREG14:[0-9]+]], 1
-; CHECK: mfvsrd 3, [[CONVREG14]]
+; CHECK: mffprd 3, [[CONVREG14]]
 }
 
 ; Function Attrs: nounwind
@@ -375,7 +375,7 @@ entry:
   ret i64 %conv
 ; CHECK-LABEL: @_Z8testullff
 ; CHECK: xscvdpuxds [[CONVREG15:[0-9]+]], 1
-; CHECK: mfvsrd 3, [[CONVREG15]]
+; CHECK: mffprd 3, [[CONVREG15]]
 }
 
 ; Function Attrs: nounwind
@@ -401,7 +401,7 @@ entry:
   ret i64 %conv
 ; CHECK-LABEL: @_Z8testulldd
 ; CHECK: xscvdpuxds [[CONVREG16:[0-9]+]], 1
-; CHECK: mfvsrd 3, [[CONVREG16]]
+; CHECK: mffprd 3, [[CONVREG16]]
 }
 
 ; Function Attrs: nounwind

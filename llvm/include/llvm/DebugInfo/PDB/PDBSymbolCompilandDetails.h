@@ -16,6 +16,7 @@
 namespace llvm {
 
 class raw_ostream;
+namespace pdb {
 
 class PDBSymbolCompilandDetails : public PDBSymbol {
 public:
@@ -45,11 +46,12 @@ public:
   FORWARD_SYMBOL_METHOD(isLTCG)
   FORWARD_SYMBOL_METHOD(isMSILNetmodule)
   FORWARD_SYMBOL_METHOD(getLanguage)
-  FORWARD_SYMBOL_METHOD(getLexicalParentId)
+  FORWARD_SYMBOL_ID_METHOD(getLexicalParent)
   FORWARD_SYMBOL_METHOD(getPlatform)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
+  FORWARD_SYMBOL_METHOD(getSourceFileName)
 };
 
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBFUNCTION_H

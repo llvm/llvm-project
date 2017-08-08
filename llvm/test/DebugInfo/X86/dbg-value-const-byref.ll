@@ -34,14 +34,15 @@
 ; CHECK: Beginning address offset: [[C1]]
 ; CHECK:    Ending address offset: [[C2:.*]]
 ; CHECK:     Location description: 11 07
-;        rax, piece 0x00000004
+;        rax
 ; CHECK: Beginning address offset: [[C2]]
 ; CHECK:    Ending address offset: [[R1:.*]]
-; CHECK:     Location description: 50 93 04
+; CHECK:     Location description: 50
 ;         rdi+0
 ; CHECK: Beginning address offset: [[R1]]
 ; CHECK:    Ending address offset: [[R2:.*]]
-; CHECK:     Location description: 75 00
+; CHECK:     Location description: 77 04
+;         rsp+4
 ;
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
@@ -50,13 +51,13 @@ target triple = "x86_64-apple-macosx10.9.0"
 define i32 @foo() #0 !dbg !4 {
 entry:
   %i = alloca i32, align 4
-  call void @llvm.dbg.value(metadata i32 3, i64 0, metadata !10, metadata !DIExpression()), !dbg !15
+  call void @llvm.dbg.value(metadata i32 3, metadata !10, metadata !DIExpression()), !dbg !15
   %call = call i32 @f3(i32 3) #3, !dbg !16
-  call void @llvm.dbg.value(metadata i32 7, i64 0, metadata !10, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata i32 7, metadata !10, metadata !DIExpression()), !dbg !18
   %call1 = call i32 (...) @f1() #3, !dbg !19
-  call void @llvm.dbg.value(metadata i32 %call1, i64 0, metadata !10, metadata !DIExpression()), !dbg !19
+  call void @llvm.dbg.value(metadata i32 %call1, metadata !10, metadata !DIExpression()), !dbg !19
   store i32 %call1, i32* %i, align 4, !dbg !19, !tbaa !20
-  call void @llvm.dbg.value(metadata i32* %i, i64 0, metadata !10, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.value(metadata i32* %i, metadata !10, metadata !DIExpression(DW_OP_deref)), !dbg !24
   call void @f2(i32* %i) #3, !dbg !24
   ret i32 0, !dbg !25
 }
@@ -68,7 +69,7 @@ declare i32 @f1(...)
 declare void @f2(i32*)
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #2 = { nounwind readnone }
@@ -78,11 +79,10 @@ attributes #3 = { nounwind }
 !llvm.module.flags = !{!11, !12}
 !llvm.ident = !{!13}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "dbg-value-const-byref.c", directory: "")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, scopeLine: 5, file: !1, scope: !5, type: !6, variables: !9)
+!4 = distinct !DISubprogram(name: "foo", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !0, scopeLine: 5, file: !1, scope: !5, type: !6, variables: !9)
 !5 = !DIFile(filename: "dbg-value-const-byref.c", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8}

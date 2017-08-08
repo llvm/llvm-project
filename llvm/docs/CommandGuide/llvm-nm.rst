@@ -68,11 +68,11 @@ OPTIONS
 
 .. option:: -B    (default)
 
- Use BSD output format.  Alias for :option:`--format=bsd`.
+ Use BSD output format.  Alias for `--format=bsd`.
 
 .. option:: -P
 
- Use POSIX.2 output format.  Alias for :option:`--format=posix`.
+ Use POSIX.2 output format.  Alias for `--format=posix`.
 
 .. option:: --debug-syms, -a
 
@@ -126,11 +126,13 @@ OPTIONS
 
  Print only symbols referenced but not defined in this file.
 
+.. option:: --radix=RADIX, -t
+
+ Specify the radix of the symbol address(es). Values accepted d(decimal),
+ x(hexadecomal) and o(octal).
+
 BUGS
 ----
-
- * :program:`llvm-nm` cannot demangle C++ mangled names, like GNU :program:`nm`
-   can.
 
  * :program:`llvm-nm` does not support the full set of arguments that GNU
    :program:`nm` does.

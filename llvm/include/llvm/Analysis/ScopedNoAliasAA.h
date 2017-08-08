@@ -27,15 +27,13 @@ class ScopedNoAliasAAResult : public AAResultBase<ScopedNoAliasAAResult> {
   friend AAResultBase<ScopedNoAliasAAResult>;
 
 public:
-  explicit ScopedNoAliasAAResult(const TargetLibraryInfo &TLI)
-      : AAResultBase(TLI) {}
-  ScopedNoAliasAAResult(ScopedNoAliasAAResult &&Arg)
-      : AAResultBase(std::move(Arg)) {}
-
   /// Handle invalidation events from the new pass manager.
   ///
   /// By definition, this result is stateless and so remains valid.
-  bool invalidate(Function &, const PreservedAnalyses &) { return false; }
+  bool invalidate(Function &, const PreservedAnalyses &,
+                  FunctionAnalysisManager::Invalidator &) {
+    return false;
+  }
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
   ModRefInfo getModRefInfo(ImmutableCallSite CS, const MemoryLocation &Loc);
@@ -43,25 +41,17 @@ public:
 
 private:
   bool mayAliasInScopes(const MDNode *Scopes, const MDNode *NoAlias) const;
-  void collectMDInDomain(const MDNode *List, const MDNode *Domain,
-                         SmallPtrSetImpl<const MDNode *> &Nodes) const;
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
-class ScopedNoAliasAA {
+class ScopedNoAliasAA : public AnalysisInfoMixin<ScopedNoAliasAA> {
+  friend AnalysisInfoMixin<ScopedNoAliasAA>;
+  static AnalysisKey Key;
+
 public:
   typedef ScopedNoAliasAAResult Result;
 
-  /// \brief Opaque, unique identifier for this analysis pass.
-  static void *ID() { return (void *)&PassID; }
-
-  ScopedNoAliasAAResult run(Function &F, AnalysisManager<Function> *AM);
-
-  /// \brief Provide access to a name for this pass for debugging purposes.
-  static StringRef name() { return "ScopedNoAliasAA"; }
-
-private:
-  static char PassID;
+  ScopedNoAliasAAResult run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the ScopedNoAliasAAResult object.

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -analyze -analyzer-checker=osx.cocoa.MissingSuperCall -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=osx.cocoa.MissingSuperCall -verify -Wno-objc-root-class %s
 
 // Define used Classes
 @protocol NSObject

@@ -17,6 +17,7 @@
 
 namespace llvm {
 
+class MachineInstr;
 class SUnit;
 
 /// HazardRecognizer - This determines whether or not an instruction can be
@@ -28,10 +29,10 @@ protected:
   /// state. Important to restore the state after backtracking. Additionally,
   /// MaxLookAhead=0 identifies a fake recognizer, allowing the client to
   /// bypass virtual calls. Currently the PostRA scheduler ignores it.
-  unsigned MaxLookAhead;
+  unsigned MaxLookAhead = 0;
 
 public:
-  ScheduleHazardRecognizer(): MaxLookAhead(0) {}
+  ScheduleHazardRecognizer() = default;
   virtual ~ScheduleHazardRecognizer();
 
   enum HazardType {
@@ -70,12 +71,22 @@ public:
   /// emitted, to advance the hazard state.
   virtual void EmitInstruction(SUnit *) {}
 
+  /// This overload will be used when the hazard recognizer is being used
+  /// by a non-scheduling pass, which does not use SUnits.
+  virtual void EmitInstruction(MachineInstr *) {}
+
   /// PreEmitNoops - This callback is invoked prior to emitting an instruction.
   /// It should return the number of noops to emit prior to the provided
   /// instruction.
   /// Note: This is only used during PostRA scheduling. EmitNoop is not called
   /// for these noops.
   virtual unsigned PreEmitNoops(SUnit *) {
+    return 0;
+  }
+
+  /// This overload will be used when the hazard recognizer is being used
+  /// by a non-scheduling pass, which does not use SUnits.
+  virtual unsigned PreEmitNoops(MachineInstr *) {
     return 0;
   }
 
@@ -106,6 +117,6 @@ public:
   }
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_SCHEDULEHAZARDRECOGNIZER_H

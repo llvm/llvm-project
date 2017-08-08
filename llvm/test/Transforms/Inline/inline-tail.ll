@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 
 ; We have to apply the less restrictive TailCallKind of the call site being
 ; inlined and any call sites cloned into the caller.

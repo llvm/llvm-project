@@ -83,8 +83,8 @@ int t5() {
 }
 
 
-__attribute ((deprecated))  
-@interface DEPRECATED { // expected-note 2 {{'DEPRECATED' has been explicitly marked deprecated here}}
+__attribute ((deprecated)) // expected-note {{'DEPRECATED' has been explicitly marked deprecated here}}
+@interface DEPRECATED { 
   @public int ivar; 
   DEPRECATED *ivar2; // no warning.
 } 
@@ -98,9 +98,17 @@ __attribute ((deprecated))
 @end
 
 @interface DEPRECATED (Category2) // no warning.
+- (id)meth;
 @end
 
-@implementation DEPRECATED (Category2) // expected-warning {{'DEPRECATED' is deprecated}}
+__attribute__((deprecated))
+void depr_function();
+
+@implementation DEPRECATED (Category2) // no warning
+- (id)meth {
+  depr_function(); // no warning.
+  return 0;
+}
 @end
 
 @interface NS : DEPRECATED  // expected-warning {{'DEPRECATED' is deprecated}}
@@ -121,9 +129,15 @@ void test(Test2 *foo) {
 }
 
 __attribute__((deprecated))
-@interface A(Blah) // expected-error{{attributes may not be specified on a category}}
+@interface A(Blah) // no warning
+- (A*)getA;
 @end
 
+@implementation A(Blah) // Don't warn by default
+- (A*)getA {
+  return self;
+}
+@end
 
 typedef struct {
 	int x;
@@ -235,7 +249,7 @@ expected-note {{property declared here}}
 
 id PID = 0;
 const char * func() {
-  return [PID cString]; // expected-warning {{'cString' is deprecated: first deprecated in OS X 10.4}}
+  return [PID cString]; // expected-warning {{'cString' is deprecated: first deprecated in macOS 10.4}}
 }
 
 // rdar://18960378

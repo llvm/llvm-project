@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/MachinePassRegistry.h ----------------------*- C++ -*-===//
+//===- llvm/CodeGen/MachinePassRegistry.h -----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,13 +18,13 @@
 #ifndef LLVM_CODEGEN_MACHINEPASSREGISTRY_H
 #define LLVM_CODEGEN_MACHINEPASSREGISTRY_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
-typedef void *(*MachinePassCtor)();
-
+using MachinePassCtor = void *(*)();
 
 //===----------------------------------------------------------------------===//
 ///
@@ -34,13 +34,14 @@ typedef void *(*MachinePassCtor)();
 //===----------------------------------------------------------------------===//
 class MachinePassRegistryListener {
   virtual void anchor();
-public:
-  MachinePassRegistryListener() {}
-  virtual ~MachinePassRegistryListener() {}
-  virtual void NotifyAdd(const char *N, MachinePassCtor C, const char *D) = 0;
-  virtual void NotifyRemove(const char *N) = 0;
-};
 
+public:
+  MachinePassRegistryListener() = default;
+  virtual ~MachinePassRegistryListener() = default;
+
+  virtual void NotifyAdd(StringRef N, MachinePassCtor C, StringRef D) = 0;
+  virtual void NotifyRemove(StringRef N) = 0;
+};
 
 //===----------------------------------------------------------------------===//
 ///
@@ -48,33 +49,24 @@ public:
 ///
 //===----------------------------------------------------------------------===//
 class MachinePassRegistryNode {
-
 private:
-
-  MachinePassRegistryNode *Next;        // Next function pass in list.
-  const char *Name;                     // Name of function pass.
-  const char *Description;              // Description string.
+  MachinePassRegistryNode *Next = nullptr; // Next function pass in list.
+  StringRef Name;                       // Name of function pass.
+  StringRef Description;                // Description string.
   MachinePassCtor Ctor;                 // Function pass creator.
 
 public:
-
   MachinePassRegistryNode(const char *N, const char *D, MachinePassCtor C)
-  : Next(nullptr)
-  , Name(N)
-  , Description(D)
-  , Ctor(C)
-  {}
+      : Name(N), Description(D), Ctor(C) {}
 
   // Accessors
   MachinePassRegistryNode *getNext()      const { return Next; }
   MachinePassRegistryNode **getNextAddress()    { return &Next; }
-  const char *getName()                   const { return Name; }
-  const char *getDescription()            const { return Description; }
+  StringRef getName()                   const { return Name; }
+  StringRef getDescription()            const { return Description; }
   MachinePassCtor getCtor()               const { return Ctor; }
   void setNext(MachinePassRegistryNode *N)      { Next = N; }
-
 };
-
 
 //===----------------------------------------------------------------------===//
 ///
@@ -82,15 +74,12 @@ public:
 ///
 //===----------------------------------------------------------------------===//
 class MachinePassRegistry {
-
 private:
-
   MachinePassRegistryNode *List;        // List of registry nodes.
   MachinePassCtor Default;              // Default function pass creator.
-  MachinePassRegistryListener* Listener;// Listener for list adds are removes.
+  MachinePassRegistryListener *Listener; // Listener for list adds are removes.
 
 public:
-
   // NO CONSTRUCTOR - we don't want static constructor ordering to mess
   // with the registry.
 
@@ -109,9 +98,7 @@ public:
   /// Remove - Removes a function pass from the registration list.
   ///
   void Remove(MachinePassRegistryNode *Node);
-
 };
-
 
 //===----------------------------------------------------------------------===//
 ///
@@ -142,16 +129,14 @@ public:
   }
 
   // Implement the MachinePassRegistryListener callbacks.
-  //
-  void NotifyAdd(const char *N, MachinePassCtor C, const char *D) override {
+  void NotifyAdd(StringRef N, MachinePassCtor C, StringRef D) override {
     this->addLiteralOption(N, (typename RegistryClass::FunctionPassCtor)C, D);
   }
-  void NotifyRemove(const char *N) override {
+  void NotifyRemove(StringRef N) override {
     this->removeLiteralOption(N);
   }
 };
 
-
 } // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINEPASSREGISTRY_H

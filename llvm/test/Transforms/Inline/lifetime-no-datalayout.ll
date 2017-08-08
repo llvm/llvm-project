@@ -1,4 +1,5 @@
 ; RUN: opt -inline -S < %s | FileCheck %s
+; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 
 declare void @use(i8* %a)
 
@@ -12,9 +13,9 @@ define void @helper() {
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NOT: lifetime
-; CHECK: llvm.lifetime.start(i64 1
+; CHECK: llvm.lifetime.start.p0i8(i64 1
 ; CHECK-NOT: lifetime
-; CHECK: llvm.lifetime.end(i64 1
+; CHECK: llvm.lifetime.end.p0i8(i64 1
   call void @helper()
 ; CHECK-NOT: lifetime
 ; CHECK: ret void

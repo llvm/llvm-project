@@ -69,16 +69,6 @@ struct RegisteredObjectInfo {
                        OwningBinary<ObjectFile> Obj)
     : Size(Size), Entry(Entry), Obj(std::move(Obj)) {}
 
-  RegisteredObjectInfo(RegisteredObjectInfo &&Other)
-    : Size(Other.Size), Entry(Other.Entry), Obj(std::move(Other.Obj)) {}
-
-  RegisteredObjectInfo& operator=(RegisteredObjectInfo &&Other) {
-    Size = Other.Size;
-    Entry = Other.Entry;
-    Obj = std::move(Other.Obj);
-    return *this;
-  }
-
   std::size_t Size;
   jit_code_entry *Entry;
   OwningBinary<ObjectFile> Obj;

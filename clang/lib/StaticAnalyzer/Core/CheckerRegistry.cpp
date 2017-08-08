@@ -49,12 +49,12 @@ static void collectCheckers(const CheckerRegistry::CheckerInfoList &checkers,
                             CheckerOptInfo &opt, CheckerInfoSet &collected) {
   // Use a binary search to find the possible start of the package.
   CheckerRegistry::CheckerInfo packageInfo(nullptr, opt.getName(), "");
-  CheckerRegistry::CheckerInfoList::const_iterator e = checkers.end();
+  auto end = checkers.cend();
   CheckerRegistry::CheckerInfoList::const_iterator i =
-    std::lower_bound(checkers.begin(), e, packageInfo, checkerNameLT);
+    std::lower_bound(checkers.cbegin(), end, packageInfo, checkerNameLT);
 
   // If we didn't even find a possible package, give up.
-  if (i == e)
+  if (i == end)
     return;
 
   // If what we found doesn't actually start the package, give up.
@@ -73,7 +73,7 @@ static void collectCheckers(const CheckerRegistry::CheckerInfoList &checkers,
     size = packageSize->getValue();
 
   // Step through all the checkers in the package.
-  for (e = i+size; i != e; ++i) {
+  for (auto checkEnd = i+size; i != checkEnd; ++i) {
     if (opt.isEnabled())
       collected.insert(&*i);
     else
@@ -173,5 +173,24 @@ void CheckerRegistry::printHelp(raw_ostream &out,
     out.indent(pad + 2) << i->Desc;
 
     out << '\n';
+  }
+}
+
+void CheckerRegistry::printList(
+    raw_ostream &out, SmallVectorImpl<CheckerOptInfo> &opts) const {
+  std::sort(Checkers.begin(), Checkers.end(), checkerNameLT);
+
+  // Collect checkers enabled by the options.
+  CheckerInfoSet enabledCheckers;
+  for (SmallVectorImpl<CheckerOptInfo>::iterator i = opts.begin(),
+                                                       e = opts.end();
+       i != e; ++i) {
+    collectCheckers(Checkers, Packages, *i, enabledCheckers);
+  }
+
+  for (CheckerInfoSet::const_iterator i = enabledCheckers.begin(),
+                                      e = enabledCheckers.end();
+       i != e; ++i) {
+    out << (*i)->FullName << '\n';
   }
 }

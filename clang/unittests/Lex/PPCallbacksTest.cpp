@@ -14,6 +14,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -30,25 +31,6 @@
 using namespace clang;
 
 namespace {
-
-// Stub out module loading.
-class VoidModuleLoader : public ModuleLoader {
-  ModuleLoadResult loadModule(SourceLocation ImportLoc, 
-                              ModuleIdPath Path,
-                              Module::NameVisibilityKind Visibility,
-                              bool IsInclusionDirective) override {
-    return ModuleLoadResult();
-  }
-
-  void makeModuleVisible(Module *Mod,
-                         Module::NameVisibilityKind Visibility,
-                         SourceLocation ImportLoc) override { }
-
-  GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override
-    { return nullptr; }
-  bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override
-    { return 0; }
-};
 
 // Stub to collect data from InclusionDirective callbacks.
 class InclusionDirectiveCallbacks : public PPCallbacks {
@@ -160,15 +142,15 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(SourceText);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
-    VoidModuleLoader ModLoader;
+    TrivialModuleLoader ModLoader;
+    MemoryBufferCache PCMCache;
 
-    IntrusiveRefCntPtr<HeaderSearchOptions> HSOpts = new HeaderSearchOptions();
-    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts,
-                            Target.get());
+    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                            Diags, LangOpts, Target.get());
     AddFakeHeader(HeaderInfo, HeaderPath, SystemHeader);
 
-    IntrusiveRefCntPtr<PreprocessorOptions> PPOpts = new PreprocessorOptions();
-    Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+    Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                    SourceMgr, PCMCache, HeaderInfo, ModLoader,
                     /*IILookup =*/nullptr,
                     /*OwnsHeaderSearch =*/false);
     PP.Initialize(*Target);
@@ -198,12 +180,14 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(SourceText, "test.cl");
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
 
-    VoidModuleLoader ModLoader;
-    HeaderSearch HeaderInfo(new HeaderSearchOptions, SourceMgr, Diags, 
-                            OpenCLLangOpts, Target.get());
+    TrivialModuleLoader ModLoader;
+    MemoryBufferCache PCMCache;
+    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                            Diags, OpenCLLangOpts, Target.get());
 
-    Preprocessor PP(new PreprocessorOptions(), Diags, OpenCLLangOpts, SourceMgr,
-                    HeaderInfo, ModLoader, /*IILookup =*/nullptr,
+    Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags,
+                    OpenCLLangOpts, SourceMgr, PCMCache, HeaderInfo, ModLoader,
+                    /*IILookup =*/nullptr,
                     /*OwnsHeaderSearch =*/false);
     PP.Initialize(*Target);
 

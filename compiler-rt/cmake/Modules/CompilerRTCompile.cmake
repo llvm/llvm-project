@@ -24,19 +24,6 @@ function(translate_msvc_cflags out_flags msvc_flags)
   set(${out_flags} "${clang_flags}" PARENT_SCOPE)
 endfunction()
 
-if (APPLE)
-  # On Darwin if /usr/include doesn't exist, the user probably has Xcode but not
-  # the command line tools. If this is the case, we need to find the OS X
-  # sysroot to pass to clang.
-  if(NOT EXISTS /usr/include)
-    execute_process(COMMAND xcodebuild -version -sdk macosx Path
-       OUTPUT_VARIABLE OSX_SYSROOT
-       ERROR_QUIET
-       OUTPUT_STRIP_TRAILING_WHITESPACE)
-    set(OSX_SYSROOT_FLAG "-isysroot${OSX_SYSROOT}")
-  endif()
-endif()
-
 # Compile a source into an object file with COMPILER_RT_TEST_COMPILER using
 # a provided compile flags and dependenices.
 # clang_compile(<object> <source>
@@ -103,8 +90,8 @@ macro(clang_compiler_add_cxx_check)
       "  fi"
       "  echo 'This can also be fixed by checking out the libcxx project from llvm.org and installing the headers'"
       "  echo 'into your build directory:'"
-      "  echo '  cd ${LLVM_SOURCE_DIR}/projects && svn co http://llvm.org/svn/llvm-project/libcxx/trunk libcxx'"
-      "  echo '  cd ${LLVM_BINARY_DIR} && make -C ${LLVM_SOURCE_DIR}/projects/libcxx installheaders HEADER_DIR=${LLVM_BINARY_DIR}/include'"
+      "  echo '  cd ${LLVM_MAIN_SRC_DIR}/projects && svn co http://llvm.org/svn/llvm-project/libcxx/trunk libcxx'"
+      "  echo '  cd ${LLVM_BINARY_DIR} && make -C ${LLVM_MAIN_SRC_DIR}/projects/libcxx installheaders HEADER_DIR=${LLVM_BINARY_DIR}/include'"
       "  echo"
       "  false"
       "fi"

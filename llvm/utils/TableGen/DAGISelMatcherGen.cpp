@@ -10,7 +10,6 @@
 #include "DAGISelMatcher.h"
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenRegisters.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/TableGen/Error.h"
@@ -76,10 +75,6 @@ namespace {
     /// array of all of the recorded input nodes that have chains.
     SmallVector<unsigned, 2> MatchedChainNodes;
 
-    /// MatchedGlueResultNodes - This maintains the position in the recorded
-    /// nodes array of all of the recorded input nodes that have glue results.
-    SmallVector<unsigned, 2> MatchedGlueResultNodes;
-
     /// MatchedComplexPatterns - This maintains a list of all of the
     /// ComplexPatterns that we need to check. The second element of each pair
     /// is the recorded operand number of the input node.
@@ -121,7 +116,7 @@ namespace {
     /// If this is the first time a node with unique identifier Name has been
     /// seen, record it. Otherwise, emit a check to make sure this is the same
     /// node. Returns true if this is the first encounter.
-    bool recordUniqueNode(std::string Name);
+    bool recordUniqueNode(const std::string &Name);
 
     // Result Code Generation.
     unsigned getNamedArgumentSlot(StringRef Name) {
@@ -255,7 +250,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode *N) {
   // If we have a physreg reference like (mul gpr:$src, EAX) then we need to
   // record the register
   if (LeafRec->isSubClassOf("Register")) {
-    AddMatcher(new RecordMatcher("physreg input "+LeafRec->getName(),
+    AddMatcher(new RecordMatcher("physreg input "+LeafRec->getName().str(),
                                  NextRecordedOperandNo));
     PhysRegInputs.push_back(std::make_pair(LeafRec, NextRecordedOperandNo++));
     return;
@@ -359,7 +354,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
   unsigned OpNo = 0;
   if (N->NodeHasProperty(SDNPHasChain, CGP)) {
     // Record the node and remember it in our chained nodes list.
-    AddMatcher(new RecordMatcher("'" + N->getOperator()->getName() +
+    AddMatcher(new RecordMatcher("'" + N->getOperator()->getName().str() +
                                          "' chained node",
                                  NextRecordedOperandNo));
     // Remember all of the input chains our pattern will match.
@@ -423,11 +418,9 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
     // TODO: This redundantly records nodes with both glues and chains.
 
     // Record the node and remember it in our chained nodes list.
-    AddMatcher(new RecordMatcher("'" + N->getOperator()->getName() +
+    AddMatcher(new RecordMatcher("'" + N->getOperator()->getName().str() +
                                          "' glue output node",
                                  NextRecordedOperandNo));
-    // Remember all of the nodes with output glue our pattern will match.
-    MatchedGlueResultNodes.push_back(NextRecordedOperandNo++);
   }
 
   // If this node is known to have an input glue or if it *might* have an input
@@ -445,7 +438,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
   }
 }
 
-bool MatcherGen::recordUniqueNode(std::string Name) {
+bool MatcherGen::recordUniqueNode(const std::string &Name) {
   unsigned &VarMapEntry = VariableMap[Name];
   if (VarMapEntry == 0) {
     // If it is a named node, we must emit a 'Record' opcode.
@@ -855,8 +848,7 @@ EmitResultInstructionAsOperand(const TreePatternNode *N,
     if (II.HasOneImplicitDefWithKnownVT(CGT) != MVT::Other)
       HandledReg = II.ImplicitDefs[0];
 
-    for (unsigned i = 0; i != Pattern.getDstRegs().size(); ++i) {
-      Record *Reg = Pattern.getDstRegs()[i];
+    for (Record *Reg : Pattern.getDstRegs()) {
       if (!Reg->isSubClassOf("Register") || Reg == HandledReg) continue;
       ResultVTs.push_back(getRegisterValueType(Reg, CGT));
     }
@@ -894,7 +886,7 @@ EmitResultInstructionAsOperand(const TreePatternNode *N,
   assert((!ResultVTs.empty() || TreeHasOutGlue || NodeHasChain) &&
          "Node has no result");
 
-  AddMatcher(new EmitNodeMatcher(II.Namespace+"::"+II.TheDef->getName(),
+  AddMatcher(new EmitNodeMatcher(II.Namespace.str()+"::"+II.TheDef->getName().str(),
                                  ResultVTs, InstOps,
                                  NodeHasChain, TreeHasInGlue, TreeHasOutGlue,
                                  NodeHasMemRefs, NumFixedArityOperands,
@@ -979,8 +971,7 @@ void MatcherGen::EmitResultCode() {
         HandledReg = II.ImplicitDefs[0];
     }
 
-    for (unsigned i = 0; i != Pattern.getDstRegs().size(); ++i) {
-      Record *Reg = Pattern.getDstRegs()[i];
+    for (Record *Reg : Pattern.getDstRegs()) {
       if (!Reg->isSubClassOf("Register") || Reg == HandledReg) continue;
       ++NumSrcResults;
     }
@@ -988,11 +979,6 @@ void MatcherGen::EmitResultCode() {
 
   assert(Ops.size() >= NumSrcResults && "Didn't provide enough results");
   Ops.resize(NumSrcResults);
-
-  // If the matched pattern covers nodes which define a glue result, emit a node
-  // that tells the matcher about them so that it can update their results.
-  if (!MatchedGlueResultNodes.empty())
-    AddMatcher(new MarkGlueResultsMatcher(MatchedGlueResultNodes));
 
   AddMatcher(new CompleteMatchMatcher(Ops, Pattern));
 }

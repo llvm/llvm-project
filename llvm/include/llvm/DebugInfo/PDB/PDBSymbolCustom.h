@@ -18,6 +18,7 @@ namespace llvm {
 
 class raw_ostream;
 
+namespace pdb {
 /// PDBSymbolCustom represents symbols that are compiler-specific and do not
 /// fit anywhere else in the lexical hierarchy.
 /// https://msdn.microsoft.com/en-us/library/d88sf09h.aspx
@@ -31,9 +32,9 @@ public:
   void dump(PDBSymDumper &Dumper) const override;
 
   void getDataBytes(llvm::SmallVector<uint8_t, 32> &bytes);
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
 };
 
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLCUSTOM_H

@@ -12,5 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-// TODO: Implement SIMD instructions.
-// Note: use Requires<[HasSIMD128]>.
+let isCommutable = 1 in {
+defm ADD : SIMDBinary<add, fadd, "add ">;
+defm MUL: SIMDBinary<mul, fmul, "mul ">;
+} // isCommutable = 1
+defm SUB: SIMDBinary<sub, fsub, "sub ">;

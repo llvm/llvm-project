@@ -215,6 +215,8 @@ module cxx_linkage_cache {
 
 module cxx_templates_common {
   header "cxx-templates-common.h"
+
+  explicit module unimported { header "cxx-templates-unimported.h" }
 }
 
 module cxx_templates_a {
@@ -259,8 +261,17 @@ module config {
   config_macros [exhaustive] WANT_FOO, WANT_BAR
 }
 
+module diag_flags {
+  header "diag_flags.h"
+}
+
 module diag_pragma {
   header "diag_pragma.h"
+}
+
+module pragma_pack {
+  module set { header "pragma_pack_set.h" }
+  module empty { header "empty.h" }
 }
 
 module dummy {
@@ -336,6 +347,12 @@ module DebugObjC {
   header "DebugObjC.h"
 }
 
+module DebugObjCImport {
+  module SubModule {
+    header "DebugObjCImport.h"
+  }
+}
+
 module ImportNameInDir {
   header "ImportNameInDir.h"
   export *
@@ -378,4 +395,59 @@ module DebugSubmodules {
 
 module ExtensionTestA {
   header "ExtensionTestA.h"
+}
+
+module TypedefTag {
+  header "typedef-tag.h"
+  explicit module Hidden {
+    header "typedef-tag-hidden.h"
+  }
+}
+
+module ElaboratedTypeStructs {
+  module Empty {}
+  module Structs {
+    header "elaborated-type-structs.h"
+  }
+}
+
+// We import a module, then declare a method with selector stringValue in
+// MethodPoolCombined1.h. In MethodPoolCombined2.h, we import another module
+// that also contains a method for selector stringValue. We make sure that
+// the method pool entry for stringValue in this module is complete.
+module MethodPoolCombined {
+  header "MethodPoolCombined1.h"
+  header "MethodPoolCombined2.h"
+}
+
+module MethodPoolString1 {
+  header "MethodPoolString1.h"
+}
+
+module MethodPoolString2 {
+  header "MethodPoolString2.h"
+}
+
+module Empty {}
+
+module MacroFabs1 {
+  header "MacroFabs1.h"
+}
+
+module DiagOutOfDate {
+  header "DiagOutOfDate.h"
+}
+
+module DebugNestedA {
+  header "DebugNestedA.h"
+  export *
+}
+
+module DebugNestedB {
+  header "DebugNestedB.h"
+  export *
+}
+
+module objcAtKeywordMissingEnd {
+  header "objcAtKeywordMissingEnd.h"
 }

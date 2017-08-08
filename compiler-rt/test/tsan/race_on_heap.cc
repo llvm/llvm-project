@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "test.h"
 
 void *Thread1(void *p) {
   *(int*)p = 42;
@@ -26,7 +27,7 @@ int main() {
   pthread_t t[2];
   pthread_create(&t[0], 0, AllocThread, 0);
   pthread_join(t[0], &p);
-  fprintf(stderr, "addr=%p\n", p);
+  print_address("addr=", 1, p);
   pthread_create(&t[0], 0, Thread1, (char*)p + 16);
   pthread_create(&t[1], 0, Thread2, (char*)p + 16);
   pthread_join(t[0], 0);

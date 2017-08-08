@@ -17,4 +17,4 @@
 
 @implementation IBImageCatalogDocument // expected-warning {{auto property synthesis will not synthesize property 'Prop' declared in protocol 'DVTInvalidation'}} \
 				       // expected-warning {{method 'invalidate' in protocol 'DVTInvalidation' not implemented}}
-@end
+@end // expected-note {{add a '@synthesize' directive}}

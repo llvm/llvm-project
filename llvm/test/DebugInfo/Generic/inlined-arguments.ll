@@ -24,16 +24,16 @@
 
 ; Function Attrs: uwtable
 define void @_Z2f2v() #0 !dbg !4 {
-  tail call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !16, metadata !DIExpression()), !dbg !18
-  tail call void @llvm.dbg.value(metadata i32 2, i64 0, metadata !20, metadata !DIExpression()), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 undef, metadata !16, metadata !DIExpression()), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 2, metadata !20, metadata !DIExpression()), !dbg !18
   tail call void @_Z2f3i(i32 2), !dbg !21
   ret void, !dbg !22
 }
 
 ; Function Attrs: uwtable
 define void @_Z2f1ii(i32 %x, i32 %y) #0 !dbg !8 {
-  tail call void @llvm.dbg.value(metadata i32 %x, i64 0, metadata !13, metadata !DIExpression()), !dbg !23
-  tail call void @llvm.dbg.value(metadata i32 %y, i64 0, metadata !14, metadata !DIExpression()), !dbg !23
+  tail call void @llvm.dbg.value(metadata i32 %x, metadata !13, metadata !DIExpression()), !dbg !23
+  tail call void @llvm.dbg.value(metadata i32 %y, metadata !14, metadata !DIExpression()), !dbg !23
   tail call void @_Z2f3i(i32 %y), !dbg !24
   ret void, !dbg !25
 }
@@ -41,7 +41,7 @@ define void @_Z2f1ii(i32 %x, i32 %y) #0 !dbg !8 {
 declare void @_Z2f3i(i32) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
@@ -50,15 +50,14 @@ attributes #2 = { nounwind readnone }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!26}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "exp.cpp", directory: "/usr/local/google/home/blaikie/dev/scratch")
 !2 = !{}
-!3 = !{!4, !8}
-!4 = distinct !DISubprogram(name: "f2", linkageName: "_Z2f2v", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 3, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "f2", linkageName: "_Z2f2v", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "exp.cpp", directory: "/usr/local/google/home/blaikie/dev/scratch")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
-!8 = distinct !DISubprogram(name: "f1", linkageName: "_Z2f1ii", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 6, file: !1, scope: !5, type: !9, variables: !12)
+!8 = distinct !DISubprogram(name: "f1", linkageName: "_Z2f1ii", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 6, file: !1, scope: !5, type: !9, variables: !12)
 !9 = !DISubroutineType(types: !10)
 !10 = !{null, !11, !11}
 !11 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

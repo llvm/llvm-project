@@ -2,7 +2,7 @@
 
 ; CHECK: {{^}}bfe_def:
 ; CHECK: BFE_UINT
-define void @bfe_def(i32 addrspace(1)* %out, i32 %x) {
+define amdgpu_kernel void @bfe_def(i32 addrspace(1)* %out, i32 %x) {
 entry:
   %0 = lshr i32 %x, 5
   %1 = and i32 %0, 15 ; 0xf
@@ -17,7 +17,7 @@ entry:
 
 ; CHECK: {{^}}bfe_shift:
 ; CHECK-NOT: BFE_UINT
-define void @bfe_shift(i32 addrspace(1)* %out, i32 %x) {
+define amdgpu_kernel void @bfe_shift(i32 addrspace(1)* %out, i32 %x) {
 entry:
   %0 = lshr i32 %x, 16
   %1 = and i32 %0, 65535 ; 0xffff

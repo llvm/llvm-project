@@ -2,7 +2,6 @@
 ; RUN: opt -loop-unswitch -loop-unswitch-threshold 1000 -disable-output -stats -info-output-file - < %s | FileCheck --check-prefix=STATS %s
 ; RUN: opt -S -loop-unswitch -loop-unswitch-threshold 1000 -verify-loop-info -verify-dom-info < %s | FileCheck %s
 
-; STATS: 1 loop-simplify - Number of pre-header or exit blocks inserted
 ; STATS: 3 loop-unswitch - Number of switches unswitched
 
 ; CHECK:        %1 = icmp eq i32 %c, 1
@@ -65,7 +64,7 @@
 ; CHECK-NEXT:   br label %loop_begin.us1
 
 ; CHECK:      loop_begin.us1:                                   ; preds = %loop_begin.backedge.us6, %.split.split.us
-; CHECK-NEXT:   %var_val.us.2 = load i32, i32* %var
+; CHECK-NEXT:   %var_val.us2 = load i32, i32* %var
 ; CHECK-NEXT:   switch i32 %c, label %second_switch.us3 [
 ; CHECK-NEXT:     i32 1, label %loop_begin.inc_crit_edge.us
 ; CHECK-NEXT:   ]

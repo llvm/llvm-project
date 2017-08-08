@@ -1,4 +1,4 @@
-; RUN: llc < %s -stress-early-ifcvt -aarch64-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc < %s -stress-early-ifcvt -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
 target triple = "arm64-apple-macosx"
 
 ; CHECK: mm2
@@ -27,7 +27,7 @@ if.else:
 do.cond:
   %max.1 = phi i32 [ %0, %do.body ], [ %max.0, %if.else ]
   %min.1 = phi i32 [ %min.0, %do.body ], [ %.min.0, %if.else ]
-; CHECK: cbnz
+; CHECK: b.ne
   %dec = add i32 %n.addr.0, -1
   %tobool = icmp eq i32 %dec, 0
   br i1 %tobool, label %do.end, label %do.body

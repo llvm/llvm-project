@@ -2,6 +2,12 @@
 // RUN: %clang_cl_asan -LD -O0 %s -Fe%t.dll
 // RUN: not %run %t %t.dll 2>&1 | FileCheck %s
 
+// On windows 64-bit, the memchr function is written in assembly and is not
+// hookable with the interception library. There is not enough padding before
+// the function and there is a short jump on the second instruction which
+// doesn't not allow enough space to encode a 64-bit indirect jump.
+// UNSUPPORTED: x86_64-windows
+
 #include <string.h>
 
 extern "C" __declspec(dllexport)
@@ -16,6 +22,6 @@ int test_function() {
 // CHECK-NEXT:  test_function {{.*}}dll_intercept_memchr.cc:[[@LINE-5]]
 // CHECK: Address [[ADDR]] is located in stack of thread T0 at offset {{.*}} in frame
 // CHECK-NEXT:  test_function {{.*}}dll_intercept_memchr.cc
-// CHECK: 'buff' <== Memory access at offset {{.*}} overflows this variable
+// CHECK: 'buff'{{.*}} <== Memory access at offset {{.*}} overflows this variable
   return 0;
 }

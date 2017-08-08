@@ -26,3 +26,6 @@ A f() {
   (void)b;
   return c;
 }
+
+// CHECK: !llvm.linker.options = !{![[dyn_tls_init:[0-9]+]]}
+// CHECK: ![[dyn_tls_init]] = !{!"/include:___dyn_tls_init@12"}

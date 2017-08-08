@@ -6,5 +6,8 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-stress
   llvm-stress.cpp
+
+  DEPENDS
+  intrinsics_gen
   )
 export_executable_symbols(llvm-stress)

@@ -14,14 +14,16 @@
 
 #include "X86IntelInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
-#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86InstComments.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
-#include <cctype>
+#include <cassert>
+#include <cstdint>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -253,5 +255,8 @@ void X86IntelInstPrinter::printMemOffset(const MCInst *MI, unsigned Op,
 
 void X86IntelInstPrinter::printU8Imm(const MCInst *MI, unsigned Op,
                                      raw_ostream &O) {
+  if (MI->getOperand(Op).isExpr())
+    return MI->getOperand(Op).getExpr()->print(O, &MAI);
+
   O << formatImm(MI->getOperand(Op).getImm() & 0xff);
 }

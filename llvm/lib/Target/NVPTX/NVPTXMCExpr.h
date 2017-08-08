@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/MC/MCExpr.h"
+#include <utility>
 
 namespace llvm {
 
@@ -21,8 +22,9 @@ class NVPTXFloatMCExpr : public MCTargetExpr {
 public:
   enum VariantKind {
     VK_NVPTX_None,
-    VK_NVPTX_SINGLE_PREC_FLOAT,   // FP constant in single-precision
-    VK_NVPTX_DOUBLE_PREC_FLOAT    // FP constant in double-precision
+    VK_NVPTX_HALF_PREC_FLOAT,   // FP constant in half-precision
+    VK_NVPTX_SINGLE_PREC_FLOAT, // FP constant in single-precision
+    VK_NVPTX_DOUBLE_PREC_FLOAT  // FP constant in double-precision
   };
 
 private:
@@ -30,21 +32,26 @@ private:
   const APFloat Flt;
 
   explicit NVPTXFloatMCExpr(VariantKind Kind, APFloat Flt)
-      : Kind(Kind), Flt(Flt) {}
+      : Kind(Kind), Flt(std::move(Flt)) {}
 
 public:
   /// @name Construction
   /// @{
 
-  static const NVPTXFloatMCExpr *create(VariantKind Kind, APFloat Flt,
+  static const NVPTXFloatMCExpr *create(VariantKind Kind, const APFloat &Flt,
                                         MCContext &Ctx);
 
-  static const NVPTXFloatMCExpr *createConstantFPSingle(APFloat Flt,
+  static const NVPTXFloatMCExpr *createConstantFPHalf(const APFloat &Flt,
+                                                        MCContext &Ctx) {
+    return create(VK_NVPTX_HALF_PREC_FLOAT, Flt, Ctx);
+  }
+
+  static const NVPTXFloatMCExpr *createConstantFPSingle(const APFloat &Flt,
                                                         MCContext &Ctx) {
     return create(VK_NVPTX_SINGLE_PREC_FLOAT, Flt, Ctx);
   }
 
-  static const NVPTXFloatMCExpr *createConstantFPDouble(APFloat Flt,
+  static const NVPTXFloatMCExpr *createConstantFPDouble(const APFloat &Flt,
                                                         MCContext &Ctx) {
     return create(VK_NVPTX_DOUBLE_PREC_FLOAT, Flt, Ctx);
   }

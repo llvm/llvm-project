@@ -12,10 +12,11 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 ; CHECK-LABEL: @foo
 ; CHECK: vector.body
-; CHECK:  %0 = getelementptr inbounds double*, double** %in, i64 %index
-; CHECK:  %1 = bitcast double** %0 to <4 x i64>*
-; CHECK:  %wide.load = load <4 x i64>, <4 x i64>* %1, align 8
-; CHECK:  %2 = icmp eq <4 x i64> %wide.load, zeroinitializer
+; CHECK:  %[[IV:.+]] = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK:  %[[v0:.+]] = getelementptr inbounds double*, double** %in, i64 %[[IV]]
+; CHECK:  %[[v1:.+]] = bitcast double** %[[v0]] to <4 x i64>*
+; CHECK:  %wide.load = load <4 x i64>, <4 x i64>* %[[v1]], align 8
+; CHECK:  icmp eq <4 x i64> %wide.load, zeroinitializer
 ; CHECK:  br i1
 
 define void @foo(double** noalias nocapture readonly %in, double** noalias nocapture readnone %out, i8* noalias nocapture %res) #0 {

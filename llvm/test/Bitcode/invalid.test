@@ -1,3 +1,5 @@
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-empty.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-EMPTY %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-pr20485.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-ENCODING %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev.bc 2>&1 | \
@@ -27,12 +29,13 @@ RUN:   FileCheck --check-prefix=MISMATCHED-EXPLICIT-INVOKE %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-invoke-non-function-explicit-type.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NON-FUNCTION-EXPLICIT-INVOKE %s
 
+INVALID-EMPTY: Invalid bitcode signature
 INVALID-ENCODING: Invalid encoding
-BAD-ABBREV: Abbreviation starts with an Array or a Blob
-UNEXPECTED-EOF: Unexpected end of file
-BAD-ABBREV-NUMBER: Invalid abbrev number
+BAD-ABBREV: Malformed block
+UNEXPECTED-EOF: Malformed block
+BAD-ABBREV-NUMBER: Malformed block
 BAD-TYPE-TABLE-FORWARD-REF: Invalid TYPE table: Only named structs can be forward referenced
-BAD-BITWIDTH: Bitwidth for integer type out of range
+BAD-BITWIDTH: Malformed block
 BAD-ALIGN: Invalid alignment value
 MISMATCHED-EXPLICIT-GEP: Explicit gep type does not match pointee type of pointer operand
 MISMATCHED-EXPLICIT-LOAD: Explicit load/store type does not match pointee type of pointer operand
@@ -66,7 +69,7 @@ INSERT-IDXS: INSERTVAL: Invalid type
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-no-proper-module.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NO-MODULE %s
 
-NO-MODULE: Malformed IR file
+NO-MODULE: Expected a single module
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-fp-shift.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=FP-SHIFT %s
@@ -102,7 +105,7 @@ FWDREF-TYPE: Invalid record
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-fwdref-type-mismatch-2.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=FWDREF-TYPE-MISMATCH %s
 
-FWDREF-TYPE-MISMATCH: Type mismatch in constant table!
+FWDREF-TYPE-MISMATCH: Malformed block
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-array-element-type.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=ELEMENT-TYPE %s
@@ -151,7 +154,7 @@ EXTRACT-0-IDXS: EXTRACTVAL: Invalid instruction with 0 indices
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-load-ptr-type.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=BAD-LOAD-PTR-TYPE %s
 
-BAD-LOAD-PTR-TYPE: Cannot load/store from pointer
+BAD-LOAD-PTR-TYPE: Malformed block
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-inserted-value-type-mismatch.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INSERT-TYPE-MISMATCH %s
@@ -168,15 +171,10 @@ RUN:   FileCheck --check-prefix=INVALID-ARGUMENT-TYPE %s
 
 INVALID-ARGUMENT-TYPE: Invalid function argument type
 
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-fixme-streaming-blob.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=STREAMING-BLOB %s
-
-STREAMING-BLOB: getPointer in streaming memory objects not allowed
-
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-function-comdat-id.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-FCOMDAT-ID %s
 
-INVALID-FCOMDAT-ID: Invalid function comdat ID
+INVALID-FCOMDAT-ID: Malformed block
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-global-var-comdat-id.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-GVCOMDAT-ID %s
@@ -191,12 +189,12 @@ ABBREV-NO-OPS: Abbrev record with no operands
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-array-operand-encoding.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=ARRAY-OP-ENC %s
 
-ARRAY-OP-ENC: Array element type has to be an encoding of a type
+ARRAY-OP-ENC: Malformed block
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-metadata-not-followed-named-node.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=META-NOT-FOLLOWED-BY-NAMED-META %s
 
-META-NOT-FOLLOWED-BY-NAMED-META: METADATA_NAME not followed by METADATA_NAMED_NODE
+META-NOT-FOLLOWED-BY-NAMED-META: Malformed block
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-vector-length.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=VECTOR-LENGTH %s
@@ -211,9 +209,29 @@ ALIAS-TYPE-MISMATCH: Alias and aliasee types don't match
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-no-function-block.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NO-FUNCTION-BLOCK %s
 
-NO-FUNCTION-BLOCK: Trying to materialize functions before seeing function blocks
+NO-FUNCTION-BLOCK: Trying to materialize functions before seeing function blocks (Producer: 'LLVM3.8.0git' Reader: 'LLVM
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-name-with-0-byte.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NAME-WITH-0 %s
 
-NAME-WITH-0: Invalid value name
+NAME-WITH-0: Malformed block
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-void-constant.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=VOID-CONSTANT-TYPE %s
+
+VOID-CONSTANT-TYPE: Invalid constant type
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-gep-no-operands.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=GEP-NO-OPERANDS %s
+
+GEP-NO-OPERANDS: Invalid gep with no operands
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-nonpointer-storeatomic.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=NONPOINTER-STOREATOMIC %s
+
+NONPOINTER-STOREATOMIC: Invalid record
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-nonpointer-atomicrmw.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=NONPOINTER-ATOMICRMW %s
+
+NONPOINTER-ATOMICRMW: Invalid record

@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wunused-value %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wunused-value -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wunused-value -std=c++11 %s
 
 // PR4806
 namespace test0 {
@@ -12,7 +14,10 @@ namespace test0 {
     // pointer to volatile has side effect (thus no warning)
     Box* box = new Box;
     box->i; // expected-warning {{expression result unused}}
-    box->j; // expected-warning {{expression result unused}}
+    box->j;
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{expression result unused}}
+#endif
   }
 }
 
@@ -54,11 +59,13 @@ struct Used {
   Used();
   Used(int);
   Used(int, int);
+  ~Used() {}
 };
 struct __attribute__((warn_unused)) Unused {
   Unused();
   Unused(int);
   Unused(int, int);
+  ~Unused() {}
 };
 void f() {
   Used();
@@ -67,6 +74,10 @@ void f() {
   Unused();     // expected-warning {{expression result unused}}
   Unused(1);    // expected-warning {{expression result unused}}
   Unused(1, 1); // expected-warning {{expression result unused}}
+#if __cplusplus >= 201103L // C++11 or later
+  Used({});
+  Unused({}); // expected-warning {{expression result unused}}
+#endif
 }
 }
 

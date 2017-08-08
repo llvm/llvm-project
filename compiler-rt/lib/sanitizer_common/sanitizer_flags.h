@@ -18,6 +18,12 @@
 
 namespace __sanitizer {
 
+enum HandleSignalMode {
+  kHandleSignalNo,
+  kHandleSignalYes,
+  kHandleSignalExclusive,
+};
+
 struct CommonFlags {
 #define COMMON_FLAG(Type, Name, DefaultValue, Description) Type Name;
 #include "sanitizer_flags.inc"
@@ -46,10 +52,17 @@ inline void OverrideCommonFlags(const CommonFlags &cf) {
   common_flags_dont_use.CopyFrom(cf);
 }
 
+void SubstituteForFlagValue(const char *s, char *out, uptr out_size);
+
 class FlagParser;
 void RegisterCommonFlags(FlagParser *parser,
                          CommonFlags *cf = &common_flags_dont_use);
 void RegisterIncludeFlags(FlagParser *parser, CommonFlags *cf);
+
+// Should be called after parsing all flags. Sets up common flag values
+// and perform initializations common to all sanitizers (e.g. setting
+// verbosity).
+void InitializeCommonFlags(CommonFlags *cf = &common_flags_dont_use);
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_FLAGS_H

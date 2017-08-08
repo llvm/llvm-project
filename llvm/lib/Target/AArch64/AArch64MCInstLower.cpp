@@ -29,7 +29,7 @@ using namespace llvm;
 extern cl::opt<bool> EnableAArch64ELFLocalDynamicTLSGeneration;
 
 AArch64MCInstLower::AArch64MCInstLower(MCContext &ctx, AsmPrinter &printer)
-    : Ctx(ctx), Printer(printer), TargetTriple(printer.getTargetTriple()) {}
+    : Ctx(ctx), Printer(printer) {}
 
 MCSymbol *
 AArch64MCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
@@ -151,12 +151,24 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
   return MCOperand::createExpr(Expr);
 }
 
+MCOperand AArch64MCInstLower::lowerSymbolOperandCOFF(const MachineOperand &MO,
+                                                     MCSymbol *Sym) const {
+  MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_None;
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, RefKind, Ctx);
+  if (!MO.isJTI() && MO.getOffset())
+    Expr = MCBinaryExpr::createAdd(
+        Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
+  return MCOperand::createExpr(Expr);
+}
+
 MCOperand AArch64MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
                                                  MCSymbol *Sym) const {
-  if (TargetTriple.isOSDarwin())
+  if (Printer.TM.getTargetTriple().isOSDarwin())
     return lowerSymbolOperandDarwin(MO, Sym);
+  if (Printer.TM.getTargetTriple().isOSBinFormatCOFF())
+    return lowerSymbolOperandCOFF(MO, Sym);
 
-  assert(TargetTriple.isOSBinFormatELF() && "Expect Darwin or ELF target");
+  assert(Printer.TM.getTargetTriple().isOSBinFormatELF() && "Invalid target");
   return lowerSymbolOperandELF(MO, Sym);
 }
 

@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the itinerary class data for the Freescale e5500 64-bit 
+// This file defines the itinerary class data for the Freescale e5500 64-bit
 // Power processor.
-// 
+//
 // All information is derived from the "e5500 Core Reference Manual",
 // Freescale Document Number e5500RM, Rev. 1, 03/2012.
 //
@@ -25,16 +25,16 @@ def E5500_DIS1 : FuncUnit;
 
 //  * Execute
 //    6 pipelined execution units: SFX0, SFX1, BU, FPU, LSU, CFX.
-//    The CFX has a bypass path, allowing non-divide instructions to execute 
+//    The CFX has a bypass path, allowing non-divide instructions to execute
 //    while a divide instruction is being executed.
 def E5500_SFX0  : FuncUnit; // Simple unit 0
 def E5500_SFX1  : FuncUnit; // Simple unit 1
 def E5500_BU    : FuncUnit; // Branch unit
-def E5500_CFX_DivBypass 
+def E5500_CFX_DivBypass
                 : FuncUnit; // CFX divide bypass path
 def E5500_CFX_0 : FuncUnit; // CFX pipeline stage 0
 
-def E5500_CFX_1 : FuncUnit; // CFX pipeline stage 1 
+def E5500_CFX_1 : FuncUnit; // CFX pipeline stage 1
 
 def E5500_LSU_0 : FuncUnit; // LSU pipeline
 def E5500_FPU_0 : FuncUnit; // FPU pipeline
@@ -313,11 +313,15 @@ def PPCE5500Itineraries : ProcessorItineraries<
                                   InstrStage<5, [E5500_CFX_0]>],
                                  [9, 2], // Latency = 5, Repeat rate = 5
                                  [E5500_GPR_Bypass, E5500_CR_Bypass]>,
-  InstrItinData<IIC_SprMFMSR,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
-                                  InstrStage<4, [E5500_SFX0]>],
+  InstrItinData<IIC_SprMFPMR,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
+                                  InstrStage<4, [E5500_CFX_0]>],
                                  [8, 2], // Latency = 4, Repeat rate = 4
                                  [E5500_GPR_Bypass, E5500_GPR_Bypass]>,
   InstrItinData<IIC_SprMFSPR,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
+                                  InstrStage<1, [E5500_CFX_0]>],
+                                 [5], // Latency = 1, Repeat rate = 1
+                                 [E5500_GPR_Bypass]>,
+  InstrItinData<IIC_SprMTPMR,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
                                   InstrStage<1, [E5500_CFX_0]>],
                                  [5], // Latency = 1, Repeat rate = 1
                                  [E5500_GPR_Bypass]>,
@@ -326,17 +330,17 @@ def PPCE5500Itineraries : ProcessorItineraries<
                                  [8, 2], // Latency = 4, Repeat rate = 4
                                  [NoBypass, E5500_GPR_Bypass]>,
   InstrItinData<IIC_SprMTSPR,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
-                                  InstrStage<1, [E5500_SFX0, E5500_SFX1]>],
+                                  InstrStage<1, [E5500_CFX_0]>],
                                  [5], // Latency = 1, Repeat rate = 1
                                  [E5500_GPR_Bypass]>,
   InstrItinData<IIC_FPGeneral,   [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
                                   InstrStage<1, [E5500_FPU_0]>],
-                                 [11, 2, 2], // Latency = 7, Repeat rate = 1 
+                                 [11, 2, 2], // Latency = 7, Repeat rate = 1
                                  [E5500_FPR_Bypass,
                                   E5500_FPR_Bypass, E5500_FPR_Bypass]>,
   InstrItinData<IIC_FPAddSub,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
                                   InstrStage<1, [E5500_FPU_0]>],
-                                 [11, 2, 2], // Latency = 7, Repeat rate = 1 
+                                 [11, 2, 2], // Latency = 7, Repeat rate = 1
                                  [E5500_FPR_Bypass,
                                   E5500_FPR_Bypass, E5500_FPR_Bypass]>,
   InstrItinData<IIC_FPCompare,   [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
@@ -351,7 +355,7 @@ def PPCE5500Itineraries : ProcessorItineraries<
                                   E5500_FPR_Bypass, E5500_FPR_Bypass]>,
   InstrItinData<IIC_FPDivS,      [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
                                   InstrStage<16, [E5500_FPU_0]>],
-                                 [24, 2, 2], // Latency = 20, Repeat rate = 16 
+                                 [24, 2, 2], // Latency = 20, Repeat rate = 16
                                  [E5500_FPR_Bypass,
                                   E5500_FPR_Bypass, E5500_FPR_Bypass]>,
   InstrItinData<IIC_FPFused,     [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
@@ -371,10 +375,11 @@ def PPCE5500Itineraries : ProcessorItineraries<
 
 def PPCE5500Model : SchedMachineModel {
   let IssueWidth = 2;  // 2 micro-ops are dispatched per cycle.
-  let MinLatency = -1; // OperandCycles are interpreted as MinLatency.
   let LoadLatency = 6; // Optimistic load latency assuming bypass.
                        // This is overriden by OperandCycles if the
                        // Itineraries are queried instead.
+
+  let CompleteModel = 0;
 
   let Itineraries = PPCE5500Itineraries;
 }

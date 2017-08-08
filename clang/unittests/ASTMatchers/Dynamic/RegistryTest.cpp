@@ -421,7 +421,7 @@ TEST_F(RegistryTest, Errors) {
                        constructMatcher("parameterCountIs", 3), Error.get())
           .isNull());
   EXPECT_EQ("Incorrect type for arg 2. (Expected = Matcher<CXXRecordDecl>) != "
-            "(Actual = Matcher<FunctionDecl>)",
+            "(Actual = Matcher<FunctionDecl|FunctionProtoType>)",
             Error->toString());
 
   // Bad argument type with variadic.
@@ -449,26 +449,25 @@ TEST_F(RegistryTest, Completion) {
   // Overloaded
   EXPECT_TRUE(hasCompletion(
       Comps, "hasParent(",
-      "Matcher<TemplateArgument|NestedNameSpecifierLoc|Decl|...> "
-      "hasParent(Matcher<TemplateArgument|NestedNameSpecifierLoc|Decl|...>)"));
+      "Matcher<NestedNameSpecifierLoc|TypeLoc|Decl|...> "
+      "hasParent(Matcher<NestedNameSpecifierLoc|TypeLoc|Decl|...>)"));
   // Variadic.
   EXPECT_TRUE(hasCompletion(Comps, "whileStmt(",
                             "Matcher<Stmt> whileStmt(Matcher<WhileStmt>...)"));
   // Polymorphic.
   EXPECT_TRUE(hasCompletion(
       Comps, "hasDescendant(",
-      "Matcher<TemplateArgument|NestedNameSpecifier|NestedNameSpecifierLoc|...>"
-      " hasDescendant(Matcher<TemplateArgument|NestedNameSpecifier|"
-      "NestedNameSpecifierLoc|...>)"));
+      "Matcher<NestedNameSpecifierLoc|QualType|TypeLoc|...> "
+      "hasDescendant(Matcher<NestedNameSpecifierLoc|QualType|TypeLoc|...>)"));
 
   CompVector WhileComps = getCompletions("whileStmt", 0);
 
   EXPECT_TRUE(hasCompletion(WhileComps, "hasBody(",
                             "Matcher<WhileStmt> hasBody(Matcher<Stmt>)"));
-  EXPECT_TRUE(hasCompletion(WhileComps, "hasParent(",
-                            "Matcher<Stmt> "
-                            "hasParent(Matcher<TemplateArgument|"
-                            "NestedNameSpecifierLoc|Decl|...>)"));
+  EXPECT_TRUE(hasCompletion(
+      WhileComps, "hasParent(",
+      "Matcher<Stmt> "
+      "hasParent(Matcher<NestedNameSpecifierLoc|TypeLoc|Decl|...>)"));
   EXPECT_TRUE(
       hasCompletion(WhileComps, "allOf(", "Matcher<T> allOf(Matcher<T>...)"));
 
@@ -504,6 +503,55 @@ TEST_F(RegistryTest, HasArgs) {
       .getTypedMatcher<Decl>();
   EXPECT_TRUE(matches("struct __attribute__((warn_unused)) X {};", Value));
   EXPECT_FALSE(matches("struct X {};", Value));
+}
+
+TEST_F(RegistryTest, ParenExpr) {
+  Matcher<Stmt> Value = constructMatcher("parenExpr").getTypedMatcher<Stmt>();
+  EXPECT_TRUE(matches("int i = (1);", Value));
+  EXPECT_FALSE(matches("int i = 1;", Value));
+}
+
+TEST_F(RegistryTest, EqualsMatcher) {
+  Matcher<Stmt> BooleanStmt = constructMatcher(
+      "cxxBoolLiteral", constructMatcher("equals", VariantValue(true)))
+      .getTypedMatcher<Stmt>();
+  EXPECT_TRUE(matches("bool x = true;", BooleanStmt));
+  EXPECT_FALSE(matches("bool x = false;", BooleanStmt));
+  EXPECT_FALSE(matches("bool x = 0;", BooleanStmt));
+
+  BooleanStmt = constructMatcher(
+      "cxxBoolLiteral", constructMatcher("equals", VariantValue(0)))
+      .getTypedMatcher<Stmt>();
+  EXPECT_TRUE(matches("bool x = false;", BooleanStmt));
+  EXPECT_FALSE(matches("bool x = true;", BooleanStmt));
+  EXPECT_FALSE(matches("bool x = 0;", BooleanStmt));
+
+  Matcher<Stmt> DoubleStmt = constructMatcher(
+      "floatLiteral", constructMatcher("equals", VariantValue(1.2)))
+      .getTypedMatcher<Stmt>();
+  EXPECT_TRUE(matches("double x = 1.2;", DoubleStmt));
+#if 0
+  // FIXME floatLiteral matching should work regardless of suffix.
+  EXPECT_TRUE(matches("double x = 1.2f;", DoubleStmt));
+  EXPECT_TRUE(matches("double x = 1.2l;", DoubleStmt));
+#endif
+  EXPECT_TRUE(matches("double x = 12e-1;", DoubleStmt));
+  EXPECT_FALSE(matches("double x = 1.23;", DoubleStmt));
+
+  Matcher<Stmt> IntegerStmt = constructMatcher(
+      "integerLiteral", constructMatcher("equals", VariantValue(42)))
+      .getTypedMatcher<Stmt>();
+  EXPECT_TRUE(matches("int x = 42;", IntegerStmt));
+  EXPECT_FALSE(matches("int x = 1;", IntegerStmt));
+
+  Matcher<Stmt> CharStmt = constructMatcher(
+      "characterLiteral", constructMatcher("equals", VariantValue('x')))
+      .getTypedMatcher<Stmt>();
+  EXPECT_TRUE(matches("int x = 'x';", CharStmt));
+  EXPECT_TRUE(matches("int x = L'x';", CharStmt));
+  EXPECT_TRUE(matches("int x = u'x';", CharStmt));
+  EXPECT_TRUE(matches("int x = U'x';", CharStmt));
+  EXPECT_FALSE(matches("int x = 120;", CharStmt));
 }
 
 } // end anonymous namespace

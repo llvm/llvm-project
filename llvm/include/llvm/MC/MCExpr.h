@@ -11,10 +11,11 @@
 #define LLVM_MC_MCEXPR_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/SMLoc.h"
+#include <cstdint>
 
 namespace llvm {
+
 class MCAsmInfo;
 class MCAsmLayout;
 class MCAssembler;
@@ -27,7 +28,8 @@ class MCSymbol;
 class MCValue;
 class raw_ostream;
 class StringRef;
-typedef DenseMap<const MCSection *, uint64_t> SectionAddrMap;
+
+using SectionAddrMap = DenseMap<const MCSection *, uint64_t>;
 
 /// \brief Base class for the full range of assembler expressions which are
 /// needed for parsing.
@@ -43,9 +45,7 @@ public:
 
 private:
   ExprKind Kind;
-
-  MCExpr(const MCExpr&) = delete;
-  void operator=(const MCExpr&) = delete;
+  SMLoc Loc;
 
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
                           const MCAsmLayout *Layout,
@@ -56,7 +56,7 @@ private:
                           const SectionAddrMap *Addrs, bool InSet) const;
 
 protected:
-  explicit MCExpr(ExprKind Kind) : Kind(Kind) {}
+  explicit MCExpr(ExprKind Kind, SMLoc Loc) : Kind(Kind), Loc(Loc) {}
 
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                  const MCAsmLayout *Layout,
@@ -64,16 +64,21 @@ protected:
                                  const SectionAddrMap *Addrs, bool InSet) const;
 
 public:
+  MCExpr(const MCExpr &) = delete;
+  MCExpr &operator=(const MCExpr &) = delete;
+
   /// \name Accessors
   /// @{
 
   ExprKind getKind() const { return Kind; }
+  SMLoc getLoc() const { return Loc; }
 
   /// @}
   /// \name Utility Methods
   /// @{
 
-  void print(raw_ostream &OS, const MCAsmInfo *MAI) const;
+  void print(raw_ostream &OS, const MCAsmInfo *MAI,
+             bool InParens = false) const;
   void dump() const;
 
   /// @}
@@ -131,7 +136,7 @@ class MCConstantExpr : public MCExpr {
   int64_t Value;
 
   explicit MCConstantExpr(int64_t Value)
-      : MCExpr(MCExpr::Constant), Value(Value) {}
+      : MCExpr(MCExpr::Constant, SMLoc()), Value(Value) {}
 
 public:
   /// \name Construction
@@ -165,6 +170,7 @@ public:
 
     VK_GOT,
     VK_GOTOFF,
+    VK_GOTREL,
     VK_GOTPCREL,
     VK_GOTTPOFF,
     VK_INDNTPOFF,
@@ -176,6 +182,8 @@ public:
     VK_TLSLDM,
     VK_TPOFF,
     VK_DTPOFF,
+    VK_TLSCALL,   // symbol(tlscall)
+    VK_TLSDESC,   // symbol(tlsdesc)
     VK_TLVP,      // Mach-O thread local variable relocations
     VK_TLVPPAGE,
     VK_TLVPPAGEOFF,
@@ -187,6 +195,8 @@ public:
     VK_SIZE,      // symbol@SIZE
     VK_WEAKREF,   // The link between the symbols in .weakref foo, bar
 
+    VK_X86_ABS8,
+
     VK_ARM_NONE,
     VK_ARM_GOT_PREL,
     VK_ARM_TARGET1,
@@ -194,8 +204,6 @@ public:
     VK_ARM_PREL31,
     VK_ARM_SBREL,          // symbol(sbrel)
     VK_ARM_TLSLDO,         // symbol(tlsldo)
-    VK_ARM_TLSCALL,        // symbol(tlscall)
-    VK_ARM_TLSDESC,        // symbol(tlsdesc)
     VK_ARM_TLSDESCSEQ,
 
     VK_PPC_LO,             // symbol@l
@@ -214,7 +222,6 @@ public:
     VK_PPC_TOC_HI,         // symbol@toc@h
     VK_PPC_TOC_HA,         // symbol@toc@ha
     VK_PPC_DTPMOD,         // symbol@dtpmod
-    VK_PPC_TPREL,          // symbol@tprel
     VK_PPC_TPREL_LO,       // symbol@tprel@l
     VK_PPC_TPREL_HI,       // symbol@tprel@h
     VK_PPC_TPREL_HA,       // symbol@tprel@ha
@@ -222,7 +229,6 @@ public:
     VK_PPC_TPREL_HIGHERA,  // symbol@tprel@highera
     VK_PPC_TPREL_HIGHEST,  // symbol@tprel@highest
     VK_PPC_TPREL_HIGHESTA, // symbol@tprel@highesta
-    VK_PPC_DTPREL,         // symbol@dtprel
     VK_PPC_DTPREL_LO,      // symbol@dtprel@l
     VK_PPC_DTPREL_HI,      // symbol@dtprel@h
     VK_PPC_DTPREL_HA,      // symbol@dtprel@ha
@@ -251,33 +257,6 @@ public:
     VK_PPC_TLSLD,          // symbol@tlsld
     VK_PPC_LOCAL,          // symbol@local
 
-    VK_Mips_GPREL,
-    VK_Mips_GOT_CALL,
-    VK_Mips_GOT16,
-    VK_Mips_GOT,
-    VK_Mips_ABS_HI,
-    VK_Mips_ABS_LO,
-    VK_Mips_TLSGD,
-    VK_Mips_TLSLDM,
-    VK_Mips_DTPREL_HI,
-    VK_Mips_DTPREL_LO,
-    VK_Mips_GOTTPREL,
-    VK_Mips_TPREL_HI,
-    VK_Mips_TPREL_LO,
-    VK_Mips_GPOFF_HI,
-    VK_Mips_GPOFF_LO,
-    VK_Mips_GOT_DISP,
-    VK_Mips_GOT_PAGE,
-    VK_Mips_GOT_OFST,
-    VK_Mips_HIGHER,
-    VK_Mips_HIGHEST,
-    VK_Mips_GOT_HI16,
-    VK_Mips_GOT_LO16,
-    VK_Mips_CALL_HI16,
-    VK_Mips_CALL_LO16,
-    VK_Mips_PCREL_HI16,
-    VK_Mips_PCREL_LO16,
-
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
 
     VK_Hexagon_PCREL,
@@ -290,6 +269,15 @@ public:
     VK_Hexagon_LD_PLT,
     VK_Hexagon_IE,
     VK_Hexagon_IE_GOT,
+
+    VK_WebAssembly_FUNCTION, // Function table index, rather than virtual addr
+    VK_WebAssembly_TYPEINDEX,// Type table index
+
+    VK_AMDGPU_GOTPCREL32_LO, // symbol@gotpcrel32@lo
+    VK_AMDGPU_GOTPCREL32_HI, // symbol@gotpcrel32@hi
+    VK_AMDGPU_REL32_LO,      // symbol@rel32@lo
+    VK_AMDGPU_REL32_HI,      // symbol@rel32@hi
+
     VK_TPREL,
     VK_DTPREL
   };
@@ -308,7 +296,7 @@ private:
   const MCSymbol *Symbol;
 
   explicit MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
-                           const MCAsmInfo *MAI);
+                           const MCAsmInfo *MAI, SMLoc Loc = SMLoc());
 
 public:
   /// \name Construction
@@ -319,7 +307,7 @@ public:
   }
 
   static const MCSymbolRefExpr *create(const MCSymbol *Symbol, VariantKind Kind,
-                                       MCContext &Ctx);
+                                       MCContext &Ctx, SMLoc Loc = SMLoc());
   static const MCSymbolRefExpr *create(StringRef Name, VariantKind Kind,
                                        MCContext &Ctx);
 
@@ -364,26 +352,30 @@ private:
   Opcode Op;
   const MCExpr *Expr;
 
-  MCUnaryExpr(Opcode Op, const MCExpr *Expr)
-      : MCExpr(MCExpr::Unary), Op(Op), Expr(Expr) {}
+  MCUnaryExpr(Opcode Op, const MCExpr *Expr, SMLoc Loc)
+      : MCExpr(MCExpr::Unary, Loc), Op(Op), Expr(Expr) {}
 
 public:
   /// \name Construction
   /// @{
 
   static const MCUnaryExpr *create(Opcode Op, const MCExpr *Expr,
-                                   MCContext &Ctx);
-  static const MCUnaryExpr *createLNot(const MCExpr *Expr, MCContext &Ctx) {
-    return create(LNot, Expr, Ctx);
+                                   MCContext &Ctx, SMLoc Loc = SMLoc());
+
+  static const MCUnaryExpr *createLNot(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return create(LNot, Expr, Ctx, Loc);
   }
-  static const MCUnaryExpr *createMinus(const MCExpr *Expr, MCContext &Ctx) {
-    return create(Minus, Expr, Ctx);
+
+  static const MCUnaryExpr *createMinus(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return create(Minus, Expr, Ctx, Loc);
   }
-  static const MCUnaryExpr *createNot(const MCExpr *Expr, MCContext &Ctx) {
-    return create(Not, Expr, Ctx);
+
+  static const MCUnaryExpr *createNot(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return create(Not, Expr, Ctx, Loc);
   }
-  static const MCUnaryExpr *createPlus(const MCExpr *Expr, MCContext &Ctx) {
-    return create(Plus, Expr, Ctx);
+
+  static const MCUnaryExpr *createPlus(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return create(Plus, Expr, Ctx, Loc);
   }
 
   /// @}
@@ -436,87 +428,108 @@ private:
   Opcode Op;
   const MCExpr *LHS, *RHS;
 
-  MCBinaryExpr(Opcode Op, const MCExpr *LHS, const MCExpr *RHS)
-      : MCExpr(MCExpr::Binary), Op(Op), LHS(LHS), RHS(RHS) {}
+  MCBinaryExpr(Opcode Op, const MCExpr *LHS, const MCExpr *RHS,
+               SMLoc Loc = SMLoc())
+      : MCExpr(MCExpr::Binary, Loc), Op(Op), LHS(LHS), RHS(RHS) {}
 
 public:
   /// \name Construction
   /// @{
 
   static const MCBinaryExpr *create(Opcode Op, const MCExpr *LHS,
-                                    const MCExpr *RHS, MCContext &Ctx);
+                                    const MCExpr *RHS, MCContext &Ctx,
+                                    SMLoc Loc = SMLoc());
+
   static const MCBinaryExpr *createAdd(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(Add, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createAnd(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(And, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createDiv(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(Div, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createEQ(const MCExpr *LHS, const MCExpr *RHS,
                                       MCContext &Ctx) {
     return create(EQ, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createGT(const MCExpr *LHS, const MCExpr *RHS,
                                       MCContext &Ctx) {
     return create(GT, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createGTE(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(GTE, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createLAnd(const MCExpr *LHS, const MCExpr *RHS,
                                         MCContext &Ctx) {
     return create(LAnd, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createLOr(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(LOr, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createLT(const MCExpr *LHS, const MCExpr *RHS,
                                       MCContext &Ctx) {
     return create(LT, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createLTE(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(LTE, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createMod(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(Mod, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createMul(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(Mul, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createNE(const MCExpr *LHS, const MCExpr *RHS,
                                       MCContext &Ctx) {
     return create(NE, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createOr(const MCExpr *LHS, const MCExpr *RHS,
                                       MCContext &Ctx) {
     return create(Or, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createShl(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(Shl, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createAShr(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(AShr, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createLShr(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(LShr, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createSub(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(Sub, LHS, RHS, Ctx);
   }
+
   static const MCBinaryExpr *createXor(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(Xor, LHS, RHS, Ctx);
@@ -549,9 +562,11 @@ public:
 /// MCExprs are bump pointer allocated and not destructed.
 class MCTargetExpr : public MCExpr {
   virtual void anchor();
+
 protected:
-  MCTargetExpr() : MCExpr(Target) {}
-  virtual ~MCTargetExpr() {}
+  MCTargetExpr() : MCExpr(Target, SMLoc()) {}
+  virtual ~MCTargetExpr() = default;
+
 public:
   virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const = 0;
   virtual bool evaluateAsRelocatableImpl(MCValue &Res,
@@ -569,4 +584,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCEXPR_H

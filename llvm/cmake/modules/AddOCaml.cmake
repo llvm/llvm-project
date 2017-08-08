@@ -53,8 +53,8 @@ function(add_ocaml_library name)
   endif()
 
   set(ocaml_flags "-lstdc++" "-ldopt" "-L${LLVM_LIBRARY_DIR}"
-                  "-ccopt" "-L\\$CAMLORIGIN/.."
-                  "-ccopt" "-Wl,-rpath,\\$CAMLORIGIN/.."
+                  "-ccopt" "-L\\$CAMLORIGIN/../.."
+                  "-ccopt" "-Wl,-rpath,\\$CAMLORIGIN/../.."
                   ${ocaml_pkgs})
 
   foreach( ocaml_dep ${ARG_OCAMLDEP} )
@@ -73,7 +73,13 @@ function(add_ocaml_library name)
 
   get_property(system_libs TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS)
   foreach(system_lib ${system_libs})
-    list(APPEND ocaml_flags "-l${system_lib}" )
+    if (system_lib MATCHES "^-")
+      # If it's an option, pass it without changes.
+      list(APPEND ocaml_flags "${system_lib}" )
+    else()
+      # Otherwise assume it's a library name we need to link with.
+      list(APPEND ocaml_flags "-l${system_lib}" )
+    endif()
   endforeach()
 
   string(REPLACE ";" " " ARG_CFLAGS "${ARG_CFLAGS}")
@@ -81,6 +87,11 @@ function(add_ocaml_library name)
   foreach( include_dir ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR} )
     set(c_flags "${c_flags} -I${include_dir}")
   endforeach()
+  # include -D/-UNDEBUG to match dump function visibility
+  # regex from HandleLLVMOptions.cmake
+  string(REGEX MATCH "(^| )[/-][UD] *NDEBUG($| )" flag_matches
+         "${CMAKE_C_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_C_FLAGS}")
+  set(c_flags "${c_flags} ${flag_matches}")
 
   foreach( ocaml_file ${ARG_OCAML} )
     list(APPEND sources "${ocaml_file}.mli" "${ocaml_file}.ml")
@@ -129,9 +140,9 @@ function(add_ocaml_library name)
   endforeach()
 
   if( APPLE )
-    set(ocaml_rpath "@executable_path/../../lib")
+    set(ocaml_rpath "@executable_path/../../../lib${LLVM_LIBDIR_SUFFIX}")
   elseif( UNIX )
-    set(ocaml_rpath "\\$ORIGIN/../../lib")
+    set(ocaml_rpath "\\$ORIGIN/../../../lib${LLVM_LIBDIR_SUFFIX}")
   endif()
   list(APPEND ocaml_flags "-ldopt" "-Wl,-rpath,${ocaml_rpath}")
 
@@ -146,7 +157,7 @@ function(add_ocaml_library name)
     OUTPUT "${bin}/${name}.odoc"
     COMMAND "${OCAMLFIND}" "ocamldoc"
             "-I" "${bin}"
-            "-I" "${LLVM_LIBRARY_DIR}/ocaml/"
+            "-I" "${LLVM_LIBRARY_DIR}/ocaml/llvm/"
             "-dump" "${bin}/${name}.odoc"
             ${ocaml_pkgs} ${ocaml_inputs}
     DEPENDS ${ocaml_inputs} ${ocaml_outputs}
@@ -164,16 +175,21 @@ function(add_ocaml_library name)
     add_dependencies("ocaml_${name}" "ocaml_${ocaml_dep}")
   endforeach()
 
-  foreach( llvm_lib ${llvm_libs} )
-    add_dependencies("ocaml_${name}" "${llvm_lib}")
-  endforeach()
+  if( NOT LLVM_OCAML_OUT_OF_TREE )
+    foreach( llvm_lib ${llvm_libs} )
+      add_dependencies("ocaml_${name}" "${llvm_lib}")
+    endforeach()
+  endif()
+
+  add_dependencies("ocaml_all" "ocaml_${name}")
 
   set(install_files)
   set(install_shlibs)
-  foreach( ocaml_output ${ocaml_outputs} )
+  foreach( ocaml_output ${ocaml_inputs} ${ocaml_outputs} )
     get_filename_component(ext "${ocaml_output}" EXT)
 
     if( NOT (ext STREQUAL ".cmo" OR
+             ext STREQUAL ".ml" OR
              ext STREQUAL CMAKE_C_OUTPUT_EXTENSION OR
              ext STREQUAL CMAKE_SHARED_LIBRARY_SUFFIX) )
       list(APPEND install_files "${ocaml_output}")
@@ -183,19 +199,25 @@ function(add_ocaml_library name)
   endforeach()
 
   install(FILES ${install_files}
-          DESTINATION lib/ocaml)
+          DESTINATION "${LLVM_OCAML_INSTALL_PATH}/llvm")
   install(FILES ${install_shlibs}
           PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
                       GROUP_READ GROUP_EXECUTE
                       WORLD_READ WORLD_EXECUTE
-          DESTINATION lib/ocaml)
+          DESTINATION "${LLVM_OCAML_INSTALL_PATH}/stublibs")
 
   foreach( install_file ${install_files} ${install_shlibs} )
     get_filename_component(filename "${install_file}" NAME)
     add_custom_command(TARGET "ocaml_${name}" POST_BUILD
       COMMAND "${CMAKE_COMMAND}" "-E" "copy" "${install_file}"
-                                             "${LLVM_LIBRARY_DIR}/ocaml/"
+                                             "${LLVM_LIBRARY_DIR}/ocaml/llvm/"
       COMMENT "Copying OCaml library component ${filename} to intermediate area"
       VERBATIM)
+    add_dependencies("ocaml_${name}" ocaml_make_directory)
   endforeach()
 endfunction()
+
+add_custom_target(ocaml_make_directory
+  COMMAND "${CMAKE_COMMAND}" "-E" "make_directory" "${LLVM_LIBRARY_DIR}/ocaml/llvm")
+add_custom_target("ocaml_all")
+set_target_properties(ocaml_all PROPERTIES FOLDER "Misc")

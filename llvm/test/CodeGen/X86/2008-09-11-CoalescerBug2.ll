@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=x86
-; RUN: llc -pre-RA-sched=source < %s -march=x86 -mcpu=corei7 | FileCheck %s --check-prefix=SOURCE-SCHED
+; RUN: llc -pre-RA-sched=source < %s -mtriple=i686-unknown-linux -mcpu=corei7 | FileCheck %s --check-prefix=SOURCE-SCHED
 ; PR2748
 
 @g_73 = external global i32		; <i32*> [#uses=1]
@@ -10,9 +10,9 @@ entry:
 ; SOURCE-SCHED: subl
 ; SOURCE-SCHED: movl
 ; SOURCE-SCHED: sarl
+; SOURCE-SCHED: xorl
 ; SOURCE-SCHED: cmpl
 ; SOURCE-SCHED: setg
-; SOURCE-SCHED: movzbl
 ; SOURCE-SCHED: movb
 ; SOURCE-SCHED: xorl
 ; SOURCE-SCHED: subl

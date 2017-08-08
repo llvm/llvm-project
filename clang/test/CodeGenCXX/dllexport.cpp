@@ -1,5 +1,9 @@
-// RUN: %clang_cc1 -triple i686-windows-msvc   -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O1 -mconstructor-aliases -disable-llvm-optzns -o - %s -w | FileCheck --check-prefix=MSC --check-prefix=M32 %s
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w | FileCheck --check-prefix=MSC --check-prefix=M64 %s
+// RUN: %clang_cc1 -triple i686-windows-msvc   -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O1 -mconstructor-aliases -disable-llvm-passes -o - %s -w -fms-compatibility-version=19.00 | FileCheck --check-prefix=MSC --check-prefix=M32 -check-prefix=MSVC2015 -check-prefix=M32MSVC2015 %s
+// RUN: %clang_cc1 -triple i686-windows-msvc   -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O1 -mconstructor-aliases -disable-llvm-passes -o - %s -w -fms-compatibility-version=18.00 | FileCheck --check-prefix=MSC --check-prefix=M32 -check-prefix=MSVC2013 -check-prefix=M32MSVC2013 %s
+
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w -fms-compatibility-version=19.00 | FileCheck --check-prefix=MSC --check-prefix=M64 -check-prefix=MSVC2015 -check-prefix=M64MSVC2015 %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w -fms-compatibility-version=18.00 | FileCheck --check-prefix=MSC --check-prefix=M64 -check-prefix=MSVC2013 -check-prefix=M64MSVC2013 %s
+
 // RUN: %clang_cc1 -triple i686-windows-gnu    -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w | FileCheck --check-prefix=GNU --check-prefix=G32 %s
 // RUN: %clang_cc1 -triple x86_64-windows-gnu  -emit-llvm -std=c++1y -fno-threadsafe-statics -fms-extensions -O0 -o - %s -w | FileCheck --check-prefix=GNU --check-prefix=G64 %s
 
@@ -104,8 +108,8 @@ inline int __declspec(dllexport) inlineStaticLocalsFunc() {
 template<typename T> __declspec(dllexport) int VarTmplDef;
 INSTVAR(VarTmplDef<ExplicitInst_Exported>)
 
-// MSC-DAG: @"\01??$VarTmplImplicitDef@UImplicitInst_Exported@@@@3HA" = external dllexport global
-// GNU-DAG: @_Z18VarTmplImplicitDefI21ImplicitInst_ExportedE          = external dllexport global
+// MSC-DAG: @"\01??$VarTmplImplicitDef@UImplicitInst_Exported@@@@3HA" = external global
+// GNU-DAG: @_Z18VarTmplImplicitDefI21ImplicitInst_ExportedE          = external global
 template<typename T> __declspec(dllexport) int VarTmplImplicitDef;
 USEVAR(VarTmplImplicitDef<ImplicitInst_Exported>)
 
@@ -484,53 +488,16 @@ struct S {
   };
 };
 
-struct CtorWithClosure {
-  __declspec(dllexport) CtorWithClosure(...) {}
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FCtorWithClosure@@QAEXXZ"({{.*}}) comdat
-// M32-DAG:   %[[this_addr:.*]] = alloca %struct.CtorWithClosure*, align 4
-// M32-DAG:   store %struct.CtorWithClosure* %this, %struct.CtorWithClosure** %[[this_addr]], align 4
-// M32-DAG:   %[[this:.*]] = load %struct.CtorWithClosure*, %struct.CtorWithClosure** %[[this_addr]]
-// M32-DAG:   call %struct.CtorWithClosure* (%struct.CtorWithClosure*, ...) @"\01??0CtorWithClosure@@QAA@ZZ"(%struct.CtorWithClosure* %[[this]])
-// M32-DAG:   ret void
-};
-
-#define DELETE_IMPLICIT_MEMBERS(ClassName) \
-    ClassName(ClassName &&) = delete; \
-    ClassName(ClassName &) = delete; \
-    ~ClassName() = delete; \
-    ClassName &operator=(ClassName &) = delete
-
-struct __declspec(dllexport) ClassWithClosure {
-  DELETE_IMPLICIT_MEMBERS(ClassWithClosure);
-  ClassWithClosure(...) {}
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FClassWithClosure@@QAEXXZ"({{.*}}) comdat
-// M32-DAG:   %[[this_addr:.*]] = alloca %struct.ClassWithClosure*, align 4
-// M32-DAG:   store %struct.ClassWithClosure* %this, %struct.ClassWithClosure** %[[this_addr]], align 4
-// M32-DAG:   %[[this:.*]] = load %struct.ClassWithClosure*, %struct.ClassWithClosure** %[[this_addr]]
-// M32-DAG:   call %struct.ClassWithClosure* (%struct.ClassWithClosure*, ...) @"\01??0ClassWithClosure@@QAA@ZZ"(%struct.ClassWithClosure* %[[this]])
-// M32-DAG:   ret void
-};
-
-struct __declspec(dllexport) NestedOuter {
-  DELETE_IMPLICIT_MEMBERS(NestedOuter);
-  NestedOuter(void *p = 0) {}
-  struct __declspec(dllexport) NestedInner {
-    DELETE_IMPLICIT_MEMBERS(NestedInner);
-    NestedInner(void *p = 0) {}
-  };
-};
-
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FNestedOuter@@QAEXXZ"({{.*}}) comdat
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FNestedInner@NestedOuter@@QAEXXZ"({{.*}}) comdat
-
 template <typename T>
 struct SomeTemplate {
   SomeTemplate(T o = T()) : o(o) {}
   T o;
 };
+// MSVC2015-DAG: define weak_odr dllexport {{.+}} @"\01??4?$SomeTemplate@H@@Q{{.+}}@$$Q{{.+}}@@Z"
+// MSVC2013-DAG: define weak_odr dllexport {{.+}} @"\01??4?$SomeTemplate@H@@Q{{.+}}0@A{{.+}}0@@Z"
 struct __declspec(dllexport) InheritFromTemplate : SomeTemplate<int> {};
 
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_F?$SomeTemplate@H@@QAEXXZ"({{.*}}) comdat
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_F?$SomeTemplate@H@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
 
 namespace PR23801 {
 template <typename>
@@ -547,7 +514,7 @@ struct __declspec(dllexport) B {
 
 }
 //
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FB@PR23801@@QAEXXZ"({{.*}}) comdat
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FB@PR23801@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
 
 struct __declspec(dllexport) T {
   // Copy assignment operator:
@@ -555,13 +522,13 @@ struct __declspec(dllexport) T {
 
   // Explicitly defaulted copy constructur:
   T(const T&) = default;
-  // M32-DAG: define weak_odr dllexport x86_thiscallcc %struct.T* @"\01??0T@@QAE@ABU0@@Z"
+  // M32MSVC2013-DAG: define weak_odr dllexport x86_thiscallcc %struct.T* @"\01??0T@@QAE@ABU0@@Z"
 
   void a() {}
   // M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?a@T@@QAEXXZ"
 
   static int b;
-  // M32-DAG: @"\01?b@T@@2HA" = external dllexport global i32
+  // M32-DAG: @"\01?b@T@@2HA" = external global i32
 
   static int c;
   // M32-DAG: @"\01?c@T@@2HA" = dllexport global i32 0, align 4
@@ -569,6 +536,30 @@ struct __declspec(dllexport) T {
 
 USEVAR(T::b)
 int T::c;
+
+// Export template class with static member variable
+// MSC-DAG: @"\01?StaticClassVarExpTmplClass@?$TmplClass@H@@2HA" = weak_odr dllexport global i32 0, comdat, align 4
+// GNU-DAG: @_ZN9TmplClassIiE26StaticClassVarExpTmplClassE = weak_odr dllexport global i32 0, comdat, align 4
+template<typename T>
+struct __declspec(dllexport) TmplClass
+{
+  static T StaticClassVarExpTmplClass;
+};
+
+template<typename T>
+T TmplClass<T>::StaticClassVarExpTmplClass;
+
+// Export a definition of a template function.
+// MSC-DAG: define weak_odr dllexport i32 @"\01??$TypeFunTmpl@H@@YAHH@Z"
+// GNU-DAG: define weak_odr dllexport i32 @_Z11TypeFunTmplIiET_S0_
+template<typename T>
+T __declspec(dllexport) TypeFunTmpl(T t) { return t + t; }
+
+// Instantiate the exported template class and the exported template function.
+int useExportedTmplStaticAndFun()
+{
+  return TmplClass<int>::StaticClassVarExpTmplClass + TypeFunTmpl<int>(10);
+}
 
 template <typename T> struct __declspec(dllexport) U { void foo() {} };
 struct __declspec(dllexport) V : public U<int> { };
@@ -582,9 +573,9 @@ void W::foo() {}
 // Copy ctor:
 // M32-DAG: define weak_odr dllexport x86_thiscallcc %struct.W* @"\01??0W@@QAE@ABU0@@Z"
 // vftable:
-// M32-DAG: [[W_VTABLE:@.*]] = private unnamed_addr constant [2 x i8*] [i8* bitcast (%rtti.CompleteObjectLocator* @"\01??_R4W@@6B@" to i8*), i8* bitcast (void (%struct.W*)* @"\01?foo@W@@UAEXXZ" to i8*)], comdat($"\01??_7W@@6B@")
-// M32-DAG: @"\01??_7W@@6B@" = dllexport unnamed_addr alias i8*, getelementptr inbounds ([2 x i8*], [2 x i8*]* [[W_VTABLE]], i32 0, i32 1)
-// G32-DAG: @_ZTV1W = dllexport unnamed_addr constant [3 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI1W to i8*), i8* bitcast (void (%struct.W*)* @_ZN1W3fooEv to i8*)]
+// M32-DAG: [[W_VTABLE:@.*]] = private unnamed_addr constant { [2 x i8*] } { [2 x i8*] [i8* bitcast (%rtti.CompleteObjectLocator* @"\01??_R4W@@6B@" to i8*), i8* bitcast (void (%struct.W*)* @"\01?foo@W@@UAEXXZ" to i8*)] }, comdat($"\01??_7W@@6B@")
+// M32-DAG: @"\01??_7W@@6B@" = dllexport unnamed_addr alias i8*, getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* [[W_VTABLE]], i32 0, i32 0, i32 1)
+// G32-DAG: @_ZTV1W = dllexport unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI1W to i8*), i8* bitcast (void (%struct.W*)* @_ZN1W3fooEv to i8*)] }
 
 struct __declspec(dllexport) X : public virtual W {};
 // vbtable:
@@ -592,7 +583,8 @@ struct __declspec(dllexport) X : public virtual W {};
 
 struct __declspec(dllexport) Y {
   // Move assignment operator:
-  // M32-DAG: define weak_odr dllexport x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.Y* @"\01??4Y@@QAEAAU0@$$QAU0@@Z"
+  // MSVC2015-DAG: define weak_odr dllexport {{.+}} @"\01??4Y@@Q{{.+}}@$$Q{{.+}}@@Z"
+  // MSVC2013-DAG: define weak_odr dllexport {{.+}} @"\01??4Y@@Q{{.+}}0@A{{.+}}0@@Z"
 
   int x;
 };
@@ -616,9 +608,34 @@ namespace UseDtorAlias {
 
 struct __declspec(dllexport) DefaultedCtorsDtors {
   DefaultedCtorsDtors() = default;
-  // M32-DAG: define weak_odr dllexport x86_thiscallcc %struct.DefaultedCtorsDtors* @"\01??0DefaultedCtorsDtors@@QAE@XZ"
+  // M32MSVC2013-DAG: define weak_odr dllexport x86_thiscallcc %struct.DefaultedCtorsDtors* @"\01??0DefaultedCtorsDtors@@QAE@XZ"
   ~DefaultedCtorsDtors() = default;
-  // M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??1DefaultedCtorsDtors@@QAE@XZ"
+  // M32MSVC2013-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??1DefaultedCtorsDtors@@QAE@XZ"
+};
+
+// Export defaulted member function definitions declared inside class.
+struct __declspec(dllexport) ExportDefaultedInclassDefs {
+  ExportDefaultedInclassDefs() = default;
+  // M32VS2013-DAG: define weak_odr dllexport x86_thiscallcc %struct.ExportDefaultedInclassDefs* @"\01??0ExportDefaultedInclassDefs@@QAE@XZ"(%struct.ExportDefaultedInclassDefs* returned %this)
+  // M64VS2013-DAG: define weak_odr dllexport                %struct.ExportDefaultedInclassDefs* @"\01??0ExportDefaultedInclassDefs@@QEAA@XZ"(%struct.ExportDefaultedInclassDefs* returned %this)
+  // M32VS2015-NOT: define weak_odr dllexport x86_thiscallcc %struct.ExportDefaultedInclassDefs* @"\01??0ExportDefaultedInclassDefs@@QAE@XZ"(%struct.ExportDefaultedInclassDefs* returned %this)
+  // M64VS2015-NOT: define weak_odr dllexport                %struct.ExportDefaultedInclassDefs* @"\01??0ExportDefaultedInclassDefs@@QEAA@XZ"(%struct.ExportDefaultedInclassDefs* returned %this)
+
+  ~ExportDefaultedInclassDefs() = default;
+  // M32VS2013-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??1ExportDefaultedInclassDefs@@QAE@XZ"(%struct.ExportDefaultedInclassDefs* %this)
+  // M64VS2013-DAG: define weak_odr dllexport                void @"\01??1ExportDefaultedInclassDefs@@QEAA@XZ"(%struct.ExportDefaultedInclassDefs* %this)
+  // M32VS2015-NOT: define weak_odr dllexport x86_thiscallcc void @"\01??1ExportDefaultedInclassDefs@@QAE@XZ"(%struct.ExportDefaultedInclassDefs* %this)
+  // M64VS2015-NOT: define weak_odr dllexport                void @"\01??1ExportDefaultedInclassDefs@@QEAA@XZ"(%struct.ExportDefaultedInclassDefs* %this)
+
+  ExportDefaultedInclassDefs(const ExportDefaultedInclassDefs&) = default;
+  // M32VS2013-DAG: define weak_odr dllexport x86_thiscallcc %struct.ExportDefaultedInclassDefs* @"\01??0ExportDefaultedInclassDefs@@QAE@ABU0@@Z"(%struct.ExportDefaultedInclassDefs* returned %this, %struct.ExportDefaultedInclassDefs* dereferenceable({{[0-9]+}}))
+  // M64VS2013-DAG: define weak_odr dllexport                %struct.ExportDefaultedInclassDefs* @"\01??0ExportDefaultedInclassDefs@@QEAA@AEBU0@@Z"(%struct.ExportDefaultedInclassDefs* returned %this, %struct.ExportDefaultedInclassDefs* dereferenceable({{[0-9]+}}))
+  // M32VS2015-NOT: define weak_odr dllexport x86_thiscallcc %struct.ExportDefaultedInclassDefs* @"\01??0ExportDefaultedInclassDefs@@QAE@ABU0@@Z"(%struct.ExportDefaultedInclassDefs* returned %this, %struct.ExportDefaultedInclassDefs* dereferenceable({{[0-9]+}}))
+  // M64VS2015-NOT: define weak_odr dllexport                %struct.ExportDefaultedInclassDefs* @"\01??0ExportDefaultedInclassDefs@@QEAA@AEBU0@@Z"(%struct.ExportDefaultedInclassDefs* returned %this, %struct.ExportDefaultedInclassDefs* dereferenceable({{[0-9]+}}))
+
+  ExportDefaultedInclassDefs& operator=(const ExportDefaultedInclassDefs&) = default;
+  // M32-DAG: define weak_odr dllexport x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.ExportDefaultedInclassDefs* @"\01??4ExportDefaultedInclassDefs@@QAEAAU0@ABU0@@Z"(%struct.ExportDefaultedInclassDefs* %this, %struct.ExportDefaultedInclassDefs* dereferenceable({{[0-9]+}}))
+  // M64-DAG: define weak_odr dllexport                dereferenceable({{[0-9]+}}) %struct.ExportDefaultedInclassDefs* @"\01??4ExportDefaultedInclassDefs@@QEAAAEAU0@AEBU0@@Z"(%struct.ExportDefaultedInclassDefs* %this, %struct.ExportDefaultedInclassDefs* dereferenceable({{[0-9]+}}))
 };
 
 namespace ReferencedInlineMethodInNestedClass {
@@ -690,7 +707,7 @@ template <typename T> struct ExplicitInstConstexprMembers {
   // M32-DAG: define weak_odr dllexport x86_thiscallcc %struct.ExplicitInstConstexprMembers* @"\01??0?$ExplicitInstConstexprMembers@X@@QAE@XZ"
 
   ExplicitInstConstexprMembers(const ExplicitInstConstexprMembers&) = default;
-  // M32-DAG: define weak_odr dllexport x86_thiscallcc %struct.ExplicitInstConstexprMembers* @"\01??0?$ExplicitInstConstexprMembers@X@@QAE@ABU0@@Z"
+  // M32MSVC2013-DAG: define weak_odr dllexport x86_thiscallcc %struct.ExplicitInstConstexprMembers* @"\01??0?$ExplicitInstConstexprMembers@X@@QAE@ABU0@@Z"
 
   constexpr int f() const { return 42; }
   // M32-DAG: define weak_odr dllexport x86_thiscallcc i32 @"\01?f@?$ExplicitInstConstexprMembers@X@@QBEHXZ"
@@ -714,6 +731,27 @@ USEMEMFUNC(ExplicitInstantiationDeclExportedDefTemplate<int>, f);
 // M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?f@?$ExplicitInstantiationDeclExportedDefTemplate@H@@QAEXXZ"
 // M32-DAG: define weak_odr dllexport x86_thiscallcc %struct.ExplicitInstantiationDeclExportedDefTemplate* @"\01??0?$ExplicitInstantiationDeclExportedDefTemplate@H@@QAE@XZ"
 // G32-DAG: define weak_odr x86_thiscallcc void @_ZN44ExplicitInstantiationDeclExportedDefTemplateIiE1fEv
+
+template <typename T> struct ImplicitInstantiationExportedExplicitInstantiationDefTemplate { virtual void f() {} };
+ImplicitInstantiationExportedExplicitInstantiationDefTemplate<int> ImplicitInstantiationExportedExplicitInstantiationDefTemplateInstance;
+template struct __declspec(dllexport) ImplicitInstantiationExportedExplicitInstantiationDefTemplate<int>;
+USEMEMFUNC(ImplicitInstantiationExportedExplicitInstantiationDefTemplate<int>, f);
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?f@?$ImplicitInstantiationExportedExplicitInstantiationDefTemplate@H@@UAEXXZ"
+// G32-DAG: define weak_odr x86_thiscallcc void @_ZN61ImplicitInstantiationExportedExplicitInstantiationDefTemplateIiE1fEv
+
+template <typename T> struct __declspec(dllexport) ImplicitInstantiationExplicitInstantiationDefExportedTemplate { virtual void f() {} };
+ImplicitInstantiationExplicitInstantiationDefExportedTemplate<int> ImplicitInstantiationExplicitInstantiationDefExportedTemplateInstance;
+template struct ImplicitInstantiationExplicitInstantiationDefExportedTemplate<int>;
+USEMEMFUNC(ImplicitInstantiationExplicitInstantiationDefExportedTemplate<int>, f);
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?f@?$ImplicitInstantiationExplicitInstantiationDefExportedTemplate@H@@UAEXXZ"
+// G32-DAG: define weak_odr x86_thiscallcc void @_ZN61ImplicitInstantiationExplicitInstantiationDefExportedTemplateIiE1fEv
+
+template <typename T> struct __declspec(dllexport) ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplate { virtual void f() {} };
+ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplate<int> ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplateInstance;
+template struct __declspec(dllexport) ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplate<int>;
+USEMEMFUNC(ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplate<int>, f);
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?f@?$ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplate@H@@UAEXXZ"
+// G32-DAG: define weak_odr x86_thiscallcc void @_ZN69ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplateIiE1fEv
 
 namespace { struct InternalLinkageType {}; }
 struct __declspec(dllexport) PR23308 {
@@ -776,6 +814,22 @@ struct __declspec(dllexport) Baz {
 // ActOnFinishCXXNonNestedClass is called, and we would bite our own tail.
 // M32-DAG: define weak_odr dllexport x86_thiscallcc dereferenceable(1) %"struct.InClassInits::Baz"* @"\01??4Baz@InClassInits@@QAEAAU01@ABU01@@Z"
 }
+
+// We had an issue where instantiating A would force emission of B's delayed
+// exported methods.
+namespace pr26490 {
+template <typename T> struct A { };
+struct __declspec(dllexport) B {
+  B(int = 0) {}
+  A<int> m_fn1() {}
+};
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FB@pr26490@@QAEXXZ"
+}
+
+// dllexport trumps dllexport on an explicit instantiation.
+template <typename T> struct ExplicitInstantiationTwoAttributes { void f() {} };
+template struct __declspec(dllexport) __declspec(dllimport) ExplicitInstantiationTwoAttributes<int>;
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?f@?$ExplicitInstantiationTwoAttributes@H@@QAEXXZ"
 
 
 //===----------------------------------------------------------------------===//
@@ -891,10 +945,26 @@ template struct ExplicitInstantiationDeclTemplateBase<int>;
 // M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?func@?$ExplicitInstantiationDeclTemplateBase@H@@QAEXXZ"
 // G32-DAG: define weak_odr x86_thiscallcc void @_ZN37ExplicitInstantiationDeclTemplateBaseIiE4funcEv
 
-template <typename T> struct ExplicitInstantiationDeclTemplateBase2 { void func() {} };
-extern template struct ExplicitInstantiationDeclTemplateBase2<int>;
-struct __declspec(dllexport) DerivedFromExplicitInstantiationDeclTemplateBase2 : public ExplicitInstantiationDeclTemplateBase2<int> {};
-template struct __declspec(dllimport) ExplicitInstantiationDeclTemplateBase2<int>;
-USEMEMFUNC(ExplicitInstantiationDeclTemplateBase2<int>, func)
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?func@?$ExplicitInstantiationDeclTemplateBase2@H@@QAEXXZ"
-// G32-DAG: define weak_odr x86_thiscallcc void @_ZN38ExplicitInstantiationDeclTemplateBase2IiE4funcEv
+// PR26076
+struct LayerSelectionBound;
+template <typename> struct Selection {};
+typedef Selection<LayerSelectionBound> LayerSelection;
+struct LayerImpl;
+struct __declspec(dllexport) LayerTreeImpl {
+  struct __declspec(dllexport) ElementLayers {
+    LayerImpl *main = nullptr;
+  };
+  LayerSelection foo;
+};
+// M32-DAG: define weak_odr dllexport x86_thiscallcc %"struct.LayerTreeImpl::ElementLayers"* @"\01??0ElementLayers@LayerTreeImpl@@QAE@XZ"
+// M64-DAG: define weak_odr dllexport %"struct.LayerTreeImpl::ElementLayers"* @"\01??0ElementLayers@LayerTreeImpl@@QEAA@XZ"
+
+class __declspec(dllexport) ACE_Shared_Object {
+public:
+  virtual ~ACE_Shared_Object();
+};
+class __declspec(dllexport) ACE_Service_Object : public ACE_Shared_Object {};
+// Implicit move constructor declaration.
+// MSVC2015-DAG: define weak_odr dllexport {{.+}}ACE_Service_Object@@Q{{.+}}@$$Q
+// The declarations should not be exported.
+// MSVC2013-NOT: define weak_odr dllexport {{.+}}ACE_Service_Object@@Q{{.+}}@$$Q

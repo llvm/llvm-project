@@ -90,10 +90,12 @@ constexpr wchar_t wc = get(L"test\0\\\"\t\a\b\234\u1234\xffffffff"); // \
 
 constexpr char32_t c32_err = get(U"\U00110000"); // expected-error {{invalid universal character}}
 
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+
 typedef decltype(sizeof(int)) LabelDiffTy;
 constexpr LabelDiffTy mulBy3(LabelDiffTy x) { return x * 3; } // expected-note {{subexpression}}
 void LabelDiffTest() {
-  static_assert(mulBy3((LabelDiffTy)&&a-(LabelDiffTy)&&b) == 3, ""); // expected-error {{constant expression}} expected-note {{call to 'mulBy3(&&a - &&b)'}}
+  static_assert(mulBy3(fold((LabelDiffTy)&&a-(LabelDiffTy)&&b)) == 3, ""); // expected-error {{constant expression}} expected-note {{call to 'mulBy3(&&a - &&b)'}}
   a:b:return;
 }
 

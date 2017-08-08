@@ -19,17 +19,18 @@
 
 #include "llvm-c/Disassembler.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
+#include <utility>
 
 namespace llvm {
-class MCContext;
-class MCAsmInfo;
-class MCDisassembler;
-class MCInstPrinter; 
-class MCInstrInfo;
-class MCRegisterInfo;
-class MCSubtargetInfo;
 class Target;
 
 //
@@ -86,15 +87,12 @@ public:
                     LLVMOpInfoCallback getOpInfo,
                     LLVMSymbolLookupCallback symbolLookUp,
                     const Target *theTarget, const MCAsmInfo *mAI,
-                    const MCRegisterInfo *mRI,
-                    const MCSubtargetInfo *mSI,
-                    const MCInstrInfo *mII,
-                    llvm::MCContext *ctx, const MCDisassembler *disAsm,
-                    MCInstPrinter *iP) : TripleName(tripleName),
-                    DisInfo(disInfo), TagType(tagType), GetOpInfo(getOpInfo),
-                    SymbolLookUp(symbolLookUp), TheTarget(theTarget),
-                    Options(0),
-                    CommentStream(CommentsToEmit) {
+                    const MCRegisterInfo *mRI, const MCSubtargetInfo *mSI,
+                    const MCInstrInfo *mII, llvm::MCContext *ctx,
+                    const MCDisassembler *disAsm, MCInstPrinter *iP)
+      : TripleName(std::move(tripleName)), DisInfo(disInfo), TagType(tagType),
+        GetOpInfo(getOpInfo), SymbolLookUp(symbolLookUp), TheTarget(theTarget),
+        Options(0), CommentStream(CommentsToEmit) {
     MAI.reset(mAI);
     MRI.reset(mRI);
     MSI.reset(mSI);

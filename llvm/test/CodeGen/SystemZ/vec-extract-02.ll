@@ -6,7 +6,7 @@
 ; The index must be extended from i32 to i64.
 define i32 @f1(<4 x i32> *%ptr, i32 %index) {
 ; CHECK-LABEL: f1:
-; CHECK: risbg {{%r[0-5]}}, %r3, 30, 189, 2
+; CHECK: risbgn {{%r[0-5]}}, %r3, 30, 189, 2
 ; CHECK: l %r2,
 ; CHECK: br %r14
   %vec = load <4 x i32>, <4 x i32> *%ptr

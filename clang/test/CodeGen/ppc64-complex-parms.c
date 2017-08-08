@@ -93,7 +93,7 @@ void bar_long_double(void) {
 // CHECK: %[[VAR22:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %[[VAR21]], i32 0, i32 0
 // CHECK: %[[VAR23:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %[[VAR21]], i32 0, i32 1
 // CHECK: store ppc_fp128 0xM40000000000000000000000000000000, ppc_fp128* %[[VAR22]]
-// CHECK: store ppc_fp128 0xMC0040000000000000000000000000000, ppc_fp128* %[[VAR23]]
+// CHECK: store ppc_fp128 0xMC0040000000000008000000000000000, ppc_fp128* %[[VAR23]]
 // CHECK: %[[VAR24:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %[[VAR21]], i32 0, i32 0
 // CHECK: %[[VAR25:[A-Za-z0-9.]+]] = load ppc_fp128, ppc_fp128* %[[VAR24]], align 16
 // CHECK: %[[VAR26:[A-Za-z0-9.]+]] = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %[[VAR21]], i32 0, i32 1
@@ -180,4 +180,4 @@ void bar_long_long(void) {
 // CHECK: %[[VAR77:[A-Za-z0-9.]+]] = load i64, i64* %[[VAR76]], align 8
 // CHECK: %{{[A-Za-z0-9.]+}} = call i64 @foo_long_long(i64 %[[VAR75]], i64 %[[VAR77]])
 
-// CHECK: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }

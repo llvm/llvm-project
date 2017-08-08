@@ -27,18 +27,6 @@ define i39 @test2(i39 %V, i39 %M) {
 ; CHECK-NEXT: ret i39 %A
 }
 
-define i43 @test3(i43 %A, i43 %B) {
-    ;; (~A | ~B) == (~(A & B)) - De Morgan's Law
-    %NotA = xor i43 %A, -1
-    %NotB = xor i43 %B, -1
-    %C1 = or i43 %NotA, %NotB
-    ret i43 %C1
-; CHECK-LABEL: @test3
-; CHECK-NEXT: %C1.demorgan = and i43 %A, %B
-; CHECK-NEXT: %C1 = xor i43 %C1.demorgan, -1
-; CHECK-NEXT: ret i43 %C1
-}
-
 ; These tests are for Integer BitWidth > 64 && BitWidth <= 1024.
 define i1023 @test4(i1023 %A) {
     ;; A | ~A == -1
@@ -66,14 +54,3 @@ define i399 @test5(i399 %V, i399 %M) {
 ; CHECK-NEXT: ret i399 %A
 }
 
-define i129 @test6(i129 %A, i129 %B) {
-    ;; (~A | ~B) == (~(A & B)) - De Morgan's Law
-    %NotA = xor i129 %A, -1
-    %NotB = xor i129 %B, -1
-    %C1 = or i129 %NotA, %NotB
-    ret i129 %C1
-; CHECK-LABEL: @test6
-; CHECK-NEXT: %C1.demorgan = and i129 %A, %B
-; CHECK-NEXT: %C1 = xor i129 %C1.demorgan, -1
-; CHECK-NEXT: ret i129 %C1
-}

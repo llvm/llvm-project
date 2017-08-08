@@ -20,7 +20,7 @@ a:
         addu    $9,10            # CHECK: addiu $9, $9, 10    # encoding: [0x25,0x29,0x00,0x0a]
         align   $4, $2, $3, 2    # CHECK: align $4, $2, $3, 2 # encoding: [0x7c,0x43,0x22,0xa0]
         aluipc  $3, 56           # CHECK: aluipc $3, 56       # encoding: [0xec,0x7f,0x00,0x38]
-        aui     $3,$2,-23        # CHECK: aui $3, $2, -23     # encoding: [0x3c,0x62,0xff,0xe9]
+        aui     $3, $2, 23       # CHECK: aui $3, $2, 23      # encoding: [0x3c,0x43,0x00,0x17]
         auipc   $3, -1           # CHECK: auipc $3, -1        # encoding: [0xec,0x7e,0xff,0xff]
         bal     21100            # CHECK: bal 21100           # encoding: [0x04,0x11,0x14,0x9b]
         balc 14572256            # CHECK: balc 14572256       # encoding: [0xe8,0x37,0x96,0xb8]
@@ -33,13 +33,13 @@ a:
         bc2eqz  $31,8            # CHECK: bc2eqz $31, 8       # encoding: [0x49,0x3f,0x00,0x02]
         bc2nez  $0,8             # CHECK: bc2nez $0, 8        # encoding: [0x49,0xa0,0x00,0x02]
         bc2nez  $31,8            # CHECK: bc2nez $31, 8       # encoding: [0x49,0xbf,0x00,0x02]
-        # beqc requires rs < rt && rs != 0 but we also accept when this is not true. See also bovc
-        # FIXME: Testcases are in valid-xfail.s at the moment
-        beqc $5, $6, 256         # CHECK: beqc $5, $6, 256    # encoding: [0x20,0xa6,0x00,0x40]
+        # beqc requires rs < rt && rs != 0 but we accept this and fix it. See also bovc.
+        beqc    $5, $6, 256      # CHECK: beqc $5, $6, 256    # encoding: [0x20,0xa6,0x00,0x40]
+        beqc    $6, $5, 256      # CHECK: beqc $6, $5, 256    # encoding: [0x20,0xa6,0x00,0x40]
         beqzalc $2, 1332         # CHECK: beqzalc $2, 1332    # encoding: [0x20,0x02,0x01,0x4d]
-        # bnec requires rs < rt && rs != 0 but we accept when this is not true. See also bnvc
-        # FIXME: Testcases are in valid-xfail.s at the moment
+        # bnec requires rs < rt && rs != 0 but we accept this and fix it. See also bnvc.
         bnec $5, $6, 256         # CHECK: bnec $5, $6, 256    # encoding: [0x60,0xa6,0x00,0x40]
+        bnec $6, $5, 256         # CHECK: bnec $6, $5, 256    # encoding: [0x60,0xa6,0x00,0x40]
         bnezalc $2, 1332         # CHECK: bnezalc $2, 1332    # encoding: [0x60,0x02,0x01,0x4d]
         beqzc $5, 72256          # CHECK: beqzc $5, 72256     # encoding: [0xd8,0xa0,0x46,0x90]
         bgec $2, $3, 256         # CHECK: bgec $2, $3, 256    # encoding: [0x58,0x43,0x00,0x40]
@@ -56,14 +56,14 @@ a:
         blezalc $2, 1332         # CHECK: blezalc $2, 1332    # encoding: [0x18,0x02,0x01,0x4d]
         bltc $5, $6, 256         # CHECK: bltc $5, $6, 256    # encoding: [0x5c,0xa6,0x00,0x40]
         bltuc $5, $6, 256        # CHECK: bltuc $5, $6, 256   # encoding: [0x1c,0xa6,0x00,0x40]
-        # bnvc requires that rs >= rt but we accept both. See also bnec
+        # bnvc requires that rs >= rt but we accept both and fix this. See also bnec.
         bnvc     $0, $0, 4       # CHECK: bnvc $zero, $zero, 4 # encoding: [0x60,0x00,0x00,0x01]
         bnvc     $2, $0, 4       # CHECK: bnvc $2, $zero, 4    # encoding: [0x60,0x40,0x00,0x01]
-        bnvc     $4, $2, 4       # CHECK: bnvc $4, $2, 4       # encoding: [0x60,0x82,0x00,0x01]
-        # bovc requires that rs >= rt but we accept both. See also beqc
+        bnvc     $2, $4, 4       # CHECK: bnvc $2, $4, 4      # encoding: [0x60,0x82,0x00,0x01]
+        # bovc requires that rs >= rt but we accept both and fix this. See also beqc.
         bovc     $0, $0, 4       # CHECK: bovc $zero, $zero, 4 # encoding: [0x20,0x00,0x00,0x01]
         bovc     $2, $0, 4       # CHECK: bovc $2, $zero, 4    # encoding: [0x20,0x40,0x00,0x01]
-        bovc     $4, $2, 4       # CHECK: bovc $4, $2, 4       # encoding: [0x20,0x82,0x00,0x01]
+        bovc     $2, $4, 4       # CHECK: bovc $2, $4, 4      # encoding: [0x20,0x82,0x00,0x01]
         cache      1, 8($5)         # CHECK: cache 1, 8($5)          # encoding: [0x7c,0xa1,0x04,0x25]
         cmp.af.s   $f2,$f3,$f4      # CHECK: cmp.af.s $f2, $f3, $f4  # encoding: [0x46,0x84,0x18,0x80]
         cmp.af.d   $f2,$f3,$f4      # CHECK: cmp.af.d $f2, $f3, $f4  # encoding: [0x46,0xa4,0x18,0x80]
@@ -101,12 +101,18 @@ a:
         di                       # CHECK: di               # encoding: [0x41,0x60,0x60,0x00]
         div     $2,$3,$4         # CHECK: div $2, $3, $4   # encoding: [0x00,0x64,0x10,0x9a]
         divu    $2,$3,$4         # CHECK: divu $2, $3, $4  # encoding: [0x00,0x64,0x10,0x9b]
+        dvp     $4               # CHECK: dvp $4           # encoding: [0x41,0x64,0x00,0x24]
+        dvp                      # CHECK: dvp $zero        # encoding: [0x41,0x60,0x00,0x24]
         ei      $14              # CHECK: ei  $14          # encoding: [0x41,0x6e,0x60,0x20]
         ei                       # CHECK: ei               # encoding: [0x41,0x60,0x60,0x20]
         eret
         eretnc                   # CHECK: eretnc           # encoding: [0x42,0x00,0x00,0x58]
+        evp     $5               # CHECK: evp $5           # encoding: [0x41,0x65,0x00,0x04]
+        evp                      # CHECK: evp $zero        # encoding: [0x41,0x60,0x00,0x04]
         jialc   $5, 256          # CHECK: jialc $5, 256    # encoding: [0xf8,0x05,0x01,0x00]
         jic     $5, 256          # CHECK: jic $5, 256      # encoding: [0xd8,0x05,0x01,0x00]
+        l.s     $f2, 8($3)       # CHECK: lwc1 $f2, 8($3)  # encoding: [0xc4,0x62,0x00,0x08]
+        l.d     $f2, 8($3)       # CHECK: ldc1 $f2, 8($3)  # encoding: [0xd4,0x62,0x00,0x08]
         lsa     $2, $3, $4, 3    # CHECK: lsa  $2, $3, $4, 3 # encoding: [0x00,0x64,0x10,0x85]
         lwpc    $2,268           # CHECK: lwpc $2, 268     # encoding: [0xec,0x48,0x00,0x43]
         lwupc   $2,268           # CHECK: lwupc $2, 268    # encoding: [0xec,0x50,0x00,0x43]
@@ -126,6 +132,12 @@ a:
         maddf.d $f2,$f3,$f4      # CHECK: maddf.d $f2, $f3, $f4  # encoding: [0x46,0x24,0x18,0x98]
         msubf.s $f2,$f3,$f4      # CHECK: msubf.s $f2, $f3, $f4  # encoding: [0x46,0x04,0x18,0x99]
         msubf.d $f2,$f3,$f4      # CHECK: msubf.d $f2, $f3, $f4  # encoding: [0x46,0x24,0x18,0x99]
+        neg       $2             # CHECK: neg  $2, $2            # encoding: [0x00,0x02,0x10,0x22]
+        neg       $2, $3         # CHECK: neg  $2, $3            # encoding: [0x00,0x03,0x10,0x22]
+        negu      $2             # CHECK: negu $2, $2            # encoding: [0x00,0x02,0x10,0x23]
+        negu      $2,$3          # CHECK: negu $2, $3            # encoding: [0x00,0x03,0x10,0x23]
+        not       $3, $4         # CHECK: not $3, $4             # encoding: [0x00,0x80,0x18,0x27]
+        not       $3             # CHECK: not $3, $3             # encoding: [0x00,0x60,0x18,0x27]
         pref    1, 8($5)         # CHECK: pref 1, 8($5)          # encoding: [0x7c,0xa1,0x04,0x35]
         # FIXME: Use the code generator in order to print the .set directives
         #        instead of the instruction printer.
@@ -133,6 +145,10 @@ a:
                                  # CHECK-NEXT: .set  mips32r2
                                  # CHECK-NEXT: rdhwr $sp, $11
                                  # CHECK-NEXT: .set  pop      # encoding: [0x7c,0x1d,0x58,0x3b]
+        recip.d $f19,$f6         # CHECK: recip.d $f19, $f6   # encoding: [0x46,0x20,0x34,0xd5]
+        recip.s $f3,$f30         # CHECK: recip.s $f3, $f30   # encoding: [0x46,0x00,0xf0,0xd5]
+        s.s    $f2, 8($3)        # CHECK: swc1 $f2, 8($3)     # encoding: [0xe4,0x62,0x00,0x08]
+        s.d    $f2, 8($3)        # CHECK: sdc1 $f2, 8($3)     # encoding: [0xf4,0x62,0x00,0x08]
         sel.d   $f0,$f1,$f2      # CHECK: sel.d $f0, $f1, $f2 # encoding: [0x46,0x22,0x08,0x10]
         sel.s   $f0,$f1,$f2      # CHECK: sel.s $f0, $f1, $f2 # encoding: [0x46,0x02,0x08,0x10]
         seleqz  $2,$3,$4         # CHECK: seleqz $2, $3, $4 # encoding: [0x00,0x64,0x10,0x35]
@@ -159,9 +175,16 @@ a:
         j       a                # CHECK: j a                    # encoding: [0b000010AA,A,A,A]
                                  # CHECK:                        #   fixup A - offset: 0, value: a, kind: fixup_Mips_26
         j       1328             # CHECK: j 1328                 # encoding: [0x08,0x00,0x01,0x4c]
+        jal       21100                # CHECK: jal 21100     # encoding: [0x0c,0x00,0x14,0x9b]
         jr.hb   $4               # CHECK: jr.hb $4               # encoding: [0x00,0x80,0x04,0x09]
+        jr      $ra              # CHECK: jr $ra                 # encoding: [0x03,0xe0,0x00,0x09]
+        jr      $25              # CHECK: jr $25                 # encoding: [0x03,0x20,0x00,0x09]
+        jrc     $27              # CHECK: jrc $27                # encoding: [0xd8,0x1b,0x00,0x00]
         jalr.hb $4               # CHECK: jalr.hb $4             # encoding: [0x00,0x80,0xfc,0x09]
         jalr.hb $4, $5           # CHECK: jalr.hb $4, $5         # encoding: [0x00,0xa0,0x24,0x09]
+        jalrc   $25              # CHECK: jalrc $25              # encoding: [0xf8,0x19,0x00,0x00]
+        jialc   $15, 16161       # CHECK: jialc $15, 16161       # encoding: [0xf8,0x0f,0x3f,0x21]
+        jic     $12, -3920       # CHECK: jic $12, -3920         # encoding: [0xd8,0x0c,0xf0,0xb0]
         ldc2    $8, -701($at)    # CHECK: ldc2 $8, -701($1)      # encoding: [0x49,0xc8,0x0d,0x43]
         lwc2    $18,-841($a2)    # CHECK: lwc2 $18, -841($6)     # encoding: [0x49,0x52,0x34,0xb7]
         sdc2    $20,629($s2)     # CHECK: sdc2 $20, 629($18)     # encoding: [0x49,0xf4,0x92,0x75]
@@ -170,12 +193,27 @@ a:
         sc      $15,-40($s3)     # CHECK: sc $15, -40($19)       # encoding: [0x7e,0x6f,0xec,0x26]
         clo     $11,$a1          # CHECK: clo $11, $5            # encoding: [0x00,0xa0,0x58,0x51]
         clz     $sp,$gp          # CHECK: clz $sp, $gp           # encoding: [0x03,0x80,0xe8,0x50]
+        rsqrt.s $f0,$f4          # CHECK: rsqrt.s $f0, $f4       # encoding: [0x46,0x00,0x20,0x16]
+        rsqrt.d $f2,$f6          # CHECK: rsqrt.d $f2, $f6       # encoding: [0x46,0x20,0x30,0x96]
+        seb       $25, $15       # CHECK: seb $25, $15           # encoding: [0x7c,0x0f,0xcc,0x20]
+        seb       $25            # CHECK: seb $25, $25           # encoding: [0x7c,0x19,0xcc,0x20]
+        seh       $3, $12        # CHECK: seh $3, $12            # encoding: [0x7c,0x0c,0x1e,0x20]
+        seh       $3             # CHECK: seh $3, $3             # encoding: [0x7c,0x03,0x1e,0x20]
+        sgt     $4, $5           # CHECK: slt $4, $5, $4         # encoding: [0x00,0xa4,0x20,0x2a]
+        sgt     $4, $5, $6       # CHECK: slt $4, $6, $5         # encoding: [0x00,0xc5,0x20,0x2a]
+        sgtu    $4, $5           # CHECK: sltu $4, $5, $4        # encoding: [0x00,0xa4,0x20,0x2b]
+        sgtu    $4, $5, $6       # CHECK: sltu $4, $6, $5        # encoding: [0x00,0xc5,0x20,0x2b]
+        sll     $4, $5           # CHECK: sllv $4, $4, $5        # encoding: [0x00,0xa4,0x20,0x04]
+        sra     $4, $5           # CHECK: srav $4, $4, $5        # encoding: [0x00,0xa4,0x20,0x07]
+        srl     $4, $5           # CHECK: srlv $4, $4, $5        # encoding: [0x00,0xa4,0x20,0x06]
         ssnop                    # WARNING: [[@LINE]]:9: warning: ssnop is deprecated for MIPS32r6 and is equivalent to a nop instruction
         ssnop                    # CHECK: ssnop                  # encoding: [0x00,0x00,0x00,0x40]
         sdbbp                    # CHECK: sdbbp                  # encoding: [0x00,0x00,0x00,0x0e]
         sdbbp     34             # CHECK: sdbbp 34               # encoding: [0x00,0x00,0x08,0x8e]
         sync                     # CHECK: sync                   # encoding: [0x00,0x00,0x00,0x0f]
         sync    1                # CHECK: sync 1                 # encoding: [0x00,0x00,0x00,0x4f]
+        syscall                  # CHECK: syscall                # encoding: [0x00,0x00,0x00,0x0c]
+        syscall   256            # CHECK: syscall 256            # encoding: [0x00,0x00,0x40,0x0c]
         teq     $0,$3            # CHECK: teq $zero, $3          # encoding: [0x00,0x03,0x00,0x34]
         teq     $5,$7,620        # CHECK: teq $5, $7, 620        # encoding: [0x00,0xa7,0x9b,0x34]
         tge     $7,$10           # CHECK: tge $7, $10            # encoding: [0x00,0xea,0x00,0x30]
@@ -191,3 +229,22 @@ a:
         xor     $2, 4            # CHECK: xori $2, $2, 4         # encoding: [0x38,0x42,0x00,0x04]
 
 1:
+
+        # Check that we accept traditional %relocation(symbol) offsets for stores
+        # and loads, not just a sign 16 bit offset.
+
+        lui     $2, %hi(g_8)            # CHECK:  encoding: [0x3c,0x02,A,A]
+        lb      $3, %lo(g_8)($2)        # CHECK:  encoding: [0x80,0x43,A,A]
+        lh      $3, %lo(g_8)($2)        # CHECK:  encoding: [0x84,0x43,A,A]
+        lhu     $3, %lo(g_8)($2)        # CHECK:  encoding: [0x94,0x43,A,A]
+        lw      $3, %lo(g_8)($2)        # CHECK:  encoding: [0x8c,0x43,A,A]
+        sb      $3, %lo(g_8)($2)        # CHECK:  encoding: [0xa0,0x43,A,A]
+        sh      $3, %lo(g_8)($2)        # CHECK:  encoding: [0xa4,0x43,A,A]
+        sw      $3, %lo(g_8)($2)        # CHECK:  encoding: [0xac,0x43,A,A]
+
+        lwc1    $f0, %lo(g_8)($2)       # CHECK:  encoding: [0xc4,0x40,A,A]
+        ldc1    $f0, %lo(g_8)($2)       # CHECK:  encoding: [0xd4,0x40,A,A]
+        swc1    $f0, %lo(g_8)($2)       # CHECK:  encoding: [0xe4,0x40,A,A]
+        sdc1    $f0, %lo(g_8)($2)       # CHECK:  encoding: [0xf4,0x40,A,A]
+        .type   g_8,@object
+        .comm   g_8,16,16

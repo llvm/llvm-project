@@ -7,6 +7,7 @@ declare double @sin(double)
 declare double @cos(double)
 declare double @pow(double, double)
 declare double @exp2(double)
+declare double @sqrt(double)
 declare i64 @round(i64)
 
 
@@ -96,6 +97,28 @@ entry:
 }
 
 
+; CHECK: sqrt_libm
+; CHECK: call nnan <2 x double> @llvm.sqrt.v2f64
+; CHECK: ret void
+define void @sqrt_libm(double* %a, double* %b, double* %c) {
+entry:
+  %i0 = load double, double* %a, align 8
+  %i1 = load double, double* %b, align 8
+  %mul = fmul double %i0, %i1
+  %call = tail call nnan double @sqrt(double %mul) nounwind readnone
+  %arrayidx3 = getelementptr inbounds double, double* %a, i64 1
+  %i3 = load double, double* %arrayidx3, align 8
+  %arrayidx4 = getelementptr inbounds double, double* %b, i64 1
+  %i4 = load double, double* %arrayidx4, align 8
+  %mul5 = fmul double %i3, %i4
+  %call5 = tail call nnan double @sqrt(double %mul5) nounwind readnone
+  store double %call, double* %c, align 8
+  %arrayidx5 = getelementptr inbounds double, double* %c, i64 1
+  store double %call5, double* %arrayidx5, align 8
+  ret void
+}
+
+
 ; Negative test case
 ; CHECK: round_custom
 ; CHECK-NOT: load <4 x i64>
@@ -124,5 +147,5 @@ entry:
 ; CHECK: declare <2 x double> @llvm.pow.v2f64(<2 x double>, <2 x double>) [[ATTR0]]
 ; CHECK: declare <2 x double> @llvm.exp2.v2f64(<2 x double>) [[ATTR0]]
 
-; CHECK: attributes [[ATTR0]] = { nounwind readnone }
+; CHECK: attributes [[ATTR0]] = { nounwind readnone speculatable }
 

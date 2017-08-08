@@ -16,8 +16,8 @@ struct POD {
 void vla(int N) {
   int array1[N]; // expected-warning{{variable length arrays are a C99 feature}}
   POD array2[N]; // expected-warning{{variable length arrays are a C99 feature}}
-  NonPOD array3[N]; // expected-error{{variable length array of non-POD element type 'NonPOD'}}
-  NonPOD2 array4[N][3]; // expected-error{{variable length array of non-POD element type 'NonPOD2'}}
+  NonPOD array3[N]; // expected-warning{{variable length arrays are a C99 feature}}
+  NonPOD2 array4[N][3]; // expected-warning{{variable length arrays are a C99 feature}}
 }
 
 /// Warn about VLAs in templates.

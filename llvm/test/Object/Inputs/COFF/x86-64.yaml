@@ -1,3 +1,4 @@
+!COFF
 header: !Header
   Machine: IMAGE_FILE_MACHINE_AMD64 # (0x8664)
 

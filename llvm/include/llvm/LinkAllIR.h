@@ -16,13 +16,13 @@
 #ifndef LLVM_LINKALLIR_H
 #define LLVM_LINKALLIR_H
 
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Support/Dwarf.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Memory.h"
@@ -31,7 +31,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/TimeValue.h"
 #include <cstdlib>
 
 namespace {
@@ -43,8 +42,9 @@ namespace {
       // to know that getenv() never returns -1, this will do the job.
       if (std::getenv("bar") != (char*) -1)
         return;
-      (void)new llvm::Module("", llvm::getGlobalContext());
-      (void)new llvm::UnreachableInst(llvm::getGlobalContext());
+      llvm::LLVMContext Context;
+      (void)new llvm::Module("", Context);
+      (void)new llvm::UnreachableInst(Context);
       (void)    llvm::createVerifierPass(); 
     }
   } ForceVMCoreLinking;

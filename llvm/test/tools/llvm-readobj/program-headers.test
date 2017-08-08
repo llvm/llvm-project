@@ -7,6 +7,20 @@ RUN:     | FileCheck %s -check-prefix ELF-MIPS
 RUN: llvm-readobj -program-headers %p/../../Object/Inputs/program-headers.mips64 \
 RUN:     | FileCheck %s -check-prefix ELF-MIPS64
 
+## openbsd-phdrs.elf-x86-64 was generated using GNU ld (GNU Binutils for Ubuntu) 2.26.1.
+## llvm-mc -filetype=obj -triple=x86_64-pc-linux test.s -o main.o
+## ld -script linker.script main.o -o openbsd-phdrs.elf-x86-64
+##
+## test.s is an empty file.
+## linker.script:
+## PHDRS { text PT_LOAD FILEHDR PHDRS; foo 0x65a3dbe6; bar 0x65a3dbe7; zed 0x65a41be6; }
+##   Where 0x65a3dbe6 is the value of PT_OPENBSD_RANDOMIZE,
+##         0x65a3dbe7 is the value of PT_OPENBSD_WXNEEDED,
+##         0x65a41be6 is the value of PT_OPENBSD_BOOTDATA
+## SECTIONS { . = SIZEOF_HEADERS; .all : { *(.*) } : text }
+RUN: llvm-readobj -program-headers %p/../../Object/Inputs/openbsd-phdrs.elf-x86-64 \
+RUN:     | FileCheck %s -check-prefix OPENBSD-X86-64
+
 ELF-I386:      ProgramHeaders [
 ELF-I386-NEXT:   ProgramHeader {
 ELF-I386-NEXT:     Type: PT_LOAD (0x1)
@@ -140,3 +154,38 @@ ELF-MIPS64-NEXT:     ]
 ELF-MIPS64-NEXT:     Alignment: 65536
 ELF-MIPS64-NEXT:   }
 ELF-MIPS64-NEXT: ]
+
+OPENBSD-X86-64:      ProgramHeaders [
+OPENBSD-X86-64:        ProgramHeader {
+OPENBSD-X86-64:          Type:  PT_OPENBSD_RANDOMIZE
+OPENBSD-X86-64-NEXT:     Offset:
+OPENBSD-X86-64-NEXT:     VirtualAddress:
+OPENBSD-X86-64-NEXT:     PhysicalAddress:
+OPENBSD-X86-64-NEXT:     FileSize:
+OPENBSD-X86-64-NEXT:     MemSize:
+OPENBSD-X86-64-NEXT:     Flags [
+OPENBSD-X86-64-NEXT:     ]
+OPENBSD-X86-64-NEXT:     Alignment:
+OPENBSD-X86-64-NEXT:   }
+OPENBSD-X86-64-NEXT:   ProgramHeader {
+OPENBSD-X86-64-NEXT:     Type:  PT_OPENBSD_WXNEEDED
+OPENBSD-X86-64-NEXT:     Offset:
+OPENBSD-X86-64-NEXT:     VirtualAddress:
+OPENBSD-X86-64-NEXT:     PhysicalAddress:
+OPENBSD-X86-64-NEXT:     FileSize:
+OPENBSD-X86-64-NEXT:     MemSize:
+OPENBSD-X86-64-NEXT:     Flags [
+OPENBSD-X86-64-NEXT:     ]
+OPENBSD-X86-64-NEXT:     Alignment:
+OPENBSD-X86-64-NEXT:   }
+OPENBSD-X86-64-NEXT:   ProgramHeader {
+OPENBSD-X86-64-NEXT:     Type:  PT_OPENBSD_BOOTDATA
+OPENBSD-X86-64-NEXT:     Offset:
+OPENBSD-X86-64-NEXT:     VirtualAddress:
+OPENBSD-X86-64-NEXT:     PhysicalAddress:
+OPENBSD-X86-64-NEXT:     FileSize:
+OPENBSD-X86-64-NEXT:     MemSize:
+OPENBSD-X86-64-NEXT:     Flags [
+OPENBSD-X86-64-NEXT:     ]
+OPENBSD-X86-64-NEXT:     Alignment:
+OPENBSD-X86-64-NEXT:   }

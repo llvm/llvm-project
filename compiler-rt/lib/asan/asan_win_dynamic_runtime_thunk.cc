@@ -1,4 +1,4 @@
-//===-- asan_win_uar_thunk.cc ---------------------------------------------===//
+//===-- asan_win_dynamic_runtime_thunk.cc ---------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,24 +14,31 @@
 // using the default "import library" generated when linking the DLL RTL.
 //
 // This includes:
+//  - creating weak aliases to default implementation imported from asan dll.
 //  - forwarding the detect_stack_use_after_return runtime option
 //  - working around deficiencies of the MD runtime
-//  - installing a custom SEH handlerx
+//  - installing a custom SEH handler
 //
 //===----------------------------------------------------------------------===//
 
-// Only compile this code when buidling asan_dynamic_runtime_thunk.lib
-// Using #ifdef rather than relying on Makefiles etc.
-// simplifies the build procedure.
-#ifdef ASAN_DYNAMIC_RUNTIME_THUNK
+#ifdef SANITIZER_DYNAMIC_RUNTIME_THUNK
+#define SANITIZER_IMPORT_INTERFACE 1
+#include "sanitizer_common/sanitizer_win_defs.h"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+// Define weak alias for all weak functions imported from asan dll.
+#define INTERFACE_FUNCTION(Name)
+#define INTERFACE_WEAK_FUNCTION(Name) WIN_WEAK_IMPORT_DEF(Name)
+#include "asan_interface.inc"
+
 // First, declare CRT sections we'll be using in this file
+#pragma section(".CRT$XIB", long, read)  // NOLINT
 #pragma section(".CRT$XID", long, read)  // NOLINT
-#pragma section(".CRT$XIZ", long, read)  // NOLINT
+#pragma section(".CRT$XCAB", long, read)  // NOLINT
 #pragma section(".CRT$XTW", long, read)  // NOLINT
 #pragma section(".CRT$XTY", long, read)  // NOLINT
+#pragma section(".CRT$XLAB", long, read)  // NOLINT
 
 ////////////////////////////////////////////////////////////////////////////////
 // Define a copy of __asan_option_detect_stack_use_after_return that should be
@@ -42,13 +49,36 @@
 // attribute adds __imp_ prefix to the symbol name of a variable.
 // Since in general we don't know if a given TU is going to be used
 // with a MT or MD runtime and we don't want to use ugly __imp_ names on Windows
-// just to work around this issue, let's clone the a variable that is
-// constant after initialization anyways.
+// just to work around this issue, let's clone the variable that is constant
+// after initialization anyways.
 extern "C" {
 __declspec(dllimport) int __asan_should_detect_stack_use_after_return();
-int __asan_option_detect_stack_use_after_return =
-    __asan_should_detect_stack_use_after_return();
+int __asan_option_detect_stack_use_after_return;
+
+__declspec(dllimport) void* __asan_get_shadow_memory_dynamic_address();
+void* __asan_shadow_memory_dynamic_address;
 }
+
+static int InitializeClonedVariables() {
+  __asan_option_detect_stack_use_after_return =
+    __asan_should_detect_stack_use_after_return();
+  __asan_shadow_memory_dynamic_address =
+    __asan_get_shadow_memory_dynamic_address();
+  return 0;
+}
+
+static void NTAPI asan_thread_init(void *mod, unsigned long reason,
+    void *reserved) {
+  if (reason == DLL_PROCESS_ATTACH) InitializeClonedVariables();
+}
+
+// Our cloned variables must be initialized before C/C++ constructors.  If TLS
+// is used, our .CRT$XLAB initializer will run first. If not, our .CRT$XIB
+// initializer is needed as a backup.
+__declspec(allocate(".CRT$XIB")) int (*__asan_initialize_cloned_variables)() =
+    InitializeClonedVariables;
+__declspec(allocate(".CRT$XLAB")) void (NTAPI *__asan_tls_init)(void *,
+    unsigned long, void *) = asan_thread_init;
 
 ////////////////////////////////////////////////////////////////////////////////
 // For some reason, the MD CRT doesn't call the C/C++ terminators during on DLL
@@ -59,6 +89,7 @@ int __asan_option_detect_stack_use_after_return =
 // using atexit() that calls a small subset of C terminators
 // where LLVM global_dtors is placed.  Fingers crossed, no other C terminators
 // are there.
+extern "C" int __cdecl atexit(void (__cdecl *f)(void));
 extern "C" void __cdecl _initterm(void *a, void *b);
 
 namespace {
@@ -72,6 +103,7 @@ void UnregisterGlobals() {
 int ScheduleUnregisterGlobals() {
   return atexit(UnregisterGlobals);
 }
+}  // namespace
 
 // We need to call 'atexit(UnregisterGlobals);' as early as possible, but after
 // atexit() is initialized (.CRT$XIC).  As this is executed before C++
@@ -79,8 +111,6 @@ int ScheduleUnregisterGlobals() {
 // dtors for C++ globals.
 __declspec(allocate(".CRT$XID"))
 int (*__asan_schedule_unregister_globals)() = ScheduleUnregisterGlobals;
-
-}  // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // ASan SEH handling.
@@ -92,7 +122,10 @@ static int SetSEHFilter() { return __asan_set_seh_filter(); }
 
 // Unfortunately, putting a pointer to __asan_set_seh_filter into
 // __asan_intercept_seh gets optimized out, so we have to use an extra function.
-__declspec(allocate(".CRT$XIZ")) int (*__asan_seh_interceptor)() = SetSEHFilter;
+__declspec(allocate(".CRT$XCAB")) int (*__asan_seh_interceptor)() =
+    SetSEHFilter;
 }
 
-#endif // ASAN_DYNAMIC_RUNTIME_THUNK
+WIN_FORCE_LINK(__asan_dso_reg_hook)
+
+#endif // SANITIZER_DYNAMIC_RUNTIME_THUNK

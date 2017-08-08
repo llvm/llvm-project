@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_MCTARGETDESC_AMDGPUMCCODEEMITTER_H
-#define LLVM_LIB_TARGET_R600_MCTARGETDESC_AMDGPUMCCODEEMITTER_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCCODEEMITTER_H
+#define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCCODEEMITTER_H
 
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -21,11 +21,19 @@
 namespace llvm {
 
 class MCInst;
+class MCInstrInfo;
 class MCOperand;
 class MCSubtargetInfo;
+class FeatureBitset;
 
 class AMDGPUMCCodeEmitter : public MCCodeEmitter {
   virtual void anchor();
+
+protected:
+  const MCInstrInfo &MCII;
+
+  AMDGPUMCCodeEmitter(const MCInstrInfo &mcii) : MCII(mcii) {}
+
 public:
 
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
@@ -43,6 +51,23 @@ public:
                                      const MCSubtargetInfo &STI) const {
     return 0;
   }
+
+  virtual unsigned getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
+    return 0;
+  }
+
+  virtual unsigned getSDWAVopcDstEncoding(const MCInst &MI, unsigned OpNo,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+    return 0;
+  }
+
+protected:
+  uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;
+  void verifyInstructionPredicates(const MCInst &MI,
+                                   uint64_t AvailableFeatures) const;
 };
 
 } // End namespace llvm

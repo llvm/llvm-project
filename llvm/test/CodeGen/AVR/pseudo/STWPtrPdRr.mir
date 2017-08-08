@@ -1,0 +1,22 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+
+--- |
+  target triple = "avr--"
+  define void @test() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test
+
+    ; CHECK:      early-clobber %r31r30 = STPtrPdRr killed %r31r30, %r29, 52
+    ; CHECK-NEXT: early-clobber %r31r30 = STPtrPdRr killed %r31r30, %r28, 52
+
+    %r31r30 = STWPtrPdRr %r31r30, %r29r28, 52
+...

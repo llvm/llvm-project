@@ -27,6 +27,8 @@ class MachineMemOperand;
 class raw_ostream;
 
 raw_ostream &operator<<(raw_ostream &OS, const MachineMemOperand &MMO);
+class PseudoSourceValue;
+raw_ostream &operator<<(raw_ostream &OS, const PseudoSourceValue* PSV);
 
 /// Special value supplied for machine level alias analysis. It indicates that
 /// a memory access references the functions stack frame (e.g., a spill slot),
@@ -40,11 +42,14 @@ public:
     ConstantPool,
     FixedStack,
     GlobalValueCallEntry,
-    ExternalSymbolCallEntry
+    ExternalSymbolCallEntry,
+    TargetCustom
   };
 
 private:
   PSVKind Kind;
+  friend raw_ostream &llvm::operator<<(raw_ostream &OS,
+                                       const PseudoSourceValue* PSV);
 
   friend class MachineMemOperand; // For printCustom().
 
@@ -63,6 +68,9 @@ public:
   bool isGOT() const { return Kind == GOT; }
   bool isConstantPool() const { return Kind == ConstantPool; }
   bool isJumpTable() const { return Kind == JumpTable; }
+  unsigned getTargetCustom() const {
+    return (Kind >= TargetCustom) ? ((Kind+1) - TargetCustom) : 0;
+  }
 
   /// Test whether the memory pointed to by this PseudoSourceValue has a
   /// constant value.
@@ -86,7 +94,7 @@ public:
   explicit FixedStackPseudoSourceValue(int FI)
       : PseudoSourceValue(FixedStack), FI(FI) {}
 
-  static inline bool classof(const PseudoSourceValue *V) {
+  static bool classof(const PseudoSourceValue *V) {
     return V->kind() == FixedStack;
   }
 
@@ -118,7 +126,7 @@ class GlobalValuePseudoSourceValue : public CallEntryPseudoSourceValue {
 public:
   GlobalValuePseudoSourceValue(const GlobalValue *GV);
 
-  static inline bool classof(const PseudoSourceValue *V) {
+  static bool classof(const PseudoSourceValue *V) {
     return V->kind() == GlobalValueCallEntry;
   }
 
@@ -132,7 +140,7 @@ class ExternalSymbolPseudoSourceValue : public CallEntryPseudoSourceValue {
 public:
   ExternalSymbolPseudoSourceValue(const char *ES);
 
-  static inline bool classof(const PseudoSourceValue *V) {
+  static bool classof(const PseudoSourceValue *V) {
     return V->kind() == ExternalSymbolCallEntry;
   }
 

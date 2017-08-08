@@ -1,9 +1,9 @@
-; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s
 
 ; Verify that we no longer crash in VSX swap removal when debug values
 ; are in the code stream.
 
-@php_intpow10.powers = external unnamed_addr constant [23 x double], align 8
+@php_intpow10.powers = external unnamed_addr constant [23 x double], align 8, !dbg !24
 
 ; Function Attrs: nounwind
 define double @_php_math_round(double %value, i32 signext %places, i32 signext %mode) #0 !dbg !6 {
@@ -56,13 +56,12 @@ attributes #3 = { nounwind }
 !llvm.module.flags = !{!29, !30}
 !llvm.ident = !{!31}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (git://github.com/llvm-mirror/clang.git e0848b6353721eb1b278a5bbea257bbf6316251e) (git://github.com/llvm-mirror/llvm.git 8724a428dfd5e78d7865bb01783708e83f9ed128)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !3, subprograms: !5, globals: !23)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (git://github.com/llvm-mirror/clang.git e0848b6353721eb1b278a5bbea257bbf6316251e) (git://github.com/llvm-mirror/llvm.git 8724a428dfd5e78d7865bb01783708e83f9ed128)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, globals: !23)
 !1 = !DIFile(filename: "testcase.i", directory: "/tmp/glibc.build")
 !2 = !{}
 !3 = !{!4}
 !4 = !DIBasicType(name: "double", size: 64, align: 64, encoding: DW_ATE_float)
-!5 = !{!6, !18}
-!6 = distinct !DISubprogram(name: "_php_math_round", scope: !1, file: !1, line: 15, type: !7, isLocal: false, isDefinition: true, scopeLine: 16, flags: DIFlagPrototyped, isOptimized: true, variables: !10)
+!6 = distinct !DISubprogram(name: "_php_math_round", scope: !1, file: !1, line: 15, type: !7, isLocal: false, isDefinition: true, scopeLine: 16, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !10)
 !7 = !DISubroutineType(types: !8)
 !8 = !{!4, !4, !9, !9}
 !9 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -74,13 +73,13 @@ attributes #3 = { nounwind }
 !15 = !DILocalVariable(name: "f2", scope: !6, file: !1, line: 17, type: !4)
 !16 = !DILocalVariable(name: "tmp_value", scope: !6, file: !1, line: 18, type: !4)
 !17 = !DILocalVariable(name: "precision_places", scope: !6, file: !1, line: 19, type: !9)
-!18 = distinct !DISubprogram(name: "php_intpow10", scope: !1, file: !1, line: 1, type: !19, isLocal: true, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, variables: !21)
+!18 = distinct !DISubprogram(name: "php_intpow10", scope: !1, file: !1, line: 1, type: !19, isLocal: true, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !21)
 !19 = !DISubroutineType(types: !20)
 !20 = !{!4, !9}
 !21 = !{!22}
 !22 = !DILocalVariable(name: "power", arg: 1, scope: !18, file: !1, line: 1, type: !9)
 !23 = !{!24}
-!24 = !DIGlobalVariable(name: "powers", scope: !18, file: !1, line: 3, type: !25, isLocal: true, isDefinition: true, variable: [23 x double]* @php_intpow10.powers)
+!24 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "powers", scope: !18, file: !1, line: 3, type: !25, isLocal: true, isDefinition: true))
 !25 = !DICompositeType(tag: DW_TAG_array_type, baseType: !26, size: 1472, align: 64, elements: !27)
 !26 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !4)
 !27 = !{!28}

@@ -1,0 +1,51 @@
+# RUN: yaml2obj < %s | llvm-nm - | FileCheck %s
+
+# That wasm exports of functions and globals are displayed as global data and
+# code symbols.
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - ReturnType:      I32
+        ParamTypes:
+          - I32
+  - Type:            IMPORT
+    Imports:
+      - Module:          env
+        Field:           weak_import_func
+        Kind:            FUNCTION
+        SigIndex:        0
+      - Module:          env
+        Field:           weak_import_data
+        Kind:            GLOBAL
+        GlobalType:      I32
+        GlobalMutable:   false
+  - Type:            EXPORT
+    Exports:
+      - Name:            weak_global_func
+        Kind:            FUNCTION
+        Index:           0x00000004
+      - Name:            weak_global_data
+        Kind:            GLOBAL
+        Index:           0x00000002
+  - Type:            CUSTOM
+    Name:            linking
+    DataSize:        0
+    DataAlignment:   2
+    SymbolInfo:
+      - Name:            weak_global_func
+        Flags:           1
+      - Name:            weak_global_data
+        Flags:           1
+      - Name:            weak_import_func
+        Flags:           1
+      - Name:            weak_import_data
+        Flags:           1
+
+# CHECK: 00000002 W weak_global_data
+# CHECK: 00000004 W weak_global_func
+# CHECK:          w weak_import_data
+# CHECK:          w weak_import_func

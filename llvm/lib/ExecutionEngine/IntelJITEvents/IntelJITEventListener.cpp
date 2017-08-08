@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Config/config.h"
 #include "IntelJITEventsWrapper.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/Config/config.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
@@ -104,7 +104,7 @@ void IntelJITEventListener::NotifyObjectEmitted(
 
   // Get the address of the object image for use as a unique identifier
   const void* ObjData = DebugObj.getData().data();
-  DIContext* Context = new DWARFContextInMemory(DebugObj);
+  std::unique_ptr<DIContext> Context = DWARFContext::create(DebugObj);
   MethodAddressVector Functions;
 
   // Use symbol info to iterate functions in the object.
@@ -113,16 +113,29 @@ void IntelJITEventListener::NotifyObjectEmitted(
     std::vector<LineNumberInfo> LineInfo;
     std::string SourceFileName;
 
-    if (Sym.getType() != SymbolRef::ST_Function)
+    Expected<SymbolRef::Type> SymTypeOrErr = Sym.getType();
+    if (!SymTypeOrErr) {
+      // TODO: Actually report errors helpfully.
+      consumeError(SymTypeOrErr.takeError());
+      continue;
+    }
+    SymbolRef::Type SymType = *SymTypeOrErr;
+    if (SymType != SymbolRef::ST_Function)
       continue;
 
-    ErrorOr<StringRef> Name = Sym.getName();
-    if (!Name)
+    Expected<StringRef> Name = Sym.getName();
+    if (!Name) {
+      // TODO: Actually report errors helpfully.
+      consumeError(Name.takeError());
       continue;
+    }
 
-    ErrorOr<uint64_t> AddrOrErr = Sym.getAddress();
-    if (AddrOrErr.getError())
+    Expected<uint64_t> AddrOrErr = Sym.getAddress();
+    if (!AddrOrErr) {
+      // TODO: Actually report errors helpfully.
+      consumeError(AddrOrErr.takeError());
       continue;
+    }
     uint64_t Addr = *AddrOrErr;
     uint64_t Size = P.second;
 

@@ -12,9 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "WinException.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/COFF.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -30,11 +31,10 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCWin64EH.h"
-#include "llvm/Support/COFF.h"
-#include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
@@ -63,26 +63,30 @@ void WinException::beginFunction(const MachineFunction *MF) {
   shouldEmitMoves = shouldEmitPersonality = shouldEmitLSDA = false;
 
   // If any landing pads survive, we need an EH table.
-  bool hasLandingPads = !MMI->getLandingPads().empty();
-  bool hasEHFunclets = MMI->hasEHFunclets();
+  bool hasLandingPads = !MF->getLandingPads().empty();
+  bool hasEHFunclets = MF->hasEHFunclets();
 
   const Function *F = MF->getFunction();
 
-  shouldEmitMoves = Asm->needsSEHMoves();
+  shouldEmitMoves = Asm->needsSEHMoves() && MF->hasWinCFI();
 
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   unsigned PerEncoding = TLOF.getPersonalityEncoding();
-  const Function *Per = nullptr;
-  if (F->hasPersonalityFn())
-    Per = dyn_cast<Function>(F->getPersonalityFn()->stripPointerCasts());
 
-  bool forceEmitPersonality =
-    F->hasPersonalityFn() && !isNoOpWithoutInvoke(classifyEHPersonality(Per)) &&
-    F->needsUnwindTableEntry();
+  EHPersonality Per = EHPersonality::Unknown;
+  const Function *PerFn = nullptr;
+  if (F->hasPersonalityFn()) {
+    PerFn = dyn_cast<Function>(F->getPersonalityFn()->stripPointerCasts());
+    Per = classifyEHPersonality(PerFn);
+  }
+
+  bool forceEmitPersonality = F->hasPersonalityFn() &&
+                              !isNoOpWithoutInvoke(Per) &&
+                              F->needsUnwindTableEntry();
 
   shouldEmitPersonality =
       forceEmitPersonality || ((hasLandingPads || hasEHFunclets) &&
-                               PerEncoding != dwarf::DW_EH_PE_omit && Per);
+                               PerEncoding != dwarf::DW_EH_PE_omit && PerFn);
 
   unsigned LSDAEncoding = TLOF.getLSDAEncoding();
   shouldEmitLSDA = shouldEmitPersonality &&
@@ -91,6 +95,15 @@ void WinException::beginFunction(const MachineFunction *MF) {
   // If we're not using CFI, we don't want the CFI or the personality, but we
   // might want EH tables if we had EH pads.
   if (!Asm->MAI->usesWindowsCFI()) {
+    if (Per == EHPersonality::MSVC_X86SEH && !hasEHFunclets) {
+      // If this is 32-bit SEH and we don't have any funclets (really invokes),
+      // make sure we emit the parent offset label. Some unreferenced filter
+      // functions may still refer to it.
+      const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
+      StringRef FLinkageName =
+          GlobalValue::dropLLVMManglingEscape(MF->getFunction()->getName());
+      emitEHRegistrationOffsetLabel(FuncInfo, FLinkageName);
+    }
     shouldEmitLSDA = hasEHFunclets;
     shouldEmitPersonality = false;
     return;
@@ -108,27 +121,28 @@ void WinException::endFunction(const MachineFunction *MF) {
   const Function *F = MF->getFunction();
   EHPersonality Per = EHPersonality::Unknown;
   if (F->hasPersonalityFn())
-    Per = classifyEHPersonality(F->getPersonalityFn());
+    Per = classifyEHPersonality(F->getPersonalityFn()->stripPointerCasts());
 
   // Get rid of any dead landing pads if we're not using funclets. In funclet
   // schemes, the landing pad is not actually reachable. It only exists so
   // that we can emit the right table data.
-  if (!isFuncletEHPersonality(Per))
-    MMI->TidyLandingPads();
+  if (!isFuncletEHPersonality(Per)) {
+    MachineFunction *NonConstMF = const_cast<MachineFunction*>(MF);
+    NonConstMF->tidyLandingPads();
+  }
 
   endFunclet();
 
   // endFunclet will emit the necessary .xdata tables for x64 SEH.
-  if (Per == EHPersonality::MSVC_Win64SEH && MMI->hasEHFunclets())
+  if (Per == EHPersonality::MSVC_Win64SEH && MF->hasEHFunclets())
     return;
 
   if (shouldEmitPersonality || shouldEmitLSDA) {
     Asm->OutStreamer->PushSection();
 
-    // Just switch sections to the right xdata section. This use of CurrentFnSym
-    // assumes that we only emit the LSDA when ending the parent function.
-    MCSection *XData = WinEH::UnwindEmitter::getXDataSection(Asm->CurrentFnSym,
-                                                             Asm->OutContext);
+    // Just switch sections to the right xdata section.
+    MCSection *XData = Asm->OutStreamer->getAssociatedXDataSection(
+        Asm->OutStreamer->getCurrentSectionOnly());
     Asm->OutStreamer->SwitchSection(XData);
 
     // Emit the tables appropriate to the personality function in use. If we
@@ -148,7 +162,7 @@ void WinException::endFunction(const MachineFunction *MF) {
   }
 }
 
-/// Retreive the MCSymbol for a GlobalValue or MachineBasicBlock.
+/// Retrieve the MCSymbol for a GlobalValue or MachineBasicBlock.
 static MCSymbol *getMCSymbolForMBB(AsmPrinter *Asm,
                                    const MachineBasicBlock *MBB) {
   if (!MBB)
@@ -160,7 +174,7 @@ static MCSymbol *getMCSymbolForMBB(AsmPrinter *Asm,
   // their funclet entry block's number.
   const MachineFunction *MF = MBB->getParent();
   const Function *F = MF->getFunction();
-  StringRef FuncLinkageName = GlobalValue::getRealLinkageName(F->getName());
+  StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F->getName());
   MCContext &Ctx = MF->getContext();
   StringRef HandlerPrefix = MBB->isCleanupFuncletEntry() ? "dtor" : "catch";
   return Ctx.getOrCreateSymbol("?" + HandlerPrefix + "$" +
@@ -194,8 +208,10 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
   }
 
   // Mark 'Sym' as starting our funclet.
-  if (shouldEmitMoves || shouldEmitPersonality)
+  if (shouldEmitMoves || shouldEmitPersonality) {
+    CurrentFuncletTextSection = Asm->OutStreamer->getCurrentSectionOnly();
     Asm->OutStreamer->EmitWinCFIStartProc(Sym);
+  }
 
   if (shouldEmitPersonality) {
     const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
@@ -205,16 +221,14 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
     if (F->hasPersonalityFn())
       PerFn = dyn_cast<Function>(F->getPersonalityFn()->stripPointerCasts());
     const MCSymbol *PersHandlerSym =
-        TLOF.getCFIPersonalitySymbol(PerFn, *Asm->Mang, Asm->TM, MMI);
+        TLOF.getCFIPersonalitySymbol(PerFn, Asm->TM, MMI);
 
-    // Classify the personality routine so that we may reason about it.
-    EHPersonality Per = EHPersonality::Unknown;
-    if (F->hasPersonalityFn())
-      Per = classifyEHPersonality(F->getPersonalityFn());
-
-    // Do not emit a .seh_handler directive if it is a C++ cleanup funclet.
-    if (Per != EHPersonality::MSVC_CXX ||
-        !CurrentFuncletEntry->isCleanupFuncletEntry())
+    // Do not emit a .seh_handler directives for cleanup funclets.
+    // FIXME: This means cleanup funclets cannot handle exceptions. Given that
+    // Clang doesn't produce EH constructs inside cleanup funclets and LLVM's
+    // inliner doesn't allow inlining them, this isn't a major problem in
+    // practice.
+    if (!CurrentFuncletEntry->isCleanupFuncletEntry())
       Asm->OutStreamer->EmitWinEHHandler(PersHandlerSym, true, true);
   }
 }
@@ -224,15 +238,12 @@ void WinException::endFunclet() {
   if (!CurrentFuncletEntry)
     return;
 
+  const MachineFunction *MF = Asm->MF;
   if (shouldEmitMoves || shouldEmitPersonality) {
-    const Function *F = Asm->MF->getFunction();
+    const Function *F = MF->getFunction();
     EHPersonality Per = EHPersonality::Unknown;
     if (F->hasPersonalityFn())
-      Per = classifyEHPersonality(F->getPersonalityFn());
-
-    // The .seh_handlerdata directive implicitly switches section, push the
-    // current section so that we may return to it.
-    Asm->OutStreamer->PushSection();
+      Per = classifyEHPersonality(F->getPersonalityFn()->stripPointerCasts());
 
     // Emit an UNWIND_INFO struct describing the prologue.
     Asm->OutStreamer->EmitWinEHHandlerData();
@@ -241,22 +252,21 @@ void WinException::endFunclet() {
         !CurrentFuncletEntry->isCleanupFuncletEntry()) {
       // If this is a C++ catch funclet (or the parent function),
       // emit a reference to the LSDA for the parent function.
-      StringRef FuncLinkageName = GlobalValue::getRealLinkageName(F->getName());
+      StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F->getName());
       MCSymbol *FuncInfoXData = Asm->OutContext.getOrCreateSymbol(
           Twine("$cppxdata$", FuncLinkageName));
       Asm->OutStreamer->EmitValue(create32bitRef(FuncInfoXData), 4);
-    } else if (Per == EHPersonality::MSVC_Win64SEH && MMI->hasEHFunclets() &&
+    } else if (Per == EHPersonality::MSVC_Win64SEH && MF->hasEHFunclets() &&
                !CurrentFuncletEntry->isEHFuncletEntry()) {
       // If this is the parent function in Win64 SEH, emit the LSDA immediately
       // following .seh_handlerdata.
-      emitCSpecificHandlerTable(Asm->MF);
+      emitCSpecificHandlerTable(MF);
     }
 
-    // Switch back to the previous section now that we are done writing to
-    // .xdata.
-    Asm->OutStreamer->PopSection();
-
-    // Emit a .seh_endproc directive to mark the end of the function.
+    // Switch back to the funclet start .text section now that we are done
+    // writing to .xdata, and emit an .seh_endproc directive to mark the end of
+    // the function.
+    Asm->OutStreamer->SwitchSection(CurrentFuncletTextSection);
     Asm->OutStreamer->EmitWinCFIEndProc();
   }
 
@@ -299,11 +309,21 @@ const MCExpr *WinException::getOffsetPlusOne(const MCSymbol *OffsetOf,
                                  Asm->OutContext);
 }
 
-int WinException::getFrameIndexOffset(int FrameIndex, WinEHFuncInfo &FuncInfo) {
+int WinException::getFrameIndexOffset(int FrameIndex,
+                                      const WinEHFuncInfo &FuncInfo) {
   const TargetFrameLowering &TFI = *Asm->MF->getSubtarget().getFrameLowering();
   unsigned UnusedReg;
-  if (Asm->MAI->usesWindowsCFI())
-    return TFI.getFrameIndexReferenceFromSP(*Asm->MF, FrameIndex, UnusedReg);
+  if (Asm->MAI->usesWindowsCFI()) {
+    int Offset =
+        TFI.getFrameIndexReferencePreferSP(*Asm->MF, FrameIndex, UnusedReg,
+                                           /*IgnoreSPUpdates*/ true);
+    assert(UnusedReg ==
+           Asm->MF->getSubtarget()
+               .getTargetLowering()
+               ->getStackPointerRegisterToSaveRestore());
+    return Offset;
+  }
+
   // For 32-bit, offsets should be relative to the end of the EH registration
   // node. For 64-bit, it's relative to SP at the end of the prologue.
   assert(FuncInfo.EHRegNodeEndOffset != INT_MAX);
@@ -340,45 +360,35 @@ struct InvokeStateChange {
 /// reported is the first change to something other than NullState, and a
 /// change back to NullState is always reported at the end of iteration).
 class InvokeStateChangeIterator {
-  InvokeStateChangeIterator(WinEHFuncInfo &EHInfo,
+  InvokeStateChangeIterator(const WinEHFuncInfo &EHInfo,
                             MachineFunction::const_iterator MFI,
                             MachineFunction::const_iterator MFE,
-                            MachineBasicBlock::const_iterator MBBI)
-      : EHInfo(EHInfo), MFI(MFI), MFE(MFE), MBBI(MBBI) {
+                            MachineBasicBlock::const_iterator MBBI,
+                            int BaseState)
+      : EHInfo(EHInfo), MFI(MFI), MFE(MFE), MBBI(MBBI), BaseState(BaseState) {
     LastStateChange.PreviousEndLabel = nullptr;
     LastStateChange.NewStartLabel = nullptr;
-    LastStateChange.NewState = NullState;
+    LastStateChange.NewState = BaseState;
     scan();
   }
 
 public:
   static iterator_range<InvokeStateChangeIterator>
-  range(WinEHFuncInfo &EHInfo, const MachineFunction &MF) {
-    // Reject empty MFs to simplify bookkeeping by ensuring that we can get the
-    // end of the last block.
-    assert(!MF.empty());
-    auto FuncBegin = MF.begin();
-    auto FuncEnd = MF.end();
-    auto BlockBegin = FuncBegin->begin();
-    auto BlockEnd = MF.back().end();
-    return make_range(
-        InvokeStateChangeIterator(EHInfo, FuncBegin, FuncEnd, BlockBegin),
-        InvokeStateChangeIterator(EHInfo, FuncEnd, FuncEnd, BlockEnd));
-  }
-  static iterator_range<InvokeStateChangeIterator>
-  range(WinEHFuncInfo &EHInfo, MachineFunction::const_iterator Begin,
-        MachineFunction::const_iterator End) {
+  range(const WinEHFuncInfo &EHInfo, MachineFunction::const_iterator Begin,
+        MachineFunction::const_iterator End, int BaseState = NullState) {
     // Reject empty ranges to simplify bookkeeping by ensuring that we can get
     // the end of the last block.
     assert(Begin != End);
     auto BlockBegin = Begin->begin();
     auto BlockEnd = std::prev(End)->end();
-    return make_range(InvokeStateChangeIterator(EHInfo, Begin, End, BlockBegin),
-                      InvokeStateChangeIterator(EHInfo, End, End, BlockEnd));
+    return make_range(
+        InvokeStateChangeIterator(EHInfo, Begin, End, BlockBegin, BaseState),
+        InvokeStateChangeIterator(EHInfo, End, End, BlockEnd, BaseState));
   }
 
   // Iterator methods.
   bool operator==(const InvokeStateChangeIterator &O) const {
+    assert(BaseState == O.BaseState);
     // Must be visiting same block.
     if (MFI != O.MFI)
       return false;
@@ -402,13 +412,14 @@ public:
 private:
   InvokeStateChangeIterator &scan();
 
-  WinEHFuncInfo &EHInfo;
+  const WinEHFuncInfo &EHInfo;
   const MCSymbol *CurrentEndLabel = nullptr;
   MachineFunction::const_iterator MFI;
   MachineFunction::const_iterator MFE;
   MachineBasicBlock::const_iterator MBBI;
   InvokeStateChange LastStateChange;
   bool VisitingInvoke = false;
+  int BaseState;
 };
 
 } // end anonymous namespace
@@ -420,14 +431,14 @@ InvokeStateChangeIterator &InvokeStateChangeIterator::scan() {
       MBBI = MFI->begin();
     for (auto MBBE = MFI->end(); MBBI != MBBE; ++MBBI) {
       const MachineInstr &MI = *MBBI;
-      if (!VisitingInvoke && LastStateChange.NewState != NullState &&
+      if (!VisitingInvoke && LastStateChange.NewState != BaseState &&
           MI.isCall() && !EHStreamer::callToNoUnwindFunction(&MI)) {
         // Indicate a change of state to the null state.  We don't have
         // start/end EH labels handy but the caller won't expect them for
         // null state regions.
         LastStateChange.PreviousEndLabel = CurrentEndLabel;
         LastStateChange.NewStartLabel = nullptr;
-        LastStateChange.NewState = NullState;
+        LastStateChange.NewState = BaseState;
         CurrentEndLabel = nullptr;
         // Don't re-visit this instr on the next scan
         ++MBBI;
@@ -442,18 +453,12 @@ InvokeStateChangeIterator &InvokeStateChangeIterator::scan() {
         VisitingInvoke = false;
         continue;
       }
-      auto InvokeMapIter = EHInfo.InvokeToStateMap.find(Label);
+      auto InvokeMapIter = EHInfo.LabelToStateMap.find(Label);
       // Ignore EH labels that aren't the ones inserted before an invoke
-      if (InvokeMapIter == EHInfo.InvokeToStateMap.end())
+      if (InvokeMapIter == EHInfo.LabelToStateMap.end())
         continue;
       auto &StateAndEnd = InvokeMapIter->second;
       int NewState = StateAndEnd.first;
-      // Ignore EH labels explicitly annotated with the null state (which
-      // can happen for invokes that unwind to a chain of endpads the last
-      // of which unwinds to caller).  We'll see the subsequent invoke and
-      // report a transition to the null state same as we do for calls.
-      if (NewState == NullState)
-        continue;
       // Keep track of the fact that we're between EH start/end labels so
       // we know not to treat the inoke we'll see as unwinding to caller.
       VisitingInvoke = true;
@@ -475,11 +480,11 @@ InvokeStateChangeIterator &InvokeStateChangeIterator::scan() {
     }
   }
   // Iteration hit the end of the block range.
-  if (LastStateChange.NewState != NullState) {
+  if (LastStateChange.NewState != BaseState) {
     // Report the end of the last new state
     LastStateChange.PreviousEndLabel = CurrentEndLabel;
     LastStateChange.NewStartLabel = nullptr;
-    LastStateChange.NewState = NullState;
+    LastStateChange.NewState = BaseState;
     // Leave CurrentEndLabel non-null to distinguish this state from end.
     assert(CurrentEndLabel != nullptr);
     return *this;
@@ -520,8 +525,24 @@ InvokeStateChangeIterator &InvokeStateChangeIterator::scan() {
 void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
   auto &OS = *Asm->OutStreamer;
   MCContext &Ctx = Asm->OutContext;
+  const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
 
-  WinEHFuncInfo &FuncInfo = MMI->getWinEHFuncInfo(MF->getFunction());
+  bool VerboseAsm = OS.isVerboseAsm();
+  auto AddComment = [&](const Twine &Comment) {
+    if (VerboseAsm)
+      OS.AddComment(Comment);
+  };
+
+  // Emit a label assignment with the SEH frame offset so we can use it for
+  // llvm.x86.seh.recoverfp.
+  StringRef FLinkageName =
+      GlobalValue::dropLLVMManglingEscape(MF->getFunction()->getName());
+  MCSymbol *ParentFrameOffset =
+      Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
+  const MCExpr *MCOffset =
+      MCConstantExpr::create(FuncInfo.SEHSetFrameOffset, Ctx);
+  Asm->OutStreamer->EmitAssignment(ParentFrameOffset, MCOffset);
+
   // Use the assembler to compute the number of table entries through label
   // difference and division.
   MCSymbol *TableBegin =
@@ -531,6 +552,7 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
   const MCExpr *LabelDiff = getOffset(TableEnd, TableBegin);
   const MCExpr *EntrySize = MCConstantExpr::create(16, Ctx);
   const MCExpr *EntryCount = MCBinaryExpr::createDiv(LabelDiff, EntrySize, Ctx);
+  AddComment("Number of call sites");
   OS.EmitValue(EntryCount, 4);
 
   OS.EmitLabel(TableBegin);
@@ -564,15 +586,21 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
   OS.EmitLabel(TableEnd);
 }
 
-void WinException::emitSEHActionsForRange(WinEHFuncInfo &FuncInfo,
+void WinException::emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
                                           const MCSymbol *BeginLabel,
                                           const MCSymbol *EndLabel, int State) {
   auto &OS = *Asm->OutStreamer;
   MCContext &Ctx = Asm->OutContext;
 
+  bool VerboseAsm = OS.isVerboseAsm();
+  auto AddComment = [&](const Twine &Comment) {
+    if (VerboseAsm)
+      OS.AddComment(Comment);
+  };
+
   assert(BeginLabel && EndLabel);
   while (State != -1) {
-    SEHUnwindMapEntry &UME = FuncInfo.SEHUnwindMap[State];
+    const SEHUnwindMapEntry &UME = FuncInfo.SEHUnwindMap[State];
     const MCExpr *FilterOrFinally;
     const MCExpr *ExceptOrNull;
     auto *Handler = UME.Handler.get<MachineBasicBlock *>();
@@ -587,9 +615,14 @@ void WinException::emitSEHActionsForRange(WinEHFuncInfo &FuncInfo,
       ExceptOrNull = create32bitRef(Handler->getSymbol());
     }
 
+    AddComment("LabelStart");
     OS.EmitValue(getLabelPlusOne(BeginLabel), 4);
+    AddComment("LabelEnd");
     OS.EmitValue(getLabelPlusOne(EndLabel), 4);
+    AddComment(UME.IsFinally ? "FinallyFunclet" : UME.Filter ? "FilterFunction"
+                                                             : "CatchAll");
     OS.EmitValue(FilterOrFinally, 4);
+    AddComment(UME.IsFinally ? "Null" : "ExceptionHandler");
     OS.EmitValue(ExceptOrNull, 4);
 
     assert(UME.ToState < State && "states should decrease");
@@ -600,9 +633,9 @@ void WinException::emitSEHActionsForRange(WinEHFuncInfo &FuncInfo,
 void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   const Function *F = MF->getFunction();
   auto &OS = *Asm->OutStreamer;
-  WinEHFuncInfo &FuncInfo = MMI->getWinEHFuncInfo(F);
+  const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
 
-  StringRef FuncLinkageName = GlobalValue::getRealLinkageName(F->getName());
+  StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F->getName());
 
   SmallVector<std::pair<const MCExpr *, int>, 4> IPToStateTable;
   MCSymbol *FuncInfoXData = nullptr;
@@ -634,6 +667,12 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
     IPToStateXData =
         Asm->OutContext.getOrCreateSymbol(Twine("$ip2state$", FuncLinkageName));
 
+  bool VerboseAsm = OS.isVerboseAsm();
+  auto AddComment = [&](const Twine &Comment) {
+    if (VerboseAsm)
+      OS.AddComment(Comment);
+  };
+
   // FuncInfo {
   //   uint32_t           MagicNumber
   //   int32_t            MaxState;
@@ -651,17 +690,38 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   // EHFlags & 4 -> The function is noexcept(true), unwinding can't continue.
   OS.EmitValueToAlignment(4);
   OS.EmitLabel(FuncInfoXData);
-  OS.EmitIntValue(0x19930522, 4);                      // MagicNumber
-  OS.EmitIntValue(FuncInfo.CxxUnwindMap.size(), 4);       // MaxState
-  OS.EmitValue(create32bitRef(UnwindMapXData), 4);     // UnwindMap
-  OS.EmitIntValue(FuncInfo.TryBlockMap.size(), 4);     // NumTryBlocks
-  OS.EmitValue(create32bitRef(TryBlockMapXData), 4);   // TryBlockMap
-  OS.EmitIntValue(IPToStateTable.size(), 4);           // IPMapEntries
-  OS.EmitValue(create32bitRef(IPToStateXData), 4);     // IPToStateMap
-  if (Asm->MAI->usesWindowsCFI())
-    OS.EmitIntValue(UnwindHelpOffset, 4);              // UnwindHelp
-  OS.EmitIntValue(0, 4);                               // ESTypeList
-  OS.EmitIntValue(1, 4);                               // EHFlags
+
+  AddComment("MagicNumber");
+  OS.EmitIntValue(0x19930522, 4);
+
+  AddComment("MaxState");
+  OS.EmitIntValue(FuncInfo.CxxUnwindMap.size(), 4);
+
+  AddComment("UnwindMap");
+  OS.EmitValue(create32bitRef(UnwindMapXData), 4);
+
+  AddComment("NumTryBlocks");
+  OS.EmitIntValue(FuncInfo.TryBlockMap.size(), 4);
+
+  AddComment("TryBlockMap");
+  OS.EmitValue(create32bitRef(TryBlockMapXData), 4);
+
+  AddComment("IPMapEntries");
+  OS.EmitIntValue(IPToStateTable.size(), 4);
+
+  AddComment("IPToStateXData");
+  OS.EmitValue(create32bitRef(IPToStateXData), 4);
+
+  if (Asm->MAI->usesWindowsCFI()) {
+    AddComment("UnwindHelp");
+    OS.EmitIntValue(UnwindHelpOffset, 4);
+  }
+
+  AddComment("ESTypeList");
+  OS.EmitIntValue(0, 4);
+
+  AddComment("EHFlags");
+  OS.EmitIntValue(1, 4);
 
   // UnwindMapEntry {
   //   int32_t ToState;
@@ -672,8 +732,11 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
     for (const CxxUnwindMapEntry &UME : FuncInfo.CxxUnwindMap) {
       MCSymbol *CleanupSym =
           getMCSymbolForMBB(Asm, UME.Cleanup.dyn_cast<MachineBasicBlock *>());
-      OS.EmitIntValue(UME.ToState, 4);             // ToState
-      OS.EmitValue(create32bitRef(CleanupSym), 4); // Action
+      AddComment("ToState");
+      OS.EmitIntValue(UME.ToState, 4);
+
+      AddComment("Action");
+      OS.EmitValue(create32bitRef(CleanupSym), 4);
     }
   }
 
@@ -688,7 +751,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
     OS.EmitLabel(TryBlockMapXData);
     SmallVector<MCSymbol *, 1> HandlerMaps;
     for (size_t I = 0, E = FuncInfo.TryBlockMap.size(); I != E; ++I) {
-      WinEHTryBlockMapEntry &TBME = FuncInfo.TryBlockMap[I];
+      const WinEHTryBlockMapEntry &TBME = FuncInfo.TryBlockMap[I];
 
       MCSymbol *HandlerMapXData = nullptr;
       if (!TBME.HandlerArray.empty())
@@ -706,11 +769,20 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
       assert(TBME.CatchHigh < int(FuncInfo.CxxUnwindMap.size()) &&
              "bad trymap interval");
 
-      OS.EmitIntValue(TBME.TryLow, 4);                    // TryLow
-      OS.EmitIntValue(TBME.TryHigh, 4);                   // TryHigh
-      OS.EmitIntValue(TBME.CatchHigh, 4);                 // CatchHigh
-      OS.EmitIntValue(TBME.HandlerArray.size(), 4);       // NumCatches
-      OS.EmitValue(create32bitRef(HandlerMapXData), 4);   // HandlerArray
+      AddComment("TryLow");
+      OS.EmitIntValue(TBME.TryLow, 4);
+
+      AddComment("TryHigh");
+      OS.EmitIntValue(TBME.TryHigh, 4);
+
+      AddComment("CatchHigh");
+      OS.EmitIntValue(TBME.CatchHigh, 4);
+
+      AddComment("NumCatches");
+      OS.EmitIntValue(TBME.HandlerArray.size(), 4);
+
+      AddComment("HandlerArray");
+      OS.EmitValue(create32bitRef(HandlerMapXData), 4);
     }
 
     // All funclets use the same parent frame offset currently.
@@ -721,7 +793,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
     }
 
     for (size_t I = 0, E = FuncInfo.TryBlockMap.size(); I != E; ++I) {
-      WinEHTryBlockMapEntry &TBME = FuncInfo.TryBlockMap[I];
+      const WinEHTryBlockMapEntry &TBME = FuncInfo.TryBlockMap[I];
       MCSymbol *HandlerMapXData = HandlerMaps[I];
       if (!HandlerMapXData)
         continue;
@@ -740,6 +812,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
         const MCExpr *FrameAllocOffsetRef = nullptr;
         if (HT.CatchObj.FrameIndex != INT_MAX) {
           int Offset = getFrameIndexOffset(HT.CatchObj.FrameIndex, FuncInfo);
+          assert(Offset != 0 && "Illegal offset for catch object!");
           FrameAllocOffsetRef = MCConstantExpr::create(Offset, Asm->OutContext);
         } else {
           FrameAllocOffsetRef = MCConstantExpr::create(0, Asm->OutContext);
@@ -748,12 +821,22 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
         MCSymbol *HandlerSym =
             getMCSymbolForMBB(Asm, HT.Handler.dyn_cast<MachineBasicBlock *>());
 
-        OS.EmitIntValue(HT.Adjectives, 4);                  // Adjectives
-        OS.EmitValue(create32bitRef(HT.TypeDescriptor), 4); // Type
-        OS.EmitValue(FrameAllocOffsetRef, 4);               // CatchObjOffset
-        OS.EmitValue(create32bitRef(HandlerSym), 4);        // Handler
-        if (shouldEmitPersonality)
-          OS.EmitIntValue(ParentFrameOffset, 4); // ParentFrameOffset
+        AddComment("Adjectives");
+        OS.EmitIntValue(HT.Adjectives, 4);
+
+        AddComment("Type");
+        OS.EmitValue(create32bitRef(HT.TypeDescriptor), 4);
+
+        AddComment("CatchObjOffset");
+        OS.EmitValue(FrameAllocOffsetRef, 4);
+
+        AddComment("Handler");
+        OS.EmitValue(create32bitRef(HandlerSym), 4);
+
+        if (shouldEmitPersonality) {
+          AddComment("ParentFrameOffset");
+          OS.EmitIntValue(ParentFrameOffset, 4);
+        }
       }
     }
   }
@@ -765,35 +848,65 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   if (IPToStateXData) {
     OS.EmitLabel(IPToStateXData);
     for (auto &IPStatePair : IPToStateTable) {
-      OS.EmitValue(IPStatePair.first, 4);     // IP
-      OS.EmitIntValue(IPStatePair.second, 4); // State
+      AddComment("IP");
+      OS.EmitValue(IPStatePair.first, 4);
+      AddComment("ToState");
+      OS.EmitIntValue(IPStatePair.second, 4);
     }
   }
 }
 
 void WinException::computeIP2StateTable(
-    const MachineFunction *MF, WinEHFuncInfo &FuncInfo,
+    const MachineFunction *MF, const WinEHFuncInfo &FuncInfo,
     SmallVectorImpl<std::pair<const MCExpr *, int>> &IPToStateTable) {
-  // Indicate that all calls from the prologue to the first invoke unwind to
-  // caller. We handle this as a special case since other ranges starting at end
-  // labels need to use LtmpN+1.
-  MCSymbol *StartLabel = Asm->getFunctionBegin();
-  assert(StartLabel && "need local function start label");
-  IPToStateTable.push_back(std::make_pair(create32bitRef(StartLabel), -1));
 
-  // FIXME: Do we need to emit entries for funclet base states?
-  for (const auto &StateChange :
-       InvokeStateChangeIterator::range(FuncInfo, *MF)) {
-    // Compute the label to report as the start of this entry; use the EH start
-    // label for the invoke if we have one, otherwise (this is a call which may
-    // unwind to our caller and does not have an EH start label, so) use the
-    // previous end label.
-    const MCSymbol *ChangeLabel = StateChange.NewStartLabel;
-    if (!ChangeLabel)
-      ChangeLabel = StateChange.PreviousEndLabel;
-    // Emit an entry indicating that PCs after 'Label' have this EH state.
+  for (MachineFunction::const_iterator FuncletStart = MF->begin(),
+                                       FuncletEnd = MF->begin(),
+                                       End = MF->end();
+       FuncletStart != End; FuncletStart = FuncletEnd) {
+    // Find the end of the funclet
+    while (++FuncletEnd != End) {
+      if (FuncletEnd->isEHFuncletEntry()) {
+        break;
+      }
+    }
+
+    // Don't emit ip2state entries for cleanup funclets. Any interesting
+    // exceptional actions in cleanups must be handled in a separate IR
+    // function.
+    if (FuncletStart->isCleanupFuncletEntry())
+      continue;
+
+    MCSymbol *StartLabel;
+    int BaseState;
+    if (FuncletStart == MF->begin()) {
+      BaseState = NullState;
+      StartLabel = Asm->getFunctionBegin();
+    } else {
+      auto *FuncletPad =
+          cast<FuncletPadInst>(FuncletStart->getBasicBlock()->getFirstNonPHI());
+      assert(FuncInfo.FuncletBaseStateMap.count(FuncletPad) != 0);
+      BaseState = FuncInfo.FuncletBaseStateMap.find(FuncletPad)->second;
+      StartLabel = getMCSymbolForMBB(Asm, &*FuncletStart);
+    }
+    assert(StartLabel && "need local function start label");
     IPToStateTable.push_back(
-        std::make_pair(getLabelPlusOne(ChangeLabel), StateChange.NewState));
+        std::make_pair(create32bitRef(StartLabel), BaseState));
+
+    for (const auto &StateChange : InvokeStateChangeIterator::range(
+             FuncInfo, FuncletStart, FuncletEnd, BaseState)) {
+      // Compute the label to report as the start of this entry; use the EH
+      // start label for the invoke if we have one, otherwise (this is a call
+      // which may unwind to our caller and does not have an EH start label, so)
+      // use the previous end label.
+      const MCSymbol *ChangeLabel = StateChange.NewStartLabel;
+      if (!ChangeLabel)
+        ChangeLabel = StateChange.PreviousEndLabel;
+      // Emit an entry indicating that PCs after 'Label' have this EH state.
+      IPToStateTable.push_back(
+          std::make_pair(getLabelPlusOne(ChangeLabel), StateChange.NewState));
+      // FIXME: assert that NewState is between CatchLow and CatchHigh.
+    }
   }
 }
 
@@ -803,15 +916,24 @@ void WinException::emitEHRegistrationOffsetLabel(const WinEHFuncInfo &FuncInfo,
   // registration in order to recover the parent frame pointer. Now that we know
   // we've code generated the parent, we can emit the label assignment that
   // those helpers use to get the offset of the registration node.
-  assert(FuncInfo.EHRegNodeEscapeIndex != INT_MAX &&
-         "no EH reg node localescape index");
+
+  // Compute the parent frame offset. The EHRegNodeFrameIndex will be invalid if
+  // after optimization all the invokes were eliminated. We still need to emit
+  // the parent frame offset label, but it should be garbage and should never be
+  // used.
+  int64_t Offset = 0;
+  int FI = FuncInfo.EHRegNodeFrameIndex;
+  if (FI != INT_MAX) {
+    const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
+    unsigned UnusedReg;
+    Offset = TFI->getFrameIndexReference(*Asm->MF, FI, UnusedReg);
+  }
+
+  MCContext &Ctx = Asm->OutContext;
   MCSymbol *ParentFrameOffset =
-      Asm->OutContext.getOrCreateParentFrameOffsetSymbol(FLinkageName);
-  MCSymbol *RegistrationOffsetSym = Asm->OutContext.getOrCreateFrameAllocSymbol(
-      FLinkageName, FuncInfo.EHRegNodeEscapeIndex);
-  const MCExpr *RegistrationOffsetSymRef =
-      MCSymbolRefExpr::create(RegistrationOffsetSym, Asm->OutContext);
-  Asm->OutStreamer->EmitAssignment(ParentFrameOffset, RegistrationOffsetSymRef);
+      Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
+  Asm->OutStreamer->EmitAssignment(ParentFrameOffset,
+                                   MCConstantExpr::create(Offset, Ctx));
 }
 
 /// Emit the language-specific data that _except_handler3 and 4 expect. This is
@@ -820,9 +942,15 @@ void WinException::emitEHRegistrationOffsetLabel(const WinEHFuncInfo &FuncInfo,
 void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
   MCStreamer &OS = *Asm->OutStreamer;
   const Function *F = MF->getFunction();
-  StringRef FLinkageName = GlobalValue::getRealLinkageName(F->getName());
+  StringRef FLinkageName = GlobalValue::dropLLVMManglingEscape(F->getName());
 
-  WinEHFuncInfo &FuncInfo = MMI->getWinEHFuncInfo(F);
+  bool VerboseAsm = OS.isVerboseAsm();
+  auto AddComment = [&](const Twine &Comment) {
+    if (VerboseAsm)
+      OS.AddComment(Comment);
+  };
+
+  const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
   emitEHRegistrationOffsetLabel(FuncInfo, FLinkageName);
 
   // Emit the __ehtable label that we use for llvm.x86.seh.lsda.
@@ -846,55 +974,90 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
     //   ScopeTableEntry ScopeRecord[];
     // };
     //
-    // Only the EHCookieOffset field appears to vary, and it appears to be the
-    // offset from the final saved SP value to the retaddr.
-    OS.EmitIntValue(-2, 4);
+    // Offsets are %ebp relative.
+    //
+    // The GS cookie is present only if the function needs stack protection.
+    // GSCookieOffset = -2 means that GS cookie is not used.
+    //
+    // The EH cookie is always present.
+    //
+    // Check is done the following way:
+    //    (ebp+CookieXOROffset) ^ [ebp+CookieOffset] == _security_cookie
+
+    // Retrieve the Guard Stack slot.
+    int GSCookieOffset = -2;
+    const MachineFrameInfo &MFI = MF->getFrameInfo();
+    if (MFI.hasStackProtectorIndex()) {
+      unsigned UnusedReg;
+      const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
+      int SSPIdx = MFI.getStackProtectorIndex();
+      GSCookieOffset = TFI->getFrameIndexReference(*MF, SSPIdx, UnusedReg);
+    }
+
+    // Retrieve the EH Guard slot.
+    // TODO(etienneb): Get rid of this value and change it for and assertion.
+    int EHCookieOffset = 9999;
+    if (FuncInfo.EHGuardFrameIndex != INT_MAX) {
+      unsigned UnusedReg;
+      const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
+      int EHGuardIdx = FuncInfo.EHGuardFrameIndex;
+      EHCookieOffset = TFI->getFrameIndexReference(*MF, EHGuardIdx, UnusedReg);
+    }
+
+    AddComment("GSCookieOffset");
+    OS.EmitIntValue(GSCookieOffset, 4);
+    AddComment("GSCookieXOROffset");
     OS.EmitIntValue(0, 4);
-    // FIXME: Calculate.
-    OS.EmitIntValue(9999, 4);
+    AddComment("EHCookieOffset");
+    OS.EmitIntValue(EHCookieOffset, 4);
+    AddComment("EHCookieXOROffset");
     OS.EmitIntValue(0, 4);
     BaseState = -2;
   }
 
   assert(!FuncInfo.SEHUnwindMap.empty());
-  for (SEHUnwindMapEntry &UME : FuncInfo.SEHUnwindMap) {
-    MCSymbol *ExceptOrFinally =
-        UME.Handler.get<MachineBasicBlock *>()->getSymbol();
+  for (const SEHUnwindMapEntry &UME : FuncInfo.SEHUnwindMap) {
+    auto *Handler = UME.Handler.get<MachineBasicBlock *>();
+    const MCSymbol *ExceptOrFinally =
+        UME.IsFinally ? getMCSymbolForMBB(Asm, Handler) : Handler->getSymbol();
     // -1 is usually the base state for "unwind to caller", but for
     // _except_handler4 it's -2. Do that replacement here if necessary.
     int ToState = UME.ToState == -1 ? BaseState : UME.ToState;
-    OS.EmitIntValue(ToState, 4);                      // ToState
-    OS.EmitValue(create32bitRef(UME.Filter), 4);      // Filter
-    OS.EmitValue(create32bitRef(ExceptOrFinally), 4); // Except/Finally
+    AddComment("ToState");
+    OS.EmitIntValue(ToState, 4);
+    AddComment(UME.IsFinally ? "Null" : "FilterFunction");
+    OS.EmitValue(create32bitRef(UME.Filter), 4);
+    AddComment(UME.IsFinally ? "FinallyFunclet" : "ExceptionHandler");
+    OS.EmitValue(create32bitRef(ExceptOrFinally), 4);
   }
 }
 
-static int getRank(WinEHFuncInfo &FuncInfo, int State) {
+static int getTryRank(const WinEHFuncInfo &FuncInfo, int State) {
   int Rank = 0;
   while (State != -1) {
     ++Rank;
-    State = FuncInfo.ClrEHUnwindMap[State].Parent;
+    State = FuncInfo.ClrEHUnwindMap[State].TryParentState;
   }
   return Rank;
 }
 
-static int getAncestor(WinEHFuncInfo &FuncInfo, int Left, int Right) {
-  int LeftRank = getRank(FuncInfo, Left);
-  int RightRank = getRank(FuncInfo, Right);
+static int getTryAncestor(const WinEHFuncInfo &FuncInfo, int Left, int Right) {
+  int LeftRank = getTryRank(FuncInfo, Left);
+  int RightRank = getTryRank(FuncInfo, Right);
 
   while (LeftRank < RightRank) {
-    Right = FuncInfo.ClrEHUnwindMap[Right].Parent;
+    Right = FuncInfo.ClrEHUnwindMap[Right].TryParentState;
     --RightRank;
   }
 
   while (RightRank < LeftRank) {
-    Left = FuncInfo.ClrEHUnwindMap[Left].Parent;
+    Left = FuncInfo.ClrEHUnwindMap[Left].TryParentState;
     --LeftRank;
   }
 
   while (Left != Right) {
-    Left = FuncInfo.ClrEHUnwindMap[Left].Parent;
-    Right = FuncInfo.ClrEHUnwindMap[Right].Parent;
+    Left = FuncInfo.ClrEHUnwindMap[Left].TryParentState;
+    Right = FuncInfo.ClrEHUnwindMap[Right].TryParentState;
   }
 
   return Left;
@@ -905,8 +1068,7 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
   // states, handlers, and funclets all have 1:1 mappings between them, and a
   // handler/funclet's "state" is its index in the ClrEHUnwindMap.
   MCStreamer &OS = *Asm->OutStreamer;
-  const Function *F = MF->getFunction();
-  WinEHFuncInfo &FuncInfo = MMI->getWinEHFuncInfo(F);
+  const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
   MCSymbol *FuncBeginSym = Asm->getFunctionBegin();
   MCSymbol *FuncEndSym = Asm->getFunctionEnd();
 
@@ -929,9 +1091,9 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
         FuncInfo.ClrEHUnwindMap[State].Handler.get<MachineBasicBlock *>();
     HandlerStates[HandlerBlock] = State;
     // Use this loop through all handlers to verify our assumption (used in
-    // the MinEnclosingState computation) that ancestors have lower state
-    // numbers than their descendants.
-    assert(FuncInfo.ClrEHUnwindMap[State].Parent < State &&
+    // the MinEnclosingState computation) that enclosing funclets have lower
+    // state numbers than their enclosed funclets.
+    assert(FuncInfo.ClrEHUnwindMap[State].HandlerParentState < State &&
            "ill-formed state numbering");
   }
   // Map the main function to the NullState.
@@ -964,7 +1126,6 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
   SmallVector<int, 4> MinClauseMap((size_t)NumStates, NumStates);
 
   // Visit the root function and each funclet.
-
   for (MachineFunction::const_iterator FuncletStart = MF->begin(),
                                        FuncletEnd = MF->begin(),
                                        End = MF->end();
@@ -994,17 +1155,18 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
     for (const auto &StateChange :
          InvokeStateChangeIterator::range(FuncInfo, FuncletStart, FuncletEnd)) {
       // Close any try regions we're not still under
-      int AncestorState =
-          getAncestor(FuncInfo, CurrentState, StateChange.NewState);
-      while (CurrentState != AncestorState) {
-        assert(CurrentState != NullState && "Failed to find ancestor!");
+      int StillPendingState =
+          getTryAncestor(FuncInfo, CurrentState, StateChange.NewState);
+      while (CurrentState != StillPendingState) {
+        assert(CurrentState != NullState &&
+               "Failed to find still-pending state!");
         // Close the pending clause
         Clauses.push_back({CurrentStartLabel, StateChange.PreviousEndLabel,
                            CurrentState, FuncletState});
-        // Now the parent handler is current
-        CurrentState = FuncInfo.ClrEHUnwindMap[CurrentState].Parent;
+        // Now the next-outer try region is current
+        CurrentState = FuncInfo.ClrEHUnwindMap[CurrentState].TryParentState;
         // Pop the new start label from the handler stack if we've exited all
-        // descendants of the corresponding handler.
+        // inner try regions of the corresponding try region.
         if (HandlerStack.back().second == CurrentState)
           CurrentStartLabel = HandlerStack.pop_back_val().first;
       }
@@ -1015,7 +1177,8 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
         // it.
         for (int EnteredState = StateChange.NewState;
              EnteredState != CurrentState;
-             EnteredState = FuncInfo.ClrEHUnwindMap[EnteredState].Parent) {
+             EnteredState =
+                 FuncInfo.ClrEHUnwindMap[EnteredState].TryParentState) {
           int &MinEnclosingState = MinClauseMap[EnteredState];
           if (FuncletState < MinEnclosingState)
             MinEnclosingState = FuncletState;
@@ -1085,7 +1248,7 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
         getOffsetPlusOne(Clause.StartLabel, FuncBeginSym);
     const MCExpr *ClauseEnd = getOffsetPlusOne(Clause.EndLabel, FuncBeginSym);
 
-    ClrEHUnwindMapEntry &Entry = FuncInfo.ClrEHUnwindMap[Clause.State];
+    const ClrEHUnwindMapEntry &Entry = FuncInfo.ClrEHUnwindMap[Clause.State];
     MachineBasicBlock *HandlerBlock = Entry.Handler.get<MachineBasicBlock *>();
     MCSymbol *BeginSym = getMCSymbolForMBB(Asm, HandlerBlock);
     const MCExpr *HandlerBegin = getOffset(BeginSym, FuncBeginSym);

@@ -1,4 +1,4 @@
-//===- SampleProfReader.h - Read LLVM sample profile data -----------------===//
+//===- SampleProfReader.h - Read LLVM sample profile data -------*- C++ -*-===//
 //
 //                      The LLVM Compiler Infrastructure
 //
@@ -129,6 +129,30 @@
 // VERSION (uint32_t)
 //    File format version number computed by SPVersion()
 //
+// SUMMARY
+//    TOTAL_COUNT (uint64_t)
+//        Total number of samples in the profile.
+//    MAX_COUNT (uint64_t)
+//        Maximum value of samples on a line.
+//    MAX_FUNCTION_COUNT (uint64_t)
+//        Maximum number of samples at function entry (head samples).
+//    NUM_COUNTS (uint64_t)
+//        Number of lines with samples.
+//    NUM_FUNCTIONS (uint64_t)
+//        Number of functions with samples.
+//    NUM_DETAILED_SUMMARY_ENTRIES (size_t)
+//        Number of entries in detailed summary
+//    DETAILED_SUMMARY
+//        A list of detailed summary entry. Each entry consists of
+//        CUTOFF (uint32_t)
+//            Required percentile of total sample count expressed as a fraction
+//            multiplied by 1000000.
+//        MIN_COUNT (uint64_t)
+//            The minimum number of samples required to reach the target
+//            CUTOFF.
+//        NUM_COUNTS (uint64_t)
+//            Number of samples to get to the desrired percentile.
+//
 // NAME TABLE
 //    SIZE (uint32_t)
 //        Number of entries in the name table.
@@ -181,25 +205,33 @@
 //        FUNCTION BODY
 //          A FUNCTION BODY entry describing the inlined function.
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 #define LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/GCOV.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <vector>
 
 namespace llvm {
+
+class raw_ostream;
 
 namespace sampleprof {
 
@@ -235,7 +267,7 @@ public:
   SampleProfileReader(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
       : Profiles(0), Ctx(C), Buffer(std::move(B)) {}
 
-  virtual ~SampleProfileReader() {}
+  virtual ~SampleProfileReader() = default;
 
   /// \brief Read and validate the file header.
   virtual std::error_code readHeader() = 0;
@@ -251,7 +283,12 @@ public:
 
   /// \brief Return the samples collected for function \p F.
   FunctionSamples *getSamplesFor(const Function &F) {
-    return &Profiles[F.getName()];
+    // The function name may have been updated by adding suffix. In sample
+    // profile, the function names are all stripped, so we need to strip
+    // the function name suffix before matching with profile.
+    if (Profiles.count(F.getName().split('.').first))
+      return &Profiles[(F.getName().split('.').first)];
+    return nullptr;
   }
 
   /// \brief Return all the profiles.
@@ -265,7 +302,14 @@ public:
 
   /// \brief Create a sample profile reader appropriate to the file format.
   static ErrorOr<std::unique_ptr<SampleProfileReader>>
-  create(StringRef Filename, LLVMContext &C);
+  create(const Twine &Filename, LLVMContext &C);
+
+  /// \brief Create a sample profile reader from the supplied memory buffer.
+  static ErrorOr<std::unique_ptr<SampleProfileReader>>
+  create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C);
+
+  /// \brief Return the profile summary.
+  ProfileSummary &getSummary() { return *(Summary.get()); }
 
 protected:
   /// \brief Map every function to its associated profile.
@@ -280,6 +324,12 @@ protected:
 
   /// \brief Memory buffer holding the profile file.
   std::unique_ptr<MemoryBuffer> Buffer;
+
+  /// \brief Profile summary information.
+  std::unique_ptr<ProfileSummary> Summary;
+
+  /// \brief Compute summary for this profile.
+  void computeSummary();
 };
 
 class SampleProfileReaderText : public SampleProfileReader {
@@ -292,12 +342,15 @@ public:
 
   /// \brief Read sample profiles from the associated file.
   std::error_code read() override;
+
+  /// \brief Return true if \p Buffer is in the format supported by this class.
+  static bool hasFormat(const MemoryBuffer &Buffer);
 };
 
 class SampleProfileReaderBinary : public SampleProfileReader {
 public:
   SampleProfileReaderBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
-      : SampleProfileReader(std::move(B), C), Data(nullptr), End(nullptr) {}
+      : SampleProfileReader(std::move(B), C) {}
 
   /// \brief Read and validate the file header.
   std::error_code readHeader() override;
@@ -335,16 +388,22 @@ protected:
   std::error_code readProfile(FunctionSamples &FProfile);
 
   /// \brief Points to the current location in the buffer.
-  const uint8_t *Data;
+  const uint8_t *Data = nullptr;
 
   /// \brief Points to the end of the buffer.
-  const uint8_t *End;
+  const uint8_t *End = nullptr;
 
   /// Function name table.
   std::vector<StringRef> NameTable;
+
+private:
+  std::error_code readSummaryEntry(std::vector<ProfileSummaryEntry> &Entries);
+
+  /// \brief Read profile summary.
+  std::error_code readSummary();
 };
 
-typedef SmallVector<FunctionSamples *, 10> InlineCallStack;
+using InlineCallStack = SmallVector<FunctionSamples *, 10>;
 
 // Supported histogram types in GCC.  Currently, we only need support for
 // call target histograms.
@@ -396,8 +455,8 @@ protected:
   static const uint32_t GCOVTagAFDOFunction = 0xac000000;
 };
 
-} // End namespace sampleprof
+} // end namespace sampleprof
 
-} // End namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_PROFILEDATA_SAMPLEPROFREADER_H

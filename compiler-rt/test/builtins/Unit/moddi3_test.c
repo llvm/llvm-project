@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- moddi3_test.c - Test __moddi3 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

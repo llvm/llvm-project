@@ -1,4 +1,4 @@
-//===--- DAGDeltaAlgorithm.h - A DAG Minimization Algorithm ----*- C++ -*--===//
+//===- DAGDeltaAlgorithm.h - A DAG Minimization Algorithm ------*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,6 +10,7 @@
 #define LLVM_ADT_DAGDELTAALGORITHM_H
 
 #include <set>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -37,16 +38,17 @@ namespace llvm {
 /// should satisfy.
 class DAGDeltaAlgorithm {
   virtual void anchor();
+
 public:
-  typedef unsigned change_ty;
-  typedef std::pair<change_ty, change_ty> edge_ty;
+  using change_ty = unsigned;
+  using edge_ty = std::pair<change_ty, change_ty>;
 
   // FIXME: Use a decent data structure.
-  typedef std::set<change_ty> changeset_ty;
-  typedef std::vector<changeset_ty> changesetlist_ty;
+  using changeset_ty = std::set<change_ty>;
+  using changesetlist_ty = std::vector<changeset_ty>;
 
 public:
-  virtual ~DAGDeltaAlgorithm() {}
+  virtual ~DAGDeltaAlgorithm() = default;
 
   /// Run - Minimize the DAG formed by the \p Changes vertices and the
   /// \p Dependencies edges by executing \see ExecuteOneTest() on subsets of
@@ -74,4 +76,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_DAGDELTAALGORITHM_H

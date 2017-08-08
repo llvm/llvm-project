@@ -1,9 +1,9 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -faltivec -triple powerpc64le-unknown-unknown \
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc64le-unknown-unknown \
 // RUN: -target-feature +crypto -target-feature +power8-vector \
 // RUN: -emit-llvm %s -o - | FileCheck %s
 
-// RUN: %clang_cc1 -faltivec -triple powerpc64-unknown-unknown \
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc64-unknown-unknown \
 // RUN: -target-feature +crypto -target-feature +power8-vector \
 // RUN: -emit-llvm %s -o - | FileCheck %s
 #include <altivec.h>
@@ -105,6 +105,30 @@ vector unsigned long long test_vpermxord(void)
   vector unsigned long long b = D_INIT2
   vector unsigned long long c = D_INIT2
   return __builtin_altivec_crypto_vpermxor(a, b, c);
+// CHECK: @llvm.ppc.altivec.crypto.vpermxor
+}
+
+// CHECK-LABEL: test_vpermxorbc
+vector bool char test_vpermxorbc(vector bool char a,
+                                vector bool char b,
+                                vector bool char c) {
+  return vec_permxor(a, b, c);
+// CHECK: @llvm.ppc.altivec.crypto.vpermxor
+}
+
+// CHECK-LABEL: test_vpermxorsc
+vector signed char test_vpermxorsc(vector signed char a,
+                                   vector signed char b,
+                                   vector signed char c) {
+  return vec_permxor(a, b, c);
+// CHECK: @llvm.ppc.altivec.crypto.vpermxor
+}
+
+// CHECK-LABEL: test_vpermxoruc
+vector unsigned char test_vpermxoruc(vector unsigned char a,
+                                     vector unsigned char b,
+                                     vector unsigned char c) {
+  return vec_permxor(a, b, c);
 // CHECK: @llvm.ppc.altivec.crypto.vpermxor
 }
 

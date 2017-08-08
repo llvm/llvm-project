@@ -1,10 +1,21 @@
-; RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=asm %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-apple-macosx10.9.0 -filetype=obj -O0 < %s \
+; RUN:   | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 ; ModuleID = 'aggregate-indirect-arg.cpp'
 ; extracted from debuginfo-tests/aggregate-indirect-arg.cpp
 
-; v should not be a pointer.
-; CHECK: ##DEBUG_VALUE: foo:v <- RSI
-; rdar://problem/13658587
+; v should be a pointer.
+; CHECK:  .debug_info contents:
+; CHECK:   DW_TAG_subprogram
+; CHECK:     DW_AT_specification {{.*}} "_ZN1A3fooE4SVal"
+; CHECK-NOT: DW_TAG_subprogram
+; CHECK:     DW_TAG_formal_parameter
+; CHECK:       DW_AT_name {{.*}} "this"
+; CHECK-NOT:   DW_TAG_subprogram
+; CHECK:     DW_TAG_formal_parameter
+; CHECK-NEXT:  DW_AT_location 
+;                                rsi+0
+; CHECK-SAME:                    74 00
+; CHECK-NEXT:  DW_AT_name {{.*}} "v"
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
@@ -14,6 +25,7 @@ target triple = "x86_64-apple-macosx10.9.0"
 
 declare void @_Z3barR4SVal(%class.SVal* %v)
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 declare i32 @main()
 ; Function Attrs: nounwind ssp uwtable
 define linkonce_odr void @_ZN1A3fooE4SVal(%class.A* %this, %class.SVal* %v) nounwind ssp uwtable align 2 !dbg !35 {
@@ -21,7 +33,7 @@ entry:
   %this.addr = alloca %class.A*, align 8
   store %class.A* %this, %class.A** %this.addr, align 8
   call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !59, metadata !DIExpression()), !dbg !61
-  call void @llvm.dbg.declare(metadata %class.SVal* %v, metadata !62, metadata !DIExpression(DW_OP_deref)), !dbg !61
+  call void @llvm.dbg.value(metadata %class.SVal* %v, metadata !62, metadata !DIExpression(DW_OP_deref)), !dbg !61
   %this1 = load %class.A*, %class.A** %this.addr
   call void @_Z3barR4SVal(%class.SVal* %v), !dbg !61
   ret void, !dbg !61
@@ -32,11 +44,10 @@ declare void @_ZN4SValD2Ev(%class.SVal* %this)
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!47, !68}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: false, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "aggregate-indirect-arg.cpp", directory: "")
 !2 = !{}
-!3 = !{!4, !29, !33, !34, !35}
-!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barR4SVal", line: 19, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 19, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barR4SVal", line: 19, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 19, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "aggregate-indirect-arg.cpp", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null, !8}
@@ -58,13 +69,13 @@ declare void @_ZN4SValD2Ev(%class.SVal* %this)
 !25 = !{null, !19, !26}
 !26 = !DIDerivedType(tag: DW_TAG_reference_type, baseType: !27)
 !27 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !9)
-!29 = distinct !DISubprogram(name: "main", line: 25, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 25, file: !1, scope: !5, type: !30, variables: !2)
+!29 = distinct !DISubprogram(name: "main", line: 25, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 25, file: !1, scope: !5, type: !30, variables: !2)
 !30 = !DISubroutineType(types: !31)
 !31 = !{!32}
 !32 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!33 = distinct !DISubprogram(name: "~SVal", linkageName: "_ZN4SValD1Ev", line: 14, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 14, file: !1, scope: null, type: !17, declaration: !16, variables: !2)
-!34 = distinct !DISubprogram(name: "~SVal", linkageName: "_ZN4SValD2Ev", line: 14, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 14, file: !1, scope: null, type: !17, declaration: !16, variables: !2)
-!35 = distinct !DISubprogram(name: "foo", linkageName: "_ZN1A3fooE4SVal", line: 22, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 22, file: !1, scope: null, type: !36, declaration: !41, variables: !2)
+!33 = distinct !DISubprogram(name: "~SVal", linkageName: "_ZN4SValD1Ev", line: 14, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 14, file: !1, scope: null, type: !17, declaration: !16, variables: !2)
+!34 = distinct !DISubprogram(name: "~SVal", linkageName: "_ZN4SValD2Ev", line: 14, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 14, file: !1, scope: null, type: !17, declaration: !16, variables: !2)
+!35 = distinct !DISubprogram(name: "foo", linkageName: "_ZN1A3fooE4SVal", line: 22, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 22, file: !1, scope: null, type: !36, declaration: !41, variables: !2)
 !36 = !DISubroutineType(types: !37)
 !37 = !{null, !38, !9}
 !38 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer, baseType: !39)

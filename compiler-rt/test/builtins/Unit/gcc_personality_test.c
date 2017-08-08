@@ -1,3 +1,6 @@
+// FIXME: XFAIL as currently it cannot be built by lit properly.
+// XFAIL: *
+// RUN: %clangxx_builtins %s %librt -o %t && %run %t
 /* ===-- gcc_personality_test.c - Tests __gcc_personality_v0 -------------===
  *
  *                     The LLVM Compiler Infrastructure

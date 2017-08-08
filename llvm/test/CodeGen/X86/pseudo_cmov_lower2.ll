@@ -98,3 +98,47 @@ entry:
   %d5 = fdiv double %d4, %d3
   ret double %d5
 }
+
+; This test checks that only a single jae gets generated in the final code
+; for lowering the CMOV pseudos that get created for this IR.  The tricky part
+; of this test is that it tests the special code in CodeGenPrepare.
+;
+; CHECK-LABEL: foo5:
+; CHECK: jae
+; CHECK-NOT: jae
+define double @foo5(float %p1, double %p2, double %p3) nounwind {
+entry:
+  %c1 = fcmp oge float %p1, 0.000000e+00
+  %d0 = fadd double %p2, 1.25e0
+  %d1 = fadd double %p3, 1.25e0
+  %d2 = select i1 %c1, double %d0, double %d1, !prof !0
+  %d3 = select i1 %c1, double %d2, double %p2, !prof !0
+  %d4 = select i1 %c1, double %d3, double %p3, !prof !0
+  %d5 = fsub double %d2, %d3
+  %d6 = fadd double %d5, %d4
+  ret double %d6
+}
+
+; We should expand select instructions into 3 conditional branches as their
+; condtions are different.
+;
+; CHECK-LABEL: foo6:
+; CHECK: jae
+; CHECK: jae
+; CHECK: jae
+define double @foo6(float %p1, double %p2, double %p3) nounwind {
+entry:
+  %c1 = fcmp oge float %p1, 0.000000e+00
+  %c2 = fcmp oge float %p1, 1.000000e+00
+  %c3 = fcmp oge float %p1, 2.000000e+00
+  %d0 = fadd double %p2, 1.25e0
+  %d1 = fadd double %p3, 1.25e0
+  %d2 = select i1 %c1, double %d0, double %d1, !prof !0
+  %d3 = select i1 %c2, double %d2, double %p2, !prof !0
+  %d4 = select i1 %c3, double %d3, double %p3, !prof !0
+  %d5 = fsub double %d2, %d3
+  %d6 = fadd double %d5, %d4
+  ret double %d6
+}
+
+!0 = !{!"branch_weights", i32 1, i32 2000}

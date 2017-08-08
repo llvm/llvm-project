@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 namespace N { 
   namespace M {
@@ -21,8 +23,15 @@ namespace N {
   }
 
   M::Promote<int>::type *ret_intptr3(int* ip) { return ip; }
-  M::template Promote<int>::type *ret_intptr4(int* ip) { return ip; } // expected-warning{{'template' keyword outside of a template}}
-  M::template Promote<int> pi; // expected-warning{{'template' keyword outside of a template}}
+  M::template Promote<int>::type *ret_intptr4(int* ip) { return ip; } 
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{'template' keyword outside of a template}}
+#endif
+
+  M::template Promote<int> pi;
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{'template' keyword outside of a template}}
+#endif
 }
 
 N::M::Promote<int>::type *ret_intptr5(int* ip) { return ip; }

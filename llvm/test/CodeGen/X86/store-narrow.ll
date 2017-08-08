@@ -1,6 +1,7 @@
 ; rdar://7860110
 ; RUN: llc -asm-verbose=false < %s | FileCheck %s -check-prefix=X64
-; RUN: llc -march=x86 -asm-verbose=false < %s | FileCheck %s -check-prefix=X32
+; RUN: llc -march=x86 -asm-verbose=false -fixup-byte-word-insts=1 < %s | FileCheck %s -check-prefix=X32 -check-prefix=X32-BWON
+; RUN: llc -march=x86 -asm-verbose=false -fixup-byte-word-insts=0 < %s | FileCheck %s -check-prefix=X32 -check-prefix=X32-BWOFF
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10.2"
 
@@ -50,7 +51,8 @@ entry:
 ; X64: movw	%si, (%rdi)
 
 ; X32-LABEL: test3:
-; X32: movw	8(%esp), %ax
+; X32-BWON:  movzwl	8(%esp), %eax
+; X32-BWOFF: movw	8(%esp), %ax
 ; X32: movw	%ax, (%{{.*}})
 }
 
@@ -67,7 +69,8 @@ entry:
 ; X64: movw	%si, 2(%rdi)
 
 ; X32-LABEL: test4:
-; X32: movw	8(%esp), %[[REG:[abcd]]]x
+; X32-BWON:  movzwl	8(%esp), %e[[REG:[abcd]]]x
+; X32-BWOFF: movw	8(%esp), %[[REG:[abcd]]]x
 ; X32: movw	%[[REG]]x, 2(%{{.*}})
 }
 
@@ -84,7 +87,8 @@ entry:
 ; X64: movw	%si, 2(%rdi)
 
 ; X32-LABEL: test5:
-; X32: movw	8(%esp), %[[REG:[abcd]]]x
+; X32-BWON:  movzwl	8(%esp), %e[[REG:[abcd]]]x
+; X32-BWOFF: movw	8(%esp), %[[REG:[abcd]]]x
 ; X32: movw	%[[REG]]x, 2(%{{.*}})
 }
 
@@ -130,10 +134,7 @@ entry:
 @g_16 = internal global i32 -1
 
 ; X64-LABEL: test8:
-; X64-NEXT: movl _g_16(%rip), %eax
-; X64-NEXT: movl $0, _g_16(%rip)
-; X64-NEXT: orl  $1, %eax
-; X64-NEXT: movl %eax, _g_16(%rip)
+; X64-NEXT: orb  $1, _g_16(%rip)
 ; X64-NEXT: ret
 define void @test8() nounwind {
   %tmp = load i32, i32* @g_16

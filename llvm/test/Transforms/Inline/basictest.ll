@@ -1,4 +1,5 @@
-; RUN: opt < %s -inline -scalarrepl -S | FileCheck %s
+; RUN: opt < %s -inline -sroa -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline,function(sroa))' -S | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
 define i32 @test1f(i32 %i) {
@@ -89,4 +90,28 @@ define i32 @test() {
 
   ret i32 %e
 ; CHECK: }
+}
+
+; Inliner shouldn't delete calls it can't inline, even if they're trivially dead
+; CHECK-LABEL: @outer4(
+define void @outer4(void ()* %inner4) {
+entry:
+; CHECK: call void %inner4()
+  call void %inner4() nounwind readnone
+  ret void
+}
+
+declare void @inner5_inner()
+
+define void @inner5(void ()* %x) {
+  call void %x() nounwind readnone
+  ret void
+}
+
+; Inliner shouldn't delete calls it can't inline, even if they're trivially dead and temporarily indirect
+; CHECK-LABEL: @outer5(
+define void @outer5() {
+; CHECK: call void @inner5_inner(
+  call void @inner5(void ()* @inner5_inner)
+  ret void
 }

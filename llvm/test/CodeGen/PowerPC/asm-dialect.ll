@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc-apple-darwin | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64-apple-darwin | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-apple-darwin | FileCheck %s
 
 ; This test verifies that we choose "assembler variant 1" (which GCC
 ; uses for "new-style mnemonics" as opposed to POWER mnemonics) when

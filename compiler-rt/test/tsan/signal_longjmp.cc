@@ -1,17 +1,24 @@
 // RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 
 // Test case for longjumping out of signal handler:
-// https://code.google.com/p/thread-sanitizer/issues/detail?id=75
+// https://github.com/google/sanitizers/issues/482
 
-// Longjmp assembly has not been implemented for mips64 or aarch64 yet
-// XFAIL: mips64
-// XFAIL: aarch64
+// This test fails on powerpc64 BE (VMA=44), a segmentation fault
+// error happens at the second assignment
+// "((volatile int *volatile)mem)[1] = 1".
+// XFAIL: powerpc64-unknown-linux-gnu
 
 #include <setjmp.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/mman.h>
+
+#ifdef __APPLE__
+#define SIGNAL_TO_HANDLE SIGBUS
+#else
+#define SIGNAL_TO_HANDLE SIGSEGV
+#endif
 
 sigjmp_buf fault_jmp;
 volatile int fault_expected;
@@ -45,7 +52,7 @@ int main() {
     exit(1);
   }
 
-  if (sigaction(SIGSEGV, &act, NULL)) {
+  if (sigaction(SIGNAL_TO_HANDLE, &act, NULL)) {
     perror("sigaction");
     exit(1);
   }

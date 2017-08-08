@@ -11,7 +11,7 @@
 #define LLVM_TOOLS_LLVM_READOBJ_ARMEHABIPRINTER_H
 
 #include "Error.h"
-#include "StreamWriter.h"
+#include "llvm-readobj.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
@@ -19,6 +19,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/type_traits.h"
 
 namespace llvm {
@@ -26,7 +27,7 @@ namespace ARM {
 namespace EHABI {
 
 class OpcodeDecoder {
-  StreamWriter &SW;
+  ScopedPrinter &SW;
   raw_ostream &OS;
 
   struct RingEntry {
@@ -63,7 +64,7 @@ class OpcodeDecoder {
   void PrintRegisters(uint32_t Mask, StringRef Prefix);
 
 public:
-  OpcodeDecoder(StreamWriter &SW) : SW(SW), OS(SW.getOStream()) {}
+  OpcodeDecoder(ScopedPrinter &SW) : SW(SW), OS(SW.getOStream()) {}
   void Decode(const uint8_t *Opcodes, off_t Offset, size_t Length);
 };
 
@@ -310,7 +311,7 @@ class PrinterContext {
   typedef typename object::ELFFile<ET>::Elf_Rel Elf_Rel;
   typedef typename object::ELFFile<ET>::Elf_Word Elf_Word;
 
-  StreamWriter &SW;
+  ScopedPrinter &SW;
   const object::ELFFile<ET> *ELF;
   const Elf_Shdr *Symtab;
   ArrayRef<Elf_Word> ShndxTable;
@@ -334,7 +335,7 @@ class PrinterContext {
   void PrintOpcodes(const uint8_t *Entry, size_t Length, off_t Offset) const;
 
 public:
-  PrinterContext(StreamWriter &SW, const object::ELFFile<ET> *ELF,
+  PrinterContext(ScopedPrinter &SW, const object::ELFFile<ET> *ELF,
                  const Elf_Shdr *Symtab)
       : SW(SW), ELF(ELF), Symtab(Symtab) {}
 
@@ -348,14 +349,22 @@ template <typename ET>
 ErrorOr<StringRef>
 PrinterContext<ET>::FunctionAtAddress(unsigned Section,
                                       uint64_t Address) const {
-  ErrorOr<StringRef> StrTableOrErr = ELF->getStringTableForSymtab(*Symtab);
-  error(StrTableOrErr.getError());
+  auto StrTableOrErr = ELF->getStringTableForSymtab(*Symtab);
+  if (!StrTableOrErr)
+    error(StrTableOrErr.takeError());
   StringRef StrTable = *StrTableOrErr;
 
-  for (const Elf_Sym &Sym : ELF->symbols(Symtab))
+  for (const Elf_Sym &Sym : unwrapOrError(ELF->symbols(Symtab)))
     if (Sym.st_shndx == Section && Sym.st_value == Address &&
-        Sym.getType() == ELF::STT_FUNC)
-      return Sym.getName(StrTable);
+        Sym.getType() == ELF::STT_FUNC) {
+      auto NameOrErr = Sym.getName(StrTable);
+      if (!NameOrErr) {
+        // TODO: Actually report errors helpfully.
+        consumeError(NameOrErr.takeError());
+        return readobj_error::unknown_symbol;
+      }
+      return *NameOrErr;
+    }
   return readobj_error::unknown_symbol;
 }
 
@@ -371,15 +380,16 @@ PrinterContext<ET>::FindExceptionTable(unsigned IndexSectionIndex,
   /// handling table.  Use this symbol to recover the actual exception handling
   /// table.
 
-  for (const Elf_Shdr &Sec : ELF->sections()) {
+  for (const Elf_Shdr &Sec : unwrapOrError(ELF->sections())) {
     if (Sec.sh_type != ELF::SHT_REL || Sec.sh_info != IndexSectionIndex)
       continue;
 
-    ErrorOr<const Elf_Shdr *> SymTabOrErr = ELF->getSection(Sec.sh_link);
-    error(SymTabOrErr.getError());
+    auto SymTabOrErr = ELF->getSection(Sec.sh_link);
+    if (!SymTabOrErr)
+      error(SymTabOrErr.takeError());
     const Elf_Shdr *SymTab = *SymTabOrErr;
 
-    for (const Elf_Rel &R : ELF->rels(&Sec)) {
+    for (const Elf_Rel &R : unwrapOrError(ELF->rels(&Sec))) {
       if (R.r_offset != static_cast<unsigned>(IndexTableOffset))
         continue;
 
@@ -388,12 +398,12 @@ PrinterContext<ET>::FindExceptionTable(unsigned IndexSectionIndex,
       RelA.r_info = R.r_info;
       RelA.r_addend = 0;
 
-      const Elf_Sym *Symbol = ELF->getRelocationSymbol(&RelA, SymTab);
+      const Elf_Sym *Symbol =
+          unwrapOrError(ELF->getRelocationSymbol(&RelA, SymTab));
 
-      ErrorOr<const Elf_Shdr *> Ret =
-          ELF->getSection(Symbol, SymTab, ShndxTable);
-      if (std::error_code EC = Ret.getError())
-        report_fatal_error(EC.message());
+      auto Ret = ELF->getSection(Symbol, SymTab, ShndxTable);
+      if (!Ret)
+        report_fatal_error(errorToErrorCode(Ret.takeError()).message());
       return *Ret;
     }
   }
@@ -404,7 +414,7 @@ template <typename ET>
 void PrinterContext<ET>::PrintExceptionTable(const Elf_Shdr *IT,
                                              const Elf_Shdr *EHT,
                                              uint64_t TableEntryOffset) const {
-  ErrorOr<ArrayRef<uint8_t> > Contents = ELF->getSectionContents(EHT);
+  Expected<ArrayRef<uint8_t>> Contents = ELF->getSectionContents(EHT);
   if (!Contents)
     return;
 
@@ -471,7 +481,7 @@ void PrinterContext<ET>::PrintOpcodes(const uint8_t *Entry,
 template <typename ET>
 void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
                                          const Elf_Shdr *IT) const {
-  ErrorOr<ArrayRef<uint8_t> > Contents = ELF->getSectionContents(IT);
+  Expected<ArrayRef<uint8_t>> Contents = ELF->getSectionContents(IT);
   if (!Contents)
     return;
 
@@ -524,7 +534,7 @@ void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
       const Elf_Shdr *EHT =
         FindExceptionTable(SectionIndex, Entry * IndexTableEntrySize + 4);
 
-      if (ErrorOr<StringRef> Name = ELF->getSectionName(EHT))
+      if (auto Name = ELF->getSectionName(EHT))
         SW.printString("ExceptionHandlingTable", *Name);
 
       uint64_t TableEntryOffset = PREL31(Word1, IT->sh_addr);
@@ -540,12 +550,12 @@ void PrinterContext<ET>::PrintUnwindInformation() const {
   DictScope UI(SW, "UnwindInformation");
 
   int SectionIndex = 0;
-  for (const Elf_Shdr &Sec : ELF->sections()) {
+  for (const Elf_Shdr &Sec : unwrapOrError(ELF->sections())) {
     if (Sec.sh_type == ELF::SHT_ARM_EXIDX) {
       DictScope UIT(SW, "UnwindIndexTable");
 
       SW.printNumber("SectionIndex", SectionIndex);
-      if (ErrorOr<StringRef> SectionName = ELF->getSectionName(&Sec))
+      if (auto SectionName = ELF->getSectionName(&Sec))
         SW.printString("SectionName", *SectionName);
       SW.printHex("SectionOffset", Sec.sh_offset);
 

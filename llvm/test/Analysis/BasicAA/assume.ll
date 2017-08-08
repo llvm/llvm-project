@@ -14,8 +14,8 @@ define void @test1(i8* %P, i8* %Q) nounwind ssp {
 ; CHECK: MayAlias:	i8* %P, i8* %Q
 ; CHECK: NoModRef:  Ptr: i8* %P	<->  tail call void @llvm.assume(i1 true)
 ; CHECK: NoModRef:  Ptr: i8* %Q	<->  tail call void @llvm.assume(i1 true)
-; CHECK: Both ModRef:  Ptr: i8* %P	<->  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
-; CHECK: Both ModRef:  Ptr: i8* %Q	<->  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
+; CHECK: Just Mod:  Ptr: i8* %P	<->  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
+; CHECK: Just Ref:  Ptr: i8* %Q	<->  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
 ; CHECK: NoModRef:   tail call void @llvm.assume(i1 true) <->   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
 ; CHECK: NoModRef:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false) <->   tail call void @llvm.assume(i1 true)
 }

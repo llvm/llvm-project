@@ -66,6 +66,7 @@ void NoReturnFunctionChecker::checkPostCall(const CallEvent &CE,
             .Case("assfail", true)
             .Case("db_error", true)
             .Case("__assert", true)
+            .Case("__assert2", true)
             // For the purpose of static analysis, we do not care that
             //  this MSVC function will return if the user decides to continue.
             .Case("_wassert", true)
@@ -122,14 +123,14 @@ void NoReturnFunctionChecker::checkPostObjCMessage(const ObjCMethodCall &Msg,
   case 4:
     lazyInitKeywordSelector(HandleFailureInFunctionSel, C.getASTContext(),
                             "handleFailureInFunction", "file", "lineNumber",
-                            "description", nullptr);
+                            "description");
     if (Sel != HandleFailureInFunctionSel)
       return;
     break;
   case 5:
     lazyInitKeywordSelector(HandleFailureInMethodSel, C.getASTContext(),
                             "handleFailureInMethod", "object", "file",
-                            "lineNumber", "description", nullptr);
+                            "lineNumber", "description");
     if (Sel != HandleFailureInMethodSel)
       return;
     break;

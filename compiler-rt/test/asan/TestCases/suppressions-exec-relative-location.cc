@@ -25,6 +25,7 @@
 
 // XFAIL: android
 // XFAIL: win32
+// UNSUPPORTED: ios
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -20,6 +20,6 @@ int do_uaf(void) {
   free(x);
   return x[5];
   // CHECK: AddressSanitizer: heap-use-after-free
-  // CHECK: #0 {{0x[a-f0-9]+ \(.*[\\/]unsymbolized.cc.*.exe\+0x40[a-f0-9]{4}\)}}
-  // CHECK: #1 {{0x[a-f0-9]+ \(.*[\\/]unsymbolized.cc.*.exe\+0x40[a-f0-9]{4}\)}}
+  // CHECK: #0 {{0x[a-f0-9]+ \(.*[\\/]unsymbolized.cc.*.exe\+(0x40|0x14000)[a-f0-9]{4}\)}}
+  // CHECK: #1 {{0x[a-f0-9]+ \(.*[\\/]unsymbolized.cc.*.exe\+(0x40|0x14000)[a-f0-9]{4}\)}}
 }

@@ -29,3 +29,68 @@ int main() {
   cdv = f(cdv);
   vv = f(vv);
 }
+
+// Ensuring that we pick the correct function for taking the address of an
+// overload when conversions are involved.
+
+void addrof_many(int *a) __attribute__((overloadable, enable_if(0, "")));
+void addrof_many(void *a) __attribute__((overloadable));
+void addrof_many(char *a) __attribute__((overloadable));
+
+void addrof_single(int *a) __attribute__((overloadable, enable_if(0, "")));
+void addrof_single(char *a) __attribute__((overloadable, enable_if(0, "")));
+void addrof_single(char *a) __attribute__((overloadable));
+
+// CHECK-LABEL: define void @foo
+void foo() {
+  // CHECK: store void (i8*)* @_Z11addrof_manyPc
+  void (*p1)(char *) = &addrof_many;
+  // CHECK: store void (i8*)* @_Z11addrof_manyPv
+  void (*p2)(void *) = &addrof_many;
+  // CHECK: void (i8*)* @_Z11addrof_manyPc
+  void *vp1 = (void (*)(char *)) & addrof_many;
+  // CHECK: void (i8*)* @_Z11addrof_manyPv
+  void *vp2 = (void (*)(void *)) & addrof_many;
+
+  // CHECK: store void (i8*)* @_Z13addrof_singlePc
+  void (*p3)(char *) = &addrof_single;
+  // CHECK: @_Z13addrof_singlePc
+  void (*p4)(int *) = &addrof_single;
+  // CHECK: @_Z13addrof_singlePc
+  void *vp3 = &addrof_single;
+}
+
+
+void ovl_bar(char *) __attribute__((overloadable));
+void ovl_bar(int) __attribute__((overloadable));
+
+// CHECK-LABEL: define void @bar
+void bar() {
+  char charbuf[1];
+  unsigned char ucharbuf[1];
+
+  // CHECK: call void @_Z7ovl_barPc
+  ovl_bar(charbuf);
+  // CHECK: call void @_Z7ovl_barPc
+  ovl_bar(ucharbuf);
+}
+
+void ovl_baz(int *, int) __attribute__((overloadable));
+void ovl_baz(unsigned int *, unsigned int) __attribute__((overloadable));
+void ovl_baz2(int, int *) __attribute__((overloadable));
+void ovl_baz2(unsigned int, unsigned int *) __attribute__((overloadable));
+// CHECK-LABEL: define void @baz
+void baz() {
+  unsigned int j;
+  // Initial rules for incompatible pointer conversions made this overload
+  // ambiguous.
+  // CHECK: call void @_Z7ovl_bazPjj
+  ovl_baz(&j, 0);
+  // CHECK: call void @_Z7ovl_bazPjj
+  ovl_baz(&j, 0u);
+
+  // CHECK: call void @_Z8ovl_baz2jPj
+  ovl_baz2(0, &j);
+  // CHECK: call void @_Z8ovl_baz2jPj
+  ovl_baz2(0u, &j);
+}

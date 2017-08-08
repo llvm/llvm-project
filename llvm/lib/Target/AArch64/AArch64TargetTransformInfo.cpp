@@ -9,8 +9,8 @@
 
 #include "AArch64TargetTransformInfo.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/CostTable.h"
@@ -19,6 +19,23 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64tti"
+
+static cl::opt<bool> EnableFalkorHWPFUnrollFix("enable-falkor-hwpf-unroll-fix",
+                                               cl::init(true), cl::Hidden);
+
+bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
+                                         const Function *Callee) const {
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  const FeatureBitset &CallerBits =
+      TM.getSubtargetImpl(*Caller)->getFeatureBits();
+  const FeatureBitset &CalleeBits =
+      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+  // Inline a callee if its target-features are a subset of the callers
+  // target-features.
+  return (CallerBits & CalleeBits) == CalleeBits;
+}
 
 /// \brief Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
@@ -176,9 +193,94 @@ AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) {
   return TTI::PSK_Software;
 }
 
-int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
+bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
+                                           ArrayRef<const Value *> Args) {
+
+  // A helper that returns a vector type from the given type. The number of
+  // elements in type Ty determine the vector width.
+  auto toVectorTy = [&](Type *ArgTy) {
+    return VectorType::get(ArgTy->getScalarType(),
+                           DstTy->getVectorNumElements());
+  };
+
+  // Exit early if DstTy is not a vector type whose elements are at least
+  // 16-bits wide.
+  if (!DstTy->isVectorTy() || DstTy->getScalarSizeInBits() < 16)
+    return false;
+
+  // Determine if the operation has a widening variant. We consider both the
+  // "long" (e.g., usubl) and "wide" (e.g., usubw) versions of the
+  // instructions.
+  //
+  // TODO: Add additional widening operations (e.g., mul, shl, etc.) once we
+  //       verify that their extending operands are eliminated during code
+  //       generation.
+  switch (Opcode) {
+  case Instruction::Add: // UADDL(2), SADDL(2), UADDW(2), SADDW(2).
+  case Instruction::Sub: // USUBL(2), SSUBL(2), USUBW(2), SSUBW(2).
+    break;
+  default:
+    return false;
+  }
+
+  // To be a widening instruction (either the "wide" or "long" versions), the
+  // second operand must be a sign- or zero extend having a single user. We
+  // only consider extends having a single user because they may otherwise not
+  // be eliminated.
+  if (Args.size() != 2 ||
+      (!isa<SExtInst>(Args[1]) && !isa<ZExtInst>(Args[1])) ||
+      !Args[1]->hasOneUse())
+    return false;
+  auto *Extend = cast<CastInst>(Args[1]);
+
+  // Legalize the destination type and ensure it can be used in a widening
+  // operation.
+  auto DstTyL = TLI->getTypeLegalizationCost(DL, DstTy);
+  unsigned DstElTySize = DstTyL.second.getScalarSizeInBits();
+  if (!DstTyL.second.isVector() || DstElTySize != DstTy->getScalarSizeInBits())
+    return false;
+
+  // Legalize the source type and ensure it can be used in a widening
+  // operation.
+  Type *SrcTy = toVectorTy(Extend->getSrcTy());
+  auto SrcTyL = TLI->getTypeLegalizationCost(DL, SrcTy);
+  unsigned SrcElTySize = SrcTyL.second.getScalarSizeInBits();
+  if (!SrcTyL.second.isVector() || SrcElTySize != SrcTy->getScalarSizeInBits())
+    return false;
+
+  // Get the total number of vector elements in the legalized types.
+  unsigned NumDstEls = DstTyL.first * DstTyL.second.getVectorNumElements();
+  unsigned NumSrcEls = SrcTyL.first * SrcTyL.second.getVectorNumElements();
+
+  // Return true if the legalized types have the same number of vector elements
+  // and the destination element type size is twice that of the source type.
+  return NumDstEls == NumSrcEls && 2 * SrcElTySize == DstElTySize;
+}
+
+int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                     const Instruction *I) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
+
+  // If the cast is observable, and it is used by a widening instruction (e.g.,
+  // uaddl, saddw, etc.), it may be free.
+  if (I && I->hasOneUse()) {
+    auto *SingleUser = cast<Instruction>(*I->user_begin());
+    SmallVector<const Value *, 4> Operands(SingleUser->operand_values());
+    if (isWideningInstruction(Dst, SingleUser->getOpcode(), Operands)) {
+      // If the cast is the second operand, it is free. We will generate either
+      // a "wide" or "long" version of the widening instruction.
+      if (I == SingleUser->getOperand(1))
+        return 0;
+      // If the cast is not the second operand, it will be free if it looks the
+      // same as the second operand. In this case, we will generate a "long"
+      // version of the widening instruction.
+      if (auto *Cast = dyn_cast<CastInst>(SingleUser->getOperand(1)))
+        if (I->getOpcode() == Cast->getOpcode() &&
+            cast<CastInst>(I)->getSrcTy() == Cast->getSrcTy())
+          return 0;
+    }
+  }
 
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
@@ -188,27 +290,28 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
 
   static const TypeConversionCostTblEntry
   ConversionTbl[] = {
-    { ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i16, 0 },
-    { ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i16, 0 },
-    { ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i32, 1 },
-    { ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i32, 1 },
-    { ISD::TRUNCATE,    MVT::v4i32, MVT::v4i64, 0 },
-    { ISD::TRUNCATE,    MVT::v4i16, MVT::v4i32, 1 },
+    { ISD::TRUNCATE, MVT::v4i16, MVT::v4i32,  1 },
+    { ISD::TRUNCATE, MVT::v4i32, MVT::v4i64,  0 },
+    { ISD::TRUNCATE, MVT::v8i8,  MVT::v8i32,  3 },
+    { ISD::TRUNCATE, MVT::v16i8, MVT::v16i32, 6 },
 
     // The number of shll instructions for the extension.
-    { ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i16, 3 },
-    { ISD::ZERO_EXTEND, MVT::v4i64, MVT::v4i16, 3 },
-    { ISD::SIGN_EXTEND, MVT::v8i32, MVT::v8i8, 3 },
-    { ISD::ZERO_EXTEND, MVT::v8i32, MVT::v8i8, 3 },
-    { ISD::SIGN_EXTEND, MVT::v8i64, MVT::v8i8, 7 },
-    { ISD::ZERO_EXTEND, MVT::v8i64, MVT::v8i8, 7 },
-    { ISD::SIGN_EXTEND, MVT::v8i64, MVT::v8i16, 6 },
-    { ISD::ZERO_EXTEND, MVT::v8i64, MVT::v8i16, 6 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i16, 3 },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i16, 3 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32, 2 },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i32, 2 },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i8,  3 },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i8,  3 },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i16, 2 },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16, 2 },
+    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i8,  7 },
+    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i8,  7 },
+    { ISD::SIGN_EXTEND, MVT::v8i64,  MVT::v8i16, 6 },
+    { ISD::ZERO_EXTEND, MVT::v8i64,  MVT::v8i16, 6 },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8, 2 },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8, 2 },
     { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i8, 6 },
     { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i8, 6 },
-
-    { ISD::TRUNCATE,    MVT::v16i8, MVT::v16i32, 6 },
-    { ISD::TRUNCATE,    MVT::v8i8, MVT::v8i32, 3 },
 
     // LowerVectorINT_TO_FP:
     { ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i32, 1 },
@@ -290,6 +393,61 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
   return BaseT::getCastInstrCost(Opcode, Dst, Src);
 }
 
+int AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                             VectorType *VecTy,
+                                             unsigned Index) {
+
+  // Make sure we were given a valid extend opcode.
+  assert((Opcode == Instruction::SExt || Opcode == Instruction::ZExt) &&
+         "Invalid opcode");
+
+  // We are extending an element we extract from a vector, so the source type
+  // of the extend is the element type of the vector.
+  auto *Src = VecTy->getElementType();
+
+  // Sign- and zero-extends are for integer types only.
+  assert(isa<IntegerType>(Dst) && isa<IntegerType>(Src) && "Invalid type");
+
+  // Get the cost for the extract. We compute the cost (if any) for the extend
+  // below.
+  auto Cost = getVectorInstrCost(Instruction::ExtractElement, VecTy, Index);
+
+  // Legalize the types.
+  auto VecLT = TLI->getTypeLegalizationCost(DL, VecTy);
+  auto DstVT = TLI->getValueType(DL, Dst);
+  auto SrcVT = TLI->getValueType(DL, Src);
+
+  // If the resulting type is still a vector and the destination type is legal,
+  // we may get the extension for free. If not, get the default cost for the
+  // extend.
+  if (!VecLT.second.isVector() || !TLI->isTypeLegal(DstVT))
+    return Cost + getCastInstrCost(Opcode, Dst, Src);
+
+  // The destination type should be larger than the element type. If not, get
+  // the default cost for the extend.
+  if (DstVT.getSizeInBits() < SrcVT.getSizeInBits())
+    return Cost + getCastInstrCost(Opcode, Dst, Src);
+
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Opcode should be either SExt or ZExt");
+
+  // For sign-extends, we only need a smov, which performs the extension
+  // automatically.
+  case Instruction::SExt:
+    return Cost;
+
+  // For zero-extends, the extend is performed automatically by a umov unless
+  // the destination type is i64 and the element type is i8 or i16.
+  case Instruction::ZExt:
+    if (DstVT.getSizeInBits() != 64u || SrcVT.getSizeInBits() == 32u)
+      return Cost;
+  }
+
+  // If we are unable to perform the extend for free, get the default cost.
+  return Cost + getCastInstrCost(Opcode, Dst, Src);
+}
+
 int AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                        unsigned Index) {
   assert(Val->isVectorTy() && "This must be a vector type");
@@ -312,15 +470,25 @@ int AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   }
 
   // All other insert/extracts cost this much.
-  return 3;
+  return ST->getVectorInsertExtractBaseCost();
 }
 
 int AArch64TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::OperandValueKind Opd1Info,
     TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo) {
+    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args) {
   // Legalize the type.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+
+  // If the instruction is a widening instruction (e.g., uaddl, saddw, etc.),
+  // add in the widening overhead specified by the sub-target. Since the
+  // extends feeding widening instructions are performed automatically, they
+  // aren't present in the generated code and have a zero cost. By adding a
+  // widening overhead here, we attach the total cost of the combined operation
+  // to the widening instruction.
+  int Cost = 0;
+  if (isWideningInstruction(Ty, Opcode, Args))
+    Cost += ST->getWideningBaseCost();
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
@@ -331,9 +499,9 @@ int AArch64TTIImpl::getArithmeticInstrCost(
     // normally expanded to the sequence ADD + CMP + SELECT + SRA.
     // The OperandValue properties many not be same as that of previous
     // operation; conservatively assume OP_None.
-    int Cost = getArithmeticInstrCost(Instruction::Add, Ty, Opd1Info, Opd2Info,
-                                      TargetTransformInfo::OP_None,
-                                      TargetTransformInfo::OP_None);
+    Cost += getArithmeticInstrCost(Instruction::Add, Ty, Opd1Info, Opd2Info,
+                                   TargetTransformInfo::OP_None,
+                                   TargetTransformInfo::OP_None);
     Cost += getArithmeticInstrCost(Instruction::Sub, Ty, Opd1Info, Opd2Info,
                                    TargetTransformInfo::OP_None,
                                    TargetTransformInfo::OP_None);
@@ -348,8 +516,8 @@ int AArch64TTIImpl::getArithmeticInstrCost(
 
   switch (ISD) {
   default:
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
-                                         Opd1PropInfo, Opd2PropInfo);
+    return Cost + BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
+                                                Opd1PropInfo, Opd2PropInfo);
   case ISD::ADD:
   case ISD::MUL:
   case ISD::XOR:
@@ -357,18 +525,21 @@ int AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::AND:
     // These nodes are marked as 'custom' for combining purposes only.
     // We know that they are legal. See LowerAdd in ISelLowering.
-    return 1 * LT.first;
+    return (Cost + 1) * LT.first;
   }
 }
 
-int AArch64TTIImpl::getAddressComputationCost(Type *Ty, bool IsComplex) {
+int AArch64TTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
+                                              const SCEV *Ptr) {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
   // extra micro-ops can significantly decrease throughput.
   unsigned NumVectorInstToHideOverhead = 10;
+  int MaxMergeDistance = 64;
 
-  if (Ty->isVectorTy() && IsComplex)
+  if (Ty->isVectorTy() && SE && 
+      !BaseT::isConstantStridedAccessLessThan(SE, Ptr, MaxMergeDistance + 1))
     return NumVectorInstToHideOverhead;
 
   // In many cases the address computation is not merged into the instruction
@@ -377,7 +548,7 @@ int AArch64TTIImpl::getAddressComputationCost(Type *Ty, bool IsComplex) {
 }
 
 int AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                       Type *CondTy) {
+                                       Type *CondTy, const Instruction *I) {
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // We don't lower some vector selects well that are wider than the register
@@ -404,30 +575,31 @@ int AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
         return Entry->Cost;
     }
   }
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
 }
 
-int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                    unsigned Alignment, unsigned AddressSpace) {
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
+int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
+                                    unsigned Alignment, unsigned AddressSpace,
+                                    const Instruction *I) {
+  auto LT = TLI->getTypeLegalizationCost(DL, Ty);
 
-  if (Opcode == Instruction::Store && Src->isVectorTy() && Alignment != 16 &&
-      Src->getVectorElementType()->isIntegerTy(64)) {
-    // Unaligned stores are extremely inefficient. We don't split
-    // unaligned v2i64 stores because the negative impact that has shown in
-    // practice on inlined memcpy code.
-    // We make v2i64 stores expensive so that we will only vectorize if there
+  if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
+      LT.second.is128BitVector() && Alignment < 16) {
+    // Unaligned stores are extremely inefficient. We don't split all
+    // unaligned 128-bit stores because the negative impact that has shown in
+    // practice on inlined block copy code.
+    // We make such stores expensive so that we will only vectorize if there
     // are 6 other instructions getting vectorized.
-    int AmortizationCost = 6;
+    const int AmortizationCost = 6;
 
     return LT.first * 2 * AmortizationCost;
   }
 
-  if (Src->isVectorTy() && Src->getVectorElementType()->isIntegerTy(8) &&
-      Src->getVectorNumElements() < 8) {
+  if (Ty->isVectorTy() && Ty->getVectorElementType()->isIntegerTy(8) &&
+      Ty->getVectorNumElements() < 8) {
     // We scalarize the loads/stores because there is not v.4b register and we
     // have to promote the elements to v.4h.
-    unsigned NumVecElts = Src->getVectorNumElements();
+    unsigned NumVecElts = Ty->getVectorNumElements();
     unsigned NumVectorizableInstsToAmortize = NumVecElts * 2;
     // We generate 2 instructions per vector element.
     return NumVectorizableInstsToAmortize * NumVecElts * 2;
@@ -446,12 +618,14 @@ int AArch64TTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
 
   if (Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     unsigned NumElts = VecTy->getVectorNumElements();
-    Type *SubVecTy = VectorType::get(VecTy->getScalarType(), NumElts / Factor);
-    unsigned SubVecSize = DL.getTypeAllocSizeInBits(SubVecTy);
+    auto *SubVecTy = VectorType::get(VecTy->getScalarType(), NumElts / Factor);
 
     // ldN/stN only support legal vector types of size 64 or 128 in bits.
-    if (NumElts % Factor == 0 && (SubVecSize == 64 || SubVecSize == 128))
-      return Factor;
+    // Accesses having vector types that are a multiple of 128 bits can be
+    // matched to more than one ldN/stN instruction.
+    if (NumElts % Factor == 0 &&
+        TLI->isLegalInterleavedAccessType(SubVecTy, DL))
+      return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL);
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
@@ -471,15 +645,65 @@ int AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
 }
 
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(unsigned VF) {
-  if (ST->isCortexA57())
-    return 4;
-  return 2;
+  return ST->getMaxInterleaveFactor();
 }
 
-void AArch64TTIImpl::getUnrollingPreferences(Loop *L,
+// For Falkor, we want to avoid having too many strided loads in a loop since
+// that can exhaust the HW prefetcher resources.  We adjust the unroller
+// MaxCount preference below to attempt to ensure unrolling doesn't create too
+// many strided loads.
+static void
+getFalkorUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                              TargetTransformInfo::UnrollingPreferences &UP) {
+  enum { MaxStridedLoads = 7 };
+  auto countStridedLoads = [](Loop *L, ScalarEvolution &SE) {
+    int StridedLoads = 0;
+    // FIXME? We could make this more precise by looking at the CFG and
+    // e.g. not counting loads in each side of an if-then-else diamond.
+    for (const auto BB : L->blocks()) {
+      for (auto &I : *BB) {
+        LoadInst *LMemI = dyn_cast<LoadInst>(&I);
+        if (!LMemI)
+          continue;
+
+        Value *PtrValue = LMemI->getPointerOperand();
+        if (L->isLoopInvariant(PtrValue))
+          continue;
+
+        const SCEV *LSCEV = SE.getSCEV(PtrValue);
+        const SCEVAddRecExpr *LSCEVAddRec = dyn_cast<SCEVAddRecExpr>(LSCEV);
+        if (!LSCEVAddRec || !LSCEVAddRec->isAffine())
+          continue;
+
+        // FIXME? We could take pairing of unrolled load copies into account
+        // by looking at the AddRec, but we would probably have to limit this
+        // to loops with no stores or other memory optimization barriers.
+        ++StridedLoads;
+        // We've seen enough strided loads that seeing more won't make a
+        // difference.
+        if (StridedLoads > MaxStridedLoads / 2)
+          return StridedLoads;
+      }
+    }
+    return StridedLoads;
+  };
+
+  int StridedLoads = countStridedLoads(L, SE);
+  DEBUG(dbgs() << "falkor-hwpf: detected " << StridedLoads
+               << " strided loads\n");
+  // Pick the largest power of 2 unroll count that won't result in too many
+  // strided loads.
+  if (StridedLoads) {
+    UP.MaxCount = 1 << Log2_32(MaxStridedLoads / StridedLoads);
+    DEBUG(dbgs() << "falkor-hwpf: setting unroll MaxCount to " << UP.MaxCount
+                 << '\n');
+  }
+}
+
+void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                              TTI::UnrollingPreferences &UP) {
   // Enable partial unrolling and runtime unrolling.
-  BaseT::getUnrollingPreferences(L, UP);
+  BaseT::getUnrollingPreferences(L, SE, UP);
 
   // For inner loop, it is more likely to be a hot one, and the runtime check
   // can be promoted out from LICM pass, so the overhead is less, let's try
@@ -489,6 +713,10 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L,
 
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
+
+  if (ST->getProcFamily() == AArch64Subtarget::Falkor &&
+      EnableFalkorHWPFUnrollFix)
+    getFalkorUnrollingPreferences(L, SE, UP);
 }
 
 Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
@@ -537,8 +765,6 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::aarch64_neon_ld4:
     Info.ReadMem = true;
     Info.WriteMem = false;
-    Info.Vol = false;
-    Info.NumMemRefs = 1;
     Info.PtrVal = Inst->getArgOperand(0);
     break;
   case Intrinsic::aarch64_neon_st2:
@@ -546,8 +772,6 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::aarch64_neon_st4:
     Info.ReadMem = false;
     Info.WriteMem = true;
-    Info.Vol = false;
-    Info.NumMemRefs = 1;
     Info.PtrVal = Inst->getArgOperand(Inst->getNumArgOperands() - 1);
     break;
   }
@@ -569,4 +793,77 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     break;
   }
   return true;
+}
+
+/// See if \p I should be considered for address type promotion. We check if \p
+/// I is a sext with right type and used in memory accesses. If it used in a
+/// "complex" getelementptr, we allow it to be promoted without finding other
+/// sext instructions that sign extended the same initial value. A getelementptr
+/// is considered as "complex" if it has more than 2 operands.
+bool AArch64TTIImpl::shouldConsiderAddressTypePromotion(
+    const Instruction &I, bool &AllowPromotionWithoutCommonHeader) {
+  bool Considerable = false;
+  AllowPromotionWithoutCommonHeader = false;
+  if (!isa<SExtInst>(&I))
+    return false;
+  Type *ConsideredSExtType =
+      Type::getInt64Ty(I.getParent()->getParent()->getContext());
+  if (I.getType() != ConsideredSExtType)
+    return false;
+  // See if the sext is the one with the right type and used in at least one
+  // GetElementPtrInst.
+  for (const User *U : I.users()) {
+    if (const GetElementPtrInst *GEPInst = dyn_cast<GetElementPtrInst>(U)) {
+      Considerable = true;
+      // A getelementptr is considered as "complex" if it has more than 2
+      // operands. We will promote a SExt used in such complex GEP as we
+      // expect some computation to be merged if they are done on 64 bits.
+      if (GEPInst->getNumOperands() > 2) {
+        AllowPromotionWithoutCommonHeader = true;
+        break;
+      }
+    }
+  }
+  return Considerable;
+}
+
+unsigned AArch64TTIImpl::getCacheLineSize() {
+  return ST->getCacheLineSize();
+}
+
+unsigned AArch64TTIImpl::getPrefetchDistance() {
+  return ST->getPrefetchDistance();
+}
+
+unsigned AArch64TTIImpl::getMinPrefetchStride() {
+  return ST->getMinPrefetchStride();
+}
+
+unsigned AArch64TTIImpl::getMaxPrefetchIterationsAhead() {
+  return ST->getMaxPrefetchIterationsAhead();
+}
+
+bool AArch64TTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
+                                           TTI::ReductionFlags Flags) const {
+  assert(isa<VectorType>(Ty) && "Expected Ty to be a vector type");
+  unsigned ScalarBits = Ty->getScalarSizeInBits();
+  switch (Opcode) {
+  case Instruction::FAdd:
+  case Instruction::FMul:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::Mul:
+    return false;
+  case Instruction::Add:
+    return ScalarBits * Ty->getVectorNumElements() >= 128;
+  case Instruction::ICmp:
+    return (ScalarBits < 64) &&
+           (ScalarBits * Ty->getVectorNumElements() >= 128);
+  case Instruction::FCmp:
+    return Flags.NoNaN;
+  default:
+    llvm_unreachable("Unhandled reduction opcode");
+  }
+  return false;
 }

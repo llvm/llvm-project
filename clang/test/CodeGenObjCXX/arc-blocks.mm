@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=gnu++98 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -o - %s | FileCheck %s
 
 // CHECK: [[A:.*]] = type { i64, [10 x i8*] }
 
-// CHECK: [[LAYOUT0:@.*]] = private global [3 x i8] c" 9\00"
+// CHECK: [[LAYOUT0:@.*]] = private unnamed_addr constant [3 x i8] c" 9\00"
 
 // rdar://13045269
 // If a __block variable requires extended layout information *and*

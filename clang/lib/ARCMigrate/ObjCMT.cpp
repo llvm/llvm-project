@@ -177,12 +177,13 @@ protected:
   }
 };
 
-}
+} // end anonymous namespace
 
-ObjCMigrateAction::ObjCMigrateAction(FrontendAction *WrappedAction,
+ObjCMigrateAction::ObjCMigrateAction(
+                                  std::unique_ptr<FrontendAction> WrappedAction,
                                      StringRef migrateDir,
                                      unsigned migrateAction)
-  : WrapperFrontendAction(WrappedAction), MigrateDir(migrateDir),
+  : WrapperFrontendAction(std::move(WrappedAction)), MigrateDir(migrateDir),
     ObjCMigAction(migrateAction),
     CompInst(nullptr) {
   if (MigrateDir.empty())
@@ -306,7 +307,6 @@ namespace {
     }
     return true;
   }
-  
 
 class ObjCMigrator : public RecursiveASTVisitor<ObjCMigrator> {
   ObjCMigrateASTConsumer &Consumer;
@@ -369,7 +369,7 @@ public:
     return true;
   }
 };
-}
+} // end anonymous namespace
 
 void ObjCMigrateASTConsumer::migrateDecl(Decl *D) {
   if (!D)
@@ -588,7 +588,7 @@ void ObjCMigrateASTConsumer::migrateObjCContainerDecl(ASTContext &Ctx,
   if (!(ASTMigrateActions & FrontendOptions::ObjCMT_ReturnsInnerPointerProperty))
     return;
   
-  for (auto *Prop : D->properties()) {
+  for (auto *Prop : D->instance_properties()) {
     if ((ASTMigrateActions & FrontendOptions::ObjCMT_Annotation) &&
         !Prop->isDeprecated())
       migratePropertyNsReturnsInnerPointer(Ctx, Prop);
@@ -605,7 +605,7 @@ ClassImplementsAllMethodsAndProperties(ASTContext &Ctx,
   // in class interface.
   bool HasAtleastOneRequiredProperty = false;
   if (const ObjCProtocolDecl *PDecl = Protocol->getDefinition())
-    for (const auto *Property : PDecl->properties()) {
+    for (const auto *Property : PDecl->instance_properties()) {
       if (Property->getPropertyImplementation() == ObjCPropertyDecl::Optional)
         continue;
       HasAtleastOneRequiredProperty = true;
@@ -615,7 +615,8 @@ ClassImplementsAllMethodsAndProperties(ASTContext &Ctx,
         // or dynamic declaration. Class is implementing a property coming from
         // another protocol. This still makes the target protocol as conforming.
         if (!ImpDecl->FindPropertyImplDecl(
-                                  Property->getDeclName().getAsIdentifierInfo()))
+                                  Property->getDeclName().getAsIdentifierInfo(),
+                                  Property->getQueryKind()))
           return false;
       }
       else if (ObjCPropertyDecl *ClassProperty = dyn_cast<ObjCPropertyDecl>(R[0])) {
@@ -770,23 +771,11 @@ static void rewriteToNSMacroDecl(ASTContext &Ctx,
   ClassString += ", ";
   
   ClassString += TypedefDcl->getIdentifier()->getName();
-  ClassString += ')';
-  SourceLocation EndLoc;
-  if (EnumDcl->getIntegerTypeSourceInfo()) {
-    TypeSourceInfo *TSourceInfo = EnumDcl->getIntegerTypeSourceInfo();
-    TypeLoc TLoc = TSourceInfo->getTypeLoc();
-    EndLoc = TLoc.getLocEnd();
-    const char *lbrace = Ctx.getSourceManager().getCharacterData(EndLoc);
-    unsigned count = 0;
-    if (lbrace)
-      while (lbrace[count] != '{')
-        ++count;
-    if (count > 0)
-      EndLoc = EndLoc.getLocWithOffset(count-1);
-  }
-  else
-    EndLoc = EnumDcl->getLocStart();
-  SourceRange R(EnumDcl->getLocStart(), EndLoc);
+  ClassString += ") ";
+  SourceLocation EndLoc = EnumDcl->getBraceRange().getBegin();
+  if (EndLoc.isInvalid())
+    return;
+  CharSourceRange R = CharSourceRange::getCharRange(EnumDcl->getLocStart(), EndLoc);
   commit.replace(R, ClassString);
   // This is to remove spaces between '}' and typedef name.
   SourceLocation StartTypedefLoc = EnumDcl->getLocEnd();
@@ -1104,7 +1093,6 @@ static bool AvailabilityAttrsMatch(Attr *At1, Attr *At2) {
           versionsMatch(Deprecated1, Deprecated2) &&
           versionsMatch(Obsoleted1, Obsoleted2) &&
           IsUnavailable1 == IsUnavailable2);
-  
 }
 
 static bool MatchTwoAttributeLists(const AttrVec &Attrs1, const AttrVec &Attrs2,
@@ -1509,7 +1497,6 @@ void ObjCMigrateASTConsumer::AddCFAnnotations(ASTContext &Ctx,
   }
 }
 
-
 ObjCMigrateASTConsumer::CF_BRIDGING_KIND
   ObjCMigrateASTConsumer::migrateAddFunctionAnnotation(
                                                   ASTContext &Ctx,
@@ -1524,7 +1511,7 @@ ObjCMigrateASTConsumer::CF_BRIDGING_KIND
                                 FuncDecl->hasAttr<NSReturnsNotRetainedAttr>() ||
                                 FuncDecl->hasAttr<NSReturnsAutoreleasedAttr>());
   
-  // Trivial case of when funciton is annotated and has no argument.
+  // Trivial case of when function is annotated and has no argument.
   if (FuncIsReturnAnnotated && FuncDecl->getNumParams() == 0)
     return CF_BRIDGING_NONE;
   
@@ -1653,7 +1640,7 @@ void ObjCMigrateASTConsumer::migrateAddMethodAnnotation(
     Editor->commit(commit);
   }
   
-  // Trivial case of when funciton is annotated and has no argument.
+  // Trivial case of when function is annotated and has no argument.
   if (MethodIsReturnAnnotated &&
       (MethodDecl->param_begin() == MethodDecl->param_end()))
     return;
@@ -1683,7 +1670,6 @@ void ObjCMigrateASTConsumer::migrateAddMethodAnnotation(
       return;
     }
   }
-  return;
 }
 
 namespace {
@@ -1700,7 +1686,7 @@ public:
     return true;
   }
 };
-} // anonymous namespace
+} // end anonymous namespace
 
 static bool hasSuperInitCall(const ObjCMethodDecl *MD) {
   return !SuperInitChecker().TraverseStmt(MD->getBody());
@@ -1739,6 +1725,11 @@ bool ObjCMigrateASTConsumer::InsertFoundation(ASTContext &Ctx,
     return true;
   if (Loc.isInvalid())
     return false;
+  auto *nsEnumId = &Ctx.Idents.get("NS_ENUM");
+  if (PP.getMacroDefinitionAtLoc(nsEnumId, Loc)) {
+    FoundationIncluded = true;
+    return true;
+  }
   edit::Commit commit(*Editor);
   if (Ctx.getLangOpts().Modules)
     commit.insert(Loc, "#ifndef NS_ENUM\n@import Foundation;\n#endif\n");
@@ -1841,7 +1832,7 @@ private:
   }
 };
 
-}
+} // end anonymous namespace
 
 void ObjCMigrateASTConsumer::HandleTranslationUnit(ASTContext &Ctx) {
   
@@ -1897,18 +1888,20 @@ void ObjCMigrateASTConsumer::HandleTranslationUnit(ASTContext &Ctx) {
         if (++N == DEnd)
           continue;
         if (const EnumDecl *ED = dyn_cast<EnumDecl>(*N)) {
-          if (++N != DEnd)
-            if (const TypedefDecl *TDF = dyn_cast<TypedefDecl>(*N)) {
-              // prefer typedef-follows-enum to enum-follows-typedef pattern.
-              if (migrateNSEnumDecl(Ctx, ED, TDF)) {
-                ++D; ++D;
-                CacheObjCNSIntegerTypedefed(TD);
-                continue;
+          if (canModify(ED)) {
+            if (++N != DEnd)
+              if (const TypedefDecl *TDF = dyn_cast<TypedefDecl>(*N)) {
+                // prefer typedef-follows-enum to enum-follows-typedef pattern.
+                if (migrateNSEnumDecl(Ctx, ED, TDF)) {
+                  ++D; ++D;
+                  CacheObjCNSIntegerTypedefed(TD);
+                  continue;
+                }
               }
+            if (migrateNSEnumDecl(Ctx, ED, TD)) {
+              ++D;
+              continue;
             }
-          if (migrateNSEnumDecl(Ctx, ED, TD)) {
-            ++D;
-            continue;
           }
         }
         CacheObjCNSIntegerTypedefed(TD);
@@ -2042,7 +2035,7 @@ struct EditEntry {
 
   EditEntry() : File(), Offset(), RemoveLen() {}
 };
-}
+} // end anonymous namespace
 
 namespace llvm {
 template<> struct DenseMapInfo<EditEntry> {
@@ -2071,7 +2064,7 @@ template<> struct DenseMapInfo<EditEntry> {
         LHS.Text == RHS.Text;
   }
 };
-}
+} // end namespace llvm
 
 namespace {
 class RemapFileParser {
@@ -2153,7 +2146,7 @@ private:
       Entries.push_back(Entry);
   }
 };
-}
+} // end anonymous namespace
 
 static bool reportDiag(const Twine &Err, DiagnosticsEngine &Diag) {
   Diag.Report(Diag.getCustomDiagID(DiagnosticsEngine::Error, "%0"))
@@ -2196,7 +2189,7 @@ static std::string applyEditsToTemp(const FileEntry *FE,
 
   Rewriter rewriter(SM, LangOpts);
   RewritesReceiver Rec(rewriter);
-  Editor.applyRewrites(Rec);
+  Editor.applyRewrites(Rec, /*adjustRemovals=*/false);
 
   const RewriteBuffer *Buf = rewriter.getRewriteBufferFor(FID);
   SmallString<512> NewText;

@@ -46,7 +46,7 @@ MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
                                      StringRef MakeSmartPtrFunctionName)
     : ClangTidyCheck(Name, Context),
       IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.getLocalOrGlobal("IncludeStyle", "llvm"))),
+          Options.get("IncludeStyle", "llvm"))),
       MakeSmartPtrFunctionHeader(
           Options.get("MakeSmartPtrFunctionHeader", StdMemoryHeader)),
       MakeSmartPtrFunctionName(

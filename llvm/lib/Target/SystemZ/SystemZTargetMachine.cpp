@@ -8,17 +8,30 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZTargetMachine.h"
+#include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "SystemZ.h"
+#include "SystemZMachineScheduler.h"
 #include "SystemZTargetTransformInfo.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/Support/TargetRegistry.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Transforms/Scalar.h"
+#include <string>
 
 using namespace llvm;
 
 extern "C" void LLVMInitializeSystemZTarget() {
   // Register the target.
-  RegisterTargetMachine<SystemZTargetMachine> X(TheSystemZTarget);
+  RegisterTargetMachine<SystemZTargetMachine> X(getTheSystemZTarget());
 }
 
 // Determine whether we use the vector ABI.
@@ -46,7 +59,7 @@ static bool UsesVectorABI(StringRef CPU, StringRef FS) {
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,
                                      StringRef FS) {
   bool VectorABI = UsesVectorABI(CPU, FS);
-  std::string Ret = "";
+  std::string Ret;
 
   // Big endian.
   Ret += "E";
@@ -78,39 +91,63 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   return Ret;
 }
 
+static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
+  // Static code is suitable for use in a dynamic executable; there is no
+  // separate DynamicNoPIC model.
+  if (!RM.hasValue() || *RM == Reloc::DynamicNoPIC)
+    return Reloc::Static;
+  return *RM;
+}
+
 SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
-                                           Reloc::Model RM, CodeModel::Model CM,
+                                           Optional<Reloc::Model> RM,
+                                           CodeModel::Model CM,
                                            CodeGenOpt::Level OL)
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, FS), TT, CPU, FS, Options,
-                        RM, CM, OL),
-      TLOF(make_unique<TargetLoweringObjectFileELF>()),
+                        getEffectiveRelocModel(RM), CM, OL),
+      TLOF(llvm::make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
 }
 
-SystemZTargetMachine::~SystemZTargetMachine() {}
+SystemZTargetMachine::~SystemZTargetMachine() = default;
 
 namespace {
+
 /// SystemZ Code Generator Pass Configuration Options.
 class SystemZPassConfig : public TargetPassConfig {
 public:
-  SystemZPassConfig(SystemZTargetMachine *TM, PassManagerBase &PM)
+  SystemZPassConfig(SystemZTargetMachine &TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {}
 
   SystemZTargetMachine &getSystemZTargetMachine() const {
     return getTM<SystemZTargetMachine>();
   }
 
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override {
+    return new ScheduleDAGMI(C,
+                             llvm::make_unique<SystemZPostRASchedStrategy>(C),
+                             /*RemoveKillFlags=*/true);
+  }
+
   void addIRPasses() override;
   bool addInstSelector() override;
+  bool addILPOpts() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
 };
+
 } // end anonymous namespace
 
 void SystemZPassConfig::addIRPasses() {
+  if (getOptLevel() != CodeGenOpt::None) {
+    addPass(createSystemZTDCPass());
+    addPass(createLoopDataPrefetchPass());
+  }
+
   TargetPassConfig::addIRPasses();
 }
 
@@ -123,14 +160,19 @@ bool SystemZPassConfig::addInstSelector() {
   return false;
 }
 
+bool SystemZPassConfig::addILPOpts() {
+  addPass(&EarlyIfConverterID);
+  return true;
+}
+
 void SystemZPassConfig::addPreSched2() {
-  if (getOptLevel() != CodeGenOpt::None &&
-      getSystemZTargetMachine().getSubtargetImpl()->hasLoadStoreOnCond())
+  addPass(createSystemZExpandPseudoPass(getSystemZTargetMachine()));
+
+  if (getOptLevel() != CodeGenOpt::None)
     addPass(&IfConverterID);
 }
 
 void SystemZPassConfig::addPreEmitPass() {
-
   // Do instruction shortening before compare elimination because some
   // vector instructions will be shortened into opcodes that compare
   // elimination recognizes.
@@ -163,10 +205,16 @@ void SystemZPassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createSystemZElimComparePass(getSystemZTargetMachine()), false);
   addPass(createSystemZLongBranchPass(getSystemZTargetMachine()));
+
+  // Do final scheduling after all other optimizations, to get an
+  // optimal input for the decoder (branch relaxation must happen
+  // after block placement).
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(&PostMachineSchedulerID);
 }
 
 TargetPassConfig *SystemZTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new SystemZPassConfig(this, PM);
+  return new SystemZPassConfig(*this, PM);
 }
 
 TargetIRAnalysis SystemZTargetMachine::getTargetIRAnalysis() {

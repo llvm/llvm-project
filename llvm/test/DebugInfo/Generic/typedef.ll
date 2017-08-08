@@ -12,20 +12,22 @@
 ; CHECK-NOT: DW_AT_type
 ; CHECK: {{DW_TAG|NULL}}
 
-@y = global i8* null, align 8
+source_filename = "test/DebugInfo/Generic/typedef.ll"
 
-!llvm.dbg.cu = !{!0}
+@y = global i8* null, align 8, !dbg !0
+
+!llvm.dbg.cu = !{!5}
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !3, imports: !2)
-!1 = !DIFile(filename: "typedef.cpp", directory: "/tmp/dbginfo")
-!2 = !{}
-!3 = !{!4}
-!4 = !DIGlobalVariable(name: "y", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !6, variable: i8** @y)
-!5 = !DIFile(filename: "typedef.cpp", directory: "/tmp/dbginfo")
-!6 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !7)
-!7 = !DIDerivedType(tag: DW_TAG_typedef, name: "x", line: 1, file: !1, baseType: null)
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "y", scope: null, file: !2, line: 2, type: !3, isLocal: false, isDefinition: true)
+!2 = !DIFile(filename: "typedef.cpp", directory: "/tmp/dbginfo")
+!3 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64, align: 64)
+!4 = !DIDerivedType(tag: DW_TAG_typedef, name: "x", file: !2, line: 1, baseType: null)
+!5 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 3.5.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !6, retainedTypes: !6, globals: !7, imports: !6)
+!6 = !{}
+!7 = !{!0}
 !8 = !{i32 2, !"Dwarf Version", i32 4}
 !9 = !{i32 1, !"Debug Info Version", i32 3}
 !10 = !{!"clang version 3.5.0 "}

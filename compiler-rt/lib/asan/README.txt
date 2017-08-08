@@ -23,4 +23,4 @@ from the root of your CMake build tree:
 make check-asan
 
 For more instructions see:
-http://code.google.com/p/address-sanitizer/wiki/HowToBuild
+https://github.com/google/sanitizers/wiki/AddressSanitizerHowToBuild

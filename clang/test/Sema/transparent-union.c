@@ -54,10 +54,20 @@ typedef union {
   aligned_struct8 s8; // expected-warning{{alignment of field}}
 } TU1 __attribute__((transparent_union));
 
+typedef union __attribute__((transparent_union)) {
+  aligned_struct4 s4; // expected-note{{alignment of first field}}
+  aligned_struct8 s8; // expected-warning{{alignment of field}}
+} TU1b ;
+
 typedef union {
   char c; // expected-note{{size of first field is 8 bits}}
   int i; // expected-warning{{size of field}}
 } TU2 __attribute__((transparent_union));
+
+typedef union __attribute__((transparent_union)){
+  char c; // expected-note{{size of first field is 8 bits}}
+  int i; // expected-warning{{size of field}}
+} TU2b;
 
 typedef union {
   float f; // expected-warning{{floating}}
@@ -89,3 +99,26 @@ union pr15134v2 {
     unsigned int u3;
   } __attribute__((aligned(8)));
 } __attribute__((transparent_union));
+
+union pr30520v { void b; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'void'}}
+
+union pr30520a { int b[]; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'int []'}}
+
+// expected-note@+1 2 {{forward declaration of 'struct stb'}}
+union pr30520s { struct stb b; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'struct stb'}}
+
+union pr30520s2 { int *v; struct stb b; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'struct stb'}}
+
+typedef union __attribute__((__transparent_union__)) {
+  int *i;
+  struct st *s;
+} TU6;
+
+void bar(TU6);
+
+void foo11(int *i) {
+  bar(i);
+}
+void foo2(struct st *s) {
+  bar(s);
+}

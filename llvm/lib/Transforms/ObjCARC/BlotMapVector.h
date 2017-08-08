@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
-#include <vector>
 #include <algorithm>
+#include <vector>
 
 namespace llvm {
 /// \brief An associative container with fast insertion-order (deterministic)
@@ -31,7 +31,7 @@ public:
   const_iterator begin() const { return Vector.begin(); }
   const_iterator end() const { return Vector.end(); }
 
-#ifdef XDEBUG
+#ifdef EXPENSIVE_CHECKS
   ~BlotMapVector() {
     assert(Vector.size() >= Map.size()); // May differ due to blotting.
     for (typename MapTy::const_iterator I = Map.begin(), E = Map.end(); I != E;

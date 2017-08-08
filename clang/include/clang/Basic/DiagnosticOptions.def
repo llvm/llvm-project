@@ -50,6 +50,7 @@ DIAGOPT(Pedantic, 1, 0)         /// -pedantic
 DIAGOPT(PedanticErrors, 1, 0)   /// -pedantic-errors
 DIAGOPT(ShowColumn, 1, 1)       /// Show column number on diagnostics.
 DIAGOPT(ShowLocation, 1, 1)     /// Show source location information.
+DIAGOPT(AbsolutePath, 1, 0)     /// Use absolute paths.
 DIAGOPT(ShowCarets, 1, 1)       /// Show carets in diagnostics.
 DIAGOPT(ShowFixits, 1, 1)       /// Show fixit information.
 DIAGOPT(ShowSourceRanges, 1, 0) /// Show source ranges in numeric form.
@@ -86,6 +87,8 @@ VALUE_DIAGOPT(TemplateBacktraceLimit, 32, DefaultTemplateBacktraceLimit)
 VALUE_DIAGOPT(ConstexprBacktraceLimit, 32, DefaultConstexprBacktraceLimit)
 /// Limit number of times to perform spell checking.
 VALUE_DIAGOPT(SpellCheckingLimit, 32, DefaultSpellCheckingLimit)
+/// Limit number of lines shown in a snippet.
+VALUE_DIAGOPT(SnippetLineLimit, 32, DefaultSnippetLineLimit)
 
 VALUE_DIAGOPT(TabStop, 32, DefaultTabStop) /// The distance between tab stops.
 /// Column limit for formatting message diagnostics, or 0 if unused.

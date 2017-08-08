@@ -1,4 +1,4 @@
-//===-- MCAsmInfoCOFF.cpp - COFF asm properties -----------------*- C++ -*-===//
+//===- MCAsmInfoCOFF.cpp - COFF asm properties ----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,9 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmInfoCOFF.h"
+#include "llvm/MC/MCDirectives.h"
+
 using namespace llvm;
 
-void MCAsmInfoCOFF::anchor() { }
+void MCAsmInfoCOFF::anchor() {}
 
 MCAsmInfoCOFF::MCAsmInfoCOFF() {
   // MingW 4.5 and later support .comm with log2 alignment, but .lcomm uses byte
@@ -37,18 +39,14 @@ MCAsmInfoCOFF::MCAsmInfoCOFF() {
 
   UseIntegratedAssembler = true;
 
-  // FIXME: For now keep the previous behavior, AShr. Need to double-check
-  // other COFF-targeting assemblers and change this if necessary.
+  // At least MSVC inline-asm does AShr.
   UseLogicalShr = false;
 }
 
-void MCAsmInfoMicrosoft::anchor() { }
+void MCAsmInfoMicrosoft::anchor() {}
 
-MCAsmInfoMicrosoft::MCAsmInfoMicrosoft() {
-}
+MCAsmInfoMicrosoft::MCAsmInfoMicrosoft() = default;
 
-void MCAsmInfoGNUCOFF::anchor() { }
+void MCAsmInfoGNUCOFF::anchor() {}
 
-MCAsmInfoGNUCOFF::MCAsmInfoGNUCOFF() {
-
-}
+MCAsmInfoGNUCOFF::MCAsmInfoGNUCOFF() = default;

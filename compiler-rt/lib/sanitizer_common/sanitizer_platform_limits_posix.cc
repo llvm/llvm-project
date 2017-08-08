@@ -23,14 +23,8 @@
 #ifdef _FILE_OFFSET_BITS
 #undef _FILE_OFFSET_BITS
 #endif
-#if SANITIZER_FREEBSD
-#define _WANT_RTENTRY
-#include <sys/param.h>
-#include <sys/socketvar.h>
-#endif
 #include <arpa/inet.h>
 #include <dirent.h>
-#include <errno.h>
 #include <grp.h>
 #include <limits.h>
 #include <net/if.h>
@@ -51,6 +45,9 @@
 #include <termios.h>
 #include <time.h>
 #include <wchar.h>
+#if !SANITIZER_MAC && !SANITIZER_FREEBSD
+#include <utmp.h>
+#endif
 
 #if !SANITIZER_IOS
 #include <net/route.h>
@@ -59,6 +56,7 @@
 #if !SANITIZER_ANDROID
 #include <sys/mount.h>
 #include <sys/timeb.h>
+#include <utmpx.h>
 #endif
 
 #if SANITIZER_LINUX
@@ -123,6 +121,10 @@
 #  include <asm/ptrace.h>
 #  ifdef __arm__
 typedef struct user_fpregs elf_fpregset_t;
+#   define ARM_VFPREGS_SIZE_ASAN (32 * 8 /*fpregs*/ + 4 /*fpscr*/)
+#   if !defined(ARM_VFPREGS_SIZE)
+#     define ARM_VFPREGS_SIZE ARM_VFPREGS_SIZE_ASAN
+#   endif
 #  endif
 # endif
 # include <semaphore.h>
@@ -280,6 +282,13 @@ namespace __sanitizer {
   int shmctl_shm_stat = (int)SHM_STAT;
 #endif
 
+#if !SANITIZER_MAC && !SANITIZER_FREEBSD
+  unsigned struct_utmp_sz = sizeof(struct utmp);
+#endif
+#if !SANITIZER_ANDROID
+  unsigned struct_utmpx_sz = sizeof(struct utmpx);
+#endif
+
   int map_fixed = MAP_FIXED;
 
   int af_inet = (int)AF_INET;
@@ -307,23 +316,28 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID && \
     (defined(__i386) || defined(__x86_64) || defined(__mips64) || \
-      defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__))
+      defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__) || \
+      defined(__s390__))
 #if defined(__mips64) || defined(__powerpc64__) || defined(__arm__)
   unsigned struct_user_regs_struct_sz = sizeof(struct pt_regs);
   unsigned struct_user_fpregs_struct_sz = sizeof(elf_fpregset_t);
 #elif defined(__aarch64__)
   unsigned struct_user_regs_struct_sz = sizeof(struct user_pt_regs);
   unsigned struct_user_fpregs_struct_sz = sizeof(struct user_fpsimd_state);
+#elif defined(__s390__)
+  unsigned struct_user_regs_struct_sz = sizeof(struct _user_regs_struct);
+  unsigned struct_user_fpregs_struct_sz = sizeof(struct _user_fpregs_struct);
 #else
   unsigned struct_user_regs_struct_sz = sizeof(struct user_regs_struct);
   unsigned struct_user_fpregs_struct_sz = sizeof(struct user_fpregs_struct);
 #endif // __mips64 || __powerpc64__ || __aarch64__
 #if defined(__x86_64) || defined(__mips64) || defined(__powerpc64__) || \
-    defined(__aarch64__) || defined(__arm__)
+    defined(__aarch64__) || defined(__arm__) || defined(__s390__)
   unsigned struct_user_fpxregs_struct_sz = 0;
 #else
   unsigned struct_user_fpxregs_struct_sz = sizeof(struct user_fpxregs_struct);
 #endif // __x86_64 || __mips64 || __powerpc64__ || __aarch64__ || __arm__
+// || __s390__
 #ifdef __arm__
   unsigned struct_user_vfpregs_struct_sz = ARM_VFPREGS_SIZE;
 #else
@@ -333,21 +347,24 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   int ptrace_peektext = PTRACE_PEEKTEXT;
   int ptrace_peekdata = PTRACE_PEEKDATA;
   int ptrace_peekuser = PTRACE_PEEKUSER;
-#if defined(PT_GETREGS) && defined(PT_SETREGS)
+#if (defined(PTRACE_GETREGS) && defined(PTRACE_SETREGS)) || \
+    (defined(PT_GETREGS) && defined(PT_SETREGS))
   int ptrace_getregs = PTRACE_GETREGS;
   int ptrace_setregs = PTRACE_SETREGS;
 #else
   int ptrace_getregs = -1;
   int ptrace_setregs = -1;
 #endif
-#if defined(PT_GETFPREGS) && defined(PT_SETFPREGS)
+#if (defined(PTRACE_GETFPREGS) && defined(PTRACE_SETFPREGS)) || \
+    (defined(PT_GETFPREGS) && defined(PT_SETFPREGS))
   int ptrace_getfpregs = PTRACE_GETFPREGS;
   int ptrace_setfpregs = PTRACE_SETFPREGS;
 #else
   int ptrace_getfpregs = -1;
   int ptrace_setfpregs = -1;
 #endif
-#if defined(PT_GETFPXREGS) && defined(PT_SETFPXREGS)
+#if (defined(PTRACE_GETFPXREGS) && defined(PTRACE_SETFPXREGS)) || \
+    (defined(PT_GETFPXREGS) && defined(PT_SETFPXREGS))
   int ptrace_getfpxregs = PTRACE_GETFPXREGS;
   int ptrace_setfpxregs = PTRACE_SETFPXREGS;
 #else
@@ -410,6 +427,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_input_absinfo_sz = sizeof(struct input_absinfo);
   unsigned struct_input_id_sz = sizeof(struct input_id);
   unsigned struct_mtpos_sz = sizeof(struct mtpos);
+  unsigned struct_rtentry_sz = sizeof(struct rtentry);
   unsigned struct_termio_sz = sizeof(struct termio);
   unsigned struct_vt_consize_sz = sizeof(struct vt_consize);
   unsigned struct_vt_sizes_sz = sizeof(struct vt_sizes);
@@ -429,7 +447,6 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_midi_info_sz = sizeof(struct midi_info);
   unsigned struct_mtget_sz = sizeof(struct mtget);
   unsigned struct_mtop_sz = sizeof(struct mtop);
-  unsigned struct_rtentry_sz = sizeof(struct rtentry);
   unsigned struct_sbi_instrument_sz = sizeof(struct sbi_instrument);
   unsigned struct_seq_event_rec_sz = sizeof(struct seq_event_rec);
   unsigned struct_synth_info_sz = sizeof(struct synth_info);
@@ -913,17 +930,11 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_SNDCTL_DSP_GETOSPACE = SNDCTL_DSP_GETOSPACE;
 #endif // (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
 
-  const int errno_EINVAL = EINVAL;
-// EOWNERDEAD is not present in some older platforms.
-#if defined(EOWNERDEAD)
-  const int errno_EOWNERDEAD = EOWNERDEAD;
-#else
-  const int errno_EOWNERDEAD = -1;
-#endif
-
   const int si_SEGV_MAPERR = SEGV_MAPERR;
   const int si_SEGV_ACCERR = SEGV_ACCERR;
 } // namespace __sanitizer
+
+using namespace __sanitizer;
 
 COMPILER_CHECK(sizeof(__sanitizer_pthread_attr_t) >= sizeof(pthread_attr_t));
 
@@ -1048,8 +1059,15 @@ COMPILER_CHECK(sizeof(__sanitizer_sigaction) == sizeof(struct sigaction));
 // Can't write checks for sa_handler and sa_sigaction due to them being
 // preprocessor macros.
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_mask);
+#ifndef __GLIBC_PREREQ
+#define __GLIBC_PREREQ(x, y) 0
+#endif
+#if !defined(__s390x__) || __GLIBC_PREREQ (2, 20)
+// On s390x glibc 2.19 and earlier sa_flags was unsigned long, and sa_resv
+// didn't exist.
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_flags);
-#if SANITIZER_LINUX
+#endif
+#if SANITIZER_LINUX && (!SANITIZER_ANDROID || !SANITIZER_MIPS32)
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_restorer);
 #endif
 
@@ -1120,9 +1138,6 @@ CHECK_SIZE_AND_OFFSET(ipc_perm, uid);
 CHECK_SIZE_AND_OFFSET(ipc_perm, gid);
 CHECK_SIZE_AND_OFFSET(ipc_perm, cuid);
 CHECK_SIZE_AND_OFFSET(ipc_perm, cgid);
-#ifndef __GLIBC_PREREQ
-#define __GLIBC_PREREQ(x, y) 0
-#endif
 #if !defined(__aarch64__) || !SANITIZER_LINUX || __GLIBC_PREREQ (2, 21)
 /* On aarch64 glibc 2.20 and earlier provided incorrect mode field.  */
 CHECK_SIZE_AND_OFFSET(ipc_perm, mode);
@@ -1259,6 +1274,10 @@ CHECK_SIZE_AND_OFFSET(cookie_io_functions_t, close);
 
 #if SANITIZER_LINUX || SANITIZER_FREEBSD
 CHECK_TYPE_SIZE(sem_t);
+#endif
+
+#if SANITIZER_LINUX && defined(__arm__)
+COMPILER_CHECK(ARM_VFPREGS_SIZE == ARM_VFPREGS_SIZE_ASAN);
 #endif
 
 #endif // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_MAC

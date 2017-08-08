@@ -50,6 +50,7 @@
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "gtest/gtest.h"
 using namespace llvm;
+using namespace llvm::pdb;
 
 namespace {
 
@@ -62,9 +63,7 @@ namespace {
 class MockSession : public IPDBSession {
   uint64_t getLoadAddress() const override { return 0; }
   void setLoadAddress(uint64_t Address) override {}
-  std::unique_ptr<PDBSymbolExe> getGlobalScope() const override {
-    return nullptr;
-  }
+  std::unique_ptr<PDBSymbolExe> getGlobalScope() override { return nullptr; }
   std::unique_ptr<PDBSymbol> getSymbolById(uint32_t SymbolId) const override {
     return nullptr;
   }
@@ -78,7 +77,33 @@ class MockSession : public IPDBSession {
     return nullptr;
   }
   std::unique_ptr<IPDBEnumLineNumbers>
+  findLineNumbers(const PDBSymbolCompiland &Compiland,
+                  const IPDBSourceFile &File) const override {
+    return nullptr;
+  }
+  std::unique_ptr<IPDBEnumLineNumbers>
   findLineNumbersByAddress(uint64_t Address, uint32_t Length) const override {
+    return nullptr;
+  }
+  std::unique_ptr<IPDBEnumSourceFiles>
+  findSourceFiles(const PDBSymbolCompiland *Compiland, llvm::StringRef Pattern,
+                  PDB_NameSearchFlags Flags) const override {
+    return nullptr;
+  }
+  std::unique_ptr<IPDBSourceFile>
+  findOneSourceFile(const PDBSymbolCompiland *Compiland,
+                    llvm::StringRef Pattern,
+                    PDB_NameSearchFlags Flags) const override {
+    return nullptr;
+  }
+  std::unique_ptr<IPDBEnumChildren<PDBSymbolCompiland>>
+  findCompilandsForSourceFile(llvm::StringRef Pattern,
+                              PDB_NameSearchFlags Flags) const override {
+    return nullptr;
+  }
+  std::unique_ptr<PDBSymbolCompiland>
+  findOneCompilandForSourceFile(llvm::StringRef Pattern,
+                                PDB_NameSearchFlags Flags) const override {
     return nullptr;
   }
 
@@ -199,6 +224,7 @@ public:
   MOCK_SYMBOL_ACCESSOR(getMachineType)
   MOCK_SYMBOL_ACCESSOR(getThunkOrdinal)
   MOCK_SYMBOL_ACCESSOR(getLength)
+  MOCK_SYMBOL_ACCESSOR(getVirtualBaseTableType)
   MOCK_SYMBOL_ACCESSOR(getLiveRangeLength)
   MOCK_SYMBOL_ACCESSOR(getVirtualAddress)
   MOCK_SYMBOL_ACCESSOR(getUdtKind)

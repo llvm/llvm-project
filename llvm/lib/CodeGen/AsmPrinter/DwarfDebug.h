@@ -14,15 +14,15 @@
 #ifndef LLVM_LIB_CODEGEN_ASMPRINTER_DWARFDEBUG_H
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DWARFDEBUG_H
 
-#include "AsmPrinterHandler.h"
 #include "DbgValueHistoryCalculator.h"
+#include "DebugHandlerBase.h"
 #include "DebugLocStream.h"
 #include "DwarfAccelTable.h"
 #include "DwarfFile.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DIE.h"
@@ -31,8 +31,8 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Target/TargetOptions.h"
 #include <memory>
 
 namespace llvm {
@@ -53,7 +53,7 @@ class MachineModuleInfo;
 ///
 /// Variables can be created from allocas, in which case they're generated from
 /// the MMI table.  Such variables can have multiple expressions and frame
-/// indices.  The \a Expr and \a FrameIndices array must match.
+/// indices.
 ///
 /// Variables can be created from \c DBG_VALUE instructions.  Those whose
 /// location changes over time use \a DebugLocListIndex, while those with a
@@ -63,38 +63,39 @@ class MachineModuleInfo;
 class DbgVariable {
   const DILocalVariable *Var;                /// Variable Descriptor.
   const DILocation *IA;                      /// Inlined at location.
-  SmallVector<const DIExpression *, 1> Expr; /// Complex address.
   DIE *TheDIE = nullptr;                     /// Variable DIE.
   unsigned DebugLocListIndex = ~0u;          /// Offset in DebugLocs.
   const MachineInstr *MInsn = nullptr;       /// DBG_VALUE instruction.
-  SmallVector<int, 1> FrameIndex;            /// Frame index.
-  DwarfDebug *DD;
+
+  struct FrameIndexExpr {
+    int FI;
+    const DIExpression *Expr;
+  };
+  mutable SmallVector<FrameIndexExpr, 1>
+      FrameIndexExprs; /// Frame index + expression.
 
 public:
   /// Construct a DbgVariable.
   ///
   /// Creates a variable without any DW_AT_location.  Call \a initializeMMI()
   /// for MMI entries, or \a initializeDbgValue() for DBG_VALUE instructions.
-  DbgVariable(const DILocalVariable *V, const DILocation *IA, DwarfDebug *DD)
-      : Var(V), IA(IA), DD(DD) {}
+  DbgVariable(const DILocalVariable *V, const DILocation *IA)
+      : Var(V), IA(IA) {}
 
   /// Initialize from the MMI table.
   void initializeMMI(const DIExpression *E, int FI) {
-    assert(Expr.empty() && "Already initialized?");
-    assert(FrameIndex.empty() && "Already initialized?");
+    assert(FrameIndexExprs.empty() && "Already initialized?");
     assert(!MInsn && "Already initialized?");
 
     assert((!E || E->isValid()) && "Expected valid expression");
-    assert(~FI && "Expected valid index");
+    assert(FI != INT_MAX && "Expected valid index");
 
-    Expr.push_back(E);
-    FrameIndex.push_back(FI);
+    FrameIndexExprs.push_back({FI, E});
   }
 
   /// Initialize from a DBG_VALUE instruction.
   void initializeDbgValue(const MachineInstr *DbgValue) {
-    assert(Expr.empty() && "Already initialized?");
-    assert(FrameIndex.empty() && "Already initialized?");
+    assert(FrameIndexExprs.empty() && "Already initialized?");
     assert(!MInsn && "Already initialized?");
 
     assert(Var == DbgValue->getDebugVariable() && "Wrong variable");
@@ -103,20 +104,25 @@ public:
     MInsn = DbgValue;
     if (auto *E = DbgValue->getDebugExpression())
       if (E->getNumElements())
-        Expr.push_back(E);
+        FrameIndexExprs.push_back({0, E});
   }
 
   // Accessors.
   const DILocalVariable *getVariable() const { return Var; }
   const DILocation *getInlinedAt() const { return IA; }
-  ArrayRef<const DIExpression *> getExpression() const { return Expr; }
+  const DIExpression *getSingleExpression() const {
+    assert(MInsn && FrameIndexExprs.size() <= 1);
+    return FrameIndexExprs.size() ? FrameIndexExprs[0].Expr : nullptr;
+  }
   void setDIE(DIE &D) { TheDIE = &D; }
   DIE *getDIE() const { return TheDIE; }
   void setDebugLocListIndex(unsigned O) { DebugLocListIndex = O; }
   unsigned getDebugLocListIndex() const { return DebugLocListIndex; }
   StringRef getName() const { return Var->getName(); }
   const MachineInstr *getMInsn() const { return MInsn; }
-  ArrayRef<int> getFrameIndex() const { return FrameIndex; }
+  /// Get the FI entries, sorted by fragment offset.
+  ArrayRef<FrameIndexExpr> getFrameIndexExprs() const;
+  bool hasFrameIndexExprs() const { return !FrameIndexExprs.empty(); }
 
   void addMMIEntry(const DbgVariable &V) {
     assert(DebugLocListIndex == ~0U && !MInsn && "not an MMI entry");
@@ -124,16 +130,22 @@ public:
     assert(V.Var == Var && "conflicting variable");
     assert(V.IA == IA && "conflicting inlined-at location");
 
-    assert(!FrameIndex.empty() && "Expected an MMI entry");
-    assert(!V.FrameIndex.empty() && "Expected an MMI entry");
-    assert(Expr.size() == FrameIndex.size() && "Mismatched expressions");
-    assert(V.Expr.size() == V.FrameIndex.size() && "Mismatched expressions");
+    assert(!FrameIndexExprs.empty() && "Expected an MMI entry");
+    assert(!V.FrameIndexExprs.empty() && "Expected an MMI entry");
 
-    Expr.append(V.Expr.begin(), V.Expr.end());
-    FrameIndex.append(V.FrameIndex.begin(), V.FrameIndex.end());
-    assert(std::all_of(Expr.begin(), Expr.end(), [](const DIExpression *E) {
-             return E && E->isBitPiece();
-           }) && "conflicting locations for variable");
+    if (FrameIndexExprs.size()) {
+      auto *Expr = FrameIndexExprs.back().Expr;
+      // Get rid of duplicate non-fragment entries. More than one non-fragment
+      // dbg.declare makes no sense so ignore all but the first.
+      if (!Expr || !Expr->isFragment())
+        return;
+    }
+    FrameIndexExprs.append(V.FrameIndexExprs.begin(), V.FrameIndexExprs.end());
+    assert(all_of(FrameIndexExprs,
+                  [](FrameIndexExpr &FIE) {
+                    return FIE.Expr && FIE.Expr->isFragment();
+                  }) &&
+           "conflicting locations for variable");
   }
 
   // Translate tag to proper Dwarf tag.
@@ -163,19 +175,19 @@ public:
 
   bool hasComplexAddress() const {
     assert(MInsn && "Expected DBG_VALUE, not MMI variable");
-    assert(FrameIndex.empty() && "Expected DBG_VALUE, not MMI variable");
-    assert(
-        (Expr.empty() || (Expr.size() == 1 && Expr.back()->getNumElements())) &&
-        "Invalid Expr for DBG_VALUE");
-    return !Expr.empty();
+    assert((FrameIndexExprs.empty() ||
+            (FrameIndexExprs.size() == 1 &&
+             FrameIndexExprs[0].Expr->getNumElements())) &&
+           "Invalid Expr for DBG_VALUE");
+    return !FrameIndexExprs.empty();
   }
   bool isBlockByrefVariable() const;
   const DIType *getType() const;
 
 private:
-  /// Look in the DwarfDebug map for the MDNode that
-  /// corresponds to the reference.
-  template <typename T> T *resolve(TypedDINodeRef<T> Ref) const;
+  template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
+    return Ref.resolve();
+  }
 };
 
 
@@ -186,46 +198,13 @@ struct SymbolCU {
   DwarfCompileUnit *CU;
 };
 
-/// Identify a debugger for "tuning" the debug info.
-///
-/// The "debugger tuning" concept allows us to present a more intuitive
-/// interface that unpacks into different sets of defaults for the various
-/// individual feature-flag settings, that suit the preferences of the
-/// various debuggers.  However, it's worth remembering that debuggers are
-/// not the only consumers of debug info, and some variations in DWARF might
-/// better be treated as target/platform issues. Fundamentally,
-/// o if the feature is useful (or not) to a particular debugger, regardless
-///   of the target, that's a tuning decision;
-/// o if the feature is useful (or not) on a particular platform, regardless
-///   of the debugger, that's a target decision.
-/// It's not impossible to see both factors in some specific case.
-///
-/// The "tuning" should be used to set defaults for individual feature flags
-/// in DwarfDebug; if a given feature has a more specific command-line option,
-/// that option should take precedence over the tuning.
-enum class DebuggerKind {
-  Default,  // No specific tuning requested.
-  GDB,      // Tune debug info for gdb.
-  LLDB,     // Tune debug info for lldb.
-  SCE       // Tune debug info for SCE targets (e.g. PS4).
-};
-
 /// Collects and handles dwarf debug information.
-class DwarfDebug : public AsmPrinterHandler {
-  /// Target of Dwarf emission.
-  AsmPrinter *Asm;
-
-  /// Collected machine module information.
-  MachineModuleInfo *MMI;
-
+class DwarfDebug : public DebugHandlerBase {
   /// All DIEValues are allocated through this allocator.
   BumpPtrAllocator DIEValueAllocator;
 
   /// Maps MDNode with its corresponding DwarfCompileUnit.
   MapVector<const MDNode *, DwarfCompileUnit *> CUMap;
-
-  /// Maps subprogram MDNode with its corresponding DwarfCompileUnit.
-  MapVector<const MDNode *, DwarfCompileUnit *> SPMap;
 
   /// Maps a CU DIE with its corresponding DwarfCompileUnit.
   DenseMap<const DIE *, DwarfCompileUnit *> CUDieMap;
@@ -236,10 +215,7 @@ class DwarfDebug : public AsmPrinterHandler {
   /// Size of each symbol emitted (for those symbols that have a specific size).
   DenseMap<const MCSymbol *, uint64_t> SymSize;
 
-  LexicalScopes LScopes;
-
   /// Collection of abstract variables.
-  DenseMap<const MDNode *, std::unique_ptr<DbgVariable>> AbstractVariables;
   SmallVector<std::unique_ptr<DbgVariable>, 64> ConcreteVariables;
 
   /// Collection of DebugLocEntry. Stored in a linked list so that DIELocLists
@@ -248,33 +224,12 @@ class DwarfDebug : public AsmPrinterHandler {
 
   /// This is a collection of subprogram MDNodes that are processed to
   /// create DIEs.
-  SmallPtrSet<const MDNode *, 16> ProcessedSPNodes;
-
-  /// Maps instruction with label emitted before instruction.
-  DenseMap<const MachineInstr *, MCSymbol *> LabelsBeforeInsn;
-
-  /// Maps instruction with label emitted after instruction.
-  DenseMap<const MachineInstr *, MCSymbol *> LabelsAfterInsn;
-
-  /// History of DBG_VALUE and clobber instructions for each user
-  /// variable.  Variables are listed in order of appearance.
-  DbgValueHistoryMap DbgValues;
-
-  /// Previous instruction's location information. This is used to
-  /// determine label location to indicate scope boundries in dwarf
-  /// debug info.
-  DebugLoc PrevInstLoc;
-  MCSymbol *PrevLabel;
-
-  /// This location indicates end of function prologue and beginning of
-  /// function body.
-  DebugLoc PrologEndLoc;
+  SetVector<const DISubprogram *, SmallVector<const DISubprogram *, 16>,
+            SmallPtrSet<const DISubprogram *, 16>>
+      ProcessedSPNodes;
 
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn;
-
-  /// If nonnull, stores the current machine instruction we're processing.
-  const MachineInstr *CurMI;
 
   /// If nonnull, stores the CU in which the previous subprogram was contained.
   const DwarfCompileUnit *PrevCU;
@@ -289,32 +244,27 @@ class DwarfDebug : public AsmPrinterHandler {
   /// Holders for the various debug information flags that we might need to
   /// have exposed. See accessor functions below for description.
 
-  /// Map from MDNodes for user-defined types to the type units that
-  /// describe them.
-  DenseMap<const MDNode *, const DwarfTypeUnit *> DwarfTypeUnits;
+  /// Map from MDNodes for user-defined types to their type signatures. Also
+  /// used to keep track of which types we have emitted type units for.
+  DenseMap<const MDNode *, uint64_t> TypeSignatures;
 
   SmallVector<
       std::pair<std::unique_ptr<DwarfTypeUnit>, const DICompositeType *>, 1>
       TypeUnitsUnderConstruction;
 
-  /// Whether to emit the pubnames/pubtypes sections.
-  bool HasDwarfPubSections;
-
   /// Whether to use the GNU TLS opcode (instead of the standard opcode).
   bool UseGNUTLSOpcode;
 
-  /// Whether to emit DW_AT_[MIPS_]linkage_name.
-  bool UseLinkageNames;
+  /// Whether to use DWARF 2 bitfields (instead of the DWARF 4 format).
+  bool UseDWARF2Bitfields;
 
-  /// Version of dwarf we're emitting.
-  unsigned DwarfVersion;
-
-  /// Maps from a type identifier to the actual MDNode.
-  DITypeIdentifierMap TypeIdentifierMap;
+  /// Whether to emit all linkage names, or just abstract subprograms.
+  bool UseAllLinkageNames;
 
   /// DWARF5 Experimental Options
   /// @{
   bool HasDwarfAccelTables;
+  bool HasAppleExtensionAttributes;
   bool HasSplitDwarf;
 
   /// Separated Dwarf Variables
@@ -347,31 +297,34 @@ class DwarfDebug : public AsmPrinterHandler {
   // Identify a debugger for "tuning" the debug info.
   DebuggerKind DebuggerTuning;
 
+  /// \defgroup DebuggerTuning Predicates to tune DWARF for a given debugger.
+  ///
+  /// Returns whether we are "tuning" for a given debugger.
+  /// Should be used only within the constructor, to set feature flags.
+  /// @{
+  bool tuneForGDB() const { return DebuggerTuning == DebuggerKind::GDB; }
+  bool tuneForLLDB() const { return DebuggerTuning == DebuggerKind::LLDB; }
+  bool tuneForSCE() const { return DebuggerTuning == DebuggerKind::SCE; }
+  /// @}
+
   MCDwarfDwoLineTable *getDwoLineTable(const DwarfCompileUnit &);
 
-  const SmallVectorImpl<std::unique_ptr<DwarfUnit>> &getUnits() {
+  const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
     return InfoHolder.getUnits();
   }
 
   typedef DbgValueHistoryMap::InlinedVariable InlinedVariable;
 
-  /// Find abstract variable associated with Var.
-  DbgVariable *getExistingAbstractVariable(InlinedVariable IV,
-                                           const DILocalVariable *&Cleansed);
-  DbgVariable *getExistingAbstractVariable(InlinedVariable IV);
-  void createAbstractVariable(const DILocalVariable *DV, LexicalScope *Scope);
-  void ensureAbstractVariableIsCreated(InlinedVariable Var,
+  void ensureAbstractVariableIsCreated(DwarfCompileUnit &CU, InlinedVariable Var,
                                        const MDNode *Scope);
-  void ensureAbstractVariableIsCreatedIfScoped(InlinedVariable Var,
+  void ensureAbstractVariableIsCreatedIfScoped(DwarfCompileUnit &CU, InlinedVariable Var,
                                                const MDNode *Scope);
 
-  DbgVariable *createConcreteVariable(LexicalScope &Scope, InlinedVariable IV);
+  DbgVariable *createConcreteVariable(DwarfCompileUnit &TheCU,
+                                      LexicalScope &Scope, InlinedVariable IV);
 
   /// Construct a DIE for this abstract scope.
-  void constructAbstractSubprogramScopeDIE(LexicalScope *Scope);
-
-  /// Collect info for variables that were optimized out.
-  void collectDeadVariables();
+  void constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU, LexicalScope *Scope);
 
   void finishVariableDefinitions();
 
@@ -420,26 +373,32 @@ class DwarfDebug : public AsmPrinterHandler {
       bool GnuStyle, MCSection *PSec, StringRef Name,
       const StringMap<const DIE *> &(DwarfCompileUnit::*Accessor)() const);
 
-  /// Emit visible names into a debug str section.
+  /// Emit null-terminated strings into a debug str section.
   void emitDebugStr();
 
-  /// Emit visible names into a debug loc section.
+  /// Emit variable locations into a debug loc section.
   void emitDebugLoc();
 
-  /// Emit visible names into a debug loc dwo section.
+  /// Emit variable locations into a debug loc dwo section.
   void emitDebugLocDWO();
 
-  /// Emit visible names into a debug aranges section.
+  /// Emit address ranges into a debug aranges section.
   void emitDebugARanges();
 
-  /// Emit visible names into a debug ranges section.
+  /// Emit address ranges into a debug ranges section.
   void emitDebugRanges();
+
+  /// Emit macros into a debug macinfo section.
+  void emitDebugMacinfo();
+  void emitMacro(DIMacro &M);
+  void emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U);
+  void handleMacroNodes(DIMacroNodeArray Nodes, DwarfCompileUnit &U);
 
   /// DWARF 5 Experimental Split Dwarf Emitters
 
   /// Initialize common features of skeleton units.
   void initSkeletonUnit(const DwarfUnit &U, DIE &Die,
-                        std::unique_ptr<DwarfUnit> NewU);
+                        std::unique_ptr<DwarfCompileUnit> NewU);
 
   /// Construct the split debug info compile unit for the debug info
   /// section.
@@ -459,11 +418,11 @@ class DwarfDebug : public AsmPrinterHandler {
 
   /// Flags to let the linker know we have emitted new style pubnames. Only
   /// emit it here if we don't have a skeleton CU for split dwarf.
-  void addGnuPubAttributes(DwarfUnit &U, DIE &D) const;
+  void addGnuPubAttributes(DwarfCompileUnit &U, DIE &D) const;
 
   /// Create new DwarfCompileUnit for the given metadata node with tag
   /// DW_TAG_compile_unit.
-  DwarfCompileUnit &constructDwarfCompileUnit(const DICompileUnit *DIUnit);
+  DwarfCompileUnit &getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit);
 
   /// Construct imported_module or imported_declaration DIE.
   void constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,
@@ -475,10 +434,6 @@ class DwarfDebug : public AsmPrinterHandler {
   void recordSourceLine(unsigned Line, unsigned Col, const MDNode *Scope,
                         unsigned Flags);
 
-  /// Indentify instructions that are marking the beginning of or
-  /// ending of a scope.
-  void identifyScopeMarkers();
-
   /// Populate LexicalScope entries with variables' info.
   void collectVariableInfo(DwarfCompileUnit &TheCU, const DISubprogram *SP,
                            DenseSet<InlinedVariable> &ProcessedVars);
@@ -488,19 +443,18 @@ class DwarfDebug : public AsmPrinterHandler {
   void buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
                          const DbgValueHistoryMap::InstrRanges &Ranges);
 
-  /// Collect variable information from the side table maintained
-  /// by MMI.
-  void collectVariableInfoFromMMITable(DenseSet<InlinedVariable> &P);
+  /// Collect variable information from the side table maintained by MF.
+  void collectVariableInfoFromMFTable(DwarfCompileUnit &TheCU,
+                                      DenseSet<InlinedVariable> &P);
 
-  /// Ensure that a label will be emitted before MI.
-  void requestLabelBeforeInsn(const MachineInstr *MI) {
-    LabelsBeforeInsn.insert(std::make_pair(MI, nullptr));
-  }
+protected:
+  /// Gather pre-function debug information.
+  void beginFunctionImpl(const MachineFunction *MF) override;
 
-  /// Ensure that a label will be emitted after MI.
-  void requestLabelAfterInsn(const MachineInstr *MI) {
-    LabelsAfterInsn.insert(std::make_pair(MI, nullptr));
-  }
+  /// Gather and emit post-function debug information.
+  void endFunctionImpl(const MachineFunction *MF) override;
+
+  void skippedNonDebugFunction() override;
 
 public:
   //===--------------------------------------------------------------------===//
@@ -517,17 +471,8 @@ public:
   /// Emit all Dwarf sections that should come after the content.
   void endModule() override;
 
-  /// Gather pre-function debug information.
-  void beginFunction(const MachineFunction *MF) override;
-
-  /// Gather and emit post-function debug information.
-  void endFunction(const MachineFunction *MF) override;
-
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
-
-  /// Process end of an instruction.
-  void endInstruction() override;
 
   /// Perform an MD5 checksum of \p Identifier and return the lower 64 bits.
   static uint64_t makeTypeSignature(StringRef Identifier);
@@ -546,21 +491,17 @@ public:
     SymSize[Sym] = Size;
   }
 
-  /// Returns whether to emit DW_AT_[MIPS_]linkage_name.
-  bool useLinkageNames() const { return UseLinkageNames; }
+  /// Returns whether we should emit all DW_AT_[MIPS_]linkage_name.
+  /// If not, we still might emit certain cases.
+  bool useAllLinkageNames() const { return UseAllLinkageNames; }
 
   /// Returns whether to use DW_OP_GNU_push_tls_address, instead of the
   /// standard DW_OP_form_tls_address opcode
   bool useGNUTLSOpcode() const { return UseGNUTLSOpcode; }
 
-  /// \defgroup DebuggerTuning Predicates to tune DWARF for a given debugger.
-  ///
-  /// Returns whether we are "tuning" for a given debugger.
-  /// @{
-  bool tuneForGDB() const { return DebuggerTuning == DebuggerKind::GDB; }
-  bool tuneForLLDB() const { return DebuggerTuning == DebuggerKind::LLDB; }
-  bool tuneForSCE() const { return DebuggerTuning == DebuggerKind::SCE; }
-  /// @}
+  /// Returns whether to use the DWARF2 format for bitfields instyead of the
+  /// DWARF4 format.
+  bool useDWARF2Bitfields() const { return UseDWARF2Bitfields; }
 
   // Experimental DWARF5 features.
 
@@ -568,12 +509,18 @@ public:
   /// use to accelerate lookup.
   bool useDwarfAccelTables() const { return HasDwarfAccelTables; }
 
+  bool useAppleExtensionAttributes() const {
+    return HasAppleExtensionAttributes;
+  }
+
   /// Returns whether or not to change the current debug info for the
   /// split dwarf proposal support.
   bool useSplitDwarf() const { return HasSplitDwarf; }
 
+  bool shareAcrossDWOCUs() const;
+
   /// Returns the Dwarf Version.
-  unsigned getDwarfVersion() const { return DwarfVersion; }
+  uint16_t getDwarfVersion() const;
 
   /// Returns the previous CU that was being updated
   const DwarfCompileUnit *getPrevCU() const { return PrevCU; }
@@ -592,17 +539,7 @@ public:
 
   /// Find the MDNode for the given reference.
   template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
-    return Ref.resolve(TypeIdentifierMap);
-  }
-
-  /// Return the TypeIdentifierMap.
-  const DITypeIdentifierMap &getTypeIdentifierMap() const {
-    return TypeIdentifierMap;
-  }
-
-  /// Find the DwarfCompileUnit for the given CU Die.
-  DwarfCompileUnit *lookupUnit(const DIE *CU) const {
-    return CUDieMap.lookup(CU);
+    return Ref.resolve();
   }
 
   void addSubprogramNames(const DISubprogram *SP, DIE &Die);
@@ -623,17 +560,7 @@ public:
   /// going to be null.
   bool isLexicalScopeDIENull(LexicalScope *Scope);
 
-  /// Return Label preceding the instruction.
-  MCSymbol *getLabelBeforeInsn(const MachineInstr *MI);
-
-  /// Return Label immediately following the instruction.
-  MCSymbol *getLabelAfterInsn(const MachineInstr *MI);
-
-  // FIXME: Sink these functions down into DwarfFile/Dwarf*Unit.
-
-  SmallPtrSet<const MDNode *, 16> &getProcessedSPNodes() {
-    return ProcessedSPNodes;
-  }
+  bool hasDwarfPubSections(bool includeMinimalInlineScopes) const;
 };
 } // End of namespace llvm
 

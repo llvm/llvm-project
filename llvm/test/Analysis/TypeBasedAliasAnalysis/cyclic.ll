@@ -1,5 +1,5 @@
 ; RUN: not opt -instcombine < %s 2>&1 | FileCheck %s
-; CHECK: Cycle found in TBAA metadata.
+; CHECK: Access type node must be a valid scalar type
 
 define void @test6(i32* %gi) #0 {
 entry:

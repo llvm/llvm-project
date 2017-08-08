@@ -115,7 +115,7 @@ L6:
 	.long	-858993459
 	.long	1074318540
 
-3) struct copies appear to be done field by field 
+3) struct copies appear to be done field by field
 instead of by words, at least sometimes:
 
 struct foo { int x; short s; char c1; char c2; };
@@ -142,7 +142,7 @@ a good way to measure on ARM).
 
 * Consider this silly example:
 
-double bar(double x) {  
+double bar(double x) {
   double r = foo(3.1);
   return x+r;
 }
@@ -162,7 +162,7 @@ _bar:
         fmrrd r0, r1, d0
         ldmfd sp!, {r4, r5, r7, pc}
 
-Ignore the prologue and epilogue stuff for a second. Note 
+Ignore the prologue and epilogue stuff for a second. Note
 	mov r4, r0
 	mov r5, r1
 the copys to callee-save registers and the fact they are only being used by the
@@ -269,7 +269,7 @@ LBB4:
   b LBB2
 
 If BB4 is the only predecessor of BB3, then we can emit BB3 after BB4. We can
-then eliminate beq and and turn the unconditional branch to LBB2 to a bne.
+then eliminate beq and turn the unconditional branch to LBB2 to a bne.
 
 See McCat/18-imp/ComputeBoundingBoxes for an example.
 
@@ -391,10 +391,10 @@ void foo(signed char* p) {
 }
 
 llvm decides it's a good idea to turn the repeated if...else into a
-binary tree, as if it were a switch; the resulting code requires -1 
+binary tree, as if it were a switch; the resulting code requires -1
 compare-and-branches when *p<=2 or *p==5, the same number if *p==4
 or *p>6, and +1 if *p==3.  So it should be a speed win
-(on balance).  However, the revised code is larger, with 4 conditional 
+(on balance).  However, the revised code is larger, with 4 conditional
 branches instead of 3.
 
 More seriously, there is a byte->word extend before
@@ -421,8 +421,8 @@ int foo(int a, int b, int c, int d) {
   return (int)(acc >> 32);
 }
 
-Should compile to use SMLAL (Signed Multiply Accumulate Long) which multiplies 
-two signed 32-bit values to produce a 64-bit value, and accumulates this with 
+Should compile to use SMLAL (Signed Multiply Accumulate Long) which multiplies
+two signed 32-bit values to produce a 64-bit value, and accumulates this with
 a 64-bit value.
 
 We currently get this with both v4 and v6:
@@ -513,7 +513,7 @@ Be careful though as the last attempt caused infinite looping on lencod.
 
 //===---------------------------------------------------------------------===//
 
-Predication issue. This function:   
+Predication issue. This function:
 
 extern unsigned array[ 128 ];
 int     foo( int x ) {

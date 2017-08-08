@@ -216,10 +216,9 @@ void ClangdLSPServer::LSPProtocolCallbacks::onGoToDefinition(
       R"(,"result":[)" + Locations + R"(]})");
 }
 
-ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, bool RunSynchronously,
-                                 llvm::Optional<StringRef> ResourceDir)
+ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, bool RunSynchronously)
     : Out(Out), DiagConsumer(*this),
-      Server(CDB, DiagConsumer, FSProvider, RunSynchronously, ResourceDir) {}
+      Server(CDB, DiagConsumer, FSProvider, RunSynchronously) {}
 
 void ClangdLSPServer::run(std::istream &In) {
   assert(!IsDone && "Run was called before");

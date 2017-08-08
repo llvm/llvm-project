@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(bool);
 
@@ -202,6 +202,25 @@ struct s2 {
 void PR21606()
 {
     s2().f(0);
+}
+
+// --- PR25392 --- //
+
+struct HasConstMemberFunction {
+public:
+  void constMemberFunction() const;
+};
+
+HasConstMemberFunction hasNoReturn() { } // expected-warning {{control reaches end of non-void function}}
+
+void testUnknownWithConstMemberFunction() {
+  hasNoReturn().constMemberFunction();
+}
+
+void testNonRegionLocWithConstMemberFunction() {
+  (*((HasConstMemberFunction *)(&&label))).constMemberFunction();
+
+  label: return;
 }
 
 // FIXME

@@ -32,12 +32,48 @@ std::ostream &operator<<(std::ostream &OS,
 
 }
 
+// Check that we can't accidentally assign a temporary std::string to a
+// StringRef. (Unfortunately we can't make use of the same thing with
+// constructors.)
+//
+// Disable this check under MSVC; even MSVC 2015 isn't consistent between
+// std::is_assignable and actually writing such an assignment.
+#if !defined(_MSC_VER)
+static_assert(
+    !std::is_assignable<StringRef, std::string>::value,
+    "Assigning from prvalue std::string");
+static_assert(
+    !std::is_assignable<StringRef, std::string &&>::value,
+    "Assigning from xvalue std::string");
+static_assert(
+    std::is_assignable<StringRef, std::string &>::value,
+    "Assigning from lvalue std::string");
+static_assert(
+    std::is_assignable<StringRef, const char *>::value,
+    "Assigning from prvalue C string");
+static_assert(
+    std::is_assignable<StringRef, const char * &&>::value,
+    "Assigning from xvalue C string");
+static_assert(
+    std::is_assignable<StringRef, const char * &>::value,
+    "Assigning from lvalue C string");
+#endif
+
+
 namespace {
 TEST(StringRefTest, Construction) {
   EXPECT_EQ("", StringRef());
   EXPECT_EQ("hello", StringRef("hello"));
   EXPECT_EQ("hello", StringRef("hello world", 5));
   EXPECT_EQ("hello", StringRef(std::string("hello")));
+}
+
+TEST(StringRefTest, EmptyInitializerList) {
+  StringRef S = {};
+  EXPECT_TRUE(S.empty());
+
+  S = {};
+  EXPECT_TRUE(S.empty());
 }
 
 TEST(StringRefTest, Iteration) {
@@ -301,7 +337,7 @@ TEST(StringRefTest, Trim) {
   EXPECT_EQ(StringRef(""), StringRef(" ").trim());
   EXPECT_EQ(StringRef("\0", 1), StringRef(" \0 ", 3).trim());
   EXPECT_EQ(StringRef("\0\0", 2), StringRef("\0\0", 2).trim());
-  EXPECT_EQ(StringRef("x"), StringRef("\0\0x\0\0", 5).trim(StringRef("\0", 1)));
+  EXPECT_EQ(StringRef("x"), StringRef("\0\0x\0\0", 5).trim('\0'));
 }
 
 TEST(StringRefTest, StartsWith) {
@@ -320,6 +356,22 @@ TEST(StringRefTest, StartsWithLower) {
   EXPECT_TRUE(Str.startswith_lower("HELlo"));
   EXPECT_FALSE(Str.startswith_lower("helloworld"));
   EXPECT_FALSE(Str.startswith_lower("hi"));
+}
+
+TEST(StringRefTest, ConsumeFront) {
+  StringRef Str("hello");
+  EXPECT_TRUE(Str.consume_front(""));
+  EXPECT_EQ("hello", Str);
+  EXPECT_TRUE(Str.consume_front("he"));
+  EXPECT_EQ("llo", Str);
+  EXPECT_FALSE(Str.consume_front("lloworld"));
+  EXPECT_EQ("llo", Str);
+  EXPECT_FALSE(Str.consume_front("lol"));
+  EXPECT_EQ("llo", Str);
+  EXPECT_TRUE(Str.consume_front("llo"));
+  EXPECT_EQ("", Str);
+  EXPECT_FALSE(Str.consume_front("o"));
+  EXPECT_TRUE(Str.consume_front(""));
 }
 
 TEST(StringRefTest, EndsWith) {
@@ -341,22 +393,75 @@ TEST(StringRefTest, EndsWithLower) {
   EXPECT_FALSE(Str.endswith_lower("hi"));
 }
 
-TEST(StringRefTest, Find) {
+TEST(StringRefTest, ConsumeBack) {
   StringRef Str("hello");
-  EXPECT_EQ(2U, Str.find('l'));
-  EXPECT_EQ(StringRef::npos, Str.find('z'));
-  EXPECT_EQ(StringRef::npos, Str.find("helloworld"));
-  EXPECT_EQ(0U, Str.find("hello"));
-  EXPECT_EQ(1U, Str.find("ello"));
-  EXPECT_EQ(StringRef::npos, Str.find("zz"));
-  EXPECT_EQ(2U, Str.find("ll", 2));
-  EXPECT_EQ(StringRef::npos, Str.find("ll", 3));
-  EXPECT_EQ(0U, Str.find(""));
-  StringRef LongStr("hellx xello hell ello world foo bar hello");
-  EXPECT_EQ(36U, LongStr.find("hello"));
-  EXPECT_EQ(28U, LongStr.find("foo"));
-  EXPECT_EQ(12U, LongStr.find("hell", 2));
-  EXPECT_EQ(0U, LongStr.find(""));
+  EXPECT_TRUE(Str.consume_back(""));
+  EXPECT_EQ("hello", Str);
+  EXPECT_TRUE(Str.consume_back("lo"));
+  EXPECT_EQ("hel", Str);
+  EXPECT_FALSE(Str.consume_back("helhel"));
+  EXPECT_EQ("hel", Str);
+  EXPECT_FALSE(Str.consume_back("hle"));
+  EXPECT_EQ("hel", Str);
+  EXPECT_TRUE(Str.consume_back("hel"));
+  EXPECT_EQ("", Str);
+  EXPECT_FALSE(Str.consume_back("h"));
+  EXPECT_TRUE(Str.consume_back(""));
+}
+
+TEST(StringRefTest, Find) {
+  StringRef Str("helloHELLO");
+  StringRef LongStr("hellx xello hell ello world foo bar hello HELLO");
+
+  struct {
+    StringRef Str;
+    char C;
+    std::size_t From;
+    std::size_t Pos;
+    std::size_t LowerPos;
+  } CharExpectations[] = {
+      {Str, 'h', 0U, 0U, 0U},
+      {Str, 'e', 0U, 1U, 1U},
+      {Str, 'l', 0U, 2U, 2U},
+      {Str, 'l', 3U, 3U, 3U},
+      {Str, 'o', 0U, 4U, 4U},
+      {Str, 'L', 0U, 7U, 2U},
+      {Str, 'z', 0U, StringRef::npos, StringRef::npos},
+  };
+
+  struct {
+    StringRef Str;
+    llvm::StringRef S;
+    std::size_t From;
+    std::size_t Pos;
+    std::size_t LowerPos;
+  } StrExpectations[] = {
+      {Str, "helloword", 0, StringRef::npos, StringRef::npos},
+      {Str, "hello", 0, 0U, 0U},
+      {Str, "ello", 0, 1U, 1U},
+      {Str, "zz", 0, StringRef::npos, StringRef::npos},
+      {Str, "ll", 2U, 2U, 2U},
+      {Str, "ll", 3U, StringRef::npos, 7U},
+      {Str, "LL", 2U, 7U, 2U},
+      {Str, "LL", 3U, 7U, 7U},
+      {Str, "", 0U, 0U, 0U},
+      {LongStr, "hello", 0U, 36U, 36U},
+      {LongStr, "foo", 0U, 28U, 28U},
+      {LongStr, "hell", 2U, 12U, 12U},
+      {LongStr, "HELL", 2U, 42U, 12U},
+      {LongStr, "", 0U, 0U, 0U}};
+
+  for (auto &E : CharExpectations) {
+    EXPECT_EQ(E.Pos, E.Str.find(E.C, E.From));
+    EXPECT_EQ(E.LowerPos, E.Str.find_lower(E.C, E.From));
+    EXPECT_EQ(E.LowerPos, E.Str.find_lower(toupper(E.C), E.From));
+  }
+
+  for (auto &E : StrExpectations) {
+    EXPECT_EQ(E.Pos, E.Str.find(E.S, E.From));
+    EXPECT_EQ(E.LowerPos, E.Str.find_lower(E.S, E.From));
+    EXPECT_EQ(E.LowerPos, E.Str.find_lower(E.S.upper(), E.From));
+  }
 
   EXPECT_EQ(3U, Str.rfind('l'));
   EXPECT_EQ(StringRef::npos, Str.rfind('z'));
@@ -365,10 +470,19 @@ TEST(StringRefTest, Find) {
   EXPECT_EQ(1U, Str.rfind("ello"));
   EXPECT_EQ(StringRef::npos, Str.rfind("zz"));
 
+  EXPECT_EQ(8U, Str.rfind_lower('l'));
+  EXPECT_EQ(8U, Str.rfind_lower('L'));
+  EXPECT_EQ(StringRef::npos, Str.rfind_lower('z'));
+  EXPECT_EQ(StringRef::npos, Str.rfind_lower("HELLOWORLD"));
+  EXPECT_EQ(5U, Str.rfind("HELLO"));
+  EXPECT_EQ(6U, Str.rfind("ELLO"));
+  EXPECT_EQ(StringRef::npos, Str.rfind("ZZ"));
+
   EXPECT_EQ(2U, Str.find_first_of('l'));
   EXPECT_EQ(1U, Str.find_first_of("el"));
   EXPECT_EQ(StringRef::npos, Str.find_first_of("xyz"));
 
+  Str = "hello";
   EXPECT_EQ(1U, Str.find_first_not_of('h'));
   EXPECT_EQ(4U, Str.find_first_not_of("hel"));
   EXPECT_EQ(StringRef::npos, Str.find_first_not_of("hello"));
@@ -390,8 +504,22 @@ TEST(StringRefTest, Count) {
 }
 
 TEST(StringRefTest, EditDistance) {
-  StringRef Str("hello");
-  EXPECT_EQ(2U, Str.edit_distance("hill"));
+  StringRef Hello("hello");
+  EXPECT_EQ(2U, Hello.edit_distance("hill"));
+
+  StringRef Industry("industry");
+  EXPECT_EQ(6U, Industry.edit_distance("interest"));
+
+  StringRef Soylent("soylent green is people");
+  EXPECT_EQ(19U, Soylent.edit_distance("people soiled our green"));
+  EXPECT_EQ(26U, Soylent.edit_distance("people soiled our green",
+                                      /* allow replacements = */ false));
+  EXPECT_EQ(9U, Soylent.edit_distance("people soiled our green",
+                                      /* allow replacements = */ true,
+                                      /* max edit distance = */ 8));
+  EXPECT_EQ(53U, Soylent.edit_distance("people soiled our green "
+                                       "people soiled our green "
+                                       "people soiled our green "));
 }
 
 TEST(StringRefTest, Misc) {
@@ -539,7 +667,8 @@ TEST(StringRefTest, getAsInteger) {
 
 
 static const char* BadStrings[] = {
-    "18446744073709551617"  // value just over max
+    ""                      // empty string
+  , "18446744073709551617"  // value just over max
   , "123456789012345678901" // value way too large
   , "4t23v"                 // illegal decimal characters
   , "0x123W56"              // illegal hex characters
@@ -547,6 +676,8 @@ static const char* BadStrings[] = {
   , "08"                    // illegal oct characters
   , "0o8"                   // illegal oct characters
   , "-123"                  // negative unsigned value
+  , "0x"
+  , "0b"
 };
 
 
@@ -555,6 +686,205 @@ TEST(StringRefTest, getAsUnsignedIntegerBadStrings) {
   for (size_t i = 0; i < array_lengthof(BadStrings); ++i) {
     bool IsBadNumber = StringRef(BadStrings[i]).getAsInteger(0, U64);
     ASSERT_TRUE(IsBadNumber);
+  }
+}
+
+struct ConsumeUnsignedPair {
+  const char *Str;
+  uint64_t Expected;
+  const char *Leftover;
+} ConsumeUnsigned[] = {
+    {"0", 0, ""},
+    {"255", 255, ""},
+    {"256", 256, ""},
+    {"65535", 65535, ""},
+    {"65536", 65536, ""},
+    {"4294967295", 4294967295ULL, ""},
+    {"4294967296", 4294967296ULL, ""},
+    {"255A376", 255, "A376"},
+    {"18446744073709551615", 18446744073709551615ULL, ""},
+    {"18446744073709551615ABC", 18446744073709551615ULL, "ABC"},
+    {"042", 34, ""},
+    {"0x42", 66, ""},
+    {"0x42-0x34", 66, "-0x34"},
+    {"0b101010", 42, ""},
+    {"0429F", 042, "9F"},            // Auto-sensed octal radix, invalid digit
+    {"0x42G12", 0x42, "G12"},        // Auto-sensed hex radix, invalid digit
+    {"0b10101020101", 42, "20101"}}; // Auto-sensed binary radix, invalid digit.
+
+struct ConsumeSignedPair {
+  const char *Str;
+  int64_t Expected;
+  const char *Leftover;
+} ConsumeSigned[] = {
+    {"0", 0, ""},
+    {"-0", 0, ""},
+    {"0-1", 0, "-1"},
+    {"-0-1", 0, "-1"},
+    {"127", 127, ""},
+    {"128", 128, ""},
+    {"127-1", 127, "-1"},
+    {"128-1", 128, "-1"},
+    {"-128", -128, ""},
+    {"-129", -129, ""},
+    {"-128-1", -128, "-1"},
+    {"-129-1", -129, "-1"},
+    {"32767", 32767, ""},
+    {"32768", 32768, ""},
+    {"32767-1", 32767, "-1"},
+    {"32768-1", 32768, "-1"},
+    {"-32768", -32768, ""},
+    {"-32769", -32769, ""},
+    {"-32768-1", -32768, "-1"},
+    {"-32769-1", -32769, "-1"},
+    {"2147483647", 2147483647LL, ""},
+    {"2147483648", 2147483648LL, ""},
+    {"2147483647-1", 2147483647LL, "-1"},
+    {"2147483648-1", 2147483648LL, "-1"},
+    {"-2147483648", -2147483648LL, ""},
+    {"-2147483649", -2147483649LL, ""},
+    {"-2147483648-1", -2147483648LL, "-1"},
+    {"-2147483649-1", -2147483649LL, "-1"},
+    {"-9223372036854775808", -(9223372036854775807LL) - 1, ""},
+    {"-9223372036854775808-1", -(9223372036854775807LL) - 1, "-1"},
+    {"042", 34, ""},
+    {"042-1", 34, "-1"},
+    {"0x42", 66, ""},
+    {"0x42-1", 66, "-1"},
+    {"0b101010", 42, ""},
+    {"0b101010-1", 42, "-1"},
+    {"-042", -34, ""},
+    {"-042-1", -34, "-1"},
+    {"-0x42", -66, ""},
+    {"-0x42-1", -66, "-1"},
+    {"-0b101010", -42, ""},
+    {"-0b101010-1", -42, "-1"}};
+
+TEST(StringRefTest, consumeIntegerUnsigned) {
+  uint8_t U8;
+  uint16_t U16;
+  uint32_t U32;
+  uint64_t U64;
+
+  for (size_t i = 0; i < array_lengthof(ConsumeUnsigned); ++i) {
+    StringRef Str = ConsumeUnsigned[i].Str;
+    bool U8Success = Str.consumeInteger(0, U8);
+    if (static_cast<uint8_t>(ConsumeUnsigned[i].Expected) ==
+        ConsumeUnsigned[i].Expected) {
+      ASSERT_FALSE(U8Success);
+      EXPECT_EQ(U8, ConsumeUnsigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeUnsigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(U8Success);
+    }
+
+    Str = ConsumeUnsigned[i].Str;
+    bool U16Success = Str.consumeInteger(0, U16);
+    if (static_cast<uint16_t>(ConsumeUnsigned[i].Expected) ==
+        ConsumeUnsigned[i].Expected) {
+      ASSERT_FALSE(U16Success);
+      EXPECT_EQ(U16, ConsumeUnsigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeUnsigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(U16Success);
+    }
+
+    Str = ConsumeUnsigned[i].Str;
+    bool U32Success = Str.consumeInteger(0, U32);
+    if (static_cast<uint32_t>(ConsumeUnsigned[i].Expected) ==
+        ConsumeUnsigned[i].Expected) {
+      ASSERT_FALSE(U32Success);
+      EXPECT_EQ(U32, ConsumeUnsigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeUnsigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(U32Success);
+    }
+
+    Str = ConsumeUnsigned[i].Str;
+    bool U64Success = Str.consumeInteger(0, U64);
+    if (static_cast<uint64_t>(ConsumeUnsigned[i].Expected) ==
+        ConsumeUnsigned[i].Expected) {
+      ASSERT_FALSE(U64Success);
+      EXPECT_EQ(U64, ConsumeUnsigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeUnsigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(U64Success);
+    }
+  }
+}
+
+TEST(StringRefTest, consumeIntegerSigned) {
+  int8_t S8;
+  int16_t S16;
+  int32_t S32;
+  int64_t S64;
+
+  for (size_t i = 0; i < array_lengthof(ConsumeSigned); ++i) {
+    StringRef Str = ConsumeSigned[i].Str;
+    bool S8Success = Str.consumeInteger(0, S8);
+    if (static_cast<int8_t>(ConsumeSigned[i].Expected) ==
+        ConsumeSigned[i].Expected) {
+      ASSERT_FALSE(S8Success);
+      EXPECT_EQ(S8, ConsumeSigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeSigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(S8Success);
+    }
+
+    Str = ConsumeSigned[i].Str;
+    bool S16Success = Str.consumeInteger(0, S16);
+    if (static_cast<int16_t>(ConsumeSigned[i].Expected) ==
+        ConsumeSigned[i].Expected) {
+      ASSERT_FALSE(S16Success);
+      EXPECT_EQ(S16, ConsumeSigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeSigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(S16Success);
+    }
+
+    Str = ConsumeSigned[i].Str;
+    bool S32Success = Str.consumeInteger(0, S32);
+    if (static_cast<int32_t>(ConsumeSigned[i].Expected) ==
+        ConsumeSigned[i].Expected) {
+      ASSERT_FALSE(S32Success);
+      EXPECT_EQ(S32, ConsumeSigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeSigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(S32Success);
+    }
+
+    Str = ConsumeSigned[i].Str;
+    bool S64Success = Str.consumeInteger(0, S64);
+    if (static_cast<int64_t>(ConsumeSigned[i].Expected) ==
+        ConsumeSigned[i].Expected) {
+      ASSERT_FALSE(S64Success);
+      EXPECT_EQ(S64, ConsumeSigned[i].Expected);
+      EXPECT_EQ(Str, ConsumeSigned[i].Leftover);
+    } else {
+      ASSERT_TRUE(S64Success);
+    }
+  }
+}
+
+struct GetDoubleStrings {
+  const char *Str;
+  bool AllowInexact;
+  bool ShouldFail;
+  double D;
+} DoubleStrings[] = {{"0", false, false, 0.0},
+                     {"0.0", false, false, 0.0},
+                     {"-0.0", false, false, -0.0},
+                     {"123.45", false, true, 123.45},
+                     {"123.45", true, false, 123.45}};
+
+TEST(StringRefTest, getAsDouble) {
+  for (const auto &Entry : DoubleStrings) {
+    double Result;
+    StringRef S(Entry.Str);
+    EXPECT_EQ(Entry.ShouldFail, S.getAsDouble(Result, Entry.AllowInexact));
+    if (!Entry.ShouldFail) {
+      EXPECT_EQ(Result, Entry.D);
+    }
   }
 }
 
@@ -584,11 +914,22 @@ TEST(StringRefTest, joinStrings) {
   EXPECT_TRUE(v2_join2);
   bool v2_join3 = join(v2.begin(), v2.end(), "::") == join_result3;
   EXPECT_TRUE(v2_join3);
+  v2_join3 = join(v2, "::") == join_result3;
+  EXPECT_TRUE(v2_join3);
 }
 
 
 TEST(StringRefTest, AllocatorCopy) {
   BumpPtrAllocator Alloc;
+  // First test empty strings.  We don't want these to allocate anything on the
+  // allocator.
+  StringRef StrEmpty = "";
+  StringRef StrEmptyc = StrEmpty.copy(Alloc);
+  EXPECT_TRUE(StrEmpty.equals(StrEmptyc));
+  EXPECT_EQ(StrEmptyc.data(), nullptr);
+  EXPECT_EQ(StrEmptyc.size(), 0u);
+  EXPECT_EQ(Alloc.getTotalMemory(), 0u);
+
   StringRef Str1 = "hello";
   StringRef Str2 = "bye";
   StringRef Str1c = Str1.copy(Alloc);
@@ -599,5 +940,110 @@ TEST(StringRefTest, AllocatorCopy) {
   EXPECT_NE(Str2.data(), Str2c.data());
 }
 
+TEST(StringRefTest, Drop) {
+  StringRef Test("StringRefTest::Drop");
+
+  StringRef Dropped = Test.drop_front(5);
+  EXPECT_EQ(Dropped, "gRefTest::Drop");
+
+  Dropped = Test.drop_back(5);
+  EXPECT_EQ(Dropped, "StringRefTest:");
+
+  Dropped = Test.drop_front(0);
+  EXPECT_EQ(Dropped, Test);
+
+  Dropped = Test.drop_back(0);
+  EXPECT_EQ(Dropped, Test);
+
+  Dropped = Test.drop_front(Test.size());
+  EXPECT_TRUE(Dropped.empty());
+
+  Dropped = Test.drop_back(Test.size());
+  EXPECT_TRUE(Dropped.empty());
+}
+
+TEST(StringRefTest, Take) {
+  StringRef Test("StringRefTest::Take");
+
+  StringRef Taken = Test.take_front(5);
+  EXPECT_EQ(Taken, "Strin");
+
+  Taken = Test.take_back(5);
+  EXPECT_EQ(Taken, ":Take");
+
+  Taken = Test.take_front(Test.size());
+  EXPECT_EQ(Taken, Test);
+
+  Taken = Test.take_back(Test.size());
+  EXPECT_EQ(Taken, Test);
+
+  Taken = Test.take_front(0);
+  EXPECT_TRUE(Taken.empty());
+
+  Taken = Test.take_back(0);
+  EXPECT_TRUE(Taken.empty());
+}
+
+TEST(StringRefTest, FindIf) {
+  StringRef Punct("Test.String");
+  StringRef NoPunct("ABCDEFG");
+  StringRef Empty;
+
+  auto IsPunct = [](char c) { return ::ispunct(c); };
+  auto IsAlpha = [](char c) { return ::isalpha(c); };
+  EXPECT_EQ(4U, Punct.find_if(IsPunct));
+  EXPECT_EQ(StringRef::npos, NoPunct.find_if(IsPunct));
+  EXPECT_EQ(StringRef::npos, Empty.find_if(IsPunct));
+
+  EXPECT_EQ(4U, Punct.find_if_not(IsAlpha));
+  EXPECT_EQ(StringRef::npos, NoPunct.find_if_not(IsAlpha));
+  EXPECT_EQ(StringRef::npos, Empty.find_if_not(IsAlpha));
+}
+
+TEST(StringRefTest, TakeWhileUntil) {
+  StringRef Test("String With 1 Number");
+
+  StringRef Taken = Test.take_while([](char c) { return ::isdigit(c); });
+  EXPECT_EQ("", Taken);
+
+  Taken = Test.take_until([](char c) { return ::isdigit(c); });
+  EXPECT_EQ("String With ", Taken);
+
+  Taken = Test.take_while([](char c) { return true; });
+  EXPECT_EQ(Test, Taken);
+
+  Taken = Test.take_until([](char c) { return true; });
+  EXPECT_EQ("", Taken);
+
+  Test = "";
+  Taken = Test.take_while([](char c) { return true; });
+  EXPECT_EQ("", Taken);
+}
+
+TEST(StringRefTest, DropWhileUntil) {
+  StringRef Test("String With 1 Number");
+
+  StringRef Taken = Test.drop_while([](char c) { return ::isdigit(c); });
+  EXPECT_EQ(Test, Taken);
+
+  Taken = Test.drop_until([](char c) { return ::isdigit(c); });
+  EXPECT_EQ("1 Number", Taken);
+
+  Taken = Test.drop_while([](char c) { return true; });
+  EXPECT_EQ("", Taken);
+
+  Taken = Test.drop_until([](char c) { return true; });
+  EXPECT_EQ(Test, Taken);
+
+  StringRef EmptyString = "";
+  Taken = EmptyString.drop_while([](char c) { return true; });
+  EXPECT_EQ("", Taken);
+}
+
+TEST(StringRefTest, StringLiteral) {
+  constexpr StringLiteral Strings[] = {"Foo", "Bar"};
+  EXPECT_EQ(StringRef("Foo"), Strings[0]);
+  EXPECT_EQ(StringRef("Bar"), Strings[1]);
+}
 
 } // end anonymous namespace

@@ -16,7 +16,13 @@
 
 // The format of this database matches clang/Basic/Builtins.def.
 
-BUILTIN(__builtin_wasm_memory_size, "z", "nc")
-BUILTIN(__builtin_wasm_grow_memory, "vz", "n")
+// Note that current_memory is not "c" (readnone) because it must be sequenced
+// with respect to grow_memory calls.
+BUILTIN(__builtin_wasm_current_memory, "z", "n")
+BUILTIN(__builtin_wasm_grow_memory, "zz", "n")
+
+// Exception handling builtins.
+BUILTIN(__builtin_wasm_throw, "vUiv*", "r")
+BUILTIN(__builtin_wasm_rethrow, "v", "r")
 
 #undef BUILTIN

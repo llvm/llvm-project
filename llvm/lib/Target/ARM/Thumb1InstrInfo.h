@@ -25,8 +25,8 @@ class Thumb1InstrInfo : public ARMBaseInstrInfo {
 public:
   explicit Thumb1InstrInfo(const ARMSubtarget &STI);
 
-  /// getNoopForMachoTarget - Return the noop instruction to use for a noop.
-  void getNoopForMachoTarget(MCInst &NopInst) const override;
+  /// Return the noop instruction to use for a noop.
+  void getNoop(MCInst &NopInst) const override;
 
   // Return the non-pre/post incrementing version of 'Opc'. Return 0
   // if there is not such an opcode.
@@ -38,9 +38,8 @@ public:
   ///
   const ThumbRegisterInfo &getRegisterInfo() const override { return RI; }
 
-  void copyPhysReg(MachineBasicBlock &MBB,
-                   MachineBasicBlock::iterator I, DebugLoc DL,
-                   unsigned DestReg, unsigned SrcReg,
+  void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                   const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI,
@@ -55,8 +54,7 @@ public:
                             const TargetRegisterInfo *TRI) const override;
 
 private:
-  void expandLoadStackGuard(MachineBasicBlock::iterator MI,
-                            Reloc::Model RM) const override;
+  void expandLoadStackGuard(MachineBasicBlock::iterator MI) const override;
 };
 }
 

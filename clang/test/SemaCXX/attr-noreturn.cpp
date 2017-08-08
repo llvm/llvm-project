@@ -167,7 +167,7 @@ namespace destructor_tests {
 
 // PR5620
 void f0() __attribute__((__noreturn__));
-void f1(void (*)()); 
+void f1(void (*)());
 void f2() { f1(f0); }
 
 // Taking the address of a noreturn function
@@ -244,11 +244,11 @@ namespace PR15291 {
   template <typename T>
   void qux(T) {}
 
-  // expected-note@+5 {{candidate function [with T = void (*)(int) __attribute__((noreturn))] not viable: no overload of 'baz' matching 'void (*)(int) __attribute__((noreturn))' for 1st argument}}
-  // expected-note@+4 {{candidate function [with T = void (*)(int) __attribute__((noreturn))] not viable: no overload of 'qux' matching 'void (*)(int) __attribute__((noreturn))' for 1st argument}}
-  // expected-note@+3 {{candidate function [with T = void (*)(int) __attribute__((noreturn))] not viable: no overload of 'bar' matching 'void (*)(int) __attribute__((noreturn))' for 1st argument}}
-  // expected-note@+2 {{candidate function [with T = void (*)(int)] not viable: no overload of 'bar' matching 'void (*)(int)' for 1st argument}}
-  // expected-note@+1 {{candidate function [with T = void (int)] not viable: no overload of 'bar' matching 'void (*)(int)' for 1st argument}}
+  // expected-note@+5 {{candidate function not viable: no overload of 'baz' matching 'void (*)(int) __attribute__((noreturn))' for 1st argument}}
+  // expected-note@+4 {{candidate function not viable: no overload of 'qux' matching 'void (*)(int) __attribute__((noreturn))' for 1st argument}}
+  // expected-note@+3 {{candidate function not viable: no overload of 'bar' matching 'void (*)(int) __attribute__((noreturn))' for 1st argument}}
+  // expected-note@+2 {{candidate function not viable: no overload of 'bar' matching 'void (*)(int)' for 1st argument}}
+  // expected-note@+1 {{candidate function not viable: no overload of 'bar' matching 'void (*)(int)' for 1st argument}}
   template <typename T> void accept_T(T) {}
 
   // expected-note@+1 {{candidate function not viable: no overload of 'bar' matching 'void (*)(int)' for 1st argument}}
@@ -265,13 +265,13 @@ namespace PR15291 {
   typedef void (*fptr_t)(int);
   typedef void __attribute__((noreturn)) (*fptr_noreturn_t)(int);
 
-  // expected-note@+1 {{candidate function not viable: no overload of 'bar' matching 'fptr_t' (aka 'void (*)(int)') for 1st argument}}
+  // expected-note@+1 {{candidate function not viable: no overload of 'bar' matching 'PR15291::fptr_t' (aka 'void (*)(int)') for 1st argument}}
   void accept_fptr_t(fptr_t f) {
     f(42);
   }
 
-  // expected-note@+2 {{candidate function not viable: no overload of 'baz' matching 'fptr_noreturn_t' (aka 'void (*)(int) __attribute__((noreturn))') for 1st argument}}
-  // expected-note@+1 {{candidate function not viable: no overload of 'qux' matching 'fptr_noreturn_t' (aka 'void (*)(int) __attribute__((noreturn))') for 1st argument}}
+  // expected-note@+2 {{candidate function not viable: no overload of 'baz' matching 'PR15291::fptr_noreturn_t' (aka 'void (*)(int) __attribute__((noreturn))') for 1st argument}}
+  // expected-note@+1 {{candidate function not viable: no overload of 'qux' matching 'PR15291::fptr_noreturn_t' (aka 'void (*)(int) __attribute__((noreturn))') for 1st argument}}
   void accept_fptr_noreturn_t(fptr_noreturn_t f) {
     f(42);
   }

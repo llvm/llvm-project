@@ -40,9 +40,6 @@
 #include <unistd.h>
 #endif
 #ifdef HAVE_POSIX_SPAWN
-#ifdef __sun__
-#define  _RESTRICT_KYWD
-#endif
 #include <spawn.h>
 
 #if defined(__APPLE__)
@@ -162,16 +159,6 @@ static void SetMemoryLimits (unsigned size)
   getrlimit (RLIMIT_RSS, &r);
   r.rlim_cur = limit;
   setrlimit (RLIMIT_RSS, &r);
-#endif
-#ifdef RLIMIT_AS  // e.g. NetBSD doesn't have it.
-  // Don't set virtual memory limit if built with any Sanitizer. They need 80Tb
-  // of virtual memory for shadow memory mapping.
-#if !LLVM_MEMORY_SANITIZER_BUILD && !LLVM_ADDRESS_SANITIZER_BUILD
-  // Virtual memory.
-  getrlimit (RLIMIT_AS, &r);
-  r.rlim_cur = limit;
-  setrlimit (RLIMIT_AS, &r);
-#endif
 #endif
 #endif
 }
@@ -446,7 +433,7 @@ llvm::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
   return EC;
 }
 
-bool llvm::sys::argumentsFitWithinSystemLimits(ArrayRef<const char*> Args) {
+bool llvm::sys::commandLineFitsWithinSystemLimits(StringRef Program, ArrayRef<const char*> Args) {
   static long ArgMax = sysconf(_SC_ARG_MAX);
 
   // System says no practical limit.
@@ -456,14 +443,25 @@ bool llvm::sys::argumentsFitWithinSystemLimits(ArrayRef<const char*> Args) {
   // Conservatively account for space required by environment variables.
   long HalfArgMax = ArgMax / 2;
 
-  size_t ArgLength = 0;
+  size_t ArgLength = Program.size() + 1;
   for (ArrayRef<const char*>::iterator I = Args.begin(), E = Args.end();
        I != E; ++I) {
-    ArgLength += strlen(*I) + 1;
+    size_t length = strlen(*I);
+
+    // Ensure that we do not exceed the MAX_ARG_STRLEN constant on Linux, which
+    // does not have a constant unlike what the man pages would have you
+    // believe. Since this limit is pretty high, perform the check
+    // unconditionally rather than trying to be aggressive and limiting it to
+    // Linux only.
+    if (length >= (32 * 4096))
+      return false;
+
+    ArgLength += length + 1;
     if (ArgLength > size_t(HalfArgMax)) {
       return false;
     }
   }
+
   return true;
 }
 }

@@ -1,11 +1,11 @@
-//===-- BrainFDriver.cpp - BrainF compiler driver -----------------------===//
+//===-- BrainFDriver.cpp - BrainF compiler driver -------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // This program converts the BrainF language into LLVM assembly,
 // which it can then run using the JIT or output as BitCode.
@@ -22,21 +22,38 @@
 //
 // lli prog.bf.bc                      #Run generated BitCode
 //
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "BrainF.h"
-#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <vector>
+
 using namespace llvm;
 
 //Command line options
@@ -53,7 +70,6 @@ ArrayBoundsChecking("abc", cl::desc("Enable array bounds checking"));
 static cl::opt<bool>
 JIT("jit", cl::desc("Run program Just-In-Time"));
 
-
 //Add main function so can be fully compiled
 void addMainFunction(Module *mod) {
   //define i32 @main(i32 %argc, i8 **%argv)
@@ -61,7 +77,7 @@ void addMainFunction(Module *mod) {
     getOrInsertFunction("main", IntegerType::getInt32Ty(mod->getContext()),
                         IntegerType::getInt32Ty(mod->getContext()),
                         PointerType::getUnqual(PointerType::getUnqual(
-                          IntegerType::getInt8Ty(mod->getContext()))), NULL));
+                          IntegerType::getInt8Ty(mod->getContext())))));
   {
     Function::arg_iterator args = main_func->arg_begin();
     Value *arg_0 = &*args++;
@@ -88,7 +104,7 @@ void addMainFunction(Module *mod) {
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, " BrainF compiler\n");
 
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext Context;
 
   if (InputFilename == "") {
     errs() << "Error: You must specify the filename of the program to "
@@ -138,13 +154,22 @@ int main(int argc, char **argv) {
   //Write it out
   if (JIT) {
     InitializeNativeTarget();
+    InitializeNativeTargetAsmPrinter();
 
     outs() << "------- Running JIT -------\n";
     Module &M = *Mod;
     ExecutionEngine *ee = EngineBuilder(std::move(Mod)).create();
+    if (!ee) {
+      errs() << "Error: execution engine creation failed.\n";
+      abort();
+    }
     std::vector<GenericValue> args;
     Function *brainf_func = M.getFunction("brainf");
     GenericValue gv = ee->runFunction(brainf_func, args);
+    // Genereated code calls putchar, and output is not guaranteed without fflush.
+    // The better place for fflush(stdout) call would be the generated code, but it
+    // is unmanageable because stdout linkage name depends on stdlib implementation.
+    fflush(stdout);
   } else {
     WriteBitcodeToFile(Mod.get(), *out);
   }

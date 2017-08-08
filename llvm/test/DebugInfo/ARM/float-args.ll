@@ -18,20 +18,19 @@ target triple = "armv7--none-eabi"
 
 define float @foo(float %p) !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata float %p, i64 0, metadata !9, metadata !15), !dbg !16
+  tail call void @llvm.dbg.value(metadata float %p, metadata !9, metadata !15), !dbg !16
   ret float %p, !dbg !18
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!10, !11}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "test.c", directory: "")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, variables: !8)
+!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !8)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !7}
 !7 = !DIBasicType(name: "float", size: 32, align: 32, encoding: DW_ATE_float)

@@ -1,11 +1,12 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s
 
 define signext i16 @foo(i16 signext %x) nounwind {
 entry:
 ; CHECK-LABEL: foo:
-; CHECK-NOT: movzwl
-; CHECK: movswl 4(%esp), %eax
-; CHECK: xorl $21998, %eax
+; CHECK: movzwl 4(%esp), %eax
+; CHECK-NEXT: xorl $21998, %eax
+; CHECK-NEXT: # kill
+; CHECK-NEXT: retl
   %0 = xor i16 %x, 21998
   ret i16 %0
 }
@@ -13,9 +14,10 @@ entry:
 define signext i16 @bar(i16 signext %x) nounwind {
 entry:
 ; CHECK-LABEL: bar:
-; CHECK-NOT: movzwl
-; CHECK: movswl 4(%esp), %eax
-; CHECK: xorl $-10770, %eax
+; CHECK: movzwl 4(%esp), %eax
+; CHECK-NEXT: xorl $54766, %eax
+; CHECK-NEXT: # kill
+; CHECK-NEXT: retl
   %0 = xor i16 %x, 54766
   ret i16 %0
 }

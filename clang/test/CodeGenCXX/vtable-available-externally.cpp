@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -o %t
-// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -O2 -disable-llvm-optzns -emit-llvm -o %t.opt
+// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -O2 -disable-llvm-passes -emit-llvm -o %t.opt
 // RUN: FileCheck --check-prefix=CHECK-TEST1 %s < %t
 // RUN: FileCheck --check-prefix=CHECK-TEST2 %s < %t
 // RUN: FileCheck --check-prefix=CHECK-TEST5 %s < %t
@@ -12,6 +12,7 @@
 // RUN: FileCheck --check-prefix=CHECK-TEST14 %s < %t.opt
 // RUN: FileCheck --check-prefix=CHECK-TEST15 %s < %t.opt
 // RUN: FileCheck --check-prefix=CHECK-TEST16 %s < %t.opt
+// RUN: FileCheck --check-prefix=CHECK-TEST17 %s < %t.opt
 
 #include <typeinfo>
 
@@ -274,9 +275,8 @@ struct C {
   virtual D& operator=(const D&);
 };
 
-// Cannot emit B's vtable available_externally, because we cannot create
-// a reference to the inline virtual B::operator= function.
-// CHECK-TEST11: @_ZTVN6Test111DE = external unnamed_addr constant
+// Can emit D's vtable available_externally.
+// CHECK-TEST11: @_ZTVN6Test111DE = available_externally unnamed_addr constant
 struct D : C {
   virtual void key();
 };
@@ -391,3 +391,30 @@ void test() {
 }
 }
 
+namespace Test17 {
+// This test checks if we emit vtables opportunistically.
+// CHECK-TEST17-DAG: @_ZTVN6Test171AE = available_externally
+// CHECK-TEST17-DAG: @_ZTVN6Test171BE = external
+
+struct A {
+  virtual void key();
+  virtual void bar() {}
+};
+
+// We won't gonna use deleting destructor for this type, which will disallow
+// emitting vtable as available_externally
+struct B {
+  virtual void key();
+  virtual ~B() {}
+};
+
+void testcaseA() {
+  A a;
+  a.bar(); // this forces to emit definition of bar
+}
+
+void testcaseB() {
+  B b; // This only forces emitting of complete object destructor
+}
+
+} // namespace Test17

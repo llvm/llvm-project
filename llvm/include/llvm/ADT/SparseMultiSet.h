@@ -1,4 +1,4 @@
-//===--- llvm/ADT/SparseMultiSet.h - Sparse multiset ------------*- C++ -*-===//
+//===- llvm/ADT/SparseMultiSet.h - Sparse multiset --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -21,7 +21,15 @@
 #ifndef LLVM_ADT_SPARSEMULTISET_H
 #define LLVM_ADT_SPARSEMULTISET_H
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <iterator>
+#include <limits>
+#include <utility>
 
 namespace llvm {
 
@@ -73,7 +81,7 @@ namespace llvm {
 /// @tparam SparseT     An unsigned integer type. See above.
 ///
 template<typename ValueT,
-         typename KeyFunctorT = llvm::identity<unsigned>,
+         typename KeyFunctorT = identity<unsigned>,
          typename SparseT = uint8_t>
 class SparseMultiSet {
   static_assert(std::numeric_limits<SparseT>::is_integer &&
@@ -93,7 +101,7 @@ class SparseMultiSet {
     unsigned Prev;
     unsigned Next;
 
-    SMSNode(ValueT D, unsigned P, unsigned N) : Data(D), Prev(P), Next(N) { }
+    SMSNode(ValueT D, unsigned P, unsigned N) : Data(D), Prev(P), Next(N) {}
 
     /// List tails have invalid Nexts.
     bool isTail() const {
@@ -110,19 +118,19 @@ class SparseMultiSet {
     bool isValid() const { return Prev != INVALID; }
   };
 
-  typedef typename KeyFunctorT::argument_type KeyT;
-  typedef SmallVector<SMSNode, 8> DenseT;
+  using KeyT = typename KeyFunctorT::argument_type;
+  using DenseT = SmallVector<SMSNode, 8>;
   DenseT Dense;
-  SparseT *Sparse;
-  unsigned Universe;
+  SparseT *Sparse = nullptr;
+  unsigned Universe = 0;
   KeyFunctorT KeyIndexOf;
   SparseSetValFunctor<KeyT, ValueT, KeyFunctorT> ValIndexOf;
 
   /// We have a built-in recycler for reusing tombstone slots. This recycler
   /// puts a singly-linked free list into tombstone slots, allowing us quick
   /// erasure, iterator preservation, and dense size.
-  unsigned FreelistIdx;
-  unsigned NumFree;
+  unsigned FreelistIdx = SMSNode::INVALID;
+  unsigned NumFree = 0;
 
   unsigned sparseIndex(const ValueT &Val) const {
     assert(ValIndexOf(Val) < Universe &&
@@ -130,11 +138,6 @@ class SparseMultiSet {
     return ValIndexOf(Val);
   }
   unsigned sparseIndex(const SMSNode &N) const { return sparseIndex(N.Data); }
-
-  // Disable copy construction and assignment.
-  // This data structure is not meant to be used that way.
-  SparseMultiSet(const SparseMultiSet&) = delete;
-  SparseMultiSet &operator=(const SparseMultiSet&) = delete;
 
   /// Whether the given entry is the head of the list. List heads's previous
   /// pointers are to the tail of the list, allowing for efficient access to the
@@ -180,16 +183,16 @@ class SparseMultiSet {
   }
 
 public:
-  typedef ValueT value_type;
-  typedef ValueT &reference;
-  typedef const ValueT &const_reference;
-  typedef ValueT *pointer;
-  typedef const ValueT *const_pointer;
-  typedef unsigned size_type;
+  using value_type = ValueT;
+  using reference = ValueT &;
+  using const_reference = const ValueT &;
+  using pointer = ValueT *;
+  using const_pointer = const ValueT *;
+  using size_type = unsigned;
 
-  SparseMultiSet()
-    : Sparse(nullptr), Universe(0), FreelistIdx(SMSNode::INVALID), NumFree(0) {}
-
+  SparseMultiSet() = default;
+  SparseMultiSet(const SparseMultiSet &) = delete;
+  SparseMultiSet &operator=(const SparseMultiSet &) = delete;
   ~SparseMultiSet() { free(Sparse); }
 
   /// Set the universe size which determines the largest key the set can hold.
@@ -218,12 +221,13 @@ public:
   class iterator_base : public std::iterator<std::bidirectional_iterator_tag,
                                              ValueT> {
     friend class SparseMultiSet;
+
     SMSPtrTy SMS;
     unsigned Idx;
     unsigned SparseIdx;
 
     iterator_base(SMSPtrTy P, unsigned I, unsigned SI)
-      : SMS(P), Idx(I), SparseIdx(SI) { }
+      : SMS(P), Idx(I), SparseIdx(SI) {}
 
     /// Whether our iterator has fallen outside our dense vector.
     bool isEnd() const {
@@ -244,11 +248,11 @@ public:
     void setNext(unsigned N) { SMS->Dense[Idx].Next = N; }
 
   public:
-    typedef std::iterator<std::bidirectional_iterator_tag, ValueT> super;
-    typedef typename super::value_type value_type;
-    typedef typename super::difference_type difference_type;
-    typedef typename super::pointer pointer;
-    typedef typename super::reference reference;
+    using super = std::iterator<std::bidirectional_iterator_tag, ValueT>;
+    using value_type = typename super::value_type;
+    using difference_type = typename super::difference_type;
+    using pointer = typename super::pointer;
+    using reference = typename super::reference;
 
     reference operator*() const {
       assert(isKeyed() && SMS->sparseIndex(SMS->Dense[Idx].Data) == SparseIdx &&
@@ -304,11 +308,12 @@ public:
       return I;
     }
   };
-  typedef iterator_base<SparseMultiSet *> iterator;
-  typedef iterator_base<const SparseMultiSet *> const_iterator;
+
+  using iterator = iterator_base<SparseMultiSet *>;
+  using const_iterator = iterator_base<const SparseMultiSet *>;
 
   // Convenience types
-  typedef std::pair<iterator, iterator> RangePair;
+  using RangePair = std::pair<iterator, iterator>;
 
   /// Returns an iterator past this container. Note that such an iterator cannot
   /// be decremented, but will compare equal to other end iterators.
@@ -515,4 +520,4 @@ private:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_SPARSEMULTISET_H

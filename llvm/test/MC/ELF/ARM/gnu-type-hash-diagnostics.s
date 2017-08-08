@@ -7,3 +7,7 @@
 // CHECK: .type TYPE #32
 // CHECK:             ^
 
+  // For ARM, the comment character is '@', so we don't list '@<type>' as a
+  // valid option.
+  .section "foo", "a", @progbits
+// CHECK: error: expected '%<type>' or "<type>"

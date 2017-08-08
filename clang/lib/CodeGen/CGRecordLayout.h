@@ -11,7 +11,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGRECORDLAYOUT_H
 
 #include "clang/AST/CharUnits.h"
-#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/DerivedTypes.h"

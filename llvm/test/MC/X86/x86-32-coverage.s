@@ -1,4 +1,5 @@
 // RUN: llvm-mc -triple i386-unknown-unknown %s --show-encoding  | FileCheck %s
+// RUN: llvm-mc -triple i386-unknown-unknown -output-asm-variant=1 %s | FileCheck --check-prefix=INTEL %s
 
 // CHECK: flds	(%edi)
 // CHECK:  encoding: [0xd9,0x07]
@@ -279,6 +280,10 @@
 // CHECK: sti
 // CHECK:  encoding: [0xfb]
         	sti
+
+// CHECK: salc
+// CHECK:  encoding: [0xd6]
+        	salc
 
 // CHECK: addb	$254, 3735928559(%ebx,%ecx,8)
 // CHECK:  encoding: [0x80,0x84,0xcb,0xef,0xbe,0xad,0xde,0xfe]
@@ -1415,6 +1420,12 @@
 // CHECK: rorl	305419896
 // CHECK:  encoding: [0xd1,0x0d,0x78,0x56,0x34,0x12]
         	rorl	0x12345678
+
+// CHECK: rorl  $foo, (%ebx)
+// INTEL: ror dword ptr [ebx], foo
+// CHECK:  encoding: [0xc1,0x0b,A]
+// CHECK:    fixup A - offset: 2, value: foo, kind: FK_Data_1
+                rorl    $foo, (%ebx)
 
 // CHECK: shll	$0, 3735928559(%ebx,%ecx,8)
 // CHECK:  encoding: [0xc1,0xa4,0xcb,0xef,0xbe,0xad,0xde,0x00]
@@ -2739,6 +2750,10 @@
 // CHECK: ffree	%st(2)
 // CHECK:  encoding: [0xdd,0xc2]
         	ffree	%st(2)
+
+// CHECK: ffreep	%st(2)
+// CHECK:  encoding: [0xdf,0xc2]
+        	ffreep	%st(2)
 
 // CHECK: fnop
 // CHECK:  encoding: [0xd9,0xd0]
@@ -10511,9 +10526,9 @@
 // CHECK: 	invlpga %ecx, %eax
         	invlpga %ecx, %eax
 
-// CHECK:   blendvps	(%eax), %xmm1   # encoding: [0x66,0x0f,0x38,0x14,0x08]
+// CHECK:   blendvps	%xmm0, (%eax), %xmm1   # encoding: [0x66,0x0f,0x38,0x14,0x08]
             blendvps (%eax), %xmm1
-// CHECK:   blendvps	%xmm2, %xmm1    # encoding: [0x66,0x0f,0x38,0x14,0xca]
+// CHECK:   blendvps	%xmm0, %xmm2, %xmm1    # encoding: [0x66,0x0f,0x38,0x14,0xca]
             blendvps %xmm2, %xmm1
 
 // These instructions can take an unsigned 8-bit mask as well as a signed 8-bit
@@ -10548,29 +10563,29 @@
           insertps $-64, %xmm2, %xmm1
 
 // PR13253 handle implicit optional third argument that must always be xmm0
-// CHECK: pblendvb %xmm2, %xmm1
+// CHECK: pblendvb %xmm0, %xmm2, %xmm1
 pblendvb %xmm2, %xmm1
-// CHECK: pblendvb %xmm2, %xmm1
+// CHECK: pblendvb %xmm0, %xmm2, %xmm1
 pblendvb %xmm0, %xmm2, %xmm1
-// CHECK: pblendvb (%eax), %xmm1
+// CHECK: pblendvb %xmm0, (%eax), %xmm1
 pblendvb (%eax), %xmm1
-// CHECK: pblendvb (%eax), %xmm1
+// CHECK: pblendvb %xmm0, (%eax), %xmm1
 pblendvb %xmm0, (%eax), %xmm1
-// CHECK: blendvpd %xmm2, %xmm1
+// CHECK: blendvpd %xmm0, %xmm2, %xmm1
 blendvpd %xmm2, %xmm1
-// CHECK: blendvpd %xmm2, %xmm1
+// CHECK: blendvpd %xmm0, %xmm2, %xmm1
 blendvpd %xmm0, %xmm2, %xmm1
-// CHECK: blendvpd (%eax), %xmm1
+// CHECK: blendvpd %xmm0, (%eax), %xmm1
 blendvpd (%eax), %xmm1
-// CHECK: blendvpd (%eax), %xmm1
+// CHECK: blendvpd %xmm0, (%eax), %xmm1
 blendvpd %xmm0, (%eax), %xmm1
-// CHECK: blendvps %xmm2, %xmm1
+// CHECK: blendvps %xmm0, %xmm2, %xmm1
 blendvps %xmm2, %xmm1
-// CHECK: blendvps %xmm2, %xmm1
+// CHECK: blendvps %xmm0, %xmm2, %xmm1
 blendvps %xmm0, %xmm2, %xmm1
-// CHECK: blendvps (%eax), %xmm1
+// CHECK: blendvps %xmm0, (%eax), %xmm1
 blendvps (%eax), %xmm1
-// CHECK: blendvps (%eax), %xmm1
+// CHECK: blendvps %xmm0, (%eax), %xmm1
 blendvps %xmm0, (%eax), %xmm1
 
 
@@ -10638,10 +10653,6 @@ btcq $4, (%eax)
 // CHECK: clwb	305419896
 // CHECK:  encoding: [0x66,0x0f,0xae,0x35,0x78,0x56,0x34,0x12]
         	clwb	0x12345678
-
-// CHECK: pcommit
-// CHECK:  encoding: [0x66,0x0f,0xae,0xf8]
-        	pcommit
 
 // CHECK: xsave	3735928559(%ebx,%ecx,8)
 // CHECK:  encoding: [0x0f,0xae,0xa4,0xcb,0xef,0xbe,0xad,0xde]

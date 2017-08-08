@@ -11,11 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/Attr.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
-#include "llvm/ADT/StringSwitch.h"
 using namespace clang;
 
 #include "clang/AST/AttrImpl.inc"

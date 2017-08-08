@@ -1,0 +1,806 @@
+# RUN: llc -mtriple=amdgcn--amdhsa -mcpu=hawaii -verify-machineinstrs -run-pass si-fold-operands,dead-mi-elimination -o - %s | FileCheck -check-prefix=GCN %s
+...
+
+# GCN-LABEL: name: s_fold_and_imm_regimm_32{{$}}
+# GCN: %10 = V_MOV_B32_e32 1543, implicit %exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed %10,
+name:            s_fold_and_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_64_xexec }
+  - { id: 2, class: sreg_32_xm0 }
+  - { id: 3, class: sreg_32_xm0 }
+  - { id: 4, class: sreg_32_xm0 }
+  - { id: 5, class: sreg_32_xm0 }
+  - { id: 6, class: sreg_128 }
+  - { id: 7, class: sreg_32_xm0 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_32_xm0 }
+  - { id: 10, class: vgpr_32 }
+liveins:
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: %sgpr0_sgpr1
+
+    %0 = COPY %sgpr0_sgpr1
+    %1 = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %2 = COPY %1.sub1
+    %3 = COPY %1.sub0
+    %4 = S_MOV_B32 61440
+    %5 = S_MOV_B32 -1
+    %6 = REG_SEQUENCE killed %2, 1, killed %3, 2, killed %4, 3, killed %5, 4
+    %7 = S_MOV_B32 1234567
+    %8 = S_MOV_B32 9999
+    %9 = S_AND_B32 killed %7, killed %8, implicit-def dead %scc
+    %10 = COPY %9
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, 0, implicit %exec
+    S_ENDPGM
+
+...
+---
+
+# GCN-LABEL: name: v_fold_and_imm_regimm_32{{$}}
+
+# GCN: %9 = V_MOV_B32_e32 646, implicit %exec
+# GCN: FLAT_STORE_DWORD %19, %9,
+
+# GCN: %10 = V_MOV_B32_e32 646, implicit %exec
+# GCN: FLAT_STORE_DWORD %19, %10
+
+# GCN: %11 = V_MOV_B32_e32 646, implicit %exec
+# GCN: FLAT_STORE_DWORD %19, %11,
+
+# GCN: %12 = V_MOV_B32_e32 1234567, implicit %exec
+# GCN: FLAT_STORE_DWORD %19, %12,
+
+# GCN: %13 = V_MOV_B32_e32 63, implicit %exec
+# GCN: FLAT_STORE_DWORD %19, %13,
+
+name:            v_fold_and_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 20, class: sreg_32_xm0 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vreg_64 }
+  - { id: 26, class: sreg_32_xm0 }
+  - { id: 27, class: vgpr_32 }
+  - { id: 28, class: vgpr_32 }
+  - { id: 29, class: vgpr_32 }
+  - { id: 30, class: vgpr_32 }
+  - { id: 31, class: vgpr_32 }
+  - { id: 32, class: vreg_64 }
+  - { id: 33, class: vreg_64 }
+  - { id: 34, class: vgpr_32 }
+  - { id: 35, class: vgpr_32 }
+  - { id: 36, class: vgpr_32 }
+  - { id: 37, class: vreg_64 }
+  - { id: 44, class: vgpr_32 }
+
+liveins:
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '%vgpr0', virtual-reg: '%3' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: %sgpr0_sgpr1, %vgpr0
+
+    %3 = COPY %vgpr0
+    %0 = COPY %sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %31 = V_ASHRREV_I32_e64 31, %3, implicit %exec
+    %32 = REG_SEQUENCE %3, 1, %31, 2
+    %33 = V_LSHLREV_B64 2, killed %32, implicit %exec
+    %20 = COPY %4.sub1
+    %44 = V_ADD_I32_e32 %4.sub0, %33.sub0, implicit-def %vcc, implicit %exec
+    %36 = COPY killed %20
+    %35 = V_ADDC_U32_e32 %33.sub1, %36, implicit-def %vcc, implicit %vcc, implicit %exec
+    %37 = REG_SEQUENCE %44, 1, killed %35, 2
+    %24 = V_MOV_B32_e32 982, implicit %exec
+    %26 = S_MOV_B32 1234567
+    %34 = V_MOV_B32_e32 63, implicit %exec
+
+    %27 = V_AND_B32_e64 %26, %24, implicit %exec
+    FLAT_STORE_DWORD %37, %27, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %28 = V_AND_B32_e64 %24, %26, implicit %exec
+    FLAT_STORE_DWORD %37, %28, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %29 = V_AND_B32_e32 %26, %24, implicit %exec
+    FLAT_STORE_DWORD %37, %29, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %30 = V_AND_B32_e64 %26, %26, implicit %exec
+    FLAT_STORE_DWORD %37, %30, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %31 = V_AND_B32_e64 %34, %34, implicit %exec
+    FLAT_STORE_DWORD %37, %31, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    S_ENDPGM
+
+...
+---
+
+# GCN-LABEL: name: s_fold_shl_imm_regimm_32{{$}}
+# GC1: %13 = V_MOV_B32_e32 4096, implicit %exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed %13,
+
+name:            s_fold_shl_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_32_xm0_xexec }
+  - { id: 6, class: sreg_32_xm0 }
+  - { id: 7, class: sreg_32_xm0 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_32_xm0 }
+  - { id: 10, class: sreg_128 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sreg_32_xm0 }
+  - { id: 13, class: vgpr_32 }
+liveins:
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: %sgpr0_sgpr1
+
+    %0 = COPY %sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %5 = S_MOV_B32 1
+    %6 = COPY %4.sub1
+    %7 = COPY %4.sub0
+    %8 = S_MOV_B32 61440
+    %9 = S_MOV_B32 -1
+    %10 = REG_SEQUENCE killed %7, 1, killed %6, 2, killed %9, 3, killed %8, 4
+    %12 = S_LSHL_B32 killed %5, 12, implicit-def dead %scc
+    %13 = COPY %12
+    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit %exec
+    S_ENDPGM
+
+...
+---
+# GCN-LABEL: name: v_fold_shl_imm_regimm_32{{$}}
+
+# GCN: %11 = V_MOV_B32_e32 40955904, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %11,
+
+# GCN: %12 = V_MOV_B32_e32 24, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %12,
+
+# GCN: %13 = V_MOV_B32_e32 4096, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %13,
+
+# GCN: %14 = V_MOV_B32_e32 24, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %14,
+
+# GCN: %15 = V_MOV_B32_e32 0, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %15,
+
+# GCN: %22 = V_MOV_B32_e32 4096, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %22,
+
+# GCN: %23 = V_MOV_B32_e32 1, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %23,
+
+# GCN: %25 = V_MOV_B32_e32 2, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %25,
+
+# GCN: %26 = V_MOV_B32_e32 7927808, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %26,
+
+# GCN: %28 = V_MOV_B32_e32 -8, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %28,
+
+name:            v_fold_shl_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: sreg_64_xexec }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_32_xm0 }
+  - { id: 6, class: vgpr_32 }
+  - { id: 7, class: sreg_32_xm0 }
+  - { id: 8, class: sreg_64 }
+  - { id: 9, class: sreg_32_xm0 }
+  - { id: 10, class: vgpr_32 }
+  - { id: 11, class: vgpr_32 }
+  - { id: 12, class: vgpr_32 }
+  - { id: 13, class: vgpr_32 }
+  - { id: 14, class: vgpr_32 }
+  - { id: 15, class: vgpr_32 }
+  - { id: 16, class: vreg_64 }
+  - { id: 17, class: vreg_64 }
+  - { id: 18, class: vgpr_32 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vreg_64 }
+  - { id: 21, class: vgpr_32 }
+  - { id: 22, class: vgpr_32 }
+  - { id: 23, class: vgpr_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vgpr_32 }
+  - { id: 26, class: vgpr_32 }
+  - { id: 27, class: sreg_32_xm0 }
+  - { id: 28, class: vgpr_32 }
+liveins:
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '%vgpr0', virtual-reg: '%2' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: %sgpr0_sgpr1, %vgpr0
+
+    %2 = COPY %vgpr0
+    %0 = COPY %sgpr0_sgpr1
+    %3 = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %15 = V_ASHRREV_I32_e64 31, %2, implicit %exec
+    %16 = REG_SEQUENCE %2, 1, %15, 2
+    %17 = V_LSHLREV_B64 2, killed %16, implicit %exec
+    %9 = COPY %3.sub1
+    %21 = V_ADD_I32_e32 %3.sub0, %17.sub0, implicit-def %vcc, implicit %exec
+    %19 = COPY killed %9
+    %18 = V_ADDC_U32_e32 %17.sub1, %19, implicit-def %vcc, implicit %vcc, implicit %exec
+    %20 = REG_SEQUENCE %21, 1, killed %18, 2
+    %10 = V_MOV_B32_e32 9999, implicit %exec
+    %24 = V_MOV_B32_e32 3871, implicit %exec
+    %6 = V_MOV_B32_e32 1, implicit %exec
+    %7 = S_MOV_B32 1
+    %27 = S_MOV_B32 -4
+
+    %11 = V_LSHLREV_B32_e64 12, %10, implicit %exec
+    FLAT_STORE_DWORD %20, %11, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %12 = V_LSHLREV_B32_e64 %7, 12, implicit %exec
+    FLAT_STORE_DWORD %20, %12, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %13 = V_LSHL_B32_e64 %7, 12, implicit %exec
+    FLAT_STORE_DWORD %20, %13, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %14 = V_LSHL_B32_e64 12, %7, implicit %exec
+    FLAT_STORE_DWORD %20, %14, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %15 = V_LSHL_B32_e64 12, %24, implicit %exec
+    FLAT_STORE_DWORD %20, %15, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %22 = V_LSHL_B32_e64 %6, 12, implicit %exec
+    FLAT_STORE_DWORD %20, %22, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %23 = V_LSHL_B32_e64 %6, 32, implicit %exec
+    FLAT_STORE_DWORD %20, %23, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %25 = V_LSHL_B32_e32 %6, %6, implicit %exec
+    FLAT_STORE_DWORD %20, %25, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %26 = V_LSHLREV_B32_e32 11, %24, implicit %exec
+    FLAT_STORE_DWORD %20, %26, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %28 = V_LSHL_B32_e32 %27, %6, implicit %exec
+    FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    S_ENDPGM
+
+...
+---
+
+# GCN-LABEL: name: s_fold_ashr_imm_regimm_32{{$}}
+# GCN: %11 = V_MOV_B32_e32 243, implicit %exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed %11, killed %8,
+name:            s_fold_ashr_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_32_xm0_xexec }
+  - { id: 6, class: sreg_32_xm0 }
+  - { id: 7, class: sreg_32_xm0 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_32_xm0 }
+  - { id: 10, class: sreg_128 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sreg_32_xm0 }
+  - { id: 13, class: vgpr_32 }
+liveins:
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: %sgpr0_sgpr1
+
+    %0 = COPY %sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %5 = S_MOV_B32 999123
+    %6 = COPY %4.sub1
+    %7 = COPY %4.sub0
+    %8 = S_MOV_B32 61440
+    %9 = S_MOV_B32 -1
+    %10 = REG_SEQUENCE killed %7, 1, killed %6, 2, killed %9, 3, killed %8, 4
+    %12 = S_ASHR_I32 killed %5, 12, implicit-def dead %scc
+    %13 = COPY %12
+    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit %exec
+    S_ENDPGM
+
+...
+
+# GCN-LABEL: name: v_fold_ashr_imm_regimm_32{{$}}
+# GCN: %11 = V_MOV_B32_e32 3903258, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %11,
+
+# GCN: %12 = V_MOV_B32_e32 62452139, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %12,
+
+# GCN: %13 = V_MOV_B32_e32 1678031, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %13,
+
+# GCN: %14 = V_MOV_B32_e32 3, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %14,
+
+# GCN: %15 = V_MOV_B32_e32 -1, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %15,
+
+# GCN: %22 = V_MOV_B32_e32 62500, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %22,
+
+# GCN: %23 = V_MOV_B32_e32 500000, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %23,
+
+# GCN: %25 = V_MOV_B32_e32 1920, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %25,
+
+# GCN: %26 = V_MOV_B32_e32 487907, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %26,
+
+# GCN: %28 = V_MOV_B32_e32 -1, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %28,
+
+name:            v_fold_ashr_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: sreg_64_xexec }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_32_xm0 }
+  - { id: 6, class: vgpr_32 }
+  - { id: 7, class: sreg_32_xm0 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_32_xm0 }
+  - { id: 10, class: vgpr_32 }
+  - { id: 11, class: vgpr_32 }
+  - { id: 12, class: vgpr_32 }
+  - { id: 13, class: vgpr_32 }
+  - { id: 14, class: vgpr_32 }
+  - { id: 15, class: vgpr_32 }
+  - { id: 16, class: vreg_64 }
+  - { id: 17, class: vreg_64 }
+  - { id: 18, class: vgpr_32 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vreg_64 }
+  - { id: 21, class: vgpr_32 }
+  - { id: 22, class: vgpr_32 }
+  - { id: 23, class: vgpr_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vgpr_32 }
+  - { id: 26, class: vgpr_32 }
+  - { id: 27, class: sreg_32_xm0 }
+  - { id: 28, class: vgpr_32 }
+  - { id: 32, class: sreg_32_xm0 }
+  - { id: 33, class: sreg_32_xm0 }
+  - { id: 34, class: vgpr_32 }
+  - { id: 35, class: vgpr_32 }
+liveins:
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '%vgpr0', virtual-reg: '%2' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: %sgpr0_sgpr1, %vgpr0
+
+    %2 = COPY %vgpr0
+    %0 = COPY %sgpr0_sgpr1
+    %3 = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %15 = V_ASHRREV_I32_e64 31, %2, implicit %exec
+    %16 = REG_SEQUENCE %2, 1, %15, 2
+    %17 = V_LSHLREV_B64 2, killed %16, implicit %exec
+    %9 = COPY %3.sub1
+    %21 = V_ADD_I32_e32 %3.sub0, %17.sub0, implicit-def %vcc, implicit %exec
+    %19 = COPY killed %9
+    %18 = V_ADDC_U32_e32 %17.sub1, %19, implicit-def %vcc, implicit %vcc, implicit %exec
+    %20 = REG_SEQUENCE %21, 1, killed %18, 2
+    %10 = V_MOV_B32_e32 999234234, implicit %exec
+    %24 = V_MOV_B32_e32 3871, implicit %exec
+    %6 = V_MOV_B32_e32 1000000, implicit %exec
+    %7 = S_MOV_B32 13424252
+    %8 = S_MOV_B32 4
+    %27 = S_MOV_B32 -4
+    %32 = S_MOV_B32 1
+    %33 = S_MOV_B32 3841
+    %34 = V_MOV_B32_e32 3841, implicit %exec
+    %35 = V_MOV_B32_e32 2, implicit %exec
+
+    %11 = V_ASHRREV_I32_e64 8, %10, implicit %exec
+    FLAT_STORE_DWORD %20, %11, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %12 = V_ASHRREV_I32_e64 %8, %10, implicit %exec
+    FLAT_STORE_DWORD %20, %12, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %13 = V_ASHR_I32_e64 %7, 3, implicit %exec
+    FLAT_STORE_DWORD %20, %13, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %14 = V_ASHR_I32_e64 7, %32, implicit %exec
+    FLAT_STORE_DWORD %20, %14, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %15 = V_ASHR_I32_e64 %27, %24, implicit %exec
+    FLAT_STORE_DWORD %20, %15, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %22 = V_ASHR_I32_e64 %6, 4, implicit %exec
+    FLAT_STORE_DWORD %20, %22, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %23 = V_ASHR_I32_e64 %6, %33, implicit %exec
+    FLAT_STORE_DWORD %20, %23, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %25 = V_ASHR_I32_e32 %34, %34, implicit %exec
+    FLAT_STORE_DWORD %20, %25, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %26 = V_ASHRREV_I32_e32 11, %10, implicit %exec
+    FLAT_STORE_DWORD %20, %26, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %28 = V_ASHR_I32_e32 %27, %35, implicit %exec
+    FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    S_ENDPGM
+
+...
+---
+
+# GCN-LABEL: name: s_fold_lshr_imm_regimm_32{{$}}
+# GCN: %11 = V_MOV_B32_e32 1048332, implicit %exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed %11, killed %8,
+name:            s_fold_lshr_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_32_xm0_xexec }
+  - { id: 6, class: sreg_32_xm0 }
+  - { id: 7, class: sreg_32_xm0 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_32_xm0 }
+  - { id: 10, class: sreg_128 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sreg_32_xm0 }
+  - { id: 13, class: vgpr_32 }
+liveins:
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: %sgpr0_sgpr1
+
+    %0 = COPY %sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %5 = S_MOV_B32 -999123
+    %6 = COPY %4.sub1
+    %7 = COPY %4.sub0
+    %8 = S_MOV_B32 61440
+    %9 = S_MOV_B32 -1
+    %10 = REG_SEQUENCE killed %7, 1, killed %6, 2, killed %9, 3, killed %8, 4
+    %12 = S_LSHR_B32 killed %5, 12, implicit-def dead %scc
+    %13 = COPY %12
+    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, 0, implicit %exec
+    S_ENDPGM
+
+...
+---
+
+# GCN-LABEL: name: v_fold_lshr_imm_regimm_32{{$}}
+# GCN: %11 = V_MOV_B32_e32 3903258, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %11,
+
+# GCN: %12 = V_MOV_B32_e32 62452139, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %12,
+
+# GCN: %13 = V_MOV_B32_e32 1678031, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %13,
+
+# GCN: %14 = V_MOV_B32_e32 3, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %14,
+
+# GCN: %15 = V_MOV_B32_e32 1, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %15,
+
+# GCN: %22 = V_MOV_B32_e32 62500, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %22,
+
+# GCN: %23 = V_MOV_B32_e32 500000, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %23,
+
+# GCN: %25 = V_MOV_B32_e32 1920, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %25,
+
+# GCN: %26 = V_MOV_B32_e32 487907, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %26,
+
+# GCN: %28 = V_MOV_B32_e32 1073741823, implicit %exec
+# GCN: FLAT_STORE_DWORD %20, %28,
+
+name:            v_fold_lshr_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: sreg_64_xexec }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_32_xm0 }
+  - { id: 6, class: vgpr_32 }
+  - { id: 7, class: sreg_32_xm0 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_32_xm0 }
+  - { id: 10, class: vgpr_32 }
+  - { id: 11, class: vgpr_32 }
+  - { id: 12, class: vgpr_32 }
+  - { id: 13, class: vgpr_32 }
+  - { id: 14, class: vgpr_32 }
+  - { id: 15, class: vgpr_32 }
+  - { id: 16, class: vreg_64 }
+  - { id: 17, class: vreg_64 }
+  - { id: 18, class: vgpr_32 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vreg_64 }
+  - { id: 21, class: vgpr_32 }
+  - { id: 22, class: vgpr_32 }
+  - { id: 23, class: vgpr_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vgpr_32 }
+  - { id: 26, class: vgpr_32 }
+  - { id: 27, class: sreg_32_xm0 }
+  - { id: 28, class: vgpr_32 }
+  - { id: 32, class: sreg_32_xm0 }
+  - { id: 33, class: sreg_32_xm0 }
+  - { id: 34, class: vgpr_32 }
+  - { id: 35, class: vgpr_32 }
+liveins:
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '%vgpr0', virtual-reg: '%2' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: %sgpr0_sgpr1, %vgpr0
+
+    %2 = COPY %vgpr0
+    %0 = COPY %sgpr0_sgpr1
+    %3 = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %15 = V_ASHRREV_I32_e64 31, %2, implicit %exec
+    %16 = REG_SEQUENCE %2, 1, %15, 2
+    %17 = V_LSHLREV_B64 2, killed %16, implicit %exec
+    %9 = COPY %3.sub1
+    %21 = V_ADD_I32_e32 %3.sub0, %17.sub0, implicit-def %vcc, implicit %exec
+    %19 = COPY killed %9
+    %18 = V_ADDC_U32_e32 %17.sub1, %19, implicit-def %vcc, implicit %vcc, implicit %exec
+    %20 = REG_SEQUENCE %21, 1, killed %18, 2
+    %10 = V_MOV_B32_e32 999234234, implicit %exec
+    %24 = V_MOV_B32_e32 3871, implicit %exec
+    %6 = V_MOV_B32_e32 1000000, implicit %exec
+    %7 = S_MOV_B32 13424252
+    %8 = S_MOV_B32 4
+    %27 = S_MOV_B32 -4
+    %32 = S_MOV_B32 1
+    %33 = S_MOV_B32 3841
+    %34 = V_MOV_B32_e32 3841, implicit %exec
+    %35 = V_MOV_B32_e32 2, implicit %exec
+
+    %11 = V_LSHRREV_B32_e64 8, %10, implicit %exec
+    FLAT_STORE_DWORD %20, %11, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %12 = V_LSHRREV_B32_e64 %8, %10, implicit %exec
+    FLAT_STORE_DWORD %20, %12, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %13 = V_LSHR_B32_e64 %7, 3, implicit %exec
+    FLAT_STORE_DWORD %20, %13, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %14 = V_LSHR_B32_e64 7, %32, implicit %exec
+    FLAT_STORE_DWORD %20, %14, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %15 = V_LSHR_B32_e64 %27, %24, implicit %exec
+    FLAT_STORE_DWORD %20, %15, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %22 = V_LSHR_B32_e64 %6, 4, implicit %exec
+    FLAT_STORE_DWORD %20, %22, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %23 = V_LSHR_B32_e64 %6, %33, implicit %exec
+    FLAT_STORE_DWORD %20, %23, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %25 = V_LSHR_B32_e32 %34, %34, implicit %exec
+    FLAT_STORE_DWORD %20, %25, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %26 = V_LSHRREV_B32_e32 11, %10, implicit %exec
+    FLAT_STORE_DWORD %20, %26, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    %28 = V_LSHR_B32_e32 %27, %35, implicit %exec
+    FLAT_STORE_DWORD %20, %28, 0, 0, 0, implicit %exec, implicit %flat_scr
+
+    S_ENDPGM
+
+...
+---
+# There is only an undef use operand for %1, so there is no
+# corresponding defining instruction
+
+# GCN-LABEL: name: undefined_vreg_operand{{$}}
+# GCN: bb.0
+# GCN-NEXT: FLAT_STORE_DWORD undef %3, undef %1,
+# GCN-NEXT: S_ENDPGM
+name: undefined_vreg_operand
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '' }
+  - { id: 1, class: vgpr_32, preferred-register: '' }
+  - { id: 2, class: vgpr_32, preferred-register: '' }
+  - { id: 3, class: vreg_64, preferred-register: '' }
+body:             |
+  bb.0:
+    %0 = V_MOV_B32_e32 0, implicit %exec
+    %2 = V_XOR_B32_e64 killed %0, undef %1, implicit %exec
+    FLAT_STORE_DWORD undef %3, %2, 0, 0, 0, implicit %exec, implicit %flat_scr
+    S_ENDPGM
+
+...

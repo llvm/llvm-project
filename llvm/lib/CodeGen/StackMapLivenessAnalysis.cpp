@@ -17,7 +17,6 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/CommandLine.h"
@@ -61,6 +60,11 @@ public:
   /// \brief Tell the pass manager which passes we depend on and what
   /// information we preserve.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoVRegs);
+  }
 
   /// \brief Calculate the liveness information for the given machine function.
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -108,7 +112,7 @@ bool StackMapLiveness::runOnMachineFunction(MachineFunction &MF) {
   ++NumStackMapFuncVisited;
 
   // Skip this function if there are no patchpoints to process.
-  if (!MF.getFrameInfo()->hasPatchPoint()) {
+  if (!MF.getFrameInfo().hasPatchPoint()) {
     ++NumStackMapFuncSkipped;
     return false;
   }
@@ -121,8 +125,9 @@ bool StackMapLiveness::calculateLiveness(MachineFunction &MF) {
   // For all basic blocks in the function.
   for (auto &MBB : MF) {
     DEBUG(dbgs() << "****** BB " << MBB.getName() << " ******\n");
-    LiveRegs.init(TRI);
-    LiveRegs.addLiveOuts(&MBB);
+    LiveRegs.init(*TRI);
+    // FIXME: This should probably be addLiveOuts().
+    LiveRegs.addLiveOutsNoPristines(MBB);
     bool HasStackMap = false;
     // Reverse iterate over all instructions and add the current live register
     // set to an instruction if we encounter a patchpoint instruction.

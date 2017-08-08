@@ -1,0 +1,7 @@
+RUN: llvm-mt /h | FileCheck %s -check-prefix=HELP
+
+RUN: llvm-mt /inputresource:foo.res /manifest foo.manifest | FileCheck %s -check-prefix=NOT_SUPPORTED
+
+HELP:      OVERVIEW: Manifest Tool
+
+NOT_SUPPORTED: llvm-mt: ignoring unsupported 'inputresource:' option

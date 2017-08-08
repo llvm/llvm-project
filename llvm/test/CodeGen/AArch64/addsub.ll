@@ -5,6 +5,7 @@
 ; loads and stores.
 
 @var_i32 = global i32 42
+@var2_i32 = global i32 43
 @var_i64 = global i64 0
 
 ; Add pure 12-bit immediates:
@@ -106,6 +107,7 @@ define void @sub_med() {
 define void @testing() {
 ; CHECK-LABEL: testing:
   %val = load i32, i32* @var_i32
+  %val2 = load i32, i32* @var2_i32
 
 ; CHECK: cmp {{w[0-9]+}}, #4095
 ; CHECK: b.ne [[RET:.?LBB[0-9]+_[0-9]+]]
@@ -117,7 +119,7 @@ test2:
 ; CHECK: b.lo [[RET]]
   %newval2 = add i32 %val, 1
   store i32 %newval2, i32* @var_i32
-  %cmp_pos_big = icmp ult i32 %val, 14610432
+  %cmp_pos_big = icmp ult i32 %val2, 14610432
   br i1 %cmp_pos_big, label %ret, label %test3
 
 test3:
@@ -133,7 +135,7 @@ test4:
 ; CHECK: b.gt [[RET]]
   %newval4 = add i32 %val, 3
   store i32 %newval4, i32* @var_i32
-  %cmp_pos_sgt = icmp sgt i32 %val, 321
+  %cmp_pos_sgt = icmp sgt i32 %val2, 321
   br i1 %cmp_pos_sgt, label %ret, label %test5
 
 test5:
@@ -141,7 +143,7 @@ test5:
 ; CHECK: b.gt [[RET]]
   %newval5 = add i32 %val, 4
   store i32 %newval5, i32* @var_i32
-  %cmp_neg_uge = icmp sgt i32 %val, -444
+  %cmp_neg_uge = icmp sgt i32 %val2, -444
   br i1 %cmp_neg_uge, label %ret, label %test6
 
 test6:

@@ -17,18 +17,23 @@
 
 #include "llvm/Support/CodeGen.h"
 #include <functional>
+#include <vector>
 
 namespace llvm {
 
 class ARMAsmPrinter;
 class ARMBaseTargetMachine;
+class ARMRegisterBankInfo;
+class ARMSubtarget;
+struct BasicBlockInfo;
 class Function;
 class FunctionPass;
-class ImmutablePass;
+class InstructionSelector;
+class MachineBasicBlock;
+class MachineFunction;
 class MachineInstr;
 class MCInst;
-class TargetLowering;
-class TargetMachine;
+class PassRegistry;
 
 FunctionPass *createARMISelDag(ARMBaseTargetMachine &TM,
                                CodeGenOpt::Level OptLevel);
@@ -41,10 +46,21 @@ FunctionPass *createThumb2ITBlockPass();
 FunctionPass *createARMOptimizeBarriersPass();
 FunctionPass *createThumb2SizeReductionPass(
     std::function<bool(const Function &)> Ftor = nullptr);
+InstructionSelector *
+createARMInstructionSelector(const ARMBaseTargetMachine &TM, const ARMSubtarget &STI,
+                             const ARMRegisterBankInfo &RBI);
 
 void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                   ARMAsmPrinter &AP);
 
-} // end namespace llvm;
+void computeBlockSize(MachineFunction *MF, MachineBasicBlock *MBB,
+                      BasicBlockInfo &BBI);
+std::vector<BasicBlockInfo> computeAllBlockSizes(MachineFunction *MF);
 
-#endif
+void initializeARMLoadStoreOptPass(PassRegistry &);
+void initializeARMPreAllocLoadStoreOptPass(PassRegistry &);
+void initializeARMConstantIslandsPass(PassRegistry &);
+
+} // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_ARM_ARM_H

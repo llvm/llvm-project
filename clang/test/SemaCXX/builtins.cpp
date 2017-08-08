@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify -std=c++11
+// RUN: %clang_cc1 %s -fsyntax-only -verify -std=c++11 -fcxx-exceptions
+// RUN: %clang_cc1 %s -fsyntax-only -verify -std=c++1z -fcxx-exceptions
 typedef const struct __CFString * CFStringRef;
 #define CFSTR __builtin___CFStringMakeConstantString
 
@@ -43,4 +44,12 @@ void no_ms_builtins() {
   __assume(1); // expected-error {{use of undeclared}}
   __noop(1); // expected-error {{use of undeclared}}
   __debugbreak(); // expected-error {{use of undeclared}}
+}
+
+struct FILE;
+extern "C" int vfprintf(FILE *__restrict, const char *__restrict,
+                        __builtin_va_list va);
+
+void synchronize_args() {
+  __sync_synchronize(0); // expected-error {{too many arguments}}
 }

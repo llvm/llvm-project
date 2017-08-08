@@ -23,6 +23,7 @@
 #ifndef LLVM_SUPPORT_FORMAT_H
 #define LLVM_SUPPORT_FORMAT_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
@@ -71,9 +72,19 @@ public:
 };
 
 /// These are templated helper classes used by the format function that
-/// capture the object to be formated and the format string. When actually
+/// capture the object to be formatted and the format string. When actually
 /// printed, this synthesizes the string into a temporary buffer provided and
 /// returns whether or not it is big enough.
+
+// Helper to validate that format() parameters are scalars or pointers.
+template <typename... Args> struct validate_format_parameters;
+template <typename Arg, typename... Args>
+struct validate_format_parameters<Arg, Args...> {
+  static_assert(std::is_scalar<Arg>::value,
+                "format can't be used with non fundamental / non pointer type");
+  validate_format_parameters() { validate_format_parameters<Args...>(); }
+};
+template <> struct validate_format_parameters<> {};
 
 template <typename... Ts>
 class format_object final : public format_object_base {
@@ -91,7 +102,9 @@ class format_object final : public format_object_base {
 
 public:
   format_object(const char *fmt, const Ts &... vals)
-      : format_object_base(fmt), Vals(vals...) {}
+      : format_object_base(fmt), Vals(vals...) {
+    validate_format_parameters<Ts...>();
+  }
 
   int snprint(char *Buffer, unsigned BufferSize) const override {
     return snprint_tuple(Buffer, BufferSize, index_sequence_for<Ts...>());
@@ -112,30 +125,39 @@ inline format_object<Ts...> format(const char *Fmt, const Ts &... Vals) {
   return format_object<Ts...>(Fmt, Vals...);
 }
 
-/// This is a helper class used for left_justify() and right_justify().
+/// This is a helper class for left_justify, right_justify, and center_justify.
 class FormattedString {
+public:
+  enum Justification { JustifyNone, JustifyLeft, JustifyRight, JustifyCenter };
+  FormattedString(StringRef S, unsigned W, Justification J)
+      : Str(S), Width(W), Justify(J) {}
+
+private:
   StringRef Str;
   unsigned Width;
-  bool RightJustify;
+  Justification Justify;
   friend class raw_ostream;
-
-public:
-    FormattedString(StringRef S, unsigned W, bool R)
-      : Str(S), Width(W), RightJustify(R) { }
 };
 
 /// left_justify - append spaces after string so total output is
 /// \p Width characters.  If \p Str is larger that \p Width, full string
 /// is written with no padding.
 inline FormattedString left_justify(StringRef Str, unsigned Width) {
-  return FormattedString(Str, Width, false);
+  return FormattedString(Str, Width, FormattedString::JustifyLeft);
 }
 
 /// right_justify - add spaces before string so total output is
 /// \p Width characters.  If \p Str is larger that \p Width, full string
 /// is written with no padding.
 inline FormattedString right_justify(StringRef Str, unsigned Width) {
-  return FormattedString(Str, Width, true);
+  return FormattedString(Str, Width, FormattedString::JustifyRight);
+}
+
+/// center_justify - add spaces before and after string so total output is
+/// \p Width characters.  If \p Str is larger that \p Width, full string
+/// is written with no padding.
+inline FormattedString center_justify(StringRef Str, unsigned Width) {
+  return FormattedString(Str, Width, FormattedString::JustifyCenter);
 }
 
 /// This is a helper class used for format_hex() and format_decimal().
@@ -170,13 +192,13 @@ inline FormattedNumber format_hex(uint64_t N, unsigned Width,
 /// format_hex_no_prefix - Output \p N as a fixed width hexadecimal. Does not
 /// prepend '0x' to the outputted string.  If number will not fit in width,
 /// full number is still printed.  Examples:
-///   OS << format_hex_no_prefix(255, 4)              => ff
-///   OS << format_hex_no_prefix(255, 4, true)        => FF
-///   OS << format_hex_no_prefix(255, 6)              => 00ff
 ///   OS << format_hex_no_prefix(255, 2)              => ff
+///   OS << format_hex_no_prefix(255, 2, true)        => FF
+///   OS << format_hex_no_prefix(255, 4)              => 00ff
+///   OS << format_hex_no_prefix(255, 1)              => ff
 inline FormattedNumber format_hex_no_prefix(uint64_t N, unsigned Width,
                                             bool Upper = false) {
-  assert(Width <= 18 && "hex width must be <= 18");
+  assert(Width <= 16 && "hex width must be <= 16");
   return FormattedNumber(N, 0, Width, true, Upper, false);
 }
 
@@ -188,6 +210,46 @@ inline FormattedNumber format_hex_no_prefix(uint64_t N, unsigned Width,
 ///   OS << format_decimal(12345, 3) => "12345"
 inline FormattedNumber format_decimal(int64_t N, unsigned Width) {
   return FormattedNumber(0, N, Width, false, false, false);
+}
+
+class FormattedBytes {
+  ArrayRef<uint8_t> Bytes;
+
+  // If not None, display offsets for each line relative to starting value.
+  Optional<uint64_t> FirstByteOffset;
+  uint32_t IndentLevel;  // Number of characters to indent each line.
+  uint32_t NumPerLine;   // Number of bytes to show per line.
+  uint8_t ByteGroupSize; // How many hex bytes are grouped without spaces
+  bool Upper;            // Show offset and hex bytes as upper case.
+  bool ASCII;            // Show the ASCII bytes for the hex bytes to the right.
+  friend class raw_ostream;
+
+public:
+  FormattedBytes(ArrayRef<uint8_t> B, uint32_t IL, Optional<uint64_t> O,
+                 uint32_t NPL, uint8_t BGS, bool U, bool A)
+      : Bytes(B), FirstByteOffset(O), IndentLevel(IL), NumPerLine(NPL),
+        ByteGroupSize(BGS), Upper(U), ASCII(A) {
+
+    if (ByteGroupSize > NumPerLine)
+      ByteGroupSize = NumPerLine;
+  }
+};
+
+inline FormattedBytes
+format_bytes(ArrayRef<uint8_t> Bytes, Optional<uint64_t> FirstByteOffset = None,
+             uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4,
+             uint32_t IndentLevel = 0, bool Upper = false) {
+  return FormattedBytes(Bytes, IndentLevel, FirstByteOffset, NumPerLine,
+                        ByteGroupSize, Upper, false);
+}
+
+inline FormattedBytes
+format_bytes_with_ascii(ArrayRef<uint8_t> Bytes,
+                        Optional<uint64_t> FirstByteOffset = None,
+                        uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4,
+                        uint32_t IndentLevel = 0, bool Upper = false) {
+  return FormattedBytes(Bytes, IndentLevel, FirstByteOffset, NumPerLine,
+                        ByteGroupSize, Upper, true);
 }
 
 } // end namespace llvm

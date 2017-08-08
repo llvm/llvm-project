@@ -195,7 +195,7 @@ void SparseSolver::getFeasibleSuccessors(TerminatorInst &TI,
     Succs.assign(TI.getNumSuccessors(), true);
     return;
   }
-  SwitchInst::CaseIt Case = SI.findCaseValue(cast<ConstantInt>(C));
+  SwitchInst::CaseHandle Case = *SI.findCaseValue(cast<ConstantInt>(C));
   Succs[Case.getSuccessorIndex()] = true;
 }
 
@@ -320,8 +320,8 @@ void SparseSolver::Solve(Function &F) {
 
       // Notify all instructions in this basic block that they are newly
       // executable.
-      for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I)
-        visitInst(*I);
+      for (Instruction &I : *BB)
+        visitInst(I);
     }
   }
 }

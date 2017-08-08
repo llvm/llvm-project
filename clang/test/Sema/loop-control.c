@@ -119,3 +119,51 @@ void pr8880_23(int x, int y) {
     for ( ; ({ ++y; break; y;}); ++y) {} // expected-warning{{'break' is bound to loop, GCC binds it to switch}}
   }
 }
+
+void pr32648_1(int x, int y) {
+  switch(x) {
+  case 1:
+    for ( ; ({ ++y; switch (y) { case 0: break; } y;}); ++y) {} // no warning
+  }
+}
+
+void pr32648_2(int x, int y) {
+  while(x) {
+    for ( ; ({ ++y; switch (y) { case 0: continue; } y;}); ++y) {}  // expected-warning {{'continue' is bound to current loop, GCC binds it to the enclosing loop}}
+  }
+}
+
+void pr32648_3(int x, int y) {
+  switch(x) {
+  case 1:
+    for ( ; ({ ++y; for (; y; y++) { break; } y;}); ++y) {} // no warning
+  }
+}
+
+void pr32648_4(int x, int y) {
+  switch(x) {
+  case 1:
+    for ( ; ({ ++y; for (({ break; }); y; y++) { } y;}); ++y) {} // expected-warning{{'break' is bound to loop, GCC binds it to switch}}
+  }
+}
+
+void pr32648_5(int x, int y) {
+  switch(x) {
+  case 1:
+    for ( ; ({ ++y; while (({ break; y; })) {} y;}); ++y) {} // expected-warning{{'break' is bound to current loop, GCC binds it to the enclosing loop}}
+  }
+}
+
+void pr32648_6(int x, int y) {
+  switch(x) {
+  case 1:
+    for ( ; ({ ++y; do {} while (({ break; y; })); y;}); ++y) {} // expected-warning{{'break' is bound to current loop, GCC binds it to the enclosing loop}}
+  }
+}
+
+void pr32648_7(int x, int y) {
+  switch(x) {
+  case 1:
+    for ( ; ({ ++y; do { break; } while (y); y;}); ++y) {} // no warning
+  }
+}

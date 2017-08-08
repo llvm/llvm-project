@@ -13,10 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cstdarg>   /* for va_*()       */
-#include <cstdio>    /* for vsnprintf()  */
-#include <cstdlib>   /* for exit()       */
-#include <cstring>   /* for memset()     */
+#include <cstdarg> /* for va_*()       */
+#include <cstdio>  /* for vsnprintf()  */
+#include <cstdlib> /* for exit()       */
+#include <cstring> /* for memset()     */
 
 #include "X86DisassemblerDecoder.h"
 
@@ -52,7 +52,6 @@ struct ContextDecision {
 #else
 #define debug(s) do { } while (0)
 #endif
-
 
 /*
  * contextForAttrs - Client for the instruction context table.  Takes a set of
@@ -276,8 +275,6 @@ static void dbgprintf(struct InternalInstruction* insn,
   va_end(ap);
 
   insn->dlog(insn->dlogArg, buffer);
-
-  return;
 }
 
 /*
@@ -361,7 +358,7 @@ static int readPrefixes(struct InternalInstruction* insn) {
        * then it should be disassembled as a xacquire/xrelease not repne/rep.
        */
       if ((byte == 0xf2 || byte == 0xf3) &&
-          ((nextByte == 0xf0) |
+          ((nextByte == 0xf0) ||
           ((nextByte & 0xfe) == 0x86 || (nextByte & 0xf8) == 0x90)))
         insn->xAcquireRelease = true;
       /*
@@ -653,11 +650,6 @@ static int readPrefixes(struct InternalInstruction* insn) {
       insn->addressSize        = (hasAdSize ? 4 : 8);
       insn->displacementSize   = 4;
       insn->immediateSize      = 4;
-    } else if (insn->rexPrefix) {
-      insn->registerSize       = (hasOpSize ? 2 : 4);
-      insn->addressSize        = (hasAdSize ? 4 : 8);
-      insn->displacementSize   = (hasOpSize ? 2 : 4);
-      insn->immediateSize      = (hasOpSize ? 2 : 4);
     } else {
       insn->registerSize       = (hasOpSize ? 2 : 4);
       insn->addressSize        = (hasAdSize ? 4 : 8);
@@ -828,7 +820,7 @@ static int getIDWithAttrMask(uint16_t* instructionID,
  * @param orig  - The instruction that is not 16-bit
  * @param equiv - The instruction that is 16-bit
  */
-static bool is16BitEquivalent(const char* orig, const char* equiv) {
+static bool is16BitEquivalent(const char *orig, const char *equiv) {
   off_t i;
 
   for (i = 0;; i++) {
@@ -853,7 +845,7 @@ static bool is16BitEquivalent(const char* orig, const char* equiv) {
  *
  * @param name - The instruction that is not 16-bit
  */
-static bool is64Bit(const char* name) {
+static bool is64Bit(const char *name) {
   off_t i;
 
   for (i = 0;; ++i) {
@@ -1047,9 +1039,9 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
         return 0;
       }
 
-      const char *SpecName = GetInstrName(instructionIDWithREXW, miiArg);
+      auto SpecName = GetInstrName(instructionIDWithREXW, miiArg);
       // If not a 64-bit instruction. Switch the opcode.
-      if (!is64Bit(SpecName)) {
+      if (!is64Bit(SpecName.data())) {
         insn->instructionID = instructionIDWithREXW;
         insn->spec = specifierForUID(instructionIDWithREXW);
         return 0;
@@ -1095,7 +1087,7 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
 
     const struct InstructionSpecifier *spec;
     uint16_t instructionIDWithOpsize;
-    const char *specName, *specWithOpSizeName;
+    llvm::StringRef specName, specWithOpSizeName;
 
     spec = specifierForUID(instructionID);
 
@@ -1115,7 +1107,7 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
     specName = GetInstrName(instructionID, miiArg);
     specWithOpSizeName = GetInstrName(instructionIDWithOpsize, miiArg);
 
-    if (is16BitEquivalent(specName, specWithOpSizeName) &&
+    if (is16BitEquivalent(specName.data(), specWithOpSizeName.data()) &&
         (insn->mode == MODE_16BIT) ^ insn->prefixPresent[0x66]) {
       insn->instructionID = instructionIDWithOpsize;
       insn->spec = specifierForUID(instructionIDWithOpsize);
@@ -1453,10 +1445,10 @@ static int readModRM(struct InternalInstruction* insn) {
 }
 
 #define GENERIC_FIXUP_FUNC(name, base, prefix)            \
-  static uint8_t name(struct InternalInstruction *insn,   \
-                      OperandType type,                   \
-                      uint8_t index,                      \
-                      uint8_t *valid) {                   \
+  static uint16_t name(struct InternalInstruction *insn,  \
+                       OperandType type,                  \
+                       uint8_t index,                     \
+                       uint8_t *valid) {                  \
     *valid = 1;                                           \
     switch (type) {                                       \
     default:                                              \
@@ -1478,18 +1470,13 @@ static int readModRM(struct InternalInstruction* insn) {
       return prefix##_EAX + index;                        \
     case TYPE_R64:                                        \
       return prefix##_RAX + index;                        \
-    case TYPE_XMM512:                                     \
+    case TYPE_ZMM:                                        \
       return prefix##_ZMM0 + index;                       \
-    case TYPE_XMM256:                                     \
+    case TYPE_YMM:                                        \
       return prefix##_YMM0 + index;                       \
-    case TYPE_XMM128:                                     \
-    case TYPE_XMM64:                                      \
-    case TYPE_XMM32:                                      \
     case TYPE_XMM:                                        \
       return prefix##_XMM0 + index;                       \
-    case TYPE_VK1:                                        \
-    case TYPE_VK8:                                        \
-    case TYPE_VK16:                                       \
+    case TYPE_VK:                                         \
       if (index > 7)                                      \
         *valid = 0;                                       \
       return prefix##_K0 + index;                         \
@@ -1503,6 +1490,10 @@ static int readModRM(struct InternalInstruction* insn) {
       return prefix##_DR0 + index;                        \
     case TYPE_CONTROLREG:                                 \
       return prefix##_CR0 + index;                        \
+    case TYPE_BNDR:                                       \
+      if (index > 3)                                      \
+        *valid = 0;                                       \
+      return prefix##_BND0 + index;                       \
     }                                                     \
   }
 
@@ -1558,6 +1549,7 @@ static int fixupReg(struct InternalInstruction *insn,
       return -1;
     break;
   CASE_ENCODING_RM:
+  CASE_ENCODING_VSIB:
     if (insn->eaBase >= insn->eaRegBase) {
       insn->eaBase = (EABase)fixupRMValue(insn,
                                           (OperandType)op->type,
@@ -1749,6 +1741,18 @@ static int readOperands(struct InternalInstruction* insn) {
     case ENCODING_SI:
     case ENCODING_DI:
       break;
+    CASE_ENCODING_VSIB:
+      // VSIB can use the V2 bit so check only the other bits.
+      if (needVVVV)
+        needVVVV = hasVVVV & ((insn->vvvv & 0xf) != 0);
+      if (readModRM(insn))
+        return -1;
+      if (fixupReg(insn, &Op))
+        return -1;
+      // Apply the AVX512 compressed displacement scaling factor.
+      if (Op.encoding != ENCODING_REG && insn->eaDisplacement == EA_DISP_8)
+        insn->displacement *= 1 << (Op.encoding - ENCODING_VSIB);
+      break;
     case ENCODING_REG:
     CASE_ENCODING_RM:
       if (readModRM(insn))
@@ -1759,14 +1763,6 @@ static int readOperands(struct InternalInstruction* insn) {
       if (Op.encoding != ENCODING_REG && insn->eaDisplacement == EA_DISP_8)
         insn->displacement *= 1 << (Op.encoding - ENCODING_RM);
       break;
-    case ENCODING_CB:
-    case ENCODING_CW:
-    case ENCODING_CD:
-    case ENCODING_CP:
-    case ENCODING_CO:
-    case ENCODING_CT:
-      dbgprintf(insn, "We currently don't hande code-offset encodings");
-      return -1;
     case ENCODING_IB:
       if (sawRegImm) {
         /* Saw a register immediate so don't read again and instead split the
@@ -1778,8 +1774,7 @@ static int readOperands(struct InternalInstruction* insn) {
       }
       if (readImmediate(insn, 1))
         return -1;
-      if (Op.type == TYPE_XMM128 ||
-          Op.type == TYPE_XMM256)
+      if (Op.type == TYPE_XMM || Op.type == TYPE_YMM)
         sawRegImm = 1;
       break;
     case ENCODING_IW:

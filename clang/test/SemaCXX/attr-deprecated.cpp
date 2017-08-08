@@ -56,14 +56,14 @@ void f(B* b, C *c) {
 }
 
 struct D {
-  virtual void f() __attribute__((deprecated));
-  virtual void f(int) __attribute__((deprecated));
-  virtual void f(int, int) __attribute__((deprecated));
+  virtual void f() __attribute__((deprecated));// expected-note{{'f' has been explicitly marked deprecated here}}
+  virtual void f(int) __attribute__((deprecated));// expected-note{{'f' has been explicitly marked deprecated here}}
+  virtual void f(int, int) __attribute__((deprecated));// expected-note{{'f' has been explicitly marked deprecated here}}
 };
 
-void D::f() { } // expected-note{{'f' has been explicitly marked deprecated here}}
-void D::f(int v) { } // expected-note{{'f' has been explicitly marked deprecated here}}
-void D::f(int v1, int v2) { } // expected-note{{'f' has been explicitly marked deprecated here}}
+void D::f() { } 
+void D::f(int v) { } 
+void D::f(int v1, int v2) { } 
 
 void f(D* d) {
   d->f(); // expected-warning{{'f' is deprecated}}
@@ -199,8 +199,8 @@ namespace test5 {
 
 // rdar://problem/8518751
 namespace test6 {
-  enum __attribute__((deprecated)) A { // expected-note {{'A' has been explicitly marked deprecated here}}
-    a0 // expected-note {{'a0' has been explicitly marked deprecated here}}
+  enum __attribute__((deprecated)) A { // expected-note 2 {{'A' has been explicitly marked deprecated here}}
+    a0
   };
   void testA() {
     A x; // expected-warning {{'A' is deprecated}}
@@ -218,8 +218,8 @@ namespace test6 {
   }
 
   template <class T> struct C {
-    enum __attribute__((deprecated)) Enum { // expected-note {{'Enum' has been explicitly marked deprecated here}}
-      c0 // expected-note {{'c0' has been explicitly marked deprecated here}}
+    enum __attribute__((deprecated)) Enum { // expected-note 2 {{'Enum' has been explicitly marked deprecated here}}
+      c0
     };
   };
   void testC() {

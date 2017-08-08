@@ -58,6 +58,10 @@ types are:
     The 'string' type represents an ordered sequence of characters of arbitrary
     length.
 
+``code``
+    The `code` type represents a code fragment, which can be single/multi-line
+    string literal.
+
 ``bits<n>``
     A 'bits' type is an arbitrary, but fixed, size integer that is broken up
     into individual bits.  This type is useful because it can handle some bits
@@ -98,9 +102,6 @@ supported include:
     Note that this is sized by the number of bits given and will not be
     silently extended/truncated.
 
-``07654321``
-    octal integer value (indicated by a leading 0)
-
 ``7``
     decimal integer value
 
@@ -108,7 +109,7 @@ supported include:
     hexadecimal integer value
 
 ``"foo"``
-    string value
+    a single-line string value, can be assigned to ``string`` or ``code`` variable.
 
 ``[{ ... }]``
     usually called a "code fragment", but is just a multiline string literal
@@ -129,7 +130,8 @@ supported include:
     access to one bit of a value
 
 ``value{15-17}``
-    access to multiple bits of a value
+    access to an ordered sequence of bits of a value, in particular ``value{15-17}``
+    produces an order that is the reverse of ``value{17-15}``.
 
 ``DEF``
     reference to a record definition
@@ -232,7 +234,7 @@ the record ends with a semicolon.
 
 Here is a simple TableGen file:
 
-.. code-block:: llvm
+.. code-block:: text
 
   class C { bit V = 1; }
   def X : C;
@@ -276,7 +278,7 @@ derived class or definition wants to override.  Let expressions consist of the
 value.  For example, a new class could be added to the example above, redefining
 the ``V`` field for all of its subclasses:
 
-.. code-block:: llvm
+.. code-block:: text
 
   class D : C { let V = 0; }
   def Z : D;
@@ -295,7 +297,7 @@ concrete classes.  Parameterized TableGen classes specify a list of variable
 bindings (which may optionally have defaults) that are bound when used.  Here is
 a simple example:
 
-.. code-block:: llvm
+.. code-block:: text
 
   class FPFormat<bits<3> val> {
     bits<3> Value = val;
@@ -316,7 +318,7 @@ integer.
 The more esoteric forms of `TableGen expressions`_ are useful in conjunction
 with template arguments.  As an example:
 
-.. code-block:: llvm
+.. code-block:: text
 
   class ModRefVal<bits<2> val> {
     bits<2> Value = val;
@@ -346,7 +348,7 @@ be used to decouple the interface provided to the user of the class from the
 actual internal data representation expected by the class.  In this case,
 running ``llvm-tblgen`` on the example prints the following definitions:
 
-.. code-block:: llvm
+.. code-block:: text
 
   def bork {      // Value
     bit isMod = 1;
@@ -379,7 +381,7 @@ commonality exists, then in a separate place indicate what all the ops are.
 
 Here is an example TableGen fragment that shows this idea:
 
-.. code-block:: llvm
+.. code-block:: text
 
   def ops;
   def GPR;
@@ -405,7 +407,7 @@ inherit from multiple multiclasses, instantiating definitions from each
 multiclass.  Using a multiclass this way is exactly equivalent to instantiating
 the classes multiple times yourself, e.g. by writing:
 
-.. code-block:: llvm
+.. code-block:: text
 
   def ops;
   def GPR;
@@ -432,7 +434,7 @@ the classes multiple times yourself, e.g. by writing:
 A ``defm`` can also be used inside a multiclass providing several levels of
 multiclass instantiations.
 
-.. code-block:: llvm
+.. code-block:: text
 
   class Instruction<bits<4> opc, string Name> {
     bits<4> opcode = opc;
@@ -473,7 +475,7 @@ multiclass instantiations.
 the class list must start after the last multiclass, and there must be at least
 one multiclass before them.
 
-.. code-block:: llvm
+.. code-block:: text
 
   class XD { bits<4> Prefix = 11; }
   class XS { bits<4> Prefix = 12; }
@@ -516,7 +518,7 @@ specified file in place of the include directive.  The filename should be
 specified as a double quoted string immediately after the '``include``' keyword.
 Example:
 
-.. code-block:: llvm
+.. code-block:: text
 
   include "foo.td"
 
@@ -532,7 +534,7 @@ commonality from the records.
 File-scope "let" expressions take a comma-separated list of bindings to apply,
 and one or more records to bind the values in.  Here are some examples:
 
-.. code-block:: llvm
+.. code-block:: text
 
   let isTerminator = 1, isReturn = 1, isBarrier = 1, hasCtrlDep = 1 in
     def RET : I<0xC3, RawFrm, (outs), (ins), "ret", [(X86retflag 0)]>;
@@ -559,7 +561,7 @@ ways to factor out commonality from the records, specially if using several
 levels of multiclass instantiations. This also avoids the need of using "let"
 expressions within subsequent records inside a multiclass.
 
-.. code-block:: llvm
+.. code-block:: text
 
   multiclass basic_r<bits<4> opc> {
     let Predicates = [HasSSE2] in {
@@ -587,7 +589,7 @@ TableGen supports the '``foreach``' block, which textually replicates the loop
 body, substituting iterator values for iterator references in the body.
 Example:
 
-.. code-block:: llvm
+.. code-block:: text
 
   foreach i = [0, 1, 2, 3] in {
     def R#i : Register<...>;
@@ -598,7 +600,7 @@ This will create objects ``R0``, ``R1``, ``R2`` and ``R3``.  ``foreach`` blocks
 may be nested. If there is only one item in the body the braces may be
 elided:
 
-.. code-block:: llvm
+.. code-block:: text
 
   foreach i = [0, 1, 2, 3] in
     def R#i : Register<...>;

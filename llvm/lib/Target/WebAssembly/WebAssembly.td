@@ -6,10 +6,11 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// This is a target description file for the WebAssembly architecture, which is
-// also known as "wasm".
-//
+///
+/// \file
+/// \brief This is a target description file for the WebAssembly architecture,
+/// which is also known as "wasm".
+///
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -22,7 +23,7 @@ include "llvm/Target/Target.td"
 // WebAssembly Subtarget features.
 //===----------------------------------------------------------------------===//
 
-def FeatureSIMD128 : SubtargetFeature<"simd128", "HasSIMD128", "false",
+def FeatureSIMD128 : SubtargetFeature<"simd128", "HasSIMD128", "true",
                                       "Enable 128-bit SIMD">;
 
 //===----------------------------------------------------------------------===//

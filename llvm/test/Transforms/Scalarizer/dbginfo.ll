@@ -16,9 +16,9 @@ define void @f1(<4 x i32>* nocapture %a, <4 x i32>* nocapture readonly %b, <4 x 
 ; CHECK: %b.i1 = getelementptr i32, i32* %b.i0, i32 1
 ; CHECK: %b.i2 = getelementptr i32, i32* %b.i0, i32 2
 ; CHECK: %b.i3 = getelementptr i32, i32* %b.i0, i32 3
-; CHECK: tail call void @llvm.dbg.value(metadata <4 x i32>* %a, i64 0, metadata !{{[0-9]+}}, metadata {{.*}}), !dbg !{{[0-9]+}}
-; CHECK: tail call void @llvm.dbg.value(metadata <4 x i32>* %b, i64 0, metadata !{{[0-9]+}}, metadata {{.*}}), !dbg !{{[0-9]+}}
-; CHECK: tail call void @llvm.dbg.value(metadata <4 x i32>* %c, i64 0, metadata !{{[0-9]+}}, metadata {{.*}}), !dbg !{{[0-9]+}}
+; CHECK: tail call void @llvm.dbg.value(metadata <4 x i32>* %a, metadata !{{[0-9]+}}, metadata {{.*}}), !dbg !{{[0-9]+}}
+; CHECK: tail call void @llvm.dbg.value(metadata <4 x i32>* %b, metadata !{{[0-9]+}}, metadata {{.*}}), !dbg !{{[0-9]+}}
+; CHECK: tail call void @llvm.dbg.value(metadata <4 x i32>* %c, metadata !{{[0-9]+}}, metadata {{.*}}), !dbg !{{[0-9]+}}
 ; CHECK: %bval.i0 = load i32, i32* %b.i0, align 16, !dbg ![[TAG1:[0-9]+]], !tbaa ![[TAG2:[0-9]+]]
 ; CHECK: %bval.i1 = load i32, i32* %b.i1, align 4, !dbg ![[TAG1]], !tbaa ![[TAG2]]
 ; CHECK: %bval.i2 = load i32, i32* %b.i2, align 8, !dbg ![[TAG1]], !tbaa ![[TAG2]]
@@ -37,9 +37,9 @@ define void @f1(<4 x i32>* nocapture %a, <4 x i32>* nocapture readonly %b, <4 x 
 ; CHECK: store i32 %add.i3, i32* %a.i3, align 4, !dbg ![[TAG1]], !tbaa ![[TAG2]]
 ; CHECK: ret void
 entry:
-  tail call void @llvm.dbg.value(metadata <4 x i32>* %a, i64 0, metadata !15, metadata !DIExpression()), !dbg !20
-  tail call void @llvm.dbg.value(metadata <4 x i32>* %b, i64 0, metadata !16, metadata !DIExpression()), !dbg !20
-  tail call void @llvm.dbg.value(metadata <4 x i32>* %c, i64 0, metadata !17, metadata !DIExpression()), !dbg !20
+  tail call void @llvm.dbg.value(metadata <4 x i32>* %a, metadata !15, metadata !DIExpression()), !dbg !20
+  tail call void @llvm.dbg.value(metadata <4 x i32>* %b, metadata !16, metadata !DIExpression()), !dbg !20
+  tail call void @llvm.dbg.value(metadata <4 x i32>* %c, metadata !17, metadata !DIExpression()), !dbg !20
   %bval = load <4 x i32>, <4 x i32>* %b, align 16, !dbg !21, !tbaa !22
   %cval = load <4 x i32>, <4 x i32>* %c, align 16, !dbg !21, !tbaa !22
   %add = add <4 x i32> %bval, %cval, !dbg !21
@@ -48,7 +48,7 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
@@ -57,11 +57,10 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!18, !26}
 !llvm.ident = !{!19}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.4 (trunk 194134) (llvm/trunk 194126)", isOptimized: true, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.4 (trunk 194134) (llvm/trunk 194126)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "/tmp/add.c", directory: "/home/richards/llvm/build")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "f1", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 4, file: !1, scope: !5, type: !6, variables: !14)
+!4 = distinct !DISubprogram(name: "f1", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 4, file: !1, scope: !5, type: !6, variables: !14)
 !5 = !DIFile(filename: "/tmp/add.c", directory: "/home/richards/llvm/build")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null, !8, !8, !8}

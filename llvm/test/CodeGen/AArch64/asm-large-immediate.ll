@@ -1,4 +1,4 @@
-; RUN: llc -march=aarch64 -no-integrated-as < %s | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-eabi -no-integrated-as | FileCheck %s
 
 define void @test() {
 entry:

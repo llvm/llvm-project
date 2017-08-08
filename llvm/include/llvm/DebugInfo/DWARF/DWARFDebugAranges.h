@@ -1,4 +1,4 @@
-//===-- DWARFDebugAranges.h -------------------------------------*- C++ -*-===//
+//===- DWARFDebugAranges.h --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_DEBUGINFO_DWARFDEBUGARANGES_H
-#define LLVM_LIB_DEBUGINFO_DWARFDEBUGARANGES_H
+#ifndef LLVM_DEBUGINFO_DWARFDEBUGARANGES_H
+#define LLVM_DEBUGINFO_DWARFDEBUGARANGES_H
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/DataExtractor.h"
+#include <cstdint>
 #include <vector>
 
 namespace llvm {
@@ -27,7 +28,7 @@ private:
   void clear();
   void extract(DataExtractor DebugArangesData);
 
-  // Call appendRange multiple times and then call construct.
+  /// Call appendRange multiple times and then call construct.
   void appendRange(uint32_t CUOffset, uint64_t LowPC, uint64_t HighPC);
   void construct();
 
@@ -42,6 +43,7 @@ private:
       else
         Length = HighPC - LowPC;
     }
+
     uint64_t HighPC() const {
       if (Length)
         return LowPC + Length;
@@ -51,13 +53,14 @@ private:
     bool containsAddress(uint64_t Address) const {
       return LowPC <= Address && Address < HighPC();
     }
+
     bool operator<(const Range &other) const {
       return LowPC < other.LowPC;
     }
 
-    uint64_t LowPC; // Start of address range.
-    uint32_t Length; // End of address range (not including this address).
-    uint32_t CUOffset; // Offset of the compile unit or die.
+    uint64_t LowPC; /// Start of address range.
+    uint32_t Length; /// End of address range (not including this address).
+    uint32_t CUOffset; /// Offset of the compile unit or die.
   };
 
   struct RangeEndpoint {
@@ -73,15 +76,14 @@ private:
     }
   };
 
-
-  typedef std::vector<Range>              RangeColl;
-  typedef RangeColl::const_iterator       RangeCollIterator;
+  using RangeColl = std::vector<Range>;
+  using RangeCollIterator = RangeColl::const_iterator;
 
   std::vector<RangeEndpoint> Endpoints;
   RangeColl Aranges;
   DenseSet<uint32_t> ParsedCUOffsets;
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_DEBUGINFO_DWARFDEBUGARANGES_H

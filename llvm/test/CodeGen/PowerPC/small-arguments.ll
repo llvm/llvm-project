@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 | not grep "extsh\|rlwinm"
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep "extsh\|rlwinm"
 
 declare signext i16 @foo()  
 

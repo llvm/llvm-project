@@ -43,10 +43,11 @@ namespace tooling {
 struct CompileCommand {
   CompileCommand() {}
   CompileCommand(Twine Directory, Twine Filename,
-                 std::vector<std::string> CommandLine)
+                 std::vector<std::string> CommandLine, Twine Output)
       : Directory(Directory.str()),
         Filename(Filename.str()),
-        CommandLine(std::move(CommandLine)) {}
+        CommandLine(std::move(CommandLine)),
+        Output(Output.str()){}
 
   /// \brief The working directory the command was executed from.
   std::string Directory;
@@ -57,15 +58,8 @@ struct CompileCommand {
   /// \brief The command line that was executed.
   std::vector<std::string> CommandLine;
 
-  /// \brief An optional mapping from each file's path to its content for all
-  /// files needed for the compilation that are not available via the file
-  /// system.
-  ///
-  /// Note that a tool implementation is required to fall back to the file
-  /// system if a source file is not provided in the mapped sources, as
-  /// compilation databases will usually not provide all files in mapped sources
-  /// for performance reasons.
-  std::vector<std::pair<std::string, std::string> > MappedSources;
+  /// The output file associated with the command.
+  std::string Output;
 };
 
 /// \brief Interface for compilation databases.
@@ -182,10 +176,11 @@ public:
   /// the number of arguments before "--", if "--" was found in the argument
   /// list.
   /// \param Argv Points to the command line arguments.
+  /// \param ErrorMsg Contains error text if the function returns null pointer.
   /// \param Directory The base directory used in the FixedCompilationDatabase.
-  static FixedCompilationDatabase *loadFromCommandLine(int &Argc,
-                                                       const char *const *Argv,
-                                                       Twine Directory = ".");
+  static std::unique_ptr<FixedCompilationDatabase> loadFromCommandLine(
+      int &Argc, const char *const *Argv, std::string &ErrorMsg,
+      Twine Directory = ".");
 
   /// \brief Constructs a compilation data base from a specified directory
   /// and command line.

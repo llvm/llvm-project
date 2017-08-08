@@ -3,11 +3,11 @@
 ; This test checks if unswitched condition preserve make.implicit metadata.
 
 define i32 @test(i1 %cond) {
-; CHECK: br i1 %cond, label %..split_crit_edge, label %.loop_exit.split_crit_edge, !make.implicit !0
+; CHECK-LABEL: @test(
+; CHECK:  br i1 %cond, label %..split_crit_edge, label %.loop_exit.split_crit_edge, !make.implicit !0
   br label %loop_begin
 
 loop_begin:
-; CHECK: br i1 true, label %continue, label %loop_exit, !make.implicit !0
   br i1 %cond, label %continue, label %loop_exit, !make.implicit !0
 
 continue:

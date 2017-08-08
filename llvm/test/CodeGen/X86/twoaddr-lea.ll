@@ -44,3 +44,60 @@ entry:
   %0 = shl i64 %x, 1
   ret i64 %0
 }
+
+@global = external global i32, align 4
+@global2 = external global i64, align 8
+
+; Test that liveness is properly updated and we do not encounter the
+; assert/crash from http://llvm.org/PR28301
+; CHECK-LABEL: ham
+define void @ham() {
+bb:
+  br label %bb1
+
+bb1:
+  %tmp = phi i64 [ %tmp40, %bb9 ], [ 0, %bb ]
+  %tmp2 = phi i32 [ %tmp39, %bb9 ], [ 0, %bb ]
+  %tmp3 = icmp sgt i32 undef, 10
+  br i1 %tmp3, label %bb2, label %bb3
+
+bb2:
+  %tmp6 = load i32, i32* @global, align 4
+  %tmp8 = add nsw i32 %tmp6, %tmp2
+  %tmp9 = sext i32 %tmp8 to i64
+  br label %bb6
+
+bb3:
+; CHECK: subl %e[[REG0:[a-z0-9]+]],
+; CHECK: leaq 4({{%[a-z0-9]+}}), %r[[REG0]]
+  %tmp14 = phi i64 [ %tmp15, %bb5 ], [ 0, %bb1 ]
+  %tmp15 = add nuw i64 %tmp14, 4
+  %tmp16 = trunc i64 %tmp14 to i32
+  %tmp17 = sub i32 %tmp2, %tmp16
+  br label %bb4
+
+bb4:
+  %tmp20 = phi i64 [ %tmp14, %bb3 ], [ %tmp34, %bb5 ]
+  %tmp28 = icmp eq i32 %tmp17, 0
+  br i1 %tmp28, label %bb5, label %bb8
+
+bb5:
+  %tmp34 = add nuw nsw i64 %tmp20, 1
+  %tmp35 = icmp slt i64 %tmp34, %tmp15
+  br i1 %tmp35, label %bb4, label %bb3
+
+bb6:
+  store volatile i64 %tmp, i64* @global2, align 8
+  store volatile i64 %tmp9, i64* @global2, align 8
+  store volatile i32 %tmp6, i32* @global, align 4
+  %tmp45 = icmp slt i32 undef, undef
+  br i1 %tmp45, label %bb6, label %bb9
+
+bb8:
+  unreachable
+
+bb9:
+  %tmp39 = add nuw nsw i32 %tmp2, 4
+  %tmp40 = add nuw i64 %tmp, 4
+  br label %bb1
+}

@@ -11,11 +11,11 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DEBUGLOCENTRY_H
 
 #include "DebugLocStream.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MachineLocation.h"
+#include "llvm/Support/Debug.h"
 
 namespace llvm {
 class AsmPrinter;
@@ -72,10 +72,26 @@ public:
     const ConstantFP *getConstantFP() const { return Constant.CFP; }
     const ConstantInt *getConstantInt() const { return Constant.CIP; }
     MachineLocation getLoc() const { return Loc; }
-    bool isBitPiece() const { return getExpression()->isBitPiece(); }
+    bool isFragment() const { return getExpression()->isFragment(); }
     const DIExpression *getExpression() const { return Expression; }
     friend bool operator==(const Value &, const Value &);
     friend bool operator<(const Value &, const Value &);
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    LLVM_DUMP_METHOD void dump() const {
+      if (isLocation()) {
+        llvm::dbgs() << "Loc = { reg=" << Loc.getReg() << " ";
+        if (Loc.isIndirect())
+          llvm::dbgs() << "+0";
+        llvm::dbgs() << "} ";
+      }
+      else if (isConstantInt())
+        Constant.CIP->dump();
+      else if (isConstantFP())
+        Constant.CFP->dump();
+      if (Expression)
+        Expression->dump();
+    }
+#endif
   };
 
 private:
@@ -93,18 +109,7 @@ public:
   /// variable, merge them by appending Next's values to the current
   /// list of values.
   /// Return true if the merge was successful.
-  bool MergeValues(const DebugLocEntry &Next) {
-    if (Begin == Next.Begin) {
-      auto *Expr = cast_or_null<DIExpression>(Values[0].Expression);
-      auto *NextExpr = cast_or_null<DIExpression>(Next.Values[0].Expression);
-      if (Expr->isBitPiece() && NextExpr->isBitPiece()) {
-        addValues(Next.Values);
-        End = Next.End;
-        return true;
-      }
-    }
-    return false;
-  }
+  bool MergeValues(const DebugLocEntry &Next);
 
   /// \brief Attempt to merge this DebugLocEntry with Next and return
   /// true if the merge was successful. Entries can be merged if they
@@ -125,8 +130,8 @@ public:
   void addValues(ArrayRef<DebugLocEntry::Value> Vals) {
     Values.append(Vals.begin(), Vals.end());
     sortUniqueValues();
-    assert(std::all_of(Values.begin(), Values.end(), [](DebugLocEntry::Value V){
-          return V.isBitPiece();
+    assert(all_of(Values, [](DebugLocEntry::Value V) {
+          return V.isFragment();
         }) && "value must be a piece");
   }
 
@@ -169,11 +174,11 @@ inline bool operator==(const DebugLocEntry::Value &A,
   llvm_unreachable("unhandled EntryKind");
 }
 
-/// \brief Compare two pieces based on their offset.
+/// Compare two fragments based on their offset.
 inline bool operator<(const DebugLocEntry::Value &A,
                       const DebugLocEntry::Value &B) {
-  return A.getExpression()->getBitPieceOffset() <
-         B.getExpression()->getBitPieceOffset();
+  return A.getExpression()->getFragmentInfo()->OffsetInBits <
+         B.getExpression()->getFragmentInfo()->OffsetInBits;
 }
 
 }

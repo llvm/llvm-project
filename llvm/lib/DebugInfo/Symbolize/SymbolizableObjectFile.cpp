@@ -1,4 +1,4 @@
-//===-- SymbolizableObjectFile.cpp ----------------------------------------===//
+//===- SymbolizableObjectFile.cpp -----------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,13 +12,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolizableObjectFile.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/BinaryFormat/COFF.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/Object/COFF.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolSize.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Error.h"
+#include <algorithm>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <utility>
+#include <vector>
 
-namespace llvm {
-namespace symbolize {
-
+using namespace llvm;
 using namespace object;
+using namespace symbolize;
 
 static DILineInfoSpecifier
 getDILineInfoSpecifier(FunctionNameKind FNKind) {
@@ -71,14 +87,17 @@ SymbolizableObjectFile::SymbolizableObjectFile(ObjectFile *Obj,
     : Module(Obj), DebugInfoContext(std::move(DICtx)) {}
 
 namespace {
+
 struct OffsetNamePair {
   uint32_t Offset;
   StringRef Name;
+
   bool operator<(const OffsetNamePair &R) const {
     return Offset < R.Offset;
   }
 };
-}
+
+} // end anonymous namespace
 
 std::error_code SymbolizableObjectFile::addCoffExportSymbols(
     const COFFObjectFile *CoffObj) {
@@ -118,12 +137,15 @@ std::error_code SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
                                                   uint64_t SymbolSize,
                                                   DataExtractor *OpdExtractor,
                                                   uint64_t OpdAddress) {
-  SymbolRef::Type SymbolType = Symbol.getType();
+  Expected<SymbolRef::Type> SymbolTypeOrErr = Symbol.getType();
+  if (!SymbolTypeOrErr)
+    return errorToErrorCode(SymbolTypeOrErr.takeError());
+  SymbolRef::Type SymbolType = *SymbolTypeOrErr;
   if (SymbolType != SymbolRef::ST_Function && SymbolType != SymbolRef::ST_Data)
     return std::error_code();
-  ErrorOr<uint64_t> SymbolAddressOrErr = Symbol.getAddress();
-  if (auto EC = SymbolAddressOrErr.getError())
-    return EC;
+  Expected<uint64_t> SymbolAddressOrErr = Symbol.getAddress();
+  if (!SymbolAddressOrErr)
+    return errorToErrorCode(SymbolAddressOrErr.takeError());
   uint64_t SymbolAddress = *SymbolAddressOrErr;
   if (OpdExtractor) {
     // For big-endian PowerPC64 ELF, symbols in the .opd section refer to
@@ -137,12 +159,12 @@ std::error_code SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
         OpdExtractor->isValidOffsetForAddress(OpdOffset32))
       SymbolAddress = OpdExtractor->getAddress(&OpdOffset32);
   }
-  ErrorOr<StringRef> SymbolNameOrErr = Symbol.getName();
-  if (auto EC = SymbolNameOrErr.getError())
-    return EC;
+  Expected<StringRef> SymbolNameOrErr = Symbol.getName();
+  if (!SymbolNameOrErr)
+    return errorToErrorCode(SymbolNameOrErr.takeError());
   StringRef SymbolName = *SymbolNameOrErr;
   // Mach-O symbol table names have leading underscore, skip it.
-  if (Module->isMachO() && SymbolName.size() > 0 && SymbolName[0] == '_')
+  if (Module->isMachO() && !SymbolName.empty() && SymbolName[0] == '_')
     SymbolName = SymbolName.drop_front();
   // FIXME: If a function has alias, there are two entries in symbol table
   // with same address size. Make sure we choose the correct one.
@@ -186,6 +208,16 @@ bool SymbolizableObjectFile::getNameFromSymbolTable(SymbolRef::Type Type,
   return true;
 }
 
+bool SymbolizableObjectFile::shouldOverrideWithSymbolTable(
+    FunctionNameKind FNKind, bool UseSymbolTable) const {
+  // When DWARF is used with -gline-tables-only / -gmlt, the symbol table gives
+  // better answers for linkage names than the DIContext. Otherwise, we are
+  // probably using PEs and PDBs, and we shouldn't do the override. PE files
+  // generally only contain the names of exported symbols.
+  return FNKind == FunctionNameKind::LinkageName && UseSymbolTable &&
+         isa<DWARFContext>(DebugInfoContext.get());
+}
+
 DILineInfo SymbolizableObjectFile::symbolizeCode(uint64_t ModuleOffset,
                                                  FunctionNameKind FNKind,
                                                  bool UseSymbolTable) const {
@@ -195,7 +227,7 @@ DILineInfo SymbolizableObjectFile::symbolizeCode(uint64_t ModuleOffset,
         ModuleOffset, getDILineInfoSpecifier(FNKind));
   }
   // Override function name from symbol table if necessary.
-  if (FNKind == FunctionNameKind::LinkageName && UseSymbolTable) {
+  if (shouldOverrideWithSymbolTable(FNKind, UseSymbolTable)) {
     std::string FunctionName;
     uint64_t Start, Size;
     if (getNameFromSymbolTable(SymbolRef::ST_Function, ModuleOffset,
@@ -218,7 +250,7 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
     InlinedContext.addFrame(DILineInfo());
 
   // Override the function name in lower frame with name from symbol table.
-  if (FNKind == FunctionNameKind::LinkageName && UseSymbolTable) {
+  if (shouldOverrideWithSymbolTable(FNKind, UseSymbolTable)) {
     std::string FunctionName;
     uint64_t Start, Size;
     if (getNameFromSymbolTable(SymbolRef::ST_Function, ModuleOffset,
@@ -237,7 +269,3 @@ DIGlobal SymbolizableObjectFile::symbolizeData(uint64_t ModuleOffset) const {
                          Res.Size);
   return Res;
 }
-
-}  // namespace symbolize
-}  // namespace llvm
-

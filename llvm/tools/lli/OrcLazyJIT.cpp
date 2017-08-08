@@ -1,4 +1,4 @@
-//===------ OrcLazyJIT.cpp - Basic Orc-based JIT for lazy execution -------===//
+//===- OrcLazyJIT.cpp - Basic Orc-based JIT for lazy execution ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,76 +8,56 @@
 //===----------------------------------------------------------------------===//
 
 #include "OrcLazyJIT.h"
-#include "llvm/ExecutionEngine/Orc/OrcTargetSupport.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
+#include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <system_error>
 
 using namespace llvm;
 
 namespace {
 
-  enum class DumpKind { NoDump, DumpFuncsToStdOut, DumpModsToStdErr,
-                        DumpModsToDisk };
+enum class DumpKind {
+  NoDump,
+  DumpFuncsToStdOut,
+  DumpModsToStdOut,
+  DumpModsToDisk
+};
 
-  cl::opt<DumpKind> OrcDumpKind("orc-lazy-debug",
-                                cl::desc("Debug dumping for the orc-lazy JIT."),
-                                cl::init(DumpKind::NoDump),
-                                cl::values(
-                                  clEnumValN(DumpKind::NoDump, "no-dump",
-                                             "Don't dump anything."),
-                                  clEnumValN(DumpKind::DumpFuncsToStdOut,
-                                             "funcs-to-stdout",
-                                             "Dump function names to stdout."),
-                                  clEnumValN(DumpKind::DumpModsToStdErr,
-                                             "mods-to-stderr",
-                                             "Dump modules to stderr."),
-                                  clEnumValN(DumpKind::DumpModsToDisk,
-                                             "mods-to-disk",
-                                             "Dump modules to the current "
-                                             "working directory. (WARNING: "
-                                             "will overwrite existing files)."),
-                                  clEnumValEnd),
-                                cl::Hidden);
+} // end anonymous namespace
 
-  cl::opt<bool> OrcInlineStubs("orc-lazy-inline-stubs",
-                               cl::desc("Try to inline stubs"),
-                               cl::init(true), cl::Hidden);
-}
+static cl::opt<DumpKind> OrcDumpKind(
+    "orc-lazy-debug", cl::desc("Debug dumping for the orc-lazy JIT."),
+    cl::init(DumpKind::NoDump),
+    cl::values(clEnumValN(DumpKind::NoDump, "no-dump", "Don't dump anything."),
+               clEnumValN(DumpKind::DumpFuncsToStdOut, "funcs-to-stdout",
+                          "Dump function names to stdout."),
+               clEnumValN(DumpKind::DumpModsToStdOut, "mods-to-stdout",
+                          "Dump modules to stdout."),
+               clEnumValN(DumpKind::DumpModsToDisk, "mods-to-disk",
+                          "Dump modules to the current "
+                          "working directory. (WARNING: "
+                          "will overwrite existing files).")),
+    cl::Hidden);
 
-std::unique_ptr<OrcLazyJIT::CompileCallbackMgr>
-OrcLazyJIT::createCompileCallbackMgr(Triple T) {
-  switch (T.getArch()) {
-    default: return nullptr;
-
-    case Triple::x86_64: {
-      typedef orc::JITCompileCallbackManager<orc::OrcX86_64> CCMgrT;
-      return llvm::make_unique<CCMgrT>(0);
-    }
-  }
-}
-
-OrcLazyJIT::IndirectStubsManagerBuilder
-OrcLazyJIT::createIndirectStubsMgrBuilder(Triple T) {
-  switch (T.getArch()) {
-    default: return nullptr;
-
-    case Triple::x86_64:
-      return [](){
-        return llvm::make_unique<orc::IndirectStubsManager<orc::OrcX86_64>>();
-      };
-  }
-}
+static cl::opt<bool> OrcInlineStubs("orc-lazy-inline-stubs",
+                                    cl::desc("Try to inline stubs"),
+                                    cl::init(true), cl::Hidden);
 
 OrcLazyJIT::TransformFtor OrcLazyJIT::createDebugDumper() {
-
   switch (OrcDumpKind) {
   case DumpKind::NoDump:
-    return [](std::unique_ptr<Module> M) { return M; };
+    return [](std::shared_ptr<Module> M) { return M; };
 
   case DumpKind::DumpFuncsToStdOut:
-    return [](std::unique_ptr<Module> M) {
+    return [](std::shared_ptr<Module> M) {
       printf("[ ");
 
       for (const auto &F : *M) {
@@ -95,16 +75,16 @@ OrcLazyJIT::TransformFtor OrcLazyJIT::createDebugDumper() {
       return M;
     };
 
-  case DumpKind::DumpModsToStdErr:
-    return [](std::unique_ptr<Module> M) {
-             dbgs() << "----- Module Start -----\n" << *M
+  case DumpKind::DumpModsToStdOut:
+    return [](std::shared_ptr<Module> M) {
+             outs() << "----- Module Start -----\n" << *M
                     << "----- Module End -----\n";
 
              return M;
            };
 
   case DumpKind::DumpModsToDisk:
-    return [](std::unique_ptr<Module> M) {
+    return [](std::shared_ptr<Module> M) {
              std::error_code EC;
              raw_fd_ostream Out(M->getModuleIdentifier() + ".ll", EC,
                                 sys::fs::F_Text);
@@ -123,13 +103,13 @@ OrcLazyJIT::TransformFtor OrcLazyJIT::createDebugDumper() {
 // Defined in lli.cpp.
 CodeGenOpt::Level getOptLevel();
 
-
 template <typename PtrTy>
-static PtrTy fromTargetAddress(orc::TargetAddress Addr) {
+static PtrTy fromTargetAddress(JITTargetAddress Addr) {
   return reinterpret_cast<PtrTy>(static_cast<uintptr_t>(Addr));
 }
 
-int llvm::runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]) {
+int llvm::runOrcLazyJIT(std::vector<std::unique_ptr<Module>> Ms,
+                        const std::vector<std::string> &Args) {
   // Add the program's symbols into the JIT's search space.
   if (sys::DynamicLibrary::LoadLibraryPermanently(nullptr)) {
     errs() << "Error loading program symbols.\n";
@@ -141,8 +121,8 @@ int llvm::runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]) {
   EngineBuilder EB;
   EB.setOptLevel(getOptLevel());
   auto TM = std::unique_ptr<TargetMachine>(EB.selectTarget());
-  auto CompileCallbackMgr =
-    OrcLazyJIT::createCompileCallbackMgr(Triple(TM->getTargetTriple()));
+  Triple T(TM->getTargetTriple());
+  auto CompileCallbackMgr = orc::createLocalCompileCallbackManager(T, 0);
 
   // If we couldn't build the factory function then there must not be a callback
   // manager for this target. Bail out.
@@ -152,8 +132,7 @@ int llvm::runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]) {
     return 1;
   }
 
-  auto IndirectStubsMgrBuilder =
-    OrcLazyJIT::createIndirectStubsMgrBuilder(Triple(TM->getTargetTriple()));
+  auto IndirectStubsMgrBuilder = orc::createLocalIndirectStubsManagerBuilder(T);
 
   // If we couldn't build a stubs-manager-builder for this target then bail out.
   if (!IndirectStubsMgrBuilder) {
@@ -168,15 +147,20 @@ int llvm::runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]) {
                OrcInlineStubs);
 
   // Add the module, look up main and run it.
-  auto MainHandle = J.addModule(std::move(M));
-  auto MainSym = J.findSymbolIn(MainHandle, "main");
+  for (auto &M : Ms)
+    cantFail(J.addModule(std::shared_ptr<Module>(std::move(M))));
 
-  if (!MainSym) {
+  if (auto MainSym = J.findSymbol("main")) {
+    typedef int (*MainFnPtr)(int, const char*[]);
+    std::vector<const char *> ArgV;
+    for (auto &Arg : Args)
+      ArgV.push_back(Arg.c_str());
+    auto Main = fromTargetAddress<MainFnPtr>(cantFail(MainSym.getAddress()));
+    return Main(ArgV.size(), (const char**)ArgV.data());
+  } else if (auto Err = MainSym.takeError())
+    logAllUnhandledErrors(std::move(Err), llvm::errs(), "");
+  else
     errs() << "Could not find main function.\n";
-    return 1;
-  }
 
-  typedef int (*MainFnPtr)(int, char*[]);
-  auto Main = fromTargetAddress<MainFnPtr>(MainSym.getAddress());
-  return Main(ArgC, ArgV);
+  return 1;
 }

@@ -17,15 +17,17 @@
 #ifndef LLVM_IR_CONSTANTFOLDER_H
 #define LLVM_IR_CONSTANTFOLDER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 
 namespace llvm {
 
 /// ConstantFolder - Create constants with minimum, target independent, folding.
 class ConstantFolder {
 public:
-  explicit ConstantFolder() {}
+  explicit ConstantFolder() = default;
 
   //===--------------------------------------------------------------------===//
   // Binary Operators
@@ -35,61 +37,78 @@ public:
                       bool HasNUW = false, bool HasNSW = false) const {
     return ConstantExpr::getAdd(LHS, RHS, HasNUW, HasNSW);
   }
+
   Constant *CreateFAdd(Constant *LHS, Constant *RHS) const {
     return ConstantExpr::getFAdd(LHS, RHS);
   }
+
   Constant *CreateSub(Constant *LHS, Constant *RHS,
                       bool HasNUW = false, bool HasNSW = false) const {
     return ConstantExpr::getSub(LHS, RHS, HasNUW, HasNSW);
   }
+
   Constant *CreateFSub(Constant *LHS, Constant *RHS) const {
     return ConstantExpr::getFSub(LHS, RHS);
   }
+
   Constant *CreateMul(Constant *LHS, Constant *RHS,
                       bool HasNUW = false, bool HasNSW = false) const {
     return ConstantExpr::getMul(LHS, RHS, HasNUW, HasNSW);
   }
+
   Constant *CreateFMul(Constant *LHS, Constant *RHS) const {
     return ConstantExpr::getFMul(LHS, RHS);
   }
+
   Constant *CreateUDiv(Constant *LHS, Constant *RHS,
                        bool isExact = false) const {
     return ConstantExpr::getUDiv(LHS, RHS, isExact);
   }
+
   Constant *CreateSDiv(Constant *LHS, Constant *RHS,
                        bool isExact = false) const {
     return ConstantExpr::getSDiv(LHS, RHS, isExact);
   }
+
   Constant *CreateFDiv(Constant *LHS, Constant *RHS) const {
     return ConstantExpr::getFDiv(LHS, RHS);
   }
+
   Constant *CreateURem(Constant *LHS, Constant *RHS) const {
     return ConstantExpr::getURem(LHS, RHS);
   }
+
   Constant *CreateSRem(Constant *LHS, Constant *RHS) const {
     return ConstantExpr::getSRem(LHS, RHS);
   }
+
   Constant *CreateFRem(Constant *LHS, Constant *RHS) const {
     return ConstantExpr::getFRem(LHS, RHS);
   }
+
   Constant *CreateShl(Constant *LHS, Constant *RHS,
                       bool HasNUW = false, bool HasNSW = false) const {
     return ConstantExpr::getShl(LHS, RHS, HasNUW, HasNSW);
   }
+
   Constant *CreateLShr(Constant *LHS, Constant *RHS,
                        bool isExact = false) const {
     return ConstantExpr::getLShr(LHS, RHS, isExact);
   }
+
   Constant *CreateAShr(Constant *LHS, Constant *RHS,
                        bool isExact = false) const {
     return ConstantExpr::getAShr(LHS, RHS, isExact);
   }
+
   Constant *CreateAnd(Constant *LHS, Constant *RHS) const {
     return ConstantExpr::getAnd(LHS, RHS);
   }
+
   Constant *CreateOr(Constant *LHS, Constant *RHS) const {
     return ConstantExpr::getOr(LHS, RHS);
   }
+
   Constant *CreateXor(Constant *LHS, Constant *RHS) const {
     return ConstantExpr::getXor(LHS, RHS);
   }
@@ -107,9 +126,11 @@ public:
                       bool HasNUW = false, bool HasNSW = false) const {
     return ConstantExpr::getNeg(C, HasNUW, HasNSW);
   }
+
   Constant *CreateFNeg(Constant *C) const {
     return ConstantExpr::getFNeg(C);
   }
+
   Constant *CreateNot(Constant *C) const {
     return ConstantExpr::getNot(C);
   }
@@ -122,12 +143,14 @@ public:
                                 ArrayRef<Constant *> IdxList) const {
     return ConstantExpr::getGetElementPtr(Ty, C, IdxList);
   }
+
   Constant *CreateGetElementPtr(Type *Ty, Constant *C, Constant *Idx) const {
     // This form of the function only exists to avoid ambiguous overload
     // warnings about whether to convert Idx to ArrayRef<Constant *> or
     // ArrayRef<Value *>.
     return ConstantExpr::getGetElementPtr(Ty, C, Idx);
   }
+
   Constant *CreateGetElementPtr(Type *Ty, Constant *C,
                                 ArrayRef<Value *> IdxList) const {
     return ConstantExpr::getGetElementPtr(Ty, C, IdxList);
@@ -137,6 +160,7 @@ public:
                                         ArrayRef<Constant *> IdxList) const {
     return ConstantExpr::getInBoundsGetElementPtr(Ty, C, IdxList);
   }
+
   Constant *CreateInBoundsGetElementPtr(Type *Ty, Constant *C,
                                         Constant *Idx) const {
     // This form of the function only exists to avoid ambiguous overload
@@ -144,6 +168,7 @@ public:
     // ArrayRef<Value *>.
     return ConstantExpr::getInBoundsGetElementPtr(Ty, C, Idx);
   }
+
   Constant *CreateInBoundsGetElementPtr(Type *Ty, Constant *C,
                                         ArrayRef<Value *> IdxList) const {
     return ConstantExpr::getInBoundsGetElementPtr(Ty, C, IdxList);
@@ -157,6 +182,7 @@ public:
                        Type *DestTy) const {
     return ConstantExpr::getCast(Op, C, DestTy);
   }
+
   Constant *CreatePointerCast(Constant *C, Type *DestTy) const {
     return ConstantExpr::getPointerCast(C, DestTy);
   }
@@ -170,6 +196,7 @@ public:
                           bool isSigned) const {
     return ConstantExpr::getIntegerCast(C, DestTy, isSigned);
   }
+
   Constant *CreateFPCast(Constant *C, Type *DestTy) const {
     return ConstantExpr::getFPCast(C, DestTy);
   }
@@ -177,15 +204,19 @@ public:
   Constant *CreateBitCast(Constant *C, Type *DestTy) const {
     return CreateCast(Instruction::BitCast, C, DestTy);
   }
+
   Constant *CreateIntToPtr(Constant *C, Type *DestTy) const {
     return CreateCast(Instruction::IntToPtr, C, DestTy);
   }
+
   Constant *CreatePtrToInt(Constant *C, Type *DestTy) const {
     return CreateCast(Instruction::PtrToInt, C, DestTy);
   }
+
   Constant *CreateZExtOrBitCast(Constant *C, Type *DestTy) const {
     return ConstantExpr::getZExtOrBitCast(C, DestTy);
   }
+
   Constant *CreateSExtOrBitCast(Constant *C, Type *DestTy) const {
     return ConstantExpr::getSExtOrBitCast(C, DestTy);
   }
@@ -202,6 +233,7 @@ public:
                        Constant *RHS) const {
     return ConstantExpr::getCompare(P, LHS, RHS);
   }
+
   Constant *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                        Constant *RHS) const {
     return ConstantExpr::getCompare(P, LHS, RHS);
@@ -240,6 +272,6 @@ public:
   }
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_CONSTANTFOLDER_H

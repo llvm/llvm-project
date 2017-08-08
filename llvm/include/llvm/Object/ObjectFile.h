@@ -15,35 +15,46 @@
 #define LLVM_OBJECT_OBJECTFILE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/Magic.h"
+#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Object/Binary.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Object/SymbolicFile.h"
-#include "llvm/Support/DataTypes.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <cstring>
-#include <vector>
+#include <cassert>
+#include <cstdint>
+#include <memory>
+#include <system_error>
 
 namespace llvm {
+
+class ARMAttributeParser;
+
 namespace object {
 
-class ObjectFile;
 class COFFObjectFile;
 class MachOObjectFile;
-
+class ObjectFile;
+class SectionRef;
 class SymbolRef;
 class symbol_iterator;
-class SectionRef;
-typedef content_iterator<SectionRef> section_iterator;
+class WasmObjectFile;
+
+using section_iterator = content_iterator<SectionRef>;
 
 /// This is a value type class that represents a single relocation in the list
 /// of relocations in the object file.
 class RelocationRef {
   DataRefImpl RelocationPimpl;
-  const ObjectFile *OwningObject;
+  const ObjectFile *OwningObject = nullptr;
 
 public:
-  RelocationRef() : OwningObject(nullptr) { }
-
+  RelocationRef() = default;
   RelocationRef(DataRefImpl RelocationP, const ObjectFile *Owner);
 
   bool operator==(const RelocationRef &Other) const;
@@ -62,18 +73,19 @@ public:
   DataRefImpl getRawDataRefImpl() const;
   const ObjectFile *getObject() const;
 };
-typedef content_iterator<RelocationRef> relocation_iterator;
+
+using relocation_iterator = content_iterator<RelocationRef>;
 
 /// This is a value type class that represents a single section in the list of
 /// sections in the object file.
 class SectionRef {
   friend class SymbolRef;
+
   DataRefImpl SectionPimpl;
-  const ObjectFile *OwningObject;
+  const ObjectFile *OwningObject = nullptr;
 
 public:
-  SectionRef() : OwningObject(nullptr) { }
-
+  SectionRef() = default;
   SectionRef(DataRefImpl SectionP, const ObjectFile *Owner);
 
   bool operator==(const SectionRef &Other) const;
@@ -84,24 +96,26 @@ public:
 
   std::error_code getName(StringRef &Result) const;
   uint64_t getAddress() const;
+  uint64_t getIndex() const;
   uint64_t getSize() const;
   std::error_code getContents(StringRef &Result) const;
 
   /// @brief Get the alignment of this section as the actual value (not log 2).
   uint64_t getAlignment() const;
 
+  bool isCompressed() const;
   bool isText() const;
   bool isData() const;
   bool isBSS() const;
   bool isVirtual() const;
+  bool isBitcode() const;
 
   bool containsSymbol(SymbolRef S) const;
 
   relocation_iterator relocation_begin() const;
   relocation_iterator relocation_end() const;
   iterator_range<relocation_iterator> relocations() const {
-    return iterator_range<relocation_iterator>(relocation_begin(),
-                                               relocation_end());
+    return make_range(relocation_begin(), relocation_end());
   }
   section_iterator getRelocatedSection() const;
 
@@ -115,8 +129,6 @@ class SymbolRef : public BasicSymbolRef {
   friend class SectionRef;
 
 public:
-  SymbolRef() : BasicSymbolRef() {}
-
   enum Type {
     ST_Unknown, // Type not specified
     ST_Data,
@@ -126,15 +138,16 @@ public:
     ST_Other
   };
 
+  SymbolRef() = default;
   SymbolRef(DataRefImpl SymbolP, const ObjectFile *Owner);
   SymbolRef(const BasicSymbolRef &B) : BasicSymbolRef(B) {
     assert(isa<ObjectFile>(BasicSymbolRef::getObject()));
   }
 
-  ErrorOr<StringRef> getName() const;
+  Expected<StringRef> getName() const;
   /// Returns the symbol virtual address (i.e. address at which it will be
   /// mapped).
-  ErrorOr<uint64_t> getAddress() const;
+  Expected<uint64_t> getAddress() const;
 
   /// Return the value of the symbol depending on the object this can be an
   /// offset or a virtual address.
@@ -143,11 +156,11 @@ public:
   /// @brief Get the alignment of this symbol as the actual value (not log 2).
   uint32_t getAlignment() const;
   uint64_t getCommonSize() const;
-  SymbolRef::Type getType() const;
+  Expected<SymbolRef::Type> getType() const;
 
   /// @brief Get section this symbol is defined in reference to. Result is
   /// end_sections() if it is undefined or is an absolute symbol.
-  ErrorOr<section_iterator> getSection() const;
+  Expected<section_iterator> getSection() const;
 
   const ObjectFile *getObject() const;
 };
@@ -175,8 +188,6 @@ public:
 /// to create.
 class ObjectFile : public SymbolicFile {
   virtual void anchor();
-  ObjectFile() = delete;
-  ObjectFile(const ObjectFile &other) = delete;
 
 protected:
   ObjectFile(unsigned int Type, MemoryBufferRef Source);
@@ -194,32 +205,37 @@ protected:
   // Implementations assume that the DataRefImpl is valid and has not been
   // modified externally. It's UB otherwise.
   friend class SymbolRef;
-  virtual ErrorOr<StringRef> getSymbolName(DataRefImpl Symb) const = 0;
+
+  virtual Expected<StringRef> getSymbolName(DataRefImpl Symb) const = 0;
   std::error_code printSymbolName(raw_ostream &OS,
                                   DataRefImpl Symb) const override;
-  virtual ErrorOr<uint64_t> getSymbolAddress(DataRefImpl Symb) const = 0;
+  virtual Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const = 0;
   virtual uint64_t getSymbolValueImpl(DataRefImpl Symb) const = 0;
   virtual uint32_t getSymbolAlignment(DataRefImpl Symb) const;
   virtual uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const = 0;
-  virtual SymbolRef::Type getSymbolType(DataRefImpl Symb) const = 0;
-  virtual ErrorOr<section_iterator>
+  virtual Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const = 0;
+  virtual Expected<section_iterator>
   getSymbolSection(DataRefImpl Symb) const = 0;
 
   // Same as above for SectionRef.
   friend class SectionRef;
+
   virtual void moveSectionNext(DataRefImpl &Sec) const = 0;
   virtual std::error_code getSectionName(DataRefImpl Sec,
                                          StringRef &Res) const = 0;
   virtual uint64_t getSectionAddress(DataRefImpl Sec) const = 0;
+  virtual uint64_t getSectionIndex(DataRefImpl Sec) const = 0;
   virtual uint64_t getSectionSize(DataRefImpl Sec) const = 0;
   virtual std::error_code getSectionContents(DataRefImpl Sec,
                                              StringRef &Res) const = 0;
   virtual uint64_t getSectionAlignment(DataRefImpl Sec) const = 0;
+  virtual bool isSectionCompressed(DataRefImpl Sec) const = 0;
   virtual bool isSectionText(DataRefImpl Sec) const = 0;
   virtual bool isSectionData(DataRefImpl Sec) const = 0;
   virtual bool isSectionBSS(DataRefImpl Sec) const = 0;
   // A section is 'virtual' if its contents aren't present in the object image.
   virtual bool isSectionVirtual(DataRefImpl Sec) const = 0;
+  virtual bool isSectionBitcode(DataRefImpl Sec) const;
   virtual relocation_iterator section_rel_begin(DataRefImpl Sec) const = 0;
   virtual relocation_iterator section_rel_end(DataRefImpl Sec) const = 0;
   virtual section_iterator getRelocatedSection(DataRefImpl Sec) const;
@@ -236,12 +252,15 @@ protected:
   uint64_t getSymbolValue(DataRefImpl Symb) const;
 
 public:
+  ObjectFile() = delete;
+  ObjectFile(const ObjectFile &other) = delete;
+
   uint64_t getCommonSymbolSize(DataRefImpl Symb) const {
     assert(getSymbolFlags(Symb) & SymbolRef::SF_Common);
     return getCommonSymbolSizeImpl(Symb);
   }
 
-  typedef iterator_range<symbol_iterator> symbol_iterator_range;
+  using symbol_iterator_range = iterator_range<symbol_iterator>;
   symbol_iterator_range symbols() const {
     return symbol_iterator_range(symbol_begin(), symbol_end());
   }
@@ -249,7 +268,7 @@ public:
   virtual section_iterator section_begin() const = 0;
   virtual section_iterator section_end() const = 0;
 
-  typedef iterator_range<section_iterator> section_iterator_range;
+  using section_iterator_range = iterator_range<section_iterator>;
   section_iterator_range sections() const {
     return section_iterator_range(section_begin(), section_end());
   }
@@ -260,12 +279,22 @@ public:
 
   virtual StringRef getFileFormatName() const = 0;
   virtual /* Triple::ArchType */ unsigned getArch() const = 0;
+  virtual SubtargetFeatures getFeatures() const = 0;
+  virtual void setARMSubArch(Triple &TheTriple) const { }
 
   /// Returns platform-specific object flags, if any.
   virtual std::error_code getPlatformFlags(unsigned &Result) const {
     Result = 0;
     return object_error::invalid_file_type;
   }
+
+  virtual std::error_code
+    getBuildAttributes(ARMAttributeParser &Attributes) const {
+      return std::error_code();
+    }
+
+  /// Maps a debug section name to a standard DWARF section name.
+  virtual StringRef mapDebugSectionName(StringRef Name) const { return Name; }
 
   /// True if this is a relocatable object (.o/.obj).
   virtual bool isRelocatableObject() const = 0;
@@ -274,18 +303,17 @@ public:
   /// @param ObjectPath The path to the object file. ObjectPath.isObject must
   ///        return true.
   /// @brief Create ObjectFile from path.
-  static ErrorOr<OwningBinary<ObjectFile>>
+  static Expected<OwningBinary<ObjectFile>>
   createObjectFile(StringRef ObjectPath);
 
-  static ErrorOr<std::unique_ptr<ObjectFile>>
-  createObjectFile(MemoryBufferRef Object, sys::fs::file_magic Type);
-  static ErrorOr<std::unique_ptr<ObjectFile>>
+  static Expected<std::unique_ptr<ObjectFile>>
+  createObjectFile(MemoryBufferRef Object, llvm::file_magic Type);
+  static Expected<std::unique_ptr<ObjectFile>>
   createObjectFile(MemoryBufferRef Object) {
-    return createObjectFile(Object, sys::fs::file_magic::unknown);
+    return createObjectFile(Object, llvm::file_magic::unknown);
   }
 
-
-  static inline bool classof(const Binary *v) {
+  static bool classof(const Binary *v) {
     return v->isObject();
   }
 
@@ -295,19 +323,24 @@ public:
   static ErrorOr<std::unique_ptr<ObjectFile>>
   createELFObjectFile(MemoryBufferRef Object);
 
-  static ErrorOr<std::unique_ptr<MachOObjectFile>>
-  createMachOObjectFile(MemoryBufferRef Object);
+  static Expected<std::unique_ptr<MachOObjectFile>>
+  createMachOObjectFile(MemoryBufferRef Object,
+                        uint32_t UniversalCputype = 0,
+                        uint32_t UniversalIndex = 0);
+
+  static Expected<std::unique_ptr<WasmObjectFile>>
+  createWasmObjectFile(MemoryBufferRef Object);
 };
 
 // Inline function definitions.
 inline SymbolRef::SymbolRef(DataRefImpl SymbolP, const ObjectFile *Owner)
     : BasicSymbolRef(SymbolP, Owner) {}
 
-inline ErrorOr<StringRef> SymbolRef::getName() const {
+inline Expected<StringRef> SymbolRef::getName() const {
   return getObject()->getSymbolName(getRawDataRefImpl());
 }
 
-inline ErrorOr<uint64_t> SymbolRef::getAddress() const {
+inline Expected<uint64_t> SymbolRef::getAddress() const {
   return getObject()->getSymbolAddress(getRawDataRefImpl());
 }
 
@@ -323,11 +356,11 @@ inline uint64_t SymbolRef::getCommonSize() const {
   return getObject()->getCommonSymbolSize(getRawDataRefImpl());
 }
 
-inline ErrorOr<section_iterator> SymbolRef::getSection() const {
+inline Expected<section_iterator> SymbolRef::getSection() const {
   return getObject()->getSymbolSection(getRawDataRefImpl());
 }
 
-inline SymbolRef::Type SymbolRef::getType() const {
+inline Expected<SymbolRef::Type> SymbolRef::getType() const {
   return getObject()->getSymbolType(getRawDataRefImpl());
 }
 
@@ -335,7 +368,6 @@ inline const ObjectFile *SymbolRef::getObject() const {
   const SymbolicFile *O = BasicSymbolRef::getObject();
   return cast<ObjectFile>(O);
 }
-
 
 /// SectionRef
 inline SectionRef::SectionRef(DataRefImpl SectionP,
@@ -367,6 +399,10 @@ inline uint64_t SectionRef::getAddress() const {
   return OwningObject->getSectionAddress(SectionPimpl);
 }
 
+inline uint64_t SectionRef::getIndex() const {
+  return OwningObject->getSectionIndex(SectionPimpl);
+}
+
 inline uint64_t SectionRef::getSize() const {
   return OwningObject->getSectionSize(SectionPimpl);
 }
@@ -377,6 +413,10 @@ inline std::error_code SectionRef::getContents(StringRef &Result) const {
 
 inline uint64_t SectionRef::getAlignment() const {
   return OwningObject->getSectionAlignment(SectionPimpl);
+}
+
+inline bool SectionRef::isCompressed() const {
+  return OwningObject->isSectionCompressed(SectionPimpl);
 }
 
 inline bool SectionRef::isText() const {
@@ -393,6 +433,10 @@ inline bool SectionRef::isBSS() const {
 
 inline bool SectionRef::isVirtual() const {
   return OwningObject->isSectionVirtual(SectionPimpl);
+}
+
+inline bool SectionRef::isBitcode() const {
+  return OwningObject->isSectionBitcode(SectionPimpl);
 }
 
 inline relocation_iterator SectionRef::relocation_begin() const {
@@ -453,8 +497,8 @@ inline const ObjectFile *RelocationRef::getObject() const {
   return OwningObject;
 }
 
-
 } // end namespace object
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_OBJECT_OBJECTFILE_H

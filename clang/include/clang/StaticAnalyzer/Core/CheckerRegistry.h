@@ -127,7 +127,9 @@ public:
 
   /// Prints the name and description of all checkers in this registry.
   /// This output is not intended to be machine-parseable.
-  void printHelp(raw_ostream &out, size_t maxNameChars = 30) const ;
+  void printHelp(raw_ostream &out, size_t maxNameChars = 30) const;
+  void printList(raw_ostream &out,
+                 SmallVectorImpl<CheckerOptInfo> &opts) const;
 
 private:
   mutable CheckerInfoList Checkers;

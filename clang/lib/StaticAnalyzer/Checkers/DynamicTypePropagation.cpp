@@ -1,4 +1,4 @@
-//== DynamicTypePropagation.cpp -------------------------------- -*- C++ -*--=//
+//===- DynamicTypePropagation.cpp ------------------------------*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -83,10 +83,10 @@ class DynamicTypePropagation:
       ID.AddPointer(Sym);
     }
 
-    PathDiagnosticPiece *VisitNode(const ExplodedNode *N,
-                                   const ExplodedNode *PrevN,
-                                   BugReporterContext &BRC,
-                                   BugReport &BR) override;
+    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                   const ExplodedNode *PrevN,
+                                                   BugReporterContext &BRC,
+                                                   BugReport &BR) override;
 
   private:
     // The tracked symbol.
@@ -97,6 +97,7 @@ class DynamicTypePropagation:
                          const ObjCObjectPointerType *To, ExplodedNode *N,
                          SymbolRef Sym, CheckerContext &C,
                          const Stmt *ReportedNode = nullptr) const;
+
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
@@ -109,7 +110,7 @@ public:
   /// This value is set to true, when the Generics checker is turned on.
   DefaultBool CheckGenerics;
 };
-}
+} // end anonymous namespace
 
 void DynamicTypePropagation::checkDeadSymbols(SymbolReaper &SR,
                                               CheckerContext &C) const {
@@ -151,7 +152,6 @@ static void recordFixedType(const MemRegion *Region, const CXXMethodDecl *MD,
   ProgramStateRef State = C.getState();
   State = setDynamicTypeInfo(State, Region, Ty, /*CanBeSubclass=*/false);
   C.addTransition(State);
-  return;
 }
 
 void DynamicTypePropagation::checkPreCall(const CallEvent &Call,
@@ -387,6 +387,14 @@ static const ObjCObjectPointerType *getMostInformativeDerivedClassImpl(
     }
     return From;
   }
+
+  if (To->getObjectType()->getSuperClassType().isNull()) {
+    // If To has no super class and From and To aren't the same then
+    // To was not actually a descendent of From. In this case the best we can
+    // do is 'From'.
+    return From;
+  }
+
   const auto *SuperOfTo =
       To->getObjectType()->getSuperClassType()->getAs<ObjCObjectType>();
   assert(SuperOfTo);
@@ -444,6 +452,23 @@ storeWhenMoreInformative(ProgramStateRef &State, SymbolRef Sym,
                          const ObjCObjectPointerType *StaticLowerBound,
                          const ObjCObjectPointerType *StaticUpperBound,
                          ASTContext &C) {
+  // TODO: The above 4 cases are not exhaustive. In particular, it is possible
+  // for Current to be incomparable with StaticLowerBound, StaticUpperBound,
+  // or both.
+  //
+  // For example, suppose Foo<T> and Bar<T> are unrelated types.
+  //
+  //  Foo<T> *f = ...
+  //  Bar<T> *b = ...
+  //
+  //  id t1 = b;
+  //  f = t1;
+  //  id t2 = f; // StaticLowerBound is Foo<T>, Current is Bar<T>
+  //
+  // We should either constrain the callers of this function so that the stated
+  // preconditions hold (and assert it) or rewrite the function to expicitly
+  // handle the additional cases.
+
   // Precondition
   assert(StaticUpperBound->isSpecialized() ||
          StaticLowerBound->isSpecialized());
@@ -702,6 +727,37 @@ void DynamicTypePropagation::checkPreObjCMessage(const ObjCMethodCall &M,
   if (!Method)
     return;
 
+  // If the method is declared on a class that has a non-invariant
+  // type parameter, don't warn about parameter mismatches after performing
+  // substitution. This prevents warning when the programmer has purposely
+  // casted the receiver to a super type or unspecialized type but the analyzer
+  // has a more precise tracked type than the programmer intends at the call
+  // site.
+  //
+  // For example, consider NSArray (which has a covariant type parameter)
+  // and NSMutableArray (a subclass of NSArray where the type parameter is
+  // invariant):
+  // NSMutableArray *a = [[NSMutableArray<NSString *> alloc] init;
+  //
+  // [a containsObject:number]; // Safe: -containsObject is defined on NSArray.
+  // NSArray<NSObject *> *other = [a arrayByAddingObject:number]  // Safe
+  //
+  // [a addObject:number] // Unsafe: -addObject: is defined on NSMutableArray
+  //
+
+  const ObjCInterfaceDecl *Interface = Method->getClassInterface();
+  if (!Interface)
+    return;
+
+  ObjCTypeParamList *TypeParams = Interface->getTypeParamList();
+  if (!TypeParams)
+    return;
+
+  for (ObjCTypeParamDecl *TypeParam : *TypeParams) {
+    if (TypeParam->getVariance() != ObjCTypeParamVariance::Invariant)
+      return;
+  }
+
   Optional<ArrayRef<QualType>> TypeArgs =
       (*TrackedType)->getObjCSubstitutions(Method->getDeclContext());
   // This case might happen when there is an unspecialized override of a
@@ -772,7 +828,6 @@ void DynamicTypePropagation::checkPostObjCMessage(const ObjCMethodCall &M,
   // class. This method is provided by the runtime and available on all classes.
   if (MessageExpr->getReceiverKind() == ObjCMessageExpr::Class &&
       Sel.getAsString() == "class") {
-
     QualType ReceiverType = MessageExpr->getClassReceiver();
     const auto *ReceiverClassType = ReceiverType->getAs<ObjCObjectType>();
     QualType ReceiverClassPointerType =
@@ -868,9 +923,11 @@ void DynamicTypePropagation::reportGenericsBug(
   C.emitReport(std::move(R));
 }
 
-PathDiagnosticPiece *DynamicTypePropagation::GenericsBugVisitor::VisitNode(
-    const ExplodedNode *N, const ExplodedNode *PrevN, BugReporterContext &BRC,
-    BugReport &BR) {
+std::shared_ptr<PathDiagnosticPiece>
+DynamicTypePropagation::GenericsBugVisitor::VisitNode(const ExplodedNode *N,
+                                                      const ExplodedNode *PrevN,
+                                                      BugReporterContext &BRC,
+                                                      BugReport &BR) {
   ProgramStateRef state = N->getState();
   ProgramStateRef statePrev = PrevN->getState();
 
@@ -885,12 +942,7 @@ PathDiagnosticPiece *DynamicTypePropagation::GenericsBugVisitor::VisitNode(
     return nullptr;
 
   // Retrieve the associated statement.
-  const Stmt *S = nullptr;
-  ProgramPoint ProgLoc = N->getLocation();
-  if (Optional<StmtPoint> SP = ProgLoc.getAs<StmtPoint>()) {
-    S = SP->getStmt();
-  }
-
+  const Stmt *S = PathDiagnosticLocation::getStmt(N);
   if (!S)
     return nullptr;
 
@@ -925,7 +977,8 @@ PathDiagnosticPiece *DynamicTypePropagation::GenericsBugVisitor::VisitNode(
   // Generate the extra diagnostic.
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
                              N->getLocationContext());
-  return new PathDiagnosticEventPiece(Pos, OS.str(), true, nullptr);
+  return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true,
+                                                    nullptr);
 }
 
 /// Register checkers.

@@ -1,4 +1,4 @@
-//===---- OrcMCJITReplacement.h - Orc based MCJIT replacement ---*- C++ -*-===//
+//===- OrcMCJITReplacement.h - Orc based MCJIT replacement ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,18 +14,46 @@
 #ifndef LLVM_LIB_EXECUTIONENGINE_ORC_ORCMCJITREPLACEMENT_H
 #define LLVM_LIB_EXECUTIONENGINE_ORC_ORCMCJITREPLACEMENT_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/LazyEmittingLayer.h"
-#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/Binary.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
 namespace llvm {
+
+class ObjectCache;
+
 namespace orc {
 
 class OrcMCJITReplacement : public ExecutionEngine {
-
   // OrcMCJITReplacement needs to do a little extra book-keeping to ensure that
   // Orc's automatic finalization doesn't kick in earlier than MCJIT clients are
   // expecting - see finalizeMemory.
@@ -54,10 +82,13 @@ class OrcMCJITReplacement : public ExecutionEngine {
       return Addr;
     }
 
-    void reserveAllocationSpace(uintptr_t CodeSize, uintptr_t DataSizeRO,
-                                uintptr_t DataSizeRW) override {
-      return ClientMM->reserveAllocationSpace(CodeSize, DataSizeRO,
-                                                DataSizeRW);
+    void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
+                                uintptr_t RODataSize, uint32_t RODataAlign,
+                                uintptr_t RWDataSize,
+                                uint32_t RWDataAlign) override {
+      return ClientMM->reserveAllocationSpace(CodeSize, CodeAlign,
+                                              RODataSize, RODataAlign,
+                                              RWDataSize, RWDataAlign);
     }
 
     bool needsToReserveAllocationSpace() override {
@@ -69,9 +100,13 @@ class OrcMCJITReplacement : public ExecutionEngine {
       return ClientMM->registerEHFrames(Addr, LoadAddr, Size);
     }
 
-    void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr,
-                            size_t Size) override {
-      return ClientMM->deregisterEHFrames(Addr, LoadAddr, Size);
+    void deregisterEHFrames() override {
+      return ClientMM->deregisterEHFrames();
+    }
+
+    void notifyObjectLoaded(RuntimeDyld &RTDyld,
+                            const object::ObjectFile &O) override {
+      return ClientMM->notifyObjectLoaded(RTDyld, O);
     }
 
     void notifyObjectLoaded(ExecutionEngine *EE,
@@ -103,16 +138,17 @@ class OrcMCJITReplacement : public ExecutionEngine {
     std::shared_ptr<MCJITMemoryManager> ClientMM;
   };
 
-  class LinkingResolver : public RuntimeDyld::SymbolResolver {
+  class LinkingResolver : public JITSymbolResolver {
   public:
     LinkingResolver(OrcMCJITReplacement &M) : M(M) {}
 
-    RuntimeDyld::SymbolInfo findSymbol(const std::string &Name) override {
-      return M.findMangledSymbol(Name);
+    JITSymbol findSymbol(const std::string &Name) override {
+      return M.ClientResolver->findSymbol(Name);
     }
 
-    RuntimeDyld::SymbolInfo
-    findSymbolInLogicalDylib(const std::string &Name) override {
+    JITSymbol findSymbolInLogicalDylib(const std::string &Name) override {
+      if (auto Sym = M.findMangledSymbol(Name))
+        return Sym;
       return M.ClientResolver->findSymbolInLogicalDylib(Name);
     }
 
@@ -121,35 +157,36 @@ class OrcMCJITReplacement : public ExecutionEngine {
   };
 
 private:
-
   static ExecutionEngine *
   createOrcMCJITReplacement(std::string *ErrorMsg,
                             std::shared_ptr<MCJITMemoryManager> MemMgr,
-                            std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver,
+                            std::shared_ptr<JITSymbolResolver> Resolver,
                             std::unique_ptr<TargetMachine> TM) {
     return new OrcMCJITReplacement(std::move(MemMgr), std::move(Resolver),
                                    std::move(TM));
   }
 
 public:
+  OrcMCJITReplacement(
+      std::shared_ptr<MCJITMemoryManager> MemMgr,
+      std::shared_ptr<JITSymbolResolver> ClientResolver,
+      std::unique_ptr<TargetMachine> TM)
+      : ExecutionEngine(TM->createDataLayout()), TM(std::move(TM)),
+        MemMgr(std::make_shared<MCJITReplacementMemMgr>(*this,
+                                                        std::move(MemMgr))),
+        Resolver(std::make_shared<LinkingResolver>(*this)),
+        ClientResolver(std::move(ClientResolver)), NotifyObjectLoaded(*this),
+        NotifyFinalized(*this),
+        ObjectLayer([this]() { return this->MemMgr; }, NotifyObjectLoaded,
+                    NotifyFinalized),
+        CompileLayer(ObjectLayer, SimpleCompiler(*this->TM)),
+        LazyEmitLayer(CompileLayer) {}
+
   static void Register() {
     OrcMCJITReplacementCtor = createOrcMCJITReplacement;
   }
 
-  OrcMCJITReplacement(
-      std::shared_ptr<MCJITMemoryManager> MemMgr,
-      std::shared_ptr<RuntimeDyld::SymbolResolver> ClientResolver,
-      std::unique_ptr<TargetMachine> TM)
-      : ExecutionEngine(TM->createDataLayout()), TM(std::move(TM)),
-        MemMgr(*this, std::move(MemMgr)), Resolver(*this),
-        ClientResolver(std::move(ClientResolver)), NotifyObjectLoaded(*this),
-        NotifyFinalized(*this),
-        ObjectLayer(NotifyObjectLoaded, NotifyFinalized),
-        CompileLayer(ObjectLayer, SimpleCompiler(*this->TM)),
-        LazyEmitLayer(CompileLayer) {}
-
   void addModule(std::unique_ptr<Module> M) override {
-
     // If this module doesn't have a DataLayout attached then attach the
     // default.
     if (M->getDataLayout().isDefault()) {
@@ -157,36 +194,50 @@ public:
     } else {
       assert(M->getDataLayout() == getDataLayout() && "DataLayout Mismatch");
     }
-    Modules.push_back(std::move(M));
-    std::vector<Module *> Ms;
-    Ms.push_back(&*Modules.back());
-    LazyEmitLayer.addModuleSet(std::move(Ms), &MemMgr, &Resolver);
+    auto *MPtr = M.release();
+    ShouldDelete[MPtr] = true;
+    auto Deleter = [this](Module *Mod) {
+      auto I = ShouldDelete.find(Mod);
+      if (I != ShouldDelete.end() && I->second)
+        delete Mod;
+    };
+    LocalModules.push_back(std::shared_ptr<Module>(MPtr, std::move(Deleter)));
+    cantFail(LazyEmitLayer.addModule(LocalModules.back(), Resolver));
   }
 
   void addObjectFile(std::unique_ptr<object::ObjectFile> O) override {
-    std::vector<std::unique_ptr<object::ObjectFile>> Objs;
-    Objs.push_back(std::move(O));
-    ObjectLayer.addObjectSet(std::move(Objs), &MemMgr, &Resolver);
+    auto Obj =
+      std::make_shared<object::OwningBinary<object::ObjectFile>>(std::move(O),
+                                                                 nullptr);
+    cantFail(ObjectLayer.addObject(std::move(Obj), Resolver));
   }
 
   void addObjectFile(object::OwningBinary<object::ObjectFile> O) override {
-    std::unique_ptr<object::ObjectFile> Obj;
-    std::unique_ptr<MemoryBuffer> Buf;
-    std::tie(Obj, Buf) = O.takeBinary();
-    std::vector<std::unique_ptr<object::ObjectFile>> Objs;
-    Objs.push_back(std::move(Obj));
-    ObjectLayer.addObjectSet(std::move(Objs), &MemMgr, &Resolver);
+    auto Obj =
+      std::make_shared<object::OwningBinary<object::ObjectFile>>(std::move(O));
+    cantFail(ObjectLayer.addObject(std::move(Obj), Resolver));
   }
 
   void addArchive(object::OwningBinary<object::Archive> A) override {
     Archives.push_back(std::move(A));
   }
-
-  uint64_t getSymbolAddress(StringRef Name) {
-    return findSymbol(Name).getAddress();
+  
+  bool removeModule(Module *M) override {
+    for (auto I = LocalModules.begin(), E = LocalModules.end(); I != E; ++I) {
+      if (I->get() == M) {
+	ShouldDelete[M] = false;
+	LocalModules.erase(I);
+	return true;
+      }
+    }
+    return false;
   }
 
-  RuntimeDyld::SymbolInfo findSymbol(StringRef Name) {
+  uint64_t getSymbolAddress(StringRef Name) {
+    return cantFail(findSymbol(Name).getAddress());
+  }
+
+  JITSymbol findSymbol(StringRef Name) {
     return findMangledSymbol(Mangle(Name));
   }
 
@@ -227,22 +278,23 @@ public:
                            ArrayRef<GenericValue> ArgValues) override;
 
   void setObjectCache(ObjectCache *NewCache) override {
-    CompileLayer.setObjectCache(NewCache);
+    CompileLayer.getCompiler().setObjectCache(NewCache);
   }
 
   void setProcessAllSections(bool ProcessAllSections) override {
     ObjectLayer.setProcessAllSections(ProcessAllSections);
   }
 
-private:
+  void runStaticConstructorsDestructors(bool isDtors) override;
 
-  RuntimeDyld::SymbolInfo findMangledSymbol(StringRef Name) {
+private:
+  JITSymbol findMangledSymbol(StringRef Name) {
     if (auto Sym = LazyEmitLayer.findSymbol(Name, false))
-      return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+      return Sym;
     if (auto Sym = ClientResolver->findSymbol(Name))
-      return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+      return Sym;
     if (auto Sym = scanArchives(Name))
-      return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+      return Sym;
 
     return nullptr;
   }
@@ -251,21 +303,27 @@ private:
     for (object::OwningBinary<object::Archive> &OB : Archives) {
       object::Archive *A = OB.getBinary();
       // Look for our symbols in each Archive
-      object::Archive::child_iterator ChildIt = A->findSym(Name);
-      if (std::error_code EC = ChildIt->getError())
-        report_fatal_error(EC.message());
-      if (ChildIt != A->child_end()) {
+      auto OptionalChildOrErr = A->findSym(Name);
+      if (!OptionalChildOrErr)
+        report_fatal_error(OptionalChildOrErr.takeError());
+      auto &OptionalChild = *OptionalChildOrErr;
+      if (OptionalChild) {
         // FIXME: Support nested archives?
-        ErrorOr<std::unique_ptr<object::Binary>> ChildBinOrErr =
-            (*ChildIt)->getAsBinary();
-        if (ChildBinOrErr.getError())
+        Expected<std::unique_ptr<object::Binary>> ChildBinOrErr =
+            OptionalChild->getAsBinary();
+        if (!ChildBinOrErr) {
+          // TODO: Actually report errors helpfully.
+          consumeError(ChildBinOrErr.takeError());
           continue;
+        }
         std::unique_ptr<object::Binary> &ChildBin = ChildBinOrErr.get();
         if (ChildBin->isObject()) {
-          std::vector<std::unique_ptr<object::ObjectFile>> ObjSet;
-          ObjSet.push_back(std::unique_ptr<object::ObjectFile>(
-              static_cast<object::ObjectFile *>(ChildBin.release())));
-          ObjectLayer.addObjectSet(std::move(ObjSet), &MemMgr, &Resolver);
+          std::unique_ptr<object::ObjectFile> ChildObj(
+            static_cast<object::ObjectFile*>(ChildBinOrErr->release()));
+          auto Obj =
+            std::make_shared<object::OwningBinary<object::ObjectFile>>(
+              std::move(ChildObj), nullptr);
+          cantFail(ObjectLayer.addObject(std::move(Obj), Resolver));
           if (auto Sym = ObjectLayer.findSymbol(Name, true))
             return Sym;
         }
@@ -276,23 +334,18 @@ private:
 
   class NotifyObjectLoadedT {
   public:
-    typedef std::vector<std::unique_ptr<object::ObjectFile>> ObjListT;
-    typedef std::vector<std::unique_ptr<RuntimeDyld::LoadedObjectInfo>>
-        LoadedObjInfoListT;
+    using LoadedObjInfoListT =
+        std::vector<std::unique_ptr<RuntimeDyld::LoadedObjectInfo>>;
 
     NotifyObjectLoadedT(OrcMCJITReplacement &M) : M(M) {}
 
-    void operator()(ObjectLinkingLayerBase::ObjSetHandleT H,
-                    const ObjListT &Objects,
-                    const LoadedObjInfoListT &Infos) const {
+    void operator()(RTDyldObjectLinkingLayerBase::ObjHandleT H,
+                    const RTDyldObjectLinkingLayer::ObjectPtr &Obj,
+                    const LoadedObjectInfo &Info) const {
       M.UnfinalizedSections[H] = std::move(M.SectionsAllocatedSinceLastLoad);
       M.SectionsAllocatedSinceLastLoad = SectionAddrSet();
-      assert(Objects.size() == Infos.size() &&
-             "Incorrect number of Infos for Objects.");
-      for (unsigned I = 0; I < Objects.size(); ++I)
-        M.MemMgr.notifyObjectLoaded(&M, *Objects[I]);
+      M.MemMgr->notifyObjectLoaded(&M, *Obj->getBinary());
     }
-
   private:
     OrcMCJITReplacement &M;
   };
@@ -300,7 +353,8 @@ private:
   class NotifyFinalizedT {
   public:
     NotifyFinalizedT(OrcMCJITReplacement &M) : M(M) {}
-    void operator()(ObjectLinkingLayerBase::ObjSetHandleT H) {
+
+    void operator()(RTDyldObjectLinkingLayerBase::ObjHandleT H) {
       M.UnfinalizedSections.erase(H);
     }
 
@@ -317,14 +371,14 @@ private:
     return MangledName;
   }
 
-  typedef ObjectLinkingLayer<NotifyObjectLoadedT> ObjectLayerT;
-  typedef IRCompileLayer<ObjectLayerT> CompileLayerT;
-  typedef LazyEmittingLayer<CompileLayerT> LazyEmitLayerT;
+  using ObjectLayerT = RTDyldObjectLinkingLayer;
+  using CompileLayerT = IRCompileLayer<ObjectLayerT, orc::SimpleCompiler>;
+  using LazyEmitLayerT = LazyEmittingLayer<CompileLayerT>;
 
   std::unique_ptr<TargetMachine> TM;
-  MCJITReplacementMemMgr MemMgr;
-  LinkingResolver Resolver;
-  std::shared_ptr<RuntimeDyld::SymbolResolver> ClientResolver;
+  std::shared_ptr<MCJITReplacementMemMgr> MemMgr;
+  std::shared_ptr<LinkingResolver> Resolver;
+  std::shared_ptr<JITSymbolResolver> ClientResolver;
   Mangler Mang;
 
   NotifyObjectLoadedT NotifyObjectLoaded;
@@ -337,21 +391,24 @@ private:
   // We need to store ObjLayerT::ObjSetHandles for each of the object sets
   // that have been emitted but not yet finalized so that we can forward the
   // mapSectionAddress calls appropriately.
-  typedef std::set<const void *> SectionAddrSet;
-  struct ObjSetHandleCompare {
-    bool operator()(ObjectLayerT::ObjSetHandleT H1,
-                    ObjectLayerT::ObjSetHandleT H2) const {
+  using SectionAddrSet = std::set<const void *>;
+  struct ObjHandleCompare {
+    bool operator()(ObjectLayerT::ObjHandleT H1,
+                    ObjectLayerT::ObjHandleT H2) const {
       return &*H1 < &*H2;
     }
   };
   SectionAddrSet SectionsAllocatedSinceLastLoad;
-  std::map<ObjectLayerT::ObjSetHandleT, SectionAddrSet, ObjSetHandleCompare>
+  std::map<ObjectLayerT::ObjHandleT, SectionAddrSet, ObjHandleCompare>
       UnfinalizedSections;
 
+  std::map<Module*, bool> ShouldDelete;
+  std::vector<std::shared_ptr<Module>> LocalModules;
   std::vector<object::OwningBinary<object::Archive>> Archives;
 };
 
-} // End namespace orc.
-} // End namespace llvm.
+} // end namespace orc
+
+} // end namespace llvm
 
 #endif // LLVM_LIB_EXECUTIONENGINE_ORC_MCJITREPLACEMENT_H

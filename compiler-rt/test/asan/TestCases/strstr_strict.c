@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
   s2[size - 1]='\0';
   char* r = strstr(s1, s2);
   // CHECK: {{.*ERROR: AddressSanitizer: heap-buffer-overflow on address}}
-  // CHECK: READ of size 101
+  // CHECK: READ of size {{101|100}}
   assert(r == s1);
   free(s1);
   free(s2);

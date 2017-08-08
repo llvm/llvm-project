@@ -667,19 +667,14 @@ define void @test_atomic_load_min_i64(i64 %offset) nounwind {
 ; CHECK: ldaexd [[OLD1:r[0-9]+|lr]], [[OLD2:r[0-9]+|lr]], [r[[ADDR]]]
   ; r0, r1 below is a reasonable guess but could change: it certainly comes into the
   ; function there.
-; CHECK-ARM: mov [[LOCARRY:r[0-9]+|lr]], #0
-; CHECK-ARM: mov [[HICARRY:r[0-9]+|lr]], #0
-; CHECK-ARM-LE: cmp [[OLD1]], r0
-; CHECK-ARM-LE: movwls [[LOCARRY]], #1
-; CHECK-ARM-LE: cmp [[OLD2]], r1
-; CHECK-ARM-LE: movwle [[HICARRY]], #1
-; CHECK-ARM-BE: cmp [[OLD2]], r1
-; CHECK-ARM-BE: movwls [[LOCARRY]], #1
-; CHECK-ARM-BE: cmp [[OLD1]], r0
-; CHECK-ARM-BE: movwle [[HICARRY]], #1
-; CHECK-ARM: moveq [[HICARRY]], [[LOCARRY]]
-; CHECK-ARM: cmp [[HICARRY]], #0
 ; CHECK-ARM: mov [[MINHI:r[0-9]+]], r1
+; CHECK-ARM-LE: subs {{[^,]+}}, r0, [[OLD1]]
+; CHECK-ARM-LE: sbcs {{[^,]+}}, r1, [[OLD2]]
+; CHECK-ARM-BE: subs {{[^,]+}}, r1, [[OLD2]]
+; CHECK-ARM-BE: sbcs {{[^,]+}}, r0, [[OLD1]]
+; CHECK-ARM: mov [[CMP:r[0-9]+|lr]], #0
+; CHECK-ARM: movwge [[CMP:r[0-9]+|lr]], #1
+; CHECK-ARM: cmp [[CMP:r[0-9]+|lr]], #0
 ; CHECK-ARM: movne [[MINHI]], [[OLD2]]
 ; CHECK-ARM: mov [[MINLO:r[0-9]+]], r0
 ; CHECK-ARM: movne [[MINLO]], [[OLD1]]
@@ -785,19 +780,14 @@ define void @test_atomic_load_max_i64(i64 %offset) nounwind {
 ; CHECK: ldrexd [[OLD1:r[0-9]+]], [[OLD2:r[0-9]+|lr]], [r[[ADDR]]]
   ; r0, r1 below is a reasonable guess but could change: it certainly comes into the
   ; function there.
-; CHECK-ARM: mov [[LOCARRY:r[0-9]+|lr]], #0
-; CHECK-ARM: mov [[HICARRY:r[0-9]+|lr]], #0
-; CHECK-ARM-LE: cmp [[OLD1]], r0
-; CHECK-ARM-LE: movwhi [[LOCARRY]], #1
-; CHECK-ARM-LE: cmp [[OLD2]], r1
-; CHECK-ARM-LE: movwgt [[HICARRY]], #1
-; CHECK-ARM-BE: cmp [[OLD2]], r1
-; CHECK-ARM-BE: movwhi [[LOCARRY]], #1
-; CHECK-ARM-BE: cmp [[OLD1]], r0
-; CHECK-ARM-BE: movwgt [[HICARRY]], #1
-; CHECK-ARM: moveq [[HICARRY]], [[LOCARRY]]
-; CHECK-ARM: cmp [[HICARRY]], #0
 ; CHECK-ARM: mov [[MINHI:r[0-9]+]], r1
+; CHECK-ARM-LE: subs {{[^,]+}}, r0, [[OLD1]]
+; CHECK-ARM-LE: sbcs {{[^,]+}}, r1, [[OLD2]]
+; CHECK-ARM-BE: subs {{[^,]+}}, r1, [[OLD2]]
+; CHECK-ARM-BE: sbcs {{[^,]+}}, r0, [[OLD1]]
+; CHECK-ARM: mov [[CMP:r[0-9]+|lr]], #0
+; CHECK-ARM: movwlt [[CMP:r[0-9]+|lr]], #1
+; CHECK-ARM: cmp [[CMP:r[0-9]+|lr]], #0
 ; CHECK-ARM: movne [[MINHI]], [[OLD2]]
 ; CHECK-ARM: mov [[MINLO:r[0-9]+]], r0
 ; CHECK-ARM: movne [[MINLO]], [[OLD1]]
@@ -903,19 +893,14 @@ define void @test_atomic_load_umin_i64(i64 %offset) nounwind {
 ; CHECK: ldaexd [[OLD1:r[0-9]+|lr]], [[OLD2:r[0-9]+|lr]], [r[[ADDR]]]
   ; r0, r1 below is a reasonable guess but could change: it certainly comes into the
   ; function there.
-; CHECK-ARM: mov [[LOCARRY:r[0-9]+|lr]], #0
-; CHECK-ARM: mov [[HICARRY:r[0-9]+|lr]], #0
-; CHECK-ARM-LE: cmp [[OLD1]], r0
-; CHECK-ARM-LE: movwls [[LOCARRY]], #1
-; CHECK-ARM-LE: cmp [[OLD2]], r1
-; CHECK-ARM-LE: movwls [[HICARRY]], #1
-; CHECK-ARM-BE: cmp [[OLD2]], r1
-; CHECK-ARM-BE: movwls [[LOCARRY]], #1
-; CHECK-ARM-BE: cmp [[OLD1]], r0
-; CHECK-ARM-BE: movwls [[HICARRY]], #1
-; CHECK-ARM: moveq [[HICARRY]], [[LOCARRY]]
-; CHECK-ARM: cmp [[HICARRY]], #0
 ; CHECK-ARM: mov [[MINHI:r[0-9]+]], r1
+; CHECK-ARM-LE: subs {{[^,]+}}, r0, [[OLD1]]
+; CHECK-ARM-LE: sbcs {{[^,]+}}, r1, [[OLD2]]
+; CHECK-ARM-BE: subs {{[^,]+}}, r1, [[OLD2]]
+; CHECK-ARM-BE: sbcs {{[^,]+}}, r0, [[OLD1]]
+; CHECK-ARM: mov [[CMP:r[0-9]+|lr]], #0
+; CHECK-ARM: movwhs [[CMP:r[0-9]+|lr]], #1
+; CHECK-ARM: cmp [[CMP:r[0-9]+|lr]], #0
 ; CHECK-ARM: movne [[MINHI]], [[OLD2]]
 ; CHECK-ARM: mov [[MINLO:r[0-9]+]], r0
 ; CHECK-ARM: movne [[MINLO]], [[OLD1]]
@@ -1021,19 +1006,14 @@ define void @test_atomic_load_umax_i64(i64 %offset) nounwind {
 ; CHECK: ldaexd [[OLD1:r[0-9]+|lr]], [[OLD2:r[0-9]+|lr]], [r[[ADDR]]]
   ; r0, r1 below is a reasonable guess but could change: it certainly comes into the
   ; function there.
-; CHECK-ARM: mov [[LOCARRY:r[0-9]+|lr]], #0
-; CHECK-ARM: mov [[HICARRY:r[0-9]+|lr]], #0
-; CHECK-ARM-LE: cmp [[OLD1]], r0
-; CHECK-ARM-LE: movwhi [[LOCARRY]], #1
-; CHECK-ARM-LE: cmp [[OLD2]], r1
-; CHECK-ARM-LE: movwhi [[HICARRY]], #1
-; CHECK-ARM-BE: cmp [[OLD2]], r1
-; CHECK-ARM-BE: movwhi [[LOCARRY]], #1
-; CHECK-ARM-BE: cmp [[OLD1]], r0
-; CHECK-ARM-BE: movwhi [[HICARRY]], #1
-; CHECK-ARM: moveq [[HICARRY]], [[LOCARRY]]
-; CHECK-ARM: cmp [[HICARRY]], #0
 ; CHECK-ARM: mov [[MINHI:r[0-9]+]], r1
+; CHECK-ARM-LE: subs {{[^,]+}}, r0, [[OLD1]]
+; CHECK-ARM-LE: sbcs {{[^,]+}}, r1, [[OLD2]]
+; CHECK-ARM-BE: subs {{[^,]+}}, r1, [[OLD2]]
+; CHECK-ARM-BE: sbcs {{[^,]+}}, r0, [[OLD1]]
+; CHECK-ARM: mov [[CMP:r[0-9]+|lr]], #0
+; CHECK-ARM: movwlo [[CMP:r[0-9]+|lr]], #1
+; CHECK-ARM: cmp [[CMP:r[0-9]+|lr]], #0
 ; CHECK-ARM: movne [[MINHI]], [[OLD2]]
 ; CHECK-ARM: mov [[MINLO:r[0-9]+]], r0
 ; CHECK-ARM: movne [[MINLO]], [[OLD1]]
@@ -1065,20 +1045,21 @@ define i8 @test_atomic_cmpxchg_i8(i8 zeroext %wanted, i8 zeroext %new) nounwind 
   ;  function there.
 ; CHECK-ARM-NEXT:   cmp r[[OLD]], r0
 ; CHECK-THUMB-NEXT: cmp r[[OLD]], r[[WANTED]]
-; CHECK-NEXT: bne .LBB{{[0-9]+}}_3
+; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
 ; CHECK-NEXT: BB#2:
   ; As above, r1 is a reasonable guess.
 ; CHECK: strexb [[STATUS:r[0-9]+]], r1, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
-; CHECK-NEXT: b .LBB{{[0-9]+}}_4
-; CHECK-NEXT: .LBB{{[0-9]+}}_3:
-; CHECK-NEXT: clrex
+; CHECK-ARM: mov r0, r[[OLD]]
+; CHECK: bx lr
 ; CHECK-NEXT: .LBB{{[0-9]+}}_4:
+; CHECK-NEXT: clrex
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 
 ; CHECK-ARM: mov r0, r[[OLD]]
+; CHECK-ARM-NEXT: bx lr
    ret i8 %old
 }
 
@@ -1098,20 +1079,21 @@ define i16 @test_atomic_cmpxchg_i16(i16 zeroext %wanted, i16 zeroext %new) nounw
   ;  function there.
 ; CHECK-ARM-NEXT:   cmp r[[OLD]], r0
 ; CHECK-THUMB-NEXT: cmp r[[OLD]], r[[WANTED]]
-; CHECK-NEXT: bne .LBB{{[0-9]+}}_3
+; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
 ; CHECK-NEXT: BB#2:
   ; As above, r1 is a reasonable guess.
 ; CHECK: stlexh [[STATUS:r[0-9]+]], r1, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
-; CHECK-NEXT: b .LBB{{[0-9]+}}_4
-; CHECK-NEXT: .LBB{{[0-9]+}}_3:
-; CHECK-NEXT: clrex
+; CHECK-ARM: mov r0, r[[OLD]]
+; CHECK: bx lr
 ; CHECK-NEXT: .LBB{{[0-9]+}}_4:
+; CHECK-NEXT: clrex
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 
 ; CHECK-ARM: mov r0, r[[OLD]]
+; CHECK-ARM-NEXT: bx lr
    ret i16 %old
 }
 
@@ -1130,20 +1112,21 @@ define void @test_atomic_cmpxchg_i32(i32 %wanted, i32 %new) nounwind {
   ; r0 below is a reasonable guess but could change: it certainly comes into the
   ;  function there.
 ; CHECK-NEXT: cmp r[[OLD]], r0
-; CHECK-NEXT: bne .LBB{{[0-9]+}}_3
+; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
 ; CHECK-NEXT: BB#2:
   ; As above, r1 is a reasonable guess.
 ; CHECK: stlex [[STATUS:r[0-9]+]], r1, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
-; CHECK-NEXT: b .LBB{{[0-9]+}}_4
-; CHECK-NEXT: .LBB{{[0-9]+}}_3:
-; CHECK-NEXT: clrex
+; CHECK: str{{(.w)?}} r[[OLD]],
+; CHECK-NEXT: bx lr
 ; CHECK-NEXT: .LBB{{[0-9]+}}_4:
+; CHECK-NEXT: clrex
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 
 ; CHECK: str{{(.w)?}} r[[OLD]],
+; CHECK-ARM-NEXT: bx lr
    ret void
 }
 
@@ -1168,16 +1151,16 @@ define void @test_atomic_cmpxchg_i64(i64 %wanted, i64 %new) nounwind {
 ; CHECK-BE-DAG: eor{{(\.w)?}} [[MISMATCH_LO:r[0-9]+|lr]], [[OLD1]], r0
 ; CHECK-ARM-BE: orrs{{(\.w)?}} {{r[0-9]+}}, [[MISMATCH_HI]], [[MISMATCH_LO]]
 ; CHECK-THUMB-BE: orrs{{(\.w)?}} {{(r[0-9]+, )?}}[[MISMATCH_LO]], [[MISMATCH_HI]]
-; CHECK-NEXT: bne .LBB{{[0-9]+}}_3
+; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
 ; CHECK-NEXT: BB#2:
   ; As above, r2, r3 is a reasonable guess.
 ; CHECK: strexd [[STATUS:r[0-9]+]], r2, r3, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
-; CHECK-NEXT: b .LBB{{[0-9]+}}_4
-; CHECK-NEXT: .LBB{{[0-9]+}}_3:
-; CHECK-NEXT: clrex
+; CHECK: strd [[OLD1]], [[OLD2]], [r[[ADDR]]]
+; CHECK-NEXT: pop
 ; CHECK-NEXT: .LBB{{[0-9]+}}_4:
+; CHECK-NEXT: clrex
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 

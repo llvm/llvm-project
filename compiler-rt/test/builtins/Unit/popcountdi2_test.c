@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- popcountdi2_test.c - Test __popcountdi2 ----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

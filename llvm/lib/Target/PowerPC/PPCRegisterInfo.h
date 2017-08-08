@@ -75,6 +75,7 @@ public:
 
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
+  const MCPhysReg *getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID CC) const override;
   const uint32_t *getNoPreservedMask() const override;
@@ -82,6 +83,7 @@ public:
   void adjustStackMapLiveOutMask(uint32_t *Mask) const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+  bool isCallerPreservedPhysReg(unsigned PhysReg, const MachineFunction &MF) const override;
 
   /// We require the register scavenger.
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
@@ -101,6 +103,7 @@ public:
   }
 
   void lowerDynamicAlloc(MachineBasicBlock::iterator II) const;
+  void lowerDynamicAreaOffset(MachineBasicBlock::iterator II) const;
   void lowerCRSpilling(MachineBasicBlock::iterator II,
                        unsigned FrameIndex) const;
   void lowerCRRestore(MachineBasicBlock::iterator II,

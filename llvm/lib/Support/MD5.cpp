@@ -37,10 +37,14 @@
  * compile-time configuration.
  */
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
+#include <cstdint>
 #include <cstring>
 
 // The basic MD5 functions.
@@ -68,7 +72,7 @@
        ((MD5_u32plus) ptr[(n) * 4 + 3] << 24))
 #define GET(n) (block[(n)])
 
-namespace llvm {
+using namespace llvm;
 
 /// \brief This processes one or more 64-byte data blocks, but does NOT update
 ///the bit counters.  There are no alignment requirements.
@@ -179,9 +183,7 @@ const uint8_t *MD5::body(ArrayRef<uint8_t> Data) {
   return ptr;
 }
 
-MD5::MD5()
-    : a(0x67452301), b(0xefcdab89), c(0x98badcfe), d(0x10325476), hi(0), lo(0) {
-}
+MD5::MD5() = default;
 
 /// Incrementally add the bytes in \p Data to the hash.
 void MD5::update(ArrayRef<uint8_t> Data) {
@@ -248,39 +250,34 @@ void MD5::final(MD5Result &Result) {
   memset(&buffer[used], 0, free - 8);
 
   lo <<= 3;
-  buffer[56] = lo;
-  buffer[57] = lo >> 8;
-  buffer[58] = lo >> 16;
-  buffer[59] = lo >> 24;
-  buffer[60] = hi;
-  buffer[61] = hi >> 8;
-  buffer[62] = hi >> 16;
-  buffer[63] = hi >> 24;
+  support::endian::write32le(&buffer[56], lo);
+  support::endian::write32le(&buffer[60], hi);
 
   body(makeArrayRef(buffer, 64));
 
-  Result[0] = a;
-  Result[1] = a >> 8;
-  Result[2] = a >> 16;
-  Result[3] = a >> 24;
-  Result[4] = b;
-  Result[5] = b >> 8;
-  Result[6] = b >> 16;
-  Result[7] = b >> 24;
-  Result[8] = c;
-  Result[9] = c >> 8;
-  Result[10] = c >> 16;
-  Result[11] = c >> 24;
-  Result[12] = d;
-  Result[13] = d >> 8;
-  Result[14] = d >> 16;
-  Result[15] = d >> 24;
+  support::endian::write32le(&Result[0], a);
+  support::endian::write32le(&Result[4], b);
+  support::endian::write32le(&Result[8], c);
+  support::endian::write32le(&Result[12], d);
+}
+
+SmallString<32> MD5::MD5Result::digest() const {
+  SmallString<32> Str;
+  raw_svector_ostream Res(Str);
+  for (int i = 0; i < 16; ++i)
+    Res << format("%.2x", Bytes[i]);
+  return Str;
 }
 
 void MD5::stringifyResult(MD5Result &Result, SmallString<32> &Str) {
-  raw_svector_ostream Res(Str);
-  for (int i = 0; i < 16; ++i)
-    Res << format("%.2x", Result[i]);
+  Str = Result.digest();
 }
 
+std::array<uint8_t, 16> MD5::hash(ArrayRef<uint8_t> Data) {
+  MD5 Hash;
+  Hash.update(Data);
+  MD5::MD5Result Res;
+  Hash.final(Res);
+
+  return Res;
 }

@@ -1,4 +1,4 @@
-// RUN: %clang --analyze -Xanalyzer -analyzer-checker=osx.cocoa.IncompatibleMethodTypes,osx.coreFoundation.CFRetainRelease -Xclang -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core.DivideZero,core.DynamicTypePropagation,osx.cocoa.IncompatibleMethodTypes -w -verify %s
 
 #include "InlineObjCInstanceMethod.h"
 

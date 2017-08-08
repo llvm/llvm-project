@@ -91,3 +91,28 @@ define i64 @f8(i64 %a, i64 %b) {
   %or = or i64 %anda, %shrb
   ret i64 %or
 }
+
+; Check that we can get the case where a 64-bit shift feeds a 32-bit or of
+; ands with complement masks.
+define signext i32 @f9(i64 %x, i32 signext %y) {
+; CHECK-LABEL: f9:
+; CHECK: risbg [[REG:%r[0-5]]], %r2, 48, 63, 16
+; CHECK: lgfr %r2, [[REG]]
+  %shr6 = lshr i64 %x, 48
+  %conv = trunc i64 %shr6 to i32
+  %and1 = and i32 %y, -65536
+  %or = or i32 %conv, %and1
+  ret i32 %or
+}
+
+; Check that we don't get the case where a 64-bit shift feeds a 32-bit or of
+; ands with incompatible masks.
+define signext i32 @f10(i64 %x, i32 signext %y) {
+; CHECK-LABEL: f10:
+; CHECK: nilf %r3, 4278190080
+  %shr6 = lshr i64 %x, 48
+  %conv = trunc i64 %shr6 to i32
+  %and1 = and i32 %y, -16777216
+  %or = or i32 %conv, %and1
+  ret i32 %or
+}

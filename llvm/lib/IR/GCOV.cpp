@@ -17,11 +17,11 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryObject.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <system_error>
+
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -103,11 +103,17 @@ bool GCOVFile::readGCDA(GCOVBuffer &Buffer) {
   return true;
 }
 
-/// dump - Dump GCOVFile content to dbgs() for debugging purposes.
-void GCOVFile::dump() const {
+void GCOVFile::print(raw_ostream &OS) const {
   for (const auto &FPtr : Functions)
-    FPtr->dump();
+    FPtr->print(OS);
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+/// dump - Dump GCOVFile content to dbgs() for debugging purposes.
+LLVM_DUMP_METHOD void GCOVFile::dump() const {
+  print(dbgs());
+}
+#endif
 
 /// collectLineCounts - Collect line counts. This must be used after
 /// reading .gcno and .gcda files.
@@ -247,9 +253,11 @@ bool GCOVFunction::readGCNO(GCOVBuffer &Buff, GCOV::GCOVVersion Version) {
 /// readGCDA - Read a function from the GCDA buffer. Return false if an error
 /// occurs.
 bool GCOVFunction::readGCDA(GCOVBuffer &Buff, GCOV::GCOVVersion Version) {
-  uint32_t Dummy;
-  if (!Buff.readInt(Dummy))
+  uint32_t HeaderLength;
+  if (!Buff.readInt(HeaderLength))
     return false; // Function header length
+
+  uint64_t EndPos = Buff.getCursor() + HeaderLength * sizeof(uint32_t);
 
   uint32_t GCDAIdent;
   if (!Buff.readInt(GCDAIdent))
@@ -280,13 +288,15 @@ bool GCOVFunction::readGCDA(GCOVBuffer &Buff, GCOV::GCOVVersion Version) {
     }
   }
 
-  StringRef GCDAName;
-  if (!Buff.readString(GCDAName))
-    return false;
-  if (Name != GCDAName) {
-    errs() << "Function names do not match: " << Name << " != " << GCDAName
-           << ".\n";
-    return false;
+  if (Buff.getCursor() < EndPos) {
+    StringRef GCDAName;
+    if (!Buff.readString(GCDAName))
+      return false;
+    if (Name != GCDAName) {
+      errs() << "Function names do not match: " << Name << " != " << GCDAName
+             << ".\n";
+      return false;
+    }
   }
 
   if (!Buff.readArcTag()) {
@@ -339,13 +349,19 @@ uint64_t GCOVFunction::getExitCount() const {
   return Blocks.back()->getCount();
 }
 
-/// dump - Dump GCOVFunction content to dbgs() for debugging purposes.
-void GCOVFunction::dump() const {
-  dbgs() << "===== " << Name << " (" << Ident << ") @ " << Filename << ":"
-         << LineNumber << "\n";
+void GCOVFunction::print(raw_ostream &OS) const {
+  OS << "===== " << Name << " (" << Ident << ") @ " << Filename << ":"
+     << LineNumber << "\n";
   for (const auto &Block : Blocks)
-    Block->dump();
+    Block->print(OS);
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+/// dump - Dump GCOVFunction content to dbgs() for debugging purposes.
+LLVM_DUMP_METHOD void GCOVFunction::dump() const {
+  print(dbgs());
+}
+#endif
 
 /// collectLineCounts - Collect line counts. This must be used after
 /// reading .gcno and .gcda files.
@@ -396,28 +412,34 @@ void GCOVBlock::collectLineCounts(FileInfo &FI) {
     FI.addBlockLine(Parent.getFilename(), N, this);
 }
 
-/// dump - Dump GCOVBlock content to dbgs() for debugging purposes.
-void GCOVBlock::dump() const {
-  dbgs() << "Block : " << Number << " Counter : " << Counter << "\n";
+void GCOVBlock::print(raw_ostream &OS) const {
+  OS << "Block : " << Number << " Counter : " << Counter << "\n";
   if (!SrcEdges.empty()) {
-    dbgs() << "\tSource Edges : ";
+    OS << "\tSource Edges : ";
     for (const GCOVEdge *Edge : SrcEdges)
-      dbgs() << Edge->Src.Number << " (" << Edge->Count << "), ";
-    dbgs() << "\n";
+      OS << Edge->Src.Number << " (" << Edge->Count << "), ";
+    OS << "\n";
   }
   if (!DstEdges.empty()) {
-    dbgs() << "\tDestination Edges : ";
+    OS << "\tDestination Edges : ";
     for (const GCOVEdge *Edge : DstEdges)
-      dbgs() << Edge->Dst.Number << " (" << Edge->Count << "), ";
-    dbgs() << "\n";
+      OS << Edge->Dst.Number << " (" << Edge->Count << "), ";
+    OS << "\n";
   }
   if (!Lines.empty()) {
-    dbgs() << "\tLines : ";
+    OS << "\tLines : ";
     for (uint32_t N : Lines)
-      dbgs() << (N) << ",";
-    dbgs() << "\n";
+      OS << (N) << ",";
+    OS << "\n";
   }
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+/// dump - Dump GCOVBlock content to dbgs() for debugging purposes.
+LLVM_DUMP_METHOD void GCOVBlock::dump() const {
+  print(dbgs());
+}
+#endif
 
 //===----------------------------------------------------------------------===//
 // FileInfo implementation.
@@ -496,7 +518,7 @@ public:
     OS << format("%5u:", LineNum) << Line << "\n";
   }
 };
-}
+} // end anonymous namespace
 
 /// Convert a path to a gcov filename. If PreservePaths is true, this
 /// translates "/" to "#", ".." to "^", and drops ".", to match gcov.
@@ -567,8 +589,12 @@ FileInfo::openCoveragePath(StringRef CoveragePath) {
 /// print -  Print source files with collected line count information.
 void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
                      StringRef GCNOFile, StringRef GCDAFile) {
-  for (const auto &LI : LineInfo) {
-    StringRef Filename = LI.first();
+  SmallVector<StringRef, 4> Filenames;
+  for (const auto &LI : LineInfo)
+    Filenames.push_back(LI.first());
+  std::sort(Filenames.begin(), Filenames.end());
+
+  for (StringRef Filename : Filenames) {
     auto AllLines = LineConsumer(Filename);
 
     std::string CoveragePath = getCoveragePath(Filename, MainFilename);
@@ -581,7 +607,7 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
     CovOS << "        -:    0:Runs:" << RunCount << "\n";
     CovOS << "        -:    0:Programs:" << ProgramCount << "\n";
 
-    const LineData &Line = LI.second;
+    const LineData &Line = LineInfo[Filename];
     GCOVCoverage FileCoverage(Filename);
     for (uint32_t LineIndex = 0; LineIndex < Line.LastLine || !AllLines.empty();
          ++LineIndex) {
@@ -683,7 +709,6 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
   if (Options.FuncCoverage)
     printFuncCoverage(InfoOS);
   printFileCoverage(InfoOS);
-  return;
 }
 
 /// printFunctionSummary - Print function and block summary.

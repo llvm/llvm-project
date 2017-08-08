@@ -1,0 +1,74 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
+--- |
+  define void @test_unmerge_v128() {
+    ret void
+  }
+
+  define void @test_unmerge_v256() {
+    ret void
+  }
+
+...
+---
+name:            test_unmerge_v128
+# ALL-LABEL: name:  test_unmerge_v128
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr128x, preferred-register: '' }
+# ALL-NEXT:   - { id: 3, class: vr128x, preferred-register: '' }
+# ALL-NEXT:   - { id: 4, class: vr128x, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+  - { id: 3, class: vecr }
+  - { id: 4, class: vecr }
+# ALL:          %0 = IMPLICIT_DEF
+# ALL-NEXT:     %1 = COPY %0.sub_xmm
+# ALL-NEXT:     %2 = VEXTRACTF32x4Zrr %0, 1
+# ALL-NEXT:     %3 = VEXTRACTF32x4Zrr %0, 2
+# ALL-NEXT:     %4 = VEXTRACTF32x4Zrr %0, 3
+# ALL-NEXT:     %xmm0 = COPY %1
+# ALL-NEXT:     RET 0, implicit %xmm0
+body:             |
+  bb.1 (%ir-block.0):
+
+    %0(<16 x s32>) = IMPLICIT_DEF
+    %1(<4 x s32>), %2(<4 x s32>), %3(<4 x s32>), %4(<4 x s32>) = G_UNMERGE_VALUES %0(<16 x s32>)
+    %xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_unmerge_v256
+# ALL-LABEL: name:  test_unmerge_v256
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr256x, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# ALL:          %0 = IMPLICIT_DEF
+# ALL-NEXT:     %1 = COPY %0.sub_ymm
+# ALL-NEXT:     %2 = VEXTRACTF64x4Zrr %0, 1
+# ALL-NEXT:     %xmm0 = COPY %1
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+
+    %0(<16 x s32>) = IMPLICIT_DEF
+    %1(<8 x s32>), %2(<8 x s32>) = G_UNMERGE_VALUES %0(<16 x s32>)
+    %xmm0 = COPY %1(<8 x s32>)
+    RET 0, implicit %ymm0
+
+...
+

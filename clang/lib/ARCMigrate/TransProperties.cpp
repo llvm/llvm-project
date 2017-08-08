@@ -76,7 +76,7 @@ public:
 
   static void collectProperties(ObjCContainerDecl *D, AtPropDeclsTy &AtProps,
                                 AtPropDeclsTy *PrevAtProps = nullptr) {
-    for (auto *Prop : D->properties()) {
+    for (auto *Prop : D->instance_properties()) {
       if (Prop->getAtLoc().isInvalid())
         continue;
       unsigned RawLoc = Prop->getAtLoc().getRawEncoding();

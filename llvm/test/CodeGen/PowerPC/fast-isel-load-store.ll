@@ -2,7 +2,7 @@
 ; registers and with -fast-isel-abort=1 turned on the test case will then fail.
 ; When fastisel better supports VSX fix up this test case.
 ;
-; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel -fast-isel-abort=1 -mattr=-vsx -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 | FileCheck %s --check-prefix=ELF64
+; RUN: llc -relocation-model=static < %s -O0 -verify-machineinstrs -fast-isel -fast-isel-abort=1 -mattr=-vsx -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 | FileCheck %s --check-prefix=ELF64
 
 ; This test verifies that load/store instructions are properly generated,
 ; and that they pass MI verification.
@@ -196,7 +196,7 @@ define void @t17(i64 %v) nounwind {
   %1 = add nsw i64 %v, 1
   store i64 %1, i64* getelementptr inbounds ([8192 x i64], [8192 x i64]* @i, i32 0, i64 5000), align 8
 ; ELF64: addis
-; ELF64: ld
+; ELF64: addi
 ; ELF64: addi
 ; ELF64: lis
 ; ELF64: ori

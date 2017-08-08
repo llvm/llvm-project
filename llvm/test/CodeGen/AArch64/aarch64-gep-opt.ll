@@ -1,6 +1,9 @@
-; RUN: llc -O3 -aarch64-gep-opt=true -verify-machineinstrs %s -o - | FileCheck %s
-; RUN: llc -O3 -aarch64-gep-opt=true -print-after=codegenprepare -mcpu=cyclone < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-NoAA <%t %s
-; RUN: llc -O3 -aarch64-gep-opt=true -print-after=codegenprepare -mcpu=cortex-a53 < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-UseAA <%t %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true -mattr=-use-aa -print-after=codegenprepare < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-NoAA <%t %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true -mattr=+use-aa -print-after=codegenprepare < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-UseAA <%t %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true -print-after=codegenprepare -mcpu=cyclone < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-NoAA <%t %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true -print-after=codegenprepare -mcpu=cortex-a53 < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-UseAA <%t %s
+
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-linux-gnueabi"
 
@@ -93,9 +96,13 @@ exit:
 ; CHECK-NoAA: add i64 [[TMP:%[a-zA-Z0-9]+]], 528
 ; CHECK-NoAA: add i64 [[TMP]], 532
 ; CHECK-NoAA: if.true:
-; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = add i64 [[TMP]], 532
+; CHECK-NoAA: inttoptr
+; CHECK-NoAA: bitcast
+; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = getelementptr i8, {{.*}}, i64 532
 ; CHECK-NoAA: exit:
-; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = add i64 [[TMP]], 528
+; CHECK-NoAA: inttoptr
+; CHECK-NoAA: bitcast
+; CHECK-NoAA: {{%sunk[a-zA-Z0-9]+}} = getelementptr i8, {{.*}}, i64 528
 
 ; CHECK-UseAA-LABEL: test_GEP_across_BB(
 ; CHECK-UseAA: [[PTR0:%[a-zA-Z0-9]+]] = getelementptr

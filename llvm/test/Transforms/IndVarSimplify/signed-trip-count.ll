@@ -1,12 +1,14 @@
-; RUN: opt < %s -indvars -S > %t
-; RUN: not grep sext %t
-; RUN: grep phi %t | count 1
+; RUN: opt < %s -indvars -S | FileCheck %s
 
 ; Provide legal integer types.
 target datalayout = "n8:16:32:64"
 
 
 define void @foo(i64* nocapture %x, i32 %n) nounwind {
+; CHECK-LABEL: @foo(
+; CHECK-NOT: sext
+; CHECK: phi
+; CHECK-NOT: phi
 entry:
 	%tmp102 = icmp sgt i32 %n, 0		; <i1> [#uses=1]
 	br i1 %tmp102, label %bb.nph, label %return

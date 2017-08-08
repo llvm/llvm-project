@@ -11,7 +11,6 @@
 #define LLVM_LIB_EXECUTIONENGINE_RUNTIMEDYLD_RUNTIMEDYLDCHECKERIMPL_H
 
 #include "RuntimeDyldImpl.h"
-#include <set>
 
 namespace llvm {
 
@@ -60,6 +59,8 @@ private:
                                                   StringRef Symbol,
                                                   bool IsInsideLoad) const;
   StringRef getSubsectionStartingAt(StringRef Name) const;
+
+  Optional<uint64_t> getSectionLoadAddress(void *LocalAddr) const;
 
   void registerSection(StringRef FilePath, unsigned SectionID);
   void registerStubMap(StringRef FilePath, unsigned SectionID,

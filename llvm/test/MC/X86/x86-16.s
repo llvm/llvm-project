@@ -256,10 +256,22 @@ cmovnae	%bx,%bx
 // CHECK:  encoding: [0x67,0x8c,0x08]
         movw %cs, (%eax)
 
-// CHECK: movl	%eax, %cs
-// CHECK:  encoding: [0x66,0x8e,0xc8]
+// CHECK: movw	%ax, %cs
+// CHECK:  encoding: [0x8e,0xc8]
         movl %eax, %cs
 
+// CHECK: movw	%ax, %cs
+// CHECK:  encoding: [0x8e,0xc8]
+        mov %eax, %cs	
+
+// CHECK: movw	%ax, %cs
+// CHECK:  encoding: [0x8e,0xc8]
+        movw %ax, %cs
+
+// CHECK: movw	%ax, %cs
+// CHECK:  encoding: [0x8e,0xc8]
+        mov %ax, %cs		
+	
 // CHECK: movl	(%eax), %cs
 // CHECK:  encoding: [0x67,0x66,0x8e,0x08]
         movl (%eax), %cs
@@ -947,3 +959,13 @@ lretw
 // CHECK: lretl
 // CHECK: encoding: [0x66,0xcb]
 lretl
+
+// CHECK: data32
+// CHECK: encoding: [0x66]
+data32
+
+// CHECK: data32
+// CHECK: encoding: [0x66]
+// CHECK: lgdtw 4(%eax)
+// CHECK:  encoding: [0x67,0x0f,0x01,0x50,0x04]
+data32 lgdt 4(%eax)

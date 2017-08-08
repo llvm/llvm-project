@@ -25,10 +25,10 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
+#include <utility>
 
 using namespace clang;
 using namespace ento;
-using llvm::APInt;
 using llvm::APSInt;
 
 namespace {
@@ -38,7 +38,7 @@ struct MallocOverflowCheck {
   APSInt maxVal;
 
   MallocOverflowCheck(const BinaryOperator *m, const Expr *v, APSInt val)
-      : mulop(m), variable(v), maxVal(val) {}
+      : mulop(m), variable(v), maxVal(std::move(val)) {}
 };
 
 class MallocOverflowSecurityChecker : public Checker<check::ASTCodeBody> {
@@ -141,25 +141,25 @@ private:
       return false;
     }
 
-    const Decl *getDecl(const DeclRefExpr *DR) { return DR->getDecl(); }
-
-    const Decl *getDecl(const MemberExpr *ME) { return ME->getMemberDecl(); }
+    static const Decl *getDecl(const DeclRefExpr *DR) { return DR->getDecl(); }
+    static const Decl *getDecl(const MemberExpr *ME) {
+      return ME->getMemberDecl();
+    }
 
     template <typename T1>
-    void Erase(const T1 *DR, std::function<bool(theVecType::iterator)> pred) {
-      theVecType::iterator i = toScanFor.end();
-      theVecType::iterator e = toScanFor.begin();
-      while (i != e) {
-        --i;
-        if (const T1 *DR_i = dyn_cast<T1>(i->variable)) {
-          if ((getDecl(DR_i) == getDecl(DR)) && pred(i))
-            i = toScanFor.erase(i);
-        }
-      }
+    void Erase(const T1 *DR,
+               llvm::function_ref<bool(const MallocOverflowCheck &)> Pred) {
+      auto P = [DR, Pred](const MallocOverflowCheck &Check) {
+        if (const auto *CheckDR = dyn_cast<T1>(Check.variable))
+          return getDecl(CheckDR) == getDecl(DR) && Pred(Check);
+        return false;
+      };
+      toScanFor.erase(std::remove_if(toScanFor.begin(), toScanFor.end(), P),
+                      toScanFor.end());
     }
 
     void CheckExpr(const Expr *E_p) {
-      auto PredTrue = [](theVecType::iterator) -> bool { return true; };
+      auto PredTrue = [](const MallocOverflowCheck &) { return true; };
       const Expr *E = E_p->IgnoreParenImpCasts();
       if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(E))
         Erase<DeclRefExpr>(DR, PredTrue);
@@ -210,9 +210,9 @@ private:
       const Expr *E = lhs->IgnoreParenImpCasts();
 
       auto pred = [assignKnown, numeratorKnown,
-                   denomExtVal](theVecType::iterator i) {
+                   denomExtVal](const MallocOverflowCheck &Check) {
         return assignKnown ||
-               (numeratorKnown && (denomExtVal >= i->maxVal.getExtValue()));
+               (numeratorKnown && (denomExtVal >= Check.maxVal.getExtValue()));
       };
 
       if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(E))

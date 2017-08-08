@@ -1,0 +1,33 @@
+// Check COFF emission of cvtres
+// The input was generated with the following command, using the original Windows
+// rc.exe:
+// > rc /fo test_resource.res /nologo test_resource.rc
+// The object file we are comparing against was generated with this command using
+// the original Windows cvtres.exe.
+// > cvtres /machine:X86 /readonly /nologo /out:test_resource.obj.coff \
+//   test_resource.res
+
+RUN: llvm-cvtres /verbose /out:%t %p/Inputs/test_resource.res
+RUN: llvm-readobj -symbols %t | FileCheck %s
+
+CHECK:        Name: $R000000
+CHECK-NEXT:    Value: 0
+CHECK-NEXT:    Section: .rsrc$02
+CHECK:        Name: $R000018
+CHECK-NEXT:    Value: 24
+CHECK-NEXT:    Section: .rsrc$02
+CHECK:        Name: $R000340
+CHECK-NEXT:    Value: 832
+CHECK-NEXT:    Section: .rsrc$02
+CHECK:        Name: $R000668
+CHECK-NEXT:    Value: 1640
+CHECK-NEXT:    Section: .rsrc$02
+CHECK:        Name: $R000698
+CHECK-NEXT:    Value: 1688
+CHECK-NEXT:    Section: .rsrc$02
+CHECK:        Name: $R000720
+CHECK-NEXT:    Value: 1824
+CHECK-NEXT:    Section: .rsrc$02
+CHECK:        Name: $R000750
+CHECK-NEXT:    Value: 1872
+CHECK-NEXT:    Section: .rsrc$02

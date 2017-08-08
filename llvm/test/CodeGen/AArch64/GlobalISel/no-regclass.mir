@@ -1,0 +1,30 @@
+# RUN: llc -O0 -mtriple=aarch64-apple-ios -global-isel -start-before=legalizer -stop-after=instruction-select %s -o - | FileCheck %s
+
+# We run the legalizer to combine the trivial EXTRACT_SEQ pair, leaving %1 and
+# %2 orphaned after instruction-selection (no instructions define or use
+# them). This shouldn't be a problem.
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+
+  define void @unused_reg() { ret void }
+
+---
+# CHECK-LABEL: name: unused_reg
+name:            unused_reg
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+
+# CHECK:      body:
+# CHECK:  %0 = COPY %w0
+# CHECK:  %w0 = COPY %0
+
+body:             |
+  bb.0:
+    liveins: %w0
+    %0:gpr(s32) = COPY %w0
+    %1:gpr(s32) = G_MERGE_VALUES %0(s32)
+    %2:gpr(s32) = G_UNMERGE_VALUES %1(s32)
+    %w0 = COPY %2(s32)
+...

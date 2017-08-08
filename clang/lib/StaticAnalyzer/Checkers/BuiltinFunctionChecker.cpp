@@ -41,6 +41,24 @@ bool BuiltinFunctionChecker::evalCall(const CallExpr *CE,
   default:
     return false;
 
+  case Builtin::BI__builtin_assume: {
+    assert (CE->arg_begin() != CE->arg_end());
+    SVal ArgSVal = state->getSVal(CE->getArg(0), LCtx);
+    if (ArgSVal.isUndef())
+      return true; // Return true to model purity.
+
+    state = state->assume(ArgSVal.castAs<DefinedOrUnknownSVal>(), true);
+    // FIXME: do we want to warn here? Not right now. The most reports might
+    // come from infeasible paths, thus being false positives.
+    if (!state) {
+      C.generateSink(C.getState(), C.getPredecessor());
+      return true;
+    }
+
+    C.addTransition(state);
+    return true;
+  }
+
   case Builtin::BI__builtin_unpredictable:
   case Builtin::BI__builtin_expect:
   case Builtin::BI__builtin_assume_aligned:
@@ -55,6 +73,7 @@ bool BuiltinFunctionChecker::evalCall(const CallExpr *CE,
     return true;
   }
 
+  case Builtin::BI__builtin_alloca_with_align:
   case Builtin::BI__builtin_alloca: {
     // FIXME: Refactor into StoreManager itself?
     MemRegionManager& RM = C.getStoreManager().getRegionManager();

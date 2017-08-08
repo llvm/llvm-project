@@ -9,7 +9,7 @@ T pi = T(3.1415926535897932385); // expected-note {{template is declared here}}
 template int pi<int>;
 
 #ifndef FIXING
-template float pi<>; // expected-error {{too few template arguments for template 'pi'}}
+template float pi<>; // expected-error {{too few template arguments for variable template 'pi'}}
 template double pi_var0; // expected-error {{explicit instantiation of 'pi_var0' does not refer to a function template, variable template, member function, member class, or static data member}}
 #endif
 

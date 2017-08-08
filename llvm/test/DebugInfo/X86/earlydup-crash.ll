@@ -4,7 +4,7 @@
 
 %struct.cpp_dir = type { %struct.cpp_dir*, i8*, i32, i8, i8**, i8*, i8* (i8*, %struct.cpp_dir*)*, i64, i32, i8 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 define internal i8* @framework_construct_pathname(i8* %fname, %struct.cpp_dir* %dir) nounwind ssp !dbg !2 {
 entry:
@@ -13,7 +13,7 @@ entry:
 bb:                                               ; preds = %entry
   %tmp = icmp eq i32 undef, 0
   %tmp1 = add i32 0, 11
-  call void @llvm.dbg.value(metadata i32 %tmp1, i64 0, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
+  call void @llvm.dbg.value(metadata i32 %tmp1, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   br i1 undef, label %bb18, label %bb31.preheader
 
 bb31.preheader:                                   ; preds = %bb19, %bb
@@ -46,9 +46,9 @@ declare void @foobar(i32)
 !llvm.module.flags = !{!47}
 !0 = !DILocalVariable(name: "frname_len", line: 517, scope: !1, file: !3, type: !38)
 !1 = distinct !DILexicalBlock(line: 515, column: 0, file: !44, scope: !2)
-!2 = distinct !DISubprogram(name: "framework_construct_pathname", line: 515, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, file: !44, scope: null, type: !5)
+!2 = distinct !DISubprogram(name: "framework_construct_pathname", line: 515, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !4, file: !44, scope: null, type: !5)
 !3 = !DIFile(filename: "darwin-c.c", directory: "/Users/espindola/llvm/build-llvm-gcc/gcc/../../llvm-gcc-4.2/gcc/config")
-!4 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 0, file: !44, enums: !46, retainedTypes: !46, subprograms: !45)
+!4 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !44, enums: !46, retainedTypes: !46)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !9, !11}
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, file: !44, scope: !3, baseType: !8)
@@ -89,6 +89,5 @@ declare void @foobar(i32)
 !42 = !DIFile(filename: "types.h", directory: "/usr/include/sys")
 !43 = !DIFile(filename: "stddef.h", directory: "/Users/espindola/llvm/build-llvm-gcc/./prev-gcc/include")
 !44 = !DIFile(filename: "darwin-c.c", directory: "/Users/espindola/llvm/build-llvm-gcc/gcc/../../llvm-gcc-4.2/gcc/config")
-!45 = !{!2}
 !46 = !{}
 !47 = !{i32 1, !"Debug Info Version", i32 3}

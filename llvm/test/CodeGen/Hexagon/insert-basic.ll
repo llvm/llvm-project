@@ -1,8 +1,8 @@
 ; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
-; CHECK-DAG: insert(r{{[0-9]*}}, #17, #0)
-; CHECK-DAG: insert(r{{[0-9]*}}, #18, #0)
-; CHECK-DAG: insert(r{{[0-9]*}}, #22, #0)
-; CHECK-DAG: insert(r{{[0-9]*}}, #12, #0)
+; CHECK-DAG: insert(r{{[0-9]*}},#17,#0)
+; CHECK-DAG: insert(r{{[0-9]*}},#18,#0)
+; CHECK-DAG: insert(r{{[0-9]*}},#22,#0)
+; CHECK-DAG: insert(r{{[0-9]*}},#12,#0)
 
 ; C source:
 ; typedef struct {

@@ -6,15 +6,24 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #include "llvm/Support/LockFileManager.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cerrno>
+#include <ctime>
+#include <memory>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <system_error>
+#include <tuple>
 #if LLVM_ON_WIN32
 #include <windows.h>
 #endif
@@ -31,6 +40,7 @@
 #if USE_OSX_GETHOSTUUID
 #include <uuid/uuid.h>
 #endif
+
 using namespace llvm;
 
 /// \brief Attempt to read the lock file with the given name, if it exists.
@@ -112,6 +122,7 @@ bool LockFileManager::processStillExecuting(StringRef HostID, int PID) {
 }
 
 namespace {
+
 /// An RAII helper object ensure that the unique lock file is removed.
 ///
 /// Ensures that if there is an error or a signal before we finish acquiring the
@@ -127,6 +138,7 @@ public:
   : Filename(Name), RemoveImmediately(true) {
     sys::RemoveFileOnSignal(Filename, nullptr);
   }
+
   ~RemoveUniqueLockFileOnSignal() {
     if (!RemoveImmediately) {
       // Leave the signal handler enabled. It will be removed when the lock is
@@ -136,15 +148,19 @@ public:
     sys::fs::remove(Filename);
     sys::DontRemoveFileOnSignal(Filename);
   }
+
   void lockAcquired() { RemoveImmediately = false; }
 };
+
 } // end anonymous namespace
 
 LockFileManager::LockFileManager(StringRef FileName)
 {
   this->FileName = FileName;
   if (std::error_code EC = sys::fs::make_absolute(this->FileName)) {
-    Error = EC;
+    std::string S("failed to obtain absolute path for ");
+    S.append(this->FileName.str());
+    setError(EC, S);
     return;
   }
   LockFileName = this->FileName;
@@ -161,7 +177,9 @@ LockFileManager::LockFileManager(StringRef FileName)
   int UniqueLockFileID;
   if (std::error_code EC = sys::fs::createUniqueFile(
           UniqueLockFileName, UniqueLockFileID, UniqueLockFileName)) {
-    Error = EC;
+    std::string S("failed to create unique file ");
+    S.append(UniqueLockFileName.str());
+    setError(EC, S);
     return;
   }
 
@@ -169,7 +187,7 @@ LockFileManager::LockFileManager(StringRef FileName)
   {
     SmallString<256> HostID;
     if (auto EC = getHostID(HostID)) {
-      Error = EC;
+      setError(EC, "failed to get host id");
       return;
     }
 
@@ -185,7 +203,10 @@ LockFileManager::LockFileManager(StringRef FileName)
     if (Out.has_error()) {
       // We failed to write out PID, so make up an excuse, remove the
       // unique lock file, and fail.
-      Error = make_error_code(errc::no_space_on_device);
+      auto EC = make_error_code(errc::no_space_on_device);
+      std::string S("failed to write to ");
+      S.append(UniqueLockFileName.str());
+      setError(EC, S);
       sys::fs::remove(UniqueLockFileName);
       return;
     }
@@ -195,7 +216,7 @@ LockFileManager::LockFileManager(StringRef FileName)
   // held since the .lock symlink will point to a nonexistent file.
   RemoveUniqueLockFileOnSignal RemoveUniqueFile(UniqueLockFileName);
 
-  while (1) {
+  while (true) {
     // Create a link from the lock file name. If this succeeds, we're done.
     std::error_code EC =
         sys::fs::create_link(UniqueLockFileName, LockFileName);
@@ -205,7 +226,10 @@ LockFileManager::LockFileManager(StringRef FileName)
     }
 
     if (EC != errc::file_exists) {
-      Error = EC;
+      std::string S("failed to create link ");
+      raw_string_ostream OSS(S);
+      OSS << LockFileName.str() << " to " << UniqueLockFileName.str();
+      setError(EC, OSS.str());
       return;
     }
 
@@ -226,7 +250,9 @@ LockFileManager::LockFileManager(StringRef FileName)
     // There is a lock file that nobody owns; try to clean it up and get
     // ownership.
     if ((EC = sys::fs::remove(LockFileName))) {
-      Error = EC;
+      std::string S("failed to remove lockfile ");
+      S.append(UniqueLockFileName.str());
+      setError(EC, S);
       return;
     }
   }
@@ -240,6 +266,19 @@ LockFileManager::LockFileState LockFileManager::getState() const {
     return LFS_Error;
 
   return LFS_Owned;
+}
+
+std::string LockFileManager::getErrorMessage() const {
+  if (Error) {
+    std::string Str(ErrorDiagMsg);
+    std::string ErrCodeMsg = Error->message();
+    raw_string_ostream OSS(Str);
+    if (!ErrCodeMsg.empty())
+      OSS << ": " << Error->message();
+    OSS.flush();
+    return Str;
+  }
+  return "";
 }
 
 LockFileManager::~LockFileManager() {
@@ -265,9 +304,9 @@ LockFileManager::WaitForUnlockResult LockFileManager::waitForUnlock() {
   Interval.tv_sec = 0;
   Interval.tv_nsec = 1000000;
 #endif
-  // Don't wait more than five minutes per iteration. Total timeout for the file
-  // to appear is ~8.5 mins.
-  const unsigned MaxSeconds = 5*60;
+  // Don't wait more than 40s per iteration. Total timeout for the file
+  // to appear is ~1.5 minutes.
+  const unsigned MaxSeconds = 40;
   do {
     // Sleep for the designated interval, to allow the owning process time to
     // finish up and remove the lock file.

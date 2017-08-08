@@ -22,21 +22,21 @@
 let isTerminator = 1, isReturn = 1, isBarrier = 1,
     hasCtrlDep = 1, FPForm = SpecialFP, SchedRW = [WriteJumpLd] in {
   def RETL   : I   <0xC3, RawFrm, (outs), (ins variable_ops),
-                    "ret{l}", [(X86retflag 0)], IIC_RET>, OpSize32,
+                    "ret{l}", [], IIC_RET>, OpSize32,
                     Requires<[Not64BitMode]>;
   def RETQ   : I   <0xC3, RawFrm, (outs), (ins variable_ops),
-                    "ret{q}", [(X86retflag 0)], IIC_RET>, OpSize32,
+                    "ret{q}", [], IIC_RET>, OpSize32,
                     Requires<[In64BitMode]>;
   def RETW   : I   <0xC3, RawFrm, (outs), (ins),
                     "ret{w}",
                     [], IIC_RET>, OpSize16;
   def RETIL  : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt, variable_ops),
                     "ret{l}\t$amt",
-                    [(X86retflag timm:$amt)], IIC_RET_IMM>, OpSize32,
+                    [], IIC_RET_IMM>, OpSize32,
                Requires<[Not64BitMode]>;
   def RETIQ  : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt, variable_ops),
                     "ret{q}\t$amt",
-                    [(X86retflag timm:$amt)], IIC_RET_IMM>, OpSize32,
+                    [], IIC_RET_IMM>, OpSize32,
                Requires<[In64BitMode]>;
   def RETIW  : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt),
                     "ret{w}\t$amt",
@@ -53,6 +53,19 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1,
                     "{l}ret{|f}q\t$amt", [], IIC_RET>, Requires<[In64BitMode]>;
   def LRETIW : Ii16<0xCA, RawFrm, (outs), (ins i16imm:$amt),
                     "{l}ret{w|f}\t$amt", [], IIC_RET>, OpSize16;
+
+  // The machine return from interrupt instruction, but sometimes we need to
+  // perform a post-epilogue stack adjustment. Codegen emits the pseudo form
+  // which expands to include an SP adjustment if necessary.
+  def IRET16 : I   <0xcf, RawFrm, (outs), (ins), "iret{w}", [], IIC_IRET>,
+               OpSize16;
+  def IRET32 : I   <0xcf, RawFrm, (outs), (ins), "iret{l|d}", [],
+                    IIC_IRET>, OpSize32;
+  def IRET64 : RI  <0xcf, RawFrm, (outs), (ins), "iretq", [],
+                    IIC_IRET>, Requires<[In64BitMode]>;
+  let isCodeGenOnly = 1 in
+  def IRET : PseudoI<(outs), (ins i32imm:$adj), [(X86iret timm:$adj)]>;
+  def RET  : PseudoI<(outs), (ins i32imm:$adj, variable_ops), [(X86retflag timm:$adj)]>;
 }
 
 // Unconditional branches.
@@ -226,7 +239,6 @@ let isCall = 1 in
 
 
 // Tail call stuff.
-
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     isCodeGenOnly = 1, SchedRW = [WriteJumpLd] in
   let Uses = [ESP] in {
@@ -244,11 +256,27 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
                            (ins i32imm_pcrel:$dst),
                            "jmp\t$dst",
                            [], IIC_JMP_REL>;
+
   def TAILJMPr : I<0xFF, MRM4r, (outs), (ins ptr_rc_tailcall:$dst),
                    "", [], IIC_JMP_REG>;  // FIXME: Remove encoding when JIT is dead.
   let mayLoad = 1 in
   def TAILJMPm : I<0xFF, MRM4m, (outs), (ins i32mem_TC:$dst),
                    "jmp{l}\t{*}$dst", [], IIC_JMP_MEM>;
+}
+
+// Conditional tail calls are similar to the above, but they are branches
+// rather than barriers, and they use EFLAGS.
+let isCall = 1, isTerminator = 1, isReturn = 1, isBranch = 1,
+    isCodeGenOnly = 1, SchedRW = [WriteJumpLd] in
+  let Uses = [ESP, EFLAGS] in {
+  def TCRETURNdicc : PseudoI<(outs),
+                     (ins i32imm_pcrel:$dst, i32imm:$offset, i32imm:$cond), []>;
+
+  // This gets substituted to a conditional jump instruction in MC lowering.
+  def TAILJMPd_CC : Ii32PCRel<0x80, RawFrm, (outs),
+                           (ins i32imm_pcrel:$dst, i32imm:$cond),
+                           "",
+                           [], IIC_JMP_REL>;
 }
 
 
@@ -283,17 +311,18 @@ let isCall = 1, Uses = [RSP], SchedRW = [WriteJump] in {
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     isCodeGenOnly = 1, Uses = [RSP], usesCustomInserter = 1,
     SchedRW = [WriteJump] in {
-  def TCRETURNdi64 : PseudoI<(outs),
-                      (ins i64i32imm_pcrel:$dst, i32imm:$offset),
-                      []>;
-  def TCRETURNri64 : PseudoI<(outs),
-                      (ins ptr_rc_tailcall:$dst, i32imm:$offset), []>;
+  def TCRETURNdi64   : PseudoI<(outs),
+                        (ins i64i32imm_pcrel:$dst, i32imm:$offset),
+                        []>;
+  def TCRETURNri64   : PseudoI<(outs),
+                        (ins ptr_rc_tailcall:$dst, i32imm:$offset), []>;
   let mayLoad = 1 in
-  def TCRETURNmi64 : PseudoI<(outs),
-                       (ins i64mem_TC:$dst, i32imm:$offset), []>;
+  def TCRETURNmi64   : PseudoI<(outs),
+                        (ins i64mem_TC:$dst, i32imm:$offset), []>;
 
   def TAILJMPd64 : Ii32PCRel<0xE9, RawFrm, (outs), (ins i64i32imm_pcrel:$dst),
                    "jmp\t$dst", [], IIC_JMP_REL>;
+
   def TAILJMPr64 : I<0xFF, MRM4r, (outs), (ins ptr_rc_tailcall:$dst),
                      "jmp{q}\t{*}$dst", [], IIC_JMP_MEM>;
 
@@ -301,11 +330,8 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
   def TAILJMPm64 : I<0xFF, MRM4m, (outs), (ins i64mem_TC:$dst),
                      "jmp{q}\t{*}$dst", [], IIC_JMP_MEM>;
 
-  // Win64 wants jumps leaving the function to have a REX_W prefix.
+  // Win64 wants indirect jumps leaving the function to have a REX_W prefix.
   let hasREX_WPrefix = 1 in {
-    def TAILJMPd64_REX : Ii32PCRel<0xE9, RawFrm, (outs),
-                                   (ins i64i32imm_pcrel:$dst),
-                                   "rex64 jmp\t$dst", [], IIC_JMP_REL>;
     def TAILJMPr64_REX : I<0xFF, MRM4r, (outs), (ins ptr_rc_tailcall:$dst),
                            "rex64 jmp{q}\t{*}$dst", [], IIC_JMP_MEM>;
 
@@ -313,4 +339,20 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     def TAILJMPm64_REX : I<0xFF, MRM4m, (outs), (ins i64mem_TC:$dst),
                            "rex64 jmp{q}\t{*}$dst", [], IIC_JMP_MEM>;
   }
+}
+
+// Conditional tail calls are similar to the above, but they are branches
+// rather than barriers, and they use EFLAGS.
+let isCall = 1, isTerminator = 1, isReturn = 1, isBranch = 1,
+    isCodeGenOnly = 1, SchedRW = [WriteJumpLd] in
+  let Uses = [RSP, EFLAGS] in {
+  def TCRETURNdi64cc : PseudoI<(outs),
+                           (ins i64i32imm_pcrel:$dst, i32imm:$offset,
+                            i32imm:$cond), []>;
+
+  // This gets substituted to a conditional jump instruction in MC lowering.
+  def TAILJMPd64_CC : Ii32PCRel<0x80, RawFrm, (outs),
+                           (ins i64i32imm_pcrel:$dst, i32imm:$cond),
+                           "",
+                           [], IIC_JMP_REL>;
 }

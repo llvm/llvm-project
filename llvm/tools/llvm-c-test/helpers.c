@@ -18,7 +18,7 @@
 #define MAX_TOKENS 512
 #define MAX_LINE_LEN 1024
 
-void tokenize_stdin(void (*cb)(char **tokens, int ntokens)) {
+void llvm_tokenize_stdin(void (*cb)(char **tokens, int ntokens)) {
   char line[MAX_LINE_LEN];
   char *tokbuf[MAX_TOKENS];
 

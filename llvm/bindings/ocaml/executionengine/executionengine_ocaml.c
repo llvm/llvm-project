@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include <assert.h>
+#include "llvm-c/Core.h"
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm-c/Target.h"
 #include "caml/alloc.h"

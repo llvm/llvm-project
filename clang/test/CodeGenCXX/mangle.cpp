@@ -1101,3 +1101,39 @@ struct c {
   // CHECK-LABEL: @_ZN6test541cC2EPNS0_Ut0_E
 };
 }
+
+namespace test55 {
+enum E { R };
+
+template <typename T>
+void fn(T, __underlying_type(T)) {}
+
+template void fn<E>(E, __underlying_type(E));
+// CHECK-LABEL: @_ZN6test552fnINS_1EEEEvT_U3eutS2_
+}
+
+namespace test56 {
+  struct A { A *operator->(); int n; } a;
+  template<int N> void f(decltype(a->n + N)) {}
+  // CHECK-LABEL: @_ZN6test561fILi0EEEvDTplptL_ZNS_1aEE1nT_E
+  template void f<0>(int);
+}
+
+namespace test57 {
+  struct X { template <int N> int f(); } x;
+  template<int N> void f(decltype(x.f<0>() + N)) {}
+  // CHECK-LABEL: @_ZN6test571fILi0EEEvDTplcldtL_ZNS_1xEE1fIXLi0EEEET_E
+  template void f<0>(int);
+}
+
+namespace test58 {
+  struct State {
+   bool m_fn1();
+  } a;
+  template <class T> struct identity { typedef T type; };
+  struct A {
+   template <typename T> A(T, bool (identity<T>::type::*)());
+  };
+  // CHECK-LABEL: @_ZN6test581AC1INS_5StateEEET_MNS_8identityIS3_E4typeEFbvE
+  void fn1() { A(a, &State::m_fn1); }
+}

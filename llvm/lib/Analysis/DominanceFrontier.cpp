@@ -9,49 +9,80 @@
 
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Analysis/DominanceFrontierImpl.h"
+#include "llvm/IR/PassManager.h"
 
 using namespace llvm;
 
 namespace llvm {
-template class DominanceFrontierBase<BasicBlock>;
+template class DominanceFrontierBase<BasicBlock, false>;
+template class DominanceFrontierBase<BasicBlock, true>;
 template class ForwardDominanceFrontierBase<BasicBlock>;
 }
 
-char DominanceFrontier::ID = 0;
+char DominanceFrontierWrapperPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(DominanceFrontier, "domfrontier",
+INITIALIZE_PASS_BEGIN(DominanceFrontierWrapperPass, "domfrontier",
                 "Dominance Frontier Construction", true, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(DominanceFrontier, "domfrontier",
+INITIALIZE_PASS_END(DominanceFrontierWrapperPass, "domfrontier",
                 "Dominance Frontier Construction", true, true)
 
-DominanceFrontier::DominanceFrontier()
-  : FunctionPass(ID),
-    Base() {
-  initializeDominanceFrontierPass(*PassRegistry::getPassRegistry());
+ DominanceFrontierWrapperPass::DominanceFrontierWrapperPass()
+    : FunctionPass(ID), DF() {
+  initializeDominanceFrontierWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-void DominanceFrontier::releaseMemory() {
-  Base.releaseMemory();
+void DominanceFrontierWrapperPass::releaseMemory() {
+  DF.releaseMemory();
 }
 
-bool DominanceFrontier::runOnFunction(Function &) {
+bool DominanceFrontierWrapperPass::runOnFunction(Function &) {
   releaseMemory();
-  Base.analyze(getAnalysis<DominatorTreeWrapperPass>().getDomTree());
+  DF.analyze(getAnalysis<DominatorTreeWrapperPass>().getDomTree());
   return false;
 }
 
-void DominanceFrontier::getAnalysisUsage(AnalysisUsage &AU) const {
+void DominanceFrontierWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<DominatorTreeWrapperPass>();
 }
 
-void DominanceFrontier::print(raw_ostream &OS, const Module *) const {
-  Base.print(OS);
+void DominanceFrontierWrapperPass::print(raw_ostream &OS, const Module *) const {
+  DF.print(OS);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void DominanceFrontier::dump() const {
+LLVM_DUMP_METHOD void DominanceFrontierWrapperPass::dump() const {
   print(dbgs());
 }
 #endif
+
+/// Handle invalidation explicitly.
+bool DominanceFrontier::invalidate(Function &F, const PreservedAnalyses &PA,
+                                   FunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG have been preserved.
+  auto PAC = PA.getChecker<DominanceFrontierAnalysis>();
+  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
+           PAC.preservedSet<CFGAnalyses>());
+}
+
+AnalysisKey DominanceFrontierAnalysis::Key;
+
+DominanceFrontier DominanceFrontierAnalysis::run(Function &F,
+                                                 FunctionAnalysisManager &AM) {
+  DominanceFrontier DF;
+  DF.analyze(AM.getResult<DominatorTreeAnalysis>(F));
+  return DF;
+}
+
+DominanceFrontierPrinterPass::DominanceFrontierPrinterPass(raw_ostream &OS)
+  : OS(OS) {}
+
+PreservedAnalyses
+DominanceFrontierPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
+  OS << "DominanceFrontier for function: " << F.getName() << "\n";
+  AM.getResult<DominanceFrontierAnalysis>(F).print(OS);
+
+  return PreservedAnalyses::all();
+}

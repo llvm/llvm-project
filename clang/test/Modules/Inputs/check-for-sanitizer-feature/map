@@ -1,0 +1,3 @@
+module check_feature {
+  header "check.h"
+}

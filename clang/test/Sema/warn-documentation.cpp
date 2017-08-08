@@ -368,6 +368,101 @@ typedef unsigned int test_not_function_like_typedef3;
 /// \param aaa Meow.
 typedef foo::not_a_function_wrapper<1> test_not_function_like_typedef4;
 
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using1 = int (int aaa, int ccc);
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using2 = int (*)(int aaa, int ccc);
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using3 = int (* const)(int aaa, int ccc);
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using4 = int (C::*)(int aaa, int ccc);
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using5 = foo::function_wrapper<int (int aaa, int ccc)>;
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using6 = foo::function_wrapper<int (int aaa, int ccc)> *;
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using7 = foo::function_wrapper<int (int aaa, int ccc)> &;
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using8 = foo::function_wrapper<int (int aaa, int ccc)> &&;
+
+// expected-warning@+4 {{template parameter 'U' not found in the template declaration}} expected-note@+4 {{did you mean 'T'?}}
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \tparam U Uuu.
+template<typename T>
+using test_function_like_using9 = int(T aaa, int ccc);
+
+// expected-warning@+4 {{template parameter 'U' not found in the template declaration}} expected-note@+4 {{did you mean 'T'?}}
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \tparam U Uuu.
+template<typename T>
+using test_function_like_using10 = int (*)(T aaa, int ccc);
+
+// expected-warning@+4 {{template parameter 'U' not found in the template declaration}} expected-note@+4 {{did you mean 'T'?}}
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \tparam U Uuu.
+template<typename T>
+using test_function_like_using11 = foo::function_wrapper<int (T aaa, int ccc)>;
+
+// expected-warning@+4 {{template parameter 'U' not found in the template declaration}} expected-note@+4 {{did you mean 'T'?}}
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \tparam U Uuu.
+template<typename T>
+using test_function_like_using12 = foo::function_wrapper<int (T aaa, int ccc)> *;
+
+using test_not_function_like_using1 = int (*)(int aaa);
+
+// expected-warning@+1 {{'\param' command used in a comment that is not attached to a function declaration}}
+/// \param aaa Meow.
+using test_not_function_like_using2 = test_not_function_like_using1;
+
+// Check that the diagnostic uses the same command marker as the comment.
+// expected-warning@+1 {{'@param' command used in a comment that is not attached to a function declaration}}
+/// @param aaa Meow.
+using test_not_function_like_using3 = unsigned int;
+
+// expected-warning@+1 {{'\param' command used in a comment that is not attached to a function declaration}}
+/// \param aaa Meow.
+using test_not_function_like_using4 = foo::not_a_function_wrapper<1>;
+
 /// \param aaa Aaa
 /// \param ... Vararg
 int test_vararg_param1(int aaa, ...);
@@ -1091,7 +1186,7 @@ class Predicate
 /// @brief A C++ wrapper class for providing threaded access to a value
 /// of type T.
 ///
-/// A template specilization class.
+/// A template specialization class.
 //----------------------------------------------------------------------
 template<> class Predicate<int, char>
 {
@@ -1115,3 +1210,75 @@ template <class T> T test_function (T arg);
 /*!     @function test_function<int>
 */
 template <> int test_function<int> (int arg);
+
+namespace AllowParamAndReturnsOnFunctionPointerVars {
+
+/**
+ * functionPointerVariable
+ *
+ * @param i is integer.
+ * @returns integer.
+ */
+int (*functionPointerVariable)(int i);
+
+struct HasFields {
+  /**
+   * functionPointerField
+   *
+   * @param i is integer.
+   * @returns integer.
+   */
+  int (*functionPointerField)(int i);
+};
+
+// expected-warning@+5 {{'\returns' command used in a comment that is attached to a function returning void}}
+/**
+ * functionPointerVariable
+ *
+ * \param p not here.
+ * \returns integer.
+ */
+void (*functionPointerVariableThatLeadsNowhere)();
+
+// Still warn about param/returns commands for variables that don't specify
+// the type directly:
+
+/**
+ * FunctionPointerTypedef
+ *
+ * \param i is integer.
+ * \returns integer.
+ */
+typedef int (*FunctionPointerTypedef)(int i);
+
+/**
+ * FunctionPointerTypealias
+ *
+ * \param i is integer.
+ * \returns integer.
+ */
+using FunctionPointerTypealias = int (*)(int i);
+
+// expected-warning@+5 {{'@param' command used in a comment that is not attached to a function declaration}}
+// expected-warning@+5 {{'@returns' command used in a comment that is not attached to a function or method declaration}}
+/**
+ * functionPointerVariable
+ *
+ * @param i is integer.
+ * @returns integer.
+ */
+FunctionPointerTypedef functionPointerTypedefVariable;
+
+struct HasMoreFields {
+  // expected-warning@+5 {{'\param' command used in a comment that is not attached to a function declaration}}
+  // expected-warning@+5 {{'\returns' command used in a comment that is not attached to a function or method declaration}}
+  /**
+   * functionPointerTypealiasField
+   *
+   * \param i is integer.
+   * \returns integer.
+   */
+  FunctionPointerTypealias functionPointerTypealiasField;
+};
+
+}

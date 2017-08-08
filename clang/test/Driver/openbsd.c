@@ -3,6 +3,12 @@
 // CHECK-LD: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
 // CHECK-LD: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-lgcc" "-lc" "-lgcc" "{{.*}}crtend.o"
 
+// Check for --eh-frame-hdr being passed with static linking
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -static %s -### 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-STATIC-EH %s
+// CHECK-LD-STATIC-EH: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
+// CHECK-LD-STATIC-EH: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-Bstatic" "-o" "a.out" "{{.*}}rcrt0.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-lgcc" "-lc" "-lgcc" "{{.*}}crtend.o"
+
 // RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -pg -pthread %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG %s
 // CHECK-PG: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
@@ -61,9 +67,40 @@
 // RUN:   | FileCheck -check-prefix=CHECK-MIPS64EL-PIC %s
 // CHECK-AMD64-M32: as{{.*}}" "--32"
 // CHECK-POWERPC: as{{.*}}" "-mppc" "-many"
-// CHECK-SPARC: as{{.*}}" "-32"
-// CHECK-SPARC64: as{{.*}}" "-64" "-Av9a"
+// CHECK-SPARC: as{{.*}}" "-32" "-Av8"
+// CHECK-SPARC64: as{{.*}}" "-64" "-Av9"
 // CHECK-MIPS64: as{{.*}}" "-mabi" "64" "-EB"
 // CHECK-MIPS64-PIC: as{{.*}}" "-mabi" "64" "-EB" "-KPIC"
 // CHECK-MIPS64EL: as{{.*}}" "-mabi" "64" "-EL"
 // CHECK-MIPS64EL-PIC: as{{.*}}" "-mabi" "64" "-EL" "-KPIC"
+
+// Check linking against correct startup code when (not) using PIE
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -pie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE-FLAG %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -fno-pie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -static %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-STATIC-PIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -static -fno-pie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-STATIC-PIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -nopie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NOPIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -fno-pie -nopie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NOPIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -static -nopie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NOPIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -fno-pie -static -nopie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NOPIE %s
+// CHECK-PIE: "{{.*}}crt0.o"
+// CHECK-PIE-NOT: "-nopie"
+// CHECK-PIE-FLAG: "-pie"
+// CHECK-STATIC-PIE: "{{.*}}rcrt0.o"
+// CHECK-STATIC-PIE-NOT: "-nopie"
+// CHECK-NOPIE: "-nopie" "{{.*}}crt0.o"
+
+// Check ARM float ABI
+// RUN: %clang -target arm-unknown-openbsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ARM-FLOAT-ABI %s
+// CHECK-ARM-FLOAT-ABI: "-mfloat-abi" "soft"

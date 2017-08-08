@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s
+; RUN: llc -march=mipsel -verify-machineinstrs < %s | FileCheck %s
 
 define i8* @f1() nounwind {
 entry:

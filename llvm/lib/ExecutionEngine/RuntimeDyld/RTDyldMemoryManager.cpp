@@ -94,11 +94,11 @@ static const char *processFDE(const char *Entry, bool isDeregister) {
 // This implementation handles frame registration for local targets.
 // Memory managers for remote targets should re-implement this function
 // and use the LoadAddr parameter.
-void RTDyldMemoryManager::registerEHFrames(uint8_t *Addr,
-                                           uint64_t LoadAddr,
-                                           size_t Size) {
+void RTDyldMemoryManager::registerEHFramesInProcess(uint8_t *Addr,
+                                                    size_t Size) {
   // On OS X OS X __register_frame takes a single FDE as an argument.
-  // See http://lists.llvm.org/pipermail/llvm-dev/2013-April/061768.html
+  // See http://lists.llvm.org/pipermail/llvm-dev/2013-April/061737.html
+  // and projects/libunwind/src/UnwindLevel1-gcc-ext.c.
   const char *P = (const char *)Addr;
   const char *End = P + Size;
   do  {
@@ -106,9 +106,8 @@ void RTDyldMemoryManager::registerEHFrames(uint8_t *Addr,
   } while(P != End);
 }
 
-void RTDyldMemoryManager::deregisterEHFrames(uint8_t *Addr,
-                                           uint64_t LoadAddr,
-                                           size_t Size) {
+void RTDyldMemoryManager::deregisterEHFramesInProcess(uint8_t *Addr,
+                                                      size_t Size) {
   const char *P = (const char *)Addr;
   const char *End = P + Size;
   do  {
@@ -118,9 +117,8 @@ void RTDyldMemoryManager::deregisterEHFrames(uint8_t *Addr,
 
 #else
 
-void RTDyldMemoryManager::registerEHFrames(uint8_t *Addr,
-                                           uint64_t LoadAddr,
-                                           size_t Size) {
+void RTDyldMemoryManager::registerEHFramesInProcess(uint8_t *Addr,
+                                                    size_t Size) {
   // On Linux __register_frame takes a single argument: 
   // a pointer to the start of the .eh_frame section.
 
@@ -129,13 +127,24 @@ void RTDyldMemoryManager::registerEHFrames(uint8_t *Addr,
   __register_frame(Addr);
 }
 
-void RTDyldMemoryManager::deregisterEHFrames(uint8_t *Addr,
-                                           uint64_t LoadAddr,
-                                           size_t Size) {
+void RTDyldMemoryManager::deregisterEHFramesInProcess(uint8_t *Addr,
+                                                      size_t Size) {
   __deregister_frame(Addr);
 }
 
 #endif
+
+void RTDyldMemoryManager::registerEHFrames(uint8_t *Addr, uint64_t LoadAddr,
+                                          size_t Size) {
+  registerEHFramesInProcess(Addr, Size);
+  EHFrames.push_back({Addr, Size});
+}
+
+void RTDyldMemoryManager::deregisterEHFrames() {
+  for (auto &Frame : EHFrames)
+    deregisterEHFramesInProcess(Frame.Addr, Frame.Size);
+  EHFrames.clear();
+}
 
 static int jit_noop() {
   return 0;
@@ -266,18 +275,15 @@ RTDyldMemoryManager::getSymbolAddressInProcess(const std::string &Name) {
   // is called before ExecutionEngine::runFunctionAsMain() is called.
   if (Name == "__main") return (uint64_t)&jit_noop;
 
-  // Try to demangle Name before looking it up in the process, otherwise symbol
-  // '_<Name>' (if present) will shadow '<Name>', and there will be no way to
-  // refer to the latter.
-
   const char *NameStr = Name.c_str();
 
+  // DynamicLibrary::SearchForAddresOfSymbol expects an unmangled 'C' symbol
+  // name so ff we're on Darwin, strip the leading '_' off.
+#ifdef __APPLE__
   if (NameStr[0] == '_')
-    if (void *Ptr = sys::DynamicLibrary::SearchForAddressOfSymbol(NameStr + 1))
-      return (uint64_t)Ptr;
+    ++NameStr;
+#endif
 
-  // If we Name did not require demangling, or we failed to find the demangled
-  // name, try again without demangling.
   return (uint64_t)sys::DynamicLibrary::SearchForAddressOfSymbol(NameStr);
 }
 
@@ -288,6 +294,7 @@ void *RTDyldMemoryManager::getPointerToNamedFunction(const std::string &Name,
   if (!Addr && AbortOnFailure)
     report_fatal_error("Program used external function '" + Name +
                        "' which could not be resolved!");
+
   return (void*)Addr;
 }
 

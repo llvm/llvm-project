@@ -1,4 +1,4 @@
-//===-- llvm/SymbolTableListTraits.h - Traits for iplist --------*- C++ -*-===//
+//===- llvm/SymbolTableListTraits.h - Traits for iplist ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -26,38 +26,36 @@
 #define LLVM_IR_SYMBOLTABLELISTTRAITS_H
 
 #include "llvm/ADT/ilist.h"
+#include "llvm/ADT/simple_ilist.h"
+#include <cstddef>
 
 namespace llvm {
+
+class Argument;
+class BasicBlock;
+class Function;
+class GlobalAlias;
+class GlobalIFunc;
+class GlobalVariable;
+class Instruction;
+class Module;
 class ValueSymbolTable;
-
-template <typename NodeTy> class ilist_iterator;
-template <typename NodeTy, typename Traits> class iplist;
-template <typename Ty> struct ilist_traits;
-
-template <typename NodeTy>
-struct SymbolTableListSentinelTraits
-    : public ilist_embedded_sentinel_traits<NodeTy> {};
 
 /// Template metafunction to get the parent type for a symbol table list.
 ///
 /// Implementations create a typedef called \c type so that we only need a
 /// single template parameter for the list and traits.
 template <typename NodeTy> struct SymbolTableListParentType {};
-class Argument;
-class BasicBlock;
-class Function;
-class Instruction;
-class GlobalVariable;
-class GlobalAlias;
-class Module;
+
 #define DEFINE_SYMBOL_TABLE_PARENT_TYPE(NODE, PARENT)                          \
-  template <> struct SymbolTableListParentType<NODE> { typedef PARENT type; };
+  template <> struct SymbolTableListParentType<NODE> { using type = PARENT; };
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(Instruction, BasicBlock)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(BasicBlock, Function)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(Argument, Function)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(Function, Module)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(GlobalVariable, Module)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(GlobalAlias, Module)
+DEFINE_SYMBOL_TABLE_PARENT_TYPE(GlobalIFunc, Module)
 #undef DEFINE_SYMBOL_TABLE_PARENT_TYPE
 
 template <typename NodeTy> class SymbolTableList;
@@ -66,16 +64,14 @@ template <typename NodeTy> class SymbolTableList;
 // ItemParentClass - The type of object that owns the list, e.g. BasicBlock.
 //
 template <typename ValueSubClass>
-class SymbolTableListTraits
-    : public ilist_nextprev_traits<ValueSubClass>,
-      public SymbolTableListSentinelTraits<ValueSubClass>,
-      public ilist_node_traits<ValueSubClass> {
-  typedef SymbolTableList<ValueSubClass> ListTy;
-  typedef
-      typename SymbolTableListParentType<ValueSubClass>::type ItemParentClass;
+class SymbolTableListTraits : public ilist_alloc_traits<ValueSubClass> {
+  using ListTy = SymbolTableList<ValueSubClass>;
+  using iterator = typename simple_ilist<ValueSubClass>::iterator;
+  using ItemParentClass =
+      typename SymbolTableListParentType<ValueSubClass>::type;
 
 public:
-  SymbolTableListTraits() {}
+  SymbolTableListTraits() = default;
 
 private:
   /// getListOwner - Return the object that owns this list.  If this is a list
@@ -99,10 +95,9 @@ private:
 public:
   void addNodeToList(ValueSubClass *V);
   void removeNodeFromList(ValueSubClass *V);
-  void transferNodesFromList(SymbolTableListTraits &L2,
-                             ilist_iterator<ValueSubClass> first,
-                             ilist_iterator<ValueSubClass> last);
-//private:
+  void transferNodesFromList(SymbolTableListTraits &L2, iterator first,
+                             iterator last);
+  // private:
   template<typename TPtr>
   void setSymTabObject(TPtr *, TPtr);
   static ValueSymbolTable *toPtr(ValueSymbolTable *P) { return P; }
@@ -114,9 +109,10 @@ public:
 /// When nodes are inserted into and removed from this list, the associated
 /// symbol table will be automatically updated.  Similarly, parent links get
 /// updated automatically.
-template <typename NodeTy>
-class SymbolTableList : public iplist<NodeTy, SymbolTableListTraits<NodeTy>> {};
+template <class T>
+class SymbolTableList
+    : public iplist_impl<simple_ilist<T>, SymbolTableListTraits<T>> {};
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_SYMBOLTABLELISTTRAITS_H

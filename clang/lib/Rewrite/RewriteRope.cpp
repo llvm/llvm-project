@@ -350,8 +350,10 @@ void RopePieceBTreeLeaf::erase(unsigned Offset, unsigned NumBytes) {
     PieceOffs += getPiece(i).size();
 
   // If we exactly include the last one, include it in the region to delete.
-  if (Offset+NumBytes == PieceOffs+getPiece(i).size())
-    PieceOffs += getPiece(i).size(), ++i;
+  if (Offset+NumBytes == PieceOffs+getPiece(i).size()) {
+    PieceOffs += getPiece(i).size();
+    ++i;
+  }
 
   // If we completely cover some RopePieces, erase them now.
   if (i != StartPiece) {

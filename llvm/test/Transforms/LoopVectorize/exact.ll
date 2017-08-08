@@ -1,7 +1,6 @@
 ; RUN: opt < %s  -loop-vectorize -force-vector-width=4 -S | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.9.0"
 
 ; CHECK-LABEL: @lshr_exact(
 ; CHECK: lshr exact <4 x i32>

@@ -16,12 +16,12 @@ import time
 import unittest2
 import lldb
 import lldbsuite.test.decorators as decorators
-from lldbsuite.test.lldbrepl import REPLTest, load_tests
+import lldbsuite.test.lldbrepl as lldbrepl
 
 
-class REPLIntVarsTestCase (REPLTest):
+class REPLIntVarsTestCase (lldbrepl.REPLTest):
 
-    mydir = REPLTest.compute_mydir(__file__)
+    mydir = lldbrepl.REPLTest.compute_mydir(__file__)
 
     @decorators.swiftTest
     @decorators.no_debug_info_test
@@ -29,7 +29,7 @@ class REPLIntVarsTestCase (REPLTest):
         oslist=["linux"],
         bugnumber="rdar://23081322")
     def testREPL(self):
-        REPLTest.testREPL(self)
+        lldbrepl.REPLTest.testREPL(self)
 
     def doTest(self):
         self.command('3 + 2', patterns=['\\$R0: Int = 5'])

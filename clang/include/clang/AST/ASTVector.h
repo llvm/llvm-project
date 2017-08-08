@@ -20,9 +20,9 @@
 
 #include "clang/AST/AttrIterator.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/type_traits.h"
 #include <algorithm>
+#include <cstddef>
 #include <cstring>
 #include <memory>
 
@@ -381,7 +381,7 @@ void ASTVector<T>::grow(const ASTContext &C, size_t MinSize) {
     NewCapacity = MinSize;
 
   // Allocate the memory from the ASTContext.
-  T *NewElts = new (C, llvm::alignOf<T>()) T[NewCapacity];
+  T *NewElts = new (C, alignof(T)) T[NewCapacity];
 
   // Copy the elements over.
   if (Begin != End) {

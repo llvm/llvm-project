@@ -1,7 +1,7 @@
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
-; RUN: llc < %s -march=ppc64 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc64 | FileCheck %s
 
 %struct.ref_s.1.49.91.115.121.139.145.151.157.163.169.175.181.211 = type { %union.v.0.48.90.114.120.138.144.150.156.162.168.174.180.210, i16, i16 }
 %union.v.0.48.90.114.120.138.144.150.156.162.168.174.180.210 = type { i64 }

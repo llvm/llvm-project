@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 // PR4607
 template <class T> struct X {};
@@ -47,4 +49,9 @@ namespace rdar9169404 {
   };
 
   X<bool, -1>::type value;
+#if __cplusplus >= 201103L
+  // expected-error@-2 {{non-type template argument evaluates to -1, which cannot be narrowed to type 'bool'}}
+#else
+  // expected-no-diagnostics
+#endif
 }

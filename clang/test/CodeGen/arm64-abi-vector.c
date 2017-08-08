@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios7 -target-abi darwinpcs -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-linux-android -emit-llvm -o - %s | FileCheck -check-prefix=ANDROID %s
 
 #include <stdarg.h>
 
+typedef __attribute__(( ext_vector_type(2) ))  char __char2;
 typedef __attribute__(( ext_vector_type(3) ))  char __char3;
 typedef __attribute__(( ext_vector_type(4) ))  char __char4;
 typedef __attribute__(( ext_vector_type(5) ))  char __char5;
@@ -12,6 +14,26 @@ typedef __attribute__(( ext_vector_type(5) ))  short __short5;
 typedef __attribute__(( ext_vector_type(3) ))  int __int3;
 typedef __attribute__(( ext_vector_type(5) ))  int __int5;
 typedef __attribute__(( ext_vector_type(3) ))  double __double3;
+
+// Passing legal vector types as varargs. Check that we've allocated the appropriate size
+double varargs_vec_2c(int fixed, ...) {
+// ANDROID: varargs_vec_2c
+// ANDROID: [[VAR:%.*]] = alloca <2 x i8>, align 2
+// ANDROID: [[AP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[AP_CUR:%.*]], i64 8
+// ANDROID: bitcast i8* [[AP_CUR]] to <2 x i8>*
+  va_list ap;
+  double sum = fixed;
+  va_start(ap, fixed);
+  __char2 c3 = va_arg(ap, __char2);
+  sum = sum + c3.x + c3.y;
+  va_end(ap);
+  return sum;
+}
+
+double test_2c(__char2 *in) {
+// ANDROID: call double (i32, ...) @varargs_vec_2c(i32 3, i16 {{%.*}})
+  return varargs_vec_2c(3, *in);
+}
 
 double varargs_vec_3c(int fixed, ...) {
 // CHECK: varargs_vec_3c

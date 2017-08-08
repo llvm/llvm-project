@@ -31,13 +31,22 @@ typedef ArrayRef<std::pair<IdentifierInfo *, SourceLocation> > ModuleIdPath;
 
 /// \brief Describes the result of attempting to load a module.
 class ModuleLoadResult {
-  llvm::PointerIntPair<Module *, 1, bool> Storage;
-
 public:
-  ModuleLoadResult() : Storage() { }
+  enum LoadResultKind {
+    // We either succeeded or failed to load the named module.
+    Normal,
+    // The module exists, but does not actually contain the named submodule.
+    // This should only happen if the named submodule was inferred from an
+    // umbrella directory, but not actually part of the umbrella header.
+    MissingExpected,
+    // The module exists but cannot be imported due to a configuration mismatch.
+    ConfigMismatch
+  };
+  llvm::PointerIntPair<Module *, 2, LoadResultKind> Storage;
 
-  ModuleLoadResult(Module *module, bool missingExpected)
-    : Storage(module, missingExpected) { }
+  ModuleLoadResult() : Storage() { }
+  ModuleLoadResult(Module *M) : Storage(M, Normal) {}
+  ModuleLoadResult(LoadResultKind Kind) : Storage(nullptr, Kind) {}
 
   operator Module *() const { return Storage.getPointer(); }
 
@@ -45,7 +54,11 @@ public:
   /// actually a submodule that we expected to see (based on implying the
   /// submodule from header structure), but didn't materialize in the actual
   /// module.
-  bool isMissingExpected() const { return Storage.getInt(); }
+  bool isMissingExpected() const { return Storage.getInt() == MissingExpected; }
+
+  /// \brief Determines whether the module failed to load due to a configuration
+  /// mismatch with an explicitly-named .pcm file from the command line.
+  bool isConfigMismatch() const { return Storage.getInt() == ConfigMismatch; }
 };
 
 /// \brief Abstract interface for a module loader.
@@ -96,6 +109,16 @@ public:
                                       Module::NameVisibilityKind Visibility,
                                       bool IsInclusionDirective) = 0;
 
+  /// Attempt to load the given module from the specified source buffer. Does
+  /// not make any submodule visible; for that, use loadModule or
+  /// makeModuleVisible.
+  ///
+  /// \param Loc The location at which the module was loaded.
+  /// \param ModuleName The name of the module to build.
+  /// \param Source The source of the module: a (preprocessed) module map.
+  virtual void loadModuleFromSource(SourceLocation Loc, StringRef ModuleName,
+                                    StringRef Source) = 0;
+
   /// \brief Make the given module visible.
   virtual void makeModuleVisible(Module *Mod,
                                  Module::NameVisibilityKind Visibility,
@@ -122,6 +145,30 @@ public:
                                     SourceLocation TriggerLoc) = 0;
 
   bool HadFatalFailure;
+};
+
+/// A module loader that doesn't know how to load modules.
+class TrivialModuleLoader : public ModuleLoader {
+public:
+  ModuleLoadResult loadModule(SourceLocation ImportLoc, ModuleIdPath Path,
+                              Module::NameVisibilityKind Visibility,
+                              bool IsInclusionDirective) override {
+    return ModuleLoadResult();
+  }
+
+  void loadModuleFromSource(SourceLocation ImportLoc, StringRef ModuleName,
+                            StringRef Source) override {}
+
+  void makeModuleVisible(Module *Mod, Module::NameVisibilityKind Visibility,
+                         SourceLocation ImportLoc) override {}
+
+  GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override {
+    return nullptr;
+  }
+  bool lookupMissingImports(StringRef Name,
+                            SourceLocation TriggerLoc) override {
+    return 0;
+  }
 };
   
 }

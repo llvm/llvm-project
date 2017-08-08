@@ -1,4 +1,4 @@
-# RUN: llvm-mc --disassemble %s -triple=arm-apple-darwin9 2>&1 | FileCheck %s
+# RUN: llvm-mc --disassemble %s -triple=armv7-apple-darwin9 2>&1 | FileCheck %s
 
 # Opcode=322 Name=SSAT Format=ARM_FORMAT_SATFRM(13)
 #  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0

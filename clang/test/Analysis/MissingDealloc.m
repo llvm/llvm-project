@@ -1,5 +1,13 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.osx.cocoa.Dealloc %s -verify
-// expected-no-diagnostics
+// RUN: %clang_analyze_cc1 -analyzer-checker=osx.cocoa.Dealloc -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=osx.cocoa.Dealloc -fblocks -verify -triple x86_64-apple-darwin10 -fobjc-arc %s
+
+#define NON_ARC !__has_feature(objc_arc)
+
+// No diagnostics expected under ARC.
+#if !NON_ARC
+  // expected-no-diagnostics
+#endif
+
 typedef signed char BOOL;
 @protocol NSObject
 - (BOOL)isEqual:(id)object;
@@ -13,22 +21,92 @@ typedef signed char BOOL;
 
 typedef struct objc_selector *SEL;
 
-// <rdar://problem/6380411>: 'myproperty' has kind 'assign' and thus the
-//  assignment through the setter does not perform a release.
+//===------------------------------------------------------------------------===
+// Do not warn about missing -dealloc method.  Not enough context to know
+// whether the ivar is retained or not.
 
-@interface MyObject : NSObject {
-  id _myproperty;  
-}
-@property(assign) id myproperty;
-@end
-
-@implementation MyObject
-@synthesize myproperty=_myproperty; // no-warning
-- (void)dealloc {
-  self.myproperty = 0;
-  [super dealloc]; 
+@interface MissingDeallocWithIvar : NSObject {
+  NSObject *_ivar;
 }
 @end
+
+@implementation MissingDeallocWithIvar
+@end
+
+//===------------------------------------------------------------------------===
+// Do not warn about missing -dealloc method.  These properties are not
+// retained or synthesized.
+
+@interface MissingDeallocWithIntProperty : NSObject
+@property (assign) int ivar;
+@end
+
+@implementation MissingDeallocWithIntProperty
+@end
+
+@interface MissingDeallocWithSELProperty : NSObject
+@property (assign) SEL ivar;
+@end
+
+@implementation MissingDeallocWithSELProperty
+@end
+
+//===------------------------------------------------------------------------===
+// Warn about missing -dealloc method.
+
+@interface MissingDeallocWithCopyProperty : NSObject
+@property (copy) NSObject *ivar;
+@end
+
+#if NON_ARC
+// expected-warning@+2{{'MissingDeallocWithCopyProperty' lacks a 'dealloc' instance method but must release '_ivar'}}
+#endif
+@implementation MissingDeallocWithCopyProperty
+@end
+
+@interface MissingDeallocWithRetainProperty : NSObject
+@property (retain) NSObject *ivar;
+@end
+
+#if NON_ARC
+// expected-warning@+2{{'MissingDeallocWithRetainProperty' lacks a 'dealloc' instance method but must release '_ivar'}}
+#endif
+@implementation MissingDeallocWithRetainProperty
+@end
+
+@interface MissingDeallocWithMultipleProperties : NSObject
+@property (retain) NSObject *ivar1;
+@property (retain) NSObject *ivar2;
+@end
+
+#if NON_ARC
+// expected-warning@+2{{'MissingDeallocWithMultipleProperties' lacks a 'dealloc' instance method but must release '_ivar1' and others}}
+#endif
+@implementation MissingDeallocWithMultipleProperties
+@end
+
+@interface MissingDeallocWithIVarAndRetainProperty : NSObject {
+  NSObject *_ivar2;
+}
+@property (retain) NSObject *ivar1;
+@end
+
+#if NON_ARC
+// expected-warning@+2{{'MissingDeallocWithIVarAndRetainProperty' lacks a 'dealloc' instance method but must release '_ivar1'}}
+#endif
+@implementation MissingDeallocWithIVarAndRetainProperty
+@end
+
+@interface MissingDeallocWithReadOnlyRetainedProperty : NSObject
+@property (readonly,retain) NSObject *ivar;
+@end
+
+#if NON_ARC
+// expected-warning@+2{{'MissingDeallocWithReadOnlyRetainedProperty' lacks a 'dealloc' instance method but must release '_ivar'}}
+#endif
+@implementation MissingDeallocWithReadOnlyRetainedProperty
+@end
+
 
 //===------------------------------------------------------------------------===
 //  Don't warn about iVars that are selectors.
@@ -65,27 +143,6 @@ IBOutlet NSWindow *window;
 @end
 
 //===------------------------------------------------------------------------===
-// <rdar://problem/6380411>
-// Was bogus warning: "The '_myproperty' instance variable was not retained by a
-//  synthesized property but was released in 'dealloc'"
-
-@interface MyObject_rdar6380411 : NSObject {
-    id _myproperty;
-}
-@property(assign) id myproperty;
-@end
-
-@implementation MyObject_rdar6380411
-@synthesize myproperty=_myproperty;
-- (void)dealloc {
-    // Don't claim that myproperty is released since it the property
-    // has the 'assign' attribute.
-    self.myproperty = 0; // no-warning
-    [super dealloc];
-}
-@end
-
-//===------------------------------------------------------------------------===
 // PR 3187: http://llvm.org/bugs/show_bug.cgi?id=3187
 // - Disable the missing -dealloc check for classes that subclass SenTestCase
 
@@ -97,6 +154,9 @@ IBOutlet NSWindow *window;
 @interface MyClassTest : SenTestCase {
   NSString *resourcePath;
 }
+
+@property (retain) NSObject *ivar;
+
 @end
 
 @interface NSBundle : NSObject {}
@@ -112,3 +172,15 @@ IBOutlet NSWindow *window;
   // do something which uses resourcepath
 }
 @end
+
+//===------------------------------------------------------------------------===
+// Don't warn for clases that aren't subclasses of NSObject
+
+__attribute__((objc_root_class))
+@interface NonNSObjectMissingDealloc
+@property (retain) NSObject *ivar;
+@end
+@implementation NonNSObjectMissingDealloc
+@end
+
+// CHECK: 4 warnings generated.

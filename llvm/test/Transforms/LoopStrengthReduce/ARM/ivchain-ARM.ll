@@ -1,5 +1,4 @@
 ; RUN: llc -O3 -mtriple=thumb-eabi -mcpu=cortex-a9 %s -o - | FileCheck %s -check-prefix=A9
-; RUN: llc -O3 -mtriple=thumb-eabi -mcpu=cortex-a9 -addr-sink-using-gep=1 %s -o - | FileCheck %s -check-prefix=A9
 
 ; @simple is the most basic chain of address induction variables. Chaining
 ; saves at least one register and avoids complex addressing and setup
@@ -199,7 +198,7 @@ for.end:                                          ; preds = %for.body
 
 ; @testNeon is an important example of the nead for ivchains.
 ;
-; Currently we have three extra add.w's that keep the store address
+; Currently we have two extra add.w's that keep the store address
 ; live past the next increment because ISEL is unfortunately undoing
 ; the store chain. ISEL also fails to convert all but one of the stores to
 ; post-increment addressing. However, the loads should use
@@ -208,12 +207,10 @@ for.end:                                          ; preds = %for.body
 ;
 ; A9: testNeon:
 ; A9: %.lr.ph
+; A9: add.w r
 ; A9-NOT: lsl.w
 ; A9-NOT: {{ldr|str|adds|add r}}
-; A9: vst1.8 {{.*}} [r{{[0-9]+}}]!
-; A9-NOT: {{ldr|str|adds|add r}}
-; A9: add.w r
-; A9-NOT: {{ldr|str|adds|add r}}
+; A9: vst1.8 {{.*}} [r{{[0-9]+}}], r{{[0-9]+}}
 ; A9: add.w r
 ; A9-NOT: {{ldr|str|adds|add r}}
 ; A9-NOT: add.w r

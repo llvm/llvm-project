@@ -17,7 +17,7 @@
 using namespace llvm;
 
 TEST(Local, RecursivelyDeleteDeadPHINodes) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   IRBuilder<> builder(C);
 
@@ -60,7 +60,7 @@ TEST(Local, RecursivelyDeleteDeadPHINodes) {
 }
 
 TEST(Local, RemoveDuplicatePHINodes) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   IRBuilder<> B(C);
 
   std::unique_ptr<Function> F(

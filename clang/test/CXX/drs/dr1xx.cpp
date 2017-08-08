@@ -35,7 +35,7 @@ namespace dr102 { // dr102: yes
 }
 
 // dr103: na
-// dr104 FIXME: add codegen test
+// dr104: na lib
 // dr105: na
 
 namespace dr106 { // dr106: sup 540
@@ -202,7 +202,7 @@ namespace dr116 { // dr116: yes
 }
 
 // dr117: na
-// dr118 FIXME: add codegen test
+// dr118 is in its own file.
 // dr119: na
 // dr120: na
 
@@ -235,13 +235,11 @@ namespace dr125 {
     friend dr125_A (::dr125_B::dr125_C)(); // ok
     friend dr125_A::dr125_B::dr125_C(); // expected-error {{did you mean the constructor name 'dr125_B'?}}
     // expected-error@-1 {{missing exception specification}}
-#if __cplusplus >= 201103L
-    // expected-error@-3 {{follows constexpr declaration}} expected-note@-10 {{here}}
-#endif
   };
 }
 
 namespace dr126 { // dr126: no
+#if __cplusplus <= 201402L
   struct C {};
   struct D : C {};
   struct E : private C { friend class A; friend class B; };
@@ -314,12 +312,15 @@ namespace dr126 { // dr126: no
     virtual void y() throw(int*); // ok
     virtual void z() throw(long); // expected-error {{more lax}}
   };
+#else
+  void f() throw(int); // expected-error {{ISO C++1z does not allow}} expected-note {{use 'noexcept}}
+#endif
 }
 
 namespace dr127 { // dr127: yes
   __extension__ typedef __decltype(sizeof(0)) size_t;
   template<typename T> struct A {
-    A() throw(int);
+    A() { throw 0; }
     void *operator new(size_t, const char * = 0);
     void operator delete(void *, const char *) { T::error; } // expected-error 2{{no members}}
     void operator delete(void *) { T::error; }
@@ -524,18 +525,25 @@ namespace dr143 { // dr143: yes
 
 namespace dr145 { // dr145: yes
   void f(bool b) {
+#if __cplusplus <= 201402L
     ++b; // expected-warning {{deprecated}}
     b++; // expected-warning {{deprecated}}
+#else
+    ++b; // expected-error {{increment}}
+    b++; // expected-error {{increment}}
+#endif
   }
 }
 
-namespace dr147 { // dr147: no
+namespace dr147 { // dr147: yes
   namespace example1 {
     template<typename> struct A {
       template<typename T> A(T);
     };
-    // FIXME: This appears to be valid, and EDG and G++ accept.
+    // Per core issue 1435, this is ill-formed because A<int>::A<int> does not
+    // name the injected-class-name. (A<int>::A does, though.)
     template<> template<> A<int>::A<int>(int) {} // expected-error {{out-of-line constructor for 'A' cannot have template arguments}}
+    template<> template<> A<float>::A(float) {}
   }
   namespace example2 {
     struct A { A(); };
@@ -574,11 +582,18 @@ namespace dr151 { // dr151: yes
 
 namespace dr152 { // dr152: yes
   struct A {
-    A(); // expected-note {{not viable}}
+    A(); // expected-note 0-2{{not viable}}
     explicit A(const A&);
   };
-  A a1 = A(); // expected-error {{no matching constructor}}
+  A a1 = A();
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{no matching constructor}}
+#endif
   A a2((A()));
+
+  A &f();
+  A a3 = f(); // expected-error {{no matching constructor}}
+  A a4(f());
 }
 
 // dr153: na
@@ -595,7 +610,7 @@ namespace dr155 { // dr155: dup 632
   struct S { int n; } s = { { 1 } }; // expected-warning {{braces around scalar initializer}}
 }
 
-// dr158 FIXME write codegen test
+// dr158 is in its own file.
 
 namespace dr159 { // dr159: 3.5
   namespace X { void f(); }
@@ -821,11 +836,20 @@ namespace dr176 { // dr176: yes
 namespace dr177 { // dr177: yes
   struct B {};
   struct A {
-    A(A &); // expected-note {{not viable: expects an l-value}}
-    A(const B &);
+    A(A &); // expected-note 0-1{{not viable: expects an l-value}}
+    A(const B &); // expected-note 0-1{{not viable: no known conversion from 'dr177::A' to}}
   };
   B b;
-  A a = b; // expected-error {{no viable constructor copying variable}}
+  A a = b;
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{no viable constructor copying variable}}
+#endif
+
+  struct C { C(C&); }; // expected-note {{not viable: no known conversion from 'dr177::D' to 'dr177::C &'}}
+  struct D : C {};
+  struct E { operator D(); };
+  E e;
+  C c = e; // expected-error {{no viable constructor copying variable of type 'dr177::D'}}
 }
 
 namespace dr178 { // dr178: yes
@@ -897,7 +921,11 @@ namespace dr183 { // dr183: sup 382
     typedef int X;
   };
   template<> struct A<int> {
+#if __cplusplus <= 199711
+    typename B<int>::X x; // expected-error {{'typename' occurs outside of a template}}
+#else
     typename B<int>::X x;
+#endif
   };
 }
 

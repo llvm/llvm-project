@@ -1,0 +1,311 @@
+# RUN: llc -O0 -mtriple=aarch64-apple-ios -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=IOS
+# RUN: llc -O0 -mtriple=aarch64-linux-gnu -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LINUX-DEFAULT
+# RUN: llc -O0 -mtriple=aarch64-linux-gnu -relocation-model=pic -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LINUX-PIC
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+
+  define void @frame_index() {
+    %ptr0 = alloca i64
+    ret void
+  }
+
+  define i8* @gep(i8* %in) { ret i8* undef }
+
+  define i8* @ptr_mask(i8* %in) { ret i8* undef }
+
+  @var_local = global i8 0
+  define i8* @global_local() { ret i8* undef }
+
+  @var_got = external global i8
+  define i8* @global_got() { ret i8* undef }
+
+  define void @icmp() { ret void }
+  define void @fcmp() { ret void }
+
+  define void @phi() { ret void }
+
+  define void @select() { ret void }
+...
+
+---
+# CHECK-LABEL: name: frame_index
+name:            frame_index
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+
+stack:
+  - { id: 0, name: ptr0, offset: 0, size: 8, alignment: 8 }
+
+# CHECK:  body:
+# CHECK: %0 = ADDXri %stack.0.ptr0, 0, 0
+body:             |
+  bb.0:
+    %0(p0) = G_FRAME_INDEX %stack.0.ptr0
+    %x0 = COPY %0(p0)
+...
+
+---
+# CHECK-LABEL: name: gep
+name:            gep
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+# CHECK:  body:
+# CHECK: %1 = MOVi64imm 42
+# CHECK: %2 = ADDXrr %0, %1
+body:             |
+  bb.0:
+      liveins: %x0
+    %0(p0) = COPY %x0
+    %1(s64) = G_CONSTANT i64 42
+    %2(p0) = G_GEP %0, %1(s64)
+    %x0 = COPY %2(p0)
+...
+
+---
+# CHECK-LABEL: name: ptr_mask
+name:            ptr_mask
+legalized:       true
+regBankSelected: true
+
+# CHECK:  body:
+# CHECK: %1 = ANDXri %0, 8060
+body:             |
+  bb.0:
+      liveins: %x0
+    %0:gpr(p0) = COPY %x0
+    %1:gpr(p0) = G_PTR_MASK %0, 3
+    %x0 = COPY %1(p0)
+...
+
+---
+# Global defined in the same linkage unit so no GOT is needed
+# CHECK-LABEL: name: global_local
+name:            global_local
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: gpr }
+
+# CHECK:  body:
+# IOS: %0 = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
+# LINUX-DEFAULT: %0 = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
+# LINUX-PIC: %0 = LOADgot target-flags(aarch64-got) @var_local
+body:             |
+  bb.0:
+    %0(p0) = G_GLOBAL_VALUE @var_local
+    %x0 = COPY %0(p0)
+...
+
+---
+# CHECK-LABEL: name: global_got
+name:            global_got
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: gpr }
+
+# CHECK:  body:
+# IOS: %0 = LOADgot target-flags(aarch64-got) @var_got
+# LINUX-DEFAULT: %0 = MOVaddr target-flags(aarch64-page) @var_got, target-flags(aarch64-pageoff, aarch64-nc) @var_got
+# LINUX-PIC: %0 = LOADgot target-flags(aarch64-got) @var_got
+body:             |
+  bb.0:
+    %0(p0) = G_GLOBAL_VALUE @var_got
+    %x0 = COPY %0(p0)
+...
+
+---
+# CHECK-LABEL: name: icmp
+name:            icmp
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 2, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 4, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 5, class: gpr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+  - { id: 5, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %wzr = SUBSWrr %0, %0, implicit-def %nzcv
+# CHECK:    %1 = CSINCWr %wzr, %wzr, 1, implicit %nzcv
+
+# CHECK:    %xzr = SUBSXrr %2, %2, implicit-def %nzcv
+# CHECK:    %3 = CSINCWr %wzr, %wzr, 3, implicit %nzcv
+
+# CHECK:    %xzr = SUBSXrr %4, %4, implicit-def %nzcv
+# CHECK:    %5 = CSINCWr %wzr, %wzr, 0, implicit %nzcv
+
+body:             |
+  bb.0:
+    liveins: %w0, %x0
+
+    %0(s32) = COPY %w0
+    %1(s1) = G_ICMP intpred(eq), %0, %0
+    %w0 = COPY %1(s1)
+
+    %2(s64) = COPY %x0
+    %3(s1) = G_ICMP intpred(uge), %2, %2
+    %w0 = COPY %3(s1)
+
+    %4(p0) = COPY %x0
+    %5(s1) = G_ICMP intpred(ne), %4, %4
+    %w0 = COPY %5(s1)
+...
+
+---
+# CHECK-LABEL: name: fcmp
+name:            fcmp
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 2, class: fpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 4, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 5, class: gpr32, preferred-register: '' }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: fpr }
+  - { id: 3, class: gpr }
+
+# CHECK:  body:
+# CHECK:    FCMPSrr %0, %0, implicit-def %nzcv
+# CHECK:    [[TST_MI:%[0-9]+]] = CSINCWr %wzr, %wzr, 5, implicit %nzcv
+# CHECK:    [[TST_GT:%[0-9]+]] = CSINCWr %wzr, %wzr, 13, implicit %nzcv
+# CHECK:    %1 = ORRWrr [[TST_MI]], [[TST_GT]]
+
+# CHECK:    FCMPDrr %2, %2, implicit-def %nzcv
+# CHECK:    %3 = CSINCWr %wzr, %wzr, 4, implicit %nzcv
+
+body:             |
+  bb.0:
+    liveins: %w0, %x0
+
+    %0(s32) = COPY %s0
+    %1(s1) = G_FCMP floatpred(one), %0, %0
+    %w0 = COPY %1(s1)
+
+    %2(s64) = COPY %d0
+    %3(s1) = G_FCMP floatpred(uge), %2, %2
+    %w0 = COPY %3(s1)
+
+...
+
+---
+# CHECK-LABEL: name: phi
+name:            phi
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 2, class: fpr32, preferred-register: '' }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: fpr }
+
+# CHECK:  body:
+# CHECK:    bb.1:
+# CHECK:      %2 = PHI %0, %bb.0, %2, %bb.1
+
+body:             |
+  bb.0:
+    liveins: %s0, %w0
+    successors: %bb.1
+    %0(s32) = COPY %s0
+    %1(s1) = COPY %w0
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    %2(s32) = PHI %0, %bb.0, %2, %bb.1
+    G_BRCOND %1, %bb.1
+
+  bb.2:
+    %s0 = COPY %2
+    RET_ReallyLR implicit %s0
+...
+
+---
+# CHECK-LABEL: name: select
+name:            select
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 2, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 4, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 5, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 6, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 7, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 8, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 9, class: gpr64, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+  - { id: 5, class: gpr }
+  - { id: 6, class: gpr }
+  - { id: 7, class: gpr }
+  - { id: 8, class: gpr }
+  - { id: 9, class: gpr }
+
+# CHECK:  body:
+# CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
+# CHECK:      %3 = CSELWr %1, %2, 1, implicit %nzcv
+# CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
+# CHECK:      %6 = CSELXr %4, %5, 1, implicit %nzcv
+# CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
+# CHECK:      %9 = CSELXr %7, %8, 1, implicit %nzcv
+body:             |
+  bb.0:
+    liveins: %w0, %w1, %w2
+    %0(s1) = COPY %w0
+
+    %1(s32) = COPY %w1
+    %2(s32) = COPY %w2
+    %3(s32) = G_SELECT %0, %1, %2
+    %w0 = COPY %3(s32)
+
+    %4(s64) = COPY %x0
+    %5(s64) = COPY %x1
+    %6(s64) = G_SELECT %0, %4, %5
+    %x0 = COPY %6(s64)
+
+    %7(p0) = COPY %x0
+    %8(p0) = COPY %x1
+    %9(p0) = G_SELECT %0, %7, %8
+    %x0 = COPY %9(p0)
+...

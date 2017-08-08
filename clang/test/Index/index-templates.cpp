@@ -49,9 +49,9 @@ template class vector<int*>;
 struct Z4 {
   template<typename T> T getAs();
 };
-
+template<typename T, T> struct value { };
 void template_exprs() {
-  f<Unsigned, OneDimension, array>(array<Unsigned, OneDimension>());
+  f<Unsigned, OneDimension, value>(value<Unsigned, OneDimension>());
   Z4().getAs<Unsigned>();
 }
 
@@ -109,6 +109,9 @@ void foo(T Value) {}
 static const int FxnTmpl_Var = 7;
 template <>
 void foo<float, 9, FxnTmplEnum_B, FxnTmpl_Var + 7>(float Value);
+
+template <class T>
+using alias = T;
 
 // RUN: c-index-test -test-load-source all -fno-delayed-template-parsing %s | FileCheck -check-prefix=CHECK-LOAD %s
 // CHECK-LOAD: index-templates.cpp:4:6: FunctionTemplate=f:4:6 Extent=[3:1 - 4:22]
@@ -170,7 +173,7 @@ void foo<float, 9, FxnTmplEnum_B, FxnTmpl_Var + 7>(float Value);
 // CHECK-LOAD: index-templates.cpp:54:3: DeclRefExpr=f:4:6 RefName=[54:3 - 54:4] RefName=[54:4 - 54:35] Extent=[54:3 - 54:35]
 // CHECK-LOAD: index-templates.cpp:54:5: TypeRef=Unsigned:42:18 Extent=[54:5 - 54:13]
 // CHECK-LOAD: index-templates.cpp:54:15: DeclRefExpr=OneDimension:35:16 Extent=[54:15 - 54:27]
-// CHECK-LOAD: index-templates.cpp:54:29: TemplateRef=array:37:8 Extent=[54:29 - 54:34]
+// CHECK-LOAD: index-templates.cpp:54:29: TemplateRef=value:52:32 Extent=[54:29 - 54:34]
 // CHECK-LOAD: index-templates.cpp:55:8: MemberRefExpr=getAs:50:26 SingleRefName=[55:8 - 55:13] RefName=[55:8 - 55:13] Extent=[55:3 - 55:23]
 // CHECK-LOAD: index-templates.cpp:55:3: CallExpr=Z4:49:8 Extent=[55:3 - 55:7]
 // CHECK-LOAD: index-templates.cpp:55:14: TypeRef=Unsigned:42:18 Extent=[55:14 - 55:22]
@@ -189,6 +192,10 @@ void foo<float, 9, FxnTmplEnum_B, FxnTmpl_Var + 7>(float Value);
 // CHECK-LOAD: index-templates.cpp:101:20: C++ base class specifier=Pair<int, int>:98:16 [access=public isVirtual=false] Extent=[101:20 - 101:34]
 // CHECK-LOAD: index-templates.cpp:101:36: C++ base class specifier=Pair<T, U>:76:8 [access=public isVirtual=false] Extent=[101:36 - 101:46]
 // CHECK-LOAD: index-templates.cpp:111:6: FunctionDecl=foo:111:6 [Specialization of foo:107:6] [Template arg 0: kind: 1, type: float] [Template arg 1: kind: 4, intval: 9] [Template arg 2: kind: 4, intval: 1] [Template arg 3: kind: 4, intval: 14] Extent=[110:1 - 111:64]
+// CHECK-LOAD: index-templates.cpp:114:1: TypeAliasTemplateDecl=alias:114:1 (Definition) Extent=[113:1 - 114:16]
+// CHECK-LOAD: index-templates.cpp:113:17: TemplateTypeParameter=T:113:17 (Definition) Extent=[113:11 - 113:18] [access=public]
+// CHECK-LOAD: index-templates.cpp:114:7: TypeAliasDecl=alias:114:7 (Definition) Extent=[114:1 - 114:16]
+// CHECK-LOAD: index-templates.cpp:114:15: TypeRef=T:113:17 Extent=[114:15 - 114:16]
 
 // RUN: c-index-test -test-load-source-usrs all -fno-delayed-template-parsing %s | FileCheck -check-prefix=CHECK-USRS %s
 // CHECK-USRS: index-templates.cpp c:@FT@>3#T#Nt0.0#t>2#T#Nt1.0f#>t0.22S0_#v# Extent=[3:1 - 4:22]

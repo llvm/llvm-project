@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OrcTestCommon.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
+#include "OrcTestCommon.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -16,29 +16,22 @@ using namespace llvm::orc;
 
 namespace {
 
-class DummyCallbackManager : public orc::JITCompileCallbackManagerBase {
+class DummyCallbackManager : public orc::JITCompileCallbackManager {
 public:
-  DummyCallbackManager()
-      : JITCompileCallbackManagerBase(0), NextStubAddress(0),
-        UniversalCompile([]() { return 0; }) {
-  }
+  DummyCallbackManager() : JITCompileCallbackManager(0) {}
 
-  CompileCallbackInfo getCompileCallback() override {
-    return CompileCallbackInfo(++NextStubAddress, UniversalCompile);
-  }
 public:
-  TargetAddress NextStubAddress;
-  CompileFtor UniversalCompile;
+  void grow() override { llvm_unreachable("not implemented"); }
 };
 
-class DummyStubsManager : public orc::IndirectStubsManagerBase {
+class DummyStubsManager : public orc::IndirectStubsManager {
 public:
-  std::error_code createStub(StringRef StubName, TargetAddress InitAddr,
-                             JITSymbolFlags Flags) override {
+  Error createStub(StringRef StubName, JITTargetAddress InitAddr,
+                   JITSymbolFlags Flags) override {
     llvm_unreachable("Not implemented");
   }
 
-  std::error_code createStubs(const StubInitsMap &StubInits) override {
+  Error createStubs(const StubInitsMap &StubInits) override {
     llvm_unreachable("Not implemented");
   }
 
@@ -50,22 +43,21 @@ public:
     llvm_unreachable("Not implemented");
   }
 
-  std::error_code updatePointer(StringRef Name,
-                                TargetAddress NewAddr) override {
+  Error updatePointer(StringRef Name, JITTargetAddress NewAddr) override {
     llvm_unreachable("Not implemented");
   }
 };
 
 TEST(CompileOnDemandLayerTest, FindSymbol) {
-  auto MockBaseLayer =
-    createMockBaseLayer<int>(DoNothingAndReturn<int>(0),
-                             DoNothingAndReturn<void>(),
-                             [](const std::string &Name, bool) {
-                               if (Name == "foo")
-                                 return JITSymbol(1, JITSymbolFlags::Exported);
-                               return JITSymbol(nullptr);
-                             },
-                             DoNothingAndReturn<JITSymbol>(nullptr));
+  auto MockBaseLayer = createMockBaseLayer<int>(
+      DoNothingAndReturn<int>(0),
+      [](int Handle) { return Error::success(); },
+      [](const std::string &Name, bool) {
+        if (Name == "foo")
+          return JITSymbol(1, JITSymbolFlags::Exported);
+        return JITSymbol(nullptr);
+      },
+      ReturnNullJITSymbol());
 
   typedef decltype(MockBaseLayer) MockBaseLayerT;
   DummyCallbackManager CallbackMgr;
@@ -76,8 +68,7 @@ TEST(CompileOnDemandLayerTest, FindSymbol) {
 
   auto Sym = COD.findSymbol("foo", true);
 
-  EXPECT_TRUE(!!Sym)
-    << "CompileOnDemand::findSymbol should call findSymbol in the base layer.";
+  EXPECT_TRUE(!!Sym) << "CompileOnDemand::findSymbol should call findSymbol in "
+                        "the base layer.";
 }
-
 }

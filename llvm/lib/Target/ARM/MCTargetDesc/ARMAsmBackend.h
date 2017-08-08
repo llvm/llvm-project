@@ -11,12 +11,12 @@
 #define LLVM_LIB_TARGET_ARM_ARMASMBACKEND_H
 
 #include "MCTargetDesc/ARMFixupKinds.h"
+#include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/TargetRegistry.h"
 
-using namespace llvm;
-
-namespace {
+namespace llvm {
 
 class ARMAsmBackend : public MCAsmBackend {
   const MCSubtargetInfo *STI;
@@ -38,19 +38,17 @@ public:
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
-  /// processFixupValue - Target hook to process the literal value of a fixup
-  /// if necessary.
-  void processFixupValue(const MCAssembler &Asm, const MCAsmLayout &Layout,
-                         const MCFixup &Fixup, const MCFragment *DF,
-                         const MCValue &Target, uint64_t &Value,
-                         bool &IsResolved) override;
+  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                             const MCValue &Target) override;
 
-  unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value, bool IsPCRel,
-                            MCContext *Ctx, bool IsLittleEndian,
-                            bool IsResolved) const;
+  unsigned adjustFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
+                            const MCValue &Target, uint64_t Value,
+                            bool IsResolved, MCContext &Ctx,
+                            bool IsLittleEndian) const;
 
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t Value, bool IsPCRel) const override;
+  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                  const MCValue &Target, MutableArrayRef<char> Data,
+                  uint64_t Value, bool IsResolved) const override;
 
   unsigned getRelaxedOpcode(unsigned Op) const;
 
@@ -63,7 +61,8 @@ public:
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override;
 
-  void relaxInstruction(const MCInst &Inst, MCInst &Res) const override;
+  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                        MCInst &Res) const override;
 
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
 
@@ -74,6 +73,6 @@ public:
   void setIsThumb(bool it) { isThumbMode = it; }
   bool isLittle() const { return IsLittleEndian; }
 };
-} // end anonymous namespace
+} // end namespace llvm
 
 #endif

@@ -4,10 +4,10 @@
 // REQUIRES: nvptx-registered-target
 //
 // Prepare bitcode file to link with
-// RUN: %clang_cc1 -triple nvptx-unknown-cuda -emit-llvm-bc -o %t.bc \
-// RUN:    %S/Inputs/device-code.ll
-// RUN: %clang_cc1 -triple nvptx-unknown-cuda -emit-llvm-bc -o %t-2.bc \
-// RUN:    %S/Inputs/device-code-2.ll
+// RUN: %clang_cc1 -triple nvptx-unknown-cuda -emit-llvm-bc \
+// RUN:    -disable-llvm-passes -o %t.bc %S/Inputs/device-code.ll
+// RUN: %clang_cc1 -triple nvptx-unknown-cuda -emit-llvm-bc \
+// RUN:    -disable-llvm-passes -o %t-2.bc %S/Inputs/device-code-2.ll
 //
 // Make sure function in device-code gets linked in and internalized.
 // RUN: %clang_cc1 -triple nvptx-unknown-cuda -fcuda-is-device \

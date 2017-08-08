@@ -36,7 +36,8 @@ define void @g(i1* %condition) {
 ; CHECK: %idx.inc2.sext = sext i32 %idx.inc2 to i64
 ; CHECK-NEXT: -->  {2,+,3}<nuw><nsw><%loop>
 
-  %c = load volatile i1, i1* %condition
+  %cond.gep = getelementptr inbounds i1, i1* %condition, i32 %idx.inc
+  %c = load volatile i1, i1* %cond.gep
   br i1 %c, label %loop, label %exit
 
  exit:

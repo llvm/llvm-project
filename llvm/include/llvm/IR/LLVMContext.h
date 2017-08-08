@@ -1,4 +1,4 @@
-//===-- llvm/LLVMContext.h - Class for managing "global" state --*- C++ -*-===//
+//===- llvm/LLVMContext.h - Class for managing "global" state ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,23 +15,50 @@
 #ifndef LLVM_IR_LLVMCONTEXT_H
 #define LLVM_IR_LLVMCONTEXT_H
 
-#include "llvm-c/Core.h"
+#include "llvm-c/Types.h"
 #include "llvm/Support/CBindingWrapping.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Options.h"
+#include <cstdint>
+#include <memory>
+#include <string>
 
 namespace llvm {
 
+class DiagnosticInfo;
+enum DiagnosticSeverity : char;
+class Function;
+class Instruction;
 class LLVMContextImpl;
+class Module;
+class OptBisect;
+template <typename T> class SmallVectorImpl;
+class SMDiagnostic;
 class StringRef;
 class Twine;
-class Instruction;
-class Module;
-class SMDiagnostic;
-class DiagnosticInfo;
-template <typename T> class SmallVectorImpl;
-class Function;
-class DebugLoc;
+
+namespace yaml {
+
+class Output;
+
+} // end namespace yaml
+
+namespace SyncScope {
+
+typedef uint8_t ID;
+
+/// Known synchronization scope IDs, which always have the same value.  All
+/// synchronization scope IDs that LLVM has special knowledge of are listed
+/// here.  Additionally, this scheme allows LLVM to efficiently check for
+/// specific synchronization scope ID without comparing strings.
+enum {
+  /// Synchronized with respect to signal handlers executing in the same thread.
+  SingleThread = 0,
+
+  /// Synchronized with respect to all concurrently executing threads.
+  System = 1
+};
+
+} // end namespace SyncScope
 
 /// This is an important class for using LLVM in a threaded context.  It
 /// (opaquely) owns and manages the core "global" data of LLVM's core
@@ -42,29 +69,46 @@ class LLVMContext {
 public:
   LLVMContextImpl *const pImpl;
   LLVMContext();
+  LLVMContext(LLVMContext &) = delete;
+  LLVMContext &operator=(const LLVMContext &) = delete;
   ~LLVMContext();
 
   // Pinned metadata names, which always have the same value.  This is a
   // compile-time performance optimization, not a correctness optimization.
   enum {
-    MD_dbg = 0,  // "dbg"
-    MD_tbaa = 1, // "tbaa"
-    MD_prof = 2,  // "prof"
-    MD_fpmath = 3,  // "fpmath"
-    MD_range = 4, // "range"
-    MD_tbaa_struct = 5, // "tbaa.struct"
-    MD_invariant_load = 6, // "invariant.load"
-    MD_alias_scope = 7, // "alias.scope"
-    MD_noalias = 8, // "noalias",
-    MD_nontemporal = 9, // "nontemporal"
+    MD_dbg = 0,                       // "dbg"
+    MD_tbaa = 1,                      // "tbaa"
+    MD_prof = 2,                      // "prof"
+    MD_fpmath = 3,                    // "fpmath"
+    MD_range = 4,                     // "range"
+    MD_tbaa_struct = 5,               // "tbaa.struct"
+    MD_invariant_load = 6,            // "invariant.load"
+    MD_alias_scope = 7,               // "alias.scope"
+    MD_noalias = 8,                   // "noalias",
+    MD_nontemporal = 9,               // "nontemporal"
     MD_mem_parallel_loop_access = 10, // "llvm.mem.parallel_loop_access"
-    MD_nonnull = 11, // "nonnull"
-    MD_dereferenceable = 12, // "dereferenceable"
-    MD_dereferenceable_or_null = 13, // "dereferenceable_or_null"
-    MD_make_implicit = 14, // "make.implicit"
-    MD_unpredictable = 15, // "unpredictable"
-    MD_invariant_group = 16, // "invariant.group"
-    MD_align = 17 // "align"
+    MD_nonnull = 11,                  // "nonnull"
+    MD_dereferenceable = 12,          // "dereferenceable"
+    MD_dereferenceable_or_null = 13,  // "dereferenceable_or_null"
+    MD_make_implicit = 14,            // "make.implicit"
+    MD_unpredictable = 15,            // "unpredictable"
+    MD_invariant_group = 16,          // "invariant.group"
+    MD_align = 17,                    // "align"
+    MD_loop = 18,                     // "llvm.loop"
+    MD_type = 19,                     // "type"
+    MD_section_prefix = 20,           // "section_prefix"
+    MD_absolute_symbol = 21,          // "absolute_symbol"
+    MD_associated = 22,               // "associated"
+  };
+
+  /// Known operand bundle tag IDs, which always have the same value.  All
+  /// operand bundle tags that LLVM has special knowledge of are listed here.
+  /// Additionally, this scheme allows LLVM to efficiently check for specific
+  /// operand bundle tags without comparing strings.
+  enum {
+    OB_deopt = 0,         // "deopt"
+    OB_funclet = 1,       // "funclet"
+    OB_gc_transition = 2, // "gc-transition"
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
@@ -85,17 +129,52 @@ public:
   /// tag registered with an LLVMContext has an unique ID.
   uint32_t getOperandBundleTagID(StringRef Tag) const;
 
-  typedef void (*InlineAsmDiagHandlerTy)(const SMDiagnostic&, void *Context,
-                                         unsigned LocCookie);
+  /// getOrInsertSyncScopeID - Maps synchronization scope name to
+  /// synchronization scope ID.  Every synchronization scope registered with
+  /// LLVMContext has unique ID except pre-defined ones.
+  SyncScope::ID getOrInsertSyncScopeID(StringRef SSN);
+
+  /// getSyncScopeNames - Populates client supplied SmallVector with
+  /// synchronization scope names registered with LLVMContext.  Synchronization
+  /// scope names are ordered by increasing synchronization scope IDs.
+  void getSyncScopeNames(SmallVectorImpl<StringRef> &SSNs) const;
+
+  /// Define the GC for a function
+  void setGC(const Function &Fn, std::string GCName);
+
+  /// Return the GC for a function
+  const std::string &getGC(const Function &Fn);
+
+  /// Remove the GC for a function
+  void deleteGC(const Function &Fn);
+
+  /// Return true if the Context runtime configuration is set to discard all
+  /// value names. When true, only GlobalValue names will be available in the
+  /// IR.
+  bool shouldDiscardValueNames() const;
+
+  /// Set the Context runtime configuration to discard all value name (but
+  /// GlobalValue). Clients can use this flag to save memory and runtime,
+  /// especially in release mode.
+  void setDiscardValueNames(bool Discard);
+
+  /// Whether there is a string map for uniquing debug info
+  /// identifiers across the context.  Off by default.
+  bool isODRUniquingDebugTypes() const;
+  void enableDebugTypeODRUniquing();
+  void disableDebugTypeODRUniquing();
+
+  using InlineAsmDiagHandlerTy = void (*)(const SMDiagnostic&, void *Context,
+                                          unsigned LocCookie);
 
   /// Defines the type of a diagnostic handler.
   /// \see LLVMContext::setDiagnosticHandler.
   /// \see LLVMContext::diagnose.
-  typedef void (*DiagnosticHandlerTy)(const DiagnosticInfo &DI, void *Context);
+  using DiagnosticHandlerTy = void (*)(const DiagnosticInfo &DI, void *Context);
 
   /// Defines the type of a yield callback.
   /// \see LLVMContext::setYieldCallback.
-  typedef void (*YieldCallbackTy)(LLVMContext *Context, void *OpaqueHandle);
+  using YieldCallbackTy = void (*)(LLVMContext *Context, void *OpaqueHandle);
 
   /// setInlineAsmDiagnosticHandler - This method sets a handler that is invoked
   /// when problems with inline asm are detected by the backend.  The first
@@ -134,6 +213,37 @@ public:
   /// getDiagnosticContext - Return the diagnostic context set by
   /// setDiagnosticContext.
   void *getDiagnosticContext() const;
+
+  /// \brief Return if a code hotness metric should be included in optimization
+  /// diagnostics.
+  bool getDiagnosticsHotnessRequested() const;
+  /// \brief Set if a code hotness metric should be included in optimization
+  /// diagnostics.
+  void setDiagnosticsHotnessRequested(bool Requested);
+
+  /// \brief Return the minimum hotness value a diagnostic would need in order
+  /// to be included in optimization diagnostics. If there is no minimum, this
+  /// returns None.
+  uint64_t getDiagnosticsHotnessThreshold() const;
+
+  /// \brief Set the minimum hotness value a diagnostic needs in order to be
+  /// included in optimization diagnostics.
+  void setDiagnosticsHotnessThreshold(uint64_t Threshold);
+
+  /// \brief Return the YAML file used by the backend to save optimization
+  /// diagnostics.  If null, diagnostics are not saved in a file but only
+  /// emitted via the diagnostic handler.
+  yaml::Output *getDiagnosticsOutputFile();
+  /// Set the diagnostics output file used for optimization diagnostics.
+  ///
+  /// By default or if invoked with null, diagnostics are not saved in a file
+  /// but only emitted via the diagnostic handler.  Even if an output file is
+  /// set, the handler is invoked for each diagnostic message.
+  void setDiagnosticsOutputFile(std::unique_ptr<yaml::Output> F);
+
+  /// \brief Get the prefix that should be printed in front of a diagnostic of
+  ///        the given \p Severity
+  static const char *getDiagnosticMessagePrefix(DiagnosticSeverity Severity);
 
   /// \brief Report a message to the currently installed diagnostic handler.
   ///
@@ -190,9 +300,12 @@ public:
     return OptionRegistry::instance().template get<ValT, Base, Mem>();
   }
 
+  /// \brief Access the object which manages optimization bisection for failure
+  /// analysis.
+  OptBisect &getOptBisect();
 private:
-  LLVMContext(LLVMContext&) = delete;
-  void operator=(LLVMContext&) = delete;
+  // Module needs access to the add/removeModule methods.
+  friend class Module;
 
   /// addModule - Register a module as being instantiated in this context.  If
   /// the context is deleted, the module will be deleted as well.
@@ -200,14 +313,7 @@ private:
 
   /// removeModule - Unregister a module from this context.
   void removeModule(Module*);
-
-  // Module needs access to the add/removeModule methods.
-  friend class Module;
 };
-
-/// getGlobalContext - Returns a global context.  This is for LLVM clients that
-/// only care about operating on a single thread.
-extern LLVMContext &getGlobalContext();
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLVMContext, LLVMContextRef)
@@ -222,6 +328,6 @@ inline LLVMContextRef *wrap(const LLVMContext **Tys) {
   return reinterpret_cast<LLVMContextRef*>(const_cast<LLVMContext**>(Tys));
 }
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_LLVMCONTEXT_H

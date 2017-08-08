@@ -1,5 +1,7 @@
+RUN: cd %p
+
 Test reading an archive created by gnu ar
-RUN: env TZ=GMT llvm-ar tv %p/Inputs/GNU.a | FileCheck %s --check-prefix=GNU -strict-whitespace
+RUN: env TZ=GMT llvm-ar tv Inputs/GNU.a | FileCheck %s --check-prefix=GNU -strict-whitespace
 
 GNU:      rw-r--r-- 500/500      8 2004-11-19 02:57:37.000000000 evenlen
 GNU-NEXT: rw-r--r-- 500/500      7 2004-11-19 02:57:21.000000000 oddlen
@@ -8,7 +10,7 @@ GNU-NEXT: rw-r--r-- 500/500   2280 2004-11-19 03:04:30.000000000 IsNAN.o
 
 
 Test reading an archive createdy by Mac OS X ar
-RUN: env TZ=GMT llvm-ar tv %p/Inputs/MacOSX.a | FileCheck %s --check-prefix=OSX -strict-whitespace
+RUN: env TZ=GMT llvm-ar tv Inputs/MacOSX.a | FileCheck %s --check-prefix=OSX -strict-whitespace
 
 OSX-NOT: __.SYMDEF
 OSX:      rw-r--r-- 501/501      8 2004-11-19 02:57:37.000000000 evenlen
@@ -17,10 +19,10 @@ OSX-NEXT: rw-r--r-- 502/502   1465 2010-02-04 06:59:14.000000000 very_long_bytec
 OSX-NEXT: rw-r--r-- 501/501   2280 2004-11-19 04:32:06.000000000 IsNAN.o
 
 Test reading an archive created on Solaris by /usr/ccs/bin/ar
-RUN: env TZ=GMT llvm-ar tv %p/Inputs/SVR4.a | FileCheck %s -strict-whitespace
+RUN: env TZ=GMT llvm-ar tv Inputs/SVR4.a | FileCheck %s -strict-whitespace
 
 Test reading an archive created on Solaris by /usr/xpg4/bin/ar
-RUN: env TZ=GMT llvm-ar tv %p/Inputs/xpg4.a | FileCheck %s -strict-whitespace
+RUN: env TZ=GMT llvm-ar tv Inputs/xpg4.a | FileCheck %s -strict-whitespace
 
 CHECK:      rw-r--r-- 1002/102      8 2004-11-19 03:24:02.000000000 evenlen
 CHECK-NEXT: rw-r--r-- 1002/102      7 2004-11-19 03:24:02.000000000 oddlen
@@ -28,19 +30,19 @@ CHECK-NEXT: rwxr-xr-x 1002/102   1465 2004-11-19 03:24:02.000000000 very_long_by
 CHECK-NEXT: rw-r--r-- 1002/102   2280 2004-11-19 03:24:02.000000000 IsNAN.o
 
 Test reading a thin archive created by gnu ar
-RUN: env TZ=GMT llvm-ar tv %p/Inputs/thin.a | FileCheck %s --check-prefix=THIN -strict-whitespace
+RUN: env TZ=GMT llvm-ar tv Inputs/thin.a | FileCheck %s --check-prefix=THIN -strict-whitespace
 
-THIN:      rw-r--r-- 1000/1000      8 2014-12-16 00:56:27.000000000 evenlen
-THIN-NEXT: rw-r--r-- 1000/1000      7 2014-12-16 00:56:27.000000000 oddlen
-THIN-NEXT: rwxr-xr-x 1000/1000   1465 2014-12-16 00:56:27.000000000 very_long_bytecode_file_name.bc
-THIN-NEXT: rw-r--r-- 1000/1000   2280 2014-12-16 00:56:27.000000000 IsNAN.o
+THIN:      rw-r--r-- 1000/1000      8 2014-12-16 00:56:27.000000000 Inputs/evenlen
+THIN-NEXT: rw-r--r-- 1000/1000      7 2014-12-16 00:56:27.000000000 Inputs/oddlen
+THIN-NEXT: rwxr-xr-x 1000/1000   1465 2014-12-16 00:56:27.000000000 Inputs/very_long_bytecode_file_name.bc
+THIN-NEXT: rw-r--r-- 1000/1000   2280 2014-12-16 00:56:27.000000000 Inputs/IsNAN.o
 
 Test reading an archive with just a symbol table. We use to reject them.
-RUN: llvm-ar tv %p/Inputs/symtab-only.a | FileCheck --allow-empty --check-prefix=EMPTY %s
+RUN: llvm-ar tv Inputs/symtab-only.a | FileCheck --allow-empty --check-prefix=EMPTY %s
 EMPTY-NOT: {{.}}
 
 Test reading a thin archive with directory names.
-RUN: env TZ=GMT llvm-ar tv %p/Inputs/thin-path.a | FileCheck %s --check-prefix=THINPATH -strict-whitespace
+RUN: env TZ=GMT llvm-ar tv Inputs/thin-path.a | FileCheck %s --check-prefix=THINPATH -strict-whitespace
 
-THINPATH: rw-r--r-- 0/0   1224 1970-01-01 00:00:00.000000000 test.o
-THINPATH-NEXT: rw-r--r-- 0/0   1224 1970-01-01 00:00:00.000000000 t/test2.o
+THINPATH: rw-r--r-- 0/0   1224 1970-01-01 00:00:00.000000000 Inputs/test.o
+THINPATH-NEXT: rw-r--r-- 0/0   1224 1970-01-01 00:00:00.000000000 Inputs/t/test2.o
