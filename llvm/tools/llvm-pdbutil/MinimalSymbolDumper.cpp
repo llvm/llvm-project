@@ -389,15 +389,25 @@ Error MinimalSymbolDumper::visitSymbolEnd(CVSymbol &Record) {
   return Error::success();
 }
 
-std::string MinimalSymbolDumper::typeIndex(TypeIndex TI) const {
+std::string MinimalSymbolDumper::typeOrIdIndex(codeview::TypeIndex TI,
+                                               bool IsType) const {
   if (TI.isSimple())
     return formatv("{0}", TI).str();
-  StringRef Name = Types.getTypeName(TI);
+  auto &Container = IsType ? Types : Ids;
+  StringRef Name = Container.getTypeName(TI);
   if (Name.size() > 32) {
     Name = Name.take_front(32);
     return formatv("{0} ({1}...)", TI, Name);
   } else
     return formatv("{0} ({1})", TI, Name);
+}
+
+std::string MinimalSymbolDumper::idIndex(codeview::TypeIndex TI) const {
+  return typeOrIdIndex(TI, false);
+}
+
+std::string MinimalSymbolDumper::typeIndex(TypeIndex TI) const {
+  return typeOrIdIndex(TI, true);
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, BlockSym &Block) {
@@ -727,9 +737,19 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, ProcSym &Proc) {
                Proc.Parent, Proc.End,
                formatSegmentOffset(Proc.Segment, Proc.CodeOffset),
                Proc.CodeSize);
-  // FIXME: It seems FunctionType is sometimes an id and sometimes a type.
+  bool IsType = true;
+  switch (Proc.getKind()) {
+  case SymbolRecordKind::GlobalProcIdSym:
+  case SymbolRecordKind::ProcIdSym:
+  case SymbolRecordKind::DPCProcIdSym:
+    IsType = false;
+    break;
+  default:
+    break;
+  }
   P.formatLine("type = `{0}`, debug start = {1}, debug end = {2}, flags = {3}",
-               typeIndex(Proc.FunctionType), Proc.DbgStart, Proc.DbgEnd,
+               typeOrIdIndex(Proc.FunctionType, IsType), Proc.DbgStart,
+               Proc.DbgEnd,
                formatProcSymFlags(P.getIndentLevel() + 9, Proc.Flags));
   return Error::success();
 }

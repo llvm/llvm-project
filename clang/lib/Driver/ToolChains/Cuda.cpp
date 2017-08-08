@@ -9,7 +9,9 @@
 
 #include "Cuda.h"
 #include "InputInfo.h"
+#include "CommonArgs.h"
 #include "clang/Basic/Cuda.h"
+#include "clang/Config/config.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -279,7 +281,10 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("--gpu-name");
   CmdArgs.push_back(Args.MakeArgString(CudaArchToString(gpu_arch)));
   CmdArgs.push_back("--output-file");
-  CmdArgs.push_back(Args.MakeArgString(Output.getFilename()));
+  SmallString<256> OutputFileName(Output.getFilename());
+  if (JA.isOffloading(Action::OFK_OpenMP))
+    llvm::sys::path::replace_extension(OutputFileName, "cubin");
+  CmdArgs.push_back(Args.MakeArgString(OutputFileName));
   for (const auto& II : Inputs)
     CmdArgs.push_back(Args.MakeArgString(II.getFilename()));
 
@@ -338,14 +343,92 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
 
+void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
+                                       const InputInfo &Output,
+                                       const InputInfoList &Inputs,
+                                       const ArgList &Args,
+                                       const char *LinkingOutput) const {
+  const auto &TC =
+      static_cast<const toolchains::CudaToolChain &>(getToolChain());
+  assert(TC.getTriple().isNVPTX() && "Wrong platform");
+
+  ArgStringList CmdArgs;
+
+  // OpenMP uses nvlink to link cubin files. The result will be embedded in the
+  // host binary by the host linker.
+  assert(!JA.isHostOffloading(Action::OFK_OpenMP) &&
+         "CUDA toolchain not expected for an OpenMP host device.");
+
+  if (Output.isFilename()) {
+    CmdArgs.push_back("-o");
+    CmdArgs.push_back(Output.getFilename());
+  } else
+    assert(Output.isNothing() && "Invalid output.");
+  if (Args.hasArg(options::OPT_g_Flag))
+    CmdArgs.push_back("-g");
+
+  if (Args.hasArg(options::OPT_v))
+    CmdArgs.push_back("-v");
+
+  StringRef GPUArch =
+      Args.getLastArgValue(options::OPT_march_EQ);
+  assert(!GPUArch.empty() && "At least one GPU Arch required for ptxas.");
+
+  CmdArgs.push_back("-arch");
+  CmdArgs.push_back(Args.MakeArgString(GPUArch));
+
+  // Add paths specified in LIBRARY_PATH environment variable as -L options.
+  addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
+
+  // Add paths for the default clang library path.
+  SmallString<256> DefaultLibPath =
+      llvm::sys::path::parent_path(TC.getDriver().Dir);
+  llvm::sys::path::append(DefaultLibPath, "lib" CLANG_LIBDIR_SUFFIX);
+  CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
+
+  // Add linking against library implementing OpenMP calls on NVPTX target.
+  CmdArgs.push_back("-lomptarget-nvptx");
+
+  for (const auto &II : Inputs) {
+    if (II.getType() == types::TY_LLVM_IR ||
+        II.getType() == types::TY_LTO_IR ||
+        II.getType() == types::TY_LTO_BC ||
+        II.getType() == types::TY_LLVM_BC) {
+      C.getDriver().Diag(diag::err_drv_no_linker_llvm_support)
+          << getToolChain().getTripleString();
+      continue;
+    }
+
+    // Currently, we only pass the input files to the linker, we do not pass
+    // any libraries that may be valid only for the host.
+    if (!II.isFilename())
+      continue;
+
+    SmallString<256> Name = llvm::sys::path::filename(II.getFilename());
+    llvm::sys::path::replace_extension(Name, "cubin");
+
+    const char *CubinF =
+        C.addTempFile(C.getArgs().MakeArgString(Name));
+
+    CmdArgs.push_back(CubinF);
+  }
+
+  AddOpenMPLinkerScript(getToolChain(), C, Output, Inputs, Args, CmdArgs, JA);
+
+  const char *Exec =
+      Args.MakeArgString(getToolChain().GetProgramPath("nvlink"));
+  C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+}
+
 /// CUDA toolchain.  Our assembler is ptxas, and our "linker" is fatbinary,
 /// which isn't properly a linker but nonetheless performs the step of stitching
 /// together object files from the assembler into a single blob.
 
 CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
-                             const ToolChain &HostTC, const ArgList &Args)
+                             const ToolChain &HostTC, const ArgList &Args,
+                             const Action::OffloadKind OK)
     : ToolChain(D, Triple, Args), HostTC(HostTC),
-      CudaInstallation(D, HostTC.getTriple(), Args) {
+      CudaInstallation(D, HostTC.getTriple(), Args), OK(OK) {
   if (CudaInstallation.isValid())
     getProgramPaths().push_back(CudaInstallation.getBinPath());
 }
@@ -488,6 +571,8 @@ Tool *CudaToolChain::buildAssembler() const {
 }
 
 Tool *CudaToolChain::buildLinker() const {
+  if (OK == Action::OFK_OpenMP)
+    return new tools::NVPTX::OpenMPLinker(*this);
   return new tools::NVPTX::Linker(*this);
 }
 

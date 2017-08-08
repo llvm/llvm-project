@@ -463,23 +463,24 @@ namespace {
     SDValue getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
                                 unsigned NumStores);
 
-    /// This is a helper function for MergeConsecutiveStores. When the source
-    /// elements of the consecutive stores are all constants or all extracted
-    /// vector elements, try to merge them into one larger store.
-    /// \return True if a merged store was created.
+    /// This is a helper function for MergeConsecutiveStores. When the
+    /// source elements of the consecutive stores are all constants or
+    /// all extracted vector elements, try to merge them into one
+    /// larger store.  \return True if a merged store was created.
     bool MergeStoresOfConstantsOrVecElts(SmallVectorImpl<MemOpLink> &StoreNodes,
                                          EVT MemVT, unsigned NumStores,
                                          bool IsConstantSrc, bool UseVector,
                                          bool UseTrunc);
 
-    /// This is a helper function for MergeConsecutiveStores.
-    /// Stores that may be merged are placed in StoreNodes.
+    /// This is a helper function for MergeConsecutiveStores. Stores
+    /// that potentially may be merged with St are placed in
+    /// StoreNodes.
     void getStoreMergeCandidates(StoreSDNode *St,
                                  SmallVectorImpl<MemOpLink> &StoreNodes);
 
     /// Helper function for MergeConsecutiveStores. Checks if
-    /// Candidate stores have indirect dependency through their
-    /// operands. \return True if safe to merge
+    /// candidate stores have indirect dependency through their
+    /// operands. \return True if safe to merge.
     bool checkMergeStoreCandidatesForDependencies(
         SmallVectorImpl<MemOpLink> &StoreNodes, unsigned NumStores);
 
@@ -12418,6 +12419,12 @@ bool DAGCombiner::isMulAddWithConstProfitable(SDNode *MulNode,
   return false;
 }
 
+static SDValue peekThroughBitcast(SDValue V) {
+  while (V.getOpcode() == ISD::BITCAST)
+    V = V.getOperand(0);
+  return V;
+}
+
 SDValue DAGCombiner::getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
                                          unsigned NumStores) {
   SmallVector<SDValue, 8> Chains;
@@ -14613,8 +14620,7 @@ static SDValue combineConcatVectorOfExtracts(SDNode *N, SelectionDAG &DAG) {
 
   for (SDValue Op : N->ops()) {
     // Peek through any bitcast.
-    while (Op.getOpcode() == ISD::BITCAST)
-      Op = Op.getOperand(0);
+    Op = peekThroughBitcast(Op);
 
     // UNDEF nodes convert to UNDEF shuffle mask values.
     if (Op.isUndef()) {
@@ -14633,8 +14639,7 @@ static SDValue combineConcatVectorOfExtracts(SDNode *N, SelectionDAG &DAG) {
     EVT ExtVT = ExtVec.getValueType();
 
     // Peek through any bitcast.
-    while (ExtVec.getOpcode() == ISD::BITCAST)
-      ExtVec = ExtVec.getOperand(0);
+    ExtVec = peekThroughBitcast(ExtVec);
 
     // UNDEF nodes convert to UNDEF shuffle mask values.
     if (ExtVec.isUndef()) {
@@ -14859,9 +14864,7 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
 
   // We are looking for an optionally bitcasted wide vector binary operator
   // feeding an extract subvector.
-  SDValue BinOp = Extract->getOperand(0);
-  if (BinOp.getOpcode() == ISD::BITCAST)
-    BinOp = BinOp.getOperand(0);
+  SDValue BinOp = peekThroughBitcast(Extract->getOperand(0));
 
   // TODO: The motivating case for this transform is an x86 AVX1 target. That
   // target has temptingly almost legal versions of bitwise logic ops in 256-bit
@@ -14885,13 +14888,8 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
     return SDValue();
 
   // Peek through bitcasts of the binary operator operands if needed.
-  SDValue LHS = BinOp.getOperand(0);
-  if (LHS.getOpcode() == ISD::BITCAST)
-    LHS = LHS.getOperand(0);
-
-  SDValue RHS = BinOp.getOperand(1);
-  if (RHS.getOpcode() == ISD::BITCAST)
-    RHS = RHS.getOperand(0);
+  SDValue LHS = peekThroughBitcast(BinOp.getOperand(0));
+  SDValue RHS = peekThroughBitcast(BinOp.getOperand(1));
 
   // We need at least one concatenation operation of a binop operand to make
   // this transform worthwhile. The concat must double the input vector sizes.
@@ -14990,8 +14988,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode* N) {
   }
 
   // Skip bitcasting
-  if (V->getOpcode() == ISD::BITCAST)
-    V = V.getOperand(0);
+  V = peekThroughBitcast(V);
 
   if (V->getOpcode() == ISD::INSERT_SUBVECTOR) {
     // Handle only simple case where vector being inserted and vector
@@ -15114,11 +15111,14 @@ static SDValue simplifyShuffleOperands(ShuffleVectorSDNode *SVN, SDValue N0,
 
 static SDValue simplifyShuffleMask(ShuffleVectorSDNode *SVN, SDValue N0,
                                    SDValue N1, SelectionDAG &DAG) {
-  // TODO - handle cases other than BUILD_VECTOR.
-  auto *BV0 = dyn_cast<BuildVectorSDNode>(N0);
-  auto *BV1 = dyn_cast<BuildVectorSDNode>(N1);
-  if (!BV0 && !BV1)
-    return SDValue();
+  auto isUndefElt = [](SDValue V, int Idx) {
+    // TODO - handle more cases as required.
+    if (V.getOpcode() == ISD::BUILD_VECTOR)
+      return V.getOperand(Idx).isUndef();
+    if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(V))
+      return SVN->getMaskElt(Idx) < 0;
+    return false;
+  };
 
   EVT VT = SVN->getValueType(0);
   unsigned NumElts = VT.getVectorNumElements();
@@ -15127,12 +15127,8 @@ static SDValue simplifyShuffleMask(ShuffleVectorSDNode *SVN, SDValue N0,
   SmallVector<int, 8> NewMask;
   for (unsigned i = 0; i != NumElts; ++i) {
     int Idx = SVN->getMaskElt(i);
-    if (BV0 && 0 <= Idx && Idx < (int)NumElts &&
-        BV0->getOperand(Idx).isUndef()) {
-      Changed = true;
-      Idx = -1;
-    } else if (BV1 && Idx > (int)NumElts &&
-               BV1->getOperand(Idx - NumElts).isUndef()) {
+    if ((0 <= Idx && Idx < (int)NumElts && isUndefElt(N0, Idx)) ||
+        ((int)NumElts < Idx && isUndefElt(N1, Idx - NumElts))) {
       Changed = true;
       Idx = -1;
     }
@@ -15349,9 +15345,7 @@ static SDValue combineTruncationShuffle(ShuffleVectorSDNode *SVN,
   if (!VT.isInteger() || IsBigEndian)
     return SDValue();
 
-  SDValue N0 = SVN->getOperand(0);
-  while (N0.getOpcode() == ISD::BITCAST)
-    N0 = N0.getOperand(0);
+  SDValue N0 = peekThroughBitcast(SVN->getOperand(0));
 
   unsigned Opcode = N0.getOpcode();
   if (Opcode != ISD::ANY_EXTEND_VECTOR_INREG &&
@@ -15937,7 +15931,7 @@ SDValue DAGCombiner::visitFP16_TO_FP(SDNode *N) {
 SDValue DAGCombiner::XformToShuffleWithZero(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
+  SDValue RHS = peekThroughBitcast(N->getOperand(1));
   SDLoc DL(N);
 
   // Make sure we're not running after operation legalization where it
@@ -15947,9 +15941,6 @@ SDValue DAGCombiner::XformToShuffleWithZero(SDNode *N) {
 
   if (N->getOpcode() != ISD::AND)
     return SDValue();
-
-  if (RHS.getOpcode() == ISD::BITCAST)
-    RHS = RHS.getOperand(0);
 
   if (RHS.getOpcode() != ISD::BUILD_VECTOR)
     return SDValue();

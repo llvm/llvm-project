@@ -1,4 +1,4 @@
-//===--- ImplicitBoolCastCheck.h - clang-tidy--------------------*- C++ -*-===//
+//===--- ImplicitBoolConversionCheck.h - clang-tidy--------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IMPLICIT_BOOL_CAST_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IMPLICIT_BOOL_CAST_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IMPLICIT_BOOL_CONVERSION_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IMPLICIT_BOOL_CONVERSION_H
 
 #include "../ClangTidy.h"
 
@@ -16,13 +16,13 @@ namespace clang {
 namespace tidy {
 namespace readability {
 
-/// \brief Checks for use of implicit bool casts in expressions.
+/// \brief Checks for use of implicit bool conversions in expressions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-implicit-bool-cast.html
-class ImplicitBoolCastCheck : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability-implicit-bool-conversion.html
+class ImplicitBoolConversionCheck : public ClangTidyCheck {
 public:
-  ImplicitBoolCastCheck(StringRef Name, ClangTidyContext *Context);
+  ImplicitBoolConversionCheck(StringRef Name, ClangTidyContext *Context);
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
@@ -35,12 +35,12 @@ private:
                           const ImplicitCastExpr *FurtherImplicitCastExpression,
                           ASTContext &Context);
 
-  bool AllowConditionalIntegerCasts;
-  bool AllowConditionalPointerCasts;
+  const bool AllowIntegerConditions;
+  const bool AllowPointerConditions;
 };
 
 } // namespace readability
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IMPLICIT_BOOL_CAST_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IMPLICIT_BOOL_CONVERSION_H

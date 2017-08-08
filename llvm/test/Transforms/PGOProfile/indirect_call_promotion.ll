@@ -1,10 +1,9 @@
-; RUN: opt < %s -pgo-icall-prom -S | FileCheck %s --check-prefix=ICALL-PROM
-; RUN: opt < %s -pgo-icall-prom -S -icp-samplepgo | FileCheck %s --check-prefix=ICALL-PROM
-; RUN: opt < %s -pgo-icall-prom -S -icp-samplepgo | FileCheck %s --check-prefix=ICALL-PROM-SAMPLEPGO
-; RUN: opt < %s -passes=pgo-icall-prom -S | FileCheck %s --check-prefix=ICALL-PROM
-; RUN: opt < %s -pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-count-threshold=0 -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
-; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-count-threshold=0 -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
-; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-count-threshold=0 -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=20 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS2-REMARK
+; RUN: opt < %s -pgo-icall-prom -S -icp-total-percent-threshold=50 | FileCheck %s --check-prefix=ICALL-PROM
+; RUN: opt < %s -pgo-icall-prom -S -icp-samplepgo -icp-total-percent-threshold=50 | FileCheck %s --check-prefix=ICALL-PROM
+; RUN: opt < %s -passes=pgo-icall-prom -S -icp-total-percent-threshold=50 | FileCheck %s --check-prefix=ICALL-PROM
+; RUN: opt < %s -pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
+; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
+; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=20 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS2-REMARK
 
 ; PASS-REMARK: remark: <unknown>:0:0: Promote indirect call to func4 with count 1030 out of 1600
 ; PASS-REMARK: remark: <unknown>:0:0: Promote indirect call to func2 with count 410 out of 570

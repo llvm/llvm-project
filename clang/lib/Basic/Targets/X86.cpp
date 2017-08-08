@@ -1301,6 +1301,8 @@ bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
       .Case("avx512pf", true)
       .Case("avx512vbmi", true)
       .Case("avx512ifma", true)
+      .Case("avx5124vnniw", true)
+      .Case("avx5124fmaps", true)
       .Case("avx512vpopcntdq", true)
       .Default(false);
 }

@@ -433,34 +433,42 @@ struct SemiNCAInfo {
     const unsigned NCDLevel = NCD->getLevel();
     DEBUG(dbgs() << "Visiting " << BlockNamePrinter(TN) << "\n");
 
-    assert(TN->getBlock());
-    for (const NodePtr Succ :
-        ChildrenGetter<NodePtr, IsPostDom>::Get(TN->getBlock())) {
-      const TreeNodePtr SuccTN = DT.getNode(Succ);
-      assert(SuccTN && "Unreachable successor found at reachable insertion");
-      const unsigned SuccLevel = SuccTN->getLevel();
+    SmallVector<TreeNodePtr, 8> Stack = {TN};
+    assert(TN->getBlock() && II.Visited.count(TN) && "Preconditions!");
 
-      DEBUG(dbgs() << "\tSuccessor " << BlockNamePrinter(Succ)
-                   << ", level = " << SuccLevel << "\n");
+    do {
+      TreeNodePtr Next = Stack.pop_back_val();
 
-      // Succ dominated by subtree From -- not affected.
-      // (Based on the lemma 2.5 from the second paper.)
-      if (SuccLevel > RootLevel) {
-        DEBUG(dbgs() << "\t\tDominated by subtree From\n");
-        if (II.Visited.count(SuccTN) != 0) continue;
+      for (const NodePtr Succ :
+           ChildrenGetter<NodePtr, IsPostDom>::Get(Next->getBlock())) {
+        const TreeNodePtr SuccTN = DT.getNode(Succ);
+        assert(SuccTN && "Unreachable successor found at reachable insertion");
+        const unsigned SuccLevel = SuccTN->getLevel();
 
-        DEBUG(dbgs() << "\t\tMarking visited not affected "
-                     << BlockNamePrinter(Succ) << "\n");
-        II.Visited.insert(SuccTN);
-        II.VisitedNotAffectedQueue.push_back(SuccTN);
-        VisitInsertion(DT, SuccTN, RootLevel, NCD, II);
-      } else if ((SuccLevel > NCDLevel + 1) && II.Affected.count(SuccTN) == 0) {
-        DEBUG(dbgs() << "\t\tMarking affected and adding "
-                     << BlockNamePrinter(Succ) << " to a Bucket\n");
-        II.Affected.insert(SuccTN);
-        II.Bucket.push({SuccLevel, SuccTN});
+        DEBUG(dbgs() << "\tSuccessor " << BlockNamePrinter(Succ)
+                     << ", level = " << SuccLevel << "\n");
+
+        // Succ dominated by subtree From -- not affected.
+        // (Based on the lemma 2.5 from the second paper.)
+        if (SuccLevel > RootLevel) {
+          DEBUG(dbgs() << "\t\tDominated by subtree From\n");
+          if (II.Visited.count(SuccTN) != 0)
+            continue;
+
+          DEBUG(dbgs() << "\t\tMarking visited not affected "
+                       << BlockNamePrinter(Succ) << "\n");
+          II.Visited.insert(SuccTN);
+          II.VisitedNotAffectedQueue.push_back(SuccTN);
+          Stack.push_back(SuccTN);
+        } else if ((SuccLevel > NCDLevel + 1) &&
+                   II.Affected.count(SuccTN) == 0) {
+          DEBUG(dbgs() << "\t\tMarking affected and adding "
+                       << BlockNamePrinter(Succ) << " to a Bucket\n");
+          II.Affected.insert(SuccTN);
+          II.Bucket.push({SuccLevel, SuccTN});
+        }
       }
-    }
+    } while (!Stack.empty());
   }
 
   // Updates immediate dominators and levels after insertion.

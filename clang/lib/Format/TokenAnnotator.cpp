@@ -372,6 +372,10 @@ private:
 
     ScopedContextCreator ContextCreator(*this, tok::l_square, BindingIncrease);
     Contexts.back().IsExpression = true;
+    if (Style.Language == FormatStyle::LK_JavaScript && Parent &&
+        Parent->is(TT_JsTypeColon))
+      Contexts.back().IsExpression = false;
+
     Contexts.back().ColonIsObjCMethodExpr = StartsObjCMethodExpr;
 
     while (CurrentToken) {
@@ -439,6 +443,9 @@ private:
       Contexts.back().ColonIsDictLiteral = true;
       if (Left->BlockKind == BK_BracedInit)
         Contexts.back().IsExpression = true;
+      if (Style.Language == FormatStyle::LK_JavaScript && Left->Previous &&
+          Left->Previous->is(TT_JsTypeColon))
+        Contexts.back().IsExpression = false;
 
       while (CurrentToken) {
         if (CurrentToken->is(tok::r_brace)) {
@@ -531,6 +538,8 @@ private:
              !Line.First->isOneOf(tok::kw_enum, tok::kw_case)) ||
             Contexts.back().ContextKind == tok::l_paren ||  // function params
             Contexts.back().ContextKind == tok::l_square || // array type
+            (!Contexts.back().IsExpression &&
+             Contexts.back().ContextKind == tok::l_brace) || // object type
             (Contexts.size() == 1 &&
              Line.MustBeDeclaration)) { // method/property declaration
           Contexts.back().IsExpression = false;

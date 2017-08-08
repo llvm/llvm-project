@@ -837,6 +837,7 @@ Error DumpOutputStyle::dumpModuleSyms() {
 
   ExitOnError Err("Unexpected error processing symbols: ");
 
+  auto &Ids = Err(initializeTypes(StreamIPI));
   auto &Types = Err(initializeTypes(StreamTPI));
 
   iterateModules(
@@ -852,7 +853,8 @@ Error DumpOutputStyle::dumpModuleSyms() {
 
         SymbolVisitorCallbackPipeline Pipeline;
         SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
-        MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Types);
+        MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Ids,
+                                   Types);
 
         Pipeline.addCallbackToPipeline(Deserializer);
         Pipeline.addCallbackToPipeline(Dumper);
@@ -936,9 +938,13 @@ Error DumpOutputStyle::dumpSymbolsFromGSI(const GSIHashTable &Table,
   auto ExpectedTypes = initializeTypes(StreamTPI);
   if (!ExpectedTypes)
     return ExpectedTypes.takeError();
+  auto ExpectedIds = initializeTypes(StreamIPI);
+  if (!ExpectedIds)
+    return ExpectedIds.takeError();
   SymbolVisitorCallbackPipeline Pipeline;
   SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
-  MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, *ExpectedTypes);
+  MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, *ExpectedIds,
+                             *ExpectedTypes);
 
   Pipeline.addCallbackToPipeline(Deserializer);
   Pipeline.addCallbackToPipeline(Dumper);

@@ -216,14 +216,6 @@ static Optional<Visibility> getVisibilityOf(const NamedDecl *D,
     return getVisibilityFromAttr(A);
   }
 
-  // If we're on Mac OS X, an 'availability' for Mac OS X attribute
-  // implies visibility(default).
-  if (D->getASTContext().getTargetInfo().getTriple().isOSDarwin()) {
-    for (const auto *A : D->specific_attrs<AvailabilityAttr>())
-      if (A->getPlatform()->getName().equals("macos"))
-        return DefaultVisibility;
-  }
-
   return None;
 }
 

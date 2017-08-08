@@ -1196,8 +1196,10 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
 
     // If we get a No or May, then return it immediately, no amount of analysis
     // will improve this situation.
-    if (BaseAlias != MustAlias)
+    if (BaseAlias != MustAlias) {
+      assert(BaseAlias == NoAlias || BaseAlias == MayAlias);
       return BaseAlias;
+    }
 
     // Otherwise, we have a MustAlias.  Since the base pointers alias each other
     // exactly, see if the computed offset from the common pointer tells us

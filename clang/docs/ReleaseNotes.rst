@@ -94,6 +94,9 @@ Clang now supports the ...
 Attribute Changes in Clang
 --------------------------
 
+- The presence of __attribute__((availability(...))) on a declaration no longer
+  implies default visibility for that declaration on macOS.
+
 - ...
 
 Windows Support

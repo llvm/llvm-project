@@ -529,6 +529,34 @@ FormatToken *FormatTokenLexer::getNextToken() {
     readRawToken(*FormatTok);
   }
 
+  // JavaScript and Java do not allow to escape the end of the line with a
+  // backslash. Backslashes are syntax errors in plain source, but can occur in
+  // comments. When a single line comment ends with a \, it'll cause the next
+  // line of code to be lexed as a comment, breaking formatting. The code below
+  // finds comments that contain a backslash followed by a line break, truncates
+  // the comment token at the backslash, and resets the lexer to restart behind
+  // the backslash.
+  if ((Style.Language == FormatStyle::LK_JavaScript ||
+       Style.Language == FormatStyle::LK_Java) &&
+      FormatTok->is(tok::comment) && FormatTok->TokenText.startswith("//")) {
+    size_t BackslashPos = FormatTok->TokenText.find('\\');
+    while (BackslashPos != StringRef::npos) {
+      if (BackslashPos + 1 < FormatTok->TokenText.size() &&
+          FormatTok->TokenText[BackslashPos + 1] == '\n') {
+        const char *Offset = Lex->getBufferLocation();
+        Offset -= FormatTok->TokenText.size();
+        Offset += BackslashPos + 1;
+        resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset)));
+        FormatTok->TokenText = FormatTok->TokenText.substr(0, BackslashPos + 1);
+        FormatTok->ColumnWidth = encoding::columnWidthWithTabs(
+            FormatTok->TokenText, FormatTok->OriginalColumn, Style.TabWidth,
+            Encoding);
+        break;
+      }
+      BackslashPos = FormatTok->TokenText.find('\\', BackslashPos + 1);
+    }
+  }
+
   // In case the token starts with escaped newlines, we want to
   // take them into account as whitespace - this pattern is quite frequent
   // in macro definitions.

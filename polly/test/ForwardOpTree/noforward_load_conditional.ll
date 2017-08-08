@@ -1,5 +1,20 @@
 ; RUN: opt %loadPolly -polly-optree -analyze < %s | FileCheck %s -match-full-lines
 ;
+; B[j] is overwritten by at least one statement between the
+; definition of %val and its use. Hence, it cannot be forwarded.
+;
+; for (int j = 0; j < n; j += 1) {
+; bodyA:
+;   double val = B[j];
+;   if (j < 1) {
+; bodyA_true:
+;     B[j] = 0.0;
+;   }
+;
+; bodyB:
+;   A[j] = val;
+; }
+;
 define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
 entry:
   br label %for

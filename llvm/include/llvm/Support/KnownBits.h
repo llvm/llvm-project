@@ -193,6 +193,10 @@ public:
   unsigned countMaxPopulation() const {
     return getBitWidth() - Zero.countPopulation();
   }
+
+  /// Compute known bits resulting from adding LHS and RHS.
+  static KnownBits computeForAddSub(bool Add, bool NSW, const KnownBits &LHS,
+                                    KnownBits RHS);
 };
 
 } // end namespace llvm

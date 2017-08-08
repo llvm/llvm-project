@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/ValueMap.h"
 
@@ -115,11 +116,10 @@ private:
       OtherAliasScopeListMap;
 
   /// A map from pointers to second level alias scopes.
-  llvm::DenseMap<llvm::AssertingVH<llvm::Value>, llvm::MDNode *>
-      SecondLevelAliasScopeMap;
+  llvm::DenseMap<const llvm::SCEV *, llvm::MDNode *> SecondLevelAliasScopeMap;
 
   /// A map from pointers to second level alias scope list of other pointers.
-  llvm::DenseMap<llvm::AssertingVH<llvm::Value>, llvm::MDNode *>
+  llvm::DenseMap<const llvm::SCEV *, llvm::MDNode *>
       SecondLevelOtherAliasScopeListMap;
 
   /// Inter iteration alias-free base pointers.

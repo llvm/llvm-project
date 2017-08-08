@@ -97,3 +97,16 @@ int fallthrough(int i) { // CHECK-NEXT: File 0, [[@LINE]]:24 -> [[@LINE+12]]:2 =
     break;
   }
 }
+
+void abort(void) __attribute((noreturn));
+                   // CHECK: noret
+int noret(int x) { // CHECK-NEXT: File 0, [[@LINE]]:18 -> [[@LINE+9]]:2
+  switch (x) {
+  default:         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:12
+    abort();
+  case 1:         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:13
+    return 5;
+  case 2:         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+1]]:14
+    return 10;
+  }
+}

@@ -52,6 +52,21 @@ public:
     return Error::success();
   }
 
+  template <typename T>
+  static Expected<T> deserializeAs(ArrayRef<uint8_t> Data) {
+    CVType CVT;
+    CVT.RecordData = Data;
+    MappingInfo I(CVT.content());
+    const RecordPrefix *Prefix =
+        reinterpret_cast<const RecordPrefix *>(Data.data());
+    TypeRecordKind K =
+        static_cast<TypeRecordKind>(uint16_t(Prefix->RecordKind));
+    T Record(K);
+    if (auto EC = deserializeAs<T>(CVT, Record))
+      return std::move(EC);
+    return Record;
+  }
+
   Error visitTypeBegin(CVType &Record) override {
     assert(!Mapping && "Already in a type mapping!");
     Mapping = llvm::make_unique<MappingInfo>(Record.content());

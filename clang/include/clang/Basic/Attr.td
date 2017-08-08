@@ -2138,7 +2138,7 @@ def AssertCapability : InheritableAttr {
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let DuplicatesAllowedWhileMerging = 1;
-  let Args = [ExprArgument<"Expr">];
+  let Args = [VariadicExprArgument<"Args">];
   let Accessors = [Accessor<"isShared",
                     [GNU<"assert_shared_capability">,
                      CXX11<"clang", "assert_shared_capability">]>];
@@ -2682,6 +2682,14 @@ def OMPCaptureNoInit : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
   let SemaHandler = 0;
+  let Documentation = [Undocumented];
+}
+
+def OMPCaptureKind : Attr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Args = [UnsignedArgument<"CaptureKind">];
   let Documentation = [Undocumented];
 }
 

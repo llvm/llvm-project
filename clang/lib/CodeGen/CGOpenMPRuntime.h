@@ -1325,6 +1325,23 @@ public:
   virtual void emitDoacrossOrdered(CodeGenFunction &CGF,
                                    const OMPDependClause *C);
 
+  /// Translates the native parameter of outlined function if this is required
+  /// for target.
+  /// \param FD Field decl from captured record for the paramater.
+  /// \param NativeParam Parameter itself.
+  virtual const VarDecl *translateParameter(const FieldDecl *FD,
+                                            const VarDecl *NativeParam) const {
+    return NativeParam;
+  }
+
+  /// Gets the address of the native argument basing on the address of the
+  /// target-specific parameter.
+  /// \param NativeParam Parameter itself.
+  /// \param TargetParam Corresponding target-specific parameter.
+  virtual Address getParameterAddress(CodeGenFunction &CGF,
+                                      const VarDecl *NativeParam,
+                                      const VarDecl *TargetParam) const;
+
   /// Emits call of the outlined function with the provided arguments,
   /// translating these arguments to correct target-specific arguments.
   virtual void

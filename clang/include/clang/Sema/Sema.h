@@ -8527,6 +8527,11 @@ public:
   /// is performed.
   bool isOpenMPPrivateDecl(ValueDecl *D, unsigned Level);
 
+  /// Sets OpenMP capture kind (OMPC_private, OMPC_firstprivate, OMPC_map etc.)
+  /// for \p FD based on DSA for the provided corresponding captured declaration
+  /// \p D.
+  void setOpenMPCaptureKind(FieldDecl *FD, ValueDecl *D, unsigned Level);
+
   /// \brief Check if the specified variable is captured  by 'target' directive.
   /// \param Level Relative level of nested OpenMP construct for that the check
   /// is performed.

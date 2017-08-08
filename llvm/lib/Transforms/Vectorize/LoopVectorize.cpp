@@ -4863,8 +4863,10 @@ void InnerLoopVectorizer::vectorizeInstruction(Instruction &I) {
       Value *B = getOrCreateVectorValue(Cmp->getOperand(1), Part);
       Value *C = nullptr;
       if (FCmp) {
+        // Propagate fast math flags.
+        IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+        Builder.setFastMathFlags(Cmp->getFastMathFlags());
         C = Builder.CreateFCmp(Cmp->getPredicate(), A, B);
-        cast<FCmpInst>(C)->copyFastMathFlags(Cmp);
       } else {
         C = Builder.CreateICmp(Cmp->getPredicate(), A, B);
       }

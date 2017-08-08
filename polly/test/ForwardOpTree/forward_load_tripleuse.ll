@@ -1,5 +1,22 @@
 ; RUN: opt %loadPolly -polly-optree -polly-codegen -analyze < %s | FileCheck %s -match-full-lines
 ;
+; %val1 is used three times: Twice by its own operand tree of %val2 and once
+; more by the store in %bodyB.
+; Verify that we can handle multiple uses by the same instruction and uses
+; in multiple statements as well.
+; The result processing may depend on the order in which the values are used,
+; hence we check both orderings.
+;
+; for (int j = 0; j < n; j += 1) {
+; bodyA:
+;   double val1 = A[j];
+;   double val2 = val1 + val1;
+;
+; bodyB:
+;   B[j] = val1;
+;   C[j] = val2;
+; }
+;
 define void @func1(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B, double* noalias nonnull %C) {
 entry:
   br label %for

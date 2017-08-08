@@ -15,7 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX
+#if SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX || \
+    SANITIZER_NETBSD
 
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "asan_allocator.h"
@@ -234,4 +235,5 @@ void ReplaceSystemMalloc() {
 }  // namespace __asan
 #endif  // SANITIZER_ANDROID
 
-#endif  // SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX
+#endif  // SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX \
+  || SANITIZER_NETBSD

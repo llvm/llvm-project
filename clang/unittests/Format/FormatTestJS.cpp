@@ -1363,6 +1363,18 @@ TEST_F(FormatTestJS, UnionIntersectionTypes) {
                "};");
 }
 
+TEST_F(FormatTestJS, UnionIntersectionTypesInObjectType) {
+  verifyFormat("let x: {x: number|null} = {x: number | null};");
+  verifyFormat("let nested: {x: {y: number|null}};");
+  verifyFormat("let mixed: {x: [number|null, {w: number}]};");
+  verifyFormat("class X {\n"
+               "  contructor(x: {\n"
+               "    a: a|null,\n"
+               "    b: b|null,\n"
+               "  }) {}\n"
+               "}");
+}
+
 TEST_F(FormatTestJS, ClassDeclarations) {
   verifyFormat("class C {\n  x: string = 12;\n}");
   verifyFormat("class C {\n  x(): string => 12;\n}");
@@ -2072,6 +2084,28 @@ TEST_F(FormatTestJS, NestedLiterals) {
                "        3,\n"
                "    ],\n"
                "};", FourSpaces);
+}
+
+TEST_F(FormatTestJS, BackslashesInComments) {
+  verifyFormat("// hello \\\n"
+               "if (x) foo();\n",
+               "// hello \\\n"
+               "     if ( x) \n"
+               "   foo();\n");
+  verifyFormat("/* ignore \\\n"
+               " */\n"
+               "if (x) foo();\n",
+               "/* ignore \\\n"
+               " */\n"
+               " if (  x) foo();\n");
+  verifyFormat("// st \\ art\\\n"
+               "// comment"
+               "// continue \\\n"
+               "formatMe();\n",
+               "// st \\ art\\\n"
+               "// comment"
+               "// continue \\\n"
+               "formatMe( );\n");
 }
 
 } // end namespace tooling

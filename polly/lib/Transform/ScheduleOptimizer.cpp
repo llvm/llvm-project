@@ -311,11 +311,12 @@ static isl::set addExtentConstraints(isl::set Set, int VectorWidth) {
 
 isl::set getPartialTilePrefixes(isl::set ScheduleRange, int VectorWidth) {
   unsigned Dims = ScheduleRange.dim(isl::dim::set);
-  isl::set LoopPrefixes = ScheduleRange.project_out(isl::dim::set, Dims - 1, 1);
-  isl::set ExtentPrefixes = LoopPrefixes.add_dims(isl::dim::set, 1);
-  ExtentPrefixes = addExtentConstraints(ExtentPrefixes, VectorWidth);
+  isl::set LoopPrefixes =
+      ScheduleRange.drop_constraints_involving_dims(isl::dim::set, Dims - 1, 1);
+  auto ExtentPrefixes = addExtentConstraints(LoopPrefixes, VectorWidth);
   isl::set BadPrefixes = ExtentPrefixes.subtract(ScheduleRange);
   BadPrefixes = BadPrefixes.project_out(isl::dim::set, Dims - 1, 1);
+  LoopPrefixes = LoopPrefixes.project_out(isl::dim::set, Dims - 1, 1);
   return LoopPrefixes.subtract(BadPrefixes);
 }
 

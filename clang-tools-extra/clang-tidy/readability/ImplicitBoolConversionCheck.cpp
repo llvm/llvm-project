@@ -1,4 +1,4 @@
-//===--- ImplicitBoolCastCheck.cpp - clang-tidy----------------------------===//
+//===--- ImplicitBoolConversionCheck.cpp - clang-tidy----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ImplicitBoolCastCheck.h"
+#include "ImplicitBoolConversionCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -218,7 +218,7 @@ StringRef getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
   return BoolLiteral->getValue() ? "1" : "0";
 }
 
-bool isAllowedConditionalCast(const ImplicitCastExpr *Cast,
+bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
                               ASTContext &Context) {
   std::queue<const Stmt *> Q;
   Q.push(Cast);
@@ -245,22 +245,19 @@ bool isAllowedConditionalCast(const ImplicitCastExpr *Cast,
 
 } // anonymous namespace
 
-ImplicitBoolCastCheck::ImplicitBoolCastCheck(StringRef Name,
-                                             ClangTidyContext *Context)
+ImplicitBoolConversionCheck::ImplicitBoolConversionCheck(
+    StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      AllowConditionalIntegerCasts(
-          Options.get("AllowConditionalIntegerCasts", false)),
-      AllowConditionalPointerCasts(
-          Options.get("AllowConditionalPointerCasts", false)) {}
+      AllowIntegerConditions(Options.get("AllowIntegerConditions", false)),
+      AllowPointerConditions(Options.get("AllowPointerConditions", false)) {}
 
-void ImplicitBoolCastCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "AllowConditionalIntegerCasts",
-                AllowConditionalIntegerCasts);
-  Options.store(Opts, "AllowConditionalPointerCasts",
-                AllowConditionalPointerCasts);
+void ImplicitBoolConversionCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AllowIntegerConditions", AllowIntegerConditions);
+  Options.store(Opts, "AllowPointerConditions", AllowPointerConditions);
 }
 
-void ImplicitBoolCastCheck::registerMatchers(MatchFinder *Finder) {
+void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
   // This check doesn't make much sense if we run it on language without
   // built-in bool support.
   if (!getLangOpts().Bool) {
@@ -326,7 +323,8 @@ void ImplicitBoolCastCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void ImplicitBoolCastCheck::check(const MatchFinder::MatchResult &Result) {
+void ImplicitBoolConversionCheck::check(
+    const MatchFinder::MatchResult &Result) {
   if (const auto *CastToBool =
           Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastToBool")) {
     const auto *Parent = Result.Nodes.getNodeAs<Stmt>("parentStmt");
@@ -341,23 +339,22 @@ void ImplicitBoolCastCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-void ImplicitBoolCastCheck::handleCastToBool(const ImplicitCastExpr *Cast,
-                                             const Stmt *Parent,
-                                             ASTContext &Context) {
-  if (AllowConditionalPointerCasts &&
+void ImplicitBoolConversionCheck::handleCastToBool(const ImplicitCastExpr *Cast,
+                                                   const Stmt *Parent,
+                                                   ASTContext &Context) {
+  if (AllowPointerConditions &&
       (Cast->getCastKind() == CK_PointerToBoolean ||
        Cast->getCastKind() == CK_MemberPointerToBoolean) &&
-      isAllowedConditionalCast(Cast, Context)) {
+      isCastAllowedInCondition(Cast, Context)) {
     return;
   }
 
-  if (AllowConditionalIntegerCasts &&
-      Cast->getCastKind() == CK_IntegralToBoolean &&
-      isAllowedConditionalCast(Cast, Context)) {
+  if (AllowIntegerConditions && Cast->getCastKind() == CK_IntegralToBoolean &&
+      isCastAllowedInCondition(Cast, Context)) {
     return;
   }
 
-  auto Diag = diag(Cast->getLocStart(), "implicit cast %0 -> bool")
+  auto Diag = diag(Cast->getLocStart(), "implicit conversion %0 -> bool")
               << Cast->getSubExpr()->getType();
 
   StringRef EquivalentLiteral =
@@ -369,12 +366,13 @@ void ImplicitBoolCastCheck::handleCastToBool(const ImplicitCastExpr *Cast,
   }
 }
 
-void ImplicitBoolCastCheck::handleCastFromBool(
+void ImplicitBoolConversionCheck::handleCastFromBool(
     const ImplicitCastExpr *Cast, const ImplicitCastExpr *NextImplicitCast,
     ASTContext &Context) {
   QualType DestType =
       NextImplicitCast ? NextImplicitCast->getType() : Cast->getType();
-  auto Diag = diag(Cast->getLocStart(), "implicit cast bool -> %0") << DestType;
+  auto Diag = diag(Cast->getLocStart(), "implicit conversion bool -> %0")
+              << DestType;
 
   if (const auto *BoolLiteral =
           dyn_cast<CXXBoolLiteralExpr>(Cast->getSubExpr())) {

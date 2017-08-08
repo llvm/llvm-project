@@ -121,31 +121,6 @@ isl::map computeScalarReachingOverwrite(isl::union_map Schedule,
   return singleton(std::move(ReachOverwrite), ResultSpace);
 }
 
-/// Return whether @p Map maps to an unknown value.
-///
-/// @param { [] -> ValInst[] }
-bool isMapToUnknown(const isl::map &Map) {
-  auto Space = give(isl_space_range(isl_map_get_space(Map.keep())));
-  return !isl_map_has_tuple_id(Map.keep(), isl_dim_set) &&
-         !isl_space_is_wrapping(Space.keep()) &&
-         isl_map_dim(Map.keep(), isl_dim_out) == 0;
-}
-
-/// Return only the mappings that map to known values.
-///
-/// @param UMap { [] -> ValInst[] }
-///
-/// @return { [] -> ValInst[] }
-isl::union_map filterKnownValInst(const isl::union_map &UMap) {
-  auto Result = give(isl_union_map_empty(isl_union_map_get_space(UMap.keep())));
-  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
-    if (!isMapToUnknown(Map))
-      Result = give(isl_union_map_add_map(Result.take(), Map.take()));
-    return isl::stat::ok;
-  });
-  return Result;
-}
-
 /// Try to find a 'natural' extension of a mapped to elements outside its
 /// domain.
 ///
