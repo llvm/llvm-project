@@ -78,6 +78,29 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
   return *this;
 }
 
+namespace {
+
+struct SIGISelActualAccessor : public GISelAccessor {
+  std::unique_ptr<AMDGPUCallLowering> CallLoweringInfo;
+  std::unique_ptr<InstructionSelector> InstSelector;
+  std::unique_ptr<LegalizerInfo> Legalizer;
+  std::unique_ptr<RegisterBankInfo> RegBankInfo;
+  const AMDGPUCallLowering *getCallLowering() const override {
+    return CallLoweringInfo.get();
+  }
+  const InstructionSelector *getInstructionSelector() const override {
+    return InstSelector.get();
+  }
+  const LegalizerInfo *getLegalizerInfo() const override {
+    return Legalizer.get();
+  }
+  const RegisterBankInfo *getRegBankInfo() const override {
+    return RegBankInfo.get();
+  }
+};
+
+} // end anonymous namespace
+
 AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                                  const TargetMachine &TM)
   : AMDGPUGenSubtargetInfo(TT, GPU, FS),
@@ -330,12 +353,14 @@ SISubtarget::SISubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     : AMDGPUSubtarget(TT, GPU, FS, TM), InstrInfo(*this),
       FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
       TLInfo(TM, *this) {
-  CallLoweringInfo.reset(new AMDGPUCallLowering(*getTargetLowering()));
-  Legalizer.reset(new AMDGPULegalizerInfo());
+  SIGISelActualAccessor *GISel = new SIGISelActualAccessor();
+  GISel->CallLoweringInfo.reset(new AMDGPUCallLowering(*getTargetLowering()));
+  GISel->Legalizer.reset(new AMDGPULegalizerInfo());
 
-  RegBankInfo.reset(new AMDGPURegisterBankInfo(*getRegisterInfo()));
-  InstSelector.reset(new AMDGPUInstructionSelector(
-      *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get())));
+  GISel->RegBankInfo.reset(new AMDGPURegisterBankInfo(*getRegisterInfo()));
+  GISel->InstSelector.reset(new AMDGPUInstructionSelector(
+      *this, *static_cast<AMDGPURegisterBankInfo *>(GISel->RegBankInfo.get())));
+  setGISelAccessor(*GISel);
 }
 
 void SISubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
