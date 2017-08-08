@@ -184,6 +184,12 @@ enum {
   /// - RendererID - The renderer to call
   GIR_ComplexRenderer,
 
+  /// Render a G_CONSTANT operator as a sign-extended immediate.
+  /// - NewInsnID - Instruction ID to modify
+  /// - OldInsnID - Instruction ID to copy from
+  /// The operand index is implicitly 1.
+  GIR_CopyConstantAsSImm,
+
   /// Constrain an instruction operand to a register class.
   /// - InsnID - Instruction ID to modify
   /// - OpIdx - Operand index

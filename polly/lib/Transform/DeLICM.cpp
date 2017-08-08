@@ -1048,6 +1048,9 @@ private:
   void mapPHI(const ScopArrayInfo *SAI, isl::map ReadTarget,
               isl::union_map WriteTarget, isl::map Lifetime,
               Knowledge Proposed) {
+    // { Element[] }
+    isl::space ElementSpace = ReadTarget.get_space().range();
+
     // Redirect the PHI incoming writes.
     for (auto *MA : S->getPHIIncomings(SAI)) {
       // { DomainWrite[] }
@@ -1055,11 +1058,13 @@ private:
 
       // { DomainWrite[] -> Element[] }
       auto NewAccRel = give(isl_union_map_intersect_domain(
-          WriteTarget.copy(), isl_union_set_from_set(Domain.take())));
+          WriteTarget.copy(), isl_union_set_from_set(Domain.copy())));
       simplify(NewAccRel);
 
-      assert(isl_union_map_n_map(NewAccRel.keep()) == 1);
-      MA->setNewAccessRelation(isl::map::from_union_map(NewAccRel));
+      isl::space NewAccRelSpace =
+          Domain.get_space().map_from_domain_and_range(ElementSpace);
+      isl::map NewAccRelMap = singleton(NewAccRel, NewAccRelSpace);
+      MA->setNewAccessRelation(NewAccRelMap);
     }
 
     // Redirect the PHI read.

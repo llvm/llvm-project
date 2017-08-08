@@ -383,7 +383,6 @@ static bool getConstantValue(SDValue N, uint32_t &Out) {
 }
 
 void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
-  unsigned Opc = N->getOpcode();
   EVT VT = N->getValueType(0);
   unsigned NumVectorElts = VT.getVectorNumElements();
   EVT EltVT = VT.getVectorElementType();
@@ -420,7 +419,7 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   }
   if (NOps != NumVectorElts) {
     // Fill in the missing undef elements if this was a scalar_to_vector.
-    assert(Opc == ISD::SCALAR_TO_VECTOR && NOps < NumVectorElts);
+    assert(N->getOpcode() == ISD::SCALAR_TO_VECTOR && NOps < NumVectorElts);
     MachineSDNode *ImpDef = CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF,
                                                    DL, EltVT);
     for (unsigned i = NOps; i < NumVectorElts; ++i) {
@@ -481,7 +480,6 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   case ISD::BUILD_VECTOR: {
     EVT VT = N->getValueType(0);
     unsigned NumVectorElts = VT.getVectorNumElements();
-    EVT EltVT = VT.getVectorElementType();
 
     if (VT == MVT::v2i16 || VT == MVT::v2f16) {
       if (Opc == ISD::BUILD_VECTOR) {
@@ -498,7 +496,7 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
       break;
     }
 
-    assert(EltVT.bitsEq(MVT::i32));
+    assert(VT.getVectorElementType().bitsEq(MVT::i32));
     unsigned RegClassID = selectSGPRVectorRegClassID(NumVectorElts);
     SelectBuildVector(N, RegClassID);
     return;

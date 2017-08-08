@@ -5316,13 +5316,7 @@ void OffloadBundler::ConstructJobMultipleOutputs(
   for (unsigned I = 0; I < Outputs.size(); ++I) {
     if (I)
       UB += ',';
-    SmallString<256> OutputFileName(Outputs[I].getFilename());
-    // Change extension of target files for OpenMP offloading
-    // to NVIDIA GPUs.
-    if (DepInfo[I].DependentToolChain->getTriple().isNVPTX() &&
-        JA.isOffloading(Action::OFK_OpenMP))
-      llvm::sys::path::replace_extension(OutputFileName, "cubin");
-    UB += OutputFileName;
+    UB += Outputs[I].getFilename();
   }
   CmdArgs.push_back(TCArgs.MakeArgString(UB));
   CmdArgs.push_back("-unbundle");

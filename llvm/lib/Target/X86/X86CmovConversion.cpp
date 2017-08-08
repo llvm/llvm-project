@@ -67,6 +67,11 @@ static cl::opt<bool>
                         cl::desc("Enable the X86 cmov-to-branch optimization."),
                         cl::init(true), cl::Hidden);
 
+static cl::opt<unsigned>
+    GainCycleThreshold("x86-cmov-converter-threshold",
+                       cl::desc("Minimum gain per loop (in cycles) threshold."),
+                       cl::init(4), cl::Hidden);
+
 /// Converts X86 cmov instructions into branches when profitable.
 class X86CmovConverterPass : public MachineFunctionPass {
 public:
@@ -389,19 +394,28 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
   //           Critical-path is iteration dependent - there is dependency of
   //           critical-path instructions on critical-path instructions of
   //           previous iteration.
-  //           Thus, it is required to check the gradient of the gain - the
-  //           change in Depth-Diff compared to the change in Loop-Depth between
-  //           1st and 2nd iterations.
+  //           Thus, check the gain percent of the 2nd iteration (similar to the
+  //           previous case), but it is also required to check the gradient of
+  //           the gain - the change in Depth-Diff compared to the change in
+  //           Loop-Depth between 1st and 2nd iterations.
   //           To be conservative, the gradient need to be at least 50%.
+  //
+  //   In addition, In order not to optimize loops with very small gain, the
+  //   gain (in cycles) after 2nd iteration should not be less than a given
+  //   threshold. Thus, the check (Diff[1] >= GainCycleThreshold) must apply.
   //
   // If loop is not worth optimizing, remove all CMOV-group-candidates.
   //===--------------------------------------------------------------------===//
+  if (Diff[1] < GainCycleThreshold)
+    return false;
+
   bool WorthOptLoop = false;
   if (Diff[1] == Diff[0])
     WorthOptLoop = Diff[0] * 8 >= LoopDepth[0].Depth;
   else if (Diff[1] > Diff[0])
     WorthOptLoop =
-        (Diff[1] - Diff[0]) * 2 >= (LoopDepth[1].Depth - LoopDepth[0].Depth);
+        (Diff[1] - Diff[0]) * 2 >= (LoopDepth[1].Depth - LoopDepth[0].Depth) &&
+        (Diff[1] * 8 >= LoopDepth[1].Depth);
 
   if (!WorthOptLoop)
     return false;

@@ -524,7 +524,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     auto &CudaTC = ToolChains[CudaTriple.str() + "/" + HostTriple.str()];
     if (!CudaTC) {
       CudaTC = llvm::make_unique<toolchains::CudaToolChain>(
-          *this, CudaTriple, *HostTC, C.getInputArgs(), Action::OFK_Cuda);
+          *this, CudaTriple, *HostTC, C.getInputArgs());
     }
     C.addOffloadDeviceToolChain(CudaTC.get(), Action::OFK_Cuda);
   }
@@ -582,7 +582,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                   ToolChains[TT.str() + "/" + HostTC->getTriple().str()];
               if (!CudaTC)
                 CudaTC = llvm::make_unique<toolchains::CudaToolChain>(
-                    *this, TT, *HostTC, C.getInputArgs(), Action::OFK_OpenMP);
+                    *this, TT, *HostTC, C.getInputArgs());
               TC = CudaTC.get();
             } else
               TC = &getToolChain(C.getInputArgs(), TT);
@@ -3224,6 +3224,12 @@ InputInfo Driver::BuildJobsForActionNoCache(
   InputInfoList OffloadDependencesInputInfo;
   bool BuildingForOffloadDevice = TargetDeviceOffloadKind != Action::OFK_None;
   if (const OffloadAction *OA = dyn_cast<OffloadAction>(A)) {
+    // The 'Darwin' toolchain is initialized only when its arguments are
+    // computed. Get the default arguments for OFK_None to ensure that
+    // initialization is performed before processing the offload action.
+    // FIXME: Remove when darwin's toolchain is initialized during construction.
+    C.getArgsForToolChain(TC, BoundArch, Action::OFK_None);
+
     // The offload action is expected to be used in four different situations.
     //
     // a) Set a toolchain/architecture/kind for a host action:

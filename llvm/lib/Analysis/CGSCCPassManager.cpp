@@ -421,7 +421,9 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
           assert(E && "No function transformations should introduce *new* "
                       "call edges! Any new calls should be modeled as "
                       "promoted existing ref edges!");
-          RetainedEdges.insert(&CalleeN);
+          bool Inserted = RetainedEdges.insert(&CalleeN).second;
+          (void)Inserted;
+          assert(Inserted && "We should never visit a function twice.");
           if (!E->isCall())
             PromotedRefTargets.insert(&CalleeN);
         }
@@ -441,7 +443,9 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
     assert(E && "No function transformations should introduce *new* ref "
                 "edges! Any new ref edges would require IPO which "
                 "function passes aren't allowed to do!");
-    RetainedEdges.insert(&RefereeN);
+    bool Inserted = RetainedEdges.insert(&RefereeN).second;
+    (void)Inserted;
+    assert(Inserted && "We should never visit a function twice.");
     if (E->isCall())
       DemotedCallTargets.insert(&RefereeN);
   };
@@ -449,7 +453,10 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
 
   // Include synthetic reference edges to known, defined lib functions.
   for (auto *F : G.getLibFunctions())
-    VisitRef(*F);
+    // While the list of lib functions doesn't have repeats, don't re-visit
+    // anything handled above.
+    if (!Visited.count(F))
+      VisitRef(*F);
 
   // First remove all of the edges that are no longer present in this function.
   // We have to build a list of dead targets first and then remove them as the
