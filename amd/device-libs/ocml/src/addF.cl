@@ -7,27 +7,15 @@
 
 #include "mathF.h"
 
-#if defined ENABLE_ROUNDED
-#if defined HSAIL_BUILD
-
-#define GEN(NAME,ROUND)\
-CONSTATTR float \
-MATH_MANGLE(NAME)(float x, float y) \
+#define GEN(LN,UN) \
+CONSTATTR INLINEATTR float \
+MATH_MANGLE(LN)(float x, float y) \
 { \
-    float ret; \
-    if (DAZ_OPT()) { \
-        ret = BUILTIN_FULL_BINARY(faddf, true, ROUND, x, y); \
-    } else { \
-        ret = BUILTIN_FULL_BINARY(faddf, false, ROUND, x, y); \
-    } \
-    return ret; \
+    return BUILTIN_##UN##_F32(x, y); \
 }
 
-GEN(add_rte, ROUND_TO_NEAREST_EVEN)
-GEN(add_rtp, ROUND_TO_POSINF)
-GEN(add_rtn, ROUND_TO_NEGINF)
-GEN(add_rtz, ROUND_TO_ZERO)
-
-#endif // HSAIL_BUILD
-#endif // ENABLE_ROUNDED
+GEN(add_rte,ADD_RTE)
+GEN(add_rtn,ADD_RTN)
+GEN(add_rtp,ADD_RTP)
+GEN(add_rtz,ADD_RTZ)
 

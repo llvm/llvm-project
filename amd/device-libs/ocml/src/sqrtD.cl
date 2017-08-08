@@ -13,21 +13,15 @@ MATH_MANGLE(sqrt)(double x)
     return MATH_SQRT(x);
 }
 
-#if defined ENABLE_ROUNDED
-#if defined HSAIL_BUILD
-
-#define GEN(NAME,ROUND)\
-CONSTATTR double \
-MATH_MANGLE(NAME)(double x) \
+#define GEN(LN,UN) \
+CONSTATTR INLINEATTR double \
+MATH_MANGLE(LN)(double x) \
 { \
-    return BUILTIN_FULL_UNARY(fsqrt, false, ROUND, x); \
+    return BUILTIN_##UN##_F64(x); \
 }
 
-GEN(sqrt_rte, ROUND_TO_NEAREST_EVEN)
-GEN(sqrt_rtp, ROUND_TO_POSINF)
-GEN(sqrt_rtn, ROUND_TO_NEGINF)
-GEN(sqrt_rtz, ROUND_TO_ZERO)
-
-#endif // HSAIL_BUILD
-#endif // ENABLE_ROUNDED
+GEN(sqrt_rte,SQRT_RTE)
+GEN(sqrt_rtn,SQRT_RTN)
+GEN(sqrt_rtp,SQRT_RTP)
+GEN(sqrt_rtz,SQRT_RTZ)
 

@@ -13,21 +13,15 @@ MATH_MANGLE(fma)(double a, double b, double c)
     return BUILTIN_FMA_F64(a, b, c);
 }
 
-#if defined ENABLE_ROUNDED
-#if defined HSAIL_BUILD
-
-#define GEN(NAME,ROUND)\
-CONSTATTR double \
-MATH_MANGLE(NAME)(double a, double b, double c) \
+#define GEN(LN,UN) \
+CONSTATTR INLINEATTR double \
+MATH_MANGLE(LN)(double a, double b, double c) \
 { \
-    return BUILTIN_FULL_TERNARY(ffma, false, ROUND, a, b, c); \
+    return BUILTIN_##UN##_F64(a, b, c); \
 }
 
-GEN(fma_rte, ROUND_TO_NEAREST_EVEN)
-GEN(fma_rtp, ROUND_TO_POSINF)
-GEN(fma_rtn, ROUND_TO_NEGINF)
-GEN(fma_rtz, ROUND_TO_ZERO)
-
-#endif // HSAIL_BUILD
-#endif // ENABLE_ROUNDED
+GEN(fma_rte,FMA_RTE)
+GEN(fma_rtn,FMA_RTN)
+GEN(fma_rtp,FMA_RTP)
+GEN(fma_rtz,FMA_RTZ)
 

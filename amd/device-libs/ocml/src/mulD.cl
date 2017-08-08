@@ -7,21 +7,15 @@
 
 #include "mathD.h"
 
-#if defined ENABLE_ROUNDED
-#if defined HSAIL_BUILD
-
-#define GEN(NAME,ROUND)\
-CONSTATTR double \
-MATH_MANGLE(NAME)(double x, double y) \
+#define GEN(LN,UN) \
+CONSTATTR INLINEATTR double \
+MATH_MANGLE(LN)(double x, double y) \
 { \
-    return BUILTIN_FULL_BINARY(fmul, false, ROUND, x, y); \
+    return BUILTIN_##UN##_F64(x, y); \
 }
 
-GEN(mul_rte, ROUND_TO_NEAREST_EVEN)
-GEN(mul_rtp, ROUND_TO_POSINF)
-GEN(mul_rtn, ROUND_TO_NEGINF)
-GEN(mul_rtz, ROUND_TO_ZERO)
-
-#endif // HSAIL_BUILD
-#endif // ENABLE_ROUNDED
+GEN(mul_rte,MUL_RTE)
+GEN(mul_rtn,MUL_RTN)
+GEN(mul_rtp,MUL_RTP)
+GEN(mul_rtz,MUL_RTZ)
 

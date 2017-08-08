@@ -5,6 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
+#include "irif.h"
 #include "mathF.h"
 
 CONSTATTR float
@@ -13,27 +14,15 @@ MATH_MANGLE(fma)(float a, float b, float c)
     return BUILTIN_FMA_F32(a, b, c);
 }
 
-#if defined ENABLE_ROUNDED
-#if defined HSAIL_BUILD
-
-#define GEN(NAME,ROUND)\
-CONSTATTR float \
-MATH_MANGLE(NAME)(float a, float b, float c) \
+#define GEN(LN,UN) \
+CONSTATTR INLINEATTR float \
+MATH_MANGLE(LN)(float a, float b, float c) \
 { \
-    float ret; \
-    if (DAZ_OPT()) { \
-        ret = BUILTIN_FULL_TERNARY(ffmaf, true, ROUND, a, b, c); \
-    } else { \
-        ret = BUILTIN_FULL_TERNARY(ffmaf, false, ROUND, a, b, c); \
-    } \
-    return ret; \
+    return BUILTIN_##UN##_F32(a, b, c); \
 }
 
-GEN(fma_rte, ROUND_TO_NEAREST_EVEN)
-GEN(fma_rtp, ROUND_TO_POSINF)
-GEN(fma_rtn, ROUND_TO_NEGINF)
-GEN(fma_rtz, ROUND_TO_ZERO)
-
-#endif // HSAIL_BUILD
-#endif // ENABLE_ROUNDED
+GEN(fma_rte,FMA_RTE)
+GEN(fma_rtn,FMA_RTN)
+GEN(fma_rtp,FMA_RTP)
+GEN(fma_rtz,FMA_RTZ)
 

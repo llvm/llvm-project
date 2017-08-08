@@ -17,27 +17,15 @@ MATH_MANGLE(sqrt)(float x)
     }
 }
 
-#if defined ENABLE_ROUNDED
-#if defined HSAIL_BUILD
-
-#define GEN(NAME,ROUND)\
-CONSTATTR float \
-MATH_MANGLE(NAME)(float x) \
+#define GEN(LN,UN) \
+CONSTATTR INLINEATTR float \
+MATH_MANGLE(LN)(float x) \
 { \
-    float ret; \
-    if (DAZ_OPT()) { \
-        ret = BUILTIN_FULL_UNARY(fsqrtf, true, ROUND, x); \
-    } else { \
-        ret = BUILTIN_FULL_UNARY(fsqrtf, false, ROUND, x); \
-    } \
-    return ret; \
+    return BUILTIN_##UN##_F32(x); \
 }
 
-GEN(sqrt_rte, ROUND_TO_NEAREST_EVEN)
-GEN(sqrt_rtp, ROUND_TO_POSINF)
-GEN(sqrt_rtn, ROUND_TO_NEGINF)
-GEN(sqrt_rtz, ROUND_TO_ZERO)
-
-#endif // HSAIL_BUILD
-#endif // ENABLE_ROUNDED
+GEN(sqrt_rte,SQRT_RTE)
+GEN(sqrt_rtn,SQRT_RTN)
+GEN(sqrt_rtp,SQRT_RTP)
+GEN(sqrt_rtz,SQRT_RTZ)
 

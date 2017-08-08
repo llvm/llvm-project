@@ -222,3 +222,81 @@
 #define BUILTIN_CLAMP_F32(X,L,H) __llvm_amdgcn_fmed3_f32(X,L,H)
 #define BUILTIN_CLAMP_F16(X,L,H) __llvm_amdgcn_fmed3_f16(X,L,H)
 
+#define BUILTIN_ADD_RTE_F32 __llvm_add_rte_f32
+#define BUILTIN_ADD_RTE_F64 __llvm_add_rte_f64
+#define BUILTIN_ADD_RTE_F16 __llvm_add_rte_f16
+#define BUILTIN_ADD_RTN_F32 __llvm_add_rtn_f32
+#define BUILTIN_ADD_RTN_F64 __llvm_add_rtn_f64
+#define BUILTIN_ADD_RTN_F16 __llvm_add_rtn_f16
+#define BUILTIN_ADD_RTP_F32 __llvm_add_rtp_f32
+#define BUILTIN_ADD_RTP_F64 __llvm_add_rtp_f64
+#define BUILTIN_ADD_RTP_F16 __llvm_add_rtp_f16
+#define BUILTIN_ADD_RTZ_F32 __llvm_add_rtz_f32
+#define BUILTIN_ADD_RTZ_F64 __llvm_add_rtz_f64
+#define BUILTIN_ADD_RTZ_F16 __llvm_add_rtz_f16
+
+#define BUILTIN_SUB_RTE_F32 __llvm_sub_rte_f32
+#define BUILTIN_SUB_RTE_F64 __llvm_sub_rte_f64
+#define BUILTIN_SUB_RTE_F16 __llvm_sub_rte_f16
+#define BUILTIN_SUB_RTN_F32 __llvm_sub_rtn_f32
+#define BUILTIN_SUB_RTN_F64 __llvm_sub_rtn_f64
+#define BUILTIN_SUB_RTN_F16 __llvm_sub_rtn_f16
+#define BUILTIN_SUB_RTP_F32 __llvm_sub_rtp_f32
+#define BUILTIN_SUB_RTP_F64 __llvm_sub_rtp_f64
+#define BUILTIN_SUB_RTP_F16 __llvm_sub_rtp_f16
+#define BUILTIN_SUB_RTZ_F32 __llvm_sub_rtz_f32
+#define BUILTIN_SUB_RTZ_F64 __llvm_sub_rtz_f64
+#define BUILTIN_SUB_RTZ_F16 __llvm_sub_rtz_f16
+
+#define BUILTIN_MUL_RTE_F32 __llvm_mul_rte_f32
+#define BUILTIN_MUL_RTE_F64 __llvm_mul_rte_f64
+#define BUILTIN_MUL_RTE_F16 __llvm_mul_rte_f16
+#define BUILTIN_MUL_RTN_F32 __llvm_mul_rtn_f32
+#define BUILTIN_MUL_RTN_F64 __llvm_mul_rtn_f64
+#define BUILTIN_MUL_RTN_F16 __llvm_mul_rtn_f16
+#define BUILTIN_MUL_RTP_F32 __llvm_mul_rtp_f32
+#define BUILTIN_MUL_RTP_F64 __llvm_mul_rtp_f64
+#define BUILTIN_MUL_RTP_F16 __llvm_mul_rtp_f16
+#define BUILTIN_MUL_RTZ_F32 __llvm_mul_rtz_f32
+#define BUILTIN_MUL_RTZ_F64 __llvm_mul_rtz_f64
+#define BUILTIN_MUL_RTZ_F16 __llvm_mul_rtz_f16
+
+#define BUILTIN_DIV_RTE_F32 __llvm_div_rte_f32
+#define BUILTIN_DIV_RTE_F64 __llvm_div_rte_f64
+#define BUILTIN_DIV_RTE_F16 __llvm_div_rte_f16
+#define BUILTIN_DIV_RTN_F32 __llvm_div_rtn_f32
+#define BUILTIN_DIV_RTN_F64 __llvm_div_rtn_f64
+#define BUILTIN_DIV_RTN_F16 __llvm_div_rtn_f16
+#define BUILTIN_DIV_RTP_F32 __llvm_div_rtp_f32
+#define BUILTIN_DIV_RTP_F64 __llvm_div_rtp_f64
+#define BUILTIN_DIV_RTP_F16 __llvm_div_rtp_f16
+#define BUILTIN_DIV_RTZ_F32 __llvm_div_rtz_f32
+#define BUILTIN_DIV_RTZ_F64 __llvm_div_rtz_f64
+#define BUILTIN_DIV_RTZ_F16 __llvm_div_rtz_f16
+
+#define BUILTIN_SQRT_RTE_F32 __llvm_sqrt_rte_f32
+#define BUILTIN_SQRT_RTE_F64 __llvm_sqrt_rte_f64
+#define BUILTIN_SQRT_RTE_F16 __llvm_sqrt_rte_f16
+#define BUILTIN_SQRT_RTN_F32 __llvm_sqrt_rtn_f32
+#define BUILTIN_SQRT_RTN_F64 __llvm_sqrt_rtn_f64
+#define BUILTIN_SQRT_RTN_F16 __llvm_sqrt_rtn_f16
+#define BUILTIN_SQRT_RTP_F32 __llvm_sqrt_rtp_f32
+#define BUILTIN_SQRT_RTP_F64 __llvm_sqrt_rtp_f64
+#define BUILTIN_SQRT_RTP_F16 __llvm_sqrt_rtp_f16
+#define BUILTIN_SQRT_RTZ_F32 __llvm_sqrt_rtz_f32
+#define BUILTIN_SQRT_RTZ_F64 __llvm_sqrt_rtz_f64
+#define BUILTIN_SQRT_RTZ_F16 __llvm_sqrt_rtz_f16
+
+#define BUILTIN_FMA_RTE_F32 __llvm_fma_rte_f32
+#define BUILTIN_FMA_RTE_F64 __llvm_fma_rte_f64
+#define BUILTIN_FMA_RTE_F16 __llvm_fma_rte_f16
+#define BUILTIN_FMA_RTN_F32 __llvm_fma_rtn_f32
+#define BUILTIN_FMA_RTN_F64 __llvm_fma_rtn_f64
+#define BUILTIN_FMA_RTN_F16 __llvm_fma_rtn_f16
+#define BUILTIN_FMA_RTP_F32 __llvm_fma_rtp_f32
+#define BUILTIN_FMA_RTP_F64 __llvm_fma_rtp_f64
+#define BUILTIN_FMA_RTP_F16 __llvm_fma_rtp_f16
+#define BUILTIN_FMA_RTZ_F32 __llvm_fma_rtz_f32
+#define BUILTIN_FMA_RTZ_F64 __llvm_fma_rtz_f64
+#define BUILTIN_FMA_RTZ_F16 __llvm_fma_rtz_f16
+
