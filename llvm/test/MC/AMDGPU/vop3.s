@@ -435,3 +435,208 @@ v_mul_f64 v[0:1], |0|, |0|
 v_cubeid_f32 v0, |-1|, |-1.0|, |1.0|
 // SICI: v_cubeid_f32 v0, |-1|, |-1.0|, |1.0| ; encoding: [0x00,0x07,0x88,0xd2,0xc1,0xe6,0xc9,0x03]
 // VI:   v_cubeid_f32 v0, |-1|, |-1.0|, |1.0| ; encoding: [0x00,0x07,0xc4,0xd1,0xc1,0xe6,0xc9,0x03]
+
+//
+// v_interp*
+//
+
+v_interp_mov_f32_e64 v5, p10, attr0.x
+// NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_mov_f32_e64 v5, p10, attr0.x ; encoding: [0x05,0x00,0x72,0xd2,0x00,0x00,0x00,0x00]
+
+v_interp_mov_f32_e64 v5, p10, attr32.x
+// NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_mov_f32_e64 v5, p10, attr32.x ; encoding: [0x05,0x00,0x72,0xd2,0x20,0x00,0x00,0x00]
+
+v_interp_mov_f32_e64 v5, p20, attr0.x
+// NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_mov_f32_e64 v5, p20, attr0.x ; encoding: [0x05,0x00,0x72,0xd2,0x00,0x02,0x00,0x00]
+
+v_interp_mov_f32_e64 v5, p10, attr0.w
+// NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_mov_f32_e64 v5, p10, attr0.w ; encoding: [0x05,0x00,0x72,0xd2,0xc0,0x00,0x00,0x00]
+
+v_interp_mov_f32_e64 v5, p10, attr0.x clamp
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_mov_f32_e64 v5, p10, attr0.x clamp ; encoding: [0x05,0x80,0x72,0xd2,0x00,0x00,0x00,0x00]
+
+v_interp_mov_f32 v5, p10, attr0.x clamp
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_mov_f32_e64 v5, p10, attr0.x clamp ; encoding: [0x05,0x80,0x72,0xd2,0x00,0x00,0x00,0x00]
+
+v_interp_mov_f32_e64 v5, p10, attr0.x mul:2
+// NOSICI: error: not a valid operand
+// VI: v_interp_mov_f32_e64 v5, p10, attr0.x mul:2 ; encoding: [0x05,0x00,0x72,0xd2,0x00,0x00,0x00,0x08]
+
+v_interp_mov_f32_e64 v5, p10, attr0.x mul:4
+// NOSICI: error: not a valid operand
+// VI: v_interp_mov_f32_e64 v5, p10, attr0.x mul:4 ; encoding: [0x05,0x00,0x72,0xd2,0x00,0x00,0x00,0x10]
+
+v_interp_mov_f32_e64 v5, p10, attr0.x div:2
+// NOSICI: error: not a valid operand
+// VI: v_interp_mov_f32_e64 v5, p10, attr0.x div:2 ; encoding: [0x05,0x00,0x72,0xd2,0x00,0x00,0x00,0x18]
+
+v_interp_mov_f32 v5, p10, attr0.x div:2
+// NOSICI: error: not a valid operand
+// VI: v_interp_mov_f32_e64 v5, p10, attr0.x div:2 ; encoding: [0x05,0x00,0x72,0xd2,0x00,0x00,0x00,0x18]
+
+
+v_interp_p1_f32_e64 v5, v2, attr0.x
+// NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_p1_f32_e64 v5, v2, attr0.x ; encoding: [0x05,0x00,0x70,0xd2,0x00,0x04,0x02,0x00]
+
+v_interp_p1_f32_e64 v5, v2, attr0.y
+// NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_p1_f32_e64 v5, v2, attr0.y ; encoding: [0x05,0x00,0x70,0xd2,0x40,0x04,0x02,0x00]
+
+v_interp_p1_f32_e64 v5, -v2, attr0.x
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1_f32_e64 v5, -v2, attr0.x ; encoding: [0x05,0x00,0x70,0xd2,0x00,0x04,0x02,0x40]
+
+v_interp_p1_f32_e64 v5, |v2|, attr0.x
+// NOSICI: error: not a valid operand
+// VI: v_interp_p1_f32_e64 v5, |v2|, attr0.x ; encoding: [0x05,0x02,0x70,0xd2,0x00,0x04,0x02,0x00]
+
+v_interp_p1_f32_e64 v5, v2, attr0.x clamp
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1_f32_e64 v5, v2, attr0.x clamp ; encoding: [0x05,0x80,0x70,0xd2,0x00,0x04,0x02,0x00]
+
+v_interp_p1_f32 v5, v2, attr0.x clamp
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1_f32_e64 v5, v2, attr0.x clamp ; encoding: [0x05,0x80,0x70,0xd2,0x00,0x04,0x02,0x00]
+
+v_interp_p1_f32_e64 v5, v2, attr0.x mul:2
+// NOSICI: error: not a valid operand
+// VI: v_interp_p1_f32_e64 v5, v2, attr0.x mul:2 ; encoding: [0x05,0x00,0x70,0xd2,0x00,0x04,0x02,0x08]
+
+
+v_interp_p2_f32_e64 v255, v2, attr0.x
+// NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_p2_f32_e64 v255, v2, attr0.x ; encoding: [0xff,0x00,0x71,0xd2,0x00,0x04,0x02,0x00]
+
+v_interp_p2_f32_e64 v5, v2, attr31.x
+// NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_p2_f32_e64 v5, v2, attr31.x ; encoding: [0x05,0x00,0x71,0xd2,0x1f,0x04,0x02,0x00]
+
+v_interp_p2_f32_e64 v5, -v2, attr0.x
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p2_f32_e64 v5, -v2, attr0.x ; encoding: [0x05,0x00,0x71,0xd2,0x00,0x04,0x02,0x40]
+
+v_interp_p2_f32_e64 v5, |v2|, attr0.x
+// NOSICI: error: not a valid operand
+// VI: v_interp_p2_f32_e64 v5, |v2|, attr0.x ; encoding: [0x05,0x02,0x71,0xd2,0x00,0x04,0x02,0x00]
+
+v_interp_p2_f32_e64 v5, v2, attr0.x clamp
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p2_f32_e64 v5, v2, attr0.x clamp ; encoding: [0x05,0x80,0x71,0xd2,0x00,0x04,0x02,0x00]
+
+v_interp_p2_f32_e64 v5, v2, attr0.x div:2
+// NOSICI: error: not a valid operand
+// VI: v_interp_p2_f32_e64 v5, v2, attr0.x div:2 ; encoding: [0x05,0x00,0x71,0xd2,0x00,0x04,0x02,0x18]
+
+
+v_interp_p1ll_f16 v5, v2, attr31.x
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1ll_f16 v5, v2, attr31.x ; encoding: [0x05,0x00,0x74,0xd2,0x1f,0x04,0x02,0x00]
+
+v_interp_p1ll_f16 v5, v2, attr0.w
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1ll_f16 v5, v2, attr0.w ; encoding: [0x05,0x00,0x74,0xd2,0xc0,0x04,0x02,0x00]
+
+v_interp_p1ll_f16 v5, -v2, attr0.x
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1ll_f16 v5, -v2, attr0.x ; encoding: [0x05,0x00,0x74,0xd2,0x00,0x04,0x02,0x40]
+
+v_interp_p1ll_f16 v5, |v2|, attr0.x
+// NOSICI: error: not a valid operand
+// VI: v_interp_p1ll_f16 v5, |v2|, attr0.x ; encoding: [0x05,0x02,0x74,0xd2,0x00,0x04,0x02,0x00]
+
+v_interp_p1ll_f16 v5, v2, attr0.x high
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1ll_f16 v5, v2, attr0.x high ; encoding: [0x05,0x00,0x74,0xd2,0x00,0x05,0x02,0x00]
+
+v_interp_p1ll_f16 v5, v2, attr0.x clamp
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1ll_f16 v5, v2, attr0.x clamp ; encoding: [0x05,0x80,0x74,0xd2,0x00,0x04,0x02,0x00]
+
+v_interp_p1ll_f16 v5, v2, attr0.x mul:4
+// NOSICI: error: not a valid operand
+// VI: v_interp_p1ll_f16 v5, v2, attr0.x mul:4 ; encoding: [0x05,0x00,0x74,0xd2,0x00,0x04,0x02,0x10]
+
+
+v_interp_p1lv_f16 v5, v2, attr1.x, v3
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1lv_f16 v5, v2, attr1.x, v3 ; encoding: [0x05,0x00,0x75,0xd2,0x01,0x04,0x0e,0x04]
+
+v_interp_p1lv_f16 v5, v2, attr0.z, v3
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1lv_f16 v5, v2, attr0.z, v3 ; encoding: [0x05,0x00,0x75,0xd2,0x80,0x04,0x0e,0x04]
+
+v_interp_p1lv_f16 v5, -v2, attr0.x, v3
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1lv_f16 v5, -v2, attr0.x, v3 ; encoding: [0x05,0x00,0x75,0xd2,0x00,0x04,0x0e,0x44]
+
+v_interp_p1lv_f16 v5, v2, attr0.x, -v3
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1lv_f16 v5, v2, attr0.x, -v3 ; encoding: [0x05,0x00,0x75,0xd2,0x00,0x04,0x0e,0x84]
+
+v_interp_p1lv_f16 v5, |v2|, attr0.x, v3
+// NOSICI: error: not a valid operand
+// VI: v_interp_p1lv_f16 v5, |v2|, attr0.x, v3 ; encoding: [0x05,0x02,0x75,0xd2,0x00,0x04,0x0e,0x04]
+
+v_interp_p1lv_f16 v5, v2, attr0.x, |v3|
+// NOSICI: error: not a valid operand
+// VI: v_interp_p1lv_f16 v5, v2, attr0.x, |v3| ; encoding: [0x05,0x04,0x75,0xd2,0x00,0x04,0x0e,0x04]
+
+v_interp_p1lv_f16 v5, v2, attr0.x, v3 high
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1lv_f16 v5, v2, attr0.x, v3 high ; encoding: [0x05,0x00,0x75,0xd2,0x00,0x05,0x0e,0x04]
+
+v_interp_p1lv_f16 v5, v2, attr0.x, v3 clamp
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p1lv_f16 v5, v2, attr0.x, v3 clamp ; encoding: [0x05,0x80,0x75,0xd2,0x00,0x04,0x0e,0x04]
+
+v_interp_p1lv_f16 v5, v2, attr0.x, v3 mul:2
+// NOSICI: error: not a valid operand
+// VI: v_interp_p1lv_f16 v5, v2, attr0.x, v3 mul:2 ; encoding: [0x05,0x00,0x75,0xd2,0x00,0x04,0x0e,0x0c]
+
+v_interp_p1lv_f16 v5, v2, attr0.x, v3 div:2
+// NOSICI: error: not a valid operand
+// VI: v_interp_p1lv_f16 v5, v2, attr0.x, v3 div:2 ; encoding: [0x05,0x00,0x75,0xd2,0x00,0x04,0x0e,0x1c]
+
+
+v_interp_p2_f16 v5, v2, attr1.x, v3
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p2_f16 v5, v2, attr1.x, v3 ; encoding: [0x05,0x00,0x76,0xd2,0x01,0x04,0x0e,0x04]
+
+v_interp_p2_f16 v5, v2, attr32.x, v3
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p2_f16 v5, v2, attr32.x, v3 ; encoding: [0x05,0x00,0x76,0xd2,0x20,0x04,0x0e,0x04]
+
+v_interp_p2_f16 v5, v2, attr0.w, v3
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p2_f16 v5, v2, attr0.w, v3 ; encoding: [0x05,0x00,0x76,0xd2,0xc0,0x04,0x0e,0x04]
+
+v_interp_p2_f16 v5, -v2, attr0.x, v3
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p2_f16 v5, -v2, attr0.x, v3 ; encoding: [0x05,0x00,0x76,0xd2,0x00,0x04,0x0e,0x44]
+
+v_interp_p2_f16 v5, v2, attr0.x, -v3
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p2_f16 v5, v2, attr0.x, -v3 ; encoding: [0x05,0x00,0x76,0xd2,0x00,0x04,0x0e,0x84]
+
+v_interp_p2_f16 v5, |v2|, attr0.x, v3
+// NOSICI: error: not a valid operand
+// VI: v_interp_p2_f16 v5, |v2|, attr0.x, v3 ; encoding: [0x05,0x02,0x76,0xd2,0x00,0x04,0x0e,0x04]
+
+v_interp_p2_f16 v5, v2, attr0.x, |v3|
+// NOSICI: error: not a valid operand
+// VI: v_interp_p2_f16 v5, v2, attr0.x, |v3| ; encoding: [0x05,0x04,0x76,0xd2,0x00,0x04,0x0e,0x04]
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 high
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p2_f16 v5, v2, attr0.x, v3 high ; encoding: [0x05,0x00,0x76,0xd2,0x00,0x05,0x0e,0x04]
+
+v_interp_p2_f16 v5, v2, attr0.x, v3 clamp
+// NOSICI: error: invalid operand for instruction
+// VI: v_interp_p2_f16 v5, v2, attr0.x, v3 clamp ; encoding: [0x05,0x80,0x76,0xd2,0x00,0x04,0x0e,0x04]

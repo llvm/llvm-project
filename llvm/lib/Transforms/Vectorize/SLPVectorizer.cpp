@@ -4387,7 +4387,7 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
   if (!I)
     return false;
 
-  if (!isa<BinaryOperator>(I))
+  if (!isa<BinaryOperator>(I) && !isa<CmpInst>(I))
     return false;
 
   Value *P = I->getParent();
@@ -4925,39 +4925,30 @@ private:
 ///  %rb = insertelement <4 x float> %ra, float %s1, i32 1
 ///  %rc = insertelement <4 x float> %rb, float %s2, i32 2
 ///  %rd = insertelement <4 x float> %rc, float %s3, i32 3
+///  starting from the last insertelement instruction.
 ///
 /// Returns true if it matches
 ///
-static bool findBuildVector(InsertElementInst *FirstInsertElem,
+static bool findBuildVector(InsertElementInst *LastInsertElem,
                             SmallVectorImpl<Value *> &BuildVector,
                             SmallVectorImpl<Value *> &BuildVectorOpds) {
-  if (!isa<UndefValue>(FirstInsertElem->getOperand(0)))
-    return false;
-
-  InsertElementInst *IE = FirstInsertElem;
-  while (true) {
-    BuildVector.push_back(IE);
-    BuildVectorOpds.push_back(IE->getOperand(1));
-
-    if (IE->use_empty())
+  Value *V = nullptr;
+  do {
+    BuildVector.push_back(LastInsertElem);
+    BuildVectorOpds.push_back(LastInsertElem->getOperand(1));
+    V = LastInsertElem->getOperand(0);
+    if (isa<UndefValue>(V))
+      break;
+    LastInsertElem = dyn_cast<InsertElementInst>(V);
+    if (!LastInsertElem || !LastInsertElem->hasOneUse())
       return false;
-
-    InsertElementInst *NextUse = dyn_cast<InsertElementInst>(IE->user_back());
-    if (!NextUse)
-      return true;
-
-    // If this isn't the final use, make sure the next insertelement is the only
-    // use. It's OK if the final constructed vector is used multiple times
-    if (!IE->hasOneUse())
-      return false;
-
-    IE = NextUse;
-  }
-
-  return false;
+  } while (true);
+  std::reverse(BuildVector.begin(), BuildVector.end());
+  std::reverse(BuildVectorOpds.begin(), BuildVectorOpds.end());
+  return true;
 }
 
-/// \brief Like findBuildVector, but looks backwards for construction of aggregate.
+/// \brief Like findBuildVector, but looks for construction of aggregate.
 ///
 /// \return true if it matches.
 static bool findBuildAggregate(InsertValueInst *IV,
@@ -5142,6 +5133,64 @@ bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Value *V,
                                                   ExtraVectorization);
 }
 
+bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
+                                                 BasicBlock *BB, BoUpSLP &R) {
+  const DataLayout &DL = BB->getModule()->getDataLayout();
+  if (!R.canMapToVector(IVI->getType(), DL))
+    return false;
+
+  SmallVector<Value *, 16> BuildVector;
+  SmallVector<Value *, 16> BuildVectorOpds;
+  if (!findBuildAggregate(IVI, BuildVector, BuildVectorOpds))
+    return false;
+
+  DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
+  return tryToVectorizeList(BuildVectorOpds, R, BuildVector, false);
+}
+
+bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
+                                                   BasicBlock *BB, BoUpSLP &R) {
+  SmallVector<Value *, 16> BuildVector;
+  SmallVector<Value *, 16> BuildVectorOpds;
+  if (!findBuildVector(IEI, BuildVector, BuildVectorOpds))
+    return false;
+
+  // Vectorize starting with the build vector operands ignoring the BuildVector
+  // instructions for the purpose of scheduling and user extraction.
+  return tryToVectorizeList(BuildVectorOpds, R, BuildVector);
+}
+
+bool SLPVectorizerPass::vectorizeCmpInst(CmpInst *CI, BasicBlock *BB,
+                                         BoUpSLP &R) {
+  if (tryToVectorizePair(CI->getOperand(0), CI->getOperand(1), R))
+    return true;
+
+  bool OpsChanged = false;
+  for (int Idx = 0; Idx < 2; ++Idx) {
+    OpsChanged |=
+        vectorizeRootInstruction(nullptr, CI->getOperand(Idx), BB, R, TTI);
+  }
+  return OpsChanged;
+}
+
+bool SLPVectorizerPass::vectorizeSimpleInstructions(
+    SmallVectorImpl<WeakVH> &Instructions, BasicBlock *BB, BoUpSLP &R) {
+  bool OpsChanged = false;
+  for (auto &VH : reverse(Instructions)) {
+    auto *I = dyn_cast_or_null<Instruction>(VH);
+    if (!I)
+      continue;
+    if (auto *LastInsertValue = dyn_cast<InsertValueInst>(I))
+      OpsChanged |= vectorizeInsertValueInst(LastInsertValue, BB, R);
+    else if (auto *LastInsertElem = dyn_cast<InsertElementInst>(I))
+      OpsChanged |= vectorizeInsertElementInst(LastInsertElem, BB, R);
+    else if (auto *CI = dyn_cast<CmpInst>(I))
+      OpsChanged |= vectorizeCmpInst(CI, BB, R);
+  }
+  Instructions.clear();
+  return OpsChanged;
+}
+
 bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   bool Changed = false;
   SmallVector<Value *, 4> Incoming;
@@ -5201,10 +5250,21 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
   VisitedInstrs.clear();
 
+  SmallVector<WeakVH, 8> PostProcessInstructions;
+  SmallDenseSet<Instruction *, 4> KeyNodes;
   for (BasicBlock::iterator it = BB->begin(), e = BB->end(); it != e; it++) {
     // We may go through BB multiple times so skip the one we have checked.
-    if (!VisitedInstrs.insert(&*it).second)
+    if (!VisitedInstrs.insert(&*it).second) {
+      if (it->use_empty() && KeyNodes.count(&*it) > 0 &&
+          vectorizeSimpleInstructions(PostProcessInstructions, BB, R)) {
+        // We would like to start over since some instructions are deleted
+        // and the iterator may become invalid value.
+        Changed = true;
+        it = BB->begin();
+        e = BB->end();
+      }
       continue;
+    }
 
     if (isa<DbgInfoIntrinsic>(it))
       continue;
@@ -5226,96 +5286,37 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       continue;
     }
 
-    if (ShouldStartVectorizeHorAtStore) {
-      if (StoreInst *SI = dyn_cast<StoreInst>(it)) {
-        // Try to match and vectorize a horizontal reduction.
-        if (vectorizeRootInstruction(nullptr, SI->getValueOperand(), BB, R,
-                                     TTI)) {
-          Changed = true;
-          it = BB->begin();
-          e = BB->end();
-          continue;
+    // Ran into an instruction without users, like terminator, or function call
+    // with ignored return value, store. Ignore unused instructions (basing on
+    // instruction type, except for CallInst and InvokeInst).
+    if (it->use_empty() && (it->getType()->isVoidTy() || isa<CallInst>(it) ||
+                            isa<InvokeInst>(it))) {
+      KeyNodes.insert(&*it);
+      bool OpsChanged = false;
+      if (ShouldStartVectorizeHorAtStore || !isa<StoreInst>(it)) {
+        for (auto *V : it->operand_values()) {
+          // Try to match and vectorize a horizontal reduction.
+          OpsChanged |= vectorizeRootInstruction(nullptr, V, BB, R, TTI);
         }
       }
-    }
-
-    // Try to vectorize horizontal reductions feeding into a return.
-    if (ReturnInst *RI = dyn_cast<ReturnInst>(it)) {
-      if (RI->getNumOperands() != 0) {
-        // Try to match and vectorize a horizontal reduction.
-        if (vectorizeRootInstruction(nullptr, RI->getOperand(0), BB, R, TTI)) {
-          Changed = true;
-          it = BB->begin();
-          e = BB->end();
-          continue;
-        }
-      }
-    }
-
-    // Try to vectorize trees that start at compare instructions.
-    if (CmpInst *CI = dyn_cast<CmpInst>(it)) {
-      if (tryToVectorizePair(CI->getOperand(0), CI->getOperand(1), R)) {
-        Changed = true;
+      // Start vectorization of post-process list of instructions from the
+      // top-tree instructions to try to vectorize as many instructions as
+      // possible.
+      OpsChanged |= vectorizeSimpleInstructions(PostProcessInstructions, BB, R);
+      if (OpsChanged) {
         // We would like to start over since some instructions are deleted
         // and the iterator may become invalid value.
-        it = BB->begin();
-        e = BB->end();
-        continue;
-      }
-
-      for (int I = 0; I < 2; ++I) {
-        if (vectorizeRootInstruction(nullptr, CI->getOperand(I), BB, R, TTI)) {
-          Changed = true;
-          // We would like to start over since some instructions are deleted
-          // and the iterator may become invalid value.
-          it = BB->begin();
-          e = BB->end();
-          break;
-        }
-      }
-      continue;
-    }
-
-    // Try to vectorize trees that start at insertelement instructions.
-    if (InsertElementInst *FirstInsertElem = dyn_cast<InsertElementInst>(it)) {
-      SmallVector<Value *, 16> BuildVector;
-      SmallVector<Value *, 16> BuildVectorOpds;
-      if (!findBuildVector(FirstInsertElem, BuildVector, BuildVectorOpds))
-        continue;
-
-      // Vectorize starting with the build vector operands ignoring the
-      // BuildVector instructions for the purpose of scheduling and user
-      // extraction.
-      if (tryToVectorizeList(BuildVectorOpds, R, BuildVector)) {
         Changed = true;
         it = BB->begin();
         e = BB->end();
-      }
-
-      continue;
-    }
-
-    // Try to vectorize trees that start at insertvalue instructions feeding into
-    // a store.
-    if (StoreInst *SI = dyn_cast<StoreInst>(it)) {
-      if (InsertValueInst *LastInsertValue = dyn_cast<InsertValueInst>(SI->getValueOperand())) {
-        const DataLayout &DL = BB->getModule()->getDataLayout();
-        if (R.canMapToVector(SI->getValueOperand()->getType(), DL)) {
-          SmallVector<Value *, 16> BuildVector;
-          SmallVector<Value *, 16> BuildVectorOpds;
-          if (!findBuildAggregate(LastInsertValue, BuildVector, BuildVectorOpds))
-            continue;
-
-          DEBUG(dbgs() << "SLP: store of array mappable to vector: " << *SI << "\n");
-          if (tryToVectorizeList(BuildVectorOpds, R, BuildVector, false)) {
-            Changed = true;
-            it = BB->begin();
-            e = BB->end();
-          }
-          continue;
-        }
+        continue;
       }
     }
+
+    if (isa<InsertElementInst>(it) || isa<CmpInst>(it) ||
+        isa<InsertValueInst>(it))
+      PostProcessInstructions.push_back(&*it);
+
   }
 
   return Changed;

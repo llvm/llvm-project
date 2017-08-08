@@ -1,4 +1,4 @@
-//===-- SILoadStoreOptimizer.cpp ------------------------------------------===//
+//===- SILoadStoreOptimizer.cpp -------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -56,8 +56,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
+#include <algorithm>
 #include <cassert>
+#include <cstdlib>
 #include <iterator>
 #include <utility>
 
@@ -68,8 +69,7 @@ using namespace llvm;
 namespace {
 
 class SILoadStoreOptimizer : public MachineFunctionPass {
-
-  typedef struct {
+  using CombineInfo = struct {
     MachineBasicBlock::iterator I;
     MachineBasicBlock::iterator Paired;
     unsigned EltSize;
@@ -78,7 +78,7 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
     unsigned BaseOff;
     bool UseST64;
     SmallVector<MachineInstr*, 8> InstsToMove;
-   } CombineInfo;
+   };
 
 private:
   const SIInstrInfo *TII = nullptr;
@@ -258,7 +258,6 @@ bool SILoadStoreOptimizer::findMatchingDSInst(CombineInfo &CI) {
 
   for ( ; MBBI != E; ++MBBI) {
     if (MBBI->getOpcode() != CI.I->getOpcode()) {
-
       // This is not a matching DS instruction, but we can keep looking as
       // long as one of these conditions are met:
       // 1. It is safe to move I down past MBBI.

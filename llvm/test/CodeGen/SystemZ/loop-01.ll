@@ -9,7 +9,7 @@
 define void @f1(i32 *%dest, i32 %a) {
 ; CHECK-LABEL: f1:
 ; CHECK-NOT: sllg
-; CHECK: st %r3, 0({{%r[1-5],%r[1-5]}})
+; CHECK: st %r3, 400({{%r[1-5],%r[1-5]}})
 ; CHECK: br %r14
 entry:
   br label %loop

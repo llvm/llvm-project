@@ -209,9 +209,9 @@ class VOP_MAC <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, VGPR_32:$src2);
   let Ins64 = getIns64<Src0RC64, Src1RC64, RegisterOperand<VGPR_32>, 3,
                        HasModifiers, HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
-  let InsDPP = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
+  let InsDPP = (ins DstRCDPP:$old,
+                    Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                     Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
-                    VGPR_32:$src2, // stub argument
                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
 
@@ -282,7 +282,8 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1]> {
                      dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
 
-  let InsDPP = (ins Src0Mod:$src0_modifiers, Src0DPP:$src0,
+  let InsDPP = (ins DstRCDPP:$old,
+                    Src0Mod:$src0_modifiers, Src0DPP:$src0,
                     Src1Mod:$src1_modifiers, Src1DPP:$src1,
                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
@@ -665,8 +666,6 @@ class VOP2_DPP <bits<6> op, VOP2_Pseudo ps, VOPProfile P = ps.Pfl> :
   let Uses = ps.Uses;
   let SchedRW = ps.SchedRW;
   let hasSideEffects = ps.hasSideEffects;
-  let Constraints = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   bits<8> vdst;
   bits<8> src1;

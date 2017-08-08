@@ -20,9 +20,7 @@
 #include "FuzzerIO.h"
 #include "FuzzerUtil.h"
 #include "FuzzerValueBitMap.h"
-#include <map>
 #include <set>
-#include <sstream>
 
 // The coverage counters and PCs.
 // These are declared as global variables named "__sancov_*" to simplify
@@ -48,8 +46,8 @@ uintptr_t *TracePC::PCs() const {
 }
 
 size_t TracePC::GetTotalPCCoverage() {
-  if (ObservedPCs)
-    return ObservedPCs->size();
+  if (ObservedPCs.size())
+    return ObservedPCs.size();
   size_t Res = 0;
   for (size_t i = 1, N = GetNumPCs(); i < N; i++)
     if (PCs()[i])
@@ -141,13 +139,10 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
 void TracePC::UpdateObservedPCs() {
   if (NumPCsInPCTables) {
     auto Observe = [&](uintptr_t PC) {
-      bool Inserted = ObservedPCs->insert(PC).second;
+      bool Inserted = ObservedPCs.insert(PC).second;
       if (Inserted && DoPrintNewPCs)
         PrintPC("\tNEW_PC: %p %F %L\n", "\tNEW_PC: %p\n", PC + 1);
     };
-
-    if (!ObservedPCs)
-      ObservedPCs = new std::set<uintptr_t>;
 
     if (NumInline8bitCounters == NumPCsInPCTables) {
       for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
@@ -174,6 +169,28 @@ void TracePC::UpdateObservedPCs() {
   }
 }
 
+inline ALWAYS_INLINE uintptr_t GetPreviousInstructionPc(uintptr_t PC) {
+  // TODO: this implementation is x86 only.
+  // see sanitizer_common GetPreviousInstructionPc for full implementation.
+  return PC - 1;
+}
+
+inline ALWAYS_INLINE uintptr_t GetNextInstructionPc(uintptr_t PC) {
+  // TODO: this implementation is x86 only.
+  // see sanitizer_common GetPreviousInstructionPc for full implementation.
+  return PC + 1;
+}
+
+static std::string GetModuleName(uintptr_t PC) {
+  char ModulePathRaw[4096] = "";  // What's PATH_MAX in portable C++?
+  void *OffsetRaw = nullptr;
+  if (!EF->__sanitizer_get_module_and_offset_for_pc(
+      reinterpret_cast<void *>(PC), ModulePathRaw,
+      sizeof(ModulePathRaw), &OffsetRaw))
+    return "";
+  return ModulePathRaw;
+}
+
 void TracePC::PrintCoverage() {
   if (!EF->__sanitizer_symbolize_pc ||
       !EF->__sanitizer_get_module_and_offset_for_pc) {
@@ -182,107 +199,54 @@ void TracePC::PrintCoverage() {
            " not printing coverage\n");
     return;
   }
-  std::map<std::string, std::vector<uintptr_t>> CoveredPCsPerModule;
-  std::map<std::string, uintptr_t> ModuleOffsets;
-  std::set<std::string> CoveredDirs, CoveredFiles, CoveredFunctions,
-      CoveredLines;
   Printf("COVERAGE:\n");
-  for (size_t i = 1; i < GetNumPCs(); i++) {
-    uintptr_t PC = PCs()[i];
-    if (!PC) continue;
-    std::string FileStr = DescribePC("%s", PC);
-    if (!IsInterestingCoverageFile(FileStr)) continue;
-    std::string FixedPCStr = DescribePC("%p", PC);
-    std::string FunctionStr = DescribePC("%F", PC);
-    std::string LineStr = DescribePC("%l", PC);
-    char ModulePathRaw[4096] = "";  // What's PATH_MAX in portable C++?
-    void *OffsetRaw = nullptr;
-    if (!EF->__sanitizer_get_module_and_offset_for_pc(
-            reinterpret_cast<void *>(PC), ModulePathRaw,
-            sizeof(ModulePathRaw), &OffsetRaw))
-      continue;
-    std::string Module = ModulePathRaw;
-    uintptr_t FixedPC = std::stoull(FixedPCStr, 0, 16);
-    uintptr_t PcOffset = reinterpret_cast<uintptr_t>(OffsetRaw);
-    ModuleOffsets[Module] = FixedPC - PcOffset;
-    CoveredPCsPerModule[Module].push_back(PcOffset);
-    CoveredFunctions.insert(FunctionStr);
-    CoveredFiles.insert(FileStr);
-    CoveredDirs.insert(DirName(FileStr));
-    if (!CoveredLines.insert(FileStr + ":" + LineStr).second)
-      continue;
-    Printf("COVERED: %s %s:%s\n", FunctionStr.c_str(),
-           FileStr.c_str(), LineStr.c_str());
-  }
+  std::string LastFunctionName = "";
+  std::string LastFileStr = "";
+  std::set<size_t> UncoveredLines;
+  std::set<size_t> CoveredLines;
 
-  std::string CoveredDirsStr;
-  for (auto &Dir : CoveredDirs) {
-    if (!CoveredDirsStr.empty())
-      CoveredDirsStr += ",";
-    CoveredDirsStr += Dir;
-  }
-  Printf("COVERED_DIRS: %s\n", CoveredDirsStr.c_str());
-
-  for (auto &M : CoveredPCsPerModule) {
-    std::set<std::string> UncoveredFiles, UncoveredFunctions;
-    std::map<std::string, std::set<int> > UncoveredLines;  // Func+File => lines
-    auto &ModuleName = M.first;
-    auto &CoveredOffsets = M.second;
-    uintptr_t ModuleOffset = ModuleOffsets[ModuleName];
-    std::sort(CoveredOffsets.begin(), CoveredOffsets.end());
-    Printf("MODULE_WITH_COVERAGE: %s\n", ModuleName.c_str());
-    // sancov does not yet fully support DSOs.
-    // std::string Cmd = "sancov -print-coverage-pcs " + ModuleName;
-    std::string Cmd = DisassembleCmd(ModuleName) + " | " +
-        SearchRegexCmd("call.*__sanitizer_cov_trace_pc_guard");
-    std::string SanCovOutput;
-    if (!ExecuteCommandAndReadOutput(Cmd, &SanCovOutput)) {
-      Printf("INFO: Command failed: %s\n", Cmd.c_str());
-      continue;
-    }
-    std::istringstream ISS(SanCovOutput);
-    std::string S;
-    while (std::getline(ISS, S, '\n')) {
-      size_t PcOffsetEnd = S.find(':');
-      if (PcOffsetEnd == std::string::npos)
-        continue;
-      S.resize(PcOffsetEnd);
-      uintptr_t PcOffset = std::stoull(S, 0, 16);
-      if (!std::binary_search(CoveredOffsets.begin(), CoveredOffsets.end(),
-                              PcOffset)) {
-        uintptr_t PC = ModuleOffset + PcOffset;
-        auto FileStr = DescribePC("%s", PC);
-        if (!IsInterestingCoverageFile(FileStr)) continue;
-        if (CoveredFiles.count(FileStr) == 0) {
-          UncoveredFiles.insert(FileStr);
-          continue;
+  auto FunctionEndCallback = [&](const std::string &CurrentFunc,
+                                 const std::string &CurrentFile) {
+    if (LastFunctionName != CurrentFunc) {
+      if (CoveredLines.empty() && !UncoveredLines.empty()) {
+        Printf("UNCOVERED_FUNC: %s\n", LastFunctionName.c_str());
+      } else {
+        for (auto Line : UncoveredLines) {
+          if (!CoveredLines.count(Line))
+            Printf("UNCOVERED_LINE: %s %s:%zd\n", LastFunctionName.c_str(),
+                   LastFileStr.c_str(), Line);
         }
-        auto FunctionStr = DescribePC("%F", PC);
-        if (CoveredFunctions.count(FunctionStr) == 0) {
-          UncoveredFunctions.insert(FunctionStr);
-          continue;
-        }
-        std::string LineStr = DescribePC("%l", PC);
-        uintptr_t Line = std::stoi(LineStr);
-        std::string FileLineStr = FileStr + ":" + LineStr;
-        if (CoveredLines.count(FileLineStr) == 0)
-          UncoveredLines[FunctionStr + " " + FileStr].insert(Line);
       }
-    }
-    for (auto &FileLine: UncoveredLines)
-      for (int Line : FileLine.second)
-        Printf("UNCOVERED_LINE: %s:%d\n", FileLine.first.c_str(), Line);
-    for (auto &Func : UncoveredFunctions)
-      Printf("UNCOVERED_FUNC: %s\n", Func.c_str());
-    for (auto &File : UncoveredFiles)
-      Printf("UNCOVERED_FILE: %s\n", File.c_str());
-  }
-}
 
-inline ALWAYS_INLINE uintptr_t GetPreviousInstructionPc(uintptr_t PC) {
-  // TODO: this implementation is x86 only.
-  // see sanitizer_common GetPreviousInstructionPc for full implementation.
-  return PC - 1;
+      UncoveredLines.clear();
+      CoveredLines.clear();
+      LastFunctionName = CurrentFunc;
+      LastFileStr = CurrentFile;
+    }
+  };
+
+  for (size_t i = 0; i < NumPCTables; i++) {
+    auto &M = ModulePCTable[i];
+    assert(M.Start < M.Stop);
+    auto ModuleName = GetModuleName(*M.Start);
+    for (auto Ptr = M.Start; Ptr < M.Stop; Ptr++) {
+      auto PC = *Ptr;
+      auto VisualizePC = GetNextInstructionPc(PC);
+      bool IsObserved = ObservedPCs.count(PC);
+      std::string FileStr = DescribePC("%s", VisualizePC);
+      if (!IsInterestingCoverageFile(FileStr)) continue;
+      std::string FunctionStr = DescribePC("%F", VisualizePC);
+      FunctionEndCallback(FunctionStr, FileStr);
+      std::string LineStr = DescribePC("%l", VisualizePC);
+      size_t Line = std::stoul(LineStr);
+      if (IsObserved && CoveredLines.insert(Line).second)
+        Printf("COVERED: %s %s:%zd\n", FunctionStr.c_str(), FileStr.c_str(),
+               Line);
+      else
+        UncoveredLines.insert(Line);
+    }
+  }
+  FunctionEndCallback("", "");
 }
 
 void TracePC::DumpCoverage() {

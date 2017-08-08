@@ -540,7 +540,31 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   EarlyFPM.addPass(SROA());
   EarlyFPM.addPass(EarlyCSEPass());
   EarlyFPM.addPass(LowerExpectIntrinsicPass());
+  // In SamplePGO ThinLTO backend, we need instcombine before profile annotation
+  // to convert bitcast to direct calls so that they can be inlined during the
+  // profile annotation prepration step.
+  // More details about SamplePGO design can be found in:
+  // https://research.google.com/pubs/pub45290.html
+  // FIXME: revisit how SampleProfileLoad/Inliner/ICP is structured.
+  if (PGOOpt && !PGOOpt->SampleProfileFile.empty() &&
+      Phase == ThinLTOPhase::PostLink)
+    EarlyFPM.addPass(InstCombinePass());
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(EarlyFPM)));
+
+  if (PGOOpt && !PGOOpt->SampleProfileFile.empty()) {
+    // Annotate sample profile right after early FPM to ensure freshness of
+    // the debug info.
+    MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile));
+    // Do not invoke ICP in the ThinLTOPrelink phase as it makes it hard
+    // for the profile annotation to be accurate in the ThinLTO backend.
+    if (Phase != ThinLTOPhase::PreLink)
+      // We perform early indirect call promotion here, before globalopt.
+      // This is important for the ThinLTO backend phase because otherwise
+      // imported available_externally functions look unreferenced and are
+      // removed.
+      MPM.addPass(PGOIndirectCallPromotion(Phase == ThinLTOPhase::PostLink,
+                                           true));
+  }
 
   // Interprocedural constant propagation now that basic cleanup has occured
   // and prior to optimizing globals.
@@ -768,13 +792,8 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
 
-  if (PGOOpt && PGOOpt->SamplePGOSupport) {
+  if (PGOOpt && PGOOpt->SamplePGOSupport)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
-    if (!PGOOpt->SampleProfileFile.empty()) {
-      MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile));
-      MPM.addPass(PGOIndirectCallPromotion(false, true));
-    }
-  }
 
   // Add the core simplification pipeline.
   MPM.addPass(buildModuleSimplificationPipeline(Level, ThinLTOPhase::None,
@@ -796,14 +815,8 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level,
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
 
-  // Invoke the SamplePGO annotation pass for the first time to annotate
-  // profile for functions in the current module to give ThinLink info
-  // about module grouping.
-  if (PGOOpt && PGOOpt->SamplePGOSupport) {
+  if (PGOOpt && PGOOpt->SamplePGOSupport)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
-    if (!PGOOpt->SampleProfileFile.empty())
-      MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile));
-  }
 
   // If we are planning to perform ThinLTO later, we don't bloat the code with
   // unrolling/vectorization/... now. Just simplify the module as much as we
@@ -839,16 +852,14 @@ PassBuilder::buildThinLTODefaultPipeline(OptimizationLevel Level,
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
 
-  // Invoke the SamplePGO annotation pass for the second time to annotate on
-  // functions imported from other modules.
-  if (PGOOpt && !PGOOpt->SampleProfileFile.empty())
-    MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile));
-
   // During the ThinLTO backend phase we perform early indirect call promotion
   // here, before globalopt. Otherwise imported available_externally functions
   // look unreferenced and are removed.
-  MPM.addPass(PGOIndirectCallPromotion(
-      true /* InLTO */, PGOOpt && !PGOOpt->SampleProfileFile.empty()));
+  // FIXME: move this into buildModuleSimplificationPipeline to merge the logic
+  //        with SamplePGO.
+  if (PGOOpt && !PGOOpt->ProfileUseFile.empty())
+    MPM.addPass(PGOIndirectCallPromotion(true /* InLTO */,
+                                         false /* SamplePGO */));
 
   // Add the core simplification pipeline.
   MPM.addPass(buildModuleSimplificationPipeline(Level, ThinLTOPhase::PostLink,

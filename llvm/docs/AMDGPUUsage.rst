@@ -110,8 +110,7 @@ names from both the *Processor* and *Alternative Processor* can be used.
      cayman                 r600         dGPU
      **GCN GFX6 (Southern Islands (SI))** [AMD-Souther-Islands]_
      --------------------------------------------------------------------
-     gfx600     - SI        amdgcn       dGPU
-                - tahiti
+     gfx600     - tahiti    amdgcn       dGPU
      gfx601     - pitcairn  amdgcn       dGPU
                 - verde
                 - oland

@@ -188,7 +188,7 @@ define <2 x float> @ins4f2(<4 x float> %tmp1, <2 x float> %tmp2) {
 
 define <1 x double> @ins2f1(<2 x double> %tmp1, <1 x double> %tmp2) {
 ; CHECK-LABEL: ins2f1:
-; CHECK: mov {{d[0-9]+}}, {{v[0-9]+}}.d[1]
+; CHECK: dup {{v[0-9]+}}.2d, {{v[0-9]+}}.d[1]
   %tmp3 = extractelement <2 x double> %tmp1, i32 1
   %tmp4 = insertelement <1 x double> %tmp2, double %tmp3, i32 0
   ret <1 x double> %tmp4

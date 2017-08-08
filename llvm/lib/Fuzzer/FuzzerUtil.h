@@ -41,8 +41,6 @@ std::string DescribePC(const char *SymbolizedFMT, uintptr_t PC);
 
 unsigned NumberOfCpuCores();
 
-bool ExecuteCommandAndReadOutput(const std::string &Command, std::string *Out);
-
 // Platform specific functions.
 void SetSignalHandler(const FuzzingOptions& Options);
 

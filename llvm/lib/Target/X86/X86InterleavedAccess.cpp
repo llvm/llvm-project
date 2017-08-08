@@ -69,8 +69,10 @@ class X86InterleavedAccessGroup {
   ///   Out-V3 = P4, q4, r4, s4
   void transpose_4x4(ArrayRef<Instruction *> InputVectors,
                      SmallVectorImpl<Value *> &TransposedMatrix);
-  void interleave8bit_32x4(ArrayRef<Instruction *> InputVectors,
-                          SmallVectorImpl<Value *> &TransposedMatrix);
+  void interleave8bitStride4(ArrayRef<Instruction *> InputVectors,
+                             SmallVectorImpl<Value *> &TransposedMatrix,
+                             unsigned NumSubVecElems);
+
 public:
   /// In order to form an interleaved access group X86InterleavedAccessGroup
   /// requires a wide-load instruction \p 'I', a group of interleaved-vectors
@@ -101,13 +103,14 @@ bool X86InterleavedAccessGroup::isSupported() const {
   Type *ShuffleEltTy = ShuffleVecTy->getVectorElementType();
   unsigned ShuffleElemSize = DL.getTypeSizeInBits(ShuffleEltTy);
   unsigned SupportedNumElem = 4;
-  if (ShuffleElemSize == 8)
-    SupportedNumElem = 32;
   unsigned WideInstSize;
 
-  // Currently, lowering is supported for the following vectors:
-  // 1. 4-element vectors of 64 bits on AVX.
-  // 2. 32-element vectors of 8 bits on AVX.
+  // Currently, lowering is supported for the following vectors with stride 4:
+  // 1. Store and load of 4-element vectors of 64 bits on AVX.
+  // 2. Store of 16/32-element vectors of 8 bits on AVX.
+  if (!Subtarget.hasAVX() || Factor != 4)
+    return false;
+
   if (isa<LoadInst>(Inst)) {
     if (DL.getTypeSizeInBits(ShuffleVecTy) !=
         SupportedNumElem * ShuffleElemSize)
@@ -117,11 +120,13 @@ bool X86InterleavedAccessGroup::isSupported() const {
   } else
     WideInstSize = DL.getTypeSizeInBits(Shuffles[0]->getType());
 
-  if (DL.getTypeSizeInBits(ShuffleEltTy) == 8 && !isa<StoreInst>(Inst))
-    return false;
+  // We support shuffle represents stride 4 for byte type with size of
+  // WideInstSize.
+  if (ShuffleElemSize == 8 && isa<StoreInst>(Inst) &&
+      (WideInstSize == 512 || WideInstSize == 1024))
+    return true;
 
-  if (!Subtarget.hasAVX() || Factor != 4 ||
-      (ShuffleElemSize != 64 && ShuffleElemSize != 8) ||
+  if (ShuffleElemSize != 64 ||
       WideInstSize != (Factor * ShuffleElemSize * SupportedNumElem))
     return false;
 
@@ -192,15 +197,22 @@ static void createConcatShuffleMask(int NumElements,
     Mask.push_back(i + Offset + NumElements);
 }
 
-void X86InterleavedAccessGroup::interleave8bit_32x4(
-    ArrayRef<Instruction *> Matrix,
-    SmallVectorImpl<Value *> &TransposedMatrix) {
+void X86InterleavedAccessGroup::interleave8bitStride4(
+    ArrayRef<Instruction *> Matrix, SmallVectorImpl<Value *> &TransposedMatrix,
+    unsigned numberOfElement) {
 
   // Example: Assuming we start from the following vectors:
   // Matrix[0]= c0 c1 c2 c3 c4 ... c31
   // Matrix[1]= m0 m1 m2 m3 m4 ... m31
   // Matrix[2]= y0 y1 y2 y3 y4 ... y31
   // Matrix[3]= k0 k1 k2 k3 k4 ... k31
+
+  Type *VecTyepVt = VectorType::get(Type::getInt8Ty(Shuffles[0]->getContext()),
+                                    numberOfElement);
+  Type *VecTyepVtHalf = VectorType::get(
+      Type::getInt16Ty(Shuffles[0]->getContext()), numberOfElement / 2);
+  MVT VT = MVT::getVT(VecTyepVt);
+  MVT HalfVT = MVT::getVT(VecTyepVtHalf);
 
   TransposedMatrix.resize(4);
 
@@ -216,8 +228,8 @@ void X86InterleavedAccessGroup::interleave8bit_32x4(
   // MaskHighTemp and MaskLowTemp built in the vpunpckhbw and vpunpcklbw X86
   // shuffle pattern.
 
-  createUnpackShuffleMask<uint32_t>(MVT::v32i8, MaskHighTemp, false, false);
-  createUnpackShuffleMask<uint32_t>(MVT::v32i8, MaskLowTemp, true, false);
+  createUnpackShuffleMask<uint32_t>(VT, MaskHighTemp, false, false);
+  createUnpackShuffleMask<uint32_t>(VT, MaskLowTemp, true, false);
   ArrayRef<uint32_t> MaskHigh = makeArrayRef(MaskHighTemp);
   ArrayRef<uint32_t> MaskLow = makeArrayRef(MaskLowTemp);
 
@@ -232,8 +244,8 @@ void X86InterleavedAccessGroup::interleave8bit_32x4(
   // MaskHighTemp1 and MaskLowTemp1 built in the vpunpckhdw and vpunpckldw X86
   // shuffle pattern.
 
-  createUnpackShuffleMask<uint32_t>(MVT::v16i16, MaskLowTemp1, true, false);
-  createUnpackShuffleMask<uint32_t>(MVT::v16i16, MaskHighTemp1, false, false);
+  createUnpackShuffleMask<uint32_t>(HalfVT, MaskLowTemp1, true, false);
+  createUnpackShuffleMask<uint32_t>(HalfVT, MaskHighTemp1, false, false);
   scaleShuffleMask<uint32_t>(2, makeArrayRef(MaskHighTemp1), MaskHighTemp2);
   scaleShuffleMask<uint32_t>(2, makeArrayRef(MaskLowTemp1), MaskLowTemp2);
   ArrayRef<uint32_t> MaskHighWord = makeArrayRef(MaskHighTemp2);
@@ -267,6 +279,13 @@ void X86InterleavedAccessGroup::interleave8bit_32x4(
   Value *Low1 =
       Builder.CreateShuffleVector(IntrVec1High, IntrVec2High, MaskLowWord);
 
+  if (VT == MVT::v16i8) {
+    TransposedMatrix[0] = Low;
+    TransposedMatrix[1] = High;
+    TransposedMatrix[2] = Low1;
+    TransposedMatrix[3] = High1;
+    return;
+  }
   // cmyk0  cmyk1  cmyk2   cmyk3  | cmyk4  cmyk5  cmyk6   cmyk7
   // cmyk8  cmyk9  cmyk10  cmyk11 | cmyk12 cmyk13 cmyk14  cmyk15
   // cmyk16 cmyk17 cmyk18 cmyk19  | cmyk20 cmyk21 cmyk22 cmyk23
@@ -349,8 +368,9 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
   case 4:
     transpose_4x4(DecomposedVectors, TransposedVectors);
     break;
+  case 16:
   case 32:
-    interleave8bit_32x4(DecomposedVectors, TransposedVectors);
+    interleave8bitStride4(DecomposedVectors, TransposedVectors, NumSubVecElems);
     break;
   default:
     return false;

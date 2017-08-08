@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx901 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 

@@ -34,6 +34,32 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
   const AMDGPUTargetLowering *TLI;
   bool IsGraphicsShader;
 
+
+  const FeatureBitset InlineFeatureIgnoreList = {
+    // Codegen control options which don't matter.
+    AMDGPU::FeatureEnableLoadStoreOpt,
+    AMDGPU::FeatureEnableSIScheduler,
+    AMDGPU::FeatureEnableUnsafeDSOffsetFolding,
+    AMDGPU::FeatureFlatForGlobal,
+    AMDGPU::FeaturePromoteAlloca,
+    AMDGPU::FeatureUnalignedBufferAccess,
+    AMDGPU::FeatureUnalignedScratchAccess,
+
+    AMDGPU::FeatureAutoWaitcntBeforeBarrier,
+    AMDGPU::FeatureDebuggerEmitPrologue,
+    AMDGPU::FeatureDebuggerInsertNops,
+    AMDGPU::FeatureDebuggerReserveRegs,
+
+    // Property of the kernel/environment which can't actually differ.
+    AMDGPU::FeatureSGPRInitBug,
+    AMDGPU::FeatureXNACK,
+    AMDGPU::FeatureTrapHandler,
+
+    // Perf-tuning features
+    AMDGPU::FeatureFastFMAF32,
+    AMDGPU::HalfRate64Ops
+  };
+
   const AMDGPUSubtarget *getST() const { return ST; }
   const AMDGPUTargetLowering *getTLI() const { return TLI; }
 
@@ -121,6 +147,9 @@ public:
 
   unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                           Type *SubTp);
+
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const;
 };
 
 } // end namespace llvm
