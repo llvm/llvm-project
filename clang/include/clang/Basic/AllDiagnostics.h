@@ -24,6 +24,7 @@
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Serialization/SerializationDiagnostic.h"
+#include "clang/Tooling/Core/RefactoringDiagnostic.h"
 
 namespace clang {
 template <size_t SizeOfStr, typename FieldType>

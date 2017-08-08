@@ -118,6 +118,23 @@ void SBExpressionOptions::SetCancelCallback(
   m_opaque_ap->SetCancelCallback(callback, baton);
 }
 
+bool SBExpressionOptions::GetPlaygroundTransformEnabled() const {
+  return m_opaque_ap->GetPlaygroundTransformEnabled();
+}
+
+void SBExpressionOptions::SetPlaygroundTransformEnabled(
+    bool enable_playground_transform) {
+  m_opaque_ap->SetPlaygroundTransformEnabled(enable_playground_transform);
+}
+
+bool SBExpressionOptions::GetREPLMode() const {
+  return m_opaque_ap->GetREPLEnabled();
+}
+
+void SBExpressionOptions::SetREPLMode(bool enable_repl_mode) {
+  m_opaque_ap->SetREPLEnabled(enable_repl_mode);
+}
+
 bool SBExpressionOptions::GetGenerateDebugInfo() {
   return m_opaque_ap->GetGenerateDebugInfo();
 }

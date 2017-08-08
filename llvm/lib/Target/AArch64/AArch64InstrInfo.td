@@ -37,6 +37,9 @@ def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
                                  AssemblerPredicate<"FeatureFullFP16", "fullfp16">;
 def HasSPE           : Predicate<"Subtarget->hasSPE()">,
                                  AssemblerPredicate<"FeatureSPE", "spe">;
+def HasFuseAES       : Predicate<"Subtarget->hasFuseAES()">,
+                                 AssemblerPredicate<"FeatureFuseAES",
+                                 "fuse-aes">;
 def HasSVE           : Predicate<"Subtarget->hasSVE()">,
                                  AssemblerPredicate<"FeatureSVE", "sve">;
 
@@ -5303,6 +5306,31 @@ def AESErr   : AESTiedInst<0b0100, "aese",   int_aarch64_crypto_aese>;
 def AESDrr   : AESTiedInst<0b0101, "aesd",   int_aarch64_crypto_aesd>;
 def AESMCrr  : AESInst<    0b0110, "aesmc",  int_aarch64_crypto_aesmc>;
 def AESIMCrr : AESInst<    0b0111, "aesimc", int_aarch64_crypto_aesimc>;
+
+// Pseudo instructions for AESMCrr/AESIMCrr with a register constraint required
+// for AES fusion on some CPUs.
+let hasSideEffects = 0, mayStore = 0, mayLoad = 0 in {
+def AESMCrrTied: Pseudo<(outs V128:$Rd), (ins V128:$Rn), [], "$Rn = $Rd">,
+                        Sched<[WriteV]>;
+def AESIMCrrTied: Pseudo<(outs V128:$Rd), (ins V128:$Rn), [], "$Rn = $Rd">,
+                         Sched<[WriteV]>;
+}
+
+// Only use constrained versions of AES(I)MC instructions if they are paired with
+// AESE/AESD.
+def : Pat<(v16i8 (int_aarch64_crypto_aesmc
+            (v16i8 (int_aarch64_crypto_aese (v16i8 V128:$src1),
+                                            (v16i8 V128:$src2))))),
+          (v16i8 (AESMCrrTied (v16i8 (AESErr (v16i8 V128:$src1),
+                                             (v16i8 V128:$src2)))))>,
+          Requires<[HasFuseAES]>;
+
+def : Pat<(v16i8 (int_aarch64_crypto_aesimc
+            (v16i8 (int_aarch64_crypto_aesd (v16i8 V128:$src1),
+                                            (v16i8 V128:$src2))))),
+          (v16i8 (AESIMCrrTied (v16i8 (AESDrr (v16i8 V128:$src1),
+                                              (v16i8 V128:$src2)))))>,
+          Requires<[HasFuseAES]>;
 
 def SHA1Crrr     : SHATiedInstQSV<0b000, "sha1c",   int_aarch64_crypto_sha1c>;
 def SHA1Prrr     : SHATiedInstQSV<0b001, "sha1p",   int_aarch64_crypto_sha1p>;

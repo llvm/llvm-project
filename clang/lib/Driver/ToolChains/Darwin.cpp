@@ -10,6 +10,7 @@
 #include "Darwin.h"
 #include "Arch/ARM.h"
 #include "CommonArgs.h"
+#include "clang/Basic/AlignedAllocation.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Driver/Compilation.h"
@@ -434,6 +435,10 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // comes from specs (starting with link_command). Consult gcc for
   // more information.
   ArgStringList CmdArgs;
+
+  Args.ClaimAllArgs(options::OPT_index_store_path);
+  Args.ClaimAllArgs(options::OPT_index_ignore_system_symbols);
+  Args.ClaimAllArgs(options::OPT_index_record_codegen_name);
 
   /// Hack(tm) to ignore linking errors when we are doing ARC migration.
   if (Args.hasArg(options::OPT_ccc_arcmt_check,
@@ -1743,19 +1748,27 @@ void MachO::AddLinkRuntimeLibArgs(const ArgList &Args,
 }
 
 bool Darwin::isAlignedAllocationUnavailable() const {
+  llvm::Triple::OSType OS;
+
   switch (TargetPlatform) {
   case MacOS: // Earlier than 10.13.
-    return TargetVersion < VersionTuple(10U, 13U, 0U);
+    OS = llvm::Triple::MacOSX;
+    break;
   case IPhoneOS:
   case IPhoneOSSimulator:
+    OS = llvm::Triple::IOS;
+    break;
   case TvOS:
   case TvOSSimulator: // Earlier than 11.0.
-    return TargetVersion < VersionTuple(11U, 0U, 0U);
+    OS = llvm::Triple::TvOS;
+    break;
   case WatchOS:
   case WatchOSSimulator: // Earlier than 4.0.
-    return TargetVersion < VersionTuple(4U, 0U, 0U);
+    OS = llvm::Triple::WatchOS;
+    break;
   }
-  llvm_unreachable("Unsupported platform");
+
+  return TargetVersion < alignedAllocMinVersion(OS);
 }
 
 void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,

@@ -612,6 +612,8 @@ public:
 
   virtual bool HasSyntheticValue();
 
+  SwiftASTContext *GetSwiftASTContext();
+
   virtual bool IsSynthetic() { return false; }
 
   lldb::ValueObjectSP
@@ -1022,6 +1024,11 @@ protected:
 
   const char *GetLocationAsCStringImpl(const Value &value,
                                        const DataExtractor &data);
+
+  virtual lldb_private::Status
+  GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
+                 uint32_t data_offset, Module *module,
+                 bool mask_error_on_zerosize_type = true);
 
   bool IsChecksumEmpty();
 

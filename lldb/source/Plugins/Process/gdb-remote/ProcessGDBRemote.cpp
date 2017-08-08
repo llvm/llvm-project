@@ -3290,7 +3290,11 @@ ProcessGDBRemote::EstablishConnectionIfNeeded(const ProcessInfo &process_info) {
   return error;
 }
 #if defined(__APPLE__)
-#define USE_SOCKETPAIR_FOR_LOCAL_CONNECTION 1
+// CI bots that use the code-signed debugserver from Xcode don't yet have a
+// debugserver that supports the socketpair "--fd" argument.  We need to
+// disable this until we have an Apple codesigned version of debugserver that
+// supports it.
+// #define USE_SOCKETPAIR_FOR_LOCAL_CONNECTION 1
 #endif
 
 #ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
@@ -3456,7 +3460,7 @@ void ProcessGDBRemote::KillDebugserverProcess() {
 }
 
 void ProcessGDBRemote::Initialize() {
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
 
   llvm::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),

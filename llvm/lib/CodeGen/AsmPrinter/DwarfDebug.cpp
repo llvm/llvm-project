@@ -61,10 +61,14 @@ static cl::opt<bool>
 DisableDebugInfoPrinting("disable-debug-info-print", cl::Hidden,
                          cl::desc("Disable debug info printing"));
 
+static cl::opt<bool> UseDwarfRangesBaseAddressSpecifier(
+    "use-dwarf-ranges-base-address-specifier", cl::Hidden,
+    cl::desc("Use base address specifiers in debug_ranges"), cl::init(false));
+
 static cl::opt<bool>
-GenerateGnuPubSections("generate-gnu-dwarf-pub-sections", cl::Hidden,
-                       cl::desc("Generate GNU-style pubnames and pubtypes"),
-                       cl::init(false));
+    GenerateGnuPubSections("generate-gnu-dwarf-pub-sections", cl::Hidden,
+                           cl::desc("Generate GNU-style pubnames and pubtypes"),
+                           cl::init(false));
 
 static cl::opt<bool> GenerateARangeSection("generate-arange-section",
                                            cl::Hidden,
@@ -494,6 +498,8 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
 
 void DwarfDebug::constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,
                                                   const DIImportedEntity *N) {
+  if (isa<DILocalScope>(N->getScope()))
+    return;
   if (DIE *D = TheCU.getOrCreateContextDIE(N->getScope()))
     D->addChild(TheCU.constructImportedEntityDIE(N));
 }
@@ -518,6 +524,14 @@ sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
                          }),
              GVEs.end());
   return GVEs;
+}
+
+static bool isEmptyCU(DICompileUnit *CUNode) {
+  return CUNode->getEnumTypes().empty() &&
+         CUNode->getRetainedTypes().empty() &&
+         CUNode->getGlobalVariables().empty() &&
+         CUNode->getImportedEntities().empty() &&
+         CUNode->getMacros().empty();
 }
 
 // Emit all Dwarf sections that should come prior to the content. Create
@@ -546,9 +560,7 @@ void DwarfDebug::beginModule() {
   }
 
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
-    if (CUNode->getEnumTypes().empty() && CUNode->getRetainedTypes().empty() &&
-        CUNode->getGlobalVariables().empty() &&
-        CUNode->getImportedEntities().empty() && CUNode->getMacros().empty())
+    if (isEmptyCU(CUNode))
       continue;
 
     DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(CUNode);
@@ -682,6 +694,11 @@ void DwarfDebug::finalizeModuleInfo() {
                         TLOF.getDwarfMacinfoSection()->getBeginSymbol());
   }
 
+  // Emit all frontend-produced Skeleton CUs, i.e., Clang modules.
+  for (auto *CUNode : MMI->getModule()->debug_compile_units())
+    if (CUNode->getDWOId())
+      getOrCreateDwarfCompileUnit(CUNode);
+
   // Compute DIE offsets and sizes.
   InfoHolder.computeSizeAndOffsets();
   if (useSplitDwarf())
@@ -778,6 +795,7 @@ void DwarfDebug::ensureAbstractVariableIsCreatedIfScoped(DwarfCompileUnit &CU,
 // Collect variable information from side table maintained by MF.
 void DwarfDebug::collectVariableInfoFromMFTable(
     DwarfCompileUnit &TheCU, DenseSet<InlinedVariable> &Processed) {
+  SmallDenseMap<InlinedVariable, DbgVariable *> MFVars;
   for (const auto &VI : Asm->MF->getVariableDbgInfo()) {
     if (!VI.Var)
       continue;
@@ -795,24 +813,26 @@ void DwarfDebug::collectVariableInfoFromMFTable(
     ensureAbstractVariableIsCreatedIfScoped(TheCU, Var, Scope->getScopeNode());
     auto RegVar = make_unique<DbgVariable>(Var.first, Var.second);
     RegVar->initializeMMI(VI.Expr, VI.Slot);
-    if (InfoHolder.addScopeVariable(Scope, RegVar.get()))
+    if (DbgVariable *DbgVar = MFVars.lookup(Var))
+      DbgVar->addMMIEntry(*RegVar);
+    else if (InfoHolder.addScopeVariable(Scope, RegVar.get())) {
+      MFVars.insert({Var, RegVar.get()});
       ConcreteVariables.push_back(std::move(RegVar));
+    }
   }
 }
 
 // Get .debug_loc entry for the instruction range starting at MI.
 static DebugLocEntry::Value getDebugLocValue(const MachineInstr *MI) {
   const DIExpression *Expr = MI->getDebugExpression();
-
   assert(MI->getNumOperands() == 4);
   if (MI->getOperand(0).isReg()) {
-    MachineLocation MLoc;
+    auto RegOp = MI->getOperand(0);
+    auto Op1 = MI->getOperand(1);
     // If the second operand is an immediate, this is a
     // register-indirect address.
-    if (!MI->getOperand(1).isImm())
-      MLoc.set(MI->getOperand(0).getReg());
-    else
-      MLoc.set(MI->getOperand(0).getReg(), MI->getOperand(1).getImm());
+    assert((!Op1.isImm() || (Op1.getImm() == 0)) && "unexpected offset");
+    MachineLocation MLoc(RegOp.getReg(), Op1.isImm());
     return DebugLocEntry::Value(Expr, MLoc);
   }
   if (MI->getOperand(0).isImm())
@@ -1553,13 +1573,7 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     MachineLocation Location = Value.getLoc();
     if (Location.isIndirect())
       DwarfExpr.setMemoryLocationKind();
-    SmallVector<uint64_t, 8> Ops;
-    if (Location.isIndirect() && Location.getOffset()) {
-      Ops.push_back(dwarf::DW_OP_plus_uconst);
-      Ops.push_back(Location.getOffset());
-    }
-    Ops.append(DIExpr->elements_begin(), DIExpr->elements_end());
-    DIExpressionCursor Cursor(Ops);
+    DIExpressionCursor Cursor(DIExpr);
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
     if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
       return;
@@ -1844,17 +1858,49 @@ void DwarfDebug::emitDebugRanges() {
       // Emit our symbol so we can find the beginning of the range.
       Asm->OutStreamer->EmitLabel(List.getSym());
 
+      // Gather all the ranges that apply to the same section so they can share
+      // a base address entry.
+      MapVector<const MCSection *, std::vector<const RangeSpan *>> MV;
       for (const RangeSpan &Range : List.getRanges()) {
-        const MCSymbol *Begin = Range.getStart();
-        const MCSymbol *End = Range.getEnd();
-        assert(Begin && "Range without a begin symbol?");
-        assert(End && "Range without an end symbol?");
-        if (auto *Base = TheCU->getBaseAddress()) {
-          Asm->EmitLabelDifference(Begin, Base, Size);
-          Asm->EmitLabelDifference(End, Base, Size);
-        } else {
-          Asm->OutStreamer->EmitSymbolValue(Begin, Size);
-          Asm->OutStreamer->EmitSymbolValue(End, Size);
+        MV[&Range.getStart()->getSection()].push_back(&Range);
+      }
+
+      auto *CUBase = TheCU->getBaseAddress();
+      bool BaseIsSet = false;
+      for (const auto &P : MV) {
+        // Don't bother with a base address entry if there's only one range in
+        // this section in this range list - for example ranges for a CU will
+        // usually consist of single regions from each of many sections
+        // (-ffunction-sections, or just C++ inline functions) except under LTO
+        // or optnone where there may be holes in a single CU's section
+        // contrubutions.
+        auto *Base = CUBase;
+        if (!Base && P.second.size() > 1 &&
+            UseDwarfRangesBaseAddressSpecifier) {
+          BaseIsSet = true;
+          // FIXME/use care: This may not be a useful base address if it's not
+          // the lowest address/range in this object.
+          Base = P.second.front()->getStart();
+          Asm->OutStreamer->EmitIntValue(-1, Size);
+          Asm->OutStreamer->EmitSymbolValue(Base, Size);
+        } else if (BaseIsSet) {
+          BaseIsSet = false;
+          Asm->OutStreamer->EmitIntValue(-1, Size);
+          Asm->OutStreamer->EmitIntValue(0, Size);
+        }
+
+        for (const auto *RS : P.second) {
+          const MCSymbol *Begin = RS->getStart();
+          const MCSymbol *End = RS->getEnd();
+          assert(Begin && "Range without a begin symbol?");
+          assert(End && "Range without an end symbol?");
+          if (Base) {
+            Asm->EmitLabelDifference(Begin, Base, Size);
+            Asm->EmitLabelDifference(End, Base, Size);
+          } else {
+            Asm->OutStreamer->EmitSymbolValue(Begin, Size);
+            Asm->OutStreamer->EmitSymbolValue(End, Size);
+          }
         }
       }
 

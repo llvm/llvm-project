@@ -2083,18 +2083,6 @@ bool AArch64InstrInfo::shouldClusterMemOps(MachineInstr &FirstLdSt,
   return Offset1 + 1 == Offset2;
 }
 
-MachineInstr *AArch64InstrInfo::emitFrameIndexDebugValue(
-    MachineFunction &MF, int FrameIx, uint64_t Offset, const MDNode *Var,
-    const MDNode *Expr, const DebugLoc &DL) const {
-  MachineInstrBuilder MIB = BuildMI(MF, DL, get(AArch64::DBG_VALUE))
-                                .addFrameIndex(FrameIx)
-                                .addImm(0)
-                                .addImm(Offset)
-                                .addMetadata(Var)
-                                .addMetadata(Expr);
-  return &*MIB;
-}
-
 static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
                                             unsigned Reg, unsigned SubIdx,
                                             unsigned State,

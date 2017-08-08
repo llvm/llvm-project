@@ -18,6 +18,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -361,8 +362,10 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
           case eSectionTypeDWARFDebugStrOffsets:
           case eSectionTypeDWARFAppleNames:
           case eSectionTypeDWARFAppleTypes:
+          case eSectionTypeDWARFAppleExternalTypes:
           case eSectionTypeDWARFAppleNamespaces:
           case eSectionTypeDWARFAppleObjC:
+          case eSectionTypeSwiftModules:
             return eAddressClassDebug;
           case eSectionTypeEHFrame:
           case eSectionTypeARMexidx:
@@ -444,8 +447,14 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
         return eAddressClassRuntime;
       case eSymbolTypeObjCIVar:
         return eAddressClassRuntime;
+      case eSymbolTypeIVarOffset:
+        return eAddressClassRuntime;
+      case eSymbolTypeMetadata:
+        return eAddressClassRuntime;
       case eSymbolTypeReExported:
         return eAddressClassRuntime;
+      case eSymbolTypeASTFile:
+        return eAddressClassDebug;
       }
     }
   }
@@ -633,7 +642,14 @@ lldb::SymbolType
 ObjectFile::GetSymbolTypeFromName(llvm::StringRef name,
                                   lldb::SymbolType symbol_type_hint) {
   if (!name.empty()) {
-    if (name.startswith("_OBJC_")) {
+    std::string name_str = name.str();
+    if (SwiftLanguageRuntime::IsSwiftMangledName(name_str.c_str())) {
+      // Swift
+      if (SwiftLanguageRuntime::IsMetadataSymbol(name_str.c_str()))
+        return lldb::eSymbolTypeMetadata;
+      if (SwiftLanguageRuntime::IsIvarOffsetSymbol(name_str.c_str()))
+        return lldb::eSymbolTypeIVarOffset;
+    } else if (name.startswith("_OBJC_")) {
       // ObjC
       if (name.startswith("_OBJC_CLASS_$_"))
         return lldb::eSymbolTypeObjCClass;

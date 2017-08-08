@@ -24,6 +24,9 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "Plugins/Process/Utility/HistoryThread.h"
+#include "swift/AST/ASTContext.h"
+#include "swift/AST/NameLookup.h"
+#include "swift/ClangImporter/ClangImporter.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -67,6 +70,84 @@ bool MainThreadCheckerRuntime::CheckIfRuntimeIsValid(
   const Symbol *symbol =
       module_sp->FindFirstSymbolWithNameAndType(test_sym, lldb::eSymbolTypeAny);
   return symbol != nullptr;
+}
+
+static std::string TranslateObjCNameToSwiftName(std::string className,
+                                                std::string selector,
+                                                StackFrameSP swiftFrame) {
+  if (className.empty() || selector.empty())
+    return "";
+  ModuleSP swiftModule = swiftFrame->GetFrameCodeAddress().GetModule();
+  if (!swiftModule)
+    return "";
+  SwiftASTContext *ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
+      swiftModule->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
+  if (!ctx)
+    return "";
+  swift::ClangImporter *imp = ctx->GetClangImporter();
+  if (!imp)
+    return "";
+
+  size_t numArguments = llvm::StringRef(selector).count(':');
+  llvm::SmallVector<llvm::StringRef, 4> parts;
+  llvm::StringRef(selector).split(parts, ":", /*MaxSplit*/ -1,
+      /*KeepEmpty*/ false);
+
+  llvm::SmallVector<swift::Identifier, 2> selectorIdentifiers;
+  for (size_t i = 0; i < parts.size(); i++) {
+    selectorIdentifiers.push_back(ctx->GetIdentifier(parts[i]));
+  }
+
+  class MyConsumer : public swift::VisibleDeclConsumer {
+  public:
+    swift::ObjCSelector selectorToLookup;
+    swift::DeclName result;
+
+    MyConsumer(swift::ObjCSelector selector) : selectorToLookup(selector) {}
+
+    virtual void foundDecl(swift::ValueDecl *VD,
+                           swift::DeclVisibilityKind Reason) {
+      if (result)
+        return; // Take the first result.
+      swift::ClassDecl *cls = llvm::dyn_cast<swift::ClassDecl>(VD);
+      if (!cls)
+        return;
+      auto funcs = cls->lookupDirect(selectorToLookup, true);
+      if (funcs.size() == 0)
+        return;
+
+      // If the decl is actually an accessor, use the property name instead.
+      swift::AbstractFunctionDecl *decl = funcs.front();
+      if (auto func = llvm::dyn_cast<swift::FuncDecl>(decl)) {
+        swift::DeclContext *funcCtx = func->getParent();
+        // We need to loadAllMembers(), otherwise 'isAccessor' returns false.
+        if (auto extension = llvm::dyn_cast<swift::ExtensionDecl>(funcCtx)) {
+          extension->loadAllMembers();
+        } else if (auto nominal =
+                       llvm::dyn_cast<swift::NominalTypeDecl>(funcCtx)) {
+          nominal->loadAllMembers();
+        }
+
+        if (func->isAccessor()) {
+          result = func->getAccessorStorageDecl()->getFullName();
+          return;
+        }
+      }
+
+      result = decl->getFullName();
+    }
+  };
+
+  MyConsumer consumer(swift::ObjCSelector(*ctx->GetASTContext(), numArguments,
+                                          selectorIdentifiers));
+  // FIXME(mracek): Switch to a new API that translates the Clang class name
+  // to Swift class name, once this API exists. Now we assume they are the same.
+  imp->lookupValue(ctx->GetIdentifier(className), consumer);
+
+  if (!consumer.result)
+    return "";
+  llvm::SmallString<32> scratchSpace;
+  return className + "." + consumer.result.getString(scratchSpace).str();
 }
 
 StructuredData::ObjectSP
@@ -133,7 +214,16 @@ MainThreadCheckerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
     lldb::addr_t PC = addr.GetLoadAddress(&target);
     trace->AddItem(StructuredData::ObjectSP(new StructuredData::Integer(PC)));
   }
-
+  
+  if (responsible_frame) {
+    if (responsible_frame->GetLanguage() == eLanguageTypeSwift) {
+      std::string swiftApiName =
+          TranslateObjCNameToSwiftName(className, selector, responsible_frame);
+      if (swiftApiName != "")
+        apiName = swiftApiName;
+    }
+  }
+  
   auto *d = new StructuredData::Dictionary();
   auto dict_sp = StructuredData::ObjectSP(d);
   d->AddStringItem("instrumentation_class", "MainThreadChecker");

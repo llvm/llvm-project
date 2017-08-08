@@ -42,28 +42,28 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; Function Attrs: nounwind readnone ssp uwtable
 define i32 @_Z3foo1S(i32 %s.coerce) #0 !dbg !12 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %s.coerce, i64 0, metadata !18, metadata !37), !dbg !38
-  tail call void @llvm.dbg.value(metadata i32 1, i64 0, metadata !18, metadata !37), !dbg !38
+  tail call void @llvm.dbg.value(metadata i32 %s.coerce, metadata !18, metadata !37), !dbg !38
+  tail call void @llvm.dbg.value(metadata i32 1, metadata !18, metadata !37), !dbg !38
   ret i32 1, !dbg !39
 }
 
 ; Function Attrs: nounwind readnone ssp uwtable
 define i32 @_Z3foo1C(i32 %c.coerce) #0 !dbg !19 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %c.coerce, i64 0, metadata !23, metadata !37), !dbg !40
-  tail call void @llvm.dbg.value(metadata i32 2, i64 0, metadata !23, metadata !37), !dbg !40
+  tail call void @llvm.dbg.value(metadata i32 %c.coerce, metadata !23, metadata !37), !dbg !40
+  tail call void @llvm.dbg.value(metadata i32 2, metadata !23, metadata !37), !dbg !40
   ret i32 2, !dbg !41
 }
 
 ; Function Attrs: nounwind readnone ssp uwtable
 define i32 @_Z3barv() #0 !dbg !24 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 3, i64 0, metadata !28, metadata !37), !dbg !42
+  tail call void @llvm.dbg.value(metadata i32 3, metadata !28, metadata !37), !dbg !42
   ret i32 3, !dbg !43
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind readnone ssp uwtable }
 attributes #1 = { nounwind readnone }

@@ -11,6 +11,12 @@ include(LLDBStandalone)
 include(LLDBConfig)
 include(AddLLDB)
 
+if(NOT LLDB_BUILT_STANDALONE AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../swift)
+   list(APPEND CMAKE_MODULE_PATH
+        "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake/modules")
+endif()
+
 if (CMAKE_SYSTEM_NAME MATCHES "Windows|Android")
   set(LLDB_DEFAULT_DISABLE_LIBEDIT 1)
 else()

@@ -232,3 +232,8 @@ void multiple_ranges(int a, int b) {
   b
   );
 }
+
+#define pr33902_a(b) #b
+#define pr33902_c(d) _Pragma(pr33902_a(d))
+#define pr33902_e(f) pr33902_c(GCC warning #f)
+pr33902_e() pr33902_e()

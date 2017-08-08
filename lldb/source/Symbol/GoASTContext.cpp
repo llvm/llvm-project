@@ -229,8 +229,8 @@ ConstString GoASTContext::GetPluginName() {
 uint32_t GoASTContext::GetPluginVersion() { return 1; }
 
 lldb::TypeSystemSP GoASTContext::CreateInstance(lldb::LanguageType language,
-                                                Module *module,
-                                                Target *target) {
+                                                Module *module, Target *target,
+                                                const char *compiler_options) {
   if (language == eLanguageTypeGo) {
     ArchSpec arch;
     std::shared_ptr<GoASTContext> go_ast_sp;
@@ -434,7 +434,7 @@ bool GoASTContext::IsPolymorphicClass(lldb::opaque_compiler_type_t type) {
 bool GoASTContext::IsPossibleDynamicType(
     lldb::opaque_compiler_type_t type,
     CompilerType *target_type, // Can pass NULL
-    bool check_cplusplus, bool check_objc) {
+    bool check_cplusplus, bool check_objc, bool check_swift) {
   if (target_type)
     target_type->Clear();
   if (type)
@@ -595,7 +595,7 @@ GoASTContext::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
   if (name) {
     typedef UniqueCStringMap<lldb::BasicType> TypeNameToBasicTypeMap;
     static TypeNameToBasicTypeMap g_type_map;
-    static llvm::once_flag g_once_flag;
+    static std::once_flag g_once_flag;
     llvm::call_once(g_once_flag, []() {
       // "void"
       g_type_map.Append(ConstString("void"), eBasicTypeVoid);
@@ -1185,7 +1185,8 @@ bool GoASTContext::DumpTypeValue(lldb::opaque_compiler_type_t type, Stream *s,
                                  lldb::offset_t byte_offset, size_t byte_size,
                                  uint32_t bitfield_bit_size,
                                  uint32_t bitfield_bit_offset,
-                                 ExecutionContextScope *exe_scope) {
+                                 ExecutionContextScope *exe_scope,
+                                 bool is_base_class) {
   if (!type)
     return false;
   if (IsAggregateType(type)) {
@@ -1208,7 +1209,7 @@ bool GoASTContext::DumpTypeValue(lldb::opaque_compiler_type_t type, Stream *s,
                              // treat as a bitfield
           bitfield_bit_offset, // Offset in bits of a bitfield value if
                                // bitfield_bit_size != 0
-          exe_scope);
+          exe_scope, is_base_class);
     }
 
     uint32_t item_count = 1;

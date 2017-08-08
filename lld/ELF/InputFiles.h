@@ -24,6 +24,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Support/Threading.h"
 
 #include <map>
 
@@ -211,6 +212,7 @@ private:
   // single object file, so we cache debugging information in order to
   // parse it only once for each object file we link.
   std::unique_ptr<llvm::DWARFDebugLine> DwarfLine;
+  llvm::once_flag InitDwarfLine;
 };
 
 // LazyObjectFile is analogous to ArchiveFile in the sense that

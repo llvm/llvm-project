@@ -101,6 +101,9 @@ public:
     Returns false if unoptimized, or unknown.") GetIsOptimized;
     bool
     GetIsOptimized();
+    
+    bool
+    GetCanThrow();
 
     bool
     GetDescription (lldb::SBStream &description);

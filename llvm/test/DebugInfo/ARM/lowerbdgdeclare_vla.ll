@@ -27,10 +27,10 @@ entry:
 ; The VLA alloca should be described by a dbg.declare:
 ; CHECK: call void @llvm.dbg.declare(metadata float* %vla, metadata ![[VLA:.*]], metadata {{.*}})
 ; The VLA alloca and following store into the array should not be lowered to like this:
-; CHECK-NOT:  call void @llvm.dbg.value(metadata float %r, i64 0, metadata ![[VLA]])
+; CHECK-NOT:  call void @llvm.dbg.value(metadata float %r, metadata ![[VLA]])
 ; the backend interprets this as "vla has the location of %r".
   store float %r, float* %vla, align 4, !dbg !25, !tbaa !26
-  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !18, metadata !DIExpression()), !dbg !30
+  tail call void @llvm.dbg.value(metadata i32 0, metadata !18, metadata !DIExpression()), !dbg !30
   %cmp8 = icmp sgt i32 %conv, 0, !dbg !30
   br i1 %cmp8, label %for.body, label %for.end, !dbg !30
 
@@ -41,7 +41,7 @@ for.body:                                         ; preds = %entry, %for.body.fo
   %div = fdiv float %0, %r, !dbg !31
   store float %div, float* %arrayidx2, align 4, !dbg !31, !tbaa !26
   %inc = add nsw i32 %i.09, 1, !dbg !30
-  tail call void @llvm.dbg.value(metadata i32 %inc, i64 0, metadata !18, metadata !DIExpression()), !dbg !30
+  tail call void @llvm.dbg.value(metadata i32 %inc, metadata !18, metadata !DIExpression()), !dbg !30
   %exitcond = icmp eq i32 %inc, %conv, !dbg !30
   br i1 %exitcond, label %for.end, label %for.body.for.body_crit_edge, !dbg !30
 
@@ -58,7 +58,7 @@ for.end:                                          ; preds = %for.body, %entry
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind optsize readnone "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

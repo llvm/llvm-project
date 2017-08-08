@@ -73,7 +73,6 @@ class TestFrameGuessLanguage(TestBase):
         self.assertTrue(breakpoint.GetHitCount() == 1)
 
         thread = threads[0]
-
         c_frame_language = lldb.eLanguageTypeC99
         # gcc emits DW_LANG_C89 even if -std=c99 was specified
         if "gcc" in self.getCompiler():

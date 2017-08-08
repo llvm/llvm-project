@@ -69,6 +69,10 @@ ClBinaryName("obj", cl::init(""),
              cl::desc("Path to object file to be symbolized (if not provided, "
                       "object file should be specified for each input line)"));
 
+static cl::opt<std::string>
+    ClDwpName("dwp", cl::init(""),
+              cl::desc("Path to DWP file to be use for any split CUs"));
+
 static cl::list<std::string>
 ClDsymHint("dsym-hint", cl::ZeroOrMore,
            cl::desc("Path to .dSYM bundles to search for debug info for the "
@@ -191,11 +195,13 @@ int main(int argc, char **argv) {
       auto ResOrErr = Symbolizer.symbolizeData(ModuleName, ModuleOffset);
       Printer << (error(ResOrErr) ? DIGlobal() : ResOrErr.get());
     } else if (ClPrintInlining) {
-      auto ResOrErr = Symbolizer.symbolizeInlinedCode(ModuleName, ModuleOffset);
+      auto ResOrErr =
+          Symbolizer.symbolizeInlinedCode(ModuleName, ModuleOffset, ClDwpName);
       Printer << (error(ResOrErr) ? DIInliningInfo()
                                              : ResOrErr.get());
     } else {
-      auto ResOrErr = Symbolizer.symbolizeCode(ModuleName, ModuleOffset);
+      auto ResOrErr =
+          Symbolizer.symbolizeCode(ModuleName, ModuleOffset, ClDwpName);
       Printer << (error(ResOrErr) ? DILineInfo() : ResOrErr.get());
     }
     outs() << "\n";

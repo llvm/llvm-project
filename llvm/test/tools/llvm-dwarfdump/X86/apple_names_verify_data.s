@@ -3,9 +3,9 @@
 # RUN: | FileCheck %s
 
 # CHECK: Verifying .apple_names...
-# CHECK-NEXT: error: Bucket[0] has invalid hash index: 4294967294
-# CHECK-NEXT: error: Hash[0] has invalid HashData offset: 0x000000b4
-# CHECK-NEXT: error: .apple_names Bucket[1] Hash[1] = 0x0002b60f Str[0] = 0x0000005a DIE[0] = 0x00000001 is not a valid DIE offset for "j".
+# CHECK-NEXT:	error: Bucket[0] has invalid hash index: 4294967294.
+# CHECK-NEXT:	error: Hash[0] has invalid HashData offset: 0x000000b4.
+# CHECK-NEXT:	error: .apple_names Bucket[1] Hash[1] = 0x0002b60f Str[0] = 0x0000005a DIE[0] = 0x00000001 is not a valid DIE offset for "j".
 
 # This test is meant to verify that the -verify option 
 # in llvm-dwarfdump, correctly identifies
@@ -41,11 +41,11 @@ Lnames_begin:
 	.long	1                       ## HeaderData Atom Count
 	.short	1                       ## DW_ATOM_die_offset
 	.short	25                       ## DW_FORM_data4 -- error: .apple_names Bucket[1] Hash[1] = 0x0002b60f Str[0] = 0x0000005a DIE[0] = 0x00000001 is not a valid DIE offset for "j".
-	.long	-2                      ## Bucket 0 -- error: Bucket[0] has invalid hash index: 4294967294
+	.long	-2                      ## Bucket 0 -- error: Bucket[0] has invalid hash index: 4294967294.
 	.long	1                       ## Bucket 1
 	.long	177678                  ## Hash in Bucket 0
 	.long	177679                  ## Hash in Bucket 1
-	.long	Lsection_line    ## Offset in Bucket 0 -- error: Hash[0] has invalid HashData offset: 0x000000b4
+	.long	Lsection_line    ## Offset in Bucket 0 -- error: Hash[0] has invalid HashData offset: 0x000000b4.
 	.long	LNames1-Lnames_begin    ## Offset in Bucket 1
 LNames0:
 	.long	84                      ## i

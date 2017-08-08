@@ -378,8 +378,12 @@ void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
   assert(Record && Record->hasDefinition() &&
          "Expected non-null record to be a definition.");
 
-  if (isa<ClassTemplateSpecializationDecl>(Record)) {
-    return;
+  const DeclContext *DC = Record;
+  while (DC) {
+    if (isa<ClassTemplateSpecializationDecl>(DC)) {
+      return;
+    }
+    DC = DC->getParent();
   }
 
   AddDecl(Record);

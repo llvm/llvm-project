@@ -1790,7 +1790,8 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
   // variables that do not have their 'addresses taken'.  If they don't have
   // their addresses taken, we can propagate constants through them.
   for (GlobalVariable &G : M.globals())
-    if (!G.isConstant() && G.hasLocalLinkage() && !AddressIsTaken(&G))
+    if (!G.isConstant() && G.hasLocalLinkage() &&
+        G.hasDefinitiveInitializer() && !AddressIsTaken(&G))
       Solver.TrackValueOfGlobalVariable(&G);
 
   // Solve for constants.

@@ -165,13 +165,32 @@ bool HostInfoPosix::ComputePathRelativeToLibrary(FileSpec &file_spec,
   return (bool)file_spec.GetDirectory();
 }
 
+bool HostInfoPosix::ComputeSupportFileDirectory(FileSpec &file_spec) {
+  FileSpec temp_file_spec;
+
+  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, temp_file_spec))
+    return false;
+
+  temp_file_spec.AppendPathComponent("lldb");
+
+  file_spec = temp_file_spec;
+
+  return true;
+}
+
 bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
   return ComputePathRelativeToLibrary(file_spec, "/bin");
 }
 
 bool HostInfoPosix::ComputeClangDirectory(FileSpec &file_spec) {
-  return ComputePathRelativeToLibrary(
+  bool returnVal = ComputePathRelativeToLibrary(
       file_spec, (llvm::Twine("/lib") + CLANG_LIBDIR_SUFFIX + "/clang/" +
+                  CLANG_VERSION_STRING)
+                     .str());
+  if (file_spec.Exists())
+    return returnVal;
+  return ComputePathRelativeToLibrary(
+      file_spec, (llvm::Twine("/lib") + CLANG_LIBDIR_SUFFIX + "/lldb/clang/" +
                   CLANG_VERSION_STRING)
                      .str());
 }
@@ -220,6 +239,17 @@ bool HostInfoPosix::ComputePythonDirectory(FileSpec &file_spec) {
 #else
   return false;
 #endif
+}
+
+bool HostInfoPosix::ComputeSwiftDirectory(FileSpec &file_spec) {
+  FileSpec lldb_file_spec;
+  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+    return false;
+
+  lldb_file_spec.AppendPathComponent("swift");
+
+  file_spec = lldb_file_spec;
+  return true;
 }
 
 bool HostInfoPosix::GetEnvironmentVar(const std::string &var_name,

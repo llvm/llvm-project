@@ -47,7 +47,7 @@ using namespace lldb_private;
 namespace {
 
 static PropertyDefinition g_properties[] = {
-    {"enable", OptionValue::eTypeBoolean, true, true, nullptr, nullptr,
+    {"enable", OptionValue::eTypeBoolean, true, false, nullptr, nullptr,
      "Specify whether goroutines should be treated as threads."},
     {NULL, OptionValue::eTypeInvalid, false, 0, NULL, NULL, NULL}};
 
@@ -451,8 +451,14 @@ OperatingSystemGo::Goroutine
 OperatingSystemGo::CreateGoroutineAtIndex(uint64_t idx, Status &err) {
   err.Clear();
   Goroutine result = {};
-  ValueObjectSP g =
-      m_allg_sp->GetSyntheticArrayMember(idx, true)->Dereference(err);
+  ValueObjectSP child_sp = m_allg_sp->GetSyntheticArrayMember(idx, true);
+  if (!child_sp) {
+    err.SetErrorToGenericError();
+    err.SetErrorString("unable to find goroutines in array");
+    return result;
+  }
+
+  ValueObjectSP g = child_sp->Dereference(err);
   if (err.Fail()) {
     return result;
   }

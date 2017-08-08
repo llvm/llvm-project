@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import errno
 import hashlib
 import fnmatch
 import os
@@ -30,6 +29,8 @@ def process_root(name):
     return {
         "llvm": llvm_source_path(),
         "clang": clang_source_path(),
+        "swift": swift_source_path(),
+        "cmark": cmark_source_path(),
         "ninja": ninja_source_path()
     }[name]
 
@@ -42,13 +43,22 @@ def process_repo(r):
         'ref': r["ref"]
     }
 
+def fallback_repo(name):
+    return {
+        'name': name,
+        'vcs': None,
+        'root': process_root(name),
+        'url': None,
+        'ref': None
+    }
+
 def XCODE_REPOSITORIES():
     override = repo.get_override()
     if override:
         return [process_repo(r) for r in override]
     identifier = repo.identifier()
     if identifier == None:
-        identifier = "<invalid>" # repo.find will just use the fallback file
+        return [fallback_repo(n) for n in ["llvm", "clang", "swift", "cmark", "ninja"]]
     set = repo.find(identifier)
     return [process_repo(r) for r in set]
 
@@ -111,34 +121,33 @@ def get_common_linker_flags():
 def get_exe_linker_flags():
     return get_common_linker_flags()
 
+def with_devices_preset_suffix():
+    """Return a suffix for the LLDB-specific Swift build preset."""
+    if os.environ.get("LLDB_SWIFT_STDLIB_INCLUDES_DEVICES", None) is not None:
+        return "_with_devices"
+    else:
+        return ""
 
-def get_shared_linker_flags():
-    return get_common_linker_flags()
+def XCODE_REPOSITORIES():
+    identifier = repo.identifier()
+    if identifier == None:
+        identifier = "<invalid>" # repo.find will just use the fallback file
+    set = repo.find(identifier)
+    return [process_repo(r) for r in set]
 
 
-def CMAKE_FLAGS():
+def BUILD_SCRIPT_FLAGS():
     return {
-        "Debug": [
-            "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
-            "-DLLVM_ENABLE_ASSERTIONS=ON",
-        ],
-        "DebugClang": [
-            "-DCMAKE_BUILD_TYPE=Debug",
-            "-DLLVM_ENABLE_ASSERTIONS=ON",
-        ],
-        "Release": [
-            "-DCMAKE_BUILD_TYPE=Release",
-            "-DLLVM_ENABLE_ASSERTIONS=ON",
-        ],
-        "BuildAndIntegration": [
-            "-DCMAKE_BUILD_TYPE=Release",
-            "-DLLVM_ENABLE_ASSERTIONS=OFF",
-        ],
+        "Debug": ["--preset=LLDB_Swift_ReleaseAssert" + with_devices_preset_suffix()],
+        "DebugClang": ["--preset=LLDB_Swift_DebugAssert" + with_devices_preset_suffix()],
+        "Release": ["--preset=LLDB_Swift_ReleaseAssert" + with_devices_preset_suffix()],
     }
 
 
-def CMAKE_ENVIRONMENT():
+def BUILD_SCRIPT_ENVIRONMENT():
     return {
+        "SWIFT_SOURCE_ROOT": lldb_source_path(),
+        "SWIFT_BUILD_ROOT": llvm_build_dirtree()
     }
 
 #### COLLECTING ALL ARCHIVES ####
@@ -146,8 +155,11 @@ def CMAKE_ENVIRONMENT():
 
 def collect_archives_in_path(path):
     files = os.listdir(path)
-    # Only use libclang and libLLVM archives, and exclude libclang_rt
-    regexp = "^lib(clang[^_]|LLVM|gtest).*$"
+    # Only use libclang and libLLVM archives (and gtests), and exclude libclang_rt.
+    # Also include swigt and cmark.
+    # This is not a very scalable solution.  Direct dependency determination would
+    # be preferred.
+    regexp = "^lib(clang[^_]|LLVM|gtest|swift|cmark).*$"
     return [
         os.path.join(
             path,
@@ -216,7 +228,8 @@ def apply_patches(spec):
 
 
 def check_out_if_needed(spec):
-    if not os.path.isdir(spec['root']):
+    if (build_type() != BuildType.CustomSwift) and not (
+            os.path.isdir(spec['root'])):
         vcs(spec).check_out()
         apply_patches(spec)
 
@@ -226,6 +239,8 @@ def all_check_out_if_needed():
 
 
 def should_build_llvm():
+    if build_type() == BuildType.CustomSwift:
+        return False
     if build_type() == BuildType.Xcode:
         # TODO use md5 sums
         return True
@@ -233,6 +248,8 @@ def should_build_llvm():
 
 def do_symlink(source_path, link_path):
     print "Symlinking " + source_path + " to " + link_path
+    if os.path.islink(link_path):
+        os.remove(link_path)
     if not os.path.exists(link_path):
         os.symlink(source_path, link_path)
 
@@ -248,47 +265,9 @@ def setup_source_symlinks():
 
 
 def setup_build_symlink():
-    # We don't use the build symlinks in llvm.org Xcode-based builds.
-    if build_type() != BuildType.Xcode:
-        source_path = package_build_path()
-        link_path = expected_package_build_path()
-        do_symlink(source_path, link_path)
-
-
-def should_run_cmake(cmake_build_dir):
-    # We need to run cmake if our llvm build directory doesn't yet exist.
-    if not os.path.exists(cmake_build_dir):
-        return True
-
-    # Wee also need to run cmake if for some reason we don't have a ninja
-    # build file.  (Perhaps the cmake invocation failed, which this current
-    # build may have fixed).
-    ninja_path = os.path.join(cmake_build_dir, "build.ninja")
-    return not os.path.exists(ninja_path)
-
-
-def cmake_environment():
-    cmake_env = join_dicts(os.environ, CMAKE_ENVIRONMENT())
-    return cmake_env
-
-
-def is_executable(path):
-    return os.path.isfile(path) and os.access(path, os.X_OK)
-
-
-def find_executable_in_paths(program, paths_to_check):
-    program_dir, program_name = os.path.split(program)
-    if program_dir:
-        if is_executable(program):
-            return program
-    else:
-        for path_dir in paths_to_check:
-            path_dir = path_dir.strip('"')
-            executable_file = os.path.join(path_dir, program)
-            if is_executable(executable_file):
-                return executable_file
-    return None
-
+    source_path = package_build_path()
+    link_path = expected_package_build_path()
+    do_symlink(source_path, link_path)
 
 def find_cmake():
     # First check the system PATH env var for cmake
@@ -409,6 +388,10 @@ def build_ninja_if_needed():
 
     return ninja_binary_path
 
+def build_script_flags():
+    return BUILD_SCRIPT_FLAGS()[lldb_configuration(
+    )] + ["swift_install_destdir=" + expected_package_build_path_for("swift")]
+
 
 def join_dicts(dict1, dict2):
     d = dict1.copy()
@@ -416,19 +399,25 @@ def join_dicts(dict1, dict2):
     return d
 
 
-def build_llvm(ninja_binary_path):
-    cmake_build_dir = package_build_path()
-    subprocess.check_call(
-        [ninja_binary_path],
-        cwd=cmake_build_dir,
-        env=cmake_environment())
+def build_script_path():
+    return os.path.join(swift_source_path(), "utils", "build-script")
+
+
+def build_script_environment():
+    return join_dicts(os.environ, BUILD_SCRIPT_ENVIRONMENT())
+
+
+def build_llvm():
+    subprocess.check_call(["python",
+                           build_script_path()] + build_script_flags(),
+                          cwd=lldb_source_path(),
+                          env=build_script_environment())
 
 
 def build_llvm_if_needed():
     if should_build_llvm():
-        ninja_binary_path = build_ninja_if_needed()
-        run_cmake_if_needed(ninja_binary_path)
-        build_llvm(ninja_binary_path)
+        setup_source_symlinks()
+        build_llvm()
         setup_build_symlink()
 
 #### MAIN LOGIC ####

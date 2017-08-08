@@ -133,18 +133,19 @@ void RegAllocBase::allocatePhysRegs() {
     if (AvailablePhysReg)
       Matrix->assign(*VirtReg, AvailablePhysReg);
 
-    for (VirtRegVec::iterator I = SplitVRegs.begin(), E = SplitVRegs.end();
-         I != E; ++I) {
-      LiveInterval *SplitVirtReg = &LIS->getInterval(*I);
+    for (unsigned Reg : SplitVRegs) {
+      assert(LIS->hasInterval(Reg));
+
+      LiveInterval *SplitVirtReg = &LIS->getInterval(Reg);
       assert(!VRM->hasPhys(SplitVirtReg->reg) && "Register already assigned");
       if (MRI->reg_nodbg_empty(SplitVirtReg->reg)) {
+        assert(SplitVirtReg->empty() && "Non-empty but used interval");
         DEBUG(dbgs() << "not queueing unused  " << *SplitVirtReg << '\n');
         aboutToRemoveInterval(*SplitVirtReg);
         LIS->removeInterval(SplitVirtReg->reg);
         continue;
       }
       DEBUG(dbgs() << "queuing new interval: " << *SplitVirtReg << "\n");
-      assert(!SplitVirtReg->empty() && "expecting non-empty interval");
       assert(TargetRegisterInfo::isVirtualRegister(SplitVirtReg->reg) &&
              "expect split value in virtual register");
       enqueue(SplitVirtReg);

@@ -80,6 +80,8 @@ public:
     case Selected::Two:
       return if_T2(m_t2);
     }
+
+    llvm_unreachable("Unhandled Selected in switch.");
   }
 
   bool operator==(const Either<T1, T2> &rhs) {
@@ -93,6 +95,8 @@ public:
     case Selected::Two:
       return (bool)m_t2;
     }
+
+    llvm_unreachable("Unhandled Selected in switch.");
   }
 
   Either<T1, T2> &operator=(const Either<T1, T2> &rhs) {

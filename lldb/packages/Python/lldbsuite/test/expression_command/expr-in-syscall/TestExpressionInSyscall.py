@@ -17,6 +17,9 @@ class ExprSyscallTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr21765, getpid() does not exist on Windows")
+    @expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="rdar://29054690")
     def test_setpgid(self):
         self.build()
         self.expr_syscall()

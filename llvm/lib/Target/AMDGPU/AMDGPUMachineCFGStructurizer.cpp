@@ -250,7 +250,8 @@ unsigned PHILinearize::getNumSources(unsigned DestReg) {
   return phiInfoElementGetSources(findPHIInfoElement(DestReg)).size();
 }
 
-void PHILinearize::dump(MachineRegisterInfo *MRI) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void PHILinearize::dump(MachineRegisterInfo *MRI) {
   const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
   dbgs() << "=PHIInfo Start=\n";
   for (auto PII : this->PHIInfo) {
@@ -265,6 +266,7 @@ void PHILinearize::dump(MachineRegisterInfo *MRI) {
   }
   dbgs() << "=PHIInfo End=\n";
 }
+#endif
 
 void PHILinearize::clear() { PHIInfo = PHIInfoT(); }
 
@@ -839,6 +841,7 @@ void LinearizedRegion::storeLiveOuts(RegionMRT *Region,
   }
 }
 
+#ifndef NDEBUG
 void LinearizedRegion::print(raw_ostream &OS, const TargetRegisterInfo *TRI) {
   OS << "Linearized Region {";
   bool IsFirst = true;
@@ -859,6 +862,7 @@ void LinearizedRegion::print(raw_ostream &OS, const TargetRegisterInfo *TRI) {
   }
   OS << "} \n";
 }
+#endif
 
 unsigned LinearizedRegion::getBBSelectRegIn() {
   return getRegionMRT()->getBBSelectRegIn();

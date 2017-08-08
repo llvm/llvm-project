@@ -16,13 +16,16 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/Block.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Type.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanStepOverRange.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
@@ -45,8 +48,11 @@ ThreadPlanStepOut::ThreadPlanStepOut(
                  run_vote),
       ThreadPlanShouldStopHere(this), m_step_from_insn(LLDB_INVALID_ADDRESS),
       m_return_bp_id(LLDB_INVALID_BREAK_ID),
-      m_return_addr(LLDB_INVALID_ADDRESS), m_stop_others(stop_others),
-      m_immediate_step_from_function(nullptr),
+      m_return_addr(LLDB_INVALID_ADDRESS),
+      m_swift_error_return(),
+      m_swift_error_check_after_return(false),
+      m_stop_others(stop_others), m_immediate_step_from_function(nullptr),
+      m_is_swift_error_value(false),
       m_calculate_return_value(gather_return_value) {
   SetFlagsToDefault();
   SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
@@ -129,6 +135,41 @@ ThreadPlanStepOut::ThreadPlanStepOut(
           immediate_return_from_sp->GetSymbolContext(eSymbolContextFunction);
       if (sc.function) {
         m_immediate_step_from_function = sc.function;
+      }
+    }
+  }
+
+  // If we are about to step out of a swift frame, we need to store away the
+  // location that swift will use for
+  // any error return:
+  // FIXME: I'm only doing this if you are stepping out ONE frame at present.
+  // I'll have to change the stepping
+  // code so that it first runs to the frame we are stepping out FROM, then
+  // capture the error return pointer, then
+  // step out.  That's more than I have time to do right now.
+
+  if (frame_idx == 0) {
+    bool stepping_from_swift = false;
+    StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
+    Symbol *symbol = frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol;
+    if (symbol) {
+      Mangled symbol_mangled = symbol->GetMangled();
+      if (symbol_mangled.GuessLanguage() == eLanguageTypeSwift)
+        stepping_from_swift = true;
+    } else {
+      CompileUnit *comp_unit =
+          frame_sp->GetSymbolContext(eSymbolContextCompUnit).comp_unit;
+      if (comp_unit && comp_unit->GetLanguage() == eLanguageTypeSwift)
+        stepping_from_swift = true;
+    }
+
+    if (stepping_from_swift) {
+      SwiftLanguageRuntime *swift_runtime =
+          m_thread.GetProcess()->GetSwiftLanguageRuntime();
+      if (swift_runtime) {
+        m_swift_error_return =
+            swift_runtime->GetErrorReturnLocationBeforeReturn(frame_sp,
+                                                              m_swift_error_check_after_return);
       }
     }
   }
@@ -261,8 +302,8 @@ bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
         }
 
         if (done) {
+          CalculateReturnValue();
           if (InvokeShouldStopHereCallback(eFrameCompareOlder)) {
-            CalculateReturnValue();
             SetPlanComplete();
           }
         }
@@ -325,12 +366,21 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
   // and we are done.
 
   if (done) {
+    CalculateReturnValue();
     if (InvokeShouldStopHereCallback(eFrameCompareOlder)) {
-      CalculateReturnValue();
       SetPlanComplete();
     } else {
       m_step_out_further_plan_sp =
           QueueStepOutFromHerePlan(m_flags, eFrameCompareOlder);
+      if (m_step_out_further_plan_sp->GetKind() == eKindStepOut)
+      {
+        // If we are planning to step out further, then the frame we are going
+        // to step out to is about to go away, so we need to reset the frame
+        // we are stepping out to to the one our step out plan is aiming for.
+        ThreadPlanStepOut *as_step_out 
+          = static_cast<ThreadPlanStepOut *>(m_step_out_further_plan_sp.get());
+        m_step_out_to_id = as_step_out->m_step_out_to_id;
+      }
       done = false;
     }
   }
@@ -457,12 +507,44 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
 }
 
 void ThreadPlanStepOut::CalculateReturnValue() {
-  if (m_return_valobj_sp)
-    return;
-
   if (!m_calculate_return_value)
     return;
 
+  if (m_return_valobj_sp)
+    return;
+  // First check if we have an error return address, and if that pointer
+  // contains a valid error return, grab it:
+  SwiftLanguageRuntime *swift_runtime =
+        m_thread.GetProcess()->GetSwiftLanguageRuntime();
+
+  if (swift_runtime) {
+    // In some ABI's the error is in a memory location in the caller's frame
+    // and we need to fetch that location from the frame before we leave the
+    // throwing frame.  In others, the actual error address is in a register,
+    // so we need to fetch the value of the address AFTER leaving the frame.
+    if (m_swift_error_check_after_return)
+    {
+      StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
+      if (!frame_sp)
+          return;
+      
+      m_swift_error_return =
+            swift_runtime->GetErrorReturnLocationAfterReturn(frame_sp);
+    }
+    if (m_swift_error_return) {
+      ConstString name("swift_thrown_error");
+
+      m_return_valobj_sp = swift_runtime->CalculateErrorValueObjectFromValue(
+          m_swift_error_return.getValue(), name, true);
+      // Even if we couldn't figure out what the error return was, we
+      // were told there was an error, so don't show the user a false return value
+      // instead.
+      m_is_swift_error_value = true;
+      return;
+    }
+  }
+
+  // We don't have a swift error, so let's compute the actual return:
   if (m_immediate_step_from_function != nullptr) {
     CompilerType return_compiler_type =
         m_immediate_step_from_function->GetCompilerType()

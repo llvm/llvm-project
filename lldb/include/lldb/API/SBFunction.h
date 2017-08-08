@@ -54,6 +54,8 @@ public:
   lldb::LanguageType GetLanguage();
 
   bool GetIsOptimized();
+  
+  bool GetCanThrow();
 
   bool operator==(const lldb::SBFunction &rhs) const;
 

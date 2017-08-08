@@ -62,5 +62,3 @@ class TestNameLookup(TestBase):
             for symbol_context in symbol_contexts:
                 self.assertTrue(symbol_context.GetFunction().IsValid())
                 self.assertTrue(symbol_context.GetSymbol().IsValid())
-            
-            

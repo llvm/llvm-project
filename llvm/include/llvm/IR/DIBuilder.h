@@ -551,13 +551,17 @@ namespace llvm {
     DIExpression *createExpression(ArrayRef<uint64_t> Addr = None);
     DIExpression *createExpression(ArrayRef<int64_t> Addr);
 
-    /// Create a descriptor to describe one part
-    /// of aggregate variable that is fragmented across multiple Values.
+    /// Create a descriptor to describe one part of an aggregate variable that
+    /// is fragmented across multiple Values. The DW_OP_LLVM_fragment operation
+    /// will be appended to the elements of \c Expr. If \c Expr already contains
+    /// a \c DW_OP_LLVM_fragment \c OffsetInBits is interpreted as an offset
+    /// into the existing fragment.
     ///
     /// \param OffsetInBits Offset of the piece in bits.
     /// \param SizeInBits   Size of the piece in bits.
     DIExpression *createFragmentExpression(unsigned OffsetInBits,
-                                           unsigned SizeInBits);
+                                           unsigned SizeInBits,
+                                           const DIExpression *Expr = nullptr);
 
     /// Create an expression for a variable that does not have an address, but
     /// does have a constant value.
@@ -729,12 +733,11 @@ namespace llvm {
 
     /// Insert a new llvm.dbg.value intrinsic call.
     /// \param Val          llvm::Value of the variable
-    /// \param Offset       Offset
     /// \param VarInfo      Variable's debug info descriptor.
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
     /// \param InsertAtEnd Location for the new intrinsic.
-    Instruction *insertDbgValueIntrinsic(llvm::Value *Val, uint64_t Offset,
+    Instruction *insertDbgValueIntrinsic(llvm::Value *Val,
                                          DILocalVariable *VarInfo,
                                          DIExpression *Expr,
                                          const DILocation *DL,
@@ -742,12 +745,11 @@ namespace llvm {
 
     /// Insert a new llvm.dbg.value intrinsic call.
     /// \param Val          llvm::Value of the variable
-    /// \param Offset       Offset
     /// \param VarInfo      Variable's debug info descriptor.
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
     /// \param InsertBefore Location for the new intrinsic.
-    Instruction *insertDbgValueIntrinsic(llvm::Value *Val, uint64_t Offset,
+    Instruction *insertDbgValueIntrinsic(llvm::Value *Val,
                                          DILocalVariable *VarInfo,
                                          DIExpression *Expr,
                                          const DILocation *DL,

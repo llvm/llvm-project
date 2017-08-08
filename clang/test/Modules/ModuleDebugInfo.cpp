@@ -86,10 +86,10 @@
 // CHECK-SAME:             flags: DIFlagFwdDecl
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIfNS_6traitsIfEEEE")
 
-// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "FwdVirtual"
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Virtual"
 // CHECK-SAME:             elements:
-// CHECK-SAME:             identifier: "_ZTS10FwdVirtual")
-// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "_vptr$FwdVirtual"
+// CHECK-SAME:             identifier: "_ZTS7Virtual")
+// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "_vptr$Virtual"
 
 // CHECK: !DICompositeType(tag: DW_TAG_union_type,
 // CHECK-NOT:              name:
@@ -110,6 +110,11 @@
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK-SAME:             name: "InAnonymousNamespace",
 // CHECK-SAME:             elements: !{{[0-9]+}})
+
+// CHECK: ![[A:.*]] = {{.*}}!DICompositeType(tag: DW_TAG_class_type, name: "A",
+// CHECK-SAME:                               elements:
+// CHECK-SAME:                               vtableHolder: ![[A]],
+// CHECK-SAME:                               identifier: "_ZTS1A")
 
 // CHECK: ![[DERIVED:.*]] = {{.*}}!DICompositeType(tag: DW_TAG_class_type, name: "Derived",
 // CHECK-SAME:                                     identifier: "_ZTS7Derived")

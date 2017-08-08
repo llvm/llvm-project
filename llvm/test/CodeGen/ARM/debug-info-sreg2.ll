@@ -15,7 +15,7 @@ target triple = "thumbv7-apple-macosx10.6.7"
 define void @_Z3foov() optsize ssp !dbg !1 {
 entry:
   %call = tail call float @_Z3barv() optsize, !dbg !11
-  tail call void @llvm.dbg.value(metadata float %call, i64 0, metadata !5, metadata !DIExpression()), !dbg !11
+  tail call void @llvm.dbg.value(metadata float %call, metadata !5, metadata !DIExpression()), !dbg !11
   %call16 = tail call float @_Z2f2v() optsize, !dbg !12
   %cmp7 = fcmp olt float %call, %call16, !dbg !12
   br i1 %cmp7, label %for.body, label %for.end, !dbg !12
@@ -38,7 +38,7 @@ declare float @_Z2f2v() optsize
 
 declare float @_Z2f3f(float) optsize
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!20}

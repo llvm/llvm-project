@@ -83,30 +83,26 @@ MachineInstrBuilder MachineIRBuilder::insertInstr(MachineInstrBuilder MIB) {
   return MIB;
 }
 
-MachineInstrBuilder MachineIRBuilder::buildDirectDbgValue(
-    unsigned Reg, const MDNode *Variable, const MDNode *Expr) {
+MachineInstrBuilder
+MachineIRBuilder::buildDirectDbgValue(unsigned Reg, const MDNode *Variable,
+                                      const MDNode *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return buildInstr(TargetOpcode::DBG_VALUE)
-      .addReg(Reg, RegState::Debug)
-      .addReg(0, RegState::Debug)
-      .addMetadata(Variable)
-      .addMetadata(Expr);
+  return insertInstr(BuildMI(getMF(), DL, getTII().get(TargetOpcode::DBG_VALUE),
+                             /*IsIndirect*/ false, Reg, Variable, Expr));
 }
 
-MachineInstrBuilder MachineIRBuilder::buildIndirectDbgValue(
-    unsigned Reg, unsigned Offset, const MDNode *Variable, const MDNode *Expr) {
+MachineInstrBuilder
+MachineIRBuilder::buildIndirectDbgValue(unsigned Reg, const MDNode *Variable,
+                                        const MDNode *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return buildInstr(TargetOpcode::DBG_VALUE)
-      .addReg(Reg, RegState::Debug)
-      .addImm(Offset)
-      .addMetadata(Variable)
-      .addMetadata(Expr);
+  return insertInstr(BuildMI(getMF(), DL, getTII().get(TargetOpcode::DBG_VALUE),
+                             /*IsIndirect*/ true, Reg, Variable, Expr));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFIDbgValue(int FI,
@@ -124,7 +120,6 @@ MachineInstrBuilder MachineIRBuilder::buildFIDbgValue(int FI,
 }
 
 MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
-                                                         unsigned Offset,
                                                          const MDNode *Variable,
                                                          const MDNode *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
@@ -144,7 +139,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     MIB.addReg(0U);
   }
 
-  return MIB.addImm(Offset).addMetadata(Variable).addMetadata(Expr);
+  return MIB.addImm(0).addMetadata(Variable).addMetadata(Expr);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFrameIndex(unsigned Res, int Idx) {

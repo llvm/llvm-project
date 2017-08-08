@@ -53,11 +53,20 @@ public:
 
   bool CouldHaveDynamicValue(ValueObject &in_value) override;
 
+  virtual bool CouldHaveDynamicValue(ValueObject &in_value, bool allow_swift);
+
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
                                 TypeAndOrName &class_type_or_name,
                                 Address &address,
                                 Value::ValueType &value_type) override;
+
+  virtual bool GetDynamicTypeAndAddress(ValueObject &in_value,
+                                        lldb::DynamicValueType use_dynamic,
+                                        TypeAndOrName &class_type_or_name,
+                                        Address &address,
+                                        Value::ValueType &value_type,
+                                        bool allow_swift);
 
   TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                  ValueObject &static_value) override;
@@ -95,6 +104,8 @@ public:
 
   virtual void GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,
                                             lldb::addr_t &cf_false);
+                                            
+  virtual bool IsTaggedPointer (lldb::addr_t addr) { return false; }
 
 protected:
   // Call CreateInstance instead.

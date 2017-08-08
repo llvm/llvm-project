@@ -879,7 +879,9 @@ void RAFast::AllocateBasicBlock() {
             else {
               // Modify DBG_VALUE now that the value is in a spill slot.
               bool IsIndirect = MI->isIndirectDebugValue();
-              uint64_t Offset = IsIndirect ? MI->getOperand(1).getImm() : 0;
+              if (IsIndirect)
+                assert(MI->getOperand(1).getImm() == 0 &&
+                       "DBG_VALUE with nonzero offset");
               const MDNode *Var = MI->getDebugVariable();
               const MDNode *Expr = MI->getDebugExpression();
               DebugLoc DL = MI->getDebugLoc();
@@ -890,7 +892,7 @@ void RAFast::AllocateBasicBlock() {
               MachineInstr *NewDV = BuildMI(*MBB, MBB->erase(MI), DL,
                                             TII->get(TargetOpcode::DBG_VALUE))
                                         .addFrameIndex(SS)
-                                        .addImm(Offset)
+                                        .addImm(0U)
                                         .addMetadata(Var)
                                         .addMetadata(Expr);
               DEBUG(dbgs() << "Modifying debug info due to spill:"

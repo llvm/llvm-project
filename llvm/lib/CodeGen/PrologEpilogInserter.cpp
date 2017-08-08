@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1081,11 +1082,15 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
         assert(i == 0 && "Frame indices can only appear as the first "
                          "operand of a DBG_VALUE machine instruction");
         unsigned Reg;
-        MachineOperand &Offset = MI.getOperand(1);
-        Offset.setImm(
-            Offset.getImm() +
-            TFI->getFrameIndexReference(Fn, MI.getOperand(0).getIndex(), Reg));
+        int64_t Offset =
+            TFI->getFrameIndexReference(Fn, MI.getOperand(0).getIndex(), Reg);
         MI.getOperand(0).ChangeToRegister(Reg, false /*isDef*/);
+        auto *DIExpr = DIExpression::prepend(MI.getDebugExpression(),
+                                             DIExpression::NoDeref, Offset);
+        MI.getOperand(3).setMetadata(DIExpr);
+        const Module *M = Fn.getMMI().getModule();
+        // Add the expression to the metadata graph so isn't lost in MIR dumps.
+        M->getNamedMetadata("llvm.dbg.mir")->addOperand(DIExpr);
         continue;
       }
 

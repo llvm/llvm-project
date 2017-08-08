@@ -33,6 +33,8 @@
 
 #include "llvm/ADT/APInt.h"
 
+#include "llvm/ADT/APInt.h"
+
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 
 #include "NSString.h"
@@ -40,6 +42,15 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
+
+namespace lldb_private {
+namespace formatters {
+namespace swift {
+bool NSContiguousString_SummaryProvider(ValueObject &valobj, Stream &stream,
+                                        const TypeSummaryOptions &options);
+}
+}
+}
 
 bool lldb_private::formatters::NSBundleSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {

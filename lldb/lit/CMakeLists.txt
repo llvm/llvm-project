@@ -12,6 +12,7 @@ else()
 endif(BUILD_SHARED_LIBS)
 
 option(LLDB_TEST_CLANG "Use in-tree clang when testing lldb" Off)
+option(LLDB_TEST_SWIFT "Use in-tree swift when testing lldb" Off)
 set(LLDB_TEST_C_COMPILER "" CACHE STRING "C compiler to use when testing LLDB")
 set(LLDB_TEST_CXX_COMPILER "" CACHE STRING "C++ compiler to use when testing LLDB")
 

@@ -39,7 +39,7 @@
 define i32 @_Z8function1Si(i32 %s.coerce, i32 %i) #0 !dbg !9 {
 entry:
   tail call void @llvm.dbg.declare(metadata %struct.S* undef, metadata !14, metadata !DIExpression()), !dbg !20
-  tail call void @llvm.dbg.value(metadata i32 %i, i64 0, metadata !15, metadata !DIExpression()), !dbg !20
+  tail call void @llvm.dbg.value(metadata i32 %i, metadata !15, metadata !DIExpression()), !dbg !20
   %add = add nsw i32 %i, %s.coerce, !dbg !20
   ret i32 %add, !dbg !20
 }
@@ -48,7 +48,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind readnone uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

@@ -22,6 +22,7 @@
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/SectionLoadList.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Log.h"
@@ -1857,6 +1858,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
       static ConstString g_sect_name_dwarf_debug_str_offsets_dwo(
           ".debug_str_offsets.dwo");
       static ConstString g_sect_name_eh_frame(".eh_frame");
+      static ConstString g_sect_name_swift_ast(".swift_ast");
       static ConstString g_sect_name_arm_exidx(".ARM.exidx");
       static ConstString g_sect_name_arm_extab(".ARM.extab");
       static ConstString g_sect_name_go_symtab(".gosymtab");
@@ -1942,6 +1944,8 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         sect_type = eSectionTypeDWARFDebugStrOffsets;
       else if (name == g_sect_name_eh_frame)
         sect_type = eSectionTypeEHFrame;
+      else if (name == g_sect_name_swift_ast)
+        sect_type = eSectionTypeSwiftModules;
       else if (name == g_sect_name_arm_exidx)
         sect_type = eSectionTypeARMexidx;
       else if (name == g_sect_name_arm_extab)
@@ -2364,7 +2368,8 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     bool is_global = symbol.getBinding() == STB_GLOBAL;
     uint32_t flags = symbol.st_other << 8 | symbol.st_info | additional_flags;
-    bool is_mangled = (symbol_name[0] == '_' && symbol_name[1] == 'Z');
+    bool is_mangled =
+        (symbol_name && symbol_name[0] == '_' && symbol_name[1] == 'Z');
 
     llvm::StringRef symbol_ref(symbol_name);
 
@@ -2373,6 +2378,12 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     size_t version_pos = symbol_ref.find('@');
     bool has_suffix = version_pos != llvm::StringRef::npos;
     llvm::StringRef symbol_bare = symbol_ref.substr(0, version_pos);
+
+    Mangled guess_the_language(ConstString(symbol_bare), true);
+    if (guess_the_language.GuessLanguage() != lldb::eLanguageTypeUnknown) {
+      is_mangled = true;
+    }
+
     Mangled mangled(ConstString(symbol_bare), is_mangled);
 
     // Now append the suffix back to mangled and unmangled names. Only do it if
@@ -2391,6 +2402,9 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
       if (!demangled_name.empty())
         mangled.SetDemangledName(ConstString((demangled_name + suffix).str()));
     }
+
+    if (SwiftLanguageRuntime::IsMetadataSymbol(symbol_name))
+      symbol_type = eSymbolTypeMetadata;
 
     // In ELF all symbol should have a valid size but it is not true for some
     // function symbols

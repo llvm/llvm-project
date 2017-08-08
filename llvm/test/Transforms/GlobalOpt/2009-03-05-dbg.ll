@@ -10,14 +10,14 @@ source_filename = "test/Transforms/GlobalOpt/2009-03-05-dbg.ll"
 define i32 @foo(i32 %i) #0 {
 entry:
   %"alloca point" = bitcast i32 0 to i32
-  call void @llvm.dbg.value(metadata i32 %i, i64 0, metadata !8, metadata !12), !dbg !13
+  call void @llvm.dbg.value(metadata i32 %i, metadata !8, metadata !12), !dbg !13
   %0 = icmp eq i32 %i, 1, !dbg !13
   br i1 %0, label %bb, label %bb1, !dbg !13
 
 bb:                                               ; preds = %entry
   store i32 0, i32* @Stop, align 4, !dbg !15
   %1 = mul nsw i32 %i, 42, !dbg !16
-  call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !8, metadata !12), !dbg !16
+  call void @llvm.dbg.value(metadata i32 %1, metadata !8, metadata !12), !dbg !16
   br label %bb2, !dbg !16
 
 bb1:                                              ; preds = %entry
@@ -60,7 +60,7 @@ return:                                           ; preds = %bb2
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind ssp }
 attributes #1 = { nounwind readnone }

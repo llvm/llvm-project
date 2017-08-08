@@ -48,6 +48,9 @@ public:
     IsEnabled ();
 
     uint32_t
+    GetHitCount ();
+
+    uint32_t
     GetIgnoreCount ();
 
     void

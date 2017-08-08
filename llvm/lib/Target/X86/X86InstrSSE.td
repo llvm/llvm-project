@@ -3697,8 +3697,7 @@ let SchedRW = [WriteNop] in {
 // Pause. This "instruction" is encoded as "rep; nop", so even though it
 // was introduced with SSE2, it's backward compatible.
 def PAUSE : I<0x90, RawFrm, (outs), (ins),
-              "pause", [(int_x86_sse2_pause)], IIC_SSE_PAUSE>,
-              OBXS, Requires<[HasSSE2]>;
+              "pause", [(int_x86_sse2_pause)], IIC_SSE_PAUSE>, OBXS;
 }
 
 let SchedRW = [WriteFence] in {
