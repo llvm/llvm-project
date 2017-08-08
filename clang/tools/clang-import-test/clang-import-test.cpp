@@ -27,6 +27,7 @@
 #include "clang/Parse/ParseAST.h"
 
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
@@ -62,6 +63,10 @@ static llvm::cl::opt<std::string>
 static llvm::cl::opt<bool>
 DumpAST("dump-ast", llvm::cl::init(false),
         llvm::cl::desc("Dump combined AST"));
+
+static llvm::cl::opt<bool>
+DumpIR("dump-ir", llvm::cl::init(false),
+        llvm::cl::desc("Dump IR from final parse"));
 
 namespace init_convenience {
 class TestDiagnosticConsumer : public DiagnosticConsumer {
@@ -264,7 +269,7 @@ llvm::Error ParseSource(const std::string &Path, CompilerInstance &CI,
 llvm::Expected<std::unique_ptr<CompilerInstance>>
 Parse(const std::string &Path,
       llvm::ArrayRef<std::unique_ptr<CompilerInstance>> Imports,
-      bool ShouldDumpAST) {
+      bool ShouldDumpAST, bool ShouldDumpIR) {
   std::unique_ptr<CompilerInstance> CI =
       init_convenience::BuildCompilerInstance();
   auto ST = llvm::make_unique<SelectorTable>();
@@ -279,6 +284,7 @@ Parse(const std::string &Path,
 
   auto LLVMCtx = llvm::make_unique<llvm::LLVMContext>();
   ASTConsumers.push_back(init_convenience::BuildCodeGen(*CI, *LLVMCtx));
+  auto &CG = *static_cast<CodeGenerator*>(ASTConsumers.back().get());
 
   if (ShouldDumpAST)
     ASTConsumers.push_back(CreateASTDumper("", true, false, false));
@@ -292,6 +298,8 @@ Parse(const std::string &Path,
     return std::move(PE);
   }
   CI->getDiagnosticClient().EndSourceFile();
+  if (ShouldDumpIR)
+    CG.GetModule()->print(llvm::outs(), nullptr);
   if (CI->getDiagnosticClient().getNumErrors()) {
     return llvm::make_error<llvm::StringError>(
         "Errors occured while parsing the expression.", std::error_code());
@@ -309,7 +317,7 @@ int main(int argc, const char **argv) {
   std::vector<std::unique_ptr<CompilerInstance>> ImportCIs;
   for (auto I : Imports) {
     llvm::Expected<std::unique_ptr<CompilerInstance>> ImportCI =
-      Parse(I, {}, false);
+      Parse(I, {}, false, false);
     if (auto E = ImportCI.takeError()) {
       llvm::errs() << llvm::toString(std::move(E));
       exit(-1);
@@ -325,7 +333,7 @@ int main(int argc, const char **argv) {
     }
   }
   llvm::Expected<std::unique_ptr<CompilerInstance>> ExpressionCI =
-      Parse(Expression, Direct ? ImportCIs : IndirectCIs, DumpAST);
+      Parse(Expression, Direct ? ImportCIs : IndirectCIs, DumpAST, DumpIR);
   if (auto E = ExpressionCI.takeError()) {
     llvm::errs() << llvm::toString(std::move(E));
     exit(-1);

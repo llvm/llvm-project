@@ -795,3 +795,65 @@ ToolChain::computeMSVCVersion(const Driver *D,
 
   return VersionTuple();
 }
+
+llvm::opt::DerivedArgList *
+ToolChain::TranslateOpenMPTargetArgs(const llvm::opt::DerivedArgList &Args,
+    Action::OffloadKind DeviceOffloadKind) const {
+  if (DeviceOffloadKind == Action::OFK_OpenMP) {
+    DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
+    const OptTable &Opts = getDriver().getOpts();
+
+    // Handle -Xopenmp-target flags
+    for (Arg *A : Args) {
+      // Exclude flags which may only apply to the host toolchain.
+      // Do not exclude flags when the host triple (AuxTriple),
+      // matches the current toolchain triple.
+      if (A->getOption().matches(options::OPT_m_Group)) {
+        if (getAuxTriple() && getAuxTriple()->str() == getTriple().str())
+          DAL->append(A);
+        continue;
+      }
+
+      unsigned Index;
+      unsigned Prev;
+      bool XOpenMPTargetNoTriple = A->getOption().matches(
+          options::OPT_Xopenmp_target);
+
+      if (A->getOption().matches(options::OPT_Xopenmp_target_EQ)) {
+        // Passing device args: -Xopenmp-target=<triple> -opt=val.
+        if (A->getValue(0) == getTripleString())
+          Index = Args.getBaseArgs().MakeIndex(A->getValue(1));
+        else
+          continue;
+      } else if (XOpenMPTargetNoTriple) {
+        // Passing device args: -Xopenmp-target -opt=val.
+        Index = Args.getBaseArgs().MakeIndex(A->getValue(0));
+      } else {
+        DAL->append(A);
+        continue;
+      }
+
+      // Parse the argument to -Xopenmp-target.
+      Prev = Index;
+      std::unique_ptr<Arg> XOpenMPTargetArg(Opts.ParseOneArg(Args, Index));
+      if (!XOpenMPTargetArg || Index > Prev + 1) {
+        getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
+            << A->getAsString(Args);
+        continue;
+      }
+      if (XOpenMPTargetNoTriple && XOpenMPTargetArg &&
+          Args.getAllArgValues(
+              options::OPT_fopenmp_targets_EQ).size() != 1) {
+        getDriver().Diag(diag::err_drv_Xopenmp_target_missing_triple);
+        continue;
+      }
+      XOpenMPTargetArg->setBaseArg(A);
+      A = XOpenMPTargetArg.release();
+      DAL->append(A);
+    }
+
+    return DAL;
+  }
+
+  return nullptr;
+}

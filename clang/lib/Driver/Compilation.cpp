@@ -59,7 +59,16 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
 
   DerivedArgList *&Entry = TCArgs[{TC, BoundArch, DeviceOffloadKind}];
   if (!Entry) {
-    Entry = TC->TranslateArgs(*TranslatedArgs, BoundArch, DeviceOffloadKind);
+    // Translate OpenMP toolchain arguments provided via the -Xopenmp-target flags.
+    DerivedArgList *OpenMPArgs = TC->TranslateOpenMPTargetArgs(*TranslatedArgs,
+        DeviceOffloadKind);
+    if (!OpenMPArgs) {
+      Entry = TC->TranslateArgs(*TranslatedArgs, BoundArch, DeviceOffloadKind);
+    } else {
+      Entry = TC->TranslateArgs(*OpenMPArgs, BoundArch, DeviceOffloadKind);
+      delete OpenMPArgs;
+    }
+
     if (!Entry)
       Entry = TranslatedArgs;
   }

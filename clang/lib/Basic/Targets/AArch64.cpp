@@ -458,6 +458,23 @@ MicrosoftARM64TargetInfo::getBuiltinVaListKind() const {
   return TargetInfo::CharPtrBuiltinVaList;
 }
 
+TargetInfo::CallingConvCheckResult
+MicrosoftARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_X86StdCall:
+  case CC_X86ThisCall:
+  case CC_X86FastCall:
+  case CC_X86VectorCall:
+    return CCCR_Ignore;
+  case CC_C:
+  case CC_OpenCLKernel:
+  case CC_Win64:
+    return CCCR_OK;
+  default:
+    return CCCR_Warning;
+  }
+}
+
 DarwinAArch64TargetInfo::DarwinAArch64TargetInfo(const llvm::Triple &Triple,
                                                  const TargetOptions &Opts)
     : DarwinTargetInfo<AArch64leTargetInfo>(Triple, Opts) {
