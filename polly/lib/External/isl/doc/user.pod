@@ -721,11 +721,6 @@ The following binary properties are defined on pairs of C<isl_val>s.
 	isl_bool isl_val_abs_eq(__isl_keep isl_val *v1,
 		__isl_keep isl_val *v2);
 
-Comparisons to NaN always return false.
-That is, a NaN is not considered to hold any relative position
-with respect to any value.  In particular, a NaN
-is neither considered to be equal to nor to be different from
-any value (including another NaN).
 The function C<isl_val_abs_eq> checks whether its two arguments
 are equal in absolute value.
 
@@ -6330,9 +6325,6 @@ into the first expression.
 	__isl_give isl_set *isl_aff_eq_set(
 		__isl_take isl_aff *aff1,
 		__isl_take isl_aff *aff2);
-	__isl_give isl_set *isl_aff_ne_set(
-		__isl_take isl_aff *aff1,
-		__isl_take isl_aff *aff2);
 	__isl_give isl_basic_set *isl_aff_le_basic_set(
 		__isl_take isl_aff *aff1,
 		__isl_take isl_aff *aff2);
@@ -6352,9 +6344,6 @@ into the first expression.
 		__isl_take isl_aff *aff1,
 		__isl_take isl_aff *aff2);
 	__isl_give isl_basic_set *isl_aff_gt_basic_set(
-		__isl_take isl_aff *aff1,
-		__isl_take isl_aff *aff2);
-	__isl_give isl_set *isl_aff_gt_set(
 		__isl_take isl_aff *aff1,
 		__isl_take isl_aff *aff2);
 	__isl_give isl_set *isl_pw_aff_eq_set(

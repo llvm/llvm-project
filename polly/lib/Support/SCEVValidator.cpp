@@ -506,6 +506,10 @@ public:
       if (AllowLoops)
         return true;
 
+      if (!Scope) {
+        HasInRegionDeps = true;
+        return false;
+      }
       auto *L = AddRec->getLoop();
       if (R->contains(L) && !L->contains(Scope)) {
         HasInRegionDeps = true;

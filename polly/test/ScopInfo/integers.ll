@@ -14,8 +14,7 @@ bb:
   store i1024 %indvar, i1024* %a, align 8
   %indvar.next = add nsw i1024 %indvar, 1
   %exitcond = icmp eq i1024 %indvar, 123456000000000000000000000
-; CHECK-LABEL: Function: f
-; CHECK-NEXT: Region: %bb---%return
+; CHECK:  'bb => return' in function 'f'
 ; CHECK: i0 <= 123456000000000000000000000
   br i1 %exitcond, label %return, label %bb
 
@@ -34,8 +33,7 @@ bb:
   store i32 %indvar, i32* %scevgep, align 8
   %indvar.next = add nsw i32 %indvar, 1
   %exitcond = icmp eq i32 %indvar, 123456
-; CHECK-LABEL: Function: f2
-; CHECK-NEXT: Region: %bb---%return
+; CHECK:  'bb => return' in function 'f2'
 ; CHECK: i0 <= 123456
   br i1 %exitcond, label %return, label %bb
 
@@ -55,8 +53,7 @@ bb:
   %indvar.next = add nsw i32 %indvar, 1
   %sub = sub i32 %n, 123456
   %exitcond = icmp eq i32 %indvar, %sub
-; CHECK-LABEL: Function: f3
-; CHECK-NEXT: Region: %bb---%return
+; CHECK:  'bb => return' in function 'f3'
 ; CHECK: -123456
   br i1 %exitcond, label %return, label %bb
 
@@ -75,8 +72,7 @@ bb:
   store i1024 %indvar, i1024* %scevgep, align 8
   %indvar.next = add nsw i1024 %indvar, 1
   %sub = sub i1024 %n, 123456000000000000000000000000000000
-; CHECK-LABEL: Function: f4
-; CHECK-NEXT: Region: %bb---%return
+; CHECK:  'bb => return' in function 'f4'
 ; CHECK: -123456000000000000000000000000000000
   %exitcond = icmp eq i1024 %indvar, %sub
   br i1 %exitcond, label %return, label %bb
@@ -95,8 +91,7 @@ bb:
   store i1023 %indvar, i1023* %scevgep, align 8
   %indvar.next = add nsw i1023 %indvar, 1
   %sub = sub i1023 %n, 123456000000000000000000000000000000
-; CHECK-LABEL: Function: f5
-; CHECK-NEXT: Region: %bb---%return
+; CHECK:  'bb => return' in function 'f5'
 ; CHECK: -123456000000000000000000000000000000
   %exitcond = icmp eq i1023 %indvar, %sub
   br i1 %exitcond, label %return, label %bb
@@ -116,8 +111,7 @@ bb:
   store i3 %indvar, i3* %scevgep, align 8
   %indvar.next = add nsw i3 %indvar, 1
   %sub = sub i3 %n, 3
-; CHECK-LABEL: Function: f6
-; CHECK-NEXT: Region: %bb---%return
+; CHECK-LABEL:  'bb => return' in function 'f6'
 ; CHECK:         Context:
 ; CHECK-NEXT:    [n] -> {  : -4 <= n <= 3 }
 ; CHECK-NEXT:    Assumed Context:

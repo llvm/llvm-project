@@ -1,3 +1,4 @@
+; RUN: opt %loadPolly -polly-codegen -analyze < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s -check-prefix=CHECK-CODE
 
 ; void f(long A[], long N) {
@@ -31,5 +32,6 @@ return:
   ret void
 }
 
+; CHECK: Create LLVM-IR from SCoPs' for region: 'for.i => return'
 ; CHECK-CODE: polly.split_new_and_old
 ; CHECK-CODE: polly.merge_new_and_old

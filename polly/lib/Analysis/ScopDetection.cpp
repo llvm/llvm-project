@@ -64,7 +64,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Regex.h"
 #include <set>
 #include <stack>
 
@@ -93,18 +92,10 @@ static cl::opt<bool, true> XPollyProcessUnprofitable(
 
 static cl::list<std::string> OnlyFunctions(
     "polly-only-func",
-    cl::desc("Only run on functions that match a regex. "
-             "Multiple regexes can be comma separated. "
-             "Scop detection will run on all functions that match "
-             "ANY of the regexes provided."),
-    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
-
-static cl::list<std::string> IgnoredFunctions(
-    "polly-ignore-func",
-    cl::desc("Ignore functions that match a regex. "
-             "Multiple regexes can be comma separated. "
-             "Scop detection will ignore all functions that match "
-             "ANY of the regexes provided."),
+    cl::desc("Only run on functions that contain a certain string. "
+             "Multiple strings can be comma separated. "
+             "Scop detection will run on all functions that contain "
+             "any of the strings provided."),
     cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
 
 static cl::opt<bool>
@@ -282,21 +273,10 @@ void DiagnosticScopFound::print(DiagnosticPrinter &DP) const {
   DP << FileName << ":" << ExitLine << ": End of scop";
 }
 
-/// Check if a string matches any regex in a list of regexes.
-/// @param Str the input string to match against.
-/// @param RegexList a list of strings that are regular expressions.
-static bool doesStringMatchAnyRegex(StringRef Str,
-                                    const cl::list<std::string> &RegexList) {
-  for (auto RegexStr : RegexList) {
-    Regex R(RegexStr);
-
-    std::string Err;
-    if (!R.isValid(Err))
-      report_fatal_error("invalid regex given as input to polly: " + Err, true);
-
-    if (R.match(Str))
+static bool IsFnNameListedInOnlyFunctions(StringRef FnName) {
+  for (auto Name : OnlyFunctions)
+    if (FnName.count(Name) > 0)
       return true;
-  }
   return false;
 }
 //===----------------------------------------------------------------------===//
@@ -312,11 +292,7 @@ ScopDetection::ScopDetection(Function &F, const DominatorTree &DT,
 
   Region *TopRegion = RI.getTopLevelRegion();
 
-  if (OnlyFunctions.size() > 0 &&
-      !doesStringMatchAnyRegex(F.getName(), OnlyFunctions))
-    return;
-
-  if (doesStringMatchAnyRegex(F.getName(), IgnoredFunctions))
+  if (OnlyFunctions.size() > 0 && !IsFnNameListedInOnlyFunctions(F.getName()))
     return;
 
   if (!isValidFunction(F))
@@ -1780,11 +1756,6 @@ ScopDetectionWrapperPass::ScopDetectionWrapperPass() : FunctionPass(ID) {
   if (IgnoreAliasing)
     PollyUseRuntimeAliasChecks = false;
 }
-ScopAnalysis::ScopAnalysis() {
-  // Disable runtime alias checks if we ignore aliasing all together.
-  if (IgnoreAliasing)
-    PollyUseRuntimeAliasChecks = false;
-}
 
 void ScopDetectionWrapperPass::releaseMemory() { Result.reset(); }
 
@@ -1804,7 +1775,6 @@ ScopDetection ScopAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 
 PreservedAnalyses ScopAnalysisPrinterPass::run(Function &F,
                                                FunctionAnalysisManager &FAM) {
-  Stream << "Detected Scops in Function " << F.getName() << "\n";
   auto &SD = FAM.getResult<ScopAnalysis>(F);
   for (const Region *R : SD.ValidRegions)
     Stream << "Valid Region for Scop: " << R->getNameStr() << '\n';

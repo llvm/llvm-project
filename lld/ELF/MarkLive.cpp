@@ -225,17 +225,17 @@ template <class ELFT> void elf::markLive() {
   };
 
   // Add GC root symbols.
-  MarkSymbol(Symtab->find(Config->Entry));
-  MarkSymbol(Symtab->find(Config->Init));
-  MarkSymbol(Symtab->find(Config->Fini));
+  MarkSymbol(Symtab<ELFT>::X->find(Config->Entry));
+  MarkSymbol(Symtab<ELFT>::X->find(Config->Init));
+  MarkSymbol(Symtab<ELFT>::X->find(Config->Fini));
   for (StringRef S : Config->Undefined)
-    MarkSymbol(Symtab->find(S));
+    MarkSymbol(Symtab<ELFT>::X->find(S));
   for (StringRef S : Script->Opt.ReferencedSymbols)
-    MarkSymbol(Symtab->find(S));
+    MarkSymbol(Symtab<ELFT>::X->find(S));
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.
-  for (const Symbol *S : Symtab->getSymbols())
+  for (const Symbol *S : Symtab<ELFT>::X->getSymbols())
     if (S->includeInDynsym())
       MarkSymbol(S->body());
 
@@ -253,7 +253,7 @@ template <class ELFT> void elf::markLive() {
       Enqueue({Sec, 0});
     else if (isValidCIdentifier(Sec->Name)) {
       CNamedSections[Saver.save("__start_" + Sec->Name)].push_back(Sec);
-      CNamedSections[Saver.save("__stop_" + Sec->Name)].push_back(Sec);
+      CNamedSections[Saver.save("__end_" + Sec->Name)].push_back(Sec);
     }
   }
 
