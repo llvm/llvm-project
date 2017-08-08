@@ -24,16 +24,17 @@ class TestMPXTable(TestBase):
     @skipIf(compiler="clang")
     @skipIf(oslist=no_match(['linux']))
     @skipIf(archs=no_match(['i386', 'x86_64']))
-    @skipIf(compiler="gcc", compiler_version=["<", "5"]) #GCC version >= 5 supports Intel(R) MPX.
+    @skipIf(compiler="gcc", compiler_version=["<", "5"]) #GCC version >= 5 supports
+    #Intel(R) Memory Protection Extensions (Intel(R) MPX).
     def test_show_command(self):
         """Test 'mpx-table show' command"""
         self.build()
 
         lldb_exec_dir = os.environ["LLDB_IMPLIB_DIR"]
         lldb_lib_dir = os.path.join(lldb_exec_dir, os.pardir, "lib")
-        plugin_file = os.path.join(lldb_lib_dir, "liblldb-intel-mpxtable.so")
+        plugin_file = os.path.join(lldb_lib_dir, "liblldbIntelFeatures.so")
         if not os.path.isfile(plugin_file):
-            self.skipTest("Intel(R) mpx-table plugin missing.")
+            self.skipTest("features plugin missing.")
         plugin_command = " "
         seq = ("plugin", "load", plugin_file)
         plugin_command = plugin_command.join(seq)
@@ -123,9 +124,9 @@ class TestMPXTable(TestBase):
 
         lldb_exec_dir = os.environ["LLDB_IMPLIB_DIR"]
         lldb_lib_dir = os.path.join(lldb_exec_dir, os.pardir, "lib")
-        plugin_file = os.path.join(lldb_lib_dir, "liblldb-intel-mpxtable.so")
+        plugin_file = os.path.join(lldb_lib_dir, "liblldbIntelFeatures.so")
         if not os.path.isfile(plugin_file):
-            self.skipTest("Intel(R) mpx-table plugin missing.")
+            self.skipTest("features plugin missing.")
         plugin_command = " "
         seq = ("plugin", "load", plugin_file)
         plugin_command = plugin_command.join(seq)

@@ -5,22 +5,22 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <sys/mman.h>
 
 int main() {
   fprintf(stderr, "Hello\n");
   char *ptr;
 
-  if (sizeof(void *) == 8)
-    ptr = (char *)0x6666666666666666;
-  else if (sizeof(void *) == 4)
-    ptr = (char *)0x55555555;
-  else
-    assert(0 && "Your computer is weird.");
+  ptr = (char *)mmap(NULL, 0x10000, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
+  assert(ptr && "failed to mmap");
+
+  fprintf(stderr, sizeof(uintptr_t) == 8 ? "p = 0x%016lx\n" : "p = 0x%08lx\n", (uintptr_t)ptr);
+  // CHECK: p = [[ADDR:0x[0-9]+]]
 
   char c = *ptr;  // BOOM
   // CHECK: ERROR: AddressSanitizer: {{SEGV|BUS}}
   // CHECK: Register values:
-  // CHECK: {{0x55555555|0x6666666666666666}}
+  // CHECK: [[ADDR]]
   fprintf(stderr, "World\n");
   return c;
 }

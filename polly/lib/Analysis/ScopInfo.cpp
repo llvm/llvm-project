@@ -1276,7 +1276,7 @@ void ScopStmt::buildAccessRelations() {
   }
 }
 
-void ScopStmt::addAccess(MemoryAccess *Access) {
+void ScopStmt::addAccess(MemoryAccess *Access, bool Prepend) {
   Instruction *AccessInst = Access->getAccessInstruction();
 
   if (Access->isArrayKind()) {
@@ -1305,6 +1305,10 @@ void ScopStmt::addAccess(MemoryAccess *Access) {
     PHIReads[PHI] = Access;
   }
 
+  if (Prepend) {
+    MemAccs.insert(MemAccs.begin(), Access);
+    return;
+  }
   MemAccs.push_back(Access);
 }
 

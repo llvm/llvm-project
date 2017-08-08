@@ -1,4 +1,5 @@
-//===-- IntelMPXTablePlugin.cpp----------------------------------*- C++ -*-===//
+//===-- cli-wrapper-mpxtable.cpp----------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,6 +13,7 @@
 #include <string>
 
 // Project includes
+#include "cli-wrapper-mpxtable.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
@@ -20,10 +22,6 @@
 #include "lldb/API/SBThread.h"
 
 #include "llvm/ADT/Triple.h"
-
-namespace lldb {
-bool PluginInitialize(lldb::SBDebugger debugger);
-}
 
 static bool GetPtr(char *cptr, uint64_t &ptr, lldb::SBFrame &frame,
                    lldb::SBCommandReturnObject &result) {
@@ -285,8 +283,8 @@ static bool GetInitInfo(lldb::SBDebugger debugger, lldb::SBTarget &target,
 
   lldb::SBValue bndcfgu_val = frame.FindRegister("bndcfgu");
   if (!bndcfgu_val.IsValid()) {
-    result.SetError(
-        "Cannot access register BNDCFGU. Does the target support MPX?");
+    result.SetError("Cannot access register BNDCFGU. Does the target support "
+                    "Intel(R) Memory Protection Extensions (Intel(R) MPX)?");
     result.SetStatus(lldb::eReturnStatusFailed);
     return false;
   }
@@ -409,17 +407,17 @@ public:
   }
 };
 
-bool lldb::PluginInitialize(lldb::SBDebugger debugger) {
+bool MPXPluginInitialize(lldb::SBDebugger &debugger) {
   lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
   lldb::SBCommand mpxTable = interpreter.AddMultiwordCommand(
-      "mpx-table", "A utility to access the MPX table entries.");
+      "mpx-table", "A utility to access the Intel(R) MPX table entries.");
 
-  const char *mpx_show_help = "Show the MPX table entry of a pointer.\n"
-                              "mpx-table show <pointer>";
+  const char *mpx_show_help = "Show the Intel(R) MPX table entry of a pointer."
+                              "\nmpx-table show <pointer>";
   mpxTable.AddCommand("show", new MPXTableShow(), mpx_show_help);
 
   const char *mpx_set_help =
-      "Set the MPX table entry of a pointer.\n"
+      "Set the Intel(R) MPX table entry of a pointer.\n"
       "mpx-table set <pointer> <lower bound> <upper bound>";
   mpxTable.AddCommand("set", new MPXTableSet(), mpx_set_help);
 
