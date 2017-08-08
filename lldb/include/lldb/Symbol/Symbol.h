@@ -47,7 +47,9 @@ public:
 
   bool Compare(const ConstString &name, lldb::SymbolType type) const;
 
-  void Dump(Stream *s, Target *target, uint32_t index) const;
+  void Dump(Stream *s, Target *target, uint32_t index,
+            Mangled::NamePreference name_preference =
+                Mangled::ePreferDemangled) const;
 
   bool ValueIsAddress() const;
 

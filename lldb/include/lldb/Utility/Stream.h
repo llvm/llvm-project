@@ -33,8 +33,16 @@ public:
   /// \a m_flags bit values.
   //------------------------------------------------------------------
   enum {
-    eBinary = (1 << 0) ///< Get and put data as binary instead of as the default
+    eBinary = (1 << 0), ///< Get and put data as binary instead of as the default
                        /// string mode.
+// START SWIFT PATCH
+    eVerbose = (1 << 1),   ///< If set, verbose logging is enabled
+    eDebug = (eVerbose << 1),     ///< If set, debug logging is enabled
+    eAddPrefix = (eVerbose << 2), ///< Add number prefixes for binary, octal and hex
+                           ///when eBinary is clear
+    eANSIColor = (eVerbose << 3), ///< If set, then it is ok to colorize the output
+                           ///with ANSI escape sequences
+// END SWIFT PATCH
   };
 
   //------------------------------------------------------------------

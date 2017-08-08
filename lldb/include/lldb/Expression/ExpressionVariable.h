@@ -242,7 +242,7 @@ public:
                            lldb::ByteOrder byte_order,
                            uint32_t addr_byte_size) = 0;
 
-  virtual ConstString GetNextPersistentVariableName() = 0;
+  virtual ConstString GetNextPersistentVariableName(bool is_error = false) = 0;
 
   virtual void
   RemovePersistentVariable(lldb::ExpressionVariableSP variable) = 0;
@@ -250,6 +250,8 @@ public:
   virtual lldb::addr_t LookupSymbol(const ConstString &name);
 
   void RegisterExecutionUnit(lldb::IRExecutionUnitSP &execution_unit_sp);
+
+  void RegisterSymbol(const ConstString &name, lldb::addr_t address);
 
 private:
   LLVMCastKind m_kind;

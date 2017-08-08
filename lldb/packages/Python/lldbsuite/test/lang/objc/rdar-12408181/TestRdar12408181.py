@@ -14,6 +14,7 @@ from lldbsuite.test import lldbutil
 
 
 @skipUnlessDarwin
+@skipIfDarwin  # <rdar://problem/23298079> Modify TestRdar12408181.py to self.skipTest() if WindowServer isn't available
 class Rdar12408181TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)

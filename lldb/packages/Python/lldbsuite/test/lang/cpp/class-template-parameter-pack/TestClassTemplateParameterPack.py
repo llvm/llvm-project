@@ -6,4 +6,6 @@ lldbinline.MakeInlineTest(
         decorators.expectedFailureAll(
             oslist=["windows"], bugnumber="llvm.org/pr24764"),
         decorators.expectedFailureAll(
-            compiler="gcc")])
+            compiler="gcc"),
+        decorators.expectedFailureAll(
+            bugnumber="rdar://problem/31811802")])

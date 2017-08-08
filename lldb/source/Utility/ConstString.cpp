@@ -195,7 +195,7 @@ protected:
 // touch ConstStrings is difficult.  So we leak the pool instead.
 //----------------------------------------------------------------------
 static Pool &StringPool() {
-  static llvm::once_flag g_pool_initialization_flag;
+  static std::once_flag g_pool_initialization_flag;
   static Pool *g_string_pool = nullptr;
 
   llvm::call_once(g_pool_initialization_flag,

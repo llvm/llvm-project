@@ -27,6 +27,7 @@
 #include "lldb/Symbol/GoASTContext.h"
 #include "lldb/Symbol/JavaASTContext.h"
 #include "lldb/Symbol/OCamlASTContext.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Utility/Timer.h"
 
 #include "Plugins/ABI/MacOSX-arm/ABIMacOSX_arm.h"
@@ -53,6 +54,7 @@
 #include "Plugins/InstrumentationRuntime/TSan/TSanRuntime.h"
 #include "Plugins/InstrumentationRuntime/UBSan/UBSanRuntime.h"
 #include "Plugins/InstrumentationRuntime/MainThreadChecker/MainThreadCheckerRuntime.h"
+#include "Plugins/InstrumentationRuntime/SwiftRuntimeReporting/SwiftRuntimeReporting.h"
 #include "Plugins/JITLoader/GDB/JITLoaderGDB.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/Go/GoLanguage.h"
@@ -113,6 +115,11 @@
 #if defined(_WIN32)
 #include "Plugins/Process/Windows/Common/ProcessWindows.h"
 #include "lldb/Host/windows/windows.h"
+#endif
+
+#if defined(__APPLE__) || defined(__linux__)
+#include "Plugins/Language/Swift/SwiftLanguage.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #endif
 
 #include "llvm/Support/TargetSelect.h"
@@ -247,6 +254,20 @@ SystemInitializerFull::SystemInitializerFull() {}
 
 SystemInitializerFull::~SystemInitializerFull() {}
 
+static void SwiftInitialize() {
+#if defined(__APPLE__) || defined(__linux__)
+  SwiftLanguage::Initialize();
+  SwiftLanguageRuntime::Initialize();
+#endif
+}
+
+static void SwiftTerminate() {
+#if defined(__APPLE__) || defined(__linux__)
+  SwiftLanguage::Terminate();
+  SwiftLanguageRuntime::Terminate();
+#endif
+}
+
 void SystemInitializerFull::Initialize() {
   SystemInitializerCommon::Initialize();
   ScriptInterpreterNone::Initialize();
@@ -290,6 +311,7 @@ void SystemInitializerFull::Initialize() {
   GoASTContext::Initialize();
   JavaASTContext::Initialize();
   OCamlASTContext::Initialize();
+  SwiftASTContext::Initialize();
 
   ABIMacOSX_i386::Initialize();
   ABIMacOSX_arm::Initialize();
@@ -314,6 +336,7 @@ void SystemInitializerFull::Initialize() {
   ThreadSanitizerRuntime::Initialize();
   UndefinedBehaviorSanitizerRuntime::Initialize();
   MainThreadCheckerRuntime::Initialize();
+  SwiftRuntimeReporting::Initialize();
 
   SymbolVendorELF::Initialize();
   SymbolFileDWARF::Initialize();
@@ -337,6 +360,7 @@ void SystemInitializerFull::Initialize() {
   ObjCLanguage::Initialize();
   ObjCPlusPlusLanguage::Initialize();
   OCamlLanguage::Initialize();
+  ::SwiftInitialize();
 
 #if defined(_WIN32)
   ProcessWindows::Initialize();
@@ -416,6 +440,7 @@ void SystemInitializerFull::Terminate() {
   GoASTContext::Terminate();
   JavaASTContext::Terminate();
   OCamlASTContext::Terminate();
+  SwiftASTContext::Terminate();
 
   ABIMacOSX_i386::Terminate();
   ABIMacOSX_arm::Terminate();
@@ -440,6 +465,7 @@ void SystemInitializerFull::Terminate() {
   ThreadSanitizerRuntime::Terminate();
   UndefinedBehaviorSanitizerRuntime::Terminate();
   MainThreadCheckerRuntime::Terminate();
+  SwiftRuntimeReporting::Terminate();
   SymbolVendorELF::Terminate();
   SymbolFileDWARF::Terminate();
   SymbolFilePDB::Terminate();
@@ -454,6 +480,8 @@ void SystemInitializerFull::Terminate() {
   SystemRuntimeMacOSX::Terminate();
   RenderScriptRuntime::Terminate();
   JavaLanguageRuntime::Terminate();
+
+  ::SwiftTerminate();
 
   CPlusPlusLanguage::Terminate();
   GoLanguage::Terminate();

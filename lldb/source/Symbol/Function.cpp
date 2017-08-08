@@ -112,7 +112,7 @@ ConstString InlineFunctionInfo::GetName(LanguageType language) const {
 ConstString InlineFunctionInfo::GetDisplayName(LanguageType language) const {
   if (m_mangled)
     return m_mangled.GetDisplayDemangledName(language);
-  return m_name;
+  return GetName(language);
 }
 
 Declaration &InlineFunctionInfo::GetCallSite() { return m_call_decl; }
@@ -134,22 +134,29 @@ size_t InlineFunctionInfo::MemorySize() const {
 //----------------------------------------------------------------------
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
-                   const AddressRange &range)
+                   const AddressRange &range, bool canThrow)
     : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
       m_type(type), m_mangled(mangled), m_block(func_uid), m_range(range),
       m_frame_base(nullptr), m_flags(), m_prologue_byte_size(0) {
   m_block.SetParentScope(this);
+  if (canThrow)
+    m_flags.Set(flagsFunctionCanThrow);
+    
   assert(comp_unit != nullptr);
 }
 
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const char *mangled, Type *type,
-                   const AddressRange &range)
+                   const AddressRange &range, bool canThrow)
     : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
       m_type(type), m_mangled(ConstString(mangled), true), m_block(func_uid),
       m_range(range), m_frame_base(nullptr), m_flags(),
       m_prologue_byte_size(0) {
   m_block.SetParentScope(this);
+
+  if (canThrow)
+    m_flags.Set(flagsFunctionCanThrow);
+
   assert(comp_unit != nullptr);
 }
 
@@ -350,6 +357,8 @@ bool Function::IsTopLevelFunction() {
 }
 
 ConstString Function::GetDisplayName() const {
+  if (!m_mangled)
+    return GetName();
   return m_mangled.GetDisplayDemangledName(GetLanguage());
 }
 

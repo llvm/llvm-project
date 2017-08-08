@@ -11,8 +11,10 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import subprocess
+import unittest2
 
 
+@unittest2.skip("skipping due to frequent timeouts: rdar://28183131")
 class SBBreakpointCallbackCase(TestBase):
 
     def setUp(self):

@@ -44,7 +44,8 @@ public:
   static ConstString GetPluginNameStatic();
 
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
-                                           Module *module, Target *target);
+                                           Module *module, Target *target,
+                                           const char *compiler_options);
 
   static void EnumerateSupportedLanguages(
       std::set<lldb::LanguageType> &languages_for_types,
@@ -168,7 +169,8 @@ public:
 
   bool IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                              CompilerType *target_type, // Can pass nullptr
-                             bool check_cplusplus, bool check_objc) override;
+                             bool check_cplusplus, bool check_objc,
+                             bool check_swift) override;
 
   bool IsPointerType(lldb::opaque_compiler_type_t type,
                      CompilerType *pointee_type = nullptr) override;
@@ -215,6 +217,10 @@ public:
 
   CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) override;
 
+  CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) override {
+    return CompilerType(this, type);
+  }
+
   // Returns -1 if this isn't a function of if the function doesn't have a
   // prototype
   // Returns a value >= 0 if there is a prototype.
@@ -242,6 +248,10 @@ public:
 
   uint64_t GetBitSize(lldb::opaque_compiler_type_t type,
                       ExecutionContextScope *exe_scope) override;
+
+  uint64_t GetByteStride(lldb::opaque_compiler_type_t type) override {
+    return 0;
+  }
 
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                              uint64_t &count) override;
@@ -331,11 +341,13 @@ public:
                  bool show_types, bool show_summary, bool verbose,
                  uint32_t depth) override;
 
-  bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream *s,
-                     lldb::Format format, const DataExtractor &data,
-                     lldb::offset_t data_offset, size_t data_byte_size,
-                     uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-                     ExecutionContextScope *exe_scope) override;
+  virtual bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream *s,
+                             lldb::Format format, const DataExtractor &data,
+                             lldb::offset_t data_offset, size_t data_byte_size,
+                             uint32_t bitfield_bit_size,
+                             uint32_t bitfield_bit_offset,
+                             ExecutionContextScope *exe_scope,
+                             bool is_base_class) override;
 
   void DumpTypeDescription(
       lldb::opaque_compiler_type_t type) override; // Dump to stdout
@@ -387,7 +399,11 @@ public:
   bool IsTypedefType(lldb::opaque_compiler_type_t type) override;
 
   // If the current object represents a typedef type, get the underlying type
-  CompilerType GetTypedefedType(lldb::opaque_compiler_type_t type) override;
+  CompilerType GetTypedefedType(void *type) override;
+
+  CompilerType GetUnboundType(lldb::opaque_compiler_type_t type) override {
+    return CompilerType(this, type);
+  }
 
   bool IsVectorType(lldb::opaque_compiler_type_t type,
                     CompilerType *element_type, uint64_t *size) override;
@@ -396,6 +412,11 @@ public:
   GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type) override;
+
+  CompilerType
+  GetLValueReferenceType(lldb::opaque_compiler_type_t type) override {
+    return CompilerType(this, type);
+  }
 
   bool IsReferenceType(lldb::opaque_compiler_type_t type,
                        CompilerType *pointee_type = nullptr,

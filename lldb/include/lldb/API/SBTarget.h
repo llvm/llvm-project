@@ -218,14 +218,6 @@ public:
   lldb::SBProcess AttachToProcessWithID(SBListener &listener, lldb::pid_t pid,
                                         lldb::SBError &error);
 
-#if defined(__APPLE__)
-  // We need to keep this around for a build or two since Xcode links
-  // to the 32 bit version of this function. We will take it out soon.
-  lldb::SBProcess AttachToProcessWithID(SBListener &listener,
-                                        ::pid_t pid, // 32 bit int process ID
-                                        lldb::SBError &error); // DEPRECATED
-#endif
-
   //------------------------------------------------------------------
   /// Attach to process with name.
   ///
@@ -569,12 +561,14 @@ public:
   lldb::SBBreakpoint BreakpointCreateByName(const char *symbol_name,
                                             const char *module_name = nullptr);
 
-  // This version uses name_type_mask = eFunctionNameTypeAuto
+  // This version uses name_type_mask = eFunctionNameTypeAuto, symbol_language =
+  // eLanguageTypeUnknown
   lldb::SBBreakpoint
   BreakpointCreateByName(const char *symbol_name,
                          const SBFileSpecList &module_list,
                          const SBFileSpecList &comp_unit_list);
 
+  // symbol_language = eLanguageTypeUnknown.
   lldb::SBBreakpoint BreakpointCreateByName(
       const char *symbol_name,
       uint32_t
@@ -639,6 +633,15 @@ public:
 
   lldb::SBBreakpoint BreakpointCreateForException(lldb::LanguageType language,
                                                   bool catch_bp, bool throw_bp);
+
+  // The extra_args parameter will hold any number of pairs, the first element
+  // is the extra
+  // argument type, and the second the value.
+  // The argument types all follow the option long name from "breakpoint set -E
+  // <Language>".
+  lldb::SBBreakpoint BreakpointCreateForException(lldb::LanguageType language,
+                                                  bool catch_bp, bool throw_bp,
+                                                  SBStringList &extra_args);
 
   lldb::SBBreakpoint BreakpointCreateByAddress(addr_t address);
 

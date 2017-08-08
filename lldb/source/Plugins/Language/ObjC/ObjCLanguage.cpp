@@ -746,6 +746,11 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                 "NSNotification summary provider",
                 ConstString("NSConcreteNotification"), appkit_flags);
 
+  // AddStringSummary(objc_category_sp, "domain: ${var._domain} - code:
+  // ${var._code}", ConstString("NSError"), appkit_flags);
+  // AddStringSummary(objc_category_sp,"name:${var.name%S}
+  // reason:${var.reason%S}",ConstString("NSException"),appkit_flags);
+
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider,
       "NSNumber summary provider", ConstString("NSNumber"), appkit_flags);
@@ -859,7 +864,7 @@ static void LoadCoreMediaFormatters(TypeCategoryImplSP objc_category_sp) {
 }
 
 lldb::TypeCategoryImplSP ObjCLanguage::GetFormatters() {
-  static llvm::once_flag g_initialize;
+  static std::once_flag g_initialize;
   static TypeCategoryImplSP g_category;
 
   llvm::call_once(g_initialize, [this]() -> void {
@@ -884,8 +889,9 @@ ObjCLanguage::GetPossibleFormattersMatches(ValueObject &valobj,
 
   const bool check_cpp = false;
   const bool check_objc = true;
-  bool canBeObjCDynamic =
-      compiler_type.IsPossibleDynamicType(nullptr, check_cpp, check_objc);
+  const bool check_swift = false;
+  bool canBeObjCDynamic = compiler_type.IsPossibleDynamicType(
+      nullptr, check_cpp, check_objc, check_swift);
 
   if (canBeObjCDynamic) {
     do {

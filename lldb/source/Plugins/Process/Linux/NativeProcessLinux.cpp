@@ -72,7 +72,7 @@ using namespace llvm;
 
 static bool ProcessVmReadvSupported() {
   static bool is_supported;
-  static llvm::once_flag flag;
+  static std::once_flag flag;
 
   llvm::call_once(flag, [] {
     Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));

@@ -28,6 +28,7 @@
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
@@ -46,6 +47,15 @@ namespace lldb_private {
 class ClangUserExpression : public LLVMUserExpression {
 public:
   enum { kDefaultTimeout = 500000u };
+
+  enum {
+    eLanguageFlagNeedsObjectPointer = 1 << 0,
+    eLanguageFlagEnforceValidObject = 1 << 1,
+    eLanguageFlagInCPlusPlusMethod = 1 << 2,
+    eLanguageFlagInObjectiveCMethod = 1 << 3,
+    eLanguageFlagInStaticMethod = 1 << 4,
+    eLanguageFlagConstObject = 1 << 5
+  };
 
   class ClangUserExpressionHelper : public ClangExpressionHelper {
   public:
@@ -110,6 +120,9 @@ public:
   /// @param[in] desired_type
   ///     If not eResultTypeAny, the type to use for the expression
   ///     result.
+  ///
+  /// @param[in] options
+  ///     Additional options for the expression.
   //------------------------------------------------------------------
   ClangUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
                       llvm::StringRef prefix, lldb::LanguageType language,
@@ -141,7 +154,8 @@ public:
   //------------------------------------------------------------------
   bool Parse(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
              lldb_private::ExecutionPolicy execution_policy,
-             bool keep_result_in_memory, bool generate_debug_info) override;
+             bool keep_result_in_memory, bool generate_debug_info,
+             uint32_t line_offset = 0) override;
 
   ExpressionTypeSystemHelper *GetTypeSystemHelper() override {
     return &m_type_system_helper;

@@ -151,12 +151,25 @@ def process_args(args):
         help=(
             "Specifies the build dir where the language binding "
             "should be placed"))
-
     parser.add_argument(
         "--target-platform",
         help=(
             "Specifies the platform we are building for."
             "Should be the same as what platform.system() returns."))
+
+    group = parser.add_argument_group("static binding usage")
+    group.add_argument(
+        "--allow-static-binding",
+        action="store_true",
+        help=(
+            "Specify the pre-baked binding can be used if "
+            "swig cannot be found."))
+    group.add_argument(
+        "--static-binding-dir",
+        default="static-binding",
+        help="script-relative directory for appropriate static bindings"
+    )
+
     # Process args.
     options = parser.parse_args(args)
 
@@ -177,6 +190,79 @@ def process_args(args):
     return options
 
 
+def find_file_in_paths(paths, exe_basename):
+    """Returns the full exe path for the first path match.
+
+    @params paths the list of directories to search for the exe_basename
+    executable
+    @params exe_basename the name of the file for which to search.
+    e.g. "swig" or "swig.exe".
+
+    @return the full path to the executable if found in one of the
+    given paths; otherwise, returns None.
+    """
+    for path in paths:
+        trial_exe_path = os.path.join(path, exe_basename)
+        if os.path.exists(trial_exe_path):
+            return os.path.normcase(trial_exe_path)
+    return None
+
+
+def find_swig_executable(options, must_exist):
+    """Finds the swig executable in the PATH or known good locations.
+
+    :param options the command line options returned by argparse.
+
+    :param must_exist if True, this method exits the program if
+    swig is not found; otherwise, always returns whether swig is found.
+
+    Replaces options.swig_executable with the full swig executable path.
+    """
+    # Figure out what we're looking for.
+    if platform.system() == 'Windows':
+        exe_basename = "swig.exe"
+        extra_dirs = []
+    else:
+        exe_basename = "swig"
+        extra_dirs = ["/usr/local/bin"]
+
+    # Figure out what paths to check.
+    path_env = os.environ.get("PATH", None)
+    if path_env is not None:
+        paths_to_check = path_env.split(os.path.pathsep)
+    else:
+        paths_to_check = []
+
+    # Add in the extra dirs
+    paths_to_check.extend(extra_dirs)
+    if len(paths_to_check) < 1:
+        if must_exist:
+            logging.error(
+                "swig executable was not specified, PATH has no "
+                "contents, and there are no extra directories to search")
+            sys.exit(-6)
+        else:
+            logging.info("failed to find swig: no paths available")
+            return
+
+    # Find the swig executable
+    options.swig_executable = find_file_in_paths(paths_to_check, exe_basename)
+    if not options.swig_executable or len(options.swig_executable) < 1:
+        if must_exist:
+            logging.error(
+                "failed to find exe='%s' in paths='%s'",
+                exe_basename,
+                paths_to_check)
+            sys.exit(-6)
+        else:
+            logging.info(
+                "%s not found in paths %s",
+                exe_basename,
+                paths_to_check)
+    else:
+        logging.info("found swig executable: %s", options.swig_executable)
+
+
 def main(args):
     """Drives the main script preparation steps.
 
@@ -189,11 +275,8 @@ def main(args):
     # Ensure we have a swig executable.
     if not options.swig_executable or len(options.swig_executable) == 0:
         if options.find_swig:
-            try:
-                options.swig_executable = fs.find_executable("swig")
-            except Exception as e:
-                logging.error("Unable to find swig executable: %s" % e.message)
-                sys.exit(-6)
+            must_exist = not options.allow_static_binding
+            find_swig_executable(options, must_exist)
         else:
             logging.error(
                 "The --find-swig option must be specified "

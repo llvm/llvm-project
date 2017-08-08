@@ -45,7 +45,7 @@ void HostInfoLinux::Initialize() {
 bool HostInfoLinux::GetOSVersion(uint32_t &major, uint32_t &minor,
                                  uint32_t &update) {
   static bool success = false;
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
 
     struct utsname un;
@@ -101,7 +101,7 @@ bool HostInfoLinux::GetOSKernelDescription(std::string &s) {
 llvm::StringRef HostInfoLinux::GetDistributionId() {
   // Try to run 'lbs_release -i', and use that response
   // for the distribution id.
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST));

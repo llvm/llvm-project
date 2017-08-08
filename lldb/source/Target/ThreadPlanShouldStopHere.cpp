@@ -13,6 +13,8 @@
 // Project includes
 #include "lldb/Target/ThreadPlanShouldStopHere.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/LanguageRuntime.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Log.h"
@@ -83,6 +85,18 @@ bool ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
     }
   }
 
+  // Check whether the frame we are in is a language runtime thunk, only for
+  // step out:
+  if (operation == eFrameCompareOlder) {
+    Symbol *symbol = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
+    if (symbol) {
+      ProcessSP process_sp(current_plan->GetThread().GetProcess());
+      if (LanguageRuntime::IsSymbolAnyRuntimeThunk(process_sp, *symbol)) {
+          should_stop_here = false;
+      }
+    }
+  }
+
   // Always avoid code with line number 0.
   // FIXME: At present the ShouldStop and the StepFromHere calculate this
   // independently.  If this ever
@@ -118,29 +132,54 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
   if (sc.line_entry.line == 0) {
     AddressRange range = sc.line_entry.range;
 
-    // If the whole function is marked line 0 just step out, that's easier &
-    // faster than continuing
-    // to step through it.
+    // If this is a runtime thunk, just step out:
     bool just_step_out = false;
-    if (sc.symbol && sc.symbol->ValueIsAddress()) {
-      Address symbol_end = sc.symbol->GetAddress();
-      symbol_end.Slide(sc.symbol->GetByteSize() - 1);
-      if (range.ContainsFileAddress(sc.symbol->GetAddress()) &&
-          range.ContainsFileAddress(symbol_end)) {
-        if (log)
-          log->Printf("Stopped in a function with only line 0 lines, just "
-                      "stepping out.");
+    if (sc.symbol) {
+      ProcessSP process_sp(current_plan->GetThread().GetProcess());
+
+      if (LanguageRuntime::IsSymbolAnyRuntimeThunk(process_sp, *sc.symbol)) {
+          if (log)
+            log->Printf("In runtime thunk %s - stepping out.", 
+              sc.symbol->GetName().GetCString());
         just_step_out = true;
       }
+      // If the whole function is marked line 0 just step out, that's easier &
+      // faster than continuing to step through it.
+      // FIXME: This assumes that the function is a single line range.  It could
+      // be a series of contiguous line 0 ranges.  Check for that too.
+      if (!just_step_out && sc.symbol->ValueIsAddress()) {
+        Address symbol_end = sc.symbol->GetAddress();
+        symbol_end.Slide(sc.symbol->GetByteSize() - 1);
+        if (range.ContainsFileAddress(sc.symbol->GetAddress()) &&
+            range.ContainsFileAddress(symbol_end)) {
+          if (log)
+            log->Printf("Stopped in a function with only line 0 lines, just "
+                        "stepping out.");
+          just_step_out = true;
+        }
+      }
     }
+    
     if (!just_step_out) {
-      if (log)
-        log->Printf("ThreadPlanShouldStopHere::DefaultStepFromHereCallback "
-                    "Queueing StepInRange plan to step through line 0 code.");
-
-      return_plan_sp = current_plan->GetThread().QueueThreadPlanForStepInRange(
-          false, range, sc, NULL, eOnlyDuringStepping, eLazyBoolCalculate,
-          eLazyBoolNo);
+      // If the current plan is a "Step In" plan we should use step in, otherwise
+      // just step over:
+      if (current_plan->GetKind() == ThreadPlan::eKindStepInRange) {
+        if (log)
+          log->Printf("ThreadPlanShouldStopHere::DefaultStepFromHereCallback "
+                      "Queueing StepInRange plan to step through line 0 code.");
+        return_plan_sp = 
+          current_plan
+            ->GetThread().QueueThreadPlanForStepInRangeNoShouldStop(
+              false, range, sc, NULL, eOnlyDuringStepping, eLazyBoolCalculate,
+              eLazyBoolNo);
+      } else {
+        if (log)
+          log->Printf("ThreadPlanShouldStopHere::DefaultStepFromHereCallback "
+                      "Queueing StepOverRange plan to step through line 0 code.");
+        return_plan_sp = 
+            current_plan->GetThread().QueueThreadPlanForStepOverRange(
+              false, range, sc, eOnlyDuringStepping, eLazyBoolNo);
+      }
     }
   }
 

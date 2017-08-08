@@ -84,10 +84,6 @@ class _WritelnDecorator(object):
             self.write(arg)
         self.write('\n')  # text-mode streams translate to \r\n if needed
 
-#
-# Global variables:
-#
-
 
 def usage(parser):
     parser.print_help()
@@ -275,6 +271,12 @@ def parseOptionsAndInitTestdirs():
     if args.h:
         do_help = True
 
+    if args.lldb_platform_name and args.apple_sdk == "macosx":
+        # We likely know better here.
+        sdk = getSDKForPlatform(args.lldb_platform_name)
+        if sdk != None:
+            args.apple_sdk = sdk
+
     if args.compiler:
         configuration.compiler = os.path.realpath(args.compiler)
         if not is_exe(configuration.compiler):
@@ -334,6 +336,12 @@ def parseOptionsAndInitTestdirs():
     if args.skipCategories:
         configuration.skipCategories = test_categories.validate(
             args.skipCategories, False)
+
+    if args.swiftcompiler:
+        configuration.swiftCompiler = args.swiftcompiler
+
+    if args.swiftlibrary:
+        configuration.swiftLibrary = args.swiftlibrary
 
     if args.E:
         cflags_extras = args.E
@@ -511,10 +519,13 @@ def getXcodeOutputPaths(lldbRootDirectory):
     xcode4_build_dir = ['build', 'lldb', 'Build', 'Products']
 
     configurations = [
+        ['DebugPresubmission'],
         ['Debug'],
         ['DebugClang'],
         ['Release'],
-        ['BuildAndIntegration']]
+        ['BuildAndIntegration'],
+        ['CustomSwift-Debug'],
+        ['CustomSwift-Release']]
     xcode_build_dirs = [xcode3_build_dir, xcode4_build_dir]
     for configuration in configurations:
         for xcode_build_dir in xcode_build_dirs:
@@ -601,6 +612,32 @@ def getOutputPaths(lldbRootDirectory):
     result.append(os.path.join(lldbParentDir, 'build', 'bin'))
     result.append(os.path.join(lldbParentDir, 'build', 'host', 'bin'))
 
+    # linux swiftie build
+    # TODO: add more configurations
+    configurations = ['Ninja-DebugAssert', 'Ninja-RelWithDebInfoAssert']
+    for configuration in configurations:
+        result.append(
+            os.path.join(
+                lldbParentDir,
+                'build',
+                configuration,
+                'lldb-linux-x86_64',
+                'bin'))
+
+    # osx swiftie build
+    configurations = [['Ninja-DebugAssert',
+                       'CustomSwift-Debug'],
+                      ['Ninja-RelWithDebInfoAssert',
+                       'CustomSwift-Release']]  # TODO: add more configurations
+    for configuration in configurations:
+        result.append(
+            os.path.join(
+                lldbParentDir,
+                'build',
+                configuration[0],
+                'lldb-macosx-x86_64',
+                configuration[1]))
+
     return result
 
 
@@ -642,7 +679,16 @@ def setupSysPath():
     # This is the root of the lldb git/svn checkout
     # When this changes over to a package instead of a standalone script, this
     # will be `lldbsuite.lldb_root`
-    lldbRootDirectory = lldbsuite.lldb_root
+    lldbRootDirectory = os.path.abspath(os.path.join(scriptPath, os.pardir))
+    # if we are in packages/Python/lldbsuite, we are too deep and not really at our root
+    # so go up a few more times
+    if os.path.basename(lldbRootDirectory) == 'lldbsuite':
+        lldbRootDirectory = os.path.abspath(
+            os.path.join(
+                lldbRootDirectory,
+                os.pardir,
+                os.pardir,
+                os.pardir))
 
     # Some of the tests can invoke the 'lldb' command directly.
     # We'll try to locate the appropriate executable right here.
@@ -1014,6 +1060,33 @@ def isMultiprocessTestRunner():
     return not (
         configuration.is_inferior_test_runner or configuration.no_multiprocess_test_runner)
 
+def getSDKForPlatform(platform):
+    sdks = {
+        'ios-simulator': 'iphonesimulator',
+        'tvos-simulator': 'appletvsimulator',
+        'watchos-simulator': 'watchsimulator',
+        'remote-ios': 'iphoneos',
+        'remote-tvos': 'appletvos',
+        'remote-watchos': 'watchos'
+    }
+    if platform in sdks:
+        return sdks[platform]
+    else:
+        return None
+
+def getInfixForPlatform(platform):
+    infixes = {
+        'ios-simulator': '-apple-ios',
+        'tvos-simulator': '-apple-tvos',
+        'watchos-simulator': '-apple-watchos',
+        'remote-ios': '-apple-ios',
+        'remote-tvos': '-apple-tvos',
+        'remote-watchos': '-apple-watchos'
+    }
+    if platform in infixes:
+        return infixes[platform]
+    else:
+        return None
 
 def getVersionForSDK(sdk):
     sdk = str.lower(sdk)
@@ -1034,9 +1107,10 @@ def getPathForSDK(sdk):
 
 
 def setDefaultTripleForPlatform():
-    if configuration.lldb_platform_name == 'ios-simulator':
-        triple_str = 'x86_64-apple-ios%s' % (
-            getVersionForSDK('iphonesimulator'))
+    infix = getInfixForPlatform(configuration.lldb_platform_name)
+    sdk = getSDKForPlatform(configuration.lldb_platform_name)
+    if infix != None and sdk != None and len(configuration.archs) > 0:
+        triple_str = configuration.archs[0] + infix + getVersionForSDK(sdk)
         os.environ['TRIPLE'] = triple_str
         return {'TRIPLE': triple_str}
     return {}
@@ -1136,6 +1210,7 @@ def run_suite():
               (configuration.lldb_platform_name))
         lldb.remote_platform = lldb.SBPlatform(
             configuration.lldb_platform_name)
+        lldb.remote_platform_name = configuration.lldb_platform_name
         if not lldb.remote_platform.IsValid():
             print(
                 "error: unable to create the LLDB platform named '%s'." %
@@ -1253,6 +1328,10 @@ def run_suite():
     # Iterating over all possible architecture and compiler combinations.
     os.environ["ARCH"] = configuration.arch
     os.environ["CC"] = configuration.compiler
+    if configuration.swiftCompiler:
+        os.environ["SWIFTCC"] = configuration.swiftCompiler
+    if configuration.swiftLibrary:
+        os.environ["USERSWIFTLIBRARY"] = configuration.swiftLibrary
     configString = "arch=%s compiler=%s" % (configuration.arch,
                                             configuration.compiler)
 
