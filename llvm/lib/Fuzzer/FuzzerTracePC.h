@@ -135,9 +135,8 @@ class TracePC {
 
   template<class CallBack>
   void ForEachObservedPC(CallBack CB) {
-    if (ObservedPCs)
-      for (auto PC : *ObservedPCs)
-        CB(PC);
+    for (auto PC : ObservedPCs)
+      CB(PC);
   }
 
 private:
@@ -164,7 +163,7 @@ private:
   uint8_t *Counters() const;
   uintptr_t *PCs() const;
 
-  std::set<uintptr_t> *ObservedPCs;
+  std::set<uintptr_t> ObservedPCs;
 
   ValueBitMap ValueProfileMap;
   uintptr_t InitialStack, LowestStack;  // Assume stack grows down.

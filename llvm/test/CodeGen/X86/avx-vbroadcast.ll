@@ -851,6 +851,30 @@ define <4 x double> @broadcast_shuffle_1000(double* %p) {
   ret <4 x double> %3
 }
 
+define <4 x double> @broadcast_shuffle1032(double* %p) {
+; X32-LABEL: broadcast_shuffle1032:
+; X32:       ## BB#0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
+; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; X32-NEXT:    retl
+;
+; X64-LABEL: broadcast_shuffle1032:
+; X64:       ## BB#0:
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
+; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; X64-NEXT:    retq
+  %1 = load double, double* %p
+  %2 = insertelement <2 x double> undef, double %1, i32 1
+  %3 = insertelement <2 x double> undef, double %1, i32 0
+  %4 = shufflevector <2 x double> %2, <2 x double> %3, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  ret <4 x double> %4
+}
+
 ;
 ; When VBROADCAST replaces an existing load, ensure it still respects lifetime dependencies.
 ;

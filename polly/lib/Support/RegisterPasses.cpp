@@ -78,7 +78,7 @@ static cl::opt<PassPositionChoice> PassPosition(
                    "After the loop optimizer (but within the inline cycle)"),
         clEnumValN(POSITION_BEFORE_VECTORIZER, "before-vectorizer",
                    "Right before the vectorizer")),
-    cl::Hidden, cl::init(POSITION_EARLY), cl::ZeroOrMore,
+    cl::Hidden, cl::init(POSITION_BEFORE_VECTORIZER), cl::ZeroOrMore,
     cl::cat(PollyCategory));
 
 static cl::opt<OptimizerChoice>
@@ -227,7 +227,7 @@ static cl::list<std::string> DumpAfterFile(
 static cl::opt<bool>
     EnableDeLICM("polly-enable-delicm",
                  cl::desc("Eliminate scalar loop carried dependences"),
-                 cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+                 cl::Hidden, cl::init(true), cl::cat(PollyCategory));
 
 static cl::opt<bool>
     EnableSimplify("polly-enable-simplify",

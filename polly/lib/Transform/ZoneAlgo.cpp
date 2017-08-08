@@ -284,6 +284,29 @@ ZoneAlgorithm::ZoneAlgorithm(const char *PassName, Scop *S, LoopInfo *LI)
   ScatterSpace = getScatterSpace(Schedule);
 }
 
+/// Check if all stores in @p Stmt store the very same value.
+///
+/// TODO: In the future we may want to extent this to make the checks
+///       specific to different memory locations.
+static bool onlySameValueWrites(ScopStmt *Stmt) {
+  Value *V = nullptr;
+
+  for (auto *MA : *Stmt) {
+    if (!MA->isLatestArrayKind() || !MA->isMustWrite() ||
+        !MA->isOriginalArrayKind())
+      continue;
+
+    if (!V) {
+      V = MA->getAccessValue();
+      continue;
+    }
+
+    if (V != MA->getAccessValue())
+      return false;
+  }
+  return true;
+}
+
 bool ZoneAlgorithm::isCompatibleStmt(ScopStmt *Stmt) {
   auto Stores = makeEmptyUnionMap();
   auto Loads = makeEmptyUnionMap();
@@ -338,11 +361,13 @@ bool ZoneAlgorithm::isCompatibleStmt(ScopStmt *Stmt) {
     if (!isl_union_map_is_disjoint(Stores.keep(), AccRel.keep())) {
       OptimizationRemarkMissed R(PassName, "StoreAfterStore",
                                  MA->getAccessInstruction());
-      R << "store after store of same element in same statement";
-      R << " (previous stores: " << Stores;
-      R << ", storing: " << AccRel << ")";
-      S->getFunction().getContext().diagnose(R);
-      return false;
+      if (!onlySameValueWrites(Stmt)) {
+        R << "store after store of same element in same statement";
+        R << " (previous stores: " << Stores;
+        R << ", storing: " << AccRel << ")";
+        S->getFunction().getContext().diagnose(R);
+        return false;
+      }
     }
 
     Stores = give(isl_union_map_union(Stores.take(), AccRel.take()));

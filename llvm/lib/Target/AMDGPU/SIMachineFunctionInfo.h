@@ -1,4 +1,4 @@
-//===- SIMachineFunctionInfo.h - SIMachineFunctionInfo interface -*- C++ -*-==//
+//==- SIMachineFunctionInfo.h - SIMachineFunctionInfo interface --*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,23 +15,30 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIMACHINEFUNCTIONINFO_H
 
 #include "AMDGPUMachineFunction.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "AMDGPUArgumentUsageInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <array>
 #include <cassert>
-#include <map>
 #include <utility>
+#include <vector>
 
 namespace llvm {
+
+class MachineFrameInfo;
+class MachineFunction;
+class TargetRegisterClass;
 
 class AMDGPUImagePseudoSourceValue : public PseudoSourceValue {
 public:
   explicit AMDGPUImagePseudoSourceValue() :
-    PseudoSourceValue(PseudoSourceValue::TargetCustom) { }
+    PseudoSourceValue(PseudoSourceValue::TargetCustom) {}
 
   bool isConstant(const MachineFrameInfo *) const override {
     // This should probably be true for most images, but we will start by being
@@ -45,7 +52,7 @@ public:
     return false;
   }
 
-  bool mayAlias(const MachineFrameInfo*) const override {
+  bool mayAlias(const MachineFrameInfo *) const override {
     // FIXME: If we ever change image intrinsics to accept fat pointers, then
     // this could be true for some cases.
     return false;
@@ -55,7 +62,7 @@ public:
 class AMDGPUBufferPseudoSourceValue : public PseudoSourceValue {
 public:
   explicit AMDGPUBufferPseudoSourceValue() :
-    PseudoSourceValue(PseudoSourceValue::TargetCustom) { }
+    PseudoSourceValue(PseudoSourceValue::TargetCustom) {}
 
   bool isConstant(const MachineFrameInfo *) const override {
     // This should probably be true for most images, but we will start by being
@@ -69,7 +76,7 @@ public:
     return false;
   }
 
-  bool mayAlias(const MachineFrameInfo*) const override {
+  bool mayAlias(const MachineFrameInfo *) const override {
     // FIXME: If we ever change image intrinsics to accept fat pointers, then
     // this could be true for some cases.
     return false;
@@ -82,57 +89,58 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   // FIXME: This should be removed and getPreloadedValue moved here.
   friend class SIRegisterInfo;
 
-  unsigned TIDReg;
+  unsigned TIDReg = AMDGPU::NoRegister;
 
   // Registers that may be reserved for spilling purposes. These may be the same
   // as the input registers.
-  unsigned ScratchRSrcReg;
-  unsigned ScratchWaveOffsetReg;
+  unsigned ScratchRSrcReg = AMDGPU::PRIVATE_RSRC_REG;
+  unsigned ScratchWaveOffsetReg = AMDGPU::SCRATCH_WAVE_OFFSET_REG;
 
   // This is the current function's incremented size from the kernel's scratch
   // wave offset register. For an entry function, this is exactly the same as
   // the ScratchWaveOffsetReg.
-  unsigned FrameOffsetReg;
+  unsigned FrameOffsetReg = AMDGPU::FP_REG;
 
   // Top of the stack SGPR offset derived from the ScratchWaveOffsetReg.
-  unsigned StackPtrOffsetReg;
+  unsigned StackPtrOffsetReg = AMDGPU::SP_REG;
 
   AMDGPUFunctionArgInfo ArgInfo;
 
   // Graphics info.
-  unsigned PSInputAddr;
-  unsigned PSInputEnable;
+  unsigned PSInputAddr = 0;
+  unsigned PSInputEnable = 0;
 
-  bool ReturnsVoid;
+  bool ReturnsVoid = true;
 
   // A pair of default/requested minimum/maximum flat work group sizes.
   // Minimum - first, maximum - second.
-  std::pair<unsigned, unsigned> FlatWorkGroupSizes;
+  std::pair<unsigned, unsigned> FlatWorkGroupSizes = {0, 0};
 
   // A pair of default/requested minimum/maximum number of waves per execution
   // unit. Minimum - first, maximum - second.
-  std::pair<unsigned, unsigned> WavesPerEU;
+  std::pair<unsigned, unsigned> WavesPerEU = {0, 0};
 
   // Stack object indices for work group IDs.
-  std::array<int, 3> DebuggerWorkGroupIDStackObjectIndices;
+  std::array<int, 3> DebuggerWorkGroupIDStackObjectIndices = {{0, 0, 0}};
+
   // Stack object indices for work item IDs.
-  std::array<int, 3> DebuggerWorkItemIDStackObjectIndices;
+  std::array<int, 3> DebuggerWorkItemIDStackObjectIndices = {{0, 0, 0}};
 
   AMDGPUBufferPseudoSourceValue BufferPSV;
   AMDGPUImagePseudoSourceValue ImagePSV;
 
 private:
-  unsigned LDSWaveSpillSize;
+  unsigned LDSWaveSpillSize = 0;
   unsigned ScratchOffsetReg;
-  unsigned NumUserSGPRs;
-  unsigned NumSystemSGPRs;
+  unsigned NumUserSGPRs = 0;
+  unsigned NumSystemSGPRs = 0;
 
-  bool HasSpilledSGPRs;
-  bool HasSpilledVGPRs;
-  bool HasNonSpillStackObjects;
+  bool HasSpilledSGPRs = false;
+  bool HasSpilledVGPRs = false;
+  bool HasNonSpillStackObjects = false;
 
-  unsigned NumSpilledSGPRs;
-  unsigned NumSpilledVGPRs;
+  unsigned NumSpilledSGPRs = 0;
+  unsigned NumSpilledVGPRs = 0;
 
   // Feature bits required for inputs passed in user SGPRs.
   bool PrivateSegmentBuffer : 1;
@@ -180,7 +188,7 @@ public:
     int Lane = -1;
 
     SpilledReg() = default;
-    SpilledReg(unsigned R, int L) : VGPR (R), Lane (L) { }
+    SpilledReg(unsigned R, int L) : VGPR (R), Lane (L) {}
 
     bool hasLane() { return Lane != -1;}
     bool hasReg() { return VGPR != AMDGPU::NoRegister;}
@@ -194,14 +202,12 @@ public:
     // prolog/epilog.
     Optional<int> FI;
 
-    SGPRSpillVGPRCSR(unsigned V, Optional<int> F) :
-      VGPR(V),
-      FI(F) {}
+    SGPRSpillVGPRCSR(unsigned V, Optional<int> F) : VGPR(V), FI(F) {}
   };
 
 private:
   // SGPR->VGPR spilling support.
-  typedef std::pair<unsigned, unsigned> SpillRegMask;
+  using SpillRegMask = std::pair<unsigned, unsigned>;
 
   // Track VGPR + wave index for each subregister of the SGPR spilled to
   // frameindex key.
@@ -225,8 +231,8 @@ public:
   bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);
   void removeSGPRToVGPRFrameIndices(MachineFrameInfo &MFI);
 
-  bool hasCalculatedTID() const { return TIDReg != AMDGPU::NoRegister; };
-  unsigned getTIDReg() const { return TIDReg; };
+  bool hasCalculatedTID() const { return TIDReg != AMDGPU::NoRegister; }
+  unsigned getTIDReg() const { return TIDReg; }
   void setTIDReg(unsigned Reg) { TIDReg = Reg; }
 
   // Add user SGPRs.
@@ -275,7 +281,6 @@ public:
   void setWorkItemIDZ(ArgDescriptor Arg) {
     ArgInfo.WorkItemIDZ = Arg;
   }
-
 
   unsigned addPrivateSegmentWaveByteOffset() {
     ArgInfo.PrivateSegmentWaveByteOffset

@@ -25,7 +25,7 @@ struct KnownBits {
   APInt One;
 
 private:
-  // Internal constructor for creating a ConstantRange from two APInts.
+  // Internal constructor for creating a KnownBits from two APInts.
   KnownBits(APInt Zero, APInt One)
       : Zero(std::move(Zero)), One(std::move(One)) {}
 

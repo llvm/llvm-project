@@ -666,8 +666,8 @@
 // RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -save-temps -no-canonical-prefixes %t1.o %t2.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-TWOCUBIN %s
 
-// CHK-TWOCUBIN: clang-offload-bundler" "-type=o" "{{.*}}inputs={{.*}}tmp1.o" "-outputs={{.*}}.o,{{.*}}tmp1-openmp-nvptx64-nvidia-cuda.cubin" "-unbundle"
-// CHK-TWOCUBIN-NEXT: clang-offload-bundler" "-type=o" "{{.*}}inputs={{.*}}tmp2.o" "-outputs={{.*}}.o,{{.*}}tmp2-openmp-nvptx64-nvidia-cuda.cubin" "-unbundle"
+// CHK-TWOCUBIN: clang-offload-bundler{{[^"]*}}" "-type=o" "{{.*}}inputs={{.*}}tmp1.o" "-outputs={{.*}}.o,{{.*}}tmp1-openmp-nvptx64-nvidia-cuda.cubin" "-unbundle"
+// CHK-TWOCUBIN-NEXT: clang-offload-bundler{{[^"]*}}" "-type=o" "{{.*}}inputs={{.*}}tmp2.o" "-outputs={{.*}}.o,{{.*}}tmp2-openmp-nvptx64-nvidia-cuda.cubin" "-unbundle"
 // CHK-TWOCUBIN-NEXT: nvlink" "-o" "{{.*}}-openmp-nvptx64-nvidia-cuda" {{.*}} "openmp-offload.c.tmp1-openmp-nvptx64-nvidia-cuda.cubin" "openmp-offload.c.tmp2-openmp-nvptx64-nvidia-cuda.cubin"
 
 /// ###########################################################################

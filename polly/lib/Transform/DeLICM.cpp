@@ -44,7 +44,7 @@ cl::opt<bool> DelicmOverapproximateWrites(
 
 cl::opt<bool> DelicmPartialWrites("polly-delicm-partial-writes",
                                   cl::desc("Allow partial writes"),
-                                  cl::init(false), cl::Hidden,
+                                  cl::init(true), cl::Hidden,
                                   cl::cat(PollyCategory));
 
 cl::opt<bool>

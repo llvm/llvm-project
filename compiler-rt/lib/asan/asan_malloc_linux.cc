@@ -32,7 +32,7 @@ static uptr alloc_memory_for_dlsym[kDlsymAllocPoolSize];
 
 static INLINE bool IsInDlsymAllocPool(const void *ptr) {
   uptr off = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
-  return off < sizeof(alloc_memory_for_dlsym);
+  return off < allocated_for_dlsym * sizeof(alloc_memory_for_dlsym[0]);
 }
 
 static void *AllocateFromLocalPool(uptr size_in_bytes) {

@@ -1,4 +1,4 @@
-//===-- SIMachineFunctionInfo.cpp -------- SI Machine Function Info -------===//
+//===- SIMachineFunctionInfo.cpp - SI Machine Function Info ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,13 +8,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIMachineFunctionInfo.h"
+#include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUSubtarget.h"
-#include "SIInstrInfo.h"
+#include "SIRegisterInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
+#include <cassert>
+#include <vector>
 
 #define MAX_LANES 64
 
@@ -22,27 +28,6 @@ using namespace llvm;
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   : AMDGPUMachineFunction(MF),
-    TIDReg(AMDGPU::NoRegister),
-    ScratchRSrcReg(AMDGPU::PRIVATE_RSRC_REG),
-    ScratchWaveOffsetReg(AMDGPU::SCRATCH_WAVE_OFFSET_REG),
-    FrameOffsetReg(AMDGPU::FP_REG),
-    StackPtrOffsetReg(AMDGPU::SP_REG),
-    ArgInfo(),
-    PSInputAddr(0),
-    PSInputEnable(0),
-    ReturnsVoid(true),
-    FlatWorkGroupSizes(0, 0),
-    WavesPerEU(0, 0),
-    DebuggerWorkGroupIDStackObjectIndices({{0, 0, 0}}),
-    DebuggerWorkItemIDStackObjectIndices({{0, 0, 0}}),
-    LDSWaveSpillSize(0),
-    NumUserSGPRs(0),
-    NumSystemSGPRs(0),
-    HasSpilledSGPRs(false),
-    HasSpilledVGPRs(false),
-    HasNonSpillStackObjects(false),
-    NumSpilledSGPRs(0),
-    NumSpilledVGPRs(0),
     PrivateSegmentBuffer(false),
     DispatchPtr(false),
     QueuePtr(false),

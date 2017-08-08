@@ -1253,6 +1253,10 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
+  LoopAnalysisManager *LAM = nullptr;
+  if (auto *LAMProxy = AM.getCachedResult<LoopAnalysisManagerFunctionProxy>(F))
+    LAM = &LAMProxy->getManager();
+
   const ModuleAnalysisManager &MAM =
       AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
   ProfileSummaryInfo *PSI =
@@ -1278,9 +1282,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     // for unrolling is only needed to get optimization remarks emitted in
     // a forward order.
     Loop &L = *Worklist.pop_back_val();
-#ifndef NDEBUG
     Loop *ParentL = L.getParentLoop();
-#endif
 
     // The API here is quite complex to call, but there are only two interesting
     // states we support: partial and full (or "simple") unrolling. However, to
@@ -1305,6 +1307,20 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     if (CurChanged && ParentL)
       ParentL->verifyLoop();
 #endif
+
+    // Walk the parent or top-level loops after unrolling to check whether we
+    // actually removed a loop, and if so clear any cached analysis results for
+    // it. We have to do this immediately as the next unrolling could allocate
+    // a new loop object that ends up with the same address as the deleted loop
+    // object causing cache collisions.
+    if (LAM) {
+      bool IsCurLoopValid =
+          ParentL
+              ? llvm::any_of(*ParentL, [&](Loop *SibL) { return SibL == &L; })
+              : llvm::any_of(LI, [&](Loop *SibL) { return SibL == &L; });
+      if (!IsCurLoopValid)
+        LAM->clear(L);
+    }
   }
 
   if (!Changed)
