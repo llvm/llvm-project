@@ -477,7 +477,7 @@ public:
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
 
-  InstructionMatcher &addInstructionMatcher();
+  InstructionMatcher &addInstructionMatcher(StringRef SymbolicName);
   void addRequiredFeature(Record *Feature);
   const std::vector<Record *> &getRequiredFeatures() const;
 
@@ -500,6 +500,8 @@ public:
   defined_insn_vars() const {
     return make_range(defined_insn_vars_begin(), defined_insn_vars_end());
   }
+
+  const InstructionMatcher &getInstructionMatcher(StringRef SymbolicName) const;
 
   void emitCaptureOpcodes(MatchTable &Table);
 
@@ -575,8 +577,8 @@ public:
   /// are represented by a virtual register defined by a G_CONSTANT instruction.
   enum PredicateKind {
     OPM_ComplexPattern,
-    OPM_Instruction,
     OPM_IntrinsicID,
+    OPM_Instruction,
     OPM_Int,
     OPM_LiteralInt,
     OPM_LLT,
@@ -619,9 +621,7 @@ public:
   /// Compare the priority of this object and B.
   ///
   /// Returns true if this object is more important than B.
-  virtual bool isHigherPriorityThan(const OperandPredicateMatcher &B) const {
-    return Kind < B.Kind;
-  };
+  virtual bool isHigherPriorityThan(const OperandPredicateMatcher &B) const;
 
   /// Report the maximum number of temporary operands needed by the predicate
   /// matcher.
@@ -987,6 +987,10 @@ public:
 
     return false;
   };
+
+  bool isConstantInstruction() const {
+    return I->TheDef->getName() == "G_CONSTANT";
+  }
 };
 
 /// Generates code to check that a set of predicates and operands match for a
@@ -1004,7 +1008,11 @@ protected:
   /// condition is always true.
   OperandVec Operands;
 
+  std::string SymbolicName;
+
 public:
+  InstructionMatcher(StringRef SymbolicName) : SymbolicName(SymbolicName) {}
+
   /// Add an operand to the matcher.
   OperandMatcher &addOperand(unsigned OpIdx, const std::string &SymbolicName,
                              unsigned AllocatedTemporariesBaseID) {
@@ -1041,6 +1049,7 @@ public:
     llvm_unreachable("Failed to lookup operand");
   }
 
+  StringRef getSymbolicName() const { return SymbolicName; }
   unsigned getNumOperands() const { return Operands.size(); }
   OperandVec::iterator operands_begin() { return Operands.begin(); }
   OperandVec::iterator operands_end() { return Operands.end(); }
@@ -1116,6 +1125,14 @@ public:
                  return A + Operand->countRendererFns();
                });
   }
+
+  bool isConstantInstruction() const {
+    for (const auto &P : predicates())
+      if (const InstructionOpcodeMatcher *Opcode =
+              dyn_cast<InstructionOpcodeMatcher>(P.get()))
+        return Opcode->isConstantInstruction();
+    return false;
+  }
 };
 
 /// Generates code to check that the operand is a register defined by an
@@ -1132,9 +1149,9 @@ protected:
   std::unique_ptr<InstructionMatcher> InsnMatcher;
 
 public:
-  InstructionOperandMatcher()
+  InstructionOperandMatcher(StringRef SymbolicName)
       : OperandPredicateMatcher(OPM_Instruction),
-        InsnMatcher(new InstructionMatcher()) {}
+        InsnMatcher(new InstructionMatcher(SymbolicName)) {}
 
   static bool classof(const OperandPredicateMatcher *P) {
     return P->getKind() == OPM_Instruction;
@@ -1168,6 +1185,7 @@ public:
   enum RendererKind {
     OR_Copy,
     OR_CopySubReg,
+    OR_CopyConstantAsImm,
     OR_Imm,
     OR_Register,
     OR_ComplexPattern
@@ -1202,7 +1220,9 @@ public:
   CopyRenderer(unsigned NewInsnID, const InstructionMatcher &Matched,
                StringRef SymbolicName)
       : OperandRenderer(OR_Copy), NewInsnID(NewInsnID), Matched(Matched),
-        SymbolicName(SymbolicName) {}
+        SymbolicName(SymbolicName) {
+    assert(!SymbolicName.empty() && "Cannot copy from an unspecified source");
+  }
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_Copy;
@@ -1217,6 +1237,38 @@ public:
           << MatchTable::IntValue(NewInsnID) << MatchTable::Comment("OldInsnID")
           << MatchTable::IntValue(OldInsnVarID) << MatchTable::Comment("OpIdx")
           << MatchTable::IntValue(Operand.getOperandIndex())
+          << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
+  }
+};
+
+/// A CopyConstantAsImmRenderer emits code to render a G_CONSTANT instruction to
+/// an extended immediate operand.
+class CopyConstantAsImmRenderer : public OperandRenderer {
+protected:
+  unsigned NewInsnID;
+  /// The name of the operand.
+  const std::string SymbolicName;
+  bool Signed;
+
+public:
+  CopyConstantAsImmRenderer(unsigned NewInsnID, StringRef SymbolicName)
+      : OperandRenderer(OR_CopyConstantAsImm), NewInsnID(NewInsnID),
+        SymbolicName(SymbolicName), Signed(true) {}
+
+  static bool classof(const OperandRenderer *R) {
+    return R->getKind() == OR_CopyConstantAsImm;
+  }
+
+  const StringRef getSymbolicName() const { return SymbolicName; }
+
+  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
+    const InstructionMatcher &InsnMatcher = Rule.getInstructionMatcher(SymbolicName);
+    unsigned OldInsnVarID = Rule.getInsnVarID(InsnMatcher);
+    Table << MatchTable::Opcode(Signed ? "GIR_CopyConstantAsSImm"
+                                       : "GIR_CopyConstantAsUImm")
+          << MatchTable::Comment("NewInsnID") << MatchTable::IntValue(NewInsnID)
+          << MatchTable::Comment("OldInsnID")
+          << MatchTable::IntValue(OldInsnVarID)
           << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
   }
 };
@@ -1479,7 +1531,8 @@ public:
       std::sort(MergeInsnIDs.begin(), MergeInsnIDs.end());
       for (const auto &MergeInsnID : MergeInsnIDs)
         Table << MatchTable::IntValue(MergeInsnID);
-      Table << MatchTable::NamedValue("GIU_MergeMemOperands_EndOfList");
+      Table << MatchTable::NamedValue("GIU_MergeMemOperands_EndOfList")
+            << MatchTable::LineBreak;
     }
 
     Table << MatchTable::Opcode("GIR_EraseFromParent")
@@ -1526,8 +1579,8 @@ public:
   }
 };
 
-InstructionMatcher &RuleMatcher::addInstructionMatcher() {
-  Matchers.emplace_back(new InstructionMatcher());
+InstructionMatcher &RuleMatcher::addInstructionMatcher(StringRef SymbolicName) {
+  Matchers.emplace_back(new InstructionMatcher(SymbolicName));
   return *Matchers.back();
 }
 
@@ -1570,6 +1623,15 @@ unsigned RuleMatcher::getInsnVarID(const InstructionMatcher &InsnMatcher) const 
   if (I != InsnVariableIDs.end())
     return I->second;
   llvm_unreachable("Matched Insn was not captured in a local variable");
+}
+
+const InstructionMatcher &
+RuleMatcher::getInstructionMatcher(StringRef SymbolicName) const {
+  for (const auto &I : InsnVariableIDs)
+    if (I.first->getSymbolicName() == SymbolicName)
+      return *I.first;
+  llvm_unreachable(
+      ("Failed to lookup instruction " + SymbolicName).str().c_str());
 }
 
 /// Emit MatchTable opcodes to check the shape of the match and capture
@@ -1697,6 +1759,32 @@ unsigned RuleMatcher::countRendererFns() const {
       [](unsigned A, const std::unique_ptr<InstructionMatcher> &Matcher) {
         return A + Matcher->countRendererFns();
       });
+}
+
+bool OperandPredicateMatcher::isHigherPriorityThan(
+    const OperandPredicateMatcher &B) const {
+  // Generally speaking, an instruction is more important than an Int or a
+  // LiteralInt because it can cover more nodes but theres an exception to
+  // this. G_CONSTANT's are less important than either of those two because they
+  // are more permissive.
+  if (const InstructionOperandMatcher *AOM =
+          dyn_cast<InstructionOperandMatcher>(this)) {
+    if (AOM->getInsnMatcher().isConstantInstruction()) {
+      if (B.Kind == OPM_Int) {
+        return false;
+      }
+    }
+  }
+  if (const InstructionOperandMatcher *BOM =
+          dyn_cast<InstructionOperandMatcher>(&B)) {
+    if (BOM->getInsnMatcher().isConstantInstruction()) {
+      if (Kind == OPM_Int) {
+        return true;
+      }
+    }
+  }
+
+  return Kind < B.Kind;
 }
 
 //===- GlobalISelEmitter class --------------------------------------------===//
@@ -1844,6 +1932,14 @@ GlobalISelEmitter::createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
   } else {
     assert(SrcGIOrNull &&
            "Expected to have already found an equivalent Instruction");
+    if (SrcGIOrNull->TheDef->getName() == "G_CONSTANT") {
+      // imm still has an operand but we don't need to do anything with it
+      // here since we don't support ImmLeaf predicates yet. However, we still
+      // need to note the hidden operand to get GIM_CheckNumOperands correct.
+      InsnMatcher.addOperand(OpIdx++, "", TempOpIdx);
+      return InsnMatcher;
+    }
+
     // Match the used operands (i.e. the children of the operator).
     for (unsigned i = 0, e = Src->getNumChildren(); i != e; ++i) {
       TreePatternNode *SrcChild = Src->getChild(i);
@@ -1905,7 +2001,7 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
   if (!SrcChild->isLeaf()) {
     // Map the node to a gMIR instruction.
     InstructionOperandMatcher &InsnOperand =
-        OM.addPredicate<InstructionOperandMatcher>();
+        OM.addPredicate<InstructionOperandMatcher>(SrcChild->getName());
     auto InsnMatcherOrError = createAndImportSelDAGMatcher(
         InsnOperand.getInsnMatcher(), SrcChild, TempOpIdx);
     if (auto Error = InsnMatcherOrError.takeError())
@@ -1960,9 +2056,9 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
 Error GlobalISelEmitter::importExplicitUseRenderer(
     BuildMIAction &DstMIBuilder, TreePatternNode *DstChild,
     const InstructionMatcher &InsnMatcher) const {
-  // The only non-leaf child we accept is 'bb': it's an operator because
-  // BasicBlockSDNode isn't inline, but in MI it's just another operand.
   if (!DstChild->isLeaf()) {
+    // We accept 'bb' here. It's an operator because BasicBlockSDNode isn't
+    // inline, but in MI it's just another operand.
     if (DstChild->getOperator()->isSubClassOf("SDNode")) {
       auto &ChildSDNI = CGP.getSDNodeInfo(DstChild->getOperator());
       if (ChildSDNI.getSDClassName() == "BasicBlockSDNode") {
@@ -1971,6 +2067,17 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
         return Error::success();
       }
     }
+
+    // Similarly, imm is an operator in TreePatternNode's view but must be
+    // rendered as operands.
+    // FIXME: The target should be able to choose sign-extended when appropriate
+    //        (e.g. on Mips).
+    if (DstChild->getOperator()->getName() == "imm") {
+      DstMIBuilder.addRenderer<CopyConstantAsImmRenderer>(0,
+                                                          DstChild->getName());
+      return Error::success();
+    }
+
     return failedImport("Dst pattern child isn't a leaf node or an MBB");
   }
 
@@ -2194,7 +2301,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
                         to_string(Src->getExtTypes().size()) + " def(s) vs " +
                         to_string(DstI.Operands.NumDefs) + " def(s))");
 
-  InstructionMatcher &InsnMatcherTemp = M.addInstructionMatcher();
+  InstructionMatcher &InsnMatcherTemp = M.addInstructionMatcher(Src->getName());
   unsigned TempOpIdx = 0;
   auto InsnMatcherOrError =
       createAndImportSelDAGMatcher(InsnMatcherTemp, Src, TempOpIdx);

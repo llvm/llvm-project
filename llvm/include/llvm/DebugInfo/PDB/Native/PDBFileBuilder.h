@@ -31,8 +31,7 @@ class MSFBuilder;
 namespace pdb {
 class DbiStreamBuilder;
 class InfoStreamBuilder;
-class PublicsStreamBuilder;
-class GlobalsStreamBuilder;
+class GSIStreamBuilder;
 class TpiStreamBuilder;
 
 class PDBFileBuilder {
@@ -50,8 +49,7 @@ public:
   TpiStreamBuilder &getTpiBuilder();
   TpiStreamBuilder &getIpiBuilder();
   PDBStringTableBuilder &getStringTableBuilder();
-  PublicsStreamBuilder &getPublicsBuilder();
-  GlobalsStreamBuilder &getGlobalsBuilder();
+  GSIStreamBuilder &getGsiBuilder();
 
   Error commit(StringRef Filename);
 
@@ -68,8 +66,7 @@ private:
   std::unique_ptr<msf::MSFBuilder> Msf;
   std::unique_ptr<InfoStreamBuilder> Info;
   std::unique_ptr<DbiStreamBuilder> Dbi;
-  std::unique_ptr<GlobalsStreamBuilder> Globals;
-  std::unique_ptr<PublicsStreamBuilder> Publics;
+  std::unique_ptr<GSIStreamBuilder> Gsi;
   std::unique_ptr<TpiStreamBuilder> Tpi;
   std::unique_ptr<TpiStreamBuilder> Ipi;
 

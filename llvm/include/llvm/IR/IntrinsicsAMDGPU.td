@@ -788,6 +788,15 @@ def int_amdgcn_mov_dpp :
             [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
              llvm_i1_ty], [IntrNoMem, IntrConvergent]>;
 
+// llvm.amdgcn.update.dpp.i32 <old> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
+// Should be equivalent to:
+// v_mov_b32 <dest> <old>
+// v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
+def int_amdgcn_update_dpp :
+  Intrinsic<[llvm_anyint_ty],
+            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+             llvm_i32_ty, llvm_i1_ty], [IntrNoMem, IntrConvergent]>;
+
 def int_amdgcn_s_dcache_wb :
   GCCBuiltin<"__builtin_amdgcn_s_dcache_wb">,
   Intrinsic<[], [], []>;

@@ -1655,7 +1655,7 @@ struct llvm::ClassInfo {
 
   TypeIndex VShapeTI;
 
-  std::vector<const DICompositeType *> NestedClasses;
+  std::vector<const DIType *> NestedTypes;
 };
 
 void CodeViewDebug::clear() {
@@ -1706,12 +1706,14 @@ ClassInfo CodeViewDebug::collectClassInfo(const DICompositeType *Ty) {
       } else if (DDTy->getTag() == dwarf::DW_TAG_pointer_type &&
                  DDTy->getName() == "__vtbl_ptr_type") {
         Info.VShapeTI = getTypeIndex(DDTy);
+      } else if (DDTy->getTag() == dwarf::DW_TAG_typedef) {
+        Info.NestedTypes.push_back(DDTy);
       } else if (DDTy->getTag() == dwarf::DW_TAG_friend) {
         // Ignore friend members. It appears that MSVC emitted info about
         // friends in the past, but modern versions do not.
       }
     } else if (auto *Composite = dyn_cast<DICompositeType>(Element)) {
-      Info.NestedClasses.push_back(Composite);
+      Info.NestedTypes.push_back(Composite);
     }
     // Skip other unrecognized kinds of elements.
   }
@@ -1920,7 +1922,7 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
   }
 
   // Create nested classes.
-  for (const DICompositeType *Nested : Info.NestedClasses) {
+  for (const DIType *Nested : Info.NestedTypes) {
     NestedTypeRecord R(getTypeIndex(DITypeRef(Nested)), Nested->getName());
     FLBR.writeMemberType(R);
     MemberCount++;
@@ -1928,7 +1930,7 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
 
   TypeIndex FieldTI = FLBR.end(true);
   return std::make_tuple(FieldTI, Info.VShapeTI, MemberCount,
-                         !Info.NestedClasses.empty());
+                         !Info.NestedTypes.empty());
 }
 
 TypeIndex CodeViewDebug::getVBPTypeIndex() {

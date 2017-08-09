@@ -33,7 +33,7 @@ l:
 p:
 # R_AARCH64_ADR_PREL_PG_HI21
 # Test both low and high immediate values
-        adrp x4, a + 20480 # 16384 + 4096
+        adrp x4, a + 20480 // 16384 + 4096
 # Align next label to 16 bytes, so that LDST immediate
 # fields will be non-zero        
         .align 4

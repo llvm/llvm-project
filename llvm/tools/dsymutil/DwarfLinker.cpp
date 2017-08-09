@@ -3325,8 +3325,10 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
   auto DwarfContext = DWARFContext::create(*ErrOrObj);
   RelocationManager RelocMgr(*this);
   for (const auto &CU : DwarfContext->compile_units()) {
-    auto CUDie = CU->getUnitDIE(false);
+    maybeUpdateMaxDwarfVersion(CU->getVersion());
+
     // Recursively get all modules imported by this one.
+    auto CUDie = CU->getUnitDIE(false);
     if (!registerModuleReference(CUDie, *CU, ModuleMap, Indent)) {
       if (Unit) {
         errs() << Filename << ": Clang modules are expected to have exactly"
