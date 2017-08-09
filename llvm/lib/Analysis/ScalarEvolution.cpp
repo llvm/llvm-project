@@ -7582,6 +7582,25 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
             const SCEV *BackedgeTakenCount = getBackedgeTakenCount(LI);
             if (const SCEVConstant *BTCC =
                   dyn_cast<SCEVConstant>(BackedgeTakenCount)) {
+
+              // This trivial case can show up in some degenerate cases where
+              // the incoming IR has not yet been fully simplified.
+              if (BTCC->getValue()->isZero()) {
+                Value *InitValue = nullptr;
+                bool MultipleInitValues = false;
+                for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
+                  if (!LI->contains(PN->getIncomingBlock(i))) {
+                    if (!InitValue)
+                      InitValue = PN->getIncomingValue(i);
+                    else if (InitValue != PN->getIncomingValue(i)) {
+                      MultipleInitValues = true;
+                      break;
+                    }
+                  }
+                  if (!MultipleInitValues && InitValue)
+                    return getSCEV(InitValue);
+                }
+              }
               // Okay, we know how many times the containing loop executes.  If
               // this is a constant evolving PHI node, get the final value at
               // the specified iteration number.
