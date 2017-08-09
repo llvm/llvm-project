@@ -294,6 +294,18 @@ static void emitColumnLabelsForIndex(raw_ostream &OS) {
   OS << tag("tr", join(Columns.begin(), Columns.end(), ""));
 }
 
+std::string
+CoveragePrinterHTML::buildLinkToFile(StringRef SF,
+                                     const FileCoverageSummary &FCS) const {
+  SmallString<128> LinkTextStr(sys::path::relative_path(FCS.Name));
+  sys::path::remove_dots(LinkTextStr, /*remove_dot_dots=*/true);
+  sys::path::native(LinkTextStr);
+  std::string LinkText = escape(LinkTextStr, Opts);
+  std::string LinkTarget =
+      escape(getOutputPath(SF, "html", /*InToplevel=*/false), Opts);
+  return a(LinkTarget, LinkText);
+}
+
 /// Render a file coverage summary (\p FCS) in a table row. If \p IsTotals is
 /// false, link the summary to \p SF.
 void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
@@ -326,13 +338,7 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
   if (IsTotals) {
     Filename = "TOTALS";
   } else {
-    SmallString<128> LinkTextStr(sys::path::relative_path(FCS.Name));
-    sys::path::remove_dots(LinkTextStr, /*remove_dot_dots=*/true);
-    sys::path::native(LinkTextStr);
-    std::string LinkText = escape(LinkTextStr, Opts);
-    std::string LinkTarget =
-        escape(getOutputPath(SF, "html", /*InToplevel=*/false), Opts);
-    Filename = a(LinkTarget, LinkText);
+    Filename = buildLinkToFile(SF, FCS);
   }
 
   Columns.emplace_back(tag("td", tag("pre", Filename)));
@@ -387,16 +393,39 @@ Error CoveragePrinterHTML::createIndexFile(
                         " for information about interpreting this report.");
 
   // Emit a table containing links to reports for each file in the covmapping.
+  // Exclude files which don't contain any regions.
   OSRef << BeginCenteredDiv << BeginTable;
   emitColumnLabelsForIndex(OSRef);
   FileCoverageSummary Totals("TOTALS");
   auto FileReports =
       CoverageReport::prepareFileReports(Coverage, Totals, SourceFiles);
-  for (unsigned I = 0, E = FileReports.size(); I < E; ++I)
-    emitFileSummary(OSRef, SourceFiles[I], FileReports[I]);
+  bool EmptyFiles = false;
+  for (unsigned I = 0, E = FileReports.size(); I < E; ++I) {
+    if (FileReports[I].FunctionCoverage.NumFunctions)
+      emitFileSummary(OSRef, SourceFiles[I], FileReports[I]);
+    else
+      EmptyFiles = true;
+  }
   emitFileSummary(OSRef, "Totals", Totals, /*IsTotals=*/true);
-  OSRef << EndTable << EndCenteredDiv
-        << tag("h5", escape(Opts.getLLVMVersionString(), Opts));
+  OSRef << EndTable << EndCenteredDiv;
+
+  // Emit links to files which don't contain any functions. These are normally
+  // not very useful, but could be relevant for code which abuses the
+  // preprocessor.
+  if (EmptyFiles) {
+    OSRef << tag("p", "Files which contain no functions. (These "
+                      "files contain code pulled into other files "
+                      "by the preprocessor.)\n");
+    OSRef << BeginCenteredDiv << BeginTable;
+    for (unsigned I = 0, E = FileReports.size(); I < E; ++I)
+      if (!FileReports[I].FunctionCoverage.NumFunctions) {
+        std::string Link = buildLinkToFile(SourceFiles[I], FileReports[I]);
+        OSRef << tag("tr", tag("td", tag("pre", Link)), "light-row") << '\n';
+      }
+    OSRef << EndTable << EndCenteredDiv;
+  }
+
+  OSRef << tag("h5", escape(Opts.getLLVMVersionString(), Opts));
   emitEpilog(OSRef);
 
   return Error::success();

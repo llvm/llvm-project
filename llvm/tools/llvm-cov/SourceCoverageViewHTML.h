@@ -38,6 +38,8 @@ private:
   void emitFileSummary(raw_ostream &OS, StringRef SF,
                        const FileCoverageSummary &FCS,
                        bool IsTotals = false) const;
+  std::string buildLinkToFile(StringRef SF,
+                              const FileCoverageSummary &FCS) const;
 };
 
 /// \brief A code coverage view which supports html-based rendering.
