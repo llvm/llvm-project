@@ -18,11 +18,17 @@
 # define BYTE_ORDER __DARWIN_BYTE_ORDER
 # define BIG_ENDIAN __DARWIN_BIG_ENDIAN
 # define LITTLE_ENDIAN __DARWIN_LITTLE_ENDIAN
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || defined(__NetBSD__)
 # include <sys/endian.h>
-# define BYTE_ORDER _BYTE_ORDER
-# define BIG_ENDIAN _BIG_ENDIAN
-# define LITTLE_ENDIAN _LITTLE_ENDIAN
+# ifndef BYTE_ORDER
+#  define BYTE_ORDER _BYTE_ORDER
+# endif
+# ifndef BIG_ENDIAN
+#  define BIG_ENDIAN _BIG_ENDIAN
+# endif
+# ifndef LITTLE_ENDIAN
+#  define LITTLE_ENDIAN _LITTLE_ENDIAN
+# endif
 #elif defined(_WIN32)
 # define BYTE_ORDER 0
 # define BIG_ENDIAN 1

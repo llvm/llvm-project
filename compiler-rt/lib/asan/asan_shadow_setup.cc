@@ -12,6 +12,11 @@
 // Set up the shadow memory.
 //===----------------------------------------------------------------------===//
 
+#include "sanitizer_common/sanitizer_platform.h"
+
+// asan_fuchsia.cc has its own InitializeShadowMemory implementation.
+#if !SANITIZER_FUCHSIA
+
 #include "asan_internal.h"
 #include "asan_mapping.h"
 
@@ -142,3 +147,5 @@ void InitializeShadowMemory() {
 }
 
 }  // namespace __asan
+
+#endif  // !SANITIZER_FUCHSIA

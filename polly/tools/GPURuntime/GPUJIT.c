@@ -1478,12 +1478,18 @@ static PollyGPUDevicePtr *allocateMemoryForDeviceCUDA(long MemSize) {
 
   PollyGPUDevicePtr *DevData = malloc(sizeof(PollyGPUDevicePtr));
   if (DevData == 0) {
-    fprintf(stderr, "Allocate memory for GPU device memory pointer failed.\n");
+    fprintf(stderr,
+            "Allocate memory for GPU device memory pointer failed."
+            " Line: %d | Size: %ld\n",
+            __LINE__, MemSize);
     exit(-1);
   }
   DevData->DevicePtr = (CUDADevicePtr *)malloc(sizeof(CUDADevicePtr));
   if (DevData->DevicePtr == 0) {
-    fprintf(stderr, "Allocate memory for GPU device memory pointer failed.\n");
+    fprintf(stderr,
+            "Allocate memory for GPU device memory pointer failed."
+            " Line: %d | Size: %ld\n",
+            __LINE__, MemSize);
     exit(-1);
   }
 
@@ -1491,7 +1497,10 @@ static PollyGPUDevicePtr *allocateMemoryForDeviceCUDA(long MemSize) {
       CuMemAllocFcnPtr(&(((CUDADevicePtr *)DevData->DevicePtr)->Cuda), MemSize);
 
   if (Res != CUDA_SUCCESS) {
-    fprintf(stderr, "Allocate memory for GPU device memory pointer failed.\n");
+    fprintf(stderr,
+            "Allocate memory for GPU device memory pointer failed."
+            " Line: %d | Size: %ld\n",
+            __LINE__, MemSize);
     exit(-1);
   }
 

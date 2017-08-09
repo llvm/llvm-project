@@ -1,7 +1,7 @@
-// RUN: %check_clang_tidy %s readability-implicit-bool-cast %t \
+// RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: readability-implicit-bool-cast.AllowConditionalIntegerCasts, value: 1}, \
-// RUN:   {key: readability-implicit-bool-cast.AllowConditionalPointerCasts, value: 1}]}' \
+// RUN:  [{key: readability-implicit-bool-conversion.AllowIntegerConditions, value: 1}, \
+// RUN:   {key: readability-implicit-bool-conversion.AllowPointerConditions, value: 1}]}' \
 // RUN: -- -std=c++11
 
 template<typename T>
@@ -15,14 +15,14 @@ struct Struct {
 };
 
 
-void regularImplicitCastIntegerToBoolIsNotIgnored() {
+void regularImplicitConversionIntegerToBoolIsNotIgnored() {
   int integer = 0;
   functionTaking<bool>(integer);
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit cast 'int' -> bool [readability-implicit-bool-cast]
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int' -> bool [readability-implicit-bool-conversion]
   // CHECK-FIXES: functionTaking<bool>(integer != 0);
 }
 
-void implicitCastIntegerToBoolInConditionalsIsAllowed() {
+void implicitConversionIntegerToBoolInConditionalsIsAllowed() {
   if (functionReturningInt()) {}
   if (!functionReturningInt()) {}
   if (functionReturningInt() && functionReturningPointer()) {}
@@ -40,19 +40,19 @@ void implicitCastIntegerToBoolInConditionalsIsAllowed() {
   int *p1 = functionReturningPointer() ?: &value3;
 }
 
-void regularImplicitCastPointerToBoolIsNotIgnored() {
+void regularImplicitConversionPointerToBoolIsNotIgnored() {
   int* pointer = nullptr;
   functionTaking<bool>(pointer);
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit cast 'int *' -> bool
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int *' -> bool
   // CHECK-FIXES: functionTaking<bool>(pointer != nullptr);
 
   int Struct::* memberPointer = &Struct::member;
   functionTaking<bool>(memberPointer);
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit cast 'int Struct::*' -> bool
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int Struct::*' -> bool
   // CHECK-FIXES: functionTaking<bool>(memberPointer != nullptr);
 }
 
-void implicitCastPointerToBoolInConditionalsIsAllowed() {
+void implicitConversionPointerToBoolInConditionalsIsAllowed() {
   if (functionReturningPointer()) {}
   if (not functionReturningPointer()) {}
   int value1 = functionReturningPointer() ? 1 : 2;

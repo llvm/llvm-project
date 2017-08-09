@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-implicit-cast-in-loop %t
+// RUN: %check_clang_tidy %s performance-implicit-conversion-in-loop %t
 
 // ---------- Classes used in the tests ----------
 
@@ -26,8 +26,8 @@ struct View {
   T end();
 };
 
-// With this class, the implicit cast is a call to the (implicit) constructor of
-// the class.
+// With this class, the implicit conversion is a call to the (implicit)
+// constructor of the class.
 template <typename T>
 class ImplicitWrapper {
  public:
@@ -35,8 +35,8 @@ class ImplicitWrapper {
   ImplicitWrapper(const T& t);
 };
 
-// With this class, the implicit cast is a call to the conversion operators of
-// SimpleClass and ComplexClass.
+// With this class, the implicit conversion is a call to the conversion
+// operators of SimpleClass and ComplexClass.
 template <typename T>
 class OperatorWrapper {
  public:
@@ -98,7 +98,7 @@ void ComplexClassRefIterator() {
 
 void ImplicitSimpleClassIterator() {
   for (const ImplicitWrapper<SimpleClass>& foo : SimpleView()) {}
-  // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the loop variable 'foo' is different from the one returned by the iterator and generates an implicit cast; you can either change the type to the correct one ('const SimpleClass &' but 'const auto&' is always a valid option) or remove the reference to make it explicit that you are creating a new value [performance-implicit-cast-in-loop]
+  // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the loop variable 'foo' is different from the one returned by the iterator and generates an implicit conversion; you can either change the type to the matching one ('const SimpleClass &' but 'const auto&' is always a valid option) or remove the reference to make it explicit that you are creating a new value [performance-implicit-conversion-in-loop]
   // for (ImplicitWrapper<SimpleClass>& foo : SimpleView()) {}
   for (const ImplicitWrapper<SimpleClass> foo : SimpleView()) {}
   for (ImplicitWrapper<SimpleClass>foo : SimpleView()) {}

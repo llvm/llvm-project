@@ -314,6 +314,11 @@ INTERCEPTOR(int, swapcontext, struct ucontext_t *oucp,
 }
 #endif  // ASAN_INTERCEPT_SWAPCONTEXT
 
+#if SANITIZER_NETBSD
+#define longjmp __longjmp14
+#define siglongjmp __siglongjmp14
+#endif
+
 INTERCEPTOR(void, longjmp, void *env, int val) {
   __asan_handle_no_return();
   REAL(longjmp)(env, val);

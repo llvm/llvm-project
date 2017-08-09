@@ -1,5 +1,17 @@
 ; RUN: opt %loadPolly -polly-optree -analyze < %s | FileCheck %s -match-full-lines
 ;
+; Forward an operand tree consisting of a speculatable instruction (%add)
+; and a load (%val).
+;
+; for (int j = 0; j < n; j += 1) {
+; bodyA:
+;   double val = B[j];
+;   double add = val + 42.0;
+;
+; bodyB:
+;   A[j] = add;
+; }
+;
 define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
 entry:
   br label %for

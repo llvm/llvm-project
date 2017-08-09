@@ -12,7 +12,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "FasterStringFindCheck.h"
 #include "ForRangeCopyCheck.h"
-#include "ImplicitCastInLoopCheck.h"
+#include "ImplicitConversionInLoopCheck.h"
 #include "InefficientStringConcatenationCheck.h"
 #include "InefficientVectorOperationCheck.h"
 #include "TypePromotionInMathFnCheck.h"
@@ -30,8 +30,8 @@ public:
         "performance-faster-string-find");
     CheckFactories.registerCheck<ForRangeCopyCheck>(
         "performance-for-range-copy");
-    CheckFactories.registerCheck<ImplicitCastInLoopCheck>(
-        "performance-implicit-cast-in-loop");
+    CheckFactories.registerCheck<ImplicitConversionInLoopCheck>(
+        "performance-implicit-conversion-in-loop");
     CheckFactories.registerCheck<InefficientStringConcatenationCheck>(
         "performance-inefficient-string-concatenation");
     CheckFactories.registerCheck<InefficientVectorOperationCheck>(

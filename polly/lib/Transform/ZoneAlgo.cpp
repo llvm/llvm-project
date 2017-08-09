@@ -246,12 +246,7 @@ static bool isMapToUnknown(const isl::map &Map) {
          Space.is_wrapping().is_false() && Space.dim(isl::dim::set) == 0;
 }
 
-/// Return only the mappings that map to known values.
-///
-/// @param UMap { [] -> ValInst[] }
-///
-/// @return { [] -> ValInst[] }
-static isl::union_map filterKnownValInst(const isl::union_map &UMap) {
+isl::union_map polly::filterKnownValInst(const isl::union_map &UMap) {
   isl::union_map Result = isl::union_map::empty(UMap.get_space());
   UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
     if (!isMapToUnknown(Map))

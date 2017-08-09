@@ -3,6 +3,17 @@
 ; Cannot rematerialize %val from B[0] at bodyC because B[0] has been
 ; overwritten in bodyB.
 ;
+; for (int j = 0; j < n; j += 1) {
+; bodyA:
+;   double val = B[j];
+;
+; bodyB:
+;   B[j] = 0.0;
+;
+; bodyC:
+;   A[j] = val;
+; }
+;
 define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
 entry:
   br label %for

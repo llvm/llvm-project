@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
+#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
@@ -298,6 +299,7 @@ static bool remapTypeIndex(TypeIndex &TI, ArrayRef<TypeIndex> TypeIndexMap) {
 static void remapTypesInSymbolRecord(ObjFile *File,
                                      MutableArrayRef<uint8_t> Contents,
                                      const CVIndexMap &IndexMap,
+                                     const TypeTableBuilder &IDTable,
                                      ArrayRef<TiReference> TypeRefs) {
   for (const TiReference &Ref : TypeRefs) {
     unsigned ByteSize = Ref.Count * sizeof(TypeIndex);
@@ -322,11 +324,55 @@ static void remapTypesInSymbolRecord(ObjFile *File,
   }
 }
 
-/// MSVC translates S_PROC_ID_END to S_END.
-uint16_t canonicalizeSymbolKind(SymbolKind Kind) {
-  if (Kind == SymbolKind::S_PROC_ID_END)
-    return SymbolKind::S_END;
-  return Kind;
+static SymbolKind symbolKind(ArrayRef<uint8_t> RecordData) {
+  const RecordPrefix *Prefix =
+      reinterpret_cast<const RecordPrefix *>(RecordData.data());
+  return static_cast<SymbolKind>(uint16_t(Prefix->RecordKind));
+}
+
+/// MSVC translates S_PROC_ID_END to S_END, and S_[LG]PROC32_ID to S_[LG]PROC32
+static void translateIdSymbols(MutableArrayRef<uint8_t> &RecordData,
+                               const TypeTableBuilder &IDTable) {
+  RecordPrefix *Prefix = reinterpret_cast<RecordPrefix *>(RecordData.data());
+
+  SymbolKind Kind = symbolKind(RecordData);
+
+  if (Kind == SymbolKind::S_PROC_ID_END) {
+    Prefix->RecordKind = SymbolKind::S_END;
+    return;
+  }
+
+  // In an object file, GPROC32_ID has an embedded reference which refers to the
+  // single object file type index namespace.  This has already been translated
+  // to the PDB file's ID stream index space, but we need to convert this to a
+  // symbol that refers to the type stream index space.  So we remap again from
+  // ID index space to type index space.
+  if (Kind == SymbolKind::S_GPROC32_ID || Kind == SymbolKind::S_LPROC32_ID) {
+    SmallVector<TiReference, 1> Refs;
+    auto Content = RecordData.drop_front(sizeof(RecordPrefix));
+    CVSymbol Sym(Kind, RecordData);
+    discoverTypeIndicesInSymbol(Sym, Refs);
+    assert(Refs.size() == 1);
+    assert(Refs.front().Count == 1);
+
+    TypeIndex *TI =
+        reinterpret_cast<TypeIndex *>(Content.data() + Refs[0].Offset);
+    // `TI` is the index of a FuncIdRecord or MemberFuncIdRecord which lives in
+    // the IPI stream, whose `FunctionType` member refers to the TPI stream.
+    // Note that LF_FUNC_ID and LF_MEMFUNC_ID have the same record layout, and
+    // in both cases we just need the second type index.
+    if (!TI->isSimple() && !TI->isNoneType()) {
+      ArrayRef<uint8_t> FuncIdData = IDTable.records()[TI->toArrayIndex()];
+      SmallVector<TypeIndex, 2> Indices;
+      discoverTypeIndices(FuncIdData, Indices);
+      assert(Indices.size() == 2);
+      *TI = Indices[1];
+    }
+
+    Kind = (Kind == SymbolKind::S_GPROC32_ID) ? SymbolKind::S_GPROC32
+                                              : SymbolKind::S_LPROC32;
+    Prefix->RecordKind = uint16_t(Kind);
+  }
 }
 
 /// Copy the symbol record. In a PDB, symbol records must be 4 byte aligned.
@@ -344,10 +390,8 @@ static MutableArrayRef<uint8_t> copySymbolForPdb(const CVSymbol &Sym,
   memset(NewData.data() + Sym.length(), 0, Size - Sym.length());
 
   // Update the record prefix length. It should point to the beginning of the
-  // next record. MSVC does some canonicalization of the record kind, so we do
-  // that as well.
+  // next record.
   auto *Prefix = reinterpret_cast<RecordPrefix *>(Mem);
-  Prefix->RecordKind = canonicalizeSymbolKind(Sym.kind());
   Prefix->RecordLen = Size - 2;
   return NewData;
 }
@@ -418,6 +462,7 @@ static void scopeStackClose(SmallVectorImpl<SymbolScope> &Stack,
 
 static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
                                const CVIndexMap &IndexMap,
+                               const TypeTableBuilder &IDTable,
                                BinaryStreamRef SymData) {
   // FIXME: Improve error recovery by warning and skipping records when
   // possible.
@@ -425,11 +470,11 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
   BinaryStreamReader Reader(SymData);
   ExitOnErr(Reader.readArray(Syms, Reader.getLength()));
   SmallVector<SymbolScope, 4> Scopes;
-  for (const CVSymbol &Sym : Syms) {
+  for (CVSymbol Sym : Syms) {
     // Discover type index references in the record. Skip it if we don't know
     // where they are.
     SmallVector<TiReference, 32> TypeRefs;
-    if (!discoverTypeIndices(Sym, TypeRefs)) {
+    if (!discoverTypeIndicesInSymbol(Sym, TypeRefs)) {
       log("ignoring unknown symbol record with kind 0x" + utohexstr(Sym.kind()));
       continue;
     }
@@ -440,13 +485,19 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
     // Re-map all the type index references.
     MutableArrayRef<uint8_t> Contents =
         NewData.drop_front(sizeof(RecordPrefix));
-    remapTypesInSymbolRecord(File, Contents, IndexMap, TypeRefs);
+    remapTypesInSymbolRecord(File, Contents, IndexMap, IDTable, TypeRefs);
+
+    // An object file may have S_xxx_ID symbols, but these get converted to
+    // "real" symbols in a PDB.
+    translateIdSymbols(NewData, IDTable);
+
+    SymbolKind NewKind = symbolKind(NewData);
 
     // Fill in "Parent" and "End" fields by maintaining a stack of scopes.
-    CVSymbol NewSym(Sym.kind(), NewData);
-    if (symbolOpensScope(Sym.kind()))
+    CVSymbol NewSym(NewKind, NewData);
+    if (symbolOpensScope(NewKind))
       scopeStackOpen(Scopes, File->ModuleDBI->getNextSymbolOffset(), NewSym);
-    else if (symbolEndsScope(Sym.kind()))
+    else if (symbolEndsScope(NewKind))
       scopeStackClose(Scopes, File->ModuleDBI->getNextSymbolOffset(), File);
 
     // Add the symbol to the module.
@@ -516,7 +567,7 @@ void PDBLinker::addObjFile(ObjFile *File) {
         File->ModuleDBI->addDebugSubsection(SS);
         break;
       case DebugSubsectionKind::Symbols:
-        mergeSymbolRecords(Alloc, File, IndexMap, SS.getRecordData());
+        mergeSymbolRecords(Alloc, File, IndexMap, IDTable, SS.getRecordData());
         break;
       default:
         // FIXME: Process the rest of the subsections.
