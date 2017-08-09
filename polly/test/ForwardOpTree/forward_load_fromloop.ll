@@ -1,5 +1,19 @@
 ; RUN: opt %loadPolly -polly-optree -analyze < %s | FileCheck %s -match-full-lines
 ;
+; Forward a the LoadInst %val into %bodyB. %val is executed multiple times,
+; we must get the last loaded values.
+;
+; for (int j = 0; j < n; j += 1) {
+;   double val;
+;   for (int i = 0; i < n; i += 1) {
+; bodyA:
+;     val = B[j];
+;   }
+;
+; bodyB:
+;   A[j] = val;
+; }
+;
 define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
 entry:
   br label %for

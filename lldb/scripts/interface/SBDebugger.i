@@ -247,6 +247,34 @@ public:
     void
     SetSelectedPlatform(lldb::SBPlatform &platform);
 
+    %feature("docstring",
+    "Get the number of currently active platforms."
+    ) GetNumPlatforms;
+    uint32_t
+    GetNumPlatforms ();
+
+    %feature("docstring",
+    "Get one of the currently active platforms."
+    ) GetPlatformAtIndex;
+    lldb::SBPlatform
+    GetPlatformAtIndex (uint32_t idx);
+
+    %feature("docstring",
+    "Get the number of available platforms."
+    ) GetNumAvailablePlatforms;
+    uint32_t
+    GetNumAvailablePlatforms ();
+
+    %feature("docstring", "
+    Get the name and description of one of the available platforms.
+
+    @param idx Zero-based index of the platform for which info should be
+               retrieved, must be less than the value returned by
+               GetNumAvailablePlatforms().
+    ") GetAvailablePlatformInfoAtIndex;
+    lldb::SBStructuredData
+    GetAvailablePlatformInfoAtIndex (uint32_t idx);
+
     lldb::SBSourceManager
     GetSourceManager ();
 

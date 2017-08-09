@@ -121,31 +121,6 @@ isl::map computeScalarReachingOverwrite(isl::union_map Schedule,
   return singleton(std::move(ReachOverwrite), ResultSpace);
 }
 
-/// Return whether @p Map maps to an unknown value.
-///
-/// @param { [] -> ValInst[] }
-bool isMapToUnknown(const isl::map &Map) {
-  auto Space = give(isl_space_range(isl_map_get_space(Map.keep())));
-  return !isl_map_has_tuple_id(Map.keep(), isl_dim_set) &&
-         !isl_space_is_wrapping(Space.keep()) &&
-         isl_map_dim(Map.keep(), isl_dim_out) == 0;
-}
-
-/// Return only the mappings that map to known values.
-///
-/// @param UMap { [] -> ValInst[] }
-///
-/// @return { [] -> ValInst[] }
-isl::union_map filterKnownValInst(const isl::union_map &UMap) {
-  auto Result = give(isl_union_map_empty(isl_union_map_get_space(UMap.keep())));
-  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
-    if (!isMapToUnknown(Map))
-      Result = give(isl_union_map_add_map(Result.take(), Map.take()));
-    return isl::stat::ok;
-  });
-  return Result;
-}
-
 /// Try to find a 'natural' extension of a mapped to elements outside its
 /// domain.
 ///
@@ -1048,6 +1023,9 @@ private:
   void mapPHI(const ScopArrayInfo *SAI, isl::map ReadTarget,
               isl::union_map WriteTarget, isl::map Lifetime,
               Knowledge Proposed) {
+    // { Element[] }
+    isl::space ElementSpace = ReadTarget.get_space().range();
+
     // Redirect the PHI incoming writes.
     for (auto *MA : S->getPHIIncomings(SAI)) {
       // { DomainWrite[] }
@@ -1055,11 +1033,13 @@ private:
 
       // { DomainWrite[] -> Element[] }
       auto NewAccRel = give(isl_union_map_intersect_domain(
-          WriteTarget.copy(), isl_union_set_from_set(Domain.take())));
+          WriteTarget.copy(), isl_union_set_from_set(Domain.copy())));
       simplify(NewAccRel);
 
-      assert(isl_union_map_n_map(NewAccRel.keep()) == 1);
-      MA->setNewAccessRelation(isl::map::from_union_map(NewAccRel));
+      isl::space NewAccRelSpace =
+          Domain.get_space().map_from_domain_and_range(ElementSpace);
+      isl::map NewAccRelMap = singleton(NewAccRel, NewAccRelSpace);
+      MA->setNewAccessRelation(NewAccRelMap);
     }
 
     // Redirect the PHI read.

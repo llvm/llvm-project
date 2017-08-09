@@ -54,6 +54,20 @@ static cl::opt<bool>
                    cl::desc("Add run-time performance monitoring"), cl::Hidden,
                    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+namespace polly {
+/// Mark a basic block unreachable.
+///
+/// Marks the basic block @p Block unreachable by equipping it with an
+/// UnreachableInst.
+void markBlockUnreachable(BasicBlock &Block, PollyIRBuilder &Builder) {
+  auto *OrigTerminator = Block.getTerminator();
+  Builder.SetInsertPoint(OrigTerminator);
+  Builder.CreateUnreachable();
+  OrigTerminator->eraseFromParent();
+}
+
+} // namespace polly
+
 namespace {
 
 static void verifyGeneratedFunction(Scop &S, Function &F, IslAstInfo &AI) {
@@ -84,17 +98,6 @@ static void fixRegionInfo(Function &F, Region &ParentRegion, RegionInfo &RI) {
 
     RI.setRegionFor(&BB, &ParentRegion);
   }
-}
-
-/// Mark a basic block unreachable.
-///
-/// Marks the basic block @p Block unreachable by equipping it with an
-/// UnreachableInst.
-static void markBlockUnreachable(BasicBlock &Block, PollyIRBuilder &Builder) {
-  auto *OrigTerminator = Block.getTerminator();
-  Builder.SetInsertPoint(OrigTerminator);
-  Builder.CreateUnreachable();
-  OrigTerminator->eraseFromParent();
 }
 
 /// Remove all lifetime markers (llvm.lifetime.start, llvm.lifetime.end) from

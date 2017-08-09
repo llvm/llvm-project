@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/CodeGen/PPCGCodeGeneration.h"
+#include "polly/CodeGen/CodeGeneration.h"
 #include "polly/CodeGen/IslAst.h"
 #include "polly/CodeGen/IslNodeBuilder.h"
 #include "polly/CodeGen/Utils.h"
@@ -777,6 +778,19 @@ void GPUNodeBuilder::allocateDeviceArrays() {
           ArraySize,
           Builder.CreateMul(Offset,
                             Builder.getInt64(ScopArray->getElemSizeInBytes())));
+    const SCEV *SizeSCEV = SE.getSCEV(ArraySize);
+    // It makes no sense to have an array of size 0. The CUDA API will
+    // throw an error anyway if we invoke `cuMallocManaged` with size `0`. We
+    // choose to be defensive and catch this at the compile phase. It is
+    // most likely that we are doing something wrong with size computation.
+    if (SizeSCEV->isZero()) {
+      errs() << getUniqueScopName(&S)
+             << " has computed array size 0: " << *ArraySize
+             << " | for array: " << *(ScopArray->getBasePtr())
+             << ". This is illegal, exiting.\n";
+      report_fatal_error("array size was computed to be 0");
+    }
+
     Value *DevArray = createCallAllocateMemoryForDevice(ArraySize);
     DevArray->setName(DevArrayName);
     DeviceAllocations[ScopArray] = DevArray;
@@ -2904,7 +2918,7 @@ public:
 
       PPCGArray.space = Array->getSpace().release();
       PPCGArray.type = strdup(TypeName.c_str());
-      PPCGArray.size = Array->getElementType()->getPrimitiveSizeInBits() / 8;
+      PPCGArray.size = DL->getTypeAllocSize(Array->getElementType());
       PPCGArray.name = strdup(Array->getName().c_str());
       PPCGArray.extent = nullptr;
       PPCGArray.n_index = Array->getNumberOfDimensions();
@@ -3373,7 +3387,6 @@ public:
     // TODO: Handle LICM
     auto SplitBlock = StartBlock->getSinglePredecessor();
     Builder.SetInsertPoint(SplitBlock->getTerminator());
-    NodeBuilder.addParameters(S->getContext().release());
 
     isl_ast_build *Build = isl_ast_build_alloc(S->getIslCtx());
     isl_ast_expr *Condition = IslAst::buildRunCondition(*S, Build);
@@ -3383,17 +3396,34 @@ public:
 
     // preload invariant loads. Note: This should happen before the RTC
     // because the RTC may depend on values that are invariant load hoisted.
-    if (!NodeBuilder.preloadInvariantLoads())
-      report_fatal_error("preloading invariant loads failed in function: " +
-                         S->getFunction().getName() +
-                         " | Scop Region: " + S->getNameStr());
+    if (!NodeBuilder.preloadInvariantLoads()) {
+      DEBUG(dbgs() << "preloading invariant loads failed in function: " +
+                          S->getFunction().getName() +
+                          " | Scop Region: " + S->getNameStr());
+      // adjust the dominator tree accordingly.
+      auto *ExitingBlock = StartBlock->getUniqueSuccessor();
+      assert(ExitingBlock);
+      auto *MergeBlock = ExitingBlock->getUniqueSuccessor();
+      assert(MergeBlock);
+      polly::markBlockUnreachable(*StartBlock, Builder);
+      polly::markBlockUnreachable(*ExitingBlock, Builder);
+      auto *ExitingBB = S->getExitingBlock();
+      assert(ExitingBB);
 
-    Value *RTC = NodeBuilder.createRTC(Condition);
-    Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
+      DT->changeImmediateDominator(MergeBlock, ExitingBB);
+      DT->eraseNode(ExitingBlock);
+      isl_ast_expr_free(Condition);
+      isl_ast_node_free(Root);
+    } else {
 
-    Builder.SetInsertPoint(&*StartBlock->begin());
+      NodeBuilder.addParameters(S->getContext().release());
+      Value *RTC = NodeBuilder.createRTC(Condition);
+      Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
 
-    NodeBuilder.create(Root);
+      Builder.SetInsertPoint(&*StartBlock->begin());
+
+      NodeBuilder.create(Root);
+    }
 
     /// In case a sequential kernel has more surrounding loops as any parallel
     /// kernel, the SCoP is probably mostly sequential. Hence, there is no

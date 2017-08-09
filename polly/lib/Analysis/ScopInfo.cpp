@@ -3853,7 +3853,7 @@ bool Scop::canAlwaysBeHoisted(MemoryAccess *MA, bool StmtInvalidCtxIsEmpty,
 
   // If the location might be overwritten we do not hoist it unconditionally.
   //
-  // TODO: This is probably to conservative.
+  // TODO: This is probably too conservative.
   if (!NonHoistableCtxIsEmpty)
     return false;
 

@@ -140,12 +140,14 @@ static llvm::Value *getMemAccInstPointerOperand(Instruction *Inst) {
 
 void ScopAnnotator::annotateSecondLevel(llvm::Instruction *Inst,
                                         llvm::Value *BasePtr) {
-  auto *Ptr = getMemAccInstPointerOperand(Inst);
-  if (!Ptr)
+  auto *PtrSCEV = SE->getSCEV(getMemAccInstPointerOperand(Inst));
+  auto *BasePtrSCEV = SE->getPointerBase(PtrSCEV);
+
+  if (!PtrSCEV)
     return;
-  auto SecondLevelAliasScope = SecondLevelAliasScopeMap.lookup(Ptr);
+  auto SecondLevelAliasScope = SecondLevelAliasScopeMap.lookup(PtrSCEV);
   auto SecondLevelOtherAliasScopeList =
-      SecondLevelOtherAliasScopeListMap.lookup(Ptr);
+      SecondLevelOtherAliasScopeListMap.lookup(PtrSCEV);
   if (!SecondLevelAliasScope) {
     auto AliasScope = AliasScopeMap.lookup(BasePtr);
     if (!AliasScope)
@@ -153,16 +155,16 @@ void ScopAnnotator::annotateSecondLevel(llvm::Instruction *Inst,
     LLVMContext &Ctx = SE->getContext();
     SecondLevelAliasScope = getID(
         Ctx, AliasScope, MDString::get(Ctx, "second level alias metadata"));
-    SecondLevelAliasScopeMap[Ptr] = SecondLevelAliasScope;
+    SecondLevelAliasScopeMap[PtrSCEV] = SecondLevelAliasScope;
     Metadata *Args = {SecondLevelAliasScope};
     auto SecondLevelBasePtrAliasScopeList =
-        SecondLevelAliasScopeMap.lookup(BasePtr);
-    SecondLevelAliasScopeMap[BasePtr] = MDNode::concatenate(
+        SecondLevelAliasScopeMap.lookup(BasePtrSCEV);
+    SecondLevelAliasScopeMap[BasePtrSCEV] = MDNode::concatenate(
         SecondLevelBasePtrAliasScopeList, MDNode::get(Ctx, Args));
     auto OtherAliasScopeList = OtherAliasScopeListMap.lookup(BasePtr);
     SecondLevelOtherAliasScopeList = MDNode::concatenate(
         OtherAliasScopeList, SecondLevelBasePtrAliasScopeList);
-    SecondLevelOtherAliasScopeListMap[Ptr] = SecondLevelOtherAliasScopeList;
+    SecondLevelOtherAliasScopeListMap[PtrSCEV] = SecondLevelOtherAliasScopeList;
   }
   Inst->setMetadata("alias.scope", SecondLevelAliasScope);
   Inst->setMetadata("noalias", SecondLevelOtherAliasScopeList);

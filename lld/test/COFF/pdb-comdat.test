@@ -46,7 +46,7 @@ CHECK:    60 | S_COMPILE3 [size = 60]
 CHECK:         machine = intel x86-x64, Ver = Microsoft (R) Optimizing Compiler, language = c
 CHECK:         frontend = 19.0.24215.1, backend = 19.0.24215.1
 CHECK:         flags = security checks | hot patchable
-CHECK:   120 | S_GPROC32_ID [size = 44] `main`
+CHECK:   120 | S_GPROC32 [size = 44] `main`
 CHECK:         parent = 0, end = 196, addr = 0002:0000, code size = 24
 CHECK:         debug start = 4, debug end = 19, flags = none
 CHECK:   164 | S_FRAMEPROC [size = 32]
@@ -57,7 +57,7 @@ CHECK:   196 | S_END [size = 4]
 CHECK:   200 | S_GDATA32 [size = 24] `global`
 CHECK:         type = 0x0074 (int), addr = 0000:0000
 CHECK:   224 | S_BUILDINFO [size = 8] BuildId = `0x100A`
-CHECK:   232 | S_GPROC32_ID [size = 44] `foo`
+CHECK:   232 | S_GPROC32 [size = 44] `foo`
 CHECK:         parent = 0, end = 308, addr = 0002:0032, code size = 15
 CHECK:         debug start = 0, debug end = 14, flags = none
 CHECK:   276 | S_FRAMEPROC [size = 32]
@@ -71,7 +71,7 @@ CHECK:    60 | S_COMPILE3 [size = 60]
 CHECK:       machine = intel x86-x64, Ver = Microsoft (R) Optimizing Compiler, language = c
 CHECK:       frontend = 19.0.24215.1, backend = 19.0.24215.1
 CHECK:       flags = security checks | hot patchable
-CHECK:   120 | S_GPROC32_ID [size = 44] `bar`
+CHECK:   120 | S_GPROC32 [size = 44] `bar`
 CHECK:       parent = 0, end = 196, addr = 0002:0048, code size = 14
 CHECK:       debug start = 4, debug end = 9, flags = none
 CHECK:   164 | S_FRAMEPROC [size = 32]
@@ -82,7 +82,7 @@ CHECK:   196 | S_END [size = 4]
 CHECK:   200 | S_GDATA32 [size = 24] `global`
 CHECK:       type = 0x0074 (int), addr = 0000:0000
 CHECK:   224 | S_BUILDINFO [size = 8] BuildId = `0x100D`
-CHECK-NOT:   S_GPROC32_ID {{.*}} `foo`
+CHECK-NOT:   S_GPROC32 {{.*}} `foo`
 CHECK-LABEL:   Mod 0002 | `* Linker *`:
 
 Reorder the object files and verify that the other table is selected.

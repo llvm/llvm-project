@@ -1572,24 +1572,24 @@ struct Db
 {
     typedef Vector<Node*> sub_type;
     typedef Vector<sub_type> template_param_type;
-    sub_type names;
-    template_param_type subs;
-    Vector<template_param_type> template_param;
-    Qualifiers cv = QualNone;
-    FunctionRefQual ref = FrefQualNone;
-    unsigned encoding_depth = 0;
-    bool parsed_ctor_dtor_cv = false;
-    bool tag_templates = true;
-    bool fix_forward_references = false;
-    bool try_to_parse_template_args = true;
+    sub_type Names;
+    template_param_type Subs;
+    Vector<template_param_type> TemplateParams;
+    Qualifiers CV = QualNone;
+    FunctionRefQual RefQuals = FrefQualNone;
+    unsigned EncodingDepth = 0;
+    bool ParsedCtorDtorCV = false;
+    bool TagTemplates = true;
+    bool FixForwardReferences = false;
+    bool TryToParseTemplateArgs = true;
 
     BumpPointerAllocator ASTAllocator;
 
     template <size_t N>
     Db(arena<N>& ar) :
-        names(ar),
-        subs(0, names, ar),
-        template_param(0, subs, ar)
+        Names(ar),
+        Subs(0, Names, ar),
+        TemplateParams(0, Subs, ar)
     {}
 
     template <class T, class... Args> T* make(Args&& ...args)
@@ -1609,10 +1609,10 @@ struct Db
 
     NodeArray popTrailingNodeArray(size_t FromPosition)
     {
-        assert(FromPosition <= names.size());
+        assert(FromPosition <= Names.size());
         NodeArray res = makeNodeArray(
-            names.begin() + (long)FromPosition, names.end());
-        names.erase(names.begin() + (long)FromPosition, names.end());
+            Names.begin() + (long)FromPosition, Names.end());
+        Names.erase(Names.begin() + (long)FromPosition, Names.end());
         return res;
     }
 };
@@ -1710,7 +1710,7 @@ parse_floating_number(const char* first, const char* last, Db& db)
     }
     if (*t == 'E')
     {
-        db.names.push_back(
+        db.Names.push_back(
             db.make<FloatExpr<Float>>(StringView(first, t)));
         first = t + 1;
     }
@@ -1739,9 +1739,9 @@ parse_source_name(const char* first, const char* last, Db& db)
             {
                 StringView r(t, t + n);
                 if (r.substr(0, 10) == "_GLOBAL__N")
-                    db.names.push_back(db.make<NameType>("(anonymous namespace)"));
+                    db.Names.push_back(db.make<NameType>("(anonymous namespace)"));
                 else
-                    db.names.push_back(db.make<NameType>(r));
+                    db.Names.push_back(db.make<NameType>(r));
                 first = t + n;
             }
         }
@@ -1770,39 +1770,39 @@ parse_substitution(const char* first, const char* last, Db& db)
             switch (first[1])
             {
             case 'a':
-                db.names.push_back(
+                db.Names.push_back(
                     db.make<SpecialSubstitution>(
                         SpecialSubKind::allocator));
                 first += 2;
                 break;
             case 'b':
-                db.names.push_back(
+                db.Names.push_back(
                     db.make<SpecialSubstitution>(SpecialSubKind::basic_string));
                 first += 2;
                 break;
             case 's':
-                db.names.push_back(
+                db.Names.push_back(
                     db.make<SpecialSubstitution>(
                         SpecialSubKind::string));
                 first += 2;
                 break;
             case 'i':
-                db.names.push_back(db.make<SpecialSubstitution>(SpecialSubKind::istream));
+                db.Names.push_back(db.make<SpecialSubstitution>(SpecialSubKind::istream));
                 first += 2;
                 break;
             case 'o':
-                db.names.push_back(db.make<SpecialSubstitution>(SpecialSubKind::ostream));
+                db.Names.push_back(db.make<SpecialSubstitution>(SpecialSubKind::ostream));
                 first += 2;
                 break;
             case 'd':
-                db.names.push_back(db.make<SpecialSubstitution>(SpecialSubKind::iostream));
+                db.Names.push_back(db.make<SpecialSubstitution>(SpecialSubKind::iostream));
                 first += 2;
                 break;
             case '_':
-                if (!db.subs.empty())
+                if (!db.Subs.empty())
                 {
-                    for (const auto& n : db.subs.front())
-                        db.names.push_back(n);
+                    for (const auto& n : db.Subs.front())
+                        db.Names.push_back(n);
                     first += 2;
                 }
                 break;
@@ -1826,10 +1826,10 @@ parse_substitution(const char* first, const char* last, Db& db)
                     if (t == last || *t != '_')
                         return first;
                     ++sub;
-                    if (sub < db.subs.size())
+                    if (sub < db.Subs.size())
                     {
-                        for (const auto& n : db.subs[sub])
-                            db.names.push_back(n);
+                        for (const auto& n : db.Subs[sub])
+                            db.Names.push_back(n);
                         first = t+1;
                     }
                 }
@@ -1880,87 +1880,87 @@ parse_builtin_type(const char* first, const char* last, Db& db)
         switch (*first)
         {
         case 'v':
-            db.names.push_back(db.make<NameType>("void"));
+            db.Names.push_back(db.make<NameType>("void"));
             ++first;
             break;
         case 'w':
-            db.names.push_back(db.make<NameType>("wchar_t"));
+            db.Names.push_back(db.make<NameType>("wchar_t"));
             ++first;
             break;
         case 'b':
-            db.names.push_back(db.make<NameType>("bool"));
+            db.Names.push_back(db.make<NameType>("bool"));
             ++first;
             break;
         case 'c':
-            db.names.push_back(db.make<NameType>("char"));
+            db.Names.push_back(db.make<NameType>("char"));
             ++first;
             break;
         case 'a':
-            db.names.push_back(db.make<NameType>("signed char"));
+            db.Names.push_back(db.make<NameType>("signed char"));
             ++first;
             break;
         case 'h':
-            db.names.push_back(db.make<NameType>("unsigned char"));
+            db.Names.push_back(db.make<NameType>("unsigned char"));
             ++first;
             break;
         case 's':
-            db.names.push_back(db.make<NameType>("short"));
+            db.Names.push_back(db.make<NameType>("short"));
             ++first;
             break;
         case 't':
-            db.names.push_back(db.make<NameType>("unsigned short"));
+            db.Names.push_back(db.make<NameType>("unsigned short"));
             ++first;
             break;
         case 'i':
-            db.names.push_back(db.make<NameType>("int"));
+            db.Names.push_back(db.make<NameType>("int"));
             ++first;
             break;
         case 'j':
-            db.names.push_back(db.make<NameType>("unsigned int"));
+            db.Names.push_back(db.make<NameType>("unsigned int"));
             ++first;
             break;
         case 'l':
-            db.names.push_back(db.make<NameType>("long"));
+            db.Names.push_back(db.make<NameType>("long"));
             ++first;
             break;
         case 'm':
-            db.names.push_back(db.make<NameType>("unsigned long"));
+            db.Names.push_back(db.make<NameType>("unsigned long"));
             ++first;
             break;
         case 'x':
-            db.names.push_back(db.make<NameType>("long long"));
+            db.Names.push_back(db.make<NameType>("long long"));
             ++first;
             break;
         case 'y':
-            db.names.push_back(db.make<NameType>("unsigned long long"));
+            db.Names.push_back(db.make<NameType>("unsigned long long"));
             ++first;
             break;
         case 'n':
-            db.names.push_back(db.make<NameType>("__int128"));
+            db.Names.push_back(db.make<NameType>("__int128"));
             ++first;
             break;
         case 'o':
-            db.names.push_back(db.make<NameType>("unsigned __int128"));
+            db.Names.push_back(db.make<NameType>("unsigned __int128"));
             ++first;
             break;
         case 'f':
-            db.names.push_back(db.make<NameType>("float"));
+            db.Names.push_back(db.make<NameType>("float"));
             ++first;
             break;
         case 'd':
-            db.names.push_back(db.make<NameType>("double"));
+            db.Names.push_back(db.make<NameType>("double"));
             ++first;
             break;
         case 'e':
-            db.names.push_back(db.make<NameType>("long double"));
+            db.Names.push_back(db.make<NameType>("long double"));
             ++first;
             break;
         case 'g':
-            db.names.push_back(db.make<NameType>("__float128"));
+            db.Names.push_back(db.make<NameType>("__float128"));
             ++first;
             break;
         case 'z':
-            db.names.push_back(db.make<NameType>("..."));
+            db.Names.push_back(db.make<NameType>("..."));
             ++first;
             break;
         case 'u':
@@ -1976,39 +1976,39 @@ parse_builtin_type(const char* first, const char* last, Db& db)
                 switch (first[1])
                 {
                 case 'd':
-                    db.names.push_back(db.make<NameType>("decimal64"));
+                    db.Names.push_back(db.make<NameType>("decimal64"));
                     first += 2;
                     break;
                 case 'e':
-                    db.names.push_back(db.make<NameType>("decimal128"));
+                    db.Names.push_back(db.make<NameType>("decimal128"));
                     first += 2;
                     break;
                 case 'f':
-                    db.names.push_back(db.make<NameType>("decimal32"));
+                    db.Names.push_back(db.make<NameType>("decimal32"));
                     first += 2;
                     break;
                 case 'h':
-                    db.names.push_back(db.make<NameType>("decimal16"));
+                    db.Names.push_back(db.make<NameType>("decimal16"));
                     first += 2;
                     break;
                 case 'i':
-                    db.names.push_back(db.make<NameType>("char32_t"));
+                    db.Names.push_back(db.make<NameType>("char32_t"));
                     first += 2;
                     break;
                 case 's':
-                    db.names.push_back(db.make<NameType>("char16_t"));
+                    db.Names.push_back(db.make<NameType>("char16_t"));
                     first += 2;
                     break;
                 case 'a':
-                    db.names.push_back(db.make<NameType>("auto"));
+                    db.Names.push_back(db.make<NameType>("auto"));
                     first += 2;
                     break;
                 case 'c':
-                    db.names.push_back(db.make<NameType>("decltype(auto)"));
+                    db.Names.push_back(db.make<NameType>("decltype(auto)"));
                     first += 2;
                     break;
                 case 'n':
-                    db.names.push_back(db.make<NameType>("std::nullptr_t"));
+                    db.Names.push_back(db.make<NameType>("std::nullptr_t"));
                     first += 2;
                     break;
                 }
@@ -2058,19 +2058,19 @@ parse_template_param(const char* first, const char* last, Db& db)
         {
             if (first[1] == '_')
             {
-                if (db.template_param.empty())
+                if (db.TemplateParams.empty())
                     return first;
-                if (!db.template_param.back().empty())
+                if (!db.TemplateParams.back().empty())
                 {
-                    for (auto& t : db.template_param.back().front())
-                        db.names.push_back(t);
+                    for (auto& t : db.TemplateParams.back().front())
+                        db.Names.push_back(t);
                     first += 2;
                 }
                 else
                 {
-                    db.names.push_back(db.make<NameType>("T_"));
+                    db.Names.push_back(db.make<NameType>("T_"));
                     first += 2;
-                    db.fix_forward_references = true;
+                    db.FixForwardReferences = true;
                 }
             }
             else if (isdigit(first[1]))
@@ -2082,21 +2082,21 @@ parse_template_param(const char* first, const char* last, Db& db)
                     sub *= 10;
                     sub += static_cast<size_t>(*t - '0');
                 }
-                if (t == last || *t != '_' || db.template_param.empty())
+                if (t == last || *t != '_' || db.TemplateParams.empty())
                     return first;
                 ++sub;
-                if (sub < db.template_param.back().size())
+                if (sub < db.TemplateParams.back().size())
                 {
-                    for (auto& temp : db.template_param.back()[sub])
-                        db.names.push_back(temp);
+                    for (auto& temp : db.TemplateParams.back()[sub])
+                        db.Names.push_back(temp);
                     first = t+1;
                 }
                 else
                 {
-                    db.names.push_back(
+                    db.Names.push_back(
                         db.make<NameType>(StringView(first, t + 1)));
                     first = t+1;
-                    db.fix_forward_references = true;
+                    db.FixForwardReferences = true;
                 }
             }
         }
@@ -2117,14 +2117,14 @@ parse_const_cast_expr(const char* first, const char* last, Db& db)
             const char* t1 = parse_expression(t, last, db);
             if (t1 != t)
             {
-                if (db.names.size() < 2)
+                if (db.Names.size() < 2)
                     return first;
-                auto from_expr = db.names.back();
-                db.names.pop_back();
-                if (db.names.empty())
+                auto from_expr = db.Names.back();
+                db.Names.pop_back();
+                if (db.Names.empty())
                     return first;
-                db.names.back() = db.make<CastExpr>(
-                    "const_cast", db.names.back(), from_expr);
+                db.Names.back() = db.make<CastExpr>(
+                    "const_cast", db.Names.back(), from_expr);
                 first = t1;
             }
         }
@@ -2145,14 +2145,14 @@ parse_dynamic_cast_expr(const char* first, const char* last, Db& db)
             const char* t1 = parse_expression(t, last, db);
             if (t1 != t)
             {
-                if (db.names.size() < 2)
+                if (db.Names.size() < 2)
                     return first;
-                auto from_expr = db.names.back();
-                db.names.pop_back();
-                if (db.names.empty())
+                auto from_expr = db.Names.back();
+                db.Names.pop_back();
+                if (db.Names.empty())
                     return first;
-                db.names.back() = db.make<CastExpr>(
-                    "dynamic_cast", db.names.back(), from_expr);
+                db.Names.back() = db.make<CastExpr>(
+                    "dynamic_cast", db.Names.back(), from_expr);
                 first = t1;
             }
         }
@@ -2173,14 +2173,14 @@ parse_reinterpret_cast_expr(const char* first, const char* last, Db& db)
             const char* t1 = parse_expression(t, last, db);
             if (t1 != t)
             {
-                if (db.names.size() < 2)
+                if (db.Names.size() < 2)
                     return first;
-                auto from_expr = db.names.back();
-                db.names.pop_back();
-                if (db.names.empty())
+                auto from_expr = db.Names.back();
+                db.Names.pop_back();
+                if (db.Names.empty())
                     return first;
-                db.names.back() = db.make<CastExpr>(
-                    "reinterpret_cast", db.names.back(), from_expr);
+                db.Names.back() = db.make<CastExpr>(
+                    "reinterpret_cast", db.Names.back(), from_expr);
                 first = t1;
             }
         }
@@ -2201,12 +2201,12 @@ parse_static_cast_expr(const char* first, const char* last, Db& db)
             const char* t1 = parse_expression(t, last, db);
             if (t1 != t)
             {
-                if (db.names.size() < 2)
+                if (db.Names.size() < 2)
                     return first;
-                auto from_expr = db.names.back();
-                db.names.pop_back();
-                db.names.back() = db.make<CastExpr>(
-                    "static_cast", db.names.back(), from_expr);
+                auto from_expr = db.Names.back();
+                db.Names.pop_back();
+                db.Names.back() = db.make<CastExpr>(
+                    "static_cast", db.Names.back(), from_expr);
                 first = t1;
             }
         }
@@ -2238,10 +2238,10 @@ parse_sizeof_type_expr(const char* first, const char* last, Db& db)
         const char* t = parse_type(first+2, last, db);
         if (t != first+2)
         {
-            if (db.names.empty())
+            if (db.Names.empty())
                 return first;
-            db.names.back() = db.make<EnclosingExpr>(
-                "sizeof (", db.names.back(), ")");
+            db.Names.back() = db.make<EnclosingExpr>(
+                "sizeof (", db.Names.back(), ")");
             first = t;
         }
     }
@@ -2258,10 +2258,10 @@ parse_sizeof_expr_expr(const char* first, const char* last, Db& db)
         const char* t = parse_expression(first+2, last, db);
         if (t != first+2)
         {
-            if (db.names.empty())
+            if (db.Names.empty())
                 return first;
-            db.names.back() = db.make<EnclosingExpr>(
-                "sizeof (", db.names.back(), ")");
+            db.Names.back() = db.make<EnclosingExpr>(
+                "sizeof (", db.Names.back(), ")");
             first = t;
         }
     }
@@ -2275,14 +2275,14 @@ parse_sizeof_param_pack_expr(const char* first, const char* last, Db& db)
 {
     if (last - first >= 3 && first[0] == 's' && first[1] == 'Z' && first[2] == 'T')
     {
-        size_t k0 = db.names.size();
+        size_t k0 = db.Names.size();
         const char* t = parse_template_param(first+2, last, db);
-        size_t k1 = db.names.size();
+        size_t k1 = db.Names.size();
         if (t != first+2 && k0 <= k1)
         {
             Node* sizeof_expr = db.make<SizeofParamPackExpr>(
                 db.popTrailingNodeArray(k0));
-            db.names.push_back(sizeof_expr);
+            db.Names.push_back(sizeof_expr);
             first = t;
         }
     }
@@ -2306,7 +2306,7 @@ parse_function_param(const char* first, const char* last, Db& db)
             const char* t1 = parse_number(t, last);
             if (t1 != last && *t1 == '_')
             {
-                db.names.push_back(
+                db.Names.push_back(
                     db.make<FunctionParam>(StringView(t, t1)));
                 first = t1+1;
             }
@@ -2322,7 +2322,7 @@ parse_function_param(const char* first, const char* last, Db& db)
                 const char* t1 = parse_number(t, last);
                 if (t1 != last && *t1 == '_')
                 {
-                    db.names.push_back(
+                    db.Names.push_back(
                         db.make<FunctionParam>(StringView(t, t1)));
                     first = t1+1;
                 }
@@ -2342,10 +2342,10 @@ parse_sizeof_function_param_pack_expr(const char* first, const char* last, Db& d
         const char* t = parse_function_param(first+2, last, db);
         if (t != first+2)
         {
-            if (db.names.empty())
+            if (db.Names.empty())
                 return first;
-            db.names.back() = db.make<EnclosingExpr>(
-                "sizeof...(", db.names.back(), ")");
+            db.Names.back() = db.make<EnclosingExpr>(
+                "sizeof...(", db.Names.back(), ")");
             first = t;
         }
     }
@@ -2367,10 +2367,10 @@ parse_typeid_expr(const char* first, const char* last, Db& db)
             t = parse_type(first+2, last, db);
         if (t != first+2)
         {
-            if (db.names.empty())
+            if (db.Names.empty())
                 return first;
-            db.names.back() = db.make<EnclosingExpr>(
-                "typeid(", db.names.back(), ")");
+            db.Names.back() = db.make<EnclosingExpr>(
+                "typeid(", db.Names.back(), ")");
             first = t;
         }
     }
@@ -2387,9 +2387,9 @@ parse_throw_expr(const char* first, const char* last, Db& db)
         const char* t = parse_expression(first+2, last, db);
         if (t != first+2)
         {
-            if (db.names.empty())
+            if (db.Names.empty())
                 return first;
-            db.names.back() = db.make<ThrowExpr>(db.names.back());
+            db.Names.back() = db.make<ThrowExpr>(db.Names.back());
             first = t;
         }
     }
@@ -2409,12 +2409,12 @@ parse_dot_star_expr(const char* first, const char* last, Db& db)
             const char* t1 = parse_expression(t, last, db);
             if (t1 != t)
             {
-                if (db.names.size() < 2)
+                if (db.Names.size() < 2)
                     return first;
-                auto rhs_expr = db.names.back();
-                db.names.pop_back();
-                db.names.back() = db.make<MemberExpr>(
-                    db.names.back(), ".*", rhs_expr);
+                auto rhs_expr = db.Names.back();
+                db.Names.pop_back();
+                db.Names.back() = db.make<MemberExpr>(
+                    db.Names.back(), ".*", rhs_expr);
                 first = t1;
             }
         }
@@ -2435,12 +2435,12 @@ parse_simple_id(const char* first, const char* last, Db& db)
             const char* t1 = parse_template_args(t, last, db);
             if (t1 != t)
             {
-                if (db.names.size() < 2)
+                if (db.Names.size() < 2)
                     return first;
-                auto args = db.names.back();
-                db.names.pop_back();
-                db.names.back() =
-                    db.make<NameWithTemplateArgs>(db.names.back(), args);
+                auto args = db.Names.back();
+                db.Names.pop_back();
+                db.Names.back() =
+                    db.make<NameWithTemplateArgs>(db.Names.back(), args);
             }
             first = t1;
         }
@@ -2464,18 +2464,18 @@ parse_unresolved_type(const char* first, const char* last, Db& db)
         {
         case 'T':
           {
-            size_t k0 = db.names.size();
+            size_t k0 = db.Names.size();
             t = parse_template_param(first, last, db);
-            size_t k1 = db.names.size();
+            size_t k1 = db.Names.size();
             if (t != first && k1 == k0 + 1)
             {
-                db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                 first = t;
             }
             else
             {
                 for (; k1 != k0; --k1)
-                    db.names.pop_back();
+                    db.Names.pop_back();
             }
             break;
           }
@@ -2483,9 +2483,9 @@ parse_unresolved_type(const char* first, const char* last, Db& db)
             t = parse_decltype(first, last, db);
             if (t != first)
             {
-                if (db.names.empty())
+                if (db.Names.empty())
                     return first;
-                db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                 first = t;
             }
             break;
@@ -2500,11 +2500,11 @@ parse_unresolved_type(const char* first, const char* last, Db& db)
                     t = parse_unqualified_name(first+2, last, db);
                     if (t != first+2)
                     {
-                        if (db.names.empty())
+                        if (db.Names.empty())
                             return first;
-                        db.names.back() =
-                            db.make<StdQualifiedName>(db.names.back());
-                        db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                        db.Names.back() =
+                            db.make<StdQualifiedName>(db.Names.back());
+                        db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                         first = t;
                     }
                 }
@@ -2528,9 +2528,9 @@ parse_destructor_name(const char* first, const char* last, Db& db)
             t = parse_simple_id(first, last, db);
         if (t != first)
         {
-            if (db.names.empty())
+            if (db.Names.empty())
                 return first;
-            db.names.back() = db.make<DtorName>(db.names.back());
+            db.Names.back() = db.make<DtorName>(db.Names.back());
             first = t;
         }
     }
@@ -2560,13 +2560,13 @@ parse_base_unresolved_name(const char* first, const char* last, Db& db)
                     first = parse_template_args(t, last, db);
                     if (first != t)
                     {
-                        if (db.names.size() < 2)
+                        if (db.Names.size() < 2)
                             return first;
-                        auto args = db.names.back();
-                        db.names.pop_back();
-                        db.names.back() =
+                        auto args = db.Names.back();
+                        db.Names.pop_back();
+                        db.Names.back() =
                             db.make<NameWithTemplateArgs>(
-                                db.names.back(), args);
+                                db.Names.back(), args);
                     }
                 }
             }
@@ -2588,13 +2588,13 @@ parse_base_unresolved_name(const char* first, const char* last, Db& db)
                     first = parse_template_args(t, last, db);
                     if (first != t)
                     {
-                        if (db.names.size() < 2)
+                        if (db.Names.size() < 2)
                             return first;
-                        auto args = db.names.back();
-                        db.names.pop_back();
-                        db.names.back() =
+                        auto args = db.Names.back();
+                        db.Names.pop_back();
+                        db.Names.back() =
                             db.make<NameWithTemplateArgs>(
-                                db.names.back(), args);
+                                db.Names.back(), args);
                     }
                 }
             }
@@ -2640,10 +2640,10 @@ parse_unresolved_name(const char* first, const char* last, Db& db)
         {
             if (global)
             {
-                if (db.names.empty())
+                if (db.Names.empty())
                     return first;
-                db.names.back() =
-                    db.make<GlobalQualifiedName>(db.names.back());
+                db.Names.back() =
+                    db.make<GlobalQualifiedName>(db.Names.back());
             }
             first = t2;
         }
@@ -2659,44 +2659,44 @@ parse_unresolved_name(const char* first, const char* last, Db& db)
                 t1 = parse_template_args(t, last, db);
                 if (t1 != t)
                 {
-                    if (db.names.size() < 2)
+                    if (db.Names.size() < 2)
                         return first;
-                    auto args = db.names.back();
-                    db.names.pop_back();
-                    db.names.back() = db.make<NameWithTemplateArgs>(
-                        db.names.back(), args);
+                    auto args = db.Names.back();
+                    db.Names.pop_back();
+                    db.Names.back() = db.make<NameWithTemplateArgs>(
+                        db.Names.back(), args);
                     t = t1;
                     if (t == last)
                     {
-                        db.names.pop_back();
+                        db.Names.pop_back();
                         return first;
                     }
                 }
                 while (*t != 'E')
                 {
                     t1 = parse_unresolved_qualifier_level(t, last, db);
-                    if (t1 == t || t1 == last || db.names.size() < 2)
+                    if (t1 == t || t1 == last || db.Names.size() < 2)
                         return first;
-                    auto s = db.names.back();
-                    db.names.pop_back();
-                    db.names.back() =
-                        db.make<QualifiedName>(db.names.back(), s);
+                    auto s = db.Names.back();
+                    db.Names.pop_back();
+                    db.Names.back() =
+                        db.make<QualifiedName>(db.Names.back(), s);
                     t = t1;
                 }
                 ++t;
                 t1 = parse_base_unresolved_name(t, last, db);
                 if (t1 == t)
                 {
-                    if (!db.names.empty())
-                        db.names.pop_back();
+                    if (!db.Names.empty())
+                        db.Names.pop_back();
                     return first;
                 }
-                if (db.names.size() < 2)
+                if (db.Names.size() < 2)
                     return first;
-                auto s = db.names.back();
-                db.names.pop_back();
-                db.names.back() =
-                    db.make<QualifiedName>(db.names.back(), s);
+                auto s = db.Names.back();
+                db.Names.pop_back();
+                db.Names.back() =
+                    db.make<QualifiedName>(db.Names.back(), s);
                 first = t1;
             }
             else
@@ -2709,28 +2709,28 @@ parse_unresolved_name(const char* first, const char* last, Db& db)
                     t1 = parse_template_args(t, last, db);
                     if (t1 != t)
                     {
-                        if (db.names.size() < 2)
+                        if (db.Names.size() < 2)
                             return first;
-                        auto args = db.names.back();
-                        db.names.pop_back();
-                        db.names.back() =
+                        auto args = db.Names.back();
+                        db.Names.pop_back();
+                        db.Names.back() =
                             db.make<NameWithTemplateArgs>(
-                                db.names.back(), args);
+                                db.Names.back(), args);
                         t = t1;
                     }
                     t1 = parse_base_unresolved_name(t, last, db);
                     if (t1 == t)
                     {
-                        if (!db.names.empty())
-                            db.names.pop_back();
+                        if (!db.Names.empty())
+                            db.Names.pop_back();
                         return first;
                     }
-                    if (db.names.size() < 2)
+                    if (db.Names.size() < 2)
                         return first;
-                    auto s = db.names.back();
-                    db.names.pop_back();
-                    db.names.back() =
-                        db.make<QualifiedName>(db.names.back(), s);
+                    auto s = db.Names.back();
+                    db.Names.pop_back();
+                    db.Names.back() =
+                        db.make<QualifiedName>(db.Names.back(), s);
                     first = t1;
                 }
                 else
@@ -2741,37 +2741,37 @@ parse_unresolved_name(const char* first, const char* last, Db& db)
                     t = t1;
                     if (global)
                     {
-                        if (db.names.empty())
+                        if (db.Names.empty())
                             return first;
-                        db.names.back() =
+                        db.Names.back() =
                             db.make<GlobalQualifiedName>(
-                                db.names.back());
+                                db.Names.back());
                     }
                     while (*t != 'E')
                     {
                         t1 = parse_unresolved_qualifier_level(t, last, db);
-                        if (t1 == t || t1 == last || db.names.size() < 2)
+                        if (t1 == t || t1 == last || db.Names.size() < 2)
                             return first;
-                        auto s = db.names.back();
-                        db.names.pop_back();
-                        db.names.back() = db.make<QualifiedName>(
-                            db.names.back(), s);
+                        auto s = db.Names.back();
+                        db.Names.pop_back();
+                        db.Names.back() = db.make<QualifiedName>(
+                            db.Names.back(), s);
                         t = t1;
                     }
                     ++t;
                     t1 = parse_base_unresolved_name(t, last, db);
                     if (t1 == t)
                     {
-                        if (!db.names.empty())
-                            db.names.pop_back();
+                        if (!db.Names.empty())
+                            db.Names.pop_back();
                         return first;
                     }
-                    if (db.names.size() < 2)
+                    if (db.Names.size() < 2)
                         return first;
-                    auto s = db.names.back();
-                    db.names.pop_back();
-                    db.names.back() =
-                        db.make<QualifiedName>(db.names.back(), s);
+                    auto s = db.Names.back();
+                    db.Names.pop_back();
+                    db.Names.back() =
+                        db.make<QualifiedName>(db.Names.back(), s);
                     first = t1;
                 }
             }
@@ -2793,13 +2793,13 @@ parse_dot_expr(const char* first, const char* last, Db& db)
             const char* t1 = parse_unresolved_name(t, last, db);
             if (t1 != t)
             {
-                if (db.names.size() < 2)
+                if (db.Names.size() < 2)
                     return first;
-                auto name = db.names.back();
-                db.names.pop_back();
-                if (db.names.empty())
+                auto name = db.Names.back();
+                db.Names.pop_back();
+                if (db.Names.empty())
                     return first;
-                db.names.back() = db.make<MemberExpr>(db.names.back(), ".", name);
+                db.Names.back() = db.make<MemberExpr>(db.Names.back(), ".", name);
                 first = t1;
             }
         }
@@ -2815,11 +2815,11 @@ parse_call_expr(const char* first, const char* last, Db& db)
     if (last - first >= 4 && first[0] == 'c' && first[1] == 'l')
     {
         const char* t = parse_expression(first+2, last, db);
-        if (t == last || t == first + 2 || db.names.empty())
+        if (t == last || t == first + 2 || db.Names.empty())
             return first;
-        Node* callee = db.names.back();
-        db.names.pop_back();
-        size_t args_begin = db.names.size();
+        Node* callee = db.Names.back();
+        db.Names.pop_back();
+        size_t args_begin = db.Names.size();
         while (*t != 'E')
         {
             const char* t1 = parse_expression(t, last, db);
@@ -2827,12 +2827,12 @@ parse_call_expr(const char* first, const char* last, Db& db)
                 return first;
             t = t1;
         }
-        if (db.names.size() < args_begin)
+        if (db.Names.size() < args_begin)
             return first;
         ++t;
         CallExpr* the_call = db.make<CallExpr>(
             callee, db.popTrailingNodeArray(args_begin));
-        db.names.push_back(the_call);
+        db.Names.push_back(the_call);
         first = t;
     }
     return first;
@@ -2862,7 +2862,7 @@ parse_new_expr(const char* first, const char* last, Db& db)
             t += 2;
             if (t == last)
                 return first;
-            size_t first_expr_in_list = db.names.size();
+            size_t first_expr_in_list = db.Names.size();
             NodeArray ExprList, init_list;
             while (*t != '_')
             {
@@ -2871,7 +2871,7 @@ parse_new_expr(const char* first, const char* last, Db& db)
                     return first;
                 t = t1;
             }
-            if (first_expr_in_list > db.names.size())
+            if (first_expr_in_list > db.Names.size())
                 return first;
             ExprList = db.popTrailingNodeArray(first_expr_in_list);
             ++t;
@@ -2884,7 +2884,7 @@ parse_new_expr(const char* first, const char* last, Db& db)
             {
                 t += 2;
                 has_init = true;
-                size_t init_list_begin = db.names.size();
+                size_t init_list_begin = db.Names.size();
                 while (*t != 'E')
                 {
                     t1 = parse_expression(t, last, db);
@@ -2892,15 +2892,15 @@ parse_new_expr(const char* first, const char* last, Db& db)
                         return first;
                     t = t1;
                 }
-                if (init_list_begin > db.names.size())
+                if (init_list_begin > db.Names.size())
                     return first;
                 init_list = db.popTrailingNodeArray(init_list_begin);
             }
-            if (*t != 'E' || db.names.empty())
+            if (*t != 'E' || db.Names.empty())
                 return first;
-            auto type = db.names.back();
-            db.names.pop_back();
-            db.names.push_back(
+            auto type = db.Names.back();
+            db.Names.pop_back();
+            db.Names.push_back(
                 db.make<NewExpr>(ExprList, type, init_list,
                                   parsed_gs, is_array));
             first = t+1;
@@ -2917,14 +2917,14 @@ parse_conversion_expr(const char* first, const char* last, Db& db)
 {
     if (last - first >= 3 && first[0] == 'c' && first[1] == 'v')
     {
-        bool try_to_parse_template_args = db.try_to_parse_template_args;
-        db.try_to_parse_template_args = false;
-        size_t type_begin = db.names.size();
+        bool TryToParseTemplateArgs = db.TryToParseTemplateArgs;
+        db.TryToParseTemplateArgs = false;
+        size_t type_begin = db.Names.size();
         const char* t = parse_type(first+2, last, db);
-        db.try_to_parse_template_args = try_to_parse_template_args;
+        db.TryToParseTemplateArgs = TryToParseTemplateArgs;
         if (t != first+2 && t != last)
         {
-            size_t expr_list_begin = db.names.size();
+            size_t expr_list_begin = db.Names.size();
             if (*t != '_')
             {
                 const char* t1 = parse_expression(t, last, db);
@@ -2949,19 +2949,19 @@ parse_conversion_expr(const char* first, const char* last, Db& db)
                 }
                 ++t;
             }
-            if (db.names.size() < expr_list_begin ||
+            if (db.Names.size() < expr_list_begin ||
                 type_begin > expr_list_begin)
                 return first;
             NodeArray expressions = db.makeNodeArray(
-                db.names.begin() + (long)expr_list_begin, db.names.end());
+                db.Names.begin() + (long)expr_list_begin, db.Names.end());
             NodeArray types = db.makeNodeArray(
-                db.names.begin() + (long)type_begin,
-                db.names.begin() + (long)expr_list_begin);
+                db.Names.begin() + (long)type_begin,
+                db.Names.begin() + (long)expr_list_begin);
             auto* conv_expr = db.make<ConversionExpr>(
                 types, expressions);
-            db.names.erase(
-                db.names.begin() + (long)type_begin, db.names.end());
-            db.names.push_back(conv_expr);
+            db.Names.erase(
+                db.Names.begin() + (long)type_begin, db.Names.end());
+            db.Names.push_back(conv_expr);
             first = t;
         }
     }
@@ -2981,12 +2981,12 @@ parse_arrow_expr(const char* first, const char* last, Db& db)
             const char* t1 = parse_expression(t, last, db);
             if (t1 != t)
             {
-                if (db.names.size() < 2)
+                if (db.Names.size() < 2)
                     return first;
-                auto tmp = db.names.back();
-                db.names.pop_back();
-                db.names.back() = db.make<MemberExpr>(
-                    db.names.back(), "->", tmp);
+                auto tmp = db.Names.back();
+                db.Names.pop_back();
+                db.Names.back() = db.make<MemberExpr>(
+                    db.Names.back(), "->", tmp);
                 first = t1;
             }
         }
@@ -3014,19 +3014,19 @@ parse_function_type(const char* first, const char* last, Db& db)
                     return first;
             }
             const char* t1 = parse_type(t, last, db);
-            if (t1 != t && !db.names.empty())
+            if (t1 != t && !db.Names.empty())
             {
-                Node* ret_type = db.names.back();
-                db.names.pop_back();
-                size_t params_begin = db.names.size();
+                Node* ret_type = db.Names.back();
+                db.Names.pop_back();
+                size_t params_begin = db.Names.size();
                 t = t1;
                 FunctionRefQual RefQuals = FrefQualNone;
                 while (true)
                 {
                     if (t == last)
                     {
-                        if (!db.names.empty())
-                          db.names.pop_back();
+                        if (!db.Names.empty())
+                          db.Names.pop_back();
                         return first;
                     }
                     if (*t == 'E')
@@ -3051,20 +3051,20 @@ parse_function_type(const char* first, const char* last, Db& db)
                         ++t;
                         continue;
                     }
-                    size_t k0 = db.names.size();
+                    size_t k0 = db.Names.size();
                     t1 = parse_type(t, last, db);
-                    size_t k1 = db.names.size();
+                    size_t k1 = db.Names.size();
                     if (t1 == t || t1 == last || k1 < k0)
                         return first;
                     t = t1;
                 }
-                if (db.names.empty() || params_begin > db.names.size())
+                if (db.Names.empty() || params_begin > db.Names.size())
                     return first;
                 Node* fty = db.make<FunctionType>(
                     ret_type, db.popTrailingNodeArray(params_begin));
                 if (RefQuals)
                     fty = db.make<FunctionRefQualType>(fty, RefQuals);
-                db.names.push_back(fty);
+                db.Names.push_back(fty);
                 first = t;
             }
         }
@@ -3085,12 +3085,12 @@ parse_pointer_to_member_type(const char* first, const char* last, Db& db)
             const char* t2 = parse_type(t, last, db);
             if (t2 != t)
             {
-                if (db.names.size() < 2)
+                if (db.Names.size() < 2)
                     return first;
-                auto func = std::move(db.names.back());
-                db.names.pop_back();
-                auto ClassType = std::move(db.names.back());
-                db.names.back() =
+                auto func = std::move(db.Names.back());
+                db.Names.pop_back();
+                auto ClassType = std::move(db.Names.back());
+                db.Names.back() =
                     db.make<PointerToMemberType>(ClassType, func);
                 first = t2;
             }
@@ -3112,9 +3112,9 @@ parse_array_type(const char* first, const char* last, Db& db)
             const char* t = parse_type(first+2, last, db);
             if (t != first+2)
             {
-                if (db.names.empty())
+                if (db.Names.empty())
                     return first;
-                db.names.back() = db.make<ArrayType>(db.names.back());
+                db.Names.back() = db.make<ArrayType>(db.Names.back());
                 first = t;
             }
         }
@@ -3126,10 +3126,10 @@ parse_array_type(const char* first, const char* last, Db& db)
                 const char* t2 = parse_type(t+1, last, db);
                 if (t2 != t+1)
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    db.names.back() =
-                        db.make<ArrayType>(db.names.back(),
+                    db.Names.back() =
+                        db.make<ArrayType>(db.Names.back(),
                                             StringView(first + 1, t));
                     first = t2;
                 }
@@ -3143,12 +3143,12 @@ parse_array_type(const char* first, const char* last, Db& db)
                 const char* t2 = parse_type(++t, last, db);
                 if (t2 != t)
                 {
-                    if (db.names.size() < 2)
+                    if (db.Names.size() < 2)
                         return first;
-                    auto base_type = std::move(db.names.back());
-                    db.names.pop_back();
-                    auto dimension_expr = std::move(db.names.back());
-                    db.names.back() =
+                    auto base_type = std::move(db.Names.back());
+                    db.Names.pop_back();
+                    auto dimension_expr = std::move(db.Names.back());
+                    db.Names.back() =
                         db.make<ArrayType>(base_type, dimension_expr);
                     first = t2;
                 }
@@ -3174,10 +3174,10 @@ parse_decltype(const char* first, const char* last, Db& db)
                 const char* t = parse_expression(first+2, last, db);
                 if (t != first+2 && t != last && *t == 'E')
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    db.names.back() = db.make<EnclosingExpr>(
-                        "decltype(", db.names.back(), ")");
+                    db.Names.back() = db.make<EnclosingExpr>(
+                        "decltype(", db.Names.back(), ")");
                     first = t+1;
                 }
             }
@@ -3213,10 +3213,10 @@ parse_vector_type(const char* first, const char* last, Db& db)
                     const char* t1 = parse_type(t, last, db);
                     if (t1 != t)
                     {
-                        if (db.names.empty())
+                        if (db.Names.empty())
                             return first;
-                        db.names.back() =
-                            db.make<VectorType>(db.names.back(),
+                        db.Names.back() =
+                            db.make<VectorType>(db.Names.back(),
                                                  StringView(num, num + sz));
                         first = t1;
                     }
@@ -3224,7 +3224,7 @@ parse_vector_type(const char* first, const char* last, Db& db)
                 else
                 {
                     ++t;
-                    db.names.push_back(
+                    db.Names.push_back(
                         db.make<VectorType>(StringView(num, num + sz)));
                     first = t;
                 }
@@ -3239,10 +3239,10 @@ parse_vector_type(const char* first, const char* last, Db& db)
                 const char* t = parse_expression(t1, last, db);
                 if (t != t1)
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    num = db.names.back();
-                    db.names.pop_back();
+                    num = db.Names.back();
+                    db.Names.pop_back();
                     t1 = t;
                 }
             }
@@ -3251,17 +3251,17 @@ parse_vector_type(const char* first, const char* last, Db& db)
                 const char* t = parse_type(t1, last, db);
                 if (t != t1)
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
                     if (num)
-                        db.names.back() =
-                            db.make<VectorType>(db.names.back(), num);
+                        db.Names.back() =
+                            db.make<VectorType>(db.Names.back(), num);
                     else
-                        db.names.back() =
-                            db.make<VectorType>(db.names.back(), StringView());
+                        db.Names.back() =
+                            db.make<VectorType>(db.Names.back(), StringView());
                     first = t;
                 } else if (num)
-                    db.names.push_back(num);
+                    db.Names.push_back(num);
             }
         }
     }
@@ -3307,25 +3307,25 @@ parse_type(const char* first, const char* last, Db& db)
                 if (t != first)
                 {
                     bool is_function = *t == 'F';
-                    size_t k0 = db.names.size();
+                    size_t k0 = db.Names.size();
                     const char* t1 = parse_type(t, last, db);
-                    size_t k1 = db.names.size();
+                    size_t k1 = db.Names.size();
                     if (t1 != t)
                     {
                         if (is_function)
-                            db.subs.pop_back();
-                        db.subs.emplace_back(db.names.get_allocator());
+                            db.Subs.pop_back();
+                        db.Subs.emplace_back(db.Names.get_allocator());
                         for (size_t k = k0; k < k1; ++k)
                         {
                             if (cv) {
                                 if (is_function)
-                                    db.names[k] = db.make<FunctionQualType>(
-                                        db.names[k], cv);
+                                    db.Names[k] = db.make<FunctionQualType>(
+                                        db.Names[k], cv);
                                 else
-                                    db.names[k] =
-                                        db.make<QualType>(db.names[k], cv);
+                                    db.Names[k] =
+                                        db.make<QualType>(db.Names[k], cv);
                             }
-                            db.subs.back().push_back(db.names[k]);
+                            db.Subs.back().push_back(db.Names[k]);
                         }
                         first = t1;
                     }
@@ -3347,69 +3347,69 @@ parse_type(const char* first, const char* last, Db& db)
                         t = parse_array_type(first, last, db);
                         if (t != first)
                         {
-                            if (db.names.empty())
+                            if (db.Names.empty())
                                 return first;
                             first = t;
-                            db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                            db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                         }
                         break;
                     case 'C':
                         t = parse_type(first+1, last, db);
                         if (t != first+1)
                         {
-                            if (db.names.empty())
+                            if (db.Names.empty())
                                 return first;
-                            db.names.back() = db.make<PostfixQualifiedType>(
-                                db.names.back(), " complex");
+                            db.Names.back() = db.make<PostfixQualifiedType>(
+                                db.Names.back(), " complex");
                             first = t;
-                            db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                            db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                         }
                         break;
                     case 'F':
                         t = parse_function_type(first, last, db);
                         if (t != first)
                         {
-                            if (db.names.empty())
+                            if (db.Names.empty())
                                 return first;
                             first = t;
-                            db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                            db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                         }
                         break;
                     case 'G':
                         t = parse_type(first+1, last, db);
                         if (t != first+1)
                         {
-                            if (db.names.empty())
+                            if (db.Names.empty())
                                 return first;
-                            db.names.back() = db.make<PostfixQualifiedType>(
-                                db.names.back(), " imaginary");
+                            db.Names.back() = db.make<PostfixQualifiedType>(
+                                db.Names.back(), " imaginary");
                             first = t;
-                            db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                            db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                         }
                         break;
                     case 'M':
                         t = parse_pointer_to_member_type(first, last, db);
                         if (t != first)
                         {
-                            if (db.names.empty())
+                            if (db.Names.empty())
                                 return first;
                             first = t;
-                            db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                            db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                         }
                         break;
                     case 'O':
                       {
-                        size_t k0 = db.names.size();
+                        size_t k0 = db.Names.size();
                         t = parse_type(first+1, last, db);
-                        size_t k1 = db.names.size();
+                        size_t k1 = db.Names.size();
                         if (t != first+1)
                         {
-                            db.subs.emplace_back(db.names.get_allocator());
+                            db.Subs.emplace_back(db.Names.get_allocator());
                             for (size_t k = k0; k < k1; ++k)
                             {
-                                db.names[k] =
-                                    db.make<RValueReferenceType>(db.names[k]);
-                                db.subs.back().push_back(db.names[k]);
+                                db.Names[k] =
+                                    db.make<RValueReferenceType>(db.Names[k]);
+                                db.Subs.back().push_back(db.Names[k]);
                             }
                             first = t;
                         }
@@ -3417,16 +3417,16 @@ parse_type(const char* first, const char* last, Db& db)
                       }
                     case 'P':
                       {
-                        size_t k0 = db.names.size();
+                        size_t k0 = db.Names.size();
                         t = parse_type(first+1, last, db);
-                        size_t k1 = db.names.size();
+                        size_t k1 = db.Names.size();
                         if (t != first+1)
                         {
-                            db.subs.emplace_back(db.names.get_allocator());
+                            db.Subs.emplace_back(db.Names.get_allocator());
                             for (size_t k = k0; k < k1; ++k)
                             {
-                                db.names[k] = db.make<PointerType>(db.names[k]);
-                                db.subs.back().push_back(db.names[k]);
+                                db.Names[k] = db.make<PointerType>(db.Names[k]);
+                                db.Subs.back().push_back(db.Names[k]);
                             }
                             first = t;
                         }
@@ -3434,17 +3434,17 @@ parse_type(const char* first, const char* last, Db& db)
                       }
                     case 'R':
                       {
-                        size_t k0 = db.names.size();
+                        size_t k0 = db.Names.size();
                         t = parse_type(first+1, last, db);
-                        size_t k1 = db.names.size();
+                        size_t k1 = db.Names.size();
                         if (t != first+1)
                         {
-                            db.subs.emplace_back(db.names.get_allocator());
+                            db.Subs.emplace_back(db.Names.get_allocator());
                             for (size_t k = k0; k < k1; ++k)
                             {
-                                db.names[k] =
-                                    db.make<LValueReferenceType>(db.names[k]);
-                                db.subs.back().push_back(db.names[k]);
+                                db.Names[k] =
+                                    db.make<LValueReferenceType>(db.Names[k]);
+                                db.Subs.back().push_back(db.Names[k]);
                             }
                             first = t;
                         }
@@ -3452,27 +3452,27 @@ parse_type(const char* first, const char* last, Db& db)
                       }
                     case 'T':
                       {
-                        size_t k0 = db.names.size();
+                        size_t k0 = db.Names.size();
                         t = parse_template_param(first, last, db);
-                        size_t k1 = db.names.size();
+                        size_t k1 = db.Names.size();
                         if (t != first)
                         {
-                            db.subs.emplace_back(db.names.get_allocator());
+                            db.Subs.emplace_back(db.Names.get_allocator());
                             for (size_t k = k0; k < k1; ++k)
-                                db.subs.back().push_back(db.names[k]);
-                            if (db.try_to_parse_template_args && k1 == k0+1)
+                                db.Subs.back().push_back(db.Names[k]);
+                            if (db.TryToParseTemplateArgs && k1 == k0+1)
                             {
                                 const char* t1 = parse_template_args(t, last, db);
                                 if (t1 != t)
                                 {
-                                    auto args = db.names.back();
-                                    db.names.pop_back();
-                                    db.names.back() = db.make<
+                                    auto args = db.Names.back();
+                                    db.Names.pop_back();
+                                    db.Names.back() = db.make<
                                         NameWithTemplateArgs>(
-                                        db.names.back(), args);
-                                    db.subs.push_back(Db::sub_type(
-                                        1, db.names.back(),
-                                        db.names.get_allocator()));
+                                        db.Names.back(), args);
+                                    db.Subs.push_back(Db::sub_type(
+                                        1, db.Names.back(),
+                                        db.Names.get_allocator()));
                                     t = t1;
                                 }
                             }
@@ -3489,30 +3489,30 @@ parse_type(const char* first, const char* last, Db& db)
                                 const char* t2 = parse_type(t, last, db);
                                 if (t2 != t)
                                 {
-                                    if (db.names.size() < 2)
+                                    if (db.Names.size() < 2)
                                         return first;
-                                    auto type = db.names.back();
-                                    db.names.pop_back();
-                                    if (db.names.back()->K != Node::KNameType ||
-                                        !static_cast<NameType*>(db.names.back())->getName().startsWith("objcproto"))
+                                    auto type = db.Names.back();
+                                    db.Names.pop_back();
+                                    if (db.Names.back()->K != Node::KNameType ||
+                                        !static_cast<NameType*>(db.Names.back())->getName().startsWith("objcproto"))
                                     {
-                                        db.names.back() = db.make<VendorExtQualType>(type, db.names.back());
+                                        db.Names.back() = db.make<VendorExtQualType>(type, db.Names.back());
                                     }
                                     else
                                     {
-                                        auto* proto = static_cast<NameType*>(db.names.back());
-                                        db.names.pop_back();
+                                        auto* proto = static_cast<NameType*>(db.Names.back());
+                                        db.Names.pop_back();
                                         t = parse_source_name(proto->getName().begin() + 9, proto->getName().end(), db);
                                         if (t != proto->getName().begin() + 9)
                                         {
-                                            db.names.back() = db.make<ObjCProtoName>(type, db.names.back());
+                                            db.Names.back() = db.make<ObjCProtoName>(type, db.Names.back());
                                         }
                                         else
                                         {
-                                            db.names.push_back(db.make<VendorExtQualType>(type, proto));
+                                            db.Names.push_back(db.make<VendorExtQualType>(type, proto));
                                         }
                                     }
-                                    db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                                     first = t2;
                                 }
                             }
@@ -3524,9 +3524,9 @@ parse_type(const char* first, const char* last, Db& db)
                             t = parse_name(first, last, db);
                             if (t != first)
                             {
-                                if (db.names.empty())
+                                if (db.Names.empty())
                                     return first;
-                                db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                                db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                                 first = t;
                             }
                         }
@@ -3538,20 +3538,20 @@ parse_type(const char* first, const char* last, Db& db)
                                 first = t;
                                 // Parsed a substitution.  If the substitution is a
                                 //  <template-param> it might be followed by <template-args>.
-                                if (db.try_to_parse_template_args)
+                                if (db.TryToParseTemplateArgs)
                                 {
                                     t = parse_template_args(first, last, db);
                                     if (t != first)
                                     {
-                                        if (db.names.size() < 2)
+                                        if (db.Names.size() < 2)
                                             return first;
-                                        auto template_args = db.names.back();
-                                        db.names.pop_back();
-                                        db.names.back() = db.make<
+                                        auto template_args = db.Names.back();
+                                        db.Names.pop_back();
+                                        db.Names.back() = db.make<
                                           NameWithTemplateArgs>(
-                                              db.names.back(), template_args);
+                                              db.Names.back(), template_args);
                                         // Need to create substitution for <template-template-param> <template-args>
-                                        db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                                        db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                                         first = t;
                                     }
                                 }
@@ -3565,14 +3565,14 @@ parse_type(const char* first, const char* last, Db& db)
                             {
                             case 'p':
                               {
-                                size_t k0 = db.names.size();
+                                size_t k0 = db.Names.size();
                                 t = parse_type(first+2, last, db);
-                                size_t k1 = db.names.size();
+                                size_t k1 = db.Names.size();
                                 if (t != first+2)
                                 {
-                                    db.subs.emplace_back(db.names.get_allocator());
+                                    db.Subs.emplace_back(db.Names.get_allocator());
                                     for (size_t k = k0; k < k1; ++k)
-                                        db.subs.back().push_back(db.names[k]);
+                                        db.Subs.back().push_back(db.Names[k]);
                                     first = t;
                                     return first;
                                 }
@@ -3583,9 +3583,9 @@ parse_type(const char* first, const char* last, Db& db)
                                 t = parse_decltype(first, last, db);
                                 if (t != first)
                                 {
-                                    if (db.names.empty())
+                                    if (db.Names.empty())
                                         return first;
-                                    db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                                     first = t;
                                     return first;
                                 }
@@ -3594,9 +3594,9 @@ parse_type(const char* first, const char* last, Db& db)
                                 t = parse_vector_type(first, last, db);
                                 if (t != first)
                                 {
-                                    if (db.names.empty())
+                                    if (db.Names.empty())
                                         return first;
-                                    db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                                     first = t;
                                     return first;
                                 }
@@ -3617,9 +3617,9 @@ parse_type(const char* first, const char* last, Db& db)
                             t = parse_name(first, last, db);
                             if (t != first)
                             {
-                                if (db.names.empty())
+                                if (db.Names.empty())
                                     return first;
-                                db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                                db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                                 first = t;
                             }
                         }
@@ -3696,20 +3696,20 @@ parse_operator_name(const char* first, const char* last, Db& db)
             switch (first[1])
             {
             case 'a':
-                db.names.push_back(db.make<NameType>("operator&&"));
+                db.Names.push_back(db.make<NameType>("operator&&"));
                 first += 2;
                 break;
             case 'd':
             case 'n':
-                db.names.push_back(db.make<NameType>("operator&"));
+                db.Names.push_back(db.make<NameType>("operator&"));
                 first += 2;
                 break;
             case 'N':
-                db.names.push_back(db.make<NameType>("operator&="));
+                db.Names.push_back(db.make<NameType>("operator&="));
                 first += 2;
                 break;
             case 'S':
-                db.names.push_back(db.make<NameType>("operator="));
+                db.Names.push_back(db.make<NameType>("operator="));
                 first += 2;
                 break;
             }
@@ -3718,30 +3718,30 @@ parse_operator_name(const char* first, const char* last, Db& db)
             switch (first[1])
             {
             case 'l':
-                db.names.push_back(db.make<NameType>("operator()"));
+                db.Names.push_back(db.make<NameType>("operator()"));
                 first += 2;
                 break;
             case 'm':
-                db.names.push_back(db.make<NameType>("operator,"));
+                db.Names.push_back(db.make<NameType>("operator,"));
                 first += 2;
                 break;
             case 'o':
-                db.names.push_back(db.make<NameType>("operator~"));
+                db.Names.push_back(db.make<NameType>("operator~"));
                 first += 2;
                 break;
             case 'v':
                 {
-                    bool try_to_parse_template_args = db.try_to_parse_template_args;
-                    db.try_to_parse_template_args = false;
+                    bool TryToParseTemplateArgs = db.TryToParseTemplateArgs;
+                    db.TryToParseTemplateArgs = false;
                     const char* t = parse_type(first+2, last, db);
-                    db.try_to_parse_template_args = try_to_parse_template_args;
+                    db.TryToParseTemplateArgs = TryToParseTemplateArgs;
                     if (t != first+2)
                     {
-                        if (db.names.empty())
+                        if (db.Names.empty())
                             return first;
-                        db.names.back() =
-                            db.make<ConversionOperatorType>(db.names.back());
-                        db.parsed_ctor_dtor_cv = true;
+                        db.Names.back() =
+                            db.make<ConversionOperatorType>(db.Names.back());
+                        db.ParsedCtorDtorCV = true;
                         first = t;
                     }
                 }
@@ -3752,23 +3752,23 @@ parse_operator_name(const char* first, const char* last, Db& db)
             switch (first[1])
             {
             case 'a':
-                db.names.push_back(db.make<NameType>("operator delete[]"));
+                db.Names.push_back(db.make<NameType>("operator delete[]"));
                 first += 2;
                 break;
             case 'e':
-                db.names.push_back(db.make<NameType>("operator*"));
+                db.Names.push_back(db.make<NameType>("operator*"));
                 first += 2;
                 break;
             case 'l':
-                db.names.push_back(db.make<NameType>("operator delete"));
+                db.Names.push_back(db.make<NameType>("operator delete"));
                 first += 2;
                 break;
             case 'v':
-                db.names.push_back(db.make<NameType>("operator/"));
+                db.Names.push_back(db.make<NameType>("operator/"));
                 first += 2;
                 break;
             case 'V':
-                db.names.push_back(db.make<NameType>("operator/="));
+                db.Names.push_back(db.make<NameType>("operator/="));
                 first += 2;
                 break;
             }
@@ -3777,15 +3777,15 @@ parse_operator_name(const char* first, const char* last, Db& db)
             switch (first[1])
             {
             case 'o':
-                db.names.push_back(db.make<NameType>("operator^"));
+                db.Names.push_back(db.make<NameType>("operator^"));
                 first += 2;
                 break;
             case 'O':
-                db.names.push_back(db.make<NameType>("operator^="));
+                db.Names.push_back(db.make<NameType>("operator^="));
                 first += 2;
                 break;
             case 'q':
-                db.names.push_back(db.make<NameType>("operator=="));
+                db.Names.push_back(db.make<NameType>("operator=="));
                 first += 2;
                 break;
             }
@@ -3794,11 +3794,11 @@ parse_operator_name(const char* first, const char* last, Db& db)
             switch (first[1])
             {
             case 'e':
-                db.names.push_back(db.make<NameType>("operator>="));
+                db.Names.push_back(db.make<NameType>("operator>="));
                 first += 2;
                 break;
             case 't':
-                db.names.push_back(db.make<NameType>("operator>"));
+                db.Names.push_back(db.make<NameType>("operator>"));
                 first += 2;
                 break;
             }
@@ -3806,7 +3806,7 @@ parse_operator_name(const char* first, const char* last, Db& db)
         case 'i':
             if (first[1] == 'x')
             {
-                db.names.push_back(db.make<NameType>("operator[]"));
+                db.Names.push_back(db.make<NameType>("operator[]"));
                 first += 2;
             }
             break;
@@ -3814,7 +3814,7 @@ parse_operator_name(const char* first, const char* last, Db& db)
             switch (first[1])
             {
             case 'e':
-                db.names.push_back(db.make<NameType>("operator<="));
+                db.Names.push_back(db.make<NameType>("operator<="));
                 first += 2;
                 break;
             case 'i':
@@ -3822,24 +3822,24 @@ parse_operator_name(const char* first, const char* last, Db& db)
                     const char* t = parse_source_name(first+2, last, db);
                     if (t != first+2)
                     {
-                        if (db.names.empty())
+                        if (db.Names.empty())
                             return first;
-                        db.names.back() =
-                            db.make<LiteralOperator>(db.names.back());
+                        db.Names.back() =
+                            db.make<LiteralOperator>(db.Names.back());
                         first = t;
                     }
                 }
                 break;
             case 's':
-                db.names.push_back(db.make<NameType>("operator<<"));
+                db.Names.push_back(db.make<NameType>("operator<<"));
                 first += 2;
                 break;
             case 'S':
-                db.names.push_back(db.make<NameType>("operator<<="));
+                db.Names.push_back(db.make<NameType>("operator<<="));
                 first += 2;
                 break;
             case 't':
-                db.names.push_back(db.make<NameType>("operator<"));
+                db.Names.push_back(db.make<NameType>("operator<"));
                 first += 2;
                 break;
             }
@@ -3848,23 +3848,23 @@ parse_operator_name(const char* first, const char* last, Db& db)
             switch (first[1])
             {
             case 'i':
-                db.names.push_back(db.make<NameType>("operator-"));
+                db.Names.push_back(db.make<NameType>("operator-"));
                 first += 2;
                 break;
             case 'I':
-                db.names.push_back(db.make<NameType>("operator-="));
+                db.Names.push_back(db.make<NameType>("operator-="));
                 first += 2;
                 break;
             case 'l':
-                db.names.push_back(db.make<NameType>("operator*"));
+                db.Names.push_back(db.make<NameType>("operator*"));
                 first += 2;
                 break;
             case 'L':
-                db.names.push_back(db.make<NameType>("operator*="));
+                db.Names.push_back(db.make<NameType>("operator*="));
                 first += 2;
                 break;
             case 'm':
-                db.names.push_back(db.make<NameType>("operator--"));
+                db.Names.push_back(db.make<NameType>("operator--"));
                 first += 2;
                 break;
             }
@@ -3873,23 +3873,23 @@ parse_operator_name(const char* first, const char* last, Db& db)
             switch (first[1])
             {
             case 'a':
-                db.names.push_back(db.make<NameType>("operator new[]"));
+                db.Names.push_back(db.make<NameType>("operator new[]"));
                 first += 2;
                 break;
             case 'e':
-                db.names.push_back(db.make<NameType>("operator!="));
+                db.Names.push_back(db.make<NameType>("operator!="));
                 first += 2;
                 break;
             case 'g':
-                db.names.push_back(db.make<NameType>("operator-"));
+                db.Names.push_back(db.make<NameType>("operator-"));
                 first += 2;
                 break;
             case 't':
-                db.names.push_back(db.make<NameType>("operator!"));
+                db.Names.push_back(db.make<NameType>("operator!"));
                 first += 2;
                 break;
             case 'w':
-                db.names.push_back(db.make<NameType>("operator new"));
+                db.Names.push_back(db.make<NameType>("operator new"));
                 first += 2;
                 break;
             }
@@ -3898,15 +3898,15 @@ parse_operator_name(const char* first, const char* last, Db& db)
             switch (first[1])
             {
             case 'o':
-                db.names.push_back(db.make<NameType>("operator||"));
+                db.Names.push_back(db.make<NameType>("operator||"));
                 first += 2;
                 break;
             case 'r':
-                db.names.push_back(db.make<NameType>("operator|"));
+                db.Names.push_back(db.make<NameType>("operator|"));
                 first += 2;
                 break;
             case 'R':
-                db.names.push_back(db.make<NameType>("operator|="));
+                db.Names.push_back(db.make<NameType>("operator|="));
                 first += 2;
                 break;
             }
@@ -3915,27 +3915,27 @@ parse_operator_name(const char* first, const char* last, Db& db)
             switch (first[1])
             {
             case 'm':
-                db.names.push_back(db.make<NameType>("operator->*"));
+                db.Names.push_back(db.make<NameType>("operator->*"));
                 first += 2;
                 break;
             case 'l':
-                db.names.push_back(db.make<NameType>("operator+"));
+                db.Names.push_back(db.make<NameType>("operator+"));
                 first += 2;
                 break;
             case 'L':
-                db.names.push_back(db.make<NameType>("operator+="));
+                db.Names.push_back(db.make<NameType>("operator+="));
                 first += 2;
                 break;
             case 'p':
-                db.names.push_back(db.make<NameType>("operator++"));
+                db.Names.push_back(db.make<NameType>("operator++"));
                 first += 2;
                 break;
             case 's':
-                db.names.push_back(db.make<NameType>("operator+"));
+                db.Names.push_back(db.make<NameType>("operator+"));
                 first += 2;
                 break;
             case 't':
-                db.names.push_back(db.make<NameType>("operator->"));
+                db.Names.push_back(db.make<NameType>("operator->"));
                 first += 2;
                 break;
             }
@@ -3943,7 +3943,7 @@ parse_operator_name(const char* first, const char* last, Db& db)
         case 'q':
             if (first[1] == 'u')
             {
-                db.names.push_back(db.make<NameType>("operator?"));
+                db.Names.push_back(db.make<NameType>("operator?"));
                 first += 2;
             }
             break;
@@ -3951,19 +3951,19 @@ parse_operator_name(const char* first, const char* last, Db& db)
             switch (first[1])
             {
             case 'm':
-                db.names.push_back(db.make<NameType>("operator%"));
+                db.Names.push_back(db.make<NameType>("operator%"));
                 first += 2;
                 break;
             case 'M':
-                db.names.push_back(db.make<NameType>("operator%="));
+                db.Names.push_back(db.make<NameType>("operator%="));
                 first += 2;
                 break;
             case 's':
-                db.names.push_back(db.make<NameType>("operator>>"));
+                db.Names.push_back(db.make<NameType>("operator>>"));
                 first += 2;
                 break;
             case 'S':
-                db.names.push_back(db.make<NameType>("operator>>="));
+                db.Names.push_back(db.make<NameType>("operator>>="));
                 first += 2;
                 break;
             }
@@ -3974,10 +3974,10 @@ parse_operator_name(const char* first, const char* last, Db& db)
                 const char* t = parse_source_name(first+2, last, db);
                 if (t != first+2)
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    db.names.back() =
-                        db.make<ConversionOperatorType>(db.names.back());
+                    db.Names.back() =
+                        db.make<ConversionOperatorType>(db.Names.back());
                     first = t;
                 }
             }
@@ -3993,7 +3993,7 @@ parse_integer_literal(const char* first, const char* last, StringView lit, Db& d
     const char* t = parse_number(first, last);
     if (t != first && t != last && *t == 'E')
     {
-        db.names.push_back(
+        db.Names.push_back(
             db.make<IntegerExpr>(lit, StringView(first, t)));
         first = t+1;
     }
@@ -4027,11 +4027,11 @@ parse_expr_primary(const char* first, const char* last, Db& db)
                 switch (first[2])
                 {
                 case '0':
-                    db.names.push_back(db.make<BoolExpr>(0));
+                    db.Names.push_back(db.make<BoolExpr>(0));
                     first += 4;
                     break;
                 case '1':
-                    db.names.push_back(db.make<BoolExpr>(1));
+                    db.Names.push_back(db.make<BoolExpr>(1));
                     first += 4;
                     break;
                 }
@@ -4174,10 +4174,10 @@ parse_expr_primary(const char* first, const char* last, Db& db)
                             ;
                         if (n != t && n != last && *n == 'E')
                         {
-                            if (db.names.empty())
+                            if (db.Names.empty())
                                 return first;
-                            db.names.back() = db.make<IntegerCastExpr>(
-                                db.names.back(), StringView(t, n));
+                            db.Names.back() = db.make<IntegerCastExpr>(
+                                db.Names.back(), StringView(t, n));
                             first = n+1;
                             break;
                         }
@@ -4224,7 +4224,7 @@ Node* maybe_change_special_sub_name(Node* inp, Db& db)
 const char*
 parse_ctor_dtor_name(const char* first, const char* last, Db& db)
 {
-    if (last-first >= 2 && !db.names.empty())
+    if (last-first >= 2 && !db.Names.empty())
     {
         switch (first[0])
         {
@@ -4235,14 +4235,14 @@ parse_ctor_dtor_name(const char* first, const char* last, Db& db)
             case '2':
             case '3':
             case '5':
-                if (db.names.empty())
+                if (db.Names.empty())
                     return first;
-                db.names.back() =
-                    maybe_change_special_sub_name(db.names.back(), db);
-                db.names.push_back(
-                    db.make<CtorDtorName>(db.names.back(), false));
+                db.Names.back() =
+                    maybe_change_special_sub_name(db.Names.back(), db);
+                db.Names.push_back(
+                    db.make<CtorDtorName>(db.Names.back(), false));
                 first += 2;
-                db.parsed_ctor_dtor_cv = true;
+                db.ParsedCtorDtorCV = true;
                 break;
             }
             break;
@@ -4253,12 +4253,12 @@ parse_ctor_dtor_name(const char* first, const char* last, Db& db)
             case '1':
             case '2':
             case '5':
-                if (db.names.empty())
+                if (db.Names.empty())
                     return first;
-                db.names.push_back(
-                    db.make<CtorDtorName>(db.names.back(), true));
+                db.Names.push_back(
+                    db.make<CtorDtorName>(db.Names.back(), true));
                 first += 2;
-                db.parsed_ctor_dtor_cv = true;
+                db.ParsedCtorDtorCV = true;
                 break;
             }
             break;
@@ -4298,13 +4298,13 @@ parse_unnamed_type_name(const char* first, const char* last, Db& db)
             }
             if (t0 == last || *t0 != '_')
                 return first;
-            db.names.push_back(db.make<UnnamedTypeName>(count));
+            db.Names.push_back(db.make<UnnamedTypeName>(count));
             first = t0 + 1;
           }
             break;
         case 'l':
           {
-            size_t begin_pos = db.names.size();
+            size_t begin_pos = db.Names.size();
             const char* t0 = first+2;
             NodeArray lambda_params;
             if (first[2] == 'v')
@@ -4320,7 +4320,7 @@ parse_unnamed_type_name(const char* first, const char* last, Db& db)
                         break;
                     t0 = t1;
                 }
-                if (db.names.size() < begin_pos)
+                if (db.Names.size() < begin_pos)
                     return first;
                 lambda_params = db.popTrailingNodeArray(begin_pos);
             }
@@ -4340,7 +4340,7 @@ parse_unnamed_type_name(const char* first, const char* last, Db& db)
             }
             if (t0 == last || *t0 != '_')
                 return first;
-            db.names.push_back(db.make<LambdaTypeName>(lambda_params, count));
+            db.Names.push_back(db.make<LambdaTypeName>(lambda_params, count));
             first = t0 + 1;
           }
             break;
@@ -4419,10 +4419,10 @@ parse_unscoped_name(const char* first, const char* last, Db& db)
         {
             if (St)
             {
-                if (db.names.empty())
+                if (db.Names.empty())
                     return first;
-                db.names.back() =
-                    db.make<StdQualifiedName>(db.names.back());
+                db.Names.back() =
+                    db.make<StdQualifiedName>(db.Names.back());
             }
             first = t1;
         }
@@ -4440,10 +4440,10 @@ parse_alignof_type(const char* first, const char* last, Db& db)
         const char* t = parse_type(first+2, last, db);
         if (t != first+2)
         {
-            if (db.names.empty())
+            if (db.Names.empty())
                 return first;
-            db.names.back() =
-                db.make<EnclosingExpr>("alignof (", db.names.back(), ")");
+            db.Names.back() =
+                db.make<EnclosingExpr>("alignof (", db.Names.back(), ")");
             first = t;
         }
     }
@@ -4460,10 +4460,10 @@ parse_alignof_expr(const char* first, const char* last, Db& db)
         const char* t = parse_expression(first+2, last, db);
         if (t != first+2)
         {
-            if (db.names.empty())
+            if (db.Names.empty())
                 return first;
-            db.names.back() =
-                db.make<EnclosingExpr>("alignof (", db.names.back(), ")");
+            db.Names.back() =
+                db.make<EnclosingExpr>("alignof (", db.Names.back(), ")");
             first = t;
         }
     }
@@ -4476,10 +4476,10 @@ parse_noexcept_expression(const char* first, const char* last, Db& db)
     const char* t1 = parse_expression(first, last, db);
     if (t1 != first)
     {
-        if (db.names.empty())
+        if (db.Names.empty())
             return first;
-        db.names.back() =
-            db.make<EnclosingExpr>("noexcept (", db.names.back(), ")");
+        db.Names.back() =
+            db.make<EnclosingExpr>("noexcept (", db.Names.back(), ")");
         first = t1;
     }
     return first;
@@ -4491,9 +4491,9 @@ parse_prefix_expression(const char* first, const char* last, StringView op, Db& 
     const char* t1 = parse_expression(first, last, db);
     if (t1 != first)
     {
-        if (db.names.empty())
+        if (db.Names.empty())
             return first;
-        db.names.back() = db.make<PrefixExpr>(op, db.names.back());
+        db.Names.back() = db.make<PrefixExpr>(op, db.Names.back());
         first = t1;
     }
     return first;
@@ -4508,12 +4508,12 @@ parse_binary_expression(const char* first, const char* last, StringView op, Db& 
         const char* t2 = parse_expression(t1, last, db);
         if (t2 != t1)
         {
-            if (db.names.size() < 2)
+            if (db.Names.size() < 2)
                 return first;
-            auto op2 = db.names.back();
-            db.names.pop_back();
-            auto op1 = db.names.back();
-            db.names.back() = db.make<BinaryExpr>(op1, op, op2);
+            auto op2 = db.Names.back();
+            db.Names.pop_back();
+            auto op1 = db.Names.back();
+            db.Names.back() = db.make<BinaryExpr>(op1, op, op2);
             first = t2;
         }
     }
@@ -4651,10 +4651,10 @@ parse_expression(const char* first, const char* last, Db& db)
                     const char* t1 = parse_expression(t+2, last, db);
                     if (t1 != t+2)
                     {
-                        if (db.names.empty())
+                        if (db.Names.empty())
                             return first;
-                        db.names.back() = db.make<DeleteExpr>(
-                            db.names.back(), parsed_gs, /*is_array=*/true);
+                        db.Names.back() = db.make<DeleteExpr>(
+                            db.Names.back(), parsed_gs, /*is_array=*/true);
                         first = t1;
                     }
                 }
@@ -4672,10 +4672,10 @@ parse_expression(const char* first, const char* last, Db& db)
                     const char* t1 = parse_expression(t+2, last, db);
                     if (t1 != t+2)
                     {
-                        if (db.names.empty())
+                        if (db.Names.empty())
                             return first;
-                        db.names.back() = db.make<DeleteExpr>(
-                            db.names.back(), parsed_gs, /*is_array=*/false);
+                        db.Names.back() = db.make<DeleteExpr>(
+                            db.Names.back(), parsed_gs, /*is_array=*/false);
                         first = t1;
                     }
                 }
@@ -4744,17 +4744,17 @@ parse_expression(const char* first, const char* last, Db& db)
                     const char* t2 = parse_expression(t1, last, db);
                     if (t2 != t1)
                     {
-                        if (db.names.size() < 2)
+                        if (db.Names.size() < 2)
                             return first;
-                        auto op2 = db.names.back();
-                        db.names.pop_back();
-                        auto op1 = db.names.back();
-                        db.names.back() =
+                        auto op2 = db.Names.back();
+                        db.Names.pop_back();
+                        auto op1 = db.Names.back();
+                        db.Names.back() =
                             db.make<ArraySubscriptExpr>(op1, op2);
                         first = t2;
                     }
-                    else if (!db.names.empty())
-                        db.names.pop_back();
+                    else if (!db.Names.empty())
+                        db.Names.pop_back();
                 }
             }
             break;
@@ -4818,10 +4818,10 @@ parse_expression(const char* first, const char* last, Db& db)
                     const char* t1 = parse_expression(first+2, last, db);
                     if (t1 != first+2)
                     {
-                        if (db.names.empty())
+                        if (db.Names.empty())
                             return first;
-                        db.names.back() =
-                            db.make<PostfixExpr>(db.names.back(), "--");
+                        db.Names.back() =
+                            db.make<PostfixExpr>(db.Names.back(), "--");
                         first = t1;
                     }
                 }
@@ -4909,10 +4909,10 @@ parse_expression(const char* first, const char* last, Db& db)
                     const char* t1 = parse_expression(first+2, last, db);
                     if (t1 != first+2)
                     {
-                        if (db.names.empty())
+                        if (db.Names.empty())
                             return first;
-                        db.names.back() =
-                            db.make<PostfixExpr>(db.names.back(), "++");
+                        db.Names.back() =
+                            db.make<PostfixExpr>(db.Names.back(), "++");
                         first = t1;
                     }
                 }
@@ -4939,27 +4939,27 @@ parse_expression(const char* first, const char* last, Db& db)
                         const char* t3 = parse_expression(t2, last, db);
                         if (t3 != t2)
                         {
-                            if (db.names.size() < 3)
+                            if (db.Names.size() < 3)
                                 return first;
-                            auto op3 = db.names.back();
-                            db.names.pop_back();
-                            auto op2 = db.names.back();
-                            db.names.pop_back();
-                            auto op1 = db.names.back();
-                            db.names.back() =
+                            auto op3 = db.Names.back();
+                            db.Names.pop_back();
+                            auto op2 = db.Names.back();
+                            db.Names.pop_back();
+                            auto op1 = db.Names.back();
+                            db.Names.back() =
                                 db.make<ConditionalExpr>(op1, op2, op3);
                             first = t3;
                         }
                         else
                         {
-                            if (db.names.size() < 2)
+                            if (db.Names.size() < 2)
                               return first;
-                            db.names.pop_back();
-                            db.names.pop_back();
+                            db.Names.pop_back();
+                            db.Names.pop_back();
                         }
                     }
-                    else if (!db.names.empty())
-                        db.names.pop_back();
+                    else if (!db.Names.empty())
+                        db.Names.pop_back();
                 }
             }
             break;
@@ -5032,7 +5032,7 @@ parse_expression(const char* first, const char* last, Db& db)
                 first = parse_typeid_expr(first, last, db);
                 break;
             case 'r':
-                db.names.push_back(db.make<NameType>("throw"));
+                db.Names.push_back(db.make<NameType>("throw"));
                 first += 2;
                 break;
             case 'w':
@@ -5118,35 +5118,35 @@ parse_template_args(const char* first, const char* last, Db& db)
 {
     if (last - first >= 2 && *first == 'I')
     {
-        if (db.tag_templates)
-            db.template_param.back().clear();
+        if (db.TagTemplates)
+            db.TemplateParams.back().clear();
         const char* t = first+1;
-        size_t begin_idx = db.names.size();
+        size_t begin_idx = db.Names.size();
         while (*t != 'E')
         {
-            if (db.tag_templates)
-                db.template_param.emplace_back(db.names.get_allocator());
-            size_t k0 = db.names.size();
+            if (db.TagTemplates)
+                db.TemplateParams.emplace_back(db.Names.get_allocator());
+            size_t k0 = db.Names.size();
             const char* t1 = parse_template_arg(t, last, db);
-            size_t k1 = db.names.size();
-            if (db.tag_templates)
-                db.template_param.pop_back();
+            size_t k1 = db.Names.size();
+            if (db.TagTemplates)
+                db.TemplateParams.pop_back();
             if (t1 == t || t1 == last || k0 > k1)
                 return first;
-            if (db.tag_templates)
+            if (db.TagTemplates)
             {
-                db.template_param.back().emplace_back(db.names.get_allocator());
+                db.TemplateParams.back().emplace_back(db.Names.get_allocator());
                 for (size_t k = k0; k < k1; ++k)
-                    db.template_param.back().back().push_back(db.names[k]);
+                    db.TemplateParams.back().back().push_back(db.Names[k]);
             }
             t = t1;
         }
-        if (begin_idx > db.names.size())
+        if (begin_idx > db.Names.size())
             return first;
         first = t + 1;
         TemplateParams* tp = db.make<TemplateParams>(
             db.popTrailingNodeArray(begin_idx));
-        db.names.push_back(tp);
+        db.Names.push_back(tp);
     }
     return first;
 }
@@ -5177,22 +5177,22 @@ parse_nested_name(const char* first, const char* last, Db& db,
         const char* t0 = parse_cv_qualifiers(first+1, last, cv);
         if (t0 == last)
             return first;
-        db.ref = FrefQualNone;
+        db.RefQuals = FrefQualNone;
         if (*t0 == 'R')
         {
-            db.ref = FrefQualLValue;
+            db.RefQuals = FrefQualLValue;
             ++t0;
         }
         else if (*t0 == 'O')
         {
-            db.ref = FrefQualRValue;
+            db.RefQuals = FrefQualRValue;
             ++t0;
         }
-        db.names.push_back(db.make<EmptyName>());
+        db.Names.push_back(db.make<EmptyName>());
         if (last - t0 >= 2 && t0[0] == 'S' && t0[1] == 't')
         {
             t0 += 2;
-            db.names.back() = db.make<NameType>("std");
+            db.Names.back() = db.make<NameType>("std");
         }
         if (t0 == last)
             return first;
@@ -5210,20 +5210,20 @@ parse_nested_name(const char* first, const char* last, Db& db,
                 t1 = parse_substitution(t0, last, db);
                 if (t1 != t0 && t1 != last)
                 {
-                    if (db.names.size() < 2)
+                    if (db.Names.size() < 2)
                         return first;
-                    auto name = db.names.back();
-                    db.names.pop_back();
-                    if (db.names.back()->K != Node::KEmptyName)
+                    auto name = db.Names.back();
+                    db.Names.pop_back();
+                    if (db.Names.back()->K != Node::KEmptyName)
                     {
-                        db.names.back() = db.make<QualifiedName>(
-                            db.names.back(), name);
-                        db.subs.push_back(
-                            Db::sub_type(1, db.names.back(),
-                                         db.names.get_allocator()));
+                        db.Names.back() = db.make<QualifiedName>(
+                            db.Names.back(), name);
+                        db.Subs.push_back(
+                            Db::sub_type(1, db.Names.back(),
+                                         db.Names.get_allocator()));
                     }
                     else
-                        db.names.back() = name;
+                        db.Names.back() = name;
                     pop_subs = true;
                     t0 = t1;
                 }
@@ -5234,16 +5234,16 @@ parse_nested_name(const char* first, const char* last, Db& db,
                 t1 = parse_template_param(t0, last, db);
                 if (t1 != t0 && t1 != last)
                 {
-                    if (db.names.size() < 2)
+                    if (db.Names.size() < 2)
                         return first;
-                    auto name = db.names.back();
-                    db.names.pop_back();
-                    if (db.names.back()->K != Node::KEmptyName)
-                        db.names.back() =
-                            db.make<QualifiedName>(db.names.back(), name);
+                    auto name = db.Names.back();
+                    db.Names.pop_back();
+                    if (db.Names.back()->K != Node::KEmptyName)
+                        db.Names.back() =
+                            db.make<QualifiedName>(db.Names.back(), name);
                     else
-                        db.names.back() = name;
-                    db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                        db.Names.back() = name;
+                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                     pop_subs = true;
                     t0 = t1;
                 }
@@ -5256,16 +5256,16 @@ parse_nested_name(const char* first, const char* last, Db& db,
                 t1 = parse_decltype(t0, last, db);
                 if (t1 != t0 && t1 != last)
                 {
-                    if (db.names.size() < 2)
+                    if (db.Names.size() < 2)
                         return first;
-                    auto name = db.names.back();
-                    db.names.pop_back();
-                    if (db.names.back()->K != Node::KEmptyName)
-                        db.names.back() =
-                            db.make<QualifiedName>(db.names.back(), name);
+                    auto name = db.Names.back();
+                    db.Names.pop_back();
+                    if (db.Names.back()->K != Node::KEmptyName)
+                        db.Names.back() =
+                            db.make<QualifiedName>(db.Names.back(), name);
                     else
-                        db.names.back() = name;
-                    db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                        db.Names.back() = name;
+                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                     pop_subs = true;
                     t0 = t1;
                 }
@@ -5276,14 +5276,14 @@ parse_nested_name(const char* first, const char* last, Db& db,
                 t1 = parse_template_args(t0, last, db);
                 if (t1 != t0 && t1 != last)
                 {
-                    if (db.names.size() < 2)
+                    if (db.Names.size() < 2)
                         return first;
-                    auto name = db.names.back();
-                    db.names.pop_back();
-                    db.names.back() = db.make<NameWithTemplateArgs>(
-                        db.names.back(), name);
-                    db.subs.push_back(Db::sub_type(
-                        1, db.names.back(), db.names.get_allocator()));
+                    auto name = db.Names.back();
+                    db.Names.pop_back();
+                    db.Names.back() = db.make<NameWithTemplateArgs>(
+                        db.Names.back(), name);
+                    db.Subs.push_back(Db::sub_type(
+                        1, db.Names.back(), db.Names.get_allocator()));
                     t0 = t1;
                     component_ends_with_template_args = true;
                 }
@@ -5299,16 +5299,16 @@ parse_nested_name(const char* first, const char* last, Db& db,
                 t1 = parse_unqualified_name(t0, last, db);
                 if (t1 != t0 && t1 != last)
                 {
-                    if (db.names.size() < 2)
+                    if (db.Names.size() < 2)
                         return first;
-                    auto name = db.names.back();
-                    db.names.pop_back();
-                    if (db.names.back()->K != Node::KEmptyName)
-                        db.names.back() =
-                            db.make<QualifiedName>(db.names.back(), name);
+                    auto name = db.Names.back();
+                    db.Names.pop_back();
+                    if (db.Names.back()->K != Node::KEmptyName)
+                        db.Names.back() =
+                            db.make<QualifiedName>(db.Names.back(), name);
                     else
-                        db.names.back() = name;
-                    db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                        db.Names.back() = name;
+                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                     pop_subs = true;
                     t0 = t1;
                 }
@@ -5317,9 +5317,9 @@ parse_nested_name(const char* first, const char* last, Db& db,
             }
         }
         first = t0 + 1;
-        db.cv = cv;
-        if (pop_subs && !db.subs.empty())
-            db.subs.pop_back();
+        db.CV = cv;
+        if (pop_subs && !db.Subs.empty())
+            db.Subs.pop_back();
         if (ends_with_template_args)
             *ends_with_template_args = component_ends_with_template_args;
     }
@@ -5381,10 +5381,10 @@ parse_local_name(const char* first, const char* last, Db& db,
             {
             case 's':
                 first = parse_discriminator(t+1, last);
-                if (db.names.empty())
+                if (db.Names.empty())
                     return first;
-                db.names.back() = db.make<QualifiedName>(
-                    db.names.back(), db.make<NameType>("string literal"));
+                db.Names.back() = db.make<QualifiedName>(
+                    db.Names.back(), db.make<NameType>("string literal"));
                 break;
             case 'd':
                 if (++t != last)
@@ -5397,18 +5397,18 @@ parse_local_name(const char* first, const char* last, Db& db,
                                         ends_with_template_args);
                         if (t1 != t)
                         {
-                            if (db.names.size() < 2)
+                            if (db.Names.size() < 2)
                                 return first;
-                            auto name = db.names.back();
-                            db.names.pop_back();
-                            if (db.names.empty())
+                            auto name = db.Names.back();
+                            db.Names.pop_back();
+                            if (db.Names.empty())
                                 return first;
-                            db.names.back() =
-                                db.make<QualifiedName>(db.names.back(), name);
+                            db.Names.back() =
+                                db.make<QualifiedName>(db.Names.back(), name);
                             first = t1;
                         }
-                        else if (!db.names.empty())
-                            db.names.pop_back();
+                        else if (!db.Names.empty())
+                            db.Names.pop_back();
                     }
                 }
                 break;
@@ -5420,17 +5420,17 @@ parse_local_name(const char* first, const char* last, Db& db,
                     {
                         // parse but ignore discriminator
                         first = parse_discriminator(t1, last);
-                        if (db.names.size() < 2)
+                        if (db.Names.size() < 2)
                             return first;
-                        auto name = db.names.back();
-                        db.names.pop_back();
-                        if (db.names.empty())
+                        auto name = db.Names.back();
+                        db.Names.pop_back();
+                        if (db.Names.empty())
                             return first;
-                        db.names.back() =
-                            db.make<QualifiedName>(db.names.back(), name);
+                        db.Names.back() =
+                            db.make<QualifiedName>(db.Names.back(), name);
                     }
-                    else if (!db.names.empty())
-                        db.names.pop_back();
+                    else if (!db.Names.empty())
+                        db.Names.pop_back();
                 }
                 break;
             }
@@ -5482,22 +5482,22 @@ parse_name(const char* first, const char* last, Db& db,
             {
                 if (t1 != last && *t1 == 'I')  // <unscoped-template-name> <template-args>
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
                     t0 = t1;
                     t1 = parse_template_args(t0, last, db);
                     if (t1 != t0)
                     {
-                        if (db.names.size() < 2)
+                        if (db.Names.size() < 2)
                             return first;
-                        auto tmp = db.names.back();
-                        db.names.pop_back();
-                        if (db.names.empty())
+                        auto tmp = db.Names.back();
+                        db.Names.pop_back();
+                        if (db.Names.empty())
                             return first;
-                        db.names.back() =
+                        db.Names.back() =
                             db.make<NameWithTemplateArgs>(
-                                db.names.back(), tmp);
+                                db.Names.back(), tmp);
                         first = t1;
                         if (ends_with_template_args)
                             *ends_with_template_args = true;
@@ -5515,15 +5515,15 @@ parse_name(const char* first, const char* last, Db& db,
                     t1 = parse_template_args(t0, last, db);
                     if (t1 != t0)
                     {
-                        if (db.names.size() < 2)
+                        if (db.Names.size() < 2)
                             return first;
-                        auto tmp = db.names.back();
-                        db.names.pop_back();
-                        if (db.names.empty())
+                        auto tmp = db.Names.back();
+                        db.Names.pop_back();
+                        if (db.Names.empty())
                             return first;
-                        db.names.back() =
+                        db.Names.back() =
                             db.make<NameWithTemplateArgs>(
-                                db.names.back(), tmp);
+                                db.Names.back(), tmp);
                         first = t1;
                         if (ends_with_template_args)
                             *ends_with_template_args = true;
@@ -5609,10 +5609,10 @@ parse_special_name(const char* first, const char* last, Db& db)
                 t = parse_type(first+2, last, db);
                 if (t != first+2)
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    db.names.back() =
-                        db.make<SpecialName>("vtable for ", db.names.back());
+                    db.Names.back() =
+                        db.make<SpecialName>("vtable for ", db.Names.back());
                     first = t;
                 }
                 break;
@@ -5621,10 +5621,10 @@ parse_special_name(const char* first, const char* last, Db& db)
                 t = parse_type(first+2, last, db);
                 if (t != first+2)
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    db.names.back() =
-                        db.make<SpecialName>("VTT for ", db.names.back());
+                    db.Names.back() =
+                        db.make<SpecialName>("VTT for ", db.Names.back());
                     first = t;
                 }
                 break;
@@ -5633,10 +5633,10 @@ parse_special_name(const char* first, const char* last, Db& db)
                 t = parse_type(first+2, last, db);
                 if (t != first+2)
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    db.names.back() =
-                        db.make<SpecialName>("typeinfo for ", db.names.back());
+                    db.Names.back() =
+                        db.make<SpecialName>("typeinfo for ", db.Names.back());
                     first = t;
                 }
                 break;
@@ -5645,10 +5645,10 @@ parse_special_name(const char* first, const char* last, Db& db)
                 t = parse_type(first+2, last, db);
                 if (t != first+2)
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    db.names.back() =
-                        db.make<SpecialName>("typeinfo name for ", db.names.back());
+                    db.Names.back() =
+                        db.make<SpecialName>("typeinfo name for ", db.Names.back());
                     first = t;
                 }
                 break;
@@ -5664,11 +5664,11 @@ parse_special_name(const char* first, const char* last, Db& db)
                 t = parse_encoding(t1, last, db);
                 if (t != t1)
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    db.names.back() =
+                    db.Names.back() =
                         db.make<SpecialName>("covariant return thunk to ",
-                                              db.names.back());
+                                              db.Names.back());
                     first = t;
                 }
               }
@@ -5684,14 +5684,14 @@ parse_special_name(const char* first, const char* last, Db& db)
                         const char* t1 = parse_type(++t0, last, db);
                         if (t1 != t0)
                         {
-                            if (db.names.size() < 2)
+                            if (db.Names.size() < 2)
                                 return first;
-                            auto left = db.names.back();
-                            db.names.pop_back();
-                            if (db.names.empty())
+                            auto left = db.Names.back();
+                            db.Names.pop_back();
+                            if (db.Names.empty())
                                 return first;
-                            db.names.back() = db.make<CtorVtableSpecialName>(
-                                left, db.names.back());
+                            db.Names.back() = db.make<CtorVtableSpecialName>(
+                                left, db.Names.back());
                             first = t1;
                         }
                     }
@@ -5702,11 +5702,11 @@ parse_special_name(const char* first, const char* last, Db& db)
                 t = parse_name(first + 2, last, db);
                 if (t != first + 2) 
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    db.names.back() =
+                    db.Names.back() =
                         db.make<SpecialName>("thread-local wrapper routine for ",
-                                              db.names.back());
+                                              db.Names.back());
                     first = t;
                 }
                 break;
@@ -5715,10 +5715,10 @@ parse_special_name(const char* first, const char* last, Db& db)
                 t = parse_name(first + 2, last, db);
                 if (t != first + 2) 
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    db.names.back() = db.make<SpecialName>(
-                        "thread-local initialization routine for ", db.names.back());
+                    db.Names.back() = db.make<SpecialName>(
+                        "thread-local initialization routine for ", db.Names.back());
                     first = t;
                 }
                 break;
@@ -5731,20 +5731,20 @@ parse_special_name(const char* first, const char* last, Db& db)
                 t = parse_encoding(t0, last, db);
                 if (t != t0)
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
                     if (first[1] == 'v')
                     {
-                        db.names.back() =
+                        db.Names.back() =
                             db.make<SpecialName>("virtual thunk to ",
-                                                  db.names.back());
+                                                  db.Names.back());
                         first = t;
                     }
                     else
                     {
-                        db.names.back() =
+                        db.Names.back() =
                             db.make<SpecialName>("non-virtual thunk to ",
-                                                  db.names.back());
+                                                  db.Names.back());
                         first = t;
                     }
                 }
@@ -5760,10 +5760,10 @@ parse_special_name(const char* first, const char* last, Db& db)
                 t = parse_name(first+2, last, db);
                 if (t != first+2)
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    db.names.back() =
-                        db.make<SpecialName>("guard variable for ", db.names.back());
+                    db.Names.back() =
+                        db.make<SpecialName>("guard variable for ", db.Names.back());
                     first = t;
                 }
                 break;
@@ -5772,11 +5772,11 @@ parse_special_name(const char* first, const char* last, Db& db)
                 t = parse_name(first+2, last, db);
                 if (t != first+2)
                 {
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    db.names.back() =
+                    db.Names.back() =
                         db.make<SpecialName>("reference temporary for ",
-                                              db.names.back());
+                                              db.Names.back());
                     first = t;
                 }
                 break;
@@ -5816,13 +5816,13 @@ parse_encoding(const char* first, const char* last, Db& db)
 {
     if (first != last)
     {
-        save_value<decltype(db.encoding_depth)> su(db.encoding_depth);
-        ++db.encoding_depth;
-        save_value<decltype(db.tag_templates)> sb(db.tag_templates);
-        if (db.encoding_depth > 1)
-            db.tag_templates = true;
-        save_value<decltype(db.parsed_ctor_dtor_cv)> sp(db.parsed_ctor_dtor_cv);
-        db.parsed_ctor_dtor_cv = false;
+        save_value<decltype(db.EncodingDepth)> su(db.EncodingDepth);
+        ++db.EncodingDepth;
+        save_value<decltype(db.TagTemplates)> sb(db.TagTemplates);
+        if (db.EncodingDepth > 1)
+            db.TagTemplates = true;
+        save_value<decltype(db.ParsedCtorDtorCV)> sp(db.ParsedCtorDtorCV);
+        db.ParsedCtorDtorCV = false;
         switch (*first)
         {
         case 'G':
@@ -5834,31 +5834,31 @@ parse_encoding(const char* first, const char* last, Db& db)
             bool ends_with_template_args = false;
             const char* t = parse_name(first, last, db,
                                        &ends_with_template_args);
-            if (db.names.empty())
+            if (db.Names.empty())
                 return first;
-            Qualifiers cv = db.cv;
-            FunctionRefQual ref = db.ref;
+            Qualifiers cv = db.CV;
+            FunctionRefQual ref = db.RefQuals;
             if (t != first)
             {
                 if (t != last && *t != 'E' && *t != '.')
                 {
-                    save_value<bool> sb2(db.tag_templates);
-                    db.tag_templates = false;
+                    save_value<bool> sb2(db.TagTemplates);
+                    db.TagTemplates = false;
                     const char* t2;
-                    if (db.names.empty())
+                    if (db.Names.empty())
                         return first;
-                    if (!db.names.back())
+                    if (!db.Names.back())
                         return first;
                     Node* return_type = nullptr;
-                    if (!db.parsed_ctor_dtor_cv && ends_with_template_args)
+                    if (!db.ParsedCtorDtorCV && ends_with_template_args)
                     {
                         t2 = parse_type(t, last, db);
                         if (t2 == t)
                             return first;
-                        if (db.names.size() < 1)
+                        if (db.Names.size() < 1)
                             return first;
-                        return_type = db.names.back();
-                        db.names.pop_back();
+                        return_type = db.Names.back();
+                        db.Names.pop_back();
                         t = t2;
                     }
 
@@ -5867,16 +5867,16 @@ parse_encoding(const char* first, const char* last, Db& db)
                     if (t != last && *t == 'v')
                     {
                         ++t;
-                        if (db.names.empty())
+                        if (db.Names.empty())
                             return first;
-                        Node* name = db.names.back();
-                        db.names.pop_back();
+                        Node* name = db.Names.back();
+                        db.Names.pop_back();
                         result = db.make<TopLevelFunctionDecl>(
                             return_type, name, NodeArray());
                     }
                     else
                     {
-                        size_t params_begin = db.names.size();
+                        size_t params_begin = db.Names.size();
                         while (true)
                         {
                             t2 = parse_type(t, last, db);
@@ -5884,14 +5884,14 @@ parse_encoding(const char* first, const char* last, Db& db)
                                 break;
                             t = t2;
                         }
-                        if (db.names.size() < params_begin)
+                        if (db.Names.size() < params_begin)
                             return first;
                         NodeArray params =
                             db.popTrailingNodeArray(params_begin);
-                        if (db.names.empty())
+                        if (db.Names.empty())
                             return first;
-                        Node* name = db.names.back();
-                        db.names.pop_back();
+                        Node* name = db.Names.back();
+                        db.Names.pop_back();
                         result = db.make<TopLevelFunctionDecl>(
                             return_type, name, params);
                     }
@@ -5899,7 +5899,7 @@ parse_encoding(const char* first, const char* last, Db& db)
                         result = db.make<FunctionRefQualType>(result, ref);
                     if (cv != QualNone)
                         result = db.make<FunctionQualType>(result, cv);
-                    db.names.push_back(result);
+                    db.Names.push_back(result);
                     first = t;
                 }
                 else
@@ -5942,11 +5942,11 @@ parse_block_invoke(const char* first, const char* last, Db& db)
             while (t != last && isdigit(*t))
                 ++t;
         }
-        if (db.names.empty())
+        if (db.Names.empty())
             return first;
-        db.names.back() =
+        db.Names.back() =
             db.make<SpecialName>("invocation function for block in ",
-                                  db.names.back());
+                                  db.Names.back());
         first = t;
     }
     return first;
@@ -5960,10 +5960,10 @@ parse_dot_suffix(const char* first, const char* last, Db& db)
 {
     if (first != last && *first == '.')
     {
-        if (db.names.empty())
+        if (db.Names.empty())
             return first;
-        db.names.back() =
-            db.make<DotSuffix>(db.names.back(), StringView(first, last));
+        db.Names.back() =
+            db.make<DotSuffix>(db.Names.back(), StringView(first, last));
         first = last;
     }
     return first;
@@ -6019,7 +6019,7 @@ demangle(const char* first, const char* last, Db& db, int& status)
         if (t != last)
             status = invalid_mangled_name;
     }
-    if (status == success && db.names.empty())
+    if (status == success && db.Names.empty())
         status = invalid_mangled_name;
 }
 
@@ -6037,21 +6037,21 @@ __cxa_demangle(const char *mangled_name, char *buf, size_t *n, int *status) {
     size_t internal_size = buf != nullptr ? *n : 0;
     arena<bs> a;
     Db db(a);
-    db.template_param.emplace_back(a);
+    db.TemplateParams.emplace_back(a);
     int internal_status = success;
     size_t len = std::strlen(mangled_name);
     demangle(mangled_name, mangled_name + len, db,
              internal_status);
 
-    if (internal_status == success && db.fix_forward_references &&
-           !db.template_param.empty() && !db.template_param.front().empty())
+    if (internal_status == success && db.FixForwardReferences &&
+        !db.TemplateParams.empty() && !db.TemplateParams.front().empty())
     {
-        db.fix_forward_references = false;
-        db.tag_templates = false;
-        db.names.clear();
-        db.subs.clear();
+        db.FixForwardReferences = false;
+        db.TagTemplates = false;
+        db.Names.clear();
+        db.Subs.clear();
         demangle(mangled_name, mangled_name + len, db, internal_status);
-        if (db.fix_forward_references)
+        if (db.FixForwardReferences)
             internal_status = invalid_mangled_name;
     }
 
@@ -6066,7 +6066,7 @@ __cxa_demangle(const char *mangled_name, char *buf, size_t *n, int *status) {
         if (buf)
         {
             OutputStream s(buf, internal_size);
-            db.names.back()->print(s);
+            db.Names.back()->print(s);
             s += '\0';
             if (n) *n = s.getCurrentPosition();
             buf = s.getBuffer();

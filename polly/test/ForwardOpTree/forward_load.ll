@@ -2,6 +2,14 @@
 ;
 ; Rematerialize a load.
 ;
+; for (int j = 0; j < n; j += 1) {
+; bodyA:
+;   double val = B[j];
+;
+; bodyB:
+;   A[j] = val;
+; }
+;
 define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
 entry:
   br label %for

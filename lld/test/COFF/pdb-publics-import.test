@@ -11,6 +11,7 @@ RUN: llvm-pdbutil dump %t2.pdb -publics -section-contribs | FileCheck %s
 
 CHECK:                             Public Symbols
 CHECK-NEXT: ============================================================
+CHECK-NEXT:    Records
 CHECK-NEXT:      112 | S_PUB32 [size = 20] `main`
 CHECK-NEXT:            flags = function, addr = 0001:0000
 CHECK-NEXT:       64 | S_PUB32 [size = 24] `exportfn1`

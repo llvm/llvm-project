@@ -1,5 +1,20 @@
 ; RUN: opt %loadPolly -polly-optree -analyze < %s | FileCheck %s -match-full-lines
 ;
+; To forward %val, B[j] cannot be reused in bodyC because it is overwritten
+; between. Verify that instead the alternative C[j] is used.
+;
+; for (int j = 0; j < n; j += 1) {
+; bodyA:
+;   double val = B[j];
+;
+; bodyB:
+;   B[j] = 0;
+;   C[j] = val;
+;
+; bodyC:
+;   A[j] = val;
+; }
+;
 define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B, double* noalias nonnull %C) {
 entry:
   br label %for

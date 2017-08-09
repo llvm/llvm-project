@@ -29,6 +29,13 @@ class Scop;
 class ScopStmt;
 class MemoryAccess;
 
+/// Return only the mappings that map to known values.
+///
+/// @param UMap { [] -> ValInst[] }
+///
+/// @return { [] -> ValInst[] }
+isl::union_map filterKnownValInst(const isl::union_map &UMap);
+
 /// Base class for algorithms based on zones, like DeLICM.
 class ZoneAlgorithm {
 protected:
