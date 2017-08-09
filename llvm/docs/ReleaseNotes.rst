@@ -160,8 +160,14 @@ Changes to the C API
 External Open Source Projects Using LLVM 5
 ==========================================
 
-* A project...
+Zig Programming Language
+------------------------
 
+`Zig <http://ziglang.org>`_  is an open-source programming language designed
+for robustness, optimality, and clarity. It integrates closely with C and is
+intended to eventually take the place of C. It uses LLVM to produce highly
+optimized native code and to cross-compile for any target out of the box. Zig
+is in alpha; with a beta release expected in September.
 
 Additional Information
 ======================
