@@ -199,6 +199,13 @@ void MakeSmartPtrCheck::checkReset(SourceManager &SM,
     return;
   }
 
+  // There are some cases where we don't have operator ("." or "->") of the
+  // "reset" expression, e.g. call "reset()" method directly in the subclass of
+  // "std::unique_ptr<>". We skip these cases.
+  if (OperatorLoc.isInvalid()) {
+    return;
+  }
+
   auto Diag = diag(ResetCallStart, "use %0 instead")
               << MakeSmartPtrFunctionName;
 

@@ -415,3 +415,16 @@ void macro() {
   g2<bar::Bar>(t);
 }
 #undef DEFINE
+
+class UniqueFoo : public std::unique_ptr<Foo> {
+ public:
+  void foo() {
+    reset(new Foo);
+    this->reset(new Foo);
+    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use std::make_unique instead
+    // CHECK-FIXES: *this = std::make_unique<Foo>();
+    (*this).reset(new Foo);
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use std::make_unique instead
+    // CHECK-FIXES: (*this) = std::make_unique<Foo>();
+  }
+};

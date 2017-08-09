@@ -666,9 +666,12 @@ public:
     case VirtualUse::Inter:
       Instruction *Inst = cast<Instruction>(UseVal);
 
-      if (!DefStmt)
+      if (!DefStmt) {
         DefStmt = S->getStmtFor(Inst);
-      assert(DefStmt && "Value must be defined somewhere");
+        if (!DefStmt)
+          return FD_CannotForward;
+      }
+
       DefLoop = LI->getLoopFor(Inst->getParent());
 
       if (DefToTarget.is_null() && !Known.is_null()) {
