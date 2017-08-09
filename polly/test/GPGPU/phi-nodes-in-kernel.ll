@@ -32,44 +32,28 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CODE: # host
-; CODE-NEXT: {
-; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_out_l_055__phi, &MemRef_out_l_055__phi, sizeof(i32), cudaMemcpyHostToDevice));
-; CODE-NEXT:   {
-; CODE-NEXT:     dim3 k0_dimBlock(32);
-; CODE-NEXT:     dim3 k0_dimGrid(2);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_out_l_055__phi, dev_MemRef_out_l_055, dev_MemRef_c);
-; CODE-NEXT:     cudaCheckKernel();
-; CODE-NEXT:   }
+; CODE:       cudaCheckReturn(cudaMalloc((void **) &dev_MemRef_c, (50) * sizeof(i32)));
+
+; CODE:       {
+; CODE-NEXT:    dim3 k0_dimBlock(32);
+; CODE-NEXT:    dim3 k0_dimGrid(2);
+; CODE-NEXT:    kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_c);
+; CODE-NEXT:    cudaCheckKernel();
+; CODE-NEXT:  }
 
 ; CODE:       cudaCheckReturn(cudaMemcpy(MemRef_c, dev_MemRef_c, (50) * sizeof(i32), cudaMemcpyDeviceToHost));
-; CODE-NEXT: }
+; CODE-NEXT:  cudaCheckReturn(cudaFree(dev_MemRef_c));
 
 ; CODE: # kernel0
-; CODE-NEXT: if (32 * b0 + t0 <= 48) {
-; CODE-NEXT:   if (b0 == 1 && t0 == 16)
-; CODE-NEXT:     Stmt_for_cond1_preheader(0);
-; CODE-NEXT:   Stmt_for_body17(0, 32 * b0 + t0);
-; CODE-NEXT:   if (b0 == 1 && t0 == 16)
-; CODE-NEXT:     Stmt_for_cond15_for_cond12_loopexit_crit_edge(0);
-; CODE-NEXT: }
+; CODE-NEXT: if (32 * b0 + t0 <= 48)
+; CODE-NEXT:     Stmt_for_body17(0, 32 * b0 + t0);
 
-; IR:      [[REGA:%.+]] = bitcast i32* %out_l.055.phiops to i8*
-; IR-NEXT: call void @polly_copyFromHostToDevice(i8* [[REGA]], i8* %p_dev_array_MemRef_out_l_055__phi, i64 4)
-
-; IR: [[REGC:%.+]] =   bitcast i32* %38 to i8*
+; IR: [[REGC:%.+]] =   bitcast i32* %27 to i8*
 ; IR-NEXT:  call void @polly_copyFromDeviceToHost(i8* %p_dev_array_MemRef_c, i8* [[REGC]], i64 196)
 
-; KERNEL-IR: entry:
-; KERNEL-IR-NEXT:   %out_l.055.s2a = alloca i32
-; KERNEL-IR-NEXT:   %out_l.055.phiops = alloca i32
-; KERNEL-IR-NEXT:   %1 = addrspacecast i8 addrspace(1)* %MemRef_out_l_055__phi to i32*
-; KERNEL-IR-NEXT:   %2 = load i32, i32* %1
-; KERNEL-IR-NEXT:   store i32 %2, i32* %out_l.055.phiops
-; KERNEL-IR-NEXT:   %3 = addrspacecast i8 addrspace(1)* %MemRef_out_l_055 to i32*
-; KERNEL-IR-NEXT:   %4 = load i32, i32* %3
-; KERNEL-IR-NEXT:   store i32 %4, i32* %out_l.055.s2a
-
+; KERNEL-IR: define ptx_kernel void @FUNC_kernel_dynprog_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_c, i32) #0 {
+; KERNEL-IR: %polly.access.MemRef_c = getelementptr i32, i32 addrspace(1)* %polly.access.cast.MemRef_c, i64 %10
+; KERNEL-IR-NEXT: store i32 %0, i32 addrspace(1)* %polly.access.MemRef_c, align 4
 
 define void @kernel_dynprog([50 x i32]* %c) {
 entry:

@@ -80,6 +80,7 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   Config = make<Configuration>();
   Driver = make<LinkerDriver>();
   Script = make<LinkerScript>();
+  Symtab = make<SymbolTable>();
   Config->Argv = {Args.begin(), Args.end()};
 
   Driver->main(Args, CanExitEarly);
@@ -187,7 +188,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     // we'll handle it as if it had a symbol table.
     if (!File->isEmpty() && !File->hasSymbolTable()) {
       for (const auto &P : getArchiveMembers(MBRef))
-        Files.push_back(make<LazyObjectFile>(P.first, Path, P.second));
+        Files.push_back(make<LazyObjFile>(P.first, Path, P.second));
       return;
     }
 
@@ -216,7 +217,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     return;
   default:
     if (InLib)
-      Files.push_back(make<LazyObjectFile>(MBRef, "", 0));
+      Files.push_back(make<LazyObjFile>(MBRef, "", 0));
     else
       Files.push_back(createObjectFile(MBRef));
   }
@@ -418,9 +419,6 @@ static std::string getRpath(opt::InputArgList &Args) {
 // Determines what we should do if there are remaining unresolved
 // symbols after the name resolution.
 static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &Args) {
-  // -noinhibit-exec or -r imply some default values.
-  if (Args.hasArg(OPT_noinhibit_exec))
-    return UnresolvedPolicy::WarnAll;
   if (Args.hasArg(OPT_relocatable))
     return UnresolvedPolicy::IgnoreAll;
 
@@ -619,6 +617,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AuxiliaryList = getArgs(Args, OPT_auxiliary);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
+  Config->Chroot = Args.getLastArgValue(OPT_chroot);
   Config->CompressDebugSections = getCompressDebugSections(Args);
   Config->DefineCommon = getArg(Args, OPT_define_common, OPT_no_define_common,
                                 !Args.hasArg(OPT_relocatable));
@@ -647,6 +646,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->MapFile = Args.getLastArgValue(OPT_Map);
   Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
   Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
+  Config->NoinhibitExec = Args.hasArg(OPT_noinhibit_exec);
   Config->Nostdlib = Args.hasArg(OPT_nostdlib);
   Config->OFormatBinary = isOutputFormatBinary(Args);
   Config->Omagic = Args.hasArg(OPT_omagic);
@@ -659,7 +659,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Rpath = getRpath(Args);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
-  Config->SearchPaths = getArgs(Args, OPT_L);
+  Config->SearchPaths = getArgs(Args, OPT_library_path);
   Config->SectionStartMap = getSectionStartMap(Args);
   Config->Shared = Args.hasArg(OPT_shared);
   Config->SingleRoRx = Args.hasArg(OPT_no_rosegment);
@@ -804,14 +804,13 @@ static bool getBinaryOption(StringRef S) {
 
 void LinkerDriver::createFiles(opt::InputArgList &Args) {
   for (auto *Arg : Args) {
-    switch (Arg->getOption().getID()) {
-    case OPT_l:
+    switch (Arg->getOption().getUnaliasedOption().getID()) {
+    case OPT_library:
       addLibrary(Arg->getValue());
       break;
     case OPT_INPUT:
       addFile(Arg->getValue(), /*WithLOption=*/false);
       break;
-    case OPT_alias_script_T:
     case OPT_script:
       if (Optional<MemoryBufferRef> MB = readFile(Arg->getValue()))
         readLinkerScript(*MB);
@@ -943,15 +942,13 @@ static void excludeLibs(opt::InputArgList &Args, ArrayRef<InputFile *> Files) {
   for (InputFile *File : Files)
     if (auto *F = dyn_cast<ArchiveFile>(File))
       if (All || Libs.count(path::filename(F->getName())))
-        for (Symbol *Sym : F->getSymbols())
-          Sym->VersionId = VER_NDX_LOCAL;
+        for (SymbolBody *Sym : F->getSymbols())
+          Sym->symbol()->VersionId = VER_NDX_LOCAL;
 }
 
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
-  SymbolTable<ELFT> Symtab;
-  elf::Symtab<ELFT>::X = &Symtab;
   Target = getTarget();
 
   Config->MaxPageSize = getMaxPageSize(Args);
@@ -981,64 +978,64 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle --trace-symbol.
   for (auto *Arg : Args.filtered(OPT_trace_symbol))
-    Symtab.trace(Arg->getValue());
+    Symtab->trace(Arg->getValue());
 
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table.
   for (InputFile *F : Files)
-    Symtab.addFile(F);
+    Symtab->addFile<ELFT>(F);
 
   // If an entry symbol is in a static archive, pull out that file now
   // to complete the symbol table. After this, no new names except a
   // few linker-synthesized ones will be added to the symbol table.
-  if (Symtab.find(Config->Entry))
-    Symtab.addUndefined(Config->Entry);
+  if (Symtab->find(Config->Entry))
+    Symtab->addUndefined<ELFT>(Config->Entry);
 
   // Return if there were name resolution errors.
   if (ErrorCount)
     return;
 
   // Handle the `--undefined <sym>` options.
-  Symtab.scanUndefinedFlags();
+  Symtab->scanUndefinedFlags<ELFT>();
 
   // Handle undefined symbols in DSOs.
-  Symtab.scanShlibUndefined();
+  Symtab->scanShlibUndefined<ELFT>();
 
   // Handle the -exclude-libs option.
   if (Args.hasArg(OPT_exclude_libs))
     excludeLibs(Args, Files);
 
   // Apply version scripts.
-  Symtab.scanVersionScript();
+  Symtab->scanVersionScript();
 
   // Create wrapped symbols for -wrap option.
   for (auto *Arg : Args.filtered(OPT_wrap))
-    Symtab.addSymbolWrap(Arg->getValue());
+    Symtab->addSymbolWrap<ELFT>(Arg->getValue());
 
   // Create alias symbols for -defsym option.
   for (std::pair<StringRef, StringRef> &Def : getDefsym(Args))
-    Symtab.addSymbolAlias(Def.first, Def.second);
+    Symtab->addSymbolAlias<ELFT>(Def.first, Def.second);
 
-  Symtab.addCombinedLTOObject();
+  Symtab->addCombinedLTOObject<ELFT>();
   if (ErrorCount)
     return;
 
   // Some symbols (such as __ehdr_start) are defined lazily only when there
   // are undefined symbols for them, so we add these to trigger that logic.
   for (StringRef Sym : Script->Opt.ReferencedSymbols)
-    Symtab.addUndefined(Sym);
+    Symtab->addUndefined<ELFT>(Sym);
 
   // Apply symbol renames for -wrap and -defsym
-  Symtab.applySymbolRenames();
+  Symtab->applySymbolRenames();
 
   // Now that we have a complete list of input files.
   // Beyond this point, no new files are added.
   // Aggregate all input sections into one place.
-  for (elf::ObjectFile<ELFT> *F : Symtab.getObjectFiles())
+  for (ObjFile<ELFT> *F : ObjFile<ELFT>::Instances)
     for (InputSectionBase *S : F->getSections())
       if (S && S != &InputSection::Discarded)
         InputSections.push_back(S);
-  for (BinaryFile *F : Symtab.getBinaryFiles())
+  for (BinaryFile *F : BinaryFile::Instances)
     for (InputSectionBase *S : F->getSections())
       InputSections.push_back(cast<InputSection>(S));
 

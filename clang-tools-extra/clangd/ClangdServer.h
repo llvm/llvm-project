@@ -66,7 +66,7 @@ public:
 
 template <class T>
 Tagged<typename std::decay<T>::type> make_tagged(T &&Value, VFSTag Tag) {
-  return Tagged<T>(std::forward<T>(Value), Tag);
+  return Tagged<typename std::decay<T>::type>(std::forward<T>(Value), Tag);
 }
 
 class DiagnosticsConsumer {

@@ -13,19 +13,19 @@
 
 # DISASM:      _start:
 # DISASM-NEXT: 201000:        e8 05 00 00 00  callq   5 <__start_foo>
-# DISASM-NEXT: 201005:        e8 01 00 00 00  callq   1 <__start_bar>
+# DISASM-NEXT: 201005:        e8 02 00 00 00  callq   2 <__stop_bar>
 # DISASM-NEXT: Disassembly of section foo:
 # DISASM-NEXT: __start_foo:
 # DISASM-NEXT: 20100a:        90      nop
 # DISASM-NEXT: Disassembly of section bar:
-# DISASM-NEXT: __start_bar:
+# DISASM-NEXT: bar:
 # DISASM-NEXT: 20100b:        90      nop
 
 .global _start
 .text
 _start:
  callq __start_foo
- callq __start_bar
+ callq __stop_bar
 
 .section foo,"ax"
  nop

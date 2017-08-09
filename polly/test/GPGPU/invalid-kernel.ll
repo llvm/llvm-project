@@ -20,11 +20,7 @@
 ; were we still lack proper code-generation support. We check here that we
 ; detect the invalid IR and bail out gracefully.
 
-; CODE: Code
-; CODE-NEXT: ====
-; CODE-NEXT: # host
-; CODE-NEXT: {
-; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_B, MemRef_B, (1024) * sizeof(i64), cudaMemcpyHostToDevice));
+; CODE:        cudaCheckReturn(cudaMemcpy(dev_MemRef_B, MemRef_B, (1024) * sizeof(i64), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (1024) * sizeof(i64), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
@@ -34,7 +30,6 @@
 ; CODE-NEXT:   }
 
 ; CODE:   cudaCheckReturn(cudaMemcpy(MemRef_A, dev_MemRef_A, (1024) * sizeof(i64), cudaMemcpyDeviceToHost));
-; CODE-NEXT: }
 
 ; CODE: # kernel0
 ; CODE-NEXT: Stmt_bb2(32 * b0 + t0);

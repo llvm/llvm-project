@@ -301,7 +301,7 @@ Glossary
   they are merged by ICF. It is known as an effective technique,
   and it usually reduces C++ program's size by a few percent or more.
 
-  Note that this is not entirely sound optimization. C/C++ require
+  Note that this is not an entirely sound optimization. C/C++ require
   different functions have different addresses. If a program depends on
   that property, it would fail at runtime.
 

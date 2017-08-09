@@ -54,6 +54,20 @@ static cl::opt<bool>
                    cl::desc("Add run-time performance monitoring"), cl::Hidden,
                    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+namespace polly {
+/// Mark a basic block unreachable.
+///
+/// Marks the basic block @p Block unreachable by equipping it with an
+/// UnreachableInst.
+void markBlockUnreachable(BasicBlock &Block, PollyIRBuilder &Builder) {
+  auto *OrigTerminator = Block.getTerminator();
+  Builder.SetInsertPoint(OrigTerminator);
+  Builder.CreateUnreachable();
+  OrigTerminator->eraseFromParent();
+}
+
+} // namespace polly
+
 namespace {
 
 static void verifyGeneratedFunction(Scop &S, Function &F, IslAstInfo &AI) {
@@ -63,7 +77,7 @@ static void verifyGeneratedFunction(Scop &S, Function &F, IslAstInfo &AI) {
   DEBUG({
     errs() << "== ISL Codegen created an invalid function ==\n\n== The "
               "SCoP ==\n";
-    S.print(errs());
+    errs() << S;
     errs() << "\n== The isl AST ==\n";
     AI.print(errs());
     errs() << "\n== The invalid function ==\n";
@@ -84,17 +98,6 @@ static void fixRegionInfo(Function &F, Region &ParentRegion, RegionInfo &RI) {
 
     RI.setRegionFor(&BB, &ParentRegion);
   }
-}
-
-/// Mark a basic block unreachable.
-///
-/// Marks the basic block @p Block unreachable by equipping it with an
-/// UnreachableInst.
-static void markBlockUnreachable(BasicBlock &Block, PollyIRBuilder &Builder) {
-  auto *OrigTerminator = Block.getTerminator();
-  Builder.SetInsertPoint(OrigTerminator);
-  Builder.CreateUnreachable();
-  OrigTerminator->eraseFromParent();
 }
 
 /// Remove all lifetime markers (llvm.lifetime.start, llvm.lifetime.end) from
@@ -228,7 +231,7 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
 
     isl_ast_node_free(AstRoot);
   } else {
-    NodeBuilder.addParameters(S.getContext());
+    NodeBuilder.addParameters(S.getContext().release());
     Value *RTC = NodeBuilder.createRTC(AI.getRunCondition());
 
     Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
