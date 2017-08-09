@@ -3087,6 +3087,8 @@ def warn_impcast_vector_scalar : Warning<
 def warn_impcast_complex_scalar : Warning<
   "implicit conversion discards imaginary component: %0 to %1">,
   InGroup<Conversion>, DefaultIgnore;
+def err_impcast_complex_scalar : Error<
+  "implicit conversion from %0 to %1 is not permitted in C++">;
 def warn_impcast_float_precision : Warning<
   "implicit conversion loses floating-point precision: %0 to %1">,
   InGroup<Conversion>, DefaultIgnore;

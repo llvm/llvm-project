@@ -2818,6 +2818,7 @@ SDValue PPCDAGToDAGISel::getCompoundZeroComparisonInGPR(SDValue LHS, SDLoc dl,
   case ZeroCompare::GESExt:
     ToExtend = SDValue(CurDAG->getMachineNode(Is32Bit ? PPC::NOR : PPC::NOR8,
                                               dl, InVT, LHS, LHS), 0);
+    break;
   case ZeroCompare::LEZExt:
   case ZeroCompare::LESExt: {
     if (Is32Bit) {
@@ -2834,15 +2835,18 @@ SDValue PPCDAGToDAGISel::getCompoundZeroComparisonInGPR(SDValue LHS, SDLoc dl,
       ToExtend = SDValue(CurDAG->getMachineNode(PPC::OR8, dl, MVT::i64,
                                                 Addi, LHS), 0);
     }
+    break;
   }
   }
 
   // For 64-bit sequences, the extensions are the same for the GE/LE cases.
-  if (!Is32Bit && (CmpTy == ZeroCompare::GEZExt || ZeroCompare::LEZExt))
+  if (!Is32Bit &&
+      (CmpTy == ZeroCompare::GEZExt || CmpTy == ZeroCompare::LEZExt))
     return SDValue(CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64,
                                           ToExtend, getI64Imm(1, dl),
                                           getI64Imm(63, dl)), 0);
-  if (!Is32Bit && (CmpTy == ZeroCompare::GESExt || ZeroCompare::LESExt))
+  if (!Is32Bit &&
+      (CmpTy == ZeroCompare::GESExt || CmpTy == ZeroCompare::LESExt))
     return SDValue(CurDAG->getMachineNode(PPC::SRADI, dl, MVT::i64, ToExtend,
                                           getI64Imm(63, dl)), 0);
 
@@ -2866,10 +2870,9 @@ SDValue PPCDAGToDAGISel::getCompoundZeroComparisonInGPR(SDValue LHS, SDLoc dl,
                                           getI32Imm(-1, dl)), 0);
   }
 
-  // Some compilers warn if there's a default label in the switch above, others
-  // warn if there isn't a return statement here or in a default label. Appease
-  // both (even though this is unreachable).
-  return SDValue();
+  // The above case covers all the enumerators so it can't have a default clause
+  // to avoid compiler warnings.
+  llvm_unreachable("Unknown zero-comparison type.");
 }
 
 /// Produces a zero-extended result of comparing two 32-bit values according to

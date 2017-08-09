@@ -264,7 +264,8 @@ class TargetArch<list<string> arches> {
 }
 def TargetARM : TargetArch<["arm", "thumb", "armeb", "thumbeb"]>;
 def TargetAVR : TargetArch<["avr"]>;
-def TargetMips : TargetArch<["mips", "mipsel"]>;
+def TargetMips32 : TargetArch<["mips", "mipsel"]>;
+def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
 def TargetX86 : TargetArch<["x86"]>;
 def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
@@ -1160,13 +1161,13 @@ def MSP430Interrupt : InheritableAttr, TargetSpecificAttr<TargetMSP430> {
   let Documentation = [Undocumented];
 }
 
-def Mips16 : InheritableAttr, TargetSpecificAttr<TargetMips> {
+def Mips16 : InheritableAttr, TargetSpecificAttr<TargetMips32> {
   let Spellings = [GCC<"mips16">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [Undocumented];
 }
 
-def MipsInterrupt : InheritableAttr, TargetSpecificAttr<TargetMips> {
+def MipsInterrupt : InheritableAttr, TargetSpecificAttr<TargetMips32> {
   // NOTE: If you add any additional spellings, ARMInterrupt's,
   // MSP430Interrupt's and AnyX86Interrupt's spellings must match.
   let Spellings = [GNU<"interrupt">];
@@ -1182,19 +1183,19 @@ def MipsInterrupt : InheritableAttr, TargetSpecificAttr<TargetMips> {
   let Documentation = [MipsInterruptDocs];
 }
 
-def MicroMips : InheritableAttr, TargetSpecificAttr<TargetMips> {
+def MicroMips : InheritableAttr, TargetSpecificAttr<TargetMips32> {
   let Spellings = [GCC<"micromips">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [MicroMipsDocs];
 }
 
-def MipsLongCall : InheritableAttr, TargetSpecificAttr<TargetMips> {
+def MipsLongCall : InheritableAttr, TargetSpecificAttr<TargetAnyMips> {
   let Spellings = [GCC<"long_call">, GCC<"far">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [MipsLongCallStyleDocs];
 }
 
-def MipsShortCall : InheritableAttr, TargetSpecificAttr<TargetMips> {
+def MipsShortCall : InheritableAttr, TargetSpecificAttr<TargetAnyMips> {
   let Spellings = [GCC<"short_call">, GCC<"near">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [MipsShortCallStyleDocs];
@@ -1276,13 +1277,13 @@ def NoInline : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def NoMips16 : InheritableAttr, TargetSpecificAttr<TargetMips> {
+def NoMips16 : InheritableAttr, TargetSpecificAttr<TargetMips32> {
   let Spellings = [GCC<"nomips16">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [Undocumented];
 }
 
-def NoMicroMips : InheritableAttr, TargetSpecificAttr<TargetMips> {
+def NoMicroMips : InheritableAttr, TargetSpecificAttr<TargetMips32> {
   let Spellings = [GCC<"nomicromips">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [MicroMipsDocs];

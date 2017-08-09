@@ -97,6 +97,9 @@ void InitTlsSize() {}
 
 void PrintModuleMap() {}
 
+void SignalContext::DumpAllRegisters(void *context) { UNIMPLEMENTED(); }
+const char *DescribeSignalOrException(int signo) { UNIMPLEMENTED(); }
+
 struct UnwindTraceArg {
   BufferedStackTrace *stack;
   u32 max_depth;

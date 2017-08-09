@@ -84,6 +84,9 @@ void *AsanDoesNotSupportStaticLinkage();
 void AsanCheckDynamicRTPrereqs();
 void AsanCheckIncompatibleRT();
 
+// asan_thread.cc
+AsanThread *CreateMainThread();
+
 // Support function for __asan_(un)register_image_globals. Searches for the
 // loaded image containing `needle' and then enumerates all global metadata
 // structures declared in that image, applying `op' (e.g.,

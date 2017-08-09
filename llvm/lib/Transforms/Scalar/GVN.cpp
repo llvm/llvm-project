@@ -1558,6 +1558,17 @@ uint32_t GVN::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
   return Num;
 }
 
+/// Erase stale entry from phiTranslate cache so phiTranslate can be computed
+/// again.
+void GVN::ValueTable::eraseTranslateCacheEntry(uint32_t Num,
+                                               const BasicBlock &CurrBlock) {
+  for (const BasicBlock *Pred : predecessors(&CurrBlock)) {
+    auto FindRes = PhiTranslateTable.find({Num, Pred});
+    if (FindRes != PhiTranslateTable.end())
+      PhiTranslateTable.erase(FindRes);
+  }
+}
+
 // In order to find a leader for a given value number at a
 // specific basic block, we first obtain the list of all Values for that number,
 // and then scan the list to find one whose block dominates the block in
@@ -2210,6 +2221,9 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   }
 
   VN.add(Phi, ValNo);
+  // After creating a new PHI for ValNo, the phi translate result for ValNo will
+  // be changed, so erase the related stale entries in phi translate cache.
+  VN.eraseTranslateCacheEntry(ValNo, *CurrentBlock);
   addToLeaderTable(ValNo, Phi, CurrentBlock);
   Phi->setDebugLoc(CurInst->getDebugLoc());
   CurInst->replaceAllUsesWith(Phi);

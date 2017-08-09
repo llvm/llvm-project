@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple mips-linux-gnu -emit-llvm  -o  - %s | FileCheck %s
+// RUN: %clang_cc1 -triple mips64-linux-gnu -emit-llvm  -o  - %s | FileCheck %s
 
 void __attribute__((long_call)) foo1 (void);
 void __attribute__((short_call)) foo4 (void);

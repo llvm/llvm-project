@@ -111,6 +111,7 @@ public:
                             Value *LHS, Value *RHS);
     uint32_t phiTranslate(const BasicBlock *BB, const BasicBlock *PhiBlock,
                           uint32_t Num, GVN &Gvn);
+    void eraseTranslateCacheEntry(uint32_t Num, const BasicBlock &CurrBlock);
     bool exists(Value *V) const;
     void add(Value *V, uint32_t num);
     void clear();

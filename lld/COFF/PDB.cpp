@@ -30,13 +30,13 @@
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/GSIStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/PublicsStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
@@ -641,14 +641,10 @@ void PDBLinker::addObjectsToPDB() {
               [](const PublicSym32 &L, const PublicSym32 &R) {
                 return L.Name < R.Name;
               });
-    auto &PublicsBuilder = Builder.getPublicsBuilder();
+    auto &GsiBuilder = Builder.getGsiBuilder();
     for (const PublicSym32 &Pub : Publics)
-      PublicsBuilder.addPublicSymbol(Pub);
+      GsiBuilder.addPublicSymbol(Pub);
   }
-  // Add globals stream.  For now we don't actually write any thing useful to
-  // the globals stream, but the act of "getting" it also creates it lazily so
-  // that we write an empty stream.
-  (void)Builder.getGlobalsBuilder();
 }
 
 static void addLinkerModuleSymbols(StringRef Path,

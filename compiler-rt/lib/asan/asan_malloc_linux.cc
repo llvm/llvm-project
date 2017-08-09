@@ -235,5 +235,5 @@ void ReplaceSystemMalloc() {
 }  // namespace __asan
 #endif  // SANITIZER_ANDROID
 
-#endif  // SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX \
-  || SANITIZER_NETBSD
+#endif  // SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX ||
+        // SANITIZER_NETBSD

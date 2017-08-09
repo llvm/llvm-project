@@ -1,4 +1,4 @@
-//===-- AMDGPUOpenCLImageTypeLoweringPass.cpp -----------------------------===//
+//===- AMDGPUOpenCLImageTypeLoweringPass.cpp ------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -22,40 +22,57 @@
 /// Resource IDs of read-only images, write-only images and samplers are
 /// defined to be their index among the kernel arguments of the same
 /// type and access qualifier.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/Passes.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <tuple>
 
 using namespace llvm;
 
-namespace {
+static StringRef GetImageSizeFunc =         "llvm.OpenCL.image.get.size";
+static StringRef GetImageFormatFunc =       "llvm.OpenCL.image.get.format";
+static StringRef GetImageResourceIDFunc =   "llvm.OpenCL.image.get.resource.id";
+static StringRef GetSamplerResourceIDFunc =
+    "llvm.OpenCL.sampler.get.resource.id";
 
-StringRef GetImageSizeFunc =         "llvm.OpenCL.image.get.size";
-StringRef GetImageFormatFunc =       "llvm.OpenCL.image.get.format";
-StringRef GetImageResourceIDFunc =   "llvm.OpenCL.image.get.resource.id";
-StringRef GetSamplerResourceIDFunc = "llvm.OpenCL.sampler.get.resource.id";
+static StringRef ImageSizeArgMDType =   "__llvm_image_size";
+static StringRef ImageFormatArgMDType = "__llvm_image_format";
 
-StringRef ImageSizeArgMDType =   "__llvm_image_size";
-StringRef ImageFormatArgMDType = "__llvm_image_format";
-
-StringRef KernelsMDNodeName = "opencl.kernels";
-StringRef KernelArgMDNodeNames[] = {
+static StringRef KernelsMDNodeName = "opencl.kernels";
+static StringRef KernelArgMDNodeNames[] = {
   "kernel_arg_addr_space",
   "kernel_arg_access_qual",
   "kernel_arg_type",
   "kernel_arg_base_type",
   "kernel_arg_type_qual"};
-const unsigned NumKernelArgMDNodes = 5;
+static const unsigned NumKernelArgMDNodes = 5;
 
-typedef SmallVector<Metadata *, 8> MDVector;
+namespace {
+
+using MDVector = SmallVector<Metadata *, 8>;
 struct KernelArgMD {
   MDVector ArgVector[NumKernelArgMDNodes];
 };
@@ -303,7 +320,7 @@ class AMDGPUOpenCLImageTypeLoweringPass : public ModulePass {
     CloneFunctionInto(NewF, F, VMap, /*ModuleLevelChanges=*/false, Returns);
 
     // Build new MDNode.
-    SmallVector<llvm::Metadata *, 6> KernelMDArgs;
+    SmallVector<Metadata *, 6> KernelMDArgs;
     KernelMDArgs.push_back(ConstantAsMetadata::get(NewF));
     for (unsigned i = 0; i < NumKernelArgMDNodes; ++i)
       KernelMDArgs.push_back(MDNode::get(*Context, NewArgMDs.ArgVector[i]));
@@ -346,7 +363,7 @@ class AMDGPUOpenCLImageTypeLoweringPass : public ModulePass {
     return Modified;
   }
 
- public:
+public:
   AMDGPUOpenCLImageTypeLoweringPass() : ModulePass(ID) {}
 
   bool runOnModule(Module &M) override {
@@ -363,9 +380,9 @@ class AMDGPUOpenCLImageTypeLoweringPass : public ModulePass {
   }
 };
 
-char AMDGPUOpenCLImageTypeLoweringPass::ID = 0;
-
 } // end anonymous namespace
+
+char AMDGPUOpenCLImageTypeLoweringPass::ID = 0;
 
 ModulePass *llvm::createAMDGPUOpenCLImageTypeLoweringPass() {
   return new AMDGPUOpenCLImageTypeLoweringPass();

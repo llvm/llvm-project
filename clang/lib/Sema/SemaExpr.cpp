@@ -7530,6 +7530,12 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
   if (unsupportedTypeConversion(*this, LHSType, RHSType))
     return Incompatible;
 
+  // Disallow assigning a _Complex to a real type in C++ mode since it simply
+  // discards the imaginary part.
+  if (getLangOpts().CPlusPlus && RHSType->getAs<ComplexType>() &&
+      !LHSType->getAs<ComplexType>())
+    return Incompatible;
+
   // Arithmetic conversions.
   if (LHSType->isArithmeticType() && RHSType->isArithmeticType() &&
       !(getLangOpts().CPlusPlus && LHSType->isEnumeralType())) {
