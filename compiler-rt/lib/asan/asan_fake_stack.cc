@@ -171,7 +171,7 @@ void FakeStack::ForEachFakeFrame(RangeIteratorCallback callback, void *arg) {
   }
 }
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#if (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
 static THREADLOCAL FakeStack *fake_stack_tls;
 
 FakeStack *GetTLSFakeStack() {
@@ -183,7 +183,7 @@ void SetTLSFakeStack(FakeStack *fs) {
 #else
 FakeStack *GetTLSFakeStack() { return 0; }
 void SetTLSFakeStack(FakeStack *fs) { }
-#endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
+#endif  // (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
 
 static FakeStack *GetFakeStack() {
   AsanThread *t = GetCurrentThread();

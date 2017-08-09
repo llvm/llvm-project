@@ -46,8 +46,11 @@ ALWAYS_INLINE void FastPoisonShadow(uptr aligned_beg, uptr aligned_size,
   // for mapping shadow and zeroing out pages doesn't "just work", so we should
   // probably provide higher-level interface for these operations.
   // For now, just memset on Windows.
-  if (value ||
-      SANITIZER_WINDOWS == 1 ||
+  if (value || SANITIZER_WINDOWS == 1 ||
+      // TODO(mcgrathr): Fuchsia doesn't allow the shadow mapping to be
+      // changed at all.  It doesn't currently have an efficient means
+      // to zero a bunch of pages, but maybe we should add one.
+      SANITIZER_FUCHSIA == 1 ||
       shadow_end - shadow_beg < common_flags()->clear_shadow_mmap_threshold) {
     REAL(memset)((void*)shadow_beg, value, shadow_end - shadow_beg);
   } else {
