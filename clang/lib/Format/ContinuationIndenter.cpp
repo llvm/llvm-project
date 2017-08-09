@@ -1383,8 +1383,8 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
     }
   }
 
-  BreakableToken::Split SplitAfterLastLine = Token->getSplitAfterLastLine(
-      TailOffset, ColumnLimit, CommentPragmasRegex);
+  BreakableToken::Split SplitAfterLastLine =
+      Token->getSplitAfterLastLine(TailOffset, ColumnLimit);
   if (SplitAfterLastLine.first != StringRef::npos) {
     if (!DryRun)
       Token->replaceWhitespaceAfterLastLine(TailOffset, SplitAfterLastLine,

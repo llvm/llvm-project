@@ -688,11 +688,8 @@ supportedAddressingMode(Instruction *I, bool HasVector) {
   return AddressingMode(true/*LongDispl*/, true/*IdxReg*/);
 }
 
-// TODO: This method should also check for the displacement when *I is
-// passed. It may also be possible to merge with isFoldableMemAccessOffset()
-// now that both methods get the *I.
 bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
-            const AddrMode &AM, Type *Ty, unsigned AS, Instruction *I) const {
+       const AddrMode &AM, Type *Ty, unsigned AS, Instruction *I) const {
   // Punt on globals for now, although they can be used in limited
   // RELATIVE LONG cases.
   if (AM.BaseGV)
@@ -702,22 +699,19 @@ bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (!isInt<20>(AM.BaseOffs))
     return false;
 
-  if (I != nullptr &&
-      !supportedAddressingMode(I, Subtarget.hasVector()).IndexReg)
+  AddressingMode SupportedAM(true, true);
+  if (I != nullptr)
+    SupportedAM = supportedAddressingMode(I, Subtarget.hasVector());
+
+  if (!SupportedAM.LongDisplacement && !isUInt<12>(AM.BaseOffs))
+    return false;
+
+  if (!SupportedAM.IndexReg)
     // No indexing allowed.
     return AM.Scale == 0;
   else
     // Indexing is OK but no scale factor can be applied.
     return AM.Scale == 0 || AM.Scale == 1;
-}
-
-// TODO: Should we check for isInt<20> also?
-bool SystemZTargetLowering::isFoldableMemAccessOffset(Instruction *I,
-                                                      int64_t Offset) const {
-  if (!supportedAddressingMode(I, Subtarget.hasVector()).LongDisplacement)
-    return (isUInt<12>(Offset));
-
-  return true;
 }
 
 bool SystemZTargetLowering::isTruncateFree(Type *FromType, Type *ToType) const {

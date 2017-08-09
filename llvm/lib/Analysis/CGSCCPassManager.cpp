@@ -459,71 +459,78 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
       VisitRef(*F);
 
   // First remove all of the edges that are no longer present in this function.
-  // We have to build a list of dead targets first and then remove them as the
-  // data structures will all be invalidated by removing them.
-  SmallVector<PointerIntPair<Node *, 1, Edge::Kind>, 4> DeadTargets;
-  for (Edge &E : *N)
-    if (!RetainedEdges.count(&E.getNode()))
-      DeadTargets.push_back({&E.getNode(), E.getKind()});
-  for (auto DeadTarget : DeadTargets) {
-    Node &TargetN = *DeadTarget.getPointer();
-    bool IsCall = DeadTarget.getInt() == Edge::Call;
-    SCC &TargetC = *G.lookupSCC(TargetN);
-    RefSCC &TargetRC = TargetC.getOuterRefSCC();
-
-    if (&TargetRC != RC) {
-      RC->removeOutgoingEdge(N, TargetN);
-      if (DebugLogging)
-        dbgs() << "Deleting outgoing edge from '" << N << "' to '" << TargetN
-               << "'\n";
+  // The first step makes these edges uniformly ref edges and accumulates them
+  // into a separate data structure so removal doesn't invalidate anything.
+  SmallVector<Node *, 4> DeadTargets;
+  for (Edge &E : *N) {
+    if (RetainedEdges.count(&E.getNode()))
       continue;
-    }
-    if (DebugLogging)
-      dbgs() << "Deleting internal " << (IsCall ? "call" : "ref")
-             << " edge from '" << N << "' to '" << TargetN << "'\n";
 
-    if (IsCall) {
+    SCC &TargetC = *G.lookupSCC(E.getNode());
+    RefSCC &TargetRC = TargetC.getOuterRefSCC();
+    if (&TargetRC == RC && E.isCall()) {
       if (C != &TargetC) {
         // For separate SCCs this is trivial.
-        RC->switchTrivialInternalEdgeToRef(N, TargetN);
+        RC->switchTrivialInternalEdgeToRef(N, E.getNode());
       } else {
         // Now update the call graph.
-        C = incorporateNewSCCRange(RC->switchInternalEdgeToRef(N, TargetN), G,
-                                   N, C, AM, UR, DebugLogging);
+        C = incorporateNewSCCRange(RC->switchInternalEdgeToRef(N, E.getNode()),
+                                   G, N, C, AM, UR, DebugLogging);
       }
     }
 
-    auto NewRefSCCs = RC->removeInternalRefEdge(N, TargetN);
-    if (!NewRefSCCs.empty()) {
-      // Note that we don't bother to invalidate analyses as ref-edge
-      // connectivity is not really observable in any way and is intended
-      // exclusively to be used for ordering of transforms rather than for
-      // analysis conclusions.
+    // Now that this is ready for actual removal, put it into our list.
+    DeadTargets.push_back(&E.getNode());
+  }
+  // Remove the easy cases quickly and actually pull them out of our list.
+  DeadTargets.erase(
+      llvm::remove_if(DeadTargets,
+                      [&](Node *TargetN) {
+                        SCC &TargetC = *G.lookupSCC(*TargetN);
+                        RefSCC &TargetRC = TargetC.getOuterRefSCC();
 
-      // The RC worklist is in reverse postorder, so we first enqueue the
-      // current RefSCC as it will remain the parent of all split RefSCCs, then
-      // we enqueue the new ones in RPO except for the one which contains the
-      // source node as that is the "bottom" we will continue processing in the
-      // bottom-up walk.
-      UR.RCWorklist.insert(RC);
+                        // We can't trivially remove internal targets, so skip
+                        // those.
+                        if (&TargetRC == RC)
+                          return false;
+
+                        RC->removeOutgoingEdge(N, *TargetN);
+                        if (DebugLogging)
+                          dbgs() << "Deleting outgoing edge from '" << N
+                                 << "' to '" << TargetN << "'\n";
+                        return true;
+                      }),
+      DeadTargets.end());
+
+  // Now do a batch removal of the internal ref edges left.
+  auto NewRefSCCs = RC->removeInternalRefEdge(N, DeadTargets);
+  if (!NewRefSCCs.empty()) {
+    // The old RefSCC is dead, mark it as such.
+    UR.InvalidatedRefSCCs.insert(RC);
+
+    // Note that we don't bother to invalidate analyses as ref-edge
+    // connectivity is not really observable in any way and is intended
+    // exclusively to be used for ordering of transforms rather than for
+    // analysis conclusions.
+
+    // Update RC to the "bottom".
+    assert(G.lookupSCC(N) == C && "Changed the SCC when splitting RefSCCs!");
+    RC = &C->getOuterRefSCC();
+    assert(G.lookupRefSCC(N) == RC && "Failed to update current RefSCC!");
+
+    // The RC worklist is in reverse postorder, so we enqueue the new ones in
+    // RPO except for the one which contains the source node as that is the
+    // "bottom" we will continue processing in the bottom-up walk.
+    assert(NewRefSCCs.front() == RC &&
+           "New current RefSCC not first in the returned list!");
+    for (RefSCC *NewRC :
+         reverse(make_range(std::next(NewRefSCCs.begin()), NewRefSCCs.end()))) {
+      assert(NewRC != RC && "Should not encounter the current RefSCC further "
+                            "in the postorder list of new RefSCCs.");
+      UR.RCWorklist.insert(NewRC);
       if (DebugLogging)
-        dbgs() << "Enqueuing the existing RefSCC in the update worklist: "
-               << *RC << "\n";
-      // Update the RC to the "bottom".
-      assert(G.lookupSCC(N) == C && "Changed the SCC when splitting RefSCCs!");
-      RC = &C->getOuterRefSCC();
-      assert(G.lookupRefSCC(N) == RC && "Failed to update current RefSCC!");
-      assert(NewRefSCCs.front() == RC &&
-             "New current RefSCC not first in the returned list!");
-      for (RefSCC *NewRC : reverse(
-               make_range(std::next(NewRefSCCs.begin()), NewRefSCCs.end()))) {
-        assert(NewRC != RC && "Should not encounter the current RefSCC further "
-                              "in the postorder list of new RefSCCs.");
-        UR.RCWorklist.insert(NewRC);
-        if (DebugLogging)
-          dbgs() << "Enqueuing a new RefSCC in the update worklist: " << *NewRC
-                 << "\n";
-      }
+        dbgs() << "Enqueuing a new RefSCC in the update worklist: " << *NewRC
+               << "\n";
     }
   }
 

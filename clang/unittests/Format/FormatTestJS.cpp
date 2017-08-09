@@ -158,6 +158,53 @@ TEST_F(FormatTestJS, JSDocComments) {
                    "var x = 1;\n"
                    "}",
                    getGoogleJSStyleWithColumns(20)));
+
+  // Don't break the first line of a single line short jsdoc comment pragma.
+  EXPECT_EQ("/** @returns j */",
+            format("/** @returns j */",
+                   getGoogleJSStyleWithColumns(20)));
+
+  // Break a single line long jsdoc comment pragma.
+  EXPECT_EQ("/**\n"
+            " * @returns {string} jsdoc line 12\n"
+            " */",
+            format("/** @returns {string} jsdoc line 12 */",
+                   getGoogleJSStyleWithColumns(20)));
+
+  EXPECT_EQ("/**\n"
+            " * @returns {string} jsdoc line 12\n"
+            " */",
+            format("/** @returns {string} jsdoc line 12  */",
+                   getGoogleJSStyleWithColumns(20)));
+
+  EXPECT_EQ("/**\n"
+            " * @returns {string} jsdoc line 12\n"
+            " */",
+            format("/** @returns {string} jsdoc line 12*/",
+                   getGoogleJSStyleWithColumns(20)));
+
+  // Fix a multiline jsdoc comment ending in a comment pragma.
+  EXPECT_EQ("/**\n"
+            " * line 1\n"
+            " * line 2\n"
+            " * @returns {string} jsdoc line 12\n"
+            " */",
+            format("/** line 1\n"
+                   " * line 2\n"
+                   " * @returns {string} jsdoc line 12 */",
+                   getGoogleJSStyleWithColumns(20)));
+
+  EXPECT_EQ("/**\n"
+            " * line 1\n"
+            " * line 2\n"
+            " *\n"
+            " * @returns j\n"
+            " */",
+            format("/** line 1\n"
+                   " * line 2\n"
+                   " *\n"
+                   " * @returns j */",
+                   getGoogleJSStyleWithColumns(20)));
 }
 
 TEST_F(FormatTestJS, UnderstandsJavaScriptOperators) {

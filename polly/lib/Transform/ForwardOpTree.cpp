@@ -25,7 +25,7 @@
 #include "polly/ZoneAlgo.h"
 #include "llvm/Analysis/ValueTracking.h"
 
-#define DEBUG_TYPE "polly-delicm"
+#define DEBUG_TYPE "polly-optree"
 
 using namespace polly;
 using namespace llvm;

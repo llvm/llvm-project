@@ -681,12 +681,18 @@ void BreakableBlockComment::replaceWhitespaceBefore(
       InPPDirective, /*Newlines=*/1, ContentColumn[LineIndex] - Prefix.size());
 }
 
-BreakableToken::Split BreakableBlockComment::getSplitAfterLastLine(
-    unsigned TailOffset, unsigned ColumnLimit,
-    llvm::Regex &CommentPragmasRegex) const {
-  if (DelimitersOnNewline)
-    return getSplit(Lines.size() - 1, TailOffset, ColumnLimit,
-                    CommentPragmasRegex);
+BreakableToken::Split
+BreakableBlockComment::getSplitAfterLastLine(unsigned TailOffset,
+                                             unsigned ColumnLimit) const {
+  if (DelimitersOnNewline) {
+    // Replace the trailing whitespace of the last line with a newline.
+    // In case the last line is empty, the ending '*/' is already on its own
+    // line.
+    StringRef Line = Content.back().substr(TailOffset);
+    StringRef TrimmedLine = Line.rtrim(Blanks);
+    if (!TrimmedLine.empty())
+      return Split(TrimmedLine.size(), Line.size() - TrimmedLine.size());
+  }
   return Split(StringRef::npos, 0);
 }
 
