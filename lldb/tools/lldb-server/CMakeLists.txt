@@ -83,7 +83,6 @@ add_lldb_tool(lldb-server INCLUDE_IN_FRAMEWORK
       lldbHost
       lldbInitialization
       lldbInterpreter
-      lldbPluginPlatformMacOSX
       ${LLDB_PLUGINS}
       ${LLDB_SYSTEM_LIBS}
 
