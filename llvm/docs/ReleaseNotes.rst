@@ -117,6 +117,18 @@ Changes to the X86 Target
 
 * Added support for AMD Lightweight Profiling (LWP) instructions.
 
+* Avoid using slow LEA instructions.
+
+* Use alternative sequences for multiply by constant.
+
+* Improved lowering of strided shuffles.
+
+* Improved the AVX512 cost model used by the vectorizer.
+
+* Fix scalar code performance when AVX512 is enabled by making i1's illegal.
+
+* Fixed many inline assembly bugs.
+
 Changes to the AMDGPU Target
 -----------------------------
 
