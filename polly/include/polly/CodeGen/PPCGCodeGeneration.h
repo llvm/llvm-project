@@ -21,4 +21,8 @@ enum GPUArch { NVPTX64, SPIR32, SPIR64 };
 /// The GPU Runtime implementation to use.
 enum GPURuntime { CUDA, OpenCL };
 
+namespace polly {
+extern bool PollyManagedMemory;
+}
+
 #endif // POLLY_PPCGCODEGENERATION_H

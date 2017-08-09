@@ -21,12 +21,13 @@ class PlatformPythonTestCase(TestBase):
     @no_debug_info_test
     def test_platform_list(self):
         """Test SBDebugger::GetNumPlatforms() & GetPlatformAtIndex() API"""
-        # Verify there's only the host platform present by default.
-        self.assertEqual(self.dbg.GetNumPlatforms(), 1)
+        # Verify the host platform is present by default.
+        initial_num_platforms = self.dbg.GetNumPlatforms()
+        self.assertGreater(initial_num_platforms, 0)
         host_platform = self.dbg.GetPlatformAtIndex(0)
         self.assertTrue(host_platform.IsValid() and
                         host_platform.GetName() == 'host',
-                        'Only the host platform is available')
+                        'The host platform is present')
         # Select another platform and verify that the platform is added to
         # the platform list.
         platform_idx = self.dbg.GetNumAvailablePlatforms() - 1
@@ -39,9 +40,14 @@ class PlatformPythonTestCase(TestBase):
         selected_platform = self.dbg.GetSelectedPlatform()
         self.assertTrue(selected_platform.IsValid())
         self.assertEqual(selected_platform.GetName(), platform_name)
-        self.assertEqual(self.dbg.GetNumPlatforms(), 2)
-        platform = self.dbg.GetPlatformAtIndex(1)
-        self.assertEqual(platform.GetName(), platform_name)
+        self.assertEqual(self.dbg.GetNumPlatforms(), initial_num_platforms + 1)
+        platform_found = False
+        for platform_idx in range(self.dbg.GetNumPlatforms()):
+            platform = self.dbg.GetPlatformAtIndex(platform_idx)
+            if platform.GetName() == platform_name:
+                platform_found = True
+                break
+        self.assertTrue(platform_found)
 
     @add_test_categories(['pyapi'])
     @no_debug_info_test
