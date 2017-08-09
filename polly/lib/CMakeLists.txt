@@ -9,6 +9,7 @@ set(ISL_CODEGEN_FILES
 if (GPU_CODEGEN)
   set (GPGPU_CODEGEN_FILES
        CodeGen/PPCGCodeGeneration.cpp
+       CodeGen/ManagedMemoryRewrite.cpp
        )
 endif (GPU_CODEGEN)
 
