@@ -637,7 +637,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Fini = Args.getLastArgValue(OPT_fini, "_fini");
   Config->GcSections = getArg(Args, OPT_gc_sections, OPT_no_gc_sections, false);
   Config->GdbIndex = Args.hasArg(OPT_gdb_index);
-  Config->ICF = Args.hasArg(OPT_icf);
+  Config->ICF = getArg(Args, OPT_icf_all, OPT_icf_none, false);
   Config->Init = Args.getLastArgValue(OPT_init, "_init");
   Config->LTOAAPipeline = Args.getLastArgValue(OPT_lto_aa_pipeline);
   Config->LTONewPmPasses = Args.getLastArgValue(OPT_lto_newpm_passes);

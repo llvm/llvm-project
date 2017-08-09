@@ -102,6 +102,7 @@ public:
       Function *PollyMallocManaged = GetOrCreatePollyMallocManaged(M);
       assert(PollyMallocManaged && "unable to create polly_mallocManaged");
       Malloc->replaceAllUsesWith(PollyMallocManaged);
+      Malloc->eraseFromParent();
     }
 
     Function *Free = M.getFunction("free");
@@ -110,6 +111,7 @@ public:
       Function *PollyFreeManaged = GetOrCreatePollyFreeManaged(M);
       assert(PollyFreeManaged && "unable to create polly_freeManaged");
       Free->replaceAllUsesWith(PollyFreeManaged);
+      Free->eraseFromParent();
     }
 
     return true;

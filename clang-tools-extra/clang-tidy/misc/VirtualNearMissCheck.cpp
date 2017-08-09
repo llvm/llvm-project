@@ -244,8 +244,8 @@ void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
         if (isOverriddenByDerivedClass(BaseMD, DerivedRD))
           continue;
 
-        unsigned EditDistance =
-            BaseMD->getName().edit_distance(DerivedMD->getName());
+        unsigned EditDistance = BaseMD->getName().edit_distance(
+            DerivedMD->getName(), EditDistanceThreshold);
         if (EditDistance > 0 && EditDistance <= EditDistanceThreshold) {
           if (checkOverrideWithoutName(Context, BaseMD, DerivedMD)) {
             // A "virtual near miss" is found.
