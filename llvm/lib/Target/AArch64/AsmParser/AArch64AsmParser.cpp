@@ -1810,6 +1810,8 @@ static bool isValidVectorKind(StringRef Name) {
       .Case(".d", true)
       // Needed for fp16 scalar pairwise reductions
       .Case(".2h", true)
+      // another special case for the ARMv8.2a dot product operand
+      .Case(".4b", true)
       .Default(false);
 }
 

@@ -51,6 +51,10 @@ llvm::Pass *createCodeGenerationPass();
 #ifdef GPU_CODEGEN
 llvm::Pass *createPPCGCodeGenerationPass(GPUArch Arch = GPUArch::NVPTX64,
                                          GPURuntime Runtime = GPURuntime::CUDA);
+
+llvm::Pass *
+createManagedMemoryRewritePassPass(GPUArch Arch = GPUArch::NVPTX64,
+                                   GPURuntime Runtime = GPURuntime::CUDA);
 #endif
 llvm::Pass *createIslScheduleOptimizerPass();
 llvm::Pass *createFlattenSchedulePass();
@@ -87,6 +91,7 @@ struct PollyForcePassLinking {
     polly::createCodeGenerationPass();
 #ifdef GPU_CODEGEN
     polly::createPPCGCodeGenerationPass();
+    polly::createManagedMemoryRewritePassPass();
 #endif
     polly::createIslScheduleOptimizerPass();
     polly::createMaximalStaticExpansionPass();
@@ -109,6 +114,7 @@ void initializeIslAstInfoWrapperPassPass(llvm::PassRegistry &);
 void initializeCodeGenerationPass(llvm::PassRegistry &);
 #ifdef GPU_CODEGEN
 void initializePPCGCodeGenerationPass(llvm::PassRegistry &);
+void initializeManagedMemoryRewritePassPass(llvm::PassRegistry &);
 #endif
 void initializeIslScheduleOptimizerPass(llvm::PassRegistry &);
 void initializeMaximalStaticExpanderPass(llvm::PassRegistry &);

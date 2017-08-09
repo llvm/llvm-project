@@ -212,19 +212,19 @@ void test () {
   switch (a) {
     case name1::F1: break;
     case name1::F3: break;
-    case name2::B2: break; // expected-warning {{comparison of two values with different enumeration types ('name1::Foo' and 'name2::Baz')}}
+    case name2::B2: break; // expected-warning {{comparison of two values with different enumeration types in switch statement ('name1::Foo' and 'name2::Baz')}}
   }
 
   switch (x) {
     case FooB: break;
     case FooC: break;
-    case BarD: break; // expected-warning {{comparison of two values with different enumeration types ('Foo' and 'Bar')}}
+    case BarD: break; // expected-warning {{comparison of two values with different enumeration types in switch statement ('Foo' and 'Bar')}}
   }
 
   switch(getBar()) {
     case BarE: break;
     case BarF: break;
-    case FooA: break; // expected-warning {{comparison of two values with different enumeration types ('Bar' and 'Foo')}}
+    case FooA: break; // expected-warning {{comparison of two values with different enumeration types in switch statement ('Bar' and 'Foo')}}
   }
 
   switch(x) {

@@ -1400,6 +1400,9 @@ public:
   bool contains(Instruction *Inst) const {
     if (!Inst)
       return false;
+    if (isBlockStmt())
+      return std::find(Instructions.begin(), Instructions.end(), Inst) !=
+             Instructions.end();
     return represents(Inst->getParent());
   }
 
@@ -1747,6 +1750,9 @@ private:
   /// A map from basic blocks to vector of SCoP statements. Currently this
   /// vector comprises only of a single statement.
   DenseMap<BasicBlock *, std::vector<ScopStmt *>> StmtMap;
+
+  /// A map from instructions to SCoP statements.
+  DenseMap<Instruction *, ScopStmt *> InstStmtMap;
 
   /// A map from basic blocks to their domains.
   DenseMap<BasicBlock *, isl::set> DomainMap;
@@ -2697,10 +2703,6 @@ public:
   /// Get an isl string representing the invalid context.
   std::string getInvalidContextStr() const;
 
-  /// Return the ScopStmt for the given @p BB or nullptr if there is
-  ///        none.
-  ScopStmt *getStmtFor(BasicBlock *BB) const;
-
   /// Return the list of ScopStmts that represent the given @p BB.
   ArrayRef<ScopStmt *> getStmtListFor(BasicBlock *BB) const;
 
@@ -2724,7 +2726,7 @@ public:
   /// Return the ScopStmt an instruction belongs to, or nullptr if it
   ///        does not belong to any statement in this Scop.
   ScopStmt *getStmtFor(Instruction *Inst) const {
-    return getStmtFor(Inst->getParent());
+    return InstStmtMap.lookup(Inst);
   }
 
   /// Return the number of statements in the SCoP.

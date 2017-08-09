@@ -272,7 +272,12 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = llvm::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle);
+
+    if (!I->isThumb() && !I->hasARMOps())
+      F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
+          "instructions, but the target does not support ARM mode execution.");
   }
+
   return I.get();
 }
 

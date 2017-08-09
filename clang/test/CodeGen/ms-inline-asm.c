@@ -527,7 +527,7 @@ void cpuid() {
 typedef struct {
   int a;
   int b;
-} A;
+} A, *pA;
 
 typedef struct {
   int b1;
@@ -539,13 +539,15 @@ typedef struct {
   A   c2;
   int c3;
   B   c4;
-} C;
+} C, *pC;
 
 void t39() {
 // CHECK-LABEL: define void @t39
   __asm mov eax, [eax].A.b
 // CHECK: mov eax, [eax].4
   __asm mov eax, [eax] A.b
+// CHECK: mov eax, [eax] .4
+  __asm mov eax, [eax] pA.b
 // CHECK: mov eax, [eax] .4
   __asm mov eax, fs:[0] A.b
 // CHECK: mov eax, fs:[$$0] .4
@@ -556,6 +558,8 @@ void t39() {
   __asm mov eax, fs:[0] C.c2.b
 // CHECK: mov eax, fs:[$$0] .8
   __asm mov eax, [eax]C.c4.b2.b
+// CHECK: mov eax, [eax].24
+  __asm mov eax, [eax]pC.c4.b2.b
 // CHECK: mov eax, [eax].24
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }

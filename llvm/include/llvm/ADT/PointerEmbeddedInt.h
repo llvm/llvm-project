@@ -52,7 +52,7 @@ class PointerEmbeddedInt {
     explicit RawValueTag() = default;
   };
 
-  friend class PointerLikeTypeTraits<PointerEmbeddedInt>;
+  friend struct PointerLikeTypeTraits<PointerEmbeddedInt>;
 
   explicit PointerEmbeddedInt(uintptr_t Value, RawValueTag) : Value(Value) {}
 
@@ -80,10 +80,9 @@ public:
 // Provide pointer like traits to support use with pointer unions and sum
 // types.
 template <typename IntT, int Bits>
-class PointerLikeTypeTraits<PointerEmbeddedInt<IntT, Bits>> {
+struct PointerLikeTypeTraits<PointerEmbeddedInt<IntT, Bits>> {
   using T = PointerEmbeddedInt<IntT, Bits>;
 
-public:
   static inline void *getAsVoidPointer(const T &P) {
     return reinterpret_cast<void *>(P.Value);
   }

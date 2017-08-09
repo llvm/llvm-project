@@ -978,6 +978,44 @@ multiclass avx512_int_broadcast_reg<bits<8> opc, X86VectorVTInfo _,
                          (_.VT (OpNode SrcRC:$src))>, T8PD, EVEX;
 }
 
+multiclass avx512_int_broadcastbw_reg<bits<8> opc, string Name, 
+                                    X86VectorVTInfo _, SDPatternOperator OpNode,
+                                    RegisterClass SrcRC, SubRegIndex Subreg> {
+  let ExeDomain = _.ExeDomain in
+  defm r : AVX512_maskable_custom<opc, MRMSrcReg,
+                        (outs _.RC:$dst), (ins GR32:$src),
+                        !con((ins _.RC:$src0, _.KRCWM:$mask), (ins GR32:$src)),
+                        !con((ins _.KRCWM:$mask), (ins GR32:$src)),
+                        "vpbroadcast"##_.Suffix, "$src", "$src", [], [], [],
+                        "$src0 = $dst">, T8PD, EVEX;
+
+  def : Pat <(_.VT (OpNode SrcRC:$src)),
+             (!cast<Instruction>(Name#r)
+              (i32 (INSERT_SUBREG (i32 (IMPLICIT_DEF)), SrcRC:$src, Subreg)))>;
+
+  def : Pat <(vselect _.KRCWM:$mask, (_.VT (OpNode SrcRC:$src)), _.RC:$src0),
+             (!cast<Instruction>(Name#rk) _.RC:$src0, _.KRCWM:$mask,
+              (i32 (INSERT_SUBREG (i32 (IMPLICIT_DEF)), SrcRC:$src, Subreg)))>;
+
+  def : Pat <(vselect _.KRCWM:$mask, (_.VT (OpNode SrcRC:$src)), _.ImmAllZerosV),
+             (!cast<Instruction>(Name#rkz) _.KRCWM:$mask,
+              (i32 (INSERT_SUBREG (i32 (IMPLICIT_DEF)), SrcRC:$src, Subreg)))>;
+}
+
+multiclass avx512_int_broadcastbw_reg_vl<bits<8> opc, string Name,
+                      AVX512VLVectorVTInfo _, SDPatternOperator OpNode,
+                      RegisterClass SrcRC, SubRegIndex Subreg, Predicate prd> {
+  let Predicates = [prd] in
+    defm Z : avx512_int_broadcastbw_reg<opc, Name#Z, _.info512, OpNode, SrcRC, 
+              Subreg>, EVEX_V512;
+  let Predicates = [prd, HasVLX] in {
+    defm Z256 : avx512_int_broadcastbw_reg<opc, Name#Z256, _.info256, OpNode,
+              SrcRC, Subreg>, EVEX_V256;
+    defm Z128 : avx512_int_broadcastbw_reg<opc, Name#Z128, _.info128, OpNode,
+              SrcRC, Subreg>, EVEX_V128;
+  }
+}
+
 multiclass avx512_int_broadcast_reg_vl<bits<8> opc, AVX512VLVectorVTInfo _,
                                        SDPatternOperator OpNode,
                                        RegisterClass SrcRC, Predicate prd> {
@@ -989,18 +1027,11 @@ multiclass avx512_int_broadcast_reg_vl<bits<8> opc, AVX512VLVectorVTInfo _,
   }
 }
 
-let isCodeGenOnly = 1 in {
-defm VPBROADCASTBr : avx512_int_broadcast_reg_vl<0x7A, avx512vl_i8_info,
-                                                 X86VBroadcast, GR8, HasBWI>;
-defm VPBROADCASTWr : avx512_int_broadcast_reg_vl<0x7B, avx512vl_i16_info,
-                                                 X86VBroadcast, GR16, HasBWI>;
-}
-let isAsmParserOnly = 1 in {
-  defm VPBROADCASTBr_Alt : avx512_int_broadcast_reg_vl<0x7A, avx512vl_i8_info,
-                                                       null_frag, GR32, HasBWI>;
-  defm VPBROADCASTWr_Alt : avx512_int_broadcast_reg_vl<0x7B, avx512vl_i16_info,
-                                                       null_frag, GR32, HasBWI>;
-}
+defm VPBROADCASTBr : avx512_int_broadcastbw_reg_vl<0x7A, "VPBROADCASTBr",
+                       avx512vl_i8_info, X86VBroadcast, GR8, sub_8bit, HasBWI>;
+defm VPBROADCASTWr : avx512_int_broadcastbw_reg_vl<0x7B, "VPBROADCASTWr",
+                       avx512vl_i16_info, X86VBroadcast, GR16, sub_16bit,
+                       HasBWI>;
 defm VPBROADCASTDr : avx512_int_broadcast_reg_vl<0x7C, avx512vl_i32_info,
                                                  X86VBroadcast, GR32, HasAVX512>;
 defm VPBROADCASTQr : avx512_int_broadcast_reg_vl<0x7C, avx512vl_i64_info,

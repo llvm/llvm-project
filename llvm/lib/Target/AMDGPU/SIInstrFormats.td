@@ -90,6 +90,10 @@ class InstSI <dag outs, dag ins, string asm = "",
   // Is it possible for this instruction to be atomic?
   field bit maybeAtomic = 0;
 
+  // This bit indicates that this is a 16-bit instruction which zero-fills
+  // unused bits in dst. Note that new GFX9 opcodes preserve unused bits.
+  field bit F16_ZFILL = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
   let TSFlags{1} = VALU;
@@ -137,6 +141,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{43} = VOP3_OPSEL;
 
   let TSFlags{44} = maybeAtomic;
+  let TSFlags{45} = F16_ZFILL;
 
   let SchedRW = [Write32Bit];
 

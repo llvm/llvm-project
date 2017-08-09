@@ -62,6 +62,7 @@ protected:
   bool HasFPARMv8 = false;
   bool HasNEON = false;
   bool HasCrypto = false;
+  bool HasDotProd = false;
   bool HasCRC = false;
   bool HasLSE = false;
   bool HasRAS = false;
@@ -201,6 +202,7 @@ public:
   bool hasFPARMv8() const { return HasFPARMv8; }
   bool hasNEON() const { return HasNEON; }
   bool hasCrypto() const { return HasCrypto; }
+  bool hasDotProd() const { return HasDotProd; }
   bool hasCRC() const { return HasCRC; }
   bool hasLSE() const { return HasLSE; }
   bool hasRAS() const { return HasRAS; }

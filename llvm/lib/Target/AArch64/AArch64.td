@@ -122,6 +122,10 @@ def FeatureUseRSqrt : SubtargetFeature<
     "use-reciprocal-square-root", "UseRSqrt", "true",
     "Use the reciprocal square root approximation">;
 
+def FeatureDotProd : SubtargetFeature<
+    "dotprod", "HasDotProd", "true",
+    "Enable dot product support">;
+
 def FeatureNoNegativeImmediates : SubtargetFeature<"no-neg-immediates",
                                         "NegativeImmediates", "false",
                                         "Convert immediates and instructions "

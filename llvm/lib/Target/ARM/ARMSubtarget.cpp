@@ -138,8 +138,6 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                           ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
                           : (ARMBaseInstrInfo *)new Thumb2InstrInfo(*this)),
       TLInfo(TM, *this) {
-  assert((isThumb() || hasARMOps()) &&
-         "Target must either be thumb or support ARM operations!");
 
   ARMGISelActualAccessor *GISel = new ARMGISelActualAccessor();
   GISel->CallLoweringInfo.reset(new ARMCallLowering(*getTargetLowering()));

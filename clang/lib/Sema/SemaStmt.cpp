@@ -762,7 +762,7 @@ static void checkEnumTypesInSwitchStmt(Sema &S, const Expr *Cond,
   if (S.Context.hasSameUnqualifiedType(CondType, CaseType))
     return;
 
-  S.Diag(Case->getExprLoc(), diag::warn_comparison_of_mixed_enum_types)
+  S.Diag(Case->getExprLoc(), diag::warn_comparison_of_mixed_enum_types_switch)
       << CondType << CaseType << Cond->getSourceRange()
       << Case->getSourceRange();
 }

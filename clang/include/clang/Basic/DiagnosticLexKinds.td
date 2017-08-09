@@ -173,8 +173,6 @@ def warn_char_constant_too_large : Warning<
 def err_multichar_utf_character_literal : Error<
   "Unicode character literals may not contain multiple characters">;
 def err_exponent_has_no_digits : Error<"exponent has no digits">;
-def ext_imaginary_constant : Extension<
-  "imaginary constants are a GNU extension">, InGroup<GNUImaginaryConstant>;
 def err_hex_constant_requires : Error<
   "hexadecimal floating %select{constant|literal}0 requires "
   "%select{an exponent|a significand}1">;

@@ -1106,6 +1106,10 @@ TEST_F(FormatTestJS, WrapRespectsAutomaticSemicolonInsertion) {
                "  readonly ratherLongField = 1;\n"
                "}",
                getGoogleJSStyleWithColumns(20));
+  verifyFormat("const x = (5 + 9)\n"
+               "const y = 3\n",
+               "const x = (   5 +    9)\n"
+               "const y = 3\n");
 }
 
 TEST_F(FormatTestJS, AutomaticSemicolonInsertionHeuristic) {

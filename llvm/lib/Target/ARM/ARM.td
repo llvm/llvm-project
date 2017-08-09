@@ -341,9 +341,7 @@ def FeatureThumb2 : SubtargetFeature<"thumb2", "HasThumb2", "true",
                                      "Enable Thumb2 instructions">;
 
 def FeatureNoARM  : SubtargetFeature<"noarm", "NoARM", "true",
-                                     "Does not support ARM mode execution",
-                                     [ModeThumb]>;
-
+                                     "Does not support ARM mode execution">;
 
 //===----------------------------------------------------------------------===//
 // ARM ISAa.
@@ -504,11 +502,13 @@ def ARMv6kz   : Architecture<"armv6kz",   "ARMv6kz",  [HasV6KOps,
 
 def ARMv6m    : Architecture<"armv6-m",   "ARMv6m",   [HasV6MOps,
                                                        FeatureNoARM,
+                                                       ModeThumb,
                                                        FeatureDB,
                                                        FeatureMClass]>;
 
 def ARMv6sm   : Architecture<"armv6s-m",  "ARMv6sm",  [HasV6MOps,
                                                        FeatureNoARM,
+                                                       ModeThumb,
                                                        FeatureDB,
                                                        FeatureMClass]>;
 
@@ -536,6 +536,7 @@ def ARMv7r    : Architecture<"armv7-r",   "ARMv7r",   [HasV7Ops,
 def ARMv7m    : Architecture<"armv7-m",   "ARMv7m",   [HasV7Ops,
                                                        FeatureThumb2,
                                                        FeatureNoARM,
+                                                       ModeThumb,
                                                        FeatureDB,
                                                        FeatureHWDivThumb,
                                                        FeatureMClass]>;
@@ -543,6 +544,7 @@ def ARMv7m    : Architecture<"armv7-m",   "ARMv7m",   [HasV7Ops,
 def ARMv7em   : Architecture<"armv7e-m",  "ARMv7em",  [HasV7Ops,
                                                        FeatureThumb2,
                                                        FeatureNoARM,
+                                                       ModeThumb,
                                                        FeatureDB,
                                                        FeatureHWDivThumb,
                                                        FeatureMClass,
@@ -598,6 +600,7 @@ def ARMv8r    : Architecture<"armv8-r",   "ARMv8r",   [HasV8Ops,
 def ARMv8mBaseline : Architecture<"armv8-m.base", "ARMv8mBaseline",
                                                       [HasV8MBaselineOps,
                                                        FeatureNoARM,
+                                                       ModeThumb,
                                                        FeatureDB,
                                                        FeatureHWDivThumb,
                                                        FeatureV7Clrex,
@@ -608,6 +611,7 @@ def ARMv8mBaseline : Architecture<"armv8-m.base", "ARMv8mBaseline",
 def ARMv8mMainline : Architecture<"armv8-m.main", "ARMv8mMainline",
                                                       [HasV8MMainlineOps,
                                                        FeatureNoARM,
+                                                       ModeThumb,
                                                        FeatureDB,
                                                        FeatureHWDivThumb,
                                                        Feature8MSecExt,
