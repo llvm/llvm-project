@@ -377,6 +377,8 @@ option(CLANG_ENABLE_STATIC_ANALYZER "Build static analyzer." ON)
 option(CLANG_ANALYZER_BUILD_Z3
   "Build the static analyzer with the Z3 constraint manager." OFF)
 
+option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
+
 if(NOT CLANG_ENABLE_STATIC_ANALYZER AND (CLANG_ENABLE_ARCMT OR CLANG_ANALYZER_BUILD_Z3))
   message(FATAL_ERROR "Cannot disable static analyzer while enabling ARCMT or Z3")
 endif()

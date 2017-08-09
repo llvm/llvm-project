@@ -161,8 +161,8 @@ public:
   ///
   /// A result having offset == StringRef::npos means that no reformat is
   /// necessary.
-  virtual Split getSplitAfterLastLine(unsigned TailOffset, unsigned ColumnLimit,
-                                      llvm::Regex &CommentPragmasRegex) const {
+  virtual Split getSplitAfterLastLine(unsigned TailOffset,
+                                      unsigned ColumnLimit) const {
     return Split(StringRef::npos, 0);
   }
 
@@ -347,8 +347,8 @@ public:
   void replaceWhitespaceBefore(unsigned LineIndex, unsigned PreviousEndColumn,
                                unsigned ColumnLimit, Split SplitBefore,
                                WhitespaceManager &Whitespaces) override;
-  Split getSplitAfterLastLine(unsigned TailOffset, unsigned ColumnLimit,
-                              llvm::Regex &CommentPragmasRegex) const override;
+  Split getSplitAfterLastLine(unsigned TailOffset,
+                              unsigned ColumnLimit) const override;
 
   bool mayReflow(unsigned LineIndex,
                  llvm::Regex &CommentPragmasRegex) const override;

@@ -802,6 +802,7 @@ ToolChain::TranslateOpenMPTargetArgs(const llvm::opt::DerivedArgList &Args,
   if (DeviceOffloadKind == Action::OFK_OpenMP) {
     DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
     const OptTable &Opts = getDriver().getOpts();
+    bool NewArgAdded = false;
 
     // Handle -Xopenmp-target flags
     for (Arg *A : Args) {
@@ -850,9 +851,10 @@ ToolChain::TranslateOpenMPTargetArgs(const llvm::opt::DerivedArgList &Args,
       XOpenMPTargetArg->setBaseArg(A);
       A = XOpenMPTargetArg.release();
       DAL->append(A);
+      NewArgAdded = true;
     }
 
-    return DAL;
+    return NewArgAdded ? DAL : nullptr;
   }
 
   return nullptr;

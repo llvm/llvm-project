@@ -660,20 +660,30 @@
 
 /// ###########################################################################
 
-/// Check cubin file generation and usage by nvlink
-// RUN:   touch %t1.o
-// RUN:   touch %t2.o
-// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -save-temps -no-canonical-prefixes %t1.o %t2.o 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHK-TWOCUBIN %s
+/// Check cubin file generation and usage by nvlink when toolchain has BindArchAction
+// RUN:   %clang -### -no-canonical-prefixes -target x86_64-apple-darwin17.0.0 -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -save-temps -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-CUBIN-DARWIN %s
 
-// CHK-TWOCUBIN: clang-offload-bundler{{[^"]*}}" "-type=o" "{{.*}}inputs={{.*}}tmp1.o" "-outputs={{.*}}.o,{{.*}}tmp1-openmp-nvptx64-nvidia-cuda.cubin" "-unbundle"
-// CHK-TWOCUBIN-NEXT: clang-offload-bundler{{[^"]*}}" "-type=o" "{{.*}}inputs={{.*}}tmp2.o" "-outputs={{.*}}.o,{{.*}}tmp2-openmp-nvptx64-nvidia-cuda.cubin" "-unbundle"
-// CHK-TWOCUBIN-NEXT: nvlink" "-o" "{{.*}}-openmp-nvptx64-nvidia-cuda" {{.*}} "openmp-offload.c.tmp1-openmp-nvptx64-nvidia-cuda.cubin" "openmp-offload.c.tmp2-openmp-nvptx64-nvidia-cuda.cubin"
+// CHK-CUBIN-DARWIN: clang{{.*}}" "-o" "{{.*}}-openmp-nvptx64-nvidia-cuda.s"
+// CHK-CUBIN-DARWIN-NEXT: ptxas{{.*}}" "--output-file" "{{.*}}-openmp-nvptx64-nvidia-cuda.cubin" "{{.*}}-openmp-nvptx64-nvidia-cuda.s"
+// CHK-CUBIN-DARWIN-NEXT: nvlink" "-o" "{{.*}}-openmp-nvptx64-nvidia-cuda" {{.*}} "openmp-offload-openmp-nvptx64-nvidia-cuda.cubin"
 
 /// ###########################################################################
 
-/// Check PTXAS is passed -c flag when offloading to an NVIDIA device using OpenMP.
-// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -no-canonical-prefixes %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHK-PTXAS-DEFAULT %s
+/// Check cubin file generation and usage by nvlink
+// RUN:   touch %t1.o
+// RUN:   touch %t2.o
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda %t1.o %t2.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-TWOCUBIN %s
 
-// CHK-PTXAS-DEFAULT: ptxas{{.*}}" "-c"
+// CHK-TWOCUBIN: nvlink"{{.*}}"openmp-offload-{{.*}}.cubin" "openmp-offload-{{.*}}.cubin"
+
+/// ###########################################################################
+
+/// Check cubin file generation and usage by nvlink when toolchain has BindArchAction
+// RUN:   touch %t1.o
+// RUN:   touch %t2.o
+// RUN:   %clang -### -no-canonical-prefixes -target x86_64-apple-darwin17.0.0 -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda %t1.o %t2.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-TWOCUBIN-DARWIN %s
+
+// CHK-TWOCUBIN-DARWIN: nvlink"{{.*}}"openmp-offload-{{.*}}.cubin" "openmp-offload-{{.*}}.cubin"

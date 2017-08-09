@@ -2941,6 +2941,16 @@ def warn_thread_attribute_decl_not_lockable : Warning<
   "%0 attribute can only be applied in a context annotated "
   "with 'capability(\"mutex\")' attribute">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
+def warn_thread_attribute_noargs_not_lockable : Warning<
+  "%0 attribute requires type annotated with 'capability' attribute; "
+  "type here is %1">,
+  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
+def warn_thread_attribute_noargs_not_method : Warning<
+  "%0 attribute without arguments can only be applied to a method of a class">,
+  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
+def warn_thread_attribute_noargs_static_method : Warning<
+  "%0 attribute without arguments cannot be applied to a static method">,
+  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_decl_not_pointer : Warning<
   "%0 only applies to pointer types; type here is %1">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
@@ -3086,6 +3096,8 @@ def warn_impcast_vector_scalar : Warning<
 def warn_impcast_complex_scalar : Warning<
   "implicit conversion discards imaginary component: %0 to %1">,
   InGroup<Conversion>, DefaultIgnore;
+def err_impcast_complex_scalar : Error<
+  "implicit conversion from %0 to %1 is not permitted in C++">;
 def warn_impcast_float_precision : Warning<
   "implicit conversion loses floating-point precision: %0 to %1">,
   InGroup<Conversion>, DefaultIgnore;
@@ -3211,6 +3223,9 @@ def warn_int_to_void_pointer_cast : Warning<
   "cast to %1 from smaller integer type %0">,
   InGroup<IntToVoidPointerCast>;
 
+def warn_attribute_ignored_for_field_of_type : Warning<
+  "%0 attribute ignored for field of type %1">,
+  InGroup<IgnoredAttributes>;
 def warn_no_underlying_type_specified_for_enum_bitfield : Warning<
   "enums in the Microsoft ABI are signed integers by default; consider giving "
   "the enum %0 an unsigned underlying type to make this code portable">,

@@ -1183,13 +1183,13 @@ void CGDebugInfo::CollectRecordNormalField(
   elements.push_back(FieldType);
 }
 
-void CGDebugInfo::CollectRecordNestedRecord(
-    const RecordDecl *RD, SmallVectorImpl<llvm::Metadata *> &elements) {
-  QualType Ty = CGM.getContext().getTypeDeclType(RD);
+void CGDebugInfo::CollectRecordNestedType(
+    const TypeDecl *TD, SmallVectorImpl<llvm::Metadata *> &elements) {
+  QualType Ty = CGM.getContext().getTypeDeclType(TD);
   // Injected class names are not considered nested records.
   if (isa<InjectedClassNameType>(Ty))
     return;
-  SourceLocation Loc = RD->getLocation();
+  SourceLocation Loc = TD->getLocation();
   llvm::DIType *nestedType = getOrCreateType(Ty, getOrCreateFile(Loc));
   elements.push_back(nestedType);
 }
@@ -1205,9 +1205,9 @@ void CGDebugInfo::CollectRecordFields(
   else {
     const ASTRecordLayout &layout = CGM.getContext().getASTRecordLayout(record);
 
-    // Debug info for nested records is included in the member list only for
+    // Debug info for nested types is included in the member list only for
     // CodeView.
-    bool IncludeNestedRecords = CGM.getCodeGenOpts().EmitCodeView;
+    bool IncludeNestedTypes = CGM.getCodeGenOpts().EmitCodeView;
 
     // Field number for non-static fields.
     unsigned fieldNo = 0;
@@ -1234,10 +1234,12 @@ void CGDebugInfo::CollectRecordFields(
 
         // Bump field number for next field.
         ++fieldNo;
-      } else if (const auto *nestedRec = dyn_cast<CXXRecordDecl>(I))
-        if (IncludeNestedRecords && !nestedRec->isImplicit() &&
-            nestedRec->getDeclContext() == record)
-          CollectRecordNestedRecord(nestedRec, elements);
+      } else if (IncludeNestedTypes) {
+        if (const auto *nestedType = dyn_cast<TypeDecl>(I))
+          if (!nestedType->isImplicit() &&
+              nestedType->getDeclContext() == record)
+            CollectRecordNestedType(nestedType, elements);
+      }
   }
 }
 
