@@ -1,4 +1,4 @@
-//===-- AMDGPURewriteOutArgumentsPass.cpp - Create struct returns ---------===//
+//===- AMDGPURewriteOutArgumentsPass.cpp - Create struct returns ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -44,21 +44,38 @@
 
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
-
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <utility>
 
 #define DEBUG_TYPE "amdgpu-rewrite-out-arguments"
 
 using namespace llvm;
-
-namespace {
 
 static cl::opt<bool> AnyAddressSpace(
   "amdgpu-any-address-space-out-arguments",
@@ -78,6 +95,8 @@ STATISTIC(NumOutArgumentsReplaced,
 STATISTIC(NumOutArgumentFunctionsReplaced,
           "Number of functions with out arguments moved to struct return values");
 
+namespace {
+
 class AMDGPURewriteOutArguments : public FunctionPass {
 private:
   const DataLayout *DL = nullptr;
@@ -89,11 +108,11 @@ private:
 #ifndef NDEBUG
   bool isVec3ToVec4Shuffle(Type *Ty0, Type* Ty1) const;
 #endif
+
 public:
   static char ID;
 
-  AMDGPURewriteOutArguments() :
-    FunctionPass(ID) {}
+  AMDGPURewriteOutArguments() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MemoryDependenceWrapperPass>();
@@ -101,10 +120,10 @@ public:
   }
 
   bool doInitialization(Module &M) override;
-  bool runOnFunction(Function &M) override;
+  bool runOnFunction(Function &F) override;
 };
 
-} // End anonymous namespace
+} // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(AMDGPURewriteOutArguments, DEBUG_TYPE,
                       "AMDGPU Rewrite Out Arguments", false, false)
@@ -239,7 +258,8 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   if (OutArgs.empty())
     return false;
 
-  typedef SmallVector<std::pair<Argument *, Value *>, 4> ReplacementVec;
+  using ReplacementVec = SmallVector<std::pair<Argument *, Value *>, 4>;
+
   DenseMap<ReturnInst *, ReplacementVec> Replacements;
 
   SmallVector<ReturnInst *, 4> Returns;
@@ -372,7 +392,6 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
     Value *RetVal = RI->getReturnValue();
     if (RetVal)
       NewRetVal = B.CreateInsertValue(NewRetVal, RetVal, RetIdx++);
-
 
     for (std::pair<Argument *, Value *> ReturnPoint : Replacement.second) {
       Argument *Arg = ReturnPoint.first;

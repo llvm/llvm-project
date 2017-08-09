@@ -384,6 +384,20 @@ define i32 @test69(i32 %x, i32 %y) {
   ret i32 %select
 }
 
+; TODO: we should be able to remove this select
+define i8 @test70(i8 %x, i8 %y) {
+; CHECK-LABEL: @test70(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i8 [[OR]], i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
+;
+  %cmp = icmp slt i8 %x, 0
+  %or = or i8 %y, 2
+  %select = select i1 %cmp, i8 %or, i8 %y
+  ret i8 %select
+}
+
 define i32 @shift_no_xor_multiuse_or(i32 %x, i32 %y) {
 ; CHECK-LABEL: @shift_no_xor_multiuse_or(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 2

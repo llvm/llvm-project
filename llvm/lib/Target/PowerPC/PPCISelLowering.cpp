@@ -7650,6 +7650,15 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
         return DAG.getBitcast(Op.getValueType(), NewBV);
       return NewBV;
     }
+
+    // BuildVectorSDNode::isConstantSplat() is actually pretty smart. It'll
+    // detect that constant splats like v8i16: 0xABAB are really just splats
+    // of a 1-byte constant. In this case, we need to convert the node to a
+    // splat of v16i8 and a bitcast.
+    if (Op.getValueType() != MVT::v16i8)
+      return DAG.getBitcast(Op.getValueType(),
+                            DAG.getConstant(SplatBits, dl, MVT::v16i8));
+
     return Op;
   }
 

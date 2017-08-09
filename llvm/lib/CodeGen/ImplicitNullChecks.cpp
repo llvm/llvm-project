@@ -390,8 +390,10 @@ bool ImplicitNullChecks::canHoistInst(MachineInstr *FaultingMI,
   // We don't want to reason about speculating loads.  Note -- at this point
   // we should have already filtered out all of the other non-speculatable
   // things, like calls and stores.
+  // We also do not want to hoist stores because it might change the memory
+  // while the FaultingMI may result in faulting.
   assert(canHandle(DependenceMI) && "Should never have reached here!");
-  if (DependenceMI->mayLoad())
+  if (DependenceMI->mayLoadOrStore())
     return false;
 
   for (auto &DependenceMO : DependenceMI->operands()) {

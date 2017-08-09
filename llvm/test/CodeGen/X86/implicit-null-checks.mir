@@ -365,6 +365,18 @@
     ret i32 undef
   }
 
+  define i32 @inc_spill_dep(i32* %ptr, i32 %val) {
+  entry:
+    %ptr_is_null = icmp eq i32* %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret i32 undef
+
+  is_null:
+    ret i32 undef
+  }
+
   attributes #0 = { "target-features"="+bmi,+bmi2" }
 
   !0 = !{}
@@ -1258,6 +1270,44 @@ body:             |
 
     MOV32mi killed %rsi, 1, _, 0, _, 3 :: (store 4 into %ir.ptr2)
     %eax = MOV32rm killed %rdi, 1, _, 0, _ :: (load 4 from %ir.ptr)
+    RETQ %eax
+
+  bb.2.is_null:
+    %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags
+    RETQ %eax
+
+...
+---
+name:            inc_spill_dep
+# CHECK-LABEL: inc_spill_dep
+# CHECK: bb.0.entry:
+# CHECK:    TEST64rr %rdi, %rdi, implicit-def %eflags
+# CHECK-NEXT:    JE_1 %bb.2.is_null, implicit killed %eflags
+# CHECK: bb.1.not_null
+
+alignment:       4
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8}
+liveins:
+  - { reg: '%rdi' }
+  - { reg: '%rsi' }
+body:             |
+  bb.0.entry:
+    liveins: %rdi, %rsi
+
+    %rsp = frame-setup SUB64ri8 %rsp, 8, implicit-def dead %eflags
+    MOV32mr %rsp, 1, %noreg, 0, %noreg, %esi :: (store 4 into %stack.0)
+    TEST64rr %rdi, %rdi, implicit-def %eflags
+    JE_1 %bb.2.is_null, implicit killed %eflags
+
+  bb.1.not_null:
+    liveins: %rdi, %rsi
+
+    %r14d = MOV32rm %rsp, 1, %noreg, 0, %noreg :: (load 4 from %stack.0)
+    MOV64mr %rsp, 1, %noreg, 0, %noreg, %rdi :: (store 8 into %stack.0)
+    %edi = MOV32rm %rdi, 1, %noreg, 8, %noreg :: (load 4 from %ir.ptr)
+    %eax = MOV32rr %edi
     RETQ %eax
 
   bb.2.is_null:

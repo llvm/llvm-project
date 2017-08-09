@@ -35,7 +35,6 @@ add_pdb_impl_folder(Native
   Native/DbiStreamBuilder.cpp
   Native/EnumTables.cpp
   Native/GlobalsStream.cpp
-  Native/GlobalsStreamBuilder.cpp
   Native/Hash.cpp
   Native/HashTable.cpp
   Native/InfoStream.cpp
@@ -55,7 +54,7 @@ add_pdb_impl_folder(Native
   Native/PDBStringTable.cpp
   Native/PDBStringTableBuilder.cpp
   Native/PublicsStream.cpp
-  Native/PublicsStreamBuilder.cpp
+  Native/GSIStreamBuilder.cpp
   Native/RawError.cpp
   Native/SymbolStream.cpp
   Native/TpiHashing.cpp

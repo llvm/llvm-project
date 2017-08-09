@@ -702,7 +702,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
         return false;
       }
     } else {
-      if (Ty != s32 && Ty != s64 && Ty != p0) {
+      // s32 and s64 are covered by tablegen.
+      if (Ty != p0) {
         DEBUG(dbgs() << "Unable to materialize integer " << Ty
                      << " constant, expected: " << s32 << ", " << s64 << ", or "
                      << p0 << '\n');

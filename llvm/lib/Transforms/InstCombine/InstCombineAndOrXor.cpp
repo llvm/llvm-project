@@ -997,8 +997,8 @@ bool InstCombiner::shouldOptimizeCast(CastInst *CI) {
 /// Fold {and,or,xor} (cast X), C.
 static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
                                           InstCombiner::BuilderTy &Builder) {
-  Constant *C;
-  if (!match(Logic.getOperand(1), m_Constant(C)))
+  Constant *C = dyn_cast<Constant>(Logic.getOperand(1));
+  if (!C)
     return nullptr;
 
   auto LogicOpc = Logic.getOpcode();

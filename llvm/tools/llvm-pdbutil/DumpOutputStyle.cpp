@@ -837,6 +837,7 @@ Error DumpOutputStyle::dumpModuleSyms() {
 
   ExitOnError Err("Unexpected error processing symbols: ");
 
+  auto &Ids = Err(initializeTypes(StreamIPI));
   auto &Types = Err(initializeTypes(StreamTPI));
 
   iterateModules(
@@ -852,7 +853,8 @@ Error DumpOutputStyle::dumpModuleSyms() {
 
         SymbolVisitorCallbackPipeline Pipeline;
         SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
-        MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Types);
+        MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Ids,
+                                   Types);
 
         Pipeline.addCallbackToPipeline(Deserializer);
         Pipeline.addCallbackToPipeline(Dumper);
@@ -894,6 +896,13 @@ Error DumpOutputStyle::dumpPublics() {
   auto &Publics = Err(File.getPDBPublicsStream());
 
   const GSIHashTable &PublicsTable = Publics.getPublicsTable();
+  if (opts::dump::DumpPublicExtras) {
+    P.printLine("Publics Header");
+    AutoIndent Indent(P);
+    P.formatLine("sym hash = {0}, thunk table addr = {1}", Publics.getSymHash(),
+                 formatSegmentOffset(Publics.getThunkTableSection(),
+                                     Publics.getThunkTableOffset()));
+  }
   Err(dumpSymbolsFromGSI(PublicsTable, opts::dump::DumpPublicExtras));
 
   // Skip the rest if we aren't dumping extras.
@@ -936,29 +945,45 @@ Error DumpOutputStyle::dumpSymbolsFromGSI(const GSIHashTable &Table,
   auto ExpectedTypes = initializeTypes(StreamTPI);
   if (!ExpectedTypes)
     return ExpectedTypes.takeError();
-  SymbolVisitorCallbackPipeline Pipeline;
-  SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
-  MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, *ExpectedTypes);
+  auto ExpectedIds = initializeTypes(StreamIPI);
+  if (!ExpectedIds)
+    return ExpectedIds.takeError();
 
-  Pipeline.addCallbackToPipeline(Deserializer);
-  Pipeline.addCallbackToPipeline(Dumper);
-  CVSymbolVisitor Visitor(Pipeline);
+  if (HashExtras) {
+    P.printLine("GSI Header");
+    AutoIndent Indent(P);
+    P.formatLine("sig = {0:X}, hdr = {1:X}, hr size = {2}, num buckets = {3}",
+                 Table.getVerSignature(), Table.getVerHeader(),
+                 Table.getHashRecordSize(), Table.getNumBuckets());
+  }
 
-  BinaryStreamRef SymStream =
-      ExpectedSyms->getSymbolArray().getUnderlyingStream();
-  for (uint32_t PubSymOff : Table) {
-    Expected<CVSymbol> Sym = readSymbolFromStream(SymStream, PubSymOff);
-    if (!Sym)
-      return Sym.takeError();
-    if (auto E = Visitor.visitSymbolRecord(*Sym, PubSymOff))
-      return E;
+  {
+    P.printLine("Records");
+    SymbolVisitorCallbackPipeline Pipeline;
+    SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
+    MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, *ExpectedIds,
+                               *ExpectedTypes);
+
+    Pipeline.addCallbackToPipeline(Deserializer);
+    Pipeline.addCallbackToPipeline(Dumper);
+    CVSymbolVisitor Visitor(Pipeline);
+
+    BinaryStreamRef SymStream =
+        ExpectedSyms->getSymbolArray().getUnderlyingStream();
+    for (uint32_t PubSymOff : Table) {
+      Expected<CVSymbol> Sym = readSymbolFromStream(SymStream, PubSymOff);
+      if (!Sym)
+        return Sym.takeError();
+      if (auto E = Visitor.visitSymbolRecord(*Sym, PubSymOff))
+        return E;
+    }
   }
 
   // Return early if we aren't dumping public hash table and address map info.
   if (!HashExtras)
     return Error::success();
 
-  P.formatLine("Hash Records");
+  P.formatLine("Hash Entries");
   {
     AutoIndent Indent2(P);
     for (const PSHashRecord &HR : Table.HashRecords)

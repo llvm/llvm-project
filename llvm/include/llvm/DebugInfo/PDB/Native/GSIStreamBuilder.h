@@ -1,4 +1,4 @@
-//===- PublicsStreamBuilder.h - PDB Publics Stream Creation -----*- C++ -*-===//
+//===- GSIStreamBuilder.h - PDB Publics/Globals Stream Creation -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBPUBLICSTREAMBUILDER_H
-#define LLVM_DEBUGINFO_PDB_RAW_PDBPUBLICSTREAMBUILDER_H
+#ifndef LLVM_DEBUGINFO_PDB_RAW_GSISTREAMBUILDER_H
+#define LLVM_DEBUGINFO_PDB_RAW_GSISTREAMBUILDER_H
 
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
-#include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryItemStream.h"
 #include "llvm/Support/BinaryStreamRef.h"
@@ -34,44 +34,41 @@ template <> struct BinaryItemTraits<codeview::CVSymbol> {
 
 namespace msf {
 class MSFBuilder;
-}
+struct MSFLayout;
+} // namespace msf
 namespace pdb {
-class PublicsStream;
-struct PublicsStreamHeader;
+struct GSIHashStreamBuilder;
 
-struct GSIHashTableBuilder {
-  void addSymbols(ArrayRef<codeview::CVSymbol> Symbols);
+class GSIStreamBuilder {
 
-  std::vector<PSHashRecord> HashRecords;
-  std::array<support::ulittle32_t, (IPHR_HASH + 32) / 32> HashBitmap;
-  std::vector<support::ulittle32_t> HashBuckets;
-};
-
-class PublicsStreamBuilder {
 public:
-  explicit PublicsStreamBuilder(msf::MSFBuilder &Msf);
-  ~PublicsStreamBuilder();
+  explicit GSIStreamBuilder(msf::MSFBuilder &Msf);
+  ~GSIStreamBuilder();
 
-  PublicsStreamBuilder(const PublicsStreamBuilder &) = delete;
-  PublicsStreamBuilder &operator=(const PublicsStreamBuilder &) = delete;
+  GSIStreamBuilder(const GSIStreamBuilder &) = delete;
+  GSIStreamBuilder &operator=(const GSIStreamBuilder &) = delete;
 
   Error finalizeMsfLayout();
-  uint32_t calculateSerializedLength() const;
 
-  Error commit(BinaryStreamWriter &PublicsWriter,
-               BinaryStreamWriter &RecWriter);
+  Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef Buffer);
 
-  uint32_t getStreamIndex() const { return StreamIdx; }
+  uint32_t getPublicsStreamIndex() const;
+  uint32_t getGlobalsStreamIndex() const;
   uint32_t getRecordStreamIdx() const { return RecordStreamIdx; }
 
   void addPublicSymbol(const codeview::PublicSym32 &Pub);
 
 private:
-  uint32_t StreamIdx = kInvalidStreamIndex;
+  uint32_t calculatePublicsHashStreamSize() const;
+  uint32_t calculateGlobalsHashStreamSize() const;
+  Error commitSymbolRecordStream(WritableBinaryStreamRef Stream);
+  Error commitPublicsHashStream(WritableBinaryStreamRef Stream);
+  Error commitGlobalsHashStream(WritableBinaryStreamRef Stream);
+
   uint32_t RecordStreamIdx = kInvalidStreamIndex;
-  std::unique_ptr<GSIHashTableBuilder> Table;
-  std::vector<codeview::CVSymbol> Publics;
   msf::MSFBuilder &Msf;
+  std::unique_ptr<GSIHashStreamBuilder> PSH;
+  std::unique_ptr<GSIHashStreamBuilder> GSH;
 };
 } // namespace pdb
 } // namespace llvm

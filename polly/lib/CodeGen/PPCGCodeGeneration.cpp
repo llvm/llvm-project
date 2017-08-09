@@ -778,6 +778,19 @@ void GPUNodeBuilder::allocateDeviceArrays() {
           ArraySize,
           Builder.CreateMul(Offset,
                             Builder.getInt64(ScopArray->getElemSizeInBytes())));
+    const SCEV *SizeSCEV = SE.getSCEV(ArraySize);
+    // It makes no sense to have an array of size 0. The CUDA API will
+    // throw an error anyway if we invoke `cuMallocManaged` with size `0`. We
+    // choose to be defensive and catch this at the compile phase. It is
+    // most likely that we are doing something wrong with size computation.
+    if (SizeSCEV->isZero()) {
+      errs() << getUniqueScopName(&S)
+             << " has computed array size 0: " << *ArraySize
+             << " | for array: " << *(ScopArray->getBasePtr())
+             << ". This is illegal, exiting.\n";
+      report_fatal_error("array size was computed to be 0");
+    }
+
     Value *DevArray = createCallAllocateMemoryForDevice(ArraySize);
     DevArray->setName(DevArrayName);
     DeviceAllocations[ScopArray] = DevArray;
@@ -2905,7 +2918,7 @@ public:
 
       PPCGArray.space = Array->getSpace().release();
       PPCGArray.type = strdup(TypeName.c_str());
-      PPCGArray.size = Array->getElementType()->getPrimitiveSizeInBits() / 8;
+      PPCGArray.size = DL->getTypeAllocSize(Array->getElementType());
       PPCGArray.name = strdup(Array->getName().c_str());
       PPCGArray.extent = nullptr;
       PPCGArray.n_index = Array->getNumberOfDimensions();

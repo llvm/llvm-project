@@ -795,26 +795,25 @@ public:
     /// though, so be careful calling this while iterating over them.
     void removeOutgoingEdge(Node &SourceN, Node &TargetN);
 
-    /// Remove a ref edge which is entirely within this RefSCC.
+    /// Remove a list of ref edges which are entirely within this RefSCC.
     ///
-    /// Both the \a SourceN and the \a TargetN must be within this RefSCC.
-    /// Removing such an edge may break cycles that form this RefSCC and thus
-    /// this operation may change the RefSCC graph significantly. In
+    /// Both the \a SourceN and all of the \a TargetNs must be within this
+    /// RefSCC. Removing these edges may break cycles that form this RefSCC and
+    /// thus this operation may change the RefSCC graph significantly. In
     /// particular, this operation will re-form new RefSCCs based on the
     /// remaining connectivity of the graph. The following invariants are
     /// guaranteed to hold after calling this method:
     ///
-    /// 1) This RefSCC is still a RefSCC in the graph.
-    /// 2) This RefSCC will be the parent of any new RefSCCs. Thus, this RefSCC
-    ///    is preserved as the root of any new RefSCC DAG formed.
-    /// 3) No RefSCC other than this RefSCC has its member set changed (this is
+    /// 1) If a ref-cycle remains after removal, it leaves this RefSCC intact
+    ///    and in the graph. No new RefSCCs are built.
+    /// 2) Otherwise, this RefSCC will be dead after this call and no longer in
+    ///    the graph or the postorder traversal of the call graph. Any iterator
+    ///    pointing at this RefSCC will become invalid.
+    /// 3) All newly formed RefSCCs will be returned and the order of the
+    ///    RefSCCs returned will be a valid postorder traversal of the new
+    ///    RefSCCs.
+    /// 4) No RefSCC other than this RefSCC has its member set changed (this is
     ///    inherent in the definition of removing such an edge).
-    /// 4) All of the parent links of the RefSCC graph will be updated to
-    ///    reflect the new RefSCC structure.
-    /// 5) All RefSCCs formed out of this RefSCC, excluding this RefSCC, will
-    ///    be returned in post-order.
-    /// 6) The order of the RefSCCs in the vector will be a valid postorder
-    ///    traversal of the new RefSCCs.
     ///
     /// These invariants are very important to ensure that we can build
     /// optimization pipelines on top of the CGSCC pass manager which
@@ -833,11 +832,9 @@ public:
     /// within this RefSCC and edges from this RefSCC to child RefSCCs. Some
     /// effort has been made to minimize the overhead of common cases such as
     /// self-edges and edge removals which result in a spanning tree with no
-    /// more cycles. There are also detailed comments within the implementation
-    /// on techniques which could substantially improve this routine's
-    /// efficiency.
+    /// more cycles.
     SmallVector<RefSCC *, 1> removeInternalRefEdge(Node &SourceN,
-                                                   Node &TargetN);
+                                                   ArrayRef<Node *> TargetNs);
 
     /// A convenience wrapper around the above to handle trivial cases of
     /// inserting a new call edge.

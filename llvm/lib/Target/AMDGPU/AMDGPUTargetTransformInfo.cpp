@@ -1,4 +1,4 @@
-//===-- AMDGPUTargetTransformInfo.cpp - AMDGPU specific TTI pass ---------===//
+//===- AMDGPUTargetTransformInfo.cpp - AMDGPU specific TTI pass -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,15 +16,39 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetTransformInfo.h"
+#include "AMDGPUSubtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/IR/Intrinsics.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Target/CostTable.h"
-#include "llvm/Target/TargetLowering.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
+#include <algorithm>
+#include <cassert>
+#include <limits>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "AMDGPUtti"
@@ -54,7 +78,7 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
     if (!L->contains(I))
       continue;
     if (const PHINode *PHI = dyn_cast<PHINode>(V)) {
-      if (none_of(L->getSubLoops(), [PHI](const Loop* SubLoop) {
+      if (llvm::none_of(L->getSubLoops(), [PHI](const Loop* SubLoop) {
                   return SubLoop->contains(PHI); }))
         return true;
     } else if (Depth < 10 && dependsOnLocalPhi(L, V, Depth+1))
@@ -66,7 +90,7 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
 void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                             TTI::UnrollingPreferences &UP) {
   UP.Threshold = 300; // Twice the default.
-  UP.MaxCount = UINT_MAX;
+  UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.Partial = true;
 
   // TODO: Do we want runtime unrolling?
@@ -81,12 +105,11 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
     const DataLayout &DL = BB->getModule()->getDataLayout();
     unsigned LocalGEPsSeen = 0;
 
-    if (any_of(L->getSubLoops(), [BB](const Loop* SubLoop) {
+    if (llvm::any_of(L->getSubLoops(), [BB](const Loop* SubLoop) {
                return SubLoop->contains(BB); }))
         continue; // Block belongs to an inner loop.
 
     for (const Instruction &I : *BB) {
-
       // Unroll a loop which contains an "if" statement whose condition
       // defined by a PHI belonging to the loop. This may help to eliminate
       // if region and potentially even PHI itself, saving on both divergence
@@ -153,7 +176,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
         if (!Inst || L->isLoopInvariant(Op))
           continue;
 
-        if (any_of(L->getSubLoops(), [Inst](const Loop* SubLoop) {
+        if (llvm::any_of(L->getSubLoops(), [Inst](const Loop* SubLoop) {
              return SubLoop->contains(Inst); }))
           continue;
         HasLoopDef = true;
@@ -268,7 +291,6 @@ int AMDGPUTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::OperandValueKind Opd1Info,
     TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args ) {
-
   EVT OrigTy = TLI->getValueType(DL, Ty);
   if (!OrigTy.isSimple()) {
     return BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
@@ -289,25 +311,23 @@ int AMDGPUTTIImpl::getArithmeticInstrCost(
   switch (ISD) {
   case ISD::SHL:
   case ISD::SRL:
-  case ISD::SRA: {
+  case ISD::SRA:
     if (SLT == MVT::i64)
       return get64BitInstrCost() * LT.first * NElts;
 
     // i32
     return getFullRateInstrCost() * LT.first * NElts;
-  }
   case ISD::ADD:
   case ISD::SUB:
   case ISD::AND:
   case ISD::OR:
-  case ISD::XOR: {
+  case ISD::XOR:
     if (SLT == MVT::i64){
       // and, or and xor are typically split into 2 VALU instructions.
       return 2 * getFullRateInstrCost() * LT.first * NElts;
     }
 
     return LT.first * NElts * getFullRateInstrCost();
-  }
   case ISD::MUL: {
     const int QuarterRateCost = getQuarterRateInstrCost();
     if (SLT == MVT::i64) {
@@ -327,7 +347,6 @@ int AMDGPUTTIImpl::getArithmeticInstrCost(
     if (SLT == MVT::f32 || SLT == MVT::f16)
       return LT.first * NElts * getFullRateInstrCost();
     break;
-
   case ISD::FDIV:
   case ISD::FREM:
     // FIXME: frem should be handled separately. The fdiv in it is most of it,
@@ -348,7 +367,6 @@ int AMDGPUTTIImpl::getArithmeticInstrCost(
       int Cost = 7 * getFullRateInstrCost() + 1 * getQuarterRateInstrCost();
       return LT.first * NElts * Cost;
     }
-
     break;
   default:
     break;
@@ -465,11 +483,9 @@ static bool isArgPassedInSGPR(const Argument *A) {
   }
 }
 
-///
 /// \returns true if the result of the value could potentially be
 /// different across workitems in a wavefront.
 bool AMDGPUTTIImpl::isSourceOfDivergence(const Value *V) const {
-
   if (const Argument *A = dyn_cast<Argument>(V))
     return !isArgPassedInSGPR(A);
 

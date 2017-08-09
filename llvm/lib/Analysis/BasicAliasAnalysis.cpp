@@ -1196,8 +1196,10 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
 
     // If we get a No or May, then return it immediately, no amount of analysis
     // will improve this situation.
-    if (BaseAlias != MustAlias)
+    if (BaseAlias != MustAlias) {
+      assert(BaseAlias == NoAlias || BaseAlias == MayAlias);
       return BaseAlias;
+    }
 
     // Otherwise, we have a MustAlias.  Since the base pointers alias each other
     // exactly, see if the computed offset from the common pointer tells us
@@ -1236,13 +1238,15 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
     AliasResult R = aliasCheck(UnderlyingV1, MemoryLocation::UnknownSize,
                                AAMDNodes(), V2, MemoryLocation::UnknownSize,
                                V2AAInfo, nullptr, UnderlyingV2);
-    if (R != MustAlias)
+    if (R != MustAlias) {
       // If V2 may alias GEP base pointer, conservatively returns MayAlias.
       // If V2 is known not to alias GEP base pointer, then the two values
       // cannot alias per GEP semantics: "Any memory access must be done through
       // a pointer value associated with an address range of the memory access,
       // otherwise the behavior is undefined.".
+      assert(R == NoAlias || R == MayAlias);
       return R;
+    }
 
     // If the max search depth is reached the result is undefined
     if (GEP1MaxLookupReached)

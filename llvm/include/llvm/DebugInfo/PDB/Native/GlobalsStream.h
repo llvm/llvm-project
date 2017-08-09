@@ -57,6 +57,11 @@ public:
 
   Error read(BinaryStreamReader &Reader);
 
+  uint32_t getVerSignature() const { return HashHdr->VerSignature; }
+  uint32_t getVerHeader() const { return HashHdr->VerHdr; }
+  uint32_t getHashRecordSize() const { return HashHdr->HrSize; }
+  uint32_t getNumBuckets() const { return HashHdr->NumBuckets; }
+
   typedef GSIHashHeader iterator;
   GSIHashIterator begin() const { return GSIHashIterator(HashRecords.begin()); }
   GSIHashIterator end() const { return GSIHashIterator(HashRecords.end()); }

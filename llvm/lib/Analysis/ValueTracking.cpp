@@ -275,47 +275,7 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   computeKnownBits(Op0, LHSKnown, Depth + 1, Q);
   computeKnownBits(Op1, Known2, Depth + 1, Q);
 
-  // Carry in a 1 for a subtract, rather than a 0.
-  uint64_t CarryIn = 0;
-  if (!Add) {
-    // Sum = LHS + ~RHS + 1
-    std::swap(Known2.Zero, Known2.One);
-    CarryIn = 1;
-  }
-
-  APInt PossibleSumZero = ~LHSKnown.Zero + ~Known2.Zero + CarryIn;
-  APInt PossibleSumOne = LHSKnown.One + Known2.One + CarryIn;
-
-  // Compute known bits of the carry.
-  APInt CarryKnownZero = ~(PossibleSumZero ^ LHSKnown.Zero ^ Known2.Zero);
-  APInt CarryKnownOne = PossibleSumOne ^ LHSKnown.One ^ Known2.One;
-
-  // Compute set of known bits (where all three relevant bits are known).
-  APInt LHSKnownUnion = LHSKnown.Zero | LHSKnown.One;
-  APInt RHSKnownUnion = Known2.Zero | Known2.One;
-  APInt CarryKnownUnion = CarryKnownZero | CarryKnownOne;
-  APInt Known = LHSKnownUnion & RHSKnownUnion & CarryKnownUnion;
-
-  assert((PossibleSumZero & Known) == (PossibleSumOne & Known) &&
-         "known bits of sum differ");
-
-  // Compute known bits of the result.
-  KnownOut.Zero = ~PossibleSumOne & Known;
-  KnownOut.One = PossibleSumOne & Known;
-
-  // Are we still trying to solve for the sign bit?
-  if (!Known.isSignBitSet()) {
-    if (NSW) {
-      // Adding two non-negative numbers, or subtracting a negative number from
-      // a non-negative one, can't wrap into negative.
-      if (LHSKnown.isNonNegative() && Known2.isNonNegative())
-        KnownOut.makeNonNegative();
-      // Adding two negative numbers, or subtracting a non-negative number from
-      // a negative one, can't wrap into non-negative.
-      else if (LHSKnown.isNegative() && Known2.isNegative())
-        KnownOut.makeNegative();
-    }
-  }
+  KnownOut = KnownBits::computeForAddSub(Add, NSW, LHSKnown, Known2);
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,

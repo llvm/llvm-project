@@ -1711,7 +1711,9 @@ NewGVN::performSymbolicAggrValueEvaluation(Instruction *I) const {
   return createAggregateValueExpression(I);
 }
 const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
-  auto *CI = dyn_cast<CmpInst>(I);
+  assert(isa<CmpInst>(I) && "Expected a cmp instruction.");
+
+  auto *CI = cast<CmpInst>(I);
   // See if our operands are equal to those of a previous predicate, and if so,
   // if it implies true or false.
   auto Op0 = lookupOperandLeader(CI->getOperand(0));

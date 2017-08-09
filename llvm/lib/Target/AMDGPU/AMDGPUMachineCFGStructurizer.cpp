@@ -14,46 +14,55 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/CFG.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegionInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetLowering.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetOpcodes.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
 #include <tuple>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpucfgstructurizer"
 
 namespace {
+
 class PHILinearizeDestIterator;
 
 class PHILinearize {
   friend class PHILinearizeDestIterator;
 
 public:
-  typedef std::pair<unsigned, MachineBasicBlock *> PHISourceT;
+  using PHISourceT = std::pair<unsigned, MachineBasicBlock *>;
 
 private:
-  typedef DenseSet<PHISourceT> PHISourcesT;
-  typedef struct {
+  using PHISourcesT = DenseSet<PHISourceT>;
+  using PHIInfoElementT = struct {
     unsigned DestReg;
     DebugLoc DL;
     PHISourcesT Sources;
-  } PHIInfoElementT;
-  typedef SmallPtrSet<PHIInfoElementT *, 2> PHIInfoT;
+  };
+  using PHIInfoT = SmallPtrSet<PHIInfoElementT *, 2>;
   PHIInfoT PHIInfo;
 
   static unsigned phiInfoElementGetDest(PHIInfoElementT *Info);
@@ -85,8 +94,8 @@ public:
   void dump(MachineRegisterInfo *MRI);
   void clear();
 
-  typedef PHISourcesT::iterator source_iterator;
-  typedef PHILinearizeDestIterator dest_iterator;
+  using source_iterator = PHISourcesT::iterator;
+  using dest_iterator = PHILinearizeDestIterator;
 
   dest_iterator dests_begin();
   dest_iterator dests_end();
@@ -100,6 +109,8 @@ private:
   PHILinearize::PHIInfoT::iterator Iter;
 
 public:
+  PHILinearizeDestIterator(PHILinearize::PHIInfoT::iterator I) : Iter(I) {}
+
   unsigned operator*() { return PHILinearize::phiInfoElementGetDest(*Iter); }
   PHILinearizeDestIterator &operator++() {
     ++Iter;
@@ -111,9 +122,9 @@ public:
   bool operator!=(const PHILinearizeDestIterator &I) const {
     return I.Iter != Iter;
   }
-
-  PHILinearizeDestIterator(PHILinearize::PHIInfoT::iterator I) : Iter(I) {}
 };
+
+} // end anonymous namespace
 
 unsigned PHILinearize::phiInfoElementGetDest(PHIInfoElementT *Info) {
   return Info->DestReg;
@@ -282,13 +293,11 @@ PHILinearize::source_iterator PHILinearize::sources_begin(unsigned Reg) {
   auto InfoElement = findPHIInfoElement(Reg);
   return phiInfoElementGetSources(InfoElement).begin();
 }
+
 PHILinearize::source_iterator PHILinearize::sources_end(unsigned Reg) {
   auto InfoElement = findPHIInfoElement(Reg);
   return phiInfoElementGetSources(InfoElement).end();
 }
-
-class RegionMRT;
-class MBBMRT;
 
 static unsigned getPHINumInputs(MachineInstr &PHI) {
   assert(PHI.isPHI());
@@ -314,6 +323,11 @@ static unsigned getPHIDestReg(MachineInstr &PHI) {
   assert(PHI.isPHI());
   return PHI.getOperand(0).getReg();
 }
+
+namespace {
+
+class RegionMRT;
+class MBBMRT;
 
 class LinearizedRegion {
 protected:
@@ -349,6 +363,11 @@ protected:
                      RegionMRT *TopRegion = nullptr);
 
 public:
+  LinearizedRegion();
+  LinearizedRegion(MachineBasicBlock *MBB, const MachineRegisterInfo *MRI,
+                   const TargetRegisterInfo *TRI, PHILinearize &PHIInfo);
+  ~LinearizedRegion() = default;
+
   void setRegionMRT(RegionMRT *Region) { RMRT = Region; }
 
   RegionMRT *getRegionMRT() { return RMRT; }
@@ -413,13 +432,6 @@ public:
 
   void initLiveOut(RegionMRT *Region, const MachineRegisterInfo *MRI,
                    const TargetRegisterInfo *TRI, PHILinearize &PHIInfo);
-
-  LinearizedRegion(MachineBasicBlock *MBB, const MachineRegisterInfo *MRI,
-                   const TargetRegisterInfo *TRI, PHILinearize &PHIInfo);
-
-  LinearizedRegion();
-
-  ~LinearizedRegion();
 };
 
 class MRT {
@@ -429,6 +441,8 @@ protected:
   unsigned BBSelectRegOut;
 
 public:
+  virtual ~MRT() = default;
+
   unsigned getBBSelectRegIn() { return BBSelectRegIn; }
 
   unsigned getBBSelectRegOut() { return BBSelectRegOut; }
@@ -467,42 +481,55 @@ public:
       dbgs() << "  ";
     }
   }
-
-  virtual ~MRT() {}
 };
 
 class MBBMRT : public MRT {
   MachineBasicBlock *MBB;
 
 public:
-  virtual MBBMRT *getMBBMRT() { return this; }
-
-  MachineBasicBlock *getMBB() { return MBB; }
-
-  virtual void dump(const TargetRegisterInfo *TRI, int depth = 0) {
-    dumpDepth(depth);
-    dbgs() << "MBB: " << getMBB()->getNumber();
-    dbgs() << " In: " << PrintReg(getBBSelectRegIn(), TRI);
-    dbgs() << ", Out: " << PrintReg(getBBSelectRegOut(), TRI) << "\n";
-  }
-
   MBBMRT(MachineBasicBlock *BB) : MBB(BB) {
     setParent(nullptr);
     setBBSelectRegOut(0);
     setBBSelectRegIn(0);
+  }
+
+  MBBMRT *getMBBMRT() override { return this; }
+
+  MachineBasicBlock *getMBB() { return MBB; }
+
+  void dump(const TargetRegisterInfo *TRI, int depth = 0) override {
+    dumpDepth(depth);
+    dbgs() << "MBB: " << getMBB()->getNumber();
+    dbgs() << " In: " << PrintReg(getBBSelectRegIn(), TRI);
+    dbgs() << ", Out: " << PrintReg(getBBSelectRegOut(), TRI) << "\n";
   }
 };
 
 class RegionMRT : public MRT {
 protected:
   MachineRegion *Region;
-  LinearizedRegion *LRegion;
-  MachineBasicBlock *Succ;
-
+  LinearizedRegion *LRegion = nullptr;
+  MachineBasicBlock *Succ = nullptr;
   SetVector<MRT *> Children;
 
 public:
-  virtual RegionMRT *getRegionMRT() { return this; }
+  RegionMRT(MachineRegion *MachineRegion) : Region(MachineRegion) {
+    setParent(nullptr);
+    setBBSelectRegOut(0);
+    setBBSelectRegIn(0);
+  }
+
+  ~RegionMRT() override {
+    if (LRegion) {
+      delete LRegion;
+    }
+
+    for (auto CI : Children) {
+      delete &(*CI);
+    }
+  }
+
+  RegionMRT *getRegionMRT() override { return this; }
 
   void setLinearizedRegion(LinearizedRegion *LinearizeRegion) {
     LRegion = LinearizeRegion;
@@ -520,7 +547,7 @@ public:
 
   SetVector<MRT *> *getChildren() { return &Children; }
 
-  virtual void dump(const TargetRegisterInfo *TRI, int depth = 0) {
+  void dump(const TargetRegisterInfo *TRI, int depth = 0) override {
     dumpDepth(depth);
     dbgs() << "Region: " << (void *)Region;
     dbgs() << " In: " << PrintReg(getBBSelectRegIn(), TRI);
@@ -583,24 +610,9 @@ public:
       }
     }
   }
-
-  RegionMRT(MachineRegion *MachineRegion)
-      : Region(MachineRegion), LRegion(nullptr), Succ(nullptr) {
-    setParent(nullptr);
-    setBBSelectRegOut(0);
-    setBBSelectRegIn(0);
-  }
-
-  virtual ~RegionMRT() {
-    if (LRegion) {
-      delete LRegion;
-    }
-
-    for (auto CI : Children) {
-      delete &(*CI);
-    }
-  }
 };
+
+} // end anonymous namespace
 
 static unsigned createBBSelectReg(const SIInstrInfo *TII,
                                   MachineRegisterInfo *MRI) {
@@ -1063,7 +1075,7 @@ LinearizedRegion::LinearizedRegion() {
   Parent = nullptr;
 }
 
-LinearizedRegion::~LinearizedRegion() {}
+namespace {
 
 class AMDGPUMachineCFGStructurizer : public MachineFunctionPass {
 private:
@@ -1074,6 +1086,7 @@ private:
   unsigned BBSelectRegister;
   PHILinearize PHIInfo;
   DenseMap<MachineBasicBlock *, MachineBasicBlock *> FallthroughMap;
+  RegionMRT *RMRT;
 
   void getPHIRegionIndices(RegionMRT *Region, MachineInstr &PHI,
                            SmallVector<unsigned, 2> &RegionIndices);
@@ -1197,14 +1210,14 @@ private:
 public:
   static char ID;
 
+  AMDGPUMachineCFGStructurizer() : MachineFunctionPass(ID) {
+    initializeAMDGPUMachineCFGStructurizerPass(*PassRegistry::getPassRegistry());
+  }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineRegionInfoPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-
-    AMDGPUMachineCFGStructurizer() : MachineFunctionPass(ID) {
-      initializeAMDGPUMachineCFGStructurizerPass(*PassRegistry::getPassRegistry());
-    }
 
   void initFallthroughMap(MachineFunction &MF);
 
@@ -1214,14 +1227,14 @@ public:
                                      MachineRegisterInfo *MRI,
                                      const SIInstrInfo *TII);
 
-  RegionMRT *RMRT;
   void setRegionMRT(RegionMRT *RegionTree) { RMRT = RegionTree; }
 
   RegionMRT *getRegionMRT() { return RMRT; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
-}
+
+} // end anonymous namespace
 
 char AMDGPUMachineCFGStructurizer::ID = 0;
 
@@ -1258,7 +1271,6 @@ void AMDGPUMachineCFGStructurizer::transformSimpleIfRegion(RegionMRT *Region) {
 }
 
 static void fixMBBTerminator(MachineBasicBlock *MBB) {
-
   if (MBB->succ_size() == 1) {
     auto *Succ = *(MBB->succ_begin());
     for (auto &TI : MBB->terminators()) {
@@ -1535,7 +1547,6 @@ void AMDGPUMachineCFGStructurizer::replacePHI(
 void AMDGPUMachineCFGStructurizer::replaceEntryPHI(
     MachineInstr &PHI, unsigned CombinedSourceReg, MachineBasicBlock *IfMBB,
     SmallVector<unsigned, 2> &PHIRegionIndices) {
-
   DEBUG(dbgs() << "Replace entry PHI: ");
   DEBUG(PHI.dump());
   DEBUG(dbgs() << " with ");
@@ -2491,7 +2502,6 @@ AMDGPUMachineCFGStructurizer::splitExit(LinearizedRegion *LRegion) {
   return NewExit;
 }
 
-
 static MachineBasicBlock *split(MachineBasicBlock::iterator I) {
   // Create the fall-through block.
   MachineBasicBlock *MBB = (*I).getParent();
@@ -2845,16 +2855,6 @@ static void checkRegOnlyPHIInputs(MachineFunction &MF) {
   }
 }
 
-
-INITIALIZE_PASS_BEGIN(AMDGPUMachineCFGStructurizer, "amdgpu-machine-cfg-structurizer",
-                      "AMDGPU Machine CFG Structurizer", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineRegionInfoPass)
-INITIALIZE_PASS_END(AMDGPUMachineCFGStructurizer, "amdgpu-machine-cfg-structurizer",
-                    "AMDGPU Machine CFG Structurizer", false, false)
-
-char AMDGPUMachineCFGStructurizerID = AMDGPUMachineCFGStructurizer::ID;
-
-
 bool AMDGPUMachineCFGStructurizer::runOnMachineFunction(MachineFunction &MF) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -2879,6 +2879,14 @@ bool AMDGPUMachineCFGStructurizer::runOnMachineFunction(MachineFunction &MF) {
   initFallthroughMap(MF);
   return result;
 }
+
+char AMDGPUMachineCFGStructurizerID = AMDGPUMachineCFGStructurizer::ID;
+
+INITIALIZE_PASS_BEGIN(AMDGPUMachineCFGStructurizer, "amdgpu-machine-cfg-structurizer",
+                      "AMDGPU Machine CFG Structurizer", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineRegionInfoPass)
+INITIALIZE_PASS_END(AMDGPUMachineCFGStructurizer, "amdgpu-machine-cfg-structurizer",
+                    "AMDGPU Machine CFG Structurizer", false, false)
 
 FunctionPass *llvm::createAMDGPUMachineCFGStructurizerPass() {
   return new AMDGPUMachineCFGStructurizer();
