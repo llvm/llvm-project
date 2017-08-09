@@ -9431,10 +9431,13 @@ void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
   // Strip complex types.
   if (isa<ComplexType>(Source)) {
     if (!isa<ComplexType>(Target)) {
-      if (S.SourceMgr.isInSystemMacro(CC))
+      if (S.SourceMgr.isInSystemMacro(CC) || Target->isBooleanType())
         return;
 
-      return DiagnoseImpCast(S, E, T, CC, diag::warn_impcast_complex_scalar);
+      return DiagnoseImpCast(S, E, T, CC,
+                             S.getLangOpts().CPlusPlus
+                                 ? diag::err_impcast_complex_scalar
+                                 : diag::warn_impcast_complex_scalar);
     }
 
     Source = cast<ComplexType>(Source)->getElementType().getTypePtr();

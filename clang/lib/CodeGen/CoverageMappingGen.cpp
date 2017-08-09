@@ -716,6 +716,16 @@ struct CounterCoverageMappingBuilder
     terminateRegion(S);
   }
 
+  void VisitCallExpr(const CallExpr *E) {
+    VisitStmt(E);
+
+    // Terminate the region when we hit a noreturn function.
+    // (This is helpful dealing with switch statements.)
+    QualType CalleeType = E->getCallee()->getType();
+    if (getFunctionExtInfo(*CalleeType).getNoReturn())
+      terminateRegion(E);
+  }
+
   void VisitWhileStmt(const WhileStmt *S) {
     extendRegion(S);
 

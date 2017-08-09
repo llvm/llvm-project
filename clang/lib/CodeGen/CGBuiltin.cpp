@@ -7375,8 +7375,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
       AVX512PF,
       AVX512VBMI,
       AVX512IFMA,
-      AVX5124VNNIW, // TODO implement this fully
-      AVX5124FMAPS, // TODO implement this fully
+      AVX5124VNNIW,
+      AVX5124FMAPS,
       AVX512VPOPCNTDQ,
       MAX
     };
@@ -7411,6 +7411,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
             .Case("avx512pf", X86Features::AVX512PF)
             .Case("avx512vbmi", X86Features::AVX512VBMI)
             .Case("avx512ifma", X86Features::AVX512IFMA)
+            .Case("avx5124vnniw", X86Features::AVX5124VNNIW)
+            .Case("avx5124fmaps", X86Features::AVX5124FMAPS)
             .Case("avx512vpopcntdq", X86Features::AVX512VPOPCNTDQ)
             .Default(X86Features::MAX);
     assert(Feature != X86Features::MAX && "Invalid feature!");
