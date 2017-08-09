@@ -247,7 +247,7 @@ namespace {
     /// true if cast to/from  UIntPtr is required for variables captured by
     /// value.
     const bool UIntPtrCastRequired = true;
-    /// true if only casted argumefnts must be registered as local args or VLA
+    /// true if only casted arguments must be registered as local args or VLA
     /// sizes.
     const bool RegisterCastedArgsOnly = false;
     /// Name of the generated function.
@@ -261,7 +261,7 @@ namespace {
   };
 }
 
-static std::pair<llvm::Function *, bool> emitOutlinedFunctionPrologue(
+static llvm::Function *emitOutlinedFunctionPrologue(
     CodeGenFunction &CGF, FunctionArgList &Args,
     llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>>
         &LocalAddrs,
@@ -277,7 +277,6 @@ static std::pair<llvm::Function *, bool> emitOutlinedFunctionPrologue(
   CodeGenModule &CGM = CGF.CGM;
   ASTContext &Ctx = CGM.getContext();
   FunctionArgList TargetArgs;
-  bool HasUIntPtrArgs = false;
   Args.append(CD->param_begin(),
               std::next(CD->param_begin(), CD->getContextParamPosition()));
   TargetArgs.append(
@@ -296,7 +295,6 @@ static std::pair<llvm::Function *, bool> emitOutlinedFunctionPrologue(
     // outlined function.
     if ((I->capturesVariableByCopy() && !ArgType->isAnyPointerType()) ||
         I->capturesVariableArrayType()) {
-      HasUIntPtrArgs = true;
       if (FO.UIntPtrCastRequired)
         ArgType = Ctx.getUIntPtrType();
     }
@@ -432,7 +430,7 @@ static std::pair<llvm::Function *, bool> emitOutlinedFunctionPrologue(
     ++I;
   }
 
-  return {F, HasUIntPtrArgs};
+  return F;
 }
 
 llvm::Function *
@@ -448,12 +446,15 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
   FunctionArgList Args;
   llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs;
   llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>> VLASizes;
+  SmallString<256> Buffer;
+  llvm::raw_svector_ostream Out(Buffer);
+  Out << CapturedStmtInfo->getHelperName();
+  if (NeedWrapperFunction)
+    Out << "_debug__";
   FunctionOptions FO(&S, !NeedWrapperFunction, /*RegisterCastedArgsOnly=*/false,
-                     CapturedStmtInfo->getHelperName());
-  llvm::Function *F;
-  bool HasUIntPtrArgs;
-  std::tie(F, HasUIntPtrArgs) = emitOutlinedFunctionPrologue(
-      *this, Args, LocalAddrs, VLASizes, CXXThisValue, FO);
+                     Out.str());
+  llvm::Function *F = emitOutlinedFunctionPrologue(*this, Args, LocalAddrs,
+                                                   VLASizes, CXXThisValue, FO);
   for (const auto &LocalAddrPair : LocalAddrs) {
     if (LocalAddrPair.second.first) {
       setAddrOfLocalVar(LocalAddrPair.second.first,
@@ -465,14 +466,12 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
   PGO.assignRegionCounters(GlobalDecl(CD), F);
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
   FinishFunction(CD->getBodyRBrace());
-  if (!NeedWrapperFunction || !HasUIntPtrArgs)
+  if (!NeedWrapperFunction)
     return F;
 
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  Out << "__nondebug_wrapper_" << CapturedStmtInfo->getHelperName();
   FunctionOptions WrapperFO(&S, /*UIntPtrCastRequired=*/true,
-                            /*RegisterCastedArgsOnly=*/true, Out.str());
+                            /*RegisterCastedArgsOnly=*/true,
+                            CapturedStmtInfo->getHelperName());
   CodeGenFunction WrapperCGF(CGM, /*suppressNewContext=*/true);
   WrapperCGF.disableDebugInfo();
   Args.clear();
@@ -480,7 +479,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
   VLASizes.clear();
   llvm::Function *WrapperF =
       emitOutlinedFunctionPrologue(WrapperCGF, Args, LocalAddrs, VLASizes,
-                                   WrapperCGF.CXXThisValue, WrapperFO).first;
+                                   WrapperCGF.CXXThisValue, WrapperFO);
   LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
   llvm::SmallVector<llvm::Value *, 4> CallArgs;
   for (const auto *Arg : Args) {
