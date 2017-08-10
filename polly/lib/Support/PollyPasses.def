@@ -23,6 +23,8 @@ SCOP_ANALYSIS("polly-dependences", DependenceAnalysis())
 #ifndef SCOP_PASS
 #define SCOP_PASS(NAME, CREATE_PASS)
 #endif
+SCOP_PASS("polly-export-jscop", JSONExportPass())
+SCOP_PASS("polly-import-jscop", JSONImportPass())
 SCOP_PASS("print<polly-ast>", IslAstPrinterPass(outs()))
 SCOP_PASS("print<polly-dependences>", DependenceInfoPrinterPass(outs()))
 SCOP_PASS("polly-codegen", CodeGenerationPass())

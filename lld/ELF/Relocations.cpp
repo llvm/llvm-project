@@ -149,7 +149,7 @@ static unsigned handleARMTlsRelocation(uint32_t Type, SymbolBody &Body,
                                        InputSectionBase &C, uint64_t Offset,
                                        int64_t Addend, RelExpr Expr) {
   // The Dynamic TLS Module Index Relocation for a symbol defined in an
-  // executable is always 1. If the target Symbol is not preemtible then
+  // executable is always 1. If the target Symbol is not preemptible then
   // we know the offset into the TLS block at static link time.
   bool NeedDynId = Body.isPreemptible() || Config->Shared;
   bool NeedDynOff = Body.isPreemptible();
@@ -527,6 +527,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
   // interpose any aliases.
   for (SharedSymbol *Sym : getSymbolsAt<ELFT>(SS)) {
     Sym->CopyRelSec = Sec;
+    Sym->IsPreemptible = false;
     Sym->CopyRelSecOff = Off;
     Sym->symbol()->IsUsedInRegularObj = true;
   }
@@ -612,6 +613,7 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
     // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
     // R_386_JMP_SLOT, etc).
     Body.NeedsPltAddr = true;
+    Body.IsPreemptible = false;
     return toPlt(Expr);
   }
 

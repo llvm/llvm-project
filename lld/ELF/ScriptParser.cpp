@@ -884,6 +884,10 @@ Expr ScriptParser::readPrimary() {
     Expr E = readPrimary();
     return [=] { return ~E().getValue(); };
   }
+  if (consume("!")) {
+    Expr E = readPrimary();
+    return [=] { return !E().getValue(); };
+  }
   if (consume("-")) {
     Expr E = readPrimary();
     return [=] { return -E().getValue(); };
