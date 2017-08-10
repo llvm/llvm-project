@@ -70,6 +70,12 @@ Improvements to clang-tidy
       ``AllowConditionalIntegerCasts`` -> ``AllowIntegerConditions``,
       ``AllowConditionalPointerCasts`` -> ``AllowPointerConditions``.
 
+- New `android-cloexec-memfd_create
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-memfd_create.html>`_ check
+
+  Checks if the required file flag ``MFD_CLOEXEC`` is present in the argument
+  of ``memfd_create()``.
+
 - New `bugprone-integer-division
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-integer-division.html>`_ check
 
