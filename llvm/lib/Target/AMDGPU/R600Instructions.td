@@ -38,9 +38,7 @@ class InstFlag<string PM = "printOperand", int Default = 0>
 }
 
 // src_sel for ALU src operands, see also ALU_CONST, ALU_PARAM registers
-def SEL : OperandWithDefaultOps <i32, (ops (i32 -1))> {
-  let PrintMethod = "printSel";
-}
+def SEL : OperandWithDefaultOps <i32, (ops (i32 -1))>;
 def BANK_SWIZZLE : OperandWithDefaultOps <i32, (ops (i32 0))> {
   let PrintMethod = "printBankSwizzle";
 }

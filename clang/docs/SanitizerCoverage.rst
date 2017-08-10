@@ -211,6 +211,14 @@ the `LLVM GEP instructions <http://llvm.org/docs/GetElementPtr.html>`_
   void __sanitizer_cov_trace_cmp4(uint32_t Arg1, uint32_t Arg2);
   void __sanitizer_cov_trace_cmp8(uint64_t Arg1, uint64_t Arg2);
 
+  // Called before a comparison instruction if exactly one of the arguments is constant.
+  // Arg1 and Arg2 are arguments of the comparison, Arg1 is a compile-time constant. 
+  // These callbacks are emitted by -fsanitize-coverage=trace-cmp since 2017-08-11
+  void __sanitizer_cov_trace_const_cmp1(uint8_t Arg1, uint8_t Arg2);
+  void __sanitizer_cov_trace_const_cmp2(uint16_t Arg1, uint16_t Arg2);
+  void __sanitizer_cov_trace_const_cmp4(uint32_t Arg1, uint32_t Arg2);
+  void __sanitizer_cov_trace_const_cmp8(uint64_t Arg1, uint64_t Arg2);
+
   // Called before a switch statement.
   // Val is the switch operand.
   // Cases[0] is the number of case constants.
@@ -226,7 +234,6 @@ the `LLVM GEP instructions <http://llvm.org/docs/GetElementPtr.html>`_
   // Called before a GetElemementPtr (GEP) instruction
   // for every non-constant array index.
   void __sanitizer_cov_trace_gep(uintptr_t Idx);
-
 
 This interface is a subject to change.
 

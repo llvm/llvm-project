@@ -48,12 +48,12 @@ entry:
 ;        optimization, we make the proposed smaller type (i8) larger (i16) to
 ;        ensure correctness.
 ;
-; CHECK: %[[S0:.+]] = sext <2 x i8> {{.*}} to <2 x i16>
-; CHECK: %[[OR:.+]] = or <2 x i16> %[[S0]], <i16 1, i16 1>
-; CHECK: %[[E0:.+]] = extractelement <2 x i16> %[[OR]], i32 0
+; CHECK: %[[OR:.+]] = or <2 x i8> {{.*}}, <i8 1, i8 1>
+; CHECK: %[[S0:.+]] = sext <2 x i8> %[[OR]] to <2 x i16>
+; CHECK: %[[E0:.+]] = extractelement <2 x i16> %[[S0]], i32 0
 ; CHECK: %[[S1:.+]] = sext i16 %[[E0]] to i64
 ; CHECK: getelementptr inbounds i8, i8* %ptr, i64 %[[S1]]
-; CHECK: %[[E1:.+]] = extractelement <2 x i16> %[[OR]], i32 1
+; CHECK: %[[E1:.+]] = extractelement <2 x i16> %[[S0]], i32 1
 ; CHECK: %[[S2:.+]] = sext i16 %[[E1]] to i64
 ; CHECK: getelementptr inbounds i8, i8* %ptr, i64 %[[S2]]
 ;

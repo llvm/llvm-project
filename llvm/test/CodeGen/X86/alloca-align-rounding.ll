@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86-64 -mtriple=i686-pc-linux -enable-misched=false | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-pc-linux-gnux32 -enable-misched=false | FileCheck %s -check-prefix=X32ABI
+; RUN: llc < %s -mtriple=x86_64-pc-linux -enable-misched=false | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-pc-linux-gnux32 -enable-misched=false | FileCheck %s -check-prefix=X32ABI
 
 declare void @bar(<2 x i64>* %n)
 

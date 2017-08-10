@@ -8,6 +8,7 @@ set(ASAN_SOURCES
   asan_errors.cc
   asan_fake_stack.cc
   asan_flags.cc
+  asan_fuchsia.cc
   asan_globals.cc
   asan_globals_win.cc
   asan_interceptors.cc
@@ -22,6 +23,7 @@ set(ASAN_SOURCES
   asan_posix.cc
   asan_report.cc
   asan_rtl.cc
+  asan_shadow_setup.cc
   asan_stack.cc
   asan_stats.cc
   asan_suppressions.cc

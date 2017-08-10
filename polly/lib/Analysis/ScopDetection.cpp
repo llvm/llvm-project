@@ -1780,6 +1780,11 @@ ScopDetectionWrapperPass::ScopDetectionWrapperPass() : FunctionPass(ID) {
   if (IgnoreAliasing)
     PollyUseRuntimeAliasChecks = false;
 }
+ScopAnalysis::ScopAnalysis() {
+  // Disable runtime alias checks if we ignore aliasing all together.
+  if (IgnoreAliasing)
+    PollyUseRuntimeAliasChecks = false;
+}
 
 void ScopDetectionWrapperPass::releaseMemory() { Result.reset(); }
 
@@ -1799,6 +1804,7 @@ ScopDetection ScopAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 
 PreservedAnalyses ScopAnalysisPrinterPass::run(Function &F,
                                                FunctionAnalysisManager &FAM) {
+  Stream << "Detected Scops in Function " << F.getName() << "\n";
   auto &SD = FAM.getResult<ScopAnalysis>(F);
   for (const Region *R : SD.ValidRegions)
     Stream << "Valid Region for Scop: " << R->getNameStr() << '\n';

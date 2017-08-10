@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn -mattr=+max-private-element-size-16 < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=GCN-NO-TONGA %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tahiti -mattr=+max-private-element-size-16 < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=GCN-NO-TONGA %s
 ; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -mattr=+max-private-element-size-16 < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=GCN-TONGA %s
 
 ; FIXME: Broken on evergreen

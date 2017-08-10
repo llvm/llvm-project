@@ -31,15 +31,30 @@ class AllocaInst;
 class CalleeSavedInfo {
   unsigned Reg;
   int FrameIdx;
+  /// Flag indicating whether the register is actually restored in the epilog.
+  /// In most cases, if a register is saved, it is also restored. There are
+  /// some situations, though, when this is not the case. For example, the
+  /// LR register on ARM is usually saved, but on exit from the function its
+  /// saved value may be loaded directly into PC. Since liveness tracking of
+  /// physical registers treats callee-saved registers are live outside of
+  /// the function, LR would be treated as live-on-exit, even though in these
+  /// scenarios it is not. This flag is added to indicate that the saved
+  /// register described by this object is not restored in the epilog.
+  /// The long-term solution is to model the liveness of callee-saved registers
+  /// by implicit uses on the return instructions, however, the required
+  /// changes in the ARM backend would be quite extensive.
+  bool Restored;
 
 public:
   explicit CalleeSavedInfo(unsigned R, int FI = 0)
-  : Reg(R), FrameIdx(FI) {}
+  : Reg(R), FrameIdx(FI), Restored(true) {}
 
   // Accessors.
   unsigned getReg()                        const { return Reg; }
   int getFrameIdx()                        const { return FrameIdx; }
   void setFrameIdx(int FI)                       { FrameIdx = FI; }
+  bool isRestored()                        const { return Restored; }
+  void setRestored(bool R)                       { Restored = R; }
 };
 
 /// The MachineFrameInfo class represents an abstract stack frame until
@@ -667,6 +682,8 @@ public:
   const std::vector<CalleeSavedInfo> &getCalleeSavedInfo() const {
     return CSInfo;
   }
+  /// \copydoc getCalleeSavedInfo()
+  std::vector<CalleeSavedInfo> &getCalleeSavedInfo() { return CSInfo; }
 
   /// Used by prolog/epilog inserter to set the function's callee saved
   /// information.

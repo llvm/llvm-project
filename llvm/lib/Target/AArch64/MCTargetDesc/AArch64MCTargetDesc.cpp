@@ -84,28 +84,6 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
   return MAI;
 }
 
-static void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
-                              CodeModel::Model &CM) {
-  assert((TT.isOSBinFormatELF() || TT.isOSBinFormatMachO() ||
-          TT.isOSBinFormatCOFF()) && "Invalid target");
-
-  if (CM == CodeModel::Default)
-    CM = CodeModel::Small;
-  // The default MCJIT memory managers make no guarantees about where they can
-  // find an executable page; JITed code needs to be able to refer to globals
-  // no matter how far away they are.
-  else if (CM == CodeModel::JITDefault)
-    CM = CodeModel::Large;
-  else if (CM != CodeModel::Small && CM != CodeModel::Large) {
-    if (!TT.isOSFuchsia())
-      report_fatal_error(
-          "Only small and large code models are allowed on AArch64");
-    else if (CM != CodeModel::Kernel)
-      report_fatal_error(
-          "Only small, kernel, and large code models are allowed on AArch64");
-  }
-}
-
 static MCInstPrinter *createAArch64MCInstPrinter(const Triple &T,
                                                  unsigned SyntaxVariant,
                                                  const MCAsmInfo &MAI,
@@ -152,9 +130,6 @@ extern "C" void LLVMInitializeAArch64TargetMC() {
                     &getTheARM64Target()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createAArch64MCAsmInfo);
-
-    // Register the MC codegen info.
-    TargetRegistry::registerMCAdjustCodeGenOpts(*T, adjustCodeGenOpts);
 
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createAArch64MCInstrInfo);

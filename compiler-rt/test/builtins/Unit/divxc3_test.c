@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -lm -o %t && %run %t
+// UNSUPPORTED: powerpc64
 //===-- divxc3_test.c - Test __divxc3 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

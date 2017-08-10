@@ -99,14 +99,54 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
   return *RM;
 }
 
+// For SystemZ we define the models as follows:
+//
+// Small:  BRASL can call any function and will use a stub if necessary.
+//         Locally-binding symbols will always be in range of LARL.
+//
+// Medium: BRASL can call any function and will use a stub if necessary.
+//         GOT slots and locally-defined text will always be in range
+//         of LARL, but other symbols might not be.
+//
+// Large:  Equivalent to Medium for now.
+//
+// Kernel: Equivalent to Medium for now.
+//
+// This means that any PIC module smaller than 4GB meets the
+// requirements of Small, so Small seems like the best default there.
+//
+// All symbols bind locally in a non-PIC module, so the choice is less
+// obvious.  There are two cases:
+//
+// - When creating an executable, PLTs and copy relocations allow
+//   us to treat external symbols as part of the executable.
+//   Any executable smaller than 4GB meets the requirements of Small,
+//   so that seems like the best default.
+//
+// - When creating JIT code, stubs will be in range of BRASL if the
+//   image is less than 4GB in size.  GOT entries will likewise be
+//   in range of LARL.  However, the JIT environment has no equivalent
+//   of copy relocs, so locally-binding data symbols might not be in
+//   the range of LARL.  We need the Medium model in that case.
+static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM,
+                                              Reloc::Model RM, bool JIT) {
+  if (CM)
+    return *CM;
+  if (JIT)
+    return RM == Reloc::PIC_ ? CodeModel::Small : CodeModel::Medium;
+  return CodeModel::Small;
+}
+
 SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
                                            Optional<Reloc::Model> RM,
-                                           CodeModel::Model CM,
-                                           CodeGenOpt::Level OL)
-    : LLVMTargetMachine(T, computeDataLayout(TT, CPU, FS), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM), CM, OL),
+                                           Optional<CodeModel::Model> CM,
+                                           CodeGenOpt::Level OL, bool JIT)
+    : LLVMTargetMachine(
+          T, computeDataLayout(TT, CPU, FS), TT, CPU, FS, Options,
+          getEffectiveRelocModel(RM),
+          getEffectiveCodeModel(CM, getEffectiveRelocModel(RM), JIT), OL),
       TLOF(llvm::make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();

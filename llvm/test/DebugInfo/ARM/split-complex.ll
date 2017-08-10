@@ -17,9 +17,9 @@ entry:
   ; CHECK-NEXT:  DW_AT_location [DW_FORM_block1]	(<0x04> 10 00 93 08 )
   ;              DW_AT_location       ( constu 0x00000000, piece 0x00000008 )
   ; CHECK-NEXT:  DW_AT_name {{.*}} "c"
-  tail call void @llvm.dbg.value(metadata i64 0, i64 0, metadata !14, metadata !17), !dbg !16
+  tail call void @llvm.dbg.value(metadata i64 0, metadata !14, metadata !17), !dbg !16
   ; Manually removed to disable location list emission:
-  ; tail call void @llvm.dbg.value(metadata i64 0, i64 0, metadata !14, metadata !18), !dbg !16
+  ; tail call void @llvm.dbg.value(metadata i64 0, metadata !14, metadata !18), !dbg !16
   ret void, !dbg !19
 }
 
@@ -27,7 +27,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
+declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 attributes #0 = { nounwind readnone }
 

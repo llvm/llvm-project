@@ -26,11 +26,11 @@ target triple = "x86_64-apple-macosx10.12.0"
 define i32 @inc(i32 %i) local_unnamed_addr #1 !dbg !7 {
 entry:
   %add = add nsw i32 %i, 1, !dbg !15
-  tail call void @llvm.dbg.value(metadata i32 %add, i64 0, metadata !12, metadata !13), !dbg !14
+  tail call void @llvm.dbg.value(metadata i32 %add, metadata !12, metadata !13), !dbg !14
   ret i32 %add, !dbg !16
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #1 = { nounwind readnone }
 

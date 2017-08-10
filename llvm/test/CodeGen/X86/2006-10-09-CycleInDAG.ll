@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 
 define void @_ZN13QFSFileEngine4readEPcx() {
 	%tmp201 = load i32, i32* null		; <i32> [#uses=1]

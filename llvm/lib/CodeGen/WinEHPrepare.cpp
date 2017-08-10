@@ -1014,6 +1014,7 @@ void WinEHPrepare::cleanupPreparedFunclets(Function &F) {
   removeUnreachableBlocks(F);
 }
 
+#ifndef NDEBUG
 void WinEHPrepare::verifyPreparedFunclets(Function &F) {
   for (BasicBlock &BB : F) {
     size_t NumColors = BlockColors[&BB].size();
@@ -1026,6 +1027,7 @@ void WinEHPrepare::verifyPreparedFunclets(Function &F) {
            "EH Pad still has a PHI!");
   }
 }
+#endif
 
 bool WinEHPrepare::prepareExplicitEH(Function &F) {
   // Remove unreachable blocks.  It is not valuable to assign them a color and

@@ -80,7 +80,7 @@ entry:
 ; Function Attrs: inlinehint noinline nounwind uwtable
 define linkonce_odr void @f(i32 %c) #2 comdat personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) !dbg !22 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %c, i64 0, metadata !26, metadata !27), !dbg !28
+  tail call void @llvm.dbg.value(metadata i32 %c, metadata !26, metadata !27), !dbg !28
   %0 = load volatile i32, i32* @x, align 4, !dbg !29, !tbaa !11
   %inc = add nsw i32 %0, 1, !dbg !29
   store volatile i32 %inc, i32* @x, align 4, !dbg !29, !tbaa !11
@@ -114,8 +114,8 @@ if.end:                                           ; preds = %if.else, %invoke.co
 ; Function Attrs: nounwind
 define internal fastcc void @"\01?fin$0@0@f@@"() unnamed_addr #3 comdat($f) !dbg !41 {
 entry:
-  tail call void @llvm.dbg.value(metadata i8* null, i64 0, metadata !44, metadata !27), !dbg !48
-  tail call void @llvm.dbg.value(metadata i8 0, i64 0, metadata !46, metadata !27), !dbg !48
+  tail call void @llvm.dbg.value(metadata i8* null, metadata !44, metadata !27), !dbg !48
+  tail call void @llvm.dbg.value(metadata i8 0, metadata !46, metadata !27), !dbg !48
   %0 = load volatile i32, i32* @x, align 4, !dbg !49, !tbaa !11
   %inc = add nsw i32 %0, 1, !dbg !49
   store volatile i32 %inc, i32* @x, align 4, !dbg !49, !tbaa !11
@@ -127,7 +127,7 @@ declare void @foo(...) #4
 declare i32 @__C_specific_handler(...)
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #5
+declare void @llvm.dbg.value(metadata, metadata, metadata) #5
 
 attributes #0 = { norecurse nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

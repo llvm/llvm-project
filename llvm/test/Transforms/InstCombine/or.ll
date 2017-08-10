@@ -268,6 +268,21 @@ define i32 @test30(i32 %A) {
   ret i32 %E
 }
 
+define <2 x i32> @test30vec(<2 x i32> %A) {
+; CHECK-LABEL: @test30vec(
+; CHECK-NEXT:    [[C:%.*]] = and <2 x i32> [[A:%.*]], <i32 -65536, i32 -65536>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[A]], <i32 7224, i32 7224>
+; CHECK-NEXT:    [[D:%.*]] = or <2 x i32> [[B]], <i32 32962, i32 32962>
+; CHECK-NEXT:    [[E:%.*]] = or <2 x i32> [[D]], [[C]]
+; CHECK-NEXT:    ret <2 x i32> [[E]]
+;
+  %B = or <2 x i32> %A, <i32 32962, i32 32962>
+  %C = and <2 x i32> %A, <i32 -65536, i32 -65536>
+  %D = and <2 x i32> %B, <i32 40186, i32 40186>
+  %E = or <2 x i32> %D, %C
+  ret <2 x i32> %E
+}
+
 ; PR4216
 define i64 @test31(i64 %A) {
 ; CHECK-LABEL: @test31(
@@ -283,6 +298,22 @@ define i64 @test31(i64 %A) {
 
   %F = or i64 %D, %E
   ret i64 %F
+}
+
+define <2 x i64> @test31vec(<2 x i64> %A) {
+; CHECK-LABEL: @test31vec(
+; CHECK-NEXT:    [[E:%.*]] = and <2 x i64> [[A:%.*]], <i64 4294908984, i64 4294908984>
+; CHECK-NEXT:    [[F:%.*]] = or <2 x i64> [[E]], <i64 32962, i64 32962>
+; CHECK-NEXT:    ret <2 x i64> [[F]]
+;
+  %B = or <2 x i64> %A, <i64 194, i64 194>
+  %D = and <2 x i64> %B, <i64 250, i64 250>
+
+  %C = or <2 x i64> %A, <i64 32768, i64 32768>
+  %E = and <2 x i64> %C, <i64 4294941696, i64 4294941696>
+
+  %F = or <2 x i64> %D, %E
+  ret <2 x i64> %F
 }
 
 ; codegen is mature enough to handle vector selects.

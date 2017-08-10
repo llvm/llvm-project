@@ -1,4 +1,4 @@
-//===- AMDGPUAliasAnalysis ---------------------------------------*- C++ -*-==//
+//===- AMDGPUAliasAnalysis --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,16 +10,23 @@
 /// This is the AMGPU address space based alias analysis pass.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_AMDGPUALIASANALYSIS_H
-#define LLVM_ANALYSIS_AMDGPUALIASANALYSIS_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUALIASANALYSIS_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUALIASANALYSIS_H
 
 #include "AMDGPU.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include <algorithm>
+#include <memory>
 
 namespace llvm {
+
+class DataLayout;
+class MDNode;
+class MemoryLocation;
 
 /// A simple AA result that uses TBAA metadata to answer queries.
 class AMDGPUAAResult : public AAResultBase<AMDGPUAAResult> {
@@ -50,7 +57,9 @@ private:
   class ASAliasRulesTy {
   public:
     ASAliasRulesTy(AMDGPUAS AS_, Triple::ArchType Arch_);
+
     AliasResult getAliasResult(unsigned AS1, unsigned AS2) const;
+
   private:
     Triple::ArchType Arch;
     AMDGPUAS AS;
@@ -61,10 +70,11 @@ private:
 /// Analysis pass providing a never-invalidated alias analysis result.
 class AMDGPUAA : public AnalysisInfoMixin<AMDGPUAA> {
   friend AnalysisInfoMixin<AMDGPUAA>;
+
   static char PassID;
 
 public:
-  typedef AMDGPUAAResult Result;
+  using Result = AMDGPUAAResult;
 
   AMDGPUAAResult run(Function &F, AnalysisManager<Function> &AM) {
     return AMDGPUAAResult(F.getParent()->getDataLayout(),
@@ -91,12 +101,15 @@ public:
         Triple(M.getTargetTriple())));
     return false;
   }
+
   bool doFinalization(Module &M) override {
     Result.reset();
     return false;
   }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
-}
-#endif // LLVM_ANALYSIS_AMDGPUALIASANALYSIS_H
+} // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUALIASANALYSIS_H

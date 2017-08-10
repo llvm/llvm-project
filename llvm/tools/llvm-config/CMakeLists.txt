@@ -37,11 +37,7 @@ set(LLVM_CXXFLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${uppercase_CMAKE_BUILD_
 set(LLVM_BUILD_SYSTEM cmake)
 set(LLVM_HAS_RTTI ${LLVM_CONFIG_HAS_RTTI})
 set(LLVM_DYLIB_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}")
-if(LLVM_BUILD_GLOBAL_ISEL)
-  set(LLVM_HAS_GLOBAL_ISEL "ON")
-else()
-  set(LLVM_HAS_GLOBAL_ISEL "OFF")
-endif()
+set(LLVM_HAS_GLOBAL_ISEL "ON")
 
 # Use the C++ link flags, since they should be a superset of C link flags.
 set(LLVM_LDFLAGS "${CMAKE_CXX_LINK_FLAGS}")
@@ -58,6 +54,12 @@ configure_file(${BUILDVARIABLES_SRCPATH} ${BUILDVARIABLES_OBJPATH} @ONLY)
 
 # Set build-time environment(s).
 add_definitions(-DCMAKE_CFG_INTDIR="${CMAKE_CFG_INTDIR}")
+
+if(LLVM_ENABLE_MODULES)
+  target_compile_options(llvm-config PUBLIC
+    "-fmodules-ignore-macro=CMAKE_CFG_INTDIR"
+    )
+endif()
 
 # Add the dependency on the generation step.
 add_file_dependencies(${CMAKE_CURRENT_SOURCE_DIR}/llvm-config.cpp ${BUILDVARIABLES_OBJPATH})

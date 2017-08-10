@@ -198,18 +198,6 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
   return MAI;
 }
 
-static void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
-                              CodeModel::Model &CM) {
-  bool is64Bit = TT.getArch() == Triple::x86_64;
-
-  // For static codegen, if we're not already set, use Small codegen.
-  if (CM == CodeModel::Default)
-    CM = CodeModel::Small;
-  else if (CM == CodeModel::JITDefault)
-    // 64-bit JIT places everything in the same buffer except external funcs.
-    CM = is64Bit ? CodeModel::Large : CodeModel::Small;
-}
-
 static MCInstPrinter *createX86MCInstPrinter(const Triple &T,
                                              unsigned SyntaxVariant,
                                              const MCAsmInfo &MAI,
@@ -237,9 +225,6 @@ extern "C" void LLVMInitializeX86TargetMC() {
   for (Target *T : {&getTheX86_32Target(), &getTheX86_64Target()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createX86MCAsmInfo);
-
-    // Register the MC codegen info.
-    RegisterMCAdjustCodeGenOptsFn Y(*T, adjustCodeGenOpts);
 
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createX86MCInstrInfo);

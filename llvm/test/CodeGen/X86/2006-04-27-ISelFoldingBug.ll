@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mtriple=i686-apple-darwin8 -relocation-model=static > %t
+; RUN: llc < %s -mtriple=i686-apple-darwin8 -relocation-model=static > %t
 ; RUN: grep "movl	_last" %t | count 1
 ; RUN: grep "cmpl.*_last" %t | count 1
 

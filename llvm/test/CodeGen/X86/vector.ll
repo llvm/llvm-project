@@ -1,6 +1,6 @@
 ; Test that vectors are scalarized/lowered correctly.
-; RUN: llc < %s -march=x86 -mcpu=i386
-; RUN: llc < %s -march=x86 -mcpu=yonah
+; RUN: llc < %s -mtriple=i686-- -mcpu=i386
+; RUN: llc < %s -mtriple=i686-- -mcpu=yonah
 
 %d8 = type <8 x double>
 %f1 = type <1 x float>

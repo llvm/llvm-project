@@ -3765,41 +3765,10 @@ static void getIntOperandsFromRegisterString(StringRef RegString,
 // which mode it is to be used, e.g. usr. Returns -1 to signify that the string
 // was invalid.
 static inline int getBankedRegisterMask(StringRef RegString) {
-  return StringSwitch<int>(RegString.lower())
-          .Case("r8_usr", 0x00)
-          .Case("r9_usr", 0x01)
-          .Case("r10_usr", 0x02)
-          .Case("r11_usr", 0x03)
-          .Case("r12_usr", 0x04)
-          .Case("sp_usr", 0x05)
-          .Case("lr_usr", 0x06)
-          .Case("r8_fiq", 0x08)
-          .Case("r9_fiq", 0x09)
-          .Case("r10_fiq", 0x0a)
-          .Case("r11_fiq", 0x0b)
-          .Case("r12_fiq", 0x0c)
-          .Case("sp_fiq", 0x0d)
-          .Case("lr_fiq", 0x0e)
-          .Case("lr_irq", 0x10)
-          .Case("sp_irq", 0x11)
-          .Case("lr_svc", 0x12)
-          .Case("sp_svc", 0x13)
-          .Case("lr_abt", 0x14)
-          .Case("sp_abt", 0x15)
-          .Case("lr_und", 0x16)
-          .Case("sp_und", 0x17)
-          .Case("lr_mon", 0x1c)
-          .Case("sp_mon", 0x1d)
-          .Case("elr_hyp", 0x1e)
-          .Case("sp_hyp", 0x1f)
-          .Case("spsr_fiq", 0x2e)
-          .Case("spsr_irq", 0x30)
-          .Case("spsr_svc", 0x32)
-          .Case("spsr_abt", 0x34)
-          .Case("spsr_und", 0x36)
-          .Case("spsr_mon", 0x3c)
-          .Case("spsr_hyp", 0x3e)
-          .Default(-1);
+  auto TheReg = ARMBankedReg::lookupBankedRegByName(RegString.lower());
+  if (!TheReg)
+     return -1;
+  return TheReg->Encoding;
 }
 
 // The flags here are common to those allowed for apsr in the A class cores and

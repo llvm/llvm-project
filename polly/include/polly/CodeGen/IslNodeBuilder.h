@@ -262,6 +262,14 @@ protected:
   /// @param NewValues A map that maps certain llvm::Values to new llvm::Values.
   void updateValues(ValueMapT &NewValues);
 
+  /// Return the most up-to-date version of the llvm::Value for code generation.
+  /// @param Original The Value to check for an up to date version.
+  /// @returns A remapped `Value` from ValueMap, or `Original` if no mapping
+  ///          exists.
+  /// @see IslNodeBuilder::updateValues
+  /// @see IslNodeBuilder::ValueMap
+  Value *getLatestValue(Value *Original) const;
+
   /// Generate code for a marker now.
   ///
   /// For mark nodes with an unknown name, we just forward the code generation
@@ -404,6 +412,16 @@ private:
   ///                    ids to new access expressions.
   void generateCopyStmt(ScopStmt *Stmt,
                         __isl_keep isl_id_to_ast_expr *NewAccesses);
+
+  /// Materialize a canonical loop induction variable for `L`, which is a loop
+  /// that is *not* present in the Scop.
+  ///
+  /// Note that this is materialized at the point where the `Builder` is
+  /// currently pointing.
+  /// We also populate the `OutsideLoopIterations` map with `L`s SCEV to keep
+  /// track of the induction variable.
+  /// See [Code generation of induction variables of loops outside Scops]
+  Value *materializeNonScopLoopInductionVariable(const Loop *L);
 };
 
 #endif // POLLY_ISL_NODE_BUILDER_H

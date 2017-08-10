@@ -554,48 +554,6 @@ int main() {
 // CHECK: [[EXIT]]
 #pragma omp atomic
   bx = civ - bx;
-// CHECK: [[EXPR_RE:%.+]] = load float, float* getelementptr inbounds ({ float, float }, { float, float }* @{{.+}}, i32 0, i32 0)
-// CHECK: [[EXPR_IM:%.+]] = load float, float* getelementptr inbounds ({ float, float }, { float, float }* @{{.+}}, i32 0, i32 1)
-// CHECK: [[X:%.+]] = load atomic i16, i16* [[X_ADDR:@.+]] monotonic
-// CHECK: br label %[[CONT:.+]]
-// CHECK: [[CONT]]
-// CHECK: [[EXPECTED:%.+]] = phi i16 [ [[X]], %{{.+}} ], [ [[OLD_X:%.+]], %[[CONT]] ]
-// CHECK: [[CONV:%.+]] = zext i16 [[EXPECTED]] to i32
-// CHECK: [[X_RVAL:%.+]] = sitofp i32 [[CONV]] to float
-// <Skip checks for complex calculations>
-// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds { float, float }, { float, float }* [[TEMP:%.+]], i32 0, i32 0
-// CHECK: [[X_RE:%.+]] = load float, float* [[X_RE_ADDR]]
-// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds { float, float }, { float, float }* [[TEMP]], i32 0, i32 1
-// CHECK: [[X_IM:%.+]] = load float, float* [[X_IM_ADDR]]
-// CHECK: [[DESIRED:%.+]] = fptoui float [[X_RE]] to i16
-// CHECK: store i16 [[DESIRED]], i16* [[TEMP:%.+]]
-// CHECK: [[DESIRED:%.+]] = load i16, i16* [[TEMP]]
-// CHECK: [[RES:%.+]] = cmpxchg i16* [[X_ADDR]], i16 [[EXPECTED]], i16 [[DESIRED]] monotonic monotonic
-// CHECK: [[OLD_X]] = extractvalue { i16, i1 } [[RES]], 0
-// CHECK: [[SUCCESS_FAIL:%.+]] = extractvalue { i16, i1 } [[RES]], 1
-// CHECK: br i1 [[SUCCESS_FAIL]], label %[[EXIT:.+]], label %[[CONT]]
-// CHECK: [[EXIT]]
-#pragma omp atomic update
-  usx /= cfv;
-// CHECK: [[EXPR_RE:%.+]] = load double, double* getelementptr inbounds ({ double, double }, { double, double }* @{{.+}}, i32 0, i32 0)
-// CHECK: [[EXPR_IM:%.+]] = load double, double* getelementptr inbounds ({ double, double }, { double, double }* @{{.+}}, i32 0, i32 1)
-// CHECK: [[X:%.+]] = load atomic i64, i64* [[X_ADDR:@.+]] monotonic
-// CHECK: br label %[[CONT:.+]]
-// CHECK: [[CONT]]
-// CHECK: [[EXPECTED:%.+]] = phi i64 [ [[X]], %{{.+}} ], [ [[OLD_X:%.+]], %[[CONT]] ]
-// CHECK: [[X_RVAL:%.+]] = sitofp i64 [[EXPECTED]] to double
-// CHECK: [[ADD_RE:%.+]] = fadd double [[X_RVAL]], [[EXPR_RE]]
-// CHECK: [[ADD_IM:%.+]] = fadd double 0.000000e+00, [[EXPR_IM]]
-// CHECK: [[DESIRED:%.+]] = fptosi double [[ADD_RE]] to i64
-// CHECK: store i64 [[DESIRED]], i64* [[TEMP:%.+]]
-// CHECK: [[DESIRED:%.+]] = load i64, i64* [[TEMP]]
-// CHECK: [[RES:%.+]] = cmpxchg i64* [[X_ADDR]], i64 [[EXPECTED]], i64 [[DESIRED]] monotonic monotonic
-// CHECK: [[OLD_X]] = extractvalue { i64, i1 } [[RES]], 0
-// CHECK: [[SUCCESS_FAIL:%.+]] = extractvalue { i64, i1 } [[RES]], 1
-// CHECK: br i1 [[SUCCESS_FAIL]], label %[[EXIT:.+]], label %[[CONT]]
-// CHECK: [[EXIT]]
-#pragma omp atomic
-  llx += cdv;
 // CHECK: [[IDX:%.+]] = load i16, i16* @{{.+}}
 // CHECK: load i8, i8*
 // CHECK: [[VEC_ITEM_VAL:%.+]] = zext i1 %{{.+}} to i32

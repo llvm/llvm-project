@@ -22,12 +22,12 @@ using namespace clang::clangd;
 
 static llvm::cl::opt<bool>
     RunSynchronously("run-synchronously",
-                     llvm::cl::desc("parse on main thread"),
+                     llvm::cl::desc("Parse on main thread"),
                      llvm::cl::init(false), llvm::cl::Hidden);
 
 static llvm::cl::opt<std::string>
     ResourceDir("resource-dir",
-                llvm::cl::desc("directory for system clang headers"),
+                llvm::cl::desc("Directory for system clang headers"),
                 llvm::cl::init(""), llvm::cl::Hidden);
 
 int main(int argc, char *argv[]) {

@@ -2507,7 +2507,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
   else {
     // For unconditional branch, check for a simple CFG pattern, where
     // BB has a single predecessor and BB's successor is also its predecessor's
-    // successor. If such pattern exisits, check for CSE between BB and its
+    // successor. If such pattern exists, check for CSE between BB and its
     // predecessor.
     if (BasicBlock *PB = BB->getSinglePredecessor())
       if (BranchInst *PBI = dyn_cast<BranchInst>(PB->getTerminator()))
@@ -5151,8 +5151,11 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
                                 const TargetTransformInfo &TTI) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
-  // Only build lookup table when we have a target that supports it.
-  if (!TTI.shouldBuildLookupTables())
+  Function *Fn = SI->getParent()->getParent();
+  // Only build lookup table when we have a target that supports it or the
+  // attribute is not set.
+  if (!TTI.shouldBuildLookupTables() ||
+      (Fn->getFnAttribute("no-jump-tables").getValueAsString() == "true"))
     return false;
 
   // FIXME: If the switch is too sparse for a lookup table, perhaps we could
@@ -5333,7 +5336,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
     // If using a bitmask, use any value to fill the lookup table holes.
     Constant *DV = NeedMask ? ResultLists[PHI][0].second : DefaultResults[PHI];
-    StringRef FuncName = SI->getParent()->getParent()->getName();
+    StringRef FuncName = Fn->getName();
     SwitchLookupTable Table(Mod, TableSize, MinCaseVal, ResultList, DV, DL,
                             FuncName);
 
@@ -5758,9 +5761,9 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
     if (PBI && PBI->isConditional() &&
         PBI->getSuccessor(0) != PBI->getSuccessor(1)) {
       assert(PBI->getSuccessor(0) == BB || PBI->getSuccessor(1) == BB);
-      bool CondIsFalse = PBI->getSuccessor(1) == BB;
+      bool CondIsTrue = PBI->getSuccessor(0) == BB;
       Optional<bool> Implication = isImpliedCondition(
-          PBI->getCondition(), BI->getCondition(), DL, CondIsFalse);
+          PBI->getCondition(), BI->getCondition(), DL, CondIsTrue);
       if (Implication) {
         // Turn this into a branch on constant.
         auto *OldCond = BI->getCondition();

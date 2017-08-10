@@ -28,6 +28,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/MutexGuard.h"
+#include "llvm/Support/Process.h"
 
 using namespace clang;
 
@@ -462,9 +463,16 @@ llvm::ErrorOr<PrecompiledPreamble::TempPCHFile>
 PrecompiledPreamble::TempPCHFile::createInSystemTempDir(const Twine &Prefix,
                                                         StringRef Suffix) {
   llvm::SmallString<64> File;
-  auto EC = llvm::sys::fs::createTemporaryFile(Prefix, Suffix, /*ref*/ File);
+  // Using a version of createTemporaryFile with a file descriptor guarantees
+  // that we would never get a race condition in a multi-threaded setting (i.e.,
+  // multiple threads getting the same temporary path).
+  int FD;
+  auto EC = llvm::sys::fs::createTemporaryFile(Prefix, Suffix, /*ref*/ FD,
+                                               /*ref*/ File);
   if (EC)
     return EC;
+  // We only needed to make sure the file exists, close the file right away.
+  llvm::sys::Process::SafelyCloseFileDescriptor(FD);
   return TempPCHFile(std::move(File).str());
 }
 

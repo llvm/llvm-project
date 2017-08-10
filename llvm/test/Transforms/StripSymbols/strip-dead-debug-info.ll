@@ -12,7 +12,7 @@ source_filename = "test/Transforms/StripSymbols/strip-dead-debug-info.ll"
 @xyz = global i32 2, !dbg !0
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
+declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 ; Function Attrs: nounwind readnone ssp
 define i32 @fn() #1 !dbg !10 {
@@ -23,7 +23,7 @@ entry:
 ; Function Attrs: nounwind readonly ssp
 define i32 @foo(i32 %i) #2 !dbg !15 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %i, i64 0, metadata !18, metadata !19), !dbg !20
+  tail call void @llvm.dbg.value(metadata i32 %i, metadata !18, metadata !19), !dbg !20
   %.0 = load i32, i32* @xyz, align 4, !dbg !30
   ret i32 %.0, !dbg !21
 }

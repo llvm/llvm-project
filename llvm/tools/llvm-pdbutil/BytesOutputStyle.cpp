@@ -15,6 +15,7 @@
 
 #include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
+#include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
@@ -117,6 +118,11 @@ Error BytesOutputStyle::dump() {
           inconvertibleErrorCode());
 
     dumpByteRanges(R.Min, Max);
+    P.NewLine();
+  }
+
+  if (opts::bytes::Fpm) {
+    dumpFpm();
     P.NewLine();
   }
 
@@ -478,6 +484,13 @@ BytesOutputStyle::initializeTypes(uint32_t StreamIdx) {
       llvm::make_unique<LazyRandomTypeCollection>(Types, Count, Offsets);
 
   return *TypeCollection;
+}
+
+void BytesOutputStyle::dumpFpm() {
+  printHeader(P, "Free Page Map");
+
+  msf::MSFStreamLayout FpmLayout = File.getFpmStreamLayout();
+  P.formatMsfStreamBlocks(File, FpmLayout);
 }
 
 void BytesOutputStyle::dumpStreamBytes() {

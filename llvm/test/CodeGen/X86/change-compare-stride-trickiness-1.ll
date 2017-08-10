@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- < %s | FileCheck %s
 
 ; The comparison happens after the relevant use, so the stride can easily
 ; be changed. The comparison can be done in a narrower mode than the

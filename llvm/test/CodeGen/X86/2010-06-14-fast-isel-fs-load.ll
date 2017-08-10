@@ -1,4 +1,4 @@
-; RUN: llc -fast-isel -march=x86 < %s | FileCheck %s
+; RUN: llc -fast-isel -mtriple=i686-- < %s | FileCheck %s
 ; CHECK: %fs:
 
 define i32 @test1(i32 addrspace(257)* %arg) nounwind {

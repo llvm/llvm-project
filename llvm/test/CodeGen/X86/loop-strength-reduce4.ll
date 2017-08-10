@@ -4,16 +4,19 @@
 ; By starting the IV at -64 instead of 0, a cmp is eliminated,
 ; as the flags from the add can be used directly.
 
-; STATIC: movl    $-64, [[ECX:%e..]]
+; STATIC: movl    $-64, [[EAX:%e..]]
 
-; STATIC: movl    [[EAX:%e..]], _state+76([[ECX]])
-; STATIC: addl    $16, [[ECX]]
+; STATIC: movl    %{{.+}}, _state+76([[EAX]])
+; STATIC: addl    $16, [[EAX]]
 ; STATIC: jne
 
-; In PIC mode the symbol can't be folded, so the change-compare-stride
-; trick applies.
+; The same for PIC mode.
 
-; PIC: cmpl $64
+; PIC: movl    $-64, [[EAX:%e..]]
+
+; PIC: movl    %{{.+}}, 76(%{{.+}},[[EAX]])
+; PIC: addl    $16, [[EAX]]
+; PIC: jne
 
 @state = external global [0 x i32]		; <[0 x i32]*> [#uses=4]
 @S = external global [0 x i32]		; <[0 x i32]*> [#uses=4]

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -march=x86-64 -mcpu=core-avx-i -mattr=fsgsbase | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=core-avx-i -mattr=fsgsbase | FileCheck %s
 
 define i32 @test_x86_rdfsbase_32() {
   ; CHECK: rdfsbasel

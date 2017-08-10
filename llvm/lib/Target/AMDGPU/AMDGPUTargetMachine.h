@@ -43,7 +43,7 @@ protected:
 public:
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, TargetOptions Options,
-                      Optional<Reloc::Model> RM, CodeModel::Model CM,
+                      Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
                       CodeGenOpt::Level OL);
   ~AMDGPUTargetMachine() override;
 
@@ -82,8 +82,8 @@ private:
 public:
   R600TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                     StringRef FS, TargetOptions Options,
-                    Optional<Reloc::Model> RM, CodeModel::Model CM,
-                    CodeGenOpt::Level OL);
+                    Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                    CodeGenOpt::Level OL, bool JIT);
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
@@ -105,8 +105,8 @@ private:
 public:
   GCNTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, TargetOptions Options,
-                   Optional<Reloc::Model> RM, CodeModel::Model CM,
-                   CodeGenOpt::Level OL);
+                   Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                   CodeGenOpt::Level OL, bool JIT);
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 

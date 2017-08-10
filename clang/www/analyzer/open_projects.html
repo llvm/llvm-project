@@ -107,13 +107,6 @@ mailing list</a> to notify other members of the community.</p>
 
   <li>Bug Reporting 
   <ul>
-    <li>Add support for displaying cross-file diagnostic paths in HTML output
-    (used by <tt>scan-build</tt>).
-    <p>Currently <tt>scan-build</tt> output does not display reports that span 
-    multiple files. The main problem is that we do not have a good format to
-    display such paths in HTML output. <i>(Difficulty: Medium)</i> </p>
-    </li>
-    
     <li>Refactor path diagnostic generation in <a href="http://clang.llvm.org/doxygen/BugReporter_8cpp_source.html">BugReporter.cpp</a>.
     <p>It would be great to have more code reuse between "Minimal" and 
     "Extensive" PathDiagnostic generation algorithms. One idea is to create an 

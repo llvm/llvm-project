@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 -mattr=+mmx,+sse2 | FileCheck -check-prefix=X32 %s
-; RUN: llc < %s -march=x86-64 -mattr=+mmx,+sse2 | FileCheck -check-prefix=X64 %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+mmx,+sse2 | FileCheck -check-prefix=X32 %s
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+mmx,+sse2 | FileCheck -check-prefix=X64 %s
 
 ;; A basic sanity check to make sure that MMX arithmetic actually compiles.
 ;; First is a straight translation of the original with bitcasts as needed.

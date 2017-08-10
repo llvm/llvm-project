@@ -10,7 +10,7 @@
 
 define i32 @foo(i32 %i) !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %add, i64 0, metadata !8, metadata !10), !dbg !11
+  tail call void @llvm.dbg.value(metadata i32 %add, metadata !8, metadata !10), !dbg !11
   %add = add nsw i32 1, %i, !dbg !12
   ret i32 %add, !dbg !13
 }
@@ -27,7 +27,7 @@ entry:
   ret i32 %call
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9}

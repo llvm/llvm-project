@@ -14,7 +14,7 @@
 #define SANITIZER_PLATFORM_H
 
 #if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__NetBSD__) && \
-  !defined(__APPLE__) && !defined(_WIN32)
+  !defined(__APPLE__) && !defined(_WIN32) && !defined(__Fuchsia__)
 # error "This operating system is not supported"
 #endif
 
@@ -83,6 +83,12 @@
 # define SANITIZER_ANDROID 1
 #else
 # define SANITIZER_ANDROID 0
+#endif
+
+#if defined(__Fuchsia__)
+# define SANITIZER_FUCHSIA 1
+#else
+# define SANITIZER_FUCHSIA 0
 #endif
 
 #define SANITIZER_POSIX \
@@ -181,7 +187,7 @@
 // For such platforms build this code with -DSANITIZER_CAN_USE_ALLOCATOR64=0 or
 // change the definition of SANITIZER_CAN_USE_ALLOCATOR64 here.
 #ifndef SANITIZER_CAN_USE_ALLOCATOR64
-# if SANITIZER_ANDROID && defined(__aarch64__)
+# if (SANITIZER_ANDROID && defined(__aarch64__)) || SANITIZER_FUCHSIA
 #  define SANITIZER_CAN_USE_ALLOCATOR64 1
 # elif defined(__mips64) || defined(__aarch64__)
 #  define SANITIZER_CAN_USE_ALLOCATOR64 0

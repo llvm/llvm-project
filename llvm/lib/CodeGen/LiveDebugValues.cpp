@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/Support/Debug.h"
@@ -114,10 +115,7 @@ private:
     /// The value location. Stored separately to avoid repeatedly
     /// extracting it from MI.
     union {
-      struct {
-        uint32_t RegNo;
-        uint32_t Offset;
-      } RegisterLoc;
+      uint64_t RegNo;
       uint64_t Hash;
     } Loc;
 
@@ -130,17 +128,7 @@ private:
       assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
       if (int RegNo = isDbgValueDescribedByReg(MI)) {
         Kind = RegisterKind;
-        Loc.RegisterLoc.RegNo = RegNo;
-        int64_t Offset =
-            MI.isIndirectDebugValue() ? MI.getOperand(1).getImm() : 0;
-        // We don't support offsets larger than 4GiB here. They are
-        // slated to be replaced with DIExpressions anyway.
-        // With indirect debug values used for spill locations, Offset 
-        // can be negative.
-        if (Offset == INT64_MIN || std::abs(Offset) >= (1LL << 32))
-          Kind = InvalidKind;
-        else
-          Loc.RegisterLoc.Offset = Offset;
+        Loc.RegNo = RegNo;
       }
     }
 
@@ -148,7 +136,7 @@ private:
     /// otherwise return 0.
     unsigned isDescribedByReg() const {
       if (Kind == RegisterKind)
-        return Loc.RegisterLoc.RegNo;
+        return Loc.RegNo;
       return 0;
     }
 
@@ -459,11 +447,15 @@ void LiveDebugValues::transferSpillInst(MachineInstr &MI,
       // iterator in our caller.
       unsigned SpillBase;
       int SpillOffset = extractSpillBaseRegAndOffset(MI, SpillBase);
+      const Module *M = MF->getMMI().getModule();
       const MachineInstr *DMI = &VarLocIDs[ID].MI;
+      auto *SpillExpr = DIExpression::prepend(
+          DMI->getDebugExpression(), DIExpression::NoDeref, SpillOffset);
+      // Add the expression to the metadata graph so isn't lost in MIR dumps.
+      M->getNamedMetadata("llvm.dbg.mir")->addOperand(SpillExpr);
       MachineInstr *SpDMI =
-          BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(), true, SpillBase, 0,
-                  DMI->getDebugVariable(), DMI->getDebugExpression());
-      SpDMI->getOperand(1).setImm(SpillOffset);
+          BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(), true, SpillBase,
+                  DMI->getDebugVariable(), SpillExpr);
       DEBUG(dbgs() << "Creating DBG_VALUE inst for spill: ";
             SpDMI->print(dbgs(), false, TII));
 
@@ -582,7 +574,7 @@ bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
     const MachineInstr *DMI = &DiffIt.MI;
     MachineInstr *MI =
         BuildMI(MBB, MBB.instr_begin(), DMI->getDebugLoc(), DMI->getDesc(),
-                DMI->isIndirectDebugValue(), DMI->getOperand(0).getReg(), 0,
+                DMI->isIndirectDebugValue(), DMI->getOperand(0).getReg(),
                 DMI->getDebugVariable(), DMI->getDebugExpression());
     if (DMI->isIndirectDebugValue())
       MI->getOperand(1).setImm(DMI->getOperand(1).getImm());

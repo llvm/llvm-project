@@ -59,7 +59,7 @@ static void MaybeDumpRegisters(void *context) {
 }
 
 static void MaybeReportNonExecRegion(uptr pc) {
-#if SANITIZER_FREEBSD || SANITIZER_LINUX
+#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
   MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
   MemoryMappedSegment segment;
   while (proc_maps.Next(&segment)) {

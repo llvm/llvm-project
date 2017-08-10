@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 | grep lea
-; RUN: llc < %s -march=x86 | not grep add
+; RUN: llc < %s -mtriple=i686-- | grep lea
+; RUN: llc < %s -mtriple=i686-- | not grep add
 
 define i32 @test(i32 %X, i32 %Y) {
 	; Push the shl through the mul to allow an LEA to be formed, instead

@@ -158,6 +158,53 @@ TEST_F(FormatTestJS, JSDocComments) {
                    "var x = 1;\n"
                    "}",
                    getGoogleJSStyleWithColumns(20)));
+
+  // Don't break the first line of a single line short jsdoc comment pragma.
+  EXPECT_EQ("/** @returns j */",
+            format("/** @returns j */",
+                   getGoogleJSStyleWithColumns(20)));
+
+  // Break a single line long jsdoc comment pragma.
+  EXPECT_EQ("/**\n"
+            " * @returns {string} jsdoc line 12\n"
+            " */",
+            format("/** @returns {string} jsdoc line 12 */",
+                   getGoogleJSStyleWithColumns(20)));
+
+  EXPECT_EQ("/**\n"
+            " * @returns {string} jsdoc line 12\n"
+            " */",
+            format("/** @returns {string} jsdoc line 12  */",
+                   getGoogleJSStyleWithColumns(20)));
+
+  EXPECT_EQ("/**\n"
+            " * @returns {string} jsdoc line 12\n"
+            " */",
+            format("/** @returns {string} jsdoc line 12*/",
+                   getGoogleJSStyleWithColumns(20)));
+
+  // Fix a multiline jsdoc comment ending in a comment pragma.
+  EXPECT_EQ("/**\n"
+            " * line 1\n"
+            " * line 2\n"
+            " * @returns {string} jsdoc line 12\n"
+            " */",
+            format("/** line 1\n"
+                   " * line 2\n"
+                   " * @returns {string} jsdoc line 12 */",
+                   getGoogleJSStyleWithColumns(20)));
+
+  EXPECT_EQ("/**\n"
+            " * line 1\n"
+            " * line 2\n"
+            " *\n"
+            " * @returns j\n"
+            " */",
+            format("/** line 1\n"
+                   " * line 2\n"
+                   " *\n"
+                   " * @returns j */",
+                   getGoogleJSStyleWithColumns(20)));
 }
 
 TEST_F(FormatTestJS, UnderstandsJavaScriptOperators) {
@@ -242,6 +289,12 @@ TEST_F(FormatTestJS, ReservedWords) {
   verifyFormat("var interface = 2;");
   verifyFormat("interface = 2;");
   verifyFormat("x = interface instanceof y;");
+  verifyFormat("interface Test {\n"
+               "  x: string;\n"
+               "  switch: string;\n"
+               "  case: string;\n"
+               "  default: string;\n"
+               "}\n");
 }
 
 TEST_F(FormatTestJS, ReservedWordsMethods) {
@@ -257,6 +310,16 @@ TEST_F(FormatTestJS, ReservedWordsMethods) {
       "    x();\n"
       "  }\n"
       "}\n");
+}
+
+TEST_F(FormatTestJS, ReservedWordsParenthesized) {
+  // All of these are statements using the keyword, not function calls.
+  verifyFormat("throw (x + y);\n"
+               "await (await x).y;\n"
+               "typeof (x) === 'string';\n"
+               "void (0);\n"
+               "delete (x.y);\n"
+               "return (x);\n");
 }
 
 TEST_F(FormatTestJS, CppKeywords) {
@@ -832,6 +895,15 @@ TEST_F(FormatTestJS, FunctionLiterals) {
 
 }
 
+TEST_F(FormatTestJS, DontWrapEmptyLiterals) {
+  verifyFormat("(aaaaaaaaaaaaaaaaaaaaa.getData as jasmine.Spy)\n"
+               "    .and.returnValue(Observable.of([]));");
+  verifyFormat("(aaaaaaaaaaaaaaaaaaaaa.getData as jasmine.Spy)\n"
+               "    .and.returnValue(Observable.of({}));");
+  verifyFormat("(aaaaaaaaaaaaaaaaaaaaa.getData as jasmine.Spy)\n"
+               "    .and.returnValue(Observable.of(()));");
+}
+
 TEST_F(FormatTestJS, InliningFunctionLiterals) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
@@ -988,6 +1060,9 @@ TEST_F(FormatTestJS, ArrowFunctions) {
                "    .doSomethingElse(\n"
                "        // break\n"
                "    );");
+  verifyFormat("const f = (x: string|null): string|null => {\n"
+               "  return x;\n"
+               "}\n");
 }
 
 TEST_F(FormatTestJS, ReturnStatements) {
@@ -1031,6 +1106,10 @@ TEST_F(FormatTestJS, WrapRespectsAutomaticSemicolonInsertion) {
                "  readonly ratherLongField = 1;\n"
                "}",
                getGoogleJSStyleWithColumns(20));
+  verifyFormat("const x = (5 + 9)\n"
+               "const y = 3\n",
+               "const x = (   5 +    9)\n"
+               "const y = 3\n");
 }
 
 TEST_F(FormatTestJS, AutomaticSemicolonInsertionHeuristic) {
@@ -1335,6 +1414,18 @@ TEST_F(FormatTestJS, UnionIntersectionTypes) {
                "};");
 }
 
+TEST_F(FormatTestJS, UnionIntersectionTypesInObjectType) {
+  verifyFormat("let x: {x: number|null} = {x: number | null};");
+  verifyFormat("let nested: {x: {y: number|null}};");
+  verifyFormat("let mixed: {x: [number|null, {w: number}]};");
+  verifyFormat("class X {\n"
+               "  contructor(x: {\n"
+               "    a: a|null,\n"
+               "    b: b|null,\n"
+               "  }) {}\n"
+               "}");
+}
+
 TEST_F(FormatTestJS, ClassDeclarations) {
   verifyFormat("class C {\n  x: string = 12;\n}");
   verifyFormat("class C {\n  x(): string => 12;\n}");
@@ -1400,6 +1491,17 @@ TEST_F(FormatTestJS, InterfaceDeclarations) {
                "}");
 }
 
+TEST_F(FormatTestJS, ObjectTypesInExtendsImplements) {
+  verifyFormat("class C extends {} {}");
+  verifyFormat("class C implements {bar: number} {}");
+  // Somewhat odd, but probably closest to reasonable formatting?
+  verifyFormat("class C implements {\n"
+               "  bar: number,\n"
+               "  baz: string,\n"
+               "} {}");
+  verifyFormat("class C<P extends {}> {}");
+}
+
 TEST_F(FormatTestJS, EnumDeclarations) {
   verifyFormat("enum Foo {\n"
                "  A = 1,\n"
@@ -1414,6 +1516,14 @@ TEST_F(FormatTestJS, EnumDeclarations) {
                "  B\n"
                "}\n"
                "var x = 1;");
+  verifyFormat("const enum Foo {\n"
+               "  A = 1,\n"
+               "  B\n"
+               "}");
+  verifyFormat("export const enum Foo {\n"
+               "  A = 1,\n"
+               "  B\n"
+               "}");
 }
 
 TEST_F(FormatTestJS, MetadataAnnotations) {
@@ -2025,6 +2135,28 @@ TEST_F(FormatTestJS, NestedLiterals) {
                "        3,\n"
                "    ],\n"
                "};", FourSpaces);
+}
+
+TEST_F(FormatTestJS, BackslashesInComments) {
+  verifyFormat("// hello \\\n"
+               "if (x) foo();\n",
+               "// hello \\\n"
+               "     if ( x) \n"
+               "   foo();\n");
+  verifyFormat("/* ignore \\\n"
+               " */\n"
+               "if (x) foo();\n",
+               "/* ignore \\\n"
+               " */\n"
+               " if (  x) foo();\n");
+  verifyFormat("// st \\ art\\\n"
+               "// comment"
+               "// continue \\\n"
+               "formatMe();\n",
+               "// st \\ art\\\n"
+               "// comment"
+               "// continue \\\n"
+               "formatMe( );\n");
 }
 
 } // end namespace tooling

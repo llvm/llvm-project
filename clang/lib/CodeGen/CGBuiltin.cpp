@@ -641,6 +641,26 @@ struct CallObjCArcUse final : EHScopeStack::Cleanup {
 };
 }
 
+Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
+                                                 BuiltinCheckKind Kind) {
+  assert((Kind == BCK_CLZPassedZero || Kind == BCK_CTZPassedZero)
+          && "Unsupported builtin check kind");
+
+  Value *ArgValue = EmitScalarExpr(E);
+  if (!SanOpts.has(SanitizerKind::Builtin) || !getTarget().isCLZForZeroUndef())
+    return ArgValue;
+
+  SanitizerScope SanScope(this);
+  Value *Cond = Builder.CreateICmpNE(
+      ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
+  EmitCheck(std::make_pair(Cond, SanitizerKind::Builtin),
+            SanitizerHandler::InvalidBuiltin,
+            {EmitCheckSourceLocation(E->getExprLoc()),
+             llvm::ConstantInt::get(Builder.getInt8Ty(), Kind)},
+            None);
+  return ArgValue;
+}
+
 RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                                         unsigned BuiltinID, const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -792,7 +812,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    Value *ArgValue = EmitCheckedArgForBuiltin(E->getArg(0), BCK_CTZPassedZero);
 
     llvm::Type *ArgType = ArgValue->getType();
     Value *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
@@ -809,7 +829,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI__builtin_clz:
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    Value *ArgValue = EmitCheckedArgForBuiltin(E->getArg(0), BCK_CLZPassedZero);
 
     llvm::Type *ArgType = ArgValue->getType();
     Value *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
@@ -2683,6 +2703,25 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
             llvm::FunctionType::get(IntTy, GenericVoidPtrTy, false),
             "__get_kernel_preferred_work_group_multiple_impl"),
         Arg));
+  }
+  case Builtin::BIget_kernel_max_sub_group_size_for_ndrange:
+  case Builtin::BIget_kernel_sub_group_count_for_ndrange: {
+    llvm::Type *GenericVoidPtrTy = Builder.getInt8PtrTy(
+        getContext().getTargetAddressSpace(LangAS::opencl_generic));
+    LValue NDRangeL = EmitAggExprToLValue(E->getArg(0));
+    llvm::Value *NDRange = NDRangeL.getAddress().getPointer();
+    Value *Block = EmitScalarExpr(E->getArg(1));
+    Block = Builder.CreatePointerCast(Block, GenericVoidPtrTy);
+    const char *Name =
+        BuiltinID == Builtin::BIget_kernel_max_sub_group_size_for_ndrange
+            ? "__get_kernel_max_sub_group_size_for_ndrange_impl"
+            : "__get_kernel_sub_group_count_for_ndrange_impl";
+    return RValue::get(Builder.CreateCall(
+        CGM.CreateRuntimeFunction(
+            llvm::FunctionType::get(
+                IntTy, {NDRange->getType(), GenericVoidPtrTy}, false),
+            Name),
+        {NDRange, Block}));
   }
   case Builtin::BIprintf:
     if (getTarget().getTriple().isNVPTX())
@@ -7336,8 +7375,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
       AVX512PF,
       AVX512VBMI,
       AVX512IFMA,
-      AVX5124VNNIW, // TODO implement this fully
-      AVX5124FMAPS, // TODO implement this fully
+      AVX5124VNNIW,
+      AVX5124FMAPS,
       AVX512VPOPCNTDQ,
       MAX
     };
@@ -7372,6 +7411,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
             .Case("avx512pf", X86Features::AVX512PF)
             .Case("avx512vbmi", X86Features::AVX512VBMI)
             .Case("avx512ifma", X86Features::AVX512IFMA)
+            .Case("avx5124vnniw", X86Features::AVX5124VNNIW)
+            .Case("avx5124fmaps", X86Features::AVX5124FMAPS)
             .Case("avx512vpopcntdq", X86Features::AVX512VPOPCNTDQ)
             .Default(X86Features::MAX);
     assert(Feature != X86Features::MAX && "Invalid feature!");

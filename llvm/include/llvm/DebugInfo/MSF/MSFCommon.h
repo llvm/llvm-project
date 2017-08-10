@@ -59,6 +59,25 @@ struct MSFLayout {
   std::vector<ArrayRef<support::ulittle32_t>> StreamMap;
 };
 
+/// \brief Describes the layout of a stream in an MSF layout.  A "stream" here
+/// is defined as any logical unit of data which may be arranged inside the MSF
+/// file as a sequence of (possibly discontiguous) blocks.  When we want to read
+/// from a particular MSF Stream, we fill out a stream layout structure and the
+/// reader uses it to determine which blocks in the underlying MSF file contain
+/// the data, so that it can be pieced together in the right order.
+class MSFStreamLayout {
+public:
+  uint32_t Length;
+  std::vector<support::ulittle32_t> Blocks;
+};
+
+/// \brief Determine the layout of the FPM stream, given the MSF layout.  An FPM
+/// stream spans 1 or more blocks, each at equally spaced intervals throughout
+/// the file.
+MSFStreamLayout getFpmStreamLayout(const MSFLayout &Msf,
+                                   bool IncludeUnusedFpmData = false,
+                                   bool AltFpm = false);
+
 inline bool isValidBlockSize(uint32_t Size) {
   switch (Size) {
   case 512:
@@ -78,7 +97,7 @@ inline uint32_t getMinimumBlockCount() { return 4; }
 inline uint32_t getFirstUnreservedBlock() { return 3; }
 
 inline uint64_t bytesToBlocks(uint64_t NumBytes, uint64_t BlockSize) {
-  return alignTo(NumBytes, BlockSize) / BlockSize;
+  return divideCeil(NumBytes, BlockSize);
 }
 
 inline uint64_t blockToOffset(uint64_t BlockNumber, uint64_t BlockSize) {
@@ -89,13 +108,14 @@ inline uint32_t getFpmIntervalLength(const MSFLayout &L) {
   return L.SB->BlockSize;
 }
 
-inline uint32_t getNumFpmIntervals(const MSFLayout &L) {
-  uint32_t Length = getFpmIntervalLength(L);
-  return alignTo(L.SB->NumBlocks, Length) / Length;
-}
+inline uint32_t getNumFpmIntervals(const MSFLayout &L,
+                                   bool IncludeUnusedFpmData = false) {
+  if (IncludeUnusedFpmData)
+    return divideCeil(L.SB->NumBlocks, L.SB->BlockSize);
 
-inline uint32_t getFullFpmByteSize(const MSFLayout &L) {
-  return alignTo(L.SB->NumBlocks, 8) / 8;
+  // We want the minimum number of intervals required, where each interval can
+  // represent BlockSize * 8 blocks.
+  return divideCeil(L.SB->NumBlocks, 8 * L.SB->BlockSize);
 }
 
 Error validateSuperBlock(const SuperBlock &SB);

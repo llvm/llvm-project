@@ -18,6 +18,8 @@ registers:
   - { id: 3, class: _ }
   - { id: 4, class: _ }
   - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
@@ -27,9 +29,13 @@ body: |
     %2(s32) = G_TRUNC %0
     %3(s32) = G_TRUNC %1
 
-    ; CHECK: %4(s1) = G_FCMP floatpred(oge), %0(s64), %1
-    %4(s1) = G_FCMP floatpred(oge), %0, %1
+    ; CHECK: [[CMP1:%[0-9]+]](s32) = G_FCMP floatpred(oge), %0(s64), %1
+    ; CHECK: [[TRUNC1:%[0-9]+]](s1) = G_TRUNC [[CMP1]]
+    %4(s32) = G_FCMP floatpred(oge), %0, %1
+    %6(s1) = G_TRUNC %4(s32)
 
-    ; CHECK: %5(s1) = G_FCMP floatpred(uno), %2(s32), %3
-    %5(s1) = G_FCMP floatpred(uno), %2, %3
+    ; CHECK: [[CMP2:%[0-9]+]](s32) = G_FCMP floatpred(uno), %2(s32), %3
+    ; CHECK: [[TRUNC2:%[0-9]+]](s1) = G_TRUNC [[CMP2]]
+    %5(s32) = G_FCMP floatpred(uno), %2, %3
+    %7(s1) = G_TRUNC %5(s32)
 ...

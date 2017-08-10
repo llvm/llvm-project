@@ -10,15 +10,15 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-unknown-linux-gnu"
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 define <4 x float> @inner_vectors(<4 x float> %a, <4 x float> %b) {
 entry:
-  call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
+  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
   %mul = fmul <4 x float> %a, <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
-  call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
+  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
   %mul1 = fmul <4 x float> %b, <float 5.000000e+00, float 5.000000e+00, float 5.000000e+00, float 5.000000e+00>
-  call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
+  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
   %add = fadd <4 x float> %mul, %mul1
   ret <4 x float> %add
 }
@@ -29,10 +29,10 @@ define float @outer_vectors(<4 x float> %a, <4 x float> %b) {
 ; CHECK: ret float
 
 entry:
-  call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
-  call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
+  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
+  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
   %call = call <4 x float> @inner_vectors(<4 x float> %a, <4 x float> %b)
-  call void @llvm.dbg.value(metadata i32 undef, i64 0, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
+  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
   %vecext = extractelement <4 x float> %call, i32 0
   %vecext1 = extractelement <4 x float> %call, i32 1
   %add = fadd float %vecext, %vecext1

@@ -81,5 +81,5 @@ int main()
     test_is_not_assignable<int(), int> ();
 
 //  pointer to incomplete template type
-	test_is_assignable<X<D>*&, X<D>*> ();
+    test_is_assignable<X<D>*&, X<D>*> ();
 }

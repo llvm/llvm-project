@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 
 ;; This example can't fold the or into an LEA.
 define i32 @test(float ** %tmp2, i32 %tmp12) nounwind {

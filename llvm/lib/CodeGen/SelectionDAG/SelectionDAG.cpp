@@ -892,8 +892,10 @@ SelectionDAG::SelectionDAG(const TargetMachine &tm, CodeGenOpt::Level OL)
 }
 
 void SelectionDAG::init(MachineFunction &NewMF,
-                        OptimizationRemarkEmitter &NewORE) {
+                        OptimizationRemarkEmitter &NewORE,
+                        Pass *PassPtr) {
   MF = &NewMF;
+  SDAGISelPass = PassPtr;
   ORE = &NewORE;
   TLI = getSubtarget().getTargetLowering();
   TSI = getSubtarget().getSelectionDAGInfo();
@@ -1997,6 +1999,18 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &Mask) {
     ConstantSDNode *AndVal = isConstOrConstSplat(V.getOperand(1));
     if (AndVal && Mask.isSubsetOf(AndVal->getAPIntValue()))
       return V.getOperand(0);
+    break;
+  }
+  case ISD::ANY_EXTEND: {
+    SDValue Src = V.getOperand(0);
+    unsigned SrcBitWidth = Src.getScalarValueSizeInBits();
+    // Being conservative here - only peek through if we only demand bits in the
+    // non-extended source (even though the extended bits are technically undef).
+    if (Mask.getActiveBits() > SrcBitWidth)
+      break;
+    APInt SrcMask = Mask.trunc(SrcBitWidth);
+    if (SDValue DemandedSrc = GetDemandedBits(Src, SrcMask))
+      return getNode(ISD::ANY_EXTEND, SDLoc(V), V.getValueType(), DemandedSrc);
     break;
   }
   }
@@ -3954,18 +3968,31 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   assert(BV1->getNumOperands() == BV2->getNumOperands() && "Out of sync!");
 
   EVT SVT = VT.getScalarType();
+  EVT LegalSVT = SVT;
+  if (NewNodesMustHaveLegalTypes && LegalSVT.isInteger()) {
+    LegalSVT = TLI->getTypeToTransformTo(*getContext(), LegalSVT);
+    if (LegalSVT.bitsLT(SVT))
+      return SDValue();
+  }
   SmallVector<SDValue, 4> Outputs;
   for (unsigned I = 0, E = BV1->getNumOperands(); I != E; ++I) {
     SDValue V1 = BV1->getOperand(I);
     SDValue V2 = BV2->getOperand(I);
 
-    // Avoid BUILD_VECTOR nodes that perform implicit truncation.
-    // FIXME: This is valid and could be handled by truncation.
+    if (SVT.isInteger()) {
+        if (V1->getValueType(0).bitsGT(SVT))
+          V1 = getNode(ISD::TRUNCATE, DL, SVT, V1);
+        if (V2->getValueType(0).bitsGT(SVT))
+          V2 = getNode(ISD::TRUNCATE, DL, SVT, V2);
+    }
+
     if (V1->getValueType(0) != SVT || V2->getValueType(0) != SVT)
       return SDValue();
 
     // Fold one vector element.
     SDValue ScalarResult = getNode(Opcode, DL, SVT, V1, V2);
+    if (LegalSVT != SVT)
+      ScalarResult = getNode(ISD::SIGN_EXTEND, DL, LegalSVT, ScalarResult);
 
     // Scalar folding only succeeded if the result is a constant or UNDEF.
     if (!ScalarResult.isUndef() && ScalarResult.getOpcode() != ISD::Constant &&
@@ -3984,6 +4011,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   return getBuildVector(VT, SDLoc(), Outputs);
 }
 
+// TODO: Merge with FoldConstantArithmetic
 SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
                                                    const SDLoc &DL, EVT VT,
                                                    ArrayRef<SDValue> Ops,
@@ -6843,31 +6871,30 @@ SDNode *SelectionDAG::getNodeIfExists(unsigned Opcode, SDVTList VTList,
 ///
 /// SDNode
 SDDbgValue *SelectionDAG::getDbgValue(MDNode *Var, MDNode *Expr, SDNode *N,
-                                      unsigned R, bool IsIndirect, uint64_t Off,
+                                      unsigned R, bool IsIndirect,
                                       const DebugLoc &DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc())
-      SDDbgValue(Var, Expr, N, R, IsIndirect, Off, DL, O);
+      SDDbgValue(Var, Expr, N, R, IsIndirect, DL, O);
 }
 
 /// Constant
 SDDbgValue *SelectionDAG::getConstantDbgValue(MDNode *Var, MDNode *Expr,
-                                              const Value *C, uint64_t Off,
+                                              const Value *C,
                                               const DebugLoc &DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, C, Off, DL, O);
+  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, C, DL, O);
 }
 
 /// FrameIndex
 SDDbgValue *SelectionDAG::getFrameIndexDbgValue(MDNode *Var, MDNode *Expr,
-                                                unsigned FI, uint64_t Off,
-                                                const DebugLoc &DL,
+                                                unsigned FI, const DebugLoc &DL,
                                                 unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, FI, Off, DL, O);
+  return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, FI, DL, O);
 }
 
 namespace {
@@ -7301,10 +7328,9 @@ void SelectionDAG::TransferDbgValues(SDValue From, SDValue To) {
         Dbg->getResNo() == From.getResNo() && !Dbg->isInvalidated()) {
       assert(FromNode != ToNode &&
              "Should not transfer Debug Values intranode");
-      SDDbgValue *Clone =
-          getDbgValue(Dbg->getVariable(), Dbg->getExpression(), ToNode,
-                      To.getResNo(), Dbg->isIndirect(), Dbg->getOffset(),
-                      Dbg->getDebugLoc(), Dbg->getOrder());
+      SDDbgValue *Clone = getDbgValue(Dbg->getVariable(), Dbg->getExpression(),
+                                      ToNode, To.getResNo(), Dbg->isIndirect(),
+                                      Dbg->getDebugLoc(), Dbg->getOrder());
       ClonedDVs.push_back(Clone);
       Dbg->setIsInvalidated();
     }
@@ -7313,22 +7339,23 @@ void SelectionDAG::TransferDbgValues(SDValue From, SDValue To) {
     AddDbgValue(I, ToNode, false);
 }
 
-void SelectionDAG::makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,
-                                                SDValue NewMemOp) {
+SDValue SelectionDAG::makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,
+                                                   SDValue NewMemOp) {
   assert(isa<MemSDNode>(NewMemOp.getNode()) && "Expected a memop node");
-  if (!OldLoad->hasAnyUseOfValue(1))
-    return;
-
   // The new memory operation must have the same position as the old load in
   // terms of memory dependency. Create a TokenFactor for the old load and new
   // memory operation and update uses of the old load's output chain to use that
   // TokenFactor.
   SDValue OldChain = SDValue(OldLoad, 1);
   SDValue NewChain = SDValue(NewMemOp.getNode(), 1);
+  if (!OldLoad->hasAnyUseOfValue(1))
+    return NewChain;
+
   SDValue TokenFactor =
       getNode(ISD::TokenFactor, SDLoc(OldLoad), MVT::Other, OldChain, NewChain);
   ReplaceAllUsesOfValueWith(OldChain, TokenFactor);
   UpdateNodeOperands(TokenFactor.getNode(), OldChain, NewChain);
+  return TokenFactor;
 }
 
 //===----------------------------------------------------------------------===//

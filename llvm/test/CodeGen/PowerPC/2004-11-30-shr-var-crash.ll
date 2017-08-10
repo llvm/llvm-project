@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32--
 
 define void @main() {
         %shamt = add i8 0, 1            ; <i8> [#uses=1]

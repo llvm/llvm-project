@@ -36,7 +36,7 @@ class NVPTXTargetMachine : public LLVMTargetMachine {
 public:
   NVPTXTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
-                     Optional<Reloc::Model> RM, CodeModel::Model CM,
+                     Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
                      CodeGenOpt::Level OP, bool is64bit);
 
   ~NVPTXTargetMachine() override;
@@ -75,8 +75,8 @@ class NVPTXTargetMachine32 : public NVPTXTargetMachine {
 public:
   NVPTXTargetMachine32(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Optional<Reloc::Model> RM, CodeModel::Model CM,
-                       CodeGenOpt::Level OL);
+                       Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                       CodeGenOpt::Level OL, bool JIT);
 };
 
 class NVPTXTargetMachine64 : public NVPTXTargetMachine {
@@ -84,8 +84,8 @@ class NVPTXTargetMachine64 : public NVPTXTargetMachine {
 public:
   NVPTXTargetMachine64(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Optional<Reloc::Model> RM, CodeModel::Model CM,
-                       CodeGenOpt::Level OL);
+                       Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                       CodeGenOpt::Level OL, bool JIT);
 };
 
 } // end namespace llvm

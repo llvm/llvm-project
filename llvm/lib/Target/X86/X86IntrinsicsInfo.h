@@ -342,6 +342,8 @@ static const IntrinsicData* getIntrinsicWithChain(uint16_t IntNo) {
  * the alphabetical order.
  */
 static const IntrinsicData  IntrinsicsWithoutChain[] = {
+  X86_INTRINSIC_DATA(avx_addsub_pd_256, INTR_TYPE_2OP, X86ISD::ADDSUB, 0),
+  X86_INTRINSIC_DATA(avx_addsub_ps_256, INTR_TYPE_2OP, X86ISD::ADDSUB, 0),
   X86_INTRINSIC_DATA(avx_cmp_pd_256,    INTR_TYPE_3OP, X86ISD::CMPP, 0),
   X86_INTRINSIC_DATA(avx_cmp_ps_256,    INTR_TYPE_3OP, X86ISD::CMPP, 0),
   X86_INTRINSIC_DATA(avx_cvt_pd2_ps_256,CVTPD2PS, ISD::FP_ROUND, 0),
@@ -1650,6 +1652,8 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(sse2_ucomile_sd,   COMI, X86ISD::UCOMI, ISD::SETLE),
   X86_INTRINSIC_DATA(sse2_ucomilt_sd,   COMI, X86ISD::UCOMI, ISD::SETLT),
   X86_INTRINSIC_DATA(sse2_ucomineq_sd,  COMI, X86ISD::UCOMI, ISD::SETNE),
+  X86_INTRINSIC_DATA(sse3_addsub_pd,    INTR_TYPE_2OP, X86ISD::ADDSUB, 0),
+  X86_INTRINSIC_DATA(sse3_addsub_ps,    INTR_TYPE_2OP, X86ISD::ADDSUB, 0),
   X86_INTRINSIC_DATA(sse3_hadd_pd,      INTR_TYPE_2OP, X86ISD::FHADD, 0),
   X86_INTRINSIC_DATA(sse3_hadd_ps,      INTR_TYPE_2OP, X86ISD::FHADD, 0),
   X86_INTRINSIC_DATA(sse3_hsub_pd,      INTR_TYPE_2OP, X86ISD::FHSUB, 0),

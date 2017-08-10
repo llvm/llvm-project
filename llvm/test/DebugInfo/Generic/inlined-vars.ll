@@ -4,8 +4,8 @@
 
 define i32 @main() uwtable !dbg !5 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !18, metadata !DIExpression()), !dbg !21
-  tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !22, metadata !DIExpression()), !dbg !23
+  tail call void @llvm.dbg.value(metadata i32 0, metadata !18, metadata !DIExpression()), !dbg !21
+  tail call void @llvm.dbg.value(metadata i32 0, metadata !22, metadata !DIExpression()), !dbg !23
   tail call void @smth(i32 0), !dbg !24
   tail call void @smth(i32 0), !dbg !25
   ret i32 0, !dbg !19
@@ -13,7 +13,7 @@ entry:
 
 declare void @smth(i32)
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!27}

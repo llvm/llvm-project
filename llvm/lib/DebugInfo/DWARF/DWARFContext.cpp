@@ -136,13 +136,13 @@ dumpDWARFv5StringOffsetsSection(raw_ostream &OS, StringRef SectionName,
       uint64_t StringOffset =
           StrOffsetExt.getRelocatedValue(EntrySize, &Offset);
       if (Format == DWARF32) {
-        OS << format("%8.8x ", StringOffset);
         uint32_t StringOffset32 = (uint32_t)StringOffset;
+        OS << format("%8.8x ", StringOffset32);
         const char *S = StrData.getCStr(&StringOffset32);
         if (S)
           OS << format("\"%s\"", S);
       } else
-        OS << format("%16.16x ", StringOffset);
+        OS << format("%16.16" PRIx64 " ", StringOffset);
       OS << "\n";
     }
   }
@@ -400,8 +400,19 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
-  // FIXME: Improve this for the case where this DWO file is really a DWP file
-  // with an index - use the index for lookup instead of a linear search.
+  parseDWOCompileUnits();
+
+  if (const auto &CUI = getCUIndex()) {
+    if (const auto *R = CUI.getFromHash(Hash))
+      if (auto CUOff = R->getOffset(DW_SECT_INFO))
+        return DWOCUs.getUnitForOffset(CUOff->Offset);
+    return nullptr;
+  }
+
+  // If there's no index, just search through the CUs in the DWO - there's
+  // probably only one unless this is something like LTO - though an in-process
+  // built/cached lookup table could be used in that case to improve repeated
+  // lookups of different CUs in the DWO.
   for (const auto &DWOCU : dwo_compile_units())
     if (DWOCU->getDWOId() == Hash)
       return DWOCU.get();
@@ -792,11 +803,13 @@ DWARFContext::getDWOContext(StringRef AbsolutePath) {
     return std::shared_ptr<DWARFContext>(std::move(S), Ctxt);
   }
 
-  SmallString<128> DWPName;
   Expected<OwningBinary<ObjectFile>> Obj = [&] {
     if (!CheckedForDWP) {
-      (DObj->getFileName() + ".dwp").toVector(DWPName);
-      auto Obj = object::ObjectFile::createObjectFile(DWPName);
+      SmallString<128> DWPName;
+      auto Obj = object::ObjectFile::createObjectFile(
+          this->DWPName.empty()
+              ? (DObj->getFileName() + ".dwp").toStringRef(DWPName)
+              : StringRef(this->DWPName));
       if (Obj) {
         Entry = &DWP;
         return Obj;
@@ -1252,9 +1265,10 @@ public:
 
 std::unique_ptr<DWARFContext>
 DWARFContext::create(const object::ObjectFile &Obj, const LoadedObjectInfo *L,
-                     function_ref<ErrorPolicy(Error)> HandleError) {
+                     function_ref<ErrorPolicy(Error)> HandleError,
+                     std::string DWPName) {
   auto DObj = llvm::make_unique<DWARFObjInMemory>(Obj, L, HandleError);
-  return llvm::make_unique<DWARFContext>(std::move(DObj));
+  return llvm::make_unique<DWARFContext>(std::move(DObj), std::move(DWPName));
 }
 
 std::unique_ptr<DWARFContext>
@@ -1262,5 +1276,5 @@ DWARFContext::create(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,
                      uint8_t AddrSize, bool isLittleEndian) {
   auto DObj =
       llvm::make_unique<DWARFObjInMemory>(Sections, AddrSize, isLittleEndian);
-  return llvm::make_unique<DWARFContext>(std::move(DObj));
+  return llvm::make_unique<DWARFContext>(std::move(DObj), "");
 }

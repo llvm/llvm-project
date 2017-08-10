@@ -14,14 +14,14 @@ entry:
   br i1 undef, label %exit, label %bb
 
 bb:                                               ; preds = %entry
-  call void @llvm.dbg.value(metadata i8* undef, i64 0, metadata !15, metadata !16), !dbg !17
+  call void @llvm.dbg.value(metadata i8* undef, metadata !15, metadata !16), !dbg !17
   br label %exit
 
 exit:                                             ; preds = %bb, %entry
   ret void
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.module.flags = !{!0, !1}
 !llvm.dbg.cu = !{!2}

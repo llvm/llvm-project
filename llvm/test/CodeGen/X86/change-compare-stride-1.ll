@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -enable-lsr-nested | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -enable-lsr-nested | FileCheck %s
 ;
 ; Nested LSR is required to optimize this case.
 ; We do not expect to see this form of IR without -enable-iv-rewrite.

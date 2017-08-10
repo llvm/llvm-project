@@ -21,6 +21,20 @@ coro1 f() {
 // CHECK: call void @_ZNSt12experimental13coroutines_v113suspend_never12await_resumeEv(%"struct.std::experimental::coroutines_v1::suspend_never"*
 // CHECK: call void @_ZN5coro112promise_type11return_voidEv(%"struct.coro1::promise_type"* %__promise)
 
+struct A {
+  A();
+  ~A();
+};
+
+coro1 f2() {
+  co_return (void) A{};
+}
+
+// CHECK-LABEL: define void @_Z2f2v(
+// CHECK: call void @_ZN1AC1Ev(%struct.A* %[[AVar:.*]])
+// CHECK-NEXT: call void @_ZN1AD1Ev(%struct.A* %[[AVar]])
+// CHECK-NEXT: call void @_ZN5coro112promise_type11return_voidEv(%"struct.coro1::promise_type"*
+
 struct coro2 {
   struct promise_type {
     coro2 get_return_object();

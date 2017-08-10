@@ -1648,16 +1648,6 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     Lex();
     return false;
   }
-  if (Lexer.is(AsmToken::Hash)) {
-    // Seeing a hash here means that it was an end-of-line comment in
-    // an asm syntax where hash's are not comment and the previous
-    // statement parser did not check the end of statement. Relex as
-    // EndOfStatement.
-    StringRef CommentStr = parseStringToEndOfStatement();
-    Lexer.Lex();
-    Lexer.UnLex(AsmToken(AsmToken::EndOfStatement, CommentStr));
-    return false;
-  }
   // Statements always start with an identifier.
   AsmToken ID = getTok();
   SMLoc IDLoc = ID.getLoc();
@@ -3199,7 +3189,7 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
   int64_t MaxBytesToFill = 0;
 
   auto parseAlign = [&]() -> bool {
-    if (checkForValidSection() || parseAbsoluteExpression(Alignment))
+    if (parseAbsoluteExpression(Alignment))
       return true;
     if (parseOptionalToken(AsmToken::Comma)) {
       // The fill expression can be omitted while specifying a maximum number of
@@ -3218,6 +3208,13 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
     return parseToken(AsmToken::EndOfStatement);
   };
 
+  if (checkForValidSection())
+    return addErrorSuffix(" in directive");
+  // Ignore empty '.p2align' directives for GNU-as compatibility
+  if (IsPow2 && (ValueSize == 1) && getTok().is(AsmToken::EndOfStatement)) {
+    Warning(AlignmentLoc, "p2align directive with no operand(s) is ignored");
+    return parseToken(AsmToken::EndOfStatement);
+  }
   if (parseAlign())
     return addErrorSuffix(" in directive");
 

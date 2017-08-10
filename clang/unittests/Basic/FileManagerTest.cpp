@@ -10,6 +10,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/FileSystemStatCache.h"
+#include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Path.h"
@@ -295,5 +296,31 @@ TEST_F(FileManagerTest, getVirtualFileWithDifferentName) {
 }
 
 #endif  // !LLVM_ON_WIN32
+
+TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
+  SmallString<64> CustomWorkingDir;
+#ifdef LLVM_ON_WIN32
+  CustomWorkingDir = "C:";
+#else
+  CustomWorkingDir = "/";
+#endif
+  llvm::sys::path::append(CustomWorkingDir, "some", "weird", "path");
+
+  auto FS =
+      IntrusiveRefCntPtr<vfs::InMemoryFileSystem>(new vfs::InMemoryFileSystem);
+  // setCurrentworkingdirectory must finish without error.
+  ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
+
+  FileSystemOptions Opts;
+  FileManager Manager(Opts, FS);
+
+  SmallString<64> Path("a/foo.cpp");
+
+  SmallString<64> ExpectedResult(CustomWorkingDir);
+  llvm::sys::path::append(ExpectedResult, Path);
+
+  ASSERT_TRUE(Manager.makeAbsolutePath(Path));
+  EXPECT_EQ(Path, ExpectedResult);
+}
 
 } // anonymous namespace

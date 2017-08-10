@@ -132,7 +132,6 @@ LLVMValueRef LLVMDIBuilderInsertDeclareAtEnd(LLVMDIBuilderRef D,
                                              LLVMBasicBlockRef Block);
 
 LLVMValueRef LLVMDIBuilderInsertValueAtEnd(LLVMDIBuilderRef D, LLVMValueRef Val,
-                                           uint64_t Offset,
                                            LLVMMetadataRef VarInfo,
                                            LLVMMetadataRef Expr,
                                            LLVMBasicBlockRef Block);

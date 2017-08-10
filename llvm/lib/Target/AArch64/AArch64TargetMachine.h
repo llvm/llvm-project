@@ -31,8 +31,8 @@ protected:
 public:
   AArch64TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Optional<Reloc::Model> RM, CodeModel::Model CM,
-                       CodeGenOpt::Level OL, bool IsLittleEndian);
+                       Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                       CodeGenOpt::Level OL, bool JIT, bool IsLittleEndian);
 
   ~AArch64TargetMachine() override;
   const AArch64Subtarget *getSubtargetImpl(const Function &F) const override;
@@ -62,8 +62,9 @@ class AArch64leTargetMachine : public AArch64TargetMachine {
 public:
   AArch64leTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                          StringRef FS, const TargetOptions &Options,
-                         Optional<Reloc::Model> RM, CodeModel::Model CM,
-                         CodeGenOpt::Level OL);
+                         Optional<Reloc::Model> RM,
+                         Optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                         bool JIT);
 };
 
 // AArch64 big endian target machine.
@@ -73,8 +74,9 @@ class AArch64beTargetMachine : public AArch64TargetMachine {
 public:
   AArch64beTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                          StringRef FS, const TargetOptions &Options,
-                         Optional<Reloc::Model> RM, CodeModel::Model CM,
-                         CodeGenOpt::Level OL);
+                         Optional<Reloc::Model> RM,
+                         Optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                         bool JIT);
 };
 
 } // end namespace llvm

@@ -254,7 +254,7 @@ define void @scatter_mask_qps_execdomain(<8 x i64> %ind, <8 x float>* %src, i8 %
 define void @gather_qps(<8 x i64> %ind, <8 x float> %src, i8* %base, i8* %stbuf)  {
 ; CHECK-LABEL: gather_qps:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k2
 ; CHECK-NEXT:    vgatherqps (%rdi,%zmm0,4), %ymm1 {%k2}
@@ -333,7 +333,7 @@ define <4 x double>@test_int_x86_avx512_gather3div4_df(<4 x double> %x0, i8* %x1
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vgatherqpd (%rdi,%ymm1,4), %ymm0 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vxorpd %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vgatherqpd (%rdi,%ymm1,2), %ymm2 {%k1}
 ; CHECK-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -351,7 +351,7 @@ define <4 x i64>@test_int_x86_avx512_gather3div4_di(<4 x i64> %x0, i8* %x1, <4 x
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpgatherqq (%rdi,%ymm1,8), %ymm0 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vpxor %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vpgatherqq (%rdi,%ymm1,8), %ymm2 {%k1}
 ; CHECK-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -476,7 +476,7 @@ define <4 x double>@test_int_x86_avx512_gather3siv4_df(<4 x double> %x0, i8* %x1
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,4), %ymm0 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vxorpd %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,2), %ymm2 {%k1}
 ; CHECK-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -545,7 +545,7 @@ define <8 x float>@test_int_x86_avx512_gather3siv8_sf(<8 x float> %x0, i8* %x1, 
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vgatherdps (%rdi,%ymm1,4), %ymm0 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vxorps %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vgatherdps (%rdi,%ymm1,2), %ymm2 {%k1}
 ; CHECK-NEXT:    vaddps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -847,7 +847,7 @@ define <16 x float> @gather_mask_test(<16 x i32> %ind, <16 x float> %src, i8* %b
 ; CHECK-LABEL: gather_mask_test:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vxorps %zmm2, %zmm2, %zmm2
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm2 {%k1}
 ; CHECK-NEXT:    kxorw %k0, %k0, %k1
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm3

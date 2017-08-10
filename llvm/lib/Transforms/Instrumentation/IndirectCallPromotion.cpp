@@ -22,6 +22,7 @@
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/IndirectCallSiteVisitor.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -121,6 +122,10 @@ public:
         *PassRegistry::getPassRegistry());
   }
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
+  }
+
   StringRef getPassName() const override { return "PGOIndirectCallPromotion"; }
 
 private:
@@ -194,7 +199,7 @@ public:
                      bool SamplePGO, OptimizationRemarkEmitter &ORE)
       : F(Func), M(Modu), Symtab(Symtab), SamplePGO(SamplePGO), ORE(ORE) {}
 
-  bool processFunction();
+  bool processFunction(ProfileSummaryInfo *PSI);
 };
 } // end anonymous namespace
 
@@ -613,7 +618,7 @@ uint32_t ICallPromotionFunc::tryToPromote(
 
 // Traverse all the indirect-call callsite and get the value profile
 // annotation to perform indirect-call promotion.
-bool ICallPromotionFunc::processFunction() {
+bool ICallPromotionFunc::processFunction(ProfileSummaryInfo *PSI) {
   bool Changed = false;
   ICallPromotionAnalysis ICallAnalysis;
   for (auto &I : findIndirectCallSites(F)) {
@@ -621,7 +626,8 @@ bool ICallPromotionFunc::processFunction() {
     uint64_t TotalCount;
     auto ICallProfDataRef = ICallAnalysis.getPromotionCandidatesForInstruction(
         I, NumVals, TotalCount, NumCandidates);
-    if (!NumCandidates)
+    if (!NumCandidates ||
+        (PSI && PSI->hasProfileSummary() && !PSI->isHotCount(TotalCount)))
       continue;
     auto PromotionCandidates = getPromotionCandidatesForCallSite(
         I, ICallProfDataRef, TotalCount, NumCandidates);
@@ -643,7 +649,8 @@ bool ICallPromotionFunc::processFunction() {
 }
 
 // A wrapper function that does the actual work.
-static bool promoteIndirectCalls(Module &M, bool InLTO, bool SamplePGO,
+static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
+                                 bool InLTO, bool SamplePGO,
                                  ModuleAnalysisManager *AM = nullptr) {
   if (DisableICP)
     return false;
@@ -673,7 +680,7 @@ static bool promoteIndirectCalls(Module &M, bool InLTO, bool SamplePGO,
     }
 
     ICallPromotionFunc ICallPromotion(F, &M, &Symtab, SamplePGO, *ORE);
-    bool FuncChanged = ICallPromotion.processFunction();
+    bool FuncChanged = ICallPromotion.processFunction(PSI);
     if (ICPDUMPAFTER && FuncChanged) {
       DEBUG(dbgs() << "\n== IR Dump After =="; F.print(dbgs()));
       DEBUG(dbgs() << "\n");
@@ -688,15 +695,20 @@ static bool promoteIndirectCalls(Module &M, bool InLTO, bool SamplePGO,
 }
 
 bool PGOIndirectCallPromotionLegacyPass::runOnModule(Module &M) {
+  ProfileSummaryInfo *PSI =
+      getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+
   // Command-line option has the priority for InLTO.
-  return promoteIndirectCalls(M, InLTO | ICPLTOMode,
+  return promoteIndirectCalls(M, PSI, InLTO | ICPLTOMode,
                               SamplePGO | ICPSamplePGOMode);
 }
 
 PreservedAnalyses PGOIndirectCallPromotion::run(Module &M,
                                                 ModuleAnalysisManager &AM) {
-  if (!promoteIndirectCalls(M, InLTO | ICPLTOMode, SamplePGO | ICPSamplePGOMode,
-                            &AM))
+  ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
+
+  if (!promoteIndirectCalls(M, PSI, InLTO | ICPLTOMode,
+                            SamplePGO | ICPSamplePGOMode, &AM))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

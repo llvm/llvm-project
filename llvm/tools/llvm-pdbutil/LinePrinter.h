@@ -60,6 +60,7 @@ public:
   void formatMsfStreamData(StringRef Label, PDBFile &File,
                            const msf::MSFStreamLayout &Stream,
                            BinarySubstreamRef Substream);
+  void formatMsfStreamBlocks(PDBFile &File, const msf::MSFStreamLayout &Stream);
 
   bool hasColor() const { return UseColor; }
   raw_ostream &getStream() { return OS; }

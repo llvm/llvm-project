@@ -4,7 +4,7 @@
 ; BAD_CM: Target only supports CodeModel Small or Large
 
 
-; RUN: llc < %s -march=xcore -code-model=default | FileCheck %s
+; RUN: llc < %s -march=xcore | FileCheck %s
 ; RUN: llc < %s -march=xcore -code-model=small | FileCheck %s
 ; RUN: llc < %s -march=xcore -code-model=large | FileCheck %s -check-prefix=LARGE
 

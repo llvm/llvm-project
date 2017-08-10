@@ -1327,6 +1327,39 @@ bool Sema::isOpenMPPrivateDecl(ValueDecl *D, unsigned Level) {
           DSAStack->isTaskgroupReductionRef(D, Level));
 }
 
+void Sema::setOpenMPCaptureKind(FieldDecl *FD, ValueDecl *D, unsigned Level) {
+  assert(LangOpts.OpenMP && "OpenMP is not allowed");
+  D = getCanonicalDecl(D);
+  OpenMPClauseKind OMPC = OMPC_unknown;
+  for (unsigned I = DSAStack->getNestingLevel() + 1; I > Level; --I) {
+    const unsigned NewLevel = I - 1;
+    if (DSAStack->hasExplicitDSA(D,
+                                 [&OMPC](const OpenMPClauseKind K) {
+                                   if (isOpenMPPrivate(K)) {
+                                     OMPC = K;
+                                     return true;
+                                   }
+                                   return false;
+                                 },
+                                 NewLevel))
+      break;
+    if (DSAStack->checkMappableExprComponentListsForDeclAtLevel(
+            D, NewLevel,
+            [](OMPClauseMappableExprCommon::MappableExprComponentListRef,
+               OpenMPClauseKind) { return true; })) {
+      OMPC = OMPC_map;
+      break;
+    }
+    if (DSAStack->hasExplicitDirective(isOpenMPTargetExecutionDirective,
+                                       NewLevel)) {
+      OMPC = OMPC_firstprivate;
+      break;
+    }
+  }
+  if (OMPC != OMPC_unknown)
+    FD->addAttr(OMPCaptureKindAttr::CreateImplicit(Context, OMPC));
+}
+
 bool Sema::isOpenMPTargetCapturedDecl(ValueDecl *D, unsigned Level) {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
   // Return true if the current level is no longer enclosed in a target region.

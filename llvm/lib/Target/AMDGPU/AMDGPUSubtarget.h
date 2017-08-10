@@ -136,7 +136,6 @@ protected:
   // Subtarget statically properties set by tablegen
   bool FP64;
   bool IsGCN;
-  bool GCN1Encoding;
   bool GCN3Encoding;
   bool CIInsts;
   bool GFX9Insts;
@@ -764,7 +763,8 @@ public:
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
 
-  unsigned getKernArgSegmentSize(const MachineFunction &MF, unsigned ExplictArgBytes) const;
+  unsigned getKernArgSegmentSize(const MachineFunction &MF,
+                                 unsigned ExplictArgBytes) const;
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;

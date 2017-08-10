@@ -9,8 +9,8 @@ target triple = "arm-apple-darwin"
 define i32 @_Z3fooi4SVal(i32 %i, %struct.SVal* noalias %location) nounwind ssp !dbg !17 {
 entry:
   %"alloca point" = bitcast i32 0 to i32
-  call void @llvm.dbg.value(metadata i32 %i, i64 0, metadata !23, metadata !DIExpression()), !dbg !24
-  call void @llvm.dbg.value(metadata %struct.SVal* %location, i64 0, metadata !25, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.value(metadata i32 %i, metadata !23, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.value(metadata %struct.SVal* %location, metadata !25, metadata !DIExpression()), !dbg !24
   %0 = icmp ne i32 %i, 0, !dbg !27
   br i1 %0, label %bb, label %bb1, !dbg !27
 
@@ -37,7 +37,7 @@ return:
 define linkonce_odr void @_ZN4SValC1Ev(%struct.SVal* %this) nounwind ssp align 2  !dbg !16 {
 entry:
   %"alloca point" = bitcast i32 0 to i32
-  call void @llvm.dbg.value(metadata %struct.SVal* %this, i64 0, metadata !31, metadata !DIExpression()), !dbg !34
+  call void @llvm.dbg.value(metadata %struct.SVal* %this, metadata !31, metadata !DIExpression()), !dbg !34
   %0 = getelementptr inbounds %struct.SVal, %struct.SVal* %this, i32 0, i32 0, !dbg !34
   store i8* null, i8** %0, align 8, !dbg !34
   %1 = getelementptr inbounds %struct.SVal, %struct.SVal* %this, i32 0, i32 1, !dbg !34
@@ -68,14 +68,14 @@ entry:
   %7 = load i32, i32* %6, align 8, !dbg !43
   store i32 %7, i32* %5, align 8, !dbg !43
   %8 = call i32 @_Z3fooi4SVal(i32 2, %struct.SVal* noalias %0) nounwind, !dbg !43
-  call void @llvm.dbg.value(metadata i32 %8, i64 0, metadata !44, metadata !DIExpression()), !dbg !43
+  call void @llvm.dbg.value(metadata i32 %8, metadata !44, metadata !DIExpression()), !dbg !43
   br label %return, !dbg !45
 
 return:
   ret i32 0, !dbg !45
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!3}
 !llvm.module.flags = !{!49}

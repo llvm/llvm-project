@@ -70,14 +70,31 @@ FunctionCoverageSummary::get(const coverage::FunctionRecord &Function) {
       LineCoverageInfo(CoveredLines, NumLines));
 }
 
-void FunctionCoverageSummary::update(const FunctionCoverageSummary &Summary) {
-  ExecutionCount += Summary.ExecutionCount;
-  RegionCoverage.Covered =
-      std::max(RegionCoverage.Covered, Summary.RegionCoverage.Covered);
-  RegionCoverage.NotCovered =
-      std::min(RegionCoverage.NotCovered, Summary.RegionCoverage.NotCovered);
-  LineCoverage.Covered =
-      std::max(LineCoverage.Covered, Summary.LineCoverage.Covered);
-  LineCoverage.NotCovered =
-      std::min(LineCoverage.NotCovered, Summary.LineCoverage.NotCovered);
+FunctionCoverageSummary
+FunctionCoverageSummary::get(const InstantiationGroup &Group,
+                             ArrayRef<FunctionCoverageSummary> Summaries) {
+  std::string Name;
+  if (Group.hasName()) {
+    Name = Group.getName();
+  } else {
+    llvm::raw_string_ostream OS(Name);
+    OS << "Definition at line " << Group.getLine() << ", column "
+       << Group.getColumn();
+  }
+
+  FunctionCoverageSummary Summary(std::move(Name));
+  Summary.ExecutionCount = Group.getTotalExecutionCount();
+  Summary.RegionCoverage = Summaries[0].RegionCoverage;
+  Summary.LineCoverage = Summaries[0].LineCoverage;
+  for (const auto &FCS : Summaries.drop_front()) {
+    Summary.RegionCoverage.Covered =
+        std::max(FCS.RegionCoverage.Covered, Summary.RegionCoverage.Covered);
+    Summary.RegionCoverage.NotCovered = std::min(
+        FCS.RegionCoverage.NotCovered, Summary.RegionCoverage.NotCovered);
+    Summary.LineCoverage.Covered =
+        std::max(FCS.LineCoverage.Covered, Summary.LineCoverage.Covered);
+    Summary.LineCoverage.NotCovered =
+        std::min(FCS.LineCoverage.NotCovered, Summary.LineCoverage.NotCovered);
+  }
+  return Summary;
 }

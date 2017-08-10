@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 
 define void @Hubba(i8* %saveunder, i32 %firstBlob, i32 %select) nounwind  {
 entry:

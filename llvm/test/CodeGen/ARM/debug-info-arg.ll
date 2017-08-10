@@ -7,13 +7,13 @@ target triple = "thumbv7-apple-ios"
 %struct.tag_s = type { i32, i32, i32 }
 
 define void @foo(%struct.tag_s* nocapture %this, %struct.tag_s* %c, i64 %x, i64 %y, %struct.tag_s* nocapture %ptr1, %struct.tag_s* nocapture %ptr2) nounwind ssp "no-frame-pointer-elim"="true" !dbg !1 {
-  tail call void @llvm.dbg.value(metadata %struct.tag_s* %this, i64 0, metadata !5, metadata !DIExpression()), !dbg !20
-  tail call void @llvm.dbg.value(metadata %struct.tag_s* %c, i64 0, metadata !13, metadata !DIExpression()), !dbg !21
-  tail call void @llvm.dbg.value(metadata i64 %x, i64 0, metadata !14, metadata !DIExpression()), !dbg !22
-  tail call void @llvm.dbg.value(metadata i64 %y, i64 0, metadata !17, metadata !DIExpression()), !dbg !23
-;CHECK:	@DEBUG_VALUE: foo:y <- [%R7+8]
-  tail call void @llvm.dbg.value(metadata %struct.tag_s* %ptr1, i64 0, metadata !18, metadata !DIExpression()), !dbg !24
-  tail call void @llvm.dbg.value(metadata %struct.tag_s* %ptr2, i64 0, metadata !19, metadata !DIExpression()), !dbg !25
+  tail call void @llvm.dbg.value(metadata %struct.tag_s* %this, metadata !5, metadata !DIExpression()), !dbg !20
+  tail call void @llvm.dbg.value(metadata %struct.tag_s* %c, metadata !13, metadata !DIExpression()), !dbg !21
+  tail call void @llvm.dbg.value(metadata i64 %x, metadata !14, metadata !DIExpression()), !dbg !22
+  tail call void @llvm.dbg.value(metadata i64 %y, metadata !17, metadata !DIExpression()), !dbg !23
+;CHECK:	@DEBUG_VALUE: foo:y <- [DW_OP_plus_uconst 8] [%R7+0]
+  tail call void @llvm.dbg.value(metadata %struct.tag_s* %ptr1, metadata !18, metadata !DIExpression()), !dbg !24
+  tail call void @llvm.dbg.value(metadata %struct.tag_s* %ptr2, metadata !19, metadata !DIExpression()), !dbg !25
   %1 = icmp eq %struct.tag_s* %c, null, !dbg !26
   br i1 %1, label %3, label %2, !dbg !26
 
@@ -27,7 +27,7 @@ define void @foo(%struct.tag_s* nocapture %this, %struct.tag_s* %c, i64 %x, i64 
 
 declare void @foobar(i64, i64)
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!33}

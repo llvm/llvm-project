@@ -1,4 +1,4 @@
-//===-- MipsSEISelLowering.h - MipsSE DAG Lowering Interface ----*- C++ -*-===//
+//===- MipsSEISelLowering.h - MipsSE DAG Lowering Interface -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,9 +15,18 @@
 #define LLVM_LIB_TARGET_MIPS_MIPSSEISELLOWERING_H
 
 #include "MipsISelLowering.h"
-#include "MipsRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 
 namespace llvm {
+
+class MachineBasicBlock;
+class MachineInstr;
+class MipsSubtarget;
+class MipsTargetMachine;
+class SelectionDAG;
+class TargetRegisterClass;
+
   class MipsSETargetLowering : public MipsTargetLowering  {
   public:
     explicit MipsSETargetLowering(const MipsTargetMachine &TM,
@@ -26,6 +35,7 @@ namespace llvm {
     /// \brief Enable MSA support for the given integer type and Register
     /// class.
     void addMSAIntType(MVT::SimpleValueType Ty, const TargetRegisterClass *RC);
+
     /// \brief Enable MSA support for the given floating-point type and
     /// Register class.
     void addMSAFloatType(MVT::SimpleValueType Ty,
@@ -56,7 +66,7 @@ namespace llvm {
 
     void
     getOpndList(SmallVectorImpl<SDValue> &Ops,
-                std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
+                std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
                 bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
                 bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
                 SDValue Chain) const override;
@@ -126,6 +136,7 @@ namespace llvm {
                                           MachineBasicBlock *BBi,
                                           bool IsFGR64) const;
   };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_MIPS_MIPSSEISELLOWERING_H

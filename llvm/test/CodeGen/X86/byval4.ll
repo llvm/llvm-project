@@ -12,7 +12,7 @@
 
 ; Win64 has not supported byval yet.
 
-; RUN: llc < %s -march=x86 -mattr=-avx | FileCheck %s -check-prefix=X32
+; RUN: llc < %s -mtriple=i686-- -mattr=-avx | FileCheck %s -check-prefix=X32
 ; X32-NOT:     movsl
 ; X32:     rep
 ; X32-NOT:     rep

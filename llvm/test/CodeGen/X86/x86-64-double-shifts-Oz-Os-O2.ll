@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=bdver1 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver1 | FileCheck %s
 
 ; clang -Oz -c test1.cpp -emit-llvm -S -o
 ; Verify that we generate shld insruction when we are optimizing for size,

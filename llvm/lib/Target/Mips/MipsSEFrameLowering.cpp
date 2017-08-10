@@ -1,4 +1,4 @@
-//===-- MipsSEFrameLowering.cpp - Mips32/64 Frame Information -------------===//
+//===- MipsSEFrameLowering.cpp - Mips32/64 Frame Information --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -71,7 +71,7 @@ public:
   bool expand();
 
 private:
-  typedef MachineBasicBlock::iterator Iter;
+  using Iter = MachineBasicBlock::iterator;
 
   bool expandInstr(MachineBasicBlock &MBB, Iter I);
   void expandLoadCCond(MachineBasicBlock &MBB, Iter I);

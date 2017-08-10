@@ -13,8 +13,12 @@
 
 #include "sanitizer_stacktrace_printer.h"
 #include "sanitizer_file.h"
+#include "sanitizer_fuchsia.h"
 
 namespace __sanitizer {
+
+// sanitizer_symbolizer_fuchsia.cc implements these differently for Fuchsia.
+#if !SANITIZER_FUCHSIA
 
 static const char *StripFunctionName(const char *function, const char *prefix) {
   if (!function) return nullptr;
@@ -146,6 +150,8 @@ void RenderData(InternalScopedString *buffer, const char *format,
     }
   }
 }
+
+#endif  // !SANITIZER_FUCHSIA
 
 void RenderSourceLocation(InternalScopedString *buffer, const char *file,
                           int line, int column, bool vs_style,

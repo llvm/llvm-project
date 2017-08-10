@@ -189,11 +189,6 @@ bool TargetTransformInfo::LSRWithInstrQueries() const {
   return TTIImpl->LSRWithInstrQueries();
 }
 
-bool TargetTransformInfo::isFoldableMemAccessOffset(Instruction *I,
-                                                    int64_t Offset) const {
-  return TTIImpl->isFoldableMemAccessOffset(I, Offset);
-}
-
 bool TargetTransformInfo::isTruncateFree(Type *Ty1, Type *Ty2) const {
   return TTIImpl->isTruncateFree(Ty1, Ty2);
 }
@@ -472,9 +467,9 @@ int TargetTransformInfo::getAddressComputationCost(Type *Tp,
   return Cost;
 }
 
-int TargetTransformInfo::getReductionCost(unsigned Opcode, Type *Ty,
-                                          bool IsPairwiseForm) const {
-  int Cost = TTIImpl->getReductionCost(Opcode, Ty, IsPairwiseForm);
+int TargetTransformInfo::getArithmeticReductionCost(unsigned Opcode, Type *Ty,
+                                                    bool IsPairwiseForm) const {
+  int Cost = TTIImpl->getArithmeticReductionCost(Opcode, Ty, IsPairwiseForm);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

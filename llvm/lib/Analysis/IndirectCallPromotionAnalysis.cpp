@@ -32,14 +32,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "pgo-icall-prom-analysis"
 
-// The minimum call count for the direct-call target to be considered as the
-// promotion candidate.
-static cl::opt<unsigned>
-    ICPCountThreshold("icp-count-threshold", cl::Hidden, cl::ZeroOrMore,
-                      cl::init(1000),
-                      cl::desc("The minimum count to the direct call target "
-                               "for the promotion"));
-
 // The percent threshold for the direct-call target (this call site vs the
 // remaining call count) for it to be considered as the promotion target.
 static cl::opt<unsigned> ICPRemainingPercentThreshold(
@@ -69,8 +61,7 @@ ICallPromotionAnalysis::ICallPromotionAnalysis() {
 bool ICallPromotionAnalysis::isPromotionProfitable(uint64_t Count,
                                                    uint64_t TotalCount,
                                                    uint64_t RemainingCount) {
-  return Count >= ICPCountThreshold &&
-         Count * 100 >= ICPRemainingPercentThreshold * RemainingCount &&
+  return Count * 100 >= ICPRemainingPercentThreshold * RemainingCount &&
          Count * 100 >= ICPTotalPercentThreshold * TotalCount;
 }
 

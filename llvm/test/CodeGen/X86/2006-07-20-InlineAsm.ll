@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -no-integrated-as
+; RUN: llc < %s -mtriple=i686-- -no-integrated-as
 ; PR833
 
 @G = weak global i32 0		; <i32*> [#uses=3]

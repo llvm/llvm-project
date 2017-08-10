@@ -192,7 +192,8 @@ void LivePhysRegs::addLiveOutsNoPristines(const MachineBasicBlock &MBB) {
     const MachineFrameInfo &MFI = MF.getFrameInfo();
     if (MFI.isCalleeSavedInfoValid()) {
       for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo())
-        addReg(Info.getReg());
+        if (Info.isRestored())
+          addReg(Info.getReg());
     }
   }
 }

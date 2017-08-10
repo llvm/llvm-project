@@ -557,6 +557,28 @@ done:
   ret void
 }
 
+; GCN-LABEL: {{^}}move_to_valu_vgpr_operand_phi:
+; GCN: v_add_i32_e32
+; GCN: ds_write_b32
+define void @move_to_valu_vgpr_operand_phi(i32 addrspace(3)* %out) {
+bb0:
+  br label %bb1
+
+bb1:                                              ; preds = %bb3, %bb0
+  %tmp0 = phi i32 [ 8, %bb0 ], [ %tmp4, %bb3 ]
+  %tmp1 = add nsw i32 %tmp0, -1
+  %tmp2 = getelementptr inbounds i32, i32 addrspace(3)* %out, i32 %tmp1
+  br i1 undef, label %bb2, label %bb3
+
+bb2:                                              ; preds = %bb1
+  store volatile i32 1, i32 addrspace(3)* %tmp2, align 4
+  br label %bb3
+
+bb3:                                              ; preds = %bb2, %bb1
+  %tmp4 = add nsw i32 %tmp0, 2
+  br label %bb1
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { nounwind readnone }

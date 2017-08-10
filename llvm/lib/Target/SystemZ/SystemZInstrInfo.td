@@ -372,6 +372,9 @@ let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   def LTGR : UnaryRRE<"ltgr", 0xB902, null_frag, GR64, GR64>;
 }
 
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
+  def PAIR128 : Pseudo<(outs GR128:$dst), (ins GR64:$hi, GR64:$lo), []>;
+
 // Immediate moves.
 let hasSideEffects = 0, isAsCheapAsAMove = 1, isMoveImm = 1,
     isReMaterializable = 1 in {
@@ -1721,7 +1724,7 @@ let Defs = [CC] in {
 // Compare double and swap.
 let Defs = [CC] in {
   defm CDS  : CmpSwapRSPair<"cds", 0xBB, 0xEB31, null_frag, GR128>;
-  def  CDSG : CmpSwapRSY<"cdsg", 0xEB3E, null_frag, GR128>;
+  def  CDSG : CmpSwapRSY<"cdsg", 0xEB3E, z_atomic_cmp_swap_128, GR128>;
 }
 
 // Compare and swap and store.
@@ -1733,8 +1736,8 @@ let Uses = [R0L, R1D], Defs = [CC], mayStore = 1, mayLoad =1 in
   def PLO : SideEffectQuaternarySSe<"plo", 0xEE, GR64>;
 
 // Load/store pair from/to quadword.
-def LPQ  : UnaryRXY<"lpq", 0xE38F, null_frag, GR128, 16>;
-def STPQ : StoreRXY<"stpq", 0xE38E, null_frag, GR128, 16>;
+def LPQ  : UnaryRXY<"lpq", 0xE38F, z_atomic_load_128, GR128, 16>;
+def STPQ : StoreRXY<"stpq", 0xE38E, z_atomic_store_128, GR128, 16>;
 
 // Load pair disjoint.
 let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 
 define i32 @unique(i8* %full, i32 %p, i32 %len, i32 %mode, i32 %verbos, i32 %flags) {
 entry:

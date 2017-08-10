@@ -61,11 +61,11 @@ public:
   /// performing a lookup by name.
   ///
   /// \param HashDataOffset an offset into the hash data table
-  /// \returns DIEOffset the offset into the .debug_info section for the DIE
-  /// related to the input hash data offset. Currently this function returns
-  /// only the DIEOffset but it can be modified to return more data regarding
-  /// the DIE
-  uint32_t readAtoms(uint32_t &HashDataOffset);
+  /// \returns <DieOffset, DieTag>
+  /// DieOffset is the offset into the .debug_info section for the DIE
+  /// related to the input hash data offset.
+  /// DieTag is the tag of the DIE
+  std::pair<uint32_t, dwarf::Tag> readAtoms(uint32_t &HashDataOffset);
   void dump(raw_ostream &OS) const;
 };
 

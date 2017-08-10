@@ -1,4 +1,4 @@
-; RUN: llc -stop-after=tailduplication -march=x86-64 < %s | FileCheck %s
+; RUN: llc -stop-after=tailduplication < %s | FileCheck %s
 ;
 ; Check that DebugLoc attached to the branch instruction of 
 ; 'while.cond1.preheader.lr.ph' survives after tailduplication pass.

@@ -26,11 +26,24 @@
 
 namespace __sanitizer {
 
+#if !SANITIZER_FUCHSIA
+
 bool ReportFile::SupportsColors() {
   SpinMutexLock l(mu);
   ReopenIfNecessary();
   return SupportsColoredOutput(fd);
 }
+
+static INLINE bool ReportSupportsColors() {
+  return report_file.SupportsColors();
+}
+
+#else  // SANITIZER_FUCHSIA
+
+// Fuchsia's logs always go through post-processing that handles colorization.
+static INLINE bool ReportSupportsColors() { return true; }
+
+#endif  // !SANITIZER_FUCHSIA
 
 bool ColorizeReports() {
   // FIXME: Add proper Windows support to AnsiColorDecorator and re-enable color
@@ -40,7 +53,7 @@ bool ColorizeReports() {
 
   const char *flag = common_flags()->color;
   return internal_strcmp(flag, "always") == 0 ||
-         (internal_strcmp(flag, "auto") == 0 && report_file.SupportsColors());
+         (internal_strcmp(flag, "auto") == 0 && ReportSupportsColors());
 }
 
 static void (*sandboxing_callback)();

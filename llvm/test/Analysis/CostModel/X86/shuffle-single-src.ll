@@ -10,8 +10,17 @@
 ; Verify the cost model for 1 src shuffles
 ;
 
-; AVX512-LABEL: 'test_vXf64'
-define void @test_vXf64(<4 x double> %src256, <8 x double> %src512, <16 x double> %src1024) {
+; CHECK-LABEL: 'test_vXf64'
+define void @test_vXf64(<2 x double> %src128, <4 x double> %src256, <8 x double> %src512, <16 x double> %src1024) {
+
+  ; SSE2: cost of 2 {{.*}} %V128 = shufflevector
+  ; SSSE3: cost of 2 {{.*}} %V128 = shufflevector
+  ; SSE42: cost of 2 {{.*}} %V128 = shufflevector
+  ; AVX1: cost of 2 {{.*}} %V128 = shufflevector
+  ; AVX2: cost of 2 {{.*}} %V128 = shufflevector
+  ; AVX512: cost of 1 {{.*}} %V128 = shufflevector
+  %V128 = shufflevector <2 x double> %src128, <2 x double> undef, <2 x i32> <i32 1, i32 1>
+
   ; SSE2: cost of 4 {{.*}} %V256 = shufflevector
   ; SSSE3: cost of 4 {{.*}} %V256 = shufflevector
   ; SSE42: cost of 4 {{.*}} %V256 = shufflevector
@@ -39,8 +48,16 @@ define void @test_vXf64(<4 x double> %src256, <8 x double> %src512, <16 x double
   ret void
 }
 
-; AVX512-LABEL: 'test_vXi64'
-define void @test_vXi64(<4 x i64> %src256, <8 x i64> %src512) {
+; CHECK-LABEL: 'test_vXi64'
+define void @test_vXi64(<2 x i64> %src128, <4 x i64> %src256, <8 x i64> %src512) {
+
+  ; SSE2: cost of 1 {{.*}} %V128 = shufflevector
+  ; SSSE3: cost of 1 {{.*}} %V128 = shufflevector
+  ; SSE42: cost of 1 {{.*}} %V128 = shufflevector
+  ; AVX1: cost of 1 {{.*}} %V128 = shufflevector
+  ; AVX2: cost of 1 {{.*}} %V128 = shufflevector
+  ; AVX512: cost of 1 {{.*}} %V128 = shufflevector
+  %V128 = shufflevector <2 x i64> %src128, <2 x i64> undef, <2 x i32> <i32 1, i32 1>
 
   ; SSE2: cost of 8 {{.*}} %V256 = shufflevector
   ; SSSE3: cost of 8 {{.*}} %V256 = shufflevector

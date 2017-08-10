@@ -77,20 +77,20 @@ TMModel("thread-model",
                    clEnumValN(ThreadModel::Single, "single",
                               "Single thread model")));
 
-cl::opt<llvm::CodeModel::Model>
-CMModel("code-model",
-        cl::desc("Choose code model"),
-        cl::init(CodeModel::Default),
-        cl::values(clEnumValN(CodeModel::Default, "default",
-                              "Target default code model"),
-                   clEnumValN(CodeModel::Small, "small",
-                              "Small code model"),
-                   clEnumValN(CodeModel::Kernel, "kernel",
-                              "Kernel code model"),
-                   clEnumValN(CodeModel::Medium, "medium",
-                              "Medium code model"),
-                   clEnumValN(CodeModel::Large, "large",
-                              "Large code model")));
+cl::opt<llvm::CodeModel::Model> CMModel(
+    "code-model", cl::desc("Choose code model"),
+    cl::values(clEnumValN(CodeModel::Small, "small", "Small code model"),
+               clEnumValN(CodeModel::Kernel, "kernel", "Kernel code model"),
+               clEnumValN(CodeModel::Medium, "medium", "Medium code model"),
+               clEnumValN(CodeModel::Large, "large", "Large code model")));
+
+static inline Optional<CodeModel::Model> getCodeModel() {
+  if (CMModel.getNumOccurrences()) {
+    CodeModel::Model M = CMModel;
+    return M;
+  }
+  return None;
+}
 
 cl::opt<llvm::ExceptionHandling>
 ExceptionModel("exception-model",

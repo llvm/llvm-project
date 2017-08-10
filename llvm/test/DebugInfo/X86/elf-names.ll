@@ -22,7 +22,7 @@
 
 define void @_ZN1DC2Ev(%class.D* nocapture %this) unnamed_addr nounwind uwtable align 2 !dbg !5 {
 entry:
-  tail call void @llvm.dbg.value(metadata %class.D* %this, i64 0, metadata !29, metadata !DIExpression()), !dbg !36
+  tail call void @llvm.dbg.value(metadata %class.D* %this, metadata !29, metadata !DIExpression()), !dbg !36
   %c1 = getelementptr inbounds %class.D, %class.D* %this, i64 0, i32 0, !dbg !37
   store i32 1, i32* %c1, align 4, !dbg !37
   %c2 = getelementptr inbounds %class.D, %class.D* %this, i64 0, i32 1, !dbg !42
@@ -36,8 +36,8 @@ entry:
 
 define void @_ZN1DC2ERKS_(%class.D* nocapture %this, %class.D* nocapture %d) unnamed_addr nounwind uwtable align 2 !dbg !31 {
 entry:
-  tail call void @llvm.dbg.value(metadata %class.D* %this, i64 0, metadata !34, metadata !DIExpression()), !dbg !46
-  tail call void @llvm.dbg.value(metadata %class.D* %d, i64 0, metadata !35, metadata !DIExpression()), !dbg !46
+  tail call void @llvm.dbg.value(metadata %class.D* %this, metadata !34, metadata !DIExpression()), !dbg !46
+  tail call void @llvm.dbg.value(metadata %class.D* %d, metadata !35, metadata !DIExpression()), !dbg !46
   %c1 = getelementptr inbounds %class.D, %class.D* %d, i64 0, i32 0, !dbg !47
   %0 = load i32, i32* %c1, align 4, !dbg !47
   %c12 = getelementptr inbounds %class.D, %class.D* %this, i64 0, i32 0, !dbg !47
@@ -57,7 +57,7 @@ entry:
   ret void, !dbg !52
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!54}

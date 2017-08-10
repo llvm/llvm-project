@@ -860,6 +860,15 @@ static GlobalValue::LinkageTypes getDecodedLinkage(unsigned Val) {
   }
 }
 
+static FunctionSummary::FFlags getDecodedFFlags(uint64_t RawFlags) {
+  FunctionSummary::FFlags Flags;
+  Flags.ReadNone = RawFlags & 0x1;
+  Flags.ReadOnly = (RawFlags >> 1) & 0x1;
+  Flags.NoRecurse = (RawFlags >> 2) & 0x1;
+  Flags.ReturnDoesNotAlias = (RawFlags >> 3) & 0x1;
+  return Flags;
+}
+
 /// Decode the flags for GlobalValue in the summary.
 static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
                                                             uint64_t Version) {
@@ -5036,9 +5045,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   }
   const uint64_t Version = Record[0];
   const bool IsOldProfileFormat = Version == 1;
-  if (Version < 1 || Version > 3)
+  if (Version < 1 || Version > 4)
     return error("Invalid summary version " + Twine(Version) +
-                 ", 1, 2 or 3 expected");
+                 ", 1, 2, 3 or 4 expected");
   Record.clear();
 
   // Keep around the last seen summary to be used when we see an optional
@@ -5088,9 +5097,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::make_pair(TheIndex.getOrInsertValueInfo(RefGUID), RefGUID);
       break;
     }
-    // FS_PERMODULE: [valueid, flags, instcount, numrefs, numrefs x valueid,
-    //                n x (valueid)]
-    // FS_PERMODULE_PROFILE: [valueid, flags, instcount, numrefs,
+    // FS_PERMODULE: [valueid, flags, instcount, fflags, numrefs,
+    //                numrefs x valueid, n x (valueid)]
+    // FS_PERMODULE_PROFILE: [valueid, flags, instcount, fflags, numrefs,
     //                        numrefs x valueid,
     //                        n x (valueid, hotness)]
     case bitc::FS_PERMODULE:
@@ -5098,14 +5107,21 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       unsigned ValueID = Record[0];
       uint64_t RawFlags = Record[1];
       unsigned InstCount = Record[2];
+      uint64_t RawFunFlags = 0;
       unsigned NumRefs = Record[3];
+      int RefListStartIndex = 4;
+      if (Version >= 4) {
+        RawFunFlags = Record[3];
+        NumRefs = Record[4];
+        RefListStartIndex = 5;
+      }
+
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
       // The module path string ref set in the summary must be owned by the
       // index's module string table. Since we don't have a module path
       // string table section in the per-module index, we create a single
       // module path string table entry with an empty (0) ID to take
       // ownership.
-      static int RefListStartIndex = 4;
       int CallGraphEdgeStartIndex = RefListStartIndex + NumRefs;
       assert(Record.size() >= RefListStartIndex + NumRefs &&
              "Record size inconsistent with number of references");
@@ -5116,8 +5132,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile);
       auto FS = llvm::make_unique<FunctionSummary>(
-          Flags, InstCount, std::move(Refs), std::move(Calls),
-          std::move(PendingTypeTests), std::move(PendingTypeTestAssumeVCalls),
+          Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
+          std::move(Calls), std::move(PendingTypeTests),
+          std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
           std::move(PendingTypeCheckedLoadConstVCalls));
@@ -5176,9 +5193,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       TheIndex.addGlobalValueSummary(GUID.first, std::move(FS));
       break;
     }
-    // FS_COMBINED: [valueid, modid, flags, instcount, numrefs,
+    // FS_COMBINED: [valueid, modid, flags, instcount, fflags, numrefs,
     //               numrefs x valueid, n x (valueid)]
-    // FS_COMBINED_PROFILE: [valueid, modid, flags, instcount, numrefs,
+    // FS_COMBINED_PROFILE: [valueid, modid, flags, instcount, fflags, numrefs,
     //                       numrefs x valueid, n x (valueid, hotness)]
     case bitc::FS_COMBINED:
     case bitc::FS_COMBINED_PROFILE: {
@@ -5186,9 +5203,17 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       uint64_t ModuleId = Record[1];
       uint64_t RawFlags = Record[2];
       unsigned InstCount = Record[3];
+      uint64_t RawFunFlags = 0;
       unsigned NumRefs = Record[4];
+      int RefListStartIndex = 5;
+
+      if (Version >= 4) {
+        RawFunFlags = Record[4];
+        NumRefs = Record[5];
+        RefListStartIndex = 6;
+      }
+
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      static int RefListStartIndex = 5;
       int CallGraphEdgeStartIndex = RefListStartIndex + NumRefs;
       assert(Record.size() >= RefListStartIndex + NumRefs &&
              "Record size inconsistent with number of references");
@@ -5200,8 +5225,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           IsOldProfileFormat, HasProfile);
       ValueInfo VI = getValueInfoFromValueId(ValueID).first;
       auto FS = llvm::make_unique<FunctionSummary>(
-          Flags, InstCount, std::move(Refs), std::move(Edges),
-          std::move(PendingTypeTests), std::move(PendingTypeTestAssumeVCalls),
+          Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
+          std::move(Edges), std::move(PendingTypeTests),
+          std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
           std::move(PendingTypeCheckedLoadConstVCalls));

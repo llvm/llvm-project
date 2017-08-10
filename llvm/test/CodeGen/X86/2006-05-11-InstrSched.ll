@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -march=x86 -mtriple=i386-linux-gnu -mcpu=penryn -mattr=+sse2 -stats 2>&1 | \
-; RUN:     grep "asm-printer" | grep 35
+; RUN: llc < %s -mtriple=i386-linux-gnu -mcpu=penryn -mattr=+sse2 -stats 2>&1 | \
+; RUN:     grep "asm-printer" | grep 33
 
 target datalayout = "e-p:32:32"
 define void @foo(i32* %mc, i32* %bp, i32* %ms, i32* %xmb, i32* %mpp, i32* %tpmm, i32* %ip, i32* %tpim, i32* %dpp, i32* %tpdm, i32* %bpi, i32 %M) nounwind {

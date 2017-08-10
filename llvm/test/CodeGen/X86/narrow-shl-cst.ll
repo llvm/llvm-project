@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 ; PR5039
 
 define i32 @test1(i32 %x) nounwind {

@@ -359,8 +359,7 @@ struct simplify_type< ::clang::CanQual<T> > {
 
 // Teach SmallPtrSet that CanQual<T> is "basically a pointer".
 template<typename T>
-class PointerLikeTypeTraits<clang::CanQual<T> > {
-public:
+struct PointerLikeTypeTraits<clang::CanQual<T> > {
   static inline void *getAsVoidPointer(clang::CanQual<T> P) {
     return P.getAsOpaquePtr();
   }

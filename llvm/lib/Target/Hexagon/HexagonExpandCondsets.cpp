@@ -488,16 +488,32 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
     if (!HII->isPredicated(*DefI))
       continue;
     // Construct the set of all necessary implicit uses, based on the def
-    // operands in the instruction.
-    std::set<RegisterRef> ImpUses;
-    for (auto &Op : DefI->operands())
-      if (Op.isReg() && Op.isDef() && DefRegs.count(Op))
-        ImpUses.insert(Op);
+    // operands in the instruction. We need to tie the implicit uses to
+    // the corresponding defs.
+    std::map<RegisterRef,unsigned> ImpUses;
+    for (unsigned i = 0, e = DefI->getNumOperands(); i != e; ++i) {
+      MachineOperand &Op = DefI->getOperand(i);
+      if (!Op.isReg() || !DefRegs.count(Op))
+        continue;
+      if (Op.isDef()) {
+        ImpUses.insert({Op, i});
+      } else {
+        // This function can be called for the same register with different
+        // lane masks. If the def in this instruction was for the whole
+        // register, we can get here more than once. Avoid adding multiple
+        // implicit uses (or adding an implicit use when an explicit one is
+        // present).
+        ImpUses.erase(Op);
+      }
+    }
     if (ImpUses.empty())
       continue;
     MachineFunction &MF = *DefI->getParent()->getParent();
-    for (RegisterRef R : ImpUses)
+    for (std::pair<RegisterRef, unsigned> P : ImpUses) {
+      RegisterRef R = P.first;
       MachineInstrBuilder(MF, DefI).addReg(R.Reg, RegState::Implicit, R.Sub);
+      DefI->tieOperands(P.second, DefI->getNumOperands()-1);
+    }
   }
 }
 

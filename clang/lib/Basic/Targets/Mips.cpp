@@ -166,9 +166,6 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasMSA)
     Builder.defineMacro("__mips_msa", Twine(1));
 
-  if (DisableMadd4)
-    Builder.defineMacro("__mips_no_madd4", Twine(1));
-
   Builder.defineMacro("_MIPS_SZPTR", Twine(getPointerWidth(0)));
   Builder.defineMacro("_MIPS_SZINT", Twine(getIntWidth()));
   Builder.defineMacro("_MIPS_SZLONG", Twine(getLongWidth()));

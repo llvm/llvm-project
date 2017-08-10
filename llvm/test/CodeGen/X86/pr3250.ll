@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 ; PR3250
 
 declare i32 @safe_sub_func_short_u_u(i16 signext, i16 signext) nounwind

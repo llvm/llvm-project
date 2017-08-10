@@ -756,7 +756,8 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   bool runOnFunction() {
     if (!ClStack) return false;
 
-    if (ClRedzoneByvalArgs) copyArgsPassedByValToAllocas();
+    if (ClRedzoneByvalArgs)
+      copyArgsPassedByValToAllocas();
 
     // Collect alloca, ret, lifetime instructions etc.
     for (BasicBlock *BB : depth_first(&F.getEntryBlock())) visit(*BB);
@@ -2545,8 +2546,13 @@ static int StackMallocSizeClass(uint64_t LocalStackSize) {
 }
 
 void FunctionStackPoisoner::copyArgsPassedByValToAllocas() {
-  BasicBlock &FirstBB = *F.begin();
-  IRBuilder<> IRB(&FirstBB, FirstBB.getFirstInsertionPt());
+  Instruction *CopyInsertPoint = &F.front().front();
+  if (CopyInsertPoint == ASan.LocalDynamicShadow) {
+    // Insert after the dynamic shadow location is determined
+    CopyInsertPoint = CopyInsertPoint->getNextNode();
+    assert(CopyInsertPoint);
+  }
+  IRBuilder<> IRB(CopyInsertPoint);
   const DataLayout &DL = F.getParent()->getDataLayout();
   for (Argument &Arg : F.args()) {
     if (Arg.hasByValAttr()) {

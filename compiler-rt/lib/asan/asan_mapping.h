@@ -144,8 +144,9 @@ static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
 
 #define SHADOW_SCALE kDefaultShadowScale
 
-
-#if SANITIZER_WORDSIZE == 32
+#if SANITIZER_FUCHSIA
+#  define SHADOW_OFFSET (0)
+#elif SANITIZER_WORDSIZE == 32
 #  if SANITIZER_ANDROID
 #    define SHADOW_OFFSET (0)
 #  elif defined(__mips__)

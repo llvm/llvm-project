@@ -26,26 +26,26 @@
 #include <cassert>
 
 namespace Foo {
-	struct FakeContainer {};
-	typedef int FakeIter;
+    struct FakeContainer {};
+    typedef int FakeIter;
 
-	FakeIter begin(const FakeContainer &)   { return 1; }
-	FakeIter end  (const FakeContainer &)   { return 2; }
-	FakeIter rbegin(const FakeContainer &)  { return 3; }
-	FakeIter rend  (const FakeContainer &)  { return 4; }
+    FakeIter begin(const FakeContainer &)   { return 1; }
+    FakeIter end  (const FakeContainer &)   { return 2; }
+    FakeIter rbegin(const FakeContainer &)  { return 3; }
+    FakeIter rend  (const FakeContainer &)  { return 4; }
 
-	FakeIter cbegin(const FakeContainer &)  { return 11; }
-	FakeIter cend  (const FakeContainer &)  { return 12; }
-	FakeIter crbegin(const FakeContainer &) { return 13; }
-	FakeIter crend  (const FakeContainer &) { return 14; }
+    FakeIter cbegin(const FakeContainer &)  { return 11; }
+    FakeIter cend  (const FakeContainer &)  { return 12; }
+    FakeIter crbegin(const FakeContainer &) { return 13; }
+    FakeIter crend  (const FakeContainer &) { return 14; }
 }
 
 
 int main(){
 // Bug #28927 - shouldn't find these via ADL
-	(void) std::cbegin (Foo::FakeContainer());
-	(void) std::cend   (Foo::FakeContainer());
-	(void) std::crbegin(Foo::FakeContainer());
-	(void) std::crend  (Foo::FakeContainer());
+    (void) std::cbegin (Foo::FakeContainer());
+    (void) std::cend   (Foo::FakeContainer());
+    (void) std::crbegin(Foo::FakeContainer());
+    (void) std::crend  (Foo::FakeContainer());
 }
 #endif

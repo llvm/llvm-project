@@ -222,8 +222,8 @@ Error processCustomEventMarker(FDRState &State, uint8_t RecordFirstByte,
                                DataExtractor &RecordExtractor,
                                size_t &RecordSize) {
   // We can encounter a CustomEventMarker anywhere in the log, so we can handle
-  // it regardless of the expectation. However, we do se the expectation to read
-  // a set number of fixed bytes, as described in the metadata.
+  // it regardless of the expectation. However, we do set the expectation to
+  // read a set number of fixed bytes, as described in the metadata.
   uint32_t OffsetPtr = 1; // Read after the first byte.
   uint32_t DataSize = RecordExtractor.getU32(&OffsetPtr);
   uint64_t TSC = RecordExtractor.getU64(&OffsetPtr);
@@ -333,7 +333,7 @@ Error processFDRFunctionRecord(FDRState &State, uint8_t RecordFirstByte,
     }
     Record.CPU = State.CPUId;
     Record.TId = State.ThreadId;
-    // Back up to read first 32 bits, including the 8 we pulled RecordType
+    // Back up to read first 32 bits, including the 4 we pulled RecordType
     // and RecordKind out of. The remaining 28 are FunctionId.
     uint32_t OffsetPtr = 0;
     // Despite function Id being a signed int on XRayRecord,
@@ -369,8 +369,9 @@ Error processFDRFunctionRecord(FDRState &State, uint8_t RecordFirstByte,
 /// We expect a format complying with the grammar in the following pseudo-EBNF.
 ///
 /// FDRLog: XRayFileHeader ThreadBuffer*
-/// XRayFileHeader: 32 bits to identify the log as FDR with machine metadata.
-/// ThreadBuffer: BufSize NewBuffer WallClockTime NewCPUId FunctionSequence EOB
+/// XRayFileHeader: 32 bytes to identify the log as FDR with machine metadata.
+///     Includes BufferSize
+/// ThreadBuffer: NewBuffer WallClockTime NewCPUId FunctionSequence EOB
 /// BufSize: 8 byte unsigned integer indicating how large the buffer is.
 /// NewBuffer: 16 byte metadata record with Thread Id.
 /// WallClockTime: 16 byte metadata record with human readable time.

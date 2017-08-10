@@ -276,10 +276,16 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       F.isVarArg();
   GlobalValueSummary::GVFlags Flags(F.getLinkage(), NotEligibleForImport,
                                     /* Live = */ false);
+  FunctionSummary::FFlags FunFlags{
+      F.hasFnAttribute(Attribute::ReadNone),
+      F.hasFnAttribute(Attribute::ReadOnly),
+      F.hasFnAttribute(Attribute::NoRecurse),
+      F.returnDoesNotAlias(),
+  };
   auto FuncSummary = llvm::make_unique<FunctionSummary>(
-      Flags, NumInsts, RefEdges.takeVector(), CallGraphEdges.takeVector(),
-      TypeTests.takeVector(), TypeTestAssumeVCalls.takeVector(),
-      TypeCheckedLoadVCalls.takeVector(),
+      Flags, NumInsts, FunFlags, RefEdges.takeVector(),
+      CallGraphEdges.takeVector(), TypeTests.takeVector(),
+      TypeTestAssumeVCalls.takeVector(), TypeCheckedLoadVCalls.takeVector(),
       TypeTestAssumeConstVCalls.takeVector(),
       TypeCheckedLoadConstVCalls.takeVector());
   if (NonRenamableLocal)
@@ -427,11 +433,16 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                                               /* Live = */ true);
           CantBePromoted.insert(GlobalValue::getGUID(Name));
           // Create the appropriate summary type.
-          if (isa<Function>(GV)) {
+          if (Function *F = dyn_cast<Function>(GV)) {
             std::unique_ptr<FunctionSummary> Summary =
                 llvm::make_unique<FunctionSummary>(
-                    GVFlags, 0, ArrayRef<ValueInfo>{},
-                    ArrayRef<FunctionSummary::EdgeTy>{},
+                    GVFlags, 0,
+                    FunctionSummary::FFlags{
+                        F->hasFnAttribute(Attribute::ReadNone),
+                        F->hasFnAttribute(Attribute::ReadOnly),
+                        F->hasFnAttribute(Attribute::NoRecurse),
+                        F->returnDoesNotAlias()},
+                    ArrayRef<ValueInfo>{}, ArrayRef<FunctionSummary::EdgeTy>{},
                     ArrayRef<GlobalValue::GUID>{},
                     ArrayRef<FunctionSummary::VFuncId>{},
                     ArrayRef<FunctionSummary::VFuncId>{},

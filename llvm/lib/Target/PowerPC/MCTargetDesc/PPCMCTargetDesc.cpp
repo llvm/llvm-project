@@ -94,15 +94,6 @@ static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI,
   return MAI;
 }
 
-static void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
-                              CodeModel::Model &CM) {
-  if (CM == CodeModel::Default) {
-    if (!TT.isOSDarwin() &&
-        (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le))
-      CM = CodeModel::Medium;
-  }
-}
-
 namespace {
 
 class PPCTargetAsmStreamer : public PPCTargetStreamer {
@@ -256,9 +247,6 @@ extern "C" void LLVMInitializePowerPCTargetMC() {
        {&getThePPC32Target(), &getThePPC64Target(), &getThePPC64LETarget()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn C(*T, createPPCMCAsmInfo);
-
-    // Register the MC codegen info.
-    TargetRegistry::registerMCAdjustCodeGenOpts(*T, adjustCodeGenOpts);
 
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createPPCMCInstrInfo);

@@ -54,6 +54,20 @@ static cl::opt<bool>
                    cl::desc("Add run-time performance monitoring"), cl::Hidden,
                    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+namespace polly {
+/// Mark a basic block unreachable.
+///
+/// Marks the basic block @p Block unreachable by equipping it with an
+/// UnreachableInst.
+void markBlockUnreachable(BasicBlock &Block, PollyIRBuilder &Builder) {
+  auto *OrigTerminator = Block.getTerminator();
+  Builder.SetInsertPoint(OrigTerminator);
+  Builder.CreateUnreachable();
+  OrigTerminator->eraseFromParent();
+}
+
+} // namespace polly
+
 namespace {
 
 static void verifyGeneratedFunction(Scop &S, Function &F, IslAstInfo &AI) {
@@ -84,17 +98,6 @@ static void fixRegionInfo(Function &F, Region &ParentRegion, RegionInfo &RI) {
 
     RI.setRegionFor(&BB, &ParentRegion);
   }
-}
-
-/// Mark a basic block unreachable.
-///
-/// Marks the basic block @p Block unreachable by equipping it with an
-/// UnreachableInst.
-static void markBlockUnreachable(BasicBlock &Block, PollyIRBuilder &Builder) {
-  auto *OrigTerminator = Block.getTerminator();
-  Builder.SetInsertPoint(OrigTerminator);
-  Builder.CreateUnreachable();
-  OrigTerminator->eraseFromParent();
 }
 
 /// Remove all lifetime markers (llvm.lifetime.start, llvm.lifetime.end) from
@@ -228,7 +231,7 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
 
     isl_ast_node_free(AstRoot);
   } else {
-    NodeBuilder.addParameters(S.getContext());
+    NodeBuilder.addParameters(S.getContext().release());
     Value *RTC = NodeBuilder.createRTC(AI.getRunCondition());
 
     Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
@@ -325,8 +328,10 @@ PreservedAnalyses
 polly::CodeGenerationPass::run(Scop &S, ScopAnalysisManager &SAM,
                                ScopStandardAnalysisResults &AR, SPMUpdater &U) {
   auto &AI = SAM.getResult<IslAstAnalysis>(S, AR);
-  if (CodeGen(S, AI, AR.LI, AR.DT, AR.SE, AR.RI))
+  if (CodeGen(S, AI, AR.LI, AR.DT, AR.SE, AR.RI)) {
+    U.invalidateScop(S);
     return PreservedAnalyses::none();
+  }
 
   return PreservedAnalyses::all();
 }

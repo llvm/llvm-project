@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s
 ; PR828
 
 target datalayout = "e-p:32:32"

@@ -1,5 +1,5 @@
 ; RUN: not llc < %s -mtriple=armv7-eabi -mcpu=cortex-a8 2>&1 | FileCheck %s
-; RUN: not llc < %s -march=thumb -mtriple=thumbv7-eabi -mcpu=cortex-a8 2>&1 | FileCheck %s
+; RUN: not llc < %s -mtriple=thumbv7-eabi -mcpu=cortex-a8 2>&1 | FileCheck %s
 
 ; CHECK: LLVM ERROR: Cannot select: intrinsic %llvm.arm.cdp2
 define void @cdp2(i32 %a) #0 {

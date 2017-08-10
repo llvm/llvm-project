@@ -83,6 +83,7 @@ class DWARFContext : public DIContext {
   StringMap<std::weak_ptr<DWOFile>> DWOFiles;
   std::weak_ptr<DWOFile> DWP;
   bool CheckedForDWP = false;
+  std::string DWPName;
 
   /// Read compile units from the debug_info section (if necessary)
   /// and store them in CUs.
@@ -104,8 +105,10 @@ protected:
   std::unique_ptr<const DWARFObject> DObj;
 
 public:
-  DWARFContext(std::unique_ptr<const DWARFObject> DObj)
-      : DIContext(CK_DWARF), DObj(std::move(DObj)) {}
+  DWARFContext(std::unique_ptr<const DWARFObject> DObj,
+               std::string DWPName = "")
+      : DIContext(CK_DWARF), DWPName(std::move(DWPName)),
+        DObj(std::move(DObj)) {}
   DWARFContext(DWARFContext &) = delete;
   DWARFContext &operator=(DWARFContext &) = delete;
 
@@ -245,7 +248,8 @@ public:
   static ErrorPolicy defaultErrorHandler(Error E);
   static std::unique_ptr<DWARFContext>
   create(const object::ObjectFile &Obj, const LoadedObjectInfo *L = nullptr,
-         function_ref<ErrorPolicy(Error)> HandleError = defaultErrorHandler);
+         function_ref<ErrorPolicy(Error)> HandleError = defaultErrorHandler,
+         std::string DWPName = "");
 
   static std::unique_ptr<DWARFContext>
   create(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,

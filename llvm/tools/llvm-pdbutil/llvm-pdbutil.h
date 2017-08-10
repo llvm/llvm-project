@@ -10,6 +10,7 @@
 #ifndef LLVM_TOOLS_LLVMPDBDUMP_LLVMPDBDUMP_H
 #define LLVM_TOOLS_LLVMPDBDUMP_LLVMPDBDUMP_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -102,6 +103,7 @@ extern llvm::Optional<NumberRange> DumpBlockRange;
 extern llvm::Optional<NumberRange> DumpByteRange;
 extern llvm::cl::list<std::string> DumpStreamData;
 extern llvm::cl::opt<bool> NameMap;
+extern llvm::cl::opt<bool> Fpm;
 
 extern llvm::cl::opt<bool> SectionContributions;
 extern llvm::cl::opt<bool> SectionMap;
@@ -123,6 +125,7 @@ extern llvm::cl::opt<bool> SplitChunks;
 namespace dump {
 
 extern llvm::cl::opt<bool> DumpSummary;
+extern llvm::cl::opt<bool> DumpFpm;
 extern llvm::cl::opt<bool> DumpStreams;
 extern llvm::cl::opt<bool> DumpStreamBlocks;
 
@@ -136,11 +139,13 @@ extern llvm::cl::opt<bool> DumpTypeData;
 extern llvm::cl::opt<bool> DumpTypeExtras;
 extern llvm::cl::list<uint32_t> DumpTypeIndex;
 extern llvm::cl::opt<bool> DumpTypeDependents;
+extern llvm::cl::opt<bool> DumpSectionHeaders;
 
 extern llvm::cl::opt<bool> DumpIds;
 extern llvm::cl::opt<bool> DumpIdData;
 extern llvm::cl::opt<bool> DumpIdExtras;
 extern llvm::cl::list<uint32_t> DumpIdIndex;
+extern llvm::cl::opt<uint32_t> DumpModi;
 extern llvm::cl::opt<bool> DumpSymbols;
 extern llvm::cl::opt<bool> DumpSymRecordBytes;
 extern llvm::cl::opt<bool> DumpGlobals;
@@ -175,6 +180,7 @@ extern llvm::cl::opt<bool> DumpModuleSyms;
 namespace diff {
 extern llvm::cl::opt<bool> PrintValueColumns;
 extern llvm::cl::opt<bool> PrintResultColumn;
+extern llvm::DenseMap<uint32_t, uint32_t> Equivalences;
 extern llvm::cl::opt<std::string> LeftRoot;
 extern llvm::cl::opt<std::string> RightRoot;
 } // namespace diff

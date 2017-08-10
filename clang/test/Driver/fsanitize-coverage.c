@@ -86,6 +86,8 @@
 // CHECK_NOPRUNE: -fsanitize-coverage-no-prune
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=inline-8bit-counters %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_INLINE8BIT
+// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=bb,inline-8bit-counters %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_INLINE8BIT
+// CHECK_INLINE8BIT-NOT: warning
 // CHECK_INLINE8BIT: -fsanitize-coverage-inline-8bit-counters
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=inline-8bit-counters,pc-table %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_PC_TABLE

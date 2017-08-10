@@ -119,8 +119,10 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ELF__");
 
   // Target properties.
-  Builder.defineMacro("_LP64");
-  Builder.defineMacro("__LP64__");
+  if (!getTriple().isOSWindows()) {
+    Builder.defineMacro("_LP64");
+    Builder.defineMacro("__LP64__");
+  }
 
   // ACLE predefines. Many can only have one possible value on v8 AArch64.
   Builder.defineMacro("__ARM_ACLE", "200");
@@ -454,6 +456,23 @@ void MicrosoftARM64TargetInfo::getTargetDefines(const LangOptions &Opts,
 TargetInfo::BuiltinVaListKind
 MicrosoftARM64TargetInfo::getBuiltinVaListKind() const {
   return TargetInfo::CharPtrBuiltinVaList;
+}
+
+TargetInfo::CallingConvCheckResult
+MicrosoftARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_X86StdCall:
+  case CC_X86ThisCall:
+  case CC_X86FastCall:
+  case CC_X86VectorCall:
+    return CCCR_Ignore;
+  case CC_C:
+  case CC_OpenCLKernel:
+  case CC_Win64:
+    return CCCR_OK;
+  default:
+    return CCCR_Warning;
+  }
 }
 
 DarwinAArch64TargetInfo::DarwinAArch64TargetInfo(const llvm::Triple &Triple,

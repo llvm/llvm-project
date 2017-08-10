@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 < %s
+; RUN: llc -mtriple=i686-- < %s
 ; PR13220
 
 define <8 x i32> @foo(<8 x i96> %x) {

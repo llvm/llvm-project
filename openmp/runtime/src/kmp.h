@@ -2868,6 +2868,7 @@ extern int __kmp_sys_max_nth; /* system-imposed maximum number of threads */
 extern int __kmp_max_nth;
 // maximum total number of concurrently-existing threads in a contention group
 extern int __kmp_cg_max_nth;
+extern int __kmp_teams_max_nth; // max threads used in a teams construct
 extern int __kmp_threads_capacity; /* capacity of the arrays __kmp_threads and
                                       __kmp_root */
 extern int __kmp_dflt_team_nth; /* default number of threads in a parallel

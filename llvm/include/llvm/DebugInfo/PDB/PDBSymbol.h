@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_IPDBSYMBOL_H
-#define LLVM_DEBUGINFO_PDB_IPDBSYMBOL_H
+#ifndef LLVM_DEBUGINFO_PDB_PDBSYMBOL_H
+#define LLVM_DEBUGINFO_PDB_PDBSYMBOL_H
 
 #include "ConcreteSymbolEnumerator.h"
 #include "IPDBRawSymbol.h"

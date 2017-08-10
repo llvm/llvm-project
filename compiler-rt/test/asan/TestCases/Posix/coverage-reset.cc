@@ -27,8 +27,8 @@ int main(int argc, char **argv) {
   bar2();
   __sanitizer_cov_dump();
 // CHECK: RESET
-// CHECK: SanitizerCoverage: ./coverage-reset.cc{{.*}}.sancov: 2 PCs written
-// CHECK: SanitizerCoverage: ./libcoverage-reset.cc{{.*}}.sancov: 2 PCs written
+// CHECK-DAG: SanitizerCoverage: ./coverage-reset.cc{{.*}}.sancov: 2 PCs written
+// CHECK-DAG: SanitizerCoverage: ./libcoverage-reset.cc{{.*}}.sancov: 2 PCs written
 
   fprintf(stderr, "RESET\n");
   __sanitizer_cov_reset();
@@ -36,8 +36,8 @@ int main(int argc, char **argv) {
   bar1();
   __sanitizer_cov_dump();
 // CHECK: RESET
-// CHECK: SanitizerCoverage: ./coverage-reset.cc{{.*}}.sancov: 1 PCs written
-// CHECK: SanitizerCoverage: ./libcoverage-reset.cc{{.*}}.sancov: 1 PCs written
+// CHECK-DAG: SanitizerCoverage: ./coverage-reset.cc{{.*}}.sancov: 1 PCs written
+// CHECK-DAG: SanitizerCoverage: ./libcoverage-reset.cc{{.*}}.sancov: 1 PCs written
 
   fprintf(stderr, "RESET\n");
   __sanitizer_cov_reset();

@@ -300,6 +300,14 @@ TEST_F(SortImportsTestJS, SortMultiLine) {
              "1;");
 }
 
+TEST_F(SortImportsTestJS, SortDefaultImports) {
+  // Reproduces issue where multi-line import was not parsed correctly.
+  verifySort("import {A} from 'a';\n"
+             "import {default as B} from 'b';\n",
+             "import {default as B} from 'b';\n"
+             "import {A} from 'a';\n");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 ; PR3037
 
 define void @entry(<4 x i8>* %dest) {

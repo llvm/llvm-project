@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 
 ; CHECK-LABEL: test
 define i64 @test(i64 %a, i256 %b, i1 %c) {

@@ -1,7 +1,7 @@
 # The configured file is not placed in the correct location
 # until the tests are run as we need to copy it into
 # a copy of the tests folder
-configure_file("tests/lit.site.cfg.in" "lit.site.cfg" @ONLY)
+configure_lit_site_cfg("tests/lit.site.cfg.in" "lit.site.cfg")
 
 # Lit's test suite creates output files next to the sources which makes the
 # source tree dirty. This is undesirable because we do out of source builds.
@@ -10,6 +10,7 @@ configure_file("tests/lit.site.cfg.in" "lit.site.cfg" @ONLY)
 # configure time (i.e. `file(COPY ...)`) because this could lead to stale
 # tests being run.
 add_custom_target(prepare-check-lit
+  COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/tests"
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/tests" "${CMAKE_CURRENT_BINARY_DIR}/tests"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg" "${CMAKE_CURRENT_BINARY_DIR}/tests"
   COMMENT "Preparing lit tests"

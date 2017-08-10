@@ -28,6 +28,15 @@ class NamedDecl;
 
 namespace tooling {
 
+/// Returns the canonical declaration that best represents a symbol that can be
+/// renamed.
+///
+/// The following canonicalization rules are currently used:
+///
+/// - A constructor is canonicalized to its class.
+/// - A destructor is canonicalized to its class.
+const NamedDecl *getCanonicalSymbolDeclaration(const NamedDecl *FoundDecl);
+
 struct USRFindingAction {
   USRFindingAction(ArrayRef<unsigned> SymbolOffsets,
                    ArrayRef<std::string> QualifiedNames, bool Force)

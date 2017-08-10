@@ -69,6 +69,10 @@ def err_drv_invalid_Xarch_argument_with_args : Error<
   "invalid Xarch argument: '%0', options requiring arguments are unsupported">;
 def err_drv_invalid_Xarch_argument_isdriver : Error<
   "invalid Xarch argument: '%0', cannot change driver behavior inside Xarch argument">;
+def err_drv_Xopenmp_target_missing_triple : Error<
+  "cannot deduce implicit triple value for -Xopenmp-target, specify triple using -Xopenmp-target=<triple>">;
+def err_drv_invalid_Xopenmp_target_with_args : Error<
+  "invalid -Xopenmp-target argument: '%0', options requiring arguments are unsupported">;
 def err_drv_argument_only_allowed_with : Error<
   "invalid argument '%0' only allowed with '%1'">;
 def err_drv_argument_not_allowed_with : Error<
@@ -106,6 +110,10 @@ def err_drv_malformed_sanitizer_blacklist : Error<
 
 def err_target_unsupported_arch
   : Error<"the target architecture '%0' is not supported by the target '%1'">;
+def err_cpu_unsupported_isa
+  : Error<"CPU '%0' does not support '%1' execution mode">;
+def err_arch_unsupported_isa
+  : Error<"Architecture '%0' does not support '%1' execution mode">;
 
 def err_drv_I_dash_not_supported : Error<
   "'%0' not supported, please use -iquote instead">;
@@ -138,9 +146,10 @@ def err_drv_cc_print_options_failure : Error<
 def err_drv_lto_without_lld : Error<"LTO requires -fuse-ld=lld">;
 def err_drv_preamble_format : Error<
     "incorrect format for -preamble-bytes=N,END">;
-def err_invalid_ios_deployment_target : Error<
+def warn_invalid_ios_deployment_target : Warning<
   "invalid iOS deployment version '%0', iOS 10 is the maximum deployment "
-  "target for 32-bit targets">;
+  "target for 32-bit targets">, InGroup<InvalidIOSDeploymentTarget>,
+  DefaultError;
 def err_drv_conflicting_deployment_targets : Error<
   "conflicting deployment targets, both '%0' and '%1' are present in environment">;
 def err_arc_unsupported_on_runtime : Error<
@@ -231,9 +240,6 @@ def warn_drv_enabling_rtti_with_exceptions : Warning<
 def warn_drv_disabling_vptr_no_rtti_default : Warning<
   "implicitly disabling vptr sanitizer because rtti wasn't enabled">,
   InGroup<AutoDisableVptrSanitizer>;
-def warn_drv_disabling_vptr_no_null_check : Warning<
-  "implicitly disabling vptr sanitizer because null checking wasn't enabled">,
-  InGroup<AutoDisableVptrSanitizer>;
 def warn_drv_object_size_disabled_O0 : Warning<
   "the object size sanitizer has no effect at -O0, but is explicitly enabled: %0">,
   InGroup<InvalidCommandLineArgument>;
@@ -284,8 +290,16 @@ def warn_target_unsupported_compact_branches : Warning<
   " support it">, InGroup<UnsupportedCB>;
 def warn_drv_unsupported_gpopt : Warning<
   "ignoring '-mgpopt' option as it cannot be used with %select{|the implicit"
-  " usage of}0-mabicalls">,
+  " usage of }0-mabicalls">,
   InGroup<UnsupportedGPOpt>;
+def warn_drv_unsupported_longcalls : Warning<
+  "ignoring '-mlong-calls' option as it is not currently supported with "
+  "%select{|the implicit usage of }0-mabicalls">,
+  InGroup<OptionIgnored>;
+def warn_drv_unsupported_abicalls : Warning<
+  "ignoring '-mabicalls' option as it cannot be used with "
+  "non position-independent code and the N64 ABI">,
+  InGroup<OptionIgnored>;
 
 def warn_drv_unable_to_find_directory_expected : Warning<
   "unable to find %0 directory, expected to be in '%1'">,

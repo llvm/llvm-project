@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 -mcpu=i686 -mattr=+mmx < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- -mcpu=i686 -mattr=+mmx < %s | FileCheck %s
 ; <rdar://problem/10106006>
 
 define void @func() nounwind ssp {

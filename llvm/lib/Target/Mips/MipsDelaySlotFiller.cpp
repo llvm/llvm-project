@@ -1,4 +1,4 @@
-//===-- MipsDelaySlotFiller.cpp - Mips Delay Slot Filler ------------------===//
+//===- MipsDelaySlotFiller.cpp - Mips Delay Slot Filler -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,8 +14,8 @@
 #include "MCTargetDesc/MipsMCNaCl.h"
 #include "Mips.h"
 #include "MipsInstrInfo.h"
+#include "MipsRegisterInfo.h"
 #include "MipsSubtarget.h"
-#include "MipsTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -42,6 +42,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -103,9 +104,9 @@ static cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
 
 namespace {
 
-  typedef MachineBasicBlock::iterator Iter;
-  typedef MachineBasicBlock::reverse_iterator ReverseIter;
-  typedef SmallDenseMap<MachineBasicBlock*, MachineInstr*, 2> BB2BrMap;
+  using Iter = MachineBasicBlock::iterator;
+  using ReverseIter = MachineBasicBlock::reverse_iterator;
+  using BB2BrMap = SmallDenseMap<MachineBasicBlock *, MachineInstr *, 2>;
 
   class RegDefsUses {
   public:
@@ -186,7 +187,7 @@ namespace {
     MemDefsUses(const DataLayout &DL, const MachineFrameInfo *MFI);
 
   private:
-    typedef PointerUnion<const Value *, const PseudoSourceValue *> ValueType;
+    using ValueType = PointerUnion<const Value *, const PseudoSourceValue *>;
 
     bool hasHazard_(const MachineInstr &MI) override;
 
@@ -211,7 +212,7 @@ namespace {
 
   class Filler : public MachineFunctionPass {
   public:
-    Filler() : MachineFunctionPass(ID), TM(nullptr) {}
+    Filler() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override { return "Mips Delay Slot Filler"; }
 
@@ -290,14 +291,14 @@ namespace {
 
     bool terminateSearch(const MachineInstr &Candidate) const;
 
-    const TargetMachine *TM;
+    const TargetMachine *TM = nullptr;
 
     static char ID;
   };
 
-  char Filler::ID = 0;
-
 } // end anonymous namespace
+
+char Filler::ID = 0;
 
 static bool hasUnoccupiedSlot(const MachineInstr *MI) {
   return MI->hasDelaySlot() && !MI->isBundledWithSucc();

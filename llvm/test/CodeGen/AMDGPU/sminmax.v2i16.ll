@@ -35,7 +35,7 @@ define amdgpu_kernel void @s_abs_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %
 }
 
 ; GCN-LABEL: {{^}}v_abs_v2i16:
-; GFX9: flat_load_dword [[VAL:v[0-9]+]]
+; GFX9: global_load_dword [[VAL:v[0-9]+]]
 ; GFX9: v_pk_sub_i16 [[SUB:v[0-9]+]], 0, [[VAL]]
 ; GFX9: v_pk_max_i16 [[MAX:v[0-9]+]], [[VAL]], [[SUB]]
 ; GFX9: v_pk_add_u16 [[ADD:v[0-9]+]], [[MAX]], 2

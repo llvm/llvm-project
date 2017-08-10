@@ -24,6 +24,11 @@
 #include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
 
+// There is no general interception at all on Fuchsia.
+// Only the functions in asan_interceptors_memintrinsics.cc are
+// really defined to replace libc functions.
+#if !SANITIZER_FUCHSIA
+
 #if SANITIZER_POSIX
 #include "sanitizer_common/sanitizer_posix.h"
 #endif
@@ -308,6 +313,11 @@ INTERCEPTOR(int, swapcontext, struct ucontext_t *oucp,
   return res;
 }
 #endif  // ASAN_INTERCEPT_SWAPCONTEXT
+
+#if SANITIZER_NETBSD
+#define longjmp __longjmp14
+#define siglongjmp __siglongjmp14
+#endif
 
 INTERCEPTOR(void, longjmp, void *env, int val) {
   __asan_handle_no_return();
@@ -654,3 +664,5 @@ void InitializeAsanInterceptors() {
 }
 
 } // namespace __asan
+
+#endif  // !SANITIZER_FUCHSIA

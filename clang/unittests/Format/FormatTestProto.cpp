@@ -356,6 +356,24 @@ TEST_F(FormatTestProto, FormatsOptions) {
                "  }\n"
                "  field_g: OK\n"
                ">;");
+
+  verifyFormat("option (MyProto.options) = <\n"
+               "  data1 <key1: value1>\n"
+               "  data2 {key2: value2}\n"
+               ">;");
+
+  verifyFormat("option (MyProto.options) = <\n"
+               "  app_id: 'com.javax.swing.salsa.latino'\n"
+               "  head_id: 1\n"
+               "  data <key: value>\n"
+               ">;");
+
+  verifyFormat("option (MyProto.options) = {\n"
+               "  app_id: 'com.javax.swing.salsa.latino'\n"
+               "  head_id: 1\n"
+               "  headheadheadheadheadhead_id: 1\n"
+               "  product_data {product {1}}\n"
+               "};");
 }
 
 TEST_F(FormatTestProto, FormatsService) {

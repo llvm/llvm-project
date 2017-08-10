@@ -1,9 +1,9 @@
-; RUN: llc < %s -march=x86 -mtriple=i386-linux-gnu | FileCheck -check-prefix=X86_LINUX %s
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=X64_LINUX %s
-; RUN: llc < %s -march=x86 -mtriple=x86-pc-win32 | FileCheck -check-prefix=X86_WIN %s
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-pc-win32 | FileCheck -check-prefix=X64_WIN %s
-; RUN: llc < %s -march=x86 -mtriple=x86-pc-windows-gnu | FileCheck -check-prefix=MINGW32 %s
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-pc-windows-gnu | FileCheck -check-prefix=X64_WIN %s
+; RUN: llc < %s -mtriple=i386-linux-gnu | FileCheck -check-prefix=X86_LINUX %s
+; RUN: llc < %s -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=X64_LINUX %s
+; RUN: llc < %s -mtriple=i686-pc-win32 | FileCheck -check-prefix=X86_WIN %s
+; RUN: llc < %s -mtriple=x86_64-pc-win32 | FileCheck -check-prefix=X64_WIN %s
+; RUN: llc < %s -mtriple=i686-pc-windows-gnu | FileCheck -check-prefix=MINGW32 %s
+; RUN: llc < %s -mtriple=x86_64-pc-windows-gnu | FileCheck -check-prefix=X64_WIN %s
 
 @i1 = thread_local global i32 15
 @i2 = external thread_local global i32

@@ -53,10 +53,11 @@
 namespace llvm {
 namespace symbolize {
 
-Expected<DILineInfo> LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
-                                                  uint64_t ModuleOffset) {
+Expected<DILineInfo>
+LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
+                              uint64_t ModuleOffset, StringRef DWPName) {
   SymbolizableModule *Info;
-  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
+  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName, DWPName))
     Info = InfoOrErr.get();
   else
     return InfoOrErr.takeError();
@@ -80,9 +81,9 @@ Expected<DILineInfo> LLVMSymbolizer::symbolizeCode(const std::string &ModuleName
 
 Expected<DIInliningInfo>
 LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
-                                     uint64_t ModuleOffset) {
+                                     uint64_t ModuleOffset, StringRef DWPName) {
   SymbolizableModule *Info;
-  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
+  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName, DWPName))
     Info = InfoOrErr.get();
   else
     return InfoOrErr.takeError();
@@ -364,7 +365,8 @@ LLVMSymbolizer::getOrCreateObject(const std::string &Path,
 }
 
 Expected<SymbolizableModule *>
-LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
+LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName,
+                                      StringRef DWPName) {
   const auto &I = Modules.find(ModuleName);
   if (I != Modules.end()) {
     return I->second.get();
@@ -409,7 +411,8 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
     }
   }
   if (!Context)
-    Context = DWARFContext::create(*Objects.second);
+    Context = DWARFContext::create(*Objects.second, nullptr,
+                                   DWARFContext::defaultErrorHandler, DWPName);
   assert(Context);
   auto InfoOrErr =
       SymbolizableObjectFile::create(Objects.first, std::move(Context));

@@ -1,4 +1,4 @@
-; RUN: llc -verify-loop-info -verify-dom-info -march=x86-64 < %s
+; RUN: llc -verify-loop-info -verify-dom-info -mtriple=x86_64-- < %s
 ; PR5243
 
 @.str96 = external constant [37 x i8], align 8    ; <[37 x i8]*> [#uses=1]

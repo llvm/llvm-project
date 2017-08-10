@@ -16,11 +16,15 @@
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 #include "llvm/DebugInfo/PDB/Native/NativeBuiltinSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
+#include "llvm/DebugInfo/PDB/Native/NativeEnumSymbol.h"
+#include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
 #include "llvm/DebugInfo/PDB/Native/NativeExeSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
+#include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/Error.h"
@@ -28,6 +32,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 #include <algorithm>
+#include <cassert>
 #include <memory>
 #include <utility>
 
@@ -102,6 +107,25 @@ NativeSession::createCompilandSymbol(DbiModuleDescriptor MI) {
       *this, std::unique_ptr<IPDBRawSymbol>(SymbolCache[Id]->clone()));
 }
 
+std::unique_ptr<PDBSymbolTypeEnum>
+NativeSession::createEnumSymbol(codeview::TypeIndex Index) {
+  const auto Id = findSymbolByTypeIndex(Index);
+  return llvm::make_unique<PDBSymbolTypeEnum>(
+      *this, std::unique_ptr<IPDBRawSymbol>(SymbolCache[Id]->clone()));
+}
+
+std::unique_ptr<IPDBEnumSymbols>
+NativeSession::createTypeEnumerator(codeview::TypeLeafKind Kind) {
+  auto Tpi = Pdb->getPDBTpiStream();
+  if (!Tpi) {
+    consumeError(Tpi.takeError());
+    return nullptr;
+  }
+  auto &Types = Tpi->typeCollection();
+  return std::unique_ptr<IPDBEnumSymbols>(
+      new NativeEnumTypes(*this, Types, codeview::LF_ENUM));
+}
+
 SymIndexId NativeSession::findSymbolByTypeIndex(codeview::TypeIndex Index) {
   // First see if it's already in our cache.
   const auto Entry = TypeIndexToSymbolId.find(Index);
@@ -129,9 +153,20 @@ SymIndexId NativeSession::findSymbolByTypeIndex(codeview::TypeIndex Index) {
     return Id;
   }
 
-  // TODO:  Look up PDB type by type index
-
-  return 0;
+  // We need to instantiate and cache the desired type symbol.
+  auto Tpi = Pdb->getPDBTpiStream();
+  if (!Tpi) {
+    consumeError(Tpi.takeError());
+    return 0;
+  }
+  auto &Types = Tpi->typeCollection();
+  const auto &I = Types.getType(Index);
+  const auto Id = static_cast<SymIndexId>(SymbolCache.size());
+  // TODO(amccarth):  Make this handle all types, not just LF_ENUMs.
+  assert(I.kind() == codeview::LF_ENUM);
+  SymbolCache.emplace_back(llvm::make_unique<NativeEnumSymbol>(*this, Id, I));
+  TypeIndexToSymbolId[Index] = Id;
+  return Id;
 }
 
 uint64_t NativeSession::getLoadAddress() const { return 0; }

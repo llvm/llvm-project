@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc -march=x86 -no-integrated-as < %s -verify-machineinstrs -precompute-phys-liveness
-; RUN: llc -march=x86-64 -no-integrated-as < %s -verify-machineinstrs -precompute-phys-liveness
+; RUN: llc -mtriple=i686-- -no-integrated-as < %s -verify-machineinstrs -precompute-phys-liveness
+; RUN: llc -mtriple=x86_64-- -no-integrated-as < %s -verify-machineinstrs -precompute-phys-liveness
  
 ; PR6497
 

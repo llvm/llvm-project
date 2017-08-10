@@ -32,16 +32,18 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
 
-  const auto ValidContainer = cxxRecordDecl(isSameOrDerivedFrom(
-      namedDecl(
-          has(cxxMethodDecl(
-                  isConst(), parameterCountIs(0), isPublic(), hasName("size"),
-                  returns(qualType(isInteger(), unless(booleanType()))))
-                  .bind("size")),
-          has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
-                            hasName("empty"), returns(booleanType()))
-                  .bind("empty")))
-          .bind("container")));
+  const auto ValidContainer = qualType(hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(cxxRecordDecl(isSameOrDerivedFrom(
+          namedDecl(
+              has(cxxMethodDecl(
+                      isConst(), parameterCountIs(0), isPublic(),
+                      hasName("size"),
+                      returns(qualType(isInteger(), unless(booleanType()))))
+                      .bind("size")),
+              has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
+                                hasName("empty"), returns(booleanType()))
+                      .bind("empty")))
+              .bind("container")))))));
 
   const auto WrongUse = anyOf(
       hasParent(binaryOperator(

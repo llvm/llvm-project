@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -march=x86 | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs | FileCheck %s
 
 ; CHECK: testl
 

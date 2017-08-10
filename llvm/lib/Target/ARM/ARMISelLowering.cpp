@@ -8783,7 +8783,6 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
   switch (TM.getCodeModel()) {
   case CodeModel::Small:
   case CodeModel::Medium:
-  case CodeModel::Default:
   case CodeModel::Kernel:
     BuildMI(*MBB, MI, DL, TII.get(ARM::tBL))
         .add(predOps(ARMCC::AL))
@@ -8793,8 +8792,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
         .addReg(ARM::R12,
                 RegState::Implicit | RegState::Define | RegState::Dead);
     break;
-  case CodeModel::Large:
-  case CodeModel::JITDefault: {
+  case CodeModel::Large: {
     MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
     unsigned Reg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
 

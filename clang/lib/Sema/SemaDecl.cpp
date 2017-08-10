@@ -6999,6 +6999,21 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
           return;
         }
       }
+
+      if (cast<VarDecl>(ShadowedDecl)->hasLocalStorage()) {
+        // A variable can't shadow a local variable in an enclosing scope, if
+        // they are separated by a non-capturing declaration context.
+        for (DeclContext *ParentDC = NewDC;
+             ParentDC && !ParentDC->Equals(OldDC);
+             ParentDC = getLambdaAwareParentOfDeclContext(ParentDC)) {
+          // Only block literals, captured statements, and lambda expressions
+          // can capture; other scopes don't.
+          if (!isa<BlockDecl>(ParentDC) && !isa<CapturedDecl>(ParentDC) &&
+              !isLambdaCallOperator(ParentDC)) {
+            return;
+          }
+        }
+      }
     }
   }
 
@@ -12662,12 +12677,16 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
                 SourceLocation());
   D.SetIdentifier(&II, Loc);
 
-  // Insert this function into translation-unit scope.
+  // Insert this function into the enclosing block scope.
+  while (S && !S->isCompoundStmtScope())
+    S = S->getParent();
+  if (S == nullptr)
+    S = TUScope;
 
   DeclContext *PrevDC = CurContext;
   CurContext = Context.getTranslationUnitDecl();
 
-  FunctionDecl *FD = cast<FunctionDecl>(ActOnDeclarator(TUScope, D));
+  FunctionDecl *FD = cast<FunctionDecl>(ActOnDeclarator(S, D));
   FD->setImplicit();
 
   CurContext = PrevDC;

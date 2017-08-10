@@ -175,6 +175,68 @@ def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
 }
 
 //===----------------------------------------------------------------------===//
+// VOP3 INTERP
+//===----------------------------------------------------------------------===//
+
+class VOP3Interp<string OpName, VOPProfile P> : VOP3_Pseudo<OpName, P> {
+  let AsmMatchConverter = "cvtVOP3Interp";
+}
+
+def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
+  let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
+                   Attr:$attr, AttrChan:$attrchan,
+                   clampmod:$clamp, omod:$omod);
+
+  let Asm64 = "$vdst, $src0_modifiers, $attr$attrchan$clamp$omod";
+}
+
+def VOP3_INTERP_MOV : VOPProfile<[f32, i32, i32, untyped]> {
+  let Ins64 = (ins InterpSlot:$src0,
+                   Attr:$attr, AttrChan:$attrchan,
+                   clampmod:$clamp, omod:$omod);
+
+  let Asm64 = "$vdst, $src0, $attr$attrchan$clamp$omod";
+
+  let HasClamp = 1;
+}
+
+class getInterp16Asm <bit HasSrc2, bit HasOMod> {
+  string src2 = !if(HasSrc2, ", $src2_modifiers", "");
+  string omod = !if(HasOMod, "$omod", "");
+  string ret =
+    " $vdst, $src0_modifiers, $attr$attrchan"#src2#"$high$clamp"#omod;
+}
+
+class getInterp16Ins <bit HasSrc2, bit HasOMod,
+                      Operand Src0Mod, Operand Src2Mod> {
+  dag ret = !if(HasSrc2,
+                !if(HasOMod,
+                    (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
+                         Attr:$attr, AttrChan:$attrchan,
+                         Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
+                         highmod:$high, clampmod:$clamp, omod:$omod),
+                    (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
+                         Attr:$attr, AttrChan:$attrchan,
+                         Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
+                         highmod:$high, clampmod:$clamp)
+                ),
+                (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
+                     Attr:$attr, AttrChan:$attrchan,
+                     highmod:$high, clampmod:$clamp, omod:$omod)
+            );
+}
+
+class VOP3_INTERP16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
+
+  let HasOMod = !if(!eq(DstVT.Value, f16.Value), 0, 1);
+  let HasHigh = 1;
+
+  let Outs64 = (outs VGPR_32:$vdst);
+  let Ins64 = getInterp16Ins<HasSrc2, HasOMod, Src0Mod, Src2Mod>.ret;
+  let Asm64 = getInterp16Asm<HasSrc2, HasOMod>.ret;
+}
+
+//===----------------------------------------------------------------------===//
 // VOP3 Instructions
 //===----------------------------------------------------------------------===//
 
@@ -310,23 +372,41 @@ def V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
 
 let SubtargetPredicate = Has16BitInsts in {
 
-def V_DIV_FIXUP_F16   : VOP3Inst <"v_div_fixup_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUdiv_fixup>;
+let F16_ZFILL = 1 in {
+def V_DIV_FIXUP_F16 : VOP3Inst <"v_div_fixup_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUdiv_fixup>;
+}
+let SubtargetPredicate = isGFX9 in {
+def V_DIV_FIXUP_F16_gfx9   : VOP3Inst <"v_div_fixup_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16>>;
+}
 
 let isCommutable = 1 in {
 
-def V_FMA_F16         : VOP3Inst <"v_fma_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fma>;
-def V_INTERP_P1LL_F16 : VOP3Inst <"v_interp_p1ll_f16", VOP3_Profile<VOP_F32_F32_F16>>;
-def V_INTERP_P1LV_F16 : VOP3Inst <"v_interp_p1lv_f16", VOP3_Profile<VOP_F32_F32_F16_F16>>;
-def V_INTERP_P2_F16   : VOP3Inst <"v_interp_p2_f16", VOP3_Profile<VOP_F16_F32_F16_F32>>;
-def V_MAD_F16         : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fmad>;
-
+let F16_ZFILL = 1 in {
+def V_MAD_F16 : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fmad>;
 def V_MAD_U16 : VOP3Inst <"v_mad_u16", VOP3_Profile<VOP_I16_I16_I16_I16>>;
 def V_MAD_I16 : VOP3Inst <"v_mad_i16", VOP3_Profile<VOP_I16_I16_I16_I16>>;
+def V_FMA_F16 : VOP3Inst <"v_fma_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fma>;
+}
+
+let SubtargetPredicate = isGFX9 in {
+def V_MAD_F16_gfx9   : VOP3Inst <"v_mad_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16>>;
+def V_MAD_U16_gfx9   : VOP3Inst <"v_mad_u16_gfx9", VOP3_Profile<VOP_I16_I16_I16_I16>>;
+def V_MAD_I16_gfx9   : VOP3Inst <"v_mad_i16_gfx9", VOP3_Profile<VOP_I16_I16_I16_I16>>;
+def V_FMA_F16_gfx9   : VOP3Inst <"v_fma_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16>>;
+} // End SubtargetPredicate = isGFX9
+
+def V_INTERP_P1LL_F16 : VOP3Interp <"v_interp_p1ll_f16", VOP3_INTERP16<[f32, f32, i32, untyped]>>;
+def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32, i32, f16]>>;
+def V_INTERP_P2_F16   : VOP3Interp <"v_interp_p2_f16",   VOP3_INTERP16<[f16, f32, i32, f32]>>;
 
 }  // End isCommutable = 1
 } // End SubtargetPredicate = Has16BitInsts
 
 let SubtargetPredicate = isVI in {
+def V_INTERP_P1_F32_e64  : VOP3Interp <"v_interp_p1_f32", VOP3_INTERP>;
+def V_INTERP_P2_F32_e64  : VOP3Interp <"v_interp_p2_f32", VOP3_INTERP>;
+def V_INTERP_MOV_F32_e64 : VOP3Interp <"v_interp_mov_f32", VOP3_INTERP_MOV>;
+
 def V_PERM_B32 : VOP3Inst <"v_perm_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
 } // End SubtargetPredicate = isVI
 
@@ -512,7 +592,33 @@ multiclass VOP3OpSel_Real_gfx9<bits<10> op> {
             VOP3OpSel_gfx9 <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
 }
 
+multiclass VOP3Interp_Real_vi<bits<10> op> {
+  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
+            VOP3Interp_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
+}
+
 } // End AssemblerPredicates = [isVI], DecoderNamespace = "VI"
+
+let AssemblerPredicates = [isVIOnly], DecoderNamespace = "VI" in {
+
+multiclass VOP3_F16_Real_vi<bits<10> op> {
+  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
+            VOP3e_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
+}
+
+} // End AssemblerPredicates = [isVIOnly], DecoderNamespace = "VI"
+
+let AssemblerPredicates = [isGFX9], DecoderNamespace = "GFX9" in {
+
+multiclass VOP3_F16_Real_gfx9<bits<10> op, string OpName, string AsmName> {
+  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(OpName), SIEncodingFamily.GFX9>,
+            VOP3e_vi <op, !cast<VOP3_Pseudo>(OpName).Pfl> {
+              VOP3_Pseudo ps = !cast<VOP3_Pseudo>(OpName);
+              let AsmString = AsmName # ps.AsmOperands;
+            }
+}
+
+} // End AssemblerPredicates = [isGFX9], DecoderNamespace = "GFX9"
 
 defm V_MAD_U64_U32      : VOP3be_Real_vi <0x1E8>;
 defm V_MAD_I64_I32      : VOP3be_Real_vi <0x1E9>;
@@ -558,18 +664,33 @@ defm V_QSAD_PK_U16_U8   : VOP3_Real_vi <0x1e5>;
 defm V_MQSAD_PK_U16_U8  : VOP3_Real_vi <0x1e6>;
 defm V_MQSAD_U32_U8     : VOP3_Real_vi <0x1e7>;
 
-defm V_MAD_F16          : VOP3_Real_vi <0x1ea>;
-defm V_MAD_U16          : VOP3_Real_vi <0x1eb>;
-defm V_MAD_I16          : VOP3_Real_vi <0x1ec>;
-
 defm V_PERM_B32         : VOP3_Real_vi <0x1ed>;
 
-defm V_FMA_F16          : VOP3_Real_vi <0x1ee>;
-defm V_DIV_FIXUP_F16    : VOP3_Real_vi <0x1ef>;
+defm V_MAD_F16          : VOP3_F16_Real_vi <0x1ea>;
+defm V_MAD_U16          : VOP3_F16_Real_vi <0x1eb>;
+defm V_MAD_I16          : VOP3_F16_Real_vi <0x1ec>;
+defm V_FMA_F16          : VOP3_F16_Real_vi <0x1ee>;
+defm V_DIV_FIXUP_F16    : VOP3_F16_Real_vi <0x1ef>;
 
-defm V_INTERP_P1LL_F16  : VOP3_Real_vi <0x274>;
-defm V_INTERP_P1LV_F16  : VOP3_Real_vi <0x275>;
-defm V_INTERP_P2_F16    : VOP3_Real_vi <0x276>;
+defm V_MAD_LEGACY_F16       : VOP3_F16_Real_gfx9 <0x1ea, "V_MAD_F16",       "v_mad_legacy_f16">;
+defm V_MAD_LEGACY_U16       : VOP3_F16_Real_gfx9 <0x1eb, "V_MAD_U16",       "v_mad_legacy_u16">;
+defm V_MAD_LEGACY_I16       : VOP3_F16_Real_gfx9 <0x1ec, "V_MAD_I16",       "v_mad_legacy_i16">;
+defm V_FMA_LEGACY_F16       : VOP3_F16_Real_gfx9 <0x1ee, "V_FMA_F16",       "v_fma_legacy_f16">;
+defm V_DIV_FIXUP_LEGACY_F16 : VOP3_F16_Real_gfx9 <0x1ef, "V_DIV_FIXUP_F16", "v_div_fixup_legacy_f16">;
+
+defm V_MAD_F16_gfx9         : VOP3_F16_Real_gfx9 <0x203, "V_MAD_F16_gfx9",       "v_mad_f16">;
+defm V_MAD_U16_gfx9         : VOP3_F16_Real_gfx9 <0x204, "V_MAD_U16_gfx9",       "v_mad_u16">;
+defm V_MAD_I16_gfx9         : VOP3_F16_Real_gfx9 <0x205, "V_MAD_I16_gfx9",       "v_mad_i16">;
+defm V_FMA_F16_gfx9         : VOP3_F16_Real_gfx9 <0x206, "V_FMA_F16_gfx9",       "v_fma_f16">;
+defm V_DIV_FIXUP_F16_gfx9   : VOP3_F16_Real_gfx9 <0x207, "V_DIV_FIXUP_F16_gfx9", "v_div_fixup_f16">;
+
+defm V_INTERP_P1_F32_e64  : VOP3Interp_Real_vi <0x270>;
+defm V_INTERP_P2_F32_e64  : VOP3Interp_Real_vi <0x271>;
+defm V_INTERP_MOV_F32_e64 : VOP3Interp_Real_vi <0x272>;
+
+defm V_INTERP_P1LL_F16  : VOP3Interp_Real_vi <0x274>;
+defm V_INTERP_P1LV_F16  : VOP3Interp_Real_vi <0x275>;
+defm V_INTERP_P2_F16    : VOP3Interp_Real_vi <0x276>;
 defm V_ADD_F64          : VOP3_Real_vi <0x280>;
 defm V_MUL_F64          : VOP3_Real_vi <0x281>;
 defm V_MIN_F64          : VOP3_Real_vi <0x282>;

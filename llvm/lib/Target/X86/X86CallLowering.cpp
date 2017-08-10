@@ -29,10 +29,6 @@ using namespace llvm;
 
 #include "X86GenCallingConv.inc"
 
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-#error "This shouldn't be built without GISel"
-#endif
-
 X86CallLowering::X86CallLowering(const X86TargetLowering &TLI)
     : CallLowering(&TLI) {}
 

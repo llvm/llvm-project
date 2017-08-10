@@ -372,6 +372,10 @@ private:
 
     ScopedContextCreator ContextCreator(*this, tok::l_square, BindingIncrease);
     Contexts.back().IsExpression = true;
+    if (Style.Language == FormatStyle::LK_JavaScript && Parent &&
+        Parent->is(TT_JsTypeColon))
+      Contexts.back().IsExpression = false;
+
     Contexts.back().ColonIsObjCMethodExpr = StartsObjCMethodExpr;
 
     while (CurrentToken) {
@@ -439,6 +443,9 @@ private:
       Contexts.back().ColonIsDictLiteral = true;
       if (Left->BlockKind == BK_BracedInit)
         Contexts.back().IsExpression = true;
+      if (Style.Language == FormatStyle::LK_JavaScript && Left->Previous &&
+          Left->Previous->is(TT_JsTypeColon))
+        Contexts.back().IsExpression = false;
 
       while (CurrentToken) {
         if (CurrentToken->is(tok::r_brace)) {
@@ -531,8 +538,11 @@ private:
              !Line.First->isOneOf(tok::kw_enum, tok::kw_case)) ||
             Contexts.back().ContextKind == tok::l_paren ||  // function params
             Contexts.back().ContextKind == tok::l_square || // array type
+            (!Contexts.back().IsExpression &&
+             Contexts.back().ContextKind == tok::l_brace) || // object type
             (Contexts.size() == 1 &&
              Line.MustBeDeclaration)) { // method/property declaration
+          Contexts.back().IsExpression = false;
           Tok->Type = TT_JsTypeColon;
           break;
         }
@@ -2005,6 +2015,9 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     if ((Left.is(TT_TemplateString) && Left.TokenText.endswith("${")) ||
         (Right.is(TT_TemplateString) && Right.TokenText.startswith("}")))
       return 100;
+    // Prefer breaking call chains (".foo") over empty "{}", "[]" or "()".
+    if (Left.opensScope() && Right.closesScope())
+      return 200;
   }
 
   if (Right.is(tok::identifier) && Right.Next && Right.Next->is(TT_DictLiteral))
@@ -2203,8 +2216,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return false;
   if (Right.is(TT_PointerOrReference))
     return (Left.is(tok::r_paren) && Line.MightBeFunctionDecl) ||
-           (Left.Tok.isLiteral() || (Left.is(tok::kw_const) && Left.Previous &&
-                                     Left.Previous->is(tok::r_paren)) ||
+           (Left.Tok.isLiteral() ||
             (!Left.isOneOf(TT_PointerOrReference, tok::l_paren) &&
              (Style.PointerAlignment != FormatStyle::PAS_Left ||
               (Line.IsMultiVariableDeclStmt &&
@@ -2341,12 +2353,16 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Left.isOneOf(Keywords.kw_function, Keywords.kw_yield))
       return false;
     if (Right.isOneOf(tok::l_brace, tok::l_square) &&
-        Left.isOneOf(Keywords.kw_function, Keywords.kw_yield))
+        Left.isOneOf(Keywords.kw_function, Keywords.kw_yield,
+                     Keywords.kw_extends, Keywords.kw_implements))
       return true;
     // JS methods can use some keywords as names (e.g. `delete()`).
     if (Right.is(tok::l_paren) && Line.MustBeDeclaration &&
         Left.Tok.getIdentifierInfo())
       return false;
+    if (Right.is(tok::l_paren) &&
+        Left.isOneOf(tok::kw_throw, Keywords.kw_await, Keywords.kw_typeof, tok::kw_void))
+      return true;
     if ((Left.isOneOf(Keywords.kw_let, Keywords.kw_var, Keywords.kw_in,
                       tok::kw_const) ||
          // "of" is only a keyword if it appears after another identifier
@@ -2516,7 +2532,9 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
     if (Left.is(tok::l_brace) && Line.Level == 0 &&
         (Line.startsWith(tok::kw_enum) ||
-         Line.startsWith(tok::kw_export, tok::kw_enum)))
+         Line.startsWith(tok::kw_const, tok::kw_enum) ||
+         Line.startsWith(tok::kw_export, tok::kw_enum) ||
+         Line.startsWith(tok::kw_export, tok::kw_const, tok::kw_enum)))
       // JavaScript top-level enum key/value pairs are put on separate lines
       // instead of bin-packing.
       return true;
