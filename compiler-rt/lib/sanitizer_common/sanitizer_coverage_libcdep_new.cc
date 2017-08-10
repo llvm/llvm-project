@@ -199,6 +199,10 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp1, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp2, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp4, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp8, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_const_cmp1, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_const_cmp2, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_const_cmp4, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_const_cmp8, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_switch, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div4, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div8, void) {}
