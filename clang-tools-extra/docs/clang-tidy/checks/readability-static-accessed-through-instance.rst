@@ -25,6 +25,7 @@ is changed to:
 
 .. code-block:: c++
 
+  C *c1 = new C();
   C::foo();
   C::x;
 
