@@ -127,7 +127,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB) {
     error(MBRef.getBufferIdentifier() + ": is not a native COFF file. "
           "Recompile without /GL");
   else
-    Symtab.addFile(make<ObjectFile>(MBRef));
+    Symtab.addFile(make<ObjFile>(MBRef));
 }
 
 void LinkerDriver::enqueuePath(StringRef Path) {
@@ -153,7 +153,7 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef MB, StringRef SymName,
 
   InputFile *Obj;
   if (Magic == file_magic::coff_object) {
-    Obj = make<ObjectFile>(MB);
+    Obj = make<ObjFile>(MB);
   } else if (Magic == file_magic::bitcode) {
     Obj = make<BitcodeFile>(MB);
   } else {
@@ -201,7 +201,7 @@ void LinkerDriver::parseDirectives(StringRef S) {
   opt::InputArgList Args = Parser.parse(S);
 
   for (auto *Arg : Args) {
-    switch (Arg->getOption().getID()) {
+    switch (Arg->getOption().getUnaliasedOption().getID()) {
     case OPT_alternatename:
       parseAlternateName(Arg->getValue());
       break;
@@ -247,7 +247,7 @@ StringRef LinkerDriver::doFindFile(StringRef Filename) {
   bool HasPathSep = (Filename.find_first_of("/\\") != StringRef::npos);
   if (HasPathSep)
     return Filename;
-  bool HasExt = (Filename.find('.') != StringRef::npos);
+  bool HasExt = Filename.contains('.');
   for (StringRef Dir : SearchPaths) {
     SmallString<128> Path = Dir;
     sys::path::append(Path, Filename);
@@ -275,7 +275,7 @@ Optional<StringRef> LinkerDriver::findFile(StringRef Filename) {
 // Find library file from search path.
 StringRef LinkerDriver::doFindLib(StringRef Filename) {
   // Add ".lib" to Filename if that has no file extension.
-  bool HasExt = (Filename.find('.') != StringRef::npos);
+  bool HasExt = Filename.contains('.');
   if (!HasExt)
     Filename = Saver.save(Filename + ".lib");
   return doFindFile(Filename);
@@ -610,16 +610,16 @@ void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
   // Write out archive members that we used in symbol resolution and pass these
   // to MSVC before any archives, so that MSVC uses the same objects to satisfy
   // references.
-  for (const auto *O : Symtab.ObjectFiles) {
-    if (O->ParentName.empty())
+  for (ObjFile *Obj : ObjFile::Instances) {
+    if (Obj->ParentName.empty())
       continue;
     SmallString<128> S;
     int Fd;
     if (auto EC = sys::fs::createTemporaryFile(
-            "lld-" + sys::path::filename(O->ParentName), ".obj", Fd, S))
+            "lld-" + sys::path::filename(Obj->ParentName), ".obj", Fd, S))
       fatal(EC, "cannot create a temporary file");
     raw_fd_ostream OS(Fd, /*shouldClose*/ true);
-    OS << O->MB.getBuffer();
+    OS << Obj->MB.getBuffer();
     Temps.push_back(S.str());
     Rsp += quote(S) + "\n";
   }
@@ -651,8 +651,8 @@ void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
     }
   }
 
-  std::vector<StringRef> ObjectFiles = Symtab.compileBitcodeFiles();
-  runMSVCLinker(Rsp, ObjectFiles);
+  std::vector<StringRef> ObjFiles = Symtab.compileBitcodeFiles();
+  runMSVCLinker(Rsp, ObjFiles);
 
   for (StringRef Path : Temps)
     sys::fs::remove(Path);
@@ -1143,7 +1143,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle /safeseh.
   if (Args.hasArg(OPT_safeseh)) {
-    for (ObjectFile *File : Symtab.ObjectFiles)
+    for (ObjFile *File : ObjFile::Instances)
       if (!File->SEHCompat)
         error("/safeseh: " + File->getName() + " is not compatible with SEH");
     if (ErrorCount)

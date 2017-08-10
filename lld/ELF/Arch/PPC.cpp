@@ -23,7 +23,7 @@ class PPC final : public TargetInfo {
 public:
   PPC() { GotBaseSymOff = 0x8000; }
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
                      const uint8_t *Loc) const override;
 };
 } // namespace
@@ -49,7 +49,7 @@ void PPC::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
 }
 
 RelExpr PPC::getRelExpr(uint32_t Type, const SymbolBody &S,
-                        const uint8_t *Loc) const {
+                        const InputFile &File, const uint8_t *Loc) const {
   switch (Type) {
   case R_PPC_REL24:
   case R_PPC_REL32:

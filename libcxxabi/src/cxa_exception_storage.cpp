@@ -56,7 +56,7 @@ namespace {
     std::__libcpp_tls_key key_;
     std::__libcpp_exec_once_flag flag_ = _LIBCPP_EXEC_ONCE_INITIALIZER;
 
-    void destruct_ (void *p) {
+    void _LIBCPP_TLS_DESTRUCTOR_CC destruct_ (void *p) {
         __free_with_fallback ( p );
         if ( 0 != std::__libcpp_tls_set ( key_, NULL ) )
             abort_message("cannot zero out thread value for __cxa_get_globals()");

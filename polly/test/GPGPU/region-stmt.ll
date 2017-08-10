@@ -5,11 +5,7 @@
 ; RUN: opt %loadPolly -polly-codegen-ppcg -S < %s | \
 ; RUN: FileCheck %s -check-prefix=IR
 
-; CODE: Code
-; CODE-NEXT: ====
-; CODE-NEXT: # host
-; CODE-NEXT: {
-; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (128) * sizeof(float), cudaMemcpyHostToDevice));
+; CODE:        cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (128) * sizeof(float), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_B, MemRef_B, (128) * sizeof(float), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
@@ -19,7 +15,6 @@
 ; CODE-NEXT:   }
 
 ; CODE:   cudaCheckReturn(cudaMemcpy(MemRef_B, dev_MemRef_B, (128) * sizeof(float), cudaMemcpyDeviceToHost));
-; CODE-NEXT: }
 
 ; CODE: # kernel0
 ; CODE-NEXT: Stmt_for_body__TO__if_end(32 * b0 + t0);

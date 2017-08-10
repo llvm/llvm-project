@@ -65,8 +65,9 @@ public:
       D->Type = COFF::IMAGE_DEBUG_TYPE_CODEVIEW;
       D->SizeOfData = Record->getSize();
       D->AddressOfRawData = Record->getRVA();
-      // TODO(compnerd) get the file offset
-      D->PointerToRawData = 0;
+      OutputSection *OS = Record->getOutputSection();
+      uint64_t Offs = OS->getFileOff() + (Record->getRVA() - OS->getRVA());
+      D->PointerToRawData = Offs;
 
       ++D;
     }
@@ -77,8 +78,15 @@ private:
 };
 
 class CVDebugRecordChunk : public Chunk {
+public:
+  CVDebugRecordChunk() {
+    PDBAbsPath = Config->PDBPath;
+    if (!PDBAbsPath.empty())
+      llvm::sys::fs::make_absolute(PDBAbsPath);
+  }
+
   size_t getSize() const override {
-    return sizeof(codeview::DebugInfo) + Config->PDBPath.size() + 1;
+    return sizeof(codeview::DebugInfo) + PDBAbsPath.size() + 1;
   }
 
   void writeTo(uint8_t *B) const override {
@@ -90,12 +98,12 @@ class CVDebugRecordChunk : public Chunk {
 
     // variable sized field (PDB Path)
     auto *P = reinterpret_cast<char *>(B + OutputSectionOff + sizeof(*DI));
-    if (!Config->PDBPath.empty())
-      memcpy(P, Config->PDBPath.data(), Config->PDBPath.size());
-    P[Config->PDBPath.size()] = '\0';
+    if (!PDBAbsPath.empty())
+      memcpy(P, PDBAbsPath.data(), PDBAbsPath.size());
+    P[PDBAbsPath.size()] = '\0';
   }
 
-public:
+  SmallString<128> PDBAbsPath;
   mutable codeview::DebugInfo *DI = nullptr;
 };
 
@@ -239,7 +247,7 @@ void Writer::run() {
     const llvm::codeview::DebugInfo *DI = nullptr;
     if (Config->DebugTypes & static_cast<unsigned>(coff::DebugType::CV))
       DI = BuildId->DI;
-    createPDB(Symtab, SectionTable, DI);
+    createPDB(Symtab, OutputSections, SectionTable, DI);
   }
 
   writeMapFile(OutputSections);
@@ -322,7 +330,7 @@ void Writer::createMiscChunks() {
 
   std::set<Defined *> Handlers;
 
-  for (lld::coff::ObjectFile *File : Symtab->ObjectFiles) {
+  for (ObjFile *File : ObjFile::Instances) {
     if (!File->SEHCompat)
       return;
     for (SymbolBody *B : File->SEHandlers) {
@@ -345,13 +353,13 @@ void Writer::createMiscChunks() {
 // IdataContents class abstracted away the details for us,
 // so we just let it create chunks and add them to the section.
 void Writer::createImportTables() {
-  if (Symtab->ImportFiles.empty())
+  if (ImportFile::Instances.empty())
     return;
 
   // Initialize DLLOrder so that import entries are ordered in
   // the same order as in the command line. (That affects DLL
   // initialization order, and this ordering is MSVC-compatible.)
-  for (ImportFile *File : Symtab->ImportFiles) {
+  for (ImportFile *File : ImportFile::Instances) {
     if (!File->Live)
       continue;
 
@@ -361,7 +369,7 @@ void Writer::createImportTables() {
   }
 
   OutputSection *Text = createSection(".text");
-  for (ImportFile *File : Symtab->ImportFiles) {
+  for (ImportFile *File : ImportFile::Instances) {
     if (!File->Live)
       continue;
 
@@ -432,19 +440,12 @@ Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
   if (isa<DefinedSynthetic>(Def))
     return None;
 
-  if (auto *D = dyn_cast<DefinedRegular>(Def)) {
-    // Don't write dead symbols or symbols in codeview sections to the symbol
-    // table.
-    if (!D->getChunk()->isLive() || D->getChunk()->isCodeView())
-      return None;
-  }
-
-  if (auto *Sym = dyn_cast<DefinedImportData>(Def))
-    if (!Sym->File->Live)
-      return None;
-
-  if (auto *Sym = dyn_cast<DefinedImportThunk>(Def))
-    if (!Sym->WrappedSym->File->Live)
+  // Don't write dead symbols or symbols in codeview sections to the symbol
+  // table.
+  if (!Def->isLive())
+    return None;
+  if (auto *D = dyn_cast<DefinedRegular>(Def))
+    if (D->getChunk()->isCodeView())
       return None;
 
   coff_symbol16 Sym;
@@ -501,7 +502,7 @@ void Writer::createSymbolAndStringTable() {
     Sec->setStringTableOff(addEntryToStringTable(Name));
   }
 
-  for (lld::coff::ObjectFile *File : Symtab->ObjectFiles) {
+  for (ObjFile *File : ObjFile::Instances) {
     for (SymbolBody *B : File->getSymbols()) {
       auto *D = dyn_cast<Defined>(B);
       if (!D || D->WrittenToSymtab)

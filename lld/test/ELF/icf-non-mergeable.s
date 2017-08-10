@@ -1,7 +1,7 @@
 // REQUIRES: x86
 
 // This file contains two functions. They are themselves identical,
-// but because they have reloactions against different data section,
+// but because they have relocations against different data sections,
 // they are not mergeable.
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1
