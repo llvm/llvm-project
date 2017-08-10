@@ -60,19 +60,19 @@ Clang-Tidy Checks
    google-runtime-member-string-references
    google-runtime-operator
    google-runtime-references
-   hicpp-explicit-conversions
-   hicpp-function-size
-   hicpp-invalid-access-moved
-   hicpp-member-init
-   hicpp-named-parameter
-   hicpp-new-delete-operators
+   hicpp-explicit-conversions (redirects to google-explicit-constructor) <hicpp-explicit-conversions>
+   hicpp-function-size (redirects to readability-function-size) <hicpp-function-size>
+   hicpp-invalid-access-moved (redirects to misc-use-after-move) <hicpp-invalid-access-moved>
+   hicpp-member-init (redirects to cppcoreguidelines-pro-type-member-init) <hicpp-member-init>
+   hicpp-named-parameter (redirects to readability-named-parameter) <hicpp-named-parameter>
+   hicpp-new-delete-operators (redirects to misc-new-delete-overloads) <hicpp-new-delete-operators>
    hicpp-no-assembler
-   hicpp-noexcept-move
-   hicpp-special-member-functions
-   hicpp-undelegated-constructor
-   hicpp-use-equals-default
-   hicpp-use-equals-delete
-   hicpp-use-override
+   hicpp-noexcept-move (redirects to misc-noexcept-moveconstructor) <hicpp-noexcept-move>
+   hicpp-special-member-functions (redirects to cppcoreguidelines-special-member-functions) <hicpp-special-member-functions>
+   hicpp-undelegated-constructor (redirects to misc-undelegated-constructor) <hicpp-undelegated-constructor>
+   hicpp-use-equals-default (redirects to modernize-use-equals-default) <hicpp-use-equals-default>
+   hicpp-use-equals-delete (redirects to modernize-use-equals-delete) <hicpp-use-equals-delete>
+   hicpp-use-override (redirects to modernize-use-override) <hicpp-use-override>
    llvm-header-guard
    llvm-include-order
    llvm-namespace-comment
