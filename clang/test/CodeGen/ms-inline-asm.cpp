@@ -180,3 +180,19 @@ void t8() {
   A::g();
 }
 
+void t9() {
+  // CHECK-LABEL: define void @_Z2t9v()
+  struct A {
+    int a;
+    int b;
+    void g() {
+      __asm mov eax, dword ptr [eax]this.b
+      // CHECK: call void asm sideeffect inteldialect
+      // CHECK-SAME: mov eax, dword ptr [eax].4
+      // CHECK-SAME: "~{eax},~{dirflag},~{fpsr},~{flags}"()
+    }
+  };
+  A AA;
+  AA.g();
+}
+

@@ -683,6 +683,11 @@ static bool SemaBuiltinReserveRWPipe(Sema &S, CallExpr *Call) {
     return true;
   }
 
+  // Since return type of reserve_read/write_pipe built-in function is
+  // reserve_id_t, which is not defined in the builtin def file , we used int
+  // as return type and need to override the return type of these functions.
+  Call->setType(S.Context.OCLReserveIDTy);
+
   return false;
 }
 
@@ -1086,20 +1091,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BIwork_group_reserve_write_pipe:
     if (SemaBuiltinReserveRWPipe(*this, TheCall))
       return ExprError();
-    // Since return type of reserve_read/write_pipe built-in function is
-    // reserve_id_t, which is not defined in the builtin def file , we used int
-    // as return type and need to override the return type of these functions.
-    TheCall->setType(Context.OCLReserveIDTy);
     break;
   case Builtin::BIsub_group_reserve_read_pipe:
   case Builtin::BIsub_group_reserve_write_pipe:
     if (checkOpenCLSubgroupExt(*this, TheCall) ||
         SemaBuiltinReserveRWPipe(*this, TheCall))
       return ExprError();
-    // Since return type of reserve_read/write_pipe built-in function is
-    // reserve_id_t, which is not defined in the builtin def file , we used int
-    // as return type and need to override the return type of these functions.
-    TheCall->setType(Context.OCLReserveIDTy);
     break;
   case Builtin::BIcommit_read_pipe:
   case Builtin::BIcommit_write_pipe:

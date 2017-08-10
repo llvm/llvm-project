@@ -109,15 +109,17 @@ LANGSTANDARD(gnucxx14, "gnu++14",
              GNUMode)
 LANGSTANDARD_ALIAS_DEPR(gnucxx14, "gnu++1y")
 
-LANGSTANDARD(cxx1z, "c++1z",
-             CXX, "Working draft for ISO C++ 2017",
+LANGSTANDARD(cxx17, "c++17",
+             CXX, "ISO C++ 2017 with amendments",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus1z |
              Digraphs | HexFloat)
+LANGSTANDARD_ALIAS_DEPR(cxx17, "c++1z")
 
-LANGSTANDARD(gnucxx1z, "gnu++1z",
-             CXX, "Working draft for ISO C++ 2017 with GNU extensions",
+LANGSTANDARD(gnucxx17, "gnu++17",
+             CXX, "ISO C++ 2017 with amendments and GNU extensions",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus1z |
              Digraphs | HexFloat | GNUMode)
+LANGSTANDARD_ALIAS_DEPR(gnucxx17, "gnu++1z")
 
 LANGSTANDARD(cxx2a, "c++2a",
              CXX, "Working draft for ISO C++ 2020",

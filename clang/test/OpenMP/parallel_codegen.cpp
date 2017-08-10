@@ -109,7 +109,7 @@ int main (int argc, char **argv) {
 // CHECK:       call {{.*}}void @{{.+terminate.*|abort}}(
 // CHECK-NEXT:  unreachable
 // CHECK-NEXT:  }
-// CHECK-DEBUG:       define internal void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i8*** dereferenceable({{4|8}}) %argc)
+// CHECK-DEBUG:       define internal void [[OMP_OUTLINED_DEBUG:@.+]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i8*** dereferenceable({{4|8}}) %argc)
 // CHECK-DEBUG:       store i8*** %argc, i8**** [[ARGC_PTR_ADDR:%.+]],
 // CHECK-DEBUG:       [[ARGC_REF:%.+]] = load i8***, i8**** [[ARGC_PTR_ADDR]]
 // CHECK-DEBUG-NEXT:  [[ARGC:%.+]] = load i8**, i8*** [[ARGC_REF]]
@@ -120,7 +120,9 @@ int main (int argc, char **argv) {
 // CHECK-DEBUG-NEXT:  }
 
 // CHECK: define linkonce_odr {{.*}}void [[FOO1]](i8** %argc)
-// CHECK-DEBUG: define linkonce_odr void [[FOO1]](i8** %argc)
+// CHECK-DEBUG-DAG: define linkonce_odr void [[FOO1]](i8** %argc)
+// CHECK-DEBUG-DAG: define internal void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i8*** dereferenceable({{4|8}}) %argc)
+// CHECK-DEBUG-DAG: call void [[OMP_OUTLINED_DEBUG]]
 
 // CHECK: attributes #[[FN_ATTRS]] = {{.+}} nounwind
 // CHECK-DEBUG: attributes #[[FN_ATTRS]] = {{.+}} nounwind

@@ -308,6 +308,13 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
   return TC.getArchName();
 }
 
+std::string ToolChain::getCompilerRTPath() const {
+  SmallString<128> Path(getDriver().ResourceDir);
+  StringRef OSLibName = Triple.isOSFreeBSD() ? "freebsd" : getOS();
+  llvm::sys::path::append(Path, "lib", OSLibName);
+  return Path.str();
+}
+
 std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
                                      bool Shared) const {
   const llvm::Triple &TT = getTriple();
@@ -320,9 +327,7 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
   const char *Suffix = Shared ? (Triple.isOSWindows() ? ".dll" : ".so")
                               : (IsITANMSVCWindows ? ".lib" : ".a");
 
-  SmallString<128> Path(getDriver().ResourceDir);
-  StringRef OSLibName = Triple.isOSFreeBSD() ? "freebsd" : getOS();
-  llvm::sys::path::append(Path, "lib", OSLibName);
+  SmallString<128> Path(getCompilerRTPath());
   llvm::sys::path::append(Path, Prefix + Twine("clang_rt.") + Component + "-" +
                                     Arch + Env + Suffix);
   return Path.str();

@@ -484,13 +484,13 @@ void t37() {
   __asm mov eax, (4 + 4) * 16
 // CHECK: mov eax, $$128
   __asm mov eax, 4 + 8 * -16
-// CHECK: mov eax, $$4294967172
+// CHECK: mov eax, $$-124
   __asm mov eax, 4 + 16 / -8
 // CHECK: mov eax, $$2
   __asm mov eax, (16 + 16) / -8
-// CHECK: mov eax, $$4294967292
+// CHECK: mov eax, $$-4
   __asm mov eax, ~15
-// CHECK: mov eax, $$4294967280
+// CHECK: mov eax, $$-16
   __asm mov eax, 6 ^ 3
 // CHECK: mov eax, $$5
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
@@ -527,7 +527,7 @@ void cpuid() {
 typedef struct {
   int a;
   int b;
-} A;
+} A, *pA;
 
 typedef struct {
   int b1;
@@ -539,13 +539,15 @@ typedef struct {
   A   c2;
   int c3;
   B   c4;
-} C;
+} C, *pC;
 
 void t39() {
 // CHECK-LABEL: define void @t39
   __asm mov eax, [eax].A.b
 // CHECK: mov eax, [eax].4
   __asm mov eax, [eax] A.b
+// CHECK: mov eax, [eax] .4
+  __asm mov eax, [eax] pA.b
 // CHECK: mov eax, [eax] .4
   __asm mov eax, fs:[0] A.b
 // CHECK: mov eax, fs:[$$0] .4
@@ -556,6 +558,8 @@ void t39() {
   __asm mov eax, fs:[0] C.c2.b
 // CHECK: mov eax, fs:[$$0] .8
   __asm mov eax, [eax]C.c4.b2.b
+// CHECK: mov eax, [eax].24
+  __asm mov eax, [eax]pC.c4.b2.b
 // CHECK: mov eax, [eax].24
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
@@ -649,6 +653,12 @@ void t45() {
     mov dr7, ecx
   }
   // CHECK: call void asm sideeffect inteldialect "mov dr0, eax\0A\09mov dr1, ebx\0A\09mov dr2, ebx\0A\09mov dr3, ecx\0A\09mov dr6, edx\0A\09mov dr7, ecx", "~{dr0},~{dr1},~{dr2},~{dr3},~{dr6},~{dr7},~{dirflag},~{fpsr},~{flags}"()
+}
+
+void t46() {
+  // CHECK-LABEL: define void @t46
+  __asm add eax, -128[eax]
+  // CHECK: call void asm sideeffect inteldialect "add eax, $$-128[eax]", "~{eax},~{flags},~{dirflag},~{fpsr},~{flags}"()
 }
 
 void dot_operator(){

@@ -687,3 +687,44 @@
 // RUN:   | FileCheck -check-prefix=CHK-TWOCUBIN-DARWIN %s
 
 // CHK-TWOCUBIN-DARWIN: nvlink"{{.*}}"openmp-offload-{{.*}}.cubin" "openmp-offload-{{.*}}.cubin"
+
+/// ###########################################################################
+
+/// Check PTXAS is passed -c flag when offloading to an NVIDIA device using OpenMP.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-PTXAS-DEFAULT %s
+
+// CHK-PTXAS-DEFAULT: ptxas{{.*}}" "-c"
+
+/// ###########################################################################
+
+/// PTXAS is passed -c flag by default when offloading to an NVIDIA device using OpenMP - disable it.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -fnoopenmp-relocatable-target %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-PTXAS-NORELO %s
+
+// CHK-PTXAS-NORELO-NOT: ptxas{{.*}}" "-c"
+
+/// ###########################################################################
+
+/// PTXAS is passed -c flag by default when offloading to an NVIDIA device using OpenMP
+/// Check that the flag is passed when -fopenmp-relocatable-target is used.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -fopenmp-relocatable-target %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-PTXAS-RELO %s
+
+// CHK-PTXAS-RELO: ptxas{{.*}}" "-c"
+
+/// ###########################################################################
+
+/// Check PTXAS is passed the compute capability passed to the driver.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda --fopenmp-ptx=+ptx52 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-PTXAS-VERSION %s
+
+// CHK-PTXAS-VERSION: clang{{.*}}.bc" {{.*}}"-target-feature" "+ptx52"
+
+/// ###########################################################################
+
+/// Check PTXAS is passed the compute capability passed to the driver.
+// RUN:   %clang -### -no-canonical-prefixes -target x86_64-apple-darwin17.0.0 -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda --fopenmp-ptx=+ptx52 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-PTXAS-DARWIN-VERSION %s
+
+// CHK-PTXAS-DARWIN-VERSION: clang{{.*}}.bc" {{.*}}"-target-feature" "+ptx52"

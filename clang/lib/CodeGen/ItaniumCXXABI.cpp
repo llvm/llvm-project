@@ -63,8 +63,11 @@ public:
   bool classifyReturnType(CGFunctionInfo &FI) const override;
 
   RecordArgABI getRecordArgABI(const CXXRecordDecl *RD) const override {
-    // If C++ prohibits us from making a copy, pass by address.
-    if (!canCopyArgument(RD))
+    // Structures with either a non-trivial destructor or a non-trivial
+    // copy constructor are always indirect.
+    // FIXME: Use canCopyArgument() when it is fixed to handle lazily declared
+    // special members.
+    if (RD->hasNonTrivialDestructor() || RD->hasNonTrivialCopyConstructor())
       return RAA_Indirect;
     return RAA_Default;
   }
@@ -1011,8 +1014,10 @@ bool ItaniumCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
   if (!RD)
     return false;
 
-  // If C++ prohibits us from making a copy, return by address.
-  if (!canCopyArgument(RD)) {
+  // Return indirectly if we have a non-trivial copy ctor or non-trivial dtor.
+  // FIXME: Use canCopyArgument() when it is fixed to handle lazily declared
+  // special members.
+  if (RD->hasNonTrivialDestructor() || RD->hasNonTrivialCopyConstructor()) {
     auto Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
     FI.getReturnInfo() = ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
     return true;
