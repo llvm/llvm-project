@@ -4458,6 +4458,10 @@ Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
                                         unsigned Depth, AssumptionCache *AC,
                                         const Instruction *CxtI,
                                         const DominatorTree *DT) {
+  // Bail out when we hit the limit.
+  if (Depth == MaxDepth)
+    return None;
+
   // A mismatch occurs when we compare a scalar cmp to a vector cmp, for example.
   if (LHS->getType() != RHS->getType())
     return None;
