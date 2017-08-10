@@ -1284,7 +1284,6 @@ void ScopStmt::addAccess(MemoryAccess *Access, bool Prepend) {
     MAL.emplace_front(Access);
   } else if (Access->isValueKind() && Access->isWrite()) {
     Instruction *AccessVal = cast<Instruction>(Access->getAccessValue());
-    assert(Parent.getStmtFor(AccessVal) == this);
     assert(!ValueWrites.lookup(AccessVal));
 
     ValueWrites[AccessVal] = Access;
@@ -3768,10 +3767,16 @@ void Scop::assumeNoOutOfBounds() {
 
 void Scop::removeFromStmtMap(ScopStmt &Stmt) {
   if (Stmt.isRegionStmt())
-    for (BasicBlock *BB : Stmt.getRegion()->blocks())
+    for (BasicBlock *BB : Stmt.getRegion()->blocks()) {
       StmtMap.erase(BB);
-  else
+      for (Instruction &Inst : *BB)
+        InstStmtMap.erase(&Inst);
+    }
+  else {
     StmtMap.erase(Stmt.getBasicBlock());
+    for (Instruction *Inst : Stmt.getInstructions())
+      InstStmtMap.erase(Inst);
+  }
 }
 
 void Scop::removeStmts(std::function<bool(ScopStmt &)> ShouldDelete) {
@@ -4090,11 +4095,13 @@ void Scop::verifyInvariantLoads() {
   auto &RIL = getRequiredInvariantLoads();
   for (LoadInst *LI : RIL) {
     assert(LI && contains(LI));
-    ScopStmt *Stmt = getStmtFor(LI);
-    if (Stmt && Stmt->getArrayAccessOrNULLFor(LI)) {
-      invalidate(INVARIANTLOAD, LI->getDebugLoc(), LI->getParent());
-      return;
-    }
+    // If there exists a statement in the scop which has a memory access for
+    // @p LI, then mark this scop as infeasible for optimization.
+    for (ScopStmt &Stmt : Stmts)
+      if (Stmt.getArrayAccessOrNULLFor(LI)) {
+        invalidate(INVARIANTLOAD, LI->getDebugLoc(), LI->getParent());
+        return;
+      }
   }
 }
 
@@ -4837,14 +4844,25 @@ void Scop::addScopStmt(BasicBlock *BB, Loop *SurroundingLoop,
   Stmts.emplace_back(*this, *BB, SurroundingLoop, Instructions);
   auto *Stmt = &Stmts.back();
   StmtMap[BB].push_back(Stmt);
+  for (Instruction *Inst : Instructions) {
+    assert(!InstStmtMap.count(Inst) &&
+           "Unexpected statement corresponding to the instruction.");
+    InstStmtMap[Inst] = Stmt;
+  }
 }
 
 void Scop::addScopStmt(Region *R, Loop *SurroundingLoop) {
   assert(R && "Unexpected nullptr!");
   Stmts.emplace_back(*this, *R, SurroundingLoop);
   auto *Stmt = &Stmts.back();
-  for (BasicBlock *BB : R->blocks())
+  for (BasicBlock *BB : R->blocks()) {
     StmtMap[BB].push_back(Stmt);
+    for (Instruction &Inst : *BB) {
+      assert(!InstStmtMap.count(&Inst) &&
+             "Unexpected statement corresponding to the instruction.");
+      InstStmtMap[&Inst] = Stmt;
+    }
+  }
 }
 
 ScopStmt *Scop::addScopStmt(isl::map SourceRel, isl::map TargetRel,
@@ -4987,14 +5005,6 @@ void Scop::buildSchedule(RegionNode *RN, LoopStackTy &LoopStack, LoopInfo &LI) {
     NextLoopData.NumBlocksProcessed += NumBlocksProcessed;
     LoopData = NextLoopData;
   }
-}
-
-ScopStmt *Scop::getStmtFor(BasicBlock *BB) const {
-  auto StmtMapIt = StmtMap.find(BB);
-  if (StmtMapIt == StmtMap.end())
-    return nullptr;
-  assert(StmtMapIt->second.size() == 1);
-  return StmtMapIt->second.front();
 }
 
 ArrayRef<ScopStmt *> Scop::getStmtListFor(BasicBlock *BB) const {

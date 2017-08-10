@@ -55,27 +55,7 @@ enum LVComputationKind {
   LVForLinkageOnly =
       LVForValue | IgnoreExplicitVisibilityBit | IgnoreAllVisibilityBit
 };
-} // namespace clang
 
-namespace llvm {
-template <> struct DenseMapInfo<clang::LVComputationKind> {
-  static inline clang::LVComputationKind getEmptyKey() {
-    return static_cast<clang::LVComputationKind>(-1);
-  }
-  static inline clang::LVComputationKind getTombstoneKey() {
-    return static_cast<clang::LVComputationKind>(-2);
-  }
-  static unsigned getHashValue(const clang::LVComputationKind &Val) {
-    return Val;
-  }
-  static bool isEqual(const clang::LVComputationKind &LHS,
-                      const clang::LVComputationKind &RHS) {
-    return LHS == RHS;
-  }
-};
-} // namespace llvm
-
-namespace clang {
 class LinkageComputer {
   // We have a cache for repeated linkage/visibility computations. This saves us
   // from exponential behavior in heavily templated code, such as:
@@ -85,18 +65,27 @@ class LinkageComputer {
   // using B = Foo<A, A>;
   // using C = Foo<B, B>;
   // using D = Foo<C, C>;
-  using QueryType = std::pair<const NamedDecl *, LVComputationKind>;
+  //
+  // Note that the unsigned is actually a LVComputationKind; ubsan's enum
+  // sanitizer doesn't like tombstone/empty markers outside of
+  // LVComputationKind's range.
+  using QueryType = std::pair<const NamedDecl *, unsigned>;
   llvm::SmallDenseMap<QueryType, LinkageInfo, 8> CachedLinkageInfo;
+
+  static QueryType makeCacheKey(const NamedDecl *ND, LVComputationKind Kind) {
+    return std::make_pair(ND, static_cast<unsigned>(Kind));
+  }
+
   llvm::Optional<LinkageInfo> lookup(const NamedDecl *ND,
                                      LVComputationKind Kind) const {
-    auto Iter = CachedLinkageInfo.find(std::make_pair(ND, Kind));
+    auto Iter = CachedLinkageInfo.find(makeCacheKey(ND, Kind));
     if (Iter == CachedLinkageInfo.end())
       return None;
     return Iter->second;
   }
 
   void cache(const NamedDecl *ND, LVComputationKind Kind, LinkageInfo Info) {
-    CachedLinkageInfo[std::make_pair(ND, Kind)] = Info;
+    CachedLinkageInfo[makeCacheKey(ND, Kind)] = Info;
   }
 
   LinkageInfo getLVForTemplateArgumentList(ArrayRef<TemplateArgument> Args,

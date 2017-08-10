@@ -25,7 +25,7 @@
 #include "polly/ZoneAlgo.h"
 #include "llvm/Analysis/ValueTracking.h"
 
-#define DEBUG_TYPE "polly-delicm"
+#define DEBUG_TYPE "polly-optree"
 
 using namespace polly;
 using namespace llvm;
@@ -666,9 +666,12 @@ public:
     case VirtualUse::Inter:
       Instruction *Inst = cast<Instruction>(UseVal);
 
-      if (!DefStmt)
+      if (!DefStmt) {
         DefStmt = S->getStmtFor(Inst);
-      assert(DefStmt && "Value must be defined somewhere");
+        if (!DefStmt)
+          return FD_CannotForward;
+      }
+
       DefLoop = LI->getLoopFor(Inst->getParent());
 
       if (DefToTarget.is_null() && !Known.is_null()) {

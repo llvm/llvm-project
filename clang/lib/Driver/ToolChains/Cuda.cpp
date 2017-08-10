@@ -291,6 +291,13 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   for (const auto& A : Args.getAllArgValues(options::OPT_Xcuda_ptxas))
     CmdArgs.push_back(Args.MakeArgString(A));
 
+  // In OpenMP we need to generate relocatable code.
+  if (JA.isOffloading(Action::OFK_OpenMP) &&
+      Args.hasFlag(options::OPT_fopenmp_relocatable_target,
+                   options::OPT_fnoopenmp_relocatable_target,
+                   /*Default=*/ true))
+    CmdArgs.push_back("-c");
+
   const char *Exec;
   if (Arg *A = Args.getLastArg(options::OPT_ptxas_path_EQ))
     Exec = A->getValue();
@@ -431,6 +438,9 @@ CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
       CudaInstallation(D, HostTC.getTriple(), Args), OK(OK) {
   if (CudaInstallation.isValid())
     getProgramPaths().push_back(CudaInstallation.getBinPath());
+  // Lookup binaries into the driver directory, this is used to
+  // discover the clang-offload-bundler executable.
+  getProgramPaths().push_back(getDriver().Dir);
 }
 
 void CudaToolChain::addClangTargetOptions(
@@ -474,7 +484,13 @@ void CudaToolChain::addClangTargetOptions(
   // than LLVM defaults to. Use PTX4.2 which is the PTX version that
   // came with CUDA-7.0.
   CC1Args.push_back("-target-feature");
-  CC1Args.push_back("+ptx42");
+
+  if (DeviceOffloadingKind == Action::OFK_OpenMP)
+    CC1Args.push_back(
+        DriverArgs.getLastArgValue(options::OPT_fopenmp_ptx_EQ,
+                                   "+ptx42").data());
+  else
+    CC1Args.push_back("+ptx42");
 }
 
 void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
@@ -517,10 +533,14 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     }
 
     StringRef Arch = DAL->getLastArgValue(options::OPT_march_EQ);
-    if (Arch.empty())
-      // Default compute capability for CUDA toolchain is sm_20.
+    if (Arch.empty()) {
+      // Default compute capability for CUDA toolchain is the
+      // lowest compute capability supported by the installed
+      // CUDA version.
       DAL->AddJoinedArg(nullptr,
-          Opts.getOption(options::OPT_march_EQ), "sm_20");
+          Opts.getOption(options::OPT_march_EQ),
+          CudaInstallation.getLowestExistingArch());
+    }
 
     return DAL;
   }

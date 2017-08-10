@@ -455,8 +455,7 @@ namespace llvm {
 
   // Teach SmallPtrSet how to handle SourceLocation.
   template<>
-  class PointerLikeTypeTraits<clang::SourceLocation> {
-  public:
+  struct PointerLikeTypeTraits<clang::SourceLocation> {
     static inline void *getAsVoidPointer(clang::SourceLocation L) {
       return L.getPtrEncoding();
     }

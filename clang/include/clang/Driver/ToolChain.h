@@ -309,6 +309,8 @@ public:
     return ToolChain::CST_Libstdcxx;
   }
 
+  virtual std::string getCompilerRTPath() const;
+
   virtual std::string getCompilerRT(const llvm::opt::ArgList &Args,
                                     StringRef Component,
                                     bool Shared = false) const;
