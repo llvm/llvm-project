@@ -162,6 +162,11 @@ static cl::opt<unsigned>
                 cl::desc("Maximum depth of recursive SExt/ZExt"),
                 cl::init(8));
 
+static cl::opt<unsigned>
+    MaxAddRecSize("scalar-evolution-max-add-rec-size", cl::Hidden,
+                  cl::desc("Max coefficients in AddRec during evolving"),
+                  cl::init(16));
+
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
@@ -2876,6 +2881,12 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       const SCEVAddRecExpr *OtherAddRec =
         dyn_cast<SCEVAddRecExpr>(Ops[OtherIdx]);
       if (!OtherAddRec || OtherAddRec->getLoop() != AddRecLoop)
+        continue;
+
+      // Limit max number of arguments to avoid creation of unreasonably big
+      // SCEVAddRecs with very complex operands.
+      if (AddRec->getNumOperands() + OtherAddRec->getNumOperands() - 1 >
+          MaxAddRecSize)
         continue;
 
       bool Overflow = false;
