@@ -30,6 +30,7 @@
 #include "polly/DependenceInfo.h"
 #include "polly/FlattenSchedule.h"
 #include "polly/ForwardOpTree.h"
+#include "polly/JSONExporter.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/PolyhedralInfo.h"
@@ -473,7 +474,8 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
   assert(!EnablePolyhedralInfo && "This option is not implemented");
   assert(!EnableDeLICM && "This option is not implemented");
   assert(!EnableSimplify && "This option is not implemented");
-  assert(!ImportJScop && "This option is not implemented");
+  if (ImportJScop)
+    SPM.addPass(JSONImportPass());
   assert(!DeadCodeElim && "This option is not implemented");
   assert(!EnablePruneUnprofitable && "This option is not implemented");
   if (Target == TARGET_CPU || Target == TARGET_HYBRID)

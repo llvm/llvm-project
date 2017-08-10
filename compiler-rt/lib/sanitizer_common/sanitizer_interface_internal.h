@@ -80,6 +80,14 @@ extern "C" {
   SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
   void __sanitizer_cov_trace_cmp8();
   SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_const_cmp1();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_const_cmp2();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_const_cmp4();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void __sanitizer_cov_trace_const_cmp8();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
   void __sanitizer_cov_trace_switch();
   SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
   void __sanitizer_cov_trace_div4();
