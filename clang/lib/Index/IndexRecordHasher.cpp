@@ -304,7 +304,7 @@ static hash_code computeHash(TemplateName Name, IndexRecordHasher &Hasher) {
       return COMBINE_HASH('t', TTP->getDepth(), TTP->getIndex());
     }
 
-    return COMBINE_HASH(Hasher.hash(Template));
+    return COMBINE_HASH(Hasher.hash(Template->getCanonicalDecl()));
   }
 
   // FIXME: Hash dependent template names.
