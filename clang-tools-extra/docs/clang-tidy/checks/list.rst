@@ -9,6 +9,7 @@ Clang-Tidy Checks
    android-cloexec-open
    android-cloexec-socket
    boost-use-to-string
+   bugprone-integer-division
    bugprone-suspicious-memset-usage
    bugprone-undefined-memory-manipulation
    cert-dcl03-c (redirects to misc-static-assert) <cert-dcl03-c>

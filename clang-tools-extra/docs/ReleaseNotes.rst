@@ -70,6 +70,12 @@ Improvements to clang-tidy
       ``AllowConditionalIntegerCasts`` -> ``AllowIntegerConditions``,
       ``AllowConditionalPointerCasts`` -> ``AllowPointerConditions``.
 
+- New `bugprone-integer-division
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-integer-division.html>`_ check
+
+  Finds cases where integer division in a floating point context is likely to
+  cause unintended loss of precision.
+
 - New `readability-static-accessed-through-instance
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-static-accessed-through-instance.html>`_ check
 
