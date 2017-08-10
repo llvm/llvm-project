@@ -6,7 +6,6 @@ Clang-Tidy Checks
 .. toctree::
    android-cloexec-creat
    android-cloexec-fopen
-   android-cloexec-memfd-create
    android-cloexec-open
    android-cloexec-socket
    boost-use-to-string
