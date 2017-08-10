@@ -67,11 +67,12 @@
 namespace lld {
 namespace elf {
 
-template <typename R, class FuncTy> void parallelForEach(R &&Range, FuncTy Fn) {
+template <class IterTy, class FuncTy>
+void parallelForEach(IterTy Begin, IterTy End, FuncTy Fn) {
   if (Config->Threads)
-    for_each(llvm::parallel::par, std::begin(Range), std::end(Range), Fn);
+    for_each(llvm::parallel::par, Begin, End, Fn);
   else
-    for_each(llvm::parallel::seq, std::begin(Range), std::end(Range), Fn);
+    for_each(llvm::parallel::seq, Begin, End, Fn);
 }
 
 inline void parallelForEachN(size_t Begin, size_t End,

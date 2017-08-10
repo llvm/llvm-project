@@ -65,9 +65,8 @@ public:
       D->Type = COFF::IMAGE_DEBUG_TYPE_CODEVIEW;
       D->SizeOfData = Record->getSize();
       D->AddressOfRawData = Record->getRVA();
-      OutputSection *OS = Record->getOutputSection();
-      uint64_t Offs = OS->getFileOff() + (Record->getRVA() - OS->getRVA());
-      D->PointerToRawData = Offs;
+      // TODO(compnerd) get the file offset
+      D->PointerToRawData = 0;
 
       ++D;
     }
@@ -78,15 +77,8 @@ private:
 };
 
 class CVDebugRecordChunk : public Chunk {
-public:
-  CVDebugRecordChunk() {
-    PDBAbsPath = Config->PDBPath;
-    if (!PDBAbsPath.empty())
-      llvm::sys::fs::make_absolute(PDBAbsPath);
-  }
-
   size_t getSize() const override {
-    return sizeof(codeview::DebugInfo) + PDBAbsPath.size() + 1;
+    return sizeof(codeview::DebugInfo) + Config->PDBPath.size() + 1;
   }
 
   void writeTo(uint8_t *B) const override {
@@ -98,12 +90,12 @@ public:
 
     // variable sized field (PDB Path)
     auto *P = reinterpret_cast<char *>(B + OutputSectionOff + sizeof(*DI));
-    if (!PDBAbsPath.empty())
-      memcpy(P, PDBAbsPath.data(), PDBAbsPath.size());
-    P[PDBAbsPath.size()] = '\0';
+    if (!Config->PDBPath.empty())
+      memcpy(P, Config->PDBPath.data(), Config->PDBPath.size());
+    P[Config->PDBPath.size()] = '\0';
   }
 
-  SmallString<128> PDBAbsPath;
+public:
   mutable codeview::DebugInfo *DI = nullptr;
 };
 
@@ -247,7 +239,7 @@ void Writer::run() {
     const llvm::codeview::DebugInfo *DI = nullptr;
     if (Config->DebugTypes & static_cast<unsigned>(coff::DebugType::CV))
       DI = BuildId->DI;
-    createPDB(Symtab, OutputSections, SectionTable, DI);
+    createPDB(Symtab, SectionTable, DI);
   }
 
   writeMapFile(OutputSections);
@@ -330,7 +322,7 @@ void Writer::createMiscChunks() {
 
   std::set<Defined *> Handlers;
 
-  for (ObjFile *File : ObjFile::Instances) {
+  for (lld::coff::ObjectFile *File : Symtab->ObjectFiles) {
     if (!File->SEHCompat)
       return;
     for (SymbolBody *B : File->SEHandlers) {
@@ -353,13 +345,13 @@ void Writer::createMiscChunks() {
 // IdataContents class abstracted away the details for us,
 // so we just let it create chunks and add them to the section.
 void Writer::createImportTables() {
-  if (ImportFile::Instances.empty())
+  if (Symtab->ImportFiles.empty())
     return;
 
   // Initialize DLLOrder so that import entries are ordered in
   // the same order as in the command line. (That affects DLL
   // initialization order, and this ordering is MSVC-compatible.)
-  for (ImportFile *File : ImportFile::Instances) {
+  for (ImportFile *File : Symtab->ImportFiles) {
     if (!File->Live)
       continue;
 
@@ -369,7 +361,7 @@ void Writer::createImportTables() {
   }
 
   OutputSection *Text = createSection(".text");
-  for (ImportFile *File : ImportFile::Instances) {
+  for (ImportFile *File : Symtab->ImportFiles) {
     if (!File->Live)
       continue;
 
@@ -440,12 +432,19 @@ Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
   if (isa<DefinedSynthetic>(Def))
     return None;
 
-  // Don't write dead symbols or symbols in codeview sections to the symbol
-  // table.
-  if (!Def->isLive())
-    return None;
-  if (auto *D = dyn_cast<DefinedRegular>(Def))
-    if (D->getChunk()->isCodeView())
+  if (auto *D = dyn_cast<DefinedRegular>(Def)) {
+    // Don't write dead symbols or symbols in codeview sections to the symbol
+    // table.
+    if (!D->getChunk()->isLive() || D->getChunk()->isCodeView())
+      return None;
+  }
+
+  if (auto *Sym = dyn_cast<DefinedImportData>(Def))
+    if (!Sym->File->Live)
+      return None;
+
+  if (auto *Sym = dyn_cast<DefinedImportThunk>(Def))
+    if (!Sym->WrappedSym->File->Live)
       return None;
 
   coff_symbol16 Sym;
@@ -502,7 +501,7 @@ void Writer::createSymbolAndStringTable() {
     Sec->setStringTableOff(addEntryToStringTable(Name));
   }
 
-  for (ObjFile *File : ObjFile::Instances) {
+  for (lld::coff::ObjectFile *File : Symtab->ObjectFiles) {
     for (SymbolBody *B : File->getSymbols()) {
       auto *D = dyn_cast<Defined>(B);
       if (!D || D->WrittenToSymtab)

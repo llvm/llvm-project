@@ -2689,7 +2689,6 @@ typedef struct kmp_base_root {
   kmp_lock_t r_begin_lock;
   volatile int r_begin;
   int r_blocktime; /* blocktime for this root and descendants */
-  int r_cg_nthreads; // count of active threads in a contention group
 } kmp_base_root_t;
 
 typedef union KMP_ALIGN_CACHE kmp_root {
@@ -2834,10 +2833,16 @@ extern int __kmp_stkpadding; /* Should we pad root thread(s) stack */
 
 extern size_t
     __kmp_malloc_pool_incr; /* incremental size of pool for kmp_malloc() */
+extern int __kmp_env_chunk; /* was KMP_CHUNK specified?     */
 extern int __kmp_env_stksize; /* was KMP_STACKSIZE specified? */
+extern int __kmp_env_omp_stksize; /* was OMP_STACKSIZE specified? */
+extern int __kmp_env_all_threads; /* was KMP_ALL_THREADS or KMP_MAX_THREADS
+                                     specified? */
+extern int __kmp_env_omp_all_threads; /* was OMP_THREAD_LIMIT specified? */
 extern int __kmp_env_blocktime; /* was KMP_BLOCKTIME specified? */
 extern int __kmp_env_checks; /* was KMP_CHECKS specified?    */
-extern int __kmp_env_consistency_check; // was KMP_CONSISTENCY_CHECK specified?
+extern int
+    __kmp_env_consistency_check; /* was KMP_CONSISTENCY_CHECK specified?    */
 extern int __kmp_generate_warnings; /* should we issue warnings? */
 extern int __kmp_reserve_warn; /* have we issued reserve_threads warning? */
 
@@ -2864,11 +2869,8 @@ extern int __kmp_xproc; /* number of processors in the system */
 extern int __kmp_avail_proc; /* number of processors available to the process */
 extern size_t __kmp_sys_min_stksize; /* system-defined minimum stack size */
 extern int __kmp_sys_max_nth; /* system-imposed maximum number of threads */
-// maximum total number of concurrently-existing threads on device
-extern int __kmp_max_nth;
-// maximum total number of concurrently-existing threads in a contention group
-extern int __kmp_cg_max_nth;
-extern int __kmp_teams_max_nth; // max threads used in a teams construct
+extern int
+    __kmp_max_nth; /* maximum total number of concurrently-existing threads */
 extern int __kmp_threads_capacity; /* capacity of the arrays __kmp_threads and
                                       __kmp_root */
 extern int __kmp_dflt_team_nth; /* default number of threads in a parallel

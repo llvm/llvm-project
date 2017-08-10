@@ -8,3 +8,4 @@
 // RUN: not ld.lld --version-script %terr1.script -shared %t.o -o %t.so 2>&1 | \
 // RUN:   FileCheck -check-prefix=ERR1 %s
 // ERR1: {{.*}}:1: unclosed quote
+// ERR1-NEXT: {{.*}}: unexpected EOF

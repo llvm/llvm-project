@@ -75,8 +75,9 @@ ScriptLexer::ScriptLexer(MemoryBufferRef MB) { tokenize(MB); }
 
 // We don't want to record cascading errors. Keep only the first one.
 void ScriptLexer::setError(const Twine &Msg) {
-  if (ErrorCount)
+  if (Error)
     return;
+  Error = true;
 
   if (!Pos) {
     error(getCurrentLocation() + ": " + Msg);
@@ -163,7 +164,7 @@ StringRef ScriptLexer::skipSpace(StringRef S) {
 }
 
 // An erroneous token is handled as if it were the last token before EOF.
-bool ScriptLexer::atEOF() { return ErrorCount || Tokens.size() == Pos; }
+bool ScriptLexer::atEOF() { return Error || Tokens.size() == Pos; }
 
 // Split a given string as an expression.
 // This function returns "3", "*" and "5" for "3*5" for example.
@@ -206,7 +207,7 @@ static std::vector<StringRef> tokenizeExpr(StringRef S) {
 //
 // This function may split the current token into multiple tokens.
 void ScriptLexer::maybeSplitExpr() {
-  if (!InExpr || ErrorCount || atEOF())
+  if (!InExpr || Error || atEOF())
     return;
 
   std::vector<StringRef> V = tokenizeExpr(Tokens[Pos]);
@@ -219,7 +220,7 @@ void ScriptLexer::maybeSplitExpr() {
 StringRef ScriptLexer::next() {
   maybeSplitExpr();
 
-  if (ErrorCount)
+  if (Error)
     return "";
   if (atEOF()) {
     setError("unexpected EOF");
@@ -230,7 +231,7 @@ StringRef ScriptLexer::next() {
 
 StringRef ScriptLexer::peek() {
   StringRef Tok = next();
-  if (ErrorCount)
+  if (Error)
     return "";
   Pos = Pos - 1;
   return Tok;
@@ -259,7 +260,7 @@ bool ScriptLexer::consumeLabel(StringRef Tok) {
 void ScriptLexer::skip() { (void)next(); }
 
 void ScriptLexer::expect(StringRef Expect) {
-  if (ErrorCount)
+  if (Error)
     return;
   StringRef Tok = next();
   if (Tok != Expect)

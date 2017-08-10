@@ -18,15 +18,9 @@
 using namespace polly;
 using namespace llvm;
 
-VirtualUse VirtualUse ::create(Scop *S, const Use &U, LoopInfo *LI,
-                               bool Virtual) {
+VirtualUse VirtualUse ::create(Scop *S, Use &U, LoopInfo *LI, bool Virtual) {
   auto *UserBB = getUseBlock(U);
-  Instruction *UI = dyn_cast<Instruction>(U.getUser());
-  ScopStmt *UserStmt = nullptr;
-  if (PHINode *PHI = dyn_cast<PHINode>(UI))
-    UserStmt = S->getLastStmtFor(PHI->getIncomingBlock(U));
-  else
-    UserStmt = S->getStmtFor(UI);
+  auto *UserStmt = S->getStmtFor(UserBB);
   auto *UserScope = LI->getLoopFor(UserBB);
   return create(S, UserStmt, UserScope, U.get(), Virtual);
 }
@@ -38,7 +32,7 @@ VirtualUse VirtualUse::create(Scop *S, ScopStmt *UserStmt, Loop *UserScope,
   if (isa<BasicBlock>(Val))
     return VirtualUse(UserStmt, Val, Block, nullptr, nullptr);
 
-  if (isa<llvm::Constant>(Val) || isa<MetadataAsValue>(Val))
+  if (isa<llvm::Constant>(Val))
     return VirtualUse(UserStmt, Val, Constant, nullptr, nullptr);
 
   // Is the value synthesizable? If the user has been pruned
@@ -78,7 +72,7 @@ VirtualUse VirtualUse::create(Scop *S, ScopStmt *UserStmt, Loop *UserScope,
   // A use is inter-statement if either it is defined in another statement, or
   // there is a MemoryAccess that reads its value that has been written by
   // another statement.
-  if (InputMA || (!Virtual && !UserStmt->represents(Inst->getParent())))
+  if (InputMA || (!Virtual && !UserStmt->contains(Inst->getParent())))
     return VirtualUse(UserStmt, Val, Inter, nullptr, InputMA);
 
   return VirtualUse(UserStmt, Val, Intra, nullptr, nullptr);
@@ -126,272 +120,8 @@ void VirtualUse::print(raw_ostream &OS, bool Reproducible) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void VirtualUse::dump() const {
+void VirtualUse::dump() const {
   print(errs(), false);
   errs() << '\n';
 }
 #endif
-
-void VirtualInstruction::print(raw_ostream &OS, bool Reproducible) const {
-  if (!Stmt || !Inst) {
-    OS << "[null VirtualInstruction]";
-    return;
-  }
-
-  OS << "[" << Stmt->getBaseName() << "]";
-  Inst->print(OS, !Reproducible);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void VirtualInstruction::dump() const {
-  print(errs(), false);
-  errs() << '\n';
-}
-#endif
-
-/// Return true if @p Inst cannot be removed, even if it is nowhere referenced.
-static bool isRoot(const Instruction *Inst) {
-  // The store is handled by its MemoryAccess. The load must be reached from the
-  // roots in order to be marked as used.
-  if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
-    return false;
-
-  // Terminator instructions (in region statements) are required for control
-  // flow.
-  if (isa<TerminatorInst>(Inst))
-    return true;
-
-  // Writes to memory must be honored.
-  if (Inst->mayWriteToMemory())
-    return true;
-
-  return false;
-}
-
-/// Return true for MemoryAccesses that cannot be removed because it represents
-/// an llvm::Value that is used after the SCoP.
-static bool isEscaping(MemoryAccess *MA) {
-  assert(MA->isOriginalValueKind());
-  Scop *S = MA->getStatement()->getParent();
-  return S->isEscaping(cast<Instruction>(MA->getAccessValue()));
-}
-
-/// Add non-removable virtual instructions in @p Stmt to @p RootInsts.
-static void
-addInstructionRoots(ScopStmt *Stmt,
-                    SmallVectorImpl<VirtualInstruction> &RootInsts) {
-  // For region statements we must keep all instructions because we do not
-  // support removing instructions from region statements.
-  if (!Stmt->isBlockStmt()) {
-    for (auto *BB : Stmt->getRegion()->blocks())
-      for (Instruction &Inst : *BB)
-        RootInsts.emplace_back(Stmt, &Inst);
-    return;
-  }
-
-  for (Instruction *Inst : Stmt->getInstructions())
-    if (isRoot(Inst))
-      RootInsts.emplace_back(Stmt, Inst);
-}
-
-/// Add non-removable memory accesses in @p Stmt to @p RootInsts.
-///
-/// @param Local If true, all writes are assumed to escape. markAndSweep
-/// algorithms can use this to be applicable to a single ScopStmt only without
-/// the risk of removing definitions required by other statements.
-///              If false, only writes for SCoP-escaping values are roots.  This
-///              is global mode, where such writes must be marked by theirs uses
-///              in order to be reachable.
-static void addAccessRoots(ScopStmt *Stmt,
-                           SmallVectorImpl<MemoryAccess *> &RootAccs,
-                           bool Local) {
-  for (auto *MA : *Stmt) {
-    if (!MA->isWrite())
-      continue;
-
-    // Writes to arrays are always used.
-    if (MA->isLatestArrayKind())
-      RootAccs.push_back(MA);
-
-    // Values are roots if they are escaping.
-    else if (MA->isLatestValueKind()) {
-      if (Local || isEscaping(MA))
-        RootAccs.push_back(MA);
-    }
-
-    // Exit phis are, by definition, escaping.
-    else if (MA->isLatestExitPHIKind())
-      RootAccs.push_back(MA);
-
-    // phi writes are only roots if we are not visiting the statement
-    // containing the PHINode.
-    else if (Local && MA->isLatestPHIKind())
-      RootAccs.push_back(MA);
-  }
-}
-
-/// Determine all instruction and access roots.
-static void addRoots(ScopStmt *Stmt,
-                     SmallVectorImpl<VirtualInstruction> &RootInsts,
-                     SmallVectorImpl<MemoryAccess *> &RootAccs, bool Local) {
-  addInstructionRoots(Stmt, RootInsts);
-  addAccessRoots(Stmt, RootAccs, Local);
-}
-
-/// Mark accesses and instructions as used if they are reachable from a root,
-/// walking the operand trees.
-///
-/// @param S              The SCoP to walk.
-/// @param LI             The LoopInfo Analysis.
-/// @param RootInsts      List of root instructions.
-/// @param RootAccs       List of root accesses.
-/// @param UsesInsts[out] Receives all reachable instructions, including the
-/// roots.
-/// @param UsedAccs[out]  Receives all reachable accesses, including the roots.
-/// @param OnlyLocal      If non-nullptr, restricts walking to a single
-/// statement.
-static void walkReachable(Scop *S, LoopInfo *LI,
-                          ArrayRef<VirtualInstruction> RootInsts,
-                          ArrayRef<MemoryAccess *> RootAccs,
-                          DenseSet<VirtualInstruction> &UsedInsts,
-                          DenseSet<MemoryAccess *> &UsedAccs,
-                          ScopStmt *OnlyLocal = nullptr) {
-  UsedInsts.clear();
-  UsedAccs.clear();
-
-  SmallVector<VirtualInstruction, 32> WorklistInsts;
-  SmallVector<MemoryAccess *, 32> WorklistAccs;
-
-  WorklistInsts.append(RootInsts.begin(), RootInsts.end());
-  WorklistAccs.append(RootAccs.begin(), RootAccs.end());
-
-  auto AddToWorklist = [&](VirtualUse VUse) {
-    switch (VUse.getKind()) {
-    case VirtualUse::Block:
-    case VirtualUse::Constant:
-    case VirtualUse::Synthesizable:
-    case VirtualUse::Hoisted:
-      break;
-    case VirtualUse::ReadOnly:
-      // Read-only scalars only have MemoryAccesses if ModelReadOnlyScalars is
-      // enabled.
-      if (!VUse.getMemoryAccess())
-        break;
-      LLVM_FALLTHROUGH;
-    case VirtualUse::Inter:
-      assert(VUse.getMemoryAccess());
-      WorklistAccs.push_back(VUse.getMemoryAccess());
-      break;
-    case VirtualUse::Intra:
-      WorklistInsts.emplace_back(VUse.getUser(),
-                                 cast<Instruction>(VUse.getValue()));
-      break;
-    }
-  };
-
-  while (true) {
-    // We have two worklists to process: Only when the MemoryAccess worklist is
-    // empty, we process the instruction worklist.
-
-    while (!WorklistAccs.empty()) {
-      auto *Acc = WorklistAccs.pop_back_val();
-
-      ScopStmt *Stmt = Acc->getStatement();
-      if (OnlyLocal && Stmt != OnlyLocal)
-        continue;
-
-      auto Inserted = UsedAccs.insert(Acc);
-      if (!Inserted.second)
-        continue;
-
-      if (Acc->isRead()) {
-        const ScopArrayInfo *SAI = Acc->getScopArrayInfo();
-
-        if (Acc->isOriginalValueKind()) {
-          MemoryAccess *DefAcc = S->getValueDef(SAI);
-
-          // Accesses to read-only values do not have a definition.
-          if (DefAcc)
-            WorklistAccs.push_back(S->getValueDef(SAI));
-        }
-
-        if (Acc->isOriginalAnyPHIKind()) {
-          auto IncomingMAs = S->getPHIIncomings(SAI);
-          WorklistAccs.append(IncomingMAs.begin(), IncomingMAs.end());
-        }
-      }
-
-      if (Acc->isWrite()) {
-        if (Acc->isOriginalValueKind() ||
-            (Acc->isOriginalArrayKind() && Acc->getAccessValue())) {
-          Loop *Scope = Stmt->getSurroundingLoop();
-          VirtualUse VUse =
-              VirtualUse::create(S, Stmt, Scope, Acc->getAccessValue(), true);
-          AddToWorklist(VUse);
-        }
-
-        if (Acc->isOriginalAnyPHIKind()) {
-          for (auto Incoming : Acc->getIncoming()) {
-            VirtualUse VUse = VirtualUse::create(
-                S, Stmt, LI->getLoopFor(Incoming.first), Incoming.second, true);
-            AddToWorklist(VUse);
-          }
-        }
-
-        if (Acc->isOriginalArrayKind())
-          WorklistInsts.emplace_back(Stmt, Acc->getAccessInstruction());
-      }
-    }
-
-    // If both worklists are empty, stop walking.
-    if (WorklistInsts.empty())
-      break;
-
-    VirtualInstruction VInst = WorklistInsts.pop_back_val();
-    ScopStmt *Stmt = VInst.getStmt();
-    Instruction *Inst = VInst.getInstruction();
-
-    // Do not process statements other than the local.
-    if (OnlyLocal && Stmt != OnlyLocal)
-      continue;
-
-    auto InsertResult = UsedInsts.insert(VInst);
-    if (!InsertResult.second)
-      continue;
-
-    // Add all operands to the worklists.
-    PHINode *PHI = dyn_cast<PHINode>(Inst);
-    if (PHI && PHI->getParent() == Stmt->getEntryBlock()) {
-      if (MemoryAccess *PHIRead = Stmt->lookupPHIReadOf(PHI))
-        WorklistAccs.push_back(PHIRead);
-    } else {
-      for (VirtualUse VUse : VInst.operands())
-        AddToWorklist(VUse);
-    }
-
-    // If there is an array access, also add its MemoryAccesses to the worklist.
-    const MemoryAccessList *Accs = Stmt->lookupArrayAccessesFor(Inst);
-    if (!Accs)
-      continue;
-
-    for (MemoryAccess *Acc : *Accs)
-      WorklistAccs.push_back(Acc);
-  }
-}
-
-void polly::markReachable(Scop *S, LoopInfo *LI,
-                          DenseSet<VirtualInstruction> &UsedInsts,
-                          DenseSet<MemoryAccess *> &UsedAccs,
-                          ScopStmt *OnlyLocal) {
-  SmallVector<VirtualInstruction, 32> RootInsts;
-  SmallVector<MemoryAccess *, 32> RootAccs;
-
-  if (OnlyLocal) {
-    addRoots(OnlyLocal, RootInsts, RootAccs, true);
-  } else {
-    for (auto &Stmt : *S)
-      addRoots(&Stmt, RootInsts, RootAccs, false);
-  }
-
-  walkReachable(S, LI, RootInsts, RootAccs, UsedInsts, UsedAccs, OnlyLocal);
-}

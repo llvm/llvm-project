@@ -97,7 +97,7 @@ public:
   /// @param Virtual Whether to ignore existing MemoryAcccess.
   ///
   /// @return The VirtualUse representing the same use as @p U.
-  static VirtualUse create(Scop *S, const Use &U, LoopInfo *LI, bool Virtual);
+  static VirtualUse create(Scop *S, Use &U, LoopInfo *LI, bool Virtual);
 
   /// Get a VirtualUse for any kind of use of a value within a statement.
   ///
@@ -151,193 +151,18 @@ public:
   ///
   /// @param OS           Stream to print to.
   /// @param Reproducible If true, ensures that the output is stable between
-  ///                     runs and is suitable to check in regression tests.
-  ///                     This excludes printing e.g. pointer values. If false,
-  ///                     the output should not be used for regression tests,
-  ///                     but may contain more information useful in debugger
-  ///                     sessions.
+  /// runs and is suitable to check in regression tests. This excludes printing
+  /// e.g. pointer values.
+  ///                     If false, the output should not be used for regression
+  ///                     tests, but may contain more information useful in
+  ///                     debugger sessions.
   void print(raw_ostream &OS, bool Reproducible = true) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const;
 #endif
 };
-
-/// An iterator for virtual operands.
-class VirtualOperandIterator
-    : public std::iterator<std::forward_iterator_tag, VirtualUse> {
-  friend class VirtualInstruction;
-  friend class VirtualUse;
-
-  using super = std::iterator<std::forward_iterator_tag, VirtualUse>;
-  using Self = VirtualOperandIterator;
-
-  ScopStmt *User;
-  User::op_iterator U;
-
-  VirtualOperandIterator(ScopStmt *User, User::op_iterator U)
-      : User(User), U(U) {}
-
-public:
-  using pointer = typename super::pointer;
-  using reference = typename super::reference;
-
-  inline bool operator==(const Self &that) const {
-    assert(this->User == that.User);
-    return this->U == that.U;
-  }
-
-  inline bool operator!=(const Self &that) const {
-    assert(this->User == that.User);
-    return this->U != that.U;
-  }
-
-  VirtualUse operator*() const {
-    return VirtualUse::create(User, User->getSurroundingLoop(), U->get(), true);
-  }
-
-  Use *operator->() const { return U; }
-
-  Self &operator++() {
-    U++;
-    return *this;
-  }
-
-  Self operator++(int) {
-    Self tmp = *this;
-    ++*this;
-    return tmp;
-  }
-};
-
-/// This class represents a "virtual instruction", an instruction in a ScopStmt,
-/// effectively a ScopStmt/Instruction-pair.
-///
-/// An instructions can be moved between statements (e.g. to avoid a scalar
-/// dependency) and even can be contained in multiple statements (for instance,
-/// to recompute a value instead of transferring it), hence 'virtual'. This
-/// class is required to represent such instructions that are not in their
-/// 'physical' location anymore.
-///
-/// A statement can currently not contain the same instructions multiple times
-/// (that is, from different loop iterations). Therefore, a
-/// ScopStmt/Instruction-pair uniquely identifies a virtual instructions.
-/// ScopStmt::getInstruction() can contain the same instruction multiple times,
-/// but they necessarily compute the same value.
-class VirtualInstruction {
-  friend class VirtualOperandIterator;
-  friend struct llvm::DenseMapInfo<VirtualInstruction>;
-
-private:
-  /// The statement this virtual instruction is in.
-  ScopStmt *Stmt = nullptr;
-
-  /// The instruction of a statement.
-  Instruction *Inst = nullptr;
-
-public:
-  VirtualInstruction() {}
-
-  /// Create a new virtual instruction of an instruction @p Inst in @p Stmt.
-  VirtualInstruction(ScopStmt *Stmt, Instruction *Inst)
-      : Stmt(Stmt), Inst(Inst) {
-    assert(Stmt && Inst);
-  }
-
-  VirtualOperandIterator operand_begin() const {
-    return VirtualOperandIterator(Stmt, Inst->op_begin());
-  }
-
-  VirtualOperandIterator operand_end() const {
-    return VirtualOperandIterator(Stmt, Inst->op_end());
-  }
-
-  /// Returns a list of virtual operands.
-  ///
-  /// Virtual operands, like virtual instructions, need to encode the ScopStmt
-  /// they are in.
-  llvm::iterator_range<VirtualOperandIterator> operands() const {
-    return {operand_begin(), operand_end()};
-  }
-
-  /// Return the SCoP everything is contained in.
-  Scop *getScop() const { return Stmt->getParent(); }
-
-  /// Return the ScopStmt this virtual instruction is in.
-  ScopStmt *getStmt() const { return Stmt; }
-
-  /// Return the instruction in the statement.
-  Instruction *getInstruction() const { return Inst; }
-
-  /// Print a description of this object.
-  ///
-  /// @param OS           Stream to print to.
-  /// @param Reproducible If true, ensures that the output is stable between
-  ///                     runs and is suitable for checks in regression tests.
-  ///                     This excludes printing e.g., pointer values. If false,
-  ///                     the output should not be used for regression tests,
-  ///                     but may contain more information useful in debugger
-  ///                     sessions.
-  void print(raw_ostream &OS, bool Reproducible = true) const;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump() const;
-#endif
-};
-
-static inline bool operator==(VirtualInstruction LHS, VirtualInstruction RHS) {
-  return LHS.getStmt() == RHS.getStmt() &&
-         LHS.getInstruction() == RHS.getInstruction();
-}
-
-/// Find all reachable instructions and accesses.
-///
-/// @param S              The SCoP to find everything reachable in.
-/// @param LI             LoopInfo required for analysis.
-/// @param UsedInsts[out] Receives all reachable instructions.
-/// @param UsedAccs[out]  Receives all reachable accesses.
-/// @param OnlyLocal      If non-nullptr, activates local mode: The SCoP is
-///                       assumed to consist only of this statement and is
-///                       conservatively correct. Does not require walking the
-///                       whole SCoP.
-void markReachable(Scop *S, LoopInfo *LI,
-                   DenseSet<VirtualInstruction> &UsedInsts,
-                   DenseSet<MemoryAccess *> &UsedAccs,
-                   ScopStmt *OnlyLocal = nullptr);
 
 } // namespace polly
-
-namespace llvm {
-/// Support VirtualInstructions in llvm::DenseMaps.
-template <> struct DenseMapInfo<polly::VirtualInstruction> {
-public:
-  static bool isEqual(polly::VirtualInstruction LHS,
-                      polly::VirtualInstruction RHS) {
-    return DenseMapInfo<polly::ScopStmt *>::isEqual(LHS.getStmt(),
-                                                    RHS.getStmt()) &&
-           DenseMapInfo<Instruction *>::isEqual(LHS.getInstruction(),
-                                                RHS.getInstruction());
-  }
-
-  static polly::VirtualInstruction getTombstoneKey() {
-    polly::VirtualInstruction TombstoneKey;
-    TombstoneKey.Stmt = DenseMapInfo<polly::ScopStmt *>::getTombstoneKey();
-    TombstoneKey.Inst = DenseMapInfo<Instruction *>::getTombstoneKey();
-    return TombstoneKey;
-  }
-
-  static polly::VirtualInstruction getEmptyKey() {
-    polly::VirtualInstruction EmptyKey;
-    EmptyKey.Stmt = DenseMapInfo<polly::ScopStmt *>::getEmptyKey();
-    EmptyKey.Inst = DenseMapInfo<Instruction *>::getEmptyKey();
-    return EmptyKey;
-  }
-
-  static unsigned getHashValue(polly::VirtualInstruction Val) {
-    return DenseMapInfo<std::pair<polly::ScopStmt *, Instruction *>>::
-        getHashValue(std::make_pair(Val.getStmt(), Val.getInstruction()));
-  }
-};
-} // namespace llvm
 
 #endif /* POLLY_SUPPORT_VIRTUALINSTRUCTION_H */

@@ -134,7 +134,7 @@ std::string JSONExporter::getFileName(Scop &S) const {
   return FileName;
 }
 
-void JSONExporter::printScop(raw_ostream &OS, Scop &S) const { OS << S; }
+void JSONExporter::printScop(raw_ostream &OS, Scop &S) const { S.print(OS); }
 
 /// Export all arrays from the Scop.
 ///
@@ -263,7 +263,7 @@ std::string JSONImporter::getFileName(Scop &S) const {
 }
 
 void JSONImporter::printScop(raw_ostream &OS, Scop &S) const {
-  OS << S;
+  S.print(OS);
   for (std::vector<std::string>::const_iterator I = NewAccessStrings.begin(),
                                                 E = NewAccessStrings.end();
        I != E; I++)
@@ -273,7 +273,7 @@ void JSONImporter::printScop(raw_ostream &OS, Scop &S) const {
 typedef Dependences::StatementToIslMapTy StatementToIslMapTy;
 
 bool JSONImporter::importContext(Scop &S, Json::Value &JScop) {
-  isl_set *OldContext = S.getContext().release();
+  isl_set *OldContext = S.getContext();
 
   // Check if key 'context' is present.
   if (!JScop.isMember("context")) {
@@ -367,7 +367,7 @@ bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
       return false;
     }
 
-    isl_space *Space = Stmt.getDomainSpace().release();
+    isl_space *Space = Stmt.getDomainSpace();
 
     // Copy the old tuple id. This is necessary to retain the user pointer,
     // that stores the reference to the ScopStmt this schedule belongs to.
@@ -391,13 +391,12 @@ bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
     return false;
   }
 
-  auto ScheduleMap = isl_union_map_empty(S.getParamSpace().release());
+  auto ScheduleMap = isl_union_map_empty(S.getParamSpace());
   for (ScopStmt &Stmt : S) {
     if (NewSchedule.find(&Stmt) != NewSchedule.end())
       ScheduleMap = isl_union_map_add_map(ScheduleMap, NewSchedule[&Stmt]);
     else
-      ScheduleMap =
-          isl_union_map_add_map(ScheduleMap, Stmt.getSchedule().release());
+      ScheduleMap = isl_union_map_add_map(ScheduleMap, Stmt.getSchedule());
   }
 
   S.setSchedule(ScheduleMap);
@@ -460,7 +459,7 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
         errs() << "The access was not parsed successfully by ISL.\n";
         return false;
       }
-      isl_map *CurrentAccessMap = MA->getAccessRelation().release();
+      isl_map *CurrentAccessMap = MA->getAccessRelation();
 
       // Check if the number of parameter change
       if (isl_map_dim(NewAccessMap, isl_dim_param) !=
@@ -481,7 +480,7 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
         NewOutId = isl_map_get_tuple_id(NewAccessMap, isl_dim_out);
         auto *SAI = S.getArrayInfoByName(isl_id_get_name(NewOutId));
         isl_id *OutId = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_out);
-        auto *OutSAI = ScopArrayInfo::getFromId(isl::manage(OutId));
+        auto *OutSAI = ScopArrayInfo::getFromId(OutId);
         if (!SAI || SAI->getElementType() != OutSAI->getElementType()) {
           errs() << "JScop file contains access function with undeclared "
                     "ScopArrayInfo\n";
@@ -491,7 +490,7 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
           return false;
         }
         isl_id_free(NewOutId);
-        NewOutId = SAI->getBasePtrId().release();
+        NewOutId = SAI->getBasePtrId();
       } else {
         NewOutId = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_out);
       }
@@ -561,9 +560,9 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
       }
 
       NewAccessDomain =
-          isl_set_intersect_params(NewAccessDomain, S.getContext().release());
-      CurrentAccessDomain = isl_set_intersect_params(CurrentAccessDomain,
-                                                     S.getContext().release());
+          isl_set_intersect_params(NewAccessDomain, S.getContext());
+      CurrentAccessDomain =
+          isl_set_intersect_params(CurrentAccessDomain, S.getContext());
 
       if (MA->isRead() &&
           isl_set_is_subset(CurrentAccessDomain, NewAccessDomain) ==
@@ -583,7 +582,7 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
         // Statistics.
         ++NewAccessMapFound;
         NewAccessStrings.push_back(Accesses.asCString());
-        MA->setNewAccessRelation(isl::manage(NewAccessMap));
+        MA->setNewAccessRelation(NewAccessMap);
       } else {
         isl_map_free(NewAccessMap);
       }
