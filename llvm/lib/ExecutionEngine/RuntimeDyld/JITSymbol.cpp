@@ -39,3 +39,11 @@ llvm::JITSymbolFlags::fromObjectSymbol(const object::BasicSymbolRef &Symbol) {
     Flags |= JITSymbolFlags::Exported;
   return Flags;
 }
+
+ARMJITSymbolFlags llvm::ARMJITSymbolFlags::fromObjectSymbol(
+                                         const object::BasicSymbolRef &Symbol) {
+  ARMJITSymbolFlags Flags;
+  if (Symbol.getFlags() & object::BasicSymbolRef::SF_Thumb)
+    Flags |= ARMJITSymbolFlags::Thumb;
+  return Flags;
+}

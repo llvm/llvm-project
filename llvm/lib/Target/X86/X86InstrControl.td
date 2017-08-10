@@ -171,7 +171,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
                      "ljmp{w}\t{*}$dst", [], IIC_JMP_FAR_MEM>, OpSize16,
                    Sched<[WriteJumpLd]>;
   def FARJMP32m  : I<0xFF, MRM5m, (outs), (ins opaque48mem:$dst),
-                     "ljmp{l}\t{*}$dst", [], IIC_JMP_FAR_MEM>, OpSize32,
+                     "{l}jmp{l}\t{*}$dst", [], IIC_JMP_FAR_MEM>, OpSize32,
                    Sched<[WriteJumpLd]>;
 }
 
@@ -233,7 +233,7 @@ let isCall = 1 in
                         "lcall{w}\t{*}$dst", [], IIC_CALL_FAR_MEM>, OpSize16,
                       Sched<[WriteJumpLd]>;
     def FARCALL32m  : I<0xFF, MRM3m, (outs), (ins opaque48mem:$dst),
-                        "lcall{l}\t{*}$dst", [], IIC_CALL_FAR_MEM>, OpSize32,
+                        "{l}call{l}\t{*}$dst", [], IIC_CALL_FAR_MEM>, OpSize32,
                       Sched<[WriteJumpLd]>;
   }
 

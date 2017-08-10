@@ -1,4 +1,4 @@
-//===-- R600ExpandSpecialInstrs.cpp - Expand special instructions ---------===//
+//===- R600ExpandSpecialInstrs.cpp - Expand special instructions ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,11 +18,17 @@
 #include "AMDGPUSubtarget.h"
 #include "R600Defines.h"
 #include "R600InstrInfo.h"
-#include "R600MachineFunctionInfo.h"
 #include "R600RegisterInfo.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/Pass.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 
 using namespace llvm;
 
@@ -32,7 +38,7 @@ namespace {
 
 class R600ExpandSpecialInstrsPass : public MachineFunctionPass {
 private:
-  const R600InstrInfo *TII;
+  const R600InstrInfo *TII = nullptr;
 
   void SetFlagInNewMI(MachineInstr *NewMI, const MachineInstr *OldMI,
       unsigned Op);
@@ -40,8 +46,7 @@ private:
 public:
   static char ID;
 
-  R600ExpandSpecialInstrsPass() : MachineFunctionPass(ID),
-    TII(nullptr) { }
+  R600ExpandSpecialInstrsPass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -50,7 +55,7 @@ public:
   }
 };
 
-} // End anonymous namespace
+} // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(R600ExpandSpecialInstrsPass, DEBUG_TYPE,
                      "R600 Expand Special Instrs", false, false)
@@ -127,7 +132,6 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
         continue;
         }
       case AMDGPU::DOT_4: {
-
         const R600RegisterInfo &TRI = TII->getRegisterInfo();
 
         unsigned DstReg = MI.getOperand(0).getReg();

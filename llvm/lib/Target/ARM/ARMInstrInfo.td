@@ -241,6 +241,8 @@ def HasV8_1a         : Predicate<"Subtarget->hasV8_1aOps()">,
                                  AssemblerPredicate<"HasV8_1aOps", "armv8.1a">;
 def HasV8_2a         : Predicate<"Subtarget->hasV8_2aOps()">,
                                  AssemblerPredicate<"HasV8_2aOps", "armv8.2a">;
+def HasV8_3a         : Predicate<"Subtarget->hasV8_3aOps()">,
+                                 AssemblerPredicate<"HasV8_3aOps", "armv8.3a">;
 def NoVFP            : Predicate<"!Subtarget->hasVFP2()">;
 def HasVFP2          : Predicate<"Subtarget->hasVFP2()">,
                                  AssemblerPredicate<"FeatureVFP2", "VFP2">;
@@ -6060,21 +6062,21 @@ def SPACE : PseudoInst<(outs GPR:$Rd), (ins i32imm:$size, GPR:$Rn),
 // significantly more naive than the standard expansion: we conservatively
 // assume seq_cst, strong cmpxchg and omit clrex on failure.
 
-let Constraints = "@earlyclobber $Rd,@earlyclobber $status",
+let Constraints = "@earlyclobber $Rd,@earlyclobber $temp",
     mayLoad = 1, mayStore = 1 in {
-def CMP_SWAP_8 : PseudoInst<(outs GPR:$Rd, GPR:$status),
+def CMP_SWAP_8 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
                             (ins GPR:$addr, GPR:$desired, GPR:$new),
                             NoItinerary, []>, Sched<[]>;
 
-def CMP_SWAP_16 : PseudoInst<(outs GPR:$Rd, GPR:$status),
+def CMP_SWAP_16 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
                              (ins GPR:$addr, GPR:$desired, GPR:$new),
                              NoItinerary, []>, Sched<[]>;
 
-def CMP_SWAP_32 : PseudoInst<(outs GPR:$Rd, GPR:$status),
+def CMP_SWAP_32 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
                              (ins GPR:$addr, GPR:$desired, GPR:$new),
                              NoItinerary, []>, Sched<[]>;
 
-def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$status),
+def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$temp),
                              (ins GPR:$addr, GPRPair:$desired, GPRPair:$new),
                              NoItinerary, []>, Sched<[]>;
 }

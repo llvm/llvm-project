@@ -2274,7 +2274,7 @@ define <8 x i16> @insert_dup_mem_v8i16_sext_i16(i16* %ptr) {
 ; AVX512VL-LABEL: insert_dup_mem_v8i16_sext_i16:
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    movswl (%rdi), %eax
-; AVX512VL-NEXT:    vpbroadcastw %ax, %xmm0
+; AVX512VL-NEXT:    vpbroadcastw %eax, %xmm0
 ; AVX512VL-NEXT:    retq
   %tmp = load i16, i16* %ptr, align 2
   %tmp1 = sext i16 %tmp to i32
@@ -2390,7 +2390,7 @@ define <8 x i16> @insert_dup_elt1_mem_v8i16_sext_i16(i16* %ptr) {
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    movswl (%rdi), %eax
 ; AVX512VL-NEXT:    shrl $16, %eax
-; AVX512VL-NEXT:    vpbroadcastw %ax, %xmm0
+; AVX512VL-NEXT:    vpbroadcastw %eax, %xmm0
 ; AVX512VL-NEXT:    retq
   %tmp = load i16, i16* %ptr, align 2
   %tmp1 = sext i16 %tmp to i32
@@ -2443,7 +2443,7 @@ define <8 x i16> @insert_dup_elt3_mem_v8i16_sext_i16(i16* %ptr) {
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    movswl (%rdi), %eax
 ; AVX512VL-NEXT:    shrl $16, %eax
-; AVX512VL-NEXT:    vpbroadcastw %ax, %xmm0
+; AVX512VL-NEXT:    vpbroadcastw %eax, %xmm0
 ; AVX512VL-NEXT:    retq
   %tmp = load i16, i16* %ptr, align 2
   %tmp1 = sext i16 %tmp to i32

@@ -70,7 +70,8 @@ enum SIEncodingFamily {
   SI = 0,
   VI = 1,
   SDWA = 2,
-  SDWA9 = 3
+  SDWA9 = 3,
+  GFX9 = 4
 };
 
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
@@ -109,6 +110,10 @@ int AMDGPUInstrInfo::pseudoToMCOpcode(int Opcode) const {
   if (get(Opcode).TSFlags & SIInstrFlags::SDWA)
     Gen = ST.getGeneration() == AMDGPUSubtarget::GFX9 ? SIEncodingFamily::SDWA9
                                                       : SIEncodingFamily::SDWA;
+
+  if ((get(Opcode).TSFlags & SIInstrFlags::F16_ZFILL) != 0 &&
+      ST.getGeneration() >= AMDGPUSubtarget::GFX9)
+    Gen = SIEncodingFamily::GFX9;
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 

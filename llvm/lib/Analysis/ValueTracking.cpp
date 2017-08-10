@@ -4531,9 +4531,7 @@ static Optional<bool> isImpliedCondAndOr(const BinaryOperator *LHS,
           LHS->getOpcode() == Instruction::Or) &&
          "Expected LHS to be 'and' or 'or'.");
 
-  // The remaining tests are all recursive, so bail out if we hit the limit.
-  if (Depth == MaxDepth)
-    return None;
+  assert(Depth <= MaxDepth && "Hit recursion limit");
 
   // If the result of an 'or' is false, then we know both legs of the 'or' are
   // false.  Similarly, if the result of an 'and' is true, then we know both
@@ -4556,6 +4554,10 @@ static Optional<bool> isImpliedCondAndOr(const BinaryOperator *LHS,
 Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
                                         const DataLayout &DL, bool LHSIsTrue,
                                         unsigned Depth) {
+  // Bail out when we hit the limit.
+  if (Depth == MaxDepth)
+    return None;
+
   // A mismatch occurs when we compare a scalar cmp to a vector cmp, for
   // example.
   if (LHS->getType() != RHS->getType())

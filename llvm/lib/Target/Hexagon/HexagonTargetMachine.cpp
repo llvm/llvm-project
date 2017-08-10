@@ -109,6 +109,7 @@ SchedCustomRegistry("hexagon", "Run Hexagon's custom scheduler",
 
 namespace llvm {
   extern char &HexagonExpandCondsetsID;
+  void initializeHexagonEarlyIfConversionPass(PassRegistry&);
   void initializeHexagonExpandCondsetsPass(PassRegistry&);
   void initializeHexagonGenMuxPass(PassRegistry&);
   void initializeHexagonLoopIdiomRecognizePass(PassRegistry&);
@@ -163,6 +164,7 @@ extern "C" void LLVMInitializeHexagonTarget() {
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeHexagonEarlyIfConversionPass(PR);
   initializeHexagonGenMuxPass(PR);
   initializeHexagonLoopIdiomRecognizePass(PR);
   initializeHexagonNewValueJumpPass(PR);

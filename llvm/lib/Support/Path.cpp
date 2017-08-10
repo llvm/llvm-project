@@ -439,10 +439,6 @@ void append(SmallVectorImpl<char> &path, Style style, const Twine &a,
   for (auto &component : components) {
     bool path_has_sep =
         !path.empty() && is_separator(path[path.size() - 1], style);
-    bool component_has_sep =
-        !component.empty() && is_separator(component[0], style);
-    bool is_root_name = has_root_name(component, style);
-
     if (path_has_sep) {
       // Strip separators from beginning of component.
       size_t loc = component.find_first_not_of(separators(style));
@@ -453,7 +449,10 @@ void append(SmallVectorImpl<char> &path, Style style, const Twine &a,
       continue;
     }
 
-    if (!component_has_sep && !(path.empty() || is_root_name)) {
+    bool component_has_sep =
+        !component.empty() && is_separator(component[0], style);
+    if (!component_has_sep &&
+        !(path.empty() || has_root_name(component, style))) {
       // Add a separator.
       path.push_back(preferred_separator(style));
     }

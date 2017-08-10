@@ -5227,7 +5227,13 @@ INITIALIZE_PASS_END(ScopInfoRegionPass, "polly-scops",
 //===----------------------------------------------------------------------===//
 ScopInfo::ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
                    LoopInfo &LI, AliasAnalysis &AA, DominatorTree &DT,
-                   AssumptionCache &AC) {
+                   AssumptionCache &AC)
+    : DL(DL), SD(SD), SE(SE), LI(LI), AA(AA), DT(DT), AC(AC) {
+  recompute();
+}
+
+void ScopInfo::recompute() {
+  RegionToScopMap.clear();
   /// Create polyhedral description of scops for all the valid regions of a
   /// function.
   for (auto &It : SD) {
@@ -5246,6 +5252,20 @@ ScopInfo::ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
     assert(Inserted && "Building Scop for the same region twice!");
     (void)Inserted;
   }
+}
+
+bool ScopInfo::invalidate(Function &F, const PreservedAnalyses &PA,
+                          FunctionAnalysisManager::Invalidator &Inv) {
+  // Check whether the analysis, all analyses on functions have been preserved
+  // or anything we're holding references to is being invalidated
+  auto PAC = PA.getChecker<ScopInfoAnalysis>();
+  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>()) ||
+         Inv.invalidate<ScopAnalysis>(F, PA) ||
+         Inv.invalidate<ScalarEvolutionAnalysis>(F, PA) ||
+         Inv.invalidate<LoopAnalysis>(F, PA) ||
+         Inv.invalidate<AAManager>(F, PA) ||
+         Inv.invalidate<DominatorTreeAnalysis>(F, PA) ||
+         Inv.invalidate<AssumptionAnalysis>(F, PA);
 }
 
 AnalysisKey ScopInfoAnalysis::Key;

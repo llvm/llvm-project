@@ -857,7 +857,7 @@ PassBuilder::buildThinLTODefaultPipeline(OptimizationLevel Level,
   // look unreferenced and are removed.
   // FIXME: move this into buildModuleSimplificationPipeline to merge the logic
   //        with SamplePGO.
-  if (PGOOpt && !PGOOpt->ProfileUseFile.empty())
+  if (!PGOOpt || PGOOpt->SampleProfileFile.empty())
     MPM.addPass(PGOIndirectCallPromotion(true /* InLTO */,
                                          false /* SamplePGO */));
 

@@ -1224,7 +1224,7 @@ Define your DebugCounter like this:
 .. code-block:: c++
 
   DEBUG_COUNTER(DeleteAnInstruction, "passname-delete-instruction",
-		"Controls which instructions get delete").
+		"Controls which instructions get delete")
 
 The ``DEBUG_COUNTER`` macro defines a static variable, whose name
 is specified by the first argument.  The name of the counter

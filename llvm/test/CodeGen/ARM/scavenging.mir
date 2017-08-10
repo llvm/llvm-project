@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=arm-arm-none-eabi -mcpu=cortex-m0 -run-pass scavenger-test | FileCheck %s
+# RUN: llc -o - %s -mtriple=thumb-arm-none-eabi -mcpu=cortex-m0 -run-pass scavenger-test | FileCheck %s
 ---
 # CHECK-LABEL: name: scavengebug0
 # Make sure we are not spilling/using a physreg used in the very last

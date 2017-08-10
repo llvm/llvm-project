@@ -302,7 +302,21 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_VSELECT(SDNode *N) {
-  SDValue Cond = GetScalarizedVector(N->getOperand(0));
+  SDValue Cond = N->getOperand(0);
+  EVT OpVT = Cond.getValueType();
+  SDLoc DL(N);
+  // The vselect result and true/value operands needs scalarizing, but it's
+  // not a given that the Cond does. For instance, in AVX512 v1i1 is legal.
+  // See the similar logic in ScalarizeVecRes_VSETCC
+  if (getTypeAction(OpVT) == TargetLowering::TypeScalarizeVector) {
+    Cond = GetScalarizedVector(Cond);
+  } else {
+    EVT VT = OpVT.getVectorElementType();
+    Cond = DAG.getNode(
+        ISD::EXTRACT_VECTOR_ELT, DL, VT, Cond,
+        DAG.getConstant(0, DL, TLI.getVectorIdxTy(DAG.getDataLayout())));
+  }
+
   SDValue LHS = GetScalarizedVector(N->getOperand(1));
   TargetLowering::BooleanContent ScalarBool =
       TLI.getBooleanContents(false, false);

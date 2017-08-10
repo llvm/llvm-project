@@ -3660,6 +3660,7 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
 
   // FIXME: This code is nearly duplicated in InstCombine. Using/refactoring
   // decomposeBitTestICmp() might help.
+  // FIXME this should support ICMP_SLE/SGE forms as well
   if (ICmpInst::isEquality(Pred) && match(CmpRHS, m_Zero())) {
     Value *X;
     const APInt *Y;
