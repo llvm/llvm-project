@@ -94,6 +94,15 @@ public:
     Adapters.reserve(ParamCount);
   }
 
+  formatv_object_base(formatv_object_base const &rhs) = delete;
+
+  formatv_object_base(formatv_object_base &&rhs)
+      : Fmt(std::move(rhs.Fmt)),
+        Adapters(), // Adapters are initialized by formatv_object
+        Replacements(std::move(rhs.Replacements)) {
+    Adapters.reserve(rhs.Adapters.size());
+  };
+
   void format(raw_ostream &S) const {
     for (auto &R : Replacements) {
       if (R.Type == ReplacementType::Empty)
@@ -147,6 +156,14 @@ public:
   formatv_object(StringRef Fmt, Tuple &&Params)
       : formatv_object_base(Fmt, std::tuple_size<Tuple>::value),
         Parameters(std::move(Params)) {
+    Adapters = apply_tuple(create_adapters(), Parameters);
+  }
+
+  formatv_object(formatv_object const &rhs) = delete;
+
+  formatv_object(formatv_object &&rhs)
+      : formatv_object_base(std::move(rhs)),
+        Parameters(std::move(rhs.Parameters)) {
     Adapters = apply_tuple(create_adapters(), Parameters);
   }
 };

@@ -11,6 +11,9 @@ def isCI : Predicate<"Subtarget->getGeneration() "
 def isCIOnly : Predicate<"Subtarget->getGeneration() =="
                          "SISubtarget::SEA_ISLANDS">,
   AssemblerPredicate <"FeatureSeaIslands">;
+def isVIOnly : Predicate<"Subtarget->getGeneration() =="
+                         "SISubtarget::VOLCANIC_ISLANDS">,
+  AssemblerPredicate <"FeatureVolcanicIslands">;
 
 def DisableInst : Predicate <"false">, AssemblerPredicate<"FeatureDisable">;
 
@@ -22,6 +25,7 @@ def SIEncodingFamily {
   int VI = 1;
   int SDWA = 2;
   int SDWA9 = 3;
+  int GFX9 = 4;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1762,7 +1766,8 @@ def getMCOpcodeGen : InstrMapping {
   let ValueCols = [[!cast<string>(SIEncodingFamily.SI)],
                    [!cast<string>(SIEncodingFamily.VI)],
                    [!cast<string>(SIEncodingFamily.SDWA)],
-                   [!cast<string>(SIEncodingFamily.SDWA9)]];
+                   [!cast<string>(SIEncodingFamily.SDWA9)],
+                   [!cast<string>(SIEncodingFamily.GFX9)]];
 }
 
 // Get equivalent SOPK instruction.

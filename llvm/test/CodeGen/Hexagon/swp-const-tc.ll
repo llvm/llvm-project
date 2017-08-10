@@ -4,7 +4,7 @@
 ; of computing a new LC0 value.
 
 ; CHECK-LABEL: @test
-; CHECK: loop0(.LBB0_1,#998)
+; CHECK: loop0(.LBB0_1,#999)
 
 define i32 @test(i32* %A, i32* %B, i32 %count) {
 entry:

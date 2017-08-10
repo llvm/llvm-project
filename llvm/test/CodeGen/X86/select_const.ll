@@ -256,6 +256,79 @@ define i64 @select_lea_9(i1 zeroext %cond) {
   ret i64 %sel
 }
 
+; Should this be 'sbb x,x' or 'sbb 0,x' with simpler LEA or add?
+
+define i64 @sel_1_2(i64 %x, i64 %y) {
+; CHECK-LABEL: sel_1_2:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    cmpq $42, %rdi
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    leaq 2(%rax,%rsi), %rax
+; CHECK-NEXT:    retq
+  %cmp = icmp ult i64 %x, 42
+  %sel = select i1 %cmp, i64 1, i64 2
+  %sub = add i64 %sel, %y
+  ret i64 %sub
+}
+
+; No LEA with 8-bit or 16-bit, but this shouldn't need branches or cmov.
+
+define i8 @sel_1_neg1(i32 %x) {
+; CHECK-LABEL: sel_1_neg1:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    cmpl $42, %edi
+; CHECK-NEXT:    movb $3, %al
+; CHECK-NEXT:    jg .LBB23_2
+; CHECK-NEXT:  # BB#1:
+; CHECK-NEXT:    movb $-1, %al
+; CHECK-NEXT:  .LBB23_2:
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt i32 %x, 42
+  %sel = select i1 %cmp, i8 3, i8 -1
+  ret i8 %sel
+}
+
+define i16 @sel_neg1_1(i32 %x) {
+; CHECK-LABEL: sel_neg1_1:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    cmpl $42, %edi
+; CHECK-NEXT:    movw $-1, %cx
+; CHECK-NEXT:    movw $3, %ax
+; CHECK-NEXT:    cmovgw %cx, %ax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt i32 %x, 42
+  %sel = select i1 %cmp, i16 -1, i16 3
+  ret i16 %sel
+}
+
+; If the comparison is available, the predicate can be inverted.
+
+define i32 @sel_1_neg1_32(i32 %x) {
+; CHECK-LABEL: sel_1_neg1_32:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    cmpl $42, %edi
+; CHECK-NEXT:    movl $8, %ecx
+; CHECK-NEXT:    movl $-1, %eax
+; CHECK-NEXT:    cmovgl %ecx, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt i32 %x, 42
+  %sel = select i1 %cmp, i32 8, i32 -1
+  ret i32 %sel
+}
+
+define i32 @sel_neg1_1_32(i32 %x) {
+; CHECK-LABEL: sel_neg1_1_32:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    cmpl $42, %edi
+; CHECK-NEXT:    movl $-7, %ecx
+; CHECK-NEXT:    movl $2, %eax
+; CHECK-NEXT:    cmovgl %ecx, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt i32 %x, 42
+  %sel = select i1 %cmp, i32 -7, i32 2
+  ret i32 %sel
+}
+
 
 ; If the constants differ by a large power-of-2, that can be a shift of the difference plus the smaller constant.
 ; select Cond, C1, C2 --> add (mul (zext Cond), C1-C2), C2
@@ -265,10 +338,10 @@ define i8 @select_pow2_diff(i1 zeroext %cond) {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    movb $19, %al
-; CHECK-NEXT:    jne .LBB22_2
+; CHECK-NEXT:    jne .LBB27_2
 ; CHECK-NEXT:  # BB#1:
 ; CHECK-NEXT:    movb $3, %al
-; CHECK-NEXT:  .LBB22_2:
+; CHECK-NEXT:  .LBB27_2:
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i8 19, i8 3
   ret i8 %sel
@@ -309,6 +382,24 @@ define i64 @select_pow2_diff_neg_invert(i1 zeroext %cond) {
   %sel = select i1 %cond, i64 -99, i64 29
   ret i64 %sel
 }
+
+; This doesn't need a branch, but don't do the wrong thing if subtraction of the constants overflows.
+
+define i8 @sel_67_neg125(i32 %x) {
+; CHECK-LABEL: sel_67_neg125:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    cmpl $42, %edi
+; CHECK-NEXT:    movb $67, %al
+; CHECK-NEXT:    jg .LBB31_2
+; CHECK-NEXT:  # BB#1:
+; CHECK-NEXT:    movb $-125, %al
+; CHECK-NEXT:  .LBB31_2:
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt i32 %x, 42
+  %sel = select i1 %cmp, i8 67, i8 -125
+  ret i8 %sel
+}
+
 
 ; In general, select of 2 constants could be:
 ; select Cond, C1, C2 --> add (mul (zext Cond), C1-C2), C2 --> add (and (sext Cond), C1-C2), C2
@@ -368,11 +459,11 @@ define <4 x i32> @sel_constants_add_constant_vec(i1 %cond) {
 ; CHECK-LABEL: sel_constants_add_constant_vec:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB30_1
+; CHECK-NEXT:    jne .LBB36_1
 ; CHECK-NEXT:  # BB#2:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [12,13,14,15]
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB30_1:
+; CHECK-NEXT:  .LBB36_1:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [4294967293,14,4,4]
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, <4 x i32> <i32 -4, i32 12, i32 1, i32 0>, <4 x i32> <i32 11, i32 11, i32 11, i32 11>
@@ -384,11 +475,11 @@ define <2 x double> @sel_constants_fmul_constant_vec(i1 %cond) {
 ; CHECK-LABEL: sel_constants_fmul_constant_vec:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB31_1
+; CHECK-NEXT:    jne .LBB37_1
 ; CHECK-NEXT:  # BB#2:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.188300e+02,3.454000e+01]
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB31_1:
+; CHECK-NEXT:  .LBB37_1:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [-2.040000e+01,3.768000e+01]
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, <2 x double> <double -4.0, double 12.0>, <2 x double> <double 23.3, double 11.0>

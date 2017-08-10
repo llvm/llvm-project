@@ -264,8 +264,6 @@ public:
 
   bool LSRWithInstrQueries() { return false; }
 
-  bool isFoldableMemAccessOffset(Instruction *I, int64_t Offset) { return true; }
-
   bool isTruncateFree(Type *Ty1, Type *Ty2) { return false; }
 
   bool isProfitableToHoist(Instruction *I) { return true; }

@@ -13182,9 +13182,15 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
                                     SDValue(NewLoad.getNode(), 1));
     }
 
-    // Replace the all stores with the new store.
-    for (unsigned i = 0; i < NumElem; ++i)
+    // Replace the all stores with the new store. Recursively remove
+    // corresponding value if its no longer used.
+    for (unsigned i = 0; i < NumElem; ++i) {
+      SDValue Val = StoreNodes[i].MemNode->getOperand(1);
       CombineTo(StoreNodes[i].MemNode, NewStore);
+      if (Val.getNode()->use_empty())
+        recursivelyDeleteUnusedNodes(Val.getNode());
+    }
+
     RV = true;
     StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
     continue;

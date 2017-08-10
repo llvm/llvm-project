@@ -2431,7 +2431,7 @@ define <32 x i8> @insert_dup_elt1_mem_v32i8_sext_i8(i8* %ptr) {
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    movsbl (%rdi), %eax
 ; AVX512VL-NEXT:    shrl $8, %eax
-; AVX512VL-NEXT:    vpbroadcastb %al, %ymm0
+; AVX512VL-NEXT:    vpbroadcastb %eax, %ymm0
 ; AVX512VL-NEXT:    retq
   %tmp = load i8, i8* %ptr, align 1
   %tmp1 = sext i8 %tmp to i32

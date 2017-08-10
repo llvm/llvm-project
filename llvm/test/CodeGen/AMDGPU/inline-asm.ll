@@ -246,3 +246,19 @@ entry:
   store i32 %add, i32 addrspace(1)* undef
   ret void
 }
+
+; CHECK-LABEL: {{^}}asm_constraint_c_n:
+; CHECK: s_trap 10{{$}}
+define amdgpu_kernel void @asm_constraint_c_n()  {
+entry:
+  tail call void asm sideeffect "s_trap ${0:c}", "n"(i32 10) #1
+  ret void
+}
+
+; CHECK-LABEL: {{^}}asm_constraint_n_n:
+; CHECK: s_trap -10{{$}}
+define amdgpu_kernel void @asm_constraint_n_n()  {
+entry:
+  tail call void asm sideeffect "s_trap ${0:n}", "n"(i32 10) #1
+  ret void
+}

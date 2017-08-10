@@ -7704,9 +7704,9 @@ Semantics:
 """"""""""
 
 The contents of memory at the location specified by the '``<pointer>``' operand
-is read and compared to '``<cmp>``'; if the read value is the equal, the
-'``<new>``' is written. The original value at the location is returned, together
-with a flag indicating success (true) or failure (false).
+is read and compared to '``<cmp>``'; if the values are equal, '``<new>``' is
+written to the location. The original value at the location is returned,
+together with a flag indicating success (true) or failure (false).
 
 If the cmpxchg operation is marked as ``weak`` then a spurious failure is
 permitted: the operation may not write ``<new>`` even if the comparison

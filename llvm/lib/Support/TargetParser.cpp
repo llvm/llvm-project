@@ -463,6 +463,8 @@ bool llvm::AArch64::getArchFeatures(AArch64::ArchKind AK,
     Features.push_back("+v8.1a");
   if (AK == AArch64::ArchKind::ARMV8_2A)
     Features.push_back("+v8.2a");
+  if (AK == AArch64::ArchKind::ARMV8_3A)
+    Features.push_back("+v8.3a");
 
   return AK != AArch64::ArchKind::INVALID;
 }
@@ -567,6 +569,7 @@ static StringRef getArchSynonym(StringRef Arch) {
       .Cases("v8", "v8a", "aarch64", "arm64", "v8-a")
       .Case("v8.1a", "v8.1-a")
       .Case("v8.2a", "v8.2-a")
+      .Case("v8.3a", "v8.3-a")
       .Case("v8r", "v8-r")
       .Case("v8m.base", "v8-m.base")
       .Case("v8m.main", "v8-m.main")
@@ -719,6 +722,7 @@ ARM::ProfileKind ARM::parseArchProfile(StringRef Arch) {
   case ARM::ArchKind::ARMV8A:
   case ARM::ArchKind::ARMV8_1A:
   case ARM::ArchKind::ARMV8_2A:
+  case ARM::ArchKind::ARMV8_3A:
     return ARM::ProfileKind::A;
     LLVM_FALLTHROUGH;
   case ARM::ArchKind::ARMV2:
@@ -781,6 +785,7 @@ unsigned llvm::ARM::parseArchVersion(StringRef Arch) {
   case ARM::ArchKind::ARMV8A:
   case ARM::ArchKind::ARMV8_1A:
   case ARM::ArchKind::ARMV8_2A:
+  case ARM::ArchKind::ARMV8_3A:
   case ARM::ArchKind::ARMV8R:
   case ARM::ArchKind::ARMV8MBaseline:
   case ARM::ArchKind::ARMV8MMainline:
