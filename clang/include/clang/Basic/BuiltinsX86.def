@@ -33,6 +33,7 @@
 // TODO: Make this somewhat generic so that other backends
 // can use it?
 BUILTIN(__builtin_cpu_supports, "bcC*", "nc")
+BUILTIN(__builtin_cpu_is, "bcC*", "nc")
 
 // Undefined Values
 //

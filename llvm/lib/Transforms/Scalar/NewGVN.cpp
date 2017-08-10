@@ -118,14 +118,18 @@ STATISTIC(NumGVNPHIOfOpsCreated, "Number of PHI of ops created");
 STATISTIC(NumGVNPHIOfOpsEliminations,
           "Number of things eliminated using PHI of ops");
 DEBUG_COUNTER(VNCounter, "newgvn-vn",
-              "Controls which instructions are value numbered")
+              "Controls which instructions are value numbered");
 DEBUG_COUNTER(PHIOfOpsCounter, "newgvn-phi",
-              "Controls which instructions we create phi of ops for")
+              "Controls which instructions we create phi of ops for");
 // Currently store defining access refinement is too slow due to basicaa being
 // egregiously slow.  This flag lets us keep it working while we work on this
 // issue.
 static cl::opt<bool> EnableStoreRefinement("enable-store-refinement",
                                            cl::init(false), cl::Hidden);
+
+/// Currently, the generation "phi of ops" can result in correctness issues.
+static cl::opt<bool> EnablePhiOfOps("enable-phi-of-ops", cl::init(false),
+                                    cl::Hidden);
 
 //===----------------------------------------------------------------------===//
 //                                GVN Pass
@@ -2442,6 +2446,8 @@ void NewGVN::addPhiOfOps(PHINode *Op, BasicBlock *BB,
 }
 
 static bool okayForPHIOfOps(const Instruction *I) {
+  if (!EnablePhiOfOps)
+    return false;
   return isa<BinaryOperator>(I) || isa<SelectInst>(I) || isa<CmpInst>(I) ||
          isa<LoadInst>(I);
 }

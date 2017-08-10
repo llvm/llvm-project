@@ -495,6 +495,10 @@ else ()
       set(_arch ${arch})
       if("${arch}" STREQUAL "i686")
         set(_arch "i386|i686")
+      elseif("${arch}" STREQUAL "armv6m")
+        set(_arch "arm|armv6m")
+      elseif("${arch}" MATCHES "^(armhf|armv7|armv7s|armv7k|armv7m|armv7em)$")
+        set(_arch "arm")
       endif()
 
       # Filter out generic versions of routines that are re-implemented in

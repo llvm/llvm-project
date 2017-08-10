@@ -12677,12 +12677,16 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
                 SourceLocation());
   D.SetIdentifier(&II, Loc);
 
-  // Insert this function into translation-unit scope.
+  // Insert this function into the enclosing block scope.
+  while (S && !S->isCompoundStmtScope())
+    S = S->getParent();
+  if (S == nullptr)
+    S = TUScope;
 
   DeclContext *PrevDC = CurContext;
   CurContext = Context.getTranslationUnitDecl();
 
-  FunctionDecl *FD = cast<FunctionDecl>(ActOnDeclarator(TUScope, D));
+  FunctionDecl *FD = cast<FunctionDecl>(ActOnDeclarator(S, D));
   FD->setImplicit();
 
   CurContext = PrevDC;

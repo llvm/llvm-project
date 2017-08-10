@@ -30,6 +30,7 @@ const auto DefaultTupleMakeFunctions = "::std::make_pair; ::std::make_tuple";
 
 UseEmplaceCheck::UseEmplaceCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      IgnoreImplicitConstructors(Options.get("IgnoreImplicitConstructors", 0)),
       ContainersWithPushBack(utils::options::parseStringList(Options.get(
           "ContainersWithPushBack", DefaultContainersWithPushBack))),
       SmartPointers(utils::options::parseStringList(
@@ -120,9 +121,13 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CXXMemberCallExpr>("call");
-  const auto *InnerCtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
+  const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
   const auto *MakeCall = Result.Nodes.getNodeAs<CallExpr>("make");
-  assert((InnerCtorCall || MakeCall) && "No push_back parameter matched");
+  assert((CtorCall || MakeCall) && "No push_back parameter matched");
+
+  if (IgnoreImplicitConstructors && CtorCall && CtorCall->getNumArgs() >= 1 &&
+      CtorCall->getArg(0)->getSourceRange() == CtorCall->getSourceRange())
+    return;
 
   const auto FunctionNameSourceRange = CharSourceRange::getCharRange(
       Call->getExprLoc(), Call->getArg(0)->getExprLoc());
@@ -138,14 +143,14 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceRange CallParensRange =
       MakeCall ? SourceRange(MakeCall->getCallee()->getLocEnd(),
                              MakeCall->getRParenLoc())
-               : InnerCtorCall->getParenOrBraceRange();
+               : CtorCall->getParenOrBraceRange();
 
   // Finish if there is no explicit constructor call.
   if (CallParensRange.getBegin().isInvalid())
     return;
 
   const SourceLocation ExprBegin =
-      MakeCall ? MakeCall->getExprLoc() : InnerCtorCall->getExprLoc();
+      MakeCall ? MakeCall->getExprLoc() : CtorCall->getExprLoc();
 
   // Range for constructor name and opening brace.
   const auto ParamCallSourceRange =

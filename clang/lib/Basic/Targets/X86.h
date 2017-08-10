@@ -382,6 +382,8 @@ public:
 
   bool validateCpuSupports(StringRef Name) const override;
 
+  bool validateCpuIs(StringRef Name) const override;
+
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
 

@@ -10,6 +10,11 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MNOABICALLS %s
 // CHECK-MNOABICALLS: "-target-feature" "+noabicalls"
 //
+// -mno-abicalls non-PIC N64
+// RUN: %clang -target mips64-linux-gnu -### -c -fno-PIC %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MNOABICALLS-N64NPIC %s
+// CHECK-MNOABICALLS-N64NPIC: "-target-feature" "+noabicalls"
+//
 // -mgpopt
 // RUN: %clang -target mips-linux-gnu -### -c %s -mno-gpopt -mgpopt -Wno-unsupported-gpopt 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MGPOPT-DEF-ABICALLS %s
@@ -331,11 +336,15 @@
 // CHECK-IMG-SINGLEFLOAT-FPXX: "-target-feature" "+fpxx"
 
 // -mlong-call
-// RUN: %clang -target mips-img-linux-gnu -### -c %s -mlong-calls 2>&1 \
+// RUN: %clang -target mips-img-linux-gnu -### -c %s \
+// RUN:        -mno-abicalls -mlong-calls 2>&1 \
 // RUN:   | FileCheck --check-prefix=LONG-CALLS-ON %s
-// RUN: %clang -target mips-img-linux-gnu -### -c %s -mno-long-calls 2>&1 \
+// RUN: %clang -target mips-img-linux-gnu -### -c %s \
+// RUN:        -mno-abicalls -mno-long-calls 2>&1 \
 // RUN:   | FileCheck --check-prefix=LONG-CALLS-OFF %s
 // RUN: %clang -target mips-img-linux-gnu -### -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=LONG-CALLS-DEF %s
+// RUN: %clang -target mips-img-linux-gnu -### -c %s -mlong-calls 2>&1 \
 // RUN:   | FileCheck --check-prefix=LONG-CALLS-DEF %s
 // LONG-CALLS-ON: "-target-feature" "+long-calls"
 // LONG-CALLS-OFF: "-target-feature" "-long-calls"

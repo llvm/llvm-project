@@ -127,47 +127,13 @@ SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
                        uint8_t Type)
     : SymbolKind(K), NeedsPltAddr(false), IsLocal(IsLocal),
       IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
-      IsInIgot(false), Type(Type), StOther(StOther), Name(Name) {}
+      IsInIgot(false), IsPreemptible(false), Type(Type), StOther(StOther),
+      Name(Name) {}
 
 InputFile *SymbolBody::getFile() const {
   if (isLocal())
     return cast<InputSectionBase>(cast<DefinedRegular>(this)->Section)->File;
   return symbol()->File;
-}
-
-// Returns true if a symbol can be replaced at load-time by a symbol
-// with the same name defined in other ELF executable or DSO.
-bool SymbolBody::isPreemptible() const {
-  if (isLocal())
-    return false;
-
-  // Shared symbols resolve to the definition in the DSO. The exceptions are
-  // symbols with copy relocations (which resolve to .bss) or preempt plt
-  // entries (which resolve to that plt entry).
-  if (auto *SS = dyn_cast<SharedSymbol>(this))
-    return !SS->CopyRelSec && !NeedsPltAddr;
-
-  // Only symbols that appear in dynsym can be preempted.
-  if (!symbol()->includeInDynsym())
-    return false;
-
-  // Only default visibility symbols can be preempted.
-  if (symbol()->Visibility != STV_DEFAULT)
-    return false;
-
-  // Undefined symbols in non-DSOs are usually just an error, so it
-  // doesn't matter whether we return true or false here. However, if
-  // -unresolved-symbols=ignore-all is specified, undefined symbols in
-  // executables are automatically exported so that the runtime linker
-  // can try to resolve them. In that case, they is preemptible. So, we
-  // return true for an undefined symbol in case the option is specified.
-  if (!Config->Shared)
-    return isUndefined();
-
-  // -Bsymbolic means that definitions are not preempted.
-  if (Config->Bsymbolic || (Config->BsymbolicFunctions && isFunc()))
-    return !isDefined();
-  return true;
 }
 
 // Overwrites all attributes with Other's so that this symbol becomes
@@ -307,7 +273,7 @@ DefinedCommon::DefinedCommon(StringRef Name, uint64_t Size, uint32_t Alignment,
                              uint8_t StOther, uint8_t Type)
     : Defined(SymbolBody::DefinedCommonKind, Name, /*IsLocal=*/false, StOther,
               Type),
-      Alignment(Alignment), Size(Size) {}
+      Live(!Config->GcSections), Alignment(Alignment), Size(Size) {}
 
 // If a shared symbol is referred via a copy relocation, its alignment
 // becomes part of the ABI. This function returns a symbol alignment.

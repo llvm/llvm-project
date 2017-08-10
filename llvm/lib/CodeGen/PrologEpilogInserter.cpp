@@ -489,7 +489,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
 
 /// Insert restore code for the callee-saved registers used in the function.
 static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
-                              ArrayRef<CalleeSavedInfo> CSI) {
+                              std::vector<CalleeSavedInfo> &CSI) {
   MachineFunction &Fn = *RestoreBlock.getParent();
   const TargetInstrInfo &TII = *Fn.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = Fn.getSubtarget().getFrameLowering();
@@ -534,7 +534,7 @@ static void doSpillCalleeSavedRegs(MachineFunction &Fn, RegScavenger *RS,
   if (!F->hasFnAttribute(Attribute::Naked)) {
     MFI.setCalleeSavedInfoValid(true);
 
-    ArrayRef<CalleeSavedInfo> CSI = MFI.getCalleeSavedInfo();
+    std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
     if (!CSI.empty()) {
       for (MachineBasicBlock *SaveBlock : SaveBlocks) {
         insertCSRSaves(*SaveBlock, CSI);

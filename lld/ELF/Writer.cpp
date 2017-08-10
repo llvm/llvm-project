@@ -451,7 +451,11 @@ static bool includeInSymtab(const SymbolBody &B) {
     if (auto *S = dyn_cast<MergeInputSection>(Sec))
       if (!S->getSectionPiece(D->Value)->Live)
         return false;
+    return true;
   }
+
+  if (auto *Sym = dyn_cast<DefinedCommon>(&B))
+    return Sym->Live;
   return true;
 }
 
@@ -1149,6 +1153,39 @@ static void removeUnusedSyntheticSections() {
   }
 }
 
+// Returns true if a symbol can be replaced at load-time by a symbol
+// with the same name defined in other ELF executable or DSO.
+static bool computeIsPreemptible(const SymbolBody &B) {
+  assert(!B.isLocal());
+  // Shared symbols resolve to the definition in the DSO. The exceptions are
+  // symbols with copy relocations (which resolve to .bss) or preempt plt
+  // entries (which resolve to that plt entry).
+  if (auto *SS = dyn_cast<SharedSymbol>(&B))
+    return !SS->CopyRelSec && !SS->NeedsPltAddr;
+
+  // Only symbols that appear in dynsym can be preempted.
+  if (!B.symbol()->includeInDynsym())
+    return false;
+
+  // Only default visibility symbols can be preempted.
+  if (B.symbol()->Visibility != STV_DEFAULT)
+    return false;
+
+  // Undefined symbols in non-DSOs are usually just an error, so it
+  // doesn't matter whether we return true or false here. However, if
+  // -unresolved-symbols=ignore-all is specified, undefined symbols in
+  // executables are automatically exported so that the runtime linker
+  // can try to resolve them. In that case, they is preemptible. So, we
+  // return true for an undefined symbol in case the option is specified.
+  if (!Config->Shared)
+    return B.isUndefined();
+
+  // -Bsymbolic means that definitions are not preempted.
+  if (Config->Bsymbolic || (Config->BsymbolicFunctions && B.isFunc()))
+    return !B.isDefined();
+  return true;
+}
+
 // Create output section objects and add them to OutputSections.
 template <class ELFT> void Writer<ELFT>::finalizeSections() {
   Out::DebugInfo = findSection(".debug_info");
@@ -1181,6 +1218,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // earlier.
   applySynthetic({In<ELFT>::EhFrame},
                  [](SyntheticSection *SS) { SS->finalizeContents(); });
+
+  for (Symbol *S : Symtab->getSymbols())
+    S->body()->IsPreemptible = computeIsPreemptible(*S->body());
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.

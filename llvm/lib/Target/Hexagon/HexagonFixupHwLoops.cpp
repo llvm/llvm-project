@@ -138,7 +138,7 @@ bool HexagonFixupHwLoops::fixupLoopInstrs(MachineFunction &MF) {
     MachineBasicBlock::iterator MIE = MBB.end();
     while (MII != MIE) {
       InstOffset += HII->getSize(*MII);
-      if (MII->isDebugValue()) {
+      if (MII->isMetaInstruction()) {
         ++MII;
         continue;
       }

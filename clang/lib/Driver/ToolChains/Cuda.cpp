@@ -527,10 +527,14 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     }
 
     StringRef Arch = DAL->getLastArgValue(options::OPT_march_EQ);
-    if (Arch.empty())
-      // Default compute capability for CUDA toolchain is sm_20.
+    if (Arch.empty()) {
+      // Default compute capability for CUDA toolchain is the
+      // lowest compute capability supported by the installed
+      // CUDA version.
       DAL->AddJoinedArg(nullptr,
-          Opts.getOption(options::OPT_march_EQ), "sm_20");
+          Opts.getOption(options::OPT_march_EQ),
+          CudaInstallation.getLowestExistingArch());
+    }
 
     return DAL;
   }

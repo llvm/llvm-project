@@ -36,7 +36,7 @@ public:
                                  const TargetRegisterInfo *TRI) const override;
   bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator MI,
-                                  const std::vector<CalleeSavedInfo> &CSI,
+                                  std::vector<CalleeSavedInfo> &CSI,
                                   const TargetRegisterInfo *TRI) const override;
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;

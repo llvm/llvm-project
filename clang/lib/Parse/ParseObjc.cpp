@@ -2478,7 +2478,7 @@ Parser::ParseObjCSynchronizedStmt(SourceLocation atLoc) {
     operand = Actions.ActOnObjCAtSynchronizedOperand(atLoc, operand.get());
 
   // Parse the compound statement within a new scope.
-  ParseScope bodyScope(this, Scope::DeclScope);
+  ParseScope bodyScope(this, Scope::DeclScope | Scope::CompoundStmtScope);
   StmtResult body(ParseCompoundStatementBody());
   bodyScope.Exit();
 
@@ -2514,7 +2514,7 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
   }
   StmtVector CatchStmts;
   StmtResult FinallyStmt;
-  ParseScope TryScope(this, Scope::DeclScope);
+  ParseScope TryScope(this, Scope::DeclScope | Scope::CompoundStmtScope);
   StmtResult TryBody(ParseCompoundStatementBody());
   TryScope.Exit();
   if (TryBody.isInvalid())
@@ -2535,7 +2535,9 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
       ConsumeToken(); // consume catch
       if (Tok.is(tok::l_paren)) {
         ConsumeParen();
-        ParseScope CatchScope(this, Scope::DeclScope|Scope::AtCatchScope);
+        ParseScope CatchScope(this, Scope::DeclScope |
+                                        Scope::CompoundStmtScope |
+                                        Scope::AtCatchScope);
         if (Tok.isNot(tok::ellipsis)) {
           DeclSpec DS(AttrFactory);
           ParseDeclarationSpecifiers(DS);
@@ -2579,7 +2581,8 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
     } else {
       assert(Tok.isObjCAtKeyword(tok::objc_finally) && "Lookahead confused?");
       ConsumeToken(); // consume finally
-      ParseScope FinallyScope(this, Scope::DeclScope);
+      ParseScope FinallyScope(this,
+                              Scope::DeclScope | Scope::CompoundStmtScope);
 
       StmtResult FinallyBody(true);
       if (Tok.is(tok::l_brace))
@@ -2616,7 +2619,7 @@ Parser::ParseObjCAutoreleasePoolStmt(SourceLocation atLoc) {
   }
   // Enter a scope to hold everything within the compound stmt.  Compound
   // statements can always hold declarations.
-  ParseScope BodyScope(this, Scope::DeclScope);
+  ParseScope BodyScope(this, Scope::DeclScope | Scope::CompoundStmtScope);
 
   StmtResult AutoreleasePoolBody(ParseCompoundStatementBody());
 
@@ -3650,11 +3653,10 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
   assert(Tok.isOneOf(tok::l_brace, tok::kw_try, tok::colon) && 
          "Inline objective-c method not starting with '{' or 'try' or ':'");
   // Enter a scope for the method or c-function body.
-  ParseScope BodyScope(this,
-                       parseMethod
-                       ? Scope::ObjCMethodScope|Scope::FnScope|Scope::DeclScope
-                       : Scope::FnScope|Scope::DeclScope);
-    
+  ParseScope BodyScope(this, (parseMethod ? Scope::ObjCMethodScope : 0) |
+                                 Scope::FnScope | Scope::DeclScope |
+                                 Scope::CompoundStmtScope);
+
   // Tell the actions module that we have entered a method or c-function definition 
   // with the specified Declarator for the method/function.
   if (parseMethod)
