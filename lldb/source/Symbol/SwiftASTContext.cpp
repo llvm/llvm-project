@@ -4583,7 +4583,7 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
         "",        // features
         *getTargetOptions(),
         llvm::Reloc::Static, // TODO verify with Sean, Default went away
-        llvm::CodeModel::Default, optimization_level);
+        llvm::None, optimization_level);
     if (target_machine) {
       // Set the module's string representation.
       const llvm::DataLayout data_layout = target_machine->createDataLayout();
