@@ -741,7 +741,9 @@ TEST(Fuzzer, ForEachNonZeroByte) {
   };
   typedef std::vector<std::pair<size_t, uint8_t> > Vec;
   Vec Res, Expected;
-  auto CB = [&](size_t Idx, uint8_t V) { Res.push_back({Idx, V}); };
+  auto CB = [&](size_t FirstFeature, size_t Idx, uint8_t V) {
+    Res.push_back({FirstFeature + Idx, V});
+  };
   ForEachNonZeroByte(Ar, Ar + N, 100, CB);
   Expected = {{108, 1}, {109, 2}, {118, 3}, {120, 4},
               {135, 5}, {137, 6}, {146, 7}, {163, 8}};

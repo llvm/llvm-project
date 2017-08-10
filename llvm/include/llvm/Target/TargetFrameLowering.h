@@ -193,10 +193,12 @@ public:
   /// restoreCalleeSavedRegisters - Issues instruction(s) to restore all callee
   /// saved registers and returns true if it isn't possible / profitable to do
   /// so by issuing a series of load instructions via loadRegToStackSlot().
+  /// If it returns true, and any of the registers in CSI is not restored,
+  /// it sets the corresponding Restored flag in CSI to false.
   /// Returns false otherwise.
   virtual bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MI,
-                                        const std::vector<CalleeSavedInfo> &CSI,
+                                           std::vector<CalleeSavedInfo> &CSI,
                                         const TargetRegisterInfo *TRI) const {
     return false;
   }

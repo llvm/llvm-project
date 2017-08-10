@@ -24,11 +24,11 @@ define amdgpu_kernel void @test() {
 entry:
 
   %call = call zeroext i1 @_Z30atomic_compare_exchange_weakPU3AS4VU7_AtomiciPU3AS4ii(i32 addrspace(4)* null, i32 addrspace(4)* null, i32 0)
-  %call1 = call zeroext i1 @_Z39atomic_compare_exchange_strong_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(i32 addrspace(4)* null, i32 addrspace(4)* null, i32 0, i32 2, i32 1, i32 4)
-  %call2 = call i32 @_Z25atomic_fetch_add_explicitPU3AS4VU7_Atomicii12memory_order12memory_scope(i32 addrspace(4)* null, i32 1, i32 2, i32 1)
+  %call1 = call zeroext i1 @_Z39atomic_compare_exchange_strong_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(i32 addrspace(4)* null, i32 addrspace(4)* null, i32 0, i32 3, i32 2, i32 4)
+  %call2 = call i32 @_Z25atomic_fetch_add_explicitPU3AS4VU7_Atomicii12memory_order12memory_scope(i32 addrspace(4)* null, i32 1, i32 3, i32 1)
            call void @_Z11atomic_initPU3AS4VU7_Atomicii(i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @test.guide to i32 addrspace(4)*), i32 42)
   %call3 = call i32 @_Z20atomic_load_explicitPU3AS4VU7_Atomici12memory_order(i32 addrspace(4)* null, i32 0)
-           call void @_Z21atomic_store_explicitPU3AS4VU7_Atomicii12memory_order(i32 addrspace(4)* null, i32 0, i32 2)
+           call void @_Z21atomic_store_explicitPU3AS4VU7_Atomicii12memory_order(i32 addrspace(4)* null, i32 0, i32 3)
            call void @my_atomic_compare_exchange_strong_explicit(i32 addrspace(4)* null, i32 addrspace(4)* null, i32 0)
            call void @_Z17atomic_flag_clearPU3AS4VU7_Atomici(i32 addrspace(4)* null)
   ret void

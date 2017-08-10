@@ -1,9 +1,9 @@
-; RUN: llc -march thumb -mcpu=cortex-a8 -relocation-model=static %s -o - | FileCheck -check-prefix=NO-OPTION %s
-; RUN: llc -march thumb -mcpu=cortex-a8 -relocation-model=static %s -o - -mattr=-no-movt | FileCheck -check-prefix=USE-MOVT %s
-; RUN: llc -march thumb -mcpu=cortex-a8 -relocation-model=static %s -o - -mattr=+no-movt | FileCheck -check-prefix=NO-USE-MOVT %s
-; RUN: llc -march thumb -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 | FileCheck -check-prefix=NO-OPTION-O0 %s
-; RUN: llc -march thumb -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 -mattr=-no-movt | FileCheck -check-prefix=USE-MOVT-O0 %s
-; RUN: llc -march thumb -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 -mattr=+no-movt | FileCheck -check-prefix=NO-USE-MOVT-O0 %s
+; RUN: llc -mcpu=cortex-a8 -relocation-model=static %s -o - | FileCheck -check-prefix=NO-OPTION %s
+; RUN: llc -mcpu=cortex-a8 -relocation-model=static %s -o - -mattr=-no-movt | FileCheck -check-prefix=USE-MOVT %s
+; RUN: llc -mcpu=cortex-a8 -relocation-model=static %s -o - -mattr=+no-movt | FileCheck -check-prefix=NO-USE-MOVT %s
+; RUN: llc -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 | FileCheck -check-prefix=NO-OPTION-O0 %s
+; RUN: llc -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 -mattr=-no-movt | FileCheck -check-prefix=USE-MOVT-O0 %s
+; RUN: llc -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 -mattr=+no-movt | FileCheck -check-prefix=NO-USE-MOVT-O0 %s
 
 target triple = "thumb-apple-darwin"
 

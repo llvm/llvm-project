@@ -3,13 +3,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; This test checks that x86-cmov-converter optimization transform CMOV
 ;; instruction into branches when it is profitable.
-;; There are 5 cases below:
+;; There are 6 cases below:
 ;;   1. CmovInCriticalPath:
 ;;        CMOV depends on the condition and it is in the hot path.
 ;;        Thus, it worths transforming.
 ;;
 ;;   2. CmovNotInCriticalPath:
-;;        similar test like in (1), just that CMOV is not in the hot path.
+;;        Similar test like in (1), just that CMOV is not in the hot path.
 ;;        Thus, it does not worth transforming.
 ;;
 ;;   3. MaxIndex:
@@ -26,16 +26,21 @@
 ;;        Usually, binary search CMOV is not predicted.
 ;;        Thus, it does not worth transforming.
 ;;
+;;   6. SmallGainPerLoop:
+;;        The gain percentage from converting CMOV into branch is acceptable,
+;;        however, the absolute gain is smaller than a threshold.
+;;        Thus, it does not worth transforming.
+;;
 ;; Test was created using the following command line:
 ;; > clang -S -O2 -m64 -fno-vectorize -fno-unroll-loops -emit-llvm foo.c -o -
 ;; Where foo.c is:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;void CmovInHotPath(int n, int a, int b, int *c, int *d) {
 ;;  for (int i = 0; i < n; i++) {
-;;    int t = c[i];
+;;    int t = c[i] + 1;
 ;;    if (c[i] * a > b)
 ;;      t = 10;
-;;    c[i] = t;
+;;    c[i] = (c[i] + 1) * t;
 ;;  }
 ;;}
 ;;
@@ -87,6 +92,16 @@
 ;;  }
 ;;  return Curr->Val;
 ;;}
+;;
+;;
+;;void SmallGainPerLoop(int n, int a, int b, int *c, int *d) {
+;;  for (int i = 0; i < n; i++) {
+;;    int t = c[i];
+;;    if (c[i] * a > b)
+;;      t = 10;
+;;    c[i] = t;
+;;  }
+;;}
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 %struct.Node = type { i32, %struct.Node*, %struct.Node* }
@@ -111,10 +126,12 @@ for.body:                                         ; preds = %for.body.preheader,
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, i32* %c, i64 %indvars.iv
   %0 = load i32, i32* %arrayidx, align 4
+  %add = add nsw i32 %0, 1
   %mul = mul nsw i32 %0, %a
   %cmp3 = icmp sgt i32 %mul, %b
-  %. = select i1 %cmp3, i32 10, i32 %0
-  store i32 %., i32* %arrayidx, align 4
+  %. = select i1 %cmp3, i32 10, i32 %add
+  %mul7 = mul nsw i32 %., %add
+  store i32 %mul7, i32* %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -251,6 +268,35 @@ while.body:                                       ; preds = %entry, %while.body
 while.end:                                        ; preds = %while.body, %entry
   %.lcssa = phi i32 [ %0, %entry ], [ %2, %while.body ]
   ret i32 %.lcssa
+}
+
+; CHECK-LABEL: SmallGainPerLoop
+; CHECK-NOT: jg
+; CHECK: cmovg
+
+define void @SmallGainPerLoop(i32 %n, i32 %a, i32 %b, i32* nocapture %c, i32* nocapture readnone %d) #0 {
+entry:
+  %cmp14 = icmp sgt i32 %n, 0
+  br i1 %cmp14, label %for.body.preheader, label %for.cond.cleanup
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %n to i64
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
+  %arrayidx = getelementptr inbounds i32, i32* %c, i64 %indvars.iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %mul = mul nsw i32 %0, %a
+  %cmp3 = icmp sgt i32 %mul, %b
+  %. = select i1 %cmp3, i32 10, i32 %0
+  store i32 %., i32* %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

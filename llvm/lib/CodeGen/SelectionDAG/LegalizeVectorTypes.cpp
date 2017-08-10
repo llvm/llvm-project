@@ -302,7 +302,21 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_VSELECT(SDNode *N) {
-  SDValue Cond = GetScalarizedVector(N->getOperand(0));
+  SDValue Cond = N->getOperand(0);
+  EVT OpVT = Cond.getValueType();
+  SDLoc DL(N);
+  // The vselect result and true/value operands needs scalarizing, but it's
+  // not a given that the Cond does. For instance, in AVX512 v1i1 is legal.
+  // See the similar logic in ScalarizeVecRes_VSETCC
+  if (getTypeAction(OpVT) == TargetLowering::TypeScalarizeVector) {
+    Cond = GetScalarizedVector(Cond);
+  } else {
+    EVT VT = OpVT.getVectorElementType();
+    Cond = DAG.getNode(
+        ISD::EXTRACT_VECTOR_ELT, DL, VT, Cond,
+        DAG.getConstant(0, DL, TLI.getVectorIdxTy(DAG.getDataLayout())));
+  }
+
   SDValue LHS = GetScalarizedVector(N->getOperand(1));
   TargetLowering::BooleanContent ScalarBool =
       TLI.getBooleanContents(false, false);
@@ -3055,7 +3069,8 @@ SDValue DAGTypeLegalizer::WidenVSELECTAndMask(SDNode *N) {
 
   // If this is a splitted VSELECT that was previously already handled, do
   // nothing.
-  if (Cond->getValueType(0).getScalarSizeInBits() != 1)
+  EVT CondVT = Cond->getValueType(0);
+  if (CondVT.getScalarSizeInBits() != 1)
     return SDValue();
 
   EVT VSelVT = N->getValueType(0);
@@ -3078,6 +3093,14 @@ SDValue DAGTypeLegalizer::WidenVSELECTAndMask(SDNode *N) {
       SetCCOpVT = TLI.getTypeToTransformTo(Ctx, SetCCOpVT);
     EVT SetCCResVT = getSetCCResultType(SetCCOpVT);
     if (SetCCResVT.getScalarSizeInBits() == 1)
+      return SDValue();
+  } else if (CondVT.getScalarType() == MVT::i1) {
+    // If there is support for an i1 vector mask (or only scalar i1 conditions),
+    // don't touch.
+    while (TLI.getTypeAction(Ctx, CondVT) != TargetLowering::TypeLegal)
+      CondVT = TLI.getTypeToTransformTo(Ctx, CondVT);
+
+    if (CondVT.getScalarType() == MVT::i1)
       return SDValue();
   }
 

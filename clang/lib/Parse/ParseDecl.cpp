@@ -1388,7 +1388,9 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
 
       // If the Decl is on a function, add function parameters to the scope.
       bool HasFunScope = EnterScope && D->isFunctionOrFunctionTemplate();
-      ParseScope FnScope(this, Scope::FnScope|Scope::DeclScope, HasFunScope);
+      ParseScope FnScope(
+          this, Scope::FnScope | Scope::DeclScope | Scope::CompoundStmtScope,
+          HasFunScope);
       if (HasFunScope)
         Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
 

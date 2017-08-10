@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -march=x86 -mcpu=yonah -stats 2>&1 | grep "Number of block tails merged" | grep 16
+; RUN: llc < %s -mtriple=i686-- -mcpu=yonah -stats 2>&1 | grep "Number of block tails merged" | grep 16
 ; PR1909
 
 @.str = internal constant [48 x i8] c"transformed bounds: (%.2f, %.2f), (%.2f, %.2f)\0A\00"		; <[48 x i8]*> [#uses=1]

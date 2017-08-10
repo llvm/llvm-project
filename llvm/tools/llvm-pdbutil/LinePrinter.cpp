@@ -13,7 +13,6 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
-#include "llvm/DebugInfo/MSF/MSFStreamLayout.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/UDTLayout.h"
@@ -244,6 +243,30 @@ void LinePrinter::formatMsfStreamData(StringRef Label, PDBFile &File,
   }
   NewLine();
   OS << ")";
+}
+
+void LinePrinter::formatMsfStreamBlocks(
+    PDBFile &File, const msf::MSFStreamLayout &StreamLayout) {
+  auto Blocks = makeArrayRef(StreamLayout.Blocks);
+  uint32_t L = StreamLayout.Length;
+
+  while (L > 0) {
+    NewLine();
+    assert(!Blocks.empty());
+    OS << formatv("Block {0} (\n", uint32_t(Blocks.front()));
+    uint32_t UsedBytes = std::min(L, File.getBlockSize());
+    ArrayRef<uint8_t> BlockData =
+        cantFail(File.getBlockData(Blocks.front(), File.getBlockSize()));
+    uint64_t BaseOffset = Blocks.front();
+    BaseOffset *= File.getBlockSize();
+    OS << format_bytes_with_ascii(BlockData, BaseOffset, 32, 4,
+                                  CurrentIndent + IndentSpaces, true);
+    NewLine();
+    OS << ")";
+    NewLine();
+    L -= UsedBytes;
+    Blocks = Blocks.drop_front();
+  }
 }
 
 bool LinePrinter::IsTypeExcluded(llvm::StringRef TypeName, uint32_t Size) {

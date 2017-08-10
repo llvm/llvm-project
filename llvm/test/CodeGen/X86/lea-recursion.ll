@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | grep lea | count 13
+; RUN: llc < %s -mtriple=x86_64-- | grep lea | count 13
 
 ; This testcase was written to demonstrate an instruction-selection problem,
 ; however it also happens to expose a limitation in the DAGCombiner's

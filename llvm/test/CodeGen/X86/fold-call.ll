@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 
 ; CHECK: test1
 ; CHECK-NOT: mov

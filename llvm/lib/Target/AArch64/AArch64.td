@@ -118,9 +118,16 @@ def FeatureDisableLatencySchedHeuristic : SubtargetFeature<
     "disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
     "Disable latency scheduling heuristic">;
 
+def FeatureRCPC : SubtargetFeature<"rcpc", "HasRCPC", "true",
+                                   "Enable support for RCPC extension">;
+
 def FeatureUseRSqrt : SubtargetFeature<
     "use-reciprocal-square-root", "UseRSqrt", "true",
     "Use the reciprocal square root approximation">;
+
+def FeatureDotProd : SubtargetFeature<
+    "dotprod", "HasDotProd", "true",
+    "Enable dot product support">;
 
 def FeatureNoNegativeImmediates : SubtargetFeature<"no-neg-immediates",
                                         "NegativeImmediates", "false",
@@ -141,6 +148,9 @@ def HasV8_1aOps : SubtargetFeature<"v8.1a", "HasV8_1aOps", "true",
 
 def HasV8_2aOps : SubtargetFeature<"v8.2a", "HasV8_2aOps", "true",
   "Support ARM v8.2a instructions", [HasV8_1aOps, FeatureRAS]>;
+
+def HasV8_3aOps : SubtargetFeature<"v8.3a", "HasV8_3aOps", "true",
+  "Support ARM v8.3a instructions", [HasV8_2aOps, FeatureRCPC]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

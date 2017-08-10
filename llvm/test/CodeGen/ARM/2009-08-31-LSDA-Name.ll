@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=arm-apple-darwin9 -march=arm | FileCheck %s
+; RUN: llc < %s -mtriple=arm-apple-darwin9 | FileCheck %s
 
 ; CHECK: ldr r0, [[CPI_PERSONALITY:[A-Za-z0-9_]+]]
 ; CHECK: ldr r0, [[CPI_LSDA:[A-Za-z0-9_]+]]

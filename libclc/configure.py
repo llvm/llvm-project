@@ -1,4 +1,11 @@
 #!/usr/bin/python
+from __future__ import print_function
+
+# We only need this for int() cast, which works by default in python 2
+try:
+    from builtins import int
+except:
+    pass
 
 def c_compiler_rule(b, name, description, compiler, flags):
   command = "%s -MMD -MF $out.d %s -c -o $out $in" % (compiler, flags)
@@ -58,19 +65,21 @@ if not pkgconfigdir:
 
 def llvm_config(args):
   try:
-    proc = Popen([llvm_config_exe] + args, stdout=PIPE)
+    # Universal newlines translate different newline formats to '\n'
+    # it also force the input to be string instead of bytes in python 3
+    proc = Popen([llvm_config_exe] + args, stdout=PIPE, universal_newlines=True)
     return proc.communicate()[0].rstrip().replace('\n', ' ')
   except OSError:
-    print "Error executing llvm-config."
-    print "Please ensure that llvm-config is in your $PATH, or use --with-llvm-config."
+    print("Error executing llvm-config.")
+    print("Please ensure that llvm-config is in your $PATH, or use --with-llvm-config.")
     sys.exit(1)
 
-llvm_version = string.split(string.replace(llvm_config(['--version']), 'svn', ''), '.')
+llvm_version = llvm_config(['--version']).replace('svn', '').split('.')
 llvm_int_version = int(llvm_version[0]) * 100 + int(llvm_version[1]) * 10
 llvm_string_version = 'LLVM' + llvm_version[0] + '.' + llvm_version[1]
 
 if llvm_int_version < 400:
-    print "libclc requires LLVM >= 4.0"
+    print("libclc requires LLVM >= 4.0")
     sys.exit(1)
 
 llvm_system_libs = llvm_config(['--system-libs'])
@@ -180,6 +189,10 @@ for target in targets:
   libdirs = filter(lambda d: os.path.isfile(os.path.join(d, 'SOURCES')),
                    [os.path.join(srcdir, subdir, 'lib') for subdir in subdirs])
 
+  # The above are iterables in python3 but we might use them multiple times
+  # if more then one device is supported.
+  incdirs = list(incdirs)
+  libdirs = list(libdirs)
   clang_cl_includes = ' '.join(["-I%s" % incdir for incdir in incdirs])
 
   for device in available_targets[target]['devices']:

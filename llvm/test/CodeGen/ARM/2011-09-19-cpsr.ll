@@ -1,4 +1,4 @@
-; RUN: llc -march=thumb -mcpu=cortex-a8 < %s
+; RUN: llc -mcpu=cortex-a8 < %s
 ; rdar://problem/10137436: sqlite3 miscompile
 ;
 ; CHECK: subs

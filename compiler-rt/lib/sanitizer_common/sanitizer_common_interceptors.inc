@@ -258,7 +258,7 @@ typedef AddrHashMap<CommonInterceptorMetadata, 31051> MetadataHashMap;
 
 static MetadataHashMap *interceptor_metadata_map;
 
-#if SI_NOT_WINDOWS
+#if SI_POSIX
 UNUSED static void SetInterceptorMetadata(__sanitizer_FILE *addr,
                                           const FileMetadata &file) {
   MetadataHashMap::Handle h(interceptor_metadata_map, (uptr)addr);
@@ -285,7 +285,7 @@ UNUSED static void DeleteInterceptorMetadata(void *addr) {
   MetadataHashMap::Handle h(interceptor_metadata_map, (uptr)addr, true);
   CHECK(h.exists());
 }
-#endif  // SI_NOT_WINDOWS
+#endif  // SI_POSIX
 
 #if SANITIZER_INTERCEPT_STRLEN
 INTERCEPTOR(SIZE_T, strlen, const char *s) {
@@ -886,7 +886,7 @@ INTERCEPTOR(long double, frexpl, long double x, int *exp) {
 #define INIT_FREXPF_FREXPL
 #endif  // SANITIZER_INTERCEPT_FREXPF_FREXPL
 
-#if SI_NOT_WINDOWS
+#if SI_POSIX
 static void write_iovec(void *ctx, struct __sanitizer_iovec *iovec,
                         SIZE_T iovlen, SIZE_T maxlen) {
   for (SIZE_T i = 0; i < iovlen && maxlen; ++i) {

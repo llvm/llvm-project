@@ -368,6 +368,11 @@ isl::union_set convertZoneToTimepoints(isl::union_set Zone, bool InclStart,
 isl::union_map convertZoneToTimepoints(isl::union_map Zone, isl::dim Dim,
                                        bool InclStart, bool InclEnd);
 
+/// Overload of convertZoneToTimepoints(isl::map,InclStart,InclEnd) to process
+/// only a single map.
+isl::map convertZoneToTimepoints(isl::map Zone, isl::dim Dim, bool InclStart,
+                                 bool InclEnd);
+
 /// Distribute the domain to the tuples of a wrapped range map.
 ///
 /// @param Map { Domain[] -> [Range1[] -> Range2[]] }

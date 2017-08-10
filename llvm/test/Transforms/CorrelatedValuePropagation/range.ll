@@ -576,3 +576,30 @@ dispatch:
 target93:
   ret i8 %c
 }
+
+define i1 @test20(i64 %a) {
+entry:
+  %b = and i64 %a, 7
+  br label %dispatch
+
+dispatch:
+  switch i64 %a, label %default [
+    i64 0, label %exit2
+    i64 -2147483647, label %exit2
+  ]
+
+default:
+  %c = icmp eq i64 %b, 0
+  br label %exit
+
+exit:
+; Negative test. Shouldn't be incorrectly optimized to "ret i1 false".
+; CHECK-LABEL: @test20(
+; CHECK: exit:
+; CHECK-NOT: ret i1 false
+; CHECK: exit2:
+  ret i1 %c
+
+exit2:
+  ret i1 false
+}

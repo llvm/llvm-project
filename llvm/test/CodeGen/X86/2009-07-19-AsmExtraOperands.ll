@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64
+; RUN: llc < %s -mtriple=x86_64--
 ; PR4583
 
 define i32 @atomic_cmpset_long(i64* %dst, i64 %exp, i64 %src) nounwind ssp noredzone noimplicitfloat {

@@ -26,10 +26,6 @@
 
 using namespace llvm;
 
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-#error "This shouldn't be built without GISel"
-#endif
-
 AMDGPUCallLowering::AMDGPUCallLowering(const AMDGPUTargetLowering &TLI)
   : CallLowering(&TLI), AMDGPUASI(TLI.getAMDGPUAS()) {
 }
@@ -45,7 +41,7 @@ unsigned AMDGPUCallLowering::lowerParameterPtr(MachineIRBuilder &MIRBuilder,
                                                unsigned Offset) const {
 
   MachineFunction &MF = MIRBuilder.getMF();
-  const SIRegisterInfo *TRI = MF.getSubtarget<SISubtarget>().getRegisterInfo();
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = *MF.getFunction();
   const DataLayout &DL = F.getParent()->getDataLayout();
@@ -53,7 +49,7 @@ unsigned AMDGPUCallLowering::lowerParameterPtr(MachineIRBuilder &MIRBuilder,
   LLT PtrType = getLLTForType(*PtrTy, DL);
   unsigned DstReg = MRI.createGenericVirtualRegister(PtrType);
   unsigned KernArgSegmentPtr =
-      TRI->getPreloadedValue(MF, SIRegisterInfo::KERNARG_SEGMENT_PTR);
+    MFI->getPreloadedReg(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
   unsigned KernArgSegmentVReg = MRI.getLiveInVirtReg(KernArgSegmentPtr);
 
   unsigned OffsetReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
@@ -144,18 +140,38 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   Function::const_arg_iterator CurOrigArg = F.arg_begin();
   const AMDGPUTargetLowering &TLI = *getTLI<AMDGPUTargetLowering>();
   for (unsigned i = 0; i != NumArgs; ++i, ++CurOrigArg) {
-    MVT ValVT = TLI.getValueType(DL, CurOrigArg->getType()).getSimpleVT();
+    EVT ValEVT = TLI.getValueType(DL, CurOrigArg->getType());
+
+    // We can only hanlde simple value types at the moment.
+    if (!ValEVT.isSimple())
+      return false;
+    MVT ValVT = ValEVT.getSimpleVT();
     ISD::ArgFlagsTy Flags;
+    ArgInfo OrigArg{VRegs[i], CurOrigArg->getType()};
+    setArgFlags(OrigArg, i + 1, DL, F);
     Flags.setOrigAlign(DL.getABITypeAlignment(CurOrigArg->getType()));
     CCAssignFn *AssignFn = CCAssignFnForCall(F.getCallingConv(),
                                              /*IsVarArg=*/false);
     bool Res =
-        AssignFn(i, ValVT, ValVT, CCValAssign::Full, Flags, CCInfo);
-    assert(!Res && "Call operand has unhandled type");
-    (void)Res;
+        AssignFn(i, ValVT, ValVT, CCValAssign::Full, OrigArg.Flags, CCInfo);
+
+    // Fail if we don't know how to handle this type.
+    if (Res)
+      return false;
   }
 
   Function::const_arg_iterator Arg = F.arg_begin();
+
+  if (F.getCallingConv() == CallingConv::AMDGPU_VS) {
+    for (unsigned i = 0; i != NumArgs; ++i, ++Arg) {
+      CCValAssign &VA = ArgLocs[i];
+      MRI.addLiveIn(VA.getLocReg(), VRegs[i]);
+      MIRBuilder.getMBB().addLiveIn(VA.getLocReg());
+      MIRBuilder.buildCopy(VRegs[i], VA.getLocReg());
+    }
+    return true;
+  }
+
   for (unsigned i = 0; i != NumArgs; ++i, ++Arg) {
     // FIXME: We should be getting DebugInfo from the arguments some how.
     CCValAssign &VA = ArgLocs[i];

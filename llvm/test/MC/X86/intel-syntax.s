@@ -50,6 +50,15 @@ main:
 // CHECK: leaq    8(%rax), %rdx
   lea RDX, [8 + RAX]
 
+// CHECK: lcalll *(%rax)
+  call FWORD ptr [rax]
+// CHECK: lcalll *(%rax)
+  lcall [rax]
+// CHECK: ljmpl *(%rax)
+  jmp FWORD ptr [rax]
+// CHECK: ljmpl *(%rax)
+  ljmp [rax]
+
 // CHECK:	movl	$257, -4(%rsp)
 	mov	DWORD PTR [RSP - 4], 257
 // CHECK:	movl	$258, 4(%rsp)

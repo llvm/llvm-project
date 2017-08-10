@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
@@ -488,7 +489,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
 
 /// Insert restore code for the callee-saved registers used in the function.
 static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
-                              ArrayRef<CalleeSavedInfo> CSI) {
+                              std::vector<CalleeSavedInfo> &CSI) {
   MachineFunction &Fn = *RestoreBlock.getParent();
   const TargetInstrInfo &TII = *Fn.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = Fn.getSubtarget().getFrameLowering();
@@ -533,7 +534,7 @@ static void doSpillCalleeSavedRegs(MachineFunction &Fn, RegScavenger *RS,
   if (!F->hasFnAttribute(Attribute::Naked)) {
     MFI.setCalleeSavedInfoValid(true);
 
-    ArrayRef<CalleeSavedInfo> CSI = MFI.getCalleeSavedInfo();
+    std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
     if (!CSI.empty()) {
       for (MachineBasicBlock *SaveBlock : SaveBlocks) {
         insertCSRSaves(*SaveBlock, CSI);
@@ -1079,11 +1080,15 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
         assert(i == 0 && "Frame indices can only appear as the first "
                          "operand of a DBG_VALUE machine instruction");
         unsigned Reg;
-        MachineOperand &Offset = MI.getOperand(1);
-        Offset.setImm(
-            Offset.getImm() +
-            TFI->getFrameIndexReference(Fn, MI.getOperand(0).getIndex(), Reg));
+        int64_t Offset =
+            TFI->getFrameIndexReference(Fn, MI.getOperand(0).getIndex(), Reg);
         MI.getOperand(0).ChangeToRegister(Reg, false /*isDef*/);
+        auto *DIExpr = DIExpression::prepend(MI.getDebugExpression(),
+                                             DIExpression::NoDeref, Offset);
+        MI.getOperand(3).setMetadata(DIExpr);
+        const Module *M = Fn.getMMI().getModule();
+        // Add the expression to the metadata graph so isn't lost in MIR dumps.
+        M->getNamedMetadata("llvm.dbg.mir")->addOperand(DIExpr);
         continue;
       }
 

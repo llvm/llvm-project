@@ -1,0 +1,4 @@
+RUN: %cpp_compiler %S/StrncmpTest.cpp -o %t-StrncmpTest
+RUN: not %t-StrncmpTest              -seed=2 -runs=10000000   2>&1 | FileCheck %s
+CHECK: BINGO
+

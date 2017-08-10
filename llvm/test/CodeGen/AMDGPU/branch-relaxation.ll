@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-s-branch-bits=4 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -amdgpu-s-branch-bits=4 < %s | FileCheck -check-prefix=GCN %s
 
 
 ; FIXME: We should use llvm-mc for this, but we can't even parse our own output.

@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32--
 
 define i32 @main() {
         %setle = icmp sle i64 1, 0              ; <i1> [#uses=1]

@@ -50,13 +50,13 @@ v_pk_add_u16 v1, v2, v3 neg_lo:[0,0]
 // GFX9: :18: error: not a valid operand.
 v_pk_add_f16 v1, |v2|, v3
 
-// GFX9: :21: error: not a valid operand.
+// GFX9: :18: error: invalid operand for instruction
 v_pk_add_f16 v1, abs(v2), v3
 
 // GFX9: :22: error: not a valid operand.
 v_pk_add_f16 v1, v2, |v3|
 
-// GFX9: :25: error: not a valid operand.
+// GFX9: :22: error: invalid operand for instruction
 v_pk_add_f16 v1, v2, abs(v3)
 
 // GFX9: :19: error: invalid operand for instruction
@@ -65,7 +65,7 @@ v_pk_add_f16 v1, -v2, v3
 // GFX9: :23: error: invalid operand for instruction
 v_pk_add_f16 v1, v2, -v3
 
-// GFX9: :21: error: not a valid operand.
+// GFX9: :18: error: invalid operand for instruction
 v_pk_add_u16 v1, abs(v2), v3
 
 // GFX9: :19: error: invalid operand for instruction

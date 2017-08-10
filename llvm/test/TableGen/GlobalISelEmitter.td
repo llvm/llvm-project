@@ -117,7 +117,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
 // CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/1,
 // CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/0,
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -168,14 +168,15 @@ def : Pat<(select GPR32:$src1, complex:$src2, (select GPR32:$src3, complex:$src4
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src3
 // CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/1,
 // CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/2,
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  // Label 1: @[[LABEL]]
 
 def : GINodeEquiv<G_SELECT, select>;
-def INSN2 : I<(outs GPR32:$dst), (ins GPR32Op:$src1, complex:$src2, complex:$src3), []>;
+let mayLoad = 1 in {
+  def INSN2 : I<(outs GPR32:$dst), (ins GPR32Op:$src1, complex:$src2, complex:$src3), []>;
+}
 def : Pat<(select GPR32:$src1, complex:$src2, complex:$src3),
           (INSN2 GPR32:$src1, complex:$src3, complex:$src2)>;
 
@@ -221,7 +222,6 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOV,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src1
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -262,7 +262,6 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src3
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -299,7 +298,6 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src3
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -330,7 +328,6 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src2
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -384,7 +381,6 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/1, // src3
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/2, // src4
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -415,7 +411,6 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
 // CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/0,
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -444,7 +439,6 @@ def : Pat<(sub GPR32:$src1, complex:$src2), (INSN1 GPR32:$src1, complex:$src2)>;
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_AddImm, /*InsnID*/0, /*Imm*/-1,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -474,7 +468,6 @@ def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -505,7 +498,6 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_AddImm, /*InsnID*/0, /*Imm*/-1,
 // CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -537,7 +529,6 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
 // CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -569,7 +560,6 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // Wm
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -599,7 +589,7 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 def : Pat<(i32 (bitconvert FPR32:$src1)),
           (COPY_TO_REGCLASS FPR32:$src1, GPR32)>;
 
-//===- Test a simple pattern with just a leaf immediate. ------------------===//
+//===- Test a simple pattern with just a specific leaf immediate. ---------===//
 
 // CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 15*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
@@ -612,7 +602,6 @@ def : Pat<(i32 (bitconvert FPR32:$src1)),
 // CHECK-NEXT:    // 1:i32  =>  (MOV1:i32)
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOV1,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
@@ -620,9 +609,30 @@ def : Pat<(i32 (bitconvert FPR32:$src1)),
 
 def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 
-//===- Test a pattern with an MBB operand. --------------------------------===//
+//===- Test a simple pattern with just a leaf immediate. ------------------===//
 
 // CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 16*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_CONSTANT,
+// CHECK-NEXT:    // MIs[0] dst
+// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
+// CHECK-NEXT:    // MIs[0] Operand 1
+// CHECK-NEXT:    // No predicates
+// CHECK-NEXT:    // (imm:i32):$imm =>  (MOVimm:i32 (imm:i32):$imm)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOVimm,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:  // Label 16: @[[LABEL]]
+
+def MOVimm : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, imm:$imm)]>;
+
+//===- Test a pattern with an MBB operand. --------------------------------===//
+
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 17*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/1,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_BR,
 // CHECK-NEXT:    // MIs[0] target
@@ -631,12 +641,13 @@ def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::BR,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 16: @[[LABEL]]
+// CHECK-NEXT:  // Label 17: @[[LABEL]]
+
+def BR : I<(outs), (ins unknown:$target),
+            [(br bb:$target)]>;
+
 // CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable0, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
-
-def BR : I<(outs), (ins unknown:$target),
-            [(br bb:$target)]>;

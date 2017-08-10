@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=corei7
+; RUN: llc < %s -mtriple=i686-- -mcpu=corei7
 ; We don't care about the output, just that it doesn't crash
 
 define <1 x i1> @buildvec_promote() {

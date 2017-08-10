@@ -47,7 +47,7 @@ public:
   virtual void onCompletion(TextDocumentPositionParams Params, StringRef ID,
                             JSONOutput &Out) = 0;
   virtual void onGoToDefinition(TextDocumentPositionParams Params, StringRef ID,
-                            JSONOutput &Out) = 0;
+                                JSONOutput &Out) = 0;
 };
 
 void regiterCallbackHandlers(JSONRPCDispatcher &Dispatcher, JSONOutput &Out,

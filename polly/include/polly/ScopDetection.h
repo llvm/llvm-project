@@ -617,6 +617,7 @@ public:
 struct ScopAnalysis : public AnalysisInfoMixin<ScopAnalysis> {
   static AnalysisKey Key;
   using Result = ScopDetection;
+  ScopAnalysis();
   Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 

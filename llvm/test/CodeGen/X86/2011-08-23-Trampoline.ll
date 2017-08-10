@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86
-; RUN: llc < %s -march=x86-64
+; RUN: llc < %s -mtriple=i686--
+; RUN: llc < %s -mtriple=x86_64--
 
 	%struct.FRAME.gnat__perfect_hash_generators__select_char_position__build_identical_keys_sets = type { i32, i32, void (i32, i32)*, i8 (i32, i32)* }
 

@@ -139,6 +139,7 @@ TEST(Mman, Stats) {
 
 TEST(Mman, Valloc) {
   ThreadState *thr = cur_thread();
+  uptr page_size = GetPageSizeCached();
 
   void *p = user_valloc(thr, 0, 100);
   EXPECT_NE(p, (void*)0);
@@ -150,8 +151,13 @@ TEST(Mman, Valloc) {
 
   p = user_pvalloc(thr, 0, 0);
   EXPECT_NE(p, (void*)0);
-  EXPECT_EQ(GetPageSizeCached(), __sanitizer_get_allocated_size(p));
+  EXPECT_EQ(page_size, __sanitizer_get_allocated_size(p));
   user_free(thr, 0, p);
+
+  EXPECT_DEATH(p = user_pvalloc(thr, 0, (uptr)-(page_size - 1)),
+               "allocator is terminating the process instead of returning 0");
+  EXPECT_DEATH(p = user_pvalloc(thr, 0, (uptr)-1),
+               "allocator is terminating the process instead of returning 0");
 }
 
 #if !SANITIZER_DEBUG

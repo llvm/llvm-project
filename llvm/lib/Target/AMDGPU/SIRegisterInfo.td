@@ -269,6 +269,18 @@ def VGPR_512 : RegisterTuples<[sub0, sub1, sub2, sub3, sub4, sub5, sub6, sub7,
 //  Register classes used as source and destination
 //===----------------------------------------------------------------------===//
 
+def Pseudo_SReg_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
+  (add FP_REG, SP_REG, SCRATCH_WAVE_OFFSET_REG)> {
+  let isAllocatable = 0;
+  let CopyCost = -1;
+}
+
+def Pseudo_SReg_128 : RegisterClass<"AMDGPU", [v4i32, v2i64], 32,
+  (add PRIVATE_RSRC_REG)> {
+  let isAllocatable = 0;
+  let CopyCost = -1;
+}
+
 // Subset of SReg_32 without M0 for SMRD instructions and alike.
 // See comments in SIInstructions.td for more info.
 def SReg_32_XM0_XEXEC : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,

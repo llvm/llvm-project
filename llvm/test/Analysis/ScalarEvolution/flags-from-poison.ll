@@ -609,8 +609,42 @@ loop:
   %index32 = sub nsw i32 %i, %sub
 
 ; CHECK: %index64 =
-; CHECK: --> {(sext i32 (-1 * %sub) to i64),+,1}<nsw>
+; CHECK: --> {(-1 * (sext i32 %sub to i64))<nsw>,+,1}<nsw
   %index64 = sext i32 %index32 to i64
+
+  %ptr = getelementptr inbounds float, float* %input, i64 %index64
+  %nexti = add nsw i32 %i, 1
+  %f = load float, float* %ptr, align 4
+  %exitcond = icmp eq i32 %nexti, %numIterations
+  br i1 %exitcond, label %exit, label %loop
+exit:
+  ret void
+}
+
+; Example checking that a sext is pushed onto a sub's operands if the sub is an
+; overflow intrinsic.
+define void @test-sext-sub(float* %input, i32 %sub, i32 %numIterations) {
+; CHECK-LABEL: @test-sext-sub
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %nexti, %cont ], [ 0, %entry ]
+
+; CHECK: %val = extractvalue { i32, i1 } %ssub, 0
+; CHECK: --> {(-1 * %sub),+,1}<nw>
+  %ssub = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %i, i32 %sub)
+  %val = extractvalue { i32, i1 } %ssub, 0
+  %ovfl = extractvalue { i32, i1 } %ssub, 1
+  br i1 %ovfl, label %trap, label %cont
+
+trap:
+  tail call void @llvm.trap()
+  unreachable
+
+cont:
+; CHECK: %index64 =
+; CHECK: --> {(-1 * (sext i32 %sub to i64))<nsw>,+,1}<nsw
+  %index64 = sext i32 %val to i64
 
   %ptr = getelementptr inbounds float, float* %input, i64 %index64
   %nexti = add nsw i32 %i, 1

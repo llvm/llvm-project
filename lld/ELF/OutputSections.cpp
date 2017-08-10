@@ -184,6 +184,20 @@ static bool canMergeToProgbits(unsigned Type) {
          Type == SHT_NOTE;
 }
 
+void elf::sortByOrder(MutableArrayRef<InputSection *> In,
+                      std::function<int(InputSectionBase *S)> Order) {
+  typedef std::pair<int, InputSection *> Pair;
+  auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
+
+  std::vector<Pair> V;
+  for (InputSection *S : In)
+    V.push_back({Order(S), S});
+  std::stable_sort(V.begin(), V.end(), Comp);
+
+  for (size_t I = 0; I < V.size(); ++I)
+    In[I] = V[I].second;
+}
+
 void elf::reportDiscarded(InputSectionBase *IS) {
   if (!Config->PrintGcSections)
     return;
@@ -291,18 +305,8 @@ bool OutputSection::classof(const BaseCommand *C) {
 }
 
 void OutputSection::sort(std::function<int(InputSectionBase *S)> Order) {
-  typedef std::pair<int, InputSection *> Pair;
-  auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
-
-  std::vector<Pair> V;
   assert(Commands.size() == 1);
-  auto *ISD = cast<InputSectionDescription>(Commands[0]);
-  for (InputSection *S : ISD->Sections)
-    V.push_back({Order(S), S});
-  std::stable_sort(V.begin(), V.end(), Comp);
-  ISD->Sections.clear();
-  for (Pair &P : V)
-    ISD->Sections.push_back(P.second);
+  sortByOrder(cast<InputSectionDescription>(Commands[0])->Sections, Order);
 }
 
 // Fill [Buf, Buf + Size) with Filler.
@@ -431,7 +435,7 @@ static void finalizeShtGroup(OutputSection *OS,
   // provides signature of the section group.
   ObjFile<ELFT> *Obj = Sections[0]->getFile<ELFT>();
   ArrayRef<SymbolBody *> Symbols = Obj->getSymbols();
-  OS->Info = InX::SymTab->getSymbolIndex(Symbols[Sections[0]->Info - 1]);
+  OS->Info = InX::SymTab->getSymbolIndex(Symbols[Sections[0]->Info]);
 }
 
 template <class ELFT> void OutputSection::finalize() {

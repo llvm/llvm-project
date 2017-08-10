@@ -372,6 +372,7 @@ void switch_on_ExtendedEnum1(enum ExtendedEnum1 e) {
   case EE1_b: break;
   case EE1_c: break; // no-warning
   case EE1_d: break; // expected-warning {{case value not in enumerated type 'enum ExtendedEnum1'}}
+  // expected-warning@-1 {{comparison of two values with different enumeration types in switch statement ('enum ExtendedEnum1' and 'const enum ExtendedEnum1_unrelated')}}
   }
 }
 

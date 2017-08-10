@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=-sse2,-sse3 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=-sse2,-sse3 | FileCheck %s
 
 ; CHECK: fchs
 

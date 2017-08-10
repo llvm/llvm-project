@@ -1,9 +1,9 @@
-; RUN: llc < %s -march=x86 -mattr=+sse | FileCheck %s
-; RUN: llc < %s -march=x86 -mattr=+avx | FileCheck %s
-; RUN: llc < %s -march=x86 -mattr=+sse -mattr=+prfchw | FileCheck %s -check-prefix=PRFCHW
-; RUN: llc < %s -march=x86 -mcpu=slm | FileCheck %s -check-prefix=SLM
-; RUN: llc < %s -march=x86 -mcpu=btver2 | FileCheck %s -check-prefix=PRFCHW
-; RUN: llc < %s -march=x86 -mcpu=btver2 -mattr=-prfchw | FileCheck %s -check-prefix=NOPRFCHW
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+avx | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse -mattr=+prfchw | FileCheck %s -check-prefix=PRFCHW
+; RUN: llc < %s -mtriple=i686-- -mcpu=slm | FileCheck %s -check-prefix=SLM
+; RUN: llc < %s -mtriple=i686-- -mcpu=btver2 | FileCheck %s -check-prefix=PRFCHW
+; RUN: llc < %s -mtriple=i686-- -mcpu=btver2 -mattr=-prfchw | FileCheck %s -check-prefix=NOPRFCHW
 
 ; rdar://10538297
 

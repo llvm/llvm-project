@@ -106,7 +106,7 @@ public:
 
   bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator MI,
-                                  const std::vector<CalleeSavedInfo> &CSI,
+                                  std::vector<CalleeSavedInfo> &CSI,
                                   const TargetRegisterInfo *TRI) const override;
 
   /// targetHandlesStackFrameRounding - Returns true if the target is

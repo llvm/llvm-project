@@ -299,6 +299,7 @@ def IIC_SSE_SHUFP : InstrItinClass;
 def IIC_SSE_PSHUF_RI : InstrItinClass;
 def IIC_SSE_PSHUF_MI : InstrItinClass;
 
+def IIC_SSE_PACK : InstrItinClass;
 def IIC_SSE_UNPCK : InstrItinClass;
 
 def IIC_SSE_MOVMSK : InstrItinClass;

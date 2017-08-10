@@ -136,7 +136,6 @@ protected:
   // Subtarget statically properties set by tablegen
   bool FP64;
   bool IsGCN;
-  bool GCN1Encoding;
   bool GCN3Encoding;
   bool CIInsts;
   bool GFX9Insts;

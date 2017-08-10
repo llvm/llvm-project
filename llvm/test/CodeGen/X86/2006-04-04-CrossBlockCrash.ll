@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=yonah
+; RUN: llc < %s -mcpu=yonah
 ; END.
 
 target datalayout = "e-p:32:32"

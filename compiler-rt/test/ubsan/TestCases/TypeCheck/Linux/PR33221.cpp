@@ -1,4 +1,4 @@
-// RUN: %clangxx -std=c++11 -frtti -fsanitize=vptr,null -g %s -O3 -o %t
+// RUN: %clangxx -std=c++11 -frtti -fsanitize=vptr -g %s -O3 -o %t
 // RUN: %run %t &> %t.log
 // RUN: cat %t.log | not count 0 && FileCheck --input-file %t.log %s || cat %t.log | count 0
 

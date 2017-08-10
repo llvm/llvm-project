@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fblocks -debug-info-kind=limited -gcodeview -emit-llvm %s \
 // RUN:       -o - -triple=x86_64-pc-win32 -std=c++98 | \
-// RUN:    grep 'DISubprogram' | sed -e 's/.*name: "\([^"]*\)".*/"\1"/' | \
+// RUN:    grep 'DISubprogram\|DICompositeType' | sed -e 's/.*name: "\([^"]*\)".*/"\1"/' | \
 // RUN:    FileCheck %s --check-prefix=CHECK --check-prefix=UNQUAL
 // RUN: %clang_cc1 -fblocks -debug-info-kind=line-tables-only -gcodeview -emit-llvm %s \
 // RUN:       -o - -triple=x86_64-pc-win32 -std=c++98 | \
@@ -91,3 +91,8 @@ void fn_tmpl() {}
 
 template void fn_tmpl<int, freefunc>();
 // CHECK-DAG: "fn_tmpl<int,&freefunc>"
+
+template <typename A, typename B, typename C> struct ClassTemplate { A a; B b; C c; };
+ClassTemplate<char, short, ClassTemplate<int, int, int> > f;
+// This will only show up in normal debug builds.
+// UNQUAL-DAG: "ClassTemplate<char,short,ClassTemplate<int,int,int> >"

@@ -227,11 +227,33 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
          O.matches(options::OPT_fno_PIE) || O.matches(options::OPT_fno_pie));
   }
 
-  if (IsN64 && NonPIC)
+  bool UseAbiCalls = false;
+
+  Arg *ABICallsArg =
+      Args.getLastArg(options::OPT_mabicalls, options::OPT_mno_abicalls);
+  UseAbiCalls =
+      !ABICallsArg ||
+      (ABICallsArg && ABICallsArg->getOption().matches(options::OPT_mabicalls));
+
+  if (UseAbiCalls && IsN64 && NonPIC) {
+    D.Diag(diag::warn_drv_unsupported_abicalls);
+    UseAbiCalls = false;
+  }
+
+  if (!UseAbiCalls)
     Features.push_back("+noabicalls");
   else
-    AddTargetFeature(Args, Features, options::OPT_mno_abicalls,
-                     options::OPT_mabicalls, "noabicalls");
+    Features.push_back("-noabicalls");
+
+  if (Arg *A = Args.getLastArg(options::OPT_mlong_calls,
+                               options::OPT_mno_long_calls)) {
+    if (A->getOption().matches(options::OPT_mno_long_calls))
+      Features.push_back("-long-calls");
+    else if (!UseAbiCalls)
+      Features.push_back("+long-calls");
+    else
+      D.Diag(diag::warn_drv_unsupported_longcalls) << (ABICallsArg ? 0 : 1);
+  }
 
   mips::FloatABI FloatABI = mips::getMipsFloatABI(D, Args);
   if (FloatABI == mips::FloatABI::Soft) {
@@ -297,11 +319,7 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
   AddTargetFeature(Args, Features, options::OPT_mno_odd_spreg,
                    options::OPT_modd_spreg, "nooddspreg");
-  AddTargetFeature(Args, Features, options::OPT_mno_madd4, options::OPT_mmadd4,
-                   "nomadd4");
-  AddTargetFeature(Args, Features, options::OPT_mlong_calls,
-                   options::OPT_mno_long_calls, "long-calls");
-  AddTargetFeature(Args, Features, options::OPT_mmt, options::OPT_mno_mt,"mt");
+  AddTargetFeature(Args, Features, options::OPT_mmt, options::OPT_mno_mt, "mt");
 }
 
 mips::NanEncoding mips::getSupportedNanEncoding(StringRef &CPU) {

@@ -153,6 +153,9 @@ def GNUFlexibleArrayUnionMember : DiagGroup<"gnu-flexible-array-union-member">;
 def GNUFoldingConstant : DiagGroup<"gnu-folding-constant">;
 def FormatExtraArgs : DiagGroup<"format-extra-args">;
 def FormatZeroLength : DiagGroup<"format-zero-length">;
+
+def InvalidIOSDeploymentTarget : DiagGroup<"invalid-ios-deployment-target">;
+
 def CXX1zCompatMangling : DiagGroup<"c++1z-compat-mangling">;
 // Name of this warning in GCC.
 def NoexceptType : DiagGroup<"noexcept-type", [CXX1zCompatMangling]>;
@@ -451,6 +454,8 @@ def CoveredSwitchDefault : DiagGroup<"covered-switch-default">;
 def SwitchBool     : DiagGroup<"switch-bool">;
 def SwitchEnum     : DiagGroup<"switch-enum">;
 def Switch         : DiagGroup<"switch">;
+def EnumCompareSwitch : DiagGroup<"enum-compare-switch">;
+def EnumCompare       : DiagGroup<"enum-compare", [EnumCompareSwitch]>;
 def ImplicitFallthroughPerFunction :
   DiagGroup<"implicit-fallthrough-per-function">;
 def ImplicitFallthrough  : DiagGroup<"implicit-fallthrough",

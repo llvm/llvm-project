@@ -32,7 +32,8 @@ public:
   Error reload();
 
   uint32_t getSymHash() const;
-  uint32_t getAddrMap() const;
+  uint16_t getThunkTableSection() const;
+  uint32_t getThunkTableOffset() const;
   const GSIHashTable &getPublicsTable() const { return PublicsTable; }
   FixedStreamArray<support::ulittle32_t> getAddressMap() const {
     return AddressMap;

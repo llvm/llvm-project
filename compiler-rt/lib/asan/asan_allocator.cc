@@ -839,6 +839,10 @@ void *asan_valloc(uptr size, BufferedStackTrace *stack) {
 
 void *asan_pvalloc(uptr size, BufferedStackTrace *stack) {
   uptr PageSize = GetPageSizeCached();
+  if (UNLIKELY(CheckForPvallocOverflow(size, PageSize))) {
+    errno = errno_ENOMEM;
+    return AsanAllocator::FailureHandler::OnBadRequest();
+  }
   // pvalloc(0) should allocate one page.
   size = size ? RoundUpTo(size, PageSize) : PageSize;
   return SetErrnoOnNull(

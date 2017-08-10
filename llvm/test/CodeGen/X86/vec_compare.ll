@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=yonah -mtriple=i386-apple-darwin | FileCheck %s
+; RUN: llc < %s -mcpu=yonah -mtriple=i386-apple-darwin | FileCheck %s
 
 
 define <4 x i32> @test1(<4 x i32> %A, <4 x i32> %B) nounwind {

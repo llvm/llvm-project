@@ -125,7 +125,7 @@ def FeatureXNACK : SubtargetFeature<"xnack",
 def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
   "SGPRInitBug",
   "true",
-  "VI SGPR initilization bug requiring a fixed SGPR allocation size"
+  "VI SGPR initialization bug requiring a fixed SGPR allocation size"
 >;
 
 class SubtargetFeatureFetchLimit <string Value> :
@@ -170,12 +170,6 @@ def FeatureGCN : SubtargetFeature<"gcn",
   "IsGCN",
   "true",
   "GCN or newer GPU"
->;
-
-def FeatureGCN1Encoding : SubtargetFeature<"gcn1-encoding",
-  "GCN1Encoding",
-  "true",
-  "Encoding format for SI and CI"
 >;
 
 def FeatureGCN3Encoding : SubtargetFeature<"gcn3-encoding",
@@ -442,14 +436,14 @@ def FeatureNorthernIslands : SubtargetFeatureGeneration<"NORTHERN_ISLANDS",
 
 def FeatureSouthernIslands : SubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize32768,
-  FeatureWavefrontSize64, FeatureGCN, FeatureGCN1Encoding,
+  FeatureWavefrontSize64, FeatureGCN,
   FeatureLDSBankCount32, FeatureMovrel]
 >;
 
 def FeatureSeaIslands : SubtargetFeatureGeneration<"SEA_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize65536,
   FeatureWavefrontSize64, FeatureGCN, FeatureFlatAddressSpace,
-  FeatureGCN1Encoding, FeatureCIInsts, FeatureMovrel]
+  FeatureCIInsts, FeatureMovrel]
 >;
 
 def FeatureVolcanicIslands : SubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
@@ -667,7 +661,7 @@ def TruePredicate : Predicate<"true">;
 def isSICI : Predicate<
   "Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
   "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS"
->, AssemblerPredicate<"FeatureGCN1Encoding">;
+>, AssemblerPredicate<"!FeatureGCN3Encoding">;
 
 def isVI : Predicate <
   "Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS">,

@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 
 #include <string>
 
@@ -51,8 +52,11 @@ private:
   Error dumpGlobals();
   Error dumpPublics();
   Error dumpSymbolsFromGSI(const GSIHashTable &Table, bool HashExtras);
+  Error dumpSectionHeaders();
   Error dumpSectionContribs();
   Error dumpSectionMap();
+
+  void dumpSectionHeaders(StringRef Label, DbgHeaderType Type);
 
   PDBFile &File;
   LinePrinter P;

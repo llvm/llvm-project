@@ -148,10 +148,11 @@ static bool isOCLAtomicInit(StringRef FuncName) {
 static AtomicOrdering MemoryOrderSpir2LLVM(Value *SpirMemOrd) {
   enum memory_order {
     memory_order_relaxed = 0,
-    memory_order_acquire,
-    memory_order_release,
-    memory_order_acq_rel,
-    memory_order_seq_cst
+    memory_order_consume = 1,
+    memory_order_acquire = 2,
+    memory_order_release = 3,
+    memory_order_acq_rel = 4,
+    memory_order_seq_cst = 5
   };
   unsigned MemOrd = dyn_cast<ConstantInt>(SpirMemOrd)->getZExtValue();
   switch (MemOrd) {
@@ -174,10 +175,10 @@ static SyncScope::ID MemoryScopeOpenCL2LLVM(LLVMContext *CTX,
                                             Value *OpenclMemScope) {
   enum memory_scope {
     memory_scope_work_item = 0,
-    memory_scope_work_group,
-    memory_scope_device,
-    memory_scope_all_svm_devices,
-    memory_scope_sub_group
+    memory_scope_work_group = 1,
+    memory_scope_device = 2,
+    memory_scope_all_svm_devices = 3,
+    memory_scope_sub_group = 4
   };
 
   unsigned MemScope = dyn_cast<ConstantInt>(OpenclMemScope)->getZExtValue();

@@ -46,6 +46,21 @@ define i32 @test4(i32 %X) {
   ret i32 %cond
 }
 
+; Same as above, but the compare isn't canonical
+; TODO: we should be able to simplify this
+define i32 @test4noncanon(i32 %X) {
+; CHECK-LABEL: @test4noncanon(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], -2147483648
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[OR]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp sle i32 %X, -1
+  %or = or i32 %X, -2147483648
+  %cond = select i1 %cmp, i32 %X, i32 %or
+  ret i32 %cond
+}
+
 define i32 @test5(i32 %X) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    ret i32 %X
@@ -93,6 +108,21 @@ define i32 @test9(i32 %X) {
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %cmp = icmp sgt i32 %X, -1
+  %or = or i32 %X, -2147483648
+  %cond = select i1 %cmp, i32 %or, i32 %X
+  ret i32 %cond
+}
+
+; Same as above, but the compare isn't canonical
+; TODO: we should be able to simplify this
+define i32 @test9noncanon(i32 %X) {
+; CHECK-LABEL: @test9noncanon(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], -2147483648
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[OR]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp sge i32 %X, 0
   %or = or i32 %X, -2147483648
   %cond = select i1 %cmp, i32 %or, i32 %X
   ret i32 %cond

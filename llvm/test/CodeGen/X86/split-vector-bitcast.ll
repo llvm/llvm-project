@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=-sse2,+sse | grep addps
+; RUN: llc < %s -mtriple=i686-- -mattr=-sse2,+sse | grep addps
 
 ; PR10497 + another isel issue with sse2 disabled
 ; (This is primarily checking that this construct doesn't crash.)

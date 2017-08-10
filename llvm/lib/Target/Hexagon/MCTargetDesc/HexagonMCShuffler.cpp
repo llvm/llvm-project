@@ -17,10 +17,14 @@
 #include "MCTargetDesc/HexagonMCShuffler.h"
 #include "Hexagon.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
-#include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "MCTargetDesc/HexagonShuffler.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -128,7 +132,6 @@ bool
 llvm::HexagonMCShuffle(MCContext &Context, MCInstrInfo const &MCII,
                        MCSubtargetInfo const &STI, MCInst &MCB,
                        SmallVector<DuplexCandidate, 8> possibleDuplexes) {
-
   if (DisableShuffle)
     return false;
 
@@ -165,7 +168,7 @@ llvm::HexagonMCShuffle(MCContext &Context, MCInstrInfo const &MCII,
       break;
   }
 
-  if (doneShuffling == false) {
+  if (!doneShuffling) {
     HexagonMCShuffler MCS(Context, false, MCII, STI, MCB);
     doneShuffling = MCS.reshuffleTo(MCB); // shuffle
   }

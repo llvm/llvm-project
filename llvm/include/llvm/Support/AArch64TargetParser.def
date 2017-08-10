@@ -28,6 +28,11 @@ AARCH64_ARCH("armv8.1-a", ARMV8_1A, "8.1-A", "v8.1a",
 AARCH64_ARCH("armv8.2-a", ARMV8_2A, "8.2-A", "v8.2a",
              ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
+              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+              AArch64::AEK_DOTPROD))
+AARCH64_ARCH("armv8.3-a", ARMV8_3A, "8.3-A", "v8.3a",
+             ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
+             (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE))
 #undef AARCH64_ARCH
 
@@ -40,6 +45,7 @@ AARCH64_ARCH_EXT_NAME("none",     AArch64::AEK_NONE,     nullptr,  nullptr)
 AARCH64_ARCH_EXT_NAME("crc",      AArch64::AEK_CRC,      "+crc",   "-crc")
 AARCH64_ARCH_EXT_NAME("lse",      AArch64::AEK_LSE,      "+lse",   "-lse")
 AARCH64_ARCH_EXT_NAME("crypto",   AArch64::AEK_CRYPTO,   "+crypto","-crypto")
+AARCH64_ARCH_EXT_NAME("dotprod",  AArch64::AEK_DOTPROD,  "+dotprod","-dotprod")
 AARCH64_ARCH_EXT_NAME("fp",       AArch64::AEK_FP,       "+fp-armv8",  "-fp-armv8")
 AARCH64_ARCH_EXT_NAME("simd",     AArch64::AEK_SIMD,     "+neon",  "-neon")
 AARCH64_ARCH_EXT_NAME("fp16",     AArch64::AEK_FP16,     "+fullfp16",  "-fullfp16")

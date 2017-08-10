@@ -1,4 +1,4 @@
-//===-- HexagonAsmPrinter.cpp - Print machine instrs to Hexagon assembly --===//
+//===- HexagonAsmPrinter.cpp - Print machine instrs to Hexagon assembly ---===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,50 +15,50 @@
 
 #include "HexagonAsmPrinter.h"
 #include "Hexagon.h"
-#include "HexagonMachineFunctionInfo.h"
+#include "HexagonInstrInfo.h"
+#include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
-#include "HexagonTargetMachine.h"
 #include "MCTargetDesc/HexagonInstPrinter.h"
+#include "MCTargetDesc/HexagonMCExpr.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
-#include "MCTargetDesc/HexagonMCShuffler.h"
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Mangler.h"
-#include "llvm/IR/Module.h"
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
-#include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <string>
 
 using namespace llvm;
 
 namespace llvm {
-  void HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
-                        MCInst &MCB, HexagonAsmPrinter &AP);
-}
+
+void HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
+                      MCInst &MCB, HexagonAsmPrinter &AP);
+
+} // end namespace llvm
 
 #define DEBUG_TYPE "asm-printer"
 
@@ -78,7 +78,7 @@ inline static unsigned getHexagonRegisterPair(unsigned Reg,
 
 HexagonAsmPrinter::HexagonAsmPrinter(TargetMachine &TM,
                                      std::unique_ptr<MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer)), Subtarget(nullptr) {}
+    : AsmPrinter(TM, std::move(Streamer)) {}
 
 void HexagonAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
                                      raw_ostream &O) {
@@ -106,14 +106,12 @@ void HexagonAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
   }
 }
 
-//
 // isBlockOnlyReachableByFallthrough - We need to override this since the
 // default AsmPrinter does not print labels for any basic block that
 // is only reachable by a fall through. That works for all cases except
 // for the case in which the basic block is reachable by a fall through but
 // through an indirect from a jump table. In this case, the jump table
 // will contain a label not defined by AsmPrinter.
-//
 bool HexagonAsmPrinter::
 isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB) const {
   if (MBB->hasAddressTaken())
@@ -121,9 +119,7 @@ isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB) const {
   return AsmPrinter::isBlockOnlyReachableByFallthrough(MBB);
 }
 
-
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
-///
 bool HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         unsigned AsmVariant,
                                         const char *ExtraCode,
@@ -306,35 +302,30 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     break;
   }
 
-  case Hexagon::A2_tfrf: {
+  case Hexagon::A2_tfrf:
     Inst.setOpcode(Hexagon::A2_paddif);
     Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
     break;
-  }
 
-  case Hexagon::A2_tfrt: {
+  case Hexagon::A2_tfrt:
     Inst.setOpcode(Hexagon::A2_paddit);
     Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
     break;
-  }
 
-  case Hexagon::A2_tfrfnew: {
+  case Hexagon::A2_tfrfnew:
     Inst.setOpcode(Hexagon::A2_paddifnew);
     Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
     break;
-  }
 
-  case Hexagon::A2_tfrtnew: {
+  case Hexagon::A2_tfrtnew:
     Inst.setOpcode(Hexagon::A2_padditnew);
     Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
     break;
-  }
 
-  case Hexagon::A2_zxtb: {
+  case Hexagon::A2_zxtb:
     Inst.setOpcode(Hexagon::A2_andir);
     Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(255, OutContext)));
     break;
-  }
 
   // "$dst = CONST64(#$src1)",
   case Hexagon::CONST64:
@@ -386,7 +377,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   // 3 register pairs.
   case Hexagon::M2_vrcmpys_acc_s1: {
     MCOperand &Rt = Inst.getOperand(3);
-    assert (Rt.isReg() && "Expected register and none was found");
+    assert(Rt.isReg() && "Expected register and none was found");
     unsigned Reg = RI->getEncodingValue(Rt.getReg());
     if (Reg & 1)
       MappedInst.setOpcode(Hexagon::M2_vrcmpys_acc_s1_h);
@@ -397,7 +388,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   }
   case Hexagon::M2_vrcmpys_s1: {
     MCOperand &Rt = Inst.getOperand(2);
-    assert (Rt.isReg() && "Expected register and none was found");
+    assert(Rt.isReg() && "Expected register and none was found");
     unsigned Reg = RI->getEncodingValue(Rt.getReg());
     if (Reg & 1)
       MappedInst.setOpcode(Hexagon::M2_vrcmpys_s1_h);
@@ -409,7 +400,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
 
   case Hexagon::M2_vrcmpys_s1rp: {
     MCOperand &Rt = Inst.getOperand(2);
-    assert (Rt.isReg() && "Expected register and none was found");
+    assert(Rt.isReg() && "Expected register and none was found");
     unsigned Reg = RI->getEncodingValue(Rt.getReg());
     if (Reg & 1)
       MappedInst.setOpcode(Hexagon::M2_vrcmpys_s1rp_h);
@@ -421,7 +412,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
 
   case Hexagon::A4_boundscheck: {
     MCOperand &Rs = Inst.getOperand(1);
-    assert (Rs.isReg() && "Expected register and none was found");
+    assert(Rs.isReg() && "Expected register and none was found");
     unsigned Reg = RI->getEncodingValue(Rs.getReg());
     if (Reg & 1) // Odd mapped to raw:hi, regpair is rodd:odd-1, like r3:2
       MappedInst.setOpcode(Hexagon::A4_boundscheck_hi);
@@ -430,15 +421,17 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     Rs.setReg(getHexagonRegisterPair(Rs.getReg(), RI));
     return;
   }
+
   case Hexagon::PS_call_nr:
     Inst.setOpcode(Hexagon::J2_call);
     break;
+
   case Hexagon::S5_asrhub_rnd_sat_goodsyntax: {
     MCOperand &MO = MappedInst.getOperand(2);
     int64_t Imm;
     MCExpr const *Expr = MO.getExpr();
     bool Success = Expr->evaluateAsAbsolute(Imm);
-    assert (Success && "Expected immediate and none was found");
+    assert(Success && "Expected immediate and none was found");
     (void)Success;
     MCInst TmpInst;
     if (Imm == 0) {
@@ -458,13 +451,14 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     MappedInst = TmpInst;
     return;
   }
+
   case Hexagon::S5_vasrhrnd_goodsyntax:
   case Hexagon::S2_asr_i_p_rnd_goodsyntax: {
     MCOperand &MO2 = MappedInst.getOperand(2);
     MCExpr const *Expr = MO2.getExpr();
     int64_t Imm;
     bool Success = Expr->evaluateAsAbsolute(Imm);
-    assert (Success && "Expected immediate and none was found");
+    assert(Success && "Expected immediate and none was found");
     (void)Success;
     MCInst TmpInst;
     if (Imm == 0) {
@@ -493,13 +487,14 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     MappedInst = TmpInst;
     return;
   }
+
   // if ("#u5==0") Assembler mapped to: "Rd=Rs"; else Rd=asr(Rs,#u5-1):rnd
   case Hexagon::S2_asr_i_r_rnd_goodsyntax: {
     MCOperand &MO = Inst.getOperand(2);
     MCExpr const *Expr = MO.getExpr();
     int64_t Imm;
     bool Success = Expr->evaluateAsAbsolute(Imm);
-    assert (Success && "Expected immediate and none was found");
+    assert(Success && "Expected immediate and none was found");
     (void)Success;
     MCInst TmpInst;
     if (Imm == 0) {
@@ -541,6 +536,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     MappedInst = TmpInst;
     return;
   }
+
   // Translate a "$Rdd = $Rss" to "$Rdd = combine($Rs, $Rt)"
   case Hexagon::A2_tfrp: {
     MCOperand &MO = MappedInst.getOperand(1);
@@ -566,6 +562,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
                           : Hexagon::C2_ccombinewf);
     return;
   }
+
   case Hexagon::A2_tfrptnew:
   case Hexagon::A2_tfrpfnew: {
     MCOperand &MO = MappedInst.getOperand(2);
@@ -598,7 +595,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
 
   case Hexagon::A2_addsp: {
     MCOperand &Rt = Inst.getOperand(1);
-    assert (Rt.isReg() && "Expected register and none was found");
+    assert(Rt.isReg() && "Expected register and none was found");
     unsigned Reg = RI->getEncodingValue(Rt.getReg());
     if (Reg & 1)
       MappedInst.setOpcode(Hexagon::A2_addsph);
@@ -607,11 +604,12 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     Rt.setReg(getHexagonRegisterPair(Rt.getReg(), RI));
     return;
   }
+
   case Hexagon::V6_vd0:
   case Hexagon::V6_vd0_128B: {
     MCInst TmpInst;
-    assert (Inst.getOperand(0).isReg() &&
-            "Expected register and none was found");
+    assert(Inst.getOperand(0).isReg() &&
+           "Expected register and none was found");
 
     TmpInst.setOpcode(Hexagon::V6_vxor);
     TmpInst.addOperand(Inst.getOperand(0));
@@ -799,10 +797,8 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   }
 }
 
-
 /// printMachineInstruction -- Print out a single Hexagon MI in Darwin syntax to
 /// the current output stream.
-///
 void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MCInst MCB = HexagonMCInstrInfo::createBundle();
   const MCInstrInfo &MCII = *Subtarget->getInstrInfo();

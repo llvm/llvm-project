@@ -1750,7 +1750,7 @@ define <32 x i16> @test_unaligned_v32i16(<32 x i16>* %src) {
 ;
 ; AVX512BW-LABEL: test_unaligned_v32i16:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vmovdqu16 (%rdi), %zmm0
+; AVX512BW-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_unaligned_v32i16:
@@ -1785,7 +1785,7 @@ define <64 x i8> @test_unaligned_v64i8(<64 x i8>* %src) {
 ;
 ; AVX512BW-LABEL: test_unaligned_v64i8:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vmovdqu8 (%rdi), %zmm0
+; AVX512BW-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_unaligned_v64i8:
@@ -1900,7 +1900,7 @@ define <16 x i32> @test_masked_v16i32(i8 * %addr, <16 x i32> %old, <16 x i32> %m
 ;
 ; AVX512-LABEL: test_masked_v16i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1
 ; AVX512-NEXT:    vmovntdqa (%rdi), %zmm1
 ; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}

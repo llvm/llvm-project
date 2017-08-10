@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=corei7 -mattr=+sse4.1
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7 -mattr=+sse4.1
 
 ; Make sure we are not crashing on this code.
 

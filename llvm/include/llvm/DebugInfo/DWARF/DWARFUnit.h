@@ -123,7 +123,7 @@ class DWARFUnit {
   const DWARFSection &StringOffsetSection;
   uint64_t StringOffsetSectionBase = 0;
   const DWARFSection *AddrOffsetSection;
-  uint32_t AddrOffsetSectionBase;
+  uint32_t AddrOffsetSectionBase = 0;
   bool isLittleEndian;
   bool isDWO;
   const DWARFUnitSectionBase &UnitSection;

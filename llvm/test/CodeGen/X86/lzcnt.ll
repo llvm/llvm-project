@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mattr=+lzcnt | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+lzcnt | FileCheck %s
 
 declare i8 @llvm.ctlz.i8(i8, i1) nounwind readnone
 declare i16 @llvm.ctlz.i16(i16, i1) nounwind readnone

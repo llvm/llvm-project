@@ -73,8 +73,7 @@ public:
 namespace llvm {
   // Provide PointerLikeTypeTraits for non-cvr pointers.
   template<>
-  class PointerLikeTypeTraits< ::clang::AnyFunctionDecl> {
-  public:
+  struct PointerLikeTypeTraits< ::clang::AnyFunctionDecl> {
     static inline void *getAsVoidPointer(::clang::AnyFunctionDecl F) {
       return F.get();
     }

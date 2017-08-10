@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm -mattr=+v6,+vfp2
+; RUN: llc < %s -mattr=+v6,+vfp2
 
 target triple = "arm-apple-darwin9"
 @a = external global double		; <double*> [#uses=1]

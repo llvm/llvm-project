@@ -39,6 +39,12 @@ public:
   std::unique_ptr<PDBSymbolCompiland>
   createCompilandSymbol(DbiModuleDescriptor MI);
 
+  std::unique_ptr<PDBSymbolTypeEnum>
+  createEnumSymbol(codeview::TypeIndex Index);
+
+  std::unique_ptr<IPDBEnumSymbols>
+  createTypeEnumerator(codeview::TypeLeafKind Kind);
+
   SymIndexId findSymbolByTypeIndex(codeview::TypeIndex TI);
 
   uint64_t getLoadAddress() const override;

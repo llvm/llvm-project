@@ -68,7 +68,7 @@ public:
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
     if (LocA.Ptr == LocB.Ptr)
-      return LocA.Size == LocB.Size ? MustAlias : PartialAlias;
+      return MustAlias;
 
     // Comparisons between global variables and other constants should be
     // handled by BasicAA.

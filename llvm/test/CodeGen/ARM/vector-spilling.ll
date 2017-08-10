@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm -mtriple=armv7-linux-gnueabihf -arm-atomic-cfg-tidy=0 -float-abi=hard -mcpu=cortex-a9 -O3 | FileCheck %s
+; RUN: llc < %s -mtriple=armv7-linux-gnueabihf -arm-atomic-cfg-tidy=0 -float-abi=hard -mcpu=cortex-a9 -O3 | FileCheck %s
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n32-S64"
 

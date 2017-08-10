@@ -57,7 +57,40 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-The improvements are...
+- Renamed checks to use correct term "implicit conversion" instead of "implicit
+  cast" and modified messages and option names accordingly:
+
+    * **performance-implicit-cast-in-loop** was renamed to
+      `performance-implicit-conversion-in-loop
+      <http://clang.llvm.org/extra/clang-tidy/checks/performance-implicit-conversion-in-loop.html>`_
+    * **readability-implicit-bool-cast** was renamed to
+      `readability-implicit-bool-conversion
+      <http://clang.llvm.org/extra/clang-tidy/checks/readability-implicit-bool-conversion.html>`_;
+      the check's options were renamed as follows:
+      ``AllowConditionalIntegerCasts`` -> ``AllowIntegerConditions``,
+      ``AllowConditionalPointerCasts`` -> ``AllowPointerConditions``.
+
+- New `android-cloexec-memfd_create
+    <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-memfd_create.html>`_ check
+
+  Checks if the required file flag ``MFD_CLOEXEC`` is present in the argument
+  of ``memfd_create()``.
+
+- New `bugprone-integer-division
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-integer-division.html>`_ check
+
+  Finds cases where integer division in a floating point context is likely to
+  cause unintended loss of precision.
+
+- New `readability-static-accessed-through-instance
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-static-accessed-through-instance.html>`_ check
+
+  Finds member expressions that access static members through instances and
+  replaces them with uses of the appropriate qualified-id.
+
+- Added `modernize-use-emplace.IgnoreImplicitConstructors
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html#cmdoption-arg-IgnoreImplicitConstructors>`_
+  option.
 
 Improvements to include-fixer
 -----------------------------

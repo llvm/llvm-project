@@ -1,4 +1,4 @@
-//===--------------------- GCNIterativeScheduler.cpp - --------------------===//
+//===- GCNIterativeScheduler.cpp ------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,23 +6,40 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-/// \file
-//
-//===----------------------------------------------------------------------===//
 
 #include "GCNIterativeScheduler.h"
+#include "AMDGPUSubtarget.h"
+#include "GCNRegPressure.h"
 #include "GCNSchedStrategy.h"
-#include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <type_traits>
+#include <vector>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
 
 namespace llvm {
-  std::vector<const SUnit*> makeMinRegSchedule(ArrayRef<const SUnit*> TopRoots,
-    const ScheduleDAG &DAG);
-}
+
+std::vector<const SUnit *> makeMinRegSchedule(ArrayRef<const SUnit *> TopRoots,
+                                              const ScheduleDAG &DAG);
+
+} // end namespace llvm
 
 // shim accessors for different order containers
 static inline MachineInstr *getMachineInstr(MachineInstr *MI) {
@@ -117,13 +134,13 @@ void GCNIterativeScheduler::printSchedRP(raw_ostream &OS,
   OS << "RP after:  ";
   After.print(OS, &ST);
 }
-
 #endif
 
 // DAG builder helper
 class GCNIterativeScheduler::BuildDAG {
   GCNIterativeScheduler &Sch;
-  SmallVector<SUnit*, 8> TopRoots;
+  SmallVector<SUnit *, 8> TopRoots;
+
 public:
   BuildDAG(const Region &R, GCNIterativeScheduler &_Sch)
     : Sch(_Sch) {
@@ -135,14 +152,16 @@ public:
                         /*TrackLaneMask*/true);
     Sch.Topo.InitDAGTopologicalSorting();
 
-    SmallVector<SUnit*, 8> BotRoots;
+    SmallVector<SUnit *, 8> BotRoots;
     Sch.findRootsAndBiasEdges(TopRoots, BotRoots);
   }
+
   ~BuildDAG() {
     Sch.BaseClass::exitRegion();
     Sch.BaseClass::finishBlock();
   }
-  ArrayRef<const SUnit*> getTopRoots() const {
+
+  ArrayRef<const SUnit *> getTopRoots() const {
     return TopRoots;
   }
 };
@@ -152,6 +171,7 @@ class GCNIterativeScheduler::OverrideLegacyStrategy {
   Region &Rgn;
   std::unique_ptr<MachineSchedStrategy> SaveSchedImpl;
   GCNRegPressure SaveMaxRP;
+
 public:
   OverrideLegacyStrategy(Region &R,
                          MachineSchedStrategy &OverrideStrategy,
@@ -165,12 +185,14 @@ public:
     Sch.BaseClass::startBlock(BB);
     Sch.BaseClass::enterRegion(BB, R.Begin, R.End, R.NumRegionInstrs);
   }
+
   ~OverrideLegacyStrategy() {
     Sch.BaseClass::exitRegion();
     Sch.BaseClass::finishBlock();
     Sch.SchedImpl.release();
     Sch.SchedImpl = std::move(SaveSchedImpl);
   }
+
   void schedule() {
     assert(Sch.RegionBegin == Rgn.Begin && Sch.RegionEnd == Rgn.End);
     DEBUG(dbgs() << "\nScheduling ";
@@ -183,6 +205,7 @@ public:
     Rgn.Begin = Sch.RegionBegin;
     Rgn.MaxPressure.clear();
   }
+
   void restoreOrder() {
     assert(Sch.RegionBegin == Rgn.Begin && Sch.RegionEnd == Rgn.End);
     // DAG SUnits are stored using original region's order
@@ -192,6 +215,7 @@ public:
 };
 
 namespace {
+
 // just a stub to make base class happy
 class SchedStrategyStub : public MachineSchedStrategy {
 public:
@@ -203,7 +227,8 @@ public:
   void releaseTopNode(SUnit *SU) override {}
   void releaseBottomNode(SUnit *SU) override {}
 };
-} // namespace
+
+} // end anonymous namespace
 
 GCNIterativeScheduler::GCNIterativeScheduler(MachineSchedContext *C,
                                              StrategyKind S)

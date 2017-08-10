@@ -129,3 +129,48 @@ bb343:
 critedge.loopexit:
   unreachable
 }
+
+; Check sub expression will be pre transformed.
+; CHECK-LABEL: @test5(
+; CHECK: entry:
+; CHECK: %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, %sub.ptr.rhs.cast
+; CHECK: br i1 %cmp
+; CHECK: if.then2:
+; CHECK: %[[PTRTOINT:.*]] = ptrtoint i32* %add.ptr to i64
+; CHECK: %[[SUB:.*]] = sub i64 %sub.ptr.lhs.cast, %[[PTRTOINT]]
+; CHECK: br label %if.end3
+; CHECK: if.end3:
+; CHECK: %[[PREPHI:.*]] = phi i64 [ %sub.ptr.sub, %if.else ], [ %[[SUB]], %if.then2 ], [ %sub.ptr.sub, %entry ]
+; CHECK: %[[DIV:.*]] = ashr exact i64 %[[PREPHI]], 2
+; CHECK: ret i64 %[[DIV]]
+
+declare void @bar(...) local_unnamed_addr #1
+
+; Function Attrs: nounwind uwtable
+define i64 @test5(i32* %start, i32* %e, i32 %n1, i32 %n2) local_unnamed_addr #0 {
+entry:
+  %sub.ptr.lhs.cast = ptrtoint i32* %e to i64
+  %sub.ptr.rhs.cast = ptrtoint i32* %start to i64
+  %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, %sub.ptr.rhs.cast
+  %cmp = icmp sgt i64 %sub.ptr.sub, 4000
+  br i1 %cmp, label %if.then, label %if.end3
+
+if.then:                                          ; preds = %entry
+  %cmp1 = icmp sgt i32 %n1, %n2
+  br i1 %cmp1, label %if.then2, label %if.else
+
+if.then2:                                         ; preds = %if.then
+  %add.ptr = getelementptr inbounds i32, i32* %start, i64 800
+  br label %if.end3
+
+if.else:                                          ; preds = %if.then
+  tail call void (...) @bar() #2
+  br label %if.end3
+
+if.end3:                                          ; preds = %if.then2, %if.else, %entry
+  %p.0 = phi i32* [ %add.ptr, %if.then2 ], [ %start, %if.else ], [ %start, %entry ]
+  %sub.ptr.rhs.cast5 = ptrtoint i32* %p.0 to i64
+  %sub.ptr.sub6 = sub i64 %sub.ptr.lhs.cast, %sub.ptr.rhs.cast5
+  %sub.ptr.div7 = ashr exact i64 %sub.ptr.sub6, 2
+  ret i64 %sub.ptr.div7
+}

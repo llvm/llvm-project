@@ -53,7 +53,7 @@ Breakpoint::Breakpoint(Target &target, SearchFilterSP &filter_sp,
                        bool resolve_indirect_symbols)
     : m_being_created(true), m_hardware(hardware), m_target(target),
       m_filter_sp(filter_sp), m_resolver_sp(resolver_sp),
-      m_options_up(new BreakpointOptions()), m_locations(*this),
+      m_options_up(new BreakpointOptions(true)), m_locations(*this),
       m_resolve_indirect_symbols(resolve_indirect_symbols), m_hit_count(0) {
   m_being_created = false;
 }
@@ -346,6 +346,14 @@ bool Breakpoint::IsOneShot() const { return m_options_up->IsOneShot(); }
 
 void Breakpoint::SetOneShot(bool one_shot) {
   m_options_up->SetOneShot(one_shot);
+}
+
+bool Breakpoint::IsAutoContinue() const { 
+  return m_options_up->IsAutoContinue();
+}
+
+void Breakpoint::SetAutoContinue(bool auto_continue) {
+  m_options_up->SetAutoContinue(auto_continue);
 }
 
 void Breakpoint::SetThreadID(lldb::tid_t thread_id) {

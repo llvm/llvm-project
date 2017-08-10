@@ -97,10 +97,10 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<MCInstrInfo> MII(TheTarget.createMCInstrInfo());
   if (!MII)
     report_fatal_error("error: no instruction info");
-  
+
   MCObjectFileInfo MOFI;
   MCContext Ctx(AsmInfo.get(), MRI.get(), &MOFI);
-  MOFI.InitMCObjectFileInfo(Triple(TripleName), false, CodeModel::Default, Ctx);
+  MOFI.InitMCObjectFileInfo(Triple(TripleName), false, Ctx);
 
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
   MCInstPrinter *IP(TheTarget.createMCInstPrinter(Triple(TripleName),

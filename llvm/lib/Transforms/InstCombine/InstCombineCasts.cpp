@@ -235,8 +235,8 @@ Instruction::CastOps InstCombiner::isEliminableCastPair(const CastInst *CI1,
   Type *MidTy = CI1->getDestTy();
   Type *DstTy = CI2->getDestTy();
 
-  Instruction::CastOps firstOp = Instruction::CastOps(CI1->getOpcode());
-  Instruction::CastOps secondOp = Instruction::CastOps(CI2->getOpcode());
+  Instruction::CastOps firstOp = CI1->getOpcode();
+  Instruction::CastOps secondOp = CI2->getOpcode();
   Type *SrcIntPtrTy =
       SrcTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(SrcTy) : nullptr;
   Type *MidIntPtrTy =
@@ -443,24 +443,120 @@ static Instruction *foldVecTruncToExtElt(TruncInst &Trunc, InstCombiner &IC) {
   return ExtractElementInst::Create(VecInput, IC.Builder.getInt32(Elt));
 }
 
-/// Try to narrow the width of bitwise logic instructions with constants.
-Instruction *InstCombiner::shrinkBitwiseLogic(TruncInst &Trunc) {
+/// Rotate left/right may occur in a wider type than necessary because of type
+/// promotion rules. Try to narrow all of the component instructions.
+Instruction *InstCombiner::narrowRotate(TruncInst &Trunc) {
+  assert((isa<VectorType>(Trunc.getSrcTy()) ||
+          shouldChangeType(Trunc.getSrcTy(), Trunc.getType())) &&
+         "Don't narrow to an illegal scalar type");
+
+  // First, find an or'd pair of opposite shifts with the same shifted operand:
+  // trunc (or (lshr ShVal, ShAmt0), (shl ShVal, ShAmt1))
+  Value *Or0, *Or1;
+  if (!match(Trunc.getOperand(0), m_OneUse(m_Or(m_Value(Or0), m_Value(Or1)))))
+    return nullptr;
+
+  Value *ShVal, *ShAmt0, *ShAmt1;
+  if (!match(Or0, m_OneUse(m_LogicalShift(m_Value(ShVal), m_Value(ShAmt0)))) ||
+      !match(Or1, m_OneUse(m_LogicalShift(m_Specific(ShVal), m_Value(ShAmt1)))))
+    return nullptr;
+
+  auto ShiftOpcode0 = cast<BinaryOperator>(Or0)->getOpcode();
+  auto ShiftOpcode1 = cast<BinaryOperator>(Or1)->getOpcode();
+  if (ShiftOpcode0 == ShiftOpcode1)
+    return nullptr;
+
+  // The shift amounts must add up to the narrow bit width.
+  Value *ShAmt;
+  bool SubIsOnLHS;
+  Type *DestTy = Trunc.getType();
+  unsigned NarrowWidth = DestTy->getScalarSizeInBits();
+  if (match(ShAmt0,
+            m_OneUse(m_Sub(m_SpecificInt(NarrowWidth), m_Specific(ShAmt1))))) {
+    ShAmt = ShAmt1;
+    SubIsOnLHS = true;
+  } else if (match(ShAmt1, m_OneUse(m_Sub(m_SpecificInt(NarrowWidth),
+                                          m_Specific(ShAmt0))))) {
+    ShAmt = ShAmt0;
+    SubIsOnLHS = false;
+  } else {
+    return nullptr;
+  }
+
+  // The shifted value must have high zeros in the wide type. Typically, this
+  // will be a zext, but it could also be the result of an 'and' or 'shift'.
+  unsigned WideWidth = Trunc.getSrcTy()->getScalarSizeInBits();
+  APInt HiBitMask = APInt::getHighBitsSet(WideWidth, WideWidth - NarrowWidth);
+  if (!MaskedValueIsZero(ShVal, HiBitMask, 0, &Trunc))
+    return nullptr;
+
+  // We have an unnecessarily wide rotate!
+  // trunc (or (lshr ShVal, ShAmt), (shl ShVal, BitWidth - ShAmt))
+  // Narrow it down to eliminate the zext/trunc:
+  // or (lshr trunc(ShVal), ShAmt0'), (shl trunc(ShVal), ShAmt1')
+  Value *NarrowShAmt = Builder.CreateTrunc(ShAmt, DestTy);
+  Value *NegShAmt = Builder.CreateNeg(NarrowShAmt);
+
+  // Mask both shift amounts to ensure there's no UB from oversized shifts.
+  Constant *MaskC = ConstantInt::get(DestTy, NarrowWidth - 1);
+  Value *MaskedShAmt = Builder.CreateAnd(NarrowShAmt, MaskC);
+  Value *MaskedNegShAmt = Builder.CreateAnd(NegShAmt, MaskC);
+
+  // Truncate the original value and use narrow ops.
+  Value *X = Builder.CreateTrunc(ShVal, DestTy);
+  Value *NarrowShAmt0 = SubIsOnLHS ? MaskedNegShAmt : MaskedShAmt;
+  Value *NarrowShAmt1 = SubIsOnLHS ? MaskedShAmt : MaskedNegShAmt;
+  Value *NarrowSh0 = Builder.CreateBinOp(ShiftOpcode0, X, NarrowShAmt0);
+  Value *NarrowSh1 = Builder.CreateBinOp(ShiftOpcode1, X, NarrowShAmt1);
+  return BinaryOperator::CreateOr(NarrowSh0, NarrowSh1);
+}
+
+/// Try to narrow the width of math or bitwise logic instructions by pulling a
+/// truncate ahead of binary operators.
+/// TODO: Transforms for truncated shifts should be moved into here.
+Instruction *InstCombiner::narrowBinOp(TruncInst &Trunc) {
   Type *SrcTy = Trunc.getSrcTy();
   Type *DestTy = Trunc.getType();
-  if (isa<IntegerType>(SrcTy) && !shouldChangeType(SrcTy, DestTy))
+  if (!isa<VectorType>(SrcTy) && !shouldChangeType(SrcTy, DestTy))
     return nullptr;
 
-  BinaryOperator *LogicOp;
-  Constant *C;
-  if (!match(Trunc.getOperand(0), m_OneUse(m_BinOp(LogicOp))) ||
-      !LogicOp->isBitwiseLogicOp() ||
-      !match(LogicOp->getOperand(1), m_Constant(C)))
+  BinaryOperator *BinOp;
+  if (!match(Trunc.getOperand(0), m_OneUse(m_BinOp(BinOp))))
     return nullptr;
 
-  // trunc (logic X, C) --> logic (trunc X, C')
-  Constant *NarrowC = ConstantExpr::getTrunc(C, DestTy);
-  Value *NarrowOp0 = Builder.CreateTrunc(LogicOp->getOperand(0), DestTy);
-  return BinaryOperator::Create(LogicOp->getOpcode(), NarrowOp0, NarrowC);
+  switch (BinOp->getOpcode()) {
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::Add:
+  case Instruction::Mul: {
+    Constant *C;
+    if (match(BinOp->getOperand(1), m_Constant(C))) {
+      // trunc (binop X, C) --> binop (trunc X, C')
+      Constant *NarrowC = ConstantExpr::getTrunc(C, DestTy);
+      Value *TruncX = Builder.CreateTrunc(BinOp->getOperand(0), DestTy);
+      return BinaryOperator::Create(BinOp->getOpcode(), TruncX, NarrowC);
+    }
+    break;
+  }
+  case Instruction::Sub: {
+    Constant *C;
+    if (match(BinOp->getOperand(0), m_Constant(C))) {
+      // trunc (binop C, X) --> binop (trunc C', X)
+      Constant *NarrowC = ConstantExpr::getTrunc(C, DestTy);
+      Value *TruncX = Builder.CreateTrunc(BinOp->getOperand(1), DestTy);
+      return BinaryOperator::Create(BinOp->getOpcode(), NarrowC, TruncX);
+    }
+    break;
+  }
+
+  default: break;
+  }
+
+  if (Instruction *NarrowOr = narrowRotate(Trunc))
+    return NarrowOr;
+
+  return nullptr;
 }
 
 /// Try to narrow the width of a splat shuffle. This could be generalized to any
@@ -616,7 +712,7 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
     }
   }
 
-  if (Instruction *I = shrinkBitwiseLogic(CI))
+  if (Instruction *I = narrowBinOp(CI))
     return I;
 
   if (Instruction *I = shrinkSplatShuffle(CI, Builder))

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 ; CHECK-NOT: IMPLICIT_DEF
 
 define void @foo(<2 x float>* %p) {

@@ -139,6 +139,10 @@ struct InlineParams {
   /// Threshold to use when the callsite is considered hot.
   Optional<int> HotCallSiteThreshold;
 
+  /// Threshold to use when the callsite is considered hot relative to function
+  /// entry.
+  Optional<int> LocallyHotCallSiteThreshold;
+
   /// Threshold to use when the callsite is considered cold.
   Optional<int> ColdCallSiteThreshold;
 };

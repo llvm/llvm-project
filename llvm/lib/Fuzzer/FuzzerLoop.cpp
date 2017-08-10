@@ -122,7 +122,6 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
     EF->__sanitizer_install_malloc_and_free_hooks(MallocHook, FreeHook);
   TPC.SetUseCounters(Options.UseCounters);
   TPC.SetUseValueProfile(Options.UseValueProfile);
-  TPC.SetPrintNewPCs(Options.PrintNewCovPcs);
 
   if (Options.Verbosity)
     TPC.PrintModuleInfo();
@@ -329,17 +328,16 @@ void Fuzzer::SetMaxMutationLen(size_t MaxMutationLen) {
 void Fuzzer::CheckExitOnSrcPosOrItem() {
   if (!Options.ExitOnSrcPos.empty()) {
     static auto *PCsSet = new std::set<uintptr_t>;
-    for (size_t i = 1, N = TPC.GetNumPCs(); i < N; i++) {
-      uintptr_t PC = TPC.GetPC(i);
-      if (!PC) continue;
-      if (!PCsSet->insert(PC).second) continue;
-      std::string Descr = DescribePC("%L", PC);
+    auto HandlePC = [&](uintptr_t PC) {
+      if (!PCsSet->insert(PC).second) return;
+      std::string Descr = DescribePC("%F %L", PC + 1);
       if (Descr.find(Options.ExitOnSrcPos) != std::string::npos) {
         Printf("INFO: found line matching '%s', exiting.\n",
                Options.ExitOnSrcPos.c_str());
         _Exit(0);
       }
-    }
+    };
+    TPC.ForEachObservedPC(HandlePC);
   }
   if (!Options.ExitOnItem.empty()) {
     if (Corpus.HasUnit(Options.ExitOnItem)) {
@@ -438,6 +436,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   PrintPulseAndReportSlowInput(Data, Size);
   size_t NumNewFeatures = Corpus.NumFeatureUpdates() - NumUpdatesBefore;
   if (NumNewFeatures) {
+    TPC.UpdateObservedPCs();
     Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures, MayDeleteFile,
                        UniqFeatureSetTmp);
     return true;
@@ -546,7 +545,6 @@ void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
                                          "NEW   ");
   WriteToOutputCorpus(U);
   NumberOfNewUnitsAdded++;
-  TPC.PrintNewPCs();
   CheckExitOnSrcPosOrItem();  // Check only after the unit is saved to corpus.
   LastCorpusUpdateRun = TotalNumberOfRuns;
   LastCorpusUpdateTime = system_clock::now();
@@ -626,7 +624,7 @@ void Fuzzer::MutateAndTestOne() {
 }
 
 void Fuzzer::Loop() {
-  TPC.InitializePrintNewPCs();
+  TPC.SetPrintNewPCs(Options.PrintNewCovPcs);
   system_clock::time_point LastCorpusReload = system_clock::now();
   if (Options.DoCrossOver)
     MD.SetCorpus(&Corpus);

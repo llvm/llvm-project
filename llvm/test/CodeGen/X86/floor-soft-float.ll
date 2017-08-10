@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86-64 -mattr=+sse4.1,-avx | FileCheck %s --check-prefix=CHECK-HARD-FLOAT
-; RUN: llc < %s -march=x86-64 -mattr=+sse4.1,-avx,+soft-float | FileCheck %s --check-prefix=CHECK-SOFT-FLOAT
+; RUN: llc < %s -mattr=+sse4.1,-avx | FileCheck %s --check-prefix=CHECK-HARD-FLOAT
+; RUN: llc < %s -mattr=+sse4.1,-avx,+soft-float | FileCheck %s --check-prefix=CHECK-SOFT-FLOAT
 
 target triple = "x86_64-unknown-linux-gnu"
 

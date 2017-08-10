@@ -550,6 +550,7 @@ void ScheduleDAGRRList::ReleasePredecessors(SUnit *SU) {
         unsigned NestLevel = 0;
         unsigned MaxNest = 0;
         SDNode *N = FindCallSeqStart(Node, NestLevel, MaxNest, TII);
+        assert(N && "Must find call sequence start");
 
         SUnit *Def = &SUnits[N->getNodeId()];
         CallSeqEndForStart[Def] = SU;
@@ -821,9 +822,13 @@ void ScheduleDAGRRList::UnscheduleNodeBottomUp(SUnit *SU) {
        SUNode = SUNode->getGluedNode()) {
     if (SUNode->isMachineOpcode() &&
         SUNode->getMachineOpcode() == TII->getCallFrameSetupOpcode()) {
+      SUnit *SeqEnd = CallSeqEndForStart[SU];
+      assert(SeqEnd && "Call sequence start/end must be known");
+      assert(!LiveRegDefs[CallResource]);
+      assert(!LiveRegGens[CallResource]);
       ++NumLiveRegs;
       LiveRegDefs[CallResource] = SU;
-      LiveRegGens[CallResource] = CallSeqEndForStart[SU];
+      LiveRegGens[CallResource] = SeqEnd;
     }
   }
 
@@ -835,6 +840,8 @@ void ScheduleDAGRRList::UnscheduleNodeBottomUp(SUnit *SU) {
       if (SUNode->isMachineOpcode() &&
           SUNode->getMachineOpcode() == TII->getCallFrameDestroyOpcode()) {
         assert(NumLiveRegs > 0 && "NumLiveRegs is already zero!");
+        assert(LiveRegDefs[CallResource]);
+        assert(LiveRegGens[CallResource]);
         --NumLiveRegs;
         LiveRegDefs[CallResource] = nullptr;
         LiveRegGens[CallResource] = nullptr;
@@ -1319,8 +1326,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
     // If we're in the middle of scheduling a call, don't begin scheduling
     // another call. Also, don't allow any physical registers to be live across
     // the call.
-    if ((Node->getMachineOpcode() == TII->getCallFrameDestroyOpcode()) ||
-        (Node->getMachineOpcode() == TII->getCallFrameSetupOpcode())) {
+    if (Node->getMachineOpcode() == TII->getCallFrameDestroyOpcode()) {
       // Check the special calling-sequence resource.
       unsigned CallResource = TRI->getNumRegs();
       if (LiveRegDefs[CallResource]) {
@@ -1390,27 +1396,30 @@ void ScheduleDAGRRList::releaseInterferences(unsigned Reg) {
 /// (3) No Interferences: may unschedule to break register interferences.
 SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
   SUnit *CurSU = AvailableQueue->empty() ? nullptr : AvailableQueue->pop();
-  while (CurSU) {
-    SmallVector<unsigned, 4> LRegs;
-    if (!DelayForLiveRegsBottomUp(CurSU, LRegs))
-      break;
-    DEBUG(dbgs() << "    Interfering reg " <<
-          (LRegs[0] == TRI->getNumRegs() ? "CallResource"
-           : TRI->getName(LRegs[0]))
-           << " SU #" << CurSU->NodeNum << '\n');
-    std::pair<LRegsMapT::iterator, bool> LRegsPair =
-      LRegsMap.insert(std::make_pair(CurSU, LRegs));
-    if (LRegsPair.second) {
-      CurSU->isPending = true;  // This SU is not in AvailableQueue right now.
-      Interferences.push_back(CurSU);
+  auto FindAvailableNode = [&]() {
+    while (CurSU) {
+      SmallVector<unsigned, 4> LRegs;
+      if (!DelayForLiveRegsBottomUp(CurSU, LRegs))
+        break;
+      DEBUG(dbgs() << "    Interfering reg " <<
+            (LRegs[0] == TRI->getNumRegs() ? "CallResource"
+             : TRI->getName(LRegs[0]))
+             << " SU #" << CurSU->NodeNum << '\n');
+      std::pair<LRegsMapT::iterator, bool> LRegsPair =
+        LRegsMap.insert(std::make_pair(CurSU, LRegs));
+      if (LRegsPair.second) {
+        CurSU->isPending = true;  // This SU is not in AvailableQueue right now.
+        Interferences.push_back(CurSU);
+      }
+      else {
+        assert(CurSU->isPending && "Interferences are pending");
+        // Update the interference with current live regs.
+        LRegsPair.first->second = LRegs;
+      }
+      CurSU = AvailableQueue->pop();
     }
-    else {
-      assert(CurSU->isPending && "Interferences are pending");
-      // Update the interference with current live regs.
-      LRegsPair.first->second = LRegs;
-    }
-    CurSU = AvailableQueue->pop();
-  }
+  };
+  FindAvailableNode();
   if (CurSU)
     return CurSU;
 
@@ -1447,13 +1456,16 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
 
       // If one or more successors has been unscheduled, then the current
       // node is no longer available.
-      if (!TrySU->isAvailable || !TrySU->NodeQueueId)
+      if (!TrySU->isAvailable || !TrySU->NodeQueueId) {
+        DEBUG(dbgs() << "TrySU not available; choosing node from queue\n");
         CurSU = AvailableQueue->pop();
-      else {
+      } else {
+        DEBUG(dbgs() << "TrySU available\n");
         // Available and in AvailableQueue
         AvailableQueue->remove(TrySU);
         CurSU = TrySU;
       }
+      FindAvailableNode();
       // Interferences has been mutated. We must break.
       break;
     }

@@ -45,7 +45,7 @@
 #include <unistd.h>
 #endif
 
-#if !defined(__APPLE__) && !defined(__FreeBSD__)
+#if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(__NetBSD__)
 #include <malloc.h>
 #endif
 

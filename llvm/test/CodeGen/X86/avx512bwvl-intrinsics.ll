@@ -2799,9 +2799,9 @@ define <32 x i8>@test_int_x86_avx512_mask_pbroadcast_b_gpr_256(i8 %x0, <32 x i8>
 ; CHECK-LABEL: test_int_x86_avx512_mask_pbroadcast_b_gpr_256:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovd %esi, %k1 ## encoding: [0xc5,0xfb,0x92,0xce]
-; CHECK-NEXT:    vpbroadcastb %dil, %ymm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x29,0x7a,0xc7]
-; CHECK-NEXT:    vpbroadcastb %dil, %ymm1 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xa9,0x7a,0xcf]
-; CHECK-NEXT:    vpbroadcastb %dil, %ymm2 ## encoding: [0x62,0xf2,0x7d,0x28,0x7a,0xd7]
+; CHECK-NEXT:    vpbroadcastb %edi, %ymm1 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xa9,0x7a,0xcf]
+; CHECK-NEXT:    vpbroadcastb %edi, %ymm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x29,0x7a,0xc7]
+; CHECK-NEXT:    vpbroadcastb %edi, %ymm2 ## encoding: [0x62,0xf2,0x7d,0x28,0x7a,0xd7]
 ; CHECK-NEXT:    vpaddb %ymm0, %ymm2, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xed,0xfc,0xc0]
 ; CHECK-NEXT:    vpaddb %ymm0, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf5,0xfc,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
@@ -2819,9 +2819,9 @@ define <16 x i8>@test_int_x86_avx512_mask_pbroadcast_b_gpr_128(i8 %x0, <16 x i8>
 ; CHECK-LABEL: test_int_x86_avx512_mask_pbroadcast_b_gpr_128:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovd %esi, %k1 ## encoding: [0xc5,0xfb,0x92,0xce]
-; CHECK-NEXT:    vpbroadcastb %dil, %xmm1 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0x89,0x7a,0xcf]
-; CHECK-NEXT:    vpbroadcastb %dil, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0x7a,0xc7]
-; CHECK-NEXT:    vpbroadcastb %dil, %xmm2 ## encoding: [0x62,0xf2,0x7d,0x08,0x7a,0xd7]
+; CHECK-NEXT:    vpbroadcastb %edi, %xmm1 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0x89,0x7a,0xcf]
+; CHECK-NEXT:    vpbroadcastb %edi, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0x7a,0xc7]
+; CHECK-NEXT:    vpbroadcastb %edi, %xmm2 ## encoding: [0x62,0xf2,0x7d,0x08,0x7a,0xd7]
 ; CHECK-NEXT:    vpaddb %xmm0, %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xe9,0xfc,0xc0]
 ; CHECK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfc,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
@@ -2839,9 +2839,9 @@ define <16 x i16>@test_int_x86_avx512_mask_pbroadcast_w_gpr_256(i16 %x0, <16 x i
 ; CHECK-LABEL: test_int_x86_avx512_mask_pbroadcast_w_gpr_256:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovd %esi, %k1 ## encoding: [0xc5,0xfb,0x92,0xce]
-; CHECK-NEXT:    vpbroadcastw %di, %ymm1 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xa9,0x7b,0xcf]
-; CHECK-NEXT:    vpbroadcastw %di, %ymm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x29,0x7b,0xc7]
-; CHECK-NEXT:    vpbroadcastw %di, %ymm2 ## encoding: [0x62,0xf2,0x7d,0x28,0x7b,0xd7]
+; CHECK-NEXT:    vpbroadcastw %edi, %ymm1 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xa9,0x7b,0xcf]
+; CHECK-NEXT:    vpbroadcastw %edi, %ymm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x29,0x7b,0xc7]
+; CHECK-NEXT:    vpbroadcastw %edi, %ymm2 ## encoding: [0x62,0xf2,0x7d,0x28,0x7b,0xd7]
 ; CHECK-NEXT:    vpaddw %ymm0, %ymm2, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xed,0xfd,0xc0]
 ; CHECK-NEXT:    vpaddw %ymm0, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf5,0xfd,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
@@ -2859,9 +2859,9 @@ define <8 x i16>@test_int_x86_avx512_mask_pbroadcast_w_gpr_128(i16 %x0, <8 x i16
 ; CHECK-LABEL: test_int_x86_avx512_mask_pbroadcast_w_gpr_128:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovd %esi, %k1 ## encoding: [0xc5,0xfb,0x92,0xce]
-; CHECK-NEXT:    vpbroadcastw %di, %xmm1 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0x89,0x7b,0xcf]
-; CHECK-NEXT:    vpbroadcastw %di, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0x7b,0xc7]
-; CHECK-NEXT:    vpbroadcastw %di, %xmm2 ## encoding: [0x62,0xf2,0x7d,0x08,0x7b,0xd7]
+; CHECK-NEXT:    vpbroadcastw %edi, %xmm1 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0x89,0x7b,0xcf]
+; CHECK-NEXT:    vpbroadcastw %edi, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0x7b,0xc7]
+; CHECK-NEXT:    vpbroadcastw %edi, %xmm2 ## encoding: [0x62,0xf2,0x7d,0x08,0x7b,0xd7]
 ; CHECK-NEXT:    vpaddw %xmm0, %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xe9,0xfd,0xc0]
 ; CHECK-NEXT:    vpaddw %xmm0, %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfd,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]

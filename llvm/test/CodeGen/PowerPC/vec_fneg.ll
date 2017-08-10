@@ -1,7 +1,7 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5 | FileCheck %s -check-prefix=CHECK-NOVSX
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -march=ppc64le \
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5 | FileCheck %s -check-prefix=CHECK-NOVSX
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:          -mattr=+altivec -mattr=+vsx |  FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -march=ppc64le \
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:          -mattr=+altivec -mattr=-vsx |  FileCheck %s \
 ; RUN:          -check-prefix=CHECK-NOVSX
 

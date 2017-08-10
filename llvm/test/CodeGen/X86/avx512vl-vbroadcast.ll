@@ -73,7 +73,7 @@ define   <8 x float> @_inreg8xfloat(float %a) {
 define   <8 x float> @_ss8xfloat_mask(<8 x float> %i, float %a, <8 x i32> %mask1) {
 ; CHECK-LABEL: _ss8xfloat_mask:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpxor %ymm3, %ymm3, %ymm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vpcmpneqd %ymm3, %ymm2, %k1
 ; CHECK-NEXT:    vbroadcastss %xmm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -87,7 +87,7 @@ define   <8 x float> @_ss8xfloat_mask(<8 x float> %i, float %a, <8 x i32> %mask1
 define   <8 x float> @_ss8xfloat_maskz(float %a, <8 x i32> %mask1) {
 ; CHECK-LABEL: _ss8xfloat_maskz:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpxor %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vpcmpneqd %ymm2, %ymm1, %k1
 ; CHECK-NEXT:    vbroadcastss %xmm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple mips-linux-gnu -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple mips64-linux-gnu -fsyntax-only -verify %s
 
 __attribute__((long_call(0))) void foo1();  // expected-error {{'long_call' attribute takes no arguments}}
 __attribute__((short_call(0))) void foo9();  // expected-error {{'short_call' attribute takes no arguments}}

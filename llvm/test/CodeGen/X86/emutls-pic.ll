@@ -1,7 +1,7 @@
-; RUN: llc < %s -emulated-tls -march=x86 -mtriple=i386-linux-gnu -relocation-model=pic | FileCheck -check-prefix=X32 %s
-; RUN: llc < %s -emulated-tls -march=x86-64 -mtriple=x86_64-linux-gnu -relocation-model=pic | FileCheck -check-prefix=X64 %s
-; RUN: llc < %s -emulated-tls -march=x86 -mtriple=i386-linux-android -relocation-model=pic | FileCheck -check-prefix=X32 %s
-; RUN: llc < %s -emulated-tls -march=x86-64 -mtriple=x86_64-linux-android -relocation-model=pic | FileCheck -check-prefix=X64 %s
+; RUN: llc < %s -emulated-tls -mtriple=i386-linux-gnu -relocation-model=pic | FileCheck -check-prefix=X32 %s
+; RUN: llc < %s -emulated-tls -mtriple=x86_64-linux-gnu -relocation-model=pic | FileCheck -check-prefix=X64 %s
+; RUN: llc < %s -emulated-tls -mtriple=i386-linux-android -relocation-model=pic | FileCheck -check-prefix=X32 %s
+; RUN: llc < %s -emulated-tls -mtriple=x86_64-linux-android -relocation-model=pic | FileCheck -check-prefix=X64 %s
 
 ; Use my_emutls_get_address like __emutls_get_address.
 @my_emutls_v_xyz = external global i8*, align 4

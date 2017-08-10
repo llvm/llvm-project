@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -code-model=large %s \
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -large-code-model %s \
 // RUN:   -o - | llvm-readobj -s -sd | FileCheck %s
 
 // CHECK:      Section {

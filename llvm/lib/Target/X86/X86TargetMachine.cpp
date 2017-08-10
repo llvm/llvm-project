@@ -181,15 +181,27 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   return *RM;
 }
 
+static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM,
+                                              bool JIT, bool Is64Bit) {
+  if (CM)
+    return *CM;
+  if (JIT)
+    return Is64Bit ? CodeModel::Large : CodeModel::Small;
+  return CodeModel::Small;
+}
+
 /// Create an X86 target.
 ///
 X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
                                    Optional<Reloc::Model> RM,
-                                   CodeModel::Model CM, CodeGenOpt::Level OL)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(TT, RM), CM, OL),
+                                   Optional<CodeModel::Model> CM,
+                                   CodeGenOpt::Level OL, bool JIT)
+    : LLVMTargetMachine(
+          T, computeDataLayout(TT), TT, CPU, FS, Options,
+          getEffectiveRelocModel(TT, RM),
+          getEffectiveCodeModel(CM, JIT, TT.getArch() == Triple::x86_64), OL),
       TLOF(createTLOF(getTargetTriple())) {
   // Windows stack unwinder gets confused when execution flow "falls through"
   // after a call to 'noreturn' function.
@@ -294,12 +306,10 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
-#ifdef LLVM_BUILD_GLOBAL_ISEL
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
-#endif
   bool addILPOpts() override;
   bool addPreISel() override;
   void addPreRegAlloc() override;
@@ -349,7 +359,6 @@ bool X86PassConfig::addInstSelector() {
   return false;
 }
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
 bool X86PassConfig::addIRTranslator() {
   addPass(new IRTranslator());
   return false;
@@ -369,7 +378,6 @@ bool X86PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
   return false;
 }
-#endif
 
 bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterID);

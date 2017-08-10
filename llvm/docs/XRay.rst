@@ -196,6 +196,9 @@ on your application, you may set the ``xray_fdr_log`` option to ``true`` in the
 ``XRAY_OPTIONS`` environment variable (while also optionally setting the
 ``xray_naive_log`` to ``false``).
 
+When the buffers are flushed to disk, the result is a binary trace format
+described by `XRay FDR format <XRayFDRFormat.html>`_
+
 When FDR mode is on, it will keep writing and recycling memory buffers until
 the logging implementation is finalized -- at which point it can be flushed and
 re-initialised later. To do this programmatically, we follow the workflow

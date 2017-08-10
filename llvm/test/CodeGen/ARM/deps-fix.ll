@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm -mcpu=cortex-a9 -mattr=+neon,+neonfp -float-abi=hard -mtriple armv7-linux-gnueabi | FileCheck %s
+; RUN: llc < %s -mcpu=cortex-a9 -mattr=+neon,+neonfp -float-abi=hard -mtriple armv7-linux-gnueabi | FileCheck %s
 
 ;; This test checks that the ExecutionDepsFix pass performs the domain changes
 ;; even when some dependencies are propagated through implicit definitions.

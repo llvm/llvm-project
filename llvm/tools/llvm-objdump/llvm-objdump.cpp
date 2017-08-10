@@ -871,7 +871,7 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   uint64_t Val = O->getPlainRelocationSymbolNum(RE);
 
   if (O->getAnyRelocationType(RE) == MachO::ARM64_RELOC_ADDEND) {
-    fmt << format("0x%x", Val);
+    fmt << format("0x%0" PRIx64, Val);
     return;
   } else if (isExtern) {
     symbol_iterator SI = O->symbol_begin();
@@ -1223,7 +1223,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   MCObjectFileInfo MOFI;
   MCContext Ctx(AsmInfo.get(), MRI.get(), &MOFI);
   // FIXME: for now initialize MCObjectFileInfo with default values
-  MOFI.InitMCObjectFileInfo(Triple(TripleName), false, CodeModel::Default, Ctx);
+  MOFI.InitMCObjectFileInfo(Triple(TripleName), false, Ctx);
 
   std::unique_ptr<MCDisassembler> DisAsm(
     TheTarget->createMCDisassembler(*STI, Ctx));

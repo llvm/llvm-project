@@ -1,0 +1,81 @@
+# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner %s -o - | FileCheck %s
+--- |
+  target triple = "aarch64---"
+  
+  define i32 @main() #0 {
+  entry:
+    ret i32 0
+  }
+  
+  attributes #0 = { noinline noredzone nounwind optnone ssp uwtable }
+
+# CHECK-LABEL: @OUTLINED_FUNCTION_0
+
+...
+---
+# This test ensures that we
+# - Create outlined functions
+# - Don't outline anything to do with LR or W30
+#
+# CHECK-LABEL: name: main
+# CHECK: BL @OUTLINED_FUNCTION_0
+# CHECK: STRHHroW %w16, %x9, %w30, 1, 1
+# CHECK: %lr = ORRXri %xzr, 1
+# CHECK: BL @OUTLINED_FUNCTION_0
+# CHECK: STRHHroW %w16, %x9, %w30, 1, 1
+# CHECK: %lr = ORRXri %xzr, 1
+# CHECK: BL @OUTLINED_FUNCTION_0
+# CHECK: STRHHroW %w16, %x9, %w30, 1, 1
+# CHECK: %lr = ORRXri %xzr, 1
+name:            main
+alignment:       2
+tracksRegLiveness: true
+frameInfo:       
+  stackSize:       16
+  maxAlignment:    4
+  maxCallFrameSize: 0
+
+body:             |
+  bb.0.entry:
+    %sp = frame-setup SUBXri %sp, 16, 0
+    %x9 = ORRXri %xzr, 1
+    %w16 = ORRWri %wzr, 1
+    %w30 = ORRWri %wzr, 1
+    %lr = ORRXri %xzr, 1
+
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    STRHHroW %w16, %x9, %w30, 1, 1
+    %lr = ORRXri %xzr, 1
+
+    %w3 = ORRWri %wzr, 1993
+
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    STRHHroW %w16, %x9, %w30, 1, 1
+    %lr = ORRXri %xzr, 1
+
+    %w4 = ORRWri %wzr, 1994
+
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    %w16 = ORRWri %wzr, 1
+    STRHHroW %w16, %x9, %w30, 1, 1
+    %lr = ORRXri %xzr, 1
+
+    %w5 = ORRWri %wzr, 1995
+
+    %sp = ADDXri %sp, 16, 0
+    RET undef %lr
+    

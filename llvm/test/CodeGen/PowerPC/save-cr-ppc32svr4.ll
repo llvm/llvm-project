@@ -1,4 +1,4 @@
-; RUN: llc -march=ppc32 -relocation-model pic < %s | FileCheck %s
+; RUN: llc -relocation-model pic < %s | FileCheck %s
 ;
 ; Make sure that the CR register is saved correctly on PPC32/SVR4.
 

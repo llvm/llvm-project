@@ -1,4 +1,4 @@
-//===------------------------- GCNRegPressure.cpp - -----------------------===//
+//===- GCNRegPressure.cpp -------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,13 +6,26 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-/// \file
-//
-//===----------------------------------------------------------------------===//
 
 #include "GCNRegPressure.h"
+#include "AMDGPUSubtarget.h"
+#include "SIRegisterInfo.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <algorithm>
+#include <cassert>
 
 using namespace llvm;
 
@@ -63,7 +76,6 @@ static bool isEqual(const GCNRPTracker::LiveRegSet &S1,
   }
   return true;
 }
-
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -176,7 +188,6 @@ void GCNRegPressure::print(raw_ostream &OS, const SISubtarget *ST) const {
   OS << '\n';
 }
 #endif
-
 
 static LaneBitmask getDefRegMask(const MachineOperand &MO,
                                  const MachineRegisterInfo &MRI) {

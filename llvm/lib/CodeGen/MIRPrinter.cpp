@@ -458,17 +458,20 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
                          const MachineConstantPool &ConstantPool) {
   unsigned ID = 0;
   for (const MachineConstantPoolEntry &Constant : ConstantPool.getConstants()) {
-    // TODO: Serialize target specific constant pool entries.
-    if (Constant.isMachineConstantPoolEntry())
-      llvm_unreachable("Can't print target specific constant pool entries yet");
-
-    yaml::MachineConstantPoolValue YamlConstant;
     std::string Str;
     raw_string_ostream StrOS(Str);
-    Constant.Val.ConstVal->printAsOperand(StrOS);
+    if (Constant.isMachineConstantPoolEntry()) {
+      Constant.Val.MachineCPVal->print(StrOS);
+    } else {
+      Constant.Val.ConstVal->printAsOperand(StrOS);
+    }
+
+    yaml::MachineConstantPoolValue YamlConstant;
     YamlConstant.ID = ID++;
     YamlConstant.Value = StrOS.str();
     YamlConstant.Alignment = Constant.getAlignment();
+    YamlConstant.IsTargetSpecific = Constant.isMachineConstantPoolEntry();
+
     MF.Constants.push_back(YamlConstant);
   }
 }

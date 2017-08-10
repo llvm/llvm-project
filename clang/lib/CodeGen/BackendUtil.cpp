@@ -335,16 +335,18 @@ static CodeGenOpt::Level getCGOptLevel(const CodeGenOptions &CodeGenOpts) {
   }
 }
 
-static llvm::CodeModel::Model getCodeModel(const CodeGenOptions &CodeGenOpts) {
-  unsigned CodeModel =
-      llvm::StringSwitch<unsigned>(CodeGenOpts.CodeModel)
-      .Case("small", llvm::CodeModel::Small)
-      .Case("kernel", llvm::CodeModel::Kernel)
-      .Case("medium", llvm::CodeModel::Medium)
-      .Case("large", llvm::CodeModel::Large)
-      .Case("default", llvm::CodeModel::Default)
-      .Default(~0u);
+static Optional<llvm::CodeModel::Model>
+getCodeModel(const CodeGenOptions &CodeGenOpts) {
+  unsigned CodeModel = llvm::StringSwitch<unsigned>(CodeGenOpts.CodeModel)
+                           .Case("small", llvm::CodeModel::Small)
+                           .Case("kernel", llvm::CodeModel::Kernel)
+                           .Case("medium", llvm::CodeModel::Medium)
+                           .Case("large", llvm::CodeModel::Large)
+                           .Case("default", ~1u)
+                           .Default(~0u);
   assert(CodeModel != ~0u && "invalid code model!");
+  if (CodeModel == ~1u)
+    return None;
   return static_cast<llvm::CodeModel::Model>(CodeModel);
 }
 
@@ -658,7 +660,7 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
     return;
   }
 
-  llvm::CodeModel::Model CM  = getCodeModel(CodeGenOpts);
+  Optional<llvm::CodeModel::Model> CM = getCodeModel(CodeGenOpts);
   std::string FeaturesStr =
       llvm::join(TargetOpts.Features.begin(), TargetOpts.Features.end(), ",");
   llvm::Reloc::Model RM = getRelocModel(CodeGenOpts);

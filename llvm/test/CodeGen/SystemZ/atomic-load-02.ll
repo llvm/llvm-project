@@ -4,7 +4,6 @@
 
 define i16 @f1(i16 *%src) {
 ; CHECK-LABEL: f1:
-; CHECK: bcr 1{{[45]}}, %r0
 ; CHECK: lh %r2, 0(%r2)
 ; CHECK: br %r14
   %val = load atomic i16 , i16 *%src seq_cst, align 2

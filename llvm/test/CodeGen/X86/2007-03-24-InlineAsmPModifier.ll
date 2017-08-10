@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -no-integrated-as | grep "mov %gs:72, %eax"
+; RUN: llc < %s -no-integrated-as | grep "mov %gs:72, %eax"
 target datalayout = "e-p:32:32"
 target triple = "i686-apple-darwin9"
 

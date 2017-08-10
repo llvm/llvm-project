@@ -1,6 +1,7 @@
 ; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -S < %s 2>&1 | FileCheck %s
 
 ; CHECK: irce: in function test_01: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
+; CHECK: irce: in function test_01u: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK-NOT: irce: in function test_02: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK: irce: in function test_03: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK-NOT: irce: in function test_04: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
@@ -9,7 +10,8 @@
 ; CHECK: irce: in function test_07: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 ; CHECK-NOT: irce: in function test_08: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 
-; Show that IRCE can turn 'ne' condition to 'slt' in increasing IV.
+; Show that IRCE can turn 'ne' condition to 'slt' in increasing IV when the IV
+; can be negative at some point.
 define void @test_01(i32* %arr, i32* %a_len_ptr) #0 {
 
 ; CHECK:      test_01
@@ -23,10 +25,43 @@ entry:
   br label %loop
 
 loop:
+  %idx = phi i32 [ -3, %entry ], [ %idx.next, %in.bounds ]
+  %idx.next = add i32 %idx, 1
+  %abc = icmp slt i32 %idx, %len
+  br i1 %abc, label %in.bounds, label %out.of.bounds
+
+in.bounds:
+  %addr = getelementptr i32, i32* %arr, i32 %idx
+  store i32 0, i32* %addr
+  %next = icmp ne i32 %idx.next, 100
+  br i1 %next, label %loop, label %exit
+
+out.of.bounds:
+  ret void
+
+exit:
+  ret void
+}
+
+; Show that IRCE can turn 'ne' condition to 'ult' in increasing IV when IV is
+; non-negative.
+define void @test_01u(i32* %arr, i32* %a_len_ptr) #0 {
+
+; CHECK:      test_01u
+; CHECK:        main.exit.selector:
+; CHECK-NEXT:     [[PSEUDO_PHI:%[^ ]+]] = phi i32 [ %idx.next, %in.bounds ]
+; CHECK-NEXT:     [[COND:%[^ ]+]] = icmp ult i32 [[PSEUDO_PHI]], 100
+; CHECK-NEXT:     br i1 [[COND]]
+
+entry:
+  %len = load i32, i32* %a_len_ptr, !range !0
+  br label %loop
+
+loop:
   %idx = phi i32 [ 0, %entry ], [ %idx.next, %in.bounds ]
   %idx.next = add i32 %idx, 1
   %abc = icmp slt i32 %idx, %len
-  br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
+  br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
   %addr = getelementptr i32, i32* %arr, i32 %idx
@@ -55,7 +90,7 @@ loop:
   %idx = phi i32 [ 0, %entry ], [ %idx.next, %in.bounds ]
   %idx.next = add i32 %idx, 1
   %abc = icmp slt i32 %idx, %len
-  br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
+  br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
   %addr = getelementptr i32, i32* %arr, i32 %idx
@@ -87,7 +122,7 @@ loop:
   %idx = phi i32 [ 0, %entry ], [ %idx.next, %in.bounds ]
   %idx.next = add i32 %idx, 1
   %abc = icmp slt i32 %idx, %len
-  br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
+  br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
   %addr = getelementptr i32, i32* %arr, i32 %idx
@@ -116,7 +151,7 @@ loop:
   %idx = phi i32 [ 0, %entry ], [ %idx.next, %in.bounds ]
   %idx.next = add i32 %idx, 1
   %abc = icmp slt i32 %idx, %len
-  br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
+  br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
   %addr = getelementptr i32, i32* %arr, i32 %idx
@@ -148,7 +183,7 @@ loop:
   %idx = phi i32 [ 100, %entry ], [ %idx.next, %in.bounds ]
   %idx.next = add i32 %idx, -1
   %abc = icmp slt i32 %idx, %len
-  br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
+  br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
   %addr = getelementptr i32, i32* %arr, i32 %idx
@@ -177,7 +212,7 @@ loop:
   %idx = phi i32 [ 100, %entry ], [ %idx.next, %in.bounds ]
   %idx.next = add i32 %idx, -1
   %abc = icmp slt i32 %idx, %len
-  br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
+  br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
   %addr = getelementptr i32, i32* %arr, i32 %idx
@@ -209,7 +244,7 @@ loop:
   %idx = phi i32 [ 100, %entry ], [ %idx.next, %in.bounds ]
   %idx.next = add i32 %idx, -1
   %abc = icmp slt i32 %idx, %len
-  br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
+  br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
   %addr = getelementptr i32, i32* %arr, i32 %idx
@@ -238,7 +273,7 @@ loop:
   %idx = phi i32 [ 100, %entry ], [ %idx.next, %in.bounds ]
   %idx.next = add i32 %idx, -1
   %abc = icmp slt i32 %idx, %len
-  br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
+  br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
   %addr = getelementptr i32, i32* %arr, i32 %idx
@@ -254,4 +289,3 @@ exit:
 }
 
 !0 = !{i32 0, i32 50}
-!1 = !{!"branch_weights", i32 64, i32 4}

@@ -1015,44 +1015,98 @@ def setle  : PatFrag<(ops node:$lhs, node:$rhs),
 def setne  : PatFrag<(ops node:$lhs, node:$rhs),
                      (setcc node:$lhs, node:$rhs, SETNE)>;
 
-def atomic_cmp_swap_8 :
-  PatFrag<(ops node:$ptr, node:$cmp, node:$swap),
-          (atomic_cmp_swap node:$ptr, node:$cmp, node:$swap), [{
-  return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i8;
-}]>;
-def atomic_cmp_swap_16 :
-  PatFrag<(ops node:$ptr, node:$cmp, node:$swap),
-          (atomic_cmp_swap node:$ptr, node:$cmp, node:$swap), [{
-  return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
-def atomic_cmp_swap_32 :
-  PatFrag<(ops node:$ptr, node:$cmp, node:$swap),
-          (atomic_cmp_swap node:$ptr, node:$cmp, node:$swap), [{
-  return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
-def atomic_cmp_swap_64 :
-  PatFrag<(ops node:$ptr, node:$cmp, node:$swap),
-          (atomic_cmp_swap node:$ptr, node:$cmp, node:$swap), [{
-  return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
+multiclass binary_atomic_op_ord<SDNode atomic_op> {
+  def #NAME#_monotonic : PatFrag<(ops node:$ptr, node:$val),
+      (!cast<SDNode>(#NAME) node:$ptr, node:$val), [{
+        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Monotonic;
+  }]>;
+  def #NAME#_acquire : PatFrag<(ops node:$ptr, node:$val),
+      (!cast<SDNode>(#NAME) node:$ptr, node:$val), [{
+        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Acquire;
+  }]>;
+  def #NAME#_release : PatFrag<(ops node:$ptr, node:$val),
+      (!cast<SDNode>(#NAME) node:$ptr, node:$val), [{
+        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Release;
+  }]>;
+  def #NAME#_acq_rel : PatFrag<(ops node:$ptr, node:$val),
+      (!cast<SDNode>(#NAME) node:$ptr, node:$val), [{
+        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::AcquireRelease;
+  }]>;
+  def #NAME#_seq_cst : PatFrag<(ops node:$ptr, node:$val),
+      (!cast<SDNode>(#NAME) node:$ptr, node:$val), [{
+        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+  }]>;
+}
+
+multiclass ternary_atomic_op_ord<SDNode atomic_op> {
+  def #NAME#_monotonic : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val), [{
+        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Monotonic;
+  }]>;
+  def #NAME#_acquire : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val), [{
+        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Acquire;
+  }]>;
+  def #NAME#_release : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val), [{
+        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Release;
+  }]>;
+  def #NAME#_acq_rel : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val), [{
+        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::AcquireRelease;
+  }]>;
+  def #NAME#_seq_cst : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val), [{
+        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+  }]>;
+}
 
 multiclass binary_atomic_op<SDNode atomic_op> {
   def _8 : PatFrag<(ops node:$ptr, node:$val),
-                   (atomic_op node:$ptr, node:$val), [{
+                   (atomic_op  node:$ptr, node:$val), [{
     return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i8;
   }]>;
   def _16 : PatFrag<(ops node:$ptr, node:$val),
-                   (atomic_op node:$ptr, node:$val), [{
+                    (atomic_op node:$ptr, node:$val), [{
     return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i16;
   }]>;
   def _32 : PatFrag<(ops node:$ptr, node:$val),
-                   (atomic_op node:$ptr, node:$val), [{
+                    (atomic_op node:$ptr, node:$val), [{
     return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i32;
   }]>;
   def _64 : PatFrag<(ops node:$ptr, node:$val),
-                   (atomic_op node:$ptr, node:$val), [{
+                    (atomic_op node:$ptr, node:$val), [{
     return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i64;
   }]>;
+
+  defm NAME#_8  : binary_atomic_op_ord<atomic_op>;
+  defm NAME#_16 : binary_atomic_op_ord<atomic_op>;
+  defm NAME#_32 : binary_atomic_op_ord<atomic_op>;
+  defm NAME#_64 : binary_atomic_op_ord<atomic_op>;
+}
+
+multiclass ternary_atomic_op<SDNode atomic_op> {
+  def _8 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+                   (atomic_op  node:$ptr, node:$cmp, node:$val), [{
+    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i8;
+  }]>;
+  def _16 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+                    (atomic_op node:$ptr, node:$cmp, node:$val), [{
+    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i16;
+  }]>;
+  def _32 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+                    (atomic_op node:$ptr, node:$cmp, node:$val), [{
+    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i32;
+  }]>;
+  def _64 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+                    (atomic_op node:$ptr, node:$cmp, node:$val), [{
+    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i64;
+  }]>;
+
+  defm NAME#_8  : ternary_atomic_op_ord<atomic_op>;
+  defm NAME#_16 : ternary_atomic_op_ord<atomic_op>;
+  defm NAME#_32 : ternary_atomic_op_ord<atomic_op>;
+  defm NAME#_64 : ternary_atomic_op_ord<atomic_op>;
 }
 
 defm atomic_load_add  : binary_atomic_op<atomic_load_add>;
@@ -1067,6 +1121,7 @@ defm atomic_load_max  : binary_atomic_op<atomic_load_max>;
 defm atomic_load_umin : binary_atomic_op<atomic_load_umin>;
 defm atomic_load_umax : binary_atomic_op<atomic_load_umax>;
 defm atomic_store     : binary_atomic_op<atomic_store>;
+defm atomic_cmp_swap  : ternary_atomic_op<atomic_cmp_swap>;
 
 def atomic_load_8 :
   PatFrag<(ops node:$ptr),

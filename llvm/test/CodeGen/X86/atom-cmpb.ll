@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=atom | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=atom | FileCheck %s
 ; CHECK:        movl
 ; CHECK:        movb
 ; CHECK:        movb

@@ -132,7 +132,8 @@ std::unique_ptr<Module> llvm::CloneModule(
     SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
     I->getAllMetadata(MDs);
     for (auto MD : MDs)
-      GV->addMetadata(MD.first, *MapMetadata(MD.second, VMap));
+      GV->addMetadata(MD.first,
+                      *MapMetadata(MD.second, VMap, RF_MoveDistinctMDs));
 
     copyComdat(GV, &*I);
   }

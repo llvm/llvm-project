@@ -27,6 +27,17 @@ void foo(MD i) {
   #include "Inputs/md.def"
 }
 
+// CHECK: bar
+// CHECK-NEXT: File 0, [[@LINE+3]]:12 -> [[@LINE+8]]:2 = #0
+bool isVal1();
+bool isVal2();
+bool bar() {
+ #define HANDLE_MD(X) is##X() ||
+  return
+#include "Inputs/md.def"
+  0;
+}
+
 int main(int argc, const char *argv[]) {
   foo(MD::Val1);
   return 0;

@@ -731,7 +731,10 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (NextNonComment->is(TT_TemplateString) && NextNonComment->closesScope())
     return State.Stack[State.Stack.size() - 2].LastSpace;
   if (Current.is(tok::identifier) && Current.Next &&
-      Current.Next->is(TT_DictLiteral))
+      (Current.Next->is(TT_DictLiteral) ||
+       ((Style.Language == FormatStyle::LK_Proto ||
+         Style.Language == FormatStyle::LK_TextProto) &&
+        Current.Next->isOneOf(TT_TemplateOpener, tok::l_brace))))
     return State.Stack.back().Indent;
   if (NextNonComment->is(TT_ObjCStringLiteral) &&
       State.StartOfStringLiteral != 0)
@@ -1380,8 +1383,8 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
     }
   }
 
-  BreakableToken::Split SplitAfterLastLine = Token->getSplitAfterLastLine(
-      TailOffset, ColumnLimit, CommentPragmasRegex);
+  BreakableToken::Split SplitAfterLastLine =
+      Token->getSplitAfterLastLine(TailOffset, ColumnLimit);
   if (SplitAfterLastLine.first != StringRef::npos) {
     if (!DryRun)
       Token->replaceWhitespaceAfterLastLine(TailOffset, SplitAfterLastLine,

@@ -1,10 +1,10 @@
-; RUN: llc < %s -emulated-tls -march=x86 -mcpu=generic -mtriple=i386-linux-gnu -relocation-model=pic \
+; RUN: llc < %s -emulated-tls -mcpu=generic -mtriple=i386-linux-gnu -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X32 %s
-; RUN: llc < %s -emulated-tls -march=x86-64 -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic \
+; RUN: llc < %s -emulated-tls -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X64 %s
-; RUN: llc < %s -emulated-tls -march=x86 -mcpu=generic -mtriple=i386-linux-android -relocation-model=pic \
+; RUN: llc < %s -emulated-tls -mcpu=generic -mtriple=i386-linux-android -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X32 %s
-; RUN: llc < %s -emulated-tls -march=x86-64 -mcpu=generic -mtriple=x86_64-linux-android -relocation-model=pic \
+; RUN: llc < %s -emulated-tls -mcpu=generic -mtriple=x86_64-linux-android -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X64 %s
 
 ; Use my_emutls_get_address like __emutls_get_address.

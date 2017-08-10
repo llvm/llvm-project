@@ -1,4 +1,4 @@
-; RUN: llc < %s -O0 -march=x86-64 -mattr=+mmx,+sse2 | FileCheck %s
+; RUN: llc < %s -O0 -mattr=+mmx,+sse2 | FileCheck %s
 ; PR4684
 
 target datalayout =

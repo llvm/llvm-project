@@ -145,6 +145,11 @@ Error DumpOutputStyle::dump() {
       return EC;
   }
 
+  if (opts::dump::DumpSectionHeaders) {
+    if (auto EC = dumpSectionHeaders())
+      return EC;
+  }
+
   if (opts::dump::DumpSectionContribs) {
     if (auto EC = dumpSectionContribs())
       return EC;
@@ -344,6 +349,20 @@ public:
 } // namespace
 
 template <typename CallbackT>
+static void iterateOneModule(PDBFile &File, LinePrinter &P,
+                             const DbiModuleDescriptor &Descriptor,
+                             uint32_t Modi, uint32_t IndentLevel,
+                             uint32_t Digits, CallbackT Callback) {
+  P.formatLine(
+      "Mod {0:4} | `{1}`: ", fmt_align(Modi, AlignStyle::Right, Digits),
+      Descriptor.getModuleName());
+
+  StringsAndChecksumsPrinter Strings(File, Modi);
+  AutoIndent Indent2(P, IndentLevel);
+  Callback(Modi, Strings);
+}
+
+template <typename CallbackT>
 static void iterateModules(PDBFile &File, LinePrinter &P, uint32_t IndentLevel,
                            CallbackT Callback) {
   AutoIndent Indent(P);
@@ -357,16 +376,21 @@ static void iterateModules(PDBFile &File, LinePrinter &P, uint32_t IndentLevel,
   auto &Stream = Err(File.getPDBDbiStream());
 
   const DbiModuleList &Modules = Stream.modules();
+
+  if (opts::dump::DumpModi.getNumOccurrences() > 0) {
+    assert(opts::dump::DumpModi.getNumOccurrences() == 1);
+    uint32_t Modi = opts::dump::DumpModi;
+    auto Descriptor = Modules.getModuleDescriptor(Modi);
+    iterateOneModule(File, P, Descriptor, Modi, IndentLevel, NumDigits(Modi),
+                     Callback);
+    return;
+  }
+
   uint32_t Count = Modules.getModuleCount();
   uint32_t Digits = NumDigits(Count);
   for (uint32_t I = 0; I < Count; ++I) {
-    auto Modi = Modules.getModuleDescriptor(I);
-    P.formatLine("Mod {0:4} | `{1}`: ", fmt_align(I, AlignStyle::Right, Digits),
-                 Modi.getModuleName());
-
-    StringsAndChecksumsPrinter Strings(File, I);
-    AutoIndent Indent2(P, IndentLevel);
-    Callback(I, Strings);
+    auto Descriptor = Modules.getModuleDescriptor(I);
+    iterateOneModule(File, P, Descriptor, I, IndentLevel, Digits, Callback);
   }
 }
 
@@ -813,47 +837,36 @@ Error DumpOutputStyle::dumpModuleSyms() {
 
   ExitOnError Err("Unexpected error processing symbols: ");
 
-  auto &Stream = Err(File.getPDBDbiStream());
-
+  auto &Ids = Err(initializeTypes(StreamIPI));
   auto &Types = Err(initializeTypes(StreamTPI));
 
-  const DbiModuleList &Modules = Stream.modules();
-  uint32_t Count = Modules.getModuleCount();
-  uint32_t Digits = NumDigits(Count);
-  for (uint32_t I = 0; I < Count; ++I) {
-    auto Modi = Modules.getModuleDescriptor(I);
-    P.formatLine("Mod {0:4} | `{1}`: ", fmt_align(I, AlignStyle::Right, Digits),
-                 Modi.getModuleName());
-    uint16_t ModiStream = Modi.getModuleStreamIndex();
-    if (ModiStream == kInvalidStreamIndex) {
-      P.formatLine("           <symbols not present>");
-      continue;
-    }
-    auto ModStreamData = MappedBlockStream::createIndexedStream(
-        File.getMsfLayout(), File.getMsfBuffer(), ModiStream,
-        File.getAllocator());
+  iterateModules(
+      File, P, 2, [&](uint32_t I, StringsAndChecksumsPrinter &Strings) {
+        auto ExpectedModS = getModuleDebugStream(File, I);
+        if (!ExpectedModS) {
+          P.formatLine("Error loading module stream {0}.  {1}", I,
+                       toString(ExpectedModS.takeError()));
+          return;
+        }
 
-    ModuleDebugStreamRef ModS(Modi, std::move(ModStreamData));
-    if (auto EC = ModS.reload()) {
-      P.formatLine("Error loading module stream {0}.  {1}", I,
-                   toString(std::move(EC)));
-      continue;
-    }
+        ModuleDebugStreamRef &ModS = *ExpectedModS;
 
-    SymbolVisitorCallbackPipeline Pipeline;
-    SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
-    MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Types);
+        SymbolVisitorCallbackPipeline Pipeline;
+        SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
+        MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Ids,
+                                   Types);
 
-    Pipeline.addCallbackToPipeline(Deserializer);
-    Pipeline.addCallbackToPipeline(Dumper);
-    CVSymbolVisitor Visitor(Pipeline);
-    auto SS = ModS.getSymbolsSubstream();
-    if (auto EC = Visitor.visitSymbolStream(ModS.getSymbolArray(), SS.Offset)) {
-      P.formatLine("Error while processing symbol records.  {0}",
-                   toString(std::move(EC)));
-      continue;
-    }
-  }
+        Pipeline.addCallbackToPipeline(Deserializer);
+        Pipeline.addCallbackToPipeline(Dumper);
+        CVSymbolVisitor Visitor(Pipeline);
+        auto SS = ModS.getSymbolsSubstream();
+        if (auto EC =
+                Visitor.visitSymbolStream(ModS.getSymbolArray(), SS.Offset)) {
+          P.formatLine("Error while processing symbol records.  {0}",
+                       toString(std::move(EC)));
+          return;
+        }
+      });
   return Error::success();
 }
 
@@ -883,6 +896,13 @@ Error DumpOutputStyle::dumpPublics() {
   auto &Publics = Err(File.getPDBPublicsStream());
 
   const GSIHashTable &PublicsTable = Publics.getPublicsTable();
+  if (opts::dump::DumpPublicExtras) {
+    P.printLine("Publics Header");
+    AutoIndent Indent(P);
+    P.formatLine("sym hash = {0}, thunk table addr = {1}", Publics.getSymHash(),
+                 formatSegmentOffset(Publics.getThunkTableSection(),
+                                     Publics.getThunkTableOffset()));
+  }
   Err(dumpSymbolsFromGSI(PublicsTable, opts::dump::DumpPublicExtras));
 
   // Skip the rest if we aren't dumping extras.
@@ -925,29 +945,45 @@ Error DumpOutputStyle::dumpSymbolsFromGSI(const GSIHashTable &Table,
   auto ExpectedTypes = initializeTypes(StreamTPI);
   if (!ExpectedTypes)
     return ExpectedTypes.takeError();
-  SymbolVisitorCallbackPipeline Pipeline;
-  SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
-  MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, *ExpectedTypes);
+  auto ExpectedIds = initializeTypes(StreamIPI);
+  if (!ExpectedIds)
+    return ExpectedIds.takeError();
 
-  Pipeline.addCallbackToPipeline(Deserializer);
-  Pipeline.addCallbackToPipeline(Dumper);
-  CVSymbolVisitor Visitor(Pipeline);
+  if (HashExtras) {
+    P.printLine("GSI Header");
+    AutoIndent Indent(P);
+    P.formatLine("sig = {0:X}, hdr = {1:X}, hr size = {2}, num buckets = {3}",
+                 Table.getVerSignature(), Table.getVerHeader(),
+                 Table.getHashRecordSize(), Table.getNumBuckets());
+  }
 
-  BinaryStreamRef SymStream =
-      ExpectedSyms->getSymbolArray().getUnderlyingStream();
-  for (uint32_t PubSymOff : Table) {
-    Expected<CVSymbol> Sym = readSymbolFromStream(SymStream, PubSymOff);
-    if (!Sym)
-      return Sym.takeError();
-    if (auto E = Visitor.visitSymbolRecord(*Sym, PubSymOff))
-      return E;
+  {
+    P.printLine("Records");
+    SymbolVisitorCallbackPipeline Pipeline;
+    SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
+    MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, *ExpectedIds,
+                               *ExpectedTypes);
+
+    Pipeline.addCallbackToPipeline(Deserializer);
+    Pipeline.addCallbackToPipeline(Dumper);
+    CVSymbolVisitor Visitor(Pipeline);
+
+    BinaryStreamRef SymStream =
+        ExpectedSyms->getSymbolArray().getUnderlyingStream();
+    for (uint32_t PubSymOff : Table) {
+      Expected<CVSymbol> Sym = readSymbolFromStream(SymStream, PubSymOff);
+      if (!Sym)
+        return Sym.takeError();
+      if (auto E = Visitor.visitSymbolRecord(*Sym, PubSymOff))
+        return E;
+    }
   }
 
   // Return early if we aren't dumping public hash table and address map info.
   if (!HashExtras)
     return Error::success();
 
-  P.formatLine("Hash Records");
+  P.formatLine("Hash Entries");
   {
     AutoIndent Indent2(P);
     for (const PSHashRecord &HR : Table.HashRecords)
@@ -968,7 +1004,9 @@ Error DumpOutputStyle::dumpSymbolsFromGSI(const GSIHashTable &Table,
 }
 
 static std::string formatSectionCharacteristics(uint32_t IndentLevel,
-                                                uint32_t C) {
+                                                uint32_t C,
+                                                uint32_t FlagsPerLine,
+                                                StringRef Separator) {
   using SC = COFF::SectionCharacteristics;
   std::vector<std::string> Opts;
   if (C == COFF::SC_Invalid)
@@ -1030,7 +1068,7 @@ static std::string formatSectionCharacteristics(uint32_t IndentLevel,
   PUSH_FLAG(SC, IMAGE_SCN_MEM_EXECUTE, C, "IMAGE_SCN_MEM_EXECUTE");
   PUSH_FLAG(SC, IMAGE_SCN_MEM_READ, C, "IMAGE_SCN_MEM_READ");
   PUSH_FLAG(SC, IMAGE_SCN_MEM_WRITE, C, "IMAGE_SCN_MEM_WRITE");
-  return typesetItemList(Opts, IndentLevel, 3, " | ");
+  return typesetItemList(Opts, IndentLevel, FlagsPerLine, Separator);
 }
 
 static std::string formatSegMapDescriptorFlag(uint32_t IndentLevel,
@@ -1049,6 +1087,101 @@ static std::string formatSegMapDescriptorFlag(uint32_t IndentLevel,
   return typesetItemList(Opts, IndentLevel, 4, " | ");
 }
 
+Error DumpOutputStyle::dumpSectionHeaders() {
+  dumpSectionHeaders("Section Headers", DbgHeaderType::SectionHdr);
+  dumpSectionHeaders("Original Section Headers", DbgHeaderType::SectionHdrOrig);
+  return Error::success();
+}
+
+static Expected<std::pair<std::unique_ptr<MappedBlockStream>,
+                          ArrayRef<llvm::object::coff_section>>>
+loadSectionHeaders(PDBFile &File, DbgHeaderType Type) {
+  if (!File.hasPDBDbiStream())
+    return make_error<StringError>(
+        "Section headers require a DBI Stream, which could not be loaded",
+        inconvertibleErrorCode());
+
+  auto &Dbi = cantFail(File.getPDBDbiStream());
+  uint32_t SI = Dbi.getDebugStreamIndex(Type);
+
+  if (SI == kInvalidStreamIndex)
+    return make_error<StringError>(
+        "PDB does not contain the requested image section header type",
+        inconvertibleErrorCode());
+
+  auto Stream = MappedBlockStream::createIndexedStream(
+      File.getMsfLayout(), File.getMsfBuffer(), SI, File.getAllocator());
+  if (!Stream)
+    return make_error<StringError>("Could not load the required stream data",
+                                   inconvertibleErrorCode());
+
+  ArrayRef<object::coff_section> Headers;
+  if (Stream->getLength() % sizeof(object::coff_section) != 0)
+    return make_error<StringError>(
+        "Section header array size is not a multiple of section header size",
+        inconvertibleErrorCode());
+
+  uint32_t NumHeaders = Stream->getLength() / sizeof(object::coff_section);
+  BinaryStreamReader Reader(*Stream);
+  cantFail(Reader.readArray(Headers, NumHeaders));
+  return std::make_pair(std::move(Stream), Headers);
+}
+
+void DumpOutputStyle::dumpSectionHeaders(StringRef Label, DbgHeaderType Type) {
+  printHeader(P, Label);
+  ExitOnError Err("Error dumping publics stream: ");
+
+  AutoIndent Indent(P);
+  std::unique_ptr<MappedBlockStream> Stream;
+  ArrayRef<object::coff_section> Headers;
+  auto ExpectedHeaders = loadSectionHeaders(File, Type);
+  if (!ExpectedHeaders) {
+    P.printLine(toString(ExpectedHeaders.takeError()));
+    return;
+  }
+  std::tie(Stream, Headers) = std::move(*ExpectedHeaders);
+
+  uint32_t I = 1;
+  for (const auto &Header : Headers) {
+    P.NewLine();
+    P.formatLine("SECTION HEADER #{0}", I);
+    P.formatLine("{0,8} name", Header.Name);
+    P.formatLine("{0,8:X-} virtual size", uint32_t(Header.VirtualSize));
+    P.formatLine("{0,8:X-} virtual address", uint32_t(Header.VirtualAddress));
+    P.formatLine("{0,8:X-} size of raw data", uint32_t(Header.SizeOfRawData));
+    P.formatLine("{0,8:X-} file pointer to raw data",
+                 uint32_t(Header.PointerToRawData));
+    P.formatLine("{0,8:X-} file pointer to relocation table",
+                 uint32_t(Header.PointerToRelocations));
+    P.formatLine("{0,8:X-} file pointer to line numbers",
+                 uint32_t(Header.PointerToLinenumbers));
+    P.formatLine("{0,8:X-} number of relocations",
+                 uint32_t(Header.NumberOfRelocations));
+    P.formatLine("{0,8:X-} number of line numbers",
+                 uint32_t(Header.NumberOfLinenumbers));
+    P.formatLine("{0,8:X-} flags", uint32_t(Header.Characteristics));
+    AutoIndent IndentMore(P, 9);
+    P.formatLine("{0}", formatSectionCharacteristics(
+                            P.getIndentLevel(), Header.Characteristics, 1, ""));
+    ++I;
+  }
+  return;
+}
+
+std::vector<std::string> getSectionNames(PDBFile &File) {
+  auto ExpectedHeaders = loadSectionHeaders(File, DbgHeaderType::SectionHdr);
+  if (!ExpectedHeaders)
+    return {};
+
+  std::unique_ptr<MappedBlockStream> Stream;
+  ArrayRef<object::coff_section> Headers;
+  std::tie(Stream, Headers) = std::move(*ExpectedHeaders);
+  std::vector<std::string> Names;
+  for (const auto &H : Headers)
+    Names.push_back(H.Name);
+  return Names;
+}
+
 Error DumpOutputStyle::dumpSectionContribs() {
   printHeader(P, "Section Contributions");
   ExitOnError Err("Error dumping publics stream: ");
@@ -1064,33 +1197,50 @@ Error DumpOutputStyle::dumpSectionContribs() {
 
   class Visitor : public ISectionContribVisitor {
   public:
-    Visitor(LinePrinter &P) : P(P) {}
+    Visitor(LinePrinter &P, ArrayRef<std::string> Names) : P(P), Names(Names) {
+      auto Max = std::max_element(
+          Names.begin(), Names.end(),
+          [](StringRef S1, StringRef S2) { return S1.size() < S2.size(); });
+      MaxNameLen = (Max == Names.end() ? 0 : Max->size());
+    }
     void visit(const SectionContrib &SC) override {
-      P.formatLine(
-          "SC  | mod = {2}, {0}, size = {1}, data crc = {3}, reloc crc = {4}",
-          formatSegmentOffset(SC.ISect, SC.Off), fmtle(SC.Size), fmtle(SC.Imod),
-          fmtle(SC.DataCrc), fmtle(SC.RelocCrc));
+      assert(SC.ISect > 0);
+      std::string NameInsert;
+      if (SC.ISect < Names.size()) {
+        StringRef SectionName = Names[SC.ISect - 1];
+        NameInsert = formatv("[{0}]", SectionName).str();
+      } else
+        NameInsert = "[???]";
+      P.formatLine("SC{5}  | mod = {2}, {0}, size = {1}, data crc = {3}, reloc "
+                   "crc = {4}",
+                   formatSegmentOffset(SC.ISect, SC.Off), fmtle(SC.Size),
+                   fmtle(SC.Imod), fmtle(SC.DataCrc), fmtle(SC.RelocCrc),
+                   fmt_align(NameInsert, AlignStyle::Left, MaxNameLen + 2));
+      AutoIndent Indent(P, MaxNameLen + 2);
       P.formatLine("      {0}",
                    formatSectionCharacteristics(P.getIndentLevel() + 6,
-                                                SC.Characteristics));
+                                                SC.Characteristics, 3, " | "));
     }
     void visit(const SectionContrib2 &SC) override {
-      P.formatLine("SC2 | mod = {2}, {0}, size = {1}, data crc = {3}, reloc "
-                   "crc = {4}, coff section = {5}",
-                   formatSegmentOffset(SC.Base.ISect, SC.Base.Off),
-                   fmtle(SC.Base.Size), fmtle(SC.Base.Imod),
-                   fmtle(SC.Base.DataCrc), fmtle(SC.Base.RelocCrc),
-                   fmtle(SC.ISectCoff));
-      P.formatLine("      {0}",
-                   formatSectionCharacteristics(P.getIndentLevel() + 6,
-                                                SC.Base.Characteristics));
+      P.formatLine(
+          "SC2[{6}] | mod = {2}, {0}, size = {1}, data crc = {3}, reloc "
+          "crc = {4}, coff section = {5}",
+          formatSegmentOffset(SC.Base.ISect, SC.Base.Off), fmtle(SC.Base.Size),
+          fmtle(SC.Base.Imod), fmtle(SC.Base.DataCrc), fmtle(SC.Base.RelocCrc),
+          fmtle(SC.ISectCoff));
+      P.formatLine("      {0}", formatSectionCharacteristics(
+                                    P.getIndentLevel() + 6,
+                                    SC.Base.Characteristics, 3, " | "));
     }
 
   private:
     LinePrinter &P;
+    uint32_t MaxNameLen;
+    ArrayRef<std::string> Names;
   };
 
-  Visitor V(P);
+  std::vector<std::string> Names = getSectionNames(File);
+  Visitor V(P, makeArrayRef(Names));
   Dbi.visitSectionContributions(V);
   return Error::success();
 }
@@ -1111,7 +1261,7 @@ Error DumpOutputStyle::dumpSectionMap() {
   uint32_t I = 0;
   for (auto &M : Dbi.getSectionMap()) {
     P.formatLine(
-        "Section {0:4} | ovl = {0}, group = {1}, frame = {2}, name = {3}", I,
+        "Section {0:4} | ovl = {1}, group = {2}, frame = {3}, name = {4}", I,
         fmtle(M.Ovl), fmtle(M.Group), fmtle(M.Frame), fmtle(M.SecName));
     P.formatLine("               class = {0}, offset = {1}, size = {2}",
                  fmtle(M.ClassName), fmtle(M.Offset), fmtle(M.SecByteLength));

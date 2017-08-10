@@ -1930,7 +1930,7 @@ unsigned PPCFastISel::PPCMaterializeFP(const ConstantFP *CFP, MVT VT) {
 
   PPCFuncInfo->setUsesTOCBasePtr();
   // For small code model, generate a LF[SD](0, LDtocCPT(Idx, X2)).
-  if (CModel == CodeModel::Small || CModel == CodeModel::JITDefault) {
+  if (CModel == CodeModel::Small) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::LDtocCPT),
             TmpReg)
       .addConstantPoolIndex(Idx).addReg(PPC::X2);
@@ -1981,7 +1981,7 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
 
   PPCFuncInfo->setUsesTOCBasePtr();
   // For small code model, generate a simple TOC load.
-  if (CModel == CodeModel::Small || CModel == CodeModel::JITDefault)
+  if (CModel == CodeModel::Small)
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::LDtoc),
             DestReg)
         .addGlobalAddress(GV)

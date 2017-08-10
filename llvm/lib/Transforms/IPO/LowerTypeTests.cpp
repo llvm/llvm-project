@@ -634,6 +634,10 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
                            Br->getMetadata(LLVMContext::MD_prof));
         ReplaceInstWithInst(InitialBB->getTerminator(), NewBr);
 
+        // Update phis in Else resulting from InitialBB being split
+        for (auto &Phi : Else->phis())
+          Phi.addIncoming(Phi.getIncomingValueForBlock(Then), InitialBB);
+
         IRBuilder<> ThenB(CI);
         return createBitSetTest(ThenB, TIL, BitOffset);
       }

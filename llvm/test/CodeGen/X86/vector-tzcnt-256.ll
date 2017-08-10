@@ -59,7 +59,7 @@ define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv4i64:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubq %ymm0, %ymm1, %ymm2
 ; AVX512CDVL-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; AVX512CDVL-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
@@ -175,7 +175,7 @@ define <4 x i64> @testv4i64u(<4 x i64> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv4i64u:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubq %ymm0, %ymm1, %ymm1
 ; AVX512CDVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512CDVL-NEXT:    vplzcntq %ymm0, %ymm0
@@ -287,7 +287,7 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv8i32:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubd %ymm0, %ymm1, %ymm2
 ; AVX512CDVL-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; AVX512CDVL-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
@@ -428,7 +428,7 @@ define <8 x i32> @testv8i32u(<8 x i32> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv8i32u:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubd %ymm0, %ymm1, %ymm1
 ; AVX512CDVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512CDVL-NEXT:    vplzcntd %ymm0, %ymm0
@@ -539,7 +539,7 @@ define <16 x i16> @testv16i16(<16 x i16> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv16i16:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubw %ymm0, %ymm1, %ymm1
 ; AVX512CDVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512CDVL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
@@ -669,7 +669,7 @@ define <16 x i16> @testv16i16u(<16 x i16> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv16i16u:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubw %ymm0, %ymm1, %ymm1
 ; AVX512CDVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512CDVL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
@@ -790,7 +790,7 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv32i8:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubb %ymm0, %ymm1, %ymm1
 ; AVX512CDVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512CDVL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
@@ -907,7 +907,7 @@ define <32 x i8> @testv32i8u(<32 x i8> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv32i8u:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubb %ymm0, %ymm1, %ymm1
 ; AVX512CDVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512CDVL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1

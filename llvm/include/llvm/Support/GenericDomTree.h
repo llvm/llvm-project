@@ -481,11 +481,15 @@ class DominatorTreeBase {
 
   /// Inform the dominator tree about a CFG edge deletion and update the tree.
   ///
-  /// This function has to be called just after making the update
-  /// on the actual CFG. There cannot be any other updates that the dominator
-  /// tree doesn't know about. The only exception is when the deletion that the
-  /// tree is informed about makes some (dominator) subtree unreachable -- in
-  /// this case, it is fine to perform deletions within this subtree.
+  /// This function has to be called just after making the update on the actual
+  /// CFG. An internal functions checks if the edge doesn't exist in the CFG in
+  /// DEBUG mode. There cannot be any other updates that the
+  /// dominator tree doesn't know about.
+  ///
+  /// However, it is fine to perform multiple CFG deletions that make different
+  /// subtrees forward-unreachable and to inform the DomTree about them all at
+  /// the same time, as the incremental algorithm doesn't walk the tree above
+  /// the NearestCommonDominator of a deleted edge
   ///
   /// Note that for postdominators it automatically takes care of deleting
   /// a reverse edge internally (so there's no need to swap the parameters).

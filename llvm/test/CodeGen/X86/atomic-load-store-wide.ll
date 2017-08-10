@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=corei7 -march=x86 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mcpu=corei7 -mtriple=i686-- -verify-machineinstrs | FileCheck %s
 
 ; 64-bit load/store on x86-32
 ; FIXME: The generated code can be substantially improved.

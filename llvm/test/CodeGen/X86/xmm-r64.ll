@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64
+; RUN: llc < %s -mtriple=x86_64--
 
 define <4 x i32> @test() {
         %tmp1039 = call <4 x i32> @llvm.x86.sse2.psll.d( <4 x i32> zeroinitializer, <4 x i32> zeroinitializer )               ; <<4 x i32>> [#uses=1]

@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 -print-machineinstrs=expand-isel-pseudos %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -mtriple=x86_64-- -print-machineinstrs=expand-isel-pseudos %s -o /dev/null 2>&1 | FileCheck %s
 
 declare void @foo(i32)
 

@@ -4,7 +4,6 @@
 
 define i32 @f1(i32 *%src) {
 ; CHECK-LABEL: f1:
-; CHECK: bcr 1{{[45]}}, %r0
 ; CHECK: l %r2, 0(%r2)
 ; CHECK: br %r14
   %val = load atomic i32 , i32 *%src seq_cst, align 4

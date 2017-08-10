@@ -106,3 +106,51 @@ let Requires = [{ {ARM::Feature8MSecExt} }] in {
 def : MClassSysReg<0,    0,    1,    0x894, "control_ns">;
 def : MClassSysReg<0,    0,    1,    0x898, "sp_ns">;
 }
+
+
+// Banked Registers
+//
+class BankedReg<string name,  bits<8> enc>
+               : SearchableTable {
+  string Name;
+  bits<8> Encoding;
+  let Name = name;
+  let Encoding = enc;
+  let SearchableFields = ["Name", "Encoding"];
+}
+
+// The values here come from B9.2.3 of the ARM ARM, where bits 4-0 are SysM
+// and bit 5 is R.
+def : BankedReg<"r8_usr",   0x00>;
+def : BankedReg<"r9_usr",   0x01>;
+def : BankedReg<"r10_usr",  0x02>;
+def : BankedReg<"r11_usr",  0x03>;
+def : BankedReg<"r12_usr",  0x04>;
+def : BankedReg<"sp_usr",   0x05>;
+def : BankedReg<"lr_usr",   0x06>;
+def : BankedReg<"r8_fiq",   0x08>;
+def : BankedReg<"r9_fiq",   0x09>;
+def : BankedReg<"r10_fiq",  0x0a>;
+def : BankedReg<"r11_fiq",  0x0b>;
+def : BankedReg<"r12_fiq",  0x0c>;
+def : BankedReg<"sp_fiq",   0x0d>;
+def : BankedReg<"lr_fiq",   0x0e>;
+def : BankedReg<"lr_irq",   0x10>;
+def : BankedReg<"sp_irq",   0x11>;
+def : BankedReg<"lr_svc",   0x12>;
+def : BankedReg<"sp_svc",   0x13>;
+def : BankedReg<"lr_abt",   0x14>;
+def : BankedReg<"sp_abt",   0x15>;
+def : BankedReg<"lr_und",   0x16>;
+def : BankedReg<"sp_und",   0x17>;
+def : BankedReg<"lr_mon",   0x1c>;
+def : BankedReg<"sp_mon",   0x1d>;
+def : BankedReg<"elr_hyp",  0x1e>;
+def : BankedReg<"sp_hyp",   0x1f>;
+def : BankedReg<"spsr_fiq", 0x2e>;
+def : BankedReg<"spsr_irq", 0x30>;
+def : BankedReg<"spsr_svc", 0x32>;
+def : BankedReg<"spsr_abt", 0x34>;
+def : BankedReg<"spsr_und", 0x36>;
+def : BankedReg<"spsr_mon", 0x3c>;
+def : BankedReg<"spsr_hyp", 0x3e>;

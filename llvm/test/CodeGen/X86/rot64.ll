@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=x86-64 -mcpu=corei7 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=corei7-avx | FileCheck %s --check-prefix=SHLD
-; RUN: llc < %s -march=x86-64 -mcpu=core-avx2 | FileCheck %s --check-prefix=BMI2
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7-avx | FileCheck %s --check-prefix=SHLD
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=core-avx2 | FileCheck %s --check-prefix=BMI2
 
 define i64 @foo(i64 %x, i64 %y, i64 %z) nounwind readnone {
 entry:

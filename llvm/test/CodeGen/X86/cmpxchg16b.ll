@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=core2 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=core2 | FileCheck %s
 
 ; Basic 128-bit cmpxchg
 define void @t1(i128* nocapture %p) nounwind ssp {

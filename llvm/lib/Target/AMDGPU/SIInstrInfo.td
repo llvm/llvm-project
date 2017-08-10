@@ -11,6 +11,9 @@ def isCI : Predicate<"Subtarget->getGeneration() "
 def isCIOnly : Predicate<"Subtarget->getGeneration() =="
                          "SISubtarget::SEA_ISLANDS">,
   AssemblerPredicate <"FeatureSeaIslands">;
+def isVIOnly : Predicate<"Subtarget->getGeneration() =="
+                         "SISubtarget::VOLCANIC_ISLANDS">,
+  AssemblerPredicate <"FeatureVolcanicIslands">;
 
 def DisableInst : Predicate <"false">, AssemblerPredicate<"FeatureDisable">;
 
@@ -22,6 +25,7 @@ def SIEncodingFamily {
   int VI = 1;
   int SDWA = 2;
   int SDWA9 = 3;
+  int GFX9 = 4;
 }
 
 //===----------------------------------------------------------------------===//
@@ -556,6 +560,7 @@ def gds : NamedOperandBit<"GDS", NamedMatchClass<"GDS">>;
 
 def omod : NamedOperandU32<"OModSI", NamedMatchClass<"OModSI">>;
 def clampmod : NamedOperandBit<"ClampSI", NamedMatchClass<"ClampSI">>;
+def highmod : NamedOperandBit<"High", NamedMatchClass<"High">>;
 
 def GLC : NamedOperandBit<"GLC", NamedMatchClass<"GLC">>;
 def slc : NamedOperandBit<"SLC", NamedMatchClass<"SLC">>;
@@ -1183,8 +1188,9 @@ class getInsVOP3OpSel <RegisterOperand Src0RC,
   );
 }
 
-class getInsDPP <RegisterClass Src0RC, RegisterClass Src1RC, int NumSrcArgs,
-                 bit HasModifiers, Operand Src0Mod, Operand Src1Mod> {
+class getInsDPP <RegisterOperand DstRC, RegisterClass Src0RC, RegisterClass Src1RC,
+                 int NumSrcArgs, bit HasModifiers,
+                 Operand Src0Mod, Operand Src1Mod> {
 
   dag ret = !if (!eq(NumSrcArgs, 0),
                 // VOP1 without input operands (V_NOP)
@@ -1193,26 +1199,29 @@ class getInsDPP <RegisterClass Src0RC, RegisterClass Src1RC, int NumSrcArgs,
             !if (!eq(NumSrcArgs, 1),
               !if (!eq(HasModifiers, 1),
                 // VOP1_DPP with modifiers
-                (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
+                (ins DstRC:$old, Src0Mod:$src0_modifiers,
+                     Src0RC:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                      bank_mask:$bank_mask, bound_ctrl:$bound_ctrl)
               /* else */,
                 // VOP1_DPP without modifiers
-                (ins Src0RC:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                bank_mask:$bank_mask, bound_ctrl:$bound_ctrl)
+                (ins DstRC:$old, Src0RC:$src0,
+                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
+                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl)
               /* endif */)
               /* NumSrcArgs == 2 */,
               !if (!eq(HasModifiers, 1),
                 // VOP2_DPP with modifiers
-                (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
+                (ins DstRC:$old,
+                     Src0Mod:$src0_modifiers, Src0RC:$src0,
                      Src1Mod:$src1_modifiers, Src1RC:$src1,
                      dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                      bank_mask:$bank_mask, bound_ctrl:$bound_ctrl)
               /* else */,
                 // VOP2_DPP without modifiers
-                (ins Src0RC:$src0, Src1RC:$src1, dpp_ctrl:$dpp_ctrl,
-                row_mask:$row_mask, bank_mask:$bank_mask,
-                bound_ctrl:$bound_ctrl)
+                (ins DstRC:$old,
+                     Src0RC:$src0, Src1RC:$src1, dpp_ctrl:$dpp_ctrl,
+                     row_mask:$row_mask, bank_mask:$bank_mask,
+                     bound_ctrl:$bound_ctrl)
              /* endif */)));
 }
 
@@ -1511,6 +1520,7 @@ class VOPProfile <list<ValueType> _ArgVT> {
   field bit HasClamp = HasModifiers;
   field bit HasSDWAClamp = EmitDst;
   field bit HasFPClamp = BitAnd<isFloatType<DstVT>.ret, HasClamp>.ret;
+  field bit HasHigh = 0;
 
   field bit IsPacked = isPackedType<Src0VT>.ret;
   field bit HasOpSel = IsPacked;
@@ -1546,7 +1556,7 @@ class VOPProfile <list<ValueType> _ArgVT> {
                                            getOpSelMod<Src0VT>.ret,
                                            getOpSelMod<Src1VT>.ret,
                                            getOpSelMod<Src2VT>.ret>.ret;
-  field dag InsDPP = getInsDPP<Src0DPP, Src1DPP, NumSrcArgs,
+  field dag InsDPP = getInsDPP<DstRCDPP, Src0DPP, Src1DPP, NumSrcArgs,
                                HasModifiers, Src0ModDPP, Src1ModDPP>.ret;
   field dag InsSDWA = getInsSDWA<Src0SDWA, Src1SDWA, NumSrcArgs,
                                  HasSDWAOMod, Src0ModSDWA, Src1ModSDWA,
@@ -1756,7 +1766,8 @@ def getMCOpcodeGen : InstrMapping {
   let ValueCols = [[!cast<string>(SIEncodingFamily.SI)],
                    [!cast<string>(SIEncodingFamily.VI)],
                    [!cast<string>(SIEncodingFamily.SDWA)],
-                   [!cast<string>(SIEncodingFamily.SDWA9)]];
+                   [!cast<string>(SIEncodingFamily.SDWA9)],
+                   [!cast<string>(SIEncodingFamily.GFX9)]];
 }
 
 // Get equivalent SOPK instruction.

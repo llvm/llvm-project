@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=yonah
+; RUN: llc < %s -mtriple=i686-- -mcpu=yonah
 
 ; Legalization example that requires splitting a large vector into smaller pieces.
 

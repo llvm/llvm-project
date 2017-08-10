@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/Support/Debug.h"
@@ -446,11 +447,15 @@ void LiveDebugValues::transferSpillInst(MachineInstr &MI,
       // iterator in our caller.
       unsigned SpillBase;
       int SpillOffset = extractSpillBaseRegAndOffset(MI, SpillBase);
+      const Module *M = MF->getMMI().getModule();
       const MachineInstr *DMI = &VarLocIDs[ID].MI;
+      auto *SpillExpr = DIExpression::prepend(
+          DMI->getDebugExpression(), DIExpression::NoDeref, SpillOffset);
+      // Add the expression to the metadata graph so isn't lost in MIR dumps.
+      M->getNamedMetadata("llvm.dbg.mir")->addOperand(SpillExpr);
       MachineInstr *SpDMI =
           BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(), true, SpillBase,
-                  DMI->getDebugVariable(), DMI->getDebugExpression());
-      SpDMI->getOperand(1).setImm(SpillOffset);
+                  DMI->getDebugVariable(), SpillExpr);
       DEBUG(dbgs() << "Creating DBG_VALUE inst for spill: ";
             SpDMI->print(dbgs(), false, TII));
 

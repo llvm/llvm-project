@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -relocation-model=pic > %t
+; RUN: llc < %s -mtriple=x86_64-- -relocation-model=pic > %t
 ; RUN: grep "movswl	%ax, %edi" %t
 ; RUN: grep "movw	(%rax), %ax" %t
 ; XFAIL: *

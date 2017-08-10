@@ -6,9 +6,11 @@ Clang-Tidy Checks
 .. toctree::
    android-cloexec-creat
    android-cloexec-fopen
+   android-cloexec-memfd-create
    android-cloexec-open
    android-cloexec-socket
    boost-use-to-string
+   bugprone-integer-division
    bugprone-suspicious-memset-usage
    bugprone-undefined-memory-manipulation
    cert-dcl03-c (redirects to misc-static-assert) <cert-dcl03-c>
@@ -29,6 +31,7 @@ Clang-Tidy Checks
    cert-msc30-c (redirects to cert-msc50-cpp) <cert-msc30-c>
    cert-msc50-cpp
    cert-oop11-cpp (redirects to misc-move-constructor-init) <cert-oop11-cpp>
+   cppcoreguidelines-c-copy-assignment-signature
    cppcoreguidelines-interfaces-global-init
    cppcoreguidelines-no-malloc
    cppcoreguidelines-pro-bounds-array-to-pointer-decay
@@ -59,19 +62,19 @@ Clang-Tidy Checks
    google-runtime-member-string-references
    google-runtime-operator
    google-runtime-references
-   hicpp-explicit-conversions
-   hicpp-function-size
-   hicpp-invalid-access-moved
-   hicpp-member-init
-   hicpp-named-parameter
-   hicpp-new-delete-operators
+   hicpp-explicit-conversions (redirects to google-explicit-constructor) <hicpp-explicit-conversions>
+   hicpp-function-size (redirects to readability-function-size) <hicpp-function-size>
+   hicpp-invalid-access-moved (redirects to misc-use-after-move) <hicpp-invalid-access-moved>
+   hicpp-member-init (redirects to cppcoreguidelines-pro-type-member-init) <hicpp-member-init>
+   hicpp-named-parameter (redirects to readability-named-parameter) <hicpp-named-parameter>
+   hicpp-new-delete-operators (redirects to misc-new-delete-overloads) <hicpp-new-delete-operators>
    hicpp-no-assembler
-   hicpp-noexcept-move
-   hicpp-special-member-functions
-   hicpp-undelegated-constructor
-   hicpp-use-equals-default
-   hicpp-use-equals-delete
-   hicpp-use-override
+   hicpp-noexcept-move (redirects to misc-noexcept-moveconstructor) <hicpp-noexcept-move>
+   hicpp-special-member-functions (redirects to cppcoreguidelines-special-member-functions) <hicpp-special-member-functions>
+   hicpp-undelegated-constructor (redirects to misc-undelegated-constructor) <hicpp-undelegated-constructor>
+   hicpp-use-equals-default (redirects to modernize-use-equals-default) <hicpp-use-equals-default>
+   hicpp-use-equals-delete (redirects to modernize-use-equals-delete) <hicpp-use-equals-delete>
+   hicpp-use-override (redirects to modernize-use-override) <hicpp-use-override>
    llvm-header-guard
    llvm-include-order
    llvm-namespace-comment
@@ -150,7 +153,7 @@ Clang-Tidy Checks
    mpi-type-mismatch
    performance-faster-string-find
    performance-for-range-copy
-   performance-implicit-cast-in-loop
+   performance-implicit-conversion-in-loop
    performance-inefficient-string-concatenation
    performance-inefficient-vector-operation
    performance-type-promotion-in-math-fn
@@ -164,7 +167,7 @@ Clang-Tidy Checks
    readability-else-after-return
    readability-function-size
    readability-identifier-naming
-   readability-implicit-bool-cast
+   readability-implicit-bool-conversion
    readability-inconsistent-declaration-parameter-name
    readability-misleading-indentation
    readability-misplaced-array-index
@@ -178,5 +181,6 @@ Clang-Tidy Checks
    readability-redundant-string-cstr
    readability-redundant-string-init
    readability-simplify-boolean-expr
+   readability-static-accessed-through-instance
    readability-static-definition-in-anonymous-namespace
    readability-uniqueptr-delete-release

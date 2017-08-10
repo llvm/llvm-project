@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- < %s | FileCheck %s
 
 ; No attributes, should not use idiv
 define i32 @test1(i32 inreg %x) {

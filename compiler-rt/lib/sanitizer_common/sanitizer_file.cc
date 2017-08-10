@@ -14,6 +14,10 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "sanitizer_platform.h"
+
+#if !SANITIZER_FUCHSIA
+
 #include "sanitizer_common.h"
 #include "sanitizer_file.h"
 
@@ -169,3 +173,5 @@ void __sanitizer_set_report_fd(void *fd) {
   report_file.fd_pid = internal_getpid();
 }
 } // extern "C"
+
+#endif  // !SANITIZER_FUCHSIA

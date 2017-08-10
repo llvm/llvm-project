@@ -54,12 +54,6 @@ const unsigned MaxDepth = 6;
 static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
                                               cl::Hidden, cl::init(20));
 
-// This optimization is known to cause performance regressions is some cases,
-// keep it under a temporary flag for now.
-static cl::opt<bool>
-DontImproveNonNegativePhiBits("dont-improve-non-negative-phi-bits",
-                              cl::Hidden, cl::init(true));
-
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
 /// returns the element type's bitwidth.
 static unsigned getBitWidth(Type *Ty, const DataLayout &DL) {
@@ -275,47 +269,7 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   computeKnownBits(Op0, LHSKnown, Depth + 1, Q);
   computeKnownBits(Op1, Known2, Depth + 1, Q);
 
-  // Carry in a 1 for a subtract, rather than a 0.
-  uint64_t CarryIn = 0;
-  if (!Add) {
-    // Sum = LHS + ~RHS + 1
-    std::swap(Known2.Zero, Known2.One);
-    CarryIn = 1;
-  }
-
-  APInt PossibleSumZero = ~LHSKnown.Zero + ~Known2.Zero + CarryIn;
-  APInt PossibleSumOne = LHSKnown.One + Known2.One + CarryIn;
-
-  // Compute known bits of the carry.
-  APInt CarryKnownZero = ~(PossibleSumZero ^ LHSKnown.Zero ^ Known2.Zero);
-  APInt CarryKnownOne = PossibleSumOne ^ LHSKnown.One ^ Known2.One;
-
-  // Compute set of known bits (where all three relevant bits are known).
-  APInt LHSKnownUnion = LHSKnown.Zero | LHSKnown.One;
-  APInt RHSKnownUnion = Known2.Zero | Known2.One;
-  APInt CarryKnownUnion = CarryKnownZero | CarryKnownOne;
-  APInt Known = LHSKnownUnion & RHSKnownUnion & CarryKnownUnion;
-
-  assert((PossibleSumZero & Known) == (PossibleSumOne & Known) &&
-         "known bits of sum differ");
-
-  // Compute known bits of the result.
-  KnownOut.Zero = ~PossibleSumOne & Known;
-  KnownOut.One = PossibleSumOne & Known;
-
-  // Are we still trying to solve for the sign bit?
-  if (!Known.isSignBitSet()) {
-    if (NSW) {
-      // Adding two non-negative numbers, or subtracting a negative number from
-      // a non-negative one, can't wrap into negative.
-      if (LHSKnown.isNonNegative() && Known2.isNonNegative())
-        KnownOut.makeNonNegative();
-      // Adding two negative numbers, or subtracting a non-negative number from
-      // a negative one, can't wrap into non-negative.
-      else if (LHSKnown.isNegative() && Known2.isNegative())
-        KnownOut.makeNegative();
-    }
-  }
+  KnownOut = KnownBits::computeForAddSub(Add, NSW, LHSKnown, Known2);
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
@@ -1297,9 +1251,6 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
 
           Known.Zero.setLowBits(std::min(Known2.countMinTrailingZeros(),
                                          Known3.countMinTrailingZeros()));
-
-          if (DontImproveNonNegativePhiBits)
-            break;
 
           auto *OverflowOp = dyn_cast<OverflowingBinaryOperator>(LU);
           if (OverflowOp && OverflowOp->hasNoSignedWrap()) {
@@ -3277,6 +3228,69 @@ void llvm::GetUnderlyingObjects(Value *V, SmallVectorImpl<Value *> &Objects,
   } while (!Worklist.empty());
 }
 
+/// This is the function that does the work of looking through basic
+/// ptrtoint+arithmetic+inttoptr sequences.
+static const Value *getUnderlyingObjectFromInt(const Value *V) {
+  do {
+    if (const Operator *U = dyn_cast<Operator>(V)) {
+      // If we find a ptrtoint, we can transfer control back to the
+      // regular getUnderlyingObjectFromInt.
+      if (U->getOpcode() == Instruction::PtrToInt)
+        return U->getOperand(0);
+      // If we find an add of a constant, a multiplied value, or a phi, it's
+      // likely that the other operand will lead us to the base
+      // object. We don't have to worry about the case where the
+      // object address is somehow being computed by the multiply,
+      // because our callers only care when the result is an
+      // identifiable object.
+      if (U->getOpcode() != Instruction::Add ||
+          (!isa<ConstantInt>(U->getOperand(1)) &&
+           Operator::getOpcode(U->getOperand(1)) != Instruction::Mul &&
+           !isa<PHINode>(U->getOperand(1))))
+        return V;
+      V = U->getOperand(0);
+    } else {
+      return V;
+    }
+    assert(V->getType()->isIntegerTy() && "Unexpected operand type!");
+  } while (true);
+}
+
+/// This is a wrapper around GetUnderlyingObjects and adds support for basic
+/// ptrtoint+arithmetic+inttoptr sequences.
+void llvm::getUnderlyingObjectsForCodeGen(const Value *V,
+                          SmallVectorImpl<Value *> &Objects,
+                          const DataLayout &DL) {
+  SmallPtrSet<const Value *, 16> Visited;
+  SmallVector<const Value *, 4> Working(1, V);
+  do {
+    V = Working.pop_back_val();
+
+    SmallVector<Value *, 4> Objs;
+    GetUnderlyingObjects(const_cast<Value *>(V), Objs, DL);
+
+    for (Value *V : Objs) {
+      if (!Visited.insert(V).second)
+        continue;
+      if (Operator::getOpcode(V) == Instruction::IntToPtr) {
+        const Value *O =
+          getUnderlyingObjectFromInt(cast<User>(V)->getOperand(0));
+        if (O->getType()->isPointerTy()) {
+          Working.push_back(O);
+          continue;
+        }
+      }
+      // If GetUnderlyingObjects fails to find an identifiable object,
+      // getUnderlyingObjectsForCodeGen also fails for safety.
+      if (!isIdentifiedObject(V)) {
+        Objects.clear();
+        return;
+      }
+      Objects.push_back(const_cast<Value *>(V));
+    }
+  } while (!Working.empty());
+}
+
 /// Return true if the only users of this pointer are lifetime markers.
 bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
   for (const User *U : V->users()) {
@@ -3931,6 +3945,62 @@ static bool isKnownNonZero(const Value *V) {
   return false;
 }
 
+/// Match clamp pattern for float types without care about NaNs or signed zeros.
+/// Given non-min/max outer cmp/select from the clamp pattern this
+/// function recognizes if it can be substitued by a "canonical" min/max
+/// pattern.
+static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
+                                               Value *CmpLHS, Value *CmpRHS,
+                                               Value *TrueVal, Value *FalseVal,
+                                               Value *&LHS, Value *&RHS) {
+  // Try to match
+  //   X < C1 ? C1 : Min(X, C2) --> Max(C1, Min(X, C2))
+  //   X > C1 ? C1 : Max(X, C2) --> Min(C1, Max(X, C2))
+  // and return description of the outer Max/Min.
+
+  // First, check if select has inverse order:
+  if (CmpRHS == FalseVal) {
+    std::swap(TrueVal, FalseVal);
+    Pred = CmpInst::getInversePredicate(Pred);
+  }
+
+  // Assume success now. If there's no match, callers should not use these anyway.
+  LHS = TrueVal;
+  RHS = FalseVal;
+
+  const APFloat *FC1;
+  if (CmpRHS != TrueVal || !match(CmpRHS, m_APFloat(FC1)) || !FC1->isFinite())
+    return {SPF_UNKNOWN, SPNB_NA, false};
+
+  const APFloat *FC2;
+  switch (Pred) {
+  case CmpInst::FCMP_OLT:
+  case CmpInst::FCMP_OLE:
+  case CmpInst::FCMP_ULT:
+  case CmpInst::FCMP_ULE:
+    if (match(FalseVal,
+              m_CombineOr(m_OrdFMin(m_Specific(CmpLHS), m_APFloat(FC2)),
+                          m_UnordFMin(m_Specific(CmpLHS), m_APFloat(FC2)))) &&
+        FC1->compare(*FC2) == APFloat::cmpResult::cmpLessThan)
+      return {SPF_FMAXNUM, SPNB_RETURNS_ANY, false};
+    break;
+  case CmpInst::FCMP_OGT:
+  case CmpInst::FCMP_OGE:
+  case CmpInst::FCMP_UGT:
+  case CmpInst::FCMP_UGE:
+    if (match(FalseVal,
+              m_CombineOr(m_OrdFMax(m_Specific(CmpLHS), m_APFloat(FC2)),
+                          m_UnordFMax(m_Specific(CmpLHS), m_APFloat(FC2)))) &&
+        FC1->compare(*FC2) == APFloat::cmpResult::cmpGreaterThan)
+      return {SPF_FMINNUM, SPNB_RETURNS_ANY, false};
+    break;
+  default:
+    break;
+  }
+
+  return {SPF_UNKNOWN, SPNB_NA, false};
+}
+
 /// Match non-obvious integer minimum and maximum sequences.
 static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
                                        Value *CmpLHS, Value *CmpRHS,
@@ -4138,7 +4208,18 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     }
   }
 
-  return matchMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
+  if (CmpInst::isIntPredicate(Pred))
+    return matchMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
+
+  // According to (IEEE 754-2008 5.3.1), minNum(0.0, -0.0) and similar
+  // may return either -0.0 or 0.0, so fcmp/select pair has stricter
+  // semantics than minNum. Be conservative in such case.
+  if (NaNBehavior != SPNB_RETURNS_ANY ||
+      (!FMF.noSignedZeros() && !isKnownNonZero(CmpLHS) &&
+       !isKnownNonZero(CmpRHS)))
+    return {SPF_UNKNOWN, SPNB_NA, false};
+
+  return matchFastFloatClamp(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
 }
 
 static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
@@ -4388,14 +4469,14 @@ isImpliedCondMatchingImmOperands(CmpInst::Predicate APred, const Value *ALHS,
 /// false.  Otherwise, return None if we can't infer anything.
 static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
                                          const ICmpInst *RHS,
-                                         const DataLayout &DL, bool LHSIsFalse,
+                                         const DataLayout &DL, bool LHSIsTrue,
                                          unsigned Depth) {
   Value *ALHS = LHS->getOperand(0);
   Value *ARHS = LHS->getOperand(1);
   // The rest of the logic assumes the LHS condition is true.  If that's not the
   // case, invert the predicate to make it so.
   ICmpInst::Predicate APred =
-      LHSIsFalse ? LHS->getInversePredicate() : LHS->getPredicate();
+      LHSIsTrue ? LHS->getPredicate() : LHS->getInversePredicate();
 
   Value *BLHS = RHS->getOperand(0);
   Value *BRHS = RHS->getOperand(1);
@@ -4429,62 +4510,76 @@ static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   return None;
 }
 
+/// Return true if LHS implies RHS is true.  Return false if LHS implies RHS is
+/// false.  Otherwise, return None if we can't infer anything.  We expect the
+/// RHS to be an icmp and the LHS to be an 'and' or an 'or' instruction.
+static Optional<bool> isImpliedCondAndOr(const BinaryOperator *LHS,
+                                         const ICmpInst *RHS,
+                                         const DataLayout &DL, bool LHSIsTrue,
+                                         unsigned Depth) {
+  // The LHS must be an 'or' or an 'and' instruction.
+  assert((LHS->getOpcode() == Instruction::And ||
+          LHS->getOpcode() == Instruction::Or) &&
+         "Expected LHS to be 'and' or 'or'.");
+
+  assert(Depth <= MaxDepth && "Hit recursion limit");
+
+  // If the result of an 'or' is false, then we know both legs of the 'or' are
+  // false.  Similarly, if the result of an 'and' is true, then we know both
+  // legs of the 'and' are true.
+  Value *ALHS, *ARHS;
+  if ((!LHSIsTrue && match(LHS, m_Or(m_Value(ALHS), m_Value(ARHS)))) ||
+      (LHSIsTrue && match(LHS, m_And(m_Value(ALHS), m_Value(ARHS))))) {
+    // FIXME: Make this non-recursion.
+    if (Optional<bool> Implication =
+            isImpliedCondition(ALHS, RHS, DL, LHSIsTrue, Depth + 1))
+      return Implication;
+    if (Optional<bool> Implication =
+            isImpliedCondition(ARHS, RHS, DL, LHSIsTrue, Depth + 1))
+      return Implication;
+    return None;
+  }
+  return None;
+}
+
 Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
-                                        const DataLayout &DL, bool LHSIsFalse,
+                                        const DataLayout &DL, bool LHSIsTrue,
                                         unsigned Depth) {
-  // A mismatch occurs when we compare a scalar cmp to a vector cmp, for example.
+  // Bail out when we hit the limit.
+  if (Depth == MaxDepth)
+    return None;
+
+  // A mismatch occurs when we compare a scalar cmp to a vector cmp, for
+  // example.
   if (LHS->getType() != RHS->getType())
     return None;
 
   Type *OpTy = LHS->getType();
-  assert(OpTy->isIntOrIntVectorTy(1));
+  assert(OpTy->isIntOrIntVectorTy(1) && "Expected integer type only!");
 
   // LHS ==> RHS by definition
   if (LHS == RHS)
-    return !LHSIsFalse;
+    return LHSIsTrue;
 
+  // FIXME: Extending the code below to handle vectors.
   if (OpTy->isVectorTy())
-    // TODO: extending the code below to handle vectors
     return None;
+
   assert(OpTy->isIntegerTy(1) && "implied by above");
 
-  // We expect the RHS to be an icmp.
-  if (!isa<ICmpInst>(RHS))
-    return None;
-
   // Both LHS and RHS are icmps.
-  if (isa<ICmpInst>(LHS))
-    return isImpliedCondICmps(cast<ICmpInst>(LHS), cast<ICmpInst>(RHS), DL,
-                              LHSIsFalse, Depth);
+  const ICmpInst *LHSCmp = dyn_cast<ICmpInst>(LHS);
+  const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS);
+  if (LHSCmp && RHSCmp)
+    return isImpliedCondICmps(LHSCmp, RHSCmp, DL, LHSIsTrue, Depth);
 
-  // The LHS can be an 'or' or an 'and' instruction.
-  const Instruction *LHSInst = dyn_cast<Instruction>(LHS);
-  if (!LHSInst)
-    return None;
-
-  switch (LHSInst->getOpcode()) {
-  default:
-    return None;
-  case Instruction::Or:
-  case Instruction::And: {
-    // The remaining tests are all recursive, so bail out if we hit the limit.
-    if (Depth == MaxDepth)
-      return None;
-    // If the result of an 'or' is false, then we know both legs of the 'or' are
-    // false.  Similarly, if the result of an 'and' is true, then we know both
-    // legs of the 'and' are true.
-    Value *ALHS, *ARHS;
-    if ((LHSIsFalse && match(LHS, m_Or(m_Value(ALHS), m_Value(ARHS)))) ||
-        (!LHSIsFalse && match(LHS, m_And(m_Value(ALHS), m_Value(ARHS))))) {
-      if (Optional<bool> Implication =
-              isImpliedCondition(ALHS, RHS, DL, LHSIsFalse, Depth + 1))
-        return Implication;
-      if (Optional<bool> Implication =
-              isImpliedCondition(ARHS, RHS, DL, LHSIsFalse, Depth + 1))
-        return Implication;
-      return None;
-    }
-    return None;
+  // The LHS should be an 'or' or an 'and' instruction.  We expect the RHS to be
+  // an icmp. FIXME: Add support for and/or on the RHS.
+  const BinaryOperator *LHSBO = dyn_cast<BinaryOperator>(LHS);
+  if (LHSBO && RHSCmp) {
+    if ((LHSBO->getOpcode() == Instruction::And ||
+         LHSBO->getOpcode() == Instruction::Or))
+      return isImpliedCondAndOr(LHSBO, RHSCmp, DL, LHSIsTrue, Depth);
   }
-  }
+  return None;
 }

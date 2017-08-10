@@ -293,6 +293,13 @@ cl::opt<bool>
                       cl::desc("Print a column with the result status"),
                       cl::Optional, cl::sub(DiffSubcommand));
 
+cl::list<std::string>
+    RawModiEquivalences("modi-equivalence", cl::ZeroOrMore,
+                        cl::value_desc("left,right"),
+                        cl::desc("Modules with the specified indices will be "
+                                 "treated as referring to the same module"),
+                        cl::sub(DiffSubcommand));
+
 cl::opt<std::string> LeftRoot(
     "left-bin-root", cl::Optional,
     cl::desc("Treats the specified path as the root of the tree containing "
@@ -310,6 +317,8 @@ cl::opt<std::string> Left(cl::Positional, cl::desc("<left>"),
                           cl::sub(DiffSubcommand));
 cl::opt<std::string> Right(cl::Positional, cl::desc("<right>"),
                            cl::sub(DiffSubcommand));
+
+llvm::DenseMap<uint32_t, uint32_t> Equivalences;
 }
 
 cl::OptionCategory FileOptions("Module & File Options");
@@ -342,6 +351,8 @@ cl::list<std::string>
 
 cl::opt<bool> NameMap("name-map", cl::desc("Dump bytes of PDB Name Map"),
                       cl::sub(BytesSubcommand), cl::cat(PdbBytes));
+cl::opt<bool> Fpm("fpm", cl::desc("Dump free page map"),
+                  cl::sub(BytesSubcommand), cl::cat(MsfBytes));
 
 cl::opt<bool> SectionContributions("sc", cl::desc("Dump section contributions"),
                                    cl::sub(BytesSubcommand), cl::cat(DbiBytes));
@@ -492,6 +503,10 @@ cl::opt<bool> DumpXme(
     cl::desc(
         "dump cross module exports (DEBUG_S_CROSSSCOPEEXPORTS subsection)"),
     cl::cat(FileOptions), cl::sub(DumpSubcommand));
+cl::opt<uint32_t> DumpModi("modi", cl::Optional,
+                           cl::desc("For all options that iterate over "
+                                    "modules, limit to the specified module"),
+                           cl::cat(FileOptions), cl::sub(DumpSubcommand));
 
 // MISCELLANEOUS OPTIONS
 cl::opt<bool> DumpStringTable("string-table", cl::desc("dump PDB String Table"),
@@ -503,6 +518,9 @@ cl::opt<bool> DumpSectionContribs("section-contribs",
                                   cl::sub(DumpSubcommand));
 cl::opt<bool> DumpSectionMap("section-map", cl::desc("dump section map"),
                              cl::cat(MiscOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpSectionHeaders("section-headers",
+                                 cl::desc("Dump image section headers"),
+                                 cl::cat(MiscOptions), cl::sub(DumpSubcommand));
 
 cl::opt<bool> RawAll("all", cl::desc("Implies most other options."),
                      cl::cat(MiscOptions), cl::sub(DumpSubcommand));
@@ -1077,6 +1095,7 @@ int main(int argc_, const char *argv_[]) {
       opts::dump::DumpStreams = true;
       opts::dump::DumpStreamBlocks = true;
       opts::dump::DumpStringTable = true;
+      opts::dump::DumpSectionHeaders = true;
       opts::dump::DumpSummary = true;
       opts::dump::DumpSymbols = true;
       opts::dump::DumpIds = true;
@@ -1173,6 +1192,19 @@ int main(int argc_, const char *argv_[]) {
     std::for_each(opts::bytes::InputFilenames.begin(),
                   opts::bytes::InputFilenames.end(), dumpBytes);
   } else if (opts::DiffSubcommand) {
+    for (StringRef S : opts::diff::RawModiEquivalences) {
+      StringRef Left;
+      StringRef Right;
+      std::tie(Left, Right) = S.split(',');
+      uint32_t X, Y;
+      if (!to_integer(Left, X) || !to_integer(Right, Y)) {
+        errs() << formatv("invalid value {0} specified for modi equivalence\n",
+                          S);
+        exit(1);
+      }
+      opts::diff::Equivalences[X] = Y;
+    }
+
     diff(opts::diff::Left, opts::diff::Right);
   } else if (opts::MergeSubcommand) {
     if (opts::merge::InputFilenames.size() < 2) {

@@ -31,6 +31,11 @@ except KeyError:
     key, = e.args
     lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
+# excludes: A list of directories to exclude from the testsuite. The 'Inputs'
+# subdirectories contain auxiliary inputs for various tests in their parent
+# directories.
+config.excludes = ['Inputs']
+
 if config.link_polly_into_tools == '' or \
    config.link_polly_into_tools.lower() == '0' or \
    config.link_polly_into_tools.lower() == 'n' or \

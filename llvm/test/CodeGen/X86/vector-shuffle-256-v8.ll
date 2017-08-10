@@ -2021,17 +2021,11 @@ define <8 x i32> @shuffle_v8i32_44444444(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: shuffle_v8i32_44444444:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vbroadcastss %xmm0, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: shuffle_v8i32_44444444:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512VL-NEXT:    vpbroadcastd %xmm0, %ymm0
-; AVX512VL-NEXT:    retq
+; AVX2OR512VL-LABEL: shuffle_v8i32_44444444:
+; AVX2OR512VL:       # BB#0:
+; AVX2OR512VL-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX2OR512VL-NEXT:    vbroadcastss %xmm0, %ymm0
+; AVX2OR512VL-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
   ret <8 x i32> %shuffle
 }

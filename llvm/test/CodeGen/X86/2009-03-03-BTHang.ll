@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 ; rdar://6642541
 
  	%struct.HandleBlock = type { [30 x i32], [990 x i8*], %struct.HandleBlockTrailer }

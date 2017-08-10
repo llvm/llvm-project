@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mattr=+avx512f,+avx512bw | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f,+avx512bw | FileCheck %s
 
 define void @f(<16 x float> %A, <16 x float> %AA, i8* %B, <8 x double> %C, <8 x double> %CC, <8 x i64> %E, <8 x i64> %EE, <16 x i32> %F, <16 x i32> %FF, <32 x i16> %G, <32 x i16> %GG, <64 x i8> %H, <64 x i8> %HH) {
 ; CHECK: vmovntps %z

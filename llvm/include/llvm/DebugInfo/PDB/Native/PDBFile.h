@@ -13,7 +13,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/MSF/IMSFFile.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
-#include "llvm/DebugInfo/MSF/MSFStreamLayout.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
@@ -72,8 +71,6 @@ public:
   Error setBlockData(uint32_t BlockIndex, uint32_t Offset,
                      ArrayRef<uint8_t> Data) const override;
 
-  ArrayRef<uint32_t> getFpmPages() const { return FpmPages; }
-
   ArrayRef<support::ulittle32_t> getStreamSizes() const {
     return ContainerLayout.StreamSizes;
   }
@@ -87,6 +84,7 @@ public:
   ArrayRef<support::ulittle32_t> getDirectoryBlockArray() const;
 
   msf::MSFStreamLayout getStreamLayout(uint32_t StreamIdx) const;
+  msf::MSFStreamLayout getFpmStreamLayout() const;
 
   Error parseFileHeaders();
   Error parseStreamData();
@@ -124,7 +122,6 @@ private:
 
   std::unique_ptr<BinaryStream> Buffer;
 
-  std::vector<uint32_t> FpmPages;
   msf::MSFLayout ContainerLayout;
 
   std::unique_ptr<GlobalsStream> Globals;

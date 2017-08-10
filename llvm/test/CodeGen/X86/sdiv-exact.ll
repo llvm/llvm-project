@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 -mattr=+sse2 < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- -mattr=+sse2 < %s | FileCheck %s
 
 define i32 @test1(i32 %x) {
   %div = sdiv exact i32 %x, 25

@@ -46,7 +46,12 @@ PublicsStream::PublicsStream(std::unique_ptr<MappedBlockStream> Stream)
 PublicsStream::~PublicsStream() = default;
 
 uint32_t PublicsStream::getSymHash() const { return Header->SymHash; }
-uint32_t PublicsStream::getAddrMap() const { return Header->AddrMap; }
+uint16_t PublicsStream::getThunkTableSection() const {
+  return Header->ISectThunkTable;
+}
+uint32_t PublicsStream::getThunkTableOffset() const {
+  return Header->OffThunkTable;
+}
 
 // Publics stream contains fixed-size headers and a serialized hash table.
 // This implementation is not complete yet. It reads till the end of the

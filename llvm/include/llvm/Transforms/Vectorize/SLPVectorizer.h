@@ -84,8 +84,8 @@ private:
                           ArrayRef<Value *> BuildVector = None,
                           bool AllowReorder = false);
 
-  /// \brief Try to vectorize a chain that may start at the operands of \p V.
-  bool tryToVectorize(BinaryOperator *V, slpvectorizer::BoUpSLP &R);
+  /// \brief Try to vectorize a chain that may start at the operands of \p I.
+  bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R);
 
   /// \brief Vectorize the store instructions collected in Stores.
   bool vectorizeStoreChains(slpvectorizer::BoUpSLP &R);
@@ -99,6 +99,19 @@ private:
   bool vectorizeRootInstruction(PHINode *P, Value *V, BasicBlock *BB,
                                 slpvectorizer::BoUpSLP &R,
                                 TargetTransformInfo *TTI);
+
+  /// Try to vectorize trees that start at insertvalue instructions.
+  bool vectorizeInsertValueInst(InsertValueInst *IVI, BasicBlock *BB,
+                                slpvectorizer::BoUpSLP &R);
+  /// Try to vectorize trees that start at insertelement instructions.
+  bool vectorizeInsertElementInst(InsertElementInst *IEI, BasicBlock *BB,
+                                  slpvectorizer::BoUpSLP &R);
+  /// Try to vectorize trees that start at compare instructions.
+  bool vectorizeCmpInst(CmpInst *CI, BasicBlock *BB, slpvectorizer::BoUpSLP &R);
+  /// Tries to vectorize constructs started from CmpInst, InsertValueInst or
+  /// InsertElementInst instructions.
+  bool vectorizeSimpleInstructions(SmallVectorImpl<WeakVH> &Instructions,
+                                   BasicBlock *BB, slpvectorizer::BoUpSLP &R);
 
   /// \brief Scan the basic block and look for patterns that are likely to start
   /// a vectorization chain.

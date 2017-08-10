@@ -723,6 +723,11 @@ void standardContainerClearIsReinit() {
     std::move(container);
     container.clear();
     container.empty();
+
+    auto container2 = container;
+    std::move(container2);
+    container2.clear();
+    container2.empty();
   }
   {
     std::deque<int> container;

@@ -192,17 +192,17 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
 
   // Check basic results
   EXPECT_EQ(AA.getModRefInfo(Store1, MemoryLocation()), MRI_Mod);
-  EXPECT_EQ(AA.getModRefInfo(Store1), MRI_Mod);
+  EXPECT_EQ(AA.getModRefInfo(Store1, None), MRI_Mod);
   EXPECT_EQ(AA.getModRefInfo(Load1, MemoryLocation()), MRI_Ref);
-  EXPECT_EQ(AA.getModRefInfo(Load1), MRI_Ref);
+  EXPECT_EQ(AA.getModRefInfo(Load1, None), MRI_Ref);
   EXPECT_EQ(AA.getModRefInfo(Add1, MemoryLocation()), MRI_NoModRef);
-  EXPECT_EQ(AA.getModRefInfo(Add1), MRI_NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(Add1, None), MRI_NoModRef);
   EXPECT_EQ(AA.getModRefInfo(VAArg1, MemoryLocation()), MRI_ModRef);
-  EXPECT_EQ(AA.getModRefInfo(VAArg1), MRI_ModRef);
+  EXPECT_EQ(AA.getModRefInfo(VAArg1, None), MRI_ModRef);
   EXPECT_EQ(AA.getModRefInfo(CmpXChg1, MemoryLocation()), MRI_ModRef);
-  EXPECT_EQ(AA.getModRefInfo(CmpXChg1), MRI_ModRef);
+  EXPECT_EQ(AA.getModRefInfo(CmpXChg1, None), MRI_ModRef);
   EXPECT_EQ(AA.getModRefInfo(AtomicRMW, MemoryLocation()), MRI_ModRef);
-  EXPECT_EQ(AA.getModRefInfo(AtomicRMW), MRI_ModRef);
+  EXPECT_EQ(AA.getModRefInfo(AtomicRMW, None), MRI_ModRef);
 }
 
 class AAPassInfraTest : public testing::Test {

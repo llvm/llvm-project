@@ -1484,7 +1484,9 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
     Arg *LocalSData = Args.getLastArg(options::OPT_mlocal_sdata,
                                       options::OPT_mno_local_sdata);
     Arg *ExternSData = Args.getLastArg(options::OPT_mextern_sdata,
-                                      options::OPT_mno_extern_sdata);
+                                       options::OPT_mno_extern_sdata);
+    Arg *EmbeddedData = Args.getLastArg(options::OPT_membedded_data,
+                                        options::OPT_mno_embedded_data);
     if (LocalSData) {
       CmdArgs.push_back("-mllvm");
       if (LocalSData->getOption().matches(options::OPT_mlocal_sdata)) {
@@ -1504,6 +1506,17 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
       }
       ExternSData->claim();
     }
+
+    if (EmbeddedData) {
+      CmdArgs.push_back("-mllvm");
+      if (EmbeddedData->getOption().matches(options::OPT_membedded_data)) {
+        CmdArgs.push_back("-membedded-data=1");
+      } else {
+        CmdArgs.push_back("-membedded-data=0");
+      }
+      EmbeddedData->claim();
+    }
+
   } else if ((!ABICalls || (!NoABICalls && ABICalls)) && WantGPOpt)
     D.Diag(diag::warn_drv_unsupported_gpopt) << (ABICalls ? 0 : 1);
 
@@ -2586,7 +2599,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool AsynchronousUnwindTables =
       Args.hasFlag(options::OPT_fasynchronous_unwind_tables,
                    options::OPT_fno_asynchronous_unwind_tables,
-                   (getToolChain().IsUnwindTablesDefault() ||
+                   (getToolChain().IsUnwindTablesDefault(Args) ||
                     getToolChain().getSanitizerArgs().needsUnwindTables()) &&
                        !KernelOrKext);
   if (Args.hasFlag(options::OPT_funwind_tables, options::OPT_fno_unwind_tables,
@@ -5303,7 +5316,13 @@ void OffloadBundler::ConstructJobMultipleOutputs(
   for (unsigned I = 0; I < Outputs.size(); ++I) {
     if (I)
       UB += ',';
-    UB += Outputs[I].getFilename();
+    SmallString<256> OutputFileName(Outputs[I].getFilename());
+    // Change extension of target files for OpenMP offloading
+    // to NVIDIA GPUs.
+    if (DepInfo[I].DependentToolChain->getTriple().isNVPTX() &&
+        JA.isOffloading(Action::OFK_OpenMP))
+      llvm::sys::path::replace_extension(OutputFileName, "cubin");
+    UB += OutputFileName;
   }
   CmdArgs.push_back(TCArgs.MakeArgString(UB));
   CmdArgs.push_back("-unbundle");

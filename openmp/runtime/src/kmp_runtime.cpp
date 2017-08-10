@@ -6413,6 +6413,10 @@ static void __kmp_do_serial_initialize(void) {
   }
   __kmp_max_nth = __kmp_sys_max_nth;
   __kmp_cg_max_nth = __kmp_sys_max_nth;
+  __kmp_teams_max_nth = __kmp_xproc; // set a "reasonable" default
+  if (__kmp_teams_max_nth > __kmp_sys_max_nth) {
+    __kmp_teams_max_nth = __kmp_sys_max_nth;
+  }
 
   // Three vars below moved here from __kmp_env_initialize() "KMP_BLOCKTIME"
   // part
@@ -6989,14 +6993,14 @@ void __kmp_push_num_teams(ident_t *id, int gtid, int num_teams,
 
   if (num_teams == 0)
     num_teams = 1; // default number of teams is 1.
-  if (num_teams > __kmp_max_nth) { // if too many teams requested?
+  if (num_teams > __kmp_teams_max_nth) { // if too many teams requested?
     if (!__kmp_reserve_warn) {
       __kmp_reserve_warn = 1;
       __kmp_msg(kmp_ms_warning,
-                KMP_MSG(CantFormThrTeam, num_teams, __kmp_max_nth),
+                KMP_MSG(CantFormThrTeam, num_teams, __kmp_teams_max_nth),
                 KMP_HNT(Unset_ALL_THREADS), __kmp_msg_null);
     }
-    num_teams = __kmp_max_nth;
+    num_teams = __kmp_teams_max_nth;
   }
   // Set number of teams (number of threads in the outer "parallel" of the
   // teams)
@@ -7007,15 +7011,15 @@ void __kmp_push_num_teams(ident_t *id, int gtid, int num_teams,
     if (!TCR_4(__kmp_init_middle))
       __kmp_middle_initialize(); // get __kmp_avail_proc calculated
     num_threads = __kmp_avail_proc / num_teams;
-    if (num_teams * num_threads > __kmp_max_nth) {
+    if (num_teams * num_threads > __kmp_teams_max_nth) {
       // adjust num_threads w/o warning as it is not user setting
-      num_threads = __kmp_max_nth / num_teams;
+      num_threads = __kmp_teams_max_nth / num_teams;
     }
   } else {
-    if (num_teams * num_threads > __kmp_max_nth) {
-      int new_threads = __kmp_max_nth / num_teams;
+    if (num_teams * num_threads > __kmp_teams_max_nth) {
+      int new_threads = __kmp_teams_max_nth / num_teams;
       if (!__kmp_reserve_warn) { // user asked for too many threads
-        __kmp_reserve_warn = 1; // that conflicts with KMP_DEVICE_THREAD_LIMIT
+        __kmp_reserve_warn = 1; // that conflicts with KMP_TEAMS_THREAD_LIMIT
         __kmp_msg(kmp_ms_warning,
                   KMP_MSG(CantFormThrTeam, num_threads, new_threads),
                   KMP_HNT(Unset_ALL_THREADS), __kmp_msg_null);

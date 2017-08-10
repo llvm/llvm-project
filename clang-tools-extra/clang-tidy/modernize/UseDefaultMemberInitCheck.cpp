@@ -166,21 +166,22 @@ void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
       cxxConstructorDecl(
           isDefaultConstructor(), unless(isInstantiated()),
           forEachConstructorInitializer(
-              allOf(forField(unless(anyOf(isBitField(),
-                                          hasInClassInitializer(anything())))),
-                    cxxCtorInitializer(isWritten(),
-                                       withInitializer(ignoringImplicit(Init)))
-                        .bind("default")))),
+              cxxCtorInitializer(
+                  forField(unless(anyOf(isBitField(),
+                                        hasInClassInitializer(anything()),
+                                        hasParent(recordDecl(isUnion()))))),
+                  isWritten(), withInitializer(ignoringImplicit(Init)))
+                  .bind("default"))),
       this);
 
   Finder->addMatcher(
       cxxConstructorDecl(
           unless(ast_matchers::isTemplateInstantiation()),
           forEachConstructorInitializer(
-              allOf(forField(hasInClassInitializer(anything())),
-                    cxxCtorInitializer(isWritten(),
-                                       withInitializer(ignoringImplicit(Init)))
-                        .bind("existing")))),
+              cxxCtorInitializer(forField(hasInClassInitializer(anything())),
+                                 isWritten(),
+                                 withInitializer(ignoringImplicit(Init)))
+                  .bind("existing"))),
       this);
 }
 
@@ -197,7 +198,7 @@ void UseDefaultMemberInitCheck::check(const MatchFinder::MatchResult &Result) {
 
 void UseDefaultMemberInitCheck::checkDefaultInit(
     const MatchFinder::MatchResult &Result, const CXXCtorInitializer *Init) {
-  const FieldDecl *Field = Init->getMember();
+  const FieldDecl *Field = Init->getAnyMember();
 
   SourceLocation StartLoc = Field->getLocStart();
   if (StartLoc.isMacroID() && IgnoreMacros)

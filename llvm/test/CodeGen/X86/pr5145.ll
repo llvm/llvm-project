@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-- < %s | FileCheck %s
 @sc8 = external global i8
 
 define void @atomic_maxmin_i8() {

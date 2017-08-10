@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -x86-asm-syntax=intel | \
+; RUN: llc < %s -mtriple=i686-- -x86-asm-syntax=intel | \
 ; RUN:   grep -i ST | not grep "fadd\|fsub\|fdiv\|fmul"
 
 ; Test that the load of the memory location is folded into the operation.

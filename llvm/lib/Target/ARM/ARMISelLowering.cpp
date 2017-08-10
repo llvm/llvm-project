@@ -8783,7 +8783,6 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
   switch (TM.getCodeModel()) {
   case CodeModel::Small:
   case CodeModel::Medium:
-  case CodeModel::Default:
   case CodeModel::Kernel:
     BuildMI(*MBB, MI, DL, TII.get(ARM::tBL))
         .add(predOps(ARMCC::AL))
@@ -8793,8 +8792,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
         .addReg(ARM::R12,
                 RegState::Implicit | RegState::Define | RegState::Dead);
     break;
-  case CodeModel::Large:
-  case CodeModel::JITDefault: {
+  case CodeModel::Large: {
     MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
     unsigned Reg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
 
@@ -12359,8 +12357,13 @@ bool ARMTargetLowering::isLegalT2ScaledAddressingMode(const AddrMode &AM,
     Scale = Scale & ~1;
     return Scale == 2 || Scale == 4 || Scale == 8;
   case MVT::i64:
+    // FIXME: What are we trying to model here? ldrd doesn't have an r + r
+    // version in Thumb mode.
     // r + r
-    if (((unsigned)AM.HasBaseReg + Scale) <= 2)
+    if (Scale == 1)
+      return true;
+    // r * 2 (this can be lowered to r + r).
+    if (!AM.HasBaseReg && Scale == 2)
       return true;
     return false;
   case MVT::isVoid:
@@ -12418,8 +12421,11 @@ bool ARMTargetLowering::isLegalAddressingMode(const DataLayout &DL,
       return isPowerOf2_32(Scale & ~1);
     case MVT::i16:
     case MVT::i64:
-      // r + r
-      if (((unsigned)AM.HasBaseReg + Scale) <= 2)
+      // r +/- r
+      if (Scale == 1 || (AM.HasBaseReg && Scale == -1))
+        return true;
+      // r * 2 (this can be lowered to r + r).
+      if (!AM.HasBaseReg && Scale == 2)
         return true;
       return false;
 

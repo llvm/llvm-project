@@ -409,6 +409,32 @@ public:
   }
 };
 
+struct ExitLimitQuery {
+  ExitLimitQuery(const Loop *L, BasicBlock *ExitingBlock, bool AllowPredicates)
+      : L(L), ExitingBlock(ExitingBlock), AllowPredicates(AllowPredicates) {}
+
+  const Loop *L;
+  BasicBlock *ExitingBlock;
+  bool AllowPredicates;
+};
+
+template <> struct DenseMapInfo<ExitLimitQuery> {
+  static inline ExitLimitQuery getEmptyKey() {
+    return ExitLimitQuery(nullptr, nullptr, true);
+  }
+  static inline ExitLimitQuery getTombstoneKey() {
+    return ExitLimitQuery(nullptr, nullptr, false);
+  }
+  static unsigned getHashValue(ExitLimitQuery Val) {
+    return hash_combine(hash_combine(Val.L, Val.ExitingBlock),
+                        Val.AllowPredicates);
+  }
+  static bool isEqual(ExitLimitQuery LHS, ExitLimitQuery RHS) {
+    return LHS.L == RHS.L && LHS.ExitingBlock == RHS.ExitingBlock &&
+           LHS.AllowPredicates == RHS.AllowPredicates;
+  }
+};
+
 /// The main scalar evolution driver. Because client code (intentionally)
 /// can't do much with the SCEV objects directly, they must ask this class
 /// for services.
@@ -584,6 +610,8 @@ private:
              !isa<SCEVCouldNotCompute>(MaxNotTaken);
     }
 
+    bool hasOperand(const SCEV *S) const;
+
     /// Test whether this ExitLimit contains all information.
     bool hasFullInfo() const {
       return !isa<SCEVCouldNotCompute>(ExactNotTaken);
@@ -703,6 +731,9 @@ private:
   /// Cache the predicated backedge-taken count of the loops for this
   /// function as they are computed.
   DenseMap<const Loop *, BackedgeTakenInfo> PredicatedBackedgeTakenCounts;
+
+  // Cache the calculated exit limits for the loops.
+  DenseMap<ExitLimitQuery, ExitLimit> ExitLimits;
 
   /// This map contains entries for all of the PHI instructions that we
   /// attempt to compute constant evolutions for.  This allows us to avoid
@@ -855,6 +886,9 @@ private:
   /// return an exact answer.
   ExitLimit computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
                              bool AllowPredicates = false);
+
+  ExitLimit computeExitLimitImpl(const Loop *L, BasicBlock *ExitingBlock,
+                                 bool AllowPredicates = false);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a conditional branch of ExitCond,
@@ -1095,8 +1129,9 @@ private:
   /// to be a constant.
   Optional<APInt> computeConstantDifference(const SCEV *LHS, const SCEV *RHS);
 
-  /// Drop memoized information computed for S.
-  void forgetMemoizedResults(const SCEV *S);
+  /// Drop memoized information computed for S. Only erase Exit Limits info if
+  /// we expect that the operation we have made is going to change it.
+  void forgetMemoizedResults(const SCEV *S, bool EraseExitLimit = true);
 
   /// Return an existing SCEV for V if there is one, otherwise return nullptr.
   const SCEV *getExistingSCEV(Value *V);

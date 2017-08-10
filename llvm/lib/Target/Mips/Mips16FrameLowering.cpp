@@ -143,7 +143,7 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
 
 bool Mips16FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MI,
-                                       const std::vector<CalleeSavedInfo> &CSI,
+                                       std::vector<CalleeSavedInfo> &CSI,
                                        const TargetRegisterInfo *TRI) const {
   //
   // Registers RA,S0,S1 are the callee saved registers and they will be restored

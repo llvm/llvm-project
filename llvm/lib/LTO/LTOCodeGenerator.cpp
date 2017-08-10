@@ -368,9 +368,8 @@ bool LTOCodeGenerator::determineTarget() {
 }
 
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
-  return std::unique_ptr<TargetMachine>(
-      MArch->createTargetMachine(TripleStr, MCpu, FeatureStr, Options,
-                                 RelocModel, CodeModel::Default, CGOptLevel));
+  return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
+      TripleStr, MCpu, FeatureStr, Options, RelocModel, None, CGOptLevel));
 }
 
 // If a linkonce global is present in the MustPreserveSymbols, we need to make

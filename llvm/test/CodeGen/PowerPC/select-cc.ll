@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32--
 ; PR3011
 
 define <2 x double> @vector_select(<2 x double> %x, <2 x double> %y) nounwind  {

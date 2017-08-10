@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=corei7 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7 -verify-machineinstrs | FileCheck %s
 
 define void @test(i8** %a, i64* %b, i64 %c, i64 %d) nounwind {
 entry:

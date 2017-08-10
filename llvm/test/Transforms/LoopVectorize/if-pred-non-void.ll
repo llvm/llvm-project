@@ -18,8 +18,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK-LABEL: test
 ; CHECK: vector.body:
 ; CHECK:   %[[SDEE:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 0
-; CHECK:   %[[SDCC:[a-zA-Z0-9]+]] = icmp eq i1 %[[SDEE]], true
-; CHECK:   br i1 %[[SDCC]], label %[[CSD:[a-zA-Z0-9.]+]], label %[[ESD:[a-zA-Z0-9.]+]]
+; CHECK:   br i1 %[[SDEE]], label %[[CSD:[a-zA-Z0-9.]+]], label %[[ESD:[a-zA-Z0-9.]+]]
 ; CHECK: [[CSD]]:
 ; CHECK:   %[[SDA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[SDA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
@@ -29,8 +28,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK: [[ESD]]:
 ; CHECK:   %[[SDR:[a-zA-Z0-9]+]] = phi <2 x i32> [ undef, %vector.body ], [ %[[SD1]], %[[CSD]] ]
 ; CHECK:   %[[SDEEH:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 1
-; CHECK:   %[[SDCCH:[a-zA-Z0-9]+]] = icmp eq i1 %[[SDEEH]], true
-; CHECK:   br i1 %[[SDCCH]], label %[[CSDH:[a-zA-Z0-9.]+]], label %[[ESDH:[a-zA-Z0-9.]+]]
+; CHECK:   br i1 %[[SDEEH]], label %[[CSDH:[a-zA-Z0-9.]+]], label %[[ESDH:[a-zA-Z0-9.]+]]
 ; CHECK: [[CSDH]]:
 ; CHECK:   %[[SDA0H:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
 ; CHECK:   %[[SDA1H:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
@@ -41,8 +39,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK:   %{{.*}} = phi <2 x i32> [ %[[SDR]], %[[ESD]] ], [ %[[SD1H]], %[[CSDH]] ]
 
 ; CHECK:   %[[UDEE:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 0
-; CHECK:   %[[UDCC:[a-zA-Z0-9]+]] = icmp eq i1 %[[UDEE]], true
-; CHECK:   br i1 %[[UDCC]], label %[[CUD:[a-zA-Z0-9.]+]], label %[[EUD:[a-zA-Z0-9.]+]]
+; CHECK:   br i1 %[[UDEE]], label %[[CUD:[a-zA-Z0-9.]+]], label %[[EUD:[a-zA-Z0-9.]+]]
 ; CHECK: [[CUD]]:
 ; CHECK:   %[[UDA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[UDA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
@@ -53,8 +50,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK:   %{{.*}} = phi <2 x i32> [ undef, %{{.*}} ], [ %[[UD1]], %[[CUD]] ]
 
 ; CHECK:   %[[SREE:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 0
-; CHECK:   %[[SRCC:[a-zA-Z0-9]+]] = icmp eq i1 %[[SREE]], true
-; CHECK:   br i1 %[[SRCC]], label %[[CSR:[a-zA-Z0-9.]+]], label %[[ESR:[a-zA-Z0-9.]+]]
+; CHECK:   br i1 %[[SREE]], label %[[CSR:[a-zA-Z0-9.]+]], label %[[ESR:[a-zA-Z0-9.]+]]
 ; CHECK: [[CSR]]:
 ; CHECK:   %[[SRA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[SRA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
@@ -65,8 +61,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK:   %{{.*}} = phi <2 x i32> [ undef, %{{.*}} ], [ %[[SR1]], %[[CSR]] ]
 
 ; CHECK:   %[[UREE:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 0
-; CHECK:   %[[URCC:[a-zA-Z0-9]+]] = icmp eq i1 %[[UREE]], true
-; CHECK:   br i1 %[[URCC]], label %[[CUR:[a-zA-Z0-9.]+]], label %[[EUR:[a-zA-Z0-9.]+]]
+; CHECK:   br i1 %[[UREE]], label %[[CUR:[a-zA-Z0-9.]+]], label %[[EUR:[a-zA-Z0-9.]+]]
 ; CHECK: [[CUR]]:
 ; CHECK:   %[[URA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[URA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
@@ -164,16 +159,11 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK: vector.body:
 ; CHECK: %[[CMP1:.+]] = icmp slt <2 x i32> %[[VAL:.+]], <i32 100, i32 100>
 ; CHECK: %[[CMP2:.+]] = icmp sge <2 x i32> %[[VAL]], <i32 200, i32 200>
-; CHECK: %[[XOR:.+]] = xor <2 x i1> %[[CMP1]], <i1 true, i1 true>
-; CHECK: %[[AND1:.+]] = and <2 x i1> %[[XOR]], <i1 true, i1 true>
-; CHECK: %[[OR1:.+]] = or <2 x i1> zeroinitializer, %[[AND1]]
-; CHECK: %[[AND2:.+]] = and <2 x i1> %[[CMP2]], %[[OR1]]
-; CHECK: %[[OR2:.+]] = or <2 x i1> zeroinitializer, %[[AND2]]
-; CHECK: %[[AND3:.+]] = and <2 x i1> %[[CMP1]], <i1 true, i1 true>
-; CHECK: %[[OR3:.+]] = or <2 x i1> %[[OR2]], %[[AND3]]
-; CHECK: %[[EXTRACT:.+]] = extractelement <2 x i1> %[[OR3]], i32 0
-; CHECK: %[[MASK:.+]] = icmp eq i1 %[[EXTRACT]], true
-; CHECK: br i1 %[[MASK]], label %[[THEN:[a-zA-Z0-9.]+]], label %[[FI:[a-zA-Z0-9.]+]]
+; CHECK: %[[NOT:.+]] = xor <2 x i1> %[[CMP1]], <i1 true, i1 true>
+; CHECK: %[[AND:.+]] = and <2 x i1> %[[CMP2]], %[[NOT]]
+; CHECK: %[[OR:.+]] = or <2 x i1> %[[AND]], %[[CMP1]]
+; CHECK: %[[EXTRACT:.+]] = extractelement <2 x i1> %[[OR]], i32 0
+; CHECK: br i1 %[[EXTRACT]], label %[[THEN:[a-zA-Z0-9.]+]], label %[[FI:[a-zA-Z0-9.]+]]
 ; CHECK: [[THEN]]:
 ; CHECK:   %[[PD:[a-zA-Z0-9]+]] = sdiv i32 %{{.*}}, %{{.*}}
 ; CHECK:   br label %[[FI]]
