@@ -58,6 +58,7 @@ protected:
 
   bool HasV8_1aOps = false;
   bool HasV8_2aOps = false;
+  bool HasV8_3aOps = false;
 
   bool HasFPARMv8 = false;
   bool HasNEON = false;
@@ -72,6 +73,7 @@ protected:
   bool HasSPE = false;
   bool HasLSLFast = false;
   bool HasSVE = false;
+  bool HasRCPC = false;
 
   // HasZeroCycleRegMove - Has zero-cycle register mov instructions.
   bool HasZeroCycleRegMove = false;
@@ -185,6 +187,7 @@ public:
 
   bool hasV8_1aOps() const { return HasV8_1aOps; }
   bool hasV8_2aOps() const { return HasV8_2aOps; }
+  bool hasV8_3aOps() const { return HasV8_3aOps; }
 
   bool hasZeroCycleRegMove() const { return HasZeroCycleRegMove; }
 
@@ -255,6 +258,7 @@ public:
   bool hasSPE() const { return HasSPE; }
   bool hasLSLFast() const { return HasLSLFast; }
   bool hasSVE() const { return HasSVE; }
+  bool hasRCPC() const { return HasRCPC; }
 
   bool isLittleEndian() const { return IsLittle; }
 

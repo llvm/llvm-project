@@ -1388,7 +1388,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // (result) is 256-bit but the source is 512-bit wide.
     // 128-bit was made Custom under AVX1.
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64,
-                     MVT::v8f32, MVT::v4f64 })
+                     MVT::v8f32, MVT::v4f64, MVT::v1i1 })
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
     for (auto VT : { MVT::v2i1, MVT::v4i1, MVT::v8i1,
                      MVT::v16i1, MVT::v32i1, MVT::v64i1 })
@@ -14531,6 +14531,21 @@ static SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Idx = Op.getOperand(1);
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
   MVT ResVT = Op.getSimpleValueType();
+
+  // When v1i1 is legal a scalarization of a vselect with a vXi1 Cond
+  // would result with: v1i1 = extract_subvector(vXi1, idx).
+  // Lower these into extract_vector_elt which is already selectable.
+  if (ResVT == MVT::v1i1) {
+    assert(Subtarget.hasAVX512() &&
+           "Boolean EXTRACT_SUBVECTOR requires AVX512");
+
+    MVT EltVT = ResVT.getVectorElementType();
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    MVT LegalVT =
+        (TLI.getTypeToTransformTo(*DAG.getContext(), EltVT)).getSimpleVT();
+    SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, LegalVT, In, Idx);
+    return DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, ResVT, Res);
+  }
 
   assert((In.getSimpleValueType().is256BitVector() ||
           In.getSimpleValueType().is512BitVector()) &&

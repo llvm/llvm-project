@@ -544,8 +544,6 @@ def no_cuda_version_check : Flag<["--"], "no-cuda-version-check">,
 def no_cuda_noopt_device_debug : Flag<["--"], "no-cuda-noopt-device-debug">;
 def cuda_path_EQ : Joined<["--"], "cuda-path=">, Group<i_Group>,
   HelpText<"CUDA installation path">;
-def fopenmp_ptx_EQ : Joined<["--"], "fopenmp-ptx=">, Flags<[DriverOption]>,
-  HelpText<"Pass a PTX version +ptxXX, default +ptx42 (for PTX version 4.2) used by OpenMP device offloading.">;
 def ptxas_path_EQ : Joined<["--"], "ptxas-path=">, Group<i_Group>,
   HelpText<"Path to ptxas (used for compiling CUDA code)">;
 def fcuda_flush_denormals_to_zero : Flag<["-"], "fcuda-flush-denormals-to-zero">,

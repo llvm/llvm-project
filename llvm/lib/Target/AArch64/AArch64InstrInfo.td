@@ -18,6 +18,8 @@ def HasV8_1a         : Predicate<"Subtarget->hasV8_1aOps()">,
                                  AssemblerPredicate<"HasV8_1aOps", "armv8.1a">;
 def HasV8_2a         : Predicate<"Subtarget->hasV8_2aOps()">,
                                  AssemblerPredicate<"HasV8_2aOps", "armv8.2a">;
+def HasV8_3a         : Predicate<"Subtarget->hasV8_3aOps()">,
+                                 AssemblerPredicate<"HasV8_3aOps", "armv8.3a">;
 def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
                                AssemblerPredicate<"FeatureFPARMv8", "fp-armv8">;
 def HasNEON          : Predicate<"Subtarget->hasNEON()">,
@@ -44,6 +46,8 @@ def HasFuseAES       : Predicate<"Subtarget->hasFuseAES()">,
                                  "fuse-aes">;
 def HasSVE           : Predicate<"Subtarget->hasSVE()">,
                                  AssemblerPredicate<"FeatureSVE", "sve">;
+def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
+                                 AssemblerPredicate<"FeatureRCPC", "rcpc">;
 
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
@@ -444,6 +448,14 @@ def UDOTIDX2S : BaseSIMDThreeSameVectorDotIndex<0, 1, "udot", ".2s", ".8b", ".4b
 def SDOTIDX2S : BaseSIMDThreeSameVectorDotIndex<0, 0, "sdot", ".2s", ".8b", ".4b">;
 def UDOTIDX4S : BaseSIMDThreeSameVectorDotIndex<1, 1, "udot", ".4s", ".16b", ".4b">;
 def SDOTIDX4S : BaseSIMDThreeSameVectorDotIndex<1, 0, "sdot", ".4s", ".16b", ".4b">;
+}
+
+let Predicates = [HasRCPC] in {
+  // v8.3 Release Consistent Processor Consistent support
+  def LDAPRB  : RCPCLoad<0b00, "ldaprb", GPR32>;
+  def LDAPRH  : RCPCLoad<0b01, "ldaprh", GPR32>;
+  def LDAPRW  : RCPCLoad<0b10, "ldapr", GPR32>;
+  def LDAPRX  : RCPCLoad<0b11, "ldapr", GPR64>;
 }
 
 def : InstAlias<"clrex", (CLREX 0xf)>;

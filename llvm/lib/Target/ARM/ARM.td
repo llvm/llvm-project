@@ -401,6 +401,9 @@ def HasV8_2aOps : SubtargetFeature<"v8.2a", "HasV8_2aOps", "true",
                                    "Support ARM v8.2a instructions",
                                    [HasV8_1aOps]>;
 
+def HasV8_3aOps   : SubtargetFeature<"v8.3a", "HasV8_3aOps", "true",
+                                   "Support ARM v8.3a instructions",
+                                   [HasV8_2aOps]>;
 
 //===----------------------------------------------------------------------===//
 // ARM Processor subtarget features.
@@ -575,6 +578,19 @@ def ARMv81a   : Architecture<"armv8.1-a", "ARMv81a",  [HasV8_1aOps,
                                                        FeatureCRC]>;
 
 def ARMv82a   : Architecture<"armv8.2-a", "ARMv82a",  [HasV8_2aOps,
+                                                       FeatureAClass,
+                                                       FeatureDB,
+                                                       FeatureFPARMv8,
+                                                       FeatureNEON,
+                                                       FeatureDSP,
+                                                       FeatureTrustZone,
+                                                       FeatureMP,
+                                                       FeatureVirtualization,
+                                                       FeatureCrypto,
+                                                       FeatureCRC,
+                                                       FeatureRAS]>;
+
+def ARMv83a   : Architecture<"armv8.3-a", "ARMv83a",  [HasV8_3aOps,
                                                        FeatureAClass,
                                                        FeatureDB,
                                                        FeatureFPARMv8,

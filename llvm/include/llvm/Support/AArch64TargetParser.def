@@ -30,6 +30,10 @@ AARCH64_ARCH("armv8.2-a", ARMV8_2A, "8.2-A", "v8.2a",
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_DOTPROD))
+AARCH64_ARCH("armv8.3-a", ARMV8_3A, "8.3-A", "v8.3a",
+             ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
+             (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
+              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE))
 #undef AARCH64_ARCH
 
 #ifndef AARCH64_ARCH_EXT_NAME

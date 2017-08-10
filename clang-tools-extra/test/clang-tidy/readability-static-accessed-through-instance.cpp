@@ -116,9 +116,9 @@ using E = D;
 
 template <typename T> void f(T t, C c) {
   t.x; // OK, t is a template parameter.
-  c.x; // 1
+  c.x;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member
-  // CHECK-FIXES: {{^}}  C::x; // 1{{$}}
+  // CHECK-FIXES: {{^}}  C::x;{{$}}
 }
 
 template <int N> struct S { static int x; };
