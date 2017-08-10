@@ -1105,14 +1105,10 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN,
   // or we return new RefSCCs and this RefSCC is dead.
   verify();
   auto VerifyOnExit = make_scope_exit([&]() {
-    if (Result.empty()) {
+    // If we didn't replace our RefSCC with new ones, check that this one
+    // remains valid.
+    if (G)
       verify();
-    } else {
-      assert(!G && "A dead RefSCC should have its graph pointer nulled.");
-      assert(SCCs.empty() && "A dead RefSCC should have no SCCs in it.");
-      for (RefSCC *RC : Result)
-        RC->verify();
-    }
   });
 #endif
 
@@ -1324,6 +1320,12 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN,
   G = nullptr;
   SCCs.clear();
   SCCIndices.clear();
+
+#ifndef NDEBUG
+  // Verify the new RefSCCs we've built.
+  for (RefSCC *RC : Result)
+    RC->verify();
+#endif
 
   // Return the new list of SCCs.
   return Result;

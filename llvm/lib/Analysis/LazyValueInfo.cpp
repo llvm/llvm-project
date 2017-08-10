@@ -1370,23 +1370,32 @@ static bool usesOperand(User *Usr, Value *Op) {
   return find(Usr->operands(), Op) != Usr->op_end();
 }
 
-// Check if Val can be simplified to an integer constant when the value of one
+// Return true if the instruction type of Val is supported by
+// constantFoldUser(). Currently CastInst and BinaryOperator only.  Call this
+// before calling constantFoldUser() to find out if it's even worth attempting
+// to call it.
+static bool isOperationFoldable(User *Usr) {
+  return isa<CastInst>(Usr) || isa<BinaryOperator>(Usr);
+}
+
+// Check if Usr can be simplified to an integer constant when the value of one
 // of its operands Op is an integer constant OpConstVal. If so, return it as an
 // lattice value range with a single element or otherwise return an overdefined
 // lattice value.
-static LVILatticeVal constantFoldUser(Value *Val, Value *Op,
+static LVILatticeVal constantFoldUser(User *Usr, Value *Op,
                                       const APInt &OpConstVal,
                                       const DataLayout &DL) {
+  assert(isOperationFoldable(Usr) && "Precondition");
   Constant* OpConst = Constant::getIntegerValue(Op->getType(), OpConstVal);
-  // Check if Val can be simplified to a constant.
-  if (auto *CI = dyn_cast<CastInst>(Val)) {
+  // Check if Usr can be simplified to a constant.
+  if (auto *CI = dyn_cast<CastInst>(Usr)) {
     assert(CI->getOperand(0) == Op && "Operand 0 isn't Op");
     if (auto *C = dyn_cast_or_null<ConstantInt>(
             SimplifyCastInst(CI->getOpcode(), OpConst,
                              CI->getDestTy(), DL))) {
       return LVILatticeVal::getRange(ConstantRange(C->getValue()));
     }
-  } else if (auto *BO = dyn_cast<BinaryOperator>(Val)) {
+  } else if (auto *BO = dyn_cast<BinaryOperator>(Usr)) {
     bool Op0Match = BO->getOperand(0) == Op;
     bool Op1Match = BO->getOperand(1) == Op;
     assert((Op0Match || Op1Match) &&
@@ -1434,7 +1443,10 @@ static bool getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
 
       if (User *Usr = dyn_cast<User>(Val)) {
         assert(Result.isOverdefined() && "Result isn't overdefined");
-        if (isa<IntegerType>(Val->getType())) {
+        // Check with isOperationFoldable() first to avoid linearly iterating
+        // over the operands unnecessarily which can be expensive for
+        // instructions with many operands.
+        if (isa<IntegerType>(Usr->getType()) && isOperationFoldable(Usr)) {
           const DataLayout &DL = BBTo->getModule()->getDataLayout();
           if (usesOperand(Usr, Condition)) {
             // If Val has Condition as an operand and Val can be folded into a
@@ -1445,7 +1457,7 @@ static bool getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
             //   %Val = and i1 %Condition, true.
             //   br %Condition, label %then, label %else
             APInt ConditionVal(1, isTrueDest ? 1 : 0);
-            Result = constantFoldUser(Val, Condition, ConditionVal, DL);
+            Result = constantFoldUser(Usr, Condition, ConditionVal, DL);
           } else {
             // If one of Val's operand has an inferred value, we may be able to
             // infer the value of Val.
@@ -1459,7 +1471,7 @@ static bool getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
               LVILatticeVal OpLatticeVal =
                   getValueFromCondition(Op, Condition, isTrueDest);
               if (Optional<APInt> OpConst = OpLatticeVal.asConstantInteger()) {
-                Result = constantFoldUser(Val, Op, OpConst.getValue(), DL);
+                Result = constantFoldUser(Usr, Op, OpConst.getValue(), DL);
                 break;
               }
             }
@@ -1477,15 +1489,16 @@ static bool getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
     Value *Condition = SI->getCondition();
     if (!isa<IntegerType>(Val->getType()))
       return false;
-    bool ValUsesCondition = false;
+    bool ValUsesConditionAndMayBeFoldable = false;
     if (Condition != Val) {
       // Check if Val has Condition as an operand.
       if (User *Usr = dyn_cast<User>(Val))
-        ValUsesCondition = usesOperand(Usr, Condition);
-      if (!ValUsesCondition)
+        ValUsesConditionAndMayBeFoldable = isOperationFoldable(Usr) &&
+            usesOperand(Usr, Condition);
+      if (!ValUsesConditionAndMayBeFoldable)
         return false;
     }
-    assert((Condition == Val || ValUsesCondition) &&
+    assert((Condition == Val || ValUsesConditionAndMayBeFoldable) &&
            "Condition != Val nor Val doesn't use Condition");
 
     bool DefaultCase = SI->getDefaultDest() == BBTo;
@@ -1495,10 +1508,11 @@ static bool getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
     for (auto Case : SI->cases()) {
       APInt CaseValue = Case.getCaseValue()->getValue();
       ConstantRange EdgeVal(CaseValue);
-      if (ValUsesCondition) {
+      if (ValUsesConditionAndMayBeFoldable) {
+        User *Usr = cast<User>(Val);
         const DataLayout &DL = BBTo->getModule()->getDataLayout();
         LVILatticeVal EdgeLatticeVal =
-            constantFoldUser(Val, Condition, CaseValue, DL);
+            constantFoldUser(Usr, Condition, CaseValue, DL);
         if (EdgeLatticeVal.isOverdefined())
           return false;
         EdgeVal = EdgeLatticeVal.getConstantRange();

@@ -603,8 +603,9 @@ void WhitespaceManager::generateChanges() {
     if (C.CreateReplacement) {
       std::string ReplacementText = C.PreviousLinePostfix;
       if (C.ContinuesPPDirective)
-        appendNewlineText(ReplacementText, C.NewlinesBefore,
-                          C.PreviousEndOfTokenColumn, C.EscapedNewlineColumn);
+        appendEscapedNewlineText(ReplacementText, C.NewlinesBefore,
+                                 C.PreviousEndOfTokenColumn,
+                                 C.EscapedNewlineColumn);
       else
         appendNewlineText(ReplacementText, C.NewlinesBefore);
       appendIndentText(ReplacementText, C.Tok->IndentLevel,
@@ -640,16 +641,17 @@ void WhitespaceManager::appendNewlineText(std::string &Text,
     Text.append(UseCRLF ? "\r\n" : "\n");
 }
 
-void WhitespaceManager::appendNewlineText(std::string &Text, unsigned Newlines,
-                                          unsigned PreviousEndOfTokenColumn,
-                                          unsigned EscapedNewlineColumn) {
+void WhitespaceManager::appendEscapedNewlineText(std::string &Text,
+                                                 unsigned Newlines,
+                                                 unsigned PreviousEndOfTokenColumn,
+                                                 unsigned EscapedNewlineColumn) {
   if (Newlines > 0) {
-    unsigned Offset =
-        std::min<int>(EscapedNewlineColumn - 2, PreviousEndOfTokenColumn);
+    unsigned Spaces =
+        std::max<int>(1, EscapedNewlineColumn - PreviousEndOfTokenColumn - 1);
     for (unsigned i = 0; i < Newlines; ++i) {
-      Text.append(EscapedNewlineColumn - Offset - 1, ' ');
+      Text.append(Spaces, ' ');
       Text.append(UseCRLF ? "\\\r\n" : "\\\n");
-      Offset = 0;
+      Spaces = std::max<int>(0, EscapedNewlineColumn - 1);
     }
   }
 }

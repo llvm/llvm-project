@@ -65,7 +65,9 @@ static void computeCacheKey(
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals,
-    const TypeIdSummariesByGuidTy &TypeIdSummariesByGuid) {
+    const TypeIdSummariesByGuidTy &TypeIdSummariesByGuid,
+    const std::set<GlobalValue::GUID> &CfiFunctionDefs,
+    const std::set<GlobalValue::GUID> &CfiFunctionDecls) {
   // Compute the unique hash for this entry.
   // This is based on the current compiler version, the module itself, the
   // export list, the hash for every single module in the import list, the
@@ -158,22 +160,39 @@ static void computeCacheKey(
                                     sizeof(GlobalValue::LinkageTypes)));
   }
 
+  // Members of CfiFunctionDefs and CfiFunctionDecls that are referenced or
+  // defined in this module.
+  std::set<GlobalValue::GUID> UsedCfiDefs;
+  std::set<GlobalValue::GUID> UsedCfiDecls;
+
+  // Typeids used in this module.
   std::set<GlobalValue::GUID> UsedTypeIds;
 
-  auto AddUsedTypeIds = [&](GlobalValueSummary *GS) {
-    auto *FS = dyn_cast_or_null<FunctionSummary>(GS);
-    if (!FS)
-      return;
-    for (auto &TT : FS->type_tests())
-      UsedTypeIds.insert(TT);
-    for (auto &TT : FS->type_test_assume_vcalls())
-      UsedTypeIds.insert(TT.GUID);
-    for (auto &TT : FS->type_checked_load_vcalls())
-      UsedTypeIds.insert(TT.GUID);
-    for (auto &TT : FS->type_test_assume_const_vcalls())
-      UsedTypeIds.insert(TT.VFunc.GUID);
-    for (auto &TT : FS->type_checked_load_const_vcalls())
-      UsedTypeIds.insert(TT.VFunc.GUID);
+  auto AddUsedCfiGlobal = [&](GlobalValue::GUID ValueGUID) {
+    if (CfiFunctionDefs.count(ValueGUID))
+      UsedCfiDefs.insert(ValueGUID);
+    if (CfiFunctionDecls.count(ValueGUID))
+      UsedCfiDecls.insert(ValueGUID);
+  };
+
+  auto AddUsedThings = [&](GlobalValueSummary *GS) {
+    if (!GS) return;
+    for (const ValueInfo &VI : GS->refs())
+      AddUsedCfiGlobal(VI.getGUID());
+    if (auto *FS = dyn_cast<FunctionSummary>(GS)) {
+      for (auto &TT : FS->type_tests())
+        UsedTypeIds.insert(TT);
+      for (auto &TT : FS->type_test_assume_vcalls())
+        UsedTypeIds.insert(TT.GUID);
+      for (auto &TT : FS->type_checked_load_vcalls())
+        UsedTypeIds.insert(TT.GUID);
+      for (auto &TT : FS->type_test_assume_const_vcalls())
+        UsedTypeIds.insert(TT.VFunc.GUID);
+      for (auto &TT : FS->type_checked_load_const_vcalls())
+        UsedTypeIds.insert(TT.VFunc.GUID);
+      for (auto &ET : FS->calls())
+        AddUsedCfiGlobal(ET.first.getGUID());
+    }
   };
 
   // Include the hash for the linkage type to reflect internalization and weak
@@ -182,14 +201,15 @@ static void computeCacheKey(
     GlobalValue::LinkageTypes Linkage = GS.second->linkage();
     Hasher.update(
         ArrayRef<uint8_t>((const uint8_t *)&Linkage, sizeof(Linkage)));
-    AddUsedTypeIds(GS.second);
+    AddUsedCfiGlobal(GS.first);
+    AddUsedThings(GS.second);
   }
 
   // Imported functions may introduce new uses of type identifier resolutions,
   // so we need to collect their used resolutions as well.
   for (auto &ImpM : ImportList)
     for (auto &ImpF : ImpM.second)
-      AddUsedTypeIds(Index.findSummaryInModule(ImpF.first, ImpM.first()));
+      AddUsedThings(Index.findSummaryInModule(ImpF.first, ImpM.first()));
 
   auto AddTypeIdSummary = [&](StringRef TId, const TypeIdSummary &S) {
     AddString(TId);
@@ -221,6 +241,14 @@ static void computeCacheKey(
       for (auto *Summary : SummariesI->second)
         AddTypeIdSummary(Summary->first, Summary->second);
   }
+
+  AddUnsigned(UsedCfiDefs.size());
+  for (auto &V : UsedCfiDefs)
+    AddUint64(V);
+
+  AddUnsigned(UsedCfiDecls.size());
+  for (auto &V : UsedCfiDecls)
+    AddUint64(V);
 
   if (!Conf.SampleProfile.empty()) {
     auto FileOrErr = MemoryBuffer::getFile(Conf.SampleProfile);
@@ -815,6 +843,8 @@ class InProcessThinBackend : public ThinBackendProc {
   AddStreamFn AddStream;
   NativeObjectCache Cache;
   TypeIdSummariesByGuidTy TypeIdSummariesByGuid;
+  std::set<GlobalValue::GUID> CfiFunctionDefs;
+  std::set<GlobalValue::GUID> CfiFunctionDecls;
 
   Optional<Error> Err;
   std::mutex ErrMu;
@@ -834,6 +864,12 @@ public:
     // each function without needing to compute GUIDs in each backend.
     for (auto &TId : CombinedIndex.typeIds())
       TypeIdSummariesByGuid[GlobalValue::getGUID(TId.first)].push_back(&TId);
+    for (auto &Name : CombinedIndex.cfiFunctionDefs())
+      CfiFunctionDefs.insert(
+          GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Name)));
+    for (auto &Name : CombinedIndex.cfiFunctionDecls())
+      CfiFunctionDecls.insert(
+          GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Name)));
   }
 
   Error runThinLTOBackendThread(
@@ -867,7 +903,8 @@ public:
     SmallString<40> Key;
     // The module may be cached, this helps handling it.
     computeCacheKey(Key, Conf, CombinedIndex, ModuleID, ImportList, ExportList,
-                    ResolvedODR, DefinedGlobals, TypeIdSummariesByGuid);
+                    ResolvedODR, DefinedGlobals, TypeIdSummariesByGuid,
+                    CfiFunctionDefs, CfiFunctionDecls);
     if (AddStreamFn CacheAddStream = Cache(Task, Key))
       return RunThinBackend(CacheAddStream);
 

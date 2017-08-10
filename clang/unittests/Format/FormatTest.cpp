@@ -2309,6 +2309,30 @@ TEST_F(FormatTest, EscapedNewlines) {
   EXPECT_EQ("template <class T> f();", format("\\\ntemplate <class T> f();"));
   EXPECT_EQ("/* \\  \\  \\\n */", format("\\\n/* \\  \\  \\\n */"));
   EXPECT_EQ("<a\n\\\\\n>", format("<a\n\\\\\n>"));
+
+  FormatStyle DontAlign = getLLVMStyle();
+  DontAlign.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
+  DontAlign.MaxEmptyLinesToKeep = 3;
+  // FIXME: can't use verifyFormat here because the newline before
+  // "public:" is not inserted the first time it's reformatted
+  EXPECT_EQ("#define A \\\n"
+            "  class Foo { \\\n"
+            "    void bar(); \\\n"
+            "\\\n"
+            "\\\n"
+            "\\\n"
+            "  public: \\\n"
+            "    void baz(); \\\n"
+            "  };",
+            format("#define A \\\n"
+                   "  class Foo { \\\n"
+                   "    void bar(); \\\n"
+                   "\\\n"
+                   "\\\n"
+                   "\\\n"
+                   "  public: \\\n"
+                   "    void baz(); \\\n"
+                   "  };", DontAlign));
 }
 
 TEST_F(FormatTest, CalculateSpaceOnConsecutiveLinesInMacro) {
@@ -5259,7 +5283,8 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("SomeType MemberFunction(const Deleted &) && {}");
   verifyFormat("SomeType MemberFunction(const Deleted &) && final {}");
   verifyFormat("SomeType MemberFunction(const Deleted &) && override {}");
-  verifyFormat("SomeType MemberFunction(const Deleted &) const &;");
+  verifyFormat("void Fn(T const &) const &;");
+  verifyFormat("void Fn(T const volatile &&) const volatile &&;");
   verifyFormat("template <typename T>\n"
                "void F(T) && = delete;",
                getGoogleStyle());
@@ -5276,7 +5301,8 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("auto Function(T... t) & -> void {}", AlignLeft);
   verifyFormat("auto Function(T) & -> void {}", AlignLeft);
   verifyFormat("auto Function(T) & -> void;", AlignLeft);
-  verifyFormat("SomeType MemberFunction(const Deleted&) const &;", AlignLeft);
+  verifyFormat("void Fn(T const&) const&;", AlignLeft);
+  verifyFormat("void Fn(T const volatile&&) const volatile&&;", AlignLeft);
 
   FormatStyle Spaces = getLLVMStyle();
   Spaces.SpacesInCStyleCastParentheses = true;

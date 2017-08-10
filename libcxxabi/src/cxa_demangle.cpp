@@ -48,7 +48,7 @@ class StringView {
 public:
   template <size_t N>
   StringView(const char (&Str)[N]) : First(Str), Last(Str + N - 1) {}
-  StringView(const char *First, const char *Last) : First(First), Last(Last) {}
+  StringView(const char *First_, const char *Last_) : First(First_), Last(Last_) {}
   StringView() : First(nullptr), Last(nullptr) {}
 
   StringView substr(size_t From, size_t To) {
@@ -132,8 +132,8 @@ public:
   public:
     StreamStringView() : First(0), Last(0) {}
 
-    StreamStringView(StreamPosition First, StreamPosition Last)
-        : First(First), Last(Last) {}
+    StreamStringView(StreamPosition First_, StreamPosition Last_)
+        : First(First_), Last(Last_) {}
 
     bool empty() const { return First == Last; }
   };
@@ -216,10 +216,10 @@ private:
   const unsigned HasArray : 1;
 
 public:
-  Node(Kind K, bool HasRHS = false, bool HasFunction = false,
-       bool HasArray = false)
-      : K(K), HasRHSComponent(HasRHS), HasFunction(HasFunction),
-        HasArray(HasArray) {}
+  Node(Kind K_, bool HasRHS_ = false, bool HasFunction_ = false,
+       bool HasArray_ = false)
+      : K(K_), HasRHSComponent(HasRHS_), HasFunction(HasFunction_),
+        HasArray(HasArray_) {}
 
   bool hasRHSComponent() const { return HasRHSComponent; }
   bool hasArray() const { return HasArray; }
@@ -252,8 +252,8 @@ class NodeArray {
 
 public:
   NodeArray() : NumElements(0) {}
-  NodeArray(Node **Elements, size_t NumElements)
-      : Elements(Elements), NumElements(NumElements) {}
+  NodeArray(Node **Elements_, size_t NumElements_)
+      : Elements(Elements_), NumElements(NumElements_) {}
 
   bool empty() const { return NumElements == 0; }
   size_t size() const { return NumElements; }
@@ -272,8 +272,8 @@ class DotSuffix final : public Node {
   const StringView Suffix;
 
 public:
-  DotSuffix(Node *Prefix, StringView Suffix)
-      : Node(KDotSuffix), Prefix(Prefix), Suffix(Suffix) {}
+  DotSuffix(Node *Prefix_, StringView Suffix_)
+      : Node(KDotSuffix), Prefix(Prefix_), Suffix(Suffix_) {}
 
   void printLeft(OutputStream &s) const override {
     Prefix->print(s);
@@ -288,8 +288,8 @@ class VendorExtQualType final : public Node {
   const Node *Ty;
 
 public:
-  VendorExtQualType(Node *Ext, Node *Ty)
-      : Node(KVendorExtQualType), Ext(Ext), Ty(Ty) {}
+  VendorExtQualType(Node *Ext_, Node *Ty_)
+      : Node(KVendorExtQualType), Ext(Ext_), Ty(Ty_) {}
 
   void printLeft(OutputStream &S) const override {
     Ext->print(S);
@@ -326,15 +326,15 @@ protected:
   }
 
 public:
-  QualType(Node *Child, Qualifiers Quals)
-      : Node(KQualType, Child->hasRHSComponent(), Child->hasFunction(),
-             Child->hasArray()),
-        Quals(Quals), Child(Child) {}
+  QualType(Node *Child_, Qualifiers Quals_)
+      : Node(KQualType, Child_->hasRHSComponent(), Child_->hasFunction(),
+             Child_->hasArray()),
+        Quals(Quals_), Child(Child_) {}
 
-  QualType(Node::Kind ChildKind, Node *Child, Qualifiers Quals)
-      : Node(ChildKind, Child->hasRHSComponent(), Child->hasFunction(),
-             Child->hasArray()),
-        Quals(Quals), Child(Child) {}
+  QualType(Node::Kind ChildKind_, Node *Child_, Qualifiers Quals_)
+      : Node(ChildKind_, Child_->hasRHSComponent(), Child_->hasFunction(),
+             Child_->hasArray()),
+        Quals(Quals_), Child(Child_) {}
 
   void printLeft(OutputStream &S) const override {
     Child->printLeft(S);
@@ -348,7 +348,7 @@ class ConversionOperatorType final : public Node {
   const Node *Ty;
 
 public:
-  ConversionOperatorType(Node *Ty) : Node(KConversionOperatorType), Ty(Ty) {}
+  ConversionOperatorType(Node *Ty_) : Node(KConversionOperatorType), Ty(Ty_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "operator ";
@@ -361,8 +361,8 @@ class PostfixQualifiedType final : public Node {
   const StringView Postfix;
 
 public:
-  PostfixQualifiedType(Node *Ty, StringView Postfix)
-      : Node(KPostfixQualifiedType), Ty(Ty), Postfix(Postfix) {}
+  PostfixQualifiedType(Node *Ty_, StringView Postfix_)
+      : Node(KPostfixQualifiedType), Ty(Ty_), Postfix(Postfix_) {}
 
   void printLeft(OutputStream &s) const override {
     Ty->printLeft(s);
@@ -376,7 +376,7 @@ class NameType final : public Node {
   const StringView Name;
 
 public:
-  NameType(StringView Name) : Node(KNameType), Name(Name) {}
+  NameType(StringView Name_) : Node(KNameType), Name(Name_) {}
 
   StringView getName() const { return Name; }
   StringView getBaseName() const override { return Name; }
@@ -391,8 +391,8 @@ class ObjCProtoName : public Node {
   friend class PointerType;
 
 public:
-  ObjCProtoName(Node *Ty, Node *Protocol)
-      : Node(KObjCProtoName), Ty(Ty), Protocol(Protocol) {}
+  ObjCProtoName(Node *Ty_, Node *Protocol_)
+      : Node(KObjCProtoName), Ty(Ty_), Protocol(Protocol_) {}
 
   bool isObjCObject() const {
     return Ty->K == KNameType &&
@@ -411,8 +411,8 @@ class PointerType final : public Node {
   const Node *Pointee;
 
 public:
-  PointerType(Node *Pointee)
-      : Node(KPointerType, Pointee->hasRHSComponent()), Pointee(Pointee) {}
+  PointerType(Node *Pointee_)
+      : Node(KPointerType, Pointee_->hasRHSComponent()), Pointee(Pointee_) {}
 
   void printLeft(OutputStream &s) const override {
     // We rewrite objc_object<SomeProtocol>* into id<SomeProtocol>.
@@ -446,9 +446,9 @@ class LValueReferenceType final : public Node {
   const Node *Pointee;
 
 public:
-  LValueReferenceType(Node *Pointee)
-      : Node(KLValueReferenceType, Pointee->hasRHSComponent()),
-        Pointee(Pointee) {}
+  LValueReferenceType(Node *Pointee_)
+      : Node(KLValueReferenceType, Pointee_->hasRHSComponent()),
+        Pointee(Pointee_) {}
 
   void printLeft(OutputStream &s) const override {
     Pointee->printLeft(s);
@@ -470,9 +470,9 @@ class RValueReferenceType final : public Node {
   const Node *Pointee;
 
 public:
-  RValueReferenceType(Node *Pointee)
-      : Node(KRValueReferenceType, Pointee->hasRHSComponent()),
-        Pointee(Pointee) {}
+  RValueReferenceType(Node *Pointee_)
+      : Node(KRValueReferenceType, Pointee_->hasRHSComponent()),
+        Pointee(Pointee_) {}
 
   void printLeft(OutputStream &s) const override {
     Pointee->printLeft(s);
@@ -496,9 +496,9 @@ class PointerToMemberType final : public Node {
   const Node *MemberType;
 
 public:
-  PointerToMemberType(Node *ClassType, Node *MemberType)
-      : Node(KPointerToMemberType, MemberType->hasRHSComponent()),
-        ClassType(ClassType), MemberType(MemberType) {}
+  PointerToMemberType(Node *ClassType_, Node *MemberType_)
+      : Node(KPointerToMemberType, MemberType_->hasRHSComponent()),
+        ClassType(ClassType_), MemberType(MemberType_) {}
 
   void printLeft(OutputStream &s) const override {
     MemberType->printLeft(s);
@@ -558,11 +558,11 @@ class ArrayType final : public Node {
   NodeOrString Dimension;
 
 public:
-  ArrayType(Node *Base, NodeOrString Dimension)
-      : Node(KArrayType, true, false, true), Base(Base), Dimension(Dimension) {}
+  ArrayType(Node *Base_, NodeOrString Dimension_)
+      : Node(KArrayType, true, false, true), Base(Base_), Dimension(Dimension_) {}
 
   // Incomplete array type.
-  ArrayType(Node *Base) : Node(KArrayType, true, false, true), Base(Base) {}
+  ArrayType(Node *Base_) : Node(KArrayType, true, false, true), Base(Base_) {}
 
   void printLeft(OutputStream &S) const override { Base->printLeft(S); }
 
@@ -584,8 +584,8 @@ class FunctionType final : public Node {
   NodeArray Params;
 
 public:
-  FunctionType(Node *Ret, NodeArray Params)
-      : Node(KFunctionType, true, true), Ret(Ret), Params(Params) {}
+  FunctionType(Node *Ret_, NodeArray Params_)
+      : Node(KFunctionType, true, true), Ret(Ret_), Params(Params_) {}
 
   // Handle C++'s ... quirky decl grammer by using the left & right
   // distinction. Consider:
@@ -613,9 +613,9 @@ class TopLevelFunctionDecl final : public Node {
   NodeArray Params;
 
 public:
-  TopLevelFunctionDecl(Node *Ret, Node *Name, NodeArray Params)
-      : Node(KTopLevelFunctionDecl, true, true), Ret(Ret), Name(Name),
-        Params(Params) {}
+  TopLevelFunctionDecl(Node *Ret_, Node *Name_, NodeArray Params_)
+      : Node(KTopLevelFunctionDecl, true, true), Ret(Ret_), Name(Name_),
+        Params(Params_) {}
 
   void printLeft(OutputStream &S) const override {
     if (Ret) {
@@ -648,8 +648,8 @@ class FunctionRefQualType : public Node {
   friend class FunctionQualType;
 
 public:
-  FunctionRefQualType(Node *Fn, FunctionRefQual Quals)
-      : Node(KFunctionRefQualType, true, true), Fn(Fn), Quals(Quals) {}
+  FunctionRefQualType(Node *Fn_, FunctionRefQual Quals_)
+      : Node(KFunctionRefQualType, true, true), Fn(Fn_), Quals(Quals_) {}
 
   void printQuals(OutputStream &S) const {
     if (Quals == FrefQualLValue)
@@ -668,8 +668,8 @@ public:
 
 class FunctionQualType final : public QualType {
 public:
-  FunctionQualType(Node *Child, Qualifiers Quals)
-      : QualType(KFunctionQualType, Child, Quals) {}
+  FunctionQualType(Node *Child_, Qualifiers Quals_)
+      : QualType(KFunctionQualType, Child_, Quals_) {}
 
   void printLeft(OutputStream &S) const override { Child->printLeft(S); }
 
@@ -690,7 +690,7 @@ class LiteralOperator : public Node {
   const Node *OpName;
 
 public:
-  LiteralOperator(Node *OpName) : Node(KLiteralOperator), OpName(OpName) {}
+  LiteralOperator(Node *OpName_) : Node(KLiteralOperator), OpName(OpName_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "operator\"\" ";
@@ -703,8 +703,8 @@ class SpecialName final : public Node {
   const Node *Child;
 
 public:
-  SpecialName(StringView Special, Node *Child)
-      : Node(KSpecialName), Special(Special), Child(Child) {}
+  SpecialName(StringView Special_, Node *Child_)
+      : Node(KSpecialName), Special(Special_), Child(Child_) {}
 
   void printLeft(OutputStream &S) const override {
     S += Special;
@@ -717,9 +717,9 @@ class CtorVtableSpecialName final : public Node {
   const Node *SecondType;
 
 public:
-  CtorVtableSpecialName(Node *FirstType, Node *SecondType)
-      : Node(KCtorVtableSpecialName), FirstType(FirstType),
-        SecondType(SecondType) {}
+  CtorVtableSpecialName(Node *FirstType_, Node *SecondType_)
+      : Node(KCtorVtableSpecialName), FirstType(FirstType_),
+        SecondType(SecondType_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "construction vtable for ";
@@ -737,8 +737,8 @@ class QualifiedName final : public Node {
   mutable OutputStream::StreamStringView Cache;
 
 public:
-  QualifiedName(Node *Qualifier, Node *Name)
-      : Node(KQualifiedName), Qualifier(Qualifier), Name(Name) {}
+  QualifiedName(Node *Qualifier_, Node *Name_)
+      : Node(KQualifiedName), Qualifier(Qualifier_), Name(Name_) {}
 
   StringView getBaseName() const override { return Name->getBaseName(); }
 
@@ -770,11 +770,11 @@ class VectorType final : public Node {
   const bool IsPixel;
 
 public:
-  VectorType(NodeOrString Dimension)
-      : Node(KVectorType), BaseType(nullptr), Dimension(Dimension),
+  VectorType(NodeOrString Dimension_)
+      : Node(KVectorType), BaseType(nullptr), Dimension(Dimension_),
         IsPixel(true) {}
-  VectorType(Node *BaseType, NodeOrString Dimension)
-      : Node(KVectorType), BaseType(BaseType), Dimension(Dimension),
+  VectorType(Node *BaseType_, NodeOrString Dimension_)
+      : Node(KVectorType), BaseType(BaseType_), Dimension(Dimension_),
         IsPixel(false) {}
 
   void printLeft(OutputStream &S) const override {
@@ -800,7 +800,7 @@ class TemplateParams final : public Node {
   mutable OutputStream::StreamStringView Cache;
 
 public:
-  TemplateParams(NodeArray Params) : Node(KTemplateParams), Params(Params) {}
+  TemplateParams(NodeArray Params_) : Node(KTemplateParams), Params(Params_) {}
 
   void printLeft(OutputStream &S) const override {
     if (!Cache.empty()) {
@@ -826,8 +826,8 @@ class NameWithTemplateArgs final : public Node {
   Node *TemplateArgs;
 
 public:
-  NameWithTemplateArgs(Node *Name, Node *TemplateArgs)
-      : Node(KNameWithTemplateArgs), Name(Name), TemplateArgs(TemplateArgs) {}
+  NameWithTemplateArgs(Node *Name_, Node *TemplateArgs_)
+      : Node(KNameWithTemplateArgs), Name(Name_), TemplateArgs(TemplateArgs_) {}
 
   StringView getBaseName() const override { return Name->getBaseName(); }
 
@@ -841,7 +841,7 @@ class GlobalQualifiedName final : public Node {
   Node *Child;
 
 public:
-  GlobalQualifiedName(Node *Child) : Node(KGlobalQualifiedName), Child(Child) {}
+  GlobalQualifiedName(Node *Child_) : Node(KGlobalQualifiedName), Child(Child_) {}
 
   StringView getBaseName() const override { return Child->getBaseName(); }
 
@@ -855,7 +855,7 @@ class StdQualifiedName final : public Node {
   Node *Child;
 
 public:
-  StdQualifiedName(Node *Child) : Node(KStdQualifiedName), Child(Child) {}
+  StdQualifiedName(Node *Child_) : Node(KStdQualifiedName), Child(Child_) {}
 
   StringView getBaseName() const override { return Child->getBaseName(); }
 
@@ -878,8 +878,8 @@ class ExpandedSpecialSubstitution final : public Node {
   SpecialSubKind SSK;
 
 public:
-  ExpandedSpecialSubstitution(SpecialSubKind SSK)
-      : Node(KExpandedSpecialSubstitution), SSK(SSK) {}
+  ExpandedSpecialSubstitution(SpecialSubKind SSK_)
+      : Node(KExpandedSpecialSubstitution), SSK(SSK_) {}
 
   StringView getBaseName() const override {
     switch (SSK) {
@@ -927,8 +927,8 @@ class SpecialSubstitution final : public Node {
 public:
   SpecialSubKind SSK;
 
-  SpecialSubstitution(SpecialSubKind SSK)
-      : Node(KSpecialSubstitution), SSK(SSK) {}
+  SpecialSubstitution(SpecialSubKind SSK_)
+      : Node(KSpecialSubstitution), SSK(SSK_) {}
 
   StringView getBaseName() const override {
     switch (SSK) {
@@ -977,8 +977,8 @@ class CtorDtorName final : public Node {
   const bool IsDtor;
 
 public:
-  CtorDtorName(Node *Basename, bool IsDtor)
-      : Node(KCtorDtorName), Basename(Basename), IsDtor(IsDtor) {}
+  CtorDtorName(Node *Basename_, bool IsDtor_)
+      : Node(KCtorDtorName), Basename(Basename_), IsDtor(IsDtor_) {}
 
   void printLeft(OutputStream &S) const override {
     if (IsDtor)
@@ -991,7 +991,7 @@ class DtorName : public Node {
   const Node *Base;
 
 public:
-  DtorName(Node *Base) : Node(KDtorName), Base(Base) {}
+  DtorName(Node *Base_) : Node(KDtorName), Base(Base_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "~";
@@ -1003,7 +1003,7 @@ class UnnamedTypeName : public Node {
   const StringView Count;
 
 public:
-  UnnamedTypeName(StringView Count) : Node(KUnnamedTypeName), Count(Count) {}
+  UnnamedTypeName(StringView Count_) : Node(KUnnamedTypeName), Count(Count_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "'unnamed";
@@ -1017,8 +1017,8 @@ class LambdaTypeName : public Node {
   StringView Count;
 
 public:
-  LambdaTypeName(NodeArray Params, StringView Count)
-      : Node(KLambdaTypeName), Params(Params), Count(Count) {}
+  LambdaTypeName(NodeArray Params_, StringView Count_)
+      : Node(KLambdaTypeName), Params(Params_), Count(Count_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "\'lambda";
@@ -1041,8 +1041,8 @@ class BinaryExpr : public Expr {
   const Node *RHS;
 
 public:
-  BinaryExpr(Node *LHS, StringView InfixOperator, Node *RHS)
-      : LHS(LHS), InfixOperator(InfixOperator), RHS(RHS) {}
+  BinaryExpr(Node *LHS_, StringView InfixOperator_, Node *RHS_)
+      : LHS(LHS_), InfixOperator(InfixOperator_), RHS(RHS_) {}
 
   void printLeft(OutputStream &S) const override {
     // might be a template argument expression, then we need to disambiguate
@@ -1068,7 +1068,7 @@ class ArraySubscriptExpr : public Expr {
   const Node *Op2;
 
 public:
-  ArraySubscriptExpr(Node *Op1, Node *Op2) : Op1(Op1), Op2(Op2) {}
+  ArraySubscriptExpr(Node *Op1_, Node *Op2_) : Op1(Op1_), Op2(Op2_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "(";
@@ -1084,8 +1084,8 @@ class PostfixExpr : public Expr {
   const StringView Operand;
 
 public:
-  PostfixExpr(Node *Child, StringView Operand)
-      : Child(Child), Operand(Operand) {}
+  PostfixExpr(Node *Child_, StringView Operand_)
+      : Child(Child_), Operand(Operand_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "(";
@@ -1101,8 +1101,8 @@ class ConditionalExpr : public Expr {
   const Node *Else;
 
 public:
-  ConditionalExpr(Node *Cond, Node *Then, Node *Else)
-      : Cond(Cond), Then(Then), Else(Else) {}
+  ConditionalExpr(Node *Cond_, Node *Then_, Node *Else_)
+      : Cond(Cond_), Then(Then_), Else(Else_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "(";
@@ -1121,8 +1121,8 @@ class MemberExpr : public Expr {
   const Node *RHS;
 
 public:
-  MemberExpr(Node *LHS, StringView Kind, Node *RHS)
-      : LHS(LHS), Kind(Kind), RHS(RHS) {}
+  MemberExpr(Node *LHS_, StringView Kind_, Node *RHS_)
+      : LHS(LHS_), Kind(Kind_), RHS(RHS_) {}
 
   void printLeft(OutputStream &S) const override {
     LHS->print(S);
@@ -1137,8 +1137,8 @@ class EnclosingExpr : public Expr {
   const StringView Postfix;
 
 public:
-  EnclosingExpr(StringView Prefix, Node *Infix, StringView Postfix)
-      : Prefix(Prefix), Infix(Infix), Postfix(Postfix) {}
+  EnclosingExpr(StringView Prefix_, Node *Infix_, StringView Postfix_)
+      : Prefix(Prefix_), Infix(Infix_), Postfix(Postfix_) {}
 
   void printLeft(OutputStream &S) const override {
     S += Prefix;
@@ -1154,8 +1154,8 @@ class CastExpr : public Expr {
   const Node *From;
 
 public:
-  CastExpr(StringView CastKind, Node *To, Node *From)
-      : CastKind(CastKind), To(To), From(From) {}
+  CastExpr(StringView CastKind_, Node *To_, Node *From_)
+      : CastKind(CastKind_), To(To_), From(From_) {}
 
   void printLeft(OutputStream &S) const override {
     S += CastKind;
@@ -1171,7 +1171,7 @@ class SizeofParamPackExpr : public Expr {
   NodeArray Args;
 
 public:
-  SizeofParamPackExpr(NodeArray Args) : Args(Args) {}
+  SizeofParamPackExpr(NodeArray Args_) : Args(Args_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "sizeof...(";
@@ -1185,7 +1185,7 @@ class CallExpr : public Expr {
   NodeArray Args;
 
 public:
-  CallExpr(Node *Callee, NodeArray Args) : Callee(Callee), Args(Args) {}
+  CallExpr(Node *Callee_, NodeArray Args_) : Callee(Callee_), Args(Args_) {}
 
   void printLeft(OutputStream &S) const override {
     Callee->print(S);
@@ -1203,10 +1203,10 @@ class NewExpr : public Expr {
   bool IsGlobal; // ::operator new ?
   bool IsArray;  // new[] ?
 public:
-  NewExpr(NodeArray ExprList, Node *Type, NodeArray InitList, bool IsGlobal,
-          bool IsArray)
-      : ExprList(ExprList), Type(Type), InitList(InitList), IsGlobal(IsGlobal),
-        IsArray(IsArray) {}
+  NewExpr(NodeArray ExprList_, Node *Type_, NodeArray InitList_, bool IsGlobal_,
+          bool IsArray_)
+      : ExprList(ExprList_), Type(Type_), InitList(InitList_), IsGlobal(IsGlobal_),
+        IsArray(IsArray_) {}
 
   void printLeft(OutputStream &S) const override {
     if (IsGlobal)
@@ -1234,8 +1234,8 @@ class DeleteExpr : public Expr {
   bool IsArray;
 
 public:
-  DeleteExpr(Node *Op, bool IsGlobal, bool IsArray)
-      : Op(Op), IsGlobal(IsGlobal), IsArray(IsArray) {}
+  DeleteExpr(Node *Op_, bool IsGlobal_, bool IsArray_)
+      : Op(Op_), IsGlobal(IsGlobal_), IsArray(IsArray_) {}
 
   void printLeft(OutputStream &S) const override {
     if (IsGlobal)
@@ -1252,7 +1252,7 @@ class PrefixExpr : public Expr {
   Node *Child;
 
 public:
-  PrefixExpr(StringView Prefix, Node *Child) : Prefix(Prefix), Child(Child) {}
+  PrefixExpr(StringView Prefix_, Node *Child_) : Prefix(Prefix_), Child(Child_) {}
 
   void printLeft(OutputStream &S) const override {
     S += Prefix;
@@ -1266,7 +1266,7 @@ class FunctionParam : public Expr {
   StringView Number;
 
 public:
-  FunctionParam(StringView Number) : Number(Number) {}
+  FunctionParam(StringView Number_) : Number(Number_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "fp";
@@ -1278,7 +1278,7 @@ class ExprList : public Expr {
   NodeArray SubExprs;
 
 public:
-  ExprList(NodeArray SubExprs) : SubExprs(SubExprs) {}
+  ExprList(NodeArray SubExprs_) : SubExprs(SubExprs_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "(";
@@ -1292,8 +1292,8 @@ class ConversionExpr : public Expr {
   NodeArray Types;
 
 public:
-  ConversionExpr(NodeArray Expressions, NodeArray Types)
-      : Expressions(Expressions), Types(Types) {}
+  ConversionExpr(NodeArray Expressions_, NodeArray Types_)
+      : Expressions(Expressions_), Types(Types_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "(";
@@ -1308,7 +1308,7 @@ class ThrowExpr : public Expr {
   const Node *Op;
 
 public:
-  ThrowExpr(Node *Op) : Op(Op) {}
+  ThrowExpr(Node *Op_) : Op(Op_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "throw ";
@@ -1320,7 +1320,7 @@ class BoolExpr : public Expr {
   bool Value;
 
 public:
-  BoolExpr(bool Value) : Value(Value) {}
+  BoolExpr(bool Value_) : Value(Value_) {}
 
   void printLeft(OutputStream &S) const override {
     S += Value ? StringView("true") : StringView("false");
@@ -1333,7 +1333,7 @@ class IntegerCastExpr : public Expr {
   StringView Integer;
 
 public:
-  IntegerCastExpr(Node *Ty, StringView Integer) : Ty(Ty), Integer(Integer) {}
+  IntegerCastExpr(Node *Ty_, StringView Integer_) : Ty(Ty_), Integer(Integer_) {}
 
   void printLeft(OutputStream &S) const override {
     S += "(";
@@ -1348,7 +1348,7 @@ class IntegerExpr : public Expr {
   StringView Value;
 
 public:
-  IntegerExpr(StringView Type, StringView Value) : Type(Type), Value(Value) {}
+  IntegerExpr(StringView Type_, StringView Value_) : Type(Type_), Value(Value_) {}
 
   void printLeft(OutputStream &S) const override {
     if (Type.size() > 3) {
@@ -1374,7 +1374,7 @@ template <class Float> class FloatExpr : public Expr {
   const StringView Contents;
 
 public:
-  FloatExpr(StringView Contents) : Contents(Contents) {}
+  FloatExpr(StringView Contents_) : Contents(Contents_) {}
 
   void printLeft(OutputStream &s) const override {
     const char *first = Contents.begin();
@@ -1406,117 +1406,6 @@ public:
     }
   }
 };
-
-template <std::size_t N>
-class arena
-{
-    static const std::size_t alignment = 16;
-    alignas(alignment) char buf_[N];
-    char* ptr_;
-
-    std::size_t 
-    align_up(std::size_t n) noexcept
-        {return (n + (alignment-1)) & ~(alignment-1);}
-
-    bool
-    pointer_in_buffer(char* p) noexcept
-        {return buf_ <= p && p <= buf_ + N;}
-
-public:
-    arena() noexcept : ptr_(buf_) {}
-    ~arena() {ptr_ = nullptr;}
-    arena(const arena&) = delete;
-    arena& operator=(const arena&) = delete;
-
-    char* allocate(std::size_t n);
-    void deallocate(char* p, std::size_t n) noexcept;
-
-    static constexpr std::size_t size() {return N;}
-    std::size_t used() const {return static_cast<std::size_t>(ptr_ - buf_);}
-    void reset() {ptr_ = buf_;}
-};
-
-template <std::size_t N>
-char*
-arena<N>::allocate(std::size_t n)
-{
-    n = align_up(n);
-    if (static_cast<std::size_t>(buf_ + N - ptr_) >= n)
-    {
-        char* r = ptr_;
-        ptr_ += n;
-        return r;
-    }
-    return static_cast<char*>(std::malloc(n));
-}
-
-template <std::size_t N>
-void
-arena<N>::deallocate(char* p, std::size_t n) noexcept
-{
-    if (pointer_in_buffer(p))
-    {
-        n = align_up(n);
-        if (p + n == ptr_)
-            ptr_ = p;
-    }
-    else
-        std::free(p);
-}
-
-template <class T, std::size_t N>
-class short_alloc
-{
-    arena<N>& a_;
-public:
-    typedef T value_type;
-
-public:
-    template <class _Up> struct rebind {typedef short_alloc<_Up, N> other;};
-
-    short_alloc(arena<N>& a) noexcept : a_(a) {}
-    template <class U>
-        short_alloc(const short_alloc<U, N>& a) noexcept
-            : a_(a.a_) {}
-    short_alloc(const short_alloc&) = default;
-    short_alloc& operator=(const short_alloc&) = delete;
-
-    T* allocate(std::size_t n)
-    {
-        return reinterpret_cast<T*>(a_.allocate(n*sizeof(T)));
-    }
-    void deallocate(T* p, std::size_t n) noexcept
-    {
-        a_.deallocate(reinterpret_cast<char*>(p), n*sizeof(T));
-    }
-
-    template <class T1, std::size_t N1, class U, std::size_t M>
-    friend
-    bool
-    operator==(const short_alloc<T1, N1>& x, const short_alloc<U, M>& y) noexcept;
-
-    template <class U, std::size_t M> friend class short_alloc;
-};
-
-template <class T, std::size_t N, class U, std::size_t M>
-inline
-bool
-operator==(const short_alloc<T, N>& x, const short_alloc<U, M>& y) noexcept
-{
-    return N == M && &x.a_ == &y.a_;
-}
-
-template <class T, std::size_t N, class U, std::size_t M>
-inline
-bool
-operator!=(const short_alloc<T, N>& x, const short_alloc<U, M>& y) noexcept
-{
-    return !(x == y);
-}
-
-const size_t bs = 4 * 1024;
-template <class T> using Alloc = short_alloc<T, bs>;
-template <class T> using Vector = std::vector<T, Alloc<T>>;
 
 class BumpPointerAllocator {
   struct BlockMeta {
@@ -1568,13 +1457,209 @@ public:
   }
 };
 
+template <class T, size_t N>
+class PODSmallVector {
+  static_assert(std::is_pod<T>::value,
+                "T is required to be a plain old data type");
+
+  T* First;
+  T* Last;
+  T* Cap;
+  T Inline[N];
+
+  bool isInline() const { return First == Inline; }
+
+  void clearInline() {
+    First = Inline;
+    Last = Inline;
+    Cap = Inline + N;
+  }
+
+  void reserve(size_t NewCap) {
+    size_t S = size();
+    if (isInline()) {
+      auto* Tmp = static_cast<T*>(std::malloc(NewCap * sizeof(T)));
+      std::copy(First, Last, Tmp);
+      First = Tmp;
+    } else
+      First = static_cast<T*>(std::realloc(First, NewCap * sizeof(T)));
+    Last = First + S;
+    Cap = First + NewCap;
+  }
+
+public:
+  PODSmallVector() : First(Inline), Last(First), Cap(Inline + N) {}
+
+  PODSmallVector(const PODSmallVector&) = delete;
+  PODSmallVector& operator=(const PODSmallVector&) = delete;
+
+  PODSmallVector(PODSmallVector&& Other) : PODSmallVector() {
+    if (Other.isInline()) {
+      std::copy(Other.begin(), Other.end(), First);
+      Last = First + Other.size();
+      Other.clear();
+      return;
+    }
+
+    First = Other.First;
+    Last = Other.Last;
+    Cap = Other.Cap;
+    Other.clearInline();
+  }
+
+  PODSmallVector& operator=(PODSmallVector&& Other) {
+    if (Other.isInline()) {
+      if (!isInline()) {
+        std::free(First);
+        clearInline();
+      }
+      std::copy(Other.begin(), Other.end(), First);
+      Last = First + Other.size();
+      Other.clear();
+      return *this;
+    }
+
+    if (isInline()) {
+      First = Other.First;
+      Last = Other.Last;
+      Cap = Other.Cap;
+      Other.clearInline();
+      return *this;
+    }
+
+    std::swap(First, Other.First);
+    std::swap(Last, Other.Last);
+    std::swap(Cap, Other.Cap);
+    Other.clear();
+    return *this;
+  }
+
+  void push_back(const T& Elem) {
+    if (Last == Cap)
+      reserve(size() * 2);
+    *Last++ = Elem;
+  }
+
+  void pop_back() {
+    assert(Last != First && "Popping empty vector!");
+    --Last;
+  }
+
+  void dropBack(size_t Index) {
+    assert(Index <= size() && "dropBack() can't expand!");
+    Last = First + Index;
+  }
+
+  T* begin() { return First; }
+  T* end() { return Last; }
+
+  bool empty() const { return First == Last; }
+  size_t size() const { return static_cast<size_t>(Last - First); }
+  T& back() {
+    assert(Last != First && "Calling back() on empty vector!");
+    return *(Last - 1);
+  }
+  T& operator[](size_t Index) {
+    assert(Index < size() && "Invalid access!");
+    return *(begin() + Index);
+  }
+  void clear() { Last = First; }
+
+  ~PODSmallVector() {
+    if (!isInline())
+      std::free(First);
+  }
+};
+
+// Substitution table. This type is used to track the substitutions that are
+// known by the parser.
+template <size_t Size>
+class SubstitutionTable {
+  // Substitutions hold the actual entries in the table, and PackIndices tells
+  // us which entries are members of which pack. For example, if the
+  // substitutions we're tracking are: {int, {float, FooBar}, char}, with
+  // {float, FooBar} being a parameter pack, we represent the substitutions as:
+  // Substitutions: int, float, FooBar, char
+  // PackIndices:     0,             1,    3
+  // So, PackIndicies[I] holds the offset of the begin of the Ith pack, and
+  // PackIndices[I + 1] holds the offset of the end.
+  PODSmallVector<Node*, Size> Substitutions;
+  PODSmallVector<unsigned, Size> PackIndices;
+
+public:
+  // Add a substitution that represents a single name to the table. This is
+  // modeled as a parameter pack with just one element.
+  void pushSubstitution(Node* Entry) {
+    pushPack();
+    pushSubstitutionIntoPack(Entry);
+  }
+
+  // Add a new empty pack to the table. Subsequent calls to
+  // pushSubstitutionIntoPack() will add to this pack.
+  void pushPack() {
+    PackIndices.push_back(static_cast<unsigned>(Substitutions.size()));
+  }
+  void pushSubstitutionIntoPack(Node* Entry) {
+    assert(!PackIndices.empty() && "No pack to push substitution into!");
+    Substitutions.push_back(Entry);
+  }
+
+  // Remove the last pack from the table.
+  void popPack() {
+    unsigned Last = PackIndices.back();
+    PackIndices.pop_back();
+    Substitutions.dropBack(Last);
+  }
+
+  // For use in a range-for loop.
+  struct NodeRange {
+    Node** First;
+    Node** Last;
+    Node** begin() { return First; }
+    Node** end() { return Last; }
+  };
+
+  // Retrieve the Nth substitution. This is represented as a range, as the
+  // substitution could be referring to a parameter pack.
+  NodeRange nthSubstitution(size_t N) {
+    assert(PackIndices[N] <= Substitutions.size());
+    // The Nth parameter pack starts at offset PackIndices[N], and ends at
+    // PackIndices[N + 1].
+    Node** Begin = Substitutions.begin() + PackIndices[N];
+    Node** End;
+    if (N + 1 != PackIndices.size()) {
+      assert(PackIndices[N + 1] <= Substitutions.size());
+      End = Substitutions.begin() + PackIndices[N + 1];
+    } else
+      End = Substitutions.end();
+    assert(Begin <= End);
+    return NodeRange{Begin, End};
+  }
+
+  size_t size() const { return PackIndices.size(); }
+  bool empty() const { return PackIndices.empty(); }
+  void clear() {
+    Substitutions.clear();
+    PackIndices.clear();
+  }
+};
+
 struct Db
 {
-    typedef Vector<Node*> sub_type;
-    typedef Vector<sub_type> template_param_type;
-    sub_type Names;
-    template_param_type Subs;
-    Vector<template_param_type> TemplateParams;
+    // Name stack, this is used by the parser to hold temporary names that were
+    // parsed. The parser colapses multiple names into new nodes to construct
+    // the AST. Once the parser is finished, names.size() == 1.
+    PODSmallVector<Node*, 32> Names;
+
+    // Substitution table. Itanium supports name substitutions as a means of
+    // compression. The string "S42_" refers to the 42nd entry in this table.
+    SubstitutionTable<32> Subs;
+
+    // Template parameter table. Like the above, but referenced like "T42_".
+    // This has a smaller size compared to Subs and Names because it can be
+    // stored on the stack.
+    SubstitutionTable<4> TemplateParams;
+
     Qualifiers CV = QualNone;
     FunctionRefQual RefQuals = FrefQualNone;
     unsigned EncodingDepth = 0;
@@ -1584,13 +1669,6 @@ struct Db
     bool TryToParseTemplateArgs = true;
 
     BumpPointerAllocator ASTAllocator;
-
-    template <size_t N>
-    Db(arena<N>& ar) :
-        Names(ar),
-        Subs(0, Names, ar),
-        TemplateParams(0, Subs, ar)
-    {}
 
     template <class T, class... Args> T* make(Args&& ...args)
     {
@@ -1612,7 +1690,7 @@ struct Db
         assert(FromPosition <= Names.size());
         NodeArray res = makeNodeArray(
             Names.begin() + (long)FromPosition, Names.end());
-        Names.erase(Names.begin() + (long)FromPosition, Names.end());
+        Names.dropBack(FromPosition);
         return res;
     }
 };
@@ -1801,7 +1879,7 @@ parse_substitution(const char* first, const char* last, Db& db)
             case '_':
                 if (!db.Subs.empty())
                 {
-                    for (const auto& n : db.Subs.front())
+                    for (Node* n : db.Subs.nthSubstitution(0))
                         db.Names.push_back(n);
                     first += 2;
                 }
@@ -1828,7 +1906,7 @@ parse_substitution(const char* first, const char* last, Db& db)
                     ++sub;
                     if (sub < db.Subs.size())
                     {
-                        for (const auto& n : db.Subs[sub])
+                        for (Node* n : db.Subs.nthSubstitution(sub))
                             db.Names.push_back(n);
                         first = t+1;
                     }
@@ -2058,11 +2136,9 @@ parse_template_param(const char* first, const char* last, Db& db)
         {
             if (first[1] == '_')
             {
-                if (db.TemplateParams.empty())
-                    return first;
-                if (!db.TemplateParams.back().empty())
+                if (!db.TemplateParams.empty())
                 {
-                    for (auto& t : db.TemplateParams.back().front())
+                    for (Node *t : db.TemplateParams.nthSubstitution(0))
                         db.Names.push_back(t);
                     first += 2;
                 }
@@ -2082,12 +2158,12 @@ parse_template_param(const char* first, const char* last, Db& db)
                     sub *= 10;
                     sub += static_cast<size_t>(*t - '0');
                 }
-                if (t == last || *t != '_' || db.TemplateParams.empty())
+                if (t == last || *t != '_')
                     return first;
                 ++sub;
-                if (sub < db.TemplateParams.back().size())
+                if (sub < db.TemplateParams.size())
                 {
-                    for (auto& temp : db.TemplateParams.back()[sub])
+                    for (Node *temp : db.TemplateParams.nthSubstitution(sub))
                         db.Names.push_back(temp);
                     first = t+1;
                 }
@@ -2469,7 +2545,7 @@ parse_unresolved_type(const char* first, const char* last, Db& db)
             size_t k1 = db.Names.size();
             if (t != first && k1 == k0 + 1)
             {
-                db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                db.Subs.pushSubstitution(db.Names.back());
                 first = t;
             }
             else
@@ -2485,7 +2561,7 @@ parse_unresolved_type(const char* first, const char* last, Db& db)
             {
                 if (db.Names.empty())
                     return first;
-                db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                db.Subs.pushSubstitution(db.Names.back());
                 first = t;
             }
             break;
@@ -2504,7 +2580,7 @@ parse_unresolved_type(const char* first, const char* last, Db& db)
                             return first;
                         db.Names.back() =
                             db.make<StdQualifiedName>(db.Names.back());
-                        db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                        db.Subs.pushSubstitution(db.Names.back());
                         first = t;
                     }
                 }
@@ -2959,8 +3035,7 @@ parse_conversion_expr(const char* first, const char* last, Db& db)
                 db.Names.begin() + (long)expr_list_begin);
             auto* conv_expr = db.make<ConversionExpr>(
                 types, expressions);
-            db.Names.erase(
-                db.Names.begin() + (long)type_begin, db.Names.end());
+            db.Names.dropBack(type_begin);
             db.Names.push_back(conv_expr);
             first = t;
         }
@@ -3313,8 +3388,8 @@ parse_type(const char* first, const char* last, Db& db)
                     if (t1 != t)
                     {
                         if (is_function)
-                            db.Subs.pop_back();
-                        db.Subs.emplace_back(db.Names.get_allocator());
+                            db.Subs.popPack();
+                        db.Subs.pushPack();
                         for (size_t k = k0; k < k1; ++k)
                         {
                             if (cv) {
@@ -3325,7 +3400,7 @@ parse_type(const char* first, const char* last, Db& db)
                                     db.Names[k] =
                                         db.make<QualType>(db.Names[k], cv);
                             }
-                            db.Subs.back().push_back(db.Names[k]);
+                            db.Subs.pushSubstitutionIntoPack(db.Names[k]);
                         }
                         first = t1;
                     }
@@ -3350,7 +3425,7 @@ parse_type(const char* first, const char* last, Db& db)
                             if (db.Names.empty())
                                 return first;
                             first = t;
-                            db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                            db.Subs.pushSubstitution(db.Names.back());
                         }
                         break;
                     case 'C':
@@ -3362,7 +3437,7 @@ parse_type(const char* first, const char* last, Db& db)
                             db.Names.back() = db.make<PostfixQualifiedType>(
                                 db.Names.back(), " complex");
                             first = t;
-                            db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                            db.Subs.pushSubstitution(db.Names.back());
                         }
                         break;
                     case 'F':
@@ -3372,7 +3447,7 @@ parse_type(const char* first, const char* last, Db& db)
                             if (db.Names.empty())
                                 return first;
                             first = t;
-                            db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                            db.Subs.pushSubstitution(db.Names.back());
                         }
                         break;
                     case 'G':
@@ -3384,7 +3459,7 @@ parse_type(const char* first, const char* last, Db& db)
                             db.Names.back() = db.make<PostfixQualifiedType>(
                                 db.Names.back(), " imaginary");
                             first = t;
-                            db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                            db.Subs.pushSubstitution(db.Names.back());
                         }
                         break;
                     case 'M':
@@ -3394,7 +3469,7 @@ parse_type(const char* first, const char* last, Db& db)
                             if (db.Names.empty())
                                 return first;
                             first = t;
-                            db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                            db.Subs.pushSubstitution(db.Names.back());
                         }
                         break;
                     case 'O':
@@ -3404,12 +3479,12 @@ parse_type(const char* first, const char* last, Db& db)
                         size_t k1 = db.Names.size();
                         if (t != first+1)
                         {
-                            db.Subs.emplace_back(db.Names.get_allocator());
+                            db.Subs.pushPack();
                             for (size_t k = k0; k < k1; ++k)
                             {
                                 db.Names[k] =
                                     db.make<RValueReferenceType>(db.Names[k]);
-                                db.Subs.back().push_back(db.Names[k]);
+                                db.Subs.pushSubstitutionIntoPack(db.Names[k]);
                             }
                             first = t;
                         }
@@ -3422,11 +3497,11 @@ parse_type(const char* first, const char* last, Db& db)
                         size_t k1 = db.Names.size();
                         if (t != first+1)
                         {
-                            db.Subs.emplace_back(db.Names.get_allocator());
+                            db.Subs.pushPack();
                             for (size_t k = k0; k < k1; ++k)
                             {
                                 db.Names[k] = db.make<PointerType>(db.Names[k]);
-                                db.Subs.back().push_back(db.Names[k]);
+                                db.Subs.pushSubstitutionIntoPack(db.Names[k]);
                             }
                             first = t;
                         }
@@ -3439,12 +3514,12 @@ parse_type(const char* first, const char* last, Db& db)
                         size_t k1 = db.Names.size();
                         if (t != first+1)
                         {
-                            db.Subs.emplace_back(db.Names.get_allocator());
+                            db.Subs.pushPack();
                             for (size_t k = k0; k < k1; ++k)
                             {
                                 db.Names[k] =
                                     db.make<LValueReferenceType>(db.Names[k]);
-                                db.Subs.back().push_back(db.Names[k]);
+                                db.Subs.pushSubstitutionIntoPack(db.Names[k]);
                             }
                             first = t;
                         }
@@ -3457,9 +3532,9 @@ parse_type(const char* first, const char* last, Db& db)
                         size_t k1 = db.Names.size();
                         if (t != first)
                         {
-                            db.Subs.emplace_back(db.Names.get_allocator());
+                            db.Subs.pushPack();
                             for (size_t k = k0; k < k1; ++k)
-                                db.Subs.back().push_back(db.Names[k]);
+                                db.Subs.pushSubstitutionIntoPack(db.Names[k]);
                             if (db.TryToParseTemplateArgs && k1 == k0+1)
                             {
                                 const char* t1 = parse_template_args(t, last, db);
@@ -3470,9 +3545,7 @@ parse_type(const char* first, const char* last, Db& db)
                                     db.Names.back() = db.make<
                                         NameWithTemplateArgs>(
                                         db.Names.back(), args);
-                                    db.Subs.push_back(Db::sub_type(
-                                        1, db.Names.back(),
-                                        db.Names.get_allocator()));
+                                    db.Subs.pushSubstitution(db.Names.back());
                                     t = t1;
                                 }
                             }
@@ -3512,7 +3585,7 @@ parse_type(const char* first, const char* last, Db& db)
                                             db.Names.push_back(db.make<VendorExtQualType>(type, proto));
                                         }
                                     }
-                                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                                    db.Subs.pushSubstitution(db.Names.back());
                                     first = t2;
                                 }
                             }
@@ -3526,7 +3599,7 @@ parse_type(const char* first, const char* last, Db& db)
                             {
                                 if (db.Names.empty())
                                     return first;
-                                db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                                db.Subs.pushSubstitution(db.Names.back());
                                 first = t;
                             }
                         }
@@ -3551,7 +3624,7 @@ parse_type(const char* first, const char* last, Db& db)
                                           NameWithTemplateArgs>(
                                               db.Names.back(), template_args);
                                         // Need to create substitution for <template-template-param> <template-args>
-                                        db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                                        db.Subs.pushSubstitution(db.Names.back());
                                         first = t;
                                     }
                                 }
@@ -3570,9 +3643,9 @@ parse_type(const char* first, const char* last, Db& db)
                                 size_t k1 = db.Names.size();
                                 if (t != first+2)
                                 {
-                                    db.Subs.emplace_back(db.Names.get_allocator());
+                                    db.Subs.pushPack();
                                     for (size_t k = k0; k < k1; ++k)
-                                        db.Subs.back().push_back(db.Names[k]);
+                                        db.Subs.pushSubstitutionIntoPack(db.Names[k]);
                                     first = t;
                                     return first;
                                 }
@@ -3585,7 +3658,7 @@ parse_type(const char* first, const char* last, Db& db)
                                 {
                                     if (db.Names.empty())
                                         return first;
-                                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                                    db.Subs.pushSubstitution(db.Names.back());
                                     first = t;
                                     return first;
                                 }
@@ -3596,7 +3669,7 @@ parse_type(const char* first, const char* last, Db& db)
                                 {
                                     if (db.Names.empty())
                                         return first;
-                                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                                    db.Subs.pushSubstitution(db.Names.back());
                                     first = t;
                                     return first;
                                 }
@@ -3619,7 +3692,7 @@ parse_type(const char* first, const char* last, Db& db)
                             {
                                 if (db.Names.empty())
                                     return first;
-                                db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                                db.Subs.pushSubstitution(db.Names.back());
                                 first = t;
                             }
                         }
@@ -5119,26 +5192,32 @@ parse_template_args(const char* first, const char* last, Db& db)
     if (last - first >= 2 && *first == 'I')
     {
         if (db.TagTemplates)
-            db.TemplateParams.back().clear();
+            db.TemplateParams.clear();
         const char* t = first+1;
         size_t begin_idx = db.Names.size();
         while (*t != 'E')
         {
             if (db.TagTemplates)
-                db.TemplateParams.emplace_back(db.Names.get_allocator());
+            {
+                auto TmpParams = std::move(db.TemplateParams);
+                size_t k0 = db.Names.size();
+                const char* t1 = parse_template_arg(t, last, db);
+                size_t k1 = db.Names.size();
+                db.TemplateParams = std::move(TmpParams);
+
+                if (t1 == t || t1 == last || k0 > k1)
+                    return first;
+                db.TemplateParams.pushPack();
+                for (size_t k = k0; k < k1; ++k)
+                    db.TemplateParams.pushSubstitutionIntoPack(db.Names[k]);
+                t = t1;
+                continue;
+            }
             size_t k0 = db.Names.size();
             const char* t1 = parse_template_arg(t, last, db);
             size_t k1 = db.Names.size();
-            if (db.TagTemplates)
-                db.TemplateParams.pop_back();
             if (t1 == t || t1 == last || k0 > k1)
-                return first;
-            if (db.TagTemplates)
-            {
-                db.TemplateParams.back().emplace_back(db.Names.get_allocator());
-                for (size_t k = k0; k < k1; ++k)
-                    db.TemplateParams.back().back().push_back(db.Names[k]);
-            }
+              return first;
             t = t1;
         }
         if (begin_idx > db.Names.size())
@@ -5218,9 +5297,7 @@ parse_nested_name(const char* first, const char* last, Db& db,
                     {
                         db.Names.back() = db.make<QualifiedName>(
                             db.Names.back(), name);
-                        db.Subs.push_back(
-                            Db::sub_type(1, db.Names.back(),
-                                         db.Names.get_allocator()));
+                        db.Subs.pushSubstitution(db.Names.back());
                     }
                     else
                         db.Names.back() = name;
@@ -5243,7 +5320,7 @@ parse_nested_name(const char* first, const char* last, Db& db,
                             db.make<QualifiedName>(db.Names.back(), name);
                     else
                         db.Names.back() = name;
-                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                    db.Subs.pushSubstitution(db.Names.back());
                     pop_subs = true;
                     t0 = t1;
                 }
@@ -5265,7 +5342,7 @@ parse_nested_name(const char* first, const char* last, Db& db,
                             db.make<QualifiedName>(db.Names.back(), name);
                     else
                         db.Names.back() = name;
-                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                    db.Subs.pushSubstitution(db.Names.back());
                     pop_subs = true;
                     t0 = t1;
                 }
@@ -5282,8 +5359,7 @@ parse_nested_name(const char* first, const char* last, Db& db,
                     db.Names.pop_back();
                     db.Names.back() = db.make<NameWithTemplateArgs>(
                         db.Names.back(), name);
-                    db.Subs.push_back(Db::sub_type(
-                        1, db.Names.back(), db.Names.get_allocator()));
+                    db.Subs.pushSubstitution(db.Names.back());
                     t0 = t1;
                     component_ends_with_template_args = true;
                 }
@@ -5308,7 +5384,7 @@ parse_nested_name(const char* first, const char* last, Db& db,
                             db.make<QualifiedName>(db.Names.back(), name);
                     else
                         db.Names.back() = name;
-                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                    db.Subs.pushSubstitution(db.Names.back());
                     pop_subs = true;
                     t0 = t1;
                 }
@@ -5319,7 +5395,7 @@ parse_nested_name(const char* first, const char* last, Db& db,
         first = t0 + 1;
         db.CV = cv;
         if (pop_subs && !db.Subs.empty())
-            db.Subs.pop_back();
+            db.Subs.popPack();
         if (ends_with_template_args)
             *ends_with_template_args = component_ends_with_template_args;
     }
@@ -5484,7 +5560,7 @@ parse_name(const char* first, const char* last, Db& db,
                 {
                     if (db.Names.empty())
                         return first;
-                    db.Subs.push_back(Db::sub_type(1, db.Names.back(), db.Names.get_allocator()));
+                    db.Subs.pushSubstitution(db.Names.back());
                     t0 = t1;
                     t1 = parse_template_args(t0, last, db);
                     if (t1 != t0)
@@ -6035,16 +6111,14 @@ __cxa_demangle(const char *mangled_name, char *buf, size_t *n, int *status) {
     }
 
     size_t internal_size = buf != nullptr ? *n : 0;
-    arena<bs> a;
-    Db db(a);
-    db.TemplateParams.emplace_back(a);
+    Db db;
     int internal_status = success;
     size_t len = std::strlen(mangled_name);
     demangle(mangled_name, mangled_name + len, db,
              internal_status);
 
     if (internal_status == success && db.FixForwardReferences &&
-        !db.TemplateParams.empty() && !db.TemplateParams.front().empty())
+        !db.TemplateParams.empty())
     {
         db.FixForwardReferences = false;
         db.TagTemplates = false;

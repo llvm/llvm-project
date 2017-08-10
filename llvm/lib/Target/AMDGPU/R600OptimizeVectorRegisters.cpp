@@ -1,4 +1,4 @@
-//===--------------------- R600MergeVectorRegisters.cpp -------------------===//
+//===- R600MergeVectorRegisters.cpp ---------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -44,7 +44,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/PassAnalysisSupport.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -98,8 +98,13 @@ public:
 
 class R600VectorRegMerger : public MachineFunctionPass {
 private:
+  using InstructionSetMap = DenseMap<unsigned, std::vector<MachineInstr *>>;
+
   MachineRegisterInfo *MRI;
-  const R600InstrInfo *TII;
+  const R600InstrInfo *TII = nullptr;
+  DenseMap<MachineInstr *, RegSeqInfo> PreviousRegSeq;
+  InstructionSetMap PreviousRegSeqByReg;
+  InstructionSetMap PreviousRegSeqByUndefCount;
 
   bool canSwizzle(const MachineInstr &MI) const;
   bool areAllUsesSwizzeable(unsigned Reg) const;
@@ -116,16 +121,10 @@ private:
   void RemoveMI(MachineInstr *);
   void trackRSI(const RegSeqInfo &RSI);
 
-  typedef DenseMap<unsigned, std::vector<MachineInstr *>> InstructionSetMap;
-  DenseMap<MachineInstr *, RegSeqInfo> PreviousRegSeq;
-  InstructionSetMap PreviousRegSeqByReg;
-  InstructionSetMap PreviousRegSeqByUndefCount;
-
 public:
   static char ID;
 
-  R600VectorRegMerger() : MachineFunctionPass(ID),
-  TII(nullptr) { }
+  R600VectorRegMerger() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -143,7 +142,7 @@ public:
   bool runOnMachineFunction(MachineFunction &Fn) override;
 };
 
-} // end anonymous namespace.
+} // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(R600VectorRegMerger, DEBUG_TYPE,
                      "R600 Vector Reg Merger", false, false)

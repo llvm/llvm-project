@@ -1,4 +1,4 @@
-//===-- AMDGPUDisassembler.cpp - Disassembler for AMDGPU ISA --------------===//
+//===- AMDGPUDisassembler.cpp - Disassembler for AMDGPU ISA ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,29 +17,40 @@
 
 // ToDo: What to do with instruction suffixes (v_mov_b32 vs v_mov_b32_e32)?
 
-#include "AMDGPUDisassembler.h"
+#include "Disassembler/AMDGPUDisassembler.h"
 #include "AMDGPU.h"
 #include "AMDGPURegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
-
+#include "llvm-c/Disassembler.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <tuple>
+#include <vector>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-disassembler"
 
-typedef llvm::MCDisassembler::DecodeStatus DecodeStatus;
-
+using DecodeStatus = llvm::MCDisassembler::DecodeStatus;
 
 inline static MCDisassembler::DecodeStatus
 addOperand(MCInst &Inst, const MCOperand& Opnd) {
@@ -101,7 +112,6 @@ DECODE_OPERAND_REG(SReg_64_XEXEC)
 DECODE_OPERAND_REG(SReg_128)
 DECODE_OPERAND_REG(SReg_256)
 DECODE_OPERAND_REG(SReg_512)
-
 
 static DecodeStatus decodeOperand_VSrc16(MCInst &Inst,
                                          unsigned Imm,
@@ -395,7 +405,6 @@ MCOperand AMDGPUDisassembler::decodeOperand_SReg_512(unsigned Val) const {
   return createSRegOperand(AMDGPU::SReg_512RegClassID, Val);
 }
 
-
 MCOperand AMDGPUDisassembler::decodeLiteralConstant() const {
   // For now all literal constants are supposed to be unsigned integer
   // ToDo: deal with signed/unsigned 64-bit integer constants
@@ -413,6 +422,7 @@ MCOperand AMDGPUDisassembler::decodeLiteralConstant() const {
 
 MCOperand AMDGPUDisassembler::decodeIntImmed(unsigned Imm) {
   using namespace AMDGPU::EncValues;
+
   assert(Imm >= INLINE_INTEGER_C_MIN && Imm <= INLINE_INTEGER_C_MAX);
   return MCOperand::createImm((Imm <= INLINE_INTEGER_C_POSITIVE_MAX) ?
     (static_cast<int64_t>(Imm) - INLINE_INTEGER_C_MIN) :
@@ -515,6 +525,7 @@ MCOperand AMDGPUDisassembler::decodeFPImmed(OpWidthTy Width, unsigned Imm) {
 
 unsigned AMDGPUDisassembler::getVgprClassId(const OpWidthTy Width) const {
   using namespace AMDGPU;
+
   assert(OPW_FIRST_ <= Width && Width < OPW_LAST_);
   switch (Width) {
   default: // fall
@@ -529,6 +540,7 @@ unsigned AMDGPUDisassembler::getVgprClassId(const OpWidthTy Width) const {
 
 unsigned AMDGPUDisassembler::getSgprClassId(const OpWidthTy Width) const {
   using namespace AMDGPU;
+
   assert(OPW_FIRST_ <= Width && Width < OPW_LAST_);
   switch (Width) {
   default: // fall
@@ -543,6 +555,7 @@ unsigned AMDGPUDisassembler::getSgprClassId(const OpWidthTy Width) const {
 
 unsigned AMDGPUDisassembler::getTtmpClassId(const OpWidthTy Width) const {
   using namespace AMDGPU;
+
   assert(OPW_FIRST_ <= Width && Width < OPW_LAST_);
   switch (Width) {
   default: // fall
@@ -557,6 +570,7 @@ unsigned AMDGPUDisassembler::getTtmpClassId(const OpWidthTy Width) const {
 
 MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val) const {
   using namespace AMDGPU::EncValues;
+
   assert(Val < 512); // enum9
 
   if (VGPR_MIN <= Val && Val <= VGPR_MAX) {
@@ -593,6 +607,7 @@ MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val) c
 
 MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
   using namespace AMDGPU;
+
   switch (Val) {
   case 102: return createRegOperand(getMCReg(FLAT_SCR_LO, STI));
   case 103: return createRegOperand(getMCReg(FLAT_SCR_HI, STI));
@@ -625,6 +640,7 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
 
 MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
   using namespace AMDGPU;
+
   switch (Val) {
   case 102: return createRegOperand(getMCReg(FLAT_SCR, STI));
   case 106: return createRegOperand(VCC);
@@ -669,7 +685,6 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc32(unsigned Val) const {
   return decodeSDWASrc(OPW32, Val);
 }
 
-
 MCOperand AMDGPUDisassembler::decodeSDWAVopcDst(unsigned Val) const {
   using namespace AMDGPU::SDWA;
 
@@ -696,8 +711,8 @@ bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
                                 raw_ostream &/*cStream*/, int64_t Value,
                                 uint64_t /*Address*/, bool IsBranch,
                                 uint64_t /*Offset*/, uint64_t /*InstSize*/) {
-  typedef std::tuple<uint64_t, StringRef, uint8_t> SymbolInfoTy;
-  typedef std::vector<SymbolInfoTy> SectionSymbolsTy;
+  using SymbolInfoTy = std::tuple<uint64_t, StringRef, uint8_t>;
+  using SectionSymbolsTy = std::vector<SymbolInfoTy>;
 
   if (!IsBranch) {
     return false;

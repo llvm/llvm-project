@@ -1,4 +1,4 @@
-//===-- R600ControlFlowFinalizer.cpp - Finalize Control Flow Inst----------===//
+//===- R600ControlFlowFinalizer.cpp - Finalize Control Flow Inst ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,7 +9,8 @@
 //
 /// \file
 /// This pass compute turns all control flow pseudo instructions into native one
-/// computing their address on the fly ; it also sets STACK_SIZE info.
+/// computing their address on the fly; it also sets STACK_SIZE info.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
@@ -29,13 +30,15 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Function.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <new>
 #include <set>
 #include <utility>
 #include <vector>
@@ -47,7 +50,6 @@ using namespace llvm;
 namespace {
 
 struct CFStack {
-
   enum StackItem {
     ENTRY = 0,
     SUB_ENTRY = 1,
@@ -214,7 +216,7 @@ void CFStack::popLoop() {
 
 class R600ControlFlowFinalizer : public MachineFunctionPass {
 private:
-  typedef std::pair<MachineInstr *, std::vector<MachineInstr *>> ClauseFile;
+  using ClauseFile = std::pair<MachineInstr *, std::vector<MachineInstr *>>;
 
   enum ControlFlowInstruction {
     CF_TC,

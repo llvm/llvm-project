@@ -716,14 +716,6 @@
 /// ###########################################################################
 
 /// Check PTXAS is passed the compute capability passed to the driver.
-// RUN:   %clang -### -no-canonical-prefixes -target powerpc64le-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda --fopenmp-ptx=+ptx52 %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHK-PTXAS-PPC64-VERSION %s
-
-// CHK-PTXAS-PPC64-VERSION: clang{{.*}}.bc" {{.*}}"-target-feature" "+ptx52"
-
-/// ###########################################################################
-
-/// Check PTXAS is passed the compute capability passed to the driver.
 // RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda --fopenmp-ptx=+ptx52 %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-PTXAS-VERSION %s
 

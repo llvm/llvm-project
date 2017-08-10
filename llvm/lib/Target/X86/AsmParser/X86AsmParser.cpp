@@ -1962,11 +1962,6 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
     return X86Operand::CreateImm(ImmExpr, Start, End);
   }
 
-  // Only positive immediates are valid.
-  if (Imm < 0)
-    return ErrorOperand(Start, "expected a positive immediate displacement "
-                               "before bracketed expr.");
-
   return ParseIntelBracExpression(/*SegReg=*/0, Start, Imm, isSymbol, Size);
 }
 

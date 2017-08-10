@@ -511,9 +511,9 @@ typedef struct {
 
 // CHECK-LABEL: test_memset_private
 // CHECK: call void @llvm.memset.p0i8.i64(i8* nonnull {{.*}}, i8 0, i64 40, i32 8, i1 false)
-StructTy3 test_memset_private(void) {
+void test_memset_private(private StructTy3 *ptr) {
   StructTy3 S3 = {0, 0, 0, 0, 0};
-  return S3;
+  *ptr = S3;
 }
 
 // Test casting literal 0 to pointer.
