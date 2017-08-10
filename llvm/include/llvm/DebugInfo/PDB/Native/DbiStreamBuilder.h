@@ -59,6 +59,7 @@ public:
 
   uint32_t calculateSerializedLength() const;
 
+  void setGlobalsStreamIndex(uint32_t Index);
   void setPublicsStreamIndex(uint32_t Index);
   void setSymbolRecordStreamIndex(uint32_t Index);
 
@@ -71,8 +72,9 @@ public:
 
   Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef MsfBuffer);
 
-  void addSectionContrib(DbiModuleDescriptorBuilder *ModuleDbi,
-                         const llvm::object::coff_section *SecHdr);
+  void addSectionContrib(const SectionContrib &SC) {
+    SectionContribs.emplace_back(SC);
+  }
 
   // A helper function to create a Section Map from a COFF section header.
   static std::vector<SecMapEntry>
@@ -105,6 +107,7 @@ private:
   uint16_t PdbDllRbld;
   uint16_t Flags;
   PDB_Machine MachineType;
+  uint32_t GlobalsStreamIndex = kInvalidStreamIndex;
   uint32_t PublicsStreamIndex = kInvalidStreamIndex;
   uint32_t SymRecordStreamIndex = kInvalidStreamIndex;
 

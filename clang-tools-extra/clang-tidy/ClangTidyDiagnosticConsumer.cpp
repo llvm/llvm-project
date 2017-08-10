@@ -115,7 +115,7 @@ ClangTidyError::ClangTidyError(StringRef CheckName,
 // Returns true if GlobList starts with the negative indicator ('-'), removes it
 // from the GlobList.
 static bool ConsumeNegativeIndicator(StringRef &GlobList) {
-  GlobList = GlobList.trim(' ');
+  GlobList = GlobList.trim(" \r\n");
   if (GlobList.startswith("-")) {
     GlobList = GlobList.substr(1);
     return true;

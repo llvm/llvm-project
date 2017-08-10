@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 -mtriple=i686-apple-ios -mcpu=yonah < %s
+; RUN: llc -mtriple=i686-apple-ios -mcpu=yonah < %s
 ; rdar://12868039
 
 define void @t() nounwind ssp {

@@ -69,43 +69,6 @@ createSparcMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   return createSparcMCSubtargetInfoImpl(TT, CPU, FS);
 }
 
-// Code models. Some only make sense for 64-bit code.
-//
-// SunCC  Reloc   CodeModel  Constraints
-// abs32  Static  Small      text+data+bss linked below 2^32 bytes
-// abs44  Static  Medium     text+data+bss linked below 2^44 bytes
-// abs64  Static  Large      text smaller than 2^31 bytes
-// pic13  PIC_    Small      GOT < 2^13 bytes
-// pic32  PIC_    Medium     GOT < 2^32 bytes
-//
-// All code models require that the text segment is smaller than 2GB.
-
-static void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
-                              CodeModel::Model &CM) {
-  // The default 32-bit code model is abs32/pic32 and the default 32-bit
-  // code model for JIT is abs32.
-  switch (CM) {
-  default: break;
-  case CodeModel::Default:
-  case CodeModel::JITDefault: CM = CodeModel::Small; break;
-  }
-}
-
-static void adjustCodeGenOptsV9(const Triple &TT, Reloc::Model RM,
-                                CodeModel::Model &CM) {
-  // The default 64-bit code model is abs44/pic32 and the default 64-bit
-  // code model for JIT is abs64.
-  switch (CM) {
-  default:  break;
-  case CodeModel::Default:
-    CM = RM == Reloc::PIC_ ? CodeModel::Small : CodeModel::Medium;
-    break;
-  case CodeModel::JITDefault:
-    CM = CodeModel::Large;
-    break;
-  }
-}
-
 static MCTargetStreamer *
 createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return new SparcTargetELFStreamer(S);
@@ -159,12 +122,4 @@ extern "C" void LLVMInitializeSparcTargetMC() {
     // Register the MCInstPrinter
     TargetRegistry::RegisterMCInstPrinter(*T, createSparcMCInstPrinter);
   }
-
-  // Register the MC codegen info.
-  TargetRegistry::registerMCAdjustCodeGenOpts(getTheSparcTarget(),
-                                              adjustCodeGenOpts);
-  TargetRegistry::registerMCAdjustCodeGenOpts(getTheSparcV9Target(),
-                                              adjustCodeGenOptsV9);
-  TargetRegistry::registerMCAdjustCodeGenOpts(getTheSparcelTarget(),
-                                              adjustCodeGenOpts);
 }

@@ -128,9 +128,11 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
   if (!TargetFrameLowering::isSafeForNoCSROpt(F)) {
     const uint32_t *CallPreservedMask =
         TRI->getCallPreservedMask(MF, F->getCallingConv());
-    // Set callee saved register as preserved.
-    for (unsigned i = 0; i < RegMaskSize; ++i)
-      RegMask[i] = RegMask[i] | CallPreservedMask[i];
+    if (CallPreservedMask) {
+      // Set callee saved register as preserved.
+      for (unsigned i = 0; i < RegMaskSize; ++i)
+        RegMask[i] = RegMask[i] | CallPreservedMask[i];
+    }
   } else {
     ++NumCSROpt;
     DEBUG(dbgs() << MF.getName()

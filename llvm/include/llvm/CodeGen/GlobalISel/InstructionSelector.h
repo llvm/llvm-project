@@ -184,6 +184,12 @@ enum {
   /// - RendererID - The renderer to call
   GIR_ComplexRenderer,
 
+  /// Render a G_CONSTANT operator as a sign-extended immediate.
+  /// - NewInsnID - Instruction ID to modify
+  /// - OldInsnID - Instruction ID to copy from
+  /// The operand index is implicitly 1.
+  GIR_CopyConstantAsSImm,
+
   /// Constrain an instruction operand to a register class.
   /// - InsnID - Instruction ID to modify
   /// - OpIdx - Operand index
@@ -195,6 +201,9 @@ enum {
   GIR_ConstrainSelectedInstOperands,
   /// Merge all memory operands into instruction.
   /// - InsnID - Instruction ID to modify
+  /// - MergeInsnID... - One or more Instruction ID to merge into the result.
+  /// - GIU_MergeMemOperands_EndOfList - Terminates the list of instructions to
+  ///                                    merge.
   GIR_MergeMemOperands,
   /// Erase from parent.
   /// - InsnID - Instruction ID to erase
@@ -202,6 +211,12 @@ enum {
 
   /// A successful emission
   GIR_Done,
+};
+
+enum {
+  /// Indicates the end of the variable-length MergeInsnID list in a
+  /// GIR_MergeMemOperands opcode.
+  GIU_MergeMemOperands_EndOfList = -1,
 };
 
 /// Provides the logic to select generic machine instructions.

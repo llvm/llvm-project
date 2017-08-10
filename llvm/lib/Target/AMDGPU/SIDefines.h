@@ -69,7 +69,8 @@ enum : uint64_t {
   VOPAsmPrefer32Bit = UINT64_C(1) << 41,
   HasFPClamp = UINT64_C(1) << 42,
   VOP3_OPSEL = UINT64_C(1) << 43,
-  maybeAtomic = UINT64_C(1) << 44
+  maybeAtomic = UINT64_C(1) << 44,
+  F16_ZFILL = UINT64_C(1) << 45
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.

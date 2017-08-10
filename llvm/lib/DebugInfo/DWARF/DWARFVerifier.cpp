@@ -253,7 +253,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
         ++NumErrors;
         OS << "error: DW_AT_stmt_list offset is beyond .debug_line "
               "bounds: "
-           << format("0x%08" PRIx32, *SectionOffset) << "\n";
+           << format("0x%08" PRIx64, *SectionOffset) << "\n";
         Die.dump(OS, 0);
         OS << "\n";
       }
@@ -292,7 +292,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
       if (CUOffset >= CUSize) {
         ++NumErrors;
         OS << "error: " << FormEncodingString(Form) << " CU offset "
-           << format("0x%08" PRIx32, CUOffset)
+           << format("0x%08" PRIx64, CUOffset)
            << " is invalid (must be less than CU size of "
            << format("0x%08" PRIx32, CUSize) << "):\n";
         Die.dump(OS, 0);
@@ -424,7 +424,7 @@ void DWARFVerifier::verifyDebugLineRows() {
       if (Row.Address < PrevAddress) {
         ++NumDebugLineErrors;
         OS << "error: .debug_line["
-           << format("0x%08" PRIx32,
+           << format("0x%08" PRIx64,
                      *toSectionOffset(Die.find(DW_AT_stmt_list)))
            << "] row[" << RowIndex
            << "] decreases in address from previous row:\n";
@@ -439,7 +439,7 @@ void DWARFVerifier::verifyDebugLineRows() {
       if (Row.File > MaxFileIndex) {
         ++NumDebugLineErrors;
         OS << "error: .debug_line["
-           << format("0x%08" PRIx32,
+           << format("0x%08" PRIx64,
                      *toSectionOffset(Die.find(DW_AT_stmt_list)))
            << "][" << RowIndex << "] has invalid file index " << Row.File
            << " (valid values are [1," << MaxFileIndex << "]):\n";
@@ -525,15 +525,16 @@ unsigned DWARFVerifier::verifyAccelTable(const DWARFSection *AccelSection,
     uint32_t StrpOffset;
     uint32_t StringOffset;
     uint32_t StringCount = 0;
-    uint32_t DieOffset = dwarf::DW_INVALID_OFFSET;
-
+    unsigned Offset;
+    unsigned Tag;
     while ((StrpOffset = AccelSectionData.getU32(&HashDataOffset)) != 0) {
       const uint32_t NumHashDataObjects =
           AccelSectionData.getU32(&HashDataOffset);
       for (uint32_t HashDataIdx = 0; HashDataIdx < NumHashDataObjects;
            ++HashDataIdx) {
-        DieOffset = AccelTable.readAtoms(HashDataOffset);
-        if (!DCtx.getDIEForOffset(DieOffset)) {
+        std::tie(Offset, Tag) = AccelTable.readAtoms(HashDataOffset);
+        auto Die = DCtx.getDIEForOffset(Offset);
+        if (!Die) {
           const uint32_t BucketIdx =
               NumBuckets ? (Hash % NumBuckets) : UINT32_MAX;
           StringOffset = StrpOffset;
@@ -546,8 +547,16 @@ unsigned DWARFVerifier::verifyAccelTable(const DWARFSection *AccelSection,
               "Str[%u] = 0x%08x "
               "DIE[%d] = 0x%08x is not a valid DIE offset for \"%s\".\n",
               SectionName, BucketIdx, HashIdx, Hash, StringCount, StrpOffset,
-              HashDataIdx, DieOffset, Name);
+              HashDataIdx, Offset, Name);
 
+          ++NumErrors;
+          continue;
+        }
+        if ((Tag != dwarf::DW_TAG_null) && (Die.getTag() != Tag)) {
+          OS << "\terror: Tag " << dwarf::TagString(Tag)
+             << " in accelerator table does not match Tag "
+             << dwarf::TagString(Die.getTag()) << " of DIE[" << HashDataIdx
+             << "].\n";
           ++NumErrors;
         }
       }

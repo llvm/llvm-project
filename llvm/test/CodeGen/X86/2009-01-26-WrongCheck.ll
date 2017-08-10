@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -enable-legalize-types-checking
+; RUN: llc < %s -mtriple=i686-- -enable-legalize-types-checking
 ; PR3393
 
 define void @foo(i32 inreg %x) {

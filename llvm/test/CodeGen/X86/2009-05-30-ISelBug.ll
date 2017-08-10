@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | not grep "movzbl	%[abcd]h,"
+; RUN: llc < %s -mtriple=x86_64-- | not grep "movzbl	%[abcd]h,"
 
 define void @BZ2_bzDecompress_bb5_2E_outer_bb35_2E_i_bb54_2E_i(i32*, i32 %c_nblock_used.2.i, i32 %.reload51, i32* %.out, i32* %.out1, i32* %.out2, i32* %.out3) nounwind {
 newFuncRoot:

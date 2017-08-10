@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 
 ; When doing sign extension, use the sext-load lowering to take advantage of
 ; x86's sign extension during loads.

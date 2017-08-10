@@ -170,6 +170,8 @@ private:
                          char Asm);
   void printAbs(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
+  void printHigh(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                 raw_ostream &O);
   void printClamp(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
   void printClampSI(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

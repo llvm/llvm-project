@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | not grep call
+; RUN: llc < %s -mtriple=i686-- | not grep call
 
 declare i1 @llvm.isunordered.f64(double)
 

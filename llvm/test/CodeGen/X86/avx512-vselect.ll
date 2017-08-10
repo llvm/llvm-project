@@ -25,7 +25,7 @@ entry:
 define <16 x double> @test2(<16 x float> %x, <16 x float> %y, <16 x double> %a, <16 x double> %b) {
 ; CHECK-SKX-LABEL: test2:
 ; CHECK-SKX:       # BB#0: # %entry
-; CHECK-SKX-NEXT:    vxorps %zmm6, %zmm6, %zmm6
+; CHECK-SKX-NEXT:    vxorps %xmm6, %xmm6, %xmm6
 ; CHECK-SKX-NEXT:    vcmpltps %zmm0, %zmm6, %k0
 ; CHECK-SKX-NEXT:    vcmpltps %zmm6, %zmm1, %k1
 ; CHECK-SKX-NEXT:    korw %k1, %k0, %k0
@@ -40,7 +40,7 @@ define <16 x double> @test2(<16 x float> %x, <16 x float> %y, <16 x double> %a, 
 ;
 ; CHECK-KNL-LABEL: test2:
 ; CHECK-KNL:       # BB#0: # %entry
-; CHECK-KNL-NEXT:    vpxord %zmm6, %zmm6, %zmm6
+; CHECK-KNL-NEXT:    vxorps %xmm6, %xmm6, %xmm6
 ; CHECK-KNL-NEXT:    vcmpltps %zmm0, %zmm6, %k0
 ; CHECK-KNL-NEXT:    vcmpltps %zmm6, %zmm1, %k1
 ; CHECK-KNL-NEXT:    korw %k1, %k0, %k1

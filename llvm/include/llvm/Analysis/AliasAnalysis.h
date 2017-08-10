@@ -38,6 +38,7 @@
 #ifndef LLVM_ANALYSIS_ALIASANALYSIS_H
 #define LLVM_ANALYSIS_ALIASANALYSIS_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CallSite.h"
@@ -500,43 +501,33 @@ public:
     return getModRefInfo(I, MemoryLocation(P, Size));
   }
 
-  /// Check whether or not an instruction may read or write memory (without
-  /// regard to a specific location).
+  /// Check whether or not an instruction may read or write the optionally
+  /// specified memory location.
   ///
-  /// For function calls, this delegates to the alias-analysis specific
-  /// call-site mod-ref behavior queries. Otherwise it delegates to the generic
-  /// mod ref information query without a location.
-  ModRefInfo getModRefInfo(const Instruction *I) {
-    if (auto CS = ImmutableCallSite(I)) {
-      auto MRB = getModRefBehavior(CS);
-      if ((MRB & MRI_ModRef) == MRI_ModRef)
-        return MRI_ModRef;
-      if (MRB & MRI_Ref)
-        return MRI_Ref;
-      if (MRB & MRI_Mod)
-        return MRI_Mod;
-      return MRI_NoModRef;
-    }
-
-    return getModRefInfo(I, MemoryLocation());
-  }
-
-  /// Check whether or not an instruction may read or write the specified
-  /// memory location.
-  ///
-  /// Note explicitly that getModRefInfo considers the effects of reading and
-  /// writing the memory location, and not the effect of ordering relative to
-  /// other instructions.  Thus, a volatile load is considered to be Ref,
-  /// because it does not actually write memory, it just can't be reordered
-  /// relative to other volatiles (or removed).  Atomic ordered loads/stores are
-  /// considered ModRef ATM because conservatively, the visible effect appears
-  /// as if memory was written, not just an ordering constraint.
   ///
   /// An instruction that doesn't read or write memory may be trivially LICM'd
   /// for example.
   ///
-  /// This primarily delegates to specific helpers above.
-  ModRefInfo getModRefInfo(const Instruction *I, const MemoryLocation &Loc) {
+  /// For function calls, this delegates to the alias-analysis specific
+  /// call-site mod-ref behavior queries. Otherwise it delegates to the specific
+  /// helpers above.
+  ModRefInfo getModRefInfo(const Instruction *I,
+                           const Optional<MemoryLocation> &OptLoc) {
+    if (OptLoc == None) {
+      if (auto CS = ImmutableCallSite(I)) {
+        auto MRB = getModRefBehavior(CS);
+        if ((MRB & MRI_ModRef) == MRI_ModRef)
+          return MRI_ModRef;
+        if (MRB & MRI_Ref)
+          return MRI_Ref;
+        if (MRB & MRI_Mod)
+          return MRI_Mod;
+        return MRI_NoModRef;
+      }
+    }
+
+    const MemoryLocation &Loc = OptLoc.getValueOr(MemoryLocation());
+
     switch (I->getOpcode()) {
     case Instruction::VAArg:  return getModRefInfo((const VAArgInst*)I, Loc);
     case Instruction::Load:   return getModRefInfo((const LoadInst*)I,  Loc);

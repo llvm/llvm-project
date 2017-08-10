@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2,-avx | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2,-avx | FileCheck %s
 
 define <2 x double> @foo() nounwind {
   ret <2 x double> bitcast (<2 x i64><i64 -1, i64 -1> to <2 x double>)

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mattr=+avx -no-integrated-as
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx -no-integrated-as
 ; rdar://7066579
 
 	%0 = type { i64, i64, i64, i64, i64 }		; type %0

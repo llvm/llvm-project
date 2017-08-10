@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=pentium
+; RUN: llc < %s -mtriple=i686-- -mcpu=pentium
 ; PR2575
 
 define void @entry(i32 %m_task_id, i32 %start_x, i32 %end_x) nounwind  {

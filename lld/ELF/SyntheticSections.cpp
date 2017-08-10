@@ -77,9 +77,11 @@ template <class ELFT> InputSection *elf::createCommonSection() {
                      return A->Alignment > B->Alignment;
                    });
 
+  // Allocate space for common symbols.
   BssSection *Sec = make<BssSection>("COMMON");
   for (DefinedCommon *Sym : Syms)
-    Sym->Offset = Sec->reserveSpace(Sym->Size, Sym->Alignment);
+    if (Sym->Live)
+      Sym->Offset = Sec->reserveSpace(Sym->Size, Sym->Alignment);
   return Sec;
 }
 
@@ -297,7 +299,7 @@ InputSection *elf::createInterpSection() {
 SymbolBody *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                                    uint64_t Size, InputSectionBase *Section) {
   auto *S = make<DefinedRegular>(Name, /*IsLocal*/ true, STV_DEFAULT, Type,
-                                 Value, Size, Section, nullptr);
+                                 Value, Size, Section);
   if (InX::SymTab)
     InX::SymTab->addSymbol(S);
   return S;
@@ -990,6 +992,7 @@ unsigned StringTableSection::addString(StringRef S, bool HashIt) {
 void StringTableSection::writeTo(uint8_t *Buf) {
   for (StringRef S : Strings) {
     memcpy(Buf, S.data(), S.size());
+    Buf[S.size()] = '\0';
     Buf += S.size() + 1;
   }
 }
@@ -1813,12 +1816,13 @@ static GdbIndexChunk readDwarf(DWARFContext &Dwarf, InputSection *Sec) {
 }
 
 template <class ELFT> GdbIndexSection *elf::createGdbIndex() {
-  std::vector<GdbIndexChunk> Chunks;
-  for (InputSection *Sec : getDebugInfoSections()) {
-    ObjFile<ELFT> *F = Sec->getFile<ELFT>();
+  std::vector<InputSection *> Sections = getDebugInfoSections();
+  std::vector<GdbIndexChunk> Chunks(Sections.size());
+  parallelForEachN(0, Chunks.size(), [&](size_t I) {
+    ObjFile<ELFT> *F = Sections[I]->getFile<ELFT>();
     DWARFContext Dwarf(make_unique<LLDDwarfObj<ELFT>>(F));
-    Chunks.push_back(readDwarf(Dwarf, Sec));
-  }
+    Chunks[I] = readDwarf(Dwarf, Sections[I]);
+  });
   return make<GdbIndexSection>(std::move(Chunks));
 }
 
@@ -2080,7 +2084,7 @@ void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
     return;
   }
 
-  auto *File = cast<SharedFile<ELFT>>(SS->File);
+  SharedFile<ELFT> *File = SS->getFile<ELFT>();
 
   // If we don't already know that we need an Elf_Verneed for this DSO, prepare
   // to create one by adding it to our needed list and creating a dynstr entry
@@ -2217,15 +2221,14 @@ size_t MergeSyntheticSection::getSize() const { return Builder.getSize(); }
 void elf::decompressAndMergeSections() {
   // splitIntoPieces needs to be called on each MergeInputSection before calling
   // finalizeContents(). Do that first.
-  parallelForEach(InputSections.begin(), InputSections.end(),
-                  [](InputSectionBase *S) {
-                    if (!S->Live)
-                      return;
-                    if (Decompressor::isCompressedELFSection(S->Flags, S->Name))
-                      S->uncompress();
-                    if (auto *MS = dyn_cast<MergeInputSection>(S))
-                      MS->splitIntoPieces();
-                  });
+  parallelForEach(InputSections, [](InputSectionBase *S) {
+    if (!S->Live)
+      return;
+    if (Decompressor::isCompressedELFSection(S->Flags, S->Name))
+      S->uncompress();
+    if (auto *MS = dyn_cast<MergeInputSection>(S))
+      MS->splitIntoPieces();
+  });
 
   std::vector<MergeSyntheticSection *> MergeSections;
   for (InputSectionBase *&S : InputSections) {

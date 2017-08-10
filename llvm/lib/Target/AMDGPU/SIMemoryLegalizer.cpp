@@ -1,4 +1,4 @@
-//===--- SIMemoryLegalizer.cpp ----------------------------------*- C++ -*-===//
+//===- SIMemoryLegalizer.cpp ----------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,17 +11,33 @@
 /// \brief Memory legalizer - implements memory model. More information can be
 /// found here:
 ///   http://llvm.org/docs/AMDGPUUsage.html#memory-model
-///
 //
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
 #include "AMDGPUMachineModuleInfo.h"
 #include "AMDGPUSubtarget.h"
+#include "SIDefines.h"
+#include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/AtomicOrdering.h"
+#include <cassert>
+#include <list>
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -38,7 +54,7 @@ private:
     AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent;
     AtomicOrdering FailureOrdering = AtomicOrdering::SequentiallyConsistent;
 
-    AtomicInfo() {}
+    AtomicInfo() = default;
 
     AtomicInfo(SyncScope::ID SSID,
                AtomicOrdering Ordering,
@@ -55,13 +71,16 @@ private:
 
   /// \brief LLVM context.
   LLVMContext *CTX = nullptr;
+
   /// \brief Machine module info.
   const AMDGPUMachineModuleInfo *MMI = nullptr;
+
   /// \brief Instruction info.
   const SIInstrInfo *TII = nullptr;
 
   /// \brief Immediate for "vmcnt(0)".
   unsigned Vmcnt0Immediate = 0;
+
   /// \brief Opcode for cache invalidation instruction (L1).
   unsigned Wbinvl1Opcode = 0;
 
@@ -134,8 +153,7 @@ private:
 public:
   static char ID;
 
-  SIMemoryLegalizer()
-      : MachineFunctionPass(ID) {}
+  SIMemoryLegalizer() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

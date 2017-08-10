@@ -1,4 +1,6 @@
 ; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc  -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj < %s \
+; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 
 ; Verify that we have correct debug info for local variables in code
 ; instrumented with AddressSanitizer.
@@ -15,7 +17,7 @@
 ; CHECK: #DEBUG_VALUE: bar:y <- [DW_OP_deref] [%RDI+0]
 ; CHECK: movq %rdi, [[OFFSET:[0-9]+]](%rsp)
 ; CHECK-NEXT: [[START_LABEL:.Ltmp[0-9]+]]
-; CHECK-NEXT: #DEBUG_VALUE: bar:y <- [DW_OP_deref, DW_OP_deref]
+; CHECK-NEXT: #DEBUG_VALUE: bar:y <- [DW_OP_plus_uconst [[OFFSET]], DW_OP_deref, DW_OP_deref]
 ; This location should be valid until the end of the function.
 
 ; CHECK:        movq    %rbp, %rsp
@@ -28,6 +30,8 @@
 ; CHECK:      .quad .Lfunc_begin0-.Lfunc_begin0
 ; CHECK-NEXT: .quad [[START_LABEL]]-.Lfunc_begin0
 ; CHECK: DW_OP_breg5
+; DWARF: Location description: 75 00 06
+;                              DW_OP_breg5+0 DW_OP_deref
 
 ; Then it's addressed via %rsp:
 ; CHECK:      .quad [[START_LABEL]]-.Lfunc_begin0
@@ -35,6 +39,8 @@
 ; CHECK: DW_OP_breg7
 ; CHECK-NEXT: [[OFFSET]]
 ; CHECK: DW_OP_deref
+; DWARF: Location description: {{77 .. 06 06}}
+;                              DW_OP_breg7+OFFSET DW_OP_deref DW_OP_deref
 
 ; ModuleID = 'test.cc'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

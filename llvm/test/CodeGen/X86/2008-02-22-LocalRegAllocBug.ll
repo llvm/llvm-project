@@ -1,4 +1,4 @@
-; RUN: llc < %s -regalloc=fast -optimize-regalloc=0 -march=x86 -mattr=+mmx | grep esi
+; RUN: llc < %s -regalloc=fast -optimize-regalloc=0 -mtriple=i686-- -mattr=+mmx | grep esi
 ; PR2082
 ; Local register allocator was refusing to use ESI, EDI, and EBP so it ran out of
 ; registers.

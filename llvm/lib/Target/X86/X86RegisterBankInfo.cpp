@@ -26,10 +26,6 @@ using namespace llvm;
 #define GET_TARGET_REGBANK_INFO_IMPL
 #include "X86GenRegisterBankInfo.def"
 
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-#error "You shouldn't build this"
-#endif
-
 X86RegisterBankInfo::X86RegisterBankInfo(const TargetRegisterInfo &TRI)
     : X86GenRegisterBankInfo() {
 

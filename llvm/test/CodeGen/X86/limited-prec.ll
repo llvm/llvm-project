@@ -1,8 +1,8 @@
-; RUN: llc < %s -limit-float-precision=6 -march=x86 | \
+; RUN: llc < %s -limit-float-precision=6 -mtriple=i686-- | \
 ; RUN:    not grep exp | not grep log | not grep pow
-; RUN: llc < %s -limit-float-precision=12 -march=x86 | \
+; RUN: llc < %s -limit-float-precision=12 -mtriple=i686-- | \
 ; RUN:    not grep exp | not grep log | not grep pow
-; RUN: llc < %s -limit-float-precision=18 -march=x86 | \
+; RUN: llc < %s -limit-float-precision=18 -mtriple=i686-- | \
 ; RUN:    not grep exp | not grep log | not grep pow
 
 define float @f1(float %x) nounwind noinline {

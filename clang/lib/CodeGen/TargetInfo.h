@@ -19,6 +19,7 @@
 #include "CGValue.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/SyncScope.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -260,6 +261,10 @@ public:
   virtual llvm::Constant *
   performAddrSpaceCast(CodeGenModule &CGM, llvm::Constant *V, unsigned SrcAddr,
                        unsigned DestAddr, llvm::Type *DestTy) const;
+
+  /// Get the syncscope used in LLVM IR.
+  virtual llvm::SyncScope::ID getLLVMSyncScopeID(SyncScope S,
+                                                 llvm::LLVMContext &C) const;
 };
 
 } // namespace CodeGen

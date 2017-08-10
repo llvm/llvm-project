@@ -141,41 +141,14 @@ define void @shuffle_v8i32_to_v4i32_1(<8 x i32>* %L, <4 x i32>* %S) nounwind {
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: shuffle_v8i32_to_v4i32_1:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vmovaps (%rdi), %ymm0
-; AVX512F-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
-; AVX512F-NEXT:    vmovaps %xmm0, (%rsi)
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: shuffle_v8i32_to_v4i32_1:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
-; AVX512VL-NEXT:    vmovaps %xmm0, (%rsi)
-; AVX512VL-NEXT:    vzeroupper
-; AVX512VL-NEXT:    retq
-;
-; AVX512BW-LABEL: shuffle_v8i32_to_v4i32_1:
-; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vmovaps (%rdi), %ymm0
-; AVX512BW-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX512BW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
-; AVX512BW-NEXT:    vmovaps %xmm0, (%rsi)
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512BWVL-LABEL: shuffle_v8i32_to_v4i32_1:
-; AVX512BWVL:       # BB#0:
-; AVX512BWVL-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
-; AVX512BWVL-NEXT:    vmovaps %xmm0, (%rsi)
-; AVX512BWVL-NEXT:    vzeroupper
-; AVX512BWVL-NEXT:    retq
+; AVX512-LABEL: shuffle_v8i32_to_v4i32_1:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX512-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; AVX512-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %vec = load <8 x i32>, <8 x i32>* %L
   %strided.vec = shufflevector <8 x i32> %vec, <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   store <4 x i32> %strided.vec, <4 x i32>* %S

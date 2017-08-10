@@ -101,19 +101,16 @@ public:
 
   using MCAsmInfoCtorFnTy = MCAsmInfo *(*)(const MCRegisterInfo &MRI,
                                            const Triple &TT);
-  using MCAdjustCodeGenOptsFnTy = void (*)(const Triple &TT, Reloc::Model RM,
-                                           CodeModel::Model &CM);
-
   using MCInstrInfoCtorFnTy = MCInstrInfo *(*)();
   using MCInstrAnalysisCtorFnTy = MCInstrAnalysis *(*)(const MCInstrInfo *Info);
   using MCRegInfoCtorFnTy = MCRegisterInfo *(*)(const Triple &TT);
   using MCSubtargetInfoCtorFnTy = MCSubtargetInfo *(*)(const Triple &TT,
                                                        StringRef CPU,
                                                        StringRef Features);
-  using TargetMachineCtorTy = TargetMachine *(*)(
-      const Target &T, const Triple &TT, StringRef CPU, StringRef Features,
-      const TargetOptions &Options, Optional<Reloc::Model> RM,
-      CodeModel::Model CM, CodeGenOpt::Level OL);
+  using TargetMachineCtorTy = TargetMachine
+      *(*)(const Target &T, const Triple &TT, StringRef CPU, StringRef Features,
+           const TargetOptions &Options, Optional<Reloc::Model> RM,
+           Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT);
   // If it weren't for layering issues (this header is in llvm/Support, but
   // depends on MC?) this should take the Streamer by value rather than rvalue
   // reference.
@@ -190,8 +187,6 @@ private:
   /// MCAsmInfoCtorFn - Constructor function for this target's MCAsmInfo, if
   /// registered.
   MCAsmInfoCtorFnTy MCAsmInfoCtorFn;
-
-  MCAdjustCodeGenOptsFnTy MCAdjustCodeGenOptsFn;
 
   /// MCInstrInfoCtorFn - Constructor function for this target's MCInstrInfo,
   /// if registered.
@@ -312,12 +307,6 @@ public:
     return MCAsmInfoCtorFn(MRI, Triple(TheTriple));
   }
 
-  void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
-                         CodeModel::Model &CM) const {
-    if (MCAdjustCodeGenOptsFn)
-      MCAdjustCodeGenOptsFn(TT, RM, CM);
-  }
-
   /// createMCInstrInfo - Create a MCInstrInfo implementation.
   ///
   MCInstrInfo *createMCInstrInfo() const {
@@ -365,15 +354,17 @@ public:
   /// feature set; it should always be provided. Generally this should be
   /// either the target triple from the module, or the target triple of the
   /// host if that does not exist.
-  TargetMachine *
-  createTargetMachine(StringRef TT, StringRef CPU, StringRef Features,
-                      const TargetOptions &Options, Optional<Reloc::Model> RM,
-                      CodeModel::Model CM = CodeModel::Default,
-                      CodeGenOpt::Level OL = CodeGenOpt::Default) const {
+  TargetMachine *createTargetMachine(StringRef TT, StringRef CPU,
+                                     StringRef Features,
+                                     const TargetOptions &Options,
+                                     Optional<Reloc::Model> RM,
+                                     Optional<CodeModel::Model> CM = None,
+                                     CodeGenOpt::Level OL = CodeGenOpt::Default,
+                                     bool JIT = false) const {
     if (!TargetMachineCtorFn)
       return nullptr;
     return TargetMachineCtorFn(*this, Triple(TT), CPU, Features, Options, RM,
-                               CM, OL);
+                               CM, OL, JIT);
   }
 
   /// createMCAsmBackend - Create a target specific assembly parser.
@@ -663,11 +654,6 @@ struct TargetRegistry {
     T.MCAsmInfoCtorFn = Fn;
   }
 
-  static void registerMCAdjustCodeGenOpts(Target &T,
-                                          Target::MCAdjustCodeGenOptsFnTy Fn) {
-    T.MCAdjustCodeGenOptsFn = Fn;
-  }
-
   /// RegisterMCInstrInfo - Register a MCInstrInfo implementation for the
   /// given target.
   ///
@@ -929,12 +915,6 @@ struct RegisterMCAsmInfoFn {
   }
 };
 
-struct RegisterMCAdjustCodeGenOptsFn {
-  RegisterMCAdjustCodeGenOptsFn(Target &T, Target::MCAdjustCodeGenOptsFnTy Fn) {
-    TargetRegistry::registerMCAdjustCodeGenOpts(T, Fn);
-  }
-};
-
 /// RegisterMCInstrInfo - Helper template for registering a target instruction
 /// info implementation.  This invokes the static "Create" method on the class
 /// to actually do the construction.  Usage:
@@ -1080,12 +1060,11 @@ template <class TargetMachineImpl> struct RegisterTargetMachine {
   }
 
 private:
-  static TargetMachine *Allocator(const Target &T, const Triple &TT,
-                                  StringRef CPU, StringRef FS,
-                                  const TargetOptions &Options,
-                                  Optional<Reloc::Model> RM,
-                                  CodeModel::Model CM, CodeGenOpt::Level OL) {
-    return new TargetMachineImpl(T, TT, CPU, FS, Options, RM, CM, OL);
+  static TargetMachine *
+  Allocator(const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
+            const TargetOptions &Options, Optional<Reloc::Model> RM,
+            Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT) {
+    return new TargetMachineImpl(T, TT, CPU, FS, Options, RM, CM, OL, JIT);
   }
 };
 

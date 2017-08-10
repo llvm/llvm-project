@@ -29,4 +29,4 @@
 // Warn about unbalanced pushes.
 #pragma pack (push,4) // expected-warning {{unterminated '#pragma pack (push, ...)' at end of file}}
 #pragma pack (push)   // expected-warning {{unterminated '#pragma pack (push, ...)' at end of file}}
-#pragma pack ()
+#pragma pack () // expected-note {{did you intend to use '#pragma pack (pop)' instead of '#pragma pack()'?}}

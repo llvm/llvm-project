@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=thumb -mcpu=arm1156t2-s -mattr=+thumb2 \
-; RUN:  -mtriple=arm-apple-darwin | FileCheck %s -check-prefix=DARWIN
-; RUN: llc < %s -march=thumb -mcpu=arm1156t2-s -mattr=+thumb2 \
-; RUN:  -mtriple=arm-linux-gnueabi | FileCheck %s -check-prefix=LINUX
+; RUN: llc < %s -mcpu=arm1156t2-s -mattr=+thumb2 -mtriple=thumb-apple-darwin \
+; RUN:    | FileCheck %s -check-prefix=DARWIN
+; RUN: llc < %s -mcpu=arm1156t2-s -mattr=+thumb2 -mtriple=thumb-linux-gnueabi \
+; RUN:    | FileCheck %s -check-prefix=LINUX
 
 define void @test1() {
 ; DARWIN-LABEL: test1:

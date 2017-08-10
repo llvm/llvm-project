@@ -1378,9 +1378,6 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
 /// \brief Determine whether the given function is a non-placement
 /// deallocation function.
 static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
-  if (FD->isInvalidDecl())
-    return false;
-
   if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(FD))
     return Method->isUsualDeallocationFunction();
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -x86-asm-syntax=intel | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -x86-asm-syntax=intel | FileCheck %s
 
 ; CHECK: inc
 ; CHECK-NOT: PTR

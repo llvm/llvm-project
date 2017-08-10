@@ -117,7 +117,7 @@ static void collectInfo(Scop &S, isl_union_map *&Read,
                         isl_union_map *&ReductionTagMap,
                         isl_union_set *&TaggedStmtDomain,
                         Dependences::AnalysisLevel Level) {
-  isl_space *Space = S.getParamSpace();
+  isl_space *Space = S.getParamSpace().release();
   Read = isl_union_map_empty(isl_space_copy(Space));
   MustWrite = isl_union_map_empty(isl_space_copy(Space));
   MayWrite = isl_union_map_empty(isl_space_copy(Space));
@@ -133,7 +133,7 @@ static void collectInfo(Scop &S, isl_union_map *&Read,
 
   for (ScopStmt &Stmt : S) {
     for (MemoryAccess *MA : Stmt) {
-      isl_set *domcp = Stmt.getDomain();
+      isl_set *domcp = Stmt.getDomain().release();
       isl_map *accdom = MA->getAccessRelation().release();
 
       accdom = isl_map_intersect_domain(accdom, domcp);
@@ -156,7 +156,7 @@ static void collectInfo(Scop &S, isl_union_map *&Read,
       } else {
         accdom = tag(accdom, MA, Level);
         if (Level > Dependences::AL_Statement) {
-          auto *StmtScheduleMap = Stmt.getSchedule();
+          isl_map *StmtScheduleMap = Stmt.getSchedule().release();
           assert(StmtScheduleMap &&
                  "Schedules that contain extension nodes require special "
                  "handling.");
@@ -174,11 +174,12 @@ static void collectInfo(Scop &S, isl_union_map *&Read,
     }
 
     if (!ReductionArrays.empty() && Level == Dependences::AL_Statement)
-      StmtSchedule = isl_union_map_add_map(StmtSchedule, Stmt.getSchedule());
+      StmtSchedule =
+          isl_union_map_add_map(StmtSchedule, Stmt.getSchedule().release());
   }
 
-  StmtSchedule =
-      isl_union_map_intersect_params(StmtSchedule, S.getAssumedContext());
+  StmtSchedule = isl_union_map_intersect_params(
+      StmtSchedule, S.getAssumedContext().release());
   TaggedStmtDomain = isl_union_map_domain(StmtSchedule);
 
   ReductionTagMap = isl_union_map_coalesce(ReductionTagMap);
@@ -419,7 +420,7 @@ void Dependences::calculateDependences(Scop &S) {
         dbgs() << "ReductionTagMap: " << ReductionTagMap << '\n';
         dbgs() << "TaggedStmtDomain: " << TaggedStmtDomain << '\n';);
 
-  Schedule = S.getScheduleTree();
+  Schedule = S.getScheduleTree().release();
 
   if (!HasReductions) {
     isl_union_map_free(ReductionTagMap);
@@ -734,7 +735,7 @@ bool Dependences::isValidSchedule(Scop &S,
     return true;
 
   isl_union_map *Dependences = getDependences(TYPE_RAW | TYPE_WAW | TYPE_WAR);
-  isl_space *Space = S.getParamSpace();
+  isl_space *Space = S.getParamSpace().release();
   isl_union_map *Schedule = isl_union_map_empty(Space);
 
   isl_space *ScheduleSpace = nullptr;
@@ -743,7 +744,7 @@ bool Dependences::isValidSchedule(Scop &S,
     isl_map *StmtScat;
 
     if (NewSchedule->find(&Stmt) == NewSchedule->end())
-      StmtScat = Stmt.getSchedule();
+      StmtScat = Stmt.getSchedule().release();
     else
       StmtScat = isl_map_copy((*NewSchedule)[&Stmt]);
     assert(StmtScat &&

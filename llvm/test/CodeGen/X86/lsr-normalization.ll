@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -march=x86-64 | FileCheck %s --check-prefix=ASM
-; RUN: llc -debug -o /dev/null < %s -march=x86-64 2>&1 | FileCheck %s --check-prefix=DBG
+; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s --check-prefix=ASM
+; RUN: llc -debug -o /dev/null < %s -mtriple=x86_64-- 2>&1 | FileCheck %s --check-prefix=DBG
 ; rdar://8168938
 
 ; This testcase involves SCEV normalization with the exit value from

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 ; PR2596
 
 @data = external global [400 x i64]		; <[400 x i64]*> [#uses=5]

@@ -59,6 +59,7 @@ static const char *const GCCRegNames[] = {
     "zmm26", "zmm27", "zmm28", "zmm29", "zmm30",   "zmm31", "k0",    "k1",
     "k2",    "k3",    "k4",    "k5",    "k6",      "k7",
     "cr0",   "cr2",   "cr3",   "cr4",   "cr8",
+    "dr0",   "dr1",   "dr2",   "dr3",   "dr6",     "dr7",
 };
 
 const TargetInfo::AddlRegName AddlRegNames[] = {
@@ -1300,7 +1301,47 @@ bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
       .Case("avx512pf", true)
       .Case("avx512vbmi", true)
       .Case("avx512ifma", true)
+      .Case("avx5124vnniw", true)
+      .Case("avx5124fmaps", true)
       .Case("avx512vpopcntdq", true)
+      .Default(false);
+}
+
+// We can't use a generic validation scheme for the cpus accepted here
+// versus subtarget cpus accepted in the target attribute because the
+// variables intitialized by the runtime only support the below currently
+// rather than the full range of cpus.
+bool X86TargetInfo::validateCpuIs(StringRef FeatureStr) const {
+  return llvm::StringSwitch<bool>(FeatureStr)
+      .Case("amd", true)
+      .Case("amdfam10h", true)
+      .Case("amdfam15h", true)
+      .Case("atom", true)
+      .Case("barcelona", true)
+      .Case("bdver1", true)
+      .Case("bdver2", true)
+      .Case("bdver3", true)
+      .Case("bdver4", true)
+      .Case("bonnell", true)
+      .Case("broadwell", true)
+      .Case("btver1", true)
+      .Case("btver2", true)
+      .Case("core2", true)
+      .Case("corei7", true)
+      .Case("haswell", true)
+      .Case("intel", true)
+      .Case("istanbul", true)
+      .Case("ivybridge", true)
+      .Case("knl", true)
+      .Case("nehalem", true)
+      .Case("sandybridge", true)
+      .Case("shanghai", true)
+      .Case("silvermont", true)
+      .Case("skylake", true)
+      .Case("skylake-avx512", true)
+      .Case("slm", true)
+      .Case("westmere", true)
+      .Case("znver1", true)
       .Default(false);
 }
 

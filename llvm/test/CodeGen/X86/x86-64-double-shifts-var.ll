@@ -1,23 +1,23 @@
-; RUN: llc < %s -march=x86-64 -mcpu=athlon | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=athlon-tbird | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=athlon-4 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=athlon-xp | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=athlon-mp | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=k8 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=opteron | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=athlon64 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=athlon-fx | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=k8-sse3 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=opteron-sse3 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=athlon64-sse3 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=amdfam10 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=btver1 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=btver2 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=bdver1 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=bdver2 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=bdver3 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=bdver4 | FileCheck %s
-; RUN: llc < %s -march=x86-64 -mcpu=znver1 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon-tbird | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon-4 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon-xp | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon-mp | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=k8 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=opteron | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon-fx | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=k8-sse3 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=opteron-sse3 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=athlon64-sse3 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=amdfam10 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=btver1 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=btver2 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver1 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver2 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver3 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver4 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver1 | FileCheck %s
 
 ; Verify that for the X86_64 processors that are known to have poor latency 
 ; double precision shift instructions we do not generate 'shld' or 'shrd'

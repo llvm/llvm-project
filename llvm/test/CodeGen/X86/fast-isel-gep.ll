@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-linux -O0 | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-windows-itanium -O0 | FileCheck %s --check-prefix=X64
-; RUN: llc < %s -march=x86 -O0 | FileCheck %s --check-prefix=X32
+; RUN: llc < %s -mtriple=i686-- -O0 | FileCheck %s --check-prefix=X32
 
 ; GEP indices are interpreted as signed integers, so they
 ; should be sign-extended to 64 bits on 64-bit targets.

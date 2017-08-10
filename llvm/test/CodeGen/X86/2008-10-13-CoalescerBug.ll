@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s -mtriple=i686--
 ; PR2775
 
 define i32 @func_77(i8 zeroext %p_79) nounwind {

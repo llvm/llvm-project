@@ -5,10 +5,11 @@ target triple = "i686-apple-darwin"
 
 ; There should be a DEBUG_VALUE for each call to llvm.dbg.value
 
-; CHECK:  ##DEBUG_VALUE: __OpenCL_test_kernel:ip <- 
-; CHECK:  ##DEBUG_VALUE: xxx <- 0
-; CHECK:  ##DEBUG_VALUE: gid <- %E{{..$}}
-; CHECK:  ##DEBUG_VALUE: idx <- %E{{..$}}
+; CHECK-LABEL: __OpenCL_test_kernel:
+; CHECK-DAG:  ##DEBUG_VALUE: __OpenCL_test_kernel:ip <- 
+; CHECK-DAG:  ##DEBUG_VALUE: xxx <- 0
+; CHECK-DAG:  ##DEBUG_VALUE: gid <- %E{{..$}}
+; CHECK-DAG:  ##DEBUG_VALUE: idx <- %E{{..$}}
 ; CHECK-NOT:  ##DEBUG_VALUE:
 
 declare <4 x i32> @__amdil_get_global_id_int()

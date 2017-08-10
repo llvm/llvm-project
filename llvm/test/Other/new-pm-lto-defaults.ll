@@ -30,6 +30,7 @@
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O2-NEXT: PGOIndirectCallPromotion
+; CHECK-O2-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-O2-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}Function
 ; CHECK-O2-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-O2-NEXT: Running pass: IPSCCPPass

@@ -49,6 +49,10 @@ void DbiStreamBuilder::setSectionMap(ArrayRef<SecMapEntry> SecMap) {
   SectionMap = SecMap;
 }
 
+void DbiStreamBuilder::setGlobalsStreamIndex(uint32_t Index) {
+  GlobalsStreamIndex = Index;
+}
+
 void DbiStreamBuilder::setSymbolRecordStreamIndex(uint32_t Index) {
   SymRecordStreamIndex = Index;
 }
@@ -270,7 +274,7 @@ Error DbiStreamBuilder::finalize() {
   H->SymRecordStreamIndex = SymRecordStreamIndex;
   H->PublicSymbolStreamIndex = PublicsStreamIndex;
   H->MFCTypeServerIndex = kInvalidStreamIndex;
-  H->GlobalSymbolStreamIndex = kInvalidStreamIndex;
+  H->GlobalSymbolStreamIndex = GlobalsStreamIndex;
 
   Header = H;
   return Error::success();
@@ -305,19 +309,6 @@ static uint16_t toSecMapFlags(uint32_t Flags) {
   Ret |= static_cast<uint16_t>(OMFSegDescFlags::IsSelector);
 
   return Ret;
-}
-
-void DbiStreamBuilder::addSectionContrib(DbiModuleDescriptorBuilder *ModuleDbi,
-                                         const object::coff_section *SecHdr) {
-  SectionContrib SC;
-  memset(&SC, 0, sizeof(SC));
-  SC.ISect = (uint16_t)~0U; // This represents nil.
-  SC.Off = SecHdr->PointerToRawData;
-  SC.Size = SecHdr->SizeOfRawData;
-  SC.Characteristics = SecHdr->Characteristics;
-  // Use the module index in the module dbi stream or nil (-1).
-  SC.Imod = ModuleDbi ? ModuleDbi->getModuleIndex() : (uint16_t)~0U;
-  SectionContribs.emplace_back(SC);
 }
 
 // A utility function to create a Section Map for a given list of COFF sections.

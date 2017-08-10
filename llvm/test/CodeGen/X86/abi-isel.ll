@@ -1,16 +1,16 @@
-; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-unknown-linux-gnu -march=x86 -relocation-model=static -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=LINUX-32-STATIC
-; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-unknown-linux-gnu -march=x86 -relocation-model=static -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=LINUX-32-PIC
+; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-unknown-linux-gnu -relocation-model=static -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=LINUX-32-STATIC
+; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-unknown-linux-gnu -relocation-model=static -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=LINUX-32-PIC
 
-; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=x86_64-unknown-linux-gnu -march=x86-64 -relocation-model=static -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=LINUX-64-STATIC
-; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=x86_64-unknown-linux-gnu -march=x86-64 -relocation-model=pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=LINUX-64-PIC
+; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=x86_64-unknown-linux-gnu -relocation-model=static -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=LINUX-64-STATIC
+; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=LINUX-64-PIC
 
-; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-apple-darwin -march=x86 -relocation-model=static -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-32-STATIC
-; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-apple-darwin9 -march=x86 -relocation-model=dynamic-no-pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-32-DYNAMIC
-; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-apple-darwin9 -march=x86 -relocation-model=pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-32-PIC
+; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-apple-darwin -relocation-model=static -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-32-STATIC
+; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-apple-darwin9 -relocation-model=dynamic-no-pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-32-DYNAMIC
+; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-apple-darwin9 -relocation-model=pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-32-PIC
 
-; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=x86_64-apple-darwin -march=x86-64 -relocation-model=static -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-64-STATIC
-; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=x86_64-apple-darwin -march=x86-64 -relocation-model=dynamic-no-pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-64-DYNAMIC
-; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=x86_64-apple-darwin -march=x86-64 -relocation-model=pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-64-PIC
+; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=x86_64-apple-darwin -relocation-model=static -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-64-STATIC
+; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=x86_64-apple-darwin -relocation-model=dynamic-no-pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-64-DYNAMIC
+; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=x86_64-apple-darwin -relocation-model=pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-64-PIC
 
 @src = external global [131072 x i32]
 @dst = external global [131072 x i32]

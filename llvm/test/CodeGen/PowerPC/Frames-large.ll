@@ -1,11 +1,8 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | FileCheck %s -check-prefix=PPC32-NOFP
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 -disable-fp-elim | FileCheck %s -check-prefix=PPC32-FP
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8 | FileCheck %s -check-prefix=PPC32-NOFP
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8 -disable-fp-elim | FileCheck %s -check-prefix=PPC32-FP
 
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 | FileCheck %s -check-prefix=PPC64-NOFP
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 -disable-fp-elim | FileCheck %s -check-prefix=PPC64-FP
-
-
-target triple = "powerpc-apple-darwin8"
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-apple-darwin8 | FileCheck %s -check-prefix=PPC64-NOFP
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-apple-darwin8 -disable-fp-elim | FileCheck %s -check-prefix=PPC64-FP
 
 define i32* @f1() nounwind {
         %tmp = alloca i32, i32 8191             ; <i32*> [#uses=1]

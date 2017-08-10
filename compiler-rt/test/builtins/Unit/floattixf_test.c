@@ -1,8 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
-// XFAIL: aarch64
-// test fails for aarch64 (see pr32260)
-
-// UNSUPPORTED: mips
+// REQUIRES: x86-target-arch
 
 //===-- floattixf.c - Test __floattixf ------------------------------------===//
 //

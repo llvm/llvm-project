@@ -49,6 +49,10 @@ private:
   void computeThresholds();
   // Count thresholds to answer isHotCount and isColdCount queries.
   Optional<uint64_t> HotCountThreshold, ColdCountThreshold;
+  // True if the working set size of the code is considered huge,
+  // because the number of profile counts required to reach the hot
+  // percentile is above a huge threshold.
+  Optional<bool> HasHugeWorkingSetSize;
 
 public:
   ProfileSummaryInfo(Module &M) : M(M) {}
@@ -84,6 +88,8 @@ public:
   /// Returns the profile count for \p CallInst.
   Optional<uint64_t> getProfileCount(const Instruction *CallInst,
                                      BlockFrequencyInfo *BFI);
+  /// Returns true if the working set size of the code is considered huge.
+  bool hasHugeWorkingSetSize();
   /// \brief Returns true if \p F has hot function entry.
   bool isFunctionEntryHot(const Function *F);
   /// Returns true if \p F has hot function entry or hot call edge.

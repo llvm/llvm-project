@@ -136,13 +136,13 @@ dumpDWARFv5StringOffsetsSection(raw_ostream &OS, StringRef SectionName,
       uint64_t StringOffset =
           StrOffsetExt.getRelocatedValue(EntrySize, &Offset);
       if (Format == DWARF32) {
-        OS << format("%8.8x ", StringOffset);
         uint32_t StringOffset32 = (uint32_t)StringOffset;
+        OS << format("%8.8x ", StringOffset32);
         const char *S = StrData.getCStr(&StringOffset32);
         if (S)
           OS << format("\"%s\"", S);
       } else
-        OS << format("%16.16x ", StringOffset);
+        OS << format("%16.16" PRIx64 " ", StringOffset);
       OS << "\n";
     }
   }
@@ -400,10 +400,12 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
+  parseDWOCompileUnits();
+
   if (const auto &CUI = getCUIndex()) {
     if (const auto *R = CUI.getFromHash(Hash))
       if (auto CUOff = R->getOffset(DW_SECT_INFO))
-        return CUs.getUnitForOffset(CUOff->Offset);
+        return DWOCUs.getUnitForOffset(CUOff->Offset);
     return nullptr;
   }
 

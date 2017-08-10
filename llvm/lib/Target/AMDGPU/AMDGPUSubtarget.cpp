@@ -15,12 +15,10 @@
 #include "AMDGPUSubtarget.h"
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
-#ifdef LLVM_BUILD_GLOBAL_ISEL
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
-#endif
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -52,7 +50,7 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   SmallString<256> FullFS("+promote-alloca,+fp64-fp16-denormals,+dx10-clamp,+load-store-opt,");
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
-    FullFS += "+flat-for-global,+unaligned-buffer-access,+trap-handler,";
+    FullFS += "+flat-address-space,+flat-for-global,+unaligned-buffer-access,+trap-handler,";
 
   FullFS += FS;
 
@@ -77,10 +75,21 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (MaxPrivateElementSize == 0)
     MaxPrivateElementSize = 4;
 
+  if (LDSBankCount == 0)
+    LDSBankCount = 32;
+
+  if (TT.getArch() == Triple::amdgcn) {
+    if (LocalMemorySize == 0)
+      LocalMemorySize = 32768;
+
+    // Do something sensible for unspecified target.
+    if (!HasMovrel && !HasVGPRIndexMode)
+      HasMovrel = true;
+  }
+
   return *this;
 }
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
 namespace {
 
 struct SIGISelActualAccessor : public GISelAccessor {
@@ -103,7 +112,6 @@ struct SIGISelActualAccessor : public GISelAccessor {
 };
 
 } // end anonymous namespace
-#endif
 
 AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                                  const TargetMachine &TM)
@@ -144,7 +152,6 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
     FP64(false),
     IsGCN(false),
-    GCN1Encoding(false),
     GCN3Encoding(false),
     CIInsts(false),
     GFX9Insts(false),
@@ -358,9 +365,6 @@ SISubtarget::SISubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     : AMDGPUSubtarget(TT, GPU, FS, TM), InstrInfo(*this),
       FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
       TLInfo(TM, *this) {
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-  GISelAccessor *GISel = new GISelAccessor();
-#else
   SIGISelActualAccessor *GISel = new SIGISelActualAccessor();
   GISel->CallLoweringInfo.reset(new AMDGPUCallLowering(*getTargetLowering()));
   GISel->Legalizer.reset(new AMDGPULegalizerInfo());
@@ -368,7 +372,6 @@ SISubtarget::SISubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   GISel->RegBankInfo.reset(new AMDGPURegisterBankInfo(*getRegisterInfo()));
   GISel->InstSelector.reset(new AMDGPUInstructionSelector(
       *this, *static_cast<AMDGPURegisterBankInfo *>(GISel->RegBankInfo.get())));
-#endif
   setGISelAccessor(*GISel);
 }
 

@@ -1,4 +1,4 @@
-//===----- HexagonMCDuplexInfo.cpp - Instruction bundle checking ----------===//
+//===- HexagonMCDuplexInfo.cpp - Instruction bundle checking --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,15 +11,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HexagonBaseInfo.h"
+#include "MCTargetDesc/HexagonBaseInfo.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
-
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 #include <map>
+#include <utility>
 
 using namespace llvm;
 using namespace Hexagon;

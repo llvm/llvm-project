@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | grep mov | count 2
+; RUN: llc < %s | grep mov | count 2
 
 ; Fold an offset into an address even if it's not a 32-bit
 ; signed integer.

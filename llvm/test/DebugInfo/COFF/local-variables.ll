@@ -33,8 +33,8 @@
 ; ASM:         .cv_loc 0 1 8 7                 # t.cpp:8:7
 ; ASM:         testl   %ecx, %ecx
 ; ASM:         je      .LBB0_2
-; ASM: [[if_start:\.Ltmp.*]]:
 ; ASM: # BB#1:                                 # %if.then
+; ASM: [[if_start:\.Ltmp.*]]:
 ; ASM:         .cv_loc 0 1 9 9                 # t.cpp:9:9
 ; ASM:         movl    $42, 40(%rsp)
 ; ASM: [[inline_site1:\.Ltmp.*]]:
@@ -60,8 +60,8 @@
 ; ASM:         leaq    36(%rsp), %rcx
 ; ASM: [[else_end:\.Ltmp.*]]:
 ; ASM: .LBB0_3:                                # %if.end
-; ASM:         callq   capture
 ; ASM:         .cv_loc 0 1 17 1                # t.cpp:17:1
+; ASM:         callq   capture
 ; ASM:         nop
 ; ASM:         addq    $56, %rsp
 ; ASM:         retq

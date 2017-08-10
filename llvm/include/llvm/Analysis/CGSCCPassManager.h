@@ -275,6 +275,15 @@ struct CGSCCUpdateResult {
   /// non-null and can be used to continue processing the "top" of the
   /// post-order walk.
   LazyCallGraph::SCC *UpdatedC;
+
+  /// A hacky area where the inliner can retain history about inlining
+  /// decisions that mutated the call graph's SCC structure in order to avoid
+  /// infinite inlining. See the comments in the inliner's CG update logic.
+  ///
+  /// FIXME: Keeping this here seems like a big layering issue, we should look
+  /// for a better technique.
+  SmallDenseSet<std::pair<LazyCallGraph::Node *, LazyCallGraph::SCC *>, 4>
+      &InlinedInternalEdges;
 };
 
 /// \brief The core module pass which does a post-order walk of the SCCs and
@@ -330,8 +339,12 @@ public:
     SmallPtrSet<LazyCallGraph::RefSCC *, 4> InvalidRefSCCSet;
     SmallPtrSet<LazyCallGraph::SCC *, 4> InvalidSCCSet;
 
-    CGSCCUpdateResult UR = {RCWorklist,    CWorklist, InvalidRefSCCSet,
-                            InvalidSCCSet, nullptr,   nullptr};
+    SmallDenseSet<std::pair<LazyCallGraph::Node *, LazyCallGraph::SCC *>, 4>
+        InlinedInternalEdges;
+
+    CGSCCUpdateResult UR = {RCWorklist,          CWorklist, InvalidRefSCCSet,
+                            InvalidSCCSet,       nullptr,   nullptr,
+                            InlinedInternalEdges};
 
     PreservedAnalyses PA = PreservedAnalyses::all();
     CG.buildRefSCCs();
@@ -433,8 +446,12 @@ public:
             // invalid SCC and RefSCCs respectively. But we will short circuit
             // the processing when we check them in the loop above.
           } while (UR.UpdatedC);
-
         } while (!CWorklist.empty());
+
+        // We only need to keep internal inlined edge information within
+        // a RefSCC, clear it to save on space and let the next time we visit
+        // any of these functions have a fresh start.
+        InlinedInternalEdges.clear();
       } while (!RCWorklist.empty());
     }
 

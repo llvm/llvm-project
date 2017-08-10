@@ -123,23 +123,36 @@ static cl::opt<bool> LateCFGStructurize(
   cl::init(false),
   cl::Hidden);
 
+static cl::opt<bool> EnableAMDGPUFunctionCalls(
+  "amdgpu-function-calls",
+  cl::Hidden,
+  cl::desc("Enable AMDGPU function call support"),
+  cl::init(false));
+
 extern "C" void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
   RegisterTargetMachine<GCNTargetMachine> Y(getTheGCNTarget());
 
   PassRegistry *PR = PassRegistry::getPassRegistry();
+  initializeR600ClauseMergePassPass(*PR);
+  initializeR600ControlFlowFinalizerPass(*PR);
+  initializeR600PacketizerPass(*PR);
+  initializeR600ExpandSpecialInstrsPassPass(*PR);
+  initializeR600VectorRegMergerPass(*PR);
+  initializeAMDGPUDAGToDAGISelPass(*PR);
   initializeSILowerI1CopiesPass(*PR);
   initializeSIFixSGPRCopiesPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
   initializeSIFoldOperandsPass(*PR);
   initializeSIPeepholeSDWAPass(*PR);
   initializeSIShrinkInstructionsPass(*PR);
-  initializeSIFixControlFlowLiveIntervalsPass(*PR);
+  initializeSIOptimizeExecMaskingPreRAPass(*PR);
   initializeSILoadStoreOptimizerPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
   initializeAMDGPUAnnotateUniformValuesPass(*PR);
+  initializeAMDGPUArgumentUsageInfoPass(*PR);
   initializeAMDGPULowerIntrinsicsPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
@@ -154,6 +167,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIMemoryLegalizerPass(*PR);
   initializeSIDebuggerInsertNopsPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
+  initializeSIFixWWMLivenessPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
 }
@@ -241,9 +255,8 @@ static StringRef getGPUOrDefault(const Triple &TT, StringRef GPU) {
   if (!GPU.empty())
     return GPU;
 
-  // HSA only supports CI+, so change the default GPU to a CI for HSA.
   if (TT.getArch() == Triple::amdgcn)
-    return (TT.getOS() == Triple::AMDHSA) ? "kaveri" : "tahiti";
+    return "generic";
 
   return "r600";
 }
@@ -254,15 +267,22 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
   return Reloc::PIC_;
 }
 
+static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM) {
+  if (CM)
+    return *CM;
+  return CodeModel::Small;
+}
+
 AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          StringRef CPU, StringRef FS,
                                          TargetOptions Options,
                                          Optional<Reloc::Model> RM,
-                                         CodeModel::Model CM,
+                                         Optional<CodeModel::Model> CM,
                                          CodeGenOpt::Level OptLevel)
-  : LLVMTargetMachine(T, computeDataLayout(TT), TT, getGPUOrDefault(TT, CPU),
-                      FS, Options, getEffectiveRelocModel(RM), CM, OptLevel),
-    TLOF(createTLOF(getTargetTriple())) {
+    : LLVMTargetMachine(T, computeDataLayout(TT), TT, getGPUOrDefault(TT, CPU),
+                        FS, Options, getEffectiveRelocModel(RM),
+                        getEffectiveCodeModel(CM), OptLevel),
+      TLOF(createTLOF(getTargetTriple())) {
   AS = AMDGPU::getAMDGPUAS(TT);
   initAsmInfo();
 }
@@ -361,8 +381,9 @@ R600TargetMachine::R600TargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,
                                      TargetOptions Options,
                                      Optional<Reloc::Model> RM,
-                                     CodeModel::Model CM, CodeGenOpt::Level OL)
-  : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {
+                                     Optional<CodeModel::Model> CM,
+                                     CodeGenOpt::Level OL, bool JIT)
+    : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {
   setRequiresStructuredCFG(true);
 }
 
@@ -394,8 +415,9 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    TargetOptions Options,
                                    Optional<Reloc::Model> RM,
-                                   CodeModel::Model CM, CodeGenOpt::Level OL)
-  : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
+                                   Optional<CodeModel::Model> CM,
+                                   CodeGenOpt::Level OL, bool JIT)
+    : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
 const SISubtarget *GCNTargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef GPU = getGPUName(F);
@@ -466,6 +488,7 @@ public:
   }
 
   bool addPreISel() override;
+  bool addInstSelector() override;
   void addPreRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -474,7 +497,12 @@ public:
 class GCNPassConfig final : public AMDGPUPassConfig {
 public:
   GCNPassConfig(LLVMTargetMachine &TM, PassManagerBase &PM)
-    : AMDGPUPassConfig(TM, PM) {}
+    : AMDGPUPassConfig(TM, PM) {
+    // It is necessary to know the register usage of the entire call graph.  We
+    // allow calls without EnableAMDGPUFunctionCalls if they are marked
+    // noinline, so this is always required.
+    setRequiresCodeGenSCCOrder(true);
+  }
 
   GCNTargetMachine &getGCNTargetMachine() const {
     return getTM<GCNTargetMachine>();
@@ -487,12 +515,10 @@ public:
   void addMachineSSAOptimization() override;
   bool addILPOpts() override;
   bool addInstSelector() override;
-#ifdef LLVM_BUILD_GLOBAL_ISEL
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
-#endif
   void addFastRegAlloc(FunctionPass *RegAllocPass) override;
   void addOptimizedRegAlloc(FunctionPass *RegAllocPass) override;
   void addPreRegAlloc() override;
@@ -542,15 +568,18 @@ void AMDGPUPassConfig::addIRPasses() {
 
   addPass(createAMDGPULowerIntrinsicsPass());
 
-  // Function calls are not supported, so make sure we inline everything.
-  addPass(createAMDGPUAlwaysInlinePass());
-  addPass(createAlwaysInlinerLegacyPass());
-  // We need to add the barrier noop pass, otherwise adding the function
-  // inlining pass will cause all of the PassConfigs passes to be run
-  // one function at a time, which means if we have a nodule with two
-  // functions, then we will generate code for the first function
-  // without ever running any passes on the second.
-  addPass(createBarrierNoopPass());
+  if (TM.getTargetTriple().getArch() == Triple::r600 ||
+      !EnableAMDGPUFunctionCalls) {
+    // Function calls are not supported, so make sure we inline everything.
+    addPass(createAMDGPUAlwaysInlinePass());
+    addPass(createAlwaysInlinerLegacyPass());
+    // We need to add the barrier noop pass, otherwise adding the function
+    // inlining pass will cause all of the PassConfigs passes to be run
+    // one function at a time, which means if we have a nodule with two
+    // functions, then we will generate code for the first function
+    // without ever running any passes on the second.
+    addPass(createBarrierNoopPass());
+  }
 
   if (TM.getTargetTriple().getArch() == Triple::amdgcn) {
     // TODO: May want to move later or split into an early and late one.
@@ -611,7 +640,7 @@ bool AMDGPUPassConfig::addPreISel() {
 }
 
 bool AMDGPUPassConfig::addInstSelector() {
-  addPass(createAMDGPUISelDag(getAMDGPUTargetMachine(), getOptLevel()));
+  addPass(createAMDGPUISelDag(&getAMDGPUTargetMachine(), getOptLevel()));
   return false;
 }
 
@@ -629,6 +658,11 @@ bool R600PassConfig::addPreISel() {
 
   if (EnableR600StructurizeCFG)
     addPass(createStructurizeCFGPass());
+  return false;
+}
+
+bool R600PassConfig::addInstSelector() {
+  addPass(createR600ISelDag(&getAMDGPUTargetMachine(), getOptLevel()));
   return false;
 }
 
@@ -727,7 +761,6 @@ bool GCNPassConfig::addInstSelector() {
   return false;
 }
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
 bool GCNPassConfig::addIRTranslator() {
   addPass(new IRTranslator());
   return false;
@@ -748,8 +781,6 @@ bool GCNPassConfig::addGlobalInstructionSelect() {
   return false;
 }
 
-#endif
-
 void GCNPassConfig::addPreRegAlloc() {
   if (LateCFGStructurize) {
     addPass(createAMDGPUMachineCFGStructurizerPass());
@@ -766,18 +797,24 @@ void GCNPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowID, false);
 
+  // This must be run after SILowerControlFlow, since it needs to use the
+  // machine-level CFG, but before register allocation.
+  insertPass(&SILowerControlFlowID, &SIFixWWMLivenessID, false);
+
   TargetPassConfig::addFastRegAlloc(RegAllocPass);
 }
 
 void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
-  // This needs to be run directly before register allocation because earlier
-  // passes might recompute live intervals.
-  insertPass(&MachineSchedulerID, &SIFixControlFlowLiveIntervalsID);
+  insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
 
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowID, false);
+
+  // This must be run after SILowerControlFlow, since it needs to use the
+  // machine-level CFG, but before register allocation.
+  insertPass(&SILowerControlFlowID, &SIFixWWMLivenessID, false);
 
   TargetPassConfig::addOptimizedRegAlloc(RegAllocPass);
 }

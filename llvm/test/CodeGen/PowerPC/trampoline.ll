@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep "__trampoline_setup"
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | grep "__trampoline_setup"
 
 module asm "\09.lazy_reference .objc_class_name_NSImageRep"
 module asm "\09.objc_class_name_NSBitmapImageRep=0"

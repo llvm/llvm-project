@@ -613,6 +613,18 @@ static void __kmp_stg_print_thread_limit(kmp_str_buf_t *buffer,
 } // __kmp_stg_print_thread_limit
 
 // -----------------------------------------------------------------------------
+// KMP_TEAMS_THREAD_LIMIT
+static void __kmp_stg_parse_teams_thread_limit(char const *name,
+                                               char const *value, void *data) {
+  __kmp_stg_parse_int(name, value, 1, __kmp_sys_max_nth, &__kmp_teams_max_nth);
+} // __kmp_stg_teams_thread_limit
+
+static void __kmp_stg_print_teams_thread_limit(kmp_str_buf_t *buffer,
+                                               char const *name, void *data) {
+  __kmp_stg_print_int(buffer, name, __kmp_teams_max_nth);
+} // __kmp_stg_print_teams_thread_limit
+
+// -----------------------------------------------------------------------------
 // KMP_BLOCKTIME
 
 static void __kmp_stg_parse_blocktime(char const *name, char const *value,
@@ -4402,6 +4414,8 @@ static kmp_setting_t __kmp_stg_table[] = {
 #endif
     {"OMP_THREAD_LIMIT", __kmp_stg_parse_thread_limit,
      __kmp_stg_print_thread_limit, NULL, 0, 0},
+    {"KMP_TEAMS_THREAD_LIMIT", __kmp_stg_parse_teams_thread_limit,
+     __kmp_stg_print_teams_thread_limit, NULL, 0, 0},
     {"OMP_WAIT_POLICY", __kmp_stg_parse_wait_policy,
      __kmp_stg_print_wait_policy, NULL, 0, 0},
     {"KMP_DISP_NUM_BUFFERS", __kmp_stg_parse_disp_buffers,

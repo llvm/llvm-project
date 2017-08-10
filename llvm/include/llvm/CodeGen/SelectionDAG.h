@@ -211,6 +211,7 @@ class SelectionDAG {
   const SelectionDAGTargetInfo *TSI = nullptr;
   const TargetLowering *TLI = nullptr;
   MachineFunction *MF;
+  Pass *SDAGISelPass = nullptr;
   LLVMContext *Context;
   CodeGenOpt::Level OptLevel;
 
@@ -366,13 +367,16 @@ public:
   ~SelectionDAG();
 
   /// Prepare this SelectionDAG to process code in the given MachineFunction.
-  void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE);
+  void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
+            Pass *PassPtr);
 
   /// Clear state and free memory necessary to make this
   /// SelectionDAG ready to process a new block.
   void clear();
 
   MachineFunction &getMachineFunction() const { return *MF; }
+  const Pass *getPass() const { return SDAGISelPass; }
+
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
   const TargetMachine &getTarget() const { return TM; }
   const TargetSubtargetInfo &getSubtarget() const { return MF->getSubtarget(); }
@@ -1218,8 +1222,9 @@ public:
   /// If an existing load has uses of its chain, create a token factor node with
   /// that chain and the new memory node's chain and update users of the old
   /// chain to the token factor. This ensures that the new memory node will have
-  /// the same relative memory dependency position as the old load.
-  void makeEquivalentMemoryOrdering(LoadSDNode *Old, SDValue New);
+  /// the same relative memory dependency position as the old load. Returns the
+  /// new merged load chain.
+  SDValue makeEquivalentMemoryOrdering(LoadSDNode *Old, SDValue New);
 
   /// Topological-sort the AllNodes list and a
   /// assign a unique node id for each node in the DAG based on their

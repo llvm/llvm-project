@@ -60,7 +60,9 @@ static OptionDefinition g_breakpoint_set_options[] = {
   "multiple times to specify multiple shared libraries." },
   { LLDB_OPT_SET_ALL,              false, "ignore-count",           'i', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeCount,               "Set the number of times this breakpoint is skipped before stopping." },
   { LLDB_OPT_SET_ALL,              false, "one-shot",               'o', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                         eArgTypeNone,                "The breakpoint is deleted the first time it causes a stop." },
+  { LLDB_OPT_SET_ALL,              false, "auto-continue",          'G', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeBoolean,             "The breakpoint will auto-continue after running its commands." },
   { LLDB_OPT_SET_ALL,              false, "condition",              'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeExpression,          "The breakpoint stops only if this condition expression evaluates to true." },
+  { LLDB_OPT_SET_ALL,              false, "command",                'd', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeCommand,             "A command to run when the breakpoint is hit, can be provided more than once, the commands will get run in order left to right." },
   { LLDB_OPT_SET_ALL,              false, "thread-index",           'x', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeThreadIndex,         "The breakpoint stops only for the thread whose indeX matches this argument." },
   { LLDB_OPT_SET_ALL,              false, "thread-id",              't', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeThreadID,            "The breakpoint stops only for the thread whose TID matches this argument." },
   { LLDB_OPT_SET_ALL,              false, "thread-name",            'T', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeThreadName,          "The breakpoint stops only for the thread whose thread name matches this "
@@ -208,6 +210,10 @@ public:
         m_condition.assign(option_arg);
         break;
 
+      case 'd':
+        m_commands.push_back(option_arg);
+        break;
+        
       case 'D':
         m_use_dummy = true;
         break;
@@ -255,6 +261,15 @@ public:
         m_func_names.push_back(option_arg);
         m_func_name_type_mask |= eFunctionNameTypeFull;
         break;
+        
+      case 'G' : {
+        bool success;
+        m_auto_continue = Args::StringToBoolean(option_arg, true, &success);
+        if (!success)
+          error.SetErrorStringWithFormat(
+              "Invalid boolean value for auto-continue option: '%s'",
+              option_arg.str().c_str());
+      } break;
 
       case 'h': {
         bool success;
@@ -445,6 +460,8 @@ public:
       m_exception_extra_args.Clear();
       m_move_to_nearest_code = eLazyBoolCalculate;
       m_source_regex_func_names.clear();
+      m_commands.clear();
+      m_auto_continue = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -482,6 +499,8 @@ public:
     Args m_exception_extra_args;
     LazyBool m_move_to_nearest_code;
     std::unordered_set<std::string> m_source_regex_func_names;
+    std::vector<std::string> m_commands;
+    bool m_auto_continue;
   };
 
 protected:
@@ -719,6 +738,18 @@ protected:
       }
 
       bp->SetOneShot(m_options.m_one_shot);
+      bp->SetAutoContinue(m_options.m_auto_continue);
+      
+      if (!m_options.m_commands.empty())
+      {
+          auto cmd_data = llvm::make_unique<BreakpointOptions::CommandData>();
+        
+          for (std::string &str : m_options.m_commands)
+            cmd_data->user_source.AppendString(str); 
+
+          cmd_data->stop_on_error = true;
+          bp->GetOptions()->SetCommandDataCallback(cmd_data);
+      }
     }
 
     if (bp) {
@@ -802,6 +833,7 @@ static OptionDefinition g_breakpoint_modify_options[] = {
   { LLDB_OPT_SET_1,   false, "enable",       'e', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,        "Enable the breakpoint." },
   { LLDB_OPT_SET_2,   false, "disable",      'd', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,        "Disable the breakpoint." },
   { LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument,  nullptr, nullptr, 0, eArgTypeNone,        "Sets Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets." },
+  { LLDB_OPT_SET_ALL, false, "auto-continue",     'G', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean, "The breakpoint will auto-continue after running its commands." },
     // clang-format on
 };
 
@@ -865,6 +897,17 @@ public:
         m_enable_passed = true;
         m_enable_value = true;
         break;
+      case 'G': {
+        bool value, success;
+        value = Args::StringToBoolean(option_arg, false, &success);
+        if (success) {
+          m_auto_continue_passed = true;
+          m_auto_continue = value;
+        } else
+          error.SetErrorStringWithFormat(
+              "invalid boolean value '%s' passed for -G option",
+              option_arg.str().c_str());
+      } break;
       case 'i':
         if (option_arg.getAsInteger(0, m_ignore_count))
           error.SetErrorStringWithFormat("invalid ignore count '%s'",
@@ -938,6 +981,8 @@ public:
       m_condition_passed = false;
       m_one_shot_passed = false;
       m_use_dummy = false;
+      m_auto_continue = false;
+      m_auto_continue_passed = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -962,6 +1007,8 @@ public:
     bool m_condition_passed;
     bool m_one_shot_passed;
     bool m_use_dummy;
+    bool m_auto_continue;
+    bool m_auto_continue_passed;
   };
 
 protected:
@@ -1013,6 +1060,9 @@ protected:
 
               if (m_options.m_condition_passed)
                 location->SetCondition(m_options.m_condition.c_str());
+                
+              if (m_options.m_auto_continue_passed)
+                location->SetAutoContinue(m_options.m_auto_continue);
             }
           } else {
             if (m_options.m_thread_id_passed)
@@ -1035,6 +1085,9 @@ protected:
 
             if (m_options.m_condition_passed)
               bp->SetCondition(m_options.m_condition.c_str());
+            
+            if (m_options.m_auto_continue_passed)
+              bp->SetAutoContinue(m_options.m_auto_continue);
           }
         }
       }

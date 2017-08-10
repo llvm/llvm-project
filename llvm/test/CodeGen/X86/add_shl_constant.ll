@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 -mtriple=x86_64-apple-darwin < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-apple-darwin < %s | FileCheck %s
 
 ; CHECK-LABEL: add_shl_add_constant_1_i32
 ; CHECK: leal 984(%rsi,%rdi,8), %eax

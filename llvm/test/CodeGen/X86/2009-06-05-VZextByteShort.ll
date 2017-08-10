@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mcpu=core2 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mcpu=core2 | FileCheck %s
 
 define <4 x i16> @a(i32* %x1) nounwind {
 ; CHECK-LABEL: a:

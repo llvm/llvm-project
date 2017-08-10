@@ -18,7 +18,7 @@
 
 using namespace llvm;
 namespace llvm {
-  namespace ARMSysReg {
+namespace ARMSysReg {
 
 // lookup system register using 12-bit SYSm value.
 // Note: the search is uniqued using M1 mask
@@ -40,5 +40,10 @@ const MClassSysReg *lookupMClassSysRegBy8bitSYSmValue(unsigned SYSm) {
 #define GET_MCLASSSYSREG_IMPL
 #include "ARMGenSystemRegister.inc"
 
-  }
-}
+} // end namespace ARMSysReg
+
+namespace ARMBankedReg {
+#define GET_BANKEDREG_IMPL
+#include "ARMGenSystemRegister.inc"
+} // end namespce ARMSysReg
+} // end namespace llvm

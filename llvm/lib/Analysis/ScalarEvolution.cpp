@@ -4168,10 +4168,21 @@ static Optional<BinaryOp> MatchBinaryOp(Value *V, DominatorTree &DT) {
       }
 
       case Intrinsic::ssub_with_overflow:
-      case Intrinsic::usub_with_overflow:
-        return BinaryOp(Instruction::Sub, CI->getArgOperand(0),
-                        CI->getArgOperand(1));
+      case Intrinsic::usub_with_overflow: {
+        if (!isOverflowIntrinsicNoWrap(cast<IntrinsicInst>(CI), DT))
+          return BinaryOp(Instruction::Sub, CI->getArgOperand(0),
+                          CI->getArgOperand(1));
 
+        // The same reasoning as sadd/uadd above.
+        if (F->getIntrinsicID() == Intrinsic::ssub_with_overflow)
+          return BinaryOp(Instruction::Sub, CI->getArgOperand(0),
+                          CI->getArgOperand(1), /* IsNSW = */ true,
+                          /* IsNUW = */ false);
+        else
+          return BinaryOp(Instruction::Sub, CI->getArgOperand(0),
+                          CI->getArgOperand(1), /* IsNSW = */ false,
+                          /* IsNUW = */ true);
+      }
       case Intrinsic::smul_with_overflow:
       case Intrinsic::umul_with_overflow:
         return BinaryOp(Instruction::Mul, CI->getArgOperand(0),
@@ -5952,6 +5963,21 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     return getZeroExtendExpr(getSCEV(U->getOperand(0)), U->getType());
 
   case Instruction::SExt:
+    if (auto BO = MatchBinaryOp(U->getOperand(0), DT)) {
+      // The NSW flag of a subtract does not always survive the conversion to
+      // A + (-1)*B.  By pushing sign extension onto its operands we are much
+      // more likely to preserve NSW and allow later AddRec optimisations.
+      //
+      // NOTE: This is effectively duplicating this logic from getSignExtend:
+      //   sext((A + B + ...)<nsw>) --> (sext(A) + sext(B) + ...)<nsw>
+      // but by that point the NSW information has potentially been lost.
+      if (BO->Opcode == Instruction::Sub && BO->IsNSW) {
+        Type *Ty = U->getType();
+        auto *V1 = getSignExtendExpr(getSCEV(BO->LHS), Ty);
+        auto *V2 = getSignExtendExpr(getSCEV(BO->RHS), Ty);
+        return getMinusSCEV(V1, V2, SCEV::FlagNSW);
+      }
+    }
     return getSignExtendExpr(getSCEV(U->getOperand(0)), U->getType());
 
   case Instruction::BitCast:
@@ -6200,7 +6226,7 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
         // own when it gets to that point.
         if (!isa<PHINode>(I) || !isa<SCEVUnknown>(Old)) {
           eraseValueFromMap(It->first);
-          forgetMemoizedResults(Old);
+          forgetMemoizedResults(Old, false);
         }
         if (PHINode *PN = dyn_cast<PHINode>(I))
           ConstantEvolutionLoopExitValue.erase(PN);
@@ -6262,6 +6288,12 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     }
 
     PushDefUseChildren(I, Worklist);
+  }
+
+  for (auto I = ExitLimits.begin(); I != ExitLimits.end(); ++I) {
+    auto &Query = I->first;
+    if (Query.L == L)
+      ExitLimits.erase(I);
   }
 
   // Forget all contained loops too, to avoid dangling entries in the
@@ -6526,6 +6558,18 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
                                   bool AllowPredicates) {
+  ExitLimitQuery Query(L, ExitingBlock, AllowPredicates);
+  auto MaybeEL = ExitLimits.find(Query);
+  if (MaybeEL != ExitLimits.end())
+    return MaybeEL->second;
+  ExitLimit EL = computeExitLimitImpl(L, ExitingBlock, AllowPredicates);
+  ExitLimits.insert({Query, EL});
+  return EL;
+}
+
+ScalarEvolution::ExitLimit
+ScalarEvolution::computeExitLimitImpl(const Loop *L, BasicBlock *ExitingBlock,
+                                      bool AllowPredicates) {
 
   // Okay, we've chosen an exiting block.  See what condition causes us to exit
   // at this block and remember the exit block and whether all other targets
@@ -7597,6 +7641,25 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
             const SCEV *BackedgeTakenCount = getBackedgeTakenCount(LI);
             if (const SCEVConstant *BTCC =
                   dyn_cast<SCEVConstant>(BackedgeTakenCount)) {
+
+              // This trivial case can show up in some degenerate cases where
+              // the incoming IR has not yet been fully simplified.
+              if (BTCC->getValue()->isZero()) {
+                Value *InitValue = nullptr;
+                bool MultipleInitValues = false;
+                for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
+                  if (!LI->contains(PN->getIncomingBlock(i))) {
+                    if (!InitValue)
+                      InitValue = PN->getIncomingValue(i);
+                    else if (InitValue != PN->getIncomingValue(i)) {
+                      MultipleInitValues = true;
+                      break;
+                    }
+                  }
+                  if (!MultipleInitValues && InitValue)
+                    return getSCEV(InitValue);
+                }
+              }
               // Okay, we know how many times the containing loop executes.  If
               // this is a constant evolving PHI node, get the final value at
               // the specified iteration number.
@@ -10389,6 +10452,7 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       BackedgeTakenCounts(std::move(Arg.BackedgeTakenCounts)),
       PredicatedBackedgeTakenCounts(
           std::move(Arg.PredicatedBackedgeTakenCounts)),
+      ExitLimits(std::move(Arg.ExitLimits)),
       ConstantEvolutionLoopExitValue(
           std::move(Arg.ConstantEvolutionLoopExitValue)),
       ValuesAtScopes(std::move(Arg.ValuesAtScopes)),
@@ -10791,7 +10855,16 @@ bool ScalarEvolution::hasOperand(const SCEV *S, const SCEV *Op) const {
   return SCEVExprContains(S, [&](const SCEV *Expr) { return Expr == Op; });
 }
 
-void ScalarEvolution::forgetMemoizedResults(const SCEV *S) {
+bool ScalarEvolution::ExitLimit::hasOperand(const SCEV *S) const {
+  auto IsS = [&](const SCEV *X) { return S == X; };
+  auto ContainsS = [&](const SCEV *X) {
+    return !isa<SCEVCouldNotCompute>(X) && SCEVExprContains(X, IsS);
+  };
+  return ContainsS(ExactNotTaken) || ContainsS(MaxNotTaken);
+}
+
+void
+ScalarEvolution::forgetMemoizedResults(const SCEV *S, bool EraseExitLimit) {
   ValuesAtScopes.erase(S);
   LoopDispositions.erase(S);
   BlockDispositions.erase(S);
@@ -10824,6 +10897,13 @@ void ScalarEvolution::forgetMemoizedResults(const SCEV *S) {
 
   RemoveSCEVFromBackedgeMap(BackedgeTakenCounts);
   RemoveSCEVFromBackedgeMap(PredicatedBackedgeTakenCounts);
+
+  // TODO: There is a suspicion that we only need to do it when there is a
+  // SCEVUnknown somewhere inside S. Need to check this.
+  if (EraseExitLimit)
+    for (auto I = ExitLimits.begin(), E = ExitLimits.end(); I != E; ++I)
+      if (I->second.hasOperand(S))
+        ExitLimits.erase(I);
 }
 
 void ScalarEvolution::verify() const {

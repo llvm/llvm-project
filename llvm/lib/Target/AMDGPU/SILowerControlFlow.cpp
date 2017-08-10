@@ -134,6 +134,38 @@ static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
 
 char &llvm::SILowerControlFlowID = SILowerControlFlow::ID;
 
+static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI) {
+  unsigned SaveExecReg = MI.getOperand(0).getReg();
+  auto U = MRI->use_instr_nodbg_begin(SaveExecReg);
+
+  if (U == MRI->use_instr_nodbg_end() ||
+      std::next(U) != MRI->use_instr_nodbg_end() ||
+      U->getOpcode() != AMDGPU::SI_END_CF)
+    return false;
+
+  // Check for SI_KILL_TERMINATOR on path from if to endif.
+  // if there is any such terminator simplififcations are not safe.
+  auto SMBB = MI.getParent();
+  auto EMBB = U->getParent();
+  DenseSet<const MachineBasicBlock*> Visited;
+  SmallVector<MachineBasicBlock*, 4> Worklist(SMBB->succ_begin(),
+                                              SMBB->succ_end());
+
+  while (!Worklist.empty()) {
+    MachineBasicBlock *MBB = Worklist.pop_back_val();
+
+    if (MBB == EMBB || !Visited.insert(MBB).second)
+      continue;
+    for(auto &Term : MBB->terminators())
+      if (Term.getOpcode() == AMDGPU::SI_KILL_TERMINATOR)
+        return false;
+
+    Worklist.append(MBB->succ_begin(), MBB->succ_end());
+  }
+
+  return true;
+}
+
 void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -152,11 +184,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   // If there is only one use of save exec register and that use is SI_END_CF,
   // we can optimize SI_IF by returning the full saved exec mask instead of
   // just cleared bits.
-  bool SimpleIf = false;
-  auto U = MRI->use_instr_nodbg_begin(SaveExecReg);
-  SimpleIf = U != MRI->use_instr_nodbg_end() &&
-             std::next(U) == MRI->use_instr_nodbg_end() &&
-             U->getOpcode() == AMDGPU::SI_END_CF;
+  bool SimpleIf = isSimpleIf(MI, MRI);
 
   // Add an implicit def of exec to discourage scheduling VALU after this which
   // will interfere with trying to form s_and_saveexec_b64 later.

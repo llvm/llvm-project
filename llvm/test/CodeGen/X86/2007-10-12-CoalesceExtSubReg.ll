@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | not grep movb
+; RUN: llc < %s -mtriple=i686-- | not grep movb
 
 define signext i16 @f(i32* %bp, i32* %ss)   {
 entry:

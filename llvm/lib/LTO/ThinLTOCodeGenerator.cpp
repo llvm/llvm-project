@@ -583,9 +583,9 @@ std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
   Features.getDefaultSubtargetFeatures(TheTriple);
   std::string FeatureStr = Features.getString();
 
-  return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-      TheTriple.str(), MCpu, FeatureStr, Options, RelocModel,
-      CodeModel::Default, CGOptLevel));
+  return std::unique_ptr<TargetMachine>(
+      TheTarget->createTargetMachine(TheTriple.str(), MCpu, FeatureStr, Options,
+                                     RelocModel, None, CGOptLevel));
 }
 
 /**

@@ -1473,7 +1473,7 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
       return nullptr;
 
   // Find out what affect this instruction has on memory.
-  ModRefInfo ModRef = AA->getModRefInfo(I);
+  ModRefInfo ModRef = AA->getModRefInfo(I, None);
   // The isOrdered check is used to ensure that volatiles end up as defs
   // (atomics end up as ModRef right now anyway).  Until we separate the
   // ordering chain from the memory chain, this enables people to see at least

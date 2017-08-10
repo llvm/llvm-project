@@ -1182,7 +1182,14 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   ObjCSuperType = QualType();
 
   // void * type
-  VoidPtrTy = getPointerType(VoidTy);
+  if (LangOpts.OpenCLVersion >= 200) {
+    auto Q = VoidTy.getQualifiers();
+    Q.setAddressSpace(LangAS::opencl_generic);
+    VoidPtrTy = getPointerType(getCanonicalType(
+        getQualifiedType(VoidTy.getUnqualifiedType(), Q)));
+  } else {
+    VoidPtrTy = getPointerType(VoidTy);
+  }
 
   // nullptr type (C++0x 2.14.7)
   InitBuiltinType(NullPtrTy,           BuiltinType::NullPtr);

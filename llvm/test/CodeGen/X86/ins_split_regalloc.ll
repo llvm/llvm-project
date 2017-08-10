@@ -1,4 +1,4 @@
-; RUN: llc -O1 -regalloc=greedy -mtriple=x86_64-apple-macosx -march x86-64  < %s -o - | FileCheck %s
+; RUN: llc -O1 -regalloc=greedy -mtriple=x86_64-apple-macosx < %s -o - | FileCheck %s
 ; Check that last chance split (RAGreedy::tryInstructonSplit) just split
 ; when this is beneficial, otherwise we end up with uncoalesced copies.
 ; <rdar://problem/15570057> 

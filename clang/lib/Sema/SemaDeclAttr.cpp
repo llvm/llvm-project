@@ -480,7 +480,7 @@ static const RecordType *getRecordType(QualType QT) {
   return nullptr;
 }
 
-static bool checkRecordTypeForCapability(Sema &S, QualType Ty) {
+template <typename T> static bool checkRecordTypeForAttr(Sema &S, QualType Ty) {
   const RecordType *RT = getRecordType(Ty);
 
   if (!RT)
@@ -497,7 +497,7 @@ static bool checkRecordTypeForCapability(Sema &S, QualType Ty) {
 
   // Check if the record itself has a capability.
   RecordDecl *RD = RT->getDecl();
-  if (RD->hasAttr<CapabilityAttr>())
+  if (RD->hasAttr<T>())
     return true;
 
   // Else check if any base classes have a capability.
@@ -505,14 +505,14 @@ static bool checkRecordTypeForCapability(Sema &S, QualType Ty) {
     CXXBasePaths BPaths(false, false);
     if (CRD->lookupInBases([](const CXXBaseSpecifier *BS, CXXBasePath &) {
           const auto *Type = BS->getType()->getAs<RecordType>();
-          return Type->getDecl()->hasAttr<CapabilityAttr>();
+          return Type->getDecl()->hasAttr<T>();
         }, BPaths))
       return true;
   }
   return false;
 }
 
-static bool checkTypedefTypeForCapability(QualType Ty) {
+template <typename T> static bool checkTypedefTypeForAttr(QualType Ty) {
   const auto *TD = Ty->getAs<TypedefType>();
   if (!TD)
     return false;
@@ -521,17 +521,25 @@ static bool checkTypedefTypeForCapability(QualType Ty) {
   if (!TN)
     return false;
 
-  return TN->hasAttr<CapabilityAttr>();
+  return TN->hasAttr<T>();
 }
 
-static bool typeHasCapability(Sema &S, QualType Ty) {
-  if (checkTypedefTypeForCapability(Ty))
+template <typename T> static bool typeHasAttr(Sema &S, QualType Ty) {
+  if (checkTypedefTypeForAttr<T>(Ty))
     return true;
 
-  if (checkRecordTypeForCapability(S, Ty))
+  if (checkRecordTypeForAttr<T>(S, Ty))
     return true;
 
   return false;
+}
+
+static bool typeHasCapability(Sema &S, QualType Ty) {
+  return typeHasAttr<CapabilityAttr>(S, Ty);
+}
+
+static bool typeHasScopedLockable(Sema &S, QualType Ty) {
+  return typeHasAttr<ScopedLockableAttr>(S, Ty);
 }
 
 static bool isCapabilityExpr(Sema &S, const Expr *Ex) {
@@ -570,6 +578,8 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
                                            SmallVectorImpl<Expr *> &Args,
                                            int Sidx = 0,
                                            bool ParamIdxOk = false) {
+  bool TriedParam = false;
+
   for (unsigned Idx = Sidx; Idx < Attr.getNumArgs(); ++Idx) {
     Expr *ArgExp = Attr.getArgAsExpr(Idx);
 
@@ -610,15 +620,18 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
     const RecordType *RT = getRecordType(ArgTy);
 
     // Now check if we index into a record type function param.
-    if(!RT && ParamIdxOk) {
+    if (!RT && ParamIdxOk) {
       FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
       IntegerLiteral *IL = dyn_cast<IntegerLiteral>(ArgExp);
-      if(FD && IL) {
+      if (FD && IL) {
+        // Don't emit free function warnings if an index was given.
+        TriedParam = true;
+
         unsigned int NumParams = FD->getNumParams();
         llvm::APInt ArgValue = IL->getValue();
         uint64_t ParamIdxFromOne = ArgValue.getZExtValue();
         uint64_t ParamIdxFromZero = ParamIdxFromOne - 1;
-        if(!ArgValue.isStrictlyPositive() || ParamIdxFromOne > NumParams) {
+        if (!ArgValue.isStrictlyPositive() || ParamIdxFromOne > NumParams) {
           S.Diag(Attr.getLoc(), diag::err_attribute_argument_out_of_range)
             << Attr.getName() << Idx + 1 << NumParams;
           continue;
@@ -636,6 +649,28 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
           << Attr.getName() << ArgTy;
 
     Args.push_back(ArgExp);
+  }
+
+  // If we don't have any lockable arguments, verify that we're an instance
+  // method on a lockable type.
+  if (Args.empty() && !TriedParam) {
+    if (auto *MD = dyn_cast<CXXMethodDecl>(D)) {
+      if (MD->isStatic()) {
+        S.Diag(Attr.getLoc(), diag::warn_thread_attribute_noargs_static_method)
+            << Attr.getName();
+        return;
+      }
+
+      QualType ThisType = MD->getThisType(MD->getASTContext());
+      if (!typeHasCapability(S, ThisType) &&
+          !typeHasScopedLockable(S, ThisType)) {
+        S.Diag(Attr.getLoc(), diag::warn_thread_attribute_noargs_not_lockable)
+            << Attr.getName() << ThisType;
+      }
+    } else {
+      S.Diag(Attr.getLoc(), diag::warn_thread_attribute_noargs_not_method)
+          << Attr.getName();
+    }
   }
 }
 
@@ -1304,14 +1339,28 @@ static void handlePackedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
     TD->addAttr(::new (S.Context) PackedAttr(Attr.getRange(), S.Context,
                                         Attr.getAttributeSpellingListIndex()));
   else if (FieldDecl *FD = dyn_cast<FieldDecl>(D)) {
-    // Report warning about changed offset in the newer compiler versions.
-    if (!FD->getType()->isDependentType() &&
-        !FD->getType()->isIncompleteType() && FD->isBitField() &&
-        S.Context.getTypeAlign(FD->getType()) <= 8)
-      S.Diag(Attr.getLoc(), diag::warn_attribute_packed_for_bitfield);
+    bool BitfieldByteAligned = (!FD->getType()->isDependentType() &&
+                                !FD->getType()->isIncompleteType() &&
+                                FD->isBitField() &&
+                                S.Context.getTypeAlign(FD->getType()) <= 8);
 
-    FD->addAttr(::new (S.Context) PackedAttr(
-        Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
+    if (S.getASTContext().getTargetInfo().getTriple().isPS4()) {
+      if (BitfieldByteAligned)
+        // The PS4 target needs to maintain ABI backwards compatibility.
+        S.Diag(Attr.getLoc(), diag::warn_attribute_ignored_for_field_of_type)
+          << Attr.getName() << FD->getType();
+      else
+        FD->addAttr(::new (S.Context) PackedAttr(
+                    Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
+    } else {
+      // Report warning about changed offset in the newer compiler versions.
+      if (BitfieldByteAligned)
+        S.Diag(Attr.getLoc(), diag::warn_attribute_packed_for_bitfield);
+
+      FD->addAttr(::new (S.Context) PackedAttr(
+                  Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
+    }
+
   } else
     S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) << Attr.getName();
 }
@@ -5686,8 +5735,12 @@ static void handleCapabilityAttr(Sema &S, Decl *D, const AttributeList &Attr) {
 
 static void handleAssertCapabilityAttr(Sema &S, Decl *D,
                                        const AttributeList &Attr) {
+  SmallVector<Expr*, 1> Args;
+  if (!checkLockFunAttrCommon(S, D, Attr, Args))
+    return;
+
   D->addAttr(::new (S.Context) AssertCapabilityAttr(Attr.getRange(), S.Context,
-                                                    Attr.getArgAsExpr(0),
+                                                    Args.data(), Args.size(),
                                         Attr.getAttributeSpellingListIndex()));
 }
 

@@ -587,9 +587,9 @@ define i64 @test46(i64 %A) {
 
 define i64 @test47(i8 %A) {
 ; CHECK-LABEL: @test47(
-; CHECK-NEXT:    [[B:%.*]] = sext i8 %A to i64
-; CHECK-NEXT:    [[C:%.*]] = and i64 [[B]], 4294967253
-; CHECK-NEXT:    [[E:%.*]] = or i64 [[C]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], 42
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[TMP1]] to i64
+; CHECK-NEXT:    [[E:%.*]] = and i64 [[C]], 4294967295
 ; CHECK-NEXT:    ret i64 [[E]]
 ;
   %B = sext i8 %A to i32
@@ -761,9 +761,9 @@ define i64 @test59(i8 %A, i8 %B) nounwind {
 ; CHECK-NEXT:    [[C:%.*]] = zext i8 %A to i64
 ; CHECK-NEXT:    [[D:%.*]] = shl nuw nsw i64 [[C]], 4
 ; CHECK-NEXT:    [[E:%.*]] = and i64 [[D]], 48
-; CHECK-NEXT:    [[F:%.*]] = zext i8 %B to i64
-; CHECK-NEXT:    [[G:%.*]] = lshr i64 [[F]], 4
-; CHECK-NEXT:    [[H:%.*]] = or i64 [[G]], [[E]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 %B, 4
+; CHECK-NEXT:    [[G:%.*]] = zext i8 [[TMP1]] to i64
+; CHECK-NEXT:    [[H:%.*]] = or i64 [[E]], [[G]]
 ; CHECK-NEXT:    ret i64 [[H]]
 ;
   %C = zext i8 %A to i32
@@ -1126,12 +1126,12 @@ define %s @test78(%s *%p, i64 %i, i64 %j, i32 %k, i32 %l, i128 %m, i128 %n) {
 
 define %s @test79(%s *%p, i64 %i, i32 %j) {
 ; CHECK-LABEL: @test79(
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i64 %i, 36
-; CHECK-NEXT:    [[B:%.*]] = trunc i64 [[A]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 %i to i32
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[TMP1]], 36
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[B]], %j
 ; CHECK-NEXT:    [[Q:%.*]] = bitcast %s* %p to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[C]] to i64
-; CHECK-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, i8* [[Q]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[C]] to i64
+; CHECK-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, i8* [[Q]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[R:%.*]] = bitcast i8* [[PP]] to %s*
 ; CHECK-NEXT:    [[L:%.*]] = load %s, %s* [[R]], align 4
 ; CHECK-NEXT:    ret %s [[L]]
@@ -1239,8 +1239,8 @@ define i64 @test82(i64 %A) nounwind {
 define i64 @test83(i16 %a, i64 %k) {
 ; CHECK-LABEL: @test83(
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i16 %a to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 %k, 4294967295
-; CHECK-NEXT:    [[SH_PROM:%.*]] = trunc i64 [[SUB]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 %k to i32
+; CHECK-NEXT:    [[SH_PROM:%.*]] = add i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV]], [[SH_PROM]]
 ; CHECK-NEXT:    [[SH_PROM1:%.*]] = zext i32 [[SHL]] to i64
 ; CHECK-NEXT:    ret i64 [[SH_PROM1]]
@@ -1521,4 +1521,18 @@ define i8 @pr33078_4(i3 %x) {
   %C = lshr i16 %B, 13
   %D = trunc i16 %C to i8
   ret i8 %D
+}
+
+; (sext (xor (cmp), -1)) -> (sext (!cmp))
+define i64 @test94(i32 %a) {
+; CHECK-LABEL: @test94(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[A:%.*]], -2
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[TMP1]] to i64
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %1 = icmp eq i32 %a, -2
+  %2 = sext i1 %1 to i8
+  %3 = xor i8 %2, -1
+  %4 = sext i8 %3 to i64
+  ret i64 %4
 }

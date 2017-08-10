@@ -1,4 +1,4 @@
-//===-- AMDGPUDisassembler.hpp - Disassembler for AMDGPU ISA ---*- C++ -*--===//
+//===- AMDGPUDisassembler.hpp - Disassembler for AMDGPU ISA -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -60,10 +60,8 @@ public:
 
   MCOperand errOperand(unsigned V, const Twine& ErrMsg) const;
 
-  DecodeStatus tryDecodeInst(const uint8_t* Table,
-                              MCInst &MI,
-                              uint64_t Inst,
-                              uint64_t Address) const;
+  DecodeStatus tryDecodeInst(const uint8_t* Table, MCInst &MI, uint64_t Inst,
+                             uint64_t Address) const;
 
   DecodeStatus convertSDWAInst(MCInst &MI) const;
 

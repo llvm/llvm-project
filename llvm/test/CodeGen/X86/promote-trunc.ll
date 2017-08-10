@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64
+; RUN: llc < %s -mtriple=x86_64--
 
 define<4 x i8> @func_8_64() {
   %F = load <4 x i64>, <4 x i64>* undef

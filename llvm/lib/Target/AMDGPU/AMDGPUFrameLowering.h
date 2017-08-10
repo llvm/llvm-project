@@ -33,10 +33,6 @@ public:
   /// \returns The number of 32-bit sub-registers that are used when storing
   /// values to the stack.
   unsigned getStackWidth(const MachineFunction &MF) const;
-
-  bool hasFP(const MachineFunction &MF) const override {
-    return false;
-  }
 };
 
 } // end namespace llvm

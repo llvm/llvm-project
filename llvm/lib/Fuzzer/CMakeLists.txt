@@ -13,22 +13,23 @@ if( APPLE )
   endif()
 endif()
 
-set(LIBFUZZER_FLAGS_BASE "${CMAKE_CXX_FLAGS}")
-if( LLVM_USE_SANITIZE_COVERAGE )
-  if(NOT "${LLVM_USE_SANITIZER}" STREQUAL "Address")
-    message(FATAL_ERROR
-      "LibFuzzer and its tests require LLVM_USE_SANITIZER=Address and "
-      "LLVM_USE_SANITIZE_COVERAGE=YES to be set."
-      )
-  endif()
-
-  # Disable the coverage and sanitizer instrumentation for the fuzzer itself.
-  set(CMAKE_CXX_FLAGS "${LIBFUZZER_FLAGS_BASE} -fno-sanitize-coverage=trace-pc-guard,edge,trace-cmp,indirect-calls,8bit-counters -Werror")
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin|Linux")
+  set(LIBFUZZER_ENABLED_CHECK ON)
+else()
+  set(LIBFUZZER_ENABLED_CHECK OFF)
 endif()
 
 # Compile libFuzzer if the compilation is specifically requested, OR
 # if the platform is known to be working.
-if ( LLVM_USE_SANITIZE_COVERAGE OR CMAKE_SYSTEM_NAME MATCHES "Darwin|Linux" )
+set(LIBFUZZER_ENABLE ${LIBFUZZER_ENABLED_CHECK} CACHE BOOL "Build libFuzzer and its tests")
+set(LIBFUZZER_ENABLE_TESTS OFF CACHE BOOL "Build libFuzzer and its tests")
+
+if (LLVM_USE_SANITIZE_COVERAGE)
+  set(CMAKE_CXX_FLAGS
+    "${CMAKE_CXX_FLAGS} -fno-sanitize-coverage=trace-pc-guard,edge,trace-cmp,indirect-calls,8bit-counters -Werror")
+endif()
+
+if (LIBFUZZER_ENABLE)
   add_library(LLVMFuzzerNoMainObjects OBJECT
       FuzzerCrossOver.cpp
       FuzzerDriver.cpp
@@ -63,6 +64,14 @@ if ( LLVM_USE_SANITIZE_COVERAGE OR CMAKE_SYSTEM_NAME MATCHES "Darwin|Linux" )
   target_link_libraries(LLVMFuzzer ${LLVM_PTHREAD_LIB})
 endif()
 
-if( LLVM_USE_SANITIZE_COVERAGE AND LLVM_INCLUDE_TESTS )
-  add_subdirectory(test)
+if (MSVC)
+
+  # Until bots are reconfigured, check-fuzzer on Windows is a no-OP.
+  add_custom_target(check-fuzzer)
+  add_custom_command(TARGET check-fuzzer
+    COMMAND cmake -E echo "check-fuzzer is disalbed on Windows")
+else()
+  if (LLVM_INCLUDE_TESTS AND LIBFUZZER_ENABLE_TESTS)
+    add_subdirectory(test)
+  endif()
 endif()

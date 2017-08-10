@@ -1,4 +1,4 @@
-//===-- MipsHazardSchedule.cpp - Workaround pipeline hazards --------------===//
+//===- MipsHazardSchedule.cpp - Workaround pipeline hazards ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -44,15 +44,15 @@
 
 #include "Mips.h"
 #include "MipsInstrInfo.h"
-#include "MipsSEInstrInfo.h"
-#include "MipsTargetMachine.h"
+#include "MipsSubtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include <algorithm>
+#include <iterator>
+#include <utility>
 
 using namespace llvm;
 
@@ -62,11 +62,10 @@ STATISTIC(NumInsertedNops, "Number of nops inserted");
 
 namespace {
 
-typedef MachineBasicBlock::iterator Iter;
-typedef MachineBasicBlock::reverse_iterator ReverseIter;
+using Iter = MachineBasicBlock::iterator;
+using ReverseIter = MachineBasicBlock::reverse_iterator;
 
 class MipsHazardSchedule : public MachineFunctionPass {
-
 public:
   MipsHazardSchedule() : MachineFunctionPass(ID) {}
 
@@ -83,8 +82,9 @@ private:
   static char ID;
 };
 
-char MipsHazardSchedule::ID = 0;
 } // end of anonymous namespace
+
+char MipsHazardSchedule::ID = 0;
 
 /// Returns a pass that clears pipeline hazards.
 FunctionPass *llvm::createMipsHazardSchedule() {

@@ -549,6 +549,11 @@ public:
     Contents.OffsetedInfo.Val.Index = Idx;
   }
 
+  void setMetadata(const MDNode *MD) {
+    assert(isMetadata() && "Wrong MachineOperand mutator");
+    Contents.MD = MD;
+  }
+
   void setMBB(MachineBasicBlock *MBB) {
     assert(isMBB() && "Wrong MachineOperand mutator");
     Contents.MBB = MBB;
@@ -596,6 +601,10 @@ public:
 
   /// Replace this operand with a frame index.
   void ChangeToFrameIndex(int Idx);
+
+  /// Replace this operand with a target index.
+  void ChangeToTargetIndex(unsigned Idx, int64_t Offset,
+                           unsigned char TargetFlags = 0);
 
   /// ChangeToRegister - Replace this operand with a new register operand of
   /// the specified value.  If an operand is known to be an register already,

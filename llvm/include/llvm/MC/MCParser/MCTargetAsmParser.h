@@ -66,11 +66,11 @@ struct AsmRewrite {
   AsmRewriteKind Kind;
   SMLoc Loc;
   unsigned Len;
-  unsigned Val;
+  int64_t Val;
   StringRef Label;
 
 public:
-  AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len = 0, unsigned val = 0)
+  AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len = 0, int64_t val = 0)
     : Kind(kind), Loc(loc), Len(len), Val(val) {}
   AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len, StringRef label)
     : Kind(kind), Loc(loc), Len(len), Val(0), Label(label) {}

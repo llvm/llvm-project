@@ -642,7 +642,7 @@ int main(int argc, char **argv) {
 
   MCObjectFileInfo MOFI;
   MCContext MC(MAI.get(), MRI.get(), &MOFI);
-  MOFI.InitMCObjectFileInfo(TheTriple, /*PIC*/ false, CodeModel::Default, MC);
+  MOFI.InitMCObjectFileInfo(TheTriple, /*PIC*/ false, MC);
 
   MCTargetOptions Options;
   auto MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, "", Options);

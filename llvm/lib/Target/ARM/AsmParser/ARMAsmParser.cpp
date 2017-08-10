@@ -4175,46 +4175,10 @@ ARMAsmParser::parseBankedRegOperand(OperandVector &Operands) {
     return MatchOperand_NoMatch;
   StringRef RegName = Tok.getString();
 
-  // The values here come from B9.2.3 of the ARM ARM, where bits 4-0 are SysM
-  // and bit 5 is R.
-  unsigned Encoding = StringSwitch<unsigned>(RegName.lower())
-                          .Case("r8_usr", 0x00)
-                          .Case("r9_usr", 0x01)
-                          .Case("r10_usr", 0x02)
-                          .Case("r11_usr", 0x03)
-                          .Case("r12_usr", 0x04)
-                          .Case("sp_usr", 0x05)
-                          .Case("lr_usr", 0x06)
-                          .Case("r8_fiq", 0x08)
-                          .Case("r9_fiq", 0x09)
-                          .Case("r10_fiq", 0x0a)
-                          .Case("r11_fiq", 0x0b)
-                          .Case("r12_fiq", 0x0c)
-                          .Case("sp_fiq", 0x0d)
-                          .Case("lr_fiq", 0x0e)
-                          .Case("lr_irq", 0x10)
-                          .Case("sp_irq", 0x11)
-                          .Case("lr_svc", 0x12)
-                          .Case("sp_svc", 0x13)
-                          .Case("lr_abt", 0x14)
-                          .Case("sp_abt", 0x15)
-                          .Case("lr_und", 0x16)
-                          .Case("sp_und", 0x17)
-                          .Case("lr_mon", 0x1c)
-                          .Case("sp_mon", 0x1d)
-                          .Case("elr_hyp", 0x1e)
-                          .Case("sp_hyp", 0x1f)
-                          .Case("spsr_fiq", 0x2e)
-                          .Case("spsr_irq", 0x30)
-                          .Case("spsr_svc", 0x32)
-                          .Case("spsr_abt", 0x34)
-                          .Case("spsr_und", 0x36)
-                          .Case("spsr_mon", 0x3c)
-                          .Case("spsr_hyp", 0x3e)
-                          .Default(~0U);
-
-  if (Encoding == ~0U)
+  auto TheReg = ARMBankedReg::lookupBankedRegByName(RegName.lower());
+  if (!TheReg)
     return MatchOperand_NoMatch;
+  unsigned Encoding = TheReg->Encoding;
 
   Parser.Lex(); // Eat identifier token.
   Operands.push_back(ARMOperand::CreateBankedReg(Encoding, S));

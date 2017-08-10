@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=corei7 | FileCheck %s
+; RUN: llc < %s -mcpu=corei7 | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

@@ -80,7 +80,7 @@ static Value *generateMinMaxSelectPattern(InstCombiner::BuilderTy &Builder,
 /// a bitmask indicating which operands of this instruction are foldable if they
 /// equal the other incoming value of the select.
 ///
-static unsigned getSelectFoldableOperands(Instruction *I) {
+static unsigned getSelectFoldableOperands(BinaryOperator *I) {
   switch (I->getOpcode()) {
   case Instruction::Add:
   case Instruction::Mul:
@@ -100,7 +100,7 @@ static unsigned getSelectFoldableOperands(Instruction *I) {
 
 /// For the same transformation as the previous function, return the identity
 /// constant that goes into the select.
-static Constant *getSelectFoldableConstant(Instruction *I) {
+static Constant *getSelectFoldableConstant(BinaryOperator *I) {
   switch (I->getOpcode()) {
   default: llvm_unreachable("This cannot happen!");
   case Instruction::Add:
@@ -237,9 +237,8 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
                                             Value *FalseVal) {
   // See the comment above GetSelectFoldableOperands for a description of the
   // transformation we are doing here.
-  if (Instruction *TVI = dyn_cast<Instruction>(TrueVal)) {
-    if (TVI->hasOneUse() && TVI->getNumOperands() == 2 &&
-        !isa<Constant>(FalseVal)) {
+  if (auto *TVI = dyn_cast<BinaryOperator>(TrueVal)) {
+    if (TVI->hasOneUse() && !isa<Constant>(FalseVal)) {
       if (unsigned SFO = getSelectFoldableOperands(TVI)) {
         unsigned OpToFold = 0;
         if ((SFO & 1) && FalseVal == TVI->getOperand(0)) {
@@ -256,10 +255,9 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
           if (!isa<Constant>(OOp) || isSelect01(C, cast<Constant>(OOp))) {
             Value *NewSel = Builder.CreateSelect(SI.getCondition(), OOp, C);
             NewSel->takeName(TVI);
-            BinaryOperator *TVI_BO = cast<BinaryOperator>(TVI);
-            BinaryOperator *BO = BinaryOperator::Create(TVI_BO->getOpcode(),
+            BinaryOperator *BO = BinaryOperator::Create(TVI->getOpcode(),
                                                         FalseVal, NewSel);
-            BO->copyIRFlags(TVI_BO);
+            BO->copyIRFlags(TVI);
             return BO;
           }
         }
@@ -267,9 +265,8 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
     }
   }
 
-  if (Instruction *FVI = dyn_cast<Instruction>(FalseVal)) {
-    if (FVI->hasOneUse() && FVI->getNumOperands() == 2 &&
-        !isa<Constant>(TrueVal)) {
+  if (auto *FVI = dyn_cast<BinaryOperator>(FalseVal)) {
+    if (FVI->hasOneUse() && !isa<Constant>(TrueVal)) {
       if (unsigned SFO = getSelectFoldableOperands(FVI)) {
         unsigned OpToFold = 0;
         if ((SFO & 1) && TrueVal == FVI->getOperand(0)) {
@@ -286,10 +283,9 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
           if (!isa<Constant>(OOp) || isSelect01(C, cast<Constant>(OOp))) {
             Value *NewSel = Builder.CreateSelect(SI.getCondition(), C, OOp);
             NewSel->takeName(FVI);
-            BinaryOperator *FVI_BO = cast<BinaryOperator>(FVI);
-            BinaryOperator *BO = BinaryOperator::Create(FVI_BO->getOpcode(),
+            BinaryOperator *BO = BinaryOperator::Create(FVI->getOpcode(),
                                                         TrueVal, NewSel);
-            BO->copyIRFlags(FVI_BO);
+            BO->copyIRFlags(FVI);
             return BO;
           }
         }
@@ -447,8 +443,7 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
     IntrinsicInst *II = cast<IntrinsicInst>(Count);
     // Explicitly clear the 'undef_on_zero' flag.
     IntrinsicInst *NewI = cast<IntrinsicInst>(II->clone());
-    Type *Ty = NewI->getArgOperand(1)->getType();
-    NewI->setArgOperand(1, Constant::getNullValue(Ty));
+    NewI->setArgOperand(1, ConstantInt::getFalse(NewI->getContext()));
     Builder.Insert(NewI);
     return Builder.CreateZExtOrTrunc(NewI, ValueOnZero->getType());
   }
@@ -594,9 +589,97 @@ canonicalizeMinMaxWithConstant(SelectInst &Sel, ICmpInst &Cmp,
   return &Sel;
 }
 
+/// If one of the constants is zero (we know they can't both be) and we have an
+/// icmp instruction with zero, and we have an 'and' with the non-constant value
+/// and a power of two we can turn the select into a shift on the result of the
+/// 'and'.
+static Value *foldSelectICmpAnd(Type *SelType, const ICmpInst *IC,
+                                APInt TrueVal, APInt FalseVal,
+                                InstCombiner::BuilderTy &Builder) {
+  assert(SelType->isIntOrIntVectorTy() && "Not an integer select?");
+
+  // If this is a vector select, we need a vector compare.
+  if (SelType->isVectorTy() != IC->getType()->isVectorTy())
+    return nullptr;
+
+  if (!IC->isEquality())
+    return nullptr;
+
+  if (!match(IC->getOperand(1), m_Zero()))
+    return nullptr;
+
+  const APInt *AndRHS;
+  Value *LHS = IC->getOperand(0);
+  if (!match(LHS, m_And(m_Value(), m_Power2(AndRHS))))
+    return nullptr;
+
+  // If both select arms are non-zero see if we have a select of the form
+  // 'x ? 2^n + C : C'. Then we can offset both arms by C, use the logic
+  // for 'x ? 2^n : 0' and fix the thing up at the end.
+  APInt Offset(TrueVal.getBitWidth(), 0);
+  if (!TrueVal.isNullValue() && !FalseVal.isNullValue()) {
+    if ((TrueVal - FalseVal).isPowerOf2())
+      Offset = FalseVal;
+    else if ((FalseVal - TrueVal).isPowerOf2())
+      Offset = TrueVal;
+    else
+      return nullptr;
+
+    // Adjust TrueVal and FalseVal to the offset.
+    TrueVal -= Offset;
+    FalseVal -= Offset;
+  }
+
+  // Make sure one of the select arms is a power of 2.
+  if (!TrueVal.isPowerOf2() && !FalseVal.isPowerOf2())
+    return nullptr;
+
+  // Determine which shift is needed to transform result of the 'and' into the
+  // desired result.
+  const APInt &ValC = !TrueVal.isNullValue() ? TrueVal : FalseVal;
+  unsigned ValZeros = ValC.logBase2();
+  unsigned AndZeros = AndRHS->logBase2();
+
+  // If types don't match we can still convert the select by introducing a zext
+  // or a trunc of the 'and'.
+  Value *V = LHS;
+  if (ValZeros > AndZeros) {
+    V = Builder.CreateZExtOrTrunc(V, SelType);
+    V = Builder.CreateShl(V, ValZeros - AndZeros);
+  } else if (ValZeros < AndZeros) {
+    V = Builder.CreateLShr(V, AndZeros - ValZeros);
+    V = Builder.CreateZExtOrTrunc(V, SelType);
+  } else
+    V = Builder.CreateZExtOrTrunc(V, SelType);
+
+  // Okay, now we know that everything is set up, we just don't know whether we
+  // have a icmp_ne or icmp_eq and whether the true or false val is the zero.
+  bool ShouldNotVal = !TrueVal.isNullValue();
+  ShouldNotVal ^= IC->getPredicate() == ICmpInst::ICMP_NE;
+  if (ShouldNotVal)
+    V = Builder.CreateXor(V, ValC);
+
+  // Apply an offset if needed.
+  if (!Offset.isNullValue())
+    V = Builder.CreateAdd(V, ConstantInt::get(V->getType(), Offset));
+  return V;
+}
+
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
                                                   ICmpInst *ICI) {
+  Value *TrueVal = SI.getTrueValue();
+  Value *FalseVal = SI.getFalseValue();
+
+  {
+    const APInt *TrueValC, *FalseValC;
+    if (match(TrueVal, m_APInt(TrueValC)) &&
+        match(FalseVal, m_APInt(FalseValC)))
+      if (Value *V = foldSelectICmpAnd(SI.getType(), ICI, *TrueValC,
+                                       *FalseValC, Builder))
+        return replaceInstUsesWith(SI, V);
+  }
+
   if (Instruction *NewSel = canonicalizeMinMaxWithConstant(SI, *ICI, Builder))
     return NewSel;
 
@@ -605,8 +688,6 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
   ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *CmpLHS = ICI->getOperand(0);
   Value *CmpRHS = ICI->getOperand(1);
-  Value *TrueVal = SI.getTrueValue();
-  Value *FalseVal = SI.getFalseValue();
 
   // Transform (X >s -1) ? C1 : C2 --> ((X >>s 31) & (C2 - C1)) + C1
   // and       (X <s  0) ? C2 : C1 --> ((X >>s 31) & (C2 - C1)) + C1
@@ -862,78 +943,6 @@ Instruction *InstCombiner::foldSPFofSPF(Instruction *Inner,
   }
 
   return nullptr;
-}
-
-/// If one of the constants is zero (we know they can't both be) and we have an
-/// icmp instruction with zero, and we have an 'and' with the non-constant value
-/// and a power of two we can turn the select into a shift on the result of the
-/// 'and'.
-static Value *foldSelectICmpAnd(const SelectInst &SI, APInt TrueVal,
-                                APInt FalseVal,
-                                InstCombiner::BuilderTy &Builder) {
-  const ICmpInst *IC = dyn_cast<ICmpInst>(SI.getCondition());
-  if (!IC || !IC->isEquality() || !SI.getType()->isIntegerTy())
-    return nullptr;
-
-  if (!match(IC->getOperand(1), m_Zero()))
-    return nullptr;
-
-  ConstantInt *AndRHS;
-  Value *LHS = IC->getOperand(0);
-  if (!match(LHS, m_And(m_Value(), m_ConstantInt(AndRHS))))
-    return nullptr;
-
-  // If both select arms are non-zero see if we have a select of the form
-  // 'x ? 2^n + C : C'. Then we can offset both arms by C, use the logic
-  // for 'x ? 2^n : 0' and fix the thing up at the end.
-  APInt Offset(TrueVal.getBitWidth(), 0);
-  if (!TrueVal.isNullValue() && !FalseVal.isNullValue()) {
-    if ((TrueVal - FalseVal).isPowerOf2())
-      Offset = FalseVal;
-    else if ((FalseVal - TrueVal).isPowerOf2())
-      Offset = TrueVal;
-    else
-      return nullptr;
-
-    // Adjust TrueVal and FalseVal to the offset.
-    TrueVal -= Offset;
-    FalseVal -= Offset;
-  }
-
-  // Make sure the mask in the 'and' and one of the select arms is a power of 2.
-  if (!AndRHS->getValue().isPowerOf2() ||
-      (!TrueVal.isPowerOf2() && !FalseVal.isPowerOf2()))
-    return nullptr;
-
-  // Determine which shift is needed to transform result of the 'and' into the
-  // desired result.
-  const APInt &ValC = !TrueVal.isNullValue() ? TrueVal : FalseVal;
-  unsigned ValZeros = ValC.logBase2();
-  unsigned AndZeros = AndRHS->getValue().logBase2();
-
-  // If types don't match we can still convert the select by introducing a zext
-  // or a trunc of the 'and'. The trunc case requires that all of the truncated
-  // bits are zero, we can figure that out by looking at the 'and' mask.
-  if (AndZeros >= ValC.getBitWidth())
-    return nullptr;
-
-  Value *V = Builder.CreateZExtOrTrunc(LHS, SI.getType());
-  if (ValZeros > AndZeros)
-    V = Builder.CreateShl(V, ValZeros - AndZeros);
-  else if (ValZeros < AndZeros)
-    V = Builder.CreateLShr(V, AndZeros - ValZeros);
-
-  // Okay, now we know that everything is set up, we just don't know whether we
-  // have a icmp_ne or icmp_eq and whether the true or false val is the zero.
-  bool ShouldNotVal = !TrueVal.isNullValue();
-  ShouldNotVal ^= IC->getPredicate() == ICmpInst::ICMP_NE;
-  if (ShouldNotVal)
-    V = Builder.CreateXor(V, ValC);
-
-  // Apply an offset if needed.
-  if (!Offset.isNullValue())
-    V = Builder.CreateAdd(V, ConstantInt::get(V->getType(), Offset));
-  return V;
 }
 
 /// Turn select C, (X + Y), (X - Y) --> (X + (select C, Y, (-Y))).
@@ -1262,12 +1271,6 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     }
   }
 
-  if (ConstantInt *TrueValC = dyn_cast<ConstantInt>(TrueVal))
-    if (ConstantInt *FalseValC = dyn_cast<ConstantInt>(FalseVal))
-      if (Value *V = foldSelectICmpAnd(SI, TrueValC->getValue(),
-                                       FalseValC->getValue(), Builder))
-        return replaceInstUsesWith(SI, V);
-
   // See if we are selecting two values based on a comparison of the two values.
   if (FCmpInst *FCI = dyn_cast<FCmpInst>(CondVal)) {
     if (FCI->getOperand(0) == TrueVal && FCI->getOperand(1) == FalseVal) {
@@ -1389,9 +1392,17 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     auto SPF = SPR.Flavor;
 
     if (SelectPatternResult::isMinOrMax(SPF)) {
-      // Canonicalize so that type casts are outside select patterns.
-      if (LHS->getType()->getPrimitiveSizeInBits() !=
-          SelType->getPrimitiveSizeInBits()) {
+      // Canonicalize so that
+      // - type casts are outside select patterns.
+      // - float clamp is transformed to min/max pattern
+
+      bool IsCastNeeded = LHS->getType() != SelType;
+      Value *CmpLHS = cast<CmpInst>(CondVal)->getOperand(0);
+      Value *CmpRHS = cast<CmpInst>(CondVal)->getOperand(1);
+      if (IsCastNeeded ||
+          (LHS->getType()->isFPOrFPVectorTy() &&
+           ((CmpLHS != LHS && CmpLHS != RHS) ||
+            (CmpRHS != LHS && CmpRHS != RHS)))) {
         CmpInst::Predicate Pred = getCmpPredicateForMinMax(SPF, SPR.Ordered);
 
         Value *Cmp;
@@ -1404,10 +1415,12 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
           Cmp = Builder.CreateFCmp(Pred, LHS, RHS);
         }
 
-        Value *NewSI = Builder.CreateCast(
-            CastOp, Builder.CreateSelect(Cmp, LHS, RHS, SI.getName(), &SI),
-            SelType);
-        return replaceInstUsesWith(SI, NewSI);
+        Value *NewSI = Builder.CreateSelect(Cmp, LHS, RHS, SI.getName(), &SI);
+        if (!IsCastNeeded)
+          return replaceInstUsesWith(SI, NewSI);
+
+        Value *NewCast = Builder.CreateCast(CastOp, NewSI, SelType);
+        return replaceInstUsesWith(SI, NewCast);
       }
     }
 
@@ -1531,9 +1544,9 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     if (PBI && PBI->isConditional() &&
         PBI->getSuccessor(0) != PBI->getSuccessor(1) &&
         (PBI->getSuccessor(0) == Parent || PBI->getSuccessor(1) == Parent)) {
-      bool CondIsFalse = PBI->getSuccessor(1) == Parent;
+      bool CondIsTrue = PBI->getSuccessor(0) == Parent;
       Optional<bool> Implication = isImpliedCondition(
-        PBI->getCondition(), SI.getCondition(), DL, CondIsFalse);
+          PBI->getCondition(), SI.getCondition(), DL, CondIsTrue);
       if (Implication) {
         Value *V = *Implication ? TrueVal : FalseVal;
         return replaceInstUsesWith(SI, V);

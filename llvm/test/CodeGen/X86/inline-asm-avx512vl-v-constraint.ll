@@ -1,4 +1,4 @@
-; RUN: llc < %s -march x86-64 -mtriple x86_64-unknown-linux-gnu -mattr +avx512vl | FileCheck %s
+; RUN: llc < %s -mtriple x86_64-unknown-linux-gnu -mattr +avx512vl | FileCheck %s
 
 define <4 x float> @testXMM_1(<4 x float> %_xmm0, i64 %_l) {
 entry:

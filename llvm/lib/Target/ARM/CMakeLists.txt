@@ -1,9 +1,7 @@
 set(LLVM_TARGET_DEFINITIONS ARM.td)
 
-if(LLVM_BUILD_GLOBAL_ISEL)
-  tablegen(LLVM ARMGenRegisterBank.inc -gen-register-bank)
-  tablegen(LLVM ARMGenGlobalISel.inc -gen-global-isel)
-endif()
+tablegen(LLVM ARMGenRegisterBank.inc -gen-register-bank)
+tablegen(LLVM ARMGenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM ARMGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM ARMGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM ARMGenMCCodeEmitter.inc -gen-emitter)
@@ -18,41 +16,30 @@ tablegen(LLVM ARMGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM ARMGenSystemRegister.inc -gen-searchable-tables)
 add_public_tablegen_target(ARMCommonTableGen)
 
-# Add GlobalISel files if the user wants to build it.
-set(GLOBAL_ISEL_FILES
-  ARMCallLowering.cpp
-  ARMInstructionSelector.cpp
-  ARMLegalizerInfo.cpp
-  ARMRegisterBankInfo.cpp
-  )
-
-if(LLVM_BUILD_GLOBAL_ISEL)
-  set(GLOBAL_ISEL_BUILD_FILES ${GLOBAL_ISEL_FILES})
-else()
-  set(GLOBAL_ISEL_BUILD_FILES "")
-  set(LLVM_OPTIONAL_SOURCES LLVMGlobalISel ${GLOBAL_ISEL_FILES})
-endif()
-
 add_llvm_target(ARMCodeGen
   A15SDOptimizer.cpp
   ARMAsmPrinter.cpp
   ARMBaseInstrInfo.cpp
   ARMBaseRegisterInfo.cpp
+  ARMCallLowering.cpp
   ARMConstantIslandPass.cpp
   ARMConstantPoolValue.cpp
   ARMExpandPseudoInsts.cpp
   ARMFastISel.cpp
   ARMFrameLowering.cpp
   ARMHazardRecognizer.cpp
+  ARMInstructionSelector.cpp
   ARMISelDAGToDAG.cpp
   ARMISelLowering.cpp
   ARMInstrInfo.cpp
+  ARMLegalizerInfo.cpp
   ARMLoadStoreOptimizer.cpp
   ARMMCInstLower.cpp
   ARMMachineFunctionInfo.cpp
   ARMMacroFusion.cpp
   ARMRegisterInfo.cpp
   ARMOptimizeBarriersPass.cpp
+  ARMRegisterBankInfo.cpp
   ARMSelectionDAGInfo.cpp
   ARMSubtarget.cpp
   ARMTargetMachine.cpp
@@ -66,7 +53,6 @@ add_llvm_target(ARMCodeGen
   Thumb2InstrInfo.cpp
   Thumb2SizeReduction.cpp
   ARMComputeBlockSize.cpp
-  ${GLOBAL_ISEL_BUILD_FILES}
   )
 
 add_subdirectory(TargetInfo)

@@ -218,6 +218,19 @@ llvm::DIScope *CGDebugInfo::getContextDescriptor(const Decl *Context,
   return Default;
 }
 
+PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
+  PrintingPolicy PP = CGM.getContext().getPrintingPolicy();
+
+  // If we're emitting codeview, it's important to try to match MSVC's naming so
+  // that visualizers written for MSVC will trigger for our class names. In
+  // particular, we can't have spaces between arguments of standard templates
+  // like basic_string and vector.
+  if (CGM.getCodeGenOpts().EmitCodeView)
+    PP.MSVCFormatting = true;
+
+  return PP;
+}
+
 StringRef CGDebugInfo::getFunctionName(const FunctionDecl *FD) {
   assert(FD && "Invalid FunctionDecl!");
   IdentifierInfo *FII = FD->getIdentifier();
@@ -238,18 +251,16 @@ StringRef CGDebugInfo::getFunctionName(const FunctionDecl *FD) {
 
   SmallString<128> NS;
   llvm::raw_svector_ostream OS(NS);
-  PrintingPolicy Policy(CGM.getLangOpts());
-  Policy.MSVCFormatting = CGM.getCodeGenOpts().EmitCodeView;
   if (!UseQualifiedName)
     FD->printName(OS);
   else
-    FD->printQualifiedName(OS, Policy);
+    FD->printQualifiedName(OS, getPrintingPolicy());
 
   // Add any template specialization args.
   if (Info) {
     const TemplateArgumentList *TArgs = Info->TemplateArguments;
     TemplateSpecializationType::PrintTemplateArgumentList(OS, TArgs->asArray(),
-                                                          Policy);
+                                                          getPrintingPolicy());
   }
 
   // Copy this name on the side and use its reference.
@@ -296,7 +307,7 @@ StringRef CGDebugInfo::getClassName(const RecordDecl *RD) {
   if (isa<ClassTemplateSpecializationDecl>(RD)) {
     SmallString<128> Name;
     llvm::raw_svector_ostream OS(Name);
-    RD->getNameForDiagnostic(OS, CGM.getContext().getPrintingPolicy(),
+    RD->getNameForDiagnostic(OS, getPrintingPolicy(),
                              /*Qualified*/ false);
 
     // Copy this name on the side and use its reference.
@@ -527,16 +538,15 @@ void CGDebugInfo::CreateCompileUnit() {
 
   // Create new compile unit.
   // FIXME - Eliminate TheCU.
+  auto &CGOpts = CGM.getCodeGenOpts();
   TheCU = DBuilder.createCompileUnit(
       LangTag,
       DBuilder.createFile(remapDIPath(MainFileName),
                           remapDIPath(getCurrentDirname()), CSKind, Checksum),
-      Producer, LO.Optimize, CGM.getCodeGenOpts().DwarfDebugFlags, RuntimeVers,
-      CGM.getCodeGenOpts().EnableSplitDwarf
-          ? ""
-          : CGM.getCodeGenOpts().SplitDwarfFile,
-      EmissionKind, 0 /* DWOid */, CGM.getCodeGenOpts().SplitDwarfInlining,
-      CGM.getCodeGenOpts().DebugInfoForProfiling);
+      Producer, LO.Optimize || CGOpts.PrepareForLTO || CGOpts.EmitSummaryIndex,
+      CGOpts.DwarfDebugFlags, RuntimeVers,
+      CGOpts.EnableSplitDwarf ? "" : CGOpts.SplitDwarfFile, EmissionKind,
+      0 /* DWOid */, CGOpts.SplitDwarfInlining, CGOpts.DebugInfoForProfiling);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
@@ -909,12 +919,11 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
 
   SmallString<128> NS;
   llvm::raw_svector_ostream OS(NS);
-  Ty->getTemplateName().print(OS, CGM.getContext().getPrintingPolicy(),
+  Ty->getTemplateName().print(OS, getPrintingPolicy(),
                               /*qualified*/ false);
 
   TemplateSpecializationType::PrintTemplateArgumentList(
-      OS, Ty->template_arguments(),
-      CGM.getContext().getPrintingPolicy());
+      OS, Ty->template_arguments(), getPrintingPolicy());
 
   auto *AliasDecl = cast<TypeAliasTemplateDecl>(
       Ty->getTemplateName().getAsTemplateDecl())->getTemplatedDecl();
@@ -1174,13 +1183,13 @@ void CGDebugInfo::CollectRecordNormalField(
   elements.push_back(FieldType);
 }
 
-void CGDebugInfo::CollectRecordNestedRecord(
-    const RecordDecl *RD, SmallVectorImpl<llvm::Metadata *> &elements) {
-  QualType Ty = CGM.getContext().getTypeDeclType(RD);
+void CGDebugInfo::CollectRecordNestedType(
+    const TypeDecl *TD, SmallVectorImpl<llvm::Metadata *> &elements) {
+  QualType Ty = CGM.getContext().getTypeDeclType(TD);
   // Injected class names are not considered nested records.
   if (isa<InjectedClassNameType>(Ty))
     return;
-  SourceLocation Loc = RD->getLocation();
+  SourceLocation Loc = TD->getLocation();
   llvm::DIType *nestedType = getOrCreateType(Ty, getOrCreateFile(Loc));
   elements.push_back(nestedType);
 }
@@ -1196,9 +1205,9 @@ void CGDebugInfo::CollectRecordFields(
   else {
     const ASTRecordLayout &layout = CGM.getContext().getASTRecordLayout(record);
 
-    // Debug info for nested records is included in the member list only for
+    // Debug info for nested types is included in the member list only for
     // CodeView.
-    bool IncludeNestedRecords = CGM.getCodeGenOpts().EmitCodeView;
+    bool IncludeNestedTypes = CGM.getCodeGenOpts().EmitCodeView;
 
     // Field number for non-static fields.
     unsigned fieldNo = 0;
@@ -1225,10 +1234,12 @@ void CGDebugInfo::CollectRecordFields(
 
         // Bump field number for next field.
         ++fieldNo;
-      } else if (const auto *nestedRec = dyn_cast<CXXRecordDecl>(I))
-        if (IncludeNestedRecords && !nestedRec->isImplicit() &&
-            nestedRec->getDeclContext() == record)
-          CollectRecordNestedRecord(nestedRec, elements);
+      } else if (IncludeNestedTypes) {
+        if (const auto *nestedType = dyn_cast<TypeDecl>(I))
+          if (!nestedType->isImplicit() &&
+              nestedType->getDeclContext() == record)
+            CollectRecordNestedType(nestedType, elements);
+      }
   }
 }
 

@@ -640,6 +640,10 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
   } else {
     if (ForDefinition)
       NewGV = copyGlobalAliasProto(cast<GlobalAlias>(SGV));
+    else if (SGV->getValueType()->isFunctionTy())
+      NewGV =
+          Function::Create(cast<FunctionType>(TypeMap.get(SGV->getValueType())),
+                           GlobalValue::ExternalLinkage, SGV->getName(), &DstM);
     else
       NewGV = new GlobalVariable(
           DstM, TypeMap.get(SGV->getValueType()),

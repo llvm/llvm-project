@@ -4,5 +4,7 @@
 #ifndef HEADER
 #define HEADER
 #pragma pack (push, 1)
+#else
+#pragma pack (2)
 #endif
-// expected-warning@-2 {{unterminated '#pragma pack (push, ...)' at end of file}}
+// expected-warning@-4 {{unterminated '#pragma pack (push, ...)' at end of file}}

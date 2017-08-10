@@ -280,6 +280,7 @@ For API clients and LLVM developers.
    GlobalISel
    XRay
    XRayExample
+   XRayFDRFormat
    PDB/index
 
 :doc:`WritingAnLLVMPass`

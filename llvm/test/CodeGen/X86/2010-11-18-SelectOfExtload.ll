@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+cmov | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- -mattr=+cmov | FileCheck %s
 ; Both values were being zero extended.
 @u = external global i8
 @s = external global i8

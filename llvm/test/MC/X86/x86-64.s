@@ -394,11 +394,14 @@ shrd  %cl, %bx, (%rax)
 sldt	%ecx
 sldt	%cx
 
-// CHECK: lcalll	*3135175374 
-// CHECK: ljmpl	*3135175374
-lcall	*0xbadeface
-ljmp	*0xbadeface
-
+// CHECK: lcalll *3135175374 
+// CHECK: ljmpl  *3135175374
+// CHECK: lcalll *(%rax)
+// CHECK: ljmpl *(%rax)
+lcall  *0xbadeface
+ljmp *0xbadeface
+lcall *(%rax)
+ljmpl *(%rax)
 
 // rdar://8444631
 // CHECK: enter	$31438, $0

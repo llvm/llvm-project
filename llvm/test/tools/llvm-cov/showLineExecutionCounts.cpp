@@ -6,7 +6,7 @@
 int main() {                              // TEXT: [[@LINE]]|   161|int main(
   int x = 0;                              // TEXT: [[@LINE]]|   161|  int x
                                           // TEXT: [[@LINE]]|   161|
-  if (x) {                                // TEXT: [[@LINE]]|     0|  if (x)
+  if (x) {                                // TEXT: [[@LINE]]|   161|  if (x)
     x = 0;                                // TEXT: [[@LINE]]|     0|    x = 0
   } else {                                // TEXT: [[@LINE]]|   161|  } else
     x = 1;                                // TEXT: [[@LINE]]|   161|    x = 1
@@ -50,7 +50,7 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>int main() {
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  int x = 0
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>
-// HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre>  if (x) {
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  if (x) {
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre>
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre><span class='red'>  }</span>
 // HTML: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>    x = 1;

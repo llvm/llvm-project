@@ -4495,16 +4495,17 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
   if (MI.isPosition())
     return MachineOutlinerInstrType::Illegal;
 
+  // Don't touch the link register or W30.
+  if (MI.readsRegister(AArch64::W30, &getRegisterInfo()) ||
+      MI.modifiesRegister(AArch64::W30, &getRegisterInfo()))
+    return MachineOutlinerInstrType::Illegal;
+
   // Make sure none of the operands are un-outlinable.
-  for (const MachineOperand &MOP : MI.operands())
+  for (const MachineOperand &MOP : MI.operands()) {
     if (MOP.isCPI() || MOP.isJTI() || MOP.isCFIIndex() || MOP.isFI() ||
         MOP.isTargetIndex())
       return MachineOutlinerInstrType::Illegal;
-
-  // Don't outline anything that uses the link register.
-  if (MI.modifiesRegister(AArch64::LR, &RI) ||
-      MI.readsRegister(AArch64::LR, &RI))
-    return MachineOutlinerInstrType::Illegal;
+  }
 
   // Does this use the stack?
   if (MI.modifiesRegister(AArch64::SP, &RI) ||

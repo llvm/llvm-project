@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 
 define double @short(i16* %P) {
         %V = load i16, i16* %P               ; <i16> [#uses=1]

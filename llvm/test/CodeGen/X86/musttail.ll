@@ -1,6 +1,6 @@
-; RUN: llc -march=x86 < %s | FileCheck %s
-; RUN: llc -march=x86 -O0 < %s | FileCheck %s
-; RUN: llc -march=x86 -disable-tail-calls < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=i686-- -disable-tail-calls < %s | FileCheck %s
 
 declare void @t1_callee(i8*)
 define void @t1(i32* %a) {

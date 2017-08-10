@@ -1,10 +1,10 @@
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=SI  %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=SI -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=SI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=SI %s
 // RUN: llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=CI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck --check-prefix=VI %s
 
 // RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck %s --check-prefix=NOSI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=SI  %s 2>&1 | FileCheck %s --check-prefix=NOSI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti  %s 2>&1 | FileCheck %s --check-prefix=NOSI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji  %s 2>&1 | FileCheck %s --check-prefix=NOVI
 
 //===----------------------------------------------------------------------===//

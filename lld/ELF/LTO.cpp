@@ -120,29 +120,29 @@ BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {
 BitcodeCompiler::~BitcodeCompiler() = default;
 
 static void undefine(Symbol *S) {
-  replaceBody<Undefined>(S, S->body()->getName(), /*IsLocal=*/false,
-                         STV_DEFAULT, S->body()->Type, nullptr);
+  replaceBody<Undefined>(S, nullptr, S->body()->getName(), /*IsLocal=*/false,
+                         STV_DEFAULT, S->body()->Type);
 }
 
 void BitcodeCompiler::add(BitcodeFile &F) {
   lto::InputFile &Obj = *F.Obj;
   unsigned SymNum = 0;
-  std::vector<Symbol *> Syms = F.getSymbols();
+  std::vector<SymbolBody *> Syms = F.getSymbols();
   std::vector<lto::SymbolResolution> Resols(Syms.size());
 
   // Provide a resolution to the LTO API for each symbol.
   for (const lto::InputFile::Symbol &ObjSym : Obj.symbols()) {
-    Symbol *Sym = Syms[SymNum];
+    SymbolBody *B = Syms[SymNum];
+    Symbol *Sym = B->symbol();
     lto::SymbolResolution &R = Resols[SymNum];
     ++SymNum;
-    SymbolBody *B = Sym->body();
 
     // Ideally we shouldn't check for SF_Undefined but currently IRObjectFile
     // reports two symbols for module ASM defined. Without this check, lld
     // flags an undefined in IR with a definition in ASM as prevailing.
     // Once IRObjectFile is fixed to report only one symbol this hack can
     // be removed.
-    R.Prevailing = !ObjSym.isUndefined() && B->File == &F;
+    R.Prevailing = !ObjSym.isUndefined() && B->getFile() == &F;
 
     R.VisibleToRegularObj = Sym->IsUsedInRegularObj ||
                             (R.Prevailing && Sym->includeInDynsym()) ||

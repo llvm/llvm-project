@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu -loop-reduce -S < %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -loop-reduce -lsr-insns-cost=false -S < %s | FileCheck %s
 ; Check LSR formula canonicalization will put loop invariant regs before
 ; induction variable of current loop, so exprs involving loop invariant regs
 ; can be promoted outside of current loop.

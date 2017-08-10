@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2 -regalloc=fast -optimize-regalloc=0
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 -regalloc=fast -optimize-regalloc=0
 
 define void @SolveCubic(double %a, double %b, double %c, double %d, i32* %solutions, double* %x) {
 entry:

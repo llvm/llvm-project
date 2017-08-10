@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 < %s -o - | grep "cmpl	\$[1], %"
+; RUN: llc -mtriple=x86_64-- < %s -o - | grep "cmpl	\$[1], %"
 
 @.str = internal constant [4 x i8] c"%d\0A\00"
 

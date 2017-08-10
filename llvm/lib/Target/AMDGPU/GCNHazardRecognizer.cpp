@@ -367,10 +367,13 @@ int GCNHazardRecognizer::checkVMEMHazards(MachineInstr* VMEM) {
 
 int GCNHazardRecognizer::checkDPPHazards(MachineInstr *DPP) {
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
 
-  // Check for DPP VGPR read after VALU VGPR write.
+  // Check for DPP VGPR read after VALU VGPR write and EXEC write.
   int DppVgprWaitStates = 2;
+  int DppExecWaitStates = 5;
   int WaitStatesNeeded = 0;
+  auto IsHazardDefFn = [TII] (MachineInstr *MI) { return TII->isVALU(*MI); };
 
   for (const MachineOperand &Use : DPP->uses()) {
     if (!Use.isReg() || !TRI->isVGPR(MF.getRegInfo(), Use.getReg()))
@@ -379,6 +382,10 @@ int GCNHazardRecognizer::checkDPPHazards(MachineInstr *DPP) {
         DppVgprWaitStates - getWaitStatesSinceDef(Use.getReg());
     WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
   }
+
+  WaitStatesNeeded = std::max(
+      WaitStatesNeeded,
+      DppExecWaitStates - getWaitStatesSinceDef(AMDGPU::EXEC, IsHazardDefFn));
 
   return WaitStatesNeeded;
 }

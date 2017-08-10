@@ -1710,13 +1710,13 @@ define <32 x i16>@test_int_x86_avx512_mask_psrav32_hi(<32 x i16> %x0, <32 x i16>
 define <32 x i16>@test_int_x86_avx512_mask_psrav32_hi_const(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x2, i32 %x3) {
 ; AVX512BW-LABEL: test_int_x86_avx512_mask_psrav32_hi_const:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vmovdqu16 {{.*#+}} zmm0 = [2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51]
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51]
 ; AVX512BW-NEXT:    vpsravw {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_int_x86_avx512_mask_psrav32_hi_const:
 ; AVX512F-32:       # BB#0:
-; AVX512F-32-NEXT:    vmovdqu16 {{.*#+}} zmm0 = [2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51]
+; AVX512F-32-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51]
 ; AVX512F-32-NEXT:    vpsravw {{\.LCPI.*}}, %zmm0, %zmm0
 ; AVX512F-32-NEXT:    retl
   %res = call <32 x i16> @llvm.x86.avx512.mask.psrav32.hi(<32 x i16> <i16 2, i16 9,  i16 -12, i16 23, i16 -26, i16 37, i16 -40, i16 51, i16 2, i16 9,  i16 -12, i16 23, i16 -26, i16 37, i16 -40, i16 51, i16 2, i16 9,  i16 -12, i16 23, i16 -26, i16 37, i16 -40, i16 51, i16 2, i16 9,  i16 -12, i16 23, i16 -26, i16 37, i16 -40, i16 51>,
@@ -1921,9 +1921,9 @@ define <64 x i8>@test_int_x86_avx512_mask_pbroadcast_b_gpr_512(i8 %x0, <64 x i8>
 ; AVX512BW-LABEL: test_int_x86_avx512_mask_pbroadcast_b_gpr_512:
 ; AVX512BW:       ## BB#0:
 ; AVX512BW-NEXT:    kmovq %rsi, %k1
-; AVX512BW-NEXT:    vpbroadcastb %dil, %zmm0 {%k1}
-; AVX512BW-NEXT:    vpbroadcastb %dil, %zmm1 {%k1} {z}
-; AVX512BW-NEXT:    vpbroadcastb %dil, %zmm2
+; AVX512BW-NEXT:    vpbroadcastb %edi, %zmm1 {%k1} {z}
+; AVX512BW-NEXT:    vpbroadcastb %edi, %zmm0 {%k1}
+; AVX512BW-NEXT:    vpbroadcastb %edi, %zmm2
 ; AVX512BW-NEXT:    vpaddb %zmm0, %zmm2, %zmm0
 ; AVX512BW-NEXT:    vpaddb %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    retq
@@ -1934,9 +1934,9 @@ define <64 x i8>@test_int_x86_avx512_mask_pbroadcast_b_gpr_512(i8 %x0, <64 x i8>
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    kunpckdq %k0, %k1, %k1
-; AVX512F-32-NEXT:    vpbroadcastb %al, %zmm1 {%k1} {z}
-; AVX512F-32-NEXT:    vpbroadcastb %al, %zmm0 {%k1}
-; AVX512F-32-NEXT:    vpbroadcastb %al, %zmm2
+; AVX512F-32-NEXT:    vpbroadcastb %eax, %zmm1 {%k1} {z}
+; AVX512F-32-NEXT:    vpbroadcastb %eax, %zmm0 {%k1}
+; AVX512F-32-NEXT:    vpbroadcastb %eax, %zmm2
 ; AVX512F-32-NEXT:    vpaddb %zmm0, %zmm2, %zmm0
 ; AVX512F-32-NEXT:    vpaddb %zmm0, %zmm1, %zmm0
 ; AVX512F-32-NEXT:    retl
@@ -1954,20 +1954,20 @@ define <32 x i16>@test_int_x86_avx512_mask_pbroadcast_w_gpr_512(i16 %x0, <32 x i
 ; AVX512BW-LABEL: test_int_x86_avx512_mask_pbroadcast_w_gpr_512:
 ; AVX512BW:       ## BB#0:
 ; AVX512BW-NEXT:    kmovd %esi, %k1
-; AVX512BW-NEXT:    vpbroadcastw %di, %zmm0 {%k1}
-; AVX512BW-NEXT:    vpbroadcastw %di, %zmm1 {%k1} {z}
-; AVX512BW-NEXT:    vpbroadcastw %di, %zmm2
+; AVX512BW-NEXT:    vpbroadcastw %edi, %zmm1 {%k1} {z}
+; AVX512BW-NEXT:    vpbroadcastw %edi, %zmm0 {%k1}
+; AVX512BW-NEXT:    vpbroadcastw %edi, %zmm2
 ; AVX512BW-NEXT:    vpaddw %zmm0, %zmm2, %zmm0
 ; AVX512BW-NEXT:    vpaddw %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_int_x86_avx512_mask_pbroadcast_w_gpr_512:
 ; AVX512F-32:       # BB#0:
-; AVX512F-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; AVX512F-32-NEXT:    vpbroadcastw %ax, %zmm0 {%k1}
-; AVX512F-32-NEXT:    vpbroadcastw %ax, %zmm1 {%k1} {z}
-; AVX512F-32-NEXT:    vpbroadcastw %ax, %zmm2
+; AVX512F-32-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; AVX512F-32-NEXT:    vpbroadcastw %eax, %zmm1 {%k1} {z}
+; AVX512F-32-NEXT:    vpbroadcastw %eax, %zmm0 {%k1}
+; AVX512F-32-NEXT:    vpbroadcastw %eax, %zmm2
 ; AVX512F-32-NEXT:    vpaddw %zmm0, %zmm2, %zmm0
 ; AVX512F-32-NEXT:    vpaddw %zmm0, %zmm1, %zmm0
 ; AVX512F-32-NEXT:    retl

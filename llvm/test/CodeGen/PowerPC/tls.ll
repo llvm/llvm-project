@@ -1,6 +1,6 @@
-; RUN: llc -relocation-model=static -verify-machineinstrs -O0 < %s -march=ppc64 -mcpu=ppc64 | FileCheck -check-prefix=OPT0 %s
-; RUN: llc -relocation-model=static -verify-machineinstrs -O1 < %s -march=ppc64 -mcpu=ppc64 | FileCheck -check-prefix=OPT1 %s
-; RUN: llc -verify-machineinstrs -O0 < %s -march=ppc32 -mcpu=ppc | FileCheck -check-prefix=OPT0-PPC32 %s
+; RUN: llc -relocation-model=static -verify-machineinstrs -O0 < %s -mcpu=ppc64 | FileCheck -check-prefix=OPT0 %s
+; RUN: llc -relocation-model=static -verify-machineinstrs -O1 < %s -mcpu=ppc64 | FileCheck -check-prefix=OPT1 %s
+; RUN: llc -verify-machineinstrs -O0 < %s -mtriple=ppc32-- -mcpu=ppc | FileCheck -check-prefix=OPT0-PPC32 %s
 
 target triple = "powerpc64-unknown-linux-gnu"
 

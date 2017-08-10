@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86
+; RUN: llc < %s
 ; PR1049
 target datalayout = "e-p:32:32"
 target triple = "i686-pc-linux-gnu"

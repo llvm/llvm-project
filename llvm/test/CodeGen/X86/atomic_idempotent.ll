@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=x86-64 -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=X64
-; RUN: llc < %s -march=x86 -mattr=+sse2 -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=X32
+; RUN: llc < %s -mtriple=x86_64-- -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=X64
+; RUN: llc < %s -mtriple=i686-- -mattr=+sse2 -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=X32
 
 ; On x86, an atomic rmw operation that does not modify the value in memory
 ; (such as atomic add 0) can be replaced by an mfence followed by a mov.

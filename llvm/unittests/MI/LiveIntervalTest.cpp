@@ -45,9 +45,8 @@ std::unique_ptr<TargetMachine> createTargetMachine() {
     return nullptr;
 
   TargetOptions Options;
-  return std::unique_ptr<TargetMachine>(
-      T->createTargetMachine("AMDGPU", "", "", Options, None,
-                             CodeModel::Default, CodeGenOpt::Aggressive));
+  return std::unique_ptr<TargetMachine>(T->createTargetMachine(
+      "AMDGPU", "", "", Options, None, None, CodeGenOpt::Aggressive));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,

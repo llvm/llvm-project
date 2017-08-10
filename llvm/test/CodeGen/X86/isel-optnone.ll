@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=x86 < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=i686-- < %s | FileCheck %s
 
 define i32* @fooOptnone(i32* %p, i32* %q, i32** %z) #0 {
 entry:

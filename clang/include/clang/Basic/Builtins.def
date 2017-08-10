@@ -700,6 +700,21 @@ BUILTIN(__atomic_signal_fence, "vi", "n")
 BUILTIN(__atomic_always_lock_free, "izvCD*", "n")
 BUILTIN(__atomic_is_lock_free, "izvCD*", "n")
 
+// OpenCL 2.0 atomic builtins.
+ATOMIC_BUILTIN(__opencl_atomic_init, "v.", "t")
+ATOMIC_BUILTIN(__opencl_atomic_load, "v.", "t")
+ATOMIC_BUILTIN(__opencl_atomic_store, "v.", "t")
+ATOMIC_BUILTIN(__opencl_atomic_exchange, "v.", "t")
+ATOMIC_BUILTIN(__opencl_atomic_compare_exchange_strong, "v.", "t")
+ATOMIC_BUILTIN(__opencl_atomic_compare_exchange_weak, "v.", "t")
+ATOMIC_BUILTIN(__opencl_atomic_fetch_add, "v.", "t")
+ATOMIC_BUILTIN(__opencl_atomic_fetch_sub, "v.", "t")
+ATOMIC_BUILTIN(__opencl_atomic_fetch_and, "v.", "t")
+ATOMIC_BUILTIN(__opencl_atomic_fetch_or, "v.", "t")
+ATOMIC_BUILTIN(__opencl_atomic_fetch_xor, "v.", "t")
+ATOMIC_BUILTIN(__opencl_atomic_fetch_min, "v.", "t")
+ATOMIC_BUILTIN(__opencl_atomic_fetch_max, "v.", "t")
+
 #undef ATOMIC_BUILTIN
 
 // Non-overloaded atomic builtins.
@@ -1398,8 +1413,10 @@ LANGBUILTIN(get_pipe_max_packets, "Ui.", "tn", OCLC20_LANG)
 // OpenCL v2.0 s6.13.17 - Enqueue kernel functions.
 // Custom builtin check allows to perform special check of passed block arguments.
 LANGBUILTIN(enqueue_kernel, "i.", "tn", OCLC20_LANG)
-LANGBUILTIN(get_kernel_work_group_size, "i.", "tn", OCLC20_LANG)
-LANGBUILTIN(get_kernel_preferred_work_group_size_multiple, "i.", "tn", OCLC20_LANG)
+LANGBUILTIN(get_kernel_work_group_size, "Ui.", "tn", OCLC20_LANG)
+LANGBUILTIN(get_kernel_preferred_work_group_size_multiple, "Ui.", "tn", OCLC20_LANG)
+LANGBUILTIN(get_kernel_max_sub_group_size_for_ndrange, "Ui.", "tn", OCLC20_LANG)
+LANGBUILTIN(get_kernel_sub_group_count_for_ndrange, "Ui.", "tn", OCLC20_LANG)
 
 // OpenCL v2.0 s6.13.9 - Address space qualifier functions.
 LANGBUILTIN(to_global, "v*v*", "tn", OCLC20_LANG)

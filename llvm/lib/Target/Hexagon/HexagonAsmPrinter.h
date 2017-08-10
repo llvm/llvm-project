@@ -1,4 +1,4 @@
-//===-- HexagonAsmPrinter.h - Print machine code to an Hexagon .s file ----===//
+//===- HexagonAsmPrinter.h - Print machine code to an Hexagon .s file -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,14 +15,20 @@
 #define LLVM_LIB_TARGET_HEXAGON_HEXAGONASMPRINTER_H
 
 #include "Hexagon.h"
-#include "HexagonTargetMachine.h"
+#include "HexagonSubtarget.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include <memory>
 
 namespace llvm {
+
+class MachineInstr;
+class MCInst;
+class raw_ostream;
+class TargetMachine;
+
   class HexagonAsmPrinter : public AsmPrinter {
-    const HexagonSubtarget *Subtarget;
+    const HexagonSubtarget *Subtarget = nullptr;
 
   public:
     explicit HexagonAsmPrinter(TargetMachine &TM,
@@ -45,7 +51,6 @@ namespace llvm {
     void HexagonProcessInstruction(MCInst &Inst,
                                    const MachineInstr &MBB);
 
-
     void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
     bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                          unsigned AsmVariant, const char *ExtraCode,
@@ -57,6 +62,6 @@ namespace llvm {
     static const char *getRegisterName(unsigned RegNo);
   };
 
-} // end of llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_HEXAGON_HEXAGONASMPRINTER_H

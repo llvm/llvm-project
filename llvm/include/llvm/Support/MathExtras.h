@@ -424,7 +424,7 @@ constexpr inline bool isPowerOf2_32(uint32_t Value) {
 
 /// Return true if the argument is a power of two > 0 (64 bit edition.)
 constexpr inline bool isPowerOf2_64(uint64_t Value) {
-  return Value && !(Value & (Value - int64_t(1L)));
+  return Value && !(Value & (Value - 1));
 }
 
 /// Return a byte-swapped representation of the 16-bit argument.
@@ -685,6 +685,11 @@ inline uint64_t alignTo(uint64_t Value, uint64_t Align, uint64_t Skew = 0) {
 template <uint64_t Align> constexpr inline uint64_t alignTo(uint64_t Value) {
   static_assert(Align != 0u, "Align must be non-zero");
   return (Value + Align - 1) / Align * Align;
+}
+
+/// Returns the integer ceil(Numerator / Denominator).
+inline uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
+  return alignTo(Numerator, Denominator) / Denominator;
 }
 
 /// \c alignTo for contexts where a constant expression is required.

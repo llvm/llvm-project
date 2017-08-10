@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 -mcpu=corei7 | grep rol | count 2
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7 | grep rol | count 2
 
 define i64 @test1(i64 %x) nounwind  {
 entry:
