@@ -328,8 +328,10 @@ PreservedAnalyses
 polly::CodeGenerationPass::run(Scop &S, ScopAnalysisManager &SAM,
                                ScopStandardAnalysisResults &AR, SPMUpdater &U) {
   auto &AI = SAM.getResult<IslAstAnalysis>(S, AR);
-  if (CodeGen(S, AI, AR.LI, AR.DT, AR.SE, AR.RI))
+  if (CodeGen(S, AI, AR.LI, AR.DT, AR.SE, AR.RI)) {
+    U.invalidateScop(S);
     return PreservedAnalyses::none();
+  }
 
   return PreservedAnalyses::all();
 }

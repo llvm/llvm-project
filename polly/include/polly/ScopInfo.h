@@ -3044,6 +3044,13 @@ private:
   /// A map of Region to its Scop object containing
   ///        Polly IR of static control part.
   RegionToScopMapTy RegionToScopMap;
+  const DataLayout &DL;
+  ScopDetection &SD;
+  ScalarEvolution &SE;
+  LoopInfo &LI;
+  AliasAnalysis &AA;
+  DominatorTree &DT;
+  AssumptionCache &AC;
 
 public:
   ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
@@ -3062,6 +3069,15 @@ public:
       return MapIt->second.get();
     return nullptr;
   }
+
+  /// Recompute the Scop-Information for a function.
+  ///
+  /// This invalidates any iterators.
+  void recompute();
+
+  /// Handle invalidation explicitly
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &Inv);
 
   iterator begin() { return RegionToScopMap.begin(); }
   iterator end() { return RegionToScopMap.end(); }

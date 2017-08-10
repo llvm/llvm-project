@@ -1,4 +1,4 @@
-; RUN: opt -polly-canonicalize %loadPolly -polly-mse -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-canonicalize -polly-mse -analyze < %s | FileCheck %s
 ;
 ; Verify that the accesses are correctly expanded
 ;

@@ -288,6 +288,8 @@ static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
   isl::ctx Ctx = Build.get_ctx();
   isl::id_to_ast_expr RefToExpr = isl::id_to_ast_expr::alloc(Ctx, 0);
 
+  Stmt->setAstBuild(Build);
+
   for (MemoryAccess *Acc : *Stmt) {
     isl::map AddrFunc = Acc->getAddressFunction();
     AddrFunc = AddrFunc.intersect_domain(Stmt->getDomain());

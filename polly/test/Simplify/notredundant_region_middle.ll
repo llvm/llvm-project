@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
 ;
 ; Do not remove redundant stores in the middle of region statements.
 ; The store in region_true could be removed, but in practice we do try to

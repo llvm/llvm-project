@@ -180,18 +180,26 @@ struct ScopStandardAnalysisResults {
 
 class SPMUpdater {
 public:
-  SPMUpdater(SmallPriorityWorklist<Scop *, 4> &Worklist,
+  SPMUpdater(SmallPriorityWorklist<Region *, 4> &Worklist,
              ScopAnalysisManager &SAM)
-      : Worklist(Worklist), SAM(SAM) {}
+      : Worklist(Worklist), SAM(SAM), InvalidateCurrentScop(false) {}
 
-  void SkipScop(Scop &S) {
-    if (Worklist.erase(&S))
-      SAM.clear(S);
+  bool invalidateCurrentScop() const { return InvalidateCurrentScop; }
+
+  void invalidateScop(Scop &S) {
+    if (&S == CurrentScop)
+      InvalidateCurrentScop = true;
+
+    Worklist.erase(&S.getRegion());
+    SAM.clear(S);
   }
 
 private:
-  SmallPriorityWorklist<Scop *, 4> &Worklist;
+  Scop *CurrentScop;
+  bool InvalidateCurrentScop;
+  SmallPriorityWorklist<Region *, 4> &Worklist;
   ScopAnalysisManager &SAM;
+  template <typename ScopPassT> friend class FunctionToScopPassAdaptor;
 };
 
 template <typename ScopPassT>
@@ -202,9 +210,15 @@ public:
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
     PreservedAnalyses PA = PreservedAnalyses::all();
-    auto &Scops = AM.getResult<ScopInfoAnalysis>(F);
-    if (Scops.empty())
+    auto &SD = AM.getResult<ScopAnalysis>(F);
+    auto &SI = AM.getResult<ScopInfoAnalysis>(F);
+    if (SI.empty())
       return PA;
+
+    SmallPriorityWorklist<Region *, 4> Worklist;
+    for (auto &S : SI)
+      if (S.second)
+        Worklist.insert(S.first);
 
     ScopStandardAnalysisResults AR = {AM.getResult<DominatorTreeAnalysis>(F),
                                       AM.getResult<ScopInfoAnalysis>(F),
@@ -215,19 +229,23 @@ public:
     ScopAnalysisManager &SAM =
         AM.getResult<ScopAnalysisManagerFunctionProxy>(F).getManager();
 
-    SmallPriorityWorklist<Scop *, 4> Worklist;
     SPMUpdater Updater{Worklist, SAM};
 
-    for (auto &S : Scops)
-      if (auto *scop = S.second.get())
-        Worklist.insert(scop);
-
     while (!Worklist.empty()) {
-      Scop *scop = Worklist.pop_back_val();
+      Region *R = Worklist.pop_back_val();
+      if (!SD.isMaxRegionInScop(*R))
+        continue;
+      Scop *scop = SI.getScop(R);
+      if (!scop)
+        continue;
+      Updater.CurrentScop = scop;
+      Updater.InvalidateCurrentScop = false;
       PreservedAnalyses PassPA = Pass.run(*scop, SAM, AR, Updater);
 
       SAM.invalidate(*scop, PassPA);
       PA.intersect(std::move(PassPA));
+      if (Updater.invalidateCurrentScop())
+        SI.recompute();
     };
 
     PA.preserveSet<AllAnalysesOn<Scop>>();

@@ -70,7 +70,7 @@ public:
   }
   bool isLocal() const { return IsLocal; }
   InputFile *getFile() const;
-  bool isPreemptible() const;
+  bool isPreemptible() const { return IsPreemptible; }
   StringRef getName() const { return Name; }
   uint8_t getVisibility() const { return StOther & 0x3; }
   void parseSymbolVersion();
@@ -121,6 +121,8 @@ public:
   // True if this symbol is in the Igot sub-section of the .got.plt or .got.
   unsigned IsInIgot : 1;
 
+  unsigned IsPreemptible : 1;
+
   // The following fields have the same meaning as the ELF symbol attributes.
   uint8_t Type;    // symbol type
   uint8_t StOther; // st_other field value
@@ -159,13 +161,17 @@ public:
     return S->kind() == SymbolBody::DefinedCommonKind;
   }
 
-  // The output offset of this common symbol in the output bss. Computed by the
-  // writer.
-  uint64_t Offset;
+  // True if this symbol is not GC'ed. Liveness is usually a notion of
+  // input sections and not of symbols, but since common symbols don't
+  // belong to any input section, their liveness is managed by this bit.
+  bool Live;
 
   // The maximum alignment we have seen for this symbol.
   uint32_t Alignment;
 
+  // The output offset of this common symbol in the output bss.
+  // Computed by the writer.
+  uint64_t Offset;
   uint64_t Size;
 };
 
