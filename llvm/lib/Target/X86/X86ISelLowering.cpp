@@ -33386,7 +33386,8 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
       SDValue NewLd = DAG.getLoad(LdVT, LdDL, Ld->getChain(), Ld->getBasePtr(),
                                   Ld->getPointerInfo(), Ld->getAlignment(),
                                   Ld->getMemOperand()->getFlags());
-      SDValue NewChain = NewLd.getValue(1);
+      // Make sure new load is placed in same chain order.
+      SDValue NewChain = DAG.makeEquivalentMemoryOrdering(Ld, NewLd);
       if (TokenFactorIndex >= 0) {
         Ops.push_back(NewChain);
         NewChain = DAG.getNode(ISD::TokenFactor, LdDL, MVT::Other, Ops);
@@ -33407,11 +33408,12 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                                Ld->getPointerInfo().getWithOffset(4),
                                MinAlign(Ld->getAlignment(), 4),
                                Ld->getMemOperand()->getFlags());
+    // Make sure new loads are placed in same chain order.
+    SDValue NewChain = DAG.makeEquivalentMemoryOrdering(Ld, LoLd);
+    NewChain = DAG.makeEquivalentMemoryOrdering(Ld, HiLd);
 
-    SDValue NewChain = LoLd.getValue(1);
     if (TokenFactorIndex >= 0) {
-      Ops.push_back(LoLd);
-      Ops.push_back(HiLd);
+      Ops.push_back(NewChain);
       NewChain = DAG.getNode(ISD::TokenFactor, LdDL, MVT::Other, Ops);
     }
 
