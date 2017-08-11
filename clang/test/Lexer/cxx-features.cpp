@@ -22,10 +22,6 @@
 
 // --- C++17 features ---
 
-#if check(variadic_using, 0, 0, 0, 201611) // FIXME: provisional name
-#error "wrong value for __cpp_variadic_using"
-#endif
-
 #if check(hex_float, 0, 0, 0, 201603)
 #error "wrong value for __cpp_hex_float"
 #endif
@@ -60,6 +56,10 @@
 
 // static_assert checked below
 
+#if check(deduction_guides, 0, 0, 0, 201611) // FIXME: provisional name
+#error "wrong value for __cpp_deduction_guides"
+#endif
+
 #if check(template_auto, 0, 0, 0, 201606) // FIXME: provisional name
 #error "wrong value for __cpp_template_auto"
 #endif
@@ -80,6 +80,10 @@
 
 // inheriting_constructors checked below
 
+#if check(variadic_using, 0, 0, 0, 201611) // FIXME: provisional name
+#error "wrong value for __cpp_variadic_using"
+#endif
+
 #if check(aggregate_bases, 0, 0, 0, 201603)
 #error "wrong value for __cpp_aggregate_bases"
 #endif
@@ -94,10 +98,6 @@
 
 #if check(template_template_args, 0, 0, 0, 0) // FIXME: should be 201611 when feature is enabled
 #error "wrong value for __cpp_template_template_args"
-#endif
-
-#if check(deduction_guides, 0, 0, 0, 201611) // FIXME: provisional name
-#error "wrong value for __cpp_deduction_guides"
 #endif
 
 // --- C++14 features ---
