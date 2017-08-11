@@ -24,34 +24,34 @@
 template <class T = void>
 struct identity : std::unary_function<T, T>
 {
-    constexpr const T& operator()(const T& __x) const { return __x;}
+    constexpr const T& operator()(const T& x) const { return x;}
 };
 
 template <>
 struct identity<void>
 {
     template <class T>
-    constexpr auto operator()(T&& __x) const
-    _NOEXCEPT_(noexcept(_VSTD::forward<T>(__x)))
-    -> decltype        (_VSTD::forward<T>(__x))
-        { return        _VSTD::forward<T>(__x); }
+    constexpr auto operator()(T&& x) const
+    _NOEXCEPT_(noexcept(_VSTD::forward<T>(x)))
+    -> decltype        (_VSTD::forward<T>(x))
+        { return        _VSTD::forward<T>(x); }
 };
 
 
 template <class T = void>
 struct twice
 {
-    constexpr const T operator()(const T& __x) const noexcept { return 2 * __x; }
+    constexpr const T operator()(const T& x) const noexcept { return 2 * x; }
 };
 
 template <>
 struct twice<void>
 {
     template <class T>
-    constexpr auto operator()(const T& __x) const
-    _NOEXCEPT_(noexcept(2 * __x))
-    -> decltype        (2 * __x)
-        { return        2 * __x; }
+    constexpr auto operator()(const T& x) const
+    _NOEXCEPT_(noexcept(2 * x))
+    -> decltype        (2 * x)
+        { return        2 * x; }
 };
 
 template <class Iter1, class T, class BOp, class UOp>

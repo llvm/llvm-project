@@ -1,3 +1,4 @@
+
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -28,17 +29,17 @@
 template <class T = void>
 struct identity : std::unary_function<T, T>
 {
-    constexpr const T& operator()(const T& __x) const { return __x;}
+    constexpr const T& operator()(const T& x) const { return x;}
 };
 
 template <>
 struct identity<void>
 {
     template <class T>
-    constexpr auto operator()(T&& __x) const
-    _NOEXCEPT_(noexcept(_VSTD::forward<T>(__x)))
-    -> decltype        (_VSTD::forward<T>(__x))
-        { return        _VSTD::forward<T>(__x); }
+    constexpr auto operator()(T&& x) const
+    _NOEXCEPT_(noexcept(_VSTD::forward<T>(x)))
+    -> decltype        (_VSTD::forward<T>(x))
+        { return        _VSTD::forward<T>(x); }
 };
 
 template <class Iter1, class BOp, class UOp, class Iter2>
