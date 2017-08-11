@@ -425,6 +425,7 @@ public:
     Argument(StringRef Key, unsigned N);
     Argument(StringRef Key, uint64_t N);
     Argument(StringRef Key, bool B) : Key(Key), Val(B ? "true" : "false") {}
+    Argument(StringRef Key, DebugLoc dl);
   };
 
   /// \p PassName is the name of the pass emitting this diagnostic. \p

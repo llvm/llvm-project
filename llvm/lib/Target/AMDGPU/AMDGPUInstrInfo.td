@@ -74,6 +74,8 @@ def AMDGPUAddeSubeOp : SDTypeProfile<2, 3,
   [SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisVT<0, i32>, SDTCisVT<1, i1>, SDTCisVT<4, i1>]
 >;
 
+def SDT_AMDGPUTCRET : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
+
 //===----------------------------------------------------------------------===//
 // AMDGPU DAG Nodes
 //
@@ -96,6 +98,10 @@ def AMDGPUcall : SDNode<"AMDGPUISD::CALL",
   SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
   SDNPVariadic]
+>;
+
+def AMDGPUtc_return: SDNode<"AMDGPUISD::TC_RETURN", SDT_AMDGPUTCRET,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 
 def AMDGPUtrap : SDNode<"AMDGPUISD::TRAP",

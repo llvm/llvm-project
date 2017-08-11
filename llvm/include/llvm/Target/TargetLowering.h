@@ -2723,6 +2723,9 @@ public:
                         bool foldBooleans, DAGCombinerInfo &DCI,
                         const SDLoc &dl) const;
 
+  // For targets which wrap address, unwrap for analysis.
+  virtual SDValue unwrapAddress(SDValue N) const { return N; }
+
   /// Returns true (and the GlobalValue and the offset) if the node is a
   /// GlobalAddress + offset.
   virtual bool

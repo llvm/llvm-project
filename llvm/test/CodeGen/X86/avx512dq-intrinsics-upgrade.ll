@@ -155,3 +155,141 @@ define <8 x i64>@test_int_x86_avx512_cvtmask2q_512(i8 %x0) {
   %res = call <8 x i64> @llvm.x86.avx512.cvtmask2q.512(i8 %x0)
   ret <8 x i64> %res
 }
+
+declare <16 x float> @llvm.x86.avx512.mask.broadcastf32x8.512(<8 x float>, <16 x float>, i16)
+
+define <16 x float>@test_int_x86_avx512_mask_broadcastf32x8_512(<8 x float> %x0, <16 x float> %x2, i16 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf32x8_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; CHECK-NEXT:    vinsertf32x8 $1, %ymm0, %zmm0, %zmm2
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vinsertf32x8 $1, %ymm0, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vaddps %zmm1, %zmm2, %zmm1
+; CHECK-NEXT:    vinsertf32x8 $1, %ymm0, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vaddps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+
+  %res1 = call <16 x float> @llvm.x86.avx512.mask.broadcastf32x8.512(<8 x float> %x0, <16 x float> %x2, i16 -1)
+  %res2 = call <16 x float> @llvm.x86.avx512.mask.broadcastf32x8.512(<8 x float> %x0, <16 x float> %x2, i16 %mask)
+  %res3 = call <16 x float> @llvm.x86.avx512.mask.broadcastf32x8.512(<8 x float> %x0, <16 x float> zeroinitializer, i16 %mask)
+  %res4 = fadd <16 x float> %res1, %res2
+  %res5 = fadd <16 x float> %res3, %res4
+  ret <16 x float> %res5
+}
+
+define <16 x float>@test_int_x86_avx512_mask_broadcastf32x8_512_load(<8 x float>* %x0ptr, <16 x float> %x2, i16 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf32x8_512_load:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vbroadcastf32x8 {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    retq
+
+  %x0 = load <8 x float>, <8 x float>* %x0ptr
+  %res = call <16 x float> @llvm.x86.avx512.mask.broadcastf32x8.512(<8 x float> %x0, <16 x float> %x2, i16 %mask)
+  ret <16 x float> %res
+}
+
+declare <8 x double> @llvm.x86.avx512.mask.broadcastf64x2.512(<2 x double>, <8 x double>, i8)
+
+define <8 x double>@test_int_x86_avx512_mask_broadcastf64x2_512(<2 x double> %x0, <8 x double> %x2, i8 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf64x2_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm2
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vaddpd %zmm1, %zmm2, %zmm1
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+
+  %res1 = call <8 x double> @llvm.x86.avx512.mask.broadcastf64x2.512(<2 x double> %x0, <8 x double> %x2, i8 -1)
+  %res2 = call <8 x double> @llvm.x86.avx512.mask.broadcastf64x2.512(<2 x double> %x0, <8 x double> %x2, i8 %mask)
+  %res3 = call <8 x double> @llvm.x86.avx512.mask.broadcastf64x2.512(<2 x double> %x0, <8 x double> zeroinitializer, i8 %mask)
+  %res4 = fadd <8 x double> %res1, %res2
+  %res5 = fadd <8 x double> %res3, %res4
+  ret <8 x double> %res5
+}
+
+define <8 x double>@test_int_x86_avx512_mask_broadcastf64x2_512_load(<2 x double>* %x0ptr, <8 x double> %x2, i8 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf64x2_512_load:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vbroadcastf64x2 {{.*#+}} zmm0 {%k1} = mem[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    retq
+
+  %x0 = load <2 x double>, <2 x double>* %x0ptr
+  %res = call <8 x double> @llvm.x86.avx512.mask.broadcastf64x2.512(<2 x double> %x0, <8 x double> %x2, i8 %mask)
+  ret <8 x double> %res
+}
+
+declare <16 x i32> @llvm.x86.avx512.mask.broadcasti32x8.512(<8 x i32>, <16 x i32>, i16)
+
+define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x8_512(<8 x i32> %x0, <16 x i32> %x2, i16 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti32x8_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; CHECK-NEXT:    vinserti32x8 $1, %ymm0, %zmm0, %zmm2
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vinserti32x8 $1, %ymm0, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
+; CHECK-NEXT:    vinserti32x8 $1, %ymm0, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+
+  %res1 = call <16 x i32> @llvm.x86.avx512.mask.broadcasti32x8.512(<8 x i32> %x0, <16 x i32> %x2, i16 -1)
+  %res2 = call <16 x i32> @llvm.x86.avx512.mask.broadcasti32x8.512(<8 x i32> %x0, <16 x i32> %x2, i16 %mask)
+  %res3 = call <16 x i32> @llvm.x86.avx512.mask.broadcasti32x8.512(<8 x i32> %x0, <16 x i32> zeroinitializer, i16 %mask)
+  %res4 = add <16 x i32> %res1, %res2
+  %res5 = add <16 x i32> %res3, %res4
+  ret <16 x i32> %res5
+}
+
+define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x8_512_load(<8 x i32>* %x0ptr, <16 x i32> %x2, i16 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti32x8_512_load:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vbroadcasti32x8 {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    retq
+
+  %x0 = load <8 x i32>, <8 x i32>* %x0ptr
+  %res = call <16 x i32> @llvm.x86.avx512.mask.broadcasti32x8.512(<8 x i32> %x0, <16 x i32> %x2, i16 %mask)
+  ret <16 x i32> %res
+}
+
+declare <8 x i64> @llvm.x86.avx512.mask.broadcasti64x2.512(<2 x i64>, <8 x i64>, i8)
+
+define <8 x i64>@test_int_x86_avx512_mask_broadcasti64x2_512(<2 x i64> %x0, <8 x i64> %x2, i8 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti64x2_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vpaddq %zmm1, %zmm2, %zmm1
+; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+
+  %res1 = call <8 x i64> @llvm.x86.avx512.mask.broadcasti64x2.512(<2 x i64> %x0, <8 x i64> %x2, i8 -1)
+  %res2 = call <8 x i64> @llvm.x86.avx512.mask.broadcasti64x2.512(<2 x i64> %x0, <8 x i64> %x2, i8 %mask)
+  %res3 = call <8 x i64> @llvm.x86.avx512.mask.broadcasti64x2.512(<2 x i64> %x0, <8 x i64> zeroinitializer, i8 %mask)
+  %res4 = add <8 x i64> %res1, %res2
+  %res5 = add <8 x i64> %res3, %res4
+  ret <8 x i64> %res5
+}
+
+define <8 x i64>@test_int_x86_avx512_mask_broadcasti64x2_512_load(<2 x i64>* %x0ptr, <8 x i64> %x2, i8 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti64x2_512_load:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vbroadcasti64x2 {{.*#+}} zmm0 {%k1} = mem[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    retq
+
+  %x0 = load <2 x i64>, <2 x i64>* %x0ptr
+  %res = call <8 x i64> @llvm.x86.avx512.mask.broadcasti64x2.512(<2 x i64> %x0, <8 x i64> %x2, i8 %mask)
+  ret <8 x i64> %res
+}

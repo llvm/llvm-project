@@ -545,12 +545,11 @@ define i64 @test9b(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 ;
 ; MCU-LABEL: test9b:
 ; MCU:       # BB#0:
-; MCU-NEXT:    orl %edx, %eax
-; MCU-NEXT:    movl $-1, %edx
-; MCU-NEXT:    je .LBB10_2
-; MCU-NEXT:  # BB#1:
+; MCU-NEXT:    movl %edx, %ecx
 ; MCU-NEXT:    xorl %edx, %edx
-; MCU-NEXT:  .LBB10_2:
+; MCU-NEXT:    orl %ecx, %eax
+; MCU-NEXT:    sete %dl
+; MCU-NEXT:    negl %edx
 ; MCU-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; MCU-NEXT:    orl %edx, %eax
 ; MCU-NEXT:    orl {{[0-9]+}}(%esp), %edx
@@ -563,23 +562,14 @@ define i64 @test9b(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 
 ;; Select between -1 and 1.
 define i64 @test10(i64 %x, i64 %y) nounwind readnone ssp noredzone {
-; GENERIC-LABEL: test10:
-; GENERIC:       ## BB#0:
-; GENERIC-NEXT:    cmpq $1, %rdi
-; GENERIC-NEXT:    sbbq %rax, %rax
-; GENERIC-NEXT:    orq $1, %rax
-; GENERIC-NEXT:    retq
-; GENERIC-NEXT:    ## -- End function
-;
-; ATOM-LABEL: test10:
-; ATOM:       ## BB#0:
-; ATOM-NEXT:    cmpq $1, %rdi
-; ATOM-NEXT:    sbbq %rax, %rax
-; ATOM-NEXT:    orq $1, %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
-; ATOM-NEXT:    ## -- End function
+; CHECK-LABEL: test10:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    leaq -1(%rax,%rax), %rax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:    ## -- End function
 ;
 ; MCU-LABEL: test10:
 ; MCU:       # BB#0:
@@ -747,29 +737,22 @@ define i32 @test13(i32 %a, i32 %b) nounwind {
 }
 
 define i32 @test14(i32 %a, i32 %b) nounwind {
-; GENERIC-LABEL: test14:
-; GENERIC:       ## BB#0:
-; GENERIC-NEXT:    cmpl %esi, %edi
-; GENERIC-NEXT:    sbbl %eax, %eax
-; GENERIC-NEXT:    notl %eax
-; GENERIC-NEXT:    retq
-; GENERIC-NEXT:    ## -- End function
-;
-; ATOM-LABEL: test14:
-; ATOM:       ## BB#0:
-; ATOM-NEXT:    cmpl %esi, %edi
-; ATOM-NEXT:    sbbl %eax, %eax
-; ATOM-NEXT:    notl %eax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
-; ATOM-NEXT:    ## -- End function
+; CHECK-LABEL: test14:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:    ## -- End function
 ;
 ; MCU-LABEL: test14:
 ; MCU:       # BB#0:
+; MCU-NEXT:    xorl %ecx, %ecx
 ; MCU-NEXT:    cmpl %edx, %eax
-; MCU-NEXT:    sbbl %eax, %eax
-; MCU-NEXT:    notl %eax
+; MCU-NEXT:    setae %cl
+; MCU-NEXT:    negl %ecx
+; MCU-NEXT:    movl %ecx, %eax
 ; MCU-NEXT:    retl
   %c = icmp uge i32 %a, %b
   %d = sext i1 %c to i32
@@ -826,12 +809,11 @@ define i64 @test16(i64 %x) nounwind uwtable readnone ssp {
 ;
 ; MCU-LABEL: test16:
 ; MCU:       # BB#0: # %entry
-; MCU-NEXT:    orl %edx, %eax
-; MCU-NEXT:    movl $-1, %eax
-; MCU-NEXT:    jne .LBB18_2
-; MCU-NEXT:  # BB#1: # %entry
+; MCU-NEXT:    movl %eax, %ecx
 ; MCU-NEXT:    xorl %eax, %eax
-; MCU-NEXT:  .LBB18_2: # %entry
+; MCU-NEXT:    orl %edx, %ecx
+; MCU-NEXT:    setne %al
+; MCU-NEXT:    negl %eax
 ; MCU-NEXT:    movl %eax, %edx
 ; MCU-NEXT:    retl
 entry:
@@ -844,14 +826,16 @@ define i16 @test17(i16 %x) nounwind {
 ; GENERIC-LABEL: test17:
 ; GENERIC:       ## BB#0: ## %entry
 ; GENERIC-NEXT:    negw %di
-; GENERIC-NEXT:    sbbw %ax, %ax
+; GENERIC-NEXT:    sbbl %eax, %eax
+; GENERIC-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; GENERIC-NEXT:    retq
 ; GENERIC-NEXT:    ## -- End function
 ;
 ; ATOM-LABEL: test17:
 ; ATOM:       ## BB#0: ## %entry
 ; ATOM-NEXT:    negw %di
-; ATOM-NEXT:    sbbw %ax, %ax
+; ATOM-NEXT:    sbbl %eax, %eax
+; ATOM-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; ATOM-NEXT:    nop
 ; ATOM-NEXT:    nop
 ; ATOM-NEXT:    nop
@@ -862,7 +846,8 @@ define i16 @test17(i16 %x) nounwind {
 ; MCU-LABEL: test17:
 ; MCU:       # BB#0: # %entry
 ; MCU-NEXT:    negw %ax
-; MCU-NEXT:    sbbw %ax, %ax
+; MCU-NEXT:    sbbl %eax, %eax
+; MCU-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; MCU-NEXT:    retl
 entry:
   %cmp = icmp ne i16 %x, 0

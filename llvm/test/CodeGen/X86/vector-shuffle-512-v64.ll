@@ -5,25 +5,10 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vbmi | FileCheck %s --check-prefix=ALL --check-prefix=AVX512 --check-prefix=AVX512VBMI
 
 define <64 x i8> @shuffle_v64i8_02_03_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u(<64 x i8> %a)  {
-; AVX512F-LABEL: shuffle_v64i8_02_03_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: shuffle_v64i8_02_03_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u:
-; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vpsrld $16, %zmm0, %zmm0
-; AVX512BW-NEXT:    retq
-;
-; AVX512DQ-LABEL: shuffle_v64i8_02_03_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u:
-; AVX512DQ:       # BB#0:
-; AVX512DQ-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX512DQ-NEXT:    retq
-;
-; AVX512VBMI-LABEL: shuffle_v64i8_02_03_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u:
-; AVX512VBMI:       # BB#0:
-; AVX512VBMI-NEXT:    vpsrld $16, %zmm0, %zmm0
-; AVX512VBMI-NEXT:    retq
+; ALL-LABEL: shuffle_v64i8_02_03_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u_u:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpsrld $16, %xmm0, %xmm0
+; ALL-NEXT:    retq
   %b = shufflevector <64 x i8> %a, <64 x i8> undef, <64 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <64 x i8> %b
 }

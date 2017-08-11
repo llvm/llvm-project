@@ -51,8 +51,10 @@ define i32 @t3() nounwind readonly {
 ;
 ; X64-LABEL: t3:
 ; X64:       # BB#0: # %entry
-; X64-NEXT:    cmpl $1, %eax
-; X64-NEXT:    sbbq %rax, %rax
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    testl %eax, %eax
+; X64-NEXT:    sete %al
+; X64-NEXT:    negq %rax
 ; X64-NEXT:    cmpq %rax, %rax
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
@@ -75,13 +77,11 @@ if.end:
 define i32 @t4(i64 %x) nounwind readnone ssp {
 ; X32-LABEL: t4:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl $-1, %eax
-; X32-NEXT:    je .LBB3_2
-; X32-NEXT:  # BB#1:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    xorl %eax, %eax
-; X32-NEXT:  .LBB3_2:
+; X32-NEXT:    orl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    sete %al
+; X32-NEXT:    negl %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t4:
