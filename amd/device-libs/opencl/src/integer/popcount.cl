@@ -57,14 +57,12 @@ popcount(uint x)
 UEXPATTR long
 popcount(long x)
 {
-    uint2 y = as_uint2(x);
-    return (long)(__ockl_popcount_u32(y.lo) + __ockl_popcount_u32(y.hi));
+    return (long)__ockl_popcount_u64((ulong)x);
 }
 
 UEXPATTR ulong
 popcount(ulong x)
 {
-    uint2 y = as_uint2(x);
-    return (ulong)(__ockl_popcount_u32(y.lo) + __ockl_popcount_u32(y.hi));
+    return __ockl_popcount_u64(x);
 }
 

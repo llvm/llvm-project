@@ -57,16 +57,15 @@ ctz(uint x)
     return __ockl_ctz_u32(x);
 }
 
-__attribute__((always_inline, const)) static ulong
-ctz_u64(ulong x)
+UEXPATTR long
+ctz(long x)
 {
-    uint xlo = (uint)x;
-    uint xhi = (uint)(x >> 32);
-    uint zlo = __ockl_ctz_u32(xlo);
-    uint zhi = __ockl_ctz_u32(xhi) + 32u;
-    return (ulong)(xlo == 0 ? zhi : zlo);
+    return (long)__ockl_ctz_u64((ulong)x);
 }
 
-extern __attribute__((overloadable, always_inline, const, alias("ctz_u64"))) ulong ctz(ulong);
-extern __attribute__((overloadable, always_inline, const, alias("ctz_u64")))  long ctz(long);
+UEXPATTR ulong
+ctz(ulong x)
+{
+    return __ockl_ctz_u64(x);
+}
 
