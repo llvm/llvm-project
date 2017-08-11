@@ -49,7 +49,7 @@ typedef void *CXRefactoringOptionSet;
  * \brief Returns a new option set.
  */
 CINDEX_LINKAGE
-CXRefactoringOptionSet clang_RefactoringOptionSet_create();
+CXRefactoringOptionSet clang_RefactoringOptionSet_create(void);
 
 /**
  * \brief Parses and returns a new option set or NULL if the given string is
