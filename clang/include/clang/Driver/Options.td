@@ -2019,6 +2019,10 @@ def mdspr2 : Flag<["-"], "mdspr2">, Group<m_Group>;
 def mno_dspr2 : Flag<["-"], "mno-dspr2">, Group<m_Group>;
 def msingle_float : Flag<["-"], "msingle-float">, Group<m_Group>;
 def mdouble_float : Flag<["-"], "mdouble-float">, Group<m_Group>;
+def mmadd4 : Flag<["-"], "mmadd4">, Group<m_Group>,
+  HelpText<"Enable the generation of 4-operand madd.s, madd.d and related instructions.">;
+def mno_madd4 : Flag<["-"], "mno-madd4">, Group<m_Group>,
+  HelpText<"Disable the generation of 4-operand madd.s, madd.d and related instructions.">;
 def mmsa : Flag<["-"], "mmsa">, Group<m_Group>,
   HelpText<"Enable MSA ASE (MIPS only)">;
 def mno_msa : Flag<["-"], "mno-msa">, Group<m_Group>,
