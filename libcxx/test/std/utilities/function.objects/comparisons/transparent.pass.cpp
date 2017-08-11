@@ -15,11 +15,11 @@ template <class T>
 struct is_transparent
 {
 private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::is_transparent* = 0);
+    struct two {char lx; char lxx;};
+    template <class U> static two test(...);
+    template <class U> static char test(typename U::is_transparent* = 0);
 public:
-    static const bool value = sizeof(__test<T>(0)) == 1;
+    static const bool value = sizeof(test<T>(0)) == 1;
 };
 
 
