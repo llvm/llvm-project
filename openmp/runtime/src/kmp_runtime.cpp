@@ -4629,23 +4629,50 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
       n_places = __kmp_affinity_num_masks - first_place + last_place + 1;
     }
     if (n_th <= n_places) {
-      int place = masters_place;
-      int S = n_places / n_th;
-      int s_count, rem, gap, gap_ct;
-      rem = n_places - n_th * S;
-      gap = rem ? n_th / rem : 1;
-      gap_ct = gap;
-      thidx = n_th;
-      if (update_master_only == 1)
-        thidx = 1;
-      for (f = 0; f < thidx; f++) {
-        kmp_info_t *th = team->t.t_threads[f];
-        KMP_DEBUG_ASSERT(th != NULL);
+      int place = -1;
 
-        th->th.th_first_place = place;
-        th->th.th_new_place = place;
-        s_count = 1;
-        while (s_count < S) {
+      if (n_places != static_cast<int>(__kmp_affinity_num_masks)) {
+        int S = n_places / n_th;
+        int s_count, rem, gap, gap_ct;
+
+        place = masters_place;
+        rem = n_places - n_th * S;
+        gap = rem ? n_th / rem : 1;
+        gap_ct = gap;
+        thidx = n_th;
+        if (update_master_only == 1)
+          thidx = 1;
+        for (f = 0; f < thidx; f++) {
+          kmp_info_t *th = team->t.t_threads[f];
+          KMP_DEBUG_ASSERT(th != NULL);
+
+          th->th.th_first_place = place;
+          th->th.th_new_place = place;
+          s_count = 1;
+          while (s_count < S) {
+            if (place == last_place) {
+              place = first_place;
+            } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+              place = 0;
+            } else {
+              place++;
+            }
+            s_count++;
+          }
+          if (rem && (gap_ct == gap)) {
+            if (place == last_place) {
+              place = first_place;
+            } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
+              place = 0;
+            } else {
+              place++;
+            }
+            rem--;
+            gap_ct = 0;
+          }
+          th->th.th_last_place = place;
+          gap_ct++;
+
           if (place == last_place) {
             place = first_place;
           } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
@@ -4653,35 +4680,74 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
           } else {
             place++;
           }
-          s_count++;
+
+          KA_TRACE(100, ("__kmp_partition_places: spread: T#%d(%d:%d) place %d "
+                         "partition = [%d,%d], __kmp_affinity_num_masks: %u\n",
+                         __kmp_gtid_from_thread(team->t.t_threads[f]),
+                         team->t.t_id, f, th->th.th_new_place,
+                         th->th.th_first_place, th->th.th_last_place,
+                         __kmp_affinity_num_masks));
         }
-        if (rem && (gap_ct == gap)) {
-          if (place == last_place) {
-            place = first_place;
-          } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
-            place = 0;
-          } else {
-            place++;
+      } else {
+        /* Having uniform space of available computation places I can create
+           T partitions of round(P/T) size and put threads into the first
+           place of each partition. */
+        double current = static_cast<double>(masters_place);
+        double spacing =
+                (static_cast<double>(n_places + 1) / static_cast<double>(n_th));
+        int first, last;
+        kmp_info_t *th;
+
+        thidx = n_th + 1;
+        if (update_master_only == 1)
+          thidx = 1;
+        for (f = 0; f < thidx; f++) {
+          first = static_cast<int>(current);
+          last = static_cast<int>(current + spacing) - 1;
+          KMP_DEBUG_ASSERT(last >= first);
+          if (first >= n_places) {
+            if (masters_place) {
+              first -= n_places;
+              last -= n_places;
+              if (first == (masters_place + 1)) {
+                KMP_DEBUG_ASSERT(f == n_th);
+                first--;
+              }
+              if (last == masters_place) {
+                KMP_DEBUG_ASSERT(f == (n_th - 1));
+                last--;
+              }
+            } else {
+              KMP_DEBUG_ASSERT(f == n_th);
+              first = 0;
+              last = 0;
+            }
           }
-          rem--;
-          gap_ct = 0;
-        }
-        th->th.th_last_place = place;
-        gap_ct++;
+          if (last >= n_places) {
+            last = (n_places - 1);
+          }
+          place = first;
+          current += spacing;
+          if (f < n_th) {
+            KMP_DEBUG_ASSERT(0 <= first);
+            KMP_DEBUG_ASSERT(n_places > first);
+            KMP_DEBUG_ASSERT(0 <= last);
+            KMP_DEBUG_ASSERT(n_places > last);
+            KMP_DEBUG_ASSERT(last_place >= first_place);
+            th = team->t.t_threads[f];
+            KMP_DEBUG_ASSERT(th);
+            th->th.th_first_place = first;
+            th->th.th_new_place = place;
+            th->th.th_last_place = last;
 
-        if (place == last_place) {
-          place = first_place;
-        } else if (place == (int)(__kmp_affinity_num_masks - 1)) {
-          place = 0;
-        } else {
-          place++;
+            KA_TRACE(100, ("__kmp_partition_places: spread: T#%d(%d:%d) place %d "
+                           "partition = [%d,%d], spacing = %.4f\n",
+                           __kmp_gtid_from_thread(team->t.t_threads[f]),
+                           team->t.t_id, f, th->th.th_new_place,
+                           th->th.th_first_place, th->th.th_last_place,
+                           spacing));
+          }
         }
-
-        KA_TRACE(100, ("__kmp_partition_places: spread: T#%d(%d:%d) place %d "
-                       "partition = [%d,%d]\n",
-                       __kmp_gtid_from_thread(team->t.t_threads[f]),
-                       team->t.t_id, f, th->th.th_new_place,
-                       th->th.th_first_place, th->th.th_last_place));
       }
       KMP_DEBUG_ASSERT(update_master_only || place == masters_place);
     } else {
