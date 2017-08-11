@@ -313,7 +313,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
         elif op == ('<',):
             redirects[0] = [filename, 'r', None]
         else:
-            raise InternalShellError(cmd, "Unsupported redirect: %r" % (r,))
+            raise InternalShellError(cmd, "Unsupported redirect: %r" % ((op, filename),))
 
     # Open file descriptors in a second pass.
     std_fds = [None, None, None]
