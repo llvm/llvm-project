@@ -11,7 +11,7 @@
 #include <functional>
 #include <string>
 
-template <class _Tp>
+template <class T>
 struct is_transparent
 {
 private:
@@ -19,7 +19,7 @@ private:
     template <class _Up> static __two __test(...);
     template <class _Up> static char __test(typename _Up::is_transparent* = 0);
 public:
-    static const bool value = sizeof(__test<_Tp>(0)) == 1;
+    static const bool value = sizeof(__test<T>(0)) == 1;
 };
 
 

@@ -25,6 +25,9 @@ bar:
 .long zed - .
 local:
 .comm   common,4,16
+.global abs
+abs = 0xAB5
+labs = 0x1AB5
 
 // CHECK:      Address          Size             Align Out     In      Symbol
 // CHECK-NEXT: 0000000000200158 0000000000000030     8 .eh_frame
@@ -48,12 +51,12 @@ local:
 // CHECK-NEXT: 0000000000202000 0000000000000004     0                 common
 // CHECK-NEXT: 0000000000000000 0000000000000008     1 .comment
 // CHECK-NEXT: 0000000000000000 0000000000000008     1         <internal>:(.comment)
-// CHECK-NEXT: 0000000000000000 00000000000000f0     8 .symtab
-// CHECK-NEXT: 0000000000000000 00000000000000f0     8         <internal>:(.symtab)
+// CHECK-NEXT: 0000000000000000 0000000000000120     8 .symtab
+// CHECK-NEXT: 0000000000000000 0000000000000120     8         <internal>:(.symtab)
 // CHECK-NEXT: 0000000000000000 0000000000000039     1 .shstrtab
 // CHECK-NEXT: 0000000000000000 0000000000000039     1         <internal>:(.shstrtab)
-// CHECK-NEXT: 0000000000000000 000000000000002f     1 .strtab
-// CHECK-NEXT: 0000000000000000 000000000000002f     1         <internal>:(.strtab)
+// CHECK-NEXT: 0000000000000000 0000000000000038     1 .strtab
+// CHECK-NEXT: 0000000000000000 0000000000000038     1         <internal>:(.strtab)
 
 // RUN: not ld.lld %t1.o %t2.o %t3.o %t4.a -o %t -Map=/ 2>&1 \
 // RUN:  | FileCheck -check-prefix=FAIL %s

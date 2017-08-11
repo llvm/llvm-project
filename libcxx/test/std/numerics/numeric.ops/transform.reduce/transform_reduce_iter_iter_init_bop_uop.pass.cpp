@@ -21,34 +21,34 @@
 
 #include "test_iterators.h"
 
-template <class _Tp = void>
-struct identity : std::unary_function<_Tp, _Tp>
+template <class T = void>
+struct identity : std::unary_function<T, T>
 {
-    constexpr const _Tp& operator()(const _Tp& __x) const { return __x;}
+    constexpr const T& operator()(const T& __x) const { return __x;}
 };
 
 template <>
 struct identity<void>
 {
-    template <class _Tp>
-    constexpr auto operator()(_Tp&& __x) const
-    _NOEXCEPT_(noexcept(_VSTD::forward<_Tp>(__x)))
-    -> decltype        (_VSTD::forward<_Tp>(__x))
-        { return        _VSTD::forward<_Tp>(__x); }
+    template <class T>
+    constexpr auto operator()(T&& __x) const
+    _NOEXCEPT_(noexcept(_VSTD::forward<T>(__x)))
+    -> decltype        (_VSTD::forward<T>(__x))
+        { return        _VSTD::forward<T>(__x); }
 };
 
 
-template <class _Tp = void>
+template <class T = void>
 struct twice
 {
-    constexpr const _Tp operator()(const _Tp& __x) const noexcept { return 2 * __x; }
+    constexpr const T operator()(const T& __x) const noexcept { return 2 * __x; }
 };
 
 template <>
 struct twice<void>
 {
-    template <class _Tp>
-    constexpr auto operator()(const _Tp& __x) const
+    template <class T>
+    constexpr auto operator()(const T& __x) const
     _NOEXCEPT_(noexcept(2 * __x))
     -> decltype        (2 * __x)
         { return        2 * __x; }

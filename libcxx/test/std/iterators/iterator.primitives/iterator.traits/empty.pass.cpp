@@ -20,7 +20,7 @@ struct not_an_iterator
 {
 };
 
-template <class _Tp>
+template <class T>
 struct has_value_type
 {
 private:
@@ -28,7 +28,7 @@ private:
     template <class _Up> static two test(...);
     template <class _Up> static char test(typename _Up::value_type* = 0);
 public:
-    static const bool value = sizeof(test<_Tp>(0)) == 1;
+    static const bool value = sizeof(test<T>(0)) == 1;
 };
 
 int main()

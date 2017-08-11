@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
+#include "llvm/DebugInfo/CodeView/RecordName.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
@@ -460,7 +461,78 @@ static void scopeStackClose(SmallVectorImpl<SymbolScope> &Stack,
   S.OpeningRecord->PtrEnd = CurOffset;
 }
 
+static bool symbolGoesInModuleStream(const CVSymbol &Sym) {
+  switch (Sym.kind()) {
+  case SymbolKind::S_GDATA32:
+  case SymbolKind::S_CONSTANT:
+  case SymbolKind::S_UDT:
+  // We really should not be seeing S_PROCREF and S_LPROCREF in the first place
+  // since they are synthesized by the linker in response to S_GPROC32 and
+  // S_LPROC32, but if we do see them, don't put them in the module stream I
+  // guess.
+  case SymbolKind::S_PROCREF:
+  case SymbolKind::S_LPROCREF:
+    return false;
+  // S_GDATA32 does not go in the module stream, but S_LDATA32 does.
+  case SymbolKind::S_LDATA32:
+  default:
+    return true;
+  }
+}
+
+static bool symbolGoesInGlobalsStream(const CVSymbol &Sym) {
+  switch (Sym.kind()) {
+  case SymbolKind::S_CONSTANT:
+  case SymbolKind::S_UDT:
+  case SymbolKind::S_GDATA32:
+  // S_LDATA32 goes in both the module stream and the globals stream.
+  case SymbolKind::S_LDATA32:
+  case SymbolKind::S_GPROC32:
+  case SymbolKind::S_LPROC32:
+  // We really should not be seeing S_PROCREF and S_LPROCREF in the first place
+  // since they are synthesized by the linker in response to S_GPROC32 and
+  // S_LPROC32, but if we do see them, copy them straight through.
+  case SymbolKind::S_PROCREF:
+  case SymbolKind::S_LPROCREF:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static void addGlobalSymbol(pdb::GSIStreamBuilder &Builder, ObjFile &File,
+                            const CVSymbol &Sym) {
+  switch (Sym.kind()) {
+  case SymbolKind::S_CONSTANT:
+  case SymbolKind::S_UDT:
+  case SymbolKind::S_GDATA32:
+  case SymbolKind::S_LDATA32:
+  case SymbolKind::S_PROCREF:
+  case SymbolKind::S_LPROCREF:
+    Builder.addGlobalSymbol(Sym);
+    break;
+  case SymbolKind::S_GPROC32:
+  case SymbolKind::S_LPROC32: {
+    SymbolRecordKind K = SymbolRecordKind::ProcRefSym;
+    if (Sym.kind() == SymbolKind::S_LPROC32)
+      K = SymbolRecordKind::LocalProcRef;
+    ProcRefSym PS(K);
+    PS.Module = static_cast<uint16_t>(File.ModuleDBI->getModuleIndex());
+    // For some reason, MSVC seems to add one to this value.
+    ++PS.Module;
+    PS.Name = getSymbolName(Sym);
+    PS.SumName = 0;
+    PS.SymOffset = File.ModuleDBI->getNextSymbolOffset();
+    Builder.addGlobalSymbol(PS);
+    break;
+  }
+  default:
+    llvm_unreachable("Invalid symbol kind!");
+  }
+}
+
 static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
+                               pdb::GSIStreamBuilder &GsiBuilder,
                                const CVIndexMap &IndexMap,
                                const TypeTableBuilder &IDTable,
                                BinaryStreamRef SymData) {
@@ -500,8 +572,15 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
     else if (symbolEndsScope(NewKind))
       scopeStackClose(Scopes, File->ModuleDBI->getNextSymbolOffset(), File);
 
+    // Add the symbol to the globals stream if necessary.  Do this before adding
+    // the symbol to the module since we may need to get the next symbol offset,
+    // and writing to the module's symbol stream will update that offset.
+    if (symbolGoesInGlobalsStream(NewSym))
+      addGlobalSymbol(GsiBuilder, *File, NewSym);
+
     // Add the symbol to the module.
-    File->ModuleDBI->addSymbol(NewSym);
+    if (symbolGoesInModuleStream(NewSym))
+      File->ModuleDBI->addSymbol(NewSym);
   }
 }
 
@@ -567,7 +646,8 @@ void PDBLinker::addObjFile(ObjFile *File) {
         File->ModuleDBI->addDebugSubsection(SS);
         break;
       case DebugSubsectionKind::Symbols:
-        mergeSymbolRecords(Alloc, File, IndexMap, IDTable, SS.getRecordData());
+        mergeSymbolRecords(Alloc, File, Builder.getGsiBuilder(), IndexMap,
+                           IDTable, SS.getRecordData());
         break;
       default:
         // FIXME: Process the rest of the subsections.
@@ -626,7 +706,8 @@ void PDBLinker::addObjectsToPDB() {
   // Construct IPI stream contents.
   addTypeInfo(Builder.getIpiBuilder(), IDTable);
 
-  // Compute the public symbols.
+  // Compute the public and global symbols.
+  auto &GsiBuilder = Builder.getGsiBuilder();
   std::vector<PublicSym32> Publics;
   Symtab->forEachSymbol([&Publics](Symbol *S) {
     // Only emit defined, live symbols that have a chunk.
@@ -641,29 +722,39 @@ void PDBLinker::addObjectsToPDB() {
               [](const PublicSym32 &L, const PublicSym32 &R) {
                 return L.Name < R.Name;
               });
-    auto &GsiBuilder = Builder.getGsiBuilder();
     for (const PublicSym32 &Pub : Publics)
       GsiBuilder.addPublicSymbol(Pub);
   }
 }
 
-static void addLinkerModuleSymbols(StringRef Path,
-                                   pdb::DbiModuleDescriptorBuilder &Mod,
-                                   BumpPtrAllocator &Allocator) {
-  codeview::SymbolSerializer Serializer(Allocator, CodeViewContainer::Pdb);
-  codeview::ObjNameSym ONS(SymbolRecordKind::ObjNameSym);
-  codeview::Compile3Sym CS(SymbolRecordKind::Compile3Sym);
-  codeview::EnvBlockSym EBS(SymbolRecordKind::EnvBlockSym);
+static void addCommonLinkerModuleSymbols(StringRef Path,
+                                         pdb::DbiModuleDescriptorBuilder &Mod,
+                                         BumpPtrAllocator &Allocator) {
+  SymbolSerializer Serializer(Allocator, CodeViewContainer::Pdb);
+  ObjNameSym ONS(SymbolRecordKind::ObjNameSym);
+  Compile3Sym CS(SymbolRecordKind::Compile3Sym);
+  EnvBlockSym EBS(SymbolRecordKind::EnvBlockSym);
 
   ONS.Name = "* Linker *";
   ONS.Signature = 0;
 
   CS.Machine = Config->is64() ? CPUType::X64 : CPUType::Intel80386;
+  // Interestingly, if we set the string to 0.0.0.0, then when trying to view
+  // local variables WinDbg emits an error that private symbols are not present.
+  // By setting this to a valid MSVC linker version string, local variables are
+  // displayed properly.   As such, even though it is not representative of
+  // LLVM's version information, we need this for compatibility.
   CS.Flags = CompileSym3Flags::None;
-  CS.VersionBackendBuild = 0;
-  CS.VersionBackendMajor = 0;
-  CS.VersionBackendMinor = 0;
+  CS.VersionBackendBuild = 25019;
+  CS.VersionBackendMajor = 14;
+  CS.VersionBackendMinor = 10;
   CS.VersionBackendQFE = 0;
+
+  // MSVC also sets the frontend to 0.0.0.0 since this is specifically for the
+  // linker module (which is by definition a backend), so we don't need to do
+  // anything here.  Also, it seems we can use "LLVM Linker" for the linker name
+  // without any problems.  Only the backend version has to be hardcoded to a
+  // magic number.
   CS.VersionFrontendBuild = 0;
   CS.VersionFrontendMajor = 0;
   CS.VersionFrontendMinor = 0;
@@ -678,7 +769,9 @@ static void addLinkerModuleSymbols(StringRef Path,
   sys::fs::current_path(cwd);
   EBS.Fields.push_back(cwd);
   EBS.Fields.push_back("exe");
-  EBS.Fields.push_back(Config->Argv[0]);
+  SmallString<64> exe = Config->Argv[0];
+  llvm::sys::fs::make_absolute(exe);
+  EBS.Fields.push_back(exe);
   EBS.Fields.push_back("pdb");
   EBS.Fields.push_back(Path);
   EBS.Fields.push_back("cmd");
@@ -689,6 +782,20 @@ static void addLinkerModuleSymbols(StringRef Path,
       CS, Allocator, CodeViewContainer::Pdb));
   Mod.addSymbol(codeview::SymbolSerializer::writeOneSymbol(
       EBS, Allocator, CodeViewContainer::Pdb));
+}
+
+static void addLinkerModuleSectionSymbol(pdb::DbiModuleDescriptorBuilder &Mod,
+                                         OutputSection &OS,
+                                         BumpPtrAllocator &Allocator) {
+  SectionSym Sym(SymbolRecordKind::SectionSym);
+  Sym.Alignment = 12; // 2^12 = 4KB
+  Sym.Characteristics = OS.getCharacteristics();
+  Sym.Length = OS.getVirtualSize();
+  Sym.Name = OS.getName();
+  Sym.Rva = OS.getRVA();
+  Sym.SectionNumber = OS.SectionIndex;
+  Mod.addSymbol(codeview::SymbolSerializer::writeOneSymbol(
+      Sym, Allocator, CodeViewContainer::Pdb));
 }
 
 // Creates a PDB file.
@@ -763,12 +870,14 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
   uint32_t PdbFilePathNI = DbiBuilder.addECName(NativePath);
   auto &LinkerModule = ExitOnErr(DbiBuilder.addModuleInfo("* Linker *"));
   LinkerModule.setPdbFilePathNI(PdbFilePathNI);
-  addLinkerModuleSymbols(NativePath, LinkerModule, Alloc);
+  addCommonLinkerModuleSymbols(NativePath, LinkerModule, Alloc);
 
   // Add section contributions. They must be ordered by ascending RVA.
-  for (OutputSection *OS : OutputSections)
+  for (OutputSection *OS : OutputSections) {
+    addLinkerModuleSectionSymbol(LinkerModule, *OS, Alloc);
     for (Chunk *C : OS->getChunks())
       addSectionContrib(LinkerModule, OS, C);
+  }
 
   // Add Section Map stream.
   ArrayRef<object::coff_section> Sections = {

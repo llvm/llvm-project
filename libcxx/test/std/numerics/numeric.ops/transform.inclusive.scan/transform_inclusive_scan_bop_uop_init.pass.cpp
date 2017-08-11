@@ -25,20 +25,20 @@
 
 #include "test_iterators.h"
 
-template <class _Tp = void>
-struct identity : std::unary_function<_Tp, _Tp>
+template <class T = void>
+struct identity : std::unary_function<T, T>
 {
-    constexpr const _Tp& operator()(const _Tp& __x) const { return __x;}
+    constexpr const T& operator()(const T& __x) const { return __x;}
 };
 
 template <>
 struct identity<void>
 {
-    template <class _Tp>
-    constexpr auto operator()(_Tp&& __x) const
-    _NOEXCEPT_(noexcept(_VSTD::forward<_Tp>(__x)))
-    -> decltype        (_VSTD::forward<_Tp>(__x))
-        { return        _VSTD::forward<_Tp>(__x); }
+    template <class T>
+    constexpr auto operator()(T&& __x) const
+    _NOEXCEPT_(noexcept(_VSTD::forward<T>(__x)))
+    -> decltype        (_VSTD::forward<T>(__x))
+        { return        _VSTD::forward<T>(__x); }
 };
 
 template <class Iter1, class BOp, class UOp, class T, class Iter2>
