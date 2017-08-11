@@ -214,7 +214,7 @@ CrossWindowsToolChain::CrossWindowsToolChain(const Driver &D,
   }
 }
 
-bool CrossWindowsToolChain::IsUnwindTablesDefault() const {
+bool CrossWindowsToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
   // FIXME: all non-x86 targets need unwind tables, however, LLVM currently does
   // not know how to emit them.
   return getArch() == llvm::Triple::x86_64;

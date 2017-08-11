@@ -347,7 +347,7 @@ Tool *toolchains::MinGW::buildLinker() const {
   return new tools::MinGW::Linker(*this);
 }
 
-bool toolchains::MinGW::IsUnwindTablesDefault() const {
+bool toolchains::MinGW::IsUnwindTablesDefault(const ArgList &Args) const {
   return getArch() == llvm::Triple::x86_64;
 }
 
