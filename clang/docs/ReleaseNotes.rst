@@ -61,7 +61,7 @@ Improvements to Clang's diagnostics
 New Compiler Flags
 ------------------
 
-The option ....
+- --autocomplete was implemented to obtain a list of flags and its arguments. This is used for shell autocompletion.
 
 Deprecated Compiler Flags
 -------------------------
