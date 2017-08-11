@@ -15,3 +15,10 @@ OCKL_MANGLE_U32(ctz)(uint i)
     return i ? r : 32u;
 }
 
+__attribute__((always_inline, const)) ulong
+OCKL_MANGLE_U64(ctz)(ulong i)
+{
+    ulong r = (ulong)__llvm_cttz_i64((long)i);
+    return i ? r : 64ul;
+}
+

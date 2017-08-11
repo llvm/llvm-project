@@ -61,16 +61,15 @@ clz(uint x)
     return __ockl_clz_u32(x);
 }
 
-__attribute__((always_inline, const)) static ulong
-clz_u64(ulong x)
+UEXPATTR long
+clz(long x)
 {
-    uint xlo = (uint)x;
-    uint xhi = (uint)(x >> 32);
-    uint zlo = __ockl_clz_u32(xlo) + 32u;
-    uint zhi = __ockl_clz_u32(xhi);
-    return (ulong)(xhi == 0 ? zlo : zhi);
+    return (long)__ockl_clz_u64((ulong)x);
 }
 
-extern __attribute__((overloadable, always_inline, const, alias("clz_u64"))) ulong clz(ulong);
-extern __attribute__((overloadable, always_inline, const, alias("clz_u64")))  long clz(long);
+UEXPATTR ulong
+clz(ulong x)
+{
+    return __ockl_clz_u64(x);
+}
 
