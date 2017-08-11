@@ -13722,6 +13722,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
                   // comparison.
                   SkipBody->CheckSameAsPrevious = true;
                   SkipBody->New = createTagFromNewDecl();
+                  SkipBody->New->setLexicalDeclContext(CurContext);
                   SkipBody->Previous = Hidden;
                 } else {
                   SkipBody->ShouldSkip = true;

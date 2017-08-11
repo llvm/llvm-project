@@ -15161,8 +15161,6 @@ static SDValue simplifyShuffleMask(ShuffleVectorSDNode *SVN, SDValue N0,
     // TODO - handle more cases as required.
     if (V.getOpcode() == ISD::BUILD_VECTOR)
       return V.getOperand(Idx).isUndef();
-    if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(V))
-      return SVN->getMaskElt(Idx) < 0;
     return false;
   };
 

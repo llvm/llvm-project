@@ -21,6 +21,7 @@
 #include "../modernize/UseEqualsDefaultCheck.h"
 #include "../modernize/UseEqualsDeleteCheck.h"
 #include "../modernize/UseOverrideCheck.h"
+#include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/IdentifierNamingCheck.h"
 #include "NoAssemblerCheck.h"
@@ -32,6 +33,8 @@ namespace hicpp {
 class HICPPModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<readability::BracesAroundStatementsCheck>(
+        "hicpp-braces-around-statements");
     CheckFactories.registerCheck<google::ExplicitConstructorCheck>(
         "hicpp-explicit-conversions");
     CheckFactories.registerCheck<readability::FunctionSizeCheck>(

@@ -92,6 +92,8 @@ Improvements to clang-tidy
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html#cmdoption-arg-IgnoreImplicitConstructors>`_
   option.
 
+- Added alias `hicpp-braces-around-statements <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-braces-around-statements.html>`_ 
+
 Improvements to include-fixer
 -----------------------------
 

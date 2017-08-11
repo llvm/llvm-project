@@ -319,6 +319,8 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
   AddTargetFeature(Args, Features, options::OPT_mno_odd_spreg,
                    options::OPT_modd_spreg, "nooddspreg");
+  AddTargetFeature(Args, Features, options::OPT_mno_madd4, options::OPT_mmadd4,
+                   "nomadd4");
   AddTargetFeature(Args, Features, options::OPT_mmt, options::OPT_mno_mt, "mt");
 }
 

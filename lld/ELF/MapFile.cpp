@@ -25,6 +25,7 @@
 #include "OutputSections.h"
 #include "Strings.h"
 #include "SymbolTable.h"
+#include "SyntheticSections.h"
 #include "Threads.h"
 
 #include "llvm/Support/raw_ostream.h"
@@ -35,8 +36,7 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf;
 
-typedef DenseMap<const SectionBase *, SmallVector<DefinedRegular *, 4>>
-    SymbolMapTy;
+typedef DenseMap<const SectionBase *, SmallVector<Defined *, 4>> SymbolMapTy;
 
 // Print out the first three columns of a line.
 static void writeHeader(raw_ostream &OS, uint64_t Addr, uint64_t Size,
@@ -48,31 +48,40 @@ static void writeHeader(raw_ostream &OS, uint64_t Addr, uint64_t Size,
 static std::string indent(int Depth) { return std::string(Depth * 8, ' '); }
 
 // Returns a list of all symbols that we want to print out.
-template <class ELFT> static std::vector<DefinedRegular *> getSymbols() {
-  std::vector<DefinedRegular *> V;
-  for (ObjFile<ELFT> *File : ObjFile<ELFT>::Instances)
-    for (SymbolBody *B : File->getSymbols())
-      if (auto *DR = dyn_cast<DefinedRegular>(B))
+template <class ELFT> static std::vector<Defined *> getSymbols() {
+  std::vector<Defined *> V;
+  for (ObjFile<ELFT> *File : ObjFile<ELFT>::Instances) {
+    for (SymbolBody *B : File->getSymbols()) {
+      if (auto *DR = dyn_cast<DefinedRegular>(B)) {
         if (DR->getFile() == File && !DR->isSection() && DR->Section &&
             DR->Section->Live)
           V.push_back(DR);
+      } else if (auto *DC = dyn_cast<DefinedCommon>(B)) {
+        if (InX::Common)
+          V.push_back(DC);
+      }
+    }
+  }
   return V;
 }
 
 // Returns a map from sections to their symbols.
-static SymbolMapTy getSectionSyms(ArrayRef<DefinedRegular *> Syms) {
+static SymbolMapTy getSectionSyms(ArrayRef<Defined *> Syms) {
   SymbolMapTy Ret;
-  for (DefinedRegular *S : Syms)
-    Ret[S->Section].push_back(S);
+  for (Defined *S : Syms) {
+    if (auto *DR = dyn_cast<DefinedRegular>(S))
+      Ret[DR->Section].push_back(S);
+    else
+      Ret[InX::Common].push_back(S);
+  }
 
   // Sort symbols by address. We want to print out symbols in the
   // order in the output file rather than the order they appeared
   // in the input files.
   for (auto &It : Ret) {
-    SmallVectorImpl<DefinedRegular *> &V = It.second;
-    std::sort(V.begin(), V.end(), [](DefinedRegular *A, DefinedRegular *B) {
-      return A->getVA() < B->getVA();
-    });
+    SmallVectorImpl<Defined *> &V = It.second;
+    std::sort(V.begin(), V.end(),
+              [](Defined *A, Defined *B) { return A->getVA() < B->getVA(); });
   }
   return Ret;
 }
@@ -81,8 +90,8 @@ static SymbolMapTy getSectionSyms(ArrayRef<DefinedRegular *> Syms) {
 // Demangling symbols (which is what toString() does) is slow, so
 // we do that in batch using parallel-for.
 template <class ELFT>
-static DenseMap<DefinedRegular *, std::string>
-getSymbolStrings(ArrayRef<DefinedRegular *> Syms) {
+static DenseMap<Defined *, std::string>
+getSymbolStrings(ArrayRef<Defined *> Syms) {
   std::vector<std::string> Str(Syms.size());
   parallelForEachN(0, Syms.size(), [&](size_t I) {
     raw_string_ostream OS(Str[I]);
@@ -90,7 +99,7 @@ getSymbolStrings(ArrayRef<DefinedRegular *> Syms) {
     OS << indent(2) << toString(*Syms[I]);
   });
 
-  DenseMap<DefinedRegular *, std::string> Ret;
+  DenseMap<Defined *, std::string> Ret;
   for (size_t I = 0, E = Syms.size(); I < E; ++I)
     Ret[Syms[I]] = std::move(Str[I]);
   return Ret;
@@ -109,9 +118,9 @@ template <class ELFT> void elf::writeMapFile() {
   }
 
   // Collect symbol info that we want to print out.
-  std::vector<DefinedRegular *> Syms = getSymbols<ELFT>();
+  std::vector<Defined *> Syms = getSymbols<ELFT>();
   SymbolMapTy SectionSyms = getSectionSyms(Syms);
-  DenseMap<DefinedRegular *, std::string> SymStr = getSymbolStrings<ELFT>(Syms);
+  DenseMap<Defined *, std::string> SymStr = getSymbolStrings<ELFT>(Syms);
 
   // Print out the header line.
   int W = ELFT::Is64Bits ? 16 : 8;
@@ -132,7 +141,7 @@ template <class ELFT> void elf::writeMapFile() {
         writeHeader(OS, OSec->Addr + IS->OutSecOff, IS->getSize(),
                     IS->Alignment);
         OS << indent(1) << toString(IS) << '\n';
-        for (DefinedRegular *Sym : SectionSyms[IS])
+        for (Defined *Sym : SectionSyms[IS])
           OS << SymStr[Sym] << '\n';
       }
     }

@@ -398,7 +398,7 @@ def : WriteRes<WriteAtomic,  []> {
 //---
 def : InstRW<[THX2T99Write_1Cyc_I2], (instrs B, BL, BR, BLR)>;
 def : InstRW<[THX2T99Write_1Cyc_I2], (instrs RET)>;
-def : InstRW<[THX2T99Write_1Cyc_I2], (instregex "^B.*")>;
+def : InstRW<[THX2T99Write_1Cyc_I2], (instregex "^B..$")>;
 def : InstRW<[THX2T99Write_1Cyc_I2],
             (instregex "^CBZ", "^CBNZ", "^TBZ", "^TBNZ")>;
 

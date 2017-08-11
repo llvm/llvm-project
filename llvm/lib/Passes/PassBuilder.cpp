@@ -656,7 +656,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // in postorder (or bottom-up).
   MPM.addPass(
       createModuleToPostOrderCGSCCPassAdaptor(createDevirtSCCRepeatedPass(
-          std::move(MainCGPipeline), MaxDevirtIterations, DebugLogging)));
+          std::move(MainCGPipeline), MaxDevirtIterations)));
 
   return MPM;
 }
@@ -1300,8 +1300,7 @@ bool PassBuilder::parseModulePass(ModulePassManager &MPM,
       if (!parseCGSCCPassPipeline(CGPM, InnerPipeline, VerifyEachPass,
                                   DebugLogging))
         return false;
-      MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM),
-                                                          DebugLogging));
+      MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
       return true;
     }
     if (Name == "function") {
@@ -1411,8 +1410,7 @@ bool PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
                                      DebugLogging))
         return false;
       // Add the nested pass manager with the appropriate adaptor.
-      CGPM.addPass(
-          createCGSCCToFunctionPassAdaptor(std::move(FPM), DebugLogging));
+      CGPM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
       return true;
     }
     if (auto Count = parseRepeatPassName(Name)) {
@@ -1428,8 +1426,8 @@ bool PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
       if (!parseCGSCCPassPipeline(NestedCGPM, InnerPipeline, VerifyEachPass,
                                   DebugLogging))
         return false;
-      CGPM.addPass(createDevirtSCCRepeatedPass(std::move(NestedCGPM),
-                                               *MaxRepetitions, DebugLogging));
+      CGPM.addPass(
+          createDevirtSCCRepeatedPass(std::move(NestedCGPM), *MaxRepetitions));
       return true;
     }
 
