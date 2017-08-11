@@ -284,7 +284,7 @@ public:
 
   void printVerboseInfo(raw_ostream &OS) const override;
 
-  bool IsUnwindTablesDefault() const override;
+  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override;
   bool isPICDefault() const override;
   bool isPIEDefault() const override;
   bool isPICDefaultForced() const override;

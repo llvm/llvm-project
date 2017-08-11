@@ -69,6 +69,14 @@
 // ARMV7_HARDFLOAT-NOT: "-msoft-float"
 // ARMV7_HARDFLOAT: "-x" "c"
 
+// RUN: %clang -target arm64-apple-ios10 -### -S %s -arch arm64 2>&1 | \
+// RUN: FileCheck -check-prefix=ARM64-APPLE %s
+// ARM64-APPLE: -munwind-table
+
+// RUN: %clang -target armv7k-apple-watchos4.0 -### -S %s -arch armv7k 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMV7K-APPLE %s
+// ARMV7K-APPLE: -munwind-table
+
 // RUN: %clang -target arm-linux -### -S %s -march=armv5e 2>&1 | \
 // RUN: FileCheck -check-prefix=ARMV5E %s
 // ARMV5E: clang
