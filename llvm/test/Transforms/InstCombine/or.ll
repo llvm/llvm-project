@@ -143,6 +143,19 @@ define i16 @test23(i16 %A) {
   ret i16 %D
 }
 
+define <2 x i16> @test23vec(<2 x i16> %A) {
+; CHECK-LABEL: @test23vec(
+; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 1, i16 1>
+; CHECK-NEXT:    [[D:%.*]] = xor <2 x i16> [[B]], <i16 -24575, i16 -24575>
+; CHECK-NEXT:    ret <2 x i16> [[D]]
+;
+  %B = lshr <2 x i16> %A, <i16 1, i16 1>
+  ;; fold or into xor
+  %C = or <2 x i16> %B, <i16 -32768, i16 -32768>
+  %D = xor <2 x i16> %C, <i16 8193, i16 8193>
+  ret <2 x i16> %D
+}
+
 ; PR1738
 define i1 @test24(double %X, double %Y) {
 ; CHECK-LABEL: @test24(
@@ -827,4 +840,16 @@ define i1 @orn_and_cmp_4(i32 %a, i32 %b, i32 %c) {
   %and = and i1 %x, %y
   %or = or i1 %and, %x_inv
   ret i1 %or
+}
+
+; The constant vectors are inverses. Make sure we can turn this into a select without crashing trying to truncate the constant to 16xi1.
+define <16 x i1> @test51(<16 x i1> %arg, <16 x i1> %arg1) {
+; CHECK-LABEL: @test51(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i1> [[ARG:%.*]], <16 x i1> [[ARG1:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 20, i32 5, i32 6, i32 23, i32 24, i32 9, i32 10, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    ret <16 x i1> [[TMP1]]
+;
+  %tmp = and <16 x i1> %arg, <i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>
+  %tmp2 = and <16 x i1> %arg1, <i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true>
+  %tmp3 = or <16 x i1> %tmp, %tmp2
+  ret <16 x i1> %tmp3
 }

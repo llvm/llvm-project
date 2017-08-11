@@ -95,7 +95,7 @@ void CloexecCheck::insertStringFlag(
       ModeArg, *Result.SourceManager, Result.Context->getLangOpts(), Mode);
 
   diag(ModeArg->getLocStart(), "use %0 mode '%1' to set O_CLOEXEC")
-      << FD << Mode
+      << FD << std::string(1, Mode)
       << FixItHint::CreateReplacement(ModeArg->getSourceRange(),
                                       ReplacementText);
 }

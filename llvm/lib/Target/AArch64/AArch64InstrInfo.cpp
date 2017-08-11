@@ -4626,7 +4626,7 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
   // Restore the link register.
   MachineInstr *LDRXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDRXpost))
                                .addReg(AArch64::SP, RegState::Define)
-                               .addReg(AArch64::LR)
+                               .addReg(AArch64::LR, RegState::Define)
                                .addReg(AArch64::SP)
                                .addImm(16);
   It = MBB.insert(It, LDRXpost);

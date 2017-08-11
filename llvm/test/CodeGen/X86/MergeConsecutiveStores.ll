@@ -522,7 +522,7 @@ define void @merge_vec_extract_stores(<8 x float> %v1, <8 x float> %v2, <4 x flo
 ; CHECK-NEXT: retq
 }
 
-; Merging vector stores when sourced from vector loads is not currently handled.
+; Merging vector stores when sourced from vector loads.
 define void @merge_vec_stores_from_loads(<4 x float>* %v, <4 x float>* %ptr) {
   %load_idx0 = getelementptr inbounds <4 x float>, <4 x float>* %v, i64 0
   %load_idx1 = getelementptr inbounds <4 x float>, <4 x float>* %v, i64 1
@@ -621,9 +621,6 @@ define void @merge_bitcast(<4 x i32> %v, float* %ptr) {
   ret void
 
 ; CHECK-LABEL: merge_bitcast
-; CHECK:      vmovd	%xmm0, (%rdi)
-; CHECK-NEXT: vpextrd	$1, %xmm0, 4(%rdi)
-; CHECK-NEXT: vpextrd	$2, %xmm0, 8(%rdi)
-; CHECK-NEXT: vpextrd	$3, %xmm0, 12(%rdi)
+; CHECK:      vmovups	%xmm0, (%rdi)
 ; CHECK-NEXT: retq
 }

@@ -273,9 +273,8 @@ define <2 x i32> @test65vec(<2 x i64> %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[X:%.*]], <i64 3, i64 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[TMP2]], <i32 2, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[TMP3]], <i32 40, i32 40>
-; CHECK-NEXT:    [[TMP5:%.*]] = xor <2 x i32> [[TMP4]], <i32 2, i32 2>
-; CHECK-NEXT:    ret <2 x i32> [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP3]], <i32 42, i32 42>
+; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
 ;
   %1 = and <2 x i64> %x, <i64 16, i64 16>
   %2 = icmp ne <2 x i64> %1, zeroinitializer
@@ -302,9 +301,8 @@ define <2 x i32> @test66vec(<2 x i64> %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[X:%.*]], <i64 31, i64 31>
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[TMP2]], <i32 2, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[TMP3]], <i32 40, i32 40>
-; CHECK-NEXT:    [[TMP5:%.*]] = xor <2 x i32> [[TMP4]], <i32 2, i32 2>
-; CHECK-NEXT:    ret <2 x i32> [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP3]], <i32 42, i32 42>
+; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
 ;
   %1 = and <2 x i64> %x, <i64 4294967296, i64 4294967296>
   %2 = icmp ne <2 x i64> %1, zeroinitializer
@@ -344,10 +342,9 @@ define <2 x i32> @test67vec(<2 x i16> %x) {
 ; CHECK-LABEL: @test67vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i16> [[X:%.*]], <i16 1, i16 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i16> [[TMP1]], <i16 2, i16 2>
-; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i16> [[TMP2]], <i16 40, i16 40>
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i16> [[TMP3]], <i16 2, i16 2>
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i16> [[TMP4]] to <2 x i32>
-; CHECK-NEXT:    ret <2 x i32> [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i16> [[TMP2]], <i16 42, i16 42>
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <2 x i16> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
 ;
   %1 = and <2 x i16> %x, <i16 4, i16 4>
   %2 = icmp ne <2 x i16> %1, zeroinitializer

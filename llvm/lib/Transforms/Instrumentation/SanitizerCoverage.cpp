@@ -46,6 +46,14 @@ static const char *const SanCovTraceCmp1 = "__sanitizer_cov_trace_cmp1";
 static const char *const SanCovTraceCmp2 = "__sanitizer_cov_trace_cmp2";
 static const char *const SanCovTraceCmp4 = "__sanitizer_cov_trace_cmp4";
 static const char *const SanCovTraceCmp8 = "__sanitizer_cov_trace_cmp8";
+static const char *const SanCovTraceConstCmp1 = 
+    "__sanitizer_cov_trace_const_cmp1";
+static const char *const SanCovTraceConstCmp2 = 
+    "__sanitizer_cov_trace_const_cmp2";
+static const char *const SanCovTraceConstCmp4 = 
+    "__sanitizer_cov_trace_const_cmp4";
+static const char *const SanCovTraceConstCmp8 = 
+    "__sanitizer_cov_trace_const_cmp8";
 static const char *const SanCovTraceDiv4 = "__sanitizer_cov_trace_div4";
 static const char *const SanCovTraceDiv8 = "__sanitizer_cov_trace_div8";
 static const char *const SanCovTraceGep = "__sanitizer_cov_trace_gep";
@@ -204,12 +212,13 @@ private:
   Function *SanCovTracePCIndir;
   Function *SanCovTracePC, *SanCovTracePCGuard;
   Function *SanCovTraceCmpFunction[4];
+  Function *SanCovTraceConstCmpFunction[4];
   Function *SanCovTraceDivFunction[2];
   Function *SanCovTraceGepFunction;
   Function *SanCovTraceSwitchFunction;
   InlineAsm *EmptyAsm;
   Type *IntptrTy, *IntptrPtrTy, *Int64Ty, *Int64PtrTy, *Int32Ty, *Int32PtrTy,
-      *Int8Ty, *Int8PtrTy;
+      *Int16Ty, *Int8Ty, *Int8PtrTy;
   Module *CurModule;
   Triple TargetTriple;
   LLVMContext *C;
@@ -281,6 +290,7 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   Int8PtrTy = PointerType::getUnqual(IRB.getInt8Ty());
   Int64Ty = IRB.getInt64Ty();
   Int32Ty = IRB.getInt32Ty();
+  Int16Ty = IRB.getInt16Ty();
   Int8Ty = IRB.getInt8Ty();
 
   SanCovTracePCIndir = checkSanitizerInterfaceFunction(
@@ -297,6 +307,19 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   SanCovTraceCmpFunction[3] =
       checkSanitizerInterfaceFunction(M.getOrInsertFunction(
           SanCovTraceCmp8, VoidTy, Int64Ty, Int64Ty));
+
+  SanCovTraceConstCmpFunction[0] =
+      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+          SanCovTraceConstCmp1, VoidTy, Int8Ty, Int8Ty));
+  SanCovTraceConstCmpFunction[1] =
+      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+          SanCovTraceConstCmp2, VoidTy, Int16Ty, Int16Ty));
+  SanCovTraceConstCmpFunction[2] =
+      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+          SanCovTraceConstCmp4, VoidTy, Int32Ty, Int32Ty));
+  SanCovTraceConstCmpFunction[3] =
+      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+          SanCovTraceConstCmp8, VoidTy, Int64Ty, Int64Ty));
 
   SanCovTraceDivFunction[0] =
       checkSanitizerInterfaceFunction(M.getOrInsertFunction(
@@ -316,6 +339,8 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
     for (int i = 0; i < 3; i++) {
       SanCovTraceCmpFunction[i]->addParamAttr(0, Attribute::ZExt);
       SanCovTraceCmpFunction[i]->addParamAttr(1, Attribute::ZExt);
+      SanCovTraceConstCmpFunction[i]->addParamAttr(0, Attribute::ZExt);
+      SanCovTraceConstCmpFunction[i]->addParamAttr(1, Attribute::ZExt);
     }
     SanCovTraceDivFunction[0]->addParamAttr(0, Attribute::ZExt);
   }
@@ -644,10 +669,21 @@ void SanitizerCoverageModule::InjectTraceForCmp(
                         TypeSize == 64 ? 3 : -1;
       if (CallbackIdx < 0) continue;
       // __sanitizer_cov_trace_cmp((type_size << 32) | predicate, A0, A1);
+      auto CallbackFunc = SanCovTraceCmpFunction[CallbackIdx];
+      bool FirstIsConst = isa<ConstantInt>(A0);
+      bool SecondIsConst = isa<ConstantInt>(A1);
+      // If both are const, then we don't need such a comparison.
+      if (FirstIsConst && SecondIsConst) continue;
+      // If only one is const, then make it the first callback argument.
+      if (FirstIsConst || SecondIsConst) {
+        CallbackFunc = SanCovTraceConstCmpFunction[CallbackIdx];
+        if (SecondIsConst) 
+          std::swap(A0, A1);
+      }
+
       auto Ty = Type::getIntNTy(*C, TypeSize);
-      IRB.CreateCall(
-          SanCovTraceCmpFunction[CallbackIdx],
-          {IRB.CreateIntCast(A0, Ty, true), IRB.CreateIntCast(A1, Ty, true)});
+      IRB.CreateCall(CallbackFunc, {IRB.CreateIntCast(A0, Ty, true), 
+              IRB.CreateIntCast(A1, Ty, true)});
     }
   }
 }

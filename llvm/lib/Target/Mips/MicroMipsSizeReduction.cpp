@@ -34,6 +34,7 @@ enum OperandTransfer {
   OT_OperandsAll, ///< Transfer all operands
   OT_Operands02,  ///< Transfer operands 0 and 2
   OT_Operand2,    ///< Transfer just operand 2
+  OT_OperandsXOR, ///< Transfer operands for XOR16
 };
 
 /// Reduction type
@@ -158,6 +159,10 @@ private:
   static bool ReduceADDIUToADDIUR1SP(MachineInstr *MI,
                                      const ReduceEntry &Entry);
 
+  // Attempts to reduce XOR into XOR16 instruction,
+  // returns true on success.
+  static bool ReduceXORtoXOR16(MachineInstr *MI, const ReduceEntry &Entry);
+
   // Changes opcode of an instruction.
   static bool ReplaceInstruction(MachineInstr *MI, const ReduceEntry &Entry);
 
@@ -221,7 +226,10 @@ llvm::SmallVector<ReduceEntry, 16> MicroMipsSizeReduce::ReduceTable = {
      OpInfo(OT_OperandsAll), ImmField(2, 0, 32, 2)},
     {RT_OneInstr, OpCodes(Mips::SW_MM, Mips::SWSP_MM), ReduceXWtoXWSP,
      OpInfo(OT_OperandsAll), ImmField(2, 0, 32, 2)},
-};
+    {RT_OneInstr, OpCodes(Mips::XOR, Mips::XOR16_MM), ReduceXORtoXOR16,
+     OpInfo(OT_OperandsXOR), ImmField(0, 0, 0, -1)},
+    {RT_OneInstr, OpCodes(Mips::XOR_MM, Mips::XOR16_MM), ReduceXORtoXOR16,
+     OpInfo(OT_OperandsXOR), ImmField(0, 0, 0, -1)}};
 } // namespace
 
 // Returns true if the machine operand MO is register SP.
@@ -395,6 +403,20 @@ bool MicroMipsSizeReduce::ReduceSXtoSX16(MachineInstr *MI,
   return ReplaceInstruction(MI, Entry);
 }
 
+bool MicroMipsSizeReduce::ReduceXORtoXOR16(MachineInstr *MI,
+                                           const ReduceEntry &Entry) {
+  if (!isMMThreeBitGPRegister(MI->getOperand(0)) ||
+      !isMMThreeBitGPRegister(MI->getOperand(1)) ||
+      !isMMThreeBitGPRegister(MI->getOperand(2)))
+    return false;
+
+  if (!(MI->getOperand(0).getReg() == MI->getOperand(2).getReg()) &&
+      !(MI->getOperand(0).getReg() == MI->getOperand(1).getReg()))
+    return false;
+
+  return ReplaceInstruction(MI, Entry);
+}
+
 bool MicroMipsSizeReduce::ReduceMBB(MachineBasicBlock &MBB) {
   bool Modified = false;
   MachineBasicBlock::instr_iterator MII = MBB.instr_begin(),
@@ -434,14 +456,30 @@ bool MicroMipsSizeReduce::ReplaceInstruction(MachineInstr *MI,
     const MCInstrDesc &NewMCID = MipsII->get(Entry.NarrowOpc());
     DebugLoc dl = MI->getDebugLoc();
     MachineInstrBuilder MIB = BuildMI(MBB, MI, dl, NewMCID);
-
-    if (OpTransfer == OT_Operand2)
+    switch (OpTransfer) {
+    case OT_Operand2:
       MIB.add(MI->getOperand(2));
-    else if (OpTransfer == OT_Operands02) {
+      break;
+    case OT_Operands02: {
       MIB.add(MI->getOperand(0));
       MIB.add(MI->getOperand(2));
-    } else
+      break;
+    }
+    case OT_OperandsXOR: {
+      if (MI->getOperand(0).getReg() == MI->getOperand(2).getReg()) {
+        MIB.add(MI->getOperand(0));
+        MIB.add(MI->getOperand(1));
+        MIB.add(MI->getOperand(2));
+      } else {
+        MIB.add(MI->getOperand(0));
+        MIB.add(MI->getOperand(2));
+        MIB.add(MI->getOperand(1));
+      }
+      break;
+    }
+    default:
       llvm_unreachable("Unknown operand transfer!");
+    }
 
     // Transfer MI flags.
     MIB.setMIFlags(MI->getFlags());

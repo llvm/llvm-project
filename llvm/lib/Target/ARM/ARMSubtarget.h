@@ -156,6 +156,9 @@ protected:
   bool HasFPARMv8 = false;
   bool HasNEON = false;
 
+  /// HasDotProd - True if the ARMv8.2A dot product instructions are supported.
+  bool HasDotProd = false;
+
   /// UseNEONForSinglePrecisionFP - if the NEONFP attribute has been
   /// specified. Use the method useNEONForSinglePrecisionFP() to
   /// determine if NEON should actually be used.
@@ -521,6 +524,7 @@ public:
   bool hasFPARMv8() const { return HasFPARMv8; }
   bool hasNEON() const { return HasNEON;  }
   bool hasCrypto() const { return HasCrypto; }
+  bool hasDotProd() const { return HasDotProd; }
   bool hasCRC() const { return HasCRC; }
   bool hasRAS() const { return HasRAS; }
   bool hasVirtualization() const { return HasVirtualization; }

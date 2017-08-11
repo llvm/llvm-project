@@ -390,7 +390,26 @@ void __sanitizer_cov_trace_cmp8(uint64_t Arg1, uint64_t Arg2) {
 ATTRIBUTE_INTERFACE
 ATTRIBUTE_NO_SANITIZE_ALL
 ATTRIBUTE_TARGET_POPCNT
+// Now the __sanitizer_cov_trace_const_cmp[1248] callbacks just mimic
+// the behaviour of __sanitizer_cov_trace_cmp[1248] ones. This, however,
+// should be changed later to make full use of instrumentation.
+void __sanitizer_cov_trace_const_cmp8(uint64_t Arg1, uint64_t Arg2) {
+  uintptr_t PC = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+  fuzzer::TPC.HandleCmp(PC, Arg1, Arg2);
+}
+
+ATTRIBUTE_INTERFACE
+ATTRIBUTE_NO_SANITIZE_ALL
+ATTRIBUTE_TARGET_POPCNT
 void __sanitizer_cov_trace_cmp4(uint32_t Arg1, uint32_t Arg2) {
+  uintptr_t PC = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+  fuzzer::TPC.HandleCmp(PC, Arg1, Arg2);
+}
+
+ATTRIBUTE_INTERFACE
+ATTRIBUTE_NO_SANITIZE_ALL
+ATTRIBUTE_TARGET_POPCNT
+void __sanitizer_cov_trace_const_cmp4(uint32_t Arg1, uint32_t Arg2) {
   uintptr_t PC = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
   fuzzer::TPC.HandleCmp(PC, Arg1, Arg2);
 }
@@ -406,7 +425,23 @@ void __sanitizer_cov_trace_cmp2(uint16_t Arg1, uint16_t Arg2) {
 ATTRIBUTE_INTERFACE
 ATTRIBUTE_NO_SANITIZE_ALL
 ATTRIBUTE_TARGET_POPCNT
+void __sanitizer_cov_trace_const_cmp2(uint16_t Arg1, uint16_t Arg2) {
+  uintptr_t PC = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+  fuzzer::TPC.HandleCmp(PC, Arg1, Arg2);
+}
+
+ATTRIBUTE_INTERFACE
+ATTRIBUTE_NO_SANITIZE_ALL
+ATTRIBUTE_TARGET_POPCNT
 void __sanitizer_cov_trace_cmp1(uint8_t Arg1, uint8_t Arg2) {
+  uintptr_t PC = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+  fuzzer::TPC.HandleCmp(PC, Arg1, Arg2);
+}
+
+ATTRIBUTE_INTERFACE
+ATTRIBUTE_NO_SANITIZE_ALL
+ATTRIBUTE_TARGET_POPCNT
+void __sanitizer_cov_trace_const_cmp1(uint8_t Arg1, uint8_t Arg2) {
   uintptr_t PC = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
   fuzzer::TPC.HandleCmp(PC, Arg1, Arg2);
 }

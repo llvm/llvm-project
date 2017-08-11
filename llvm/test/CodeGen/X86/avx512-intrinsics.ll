@@ -123,8 +123,6 @@ define i16 @test_kxnor(i16 %a0, i16 %a1) {
 ; CHECK-NEXT:    kmovw %eax, %k2
 ; CHECK-NEXT:    kxorw %k0, %k1, %k0
 ; CHECK-NEXT:    kxorw %k0, %k2, %k0
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    kxnorw %k1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq

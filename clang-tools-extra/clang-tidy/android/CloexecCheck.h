@@ -85,7 +85,7 @@ protected:
   /// \param Mode The required mode char.
   /// \param ArgPos The 0-based position of the flag argument.
   void insertStringFlag(const ast_matchers::MatchFinder::MatchResult &Result,
-                        char Mode, const int ArgPos);
+                        const char Mode, const int ArgPos);
 };
 
 } // namespace android

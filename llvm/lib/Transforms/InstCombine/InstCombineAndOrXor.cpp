@@ -1494,8 +1494,9 @@ static Value *getSelectCondition(Value *A, Value *B,
   // If both operands are constants, see if the constants are inverse bitmasks.
   Constant *AC, *BC;
   if (match(A, m_Constant(AC)) && match(B, m_Constant(BC)) &&
-      areInverseVectorBitmasks(AC, BC))
-    return ConstantExpr::getTrunc(AC, CmpInst::makeCmpResultType(Ty));
+      areInverseVectorBitmasks(AC, BC)) {
+    return Builder.CreateZExtOrTrunc(AC, CmpInst::makeCmpResultType(Ty));
+  }
 
   // If both operands are xor'd with constants using the same sexted boolean
   // operand, see if the constants are inverse bitmasks.
@@ -2364,30 +2365,40 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   {
     const APInt *RHSC;
     if (match(Op1, m_APInt(RHSC))) {
-      Value *V;
+      Value *X;
       const APInt *C;
-      if (match(Op0, m_Sub(m_APInt(C), m_Value(V)))) {
+      if (match(Op0, m_Sub(m_APInt(C), m_Value(X)))) {
         // ~(c-X) == X-c-1 == X+(-c-1)
         if (RHSC->isAllOnesValue()) {
           Constant *NewC = ConstantInt::get(I.getType(), -(*C) - 1);
-          return BinaryOperator::CreateAdd(V, NewC);
+          return BinaryOperator::CreateAdd(X, NewC);
         }
         if (RHSC->isSignMask()) {
           // (C - X) ^ signmask -> (C + signmask - X)
           Constant *NewC = ConstantInt::get(I.getType(), *C + *RHSC);
-          return BinaryOperator::CreateSub(NewC, V);
+          return BinaryOperator::CreateSub(NewC, X);
         }
-      } else if (match(Op0, m_Add(m_Value(V), m_APInt(C)))) {
+      } else if (match(Op0, m_Add(m_Value(X), m_APInt(C)))) {
         // ~(X-c) --> (-c-1)-X
         if (RHSC->isAllOnesValue()) {
           Constant *NewC = ConstantInt::get(I.getType(), -(*C) - 1);
-          return BinaryOperator::CreateSub(NewC, V);
+          return BinaryOperator::CreateSub(NewC, X);
         }
         if (RHSC->isSignMask()) {
           // (X + C) ^ signmask -> (X + C + signmask)
           Constant *NewC = ConstantInt::get(I.getType(), *C + *RHSC);
-          return BinaryOperator::CreateAdd(V, NewC);
+          return BinaryOperator::CreateAdd(X, NewC);
         }
+      }
+
+      // (X|C1)^C2 -> X^(C1^C2) iff X&~C1 == 0
+      if (match(Op0, m_Or(m_Value(X), m_APInt(C))) &&
+          MaskedValueIsZero(X, *C, 0, &I)) {
+        Constant *NewC = ConstantInt::get(I.getType(), *C ^ *RHSC);
+        Worklist.Add(cast<Instruction>(Op0));
+        I.setOperand(0, X);
+        I.setOperand(1, NewC);
+        return &I;
       }
     }
   }
@@ -2395,22 +2406,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   if (ConstantInt *RHSC = dyn_cast<ConstantInt>(Op1)) {
     if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0)) {
       if (ConstantInt *Op0CI = dyn_cast<ConstantInt>(Op0I->getOperand(1))) {
-        if (Op0I->getOpcode() == Instruction::Or) {
-          // (X|C1)^C2 -> X^(C1|C2) iff X&~C1 == 0
-          if (MaskedValueIsZero(Op0I->getOperand(0), Op0CI->getValue(),
-                                0, &I)) {
-            Constant *NewRHS = ConstantExpr::getOr(Op0CI, RHSC);
-            // Anything in both C1 and C2 is known to be zero, remove it from
-            // NewRHS.
-            Constant *CommonBits = ConstantExpr::getAnd(Op0CI, RHSC);
-            NewRHS = ConstantExpr::getAnd(NewRHS,
-                                       ConstantExpr::getNot(CommonBits));
-            Worklist.Add(Op0I);
-            I.setOperand(0, Op0I->getOperand(0));
-            I.setOperand(1, NewRHS);
-            return &I;
-          }
-        } else if (Op0I->getOpcode() == Instruction::LShr) {
+        if (Op0I->getOpcode() == Instruction::LShr) {
           // ((X^C1) >> C2) ^ C3 -> (X>>C2) ^ ((C1>>C2)^C3)
           // E1 = "X ^ C1"
           BinaryOperator *E1;
