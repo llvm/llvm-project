@@ -24,6 +24,7 @@
 #include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/IdentifierNamingCheck.h"
+#include "ExceptionBaseclassCheck.h"
 #include "NoAssemblerCheck.h"
 
 namespace clang {
@@ -35,6 +36,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<readability::BracesAroundStatementsCheck>(
         "hicpp-braces-around-statements");
+    CheckFactories.registerCheck<ExceptionBaseclassCheck>(
+        "hicpp-exception-baseclass");
     CheckFactories.registerCheck<google::ExplicitConstructorCheck>(
         "hicpp-explicit-conversions");
     CheckFactories.registerCheck<readability::FunctionSizeCheck>(
