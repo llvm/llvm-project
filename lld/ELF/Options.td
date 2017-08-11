@@ -126,7 +126,9 @@ def hash_style: S<"hash-style">,
 
 def help: F<"help">, HelpText<"Print option help">;
 
-def icf: F<"icf=all">, HelpText<"Enable identical code folding">;
+def icf_all: F<"icf=all">, HelpText<"Enable identical code folding">;
+
+def icf_none: F<"icf=none">, HelpText<"Disable identical code folding">;
 
 def image_base : J<"image-base=">, HelpText<"Set the base address">;
 

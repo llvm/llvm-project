@@ -315,7 +315,7 @@ public:
 
   /// IsUnwindTablesDefault - Does this tool chain use -funwind-tables
   /// by default.
-  virtual bool IsUnwindTablesDefault() const;
+  virtual bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const;
 
   /// \brief Test whether this toolchain defaults to PIC.
   virtual bool isPICDefault() const = 0;

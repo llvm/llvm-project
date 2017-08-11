@@ -217,7 +217,7 @@ StringRef ToolChain::getDefaultUniversalArchName() const {
   }
 }
 
-bool ToolChain::IsUnwindTablesDefault() const {
+bool ToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
   return false;
 }
 
