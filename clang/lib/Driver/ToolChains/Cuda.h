@@ -85,7 +85,7 @@ public:
       if (!LibDeviceFile.empty())
         return key;
     }
-    llvm_unreachable("no libdevice exists.");
+    return "sm_35";
   }
 };
 
