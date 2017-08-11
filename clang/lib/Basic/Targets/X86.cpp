@@ -1307,6 +1307,44 @@ bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
       .Default(false);
 }
 
+// We can't use a generic validation scheme for the cpus accepted here
+// versus subtarget cpus accepted in the target attribute because the
+// variables intitialized by the runtime only support the below currently
+// rather than the full range of cpus.
+bool X86TargetInfo::validateCpuIs(StringRef FeatureStr) const {
+  return llvm::StringSwitch<bool>(FeatureStr)
+      .Case("amd", true)
+      .Case("amdfam10h", true)
+      .Case("amdfam15h", true)
+      .Case("atom", true)
+      .Case("barcelona", true)
+      .Case("bdver1", true)
+      .Case("bdver2", true)
+      .Case("bdver3", true)
+      .Case("bdver4", true)
+      .Case("bonnell", true)
+      .Case("broadwell", true)
+      .Case("btver1", true)
+      .Case("btver2", true)
+      .Case("core2", true)
+      .Case("corei7", true)
+      .Case("haswell", true)
+      .Case("intel", true)
+      .Case("istanbul", true)
+      .Case("ivybridge", true)
+      .Case("knl", true)
+      .Case("nehalem", true)
+      .Case("sandybridge", true)
+      .Case("shanghai", true)
+      .Case("silvermont", true)
+      .Case("skylake", true)
+      .Case("skylake-avx512", true)
+      .Case("slm", true)
+      .Case("westmere", true)
+      .Case("znver1", true)
+      .Default(false);
+}
+
 bool X86TargetInfo::validateAsmConstraint(
     const char *&Name, TargetInfo::ConstraintInfo &Info) const {
   switch (*Name) {

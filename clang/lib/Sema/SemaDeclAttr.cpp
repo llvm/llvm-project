@@ -480,7 +480,7 @@ static const RecordType *getRecordType(QualType QT) {
   return nullptr;
 }
 
-template <typename T> static bool checkRecordTypeForAttr(Sema &S, QualType Ty) {
+static bool checkRecordTypeForCapability(Sema &S, QualType Ty) {
   const RecordType *RT = getRecordType(Ty);
 
   if (!RT)
@@ -497,7 +497,7 @@ template <typename T> static bool checkRecordTypeForAttr(Sema &S, QualType Ty) {
 
   // Check if the record itself has a capability.
   RecordDecl *RD = RT->getDecl();
-  if (RD->hasAttr<T>())
+  if (RD->hasAttr<CapabilityAttr>())
     return true;
 
   // Else check if any base classes have a capability.
@@ -505,14 +505,14 @@ template <typename T> static bool checkRecordTypeForAttr(Sema &S, QualType Ty) {
     CXXBasePaths BPaths(false, false);
     if (CRD->lookupInBases([](const CXXBaseSpecifier *BS, CXXBasePath &) {
           const auto *Type = BS->getType()->getAs<RecordType>();
-          return Type->getDecl()->hasAttr<T>();
+          return Type->getDecl()->hasAttr<CapabilityAttr>();
         }, BPaths))
       return true;
   }
   return false;
 }
 
-template <typename T> static bool checkTypedefTypeForAttr(QualType Ty) {
+static bool checkTypedefTypeForCapability(QualType Ty) {
   const auto *TD = Ty->getAs<TypedefType>();
   if (!TD)
     return false;
@@ -521,25 +521,17 @@ template <typename T> static bool checkTypedefTypeForAttr(QualType Ty) {
   if (!TN)
     return false;
 
-  return TN->hasAttr<T>();
-}
-
-template <typename T> static bool typeHasAttr(Sema &S, QualType Ty) {
-  if (checkTypedefTypeForAttr<T>(Ty))
-    return true;
-
-  if (checkRecordTypeForAttr<T>(S, Ty))
-    return true;
-
-  return false;
+  return TN->hasAttr<CapabilityAttr>();
 }
 
 static bool typeHasCapability(Sema &S, QualType Ty) {
-  return typeHasAttr<CapabilityAttr>(S, Ty);
-}
+  if (checkTypedefTypeForCapability(Ty))
+    return true;
 
-static bool typeHasScopedLockable(Sema &S, QualType Ty) {
-  return typeHasAttr<ScopedLockableAttr>(S, Ty);
+  if (checkRecordTypeForCapability(S, Ty))
+    return true;
+
+  return false;
 }
 
 static bool isCapabilityExpr(Sema &S, const Expr *Ex) {
@@ -578,8 +570,6 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
                                            SmallVectorImpl<Expr *> &Args,
                                            int Sidx = 0,
                                            bool ParamIdxOk = false) {
-  bool TriedParam = false;
-
   for (unsigned Idx = Sidx; Idx < Attr.getNumArgs(); ++Idx) {
     Expr *ArgExp = Attr.getArgAsExpr(Idx);
 
@@ -620,18 +610,15 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
     const RecordType *RT = getRecordType(ArgTy);
 
     // Now check if we index into a record type function param.
-    if (!RT && ParamIdxOk) {
+    if(!RT && ParamIdxOk) {
       FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
       IntegerLiteral *IL = dyn_cast<IntegerLiteral>(ArgExp);
-      if (FD && IL) {
-        // Don't emit free function warnings if an index was given.
-        TriedParam = true;
-
+      if(FD && IL) {
         unsigned int NumParams = FD->getNumParams();
         llvm::APInt ArgValue = IL->getValue();
         uint64_t ParamIdxFromOne = ArgValue.getZExtValue();
         uint64_t ParamIdxFromZero = ParamIdxFromOne - 1;
-        if (!ArgValue.isStrictlyPositive() || ParamIdxFromOne > NumParams) {
+        if(!ArgValue.isStrictlyPositive() || ParamIdxFromOne > NumParams) {
           S.Diag(Attr.getLoc(), diag::err_attribute_argument_out_of_range)
             << Attr.getName() << Idx + 1 << NumParams;
           continue;
@@ -649,28 +636,6 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
           << Attr.getName() << ArgTy;
 
     Args.push_back(ArgExp);
-  }
-
-  // If we don't have any lockable arguments, verify that we're an instance
-  // method on a lockable type.
-  if (Args.empty() && !TriedParam) {
-    if (auto *MD = dyn_cast<CXXMethodDecl>(D)) {
-      if (MD->isStatic()) {
-        S.Diag(Attr.getLoc(), diag::warn_thread_attribute_noargs_static_method)
-            << Attr.getName();
-        return;
-      }
-
-      QualType ThisType = MD->getThisType(MD->getASTContext());
-      if (!typeHasCapability(S, ThisType) &&
-          !typeHasScopedLockable(S, ThisType)) {
-        S.Diag(Attr.getLoc(), diag::warn_thread_attribute_noargs_not_lockable)
-            << Attr.getName() << ThisType;
-      }
-    } else {
-      S.Diag(Attr.getLoc(), diag::warn_thread_attribute_noargs_not_method)
-          << Attr.getName();
-    }
   }
 }
 

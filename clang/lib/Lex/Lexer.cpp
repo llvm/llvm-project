@@ -463,19 +463,15 @@ static const char *findBeginningOfLine(StringRef Buffer, unsigned Offset) {
   const char *BufStart = Buffer.data();
   if (Offset >= Buffer.size())
     return nullptr;
-  const char *StrData = BufStart + Offset;
 
-  if (StrData[0] == '\n' || StrData[0] == '\r')
-    return StrData;
-
-  const char *LexStart = StrData;
-  while (LexStart != BufStart) {
-    if (LexStart[0] == '\n' || LexStart[0] == '\r') {
+  const char *LexStart = BufStart + Offset;
+  for (; LexStart != BufStart; --LexStart) {
+    if (isVerticalWhitespace(LexStart[0]) &&
+        !Lexer::isNewLineEscaped(BufStart, LexStart)) {
+      // LexStart should point at first character of logical line.
       ++LexStart;
       break;
     }
-
-    --LexStart;
   }
   return LexStart;
 }
@@ -487,7 +483,7 @@ static SourceLocation getBeginningOfFileToken(SourceLocation Loc,
   std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
   if (LocInfo.first.isInvalid())
     return Loc;
-  
+
   bool Invalid = false;
   StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
   if (Invalid)
@@ -499,31 +495,31 @@ static SourceLocation getBeginningOfFileToken(SourceLocation Loc,
   const char *LexStart = findBeginningOfLine(Buffer, LocInfo.second);
   if (!LexStart || LexStart == StrData)
     return Loc;
-  
+
   // Create a lexer starting at the beginning of this token.
   SourceLocation LexerStartLoc = Loc.getLocWithOffset(-LocInfo.second);
   Lexer TheLexer(LexerStartLoc, LangOpts, Buffer.data(), LexStart,
                  Buffer.end());
   TheLexer.SetCommentRetentionState(true);
-  
+
   // Lex tokens until we find the token that contains the source location.
   Token TheTok;
   do {
     TheLexer.LexFromRawLexer(TheTok);
-    
+
     if (TheLexer.getBufferLocation() > StrData) {
       // Lexing this token has taken the lexer past the source location we're
       // looking for. If the current token encompasses our source location,
       // return the beginning of that token.
       if (TheLexer.getBufferLocation() - TheTok.getLength() <= StrData)
         return TheTok.getLocation();
-      
+
       // We ended up skipping over the source location entirely, which means
       // that it points into whitespace. We're done here.
       break;
     }
   } while (TheTok.getKind() != tok::eof);
-  
+
   // We've passed our source location; just return the original source location.
   return Loc;
 }
@@ -531,20 +527,20 @@ static SourceLocation getBeginningOfFileToken(SourceLocation Loc,
 SourceLocation Lexer::GetBeginningOfToken(SourceLocation Loc,
                                           const SourceManager &SM,
                                           const LangOptions &LangOpts) {
- if (Loc.isFileID())
-   return getBeginningOfFileToken(Loc, SM, LangOpts);
- 
- if (!SM.isMacroArgExpansion(Loc))
-   return Loc;
+  if (Loc.isFileID())
+    return getBeginningOfFileToken(Loc, SM, LangOpts);
 
- SourceLocation FileLoc = SM.getSpellingLoc(Loc);
- SourceLocation BeginFileLoc = getBeginningOfFileToken(FileLoc, SM, LangOpts);
- std::pair<FileID, unsigned> FileLocInfo = SM.getDecomposedLoc(FileLoc);
- std::pair<FileID, unsigned> BeginFileLocInfo
-   = SM.getDecomposedLoc(BeginFileLoc);
- assert(FileLocInfo.first == BeginFileLocInfo.first &&
-        FileLocInfo.second >= BeginFileLocInfo.second);
- return Loc.getLocWithOffset(BeginFileLocInfo.second - FileLocInfo.second);
+  if (!SM.isMacroArgExpansion(Loc))
+    return Loc;
+
+  SourceLocation FileLoc = SM.getSpellingLoc(Loc);
+  SourceLocation BeginFileLoc = getBeginningOfFileToken(FileLoc, SM, LangOpts);
+  std::pair<FileID, unsigned> FileLocInfo = SM.getDecomposedLoc(FileLoc);
+  std::pair<FileID, unsigned> BeginFileLocInfo =
+      SM.getDecomposedLoc(BeginFileLoc);
+  assert(FileLocInfo.first == BeginFileLocInfo.first &&
+         FileLocInfo.second >= BeginFileLocInfo.second);
+  return Loc.getLocWithOffset(BeginFileLocInfo.second - FileLocInfo.second);
 }
 
 namespace {
@@ -1030,6 +1026,26 @@ StringRef Lexer::getImmediateMacroNameForDiagnostics(
 
 bool Lexer::isIdentifierBodyChar(char c, const LangOptions &LangOpts) {
   return isIdentifierBody(c, LangOpts.DollarIdents);
+}
+
+bool Lexer::isNewLineEscaped(const char *BufferStart, const char *Str) {
+  assert(isVerticalWhitespace(Str[0]));
+  if (Str - 1 < BufferStart)
+    return false;
+
+  if ((Str[0] == '\n' && Str[-1] == '\r') ||
+      (Str[0] == '\r' && Str[-1] == '\n')) {
+    if (Str - 2 < BufferStart)
+      return false;
+    --Str;
+  }
+  --Str;
+
+  // Rewind to first non-space character:
+  while (Str > BufferStart && isHorizontalWhitespace(*Str))
+    --Str;
+
+  return *Str == '\\';
 }
 
 StringRef Lexer::getIndentationForLine(SourceLocation Loc,

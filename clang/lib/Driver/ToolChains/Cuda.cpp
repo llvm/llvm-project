@@ -484,13 +484,7 @@ void CudaToolChain::addClangTargetOptions(
   // than LLVM defaults to. Use PTX4.2 which is the PTX version that
   // came with CUDA-7.0.
   CC1Args.push_back("-target-feature");
-
-  if (DeviceOffloadingKind == Action::OFK_OpenMP)
-    CC1Args.push_back(
-        DriverArgs.getLastArgValue(options::OPT_fopenmp_ptx_EQ,
-                                   "+ptx42").data());
-  else
-    CC1Args.push_back("+ptx42");
+  CC1Args.push_back("+ptx42");
 }
 
 void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
