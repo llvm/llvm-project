@@ -458,6 +458,72 @@ let Predicates = [HasRCPC] in {
   def LDAPRX  : RCPCLoad<0b11, "ldapr", GPR64>;
 }
 
+let Predicates = [HasV8_3a] in {
+  // v8.3a Pointer Authentication
+  let Uses = [LR], Defs = [LR] in {
+    def PACIAZ   : SystemNoOperands<0b000, "paciaz">;
+    def PACIBZ   : SystemNoOperands<0b010, "pacibz">;
+    def AUTIAZ   : SystemNoOperands<0b100, "autiaz">;
+    def AUTIBZ   : SystemNoOperands<0b110, "autibz">;
+  }
+  let Uses = [LR, SP], Defs = [LR] in {
+    def PACIASP  : SystemNoOperands<0b001, "paciasp">;
+    def PACIBSP  : SystemNoOperands<0b011, "pacibsp">;
+    def AUTIASP  : SystemNoOperands<0b101, "autiasp">;
+    def AUTIBSP  : SystemNoOperands<0b111, "autibsp">;
+  }
+  let Uses = [X16, X17], Defs = [X17], CRm = 0b0001 in {
+    def PACIA1716  : SystemNoOperands<0b000, "pacia1716">;
+    def PACIB1716  : SystemNoOperands<0b010, "pacib1716">;
+    def AUTIA1716  : SystemNoOperands<0b100, "autia1716">;
+    def AUTIB1716  : SystemNoOperands<0b110, "autib1716">;
+  }
+
+  let Uses = [LR], Defs = [LR], CRm = 0b0000 in {
+    def XPACLRI   : SystemNoOperands<0b111, "xpaclri">;
+  }
+
+  multiclass SignAuth<bits<3> prefix, bits<3> prefix_z, string asm> {
+    def IA   : SignAuthOneData<prefix, 0b00, !strconcat(asm, "ia")>;
+    def IB   : SignAuthOneData<prefix, 0b01, !strconcat(asm, "ib")>;
+    def DA   : SignAuthOneData<prefix, 0b10, !strconcat(asm, "da")>;
+    def DB   : SignAuthOneData<prefix, 0b11, !strconcat(asm, "db")>;
+    def IZA  : SignAuthZero<prefix_z, 0b00, !strconcat(asm, "iza")>;
+    def DZA  : SignAuthZero<prefix_z, 0b10, !strconcat(asm, "dza")>;
+    def IZB  : SignAuthZero<prefix_z, 0b01, !strconcat(asm, "izb")>;
+    def DZB  : SignAuthZero<prefix_z, 0b11, !strconcat(asm, "dzb")>;
+  }
+
+  defm PAC : SignAuth<0b000, 0b010, "pac">;
+  defm AUT : SignAuth<0b001, 0b011, "aut">;
+
+  def XPACI : SignAuthZero<0b100, 0b00, "xpaci">;
+  def XPACD : SignAuthZero<0b100, 0b01, "xpacd">;
+  def PACGA : SignAuthTwoOperand<0b1100, "pacga", null_frag>;
+
+  // Combined Instructions
+  def BRAA    : AuthBranchTwoOperands<0, 0, "braa">;
+  def BRAB    : AuthBranchTwoOperands<0, 1, "brab">;
+  def BLRAA   : AuthBranchTwoOperands<1, 0, "blraa">;
+  def BLRAB   : AuthBranchTwoOperands<1, 1, "blrab">;
+
+  def BRAAZ   : AuthOneOperand<0b000, 0, "braaz">;
+  def BRABZ   : AuthOneOperand<0b000, 1, "brabz">;
+  def BLRAAZ  : AuthOneOperand<0b001, 0, "blraaz">;
+  def BLRABZ  : AuthOneOperand<0b001, 1, "blrabz">;
+
+  let isReturn = 1 in {
+    def RETAA   : AuthReturn<0b010, 0, "retaa">;
+    def RETAB   : AuthReturn<0b010, 1, "retab">;
+    def ERETAA  : AuthReturn<0b100, 0, "eretaa">;
+    def ERETAB  : AuthReturn<0b100, 1, "eretab">;
+  }
+
+  defm LDRAA  : AuthLoad<0, "ldraa", simm10Scaled>;
+  defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
+
+} // HasV8_3A
+
 def : InstAlias<"clrex", (CLREX 0xf)>;
 def : InstAlias<"isb", (ISB 0xf)>;
 

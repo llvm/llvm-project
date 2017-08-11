@@ -31,6 +31,7 @@ endif()
 
 if (LIBFUZZER_ENABLE)
   add_library(LLVMFuzzerNoMainObjects OBJECT
+      FuzzerClangCounters.cpp
       FuzzerCrossOver.cpp
       FuzzerDriver.cpp
       FuzzerExtFunctionsDlsym.cpp

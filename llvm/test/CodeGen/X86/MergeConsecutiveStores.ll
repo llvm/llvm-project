@@ -493,9 +493,9 @@ define void @merge_vec_element_store(<8 x float> %v, float* %ptr) {
   ret void
 
 ; CHECK-LABEL: merge_vec_element_store
-; CHECK: vmovups
-; CHECK-NEXT: vzeroupper
-; CHECK-NEXT: retq
+; CHECK: vmovups %ymm0, (%rdi)
+; CHECK: vzeroupper
+; CHECK: retq
 }
 
 ; PR21711 - Merge vector stores into wider vector stores.
@@ -557,8 +557,7 @@ define void @merge_vec_stores_of_constants(<4 x i32>* %ptr) {
 }
 
 ; This is a minimized test based on real code that was failing.
-; We could merge stores (and loads) like this...
-
+; This should now be merged.
 define void @merge_vec_element_and_scalar_load([6 x i64]* %array) {
   %idx0 = getelementptr inbounds [6 x i64], [6 x i64]* %array, i64 0, i64 0
   %idx1 = getelementptr inbounds [6 x i64], [6 x i64]* %array, i64 0, i64 1
@@ -575,10 +574,8 @@ define void @merge_vec_element_and_scalar_load([6 x i64]* %array) {
   ret void
 
 ; CHECK-LABEL: merge_vec_element_and_scalar_load
-; CHECK:      movq	(%rdi), %rax
-; CHECK-NEXT: movq	8(%rdi), %rcx
-; CHECK-NEXT: movq	%rax, 32(%rdi)
-; CHECK-NEXT: movq	%rcx, 40(%rdi)
+; CHECK:      vmovups (%rdi), %xmm0
+; CHECK-NEXT: vmovups %xmm0, 32(%rdi)
 ; CHECK-NEXT: retq
 }
 

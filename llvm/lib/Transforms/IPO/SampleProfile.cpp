@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -148,16 +149,16 @@ public:
   SampleProfileLoader(StringRef Name = SampleProfileFile)
       : DT(nullptr), PDT(nullptr), LI(nullptr), ACT(nullptr), Reader(),
         Samples(nullptr), Filename(Name), ProfileIsValid(false),
-        TotalCollectedSamples(0) {}
+        TotalCollectedSamples(0), ORE(nullptr) {}
 
   bool doInitialization(Module &M);
-  bool runOnModule(Module &M);
+  bool runOnModule(Module &M, ModuleAnalysisManager *AM);
   void setACT(AssumptionCacheTracker *A) { ACT = A; }
 
   void dump() { Reader->dump(); }
 
 protected:
-  bool runOnFunction(Function &F);
+  bool runOnFunction(Function &F, ModuleAnalysisManager *AM);
   unsigned getFunctionLoc(Function &F);
   bool emitAnnotations(Function &F);
   ErrorOr<uint64_t> getInstWeight(const Instruction &I);
@@ -249,6 +250,9 @@ protected:
   /// This is the sum of all the samples collected in all the functions executed
   /// at runtime.
   uint64_t TotalCollectedSamples;
+
+  /// \brief Optimization Remark Emitter used to emit diagnostic remarks.
+  OptimizationRemarkEmitter *ORE;
 };
 
 class SampleProfileLoaderLegacyPass : public ModulePass {
@@ -497,13 +501,17 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
     bool FirstMark =
         CoverageTracker.markSamplesUsed(FS, LineOffset, Discriminator, R.get());
     if (FirstMark) {
-      const Function *F = Inst.getParent()->getParent();
-      LLVMContext &Ctx = F->getContext();
-      emitOptimizationRemark(
-          Ctx, DEBUG_TYPE, *F, DLoc,
-          Twine("Applied ") + Twine(*R) +
-              " samples from profile (offset: " + Twine(LineOffset) +
-              ((Discriminator) ? Twine(".") + Twine(Discriminator) : "") + ")");
+      if (Discriminator)
+        ORE->emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "AppliedSamples", &Inst)
+                  << "Applied " << ore::NV("NumSamples", *R)
+                  << " samples from profile (offset: "
+                  << ore::NV("LineOffset", LineOffset) << "."
+                  << ore::NV("Discriminator", Discriminator) << ")");
+      else
+        ORE->emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "AppliedSamples", &Inst)
+                  << "Applied " << ore::NV("NumSamples", *R)
+                  << " samples from profile (offset: "
+                  << ore::NV("LineOffset", LineOffset) << ")");
     }
     DEBUG(dbgs() << "    " << DLoc.getLine() << "."
                  << DIL->getBaseDiscriminator() << ":" << Inst
@@ -669,7 +677,6 @@ bool SampleProfileLoader::inlineHotFunctions(
     Function &F, DenseSet<GlobalValue::GUID> &ImportGUIDs) {
   DenseSet<Instruction *> PromotedInsns;
   bool Changed = false;
-  LLVMContext &Ctx = F.getContext();
   std::function<AssumptionCache &(Function &)> GetAssumptionCache = [&](
       Function &F) -> AssumptionCache & { return ACT->getAssumptionCache(F); };
   while (true) {
@@ -720,7 +727,7 @@ bool SampleProfileLoader::inlineHotFunctions(
             // We set the probability to 80% taken to indicate that the static
             // call is likely taken.
             DI = dyn_cast<Instruction>(
-                promoteIndirectCall(I, CalledFunction, 80, 100, false)
+                promoteIndirectCall(I, CalledFunction, 80, 100, false, ORE)
                     ->stripPointerCasts());
             PromotedInsns.insert(I);
           } else {
@@ -737,12 +744,14 @@ bool SampleProfileLoader::inlineHotFunctions(
         continue;
       }
       DebugLoc DLoc = I->getDebugLoc();
+      BasicBlock *BB = I->getParent();
       if (InlineFunction(CallSite(DI), IFI)) {
         LocalChanged = true;
-        emitOptimizationRemark(Ctx, DEBUG_TYPE, F, DLoc,
-                               Twine("inlined hot callee '") +
-                                   CalledFunction->getName() + "' into '" +
-                                   F.getName() + "'");
+        // The call to InlineFunction erases DI, so we can't pass it here.
+        ORE->emit(OptimizationRemark(DEBUG_TYPE, "HotInline", DLoc, BB)
+                  << "inlined hot callee '"
+                  << ore::NV("Callee", CalledFunction) << "' into '"
+                  << ore::NV("Caller", &F) << "'");
       }
     }
     if (LocalChanged) {
@@ -1213,7 +1222,7 @@ void SampleProfileLoader::propagateWeights(Function &F) {
                  << ".\n");
     SmallVector<uint32_t, 4> Weights;
     uint32_t MaxWeight = 0;
-    DebugLoc MaxDestLoc;
+    Instruction *MaxDestInst;
     for (unsigned I = 0; I < TI->getNumSuccessors(); ++I) {
       BasicBlock *Succ = TI->getSuccessor(I);
       Edge E = std::make_pair(BB, Succ);
@@ -1232,7 +1241,7 @@ void SampleProfileLoader::propagateWeights(Function &F) {
       if (Weight != 0) {
         if (Weight > MaxWeight) {
           MaxWeight = Weight;
-          MaxDestLoc = Succ->getFirstNonPHIOrDbgOrLifetime()->getDebugLoc();
+          MaxDestInst = Succ->getFirstNonPHIOrDbgOrLifetime();
         }
       }
     }
@@ -1247,13 +1256,9 @@ void SampleProfileLoader::propagateWeights(Function &F) {
       DEBUG(dbgs() << "SUCCESS. Found non-zero weights.\n");
       TI->setMetadata(llvm::LLVMContext::MD_prof,
                       MDB.createBranchWeights(Weights));
-      emitOptimizationRemark(
-          Ctx, DEBUG_TYPE, F, MaxDestLoc,
-          Twine("most popular destination for conditional branches at ") +
-              ((BranchLoc) ? Twine(BranchLoc->getFilename() + ":" +
-                                   Twine(BranchLoc.getLine()) + ":" +
-                                   Twine(BranchLoc.getCol()))
-                           : Twine("<UNKNOWN LOCATION>")));
+      ORE->emit(OptimizationRemark(DEBUG_TYPE, "PopularDest", MaxDestInst)
+                << "most popular destination for conditional branches at "
+                << ore::NV("CondBranchesLoc", BranchLoc));
     } else {
       DEBUG(dbgs() << "SKIPPED. All branch weights are zero.\n");
     }
@@ -1433,7 +1438,7 @@ ModulePass *llvm::createSampleProfileLoaderPass(StringRef Name) {
   return new SampleProfileLoaderLegacyPass(Name);
 }
 
-bool SampleProfileLoader::runOnModule(Module &M) {
+bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM) {
   if (!ProfileIsValid)
     return false;
 
@@ -1465,7 +1470,7 @@ bool SampleProfileLoader::runOnModule(Module &M) {
   for (auto &F : M)
     if (!F.isDeclaration()) {
       clearFunctionData();
-      retval |= runOnFunction(F);
+      retval |= runOnFunction(F, AM);
     }
   if (M.getProfileSummary() == nullptr)
     M.setProfileSummary(Reader->getSummary().getMD(M.getContext()));
@@ -1475,11 +1480,21 @@ bool SampleProfileLoader::runOnModule(Module &M) {
 bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
   // FIXME: pass in AssumptionCache correctly for the new pass manager.
   SampleLoader.setACT(&getAnalysis<AssumptionCacheTracker>());
-  return SampleLoader.runOnModule(M);
+  return SampleLoader.runOnModule(M, nullptr);
 }
 
-bool SampleProfileLoader::runOnFunction(Function &F) {
+bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) {
   F.setEntryCount(0);
+  std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
+  if (AM) {
+    auto &FAM =
+        AM->getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
+            .getManager();
+    ORE = &FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  } else {
+    OwnedORE = make_unique<OptimizationRemarkEmitter>(&F);
+    ORE = OwnedORE.get();
+  }
   Samples = Reader->getSamplesFor(F);
   if (Samples && !Samples->empty())
     return emitAnnotations(F);
@@ -1494,7 +1509,7 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
 
   SampleLoader.doInitialization(M);
 
-  if (!SampleLoader.runOnModule(M))
+  if (!SampleLoader.runOnModule(M, &AM))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

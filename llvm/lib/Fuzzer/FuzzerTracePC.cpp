@@ -126,6 +126,8 @@ void TracePC::PrintModuleInfo() {
       _Exit(1);
     }
   }
+  if (size_t NumClangCounters = ClangCountersEnd() - ClangCountersBegin())
+    Printf("INFO: %zd Clang Coverage Counters\n", NumClangCounters);
 }
 
 ATTRIBUTE_NO_SANITIZE_ALL
@@ -137,13 +139,12 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
 }
 
 void TracePC::UpdateObservedPCs() {
+  auto Observe = [&](uintptr_t PC) {
+    bool Inserted = ObservedPCs.insert(PC).second;
+    if (Inserted && DoPrintNewPCs)
+      PrintPC("\tNEW_PC: %p %F %L\n", "\tNEW_PC: %p\n", PC + 1);
+  };
   if (NumPCsInPCTables) {
-    auto Observe = [&](uintptr_t PC) {
-      bool Inserted = ObservedPCs.insert(PC).second;
-      if (Inserted && DoPrintNewPCs)
-        PrintPC("\tNEW_PC: %p %F %L\n", "\tNEW_PC: %p\n", PC + 1);
-    };
-
     if (NumInline8bitCounters == NumPCsInPCTables) {
       for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
         uint8_t *Beg = ModuleCounters[i].Start;
@@ -166,6 +167,13 @@ void TracePC::UpdateObservedPCs() {
             Observe(ModulePCTable[i].Start[j]);
       }
     }
+  }
+  if (size_t NumClangCounters =
+      ClangCountersEnd() - ClangCountersBegin()) {
+    auto P = ClangCountersBegin();
+    for (size_t Idx = 0; Idx < NumClangCounters; Idx++)
+      if (P[Idx])
+        Observe((uintptr_t)Idx);
   }
 }
 

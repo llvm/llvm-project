@@ -129,6 +129,13 @@ static cl::opt<bool> EnableAMDGPUFunctionCalls(
   cl::desc("Enable AMDGPU function call support"),
   cl::init(false));
 
+// Enable lib calls simplifications
+static cl::opt<bool> EnableLibCallSimplify(
+  "amdgpu-simplify-libcall",
+  cl::desc("Enable mdgpu library simplifications"),
+  cl::init(true),
+  cl::Hidden);
+
 extern "C" void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -170,6 +177,8 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIFixWWMLivenessPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
+  initializeAMDGPUUseNativeCallsPass(*PR);
+  initializeAMDGPUSimplifyLibCallsPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -313,12 +322,12 @@ static ImmutablePass *createAMDGPUExternalAAWrapperPass() {
 void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
   Builder.DivergentTarget = true;
 
-  bool Internalize = InternalizeSymbols &&
-                     (getOptLevel() > CodeGenOpt::None) &&
+  bool EnableOpt = getOptLevel() > CodeGenOpt::None;
+  bool Internalize = InternalizeSymbols && EnableOpt &&
                      (getTargetTriple().getArch() == Triple::amdgcn);
-  bool EarlyInline = EarlyInlineAll &&
-                     (getOptLevel() > CodeGenOpt::None);
-  bool AMDGPUAA = EnableAMDGPUAliasAnalysis && getOptLevel() > CodeGenOpt::None;
+  bool EarlyInline = EarlyInlineAll && EnableOpt;
+  bool AMDGPUAA = EnableAMDGPUAliasAnalysis && EnableOpt;
+  bool LibCallSimplify = EnableLibCallSimplify && EnableOpt;
 
   Builder.addExtension(
     PassManagerBuilder::EP_ModuleOptimizerEarly,
@@ -357,11 +366,15 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
 
   Builder.addExtension(
     PassManagerBuilder::EP_EarlyAsPossible,
-    [AMDGPUAA](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+    [AMDGPUAA, LibCallSimplify](const PassManagerBuilder &,
+                                legacy::PassManagerBase &PM) {
       if (AMDGPUAA) {
         PM.add(createAMDGPUAAWrapperPass());
         PM.add(createAMDGPUExternalAAWrapperPass());
       }
+      PM.add(llvm::createAMDGPUUseNativeCallsPass());
+      if (LibCallSimplify)
+        PM.add(llvm::createAMDGPUSimplifyLibCallsPass());
   });
 
   Builder.addExtension(

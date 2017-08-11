@@ -53,8 +53,10 @@ define <2 x i256> @test_zext1() {
   ret <2 x i256> %Shuff
 
   ; X64-LABEL: test_zext1
-  ; X64:       movq $0
-  ; X64-NEXT:  movq $0
+  ; X64: xorps   %xmm0, %xmm0
+  ; X64: movaps  %xmm0
+  ; X64: movaps  %xmm0
+  ; X64: movaps  %xmm0
   ; X64-NEXT:  movq $0
   ; X64-NEXT:  movq $254
 
@@ -75,8 +77,10 @@ define <2 x i256> @test_zext2() {
   ret <2 x i256> %Shuff
 
   ; X64-LABEL: test_zext2
-  ; X64:       movq $0
-  ; X64-NEXT:  movq $0
+  ; X64: xorps   %xmm0, %xmm0
+  ; X64-NEXT: movaps  %xmm0
+  ; X64-NEXT: movaps  %xmm0
+  ; X64-NEXT: movaps  %xmm0  
   ; X64-NEXT:  movq $-1
   ; X64-NEXT:  movq $-2
 

@@ -31,13 +31,13 @@ entry:
   ret %0 %3
 }
 
+
 define fastcc %1 @ReturnBigStruct2() nounwind readnone {
 ; X86-LABEL: ReturnBigStruct2:
 ; X86:       # BB#0: # %entry
 ; X86-NEXT:    movl $48, 4(%ecx)
 ; X86-NEXT:    movb $1, 2(%ecx)
-; X86-NEXT:    movb $1, 1(%ecx)
-; X86-NEXT:    movb $0, (%ecx)
+; X86-NEXT:    movw $256, (%ecx) # imm = 0x100
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -45,8 +45,7 @@ define fastcc %1 @ReturnBigStruct2() nounwind readnone {
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movl $48, 4(%rdi)
 ; X64-NEXT:    movb $1, 2(%rdi)
-; X64-NEXT:    movb $1, 1(%rdi)
-; X64-NEXT:    movb $0, (%rdi)
+; X64-NEXT:    movw $256, (%rdi) # imm = 0x100
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
 entry:

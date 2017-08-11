@@ -38,25 +38,30 @@
 #ifndef LLVM_ANALYSIS_ALIASANALYSIS_H
 #define LLVM_ANALYSIS_ALIASANALYSIS_H
 
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CallSite.h"
-#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <vector>
 
 namespace llvm {
-class BasicAAResult;
-class LoadInst;
-class StoreInst;
-class VAArgInst;
-class DataLayout;
-class Pass;
+
 class AnalysisUsage;
-class MemTransferInst;
-class MemIntrinsic;
+class BasicAAResult;
+class BasicBlock;
 class DominatorTree;
 class OrderedBasicBlock;
+class Value;
 
 /// The possible results of an alias query.
 ///
@@ -611,6 +616,7 @@ public:
 
 private:
   class Concept;
+
   template <typename T> class Model;
 
   template <typename T> friend class AAResultBase;
@@ -624,7 +630,7 @@ private:
 
 /// Temporary typedef for legacy code that uses a generic \c AliasAnalysis
 /// pointer or reference.
-typedef AAResults AliasAnalysis;
+using AliasAnalysis = AAResults;
 
 /// A private abstract base class describing the concept of an individual alias
 /// analysis implementation.
@@ -705,7 +711,7 @@ public:
   explicit Model(AAResultT &Result, AAResults &AAR) : Result(Result) {
     Result.setAAResults(&AAR);
   }
-  ~Model() override {}
+  ~Model() override = default;
 
   void setAAResults(AAResults *NewAAR) override { Result.setAAResults(NewAAR); }
 
@@ -815,7 +821,7 @@ protected:
     }
   };
 
-  explicit AAResultBase() {}
+  explicit AAResultBase() = default;
 
   // Provide all the copy and move constructors so that derived types aren't
   // constrained.
@@ -864,7 +870,6 @@ public:
   }
 };
 
-
 /// Return true if this pointer is returned by a noalias function.
 bool isNoAliasCall(const Value *V);
 
@@ -901,7 +906,7 @@ bool isIdentifiedFunctionLocal(const Value *V);
 /// ensure the analysis itself is registered with its AnalysisManager.
 class AAManager : public AnalysisInfoMixin<AAManager> {
 public:
-  typedef AAResults Result;
+  using Result = AAResults;
 
   /// Register a specific AA result.
   template <typename AnalysisT> void registerFunctionAnalysis() {
@@ -922,6 +927,7 @@ public:
 
 private:
   friend AnalysisInfoMixin<AAManager>;
+
   static AnalysisKey Key;
 
   SmallVector<void (*)(Function &F, FunctionAnalysisManager &AM,
@@ -992,6 +998,6 @@ AAResults createLegacyPMAAResults(Pass &P, Function &F, BasicAAResult &BAR);
 /// sure the analyses required by \p createLegacyPMAAResults are available.
 void getAAResultsAnalysisUsage(AnalysisUsage &AU);
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ANALYSIS_ALIASANALYSIS_H

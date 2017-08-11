@@ -412,6 +412,10 @@ public:
     return (Options & ClassOptions::HasUniqueName) != ClassOptions::None;
   }
 
+  bool isNested() const {
+    return (Options & ClassOptions::Nested) != ClassOptions::None;
+  }
+
   uint16_t getMemberCount() const { return MemberCount; }
   ClassOptions getOptions() const { return Options; }
   TypeIndex getFieldList() const { return FieldList; }

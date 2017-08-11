@@ -154,8 +154,9 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
       return true;
 
     bool IsTLS = GV && GV->isThreadLocal();
-    bool IsAccessViaCopyRelocs =
-        Options.MCOptions.MCPIECopyRelocations && GV && isa<GlobalVariable>(GV);
+    bool IsAccessViaCopyRelocs = Options.MCOptions.MCPIECopyRelocations && GV &&
+                                 isa<GlobalVariable>(GV) &&
+                                 !GV->hasExternalWeakLinkage();
     Triple::ArchType Arch = TT.getArch();
     bool IsPPC =
         Arch == Triple::ppc || Arch == Triple::ppc64 || Arch == Triple::ppc64le;

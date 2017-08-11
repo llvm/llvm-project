@@ -1,6 +1,6 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile 2>&1 | FileCheck %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile 2>&1 | FileCheck %s
-;
+; RUN: FileCheck %s -check-prefix=YAML < %t.opt.yaml
 ; Original test case.
 ;
 ;     1    #include <stdlib.h>
@@ -26,6 +26,44 @@
 
 ; The predicate almost always chooses the 'else' branch.
 ; CHECK: remark: remarks.cc:9:15: most popular destination for conditional branches at remarks.cc:6:9
+
+; Checking to see if YAML file is generated and contains remarks
+;YAML:       --- !Passed
+;YAML-NEXT:  Pass:            sample-profile
+;YAML-NEXT:  Name:            HotInline
+;YAML-NEXT:  DebugLoc:        { File: remarks.cc, Line: 13, Column: 21 }
+;YAML-NEXT:  Function:        main
+;YAML-NEXT:  Args:
+;YAML-NEXT:    - String:          'inlined hot callee '''
+;YAML-NEXT:    - Callee:          _Z3foov
+;YAML-NEXT:      DebugLoc:        { File: remarks.cc, Line: 3, Column: 0 }
+;YAML-NEXT:    - String:          ''' into '''
+;YAML-NEXT:    - Caller:          main
+;YAML-NEXT:        DebugLoc:        { File: remarks.cc, Line: 13, Column: 0 }
+;YAML-NEXT:    - String:          ''''
+;YAML-NEXT:  ...
+;YAML:  --- !Analysis
+;YAML-NEXT:  Pass:            sample-profile
+;YAML-NEXT:  Name:            AppliedSamples
+;YAML-NEXT:  DebugLoc:        { File: remarks.cc, Line: 5, Column: 8 }
+;YAML-NEXT:  Function:        main
+;YAML-NEXT:  Args:
+;YAML-NEXT:    - String:          'Applied '
+;YAML-NEXT:    - NumSamples:      '18305'
+;YAML-NEXT:    - String:          ' samples from profile (offset: '
+;YAML-NEXT:    - LineOffset:      '2'
+;YAML-NEXT:    - String:          ')'
+;YAML-NEXT:  ...
+;YAML:  --- !Passed
+;YAML-NEXT:  Pass:            sample-profile
+;YAML-NEXT:  Name:            PopularDest
+;YAML-NEXT:  DebugLoc:        { File: remarks.cc, Line: 6, Column: 9 }
+;YAML-NEXT:  Function:        main
+;YAML-NEXT:  Args:
+;YAML-NEXT:    - String:          'most popular destination for conditional branches at '
+;YAML-NEXT:    - CondBranchesLoc: 'remarks.cc:5:3'
+;YAML-NEXT:      DebugLoc:        { File: remarks.cc, Line: 5, Column: 3 }
+;YAML-NEXT:  ...
 
 ; Function Attrs: nounwind uwtable
 define i64 @_Z3foov() #0 !dbg !4 {
