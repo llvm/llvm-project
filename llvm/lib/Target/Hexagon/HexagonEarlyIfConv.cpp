@@ -539,7 +539,7 @@ bool HexagonEarlyIfConversion::isProfitable(const FlowPattern &FP) const {
       return 0u;
     unsigned T = std::count_if(B->begin(), B->getFirstTerminator(),
                                [](const MachineInstr &MI) {
-                                 return !MI.isDebugValue();
+                                 return !MI.isMetaInstruction();
                                });
     if (T < HEXAGON_PACKET_SIZE)
       Spare += HEXAGON_PACKET_SIZE-T;

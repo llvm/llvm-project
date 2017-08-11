@@ -5348,7 +5348,8 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       Mnemonic == "vcvtm" || Mnemonic == "vrinta" || Mnemonic == "vrintn" ||
       Mnemonic == "vrintp" || Mnemonic == "vrintm" || Mnemonic == "hvc" ||
       Mnemonic.startswith("vsel") || Mnemonic == "vins" || Mnemonic == "vmovx" ||
-      Mnemonic == "bxns"  || Mnemonic == "blxns")
+      Mnemonic == "bxns"  || Mnemonic == "blxns" ||
+      Mnemonic == "vudot" || Mnemonic == "vsdot")
     return Mnemonic;
 
   // First, split out any predication code. Ignore mnemonics we know aren't
@@ -5454,7 +5455,8 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic, StringRef FullInst,
       Mnemonic.startswith("aes") || Mnemonic == "hvc" || Mnemonic == "setpan" ||
       Mnemonic.startswith("sha1") || Mnemonic.startswith("sha256") ||
       (FullInst.startswith("vmull") && FullInst.endswith(".p64")) ||
-      Mnemonic == "vmovx" || Mnemonic == "vins") {
+      Mnemonic == "vmovx" || Mnemonic == "vins" ||
+      Mnemonic == "vudot" || Mnemonic == "vsdot") {
     // These mnemonics are never predicable
     CanAcceptPredicationCode = false;
   } else if (!isThumb()) {

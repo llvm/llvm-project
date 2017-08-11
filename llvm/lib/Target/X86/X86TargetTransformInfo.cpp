@@ -838,11 +838,22 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
     { TTI::SK_Alternate, MVT::v16i16, 1 }, // vpblendw
     { TTI::SK_Alternate, MVT::v32i8,  1 }, // vpblendvb
 
+    { TTI::SK_PermuteSingleSrc, MVT::v4f64,  1 }, // vpermpd
+    { TTI::SK_PermuteSingleSrc, MVT::v8f32,  1 }, // vpermps
     { TTI::SK_PermuteSingleSrc, MVT::v4i64,  1 }, // vpermq
     { TTI::SK_PermuteSingleSrc, MVT::v8i32,  1 }, // vpermd
-    { TTI::SK_PermuteSingleSrc, MVT::v16i16, 4 }, // vperm2i128 + 2 * vpshufb
+    { TTI::SK_PermuteSingleSrc, MVT::v16i16, 4 }, // vperm2i128 + 2*vpshufb
                                                   // + vpblendvb
-    { TTI::SK_PermuteSingleSrc, MVT::v32i8,  4 }  // vperm2i128 + 2 * vpshufb
+    { TTI::SK_PermuteSingleSrc, MVT::v32i8,  4 }, // vperm2i128 + 2*vpshufb
+                                                  // + vpblendvb
+
+    { TTI::SK_PermuteTwoSrc,    MVT::v4f64,  3 }, // 2*vpermpd + vblendpd
+    { TTI::SK_PermuteTwoSrc,    MVT::v8f32,  3 }, // 2*vpermps + vblendps
+    { TTI::SK_PermuteTwoSrc,    MVT::v4i64,  3 }, // 2*vpermq + vpblendd
+    { TTI::SK_PermuteTwoSrc,    MVT::v8i32,  3 }, // 2*vpermd + vpblendd
+    { TTI::SK_PermuteTwoSrc,    MVT::v16i16, 7 }, // 2*vperm2i128 + 4*vpshufb
+                                                  // + vpblendvb
+    { TTI::SK_PermuteTwoSrc,    MVT::v32i8,  7 }, // 2*vperm2i128 + 4*vpshufb
                                                   // + vpblendvb
   };
 
@@ -872,7 +883,25 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
     { TTI::SK_Alternate, MVT::v8i32,  1 }, // vblendps
     { TTI::SK_Alternate, MVT::v8f32,  1 }, // vblendps
     { TTI::SK_Alternate, MVT::v16i16, 3 }, // vpand + vpandn + vpor
-    { TTI::SK_Alternate, MVT::v32i8,  3 }  // vpand + vpandn + vpor
+    { TTI::SK_Alternate, MVT::v32i8,  3 }, // vpand + vpandn + vpor
+
+    { TTI::SK_PermuteSingleSrc, MVT::v4f64,  3 }, // 2*vperm2f128 + vshufpd
+    { TTI::SK_PermuteSingleSrc, MVT::v4i64,  3 }, // 2*vperm2f128 + vshufpd
+    { TTI::SK_PermuteSingleSrc, MVT::v8f32,  4 }, // 2*vperm2f128 + 2*vshufps
+    { TTI::SK_PermuteSingleSrc, MVT::v8i32,  4 }, // 2*vperm2f128 + 2*vshufps
+    { TTI::SK_PermuteSingleSrc, MVT::v16i16, 8 }, // vextractf128 + 4*pshufb
+                                                  // + 2*por + vinsertf128
+    { TTI::SK_PermuteSingleSrc, MVT::v32i8,  8 }, // vextractf128 + 4*pshufb
+                                                  // + 2*por + vinsertf128
+
+    { TTI::SK_PermuteTwoSrc,    MVT::v4f64,   4 }, // 2*vperm2f128 + 2*vshufpd
+    { TTI::SK_PermuteTwoSrc,    MVT::v8f32,   4 }, // 2*vperm2f128 + 2*vshufps
+    { TTI::SK_PermuteTwoSrc,    MVT::v4i64,   4 }, // 2*vperm2f128 + 2*vshufpd
+    { TTI::SK_PermuteTwoSrc,    MVT::v8i32,   4 }, // 2*vperm2f128 + 2*vshufps
+    { TTI::SK_PermuteTwoSrc,    MVT::v16i16, 15 }, // 2*vextractf128 + 8*pshufb
+                                                   // + 4*por + vinsertf128
+    { TTI::SK_PermuteTwoSrc,    MVT::v32i8,  15 }, // 2*vextractf128 + 8*pshufb
+                                                   // + 4*por + vinsertf128
   };
 
   if (ST->hasAVX())
@@ -899,11 +928,14 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
     { TTI::SK_Reverse,   MVT::v8i16,  1 }, // pshufb
     { TTI::SK_Reverse,   MVT::v16i8,  1 }, // pshufb
 
-    { TTI::SK_Alternate, MVT::v8i16,  3 }, // pshufb + pshufb + por
-    { TTI::SK_Alternate, MVT::v16i8,  3 }, // pshufb + pshufb + por
+    { TTI::SK_Alternate, MVT::v8i16,  3 }, // 2*pshufb + por
+    { TTI::SK_Alternate, MVT::v16i8,  3 }, // 2*pshufb + por
 
     { TTI::SK_PermuteSingleSrc, MVT::v8i16, 1 }, // pshufb
-    { TTI::SK_PermuteSingleSrc, MVT::v16i8, 1 }  // pshufb
+    { TTI::SK_PermuteSingleSrc, MVT::v16i8, 1 }, // pshufb
+
+    { TTI::SK_PermuteTwoSrc,    MVT::v8i16, 3 }, // 2*pshufb + por
+    { TTI::SK_PermuteTwoSrc,    MVT::v16i8, 3 }, // 2*pshufb + por
   };
 
   if (ST->hasSSSE3())
@@ -914,13 +946,13 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
     { TTI::SK_Broadcast, MVT::v2f64,  1 }, // shufpd
     { TTI::SK_Broadcast, MVT::v2i64,  1 }, // pshufd
     { TTI::SK_Broadcast, MVT::v4i32,  1 }, // pshufd
-    { TTI::SK_Broadcast, MVT::v8i16,  2 }, // pshuflw  + pshufd
+    { TTI::SK_Broadcast, MVT::v8i16,  2 }, // pshuflw + pshufd
     { TTI::SK_Broadcast, MVT::v16i8,  3 }, // unpck + pshuflw + pshufd
 
     { TTI::SK_Reverse,   MVT::v2f64,  1 }, // shufpd
     { TTI::SK_Reverse,   MVT::v2i64,  1 }, // pshufd
     { TTI::SK_Reverse,   MVT::v4i32,  1 }, // pshufd
-    { TTI::SK_Reverse,   MVT::v8i16,  3 }, // pshuflw + pshufhw  + pshufd
+    { TTI::SK_Reverse,   MVT::v8i16,  3 }, // pshuflw + pshufhw + pshufd
     { TTI::SK_Reverse,   MVT::v16i8,  9 }, // 2*pshuflw + 2*pshufhw
                                            // + 2*pshufd + 2*unpck + packus
 
@@ -930,8 +962,19 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
     { TTI::SK_Alternate, MVT::v8i16,  3 }, // pand + pandn + por
     { TTI::SK_Alternate, MVT::v16i8,  3 }, // pand + pandn + por
 
-    { TTI::SK_PermuteSingleSrc, MVT::v2i64, 1 }, // pshufd
-    { TTI::SK_PermuteSingleSrc, MVT::v4i32, 1 }  // pshufd
+    { TTI::SK_PermuteSingleSrc, MVT::v2f64,  1 }, // shufpd
+    { TTI::SK_PermuteSingleSrc, MVT::v2i64,  1 }, // pshufd
+    { TTI::SK_PermuteSingleSrc, MVT::v4i32,  1 }, // pshufd
+    { TTI::SK_PermuteSingleSrc, MVT::v8i16,  5 }, // 2*pshuflw + 2*pshufhw
+                                                  // + pshufd/unpck
+    { TTI::SK_PermuteSingleSrc, MVT::v16i8, 10 }, // 2*pshuflw + 2*pshufhw
+                                                  // + 2*pshufd + 2*unpck + 2*packus
+
+    { TTI::SK_PermuteTwoSrc,    MVT::v2f64,  1 }, // shufpd
+    { TTI::SK_PermuteTwoSrc,    MVT::v2i64,  1 }, // shufpd
+    { TTI::SK_PermuteTwoSrc,    MVT::v4i32,  2 }, // 2*{unpck,movsd,pshufd}
+    { TTI::SK_PermuteTwoSrc,    MVT::v8i16,  8 }, // blend+permute
+    { TTI::SK_PermuteTwoSrc,    MVT::v16i8, 13 }, // blend+permute
   };
 
   if (ST->hasSSE2())
@@ -939,9 +982,11 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
       return LT.first * Entry->Cost;
 
   static const CostTblEntry SSE1ShuffleTbl[] = {
-    { TTI::SK_Broadcast, MVT::v4f32,  1 }, // shufps
-    { TTI::SK_Reverse,   MVT::v4f32,  1 }, // shufps
-    { TTI::SK_Alternate, MVT::v4f32,  2 }  // 2*shufps
+    { TTI::SK_Broadcast,        MVT::v4f32, 1 }, // shufps
+    { TTI::SK_Reverse,          MVT::v4f32, 1 }, // shufps
+    { TTI::SK_Alternate,        MVT::v4f32, 2 }, // 2*shufps
+    { TTI::SK_PermuteSingleSrc, MVT::v4f32, 1 }, // shufps
+    { TTI::SK_PermuteTwoSrc,    MVT::v4f32, 2 }, // 2*shufps
   };
 
   if (ST->hasSSE1())

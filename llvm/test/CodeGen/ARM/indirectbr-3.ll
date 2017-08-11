@@ -10,9 +10,11 @@
 define i32 @preserve_blocks(i32 %x) {
 ; preserve_blocks:
 ; CHECK: Block address taken
-; CHECK: movs r0, #1
-; CHECK: Block address taken
+; CHECK: %ibt1
 ; CHECK: movs r0, #2
+; CHECK: Block address taken
+; CHECK: %ibt2
+; CHECK: movs r0, #1
 ; CHECK-NOT: Address of block that was removed by CodeGen
 
 ; Separate bug. There are no valid diamonds to if-convert in this file.

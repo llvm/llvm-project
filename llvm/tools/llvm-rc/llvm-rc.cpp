@@ -1,4 +1,4 @@
-//===- llvm-rc.cpp - Compile .rc scripts into .res -------------*- C++ -*--===//
+//===-- llvm-rc.cpp - Compile .rc scripts into .res -------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,6 +11,8 @@
 // platform-independent port of Microsoft's rc.exe tool.
 //
 //===----------------------------------------------------------------------===//
+
+#include "ResourceScriptToken.h"
 
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -60,6 +62,12 @@ public:
 };
 
 static ExitOnError ExitOnErr;
+
+LLVM_ATTRIBUTE_NORETURN static void fatalError(Twine Message) {
+  errs() << Message << "\n";
+  exit(1);
+}
+
 } // anonymous namespace
 
 int main(int argc_, const char *argv_[]) {
@@ -81,8 +89,49 @@ int main(int argc_, const char *argv_[]) {
   opt::InputArgList InputArgs = T.ParseArgs(ArgsArr, MAI, MAC);
 
   // The tool prints nothing when invoked with no command-line arguments.
-  if (InputArgs.hasArg(OPT_HELP))
+  if (InputArgs.hasArg(OPT_HELP)) {
     T.PrintHelp(outs(), "rc", "Resource Converter", false);
+    return 0;
+  }
+
+  const bool BeVerbose = InputArgs.hasArg(OPT_VERBOSE);
+
+  std::vector<std::string> InArgsInfo = InputArgs.getAllArgValues(OPT_INPUT);
+  if (InArgsInfo.size() != 1) {
+    fatalError("Exactly one input file should be provided.");
+  }
+
+  // Read and tokenize the input file.
+  const Twine &Filename = InArgsInfo[0];
+  ErrorOr<std::unique_ptr<MemoryBuffer>> File = MemoryBuffer::getFile(Filename);
+  if (!File) {
+    fatalError("Error opening file '" + Filename +
+               "': " + File.getError().message());
+  }
+
+  std::unique_ptr<MemoryBuffer> FileContents = std::move(*File);
+  StringRef Contents = FileContents->getBuffer();
+
+  std::vector<RCToken> Tokens = ExitOnErr(tokenizeRC(Contents));
+
+  if (BeVerbose) {
+    const Twine TokenNames[] = {
+#define TOKEN(Name) #Name,
+#define SHORT_TOKEN(Name, Ch) #Name,
+#include "ResourceScriptTokenList.h"
+#undef TOKEN
+#undef SHORT_TOKEN
+    };
+
+    for (const RCToken &Token : Tokens) {
+      outs() << TokenNames[static_cast<int>(Token.kind())] << ": "
+             << Token.value();
+      if (Token.kind() == RCToken::Kind::Int)
+        outs() << "; int value = " << Token.intValue();
+
+      outs() << "\n";
+    }
+  }
 
   return 0;
 }
