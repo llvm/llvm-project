@@ -497,6 +497,8 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_ref_qualifiers", "200710");
     Builder.defineMacro("__cpp_alias_templates", "200704");
   }
+  if (LangOpts.ThreadsafeStatics)
+    Builder.defineMacro("__cpp_threadsafe_static_init", "200806");
 
   // C++14 features.
   if (LangOpts.CPlusPlus14) {
@@ -519,6 +521,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_noexcept_function_type", "201510");
     Builder.defineMacro("__cpp_capture_star_this", "201603");
     Builder.defineMacro("__cpp_if_constexpr", "201606");
+    Builder.defineMacro("__cpp_deduction_guides", "201611");
     Builder.defineMacro("__cpp_template_auto", "201606");
     Builder.defineMacro("__cpp_namespace_attributes", "201411");
     Builder.defineMacro("__cpp_enumerator_attributes", "201411");
@@ -528,8 +531,6 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_structured_bindings", "201606");
     Builder.defineMacro("__cpp_nontype_template_args", "201411");
     Builder.defineMacro("__cpp_fold_expressions", "201603");
-    // FIXME: This is not yet listed in SD-6.
-    Builder.defineMacro("__cpp_deduction_guides", "201611");
   }
   if (LangOpts.AlignedAllocation)
     Builder.defineMacro("__cpp_aligned_new", "201606");
