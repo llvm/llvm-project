@@ -58,15 +58,13 @@ def dirs_exist(names):
     return True
 
 def XCODE_REPOSITORIES():
-    names = ["llvm", "clang", "ninja"]
+    names = ["llvm", "clang", "swift", "cmark", "ninja"]
     if dirs_exist(names):
         return [fallback_repo(n) for n in names]
     override = repo.get_override()
     if override:
         return [process_repo(r) for r in override]
     identifier = repo.identifier()
-    if identifier == None:
-        return [fallback_repo(n) for n in ["llvm", "clang", "swift", "cmark", "ninja"]]
     set = repo.find(identifier)
     return [process_repo(r) for r in set]
 
@@ -135,14 +133,6 @@ def with_devices_preset_suffix():
         return "_with_devices"
     else:
         return ""
-
-def XCODE_REPOSITORIES():
-    identifier = repo.identifier()
-    if identifier == None:
-        identifier = "<invalid>" # repo.find will just use the fallback file
-    set = repo.find(identifier)
-    return [process_repo(r) for r in set]
-
 
 def BUILD_SCRIPT_FLAGS():
     return {
