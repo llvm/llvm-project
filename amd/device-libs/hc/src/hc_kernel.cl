@@ -5,7 +5,7 @@
 #define ATTR __attribute__((always_inline, const))
 #define ATTR2 __attribute__((always_inline))
 
-ATTR long
+ATTR uint
 amp_get_global_id(int dim)
 {
   __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
@@ -37,70 +37,138 @@ amp_get_global_id(int dim)
   return (g*s + l);
 }
 
-ATTR long
+ATTR uint
 amp_get_global_size(int dim)
 {
-  return __ockl_get_global_size(dim);
+    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+
+    switch(dim) {
+    case 0:
+        return p->grid_size_x;
+    case 1:
+        return p->grid_size_y;
+    case 2:
+        return p->grid_size_z;
+    default:
+        return 1;
+    }
 }
 
-ATTR long
+ATTR uint
 amp_get_local_id(int dim)
 {
-  return __ockl_get_local_id(dim);
+    switch(dim) {
+    case 0:
+        return __llvm_amdgcn_workitem_id_x();
+    case 1:
+        return __llvm_amdgcn_workitem_id_y();
+    case 2:
+        return __llvm_amdgcn_workitem_id_z();
+    default:
+        return 0;
+    }
 }
 
-ATTR long
+ATTR uint
 amp_get_num_groups(int dim)
 {
-  return __ockl_get_num_groups(dim);
+    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+
+    uint n, d;
+    switch(dim) {
+    case 0:
+        n = p->grid_size_x;
+        d = p->workgroup_size_x;
+        break;
+    case 1:
+        n = p->grid_size_y;
+        d = p->workgroup_size_y;
+        break;
+    case 2:
+        n = p->grid_size_z;
+        d = p->workgroup_size_z;
+        break;
+    default:
+        n = 1;
+        d = 1;
+        break;
+    }
+
+    return n / d;
 }
 
-ATTR long
+ATTR uint
 amp_get_group_id(int dim)
 {
-  return __ockl_get_group_id(dim);
+    switch(dim) {
+    case 0:
+        return __llvm_amdgcn_workgroup_id_x();
+    case 1:
+        return __llvm_amdgcn_workgroup_id_y();
+    case 2:
+        return __llvm_amdgcn_workgroup_id_z();
+    default:
+        return 0;
+    }
 }
 
-ATTR long
+ATTR uint
 amp_get_local_size(int dim)
 {
-  return __ockl_get_local_size(dim);
+    __constant hsa_kernel_dispatch_packet_t *p = __llvm_amdgcn_dispatch_ptr();
+    uint d;
+
+    switch(dim) {
+    case 0:
+        d = p->workgroup_size_x;
+        break;
+    case 1:
+        d = p->workgroup_size_y;
+        break;
+    case 2:
+        d = p->workgroup_size_z;
+        break;
+    default:
+        d = 1;
+        break;
+    }
+    return d;
 }
 
-ATTR long
+ATTR uint
 hc_get_grid_size(int dim)
 {
-  return __ockl_get_global_size(dim);
+    return amp_get_global_size(dim);
 }
 
-ATTR long
+ATTR uint
 hc_get_workitem_absolute_id(int dim)
 {
-  return amp_get_global_id(dim);
+    return amp_get_global_id(dim);
 }
 
-ATTR long
+ATTR uint
 hc_get_workitem_id(int dim)
 {
-  return __ockl_get_local_id(dim);
+    return amp_get_local_id(dim);
 }
 
-ATTR long
+ATTR uint
 hc_get_num_groups(int dim)
 {
-  return __ockl_get_num_groups(dim);
+    return amp_get_num_groups(dim);
 }
 
-ATTR long
+ATTR uint
 hc_get_group_id(int dim)
 {
-  return __ockl_get_group_id(dim);
+    return amp_get_group_id(dim);
 }
 
-ATTR long
+ATTR uint
 hc_get_group_size(int dim)
 {
-  return __ockl_get_local_size(dim);
+    return amp_get_local_size(dim);
 }
 
 ATTR2 void
