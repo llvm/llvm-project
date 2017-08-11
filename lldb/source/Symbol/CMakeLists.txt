@@ -65,6 +65,7 @@ add_lldb_library(lldbSymbol
     lldbPluginObjectContainerBSDArchive
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
+    lldbPluginPlatformMacOSX
 
   LINK_COMPONENTS
     Support
