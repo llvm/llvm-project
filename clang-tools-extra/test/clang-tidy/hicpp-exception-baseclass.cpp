@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s hicpp-exception-baseclass %t
+// RUN: %check_clang_tidy %s hicpp-exception-baseclass %t -- -- -fcxx-exceptions
 
 namespace std {
 class exception {};
@@ -20,7 +20,7 @@ void problematic() {
     throw non_derived_exception(); // Some class is not allowed
 // CHECK-MESSAGES: [[@LINE-1]]:5: warning: throwing an exception whose type is not derived from 'std::exception'
 // CHECK-MESSAGES: 8:1: note: type defined here
-  } catch (non_derived_exception &e) { 
+  } catch (non_derived_exception &e) {
   }
   throw non_derived_exception(); // Bad
 // CHECK-MESSAGES: [[@LINE-1]]:3: warning: throwing an exception whose type is not derived from 'std::exception'
