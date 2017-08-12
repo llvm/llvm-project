@@ -159,6 +159,7 @@ class MiVarTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfLinux  # llvm.org/pr22841: lldb-mi tests fail on all Linux buildbots
+    @skipIfDarwin # rdar://33462982
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_var_update(self):
         """Test that 'lldb-mi --interpreter' works for -var-update."""
