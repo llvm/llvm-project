@@ -952,12 +952,11 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:  .Lcfi103:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
 ; X86-NEXT:    xorl $32, %eax
+; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    orl %ebx, %eax
-; X86-NEXT:    movl $-1, %eax
-; X86-NEXT:    jne .LBB1_2
-; X86-NEXT:  # BB#1:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:  .LBB1_2:
+; X86-NEXT:    setne %cl
+; X86-NEXT:    negl %ecx
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -974,23 +973,20 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X64-HSW-NEXT:    pushq %r14
 ; X64-HSW-NEXT:  .Lcfi2:
 ; X64-HSW-NEXT:    .cfi_def_cfa_offset 32
-; X64-HSW-NEXT:    pushq %r12
+; X64-HSW-NEXT:    pushq %rbx
 ; X64-HSW-NEXT:  .Lcfi3:
 ; X64-HSW-NEXT:    .cfi_def_cfa_offset 40
-; X64-HSW-NEXT:    pushq %rbx
+; X64-HSW-NEXT:    pushq %rax
 ; X64-HSW-NEXT:  .Lcfi4:
 ; X64-HSW-NEXT:    .cfi_def_cfa_offset 48
 ; X64-HSW-NEXT:  .Lcfi5:
-; X64-HSW-NEXT:    .cfi_offset %rbx, -48
+; X64-HSW-NEXT:    .cfi_offset %rbx, -40
 ; X64-HSW-NEXT:  .Lcfi6:
-; X64-HSW-NEXT:    .cfi_offset %r12, -40
-; X64-HSW-NEXT:  .Lcfi7:
 ; X64-HSW-NEXT:    .cfi_offset %r14, -32
-; X64-HSW-NEXT:  .Lcfi8:
+; X64-HSW-NEXT:  .Lcfi7:
 ; X64-HSW-NEXT:    .cfi_offset %r15, -24
-; X64-HSW-NEXT:  .Lcfi9:
+; X64-HSW-NEXT:  .Lcfi8:
 ; X64-HSW-NEXT:    .cfi_offset %rbp, -16
-; X64-HSW-NEXT:    xorl %r12d, %r12d
 ; X64-HSW-NEXT:    movl $1, %edi
 ; X64-HSW-NEXT:    xorl %esi, %esi
 ; X64-HSW-NEXT:    callq mult
@@ -1180,11 +1176,13 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X64-HSW-NEXT:    movl $16, %esi
 ; X64-HSW-NEXT:    callq mult
 ; X64-HSW-NEXT:    xorl $32, %eax
+; X64-HSW-NEXT:    xorl %ecx, %ecx
 ; X64-HSW-NEXT:    orl %ebx, %eax
-; X64-HSW-NEXT:    movl $-1, %eax
-; X64-HSW-NEXT:    cmovel %r12d, %eax
+; X64-HSW-NEXT:    setne %cl
+; X64-HSW-NEXT:    negl %ecx
+; X64-HSW-NEXT:    movl %ecx, %eax
+; X64-HSW-NEXT:    addq $8, %rsp
 ; X64-HSW-NEXT:    popq %rbx
-; X64-HSW-NEXT:    popq %r12
 ; X64-HSW-NEXT:    popq %r14
 ; X64-HSW-NEXT:    popq %r15
 ; X64-HSW-NEXT:    popq %rbp

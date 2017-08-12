@@ -10,6 +10,7 @@
 #include "FormatUtil.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -98,4 +99,88 @@ std::string llvm::pdb::typesetStringList(uint32_t IndentLevel,
 
 std::string llvm::pdb::formatSegmentOffset(uint16_t Segment, uint32_t Offset) {
   return formatv("{0:4}:{1:4}", Segment, Offset);
+}
+
+#define PUSH_CHARACTERISTIC_FLAG(Enum, TheOpt, Value, Style, Descriptive)      \
+  PUSH_FLAG(Enum, TheOpt, Value,                                               \
+            ((Style == CharacteristicStyle::HeaderDefinition) ? #TheOpt        \
+                                                              : Descriptive))
+
+#define PUSH_MASKED_CHARACTERISTIC_FLAG(Enum, Mask, TheOpt, Value, Style,      \
+                                        Descriptive)                           \
+  PUSH_MASKED_FLAG(Enum, Mask, TheOpt, Value,                                  \
+                   ((Style == CharacteristicStyle::HeaderDefinition)           \
+                        ? #TheOpt                                              \
+                        : Descriptive))
+
+std::string llvm::pdb::formatSectionCharacteristics(uint32_t IndentLevel,
+                                                    uint32_t C,
+                                                    uint32_t FlagsPerLine,
+                                                    StringRef Separator,
+                                                    CharacteristicStyle Style) {
+  using SC = COFF::SectionCharacteristics;
+  std::vector<std::string> Opts;
+  if (C == COFF::SC_Invalid)
+    return "invalid";
+  if (C == 0)
+    return "none";
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_TYPE_NOLOAD, C, Style, "noload");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_TYPE_NO_PAD, C, Style, "no padding");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_CNT_CODE, C, Style, "code");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_CNT_INITIALIZED_DATA, C, Style,
+                           "initialized data");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_CNT_UNINITIALIZED_DATA, C, Style,
+                           "uninitialized data");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_LNK_OTHER, C, Style, "other");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_LNK_INFO, C, Style, "info");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_LNK_REMOVE, C, Style, "remove");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_LNK_COMDAT, C, Style, "comdat");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_GPREL, C, Style, "gp rel");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_MEM_PURGEABLE, C, Style, "purgeable");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_MEM_16BIT, C, Style, "16-bit");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_MEM_LOCKED, C, Style, "locked");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_MEM_PRELOAD, C, Style, "preload");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_1BYTES, C,
+                                  Style, "1 byte align");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_2BYTES, C,
+                                  Style, "2 byte align");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_4BYTES, C,
+                                  Style, "4 byte align");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_8BYTES, C,
+                                  Style, "8 byte align");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_16BYTES, C,
+                                  Style, "16 byte align");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_32BYTES, C,
+                                  Style, "32 byte align");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_64BYTES, C,
+                                  Style, "64 byte align");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_128BYTES, C,
+                                  Style, "128 byte align");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_256BYTES, C,
+                                  Style, "256 byte align");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_512BYTES, C,
+                                  Style, "512 byte align");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_1024BYTES, C,
+                                  Style, "1024 byte align");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_2048BYTES, C,
+                                  Style, "2048 byte align");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_4096BYTES, C,
+                                  Style, "4096 byte align");
+  PUSH_MASKED_CHARACTERISTIC_FLAG(SC, 0xF00000, IMAGE_SCN_ALIGN_8192BYTES, C,
+                                  Style, "8192 byte align");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_LNK_NRELOC_OVFL, C, Style,
+                           "noreloc overflow");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_MEM_DISCARDABLE, C, Style,
+                           "discardable");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_MEM_NOT_CACHED, C, Style,
+                           "not cached");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_MEM_NOT_PAGED, C, Style, "not paged");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_MEM_SHARED, C, Style, "shared");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_MEM_EXECUTE, C, Style,
+                           "execute permissions");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_MEM_READ, C, Style,
+                           "read permissions");
+  PUSH_CHARACTERISTIC_FLAG(SC, IMAGE_SCN_MEM_WRITE, C, Style,
+                           "write permissions");
+  return typesetItemList(Opts, IndentLevel, FlagsPerLine, Separator);
 }

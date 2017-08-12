@@ -197,7 +197,7 @@ private:
     // (i.e. not: { Dom[0] -> A[0]; Dom[1] -> B[1] }).
     // Look through all spaces until we find one that contains at least the
     // wanted statement instance.s
-    MustKnown.foreach_map([&, this](isl::map Map) -> isl::stat {
+    MustKnown.foreach_map([&](isl::map Map) -> isl::stat {
       // Get the array this is accessing.
       isl::id ArrayId = Map.get_tuple_id(isl::dim::out);
       ScopArrayInfo *SAI = static_cast<ScopArrayInfo *>(ArrayId.get_user());

@@ -812,6 +812,8 @@ namespace llvm {
     /// This method returns the name of a target specific DAG node.
     const char *getTargetNodeName(unsigned Opcode) const override;
 
+    bool mergeStoresAfterLegalization() const override { return true; }
+
     bool isCheapToSpeculateCttz() const override;
 
     bool isCheapToSpeculateCtlz() const override;
@@ -866,6 +868,8 @@ namespace llvm {
                                              const APInt &DemandedElts,
                                              const SelectionDAG &DAG,
                                              unsigned Depth) const override;
+
+    SDValue unwrapAddress(SDValue N) const override;
 
     bool isGAPlusOffset(SDNode *N, const GlobalValue* &GA,
                         int64_t &Offset) const override;

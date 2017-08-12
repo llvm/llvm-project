@@ -12,6 +12,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "CloexecCreatCheck.h"
 #include "CloexecFopenCheck.h"
+#include "CloexecMemfdCreateCheck.h"
 #include "CloexecOpenCheck.h"
 #include "CloexecSocketCheck.h"
 
@@ -27,6 +28,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<CloexecCreatCheck>("android-cloexec-creat");
     CheckFactories.registerCheck<CloexecFopenCheck>("android-cloexec-fopen");
+    CheckFactories.registerCheck<CloexecMemfdCreateCheck>(
+        "android-cloexec-memfd-create");
     CheckFactories.registerCheck<CloexecOpenCheck>("android-cloexec-open");
     CheckFactories.registerCheck<CloexecSocketCheck>("android-cloexec-socket");
   }

@@ -466,7 +466,8 @@ namespace {
     /// This is a helper function for MergeConsecutiveStores. When the
     /// source elements of the consecutive stores are all constants or
     /// all extracted vector elements, try to merge them into one
-    /// larger store.  \return True if a merged store was created.
+    /// larger store introducing bitcasts if necessary.  \return True
+    /// if a merged store was created.
     bool MergeStoresOfConstantsOrVecElts(SmallVectorImpl<MemOpLink> &StoreNodes,
                                          EVT MemVT, unsigned NumStores,
                                          bool IsConstantSrc, bool UseVector,
@@ -7395,7 +7396,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
             SimplifySelectCC(DL, N00, N01, ExtTrueVal, Zero, CC, true))
       return SCC;
 
-    if (!VT.isVector()) {
+    if (!VT.isVector() && !TLI.convertSelectOfConstantsToMath()) {
       EVT SetCCVT = getSetCCResultType(N00VT);
       // Don't do this transform for i1 because there's a select transform
       // that would reverse it.
@@ -12474,22 +12475,59 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
       for (unsigned I = 0; I != NumStores; ++I) {
         StoreSDNode *St = cast<StoreSDNode>(StoreNodes[I].MemNode);
         SDValue Val = St->getValue();
-        if (MemVT.getScalarType().isInteger())
-          if (auto *CFP = dyn_cast<ConstantFPSDNode>(Val))
-            Val = DAG.getConstant(
-                (uint32_t)CFP->getValueAPF().bitcastToAPInt().getZExtValue(),
-                SDLoc(CFP), MemVT);
+        // If constant is of the wrong type, convert it now.
+        if (MemVT != Val.getValueType()) {
+          Val = peekThroughBitcast(Val);
+          // Deal with constants of wrong size.
+          if (ElementSizeBytes * 8 != Val.getValueSizeInBits()) {
+            EVT IntMemVT =
+                EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits());
+            if (auto *CFP = dyn_cast<ConstantFPSDNode>(Val))
+              Val = DAG.getConstant(
+                  CFP->getValueAPF().bitcastToAPInt().zextOrTrunc(
+                      8 * ElementSizeBytes),
+                  SDLoc(CFP), IntMemVT);
+            else if (auto *C = dyn_cast<ConstantSDNode>(Val))
+              Val = DAG.getConstant(
+                  C->getAPIntValue().zextOrTrunc(8 * ElementSizeBytes),
+                  SDLoc(C), IntMemVT);
+          }
+          // Make sure correctly size type is the correct type.
+          Val = DAG.getBitcast(MemVT, Val);
+        }
         BuildVector.push_back(Val);
       }
-      StoredVal = DAG.getBuildVector(StoreTy, DL, BuildVector);
+      StoredVal = DAG.getNode(MemVT.isVector() ? ISD::CONCAT_VECTORS
+                                               : ISD::BUILD_VECTOR,
+                              DL, StoreTy, BuildVector);
     } else {
       SmallVector<SDValue, 8> Ops;
       for (unsigned i = 0; i < NumStores; ++i) {
         StoreSDNode *St = cast<StoreSDNode>(StoreNodes[i].MemNode);
-        SDValue Val = St->getValue();
-        // All operands of BUILD_VECTOR / CONCAT_VECTOR must have the same type.
-        if (Val.getValueType() != MemVT)
-          return false;
+        SDValue Val = peekThroughBitcast(St->getValue());
+        // All operands of BUILD_VECTOR / CONCAT_VECTOR must be of
+        // type MemVT. If the underlying value is not the correct
+        // type, but it is an extraction of an appropriate vector we
+        // can recast Val to be of the correct type. This may require
+        // converting between EXTRACT_VECTOR_ELT and
+        // EXTRACT_SUBVECTOR.
+        if ((MemVT != Val.getValueType()) &&
+            (Val.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
+             Val.getOpcode() == ISD::EXTRACT_SUBVECTOR)) {
+          SDValue Vec = Val.getOperand(0);
+          EVT MemVTScalarTy = MemVT.getScalarType();
+          // We may need to add a bitcast here to get types to line up.
+          if (MemVTScalarTy != Vec.getValueType()) {
+            unsigned Elts = Vec.getValueType().getSizeInBits() /
+                            MemVTScalarTy.getSizeInBits();
+            EVT NewVecTy =
+                EVT::getVectorVT(*DAG.getContext(), MemVTScalarTy, Elts);
+            Vec = DAG.getBitcast(NewVecTy, Vec);
+          }
+          auto OpC = (MemVT.isVector()) ? ISD::EXTRACT_SUBVECTOR
+                                        : ISD::EXTRACT_VECTOR_ELT;
+          Val = DAG.getNode(OpC, SDLoc(Val), MemVT, Vec, Val.getOperand(1));
+        }
         Ops.push_back(Val);
       }
 
@@ -12532,7 +12570,7 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
 
   // make sure we use trunc store if it's necessary to be legal.
   SDValue NewStore;
-  if (UseVector || !UseTrunc) {
+  if (!UseTrunc) {
     NewStore = DAG.getStore(NewChain, DL, StoredVal, FirstInChain->getBasePtr(),
                             FirstInChain->getPointerInfo(),
                             FirstInChain->getAlignment());
@@ -12566,7 +12604,7 @@ void DAGCombiner::getStoreMergeCandidates(
   BaseIndexOffset BasePtr = BaseIndexOffset::match(St->getBasePtr(), DAG);
   EVT MemVT = St->getMemoryVT();
 
-  SDValue Val = St->getValue();
+  SDValue Val = peekThroughBitcast(St->getValue());
   // We must have a base and an offset.
   if (!BasePtr.getBase().getNode())
     return;
@@ -12594,10 +12632,12 @@ void DAGCombiner::getStoreMergeCandidates(
                             int64_t &Offset) -> bool {
     if (Other->isVolatile() || Other->isIndexed())
       return false;
-    SDValue Val = Other->getValue();
+    SDValue Val = peekThroughBitcast(Other->getValue());
+    // Allow merging constants of different types as integers.
+    bool NoTypeMatch = (MemVT.isInteger()) ? !MemVT.bitsEq(Other->getMemoryVT())
+                                           : Other->getMemoryVT() != MemVT;
     if (IsLoadSrc) {
-      // Loads must match type.
-      if (Other->getMemoryVT() != MemVT)
+      if (NoTypeMatch)
         return false;
       // The Load's Base Ptr must also match
       if (LoadSDNode *OtherLd = dyn_cast<LoadSDNode>(Val)) {
@@ -12610,16 +12650,16 @@ void DAGCombiner::getStoreMergeCandidates(
         return false;
     }
     if (IsConstantSrc) {
-      // Allow merging constants of different types as integers.
-      if (MemVT.isInteger() ? !MemVT.bitsEq(Other->getMemoryVT())
-                            : Other->getMemoryVT() != MemVT)
+      if (NoTypeMatch)
         return false;
       if (!(isa<ConstantSDNode>(Val) || isa<ConstantFPSDNode>(Val)))
         return false;
     }
     if (IsExtractVecSrc) {
-      // Must match type.
-      if (Other->getMemoryVT() != MemVT)
+      // Do not merge truncated stores here.
+      if (Other->isTruncatingStore())
+        return false;
+      if (!MemVT.bitsEq(Val.getValueType()))
         return false;
       if (Val.getOpcode() != ISD::EXTRACT_VECTOR_ELT &&
           Val.getOpcode() != ISD::EXTRACT_SUBVECTOR)
@@ -12716,7 +12756,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
 
   // Perform an early exit check. Do not bother looking at stored values that
   // are not constants, loads, or extracted vector elements.
-  SDValue StoredVal = St->getValue();
+  SDValue StoredVal = peekThroughBitcast(St->getValue());
   bool IsLoadSrc = isa<LoadSDNode>(StoredVal);
   bool IsConstantSrc = isa<ConstantSDNode>(StoredVal) ||
                        isa<ConstantFPSDNode>(StoredVal);
@@ -12904,7 +12944,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       unsigned NumStoresToMerge = 1;
       for (unsigned i = 0; i < NumConsecutiveStores; ++i) {
         StoreSDNode *St = cast<StoreSDNode>(StoreNodes[i].MemNode);
-        SDValue StVal = St->getValue();
+        SDValue StVal = peekThroughBitcast(St->getValue());
         // This restriction could be loosened.
         // Bail out if any stored values are not elements extracted from a
         // vector. It should be possible to handle mixed sources, but load
@@ -12970,7 +13010,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     BaseIndexOffset LdBasePtr;
     for (unsigned i = 0; i < NumConsecutiveStores; ++i) {
       StoreSDNode *St = cast<StoreSDNode>(StoreNodes[i].MemNode);
-      SDValue Val = St->getValue();
+      SDValue Val = peekThroughBitcast(St->getValue());
       LoadSDNode *Ld = dyn_cast<LoadSDNode>(Val);
       if (!Ld)
         break;
@@ -15121,8 +15161,6 @@ static SDValue simplifyShuffleMask(ShuffleVectorSDNode *SVN, SDValue N0,
     // TODO - handle more cases as required.
     if (V.getOpcode() == ISD::BUILD_VECTOR)
       return V.getOperand(Idx).isUndef();
-    if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(V))
-      return SVN->getMaskElt(Idx) < 0;
     return false;
   };
 
@@ -15852,11 +15890,46 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   if (N1.isUndef())
     return N0;
 
+  // For nested INSERT_SUBVECTORs, attempt to combine inner node first to allow
+  // us to pull BITCASTs from input to output.
+  if (N0.hasOneUse() && N0->getOpcode() == ISD::INSERT_SUBVECTOR)
+    if (SDValue NN0 = visitINSERT_SUBVECTOR(N0.getNode()))
+      return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), VT, NN0, N1, N2);
+
   // If this is an insert of an extracted vector into an undef vector, we can
   // just use the input to the extract.
   if (N0.isUndef() && N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       N1.getOperand(1) == N2 && N1.getOperand(0).getValueType() == VT)
     return N1.getOperand(0);
+
+  // If we are inserting a bitcast value into an undef, with the same
+  // number of elements, just use the bitcast input of the extract.
+  // i.e. INSERT_SUBVECTOR UNDEF (BITCAST N1) N2 ->
+  //        BITCAST (INSERT_SUBVECTOR UNDEF N1 N2)
+  if (N0.isUndef() && N1.getOpcode() == ISD::BITCAST &&
+      N1.getOperand(0).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      N1.getOperand(0).getOperand(1) == N2 &&
+      N1.getOperand(0).getOperand(0).getValueType().getVectorNumElements() ==
+          VT.getVectorNumElements()) {
+    return DAG.getBitcast(VT, N1.getOperand(0).getOperand(0));
+  }
+
+  // If both N1 and N2 are bitcast values on which insert_subvector
+  // would makes sense, pull the bitcast through.
+  // i.e. INSERT_SUBVECTOR (BITCAST N0) (BITCAST N1) N2 ->
+  //        BITCAST (INSERT_SUBVECTOR N0 N1 N2)
+  if (N0.getOpcode() == ISD::BITCAST && N1.getOpcode() == ISD::BITCAST) {
+    SDValue CN0 = N0.getOperand(0);
+    SDValue CN1 = N1.getOperand(0);
+    if (CN0.getValueType().getVectorElementType() ==
+            CN1.getValueType().getVectorElementType() &&
+        CN0.getValueType().getVectorNumElements() ==
+            VT.getVectorNumElements()) {
+      SDValue NewINSERT = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N),
+                                      CN0.getValueType(), CN0, CN1, N2);
+      return DAG.getBitcast(VT, NewINSERT);
+    }
+  }
 
   // Combine INSERT_SUBVECTORs where we are inserting to the same index.
   // INSERT_SUBVECTOR( INSERT_SUBVECTOR( Vec, SubOld, Idx ), SubNew, Idx )

@@ -571,11 +571,11 @@ UnlockableMu ab_var_arg_bad_5 ACQUIRED_BEFORE(mu_ab); // \
 
 // takes zero or more arguments, all locks (vars/fields)
 
-void elf_function() EXCLUSIVE_LOCK_FUNCTION(); // expected-warning {{'exclusive_lock_function' attribute without arguments can only be applied to a method of a class}}
+void elf_function() EXCLUSIVE_LOCK_FUNCTION();
 
 void elf_function_args() EXCLUSIVE_LOCK_FUNCTION(mu1, mu2);
 
-int elf_testfn(int y) EXCLUSIVE_LOCK_FUNCTION(); // expected-warning {{'exclusive_lock_function' attribute without arguments can only be applied to a method of a class}}
+int elf_testfn(int y) EXCLUSIVE_LOCK_FUNCTION();
 
 int elf_testfn(int y) {
   int x EXCLUSIVE_LOCK_FUNCTION() = y; // \
@@ -590,7 +590,7 @@ class ElfFoo {
  private:
   int test_field EXCLUSIVE_LOCK_FUNCTION(); // \
     // expected-warning {{'exclusive_lock_function' attribute only applies to functions}}
-  void test_method() EXCLUSIVE_LOCK_FUNCTION(); // expected-warning {{'exclusive_lock_function' attribute requires type annotated with 'capability' attribute; type here is 'ElfFoo *'}}
+  void test_method() EXCLUSIVE_LOCK_FUNCTION();
 };
 
 class EXCLUSIVE_LOCK_FUNCTION() ElfTestClass { // \
@@ -643,11 +643,11 @@ int elf_function_bad_7() EXCLUSIVE_LOCK_FUNCTION(0); // \
 
 // takes zero or more arguments, all locks (vars/fields)
 
-void slf_function() SHARED_LOCK_FUNCTION(); // expected-warning {{'shared_lock_function' attribute without arguments can only be applied to a method of a class}}
+void slf_function() SHARED_LOCK_FUNCTION();
 
 void slf_function_args() SHARED_LOCK_FUNCTION(mu1, mu2);
 
-int slf_testfn(int y) SHARED_LOCK_FUNCTION(); // expected-warning {{'shared_lock_function' attribute without arguments can only be applied to a method of a class}}
+int slf_testfn(int y) SHARED_LOCK_FUNCTION();
 
 int slf_testfn(int y) {
   int x SHARED_LOCK_FUNCTION() = y; // \
@@ -665,8 +665,7 @@ class SlfFoo {
  private:
   int test_field SHARED_LOCK_FUNCTION(); // \
     // expected-warning {{'shared_lock_function' attribute only applies to functions}}
-  void test_method() SHARED_LOCK_FUNCTION(); // \
-    // expected-warning {{'shared_lock_function' attribute requires type annotated with 'capability' attribute; type here is 'SlfFoo *'}}
+  void test_method() SHARED_LOCK_FUNCTION();
 };
 
 class SHARED_LOCK_FUNCTION() SlfTestClass { // \
@@ -717,16 +716,14 @@ int slf_function_bad_7() SHARED_LOCK_FUNCTION(0); // \
 // takes a mandatory boolean or integer argument specifying the retval
 // plus an optional list of locks (vars/fields)
 
-void etf_function() __attribute__((exclusive_trylock_function)); // \
-  // expected-error {{'exclusive_trylock_function' attribute takes at least 1 argument}} \
+void etf_function() __attribute__((exclusive_trylock_function));  // \
+  // expected-error {{'exclusive_trylock_function' attribute takes at least 1 argument}}
 
 void etf_function_args() EXCLUSIVE_TRYLOCK_FUNCTION(1, mu2);
 
-void etf_function_arg() EXCLUSIVE_TRYLOCK_FUNCTION(1); // \
-  // expected-warning {{'exclusive_trylock_function' attribute without arguments can only be applied to a method of a class}}
+void etf_function_arg() EXCLUSIVE_TRYLOCK_FUNCTION(1);
 
-int etf_testfn(int y) EXCLUSIVE_TRYLOCK_FUNCTION(1); // \
-  // expected-warning {{'exclusive_trylock_function' attribute without arguments can only be applied to a method of a class}}
+int etf_testfn(int y) EXCLUSIVE_TRYLOCK_FUNCTION(1);
 
 int etf_testfn(int y) {
   int x EXCLUSIVE_TRYLOCK_FUNCTION(1) = y; // \
@@ -735,14 +732,13 @@ int etf_testfn(int y) {
 };
 
 int etf_test_var EXCLUSIVE_TRYLOCK_FUNCTION(1); // \
-  // expected-warning {{'exclusive_trylock_function' attribute only applies to functions}} \
+  // expected-warning {{'exclusive_trylock_function' attribute only applies to functions}}
 
 class EtfFoo {
  private:
   int test_field EXCLUSIVE_TRYLOCK_FUNCTION(1); // \
     // expected-warning {{'exclusive_trylock_function' attribute only applies to functions}}
-  void test_method() EXCLUSIVE_TRYLOCK_FUNCTION(1); // \
-    // expected-warning {{'exclusive_trylock_function' attribute requires type annotated with 'capability' attribute; type here is 'EtfFoo *'}}
+  void test_method() EXCLUSIVE_TRYLOCK_FUNCTION(1);
 };
 
 class EXCLUSIVE_TRYLOCK_FUNCTION(1) EtfTestClass { // \
@@ -763,8 +759,7 @@ int etf_function_5() EXCLUSIVE_TRYLOCK_FUNCTION(1, &mu1);
 int etf_function_6() EXCLUSIVE_TRYLOCK_FUNCTION(1, muRef);
 int etf_function_7() EXCLUSIVE_TRYLOCK_FUNCTION(1, muDoubleWrapper.getWrapper()->getMu());
 int etf_functetfn_8() EXCLUSIVE_TRYLOCK_FUNCTION(1, muPointer);
-int etf_function_9() EXCLUSIVE_TRYLOCK_FUNCTION(true); // \
-  // expected-warning {{'exclusive_trylock_function' attribute without arguments can only be applied to a method of a class}}
+int etf_function_9() EXCLUSIVE_TRYLOCK_FUNCTION(true);
 
 
 // illegal attribute arguments
@@ -799,11 +794,9 @@ void stf_function() __attribute__((shared_trylock_function));  // \
 
 void stf_function_args() SHARED_TRYLOCK_FUNCTION(1, mu2);
 
-void stf_function_arg() SHARED_TRYLOCK_FUNCTION(1); // \
-  // expected-warning {{'shared_trylock_function' attribute without arguments can only be applied to a method of a class}}
+void stf_function_arg() SHARED_TRYLOCK_FUNCTION(1);
 
-int stf_testfn(int y) SHARED_TRYLOCK_FUNCTION(1); // \
-  // expected-warning {{'shared_trylock_function' attribute without arguments can only be applied to a method of a class}}
+int stf_testfn(int y) SHARED_TRYLOCK_FUNCTION(1);
 
 int stf_testfn(int y) {
   int x SHARED_TRYLOCK_FUNCTION(1) = y; // \
@@ -822,8 +815,7 @@ class StfFoo {
  private:
   int test_field SHARED_TRYLOCK_FUNCTION(1); // \
     // expected-warning {{'shared_trylock_function' attribute only applies to functions}}
-  void test_method() SHARED_TRYLOCK_FUNCTION(1); // \
-    // expected-warning {{'shared_trylock_function' attribute requires type annotated with 'capability' attribute; type here is 'StfFoo *'}}
+  void test_method() SHARED_TRYLOCK_FUNCTION(1);
 };
 
 class SHARED_TRYLOCK_FUNCTION(1) StfTestClass { // \
@@ -841,8 +833,7 @@ int stf_function_5() SHARED_TRYLOCK_FUNCTION(1, &mu1);
 int stf_function_6() SHARED_TRYLOCK_FUNCTION(1, muRef);
 int stf_function_7() SHARED_TRYLOCK_FUNCTION(1, muDoubleWrapper.getWrapper()->getMu());
 int stf_function_8() SHARED_TRYLOCK_FUNCTION(1, muPointer);
-int stf_function_9() SHARED_TRYLOCK_FUNCTION(true); // \
-  // expected-warning {{'shared_trylock_function' attribute without arguments can only be applied to a method of a class}}
+int stf_function_9() SHARED_TRYLOCK_FUNCTION(true);
 
 
 // illegal attribute arguments
@@ -871,14 +862,11 @@ int stf_function_bad_6() SHARED_TRYLOCK_FUNCTION(1, umu); // \
 
 // takes zero or more arguments, all locks (vars/fields)
 
-void uf_function() UNLOCK_FUNCTION(); // \
-  // expected-warning {{'unlock_function' attribute without arguments can only be applied to a method of a class}}
-
+void uf_function() UNLOCK_FUNCTION();
 
 void uf_function_args() UNLOCK_FUNCTION(mu1, mu2);
 
-int uf_testfn(int y) UNLOCK_FUNCTION(); //\
-  // expected-warning {{'unlock_function' attribute without arguments can only be applied to a method of a class}}
+int uf_testfn(int y) UNLOCK_FUNCTION();
 
 int uf_testfn(int y) {
   int x UNLOCK_FUNCTION() = y; // \
@@ -893,8 +881,7 @@ class UfFoo {
  private:
   int test_field UNLOCK_FUNCTION(); // \
     // expected-warning {{'unlock_function' attribute only applies to functions}}
-  void test_method() UNLOCK_FUNCTION(); // \
-    // expected-warning {{'unlock_function' attribute requires type annotated with 'capability' attribute; type here is 'UfFoo *'}}
+  void test_method() UNLOCK_FUNCTION();
 };
 
 class NO_THREAD_SAFETY_ANALYSIS UfTestClass { // \

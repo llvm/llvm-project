@@ -153,6 +153,19 @@ CudaInstallationDetector::CudaInstallationDetector(
       }
     }
 
+    // This code prevents IsValid from being set when
+    // no libdevice has been found.
+    bool allEmpty = true;
+    std::string LibDeviceFile;
+    for (auto key : LibDeviceMap.keys()) {
+      LibDeviceFile = LibDeviceMap.lookup(key);
+      if (!LibDeviceFile.empty())
+        allEmpty = false;
+    }
+
+    if (allEmpty)
+      continue;
+
     IsValid = true;
     break;
   }
@@ -527,10 +540,14 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     }
 
     StringRef Arch = DAL->getLastArgValue(options::OPT_march_EQ);
-    if (Arch.empty())
-      // Default compute capability for CUDA toolchain is sm_20.
+    if (Arch.empty()) {
+      // Default compute capability for CUDA toolchain is the
+      // lowest compute capability supported by the installed
+      // CUDA version.
       DAL->AddJoinedArg(nullptr,
-          Opts.getOption(options::OPT_march_EQ), "sm_20");
+          Opts.getOption(options::OPT_march_EQ),
+          CudaInstallation.getLowestExistingArch());
+    }
 
     return DAL;
   }

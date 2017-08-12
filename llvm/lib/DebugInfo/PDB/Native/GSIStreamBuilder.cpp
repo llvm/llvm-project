@@ -9,6 +9,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/GSIStreamBuilder.h"
 
+#include "llvm/DebugInfo/CodeView/RecordName.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
@@ -27,13 +28,6 @@ using namespace llvm::msf;
 using namespace llvm::pdb;
 using namespace llvm::codeview;
 
-static StringRef getSymbolName(const CVSymbol &Sym) {
-  assert(Sym.kind() == S_PUB32 && "handle other kinds");
-  PublicSym32 PSL =
-      cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(Sym));
-  return PSL.Name;
-}
-
 struct llvm::pdb::GSIHashStreamBuilder {
   std::vector<CVSymbol> Records;
   uint32_t StreamIndex;
@@ -45,6 +39,13 @@ struct llvm::pdb::GSIHashStreamBuilder {
   uint32_t calculateRecordByteSize() const;
   Error commit(BinaryStreamWriter &Writer);
   void finalizeBuckets(uint32_t RecordZeroOffset);
+
+  template <typename T> void addSymbol(const T &Symbol, MSFBuilder &Msf) {
+    T Copy(Symbol);
+    Records.push_back(SymbolSerializer::writeOneSymbol(Copy, Msf.getAllocator(),
+                                                       CodeViewContainer::Pdb));
+  }
+  void addSymbol(const CVSymbol &Symbol) { Records.push_back(Symbol); }
 };
 
 uint32_t GSIHashStreamBuilder::calculateSerializedLength() const {
@@ -222,9 +223,27 @@ uint32_t GSIStreamBuilder::getGlobalsStreamIndex() const {
 }
 
 void GSIStreamBuilder::addPublicSymbol(const PublicSym32 &Pub) {
-  PublicSym32 Copy(Pub);
-  PSH->Records.push_back(SymbolSerializer::writeOneSymbol(
-      Copy, Msf.getAllocator(), CodeViewContainer::Pdb));
+  PSH->addSymbol(Pub, Msf);
+}
+
+void GSIStreamBuilder::addGlobalSymbol(const ProcRefSym &Sym) {
+  GSH->addSymbol(Sym, Msf);
+}
+
+void GSIStreamBuilder::addGlobalSymbol(const DataSym &Sym) {
+  GSH->addSymbol(Sym, Msf);
+}
+
+void GSIStreamBuilder::addGlobalSymbol(const ConstantSym &Sym) {
+  GSH->addSymbol(Sym, Msf);
+}
+
+void GSIStreamBuilder::addGlobalSymbol(const UDTSym &Sym) {
+  GSH->addSymbol(Sym, Msf);
+}
+
+void GSIStreamBuilder::addGlobalSymbol(const codeview::CVSymbol &Sym) {
+  GSH->addSymbol(Sym);
 }
 
 static Error writeRecords(BinaryStreamWriter &Writer,

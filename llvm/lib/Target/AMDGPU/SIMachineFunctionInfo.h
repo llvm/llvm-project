@@ -110,6 +110,17 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   unsigned PSInputAddr = 0;
   unsigned PSInputEnable = 0;
 
+  /// Number of bytes of arguments this function has on the stack. If the callee
+  /// is expected to restore the argument stack this should be a multiple of 16,
+  /// all usable during a tail call.
+  ///
+  /// The alternative would forbid tail call optimisation in some cases: if we
+  /// want to transfer control from a function with 8-bytes of stack-argument
+  /// space to a function with 16-bytes then misalignment of this value would
+  /// make a stack adjustment necessary, which could not be undone by the
+  /// callee.
+  unsigned BytesInStackArgArea = 0;
+
   bool ReturnsVoid = true;
 
   // A pair of default/requested minimum/maximum flat work group sizes.
@@ -234,6 +245,14 @@ public:
   bool hasCalculatedTID() const { return TIDReg != AMDGPU::NoRegister; }
   unsigned getTIDReg() const { return TIDReg; }
   void setTIDReg(unsigned Reg) { TIDReg = Reg; }
+
+  unsigned getBytesInStackArgArea() const {
+    return BytesInStackArgArea;
+  }
+
+  void setBytesInStackArgArea(unsigned Bytes) {
+    BytesInStackArgArea = Bytes;
+  }
 
   // Add user SGPRs.
   unsigned addPrivateSegmentBuffer(const SIRegisterInfo &TRI);

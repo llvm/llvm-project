@@ -583,6 +583,7 @@ def warn_redecl_library_builtin : Warning<
 def err_builtin_definition : Error<"definition of builtin function %0">;
 def err_arm_invalid_specialreg : Error<"invalid special register for builtin">;
 def err_invalid_cpu_supports : Error<"invalid cpu feature string for builtin">;
+def err_invalid_cpu_is : Error<"invalid cpu name for builtin">;
 def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
 def err_function_needs_feature
     : Error<"always_inline function %1 requires target feature '%2', but would "
@@ -2933,16 +2934,6 @@ def warn_thread_attribute_argument_not_lockable : Warning<
 def warn_thread_attribute_decl_not_lockable : Warning<
   "%0 attribute can only be applied in a context annotated "
   "with 'capability(\"mutex\")' attribute">,
-  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
-def warn_thread_attribute_noargs_not_lockable : Warning<
-  "%0 attribute requires type annotated with 'capability' attribute; "
-  "type here is %1">,
-  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
-def warn_thread_attribute_noargs_not_method : Warning<
-  "%0 attribute without arguments can only be applied to a method of a class">,
-  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
-def warn_thread_attribute_noargs_static_method : Warning<
-  "%0 attribute without arguments cannot be applied to a static method">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_decl_not_pointer : Warning<
   "%0 only applies to pointer types; type here is %1">,

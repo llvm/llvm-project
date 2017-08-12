@@ -13,9 +13,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ;; the same result in memory in the end.
 
 ; CHECK-LABEL: redundant_stores_merging:
-; CHECK:   movabsq $528280977409, %rax
-; CHECK:   movq    %rax, e+4(%rip)
-; CHECK:   movl    $456, e+8(%rip)
+; CHECK: movabsq $1958505086977, %rax
+; CHECK: movq 	 %rax, e+4(%rip)
 define void @redundant_stores_merging() {
 entry:
   store i32 1, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 1), align 4
@@ -26,9 +25,8 @@ entry:
 
 ;; This variant tests PR25154.
 ; CHECK-LABEL: redundant_stores_merging_reverse:
-; CHECK:   movabsq $528280977409, %rax
-; CHECK:   movq    %rax, e+4(%rip)
-; CHECK:   movl    $456, e+8(%rip)
+; CHECK: movabsq $1958505086977, %rax
+; CHECK: movq	 %rax, e+4(%rip)
 define void @redundant_stores_merging_reverse() {
 entry:
   store i32 123, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4

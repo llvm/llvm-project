@@ -20,8 +20,8 @@
 #include <type_traits>
 #include <cassert>
 
-template <class _Tp>
-void test(const _Tp &) {}
+template <class T>
+void test(const T &) {}
 
 
 int main()

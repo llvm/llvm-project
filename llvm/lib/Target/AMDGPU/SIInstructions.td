@@ -378,6 +378,31 @@ def SI_CALL : SPseudoInstSI <
   (outs SReg_64:$dst), (ins SSrc_b64:$src0, unknown:$callee)> {
   let Size = 4;
   let isCall = 1;
+  let UseNamedOperandTable = 1;
+  let SchedRW = [WriteBranch];
+}
+
+// Tail call handling pseudo
+def SI_TCRETURN_ISEL : SPseudoInstSI<(outs),
+  (ins SSrc_b64:$src0, i32imm:$fpdiff),
+  [(AMDGPUtc_return i64:$src0, i32:$fpdiff)]> {
+  let isCall = 1;
+  let isTerminator = 1;
+  let isReturn = 1;
+  let isBarrier = 1;
+  let SchedRW = [WriteBranch];
+  let usesCustomInserter = 1;
+}
+
+def SI_TCRETURN : SPseudoInstSI <
+  (outs),
+  (ins SSrc_b64:$src0, unknown:$callee, i32imm:$fpdiff)> {
+  let Size = 4;
+  let isCall = 1;
+  let isTerminator = 1;
+  let isReturn = 1;
+  let isBarrier = 1;
+  let UseNamedOperandTable = 1;
   let SchedRW = [WriteBranch];
 }
 

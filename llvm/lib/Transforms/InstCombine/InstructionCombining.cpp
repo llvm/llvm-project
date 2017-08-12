@@ -60,6 +60,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
@@ -79,6 +80,8 @@ STATISTIC(NumSunkInst , "Number of instructions sunk");
 STATISTIC(NumExpand,    "Number of expansions");
 STATISTIC(NumFactor   , "Number of factorizations");
 STATISTIC(NumReassoc  , "Number of reassociations");
+DEBUG_COUNTER(VisitCounter, "instcombine-visit",
+              "Controls which instructions are visited");
 
 static cl::opt<bool>
 EnableExpensiveCombines("expensive-combines",
@@ -2881,6 +2884,9 @@ bool InstCombiner::run() {
       MadeIRChange = true;
       continue;
     }
+
+    if (!DebugCounter::shouldExecute(VisitCounter))
+      continue;
 
     // Instruction isn't dead, see if we can constant propagate it.
     if (!I->use_empty() &&

@@ -21,6 +21,11 @@
 // RUN: %clang -fsanitize=fuzzer %s -shared -o %t.so -### 2>&1 | FileCheck --check-prefixes=CHECK-NOLIB-SO %s
 // CHECK-NOLIB-SO-NOT: libLLVMFuzzer.a
 
+// Check that we don't link in libFuzzer when compiling with -fsanitize=fuzzer-no-link.
+// RUN: %clang -fsanitize=fuzzer-no-link %s -target x86_64-apple-darwin14 -### 2>&1 | FileCheck --check-prefixes=CHECK-NOLIB,CHECK-COV %s
+// CHECK-NOLIB-NOT: libLLVMFuzzer.a
+// CHECK-COV: -fsanitize-coverage-trace-pc-guard
+
 // RUN: %clang -fsanitize=fuzzer -fsanitize-coverage=trace-pc %s -### 2>&1 | FileCheck --check-prefixes=CHECK-MSG %s
 // CHECK-MSG-NOT: argument unused during compilation
 
