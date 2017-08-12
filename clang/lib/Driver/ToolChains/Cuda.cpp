@@ -153,6 +153,19 @@ CudaInstallationDetector::CudaInstallationDetector(
       }
     }
 
+    // This code prevents IsValid from being set when
+    // no libdevice has been found.
+    bool allEmpty = true;
+    std::string LibDeviceFile;
+    for (auto key : LibDeviceMap.keys()) {
+      LibDeviceFile = LibDeviceMap.lookup(key);
+      if (!LibDeviceFile.empty())
+        allEmpty = false;
+    }
+
+    if (allEmpty)
+      continue;
+
     IsValid = true;
     break;
   }

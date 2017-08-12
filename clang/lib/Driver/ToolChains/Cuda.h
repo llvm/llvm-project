@@ -85,7 +85,7 @@ public:
       if (!LibDeviceFile.empty())
         return key;
     }
-    return "sm_35";
+    return "sm_20";
   }
 };
 
