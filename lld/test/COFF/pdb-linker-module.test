@@ -5,7 +5,7 @@ CHECK:      Mod 0001 | `* Linker *`:
 CHECK-NEXT:  4 | S_OBJNAME [size = 20] sig=0, `* Linker *`
 CHECK-NEXT: 24 | S_COMPILE3 [size = 40]
 CHECK-NEXT:      machine = intel 80386, Ver = LLVM Linker, language = link
-CHECK-NEXT:      frontend = 0.0.0.0, backend = 0.0.0.0
+CHECK-NEXT:      frontend = 0.0.0.0, backend = 14.10.25019.0
 CHECK-NEXT:      flags = none
 CHECK-NEXT: 64 | S_ENVBLOCK
 CHECK-NEXT: - cwd
