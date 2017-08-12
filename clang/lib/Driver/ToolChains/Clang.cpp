@@ -1473,8 +1473,21 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
   // NOTE: We need a warning here or in the backend to warn when -mgpopt is
   //       passed explicitly when compiling something with -mabicalls
   //       (implictly) in affect. Currently the warning is in the backend.
+  //
+  // When the ABI in use is  N64, we also need to determine the PIC mode that
+  // is in use, as -fno-pic for N64 implies -mno-abicalls.
   bool NoABICalls =
       ABICalls && ABICalls->getOption().matches(options::OPT_mno_abicalls);
+
+  llvm::Reloc::Model RelocationModel;
+  unsigned PICLevel;
+  bool IsPIE;
+  std::tie(RelocationModel, PICLevel, IsPIE) =
+      ParsePICArgs(getToolChain(), Args);
+
+  NoABICalls = NoABICalls ||
+               (RelocationModel == llvm::Reloc::Static && ABIName == "n64");
+
   bool WantGPOpt = GPOpt && GPOpt->getOption().matches(options::OPT_mgpopt);
   // We quietly ignore -mno-gpopt as the backend defaults to -mno-gpopt.
   if (NoABICalls && (!GPOpt || WantGPOpt)) {

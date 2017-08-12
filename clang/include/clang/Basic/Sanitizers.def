@@ -50,6 +50,9 @@ SANITIZER("memory", Memory)
 // libFuzzer
 SANITIZER("fuzzer", Fuzzer)
 
+// libFuzzer-required instrumentation, no linking.
+SANITIZER("fuzzer-no-link", FuzzerNoLink)
+
 // ThreadSanitizer
 SANITIZER("thread", Thread)
 

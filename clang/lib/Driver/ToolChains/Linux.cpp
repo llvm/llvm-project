@@ -828,6 +828,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::Fuzzer;
+  Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::KernelAddress;
   Res |= SanitizerKind::Vptr;
   Res |= SanitizerKind::SafeStack;

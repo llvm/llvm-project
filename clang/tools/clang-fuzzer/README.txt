@@ -59,6 +59,8 @@ Example:
     -DCLANG_ENABLE_PROTO_FUZZER=ON
   ninja clang-proto-fuzzer clang-proto-to-cxx
 
+This directory also contains a Dockerfile which sets up all required
+dependencies and builds the fuzzers.
 
 =====================
  Running the fuzzers
