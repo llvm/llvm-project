@@ -59,7 +59,10 @@ class SourceFileRenderer:
 
     def render_source_lines(self, stream, line_remarks):
         file_text = stream.read()
-        html_highlighted = highlight(file_text, self.cpp_lexer, self.html_formatter)
+        html_highlighted = highlight(
+            file_text,
+            self.cpp_lexer,
+            self.html_formatter).decode('utf-8')
 
         # Take off the header and footer, these must be
         #   reapplied line-wise, within the page structure

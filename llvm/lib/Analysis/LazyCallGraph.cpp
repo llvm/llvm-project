@@ -8,15 +8,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LazyCallGraph.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CallSite.h"
-#include "llvm/IR/InstVisitor.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <iterator>
+#include <string>
+#include <tuple>
 #include <utility>
 
 using namespace llvm;
@@ -1339,10 +1355,8 @@ void LazyCallGraph::RefSCC::handleTrivialEdgeInsertion(Node &SourceN,
   // after this edge insertion.
   assert(G->lookupRefSCC(SourceN) == this && "Source must be in this RefSCC.");
   RefSCC &TargetRC = *G->lookupRefSCC(TargetN);
-  if (&TargetRC == this) {
-
+  if (&TargetRC == this)
     return;
-  }
 
 #ifdef EXPENSIVE_CHECKS
   assert(TargetRC.isDescendantOf(*this) &&
@@ -1544,7 +1558,7 @@ template <typename RootsT, typename GetBeginT, typename GetEndT,
 void LazyCallGraph::buildGenericSCCs(RootsT &&Roots, GetBeginT &&GetBegin,
                                      GetEndT &&GetEnd, GetNodeT &&GetNode,
                                      FormSCCCallbackT &&FormSCC) {
-  typedef decltype(GetBegin(std::declval<Node &>())) EdgeItT;
+  using EdgeItT = decltype(GetBegin(std::declval<Node &>()));
 
   SmallVector<std::pair<Node *, EdgeItT>, 16> DFSStack;
   SmallVector<Node *, 16> PendingSCCStack;

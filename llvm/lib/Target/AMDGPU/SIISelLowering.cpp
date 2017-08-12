@@ -32,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
@@ -83,6 +84,10 @@
 #include <vector>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "si-lower"
+
+STATISTIC(NumTailCalls, "Number of tail calls");
 
 static cl::opt<bool> EnableVGPRIndexMode(
   "amdgpu-vgpr-index-mode",
@@ -1647,6 +1652,9 @@ SDValue SITargetLowering::LowerFormalArguments(
     DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
   ArgUsageInfo.setFuncArgInfo(*MF.getFunction(), Info->getArgInfo());
 
+  unsigned StackArgSize = CCInfo.getNextStackOffset();
+  Info->setBytesInStackArgArea(StackArgSize);
+
   return Chains.empty() ? Chain :
     DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
 }
@@ -1955,6 +1963,103 @@ void SITargetLowering::passSpecialInputs(
   }
 }
 
+static bool canGuaranteeTCO(CallingConv::ID CC) {
+  return CC == CallingConv::Fast;
+}
+
+/// Return true if we might ever do TCO for calls with this calling convention.
+static bool mayTailCallThisCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::C:
+    return true;
+  default:
+    return canGuaranteeTCO(CC);
+  }
+}
+
+bool SITargetLowering::isEligibleForTailCallOptimization(
+    SDValue Callee, CallingConv::ID CalleeCC, bool IsVarArg,
+    const SmallVectorImpl<ISD::OutputArg> &Outs,
+    const SmallVectorImpl<SDValue> &OutVals,
+    const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const {
+  if (!mayTailCallThisCC(CalleeCC))
+    return false;
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  const Function *CallerF = MF.getFunction();
+  CallingConv::ID CallerCC = CallerF->getCallingConv();
+  const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
+  const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
+
+  // Kernels aren't callable, and don't have a live in return address so it
+  // doesn't make sense to do a tail call with entry functions.
+  if (!CallerPreserved)
+    return false;
+
+  bool CCMatch = CallerCC == CalleeCC;
+
+  if (DAG.getTarget().Options.GuaranteedTailCallOpt) {
+    if (canGuaranteeTCO(CalleeCC) && CCMatch)
+      return true;
+    return false;
+  }
+
+  // TODO: Can we handle var args?
+  if (IsVarArg)
+    return false;
+
+  for (const Argument &Arg : CallerF->args()) {
+    if (Arg.hasByValAttr())
+      return false;
+  }
+
+  LLVMContext &Ctx = *DAG.getContext();
+
+  // Check that the call results are passed in the same way.
+  if (!CCState::resultsCompatible(CalleeCC, CallerCC, MF, Ctx, Ins,
+                                  CCAssignFnForCall(CalleeCC, IsVarArg),
+                                  CCAssignFnForCall(CallerCC, IsVarArg)))
+    return false;
+
+  // The callee has to preserve all registers the caller needs to preserve.
+  if (!CCMatch) {
+    const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
+    if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
+      return false;
+  }
+
+  // Nothing more to check if the callee is taking no arguments.
+  if (Outs.empty())
+    return true;
+
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CalleeCC, IsVarArg, MF, ArgLocs, Ctx);
+
+  CCInfo.AnalyzeCallOperands(Outs, CCAssignFnForCall(CalleeCC, IsVarArg));
+
+  const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  // If the stack arguments for this call do not fit into our own save area then
+  // the call cannot be made tail.
+  // TODO: Is this really necessary?
+  if (CCInfo.getNextStackOffset() > FuncInfo->getBytesInStackArgArea())
+    return false;
+
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  return parametersInCSRMatch(MRI, CallerPreserved, ArgLocs, OutVals);
+}
+
+bool SITargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
+  if (!CI->isTailCall())
+    return false;
+
+  const Function *ParentFn = CI->getParent()->getParent();
+  if (AMDGPU::isEntryFunctionCC(ParentFn->getCallingConv()))
+    return false;
+
+  auto Attr = ParentFn->getFnAttribute("disable-tail-calls");
+  return (Attr.getValueAsString() != "true");
+}
+
 // The wave scratch offset register is used as the global base pointer.
 SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                                     SmallVectorImpl<SDValue> &InVals) const {
@@ -1987,8 +2092,27 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                               "unsupported required tail call to function ");
   }
 
-  // TODO: Implement tail calls.
-  IsTailCall = false;
+  // The first 4 bytes are reserved for the callee's emergency stack slot.
+  const unsigned CalleeUsableStackOffset = 4;
+
+  if (IsTailCall) {
+    IsTailCall = isEligibleForTailCallOptimization(
+      Callee, CallConv, IsVarArg, Outs, OutVals, Ins, DAG);
+    if (!IsTailCall && CLI.CS && CLI.CS.isMustTailCall()) {
+      report_fatal_error("failed to perform tail call elimination on a call "
+                         "site marked musttail");
+    }
+
+    bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
+
+    // A sibling call is one where we're under the usual C ABI and not planning
+    // to change that but can still do a tail call:
+    if (!TailCallOpt && IsTailCall)
+      IsSibCall = true;
+
+    if (IsTailCall)
+      ++NumTailCalls;
+  }
 
   if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Callee)) {
     // FIXME: Remove this hack for function pointer types.
@@ -2020,8 +2144,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // by this amount for a tail call. In a sibling call it must be 0 because the
   // caller will deallocate the entire stack and the callee still expects its
   // arguments to begin at SP+0. Completely unused for non-tail calls.
-  int FPDiff = 0;
-
+  int32_t FPDiff = 0;
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
 
   // Adjust the stack pointer for the new arguments...
@@ -2044,9 +2168,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Stack pointer relative accesses are done by changing the offset SGPR. This
   // is just the VGPR offset component.
-
-  // The first 4 bytes are reserved for the callee's emergency stack slot.
-  SDValue StackPtr = DAG.getConstant(4, DL, MVT::i32);
+  SDValue StackPtr = DAG.getConstant(CalleeUsableStackOffset, DL, MVT::i32);
 
   SmallVector<SDValue, 8> MemOpChains;
   MVT PtrVT = MVT::i32;
@@ -2093,10 +2215,28 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue PtrOff = DAG.getConstant(Offset, DL, MVT::i32);
       PtrOff = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);
 
-      if (!IsTailCall) {
-        SDValue PtrOff = DAG.getTargetConstant(Offset, DL, MVT::i32);
+      if (IsTailCall) {
+        ISD::ArgFlagsTy Flags = Outs[realArgIdx].Flags;
+        unsigned OpSize = Flags.isByVal() ?
+          Flags.getByValSize() : VA.getValVT().getStoreSize();
 
-        DstAddr = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);
+        Offset = Offset + FPDiff;
+        int FI = MFI.CreateFixedObject(OpSize, Offset, true);
+
+        DstAddr = DAG.getFrameIndex(FI, PtrVT);
+        DstAddr = DAG.getNode(ISD::ADD, DL, MVT::i32, DstAddr, StackPtr);
+        DstInfo = MachinePointerInfo::getFixedStack(MF, FI);
+
+        // Make sure any stack arguments overlapping with where we're storing
+        // are loaded before this eventual operation. Otherwise they'll be
+        // clobbered.
+
+        // FIXME: Why is this really necessary? This seems to just result in a
+        // lot of code to copy the stack and write them back to the same
+        // locations, which are supposed to be immutable?
+        Chain = addTokenForArgument(Chain, DAG, MFI, FI);
+      } else {
+        DstAddr = PtrOff;
         DstInfo = MachinePointerInfo::getStack(MF, LocMemOffset);
       }
 
@@ -2132,6 +2272,22 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     InFlag = Chain.getValue(1);
   }
 
+
+  SDValue PhysReturnAddrReg;
+  if (IsTailCall) {
+    // Since the return is being combined with the call, we need to pass on the
+    // return address.
+
+    const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
+    SDValue ReturnAddrReg = CreateLiveInRegister(
+      DAG, &AMDGPU::SReg_64RegClass, TRI->getReturnAddressReg(MF), MVT::i64);
+
+    PhysReturnAddrReg = DAG.getRegister(TRI->getReturnAddressReg(MF),
+                                        MVT::i64);
+    Chain = DAG.getCopyToReg(Chain, DL, PhysReturnAddrReg, ReturnAddrReg, InFlag);
+    InFlag = Chain.getValue(1);
+  }
+
   // We don't usually want to end the call-sequence here because we would tidy
   // the frame up *after* the call, however in the ABI-changing tail-call case
   // we've carefully laid out the parameters so that when sp is reset they'll be
@@ -2153,6 +2309,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     // this information must travel along with the operation for eventual
     // consumption by emitEpilogue.
     Ops.push_back(DAG.getTargetConstant(FPDiff, DL, MVT::i32));
+
+    Ops.push_back(PhysReturnAddrReg);
   }
 
   // Add argument registers to the end of the list so that they are known live
@@ -2177,8 +2335,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // If we're doing a tall call, use a TC_RETURN here rather than an
   // actual call instruction.
   if (IsTailCall) {
-    MF.getFrameInfo().setHasTailCall();
-    llvm_unreachable("not implemented");
+    MFI.setHasTailCall();
+    return DAG.getNode(AMDGPUISD::TC_RETURN, DL, NodeTys, Ops);
   }
 
   // Returns a chain and a flag for retval copy to use.
@@ -2873,7 +3031,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
         .addReg(Info->getStackPtrOffsetReg(), RegState::Implicit);
     return BB;
   }
-  case AMDGPU::SI_CALL_ISEL: {
+  case AMDGPU::SI_CALL_ISEL:
+  case AMDGPU::SI_TCRETURN_ISEL: {
     const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
     const DebugLoc &DL = MI.getDebugLoc();
     unsigned ReturnAddrReg = TII->getRegisterInfo().getReturnAddressReg(*MF);
@@ -2885,17 +3044,24 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
 
     const GlobalValue *G = PCRel->getOperand(1).getGlobal();
 
-    MachineInstrBuilder MIB =
-      BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg)
-      .add(MI.getOperand(0))
-      .addGlobalAddress(G);
+    MachineInstrBuilder MIB;
+    if (MI.getOpcode() == AMDGPU::SI_CALL_ISEL) {
+      MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg)
+        .add(MI.getOperand(0))
+        .addGlobalAddress(G);
+    } else {
+      MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_TCRETURN))
+        .add(MI.getOperand(0))
+        .addGlobalAddress(G);
+
+      // There is an additional imm operand for tcreturn, but it should be in the
+      // right place already.
+    }
 
     for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I)
       MIB.add(MI.getOperand(I));
 
-
     MIB.setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-
     MI.eraseFromParent();
     return BB;
   }

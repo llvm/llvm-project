@@ -631,10 +631,12 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
       }
 
       if (MI.isCall()) {
-        assert(MI.getOpcode() == AMDGPU::SI_CALL);
         // Pseudo used just to encode the underlying global. Is there a better
         // way to track this?
-        const Function *Callee = cast<Function>(MI.getOperand(2).getGlobal());
+
+        const MachineOperand *CalleeOp
+          = TII->getNamedOperand(MI, AMDGPU::OpName::callee);
+        const Function *Callee = cast<Function>(CalleeOp->getGlobal());
         if (Callee->isDeclaration()) {
           // If this is a call to an external function, we can't do much. Make
           // conservative guesses.

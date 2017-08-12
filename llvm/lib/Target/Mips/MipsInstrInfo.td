@@ -220,6 +220,8 @@ def IsSym32     :     Predicate<"Subtarget->HasSym32()">,
                       AssemblerPredicate<"FeatureSym32">;
 def IsSym64     :     Predicate<"!Subtarget->HasSym32()">,
                       AssemblerPredicate<"!FeatureSym32">;
+def IsN64       :     Predicate<"Subtarget->isABI_N64()">;
+def IsNotN64    :     Predicate<"!Subtarget->isABI_N64()">;
 def RelocNotPIC :     Predicate<"!TM.isPositionIndependent()">;
 def RelocPIC    :     Predicate<"TM.isPositionIndependent()">;
 def NoNaNsFPMath :    Predicate<"TM.Options.NoNaNsFPMath">;
@@ -399,6 +401,16 @@ class ASE_NOT_DSP {
 
 class MADD4 {
   list<Predicate> AdditionalPredicates = [HasMadd4];
+}
+
+// Classses used for separating expansions that differ based on the ABI in
+// use.
+class ABI_N64 {
+  list<Predicate> AdditionalPredicates = [IsN64];
+}
+
+class ABI_NOT_N64 {
+  list<Predicate> AdditionalPredicates = [IsNotN64];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2748,9 +2760,9 @@ def : MipsPat<(MipsGotHi texternalsym:$in), (LUi texternalsym:$in)>;
 
 // gp_rel relocs
 def : MipsPat<(add GPR32:$gp, (MipsGPRel tglobaladdr:$in)),
-              (ADDiu GPR32:$gp, tglobaladdr:$in)>;
+              (ADDiu GPR32:$gp, tglobaladdr:$in)>, ABI_NOT_N64;
 def : MipsPat<(add GPR32:$gp, (MipsGPRel tconstpool:$in)),
-              (ADDiu GPR32:$gp, tconstpool:$in)>;
+              (ADDiu GPR32:$gp, tconstpool:$in)>, ABI_NOT_N64;
 
 // wrapper_pic
 class WrapperPat<SDNode node, Instruction ADDiuOp, RegisterClass RC>:

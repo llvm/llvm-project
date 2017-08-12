@@ -1,5 +1,7 @@
 // Check passing Mips ABI options to the backend.
 //
+// REQUIRES: mips-registered-target
+//
 // RUN: %clang -target mips-linux-gnu -### -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS32R2-O32 %s
 // RUN: %clang -target mips64-linux-gnu -mips32r2 -mabi=32 -### -c %s 2>&1 \

@@ -50,6 +50,8 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPURegisterInfo.cpp
   AMDGPURewriteOutArguments.cpp
   AMDGPUUnifyDivergentExitNodes.cpp
+  AMDGPULibFunc.cpp
+  AMDGPULibCalls.cpp
   GCNHazardRecognizer.cpp
   GCNSchedStrategy.cpp
   R600ClauseMergePass.cpp

@@ -85,6 +85,24 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MEMBEDDEDDATADEF %s
 // CHECK-MEMBEDDEDDATADEF-NOT: "-mllvm" "-membedded-data"
 //
+// MIPS64 + N64: -fno-pic -> -mno-abicalls -mgpopt
+// RUN: %clang -target mips64-mti-elf -mabi=64 -### -c %s -fno-pic 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-N64-GPOPT %s
+// CHECK-N64-GPOPT: "-target-feature" "+noabicalls"
+// CHECK-N64-GPOPT: "-mllvm" "-mgpopt"
+//
+// MIPS64 + N64: -fno-pic -mno-gpopt
+// RUN: %clang -target mips64-mti-elf -mabi=64 -### -c %s -fno-pic -mno-gpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-N64-MNO-GPOPT %s
+// CHECK-N64-MNO-GPOPT: "-target-feature" "+noabicalls"
+// CHECK-N64-MNO-GPOPT-NOT: "-mllvm" "-mgpopt"
+//
+// MIPS64 + N64: -mgpopt (-fpic is implicit)
+// RUN: %clang -target mips64-mti-linux-gnu -mabi=64 -### -c %s -mgpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-N64-PIC-GPOPT %s
+// CHECK-N64-PIC-GPOPT-NOT: "-mllvm" "-mgpopt"
+// CHECK-N64-PIC-GPOPT: ignoring '-mgpopt' option as it cannot be used with the implicit usage of -mabicalls
+//
 // -mips16
 // RUN: %clang -target mips-linux-gnu -### -c %s \
 // RUN:     -mno-mips16 -mips16 2>&1 \

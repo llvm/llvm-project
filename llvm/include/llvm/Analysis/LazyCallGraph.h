@@ -35,28 +35,33 @@
 #ifndef LLVM_ANALYSIS_LAZYCALLGRAPH_H
 #define LLVM_ANALYSIS_LAZYCALLGRAPH_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
 #include <iterator>
+#include <string>
 #include <utility>
 
 namespace llvm {
-class PreservedAnalyses;
-class raw_ostream;
+
+class Module;
+class Value;
 
 /// A lazily constructed view of the call graph of a module.
 ///
@@ -183,8 +188,8 @@ public:
     friend class LazyCallGraph::Node;
     friend class LazyCallGraph::RefSCC;
 
-    typedef SmallVector<Edge, 4> VectorT;
-    typedef SmallVectorImpl<Edge> VectorImplT;
+    using VectorT = SmallVector<Edge, 4>;
+    using VectorImplT = SmallVectorImpl<Edge>;
 
   public:
     /// An iterator used for the edges to both entry nodes and child nodes.
@@ -204,7 +209,7 @@ public:
       }
 
     public:
-      iterator() {}
+      iterator() = default;
 
       using iterator_adaptor_base::operator++;
       iterator &operator++() {
@@ -240,7 +245,7 @@ public:
       }
 
     public:
-      call_iterator() {}
+      call_iterator() = default;
 
       using iterator_adaptor_base::operator++;
       call_iterator &operator++() {
@@ -260,6 +265,7 @@ public:
       assert(E && "Dead or null edge!");
       return E;
     }
+
     Edge *lookup(Node &N) {
       auto EI = EdgeIndexMap.find(&N);
       if (EI == EdgeIndexMap.end())
@@ -381,15 +387,14 @@ public:
     // We provide for the DFS numbering and Tarjan walk lowlink numbers to be
     // stored directly within the node. These are both '-1' when nodes are part
     // of an SCC (or RefSCC), or '0' when not yet reached in a DFS walk.
-    int DFSNumber;
-    int LowLink;
+    int DFSNumber = 0;
+    int LowLink = 0;
 
     Optional<EdgeSequence> Edges;
 
     /// Basic constructor implements the scanning of F into Edges and
     /// EdgeIndexMap.
-    Node(LazyCallGraph &G, Function &F)
-        : G(&G), F(&F), DFSNumber(0), LowLink(0) {}
+    Node(LazyCallGraph &G, Function &F) : G(&G), F(&F) {}
 
     /// Implementation of the scan when populating.
     EdgeSequence &populateSlow();
@@ -478,7 +483,7 @@ public:
 #endif
 
   public:
-    typedef pointee_iterator<SmallVectorImpl<Node *>::const_iterator> iterator;
+    using iterator = pointee_iterator<SmallVectorImpl<Node *>::const_iterator>;
 
     iterator begin() const { return Nodes.begin(); }
     iterator end() const { return Nodes.end(); }
@@ -606,10 +611,10 @@ public:
     void handleTrivialEdgeInsertion(Node &SourceN, Node &TargetN);
 
   public:
-    typedef pointee_iterator<SmallVectorImpl<SCC *>::const_iterator> iterator;
-    typedef iterator_range<iterator> range;
-    typedef pointee_iterator<SmallPtrSetImpl<RefSCC *>::const_iterator>
-        parent_iterator;
+    using iterator = pointee_iterator<SmallVectorImpl<SCC *>::const_iterator>;
+    using range = iterator_range<iterator>;
+    using parent_iterator =
+        pointee_iterator<SmallPtrSetImpl<RefSCC *>::const_iterator>;
 
     iterator begin() const { return SCCs.begin(); }
     iterator end() const { return SCCs.end(); }
@@ -888,14 +893,13 @@ public:
     struct IsAtEndT {};
 
     LazyCallGraph *G;
-    RefSCC *RC;
+    RefSCC *RC = nullptr;
 
     /// Build the begin iterator for a node.
     postorder_ref_scc_iterator(LazyCallGraph &G) : G(&G), RC(getRC(G, 0)) {}
 
     /// Build the end iterator for a node. This is selected purely by overload.
-    postorder_ref_scc_iterator(LazyCallGraph &G, IsAtEndT /*Nonce*/)
-        : G(&G), RC(nullptr) {}
+    postorder_ref_scc_iterator(LazyCallGraph &G, IsAtEndT /*Nonce*/) : G(&G) {}
 
     /// Get the post-order RefSCC at the given index of the postorder walk,
     /// populating it if necessary.
@@ -1097,8 +1101,8 @@ public:
   ///@}
 
 private:
-  typedef SmallVectorImpl<Node *>::reverse_iterator node_stack_iterator;
-  typedef iterator_range<node_stack_iterator> node_stack_range;
+  using node_stack_iterator = SmallVectorImpl<Node *>::reverse_iterator;
+  using node_stack_range = iterator_range<node_stack_iterator>;
 
   /// Allocator that holds all the call graph nodes.
   SpecificBumpPtrAllocator<Node> BPA;
@@ -1218,16 +1222,16 @@ inline Function &LazyCallGraph::Edge::getFunction() const {
 
 // Provide GraphTraits specializations for call graphs.
 template <> struct GraphTraits<LazyCallGraph::Node *> {
-  typedef LazyCallGraph::Node *NodeRef;
-  typedef LazyCallGraph::EdgeSequence::iterator ChildIteratorType;
+  using NodeRef = LazyCallGraph::Node *;
+  using ChildIteratorType = LazyCallGraph::EdgeSequence::iterator;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
   static ChildIteratorType child_begin(NodeRef N) { return (*N)->begin(); }
   static ChildIteratorType child_end(NodeRef N) { return (*N)->end(); }
 };
 template <> struct GraphTraits<LazyCallGraph *> {
-  typedef LazyCallGraph::Node *NodeRef;
-  typedef LazyCallGraph::EdgeSequence::iterator ChildIteratorType;
+  using NodeRef = LazyCallGraph::Node *;
+  using ChildIteratorType = LazyCallGraph::EdgeSequence::iterator;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
   static ChildIteratorType child_begin(NodeRef N) { return (*N)->begin(); }
@@ -1237,11 +1241,12 @@ template <> struct GraphTraits<LazyCallGraph *> {
 /// An analysis pass which computes the call graph for a module.
 class LazyCallGraphAnalysis : public AnalysisInfoMixin<LazyCallGraphAnalysis> {
   friend AnalysisInfoMixin<LazyCallGraphAnalysis>;
+
   static AnalysisKey Key;
 
 public:
   /// Inform generic clients of the result type.
-  typedef LazyCallGraph Result;
+  using Result = LazyCallGraph;
 
   /// Compute the \c LazyCallGraph for the module \c M.
   ///
@@ -1277,6 +1282,7 @@ public:
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_ANALYSIS_LAZYCALLGRAPH_H
