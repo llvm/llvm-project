@@ -57,7 +57,7 @@ static cl::opt<bool>
     GPOpt("mgpopt", cl::Hidden,
           cl::desc("Enable gp-relative addressing of mips small data items"));
 
-void MipsSubtarget::anchor() { }
+void MipsSubtarget::anchor() {}
 
 MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                              bool little, const MipsTargetMachine &TM)
@@ -136,8 +136,8 @@ bool MipsSubtarget::enablePostRAScheduler() const { return true; }
 
 void MipsSubtarget::getCriticalPathRCs(RegClassVector &CriticalPathRCs) const {
   CriticalPathRCs.clear();
-  CriticalPathRCs.push_back(isGP64bit() ?
-                            &Mips::GPR64RegClass : &Mips::GPR32RegClass);
+  CriticalPathRCs.push_back(isGP64bit() ? &Mips::GPR64RegClass
+                                        : &Mips::GPR32RegClass);
 }
 
 CodeGenOpt::Level MipsSubtarget::getOptLevelToEnablePostRAScheduler() const {

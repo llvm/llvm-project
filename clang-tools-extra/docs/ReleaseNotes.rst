@@ -71,7 +71,7 @@ Improvements to clang-tidy
       ``AllowConditionalPointerCasts`` -> ``AllowPointerConditions``.
 
 - New `android-cloexec-memfd_create
-    <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-memfd_create.html>`_ check
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-memfd_create.html>`_ check
 
   Checks if the required file flag ``MFD_CLOEXEC`` is present in the argument
   of ``memfd_create()``.
@@ -82,6 +82,12 @@ Improvements to clang-tidy
   Finds cases where integer division in a floating point context is likely to
   cause unintended loss of precision.
 
+- New `hicpp-exception-baseclass
+  <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-exception-baseclass.html>`_ check
+
+  Ensures that all exception will be instances of ``std::exception`` and classes 
+  that are derived from it.
+
 - New `readability-static-accessed-through-instance
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-static-accessed-through-instance.html>`_ check
 
@@ -91,6 +97,8 @@ Improvements to clang-tidy
 - Added `modernize-use-emplace.IgnoreImplicitConstructors
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html#cmdoption-arg-IgnoreImplicitConstructors>`_
   option.
+
+- Added alias `hicpp-braces-around-statements <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-braces-around-statements.html>`_ 
 
 Improvements to include-fixer
 -----------------------------

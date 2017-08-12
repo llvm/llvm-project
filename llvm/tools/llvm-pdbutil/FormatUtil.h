@@ -49,6 +49,15 @@ template <typename T> std::string formatUnknownEnum(T Value) {
 
 std::string formatSegmentOffset(uint16_t Segment, uint32_t Offset);
 
+enum class CharacteristicStyle {
+  HeaderDefinition, // format as windows header definition
+  Descriptive,      // format as human readable words
+};
+std::string formatSectionCharacteristics(
+    uint32_t IndentLevel, uint32_t C, uint32_t FlagsPerLine,
+    StringRef Separator,
+    CharacteristicStyle Style = CharacteristicStyle::HeaderDefinition);
+
 std::string typesetItemList(ArrayRef<std::string> Opts, uint32_t IndentLevel,
                             uint32_t GroupSize, StringRef Sep);
 

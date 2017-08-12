@@ -610,6 +610,12 @@ multiclass MipsHighestHigherHiLoRelocs<Instruction Lui, Instruction Daddiu> {
 let AdditionalPredicates = [NotInMicroMips] in
 defm : MipsHighestHigherHiLoRelocs<LUi64, DADDiu>, SYM_64;
 
+// gp_rel relocs
+def : MipsPat<(add GPR64:$gp, (MipsGPRel tglobaladdr:$in)),
+              (DADDiu GPR64:$gp, tglobaladdr:$in)>, ABI_N64;
+def : MipsPat<(add GPR64:$gp, (MipsGPRel tconstpool:$in)),
+              (DADDiu GPR64:$gp, tconstpool:$in)>, ABI_N64;
+
 def : WrapperPat<tglobaladdr, DADDiu, GPR64>;
 def : WrapperPat<tconstpool, DADDiu, GPR64>;
 def : WrapperPat<texternalsym, DADDiu, GPR64>;

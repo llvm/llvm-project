@@ -1,4 +1,4 @@
-//===- TypeName.cpp ------------------------------------------- *- C++ --*-===//
+//===- RecordName.cpp ----------------------------------------- *- C++ --*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/CodeView/TypeName.h"
+#include "llvm/DebugInfo/CodeView/RecordName.h"
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -240,4 +242,79 @@ std::string llvm::codeview::computeTypeName(TypeCollection &Types,
     return "<unknown UDT>";
   }
   return Computer.name();
+}
+
+static int getSymbolNameOffset(CVSymbol Sym) {
+  switch (Sym.kind()) {
+  // See ProcSym
+  case SymbolKind::S_GPROC32:
+  case SymbolKind::S_LPROC32:
+  case SymbolKind::S_GPROC32_ID:
+  case SymbolKind::S_LPROC32_ID:
+  case SymbolKind::S_LPROC32_DPC:
+  case SymbolKind::S_LPROC32_DPC_ID:
+    return 35;
+  // See Thunk32Sym
+  case SymbolKind::S_THUNK32:
+    return 21;
+  // See SectionSym
+  case SymbolKind::S_SECTION:
+    return 16;
+  // See CoffGroupSym
+  case SymbolKind::S_COFFGROUP:
+    return 14;
+  // See PublicSym32, FileStaticSym, RegRelativeSym, DataSym, ThreadLocalDataSym
+  case SymbolKind::S_PUB32:
+  case SymbolKind::S_FILESTATIC:
+  case SymbolKind::S_REGREL32:
+  case SymbolKind::S_GDATA32:
+  case SymbolKind::S_LDATA32:
+  case SymbolKind::S_LMANDATA:
+  case SymbolKind::S_GMANDATA:
+  case SymbolKind::S_LTHREAD32:
+  case SymbolKind::S_GTHREAD32:
+    return 10;
+  // See RegisterSym and LocalSym
+  case SymbolKind::S_REGISTER:
+  case SymbolKind::S_LOCAL:
+    return 6;
+  // See BlockSym
+  case SymbolKind::S_BLOCK32:
+    return 18;
+  // See LabelSym
+  case SymbolKind::S_LABEL32:
+    return 7;
+  // See ObjNameSym, ExportSym, and UDTSym
+  case SymbolKind::S_OBJNAME:
+  case SymbolKind::S_EXPORT:
+  case SymbolKind::S_UDT:
+    return 4;
+  // See BPRelativeSym
+  case SymbolKind::S_BPREL32:
+    return 8;
+  default:
+    return -1;
+  }
+}
+
+StringRef llvm::codeview::getSymbolName(CVSymbol Sym) {
+  if (Sym.kind() == SymbolKind::S_CONSTANT) {
+    // S_CONSTANT is preceded by an APSInt, which has a variable length.  So we
+    // have to do a full deserialization.
+    BinaryStreamReader Reader(Sym.content(), llvm::support::little);
+    // The container doesn't matter for single records.
+    SymbolRecordMapping Mapping(Reader, CodeViewContainer::ObjectFile);
+    ConstantSym Const(SymbolKind::S_CONSTANT);
+    cantFail(Mapping.visitSymbolBegin(Sym));
+    cantFail(Mapping.visitKnownRecord(Sym, Const));
+    cantFail(Mapping.visitSymbolEnd(Sym));
+    return Const.Name;
+  }
+
+  int Offset = getSymbolNameOffset(Sym);
+  if (Offset == -1)
+    return StringRef();
+
+  StringRef StringData = toStringRef(Sym.content()).drop_front(Offset);
+  return StringData.split('\0').first;
 }

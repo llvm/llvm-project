@@ -486,38 +486,70 @@ ALL-NEXT:          flags = has async eh | opt speed
 ALL-NEXT:    196 | S_END [size = 4]
 ALL-NEXT:    200 | S_BUILDINFO [size = 8] BuildId = `0x100E`
 ALL-NEXT:   Mod 0001 | `* Linker *`:
-ALL-NEXT:      4 | S_OBJNAME [size = 20] sig=0, `* Linker *`
-ALL-NEXT:     24 | S_COMPILE3 [size = 48]
-ALL-NEXT:          machine = intel 80386, Ver = Microsoft (R) LINK, language = link
-ALL-NEXT:          frontend = 0.0.0.0, backend = 12.0.31101.0
-ALL-NEXT:          flags = none
-ALL-NEXT:     72 | S_ENVBLOCK [size = 172]
-ALL-NEXT:          - cwd
-ALL-NEXT:          - d:\src\llvm\test\DebugInfo\PDB\Inputs
-ALL-NEXT:          - exe
-ALL-NEXT:          - C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\link.exe
-ALL-NEXT:          - pdb
-ALL-NEXT:          - d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.pdb
-ALL-NEXT:    244 | S_TRAMPOLINE [size = 20]
-ALL-NEXT:          type = tramp incremental, size = 5, source = 0001:0005, target = 0001:0005
-ALL-NEXT:    264 | S_SECTION [size = 28] `.text`
-ALL-NEXT:          length = 4122, alignment = 12, rva = 4096, section # = 1, characteristics = 1610612768
-ALL-NEXT:    292 | S_COFFGROUP [size = 28] `.text$mn`
-ALL-NEXT:          length = 4122, addr = 0001:0000, characteristics = 1610612768
-ALL-NEXT:    320 | S_SECTION [size = 28] `.rdata`
-ALL-NEXT:          length = 690, alignment = 12, rva = 12288, section # = 2, characteristics = 1073741888
-ALL-NEXT:    348 | S_COFFGROUP [size = 28] `.rdata`
-ALL-NEXT:          length = 323, addr = 0002:0000, characteristics = 1073741888
-ALL-NEXT:    376 | S_COFFGROUP [size = 28] `.edata`
-ALL-NEXT:          length = 0, addr = 0002:0323, characteristics = 1073741888
-ALL-NEXT:    404 | S_COFFGROUP [size = 32] `.rdata$debug`
-ALL-NEXT:          length = 366, addr = 0002:0324, characteristics = 1073741888
-ALL-NEXT:    436 | S_SECTION [size = 28] `.data`
-ALL-NEXT:          length = 4, alignment = 12, rva = 16384, section # = 3, characteristics = 3221225536
-ALL-NEXT:    464 | S_COFFGROUP [size = 24] `.bss`
-ALL-NEXT:          length = 4, addr = 0003:0000, characteristics = 3221225600
-ALL-NEXT:    488 | S_SECTION [size = 28] `.reloc`
-ALL-NEXT:          length = 8, alignment = 12, rva = 20480, section # = 4, characteristics = 1107296320
+ALL-NEXT:          4 | S_OBJNAME [size = 20] sig=0, `* Linker *`
+ALL-NEXT:         24 | S_COMPILE3 [size = 48]
+ALL-NEXT:              machine = intel 80386, Ver = Microsoft (R) LINK, language = link
+ALL-NEXT:              frontend = 0.0.0.0, backend = 12.0.31101.0
+ALL-NEXT:              flags = none
+ALL-NEXT:         72 | S_ENVBLOCK [size = 172]
+ALL-NEXT:              - cwd
+ALL-NEXT:              - d:\src\llvm\test\DebugInfo\PDB\Inputs
+ALL-NEXT:              - exe
+ALL-NEXT:              - C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\link.exe
+ALL-NEXT:              - pdb
+ALL-NEXT:              - d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.pdb
+ALL-NEXT:        244 | S_TRAMPOLINE [size = 20]
+ALL-NEXT:              type = tramp incremental, size = 5, source = 0001:0005, target = 0001:0005
+ALL-NEXT:        264 | S_SECTION [size = 28] `.text`
+ALL-NEXT:              length = 4122, alignment = 12, rva = 4096, section # = 1
+ALL-NEXT:              characteristics =
+ALL-NEXT:                code
+ALL-NEXT:                execute permissions
+ALL-NEXT:                read permissions
+ALL-NEXT:        292 | S_COFFGROUP [size = 28] `.text$mn`
+ALL-NEXT:              length = 4122, addr = 0001:0000
+ALL-NEXT:              characteristics =
+ALL-NEXT:                code
+ALL-NEXT:                execute permissions
+ALL-NEXT:                read permissions
+ALL-NEXT:        320 | S_SECTION [size = 28] `.rdata`
+ALL-NEXT:              length = 690, alignment = 12, rva = 12288, section # = 2
+ALL-NEXT:              characteristics =
+ALL-NEXT:                initialized data
+ALL-NEXT:                read permissions
+ALL-NEXT:        348 | S_COFFGROUP [size = 28] `.rdata`
+ALL-NEXT:              length = 323, addr = 0002:0000
+ALL-NEXT:              characteristics =
+ALL-NEXT:                initialized data
+ALL-NEXT:                read permissions
+ALL-NEXT:        376 | S_COFFGROUP [size = 28] `.edata`
+ALL-NEXT:              length = 0, addr = 0002:0323
+ALL-NEXT:              characteristics =
+ALL-NEXT:                initialized data
+ALL-NEXT:                read permissions
+ALL-NEXT:        404 | S_COFFGROUP [size = 32] `.rdata$debug`
+ALL-NEXT:              length = 366, addr = 0002:0324
+ALL-NEXT:              characteristics =
+ALL-NEXT:                initialized data
+ALL-NEXT:                read permissions
+ALL-NEXT:        436 | S_SECTION [size = 28] `.data`
+ALL-NEXT:              length = 4, alignment = 12, rva = 16384, section # = 3
+ALL-NEXT:              characteristics =
+ALL-NEXT:                initialized data
+ALL-NEXT:                read permissions
+ALL-NEXT:                write permissions
+ALL-NEXT:        464 | S_COFFGROUP [size = 24] `.bss`
+ALL-NEXT:              length = 4, addr = 0003:0000
+ALL-NEXT:              characteristics =
+ALL-NEXT:                uninitialized data
+ALL-NEXT:                read permissions
+ALL-NEXT:                write permissions
+ALL-NEXT:        488 | S_SECTION [size = 28] `.reloc`
+ALL-NEXT:              length = 8, alignment = 12, rva = 20480, section # = 4
+ALL-NEXT:              characteristics =
+ALL-NEXT:                initialized data
+ALL-NEXT:                discardable
+ALL-NEXT:                read permissions
 ALL:                         Section Contributions
 ALL-NEXT: ============================================================
 ALL-NEXT:   SC[.text]  | mod = 1, 0001:0000, size = 10, data crc = 0, reloc crc = 0

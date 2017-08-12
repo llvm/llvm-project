@@ -2466,8 +2466,12 @@ TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWithNoUser) {
   DistinctMDOperandPlaceholder(7).replaceUseWith(MDTuple::get(Context, None));
 }
 
-#ifndef NDEBUG
-#ifdef GTEST_HAS_DEATH_TEST
+// Test various assertions in metadata tracking. Don't run these tests if gtest
+// will use SEH to recover from them. Two of these tests get halfway through
+// inserting metadata into DenseMaps for tracking purposes, and then they
+// assert, and we attempt to destroy an LLVMContext with broken invariants,
+// leading to infinite loops.
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG) && !defined(GTEST_HAS_SEH)
 TEST_F(DistinctMDOperandPlaceholderTest, MetadataAsValue) {
   // This shouldn't crash.
   DistinctMDOperandPlaceholder PH(7);
@@ -2508,7 +2512,6 @@ TEST_F(DistinctMDOperandPlaceholderTest, TrackingMDRefAndDistinctMDNode) {
                  "Placeholders can only be used once");
   }
 }
-#endif
 #endif
 
 } // end namespace

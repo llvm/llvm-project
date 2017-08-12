@@ -114,6 +114,9 @@ def FeatureCrypto         : SubtargetFeature<"crypto", "HasCrypto", "true",
 def FeatureCRC            : SubtargetFeature<"crc", "HasCRC", "true",
                                              "Enable support for CRC instructions">;
 
+def FeatureDotProd        : SubtargetFeature<"dotprod", "HasDotProd", "true",
+                                             "Enable support for dot product instructions",
+                                             [FeatureNEON]>;
 
 // Not to be confused with FeatureHasRetAddrStack (return address stack)
 def FeatureRAS            : SubtargetFeature<"ras", "HasRAS", "true",

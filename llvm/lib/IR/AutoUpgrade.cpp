@@ -239,6 +239,14 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx2.pblendd.") || // Added in 3.7
       Name.startswith("avx.vbroadcastf128") || // Added in 4.0
       Name == "avx2.vbroadcasti128" || // Added in 3.7
+      Name.startswith("avx512.mask.broadcastf32x4.") || // Added in 6.0
+      Name.startswith("avx512.mask.broadcastf64x2.") || // Added in 6.0
+      Name.startswith("avx512.mask.broadcasti32x4.") || // Added in 6.0
+      Name.startswith("avx512.mask.broadcasti64x2.") || // Added in 6.0
+      Name == "avx512.mask.broadcastf32x8.512" || // Added in 6.0
+      Name == "avx512.mask.broadcasti32x8.512" || // Added in 6.0
+      Name == "avx512.mask.broadcastf64x4.512" || // Added in 6.0
+      Name == "avx512.mask.broadcasti64x4.512" || // Added in 6.0
       Name == "xop.vpcmov" || // Added in 3.8
       Name == "xop.vpcmov.256" || // Added in 5.0
       Name.startswith("avx512.mask.move.s") || // Added in 4.0
@@ -1221,6 +1229,21 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       else
         Rep = Builder.CreateShuffleVector(Load, UndefValue::get(Load->getType()),
                                           { 0, 1, 2, 3, 0, 1, 2, 3 });
+    } else if (IsX86 && (Name.startswith("avx512.mask.broadcastf") ||
+                         Name.startswith("avx512.mask.broadcasti"))) {
+      unsigned NumSrcElts =
+                        CI->getArgOperand(0)->getType()->getVectorNumElements();
+      unsigned NumDstElts = CI->getType()->getVectorNumElements();
+
+      SmallVector<uint32_t, 8> ShuffleMask(NumDstElts);
+      for (unsigned i = 0; i != NumDstElts; ++i)
+        ShuffleMask[i] = i % NumSrcElts;
+
+      Rep = Builder.CreateShuffleVector(CI->getArgOperand(0),
+                                        CI->getArgOperand(0),
+                                        ShuffleMask);
+      Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+                          CI->getArgOperand(1));
     } else if (IsX86 && (Name.startswith("avx2.pbroadcast") ||
                          Name.startswith("avx2.vbroadcast") ||
                          Name.startswith("avx512.pbroadcast") ||

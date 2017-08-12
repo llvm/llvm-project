@@ -32,7 +32,7 @@ enum : SanitizerMask {
   RequiresPIE = DataFlow,
   NeedsUnwindTables = Address | Thread | Memory | DataFlow,
   SupportsCoverage = Address | KernelAddress | Memory | Leak | Undefined |
-                     Integer | Nullability | DataFlow | Fuzzer,
+                     Integer | Nullability | DataFlow | Fuzzer | FuzzerNoLink,
   RecoverableByDefault = Undefined | Integer | Nullability,
   Unrecoverable = Unreachable | Return,
   LegacyFsanitizeRecoverMask = Undefined | Integer,
@@ -286,8 +286,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       Add &= ~InvalidTrappingKinds;
       Add &= Supported;
 
-      // Enable coverage if the fuzzing flag is set.
       if (Add & Fuzzer)
+        Add |= FuzzerNoLink;
+
+      // Enable coverage if the fuzzing flag is set.
+      if (Add & FuzzerNoLink)
         CoverageFeatures |= CoverageTracePCGuard | CoverageIndirCall |
                             CoverageTraceCmp | CoveragePCTable;
 

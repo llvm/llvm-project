@@ -143,6 +143,19 @@ define i16 @test23(i16 %A) {
   ret i16 %D
 }
 
+define <2 x i16> @test23vec(<2 x i16> %A) {
+; CHECK-LABEL: @test23vec(
+; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 1, i16 1>
+; CHECK-NEXT:    [[D:%.*]] = xor <2 x i16> [[B]], <i16 -24575, i16 -24575>
+; CHECK-NEXT:    ret <2 x i16> [[D]]
+;
+  %B = lshr <2 x i16> %A, <i16 1, i16 1>
+  ;; fold or into xor
+  %C = or <2 x i16> %B, <i16 -32768, i16 -32768>
+  %D = xor <2 x i16> %C, <i16 8193, i16 8193>
+  ret <2 x i16> %D
+}
+
 ; PR1738
 define i1 @test24(double %X, double %Y) {
 ; CHECK-LABEL: @test24(

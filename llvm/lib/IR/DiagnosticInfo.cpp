@@ -233,6 +233,16 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, unsigned N)
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, uint64_t N)
     : Key(Key), Val(utostr(N)) {}
 
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, DebugLoc Loc)
+    : Key(Key), Loc(Loc) {
+  if (Loc) {
+    Val = (Loc->getFilename() + ":" + Twine(Loc.getLine()) + ":" +
+           Twine(Loc.getCol())).str();
+  } else {
+    Val = "<UNKNOWN LOCATION>";
+  }
+}
+
 void DiagnosticInfoOptimizationBase::print(DiagnosticPrinter &DP) const {
   DP << getLocationStr() << ": " << getMsg();
   if (Hotness)

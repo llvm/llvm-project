@@ -91,6 +91,7 @@ class TracePC {
       memset(Counters(), 0, GetNumPCs());
     ClearExtraCounters();
     ClearInlineCounters();
+    ClearClangCounters();
   }
 
   void ClearInlineCounters();
@@ -196,14 +197,9 @@ void ForEachNonZeroByte(const uint8_t *Begin, const uint8_t *End,
       Handle8bitCounter(FirstFeature, P - Begin, V);
 }
 
-template <class Callback>  // bool Callback(size_t Feature)
-ATTRIBUTE_NO_SANITIZE_ADDRESS
-__attribute__((noinline))
-void TracePC::CollectFeatures(Callback HandleFeature) const {
-  uint8_t *Counters = this->Counters();
-  size_t N = GetNumPCs();
-  auto Handle8bitCounter = [&](size_t FirstFeature,
-                               size_t Idx, uint8_t Counter) {
+// Given a non-zero Counters returns a number in [0,7].
+template<class T>
+unsigned CounterToFeature(T Counter) {
     assert(Counter);
     unsigned Bit = 0;
     /**/ if (Counter >= 128) Bit = 7;
@@ -213,7 +209,18 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
     else if (Counter >= 4) Bit = 3;
     else if (Counter >= 3) Bit = 2;
     else if (Counter >= 2) Bit = 1;
-    HandleFeature(FirstFeature + Idx * 8 + Bit);
+    return Bit;
+}
+
+template <class Callback>  // bool Callback(size_t Feature)
+ATTRIBUTE_NO_SANITIZE_ADDRESS
+__attribute__((noinline))
+void TracePC::CollectFeatures(Callback HandleFeature) const {
+  uint8_t *Counters = this->Counters();
+  size_t N = GetNumPCs();
+  auto Handle8bitCounter = [&](size_t FirstFeature,
+                               size_t Idx, uint8_t Counter) {
+    HandleFeature(FirstFeature + Idx * 8 + CounterToFeature(Counter));
   };
 
   size_t FirstFeature = 0;
@@ -229,6 +236,14 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
                          FirstFeature, Handle8bitCounter);
       FirstFeature += 8 * (ModuleCounters[i].Stop - ModuleCounters[i].Start);
     }
+  }
+
+  if (size_t NumClangCounters = ClangCountersEnd() - ClangCountersBegin()) {
+    auto P = ClangCountersBegin();
+    for (size_t Idx = 0; Idx < NumClangCounters; Idx++)
+      if (auto Cnt = P[Idx])
+        HandleFeature(FirstFeature + Idx * 8 + CounterToFeature(Cnt));
+    FirstFeature += NumClangCounters;
   }
 
   ForEachNonZeroByte(ExtraCountersBegin(), ExtraCountersEnd(), FirstFeature,

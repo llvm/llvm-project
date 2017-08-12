@@ -58,6 +58,12 @@ public:
 
   void addPublicSymbol(const codeview::PublicSym32 &Pub);
 
+  void addGlobalSymbol(const codeview::ProcRefSym &Sym);
+  void addGlobalSymbol(const codeview::DataSym &Sym);
+  void addGlobalSymbol(const codeview::ConstantSym &Sym);
+  void addGlobalSymbol(const codeview::UDTSym &Sym);
+  void addGlobalSymbol(const codeview::CVSymbol &Sym);
+
 private:
   uint32_t calculatePublicsHashStreamSize() const;
   uint32_t calculateGlobalsHashStreamSize() const;
