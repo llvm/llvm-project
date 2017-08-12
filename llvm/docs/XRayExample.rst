@@ -100,7 +100,7 @@ this data in a spreadsheet, we can output the results as CSV using the
 
 If we want to get a textual representation of the raw trace we can use the
 ``llvm-xray convert`` tool to get YAML output. The first few lines of that
-ouput for an example trace would look like the following:
+output for an example trace would look like the following:
 
 ::
 
