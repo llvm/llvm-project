@@ -8050,6 +8050,7 @@ class MipsTargetInfo : public TargetInfo {
     NoDSP, DSP1, DSP2
   } DspRev;
   bool HasMSA;
+  bool DisableMadd4;
 
 protected:
   bool HasFP64;
@@ -8060,7 +8061,7 @@ public:
       : TargetInfo(Triple), IsMips16(false), IsMicromips(false),
         IsNan2008(false), IsSingleFloat(false), IsNoABICalls(false),
         CanUseBSDABICalls(false), FloatABI(HardFloat), DspRev(NoDSP),
-        HasMSA(false), HasFP64(false) {
+        HasMSA(false), DisableMadd4(false), HasFP64(false) {
     TheCXXABI.set(TargetCXXABI::GenericMIPS);
 
     setABI((getTriple().getArch() == llvm::Triple::mips ||
@@ -8306,6 +8307,9 @@ public:
     if (HasMSA)
       Builder.defineMacro("__mips_msa", Twine(1));
 
+    if (DisableMadd4)
+      Builder.defineMacro("__mips_no_madd4", Twine(1));
+
     Builder.defineMacro("_MIPS_SZPTR", Twine(getPointerWidth(0)));
     Builder.defineMacro("_MIPS_SZINT", Twine(getIntWidth()));
     Builder.defineMacro("_MIPS_SZLONG", Twine(getLongWidth()));
@@ -8468,6 +8472,8 @@ public:
         DspRev = std::max(DspRev, DSP2);
       else if (Feature == "+msa")
         HasMSA = true;
+      else if (Feature == "+nomadd4")
+        DisableMadd4 = true;
       else if (Feature == "+fp64")
         HasFP64 = true;
       else if (Feature == "-fp64")
