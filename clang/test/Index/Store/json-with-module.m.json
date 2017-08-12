@@ -22,7 +22,7 @@
     {
       "kind": "type-alias",
       "lang": "C",
-      "usr": "c:ModTop.h@T@ModTopStruct",
+      "usr": "c:@T@ModTopStruct",
       "name": "ModTopStruct",
       "roles": "Def,Ref,RelCont"
     },
