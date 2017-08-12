@@ -187,6 +187,9 @@ clang-format
 
 ...
 
+* Option -verbose added to the command line.
+  Shows the list of processed files.
+
 libclang
 --------
 

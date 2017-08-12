@@ -131,16 +131,13 @@ static bool getARMLoadDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
 #include "ARMGenSubtargetInfo.inc"
 
 std::string ARM_MC::ParseARMTriple(const Triple &TT, StringRef CPU) {
-  bool isThumb =
-      TT.getArch() == Triple::thumb || TT.getArch() == Triple::thumbeb;
-
   std::string ARMArchFeature;
 
   ARM::ArchKind ArchID = ARM::parseArch(TT.getArchName());
   if (ArchID != ARM::ArchKind::INVALID &&  (CPU.empty() || CPU == "generic"))
     ARMArchFeature = (ARMArchFeature + "+" + ARM::getArchName(ArchID)).str();
 
-  if (isThumb) {
+  if (TT.isThumb()) {
     if (ARMArchFeature.empty())
       ARMArchFeature = "+thumb-mode";
     else

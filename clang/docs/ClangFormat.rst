@@ -71,6 +71,7 @@ to format C/C++/Obj-C code.
                                 Use -style="{key: value, ...}" to set specific
                                 parameters, e.g.:
                                   -style="{BasedOnStyle: llvm, IndentWidth: 8}"
+    -verbose                  - If set, shows the list of processed files
 
   Generic Options:
 
