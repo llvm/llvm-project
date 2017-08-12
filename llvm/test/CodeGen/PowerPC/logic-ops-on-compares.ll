@@ -47,7 +47,6 @@ define void @neg_truncate_i32_eq(i32 *%ptr) {
 ; CHECK-NEXT:    rldicl. r3, r3, 0, 63
 ; CHECK-NEXT:    bclr 12, eq, 0
 ; CHECK-NEXT:  # BB#1: # %if.end29.thread136
-; CHECK-NEXT:  .LBB1_2: # %if.end29
 entry:
   %0 = load i32, i32* %ptr, align 4
   %rem17127 = and i32 %0, 1
@@ -106,7 +105,6 @@ define void @neg_truncate_i64_eq(i64 *%ptr) {
 ; CHECK-NEXT:    rldicl. r3, r3, 0, 63
 ; CHECK-NEXT:    bclr 12, eq, 0
 ; CHECK-NEXT:  # BB#1: # %if.end29.thread136
-; CHECK-NEXT:  .LBB3_2: # %if.end29
 entry:
   %0 = load i64, i64* %ptr, align 4
   %rem17127 = and i64 %0, 1
@@ -167,7 +165,6 @@ define void @neg_truncate_i64_ne(i64 *%ptr) {
 ; CHECK-NEXT:    andi. r3, r3, 1
 ; CHECK-NEXT:    bclr 12, gt, 0
 ; CHECK-NEXT:  # BB#1: # %if.end29.thread136
-; CHECK-NEXT:  .LBB5_2: # %if.end29
 entry:
   %0 = load i64, i64* %ptr, align 4
   %rem17127 = and i64 %0, 1

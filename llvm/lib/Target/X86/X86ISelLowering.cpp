@@ -573,11 +573,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addLegalFPImmediate(APFloat(-0.0)); // FLD0/FCHS
     addLegalFPImmediate(APFloat(-1.0)); // FLD1/FCHS
 
-    if (!TM.Options.UnsafeFPMath) {
-      setOperationAction(ISD::FSIN   , MVT::f64, Expand);
-      setOperationAction(ISD::FCOS   , MVT::f64, Expand);
-      setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
-    }
+    // Always expand sin/cos functions even though x87 has an instruction.
+    setOperationAction(ISD::FSIN   , MVT::f64, Expand);
+    setOperationAction(ISD::FCOS   , MVT::f64, Expand);
+    setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
   } else if (UseX87) {
     // f32 and f64 in x87.
     // Set up the FP register classes.
@@ -588,11 +587,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UNDEF,     VT, Expand);
       setOperationAction(ISD::FCOPYSIGN, VT, Expand);
 
-      if (!TM.Options.UnsafeFPMath) {
-        setOperationAction(ISD::FSIN   , VT, Expand);
-        setOperationAction(ISD::FCOS   , VT, Expand);
-        setOperationAction(ISD::FSINCOS, VT, Expand);
-      }
+      // Always expand sin/cos functions even though x87 has an instruction.
+      setOperationAction(ISD::FSIN   , VT, Expand);
+      setOperationAction(ISD::FCOS   , VT, Expand);
+      setOperationAction(ISD::FSINCOS, VT, Expand);
     }
     addLegalFPImmediate(APFloat(+0.0)); // FLD0
     addLegalFPImmediate(APFloat(+1.0)); // FLD1
@@ -636,11 +634,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       addLegalFPImmediate(TmpFlt2);  // FLD1/FCHS
     }
 
-    if (!TM.Options.UnsafeFPMath) {
-      setOperationAction(ISD::FSIN   , MVT::f80, Expand);
-      setOperationAction(ISD::FCOS   , MVT::f80, Expand);
-      setOperationAction(ISD::FSINCOS, MVT::f80, Expand);
-    }
+    // Always expand sin/cos functions even though x87 has an instruction.
+    setOperationAction(ISD::FSIN   , MVT::f80, Expand);
+    setOperationAction(ISD::FCOS   , MVT::f80, Expand);
+    setOperationAction(ISD::FSINCOS, MVT::f80, Expand);
 
     setOperationAction(ISD::FFLOOR, MVT::f80, Expand);
     setOperationAction(ISD::FCEIL,  MVT::f80, Expand);
@@ -12256,7 +12253,7 @@ static SDValue lowerVectorShuffleByMerging128BitLanes(
   return DAG.getVectorShuffle(VT, DL, LaneShuffle, DAG.getUNDEF(VT), NewMask);
 }
 
-/// Lower shuffles where an entire half of a 256-bit vector is UNDEF.
+/// Lower shuffles where an entire half of a 256 or 512-bit vector is UNDEF.
 /// This allows for fast cases such as subvector extraction/insertion
 /// or shuffling smaller vector types which can lower more efficiently.
 static SDValue lowerVectorShuffleWithUndefHalf(const SDLoc &DL, MVT VT,
@@ -12264,7 +12261,8 @@ static SDValue lowerVectorShuffleWithUndefHalf(const SDLoc &DL, MVT VT,
                                                ArrayRef<int> Mask,
                                                const X86Subtarget &Subtarget,
                                                SelectionDAG &DAG) {
-  assert(VT.is256BitVector() && "Expected 256-bit vector");
+  assert((VT.is256BitVector() || VT.is512BitVector()) &&
+         "Expected 256-bit or 512-bit vector");
 
   unsigned NumElts = VT.getVectorNumElements();
   unsigned HalfNumElts = NumElts / 2;
@@ -12359,6 +12357,10 @@ static SDValue lowerVectorShuffleWithUndefHalf(const SDLoc &DL, MVT VT,
         return SDValue();
     }
   }
+
+  // AVX512 - XXXXuuuu - always extract lowers.
+  if (VT.is512BitVector() && !(UndefUpper && NumUpperHalves == 0))
+    return SDValue();
 
   auto GetHalfVector = [&](int HalfIdx) {
     if (HalfIdx < 0)
@@ -13702,6 +13704,11 @@ static SDValue lower512BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
             DL, VT, V1, V2, Mask, Zeroable, Subtarget, DAG))
       return Insertion;
+
+  // Handle special cases where the lower or upper half is UNDEF.
+  if (SDValue V =
+        lowerVectorShuffleWithUndefHalf(DL, VT, V1, V2, Mask, Subtarget, DAG))
+    return V;
 
   // Check for being able to broadcast a single element.
   if (SDValue Broadcast =
@@ -19897,23 +19904,6 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
                                 DAG.getUNDEF(BitcastVT), CvtMask,
                                 DAG.getIntPtrConstant(0, dl));
       return DAG.getBitcast(Op.getValueType(), Res);
-    }
-    case BRCST_SUBVEC_TO_VEC: {
-      SDValue Src = Op.getOperand(1);
-      SDValue Passthru = Op.getOperand(2);
-      SDValue Mask = Op.getOperand(3);
-      EVT resVT = Passthru.getValueType();
-      SDValue subVec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, resVT,
-                                       DAG.getUNDEF(resVT), Src,
-                                       DAG.getIntPtrConstant(0, dl));
-      SDValue immVal;
-      if (Src.getSimpleValueType().is256BitVector() && resVT.is512BitVector())
-        immVal = DAG.getConstant(0x44, dl, MVT::i8);
-      else
-        immVal = DAG.getConstant(0, dl, MVT::i8);
-      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT,
-                                              subVec, subVec, immVal),
-                                  Mask, Passthru, Subtarget, DAG);
     }
     case BRCST32x2_TO_VEC: {
       SDValue Src = Op.getOperand(1);
@@ -27034,6 +27024,12 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
   return 1;
 }
 
+SDValue X86TargetLowering::unwrapAddress(SDValue N) const {
+  if (N->getOpcode() == X86ISD::Wrapper || N->getOpcode() == X86ISD::WrapperRIP)
+    return N->getOperand(0);
+  return N;
+}
+
 /// Returns true (and the GlobalValue and the offset) if the node is a
 /// GlobalAddress + offset.
 bool X86TargetLowering::isGAPlusOffset(SDNode *N,
@@ -30075,78 +30071,52 @@ static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   // Don't do this for crazy integer types.
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(LHS.getValueType()))
+  EVT VT = N->getValueType(0);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
-  // If this is efficiently invertible, canonicalize the LHSC/RHSC values
-  // so that TrueC (the true value) is larger than FalseC.
-  bool NeedsCondInvert = false;
-  if (TrueC->getAPIntValue().ult(FalseC->getAPIntValue()) &&
-      // Efficiently invertible.
-      (Cond.getOpcode() == ISD::SETCC || // setcc -> invertible.
-       (Cond.getOpcode() == ISD::XOR &&  // xor(X, C) -> invertible.
-        isa<ConstantSDNode>(Cond.getOperand(1))))) {
-    NeedsCondInvert = true;
-    std::swap(TrueC, FalseC);
-  }
+  // We're going to use the condition bit in math or logic ops. We could allow
+  // this with a wider condition value (post-legalization it becomes an i8),
+  // but if nothing is creating selects that late, it doesn't matter.
+  if (Cond.getValueType() != MVT::i1)
+    return SDValue();
 
-  // Optimize C ? 8 : 0 -> zext(C) << 3.  Likewise for any pow2/0.
-  if (FalseC->getAPIntValue() == 0 && TrueC->getAPIntValue().isPowerOf2()) {
-    if (NeedsCondInvert) // Invert the condition if needed.
-      Cond = DAG.getNode(ISD::XOR, DL, Cond.getValueType(), Cond,
-                         DAG.getConstant(1, DL, Cond.getValueType()));
+  // A power-of-2 multiply is just a shift. LEA also cheaply handles multiply by
+  // 3, 5, or 9 with i32/i64, so those get transformed too.
+  // TODO: For constants that overflow or do not differ by power-of-2 or small
+  // multiplier, convert to 'and' + 'add'.
+  const APInt &TrueVal = TrueC->getAPIntValue();
+  const APInt &FalseVal = FalseC->getAPIntValue();
+  bool OV;
+  APInt Diff = TrueVal.ssub_ov(FalseVal, OV);
+  if (OV)
+    return SDValue();
 
-    // Zero extend the condition if needed.
-    Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, LHS.getValueType(), Cond);
+  APInt AbsDiff = Diff.abs();
+  if (AbsDiff.isPowerOf2() ||
+      ((VT == MVT::i32 || VT == MVT::i64) &&
+       (AbsDiff == 3 || AbsDiff == 5 || AbsDiff == 9))) {
 
-    unsigned ShAmt = TrueC->getAPIntValue().logBase2();
-    return DAG.getNode(ISD::SHL, DL, LHS.getValueType(), Cond,
-                       DAG.getConstant(ShAmt, DL, MVT::i8));
-  }
-
-  // Optimize cases that will turn into an LEA instruction.  This requires
-  // an i32 or i64 and an efficient multiplier (1, 2, 3, 4, 5, 8, 9).
-  if (N->getValueType(0) == MVT::i32 || N->getValueType(0) == MVT::i64) {
-    uint64_t Diff = TrueC->getZExtValue() - FalseC->getZExtValue();
-    if (N->getValueType(0) == MVT::i32)
-      Diff = (unsigned)Diff;
-
-    bool IsFastMultiplier = false;
-    if (Diff < 10) {
-      switch ((unsigned char)Diff) {
-      default:
-        break;
-      case 1: // result = add base, cond
-      case 2: // result = lea base(    , cond*2)
-      case 3: // result = lea base(cond, cond*2)
-      case 4: // result = lea base(    , cond*4)
-      case 5: // result = lea base(cond, cond*4)
-      case 8: // result = lea base(    , cond*8)
-      case 9: // result = lea base(cond, cond*8)
-        IsFastMultiplier = true;
-        break;
-      }
+    // We need a positive multiplier constant for shift/LEA codegen. The 'not'
+    // of the condition can usually be folded into a compare predicate, but even
+    // without that, the sequence should be cheaper than a CMOV alternative.
+    if (TrueVal.slt(FalseVal)) {
+      Cond = DAG.getNOT(DL, Cond, MVT::i1);
+      std::swap(TrueC, FalseC);
     }
 
-    if (IsFastMultiplier) {
-      APInt Diff = TrueC->getAPIntValue() - FalseC->getAPIntValue();
-      if (NeedsCondInvert) // Invert the condition if needed.
-        Cond = DAG.getNode(ISD::XOR, DL, Cond.getValueType(), Cond,
-                           DAG.getConstant(1, DL, Cond.getValueType()));
+    // select Cond, TC, FC --> (zext(Cond) * (TC - FC)) + FC
+    SDValue R = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Cond);
 
-      // Zero extend the condition if needed.
-      Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, FalseC->getValueType(0), Cond);
-      // Scale the condition by the difference.
-      if (Diff != 1)
-        Cond = DAG.getNode(ISD::MUL, DL, Cond.getValueType(), Cond,
-                           DAG.getConstant(Diff, DL, Cond.getValueType()));
+    // Multiply condition by the difference if non-one.
+    if (!AbsDiff.isOneValue())
+      R = DAG.getNode(ISD::MUL, DL, VT, R, DAG.getConstant(AbsDiff, DL, VT));
 
-      // Add the base if non-zero.
-      if (FalseC->getAPIntValue() != 0)
-        Cond = DAG.getNode(ISD::ADD, DL, Cond.getValueType(), Cond,
-                           SDValue(FalseC, 0));
-      return Cond;
-    }
+    // Add the base if non-zero.
+    if (!FalseC->isNullValue())
+      R = DAG.getNode(ISD::ADD, DL, VT, R, SDValue(FalseC, 0));
+
+    return R;
   }
 
   return SDValue();

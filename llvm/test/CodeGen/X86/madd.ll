@@ -323,13 +323,13 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX512-NEXT:    cmpq %rcx, %rax
 ; AVX512-NEXT:    jne .LBB2_1
 ; AVX512-NEXT:  # BB#2: # %middle.block
-; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[4,5,6,7,0,1,0,1]
+; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[2,3,0,1,0,1,0,1]
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[2,3,2,3,6,7,6,7,10,11,10,11,14,15,14,15]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[1,1,2,3,5,5,6,7,9,9,10,11,13,13,14,15]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    vzeroupper

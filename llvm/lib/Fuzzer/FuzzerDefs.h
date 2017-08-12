@@ -123,6 +123,10 @@ uint8_t *ExtraCountersBegin();
 uint8_t *ExtraCountersEnd();
 void ClearExtraCounters();
 
+uint64_t *ClangCountersBegin();
+uint64_t *ClangCountersEnd();
+void ClearClangCounters();
+
 }  // namespace fuzzer
 
 #endif  // LLVM_FUZZER_DEFS_H

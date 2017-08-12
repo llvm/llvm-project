@@ -446,18 +446,27 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             SectionSym &Section) {
   P.format(" `{0}`", Section.Name);
   AutoIndent Indent(P, 7);
-  P.formatLine("length = {0}, alignment = {1}, rva = {2}, section # = {3}, "
-               "characteristics = {4}",
+  P.formatLine("length = {0}, alignment = {1}, rva = {2}, section # = {3}",
                Section.Length, Section.Alignment, Section.Rva,
-               Section.SectionNumber, Section.Characteristics);
+               Section.SectionNumber);
+  P.printLine("characteristics =");
+  AutoIndent Indent2(P, 2);
+  P.printLine(formatSectionCharacteristics(P.getIndentLevel(),
+                                           Section.Characteristics, 1, "",
+                                           CharacteristicStyle::Descriptive));
   return Error::success();
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, CoffGroupSym &CG) {
   P.format(" `{0}`", CG.Name);
   AutoIndent Indent(P, 7);
-  P.formatLine("length = {0}, addr = {1}, characteristics = {2}", CG.Size,
-               formatSegmentOffset(CG.Segment, CG.Offset), CG.Characteristics);
+  P.formatLine("length = {0}, addr = {1}", CG.Size,
+               formatSegmentOffset(CG.Segment, CG.Offset));
+  P.printLine("characteristics =");
+  AutoIndent Indent2(P, 2);
+  P.printLine(formatSectionCharacteristics(P.getIndentLevel(),
+                                           CG.Characteristics, 1, "",
+                                           CharacteristicStyle::Descriptive));
   return Error::success();
 }
 

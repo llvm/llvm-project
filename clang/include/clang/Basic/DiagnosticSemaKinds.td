@@ -2935,16 +2935,6 @@ def warn_thread_attribute_decl_not_lockable : Warning<
   "%0 attribute can only be applied in a context annotated "
   "with 'capability(\"mutex\")' attribute">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
-def warn_thread_attribute_noargs_not_lockable : Warning<
-  "%0 attribute requires type annotated with 'capability' attribute; "
-  "type here is %1">,
-  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
-def warn_thread_attribute_noargs_not_method : Warning<
-  "%0 attribute without arguments can only be applied to a method of a class">,
-  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
-def warn_thread_attribute_noargs_static_method : Warning<
-  "%0 attribute without arguments cannot be applied to a static method">,
-  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_decl_not_pointer : Warning<
   "%0 only applies to pointer types; type here is %1">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;

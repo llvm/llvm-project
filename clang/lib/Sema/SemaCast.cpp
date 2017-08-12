@@ -552,7 +552,14 @@ CastsAwayConstness(Sema &Self, QualType SrcType, QualType DestType,
     Qualifiers SrcQuals, DestQuals;
     Self.Context.getUnqualifiedArrayType(UnwrappedSrcType, SrcQuals);
     Self.Context.getUnqualifiedArrayType(UnwrappedDestType, DestQuals);
-    
+
+    // We do not meaningfully track object const-ness of Objective-C object
+    // types. Remove const from the source type if either the source or
+    // the destination is an Objective-C object type.
+    if (UnwrappedSrcType->isObjCObjectType() ||
+        UnwrappedDestType->isObjCObjectType())
+      SrcQuals.removeConst();
+
     Qualifiers RetainedSrcQuals, RetainedDestQuals;
     if (CheckCVR) {
       RetainedSrcQuals.setCVRQualifiers(SrcQuals.getCVRQualifiers());

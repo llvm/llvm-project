@@ -19,6 +19,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   Formatters.cpp
   LazyRandomTypeCollection.cpp
   Line.cpp
+  RecordName.cpp
   RecordSerialization.cpp
   StringsAndChecksums.cpp
   SymbolRecordMapping.cpp
@@ -27,7 +28,6 @@ add_llvm_library(LLVMDebugInfoCodeView
   TypeDumpVisitor.cpp
   TypeIndex.cpp
   TypeIndexDiscovery.cpp
-  TypeName.cpp
   TypeRecordMapping.cpp
   TypeSerializer.cpp
   TypeStreamMerger.cpp

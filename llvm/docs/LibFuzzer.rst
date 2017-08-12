@@ -90,11 +90,23 @@ Some important things to remember about fuzz targets:
 Fuzzer Usage
 ------------
 
-Very recent versions of Clang (> April 20 2017) include libFuzzer,
+Very recent versions of Clang (after April 20 2017) include libFuzzer,
 and no installation is necessary.
 In order to fuzz your binary, use the `-fsanitize=fuzzer` flag during the compilation::
 
    clang -fsanitize=fuzzer,address mytarget.c
+
+This will perform the necessary instrumentation, as well as linking in libFuzzer
+library.
+Note that linking in libFuzzer defines the ``main`` symbol.
+If modifying ``CFLAGS`` of a large project, which also compiles executables
+requiring their own ``main`` symbol, it may be desirable to request just the
+instrumentation without linking::
+
+   clang -fsanitize=fuzzer-no-link mytarget.c
+
+Then libFuzzer can be linked to the desired driver by passing in
+``-fsanitize=fuzzer`` during the linking stage.
 
 Otherwise, build the libFuzzer library as a static archive, without any sanitizer
 options. Note that the libFuzzer library contains the ``main()`` function:
@@ -305,10 +317,6 @@ The most important command line options are:
    - 1 : close ``stdout``
    - 2 : close ``stderr``
    - 3 : close both ``stdout`` and ``stderr``.
-``-print_coverage``
-   If 1, print coverage information as text at exit.
-``-dump_coverage``
-   If 1, dump coverage information as a .sancov file at exit.
 
 For the full list of flags run the fuzzer binary with ``-help=1``.
 
@@ -546,28 +554,12 @@ How good is my fuzzer?
 Once you implement your target function ``LLVMFuzzerTestOneInput`` and fuzz it to death,
 you will want to know whether the function or the corpus can be improved further.
 One easy to use metric is, of course, code coverage.
-You can get the coverage for your corpus like this:
 
-.. code-block:: console
+We recommend to use
+`Clang Coverage <http://clang.llvm.org/docs/SourceBasedCodeCoverage.html>`_,
+to visualize and study your code coverage
+(`example <https://github.com/google/fuzzer-test-suite/blob/master/tutorial/libFuzzerTutorial.md#visualizing-coverage>`_).
 
-  ./fuzzer CORPUS_DIR -runs=0 -print_coverage=1
-
-This will run all tests in the CORPUS_DIR but will not perform any fuzzing.
-At the end of the process it will print text describing what code has been covered and what hasn't.
-
-Alternatively, use
-
-.. code-block:: console
-
-  ./fuzzer CORPUS_DIR -runs=0 -dump_coverage=1
-
-which will dump a ``.sancov`` file with coverage information.
-See SanitizerCoverage_ for details on querying the file using the ``sancov`` tool.
-
-You may also use other ways to visualize coverage,
-e.g. using `Clang coverage <http://clang.llvm.org/docs/SourceBasedCodeCoverage.html>`_,
-but those will require
-you to rebuild the code with different compiler flags.
 
 User-supplied mutators
 ----------------------

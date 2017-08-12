@@ -1,4 +1,4 @@
-//===- AliasAnalysis.cpp - Generic Alias Analysis Interface Implementation -==//
+//==- AliasAnalysis.cpp - Generic Alias Analysis Interface Implementation --==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -26,26 +26,35 @@
 
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CFLAndersAliasAnalysis.h"
 #include "llvm/Analysis/CFLSteensAliasAnalysis.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ObjCARCAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/Function.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include <algorithm>
+#include <cassert>
+#include <functional>
+#include <iterator>
+
 using namespace llvm;
 
 /// Allow disabling BasicAA from the AA results. This is particularly useful
@@ -377,7 +386,6 @@ ModRefInfo AAResults::getModRefInfo(const FenceInst *S, const MemoryLocation &Lo
 
 ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
                                     const MemoryLocation &Loc) {
-
   if (Loc.Ptr) {
     // If the va_arg address cannot alias the pointer in question, then the
     // specified memory cannot be accessed by the va_arg.
@@ -471,10 +479,10 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
   if (!CS.getInstruction() || CS.getInstruction() == Object)
     return MRI_ModRef;
 
-  if (llvm::PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true,
-                                       /* StoreCaptures */ true, I, DT,
-                                       /* include Object */ true,
-                                       /* OrderedBasicBlock */ OBB))
+  if (PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true,
+                                 /* StoreCaptures */ true, I, DT,
+                                 /* include Object */ true,
+                                 /* OrderedBasicBlock */ OBB))
     return MRI_ModRef;
 
   unsigned ArgNo = 0;
@@ -536,16 +544,17 @@ bool AAResults::canInstructionRangeModRef(const Instruction &I1,
 }
 
 // Provide a definition for the root virtual destructor.
-AAResults::Concept::~Concept() {}
+AAResults::Concept::~Concept() = default;
 
 // Provide a definition for the static object used to identify passes.
 AnalysisKey AAManager::Key;
 
 namespace {
+
 /// A wrapper pass for external alias analyses. This just squirrels away the
 /// callback used to run any analyses and register their results.
 struct ExternalAAWrapperPass : ImmutablePass {
-  typedef std::function<void(Pass &, Function &, AAResults &)> CallbackT;
+  using CallbackT = std::function<void(Pass &, Function &, AAResults &)>;
 
   CallbackT CB;
 
@@ -554,6 +563,7 @@ struct ExternalAAWrapperPass : ImmutablePass {
   ExternalAAWrapperPass() : ImmutablePass(ID) {
     initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
   }
+
   explicit ExternalAAWrapperPass(CallbackT CB)
       : ImmutablePass(ID), CB(std::move(CB)) {
     initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
@@ -563,9 +573,11 @@ struct ExternalAAWrapperPass : ImmutablePass {
     AU.setPreservesAll();
   }
 };
-}
+
+} // end anonymous namespace
 
 char ExternalAAWrapperPass::ID = 0;
+
 INITIALIZE_PASS(ExternalAAWrapperPass, "external-aa", "External Alias Analysis",
                 false, true)
 

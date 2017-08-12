@@ -4672,6 +4672,42 @@ def : Pat<(v4f32 (fma (fneg QPR:$Vn), QPR:$Vm, QPR:$src1)),
           (VFMSfq QPR:$src1, QPR:$Vn, QPR:$Vm)>,
       Requires<[HasVFP4]>;
 
+// ARMv8.2a dot product instructions.
+// We put them in the VFPV8 decoder namespace because the ARM and Thumb
+// encodings are the same and thus no further bit twiddling is necessary
+// in the disassembler.
+let Predicates = [HasDotProd], DecoderNamespace = "VFPV8" in {
+
+def VUDOTD : N3Vnp<0b11000, 0b10, 0b1101, 0b0, 0b1,
+                  (outs DPR:$Vd), (ins DPR:$Vn, DPR:$Vm),
+                  N3RegFrm, IIC_VDOTPROD, "vudot", "u8", []>;
+def VSDOTD : N3Vnp<0b11000, 0b10, 0b1101, 0b0, 0b0,
+                  (outs DPR:$Vd), (ins DPR:$Vn, DPR:$Vm),
+                  N3RegFrm, IIC_VDOTPROD, "vsdot", "s8", []>;
+def VUDOTQ : N3Vnp<0b11000, 0b10, 0b1101, 0b1, 0b1,
+                  (outs QPR:$Vd), (ins QPR:$Vn, QPR:$Vm),
+                  N3RegFrm, IIC_VDOTPROD, "vudot", "u8", []>;
+def VSDOTQ : N3Vnp<0b11000, 0b10, 0b1101, 0b1, 0b0,
+                  (outs QPR:$Vd), (ins QPR:$Vn, QPR:$Vm),
+                  N3RegFrm, IIC_VDOTPROD, "vsdot", "s8", []>;
+
+// Indexed dot product instructions:
+class DOTI<string opc, string dt, bit Q, bit U, RegisterClass Ty> :
+  N3Vnp<0b11100, 0b10, 0b1101, Q, U,
+       (outs Ty:$Vd), (ins Ty:$Vn, DPR:$Vm, VectorIndex32:$lane),
+       N3RegFrm, IIC_VDOTPROD, opc, dt, []> {
+  bit lane;
+  let Inst{5} = lane;
+  let AsmString = !strconcat(opc, ".", dt, "\t$Vd, $Vn, $Vm$lane");
+}
+
+def VUDOTDI : DOTI<"vudot", "u8", 0b0, 0b1, DPR>;
+def VSDOTDI : DOTI<"vsdot", "s8", 0b0, 0b0, DPR>;
+def VUDOTQI : DOTI<"vudot", "u8", 0b1, 0b1, QPR>;
+def VSDOTQI : DOTI<"vsdot", "s8", 0b1, 0b0, QPR>;
+
+}  // HasDotProd
+
 // Vector Subtract Operations.
 
 //   VSUB     : Vector Subtract (integer and floating-point)

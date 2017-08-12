@@ -1001,6 +1001,42 @@ CCAssignFn *AMDGPUTargetLowering::CCAssignFnForReturn(CallingConv::ID CC,
   return AMDGPUCallLowering::CCAssignFnForReturn(CC, IsVarArg);
 }
 
+SDValue AMDGPUTargetLowering::addTokenForArgument(SDValue Chain,
+                                                  SelectionDAG &DAG,
+                                                  MachineFrameInfo &MFI,
+                                                  int ClobberedFI) const {
+  SmallVector<SDValue, 8> ArgChains;
+  int64_t FirstByte = MFI.getObjectOffset(ClobberedFI);
+  int64_t LastByte = FirstByte + MFI.getObjectSize(ClobberedFI) - 1;
+
+  // Include the original chain at the beginning of the list. When this is
+  // used by target LowerCall hooks, this helps legalize find the
+  // CALLSEQ_BEGIN node.
+  ArgChains.push_back(Chain);
+
+  // Add a chain value for each stack argument corresponding
+  for (SDNode::use_iterator U = DAG.getEntryNode().getNode()->use_begin(),
+                            UE = DAG.getEntryNode().getNode()->use_end();
+       U != UE; ++U) {
+    if (LoadSDNode *L = dyn_cast<LoadSDNode>(*U)) {
+      if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(L->getBasePtr())) {
+        if (FI->getIndex() < 0) {
+          int64_t InFirstByte = MFI.getObjectOffset(FI->getIndex());
+          int64_t InLastByte = InFirstByte;
+          InLastByte += MFI.getObjectSize(FI->getIndex()) - 1;
+
+          if ((InFirstByte <= FirstByte && FirstByte <= InLastByte) ||
+              (FirstByte <= InFirstByte && InFirstByte <= LastByte))
+            ArgChains.push_back(SDValue(L, 1));
+        }
+      }
+    }
+  }
+
+  // Build a tokenfactor for all the chains.
+  return DAG.getNode(ISD::TokenFactor, SDLoc(Chain), MVT::Other, ArgChains);
+}
+
 SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
                                                  SmallVectorImpl<SDValue> &InVals,
                                                  StringRef Reason) const {
@@ -3658,6 +3694,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(ELSE)
   NODE_NAME_CASE(LOOP)
   NODE_NAME_CASE(CALL)
+  NODE_NAME_CASE(TC_RETURN)
   NODE_NAME_CASE(TRAP)
   NODE_NAME_CASE(RET_FLAG)
   NODE_NAME_CASE(RETURN_TO_EPILOG)

@@ -2057,7 +2057,7 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
     const GlobalObject *GO = GV->getBaseObject();
     if (GO && TLOF->IsGlobalInSmallSection(GO, getTargetMachine()))
       // %gp_rel relocation
-      return getAddrGPRel(N, SDLoc(N), Ty, DAG);
+      return getAddrGPRel(N, SDLoc(N), Ty, DAG, ABI.IsN64());
 
                                  // %hi/%lo relocation
     return Subtarget.hasSym32() ? getAddrNonPIC(N, SDLoc(N), Ty, DAG)
@@ -2212,7 +2212,7 @@ lowerConstantPool(SDValue Op, SelectionDAG &DAG) const
     if (TLOF->IsConstantInSmallSection(DAG.getDataLayout(), N->getConstVal(),
                                        getTargetMachine()))
       // %gp_rel relocation
-      return getAddrGPRel(N, SDLoc(N), Ty, DAG);
+      return getAddrGPRel(N, SDLoc(N), Ty, DAG, ABI.IsN64());
 
     return Subtarget.hasSym32() ? getAddrNonPIC(N, SDLoc(N), Ty, DAG)
                                 : getAddrNonPICSym64(N, SDLoc(N), Ty, DAG);

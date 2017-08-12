@@ -27,8 +27,8 @@
 
 #include "test_macros.h"
 
-template <class _Tp>
-void where(const _Tp &) {}
+template <class T>
+void where(const T &) {}
 
 template <class T, T a, T c, T m>
 void

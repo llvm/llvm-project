@@ -521,7 +521,7 @@ version 3.7.
 
 <h2 id="cxx17">C++17 implementation status</h2>
 
-<p>Clang SVN implements all the features
+<p>Clang 5 and later implement all the features
 of the C++ 2017 Draft International Standard.
 
 <p>You can use Clang in C++17 mode with the <code>-std=c++1z</code> option.</p>
@@ -647,7 +647,7 @@ of the C++ 2017 Draft International Standard.
     <tr>
       <td><tt>constexpr</tt> lambda expressions</td>
       <td><a href="http://wg21.link/p0170r1">P0170R1</a></td>
-      <td class="svn" align="center">SVN</td>
+      <td class="svn" align="center">Clang 5</td>
     </tr>
     <tr>
       <td>Differing <tt>begin</tt> and <tt>end</tt> types in range-based <tt>for</tt></td>
@@ -683,7 +683,7 @@ of the C++ 2017 Draft International Standard.
     <tr>
       <td rowspan="2">Template argument deduction for class templates</td>
       <td><a href="http://wg21.link/p0091r3">P0091R3</a></td>
-      <td rowspan="2" class="svn" align="center">SVN</td>
+      <td rowspan="2" class="svn" align="center">Clang 5</td>
     </tr>
       <tr> <!-- from Issaquah -->
         <td><a href="http://wg21.link/p0512r0">P0512R0</a></td>
@@ -854,9 +854,9 @@ and library features that are not part of standard C++.</p>
     <th>Available in Clang?</th>
  </tr>
     <tr>
-      <td rowspan="3">SD-6: SG10 feature test recommendations</td>
-      <td rowspan="3"><a href="http://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations">SD-6</a></td>
-      <td rowspan="3">N/A</td>
+      <td rowspan="4">SD-6: SG10 feature test recommendations</td>
+      <td rowspan="4"><a href="http://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations">SD-6</a></td>
+      <td rowspan="4">N/A</td>
       <td class="full" align="center">
         Clang 3.4 (<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3745">N3745</a>)</br>
       </td>
@@ -869,6 +869,11 @@ and library features that are not part of standard C++.</p>
     <tr>
       <td class="full" align="center">
         Clang 4 (<a href="http://wg21.link/p0096r3">P0096R3</a>)</a>
+      </td>
+    </tr>
+    <tr>
+      <td class="svn" align="center">
+        Clang 5 (<a href="http://wg21.link/p0096r4">P0096R4</a>)</a>
       </td>
     </tr>
     <!-- FIXME: Implement latest recommendations.
@@ -895,7 +900,7 @@ and library features that are not part of standard C++.</p>
       <td>[DRAFT TS] Coroutines</td>
       <td><a href="https://isocpp.org/files/papers/N4663.pdf">N4663</a></td>
       <td><tt>-fcoroutines-ts<br>-stdlib=libc++</tt></td>
-      <td class="svn" align="center">SVN</td>
+      <td class="svn" align="center">Clang 5</td>
     </tr>
     <tr>
       <td>[TS] Library Fundamentals, Version 1 (invocation type traits)</td>

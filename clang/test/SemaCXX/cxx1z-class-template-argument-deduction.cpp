@@ -286,6 +286,29 @@ namespace tuple_tests {
   }
 }
 
+namespace dependent {
+  template<typename T> struct X {
+    X(T);
+  };
+  template<typename T> int Var(T t) {
+    X x(t);
+    return X(x) + 1; // expected-error {{invalid operands}}
+  }
+  template<typename T> int Cast(T t) {
+    return X(X(t)) + 1; // expected-error {{invalid operands}}
+  }
+  template<typename T> int New(T t) {
+    return X(new X(t)) + 1; // expected-error {{invalid operands}}
+  };
+  template int Var(float); // expected-note {{instantiation of}}
+  template int Cast(float); // expected-note {{instantiation of}}
+  template int New(float); // expected-note {{instantiation of}}
+  template<typename T> int operator+(X<T>, int);
+  template int Var(int);
+  template int Cast(int);
+  template int New(int);
+}
+
 #else
 
 // expected-no-diagnostics

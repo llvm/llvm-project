@@ -13,7 +13,7 @@
 ; X86-NEXT: movb [[HI1]], 3([[BASEREG]])
 ; X86-NEXT: retq
 
-; DBGDAG-LABEL: Optimized lowered selection DAG: BB#0 'merge_store_partial_overlap_load:'
+; DBGDAG-LABEL: Optimized legalized selection DAG: BB#0 'merge_store_partial_overlap_load:'
 ; DBGDAG: [[ENTRYTOKEN:t[0-9]+]]: ch = EntryToken
 ; DBGDAG-DAG: [[BASEPTR:t[0-9]+]]: i64,ch = CopyFromReg [[ENTRYTOKEN]],
 ; DBGDAG-DAG: [[ADDPTR:t[0-9]+]]: i64 = add [[BASEPTR]], Constant:i64<2>
@@ -27,7 +27,7 @@
 
 ; DBGDAG: X86ISD::RET_FLAG t{{[0-9]+}},
 
-; DBGDAG: Type-legalized selection DAG: BB#0 'merge_store_partial_overlap_load:'
+; DBGDAG-LABEL: Instruction selection begins
 define void @merge_store_partial_overlap_load([4 x i8]* %tmp) {
   %tmp8 = getelementptr inbounds [4 x i8], [4 x i8]* %tmp, i32 0, i8 0
   %tmp10 = getelementptr inbounds [4 x i8], [4 x i8]* %tmp, i32 0, i8 1
