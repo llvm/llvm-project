@@ -13402,7 +13402,7 @@ bool ARMTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return true;
 }
 
-bool ARMTargetLowering::isExtractSubvectorCheap(EVT ResVT,
+bool ARMTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                                 unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
     return false;

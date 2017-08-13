@@ -14212,7 +14212,7 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
       VecIn1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);
       VecIn2 = SDValue();
     } else if (InVT1.getSizeInBits() == VT.getSizeInBits() * 2) {
-      if (!TLI.isExtractSubvectorCheap(VT, NumElems))
+      if (!TLI.isExtractSubvectorCheap(VT, InVT1, NumElems))
         return SDValue();
 
       if (!VecIn2.getNode()) {

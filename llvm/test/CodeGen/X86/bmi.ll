@@ -323,6 +323,18 @@ define i32 @bextr32b_load(i32* %x)  uwtable  ssp {
   ret i32 %3
 }
 
+; PR34042
+define i32 @bextr32c(i32 %x, i16 zeroext %y) {
+; CHECK-LABEL: bextr32c:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movswl %si, %eax
+; CHECK-NEXT:    bextrl %eax, %edi, %eax
+; CHECK-NEXT:    retq
+  %tmp0 = sext i16 %y to i32
+  %tmp1 = tail call i32 @llvm.x86.bmi.bextr.32(i32 %x, i32 %tmp0)
+  ret i32 %tmp1
+}
+
 define i64 @bextr64(i64 %x, i64 %y)   {
 ; CHECK-LABEL: bextr64:
 ; CHECK:       # BB#0:
@@ -355,6 +367,18 @@ define i64 @bextr64b_load(i64* %x) {
   %2 = lshr i64 %1, 4
   %3 = and i64 %2, 4095
   ret i64 %3
+}
+
+; PR34042
+define i64 @bextr64c(i64 %x, i32 %y) {
+; CHECK-LABEL: bextr64c:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movslq %esi, %rax
+; CHECK-NEXT:    bextrq %rax, %rdi, %rax
+; CHECK-NEXT:    retq
+  %tmp0 = sext i32 %y to i64
+  %tmp1 = tail call i64 @llvm.x86.bmi.bextr.64(i64 %x, i64 %tmp0)
+  ret i64 %tmp1
 }
 
 define i32 @non_bextr32(i32 %x) {
