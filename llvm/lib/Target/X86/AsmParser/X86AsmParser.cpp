@@ -2088,8 +2088,11 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands,
           // Parse an op-mask register mark ({%k<NUM>}), which is now to be
           // expected
           unsigned RegNo;
-          if (!ParseRegister(RegNo, StartLoc, StartLoc) &&
+          SMLoc RegLoc;
+          if (!ParseRegister(RegNo, RegLoc, StartLoc) &&
               X86MCRegisterClasses[X86::VK1RegClassID].contains(RegNo)) {
+            if (RegNo == X86::K0)
+              return Error(RegLoc, "Register k0 can't be used as write mask");
             if (!getLexer().is(AsmToken::RCurly))
               return Error(getLexer().getLoc(), "Expected } at this point");
             Operands.push_back(X86Operand::CreateToken("{", StartLoc));
