@@ -23,6 +23,7 @@ class NumberOfThreadsTestCase(TestBase):
         self.thread3_notify_all_line = line_number('main.cpp', '// Set thread3 break point on notify_all at this line.')
         self.thread3_before_lock_line = line_number('main.cpp', '// Set thread3 break point on lock at this line.')
 
+    @decorators.skipIfDarwin
     def test_number_of_threads(self):
         """Test number of threads."""
         self.build()
@@ -61,6 +62,7 @@ class NumberOfThreadsTestCase(TestBase):
             num_threads >= 13,
             'Number of expected threads and actual threads do not match.')
         
+    @decorators.skipIfDarwin
     def test_unique_stacks(self):
         """Test backtrace unique with multiple threads executing the same stack."""
         self.build()
