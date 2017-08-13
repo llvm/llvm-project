@@ -20618,8 +20618,8 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
   }
   // ADC/ADCX/SBB
   case ADX: {
-    SDVTList CFVTs = DAG.getVTList(Op->getValueType(0), MVT::Other);
-    SDVTList VTs = DAG.getVTList(Op.getOperand(3)->getValueType(0), MVT::Other);
+    SDVTList CFVTs = DAG.getVTList(Op->getValueType(0), MVT::i32);
+    SDVTList VTs = DAG.getVTList(Op.getOperand(3)->getValueType(0), MVT::i32);
     SDValue GenCF = DAG.getNode(X86ISD::ADD, dl, CFVTs, Op.getOperand(2),
                                 DAG.getConstant(-1, dl, MVT::i8));
     SDValue Res = DAG.getNode(IntrData->Opc0, dl, VTs, Op.getOperand(3),
@@ -35468,19 +35468,26 @@ static SDValue combineLockSub(SDNode *N, SelectionDAG &DAG,
                                  {Chain, LHS, RHS}, VT, MMO);
 }
 
-// TEST (AND a, b) ,(AND a, b) -> TEST a, b
-static SDValue combineTestM(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineTestM(SDNode *N, SelectionDAG &DAG,
+                            const X86Subtarget &Subtarget) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
 
-  if (Op0 != Op1 || Op1->getOpcode() != ISD::AND)
-    return SDValue();
-
-  EVT VT = N->getValueType(0);
+  MVT VT = N->getSimpleValueType(0);
   SDLoc DL(N);
 
-  return DAG.getNode(X86ISD::TESTM, DL, VT,
-                     Op0->getOperand(0), Op0->getOperand(1));
+  // TEST (AND a, b) ,(AND a, b) -> TEST a, b
+  if (Op0 == Op1 && Op1->getOpcode() == ISD::AND)
+    return DAG.getNode(X86ISD::TESTM, DL, VT, Op0->getOperand(0),
+                       Op0->getOperand(1));
+
+  // TEST op0, BUILD_VECTOR(all_zero) -> BUILD_VECTOR(all_zero)
+  // TEST BUILD_VECTOR(all_zero), op1 -> BUILD_VECTOR(all_zero)
+  if (ISD::isBuildVectorAllZeros(Op0.getNode()) ||
+      ISD::isBuildVectorAllZeros(Op1.getNode()))
+    return getZeroVector(VT, Subtarget, DAG, DL);
+
+  return SDValue();
 }
 
 static SDValue combineVectorCompare(SDNode *N, SelectionDAG &DAG,
@@ -35504,17 +35511,22 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
+  MVT OpVT = N->getSimpleValueType(0);
+
+  // Early out for mask vectors.
+  if (OpVT.getVectorElementType() == MVT::i1)
+    return SDValue();
+
   SDLoc dl(N);
   SDValue Vec = N->getOperand(0);
   SDValue SubVec = N->getOperand(1);
   SDValue Idx = N->getOperand(2);
 
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
-  MVT OpVT = N->getSimpleValueType(0);
   MVT SubVecVT = SubVec.getSimpleValueType();
 
   // If this is an insert of an extract, combine to a shuffle. Don't do this
-  // if the insert or extract can be represented with a subvector operation.
+  // if the insert or extract can be represented with a subregister operation.
   if (SubVec.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       SubVec.getOperand(0).getSimpleValueType() == OpVT &&
       (IdxVal != 0 || !Vec.isUndef())) {
@@ -35697,7 +35709,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::MGATHER:
   case ISD::MSCATTER:       return combineGatherScatter(N, DAG);
   case X86ISD::LSUB:        return combineLockSub(N, DAG, Subtarget);
-  case X86ISD::TESTM:       return combineTestM(N, DAG);
+  case X86ISD::TESTM:       return combineTestM(N, DAG, Subtarget);
   case X86ISD::PCMPEQ:
   case X86ISD::PCMPGT:      return combineVectorCompare(N, DAG, Subtarget);
   }

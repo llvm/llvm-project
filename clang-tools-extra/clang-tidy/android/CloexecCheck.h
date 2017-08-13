@@ -52,7 +52,7 @@ protected:
   /// \param MacroFlag The macro name of the flag.
   /// \param ArgPos The 0-based position of the flag argument.
   void insertMacroFlag(const ast_matchers::MatchFinder::MatchResult &Result,
-                       StringRef MarcoFlag, int ArgPos);
+                       StringRef MacroFlag, int ArgPos);
 
   /// Type2 is to replace the API to another function that has required the
   /// ability. For example:
