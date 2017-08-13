@@ -119,12 +119,24 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-s");
 
   CmdArgs.push_back("-m");
-  if (TC.getArch() == llvm::Triple::x86)
+  switch (TC.getArch()) {
+  case llvm::Triple::x86:
     CmdArgs.push_back("i386pe");
-  if (TC.getArch() == llvm::Triple::x86_64)
+    break;
+  case llvm::Triple::x86_64:
     CmdArgs.push_back("i386pep");
-  if (TC.getArch() == llvm::Triple::arm)
+    break;
+  case llvm::Triple::arm:
+  case llvm::Triple::thumb:
+    // FIXME: this is incorrect for WinCE
     CmdArgs.push_back("thumb2pe");
+    break;
+  case llvm::Triple::aarch64:
+    CmdArgs.push_back("arm64pe");
+    break;
+  default:
+    llvm_unreachable("Unsupported target architecture.");
+  }
 
   if (Args.hasArg(options::OPT_mwindows)) {
     CmdArgs.push_back("--subsystem");

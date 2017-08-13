@@ -1036,7 +1036,8 @@ namespace llvm {
 
     /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
     /// with this index.
-    bool isExtractSubvectorCheap(EVT ResVT, unsigned Index) const override;
+    bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+                                 unsigned Index) const override;
 
     /// Intel processors have a unified instruction and data cache
     const char * getClearCacheBuiltinName() const override {

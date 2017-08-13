@@ -2180,8 +2180,8 @@ void Scop::createParameterId(const SCEV *Parameter) {
     ParameterName = getIslCompatibleName("", ParameterName, "");
   }
 
-  auto *Id = isl_id_alloc(getIslCtx(), ParameterName.c_str(),
-                          const_cast<void *>((const void *)Parameter));
+  isl::id Id = isl::id::alloc(getIslCtx(), ParameterName.c_str(),
+                              const_cast<void *>((const void *)Parameter));
   ParameterIds[Parameter] = Id;
 }
 
@@ -2199,7 +2199,7 @@ void Scop::addParams(const ParameterSetTy &NewParameters) {
 isl::id Scop::getIdForParam(const SCEV *Parameter) const {
   // Normalize the SCEV to get the representing element for an invariant load.
   Parameter = getRepresentingInvariantLoadSCEV(Parameter);
-  return isl::manage(isl_id_copy(ParameterIds.lookup(Parameter)));
+  return ParameterIds.lookup(Parameter);
 }
 
 isl::set Scop::addNonEmptyDomainConstraints(isl::set C) const {
@@ -3698,8 +3698,7 @@ Scop::~Scop() {
   isl_set_free(InvalidContext);
   isl_schedule_free(Schedule);
 
-  for (auto &It : ParameterIds)
-    isl_id_free(It.second);
+  ParameterIds.clear();
 
   for (auto &AS : RecordedAssumptions)
     isl_set_free(AS.Set);
