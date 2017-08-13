@@ -260,8 +260,7 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
 
   std::string Triple;
   // Default to ARM, but use the triple if it's been set.
-  if (TheTriple.getArch() == Triple::thumb ||
-      TheTriple.getArch() == Triple::thumbeb)
+  if (TheTriple.isThumb())
     Triple = "thumb";
   else
     Triple = "arm";

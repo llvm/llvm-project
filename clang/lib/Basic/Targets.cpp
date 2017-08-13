@@ -142,7 +142,13 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::OpenBSD:
       return new OpenBSDTargetInfo<AArch64leTargetInfo>(Triple, Opts);
     case llvm::Triple::Win32:
-      return new MicrosoftARM64TargetInfo(Triple, Opts);
+      switch (Triple.getEnvironment()) {
+      case llvm::Triple::GNU:
+        return new MinGWARM64TargetInfo(Triple, Opts);
+      case llvm::Triple::MSVC:
+      default: // Assume MSVC for unknown environments
+        return new MicrosoftARM64TargetInfo(Triple, Opts);
+      }
     default:
       return new AArch64leTargetInfo(Triple, Opts);
     }

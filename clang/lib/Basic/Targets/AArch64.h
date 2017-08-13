@@ -89,24 +89,42 @@ private:
   void setDataLayout() override;
 };
 
-class LLVM_LIBRARY_VISIBILITY MicrosoftARM64TargetInfo
+class LLVM_LIBRARY_VISIBILITY WindowsARM64TargetInfo
     : public WindowsTargetInfo<AArch64leTargetInfo> {
   const llvm::Triple Triple;
 
 public:
-  MicrosoftARM64TargetInfo(const llvm::Triple &Triple,
-                           const TargetOptions &Opts);
+  WindowsARM64TargetInfo(const llvm::Triple &Triple,
+                         const TargetOptions &Opts);
 
   void setDataLayout() override;
+
+  BuiltinVaListKind getBuiltinVaListKind() const override;
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+};
+
+// Windows ARM, MS (C++) ABI
+class LLVM_LIBRARY_VISIBILITY MicrosoftARM64TargetInfo
+    : public WindowsARM64TargetInfo {
+public:
+  MicrosoftARM64TargetInfo(const llvm::Triple &Triple,
+                           const TargetOptions &Opts);
 
   void getVisualStudioDefines(const LangOptions &Opts,
                               MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
+};
 
-  BuiltinVaListKind getBuiltinVaListKind() const override;
+// ARM64 MinGW target
+class LLVM_LIBRARY_VISIBILITY MinGWARM64TargetInfo
+    : public WindowsARM64TargetInfo {
+public:
+  MinGWARM64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 
-  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64beTargetInfo : public AArch64TargetInfo {

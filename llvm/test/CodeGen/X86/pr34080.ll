@@ -60,10 +60,10 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE2-BROKEN-NEXT:  Lcfi2:
 ; SSE2-BROKEN-NEXT:    .cfi_def_cfa_register %rbp
 ; SSE2-BROKEN-NEXT:    fnstcw -4(%rbp)
+; SSE2-BROKEN-NEXT:    fldt 16(%rbp)
 ; SSE2-BROKEN-NEXT:    movzwl -4(%rbp), %eax
 ; SSE2-BROKEN-NEXT:    movw $3199, -4(%rbp) ## imm = 0xC7F
 ; SSE2-BROKEN-NEXT:    fldcw -4(%rbp)
-; SSE2-BROKEN-NEXT:    fldt 16(%rbp)
 ; SSE2-BROKEN-NEXT:    movw %ax, -4(%rbp)
 ; SSE2-BROKEN-NEXT:    fistl -8(%rbp)
 ; SSE2-BROKEN-NEXT:    fldcw -4(%rbp)
@@ -71,12 +71,12 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE2-BROKEN-NEXT:    movsd %xmm0, -64(%rbp)
 ; SSE2-BROKEN-NEXT:    movsd %xmm0, -32(%rbp)
 ; SSE2-BROKEN-NEXT:    fsubl -32(%rbp)
-; SSE2-BROKEN-NEXT:    fnstcw -2(%rbp)
 ; SSE2-BROKEN-NEXT:    flds {{.*}}(%rip)
+; SSE2-BROKEN-NEXT:    fnstcw -2(%rbp)
+; SSE2-BROKEN-NEXT:    fmul %st(0), %st(1)
 ; SSE2-BROKEN-NEXT:    movzwl -2(%rbp), %eax
 ; SSE2-BROKEN-NEXT:    movw $3199, -2(%rbp) ## imm = 0xC7F
 ; SSE2-BROKEN-NEXT:    fldcw -2(%rbp)
-; SSE2-BROKEN-NEXT:    fmul %st(0), %st(1)
 ; SSE2-BROKEN-NEXT:    movw %ax, -2(%rbp)
 ; SSE2-BROKEN-NEXT:    fxch %st(1)
 ; SSE2-BROKEN-NEXT:    fistl -12(%rbp)
