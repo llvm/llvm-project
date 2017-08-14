@@ -334,12 +334,12 @@ define i32 @test_comiss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; GENERIC-LABEL: test_comiss:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    comiss %xmm1, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    setnp %al # sched: [1:1.00]
-; GENERIC-NEXT:    sete %cl # sched: [1:1.00]
+; GENERIC-NEXT:    setnp %al # sched: [1:0.50]
+; GENERIC-NEXT:    sete %cl # sched: [1:0.50]
 ; GENERIC-NEXT:    andb %al, %cl # sched: [1:0.33]
 ; GENERIC-NEXT:    comiss (%rdi), %xmm0 # sched: [7:1.00]
-; GENERIC-NEXT:    setnp %al # sched: [1:1.00]
-; GENERIC-NEXT:    sete %dl # sched: [1:1.00]
+; GENERIC-NEXT:    setnp %al # sched: [1:0.50]
+; GENERIC-NEXT:    sete %dl # sched: [1:0.50]
 ; GENERIC-NEXT:    andb %al, %dl # sched: [1:0.33]
 ; GENERIC-NEXT:    orb %cl, %dl # sched: [1:0.33]
 ; GENERIC-NEXT:    movzbl %dl, %eax # sched: [1:0.33]
@@ -376,12 +376,12 @@ define i32 @test_comiss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; SANDY-LABEL: test_comiss:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vcomiss %xmm1, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    setnp %al # sched: [1:1.00]
-; SANDY-NEXT:    sete %cl # sched: [1:1.00]
+; SANDY-NEXT:    setnp %al # sched: [1:0.50]
+; SANDY-NEXT:    sete %cl # sched: [1:0.50]
 ; SANDY-NEXT:    andb %al, %cl # sched: [1:0.33]
 ; SANDY-NEXT:    vcomiss (%rdi), %xmm0 # sched: [7:1.00]
-; SANDY-NEXT:    setnp %al # sched: [1:1.00]
-; SANDY-NEXT:    sete %dl # sched: [1:1.00]
+; SANDY-NEXT:    setnp %al # sched: [1:0.50]
+; SANDY-NEXT:    sete %dl # sched: [1:0.50]
 ; SANDY-NEXT:    andb %al, %dl # sched: [1:0.33]
 ; SANDY-NEXT:    orb %cl, %dl # sched: [1:0.33]
 ; SANDY-NEXT:    movzbl %dl, %eax # sched: [1:0.33]
@@ -877,7 +877,7 @@ define float @test_divss(float %a0, float %a1, float *%a2) {
 define void @test_ldmxcsr(i32 %a0) {
 ; GENERIC-LABEL: test_ldmxcsr:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
+; GENERIC-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [5:1.00]
 ; GENERIC-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -895,7 +895,7 @@ define void @test_ldmxcsr(i32 %a0) {
 ;
 ; SANDY-LABEL: test_ldmxcsr:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
+; SANDY-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [5:1.00]
 ; SANDY-NEXT:    vldmxcsr -{{[0-9]+}}(%rsp) # sched: [5:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1559,7 +1559,7 @@ define <4 x float> @test_movss_reg(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; SANDY-LABEL: test_movss_reg:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3] sched: [1:1.00]
+; SANDY-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3] sched: [1:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movss_reg:
@@ -1859,7 +1859,7 @@ define <4 x float> @test_rcpps(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; SANDY-LABEL: test_rcpps:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vrcpps %xmm0, %xmm0 # sched: [7:3.00]
+; SANDY-NEXT:    vrcpps %xmm0, %xmm0 # sched: [5:1.00]
 ; SANDY-NEXT:    vrcpps (%rdi), %xmm1 # sched: [11:1.00]
 ; SANDY-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
@@ -1921,9 +1921,9 @@ define <4 x float> @test_rcpss(float %a0, float *%a1) {
 ;
 ; SANDY-LABEL: test_rcpss:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vrcpss %xmm0, %xmm0, %xmm0 # sched: [9:1.00]
+; SANDY-NEXT:    vrcpss %xmm0, %xmm0, %xmm0 # sched: [5:1.00]
 ; SANDY-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [6:0.50]
-; SANDY-NEXT:    vrcpss %xmm1, %xmm1, %xmm1 # sched: [9:1.00]
+; SANDY-NEXT:    vrcpss %xmm1, %xmm1, %xmm1 # sched: [5:1.00]
 ; SANDY-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2459,12 +2459,12 @@ define i32 @test_ucomiss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; GENERIC-LABEL: test_ucomiss:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    ucomiss %xmm1, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    setnp %al # sched: [1:1.00]
-; GENERIC-NEXT:    sete %cl # sched: [1:1.00]
+; GENERIC-NEXT:    setnp %al # sched: [1:0.50]
+; GENERIC-NEXT:    sete %cl # sched: [1:0.50]
 ; GENERIC-NEXT:    andb %al, %cl # sched: [1:0.33]
 ; GENERIC-NEXT:    ucomiss (%rdi), %xmm0 # sched: [7:1.00]
-; GENERIC-NEXT:    setnp %al # sched: [1:1.00]
-; GENERIC-NEXT:    sete %dl # sched: [1:1.00]
+; GENERIC-NEXT:    setnp %al # sched: [1:0.50]
+; GENERIC-NEXT:    sete %dl # sched: [1:0.50]
 ; GENERIC-NEXT:    andb %al, %dl # sched: [1:0.33]
 ; GENERIC-NEXT:    orb %cl, %dl # sched: [1:0.33]
 ; GENERIC-NEXT:    movzbl %dl, %eax # sched: [1:0.33]
@@ -2501,12 +2501,12 @@ define i32 @test_ucomiss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; SANDY-LABEL: test_ucomiss:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vucomiss %xmm1, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    setnp %al # sched: [1:1.00]
-; SANDY-NEXT:    sete %cl # sched: [1:1.00]
+; SANDY-NEXT:    setnp %al # sched: [1:0.50]
+; SANDY-NEXT:    sete %cl # sched: [1:0.50]
 ; SANDY-NEXT:    andb %al, %cl # sched: [1:0.33]
 ; SANDY-NEXT:    vucomiss (%rdi), %xmm0 # sched: [7:1.00]
-; SANDY-NEXT:    setnp %al # sched: [1:1.00]
-; SANDY-NEXT:    sete %dl # sched: [1:1.00]
+; SANDY-NEXT:    setnp %al # sched: [1:0.50]
+; SANDY-NEXT:    sete %dl # sched: [1:0.50]
 ; SANDY-NEXT:    andb %al, %dl # sched: [1:0.33]
 ; SANDY-NEXT:    orb %cl, %dl # sched: [1:0.33]
 ; SANDY-NEXT:    movzbl %dl, %eax # sched: [1:0.33]

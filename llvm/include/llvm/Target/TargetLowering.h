@@ -2172,11 +2172,12 @@ public:
     return false;
   }
 
-  /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
-  /// with this index. This is needed because EXTRACT_SUBVECTOR usually
-  /// has custom lowering that depends on the index of the first element,
-  /// and only the target knows which lowering is cheap.
-  virtual bool isExtractSubvectorCheap(EVT ResVT, unsigned Index) const {
+  /// Return true if EXTRACT_SUBVECTOR is cheap for extracting this result type
+  /// from this source type with this index. This is needed because
+  /// EXTRACT_SUBVECTOR usually has custom lowering that depends on the index of
+  /// the first element, and only the target knows which lowering is cheap.
+  virtual bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+                                       unsigned Index) const {
     return false;
   }
 

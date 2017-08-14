@@ -11,7 +11,7 @@ define i16 @test_andn_i16(i16 zeroext %a0, i16 zeroext %a1, i16 *%a2) {
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    andnl %esi, %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    notl %edi # sched: [1:0.33]
-; GENERIC-NEXT:    andw (%rdx), %di # sched: [5:0.50]
+; GENERIC-NEXT:    andw (%rdx), %di # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; GENERIC-NEXT:    retq # sched: [1:1.00]

@@ -13,7 +13,7 @@
 define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; GENERIC-LABEL: test_ctpop_i16:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    popcntw (%rsi), %cx # sched: [7:1.00]
+; GENERIC-NEXT:    popcntw (%rsi), %cx # sched: [9:1.00]
 ; GENERIC-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -29,7 +29,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ;
 ; SANDY-LABEL: test_ctpop_i16:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    popcntw (%rsi), %cx # sched: [7:1.00]
+; SANDY-NEXT:    popcntw (%rsi), %cx # sched: [9:1.00]
 ; SANDY-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; SANDY-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -69,7 +69,7 @@ declare i16 @llvm.ctpop.i16(i16)
 define i32 @test_ctpop_i32(i32 %a0, i32 *%a1) {
 ; GENERIC-LABEL: test_ctpop_i32:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    popcntl (%rsi), %ecx # sched: [7:1.00]
+; GENERIC-NEXT:    popcntl (%rsi), %ecx # sched: [9:1.00]
 ; GENERIC-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -83,7 +83,7 @@ define i32 @test_ctpop_i32(i32 %a0, i32 *%a1) {
 ;
 ; SANDY-LABEL: test_ctpop_i32:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    popcntl (%rsi), %ecx # sched: [7:1.00]
+; SANDY-NEXT:    popcntl (%rsi), %ecx # sched: [9:1.00]
 ; SANDY-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; SANDY-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]

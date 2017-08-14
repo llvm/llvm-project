@@ -1139,8 +1139,3 @@ def masked_truncstore_us_vi32 : PatFrag<(ops node:$src1, node:$src2, node:$src3)
                                (X86MTruncUSStore node:$src1, node:$src2, node:$src3), [{
   return cast<MaskedTruncUSStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
 }]>;
-
-def assertzext_i1 :
-  PatFrag<(ops node:$src), (assertzext node:$src), [{
-    return cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i1;
-}]>;

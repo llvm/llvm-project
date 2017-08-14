@@ -342,12 +342,12 @@ define i32 @test_comisd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; GENERIC-LABEL: test_comisd:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    comisd %xmm1, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    setnp %al # sched: [1:1.00]
-; GENERIC-NEXT:    sete %cl # sched: [1:1.00]
+; GENERIC-NEXT:    setnp %al # sched: [1:0.50]
+; GENERIC-NEXT:    sete %cl # sched: [1:0.50]
 ; GENERIC-NEXT:    andb %al, %cl # sched: [1:0.33]
 ; GENERIC-NEXT:    comisd (%rdi), %xmm0 # sched: [7:1.00]
-; GENERIC-NEXT:    setnp %al # sched: [1:1.00]
-; GENERIC-NEXT:    sete %dl # sched: [1:1.00]
+; GENERIC-NEXT:    setnp %al # sched: [1:0.50]
+; GENERIC-NEXT:    sete %dl # sched: [1:0.50]
 ; GENERIC-NEXT:    andb %al, %dl # sched: [1:0.33]
 ; GENERIC-NEXT:    orb %cl, %dl # sched: [1:0.33]
 ; GENERIC-NEXT:    movzbl %dl, %eax # sched: [1:0.33]
@@ -384,12 +384,12 @@ define i32 @test_comisd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; SANDY-LABEL: test_comisd:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vcomisd %xmm1, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    setnp %al # sched: [1:1.00]
-; SANDY-NEXT:    sete %cl # sched: [1:1.00]
+; SANDY-NEXT:    setnp %al # sched: [1:0.50]
+; SANDY-NEXT:    sete %cl # sched: [1:0.50]
 ; SANDY-NEXT:    andb %al, %cl # sched: [1:0.33]
 ; SANDY-NEXT:    vcomisd (%rdi), %xmm0 # sched: [7:1.00]
-; SANDY-NEXT:    setnp %al # sched: [1:1.00]
-; SANDY-NEXT:    sete %dl # sched: [1:1.00]
+; SANDY-NEXT:    setnp %al # sched: [1:0.50]
+; SANDY-NEXT:    sete %dl # sched: [1:0.50]
 ; SANDY-NEXT:    andb %al, %dl # sched: [1:0.33]
 ; SANDY-NEXT:    orb %cl, %dl # sched: [1:0.33]
 ; SANDY-NEXT:    movzbl %dl, %eax # sched: [1:0.33]
@@ -816,8 +816,8 @@ define i32 @test_cvtsd2si(double %a0, double *%a1) {
 ;
 ; SANDY-LABEL: test_cvtsd2si:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vcvtsd2si %xmm0, %ecx # sched: [3:1.00]
-; SANDY-NEXT:    vcvtsd2si (%rdi), %eax # sched: [7:1.00]
+; SANDY-NEXT:    vcvtsd2si %xmm0, %ecx # sched: [5:1.00]
+; SANDY-NEXT:    vcvtsd2si (%rdi), %eax # sched: [10:1.00]
 ; SANDY-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -938,9 +938,9 @@ define float @test_cvtsd2ss(double %a0, double *%a1) {
 ;
 ; SANDY-LABEL: test_cvtsd2ss:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0 # sched: [4:1.00]
 ; SANDY-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero sched: [6:0.50]
-; SANDY-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1 # sched: [3:1.00]
+; SANDY-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1 # sched: [4:1.00]
 ; SANDY-NEXT:    vaddss %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1293,7 +1293,7 @@ define i32 @test_cvttsd2si(double %a0, double *%a1) {
 ; SANDY-LABEL: test_cvttsd2si:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vcvttsd2si %xmm0, %ecx # sched: [5:1.00]
-; SANDY-NEXT:    vcvttsd2si (%rdi), %eax # sched: [7:1.00]
+; SANDY-NEXT:    vcvttsd2si (%rdi), %eax # sched: [10:1.00]
 ; SANDY-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2006,7 +2006,7 @@ define i32 @test_movd(<4 x i32> %a0, i32 %a1, i32 *%a2) {
 ;
 ; SANDY-LABEL: test_movd:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vmovd %edi, %xmm1 # sched: [1:0.33]
+; SANDY-NEXT:    vmovd %edi, %xmm1 # sched: [1:1.00]
 ; SANDY-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero sched: [6:0.50]
 ; SANDY-NEXT:    vpaddd %xmm1, %xmm0, %xmm1 # sched: [1:0.50]
 ; SANDY-NEXT:    vpaddd %xmm2, %xmm0, %xmm0 # sched: [1:0.50]
@@ -3146,7 +3146,7 @@ define <16 x i8> @test_paddsb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; SANDY-LABEL: test_paddsb:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpaddsb %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    vpaddsb %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; SANDY-NEXT:    vpaddsb (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -3199,7 +3199,7 @@ define <8 x i16> @test_paddsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; SANDY-LABEL: test_paddsw:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpaddsw %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    vpaddsw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; SANDY-NEXT:    vpaddsw (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -3358,7 +3358,7 @@ define <8 x i16> @test_paddw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; SANDY-LABEL: test_paddw:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; SANDY-NEXT:    vpaddw (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4399,7 +4399,7 @@ define <8 x i16> @test_pmulhuw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; SANDY-LABEL: test_pmulhuw:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpmulhuw %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
+; SANDY-NEXT:    vpmulhuw %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vpmulhuw (%rdi), %xmm0, %xmm0 # sched: [9:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4553,7 +4553,7 @@ define <2 x i64> @test_pmuludq(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; SANDY-LABEL: test_pmuludq:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
+; SANDY-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vpmuludq (%rdi), %xmm0, %xmm0 # sched: [9:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4780,9 +4780,9 @@ define <8 x i16> @test_pshufhw(<8 x i16> %a0, <8 x i16> *%a1) {
 ;
 ; SANDY-LABEL: test_pshufhw:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,4,7,6] sched: [1:1.00]
+; SANDY-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,4,7,6] sched: [1:0.50]
 ; SANDY-NEXT:    vpshufhw {{.*#+}} xmm1 = mem[0,1,2,3,7,6,5,4] sched: [7:0.50]
-; SANDY-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pshufhw:
@@ -4840,7 +4840,7 @@ define <8 x i16> @test_pshuflw(<8 x i16> %a0, <8 x i16> *%a1) {
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,0,3,2,4,5,6,7] sched: [1:0.50]
 ; SANDY-NEXT:    vpshuflw {{.*#+}} xmm1 = mem[3,2,1,0,4,5,6,7] sched: [7:0.50]
-; SANDY-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pshuflw:
@@ -4894,8 +4894,8 @@ define <4 x i32> @test_pslld(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; SANDY-LABEL: test_pslld:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpslld %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; SANDY-NEXT:    vpslld (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
+; SANDY-NEXT:    vpslld %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
+; SANDY-NEXT:    vpslld (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
 ; SANDY-NEXT:    vpslld $2, %xmm0, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4997,8 +4997,8 @@ define <2 x i64> @test_psllq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ;
 ; SANDY-LABEL: test_psllq:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpsllq %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; SANDY-NEXT:    vpsllq (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
+; SANDY-NEXT:    vpsllq %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
+; SANDY-NEXT:    vpsllq (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
 ; SANDY-NEXT:    vpsllq $2, %xmm0, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5055,8 +5055,8 @@ define <8 x i16> @test_psllw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; SANDY-LABEL: test_psllw:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpsllw %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; SANDY-NEXT:    vpsllw (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
+; SANDY-NEXT:    vpsllw %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
+; SANDY-NEXT:    vpsllw (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
 ; SANDY-NEXT:    vpsllw $2, %xmm0, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -5974,7 +5974,7 @@ define <2 x i64> @test_punpckhqdq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) 
 ;
 ; SANDY-LABEL: test_punpckhqdq:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1] sched: [1:1.00]
+; SANDY-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1] sched: [1:0.50]
 ; SANDY-NEXT:    vpunpckhqdq {{.*#+}} xmm1 = xmm1[1],mem[1] sched: [7:0.50]
 ; SANDY-NEXT:    vpaddq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
@@ -6083,7 +6083,7 @@ define <16 x i8> @test_punpcklbw(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; SANDY-LABEL: test_punpcklbw:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7] sched: [1:1.00]
+; SANDY-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7] sched: [1:0.50]
 ; SANDY-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3],xmm0[4],mem[4],xmm0[5],mem[5],xmm0[6],mem[6],xmm0[7],mem[7] sched: [7:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -6612,12 +6612,12 @@ define i32 @test_ucomisd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) 
 ; GENERIC-LABEL: test_ucomisd:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    ucomisd %xmm1, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    setnp %al # sched: [1:1.00]
-; GENERIC-NEXT:    sete %cl # sched: [1:1.00]
+; GENERIC-NEXT:    setnp %al # sched: [1:0.50]
+; GENERIC-NEXT:    sete %cl # sched: [1:0.50]
 ; GENERIC-NEXT:    andb %al, %cl # sched: [1:0.33]
 ; GENERIC-NEXT:    ucomisd (%rdi), %xmm0 # sched: [7:1.00]
-; GENERIC-NEXT:    setnp %al # sched: [1:1.00]
-; GENERIC-NEXT:    sete %dl # sched: [1:1.00]
+; GENERIC-NEXT:    setnp %al # sched: [1:0.50]
+; GENERIC-NEXT:    sete %dl # sched: [1:0.50]
 ; GENERIC-NEXT:    andb %al, %dl # sched: [1:0.33]
 ; GENERIC-NEXT:    orb %cl, %dl # sched: [1:0.33]
 ; GENERIC-NEXT:    movzbl %dl, %eax # sched: [1:0.33]
@@ -6654,12 +6654,12 @@ define i32 @test_ucomisd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) 
 ; SANDY-LABEL: test_ucomisd:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vucomisd %xmm1, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    setnp %al # sched: [1:1.00]
-; SANDY-NEXT:    sete %cl # sched: [1:1.00]
+; SANDY-NEXT:    setnp %al # sched: [1:0.50]
+; SANDY-NEXT:    sete %cl # sched: [1:0.50]
 ; SANDY-NEXT:    andb %al, %cl # sched: [1:0.33]
 ; SANDY-NEXT:    vucomisd (%rdi), %xmm0 # sched: [7:1.00]
-; SANDY-NEXT:    setnp %al # sched: [1:1.00]
-; SANDY-NEXT:    sete %dl # sched: [1:1.00]
+; SANDY-NEXT:    setnp %al # sched: [1:0.50]
+; SANDY-NEXT:    sete %dl # sched: [1:0.50]
 ; SANDY-NEXT:    andb %al, %dl # sched: [1:0.33]
 ; SANDY-NEXT:    orb %cl, %dl # sched: [1:0.33]
 ; SANDY-NEXT:    movzbl %dl, %eax # sched: [1:0.33]
