@@ -8,6 +8,7 @@ Clang-Tidy Checks
    android-cloexec-dup
    android-cloexec-fopen
    android-cloexec-inotify-init
+   android-cloexec-inotify-init1
    android-cloexec-memfd-create
    android-cloexec-open
    android-cloexec-socket
