@@ -611,6 +611,13 @@ static bool getCompressDebugSections(opt::InputArgList &Args) {
   return true;
 }
 
+static int parseInt(StringRef S, opt::Arg *Arg) {
+  int V = 0;
+  if (!to_integer(S, V, 10))
+    error(Arg->getSpelling() + ": number expected, but got '" + S + "'");
+  return V;
+}
+
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AllowMultipleDefinition =
@@ -694,9 +701,25 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZText = !hasZOption(Args, "notext");
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
+  for (auto *Arg : Args.filtered(OPT_plugin_opt, OPT_plugin_opt_eq)) {
+    StringRef S = Arg->getValue();
+    if (S == "disable-verify")
+      Config->DisableVerify = true;
+    else if (S == "save-temps")
+      Config->SaveTemps = true;
+    else if (S.startswith("O"))
+      Config->LTOO = parseInt(S.substr(1), Arg);
+    else if (S.startswith("lto-partitions="))
+      Config->LTOPartitions = parseInt(S.substr(15), Arg);
+    else if (S.startswith("jobs="))
+      Config->ThinLTOJobs = parseInt(S.substr(5), Arg);
+    // Ignore some options always passed by gcc.
+    else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
+             !S.startswith("-pass-through="))
+      error(Arg->getSpelling() + ": unknown option: " + S);
+  }
   if (Config->LTOO > 3)
-    error("invalid optimization level for LTO: " +
-          Args.getLastArgValue(OPT_lto_O));
+    error("invalid optimization level for LTO: " + Twine(Config->LTOO));
   if (Config->LTOPartitions == 0)
     error("--lto-partitions: number of threads must be > 0");
   if (Config->ThinLTOJobs == 0)

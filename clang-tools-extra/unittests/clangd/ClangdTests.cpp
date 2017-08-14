@@ -237,8 +237,9 @@ class MockFSProvider : public FileSystemProvider {
 public:
   Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
   getTaggedFileSystem(PathRef File) override {
-    if (ExpectedFile)
+    if (ExpectedFile) {
       EXPECT_EQ(*ExpectedFile, File);
+    }
 
     auto FS = buildTestFS(Files);
     return make_tagged(FS, Tag);
@@ -876,9 +877,10 @@ int d;
   // Check some invariants about the state of the program.
   std::vector<FileStat> Stats = DiagConsumer.takeFileStats();
   for (unsigned I = 0; I < FilesCount; ++I) {
-    if (!ReqStats[I].FileIsRemoved)
+    if (!ReqStats[I].FileIsRemoved) {
       ASSERT_EQ(Stats[I].HadErrorsInLastDiags,
                 ReqStats[I].LastContentsHadErrors);
+    }
 
     ASSERT_LE(Stats[I].HitsWithErrors, ReqStats[I].RequestsWithErrors);
     ASSERT_LE(Stats[I].HitsWithoutErrors, ReqStats[I].RequestsWithoutErrors);

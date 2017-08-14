@@ -246,7 +246,9 @@ _start:
 # UNKNOWN_EMUL: unknown emulation: wrong_emul_fbsd
 
 # RUN: not ld.lld %t --lto-partitions=0 2>&1 | FileCheck --check-prefix=NOTHREADS %s
+# RUN: not ld.lld %t --plugin-opt=lto-partitions=0 2>&1 | FileCheck --check-prefix=NOTHREADS %s
 # NOTHREADS: --lto-partitions: number of threads must be > 0
 
 # RUN: not ld.lld %t --thinlto-jobs=0 2>&1 | FileCheck --check-prefix=NOTHREADSTHIN %s
+# RUN: not ld.lld %t --plugin-opt=jobs=0 2>&1 | FileCheck --check-prefix=NOTHREADSTHIN %s
 # NOTHREADSTHIN: --thinlto-jobs: number of threads must be > 0
