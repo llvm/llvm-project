@@ -192,10 +192,13 @@ public:
   std::future<void> addDocument(PathRef File, StringRef Contents);
   /// Remove \p File from list of tracked files, schedule a request to free
   /// resources associated with it.
-  /// \return A future that will become ready the file is removed and all
-  /// associated reosources are freed.
+  /// \return A future that will become ready when the file is removed and all
+  /// associated resources are freed.
   std::future<void> removeDocument(PathRef File);
   /// Force \p File to be reparsed using the latest contents.
+  /// Will also check if CompileCommand, provided by GlobalCompilationDatabase
+  /// for \p File has changed. If it has, will remove currently stored Preamble
+  /// and AST and rebuild them from scratch.
   std::future<void> forceReparse(PathRef File);
 
   /// Run code completion for \p File at \p Pos. If \p OverridenContents is not

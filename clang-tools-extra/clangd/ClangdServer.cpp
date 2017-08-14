@@ -154,9 +154,20 @@ std::future<void> ClangdServer::removeDocument(PathRef File) {
 }
 
 std::future<void> ClangdServer::forceReparse(PathRef File) {
-  // The addDocument schedules the reparse even if the contents of the file
-  // never changed, so we just call it here.
-  return addDocument(File, getDocument(File));
+  auto FileContents = DraftMgr.getDraft(File);
+  assert(FileContents.Draft &&
+         "forceReparse() was called for non-added document");
+
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+  auto Recreated = Units.recreateFileIfCompileCommandChanged(
+      File, ResourceDir, CDB, PCHs, TaggedFS.Value);
+
+  // Note that std::future from this cleanup action is ignored.
+  scheduleCancelRebuild(std::move(Recreated.RemovedFile));
+  // Schedule a reparse.
+  return scheduleReparseAndDiags(File, std::move(FileContents),
+                                 std::move(Recreated.FileInCollection),
+                                 std::move(TaggedFS));
 }
 
 Tagged<std::vector<CompletionItem>>
