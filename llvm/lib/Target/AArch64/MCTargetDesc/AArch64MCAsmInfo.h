@@ -38,6 +38,14 @@ struct AArch64MCAsmInfoCOFF : public MCAsmInfoCOFF {
   explicit AArch64MCAsmInfoCOFF();
 };
 
+struct AArch64MCAsmInfoMicrosoftCOFF : public AArch64MCAsmInfoCOFF {
+  explicit AArch64MCAsmInfoMicrosoftCOFF();
+};
+
+struct AArch64MCAsmInfoGNUCOFF : public AArch64MCAsmInfoCOFF {
+  explicit AArch64MCAsmInfoGNUCOFF();
+};
+
 } // namespace llvm
 
 #endif

@@ -42,6 +42,25 @@ public:
     return It->second;
   }
 
+  struct RecreateResult {
+    /// A CppFile, stored in this CppFileCollection for the corresponding
+    /// filepath after calling recreateFileIfCompileCommandChanged.
+    std::shared_ptr<CppFile> FileInCollection;
+    /// If a new CppFile had to be created to account for changed
+    /// CompileCommand, a previous CppFile instance will be returned in this
+    /// field.
+    std::shared_ptr<CppFile> RemovedFile;
+  };
+
+  /// Similar to getOrCreateFile, but will replace a current CppFile for \p File
+  /// with a new one if CompileCommand, provided by \p CDB has changed.
+  /// If a currently stored CppFile had to be replaced, the previous instance
+  /// will be returned in RecreateResult.RemovedFile.
+  RecreateResult recreateFileIfCompileCommandChanged(
+      PathRef File, PathRef ResourceDir, GlobalCompilationDatabase &CDB,
+      std::shared_ptr<PCHContainerOperations> PCHs,
+      IntrusiveRefCntPtr<vfs::FileSystem> VFS);
+
   std::shared_ptr<CppFile> getFile(PathRef File) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
@@ -58,6 +77,9 @@ public:
 private:
   tooling::CompileCommand getCompileCommand(GlobalCompilationDatabase &CDB,
                                             PathRef File, PathRef ResourceDir);
+
+  bool compileCommandsAreEqual(tooling::CompileCommand const &LHS,
+                               tooling::CompileCommand const &RHS);
 
   std::mutex Mutex;
   llvm::StringMap<std::shared_ptr<CppFile>> OpenedFiles;

@@ -530,7 +530,6 @@ define amdgpu_kernel void @local_sextload_v64i16_to_v64i32(<64 x i32> addrspace(
 ; EG-DAG: MOV {{[* ]*}}[[DATA:T[0-9]+\.[XYZW]]], OQAP
 ; EG-DAG: MOV {{[* ]*}}[[TO:T[0-9]+\.[XYZW]]], KC0[2].Y
 ; EG-DAG: LDS_WRITE
-; EG: LDS_WRITE {{\*?}} [[TO]], [[DATA]]
 define amdgpu_kernel void @local_zextload_i16_to_i64(i64 addrspace(3)* %out, i16 addrspace(3)* %in) #0 {
   %a = load i16, i16 addrspace(3)* %in
   %ext = zext i16 %a to i64
@@ -572,7 +571,6 @@ define amdgpu_kernel void @local_sextload_i16_to_i64(i64 addrspace(3)* %out, i16
 ; EG-DAG: MOV {{[* ]*}}[[DATA:T[0-9]+\.[XYZW]]], OQAP
 ; EG-DAG: MOV {{[* ]*}}[[TO:T[0-9]+\.[XYZW]]], KC0[2].Y
 ; EG-DAG: LDS_WRITE
-; EG: LDS_WRITE {{\*?}} [[TO]], [[DATA]]
 define amdgpu_kernel void @local_zextload_v1i16_to_v1i64(<1 x i64> addrspace(3)* %out, <1 x i16> addrspace(3)* %in) #0 {
   %load = load <1 x i16>, <1 x i16> addrspace(3)* %in
   %ext = zext <1 x i16> %load to <1 x i64>

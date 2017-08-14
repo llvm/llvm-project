@@ -1,5 +1,5 @@
-// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -filename-equivalence %s | FileCheck -check-prefixes=SHARED,ALL %s
-// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -filename-equivalence -name=_Z4funcIbEiT_ %s | FileCheck -check-prefixes=SHARED,FILTER %s
+// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S %s | FileCheck -check-prefixes=SHARED,ALL %s
+// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S -name=_Z4funcIbEiT_ %s | FileCheck -check-prefixes=SHARED,FILTER %s
 
 // before coverage   // ALL:         [[@LINE]]|  |// before
                      // FILTER-NOT:[[@LINE-1]]|  |// before
@@ -40,8 +40,8 @@ int main() {         // ALL:         [[@LINE]]| 1|int main() {
                      // FILTER-NOT:[[@LINE-1]]|  |// after
 
 // Test html output.
-// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -filename-equivalence %s -format html -o %t.html.dir
-// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -filename-equivalence -name=_Z4funcIbEiT_ %s -format html -o %t.html.dir
+// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S %s -format html -o %t.html.dir
+// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S -name=_Z4funcIbEiT_ %s -format html -o %t.html.dir
 // RUN: FileCheck -check-prefixes=HTML-SHARED,HTML-ALL -input-file=%t.html.dir/coverage/tmp/showTemplateInstantiations.cpp.html %s
 // RUN: FileCheck -check-prefixes=HTML-SHARED,HTML-FILTER -input-file=%t.html.dir/functions.html %s
 
@@ -88,6 +88,6 @@ int main() {         // ALL:         [[@LINE]]| 1|int main() {
 // HTML-JUMP: <pre>Source (<a href='#L{{[0-9]+}}'>jump to first uncovered line</a>)</pre>
 // HTML-JUMP-NOT: <pre>Source (<a href='#L{{[0-9]+}}'>jump to first uncovered line</a>)</pre>
 
-// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -show-instantiations=false -filename-equivalence %s | FileCheck -check-prefix=NO_INSTS %s
+// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -show-instantiations=false -path-equivalence=/tmp,%S %s | FileCheck -check-prefix=NO_INSTS %s
 // NO_INSTS-NOT: {{^ *}}| _Z4funcIbEiT_:
 // NO_INSTS-NOT: {{^ *}}| _Z4funcIiEiT_:

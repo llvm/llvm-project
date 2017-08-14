@@ -146,7 +146,7 @@ class Remark(yaml.YAMLObject):
             del mapping['DebugLoc']
 
         assert(len(mapping) == 1)
-        (key, value) = mapping.items()[0]
+        (key, value) = list(mapping.items())[0]
 
         if key == 'Caller' or key == 'Callee':
             value = cgi.escape(demangle(value))

@@ -193,6 +193,21 @@ void MipsTargetStreamer::emitRRI(unsigned Opcode, unsigned Reg0, unsigned Reg1,
   emitRRX(Opcode, Reg0, Reg1, MCOperand::createImm(Imm), IDLoc, STI);
 }
 
+void MipsTargetStreamer::emitRRIII(unsigned Opcode, unsigned Reg0,
+                                   unsigned Reg1, int16_t Imm0, int16_t Imm1,
+                                   int16_t Imm2, SMLoc IDLoc,
+                                   const MCSubtargetInfo *STI) {
+  MCInst TmpInst;
+  TmpInst.setOpcode(Opcode);
+  TmpInst.addOperand(MCOperand::createReg(Reg0));
+  TmpInst.addOperand(MCOperand::createReg(Reg1));
+  TmpInst.addOperand(MCOperand::createImm(Imm0));
+  TmpInst.addOperand(MCOperand::createImm(Imm1));
+  TmpInst.addOperand(MCOperand::createImm(Imm2));
+  TmpInst.setLoc(IDLoc);
+  getStreamer().EmitInstruction(TmpInst, *STI);
+}
+
 void MipsTargetStreamer::emitAddu(unsigned DstReg, unsigned SrcReg,
                                   unsigned TrgReg, bool Is64Bit,
                                   const MCSubtargetInfo *STI) {

@@ -350,7 +350,7 @@ define <4 x float> @v4f32_one_step(<4 x float> %x) #1 {
 ;
 ; SANDY-LABEL: v4f32_one_step:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vrcpps %xmm0, %xmm1 # sched: [7:3.00]
+; SANDY-NEXT:    vrcpps %xmm0, %xmm1 # sched: [5:1.00]
 ; SANDY-NEXT:    vmulps %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
 ; SANDY-NEXT:    vmovaps {{.*#+}} xmm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [6:0.50]
 ; SANDY-NEXT:    vsubps %xmm0, %xmm2, %xmm0 # sched: [3:1.00]
@@ -453,7 +453,7 @@ define <4 x float> @v4f32_two_step(<4 x float> %x) #2 {
 ;
 ; SANDY-LABEL: v4f32_two_step:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vrcpps %xmm0, %xmm1 # sched: [7:3.00]
+; SANDY-NEXT:    vrcpps %xmm0, %xmm1 # sched: [5:1.00]
 ; SANDY-NEXT:    vmulps %xmm1, %xmm0, %xmm2 # sched: [5:1.00]
 ; SANDY-NEXT:    vmovaps {{.*#+}} xmm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [6:0.50]
 ; SANDY-NEXT:    vsubps %xmm2, %xmm3, %xmm2 # sched: [3:1.00]
@@ -547,7 +547,7 @@ define <8 x float> @v8f32_no_estimate(<8 x float> %x) #0 {
 ; SANDY-LABEL: v8f32_no_estimate:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vmovaps {{.*#+}} ymm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [7:0.50]
-; SANDY-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [29:3.00]
+; SANDY-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [29:2.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: v8f32_no_estimate:
@@ -619,7 +619,7 @@ define <8 x float> @v8f32_one_step(<8 x float> %x) #1 {
 ;
 ; SANDY-LABEL: v8f32_one_step:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vrcpps %ymm0, %ymm1 # sched: [5:1.00]
+; SANDY-NEXT:    vrcpps %ymm0, %ymm1 # sched: [7:2.00]
 ; SANDY-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
 ; SANDY-NEXT:    vmovaps {{.*#+}} ymm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [7:0.50]
 ; SANDY-NEXT:    vsubps %ymm0, %ymm2, %ymm0 # sched: [3:1.00]
@@ -735,7 +735,7 @@ define <8 x float> @v8f32_two_step(<8 x float> %x) #2 {
 ;
 ; SANDY-LABEL: v8f32_two_step:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vrcpps %ymm0, %ymm1 # sched: [5:1.00]
+; SANDY-NEXT:    vrcpps %ymm0, %ymm1 # sched: [7:2.00]
 ; SANDY-NEXT:    vmulps %ymm1, %ymm0, %ymm2 # sched: [5:1.00]
 ; SANDY-NEXT:    vmovaps {{.*#+}} ymm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [7:0.50]
 ; SANDY-NEXT:    vsubps %ymm2, %ymm3, %ymm2 # sched: [3:1.00]

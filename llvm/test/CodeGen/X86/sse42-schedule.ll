@@ -61,7 +61,7 @@ define i32 @crc32_32_16(i32 %a0, i16 %a1, i16 *%a2) {
 ; GENERIC-LABEL: crc32_32_16:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    crc32w %si, %edi # sched: [3:1.00]
-; GENERIC-NEXT:    crc32w (%rdx), %edi # sched: [8:1.00]
+; GENERIC-NEXT:    crc32w (%rdx), %edi # sched: [7:1.00]
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -75,7 +75,7 @@ define i32 @crc32_32_16(i32 %a0, i16 %a1, i16 *%a2) {
 ; SANDY-LABEL: crc32_32_16:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    crc32w %si, %edi # sched: [3:1.00]
-; SANDY-NEXT:    crc32w (%rdx), %edi # sched: [8:1.00]
+; SANDY-NEXT:    crc32w (%rdx), %edi # sched: [7:1.00]
 ; SANDY-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -208,7 +208,7 @@ define i64 @crc32_64_64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: crc32_64_64:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
-; GENERIC-NEXT:    crc32q (%rdx), %rdi # sched: [7:1.00]
+; GENERIC-NEXT:    crc32q (%rdx), %rdi # sched: [8:1.00]
 ; GENERIC-NEXT:    movq %rdi, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -222,7 +222,7 @@ define i64 @crc32_64_64(i64 %a0, i64 %a1, i64 *%a2) {
 ; SANDY-LABEL: crc32_64_64:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
-; SANDY-NEXT:    crc32q (%rdx), %rdi # sched: [7:1.00]
+; SANDY-NEXT:    crc32q (%rdx), %rdi # sched: [8:1.00]
 ; SANDY-NEXT:    movq %rdi, %rax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;

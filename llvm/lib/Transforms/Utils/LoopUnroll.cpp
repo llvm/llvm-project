@@ -295,7 +295,8 @@ static bool isEpilogProfitable(Loop *L) {
 bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
                       bool AllowRuntime, bool AllowExpensiveTripCount,
                       bool PreserveCondBr, bool PreserveOnlyFirst,
-                      unsigned TripMultiple, unsigned PeelCount, LoopInfo *LI,
+                      unsigned TripMultiple, unsigned PeelCount,
+                      bool UnrollRemainder, LoopInfo *LI,
                       ScalarEvolution *SE, DominatorTree *DT,
                       AssumptionCache *AC, OptimizationRemarkEmitter *ORE,
                       bool PreserveLCSSA) {
@@ -418,7 +419,8 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
 
   if (RuntimeTripCount && TripMultiple % Count != 0 &&
       !UnrollRuntimeLoopRemainder(L, Count, AllowExpensiveTripCount,
-                                  EpilogProfitability, LI, SE, DT,
+                                  EpilogProfitability, UnrollRemainder,
+                                  LI, SE, DT, AC, ORE,
                                   PreserveLCSSA)) {
     if (Force)
       RuntimeTripCount = false;

@@ -138,3 +138,154 @@ define void @rotate_right_m64(i64 *%pa, i64 %b) {
   ret void
 }
 
+; The next 8 tests include masks of the narrow width shift amounts that should be eliminated.
+; These patterns are produced by instcombine after r310509.
+
+define i8 @rotate_left_8(i8 %x, i32 %amount) {
+; CHECK-LABEL: rotate_left_8:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andb $7, %sil
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    rolb %cl, %dil
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+  %amt = trunc i32 %amount to i8
+  %sub = sub i8 0, %amt
+  %maskamt = and i8 %amt, 7
+  %masksub = and i8 %sub, 7
+  %shl = shl i8 %x, %maskamt
+  %shr = lshr i8 %x, %masksub
+  %or = or i8 %shl, %shr
+  ret i8 %or
+}
+
+define i8 @rotate_right_8(i8 %x, i32 %amount) {
+; CHECK-LABEL: rotate_right_8:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andb $7, %sil
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    rorb %cl, %dil
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+  %amt = trunc i32 %amount to i8
+  %sub = sub i8 0, %amt
+  %maskamt = and i8 %amt, 7
+  %masksub = and i8 %sub, 7
+  %shr = lshr i8 %x, %maskamt
+  %shl = shl i8 %x, %masksub
+  %or = or i8 %shr, %shl
+  ret i8 %or
+}
+
+define i16 @rotate_left_16(i16 %x, i32 %amount) {
+; CHECK-LABEL: rotate_left_16:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andb $15, %sil
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    rolw %cl, %di
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+  %amt = trunc i32 %amount to i16
+  %sub = sub i16 0, %amt
+  %maskamt = and i16 %amt, 15
+  %masksub = and i16 %sub, 15
+  %shl = shl i16 %x, %maskamt
+  %shr = lshr i16 %x, %masksub
+  %or = or i16 %shl, %shr
+  ret i16 %or
+}
+
+define i16 @rotate_right_16(i16 %x, i32 %amount) {
+; CHECK-LABEL: rotate_right_16:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andb $15, %sil
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    rorw %cl, %di
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+  %amt = trunc i32 %amount to i16
+  %sub = sub i16 0, %amt
+  %maskamt = and i16 %amt, 15
+  %masksub = and i16 %sub, 15
+  %shr = lshr i16 %x, %maskamt
+  %shl = shl i16 %x, %masksub
+  %or = or i16 %shr, %shl
+  ret i16 %or
+}
+
+define void @rotate_left_m8(i8* %p, i32 %amount) {
+; CHECK-LABEL: rotate_left_m8:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andb $7, %sil
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    rolb %cl, (%rdi)
+; CHECK-NEXT:    retq
+  %x = load i8, i8* %p, align 1
+  %amt = trunc i32 %amount to i8
+  %sub = sub i8 0, %amt
+  %maskamt = and i8 %amt, 7
+  %masksub = and i8 %sub, 7
+  %shl = shl i8 %x, %maskamt
+  %shr = lshr i8 %x, %masksub
+  %or = or i8 %shl, %shr
+  store i8 %or, i8* %p, align 1
+  ret void
+}
+
+define void @rotate_right_m8(i8* %p, i32 %amount) {
+; CHECK-LABEL: rotate_right_m8:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andb $7, %sil
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    rorb %cl, (%rdi)
+; CHECK-NEXT:    retq
+  %x = load i8, i8* %p, align 1
+  %amt = trunc i32 %amount to i8
+  %sub = sub i8 0, %amt
+  %maskamt = and i8 %amt, 7
+  %masksub = and i8 %sub, 7
+  %shl = shl i8 %x, %masksub
+  %shr = lshr i8 %x, %maskamt
+  %or = or i8 %shl, %shr
+  store i8 %or, i8* %p, align 1
+  ret void
+}
+
+define void @rotate_left_m16(i16* %p, i32 %amount) {
+; CHECK-LABEL: rotate_left_m16:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andb $15, %sil
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    rolw %cl, (%rdi)
+; CHECK-NEXT:    retq
+  %x = load i16, i16* %p, align 1
+  %amt = trunc i32 %amount to i16
+  %sub = sub i16 0, %amt
+  %maskamt = and i16 %amt, 15
+  %masksub = and i16 %sub, 15
+  %shl = shl i16 %x, %maskamt
+  %shr = lshr i16 %x, %masksub
+  %or = or i16 %shl, %shr
+  store i16 %or, i16* %p, align 1
+  ret void
+}
+
+define void @rotate_right_m16(i16* %p, i32 %amount) {
+; CHECK-LABEL: rotate_right_m16:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andb $15, %sil
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    rorw %cl, (%rdi)
+; CHECK-NEXT:    retq
+  %x = load i16, i16* %p, align 1
+  %amt = trunc i32 %amount to i16
+  %sub = sub i16 0, %amt
+  %maskamt = and i16 %amt, 15
+  %masksub = and i16 %sub, 15
+  %shl = shl i16 %x, %masksub
+  %shr = lshr i16 %x, %maskamt
+  %or = or i16 %shl, %shr
+  store i16 %or, i16* %p, align 1
+  ret void
+}
+
