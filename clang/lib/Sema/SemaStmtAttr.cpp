@@ -47,7 +47,7 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const AttributeList &A,
   // about using it as an extension.
   if (!S.getLangOpts().CPlusPlus1z && A.isCXX11Attribute() &&
       !A.getScopeName())
-    S.Diag(A.getLoc(), diag::ext_cxx1z_attr) << A.getName();
+    S.Diag(A.getLoc(), diag::ext_cxx17_attr) << A.getName();
 
   FnScope->setHasFallthroughStmt();
   return ::new (S.Context) auto(Attr);
