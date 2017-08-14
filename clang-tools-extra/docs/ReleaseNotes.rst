@@ -75,6 +75,11 @@ Improvements to clang-tidy
 
   Detects usage of ``dup()``.
 
+- New `android-cloexec-inotify-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-inotify-init.html>`_ check
+
+  Detects usage of ``inotify_init()``.
+
 - New `android-cloexec-memfd_create
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-memfd_create.html>`_ check
 

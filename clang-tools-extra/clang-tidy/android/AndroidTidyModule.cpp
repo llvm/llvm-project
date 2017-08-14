@@ -13,6 +13,7 @@
 #include "CloexecCreatCheck.h"
 #include "CloexecDupCheck.h"
 #include "CloexecFopenCheck.h"
+#include "CloexecInotifyInitCheck.h"
 #include "CloexecMemfdCreateCheck.h"
 #include "CloexecOpenCheck.h"
 #include "CloexecSocketCheck.h"
@@ -30,6 +31,8 @@ public:
     CheckFactories.registerCheck<CloexecCreatCheck>("android-cloexec-creat");
     CheckFactories.registerCheck<CloexecDupCheck>("android-cloexec-dup");
     CheckFactories.registerCheck<CloexecFopenCheck>("android-cloexec-fopen");
+    CheckFactories.registerCheck<CloexecInotifyInitCheck>(
+        "android-cloexec-inotify-init");
     CheckFactories.registerCheck<CloexecMemfdCreateCheck>(
         "android-cloexec-memfd-create");
     CheckFactories.registerCheck<CloexecOpenCheck>("android-cloexec-open");
