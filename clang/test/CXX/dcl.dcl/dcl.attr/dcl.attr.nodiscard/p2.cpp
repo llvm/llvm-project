@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++1z -verify -Wc++1z-extensions %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify -DEXT -Wc++1z-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify -Wc++17-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify -DEXT -Wc++17-extensions %s
 
 struct [[nodiscard]] S {};
 S get_s();
@@ -23,7 +23,7 @@ void f() {
 }
 
 #ifdef EXT
-// expected-warning@4 {{use of the 'nodiscard' attribute is a C++1z extension}}
-// expected-warning@8 {{use of the 'nodiscard' attribute is a C++1z extension}}
-// expected-warning@11 {{use of the 'nodiscard' attribute is a C++1z extension}}
+// expected-warning@4 {{use of the 'nodiscard' attribute is a C++17 extension}}
+// expected-warning@8 {{use of the 'nodiscard' attribute is a C++17 extension}}
+// expected-warning@11 {{use of the 'nodiscard' attribute is a C++17 extension}}
 #endif

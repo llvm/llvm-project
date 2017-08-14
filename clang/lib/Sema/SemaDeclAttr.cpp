@@ -2151,7 +2151,7 @@ static void handleUnusedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   // If this is spelled as the standard C++1z attribute, but not in C++1z, warn
   // about using it as an extension.
   if (!S.getLangOpts().CPlusPlus1z && IsCXX1zAttr)
-    S.Diag(Attr.getLoc(), diag::ext_cxx1z_attr) << Attr.getName();
+    S.Diag(Attr.getLoc(), diag::ext_cxx17_attr) << Attr.getName();
 
   D->addAttr(::new (S.Context) UnusedAttr(
       Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
@@ -2849,7 +2849,7 @@ static void handleWarnUnusedResult(Sema &S, Decl *D, const AttributeList &Attr) 
   // about using it as an extension.
   if (!S.getLangOpts().CPlusPlus1z && Attr.isCXX11Attribute() &&
       !Attr.getScopeName())
-    S.Diag(Attr.getLoc(), diag::ext_cxx1z_attr) << Attr.getName();
+    S.Diag(Attr.getLoc(), diag::ext_cxx17_attr) << Attr.getName();
 
   D->addAttr(::new (S.Context) 
              WarnUnusedResultAttr(Attr.getRange(), S.Context,

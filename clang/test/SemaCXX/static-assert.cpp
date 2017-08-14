@@ -49,5 +49,5 @@ struct X { ~X(); };
 StaticAssertProtected<int> sap1;
 StaticAssertProtected<X> sap2; // expected-note {{instantiation}}
 
-static_assert(true); // expected-warning {{C++1z extension}}
+static_assert(true); // expected-warning {{C++17 extension}}
 static_assert(false); // expected-error-re {{failed{{$}}}} expected-warning {{extension}}
