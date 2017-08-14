@@ -84,8 +84,6 @@
 #include <utility>
 #include <vector>
 
-#define DEBUG_TYPE "amdgpu-isel"
-
 using namespace llvm;
 
 #define DEBUG_TYPE "si-lower"
