@@ -414,8 +414,8 @@ void AArch64beTargetInfo::setDataLayout() {
   resetDataLayout("E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
 }
 
-MicrosoftARM64TargetInfo::MicrosoftARM64TargetInfo(const llvm::Triple &Triple,
-                                                   const TargetOptions &Opts)
+WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
+                                               const TargetOptions &Opts)
     : WindowsTargetInfo<AArch64leTargetInfo>(Triple, Opts), Triple(Triple) {
 
   // This is an LLP64 platform.
@@ -431,12 +431,38 @@ MicrosoftARM64TargetInfo::MicrosoftARM64TargetInfo(const llvm::Triple &Triple,
   SizeType = UnsignedLongLong;
   PtrDiffType = SignedLongLong;
   IntPtrType = SignedLongLong;
-
-  TheCXXABI.set(TargetCXXABI::Microsoft);
 }
 
-void MicrosoftARM64TargetInfo::setDataLayout() {
+void WindowsARM64TargetInfo::setDataLayout() {
   resetDataLayout("e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128");
+}
+
+TargetInfo::BuiltinVaListKind
+WindowsARM64TargetInfo::getBuiltinVaListKind() const {
+  return TargetInfo::CharPtrBuiltinVaList;
+}
+
+TargetInfo::CallingConvCheckResult
+WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_X86StdCall:
+  case CC_X86ThisCall:
+  case CC_X86FastCall:
+  case CC_X86VectorCall:
+    return CCCR_Ignore;
+  case CC_C:
+  case CC_OpenCLKernel:
+  case CC_Win64:
+    return CCCR_OK;
+  default:
+    return CCCR_Warning;
+  }
+}
+
+MicrosoftARM64TargetInfo::MicrosoftARM64TargetInfo(const llvm::Triple &Triple,
+                                                   const TargetOptions &Opts)
+    : WindowsARM64TargetInfo(Triple, Opts) {
+  TheCXXABI.set(TargetCXXABI::Microsoft);
 }
 
 void MicrosoftARM64TargetInfo::getVisualStudioDefines(
@@ -453,27 +479,22 @@ void MicrosoftARM64TargetInfo::getTargetDefines(const LangOptions &Opts,
   getVisualStudioDefines(Opts, Builder);
 }
 
-TargetInfo::BuiltinVaListKind
-MicrosoftARM64TargetInfo::getBuiltinVaListKind() const {
-  return TargetInfo::CharPtrBuiltinVaList;
+MinGWARM64TargetInfo::MinGWARM64TargetInfo(const llvm::Triple &Triple,
+                                           const TargetOptions &Opts)
+    : WindowsARM64TargetInfo(Triple, Opts) {
+  TheCXXABI.set(TargetCXXABI::GenericAArch64);
 }
 
-TargetInfo::CallingConvCheckResult
-MicrosoftARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
-  switch (CC) {
-  case CC_X86StdCall:
-  case CC_X86ThisCall:
-  case CC_X86FastCall:
-  case CC_X86VectorCall:
-    return CCCR_Ignore;
-  case CC_C:
-  case CC_OpenCLKernel:
-  case CC_Win64:
-    return CCCR_OK;
-  default:
-    return CCCR_Warning;
-  }
+void MinGWARM64TargetInfo::getTargetDefines(const LangOptions &Opts,
+                                            MacroBuilder &Builder) const {
+  WindowsTargetInfo::getTargetDefines(Opts, Builder);
+  Builder.defineMacro("_WIN32", "1");
+  Builder.defineMacro("_WIN64", "1");
+  Builder.defineMacro("WIN32", "1");
+  Builder.defineMacro("WIN64", "1");
+  addMinGWDefines(Opts, Builder);
 }
+
 
 DarwinAArch64TargetInfo::DarwinAArch64TargetInfo(const llvm::Triple &Triple,
                                                  const TargetOptions &Opts)

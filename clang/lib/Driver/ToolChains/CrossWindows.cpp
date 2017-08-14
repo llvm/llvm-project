@@ -36,6 +36,7 @@ void tools::CrossWindows::Assembler::ConstructJob(
     llvm_unreachable("unsupported architecture");
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
+  case llvm::Triple::aarch64:
     break;
   case llvm::Triple::x86:
     CmdArgs.push_back("--32");
@@ -98,6 +99,9 @@ void tools::CrossWindows::Linker::ConstructJob(
     // FIXME: this is incorrect for WinCE
     CmdArgs.push_back("thumb2pe");
     break;
+  case llvm::Triple::aarch64:
+    CmdArgs.push_back("arm64pe");
+    break;
   case llvm::Triple::x86:
     CmdArgs.push_back("i386pe");
     EntryPoint.append("_");
@@ -111,6 +115,7 @@ void tools::CrossWindows::Linker::ConstructJob(
     switch (T.getArch()) {
     default:
       llvm_unreachable("unsupported architecture");
+    case llvm::Triple::aarch64:
     case llvm::Triple::arm:
     case llvm::Triple::thumb:
     case llvm::Triple::x86_64:

@@ -216,7 +216,7 @@ template<class T> typedef Mystery<T>::type getMysteriousThing() { // \
 }
 
 template<template<typename> Foo, // expected-error {{template template parameter requires 'class' after the parameter list}}
-         template<typename> typename Bar, // expected-warning {{template template parameter using 'typename' is a C++1z extension}}
+         template<typename> typename Bar, // expected-warning {{template template parameter using 'typename' is a C++17 extension}}
          template<typename> struct Baz> // expected-error {{template template parameter requires 'class' after the parameter list}}
 void func();
 

@@ -2,13 +2,13 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: not %clang_cc1 -x c++ -fixit %t -Werror -DFIXIT
 // RUN: %clang_cc1 -x c++ %t -DFIXIT
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++1z -Wc++14-compat
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++17 -Wc++14-compat
 
 namespace foo1::foo2::foo3 {
 #if __cplusplus <= 201400L
-// expected-warning@-2 {{nested namespace definition is a C++1z extension; define each namespace separately}}
+// expected-warning@-2 {{nested namespace definition is a C++17 extension; define each namespace separately}}
 #else
-// expected-warning@-4 {{nested namespace definition is incompatible with C++ standards before C++1z}}
+// expected-warning@-4 {{nested namespace definition is incompatible with C++ standards before C++17}}
 #endif
   int foo(int x) { return x; }
 }
