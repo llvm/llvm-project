@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -136,18 +137,23 @@ namespace {
 static const std::chrono::seconds DefaultFutureTimeout =
     std::chrono::seconds(10);
 
+static bool diagsContainErrors(ArrayRef<DiagWithFixIts> Diagnostics) {
+  for (const auto &DiagAndFixIts : Diagnostics) {
+    // FIXME: severities returned by clangd should have a descriptive
+    // diagnostic severity enum
+    const int ErrorSeverity = 1;
+    if (DiagAndFixIts.Diag.severity == ErrorSeverity)
+      return true;
+  }
+  return false;
+}
+
 class ErrorCheckingDiagConsumer : public DiagnosticsConsumer {
 public:
   void
   onDiagnosticsReady(PathRef File,
                      Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
-    bool HadError = false;
-    for (const auto &DiagAndFixIts : Diagnostics.Value) {
-      // FIXME: severities returned by clangd should have a descriptive
-      // diagnostic severity enum
-      const int ErrorSeverity = 1;
-      HadError = DiagAndFixIts.Diag.severity == ErrorSeverity;
-    }
+    bool HadError = diagsContainErrors(Diagnostics.Value);
 
     std::lock_guard<std::mutex> Lock(Mutex);
     HadErrorInLastDiags = HadError;
@@ -196,24 +202,46 @@ public:
   std::vector<std::string> ExtraClangFlags;
 };
 
+IntrusiveRefCntPtr<vfs::FileSystem>
+buildTestFS(llvm::StringMap<std::string> const &Files) {
+  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> MemFS(
+      new vfs::InMemoryFileSystem);
+  for (auto &FileAndContents : Files)
+    MemFS->addFile(FileAndContents.first(), time_t(),
+                   llvm::MemoryBuffer::getMemBuffer(FileAndContents.second,
+                                                    FileAndContents.first()));
+
+  auto OverlayFS = IntrusiveRefCntPtr<vfs::OverlayFileSystem>(
+      new vfs::OverlayFileSystem(vfs::getTempOnlyFS()));
+  OverlayFS->pushOverlay(std::move(MemFS));
+  return OverlayFS;
+}
+
+class ConstantFSProvider : public FileSystemProvider {
+public:
+  ConstantFSProvider(IntrusiveRefCntPtr<vfs::FileSystem> FS,
+                     VFSTag Tag = VFSTag())
+      : FS(std::move(FS)), Tag(std::move(Tag)) {}
+
+  Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
+  getTaggedFileSystem(PathRef File) override {
+    return make_tagged(FS, Tag);
+  }
+
+private:
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
+  VFSTag Tag;
+};
+
 class MockFSProvider : public FileSystemProvider {
 public:
   Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
   getTaggedFileSystem(PathRef File) override {
-    IntrusiveRefCntPtr<vfs::InMemoryFileSystem> MemFS(
-        new vfs::InMemoryFileSystem);
     if (ExpectedFile)
       EXPECT_EQ(*ExpectedFile, File);
 
-    for (auto &FileAndContents : Files)
-      MemFS->addFile(FileAndContents.first(), time_t(),
-                     llvm::MemoryBuffer::getMemBuffer(FileAndContents.second,
-                                                      FileAndContents.first()));
-
-    auto OverlayFS = IntrusiveRefCntPtr<vfs::OverlayFileSystem>(
-        new vfs::OverlayFileSystem(vfs::getTempOnlyFS()));
-    OverlayFS->pushOverlay(std::move(MemFS));
-    return make_tagged(OverlayFS, Tag);
+    auto FS = buildTestFS(Files);
+    return make_tagged(FS, Tag);
   }
 
   llvm::Optional<SmallString<32>> ExpectedFile;
@@ -272,8 +300,7 @@ protected:
     MockFSProvider FS;
     ErrorCheckingDiagConsumer DiagConsumer;
     MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
-    ClangdServer Server(CDB, DiagConsumer, FS,
-                        /*RunSynchronously=*/false);
+    ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount());
     for (const auto &FileWithContents : ExtraFiles)
       FS.Files[getVirtualTestFilePath(FileWithContents.first)] =
           FileWithContents.second;
@@ -282,7 +309,8 @@ protected:
 
     FS.ExpectedFile = SourceFilename;
 
-    // Have to sync reparses because RunSynchronously is false.
+    // Have to sync reparses because requests are processed on the calling
+    // thread.
     auto AddDocFuture = Server.addDocument(SourceFilename, SourceContents);
 
     auto Result = dumpASTWithoutMemoryLocs(Server, SourceFilename);
@@ -334,8 +362,7 @@ TEST_F(ClangdVFSTest, Reparse) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
-  ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*RunSynchronously=*/false);
+  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount());
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -379,8 +406,7 @@ TEST_F(ClangdVFSTest, ReparseOnHeaderChange) {
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
 
-  ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*RunSynchronously=*/false);
+  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount());
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -425,16 +451,17 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  // Run ClangdServer synchronously.
   ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*RunSynchronously=*/true);
+                      /*AsyncThreadsCount=*/0);
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents = "int a;";
   FS.Files[FooCpp] = SourceContents;
   FS.ExpectedFile = FooCpp;
 
-  // No need to sync reparses, because RunSynchronously is set
-  // to true.
+  // No need to sync reparses, because requests are processed on the calling
+  // thread.
   FS.Tag = "123";
   Server.addDocument(FooCpp, SourceContents);
   EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS.Tag);
@@ -457,8 +484,9 @@ TEST_F(ClangdVFSTest, SearchLibDir) {
                              {"-xc++", "-target", "x86_64-linux-unknown",
                               "-m64", "--gcc-toolchain=/randomusr",
                               "-stdlib=libstdc++"});
+  // Run ClangdServer synchronously.
   ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*RunSynchronously=*/true);
+                      /*AsyncThreadsCount=*/0);
 
   // Just a random gcc version string
   SmallString<8> Version("4.9.3");
@@ -487,8 +515,8 @@ mock_string x;
 )cpp";
   FS.Files[FooCpp] = SourceContents;
 
-  // No need to sync reparses, because RunSynchronously is set
-  // to true.
+  // No need to sync reparses, because requests are processed on the calling
+  // thread.
   Server.addDocument(FooCpp, SourceContents);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
@@ -506,9 +534,9 @@ TEST_F(ClangdVFSTest, ForceReparseCompileCommand) {
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
   ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*RunSynchronously=*/true);
-  // No need to sync reparses, because RunSynchronously is set
-  // to true.
+                      /*AsyncThreadsCount=*/0);
+  // No need to sync reparses, because reparses are performed on the calling
+  // thread to true.
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents1 = R"cpp(
@@ -564,8 +592,7 @@ TEST_F(ClangdCompletionTest, CheckContentsOverride) {
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
 
-  ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*RunSynchronously=*/false);
+  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount());
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents = R"cpp(
@@ -612,6 +639,249 @@ int b =   ;
         Server.codeComplete(FooCpp, CompletePos, None).Value;
     EXPECT_TRUE(ContainsItem(CodeCompletionResults2, "aba"));
     EXPECT_FALSE(ContainsItem(CodeCompletionResults2, "cbc"));
+  }
+}
+
+class ClangdThreadingTest : public ClangdVFSTest {};
+
+TEST_F(ClangdThreadingTest, StressTest) {
+  // Without 'static' clang gives an error for a usage inside TestDiagConsumer.
+  static const unsigned FilesCount = 5;
+  const unsigned RequestsCount = 500;
+  // Blocking requests wait for the parsing to complete, they slow down the test
+  // dramatically, so they are issued rarely. Each
+  // BlockingRequestInterval-request will be a blocking one.
+  const unsigned BlockingRequestInterval = 40;
+
+  const auto SourceContentsWithoutErrors = R"cpp(
+int a;
+int b;
+int c;
+int d;
+)cpp";
+
+  const auto SourceContentsWithErrors = R"cpp(
+int a = x;
+int b;
+int c;
+int d;
+)cpp";
+
+  // Giving invalid line and column number should not crash ClangdServer, but
+  // just to make sure we're sometimes hitting the bounds inside the file we
+  // limit the intervals of line and column number that are generated.
+  unsigned MaxLineForFileRequests = 7;
+  unsigned MaxColumnForFileRequests = 10;
+
+  std::vector<SmallString<32>> FilePaths;
+  FilePaths.reserve(FilesCount);
+  for (unsigned I = 0; I < FilesCount; ++I)
+    FilePaths.push_back(getVirtualTestFilePath(std::string("Foo") +
+                                               std::to_string(I) + ".cpp"));
+  // Mark all of those files as existing.
+  llvm::StringMap<std::string> FileContents;
+  for (auto &&FilePath : FilePaths)
+    FileContents[FilePath] = "";
+
+  ConstantFSProvider FS(buildTestFS(FileContents));
+
+  struct FileStat {
+    unsigned HitsWithoutErrors = 0;
+    unsigned HitsWithErrors = 0;
+    bool HadErrorsInLastDiags = false;
+  };
+
+  class TestDiagConsumer : public DiagnosticsConsumer {
+  public:
+    TestDiagConsumer() : Stats(FilesCount, FileStat()) {}
+
+    void onDiagnosticsReady(
+        PathRef File,
+        Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
+      StringRef FileIndexStr = llvm::sys::path::stem(File);
+      ASSERT_TRUE(FileIndexStr.consume_front("Foo"));
+
+      unsigned long FileIndex = std::stoul(FileIndexStr.str());
+
+      bool HadError = diagsContainErrors(Diagnostics.Value);
+
+      std::lock_guard<std::mutex> Lock(Mutex);
+      if (HadError)
+        Stats[FileIndex].HitsWithErrors++;
+      else
+        Stats[FileIndex].HitsWithoutErrors++;
+      Stats[FileIndex].HadErrorsInLastDiags = HadError;
+    }
+
+    std::vector<FileStat> takeFileStats() {
+      std::lock_guard<std::mutex> Lock(Mutex);
+      return std::move(Stats);
+    }
+
+  private:
+    std::mutex Mutex;
+    std::vector<FileStat> Stats;
+  };
+
+  struct RequestStats {
+    unsigned RequestsWithoutErrors = 0;
+    unsigned RequestsWithErrors = 0;
+    bool LastContentsHadErrors = false;
+    bool FileIsRemoved = true;
+    std::future<void> LastRequestFuture;
+  };
+
+  std::vector<RequestStats> ReqStats;
+  ReqStats.reserve(FilesCount);
+  for (unsigned FileIndex = 0; FileIndex < FilesCount; ++FileIndex)
+    ReqStats.emplace_back();
+
+  TestDiagConsumer DiagConsumer;
+  {
+    MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+    ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount());
+
+    // Prepare some random distributions for the test.
+    std::random_device RandGen;
+
+    std::uniform_int_distribution<unsigned> FileIndexDist(0, FilesCount - 1);
+    // Pass a text that contains compiler errors to addDocument in about 20% of
+    // all requests.
+    std::bernoulli_distribution ShouldHaveErrorsDist(0.2);
+    // Line and Column numbers for requests that need them.
+    std::uniform_int_distribution<int> LineDist(0, MaxLineForFileRequests);
+    std::uniform_int_distribution<int> ColumnDist(0, MaxColumnForFileRequests);
+
+    // Some helpers.
+    auto UpdateStatsOnAddDocument = [&](unsigned FileIndex, bool HadErrors,
+                                        std::future<void> Future) {
+      auto &Stats = ReqStats[FileIndex];
+
+      if (HadErrors)
+        ++Stats.RequestsWithErrors;
+      else
+        ++Stats.RequestsWithoutErrors;
+      Stats.LastContentsHadErrors = HadErrors;
+      Stats.FileIsRemoved = false;
+      Stats.LastRequestFuture = std::move(Future);
+    };
+
+    auto UpdateStatsOnRemoveDocument = [&](unsigned FileIndex,
+                                           std::future<void> Future) {
+      auto &Stats = ReqStats[FileIndex];
+
+      Stats.FileIsRemoved = true;
+      Stats.LastRequestFuture = std::move(Future);
+    };
+
+    auto UpdateStatsOnForceReparse = [&](unsigned FileIndex,
+                                         std::future<void> Future) {
+      auto &Stats = ReqStats[FileIndex];
+
+      Stats.LastRequestFuture = std::move(Future);
+      if (Stats.LastContentsHadErrors)
+        ++Stats.RequestsWithErrors;
+      else
+        ++Stats.RequestsWithoutErrors;
+    };
+
+    auto AddDocument = [&](unsigned FileIndex) {
+      bool ShouldHaveErrors = ShouldHaveErrorsDist(RandGen);
+      auto Future = Server.addDocument(
+          FilePaths[FileIndex], ShouldHaveErrors ? SourceContentsWithErrors
+                                                 : SourceContentsWithoutErrors);
+      UpdateStatsOnAddDocument(FileIndex, ShouldHaveErrors, std::move(Future));
+    };
+
+    // Various requests that we would randomly run.
+    auto AddDocumentRequest = [&]() {
+      unsigned FileIndex = FileIndexDist(RandGen);
+      AddDocument(FileIndex);
+    };
+
+    auto ForceReparseRequest = [&]() {
+      unsigned FileIndex = FileIndexDist(RandGen);
+      // Make sure we don't violate the ClangdServer's contract.
+      if (ReqStats[FileIndex].FileIsRemoved)
+        AddDocument(FileIndex);
+
+      auto Future = Server.forceReparse(FilePaths[FileIndex]);
+      UpdateStatsOnForceReparse(FileIndex, std::move(Future));
+    };
+
+    auto RemoveDocumentRequest = [&]() {
+      unsigned FileIndex = FileIndexDist(RandGen);
+      // Make sure we don't violate the ClangdServer's contract.
+      if (ReqStats[FileIndex].FileIsRemoved)
+        AddDocument(FileIndex);
+
+      auto Future = Server.removeDocument(FilePaths[FileIndex]);
+      UpdateStatsOnRemoveDocument(FileIndex, std::move(Future));
+    };
+
+    auto CodeCompletionRequest = [&]() {
+      unsigned FileIndex = FileIndexDist(RandGen);
+      // Make sure we don't violate the ClangdServer's contract.
+      if (ReqStats[FileIndex].FileIsRemoved)
+        AddDocument(FileIndex);
+
+      Position Pos{LineDist(RandGen), ColumnDist(RandGen)};
+      Server.codeComplete(FilePaths[FileIndex], Pos);
+    };
+
+    auto FindDefinitionsRequest = [&]() {
+      unsigned FileIndex = FileIndexDist(RandGen);
+      // Make sure we don't violate the ClangdServer's contract.
+      if (ReqStats[FileIndex].FileIsRemoved)
+        AddDocument(FileIndex);
+
+      Position Pos{LineDist(RandGen), ColumnDist(RandGen)};
+      Server.findDefinitions(FilePaths[FileIndex], Pos);
+    };
+
+    std::vector<std::function<void()>> AsyncRequests = {
+        AddDocumentRequest, ForceReparseRequest, RemoveDocumentRequest};
+    std::vector<std::function<void()>> BlockingRequests = {
+        CodeCompletionRequest, FindDefinitionsRequest};
+
+    // Bash requests to ClangdServer in a loop.
+    std::uniform_int_distribution<int> AsyncRequestIndexDist(
+        0, AsyncRequests.size() - 1);
+    std::uniform_int_distribution<int> BlockingRequestIndexDist(
+        0, BlockingRequests.size() - 1);
+    for (unsigned I = 1; I <= RequestsCount; ++I) {
+      if (I % BlockingRequestInterval != 0) {
+        // Issue an async request most of the time. It should be fast.
+        unsigned RequestIndex = AsyncRequestIndexDist(RandGen);
+        AsyncRequests[RequestIndex]();
+      } else {
+        // Issue a blocking request once in a while.
+        auto RequestIndex = BlockingRequestIndexDist(RandGen);
+        BlockingRequests[RequestIndex]();
+      }
+    }
+
+    // Wait for last requests to finish.
+    for (auto &ReqStat : ReqStats) {
+      if (!ReqStat.LastRequestFuture.valid())
+        continue; // We never ran any requests for this file.
+
+      // Future should be ready much earlier than in 5 seconds, the timeout is
+      // there to check we won't wait indefinitely.
+      ASSERT_EQ(ReqStat.LastRequestFuture.wait_for(std::chrono::seconds(5)),
+                std::future_status::ready);
+    }
+  } // Wait for ClangdServer to shutdown before proceeding.
+
+  // Check some invariants about the state of the program.
+  std::vector<FileStat> Stats = DiagConsumer.takeFileStats();
+  for (unsigned I = 0; I < FilesCount; ++I) {
+    if (!ReqStats[I].FileIsRemoved)
+      ASSERT_EQ(Stats[I].HadErrorsInLastDiags,
+                ReqStats[I].LastContentsHadErrors);
+
+    ASSERT_LE(Stats[I].HitsWithErrors, ReqStats[I].RequestsWithErrors);
+    ASSERT_LE(Stats[I].HitsWithoutErrors, ReqStats[I].RequestsWithoutErrors);
   }
 }
 

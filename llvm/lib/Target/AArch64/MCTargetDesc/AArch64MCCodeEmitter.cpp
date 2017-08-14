@@ -84,12 +84,6 @@ public:
                                SmallVectorImpl<MCFixup> &Fixups,
                                const MCSubtargetInfo &STI) const;
 
-  /// getAuthSImmOpValue - Return encoding for a 10-bit immediate which is
-  /// encoded as a sign bit and an 9-bit immediate, separated by a single bit.
-  uint32_t getAuthSImmOpValue(const MCInst &MI, unsigned OpIdx,
-                              SmallVectorImpl<MCFixup> &Fixups,
-                              const MCSubtargetInfo &STI) const;
-
   /// getCondBranchTargetOpValue - Return the encoded value for a conditional
   /// branch target.
   uint32_t getCondBranchTargetOpValue(const MCInst &MI, unsigned OpIdx,
@@ -286,18 +280,6 @@ AArch64MCCodeEmitter::getAddSubImmOpValue(const MCInst &MI, unsigned OpIdx,
       ShiftVal = 12;
   }
   return ShiftVal == 0 ? 0 : (1 << ShiftVal);
-}
-
-/// getAuthSImmOpValue - encode a 10-bit scale signed immediate within an 11-bit
-/// field in which bit 10 of that field is not used to encode any information
-/// about the immediate.
-uint32_t
-AArch64MCCodeEmitter::getAuthSImmOpValue(const MCInst &MI, unsigned OpIdx,
-                                         SmallVectorImpl<MCFixup> &Fixups,
-                                         const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpIdx);
-  int32_t offset = MO.getImm();
-  return (uint32_t)offset;
 }
 
 /// getCondBranchTargetOpValue - Return the encoded value for a conditional

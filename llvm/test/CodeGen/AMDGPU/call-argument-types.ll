@@ -452,15 +452,15 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
 ; HSA: buffer_load_dword [[RELOAD_VAL0:v[0-9]+]], off, s[0:3], s33 offset:8
 ; HSA: buffer_load_dword [[RELOAD_VAL1:v[0-9]+]], off, s[0:3], s33 offset:12
 
-; HSA: buffer_store_dword [[RELOAD_VAL1]], off, s[0:3], [[SP]] offset:8
 ; HSA: buffer_store_dword [[RELOAD_VAL0]], off, s[0:3], [[SP]] offset:4
+; HSA: buffer_store_dword [[RELOAD_VAL1]], off, s[0:3], [[SP]] offset:8
 
 
 ; MESA: buffer_load_dword [[RELOAD_VAL0:v[0-9]+]], off, s[36:39], s33 offset:8
 ; MESA: buffer_load_dword [[RELOAD_VAL1:v[0-9]+]], off, s[36:39], s33 offset:12
 
-; MESA: buffer_store_dword [[RELOAD_VAL1]], off, s[36:39], [[SP]] offset:8
 ; MESA: buffer_store_dword [[RELOAD_VAL0]], off, s[36:39], [[SP]] offset:4
+; MESA: buffer_store_dword [[RELOAD_VAL1]], off, s[36:39], [[SP]] offset:8
 
 ; GCN-NEXT: s_swappc_b64
 ; GCN-NEXT: s_sub_u32 [[SP]], [[SP]], 0x200
@@ -487,8 +487,8 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
 ; GCN-DAG: buffer_load_dword [[RELOAD_VAL1:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, [[FP_REG]] offset:12
 
 ; GCN-DAG: s_add_u32 [[SP]], [[SP]], 0x200
-; GCN: buffer_store_dword [[RELOAD_VAL1]], off, s{{\[[0-9]+:[0-9]+\]}}, [[SP]] offset:8
 ; GCN: buffer_store_dword [[RELOAD_VAL0]], off, s{{\[[0-9]+:[0-9]+\]}}, [[SP]] offset:4
+; GCN: buffer_store_dword [[RELOAD_VAL1]], off, s{{\[[0-9]+:[0-9]+\]}}, [[SP]] offset:8
 ; GCN-NEXT: s_swappc_b64
 ; GCN-DAG: buffer_load_ubyte [[LOAD_OUT_VAL0:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, [[FP_REG]] offset:16
 ; GCN-DAG: buffer_load_dword [[LOAD_OUT_VAL1:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, [[FP_REG]] offset:20

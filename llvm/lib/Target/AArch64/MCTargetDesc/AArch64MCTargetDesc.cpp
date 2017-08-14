@@ -69,8 +69,10 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO())
     MAI = new AArch64MCAsmInfoDarwin();
+  else if (TheTriple.isWindowsMSVCEnvironment())
+    MAI = new AArch64MCAsmInfoMicrosoftCOFF();
   else if (TheTriple.isOSBinFormatCOFF())
-    MAI = new AArch64MCAsmInfoCOFF();
+    MAI = new AArch64MCAsmInfoGNUCOFF();
   else {
     assert(TheTriple.isOSBinFormatELF() && "Invalid target");
     MAI = new AArch64MCAsmInfoELF(TheTriple);

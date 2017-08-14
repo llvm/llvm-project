@@ -101,11 +101,20 @@ public:
 
 class ClangdServer;
 
-/// Handles running WorkerRequests of ClangdServer on a separate threads.
-/// Currently runs only one worker thread.
+/// Returns a number of a default async threads to use for ClangdScheduler.
+/// Returned value is always >= 1 (i.e. will not cause requests to be processed
+/// synchronously).
+unsigned getDefaultAsyncThreadsCount();
+
+/// Handles running WorkerRequests of ClangdServer on a number of worker
+/// threads.
 class ClangdScheduler {
 public:
-  ClangdScheduler(bool RunSynchronously);
+  /// If \p AsyncThreadsCount is 0, requests added using addToFront and addToEnd
+  /// will be processed synchronously on the calling thread.
+  // Otherwise, \p AsyncThreadsCount threads will be created to schedule the
+  // requests.
+  ClangdScheduler(unsigned AsyncThreadsCount);
   ~ClangdScheduler();
 
   /// Add a new request to run function \p F with args \p As to the start of the
@@ -146,17 +155,16 @@ public:
 private:
   bool RunSynchronously;
   std::mutex Mutex;
-  /// We run some tasks on a separate threads(parsing, CppFile cleanup).
-  /// This thread looks into RequestQueue to find requests to handle and
-  /// terminates when Done is set to true.
-  std::thread Worker;
-  /// Setting Done to true will make the worker thread terminate.
+  /// We run some tasks on separate threads(parsing, CppFile cleanup).
+  /// These threads looks into RequestQueue to find requests to handle and
+  /// terminate when Done is set to true.
+  std::vector<std::thread> Workers;
+  /// Setting Done to true will make the worker threads terminate.
   bool Done = false;
-  /// A queue of requests.
-  /// FIXME(krasimir): code completion should always have priority over parsing
-  /// for diagnostics.
+  /// A queue of requests. Elements of this vector are async computations (i.e.
+  /// results of calling std::async(std::launch::deferred, ...)).
   std::deque<std::future<void>> RequestQueue;
-  /// Condition variable to wake up the worker thread.
+  /// Condition variable to wake up worker threads.
   std::condition_variable RequestCV;
 };
 
@@ -165,22 +173,19 @@ private:
 /// diagnostics for tracked files).
 class ClangdServer {
 public:
-  /// Creates a new ClangdServer. If \p RunSynchronously is false, no worker
-  /// thread will be created and all requests will be completed synchronously on
-  /// the calling thread (this is mostly used for tests). If \p RunSynchronously
-  /// is true, a worker thread will be created to parse files in the background
-  /// and provide diagnostics results via DiagConsumer.onDiagnosticsReady
-  /// callback. File accesses for each instance of parsing will be conducted via
-  /// a vfs::FileSystem provided by \p FSProvider. Results of code
-  /// completion/diagnostics also include a tag, that \p FSProvider returns
-  /// along with the vfs::FileSystem.
-  /// When \p ResourceDir is set, it will be used to search for internal headers
+  /// Creates a new ClangdServer. To server parsing requests ClangdScheduler,
+  /// that spawns \p AsyncThreadsCount worker threads will be created (when \p
+  /// AsyncThreadsCount is 0, requests will be processed on the calling thread).
+  /// instance of parsing will be conducted via a vfs::FileSystem provided by \p
+  /// FSProvider. Results of code completion/diagnostics also include a tag,
+  /// that \p FSProvider returns along with the vfs::FileSystem. When \p
+  /// ResourceDir is set, it will be used to search for internal headers
   /// (overriding defaults and -resource-dir compiler flag, if set). If \p
   /// ResourceDir is None, ClangdServer will attempt to set it to a standard
   /// location, obtained via CompilerInvocation::GetResourcePath.
   ClangdServer(GlobalCompilationDatabase &CDB,
                DiagnosticsConsumer &DiagConsumer,
-               FileSystemProvider &FSProvider, bool RunSynchronously,
+               FileSystemProvider &FSProvider, unsigned AsyncThreadsCount,
                llvm::Optional<StringRef> ResourceDir = llvm::None);
 
   /// Add a \p File to the list of tracked C++ files or update the contents if

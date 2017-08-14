@@ -7,3 +7,6 @@
 // CHECK: error: Expected a {z} mark at this point
   vfmsub213ps zmm8{rn-sae}, zmm8, zmm8
 // CHECK: error: Expected an op-mask register at this point
+  vpcmpltd k5{k0}, zmm7, zmm24
+// CHECK: error: Register k0 can't be used as write mask
+

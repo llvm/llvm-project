@@ -1531,7 +1531,7 @@ define void @merge_zr64_unalign(<2 x i64>* %p) {
 ; CHECK-LABEL: merge_zr64_unalign:
 ; CHECK: // %entry
 ; NOSTRICTALIGN-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
-; STRICTALIGN: strb wzr,
+; STRICTALIGN: strb
 ; STRICTALIGN: strb
 ; STRICTALIGN: strb
 ; STRICTALIGN: strb
