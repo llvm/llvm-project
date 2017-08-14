@@ -40,20 +40,15 @@ STATISTIC(NumSimplified, "Number of instructions trivialized (dead bits)");
 /// instruction may need to be cleared of assumptions that can no longer be
 /// guaranteed correct.
 static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
-  // Any value we're trivializing should be an integer value, and moreover,
-  // any conversion between an integer value and a non-integer value should
-  // demand all of the bits. This will cause us to stop looking down the
-  // use/def chain, so we should only see integer-typed instructions here.
-  auto isExternallyVisible = [](Instruction *I, DemandedBits &DB) {
-    assert(I->getType()->isIntegerTy() && "Trivializing a non-integer value?");
-    return DB.getDemandedBits(I).isAllOnesValue();
-  };
+  assert(I->getType()->isIntegerTy() && "Trivializing a non-integer value?");
 
   // Initialize the worklist with eligible direct users.
   SmallVector<Instruction *, 16> WorkList;
   for (User *JU : I->users()) {
+    // If all bits of a user are demanded, then we know that nothing below that
+    // in the def-use chain needs to be changed.
     auto *J = dyn_cast<Instruction>(JU);
-    if (J && !isExternallyVisible(J, DB))
+    if (J && !DB.getDemandedBits(J).isAllOnesValue())
       WorkList.push_back(J);
   }
 
@@ -72,8 +67,10 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
     Visited.insert(J);
 
     for (User *KU : J->users()) {
+      // If all bits of a user are demanded, then we know that nothing below
+      // that in the def-use chain needs to be changed.
       auto *K = dyn_cast<Instruction>(KU);
-      if (K && !Visited.count(K) && !isExternallyVisible(K, DB))
+      if (K && !Visited.count(K) && !DB.getDemandedBits(K).isAllOnesValue())
         WorkList.push_back(K);
     }
   }

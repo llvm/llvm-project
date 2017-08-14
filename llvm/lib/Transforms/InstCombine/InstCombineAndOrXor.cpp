@@ -12,11 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Transforms/Utils/CmpInstAnalysis.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 using namespace PatternMatch;
@@ -292,6 +292,18 @@ static unsigned conjugateICmpMask(unsigned Mask) {
   return NewMask;
 }
 
+// Adapts the external decomposeBitTestICmp for local use.
+static bool decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate &Pred,
+                                 Value *&X, Value *&Y, Value *&Z) {
+  APInt Mask;
+  if (!llvm::decomposeBitTestICmp(LHS, RHS, Pred, X, Mask))
+    return false;
+
+  Y = ConstantInt::get(X->getType(), Mask);
+  Z = ConstantInt::get(X->getType(), 0);
+  return true;
+}
+
 /// Handle (icmp(A & B) ==/!= C) &/| (icmp(A & D) ==/!= E).
 /// Return the set of pattern classes (from MaskedICmpType) that both LHS and
 /// RHS satisfy.
@@ -316,7 +328,7 @@ static unsigned getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C,
   Value *L2 = LHS->getOperand(1);
   Value *L11, *L12, *L21, *L22;
   // Check whether the icmp can be decomposed into a bit test.
-  if (decomposeBitTestICmp(LHS, PredL, L11, L12, L2)) {
+  if (decomposeBitTestICmp(L1, L2, PredL, L11, L12, L2)) {
     L21 = L22 = L1 = nullptr;
   } else {
     // Look for ANDs in the LHS icmp.
@@ -347,7 +359,7 @@ static unsigned getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C,
   Value *R2 = RHS->getOperand(1);
   Value *R11, *R12;
   bool Ok = false;
-  if (decomposeBitTestICmp(RHS, PredR, R11, R12, R2)) {
+  if (decomposeBitTestICmp(R1, R2, PredR, R11, R12, R2)) {
     if (R11 == L11 || R11 == L12 || R11 == L21 || R11 == L22) {
       A = R11;
       D = R12;

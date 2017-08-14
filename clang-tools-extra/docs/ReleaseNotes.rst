@@ -70,6 +70,16 @@ Improvements to clang-tidy
       ``AllowConditionalIntegerCasts`` -> ``AllowIntegerConditions``,
       ``AllowConditionalPointerCasts`` -> ``AllowPointerConditions``.
 
+- New `android-cloexec-dup
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-dup.html>`_ check
+
+  Detects usage of ``dup()``.
+
+- New `android-cloexec-inotify-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-inotify-init.html>`_ check
+
+  Detects usage of ``inotify_init()``.
+
 - New `android-cloexec-memfd_create
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-memfd_create.html>`_ check
 
@@ -87,6 +97,12 @@ Improvements to clang-tidy
 
   Ensures that all exception will be instances of ``std::exception`` and classes 
   that are derived from it.
+
+- New `android-cloexec-inotify-init1
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-inotify-init1.html>`_ check
+
+  Checks if the required file flag ``IN_CLOEXEC`` is present in the argument of
+  ``inotify_init1()``.
 
 - New `readability-static-accessed-through-instance
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-static-accessed-through-instance.html>`_ check

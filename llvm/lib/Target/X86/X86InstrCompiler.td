@@ -1627,7 +1627,13 @@ def : Pat<(shl GR16:$src1, (i8 1)), (ADD16rr GR16:$src1, GR16:$src1)>;
 def : Pat<(shl GR32:$src1, (i8 1)), (ADD32rr GR32:$src1, GR32:$src1)>;
 def : Pat<(shl GR64:$src1, (i8 1)), (ADD64rr GR64:$src1, GR64:$src1)>;
 
-// Helper imms that check if a mask doesn't change significant shift bits.
+// Helper imms to check if a mask doesn't change significant shift/rotate bits.
+def immShift8 : ImmLeaf<i8, [{
+  return countTrailingOnes<uint64_t>(Imm) >= 3;
+}]>;
+def immShift16 : ImmLeaf<i8, [{
+  return countTrailingOnes<uint64_t>(Imm) >= 4;
+}]>;
 def immShift32 : ImmLeaf<i8, [{
   return countTrailingOnes<uint64_t>(Imm) >= 5;
 }]>;
@@ -1661,8 +1667,38 @@ multiclass MaskedShiftAmountPats<SDNode frag, string name> {
 defm : MaskedShiftAmountPats<shl, "SHL">;
 defm : MaskedShiftAmountPats<srl, "SHR">;
 defm : MaskedShiftAmountPats<sra, "SAR">;
-defm : MaskedShiftAmountPats<rotl, "ROL">;
-defm : MaskedShiftAmountPats<rotr, "ROR">;
+
+// ROL/ROR instructions allow a stronger mask optimization than shift for 8- and
+// 16-bit. We can remove a mask of any (bitwidth - 1) on the rotation amount
+// because over-rotating produces the same result. This is noted in the Intel
+// docs with: "tempCOUNT <- (COUNT & COUNTMASK) MOD SIZE". Masking the rotation
+// amount could affect EFLAGS results, but that does not matter because we are
+// not tracking flags for these nodes.
+multiclass MaskedRotateAmountPats<SDNode frag, string name> {
+  // (rot x (and y, BitWidth - 1)) ==> (rot x, y)
+  def : Pat<(frag GR8:$src1, (and CL, immShift8)),
+  (!cast<Instruction>(name # "8rCL") GR8:$src1)>;
+  def : Pat<(frag GR16:$src1, (and CL, immShift16)),
+  (!cast<Instruction>(name # "16rCL") GR16:$src1)>;
+  def : Pat<(frag GR32:$src1, (and CL, immShift32)),
+  (!cast<Instruction>(name # "32rCL") GR32:$src1)>;
+  def : Pat<(store (frag (loadi8 addr:$dst), (and CL, immShift8)), addr:$dst),
+  (!cast<Instruction>(name # "8mCL") addr:$dst)>;
+  def : Pat<(store (frag (loadi16 addr:$dst), (and CL, immShift16)), addr:$dst),
+  (!cast<Instruction>(name # "16mCL") addr:$dst)>;
+  def : Pat<(store (frag (loadi32 addr:$dst), (and CL, immShift32)), addr:$dst),
+  (!cast<Instruction>(name # "32mCL") addr:$dst)>;
+
+  // (rot x (and y, 63)) ==> (rot x, y)
+  def : Pat<(frag GR64:$src1, (and CL, immShift64)),
+  (!cast<Instruction>(name # "64rCL") GR64:$src1)>;
+  def : Pat<(store (frag (loadi64 addr:$dst), (and CL, immShift64)), addr:$dst),
+  (!cast<Instruction>(name # "64mCL") addr:$dst)>;
+}
+
+
+defm : MaskedRotateAmountPats<rotl, "ROL">;
+defm : MaskedRotateAmountPats<rotr, "ROR">;
 
 // Double shift amount is implicitly masked.
 multiclass MaskedDoubleShiftAmountPats<SDNode frag, string name> {

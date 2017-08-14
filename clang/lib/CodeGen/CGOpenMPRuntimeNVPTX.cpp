@@ -150,20 +150,18 @@ enum NamedBarrier : unsigned {
 
 /// Get the GPU warp size.
 static llvm::Value *getNVPTXWarpSize(CodeGenFunction &CGF) {
-  CGBuilderTy &Bld = CGF.Builder;
-  return Bld.CreateCall(
+  return CGF.EmitRuntimeCall(
       llvm::Intrinsic::getDeclaration(
           &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_warpsize),
-      llvm::None, "nvptx_warp_size");
+      "nvptx_warp_size");
 }
 
 /// Get the id of the current thread on the GPU.
 static llvm::Value *getNVPTXThreadID(CodeGenFunction &CGF) {
-  CGBuilderTy &Bld = CGF.Builder;
-  return Bld.CreateCall(
+  return CGF.EmitRuntimeCall(
       llvm::Intrinsic::getDeclaration(
           &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_tid_x),
-      llvm::None, "nvptx_tid");
+      "nvptx_tid");
 }
 
 /// Get the id of the warp in the block.
@@ -185,17 +183,15 @@ static llvm::Value *getNVPTXLaneID(CodeGenFunction &CGF) {
 
 /// Get the maximum number of threads in a block of the GPU.
 static llvm::Value *getNVPTXNumThreads(CodeGenFunction &CGF) {
-  CGBuilderTy &Bld = CGF.Builder;
-  return Bld.CreateCall(
+  return CGF.EmitRuntimeCall(
       llvm::Intrinsic::getDeclaration(
           &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_ntid_x),
-      llvm::None, "nvptx_num_threads");
+      "nvptx_num_threads");
 }
 
 /// Get barrier to synchronize all threads in a block.
 static void getNVPTXCTABarrier(CodeGenFunction &CGF) {
-  CGBuilderTy &Bld = CGF.Builder;
-  Bld.CreateCall(llvm::Intrinsic::getDeclaration(
+  CGF.EmitRuntimeCall(llvm::Intrinsic::getDeclaration(
       &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_barrier0));
 }
 
@@ -205,9 +201,9 @@ static void getNVPTXBarrier(CodeGenFunction &CGF, int ID,
                             llvm::Value *NumThreads) {
   CGBuilderTy &Bld = CGF.Builder;
   llvm::Value *Args[] = {Bld.getInt32(ID), NumThreads};
-  Bld.CreateCall(llvm::Intrinsic::getDeclaration(&CGF.CGM.getModule(),
-                                                 llvm::Intrinsic::nvvm_barrier),
-                 Args);
+  CGF.EmitRuntimeCall(llvm::Intrinsic::getDeclaration(
+                          &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_barrier),
+                      Args);
 }
 
 /// Synchronize all GPU threads in a block.
@@ -345,7 +341,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericEntryHeader(CodeGenFunction &CGF,
   Bld.CreateCondBr(IsWorker, WorkerBB, MasterCheckBB);
 
   CGF.EmitBlock(WorkerBB);
-  emitOutlinedFunctionCall(CGF, WST.WorkerFn);
+  emitCall(CGF, WST.WorkerFn);
   CGF.EmitBranch(EST.ExitBB);
 
   CGF.EmitBlock(MasterCheckBB);
@@ -555,7 +551,7 @@ void CGOpenMPRuntimeNVPTX::emitWorkerLoop(CodeGenFunction &CGF,
         CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty, /*Name=*/".zero.addr");
     CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C=*/0));
     llvm::Value *FnArgs[] = {ZeroAddr.getPointer(), ZeroAddr.getPointer()};
-    emitOutlinedFunctionCall(CGF, Fn, FnArgs);
+    emitCall(CGF, Fn, FnArgs);
 
     // Go to end of parallel region.
     CGF.EmitBranch(TerminateBB);
@@ -883,7 +879,7 @@ void CGOpenMPRuntimeNVPTX::emitTeamsCall(CodeGenFunction &CGF,
   OutlinedFnArgs.push_back(ZeroAddr.getPointer());
   OutlinedFnArgs.push_back(ZeroAddr.getPointer());
   OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
-  emitOutlinedFunctionCall(CGF, OutlinedFn, OutlinedFnArgs);
+  emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
 }
 
 void CGOpenMPRuntimeNVPTX::emitParallelCall(
@@ -932,10 +928,10 @@ void CGOpenMPRuntimeNVPTX::emitGenericParallelCall(
   auto *ThreadID = getThreadID(CGF, Loc);
   llvm::Value *Args[] = {RTLoc, ThreadID};
 
-  auto &&SeqGen = [this, Fn, &CapturedVars, &Args](CodeGenFunction &CGF,
-                                                   PrePostActionTy &) {
-    auto &&CodeGen = [this, Fn, &CapturedVars](CodeGenFunction &CGF,
-                                               PrePostActionTy &Action) {
+  auto &&SeqGen = [this, Fn, &CapturedVars, &Args, Loc](CodeGenFunction &CGF,
+                                                        PrePostActionTy &) {
+    auto &&CodeGen = [this, Fn, &CapturedVars, Loc](CodeGenFunction &CGF,
+                                                    PrePostActionTy &Action) {
       Action.Enter(CGF);
 
       llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
@@ -944,7 +940,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericParallelCall(
       OutlinedFnArgs.push_back(
           llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo()));
       OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
-      emitOutlinedFunctionCall(CGF, Fn, OutlinedFnArgs);
+      emitOutlinedFunctionCall(CGF, Loc, Fn, OutlinedFnArgs);
     };
 
     RegionCodeGenTy RCG(CodeGen);
@@ -980,7 +976,7 @@ void CGOpenMPRuntimeNVPTX::emitSpmdParallelCall(
   OutlinedFnArgs.push_back(
       llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo()));
   OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
-  emitOutlinedFunctionCall(CGF, OutlinedFn, OutlinedFnArgs);
+  emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
 }
 
 /// This function creates calls to one of two shuffle functions to copy
@@ -2296,7 +2292,7 @@ CGOpenMPRuntimeNVPTX::getParameterAddress(CodeGenFunction &CGF,
 }
 
 void CGOpenMPRuntimeNVPTX::emitOutlinedFunctionCall(
-    CodeGenFunction &CGF, llvm::Value *OutlinedFn,
+    CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *OutlinedFn,
     ArrayRef<llvm::Value *> Args) const {
   SmallVector<llvm::Value *, 4> TargetArgs;
   auto *FnType =
@@ -2314,5 +2310,5 @@ void CGOpenMPRuntimeNVPTX::emitOutlinedFunctionCall(
     TargetArgs.emplace_back(
         CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(TargetArg, TargetType));
   }
-  CGOpenMPRuntime::emitOutlinedFunctionCall(CGF, OutlinedFn, TargetArgs);
+  CGOpenMPRuntime::emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, TargetArgs);
 }

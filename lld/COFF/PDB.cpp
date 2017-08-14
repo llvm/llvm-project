@@ -483,7 +483,6 @@ static bool symbolGoesInModuleStream(const CVSymbol &Sym) {
 static bool symbolGoesInGlobalsStream(const CVSymbol &Sym) {
   switch (Sym.kind()) {
   case SymbolKind::S_CONSTANT:
-  case SymbolKind::S_UDT:
   case SymbolKind::S_GDATA32:
   // S_LDATA32 goes in both the module stream and the globals stream.
   case SymbolKind::S_LDATA32:
@@ -495,6 +494,13 @@ static bool symbolGoesInGlobalsStream(const CVSymbol &Sym) {
   case SymbolKind::S_PROCREF:
   case SymbolKind::S_LPROCREF:
     return true;
+  // FIXME: For now, we drop all S_UDT symbols (i.e. they don't go in the
+  // globals stream or the modules stream).  These have special handling which
+  // needs more investigation before we can get right, but by putting them all
+  // into the globals stream WinDbg fails to display local variables of class
+  // types saying that it cannot find the type Foo *.  So as a stopgap just to
+  // keep things working, we drop them.
+  case SymbolKind::S_UDT:
   default:
     return false;
   }

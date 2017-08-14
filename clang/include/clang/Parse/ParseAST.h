@@ -35,7 +35,7 @@ namespace clang {
   /// results.
   /// \param SkipFunctionBodies Whether to skip parsing of function bodies.
   /// This option can be used, for example, to speed up searches for
-  /// delcarations/definitions when indexing.
+  /// declarations/definitions when indexing.
   void ParseAST(Preprocessor &pp, ASTConsumer *C,
                 ASTContext &Ctx, bool PrintStats = false,
                 TranslationUnitKind TUKind = TU_Complete,
