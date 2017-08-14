@@ -85,6 +85,14 @@ class MachineIRBuilder {
     addUsesFromArgs(MIB, std::forward<UseArgsTy>(Args)...);
   }
 public:
+  /// Some constructors for easy use.
+  MachineIRBuilder() = default;
+  MachineIRBuilder(MachineFunction &MF) { setMF(MF); }
+  MachineIRBuilder(MachineInstr &MI)
+      : MachineIRBuilder(*MI.getParent()->getParent()) {
+    setInstr(MI);
+  }
+
   /// Getter for the function we currently build.
   MachineFunction &getMF() {
     assert(MF && "MachineFunction is not set");
