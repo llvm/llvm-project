@@ -12,23 +12,23 @@
 define void @t1(i32 %argc, i8** %argv) nounwind  {
 entry:
 ; SSE2-Darwin-LABEL: t1:
-; SSE2-Darwin: movsd _.str+16, %xmm0
-; SSE2-Darwin: movsd %xmm0, 16(%esp)
 ; SSE2-Darwin: movaps _.str, %xmm0
 ; SSE2-Darwin: movaps %xmm0
+; SSE2-Darwin: movsd _.str+16, %xmm0
+; SSE2-Darwin: movsd %xmm0, 16(%esp)
 ; SSE2-Darwin: movb $0, 24(%esp)
 
 ; SSE2-Mingw32-LABEL: t1:
-; SSE2-Mingw32: movsd _.str+16, %xmm0
-; SSE2-Mingw32: movsd %xmm0, 16(%esp)
 ; SSE2-Mingw32: movaps _.str, %xmm0
 ; SSE2-Mingw32: movups %xmm0
+; SSE2-Mingw32: movsd _.str+16, %xmm0
+; SSE2-Mingw32: movsd %xmm0, 16(%esp)
 ; SSE2-Mingw32: movb $0, 24(%esp)
 
 ; SSE1-LABEL: t1:
 ; SSE1: movaps _.str, %xmm0
-; SSE1: movaps %xmm0
 ; SSE1: movb $0, 24(%esp)
+; SSE1: movaps %xmm0
 ; SSE1: movl $0, 20(%esp)
 ; SSE1: movl $0, 16(%esp)
 

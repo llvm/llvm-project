@@ -3310,7 +3310,13 @@ static const CFGBlock *findBlockForNode(const ExplodedNode *N) {
   return nullptr;
 }
 
-static bool isNoReturnBlock(const CFGBlock *Blk) {
+// Returns true if by simply looking at the block, we can be sure that it
+// results in a sink during analysis. This is useful to know when the analysis
+// was interrupted, and we try to figure out if it would sink eventually.
+// There may be many more reasons why a sink would appear during analysis
+// (eg. checkers may generate sinks arbitrarily), but here we only consider
+// sinks that would be obvious by looking at the CFG.
+static bool isImmediateSinkBlock(const CFGBlock *Blk) {
   if (Blk->hasNoReturnElement())
     return true;
 
@@ -3331,13 +3337,17 @@ static bool isNoReturnBlock(const CFGBlock *Blk) {
   return false;
 }
 
-static bool isDominatedByNoReturnBlocks(const ExplodedNode *N) {
+// Returns true if by looking at the CFG surrounding the node's program
+// point, we can be sure that any analysis starting from this point would
+// eventually end with a sink. We scan the child CFG blocks in a depth-first
+// manner and see if all paths eventually end up in an immediate sink block.
+static bool isInevitablySinking(const ExplodedNode *N) {
   const CFG &Cfg = N->getCFG();
 
   const CFGBlock *StartBlk = findBlockForNode(N);
   if (!StartBlk)
     return false;
-  if (isNoReturnBlock(StartBlk))
+  if (isImmediateSinkBlock(StartBlk))
     return true;
 
   llvm::SmallVector<const CFGBlock *, 32> DFSWorkList;
@@ -3352,12 +3362,14 @@ static bool isDominatedByNoReturnBlocks(const ExplodedNode *N) {
     for (const auto &Succ : Blk->succs()) {
       if (const CFGBlock *SuccBlk = Succ.getReachableBlock()) {
         if (SuccBlk == &Cfg.getExit()) {
-          // We seem to be leaving the current CFG.
-          // We're no longer sure what happens next.
+          // If at least one path reaches the CFG exit, it means that control is
+          // returned to the caller. For now, say that we are not sure what
+          // happens next. If necessary, this can be improved to analyze
+          // the parent StackFrameContext's call site in a similar manner.
           return false;
         }
 
-        if (!isNoReturnBlock(SuccBlk) && !Visited.count(SuccBlk)) {
+        if (!isImmediateSinkBlock(SuccBlk) && !Visited.count(SuccBlk)) {
           // If the block has reachable child blocks that aren't no-return,
           // add them to the worklist.
           DFSWorkList.push_back(SuccBlk);
@@ -3420,13 +3432,9 @@ FindReportInEquivalenceClass(BugReportEquivClass& EQ,
 
     // See if we are in a no-return CFG block. If so, treat this similarly
     // to being post-dominated by a sink. This works better when the analysis
-    // is incomplete and we have never reached a no-return function
-    // we're post-dominated by.
-    // This is not quite enough to handle the incomplete analysis case.
-    // We may be post-dominated in subsequent blocks, or even
-    // inter-procedurally. However, it is not clear if more complicated
-    // cases are generally worth suppressing.
-    if (isDominatedByNoReturnBlocks(errorNode))
+    // is incomplete and we have never reached the no-return function call(s)
+    // that we'd inevitably bump into on this path.
+    if (isInevitablySinking(errorNode))
       continue;
 
     // At this point we know that 'N' is not a sink and it has at least one

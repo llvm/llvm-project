@@ -382,6 +382,8 @@ public:
     bool UpperBound;
     /// Allow peeling off loop iterations for loops with low dynamic tripcount.
     bool AllowPeeling;
+    /// Allow unrolling of all the iterations of the runtime loop remainder.
+    bool UnrollRemainder;
   };
 
   /// \brief Get target-customized preferences for the generic loop unrolling

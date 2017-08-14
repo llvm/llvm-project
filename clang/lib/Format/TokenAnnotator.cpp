@@ -1406,11 +1406,13 @@ private:
     if (NextToken->isOneOf(tok::comma, tok::semi))
       return TT_PointerOrReference;
 
-    if (PrevToken->is(tok::r_paren) && PrevToken->MatchingParen &&
-        PrevToken->MatchingParen->Previous &&
-        PrevToken->MatchingParen->Previous->isOneOf(tok::kw_typeof,
-                                                    tok::kw_decltype))
-      return TT_PointerOrReference;
+    if (PrevToken->is(tok::r_paren) && PrevToken->MatchingParen) {
+      FormatToken *TokenBeforeMatchingParen =
+          PrevToken->MatchingParen->getPreviousNonComment();
+      if (TokenBeforeMatchingParen &&
+          TokenBeforeMatchingParen->isOneOf(tok::kw_typeof, tok::kw_decltype))
+        return TT_PointerOrReference;
+    }
 
     if (PrevToken->Tok.isLiteral() ||
         PrevToken->isOneOf(tok::r_paren, tok::r_square, tok::kw_true,
@@ -2214,14 +2216,23 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                     Left.Previous->is(tok::kw_case));
   if (Left.is(tok::l_square) && Right.is(tok::amp))
     return false;
-  if (Right.is(TT_PointerOrReference))
-    return (Left.is(tok::r_paren) && Line.MightBeFunctionDecl) ||
-           (Left.Tok.isLiteral() ||
+  if (Right.is(TT_PointerOrReference)) {
+    if (Left.is(tok::r_paren) && Line.MightBeFunctionDecl) {
+      if (!Left.MatchingParen)
+        return true;
+      FormatToken *TokenBeforeMatchingParen =
+          Left.MatchingParen->getPreviousNonComment();
+      if (!TokenBeforeMatchingParen ||
+          !TokenBeforeMatchingParen->isOneOf(tok::kw_typeof, tok::kw_decltype))
+        return true;
+    }
+    return (Left.Tok.isLiteral() ||
             (!Left.isOneOf(TT_PointerOrReference, tok::l_paren) &&
              (Style.PointerAlignment != FormatStyle::PAS_Left ||
               (Line.IsMultiVariableDeclStmt &&
                (Left.NestingLevel == 0 ||
                 (Left.NestingLevel == 1 && Line.First->is(tok::kw_for)))))));
+  }
   if (Right.is(TT_FunctionTypeLParen) && Left.isNot(tok::l_paren) &&
       (!Left.is(TT_PointerOrReference) ||
        (Style.PointerAlignment != FormatStyle::PAS_Right &&

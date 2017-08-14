@@ -154,7 +154,7 @@ bool DeadCodeElim::eliminateDeadCode(Scop &S, int PreciseSteps) {
 
   Live = Live.coalesce();
 
-  bool Changed = S.restrictDomains(Live.copy());
+  bool Changed = S.restrictDomains(Live);
 
   // FIXME: We can probably avoid the recomputation of all dependences by
   // updating them explicitly.

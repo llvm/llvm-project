@@ -26,12 +26,12 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 // after coverage                   // WHOLE-FILE: [[@LINE]]|      |// after
                                     // FILTER-NOT: [[@LINE-1]]|    |// after
 
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -filename-equivalence %s | FileCheck -check-prefixes=TEXT,WHOLE-FILE %s
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -filename-equivalence -name=main %s | FileCheck -check-prefixes=TEXT,FILTER %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S %s | FileCheck -check-prefixes=TEXT,WHOLE-FILE %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S -name=main %s | FileCheck -check-prefixes=TEXT,FILTER %s
 
 // Test -output-dir.
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -o %t.dir -instr-profile %t.profdata -filename-equivalence %s
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -output-dir %t.dir -instr-profile %t.profdata -filename-equivalence -name=main %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -o %t.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -output-dir %t.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S -name=main %s
 // RUN: FileCheck -check-prefixes=TEXT,WHOLE-FILE -input-file %t.dir/coverage/tmp/showLineExecutionCounts.cpp.txt %s
 // RUN: FileCheck -check-prefixes=TEXT,FILTER -input-file %t.dir/functions.txt %s
 //
@@ -40,8 +40,8 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 // RUN: cat %t.export.json | %python -c "import json, sys; json.loads(sys.stdin.read())"
 //
 // Test html output.
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.html.dir -instr-profile %t.profdata -filename-equivalence %s
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.html.dir -instr-profile %t.profdata -filename-equivalence -name=main %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.html.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.html.dir -instr-profile %t.profdata -path-equivalence=/tmp,%S -name=main %s
 // RUN: FileCheck -check-prefixes=HTML,HTML-WHOLE-FILE -input-file %t.html.dir/coverage/tmp/showLineExecutionCounts.cpp.html %s
 // RUN: FileCheck -check-prefixes=HTML,HTML-FILTER -input-file %t.html.dir/functions.html %s
 //
