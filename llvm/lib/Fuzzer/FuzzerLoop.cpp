@@ -388,11 +388,12 @@ void Fuzzer::ShuffleAndMinimize(UnitVector *InitialCorpus) {
   uint8_t dummy;
   ExecuteCallback(&dummy, 0);
 
-  for (const auto &U : *InitialCorpus) {
+  for (auto &U : *InitialCorpus) {
     RunOne(U.data(), U.size());
     CheckExitOnSrcPosOrItem();
     TryDetectingAMemoryLeak(U.data(), U.size(),
                             /*DuringInitialCorpusExecution*/ true);
+    U.clear();
   }
   PrintStats("INITED");
   if (Corpus.empty()) {

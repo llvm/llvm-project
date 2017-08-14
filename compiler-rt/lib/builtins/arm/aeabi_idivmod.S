@@ -20,16 +20,18 @@
 #endif
 
         .syntax unified
+        .text
+        DEFINE_CODE_STATE
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_idivmod)
-#if __ARM_ARCH_ISA_THUMB == 1
+#if defined(USE_THUMB_1)
         push    {r0, r1, lr}
         bl      SYMBOL_NAME(__divsi3)
         pop     {r1, r2, r3} // now r0 = quot, r1 = num, r2 = denom
         muls    r2, r0, r2   // r2 = quot * denom
         subs    r1, r1, r2
         JMP     (r3)
-#else
+#else  // defined(USE_THUMB_1)
         push    { lr }
         sub     sp, sp, #4
         mov     r2, sp
@@ -42,7 +44,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_idivmod)
         ldr     r1, [sp]
         add     sp, sp, #4
         pop     { pc }
-#endif // __ARM_ARCH_ISA_THUMB == 1
+#endif //  defined(USE_THUMB_1)
 END_COMPILERRT_FUNCTION(__aeabi_idivmod)
 
 NO_EXEC_STACK_DIRECTIVE

@@ -7128,7 +7128,83 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   if (!ShouldDiagnoseAvailabilityInContext(S, K, DeclVersion, Ctx))
     return;
 
+  // The declaration can have multiple availability attributes, we are looking
+  // at one of them.
+  const AvailabilityAttr *A = getAttrForPlatform(S.Context, OffendingDecl);
+  if (A && A->isInherited()) {
+    for (const Decl *Redecl = OffendingDecl->getMostRecentDecl(); Redecl;
+         Redecl = Redecl->getPreviousDecl()) {
+      const AvailabilityAttr *AForRedecl =
+          getAttrForPlatform(S.Context, Redecl);
+      if (AForRedecl && !AForRedecl->isInherited()) {
+        // If D is a declaration with inherited attributes, the note should
+        // point to the declaration with actual attributes.
+        NoteLocation = Redecl->getLocation();
+        break;
+      }
+    }
+  }
+
   switch (K) {
+  case AR_NotYetIntroduced: {
+    // We would like to emit the diagnostic even if -Wunguarded-availability is
+    // not specified for deployment targets >= to iOS 11 or equivalent or
+    // for declarations that were introduced in iOS 11 (macOS 10.13, ...) or
+    // later.
+    const AvailabilityAttr *AA =
+        getAttrForPlatform(S.getASTContext(), OffendingDecl);
+    VersionTuple Introduced = AA->getIntroduced();
+
+    bool UseNewWarning = shouldDiagnoseAvailabilityByDefault(
+        S.Context, S.Context.getTargetInfo().getPlatformMinVersion(),
+        Introduced);
+    unsigned Warning = UseNewWarning ? diag::warn_unguarded_availability_new
+                                     : diag::warn_unguarded_availability;
+
+    S.Diag(Loc, Warning)
+        << OffendingDecl
+        << AvailabilityAttr::getPrettyPlatformName(
+               S.getASTContext().getTargetInfo().getPlatformName())
+        << Introduced.getAsString();
+
+    S.Diag(OffendingDecl->getLocation(), diag::note_availability_specified_here)
+        << OffendingDecl << /* partial */ 3;
+
+    if (const auto *Enclosing = findEnclosingDeclToAnnotate(Ctx)) {
+      if (auto *TD = dyn_cast<TagDecl>(Enclosing))
+        if (TD->getDeclName().isEmpty()) {
+          S.Diag(TD->getLocation(),
+                 diag::note_decl_unguarded_availability_silence)
+              << /*Anonymous*/ 1 << TD->getKindName();
+          return;
+        }
+      auto FixitNoteDiag =
+          S.Diag(Enclosing->getLocation(),
+                 diag::note_decl_unguarded_availability_silence)
+          << /*Named*/ 0 << Enclosing;
+      // Don't offer a fixit for declarations with availability attributes.
+      if (Enclosing->hasAttr<AvailabilityAttr>())
+        return;
+      if (!S.getPreprocessor().isMacroDefined("API_AVAILABLE"))
+        return;
+      Optional<AttributeInsertion> Insertion = createAttributeInsertion(
+          Enclosing, S.getSourceManager(), S.getLangOpts());
+      if (!Insertion)
+        return;
+      std::string PlatformName =
+          AvailabilityAttr::getPlatformNameSourceSpelling(
+              S.getASTContext().getTargetInfo().getPlatformName())
+              .lower();
+      std::string Introduced =
+          OffendingDecl->getVersionIntroduced().getAsString();
+      FixitNoteDiag << FixItHint::CreateInsertion(
+          Insertion->Loc,
+          (llvm::Twine(Insertion->Prefix) + "API_AVAILABLE(" + PlatformName +
+           "(" + Introduced + "))" + Insertion->Suffix)
+              .str());
+    }
+    return;
+  }
   case AR_Deprecated:
     diag = !ObjCPropertyAccess ? diag::warn_deprecated
                                : diag::warn_property_method_deprecated;
@@ -7193,28 +7269,6 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     }
     break;
 
-  case AR_NotYetIntroduced: {
-    // We would like to emit the diagnostic even if -Wunguarded-availability is
-    // not specified for deployment targets >= to iOS 11 or equivalent or
-    // for declarations that were introduced in iOS 11 (macOS 10.13, ...) or
-    // later.
-    const AvailabilityAttr *AA =
-        getAttrForPlatform(S.getASTContext(), OffendingDecl);
-    VersionTuple Introduced = AA->getIntroduced();
-    bool NewWarning = shouldDiagnoseAvailabilityByDefault(
-        S.Context, S.Context.getTargetInfo().getPlatformMinVersion(),
-        Introduced);
-    diag = NewWarning ? diag::warn_partial_availability_new
-                      : diag::warn_partial_availability;
-    diag_message = NewWarning ? diag::warn_partial_message_new
-                              : diag::warn_partial_message;
-    diag_fwdclass_message = NewWarning ? diag::warn_partial_fwdclass_message_new
-                                       : diag::warn_partial_fwdclass_message;
-    property_note_select = /* partial */ 2;
-    available_here_select_kind = /* partial */ 3;
-    break;
-  }
-
   case AR_Available:
     llvm_unreachable("Warning for availability of available declaration?");
   }
@@ -7253,59 +7307,8 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     S.Diag(UnknownObjCClass->getLocation(), diag::note_forward_class);
   }
 
-  // The declaration can have multiple availability attributes, we are looking
-  // at one of them.
-  const AvailabilityAttr *A = getAttrForPlatform(S.Context, OffendingDecl);
-  if (A && A->isInherited()) {
-    for (const Decl *Redecl = OffendingDecl->getMostRecentDecl(); Redecl;
-         Redecl = Redecl->getPreviousDecl()) {
-      const AvailabilityAttr *AForRedecl = getAttrForPlatform(S.Context,
-                                                              Redecl);
-      if (AForRedecl && !AForRedecl->isInherited()) {
-        // If D is a declaration with inherited attributes, the note should
-        // point to the declaration with actual attributes.
-        S.Diag(Redecl->getLocation(), diag_available_here) << OffendingDecl
-            << available_here_select_kind;
-        break;
-      }
-    }
-  }
-  else
-    S.Diag(NoteLocation, diag_available_here)
-        << OffendingDecl << available_here_select_kind;
-
-  if (K == AR_NotYetIntroduced)
-    if (const auto *Enclosing = findEnclosingDeclToAnnotate(Ctx)) {
-      if (auto *TD = dyn_cast<TagDecl>(Enclosing))
-        if (TD->getDeclName().isEmpty()) {
-          S.Diag(TD->getLocation(), diag::note_partial_availability_silence)
-              << /*Anonymous*/1 << TD->getKindName();
-          return;
-        }
-      auto FixitNoteDiag = S.Diag(Enclosing->getLocation(),
-                                  diag::note_partial_availability_silence)
-                           << /*Named*/ 0 << Enclosing;
-      // Don't offer a fixit for declarations with availability attributes.
-      if (Enclosing->hasAttr<AvailabilityAttr>())
-        return;
-      if (!S.getPreprocessor().isMacroDefined("API_AVAILABLE"))
-        return;
-      Optional<AttributeInsertion> Insertion = createAttributeInsertion(
-          Enclosing, S.getSourceManager(), S.getLangOpts());
-      if (!Insertion)
-        return;
-      std::string PlatformName =
-          AvailabilityAttr::getPlatformNameSourceSpelling(
-              S.getASTContext().getTargetInfo().getPlatformName())
-              .lower();
-      std::string Introduced =
-          OffendingDecl->getVersionIntroduced().getAsString();
-      FixitNoteDiag << FixItHint::CreateInsertion(
-          Insertion->Loc,
-          (llvm::Twine(Insertion->Prefix) + "API_AVAILABLE(" + PlatformName +
-           "(" + Introduced + "))" + Insertion->Suffix)
-              .str());
-    }
+  S.Diag(NoteLocation, diag_available_here)
+    << OffendingDecl << available_here_select_kind;
 }
 
 static void handleDelayedAvailabilityCheck(Sema &S, DelayedDiagnostic &DD,

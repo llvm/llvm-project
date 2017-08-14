@@ -30,7 +30,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmpeq)
         push {r0-r3, lr}
         bl __aeabi_cdcmpeq_check_nan
         cmp r0, #1
-#if __ARM_ARCH_ISA_THUMB == 1
+#if defined(USE_THUMB_1)
         beq 1f
         // NaN has been ruled out, so __aeabi_cdcmple can't trap
         mov r0, sp
@@ -78,7 +78,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmple)
 
         bl __aeabi_dcmplt
         cmp r0, #1
-#if __ARM_ARCH_ISA_THUMB == 1
+#if defined(USE_THUMB_1)
         bne 1f
         // Z = 0, C = 0
         movs r0, #1

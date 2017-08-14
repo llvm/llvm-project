@@ -426,6 +426,11 @@ public:
     CALLSITE_DELEGATE_GETTER(isNoBuiltin());
   }
 
+  /// Return true if the call requires strict floating point semantics.
+  bool isStrictFP() const {
+    CALLSITE_DELEGATE_GETTER(isStrictFP());
+  }
+
   /// Return true if the call should not be inlined.
   bool isNoInline() const {
     CALLSITE_DELEGATE_GETTER(isNoInline());

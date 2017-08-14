@@ -160,6 +160,64 @@ define <2 x i8> @test11vec(<2 x i8> %X) {
   ret <2 x i8> %sel
 }
 
+; TODO: we should be able to simplify this
+define i32 @test12(i32 %X) {
+; CHECK-LABEL: @test12(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[AND]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ult i32 %X, 4
+  %and = and i32 %X, 3
+  %cond = select i1 %cmp, i32 %X, i32 %and
+  ret i32 %cond
+}
+
+; Same as above, but the compare isn't canonical
+; TODO: we should be able to simplify this
+define i32 @test12noncanon(i32 %X) {
+; CHECK-LABEL: @test12noncanon(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[AND]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ule i32 %X, 3
+  %and = and i32 %X, 3
+  %cond = select i1 %cmp, i32 %X, i32 %and
+  ret i32 %cond
+}
+
+; TODO: we should be able to simplify this
+define i32 @test13(i32 %X) {
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[AND]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ugt i32 %X, 3
+  %and = and i32 %X, 3
+  %cond = select i1 %cmp, i32 %and, i32 %X
+  ret i32 %cond
+}
+
+; Same as above, but the compare isn't canonical
+; TODO: we should be able to simplify this
+define i32 @test13noncanon(i32 %X) {
+; CHECK-LABEL: @test13noncanon(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[AND]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp uge i32 %X, 4
+  %and = and i32 %X, 3
+  %cond = select i1 %cmp, i32 %and, i32 %X
+  ret i32 %cond
+}
+
 define i32 @select_icmp_and_8_eq_0_or_8(i32 %x) {
 ; CHECK-LABEL: @select_icmp_and_8_eq_0_or_8(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 %x, 8

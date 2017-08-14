@@ -47,6 +47,9 @@
 
 using namespace llvm;
 
+cl::opt<bool> EnableIPRA("enable-ipra", cl::init(false), cl::Hidden,
+                         cl::desc("Enable interprocedural register allocation "
+                                  "to reduce load/store at procedure calls."));
 static cl::opt<bool> DisablePostRASched("disable-post-ra", cl::Hidden,
     cl::desc("Disable Post Regalloc Scheduler"));
 static cl::opt<bool> DisableBranchFold("disable-branch-fold", cl::Hidden,
@@ -361,6 +364,13 @@ TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)
 
   if (StringRef(PrintMachineInstrs.getValue()).equals(""))
     TM.Options.PrintMachineCode = true;
+
+  if (EnableIPRA.getNumOccurrences())
+    TM.Options.EnableIPRA = EnableIPRA;
+  else {
+    // If not explicitly specified, use target default.
+    TM.Options.EnableIPRA = TM.useIPRA();
+  }
 
   if (TM.Options.EnableIPRA)
     setRequiresCodeGenSCCOrder();
@@ -779,9 +789,6 @@ void TargetPassConfig::addMachinePasses() {
   // Print the instruction selected machine code...
   printAndVerify("After Instruction Selection");
 
-  if (TM->Options.EnableIPRA)
-    addPass(createRegUsageInfoPropPass());
-
   // Expand pseudo-instructions emitted by ISel.
   addPass(&ExpandISelPseudosID);
 
@@ -793,6 +800,9 @@ void TargetPassConfig::addMachinePasses() {
     // to one another and simplify frame index references where possible.
     addPass(&LocalStackSlotAllocationID, false);
   }
+
+  if (TM->Options.EnableIPRA)
+    addPass(createRegUsageInfoPropPass());
 
   // Run pre-ra passes.
   addPreRegAlloc();

@@ -2896,25 +2896,11 @@ def warn_unguarded_availability :
 def warn_unguarded_availability_new :
   Warning<warn_unguarded_availability.Text>,
   InGroup<UnguardedAvailabilityNew>;
-def warn_partial_availability : Warning<"%0 is only available conditionally">,
-    InGroup<UnguardedAvailability>, DefaultIgnore;
-def warn_partial_availability_new : Warning<warn_partial_availability.Text>,
-  InGroup<UnguardedAvailabilityNew>;
-def note_partial_availability_silence : Note<
-  "annotate %select{%1|anonymous %1}0 with an availability attribute to silence">;
+def note_decl_unguarded_availability_silence : Note<
+  "annotate %select{%1|anonymous %1}0 with an availability attribute to silence this warning">;
 def note_unguarded_available_silence : Note<
   "enclose %0 in %select{an @available|a __builtin_available}1 check to silence"
   " this warning">;
-def warn_partial_message : Warning<"%0 is partial: %1">,
-    InGroup<UnguardedAvailability>, DefaultIgnore;
-def warn_partial_message_new : Warning<warn_partial_message.Text>,
-  InGroup<UnguardedAvailabilityNew>;
-def warn_partial_fwdclass_message : Warning<
-    "%0 may be partial because the receiver type is unknown">,
-    InGroup<UnguardedAvailability>, DefaultIgnore;
-def warn_partial_fwdclass_message_new :
-  Warning<warn_partial_fwdclass_message.Text>,
-  InGroup<UnguardedAvailabilityNew>;
 def warn_at_available_unchecked_use : Warning<
   "%select{@available|__builtin_available}0 does not guard availability here; "
   "use if (%select{@available|__builtin_available}0) instead">,
