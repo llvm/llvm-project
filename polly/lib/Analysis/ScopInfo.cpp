@@ -1222,30 +1222,20 @@ bool MemoryAccess::isLatestPartialAccess() const {
 //===----------------------------------------------------------------------===//
 
 isl::map ScopStmt::getSchedule() const {
-  isl_set *Domain = getDomain().release();
-  if (isl_set_is_empty(Domain)) {
-    isl_set_free(Domain);
-    return isl::manage(isl_map_from_aff(isl_aff_zero_on_domain(
-        isl_local_space_from_space(getDomainSpace().release()))));
-  }
-  auto *Schedule = getParent()->getSchedule().release();
-  if (!Schedule) {
-    isl_set_free(Domain);
+  isl::set Domain = getDomain();
+  if (Domain.is_empty())
+    return isl::map::from_aff(isl::aff(isl::local_space(getDomainSpace())));
+  auto Schedule = getParent()->getSchedule();
+  if (!Schedule)
     return nullptr;
-  }
-  Schedule = isl_union_map_intersect_domain(
-      Schedule, isl_union_set_from_set(isl_set_copy(Domain)));
-  if (isl_union_map_is_empty(Schedule)) {
-    isl_set_free(Domain);
-    isl_union_map_free(Schedule);
-    return isl::manage(isl_map_from_aff(isl_aff_zero_on_domain(
-        isl_local_space_from_space(getDomainSpace().release()))));
-  }
-  auto *M = isl_map_from_union_map(Schedule);
-  M = isl_map_coalesce(M);
-  M = isl_map_gist_domain(M, Domain);
-  M = isl_map_coalesce(M);
-  return isl::manage(M);
+  Schedule = Schedule.intersect_domain(isl::union_set(Domain));
+  if (Schedule.is_empty())
+    return isl::map::from_aff(isl::aff(isl::local_space(getDomainSpace())));
+  isl::map M = M.from_union_map(Schedule);
+  M = M.coalesce();
+  M = M.gist_domain(Domain);
+  M = M.coalesce();
+  return M;
 }
 
 void ScopStmt::restrictDomain(isl::set NewDomain) {
@@ -4766,32 +4756,24 @@ void Scop::setScheduleTree(__isl_take isl_schedule *NewSchedule) {
   Schedule = NewSchedule;
 }
 
-bool Scop::restrictDomains(__isl_take isl_union_set *Domain) {
+bool Scop::restrictDomains(isl::union_set Domain) {
   bool Changed = false;
   for (ScopStmt &Stmt : *this) {
-    isl_union_set *StmtDomain =
-        isl_union_set_from_set(Stmt.getDomain().release());
-    isl_union_set *NewStmtDomain = isl_union_set_intersect(
-        isl_union_set_copy(StmtDomain), isl_union_set_copy(Domain));
+    isl::union_set StmtDomain = isl::union_set(Stmt.getDomain());
+    isl::union_set NewStmtDomain = StmtDomain.intersect(Domain);
 
-    if (isl_union_set_is_subset(StmtDomain, NewStmtDomain)) {
-      isl_union_set_free(StmtDomain);
-      isl_union_set_free(NewStmtDomain);
+    if (StmtDomain.is_subset(NewStmtDomain))
       continue;
-    }
 
     Changed = true;
 
-    isl_union_set_free(StmtDomain);
-    NewStmtDomain = isl_union_set_coalesce(NewStmtDomain);
+    NewStmtDomain = NewStmtDomain.coalesce();
 
-    if (isl_union_set_is_empty(NewStmtDomain)) {
+    if (NewStmtDomain.is_empty())
       Stmt.restrictDomain(isl::set::empty(Stmt.getDomainSpace()));
-      isl_union_set_free(NewStmtDomain);
-    } else
-      Stmt.restrictDomain(isl::manage(isl_set_from_union_set(NewStmtDomain)));
+    else
+      Stmt.restrictDomain(isl::set(NewStmtDomain));
   }
-  isl_union_set_free(Domain);
   return Changed;
 }
 

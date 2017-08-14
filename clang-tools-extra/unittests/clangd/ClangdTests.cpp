@@ -501,6 +501,53 @@ std::string x;
 }
 #endif // LLVM_ON_UNIX
 
+TEST_F(ClangdVFSTest, ForceReparseCompileCommand) {
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*RunSynchronously=*/true);
+  // No need to sync reparses, because RunSynchronously is set
+  // to true.
+
+  auto FooCpp = getVirtualTestFilePath("foo.cpp");
+  const auto SourceContents1 = R"cpp(
+template <class T>
+struct foo { T x; };
+)cpp";
+  const auto SourceContents2 = R"cpp(
+template <class T>
+struct bar { T x; };
+)cpp";
+
+  FS.Files[FooCpp] = "";
+  FS.ExpectedFile = FooCpp;
+
+  // First parse files in C mode and check they produce errors.
+  CDB.ExtraClangFlags = {"-xc"};
+  Server.addDocument(FooCpp, SourceContents1);
+  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
+  Server.addDocument(FooCpp, SourceContents2);
+  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
+
+  // Now switch to C++ mode.
+  CDB.ExtraClangFlags = {"-xc++"};
+  // Currently, addDocument never checks if CompileCommand has changed, so we
+  // expect to see the errors.
+  Server.addDocument(FooCpp, SourceContents1);
+  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
+  Server.addDocument(FooCpp, SourceContents2);
+  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
+  // But forceReparse should reparse the file with proper flags.
+  Server.forceReparse(FooCpp);
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
+  // Subsequent addDocument calls should finish without errors too.
+  Server.addDocument(FooCpp, SourceContents1);
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
+  Server.addDocument(FooCpp, SourceContents2);
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
+}
+
 class ClangdCompletionTest : public ClangdVFSTest {
 protected:
   bool ContainsItem(std::vector<CompletionItem> const &Items, StringRef Name) {

@@ -859,7 +859,11 @@ ToolChain::TranslateOpenMPTargetArgs(const llvm::opt::DerivedArgList &Args,
       NewArgAdded = true;
     }
 
-    return NewArgAdded ? DAL : nullptr;
+    if (NewArgAdded) {
+      return DAL;
+    } else {
+      delete DAL;
+    }
   }
 
   return nullptr;

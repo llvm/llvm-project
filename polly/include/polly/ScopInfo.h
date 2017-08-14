@@ -2935,7 +2935,7 @@ public:
   /// Intersects the domains of all statements in the SCoP.
   ///
   /// @return true if a change was made
-  bool restrictDomains(__isl_take isl_union_set *Domain);
+  bool restrictDomains(isl::union_set Domain);
 
   /// Get the depth of a loop relative to the outermost loop in the Scop.
   ///
