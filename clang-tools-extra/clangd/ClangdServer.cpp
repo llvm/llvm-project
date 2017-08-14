@@ -78,40 +78,52 @@ RealFileSystemProvider::getTaggedFileSystem(PathRef File) {
   return make_tagged(vfs::getRealFileSystem(), VFSTag());
 }
 
-ClangdScheduler::ClangdScheduler(bool RunSynchronously)
-    : RunSynchronously(RunSynchronously) {
+unsigned clangd::getDefaultAsyncThreadsCount() {
+  unsigned HardwareConcurrency = std::thread::hardware_concurrency();
+  // C++ standard says that hardware_concurrency()
+  // may return 0, fallback to 1 worker thread in
+  // that case.
+  if (HardwareConcurrency == 0)
+    return 1;
+  return HardwareConcurrency;
+}
+
+ClangdScheduler::ClangdScheduler(unsigned AsyncThreadsCount)
+    : RunSynchronously(AsyncThreadsCount == 0) {
   if (RunSynchronously) {
     // Don't start the worker thread if we're running synchronously
     return;
   }
 
-  // Initialize Worker in ctor body, rather than init list to avoid potentially
-  // using not-yet-initialized members
-  Worker = std::thread([this]() {
-    while (true) {
-      std::future<void> Request;
+  Workers.reserve(AsyncThreadsCount);
+  for (unsigned I = 0; I < AsyncThreadsCount; ++I) {
+    Workers.push_back(std::thread([this]() {
+      while (true) {
+        std::future<void> Request;
 
-      // Pick request from the queue
-      {
-        std::unique_lock<std::mutex> Lock(Mutex);
-        // Wait for more requests.
-        RequestCV.wait(Lock, [this] { return !RequestQueue.empty() || Done; });
-        if (Done)
-          return;
+        // Pick request from the queue
+        {
+          std::unique_lock<std::mutex> Lock(Mutex);
+          // Wait for more requests.
+          RequestCV.wait(Lock,
+                         [this] { return !RequestQueue.empty() || Done; });
+          if (Done)
+            return;
 
-        assert(!RequestQueue.empty() && "RequestQueue was empty");
+          assert(!RequestQueue.empty() && "RequestQueue was empty");
 
-        // We process requests starting from the front of the queue. Users of
-        // ClangdScheduler have a way to prioritise their requests by putting
-        // them to the either side of the queue (using either addToEnd or
-        // addToFront).
-        Request = std::move(RequestQueue.front());
-        RequestQueue.pop_front();
-      } // unlock Mutex
+          // We process requests starting from the front of the queue. Users of
+          // ClangdScheduler have a way to prioritise their requests by putting
+          // them to the either side of the queue (using either addToEnd or
+          // addToFront).
+          Request = std::move(RequestQueue.front());
+          RequestQueue.pop_front();
+        } // unlock Mutex
 
-      Request.get();
-    }
-  });
+        Request.get();
+      }
+    }));
+  }
 }
 
 ClangdScheduler::~ClangdScheduler() {
@@ -123,19 +135,21 @@ ClangdScheduler::~ClangdScheduler() {
     // Wake up the worker thread
     Done = true;
   } // unlock Mutex
-  RequestCV.notify_one();
-  Worker.join();
+  RequestCV.notify_all();
+
+  for (auto &Worker : Workers)
+    Worker.join();
 }
 
 ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                            DiagnosticsConsumer &DiagConsumer,
                            FileSystemProvider &FSProvider,
-                           bool RunSynchronously,
+                           unsigned AsyncThreadsCount,
                            llvm::Optional<StringRef> ResourceDir)
     : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
       ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       PCHs(std::make_shared<PCHContainerOperations>()),
-      WorkScheduler(RunSynchronously) {}
+      WorkScheduler(AsyncThreadsCount) {}
 
 std::future<void> ClangdServer::addDocument(PathRef File, StringRef Contents) {
   DocVersion Version = DraftMgr.updateDraft(File, Contents);
