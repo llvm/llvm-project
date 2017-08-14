@@ -250,6 +250,11 @@ protected:
   //
   virtual StringRef getOutlinedHelperName() const { return ".omp_outlined."; }
 
+  /// Emits \p Callee function call with arguments \p Args with location \p Loc.
+  void emitCall(CodeGenFunction &CGF, llvm::Value *Callee,
+                ArrayRef<llvm::Value *> Args = llvm::None,
+                SourceLocation Loc = SourceLocation()) const;
+
 private:
   /// \brief Default const ident_t object used for initialization of all other
   /// ident_t objects.
@@ -1345,7 +1350,8 @@ public:
   /// Emits call of the outlined function with the provided arguments,
   /// translating these arguments to correct target-specific arguments.
   virtual void
-  emitOutlinedFunctionCall(CodeGenFunction &CGF, llvm::Value *OutlinedFn,
+  emitOutlinedFunctionCall(CodeGenFunction &CGF, SourceLocation Loc,
+                           llvm::Value *OutlinedFn,
                            ArrayRef<llvm::Value *> Args = llvm::None) const;
 };
 
