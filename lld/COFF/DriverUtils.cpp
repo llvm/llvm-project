@@ -221,6 +221,22 @@ void parseSection(StringRef S) {
   Config->Section[Name] = parseSectionAttributes(Attrs);
 }
 
+// Parses /aligncomm option argument.
+void parseAligncomm(StringRef S) {
+  StringRef Name, Align;
+  std::tie(Name, Align) = S.split(',');
+  if (Name.empty() || Align.empty()) {
+    error("/aligncomm: invalid argument: " + S);
+    return;
+  }
+  int V;
+  if (Align.getAsInteger(0, V)) {
+    error("/aligncomm: invalid argument: " + S);
+    return;
+  }
+  Config->AlignComm[Name] = std::max(Config->AlignComm[Name], 1 << V);
+}
+
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
 // Results are directly written to Config.
 void parseManifest(StringRef Arg) {

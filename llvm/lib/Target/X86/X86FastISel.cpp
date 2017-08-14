@@ -329,10 +329,6 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
   switch (VT.getSimpleVT().SimpleTy) {
   default: return false;
   case MVT::i1:
-    // TODO: Support this properly.
-    if (Subtarget->hasAVX512())
-      return false;
-    LLVM_FALLTHROUGH;
   case MVT::i8:
     Opc = X86::MOV8rm;
     RC  = &X86::GR8RegClass;
@@ -510,16 +506,6 @@ bool X86FastISel::X86FastEmitStore(EVT VT, unsigned ValReg, bool ValIsKill,
   case MVT::f80: // No f80 support yet.
   default: return false;
   case MVT::i1: {
-    // In case ValReg is a K register, COPY to a GPR
-    if (MRI.getRegClass(ValReg) == &X86::VK1RegClass) {
-      unsigned KValReg = ValReg;
-      ValReg = createResultReg(&X86::GR32RegClass);
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-              TII.get(TargetOpcode::COPY), ValReg)
-          .addReg(KValReg);
-      ValReg = fastEmitInst_extractsubreg(MVT::i8, ValReg, /*Kill=*/true,
-                                          X86::sub_8bit);
-    }
     // Mask out all but lowest bit.
     unsigned AndResult = createResultReg(&X86::GR8RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,

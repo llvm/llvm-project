@@ -1987,7 +1987,9 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
               ? m_arch_spec.GetDataByteSize()
               : eSectionTypeCode == sect_type ? m_arch_spec.GetCodeByteSize()
                                               : 1;
-
+      const addr_t sect_file_addr = header.sh_flags & SHF_ALLOC
+                                                    ? header.sh_addr
+                                                    : LLDB_INVALID_ADDRESS;
       elf::elf_xword log2align =
           (header.sh_addralign == 0) ? 0 : llvm::Log2_64(header.sh_addralign);
       SectionSP section_sp(new Section(
@@ -1997,7 +1999,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
           SectionIndex(I),     // Section ID.
           name,                // Section name.
           sect_type,           // Section type.
-          header.sh_addr,      // VM address.
+          sect_file_addr,      // VM address.
           vm_size,             // VM size in bytes of this section.
           header.sh_offset,    // Offset of this section in the file.
           file_size,           // Size of the section as found in the file.

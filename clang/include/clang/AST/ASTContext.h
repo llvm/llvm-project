@@ -465,7 +465,7 @@ private:
   mutable BuiltinTemplateDecl *MakeIntegerSeqDecl;
   mutable BuiltinTemplateDecl *TypePackElementDecl;
 
-  /// \brief The associated SourceManager object.a
+  /// \brief The associated SourceManager object.
   SourceManager &SourceMgr;
 
   /// \brief The language options used to create the AST associated with
