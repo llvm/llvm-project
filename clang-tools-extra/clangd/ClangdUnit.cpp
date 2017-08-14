@@ -711,10 +711,12 @@ CppFile::CppFile(PathRef FileName, tooling::CompileCommand Command,
   ASTFuture = ASTPromise.get_future();
 }
 
-void CppFile::cancelRebuilds() {
+void CppFile::cancelRebuild() { deferCancelRebuild().get(); }
+
+std::future<void> CppFile::deferCancelRebuild() {
   std::unique_lock<std::mutex> Lock(Mutex);
   // Cancel an ongoing rebuild, if any, and wait for it to finish.
-  ++this->RebuildCounter;
+  unsigned RequestRebuildCounter = ++this->RebuildCounter;
   // Rebuild asserts that futures aren't ready if rebuild is cancelled.
   // We want to keep this invariant.
   if (futureIsReady(PreambleFuture)) {
@@ -725,12 +727,28 @@ void CppFile::cancelRebuilds() {
     ASTPromise = std::promise<std::shared_ptr<ParsedASTWrapper>>();
     ASTFuture = ASTPromise.get_future();
   }
-  // Now wait for rebuild to finish.
-  RebuildCond.wait(Lock, [this]() { return !this->RebuildInProgress; });
 
-  // Return empty results for futures.
-  PreamblePromise.set_value(nullptr);
-  ASTPromise.set_value(std::make_shared<ParsedASTWrapper>(llvm::None));
+  Lock.unlock();
+  // Notify about changes to RebuildCounter.
+  RebuildCond.notify_all();
+
+  std::shared_ptr<CppFile> That = shared_from_this();
+  return std::async(std::launch::deferred, [That, RequestRebuildCounter]() {
+    std::unique_lock<std::mutex> Lock(That->Mutex);
+    CppFile *This = &*That;
+    This->RebuildCond.wait(Lock, [This, RequestRebuildCounter]() {
+      return !This->RebuildInProgress ||
+             This->RebuildCounter != RequestRebuildCounter;
+    });
+
+    // This computation got cancelled itself, do nothing.
+    if (This->RebuildCounter != RequestRebuildCounter)
+      return;
+
+    // Set empty results for Promises.
+    That->PreamblePromise.set_value(nullptr);
+    That->ASTPromise.set_value(std::make_shared<ParsedASTWrapper>(llvm::None));
+  });
 }
 
 llvm::Optional<std::vector<DiagWithFixIts>>
@@ -767,6 +785,8 @@ CppFile::deferRebuild(StringRef NewContents,
       this->ASTFuture = this->ASTPromise.get_future();
     }
   } // unlock Mutex.
+  // Notify about changes to RebuildCounter.
+  RebuildCond.notify_all();
 
   // A helper to function to finish the rebuild. May be run on a different
   // thread.
@@ -916,7 +936,10 @@ CppFile::RebuildGuard::RebuildGuard(CppFile &File,
   if (WasCancelledBeforeConstruction)
     return;
 
-  File.RebuildCond.wait(Lock, [&File]() { return !File.RebuildInProgress; });
+  File.RebuildCond.wait(Lock, [&File, RequestRebuildCounter]() {
+    return !File.RebuildInProgress ||
+           File.RebuildCounter != RequestRebuildCounter;
+  });
 
   WasCancelledBeforeConstruction = File.RebuildCounter != RequestRebuildCounter;
   if (WasCancelledBeforeConstruction)

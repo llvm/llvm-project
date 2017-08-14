@@ -1811,69 +1811,6 @@ Value *InstCombiner::foldOrOfFCmps(FCmpInst *LHS, FCmpInst *RHS) {
   return nullptr;
 }
 
-/// This helper function folds:
-///
-///     ((A | B) & C1) | (B & C2)
-///
-/// into:
-///
-///     (A & C1) | B
-///
-/// when the XOR of the two constants is "all ones" (-1).
-static Instruction *FoldOrWithConstants(BinaryOperator &I, Value *Op,
-                                        Value *A, Value *B, Value *C,
-                                        InstCombiner::BuilderTy &Builder) {
-  ConstantInt *CI1 = dyn_cast<ConstantInt>(C);
-  if (!CI1) return nullptr;
-
-  Value *V1 = nullptr;
-  ConstantInt *CI2 = nullptr;
-  if (!match(Op, m_And(m_Value(V1), m_ConstantInt(CI2)))) return nullptr;
-
-  APInt Xor = CI1->getValue() ^ CI2->getValue();
-  if (!Xor.isAllOnesValue()) return nullptr;
-
-  if (V1 == A || V1 == B) {
-    Value *NewOp = Builder.CreateAnd((V1 == A) ? B : A, CI1);
-    return BinaryOperator::CreateOr(NewOp, V1);
-  }
-
-  return nullptr;
-}
-
-/// \brief This helper function folds:
-///
-///     ((A ^ B) & C1) | (B & C2)
-///
-/// into:
-///
-///     (A & C1) ^ B
-///
-/// when the XOR of the two constants is "all ones" (-1).
-static Instruction *FoldXorWithConstants(BinaryOperator &I, Value *Op,
-                                         Value *A, Value *B, Value *C,
-                                         InstCombiner::BuilderTy &Builder) {
-  ConstantInt *CI1 = dyn_cast<ConstantInt>(C);
-  if (!CI1)
-    return nullptr;
-
-  Value *V1 = nullptr;
-  ConstantInt *CI2 = nullptr;
-  if (!match(Op, m_And(m_Value(V1), m_ConstantInt(CI2))))
-    return nullptr;
-
-  APInt Xor = CI1->getValue() ^ CI2->getValue();
-  if (!Xor.isAllOnesValue())
-    return nullptr;
-
-  if (V1 == A || V1 == B) {
-    Value *NewOp = Builder.CreateAnd(V1 == A ? B : A, CI1);
-    return BinaryOperator::CreateXor(NewOp, V1);
-  }
-
-  return nullptr;
-}
-
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -1939,10 +1876,10 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   Value *C = nullptr, *D = nullptr;
   if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
       match(Op1, m_And(m_Value(B), m_Value(D)))) {
-    Value *V1 = nullptr, *V2 = nullptr;
     ConstantInt *C1 = dyn_cast<ConstantInt>(C);
     ConstantInt *C2 = dyn_cast<ConstantInt>(D);
     if (C1 && C2) {  // (A & C1)|(B & C2)
+      Value *V1 = nullptr, *V2 = nullptr;
       if ((C1->getValue() & C2->getValue()).isNullValue()) {
         // ((V | N) & C1) | (V & C2) --> (V|N) & (C1|C2)
         // iff (C1&C2) == 0 and (N&~C1) == 0
@@ -1974,6 +1911,24 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
                                  Builder.getInt(C1->getValue()|C2->getValue()));
         }
       }
+
+      if (C1->getValue() == ~C2->getValue()) {
+        Value *X;
+
+        // ((X|B)&C1)|(B&C2) -> (X&C1) | B iff C1 == ~C2
+        if (match(A, m_c_Or(m_Value(X), m_Specific(B))))
+          return BinaryOperator::CreateOr(Builder.CreateAnd(X, C1), B);
+        // (A&C2)|((X|A)&C1) -> (X&C2) | A iff C1 == ~C2
+        if (match(B, m_c_Or(m_Specific(A), m_Value(X))))
+          return BinaryOperator::CreateOr(Builder.CreateAnd(X, C2), A);
+
+        // ((X^B)&C1)|(B&C2) -> (X&C1) ^ B iff C1 == ~C2
+        if (match(A, m_c_Xor(m_Value(X), m_Specific(B))))
+          return BinaryOperator::CreateXor(Builder.CreateAnd(X, C1), B);
+        // (A&C2)|((X^A)&C1) -> (X&C2) ^ A iff C1 == ~C2
+        if (match(B, m_c_Xor(m_Specific(A), m_Value(X))))
+          return BinaryOperator::CreateXor(Builder.CreateAnd(X, C2), A);
+      }
     }
 
     // Don't try to form a select if it's unlikely that we'll get rid of at
@@ -1997,27 +1952,6 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
         return replaceInstUsesWith(I, V);
       if (Value *V = matchSelectFromAndOr(D, B, C, A, Builder))
         return replaceInstUsesWith(I, V);
-    }
-
-    // ((A|B)&1)|(B&-2) -> (A&1) | B
-    if (match(A, m_c_Or(m_Value(V1), m_Specific(B)))) {
-      if (Instruction *Ret = FoldOrWithConstants(I, Op1, V1, B, C, Builder))
-        return Ret;
-    }
-    // (B&-2)|((A|B)&1) -> (A&1) | B
-    if (match(B, m_c_Or(m_Specific(A), m_Value(V1)))) {
-      if (Instruction *Ret = FoldOrWithConstants(I, Op0, A, V1, D, Builder))
-        return Ret;
-    }
-    // ((A^B)&1)|(B&-2) -> (A&1) ^ B
-    if (match(A, m_c_Xor(m_Value(V1), m_Specific(B)))) {
-      if (Instruction *Ret = FoldXorWithConstants(I, Op1, V1, B, C, Builder))
-        return Ret;
-    }
-    // (B&-2)|((A^B)&1) -> (A&1) ^ B
-    if (match(B, m_c_Xor(m_Specific(A), m_Value(V1)))) {
-      if (Instruction *Ret = FoldXorWithConstants(I, Op0, A, V1, D, Builder))
-        return Ret;
     }
   }
 
