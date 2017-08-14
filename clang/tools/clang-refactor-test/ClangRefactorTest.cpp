@@ -360,8 +360,8 @@ static int apply(ArrayRef<CXRefactoringReplacement> Replacements,
 /// this occurrence.
 static std::string
 occurrenceToString(const CXSymbolOccurrence &Occurrence, bool IsLocal,
-                   const tooling::SymbolName &NewName,
-                   const tooling::SymbolName &ExpectedReplacementStrings,
+                   const tooling::OldSymbolName &NewName,
+                   const tooling::OldSymbolName &ExpectedReplacementStrings,
                    StringRef Filename) {
   std::string Str;
   llvm::raw_string_ostream OS(Str);
@@ -434,7 +434,7 @@ parseIndexedOccurrence(StringRef IndexedOccurrence,
 static bool compareOccurrences(ArrayRef<std::string> ExpectedReplacements,
                                CXSymbolOccurrencesResult Occurrences,
                                bool IsLocal,
-                               const tooling::SymbolName &NewSymbolName,
+                               const tooling::OldSymbolName &NewSymbolName,
                                bool PrintFilenames) {
   unsigned NumFiles = clang_SymbolOccurrences_getNumFiles(Occurrences);
   size_t ExpectedReplacementIndex = 0;
@@ -591,7 +591,7 @@ int rename(CXTranslationUnit TU, CXIndex CIdx, ArrayRef<const char *> Args) {
     // FIXME: This is a hack
     LangOptions LangOpts;
     LangOpts.ObjC1 = true;
-    tooling::SymbolName NewSymbolName(opts::rename::NewName, LangOpts);
+    tooling::OldSymbolName NewSymbolName(opts::rename::NewName, LangOpts);
 
     if (ExpectedReplacements.empty()) {
       if (opts::Apply) {
@@ -726,7 +726,7 @@ int renameIndexedFile(CXIndex CIdx, ArrayRef<const char *> Args) {
 
   LangOptions LangOpts;
   LangOpts.ObjC1 = true;
-  tooling::SymbolName ExpectedReplacementStrings(
+  tooling::OldSymbolName ExpectedReplacementStrings(
       opts::rename::IndexedNewNames[0], LangOpts);
 
   // Print the occurrences.
@@ -747,7 +747,7 @@ int renameIndexedFile(CXIndex CIdx, ArrayRef<const char *> Args) {
               .c_str();
       LangOptions LangOpts;
       LangOpts.ObjC1 = true;
-      tooling::SymbolName NewSymbolName(NewName, LangOpts);
+      tooling::OldSymbolName NewSymbolName(NewName, LangOpts);
 
       outs() << occurrenceToString(FileResult.Occurrences[I], /*IsLocal*/ false,
                                    NewSymbolName, ExpectedReplacementStrings,

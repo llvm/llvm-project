@@ -26,12 +26,13 @@ namespace tooling {
 /// \brief Represent a symbol that can be used for an additional refactoring
 /// action that associated.
 class RefactoringResultAssociatedSymbol {
-  SymbolName Name;
+  OldSymbolName Name;
 
 public:
-  RefactoringResultAssociatedSymbol(SymbolName Name) : Name(std::move(Name)) {}
+  RefactoringResultAssociatedSymbol(OldSymbolName Name)
+      : Name(std::move(Name)) {}
 
-  const SymbolName &getName() const { return Name; }
+  const OldSymbolName &getName() const { return Name; }
 };
 
 /// \brief A replacement range.
