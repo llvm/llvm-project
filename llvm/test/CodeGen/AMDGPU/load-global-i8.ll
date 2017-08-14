@@ -352,22 +352,22 @@ define amdgpu_kernel void @global_zextload_v16i8_to_v16i32(<16 x i32> addrspace(
 
 ; EG: VTX_READ_128 [[DST:T[0-9]+\.XYZW]], T{{[0-9]+}}.X, 0, #1
 ; TODO: These should use DST, but for some there are redundant MOVs
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9]*.[XYZW]}}, {{.*}}, 0.0, literal
 ; EG-DAG: 8
 ; EG-DAG: 8
 ; EG-DAG: 8

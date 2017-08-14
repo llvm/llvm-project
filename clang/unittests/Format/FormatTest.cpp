@@ -5448,6 +5448,10 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("for (;; *a = b) {\n}", Left);
   verifyFormat("return *this += 1;", Left);
   verifyFormat("throw *x;", Left);
+  verifyFormat("delete *x;", Left);
+  verifyFormat("typedef typeof(int(int, int))* MyFuncPtr;", Left);
+  verifyFormat("[](const decltype(*a)* ptr) {}", Left);
+  verifyFormat("typedef typeof /*comment*/ (int(int, int))* MyFuncPtr;", Left);
 
   verifyIndependentOfContext("a = *(x + y);");
   verifyIndependentOfContext("a = &(x + y);");
@@ -5494,9 +5498,6 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyGoogleFormat("T** t = new T*;");
   verifyGoogleFormat("T** t = new T*();");
 
-  FormatStyle PointerLeft = getLLVMStyle();
-  PointerLeft.PointerAlignment = FormatStyle::PAS_Left;
-  verifyFormat("delete *x;", PointerLeft);
   verifyFormat("STATIC_ASSERT((a & b) == 0);");
   verifyFormat("STATIC_ASSERT(0 == (a & b));");
   verifyFormat("template <bool a, bool b> "

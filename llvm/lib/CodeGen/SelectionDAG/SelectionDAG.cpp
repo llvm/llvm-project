@@ -4373,6 +4373,15 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         return getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, N1.getOperand(0), N2);
       }
     }
+
+    // EXTRACT_VECTOR_ELT of v1iX EXTRACT_SUBVECTOR could be formed
+    // when vector types are scalarized and v1iX is legal.
+    // vextract (v1iX extract_subvector(vNiX, Idx)) -> vextract(vNiX,Idx)
+    if (N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        N1.getValueType().getVectorNumElements() == 1) {
+      return getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, N1.getOperand(0),
+                     N1.getOperand(1));
+    }
     break;
   case ISD::EXTRACT_ELEMENT:
     assert(N2C && (unsigned)N2C->getZExtValue() < 2 && "Bad EXTRACT_ELEMENT!");

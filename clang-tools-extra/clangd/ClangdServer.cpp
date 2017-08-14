@@ -78,40 +78,52 @@ RealFileSystemProvider::getTaggedFileSystem(PathRef File) {
   return make_tagged(vfs::getRealFileSystem(), VFSTag());
 }
 
-ClangdScheduler::ClangdScheduler(bool RunSynchronously)
-    : RunSynchronously(RunSynchronously) {
+unsigned clangd::getDefaultAsyncThreadsCount() {
+  unsigned HardwareConcurrency = std::thread::hardware_concurrency();
+  // C++ standard says that hardware_concurrency()
+  // may return 0, fallback to 1 worker thread in
+  // that case.
+  if (HardwareConcurrency == 0)
+    return 1;
+  return HardwareConcurrency;
+}
+
+ClangdScheduler::ClangdScheduler(unsigned AsyncThreadsCount)
+    : RunSynchronously(AsyncThreadsCount == 0) {
   if (RunSynchronously) {
     // Don't start the worker thread if we're running synchronously
     return;
   }
 
-  // Initialize Worker in ctor body, rather than init list to avoid potentially
-  // using not-yet-initialized members
-  Worker = std::thread([this]() {
-    while (true) {
-      std::future<void> Request;
+  Workers.reserve(AsyncThreadsCount);
+  for (unsigned I = 0; I < AsyncThreadsCount; ++I) {
+    Workers.push_back(std::thread([this]() {
+      while (true) {
+        std::future<void> Request;
 
-      // Pick request from the queue
-      {
-        std::unique_lock<std::mutex> Lock(Mutex);
-        // Wait for more requests.
-        RequestCV.wait(Lock, [this] { return !RequestQueue.empty() || Done; });
-        if (Done)
-          return;
+        // Pick request from the queue
+        {
+          std::unique_lock<std::mutex> Lock(Mutex);
+          // Wait for more requests.
+          RequestCV.wait(Lock,
+                         [this] { return !RequestQueue.empty() || Done; });
+          if (Done)
+            return;
 
-        assert(!RequestQueue.empty() && "RequestQueue was empty");
+          assert(!RequestQueue.empty() && "RequestQueue was empty");
 
-        // We process requests starting from the front of the queue. Users of
-        // ClangdScheduler have a way to prioritise their requests by putting
-        // them to the either side of the queue (using either addToEnd or
-        // addToFront).
-        Request = std::move(RequestQueue.front());
-        RequestQueue.pop_front();
-      } // unlock Mutex
+          // We process requests starting from the front of the queue. Users of
+          // ClangdScheduler have a way to prioritise their requests by putting
+          // them to the either side of the queue (using either addToEnd or
+          // addToFront).
+          Request = std::move(RequestQueue.front());
+          RequestQueue.pop_front();
+        } // unlock Mutex
 
-      Request.get();
-    }
-  });
+        Request.get();
+      }
+    }));
+  }
 }
 
 ClangdScheduler::~ClangdScheduler() {
@@ -123,19 +135,21 @@ ClangdScheduler::~ClangdScheduler() {
     // Wake up the worker thread
     Done = true;
   } // unlock Mutex
-  RequestCV.notify_one();
-  Worker.join();
+  RequestCV.notify_all();
+
+  for (auto &Worker : Workers)
+    Worker.join();
 }
 
 ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                            DiagnosticsConsumer &DiagConsumer,
                            FileSystemProvider &FSProvider,
-                           bool RunSynchronously,
+                           unsigned AsyncThreadsCount,
                            llvm::Optional<StringRef> ResourceDir)
     : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
       ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       PCHs(std::make_shared<PCHContainerOperations>()),
-      WorkScheduler(RunSynchronously) {}
+      WorkScheduler(AsyncThreadsCount) {}
 
 std::future<void> ClangdServer::addDocument(PathRef File, StringRef Contents) {
   DocVersion Version = DraftMgr.updateDraft(File, Contents);
@@ -143,67 +157,31 @@ std::future<void> ClangdServer::addDocument(PathRef File, StringRef Contents) {
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
   std::shared_ptr<CppFile> Resources =
       Units.getOrCreateFile(File, ResourceDir, CDB, PCHs, TaggedFS.Value);
-
-  std::future<llvm::Optional<std::vector<DiagWithFixIts>>> DeferredRebuild =
-      Resources->deferRebuild(Contents, TaggedFS.Value);
-  std::promise<void> DonePromise;
-  std::future<void> DoneFuture = DonePromise.get_future();
-
-  Path FileStr = File;
-  VFSTag Tag = TaggedFS.Tag;
-  auto ReparseAndPublishDiags =
-      [this, FileStr, Version,
-       Tag](std::future<llvm::Optional<std::vector<DiagWithFixIts>>>
-                DeferredRebuild,
-            std::promise<void> DonePromise) -> void {
-    FulfillPromiseGuard Guard(DonePromise);
-
-    auto CurrentVersion = DraftMgr.getVersion(FileStr);
-    if (CurrentVersion != Version)
-      return; // This request is outdated
-
-    auto Diags = DeferredRebuild.get();
-    if (!Diags)
-      return; // A new reparse was requested before this one completed.
-    DiagConsumer.onDiagnosticsReady(FileStr,
-                                    make_tagged(std::move(*Diags), Tag));
-  };
-
-  WorkScheduler.addToFront(std::move(ReparseAndPublishDiags),
-                           std::move(DeferredRebuild), std::move(DonePromise));
-  return DoneFuture;
+  return scheduleReparseAndDiags(File, VersionedDraft{Version, Contents.str()},
+                                 std::move(Resources), std::move(TaggedFS));
 }
 
 std::future<void> ClangdServer::removeDocument(PathRef File) {
-  auto Version = DraftMgr.removeDraft(File);
-  Path FileStr = File;
-
-  std::promise<void> DonePromise;
-  std::future<void> DoneFuture = DonePromise.get_future();
-
-  auto RemoveDocFromCollection = [this, FileStr,
-                                  Version](std::promise<void> DonePromise) {
-    FulfillPromiseGuard Guard(DonePromise);
-
-    if (Version != DraftMgr.getVersion(FileStr))
-      return; // This request is outdated, do nothing
-
-    std::shared_ptr<CppFile> File = Units.removeIfPresent(FileStr);
-    if (!File)
-      return;
-    // Cancel all ongoing rebuilds, so that we don't do extra work before
-    // deleting this file.
-    File->cancelRebuilds();
-  };
-  WorkScheduler.addToFront(std::move(RemoveDocFromCollection),
-                           std::move(DonePromise));
-  return DoneFuture;
+  DraftMgr.removeDraft(File);
+  std::shared_ptr<CppFile> Resources = Units.removeIfPresent(File);
+  return scheduleCancelRebuild(std::move(Resources));
 }
 
 std::future<void> ClangdServer::forceReparse(PathRef File) {
-  // The addDocument schedules the reparse even if the contents of the file
-  // never changed, so we just call it here.
-  return addDocument(File, getDocument(File));
+  auto FileContents = DraftMgr.getDraft(File);
+  assert(FileContents.Draft &&
+         "forceReparse() was called for non-added document");
+
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+  auto Recreated = Units.recreateFileIfCompileCommandChanged(
+      File, ResourceDir, CDB, PCHs, TaggedFS.Value);
+
+  // Note that std::future from this cleanup action is ignored.
+  scheduleCancelRebuild(std::move(Recreated.RemovedFile));
+  // Schedule a reparse.
+  return scheduleReparseAndDiags(File, std::move(FileContents),
+                                 std::move(Recreated.FileInCollection),
+                                 std::move(TaggedFS));
 }
 
 Tagged<std::vector<CompletionItem>>
@@ -305,4 +283,61 @@ Tagged<std::vector<Location>> ClangdServer::findDefinitions(PathRef File,
     Result = clangd::findDefinitions(*AST, Pos);
   });
   return make_tagged(std::move(Result), TaggedFS.Tag);
+}
+
+std::future<void> ClangdServer::scheduleReparseAndDiags(
+    PathRef File, VersionedDraft Contents, std::shared_ptr<CppFile> Resources,
+    Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS) {
+
+  assert(Contents.Draft && "Draft must have contents");
+  std::future<llvm::Optional<std::vector<DiagWithFixIts>>> DeferredRebuild =
+      Resources->deferRebuild(*Contents.Draft, TaggedFS.Value);
+  std::promise<void> DonePromise;
+  std::future<void> DoneFuture = DonePromise.get_future();
+
+  DocVersion Version = Contents.Version;
+  Path FileStr = File;
+  VFSTag Tag = TaggedFS.Tag;
+  auto ReparseAndPublishDiags =
+      [this, FileStr, Version,
+       Tag](std::future<llvm::Optional<std::vector<DiagWithFixIts>>>
+                DeferredRebuild,
+            std::promise<void> DonePromise) -> void {
+    FulfillPromiseGuard Guard(DonePromise);
+
+    auto CurrentVersion = DraftMgr.getVersion(FileStr);
+    if (CurrentVersion != Version)
+      return; // This request is outdated
+
+    auto Diags = DeferredRebuild.get();
+    if (!Diags)
+      return; // A new reparse was requested before this one completed.
+    DiagConsumer.onDiagnosticsReady(FileStr,
+                                    make_tagged(std::move(*Diags), Tag));
+  };
+
+  WorkScheduler.addToFront(std::move(ReparseAndPublishDiags),
+                           std::move(DeferredRebuild), std::move(DonePromise));
+  return DoneFuture;
+}
+
+std::future<void>
+ClangdServer::scheduleCancelRebuild(std::shared_ptr<CppFile> Resources) {
+  std::promise<void> DonePromise;
+  std::future<void> DoneFuture = DonePromise.get_future();
+  if (!Resources) {
+    // No need to schedule any cleanup.
+    DonePromise.set_value();
+    return DoneFuture;
+  }
+
+  std::future<void> DeferredCancel = Resources->deferCancelRebuild();
+  auto CancelReparses = [Resources](std::promise<void> DonePromise,
+                                    std::future<void> DeferredCancel) {
+    FulfillPromiseGuard Guard(DonePromise);
+    DeferredCancel.get();
+  };
+  WorkScheduler.addToFront(std::move(CancelReparses), std::move(DonePromise),
+                           std::move(DeferredCancel));
+  return DoneFuture;
 }
