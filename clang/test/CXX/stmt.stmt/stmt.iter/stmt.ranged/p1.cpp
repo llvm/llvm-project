@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++1z -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify %s
 
 struct pr12960 {
   int begin;
@@ -125,7 +125,7 @@ void g() {
   };
   for (auto a : Differ())
 #if __cplusplus <= 201402L
-    // expected-warning@-2 {{'begin' and 'end' returning different types ('int *' and 'null_t') is a C++1z extension}}
+    // expected-warning@-2 {{'begin' and 'end' returning different types ('int *' and 'null_t') is a C++17 extension}}
     // expected-note@-6 {{selected 'begin' function with iterator type 'int *'}}
     // expected-note@-6 {{selected 'end' function with iterator type 'null_t'}}
 #endif
