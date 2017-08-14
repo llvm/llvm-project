@@ -122,7 +122,7 @@ int main (int argc, char **argv) {
 // CHECK: define linkonce_odr {{.*}}void [[FOO1]](i8** %argc)
 // CHECK-DEBUG-DAG: define linkonce_odr void [[FOO1]](i8** %argc)
 // CHECK-DEBUG-DAG: define internal void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i8*** dereferenceable({{4|8}}) %argc)
-// CHECK-DEBUG-DAG: call void [[OMP_OUTLINED_DEBUG]]
+// CHECK-DEBUG-DAG: call void [[OMP_OUTLINED_DEBUG]]({{[^)]+}}){{[^,]*}}, !dbg
 
 // CHECK: attributes #[[FN_ATTRS]] = {{.+}} nounwind
 // CHECK-DEBUG: attributes #[[FN_ATTRS]] = {{.+}} nounwind

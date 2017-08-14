@@ -304,15 +304,17 @@ TEST(SanitizerCommon, InternalScopedString) {
 #if SANITIZER_LINUX
 TEST(SanitizerCommon, GetRandom) {
   u8 buffer_1[32], buffer_2[32];
-  EXPECT_FALSE(GetRandom(nullptr, 32));
-  EXPECT_FALSE(GetRandom(buffer_1, 0));
-  EXPECT_FALSE(GetRandom(buffer_1, 512));
-  EXPECT_EQ(ARRAY_SIZE(buffer_1), ARRAY_SIZE(buffer_2));
-  for (uptr size = 4; size <= ARRAY_SIZE(buffer_1); size += 4) {
-    for (uptr i = 0; i < 100; i++) {
-      EXPECT_TRUE(GetRandom(buffer_1, size));
-      EXPECT_TRUE(GetRandom(buffer_2, size));
-      EXPECT_NE(internal_memcmp(buffer_1, buffer_2, size), 0);
+  for (bool blocking : { false, true }) {
+    EXPECT_FALSE(GetRandom(nullptr, 32, blocking));
+    EXPECT_FALSE(GetRandom(buffer_1, 0, blocking));
+    EXPECT_FALSE(GetRandom(buffer_1, 512, blocking));
+    EXPECT_EQ(ARRAY_SIZE(buffer_1), ARRAY_SIZE(buffer_2));
+    for (uptr size = 4; size <= ARRAY_SIZE(buffer_1); size += 4) {
+      for (uptr i = 0; i < 100; i++) {
+        EXPECT_TRUE(GetRandom(buffer_1, size, blocking));
+        EXPECT_TRUE(GetRandom(buffer_2, size, blocking));
+        EXPECT_NE(internal_memcmp(buffer_1, buffer_2, size), 0);
+      }
     }
   }
 }

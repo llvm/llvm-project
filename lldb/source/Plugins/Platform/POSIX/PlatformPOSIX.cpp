@@ -944,7 +944,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                    the_result;
                   )",
               path);
-  llvm::StringRef prefix = GetLibdlFunctionDeclarations();
+  llvm::StringRef prefix = GetLibdlFunctionDeclarations(process);
   lldb::ValueObjectSP result_valobj_sp;
   error = EvaluateLibdlExpression(process, expr.GetData(), prefix,
                                   result_valobj_sp);
@@ -992,7 +992,7 @@ Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
 
   StreamString expr;
   expr.Printf("dlclose((void *)0x%" PRIx64 ")", image_addr);
-  llvm::StringRef prefix = GetLibdlFunctionDeclarations();
+  llvm::StringRef prefix = GetLibdlFunctionDeclarations(process);
   lldb::ValueObjectSP result_valobj_sp;
   Status error = EvaluateLibdlExpression(process, expr.GetData(), prefix,
                                          result_valobj_sp);
@@ -1024,7 +1024,8 @@ lldb::ProcessSP PlatformPOSIX::ConnectProcess(llvm::StringRef connect_url,
                                   error);
 }
 
-llvm::StringRef PlatformPOSIX::GetLibdlFunctionDeclarations() {
+llvm::StringRef
+PlatformPOSIX::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
   return R"(
               extern "C" void* dlopen(const char*, int);
               extern "C" void* dlsym(void*, const char*);

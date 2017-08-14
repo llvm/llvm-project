@@ -1359,7 +1359,7 @@ llvm::ConstantFoldLoadThroughGEPIndices(Constant *C,
 //
 
 bool llvm::canConstantFoldCallTo(ImmutableCallSite CS, const Function *F) {
-  if (CS.isNoBuiltin())
+  if (CS.isNoBuiltin() || CS.isStrictFP())
     return false;
   switch (F->getIntrinsicID()) {
   case Intrinsic::fabs:
@@ -2066,7 +2066,7 @@ Constant *
 llvm::ConstantFoldCall(ImmutableCallSite CS, Function *F,
                        ArrayRef<Constant *> Operands,
                        const TargetLibraryInfo *TLI) {
-  if (CS.isNoBuiltin())
+  if (CS.isNoBuiltin() || CS.isStrictFP())
     return nullptr;
   if (!F->hasName())
     return nullptr;
@@ -2084,7 +2084,7 @@ llvm::ConstantFoldCall(ImmutableCallSite CS, Function *F,
 bool llvm::isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI) {
   // FIXME: Refactor this code; this duplicates logic in LibCallsShrinkWrap
   // (and to some extent ConstantFoldScalarCall).
-  if (CS.isNoBuiltin())
+  if (CS.isNoBuiltin() || CS.isStrictFP())
     return false;
   Function *F = CS.getCalledFunction();
   if (!F)

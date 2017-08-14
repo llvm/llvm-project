@@ -144,7 +144,6 @@ define void @rotate_right_m64(i64 *%pa, i64 %b) {
 define i8 @rotate_left_8(i8 %x, i32 %amount) {
 ; CHECK-LABEL: rotate_left_8:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $7, %sil
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    rolb %cl, %dil
 ; CHECK-NEXT:    movl %edi, %eax
@@ -162,7 +161,6 @@ define i8 @rotate_left_8(i8 %x, i32 %amount) {
 define i8 @rotate_right_8(i8 %x, i32 %amount) {
 ; CHECK-LABEL: rotate_right_8:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $7, %sil
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    rorb %cl, %dil
 ; CHECK-NEXT:    movl %edi, %eax
@@ -180,7 +178,6 @@ define i8 @rotate_right_8(i8 %x, i32 %amount) {
 define i16 @rotate_left_16(i16 %x, i32 %amount) {
 ; CHECK-LABEL: rotate_left_16:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $15, %sil
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    rolw %cl, %di
 ; CHECK-NEXT:    movl %edi, %eax
@@ -198,7 +195,6 @@ define i16 @rotate_left_16(i16 %x, i32 %amount) {
 define i16 @rotate_right_16(i16 %x, i32 %amount) {
 ; CHECK-LABEL: rotate_right_16:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $15, %sil
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    rorw %cl, %di
 ; CHECK-NEXT:    movl %edi, %eax
@@ -216,7 +212,6 @@ define i16 @rotate_right_16(i16 %x, i32 %amount) {
 define void @rotate_left_m8(i8* %p, i32 %amount) {
 ; CHECK-LABEL: rotate_left_m8:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $7, %sil
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    rolb %cl, (%rdi)
 ; CHECK-NEXT:    retq
@@ -235,7 +230,6 @@ define void @rotate_left_m8(i8* %p, i32 %amount) {
 define void @rotate_right_m8(i8* %p, i32 %amount) {
 ; CHECK-LABEL: rotate_right_m8:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $7, %sil
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    rorb %cl, (%rdi)
 ; CHECK-NEXT:    retq
@@ -254,7 +248,6 @@ define void @rotate_right_m8(i8* %p, i32 %amount) {
 define void @rotate_left_m16(i16* %p, i32 %amount) {
 ; CHECK-LABEL: rotate_left_m16:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $15, %sil
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    rolw %cl, (%rdi)
 ; CHECK-NEXT:    retq
@@ -273,7 +266,6 @@ define void @rotate_left_m16(i16* %p, i32 %amount) {
 define void @rotate_right_m16(i16* %p, i32 %amount) {
 ; CHECK-LABEL: rotate_right_m16:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $15, %sil
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    rorw %cl, (%rdi)
 ; CHECK-NEXT:    retq

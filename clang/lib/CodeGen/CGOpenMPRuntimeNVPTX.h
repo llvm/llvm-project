@@ -285,7 +285,7 @@ public:
   /// Emits call of the outlined function with the provided arguments,
   /// translating these arguments to correct target-specific arguments.
   void emitOutlinedFunctionCall(
-      CodeGenFunction &CGF, llvm::Value *OutlinedFn,
+      CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *OutlinedFn,
       ArrayRef<llvm::Value *> Args = llvm::None) const override;
 
   /// Target codegen is specialized based on two programming models: the
