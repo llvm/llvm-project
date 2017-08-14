@@ -714,8 +714,10 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     else if (S.startswith("jobs="))
       Config->ThinLTOJobs = parseInt(S.substr(5), Arg);
     // Ignore some options always passed by gcc.
+    // FIXME: support --plugin-opt=mcpu= and --plugin-opt=thinlto.
     else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
-             !S.startswith("-pass-through="))
+             !S.startswith("-pass-through=") && !S.startswith("mcpu=") &&
+             !S.startswith("thinlto"))
       error(Arg->getSpelling() + ": unknown option: " + S);
   }
   if (Config->LTOO > 3)

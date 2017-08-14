@@ -70,6 +70,11 @@ Improvements to clang-tidy
       ``AllowConditionalIntegerCasts`` -> ``AllowIntegerConditions``,
       ``AllowConditionalPointerCasts`` -> ``AllowPointerConditions``.
 
+- New `android-cloexec-dup
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-dup.html>`_ check
+
+  Detects usage of ``dup()``.
+
 - New `android-cloexec-memfd_create
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-memfd_create.html>`_ check
 
