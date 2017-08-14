@@ -1,5 +1,5 @@
 // RUN: llvm-profdata merge -o %t.profdata %S/Inputs/showTabsHTML.proftext
-// RUN: llvm-cov show %S/Inputs/showTabsHTML.covmapping -format html -instr-profile %t.profdata -filename-equivalence %s | FileCheck %s
+// RUN: llvm-cov show %S/Inputs/showTabsHTML.covmapping -format html -instr-profile %t.profdata -path-equivalence=/tmp,%S %s | FileCheck %s
 
 int main(int argc, char ** argv) {
 	(void) "This tab starts at column 0";            // CHECK: &nbsp;&nbsp;(void) &quot;This tab starts at column 0&quot;;
@@ -9,7 +9,7 @@ int main(int argc, char ** argv) {
   return 0;
 }
 
-// RUN: llvm-cov show %S/Inputs/showTabsHTML.covmapping -format html -tab-size=3 -instr-profile %t.profdata -filename-equivalence %s | FileCheck -check-prefix=CHECK-TABSIZE %s
+// RUN: llvm-cov show %S/Inputs/showTabsHTML.covmapping -format html -tab-size=3 -instr-profile %t.profdata -path-equivalence=/tmp,%S %s | FileCheck -check-prefix=CHECK-TABSIZE %s
 
 // CHECK-TABSIZE: &nbsp;&nbsp;&nbsp;(void) &quot;This tab starts at column 0&quot;;
 // CHECK-TABSIZE: (void) &quot;&nbsp;&nbsp;This tab starts at column 10&quot;;

@@ -1,6 +1,6 @@
-// RUN: llvm-cov report %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -filename-equivalence 2>&1 | FileCheck %s
-// RUN: llvm-cov report -show-functions %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -filename-equivalence report.cpp 2>&1 | FileCheck -check-prefix=FILT %s
-// RUN: llvm-cov report -show-functions %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -filename-equivalence report.cpp does-not-exist.cpp 2>&1 | FileCheck -check-prefix=FILT %s
+// RUN: llvm-cov report %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -path-equivalence=,%S 2>&1 | FileCheck %s
+// RUN: llvm-cov report -show-functions %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -path-equivalence=,%S %s 2>&1 | FileCheck -check-prefix=FILT %s
+// RUN: llvm-cov report -show-functions %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -path-equivalence=,%S %s does-not-exist.cpp 2>&1 | FileCheck -check-prefix=FILT %s
 
 // CHECK: Regions    Missed Regions     Cover   Functions  Missed Functions  Executed  Instantiations   Missed Insts.  Executed       Lines      Missed Lines     Cover
 // CHECK-NEXT: ---
@@ -36,7 +36,7 @@ int main() {
 }
 
 // Test that listing multiple functions in a function view works.
-// RUN: llvm-cov show -o %t.dir %S/Inputs/report.covmapping -instr-profile=%S/Inputs/report.profdata -filename-equivalence -name-regex=".*" %s
+// RUN: llvm-cov show -o %t.dir %S/Inputs/report.covmapping -instr-profile=%S/Inputs/report.profdata -path-equivalence=,%S -name-regex=".*" %s
 // RUN: FileCheck -check-prefix=FUNCTIONS -input-file %t.dir/functions.txt %s
 // FUNCTIONS: _Z3foob
 // FUNCTIONS: _Z3barv

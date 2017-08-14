@@ -1,8 +1,8 @@
-RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -filename-equivalence %S/showTemplateInstantiations.cpp -format html -o %t.dir
+RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S %S/showTemplateInstantiations.cpp -format html -o %t.dir
 
-RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -filename-equivalence -name=_Z4funcIbEiT_ %S/showTemplateInstantiations.cpp -format html -o %t.dir
+RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S -name=_Z4funcIbEiT_ %S/showTemplateInstantiations.cpp -format html -o %t.dir
 
-RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -filename-equivalence %S/showTemplateInstantiations.cpp -format html | FileCheck %s -check-prefix=NODIR
+RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S %S/showTemplateInstantiations.cpp -format html | FileCheck %s -check-prefix=NODIR
 
 RUN: FileCheck %s -input-file=%t.dir/style.css -check-prefix=STYLE
 RUN: FileCheck %s -input-file=%t.dir/functions.html -check-prefix=TOPLEVEL

@@ -9,7 +9,7 @@
 // llvm-cov convert-for-testing -o prefer_used_to_unused.covmapping tmp
 
 // RUN: llvm-profdata merge %S/Inputs/prefer_used_to_unused.proftext -o %t.profdata
-// RUN: llvm-cov show %S/Inputs/prefer_used_to_unused.covmapping -instr-profile %t.profdata -filename-equivalence %s | FileCheck %s
+// RUN: llvm-cov show %S/Inputs/prefer_used_to_unused.covmapping -instr-profile %t.profdata -path-equivalence=/tmp/uu/./,%S %s | FileCheck %s
 
 // Coverage data for this function has a non-zero hash value if it is used in the translation unit.
 inline int sampleFunc(int A) { // CHECK:      [[@LINE]]| 1|inline int sampleFunc(int A) {
