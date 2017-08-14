@@ -182,7 +182,7 @@ class SPMUpdater {
 public:
   SPMUpdater(SmallPriorityWorklist<Region *, 4> &Worklist,
              ScopAnalysisManager &SAM)
-      : Worklist(Worklist), SAM(SAM), InvalidateCurrentScop(false) {}
+      : InvalidateCurrentScop(false), Worklist(Worklist), SAM(SAM) {}
 
   bool invalidateCurrentScop() const { return InvalidateCurrentScop; }
 

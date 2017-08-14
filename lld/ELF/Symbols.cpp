@@ -131,8 +131,13 @@ SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
       Name(Name) {}
 
 InputFile *SymbolBody::getFile() const {
-  if (isLocal())
-    return cast<InputSectionBase>(cast<DefinedRegular>(this)->Section)->File;
+  if (isLocal()) {
+    const SectionBase *Sec = cast<DefinedRegular>(this)->Section;
+    // Local absolute symbols actually have a file, but that is not currently
+    // used. We could support that by having a mostly redundant InputFile in
+    // SymbolBody, or having a special absolute section if needed.
+    return Sec ? cast<InputSectionBase>(Sec)->File : nullptr;
+  }
   return symbol()->File;
 }
 

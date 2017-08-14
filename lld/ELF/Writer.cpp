@@ -1870,10 +1870,8 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
     if (P->p_type != PT_LOAD || !(P->p_flags & PF_X))
       continue;
 
-    // We only fill the first and the last page of the segment because the
-    // middle part will be overwritten by output sections.
-    fillTrapInstr(Buf + alignDown(P->p_offset, Target->PageSize),
-                  Buf + alignTo(P->p_offset, Target->PageSize));
+    // We only fill the last page of the segment because the rest will be
+    // overwritten by output sections.
     fillTrapInstr(Buf + alignDown(P->p_offset + P->p_filesz, Target->PageSize),
                   Buf + alignTo(P->p_offset + P->p_filesz, Target->PageSize));
   }
