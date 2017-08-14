@@ -211,9 +211,9 @@ def warn_auto_storage_class : Warning<
 
 def warn_deprecated_register : Warning<
   "'register' storage class specifier is deprecated "
-  "and incompatible with C++1z">, InGroup<DeprecatedRegister>;
+  "and incompatible with C++17">, InGroup<DeprecatedRegister>;
 def ext_register_storage_class : ExtWarn<
-  "ISO C++1z does not allow 'register' storage class specifier">,
+  "ISO C++17 does not allow 'register' storage class specifier">,
   DefaultError, InGroup<Register>;
 
 def err_invalid_decl_spec_combination : Error<
@@ -391,9 +391,9 @@ def err_decomp_decl_context : Error<
   "decomposition declaration not permitted in this context">;
 def warn_cxx14_compat_decomp_decl : Warning<
   "decomposition declarations are incompatible with "
-  "C++ standards before C++1z">, DefaultIgnore, InGroup<CXXPre1zCompat>;
+  "C++ standards before C++17">, DefaultIgnore, InGroup<CXXPre1zCompat>;
 def ext_decomp_decl : ExtWarn<
-  "decomposition declarations are a C++1z extension">, InGroup<CXX1z>;
+  "decomposition declarations are a C++17 extension">, InGroup<CXX17>;
 def err_decomp_decl_spec : Error<
   "decomposition declaration cannot be declared "
   "%plural{1:'%1'|:with '%1' specifiers}0">;
@@ -494,7 +494,7 @@ def err_access_decl : Error<
   "ISO C++11 does not allow access declarations; "
   "use using declarations instead">;
 def ext_dynamic_exception_spec : ExtWarn<
-  "ISO C++1z does not allow dynamic exception specifications">,
+  "ISO C++17 does not allow dynamic exception specifications">,
   InGroup<DynamicExceptionSpec>, DefaultError;
 def warn_exception_spec_deprecated : Warning<
   "dynamic exception specifications are deprecated">,
@@ -507,7 +507,7 @@ def warn_deprecated_copy_operation : Warning<
   InGroup<Deprecated>, DefaultIgnore;
 def warn_cxx1z_compat_exception_spec_in_signature : Warning<
   "mangled name of %0 will change in C++17 due to non-throwing exception "
-  "specification in function signature">, InGroup<CXX1zCompatMangling>;
+  "specification in function signature">, InGroup<CXX17CompatMangling>;
 
 def warn_global_constructor : Warning<
   "declaration requires a global constructor">,
@@ -1200,15 +1200,15 @@ def err_static_assert_expression_is_not_constant : Error<
   "static_assert expression is not an integral constant expression">;
 def err_static_assert_failed : Error<"static_assert failed%select{ %1|}0">;
 def ext_static_assert_no_message : ExtWarn<
-  "static_assert with no message is a C++1z extension">, InGroup<CXX1z>;
+  "static_assert with no message is a C++17 extension">, InGroup<CXX17>;
 def warn_cxx14_compat_static_assert_no_message : Warning<
-  "static_assert with no message is incompatible with C++ standards before C++1z">,
+  "static_assert with no message is incompatible with C++ standards before C++17">,
   DefaultIgnore, InGroup<CXXPre1zCompat>;
 
 def ext_inline_variable : ExtWarn<
-  "inline variables are a C++1z extension">, InGroup<CXX1z>;
+  "inline variables are a C++17 extension">, InGroup<CXX17>;
 def warn_cxx14_compat_inline_variable : Warning<
-  "inline variables are incompatible with C++ standards before C++1z">,
+  "inline variables are incompatible with C++ standards before C++17">,
   DefaultIgnore, InGroup<CXXPre1zCompat>;
 
 def warn_inline_namespace_reopened_noninline : Warning<
@@ -1922,7 +1922,7 @@ def err_auto_not_allowed : Error<
   "|in non-static struct member|in struct member"
   "|in non-static union member|in union member"
   "|in non-static class member|in interface member"
-  "|in exception declaration|in template parameter until C++1z|in block literal"
+  "|in exception declaration|in template parameter until C++17|in block literal"
   "|in template argument|in typedef|in type alias|in function return type"
   "|in conversion function type|here|in lambda parameter"
   "|in type allocated by 'new'|in K&R-style function parameter"
@@ -2147,11 +2147,11 @@ def err_for_range_iter_deduction_failure : Error<
 def err_for_range_member_begin_end_mismatch : Error<
   "range type %0 has '%select{begin|end}1' member but no '%select{end|begin}1' member">;
 def ext_for_range_begin_end_types_differ : ExtWarn<
-  "'begin' and 'end' returning different types (%0 and %1) is a C++1z extension">,
-  InGroup<CXX1z>;
+  "'begin' and 'end' returning different types (%0 and %1) is a C++17 extension">,
+  InGroup<CXX17>;
 def warn_for_range_begin_end_types_differ : Warning<
   "'begin' and 'end' returning different types (%0 and %1) is incompatible "
-  "with C++ standards before C++1z">, InGroup<CXXPre1zCompat>, DefaultIgnore;
+  "with C++ standards before C++17">, InGroup<CXXPre1zCompat>, DefaultIgnore;
 def note_in_for_range: Note<
   "when looking up '%select{begin|end}0' function for range expression "
   "of type %1">;
@@ -3905,7 +3905,7 @@ def err_template_nontype_parm_bad_type : Error<
   "a non-type template parameter cannot have type %0">;
 def warn_cxx14_compat_template_nontype_parm_auto_type : Warning<
   "non-type template parameters declared with %0 are incompatible with C++ "
-  "standards before C++1z">,
+  "standards before C++17">,
   DefaultIgnore, InGroup<CXXPre1zCompat>;
 def err_template_param_default_arg_redefinition : Error<
   "template parameter redefines default argument">;
@@ -6337,9 +6337,9 @@ def note_member_first_declared_here : Note<
 def err_decrement_bool : Error<"cannot decrement expression of type bool">;
 def warn_increment_bool : Warning<
   "incrementing expression of type bool is deprecated and "
-  "incompatible with C++1z">, InGroup<DeprecatedIncrementBool>;
+  "incompatible with C++17">, InGroup<DeprecatedIncrementBool>;
 def ext_increment_bool : ExtWarn<
-  "ISO C++1z does not allow incrementing expression of type bool">,
+  "ISO C++17 does not allow incrementing expression of type bool">,
   DefaultError, InGroup<IncrementBool>;
 def err_increment_decrement_enum : Error<
   "cannot %select{decrement|increment}0 expression of enum type %1">;
@@ -6528,10 +6528,10 @@ let CategoryName = "Lambda Issue" in {
 
   // C++1z '*this' captures.
   def warn_cxx14_compat_star_this_lambda_capture : Warning<
-    "by value capture of '*this' is incompatible with C++ standards before C++1z">,
+    "by value capture of '*this' is incompatible with C++ standards before C++17">,
      InGroup<CXXPre1zCompat>, DefaultIgnore;
   def ext_star_this_lambda_capture_cxx1z : ExtWarn<
-    "capture of '*this' by copy is a C++1z extension">, InGroup<CXX1z>;
+    "capture of '*this' by copy is a C++17 extension">, InGroup<CXX17>;
 }
 
 def err_return_in_captured_stmt : Error<
@@ -7200,7 +7200,7 @@ def warn_unused_volatile : Warning<
 def ext_cxx14_attr : Extension<
   "use of the %0 attribute is a C++14 extension">, InGroup<CXX14>;
 def ext_cxx1z_attr : Extension<
-  "use of the %0 attribute is a C++1z extension">, InGroup<CXX1z>;
+  "use of the %0 attribute is a C++17 extension">, InGroup<CXX17>;
 
 def warn_unused_comparison : Warning<
   "%select{%select{|in}1equality|relational}0 comparison result unused">,
