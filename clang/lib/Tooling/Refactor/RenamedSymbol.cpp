@@ -25,12 +25,13 @@ Symbol::Symbol(const NamedDecl *FoundDecl, unsigned SymbolIndex,
     ObjCSelector = MD->getSelector();
 }
 
-bool operator<(const SymbolOccurrence &LHS, const SymbolOccurrence &RHS) {
+bool operator<(const OldSymbolOccurrence &LHS, const OldSymbolOccurrence &RHS) {
   assert(!LHS.Locations.empty() && !RHS.Locations.empty());
   return LHS.Locations[0] < RHS.Locations[0];
 }
 
-bool operator==(const SymbolOccurrence &LHS, const SymbolOccurrence &RHS) {
+bool operator==(const OldSymbolOccurrence &LHS,
+                const OldSymbolOccurrence &RHS) {
   return LHS.Kind == RHS.Kind && LHS.SymbolIndex == RHS.SymbolIndex &&
          std::equal(LHS.Locations.begin(), LHS.Locations.end(),
                     RHS.Locations.begin());

@@ -28,20 +28,20 @@ static void initNames(std::vector<std::string> &Strings, StringRef Name,
   } while (!Name.empty());
 }
 
-SymbolName::SymbolName(StringRef Name, const LangOptions &LangOpts) {
+OldSymbolName::OldSymbolName(StringRef Name, const LangOptions &LangOpts) {
   initNames(Strings, Name, LangOpts.ObjC1);
 }
 
-SymbolName::SymbolName(StringRef Name, bool IsObjectiveCSelector) {
+OldSymbolName::OldSymbolName(StringRef Name, bool IsObjectiveCSelector) {
   initNames(Strings, Name, IsObjectiveCSelector);
 }
 
-SymbolName::SymbolName(ArrayRef<StringRef> Name) {
+OldSymbolName::OldSymbolName(ArrayRef<StringRef> Name) {
   for (const auto &Piece : Name)
     Strings.push_back(Piece.str());
 }
 
-void SymbolName::print(raw_ostream &OS) const {
+void OldSymbolName::print(raw_ostream &OS) const {
   for (size_t I = 0, E = Strings.size(); I != E; ++I) {
     if (I != 0)
       OS << ':';
@@ -49,7 +49,7 @@ void SymbolName::print(raw_ostream &OS) const {
   }
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const SymbolName &N) {
+raw_ostream &operator<<(raw_ostream &OS, const OldSymbolName &N) {
   N.print(OS);
   return OS;
 }
