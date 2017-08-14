@@ -233,6 +233,13 @@ public:
   std::string dumpAST(PathRef File);
 
 private:
+  std::future<void>
+  scheduleReparseAndDiags(PathRef File, VersionedDraft Contents,
+                          std::shared_ptr<CppFile> Resources,
+                          Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS);
+
+  std::future<void> scheduleCancelRebuild(std::shared_ptr<CppFile> Resources);
+
   GlobalCompilationDatabase &CDB;
   DiagnosticsConsumer &DiagConsumer;
   FileSystemProvider &FSProvider;

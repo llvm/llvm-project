@@ -143,61 +143,14 @@ std::future<void> ClangdServer::addDocument(PathRef File, StringRef Contents) {
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
   std::shared_ptr<CppFile> Resources =
       Units.getOrCreateFile(File, ResourceDir, CDB, PCHs, TaggedFS.Value);
-
-  std::future<llvm::Optional<std::vector<DiagWithFixIts>>> DeferredRebuild =
-      Resources->deferRebuild(Contents, TaggedFS.Value);
-  std::promise<void> DonePromise;
-  std::future<void> DoneFuture = DonePromise.get_future();
-
-  Path FileStr = File;
-  VFSTag Tag = TaggedFS.Tag;
-  auto ReparseAndPublishDiags =
-      [this, FileStr, Version,
-       Tag](std::future<llvm::Optional<std::vector<DiagWithFixIts>>>
-                DeferredRebuild,
-            std::promise<void> DonePromise) -> void {
-    FulfillPromiseGuard Guard(DonePromise);
-
-    auto CurrentVersion = DraftMgr.getVersion(FileStr);
-    if (CurrentVersion != Version)
-      return; // This request is outdated
-
-    auto Diags = DeferredRebuild.get();
-    if (!Diags)
-      return; // A new reparse was requested before this one completed.
-    DiagConsumer.onDiagnosticsReady(FileStr,
-                                    make_tagged(std::move(*Diags), Tag));
-  };
-
-  WorkScheduler.addToFront(std::move(ReparseAndPublishDiags),
-                           std::move(DeferredRebuild), std::move(DonePromise));
-  return DoneFuture;
+  return scheduleReparseAndDiags(File, VersionedDraft{Version, Contents.str()},
+                                 std::move(Resources), std::move(TaggedFS));
 }
 
 std::future<void> ClangdServer::removeDocument(PathRef File) {
-  auto Version = DraftMgr.removeDraft(File);
-  Path FileStr = File;
-
-  std::promise<void> DonePromise;
-  std::future<void> DoneFuture = DonePromise.get_future();
-
-  auto RemoveDocFromCollection = [this, FileStr,
-                                  Version](std::promise<void> DonePromise) {
-    FulfillPromiseGuard Guard(DonePromise);
-
-    if (Version != DraftMgr.getVersion(FileStr))
-      return; // This request is outdated, do nothing
-
-    std::shared_ptr<CppFile> File = Units.removeIfPresent(FileStr);
-    if (!File)
-      return;
-    // Cancel all ongoing rebuilds, so that we don't do extra work before
-    // deleting this file.
-    File->cancelRebuilds();
-  };
-  WorkScheduler.addToFront(std::move(RemoveDocFromCollection),
-                           std::move(DonePromise));
-  return DoneFuture;
+  DraftMgr.removeDraft(File);
+  std::shared_ptr<CppFile> Resources = Units.removeIfPresent(File);
+  return scheduleCancelRebuild(std::move(Resources));
 }
 
 std::future<void> ClangdServer::forceReparse(PathRef File) {
@@ -305,4 +258,61 @@ Tagged<std::vector<Location>> ClangdServer::findDefinitions(PathRef File,
     Result = clangd::findDefinitions(*AST, Pos);
   });
   return make_tagged(std::move(Result), TaggedFS.Tag);
+}
+
+std::future<void> ClangdServer::scheduleReparseAndDiags(
+    PathRef File, VersionedDraft Contents, std::shared_ptr<CppFile> Resources,
+    Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS) {
+
+  assert(Contents.Draft && "Draft must have contents");
+  std::future<llvm::Optional<std::vector<DiagWithFixIts>>> DeferredRebuild =
+      Resources->deferRebuild(*Contents.Draft, TaggedFS.Value);
+  std::promise<void> DonePromise;
+  std::future<void> DoneFuture = DonePromise.get_future();
+
+  DocVersion Version = Contents.Version;
+  Path FileStr = File;
+  VFSTag Tag = TaggedFS.Tag;
+  auto ReparseAndPublishDiags =
+      [this, FileStr, Version,
+       Tag](std::future<llvm::Optional<std::vector<DiagWithFixIts>>>
+                DeferredRebuild,
+            std::promise<void> DonePromise) -> void {
+    FulfillPromiseGuard Guard(DonePromise);
+
+    auto CurrentVersion = DraftMgr.getVersion(FileStr);
+    if (CurrentVersion != Version)
+      return; // This request is outdated
+
+    auto Diags = DeferredRebuild.get();
+    if (!Diags)
+      return; // A new reparse was requested before this one completed.
+    DiagConsumer.onDiagnosticsReady(FileStr,
+                                    make_tagged(std::move(*Diags), Tag));
+  };
+
+  WorkScheduler.addToFront(std::move(ReparseAndPublishDiags),
+                           std::move(DeferredRebuild), std::move(DonePromise));
+  return DoneFuture;
+}
+
+std::future<void>
+ClangdServer::scheduleCancelRebuild(std::shared_ptr<CppFile> Resources) {
+  std::promise<void> DonePromise;
+  std::future<void> DoneFuture = DonePromise.get_future();
+  if (!Resources) {
+    // No need to schedule any cleanup.
+    DonePromise.set_value();
+    return DoneFuture;
+  }
+
+  std::future<void> DeferredCancel = Resources->deferCancelRebuild();
+  auto CancelReparses = [Resources](std::promise<void> DonePromise,
+                                    std::future<void> DeferredCancel) {
+    FulfillPromiseGuard Guard(DonePromise);
+    DeferredCancel.get();
+  };
+  WorkScheduler.addToFront(std::move(CancelReparses), std::move(DonePromise),
+                           std::move(DeferredCancel));
+  return DoneFuture;
 }
