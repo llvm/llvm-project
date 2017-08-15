@@ -324,7 +324,7 @@ function(generate_compiler_rt_tests test_objects test_suite testname arch)
     SUBDIR ${TEST_SUBDIR}
     OBJECTS ${${test_objects}}
     DEPS ${TEST_DEPS}
-    LINK_FLAGS ${TARGET_LINK_FLAGS}
+    LINK_FLAGS ${TEST_LINK_FLAGS}
     )
   set("${test_objects}" "${${test_objects}}" PARENT_SCOPE)
 endfunction()
