@@ -377,6 +377,10 @@ CommonChunk::CommonChunk(const COFFSymbolRef S) : Sym(S) {
   Align = std::min(uint64_t(32), PowerOf2Ceil(Sym.getValue()));
 }
 
+void CommonChunk::setAlign(uint32_t NewAlign) {
+  Align = std::max(Align, NewAlign);
+}
+
 uint32_t CommonChunk::getPermissions() const {
   return IMAGE_SCN_CNT_UNINITIALIZED_DATA | IMAGE_SCN_MEM_READ |
          IMAGE_SCN_MEM_WRITE;

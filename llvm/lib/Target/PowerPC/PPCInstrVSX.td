@@ -2550,6 +2550,44 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                     UseVSXReg;
   } // mayStore
 
+  let Predicates = [IsLittleEndian] in {
+  def: Pat<(f32 (PPCfcfids (PPCmtvsra (i32 (extractelt v4i32:$A, 0))))),
+           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 3))))>;
+  def: Pat<(f32 (PPCfcfids (PPCmtvsra (i32 (extractelt v4i32:$A, 1))))),
+           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 2))))>;
+  def: Pat<(f32 (PPCfcfids (PPCmtvsra (i32 (extractelt v4i32:$A, 2))))),
+           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 1))))>;
+  def: Pat<(f32 (PPCfcfids (PPCmtvsra (i32 (extractelt v4i32:$A, 3))))),
+           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 0))))>;
+  def: Pat<(f64 (PPCfcfid (PPCmtvsra (i32 (extractelt v4i32:$A, 0))))),
+           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 3)), VSFRC))>;
+  def: Pat<(f64 (PPCfcfid (PPCmtvsra (i32 (extractelt v4i32:$A, 1))))),
+           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 2)), VSFRC))>;
+  def: Pat<(f64 (PPCfcfid (PPCmtvsra (i32 (extractelt v4i32:$A, 2))))),
+           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 1)), VSFRC))>;
+  def: Pat<(f64 (PPCfcfid (PPCmtvsra (i32 (extractelt v4i32:$A, 3))))),
+           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 0)), VSFRC))>;
+  }
+
+  let Predicates = [IsBigEndian] in {
+  def: Pat<(f32 (PPCfcfids (PPCmtvsra (i32 (extractelt v4i32:$A, 0))))),
+           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 0))))>;
+  def: Pat<(f32 (PPCfcfids (PPCmtvsra (i32 (extractelt v4i32:$A, 1))))),
+           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 1))))>;
+  def: Pat<(f32 (PPCfcfids (PPCmtvsra (i32 (extractelt v4i32:$A, 2))))),
+           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 2))))>;
+  def: Pat<(f32 (PPCfcfids (PPCmtvsra (i32 (extractelt v4i32:$A, 3))))),
+           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 3))))>;
+  def: Pat<(f64 (PPCfcfid (PPCmtvsra (i32 (extractelt v4i32:$A, 0))))),
+           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 0)), VSFRC))>;
+  def: Pat<(f64 (PPCfcfid (PPCmtvsra (i32 (extractelt v4i32:$A, 1))))),
+           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 1)), VSFRC))>;
+  def: Pat<(f64 (PPCfcfid (PPCmtvsra (i32 (extractelt v4i32:$A, 2))))),
+           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 2)), VSFRC))>;
+  def: Pat<(f64 (PPCfcfid (PPCmtvsra (i32 (extractelt v4i32:$A, 3))))),
+           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 3)), VSFRC))>;
+  }
+
   // Patterns for which instructions from ISA 3.0 are a better match
   let Predicates = [IsLittleEndian, HasP9Vector] in {
   def : Pat<(f32 (PPCfcfidus (PPCmtvsrz (i32 (extractelt v4i32:$A, 0))))),
@@ -2560,6 +2598,14 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
             (f32 (XSCVUXDSP (XXEXTRACTUW $A, 4)))>;
   def : Pat<(f32 (PPCfcfidus (PPCmtvsrz (i32 (extractelt v4i32:$A, 3))))),
             (f32 (XSCVUXDSP (XXEXTRACTUW $A, 0)))>;
+  def : Pat<(f64 (PPCfcfidu (PPCmtvsrz (i32 (extractelt v4i32:$A, 0))))),
+            (f64 (XSCVUXDDP (XXEXTRACTUW $A, 12)))>;
+  def : Pat<(f64 (PPCfcfidu (PPCmtvsrz (i32 (extractelt v4i32:$A, 1))))),
+            (f64 (XSCVUXDDP (XXEXTRACTUW $A, 8)))>;
+  def : Pat<(f64 (PPCfcfidu (PPCmtvsrz (i32 (extractelt v4i32:$A, 2))))),
+            (f64 (XSCVUXDDP (XXEXTRACTUW $A, 4)))>;
+  def : Pat<(f64 (PPCfcfidu (PPCmtvsrz (i32 (extractelt v4i32:$A, 3))))),
+            (f64 (XSCVUXDDP (XXEXTRACTUW $A, 0)))>;
   def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 0)),
             (v4i32 (XXINSERTW v4i32:$A, AlignValues.I32_TO_BE_WORD1, 12))>;
   def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 1)),
@@ -2587,6 +2633,14 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
             (f32 (XSCVUXDSP (XXEXTRACTUW $A, 8)))>;
   def : Pat<(f32 (PPCfcfidus (PPCmtvsrz (i32 (extractelt v4i32:$A, 3))))),
             (f32 (XSCVUXDSP (XXEXTRACTUW $A, 12)))>;
+  def : Pat<(f64 (PPCfcfidu (PPCmtvsrz (i32 (extractelt v4i32:$A, 0))))),
+            (f64 (XSCVUXDDP (XXEXTRACTUW $A, 0)))>;
+  def : Pat<(f64 (PPCfcfidu (PPCmtvsrz (i32 (extractelt v4i32:$A, 1))))),
+            (f64 (XSCVUXDDP (XXEXTRACTUW $A, 4)))>;
+  def : Pat<(f64 (PPCfcfidu (PPCmtvsrz (i32 (extractelt v4i32:$A, 2))))),
+            (f64 (XSCVUXDDP (XXEXTRACTUW $A, 8)))>;
+  def : Pat<(f64 (PPCfcfidu (PPCmtvsrz (i32 (extractelt v4i32:$A, 3))))),
+            (f64 (XSCVUXDDP (XXEXTRACTUW $A, 12)))>;
   def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 0)),
             (v4i32 (XXINSERTW v4i32:$A, AlignValues.I32_TO_BE_WORD1, 0))>;
   def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 1)),

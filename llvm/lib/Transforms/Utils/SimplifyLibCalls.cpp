@@ -2041,13 +2041,103 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
   return nullptr;
 }
 
+Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
+                                                       LibFunc Func,
+                                                       IRBuilder<> &Builder) {
+  // Don't optimize calls that require strict floating point semantics.
+  if (CI->isStrictFP())
+    return nullptr;
+
+  switch (Func) {
+  case LibFunc_cosf:
+  case LibFunc_cos:
+  case LibFunc_cosl:
+    return optimizeCos(CI, Builder);
+  case LibFunc_sinpif:
+  case LibFunc_sinpi:
+  case LibFunc_cospif:
+  case LibFunc_cospi:
+    return optimizeSinCosPi(CI, Builder);
+  case LibFunc_powf:
+  case LibFunc_pow:
+  case LibFunc_powl:
+    return optimizePow(CI, Builder);
+  case LibFunc_exp2l:
+  case LibFunc_exp2:
+  case LibFunc_exp2f:
+    return optimizeExp2(CI, Builder);
+  case LibFunc_fabsf:
+  case LibFunc_fabs:
+  case LibFunc_fabsl:
+    return replaceUnaryCall(CI, Builder, Intrinsic::fabs);
+  case LibFunc_sqrtf:
+  case LibFunc_sqrt:
+  case LibFunc_sqrtl:
+    return optimizeSqrt(CI, Builder);
+  case LibFunc_log:
+  case LibFunc_log10:
+  case LibFunc_log1p:
+  case LibFunc_log2:
+  case LibFunc_logb:
+    return optimizeLog(CI, Builder);
+  case LibFunc_tan:
+  case LibFunc_tanf:
+  case LibFunc_tanl:
+    return optimizeTan(CI, Builder);
+  case LibFunc_ceil:
+    return replaceUnaryCall(CI, Builder, Intrinsic::ceil);
+  case LibFunc_floor:
+    return replaceUnaryCall(CI, Builder, Intrinsic::floor);
+  case LibFunc_round:
+    return replaceUnaryCall(CI, Builder, Intrinsic::round);
+  case LibFunc_nearbyint:
+    return replaceUnaryCall(CI, Builder, Intrinsic::nearbyint);
+  case LibFunc_rint:
+    return replaceUnaryCall(CI, Builder, Intrinsic::rint);
+  case LibFunc_trunc:
+    return replaceUnaryCall(CI, Builder, Intrinsic::trunc);
+  case LibFunc_acos:
+  case LibFunc_acosh:
+  case LibFunc_asin:
+  case LibFunc_asinh:
+  case LibFunc_atan:
+  case LibFunc_atanh:
+  case LibFunc_cbrt:
+  case LibFunc_cosh:
+  case LibFunc_exp:
+  case LibFunc_exp10:
+  case LibFunc_expm1:
+  case LibFunc_sin:
+  case LibFunc_sinh:
+  case LibFunc_tanh:
+    if (UnsafeFPShrink && hasFloatVersion(CI->getCalledFunction()->getName()))
+      return optimizeUnaryDoubleFP(CI, Builder, true);
+    return nullptr;
+  case LibFunc_copysign:
+    if (hasFloatVersion(CI->getCalledFunction()->getName()))
+      return optimizeBinaryDoubleFP(CI, Builder);
+    return nullptr;
+  case LibFunc_fminf:
+  case LibFunc_fmin:
+  case LibFunc_fminl:
+  case LibFunc_fmaxf:
+  case LibFunc_fmax:
+  case LibFunc_fmaxl:
+    return optimizeFMinFMax(CI, Builder);
+  default:
+    return nullptr;
+  }
+}
+
 Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
+  // TODO: Split out the code below that operates on FP calls so that
+  //       we can all non-FP calls with the StrictFP attribute to be
+  //       optimized.
   if (CI->isNoBuiltin())
     return nullptr;
 
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
-  StringRef FuncName = Callee->getName();
 
   SmallVector<OperandBundleDef, 2> OpBundles;
   CI->getOperandBundlesAsDefs(OpBundles);
@@ -2055,6 +2145,8 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
   bool isCallingConvC = isCallingConvCCompatible(CI);
 
   // Command-line parameter overrides instruction attribute.
+  // This can't be moved to optimizeFloatingPointLibCall() because it may be
+  // used by the intrinsic optimizations. 
   if (EnableUnsafeFPShrink.getNumOccurrences() > 0)
     UnsafeFPShrink = EnableUnsafeFPShrink;
   else if (isa<FPMathOperator>(CI) && CI->hasUnsafeAlgebra())
@@ -2064,6 +2156,8 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI)) {
     if (!isCallingConvC)
       return nullptr;
+    // The FP intrinsics have corresponding constrained versions so we don't
+    // need to check for the StrictFP attribute here.
     switch (II->getIntrinsicID()) {
     case Intrinsic::pow:
       return optimizePow(CI, Builder);
@@ -2104,32 +2198,9 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       return nullptr;
     if (Value *V = optimizeStringMemoryLibCall(CI, Builder))
       return V;
+    if (Value *V = optimizeFloatingPointLibCall(CI, Func, Builder))
+      return V;
     switch (Func) {
-    case LibFunc_cosf:
-    case LibFunc_cos:
-    case LibFunc_cosl:
-      return optimizeCos(CI, Builder);
-    case LibFunc_sinpif:
-    case LibFunc_sinpi:
-    case LibFunc_cospif:
-    case LibFunc_cospi:
-      return optimizeSinCosPi(CI, Builder);
-    case LibFunc_powf:
-    case LibFunc_pow:
-    case LibFunc_powl:
-      return optimizePow(CI, Builder);
-    case LibFunc_exp2l:
-    case LibFunc_exp2:
-    case LibFunc_exp2f:
-      return optimizeExp2(CI, Builder);
-    case LibFunc_fabsf:
-    case LibFunc_fabs:
-    case LibFunc_fabsl:
-      return replaceUnaryCall(CI, Builder, Intrinsic::fabs);
-    case LibFunc_sqrtf:
-    case LibFunc_sqrt:
-    case LibFunc_sqrtl:
-      return optimizeSqrt(CI, Builder);
     case LibFunc_ffs:
     case LibFunc_ffsl:
     case LibFunc_ffsll:
@@ -2158,18 +2229,8 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       return optimizeFWrite(CI, Builder);
     case LibFunc_fputs:
       return optimizeFPuts(CI, Builder);
-    case LibFunc_log:
-    case LibFunc_log10:
-    case LibFunc_log1p:
-    case LibFunc_log2:
-    case LibFunc_logb:
-      return optimizeLog(CI, Builder);
     case LibFunc_puts:
       return optimizePuts(CI, Builder);
-    case LibFunc_tan:
-    case LibFunc_tanf:
-    case LibFunc_tanl:
-      return optimizeTan(CI, Builder);
     case LibFunc_perror:
       return optimizeErrorReporting(CI, Builder);
     case LibFunc_vfprintf:
@@ -2177,46 +2238,6 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
       return optimizeErrorReporting(CI, Builder, 0);
     case LibFunc_fputc:
       return optimizeErrorReporting(CI, Builder, 1);
-    case LibFunc_ceil:
-      return replaceUnaryCall(CI, Builder, Intrinsic::ceil);
-    case LibFunc_floor:
-      return replaceUnaryCall(CI, Builder, Intrinsic::floor);
-    case LibFunc_round:
-      return replaceUnaryCall(CI, Builder, Intrinsic::round);
-    case LibFunc_nearbyint:
-      return replaceUnaryCall(CI, Builder, Intrinsic::nearbyint);
-    case LibFunc_rint:
-      return replaceUnaryCall(CI, Builder, Intrinsic::rint);
-    case LibFunc_trunc:
-      return replaceUnaryCall(CI, Builder, Intrinsic::trunc);
-    case LibFunc_acos:
-    case LibFunc_acosh:
-    case LibFunc_asin:
-    case LibFunc_asinh:
-    case LibFunc_atan:
-    case LibFunc_atanh:
-    case LibFunc_cbrt:
-    case LibFunc_cosh:
-    case LibFunc_exp:
-    case LibFunc_exp10:
-    case LibFunc_expm1:
-    case LibFunc_sin:
-    case LibFunc_sinh:
-    case LibFunc_tanh:
-      if (UnsafeFPShrink && hasFloatVersion(FuncName))
-        return optimizeUnaryDoubleFP(CI, Builder, true);
-      return nullptr;
-    case LibFunc_copysign:
-      if (hasFloatVersion(FuncName))
-        return optimizeBinaryDoubleFP(CI, Builder);
-      return nullptr;
-    case LibFunc_fminf:
-    case LibFunc_fmin:
-    case LibFunc_fminl:
-    case LibFunc_fmaxf:
-    case LibFunc_fmax:
-    case LibFunc_fmaxl:
-      return optimizeFMinFMax(CI, Builder);
     default:
       return nullptr;
     }

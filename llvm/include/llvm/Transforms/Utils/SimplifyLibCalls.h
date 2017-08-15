@@ -137,6 +137,9 @@ private:
   Value *optimizeSqrt(CallInst *CI, IRBuilder<> &B);
   Value *optimizeSinCosPi(CallInst *CI, IRBuilder<> &B);
   Value *optimizeTan(CallInst *CI, IRBuilder<> &B);
+  // Wrapper for all floating point library call optimizations
+  Value *optimizeFloatingPointLibCall(CallInst *CI, LibFunc Func,
+                                      IRBuilder<> &B);
 
   // Integer Library Call Optimizations
   Value *optimizeFFS(CallInst *CI, IRBuilder<> &B);

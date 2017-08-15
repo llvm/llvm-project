@@ -39,7 +39,6 @@ class CallSite;
 class DataLayout;
 class DominatorTree;
 class TargetLibraryInfo;
-class DbgDeclareInst;
 class MemIntrinsic;
 class MemSetInst;
 class OptimizationRemarkEmitter;

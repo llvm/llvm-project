@@ -1823,39 +1823,32 @@ void ScopStmt::checkForReductions() {
   // Then check each possible candidate pair.
   for (const auto &CandidatePair : Candidates) {
     bool Valid = true;
-    isl_map *LoadAccs = CandidatePair.first->getAccessRelation().release();
-    isl_map *StoreAccs = CandidatePair.second->getAccessRelation().release();
+    isl::map LoadAccs = CandidatePair.first->getAccessRelation();
+    isl::map StoreAccs = CandidatePair.second->getAccessRelation();
 
     // Skip those with obviously unequal base addresses.
-    if (!isl_map_has_equal_space(LoadAccs, StoreAccs)) {
-      isl_map_free(LoadAccs);
-      isl_map_free(StoreAccs);
+    if (!LoadAccs.has_equal_space(StoreAccs)) {
       continue;
     }
 
     // And check if the remaining for overlap with other memory accesses.
-    isl_map *AllAccsRel = isl_map_union(LoadAccs, StoreAccs);
-    AllAccsRel = isl_map_intersect_domain(AllAccsRel, getDomain().release());
-    isl_set *AllAccs = isl_map_range(AllAccsRel);
+    isl::map AllAccsRel = LoadAccs.unite(StoreAccs);
+    AllAccsRel = AllAccsRel.intersect_domain(getDomain());
+    isl::set AllAccs = AllAccsRel.range();
 
     for (MemoryAccess *MA : MemAccs) {
       if (MA == CandidatePair.first || MA == CandidatePair.second)
         continue;
 
-      isl_map *AccRel = isl_map_intersect_domain(
-          MA->getAccessRelation().release(), getDomain().release());
-      isl_set *Accs = isl_map_range(AccRel);
+      isl::map AccRel = MA->getAccessRelation().intersect_domain(getDomain());
+      isl::set Accs = AccRel.range();
 
-      if (isl_set_has_equal_space(AllAccs, Accs)) {
-        isl_set *OverlapAccs = isl_set_intersect(Accs, isl_set_copy(AllAccs));
-        Valid = Valid && isl_set_is_empty(OverlapAccs);
-        isl_set_free(OverlapAccs);
-      } else {
-        isl_set_free(Accs);
+      if (AllAccs.has_equal_space(Accs)) {
+        isl::set OverlapAccs = Accs.intersect(AllAccs);
+        Valid = Valid && OverlapAccs.is_empty();
       }
     }
 
-    isl_set_free(AllAccs);
     if (!Valid)
       continue;
 

@@ -86,6 +86,10 @@ protected:
   /// \param ArgPos The 0-based position of the flag argument.
   void insertStringFlag(const ast_matchers::MatchFinder::MatchResult &Result,
                         const char Mode, const int ArgPos);
+
+  /// Helper function to get the spelling of a particular argument.
+  StringRef getSpellingArg(const ast_matchers::MatchFinder::MatchResult &Result,
+                           int N) const;
 };
 
 } // namespace android
