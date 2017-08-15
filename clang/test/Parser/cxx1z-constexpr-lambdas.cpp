@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z %s -verify 
+// RUN: %clang_cc1 -std=c++17 %s -verify 
 // RUN: %clang_cc1 -std=c++14 %s -verify 
 // RUN: %clang_cc1 -std=c++11 %s -verify 
 
@@ -23,9 +23,9 @@ auto XL16 = [] () constexpr
                   { };
 
 #else
-auto L = []() mutable constexpr {return 0; }; //expected-warning{{is a C++1z extension}}
-auto L2 = []() constexpr { return 0;};//expected-warning{{is a C++1z extension}}
-auto L4 = []() constexpr mutable { return 0; }; //expected-warning{{is a C++1z extension}}
+auto L = []() mutable constexpr {return 0; }; //expected-warning{{is a C++17 extension}}
+auto L2 = []() constexpr { return 0;};//expected-warning{{is a C++17 extension}}
+auto L4 = []() constexpr mutable { return 0; }; //expected-warning{{is a C++17 extension}}
 #endif
 
 
