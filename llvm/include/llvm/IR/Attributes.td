@@ -149,6 +149,9 @@ def StackProtectReq : EnumAttr<"sspreq">;
 /// Strong Stack protection.
 def StackProtectStrong : EnumAttr<"sspstrong">;
 
+/// Function was called in a scope requiring strict floating point semantics.
+def StrictFP : EnumAttr<"strictfp">;
+
 /// Hidden pointer to structure to return.
 def StructRet : EnumAttr<"sret">;
 

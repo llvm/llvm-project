@@ -63,6 +63,27 @@ if (LIBFUZZER_ENABLE)
       $<TARGET_OBJECTS:LLVMFuzzerNoMainObjects>
       )
   target_link_libraries(LLVMFuzzer ${LLVM_PTHREAD_LIB})
+
+  if(LLVMFuzzer IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+      NOT LLVM_DISTRIBUTION_COMPONENTS)
+    set(export_to_llvmexports EXPORT LLVMExports)
+    set_property(GLOBAL PROPERTY LLVM_HAS_EXPORTS True)
+  endif()
+
+  install(TARGETS LLVMFuzzer
+          ${export_to_llvmexports}
+          ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+          COMPONENT LLVMFuzzer)
+
+  if (NOT CMAKE_CONFIGURATION_TYPES)
+    add_custom_target(install-LLVMFuzzer
+                      DEPENDS LLVMFuzzer
+                      COMMAND "${CMAKE_COMMAND}"
+                              -DCMAKE_INSTALL_COMPONENT=LLVMFuzzer
+                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  endif()
+
+  set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS LLVMFuzzer)
 endif()
 
 if (MSVC)

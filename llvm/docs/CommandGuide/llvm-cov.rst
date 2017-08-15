@@ -290,6 +290,12 @@ OPTIONS
  Show code coverage only for functions with region coverage less than the given
  threshold.
 
+.. option:: -path-equivalence=<from>,<to>
+
+ Map the paths in the coverage data to local source file paths. This allows you
+ to generate the coverage data on one machine, and then use llvm-cov on a
+ different machine where you have the same files on a different path.
+
 .. program:: llvm-cov report
 
 .. _llvm-cov-report:

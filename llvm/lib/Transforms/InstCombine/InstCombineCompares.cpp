@@ -1108,7 +1108,6 @@ Instruction *InstCombiner::foldAllocaCmp(ICmpInst &ICI,
         // because we don't allow ptrtoint. Memcpy and memmove are safe because
         // we don't allow stores, so src cannot point to V.
         case Intrinsic::lifetime_start: case Intrinsic::lifetime_end:
-        case Intrinsic::dbg_declare: case Intrinsic::dbg_value:
         case Intrinsic::memcpy: case Intrinsic::memmove: case Intrinsic::memset:
           continue;
         default:

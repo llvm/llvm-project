@@ -47,13 +47,10 @@ define i32 @test4(i32 %X) {
 }
 
 ; Same as above, but the compare isn't canonical
-; TODO: we should be able to simplify this
 define i32 @test4noncanon(i32 %X) {
 ; CHECK-LABEL: @test4noncanon(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], -2147483648
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[OR]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], -2147483648
+; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %cmp = icmp sle i32 %X, -1
   %or = or i32 %X, -2147483648
@@ -114,13 +111,10 @@ define i32 @test9(i32 %X) {
 }
 
 ; Same as above, but the compare isn't canonical
-; TODO: we should be able to simplify this
 define i32 @test9noncanon(i32 %X) {
 ; CHECK-LABEL: @test9noncanon(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], -2147483648
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[OR]], i32 [[X]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], -2147483648
+; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %cmp = icmp sge i32 %X, 0
   %or = or i32 %X, -2147483648
@@ -158,6 +152,52 @@ define <2 x i8> @test11vec(<2 x i8> %X) {
   %and = and <2 x i8> %X, <i8 127, i8 127>
   %sel = select <2 x i1> %cmp, <2 x i8> %X, <2 x i8> %and
   ret <2 x i8> %sel
+}
+
+define i32 @test12(i32 %X) {
+; CHECK-LABEL: @test12(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 3
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %cmp = icmp ult i32 %X, 4
+  %and = and i32 %X, 3
+  %cond = select i1 %cmp, i32 %X, i32 %and
+  ret i32 %cond
+}
+
+; Same as above, but the compare isn't canonical
+define i32 @test12noncanon(i32 %X) {
+; CHECK-LABEL: @test12noncanon(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 3
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %cmp = icmp ule i32 %X, 3
+  %and = and i32 %X, 3
+  %cond = select i1 %cmp, i32 %X, i32 %and
+  ret i32 %cond
+}
+
+define i32 @test13(i32 %X) {
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 3
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %cmp = icmp ugt i32 %X, 3
+  %and = and i32 %X, 3
+  %cond = select i1 %cmp, i32 %and, i32 %X
+  ret i32 %cond
+}
+
+; Same as above, but the compare isn't canonical
+define i32 @test13noncanon(i32 %X) {
+; CHECK-LABEL: @test13noncanon(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 3
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %cmp = icmp uge i32 %X, 4
+  %and = and i32 %X, 3
+  %cond = select i1 %cmp, i32 %and, i32 %X
+  ret i32 %cond
 }
 
 define i32 @select_icmp_and_8_eq_0_or_8(i32 %x) {

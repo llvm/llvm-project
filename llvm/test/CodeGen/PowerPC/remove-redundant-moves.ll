@@ -105,3 +105,131 @@ entry:
   %1 = uitofp i64 %0 to float
   ret float %1
 }
+
+define float @conv2fltTesti0(<4 x i32> %a) {
+entry:
+; CHECK-LABEL: conv2fltTesti0
+; CHECK: xxspltw [[SW:[0-9]+]], 34, 3
+; CHECK: xvcvsxwsp [[SW]], [[SW]]
+; CHECK: xscvspdpn 1, [[SW]]
+; CHECK-BE-LABEL: conv2fltTesti0
+; CHECK-BE: xxspltw [[CP:[0-9]+]], 34, 0
+; CHECK-BE: xvcvsxwsp [[CP]], [[CP]]
+; CHECK-BE: xscvspdpn 1, [[CP]]
+  %vecext = extractelement <4 x i32> %a, i32 0
+  %conv = sitofp i32 %vecext to float
+  ret float %conv
+}
+
+define float @conv2fltTesti1(<4 x i32> %a) {
+entry:
+; CHECK-LABEL: conv2fltTesti1
+; CHECK: xxspltw [[SW:[0-9]+]], 34, 2
+; CHECK: xvcvsxwsp [[SW]], [[SW]]
+; CHECK: xscvspdpn 1, [[SW]]
+; CHECK-BE-LABEL: conv2fltTesti1
+; CHECK-BE: xxspltw [[CP:[0-9]+]], 34, 1
+; CHECK-BE: xvcvsxwsp [[CP]], [[CP]]
+; CHECK-BE: xscvspdpn 1, [[CP]]
+  %vecext = extractelement <4 x i32> %a, i32 1
+  %conv = sitofp i32 %vecext to float
+  ret float %conv
+}
+
+define float @conv2fltTesti2(<4 x i32> %a) {
+entry:
+; CHECK-LABEL: conv2fltTesti2
+; CHECK: xxspltw [[SW:[0-9]+]], 34, 1
+; CHECK: xvcvsxwsp [[SW]], [[SW]]
+; CHECK: xscvspdpn 1, [[SW]]
+; CHECK-BE-LABEL: conv2fltTesti2
+; CHECK-BE: xxspltw [[CP:[0-9]+]], 34, 2
+; CHECK-BE: xvcvsxwsp [[CP]], [[CP]]
+; CHECK-BE: xscvspdpn 1, [[CP]]
+  %vecext = extractelement <4 x i32> %a, i32 2
+  %conv = sitofp i32 %vecext to float
+  ret float %conv
+}
+
+define float @conv2fltTesti3(<4 x i32> %a) {
+entry:
+; CHECK-LABEL: conv2fltTesti3
+; CHECK: xxspltw [[SW:[0-9]+]], 34, 0
+; CHECK: xvcvsxwsp [[SW]], [[SW]]
+; CHECK: xscvspdpn 1, [[SW]]
+; CHECK-BE-LABEL: conv2fltTesti3
+; CHECK-BE: xxspltw [[CP:[0-9]+]], 34, 3
+; CHECK-BE: xvcvsxwsp [[CP]], [[CP]]
+; CHECK-BE: xscvspdpn 1, [[CP]]
+  %vecext = extractelement <4 x i32> %a, i32 3
+  %conv = sitofp i32 %vecext to float
+  ret float %conv
+}
+
+; verify we don't crash for variable elem extract
+define float @conv2fltTestiVar(<4 x i32> %a, i32 zeroext %elem) {
+entry:
+  %vecext = extractelement <4 x i32> %a, i32 %elem
+  %conv = sitofp i32 %vecext to float
+  ret float %conv
+}
+
+define double @conv2dblTesti0(<4 x i32> %a) {
+entry:
+; CHECK-LABEL: conv2dblTesti0
+; CHECK: xxspltw [[SW:[0-9]+]], 34, 3
+; CHECK: xvcvsxwdp 1, [[SW]]
+; CHECK-BE-LABEL: conv2dblTesti0
+; CHECK-BE: xxspltw [[CP:[0-9]+]], 34, 0
+; CHECK-BE: xvcvsxwdp 1, [[CP]]
+  %vecext = extractelement <4 x i32> %a, i32 0
+  %conv = sitofp i32 %vecext to double
+  ret double %conv
+}
+
+define double @conv2dblTesti1(<4 x i32> %a) {
+entry:
+; CHECK-LABEL: conv2dblTesti1
+; CHECK: xxspltw [[SW:[0-9]+]], 34, 2
+; CHECK: xvcvsxwdp 1, [[SW]]
+; CHECK-BE-LABEL: conv2dblTesti1
+; CHECK-BE: xxspltw [[CP:[0-9]+]], 34, 1
+; CHECK-BE: xvcvsxwdp 1, [[CP]]
+  %vecext = extractelement <4 x i32> %a, i32 1
+  %conv = sitofp i32 %vecext to double
+  ret double %conv
+}
+
+define double @conv2dblTesti2(<4 x i32> %a) {
+entry:
+; CHECK-LABEL: conv2dblTesti2
+; CHECK: xxspltw [[SW:[0-9]+]], 34, 1
+; CHECK: xvcvsxwdp 1, [[SW]]
+; CHECK-BE-LABEL: conv2dblTesti2
+; CHECK-BE: xxspltw [[CP:[0-9]+]], 34, 2
+; CHECK-BE: xvcvsxwdp 1, [[CP]]
+  %vecext = extractelement <4 x i32> %a, i32 2
+  %conv = sitofp i32 %vecext to double
+  ret double %conv
+}
+
+define double @conv2dblTesti3(<4 x i32> %a) {
+entry:
+; CHECK-LABEL: conv2dblTesti3
+; CHECK: xxspltw [[SW:[0-9]+]], 34, 0
+; CHECK: xvcvsxwdp 1, [[SW]]
+; CHECK-BE-LABEL: conv2dblTesti3
+; CHECK-BE: xxspltw [[CP:[0-9]+]], 34, 3
+; CHECK-BE: xvcvsxwdp 1, [[CP]]
+  %vecext = extractelement <4 x i32> %a, i32 3
+  %conv = sitofp i32 %vecext to double
+  ret double %conv
+}
+
+; verify we don't crash for variable elem extract
+define double @conv2dblTestiVar(<4 x i32> %a, i32 zeroext %elem) {
+entry:
+  %vecext = extractelement <4 x i32> %a, i32 %elem
+  %conv = sitofp i32 %vecext to double
+  ret double %conv
+}
