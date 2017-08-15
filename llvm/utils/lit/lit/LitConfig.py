@@ -25,7 +25,7 @@ class LitConfig(object):
                  params, config_prefix = None,
                  maxIndividualTestTime = 0,
                  maxFailures = None,
-                 parallelism_groups = [],
+                 parallelism_groups = {},
                  echo_all_commands = False):
         # The name of the test runner.
         self.progname = progname

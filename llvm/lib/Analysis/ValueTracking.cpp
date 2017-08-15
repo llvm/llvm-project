@@ -3277,6 +3277,69 @@ void llvm::GetUnderlyingObjects(Value *V, SmallVectorImpl<Value *> &Objects,
   } while (!Worklist.empty());
 }
 
+/// This is the function that does the work of looking through basic
+/// ptrtoint+arithmetic+inttoptr sequences.
+static const Value *getUnderlyingObjectFromInt(const Value *V) {
+  do {
+    if (const Operator *U = dyn_cast<Operator>(V)) {
+      // If we find a ptrtoint, we can transfer control back to the
+      // regular getUnderlyingObjectFromInt.
+      if (U->getOpcode() == Instruction::PtrToInt)
+        return U->getOperand(0);
+      // If we find an add of a constant, a multiplied value, or a phi, it's
+      // likely that the other operand will lead us to the base
+      // object. We don't have to worry about the case where the
+      // object address is somehow being computed by the multiply,
+      // because our callers only care when the result is an
+      // identifiable object.
+      if (U->getOpcode() != Instruction::Add ||
+          (!isa<ConstantInt>(U->getOperand(1)) &&
+           Operator::getOpcode(U->getOperand(1)) != Instruction::Mul &&
+           !isa<PHINode>(U->getOperand(1))))
+        return V;
+      V = U->getOperand(0);
+    } else {
+      return V;
+    }
+    assert(V->getType()->isIntegerTy() && "Unexpected operand type!");
+  } while (true);
+}
+
+/// This is a wrapper around GetUnderlyingObjects and adds support for basic
+/// ptrtoint+arithmetic+inttoptr sequences.
+void llvm::getUnderlyingObjectsForCodeGen(const Value *V,
+                          SmallVectorImpl<Value *> &Objects,
+                          const DataLayout &DL) {
+  SmallPtrSet<const Value *, 16> Visited;
+  SmallVector<const Value *, 4> Working(1, V);
+  do {
+    V = Working.pop_back_val();
+
+    SmallVector<Value *, 4> Objs;
+    GetUnderlyingObjects(const_cast<Value *>(V), Objs, DL);
+
+    for (Value *V : Objs) {
+      if (!Visited.insert(V).second)
+        continue;
+      if (Operator::getOpcode(V) == Instruction::IntToPtr) {
+        const Value *O =
+          getUnderlyingObjectFromInt(cast<User>(V)->getOperand(0));
+        if (O->getType()->isPointerTy()) {
+          Working.push_back(O);
+          continue;
+        }
+      }
+      // If GetUnderlyingObjects fails to find an identifiable object,
+      // getUnderlyingObjectsForCodeGen also fails for safety.
+      if (!isIdentifiedObject(V)) {
+        Objects.clear();
+        return;
+      }
+      Objects.push_back(const_cast<Value *>(V));
+    }
+  } while (!Working.empty());
+}
+
 /// Return true if the only users of this pointer are lifetime markers.
 bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
   for (const User *U : V->users()) {
@@ -4395,6 +4458,10 @@ Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
                                         unsigned Depth, AssumptionCache *AC,
                                         const Instruction *CxtI,
                                         const DominatorTree *DT) {
+  // Bail out when we hit the limit.
+  if (Depth == MaxDepth)
+    return None;
+
   // A mismatch occurs when we compare a scalar cmp to a vector cmp, for example.
   if (LHS->getType() != RHS->getType())
     return None;

@@ -597,11 +597,13 @@ uint32_t LatticeCell::properties() const {
   return Ps;
 }
 
+#ifndef NDEBUG
 void MachineConstPropagator::CellMap::print(raw_ostream &os,
       const TargetRegisterInfo &TRI) const {
   for (auto &I : Map)
     dbgs() << "  " << PrintReg(I.first, &TRI) << " -> " << I.second << '\n';
 }
+#endif
 
 void MachineConstPropagator::visitPHI(const MachineInstr &PN) {
   const MachineBasicBlock *MB = PN.getParent();

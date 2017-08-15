@@ -62,8 +62,8 @@
 #include <cctype>
 #include <cstring>
 #include <system_error>
-#include <utility>
 #include <unordered_map>
+#include <utility>
 
 using namespace llvm;
 using namespace object;
@@ -871,7 +871,7 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   uint64_t Val = O->getPlainRelocationSymbolNum(RE);
 
   if (O->getAnyRelocationType(RE) == MachO::ARM64_RELOC_ADDEND) {
-    fmt << format("0x%x", Val);
+    fmt << format("0x%0" PRIx64, Val);
     return;
   } else if (isExtern) {
     symbol_iterator SI = O->symbol_begin();
@@ -2081,7 +2081,7 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
   if (PrintFaultMaps)
     printFaultMaps(o);
   if (DwarfDumpType != DIDT_Null) {
-    std::unique_ptr<DIContext> DICtx(new DWARFContextInMemory(*o));
+    std::unique_ptr<DIContext> DICtx = DWARFContext::create(*o);
     // Dump the complete DWARF structure.
     DIDumpOptions DumpOpts;
     DumpOpts.DumpType = DwarfDumpType;

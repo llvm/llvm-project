@@ -6053,21 +6053,21 @@ def SPACE : PseudoInst<(outs GPR:$Rd), (ins i32imm:$size, GPR:$Rn),
 // significantly more naive than the standard expansion: we conservatively
 // assume seq_cst, strong cmpxchg and omit clrex on failure.
 
-let Constraints = "@earlyclobber $Rd,@earlyclobber $status",
+let Constraints = "@earlyclobber $Rd,@earlyclobber $temp",
     mayLoad = 1, mayStore = 1 in {
-def CMP_SWAP_8 : PseudoInst<(outs GPR:$Rd, GPR:$status),
+def CMP_SWAP_8 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
                             (ins GPR:$addr, GPR:$desired, GPR:$new),
                             NoItinerary, []>, Sched<[]>;
 
-def CMP_SWAP_16 : PseudoInst<(outs GPR:$Rd, GPR:$status),
+def CMP_SWAP_16 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
                              (ins GPR:$addr, GPR:$desired, GPR:$new),
                              NoItinerary, []>, Sched<[]>;
 
-def CMP_SWAP_32 : PseudoInst<(outs GPR:$Rd, GPR:$status),
+def CMP_SWAP_32 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
                              (ins GPR:$addr, GPR:$desired, GPR:$new),
                              NoItinerary, []>, Sched<[]>;
 
-def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$status),
+def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$temp),
                              (ins GPR:$addr, GPRPair:$desired, GPRPair:$new),
                              NoItinerary, []>, Sched<[]>;
 }

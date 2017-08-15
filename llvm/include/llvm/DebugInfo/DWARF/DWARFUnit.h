@@ -123,7 +123,7 @@ class DWARFUnit {
   const DWARFSection &StringOffsetSection;
   uint64_t StringOffsetSectionBase = 0;
   const DWARFSection *AddrOffsetSection;
-  uint32_t AddrOffsetSectionBase;
+  uint32_t AddrOffsetSectionBase = 0;
   bool isLittleEndian;
   bool isDWO;
   const DWARFUnitSectionBase &UnitSection;
@@ -197,19 +197,12 @@ public:
   bool getAddrOffsetSectionItem(uint32_t Index, uint64_t &Result) const;
   bool getStringOffsetSectionItem(uint32_t Index, uint64_t &Result) const;
 
-  DWARFDataExtractor getDebugInfoExtractor() const {
-    return DWARFDataExtractor(InfoSection, isLittleEndian,
-                              getAddressByteSize());
-  }
+  DWARFDataExtractor getDebugInfoExtractor() const;
 
   DataExtractor getStringExtractor() const {
     return DataExtractor(StringSection, false, 0);
   }
 
-  const RelocAddrMap *getRelocMap() const { return &InfoSection.Relocs; }
-  const RelocAddrMap &getStringOffsetsRelocMap() const {
-    return StringOffsetSection.Relocs;
-  }
 
   bool extract(DataExtractor debug_info, uint32_t* offset_ptr);
 

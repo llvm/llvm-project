@@ -162,6 +162,11 @@ static cl::opt<unsigned>
                 cl::desc("Maximum depth of recursive SExt/ZExt"),
                 cl::init(8));
 
+static cl::opt<unsigned>
+    MaxAddRecSize("scalar-evolution-max-add-rec-size", cl::Hidden,
+                  cl::desc("Max coefficients in AddRec during evolving"),
+                  cl::init(16));
+
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
@@ -2876,6 +2881,12 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       const SCEVAddRecExpr *OtherAddRec =
         dyn_cast<SCEVAddRecExpr>(Ops[OtherIdx]);
       if (!OtherAddRec || OtherAddRec->getLoop() != AddRecLoop)
+        continue;
+
+      // Limit max number of arguments to avoid creation of unreasonably big
+      // SCEVAddRecs with very complex operands.
+      if (AddRec->getNumOperands() + OtherAddRec->getNumOperands() - 1 >
+          MaxAddRecSize)
         continue;
 
       bool Overflow = false;
@@ -7582,6 +7593,25 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
             const SCEV *BackedgeTakenCount = getBackedgeTakenCount(LI);
             if (const SCEVConstant *BTCC =
                   dyn_cast<SCEVConstant>(BackedgeTakenCount)) {
+
+              // This trivial case can show up in some degenerate cases where
+              // the incoming IR has not yet been fully simplified.
+              if (BTCC->getValue()->isZero()) {
+                Value *InitValue = nullptr;
+                bool MultipleInitValues = false;
+                for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
+                  if (!LI->contains(PN->getIncomingBlock(i))) {
+                    if (!InitValue)
+                      InitValue = PN->getIncomingValue(i);
+                    else if (InitValue != PN->getIncomingValue(i)) {
+                      MultipleInitValues = true;
+                      break;
+                    }
+                  }
+                  if (!MultipleInitValues && InitValue)
+                    return getSCEV(InitValue);
+                }
+              }
               // Okay, we know how many times the containing loop executes.  If
               // this is a constant evolving PHI node, get the final value at
               // the specified iteration number.

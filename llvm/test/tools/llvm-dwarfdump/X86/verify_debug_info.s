@@ -2,8 +2,7 @@
 # RUN: | not llvm-dwarfdump -verify - \
 # RUN: | FileCheck %s
 
-# CHECK: Verifying .debug_info Unit Header Chain...
-# CHECK-NEXT: error: DIE has invalid DW_AT_stmt_list encoding:{{[[:space:]]}}
+# CHECK: error: DIE has invalid DW_AT_stmt_list encoding:{{[[:space:]]}}
 # CHECK-NEXT: 0x0000000c: DW_TAG_compile_unit [1] *
 # CHECK-NEXT: DW_AT_producer [DW_FORM_strp]	( .debug_str[0x00000000] = "clang version 5.0.0 (trunk 308185) (llvm/trunk 308186)")
 # CHECK-NEXT: DW_AT_language [DW_FORM_data2]	(DW_LANG_C99)

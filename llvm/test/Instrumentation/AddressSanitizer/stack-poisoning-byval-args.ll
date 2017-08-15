@@ -1,5 +1,7 @@
 ; This check verifies that arguments passed by value get redzones.
 ; RUN: opt < %s -asan -asan-realign-stack=32 -S | FileCheck %s
+; RUN: opt < %s -asan -asan-realign-stack=32 -asan-force-dynamic-shadow -S | FileCheck %s --check-prefixes=CHECK-FDS
+
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
@@ -7,6 +9,8 @@ target triple = "x86_64-unknown-linux-gnu"
 %struct.A = type { [8 x i32] }
 
 declare i32 @bar(%struct.A*)
+
+; CHECK-FDS-NOT: {{\.byval}}
 
 ; Test behavior for named argument with explicit alignment.  The memcpy and
 ; alloca alignments should match the explicit alignment of 64.

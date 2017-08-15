@@ -840,7 +840,7 @@ void DwarfStreamer::emitLocationsForUnit(const CompileUnit &Unit,
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLocSection());
 
   unsigned AddressSize = Unit.getOrigUnit().getAddressByteSize();
-  const DWARFSection &InputSec = Dwarf.getLocSection();
+  const DWARFSection &InputSec = Dwarf.getDWARFObj().getLocSection();
   DataExtractor Data(InputSec.Data, Dwarf.isLittleEndian(), AddressSize);
   DWARFUnit &OrigUnit = Unit.getOrigUnit();
   auto OrigUnitDie = OrigUnit.getUnitDIE(false);
@@ -1295,7 +1295,7 @@ private:
     /// Construct the output DIE tree by cloning the DIEs we
     /// chose to keep above. If there are no valid relocs, then there's
     /// nothing to clone/emit.
-    void cloneAllCompileUnits(DWARFContextInMemory &DwarfContext);
+    void cloneAllCompileUnits(DWARFContext &DwarfContext);
 
   private:
     typedef DWARFAbbreviationDeclaration::AttributeSpec AttributeSpec;
@@ -2871,7 +2871,8 @@ void DwarfLinker::patchRangesForUnit(const CompileUnit &Unit,
   DWARFDebugRangeList RangeList;
   const auto &FunctionRanges = Unit.getFunctionRanges();
   unsigned AddressSize = Unit.getOrigUnit().getAddressByteSize();
-  DWARFDataExtractor RangeExtractor(OrigDwarf.getRangeSection(),
+  DWARFDataExtractor RangeExtractor(OrigDwarf.getDWARFObj(),
+                                    OrigDwarf.getDWARFObj().getRangeSection(),
                                     OrigDwarf.isLittleEndian(), AddressSize);
   auto InvalidRange = FunctionRanges.end(), CurrRange = InvalidRange;
   DWARFUnit &OrigUnit = Unit.getOrigUnit();
@@ -2982,9 +2983,9 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
   // Parse the original line info for the unit.
   DWARFDebugLine::LineTable LineTable;
   uint32_t StmtOffset = *StmtList;
-  DWARFDataExtractor LineExtractor(OrigDwarf.getLineSection(),
-                                   OrigDwarf.isLittleEndian(),
-                                   Unit.getOrigUnit().getAddressByteSize());
+  DWARFDataExtractor LineExtractor(
+      OrigDwarf.getDWARFObj(), OrigDwarf.getDWARFObj().getLineSection(),
+      OrigDwarf.isLittleEndian(), Unit.getOrigUnit().getAddressByteSize());
   LineTable.parse(LineExtractor, &StmtOffset);
 
   // This vector is the output line table.
@@ -3084,7 +3085,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
       LineTable.Prologue.OpcodeBase > 13)
     reportWarning("line table parameters mismatch. Cannot emit.");
   else {
-    StringRef LineData = OrigDwarf.getLineSection().Data;
+    StringRef LineData = OrigDwarf.getDWARFObj().getLineSection().Data;
     MCDwarfLineTableParams Params;
     Params.DWARF2LineOpcodeBase = LineTable.Prologue.OpcodeBase;
     Params.DWARF2LineBase = LineTable.Prologue.LineBase;
@@ -3110,7 +3111,7 @@ void DwarfLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
 void DwarfLinker::patchFrameInfoForObject(const DebugMapObject &DMO,
                                           DWARFContext &OrigDwarf,
                                           unsigned AddrSize) {
-  StringRef FrameData = OrigDwarf.getDebugFrameSection();
+  StringRef FrameData = OrigDwarf.getDWARFObj().getDebugFrameSection();
   if (FrameData.empty())
     return;
 
@@ -3321,11 +3322,13 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
   std::unique_ptr<CompileUnit> Unit;
 
   // Setup access to the debug info.
-  DWARFContextInMemory DwarfContext(*ErrOrObj);
+  auto DwarfContext = DWARFContext::create(*ErrOrObj);
   RelocationManager RelocMgr(*this);
-  for (const auto &CU : DwarfContext.compile_units()) {
-    auto CUDie = CU->getUnitDIE(false);
+  for (const auto &CU : DwarfContext->compile_units()) {
+    maybeUpdateMaxDwarfVersion(CU->getVersion());
+
     // Recursively get all modules imported by this one.
+    auto CUDie = CU->getUnitDIE(false);
     if (!registerModuleReference(CUDie, *CU, ModuleMap, Indent)) {
       if (Unit) {
         errs() << Filename << ": Clang modules are expected to have exactly"
@@ -3363,11 +3366,10 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
   std::vector<std::unique_ptr<CompileUnit>> CompileUnits;
   CompileUnits.push_back(std::move(Unit));
   DIECloner(*this, RelocMgr, DIEAlloc, CompileUnits, Options)
-      .cloneAllCompileUnits(DwarfContext);
+      .cloneAllCompileUnits(*DwarfContext);
 }
 
-void DwarfLinker::DIECloner::cloneAllCompileUnits(
-    DWARFContextInMemory &DwarfContext) {
+void DwarfLinker::DIECloner::cloneAllCompileUnits(DWARFContext &DwarfContext) {
   if (!Linker.Streamer)
     return;
 
@@ -3436,11 +3438,11 @@ bool DwarfLinker::link(const DebugMap &Map) {
     }
 
     // Setup access to the debug info.
-    DWARFContextInMemory DwarfContext(*ErrOrObj);
-    startDebugObject(DwarfContext, *Obj);
+    auto DwarfContext = DWARFContext::create(*ErrOrObj);
+    startDebugObject(*DwarfContext, *Obj);
 
     // In a first phase, just read in the debug info and load all clang modules.
-    for (const auto &CU : DwarfContext.compile_units()) {
+    for (const auto &CU : DwarfContext->compile_units()) {
       auto CUDie = CU->getUnitDIE(false);
       if (Options.Verbose) {
         outs() << "Input compilation unit:";
@@ -3474,9 +3476,9 @@ bool DwarfLinker::link(const DebugMap &Map) {
     RelocMgr.resetValidRelocs();
     if (RelocMgr.hasValidRelocs())
       DIECloner(*this, RelocMgr, DIEAlloc, Units, Options)
-          .cloneAllCompileUnits(DwarfContext);
+          .cloneAllCompileUnits(*DwarfContext);
     if (!Options.NoOutput && !Units.empty())
-      patchFrameInfoForObject(*Obj, DwarfContext,
+      patchFrameInfoForObject(*Obj, *DwarfContext,
                               Units[0]->getOrigUnit().getAddressByteSize());
 
     // Clean-up before starting working on the next object.

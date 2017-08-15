@@ -37,6 +37,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
@@ -889,6 +890,10 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
 
   // Keep a list of *allocas* which need to be remapped.
   DenseMap<const AllocaInst*, const AllocaInst*> Allocas;
+
+  // Keep a list of allocas which has been affected by the remap.
+  SmallPtrSet<const AllocaInst*, 32> MergedAllocas;
+
   for (const std::pair<int, int> &SI : SlotRemap) {
     const AllocaInst *From = MFI->getObjectAllocation(SI.first);
     const AllocaInst *To = MFI->getObjectAllocation(SI.second);
@@ -907,6 +912,10 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
       Cast->insertAfter(Inst);
       Inst = Cast;
     }
+
+    // We keep both slots to maintain AliasAnalysis metadata later.
+    MergedAllocas.insert(From);
+    MergedAllocas.insert(To);
 
     // Allow the stack protector to adjust its value map to account for the
     // upcoming replacement.
@@ -939,13 +948,6 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
 
       // Update the MachineMemOperand to use the new alloca.
       for (MachineMemOperand *MMO : I.memoperands()) {
-        // FIXME: In order to enable the use of TBAA when using AA in CodeGen,
-        // we'll also need to update the TBAA nodes in MMOs with values
-        // derived from the merged allocas. When doing this, we'll need to use
-        // the same variant of GetUnderlyingObjects that is used by the
-        // instruction scheduler (that can look through ptrtoint/inttoptr
-        // pairs).
-
         // We've replaced IR-level uses of the remapped allocas, so we only
         // need to replace direct uses here.
         const AllocaInst *AI = dyn_cast_or_null<AllocaInst>(MMO->getValue());
@@ -997,6 +999,48 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         MO.setIndex(ToSlot);
         FixedInstr++;
       }
+
+      // We adjust AliasAnalysis information for merged stack slots.
+      MachineSDNode::mmo_iterator NewMemOps =
+          MF->allocateMemRefsArray(I.getNumMemOperands());
+      unsigned MemOpIdx = 0;
+      bool ReplaceMemOps = false;
+      for (MachineMemOperand *MMO : I.memoperands()) {
+        // If this memory location can be a slot remapped here,
+        // we remove AA information.
+        bool MayHaveConflictingAAMD = false;
+        if (MMO->getAAInfo()) {
+          if (const Value *MMOV = MMO->getValue()) {
+            SmallVector<Value *, 4> Objs;
+            getUnderlyingObjectsForCodeGen(MMOV, Objs, MF->getDataLayout());
+
+            if (Objs.empty())
+              MayHaveConflictingAAMD = true;
+            else
+              for (Value *V : Objs) {
+                // If this memory location comes from a known stack slot
+                // that is not remapped, we continue checking.
+                // Otherwise, we need to invalidate AA infomation.
+                const AllocaInst *AI = dyn_cast_or_null<AllocaInst>(V);
+                if (AI && MergedAllocas.count(AI)) {
+                  MayHaveConflictingAAMD = true;
+                  break;
+                }
+              }
+          }
+        }
+        if (MayHaveConflictingAAMD) {
+          NewMemOps[MemOpIdx++] = MF->getMachineMemOperand(MMO, AAMDNodes());
+          ReplaceMemOps = true;
+        }
+        else
+          NewMemOps[MemOpIdx++] = MMO;
+      }
+
+      // If any memory operand is updated, set memory references of
+      // this instruction.
+      if (ReplaceMemOps)
+        I.setMemRefs(std::make_pair(NewMemOps, I.getNumMemOperands()));
     }
 
   // Update the location of C++ catch objects for the MSVC personality routine.

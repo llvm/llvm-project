@@ -22,6 +22,9 @@ class DWARFDie;
 class DWARFUnit;
 class DWARFAcceleratorTable;
 class DWARFDataExtractor;
+class DWARFDebugAbbrev;
+class DataExtractor;
+struct DWARFSection;
 
 /// A class that verifies DWARF debug information given a DWARF Context.
 class DWARFVerifier {
@@ -32,7 +35,18 @@ class DWARFVerifier {
   /// lies between to valid DIEs.
   std::map<uint64_t, std::set<uint32_t>> ReferenceToDIEOffsets;
   uint32_t NumDebugLineErrors = 0;
-  uint32_t NumAppleNamesErrors = 0;
+
+  /// Verifies the abbreviations section.
+  ///
+  /// This function currently checks that:
+  /// --No abbreviation declaration has more than one attributes with the same
+  /// name.
+  ///
+  /// \param Abbrev Pointer to the abbreviations section we are verifying
+  /// Abbrev can be a pointer to either .debug_abbrev or debug_abbrev.dwo.
+  ///
+  /// \returns The number of errors that occured during verification.
+  unsigned verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev);
 
   /// Verifies the header of a unit in the .debug_info section.
   ///
@@ -60,6 +74,15 @@ class DWARFVerifier {
 
 
   bool verifyUnitContents(DWARFUnit Unit);
+
+  /// Verify that all Die ranges are valid.
+  ///
+  /// This function currently checks for:
+  /// - cases in which lowPC >= highPC
+  ///
+  /// \returns Number of errors that occured during verification.
+  unsigned verifyDieRanges(const DWARFDie &Die);
+
   /// Verifies the attribute's DWARF attribute and its value.
   ///
   /// This function currently checks for:
@@ -111,9 +134,38 @@ class DWARFVerifier {
   /// - invalid file indexes
   void verifyDebugLineRows();
 
+  /// Verify that an Apple-style accelerator table is valid.
+  ///
+  /// This function currently checks that:
+  /// - The fixed part of the header fits in the section
+  /// - The size of the section is as large as what the header describes
+  /// - There is at least one atom
+  /// - The form for each atom is valid
+  /// - The buckets have a valid index, or they are empty
+  /// - Each hashdata offset is valid
+  /// - Each DIE is valid
+  /// 
+  /// \param AccelSection pointer to the section containing the acceleration table
+  /// \param StrData pointer to the string section
+  /// \param SectionName the name of the table we're verifying
+  ///
+  /// \returns The number of errors occured during verification
+  unsigned verifyAccelTable(const DWARFSection *AccelSection,
+                            DataExtractor *StrData, const char *SectionName);
+
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D)
       : OS(S), DCtx(D) {}
+  /// Verify the information in any of the following sections, if available:
+  /// .debug_abbrev, debug_abbrev.dwo
+  ///
+  /// Any errors are reported to the stream that was this object was
+  /// constructed with.
+  ///
+  /// \returns true if .debug_abbrev and .debug_abbrev.dwo verify successfully,
+  /// false otherwise.
+  bool handleDebugAbbrev();
+
   /// Verify the information in the .debug_info section.
   ///
   /// Any errors are reported to the stream that was this object was
@@ -130,13 +182,14 @@ public:
   /// \returns true if the .debug_line verifies successfully, false otherwise.
   bool handleDebugLine();
 
-  /// Verify the information in the .apple_names accelerator table.
+  /// Verify the information in accelerator tables, if they exist.
   ///
   /// Any errors are reported to the stream that was this object was
   /// constructed with.
   ///
-  /// \returns true if the .apple_names verifies successfully, false otherwise.
-  bool handleAppleNames();
+  /// \returns true if the existing Apple-style accelerator tables verify
+  /// successfully, false otherwise.
+  bool handleAccelTables();
 };
 
 } // end namespace llvm

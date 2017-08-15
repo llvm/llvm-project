@@ -17,7 +17,6 @@ namespace llvm {
 
 struct DWARFSection {
   StringRef Data;
-  RelocAddrMap Relocs;
 };
 
 } // end namespace llvm

@@ -35,9 +35,9 @@ class MachODumper {
                        ArrayRef<uint8_t> OpcodeBuffer, bool Lazy = false);
   void dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y);
-  void dumpDebugAbbrev(DWARFContextInMemory &DCtx,
+  void dumpDebugAbbrev(DWARFContext &DCtx,
                        std::unique_ptr<MachOYAML::Object> &Y);
-  void dumpDebugStrings(DWARFContextInMemory &DCtx,
+  void dumpDebugStrings(DWARFContext &DCtx,
                         std::unique_ptr<MachOYAML::Object> &Y);
 
 public:
@@ -187,8 +187,8 @@ Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   dumpLoadCommands(Y);
   dumpLinkEdit(Y);
 
-  DWARFContextInMemory DICtx(Obj);
-  if (auto Err = dwarf2yaml(DICtx, Y->DWARF))
+  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
+  if (auto Err = dwarf2yaml(*DICtx, Y->DWARF))
     return errorCodeToError(Err);
   return std::move(Y);
 }

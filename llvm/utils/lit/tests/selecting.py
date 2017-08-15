@@ -9,7 +9,7 @@
 
 # Check that regex-filtering based on environment variables work.
 #
-# RUN: LIT_FILTER='o[a-z]e' %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER-ENV %s
+# RUN: env LIT_FILTER='o[a-z]e' %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER-ENV %s
 # CHECK-FILTER-ENV: Testing: 2 of 5 tests
 
 
