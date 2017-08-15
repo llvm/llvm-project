@@ -403,14 +403,6 @@ function test_llvmCore() {
     fi
 
     if [ $do_test_suite = 'yes' ]; then
-      SandboxDir="$BuildDir/sandbox"
-      Lit=$SandboxDir/bin/lit
-      TestSuiteBuildDir="$BuildDir/test-suite-build"
-      TestSuiteSrcDir="$BuildDir/test-suite.src"
-
-      virtualenv $SandboxDir
-      $SandboxDir/bin/python $BuildDir/llvm.src/utils/lit/setup.py install
-      mkdir -p $TestSuiteBuildDir
       cd $TestSuiteBuildDir
       env CC="$c_compiler" CXX="$cxx_compiler" \
           cmake $TestSuiteSrcDir -DTEST_SUITE_LIT=$Lit
@@ -464,6 +456,19 @@ set -o pipefail
 
 if [ "$do_checkout" = "yes" ]; then
     export_sources
+fi
+
+# Setup the test-suite.  Do this early so we can catch failures before
+# we do the full 3 stage build.
+if [ $do_test_suite = "yes" ]; then
+  SandboxDir="$BuildDir/sandbox"
+  Lit=$SandboxDir/bin/lit
+  TestSuiteBuildDir="$BuildDir/test-suite-build"
+  TestSuiteSrcDir="$BuildDir/test-suite.src"
+
+  virtualenv $SandboxDir
+  $SandboxDir/bin/python $BuildDir/llvm.src/utils/lit/setup.py install
+  mkdir -p $TestSuiteBuildDir
 fi
 
 (

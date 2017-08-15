@@ -1293,14 +1293,18 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
-  applySynthetic({InX::DynSymTab,    InX::Bss,           InX::BssRelRo,
-                  InX::GnuHashTab,   In<ELFT>::HashTab,  InX::SymTab,
-                  InX::ShStrTab,     InX::StrTab,        In<ELFT>::VerDef,
-                  InX::DynStrTab,    InX::GdbIndex,      InX::Got,
-                  InX::MipsGot,      InX::IgotPlt,       InX::GotPlt,
-                  In<ELFT>::RelaDyn, In<ELFT>::RelaIplt, In<ELFT>::RelaPlt,
-                  InX::Plt,          InX::Iplt,          In<ELFT>::EhFrameHdr,
-                  In<ELFT>::VerSym,  In<ELFT>::VerNeed,  InX::Dynamic},
+  applySynthetic({InX::DynSymTab,    InX::Bss,
+                  InX::BssRelRo,     InX::GnuHashTab,
+                  In<ELFT>::HashTab, InX::SymTab,
+                  InX::ShStrTab,     InX::StrTab,
+                  In<ELFT>::VerDef,  InX::DynStrTab,
+                  InX::Got,          InX::MipsGot,
+                  InX::IgotPlt,      InX::GotPlt,
+                  In<ELFT>::RelaDyn, In<ELFT>::RelaIplt,
+                  In<ELFT>::RelaPlt, InX::Plt,
+                  InX::Iplt,         In<ELFT>::EhFrameHdr,
+                  In<ELFT>::VerSym,  In<ELFT>::VerNeed,
+                  InX::Dynamic},
                  [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   // Some architectures use small displacements for jump instructions.

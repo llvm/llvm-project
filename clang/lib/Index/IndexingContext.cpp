@@ -231,8 +231,8 @@ static bool isDeclADefinition(const Decl *D, const DeclContext *ContainerDC, AST
 
 /// Whether the given NamedDecl should be skipped because it has no name.
 static bool shouldSkipNamelessDecl(const NamedDecl *ND) {
-  return ND->getDeclName().isEmpty() && !isa<TagDecl>(ND) &&
-         !isa<ObjCCategoryDecl>(ND);
+  return (ND->getDeclName().isEmpty() && !isa<TagDecl>(ND) &&
+          !isa<ObjCCategoryDecl>(ND)) || isa<CXXDeductionGuideDecl>(ND);
 }
 
 static const Decl *adjustParent(const Decl *Parent) {

@@ -36,7 +36,7 @@ void f10(int);
 // Test tvOS specific attributes.
 void f0_tvos(int) __attribute__((availability(tvos,introduced=2.0,deprecated=2.1))); // expected-note {{'f0_tvos' has been explicitly marked deprecated here}}
 void f1_tvos(int) __attribute__((availability(tvos,introduced=2.1)));
-void f2_tvos(int) __attribute__((availability(tvos,introduced=2.0,deprecated=3.0))); // expected-note {{'f2_tvos' has been explicitly marked deprecated here}}
+void f2_tvos(int) __attribute__((availability(tvOS,introduced=2.0,deprecated=3.0))); // expected-note {{'f2_tvos' has been explicitly marked deprecated here}}
 void f3_tvos(int) __attribute__((availability(tvos,introduced=3.0)));
 void f4_tvos(int) __attribute__((availability(macosx,introduced=10.1,deprecated=10.3,obsoleted=10.5), availability(tvos,introduced=2.0,deprecated=2.1,obsoleted=3.0))); // expected-note{{explicitly marked unavailable}}
 void f5_tvos(int) __attribute__((availability(tvos,introduced=2.0))) __attribute__((availability(ios,deprecated=3.0)));
@@ -44,7 +44,7 @@ void f5_attr_reversed_tvos(int) __attribute__((availability(ios, deprecated=3.0)
 void f5b_tvos(int) __attribute__((availability(tvos,introduced=2.0))) __attribute__((availability(tvos,deprecated=3.0))); // expected-note {{'f5b_tvos' has been explicitly marked deprecated here}}
 void f5c_tvos(int) __attribute__((availability(ios,introduced=2.0))) __attribute__((availability(ios,deprecated=3.0))); // expected-note {{'f5c_tvos' has been explicitly marked deprecated here}}
 void f6_tvos(int) __attribute__((availability(tvos,deprecated=3.0)));
-void f6_tvos(int) __attribute__((availability(tvos,introduced=2.0))); // expected-note {{'f6_tvos' has been explicitly marked deprecated here}}
+void f6_tvos(int) __attribute__((availability(tvOS,introduced=2.0))); // expected-note {{'f6_tvos' has been explicitly marked deprecated here}}
 
 void test_tvos() {
   f0_tvos(0); // expected-warning{{'f0_tvos' is deprecated: first deprecated in tvOS 2.1}}

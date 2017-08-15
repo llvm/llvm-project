@@ -1,6 +1,7 @@
 REQUIRES: shell
-RUN: cd %T
-RUN: cp %p/Inputs/split-dwarf-empty.dwo %T
+RUN: rm -rf %t && mkdir -p %t
+RUN: cd %t
+RUN: cp %p/Inputs/split-dwarf-empty.dwo %t
 RUN: echo "%p/Inputs/split-dwarf-empty.o 0xdeadbeef" > %t.input
 
 RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \

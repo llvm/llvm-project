@@ -3145,27 +3145,6 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
     TheCall->setArg(i, Arg.get());
   }
 
-  Expr *Scope;
-  if (Form != Init) {
-    if (IsOpenCL) {
-      Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
-      llvm::APSInt Result(32);
-      if (!Scope->isIntegerConstantExpr(Result, Context))
-        Diag(Scope->getLocStart(),
-             diag::err_atomic_op_has_non_constant_synch_scope)
-            << Scope->getSourceRange();
-      else if (!isValidSyncScopeValue(Result.getZExtValue()))
-        Diag(Scope->getLocStart(), diag::err_atomic_op_has_invalid_synch_scope)
-            << Scope->getSourceRange();
-    } else {
-      Scope = IntegerLiteral::Create(
-          Context,
-          llvm::APInt(Context.getTypeSize(Context.IntTy),
-                      static_cast<unsigned>(SyncScope::OpenCLAllSVMDevices)),
-          Context.IntTy, SourceLocation());
-    }
-  }
-
   // Permute the arguments into a 'consistent' order.
   SmallVector<Expr*, 5> SubExprs;
   SubExprs.push_back(Ptr);
@@ -3176,33 +3155,28 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
     break;
   case Load:
     SubExprs.push_back(TheCall->getArg(1)); // Order
-    SubExprs.push_back(Scope);              // Scope
     break;
   case LoadCopy:
   case Copy:
   case Arithmetic:
   case Xchg:
     SubExprs.push_back(TheCall->getArg(2)); // Order
-    SubExprs.push_back(Scope);              // Scope
     SubExprs.push_back(TheCall->getArg(1)); // Val1
     break;
   case GNUXchg:
     // Note, AtomicExpr::getVal2() has a special case for this atomic.
     SubExprs.push_back(TheCall->getArg(3)); // Order
-    SubExprs.push_back(Scope);              // Scope
     SubExprs.push_back(TheCall->getArg(1)); // Val1
     SubExprs.push_back(TheCall->getArg(2)); // Val2
     break;
   case C11CmpXchg:
     SubExprs.push_back(TheCall->getArg(3)); // Order
-    SubExprs.push_back(Scope);              // Scope
     SubExprs.push_back(TheCall->getArg(1)); // Val1
     SubExprs.push_back(TheCall->getArg(4)); // OrderFail
     SubExprs.push_back(TheCall->getArg(2)); // Val2
     break;
   case GNUCmpXchg:
     SubExprs.push_back(TheCall->getArg(4)); // Order
-    SubExprs.push_back(Scope);              // Scope
     SubExprs.push_back(TheCall->getArg(1)); // Val1
     SubExprs.push_back(TheCall->getArg(5)); // OrderFail
     SubExprs.push_back(TheCall->getArg(2)); // Val2
@@ -3217,6 +3191,17 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
       Diag(SubExprs[1]->getLocStart(),
            diag::warn_atomic_op_has_invalid_memory_order)
           << SubExprs[1]->getSourceRange();
+  }
+
+  if (auto ScopeModel = AtomicExpr::getScopeModel(Op)) {
+    auto *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
+    llvm::APSInt Result(32);
+    if (Scope->isIntegerConstantExpr(Result, Context) &&
+        !ScopeModel->isValid(Result.getZExtValue())) {
+      Diag(Scope->getLocStart(), diag::err_atomic_op_has_invalid_synch_scope)
+          << Scope->getSourceRange();
+    }
+    SubExprs.push_back(Scope);
   }
 
   AtomicExpr *AE = new (Context) AtomicExpr(TheCall->getCallee()->getLocStart(),

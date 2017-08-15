@@ -2295,9 +2295,14 @@ void CGOpenMPRuntimeNVPTX::emitOutlinedFunctionCall(
     CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *OutlinedFn,
     ArrayRef<llvm::Value *> Args) const {
   SmallVector<llvm::Value *, 4> TargetArgs;
+  TargetArgs.reserve(Args.size());
   auto *FnType =
       cast<llvm::FunctionType>(OutlinedFn->getType()->getPointerElementType());
   for (unsigned I = 0, E = Args.size(); I < E; ++I) {
+    if (FnType->isVarArg() && FnType->getNumParams() <= I) {
+      TargetArgs.append(std::next(Args.begin(), I), Args.end());
+      break;
+    }
     llvm::Type *TargetType = FnType->getParamType(I);
     llvm::Value *NativeArg = Args[I];
     if (!TargetType->isPointerTy()) {

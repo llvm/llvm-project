@@ -1302,13 +1302,10 @@ define i16 @test87(i16 %v) {
   ret i16 %t
 }
 
-; Do not optimize to ashr i16 (shift by 18)
 define i16 @test88(i16 %v) {
 ; CHECK-LABEL: @test88(
-; CHECK-NEXT:    [[A:%.*]] = sext i16 %v to i32
-; CHECK-NEXT:    [[S:%.*]] = ashr i32 [[A]], 18
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[S]] to i16
-; CHECK-NEXT:    ret i16 [[T]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i16 %v, 15
+; CHECK-NEXT:    ret i16 [[TMP1]]
 ;
   %a = sext i16 %v to i32
   %s = ashr i32 %a, 18

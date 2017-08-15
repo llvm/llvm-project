@@ -295,13 +295,15 @@ endif()
 #                      OBJECTS <object files>
 #                      DEPS <deps (e.g. runtime libs)>
 #                      LINK_FLAGS <link flags>)
-macro(add_compiler_rt_test test_suite test_name)
+function(add_compiler_rt_test test_suite test_name)
   cmake_parse_arguments(TEST "" "SUBDIR" "OBJECTS;DEPS;LINK_FLAGS" "" ${ARGN})
-  set(output_bin ${CMAKE_CURRENT_BINARY_DIR})
+  set(output_dir ${CMAKE_CURRENT_BINARY_DIR})
   if(TEST_SUBDIR)
-    set(output_bin "${output_bin}/${TEST_SUBDIR}")
+    set(output_dir "${output_dir}/${TEST_SUBDIR}")
   endif()
-  set(output_bin "${output_bin}/${CMAKE_CFG_RESOLVED_INTDIR}${test_name}")
+  set(output_dir "${output_dir}/${CMAKE_CFG_INTDIR}")
+  file(MAKE_DIRECTORY "${output_dir}")
+  set(output_bin "${output_dir}/${test_name}")
   if(MSVC)
     set(output_bin "${output_bin}.exe")
   endif()
@@ -329,7 +331,7 @@ macro(add_compiler_rt_test test_suite test_name)
 
   # Make the test suite depend on the binary.
   add_dependencies(${test_suite} ${test_name})
-endmacro()
+endfunction()
 
 macro(add_compiler_rt_resource_file target_name file_name component)
   set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/${file_name}")

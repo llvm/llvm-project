@@ -1,5 +1,6 @@
-# RUN: llvm-mc -triple=arm64-none-linux-gnu -filetype=obj -o %T/pic-reloc.o %s
-# RUN: llvm-rtdyld -triple=arm64-none-linux-gnu -verify  -check=%s %T/pic-reloc.o \
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=arm64-none-linux-gnu -filetype=obj -o %t/pic-reloc.o %s
+# RUN: llvm-rtdyld -triple=arm64-none-linux-gnu -verify  -check=%s %t/pic-reloc.o \
 # RUN:    -map-section pic-reloc.o,.got=0x20000 -dummy-extern f=0x1234 -dummy-extern g=0x5678
 
 _s:

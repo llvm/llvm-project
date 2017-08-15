@@ -559,8 +559,8 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
         return new ZExtInst(Builder.CreateShl(X, ShAmt), Ty);
     }
 
-    // (X >>u C) << C --> X & (-1 << C)
-    if (match(Op0, m_LShr(m_Value(X), m_Specific(Op1)))) {
+    // (X >> C) << C --> X & (-1 << C)
+    if (match(Op0, m_Shr(m_Value(X), m_Specific(Op1)))) {
       APInt Mask(APInt::getHighBitsSet(BitWidth, BitWidth - ShAmt));
       return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, Mask));
     }
@@ -801,6 +801,15 @@ Instruction *InstCombiner::visitAShr(BinaryOperator &I) {
       AmtSum = std::min(AmtSum, BitWidth - 1);
       // (X >>s C1) >>s C2 --> X >>s (C1 + C2)
       return BinaryOperator::CreateAShr(X, ConstantInt::get(Ty, AmtSum));
+    }
+
+    if (match(Op0, m_OneUse(m_SExt(m_Value(X)))) &&
+        (Ty->isVectorTy() || shouldChangeType(Ty, X->getType()))) {
+      // ashr (sext X), C --> sext (ashr X, C')
+      Type *SrcTy = X->getType();
+      ShAmt = std::min(ShAmt, SrcTy->getScalarSizeInBits() - 1);
+      Value *NewSh = Builder.CreateAShr(X, ConstantInt::get(SrcTy, ShAmt));
+      return new SExtInst(NewSh, Ty);
     }
 
     // If the shifted-out value is known-zero, then this is an exact shift.
