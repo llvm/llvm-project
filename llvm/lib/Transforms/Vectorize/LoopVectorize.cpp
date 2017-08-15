@@ -7655,7 +7655,7 @@ void LoopVectorizationPlanner::executePlan(InnerLoopVectorizer &ILV) {
   // 2. Copy and widen instructions from the old loop into the new loop.
 
   // Move instructions to handle first-order recurrences.
-  DenseMap<Instruction *, Instruction *> SinkAfter = Legal->getSinkAfter();
+  DenseMap<Instruction *, Instruction *> &SinkAfter = Legal->getSinkAfter();
   for (auto &Entry : SinkAfter) {
     Entry.first->removeFromParent();
     Entry.first->insertAfter(Entry.second);
