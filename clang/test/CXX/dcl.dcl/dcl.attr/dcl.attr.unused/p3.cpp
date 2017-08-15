@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wunused -Wused-but-marked-unused -std=c++1z -Wc++1z-extensions -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wunused -Wused-but-marked-unused -std=c++11 -Wc++1z-extensions -verify -DEXT %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused -Wused-but-marked-unused -std=c++17 -Wc++17-extensions -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused -Wused-but-marked-unused -std=c++11 -Wc++17-extensions -verify -DEXT %s
 
 static_assert(__has_cpp_attribute(maybe_unused) == 201603, "");
 
@@ -20,7 +20,7 @@ void f() {
 }
 
 #ifdef EXT
-// expected-warning@6 {{use of the 'maybe_unused' attribute is a C++1z extension}}
-// expected-warning@13 {{use of the 'maybe_unused' attribute is a C++1z extension}}
-// expected-warning@14 {{use of the 'maybe_unused' attribute is a C++1z extension}}
+// expected-warning@6 {{use of the 'maybe_unused' attribute is a C++17 extension}}
+// expected-warning@13 {{use of the 'maybe_unused' attribute is a C++17 extension}}
+// expected-warning@14 {{use of the 'maybe_unused' attribute is a C++17 extension}}
 #endif
