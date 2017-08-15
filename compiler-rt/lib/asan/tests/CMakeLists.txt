@@ -186,7 +186,7 @@ set(ASAN_INST_TEST_SOURCES
   asan_str_test.cc
   asan_test_main.cc)
 if(APPLE)
-  list(APPEND ASAN_INST_TEST_SOURCES asan_mac_test.cc)
+  list(APPEND ASAN_INST_TEST_SOURCES asan_mac_test.cc asan_mac_test_helpers.mm)
 endif()
 
 set(ASAN_BENCHMARKS_SOURCES
@@ -201,11 +201,6 @@ macro(add_asan_tests_for_arch_and_kind arch kind cflags)
     asan_compile(ASAN_INST_TEST_OBJECTS ${src} ${arch} ${kind}
                  CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} ${cflags})
   endforeach()
-  if (APPLE)
-    # Add Mac-specific helper.
-    asan_compile(ASAN_INST_TEST_OBJECTS asan_mac_test_helpers.mm ${arch} ${kind}
-                 CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} -ObjC ${cflags})
-  endif()
 
   if (MSVC)
     # With the MSVC CRT, the choice between static and dynamic CRT is made at

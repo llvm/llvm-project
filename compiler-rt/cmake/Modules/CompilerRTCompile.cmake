@@ -61,7 +61,7 @@ endfunction()
 # clang_compile(<object> <source>
 #               CFLAGS <list of compile flags>
 #               DEPS <list of dependencies>)
-macro(clang_compile object_file source)
+function(clang_compile object_file source)
   cmake_parse_arguments(SOURCE "" "" "CFLAGS;DEPS" ${ARGN})
   get_filename_component(source_rpath ${source} REALPATH)
   if(NOT COMPILER_RT_STANDALONE_BUILD)
@@ -71,6 +71,7 @@ macro(clang_compile object_file source)
     list(APPEND SOURCE_DEPS CompilerRTUnitTestCheckCxx)
   endif()
   string(REGEX MATCH "[.](cc|cpp)$" is_cxx ${source_rpath})
+  string(REGEX MATCH "[.](m|mm)$" is_objc ${source_rpath})
   if(is_cxx)
     string(REPLACE " " ";" global_flags "${CMAKE_CXX_FLAGS}")
   else()
@@ -84,6 +85,9 @@ macro(clang_compile object_file source)
   if (APPLE)
     set(global_flags ${OSX_SYSROOT_FLAG} ${global_flags})
   endif()
+  if (is_objc)
+    list(APPEND global_flags -ObjC)
+  endif()
 
   # Ignore unknown warnings. CMAKE_CXX_FLAGS may contain GCC-specific options
   # which are not supported by Clang.
@@ -96,7 +100,7 @@ macro(clang_compile object_file source)
             ${source_rpath}
     MAIN_DEPENDENCY ${source}
     DEPENDS ${SOURCE_DEPS})
-endmacro()
+endfunction()
 
 # On Darwin, there are no system-wide C++ headers and the just-built clang is
 # therefore not able to compile C++ files unless they are copied/symlinked into
