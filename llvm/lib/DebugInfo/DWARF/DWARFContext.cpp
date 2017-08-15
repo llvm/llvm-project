@@ -941,6 +941,7 @@ class DWARFObjInMemory final : public DWARFObject {
   bool IsLittleEndian;
   uint8_t AddressSize;
   StringRef FileName;
+  const object::ObjectFile *Obj = nullptr;
 
   using TypeSectionMap = MapVector<object::SectionRef, DWARFSectionMap,
                                    std::map<object::SectionRef, unsigned>>;
@@ -1059,7 +1060,8 @@ public:
   DWARFObjInMemory(const object::ObjectFile &Obj, const LoadedObjectInfo *L,
                    function_ref<ErrorPolicy(Error)> HandleError)
       : IsLittleEndian(Obj.isLittleEndian()),
-        AddressSize(Obj.getBytesInAddress()), FileName(Obj.getFileName()) {
+        AddressSize(Obj.getBytesInAddress()), FileName(Obj.getFileName()),
+        Obj(&Obj) {
 
     for (const SectionRef &Section : Obj.sections()) {
       StringRef Name;
@@ -1195,6 +1197,8 @@ public:
       return None;
     return AI->second;
   }
+
+  const object::ObjectFile *getFile() const override { return Obj; }
 
   bool isLittleEndian() const override { return IsLittleEndian; }
   StringRef getAbbrevDWOSection() const override { return AbbrevDWOSection; }

@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
@@ -32,6 +33,7 @@
 
 using namespace llvm;
 using namespace dwarf;
+using namespace object;
 using namespace syntax;
 
 static void dumpApplePropertyAttribute(raw_ostream &OS, uint64_t Val) {
@@ -52,17 +54,42 @@ static void dumpApplePropertyAttribute(raw_ostream &OS, uint64_t Val) {
   OS << ")";
 }
 
-static void dumpRanges(raw_ostream &OS, const DWARFAddressRangesVector& Ranges,
-                       unsigned AddressSize, unsigned Indent) {
-  if (Ranges.empty())
-    return;
-  
-  for (const auto &Range: Ranges) {
+static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
+                       const DWARFAddressRangesVector &Ranges,
+                       unsigned AddressSize, unsigned Indent,
+                       const DIDumpOptions &DumpOpts) {
+  StringMap<unsigned> SectionAmountMap;
+  std::vector<StringRef> SectionNames;
+  if (Obj.getFile() && !DumpOpts.Brief) {
+    for (const SectionRef &Section : Obj.getFile()->sections()) {
+      StringRef Name;
+      if (Section.getName(Name))
+        Name = "<error>";
+
+      ++SectionAmountMap[Name];
+      SectionNames.push_back(Name);
+    }
+  }
+
+  for (size_t I = 0; I < Ranges.size(); ++I) {
+    const DWARFAddressRange &R = Ranges[I];
+
     OS << '\n';
     OS.indent(Indent);
-    OS << format("[0x%0*" PRIx64 " - 0x%0*" PRIx64 ")",
-                 AddressSize*2, Range.LowPC,
-                 AddressSize*2, Range.HighPC);
+    OS << format("[0x%0*" PRIx64 " - 0x%0*" PRIx64 ")", AddressSize * 2,
+                 R.LowPC, AddressSize * 2, R.HighPC);
+
+    if (SectionNames.empty() || R.SectionIndex == -1ULL)
+      continue;
+
+    StringRef Name = R.SectionIndex < SectionNames.size()
+                         ? SectionNames[R.SectionIndex]
+                         : "<error>";
+    OS << format(" \"%s\"", Name.str().c_str());
+
+    // Print section index if there is more than one section with this name.
+    if (SectionAmountMap[Name] > 1)
+      OS << format(" [%u]", R.SectionIndex);
   }
 }
 
@@ -171,10 +198,11 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     if (Optional<uint64_t> OptVal = formValue.getAsUnsignedConstant())
       dumpApplePropertyAttribute(OS, *OptVal);
   } else if (Attr == DW_AT_ranges) {
-    dumpRanges(OS, Die.getAddressRanges(), U->getAddressByteSize(),
-               sizeof(BaseIndent)+Indent+4);
+    const DWARFObject &Obj = Die.getDwarfUnit()->getContext().getDWARFObj();
+    dumpRanges(Obj, OS, Die.getAddressRanges(), U->getAddressByteSize(),
+               sizeof(BaseIndent) + Indent + 4, DumpOpts);
   }
-  
+
   OS << ")\n";
 }
 
