@@ -140,7 +140,10 @@ scalar.body:
 ; CHECK:       vector.body:
 ; CHECK:         %vector.recur = phi <4 x i16> [ %vector.recur.init, %vector.ph ], [ [[L1:%[a-zA-Z0-9.]+]], %vector.body ]
 ; CHECK:         [[L1]] = load <4 x i16>
-; CHECK:         {{.*}} = shufflevector <4 x i16> %vector.recur, <4 x i16> [[L1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK:         [[SHUF:%[a-zA-Z0-9.]+]] = shufflevector <4 x i16> %vector.recur, <4 x i16> [[L1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; Check also that the casts were not moved needlessly.
+; CHECK:         sitofp <4 x i16> [[L1]] to <4 x double>
+; CHECK:         sitofp <4 x i16> [[SHUF]] to <4 x double> 
 ; CHECK:       middle.block:
 ; CHECK:         %vector.recur.extract = extractelement <4 x i16> [[L1]], i32 3
 ; CHECK:       scalar.ph:
