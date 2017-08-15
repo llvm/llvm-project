@@ -367,28 +367,45 @@ void ASTStmtReader::VisitMSAsmStmt(MSAsmStmt *S) {
 }
 
 void ASTStmtReader::VisitCoroutineBodyStmt(CoroutineBodyStmt *S) {
-  // FIXME: Implement coroutine serialization.
-  llvm_unreachable("unimplemented");
+  VisitStmt(S);
+  assert(Record.peekInt() == S->NumParams);
+  Record.skipInts(1);
+  auto *StoredStmts = S->getStoredStmts();
+  for (unsigned i = 0;
+       i < CoroutineBodyStmt::SubStmt::FirstParamMove + S->NumParams; ++i)
+    StoredStmts[i] = Record.readSubStmt();
 }
 
 void ASTStmtReader::VisitCoreturnStmt(CoreturnStmt *S) {
-  // FIXME: Implement coroutine serialization.
-  llvm_unreachable("unimplemented");
+  VisitStmt(S);
+  S->CoreturnLoc = Record.readSourceLocation();
+  for (auto &SubStmt: S->SubStmts)
+    SubStmt = Record.readSubStmt();
+  S->IsImplicit = Record.readInt() != 0;
 }
 
-void ASTStmtReader::VisitCoawaitExpr(CoawaitExpr *S) {
-  // FIXME: Implement coroutine serialization.
-  llvm_unreachable("unimplemented");
+void ASTStmtReader::VisitCoawaitExpr(CoawaitExpr *E) {
+  VisitExpr(E);
+  E->KeywordLoc = ReadSourceLocation();
+  for (auto &SubExpr: E->SubExprs)
+    SubExpr = Record.readSubStmt();
+  E->OpaqueValue = cast_or_null<OpaqueValueExpr>(Record.readSubStmt());
+  E->setIsImplicit(Record.readInt() != 0);
 }
 
-void ASTStmtReader::VisitDependentCoawaitExpr(DependentCoawaitExpr *S) {
-  // FIXME: Implement coroutine serialization.
-  llvm_unreachable("unimplemented");
+void ASTStmtReader::VisitCoyieldExpr(CoyieldExpr *E) {
+  VisitExpr(E);
+  E->KeywordLoc = ReadSourceLocation();
+  for (auto &SubExpr: E->SubExprs)
+    SubExpr = Record.readSubStmt();
+  E->OpaqueValue = cast_or_null<OpaqueValueExpr>(Record.readSubStmt());
 }
 
-void ASTStmtReader::VisitCoyieldExpr(CoyieldExpr *S) {
-  // FIXME: Implement coroutine serialization.
-  llvm_unreachable("unimplemented");
+void ASTStmtReader::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
+  VisitExpr(E);
+  E->KeywordLoc = ReadSourceLocation();
+  for (auto &SubExpr: E->SubExprs)
+    SubExpr = Record.readSubStmt();
 }
 
 void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
@@ -3947,6 +3964,29 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = LambdaExpr::CreateDeserialized(Context, NumCaptures);
       break;
     }
+
+    case STMT_COROUTINE_BODY: {
+      unsigned NumParams = Record[ASTStmtReader::NumStmtFields];
+      S = CoroutineBodyStmt::Create(Context, Empty, NumParams);
+      break;
+    }
+
+    case STMT_CORETURN:
+      S = new (Context) CoreturnStmt(Empty);
+      break;
+
+    case EXPR_COAWAIT:
+      S = new (Context) CoawaitExpr(Empty);
+      break;
+
+    case EXPR_COYIELD:
+      S = new (Context) CoyieldExpr(Empty);
+      break;
+
+    case EXPR_DEPENDENT_COAWAIT:
+      S = new (Context) DependentCoawaitExpr(Empty);
+      break;
+
     }
 
     // We hit a STMT_STOP, so we're done with this expression.

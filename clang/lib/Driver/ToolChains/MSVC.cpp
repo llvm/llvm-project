@@ -699,7 +699,7 @@ bool MSVCToolChain::IsIntegratedAssemblerDefault() const {
   return true;
 }
 
-bool MSVCToolChain::IsUnwindTablesDefault() const {
+bool MSVCToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
   // Emit unwind tables by default on Win64. All non-x86_32 Windows platforms
   // such as ARM and PPC actually require unwind tables, but LLVM doesn't know
   // how to generate them yet.

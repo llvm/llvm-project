@@ -5573,17 +5573,14 @@ void ARMABIInfo::setCCs() {
   // AAPCS apparently requires runtime support functions to be soft-float, but
   // that's almost certainly for historic reasons (Thumb1 not supporting VFP
   // most likely). It's more convenient for AAPCS16_VFP to be hard-float.
-  switch (getABIKind()) {
-  case APCS:
-  case AAPCS16_VFP:
-    if (abiCC != getLLVMDefaultCC())
+
+  // The Run-time ABI for the ARM Architecture section 4.1.2 requires
+  // AEABI-complying FP helper functions to use the base AAPCS.
+  // These AEABI functions are expanded in the ARM llvm backend, all the builtin
+  // support functions emitted by clang such as the _Complex helpers follow the
+  // abiCC.
+  if (abiCC != getLLVMDefaultCC())
       BuiltinCC = abiCC;
-    break;
-  case AAPCS:
-  case AAPCS_VFP:
-    BuiltinCC = llvm::CallingConv::ARM_AAPCS;
-    break;
-  }
 }
 
 ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty,
@@ -6753,14 +6750,6 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
       Offset = OrigOffset + MinABIStackAlignInBytes;
       return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
     }
-
-    // Use indirect if the aggregate cannot fit into registers for
-    // passing arguments according to the ABI
-    unsigned Threshold = IsO32 ? 16 : 64;
-
-    if(getContext().getTypeSizeInChars(Ty) > CharUnits::fromQuantity(Threshold))
-      return ABIArgInfo::getIndirect(CharUnits::fromQuantity(Align), true,
-                                     getContext().getTypeAlign(Ty) / 8 > Align);
 
     // If we have reached here, aggregates are passed directly by coercing to
     // another structure type. Padding is inserted if the offset of the

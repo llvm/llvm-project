@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -std=c++14 -fcxx-exceptions -fsized-deallocation -verify %s
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fsized-deallocation -verify %s
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fsized-deallocation -fconcepts-ts -DCONCEPTS_TS=1 -verify %s
-// RUN: %clang_cc1 -fno-rtti -verify %s -DNO_EXCEPTIONS -DNO_RTTI
+// RUN: %clang_cc1 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS
 // RUN: %clang_cc1 -fcoroutines-ts -DNO_EXCEPTIONS -DCOROUTINES -verify %s
 
 // expected-no-diagnostics
@@ -22,19 +22,15 @@
 
 // --- C++17 features ---
 
-#if check(variadic_using, 0, 0, 0, 201611) // FIXME: provisional name
-#error "wrong value for __cpp_variadic_using"
-#endif
-
 #if check(hex_float, 0, 0, 0, 201603)
 #error "wrong value for __cpp_hex_float"
 #endif
 
-#if check(inline_variables, 0, 0, 0, 201606) // FIXME: provisional name
+#if check(inline_variables, 0, 0, 0, 201606)
 #error "wrong value for __cpp_inline_variables"
 #endif
 
-#if check(aligned_new, 0, 0, 0, 201606) // FIXME: provisional name
+#if check(aligned_new, 0, 0, 0, 201606)
 #error "wrong value for __cpp_aligned_new"
 #endif
 
@@ -52,7 +48,7 @@
 
 // constexpr checked below
 
-#if check(if_constexpr, 0, 0, 0, 201606) // FIXME: provisional name
+#if check(if_constexpr, 0, 0, 0, 201606)
 #error "wrong value for __cpp_if_constexpr"
 #endif
 
@@ -60,7 +56,11 @@
 
 // static_assert checked below
 
-#if check(template_auto, 0, 0, 0, 201606) // FIXME: provisional name
+#if check(deduction_guides, 0, 0, 0, 201611)
+#error "wrong value for __cpp_deduction_guides"
+#endif
+
+#if check(template_auto, 0, 0, 0, 201606)
 #error "wrong value for __cpp_template_auto"
 #endif
 
@@ -80,6 +80,10 @@
 
 // inheriting_constructors checked below
 
+#if check(variadic_using, 0, 0, 0, 201611)
+#error "wrong value for __cpp_variadic_using"
+#endif
+
 #if check(aggregate_bases, 0, 0, 0, 201603)
 #error "wrong value for __cpp_aggregate_bases"
 #endif
@@ -94,10 +98,6 @@
 
 #if check(template_template_args, 0, 0, 0, 0) // FIXME: should be 201611 when feature is enabled
 #error "wrong value for __cpp_template_template_args"
-#endif
-
-#if check(deduction_guides, 0, 0, 0, 201611) // FIXME: provisional name
-#error "wrong value for __cpp_deduction_guides"
 #endif
 
 // --- C++14 features ---
@@ -161,6 +161,10 @@
 
 #if check(user_defined_literals, 0, 200809, 200809, 200809)
 #error "wrong value for __cpp_user_defined_literals"
+#endif
+
+#if defined(NO_THREADSAFE_STATICS) ? check(threadsafe_static_init, 0, 0, 0, 0) : check(threadsafe_static_init, 200806, 200806, 200806, 200806)
+#error "wrong value for __cpp_threadsafe_static_init"
 #endif
 
 #if check(lambdas, 0, 200907, 200907, 200907)

@@ -2291,7 +2291,7 @@ void Generic_GCC::printVerboseInfo(raw_ostream &OS) const {
   CudaInstallation.print(OS);
 }
 
-bool Generic_GCC::IsUnwindTablesDefault() const {
+bool Generic_GCC::IsUnwindTablesDefault(const ArgList &Args) const {
   return getArch() == llvm::Triple::x86_64;
 }
 
