@@ -1022,7 +1022,7 @@ void CheckNoDeepBind(const char *filename, int flag) {
 }
 
 // FIXME: implement on this platform.
-bool GetRandom(void *buffer, uptr length) {
+bool GetRandom(void *buffer, uptr length, bool blocking) {
   UNIMPLEMENTED();
 }
 

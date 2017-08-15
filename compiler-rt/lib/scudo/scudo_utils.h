@@ -44,11 +44,14 @@ INLINE u64 rotl(const u64 X, int K) {
 struct XoRoShiRo128Plus {
  public:
   void init() {
-    if (UNLIKELY(!GetRandom(reinterpret_cast<void *>(State), sizeof(State)))) {
-      // Early processes (eg: init) do not have /dev/urandom yet, but we still
-      // have to provide them with some degree of entropy. Not having a secure
-      // seed is not as problematic for them, as they are less likely to be
-      // the target of heap based vulnerabilities exploitation attempts.
+    if (UNLIKELY(!GetRandom(reinterpret_cast<void *>(State), sizeof(State),
+                            /*blocking=*/false))) {
+      // On some platforms, early processes like `init` do not have an
+      // initialized random pool (getrandom blocks and /dev/urandom doesn't
+      // exist yet), but we still have to provide them with some degree of
+      // entropy. Not having a secure seed is not as problematic for them, as
+      // they are less likely to be the target of heap based vulnerabilities
+      // exploitation attempts.
       State[0] = NanoTime();
       State[1] = 0;
     }
