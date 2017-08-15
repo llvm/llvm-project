@@ -129,6 +129,7 @@
 		239D380B1D70FBAC00D8E937 /* FileSpec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 239D38091D70FB9900D8E937 /* FileSpec.cpp */; };
 		23A452031DBFF67700E44395 /* BreakpointIDTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A451FF1DBFF67000E44395 /* BreakpointIDTest.cpp */; };
 		23A452081DBFF6A500E44395 /* ArchSpecTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452041DBFF69800E44395 /* ArchSpecTest.cpp */; };
+		23A452091DBFF6AB00E44395 /* StructuredDataTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452051DBFF69800E44395 /* StructuredDataTest.cpp */; };
 		23A4520F1DBFF77700E44395 /* MinidumpParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A4520C1DBFF77400E44395 /* MinidumpParserTest.cpp */; };
 		23A4522E1DC00D5D00E44395 /* MinidumpParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452211DC00D2F00E44395 /* MinidumpParser.cpp */; };
 		23A4522F1DC00D5D00E44395 /* MinidumpTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452231DC00D2F00E44395 /* MinidumpTypes.cpp */; };
@@ -735,6 +736,7 @@
 		490A966B1628C3BF00F0002E /* SBDeclaration.h in Headers */ = {isa = PBXBuildFile; fileRef = 9452573816262CEF00325455 /* SBDeclaration.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		49224F8A1BB9E4D20041AB62 /* SwiftUserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49224F881BB9DA370041AB62 /* SwiftUserExpression.cpp */; };
 		49242C0F1A3B9A3D00DE9D6A /* AppleObjCDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4997E6831A3B74D100733D2F /* AppleObjCDeclVendor.cpp */; };
+		492DB7E71EC662B100B9E9AF /* Status.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 492DB7E61EC662B100B9E9AF /* Status.h */; };
 		492DB7EB1EC662E200B9E9AF /* Status.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 492DB7E81EC662D100B9E9AF /* Status.cpp */; };
 		492E8B021BA37DC80034B4D7 /* SwiftExpressionVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 492E8B001BA37DC80034B4D7 /* SwiftExpressionVariable.cpp */; };
 		4939EA8D1BD56B6D00084382 /* REPL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4939EA8C1BD56B6D00084382 /* REPL.cpp */; };
@@ -745,7 +747,6 @@
 		49753FB41BEAB2BB00019E45 /* lldb.1 in Copy Files */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
 		49753FBB1BEAB2BB00019E45 /* repl_swift in Copy Files */ = {isa = PBXBuildFile; fileRef = 26F8EA1718F6096400EFD6B1 /* repl_swift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		49753FBD1BEAB2BB00019E45 /* repl_swift in CopyFiles */ = {isa = PBXBuildFile; fileRef = 26F8EA1718F6096400EFD6B1 /* repl_swift */; };
-		4971D4B51F30ECFB00823171 /* SBProcessInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4987FB1E1F30EC7E00E5C17D /* SBProcessInfo.cpp */; };
 		4984BA131B978C55008658D4 /* ClangExpressionVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4984BA0E1B978C3E008658D4 /* ClangExpressionVariable.cpp */; };
 		4984BA161B979973008658D4 /* ExpressionVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4984BA151B979973008658D4 /* ExpressionVariable.cpp */; };
 		4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = 4984BA171B979C08008658D4 /* ExpressionVariable.h */; };
@@ -784,7 +785,6 @@
 		4C848E0118D2873500EC6DD0 /* SwiftSILManipulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848DFE18D2873500EC6DD0 /* SwiftSILManipulator.cpp */; };
 		4C848E0818D2892900EC6DD0 /* SwiftASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848E0718D2892900EC6DD0 /* SwiftASTContext.cpp */; };
 		4C848E0B18D28C0C00EC6DD0 /* SwiftLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848E0A18D28C0C00EC6DD0 /* SwiftLanguageRuntime.cpp */; };
-		4C877B391F30EF990068FCFB /* SBProcessInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 4987FB201F30EC9900E5C17D /* SBProcessInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C88BC2A1BA3722B00AA0964 /* Expression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C88BC291BA3722B00AA0964 /* Expression.cpp */; };
 		4C88BC2D1BA391B000AA0964 /* UserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083331B9A5DE200D5CF24 /* UserExpression.cpp */; };
 		4C8DD9181E4AAD33008241E2 /* RegisterContextMinidump_x86_32.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C8DD9131E4AAD2B008241E2 /* RegisterContextMinidump_x86_32.cpp */; };
@@ -1345,7 +1345,7 @@
 			dstPath = "/$(DT_VARIANT)/$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
+				492DB7E71EC662B100B9E9AF /* Status.h in Copy Files */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -1446,6 +1446,7 @@
 		23A451FF1DBFF67000E44395 /* BreakpointIDTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BreakpointIDTest.cpp; sourceTree = "<group>"; };
 		23A452001DBFF67000E44395 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		23A452041DBFF69800E44395 /* ArchSpecTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ArchSpecTest.cpp; sourceTree = "<group>"; };
+		23A452051DBFF69800E44395 /* StructuredDataTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StructuredDataTest.cpp; sourceTree = "<group>"; };
 		23A4520B1DBFF77400E44395 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		23A4520C1DBFF77400E44395 /* MinidumpParserTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MinidumpParserTest.cpp; sourceTree = "<group>"; };
 		23A452111DBFF78E00E44395 /* fizzbuzz_no_heap.dmp */ = {isa = PBXFileReference; lastKnownFileType = file; path = fizzbuzz_no_heap.dmp; sourceTree = "<group>"; };
@@ -2605,9 +2606,6 @@
 		499953BE1E6E78C200C64C09 /* CxaDemangle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CxaDemangle.cpp; path = source/Utility/CxaDemangle.cpp; sourceTree = "<group>"; };
 		4999FD061BC355630014BA69 /* SwiftREPLMaterializer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftREPLMaterializer.cpp; path = ExpressionParser/Swift/SwiftREPLMaterializer.cpp; sourceTree = "<group>"; };
 		4999FD081BC355840014BA69 /* SwiftREPLMaterializer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftREPLMaterializer.h; path = ExpressionParser/Swift/SwiftREPLMaterializer.h; sourceTree = "<group>"; };
-		4987FB1C1F30EC6000E5C17D /* SBProcessInfo.i */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBProcessInfo.i; sourceTree = "<group>"; };
-		4987FB1E1F30EC7E00E5C17D /* SBProcessInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBProcessInfo.cpp; path = source/API/SBProcessInfo.cpp; sourceTree = "<group>"; };
-		4987FB201F30EC9900E5C17D /* SBProcessInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBProcessInfo.h; path = include/lldb/API/SBProcessInfo.h; sourceTree = "<group>"; };
 		499F381E11A5B3F300F5CE02 /* CommandObjectArgs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectArgs.h; path = source/Commands/CommandObjectArgs.h; sourceTree = "<group>"; };
 		499F381F11A5B3F300F5CE02 /* CommandObjectArgs.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectArgs.cpp; path = source/Commands/CommandObjectArgs.cpp; sourceTree = "<group>"; };
 		49A1CAC11430E21D00306AC9 /* ExpressionSourceCode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ExpressionSourceCode.h; path = include/lldb/Expression/ExpressionSourceCode.h; sourceTree = "<group>"; };
@@ -3533,6 +3531,7 @@
 				2321F9431BDD346100BA9A93 /* CMakeLists.txt */,
 				23CB15041D66CD9200EDDDE1 /* Inputs */,
 				2321F9441BDD346100BA9A93 /* StringExtractorTest.cpp */,
+				23A452051DBFF69800E44395 /* StructuredDataTest.cpp */,
 				2321F9451BDD346100BA9A93 /* TaskPoolTest.cpp */,
 				2321F9461BDD346100BA9A93 /* UriParserTest.cpp */,
 			);
@@ -4096,7 +4095,6 @@
 				263C493B178B61CC0070F12D /* SBModuleSpec.i */,
 				262F12B8183546C900AEB384 /* SBPlatform.i */,
 				2611FF07142D83060017FEA3 /* SBProcess.i */,
-				4987FB1C1F30EC6000E5C17D /* SBProcessInfo.i */,
 				AF0EBBEE1859419F0059E52F /* SBQueue.i */,
 				AF0EBBEF1859419F0059E52F /* SBQueueItem.i */,
 				2611FF08142D83060017FEA3 /* SBSection.i */,
@@ -4222,8 +4220,6 @@
 				AF0EBBE7185940FB0059E52F /* SBQueueItem.cpp */,
 				9A9831041125FC5800A56CB0 /* SBProcess.h */,
 				9A9831031125FC5800A56CB0 /* SBProcess.cpp */,
-				4987FB201F30EC9900E5C17D /* SBProcessInfo.h */,
-				4987FB1E1F30EC7E00E5C17D /* SBProcessInfo.cpp */,
 				26B8283C142D01E9002DBC64 /* SBSection.h */,
 				26B8283F142D020F002DBC64 /* SBSection.cpp */,
 				9A9831061125FC5800A56CB0 /* SBSourceManager.h */,
@@ -6801,7 +6797,6 @@
 				8CCB018219BA4E270009FD44 /* SBThreadCollection.h in Headers */,
 				9A36D24D1EB3BE7F00AAD9EA /* SBTrace.h in Headers */,
 				AF0EBBEC185941360059E52F /* SBQueue.h in Headers */,
-				4C877B391F30EF990068FCFB /* SBProcessInfo.h in Headers */,
 				26680222115FD13D008E1FE4 /* SBError.h in Headers */,
 				26680223115FD13D008E1FE4 /* SBEvent.h in Headers */,
 				AFDCDBCB19DD0F42005EA55E /* SBExecutionContext.h in Headers */,
@@ -7541,6 +7536,7 @@
 				23CB153E1D66DA9300EDDDE1 /* PythonDataObjectsTests.cpp in Sources */,
 				9A1542FA1F0EE48600DEA1D8 /* TestUtilities.cpp in Sources */,
 				23CB153F1D66DA9300EDDDE1 /* SymbolsTest.cpp in Sources */,
+				23A452091DBFF6AB00E44395 /* StructuredDataTest.cpp in Sources */,
 				23CB15401D66DA9300EDDDE1 /* TestClangASTContext.cpp in Sources */,
 				23CB15411D66DA9300EDDDE1 /* StringExtractorTest.cpp in Sources */,
 				23A452031DBFF67700E44395 /* BreakpointIDTest.cpp in Sources */,
@@ -7576,7 +7572,6 @@
 				26680326116005DB008E1FE4 /* SBTarget.cpp in Sources */,
 				23DCBEA21D63E7190084C36B /* SBStructuredData.cpp in Sources */,
 				26680327116005DC008E1FE4 /* SBSourceManager.cpp in Sources */,
-				4971D4B51F30ECFB00823171 /* SBProcessInfo.cpp in Sources */,
 				3F81692C1ABB7A1E001DA9DF /* SystemInitializerFull.cpp in Sources */,
 				26680328116005DE008E1FE4 /* SBProcess.cpp in Sources */,
 				2668032A116005E0008E1FE4 /* SBListener.cpp in Sources */,
@@ -9519,6 +9514,48 @@
 			name = "CustomSwift-RelWithDebInfo";
 		};
 		239504D81BDD451400963CEA /* Debug */ = {
+                        isa = XCBuildConfiguration;
+                        buildSettings = {
+                                FRAMEWORK_SEARCH_PATHS = (
+                                        "$(inherited)",
+                                        "\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+                                        "$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
+                                                                );
+                                HEADER_SEARCH_PATHS = (
+                                        "$(LLVM_SOURCE_DIR)/tools/clang/include",
+                                        "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+                                );
+                                LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+                                LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+                                OTHER_CFLAGS = (
+                                        "-fno-rtti",
+                                        "-Wparentheses",
+                                        "$(LLDB_ZLIB_CFLAGS)",
+                                        "$(LLDB_COMPRESSION_CFLAGS)",
+                                        "$(LLDB_GTESTS_CFLAGS)",
+                                        "-DGTEST_HAS_RTTI=0",
+                                );
+                                OTHER_LDFLAGS = (
+                                        "$(inherited)",
+                                        "-filelist",
+                                        "$(LLVM_BUILD_DIR)/archives.txt",
+                                        "-framework",
+                                        Foundation,
+                                        "-framework",
+                                        DebugSymbols,
+                                        "-framework",
+                                        Security,
+                                        "-framework",
+                                        CoreServices,
+                                        "-framework",
+                                        ApplicationServices,
+                                        "$(LLDB_GTESTS_LDFLAGS)",
+                                );
+                                PRODUCT_NAME = "$(TARGET_NAME)";
+                        };
+                        name = Debug;
+		};
+		239504D91BDD451400963CEA /* DebugClang */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = (
@@ -9531,44 +9568,14 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
 				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
-				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
-					"$(inherited)",
+					"-fno-rtti",
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					CoreServices,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		239504D91BDD451400963CEA /* DebugClang */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
-				);
-				LLDB_GTESTS_CFLAGS = "-I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers  -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/$(LLVM_CONFIGURATION)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
+					"-DGTEST_HAS_RTTI=0",
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -9659,43 +9666,46 @@
 			name = BuildAndIntegration;
 		};
 		239D37F81D70A4AD00D8E937 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
-				);
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_CPP_RTTI = NO;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
-				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
-				PRODUCT_NAME = "lldb-gtest";
-			};
-			name = Debug;
+                        isa = XCBuildConfiguration;
+                        buildSettings = {
+                                FRAMEWORK_SEARCH_PATHS = (
+                                        "$(inherited)",
+                                        "\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+                                        "$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
+                                );
+                                HEADER_SEARCH_PATHS = (
+                                        "$(LLVM_SOURCE_DIR)/tools/clang/include",
+                                        "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+                                );
+                                LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+                                LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+                                OTHER_CFLAGS = (
+                                        "-fno-rtti",
+                                        "-Wparentheses",
+                                        "$(LLDB_ZLIB_CFLAGS)",
+                                        "$(LLDB_COMPRESSION_CFLAGS)",
+                                        "$(LLDB_GTESTS_CFLAGS)",
+                                        "-DGTEST_HAS_RTTI=0",
+                                );
+                                OTHER_LDFLAGS = (
+                                        "$(inherited)",
+                                        "-filelist",
+                                        "$(LLVM_BUILD_DIR)/archives.txt",
+                                        "-framework",
+                                        Foundation,
+                                        "-framework",
+                                        DebugSymbols,
+                                        "-framework",
+                                        Security,
+                                        "-framework",
+                                        CoreServices,
+                                        "-framework",
+                                        ApplicationServices,
+                                        "$(LLDB_GTESTS_LDFLAGS)",
+                                );
+                                PRODUCT_NAME = "lldb-gtest";
+                        };
+                        name = Debug;
 		};
 		239D37F91D70A4AD00D8E937 /* DebugClang */ = {
 			isa = XCBuildConfiguration;
@@ -9703,17 +9713,21 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
+					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
 				);
-				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
-				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
+				HEADER_SEARCH_PATHS = (
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+				);
+				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
-					"$(inherited)",
+					"-fno-rtti",
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
+					"-DGTEST_HAS_RTTI=0",
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -9725,6 +9739,8 @@
 					DebugSymbols,
 					"-framework",
 					Security,
+					"-framework",
+					CoreServices,
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
@@ -9742,7 +9758,7 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
 				);
 				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
+				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
 				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
@@ -9770,37 +9786,45 @@
 			name = DebugPresubmission;
 		};
 		239D37FB1D70A4AD00D8E937 /* CustomSwift-Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
-				);
-				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
-				PRODUCT_NAME = "lldb-gtest";
-			};
+                        isa = XCBuildConfiguration;
+                        buildSettings = {
+                                FRAMEWORK_SEARCH_PATHS = (
+                                        "$(inherited)",
+                                        "\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+                                        "$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
+                                );
+                                                        HEADER_SEARCH_PATHS = (
+                                        "$(LLDB_PATH_TO_LLVM_SOURCE)/tools/clang/include",
+                                        "$(LLDB_PATH_TO_LLVM_BUILD)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+                                );
+                                LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+                                LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+                                OTHER_CFLAGS = (
+                                        "-fno-rtti",
+                                        "-Wparentheses",
+                                        "$(LLDB_ZLIB_CFLAGS)",
+                                        "$(LLDB_COMPRESSION_CFLAGS)",
+                                        "$(LLDB_GTESTS_CFLAGS)",
+                                        "-DGTEST_HAS_RTTI=0",
+                                );
+                                OTHER_LDFLAGS = (
+                                        "$(inherited)",
+                                        "-filelist",
+                                        "$(LLVM_BUILD_DIR)/archives.txt",
+                                        "-framework",
+                                        Foundation,
+                                        "-framework",
+                                        DebugSymbols,
+                                        "-framework",
+                                        Security,
+                                        "-framework",
+                                        CoreServices,
+                                        "-framework",
+                                        ApplicationServices,
+                                        "$(LLDB_GTESTS_LDFLAGS)",
+                                );
+                                PRODUCT_NAME = "lldb-gtest";
+                        };
 			name = "CustomSwift-Debug";
 		};
 		239D37FC1D70A4AD00D8E937 /* Release */ = {
@@ -9814,7 +9838,7 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
 				);
 				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
+				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
 				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
@@ -9842,37 +9866,45 @@
 			name = Release;
 		};
 		239D37FD1D70A4AD00D8E937 /* CustomSwift-Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
-				);
-				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
-				PRODUCT_NAME = "lldb-gtest";
-			};
+                        isa = XCBuildConfiguration;
+                        buildSettings = {
+                                FRAMEWORK_SEARCH_PATHS = (
+                                        "$(inherited)",
+                                        "\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+                                        "$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
+                                );
+                                                        HEADER_SEARCH_PATHS = (
+                                        "$(LLDB_PATH_TO_LLVM_SOURCE)/tools/clang/include",
+                                        "$(LLDB_PATH_TO_LLVM_BUILD)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+                                );
+                                LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+                                LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+                                OTHER_CFLAGS = (
+                                        "-fno-rtti",
+                                        "-Wparentheses",
+                                        "$(LLDB_ZLIB_CFLAGS)",
+                                        "$(LLDB_COMPRESSION_CFLAGS)",
+                                        "$(LLDB_GTESTS_CFLAGS)",
+                                        "-DGTEST_HAS_RTTI=0",
+                                );
+                                OTHER_LDFLAGS = (
+                                        "$(inherited)",
+                                        "-filelist",
+                                        "$(LLVM_BUILD_DIR)/archives.txt",
+                                        "-framework",
+                                        Foundation,
+                                        "-framework",
+                                        DebugSymbols,
+                                        "-framework",
+                                        Security,
+                                        "-framework",
+                                        CoreServices,
+                                        "-framework",
+                                        ApplicationServices,
+                                        "$(LLDB_GTESTS_LDFLAGS)",
+                                );
+                                PRODUCT_NAME = "lldb-gtest";
+                        };
 			name = "CustomSwift-Release";
 		};
 		239D37FE1D70A4AD00D8E937 /* CustomSwift-RelWithDebInfo */ = {
@@ -9884,7 +9916,7 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
 				);
 				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
+				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
 				OTHER_CFLAGS = (
@@ -9918,7 +9950,7 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
 				);
 				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
+				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
@@ -11881,71 +11913,87 @@
 			name = DebugPresubmission;
 		};
 		49CE1A531BDFDDEB00953D79 /* CustomSwift-Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
-				);
-				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLVM_BUILD_DIR)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					CoreServices,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
-				PRODUCT_NAME = "lldb-gtest";
-			};
+                        isa = XCBuildConfiguration;
+                        buildSettings = {
+                                FRAMEWORK_SEARCH_PATHS = (
+                                        "$(inherited)",
+                                        "\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+                                        "$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
+                                );
+                                                        HEADER_SEARCH_PATHS = (
+                                        "$(LLDB_PATH_TO_LLVM_SOURCE)/tools/clang/include",
+                                        "$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+                                );
+                                LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+                                LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_SOURCE)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+                                OTHER_CFLAGS = (
+                                        "-fno-rtti",
+                                        "-Wparentheses",
+                                        "$(LLDB_ZLIB_CFLAGS)",
+                                        "$(LLDB_COMPRESSION_CFLAGS)",
+                                        "$(LLDB_GTESTS_CFLAGS)",
+                                        "-DGTEST_HAS_RTTI=0",
+                                );
+                                OTHER_LDFLAGS = (
+                                        "$(inherited)",
+                                        "-filelist",
+                                        "$(LLDB_PATH_TO_LLVM_BUILD)/archives.txt",
+                                        "-framework",
+                                        Foundation,
+                                        "-framework",
+                                        DebugSymbols,
+                                        "-framework",
+                                        Security,
+                                        "-framework",
+                                        CoreServices,
+                                        "-framework",
+                                        ApplicationServices,
+                                        "$(LLDB_GTESTS_LDFLAGS)",
+                                );
+                                PRODUCT_NAME = "$(TARGET_NAME)";
+                        };
 			name = "CustomSwift-Debug";
 		};
 		49CE1A541BDFDDEB00953D79 /* CustomSwift-Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
-				);
-				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLVM_BUILD_DIR)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"$(LLDB_GTESTS_CFLAGS)",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-					"-framework",
-					Foundation,
-					"-framework",
-					DebugSymbols,
-					"-framework",
-					Security,
-					"-framework",
-					CoreServices,
-					"-framework",
-					ApplicationServices,
-					"$(LLDB_GTESTS_LDFLAGS)",
-				);
-				PRODUCT_NAME = "lldb-gtest";
-			};
+                        isa = XCBuildConfiguration;
+                        buildSettings = {
+                                FRAMEWORK_SEARCH_PATHS = (
+                                        "$(inherited)",
+                                        "\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+                                        "$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
+                                );
+                                                        HEADER_SEARCH_PATHS = (
+                                        "$(LLDB_PATH_TO_LLVM_SOURCE)/tools/clang/include",
+                                        "$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+                                );
+                                LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+                                LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_SOURCE)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+                                OTHER_CFLAGS = (
+                                        "-fno-rtti",
+                                        "-Wparentheses",
+                                        "$(LLDB_ZLIB_CFLAGS)",
+                                        "$(LLDB_COMPRESSION_CFLAGS)",
+                                        "$(LLDB_GTESTS_CFLAGS)",
+                                        "-DGTEST_HAS_RTTI=0",
+                                );
+                                OTHER_LDFLAGS = (
+                                        "$(inherited)",
+                                        "-filelist",
+                                        "$(LLDB_PATH_TO_LLVM_BUILD)/archives.txt",
+                                        "-framework",
+                                        Foundation,
+                                        "-framework",
+                                        DebugSymbols,
+                                        "-framework",
+                                        Security,
+                                        "-framework",
+                                        CoreServices,
+                                        "-framework",
+                                        ApplicationServices,
+                                        "$(LLDB_GTESTS_LDFLAGS)",
+                                );
+                                PRODUCT_NAME = "$(TARGET_NAME)";
+                        };
 			name = "CustomSwift-Release";
 		};
 		941E2F531AE81CA100AAA711 /* Debug */ = {
