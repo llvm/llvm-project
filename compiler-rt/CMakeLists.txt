@@ -104,7 +104,7 @@ pythonize_bool(SANITIZER_CAN_USE_CXXABI)
 
 set(SANITIZER_CXX_ABI "default" CACHE STRING
     "Specify C++ ABI library to use.")
-set(CXXABIS none default libcxxabi libstdc++)
+set(CXXABIS none default libcxxabi libstdc++ libc++)
 set_property(CACHE SANITIZER_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 
 if (SANITIZER_CXX_ABI STREQUAL "default")
@@ -117,7 +117,7 @@ if (SANITIZER_CXX_ABI STREQUAL "default")
   else()
     set(SANITIZER_CXX_ABI_LIBNAME "libstdc++")
   endif()
-elseif()
+else()
   set(SANITIZER_CXX_ABI_LIBNAME "${SANITIZER_CXX_ABI}")
 endif()
 

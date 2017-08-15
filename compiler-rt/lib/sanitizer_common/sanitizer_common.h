@@ -857,8 +857,8 @@ const s32 kReleaseToOSIntervalNever = -1;
 void CheckNoDeepBind(const char *filename, int flag);
 
 // Returns the requested amount of random data (up to 256 bytes) that can then
-// be used to seed a PRNG.
-bool GetRandom(void *buffer, uptr length);
+// be used to seed a PRNG. Defaults to blocking like the underlying syscall.
+bool GetRandom(void *buffer, uptr length, bool blocking = true);
 
 }  // namespace __sanitizer
 
