@@ -224,16 +224,11 @@ macro(add_asan_tests_for_arch_and_kind arch kind cflags)
     set(ASAN_INST_DYNAMIC_TEST_OBJECTS ${ASAN_INST_TEST_OBJECTS})
   endif()
 
-  # Create the 'default' folder where ASAN tests are produced.
-  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/default/${CMAKE_CFG_RESOLVED_INTDIR}")
-
   add_asan_test(AsanUnitTests "Asan-${arch}${kind}-Test"
                 ${arch} ${kind} SUBDIR "default"
                 OBJECTS ${ASAN_INST_TEST_OBJECTS}
                 LINK_FLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS})
   if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
-    # Create the 'dynamic' folder where ASAN tests are produced.
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/dynamic/${CMAKE_CFG_RESOLVED_INTDIR}")
 
     add_asan_test(AsanDynamicUnitTests "Asan-${arch}${kind}-Dynamic-Test"
                   ${arch} ${kind} SUBDIR "dynamic"
