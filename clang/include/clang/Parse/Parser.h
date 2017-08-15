@@ -256,7 +256,7 @@ class Parser : public CodeCompletionHandler {
   /// Whether to skip parsing of function bodies.
   ///
   /// This option can be used, for example, to speed up searches for
-  /// delcarations/definitions when indexing.
+  /// declarations/definitions when indexing.
   bool SkipFunctionBodies;
 
   /// The location of the expression statement that is being parsed right now.

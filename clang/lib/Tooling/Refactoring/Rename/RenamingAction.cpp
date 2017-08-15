@@ -24,6 +24,7 @@
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/Rename/USRLocFinder.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/STLExtras.h"
 #include <string>
 #include <vector>
 
@@ -31,6 +32,45 @@ using namespace llvm;
 
 namespace clang {
 namespace tooling {
+
+Expected<std::vector<AtomicChange>>
+createRenameReplacements(const SymbolOccurrences &Occurrences,
+                         const SourceManager &SM,
+                         ArrayRef<StringRef> NewNameStrings) {
+  // FIXME: A true local rename can use just one AtomicChange.
+  std::vector<AtomicChange> Changes;
+  for (const auto &Occurrence : Occurrences) {
+    ArrayRef<SourceRange> Ranges = Occurrence.getNameRanges();
+    assert(NewNameStrings.size() == Ranges.size() &&
+           "Mismatching number of ranges and name pieces");
+    AtomicChange Change(SM, Ranges[0].getBegin());
+    for (const auto &Range : llvm::enumerate(Ranges)) {
+      auto Error =
+          Change.replace(SM, CharSourceRange::getCharRange(Range.value()),
+                         NewNameStrings[Range.index()]);
+      if (Error)
+        return std::move(Error);
+    }
+    Changes.push_back(std::move(Change));
+  }
+  return Changes;
+}
+
+/// Takes each atomic change and inserts its replacements into the set of
+/// replacements that belong to the appropriate file.
+static void convertChangesToFileReplacements(
+    ArrayRef<AtomicChange> AtomicChanges,
+    std::map<std::string, tooling::Replacements> *FileToReplaces) {
+  for (const auto &AtomicChange : AtomicChanges) {
+    for (const auto &Replace : AtomicChange.getReplacements()) {
+      llvm::Error Err = (*FileToReplaces)[Replace.getFilePath()].add(Replace);
+      if (Err) {
+        llvm::errs() << "Renaming failed in " << Replace.getFilePath() << "! "
+                     << llvm::toString(std::move(Err)) << "\n";
+      }
+    }
+  }
+}
 
 class RenamingASTConsumer : public ASTConsumer {
 public:
@@ -52,29 +92,29 @@ public:
                        const std::string &PrevName,
                        const std::vector<std::string> &USRs) {
     const SourceManager &SourceMgr = Context.getSourceManager();
-    std::vector<SourceLocation> RenamingCandidates;
-    std::vector<SourceLocation> NewCandidates;
 
-    NewCandidates = tooling::getLocationsOfUSRs(
+    SymbolOccurrences Occurrences = tooling::getOccurrencesOfUSRs(
         USRs, PrevName, Context.getTranslationUnitDecl());
-    RenamingCandidates.insert(RenamingCandidates.end(), NewCandidates.begin(),
-                              NewCandidates.end());
-
-    unsigned PrevNameLen = PrevName.length();
-    for (const auto &Loc : RenamingCandidates) {
-      if (PrintLocations) {
-        FullSourceLoc FullLoc(Loc, SourceMgr);
-        errs() << "clang-rename: renamed at: " << SourceMgr.getFilename(Loc)
+    if (PrintLocations) {
+      for (const auto &Occurrence : Occurrences) {
+        FullSourceLoc FullLoc(Occurrence.getNameRanges()[0].getBegin(),
+                              SourceMgr);
+        errs() << "clang-rename: renamed at: " << SourceMgr.getFilename(FullLoc)
                << ":" << FullLoc.getSpellingLineNumber() << ":"
                << FullLoc.getSpellingColumnNumber() << "\n";
       }
-      // FIXME: better error handling.
-      tooling::Replacement Replace(SourceMgr, Loc, PrevNameLen, NewName);
-      llvm::Error Err = FileToReplaces[Replace.getFilePath()].add(Replace);
-      if (Err)
-        llvm::errs() << "Renaming failed in " << Replace.getFilePath() << "! "
-                     << llvm::toString(std::move(Err)) << "\n";
     }
+    // FIXME: Support multi-piece names.
+    // FIXME: better error handling (propagate error out).
+    StringRef NewNameRef = NewName;
+    Expected<std::vector<AtomicChange>> Change =
+        createRenameReplacements(Occurrences, SourceMgr, NewNameRef);
+    if (!Change) {
+      llvm::errs() << "Failed to create renaming replacements for '" << PrevName
+                   << "'! " << llvm::toString(Change.takeError()) << "\n";
+      return;
+    }
+    convertChangesToFileReplacements(*Change, &FileToReplaces);
   }
 
 private:
@@ -103,15 +143,7 @@ public:
       // ready.
       auto AtomicChanges = tooling::createRenameAtomicChanges(
           USRList[I], NewNames[I], Context.getTranslationUnitDecl());
-      for (const auto AtomicChange : AtomicChanges) {
-        for (const auto &Replace : AtomicChange.getReplacements()) {
-          llvm::Error Err = FileToReplaces[Replace.getFilePath()].add(Replace);
-          if (Err) {
-            llvm::errs() << "Renaming failed in " << Replace.getFilePath()
-                         << "! " << llvm::toString(std::move(Err)) << "\n";
-          }
-        }
-      }
+      convertChangesToFileReplacements(AtomicChanges, &FileToReplaces);
     }
   }
 
