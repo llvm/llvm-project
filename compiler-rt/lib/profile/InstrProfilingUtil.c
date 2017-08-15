@@ -196,8 +196,7 @@ lprofApplyPathPrefix(char *Dest, const char *PathStr, const char *Prefix,
 
   memcpy(Dest, Prefix, PrefixLen);
 
-  if (!IS_DIR_SEPARATOR(Prefix[PrefixLen - 1]) &&
-      !IS_DIR_SEPARATOR(StrippedPathStr[0]))
+  if (!IS_DIR_SEPARATOR(Prefix[PrefixLen - 1]))
     Dest[PrefixLen++] = DIR_SEPARATOR;
 
   memcpy(Dest + PrefixLen, StrippedPathStr, strlen(StrippedPathStr) + 1);

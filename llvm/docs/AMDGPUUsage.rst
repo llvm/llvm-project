@@ -43,7 +43,7 @@ specify the target triple:
   the MESA runtime.
 
 ``amdgcn-amd--``
-  Supports AMD GPUs GCN 6 onwards for graphics and compute shaders executed on
+  Supports AMD GPUs GCN GFX6 onwards for graphics and compute shaders executed on
   the MESA runtime.
 
 ``amdgcn-amd-amdhsa-``
@@ -182,14 +182,22 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                        - Radeon R9 FuryX
                                                        - Radeon Pro Duo
                                                        - FirePro S9300x2
+                                                       - Radeon Instinct MI8
      \          - polaris10 amdgcn       dGPU  ROCm    - Radeon RX 470
                                                        - Radeon RX 480
+                                                       - Radeon Instinct MI6
      \          - polaris11 amdgcn       dGPU  ROCm    - Radeon RX 460
      gfx804                 amdgcn       dGPU          Same as gfx803
      gfx810     - stoney    amdgcn       APU
-     **GCN GFX9**
+     **GCN GFX9** [AMD-Vega]_
      --------------------------------------------------------------------
-     gfx900                 amdgcn       dGPU          - Radeon Vega Frontier Edition
+     gfx900                 amdgcn       dGPU          - Radeon Vega
+                                                         Frontier Edition
+                                                       - Radeon RX Vega 56
+                                                       - Radeon RX Vega 64
+                                                       - Radeon RX Vega 64
+                                                         Liquid
+                                                       - Radeon Instinct MI25
      gfx901                 amdgcn       dGPU  ROCm    Same as gfx900
                                                        except XNACK is
                                                        enabled
@@ -455,7 +463,7 @@ if needed.
   The standard DWARF sections. See :ref:`amdgpu-dwarf` for information on the
   DWARF produced by the AMDGPU backend.
 
-``.dynamic``, ``.dynstr``, ``.dynstr``, ``.hash``
+``.dynamic``, ``.dynstr``, ``.dynsym``, ``.hash``
   The standard sections used by a dynamic loader.
 
 ``.note``
@@ -501,25 +509,25 @@ Additional note records can be present.
   .. table:: AMDGPU ELF Note Records
      :name: amdgpu-elf-note-records-table
 
-     ===== ========================== ==========================================
-     Name  Type                       Description
-     ===== ========================== ==========================================
-     "AMD" ``NT_AMD_AMDGPU_METADATA`` <metadata null terminated string>
-     "AMD" ``NT_AMD_AMDGPU_ISA``      <isa name null terminated string>
-     ===== ========================== ==========================================
+     ===== ============================== ======================================
+     Name  Type                           Description
+     ===== ============================== ======================================
+     "AMD" ``NT_AMD_AMDGPU_HSA_METADATA`` <metadata null terminated string>
+     "AMD" ``NT_AMD_AMDGPU_ISA``          <isa name null terminated string>
+     ===== ============================== ======================================
 
 ..
 
   .. table:: AMDGPU ELF Note Record Enumeration Values
      :name: amdgpu-elf-note-record-enumeration-values-table
 
-     ============================= =====
-     Name                          Value
-     ============================= =====
-     *reserved*                    0-9
-     ``NT_AMD_AMDGPU_METADATA``    10
-     ``NT_AMD_AMDGPU_ISA``         11
-     ============================= =====
+     ============================== =====
+     Name                           Value
+     ============================== =====
+     *reserved*                       0-9
+     ``NT_AMD_AMDGPU_HSA_METADATA``    10
+     ``NT_AMD_AMDGPU_ISA``             11
+     ============================== =====
 
 ``NT_AMD_AMDGPU_ISA``
   Specifies the instruction set architecture used by the machine code contained
@@ -561,31 +569,222 @@ Additional note records can be present.
 
     ``amdgcn-amd-amdhsa--gfx901``
 
-``NT_AMD_AMDGPU_METADATA``
-  Specifies extensible metadata associated with the code object. See
-  :ref:`amdgpu-code-object-metadata` for the syntax of the code object metadata
-  string.
+``NT_AMD_AMDGPU_HSA_METADATA``
+  Specifies extensible metadata associated with the code objects executed on HSA
+  [HSA]_ compatible runtimes such as AMD's ROCm [AMD-ROCm]_. It is required when
+  the target triple OS is ``amdhsa`` (see :ref:`amdgpu-target-triples`). See
+  :ref:`amdgpu-amdhsa-hsa-code-object-metadata` for the syntax of the code
+  object metadata string.
 
-  This note record is required and must contain the minimum information
-  necessary to support the ROCM kernel queries. For example, the segment sizes
-  needed in a dispatch packet. In addition, a high level language runtime may
-  require other information to be included. For example, the AMD OpenCL runtime
-  records kernel argument information.
+.. _amdgpu-symbols:
+
+Symbols
+-------
+
+Symbols include the following:
+
+  .. table:: AMDGPU ELF Symbols
+     :name: amdgpu-elf-symbols-table
+
+     ===================== ============== ============= ==================
+     Name                  Type           Section       Description
+     ===================== ============== ============= ==================
+     *link-name*           ``STT_OBJECT`` - ``.data``   Global variable
+                                          - ``.rodata``
+                                          - ``.bss``
+     *link-name*\ ``@kd``  ``STT_OBJECT`` - ``.rodata`` Kernel descriptor
+     *link-name*           ``STT_FUNC``   - ``.text``   Kernel entry point
+     ===================== ============== ============= ==================
+
+Global variable
+  Global variables both used and defined by the compilation unit.
+
+  If the symbol is defined in the compilation unit then it is allocated in the
+  appropriate section according to if it has initialized data or is readonly.
+
+  If the symbol is external then its section is ``STN_UNDEF`` and the loader
+  will resolve relocations using the definition provided by another code object
+  or explicitly defined by the runtime.
+
+  All global symbols, whether defined in the compilation unit or external, are
+  accessed by the machine code indirectly through a GOT table entry. This
+  allows them to be preemptable. The GOT table is only supported when the target
+  triple OS is ``amdhsa`` (see :ref:`amdgpu-target-triples`).
 
   .. TODO
-     Is the string null terminated? It probably should not if YAML allows it to
-     contain null characters, otherwise it should be.
+     Add description of linked shared object symbols. Seems undefined symbols
+     are marked as STT_NOTYPE.
 
-.. _amdgpu-code-object-metadata:
+Kernel descriptor
+  Every HSA kernel has an associated kernel descriptor. It is the address of the
+  kernel descriptor that is used in the AQL dispatch packet used to invoke the
+  kernel, not the kernel entry point. The layout of the HSA kernel descriptor is
+  defined in :ref:`amdgpu-amdhsa-kernel-descriptor`.
+
+Kernel entry point
+  Every HSA kernel also has a symbol for its machine code entry point.
+
+.. _amdgpu-relocation-records:
+
+Relocation Records
+------------------
+
+AMDGPU backend generates ``Elf64_Rela`` relocation records. Supported
+relocatable fields are:
+
+``word32``
+  This specifies a 32-bit field occupying 4 bytes with arbitrary byte
+  alignment. These values use the same byte order as other word values in the
+  AMD GPU architecture.
+
+``word64``
+  This specifies a 64-bit field occupying 8 bytes with arbitrary byte
+  alignment. These values use the same byte order as other word values in the
+  AMD GPU architecture.
+
+Following notations are used for specifying relocation calculations:
+
+**A**
+  Represents the addend used to compute the value of the relocatable field.
+
+**G**
+  Represents the offset into the global offset table at which the relocation
+  entry’s symbol will reside during execution.
+
+**GOT**
+  Represents the address of the global offset table.
+
+**P**
+  Represents the place (section offset for ``et_rel`` or address for ``et_dyn``)
+  of the storage unit being relocated (computed using ``r_offset``).
+
+**S**
+  Represents the value of the symbol whose index resides in the relocation
+  entry.
+
+The following relocation types are supported:
+
+  .. table:: AMDGPU ELF Relocation Records
+     :name: amdgpu-elf-relocation-records-table
+
+     ==========================  =====  ==========  ==============================
+     Relocation Type             Value  Field       Calculation
+     ==========================  =====  ==========  ==============================
+     ``R_AMDGPU_NONE``           0      *none*      *none*
+     ``R_AMDGPU_ABS32_LO``       1      ``word32``  (S + A) & 0xFFFFFFFF
+     ``R_AMDGPU_ABS32_HI``       2      ``word32``  (S + A) >> 32
+     ``R_AMDGPU_ABS64``          3      ``word64``  S + A
+     ``R_AMDGPU_REL32``          4      ``word32``  S + A - P
+     ``R_AMDGPU_REL64``          5      ``word64``  S + A - P
+     ``R_AMDGPU_ABS32``          6      ``word32``  S + A
+     ``R_AMDGPU_GOTPCREL``       7      ``word32``  G + GOT + A - P
+     ``R_AMDGPU_GOTPCREL32_LO``  8      ``word32``  (G + GOT + A - P) & 0xFFFFFFFF
+     ``R_AMDGPU_GOTPCREL32_HI``  9      ``word32``  (G + GOT + A - P) >> 32
+     ``R_AMDGPU_REL32_LO``       10     ``word32``  (S + A - P) & 0xFFFFFFFF
+     ``R_AMDGPU_REL32_HI``       11     ``word32``  (S + A - P) >> 32
+     ==========================  =====  ==========  ==============================
+
+.. _amdgpu-dwarf:
+
+DWARF
+-----
+
+Standard DWARF [DWARF]_ Version 2 sections can be generated. These contain
+information that maps the code object executable code and data to the source
+language constructs. It can be used by tools such as debuggers and profilers.
+
+Address Space Mapping
+~~~~~~~~~~~~~~~~~~~~~
+
+The following address space mapping is used:
+
+  .. table:: AMDGPU DWARF Address Space Mapping
+     :name: amdgpu-dwarf-address-space-mapping-table
+
+     =================== =================
+     DWARF Address Space Memory Space
+     =================== =================
+     1                   Private (Scratch)
+     2                   Local (group/LDS)
+     *omitted*           Global
+     *omitted*           Constant
+     *omitted*           Generic (Flat)
+     *not supported*     Region (GDS)
+     =================== =================
+
+See :ref:`amdgpu-address-spaces` for information on the memory space terminology
+used in the table.
+
+An ``address_class`` attribute is generated on pointer type DIEs to specify the
+DWARF address space of the value of the pointer when it is in the *private* or
+*local* address space. Otherwise the attribute is omitted.
+
+An ``XDEREF`` operation is generated in location list expressions for variables
+that are allocated in the *private* and *local* address space. Otherwise no
+``XDREF`` is omitted.
+
+Register Mapping
+~~~~~~~~~~~~~~~~
+
+*This section is WIP.*
+
+.. TODO
+   Define DWARF register enumeration.
+
+   If want to present a wavefront state then should expose vector registers as
+   64 wide (rather than per work-item view that LLVM uses). Either as separate
+   registers, or a 64x4 byte single register. In either case use a new LANE op
+   (akin to XDREF) to select the current lane usage in a location
+   expression. This would also allow scalar register spilling to vector register
+   lanes to be expressed (currently no debug information is being generated for
+   spilling). If choose a wide single register approach then use LANE in
+   conjunction with PIECE operation to select the dword part of the register for
+   the current lane. If the separate register approach then use LANE to select
+   the register.
+
+Source Text
+~~~~~~~~~~~
+
+*This section is WIP.*
+
+.. TODO
+   DWARF extension to include runtime generated source text.
+
+.. _amdgpu-code-conventions:
+
+Code Conventions
+================
+
+This section provides code conventions used for each supported target triple OS
+(see :ref:`amdgpu-target-triples`).
+
+AMDHSA
+------
+
+This section provides code conventions used when the target triple OS is
+``amdhsa`` (see :ref:`amdgpu-target-triples`).
+
+.. _amdgpu-amdhsa-hsa-code-object-metadata:
 
 Code Object Metadata
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
-The code object metadata is specified by the ``NT_AMD_AMDHSA_METADATA`` note
-record (see :ref:`amdgpu-note-records`).
+The code object metadata specifies extensible metadata associated with the code
+objects executed on HSA [HSA]_ compatible runtimes such as AMD's ROCm
+[AMD-ROCm]_. It is specified by the ``NT_AMD_AMDGPU_HSA_METADATA`` note record
+(see :ref:`amdgpu-note-records`) and is required when the target triple OS is
+``amdhsa`` (see :ref:`amdgpu-target-triples`). It must contain the minimum
+information necessary to support the ROCM kernel queries. For example, the
+segment sizes needed in a dispatch packet. In addition, a high level language
+runtime may require other information to be included. For example, the AMD
+OpenCL runtime records kernel argument information.
 
 The metadata is specified as a YAML formatted string (see [YAML]_ and
 :doc:`YamlIO`).
+
+.. TODO
+   Is the string null terminated? It probably should not if YAML allows it to
+   contain null characters, otherwise it should be.
 
 The metadata is represented as a single YAML document comprised of the mapping
 defined in table :ref:`amdgpu-amdhsa-code-object-metadata-mapping-table` and
@@ -1001,191 +1200,6 @@ non-AMD key names should be prefixed by "*vendor-name*.".
 .. TODO
    Plan to remove the debug properties metadata.   
 
-.. _amdgpu-symbols:
-
-Symbols
--------
-
-Symbols include the following:
-
-  .. table:: AMDGPU ELF Symbols
-     :name: amdgpu-elf-symbols-table
-
-     ===================== ============== ============= ==================
-     Name                  Type           Section       Description
-     ===================== ============== ============= ==================
-     *link-name*           ``STT_OBJECT`` - ``.data``   Global variable
-                                          - ``.rodata``
-                                          - ``.bss``
-     *link-name*\ ``@kd``  ``STT_OBJECT`` - ``.rodata`` Kernel descriptor
-     *link-name*           ``STT_FUNC``   - ``.text``   Kernel entry point
-     ===================== ============== ============= ==================
-
-Global variable
-  Global variables both used and defined by the compilation unit.
-
-  If the symbol is defined in the compilation unit then it is allocated in the
-  appropriate section according to if it has initialized data or is readonly.
-
-  If the symbol is external then its section is ``STN_UNDEF`` and the loader
-  will resolve relocations using the definition provided by another code object
-  or explicitly defined by the runtime.
-
-  All global symbols, whether defined in the compilation unit or external, are
-  accessed by the machine code indirectly through a GOT table entry. This
-  allows them to be preemptable. The GOT table is only supported when the target
-  triple OS is ``amdhsa`` (see :ref:`amdgpu-target-triples`).
-
-  .. TODO
-     Add description of linked shared object symbols. Seems undefined symbols
-     are marked as STT_NOTYPE.
-
-Kernel descriptor
-  Every HSA kernel has an associated kernel descriptor. It is the address of the
-  kernel descriptor that is used in the AQL dispatch packet used to invoke the
-  kernel, not the kernel entry point. The layout of the HSA kernel descriptor is
-  defined in :ref:`amdgpu-amdhsa-kernel-descriptor`.
-
-Kernel entry point
-  Every HSA kernel also has a symbol for its machine code entry point.
-
-.. _amdgpu-relocation-records:
-
-Relocation Records
-------------------
-
-AMDGPU backend generates ``Elf64_Rela`` relocation records. Supported
-relocatable fields are:
-
-``word32``
-  This specifies a 32-bit field occupying 4 bytes with arbitrary byte
-  alignment. These values use the same byte order as other word values in the
-  AMD GPU architecture.
-
-``word64``
-  This specifies a 64-bit field occupying 8 bytes with arbitrary byte
-  alignment. These values use the same byte order as other word values in the
-  AMD GPU architecture.
-
-Following notations are used for specifying relocation calculations:
-
-**A**
-  Represents the addend used to compute the value of the relocatable field.
-
-**G**
-  Represents the offset into the global offset table at which the relocation
-  entry’s symbol will reside during execution.
-
-**GOT**
-  Represents the address of the global offset table.
-
-**P**
-  Represents the place (section offset for ``et_rel`` or address for ``et_dyn``)
-  of the storage unit being relocated (computed using ``r_offset``).
-
-**S**
-  Represents the value of the symbol whose index resides in the relocation
-  entry.
-
-The following relocation types are supported:
-
-  .. table:: AMDGPU ELF Relocation Records
-     :name: amdgpu-elf-relocation-records-table
-
-     ==========================  =====  ==========  ==============================
-     Relocation Type             Value  Field       Calculation
-     ==========================  =====  ==========  ==============================
-     ``R_AMDGPU_NONE``           0      *none*      *none*
-     ``R_AMDGPU_ABS32_LO``       1      ``word32``  (S + A) & 0xFFFFFFFF
-     ``R_AMDGPU_ABS32_HI``       2      ``word32``  (S + A) >> 32
-     ``R_AMDGPU_ABS64``          3      ``word64``  S + A
-     ``R_AMDGPU_REL32``          4      ``word32``  S + A - P
-     ``R_AMDGPU_REL64``          5      ``word64``  S + A - P
-     ``R_AMDGPU_ABS32``          6      ``word32``  S + A
-     ``R_AMDGPU_GOTPCREL``       7      ``word32``  G + GOT + A - P
-     ``R_AMDGPU_GOTPCREL32_LO``  8      ``word32``  (G + GOT + A - P) & 0xFFFFFFFF
-     ``R_AMDGPU_GOTPCREL32_HI``  9      ``word32``  (G + GOT + A - P) >> 32
-     ``R_AMDGPU_REL32_LO``       10     ``word32``  (S + A - P) & 0xFFFFFFFF
-     ``R_AMDGPU_REL32_HI``       11     ``word32``  (S + A - P) >> 32
-     ==========================  =====  ==========  ==============================
-
-.. _amdgpu-dwarf:
-
-DWARF
------
-
-Standard DWARF [DWARF]_ Version 2 sections can be generated. These contain
-information that maps the code object executable code and data to the source
-language constructs. It can be used by tools such as debuggers and profilers.
-
-Address Space Mapping
-~~~~~~~~~~~~~~~~~~~~~
-
-The following address space mapping is used:
-
-  .. table:: AMDGPU DWARF Address Space Mapping
-     :name: amdgpu-dwarf-address-space-mapping-table
-
-     =================== =================
-     DWARF Address Space Memory Space
-     =================== =================
-     1                   Private (Scratch)
-     2                   Local (group/LDS)
-     *omitted*           Global
-     *omitted*           Constant
-     *omitted*           Generic (Flat)
-     *not supported*     Region (GDS)
-     =================== =================
-
-See :ref:`amdgpu-address-spaces` for infomration on the memory space terminology
-used in the table.
-
-An ``address_class`` attribute is generated on pointer type DIEs to specify the
-DWARF address space of the value of the pointer when it is in the *private* or
-*local* address space. Otherwise the attribute is omitted.
-
-An ``XDEREF`` operation is generated in location list expressions for variables
-that are allocated in the *private* and *local* address space. Otherwise no
-``XDREF`` is omitted.
-
-Register Mapping
-~~~~~~~~~~~~~~~~
-
-*This section is WIP.*
-
-.. TODO
-   Define DWARF register enumeration.
-
-   If want to present a wavefront state then should expose vector registers as
-   64 wide (rather than per work-item view that LLVM uses). Either as separate
-   registers, or a 64x4 byte single register. In either case use a new LANE op
-   (akin to XDREF) to select the current lane usage in a location
-   expression. This would also allow scalar register spilling to vector register
-   lanes to be expressed (currently no debug information is being generated for
-   spilling). If choose a wide single register approach then use LANE in
-   conjunction with PIECE operation to select the dword part of the register for
-   the current lane. If the separate register approach then use LANE to select
-   the register.
-
-Source Text
-~~~~~~~~~~~
-
-*This section is WIP.*
-
-.. TODO
-   DWARF extension to include runtime generated source text.
-
-.. _amdgpu-code-conventions:
-
-Code Conventions
-================
-
-AMDHSA
-------
-
-This section provides code conventions used when the target triple OS is
-``amdhsa`` (see :ref:`amdgpu-target-triples`).
-
 Kernel Dispatch
 ~~~~~~~~~~~~~~~
 
@@ -1236,7 +1250,7 @@ CPU host program, or from an HSA kernel executing on a GPU.
    such as grid and work-group size, together with information from the code
    object about the kernel, such as segment sizes. The ROCm runtime queries on
    the kernel symbol can be used to obtain the code object values which are
-   recorded in the :ref:`amdgpu-code-object-metadata`.
+   recorded in the :ref:`amdgpu-amdhsa-hsa-code-object-metadata`.
 7. CP executes micro-code and is responsible for detecting and setting up the
    GPU to execute the wavefronts of a kernel dispatch.
 8. CP ensures that when the a wavefront starts executing the kernel machine
@@ -1330,8 +1344,8 @@ registers ``SRC_SHARED_BASE/LIMIT`` and ``SRC_PRIVATE_BASE/LIMIT``. In 64 bit
 address mode the apperture sizes are 2^32 bytes and the base is aligned to 2^32
 which makes it easier to convert from flat to segment or segment to flat.
 
-HSA Image and Samplers
-~~~~~~~~~~~~~~~~~~~~~~
+Image and Samplers
+~~~~~~~~~~~~~~~~~~
 
 Image and sample handles created by the ROCm runtime are 64 bit addresses of a
 hardware 32 byte V# and 48 byte S# object respectively. In order to support the
@@ -1342,17 +1356,17 @@ representation.
 HSA Signals
 ~~~~~~~~~~~
 
-Signal handles created by the ROCm runtime are 64 bit addresses of a structure
-allocated in memory accessible from both the CPU and GPU. The structure is
-defined by the ROCm runtime and subject to change between releases (see
-[AMD-ROCm-github]_).
+HSA signal handles created by the ROCm runtime are 64 bit addresses of a
+structure allocated in memory accessible from both the CPU and GPU. The
+structure is defined by the ROCm runtime and subject to change between releases
+(see [AMD-ROCm-github]_).
 
 .. _amdgpu-amdhsa-hsa-aql-queue:
 
 HSA AQL Queue
 ~~~~~~~~~~~~~
 
-The AQL queue structure is defined by the ROCm runtime and subject to change
+The HSA AQL queue structure is defined by the ROCm runtime and subject to change
 between releases (see [AMD-ROCm-github]_). For some processors it contains
 fields needed to implement certain language features such as the flat address
 aperture bases. It also contains fields used by CP such as managing the
@@ -1900,60 +1914,84 @@ SGPR register initial state is defined in
                                                     for scratch for the queue
                                                     executing the kernel
                                                     dispatch. CP obtains this
-                                                    from the runtime.
-
-                                                    This is the same offset used
-                                                    in computing the Scratch
-                                                    Segment Buffer base
-                                                    address. The value of
-                                                    Scratch Wave Offset must be
-                                                    added by the kernel machine
-                                                    code and moved to SGPRn-4
-                                                    for use as the FLAT SCRATCH
-                                                    BASE in flat memory
-                                                    instructions.
+                                                    from the runtime. (The
+                                                    Scratch Segment Buffer base
+                                                    address is
+                                                    ``SH_HIDDEN_PRIVATE_BASE_VIMID``
+                                                    plus this offset.) The value
+                                                    of Scratch Wave Offset must
+                                                    be added to this offset by
+                                                    the kernel machine code,
+                                                    right shifted by 8, and
+                                                    moved to the FLAT_SCRATCH_HI
+                                                    SGPR register.
+                                                    FLAT_SCRATCH_HI corresponds
+                                                    to SGPRn-4 on GFX7, and
+                                                    SGPRn-6 on GFX8 (where SGPRn
+                                                    is the highest numbered SGPR
+                                                    allocated to the wave).
+                                                    FLAT_SCRATCH_HI is
+                                                    multiplied by 256 (as it is
+                                                    in units of 256 bytes) and
+                                                    added to
+                                                    ``SH_HIDDEN_PRIVATE_BASE_VIMID``
+                                                    to calculate the per wave
+                                                    FLAT SCRATCH BASE in flat
+                                                    memory instructions that
+                                                    access the scratch
+                                                    apperture.
 
                                                     The second SGPR is 32 bit
                                                     byte size of a single
                                                     work-item’s scratch memory
-                                                    usage. This is directly
-                                                    loaded from the kernel
-                                                    dispatch packet Private
-                                                    Segment Byte Size and
-                                                    rounded up to a multiple of
-                                                    DWORD.
-
-                                                    The kernel code must move to
-                                                    SGPRn-3 for use as the FLAT
-                                                    SCRATCH SIZE in flat memory
+                                                    usage. CP obtains this from
+                                                    the runtime, and it is
+                                                    always a multiple of DWORD.
+                                                    CP checks that the value in
+                                                    the kernel dispatch packet
+                                                    Private Segment Byte Size is
+                                                    not larger, and requests the
+                                                    runtime to increase the
+                                                    queue's scratch size if
+                                                    necessary. The kernel code
+                                                    must move it to
+                                                    FLAT_SCRATCH_LO which is
+                                                    SGPRn-3 on GFX7 and SGPRn-5
+                                                    on GFX8. FLAT_SCRATCH_LO is
+                                                    used as the FLAT SCRATCH
+                                                    SIZE in flat memory
                                                     instructions. Having CP load
                                                     it once avoids loading it at
                                                     the beginning of every
-                                                    wavefront.
-                                                  GFX9
-                                                    This is the 64 bit base
-                                                    address of the per SPI
-                                                    scratch backing memory
-                                                    managed by SPI for the queue
-                                                    executing the kernel
-                                                    dispatch. CP obtains this
-                                                    from the runtime (and
+                                                    wavefront. GFX9 This is the
+                                                    64 bit base address of the
+                                                    per SPI scratch backing
+                                                    memory managed by SPI for
+                                                    the queue executing the
+                                                    kernel dispatch. CP obtains
+                                                    this from the runtime (and
                                                     divides it if there are
                                                     multiple Shader Arrays each
                                                     with its own SPI). The value
                                                     of Scratch Wave Offset must
                                                     be added by the kernel
-                                                    machine code and moved to
-                                                    SGPRn-4 and SGPRn-3 for use
-                                                    as the FLAT SCRATCH BASE in
-                                                    flat memory instructions.
-     then       Private Segment Size       1      The 32 bit byte size of a
-                (enable_sgpr_private              single work-item’s scratch
-                _segment_size)                    memory allocation. This is the
-                                                  value from the kernel dispatch
-                                                  packet Private Segment Byte
-                                                  Size rounded up by CP to a
-                                                  multiple of DWORD.
+                                                    machine code and the result
+                                                    moved to the FLAT_SCRATCH
+                                                    SGPR which is SGPRn-6 and
+                                                    SGPRn-5. It is used as the
+                                                    FLAT SCRATCH BASE in flat
+                                                    memory instructions. then
+                                                    Private Segment Size 1 The
+                                                    32 bit byte size of a
+                                                    (enable_sgpr_private single
+                                                    work-item's
+                                                    scratch_segment_size) memory
+                                                    allocation. This is the
+                                                    value from the kernel
+                                                    dispatch packet Private
+                                                    Segment Byte Size rounded up
+                                                    by CP to a multiple of
+                                                    DWORD.
 
                                                   Having CP load it once avoids
                                                   loading it at the beginning of
@@ -3358,8 +3396,11 @@ the ``s_trap`` instruction with the following usage:
      debugger            ``s_trap 0xff``                 Reserved for debugger.
      =================== =============== =============== =======================
 
-Non-AMDHSA
-----------
+Unspecified OS
+--------------
+
+This section provides code conventions used when the target triple OS is
+empty (see :ref:`amdgpu-target-triples`).
 
 Trap Handler ABI
 ~~~~~~~~~~~~~~~~
@@ -3394,7 +3435,8 @@ When the language is OpenCL the following differences occur:
 
 1. The OpenCL memory model is used (see :ref:`amdgpu-amdhsa-memory-model`).
 2. The AMDGPU backend adds additional arguments to the kernel.
-3. Additional metadata is generated (:ref:`amdgpu-code-object-metadata`).
+3. Additional metadata is generated
+   (:ref:`amdgpu-amdhsa-hsa-code-object-metadata`).
 
 .. TODO
    Specify what affect this has. Hidden arguments added. Additional metadata
@@ -3424,7 +3466,8 @@ It supports AMDGCN GFX6-GFX8.
 This section describes general syntax for instructions and operands. For more
 information about instructions, their semantics and supported combinations of
 operands, refer to one of instruction set architecture manuals
-[AMD-Souther-Islands]_ [AMD-Sea-Islands]_ [AMD-Volcanic-Islands]_.
+[AMD-Souther-Islands]_, [AMD-Sea-Islands]_, [AMD-Volcanic-Islands]_ and
+[AMD-Vega]_.
 
 An instruction has the following syntax (register operands are normally
 comma-separated while extra operands are space-separated):
@@ -3747,6 +3790,7 @@ Additional Documentation
 .. [AMD-Souther-Islands] `AMD Southern Islands Series ISA <http://developer.amd.com/wordpress/media/2012/12/AMD_Southern_Islands_Instruction_Set_Architecture.pdf>`__
 .. [AMD-Sea-Islands] `AMD Sea Islands Series ISA <http://developer.amd.com/wordpress/media/2013/07/AMD_Sea_Islands_Instruction_Set_Architecture.pdf>`_
 .. [AMD-Volcanic-Islands] `AMD GCN3 Instruction Set Architecture <http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2013/12/AMD_GCN3_Instruction_Set_Architecture_rev1.1.pdf>`__
+.. [AMD-Vega] `AMD "Vega" Instruction Set Architecture <http://developer.amd.com/wordpress/media/2013/12/Vega_Shader_ISA_28July2017.pdf>`__
 .. [AMD-OpenCL_Programming-Guide]  `AMD Accelerated Parallel Processing OpenCL Programming Guide <http://developer.amd.com/download/AMD_Accelerated_Parallel_Processing_OpenCL_Programming_Guide.pdf>`_
 .. [AMD-APP-SDK] `AMD Accelerated Parallel Processing APP SDK Documentation <http://developer.amd.com/tools/heterogeneous-computing/amd-accelerated-parallel-processing-app-sdk/documentation/>`__
 .. [AMD-ROCm] `ROCm: Open Platform for Development, Discovery and Education Around GPU Computing <http://gpuopen.com/compute-product/rocm/>`__

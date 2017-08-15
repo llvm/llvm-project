@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFOBJECT_H
 
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
+#include "llvm/Object/ObjectFile.h"
 
 namespace llvm {
 // This is responsible for low level access to the object file. It
@@ -27,6 +28,8 @@ class DWARFObject {
 public:
   virtual ~DWARFObject() = default;
   virtual StringRef getFileName() const { llvm_unreachable("unimplemented"); }
+  virtual const object::ObjectFile *getFile() const { return nullptr; }
+  virtual ArrayRef<SectionName> getSectionNames() const { return {}; }
   virtual bool isLittleEndian() const = 0;
   virtual uint8_t getAddressSize() const { llvm_unreachable("unimplemented"); }
   virtual const DWARFSection &getInfoSection() const { return Dummy; }

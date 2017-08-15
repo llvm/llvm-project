@@ -1023,7 +1023,7 @@ private:
     template <typename ReadyListType>
     void initialFillReadyList(ReadyListType &ReadyList) {
       for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode()) {
-        doForAllOpcodes(I, [&ReadyList, I](ScheduleData *SD) {
+        doForAllOpcodes(I, [&](ScheduleData *SD) {
           if (SD->isSchedulingEntity() && SD->isReady()) {
             ReadyList.insert(SD);
             DEBUG(dbgs() << "SLP:    initially in ready list: " << *I << "\n");
@@ -1424,8 +1424,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   if (!BS.tryScheduleBundle(VL, this, VL0)) {
     DEBUG(dbgs() << "SLP: We are not able to schedule this bundle!\n");
-    assert((!BS.getScheduleData(VL[0]) ||
-            !BS.getScheduleData(VL[0])->isPartOfBundle()) &&
+    assert((!BS.getScheduleData(VL0) ||
+            !BS.getScheduleData(VL0)->isPartOfBundle()) &&
            "tryScheduleBundle should cancelScheduling on failure");
     newTreeEntry(VL, false, UserTreeIdx);
     return;
@@ -2797,7 +2797,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         V = Builder.CreateICmp(P0, L, R);
 
       E->VectorizedValue = V;
-      propagateIRFlags(E->VectorizedValue, E->Scalars);
+      propagateIRFlags(E->VectorizedValue, E->Scalars, VL0);
       ++NumVectorInstructions;
       return V;
     }
@@ -2861,7 +2861,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       BinaryOperator *BinOp = cast<BinaryOperator>(VL0);
       Value *V = Builder.CreateBinOp(BinOp->getOpcode(), LHS, RHS);
       E->VectorizedValue = V;
-      propagateIRFlags(E->VectorizedValue, E->Scalars);
+      propagateIRFlags(E->VectorizedValue, E->Scalars, VL0);
       ++NumVectorInstructions;
 
       if (Instruction *I = dyn_cast<Instruction>(V))
@@ -2974,7 +2974,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         // ctlz,cttz and powi are special intrinsics whose second argument is
         // a scalar. This argument should not be vectorized.
         if (hasVectorInstrinsicScalarOpd(IID, 1) && j == 1) {
-          CallInst *CEI = cast<CallInst>(E->Scalars[0]);
+          CallInst *CEI = cast<CallInst>(VL0);
           ScalarArg = CEI->getArgOperand(j);
           OpVecs.push_back(CEI->getArgOperand(j));
           continue;
@@ -3004,7 +3004,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         ExternalUses.push_back(ExternalUser(ScalarArg, cast<User>(V), 0));
 
       E->VectorizedValue = V;
-      propagateIRFlags(E->VectorizedValue, E->Scalars);
+      propagateIRFlags(E->VectorizedValue, E->Scalars, VL0);
       ++NumVectorInstructions;
       return V;
     }
@@ -3672,8 +3672,8 @@ void BoUpSLP::BlockScheduling::resetSchedule() {
   assert(ScheduleStart &&
          "tried to reset schedule on block which has not been scheduled");
   for (Instruction *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode()) {
-    doForAllOpcodes(I, [this](ScheduleData *SD) {
-      assert(isInSchedulingRegion(SD) && 
+    doForAllOpcodes(I, [&](ScheduleData *SD) {
+      assert(isInSchedulingRegion(SD) &&
              "ScheduleData not in scheduling region");
       SD->IsScheduled = false;
       SD->resetUnscheduledDeps();

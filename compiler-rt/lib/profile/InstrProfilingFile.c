@@ -513,29 +513,23 @@ const char *__llvm_profile_get_path_prefix(void) {
 COMPILER_RT_VISIBILITY
 void __llvm_profile_initialize_file(void) {
   const char *EnvFilenamePat;
+  const char *SelectedPat = NULL;
+  ProfileNameSpecifier PNS = PNS_unknown;
   int hasCommandLineOverrider = (INSTR_PROF_PROFILE_NAME_VAR[0] != 0);
 
   EnvFilenamePat = getFilenamePatFromEnv();
-  if (EnvFilenamePat)
-    parseAndSetFilename(EnvFilenamePat, PNS_environment, 0);
-  else if (hasCommandLineOverrider) {
-    const char *SelectedPat = INSTR_PROF_PROFILE_NAME_VAR;
-
-    size_t PrefixLen;
-    int StripLen;
-    const char *Prefix = lprofGetPathPrefix(&StripLen, &PrefixLen);
-    if (Prefix != NULL) {
-      char *StripPat =
-          COMPILER_RT_ALLOCA(PrefixLen + 1 + strlen(SelectedPat) + 1);
-      lprofApplyPathPrefix(StripPat, SelectedPat, Prefix, PrefixLen, StripLen);
-      SelectedPat = StripPat;
-    }
-
-    parseAndSetFilename(SelectedPat, PNS_command_line, Prefix ? 1 : 0);
+  if (EnvFilenamePat) {
+    SelectedPat = EnvFilenamePat;
+    PNS = PNS_environment;
+  } else if (hasCommandLineOverrider) {
+    SelectedPat = INSTR_PROF_PROFILE_NAME_VAR;
+    PNS = PNS_command_line;
   } else {
-    parseAndSetFilename(NULL, PNS_default, 0);
+    SelectedPat = NULL;
+    PNS = PNS_default;
   }
 
+  parseAndSetFilename(SelectedPat, PNS, 0);
 }
 
 /* This API is directly called by the user application code. It has the

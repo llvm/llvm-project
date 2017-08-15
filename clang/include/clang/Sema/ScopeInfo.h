@@ -833,6 +833,12 @@ public:
     return FSI->Kind == SK_Lambda;
   }
 
+  /// Is this scope known to be for a generic lambda? (This will be false until
+  /// we parse the first 'auto'-typed parameter.
+  bool isGenericLambda() const {
+    return !AutoTemplateParams.empty() || GLTemplateParameterList;
+  }
+
   ///
   /// \brief Add a variable that might potentially be captured by the 
   /// lambda and therefore the enclosing lambdas. 

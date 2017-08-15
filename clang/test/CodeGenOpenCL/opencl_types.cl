@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple "spir-unknown-unknown" -emit-llvm -o - -O0 | FileCheck %s --check-prefix=CHECK-SPIR
-// RUN: %clang_cc1 %s -triple "amdgcn--amdhsa" -emit-llvm -o - -O0 | FileCheck %s --check-prefix=CHECK-AMDGCN
+// RUN: %clang_cc1 -cl-std=CL2.0 %s -triple "spir-unknown-unknown" -emit-llvm -o - -O0 | FileCheck %s --check-prefix=CHECK-SPIR
+// RUN: %clang_cc1 -cl-std=CL2.0 %s -triple "amdgcn--amdhsa" -emit-llvm -o - -O0 | FileCheck %s --check-prefix=CHECK-AMDGCN
 
 #define CLK_ADDRESS_CLAMP_TO_EDGE       2
 #define CLK_NORMALIZED_COORDS_TRUE      1
@@ -42,12 +42,22 @@ kernel void foo(image1d_t img) {
   // CHECK-SPIR: alloca %opencl.sampler_t addrspace(2)*
   event_t evt;
   // CHECK-SPIR: alloca %opencl.event_t*
+  clk_event_t clk_evt;
+  // CHECK-SPIR: alloca %opencl.clk_event_t*
+  queue_t queue;
+  // CHECK-SPIR: alloca %opencl.queue_t*
+  reserve_id_t rid;
+  // CHECK-SPIR: alloca %opencl.reserve_id_t*
   // CHECK-SPIR: store %opencl.sampler_t addrspace(2)*
   fnc4smp(smp);
   // CHECK-SPIR: call {{.*}}void @fnc4smp(%opencl.sampler_t addrspace(2)*
   fnc4smp(glb_smp);
   // CHECK-SPIR: call {{.*}}void @fnc4smp(%opencl.sampler_t addrspace(2)*
 }
+
+kernel void foo_pipe(read_only pipe int p) {}
+// CHECK-SPIR: @foo_pipe(%opencl.pipe_t addrspace(1)* %p)
+// CHECK_AMDGCN: @foo_pipe(%opencl.pipe_t addrspace(1)* %p)
 
 void __attribute__((overloadable)) bad1(image1d_t b, image2d_t c, image2d_t d) {}
 // CHECK-SPIR-LABEL: @{{_Z4bad114ocl_image1d_ro14ocl_image2d_roS0_|"\\01\?bad1@@\$\$J0YAXPAUocl_image1d_ro@@PAUocl_image2d_ro@@1@Z"}}

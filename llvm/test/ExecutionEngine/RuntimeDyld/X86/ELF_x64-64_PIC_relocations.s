@@ -1,9 +1,10 @@
-# RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj -o %T/test_ELF1_x86-64.o %s
-# RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj -o %T/test_ELF2_x86-64.o %s
-# RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -o %T/test_ELF_ExternalGlobal_x86-64.o %S/Inputs/ExternalGlobal.ll
-# RUN: llvm-rtdyld -triple=x86_64-pc-linux -verify %T/test_ELF1_x86-64.o  %T/test_ELF_ExternalGlobal_x86-64.o
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj -o %t/test_ELF1_x86-64.o %s
+# RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj -o %t/test_ELF2_x86-64.o %s
+# RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -o %t/test_ELF_ExternalGlobal_x86-64.o %S/Inputs/ExternalGlobal.ll
+# RUN: llvm-rtdyld -triple=x86_64-pc-linux -verify %t/test_ELF1_x86-64.o  %t/test_ELF_ExternalGlobal_x86-64.o
 # Test that we can load this code twice at memory locations more than 2GB apart
-# RUN: llvm-rtdyld -triple=x86_64-pc-linux -verify -map-section test_ELF1_x86-64.o,.got=0x10000 -map-section test_ELF2_x86-64.o,.text=0x100000000 -map-section test_ELF2_x86-64.o,.got=0x100010000 %T/test_ELF1_x86-64.o %T/test_ELF2_x86-64.o %T/test_ELF_ExternalGlobal_x86-64.o
+# RUN: llvm-rtdyld -triple=x86_64-pc-linux -verify -map-section test_ELF1_x86-64.o,.got=0x10000 -map-section test_ELF2_x86-64.o,.text=0x100000000 -map-section test_ELF2_x86-64.o,.got=0x100010000 %t/test_ELF1_x86-64.o %t/test_ELF2_x86-64.o %t/test_ELF_ExternalGlobal_x86-64.o
 
 # Assembly obtained by compiling the following and adding checks:
 # @G = external global i8*

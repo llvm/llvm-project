@@ -1,5 +1,5 @@
-# RUN: llvm-mc -triple=arm64-none-linux-gnu -filetype=obj -o %T/branch.o %s
-# RUN: llvm-rtdyld -triple=arm64-none-linux-gnu -verify -check=%s %T/branch.o
+# RUN: llvm-mc -triple=arm64-none-linux-gnu -filetype=obj -o %t %s
+# RUN: llvm-rtdyld -triple=arm64-none-linux-gnu -verify -check=%s %t
 
 .globl _main
 .weak _label1

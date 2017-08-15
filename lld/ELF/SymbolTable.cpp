@@ -527,13 +527,6 @@ SymbolBody *SymbolTable::find(StringRef Name) {
   return SymVector[V.Idx]->body();
 }
 
-SymbolBody *SymbolTable::findInCurrentDSO(StringRef Name) {
-  if (SymbolBody *S = find(Name))
-    if (S->isInCurrentDSO())
-      return S;
-  return nullptr;
-}
-
 template <class ELFT>
 Symbol *SymbolTable::addLazyArchive(ArchiveFile *F,
                                     const object::Archive::Symbol Sym) {

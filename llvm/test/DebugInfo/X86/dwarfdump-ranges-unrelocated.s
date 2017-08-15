@@ -1,12 +1,28 @@
 # RUN: llvm-mc -triple x86_64-pc-linux -filetype=obj %s -o %t
 # RUN: llvm-dwarfdump %t | FileCheck %s
 
+# CHECK: .debug_info contents:
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_ranges [DW_FORM_sec_offset] (0x00000000
+# CHECK-NEXT:  [0x0000000000000000 - 0x0000000000000001) ".text.foo1"
+# CHECK-NEXT:  [0x0000000000000000 - 0x0000000000000002) ".text.foo2" [4]
+# CHECK-NEXT:  [0x0000000000000000 - 0x0000000000000003) ".text.foo2" [5])
+
 # CHECK: .debug_ranges contents:
 # CHECK:   00000000 0000000000000000 0000000000000001
 # CHECK:   00000000 0000000000000000 0000000000000002
+# CHECK:   00000000 0000000000000000 0000000000000003
 # CHECK:   00000000 <End of list>
 
-## Asm code for testcase is a reduced output from next invocation and source:
+# RUN: llvm-dwarfdump -brief=true %t | FileCheck %s --check-prefix=BRIEF
+# BRIEF: DW_TAG_compile_unit
+# BRIEF: DW_AT_ranges         (0x00000000
+# BRIEF-NEXT:  [0x0000000000000000 - 0x0000000000000001)
+# BRIEF-NEXT:  [0x0000000000000000 - 0x0000000000000002)
+# BRIEF-NEXT:  [0x0000000000000000 - 0x0000000000000003))
+
+## Asm code for testcase is a reduced and modified output from next
+## invocation and source:
 # clang test.cpp -S -o test.s -gmlt -ffunction-sections
 # test.cpp:
 #   void foo1() { }  
@@ -17,11 +33,18 @@
  nop
 .Lfunc_end0:
 
-.section .text.foo2,"ax",@progbits
+.section .text.foo2,"ax",@progbits, unique, 1
 .Lfunc_begin1:
  nop
  nop
 .Lfunc_end1:
+
+.section .text.foo2,"ax",@progbits, unique, 2
+.Lfunc_begin2:
+ nop
+ nop
+ nop
+.Lfunc_end2:
 
 .section .debug_abbrev,"",@progbits
 .byte 1                       # Abbreviation Code
@@ -66,5 +89,7 @@
 .quad .Lfunc_end0
 .quad .Lfunc_begin1
 .quad .Lfunc_end1
+.quad .Lfunc_begin2
+.quad .Lfunc_end2
 .quad 0
 .quad 0

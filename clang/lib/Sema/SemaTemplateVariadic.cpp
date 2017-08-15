@@ -26,6 +26,19 @@ using namespace clang;
 // Visitor that collects unexpanded parameter packs
 //----------------------------------------------------------------------------
 
+/// \brief Retrieve the depth and index of a parameter pack.
+static std::pair<unsigned, unsigned> 
+getDepthAndIndex(NamedDecl *ND) {
+  if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(ND))
+    return std::make_pair(TTP->getDepth(), TTP->getIndex());
+  
+  if (NonTypeTemplateParmDecl *NTTP = dyn_cast<NonTypeTemplateParmDecl>(ND))
+    return std::make_pair(NTTP->getDepth(), NTTP->getIndex());
+  
+  TemplateTemplateParmDecl *TTP = cast<TemplateTemplateParmDecl>(ND);
+  return std::make_pair(TTP->getDepth(), TTP->getIndex());
+}
+
 namespace {
   /// \brief A class that collects unexpanded parameter packs.
   class CollectUnexpandedParameterPacksVisitor :
@@ -36,15 +49,36 @@ namespace {
 
     SmallVectorImpl<UnexpandedParameterPack> &Unexpanded;
 
-    bool InLambda;
+    bool InLambda = false;
+    unsigned DepthLimit = (unsigned)-1;
 
+    void addUnexpanded(NamedDecl *ND, SourceLocation Loc = SourceLocation()) {
+      if (auto *PVD = dyn_cast<ParmVarDecl>(ND)) {
+        // For now, the only problematic case is a generic lambda's templated
+        // call operator, so we don't need to look for all the other ways we
+        // could have reached a dependent parameter pack.
+        auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
+        auto *FTD = FD ? FD->getDescribedFunctionTemplate() : nullptr;
+        if (FTD && FTD->getTemplateParameters()->getDepth() >= DepthLimit)
+          return;
+      } else if (getDepthAndIndex(ND).first >= DepthLimit)
+        return;
+
+      Unexpanded.push_back({ND, Loc});
+    }
+    void addUnexpanded(const TemplateTypeParmType *T,
+                       SourceLocation Loc = SourceLocation()) {
+      if (T->getDepth() < DepthLimit)
+        Unexpanded.push_back({T, Loc});
+    }
+    
   public:
     explicit CollectUnexpandedParameterPacksVisitor(
-                  SmallVectorImpl<UnexpandedParameterPack> &Unexpanded)
-      : Unexpanded(Unexpanded), InLambda(false) { }
+        SmallVectorImpl<UnexpandedParameterPack> &Unexpanded)
+        : Unexpanded(Unexpanded) {}
 
     bool shouldWalkTypesOfTypeLocs() const { return false; }
-    
+
     //------------------------------------------------------------------------
     // Recording occurrences of (unexpanded) parameter packs.
     //------------------------------------------------------------------------
@@ -52,7 +86,7 @@ namespace {
     /// \brief Record occurrences of template type parameter packs.
     bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
       if (TL.getTypePtr()->isParameterPack())
-        Unexpanded.push_back(std::make_pair(TL.getTypePtr(), TL.getNameLoc()));
+        addUnexpanded(TL.getTypePtr(), TL.getNameLoc());
       return true;
     }
 
@@ -63,7 +97,7 @@ namespace {
     /// Ideally, this routine would never be used.
     bool VisitTemplateTypeParmType(TemplateTypeParmType *T) {
       if (T->isParameterPack())
-        Unexpanded.push_back(std::make_pair(T, SourceLocation()));
+        addUnexpanded(T);
 
       return true;
     }
@@ -72,18 +106,18 @@ namespace {
     /// parameter packs in an expression.
     bool VisitDeclRefExpr(DeclRefExpr *E) {
       if (E->getDecl()->isParameterPack())
-        Unexpanded.push_back(std::make_pair(E->getDecl(), E->getLocation()));
+        addUnexpanded(E->getDecl(), E->getLocation());
       
       return true;
     }
     
     /// \brief Record occurrences of template template parameter packs.
     bool TraverseTemplateName(TemplateName Template) {
-      if (TemplateTemplateParmDecl *TTP 
-            = dyn_cast_or_null<TemplateTemplateParmDecl>(
-                                                  Template.getAsTemplateDecl()))
+      if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
+              Template.getAsTemplateDecl())) {
         if (TTP->isParameterPack())
-          Unexpanded.push_back(std::make_pair(TTP, SourceLocation()));
+          addUnexpanded(TTP);
+      }
       
       return inherited::TraverseTemplateName(Template);
     }
@@ -141,7 +175,13 @@ namespace {
     /// \brief Suppress traversal of non-parameter declarations, since
     /// they cannot contain unexpanded parameter packs.
     bool TraverseDecl(Decl *D) { 
-      if ((D && isa<ParmVarDecl>(D)) || InLambda)
+      auto *PVD = dyn_cast_or_null<ParmVarDecl>(D);
+      // A function parameter pack is a pack expansion, so cannot contain
+      // an unexpanded parameter pack.
+      if (PVD && PVD->isParameterPack())
+        return true;
+
+      if (PVD || InLambda)
         return inherited::TraverseDecl(D);
 
       return true;
@@ -175,24 +215,25 @@ namespace {
         return true;
 
       bool WasInLambda = InLambda;
-      InLambda = true;
+      unsigned OldDepthLimit = DepthLimit;
 
-      // If any capture names a function parameter pack, that pack is expanded
-      // when the lambda is expanded.
-      for (LambdaExpr::capture_iterator I = Lambda->capture_begin(),
-                                        E = Lambda->capture_end();
-           I != E; ++I) {
-        if (I->capturesVariable()) {
-          VarDecl *VD = I->getCapturedVar();
-          if (VD->isParameterPack())
-            Unexpanded.push_back(std::make_pair(VD, I->getLocation()));
-        }
-      }
+      InLambda = true;
+      if (auto *TPL = Lambda->getTemplateParameterList())
+        DepthLimit = TPL->getDepth();
 
       inherited::TraverseLambdaExpr(Lambda);
 
       InLambda = WasInLambda;
+      DepthLimit = OldDepthLimit;
       return true;
+    }
+
+    /// Suppress traversal within pack expansions in lambda captures.
+    bool TraverseLambdaCapture(LambdaExpr *Lambda, const LambdaCapture *C,
+                               Expr *Init) {
+      if (C->isPackExpansion())
+        return true;
+      return inherited::TraverseLambdaCapture(Lambda, C, Init);
     }
   };
 }
@@ -220,13 +261,33 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
   if (Unexpanded.empty())
     return false;
 
-  // If we are within a lambda expression, that lambda contains an unexpanded
+  // If we are within a lambda expression and referencing a pack that is not
+  // a parameter of the lambda itself, that lambda contains an unexpanded
   // parameter pack, and we are done.
   // FIXME: Store 'Unexpanded' on the lambda so we don't need to recompute it
   // later.
+  SmallVector<UnexpandedParameterPack, 4> GenericLambdaParamReferences;
   for (unsigned N = FunctionScopes.size(); N; --N) {
     if (sema::LambdaScopeInfo *LSI =
           dyn_cast<sema::LambdaScopeInfo>(FunctionScopes[N-1])) {
+      if (LSI->isGenericLambda()) {
+        for (auto &Param : Unexpanded) {
+          auto *PD = dyn_cast_or_null<ParmVarDecl>(
+              Param.first.dyn_cast<NamedDecl *>());
+          if (PD && PD->getDeclContext() == LSI->CallOperator)
+            GenericLambdaParamReferences.push_back(Param);
+        }
+      }
+
+      // If we have references to a parameter of a generic lambda, only
+      // diagnose those ones. We don't know whether any other unexpanded
+      // parameters referenced herein are actually unexpanded; they might
+      // be expanded at an outer level.
+      if (!GenericLambdaParamReferences.empty()) {
+        Unexpanded = GenericLambdaParamReferences;
+        break;
+      }
+
       LSI->ContainsUnexpandedParameterPack = true;
       return false;
     }
@@ -518,19 +579,6 @@ ExprResult Sema::CheckPackExpansion(Expr *Pattern, SourceLocation EllipsisLoc,
   // Create the pack expansion expression and source-location information.
   return new (Context)
     PackExpansionExpr(Context.DependentTy, Pattern, EllipsisLoc, NumExpansions);
-}
-
-/// \brief Retrieve the depth and index of a parameter pack.
-static std::pair<unsigned, unsigned> 
-getDepthAndIndex(NamedDecl *ND) {
-  if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(ND))
-    return std::make_pair(TTP->getDepth(), TTP->getIndex());
-  
-  if (NonTypeTemplateParmDecl *NTTP = dyn_cast<NonTypeTemplateParmDecl>(ND))
-    return std::make_pair(NTTP->getDepth(), NTTP->getIndex());
-  
-  TemplateTemplateParmDecl *TTP = cast<TemplateTemplateParmDecl>(ND);
-  return std::make_pair(TTP->getDepth(), TTP->getIndex());
 }
 
 bool Sema::CheckParameterPacksForExpansion(

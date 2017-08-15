@@ -75,12 +75,11 @@ will look like:
   std::unique_ptr<Module> M = buildModule();
   JIT J;
   Handle H = J.addModule(*M);
-  int (*Main)(int, char*[]) =
-    (int(*)(int, char*[])J.findSymbol("main").getAddress();
+  int (*Main)(int, char*[]) = (int(*)(int, char*[]))J.getSymbolAddress("main");
   int Result = Main();
   J.removeModule(H);
 
-The APIs that we build in these tutorials will all be variations on this simple
+The APIs that we build in these tutorials will all be aovariations on this simple
 theme. Behind the API we will refine the implementation of the JIT to add
 support for optimization and lazy compilation. Eventually we will extend the
 API itself to allow higher-level program representations (e.g. ASTs) to be
@@ -111,6 +110,7 @@ usual include guards and #includes [2]_, we get to the definition of our class:
   #ifndef LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
   #define LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
 
+  #include "llvm/ADT/STLExtras.h"
   #include "llvm/ExecutionEngine/ExecutionEngine.h"
   #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
   #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
@@ -119,6 +119,12 @@ usual include guards and #includes [2]_, we get to the definition of our class:
   #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
   #include "llvm/IR/Mangler.h"
   #include "llvm/Support/DynamicLibrary.h"
+  #include "llvm/Support/raw_ostream.h"
+  #include "llvm/Target/TargetMachine.h"
+  #include <algorithm>
+  #include <memory>
+  #include <string>
+  #include <vector>
 
   namespace llvm {
   namespace orc {
@@ -127,38 +133,39 @@ usual include guards and #includes [2]_, we get to the definition of our class:
   private:
     std::unique_ptr<TargetMachine> TM;
     const DataLayout DL;
-    ObjectLinkingLayer<> ObjectLayer;
-    IRCompileLayer<decltype(ObjectLayer)> CompileLayer;
+    RTDyldObjectLinkingLayer ObjectLayer;
+    IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
   public:
-    typedef decltype(CompileLayer)::ModuleSetHandleT ModuleHandleT;
+    using ModuleHandle = decltype(CompileLayer)::ModuleHandleT;
 
-Our class begins with four members: A TargetMachine, TM, which will be used
-to build our LLVM compiler instance; A DataLayout, DL, which will be used for
+Our class begins with four members: A TargetMachine, TM, which will be used to
+build our LLVM compiler instance; A DataLayout, DL, which will be used for
 symbol mangling (more on that later), and two ORC *layers*: an
-ObjectLinkingLayer and a IRCompileLayer. We'll be talking more about layers in
-the next chapter, but for now you can think of them as analogous to LLVM
+RTDyldObjectLinkingLayer and a CompileLayer. We'll be talking more about layers
+in the next chapter, but for now you can think of them as analogous to LLVM
 Passes: they wrap up useful JIT utilities behind an easy to compose interface.
-The first layer, ObjectLinkingLayer, is the foundation of our JIT: it takes
-in-memory object files produced by a compiler and links them on the fly to make
-them executable. This JIT-on-top-of-a-linker design was introduced in MCJIT,
-however the linker was hidden inside the MCJIT class. In ORC we expose the
-linker so that clients can access and configure it directly if they need to. In
-this tutorial our ObjectLinkingLayer will just be used to support the next layer
-in our stack: the IRCompileLayer, which will be responsible for taking LLVM IR,
-compiling it, and passing the resulting in-memory object files down to the
-object linking layer below.
+The first layer, ObjectLayer, is the foundation of our JIT: it takes in-memory
+object files produced by a compiler and links them on the fly to make them
+executable. This JIT-on-top-of-a-linker design was introduced in MCJIT, however
+the linker was hidden inside the MCJIT class. In ORC we expose the linker so
+that clients can access and configure it directly if they need to. In this
+tutorial our ObjectLayer will just be used to support the next layer in our
+stack: the CompileLayer, which will be responsible for taking LLVM IR, compiling
+it, and passing the resulting in-memory object files down to the object linking
+layer below.
 
 That's it for member variables, after that we have a single typedef:
-ModuleHandleT. This is the handle type that will be returned from our JIT's
+ModuleHandle. This is the handle type that will be returned from our JIT's
 addModule method, and can be passed to the removeModule method to remove a
 module. The IRCompileLayer class already provides a convenient handle type
-(IRCompileLayer::ModuleSetHandleT), so we just alias our ModuleHandleT to this.
+(IRCompileLayer::ModuleSetHandleT), so we just alias our ModuleHandle to this.
 
 .. code-block:: c++
 
   KaleidoscopeJIT()
       : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
+        ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
   }
@@ -166,17 +173,22 @@ module. The IRCompileLayer class already provides a convenient handle type
   TargetMachine &getTargetMachine() { return *TM; }
 
 Next up we have our class constructor. We begin by initializing TM using the
-EngineBuilder::selectTarget helper method, which constructs a TargetMachine for
-the current process. Next we use our newly created TargetMachine to initialize
-DL, our DataLayout. Then we initialize our IRCompileLayer. Our IRCompile layer
-needs two things: (1) A reference to our object linking layer, and (2) a
-compiler instance to use to perform the actual compilation from IR to object
-files. We use the off-the-shelf SimpleCompiler instance for now. Finally, in
-the body of the constructor, we call the DynamicLibrary::LoadLibraryPermanently
-method with a nullptr argument. Normally the LoadLibraryPermanently method is
-called with the path of a dynamic library to load, but when passed a null
-pointer it will 'load' the host process itself, making its exported symbols
-available for execution.
+EngineBuilder::selectTarget helper method which constructs a TargetMachine for
+the current process. Then we use our newly created TargetMachine to initialize
+DL, our DataLayout. After that we need to initialize our ObjectLayer. The
+ObjectLayer requires a function object that will build a JIT memory manager for
+each module that is added (a JIT memory manager manages memory allocations,
+memory permissions, and registration of exception handlers for JIT'd code). For
+this we use a lambda that returns a SectionMemoryManager, an off-the-shelf
+utility that provides all the basic memory management functionality required for
+this chapter. Next we initialize our CompileLayer. The Compile laye needs two
+things: (1) A reference to our object layer, and (2) a compiler instance to use
+to perform the actual compilation from IR to object files. We use the
+off-the-shelf SimpleCompiler instance for now. Finally, in the body of the
+constructor, we call the DynamicLibrary::LoadLibraryPermanently method with a
+nullptr argument. Normally the LoadLibraryPermanently method is called with the
+path of a dynamic library to load, but when passed a null pointer it will 'load'
+the host process itself, making its exported symbols available for execution.
 
 .. code-block:: c++
 
@@ -191,48 +203,36 @@ available for execution.
             return Sym;
           return JITSymbol(nullptr);
         },
-        [](const std::string &S) {
+        [](const std::string &Name) {
           if (auto SymAddr =
                 RTDyldMemoryManager::getSymbolAddressInProcess(Name))
             return JITSymbol(SymAddr, JITSymbolFlags::Exported);
           return JITSymbol(nullptr);
         });
 
-    // Build a singleton module set to hold our module.
-    std::vector<std::unique_ptr<Module>> Ms;
-    Ms.push_back(std::move(M));
-
     // Add the set to the JIT with the resolver we created above and a newly
     // created SectionMemoryManager.
-    return CompileLayer.addModuleSet(std::move(Ms),
-                                     make_unique<SectionMemoryManager>(),
-                                     std::move(Resolver));
+    return cantFail(CompileLayer.addModule(std::move(M),
+                                           std::move(Resolver)));
   }
 
 Now we come to the first of our JIT API methods: addModule. This method is
 responsible for adding IR to the JIT and making it available for execution. In
 this initial implementation of our JIT we will make our modules "available for
-execution" by adding them straight to the IRCompileLayer, which will
-immediately compile them. In later chapters we will teach our JIT to be lazier
-and instead add the Modules to a "pending" list to be compiled if and when they
-are first executed.
+execution" by adding them straight to the CompileLayer, which will immediately
+compile them. In later chapters we will teach our JIT to be defer compilation
+of individual functions until they're actually called.
 
-To add our module to the IRCompileLayer we need to supply two auxiliary objects
-(as well as the module itself): a memory manager and a symbol resolver.  The
-memory manager will be responsible for managing the memory allocated to JIT'd
-machine code, setting memory permissions, and registering exception handling
-tables (if the JIT'd code uses exceptions). For our memory manager we will use
-the SectionMemoryManager class: another off-the-shelf utility that provides all
-the basic functionality we need. The second auxiliary class, the symbol
-resolver, is more interesting for us. It exists to tell the JIT where to look
-when it encounters an *external symbol* in the module we are adding.  External
+To add our module to the CompileLayer we need to supply both the module and a
+symbol resolver. The symbol resolver is responsible for supplying the JIT with
+an address for each *external symbol* in the module we are adding. External
 symbols are any symbol not defined within the module itself, including calls to
 functions outside the JIT and calls to functions defined in other modules that
-have already been added to the JIT. It may seem as though modules added to the
-JIT should "know about one another" by default, but since we would still have to
+have already been added to the JIT. (It may seem as though modules added to the
+JIT should know about one another by default, but since we would still have to
 supply a symbol resolver for references to code outside the JIT it turns out to
-be easier to just re-use this one mechanism for all symbol resolution. This has
-the added benefit that the user has full control over the symbol resolution
+be easier to re-use this one mechanism for all symbol resolution.) This has the
+added benefit that the user has full control over the symbol resolution
 process. Should we search for definitions within the JIT first, then fall back
 on external definitions? Or should we prefer external definitions where
 available and only JIT code if we don't already have an available
@@ -263,12 +263,13 @@ symbol definition via either of these paths, the JIT will refuse to accept our
 module, returning a "symbol not found" error.
 
 Now that we've built our symbol resolver, we're ready to add our module to the
-JIT. We do this by calling the CompileLayer's addModuleSet method [4]_. Since
-we only have a single Module and addModuleSet expects a collection, we will
-create a vector of modules and add our module as the only member. Since we
-have already typedef'd our ModuleHandleT type to be the same as the
-CompileLayer's handle type, we can return the handle from addModuleSet
-directly from our addModule method.
+JIT. We do this by calling the CompileLayer's addModule method. The addModule
+method returns an ``Expected<CompileLayer::ModuleHandle>``, since in more
+advanced JIT configurations it could fail. In our basic configuration we know
+that it will always succeed so we use the cantFail utility to assert that no
+error occurred, and extract the handle value. Since we have already typedef'd
+our ModuleHandle type to be the same as the CompileLayer's handle type, we can
+return the unwrapped handle directly.
 
 .. code-block:: c++
 
@@ -279,19 +280,29 @@ directly from our addModule method.
     return CompileLayer.findSymbol(MangledNameStream.str(), true);
   }
 
+  JITTargetAddress getSymbolAddress(const std::string Name) {
+    return cantFail(findSymbol(Name).getAddress());
+  }
+
   void removeModule(ModuleHandle H) {
-    CompileLayer.removeModuleSet(H);
+    cantFail(CompileLayer.removeModule(H));
   }
 
 Now that we can add code to our JIT, we need a way to find the symbols we've
-added to it. To do that we call the findSymbol method on our IRCompileLayer,
-but with a twist: We have to *mangle* the name of the symbol we're searching
-for first. The reason for this is that the ORC JIT components use mangled
-symbols internally the same way a static compiler and linker would, rather
-than using plain IR symbol names. The kind of mangling will depend on the
-DataLayout, which in turn depends on the target platform. To allow us to
-remain portable and search based on the un-mangled name, we just re-produce
-this mangling ourselves.
+added to it. To do that we call the findSymbol method on our CompileLayer, but
+with a twist: We have to *mangle* the name of the symbol we're searching for
+first. The ORC JIT components use mangled symbols internally the same way a
+static compiler and linker would, rather than using plain IR symbol names. This
+allows JIT'd code to interoperate easily with precompiled code in the
+application or shared libraries. The kind of mangling will depend on the
+DataLayout, which in turn depends on the target platform. To allow us to remain
+portable and search based on the un-mangled name, we just re-produce this
+mangling ourselves.
+
+Next we have a convenience function, getSymbolAddress, which returns the address
+of a given symbol. Like CompileLayer's addModule function, JITSymbol's getAddress
+function is allowed to fail [4]_, however we know that it will not in our simple
+example, so we wrap it in a call to cantFail.
 
 We now come to the last method in our JIT API: removeModule. This method is
 responsible for destructing the MemoryManager and SymbolResolver that were
@@ -302,7 +313,10 @@ treated as a duplicate definition when the next top-level expression is
 entered. It is generally good to free any module that you know you won't need
 to call further, just to free up the resources dedicated to it. However, you
 don't strictly need to do this: All resources will be cleaned up when your
-JIT class is destructed, if they haven't been freed before then.
+JIT class is destructed, if they haven't been freed before then. Like
+``CompileLayer::addModule`` and ``JITSymbol::getAddress``, removeModule may
+fail in general but will never fail in our example, so we wrap it in a call to
+cantFail.
 
 This brings us to the end of Chapter 1 of Building a JIT. You now have a basic
 but fully functioning JIT stack that you can use to take LLVM IR and make it
@@ -340,6 +354,9 @@ Here is the code:
 .. [2] +-----------------------+-----------------------------------------------+
        |         File          |               Reason for inclusion            |
        +=======================+===============================================+
+       |      STLExtras.h      | LLVM utilities that are useful when working   |
+       |                       | with the STL.                                 |
+       +-----------------------+-----------------------------------------------+
        |   ExecutionEngine.h   | Access to the EngineBuilder::selectTarget     |
        |                       | method.                                       |
        +-----------------------+-----------------------------------------------+
@@ -363,10 +380,16 @@ Here is the code:
        |   DynamicLibrary.h    | Provides the DynamicLibrary class, which      |
        |                       | makes symbols in the host process searchable. |
        +-----------------------+-----------------------------------------------+
+       |                       | A fast output stream class. We use the        |
+       |     raw_ostream.h     | raw_string_ostream subclass for symbol        |
+       |                       | mangling                                      |
+       +-----------------------+-----------------------------------------------+
+       |   TargetMachine.h     | LLVM target machine description class.        |
+       +-----------------------+-----------------------------------------------+
 
 .. [3] Actually they don't have to be lambdas, any object with a call operator
        will do, including plain old functions or std::functions.
 
-.. [4] ORC layers accept sets of Modules, rather than individual ones, so that
-       all Modules in the set could be co-located by the memory manager, though
-       this feature is not yet implemented.
+.. [4] ``JITSymbol::getAddress`` will force the JIT to compile the definition of
+       the symbol if it hasn't already been compiled, and since the compilation
+       process could fail getAddress must be able to return this failure.

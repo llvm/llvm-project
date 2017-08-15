@@ -1,16 +1,17 @@
-RUN: echo TA > %T/TA.txt
-RUN: echo TB > %T/TB.txt
-RUN: echo TAB > %T/TAB.txt
+RUN: rm -rf %t && mkdir -p %t
+RUN: echo TA > %t/TA.txt
+RUN: echo TB > %t/TB.txt
+RUN: echo TAB > %t/TAB.txt
 
-RUN: echo %T/TA* | FileCheck -check-prefix=STAR %s
-RUN: echo %T/'TA'* | FileCheck -check-prefix=STAR %s
-RUN: echo %T/T'A'* | FileCheck -check-prefix=STAR %s
+RUN: echo %t/TA* | FileCheck -check-prefix=STAR %s
+RUN: echo %t/'TA'* | FileCheck -check-prefix=STAR %s
+RUN: echo %t/T'A'* | FileCheck -check-prefix=STAR %s
 
-RUN: echo %T/T?.txt | FileCheck -check-prefix=QUESTION %s
-RUN: echo %T/'T'?.txt | FileCheck -check-prefix=QUESTION %s
+RUN: echo %t/T?.txt | FileCheck -check-prefix=QUESTION %s
+RUN: echo %t/'T'?.txt | FileCheck -check-prefix=QUESTION %s
 
-RUN: echo %T/T??.txt | FileCheck -check-prefix=QUESTION2 %s
-RUN: echo %T/'T'??.txt | FileCheck -check-prefix=QUESTION2 %s
+RUN: echo %t/T??.txt | FileCheck -check-prefix=QUESTION2 %s
+RUN: echo %t/'T'??.txt | FileCheck -check-prefix=QUESTION2 %s
 
 RUN: echo 'T*' 'T?.txt' 'T??.txt' | FileCheck -check-prefix=QUOTEDARGS %s
 

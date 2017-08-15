@@ -10,7 +10,7 @@ void f2(int) __attribute__((availability(macosx,introduced=10.4,deprecated=10.5)
 void f3(int) __attribute__((availability(macosx,introduced=10.6)));
 void f4(int) __attribute__((availability(macosx,introduced=10.1,deprecated=10.3,obsoleted=10.5), availability(ios,introduced=2.0,deprecated=3.0))); // expected-note{{explicitly marked unavailable}}
 void f5(int) __attribute__((availability(ios,introduced=3.2), availability(macosx,unavailable))); // expected-note{{'f5' has been explicitly marked unavailable here}}
-void f6(int) __attribute__((availability(macosx,strict,introduced=10.6))); //expected-note{{'f6' has been explicitly marked unavailable here}}
+void f6(int) __attribute__((availability(macOS,strict,introduced=10.6))); //expected-note{{'f6' has been explicitly marked unavailable here}}
 
 void test() {
   f0(0);
@@ -47,7 +47,7 @@ enum __attribute__((availability(macosx,introduced=8.0,deprecated=9.0))) {
 };
 
 // Make sure the note is on the declaration with the actual availability attributes.
-struct __attribute__((availability(macosx,strict,introduced=10.9))) type_info // \
+struct __attribute__((availability(macOS,strict,introduced=10.9))) type_info // \
     expected-note{{'type_info' has been explicitly marked unavailable here}}
 {
 };
