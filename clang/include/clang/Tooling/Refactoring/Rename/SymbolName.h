@@ -29,7 +29,7 @@ namespace tooling {
 /// \endcode
 class SymbolName {
 public:
-  SymbolName(StringRef Name) {
+  explicit SymbolName(StringRef Name) {
     // While empty symbol names are valid (Objective-C selectors can have empty
     // name pieces), occurrences Objective-C selectors are created using an
     // array of strings instead of just one string.

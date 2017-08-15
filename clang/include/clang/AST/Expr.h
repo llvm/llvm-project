@@ -24,6 +24,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
@@ -5067,8 +5068,8 @@ public:
 /// similarly-named C++11 instructions, and __c11 variants for <stdatomic.h>,
 /// and corresponding __opencl_atomic_* for OpenCL 2.0.
 /// All of these instructions take one primary pointer, at least one memory
-/// order, and one synchronization scope. The C++11 and __c11 atomic AtomicExpr
-/// always take the default synchronization scope.
+/// order. The instructions for which getScopeModel returns non-null value
+/// take one synch scope.
 class AtomicExpr : public Expr {
 public:
   enum AtomicOp {
@@ -5080,14 +5081,16 @@ public:
   };
 
 private:
-  enum { PTR, ORDER, SCOPE, VAL1, ORDER_FAIL, VAL2, WEAK, END_EXPR };
-  Stmt* SubExprs[END_EXPR];
+  /// \brief Location of sub-expressions.
+  /// The location of Scope sub-expression is NumSubExprs - 1, which is
+  /// not fixed, therefore is not defined in enum.
+  enum { PTR, ORDER, VAL1, ORDER_FAIL, VAL2, WEAK, END_EXPR };
+  Stmt *SubExprs[END_EXPR + 1];
   unsigned NumSubExprs;
   SourceLocation BuiltinLoc, RParenLoc;
   AtomicOp Op;
 
   friend class ASTStmtReader;
-
 public:
   AtomicExpr(SourceLocation BLoc, ArrayRef<Expr*> args, QualType t,
              AtomicOp op, SourceLocation RP);
@@ -5106,7 +5109,8 @@ public:
     return cast<Expr>(SubExprs[ORDER]);
   }
   Expr *getScope() const {
-    return cast<Expr>(SubExprs[SCOPE]);
+    assert(getScopeModel() && "No scope");
+    return cast<Expr>(SubExprs[NumSubExprs - 1]);
   }
   Expr *getVal1() const {
     if (Op == AO__c11_atomic_init || Op == AO__opencl_atomic_init)
@@ -5172,6 +5176,24 @@ public:
   }
   const_child_range children() const {
     return const_child_range(SubExprs, SubExprs + NumSubExprs);
+  }
+
+  /// \brief Get atomic scope model for the atomic op code.
+  /// \return empty atomic scope model if the atomic op code does not have
+  ///   scope operand.
+  static std::unique_ptr<AtomicScopeModel> getScopeModel(AtomicOp Op) {
+    auto Kind =
+        (Op >= AO__opencl_atomic_load && Op <= AO__opencl_atomic_fetch_max)
+            ? AtomicScopeModelKind::OpenCL
+            : AtomicScopeModelKind::None;
+    return AtomicScopeModel::create(Kind);
+  }
+
+  /// \brief Get atomic scope model.
+  /// \return empty atomic scope model if this atomic expression does not have
+  ///   scope operand.
+  std::unique_ptr<AtomicScopeModel> getScopeModel() const {
+    return getScopeModel(getOp());
   }
 };
 

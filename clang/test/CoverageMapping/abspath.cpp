@@ -4,7 +4,7 @@
 // RMDOTS-NOT: Inputs
 // RMDOTS: "
 
-// RUN: cd %T && mkdir -p test && cd test
+// RUN: mkdir -p %t/test && cd %t/test
 // RUN: echo "void f1() {}" > f1.c
 // RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -emit-llvm -main-file-name abspath.cpp ../test/f1.c -o - | FileCheck -check-prefix=RELPATH %s
 

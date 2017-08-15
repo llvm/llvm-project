@@ -1,8 +1,8 @@
-(* RUN: cp %s %T/linker.ml
- * RUN: %ocamlc -g -w +A -package llvm.linker -linkpkg %T/linker.ml -o %t
- * RUN: %t
- * RUN: %ocamlopt -g -w +A -package llvm.linker -linkpkg %T/linker.ml -o %t
- * RUN: %t
+(* RUN: rm -rf %t && mkdir -p %t && cp %s %t/linker.ml
+ * RUN: %ocamlc -g -w +A -package llvm.linker -linkpkg %t/linker.ml -o %t/executable
+ * RUN: %t/executable
+ * RUN: %ocamlopt -g -w +A -package llvm.linker -linkpkg %t/linker.ml -o %t/executable
+ * RUN: %t/executable
  * XFAIL: vg_leak
  *)
 

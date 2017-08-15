@@ -267,6 +267,10 @@ public:
                                  TypeNameInfo->getTypeLoc().getLocStart(),
                                  Dtor->getParent(), Dtor->getDeclContext());
       }
+    } else if (const auto *Guide = dyn_cast<CXXDeductionGuideDecl>(D)) {
+      IndexCtx.handleReference(Guide->getDeducedTemplate()->getTemplatedDecl(),
+                               Guide->getLocation(), Guide,
+                               Guide->getDeclContext());
     }
     // Template specialization arguments.
     if (const ASTTemplateArgumentListInfo *TemplateArgInfo =

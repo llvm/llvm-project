@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -E %s > %T/src.cpp
-// RUN: %clang_cc1 -E %s > %T/dst.cpp -DDEST
-// RUN: clang-diff -no-compilation-database %T/src.cpp %T/dst.cpp | FileCheck %s
+// RUN: mkdir -p %t
+// RUN: %clang_cc1 -E %s > %t/src.cpp
+// RUN: %clang_cc1 -E %s > %t/dst.cpp -DDEST
+// RUN: clang-diff -no-compilation-database %t/src.cpp %t/dst.cpp | FileCheck %s
 
 #ifndef DEST
 namespace src {

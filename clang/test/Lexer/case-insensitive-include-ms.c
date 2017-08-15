@@ -1,10 +1,10 @@
 // REQUIRES: case-insensitive-filesystem
 
-// RUN: mkdir -p %T/apath
-// RUN: cp %S/Inputs/case-insensitive-include.h %T
-// RUN: cd %T
-// RUN: %clang_cc1 -fsyntax-only -fms-compatibility %s -include %s -I %T -verify
-// RUN: %clang_cc1 -fsyntax-only -fms-compatibility -fdiagnostics-parseable-fixits %s -include %s -I %T 2>&1 | FileCheck %s
+// RUN: mkdir -p %t/Output/apath
+// RUN: cp %S/Inputs/case-insensitive-include.h %t/Output
+// RUN: cd %t/Output
+// RUN: %clang_cc1 -fsyntax-only -fms-compatibility %s -include %s -I %t/Output -verify
+// RUN: %clang_cc1 -fsyntax-only -fms-compatibility -fdiagnostics-parseable-fixits %s -include %s -I %t/Output 2>&1 | FileCheck %s
 
 #include "..\Output\.\case-insensitive-include.h"
 #include "..\Output\.\Case-Insensitive-Include.h" // expected-warning {{non-portable path}}
