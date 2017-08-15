@@ -81,6 +81,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   lld
   lldb
   liblldb
+  LLVMFuzzer
   LTO
   clang-format
   clang-headers

@@ -659,15 +659,17 @@ bool CallAnalyzer::allowSizeGrowth(CallSite CS) {
 bool CallAnalyzer::isColdCallSite(CallSite CS, BlockFrequencyInfo *CallerBFI) {
   // If global profile summary is available, then callsite's coldness is
   // determined based on that.
-  if (PSI->hasProfileSummary())
+  if (PSI && PSI->hasProfileSummary())
     return PSI->isColdCallSite(CS, CallerBFI);
+
+  // Otherwise we need BFI to be available.
   if (!CallerBFI)
     return false;
 
-  // In the absence of global profile summary, determine if the callsite is cold
-  // relative to caller's entry. We could potentially cache the computation of
-  // scaled entry frequency, but the added complexity is not worth it unless
-  // this scaling shows up high in the profiles.
+  // Determine if the callsite is cold relative to caller's entry. We could
+  // potentially cache the computation of scaled entry frequency, but the added
+  // complexity is not worth it unless this scaling shows up high in the
+  // profiles.
   const BranchProbability ColdProb(ColdCallSiteRelFreq, 100);
   auto CallSiteBB = CS.getInstruction()->getParent();
   auto CallSiteFreq = CallerBFI->getBlockFreq(CallSiteBB);
@@ -679,28 +681,28 @@ bool CallAnalyzer::isColdCallSite(CallSite CS, BlockFrequencyInfo *CallerBFI) {
 Optional<int>
 CallAnalyzer::getHotCallSiteThreshold(CallSite CS,
                                       BlockFrequencyInfo *CallerBFI) {
+
   // If global profile summary is available, then callsite's hotness is
   // determined based on that.
+  if (PSI && PSI->hasProfileSummary() && PSI->isHotCallSite(CS, CallerBFI))
+    return Params.HotCallSiteThreshold;
 
-  auto HotCallSiteThreshold = Params.HotCallSiteThreshold;
-  if (PSI->hasProfileSummary() && PSI->isHotCallSite(CS, CallerBFI))
-    return HotCallSiteThreshold;
-  if (!CallerBFI)
+  // Otherwise we need BFI to be available and to have a locally hot callsite
+  // threshold.
+  if (!CallerBFI || !Params.LocallyHotCallSiteThreshold)
     return None;
 
-  HotCallSiteThreshold = Params.LocallyHotCallSiteThreshold;
-  if (!HotCallSiteThreshold)
-    return None;
-
-  // In the absence of global profile summary, determine if the callsite is hot
-  // relative to caller's entry. We could potentially cache the computation of
-  // scaled entry frequency, but the added complexity is not worth it unless
-  // this scaling shows up high in the profiles.
+  // Determine if the callsite is hot relative to caller's entry. We could
+  // potentially cache the computation of scaled entry frequency, but the added
+  // complexity is not worth it unless this scaling shows up high in the
+  // profiles.
   auto CallSiteBB = CS.getInstruction()->getParent();
   auto CallSiteFreq = CallerBFI->getBlockFreq(CallSiteBB).getFrequency();
   auto CallerEntryFreq = CallerBFI->getEntryFreq();
   if (CallSiteFreq >= CallerEntryFreq * HotCallSiteRelFreq)
-    return HotCallSiteThreshold;
+    return Params.LocallyHotCallSiteThreshold;
+
+  // Otherwise treat it normally.
   return None;
 }
 
@@ -773,50 +775,48 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
   if (!Caller->optForMinSize()) {
     if (Callee.hasFnAttribute(Attribute::InlineHint))
       Threshold = MaxIfValid(Threshold, Params.HintThreshold);
-    if (PSI) {
-      BlockFrequencyInfo *CallerBFI = GetBFI ? &((*GetBFI)(*Caller)) : nullptr;
-      // FIXME: After switching to the new passmanager, simplify the logic below
-      // by checking only the callsite hotness/coldness. The check for CallerBFI
-      // exists only because we do not have BFI available with the old PM.
-      //
-      // Use callee's hotness information only if we have no way of determining
-      // callsite's hotness information. Callsite hotness can be determined if
-      // sample profile is used (which adds hotness metadata to calls) or if
-      // caller's BlockFrequencyInfo is available.
-      if (CallerBFI || PSI->hasSampleProfile()) {
-        auto HotCallSiteThreshold = getHotCallSiteThreshold(CS, CallerBFI);
-        if (!Caller->optForSize() && HotCallSiteThreshold) {
-          DEBUG(dbgs() << "Hot callsite.\n");
-          // FIXME: This should update the threshold only if it exceeds the
-          // current threshold, but AutoFDO + ThinLTO currently relies on this
-          // behavior to prevent inlining of hot callsites during ThinLTO
-          // compile phase.
-          Threshold = HotCallSiteThreshold.getValue();
-        } else if (isColdCallSite(CS, CallerBFI)) {
-          DEBUG(dbgs() << "Cold callsite.\n");
-          // Do not apply bonuses for a cold callsite including the
-          // LastCallToStatic bonus. While this bonus might result in code size
-          // reduction, it can cause the size of a non-cold caller to increase
-          // preventing it from being inlined.
-          DisallowAllBonuses();
-          Threshold = MinIfValid(Threshold, Params.ColdCallSiteThreshold);
-        }
-      } else {
-        if (PSI->isFunctionEntryHot(&Callee)) {
-          DEBUG(dbgs() << "Hot callee.\n");
-          // If callsite hotness can not be determined, we may still know
-          // that the callee is hot and treat it as a weaker hint for threshold
-          // increase.
-          Threshold = MaxIfValid(Threshold, Params.HintThreshold);
-        } else if (PSI->isFunctionEntryCold(&Callee)) {
-          DEBUG(dbgs() << "Cold callee.\n");
-          // Do not apply bonuses for a cold callee including the
-          // LastCallToStatic bonus. While this bonus might result in code size
-          // reduction, it can cause the size of a non-cold caller to increase
-          // preventing it from being inlined.
-          DisallowAllBonuses();
-          Threshold = MinIfValid(Threshold, Params.ColdThreshold);
-        }
+
+    // FIXME: After switching to the new passmanager, simplify the logic below
+    // by checking only the callsite hotness/coldness as we will reliably
+    // have local profile information.
+    //
+    // Callsite hotness and coldness can be determined if sample profile is
+    // used (which adds hotness metadata to calls) or if caller's
+    // BlockFrequencyInfo is available.
+    BlockFrequencyInfo *CallerBFI = GetBFI ? &((*GetBFI)(*Caller)) : nullptr;
+    auto HotCallSiteThreshold = getHotCallSiteThreshold(CS, CallerBFI);
+    if (!Caller->optForSize() && HotCallSiteThreshold) {
+      DEBUG(dbgs() << "Hot callsite.\n");
+      // FIXME: This should update the threshold only if it exceeds the
+      // current threshold, but AutoFDO + ThinLTO currently relies on this
+      // behavior to prevent inlining of hot callsites during ThinLTO
+      // compile phase.
+      Threshold = HotCallSiteThreshold.getValue();
+    } else if (isColdCallSite(CS, CallerBFI)) {
+      DEBUG(dbgs() << "Cold callsite.\n");
+      // Do not apply bonuses for a cold callsite including the
+      // LastCallToStatic bonus. While this bonus might result in code size
+      // reduction, it can cause the size of a non-cold caller to increase
+      // preventing it from being inlined.
+      DisallowAllBonuses();
+      Threshold = MinIfValid(Threshold, Params.ColdCallSiteThreshold);
+    } else if (PSI) {
+      // Use callee's global profile information only if we have no way of
+      // determining this via callsite information.
+      if (PSI->isFunctionEntryHot(&Callee)) {
+        DEBUG(dbgs() << "Hot callee.\n");
+        // If callsite hotness can not be determined, we may still know
+        // that the callee is hot and treat it as a weaker hint for threshold
+        // increase.
+        Threshold = MaxIfValid(Threshold, Params.HintThreshold);
+      } else if (PSI->isFunctionEntryCold(&Callee)) {
+        DEBUG(dbgs() << "Cold callee.\n");
+        // Do not apply bonuses for a cold callee including the
+        // LastCallToStatic bonus. While this bonus might result in code size
+        // reduction, it can cause the size of a non-cold caller to increase
+        // preventing it from being inlined.
+        DisallowAllBonuses();
+        Threshold = MinIfValid(Threshold, Params.ColdThreshold);
       }
     }
   }
