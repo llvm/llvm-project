@@ -844,6 +844,13 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
 
     // Figure out if this candidate is beneficial.
     size_t StringLen = Leaf->ConcatLen - Leaf->size();
+
+    // Too short to be beneficial; skip it.
+    // FIXME: This isn't necessarily true for, say, X86. If we factor in
+    // instruction lengths we need more information than this.
+    if (StringLen < 2)
+      continue;
+
     size_t CallOverhead = 0;
     size_t SequenceOverhead = StringLen;
 

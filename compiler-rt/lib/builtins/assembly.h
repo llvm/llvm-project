@@ -130,6 +130,8 @@
 #else
 #define WIDE(op) op
 #endif
+#else // !defined(__arm)
+#define DECLARE_FUNC_ENCODING
 #endif
 
 #define GLUE2(a, b) a##b
