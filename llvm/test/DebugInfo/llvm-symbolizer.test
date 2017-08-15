@@ -1,54 +1,55 @@
 RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x400559" > %t.input
 RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64.debuglink 0x400559" >> %t.input
-RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x400436" >> %t.input
-RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x400528" >> %t.input
-RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x400586" >> %t.input
-RUN: echo "%p/Inputs/dwarfdump-test2.elf-x86-64 0x4004e8" >> %t.input
-RUN: echo "%p/Inputs/dwarfdump-test2.elf-x86-64 0x4004f4" >> %t.input
-RUN: echo "%p/Inputs/dwarfdump-test4.elf-x86-64 0x62c" >> %t.input
-RUN: echo "%p/Inputs/dwarfdump-inl-test.elf-x86-64 0x8dc" >> %t.input
-RUN: echo "%p/Inputs/dwarfdump-inl-test.elf-x86-64 0xa05" >> %t.input
-RUN: echo "%p/Inputs/dwarfdump-inl-test.elf-x86-64 0x987" >> %t.input
-RUN: echo "%p/Inputs/dwarfdump-inl-test.high_pc.elf-x86-64 0x568" >> %t.input
-RUN: cp "%p/Inputs/dwarfdump-test3.elf-x86-64-space" "%T/dwarfdump-test3.elf-x86-64 space"
-RUN: echo "\"%T/dwarfdump-test3.elf-x86-64 space\" 0x640" >> %t.input
-RUN: echo "\"%T/dwarfdump-test3.elf-x86-64 space\" 0x633" >> %t.input
-RUN: echo "\"%T/dwarfdump-test3.elf-x86-64 space\" 0x62d" >> %t.input
-RUN: echo "%p/Inputs/macho-universal 0x1f84" >> %t.input
-RUN: echo "%p/Inputs/macho-universal:i386 0x1f67" >> %t.input
-RUN: echo "%p/Inputs/macho-universal:x86_64 0x100000f05" >> %t.input
-RUN: echo "%p/Inputs/llvm-symbolizer-dwo-test 0x400514" >> %t.input
-RUN: echo "%p/Inputs/fission-ranges.elf-x86_64 0x720" >> %t.input
-RUN: echo "%p/Inputs/arange-overlap.elf-x86_64 0x714" >> %t.input
+RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64.debuglink 0x400559" >> %t/input
+RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x400436" >> %t/input
+RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x400528" >> %t/input
+RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x400586" >> %t/input
+RUN: echo "%p/Inputs/dwarfdump-test2.elf-x86-64 0x4004e8" >> %t/input
+RUN: echo "%p/Inputs/dwarfdump-test2.elf-x86-64 0x4004f4" >> %t/input
+RUN: echo "%p/Inputs/dwarfdump-test4.elf-x86-64 0x62c" >> %t/input
+RUN: echo "%p/Inputs/dwarfdump-inl-test.elf-x86-64 0x8dc" >> %t/input
+RUN: echo "%p/Inputs/dwarfdump-inl-test.elf-x86-64 0xa05" >> %t/input
+RUN: echo "%p/Inputs/dwarfdump-inl-test.elf-x86-64 0x987" >> %t/input
+RUN: echo "%p/Inputs/dwarfdump-inl-test.high_pc.elf-x86-64 0x568" >> %t/input
+RUN: cp "%p/Inputs/dwarfdump-test3.elf-x86-64-space" "%t/dwarfdump-test3.elf-x86-64 space"
+RUN: echo "\"%t/dwarfdump-test3.elf-x86-64 space\" 0x640" >> %t/input
+RUN: echo "\"%t/dwarfdump-test3.elf-x86-64 space\" 0x633" >> %t/input
+RUN: echo "\"%t/dwarfdump-test3.elf-x86-64 space\" 0x62d" >> %t/input
+RUN: echo "%p/Inputs/macho-universal 0x1f84" >> %t/input
+RUN: echo "%p/Inputs/macho-universal:i386 0x1f67" >> %t/input
+RUN: echo "%p/Inputs/macho-universal:x86_64 0x100000f05" >> %t/input
+RUN: echo "%p/Inputs/llvm-symbolizer-dwo-test 0x400514" >> %t/input
+RUN: echo "%p/Inputs/fission-ranges.elf-x86_64 0x720" >> %t/input
+RUN: echo "%p/Inputs/arange-overlap.elf-x86_64 0x714" >> %t/input
 RUN: cp %p/Inputs/split-dwarf-test.dwo %T
-RUN: echo "%p/Inputs/split-dwarf-test 0x4005d4" >> %t.input
-RUN: echo "%p/Inputs/split-dwarf-test 0x4005c4" >> %t.input
-RUN: echo "%p/Inputs/cross-cu-inlining.x86_64-macho.o 0x17" >> %t.input
+RUN: echo "%p/Inputs/split-dwarf-test 0x4005d4" >> %t/input
+RUN: echo "%p/Inputs/split-dwarf-test 0x4005c4" >> %t/input
+RUN: echo "%p/Inputs/cross-cu-inlining.x86_64-macho.o 0x17" >> %t/input
 RUN: cp %p/Inputs/split-dwarf-multiple-cu.dwo %T
-RUN: echo "%p/Inputs/split-dwarf-multiple-cu.o 0x4" >> %t.input
+RUN: echo "%p/Inputs/split-dwarf-multiple-cu.o 0x4" >> %t/input
 RUN: cp %p/Inputs/split-dwarf-addr-object-relocation.dwo %T
-RUN: echo "%p/Inputs/split-dwarf-addr-object-relocation.o 0x14" >> %t.input
+RUN: echo "%p/Inputs/split-dwarf-addr-object-relocation.o 0x14" >> %t/input
 RUN: cp %p/Inputs/split-dwarf-dwp.o %T
 RUN: cp %p/Inputs/split-dwarf-dwp.o.dwp %T
-RUN: echo "%T/split-dwarf-dwp.o 0x4" >> %t.input
+RUN: echo "%T/split-dwarf-dwp.o 0x4" >> %t/input
 
 RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
-RUN:    --default-arch=i386 < %t.input | FileCheck --check-prefix=CHECK --check-prefix=SPLIT --check-prefix=DWO %s
+RUN:    --default-arch=i386 < %t/input | FileCheck --check-prefix=CHECK --check-prefix=SPLIT --check-prefix=DWO %s
 
 Ensure we get the same results in the absence of gmlt-like data in the executable but the presence of a .dwo file
 
-RUN: echo "%p/Inputs/split-dwarf-test-nogmlt 0x4005d4" >> %t.input
-RUN: echo "%p/Inputs/split-dwarf-test-nogmlt 0x4005c4" >> %t.input
+RUN: echo "%p/Inputs/split-dwarf-test-nogmlt 0x4005d4" >> %t/input
+RUN: echo "%p/Inputs/split-dwarf-test-nogmlt 0x4005c4" >> %t/input
 RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
-RUN:    --default-arch=i386 < %t.input | FileCheck --check-prefix=SPLIT --check-prefix=DWO %s
+RUN:    --default-arch=i386 < %t/input | FileCheck --check-prefix=SPLIT --check-prefix=DWO %s
 
 Ensure we get gmlt like results in the absence of a .dwo file but the presence of gmlt-like data in the executable
 
 RUN: rm %T/split-dwarf-test.dwo
-RUN: echo "%p/Inputs/split-dwarf-test 0x4005d4" >> %t.input
-RUN: echo "%p/Inputs/split-dwarf-test 0x4005c4" >> %t.input
+RUN: echo "%p/Inputs/split-dwarf-test 0x4005d4" >> %t/input
+RUN: echo "%p/Inputs/split-dwarf-test 0x4005c4" >> %t/input
 RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
-RUN:    --default-arch=i386 < %t.input | FileCheck --check-prefix=SPLIT --check-prefix=NODWO %s
+RUN:    --default-arch=i386 < %t/input | FileCheck --check-prefix=SPLIT --check-prefix=NODWO %s
 
 RUN: cp %p/Inputs/split-dwarf-dwp.o %T/split-dwarf-dwp-different-name.o
 RUN: echo "%T/split-dwarf-dwp-different-name.o 0x54" > %t.input
@@ -161,31 +162,31 @@ DWP-NEXT: split-dwarf-dwp.cpp:3:3
 DWP-NEXT: main
 DWP-NEXT: split-dwarf-dwp.cpp:10:0
 
-RUN: echo "unexisting-file 0x1234" > %t.input2
-RUN: llvm-symbolizer < %t.input2 2>&1 | FileCheck %s --check-prefix=MISSING-FILE
+RUN: echo "unexisting-file 0x1234" > %t/input2
+RUN: llvm-symbolizer < %t/input2 2>&1 | FileCheck %s --check-prefix=MISSING-FILE
 
 MISSING-FILE: LLVMSymbolizer: error reading file: {{[Nn]}}o such file or directory
 
-RUN: echo "%p/Inputs/macho-universal 0x1f84" > %t.input3
-RUN: llvm-symbolizer < %t.input3 | FileCheck %s --check-prefix=UNKNOWN-ARCH
+RUN: echo "%p/Inputs/macho-universal 0x1f84" > %t/input3
+RUN: llvm-symbolizer < %t/input3 | FileCheck %s --check-prefix=UNKNOWN-ARCH
 
 UNKNOWN-ARCH-NOT: main
 UNKNOWN-ARCH: ??
 UNKNOWN-ARCH-NOT: main
 
-RUN: echo "0x400559" > %t.input4
-RUN: echo "0x400436" >> %t.input4
-RUN: llvm-symbolizer --obj %p/Inputs/dwarfdump-test.elf-x86-64 < %t.input4 \
+RUN: echo "0x400559" > %t/input4
+RUN: echo "0x400436" >> %t/input4
+RUN: llvm-symbolizer --obj %p/Inputs/dwarfdump-test.elf-x86-64 < %t/input4 \
 RUN:   | FileCheck %s --check-prefix=BINARY
 
 BINARY:       main
 BINARY-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test.cc:16
 BINARY:      _start
 
-RUN: echo "0x400720" > %t.input5
-RUN: echo "0x4004a0" >> %t.input5
-RUN: echo "0x4006f0" >> %t.input5
-RUN: llvm-symbolizer --obj %p/Inputs/llvm-symbolizer-test.elf-x86-64 < %t.input5 \
+RUN: echo "0x400720" > %t/input5
+RUN: echo "0x4004a0" >> %t/input5
+RUN: echo "0x4006f0" >> %t/input5
+RUN: llvm-symbolizer --obj %p/Inputs/llvm-symbolizer-test.elf-x86-64 < %t/input5 \
 RUN:   | FileCheck %s --check-prefix=BINARY_C
 
 BINARY_C:       main
@@ -193,14 +194,14 @@ BINARY_C-NEXT: /tmp/dbginfo{{[/\\]}}llvm-symbolizer-test.c:10
 BINARY_C:      _start
 BINARY_C:      {{g$}}
 
-RUN: echo "0x1f1" > %t.input6
-RUN: llvm-symbolizer --obj %p/Inputs/shared-object-stripped.elf-i386 < %t.input6 \
+RUN: echo "0x1f1" > %t/input6
+RUN: llvm-symbolizer --obj %p/Inputs/shared-object-stripped.elf-i386 < %t/input6 \
 RUN:   | FileCheck %s --check-prefix=STRIPPED
 
 STRIPPED:  global_func
 
-RUN: echo "%p/Inputs/dwarfdump-test4.elf-x86-64 0x62c" > %t.input7
-RUN: llvm-symbolizer --functions=short --demangle=false < %t.input7 \
+RUN: echo "%p/Inputs/dwarfdump-test4.elf-x86-64 0x62c" > %t/input7
+RUN: llvm-symbolizer --functions=short --demangle=false < %t/input7 \
 RUN:    | FileCheck %s --check-prefix=SHORT_FUNCTION_NAME
 
 SHORT_FUNCTION_NAME-NOT: _Z1cv

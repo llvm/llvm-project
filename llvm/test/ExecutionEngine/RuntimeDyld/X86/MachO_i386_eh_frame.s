@@ -1,5 +1,6 @@
-# RUN: llvm-mc -triple=i386-apple-macosx10.4 -filetype=obj -o %T/MachO_i386_eh_frame.o %s
-# RUN: llvm-rtdyld -triple=i386-apple-macosx10.4 -verify -map-section MachO_i386_eh_frame.o,__text=0x2000 -check=%s %/T/MachO_i386_eh_frame.o
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=i386-apple-macosx10.4 -filetype=obj -o %t/MachO_i386_eh_frame.o %s
+# RUN: llvm-rtdyld -triple=i386-apple-macosx10.4 -verify -map-section MachO_i386_eh_frame.o,__text=0x2000 -check=%s %t/MachO_i386_eh_frame.o
 
 # rtdyld-check: *{4}(section_addr(MachO_i386_eh_frame.o, __eh_frame) + 0x20) = (main - (section_addr(MachO_i386_eh_frame.o, __eh_frame) + 0x20))[31:0]
 # rtdyld-check: *{4}(section_addr(MachO_i386_eh_frame.o, __eh_frame) + 0x24) = 0x9

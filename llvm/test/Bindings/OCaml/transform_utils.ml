@@ -1,8 +1,8 @@
-(* RUN: cp %s %T/transform_utils.ml
- * RUN: %ocamlc -g -w +A -package llvm.transform_utils -linkpkg %T/transform_utils.ml -o %t
- * RUN: %t
- * RUN: %ocamlopt -g -w +A -package llvm.transform_utils -linkpkg %T/transform_utils.ml -o %t
- * RUN: %t
+(* RUN: rm -rf %t && mkdir -p %t && cp %s %t/transform_utils.ml
+ * RUN: %ocamlc -g -w +A -package llvm.transform_utils -linkpkg %t/transform_utils.ml -o %t/executable
+ * RUN: %t/executable
+ * RUN: %ocamlopt -g -w +A -package llvm.transform_utils -linkpkg %t/transform_utils.ml -o %t/executable
+ * RUN: %t/executable
  * XFAIL: vg_leak
  *)
 

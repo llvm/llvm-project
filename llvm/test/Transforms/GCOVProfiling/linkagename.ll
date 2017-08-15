@@ -1,12 +1,13 @@
-; RUN: echo '!9 = !{!"%/T/linkagename.ll", !0}' > %t1
-; RUN: cat %s %t1 > %t2
-; RUN: opt -insert-gcov-profiling -disable-output < %t2
-; RUN: grep _Z3foov %T/linkagename.gcno
-; RUN: rm %T/linkagename.gcno
+; RUN: rm -rf %t && mkdir -p %t
+; RUN: echo '!9 = !{!"%/t/linkagename.ll", !0}' > %t/1
+; RUN: cat %s %t/1 > %t/2
+; RUN: opt -insert-gcov-profiling -disable-output < %t/2
+; RUN: grep _Z3foov %t/linkagename.gcno
+; RUN: rm %t/linkagename.gcno
 
-; RUN: opt -passes=insert-gcov-profiling -disable-output < %t2
-; RUN: grep _Z3foov %T/linkagename.gcno
-; RUN: rm %T/linkagename.gcno
+; RUN: opt -passes=insert-gcov-profiling -disable-output < %t/2
+; RUN: grep _Z3foov %t/linkagename.gcno
+; RUN: rm %t/linkagename.gcno
 
 define void @_Z3foov() !dbg !5 {
 entry:
