@@ -160,10 +160,13 @@ define <2 x i8> @test11vec(<2 x i8> %X) {
   ret <2 x i8> %sel
 }
 
+; TODO: we should be able to simplify this
 define i32 @test12(i32 %X) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 3
-; CHECK-NEXT:    ret i32 [[AND]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[AND]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp ult i32 %X, 4
   %and = and i32 %X, 3
@@ -186,10 +189,13 @@ define i32 @test12noncanon(i32 %X) {
   ret i32 %cond
 }
 
+; TODO: we should be able to simplify this
 define i32 @test13(i32 %X) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 3
-; CHECK-NEXT:    ret i32 [[AND]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[AND]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp ugt i32 %X, 3
   %and = and i32 %X, 3

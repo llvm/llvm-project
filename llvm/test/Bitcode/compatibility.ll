@@ -608,6 +608,7 @@ declare void @f.inaccessiblememonly() inaccessiblememonly
 ; CHECK: declare void @f.inaccessiblememonly() #33
 declare void @f.inaccessiblemem_or_argmemonly() inaccessiblemem_or_argmemonly
 ; CHECK: declare void @f.inaccessiblemem_or_argmemonly() #34
+declare void @f.strictfp() #35
 
 ; Functions -- section
 declare void @f.section() section "80"
@@ -1252,6 +1253,9 @@ exit:
   call void @f.nobuiltin() builtin
   ; CHECK: call void @f.nobuiltin() #42
 
+  call void @f.strictfp() strictfp
+  ; CHECK: call void @f.strictfp() #43
+
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
   tail call ghccc nonnull i32* @f.nonnull() minsize
@@ -1670,6 +1674,7 @@ define i8** @constexpr() {
 ; CHECK: attributes #40 = { writeonly }
 ; CHECK: attributes #41 = { speculatable }
 ; CHECK: attributes #42 = { builtin }
+; CHECK: attributes #43 = { strictfp }
 
 ;; Metadata
 

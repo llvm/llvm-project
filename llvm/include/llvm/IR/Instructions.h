@@ -1757,6 +1757,9 @@ public:
       !hasFnAttrImpl(Attribute::Builtin);
   }
 
+  /// Determine if the call requires strict floating point semantics.
+  bool isStrictFP() const { return hasFnAttr(Attribute::StrictFP); }
+
   /// Return true if the call should not be inlined.
   bool isNoInline() const { return hasFnAttr(Attribute::NoInline); }
   void setIsNoInline() {
@@ -3843,6 +3846,9 @@ public:
     return hasFnAttrImpl(Attribute::NoBuiltin) &&
       !hasFnAttrImpl(Attribute::Builtin);
   }
+
+  /// Determine if the call requires strict floating point semantics.
+  bool isStrictFP() const { return hasFnAttr(Attribute::StrictFP); }
 
   /// Return true if the call should not be inlined.
   bool isNoInline() const { return hasFnAttr(Attribute::NoInline); }

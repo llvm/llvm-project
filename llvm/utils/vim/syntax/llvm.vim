@@ -144,6 +144,7 @@ syn keyword llvmKeyword
       \ ssp
       \ sspreq
       \ sspstrong
+      \ strictfp
       \ swiftcc
       \ tail
       \ target

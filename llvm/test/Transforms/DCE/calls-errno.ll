@@ -76,6 +76,10 @@ entry:
 ; CHECK-NEXT: %cos3 = call double @cos(double 0.000000e+00)
   %cos3 = call double @cos(double 0.000000e+00) nobuiltin
 
+; cos(1) strictfp sets FP status flags
+; CHECK-NEXT: %cos4 = call double @cos(double 1.000000e+00)
+  %cos4 = call double @cos(double 1.000000e+00) strictfp
+
 ; pow(0, 1) is 0
   %pow1 = call double @pow(double 0x7FF0000000000000, double 1.000000e+00)
 

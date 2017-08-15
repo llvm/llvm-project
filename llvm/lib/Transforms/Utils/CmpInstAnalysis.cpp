@@ -12,10 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/CmpInstAnalysis.h"
+#include "llvm/Transforms/Utils/CmpInstAnalysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
 
@@ -64,74 +63,46 @@ bool llvm::PredicatesFoldable(ICmpInst::Predicate p1, ICmpInst::Predicate p2) {
          (CmpInst::isSigned(p2) && ICmpInst::isEquality(p1));
 }
 
-bool llvm::decomposeBitTestICmp(Value *LHS, Value *RHS,
-                                CmpInst::Predicate &Pred,
-                                Value *&X, APInt &Mask) {
-  const APInt *C;
-  if (!match(RHS, PatternMatch::m_APInt(C)))
+bool llvm::decomposeBitTestICmp(const ICmpInst *I, CmpInst::Predicate &Pred,
+                                Value *&X, Value *&Y, Value *&Z) {
+  ConstantInt *C = dyn_cast<ConstantInt>(I->getOperand(1));
+  if (!C)
     return false;
 
-  switch (Pred) {
+  switch (I->getPredicate()) {
   default:
     return false;
   case ICmpInst::ICMP_SLT:
     // X < 0 is equivalent to (X & SignMask) != 0.
-    if (!C->isNullValue())
+    if (!C->isZero())
       return false;
-    Mask = APInt::getSignMask(C->getBitWidth());
-    Pred = ICmpInst::ICMP_NE;
-    break;
-  case ICmpInst::ICMP_SLE:
-    // X <= -1 is equivalent to (X & SignMask) != 0.
-    if (!C->isAllOnesValue())
-      return false;
-    Mask = APInt::getSignMask(C->getBitWidth());
+    Y = ConstantInt::get(I->getContext(), APInt::getSignMask(C->getBitWidth()));
     Pred = ICmpInst::ICMP_NE;
     break;
   case ICmpInst::ICMP_SGT:
     // X > -1 is equivalent to (X & SignMask) == 0.
-    if (!C->isAllOnesValue())
+    if (!C->isMinusOne())
       return false;
-    Mask = APInt::getSignMask(C->getBitWidth());
-    Pred = ICmpInst::ICMP_EQ;
-    break;
-  case ICmpInst::ICMP_SGE:
-    // X >= 0 is equivalent to (X & SignMask) == 0.
-    if (!C->isNullValue())
-      return false;
-    Mask = APInt::getSignMask(C->getBitWidth());
+    Y = ConstantInt::get(I->getContext(), APInt::getSignMask(C->getBitWidth()));
     Pred = ICmpInst::ICMP_EQ;
     break;
   case ICmpInst::ICMP_ULT:
     // X <u 2^n is equivalent to (X & ~(2^n-1)) == 0.
-    if (!C->isPowerOf2())
+    if (!C->getValue().isPowerOf2())
       return false;
-    Mask = -*C;
-    Pred = ICmpInst::ICMP_EQ;
-    break;
-  case ICmpInst::ICMP_ULE:
-    // X <=u 2^n-1 is equivalent to (X & ~(2^n-1)) == 0.
-    if (!(*C + 1).isPowerOf2())
-      return false;
-    Mask = ~*C;
+    Y = ConstantInt::get(I->getContext(), -C->getValue());
     Pred = ICmpInst::ICMP_EQ;
     break;
   case ICmpInst::ICMP_UGT:
     // X >u 2^n-1 is equivalent to (X & ~(2^n-1)) != 0.
-    if (!(*C + 1).isPowerOf2())
+    if (!(C->getValue() + 1).isPowerOf2())
       return false;
-    Mask = ~*C;
-    Pred = ICmpInst::ICMP_NE;
-    break;
-  case ICmpInst::ICMP_UGE:
-    // X >=u 2^n is equivalent to (X & ~(2^n-1)) != 0.
-    if (!C->isPowerOf2())
-      return false;
-    Mask = -*C;
+    Y = ConstantInt::get(I->getContext(), ~C->getValue());
     Pred = ICmpInst::ICMP_NE;
     break;
   }
 
-  X = LHS;
+  X = I->getOperand(0);
+  Z = ConstantInt::getNullValue(C->getType());
   return true;
 }
