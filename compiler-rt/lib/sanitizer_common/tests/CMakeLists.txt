@@ -120,14 +120,13 @@ macro(add_sanitizer_common_lib library)
     FOLDER "Compiler-RT Runtime tests")
 endmacro()
 
-function(get_sanitizer_common_lib_for_arch arch lib lib_name)
+function(get_sanitizer_common_lib_for_arch arch lib)
   if(APPLE)
     set(tgt_name "RTSanitizerCommon.test.osx")
   else()
     set(tgt_name "RTSanitizerCommon.test.${arch}")
   endif()
   set(${lib} "${tgt_name}" PARENT_SCOPE)
-  set(${lib_name} $<TARGET_FILE:${tgt_name}> PARENT_SCOPE)
 endfunction()
 
 # Sanitizer_common unit tests testsuite.
@@ -136,41 +135,22 @@ set_target_properties(SanitizerUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
 
 # Adds sanitizer tests for architecture.
 macro(add_sanitizer_tests_for_arch arch)
-  get_target_flags_for_arch(${arch} TARGET_FLAGS)
-
-  # If the sanitizer library was built with _FILE_OFFSET_BITS=64 we need
-  # to ensure that the library and tests agree on the layout of certain
-  # structures such as 'struct stat'.
+  set(extra_flags)
   if( CMAKE_SIZEOF_VOID_P EQUAL 4 )
-    list(APPEND TARGET_FLAGS "-D_LARGEFILE_SOURCE")
-    list(APPEND TARGET_FLAGS "-D_FILE_OFFSET_BITS=64")
+    list(APPEND extra_flags "-D_LARGEFILE_SOURCE")
+    list(APPEND extra_flags "-D_FILE_OFFSET_BITS=64")
   endif()
+  get_sanitizer_common_lib_for_arch(${arch} SANITIZER_COMMON_LIB)
 
-  set(SANITIZER_TEST_SOURCES ${SANITIZER_UNITTESTS}
-                             ${COMPILER_RT_GTEST_SOURCE})
-  set(SANITIZER_TEST_COMPILE_DEPS ${SANITIZER_TEST_HEADERS})
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND SANITIZER_TEST_COMPILE_DEPS gtest)
-  endif()
   set(SANITIZER_TEST_OBJECTS)
-  foreach(source ${SANITIZER_TEST_SOURCES})
-    get_filename_component(basename ${source} NAME)
-    set(output_obj "${CMAKE_CFG_RESOLVED_INTDIR}${basename}.${arch}.o")
-    clang_compile(${output_obj} ${source}
-                  CFLAGS ${SANITIZER_TEST_CFLAGS_COMMON} ${TARGET_FLAGS}
-                  DEPS ${SANITIZER_TEST_COMPILE_DEPS})
-    list(APPEND SANITIZER_TEST_OBJECTS ${output_obj})
-  endforeach()
-  get_sanitizer_common_lib_for_arch(${arch} SANITIZER_COMMON_LIB
-                                    SANITIZER_COMMON_LIB_NAME)
-  # Add unittest target.
-  set(SANITIZER_TEST_NAME "Sanitizer-${arch}-Test")
-  add_compiler_rt_test(SanitizerUnitTests ${SANITIZER_TEST_NAME}
-                       OBJECTS ${SANITIZER_TEST_OBJECTS}
-                               ${SANITIZER_COMMON_LIB_NAME}
-                       DEPS ${SANITIZER_TEST_OBJECTS} ${SANITIZER_COMMON_LIB}
-                       LINK_FLAGS ${SANITIZER_TEST_LINK_FLAGS_COMMON}
-                                  ${TARGET_FLAGS})
+  generate_compiler_rt_tests(SANITIZER_TEST_OBJECTS SanitizerUnitTests
+    "Sanitizer-${arch}-Test" ${arch}
+    RUNTIME "${SANITIZER_COMMON_LIB}"
+    SOURCES ${SANITIZER_UNITTESTS} ${COMPILER_RT_GTEST_SOURCE}
+    COMPILE_DEPS ${SANITIZER_TEST_HEADERS}
+    DEPS gtest
+    CFLAGS  ${SANITIZER_TEST_CFLAGS_COMMON} ${extra_flags}
+    LINK_FLAGS ${SANITIZER_TEST_LINK_FLAGS_COMMON} ${extra_flags})
 
   if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND "${arch}" STREQUAL "x86_64")
     # Test that the libc-independent part of sanitizer_common is indeed
@@ -180,7 +160,7 @@ macro(add_sanitizer_tests_for_arch arch)
                   sanitizer_nolibc_test_main.cc
                   CFLAGS ${SANITIZER_TEST_CFLAGS_COMMON} ${TARGET_FLAGS}
                   DEPS ${SANITIZER_TEST_COMPILE_DEPS})
-    add_compiler_rt_test(SanitizerUnitTests "Sanitizer-${arch}-Test-Nolibc"
+    add_compiler_rt_test(SanitizerUnitTests "Sanitizer-${arch}-Test-Nolibc" ${arch}
                          OBJECTS sanitizer_nolibc_test_main.${arch}.o
                                  -Wl,-whole-archive
                                  libRTSanitizerCommon.test.nolibc.${arch}.a
