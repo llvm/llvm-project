@@ -142,10 +142,15 @@ private:
 } // end anonymous namespace
 
 char PGOIndirectCallPromotionLegacyPass::ID = 0;
-INITIALIZE_PASS(PGOIndirectCallPromotionLegacyPass, "pgo-icall-prom",
-                "Use PGO instrumentation profile to promote indirect calls to "
-                "direct calls.",
-                false, false)
+INITIALIZE_PASS_BEGIN(PGOIndirectCallPromotionLegacyPass, "pgo-icall-prom",
+                      "Use PGO instrumentation profile to promote indirect "
+                      "calls to direct calls.",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
+INITIALIZE_PASS_END(PGOIndirectCallPromotionLegacyPass, "pgo-icall-prom",
+                    "Use PGO instrumentation profile to promote indirect "
+                    "calls to direct calls.",
+                    false, false)
 
 ModulePass *llvm::createPGOIndirectCallPromotionLegacyPass(bool InLTO,
                                                            bool SamplePGO) {
