@@ -16,6 +16,7 @@
 #include "CGOpenCLRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -680,7 +681,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   default: break;  // Handle intrinsics and libm functions below.
   case Builtin::BI__builtin___CFStringMakeConstantString:
   case Builtin::BI__builtin___NSStringMakeConstantString:
-    return RValue::get(CGM.EmitConstantExpr(E, E->getType(), nullptr));
+    return RValue::get(ConstantEmitter(*this).emitAbstract(E, E->getType()));
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
   case Builtin::BI__va_start:
@@ -1366,8 +1367,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                                       llvm::ConstantInt::get(Int32Ty, Offset)));
   }
   case Builtin::BI__builtin_return_address: {
-    Value *Depth =
-        CGM.EmitConstantExpr(E->getArg(0), getContext().UnsignedIntTy, this);
+    Value *Depth = ConstantEmitter(*this).emitAbstract(E->getArg(0),
+                                                   getContext().UnsignedIntTy);
     Value *F = CGM.getIntrinsic(Intrinsic::returnaddress);
     return RValue::get(Builder.CreateCall(F, Depth));
   }
@@ -1376,8 +1377,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     return RValue::get(Builder.CreateCall(F, Builder.getInt32(0)));
   }
   case Builtin::BI__builtin_frame_address: {
-    Value *Depth =
-        CGM.EmitConstantExpr(E->getArg(0), getContext().UnsignedIntTy, this);
+    Value *Depth = ConstantEmitter(*this).emitAbstract(E->getArg(0),
+                                                   getContext().UnsignedIntTy);
     Value *F = CGM.getIntrinsic(Intrinsic::frameaddress);
     return RValue::get(Builder.CreateCall(F, Depth));
   }
