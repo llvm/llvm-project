@@ -20,6 +20,7 @@
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -356,7 +357,7 @@ static Address createReferenceTemporary(CodeGenFunction &CGF,
     if (CGF.CGM.getCodeGenOpts().MergeAllConstants &&
         (Ty->isArrayType() || Ty->isRecordType()) &&
         CGF.CGM.isTypeConstant(Ty, true))
-      if (llvm::Constant *Init = CGF.CGM.EmitConstantExpr(Inner, Ty, &CGF)) {
+      if (auto Init = ConstantEmitter(CGF).tryEmitAbstract(Inner, Ty)) {
         if (auto AddrSpace = CGF.getTarget().getConstantAddressSpace()) {
           auto AS = AddrSpace.getValue();
           auto *GV = new llvm::GlobalVariable(
@@ -1318,7 +1319,8 @@ CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
     return ConstantEmission();
 
   // Emit as a constant.
-  llvm::Constant *C = CGM.EmitConstantValue(result.Val, resultType, this);
+  auto C = ConstantEmitter(*this).emitAbstract(refExpr->getLocation(),
+                                               result.Val, resultType);
 
   // Make sure we emit a debug reference to the global variable.
   // This should probably fire even for
@@ -2283,7 +2285,9 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
         !(E->refersToEnclosingVariableOrCapture() && CapturedStmtInfo &&
           LocalDeclMap.count(VD))) {
       llvm::Constant *Val =
-        CGM.EmitConstantValue(*VD->evaluateValue(), VD->getType(), this);
+        ConstantEmitter(*this).emitAbstract(E->getLocation(),
+                                            *VD->evaluateValue(),
+                                            VD->getType());
       assert(Val && "failed to emit reference constant expression");
       // FIXME: Eventually we will want to emit vector element references.
 
