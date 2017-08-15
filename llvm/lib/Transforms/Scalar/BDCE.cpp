@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/BDCE.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DemandedBits.h"
@@ -35,6 +36,46 @@ using namespace llvm;
 STATISTIC(NumRemoved, "Number of instructions removed (unused)");
 STATISTIC(NumSimplified, "Number of instructions trivialized (dead bits)");
 
+/// If an instruction is trivialized (dead), then the chain of users of that
+/// instruction may need to be cleared of assumptions that can no longer be
+/// guaranteed correct.
+static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
+  assert(I->getType()->isIntegerTy() && "Trivializing a non-integer value?");
+
+  // Initialize the worklist with eligible direct users.
+  SmallVector<Instruction *, 16> WorkList;
+  for (User *JU : I->users()) {
+    // If all bits of a user are demanded, then we know that nothing below that
+    // in the def-use chain needs to be changed.
+    auto *J = dyn_cast<Instruction>(JU);
+    if (J && !DB.getDemandedBits(J).isAllOnesValue())
+      WorkList.push_back(J);
+  }
+
+  // DFS through subsequent users while tracking visits to avoid cycles.
+  SmallPtrSet<Instruction *, 16> Visited;
+  while (!WorkList.empty()) {
+    Instruction *J = WorkList.pop_back_val();
+
+    // NSW, NUW, and exact are based on operands that might have changed.
+    J->dropPoisonGeneratingFlags();
+
+    // We do not have to worry about llvm.assume or range metadata:
+    // 1. llvm.assume demands its operand, so trivializing can't change it.
+    // 2. range metadata only applies to memory accesses which demand all bits.
+
+    Visited.insert(J);
+
+    for (User *KU : J->users()) {
+      // If all bits of a user are demanded, then we know that nothing below
+      // that in the def-use chain needs to be changed.
+      auto *K = dyn_cast<Instruction>(KU);
+      if (K && !Visited.count(K) && !DB.getDemandedBits(K).isAllOnesValue())
+        WorkList.push_back(K);
+    }
+  }
+}
+
 static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
   SmallVector<Instruction*, 128> Worklist;
   bool Changed = false;
@@ -51,6 +92,9 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
       // replacing all uses with something else. Then, if they don't need to
       // remain live (because they have side effects, etc.) we can remove them.
       DEBUG(dbgs() << "BDCE: Trivializing: " << I << " (all bits dead)\n");
+
+      clearAssumptionsOfUsers(&I, DB);
+
       // FIXME: In theory we could substitute undef here instead of zero.
       // This should be reconsidered once we settle on the semantics of
       // undef, poison, etc.
