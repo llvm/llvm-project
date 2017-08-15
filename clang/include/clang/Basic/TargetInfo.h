@@ -46,6 +46,7 @@ class MacroBuilder;
 class QualType;
 class SourceLocation;
 class SourceManager;
+class Type;
 
 namespace Builtin { struct Info; }
 
@@ -1050,10 +1051,8 @@ public:
       return getTargetOpts().SupportedOpenCLOptions;
   }
 
-  /// \brief Get OpenCL image type address space.
-  virtual LangAS::ID getOpenCLImageAddrSpace() const {
-    return LangAS::opencl_global;
-  }
+  /// \brief Get address space for OpenCL type.
+  virtual LangAS::ID getOpenCLTypeAddrSpace(const Type *T) const;
 
   /// \returns Target specific vtbl ptr address space.
   virtual unsigned getVtblPtrAddressSpace() const {
