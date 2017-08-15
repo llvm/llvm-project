@@ -13309,6 +13309,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
         AddMsStructLayoutForRecord(RD);
       }
     }
+    New->setLexicalDeclContext(CurContext);
     return New;
   };
 
