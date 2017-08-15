@@ -28,6 +28,7 @@ public:
   virtual ~DWARFObject() = default;
   virtual StringRef getFileName() const { llvm_unreachable("unimplemented"); }
   virtual const object::ObjectFile *getFile() const { return nullptr; }
+  virtual ArrayRef<SectionName> getSectionNames() const { return {}; }
   virtual bool isLittleEndian() const = 0;
   virtual uint8_t getAddressSize() const { llvm_unreachable("unimplemented"); }
   virtual const DWARFSection &getInfoSection() const { return Dummy; }
