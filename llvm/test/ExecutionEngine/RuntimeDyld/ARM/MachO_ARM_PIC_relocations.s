@@ -1,5 +1,6 @@
-# RUN: llvm-mc -triple=armv7s-apple-ios7.0.0 -filetype=obj -o %T/foo.o %s
-# RUN: llvm-rtdyld -triple=armv7s-apple-ios7.0.0 -verify -check=%s %/T/foo.o
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=armv7s-apple-ios7.0.0 -filetype=obj -o %t/foo.o %s
+# RUN: llvm-rtdyld -triple=armv7s-apple-ios7.0.0 -verify -check=%s %t/foo.o
 
         .syntax unified
         .section        __TEXT,__text,regular,pure_instructions

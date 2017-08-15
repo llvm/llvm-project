@@ -4,22 +4,11 @@
 ; generated.
 ; PR16393
 
-; We expect the spill to be generated in %if.end230 and the reloads in
-; %if.end249 and %for.body285.
+; We expect 4-byte spill and reload to be generated.
 
 ; CHECK: set_stored_macroblock_parameters
-; CHECK: @ %if.end230
-; CHECK-NOT:@ %if.
-; CHECK-NOT:@ %for.
-; CHECK: str r{{.*}}, [sp, [[SLOT:#[0-9]+]]] @ 4-byte Spill
-; CHECK: @ %if.end249
-; CHECK-NOT:@ %if.
-; CHECK-NOT:@ %for.
-; CHECK: ldr r{{.*}}, [sp, [[SLOT]]] @ 4-byte Reload
-; CHECK: @ %for.body285
-; CHECK-NOT:@ %if.
-; CHECK-NOT:@ %for.
-; CHECK: ldr r{{.*}}, [sp, [[SLOT]]] @ 4-byte Reload
+; CHECK: str r{{.*}}, [sp, {{#[0-9]+}}] @ 4-byte Spill
+; CHECK: ldr r{{.*}}, [lr, {{#[0-9]+}}] @ 4-byte Reload
 
 target triple = "armv7l-unknown-linux-gnueabihf"
 

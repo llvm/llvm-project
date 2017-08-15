@@ -19,5 +19,5 @@
 type = Library
 name = RISCVDesc
 parent = RISCV
-required_libraries = MC RISCVInfo Support
+required_libraries = MC RISCVAsmPrinter RISCVInfo Support
 add_to_library_groups = RISCV

@@ -144,4 +144,54 @@ bb35.loopexit3:
 bb35:
   ret void
 }
-; CHECK: [3] %entry
+; CHECK: Inorder PostDominator Tree:
+; CHECK-NEXT:   [1]  <<exit node>>
+; CHECK-NEXT:     [2] %bb35
+; CHECK-NEXT:       [3] %bb
+; CHECK-NEXT:       [3] %bb.i
+; CHECK-NEXT:       [3] %_float32_unpack.exit
+; CHECK-NEXT:       [3] %bb.i5
+; CHECK-NEXT:       [3] %_float32_unpack.exit8
+; CHECK-NEXT:       [3] %bb32.preheader
+; CHECK-NEXT:       [3] %bb3
+; CHECK-NEXT:       [3] %bb3.split.us
+; CHECK-NEXT:       [3] %bb.i4.us
+; CHECK-NEXT:       [3] %bb7.i.us
+; CHECK-NEXT:       [3] %bb.i4.us.backedge
+; CHECK-NEXT:       [3] %bb1.i.us
+; CHECK-NEXT:       [3] %bb6.i.us
+; CHECK-NEXT:       [3] %bb4.i.us
+; CHECK-NEXT:       [3] %bb8.i.us
+; CHECK-NEXT:       [3] %bb3.i.loopexit.us
+; CHECK-NEXT:       [3] %bb.nph21
+; CHECK-NEXT:       [3] %bb4
+; CHECK-NEXT:       [3] %bb5
+; CHECK-NEXT:       [3] %bb14.preheader
+; CHECK-NEXT:       [3] %bb.nph18
+; CHECK-NEXT:       [3] %bb8.us.preheader
+; CHECK-NEXT:       [3] %bb8.preheader
+; CHECK-NEXT:       [3] %bb8.us
+; CHECK-NEXT:       [3] %bb8
+; CHECK-NEXT:       [3] %bb15.loopexit
+; CHECK-NEXT:       [3] %bb15.loopexit2
+; CHECK-NEXT:       [3] %bb15
+; CHECK-NEXT:       [3] %bb16
+; CHECK-NEXT:       [3] %bb17.loopexit.split
+; CHECK-NEXT:       [3] %bb.nph14
+; CHECK-NEXT:       [3] %bb19
+; CHECK-NEXT:       [3] %bb20
+; CHECK-NEXT:       [3] %bb29.preheader
+; CHECK-NEXT:       [3] %bb.nph
+; CHECK-NEXT:       [3] %bb23.us.preheader
+; CHECK-NEXT:       [3] %bb23.preheader
+; CHECK-NEXT:       [3] %bb23.us
+; CHECK-NEXT:       [3] %bb23
+; CHECK-NEXT:       [3] %bb30.loopexit
+; CHECK-NEXT:       [3] %bb30.loopexit1
+; CHECK-NEXT:       [3] %bb30
+; CHECK-NEXT:       [3] %bb31
+; CHECK-NEXT:       [3] %bb35.loopexit
+; CHECK-NEXT:       [3] %bb35.loopexit3
+; CHECK-NEXT:     [2] %entry
+; CHECK-NEXT:     [2] %bb3.i
+; CHECK-NEXT: Roots: %bb35 %bb3.i

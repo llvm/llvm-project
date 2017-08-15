@@ -53,7 +53,7 @@ createRenameReplacements(const SymbolOccurrences &Occurrences,
     }
     Changes.push_back(std::move(Change));
   }
-  return Changes;
+  return std::move(Changes);
 }
 
 /// Takes each atomic change and inserts its replacements into the set of

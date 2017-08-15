@@ -1,12 +1,12 @@
-(* RUN: cp %s %T/core.ml
- * RUN: %ocamlc -g -w +A -package llvm.analysis -package llvm.bitwriter -linkpkg %T/core.ml -o %t
- * RUN: %t %t.bc
- * RUN: %ocamlopt -g -w +A -package llvm.analysis -package llvm.bitwriter -linkpkg %T/core.ml -o %t
- * RUN: %t %t.bc
- * RUN: llvm-dis < %t.bc > %t.ll
- * RUN: FileCheck %s < %t.ll
+(* RUN: rm -rf %t && mkdir -p %t && cp %s %t/core.ml
+ * RUN: %ocamlc -g -w +A -package llvm.analysis -package llvm.bitwriter -linkpkg %t/core.ml -o %t/executable
+ * RUN: %t/executable %t/bitcode.bc
+ * RUN: %ocamlopt -g -w +A -package llvm.analysis -package llvm.bitwriter -linkpkg %t/core.ml -o %t/executable
+ * RUN: %t/executable %t/bitcode.bc
+ * RUN: llvm-dis < %t/bitcode.bc > %t/dis.ll
+ * RUN: FileCheck %s < %t/dis.ll
  * Do a second pass for things that shouldn't be anywhere.
- * RUN: FileCheck -check-prefix=CHECK-NOWHERE %s < %t.ll
+ * RUN: FileCheck -check-prefix=CHECK-NOWHERE %s < %t/dis.ll
  * XFAIL: vg_leak
  *)
 

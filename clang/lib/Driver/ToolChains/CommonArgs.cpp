@@ -376,8 +376,20 @@ void tools::AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
   // as gold requires -plugin to come before any -plugin-opt that -Wl might
   // forward.
   CmdArgs.push_back("-plugin");
-  std::string Plugin =
-      ToolChain.getDriver().Dir + "/../lib" CLANG_LIBDIR_SUFFIX "/LLVMgold.so";
+
+#if defined(LLVM_ON_WIN32)
+  const char *Suffix = ".dll";
+#elif defined(__APPLE__)
+  const char *Suffix = ".dylib";
+#else
+  const char *Suffix = ".so";
+#endif
+
+  SmallString<1024> Plugin;
+  llvm::sys::path::native(Twine(ToolChain.getDriver().Dir) +
+                              "/../lib" CLANG_LIBDIR_SUFFIX "/LLVMgold" +
+                              Suffix,
+                          Plugin);
   CmdArgs.push_back(Args.MakeArgString(Plugin));
 
   // Try to pass driver level flags relevant to LTO code generation down to

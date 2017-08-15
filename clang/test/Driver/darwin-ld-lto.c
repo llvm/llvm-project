@@ -2,11 +2,11 @@
 
 // Check that ld gets "-lto_library".
 
-// RUN: mkdir -p %T/bin
-// RUN: mkdir -p %T/lib
-// RUN: touch %T/lib/libLTO.dylib
+// RUN: mkdir -p %t/bin
+// RUN: mkdir -p %t/lib
+// RUN: touch %t/lib/libLTO.dylib
 // RUN: %clang -target x86_64-apple-darwin10 -### %s \
-// RUN:   -ccc-install-dir %T/bin -mlinker-version=133 2> %t.log
+// RUN:   -ccc-install-dir %t/bin -mlinker-version=133 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_LTOLIB_PATH %s -input-file %t.log
 //
 // LINK_LTOLIB_PATH: {{ld(.exe)?"}}

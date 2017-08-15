@@ -1,5 +1,6 @@
-# RUN: llvm-mc -triple=i386-apple-macosx10.4 -filetype=obj -o %T/test_i386.o %s
-# RUN: llvm-rtdyld -triple=i386-apple-macosx10.4 -verify -check=%s %/T/test_i386.o
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=i386-apple-macosx10.4 -filetype=obj -o %t/test_i386.o %s
+# RUN: llvm-rtdyld -triple=i386-apple-macosx10.4 -verify -check=%s %t/test_i386.o
 
 // Put the section used in the test at a non zero address.
 	.long 4

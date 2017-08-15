@@ -2,15 +2,16 @@
 ; functions aren't emitted.
 
 ; Inject metadata to set the .gcno file location
-; RUN: echo '!14 = !{!"%/T/function-numbering.ll", !0}' > %t1
-; RUN: cat %s %t1 > %t2
+; RUN: rm -rf %t && mkdir -p %t
+; RUN: echo '!14 = !{!"%/t/function-numbering.ll", !0}' > %t/1
+; RUN: cat %s %t/1 > %t/2
 
-; RUN: opt -insert-gcov-profiling -S < %t2 | FileCheck --check-prefix GCDA %s
-; RUN: llvm-cov gcov -n -dump %T/function-numbering.gcno 2>&1 | FileCheck --check-prefix GCNO %s
-; RUNN: rm %T/function-numbering.gcno
+; RUN: opt -insert-gcov-profiling -S < %t/2 | FileCheck --check-prefix GCDA %s
+; RUN: llvm-cov gcov -n -dump %t/function-numbering.gcno 2>&1 | FileCheck --check-prefix GCNO %s
+; RUNN: rm %t/function-numbering.gcno
 
-; RUN: opt -passes=insert-gcov-profiling -S < %t2 | FileCheck --check-prefix GCDA %s
-; RUN: llvm-cov gcov -n -dump %T/function-numbering.gcno 2>&1 | FileCheck --check-prefix GCNO %s
+; RUN: opt -passes=insert-gcov-profiling -S < %t/2 | FileCheck --check-prefix GCDA %s
+; RUN: llvm-cov gcov -n -dump %t/function-numbering.gcno 2>&1 | FileCheck --check-prefix GCNO %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"

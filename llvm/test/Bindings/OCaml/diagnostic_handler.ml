@@ -1,8 +1,8 @@
-(* RUN: cp %s %T/diagnostic_handler.ml
- * RUN: %ocamlc -g -w +A -package llvm.bitreader -linkpkg %T/diagnostic_handler.ml -o %t
- * RUN: %t %t.bc | FileCheck %s
- * RUN: %ocamlopt -g -w +A -package llvm.bitreader -linkpkg %T/diagnostic_handler.ml -o %t
- * RUN: %t %t.bc | FileCheck %s
+(* RUN: rm -rf %t && mkdir -p %t && cp %s %t/diagnostic_handler.ml
+ * RUN: %ocamlc -g -w +A -package llvm.bitreader -linkpkg %t/diagnostic_handler.ml -o %t/executable
+ * RUN: %t/executable %t/bitcode.bc | FileCheck %s
+ * RUN: %ocamlopt -g -w +A -package llvm.bitreader -linkpkg %t/diagnostic_handler.ml -o %t/executable
+ * RUN: %t/executable %t/bitcode.bc | FileCheck %s
  * XFAIL: vg_leak
  *)
 

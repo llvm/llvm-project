@@ -1,8 +1,8 @@
-(* RUN: cp %s %T/passmgr_builder.ml
- * RUN: %ocamlc -g -w +A -package llvm.passmgr_builder -linkpkg %T/passmgr_builder.ml -o %t
- * RUN: %t %t.bc
- * RUN: %ocamlopt -g -w +A -package llvm.passmgr_builder -linkpkg %T/passmgr_builder.ml -o %t
- * RUN: %t %t.bc
+(* RUN: rm -rf %t && mkdir -p %t && cp %s %t/passmgr_builder.ml
+ * RUN: %ocamlc -g -w +A -package llvm.passmgr_builder -linkpkg %t/passmgr_builder.ml -o %t/executable
+ * RUN: %t/executable %t/bitcode.bc
+ * RUN: %ocamlopt -g -w +A -package llvm.passmgr_builder -linkpkg %t/passmgr_builder.ml -o %t/executable
+ * RUN: %t/executable %t/bitcode.bc
  * XFAIL: vg_leak
  *)
 
