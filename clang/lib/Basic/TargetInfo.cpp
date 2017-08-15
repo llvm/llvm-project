@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/TargetInfo.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
@@ -345,6 +346,30 @@ bool TargetInfo::initFeatureMap(
     setFeatureEnabled(Features, Name.substr(1), Enabled);
   }
   return true;
+}
+
+LangAS::ID TargetInfo::getOpenCLTypeAddrSpace(const Type *T) const {
+  auto BT = dyn_cast<BuiltinType>(T);
+
+  if (!BT) {
+    if (isa<PipeType>(T))
+      return LangAS::opencl_global;
+
+    return LangAS::Default;
+  }
+
+  switch (BT->getKind()) {
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
+  case BuiltinType::Id:                                                        \
+    return LangAS::opencl_global;
+#include "clang/Basic/OpenCLImageTypes.def"
+
+  case BuiltinType::OCLSampler:
+    return LangAS::opencl_constant;
+
+  default:
+    return LangAS::Default;
+  }
 }
 
 //===----------------------------------------------------------------------===//

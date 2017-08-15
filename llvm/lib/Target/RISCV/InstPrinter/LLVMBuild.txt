@@ -1,4 +1,4 @@
-;===- ./lib/Target/RISCV/MCTargetDesc/LLVMBuild.txt ------------*- Conf -*--===;
+;===- ./lib/Target/RISCV/InstPrinter/LLVMBuild.txt -------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -17,7 +17,7 @@
 
 [component_0]
 type = Library
-name = RISCVDesc
+name = RISCVAsmPrinter
 parent = RISCV
-required_libraries = MC RISCVAsmPrinter RISCVInfo Support
+required_libraries = MC Support
 add_to_library_groups = RISCV

@@ -33,20 +33,22 @@ bool DWARFDebugRangeList::extract(const DWARFDataExtractor &data,
     return false;
   Offset = *offset_ptr;
   while (true) {
-    RangeListEntry entry;
+    RangeListEntry Entry;
+    Entry.SectionIndex = -1ULL;
+
     uint32_t prev_offset = *offset_ptr;
-    entry.StartAddress =
-        data.getRelocatedAddress(offset_ptr, &entry.SectionIndex);
-    entry.EndAddress = data.getRelocatedAddress(offset_ptr);
+    Entry.StartAddress = data.getRelocatedAddress(offset_ptr);
+    Entry.EndAddress =
+        data.getRelocatedAddress(offset_ptr, &Entry.SectionIndex);
 
     // Check that both values were extracted correctly.
     if (*offset_ptr != prev_offset + 2 * AddressSize) {
       clear();
       return false;
     }
-    if (entry.isEndOfListEntry())
+    if (Entry.isEndOfListEntry())
       break;
-    Entries.push_back(entry);
+    Entries.push_back(Entry);
   }
   return true;
 }
