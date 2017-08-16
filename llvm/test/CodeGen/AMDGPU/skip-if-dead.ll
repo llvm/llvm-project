@@ -354,7 +354,6 @@ bb7:                                              ; preds = %bb4
 ; CHECK: buffer_store_dword
 
 ; CHECK: [[END]]:
-; CHECK: s_or_b64 exec, exec
 ; CHECK: s_endpgm
 define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, <4 x float> %arg2) #0 {
 bb:

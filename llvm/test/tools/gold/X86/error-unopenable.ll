@@ -1,6 +1,6 @@
 ; RUN: llvm-as -o %t %s
 ; RUN: not %gold -plugin %llvmshlibdir/LLVMgold.so \
-; RUN:    --plugin-opt=obj-path=%T/nonexistent-dir/foo.o \
+; RUN:    --plugin-opt=obj-path=%t/nonexistent-dir/foo.o \
 ; RUN:    %t -o %t2 2>&1 | FileCheck %s
 
 ; CHECK: Could not open file {{.*}}nonexistent-dir

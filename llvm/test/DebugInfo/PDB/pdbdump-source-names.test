@@ -6,11 +6,12 @@
 # that differ by one byte, so that at least one of those will only
 # pass if alignment is implemented correctly.
 
-RUN: llvm-pdbutil yaml2pdb -pdb=%T/source-names-1.pdb %p/Inputs/source-names-1.yaml
-RUN: llvm-pdbutil pdb2yaml -module-files %T/source-names-1.pdb \
+RUN: rm -rf %t && mkdir -p %t
+RUN: llvm-pdbutil yaml2pdb -pdb=%t/source-names-1.pdb %p/Inputs/source-names-1.yaml
+RUN: llvm-pdbutil pdb2yaml -module-files %t/source-names-1.pdb \
 RUN:     | FileCheck -check-prefix=CHECK1 %s
-RUN: llvm-pdbutil yaml2pdb -pdb=%T/source-names-2.pdb %p/Inputs/source-names-2.yaml
-RUN: llvm-pdbutil pdb2yaml -module-files %T/source-names-2.pdb \
+RUN: llvm-pdbutil yaml2pdb -pdb=%t/source-names-2.pdb %p/Inputs/source-names-2.yaml
+RUN: llvm-pdbutil pdb2yaml -module-files %t/source-names-2.pdb \
 RUN:     | FileCheck -check-prefix=CHECK2 %s
 
 CHECK1: SourceFiles:

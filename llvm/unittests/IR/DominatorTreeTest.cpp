@@ -327,7 +327,8 @@ TEST(DominatorTree, NonUniqueEdges) {
 }
 
 // Verify that the PDT is correctly updated in case an edge removal results
-// in a new unreachable CFG node.
+// in a new unreachable CFG node. Also make sure that the updated PDT is the
+// same as a freshly recalculated one.
 //
 // For the following input code and initial PDT:
 //
@@ -348,27 +349,18 @@ TEST(DominatorTree, NonUniqueEdges) {
 //          CFG'               PDT-updated
 //
 //           A                    Exit
-//           |                     |
-//           B                     D
+//           |                   / | \
+//           B                  C  B  D
 //           | \                   |
-//           v  \                  B
-//          /    D                  \
-//         C      \                  A
-//        |       v
+//           v  \                  A
+//          /    D
+//         C      \
+//         |       \
 // unreachable    Exit
 //
-// WARNING: PDT-updated is inconsistent with PDT-recalculated, which is
-//          constructed from CFG' when recalculating the PDT from scratch.
+// Both the blocks that end with ret and with unreachable become trivial
+// PostDomTree roots, as they have no successors.
 //
-//         PDT-recalculated
-//
-//            Exit
-//           / | \
-//          C  B  D
-//             |
-//             A
-//
-// TODO: document the wanted behavior after resolving this inconsistency.
 TEST(DominatorTree, DeletingEdgesIntroducesUnreachables) {
   StringRef ModuleString =
       "define void @f() {\n"
@@ -395,7 +387,9 @@ TEST(DominatorTree, DeletingEdgesIntroducesUnreachables) {
         BasicBlock *C = &*FI++;
         BasicBlock *D = &*FI++;
 
-        assert(PDT->dominates(PDT->getNode(D), PDT->getNode(B)));
+        ASSERT_TRUE(PDT->dominates(PDT->getNode(D), PDT->getNode(B)));
+        EXPECT_TRUE(DT->verify());
+        EXPECT_TRUE(PDT->verify());
 
         C->getTerminator()->eraseFromParent();
         new UnreachableInst(C->getContext(), C);
@@ -403,18 +397,23 @@ TEST(DominatorTree, DeletingEdgesIntroducesUnreachables) {
         DT->deleteEdge(C, B);
         PDT->deleteEdge(C, B);
 
-        EXPECT_TRUE(PDT->dominates(PDT->getNode(D), PDT->getNode(B)));
-        EXPECT_EQ(PDT->getNode(C), nullptr);
-
-        PDT->recalculate(F);
+        EXPECT_TRUE(DT->verify());
+        EXPECT_TRUE(PDT->verify());
 
         EXPECT_FALSE(PDT->dominates(PDT->getNode(D), PDT->getNode(B)));
         EXPECT_NE(PDT->getNode(C), nullptr);
+
+        DominatorTree NDT(F);
+        EXPECT_EQ(DT->compare(NDT), 0);
+
+        PostDomTree NPDT(F);
+        EXPECT_EQ(PDT->compare(NPDT), 0);
       });
 }
 
 // Verify that the PDT is correctly updated in case an edge removal results
-// in an infinite loop.
+// in an infinite loop. Also make sure that the updated PDT is the
+// same as a freshly recalculated one.
 //
 // Test case:
 //
@@ -434,27 +433,26 @@ TEST(DominatorTree, DeletingEdgesIntroducesUnreachables) {
 // After deleting the edge C->B, C is part of an infinite reverse-unreachable
 // loop:
 //
-//          CFG'                   PDT'
+//          CFG'                  PDT'
 //
 //           A                    Exit
-//           |                     |
-//           B                     D
+//           |                   / | \
+//           B                  C  B  D
 //           | \                   |
-//           v  \                  B
-//          /    D                  \
-//         C      \                  A
+//           v  \                  A
+//          /    D
+//         C      \
 //        / \      v
 //       ^  v      Exit
 //        \_/
 //
-// In PDT, D post-dominates B. We verify that this post-dominance
-// relation is preserved _after_ deleting the edge C->B from CFG.
+// As C now becomes reverse-unreachable, it forms a new non-trivial root and
+// gets connected to the virtual exit.
+// D does not postdominate B anymore, because there are two forward paths from
+// B to the virtual exit:
+//  - B -> C -> VirtualExit
+//  - B -> D -> VirtualExit.
 //
-// As C now becomes reverse-unreachable, it is not anymore part of the
-// PDT. We also verify this property.
-//
-// TODO: Can we change the PDT definition such that C remains part of the
-//       CFG?
 TEST(DominatorTree, DeletingEdgesIntroducesInfiniteLoop) {
   StringRef ModuleString =
       "define void @f() {\n"
@@ -483,20 +481,25 @@ TEST(DominatorTree, DeletingEdgesIntroducesInfiniteLoop) {
         BasicBlock *C = &*FI++;
         BasicBlock *D = &*FI++;
 
-        assert(PDT->dominates(PDT->getNode(D), PDT->getNode(B)));
+        ASSERT_TRUE(PDT->dominates(PDT->getNode(D), PDT->getNode(B)));
+        EXPECT_TRUE(DT->verify());
+        EXPECT_TRUE(PDT->verify());
 
         auto SwitchC = cast<SwitchInst>(C->getTerminator());
         SwitchC->removeCase(SwitchC->case_begin());
         DT->deleteEdge(C, B);
+        EXPECT_TRUE(DT->verify());
         PDT->deleteEdge(C, B);
+        EXPECT_TRUE(PDT->verify());
 
-        EXPECT_TRUE(PDT->dominates(PDT->getNode(D), PDT->getNode(B)));
-        EXPECT_EQ(PDT->getNode(C), nullptr);
+        EXPECT_FALSE(PDT->dominates(PDT->getNode(D), PDT->getNode(B)));
+        EXPECT_NE(PDT->getNode(C), nullptr);
 
-        PDT->recalculate(F);
+        DominatorTree NDT(F);
+        EXPECT_EQ(DT->compare(NDT), 0);
 
-        EXPECT_TRUE(PDT->dominates(PDT->getNode(D), PDT->getNode(B)));
-        EXPECT_EQ(PDT->getNode(C), nullptr);
+        PostDomTree NPDT(F);
+        EXPECT_EQ(PDT->compare(NPDT), 0);
       });
 }
 
@@ -509,9 +512,9 @@ TEST(DominatorTree, DeletingEdgesIntroducesInfiniteLoop) {
 //
 //           A                    Exit
 //           |                   / | \
-//           B--                C  B  D
-//           |  \                  |
-//           v   \                 A
+//           B--               C2  B  D
+//           |  \              /   |
+//           v   \            C    A
 //          /     D
 //         C--C2   \
 //        / \  \    v
@@ -521,27 +524,22 @@ TEST(DominatorTree, DeletingEdgesIntroducesInfiniteLoop) {
 // After deleting the edge C->E, C is part of an infinite reverse-unreachable
 // loop:
 //
-//          CFG'                   PDT'
+//          CFG'                  PDT'
 //
 //           A                    Exit
-//           |                     |
-//           B                     D
+//           |                   / | \
+//           B                  C  B  D
 //           | \                   |
-//           v  \                  B
-//          /    D                  \
-//         C      \                  A
+//           v  \                  A
+//          /    D
+//         C      \
 //        / \      v
 //       ^  v      Exit
 //        \_/
 //
-// In PDT, D does not post-dominate B. After the edge C->E is removed, a new
-// post-dominance relation is introduced.
+// In PDT, D does not post-dominate B. After the edge C -> C2 is removed,
+// C becomes a new nontrivial PDT root.
 //
-// As C now becomes reverse-unreachable, it is not anymore part of the
-// PDT. We also verify this property.
-//
-// TODO: Can we change the PDT definition such that C remains part of the
-//       CFG, at best without loosing the dominance relation D postdom B.
 TEST(DominatorTree, DeletingEdgesIntroducesInfiniteLoop2) {
   StringRef ModuleString =
       "define void @f() {\n"
@@ -573,24 +571,30 @@ TEST(DominatorTree, DeletingEdgesIntroducesInfiniteLoop2) {
         BasicBlock *C2 = &*FI++;
         BasicBlock *D = &*FI++;
 
+        EXPECT_TRUE(DT->verify());
+        EXPECT_TRUE(PDT->verify());
+
         auto SwitchC = cast<SwitchInst>(C->getTerminator());
         SwitchC->removeCase(SwitchC->case_begin());
         DT->deleteEdge(C, C2);
         PDT->deleteEdge(C, C2);
-        C2->eraseFromParent();
+        C2->removeFromParent();
 
         EXPECT_EQ(DT->getNode(C2), nullptr);
         PDT->eraseNode(C2);
+        delete C2;
 
-        EXPECT_TRUE(PDT->dominates(PDT->getNode(D), PDT->getNode(B)));
-        EXPECT_EQ(PDT->getNode(C), nullptr);
-        EXPECT_EQ(PDT->getNode(C2), nullptr);
+        EXPECT_TRUE(DT->verify());
+        EXPECT_TRUE(PDT->verify());
 
-        PDT->recalculate(F);
+        EXPECT_FALSE(PDT->dominates(PDT->getNode(D), PDT->getNode(B)));
+        EXPECT_NE(PDT->getNode(C), nullptr);
 
-        EXPECT_TRUE(PDT->dominates(PDT->getNode(D), PDT->getNode(B)));
-        EXPECT_EQ(PDT->getNode(C), nullptr);
-        EXPECT_EQ(PDT->getNode(C2), nullptr);
+        DominatorTree NDT(F);
+        EXPECT_EQ(DT->compare(NDT), 0);
+
+        PostDomTree NPDT(F);
+        EXPECT_EQ(PDT->compare(NPDT), 0);
       });
 }
 
@@ -684,6 +688,27 @@ TEST(DominatorTree, InsertUnreachable) {
     PDT.insertEdge(From, To);
     EXPECT_TRUE(PDT.verify());
   }
+}
+
+TEST(DominatorTree, InsertFromUnreachable) {
+  CFGHolder Holder;
+  std::vector<CFGBuilder::Arc> Arcs = {{"1", "2"}, {"2", "3"}, {"3", "4"}};
+
+  std::vector<CFGBuilder::Update> Updates = {{Insert, {"3", "5"}}};
+  CFGBuilder B(Holder.F, Arcs, Updates);
+  PostDomTree PDT(*Holder.F);
+  EXPECT_TRUE(PDT.verify());
+
+  Optional<CFGBuilder::Update> LastUpdate = B.applyUpdate();
+  EXPECT_TRUE(LastUpdate);
+
+  EXPECT_EQ(LastUpdate->Action, Insert);
+  BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
+  BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
+  PDT.insertEdge(From, To);
+  EXPECT_TRUE(PDT.verify());
+  EXPECT_TRUE(PDT.getRoots().size() == 2);
+  EXPECT_NE(PDT.getNode(B.getOrAddBlock("5")), nullptr);
 }
 
 TEST(DominatorTree, InsertMixed) {

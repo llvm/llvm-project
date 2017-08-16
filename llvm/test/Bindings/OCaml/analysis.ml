@@ -1,8 +1,8 @@
-(* RUN: cp %s %T/analysis.ml
- * RUN: %ocamlc -g -w +A -package llvm.analysis -linkpkg %T/analysis.ml -o %t
- * RUN: %t
- * RUN: %ocamlopt -g -w +A -package llvm.analysis -linkpkg %T/analysis.ml -o %t
- * RUN: %t
+(* RUN: rm -rf %t && mkdir -p %t && cp %s %t/analysis.ml
+ * RUN: %ocamlc -g -w +A -package llvm.analysis -linkpkg %t/analysis.ml -o %t/executable
+ * RUN: %t/executable
+ * RUN: %ocamlopt -g -w +A -package llvm.analysis -linkpkg %t/analysis.ml -o %t/executable
+ * RUN: %t/executable
  * XFAIL: vg_leak
  *)
 

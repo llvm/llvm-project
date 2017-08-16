@@ -1,5 +1,5 @@
-# RUN: llvm-pdbdump yaml2pdb -pdb=%T/objfilename.pdb %s
-# RUN: llvm-pdbdump pdb2yaml -dbi-module-info %T/objfilename.pdb \
+# RUN: llvm-pdbdump yaml2pdb -pdb=%t %s
+# RUN: llvm-pdbdump pdb2yaml -dbi-module-info %t \
 # RUN:     | FileCheck %s
 #
 # CHECK: DbiStream:

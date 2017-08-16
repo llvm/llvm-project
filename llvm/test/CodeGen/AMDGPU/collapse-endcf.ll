@@ -9,7 +9,6 @@
 ; GCN-NEXT: {{^BB[0-9_]+}}:
 ; GCN:      store_dword
 ; GCN-NEXT: {{^}}[[ENDIF]]:
-; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC]]
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @simple_nested_if(i32 addrspace(1)* nocapture %arg) {
 bb:
@@ -45,7 +44,6 @@ bb.outer.end:                                     ; preds = %bb.outer.then, %bb.
 ; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC_INNER]]
 ; GCN:      store_dword
 ; GCN-NEXT: {{^}}[[ENDIF_OUTER]]:
-; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC_OUTER]]
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @uncollapsable_nested_if(i32 addrspace(1)* nocapture %arg) {
 bb:
@@ -90,7 +88,6 @@ bb.outer.end:                                     ; preds = %bb.inner.then, %bb
 ; GCN-NEXT: ; mask branch [[ENDIF_OUTER]]
 ; GCN:      store_dword
 ; GCN-NEXT: {{^}}[[ENDIF_OUTER]]:
-; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC_OUTER]]
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @nested_if_if_else(i32 addrspace(1)* nocapture %arg) {
 bb:
@@ -141,13 +138,10 @@ bb.outer.end:                                        ; preds = %bb, %bb.then, %b
 ; GCN-NEXT: {{^BB[0-9_]+}}:
 ; GCN:      store_dword
 ; GCN-NEXT: s_and_saveexec_b64 [[SAVEEXEC_INNER_IF_OUTER_THEN:s\[[0-9:]+\]]]
-; GCN-NEXT: ; mask branch [[ENDIF_INNER_OUTER_THEN:BB[0-9_]+]]
+; GCN-NEXT: ; mask branch [[ENDIF_OUTER]]
 ; GCN-NEXT: {{^BB[0-9_]+}}:
 ; GCN:      store_dword
-; GCN-NEXT: {{^}}[[ENDIF_INNER_OUTER_THEN]]:
-; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC_INNER_IF_OUTER_THEN]]
 ; GCN-NEXT: {{^}}[[ENDIF_OUTER]]:
-; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC_OUTER3]]
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @nested_if_else_if(i32 addrspace(1)* nocapture %arg) {
 bb:
@@ -183,6 +177,33 @@ bb.outer.end:
   ret void
 }
 
+; GCN-LABEL: {{^}}s_endpgm_unsafe_barrier:
+; GCN:      s_and_saveexec_b64 [[SAVEEXEC:s\[[0-9:]+\]]]
+; GCN-NEXT: ; mask branch [[ENDIF:BB[0-9_]+]]
+; GCN-NEXT: {{^BB[0-9_]+}}:
+; GCN:      store_dword
+; GCN-NEXT: {{^}}[[ENDIF]]:
+; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC]]
+; GCN:      s_barrier
+; GCN-NEXT: s_endpgm
+define amdgpu_kernel void @s_endpgm_unsafe_barrier(i32 addrspace(1)* nocapture %arg) {
+bb:
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %tmp1 = icmp ugt i32 %tmp, 1
+  br i1 %tmp1, label %bb.then, label %bb.end
+
+bb.then:                                          ; preds = %bb
+  %tmp4 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %tmp
+  store i32 0, i32 addrspace(1)* %tmp4, align 4
+  br label %bb.end
+
+bb.end:                                           ; preds = %bb.then, %bb
+  call void @llvm.amdgcn.s.barrier()
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare void @llvm.amdgcn.s.barrier() #1
 
 attributes #0 = { nounwind readnone speculatable }
+attributes #1 = { nounwind convergent }

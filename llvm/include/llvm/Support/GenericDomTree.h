@@ -417,14 +417,15 @@ class DominatorTreeBase {
   }
 
   /// findNearestCommonDominator - Find nearest common dominator basic block
-  /// for basic block A and B. If there is no such block then return NULL.
+  /// for basic block A and B. If there is no such block then return nullptr.
   NodeT *findNearestCommonDominator(NodeT *A, NodeT *B) const {
+    assert(A && B && "Pointers are not valid");
     assert(A->getParent() == B->getParent() &&
            "Two blocks are not in same function");
 
     // If either A or B is a entry block then it is nearest common dominator
     // (for forward-dominators).
-    if (!this->isPostDominator()) {
+    if (!isPostDominator()) {
       NodeT &Entry = A->getParent()->front();
       if (A == &Entry || B == &Entry)
         return &Entry;
@@ -580,6 +581,15 @@ class DominatorTreeBase {
     }
 
     DomTreeNodes.erase(BB);
+
+    if (!IsPostDom) return;
+
+    // Remember to update PostDominatorTree roots.
+    auto RIt = llvm::find(Roots, BB);
+    if (RIt != Roots.end()) {
+      std::swap(*RIt, Roots.back());
+      Roots.pop_back();
+    }
   }
 
   /// splitBlock - BB is split and now it has one successor. Update dominator
@@ -595,7 +605,7 @@ class DominatorTreeBase {
   ///
   void print(raw_ostream &O) const {
     O << "=============================--------------------------------\n";
-    if (this->isPostDominator())
+    if (IsPostDominator)
       O << "Inorder PostDominator Tree: ";
     else
       O << "Inorder Dominator Tree: ";
@@ -605,6 +615,14 @@ class DominatorTreeBase {
 
     // The postdom tree can have a null root if there are no returns.
     if (getRootNode()) PrintDomTree<NodeT>(getRootNode(), O, 1);
+    if (IsPostDominator) {
+      O << "Roots: ";
+      for (const NodePtr Block : Roots) {
+        Block->printAsOperand(O, false);
+        O << " ";
+      }
+      O << "\n";
+    }
   }
 
 public:

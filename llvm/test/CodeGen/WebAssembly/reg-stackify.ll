@@ -357,7 +357,9 @@ bb17:                                             ; preds = %bb13, %bb8
 bb21:                                             ; preds = %bb17, %bb5
   %tmp22 = phi double [ %tmp, %bb5 ], [ %tmp9, %bb17 ]
   %tmp23 = fadd double %tmp6, 1.000000e+00
-  br label %bb5
+  br i1 %arg4, label %exit, label %bb5
+exit:
+  ret void
 }
 
 ; Don't move calls past loads

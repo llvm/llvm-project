@@ -2,9 +2,10 @@
 // RUN: llvm-mc -triple s390x-linux-gnu -filetype=obj %s -o - | llvm-readobj -s -sr -sd | FileCheck %s
 
 // Test that RuntimeDyld can fix up such relocations.
-// RUN: llvm-mc -triple s390x-linux-gnu  -filetype=obj %s -o %T/test-s390x-cfi-relo-pc64.o
-// RUN: llc -mtriple=s390x-linux-gnu -filetype=obj %S/Inputs/rtdyld-globals.ll -o %T/test-s390x-rtdyld-globals.o
-// RUN: llvm-rtdyld -triple=s390x-linux-gnu -verify %T/test-s390x-cfi-relo-pc64.o %T/test-s390x-rtdyld-globals.o
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: llvm-mc -triple s390x-linux-gnu  -filetype=obj %s -o %t/test-s390x-cfi-relo-pc64.o
+// RUN: llc -mtriple=s390x-linux-gnu -filetype=obj %S/Inputs/rtdyld-globals.ll -o %t/test-s390x-rtdyld-globals.o
+// RUN: llvm-rtdyld -triple=s390x-linux-gnu -verify %t/test-s390x-cfi-relo-pc64.o %t/test-s390x-rtdyld-globals.o
 
 f1:
     .cfi_startproc

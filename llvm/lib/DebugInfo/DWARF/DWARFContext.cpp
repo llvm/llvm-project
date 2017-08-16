@@ -933,6 +933,8 @@ class DWARFObjInMemory final : public DWARFObject {
   bool IsLittleEndian;
   uint8_t AddressSize;
   StringRef FileName;
+  const object::ObjectFile *Obj = nullptr;
+  std::vector<SectionName> SectionNames;
 
   using TypeSectionMap = MapVector<object::SectionRef, DWARFSectionMap,
                                    std::map<object::SectionRef, unsigned>>;
@@ -1051,11 +1053,16 @@ public:
   DWARFObjInMemory(const object::ObjectFile &Obj, const LoadedObjectInfo *L,
                    function_ref<ErrorPolicy(Error)> HandleError)
       : IsLittleEndian(Obj.isLittleEndian()),
-        AddressSize(Obj.getBytesInAddress()), FileName(Obj.getFileName()) {
+        AddressSize(Obj.getBytesInAddress()), FileName(Obj.getFileName()),
+        Obj(&Obj) {
 
+    StringMap<unsigned> SectionAmountMap;
     for (const SectionRef &Section : Obj.sections()) {
       StringRef Name;
       Section.getName(Name);
+      ++SectionAmountMap[Name];
+      SectionNames.push_back({ Name, true });
+
       // Skip BSS and Virtual sections, they aren't interesting.
       if (Section.isBSS() || Section.isVirtual())
         continue;
@@ -1177,6 +1184,10 @@ public:
         Map->insert({Reloc.getOffset(), Rel});
       }
     }
+
+    for (SectionName &S : SectionNames)
+      if (SectionAmountMap[S.Name] > 1)
+        S.IsNameUnique = false;
   }
 
   Optional<RelocAddrEntry> find(const DWARFSection &S,
@@ -1186,6 +1197,12 @@ public:
     if (AI == Sec.Relocs.end())
       return None;
     return AI->second;
+  }
+
+  const object::ObjectFile *getFile() const override { return Obj; }
+
+  ArrayRef<SectionName> getSectionNames() const override {
+    return SectionNames;
   }
 
   bool isLittleEndian() const override { return IsLittleEndian; }

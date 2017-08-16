@@ -346,29 +346,33 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombiner &IC,
     }
     break;
   }
-  case Instruction::Shl:
+  case Instruction::Shl: {
     // If we are truncating the result of this SHL, and if it's a shift of a
     // constant amount, we can always perform a SHL in a smaller type.
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1))) {
+    const APInt *Amt;
+    if (match(I->getOperand(1), m_APInt(Amt))) {
       uint32_t BitWidth = Ty->getScalarSizeInBits();
-      if (CI->getLimitedValue(BitWidth) < BitWidth)
+      if (Amt->getLimitedValue(BitWidth) < BitWidth)
         return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI);
     }
     break;
-  case Instruction::LShr:
+  }
+  case Instruction::LShr: {
     // If this is a truncate of a logical shr, we can truncate it to a smaller
     // lshr iff we know that the bits we would otherwise be shifting in are
     // already zeros.
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1))) {
+    const APInt *Amt;
+    if (match(I->getOperand(1), m_APInt(Amt))) {
       uint32_t OrigBitWidth = OrigTy->getScalarSizeInBits();
       uint32_t BitWidth = Ty->getScalarSizeInBits();
       if (IC.MaskedValueIsZero(I->getOperand(0),
             APInt::getHighBitsSet(OrigBitWidth, OrigBitWidth-BitWidth), 0, CxtI) &&
-          CI->getLimitedValue(BitWidth) < BitWidth) {
+          Amt->getLimitedValue(BitWidth) < BitWidth) {
         return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI);
       }
     }
     break;
+  }
   case Instruction::Trunc:
     // trunc(trunc(x)) -> trunc(x)
     return true;
@@ -936,10 +940,11 @@ static bool canEvaluateZExtd(Value *V, Type *Ty, unsigned &BitsToClear,
     // Otherwise, we don't know how to analyze this BitsToClear case yet.
     return false;
 
-  case Instruction::Shl:
+  case Instruction::Shl: {
     // We can promote shl(x, cst) if we can promote x.  Since shl overwrites the
     // upper bits we can reduce BitsToClear by the shift amount.
-    if (ConstantInt *Amt = dyn_cast<ConstantInt>(I->getOperand(1))) {
+    const APInt *Amt;
+    if (match(I->getOperand(1), m_APInt(Amt))) {
       if (!canEvaluateZExtd(I->getOperand(0), Ty, BitsToClear, IC, CxtI))
         return false;
       uint64_t ShiftAmt = Amt->getZExtValue();
@@ -947,10 +952,12 @@ static bool canEvaluateZExtd(Value *V, Type *Ty, unsigned &BitsToClear,
       return true;
     }
     return false;
-  case Instruction::LShr:
+  }
+  case Instruction::LShr: {
     // We can promote lshr(x, cst) if we can promote x.  This requires the
     // ultimate 'and' to clear out the high zero bits we're clearing out though.
-    if (ConstantInt *Amt = dyn_cast<ConstantInt>(I->getOperand(1))) {
+    const APInt *Amt;
+    if (match(I->getOperand(1), m_APInt(Amt))) {
       if (!canEvaluateZExtd(I->getOperand(0), Ty, BitsToClear, IC, CxtI))
         return false;
       BitsToClear += Amt->getZExtValue();
@@ -960,6 +967,7 @@ static bool canEvaluateZExtd(Value *V, Type *Ty, unsigned &BitsToClear,
     }
     // Cannot promote variable LSHR.
     return false;
+  }
   case Instruction::Select:
     if (!canEvaluateZExtd(I->getOperand(1), Ty, Tmp, IC, CxtI) ||
         !canEvaluateZExtd(I->getOperand(2), Ty, BitsToClear, IC, CxtI) ||
