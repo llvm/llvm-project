@@ -45,6 +45,8 @@
 // RUN:     -fsanitize=safe-stack 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SAFESTACK
 // CHECK-SAFESTACK: "-fsanitize=safe-stack"
+// CHECK-SAFESTACK-NOT: "{{.*[/\\]}}libclang_rt.safestack-x86_64.a"
+// CHECK-SAFESTACK-NOT: "__safestack_init"
 
 // RUN: %clang %s -### --target=x86_64-unknown-fuchsia \
 // RUN:     -fsanitize=address 2>&1 \
