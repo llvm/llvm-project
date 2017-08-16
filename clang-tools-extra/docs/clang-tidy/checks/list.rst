@@ -5,6 +5,7 @@ Clang-Tidy Checks
 
 .. toctree::
    android-cloexec-accept
+   android-cloexec-accept4
    android-cloexec-creat
    android-cloexec-dup
    android-cloexec-fopen

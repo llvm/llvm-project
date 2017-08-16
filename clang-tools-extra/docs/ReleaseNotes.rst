@@ -75,6 +75,12 @@ Improvements to clang-tidy
 
   Detects usage of ``accept()``.
 
+- New `android-cloexec-accept4
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-accept4.html>`_ check
+
+  Checks if the required file flag ``SOCK_CLOEXEC`` is present in the argument of
+  ``accept4()``.
+
 - New `android-cloexec-dup
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-dup.html>`_ check
 
