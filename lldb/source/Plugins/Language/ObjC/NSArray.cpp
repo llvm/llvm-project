@@ -413,18 +413,6 @@ bool lldb_private::formatters::NSArraySummaryProvider(
                                                       ptr_size, 0, error);
     if (error.Fail())
       return false;
-  } else if (class_name == g_NSArrayMLegacy) {
-    Status error;
-    value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
-                                                      ptr_size, 0, error);
-    if (error.Fail())
-      return false;
-  } else if (class_name == g_NSArrayMImmutable) {
-    Status error;
-    value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
-                                                      ptr_size, 0, error);
-    if (error.Fail())
-      return false;
   } else if (class_name == g_NSArray0) {
     value = 0;
   } else if (class_name == g_NSArray1) {
