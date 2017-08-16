@@ -53,6 +53,8 @@ enum class SymbolKind : uint8_t {
   ConversionFunction,
 
   Parameter,
+  Using,
+
   CommentTag,
 };
 
@@ -70,6 +72,8 @@ enum class SymbolSubKind {
   CXXMoveConstructor,
   AccessorGetter,
   AccessorSetter,
+  UsingTypename,
+  UsingValue,
 
   // Swift sub-kinds
 

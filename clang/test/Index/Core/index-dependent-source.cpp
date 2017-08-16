@@ -158,3 +158,69 @@ void infiniteTraitRecursion(Trait<T> &t) {
 // Shouldn't crash!
   t.lookup;
 }
+
+template <typename T>
+struct UsingA {
+// CHECK: [[@LINE+1]]:15 | type-alias/C | Type | c:index-dependent-source.cpp@ST>1#T@UsingA@T@Type | <no-cgname> | Def,RelChild | rel: 1
+  typedef int Type;
+// CHECK: [[@LINE+1]]:15 | static-method/C++ | func | c:@ST>1#T@UsingA@F@func#S | <no-cgname> | Decl,RelChild | rel: 1
+  static void func();
+// CHECK: [[@LINE+1]]:8 | instance-method/C++ | operator() | c:@ST>1#T@UsingA@F@operator()#I# | <no-cgname> | Decl,RelChild | rel: 1
+  void operator()(int);
+// CHECK: [[@LINE+1]]:8 | instance-method/C++ | operator+ | c:@ST>1#T@UsingA@F@operator+#&1>@ST>1#T@UsingA1t0.0# | <no-cgname> | Decl,RelChild | rel: 1
+  void operator+(const UsingA &);
+};
+
+template <typename T>
+struct OtherUsing {};
+
+template <typename T>
+struct UsingB : public UsingA<T> {
+// CHECK: [[@LINE+2]]:40 | type-alias/C | TypeB | c:index-dependent-source.cpp@ST>1#T@UsingB@T@TypeB | <no-cgname> | Def,RelChild | rel: 1
+// CHECK: [[@LINE+1]]:20 | struct(Gen)/C++ | OtherUsing | c:@ST>1#T@OtherUsing | <no-cgname> | Ref,RelCont | rel: 1
+  typedef typename OtherUsing<T>::Type TypeB;
+// CHECK: [[@LINE+2]]:29 | using/using-typename(Gen)/C++ | Type | c:index-dependent-source.cpp@ST>1#T@UsingB@UUT@UsingA<T>::Type | <no-cgname> | Decl,RelChild | rel: 1
+// CHECK: [[@LINE+1]]:18 | struct(Gen)/C++ | UsingA | c:@ST>1#T@UsingA | <no-cgname> | Ref,RelCont | rel: 1
+  using typename UsingA<T>::Type;
+// CHECK: [[@LINE+2]]:20 | using/using-value(Gen)/C++ | func | c:index-dependent-source.cpp@ST>1#T@UsingB@UUV@UsingA<T>::func | <no-cgname> | Decl,RelChild | rel: 1
+// CHECK: [[@LINE+1]]:9 | struct(Gen)/C++ | UsingA | c:@ST>1#T@UsingA | <no-cgname> | Ref,RelCont | rel: 1
+  using UsingA<T>::func;
+
+// CHECK: [[@LINE+2]]:20 | using/using-value(Gen)/C++ | operator() | c:index-dependent-source.cpp@ST>1#T@UsingB@UUV@UsingA<T>::operator() | <no-cgname> | Decl,RelChild | rel: 1
+// CHECK: [[@LINE+1]]:9 | struct(Gen)/C++ | UsingA | c:@ST>1#T@UsingA | <no-cgname> | Ref,RelCont | rel: 1
+  using UsingA<T>::operator();
+// CHECK: [[@LINE+2]]:20 | using/using-value(Gen)/C++ | operator+ | c:index-dependent-source.cpp@ST>1#T@UsingB@UUV@UsingA<T>::operator+ | <no-cgname> | Decl,RelChild | rel: 1
+// CHECK: [[@LINE+1]]:9 | struct(Gen)/C++ | UsingA | c:@ST>1#T@UsingA | <no-cgname> | Ref,RelCont | rel: 1
+  using UsingA<T>::operator+;
+};
+
+template <typename T>
+struct UsingC : public UsingB<T> {
+  static void test() {
+// CHECK: [[@LINE+2]]:25 | type-alias/C | TypeB | c:index-dependent-source.cpp@ST>1#T@UsingB@T@TypeB | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE+1]]:14 | struct(Gen)/C++ | UsingB | c:@ST>1#T@UsingB | <no-cgname> | Ref,RelCont | rel: 1
+    typename UsingB<T>::TypeB value1;
+// CHECK: [[@LINE+2]]:25 | using/using-typename(Gen)/C++ | Type | c:index-dependent-source.cpp@ST>1#T@UsingB@UUT@UsingA<T>::Type | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE+1]]:14 | struct(Gen)/C++ | UsingB | c:@ST>1#T@UsingB | <no-cgname> | Ref,RelCont | rel: 1
+    typename UsingB<T>::Type value2;
+// CHECK: [[@LINE+2]]:16 | using/using-value(Gen)/C++ | func | c:index-dependent-source.cpp@ST>1#T@UsingB@UUV@UsingA<T>::func | <no-cgname> | Ref,Call,RelCall,RelCont | rel: 1
+// CHECK: [[@LINE+1]]:5 | struct(Gen)/C++ | UsingB | c:@ST>1#T@UsingB | <no-cgname> | Ref,RelCont | rel: 1
+    UsingB<T>::func();
+  }
+};
+
+template <typename T>
+struct UsingD {
+// CHECK: [[@LINE+1]]:8 | instance-method/C++ | foo | c:@ST>1#T@UsingD@F@foo#t0.0# | <no-cgname> | Decl,RelChild | rel: 1
+  void foo(T);
+};
+
+template <typename T, typename U>
+struct UsingE : public UsingD<T>, public UsingD<U> {
+// CHECK: [[@LINE+2]]:20 | using/using-value(Gen)/C++ | foo | c:index-dependent-source.cpp@ST>2#T#T@UsingE@UUV@UsingD<T>::foo | <no-cgname> | Decl,RelChild | rel: 1
+// CHECK: [[@LINE+1]]:9 | struct(Gen)/C++ | UsingD | c:@ST>1#T@UsingD | <no-cgname> | Ref,RelCont | rel: 1
+  using UsingD<T>::foo;
+// CHECK: [[@LINE+2]]:20 | using/using-value(Gen)/C++ | foo | c:index-dependent-source.cpp@ST>2#T#T@UsingE@UUV@UsingD<U>::foo | <no-cgname> | Decl,RelChild | rel: 1
+// CHECK: [[@LINE+1]]:9 | struct(Gen)/C++ | UsingD | c:@ST>1#T@UsingD | <no-cgname> | Ref,RelCont | rel: 1
+  using UsingD<U>::foo;
+};

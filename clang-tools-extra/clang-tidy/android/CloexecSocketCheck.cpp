@@ -17,8 +17,6 @@ namespace clang {
 namespace tidy {
 namespace android {
 
-static constexpr const char *SOCK_CLOEXEC = "SOCK_CLOEXEC";
-
 void CloexecSocketCheck::registerMatchers(MatchFinder *Finder) {
   registerMatchersImpl(Finder,
                        functionDecl(isExternC(), returns(isInteger()),

@@ -92,10 +92,10 @@ protected:
                            int N) const;
 
   /// Binding name of the FuncDecl of a function call.
-  static constexpr char FuncDeclBindingStr[] = "funcDecl";
+  static const char *FuncDeclBindingStr;
 
   /// Binding name of the function call expression.
-  static constexpr char FuncBindingStr[] = "func";
+  static const char *FuncBindingStr;
 };
 
 } // namespace android

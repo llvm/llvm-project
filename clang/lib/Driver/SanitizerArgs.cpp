@@ -605,6 +605,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     AsanUseAfterScope = false;
   }
 
+  if (AllAddedKinds & SafeStack) {
+    // SafeStack runtime is built into the system on Fuchsia.
+    SafeStackRuntime = !TC.getTriple().isOSFuchsia();
+  }
+
   // Parse -link-cxx-sanitizer flag.
   LinkCXXRuntimes =
       Args.hasArg(options::OPT_fsanitize_link_cxx_runtime) || D.CCCIsCXX();
