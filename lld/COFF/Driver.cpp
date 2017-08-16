@@ -473,7 +473,7 @@ static void createImportLibrary(bool AsLib) {
   }
 
   writeImportLibrary(getImportName(AsLib), getImplibPath(), Exports,
-                     Config->Machine);
+                     Config->Machine, false);
 }
 
 static void parseModuleDefs(StringRef Path) {
