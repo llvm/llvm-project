@@ -1,6 +1,6 @@
 Test the 'm' operation in llvm-ar
 
-RUN: cd `dirname %t`
+RUN: cd %T
 
 RUN: rm -f %t.a
 RUN: cp %p/Inputs/GNU.a %t.a

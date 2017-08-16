@@ -27,7 +27,7 @@ class SymbolTable;
 void createPDB(SymbolTable *Symtab,
                llvm::ArrayRef<OutputSection *> OutputSections,
                llvm::ArrayRef<uint8_t> SectionTable,
-               const llvm::codeview::DebugInfo *DI);
+               const llvm::codeview::DebugInfo &BuildId);
 }
 }
 

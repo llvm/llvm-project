@@ -76,7 +76,7 @@ public:
         IDTable(Alloc) {}
 
   /// Emit the basic PDB structure: initial streams, headers, etc.
-  void initialize(const llvm::codeview::DebugInfo *DI);
+  void initialize(const llvm::codeview::DebugInfo &BuildId);
 
   /// Link CodeView from each object file in the symbol table into the PDB.
   void addObjectsToPDB();
@@ -808,15 +808,15 @@ static void addLinkerModuleSectionSymbol(pdb::DbiModuleDescriptorBuilder &Mod,
 void coff::createPDB(SymbolTable *Symtab,
                      ArrayRef<OutputSection *> OutputSections,
                      ArrayRef<uint8_t> SectionTable,
-                     const llvm::codeview::DebugInfo *DI) {
+                     const llvm::codeview::DebugInfo &BuildId) {
   PDBLinker PDB(Symtab);
-  PDB.initialize(DI);
+  PDB.initialize(BuildId);
   PDB.addObjectsToPDB();
   PDB.addSections(OutputSections, SectionTable);
   PDB.commit();
 }
 
-void PDBLinker::initialize(const llvm::codeview::DebugInfo *DI) {
+void PDBLinker::initialize(const llvm::codeview::DebugInfo &BuildId) {
   ExitOnErr(Builder.initialize(4096)); // 4096 is blocksize
 
   // Create streams in MSF for predefined streams, namely
@@ -826,17 +826,17 @@ void PDBLinker::initialize(const llvm::codeview::DebugInfo *DI) {
 
   // Add an Info stream.
   auto &InfoBuilder = Builder.getInfoBuilder();
-  InfoBuilder.setAge(DI ? DI->PDB70.Age : 0);
+  InfoBuilder.setAge(BuildId.PDB70.Age);
 
-  GUID uuid{};
-  if (DI)
-    memcpy(&uuid, &DI->PDB70.Signature, sizeof(uuid));
+  GUID uuid;
+  memcpy(&uuid, &BuildId.PDB70.Signature, sizeof(uuid));
   InfoBuilder.setGuid(uuid);
   InfoBuilder.setSignature(time(nullptr));
   InfoBuilder.setVersion(pdb::PdbRaw_ImplVer::PdbImplVC70);
 
   // Add an empty DBI stream.
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
+  DbiBuilder.setAge(BuildId.PDB70.Age);
   DbiBuilder.setVersionHeader(pdb::PdbDbiV70);
   ExitOnErr(DbiBuilder.addDbgStream(pdb::DbgHeaderType::NewFPO, {}));
 }

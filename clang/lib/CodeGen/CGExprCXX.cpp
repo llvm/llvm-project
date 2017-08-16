@@ -16,6 +16,7 @@
 #include "CGCXXABI.h"
 #include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
+#include "ConstantEmitter.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/IR/CallSite.h"
@@ -681,8 +682,8 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
   // Emit the array size expression.
   // We multiply the size of all dimensions for NumElements.
   // e.g for 'int[2][3]', ElemType is 'int' and NumElements is 6.
-  numElements = CGF.CGM.EmitConstantExpr(e->getArraySize(),
-                                         CGF.getContext().getSizeType(), &CGF);
+  numElements =
+    ConstantEmitter(CGF).tryEmitAbstract(e->getArraySize(), e->getType());
   if (!numElements)
     numElements = CGF.EmitScalarExpr(e->getArraySize());
   assert(isa<llvm::IntegerType>(numElements->getType()));

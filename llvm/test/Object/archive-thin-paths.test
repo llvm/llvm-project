@@ -1,6 +1,6 @@
 REQUIRES: system-windows
 
-RUN: cd `dirname %t`
+RUN: cd %T
 RUN: mkdir -p archive-thin-paths.dir
 RUN: echo foo > archive-thin-paths.dir/foo.o
 

@@ -1,6 +1,6 @@
 Test the 'u' option of llvm-ar
 
-RUN: cd `dirname %t`
+RUN: cd %T
 RUN: rm -f %t.a
 
 Create a file named evenlen that is newer than the evenlen on the source dir.
