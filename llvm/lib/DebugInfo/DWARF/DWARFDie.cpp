@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
@@ -31,6 +32,7 @@
 
 using namespace llvm;
 using namespace dwarf;
+using namespace object;
 using namespace syntax;
 
 static void dumpApplePropertyAttribute(raw_ostream &OS, uint64_t Val) {
@@ -51,17 +53,31 @@ static void dumpApplePropertyAttribute(raw_ostream &OS, uint64_t Val) {
   OS << ")";
 }
 
-static void dumpRanges(raw_ostream &OS, const DWARFAddressRangesVector& Ranges,
-                       unsigned AddressSize, unsigned Indent) {
-  if (Ranges.empty())
-    return;
-  
-  for (const auto &Range: Ranges) {
+static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
+                       const DWARFAddressRangesVector &Ranges,
+                       unsigned AddressSize, unsigned Indent,
+                       const DIDumpOptions &DumpOpts) {
+  ArrayRef<SectionName> SectionNames;
+  if (!DumpOpts.Brief)
+    SectionNames = Obj.getSectionNames();
+
+  for (size_t I = 0; I < Ranges.size(); ++I) {
+    const DWARFAddressRange &R = Ranges[I];
+
     OS << '\n';
     OS.indent(Indent);
-    OS << format("[0x%0*" PRIx64 " - 0x%0*" PRIx64 ")",
-                 AddressSize*2, Range.LowPC,
-                 AddressSize*2, Range.HighPC);
+    OS << format("[0x%0*" PRIx64 " - 0x%0*" PRIx64 ")", AddressSize * 2,
+                 R.LowPC, AddressSize * 2, R.HighPC);
+
+    if (SectionNames.empty() || R.SectionIndex == -1ULL)
+      continue;
+
+    StringRef Name = SectionNames[R.SectionIndex].Name;
+    OS << " \"" << Name << '\"';
+
+    // Print section index if name is not unique.
+    if (!SectionNames[R.SectionIndex].IsNameUnique)
+      OS << format(" [%" PRIu64 "]", R.SectionIndex);
   }
 }
 
@@ -126,10 +142,11 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     if (Optional<uint64_t> OptVal = formValue.getAsUnsignedConstant())
       dumpApplePropertyAttribute(OS, *OptVal);
   } else if (Attr == DW_AT_ranges) {
-    dumpRanges(OS, Die.getAddressRanges(), U->getAddressByteSize(),
-               sizeof(BaseIndent)+Indent+4);
+    const DWARFObject &Obj = Die.getDwarfUnit()->getContext().getDWARFObj();
+    dumpRanges(Obj, OS, Die.getAddressRanges(), U->getAddressByteSize(),
+               sizeof(BaseIndent) + Indent + 4, DumpOpts);
   }
-  
+
   OS << ")\n";
 }
 

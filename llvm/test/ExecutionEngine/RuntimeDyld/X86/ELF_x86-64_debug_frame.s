@@ -1,5 +1,6 @@
-# RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj -o %T/ELF_x86-64_debug_frame.o %s
-# RUN: llvm-rtdyld -triple=x86_64-pc-linux -verify -check=%s %T/ELF_x86-64_debug_frame.o
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj -o %t/ELF_x86-64_debug_frame.o %s
+# RUN: llvm-rtdyld -triple=x86_64-pc-linux -verify -check=%s %t/ELF_x86-64_debug_frame.o
 
         .text
         .file   "debug_frame_test.c"

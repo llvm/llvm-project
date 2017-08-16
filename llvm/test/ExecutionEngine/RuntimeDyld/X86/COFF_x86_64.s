@@ -1,5 +1,6 @@
-# RUN: llvm-mc -triple=x86_64-pc-win32 -filetype=obj -o %T/COFF_x86_64.o %s
-# RUN: llvm-rtdyld -triple=x86_64-pc-win32 -verify -check=%s %/T/COFF_x86_64.o
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=x86_64-pc-win32 -filetype=obj -o %t/COFF_x86_64.o %s
+# RUN: llvm-rtdyld -triple=x86_64-pc-win32 -verify -check=%s %t/COFF_x86_64.o
         	.text
 	.def	 F;
 	.scl	2;

@@ -1,8 +1,10 @@
-; RUN: sed -e 's|PATTERN|%/T|g' %s | opt -insert-gcov-profiling -disable-output
-; RUN: rm %T/linezero.gcno
+; RUN: rm -rf %t && mkdir -p %t
 
-; RUN: sed -e 's|PATTERN|%/T|g' %s | opt -passes=insert-gcov-profiling -disable-output
-; RUN: rm %T/linezero.gcno
+; RUN: sed -e 's|PATTERN|%/t|g' %s | opt -insert-gcov-profiling -disable-output
+; RUN: rm %t/linezero.gcno
+
+; RUN: sed -e 's|PATTERN|%/t|g' %s | opt -passes=insert-gcov-profiling -disable-output
+; RUN: rm %t/linezero.gcno
 
 ; This is a crash test.
 

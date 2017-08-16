@@ -1,20 +1,21 @@
-; RUN: echo '!9 = !{!"%/T/version.ll", !0}' > %t1
-; RUN: cat %s %t1 > %t2
-; RUN: opt -insert-gcov-profiling -disable-output < %t2
-; RUN: head -c8 %T/version.gcno | grep '^oncg.204'
-; RUN: rm %T/version.gcno
-; RUN: not opt -insert-gcov-profiling -default-gcov-version=asdfasdf -disable-output < %t2
-; RUN: opt -insert-gcov-profiling -default-gcov-version=407* -disable-output < %t2
-; RUN: head -c8 %T/version.gcno | grep '^oncg.704'
-; RUN: rm %T/version.gcno
+; RUN: rm -rf %t && mkdir -p %t
+; RUN: echo '!9 = !{!"%/t/version.ll", !0}' > %t/1
+; RUN: cat %s %t/1 > %t/2
+; RUN: opt -insert-gcov-profiling -disable-output < %t/2
+; RUN: head -c8 %t/version.gcno | grep '^oncg.204'
+; RUN: rm %t/version.gcno
+; RUN: not opt -insert-gcov-profiling -default-gcov-version=asdfasdf -disable-output < %t/2
+; RUN: opt -insert-gcov-profiling -default-gcov-version=407* -disable-output < %t/2
+; RUN: head -c8 %t/version.gcno | grep '^oncg.704'
+; RUN: rm %t/version.gcno
 
-; RUN: opt -passes=insert-gcov-profiling -disable-output < %t2
-; RUN: head -c8 %T/version.gcno | grep '^oncg.204'
-; RUN: rm %T/version.gcno
-; RUN: not opt -passes=insert-gcov-profiling -default-gcov-version=asdfasdf -disable-output < %t2
-; RUN: opt -passes=insert-gcov-profiling -default-gcov-version=407* -disable-output < %t2
-; RUN: head -c8 %T/version.gcno | grep '^oncg.704'
-; RUN: rm %T/version.gcno
+; RUN: opt -passes=insert-gcov-profiling -disable-output < %t/2
+; RUN: head -c8 %t/version.gcno | grep '^oncg.204'
+; RUN: rm %t/version.gcno
+; RUN: not opt -passes=insert-gcov-profiling -default-gcov-version=asdfasdf -disable-output < %t/2
+; RUN: opt -passes=insert-gcov-profiling -default-gcov-version=407* -disable-output < %t/2
+; RUN: head -c8 %t/version.gcno | grep '^oncg.704'
+; RUN: rm %t/version.gcno
 
 define void @test() !dbg !5 {
   ret void, !dbg !8

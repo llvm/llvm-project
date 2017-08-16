@@ -1,5 +1,6 @@
-# RUN: llvm-mc -triple=arm-linux-gnueabihf -filetype=obj -o %T/reloc.o %s
-# RUN: llvm-rtdyld -triple=arm-linux-gnueabihf -verify -map-section reloc.o,.ARM.exidx=0x6000 -map-section reloc.o,.text=0x4000  -dummy-extern __aeabi_unwind_cpp_pr0=0x1234 -check=%s %T/reloc.o
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=arm-linux-gnueabihf -filetype=obj -o %t/reloc.o %s
+# RUN: llvm-rtdyld -triple=arm-linux-gnueabihf -verify -map-section reloc.o,.ARM.exidx=0x6000 -map-section reloc.o,.text=0x4000  -dummy-extern __aeabi_unwind_cpp_pr0=0x1234 -check=%s %t/reloc.o
 
         .text
         .syntax unified
