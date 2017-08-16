@@ -10,6 +10,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "CloexecAcceptCheck.h"
 #include "CloexecCreatCheck.h"
 #include "CloexecDupCheck.h"
 #include "CloexecFopenCheck.h"
@@ -29,6 +30,7 @@ namespace android {
 class AndroidModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<CloexecAcceptCheck>("android-cloexec-accept");
     CheckFactories.registerCheck<CloexecCreatCheck>("android-cloexec-creat");
     CheckFactories.registerCheck<CloexecDupCheck>("android-cloexec-dup");
     CheckFactories.registerCheck<CloexecFopenCheck>("android-cloexec-fopen");

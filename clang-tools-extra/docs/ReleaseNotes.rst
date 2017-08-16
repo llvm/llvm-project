@@ -70,6 +70,11 @@ Improvements to clang-tidy
       ``AllowConditionalIntegerCasts`` -> ``AllowIntegerConditions``,
       ``AllowConditionalPointerCasts`` -> ``AllowPointerConditions``.
 
+- New `android-cloexec-accept
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-accept.html>`_ check
+
+  Detects usage of ``accept()``.
+
 - New `android-cloexec-dup
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-dup.html>`_ check
 
