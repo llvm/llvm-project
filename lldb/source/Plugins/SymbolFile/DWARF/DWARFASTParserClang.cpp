@@ -2741,8 +2741,6 @@ bool DWARFASTParserClang::ParseChildMembers(
                     form_value.BlockData() - debug_info_data.GetDataStart();
                 if (DWARFExpression::Evaluate(
                         nullptr, // ExecutionContext *
-                        nullptr, // ClangExpressionVariableList *
-                        nullptr, // ClangExpressionDeclMap *
                         nullptr, // RegisterContext *
                         module_sp, debug_info_data, die.GetCU(), block_offset,
                         block_length, eRegisterKindDWARF, &initialValue,
@@ -3214,11 +3212,11 @@ bool DWARFASTParserClang::ParseChildMembers(
                 uint32_t block_length = form_value.Unsigned();
                 uint32_t block_offset =
                     form_value.BlockData() - debug_info_data.GetDataStart();
-                if (DWARFExpression::Evaluate(
-                        nullptr, nullptr, nullptr, nullptr, module_sp,
-                        debug_info_data, die.GetCU(), block_offset,
-                        block_length, eRegisterKindDWARF, &initialValue,
-                        nullptr, memberOffset, nullptr)) {
+                if (DWARFExpression::Evaluate(nullptr, nullptr, module_sp,
+                                              debug_info_data, die.GetCU(),
+                                              block_offset, block_length,
+                                              eRegisterKindDWARF, &initialValue,
+                                              nullptr, memberOffset, nullptr)) {
                   member_byte_offset = memberOffset.ResolveValue(NULL).UInt();
                 }
               } else {

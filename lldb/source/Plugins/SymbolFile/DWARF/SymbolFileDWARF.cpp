@@ -1669,9 +1669,8 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
                 const DWARFExpression &location = var_sp->LocationExpression();
                 Value location_result;
                 Status error;
-                if (location.Evaluate(nullptr, nullptr, nullptr,
-                                      LLDB_INVALID_ADDRESS, nullptr, nullptr,
-                                      location_result, &error)) {
+                if (location.Evaluate(nullptr, LLDB_INVALID_ADDRESS, nullptr,
+                                      nullptr, location_result, &error)) {
                   if (location_result.GetValueType() ==
                       Value::eValueTypeFileAddress) {
                     lldb::addr_t file_addr =

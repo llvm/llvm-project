@@ -106,6 +106,22 @@ IsGlobalInSmallSectionImpl(const GlobalObject *GO,
   if (!GVA)
     return false;
 
+  // If the variable has an explicit section, it is placed in that section but
+  // it's addressing mode may change.
+  if (GVA->hasSection()) {
+    StringRef Section = GVA->getSection();
+
+    // Explicitly placing any variable in the small data section overrides
+    // the global -G value.
+    if (Section == ".sdata" || Section == ".sbss")
+      return true;
+
+    // Otherwise reject accessing it through the gp pointer. There are some
+    // historic cases which GCC doesn't appear to respect any more. These
+    // are .lit4, .lit8 and .srdata. For the moment reject these as well.
+    return false;
+  }
+
   // Enforce -mlocal-sdata.
   if (!LocalSData && GVA->hasLocalLinkage())
     return false;

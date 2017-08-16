@@ -39,8 +39,9 @@ CHECK3-NEXT:       4        0
 CHECK3-NEXT:       5   0x1008
 CHECK3-NEXT:       6   0x1010  exportfn2
 
-# RUN: lld-link /out:%t.dll /dll %t.obj /export:f1=exportfn1 /export:f2=exportfn2
+# RUN: lld-link /out:%t.dll /dll %t.obj /export:f1=exportfn1 /export:f2=exportfn2 /implib:%t.lib
 # RUN: llvm-objdump -p %t.dll | FileCheck -check-prefix=CHECK4 %s
+# RUN: llvm-nm %t.lib | FileCheck -check-prefix=CHECK4-NM %s
 
 CHECK4:      Export Table:
 CHECK4:      DLL name: export.test.tmp.dll
@@ -49,6 +50,8 @@ CHECK4-NEXT:       0        0
 CHECK4-NEXT:       1   0x1010  exportfn3
 CHECK4-NEXT:       2   0x1008  f1
 CHECK4-NEXT:       3   0x1010  f2
+CHECK4-NM: 00000000 T f1
+CHECK4-NM: 00000000 T f2
 
 # RUN: echo "EXPORTS exportfn1 @3" > %t.def
 # RUN: echo "fn2=exportfn2 @2" >> %t.def

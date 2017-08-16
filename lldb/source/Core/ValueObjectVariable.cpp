@@ -156,9 +156,8 @@ bool ValueObjectVariable::UpdateValue() {
                 target);
     }
     Value old_value(m_value);
-    if (expr.Evaluate(&exe_ctx, nullptr, nullptr, nullptr,
-                      loclist_base_load_addr, nullptr, nullptr, m_value,
-                      &m_error)) {
+    if (expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr, nullptr,
+                      nullptr, m_value, &m_error)) {
       m_resolved_value = m_value;
       m_value.SetContext(Value::eContextTypeVariable, variable);
 
