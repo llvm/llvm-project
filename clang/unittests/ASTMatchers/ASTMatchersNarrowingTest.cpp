@@ -1108,26 +1108,35 @@ TEST(ConstructorDeclaration, IsExplicit) {
 }
 
 TEST(ConstructorDeclaration, Kinds) {
-  EXPECT_TRUE(matches("struct S { S(); };",
-                      cxxConstructorDecl(isDefaultConstructor())));
-  EXPECT_TRUE(notMatches("struct S { S(); };",
-                         cxxConstructorDecl(isCopyConstructor())));
-  EXPECT_TRUE(notMatches("struct S { S(); };",
-                         cxxConstructorDecl(isMoveConstructor())));
+  EXPECT_TRUE(matches(
+      "struct S { S(); };",
+      cxxConstructorDecl(isDefaultConstructor(), unless(isImplicit()))));
+  EXPECT_TRUE(notMatches(
+      "struct S { S(); };",
+      cxxConstructorDecl(isCopyConstructor(), unless(isImplicit()))));
+  EXPECT_TRUE(notMatches(
+      "struct S { S(); };",
+      cxxConstructorDecl(isMoveConstructor(), unless(isImplicit()))));
 
-  EXPECT_TRUE(notMatches("struct S { S(const S&); };",
-                         cxxConstructorDecl(isDefaultConstructor())));
-  EXPECT_TRUE(matches("struct S { S(const S&); };",
-                      cxxConstructorDecl(isCopyConstructor())));
-  EXPECT_TRUE(notMatches("struct S { S(const S&); };",
-                         cxxConstructorDecl(isMoveConstructor())));
+  EXPECT_TRUE(notMatches(
+      "struct S { S(const S&); };",
+      cxxConstructorDecl(isDefaultConstructor(), unless(isImplicit()))));
+  EXPECT_TRUE(matches(
+      "struct S { S(const S&); };",
+      cxxConstructorDecl(isCopyConstructor(), unless(isImplicit()))));
+  EXPECT_TRUE(notMatches(
+      "struct S { S(const S&); };",
+      cxxConstructorDecl(isMoveConstructor(), unless(isImplicit()))));
 
-  EXPECT_TRUE(notMatches("struct S { S(S&&); };",
-                         cxxConstructorDecl(isDefaultConstructor())));
-  EXPECT_TRUE(notMatches("struct S { S(S&&); };",
-                         cxxConstructorDecl(isCopyConstructor())));
-  EXPECT_TRUE(matches("struct S { S(S&&); };",
-                      cxxConstructorDecl(isMoveConstructor())));
+  EXPECT_TRUE(notMatches(
+      "struct S { S(S&&); };",
+      cxxConstructorDecl(isDefaultConstructor(), unless(isImplicit()))));
+  EXPECT_TRUE(notMatches(
+      "struct S { S(S&&); };",
+      cxxConstructorDecl(isCopyConstructor(), unless(isImplicit()))));
+  EXPECT_TRUE(matches(
+      "struct S { S(S&&); };",
+      cxxConstructorDecl(isMoveConstructor(), unless(isImplicit()))));
 }
 
 TEST(ConstructorDeclaration, IsUserProvided) {

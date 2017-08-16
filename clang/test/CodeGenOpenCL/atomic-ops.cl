@@ -1,11 +1,32 @@
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -finclude-default-header -O0 -o - -triple=amdgcn-amd-amdhsa-opencl | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -O0 -o - -triple=amdgcn-amd-amdhsa-opencl | opt -instnamer -S | FileCheck %s
 
 // Also test serialization of atomic operations here, to avoid duplicating the test.
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -finclude-default-header -emit-pch -O0 -o %t -triple=amdgcn-amd-amdhsa-opencl
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -finclude-default-header -include-pch %t -O0 -triple=amdgcn-amd-amdhsa-opencl -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-pch -O0 -o %t -triple=amdgcn-amd-amdhsa-opencl
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -include-pch %t -O0 -triple=amdgcn-amd-amdhsa-opencl -emit-llvm -o - | opt -instnamer -S | FileCheck %s
 
 #ifndef ALREADY_INCLUDED
 #define ALREADY_INCLUDED
+
+typedef __INTPTR_TYPE__ intptr_t;
+typedef int int8 __attribute__((ext_vector_type(8)));
+
+typedef enum memory_order {
+  memory_order_relaxed = __ATOMIC_RELAXED,
+  memory_order_acquire = __ATOMIC_ACQUIRE,
+  memory_order_release = __ATOMIC_RELEASE,
+  memory_order_acq_rel = __ATOMIC_ACQ_REL,
+  memory_order_seq_cst = __ATOMIC_SEQ_CST
+} memory_order;
+
+typedef enum memory_scope {
+  memory_scope_work_item = __OPENCL_MEMORY_SCOPE_WORK_ITEM,
+  memory_scope_work_group = __OPENCL_MEMORY_SCOPE_WORK_GROUP,
+  memory_scope_device = __OPENCL_MEMORY_SCOPE_DEVICE,
+  memory_scope_all_svm_devices = __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES,
+#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups)
+  memory_scope_sub_group = __OPENCL_MEMORY_SCOPE_SUB_GROUP
+#endif
+} memory_scope;
 
 atomic_int j;
 
@@ -50,6 +71,81 @@ bool fi4(atomic_int *i) {
   // CHECK: store i32 [[OLD]]
   int cmp = 0;
   return __opencl_atomic_compare_exchange_strong(i, &cmp, 1, memory_order_acquire, memory_order_acquire, memory_scope_work_group);
+}
+
+void fi5(atomic_int *i, int scope) {
+  // CHECK-LABEL: @fi5
+  // CHECK: switch i32 %{{.*}}, label %[[opencl_allsvmdevices:.*]] [
+  // CHECK-NEXT: i32 1, label %[[opencl_workgroup:.*]]
+  // CHECK-NEXT: i32 2, label %[[opencl_device:.*]]
+  // CHECK-NEXT: i32 4, label %[[opencl_subgroup:.*]]
+  // CHECK-NEXT: ]
+  // CHECK: [[opencl_workgroup]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} syncscope("workgroup") seq_cst
+  // CHECK: br label %[[continue:.*]]
+  // CHECK: [[opencl_device]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} syncscope("agent") seq_cst
+  // CHECK: br label %[[continue]]
+  // CHECK: [[opencl_allsvmdevices]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} seq_cst
+  // CHECK: br label %[[continue]]
+  // CHECK: [[opencl_subgroup]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} syncscope("subgroup") seq_cst
+  // CHECK: br label %[[continue]]
+  // CHECK: [[continue]]:
+  int x = __opencl_atomic_load(i, memory_order_seq_cst, scope);
+}
+
+void fi6(atomic_int *i, int order, int scope) {
+  // CHECK-LABEL: @fi6
+  // CHECK: switch i32 %{{.*}}, label %[[monotonic:.*]] [
+  // CHECK-NEXT: i32 1, label %[[acquire:.*]]
+  // CHECK-NEXT: i32 2, label %[[acquire:.*]]
+  // CHECK-NEXT: i32 5, label %[[seqcst:.*]]
+  // CHECK-NEXT: ]
+  // CHECK: [[monotonic]]:
+  // CHECK: switch i32 %{{.*}}, label %[[MON_ALL:.*]] [
+  // CHECK-NEXT: i32 1, label %[[MON_WG:.*]]
+  // CHECK-NEXT: i32 2, label %[[MON_DEV:.*]]
+  // CHECK-NEXT: i32 4, label %[[MON_SUB:.*]]
+  // CHECK-NEXT: ]
+  // CHECK: [[acquire]]:
+  // CHECK: switch i32 %{{.*}}, label %[[ACQ_ALL:.*]] [
+  // CHECK-NEXT: i32 1, label %[[ACQ_WG:.*]]
+  // CHECK-NEXT: i32 2, label %[[ACQ_DEV:.*]]
+  // CHECK-NEXT: i32 4, label %[[ACQ_SUB:.*]]
+  // CHECK-NEXT: ]
+  // CHECK: [[seqcst]]:
+  // CHECK: switch i32 %{{.*}}, label %[[SEQ_ALL:.*]] [
+  // CHECK-NEXT: i32 1, label %[[SEQ_WG:.*]]
+  // CHECK-NEXT: i32 2, label %[[SEQ_DEV:.*]]
+  // CHECK-NEXT: i32 4, label %[[SEQ_SUB:.*]]
+  // CHECK-NEXT: ]
+  // CHECK: [[MON_WG]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} syncscope("workgroup") monotonic
+  // CHECK: [[MON_DEV]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} syncscope("agent") monotonic
+  // CHECK: [[MON_ALL]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} monotonic
+  // CHECK: [[MON_SUB]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} syncscope("subgroup") monotonic
+  // CHECK: [[ACQ_WG]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} syncscope("workgroup") acquire
+  // CHECK: [[ACQ_DEV]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} syncscope("agent") acquire
+  // CHECK: [[ACQ_ALL]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} acquire
+  // CHECK: [[ACQ_SUB]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} syncscope("subgroup") acquire
+  // CHECK: [[SEQ_WG]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} syncscope("workgroup") seq_cst
+  // CHECK: [[SEQ_DEV]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} syncscope("agent") seq_cst
+  // CHECK: [[SEQ_ALL]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} seq_cst
+  // CHECK: [[SEQ_SUB]]:
+  // CHECK: load atomic i32, i32 addrspace(4)* %{{.*}} syncscope("subgroup") seq_cst
+  int x = __opencl_atomic_load(i, order, scope);
 }
 
 float ff1(global atomic_float *d) {

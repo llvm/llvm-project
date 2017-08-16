@@ -977,7 +977,7 @@ namespace {
   /// RAII object used to optionally suppress diagnostics and side-effects from
   /// a speculative evaluation.
   class SpeculativeEvaluationRAII {
-    EvalInfo *Info;
+    EvalInfo *Info = nullptr;
     Expr::EvalStatus OldStatus;
     bool OldIsSpeculativelyEvaluating;
 
