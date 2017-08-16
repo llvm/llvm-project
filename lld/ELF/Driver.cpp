@@ -716,8 +716,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->ThinLTOJobs = parseInt(S.substr(5), Arg);
     else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
              !S.startswith("-pass-through=") && !S.startswith("mcpu=") &&
-             !S.startswith("thinlto") && !S.startswith("-function-sections") &&
-             !S.startswith("-data-sections"))
+             !S.startswith("thinlto") && S != "-function-sections" &&
+             S != "-data-sections")
       error(Arg->getSpelling() + ": unknown option: " + S);
   }
 

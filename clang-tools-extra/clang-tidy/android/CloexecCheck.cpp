@@ -20,10 +20,6 @@ namespace tidy {
 namespace android {
 
 namespace {
-
-const char *const FuncDeclBindingStr = "funcDecl";
-const char *const FuncBindingStr = "func";
-
 // Helper function to form the correct string mode for Type3.
 // Build the replace text. If it's string constant, add <Mode> directly in the
 // end of the string. Else, add <Mode>.
@@ -40,6 +36,10 @@ std::string buildFixMsgForStringFlag(const Expr *Arg, const SourceManager &SM,
   return ("\"" + SR + Twine(Mode) + "\"").str();
 }
 } // namespace
+
+constexpr char CloexecCheck::FuncDeclBindingStr[];
+
+constexpr char CloexecCheck::FuncBindingStr[];
 
 void CloexecCheck::registerMatchersImpl(
     MatchFinder *Finder, internal::Matcher<FunctionDecl> Function) {

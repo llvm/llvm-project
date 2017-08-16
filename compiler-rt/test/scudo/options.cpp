@@ -22,4 +22,4 @@ int main(int argc, char **argv)
   return 0;
 }
 
-// CHECK: ERROR: allocation type mismatch on address
+// CHECK: ERROR: allocation type mismatch when deallocating address
