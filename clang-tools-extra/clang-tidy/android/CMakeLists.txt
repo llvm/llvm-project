@@ -7,6 +7,7 @@ add_clang_library(clangTidyAndroidModule
   CloexecCheck.cpp
   CloexecCreatCheck.cpp
   CloexecEpollCreate1Check.cpp
+  CloexecEpollCreateCheck.cpp
   CloexecDupCheck.cpp
   CloexecFopenCheck.cpp
   CloexecInotifyInit1Check.cpp

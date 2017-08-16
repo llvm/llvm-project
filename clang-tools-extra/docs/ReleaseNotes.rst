@@ -97,6 +97,11 @@ Improvements to clang-tidy
   Checks if the required file flag ``EPOLL_CLOEXEC`` is present in the argument of
   ``epoll_create1()``.
 
+- New `android-cloexec-epoll-create
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-epoll-create.html>`_ check
+
+  Detects usage of ``epoll_create()``.
+
 - New `android-cloexec-memfd_create
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-memfd_create.html>`_ check
 
