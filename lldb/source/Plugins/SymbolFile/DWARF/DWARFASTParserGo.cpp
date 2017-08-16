@@ -662,8 +662,6 @@ size_t DWARFASTParserGo::ParseChildMembers(const SymbolContext &sc,
                     form_value.BlockData() - debug_info_data.GetDataStart();
                 if (DWARFExpression::Evaluate(
                         NULL, // ExecutionContext *
-                        NULL, // ClangExpressionVariableList *
-                        NULL, // ClangExpressionDeclMap *
                         NULL, // RegisterContext *
                         module_sp, debug_info_data, die.GetCU(), block_offset,
                         block_length, eRegisterKindDWARF, &initialValue, NULL,

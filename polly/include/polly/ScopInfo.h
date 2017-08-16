@@ -1281,7 +1281,7 @@ private:
   /// The closest loop that contains this statement.
   Loop *SurroundingLoop;
 
-  /// Vector for Instructions in a BB.
+  /// Vector for Instructions in this statement.
   std::vector<Instruction *> Instructions;
 
   /// Build the statement.
@@ -2181,7 +2181,7 @@ private:
   ///
   /// @param BB              The basic block we build the statement for.
   /// @param SurroundingLoop The loop the created statement is contained in.
-  /// @param Instructions    The instructions in the basic block.
+  /// @param Instructions    The instructions in the statement.
   void addScopStmt(BasicBlock *BB, Loop *SurroundingLoop,
                    std::vector<Instruction *> Instructions);
 

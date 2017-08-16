@@ -566,16 +566,23 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP) {
   // Only currently enable these preferences for M-Class cores.
-  if (!ST->isMClass() || L->getNumBlocks() != 1)
+  if (!ST->isMClass())
     return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP);
+
+  // Only enable on Thumb-2 targets for simple loops.
+  if (!ST->isThumb2() || L->getNumBlocks() != 1)
+    return;
 
   // Disable loop unrolling for Oz and Os.
   UP.OptSizeThreshold = 0;
   UP.PartialOptSizeThreshold = 0;
+  BasicBlock *BB = L->getLoopLatch();
+  if (BB->getParent()->optForSize())
+    return;
 
   // Scan the loop: don't unroll loops with calls as this could prevent
   // inlining.
-  BasicBlock *BB = L->getLoopLatch();
+  unsigned Cost = 0;
   for (auto &I : *BB) {
     if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
       ImmutableCallSite CS(&I);
@@ -585,12 +592,18 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       }
       return;
     }
+    SmallVector<const Value*, 4> Operands(I.value_op_begin(),
+                                          I.value_op_end());
+    Cost += getUserCost(&I, Operands);
   }
 
-  // Enable partial and runtime unrolling, set the initial threshold based upon
-  // the number of registers available.
   UP.Partial = true;
   UP.Runtime = true;
-  UP.Threshold = ST->isThumb1Only() ? 75 : 150;
-  UP.PartialThreshold = ST->isThumb1Only() ? 75 : 150;
+  UP.UnrollRemainder = true;
+  UP.DefaultUnrollRuntimeCount = 4;
+
+  // Force unrolling small loops can be very useful because of the branch
+  // taken cost of the backedge.
+  if (Cost < 12)
+    UP.Force = true;
 }
