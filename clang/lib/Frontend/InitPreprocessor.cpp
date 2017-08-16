@@ -578,7 +578,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__ATOMIC_SEQ_CST", "5");
 
   // Define macros for the OpenCL memory scope.
-  // The values should match clang SyncScope enum.
+  // The values should match AtomicScopeOpenCLModel::ID enum.
   static_assert(
       static_cast<unsigned>(AtomicScopeOpenCLModel::WorkGroup) == 1 &&
           static_cast<unsigned>(AtomicScopeOpenCLModel::Device) == 2 &&

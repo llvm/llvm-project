@@ -5726,6 +5726,53 @@ static void DefineImplicitSpecialMember(Sema &S, CXXMethodDecl *MD,
   }
 }
 
+/// Determine whether a type is permitted to be passed or returned in
+/// registers, per C++ [class.temporary]p3.
+static bool computeCanPassInRegisters(Sema &S, CXXRecordDecl *D) {
+  if (D->isDependentType() || D->isInvalidDecl())
+    return false;
+
+  // Per C++ [class.temporary]p3, the relevant condition is:
+  //   each copy constructor, move constructor, and destructor of X is
+  //   either trivial or deleted, and X has at least one non-deleted copy
+  //   or move constructor
+  bool HasNonDeletedCopyOrMove = false;
+
+  if (D->needsImplicitCopyConstructor() &&
+      !D->defaultedCopyConstructorIsDeleted()) {
+    if (!D->hasTrivialCopyConstructor())
+      return false;
+    HasNonDeletedCopyOrMove = true; 
+  }
+
+  if (S.getLangOpts().CPlusPlus11 && D->needsImplicitMoveConstructor() &&
+      !D->defaultedMoveConstructorIsDeleted()) {
+    if (!D->hasTrivialMoveConstructor())
+      return false;
+    HasNonDeletedCopyOrMove = true;
+  }
+
+  if (D->needsImplicitDestructor() && !D->defaultedDestructorIsDeleted() &&
+      !D->hasTrivialDestructor())
+    return false;
+
+  for (const CXXMethodDecl *MD : D->methods()) {
+    if (MD->isDeleted())
+      continue;
+
+    auto *CD = dyn_cast<CXXConstructorDecl>(MD);
+    if (CD && CD->isCopyOrMoveConstructor())
+      HasNonDeletedCopyOrMove = true;
+    else if (!isa<CXXDestructorDecl>(MD))
+      continue;
+
+    if (!MD->isTrivial())
+      return false;
+  }
+
+  return HasNonDeletedCopyOrMove;
+}
+
 /// \brief Perform semantic checks on a class definition that has been
 /// completing, introducing implicitly-declared members, checking for
 /// abstract types, etc.
@@ -5870,6 +5917,8 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   }
 
   checkClassLevelDLLAttribute(Record);
+
+  Record->setCanPassInRegisters(computeCanPassInRegisters(*this, Record));
 }
 
 /// Look up the special member function that would be called by a special
@@ -7496,8 +7545,7 @@ void Sema::ActOnFinishCXXMemberSpecification(Scope* S, SourceLocation RLoc,
               reinterpret_cast<Decl**>(FieldCollector->getCurFields()),
               FieldCollector->getCurNumFields()), LBrac, RBrac, AttrList);
 
-  CheckCompletedCXXClass(
-                        dyn_cast_or_null<CXXRecordDecl>(TagDecl));
+  CheckCompletedCXXClass(dyn_cast_or_null<CXXRecordDecl>(TagDecl));
 }
 
 /// AddImplicitlyDeclaredMembersToClass - Adds any implicitly-declared
@@ -11929,8 +11977,10 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
   Scope *S = getScopeForContext(ClassDecl);
   CheckImplicitSpecialMemberDeclaration(S, CopyConstructor);
 
-  if (ShouldDeleteSpecialMember(CopyConstructor, CXXCopyConstructor))
+  if (ShouldDeleteSpecialMember(CopyConstructor, CXXCopyConstructor)) {
+    ClassDecl->setImplicitCopyConstructorIsDeleted();
     SetDeclDeleted(CopyConstructor, ClassLoc);
+  }
 
   if (S)
     PushOnScopeChains(CopyConstructor, S, false);

@@ -161,7 +161,7 @@ namespace {
       return true;
     }
 
-    /// \brief Suppress traversel into types with location information
+    /// \brief Suppress traversal into types with location information
     /// that do not contain unexpanded parameter packs.
     bool TraverseTypeLoc(TypeLoc TL) {
       if ((!TL.getType().isNull() && 
@@ -172,19 +172,48 @@ namespace {
       return true;
     }
 
-    /// \brief Suppress traversal of non-parameter declarations, since
-    /// they cannot contain unexpanded parameter packs.
+    /// \brief Suppress traversal of parameter packs.
     bool TraverseDecl(Decl *D) { 
-      auto *PVD = dyn_cast_or_null<ParmVarDecl>(D);
       // A function parameter pack is a pack expansion, so cannot contain
-      // an unexpanded parameter pack.
-      if (PVD && PVD->isParameterPack())
+      // an unexpanded parameter pack. Likewise for a template parameter
+      // pack that contains any references to other packs.
+      if (D->isParameterPack())
         return true;
 
-      if (PVD || InLambda)
-        return inherited::TraverseDecl(D);
+      return inherited::TraverseDecl(D);
+    }
 
-      return true;
+    /// \brief Suppress traversal of pack-expanded attributes.
+    bool TraverseAttr(Attr *A) {
+      if (A->isPackExpansion())
+        return true;
+
+      return inherited::TraverseAttr(A);
+    }
+
+    /// \brief Suppress traversal of pack expansion expressions and types.
+    ///@{
+    bool TraversePackExpansionType(PackExpansionType *T) { return true; }
+    bool TraversePackExpansionTypeLoc(PackExpansionTypeLoc TL) { return true; }
+    bool TraversePackExpansionExpr(PackExpansionExpr *E) { return true; }
+    bool TraverseCXXFoldExpr(CXXFoldExpr *E) { return true; }
+
+    ///@}
+
+    /// \brief Suppress traversal of using-declaration pack expansion.
+    bool TraverseUnresolvedUsingValueDecl(UnresolvedUsingValueDecl *D) {
+      if (D->isPackExpansion())
+        return true;
+
+      return inherited::TraverseUnresolvedUsingValueDecl(D);
+    }
+
+    /// \brief Suppress traversal of using-declaration pack expansion.
+    bool TraverseUnresolvedUsingTypenameDecl(UnresolvedUsingTypenameDecl *D) {
+      if (D->isPackExpansion())
+        return true;
+
+      return inherited::TraverseUnresolvedUsingTypenameDecl(D);
     }
 
     /// \brief Suppress traversal of template argument pack expansions.
@@ -201,6 +230,22 @@ namespace {
         return true;
       
       return inherited::TraverseTemplateArgumentLoc(ArgLoc);
+    }
+
+    /// \brief Suppress traversal of base specifier pack expansions.
+    bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &Base) {
+      if (Base.isPackExpansion())
+        return true;
+
+      return inherited::TraverseCXXBaseSpecifier(Base);
+    }
+
+    /// \brief Suppress traversal of mem-initializer pack expansions.
+    bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+      if (Init->isPackExpansion())
+        return true;
+
+      return inherited::TraverseConstructorInitializer(Init);
     }
 
     /// \brief Note whether we're traversing a lambda containing an unexpanded
@@ -233,6 +278,7 @@ namespace {
                                Expr *Init) {
       if (C->isPackExpansion())
         return true;
+
       return inherited::TraverseLambdaCapture(Lambda, C, Init);
     }
   };
@@ -266,25 +312,25 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
   // parameter pack, and we are done.
   // FIXME: Store 'Unexpanded' on the lambda so we don't need to recompute it
   // later.
-  SmallVector<UnexpandedParameterPack, 4> GenericLambdaParamReferences;
+  SmallVector<UnexpandedParameterPack, 4> LambdaParamPackReferences;
   for (unsigned N = FunctionScopes.size(); N; --N) {
     if (sema::LambdaScopeInfo *LSI =
           dyn_cast<sema::LambdaScopeInfo>(FunctionScopes[N-1])) {
-      if (LSI->isGenericLambda()) {
+      if (N == FunctionScopes.size()) {
         for (auto &Param : Unexpanded) {
           auto *PD = dyn_cast_or_null<ParmVarDecl>(
               Param.first.dyn_cast<NamedDecl *>());
           if (PD && PD->getDeclContext() == LSI->CallOperator)
-            GenericLambdaParamReferences.push_back(Param);
+            LambdaParamPackReferences.push_back(Param);
         }
       }
 
-      // If we have references to a parameter of a generic lambda, only
-      // diagnose those ones. We don't know whether any other unexpanded
-      // parameters referenced herein are actually unexpanded; they might
-      // be expanded at an outer level.
-      if (!GenericLambdaParamReferences.empty()) {
-        Unexpanded = GenericLambdaParamReferences;
+      // If we have references to a parameter pack of the innermost enclosing
+      // lambda, only diagnose those ones. We don't know whether any other
+      // unexpanded parameters referenced herein are actually unexpanded;
+      // they might be expanded at an outer level.
+      if (!LambdaParamPackReferences.empty()) {
+        Unexpanded = LambdaParamPackReferences;
         break;
       }
 

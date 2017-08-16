@@ -2772,6 +2772,16 @@ public:
   path_const_iterator path_begin() const { return path_buffer(); }
   path_const_iterator path_end() const { return path_buffer() + path_size(); }
 
+  const FieldDecl *getTargetUnionField() const {
+    assert(getCastKind() == CK_ToUnion);
+    return getTargetFieldForToUnionCast(getType(), getSubExpr()->getType());
+  }
+
+  static const FieldDecl *getTargetFieldForToUnionCast(QualType unionType,
+                                                       QualType opType);
+  static const FieldDecl *getTargetFieldForToUnionCast(const RecordDecl *RD,
+                                                       QualType opType);
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() >= firstCastExprConstant &&
            T->getStmtClass() <= lastCastExprConstant;

@@ -111,9 +111,62 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   LiveIntervals *LIS = &getAnalysis<LiveIntervals>();
+  DenseSet<unsigned> RecalcRegs({AMDGPU::EXEC_LO, AMDGPU::EXEC_HI});
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
+
+    // Try to remove unneeded instructions before s_endpgm.
+    if (MBB.succ_empty()) {
+      if (MBB.empty() || MBB.back().getOpcode() != AMDGPU::S_ENDPGM)
+        continue;
+
+      SmallVector<MachineBasicBlock*, 4> Blocks({&MBB});
+
+      while (!Blocks.empty()) {
+        auto CurBB = Blocks.pop_back_val();
+        auto I = CurBB->rbegin(), E = CurBB->rend();
+        if (I != E) {
+          if (I->isUnconditionalBranch() || I->getOpcode() == AMDGPU::S_ENDPGM)
+            ++I;
+          else if (I->isBranch())
+            continue;
+        }
+
+        while (I != E) {
+          if (I->isDebugValue())
+            continue;
+          if (I->mayStore() || I->isBarrier() || I->isCall() ||
+              I->hasUnmodeledSideEffects() || I->hasOrderedMemoryRef())
+            break;
+
+          DEBUG(dbgs() << "Removing no effect instruction: " << *I << '\n');
+
+          for (auto &Op : I->operands())
+            if (Op.isReg())
+              RecalcRegs.insert(Op.getReg());
+
+          auto Next = std::next(I);
+          LIS->RemoveMachineInstrFromMaps(*I);
+          I->eraseFromParent();
+          I = Next;
+
+          Changed = true;
+        }
+
+        if (I != E)
+          continue;
+
+        // Try to ascend predecessors.
+        for (auto *Pred : CurBB->predecessors()) {
+          if (Pred->succ_size() == 1)
+            Blocks.push_back(Pred);
+        }
+      }
+      continue;
+    }
+
+    // Try to collapse adjacent endifs.
     auto Lead = MBB.begin(), E = MBB.end();
     if (MBB.succ_size() != 1 || Lead == E || !isEndCF(*Lead, TRI))
       continue;
@@ -174,9 +227,16 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
   }
 
   if (Changed) {
-    // Recompute liveness for both reg units of exec.
-    LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::EXEC_LO, TRI));
-    LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::EXEC_HI, TRI));
+    for (auto Reg : RecalcRegs) {
+      if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+        LIS->removeInterval(Reg);
+        if (!MRI.reg_empty(Reg))
+          LIS->createAndComputeVirtRegInterval(Reg);
+      } else {
+        for (MCRegUnitIterator U(Reg, TRI); U.isValid(); ++U)
+          LIS->removeRegUnit(*U);
+      }
+    }
   }
 
   return Changed;

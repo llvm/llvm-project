@@ -20,7 +20,6 @@
 ; GCN: ds_write_b32
 
 ; GCN: [[BB5]]
-; GCN: s_or_b64 exec, exec
 ; GCN-NEXT: s_endpgm
 ; GCN-NEXT: .Lfunc_end
 define amdgpu_ps void @ham(float %arg, float %arg1) #0 {

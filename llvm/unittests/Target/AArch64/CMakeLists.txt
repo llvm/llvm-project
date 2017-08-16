@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
   AArch64Info
   CodeGen
   Core
+  GlobalISel
   MC
   MIRParser
   SelectionDAG
