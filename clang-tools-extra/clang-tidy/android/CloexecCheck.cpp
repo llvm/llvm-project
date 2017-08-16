@@ -37,9 +37,9 @@ std::string buildFixMsgForStringFlag(const Expr *Arg, const SourceManager &SM,
 }
 } // namespace
 
-constexpr char CloexecCheck::FuncDeclBindingStr[];
+const char *CloexecCheck::FuncDeclBindingStr = "funcDecl";
 
-constexpr char CloexecCheck::FuncBindingStr[];
+const char *CloexecCheck::FuncBindingStr ="func";
 
 void CloexecCheck::registerMatchersImpl(
     MatchFinder *Finder, internal::Matcher<FunctionDecl> Function) {
