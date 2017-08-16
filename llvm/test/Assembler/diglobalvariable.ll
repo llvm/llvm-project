@@ -20,5 +20,6 @@
 !6 = !DICompositeType(tag: DW_TAG_structure_type, name: "Class", size: 8, align: 8)
 !7 = !DIDerivedType(tag: DW_TAG_member, name: "mem", flags: DIFlagStaticMember, scope: !6, baseType: !3)
 
-; CHECK: !8 = !DIGlobalVariable(name: "mem", scope: !0, isLocal: false, isDefinition: true, declaration: !7)
-!8 = !DIGlobalVariable(name: "mem", scope: !0, declaration: !7)
+; CHECK: !8 = !DIGlobalVariable(name: "mem", scope: !0, type: !9, isLocal: false, isDefinition: true, declaration: !7)
+!8 = !DIGlobalVariable(name: "mem", scope: !0, declaration: !7, type: !9)
+!9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

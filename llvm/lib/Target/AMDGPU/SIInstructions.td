@@ -1033,8 +1033,8 @@ def : Pat <
 // VOP3 Patterns
 //===----------------------------------------------------------------------===//
 
-def : IMad24Pat<V_MAD_I32_I24>;
-def : UMad24Pat<V_MAD_U32_U24>;
+def : IMad24Pat<V_MAD_I32_I24, 1>;
+def : UMad24Pat<V_MAD_U32_U24, 1>;
 
 defm : BFIPatterns <V_BFI_B32, S_MOV_B32, SReg_64>;
 def : ROTRPattern <V_ALIGNBIT_B32>;
@@ -1083,7 +1083,7 @@ def : Pat <
   (add (sub_oneuse (umax i32:$src0, i32:$src1),
                    (umin i32:$src0, i32:$src1)),
        i32:$src2),
-  (V_SAD_U32 $src0, $src1, $src2)
+  (V_SAD_U32 $src0, $src1, $src2, (i1 0))
 >;
 
 def : Pat <
@@ -1091,7 +1091,7 @@ def : Pat <
                       (sub i32:$src0, i32:$src1),
                       (sub i32:$src1, i32:$src0)),
        i32:$src2),
-  (V_SAD_U32 $src0, $src1, $src2)
+  (V_SAD_U32 $src0, $src1, $src2, (i1 0))
 >;
 
 //===----------------------------------------------------------------------===//

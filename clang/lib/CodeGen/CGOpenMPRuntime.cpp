@@ -1438,19 +1438,22 @@ llvm::Value *CGOpenMPRuntime::getThreadID(CodeGenFunction &CGF,
     if (ThreadID != nullptr)
       return ThreadID;
   }
-  if (auto *OMPRegionInfo =
-          dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo)) {
-    if (OMPRegionInfo->getThreadIDVariable()) {
-      // Check if this an outlined function with thread id passed as argument.
-      auto LVal = OMPRegionInfo->getThreadIDVariableLValue(CGF);
-      ThreadID = CGF.EmitLoadOfLValue(LVal, Loc).getScalarVal();
-      // If value loaded in entry block, cache it and use it everywhere in
-      // function.
-      if (CGF.Builder.GetInsertBlock() == CGF.AllocaInsertPt->getParent()) {
-        auto &Elem = OpenMPLocThreadIDMap.FindAndConstruct(CGF.CurFn);
-        Elem.second.ThreadID = ThreadID;
+  // If exceptions are enabled, do not use parameter to avoid possible crash.
+  if (!CGF.getInvokeDest()) {
+    if (auto *OMPRegionInfo =
+            dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo)) {
+      if (OMPRegionInfo->getThreadIDVariable()) {
+        // Check if this an outlined function with thread id passed as argument.
+        auto LVal = OMPRegionInfo->getThreadIDVariableLValue(CGF);
+        ThreadID = CGF.EmitLoadOfLValue(LVal, Loc).getScalarVal();
+        // If value loaded in entry block, cache it and use it everywhere in
+        // function.
+        if (CGF.Builder.GetInsertBlock() == CGF.AllocaInsertPt->getParent()) {
+          auto &Elem = OpenMPLocThreadIDMap.FindAndConstruct(CGF.CurFn);
+          Elem.second.ThreadID = ThreadID;
+        }
+        return ThreadID;
       }
-      return ThreadID;
     }
   }
 

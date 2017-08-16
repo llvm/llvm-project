@@ -1072,7 +1072,7 @@ class getIns32 <RegisterOperand Src0RC, RegisterClass Src1RC, int NumSrcArgs> {
 // Returns the input arguments for VOP3 instructions for the given SrcVT.
 class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
                 RegisterOperand Src2RC, int NumSrcArgs,
-                bit HasModifiers, bit HasOMod,
+                bit HasIntClamp, bit HasModifiers, bit HasOMod,
                 Operand Src0Mod, Operand Src1Mod, Operand Src2Mod> {
 
   dag ret =
@@ -1087,7 +1087,9 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
              clampmod:$clamp, omod:$omod)
       /* else */,
         // VOP1 without modifiers
-        (ins Src0RC:$src0)
+        !if (!eq(HasIntClamp, 1),
+          (ins Src0RC:$src0, clampmod:$clamp),
+          (ins Src0RC:$src0))
       /* endif */ ),
     !if (!eq(NumSrcArgs, 2),
       !if (!eq(HasModifiers, 1),
@@ -1101,7 +1103,10 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
                clampmod:$clamp))
       /* else */,
         // VOP2 without modifiers
-        (ins Src0RC:$src0, Src1RC:$src1)
+        !if (!eq(HasIntClamp, 1),
+          (ins Src0RC:$src0, Src1RC:$src1, clampmod:$clamp),
+          (ins Src0RC:$src0, Src1RC:$src1))
+
       /* endif */ )
     /* NumSrcArgs == 3 */,
       !if (!eq(HasModifiers, 1),
@@ -1117,7 +1122,9 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
                clampmod:$clamp))
       /* else */,
         // VOP3 without modifiers
-        (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2)
+        !if (!eq(HasIntClamp, 1),
+          (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2, clampmod:$clamp),
+          (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2))
       /* endif */ ))));
 }
 
@@ -1305,7 +1312,7 @@ class getAsm32 <bit HasDst, int NumSrcArgs, ValueType DstVT = i32> {
 
 // Returns the assembly string for the inputs and outputs of a VOP3
 // instruction.
-class getAsm64 <bit HasDst, int NumSrcArgs, bit HasModifiers,
+class getAsm64 <bit HasDst, int NumSrcArgs, bit HasIntClamp, bit HasModifiers,
                 bit HasOMod, ValueType DstVT = i32> {
   string dst = !if(!eq(DstVT.Size, 1), "$sdst", "$vdst"); // use $sdst for VOPC
   string src0 = !if(!eq(NumSrcArgs, 1), "$src0_modifiers", "$src0_modifiers,");
@@ -1313,9 +1320,10 @@ class getAsm64 <bit HasDst, int NumSrcArgs, bit HasModifiers,
                    !if(!eq(NumSrcArgs, 2), " $src1_modifiers",
                                            " $src1_modifiers,"));
   string src2 = !if(!eq(NumSrcArgs, 3), " $src2_modifiers", "");
+  string iclamp = !if(HasIntClamp, "$clamp", "");
   string ret =
   !if(!eq(HasModifiers, 0),
-      getAsm32<HasDst, NumSrcArgs, DstVT>.ret,
+      getAsm32<HasDst, NumSrcArgs, DstVT>.ret # iclamp,
       dst#", "#src0#src1#src2#"$clamp"#!if(HasOMod, "$omod", ""));
 }
 
@@ -1520,6 +1528,7 @@ class VOPProfile <list<ValueType> _ArgVT> {
   field bit HasClamp = HasModifiers;
   field bit HasSDWAClamp = EmitDst;
   field bit HasFPClamp = BitAnd<isFloatType<DstVT>.ret, HasClamp>.ret;
+  field bit HasIntClamp = !if(isFloatType<DstVT>.ret, 0, HasClamp);
   field bit HasHigh = 0;
 
   field bit IsPacked = isPackedType<Src0VT>.ret;
@@ -1545,7 +1554,7 @@ class VOPProfile <list<ValueType> _ArgVT> {
 
   field dag Ins32 = getIns32<Src0RC32, Src1RC32, NumSrcArgs>.ret;
   field dag Ins64 = getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                             HasModifiers, HasOMod, Src0Mod, Src1Mod,
+                             HasIntClamp, HasModifiers, HasOMod, Src0Mod, Src1Mod,
                              Src2Mod>.ret;
   field dag InsVOP3P = getInsVOP3P<Src0RC64, Src1RC64, Src2RC64,
                                    NumSrcArgs, HasClamp,
@@ -1564,7 +1573,7 @@ class VOPProfile <list<ValueType> _ArgVT> {
 
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
-  field string Asm64 = getAsm64<HasDst, NumSrcArgs, HasModifiers, HasOMod, DstVT>.ret;
+  field string Asm64 = getAsm64<HasDst, NumSrcArgs, HasIntClamp, HasModifiers, HasOMod, DstVT>.ret;
   field string AsmVOP3P = getAsmVOP3P<HasDst, NumSrcArgs, HasModifiers, HasClamp, DstVT>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,
                                               HasClamp,

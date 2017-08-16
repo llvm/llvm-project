@@ -48,8 +48,18 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
     // If all bits of a user are demanded, then we know that nothing below that
     // in the def-use chain needs to be changed.
     auto *J = dyn_cast<Instruction>(JU);
-    if (J && !DB.getDemandedBits(J).isAllOnesValue())
+    if (J && J->getType()->isSized() &&
+        !DB.getDemandedBits(J).isAllOnesValue())
       WorkList.push_back(J);
+
+    // Note that we need to check for unsized types above before asking for
+    // demanded bits. Normally, the only way to reach an instruction with an
+    // unsized type is via an instruction that has side effects (or otherwise
+    // will demand its input bits). However, if we have a readnone function
+    // that returns an unsized type (e.g., void), we must avoid asking for the
+    // demanded bits of the function call's return value. A void-returning
+    // readnone function is always dead (and so we can stop walking the use/def
+    // chain here), but the check is necessary to avoid asserting.
   }
 
   // DFS through subsequent users while tracking visits to avoid cycles.
@@ -70,7 +80,8 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
       // If all bits of a user are demanded, then we know that nothing below
       // that in the def-use chain needs to be changed.
       auto *K = dyn_cast<Instruction>(KU);
-      if (K && !Visited.count(K) && !DB.getDemandedBits(K).isAllOnesValue())
+      if (K && !Visited.count(K) && K->getType()->isSized() &&
+          !DB.getDemandedBits(K).isAllOnesValue())
         WorkList.push_back(K);
     }
   }
