@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -fexceptions -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++2a -fsyntax-only -fexceptions -fcxx-exceptions -verify %s
 
 template<typename... Types> struct tuple;
 template<int I> struct int_c;
@@ -174,6 +175,7 @@ int check_temp_arg_1[is_same<tuple_of_ints<1, 2, 3, 4, 5>::type,
                              tuple<int_c<1>, int_c<2>, int_c<3>, int_c<4>, 
                                    int_c<5>>>::value? 1 : -1];
 
+#if __cplusplus < 201703L
 // In a dynamic-exception-specification (15.4); the pattern is a type-id.
 template<typename ...Types>
 struct f_with_except {
@@ -191,3 +193,99 @@ struct check_f_with_except_2 : f_with_except<int, float> {
 struct check_f_with_except_3 : f_with_except<int, float> {
   virtual void f() throw(int, float, double); // expected-error{{exception specification of overriding function is more lax than base version}}
 };
+#endif
+
+namespace PackExpansionWithinLambda {
+  void swallow(...);
+  template<typename ...T, typename ...U> void f(U ...u) {
+    swallow([=] {
+      // C++17 [temp.variadic]p4:
+      //   Pack expansions can occur in the following contexts:
+
+      //    - in a function parameter pack
+      void g(T...);
+
+#if __cplusplus >= 201703L
+      struct A : T... {
+        //  - in a using-declaration
+        using T::x...;
+        using typename T::U...;
+      };
+#endif
+
+      //    - in a template parameter pack that is a pack expansion
+      // FIXME: We do not support any way to reach this case yet.
+
+      //    - in an initializer-list
+      int arr[] = {T().x...};
+
+      //    - in a base-specifier-list
+      struct B : T... {
+        //  - in a mem-initializer-list
+        B() : T{0}... {}
+      };
+
+      //    - in a template-argument-list
+      f<T...>();
+
+      //    - in an attribute-list
+      // FIXME: We do not support any such attributes yet.
+      
+      //    - in an alignment-specifier
+      alignas(T...) int y;
+
+      //    - in a capture-list
+      [](T ...t) { [t...]{}(); } (T()...);
+
+      //    - in a sizeof... expression
+      const int k1 = sizeof...(T);
+
+#if __cplusplus >= 201703L
+      //    - in a fold-expression
+      const int k2 = ((sizeof(T)/sizeof(T)) + ...);
+
+      static_assert(k1 == k2);
+#endif
+
+      // Trigger clang to look in here for unexpanded packs.
+      U u;
+    } ...);
+  }
+
+  template<typename ...T> void nested() {
+    swallow([=] {
+      [](T ...t) { [t]{}(); } (T()...); // expected-error {{unexpanded parameter pack 't'}}
+    }...); // expected-error {{does not contain any unexpanded}}
+  }
+
+  template <typename ...T> void g() {
+    // Check that we do detect the above cases when the pack is not expanded.
+    swallow([=] { void h(T); }); // expected-error {{unexpanded parameter pack 'T'}}
+    swallow([=] { struct A : T {}; }); // expected-error {{unexpanded parameter pack 'T'}}
+#if __cplusplus >= 201703L
+    swallow([=] { struct A : T... { using T::x; }; }); // expected-error {{unexpanded parameter pack 'T'}}
+    swallow([=] { struct A : T... { using typename T::U; }; }); // expected-error {{unexpanded parameter pack 'T'}}
+#endif
+
+    swallow([=] { int arr[] = {T().x}; }); // expected-error {{unexpanded parameter pack 'T'}}
+    swallow([=] { struct B : T... { B() : T{0} {} }; }); // expected-error {{unexpanded parameter pack 'T'}}
+    swallow([=] { f<T>(); }); // expected-error {{unexpanded parameter pack 'T'}}
+    swallow([=] { alignas(T) int y; }); // expected-error {{unexpanded parameter pack 'T'}}
+    swallow([=] { [](T ...t) {
+          [t]{}(); // expected-error {{unexpanded parameter pack 't'}}
+        } (T()...); });
+  }
+
+  struct T { int x; using U = int; };
+  void g() { f<T>(1, 2, 3); }
+
+  template<typename ...T, typename ...U> void pack_in_lambda(U ...u) { // expected-note {{here}}
+    // FIXME: Move this test into 'f' above once we support this syntax.
+    []<T *...v, template<T *> typename ...U>(U<v> ...uv) {}; // expected-error {{expected body of lambda}} expected-error {{does not refer to a value}}
+  }
+
+  template<typename ...T> void pack_expand_attr() {
+    // FIXME: Move this test into 'f' above once we support this.
+    [[gnu::aligned(alignof(T))...]] int x; // expected-error {{cannot be used as an attribute pack}} expected-error {{unexpanded}}
+  }
+}
