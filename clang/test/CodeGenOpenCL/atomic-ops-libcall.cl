@@ -1,7 +1,24 @@
-// RUN: %clang_cc1 < %s -cl-std=CL2.0 -finclude-default-header -triple spir64 -emit-llvm | FileCheck -check-prefix=SPIR %s
-// RUN: %clang_cc1 < %s -cl-std=CL2.0 -finclude-default-header -triple armv5e-none-linux-gnueabi -emit-llvm | FileCheck -check-prefix=ARM %s
+// RUN: %clang_cc1 < %s -cl-std=CL2.0 -triple spir64 -emit-llvm | FileCheck -check-prefix=SPIR %s
+// RUN: %clang_cc1 < %s -cl-std=CL2.0 -triple armv5e-none-linux-gnueabi -emit-llvm | FileCheck -check-prefix=ARM %s
+typedef enum memory_order {
+  memory_order_relaxed = __ATOMIC_RELAXED,
+  memory_order_acquire = __ATOMIC_ACQUIRE,
+  memory_order_release = __ATOMIC_RELEASE,
+  memory_order_acq_rel = __ATOMIC_ACQ_REL,
+  memory_order_seq_cst = __ATOMIC_SEQ_CST
+} memory_order;
 
-void f(atomic_int *i, atomic_uint *ui, int cmp) {
+typedef enum memory_scope {
+  memory_scope_work_item = __OPENCL_MEMORY_SCOPE_WORK_ITEM,
+  memory_scope_work_group = __OPENCL_MEMORY_SCOPE_WORK_GROUP,
+  memory_scope_device = __OPENCL_MEMORY_SCOPE_DEVICE,
+  memory_scope_all_svm_devices = __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES,
+#if defined(cl_intel_subgroups) || defined(cl_khr_subgroups)
+  memory_scope_sub_group = __OPENCL_MEMORY_SCOPE_SUB_GROUP
+#endif
+} memory_scope;
+
+void f(atomic_int *i, atomic_uint *ui, int cmp, int order, int scope) {
   int x;
   // SPIR: {{%[^ ]*}} = call i32 @__opencl_atomic_load_4(i8 addrspace(4)* {{%[0-9]+}}, i32 5, i32 1)
   // ARM: {{%[^ ]*}} = call i32 @__opencl_atomic_load_4(i8* {{%[0-9]+}}, i32 5, i32 1)
@@ -34,4 +51,7 @@ void f(atomic_int *i, atomic_uint *ui, int cmp) {
   // SPIR: {{%[^ ]*}} = call zeroext i1 @__opencl_atomic_compare_exchange_4(i8 addrspace(4)* {{%[0-9]+}}, i8 addrspace(4)* {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 5, i32 5, i32 4)
   x = __opencl_atomic_compare_exchange_weak(i, &cmp, 1, memory_order_seq_cst, memory_order_seq_cst, memory_scope_sub_group);
 #endif
+  // SPIR: {{%[^ ]*}} = call zeroext i1 @__opencl_atomic_compare_exchange_4(i8 addrspace(4)* {{%[0-9]+}}, i8 addrspace(4)* {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  // ARM: {{%[^ ]*}} = call zeroext i1 @__opencl_atomic_compare_exchange_4(i8* {{%[0-9]+}}, i8* {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  x = __opencl_atomic_compare_exchange_weak(i, &cmp, 1, order, order, scope);
 }

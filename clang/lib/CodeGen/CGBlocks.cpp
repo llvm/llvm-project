@@ -16,6 +16,7 @@
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "ConstantEmitter.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "clang/AST/DeclObjC.h"
 #include "llvm/ADT/SmallSet.h"
@@ -290,7 +291,7 @@ static llvm::Constant *tryCaptureAsConstant(CodeGenModule &CGM,
   const Expr *init = var->getInit();
   if (!init) return nullptr;
 
-  return CGM.EmitConstantInit(*var, CGF);
+  return ConstantEmitter(CGM, CGF).tryEmitAbstractForInitializer(*var);
 }
 
 /// Get the low bit of a nonzero character count.  This is the

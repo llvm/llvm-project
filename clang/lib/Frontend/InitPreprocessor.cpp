@@ -578,11 +578,13 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__ATOMIC_SEQ_CST", "5");
 
   // Define macros for the OpenCL memory scope.
-  // The values should match clang SyncScope enum.
-  assert(static_cast<unsigned>(SyncScope::OpenCLWorkGroup) == 1 &&
-         static_cast<unsigned>(SyncScope::OpenCLDevice) == 2 &&
-         static_cast<unsigned>(SyncScope::OpenCLAllSVMDevices) == 3 &&
-         static_cast<unsigned>(SyncScope::OpenCLSubGroup) == 4);
+  // The values should match AtomicScopeOpenCLModel::ID enum.
+  static_assert(
+      static_cast<unsigned>(AtomicScopeOpenCLModel::WorkGroup) == 1 &&
+          static_cast<unsigned>(AtomicScopeOpenCLModel::Device) == 2 &&
+          static_cast<unsigned>(AtomicScopeOpenCLModel::AllSVMDevices) == 3 &&
+          static_cast<unsigned>(AtomicScopeOpenCLModel::SubGroup) == 4,
+      "Invalid OpenCL memory scope enum definition");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_WORK_ITEM", "0");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_WORK_GROUP", "1");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_DEVICE", "2");

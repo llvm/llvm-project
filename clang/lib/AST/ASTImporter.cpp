@@ -956,12 +956,16 @@ bool ASTNodeImporter::ImportDefinition(RecordDecl *From, RecordDecl *To,
     ToData.HasUninitializedFields = FromData.HasUninitializedFields;
     ToData.HasInheritedConstructor = FromData.HasInheritedConstructor;
     ToData.HasInheritedAssignment = FromData.HasInheritedAssignment;
+    ToData.NeedOverloadResolutionForCopyConstructor
+      = FromData.NeedOverloadResolutionForCopyConstructor;
     ToData.NeedOverloadResolutionForMoveConstructor
       = FromData.NeedOverloadResolutionForMoveConstructor;
     ToData.NeedOverloadResolutionForMoveAssignment
       = FromData.NeedOverloadResolutionForMoveAssignment;
     ToData.NeedOverloadResolutionForDestructor
       = FromData.NeedOverloadResolutionForDestructor;
+    ToData.DefaultedCopyConstructorIsDeleted
+      = FromData.DefaultedCopyConstructorIsDeleted;
     ToData.DefaultedMoveConstructorIsDeleted
       = FromData.DefaultedMoveConstructorIsDeleted;
     ToData.DefaultedMoveAssignmentIsDeleted
@@ -973,6 +977,7 @@ bool ASTNodeImporter::ImportDefinition(RecordDecl *From, RecordDecl *To,
       = FromData.HasConstexprNonCopyMoveConstructor;
     ToData.HasDefaultedDefaultConstructor
       = FromData.HasDefaultedDefaultConstructor;
+    ToData.CanPassInRegisters = FromData.CanPassInRegisters;
     ToData.DefaultedDefaultConstructorIsConstexpr
       = FromData.DefaultedDefaultConstructorIsConstexpr;
     ToData.HasConstexprDefaultConstructor

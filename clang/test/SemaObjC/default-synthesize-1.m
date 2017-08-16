@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wobjc-missing-property-synthesis -verify -Wno-objc-root-class %s
+// RUN: %clang_cc1 -fsyntax-only -Wobjc-missing-property-synthesis -verify -Wno-objc-root-class -triple=x86_64-apple-macos10.10 %s
 // rdar://11295716
 
 @interface NSObject 
@@ -140,4 +140,18 @@
 - (NSString *) Meth {
     return _description; // expected-error {{use of undeclared identifier '_description'}}
 }
+@end
+
+@interface DontWarnOnUnavailable
+
+// No warning expected:
+@property (nonatomic, readonly) int un1 __attribute__((unavailable));
+@property (readwrite) int un2 __attribute__((availability(macos, unavailable)));
+
+@property (readwrite) int un3 __attribute__((availability(ios, unavailable))); // expected-warning {{auto property synthesis is synthesizing property not explicitly synthesized}}
+
+@end
+
+@implementation DontWarnOnUnavailable // expected-note {{detected while default synthesizing properties in class implementation}}
+
 @end

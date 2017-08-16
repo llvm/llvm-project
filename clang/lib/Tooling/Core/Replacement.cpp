@@ -503,7 +503,7 @@ calculateRangesAfterReplacements(const Replacements &Replaces,
                                             std::string(R.getLength(), ' ')));
     assert(!Err &&
            "Replacements must not conflict since ranges have been merged.");
-    (void)Err;
+    llvm::consumeError(std::move(Err));
   }
   return FakeReplaces.merge(Replaces).getAffectedRanges();
 }

@@ -267,6 +267,12 @@ public:
   bool TraverseTemplateArguments(const TemplateArgument *Args,
                                  unsigned NumArgs);
 
+  /// \brief Recursively visit a base specifier. This can be overridden by a
+  /// subclass.
+  ///
+  /// \returns false if the visitation was terminated early, true otherwise.
+  bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &Base);
+
   /// \brief Recursively visit a constructor initializer.  This
   /// automatically dispatches to another visitor for the initializer
   /// expression, but not for the name of the initializer, so may
@@ -1769,12 +1775,19 @@ bool RecursiveASTVisitor<Derived>::TraverseRecordHelper(RecordDecl *D) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseCXXBaseSpecifier(
+    const CXXBaseSpecifier &Base) {
+  TRY_TO(TraverseTypeLoc(Base.getTypeSourceInfo()->getTypeLoc()));
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseCXXRecordHelper(CXXRecordDecl *D) {
   if (!TraverseRecordHelper(D))
     return false;
   if (D->isCompleteDefinition()) {
     for (const auto &I : D->bases()) {
-      TRY_TO(TraverseTypeLoc(I.getTypeSourceInfo()->getTypeLoc()));
+      TRY_TO(TraverseCXXBaseSpecifier(I));
     }
     // We don't traverse the friends or the conversions, as they are
     // already in decls_begin()/decls_end().
