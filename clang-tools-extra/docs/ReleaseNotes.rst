@@ -91,6 +91,12 @@ Improvements to clang-tidy
 
   Detects usage of ``inotify_init()``.
 
+- New `android-cloexec-epoll-create1
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-epoll-create1.html>`_ check
+
+  Checks if the required file flag ``EPOLL_CLOEXEC`` is present in the argument of
+  ``epoll_create1()``.
+
 - New `android-cloexec-memfd_create
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-memfd_create.html>`_ check
 

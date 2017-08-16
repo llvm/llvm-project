@@ -13,6 +13,7 @@
 #include "CloexecAccept4Check.h"
 #include "CloexecAcceptCheck.h"
 #include "CloexecCreatCheck.h"
+#include "CloexecEpollCreate1Check.h"
 #include "CloexecDupCheck.h"
 #include "CloexecFopenCheck.h"
 #include "CloexecInotifyInit1Check.h"
@@ -34,6 +35,8 @@ public:
     CheckFactories.registerCheck<CloexecAccept4Check>("android-cloexec-accept4");
     CheckFactories.registerCheck<CloexecAcceptCheck>("android-cloexec-accept");
     CheckFactories.registerCheck<CloexecCreatCheck>("android-cloexec-creat");
+    CheckFactories.registerCheck<CloexecEpollCreate1Check>(
+        "android-cloexec-epoll-create1");
     CheckFactories.registerCheck<CloexecDupCheck>("android-cloexec-dup");
     CheckFactories.registerCheck<CloexecFopenCheck>("android-cloexec-fopen");
     CheckFactories.registerCheck<CloexecInotifyInitCheck>(

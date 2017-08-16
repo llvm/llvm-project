@@ -7,6 +7,7 @@ Clang-Tidy Checks
    android-cloexec-accept
    android-cloexec-accept4
    android-cloexec-creat
+   android-cloexec-epoll-create1
    android-cloexec-dup
    android-cloexec-fopen
    android-cloexec-inotify-init
