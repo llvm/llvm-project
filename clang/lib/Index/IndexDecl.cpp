@@ -611,6 +611,24 @@ public:
                                     SymbolRoleSet());
   }
 
+  bool VisitUnresolvedUsingValueDecl(const UnresolvedUsingValueDecl *D) {
+    TRY_DECL(D, IndexCtx.handleDecl(D));
+    const DeclContext *DC = D->getDeclContext()->getRedeclContext();
+    const NamedDecl *Parent = dyn_cast<NamedDecl>(DC);
+    IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent,
+                                         D->getLexicalDeclContext());
+    return true;
+  }
+
+  bool VisitUnresolvedUsingTypenameDecl(const UnresolvedUsingTypenameDecl *D) {
+    TRY_DECL(D, IndexCtx.handleDecl(D));
+    const DeclContext *DC = D->getDeclContext()->getRedeclContext();
+    const NamedDecl *Parent = dyn_cast<NamedDecl>(DC);
+    IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent,
+                                         D->getLexicalDeclContext());
+    return true;
+  }
+
   bool VisitClassTemplateSpecializationDecl(const
                                            ClassTemplateSpecializationDecl *D) {
     // FIXME: Notify subsequent callbacks if info comes from implicit
