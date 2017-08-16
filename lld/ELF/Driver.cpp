@@ -701,6 +701,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZText = !hasZOption(Args, "notext");
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
+  // Parse LTO plugin-related options for compatibility with gold.
   for (auto *Arg : Args.filtered(OPT_plugin_opt, OPT_plugin_opt_eq)) {
     StringRef S = Arg->getValue();
     if (S == "disable-verify")
@@ -713,13 +714,12 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->LTOPartitions = parseInt(S.substr(15), Arg);
     else if (S.startswith("jobs="))
       Config->ThinLTOJobs = parseInt(S.substr(5), Arg);
-    // Ignore some options always passed by gcc.
-    // FIXME: support --plugin-opt=mcpu= and --plugin-opt=thinlto.
     else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
              !S.startswith("-pass-through=") && !S.startswith("mcpu=") &&
              !S.startswith("thinlto"))
       error(Arg->getSpelling() + ": unknown option: " + S);
   }
+
   if (Config->LTOO > 3)
     error("invalid optimization level for LTO: " + Twine(Config->LTOO));
   if (Config->LTOPartitions == 0)
@@ -727,8 +727,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (Config->ThinLTOJobs == 0)
     error("--thinlto-jobs: number of threads must be > 0");
 
+  // Parse ELF{32,64}{LE,BE} and CPU type.
   if (auto *Arg = Args.getLastArg(OPT_m)) {
-    // Parse ELF{32,64}{LE,BE} and CPU type.
     StringRef S = Arg->getValue();
     std::tie(Config->EKind, Config->EMachine, Config->OSABI) =
         parseEmulation(S);

@@ -184,7 +184,16 @@ endif()
 
 set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
   CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")
+set(LLDB_USE_ENTITLEMENTS_Default On)
+if("${LLDB_CODESIGN_IDENTITY}" STREQUAL "lldb_codesign")
+  set(LLDB_USE_ENTITLEMENTS_Default Off)
+endif()
+option(LLDB_USE_ENTITLEMENTS "Use entitlements when codesigning (Defaults Off when using lldb_codesign identity, otherwise On)" ${LLDB_USE_ENTITLEMENTS_Default})
+
 if (NOT ("${LLDB_CODESIGN_IDENTITY}" STREQUAL ""))
+  if(LLDB_USE_ENTITLEMENTS)
+    set(entitlements_flags --entitlements ${entitlements_xml})
+  endif()
   execute_process(
     COMMAND xcrun -f codesign_allocate
     OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -194,7 +203,7 @@ if (NOT ("${LLDB_CODESIGN_IDENTITY}" STREQUAL ""))
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE}
             codesign --force --sign ${LLDB_CODESIGN_IDENTITY}
-            --entitlements ${entitlements_xml}
+            ${entitlements_flags}
             $<TARGET_FILE:debugserver>
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
   )
@@ -203,7 +212,7 @@ if (NOT ("${LLDB_CODESIGN_IDENTITY}" STREQUAL ""))
       POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E env CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE}
               codesign --force --sign ${LLDB_CODESIGN_IDENTITY}
-              --entitlements ${entitlements_xml}
+              ${entitlements_flags}
               $<TARGET_FILE:debugserver>
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     )
