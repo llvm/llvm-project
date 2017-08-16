@@ -27,7 +27,7 @@ struct isl_id;
 
 namespace llvm {
 // Provide PointerLikeTypeTraits for isl_id.
-template <> class PointerLikeTypeTraits<isl_id *> {
+template <> struct PointerLikeTypeTraits<isl_id *> {
 
 public:
   static inline const void *getAsVoidPointer(isl_id *P) { return (void *)P; }

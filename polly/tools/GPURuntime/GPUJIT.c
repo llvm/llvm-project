@@ -35,6 +35,7 @@
 
 static int DebugMode;
 static int CacheMode;
+#define max(x, y) ((x) > (y) ? (x) : (y))
 
 static PollyGPURuntime Runtime = RUNTIME_NONE;
 
@@ -1455,6 +1456,16 @@ void polly_freeManaged(void *mem) {
 }
 
 void *polly_mallocManaged(size_t size) {
+  // Note: [Size 0 allocations]
+  // Sometimes, some runtime computation of size could create a size of 0
+  // for an allocation. In these cases, we do not wish to fail.
+  // The CUDA API fails on size 0 allocations.
+  // So, we allocate size a minimum of size 1.
+  if (!size && DebugMode)
+    fprintf(stderr, "cudaMallocManaged called with size 0. "
+                    "Promoting to size 1");
+  size = max(size, 1);
+  polly_initContextCUDA();
   dump_function();
   void *a;
   if (cudaMallocManaged(&a, size, cudaMemAttachGlobal) != cudaSuccess) {
@@ -1474,16 +1485,27 @@ static void freeDeviceMemoryCUDA(PollyGPUDevicePtr *Allocation) {
 }
 
 static PollyGPUDevicePtr *allocateMemoryForDeviceCUDA(long MemSize) {
+  if (!MemSize && DebugMode)
+    fprintf(stderr, "allocateMemoryForDeviceCUDA called with size 0. "
+                    "Promoting to size 1");
+  // see: [Size 0 allocations]
+  MemSize = max(MemSize, 1);
   dump_function();
 
   PollyGPUDevicePtr *DevData = malloc(sizeof(PollyGPUDevicePtr));
   if (DevData == 0) {
-    fprintf(stderr, "Allocate memory for GPU device memory pointer failed.\n");
+    fprintf(stderr,
+            "Allocate memory for GPU device memory pointer failed."
+            " Line: %d | Size: %ld\n",
+            __LINE__, MemSize);
     exit(-1);
   }
   DevData->DevicePtr = (CUDADevicePtr *)malloc(sizeof(CUDADevicePtr));
   if (DevData->DevicePtr == 0) {
-    fprintf(stderr, "Allocate memory for GPU device memory pointer failed.\n");
+    fprintf(stderr,
+            "Allocate memory for GPU device memory pointer failed."
+            " Line: %d | Size: %ld\n",
+            __LINE__, MemSize);
     exit(-1);
   }
 
@@ -1491,7 +1513,10 @@ static PollyGPUDevicePtr *allocateMemoryForDeviceCUDA(long MemSize) {
       CuMemAllocFcnPtr(&(((CUDADevicePtr *)DevData->DevicePtr)->Cuda), MemSize);
 
   if (Res != CUDA_SUCCESS) {
-    fprintf(stderr, "Allocate memory for GPU device memory pointer failed.\n");
+    fprintf(stderr,
+            "Allocate memory for GPU device memory pointer failed."
+            " Line: %d | Size: %ld\n",
+            __LINE__, MemSize);
     exit(-1);
   }
 

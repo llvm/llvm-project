@@ -243,6 +243,7 @@ public:
   bool hasData() const override { return false; }
   uint32_t getPermissions() const override;
   StringRef getSectionName() const override { return ".bss"; }
+  void setAlign(uint32_t NewAlign);
 
 private:
   const COFFSymbolRef Sym;

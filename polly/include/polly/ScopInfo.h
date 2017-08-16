@@ -128,7 +128,7 @@ enum class MemoryKind {
   ///
   /// Memory objects of type MemoryKind::Value are used to model the data flow
   /// induced by llvm::Values. For each llvm::Value that is used across
-  /// BasicBocks one ScopArrayInfo object is created. A single memory WRITE
+  /// BasicBlocks, one ScopArrayInfo object is created. A single memory WRITE
   /// stores the llvm::Value at its definition into the memory object and at
   /// each use of the llvm::Value (ignoring trivial intra-block uses) a
   /// corresponding READ is added. For instance, the use/def chain of a
@@ -238,7 +238,7 @@ public:
   /// @param DL             The data layout of the module.
   /// @param S              The scop this array object belongs to.
   /// @param BaseName       The optional name of this memory reference.
-  ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *IslCtx,
+  ScopArrayInfo(Value *BasePtr, Type *ElementType, isl::ctx IslCtx,
                 ArrayRef<const SCEV *> DimensionSizes, MemoryKind Kind,
                 const DataLayout &DL, Scop *S, const char *BaseName = nullptr);
 
@@ -310,7 +310,7 @@ public:
     return DimensionSizes[Dim];
   }
 
-  /// Return the size of dimension @p dim as isl_pw_aff.
+  /// Return the size of dimension @p dim as isl::pw_aff.
   //
   //  Scalars do not have array dimensions and the first dimension of
   //  a (possibly multi-dimensional) array also does not carry any size
@@ -371,7 +371,7 @@ public:
 
   /// Print a readable representation to @p OS.
   ///
-  /// @param SizeAsPwAff Print the size as isl_pw_aff
+  /// @param SizeAsPwAff Print the size as isl::pw_aff
   void print(raw_ostream &OS, bool SizeAsPwAff = false) const;
 
   /// Access the ScopArrayInfo associated with an access function.
@@ -428,7 +428,7 @@ private:
   /// The sizes of each dimension as SCEV*.
   SmallVector<const SCEV *, 4> DimensionSizes;
 
-  /// The sizes of each dimension as isl_pw_aff.
+  /// The sizes of each dimension as isl::pw_aff.
   SmallVector<isl::pw_aff, 4> DimensionSizesPw;
 
   /// The type of this scop array info object.
@@ -854,10 +854,10 @@ public:
   /// valued base pointer in case invariant load hoisting is enabled.
   Value *getOriginalBaseAddr() const { return BaseAddr; }
 
-  /// Get the detection-time base array isl_id for this access.
+  /// Get the detection-time base array isl::id for this access.
   isl::id getOriginalArrayId() const;
 
-  /// Get the base array isl_id for this access, modifiable through
+  /// Get the base array isl::id for this access, modifiable through
   /// setNewAccessRelation().
   isl::id getLatestArrayId() const;
 
@@ -1122,7 +1122,7 @@ struct InvariantAccess {
   MemoryAccess *MA;
 
   /// The context under which the access is not invariant.
-  isl_set *NonHoistableCtx;
+  isl::set NonHoistableCtx;
 };
 
 /// Ordered container type to hold invariant accesses.
@@ -1183,8 +1183,8 @@ public:
   /// @param TargetRel  The target location.
   /// @param Domain     The original domain under which the copy statement would
   ///                   be executed.
-  ScopStmt(Scop &parent, __isl_take isl_map *SourceRel,
-           __isl_take isl_map *TargetRel, __isl_take isl_set *Domain);
+  ScopStmt(Scop &parent, isl::map SourceRel, isl::map TargetRel,
+           isl::set Domain);
 
   /// Initialize members after all MemoryAccesses have been added.
   void init(LoopInfo &LI);
@@ -1201,7 +1201,7 @@ private:
   /// The invalid domain for a statement describes all parameter combinations
   /// under which the statement looks to be executed but is in fact not because
   /// some assumption/restriction makes the statement/scop invalid.
-  isl_set *InvalidDomain;
+  isl::set InvalidDomain;
 
   /// The iteration domain describes the set of iterations for which this
   /// statement is executed.
@@ -1222,7 +1222,7 @@ private:
   ///
   /// A pair of statement and iteration vector (S, (5,3)) is called statement
   /// instance.
-  isl_set *Domain;
+  isl::set Domain;
 
   /// The memory accesses of this statement.
   ///
@@ -1272,7 +1272,7 @@ private:
   ///}
 
   /// The isl AST build for the new generated AST.
-  isl_ast_build *Build;
+  isl::ast_build Build;
 
   SmallVector<Loop *, 4> NestLoops;
 
@@ -1281,7 +1281,7 @@ private:
   /// The closest loop that contains this statement.
   Loop *SurroundingLoop;
 
-  /// Vector for Instructions in a BB.
+  /// Vector for Instructions in this statement.
   std::vector<Instruction *> Instructions;
 
   /// Build the statement.
@@ -1315,17 +1315,17 @@ public:
   /// Get the iteration domain of this ScopStmt.
   ///
   /// @return The iteration domain of this ScopStmt.
-  __isl_give isl_set *getDomain() const;
+  isl::set getDomain() const;
 
   /// Get the space of the iteration domain
   ///
   /// @return The space of the iteration domain
-  __isl_give isl_space *getDomainSpace() const;
+  isl::space getDomainSpace() const;
 
   /// Get the id of the iteration domain space
   ///
   /// @return The id of the iteration domain space
-  __isl_give isl_id *getDomainId() const;
+  isl::id getDomainId() const;
 
   /// Get an isl string representing this domain.
   std::string getDomainStr() const;
@@ -1334,7 +1334,7 @@ public:
   ///
   /// @return The schedule function of this ScopStmt, if it does not contain
   /// extension nodes, and nullptr, otherwise.
-  __isl_give isl_map *getSchedule() const;
+  isl::map getSchedule() const;
 
   /// Get an isl string representing this schedule.
   ///
@@ -1343,17 +1343,13 @@ public:
   std::string getScheduleStr() const;
 
   /// Get the invalid domain for this statement.
-  __isl_give isl_set *getInvalidDomain() const {
-    return isl_set_copy(InvalidDomain);
-  }
+  isl::set getInvalidDomain() const { return InvalidDomain; }
 
   /// Get the invalid context for this statement.
-  __isl_give isl_set *getInvalidContext() const {
-    return isl_set_params(getInvalidDomain());
-  }
+  isl::set getInvalidContext() const { return getInvalidDomain().params(); }
 
   /// Set the invalid context for this statement to @p ID.
-  void setInvalidDomain(__isl_take isl_set *ID);
+  void setInvalidDomain(isl::set ID);
 
   /// Get the BasicBlock represented by this ScopStmt (if any).
   ///
@@ -1404,6 +1400,9 @@ public:
   bool contains(Instruction *Inst) const {
     if (!Inst)
       return false;
+    if (isBlockStmt())
+      return std::find(Instructions.begin(), Instructions.end(), Inst) !=
+             Instructions.end();
     return represents(Inst->getParent());
   }
 
@@ -1532,7 +1531,11 @@ public:
   }
 
   /// Add @p Access to this statement's list of accesses.
-  void addAccess(MemoryAccess *Access);
+  ///
+  /// @param Access  The access to add.
+  /// @param Prepend If true, will add @p Access before all other instructions
+  ///                (instead of appending it).
+  void addAccess(MemoryAccess *Access, bool Preprend = false);
 
   /// Remove a MemoryAccess from this statement.
   ///
@@ -1594,15 +1597,15 @@ public:
   const char *getBaseName() const;
 
   /// Set the isl AST build.
-  void setAstBuild(__isl_keep isl_ast_build *B) { Build = B; }
+  void setAstBuild(isl::ast_build B) { Build = B; }
 
   /// Get the isl AST build.
-  __isl_keep isl_ast_build *getAstBuild() const { return Build; }
+  isl::ast_build getAstBuild() const { return Build; }
 
   /// Restrict the domain of the statement.
   ///
   /// @param NewDomain The new statement domain.
-  void restrictDomain(__isl_take isl_set *NewDomain);
+  void restrictDomain(isl::set NewDomain);
 
   /// Get the loop for a dimension.
   ///
@@ -1727,7 +1730,7 @@ private:
   ParameterSetTy Parameters;
 
   /// Mapping from parameters to their ids.
-  DenseMap<const SCEV *, isl_id *> ParameterIds;
+  DenseMap<const SCEV *, isl::id> ParameterIds;
 
   /// The context of the SCoP created during SCoP detection.
   ScopDetection::DetectionContext &DC;
@@ -1747,6 +1750,9 @@ private:
   /// A map from basic blocks to vector of SCoP statements. Currently this
   /// vector comprises only of a single statement.
   DenseMap<BasicBlock *, std::vector<ScopStmt *>> StmtMap;
+
+  /// A map from instructions to SCoP statements.
+  DenseMap<Instruction *, ScopStmt *> InstStmtMap;
 
   /// A map from basic blocks to their domains.
   DenseMap<BasicBlock *, isl::set> DomainMap;
@@ -1958,9 +1964,8 @@ private:
   /// @param LI     The LoopInfo for the current function.
   ///
   /// @returns The domain under which @p BB is executed.
-  __isl_give isl_set *
-  getPredecessorDomainConstraints(BasicBlock *BB, __isl_keep isl_set *Domain,
-                                  DominatorTree &DT, LoopInfo &LI);
+  isl::set getPredecessorDomainConstraints(BasicBlock *BB, isl::set Domain,
+                                           DominatorTree &DT, LoopInfo &LI);
 
   /// Add loop carried constraints to the header block of the loop @p L.
   ///
@@ -2033,7 +2038,7 @@ private:
                     DenseMap<BasicBlock *, isl::set> &InvalidDomainMap);
 
   /// Add parameter constraints to @p C that imply a non-empty domain.
-  __isl_give isl_set *addNonEmptyDomainConstraints(__isl_take isl_set *C) const;
+  isl::set addNonEmptyDomainConstraints(isl::set C) const;
 
   /// Return the access for the base ptr of @p MA if any.
   MemoryAccess *lookupBasePtrAccess(MemoryAccess *MA);
@@ -2128,6 +2133,11 @@ private:
   /// have been hoisted as loop invariant.
   void canonicalizeDynamicBasePtrs();
 
+  /// Check if @p MA can always be hoisted without execution context.
+  bool canAlwaysBeHoisted(MemoryAccess *MA, bool StmtInvalidCtxIsEmpty,
+                          bool MAInvalidCtxIsEmpty,
+                          bool NonHoistableCtxIsEmpty);
+
   /// Add invariant loads listed in @p InvMAs with the domain of @p Stmt.
   void addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs);
 
@@ -2171,7 +2181,7 @@ private:
   ///
   /// @param BB              The basic block we build the statement for.
   /// @param SurroundingLoop The loop the created statement is contained in.
-  /// @param Instructions    The instructions in the basic block.
+  /// @param Instructions    The instructions in the statement.
   void addScopStmt(BasicBlock *BB, Loop *SurroundingLoop,
                    std::vector<Instruction *> Instructions);
 
@@ -2327,7 +2337,7 @@ private:
   ///                  of a given type.
   ///
   /// @returns The set of memory accesses in the scop that match the predicate.
-  __isl_give isl_union_map *
+  isl::union_map
   getAccessesOfType(std::function<bool(MemoryAccess &)> Predicate);
 
   /// @name Helper functions for printing the Scop.
@@ -2358,9 +2368,8 @@ public:
   /// @param TargetRel  The target location.
   /// @param Domain     The original domain under which the copy statement would
   ///                   be executed.
-  ScopStmt *addScopStmt(__isl_take isl_map *SourceRel,
-                        __isl_take isl_map *TargetRel,
-                        __isl_take isl_set *Domain);
+  ScopStmt *addScopStmt(isl::map SourceRel, isl::map TargetRel,
+                        isl::set Domain);
 
   /// Add the access function to all MemoryAccess objects of the Scop
   ///        created in this pass.
@@ -2425,7 +2434,7 @@ public:
   /// @param Parameter A SCEV that was recognized as a Parameter.
   ///
   /// @return The corresponding isl_id or NULL otherwise.
-  __isl_give isl_id *getIdForParam(const SCEV *Parameter) const;
+  isl::id getIdForParam(const SCEV *Parameter) const;
 
   /// Get the maximum region of this static control part.
   ///
@@ -2511,13 +2520,13 @@ public:
   /// Get the constraint on parameter of this Scop.
   ///
   /// @return The constraint on parameter of this Scop.
-  __isl_give isl_set *getContext() const;
+  isl::set getContext() const;
 
   /// Return space of isl context parameters.
   ///
   /// Returns the set of context parameters that are currently constrained. In
   /// case the full set of parameters is needed, see @getFullParamSpace.
-  __isl_give isl_space *getParamSpace() const;
+  isl::space getParamSpace() const;
 
   /// Return the full space of parameters.
   ///
@@ -2531,7 +2540,7 @@ public:
   /// Get the assumed context for this Scop.
   ///
   /// @return The assumed context of this Scop.
-  __isl_give isl_set *getAssumedContext() const;
+  isl::set getAssumedContext() const;
 
   /// Return true if the optimized SCoP can be executed.
   ///
@@ -2625,7 +2634,7 @@ public:
   /// Get the invalid context for this Scop.
   ///
   /// @return The invalid context of this Scop.
-  __isl_give isl_set *getInvalidContext() const;
+  isl::set getInvalidContext() const;
 
   /// Return true if and only if the InvalidContext is trivial (=empty).
   bool hasTrivialInvalidContext() const {
@@ -2694,10 +2703,6 @@ public:
   /// Get an isl string representing the invalid context.
   std::string getInvalidContextStr() const;
 
-  /// Return the ScopStmt for the given @p BB or nullptr if there is
-  ///        none.
-  ScopStmt *getStmtFor(BasicBlock *BB) const;
-
   /// Return the list of ScopStmts that represent the given @p BB.
   ArrayRef<ScopStmt *> getStmtListFor(BasicBlock *BB) const;
 
@@ -2721,7 +2726,7 @@ public:
   /// Return the ScopStmt an instruction belongs to, or nullptr if it
   ///        does not belong to any statement in this Scop.
   ScopStmt *getStmtFor(Instruction *Inst) const {
-    return getStmtFor(Inst->getParent());
+    return InstStmtMap.lookup(Inst);
   }
 
   /// Return the number of statements in the SCoP.
@@ -2878,44 +2883,44 @@ public:
   ///
   /// This function is like @see Scop::getPwAff() but strips away the invalid
   /// domain part associated with the piecewise affine function.
-  __isl_give isl_pw_aff *getPwAffOnly(const SCEV *E, BasicBlock *BB = nullptr);
+  isl::pw_aff getPwAffOnly(const SCEV *E, BasicBlock *BB = nullptr);
 
   /// Return the domain of @p Stmt.
   ///
   /// @param Stmt The statement for which the conditions should be returned.
-  __isl_give isl_set *getDomainConditions(const ScopStmt *Stmt) const;
+  isl::set getDomainConditions(const ScopStmt *Stmt) const;
 
   /// Return the domain of @p BB.
   ///
   /// @param BB The block for which the conditions should be returned.
-  __isl_give isl_set *getDomainConditions(BasicBlock *BB) const;
+  isl::set getDomainConditions(BasicBlock *BB) const;
 
   /// Get a union set containing the iteration domains of all statements.
-  __isl_give isl_union_set *getDomains() const;
+  isl::union_set getDomains() const;
 
   /// Get a union map of all may-writes performed in the SCoP.
-  __isl_give isl_union_map *getMayWrites();
+  isl::union_map getMayWrites();
 
   /// Get a union map of all must-writes performed in the SCoP.
-  __isl_give isl_union_map *getMustWrites();
+  isl::union_map getMustWrites();
 
   /// Get a union map of all writes performed in the SCoP.
-  __isl_give isl_union_map *getWrites();
+  isl::union_map getWrites();
 
   /// Get a union map of all reads performed in the SCoP.
-  __isl_give isl_union_map *getReads();
+  isl::union_map getReads();
 
   /// Get a union map of all memory accesses performed in the SCoP.
-  __isl_give isl_union_map *getAccesses();
+  isl::union_map getAccesses();
 
   /// Get the schedule of all the statements in the SCoP.
   ///
   /// @return The schedule of all the statements in the SCoP, if the schedule of
   /// the Scop does not contain extension nodes, and nullptr, otherwise.
-  __isl_give isl_union_map *getSchedule() const;
+  isl::union_map getSchedule() const;
 
   /// Get a schedule tree describing the schedule of all statements.
-  __isl_give isl_schedule *getScheduleTree() const;
+  isl::schedule getScheduleTree() const;
 
   /// Update the current schedule
   ///
@@ -2930,7 +2935,7 @@ public:
   /// Intersects the domains of all statements in the SCoP.
   ///
   /// @return true if a change was made
-  bool restrictDomains(__isl_take isl_union_set *Domain);
+  bool restrictDomains(isl::union_set Domain);
 
   /// Get the depth of a loop relative to the outermost loop in the Scop.
   ///
@@ -3029,7 +3034,9 @@ public:
 
 class ScopInfo {
 public:
-  using RegionToScopMapTy = DenseMap<Region *, std::unique_ptr<Scop>>;
+  using RegionToScopMapTy = MapVector<Region *, std::unique_ptr<Scop>>;
+  using reverse_iterator = RegionToScopMapTy::reverse_iterator;
+  using const_reverse_iterator = RegionToScopMapTy::const_reverse_iterator;
   using iterator = RegionToScopMapTy::iterator;
   using const_iterator = RegionToScopMapTy::const_iterator;
 
@@ -3037,6 +3044,13 @@ private:
   /// A map of Region to its Scop object containing
   ///        Polly IR of static control part.
   RegionToScopMapTy RegionToScopMap;
+  const DataLayout &DL;
+  ScopDetection &SD;
+  ScalarEvolution &SE;
+  LoopInfo &LI;
+  AliasAnalysis &AA;
+  DominatorTree &DT;
+  AssumptionCache &AC;
 
 public:
   ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
@@ -3056,10 +3070,23 @@ public:
     return nullptr;
   }
 
+  /// Recompute the Scop-Information for a function.
+  ///
+  /// This invalidates any iterators.
+  void recompute();
+
+  /// Handle invalidation explicitly
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &Inv);
+
   iterator begin() { return RegionToScopMap.begin(); }
   iterator end() { return RegionToScopMap.end(); }
   const_iterator begin() const { return RegionToScopMap.begin(); }
   const_iterator end() const { return RegionToScopMap.end(); }
+  reverse_iterator rbegin() { return RegionToScopMap.rbegin(); }
+  reverse_iterator rend() { return RegionToScopMap.rend(); }
+  const_reverse_iterator rbegin() const { return RegionToScopMap.rbegin(); }
+  const_reverse_iterator rend() const { return RegionToScopMap.rend(); }
   bool empty() const { return RegionToScopMap.empty(); }
 };
 

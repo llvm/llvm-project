@@ -98,39 +98,6 @@ static isl::union_map underapproximatedAddMap(isl::union_map UMap,
   return UResult;
 }
 
-/// Return a vector that contains MemoryAccesses in the order in
-/// which they are executed.
-///
-/// The order is:
-/// - Implicit reads (BlockGenerator::generateScalarLoads)
-/// - Explicit reads and writes (BlockGenerator::generateArrayLoad,
-///   BlockGenerator::generateArrayStore)
-///   - In block statements, the accesses are in order in which their
-///     instructions are executed.
-///   - In region statements, that order of execution is not predictable at
-///     compile-time.
-/// - Implicit writes (BlockGenerator::generateScalarStores)
-///   The order in which implicit writes are executed relative to each other is
-///   undefined.
-static SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt) {
-
-  SmallVector<MemoryAccess *, 32> Accesses;
-
-  for (MemoryAccess *MemAcc : Stmt)
-    if (isImplicitRead(MemAcc))
-      Accesses.push_back(MemAcc);
-
-  for (MemoryAccess *MemAcc : Stmt)
-    if (isExplicitAccess(MemAcc))
-      Accesses.push_back(MemAcc);
-
-  for (MemoryAccess *MemAcc : Stmt)
-    if (isImplicitWrite(MemAcc))
-      Accesses.push_back(MemAcc);
-
-  return Accesses;
-}
-
 class Simplify : public ScopPass {
 private:
   /// The last/current SCoP that is/has been processed.
@@ -172,9 +139,9 @@ private:
   /// removed) and the overwrite.
   void removeOverwrites() {
     for (auto &Stmt : *S) {
-      auto Domain = give(Stmt.getDomain());
+      isl::set Domain = Stmt.getDomain();
       isl::union_map WillBeOverwritten =
-          isl::union_map::empty(give(S->getParamSpace()));
+          isl::union_map::empty(S->getParamSpace());
 
       SmallVector<MemoryAccess *, 32> Accesses(getAccessesInOrder(Stmt));
 
@@ -190,7 +157,7 @@ private:
 
         auto AccRel = MA->getAccessRelation();
         AccRel = AccRel.intersect_domain(Domain);
-        AccRel = AccRel.intersect_params(give(S->getContext()));
+        AccRel = AccRel.intersect_params(S->getContext());
 
         // If a value is read in-between, do not consider it as overwritten.
         if (MA->isRead()) {
@@ -232,8 +199,7 @@ private:
   /// In all cases, both writes must write the same values.
   void coalesceWrites() {
     for (auto &Stmt : *S) {
-      isl::set Domain =
-          give(Stmt.getDomain()).intersect_params(give(S->getContext()));
+      isl::set Domain = Stmt.getDomain().intersect_params(S->getContext());
 
       // We let isl do the lookup for the same-value condition. For this, we
       // wrap llvm::Value into an isl::set such that isl can do the lookup in
@@ -258,8 +224,7 @@ private:
 
       // List of all eligible (for coalescing) writes of the future.
       // { [Domain[] -> Element[]] -> [Value[] -> MemoryAccess[]] }
-      isl::union_map FutureWrites =
-          isl::union_map::empty(give(S->getParamSpace()));
+      isl::union_map FutureWrites = isl::union_map::empty(S->getParamSpace());
 
       // Iterate over accesses from the last to the first.
       SmallVector<MemoryAccess *, 32> Accesses(getAccessesInOrder(Stmt));
@@ -427,13 +392,13 @@ private:
         return Result;
       };
 
-      isl::set Domain = give(Stmt.getDomain());
-      Domain = Domain.intersect_params(give(S->getContext()));
+      isl::set Domain = Stmt.getDomain();
+      Domain = Domain.intersect_params(S->getContext());
 
       // List of element reads that still have the same value while iterating
       // through the MemoryAccesses.
       // { [Domain[] -> Element[]] -> Val[] }
-      isl::union_map Known = isl::union_map::empty(give(S->getParamSpace()));
+      isl::union_map Known = isl::union_map::empty(S->getParamSpace());
 
       SmallVector<MemoryAccess *, 32> Accesses(getAccessesInOrder(Stmt));
       for (MemoryAccess *MA : Accesses) {
@@ -701,6 +666,27 @@ public:
 
 char Simplify::ID;
 } // anonymous namespace
+
+namespace polly {
+SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt) {
+
+  SmallVector<MemoryAccess *, 32> Accesses;
+
+  for (MemoryAccess *MemAcc : Stmt)
+    if (isImplicitRead(MemAcc))
+      Accesses.push_back(MemAcc);
+
+  for (MemoryAccess *MemAcc : Stmt)
+    if (isExplicitAccess(MemAcc))
+      Accesses.push_back(MemAcc);
+
+  for (MemoryAccess *MemAcc : Stmt)
+    if (isImplicitWrite(MemAcc))
+      Accesses.push_back(MemAcc);
+
+  return Accesses;
+}
+} // namespace polly
 
 Pass *polly::createSimplifyPass() { return new Simplify(); }
 

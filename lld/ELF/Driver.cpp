@@ -611,9 +611,17 @@ static bool getCompressDebugSections(opt::InputArgList &Args) {
   return true;
 }
 
+static int parseInt(StringRef S, opt::Arg *Arg) {
+  int V = 0;
+  if (!to_integer(S, V, 10))
+    error(Arg->getSpelling() + ": number expected, but got '" + S + "'");
+  return V;
+}
+
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
-  Config->AllowMultipleDefinition = Args.hasArg(OPT_allow_multiple_definition);
+  Config->AllowMultipleDefinition =
+      Args.hasArg(OPT_allow_multiple_definition) || hasZOption(Args, "muldefs");
   Config->AuxiliaryList = getArgs(Args, OPT_auxiliary);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
@@ -637,7 +645,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Fini = Args.getLastArgValue(OPT_fini, "_fini");
   Config->GcSections = getArg(Args, OPT_gc_sections, OPT_no_gc_sections, false);
   Config->GdbIndex = Args.hasArg(OPT_gdb_index);
-  Config->ICF = Args.hasArg(OPT_icf);
+  Config->ICF = getArg(Args, OPT_icf_all, OPT_icf_none, false);
   Config->Init = Args.getLastArgValue(OPT_init, "_init");
   Config->LTOAAPipeline = Args.getLastArgValue(OPT_lto_aa_pipeline);
   Config->LTONewPmPasses = Args.getLastArgValue(OPT_lto_newpm_passes);
@@ -693,16 +701,35 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZText = !hasZOption(Args, "notext");
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
+  // Parse LTO plugin-related options for compatibility with gold.
+  for (auto *Arg : Args.filtered(OPT_plugin_opt, OPT_plugin_opt_eq)) {
+    StringRef S = Arg->getValue();
+    if (S == "disable-verify")
+      Config->DisableVerify = true;
+    else if (S == "save-temps")
+      Config->SaveTemps = true;
+    else if (S.startswith("O"))
+      Config->LTOO = parseInt(S.substr(1), Arg);
+    else if (S.startswith("lto-partitions="))
+      Config->LTOPartitions = parseInt(S.substr(15), Arg);
+    else if (S.startswith("jobs="))
+      Config->ThinLTOJobs = parseInt(S.substr(5), Arg);
+    else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
+             !S.startswith("-pass-through=") && !S.startswith("mcpu=") &&
+             !S.startswith("thinlto") && S != "-function-sections" &&
+             S != "-data-sections")
+      error(Arg->getSpelling() + ": unknown option: " + S);
+  }
+
   if (Config->LTOO > 3)
-    error("invalid optimization level for LTO: " +
-          Args.getLastArgValue(OPT_lto_O));
+    error("invalid optimization level for LTO: " + Twine(Config->LTOO));
   if (Config->LTOPartitions == 0)
     error("--lto-partitions: number of threads must be > 0");
   if (Config->ThinLTOJobs == 0)
     error("--thinlto-jobs: number of threads must be > 0");
 
+  // Parse ELF{32,64}{LE,BE} and CPU type.
   if (auto *Arg = Args.getLastArg(OPT_m)) {
-    // Parse ELF{32,64}{LE,BE} and CPU type.
     StringRef S = Arg->getValue();
     std::tie(Config->EKind, Config->EMachine, Config->OSABI) =
         parseEmulation(S);

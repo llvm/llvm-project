@@ -182,7 +182,7 @@ public:
   }
 
   uint64_t getRVA() { return Data->getRVA(); }
-  Chunk *getChunk() { return Data; }
+  CommonChunk *getChunk() { return Data; }
 
 private:
   friend SymbolTable;

@@ -1316,14 +1316,18 @@ Status Platform::Unlink(const FileSpec &path) {
   return error;
 }
 
-uint64_t Platform::ConvertMmapFlagsToPlatform(const ArchSpec &arch,
-                                              unsigned flags) {
+MmapArgList Platform::GetMmapArgumentList(const ArchSpec &arch, addr_t addr,
+                                          addr_t length, unsigned prot,
+                                          unsigned flags, addr_t fd,
+                                          addr_t offset) {
   uint64_t flags_platform = 0;
   if (flags & eMmapFlagsPrivate)
     flags_platform |= MAP_PRIVATE;
   if (flags & eMmapFlagsAnon)
     flags_platform |= MAP_ANON;
-  return flags_platform;
+
+  MmapArgList args({addr, length, prot, flags_platform, fd, offset});
+  return args;
 }
 
 lldb_private::Status Platform::RunShellCommand(

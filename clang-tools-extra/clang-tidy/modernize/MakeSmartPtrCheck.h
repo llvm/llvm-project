@@ -50,6 +50,7 @@ private:
   const utils::IncludeSorter::IncludeStyle IncludeStyle;
   const std::string MakeSmartPtrFunctionHeader;
   const std::string MakeSmartPtrFunctionName;
+  const bool IgnoreMacros;
 
   void checkConstruct(SourceManager &SM, const CXXConstructExpr *Construct,
                       const QualType *Type, const CXXNewExpr *New);

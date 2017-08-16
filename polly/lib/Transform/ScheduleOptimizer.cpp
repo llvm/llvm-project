@@ -52,6 +52,7 @@
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
+#include "polly/Simplify.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLOStream.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -308,29 +309,14 @@ static isl::set addExtentConstraints(isl::set Set, int VectorWidth) {
   return Set.add_constraint(ExtConstr);
 }
 
-/// Build the desired set of partial tile prefixes.
-///
-/// We build a set of partial tile prefixes, which are prefixes of the vector
-/// loop that have exactly VectorWidth iterations.
-///
-/// 1. Get all prefixes of the vector loop.
-/// 2. Extend it to a set, which has exactly VectorWidth iterations for
-///    any prefix from the set that was built on the previous step.
-/// 3. Subtract loop domain from it, project out the vector loop dimension and
-///    get a set of prefixes, which don't have exactly VectorWidth iterations.
-/// 4. Subtract it from all prefixes of the vector loop and get the desired
-///    set.
-///
-/// @param ScheduleRange A range of a map, which describes a prefix schedule
-///                      relation.
-static isl::set getPartialTilePrefixes(isl::set ScheduleRange,
-                                       int VectorWidth) {
+isl::set getPartialTilePrefixes(isl::set ScheduleRange, int VectorWidth) {
   unsigned Dims = ScheduleRange.dim(isl::dim::set);
-  isl::set LoopPrefixes = ScheduleRange.project_out(isl::dim::set, Dims - 1, 1);
-  isl::set ExtentPrefixes = LoopPrefixes.add_dims(isl::dim::set, 1);
-  ExtentPrefixes = addExtentConstraints(ExtentPrefixes, VectorWidth);
+  isl::set LoopPrefixes =
+      ScheduleRange.drop_constraints_involving_dims(isl::dim::set, Dims - 1, 1);
+  auto ExtentPrefixes = addExtentConstraints(LoopPrefixes, VectorWidth);
   isl::set BadPrefixes = ExtentPrefixes.subtract(ScheduleRange);
   BadPrefixes = BadPrefixes.project_out(isl::dim::set, Dims - 1, 1);
+  LoopPrefixes = LoopPrefixes.project_out(isl::dim::set, Dims - 1, 1);
   return LoopPrefixes.subtract(BadPrefixes);
 }
 
@@ -686,7 +672,9 @@ static bool containsOnlyMatrMultAcc(isl::map PartialSchedule,
       permuteDimensions(PartialSchedule, isl::dim::out, MMI.j, OutDimNum - 1);
   auto MapK =
       permuteDimensions(PartialSchedule, isl::dim::out, MMI.k, OutDimNum - 1);
-  for (auto *MemA = Stmt->begin(); MemA != Stmt->end() - 1; MemA++) {
+
+  auto Accesses = getAccessesInOrder(*Stmt);
+  for (auto *MemA = Accesses.begin(); MemA != Accesses.end() - 1; MemA++) {
     auto *MemAccessPtr = *MemA;
     if (MemAccessPtr->isLatestArrayKind() && MemAccessPtr != MMI.WriteToC &&
         !isMatMulNonScalarReadAccess(MemAccessPtr, MMI) &&
@@ -761,7 +749,9 @@ static bool containsMatrMult(isl::map PartialSchedule, const Dependences *D,
   auto *Stmt = static_cast<ScopStmt *>(InputDimsId.get_user());
   if (Stmt->size() <= 1)
     return false;
-  for (auto *MemA = Stmt->end() - 1; MemA != Stmt->begin(); MemA--) {
+
+  auto Accesses = getAccessesInOrder(*Stmt);
+  for (auto *MemA = Accesses.end() - 1; MemA != Accesses.begin(); MemA--) {
     auto *MemAccessPtr = *MemA;
     if (!MemAccessPtr->isLatestArrayKind())
       continue;
@@ -1058,18 +1048,16 @@ optimizeDataLayoutMatrMulPattern(isl::schedule_node Node, isl::map MapOldIndVar,
                                          MapOldIndVar.dim(isl::dim::out) - 2);
   ExtMap = ExtMap.reverse();
   ExtMap = ExtMap.fix_si(isl::dim::out, MMI.i, 0);
-  auto Domain = isl::manage(Stmt->getDomain());
+  auto Domain = Stmt->getDomain();
 
   // Restrict the domains of the copy statements to only execute when also its
   // originating statement is executed.
   auto DomainId = Domain.get_tuple_id();
   auto *NewStmt = Stmt->getParent()->addScopStmt(
-      OldAcc.release(), MMI.B->getLatestAccessRelation().release(),
-      Domain.copy());
+      OldAcc, MMI.B->getLatestAccessRelation(), Domain);
   ExtMap = ExtMap.set_tuple_id(isl::dim::out, isl::manage(DomainId.copy()));
   ExtMap = ExtMap.intersect_range(isl::manage(Domain.copy()));
-  ExtMap =
-      ExtMap.set_tuple_id(isl::dim::out, isl::manage(NewStmt->getDomainId()));
+  ExtMap = ExtMap.set_tuple_id(isl::dim::out, NewStmt->getDomainId());
   Node = createExtensionNode(Node, ExtMap);
 
   // Create a copy statement that corresponds to the memory access
@@ -1089,15 +1077,13 @@ optimizeDataLayoutMatrMulPattern(isl::schedule_node Node, isl::map MapOldIndVar,
   ExtMap = ExtMap.reverse();
   ExtMap = ExtMap.fix_si(isl::dim::out, MMI.j, 0);
   NewStmt = Stmt->getParent()->addScopStmt(
-      OldAcc.release(), MMI.A->getLatestAccessRelation().release(),
-      Domain.copy());
+      OldAcc, MMI.A->getLatestAccessRelation(), Domain);
 
   // Restrict the domains of the copy statements to only execute when also its
   // originating statement is executed.
   ExtMap = ExtMap.set_tuple_id(isl::dim::out, DomainId);
   ExtMap = ExtMap.intersect_range(Domain);
-  ExtMap =
-      ExtMap.set_tuple_id(isl::dim::out, isl::manage(NewStmt->getDomainId()));
+  ExtMap = ExtMap.set_tuple_id(isl::dim::out, NewStmt->getDomainId());
   Node = createExtensionNode(Node, ExtMap);
   return Node.child(0).child(0).child(0).child(0);
 }
@@ -1314,7 +1300,7 @@ bool ScheduleTreeOptimizer::isProfitableSchedule(Scop &S,
   if (S.containsExtensionNode(NewSchedule.get()))
     return true;
   auto NewScheduleMap = NewSchedule.get_map();
-  auto OldSchedule = isl::manage(S.getSchedule());
+  auto OldSchedule = S.getSchedule();
   assert(OldSchedule && "Only IslScheduleOptimizer can insert extension nodes "
                         "that make Scop::getSchedule() return nullptr.");
   bool changed = !OldSchedule.is_equal(NewScheduleMap);
@@ -1390,7 +1376,7 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
         Dependences::TYPE_RAW | Dependences::TYPE_WAR | Dependences::TYPE_WAW;
   }
 
-  isl::union_set Domain = give(S.getDomains());
+  isl::union_set Domain = S.getDomains();
 
   if (!Domain)
     return false;

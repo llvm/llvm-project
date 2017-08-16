@@ -151,9 +151,17 @@ public:
   CppFile(CppFile const &) = delete;
   CppFile(CppFile &&) = delete;
 
-  /// Cancels all scheduled rebuilds and sets AST and Preamble to nulls.
+  /// Cancels a scheduled rebuild, if any, and sets AST and Preamble to nulls.
   /// If a rebuild is in progress, will wait for it to finish.
-  void cancelRebuilds();
+  void cancelRebuild();
+
+  /// Similar to deferRebuild, but sets both Preamble and AST to nulls instead
+  /// of doing an actual parsing. Returned future is a deferred computation that
+  /// will wait for any ongoing rebuilds to finish and actually set the AST and
+  /// Preamble to nulls. It can be run on a different thread.
+  /// This function is useful to cancel ongoing rebuilds, if any, before
+  /// removing CppFile.
+  std::future<void> deferCancelRebuild();
 
   /// Rebuild AST and Preamble synchronously on the calling thread.
   /// Returns a list of diagnostics or a llvm::None, if another rebuild was

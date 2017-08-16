@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyHICPPModule
+  ExceptionBaseclassCheck.cpp
   NoAssemblerCheck.cpp
   HICPPTidyModule.cpp
 

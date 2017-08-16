@@ -2,8 +2,13 @@ set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyAndroidModule
   AndroidTidyModule.cpp
+  CloexecCheck.cpp
   CloexecCreatCheck.cpp
+  CloexecDupCheck.cpp
   CloexecFopenCheck.cpp
+  CloexecInotifyInit1Check.cpp
+  CloexecInotifyInitCheck.cpp
+  CloexecMemfdCreateCheck.cpp
   CloexecOpenCheck.cpp
   CloexecSocketCheck.cpp
 

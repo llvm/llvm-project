@@ -26,7 +26,7 @@ namespace {
 template <class ELFT> class X86_64 final : public TargetInfo {
 public:
   X86_64();
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
                      const uint8_t *Loc) const override;
   bool isPicRel(uint32_t Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
@@ -74,6 +74,7 @@ template <class ELFT> X86_64<ELFT>::X86_64() {
 
 template <class ELFT>
 RelExpr X86_64<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
+                                 const InputFile &File,
                                  const uint8_t *Loc) const {
   switch (Type) {
   case R_X86_64_8:
@@ -109,7 +110,7 @@ RelExpr X86_64<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
   case R_X86_64_NONE:
     return R_NONE;
   default:
-    error(toString(S.File) + ": unknown relocation type: " + toString(Type));
+    error(toString(&File) + ": unknown relocation type: " + toString(Type));
     return R_HINT;
   }
 }

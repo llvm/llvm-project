@@ -1,12 +1,6 @@
 #!/usr/bin/python
 from __future__ import print_function
 
-# We only need this for int() cast, which works by default in python 2
-try:
-    from builtins import int
-except:
-    pass
-
 def c_compiler_rule(b, name, description, compiler, flags):
   command = "%s -MMD -MF $out.d %s -c -o $out $in" % (compiler, flags)
   b.rule(name, command, description + " $out", depfile="$out.d")

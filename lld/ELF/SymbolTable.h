@@ -87,7 +87,6 @@ public:
   void scanVersionScript();
 
   SymbolBody *find(StringRef Name);
-  SymbolBody *findInCurrentDSO(StringRef Name);
 
   void trace(StringRef Name);
 

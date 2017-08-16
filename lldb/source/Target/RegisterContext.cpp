@@ -93,10 +93,9 @@ RegisterContext::UpdateDynamicRegisterSize(const lldb_private::ArchSpec &arch,
   Value result;
   Status error;
   const lldb::offset_t offset = 0;
-  if (dwarf_expr.Evaluate(&exe_ctx, nullptr, nullptr, this, opcode_ctx,
-                          dwarf_data, nullptr, offset, dwarf_opcode_len,
-                          eRegisterKindDWARF, nullptr, nullptr, result,
-                          &error)) {
+  if (dwarf_expr.Evaluate(&exe_ctx, this, opcode_ctx, dwarf_data, nullptr,
+                          offset, dwarf_opcode_len, eRegisterKindDWARF, nullptr,
+                          nullptr, result, &error)) {
     expr_result = result.GetScalar().SInt(-1);
     switch (expr_result) {
     case 0:

@@ -202,6 +202,9 @@ void LinkerDriver::parseDirectives(StringRef S) {
 
   for (auto *Arg : Args) {
     switch (Arg->getOption().getUnaliasedOption().getID()) {
+    case OPT_aligncomm:
+      parseAligncomm(Arg->getValue());
+      break;
     case OPT_alternatename:
       parseAlternateName(Arg->getValue());
       break;
@@ -458,8 +461,8 @@ static void createImportLibrary(bool AsLib) {
   std::vector<COFFShortExport> Exports;
   for (Export &E1 : Config->Exports) {
     COFFShortExport E2;
-    // Use SymbolName, which will have any stdcall or fastcall qualifiers.
-    E2.Name = E1.SymbolName;
+    E2.Name = E1.Name;
+    E2.SymbolName = E1.SymbolName;
     E2.ExtName = E1.ExtName;
     E2.Ordinal = E1.Ordinal;
     E2.Noname = E1.Noname;
@@ -470,7 +473,7 @@ static void createImportLibrary(bool AsLib) {
   }
 
   writeImportLibrary(getImportName(AsLib), getImplibPath(), Exports,
-                     Config->Machine);
+                     Config->Machine, false);
 }
 
 static void parseModuleDefs(StringRef Path) {
@@ -899,6 +902,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   for (auto *Arg : Args.filtered(OPT_section))
     parseSection(Arg->getValue());
 
+  // Handle /aligncomm
+  for (auto *Arg : Args.filtered(OPT_aligncomm))
+    parseAligncomm(Arg->getValue());
+
   // Handle /manifestdependency. This enables /manifest unless /manifest:no is
   // also passed.
   if (auto *Arg = Args.getLastArg(OPT_manifestdependency)) {
@@ -1156,6 +1163,23 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     fixupExports();
     createImportLibrary(/*AsLib=*/false);
     assignExportOrdinals();
+  }
+
+  // Set extra alignment for .comm symbols
+  for (auto Pair : Config->AlignComm) {
+    StringRef Name = Pair.first;
+    int Align = Pair.second;
+    Symbol *Sym = Symtab.find(Name);
+    if (!Sym) {
+      warn("/aligncomm symbol " + Name + " not found");
+      continue;
+    }
+    auto *DC = dyn_cast<DefinedCommon>(Sym->body());
+    if (!DC) {
+      warn("/aligncomm symbol " + Name + " of wrong kind");
+      continue;
+    }
+    DC->getChunk()->setAlign(Align);
   }
 
   // Windows specific -- Create a side-by-side manifest file.
