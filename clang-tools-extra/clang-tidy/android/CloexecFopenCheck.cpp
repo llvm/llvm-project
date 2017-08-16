@@ -18,55 +18,17 @@ namespace clang {
 namespace tidy {
 namespace android {
 
-namespace {
-static const char MODE = 'e';
-
-// Build the replace text. If it's string constant, add 'e' directly in the end
-// of the string. Else, add "e".
-std::string BuildReplaceText(const Expr *Arg, const SourceManager &SM,
-                             const LangOptions &LangOpts) {
-  if (Arg->getLocStart().isMacroID())
-    return (Lexer::getSourceText(
-                CharSourceRange::getTokenRange(Arg->getSourceRange()), SM,
-                LangOpts) +
-            " \"" + Twine(MODE) + "\"")
-        .str();
-
-  StringRef SR = cast<StringLiteral>(Arg->IgnoreParenCasts())->getString();
-  return ("\"" + SR + Twine(MODE) + "\"").str();
-}
-} // namespace
-
 void CloexecFopenCheck::registerMatchers(MatchFinder *Finder) {
   auto CharPointerType = hasType(pointerType(pointee(isAnyCharacter())));
-
-  Finder->addMatcher(
-      callExpr(callee(functionDecl(isExternC(), returns(asString("FILE *")),
-                                   hasName("fopen"),
-                                   hasParameter(0, CharPointerType),
-                                   hasParameter(1, CharPointerType))
-                          .bind("funcDecl")))
-          .bind("fopenFn"),
-      this);
+  registerMatchersImpl(Finder,
+                       functionDecl(isExternC(), returns(asString("FILE *")),
+                                    hasName("fopen"),
+                                    hasParameter(0, CharPointerType),
+                                    hasParameter(1, CharPointerType)));
 }
 
 void CloexecFopenCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *MatchedCall = Result.Nodes.getNodeAs<CallExpr>("fopenFn");
-  const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("funcDecl");
-  const Expr *ModeArg = MatchedCall->getArg(1);
-
-  // Check if the 'e' may be in the mode string.
-  const auto *ModeStr = dyn_cast<StringLiteral>(ModeArg->IgnoreParenCasts());
-  if (!ModeStr || (ModeStr->getString().find(MODE) != StringRef::npos))
-    return;
-
-  const std::string &ReplacementText = BuildReplaceText(
-      ModeArg, *Result.SourceManager, Result.Context->getLangOpts());
-
-  diag(ModeArg->getLocStart(), "use %0 mode 'e' to set O_CLOEXEC")
-      << FD
-      << FixItHint::CreateReplacement(ModeArg->getSourceRange(),
-                                      ReplacementText);
+  insertStringFlag(Result, /*Mode=*/'e', /*ArgPos=*/1);
 }
 
 } // namespace android

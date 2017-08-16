@@ -90,6 +90,12 @@ protected:
   /// Helper function to get the spelling of a particular argument.
   StringRef getSpellingArg(const ast_matchers::MatchFinder::MatchResult &Result,
                            int N) const;
+
+  /// Binding name of the FuncDecl of a function call.
+  static constexpr char FuncDeclBindingStr[] = "funcDecl";
+
+  /// Binding name of the function call expression.
+  static constexpr char FuncBindingStr[] = "func";
 };
 
 } // namespace android
