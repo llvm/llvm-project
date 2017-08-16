@@ -490,6 +490,17 @@ namespace {
       OS << "}\n";
     }
 
+    void writeASTVisitorTraversal(raw_ostream &OS) const override {
+      StringRef Name = getUpperName();
+      OS << "  if (A->is" << Name << "Expr()) {\n"
+         << "    if (!getDerived().TraverseStmt(A->get" << Name << "Expr()))\n" 
+         << "      return false;\n" 
+         << "  } else if (auto *TSI = A->get" << Name << "Type()) {\n"
+         << "    if (!getDerived().TraverseTypeLoc(TSI->getTypeLoc()))\n"
+         << "      return false;\n" 
+         << "  }\n";
+    }
+
     void writeCloneArgs(raw_ostream &OS) const override {
       OS << "is" << getLowerName() << "Expr, is" << getLowerName()
          << "Expr ? static_cast<void*>(" << getLowerName()
@@ -628,6 +639,10 @@ namespace {
       // This isn't elegant, but we have to go through public methods...
       OS << "A->" << getLowerName() << "_begin(), "
          << "A->" << getLowerName() << "_size()";
+    }
+
+    void writeASTVisitorTraversal(raw_ostream &OS) const override {
+      // FIXME: Traverse the elements.
     }
 
     void writeCtorBody(raw_ostream &OS) const override {
@@ -1151,6 +1166,12 @@ namespace {
       OS << "  " << getType() << " get" << getUpperName() << "Loc() const {\n";
       OS << "    return " << getLowerName() << ";\n";
       OS << "  }";
+    }
+
+    void writeASTVisitorTraversal(raw_ostream &OS) const override {
+      OS << "  if (auto *TSI = A->get" << getUpperName() << "Loc())\n";
+      OS << "    if (!getDerived().TraverseTypeLoc(TSI->getTypeLoc()))\n";
+      OS << "      return false;\n";
     }
 
     void writeTemplateInstantiationArgs(raw_ostream &OS) const override {

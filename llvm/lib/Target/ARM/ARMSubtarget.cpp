@@ -28,7 +28,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -97,33 +96,6 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
   return new ARMFrameLowering(STI);
 }
 
-namespace {
-
-struct ARMGISelActualAccessor : public GISelAccessor {
-  std::unique_ptr<CallLowering> CallLoweringInfo;
-  std::unique_ptr<InstructionSelector> InstSelector;
-  std::unique_ptr<LegalizerInfo> Legalizer;
-  std::unique_ptr<RegisterBankInfo> RegBankInfo;
-
-  const CallLowering *getCallLowering() const override {
-    return CallLoweringInfo.get();
-  }
-
-  const InstructionSelector *getInstructionSelector() const override {
-    return InstSelector.get();
-  }
-
-  const LegalizerInfo *getLegalizerInfo() const override {
-    return Legalizer.get();
-  }
-
-  const RegisterBankInfo *getRegBankInfo() const override {
-    return RegBankInfo.get();
-  }
-};
-
-} // end anonymous namespace
-
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
                            const ARMBaseTargetMachine &TM, bool IsLittle)
@@ -139,40 +111,34 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                           : (ARMBaseInstrInfo *)new Thumb2InstrInfo(*this)),
       TLInfo(TM, *this) {
 
-  ARMGISelActualAccessor *GISel = new ARMGISelActualAccessor();
-  GISel->CallLoweringInfo.reset(new ARMCallLowering(*getTargetLowering()));
-  GISel->Legalizer.reset(new ARMLegalizerInfo(*this));
+  CallLoweringInfo.reset(new ARMCallLowering(*getTargetLowering()));
+  Legalizer.reset(new ARMLegalizerInfo(*this));
 
   auto *RBI = new ARMRegisterBankInfo(*getRegisterInfo());
 
   // FIXME: At this point, we can't rely on Subtarget having RBI.
   // It's awkward to mix passing RBI and the Subtarget; should we pass
   // TII/TRI as well?
-  GISel->InstSelector.reset(createARMInstructionSelector(
+  InstSelector.reset(createARMInstructionSelector(
       *static_cast<const ARMBaseTargetMachine *>(&TM), *this, *RBI));
 
-  GISel->RegBankInfo.reset(RBI);
-  setGISelAccessor(*GISel);
+  RegBankInfo.reset(RBI);
 }
 
 const CallLowering *ARMSubtarget::getCallLowering() const {
-  assert(GISel && "Access to GlobalISel APIs not set");
-  return GISel->getCallLowering();
+  return CallLoweringInfo.get();
 }
 
 const InstructionSelector *ARMSubtarget::getInstructionSelector() const {
-  assert(GISel && "Access to GlobalISel APIs not set");
-  return GISel->getInstructionSelector();
+  return InstSelector.get();
 }
 
 const LegalizerInfo *ARMSubtarget::getLegalizerInfo() const {
-  assert(GISel && "Access to GlobalISel APIs not set");
-  return GISel->getLegalizerInfo();
+  return Legalizer.get();
 }
 
 const RegisterBankInfo *ARMSubtarget::getRegBankInfo() const {
-  assert(GISel && "Access to GlobalISel APIs not set");
-  return GISel->getRegBankInfo();
+  return RegBankInfo.get();
 }
 
 bool ARMSubtarget::isXRaySupported() const {

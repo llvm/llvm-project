@@ -185,7 +185,7 @@ endif()
 set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
   CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")
 set(LLDB_USE_ENTITLEMENTS_Default On)
-if("${LLDB_CODESIGN_INDENTITY}" STREQUAL "lldb_codesign")
+if("${LLDB_CODESIGN_IDENTITY}" STREQUAL "lldb_codesign")
   set(LLDB_USE_ENTITLEMENTS_Default Off)
 endif()
 option(LLDB_USE_ENTITLEMENTS "Use entitlements when codesigning (Defaults Off when using lldb_codesign identity, otherwise On)" ${LLDB_USE_ENTITLEMENTS_Default})

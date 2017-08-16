@@ -35,7 +35,6 @@ body:             |
     S_NOP 0, implicit %3.sub1
     S_NOP 0, implicit %0.sub1
     S_NOP 0, implicit undef %0.sub0
-    S_ENDPGM
 
 ...
 

@@ -67,14 +67,13 @@ macro(add_interceptor_lib library)
     FOLDER "Compiler-RT Runtime tests")
 endmacro()
 
-function(get_interception_lib_for_arch arch lib lib_name)
+function(get_interception_lib_for_arch arch lib)
   if(APPLE)
     set(tgt_name "RTInterception.test.osx")
   else()
     set(tgt_name "RTInterception.test.${arch}")
   endif()
   set(${lib} "${tgt_name}" PARENT_SCOPE)
-  set(${lib_name} $<TARGET_FILE:${tgt_name}> PARENT_SCOPE)
 endfunction()
 
 # Interception unit tests testsuite.
@@ -84,32 +83,16 @@ set_target_properties(InterceptionUnitTests PROPERTIES
 
 # Adds interception tests for architecture.
 macro(add_interception_tests_for_arch arch)
-  get_target_flags_for_arch(${arch} TARGET_FLAGS)
-  set(INTERCEPTION_TEST_SOURCES ${INTERCEPTION_UNITTESTS}
-                             ${COMPILER_RT_GTEST_SOURCE})
-  set(INTERCEPTION_TEST_COMPILE_DEPS ${INTERCEPTION_TEST_HEADERS})
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND INTERCEPTION_TEST_COMPILE_DEPS gtest)
-  endif()
   set(INTERCEPTION_TEST_OBJECTS)
-  foreach(source ${INTERCEPTION_TEST_SOURCES})
-    get_filename_component(basename ${source} NAME)
-    set(output_obj "${CMAKE_CFG_RESOLVED_INTDIR}${basename}.${arch}.o")
-    clang_compile(${output_obj} ${source}
-                  CFLAGS ${INTERCEPTION_TEST_CFLAGS_COMMON} ${TARGET_FLAGS}
-                  DEPS ${INTERCEPTION_TEST_COMPILE_DEPS})
-    list(APPEND INTERCEPTION_TEST_OBJECTS ${output_obj})
-  endforeach()
-  get_interception_lib_for_arch(${arch} INTERCEPTION_COMMON_LIB
-                                INTERCEPTION_COMMON_LIB_NAME)
-  # Add unittest target.
-  set(INTERCEPTION_TEST_NAME "Interception-${arch}-Test")
-  add_compiler_rt_test(InterceptionUnitTests ${INTERCEPTION_TEST_NAME}
-                       OBJECTS ${INTERCEPTION_TEST_OBJECTS}
-                               ${INTERCEPTION_COMMON_LIB_NAME}
-                       DEPS ${INTERCEPTION_TEST_OBJECTS} ${INTERCEPTION_COMMON_LIB}
-                       LINK_FLAGS ${INTERCEPTION_TEST_LINK_FLAGS_COMMON}
-                                  ${TARGET_FLAGS})
+  get_interception_lib_for_arch(${arch} INTERCEPTION_COMMON_LIB)
+  generate_compiler_rt_tests(INTERCEPTION_TEST_OBJECTS
+    InterceptionUnitTests "Interception-${arch}-Test" ${arch}
+    RUNTIME ${INTERCEPTION_COMMON_LIB}
+    SOURCES ${INTERCEPTION_UNITTESTS} ${COMPILER_RT_GTEST_SOURCE}
+    COMPILE_DEPS gtest ${INTERCEPTION_TEST_HEADERS}
+    DEPS gtest
+    CFLAGS ${INTERCEPTION_TEST_CFLAGS_COMMON}
+    LINK_FLAGS ${INTERCEPTION_TEST_LINK_FLAGS_COMMON})
 endmacro()
 
 if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID AND NOT APPLE)

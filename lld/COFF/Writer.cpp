@@ -268,8 +268,10 @@ static Optional<codeview::DebugInfo> loadExistingBuildId(StringRef Path) {
 
     const codeview::DebugInfo *ExistingDI = nullptr;
     StringRef PDBFileName;
-    if (auto EC = File.getDebugPDBInfo(ExistingDI, PDBFileName))
+    if (auto EC = File.getDebugPDBInfo(ExistingDI, PDBFileName)) {
+      (void)EC;
       return None;
+    }
     // We only support writing PDBs in v70 format.  So if this is not a build
     // id that we recognize / support, ignore it.
     if (ExistingDI->Signature.CVSignature != OMF::Signature::PDB70)

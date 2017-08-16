@@ -18,6 +18,7 @@
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "ConstantEmitter.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
@@ -1601,7 +1602,7 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
       QualType T = E->getType();
       if (E->isGLValue())
         T = CGM.getContext().getLValueReferenceType(T);
-      llvm::Constant *V = CGM.EmitConstantExpr(E, T);
+      llvm::Constant *V = ConstantEmitter(CGM).emitAbstract(E, T);
       assert(V && "Expression in template argument isn't constant");
       llvm::DIType *TTy = getOrCreateType(T, Unit);
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
