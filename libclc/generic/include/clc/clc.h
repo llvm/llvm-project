@@ -179,6 +179,9 @@
 #include <clc/synchronization/cl_mem_fence_flags.h>
 #include <clc/synchronization/barrier.h>
 
+/* 6.11.9 Explicit Memory Fence Functions */
+#include <clc/explicit_fence/explicit_memory_fence.h>
+
 /* 6.11.10 Async Copy and Prefetch Functions */
 #include <clc/async/async_work_group_copy.h>
 #include <clc/async/async_work_group_strided_copy.h>
