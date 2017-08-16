@@ -145,6 +145,7 @@ protected:
   bool SGPRInitBug;
   bool HasSMemRealTime;
   bool Has16BitInsts;
+  bool HasIntClamp;
   bool HasVOP3PInsts;
   bool HasMovrel;
   bool HasVGPRIndexMode;
@@ -239,6 +240,10 @@ public:
 
   bool has16BitInsts() const {
     return Has16BitInsts;
+  }
+
+  bool hasIntClamp() const {
+    return HasIntClamp;
   }
 
   bool hasVOP3PInsts() const {

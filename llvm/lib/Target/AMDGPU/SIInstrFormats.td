@@ -94,6 +94,10 @@ class InstSI <dag outs, dag ins, string asm = "",
   // unused bits in dst. Note that new GFX9 opcodes preserve unused bits.
   field bit F16_ZFILL = 0;
 
+  // This bit indicates that instruction may support integer clamping
+  // which depends on GPU features.
+  field bit IntClamp = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
   let TSFlags{1} = VALU;
@@ -142,6 +146,7 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let TSFlags{44} = maybeAtomic;
   let TSFlags{45} = F16_ZFILL;
+  let TSFlags{46} = IntClamp;
 
   let SchedRW = [Write32Bit];
 

@@ -518,6 +518,58 @@ v_mad_u16 v5, v1, 0, v3
 v_mad_u16 v5, v1, v2, -4.0
 // VI: v_mad_u16 v5, v1, v2, -4.0 ; encoding: [0x05,0x00,0xeb,0xd1,0x01,0x05,0xde,0x03]
 
+///===---------------------------------------------------------------------===//
+// VOP3 with Integer Clamp
+///===---------------------------------------------------------------------===//
+
+v_mad_i32_i24 v5, v1, v2, v3 clamp
+// NOSICI: error: integer clamping is not supported on this GPU
+// VI: v_mad_i32_i24 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xc2,0xd1,0x01,0x05,0x0e,0x04]
+
+v_mad_u32_u24 v5, v1, v2, v3 clamp
+// NOSICI: error: integer clamping is not supported on this GPU
+// VI: v_mad_u32_u24 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xc3,0xd1,0x01,0x05,0x0e,0x04]
+
+v_sad_u8 v5, v1, v2, v3 clamp
+// NOSICI: error: integer clamping is not supported on this GPU
+// VI: v_sad_u8 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xd9,0xd1,0x01,0x05,0x0e,0x04]
+
+v_sad_hi_u8 v5, v1, v2, v3 clamp
+// NOSICI: error: integer clamping is not supported on this GPU
+// VI: v_sad_hi_u8 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xda,0xd1,0x01,0x05,0x0e,0x04]
+
+v_sad_u16 v5, v1, v2, v3 clamp
+// NOSICI: error: integer clamping is not supported on this GPU
+// VI: v_sad_u16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xdb,0xd1,0x01,0x05,0x0e,0x04]
+
+v_sad_u32 v5, v1, v2, v3 clamp
+// NOSICI: error: integer clamping is not supported on this GPU
+// VI: v_sad_u32 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xdc,0xd1,0x01,0x05,0x0e,0x04]
+
+v_msad_u8 v5, v1, v2, v3 clamp
+// NOSICI: error: integer clamping is not supported on this GPU
+// VI: v_msad_u8 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xe4,0xd1,0x01,0x05,0x0e,0x04]
+
+v_mqsad_pk_u16_u8 v[5:6], v[1:2], v2, v[3:4] clamp
+// NOSICI: error: integer clamping is not supported on this GPU
+// VI: v_mqsad_pk_u16_u8 v[5:6], v[1:2], v2, v[3:4] clamp ; encoding: [0x05,0x80,0xe6,0xd1,0x01,0x05,0x0e,0x04]
+
+v_qsad_pk_u16_u8 v[5:6], v[1:2], v2, v[3:4] clamp
+// NOSICI: error:
+// VI: v_qsad_pk_u16_u8 v[5:6], v[1:2], v2, v[3:4] clamp ; encoding: [0x05,0x80,0xe5,0xd1,0x01,0x05,0x0e,0x04]
+
+v_mqsad_u32_u8 v[252:255], v[1:2], v2, v[3:6] clamp
+// NOSICI: error:
+// VI: v_mqsad_u32_u8 v[252:255], v[1:2], v2, v[3:6] clamp ; encoding: [0xfc,0x80,0xe7,0xd1,0x01,0x05,0x0e,0x04]
+
+v_mad_u16 v5, v1, v2, v3 clamp
+// NOSICI: error:
+// VI: v_mad_u16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xeb,0xd1,0x01,0x05,0x0e,0x04]
+
+v_mad_i16 v5, v1, v2, v3 clamp
+// NOSICI: error:
+// VI: v_mad_i16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xec,0xd1,0x01,0x05,0x0e,0x04]
+
 //
 // v_interp*
 //
