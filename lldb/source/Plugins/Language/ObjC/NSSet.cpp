@@ -135,7 +135,7 @@ namespace Foundation1300 {
       GenericNSSetMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
 }
   
-namespace Foundation1400 {
+namespace Foundation1428 {
   struct DataDescriptor_32 {
     uint32_t _used : 26;
     uint32_t _size;
@@ -152,6 +152,64 @@ namespace Foundation1400 {
   
   using NSSetMSyntheticFrontEnd =
       GenericNSSetMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
+}
+  
+namespace Foundation1437 {
+  struct DataDescriptor_32 {
+    uint32_t _cow;
+    // __table storage
+    uint32_t _objs_addr;
+    union {
+      uint32_t _mutations;
+      struct {
+        uint32_t _muts;
+        uint32_t _used : 26;
+        uint32_t _szidx : 6;
+      };
+    };
+  };
+  
+  struct DataDescriptor_64 {
+    uint64_t _cow;
+    // __Table storage
+    uint64_t _objs_addr;
+    union {
+      uint64_t _mutations;
+      struct {
+        uint32_t _muts;
+        uint32_t _used : 26;
+        uint32_t _szidx : 6;
+      };
+    };
+  };
+  
+  using NSSetMSyntheticFrontEnd =
+      GenericNSSetMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
+  
+  template <typename DD>
+  uint64_t
+  __NSSetMSize_Impl(lldb_private::Process &process, lldb::addr_t valobj_addr,
+                    Status &error) {
+    const lldb::addr_t start_of_descriptor =
+        valobj_addr + process.GetAddressByteSize();
+    DD descriptor = DD();
+    process.ReadMemory(start_of_descriptor, &descriptor, sizeof(descriptor),
+                       error);
+    if (error.Fail()) {
+      return 0;
+    }
+    return descriptor._used;
+  }
+  
+  uint64_t
+  __NSSetMSize(lldb_private::Process &process, lldb::addr_t valobj_addr,
+               Status &error) {
+    if (process.GetAddressByteSize() == 4) {
+      return __NSSetMSize_Impl<DataDescriptor_32>(process, valobj_addr, error);
+    } else {
+      return __NSSetMSize_Impl<DataDescriptor_64>(process, valobj_addr, error);
+    }
+  }
 }
   
 class NSSetCodeRunningSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
@@ -219,12 +277,18 @@ bool lldb_private::formatters::NSSetSummaryProvider(
       return false;
     value &= (is_64bit ? ~0xFC00000000000000UL : ~0xFC000000U);
   } else if (!strcmp(class_name, "__NSSetM")) {
+    AppleObjCRuntime *apple_runtime =
+        llvm::dyn_cast_or_null<AppleObjCRuntime>(runtime);
     Status error;
-    value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
-                                                      ptr_size, 0, error);
+    if (apple_runtime && apple_runtime->GetFoundationVersion() >= 1437) {
+      value = Foundation1437::__NSSetMSize(*process_sp, valobj_addr, error);
+    } else {
+      value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
+                                                        ptr_size, 0, error);
+      value &= (is_64bit ? ~0xFC00000000000000UL : ~0xFC000000U);
+    }
     if (error.Fail())
       return false;
-    value &= (is_64bit ? ~0xFC00000000000000UL : ~0xFC000000U);
   }
   /*else if (!strcmp(class_name,"__NSCFSet"))
    {
@@ -312,10 +376,16 @@ lldb_private::formatters::NSSetSyntheticFrontEndCreator(
   } else if (!strcmp(class_name, "__NSSetM")) {
     AppleObjCRuntime *apple_runtime =
         llvm::dyn_cast_or_null<AppleObjCRuntime>(runtime);
-    if (apple_runtime && apple_runtime->GetFoundationVersion() >= 1400)
-      return (new Foundation1400::NSSetMSyntheticFrontEnd(valobj_sp));
-    else
+    if (apple_runtime) {
+      if (apple_runtime->GetFoundationVersion() >= 1437)
+        return (new Foundation1437::NSSetMSyntheticFrontEnd(valobj_sp));
+      else if (apple_runtime->GetFoundationVersion() >= 1428)
+        return (new Foundation1428::NSSetMSyntheticFrontEnd(valobj_sp));
+      else
+        return (new Foundation1300::NSSetMSyntheticFrontEnd(valobj_sp));
+    } else {
       return (new Foundation1300::NSSetMSyntheticFrontEnd(valobj_sp));
+    }
   } else {
     auto &map(NSSet_Additionals::GetAdditionalSynthetics());
     auto iter = map.find(class_name_cs), end = map.end();
