@@ -92,9 +92,7 @@ public:
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addRequired<ScalarEvolutionWrapperPass>();
-    // FIXME: For some reason, preserving SE here breaks LSR (even if
-    // this pass changes nothing).
-    // AU.addPreserved<ScalarEvolutionWrapperPass>();
+    AU.addPreserved<ScalarEvolutionWrapperPass>();
   }
 
   bool runOnFunction(Function &F) override;

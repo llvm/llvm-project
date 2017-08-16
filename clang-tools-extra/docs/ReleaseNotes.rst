@@ -70,6 +70,17 @@ Improvements to clang-tidy
       ``AllowConditionalIntegerCasts`` -> ``AllowIntegerConditions``,
       ``AllowConditionalPointerCasts`` -> ``AllowPointerConditions``.
 
+- New `android-cloexec-accept
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-accept.html>`_ check
+
+  Detects usage of ``accept()``.
+
+- New `android-cloexec-accept4
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-accept4.html>`_ check
+
+  Checks if the required file flag ``SOCK_CLOEXEC`` is present in the argument of
+  ``accept4()``.
+
 - New `android-cloexec-dup
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-dup.html>`_ check
 
@@ -79,6 +90,17 @@ Improvements to clang-tidy
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-inotify-init.html>`_ check
 
   Detects usage of ``inotify_init()``.
+
+- New `android-cloexec-epoll-create1
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-epoll-create1.html>`_ check
+
+  Checks if the required file flag ``EPOLL_CLOEXEC`` is present in the argument of
+  ``epoll_create1()``.
+
+- New `android-cloexec-epoll-create
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-epoll-create.html>`_ check
+
+  Detects usage of ``epoll_create()``.
 
 - New `android-cloexec-memfd_create
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-memfd_create.html>`_ check
