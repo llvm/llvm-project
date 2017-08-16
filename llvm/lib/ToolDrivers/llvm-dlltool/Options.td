@@ -12,12 +12,12 @@ def D_long : JoinedOrSeparate<["--"], "dllname">, Alias<D>;
 def d: JoinedOrSeparate<["-"], "d">, HelpText<"Input .def File">;
 def d_long : JoinedOrSeparate<["--"], "input-def">, Alias<d>;
 
+def k: Flag<["-"], "k">, HelpText<"Kill @n Symbol from export">;
+def k_alias: Flag<["--"], "kill-at">, Alias<k>;
+
 //==============================================================================
 // The flags below do nothing. They are defined only for dlltool compatibility.
 //==============================================================================
-
-def k: Flag<["-"], "k">, HelpText<"Kill @n Symbol from export">;
-def k_alias: Flag<["--"], "kill-at">, Alias<k>;
 
 def S: JoinedOrSeparate<["-"], "S">, HelpText<"Assembler">;
 def S_alias: JoinedOrSeparate<["--"], "as">, Alias<S>;

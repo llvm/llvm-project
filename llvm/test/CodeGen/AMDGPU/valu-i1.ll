@@ -71,7 +71,6 @@ end:
 ; SI: buffer_store_dword
 
 ; SI-NEXT: {{^}}[[EXIT]]:
-; SI: s_or_b64 exec, exec, [[BR_SREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @simple_test_v_if(i32 addrspace(1)* %dst, i32 addrspace(1)* %src) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -98,7 +97,6 @@ exit:
 ; SI: buffer_store_dword
 
 ; SI-NEXT: {{^}}[[EXIT]]:
-; SI: s_or_b64 exec, exec, [[BR_SREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @simple_test_v_if_ret_else_ret(i32 addrspace(1)* %dst, i32 addrspace(1)* %src) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -137,7 +135,6 @@ exit:
 ; SI-NEXT: buffer_store_dword
 
 ; SI-NEXT: {{^}}[[UNIFIED_RETURN]]: ; %UnifiedReturnBlock
-; SI: s_or_b64 exec, exec
 ; SI: s_endpgm
 define amdgpu_kernel void @simple_test_v_if_ret_else_code_ret(i32 addrspace(1)* %dst, i32 addrspace(1)* %src) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -229,9 +226,6 @@ exit:
 ; SI-NEXT: s_or_b64 [[COND_STATE]], [[ORNEG3]], [[TMP]]
 ; SI-NEXT: s_andn2_b64 exec, exec, [[COND_STATE]]
 ; SI-NEXT: s_cbranch_execnz [[LABEL_LOOP]]
-
-; SI: BB#5
-; SI: s_or_b64 exec, exec, [[COND_STATE]]
 
 ; SI: [[LABEL_EXIT]]:
 ; SI-NOT: [[COND_STATE]]

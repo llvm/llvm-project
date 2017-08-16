@@ -86,7 +86,6 @@
 ; GCN: buffer_store_dword
 
 ; GCN: ; %UnifiedReturnBlock
-; GCN-NEXT: s_or_b64 exec, exec
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @multi_divergent_region_exit_ret_ret(i32 addrspace(1)* nocapture %arg0, i32 addrspace(1)* nocapture %arg1, i32 addrspace(1)* nocapture %arg2) #0 {
 entry:

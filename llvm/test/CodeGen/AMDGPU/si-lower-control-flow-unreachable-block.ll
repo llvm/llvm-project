@@ -10,7 +10,6 @@
 ; GCN: ; divergent unreachable
 
 ; GCN-NEXT: [[RET]]: ; %UnifiedReturnBlock
-; GCN-NEXT: s_or_b64 exec, exec
 ; GCN: s_endpgm
 
 define amdgpu_kernel void @lower_control_flow_unreachable_terminator() #0 {
@@ -37,7 +36,6 @@ ret:
 ; GCN: ; divergent unreachable
 
 ; GCN: [[RETURN]]:
-; GCN-NEXT: s_or_b64 exec, exec
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @lower_control_flow_unreachable_terminator_swap_block_order() #0 {
 bb:
