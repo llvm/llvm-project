@@ -57,7 +57,8 @@ private:
   void checkReset(SourceManager &SM, const CXXMemberCallExpr *Member,
                   const CXXNewExpr *New);
 
-  void replaceNew(DiagnosticBuilder &Diag, const CXXNewExpr *New,
+  /// Returns true when the fixes for replacing CXXNewExpr are generated.
+  bool replaceNew(DiagnosticBuilder &Diag, const CXXNewExpr *New,
                   SourceManager &SM);
   void insertHeader(DiagnosticBuilder &Diag, FileID FD);
 };

@@ -108,6 +108,14 @@ void wrapDeclStmtUses() {
 // CHECK-NEXT: fix-it:{{.*}}:{[[@LINE-2]]:24-[[@LINE-2]]:24}:"\n    } else {\n        // Fallback on earlier versions\n    }"
   anotherFunction(y);
   anotherFunction(x);
+
+  if (@available(macOS 10.1, *)) {
+    int z = function();
+    (void)z;
+// CHECK: fix-it:{{.*}}:{[[@LINE-2]]:5-[[@LINE-2]]:5}:"if (@available(macOS 10.12, *)) {\n        "
+// CHECK-NEXT: fix-it:{{.*}}:{[[@LINE-2]]:13-[[@LINE-2]]:13}:"\n    } else {\n        // Fallback on earlier versions\n    }"
+    anotherFunction(x);
+  }
 }
 
 #define API_AVAILABLE(X) __attribute__((availability(macos, introduced=10.12))) // dummy macro
