@@ -169,6 +169,8 @@ private:
       return (Value + getELFAddend(R)) & 0xFFFFFFFF;
     case ELF::R_MIPS_64:
       return Value + getELFAddend(R);
+    case ELF::R_MIPS_TLS_DTPREL64:
+      return Value + getELFAddend(R) - 0x8000;
     }
     HasError = true;
     return 0;
@@ -260,7 +262,10 @@ private:
   }
 
   uint64_t visitMips32(uint32_t Rel, RelocationRef R, uint64_t Value) {
+    // FIXME: Take in account implicit addends to get correct results.
     if (Rel == ELF::R_MIPS_32)
+      return Value & 0xFFFFFFFF;
+    if (Rel == ELF::R_MIPS_TLS_DTPREL32)
       return Value & 0xFFFFFFFF;
     HasError = true;
     return 0;

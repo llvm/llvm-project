@@ -5493,81 +5493,41 @@ defm PMULHRSW    : SS3I_binop_rm<0x0B, "pmulhrsw", X86mulhrs, v8i16, v8i16,
 // SSSE3 - Packed Align Instruction Patterns
 //===---------------------------------------------------------------------===//
 
-multiclass ssse3_palignr<string asm, bit Is2Addr = 1> {
+multiclass ssse3_palignr<string asm, ValueType VT, RegisterClass RC,
+                         PatFrag memop_frag, X86MemOperand x86memop,
+                         bit Is2Addr = 1> {
   let hasSideEffects = 0 in {
-  def rri : SS3AI<0x0F, MRMSrcReg, (outs VR128:$dst),
-      (ins VR128:$src1, VR128:$src2, u8imm:$src3),
+  def rri : SS3AI<0x0F, MRMSrcReg, (outs RC:$dst),
+      (ins RC:$src1, RC:$src2, u8imm:$src3),
       !if(Is2Addr,
         !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
         !strconcat(asm,
                   "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
-      [], IIC_SSE_PALIGNRR>, Sched<[WriteShuffle]>;
+      [(set RC:$dst, (VT (X86PAlignr RC:$src1, RC:$src2, (i8 imm:$src3))))],
+      IIC_SSE_PALIGNRR>, Sched<[WriteShuffle]>;
   let mayLoad = 1 in
-  def rmi : SS3AI<0x0F, MRMSrcMem, (outs VR128:$dst),
-      (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
+  def rmi : SS3AI<0x0F, MRMSrcMem, (outs RC:$dst),
+      (ins RC:$src1, x86memop:$src2, u8imm:$src3),
       !if(Is2Addr,
         !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
         !strconcat(asm,
                   "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
-      [], IIC_SSE_PALIGNRM>, Sched<[WriteShuffleLd, ReadAfterLd]>;
+      [(set RC:$dst, (VT (X86PAlignr RC:$src1,
+                                     (bitconvert (memop_frag addr:$src2)),
+                                     (i8 imm:$src3))))],
+      IIC_SSE_PALIGNRM>, Sched<[WriteShuffleLd, ReadAfterLd]>;
   }
 }
 
-multiclass ssse3_palignr_y<string asm, bit Is2Addr = 1> {
-  let hasSideEffects = 0 in {
-  def Yrri : SS3AI<0x0F, MRMSrcReg, (outs VR256:$dst),
-      (ins VR256:$src1, VR256:$src2, u8imm:$src3),
-      !strconcat(asm,
-                 "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-      []>, Sched<[WriteShuffle]>;
-  let mayLoad = 1 in
-  def Yrmi : SS3AI<0x0F, MRMSrcMem, (outs VR256:$dst),
-      (ins VR256:$src1, i256mem:$src2, u8imm:$src3),
-      !strconcat(asm,
-                 "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-      []>, Sched<[WriteShuffleLd, ReadAfterLd]>;
-  }
-}
-
-let Predicates = [HasAVX] in
-  defm VPALIGNR : ssse3_palignr<"vpalignr", 0>, VEX_4V, VEX_WIG;
-let Predicates = [HasAVX2] in
-  defm VPALIGNR : ssse3_palignr_y<"vpalignr", 0>, VEX_4V, VEX_L, VEX_WIG;
+let Predicates = [HasAVX, NoVLX_Or_NoBWI] in
+  defm VPALIGNR : ssse3_palignr<"vpalignr", v16i8, VR128, loadv2i64,
+                                i128mem, 0>, VEX_4V, VEX_WIG;
+let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in
+  defm VPALIGNRY : ssse3_palignr<"vpalignr", v32i8, VR256, loadv4i64,
+                                 i256mem, 0>, VEX_4V, VEX_L, VEX_WIG;
 let Constraints = "$src1 = $dst", Predicates = [UseSSSE3] in
-  defm PALIGNR : ssse3_palignr<"palignr">;
-
-let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
-def : Pat<(v8i32 (X86PAlignr VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPALIGNRYrri VR256:$src1, VR256:$src2, imm:$imm)>;
-def : Pat<(v8f32 (X86PAlignr VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPALIGNRYrri VR256:$src1, VR256:$src2, imm:$imm)>;
-def : Pat<(v16i16 (X86PAlignr VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPALIGNRYrri VR256:$src1, VR256:$src2, imm:$imm)>;
-def : Pat<(v32i8 (X86PAlignr VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPALIGNRYrri VR256:$src1, VR256:$src2, imm:$imm)>;
-}
-
-let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
-def : Pat<(v4i32 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (VPALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
-def : Pat<(v4f32 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (VPALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
-def : Pat<(v8i16 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (VPALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
-def : Pat<(v16i8 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (VPALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
-}
-
-let Predicates = [UseSSSE3] in {
-def : Pat<(v4i32 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (PALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
-def : Pat<(v4f32 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (PALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
-def : Pat<(v8i16 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (PALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
-def : Pat<(v16i8 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (PALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
-}
+  defm PALIGNR : ssse3_palignr<"palignr", v16i8, VR128, memopv2i64,
+                               i128mem>;
 
 //===---------------------------------------------------------------------===//
 // SSSE3 - Thread synchronization

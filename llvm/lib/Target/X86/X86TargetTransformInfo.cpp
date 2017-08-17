@@ -861,6 +861,28 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
     if (const auto *Entry = CostTableLookup(AVX2ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
 
+  static const CostTblEntry XOPShuffleTbl[] = {
+    { TTI::SK_PermuteSingleSrc, MVT::v4f64,   2 }, // vperm2f128 + vpermil2pd
+    { TTI::SK_PermuteSingleSrc, MVT::v8f32,   2 }, // vperm2f128 + vpermil2ps
+    { TTI::SK_PermuteSingleSrc, MVT::v4i64,   2 }, // vperm2f128 + vpermil2pd
+    { TTI::SK_PermuteSingleSrc, MVT::v8i32,   2 }, // vperm2f128 + vpermil2ps
+    { TTI::SK_PermuteSingleSrc, MVT::v16i16,  4 }, // vextractf128 + 2*vpperm
+                                                   // + vinsertf128
+    { TTI::SK_PermuteSingleSrc, MVT::v32i8,   4 }, // vextractf128 + 2*vpperm
+                                                   // + vinsertf128
+
+    { TTI::SK_PermuteTwoSrc,    MVT::v16i16,  9 }, // 2*vextractf128 + 6*vpperm
+                                                   // + vinsertf128
+    { TTI::SK_PermuteTwoSrc,    MVT::v8i16,   1 }, // vpperm
+    { TTI::SK_PermuteTwoSrc,    MVT::v32i8,   9 }, // 2*vextractf128 + 6*vpperm
+                                                   // + vinsertf128
+    { TTI::SK_PermuteTwoSrc,    MVT::v16i8,   1 }, // vpperm
+  };
+
+  if (ST->hasXOP())
+    if (const auto *Entry = CostTableLookup(XOPShuffleTbl, Kind, LT.second))
+      return LT.first * Entry->Cost;
+
   static const CostTblEntry AVX1ShuffleTbl[] = {
     { TTI::SK_Broadcast, MVT::v4f64,  2 }, // vperm2f128 + vpermilpd
     { TTI::SK_Broadcast, MVT::v8f32,  2 }, // vperm2f128 + vpermilps

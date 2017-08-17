@@ -368,7 +368,7 @@ void DemandedBits::performAnalysis() {
 APInt DemandedBits::getDemandedBits(Instruction *I) {
   performAnalysis();
   
-  const DataLayout &DL = I->getParent()->getModule()->getDataLayout();
+  const DataLayout &DL = I->getModule()->getDataLayout();
   auto Found = AliveBits.find(I);
   if (Found != AliveBits.end())
     return Found->second;

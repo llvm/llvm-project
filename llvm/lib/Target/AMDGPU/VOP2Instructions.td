@@ -208,7 +208,7 @@ def VOP_MADMK_F32 : VOP_MADMK <f32>;
 class VOP_MAC <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, VGPR_32:$src2);
   let Ins64 = getIns64<Src0RC64, Src1RC64, RegisterOperand<VGPR_32>, 3,
-                       HasModifiers, HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
+                       0, HasModifiers, HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
   let InsDPP = (ins DstRCDPP:$old,
                     Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                     Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
@@ -222,7 +222,7 @@ class VOP_MAC <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
                      dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
   let Asm32 = getAsm32<1, 2, vt>.ret;
-  let Asm64 = getAsm64<1, 2, HasModifiers, HasOMod, vt>.ret;
+  let Asm64 = getAsm64<1, 2, 0, HasModifiers, HasOMod, vt>.ret;
   let AsmDPP = getAsmDPP<1, 2, HasModifiers, vt>.ret;
   let AsmSDWA = getAsmSDWA<1, 2, vt>.ret;
   let AsmSDWA9 = getAsmSDWA9<1, 1, 2, vt>.ret;
@@ -235,13 +235,13 @@ class VOP_MAC <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
 def VOP_MAC_F16 : VOP_MAC <f16> {
   // FIXME: Move 'Asm64' definition to VOP_MAC, and use 'vt'. Currently it gives
   // 'not a string initializer' error.
-  let Asm64 = getAsm64<1, 2, HasModifiers, HasOMod, f16>.ret;
+  let Asm64 = getAsm64<1, 2, 0, HasModifiers, HasOMod, f16>.ret;
 }
 
 def VOP_MAC_F32 : VOP_MAC <f32> {
   // FIXME: Move 'Asm64' definition to VOP_MAC, and use 'vt'. Currently it gives
   // 'not a string initializer' error.
-  let Asm64 = getAsm64<1, 2, HasModifiers, HasOMod, f32>.ret;
+  let Asm64 = getAsm64<1, 2, 0, HasModifiers, HasOMod, f32>.ret;
 }
 
 // Write out to vcc or arbitrary SGPR.

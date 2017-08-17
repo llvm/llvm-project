@@ -1,4 +1,4 @@
-//===- llvm/Analysis/MemoryBuiltins.h- Calls to memory builtins -*- C++ -*-===//
+//==- llvm/Analysis/MemoryBuiltins.h - Calls to memory builtins --*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,21 +15,42 @@
 #ifndef LLVM_ANALYSIS_MEMORYBUILTINS_H
 #define LLVM_ANALYSIS_MEMORYBUILTINS_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/TargetFolder.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/Support/DataTypes.h"
+#include <cstdint>
+#include <utility>
 
 namespace llvm {
+
+class AllocaInst;
+class Argument;
 class CallInst;
-class PointerType;
+class ConstantInt;
+class ConstantPointerNull;
 class DataLayout;
+class ExtractElementInst;
+class ExtractValueInst;
+class GEPOperator;
+class GlobalAlias;
+class GlobalVariable;
+class Instruction;
+class IntegerType;
+class IntrinsicInst;
+class IntToPtrInst;
+class LLVMContext;
+class LoadInst;
+class PHINode;
+class PointerType;
+class SelectInst;
 class TargetLibraryInfo;
 class Type;
+class UndefValue;
 class Value;
 
 /// \brief Tests if a value is a call or invoke to a library function that
@@ -123,7 +144,6 @@ static inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
   return const_cast<CallInst*>(isFreeCall((const Value*)I, TLI));
 }
 
-
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.
 //
@@ -169,13 +189,12 @@ ConstantInt *lowerObjectSizeCall(IntrinsicInst *ObjectSize,
                                  const TargetLibraryInfo *TLI,
                                  bool MustSucceed);
 
-typedef std::pair<APInt, APInt> SizeOffsetType;
+using SizeOffsetType = std::pair<APInt, APInt>;
 
 /// \brief Evaluate the size and offset of an object pointed to by a Value*
 /// statically. Fails if size or offset are not known at compile time.
 class ObjectSizeOffsetVisitor
   : public InstVisitor<ObjectSizeOffsetVisitor, SizeOffsetType> {
-
   const DataLayout &DL;
   const TargetLibraryInfo *TLI;
   ObjectSizeOpts Options;
@@ -229,18 +248,16 @@ private:
   bool CheckedZextOrTrunc(APInt &I);
 };
 
-typedef std::pair<Value*, Value*> SizeOffsetEvalType;
-
+using SizeOffsetEvalType = std::pair<Value *, Value *>;
 
 /// \brief Evaluate the size and offset of an object pointed to by a Value*.
 /// May create code to compute the result at run-time.
 class ObjectSizeOffsetEvaluator
   : public InstVisitor<ObjectSizeOffsetEvaluator, SizeOffsetEvalType> {
-
-  typedef IRBuilder<TargetFolder> BuilderTy;
-  typedef std::pair<WeakTrackingVH, WeakTrackingVH> WeakEvalType;
-  typedef DenseMap<const Value*, WeakEvalType> CacheMapTy;
-  typedef SmallPtrSet<const Value*, 8> PtrSetTy;
+  using BuilderTy = IRBuilder<TargetFolder>;
+  using WeakEvalType = std::pair<WeakTrackingVH, WeakTrackingVH>;
+  using CacheMapTy = DenseMap<const Value *, WeakEvalType>;
+  using PtrSetTy = SmallPtrSet<const Value *, 8>;
 
   const DataLayout &DL;
   const TargetLibraryInfo *TLI;
@@ -255,11 +272,13 @@ class ObjectSizeOffsetEvaluator
   SizeOffsetEvalType unknown() {
     return std::make_pair(nullptr, nullptr);
   }
+
   SizeOffsetEvalType compute_(Value *V);
 
 public:
   ObjectSizeOffsetEvaluator(const DataLayout &DL, const TargetLibraryInfo *TLI,
                             LLVMContext &Context, bool RoundToAlign = false);
+
   SizeOffsetEvalType compute(Value *V);
 
   bool knownSize(SizeOffsetEvalType SizeOffset) {
@@ -291,6 +310,6 @@ public:
   SizeOffsetEvalType visitInstruction(Instruction &I);
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ANALYSIS_MEMORYBUILTINS_H

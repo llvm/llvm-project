@@ -373,6 +373,23 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombiner &IC,
     }
     break;
   }
+  case Instruction::AShr: {
+    // If this is a truncate of an arithmetic shr, we can truncate it to a
+    // smaller ashr iff we know that all the bits from the sign bit of the
+    // original type and the sign bit of the truncate type are similar.
+    // TODO: It is enough to check that the bits we would be shifting in are
+    //       similar to sign bit of the truncate type.
+    const APInt *Amt;
+    if (match(I->getOperand(1), m_APInt(Amt))) {
+      uint32_t OrigBitWidth = OrigTy->getScalarSizeInBits();
+      uint32_t BitWidth = Ty->getScalarSizeInBits();
+      if (Amt->getLimitedValue(BitWidth) < BitWidth &&
+          OrigBitWidth - BitWidth <
+              IC.ComputeNumSignBits(I->getOperand(0), 0, CxtI))
+        return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI);
+    }
+    break;
+  }
   case Instruction::Trunc:
     // trunc(trunc(x)) -> trunc(x)
     return true;

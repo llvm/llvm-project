@@ -16,7 +16,6 @@ tablegen(LLVM AMDGPUGenRegisterBank.inc -gen-register-bank)
 add_public_tablegen_target(AMDGPUCommonTableGen)
 
 add_llvm_target(AMDGPUCodeGen
-  AMDILCFGStructurizer.cpp
   AMDGPUAliasAnalysis.cpp
   AMDGPUAlwaysInlinePass.cpp
   AMDGPUAnnotateKernelFeatures.cpp
@@ -26,33 +25,37 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUCallLowering.cpp
   AMDGPUCodeGenPrepare.cpp
   AMDGPUFrameLowering.cpp
-  AMDGPULegalizerInfo.cpp
-  AMDGPUTargetObjectFile.cpp
+  AMDGPUInstrInfo.cpp
   AMDGPUInstructionSelector.cpp
   AMDGPUIntrinsicInfo.cpp
   AMDGPUISelDAGToDAG.cpp
+  AMDGPUISelLowering.cpp
+  AMDGPULegalizerInfo.cpp
+  AMDGPULibCalls.cpp
+  AMDGPULibFunc.cpp
   AMDGPULowerIntrinsics.cpp
-  AMDGPUMacroFusion.cpp
-  AMDGPUMCInstLower.cpp
   AMDGPUMachineCFGStructurizer.cpp
   AMDGPUMachineFunction.cpp
   AMDGPUMachineModuleInfo.cpp
-  AMDGPUUnifyMetadata.cpp
+  AMDGPUMacroFusion.cpp
+  AMDGPUMCInstLower.cpp
   AMDGPUOpenCLImageTypeLoweringPass.cpp
-  AMDGPUSubtarget.cpp
-  AMDGPUTargetMachine.cpp
-  AMDGPUTargetTransformInfo.cpp
-  AMDGPUISelLowering.cpp
-  AMDGPUInstrInfo.cpp
   AMDGPUPromoteAlloca.cpp
   AMDGPURegAsmNames.inc.cpp
   AMDGPURegisterBankInfo.cpp
   AMDGPURegisterInfo.cpp
   AMDGPURewriteOutArguments.cpp
+  AMDGPUSubtarget.cpp
+  AMDGPUTargetMachine.cpp
+  AMDGPUTargetObjectFile.cpp
+  AMDGPUTargetTransformInfo.cpp
   AMDGPUUnifyDivergentExitNodes.cpp
-  AMDGPULibFunc.cpp
-  AMDGPULibCalls.cpp
+  AMDGPUUnifyMetadata.cpp
+  AMDILCFGStructurizer.cpp
   GCNHazardRecognizer.cpp
+  GCNIterativeScheduler.cpp
+  GCNMinRegStrategy.cpp
+  GCNRegPressure.cpp
   GCNSchedStrategy.cpp
   R600ClauseMergePass.cpp
   R600ControlFlowFinalizer.cpp
@@ -74,8 +77,8 @@ add_llvm_target(AMDGPUCodeGen
   SIFoldOperands.cpp
   SIFrameLowering.cpp
   SIInsertSkips.cpp
-  SIInsertWaits.cpp
   SIInsertWaitcnts.cpp
+  SIInsertWaits.cpp
   SIInstrInfo.cpp
   SIISelLowering.cpp
   SILoadStoreOptimizer.cpp
@@ -90,9 +93,6 @@ add_llvm_target(AMDGPUCodeGen
   SIRegisterInfo.cpp
   SIShrinkInstructions.cpp
   SIWholeQuadMode.cpp
-  GCNIterativeScheduler.cpp
-  GCNMinRegStrategy.cpp
-  GCNRegPressure.cpp
   )
 
 add_subdirectory(AsmParser)
