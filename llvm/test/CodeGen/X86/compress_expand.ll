@@ -334,7 +334,7 @@ define <32 x float> @test15(float* %base, <32 x float> %src0, <32 x i32> %trigge
 define <16 x double> @test16(double* %base, <16 x double> %src0, <16 x i32> %trigger) {
 ; SKX-LABEL: test16:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vextracti32x8 $1, %zmm2, %ymm3
+; SKX-NEXT:    vextracti64x4 $1, %zmm2, %ymm3
 ; SKX-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; SKX-NEXT:    vpcmpeqd %ymm4, %ymm3, %k1
 ; SKX-NEXT:    vpcmpeqd %ymm4, %ymm2, %k2

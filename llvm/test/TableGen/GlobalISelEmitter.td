@@ -83,6 +83,13 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    return Features;
 // CHECK-NEXT:  }
 
+// CHECK-LABEL: enum {
+// CHECK-NEXT:    GILLT_s32,
+// CHECK-NEXT:  }
+// CHECK-NEXT:  const static LLT TypeObjects[] = {
+// CHECK-NEXT:    LLT::scalar(32),
+// CHECK-NEXT:  };
+
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I) const {
 // CHECK-NEXT: MachineFunction &MF = *I.getParent()->getParent();
 // CHECK-NEXT: MachineRegisterInfo &MRI = MF.getRegInfo();
