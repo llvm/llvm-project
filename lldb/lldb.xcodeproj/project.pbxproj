@@ -777,6 +777,7 @@
 		4C56543119D1EFAA002E9C44 /* ThreadPlanPython.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543019D1EFAA002E9C44 /* ThreadPlanPython.cpp */; };
 		4C56543519D2297A002E9C44 /* SBThreadPlan.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C56543419D2297A002E9C44 /* SBThreadPlan.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C56543719D22B32002E9C44 /* SBThreadPlan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543619D22B32002E9C44 /* SBThreadPlan.cpp */; };
+		4C877B391F30EF990068FCFB /* SBProcessInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 4987FB201F30EC9900E5C17D /* SBProcessInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C848DFF18D2873500EC6DD0 /* SwiftASTManipulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848DFC18D2873500EC6DD0 /* SwiftASTManipulator.cpp */; };
 		4C848E0018D2873500EC6DD0 /* SwiftExpressionParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848DFD18D2873500EC6DD0 /* SwiftExpressionParser.cpp */; };
 		4C848E0118D2873500EC6DD0 /* SwiftSILManipulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848DFE18D2873500EC6DD0 /* SwiftSILManipulator.cpp */; };
@@ -2610,6 +2611,7 @@
 		4984BA171B979C08008658D4 /* ExpressionVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ExpressionVariable.h; path = include/lldb/Expression/ExpressionVariable.h; sourceTree = "<group>"; };
 		4987FB1C1F30EC6000E5C17D /* SBProcessInfo.i */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBProcessInfo.i; sourceTree = "<group>"; };
 		4987FB1E1F30EC7E00E5C17D /* SBProcessInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBProcessInfo.cpp; path = source/API/SBProcessInfo.cpp; sourceTree = "<group>"; };
+		4987FB201F30EC9900E5C17D /* SBProcessInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBProcessInfo.h; path = include/lldb/API/SBProcessInfo.h; sourceTree = "<group>"; };
 		498CF62A1BBDF85A0067B8C5 /* SwiftPersistentExpressionState.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftPersistentExpressionState.h; path = ExpressionParser/Swift/SwiftPersistentExpressionState.h; sourceTree = "<group>"; };
 		498CF62B1BBDF8800067B8C5 /* SwiftPersistentExpressionState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftPersistentExpressionState.cpp; path = ExpressionParser/Swift/SwiftPersistentExpressionState.cpp; sourceTree = "<group>"; };
 		4997E6811A3B74AE00733D2F /* DeclVendor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DeclVendor.h; path = include/lldb/Symbol/DeclVendor.h; sourceTree = "<group>"; };
@@ -4267,6 +4269,7 @@
 				AF0EBBE7185940FB0059E52F /* SBQueueItem.cpp */,
 				9A9831041125FC5800A56CB0 /* SBProcess.h */,
 				9A9831031125FC5800A56CB0 /* SBProcess.cpp */,
+				4987FB201F30EC9900E5C17D /* SBProcessInfo.h */,
 				26B8283C142D01E9002DBC64 /* SBSection.h */,
 				26B8283F142D020F002DBC64 /* SBSection.cpp */,
 				9A9831061125FC5800A56CB0 /* SBSourceManager.h */,
@@ -6915,6 +6918,7 @@
 				8CCB018219BA4E270009FD44 /* SBThreadCollection.h in Headers */,
 				9A36D24D1EB3BE7F00AAD9EA /* SBTrace.h in Headers */,
 				AF0EBBEC185941360059E52F /* SBQueue.h in Headers */,
+				4C877B391F30EF990068FCFB /* SBProcessInfo.h in Headers */,
 				26680222115FD13D008E1FE4 /* SBError.h in Headers */,
 				26680223115FD13D008E1FE4 /* SBEvent.h in Headers */,
 				AFDCDBCB19DD0F42005EA55E /* SBExecutionContext.h in Headers */,
