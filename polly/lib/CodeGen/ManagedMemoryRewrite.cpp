@@ -1,5 +1,4 @@
-//===------ ManagedMemoryRewrite.cpp - Rewrite global & malloc'd memory.
-//---===//
+//===---- ManagedMemoryRewrite.cpp - Rewrite global & malloc'd memory -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -30,6 +29,7 @@
 #include "polly/Support/SCEVValidator.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -43,14 +43,25 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
+
+static cl::opt<bool> RewriteAllocas(
+    "polly-acc-rewrite-allocas",
+    cl::desc(
+        "Ask the managed memory rewriter to also rewrite alloca instructions"),
+    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<bool> IgnoreLinkageForGlobals(
+    "polly-acc-rewrite-ignore-linkage-for-globals",
+    cl::desc(
+        "By default, we only rewrite globals with internal linkage. This flag "
+        "enables rewriting of globals regardless of linkage"),
+    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+#define DEBUG_TYPE "polly-acc-rewrite-managed-memory"
 namespace {
 
-static llvm::Function *GetOrCreatePollyMallocManaged(Module &M) {
-  // TODO: should I allow this pass to be a standalone pass that
-  // doesn't care if PollyManagedMemory is enabled or not?
-  assert(PollyManagedMemory &&
-         "One should only rewrite malloc & free to"
-         "polly_{malloc,free}Managed with managed memory enabled.");
+static llvm::Function *getOrCreatePollyMallocManaged(Module &M) {
   const char *Name = "polly_mallocManaged";
   Function *F = M.getFunction(Name);
 
@@ -67,12 +78,7 @@ static llvm::Function *GetOrCreatePollyMallocManaged(Module &M) {
   return F;
 }
 
-static llvm::Function *GetOrCreatePollyFreeManaged(Module &M) {
-  // TODO: should I allow this pass to be a standalone pass that
-  // doesn't care if PollyManagedMemory is enabled or not?
-  assert(PollyManagedMemory &&
-         "One should only rewrite malloc & free to"
-         "polly_{malloc,free}Managed with managed memory enabled.");
+static llvm::Function *getOrCreatePollyFreeManaged(Module &M) {
   const char *Name = "polly_freeManaged";
   Function *F = M.getFunction(Name);
 
@@ -89,17 +95,242 @@ static llvm::Function *GetOrCreatePollyFreeManaged(Module &M) {
   return F;
 }
 
+// Expand a constant expression `Cur`, which is used at instruction `Parent`
+// at index `index`.
+// Since a constant expression can expand to multiple instructions, store all
+// the expands into a set called `Expands`.
+// Note that this goes inorder on the constant expression tree.
+// A * ((B * D) + C)
+// will be processed with first A, then B * D, then B, then D, and then C.
+// Though ConstantExprs are not treated as "trees" but as DAGs, since you can
+// have something like this:
+//    *
+//   /  \
+//   \  /
+//    (D)
+//
+// For the purposes of this expansion, we expand the two occurences of D
+// separately. Therefore, we expand the DAG into the tree:
+//  *
+// / \
+// D  D
+// TODO: We don't _have_to do this, but this is the simplest solution.
+// We can write a solution that keeps track of which constants have been
+// already expanded.
+static void expandConstantExpr(ConstantExpr *Cur, PollyIRBuilder &Builder,
+                               Instruction *Parent, int index,
+                               SmallPtrSet<Instruction *, 4> &Expands) {
+  assert(Cur && "invalid constant expression passed");
+
+  Instruction *I = Cur->getAsInstruction();
+  Expands.insert(I);
+  Parent->setOperand(index, I);
+
+  assert(I && "unable to convert ConstantExpr to Instruction");
+  // The things that `Parent` uses (its operands) should be created
+  // before `Parent`.
+  Builder.SetInsertPoint(Parent);
+  Builder.Insert(I);
+
+  DEBUG(dbgs() << "Expanding ConstantExpression: " << *Cur
+               << " | in Instruction: " << *I << "\n";);
+  for (unsigned i = 0; i < Cur->getNumOperands(); i++) {
+    Value *Op = Cur->getOperand(i);
+    assert(isa<Constant>(Op) && "constant must have a constant operand");
+
+    if (ConstantExpr *CExprOp = dyn_cast<ConstantExpr>(Op))
+      expandConstantExpr(CExprOp, Builder, I, i, Expands);
+  }
+}
+
+// Edit all uses of `OldVal` to NewVal` in `Inst`. This will rewrite
+// `ConstantExpr`s that are used in the `Inst`.
+// Note that `replaceAllUsesWith` is insufficient for this purpose because it
+// does not rewrite values in `ConstantExpr`s.
+static void rewriteOldValToNew(Instruction *Inst, Value *OldVal, Value *NewVal,
+                               PollyIRBuilder &Builder) {
+
+  // This contains a set of instructions in which OldVal must be replaced.
+  // We start with `Inst`, and we fill it up with the expanded `ConstantExpr`s
+  // from `Inst`s arguments.
+  // We need to go through this process because `replaceAllUsesWith` does not
+  // actually edit `ConstantExpr`s.
+  SmallPtrSet<Instruction *, 4> InstsToVisit = {Inst};
+
+  // Expand all `ConstantExpr`s and place it in `InstsToVisit`.
+  for (unsigned i = 0; i < Inst->getNumOperands(); i++) {
+    Value *Operand = Inst->getOperand(i);
+    if (ConstantExpr *ValueConstExpr = dyn_cast<ConstantExpr>(Operand))
+      expandConstantExpr(ValueConstExpr, Builder, Inst, i, InstsToVisit);
+  }
+
+  // Now visit each instruction and use `replaceUsesOfWith`. We know that
+  // will work because `I` cannot have any `ConstantExpr` within it.
+  for (Instruction *I : InstsToVisit)
+    I->replaceUsesOfWith(OldVal, NewVal);
+}
+
+// Given a value `Current`, return all Instructions that may contain `Current`
+// in an expression.
+// We need this auxiliary function, because if we have a
+// `Constant` that is a user of `V`, we need to recurse into the
+// `Constant`s uses to gather the root instruciton.
+static void getInstructionUsersOfValue(Value *V,
+                                       SmallVector<Instruction *, 4> &Owners) {
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    Owners.push_back(I);
+  } else {
+    // Anything that is a `User` must be a constant or an instruction.
+    auto *C = cast<Constant>(V);
+    for (Use &CUse : C->uses())
+      getInstructionUsersOfValue(CUse.getUser(), Owners);
+  }
+}
+
+static void
+replaceGlobalArray(Module &M, const DataLayout &DL, GlobalVariable &Array,
+                   SmallPtrSet<GlobalVariable *, 4> &ReplacedGlobals) {
+  // We only want arrays.
+  ArrayType *ArrayTy = dyn_cast<ArrayType>(Array.getType()->getElementType());
+  if (!ArrayTy)
+    return;
+  Type *ElemTy = ArrayTy->getElementType();
+  PointerType *ElemPtrTy = ElemTy->getPointerTo();
+
+  // We only wish to replace arrays that are visible in the module they
+  // inhabit. Otherwise, our type edit from [T] to T* would be illegal across
+  // modules.
+  const bool OnlyVisibleInsideModule = Array.hasPrivateLinkage() ||
+                                       Array.hasInternalLinkage() ||
+                                       IgnoreLinkageForGlobals;
+  if (!OnlyVisibleInsideModule)
+    return;
+
+  if (!Array.hasInitializer() ||
+      !isa<ConstantAggregateZero>(Array.getInitializer()))
+    return;
+
+  // At this point, we have committed to replacing this array.
+  ReplacedGlobals.insert(&Array);
+
+  std::string NewName = (Array.getName() + Twine(".toptr")).str();
+  GlobalVariable *ReplacementToArr =
+      cast<GlobalVariable>(M.getOrInsertGlobal(NewName, ElemPtrTy));
+  ReplacementToArr->setInitializer(ConstantPointerNull::get(ElemPtrTy));
+
+  Function *PollyMallocManaged = getOrCreatePollyMallocManaged(M);
+  Twine FnName = Array.getName() + ".constructor";
+  PollyIRBuilder Builder(M.getContext());
+  FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), false);
+  const GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+  Function *F = Function::Create(Ty, Linkage, FnName, &M);
+  BasicBlock *Start = BasicBlock::Create(M.getContext(), "entry", F);
+  Builder.SetInsertPoint(Start);
+
+  int ArraySizeInt = DL.getTypeAllocSizeInBits(ArrayTy) / 8;
+  Value *ArraySize = Builder.getInt64(ArraySizeInt);
+  ArraySize->setName("array.size");
+
+  Value *AllocatedMemRaw =
+      Builder.CreateCall(PollyMallocManaged, {ArraySize}, "mem.raw");
+  Value *AllocatedMemTyped =
+      Builder.CreatePointerCast(AllocatedMemRaw, ElemPtrTy, "mem.typed");
+  Builder.CreateStore(AllocatedMemTyped, ReplacementToArr);
+  Builder.CreateRetVoid();
+
+  const int Priority = 0;
+  appendToGlobalCtors(M, F, Priority, ReplacementToArr);
+
+  SmallVector<Instruction *, 4> ArrayUserInstructions;
+  // Get all instructions that use array. We need to do this weird thing
+  // because `Constant`s that contain this array neeed to be expanded into
+  // instructions so that we can replace their parameters. `Constant`s cannot
+  // be edited easily, so we choose to convert all `Constant`s to
+  // `Instruction`s and handle all of the uses of `Array` uniformly.
+  for (Use &ArrayUse : Array.uses())
+    getInstructionUsersOfValue(ArrayUse.getUser(), ArrayUserInstructions);
+
+  for (Instruction *UserOfArrayInst : ArrayUserInstructions) {
+
+    Builder.SetInsertPoint(UserOfArrayInst);
+    // <ty>** -> <ty>*
+    Value *ArrPtrLoaded = Builder.CreateLoad(ReplacementToArr, "arrptr.load");
+    // <ty>* -> [ty]*
+    Value *ArrPtrLoadedBitcasted = Builder.CreateBitCast(
+        ArrPtrLoaded, ArrayTy->getPointerTo(), "arrptr.bitcast");
+    rewriteOldValToNew(UserOfArrayInst, &Array, ArrPtrLoadedBitcasted, Builder);
+  }
+}
+
+// We return all `allocas` that may need to be converted to a call to
+// cudaMallocManaged.
+static void getAllocasToBeManaged(Function &F,
+                                  SmallSet<AllocaInst *, 4> &Allocas) {
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      auto *Alloca = dyn_cast<AllocaInst>(&I);
+      if (!Alloca)
+        continue;
+      dbgs() << "Checking if " << *Alloca << "may be captured: ";
+
+      if (PointerMayBeCaptured(Alloca, /* ReturnCaptures */ false,
+                               /* StoreCaptures */ true)) {
+        Allocas.insert(Alloca);
+        DEBUG(dbgs() << "YES (captured)\n");
+      } else {
+        DEBUG(dbgs() << "NO (not captured)\n");
+      }
+    }
+  }
+}
+
+static void rewriteAllocaAsManagedMemory(AllocaInst *Alloca,
+                                         const DataLayout &DL) {
+  DEBUG(dbgs() << "rewriting: " << *Alloca << " to managed mem.\n");
+  Module *M = Alloca->getModule();
+  assert(M && "Alloca does not have a module");
+
+  PollyIRBuilder Builder(M->getContext());
+  Builder.SetInsertPoint(Alloca);
+
+  Value *MallocManagedFn = getOrCreatePollyMallocManaged(*Alloca->getModule());
+  const int Size = DL.getTypeAllocSize(Alloca->getType()->getElementType());
+  Value *SizeVal = Builder.getInt64(Size);
+  Value *RawManagedMem = Builder.CreateCall(MallocManagedFn, {SizeVal});
+  Value *Bitcasted = Builder.CreateBitCast(RawManagedMem, Alloca->getType());
+
+  Function *F = Alloca->getFunction();
+  assert(F && "Alloca has invalid function");
+
+  Bitcasted->takeName(Alloca);
+  Alloca->replaceAllUsesWith(Bitcasted);
+  Alloca->eraseFromParent();
+
+  for (BasicBlock &BB : *F) {
+    ReturnInst *Return = dyn_cast<ReturnInst>(BB.getTerminator());
+    if (!Return)
+      continue;
+    Builder.SetInsertPoint(Return);
+
+    Value *FreeManagedFn = getOrCreatePollyFreeManaged(*M);
+    Builder.CreateCall(FreeManagedFn, {RawManagedMem});
+  }
+}
+
 class ManagedMemoryRewritePass : public ModulePass {
 public:
   static char ID;
   GPUArch Architecture;
   GPURuntime Runtime;
+
   ManagedMemoryRewritePass() : ModulePass(ID) {}
   virtual bool runOnModule(Module &M) {
+    const DataLayout &DL = M.getDataLayout();
+
     Function *Malloc = M.getFunction("malloc");
 
     if (Malloc) {
-      Function *PollyMallocManaged = GetOrCreatePollyMallocManaged(M);
+      Function *PollyMallocManaged = getOrCreatePollyMallocManaged(M);
       assert(PollyMallocManaged && "unable to create polly_mallocManaged");
       Malloc->replaceAllUsesWith(PollyMallocManaged);
       Malloc->eraseFromParent();
@@ -108,10 +339,26 @@ public:
     Function *Free = M.getFunction("free");
 
     if (Free) {
-      Function *PollyFreeManaged = GetOrCreatePollyFreeManaged(M);
+      Function *PollyFreeManaged = getOrCreatePollyFreeManaged(M);
       assert(PollyFreeManaged && "unable to create polly_freeManaged");
       Free->replaceAllUsesWith(PollyFreeManaged);
       Free->eraseFromParent();
+    }
+
+    SmallPtrSet<GlobalVariable *, 4> GlobalsToErase;
+    for (GlobalVariable &Global : M.globals())
+      replaceGlobalArray(M, DL, Global, GlobalsToErase);
+    for (GlobalVariable *G : GlobalsToErase)
+      G->eraseFromParent();
+
+    // Rewrite allocas to cudaMallocs if we are asked to do so.
+    if (RewriteAllocas) {
+      SmallSet<AllocaInst *, 4> AllocasToBeManaged;
+      for (Function &F : M.functions())
+        getAllocasToBeManaged(F, AllocasToBeManaged);
+
+      for (AllocaInst *Alloca : AllocasToBeManaged)
+        rewriteAllocaAsManagedMemory(Alloca, DL);
     }
 
     return true;

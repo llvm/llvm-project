@@ -275,6 +275,11 @@ namespace llvm {
     /// Returns an existing SUnit for this MI, or nullptr.
     SUnit *getSUnit(MachineInstr *MI) const;
 
+    /// If this method returns true, handling of the scheduling regions
+    /// themselves (in case of a scheduling boundary in MBB) will be done
+    /// beginning with the topmost region of MBB.
+    virtual bool doMBBSchedRegionsTopDown() const { return false; }
+
     /// Prepares to perform scheduling in the given block.
     virtual void startBlock(MachineBasicBlock *BB);
 

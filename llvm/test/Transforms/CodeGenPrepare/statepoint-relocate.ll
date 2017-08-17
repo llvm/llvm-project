@@ -122,6 +122,28 @@ right:
        ret i32 %ret-base
 }
 
+define i32 @test_sor_noop_same_bb(i1 %external-cond, i32* %base) gc "statepoint-example" {
+; CHECK-LABEL: @test_sor_noop_same_bb
+; Here base relocate doesn't dominate derived relocate. Make sure that we don't
+; produce undefined use of the relocated base pointer.
+entry:
+       %ptr1 = getelementptr i32, i32* %base, i32 15
+       ; CHECK: getelementptr i32, i32* %base, i32 15
+       %ptr2 = getelementptr i32, i32* %base, i32 5
+       ; CHECK: getelementptr i32, i32* %base, i32 5
+       %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32* %base, i32* %ptr1, i32* %ptr2)
+       ; CHECK: call i32* @llvm.experimental.gc.relocate.p0i32(token %tok, i32 7, i32 7)
+       %ptr2-new = call i32* @llvm.experimental.gc.relocate.p0i32(token %tok, i32 7, i32 9)
+       %ret2-new = load i32, i32* %ptr2-new
+       ; CHECK: getelementptr i32, i32* %base-new, i32 5
+       %ptr1-new = call i32* @llvm.experimental.gc.relocate.p0i32(token %tok, i32 7, i32 8)
+       %ret1-new = load i32, i32* %ptr1-new
+       ; CHECK: getelementptr i32, i32* %base-new, i32 15
+       %base-new = call i32* @llvm.experimental.gc.relocate.p0i32(token %tok, i32 7, i32 7)
+       %ret-new = add i32 %ret2-new, %ret1-new
+       ret i32 %ret-new
+}
+
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
 declare i32* @llvm.experimental.gc.relocate.p0i32(token, i32, i32)
 declare [3 x i32]* @llvm.experimental.gc.relocate.p0a3i32(token, i32, i32)
