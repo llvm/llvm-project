@@ -1163,8 +1163,18 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
 
   case TargetOpcode::G_INTTOPTR:
-  case TargetOpcode::G_BITCAST:
+    // The importer is currently unable to import pointer types since they
+    // didn't exist in SelectionDAG.
     return selectCopy(I, TII, MRI, TRI, RBI);
+
+  case TargetOpcode::G_BITCAST:
+    // Imported SelectionDAG rules can handle every bitcast except those that
+    // bitcast from a type to the same type. Ideally, these shouldn't occur
+    // but we might not run an optimizer that deletes them.
+    if (MRI.getType(I.getOperand(0).getReg()) ==
+        MRI.getType(I.getOperand(1).getReg()))
+      return selectCopy(I, TII, MRI, TRI, RBI);
+    return false;
 
   case TargetOpcode::G_FPEXT: {
     if (MRI.getType(I.getOperand(0).getReg()) != LLT::scalar(64)) {

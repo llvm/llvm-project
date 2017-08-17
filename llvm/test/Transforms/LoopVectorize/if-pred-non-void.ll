@@ -209,9 +209,9 @@ entry:
 ; CHECK:   br i1 {{.*}}, label %[[IF0:.+]], label %[[CONT0:.+]]
 ; CHECK: [[IF0]]:
 ; CHECK:   %[[T00:.+]] = extractelement <2 x i32> %wide.load, i32 0
-; CHECK:   %[[T01:.+]] = extractelement <2 x i32> %wide.load, i32 0
-; CHECK:   %[[T02:.+]] = add nsw i32 %[[T01]], %x
-; CHECK:   %[[T03:.+]] = udiv i32 %[[T00]], %[[T02]]
+; CHECK:   %[[T01:.+]] = add nsw i32 %[[T00]], %x
+; CHECK:   %[[T02:.+]] = extractelement <2 x i32> %wide.load, i32 0
+; CHECK:   %[[T03:.+]] = udiv i32 %[[T02]], %[[T01]]
 ; CHECK:   %[[T04:.+]] = insertelement <2 x i32> undef, i32 %[[T03]], i32 0
 ; CHECK:   br label %[[CONT0]]
 ; CHECK: [[CONT0]]:
@@ -219,9 +219,9 @@ entry:
 ; CHECK:   br i1 {{.*}}, label %[[IF1:.+]], label %[[CONT1:.+]]
 ; CHECK: [[IF1]]:
 ; CHECK:   %[[T06:.+]] = extractelement <2 x i32> %wide.load, i32 1
-; CHECK:   %[[T07:.+]] = extractelement <2 x i32> %wide.load, i32 1
-; CHECK:   %[[T08:.+]] = add nsw i32 %[[T07]], %x
-; CHECK:   %[[T09:.+]] = udiv i32 %[[T06]], %[[T08]]
+; CHECK:   %[[T07:.+]] = add nsw i32 %[[T06]], %x
+; CHECK:   %[[T08:.+]] = extractelement <2 x i32> %wide.load, i32 1
+; CHECK:   %[[T09:.+]] = udiv i32 %[[T08]], %[[T07]]
 ; CHECK:   %[[T10:.+]] = insertelement <2 x i32> %[[T05]], i32 %[[T09]], i32 1
 ; CHECK:   br label %[[CONT1]]
 ; CHECK: [[CONT1]]:

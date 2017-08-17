@@ -246,52 +246,75 @@ void initialization(int T, Base b) {
   std::unique_ptr<E> PE1 = std::unique_ptr<E>(new E{});
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
   // CHECK-FIXES: std::unique_ptr<E> PE1 = std::make_unique<E>();
+  PE1.reset(new E{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PE1 = std::make_unique<E>();
+
+  //============================================================================
+  //  NOTE: For initlializer-list constructors, the check only gives warnings,
+  //  and no fixes are generated.
+  //============================================================================
 
   // Initialization with the initializer-list constructor.
   std::unique_ptr<E> PE2 = std::unique_ptr<E>(new E{1, 2});
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
-  // CHECK-FIXES: std::unique_ptr<E> PE2 = std::make_unique<E>({1, 2});
+  // CHECK-FIXES: std::unique_ptr<E> PE2 = std::unique_ptr<E>(new E{1, 2});
+  PE2.reset(new E{1, 2});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PE2.reset(new E{1, 2});
 
   // Initialization with default constructor.
   std::unique_ptr<F> PF1 = std::unique_ptr<F>(new F());
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
   // CHECK-FIXES: std::unique_ptr<F> PF1 = std::make_unique<F>();
+  PF1.reset(new F());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PF1 = std::make_unique<F>();
 
   // Initialization with default constructor.
   std::unique_ptr<F> PF2 = std::unique_ptr<F>(new F{});
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
   // CHECK-FIXES: std::unique_ptr<F> PF2 = std::make_unique<F>();
+  PF2.reset(new F());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PF2 = std::make_unique<F>();
 
   // Initialization with the initializer-list constructor.
   std::unique_ptr<F> PF3 = std::unique_ptr<F>(new F{1});
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
-  // CHECK-FIXES: std::unique_ptr<F> PF3 = std::make_unique<F>({1});
+  // CHECK-FIXES: std::unique_ptr<F> PF3 = std::unique_ptr<F>(new F{1});
+  PF3.reset(new F{1});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PF3.reset(new F{1});
 
   // Initialization with the initializer-list constructor.
   std::unique_ptr<F> PF4 = std::unique_ptr<F>(new F{1, 2});
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
-  // CHECK-FIXES: std::unique_ptr<F> PF4 = std::make_unique<F>({1, 2});
+  // CHECK-FIXES: std::unique_ptr<F> PF4 = std::unique_ptr<F>(new F{1, 2});
 
   // Initialization with the initializer-list constructor.
   std::unique_ptr<F> PF5 = std::unique_ptr<F>(new F({1, 2}));
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
-  // CHECK-FIXES: std::unique_ptr<F> PF5 = std::make_unique<F>({1, 2});
+  // CHECK-FIXES: std::unique_ptr<F> PF5 = std::unique_ptr<F>(new F({1, 2}));
 
   // Initialization with the initializer-list constructor as the default
   // constructor is not present.
   std::unique_ptr<G> PG1 = std::unique_ptr<G>(new G{});
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
-  // CHECK-FIXES: std::unique_ptr<G> PG1 = std::make_unique<G>({});
+  // CHECK-FIXES: std::unique_ptr<G> PG1 = std::unique_ptr<G>(new G{});
+  PG1.reset(new G{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PG1.reset(new G{});
 
   // Initialization with the initializer-list constructor.
   std::unique_ptr<G> PG2 = std::unique_ptr<G>(new G{1});
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
-  // CHECK-FIXES: std::unique_ptr<G> PG2 = std::make_unique<G>({1});
+  // CHECK-FIXES: std::unique_ptr<G> PG2 = std::unique_ptr<G>(new G{1});
 
   // Initialization with the initializer-list constructor.
   std::unique_ptr<G> PG3 = std::unique_ptr<G>(new G{1, 2});
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
-  // CHECK-FIXES: std::unique_ptr<G> PG3 = std::make_unique<G>({1, 2});
+  // CHECK-FIXES: std::unique_ptr<G> PG3 = std::unique_ptr<G>(new G{1, 2});
 
   std::unique_ptr<Foo> FF = std::unique_ptr<Foo>(new Foo());
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning:
