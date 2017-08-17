@@ -451,3 +451,15 @@ class UniqueFoo : public std::unique_ptr<Foo> {
     // CHECK-FIXES: (*this) = std::make_unique<Foo>();
   }
 };
+
+// Ignore statements inside a template instantiation.
+template<typename T>
+void template_fun(T* t) {
+  std::unique_ptr<T> t2 = std::unique_ptr<T>(new T);
+  t2.reset(new T);
+}
+
+void invoke_template() {
+  Foo* foo;
+  template_fun(foo);
+}
