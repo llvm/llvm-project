@@ -126,7 +126,6 @@
 		238F2BA91D2C85FA001FF92A /* StructuredDataDarwinLog.h in Headers */ = {isa = PBXBuildFile; fileRef = 238F2BA71D2C85FA001FF92A /* StructuredDataDarwinLog.h */; };
 		239481861C59EBDD00DF7168 /* libncurses.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 239481851C59EBDD00DF7168 /* libncurses.dylib */; };
 		239D380B1D70FBAC00D8E937 /* FileSpec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 239D38091D70FB9900D8E937 /* FileSpec.cpp */; };
-		23A452091DBFF6AB00E44395 /* StructuredDataTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452051DBFF69800E44395 /* StructuredDataTest.cpp */; };
 		23CB14E41D66CA2200EDDDE1 /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 23CB14E31D66CA2200EDDDE1 /* libxml2.2.dylib */; };
 		23CB15331D66DA9300EDDDE1 /* GoParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEC6FF9F1BE970A2007882C1 /* GoParserTest.cpp */; };
 		23CB15341D66DA9300EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB14FA1D66CCF100EDDDE1 /* CPlusPlusLanguageTest.cpp */; };
@@ -1463,7 +1462,6 @@
 		239504D41BDD451400963CEA /* lldb-gtest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "lldb-gtest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		239D38071D70E6C700D8E937 /* OCamlASTContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OCamlASTContext.h; path = include/lldb/Symbol/OCamlASTContext.h; sourceTree = "<group>"; };
 		239D38091D70FB9900D8E937 /* FileSpec.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FileSpec.cpp; path = source/Utility/FileSpec.cpp; sourceTree = "<group>"; };
-		23A452051DBFF69800E44395 /* StructuredDataTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StructuredDataTest.cpp; sourceTree = "<group>"; };
 		23AB052D199FF639003B8084 /* FreeBSDThread.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FreeBSDThread.cpp; sourceTree = "<group>"; };
 		23AB052E199FF639003B8084 /* FreeBSDThread.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FreeBSDThread.h; sourceTree = "<group>"; };
 		23AB052F199FF639003B8084 /* ProcessFreeBSD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessFreeBSD.cpp; sourceTree = "<group>"; };
@@ -3593,7 +3591,6 @@
 				2321F9431BDD346100BA9A93 /* CMakeLists.txt */,
 				23CB15041D66CD9200EDDDE1 /* Inputs */,
 				2321F9441BDD346100BA9A93 /* StringExtractorTest.cpp */,
-				23A452051DBFF69800E44395 /* StructuredDataTest.cpp */,
 				2321F9451BDD346100BA9A93 /* TaskPoolTest.cpp */,
 				2321F9461BDD346100BA9A93 /* UriParserTest.cpp */,
 			);
@@ -7672,7 +7669,6 @@
 				9A3D43D61F3151C400EB767C /* ConstStringTest.cpp in Sources */,
 				9A20571C1F3B867400F6C293 /* PlatformDarwinTest.cpp in Sources */,
 				23CB153F1D66DA9300EDDDE1 /* SymbolsTest.cpp in Sources */,
-				23A452091DBFF6AB00E44395 /* StructuredDataTest.cpp in Sources */,
 				23CB15401D66DA9300EDDDE1 /* TestClangASTContext.cpp in Sources */,
 				23CB15411D66DA9300EDDDE1 /* StringExtractorTest.cpp in Sources */,
 				9A2057031F3A605200F6C293 /* VASprintfTest.cpp in Sources */,
@@ -9663,8 +9659,8 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
-				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
@@ -9743,8 +9739,8 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
 					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
 				);
-				LLDB_GTESTS_CFLAGS = "-I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/$(LLVM_CONFIGURATION)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"$(LLDB_GTESTS_CFLAGS)",
@@ -9777,8 +9773,8 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
 					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
 				);
-				LLDB_GTESTS_CFLAGS = "-I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/$(LLVM_CONFIGURATION)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"$(LLDB_GTESTS_CFLAGS)",
@@ -9815,7 +9811,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -9857,7 +9853,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -9935,8 +9931,8 @@
 					"$(LLDB_PATH_TO_LLVM_SOURCE)/tools/clang/include",
 					"$(LLDB_PATH_TO_LLVM_BUILD)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLVM_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_PATH_TO_LLVM_SOURCE)/include -I $(LLVM_PATH_TO_LLVM_BUILD)/$(LLVM_BUILD_DIR_ARCH)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_LDFLAGS = "$(LLVM_PATH_TO_LLVM_BUILD)/$(LLVM_BUILD_DIR_ARCH)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
@@ -10015,7 +10011,7 @@
 					"$(LLDB_PATH_TO_LLVM_SOURCE)/tools/clang/include",
 					"$(LLDB_PATH_TO_LLVM_BUILD)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
