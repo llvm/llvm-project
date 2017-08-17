@@ -158,7 +158,7 @@ public:
   }
 
   void print(llvm::raw_ostream &Out, const PrintingPolicy &Policy,
-             unsigned Indentation = 0) const;
+             const ASTContext &Context, unsigned Indentation = 0) const;
 
   friend TrailingObjects;
 
