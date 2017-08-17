@@ -300,6 +300,18 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Kind = SymbolKind::TypeAlias;
       Info.Lang = SymbolLanguage::CXX;
       break;
+    case Decl::UnresolvedUsingTypename:
+      Info.Kind = SymbolKind::Using;
+      Info.SubKind = SymbolSubKind::UsingTypename;
+      Info.Lang = SymbolLanguage::CXX;
+      Info.Properties |= (unsigned)SymbolProperty::Generic;
+      break;
+    case Decl::UnresolvedUsingValue:
+      Info.Kind = SymbolKind::Using;
+      Info.SubKind = SymbolSubKind::UsingValue;
+      Info.Lang = SymbolLanguage::CXX;
+      Info.Properties |= (unsigned)SymbolProperty::Generic;
+      break;
     case Decl::Binding:
       Info.Kind = SymbolKind::Variable;
       Info.Lang = SymbolLanguage::CXX;
@@ -448,6 +460,7 @@ StringRef index::getSymbolKindString(SymbolKind K) {
   case SymbolKind::Destructor: return "destructor";
   case SymbolKind::ConversionFunction: return "coversion-func";
   case SymbolKind::Parameter: return "param";
+  case SymbolKind::Using: return "using";
   }
   llvm_unreachable("invalid symbol kind");
 }
@@ -459,6 +472,8 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   case SymbolSubKind::CXXMoveConstructor: return "cxx-move-ctor";
   case SymbolSubKind::AccessorGetter: return "acc-get";
   case SymbolSubKind::AccessorSetter: return "acc-set";
+  case SymbolSubKind::UsingTypename: return "using-typename";
+  case SymbolSubKind::UsingValue: return "using-value";
   }
   llvm_unreachable("invalid symbol subkind");
 }

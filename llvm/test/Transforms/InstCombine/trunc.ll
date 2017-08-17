@@ -89,6 +89,32 @@ define i32 @test6(i64 %A) {
   ret i32 %D
 }
 
+define i32 @trunc_ashr(i32 %X) {
+; CHECK-LABEL: @trunc_ashr(
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[X:%.*]], -2147483648
+; CHECK-NEXT:    [[C:%.*]] = ashr i32 [[B]], 8
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %A = zext i32 %X to i36
+  %B = or i36 %A, -2147483648 ; 0xF80000000
+  %C = ashr i36 %B, 8
+  %T = trunc i36 %C to i32
+  ret i32  %T
+}
+
+define <2 x i32> @trunc_ashr_vec(<2 x i32> %X) {
+; CHECK-LABEL: @trunc_ashr_vec(
+; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> [[X:%.*]], <i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[C:%.*]] = ashr <2 x i32> [[B]], <i32 8, i32 8>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %A = zext <2 x i32> %X to <2 x i36>
+  %B = or <2 x i36> %A, <i36 -2147483648, i36 -2147483648> ; 0xF80000000
+  %C = ashr <2 x i36> %B, <i36 8, i36 8>
+  %T = trunc <2 x i36> %C to <2 x i32>
+  ret <2 x i32>  %T
+}
+
 define i92 @test7(i64 %A) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 %A, 32

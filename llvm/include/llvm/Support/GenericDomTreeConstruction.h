@@ -914,7 +914,12 @@ struct SemiNCAInfo {
     if (!FromTN) return;
 
     const TreeNodePtr ToTN = DT.getNode(To);
-    assert(ToTN && "To already unreachable -- there is no edge to delete");
+    if (!ToTN) {
+      DEBUG(dbgs() << "\tTo (" << BlockNamePrinter(To)
+                   << ") already unreachable -- there is no edge to delete\n");
+      return;
+    }
+
     const NodePtr NCDBlock = DT.findNearestCommonDominator(From, To);
     const TreeNodePtr NCD = DT.getNode(NCDBlock);
 

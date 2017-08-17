@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// \brief This file exposes an interface to building/using memory SSA to
 /// walk memory instructions using a use/def graph.
@@ -67,6 +67,7 @@
 /// MemoryDefs are not disambiguated because it would require multiple reaching
 /// definitions, which would require multiple phis, and multiple memoryaccesses
 /// per instruction.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_MEMORYSSA_H
@@ -80,6 +81,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/simple_ilist.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/PHITransAddr.h"
@@ -87,14 +89,12 @@
 #include "llvm/IR/DerivedUser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -107,12 +107,16 @@ namespace llvm {
 class Function;
 class Instruction;
 class MemoryAccess;
+class MemorySSAWalker;
 class LLVMContext;
 class raw_ostream;
+
 namespace MSSAHelpers {
+
 struct AllAccessTag {};
 struct DefsOnlyTag {};
-}
+
+} // end namespace MSSAHelpers
 
 enum {
   // Used to signify what the default invalid ID is for MemoryAccess's
@@ -137,6 +141,11 @@ public:
   using DefsOnlyType =
       ilist_node<MemoryAccess, ilist_tag<MSSAHelpers::DefsOnlyTag>>;
 
+  MemoryAccess(const MemoryAccess &) = delete;
+  MemoryAccess &operator=(const MemoryAccess &) = delete;
+
+  void *operator new(size_t) = delete;
+
   // Methods for support type inquiry through isa, cast, and
   // dyn_cast
   static bool classof(const Value *V) {
@@ -144,19 +153,14 @@ public:
     return ID == MemoryUseVal || ID == MemoryPhiVal || ID == MemoryDefVal;
   }
 
-  MemoryAccess(const MemoryAccess &) = delete;
-  MemoryAccess &operator=(const MemoryAccess &) = delete;
-
-  void *operator new(size_t) = delete;
-
   BasicBlock *getBlock() const { return Block; }
 
   void print(raw_ostream &OS) const;
   void dump() const;
 
   /// \brief The user iterators for a memory access
-  typedef user_iterator iterator;
-  typedef const_user_iterator const_iterator;
+  using iterator = user_iterator;
+  using const_iterator = const_user_iterator;
 
   /// \brief This iterator walks over all of the defs in a given
   /// MemoryAccess. For MemoryPhi nodes, this walks arguments. For
@@ -194,11 +198,11 @@ public:
   }
 
 protected:
-  friend class MemorySSA;
-  friend class MemoryUseOrDef;
-  friend class MemoryUse;
   friend class MemoryDef;
   friend class MemoryPhi;
+  friend class MemorySSA;
+  friend class MemoryUse;
+  friend class MemoryUseOrDef;
 
   /// \brief Used by MemorySSA to change the block of a MemoryAccess when it is
   /// moved.
@@ -259,11 +263,13 @@ public:
 protected:
   friend class MemorySSA;
   friend class MemorySSAUpdater;
+
   MemoryUseOrDef(LLVMContext &C, MemoryAccess *DMA, unsigned Vty,
                  DeleteValueTy DeleteValue, Instruction *MI, BasicBlock *BB)
       : MemoryAccess(C, Vty, DeleteValue, BB, 1), MemoryInst(MI) {
     setDefiningAccess(DMA);
   }
+
   void setDefiningAccess(MemoryAccess *DMA, bool Optimized = false) {
     if (!Optimized) {
       setOperand(0, DMA);
@@ -291,8 +297,7 @@ public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(MemoryAccess);
 
   MemoryUse(LLVMContext &C, MemoryAccess *DMA, Instruction *MI, BasicBlock *BB)
-      : MemoryUseOrDef(C, DMA, MemoryUseVal, deleteMe, MI, BB),
-        OptimizedID(0) {}
+      : MemoryUseOrDef(C, DMA, MemoryUseVal, deleteMe, MI, BB) {}
 
   // allocate space for exactly one operand
   void *operator new(size_t s) { return User::operator new(s, 1); }
@@ -315,6 +320,7 @@ public:
   MemoryAccess *getOptimized() const {
     return getDefiningAccess();
   }
+
   void resetOptimized() {
     OptimizedID = INVALID_MEMORYACCESS_ID;
   }
@@ -325,7 +331,7 @@ protected:
 private:
   static void deleteMe(DerivedUser *Self);
 
-  unsigned int OptimizedID;
+  unsigned int OptimizedID = 0;
 };
 
 template <>
@@ -343,12 +349,13 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryUse, MemoryAccess)
 /// MemoryDef/MemoryPhi.
 class MemoryDef final : public MemoryUseOrDef {
 public:
+  friend class MemorySSA;
+
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(MemoryAccess);
 
   MemoryDef(LLVMContext &C, MemoryAccess *DMA, Instruction *MI, BasicBlock *BB,
             unsigned Ver)
-      : MemoryUseOrDef(C, DMA, MemoryDefVal, deleteMe, MI, BB),
-        ID(Ver), Optimized(nullptr), OptimizedID(INVALID_MEMORYACCESS_ID) {}
+      : MemoryUseOrDef(C, DMA, MemoryDefVal, deleteMe, MI, BB), ID(Ver) {}
 
   // allocate space for exactly one operand
   void *operator new(size_t s) { return User::operator new(s, 1); }
@@ -361,18 +368,19 @@ public:
     Optimized = MA;
     OptimizedID = getDefiningAccess()->getID();
   }
+
   MemoryAccess *getOptimized() const { return Optimized; }
+
   bool isOptimized() const {
     return getOptimized() && getDefiningAccess() &&
            OptimizedID == getDefiningAccess()->getID();
   }
+
   void resetOptimized() {
     OptimizedID = INVALID_MEMORYACCESS_ID;
   }
 
   void print(raw_ostream &OS) const;
-
-  friend class MemorySSA;
 
   unsigned getID() const { return ID; }
 
@@ -380,8 +388,8 @@ private:
   static void deleteMe(DerivedUser *Self);
 
   const unsigned ID;
-  MemoryAccess *Optimized;
-  unsigned int OptimizedID;
+  MemoryAccess *Optimized = nullptr;
+  unsigned int OptimizedID = INVALID_MEMORYACCESS_ID;
 };
 
 template <>
@@ -436,8 +444,8 @@ public:
 
   // Block iterator interface. This provides access to the list of incoming
   // basic blocks, which parallels the list of incoming values.
-  typedef BasicBlock **block_iterator;
-  typedef BasicBlock *const *const_block_iterator;
+  using block_iterator = BasicBlock **;
+  using const_block_iterator = BasicBlock *const *;
 
   block_iterator block_begin() {
     auto *Ref = reinterpret_cast<Use::UserRef *>(op_begin() + ReservedSpace);
@@ -477,6 +485,7 @@ public:
     assert(V && "PHI node got a null value!");
     setOperand(I, V);
   }
+
   static unsigned getOperandNumForIncomingValue(unsigned I) { return I; }
   static unsigned getIncomingValueNumForOperand(unsigned I) { return I; }
 
@@ -595,11 +604,8 @@ inline void MemoryUseOrDef::resetOptimized() {
     cast<MemoryUse>(this)->resetOptimized();
 }
 
-
 template <> struct OperandTraits<MemoryPhi> : public HungoffOperandTraits<2> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryPhi, MemoryAccess)
-
-class MemorySSAWalker;
 
 /// \brief Encapsulates MemorySSA, including all data associated with memory
 /// accesses.
@@ -707,11 +713,13 @@ protected:
 
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB, AccessList::iterator Where);
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB, InsertionPlace Point);
+
   // Rename the dominator tree branch rooted at BB.
   void renamePass(BasicBlock *BB, MemoryAccess *IncomingVal,
                   SmallPtrSetImpl<BasicBlock *> &Visited) {
     renamePass(DT->getNode(BB), IncomingVal, Visited, true, true);
   }
+
   void removeFromLookups(MemoryAccess *);
   void removeFromLists(MemoryAccess *, bool ShouldDelete = true);
   void insertIntoListsForBlock(MemoryAccess *, const BasicBlock *,
@@ -729,6 +737,7 @@ private:
   void optimizeUses();
 
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
+
   using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;
   using DefsMap = DenseMap<const BasicBlock *, std::unique_ptr<DefsList>>;
 
@@ -755,6 +764,7 @@ private:
 
   // Memory SSA mappings
   DenseMap<const Value *, MemoryAccess *> ValueToMemoryAccess;
+
   // These two mappings contain the main block to access/def mappings for
   // MemorySSA. The list contained in PerBlockAccesses really owns all the
   // MemoryAccesses.
@@ -779,8 +789,9 @@ private:
 // Internal MemorySSA utils, for use by MemorySSA classes and walkers
 class MemorySSAUtil {
 protected:
-  friend class MemorySSAWalker;
   friend class GVNHoist;
+  friend class MemorySSAWalker;
+
   // This function should not be used by new passes.
   static bool defClobbersUseOrDef(MemoryDef *MD, const MemoryUseOrDef *MU,
                                   AliasAnalysis &AA);
@@ -811,6 +822,7 @@ public:
   // unique_ptr<MemorySSA> to avoid build breakage on MSVC.
   struct Result {
     Result(std::unique_ptr<MemorySSA> &&MSSA) : MSSA(std::move(MSSA)) {}
+
     MemorySSA &getMSSA() { return *MSSA.get(); }
 
     std::unique_ptr<MemorySSA> MSSA;
@@ -978,6 +990,7 @@ public:
     assert(MP && "Tried to get phi arg block when not iterating over a PHI");
     return MP->getIncomingBlock(ArgNo);
   }
+
   typename BaseT::iterator::pointer operator*() const {
     assert(Access && "Tried to access past the end of our iterator");
     // Go to the first argument for phis, and the defining access for everything
@@ -986,6 +999,7 @@ public:
       return MP->getIncomingValue(ArgNo);
     return cast<MemoryUseOrDef>(Access)->getDefiningAccess();
   }
+
   using BaseT::operator++;
   memoryaccess_def_iterator &operator++() {
     assert(Access && "Hit end of iterator");
