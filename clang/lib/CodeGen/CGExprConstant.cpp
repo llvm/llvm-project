@@ -1044,120 +1044,6 @@ public:
   llvm::Type *ConvertType(QualType T) {
     return CGM.getTypes().ConvertType(T);
   }
-
-public:
-  ConstantAddress EmitLValue(APValue::LValueBase LVBase) {
-    if (const ValueDecl *Decl = LVBase.dyn_cast<const ValueDecl*>()) {
-      if (Decl->hasAttr<WeakRefAttr>())
-        return CGM.GetWeakRefReference(Decl);
-      if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(Decl))
-        return ConstantAddress(CGM.GetAddrOfFunction(FD), CharUnits::One());
-      if (const VarDecl* VD = dyn_cast<VarDecl>(Decl)) {
-        // We can never refer to a variable with local storage.
-        if (!VD->hasLocalStorage()) {
-          CharUnits Align = CGM.getContext().getDeclAlign(VD);
-          if (VD->isFileVarDecl() || VD->hasExternalStorage())
-            return ConstantAddress(CGM.GetAddrOfGlobalVar(VD), Align);
-          else if (VD->isLocalVarDecl()) {
-            auto Ptr = CGM.getOrCreateStaticVarDecl(
-                *VD, CGM.getLLVMLinkageVarDefinition(VD, /*isConstant=*/false));
-            return ConstantAddress(Ptr, Align);
-          }
-        }
-      }
-      return ConstantAddress::invalid();
-    }
-
-    Expr *E = const_cast<Expr*>(LVBase.get<const Expr*>());
-    switch (E->getStmtClass()) {
-    default: break;
-    case Expr::CompoundLiteralExprClass:
-      return tryEmitGlobalCompoundLiteral(CGM, Emitter.CGF,
-                                          cast<CompoundLiteralExpr>(E));
-    case Expr::StringLiteralClass:
-      return CGM.GetAddrOfConstantStringFromLiteral(cast<StringLiteral>(E));
-    case Expr::ObjCEncodeExprClass:
-      return CGM.GetAddrOfConstantStringFromObjCEncode(cast<ObjCEncodeExpr>(E));
-    case Expr::ObjCStringLiteralClass: {
-      ObjCStringLiteral* SL = cast<ObjCStringLiteral>(E);
-      ConstantAddress C =
-          CGM.getObjCRuntime().GenerateConstantString(SL->getString());
-      return C.getElementBitCast(ConvertType(E->getType()));
-    }
-    case Expr::PredefinedExprClass: {
-      unsigned Type = cast<PredefinedExpr>(E)->getIdentType();
-      if (auto CGF = Emitter.CGF) {
-        LValue Res = CGF->EmitPredefinedLValue(cast<PredefinedExpr>(E));
-        return cast<ConstantAddress>(Res.getAddress());
-      } else if (Type == PredefinedExpr::PrettyFunction) {
-        return CGM.GetAddrOfConstantCString("top level", ".tmp");
-      }
-
-      return CGM.GetAddrOfConstantCString("", ".tmp");
-    }
-    case Expr::AddrLabelExprClass: {
-      assert(Emitter.CGF &&
-             "Invalid address of label expression outside function.");
-      llvm::Constant *Ptr =
-        Emitter.CGF->GetAddrOfLabel(cast<AddrLabelExpr>(E)->getLabel());
-      Ptr = llvm::ConstantExpr::getBitCast(Ptr, ConvertType(E->getType()));
-      return ConstantAddress(Ptr, CharUnits::One());
-    }
-    case Expr::CallExprClass: {
-      CallExpr* CE = cast<CallExpr>(E);
-      unsigned builtin = CE->getBuiltinCallee();
-      if (builtin !=
-            Builtin::BI__builtin___CFStringMakeConstantString &&
-          builtin !=
-            Builtin::BI__builtin___NSStringMakeConstantString)
-        break;
-      const Expr *Arg = CE->getArg(0)->IgnoreParenCasts();
-      const StringLiteral *Literal = cast<StringLiteral>(Arg);
-      if (builtin ==
-            Builtin::BI__builtin___NSStringMakeConstantString) {
-        return CGM.getObjCRuntime().GenerateConstantString(Literal);
-      }
-      // FIXME: need to deal with UCN conversion issues.
-      return CGM.GetAddrOfConstantCFString(Literal);
-    }
-    case Expr::BlockExprClass: {
-      StringRef FunctionName;
-      if (auto CGF = Emitter.CGF)
-        FunctionName = CGF->CurFn->getName();
-      else
-        FunctionName = "global";
-
-      // This is not really an l-value.
-      llvm::Constant *Ptr =
-        CGM.GetAddrOfGlobalBlock(cast<BlockExpr>(E), FunctionName);
-      return ConstantAddress(Ptr, CGM.getPointerAlign());
-    }
-    case Expr::CXXTypeidExprClass: {
-      CXXTypeidExpr *Typeid = cast<CXXTypeidExpr>(E);
-      QualType T;
-      if (Typeid->isTypeOperand())
-        T = Typeid->getTypeOperand(CGM.getContext());
-      else
-        T = Typeid->getExprOperand()->getType();
-      return ConstantAddress(CGM.GetAddrOfRTTIDescriptor(T),
-                             CGM.getPointerAlign());
-    }
-    case Expr::CXXUuidofExprClass: {
-      return CGM.GetAddrOfUuidDescriptor(cast<CXXUuidofExpr>(E));
-    }
-    case Expr::MaterializeTemporaryExprClass: {
-      MaterializeTemporaryExpr *MTE = cast<MaterializeTemporaryExpr>(E);
-      assert(MTE->getStorageDuration() == SD_Static);
-      SmallVector<const Expr *, 2> CommaLHSs;
-      SmallVector<SubobjectAdjustment, 2> Adjustments;
-      const Expr *Inner = MTE->GetTemporaryExpr()
-          ->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
-      return CGM.GetAddrOfGlobalTemporary(MTE, Inner);
-    }
-    }
-
-    return ConstantAddress::invalid();
-  }
 };
 
 }  // end anonymous namespace.
@@ -1623,67 +1509,303 @@ llvm::Constant *CodeGenModule::getNullPointer(llvm::PointerType *T, QualType QT)
   return getTargetCodeGenInfo().getNullPointer(*this, T, QT);
 }
 
+namespace {
+/// A struct which can be used to peephole certain kinds of finalization
+/// that normally happen during l-value emission.
+struct ConstantLValue {
+  llvm::Constant *Value;
+  bool HasOffsetApplied;
+
+  /*implicit*/ ConstantLValue(llvm::Constant *value,
+                              bool hasOffsetApplied = false)
+    : Value(value), HasOffsetApplied(false) {}
+
+  /*implicit*/ ConstantLValue(ConstantAddress address)
+    : ConstantLValue(address.getPointer()) {}
+};
+
+/// A helper class for emitting constant l-values.
+class ConstantLValueEmitter : public ConstStmtVisitor<ConstantLValueEmitter,
+                                                      ConstantLValue> {
+  CodeGenModule &CGM;
+  ConstantEmitter &Emitter;
+  const APValue &Value;
+  QualType DestType;
+
+  // Befriend StmtVisitorBase so that we don't have to expose Visit*.
+  friend StmtVisitorBase;
+
+public:
+  ConstantLValueEmitter(ConstantEmitter &emitter, const APValue &value,
+                        QualType destType)
+    : CGM(emitter.CGM), Emitter(emitter), Value(value), DestType(destType) {}
+
+  llvm::Constant *tryEmit();
+
+private:
+  llvm::Constant *tryEmitAbsolute(llvm::Type *destTy);
+  ConstantLValue tryEmitBase(const APValue::LValueBase &base);
+
+  ConstantLValue VisitStmt(const Stmt *S) { return nullptr; }
+  ConstantLValue VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
+  ConstantLValue VisitStringLiteral(const StringLiteral *E);
+  ConstantLValue VisitObjCEncodeExpr(const ObjCEncodeExpr *E);
+  ConstantLValue VisitObjCStringLiteral(const ObjCStringLiteral *E);
+  ConstantLValue VisitPredefinedExpr(const PredefinedExpr *E);
+  ConstantLValue VisitAddrLabelExpr(const AddrLabelExpr *E);
+  ConstantLValue VisitCallExpr(const CallExpr *E);
+  ConstantLValue VisitBlockExpr(const BlockExpr *E);
+  ConstantLValue VisitCXXTypeidExpr(const CXXTypeidExpr *E);
+  ConstantLValue VisitCXXUuidofExpr(const CXXUuidofExpr *E);
+  ConstantLValue VisitMaterializeTemporaryExpr(
+                                         const MaterializeTemporaryExpr *E);
+
+  bool hasNonZeroOffset() const {
+    return !Value.getLValueOffset().isZero();
+  }
+
+  /// Return the value offset.
+  llvm::Constant *getOffset() {
+    return llvm::ConstantInt::get(CGM.Int64Ty,
+                                  Value.getLValueOffset().getQuantity());
+  }
+
+  /// Apply the value offset to the given constant.
+  llvm::Constant *applyOffset(llvm::Constant *C) {
+    if (!hasNonZeroOffset())
+      return C;
+
+    llvm::Type *origPtrTy = C->getType();
+    unsigned AS = origPtrTy->getPointerAddressSpace();
+    llvm::Type *charPtrTy = CGM.Int8Ty->getPointerTo(AS);
+    C = llvm::ConstantExpr::getBitCast(C, charPtrTy);
+    C = llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, C, getOffset());
+    C = llvm::ConstantExpr::getPointerCast(C, origPtrTy);
+    return C;
+  }
+};
+
+}
+
+llvm::Constant *ConstantLValueEmitter::tryEmit() {
+  const APValue::LValueBase &base = Value.getLValueBase();
+
+  // Certain special array initializers are represented in APValue
+  // as l-values referring to the base expression which generates the
+  // array.  This happens with e.g. string literals.  These should
+  // probably just get their own representation kind in APValue.
+  if (DestType->isArrayType()) {
+    assert(!hasNonZeroOffset() && "offset on array initializer");
+    auto expr = const_cast<Expr*>(base.get<const Expr*>());
+    return ConstExprEmitter(Emitter).Visit(expr, DestType);
+  }
+
+  // Otherwise, the destination type should be a pointer or reference
+  // type, but it might also be a cast thereof.
+  //
+  // FIXME: the chain of casts required should be reflected in the APValue.
+  // We need this in order to correctly handle things like a ptrtoint of a
+  // non-zero null pointer and addrspace casts that aren't trivially
+  // represented in LLVM IR.
+  auto destTy = CGM.getTypes().ConvertTypeForMem(DestType);
+  assert(isa<llvm::IntegerType>(destTy) || isa<llvm::PointerType>(destTy));
+
+  // If there's no base at all, this is a null or absolute pointer,
+  // possibly cast back to an integer type.
+  if (!base) {
+    return tryEmitAbsolute(destTy);
+  }
+
+  // Otherwise, try to emit the base.
+  ConstantLValue result = tryEmitBase(base);
+
+  // If that failed, we're done.
+  llvm::Constant *value = result.Value;
+  if (!value) return nullptr;
+
+  // Apply the offset if necessary and not already done.
+  if (!result.HasOffsetApplied) {
+    value = applyOffset(value);
+  }
+
+  // Convert to the appropriate type; this could be an lvalue for
+  // an integer.  FIXME: performAddrSpaceCast
+  if (isa<llvm::PointerType>(destTy))
+    return llvm::ConstantExpr::getPointerCast(value, destTy);
+
+  return llvm::ConstantExpr::getPtrToInt(value, destTy);
+}
+
+/// Try to emit an absolute l-value, such as a null pointer or an integer
+/// bitcast to pointer type.
+llvm::Constant *
+ConstantLValueEmitter::tryEmitAbsolute(llvm::Type *destTy) {
+  auto offset = getOffset();
+
+  // If we're producing a pointer, this is easy.
+  if (auto destPtrTy = cast<llvm::PointerType>(destTy)) {
+    if (Value.isNullPointer()) {
+      // FIXME: integer offsets from non-zero null pointers.
+      return CGM.getNullPointer(destPtrTy, DestType);
+    }
+
+    // Convert the integer to a pointer-sized integer before converting it
+    // to a pointer.
+    // FIXME: signedness depends on the original integer type.
+    auto intptrTy = CGM.getDataLayout().getIntPtrType(destPtrTy);
+    llvm::Constant *C = offset;
+    C = llvm::ConstantExpr::getIntegerCast(getOffset(), intptrTy,
+                                           /*isSigned*/ false);
+    C = llvm::ConstantExpr::getIntToPtr(C, destPtrTy);
+    return C;
+  }
+
+  // Otherwise, we're basically returning an integer constant.
+
+  // FIXME: this does the wrong thing with ptrtoint of a null pointer,
+  // but since we don't know the original pointer type, there's not much
+  // we can do about it.
+
+  auto C = getOffset();
+  C = llvm::ConstantExpr::getIntegerCast(C, destTy, /*isSigned*/ false);
+  return C;
+}
+
+ConstantLValue
+ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
+  // Handle values.
+  if (const ValueDecl *D = base.dyn_cast<const ValueDecl*>()) {
+    if (D->hasAttr<WeakRefAttr>())
+      return CGM.GetWeakRefReference(D).getPointer();
+
+    if (auto FD = dyn_cast<FunctionDecl>(D))
+      return CGM.GetAddrOfFunction(FD);
+
+    if (auto VD = dyn_cast<VarDecl>(D)) {
+      // We can never refer to a variable with local storage.
+      if (!VD->hasLocalStorage()) {
+        if (VD->isFileVarDecl() || VD->hasExternalStorage())
+          return CGM.GetAddrOfGlobalVar(VD);
+
+        if (VD->isLocalVarDecl()) {
+          return CGM.getOrCreateStaticVarDecl(
+              *VD, CGM.getLLVMLinkageVarDefinition(VD, /*isConstant=*/false));
+        }
+      }
+    }
+
+    return nullptr;
+  }
+
+  // Otherwise, it must be an expression.
+  return Visit(base.get<const Expr*>());
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
+  return tryEmitGlobalCompoundLiteral(CGM, Emitter.CGF, E);
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitStringLiteral(const StringLiteral *E) {
+  return CGM.GetAddrOfConstantStringFromLiteral(E);
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCEncodeExpr(const ObjCEncodeExpr *E) {
+  return CGM.GetAddrOfConstantStringFromObjCEncode(E);
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCStringLiteral(const ObjCStringLiteral *E) {
+  auto C = CGM.getObjCRuntime().GenerateConstantString(E->getString());
+  return C.getElementBitCast(CGM.getTypes().ConvertTypeForMem(E->getType()));
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *E) {
+  if (auto CGF = Emitter.CGF) {
+    LValue Res = CGF->EmitPredefinedLValue(E);
+    return cast<ConstantAddress>(Res.getAddress());
+  }
+
+  auto kind = E->getIdentType();
+  if (kind == PredefinedExpr::PrettyFunction) {
+    return CGM.GetAddrOfConstantCString("top level", ".tmp");
+  }
+
+  return CGM.GetAddrOfConstantCString("", ".tmp");
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *E) {
+  assert(Emitter.CGF && "Invalid address of label expression outside function");
+  llvm::Constant *Ptr = Emitter.CGF->GetAddrOfLabel(E->getLabel());
+  Ptr = llvm::ConstantExpr::getBitCast(Ptr,
+                                   CGM.getTypes().ConvertType(E->getType()));
+  return Ptr;
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitCallExpr(const CallExpr *E) {
+  unsigned builtin = E->getBuiltinCallee();
+  if (builtin != Builtin::BI__builtin___CFStringMakeConstantString &&
+      builtin != Builtin::BI__builtin___NSStringMakeConstantString)
+    return nullptr;
+
+  auto literal = cast<StringLiteral>(E->getArg(0)->IgnoreParenCasts());
+  if (builtin == Builtin::BI__builtin___NSStringMakeConstantString) {
+    return CGM.getObjCRuntime().GenerateConstantString(literal);
+  } else {
+    // FIXME: need to deal with UCN conversion issues.
+    return CGM.GetAddrOfConstantCFString(literal);
+  }
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitBlockExpr(const BlockExpr *E) {
+  StringRef functionName;
+  if (auto CGF = Emitter.CGF)
+    functionName = CGF->CurFn->getName();
+  else
+    functionName = "global";
+
+  return CGM.GetAddrOfGlobalBlock(E, functionName);
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
+  QualType T;
+  if (E->isTypeOperand())
+    T = E->getTypeOperand(CGM.getContext());
+  else
+    T = E->getExprOperand()->getType();
+  return CGM.GetAddrOfRTTIDescriptor(T);
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
+  return CGM.GetAddrOfUuidDescriptor(E);
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
+                                            const MaterializeTemporaryExpr *E) {
+  assert(E->getStorageDuration() == SD_Static);
+  SmallVector<const Expr *, 2> CommaLHSs;
+  SmallVector<SubobjectAdjustment, 2> Adjustments;
+  const Expr *Inner = E->GetTemporaryExpr()
+      ->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+  return CGM.GetAddrOfGlobalTemporary(E, Inner);
+}
+
 llvm::Constant *ConstantEmitter::tryEmitPrivate(const APValue &Value,
                                                 QualType DestType) {
   switch (Value.getKind()) {
   case APValue::Uninitialized:
     llvm_unreachable("Constant expressions should be initialized.");
-  case APValue::LValue: {
-    llvm::Type *DestTy = CGM.getTypes().ConvertTypeForMem(DestType);
-    llvm::Constant *Offset =
-      llvm::ConstantInt::get(CGM.Int64Ty,
-                             Value.getLValueOffset().getQuantity());
-
-    if (APValue::LValueBase LVBase = Value.getLValueBase()) {
-      // An array can be represented as an lvalue referring to the base.
-      if (isa<llvm::ArrayType>(DestTy)) {
-        assert(Offset->isNullValue() && "offset on array initializer");
-        return ConstExprEmitter(*this).Visit(
-          const_cast<Expr*>(LVBase.get<const Expr*>()),
-          DestType);
-      }
-
-      auto C = ConstExprEmitter(*this).EmitLValue(LVBase).getPointer();
-
-      // Apply offset if necessary.
-      if (!Offset->isNullValue()) {
-        unsigned AS = C->getType()->getPointerAddressSpace();
-        llvm::Type *CharPtrTy = CGM.Int8Ty->getPointerTo(AS);
-        llvm::Constant *Casted = llvm::ConstantExpr::getBitCast(C, CharPtrTy);
-        Casted =
-          llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, Casted, Offset);
-        C = llvm::ConstantExpr::getPointerCast(Casted, C->getType());
-      }
-
-      // Convert to the appropriate type; this could be an lvalue for
-      // an integer.  FIXME: performAddrSpaceCast
-      if (isa<llvm::PointerType>(DestTy))
-        return llvm::ConstantExpr::getPointerCast(C, DestTy);
-
-      return llvm::ConstantExpr::getPtrToInt(C, DestTy);
-    } else {
-      auto C = Offset;
-
-      // Convert to the appropriate type; this could be an lvalue for
-      // an integer.
-      if (auto PT = dyn_cast<llvm::PointerType>(DestTy)) {
-        if (Value.isNullPointer())
-          return CGM.getNullPointer(PT, DestType);
-        // Convert the integer to a pointer-sized integer before converting it
-        // to a pointer.
-        C = llvm::ConstantExpr::getIntegerCast(
-            C, CGM.getDataLayout().getIntPtrType(DestTy),
-            /*isSigned=*/false);
-        return llvm::ConstantExpr::getIntToPtr(C, DestTy);
-      }
-
-      // If the types don't match this should only be a truncate.
-      if (C->getType() != DestTy)
-        return llvm::ConstantExpr::getTrunc(C, DestTy);
-
-      return C;
-    }
-  }
+  case APValue::LValue:
+    return ConstantLValueEmitter(*this, Value, DestType).tryEmit();
   case APValue::Int:
     return llvm::ConstantInt::get(CGM.getLLVMContext(), Value.getInt());
   case APValue::ComplexInt: {

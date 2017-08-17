@@ -19,6 +19,13 @@
 // * Processor resources usage. It is beneficial to balance the use of
 // resources.
 //
+// A goal is to consider all instructions, also those outside of any
+// scheduling region. Such instructions are "advanced" past and include
+// single instructions before a scheduling region, branches etc.
+//
+// A block that has only one predecessor continues scheduling with the state
+// of it (which may be updated by emitting branches).
+//
 // ===---------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZHAZARDRECOGNIZER_H
@@ -35,10 +42,10 @@
 
 namespace llvm {
 
-/// SystemZHazardRecognizer maintains the state during scheduling.
+/// SystemZHazardRecognizer maintains the state for one MBB during scheduling.
 class SystemZHazardRecognizer : public ScheduleHazardRecognizer {
 
-  ScheduleDAGMI *DAG;
+  const SystemZInstrInfo *TII;
   const TargetSchedModel *SchedModel;
 
   /// Keep track of the number of decoder slots used in the current
@@ -88,17 +95,27 @@ class SystemZHazardRecognizer : public ScheduleHazardRecognizer {
   /// ops, return true if it seems good to schedule an FPd op next.
   bool isFPdOpPreferred_distance(const SUnit *SU);
 
-public:
-  SystemZHazardRecognizer(const MachineSchedContext *C);
+  /// Last emitted instruction or nullptr.
+  MachineInstr *LastEmittedMI;
 
-  void setDAG(ScheduleDAGMI *dag) {
-    DAG = dag;
-    SchedModel = dag->getSchedModel();
-  }
-  
+public:
+  SystemZHazardRecognizer(const SystemZInstrInfo *tii,
+                          const TargetSchedModel *SM)
+    : TII(tii), SchedModel(SM) { Reset(); }
+
   HazardType getHazardType(SUnit *m, int Stalls = 0) override;    
   void Reset() override;
   void EmitInstruction(SUnit *SU) override;
+
+  /// Resolves and cache a resolved scheduling class for an SUnit.
+  const MCSchedClassDesc *getSchedClass(SUnit *SU) const {
+    if (!SU->SchedClass && SchedModel->hasInstrSchedModel())
+      SU->SchedClass = SchedModel->resolveSchedClass(SU->getInstr());
+    return SU->SchedClass;
+  }
+
+  /// Wrap a non-scheduled instruction in an SU and emit it.
+  void emitInstruction(MachineInstr *MI, bool TakenBranch = false);
 
   // Cost functions used by SystemZPostRASchedStrategy while
   // evaluating candidates.
@@ -121,6 +138,11 @@ public:
   void dumpCurrGroup(std::string Msg = "") const;
   void dumpProcResourceCounters() const;
 #endif
+
+  MachineBasicBlock::iterator getLastEmittedMI() { return LastEmittedMI; }
+
+  /// Copy counters from end of single predecessor.
+  void copyState(SystemZHazardRecognizer *Incoming);
 };
 
 } // namespace llvm

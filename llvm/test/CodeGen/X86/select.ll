@@ -23,7 +23,8 @@ define i32 @test1(%0* %p, %0* %q, i1 %r) nounwind {
 ; MCU-NEXT:    jne .LBB0_1
 ; MCU-NEXT:  # BB#2:
 ; MCU-NEXT:    addl $8, %edx
-; MCU-NEXT:    movl (%edx), %eax
+; MCU-NEXT:    movl %edx, %eax
+; MCU-NEXT:    movl (%eax), %eax
 ; MCU-NEXT:    retl
 ; MCU-NEXT:  .LBB0_1:
 ; MCU-NEXT:    addl $8, %eax

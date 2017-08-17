@@ -214,8 +214,19 @@ public:
   /// This has to be enabled in combination with shouldTrackPressure().
   virtual bool shouldTrackLaneMasks() const { return false; }
 
+  // If this method returns true, handling of the scheduling regions
+  // themselves (in case of a scheduling boundary in MBB) will be done
+  // beginning with the topmost region of MBB.
+  virtual bool doMBBSchedRegionsTopDown() const { return false; }
+
   /// Initialize the strategy after building the DAG for a new region.
   virtual void initialize(ScheduleDAGMI *DAG) = 0;
+
+  /// Tell the strategy that MBB is about to be processed.
+  virtual void enterMBB(MachineBasicBlock *MBB) {};
+
+  /// Tell the strategy that current MBB is done.
+  virtual void leaveMBB() {};
 
   /// Notify this strategy that all roots have been released (including those
   /// that depend on EntrySU or ExitSU).
@@ -284,6 +295,13 @@ public:
   // Provide a vtable anchor
   ~ScheduleDAGMI() override;
 
+  /// If this method returns true, handling of the scheduling regions
+  /// themselves (in case of a scheduling boundary in MBB) will be done
+  /// beginning with the topmost region of MBB.
+  bool doMBBSchedRegionsTopDown() const override {
+    return SchedImpl->doMBBSchedRegionsTopDown();
+  }
+
   // Returns LiveIntervals instance for use in DAG mutators and such.
   LiveIntervals *getLIS() const { return LIS; }
 
@@ -325,6 +343,9 @@ public:
   /// Implement ScheduleDAGInstrs interface for scheduling a sequence of
   /// reorderable instructions.
   void schedule() override;
+
+  void startBlock(MachineBasicBlock *bb) override;
+  void finishBlock() override;
 
   /// Change the position of an instruction within the basic block and update
   /// live ranges and region boundary iterators.

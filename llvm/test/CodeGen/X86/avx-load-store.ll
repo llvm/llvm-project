@@ -12,11 +12,11 @@ define void @test_256_load(double* nocapture %d, float* nocapture %f, <4 x i64>*
 ; CHECK-NEXT:    movq %rdx, %r14
 ; CHECK-NEXT:    movq %rsi, %r15
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    vmovaps (%rdi), %ymm0
+; CHECK-NEXT:    vmovaps (%rbx), %ymm0
 ; CHECK-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovaps (%rsi), %ymm1
+; CHECK-NEXT:    vmovaps (%r15), %ymm1
 ; CHECK-NEXT:    vmovups %ymm1, {{[0-9]+}}(%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovaps (%rdx), %ymm2
+; CHECK-NEXT:    vmovaps (%r14), %ymm2
 ; CHECK-NEXT:    vmovups %ymm2, (%rsp) # 32-byte Spill
 ; CHECK-NEXT:    callq dummy
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
