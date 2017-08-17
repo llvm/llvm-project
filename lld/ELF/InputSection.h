@@ -183,6 +183,11 @@ public:
     assert(S % sizeof(T) == 0);
     return llvm::makeArrayRef<T>((const T *)Data.data(), S / sizeof(T));
   }
+
+private:
+  // A pointer that owns uncompressed data if a section is compressed by zlib.
+  // Since the feature is not used often, this is usually a nullptr.
+  std::unique_ptr<std::vector<uint8_t>> UncompressBuf;
 };
 
 // SectionPiece represents a piece of splittable section contents.

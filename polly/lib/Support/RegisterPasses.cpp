@@ -266,6 +266,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeScopDetectionWrapperPassPass(Registry);
   initializeScopInfoRegionPassPass(Registry);
   initializeScopInfoWrapperPassPass(Registry);
+  initializeRewriteByrefParamsPass(Registry);
   initializeCodegenCleanupPass(Registry);
   initializeFlattenSchedulePass(Registry);
   initializeForwardOpTreePass(Registry);

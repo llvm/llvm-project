@@ -445,10 +445,6 @@ struct private_common *kmp_threadprivate_insert(int gtid, void *pc_addr,
   tn->link = __kmp_threads[gtid]->th.th_pri_head;
   __kmp_threads[gtid]->th.th_pri_head = tn;
 
-#ifdef BUILD_TV
-  __kmp_tv_threadprivate_store(__kmp_threads[gtid], tn->gbl_addr, tn->par_addr);
-#endif
-
   if ((__kmp_foreign_tp) ? (KMP_INITIAL_GTID(gtid)) : (KMP_UBER_GTID(gtid)))
     return tn;
 

@@ -502,13 +502,6 @@ kmp_lock_t __kmp_debug_lock; /* Control I/O access for KMP_DEBUG */
 int __kmp_handle_signals = FALSE;
 #endif
 
-/* ----------------------------------------------- */
-#ifdef BUILD_TV
-kmp_key_t __kmp_tv_key = 0;
-#endif
-
-/* ------------------------------------------------------------------------ */
-
 #ifdef DEBUG_SUSPEND
 int get_suspend_count_(void) {
   int count = __kmp_suspend_count;
