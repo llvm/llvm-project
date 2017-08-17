@@ -171,7 +171,7 @@ define <8 x i1> @shuf8i1_u_2_u_u_2_u_2_u(i8 %a) {
 ; VL_BW_DQ:       # BB#0:
 ; VL_BW_DQ-NEXT:    kmovd %edi, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2q %k0, %zmm0
-; VL_BW_DQ-NEXT:    vextracti64x2 $1, %zmm0, %xmm0
+; VL_BW_DQ-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
 ; VL_BW_DQ-NEXT:    vpbroadcastq %xmm0, %zmm0
 ; VL_BW_DQ-NEXT:    vpmovq2m %zmm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2w %k0, %xmm0

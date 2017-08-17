@@ -25,7 +25,7 @@ public:
   MinimalSymbolDumper(LinePrinter &P, bool RecordBytes,
                       codeview::LazyRandomTypeCollection &Ids,
                       codeview::LazyRandomTypeCollection &Types)
-      : P(P), Ids(Ids), Types(Types) {}
+      : P(P), RecordBytes(RecordBytes), Ids(Ids), Types(Types) {}
 
   Error visitSymbolBegin(codeview::CVSymbol &Record) override;
   Error visitSymbolBegin(codeview::CVSymbol &Record, uint32_t Offset) override;
@@ -44,6 +44,7 @@ private:
   std::string idIndex(codeview::TypeIndex TI) const;
 
   LinePrinter &P;
+  bool RecordBytes;
   codeview::LazyRandomTypeCollection &Ids;
   codeview::LazyRandomTypeCollection &Types;
 };

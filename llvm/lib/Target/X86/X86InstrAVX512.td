@@ -285,6 +285,28 @@ multiclass AVX512_maskable_fp_common<bits<8> O, Format F, X86VectorVTInfo _,
 // This multiclass generates the unconditional/non-masking, the masking and
 // the zero-masking variant of the vector instruction.  In the masking case, the
 // perserved vector elements come from a new dummy input operand tied to $dst.
+// This version uses a separate dag for non-masking and masking.
+multiclass AVX512_maskable_split<bits<8> O, Format F, X86VectorVTInfo _,
+                           dag Outs, dag Ins, string OpcodeStr,
+                           string AttSrcAsm, string IntelSrcAsm,
+                           dag RHS, dag MaskRHS,
+                           InstrItinClass itin = NoItinerary,
+                           bit IsCommutable = 0, bit IsKCommutable = 0,
+                           SDNode Select = vselect> :
+   AVX512_maskable_custom<O, F, Outs, Ins,
+                          !con((ins _.RC:$src0, _.KRCWM:$mask), Ins),
+                          !con((ins _.KRCWM:$mask), Ins),
+                          OpcodeStr, AttSrcAsm, IntelSrcAsm,
+                          [(set _.RC:$dst, RHS)],
+                          [(set _.RC:$dst,
+                              (Select _.KRCWM:$mask, MaskRHS, _.RC:$src0))],
+                          [(set _.RC:$dst,
+                              (Select _.KRCWM:$mask, MaskRHS, _.ImmAllZerosV))],
+                          "$src0 = $dst", itin, IsCommutable, IsKCommutable>;
+
+// This multiclass generates the unconditional/non-masking, the masking and
+// the zero-masking variant of the vector instruction.  In the masking case, the
+// perserved vector elements come from a new dummy input operand tied to $dst.
 multiclass AVX512_maskable<bits<8> O, Format F, X86VectorVTInfo _,
                            dag Outs, dag Ins, string OpcodeStr,
                            string AttSrcAsm, string IntelSrcAsm,
@@ -512,27 +534,44 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
 //===----------------------------------------------------------------------===//
 // AVX-512 - VECTOR INSERT
 //
-multiclass vinsert_for_size<int Opcode, X86VectorVTInfo From, X86VectorVTInfo To,
-                                                       PatFrag vinsert_insert> {
+
+// Supports two different pattern operators for mask and unmasked ops. Allows
+// null_frag to be passed for one.
+multiclass vinsert_for_size_split<int Opcode, X86VectorVTInfo From,
+                                  X86VectorVTInfo To,
+                                  SDPatternOperator vinsert_insert,
+                                  SDPatternOperator vinsert_for_mask> {
   let ExeDomain = To.ExeDomain in {
-    defm rr : AVX512_maskable<Opcode, MRMSrcReg, To, (outs To.RC:$dst),
+    defm rr : AVX512_maskable_split<Opcode, MRMSrcReg, To, (outs To.RC:$dst),
                    (ins To.RC:$src1, From.RC:$src2, u8imm:$src3),
                    "vinsert" # From.EltTypeName # "x" # From.NumElts,
                    "$src3, $src2, $src1", "$src1, $src2, $src3",
                    (vinsert_insert:$src3 (To.VT To.RC:$src1),
                                          (From.VT From.RC:$src2),
-                                         (iPTR imm))>, AVX512AIi8Base, EVEX_4V;
+                                         (iPTR imm)),
+                   (vinsert_for_mask:$src3 (To.VT To.RC:$src1),
+                                           (From.VT From.RC:$src2),
+                                           (iPTR imm))>, AVX512AIi8Base, EVEX_4V;
 
-    defm rm : AVX512_maskable<Opcode, MRMSrcMem, To, (outs To.RC:$dst),
+    defm rm : AVX512_maskable_split<Opcode, MRMSrcMem, To, (outs To.RC:$dst),
                    (ins To.RC:$src1, From.MemOp:$src2, u8imm:$src3),
                    "vinsert" # From.EltTypeName # "x" # From.NumElts,
                    "$src3, $src2, $src1", "$src1, $src2, $src3",
                    (vinsert_insert:$src3 (To.VT To.RC:$src1),
                                (From.VT (bitconvert (From.LdFrag addr:$src2))),
+                               (iPTR imm)),
+                   (vinsert_for_mask:$src3 (To.VT To.RC:$src1),
+                               (From.VT (bitconvert (From.LdFrag addr:$src2))),
                                (iPTR imm))>, AVX512AIi8Base, EVEX_4V,
                    EVEX_CD8<From.EltSize, From.CD8TupleForm>;
   }
 }
+
+// Passes the same pattern operator for masked and unmasked ops.
+multiclass vinsert_for_size<int Opcode, X86VectorVTInfo From,
+                            X86VectorVTInfo To,
+                            SDPatternOperator vinsert_insert> :
+  vinsert_for_size_split<Opcode, From, To, vinsert_insert, vinsert_insert>;
 
 multiclass vinsert_for_size_lowering<string InstrStr, X86VectorVTInfo From,
                        X86VectorVTInfo To, PatFrag vinsert_insert,
@@ -573,22 +612,24 @@ multiclass vinsert_for_type<ValueType EltVT32, int Opcode128,
                                  X86VectorVTInfo< 8, EltVT64, VR512>,
                                  vinsert256_insert>, VEX_W, EVEX_V512;
 
+  // Even with DQI we'd like to only use these instructions for masking.
   let Predicates = [HasVLX, HasDQI] in
-    defm NAME # "64x2Z256" : vinsert_for_size<Opcode128,
+    defm NAME # "64x2Z256" : vinsert_for_size_split<Opcode128,
                                    X86VectorVTInfo< 2, EltVT64, VR128X>,
                                    X86VectorVTInfo< 4, EltVT64, VR256X>,
-                                   vinsert128_insert>, VEX_W, EVEX_V256;
+                                   null_frag, vinsert128_insert>, VEX_W, EVEX_V256;
 
+  // Even with DQI we'd like to only use these instructions for masking.
   let Predicates = [HasDQI] in {
-    defm NAME # "64x2Z" : vinsert_for_size<Opcode128,
+    defm NAME # "64x2Z" : vinsert_for_size_split<Opcode128,
                                  X86VectorVTInfo< 2, EltVT64, VR128X>,
                                  X86VectorVTInfo< 8, EltVT64, VR512>,
-                                 vinsert128_insert>, VEX_W, EVEX_V512;
+                                 null_frag, vinsert128_insert>, VEX_W, EVEX_V512;
 
-    defm NAME # "32x8Z" : vinsert_for_size<Opcode256,
+    defm NAME # "32x8Z" : vinsert_for_size_split<Opcode256,
                                    X86VectorVTInfo< 8, EltVT32, VR256X>,
                                    X86VectorVTInfo<16, EltVT32, VR512>,
-                                   vinsert256_insert>, EVEX_V512;
+                                   null_frag, vinsert256_insert>, EVEX_V512;
   }
 }
 
@@ -596,21 +637,21 @@ defm VINSERTF : vinsert_for_type<f32, 0x18, f64, 0x1a>;
 defm VINSERTI : vinsert_for_type<i32, 0x38, i64, 0x3a>;
 
 // Codegen pattern with the alternative types,
-// Only add this if 64x2 and its friends are not supported natively via AVX512DQ.
+// Even with AVX512DQ we'll still use these for unmasked operations.
 defm : vinsert_for_size_lowering<"VINSERTF32x4Z256", v2f64x_info, v4f64x_info,
-              vinsert128_insert, INSERT_get_vinsert128_imm, [HasVLX, NoDQI]>;
+              vinsert128_insert, INSERT_get_vinsert128_imm, [HasVLX]>;
 defm : vinsert_for_size_lowering<"VINSERTI32x4Z256", v2i64x_info, v4i64x_info,
-              vinsert128_insert, INSERT_get_vinsert128_imm, [HasVLX, NoDQI]>;
+              vinsert128_insert, INSERT_get_vinsert128_imm, [HasVLX]>;
 
 defm : vinsert_for_size_lowering<"VINSERTF32x4Z", v2f64x_info, v8f64_info,
-              vinsert128_insert, INSERT_get_vinsert128_imm, [HasAVX512, NoDQI]>;
+              vinsert128_insert, INSERT_get_vinsert128_imm, [HasAVX512]>;
 defm : vinsert_for_size_lowering<"VINSERTI32x4Z", v2i64x_info, v8i64_info,
-              vinsert128_insert, INSERT_get_vinsert128_imm, [HasAVX512, NoDQI]>;
+              vinsert128_insert, INSERT_get_vinsert128_imm, [HasAVX512]>;
 
 defm : vinsert_for_size_lowering<"VINSERTF64x4Z", v8f32x_info, v16f32_info,
-              vinsert256_insert, INSERT_get_vinsert256_imm, [HasAVX512, NoDQI]>;
+              vinsert256_insert, INSERT_get_vinsert256_imm, [HasAVX512]>;
 defm : vinsert_for_size_lowering<"VINSERTI64x4Z", v8i32x_info, v16i32_info,
-              vinsert256_insert, INSERT_get_vinsert256_imm, [HasAVX512, NoDQI]>;
+              vinsert256_insert, INSERT_get_vinsert256_imm, [HasAVX512]>;
 
 // Codegen pattern with the alternative types insert VEC128 into VEC256
 defm : vinsert_for_size_lowering<"VINSERTI32x4Z256", v8i16x_info, v16i16x_info,
@@ -647,16 +688,20 @@ def VINSERTPSZrm: AVX512AIi8<0x21, MRMSrcMem, (outs VR128X:$dst),
 // AVX-512 VECTOR EXTRACT
 //---
 
-multiclass vextract_for_size<int Opcode,
-                             X86VectorVTInfo From, X86VectorVTInfo To,
-                             PatFrag vextract_extract> {
+// Supports two different pattern operators for mask and unmasked ops. Allows
+// null_frag to be passed for one.
+multiclass vextract_for_size_split<int Opcode,
+                                   X86VectorVTInfo From, X86VectorVTInfo To,
+                                   SDPatternOperator vextract_extract,
+                                   SDPatternOperator vextract_for_mask> {
 
   let hasSideEffects = 0, ExeDomain = To.ExeDomain in {
-    defm rr : AVX512_maskable<Opcode, MRMDestReg, To, (outs To.RC:$dst),
+    defm rr : AVX512_maskable_split<Opcode, MRMDestReg, To, (outs To.RC:$dst),
                 (ins From.RC:$src1, u8imm:$idx),
                 "vextract" # To.EltTypeName # "x" # To.NumElts,
                 "$idx, $src1", "$src1, $idx",
-                (vextract_extract:$idx (From.VT From.RC:$src1), (iPTR imm))>,
+                (vextract_extract:$idx (From.VT From.RC:$src1), (iPTR imm)),
+                (vextract_for_mask:$idx (From.VT From.RC:$src1), (iPTR imm))>,
               AVX512AIi8Base, EVEX;
     def mr  : AVX512AIi8<Opcode, MRMDestMem, (outs),
                     (ins To.MemOp:$dst, From.RC:$src1, u8imm:$idx),
@@ -676,6 +721,12 @@ multiclass vextract_for_size<int Opcode,
                     []>, EVEX_K, EVEX;
   }
 }
+
+// Passes the same pattern operator for masked and unmasked ops.
+multiclass vextract_for_size<int Opcode, X86VectorVTInfo From,
+                             X86VectorVTInfo To,
+                             SDPatternOperator vextract_extract> :
+  vextract_for_size_split<Opcode, From, To, vextract_extract, vextract_extract>;
 
 // Codegen pattern for the alternative types
 multiclass vextract_for_size_lowering<string InstrStr, X86VectorVTInfo From,
@@ -713,22 +764,26 @@ multiclass vextract_for_type<ValueType EltVT32, int Opcode128,
                                  X86VectorVTInfo< 4, EltVT32, VR128X>,
                                  vextract128_extract>,
                                      EVEX_V256, EVEX_CD8<32, CD8VT4>;
+
+  // Even with DQI we'd like to only use these instructions for masking.
   let Predicates = [HasVLX, HasDQI] in
-    defm NAME # "64x2Z256" : vextract_for_size<Opcode128,
+    defm NAME # "64x2Z256" : vextract_for_size_split<Opcode128,
                                  X86VectorVTInfo< 4, EltVT64, VR256X>,
                                  X86VectorVTInfo< 2, EltVT64, VR128X>,
-                                 vextract128_extract>,
+                                 null_frag, vextract128_extract>,
                                      VEX_W, EVEX_V256, EVEX_CD8<64, CD8VT2>;
+
+  // Even with DQI we'd like to only use these instructions for masking.
   let Predicates = [HasDQI] in {
-    defm NAME # "64x2Z" : vextract_for_size<Opcode128,
+    defm NAME # "64x2Z" : vextract_for_size_split<Opcode128,
                                  X86VectorVTInfo< 8, EltVT64, VR512>,
                                  X86VectorVTInfo< 2, EltVT64, VR128X>,
-                                 vextract128_extract>,
+                                 null_frag, vextract128_extract>,
                                      VEX_W, EVEX_V512, EVEX_CD8<64, CD8VT2>;
-    defm NAME # "32x8Z" : vextract_for_size<Opcode256,
+    defm NAME # "32x8Z" : vextract_for_size_split<Opcode256,
                                  X86VectorVTInfo<16, EltVT32, VR512>,
                                  X86VectorVTInfo< 8, EltVT32, VR256X>,
-                                 vextract256_extract>,
+                                 null_frag, vextract256_extract>,
                                      EVEX_V512, EVEX_CD8<32, CD8VT8>;
   }
 }
@@ -737,21 +792,21 @@ defm VEXTRACTF : vextract_for_type<f32, 0x19, f64, 0x1b>;
 defm VEXTRACTI : vextract_for_type<i32, 0x39, i64, 0x3b>;
 
 // extract_subvector codegen patterns with the alternative types.
-// Only add this if 64x2 and its friends are not supported natively via AVX512DQ.
+// Even with AVX512DQ we'll still use these for unmasked operations.
 defm : vextract_for_size_lowering<"VEXTRACTF32x4Z", v8f64_info, v2f64x_info,
-          vextract128_extract, EXTRACT_get_vextract128_imm, [HasAVX512, NoDQI]>;
+          vextract128_extract, EXTRACT_get_vextract128_imm, [HasAVX512]>;
 defm : vextract_for_size_lowering<"VEXTRACTI32x4Z", v8i64_info, v2i64x_info,
-          vextract128_extract, EXTRACT_get_vextract128_imm, [HasAVX512, NoDQI]>;
+          vextract128_extract, EXTRACT_get_vextract128_imm, [HasAVX512]>;
 
 defm : vextract_for_size_lowering<"VEXTRACTF64x4Z", v16f32_info, v8f32x_info,
-          vextract256_extract, EXTRACT_get_vextract256_imm, [HasAVX512, NoDQI]>;
+          vextract256_extract, EXTRACT_get_vextract256_imm, [HasAVX512]>;
 defm : vextract_for_size_lowering<"VEXTRACTI64x4Z", v16i32_info, v8i32x_info,
-          vextract256_extract, EXTRACT_get_vextract256_imm, [HasAVX512, NoDQI]>;
+          vextract256_extract, EXTRACT_get_vextract256_imm, [HasAVX512]>;
 
 defm : vextract_for_size_lowering<"VEXTRACTF32x4Z256", v4f64x_info, v2f64x_info,
-          vextract128_extract, EXTRACT_get_vextract128_imm, [HasVLX, NoDQI]>;
+          vextract128_extract, EXTRACT_get_vextract128_imm, [HasVLX]>;
 defm : vextract_for_size_lowering<"VEXTRACTI32x4Z256", v4i64x_info, v2i64x_info,
-          vextract128_extract, EXTRACT_get_vextract128_imm, [HasVLX, NoDQI]>;
+          vextract128_extract, EXTRACT_get_vextract128_imm, [HasVLX]>;
 
 // Codegen pattern with the alternative types extract VEC128 from VEC256
 defm : vextract_for_size_lowering<"VEXTRACTI32x4Z256", v16i16x_info, v8i16x_info,
