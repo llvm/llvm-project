@@ -196,8 +196,13 @@ int IslNodeBuilder::getNumberOfIterations(__isl_keep isl_ast_node *For) {
 
 /// Extract the values and SCEVs needed to generate code for a block.
 static int findReferencesInBlock(struct SubtreeReferences &References,
-                                 const ScopStmt *Stmt, const BasicBlock *BB) {
-  for (const Instruction &Inst : *BB)
+                                 const ScopStmt *Stmt, BasicBlock *BB) {
+  for (Instruction &Inst : *BB) {
+    // Include invariant loads
+    if (isa<LoadInst>(Inst))
+      if (Value *InvariantLoad = References.GlobalMap.lookup(&Inst))
+        References.Values.insert(InvariantLoad);
+
     for (Value *SrcVal : Inst.operands()) {
       auto *Scope = References.LI.getLoopFor(BB);
       if (canSynthesize(SrcVal, References.S, &References.SE, Scope)) {
@@ -206,6 +211,7 @@ static int findReferencesInBlock(struct SubtreeReferences &References,
       } else if (Value *NewVal = References.GlobalMap.lookup(SrcVal))
         References.Values.insert(NewVal);
     }
+  }
   return 0;
 }
 
@@ -218,7 +224,7 @@ isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
   else {
     assert(Stmt->isRegionStmt() &&
            "Stmt was neither block nor region statement");
-    for (const BasicBlock *BB : Stmt->getRegion()->blocks())
+    for (BasicBlock *BB : Stmt->getRegion()->blocks())
       findReferencesInBlock(References, Stmt, BB);
   }
 

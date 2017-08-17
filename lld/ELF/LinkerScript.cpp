@@ -842,8 +842,13 @@ bool LinkerScript::ignoreInterpSection() {
 }
 
 ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
-  if (S == ".")
-    return {CurAddressState->OutSec, Dot - CurAddressState->OutSec->Addr, Loc};
+  if (S == ".") {
+    if (CurAddressState)
+      return {CurAddressState->OutSec, Dot - CurAddressState->OutSec->Addr,
+              Loc};
+    error(Loc + ": unable to get location counter value");
+    return 0;
+  }
   if (SymbolBody *B = Symtab->find(S)) {
     if (auto *D = dyn_cast<DefinedRegular>(B))
       return {D->Section, D->Value, Loc};
