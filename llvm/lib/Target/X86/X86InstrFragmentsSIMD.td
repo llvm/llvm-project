@@ -352,7 +352,11 @@ def SDTFmaRound : SDTypeProfile<1, 4, [SDTCisSameAs<0,1>,
                            SDTCisSameAs<1,2>, SDTCisSameAs<1,3>,
                            SDTCisFP<0>, SDTCisVT<4, i32>]>;
 
-def X86PAlignr : SDNode<"X86ISD::PALIGNR", SDTShuff3OpI>;
+def X86PAlignr : SDNode<"X86ISD::PALIGNR",
+                        SDTypeProfile<1, 3, [SDTCVecEltisVT<0, i8>,
+                                             SDTCisSameAs<0,1>,
+                                             SDTCisSameAs<0,2>,
+                                             SDTCisVT<3, i8>]>>;
 def X86VAlign  : SDNode<"X86ISD::VALIGN", SDTShuff3OpI>;
 
 def X86Conflict : SDNode<"X86ISD::CONFLICT", SDTIntUnaryOp>;

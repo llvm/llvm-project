@@ -19130,8 +19130,8 @@ static SDValue getTargetVShiftNode(unsigned Opc, const SDLoc &dl, MVT VT,
     ShAmt = DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(ShAmt), MVT::v4i32, ShAmt);
     ShAmt = DAG.getZeroExtendVectorInReg(ShAmt, SDLoc(ShAmt), MVT::v2i64);
   } else {
-    SmallVector<SDValue, 4> ShOps = {ShAmt, DAG.getConstant(0, dl, SVT),
-                                     DAG.getUNDEF(SVT), DAG.getUNDEF(SVT)};
+    SDValue ShOps[4] = {ShAmt, DAG.getConstant(0, dl, SVT),
+                        DAG.getUNDEF(SVT), DAG.getUNDEF(SVT)};
     ShAmt = DAG.getBuildVector(MVT::v4i32, dl, ShOps);
   }
 

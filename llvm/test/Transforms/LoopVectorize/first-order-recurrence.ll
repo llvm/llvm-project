@@ -467,13 +467,6 @@ for.body:
 ; SINK-AFTER:   %[[VCONV:.+]] = sext <4 x i16> %[[VSHUF]] to <4 x i32>
 ; SINK-AFTER:   %[[VCONV3:.+]] = sext <4 x i16> %wide.load to <4 x i32>
 ; SINK-AFTER:   mul nsw <4 x i32> %[[VCONV3]], %[[VCONV]]
-; Check also that the sext sank after the load in the scalar loop.
-; SINK-AFTER: for.body
-; SINK-AFTER:   %scalar.recur = phi i16 [ %scalar.recur.init, %scalar.ph ], [ %[[LOAD:.+]], %for.body ]
-; SINK-AFTER:   %[[LOAD]] = load i16, i16* %arrayidx2
-; SINK-AFTER:   %[[CONV:.+]] = sext i16 %scalar.recur to i32
-; SINK-AFTER:   %[[CONV3:.+]] = sext i16 %[[LOAD]] to i32
-; SINK-AFTER:   %mul = mul nsw i32 %[[CONV3]], %[[CONV]]
 ;
 define void @sink_after(i16* %a, i32* %b, i64 %n) {
 entry:

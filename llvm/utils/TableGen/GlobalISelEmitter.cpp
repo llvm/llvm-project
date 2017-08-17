@@ -182,14 +182,6 @@ static Error failedImport(const Twine &Reason) {
 static Error isTrivialOperatorNode(const TreePatternNode *N) {
   std::string Explanation = "";
   std::string Separator = "";
-  if (N->isLeaf()) {
-    if (isa<IntInit>(N->getLeafValue()))
-      return Error::success();
-
-    Explanation = "Is a leaf";
-    Separator = ", ";
-  }
-
   if (N->hasAnyPredicate()) {
     Explanation = Separator + "Has a predicate (" + explainPredicates(N) + ")";
     Separator = ", ";
@@ -200,7 +192,7 @@ static Error isTrivialOperatorNode(const TreePatternNode *N) {
     Separator = ", ";
   }
 
-  if (!N->isLeaf() && !N->hasAnyPredicate() && !N->getTransformFn())
+  if (!N->hasAnyPredicate() && !N->getTransformFn())
     return Error::success();
 
   return failedImport(Explanation);
@@ -1767,22 +1759,28 @@ bool OperandPredicateMatcher::isHigherPriorityThan(
   // LiteralInt because it can cover more nodes but theres an exception to
   // this. G_CONSTANT's are less important than either of those two because they
   // are more permissive.
-  if (const InstructionOperandMatcher *AOM =
-          dyn_cast<InstructionOperandMatcher>(this)) {
-    if (AOM->getInsnMatcher().isConstantInstruction()) {
-      if (B.Kind == OPM_Int) {
-        return false;
-      }
-    }
+
+  const InstructionOperandMatcher *AOM =
+      dyn_cast<InstructionOperandMatcher>(this);
+  const InstructionOperandMatcher *BOM =
+      dyn_cast<InstructionOperandMatcher>(&B);
+  bool AIsConstantInsn = AOM && AOM->getInsnMatcher().isConstantInstruction();
+  bool BIsConstantInsn = BOM && BOM->getInsnMatcher().isConstantInstruction();
+
+  if (AOM && BOM) {
+    // The relative priorities between a G_CONSTANT and any other instruction
+    // don't actually matter but this code is needed to ensure a strict weak
+    // ordering. This is particularly important on Windows where the rules will
+    // be incorrectly sorted without it.
+    if (AIsConstantInsn != BIsConstantInsn)
+      return AIsConstantInsn < BIsConstantInsn;
+    return false;
   }
-  if (const InstructionOperandMatcher *BOM =
-          dyn_cast<InstructionOperandMatcher>(&B)) {
-    if (BOM->getInsnMatcher().isConstantInstruction()) {
-      if (Kind == OPM_Int) {
-        return true;
-      }
-    }
-  }
+
+  if (AOM && AIsConstantInsn && (B.Kind == OPM_Int || B.Kind == OPM_LiteralInt))
+    return false;
+  if (BOM && BIsConstantInsn && (Kind == OPM_Int || Kind == OPM_LiteralInt))
+    return true;
 
   return Kind < B.Kind;
 }
@@ -2287,8 +2285,42 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     return failedImport("Src pattern root isn't a trivial operator (" +
                         toString(std::move(Err)) + ")");
 
-  if (Dst->isLeaf())
+  InstructionMatcher &InsnMatcherTemp = M.addInstructionMatcher(Src->getName());
+  unsigned TempOpIdx = 0;
+  auto InsnMatcherOrError =
+      createAndImportSelDAGMatcher(InsnMatcherTemp, Src, TempOpIdx);
+  if (auto Error = InsnMatcherOrError.takeError())
+    return std::move(Error);
+  InstructionMatcher &InsnMatcher = InsnMatcherOrError.get();
+
+  if (Dst->isLeaf()) {
+    Record *RCDef = getInitValueAsRegClass(Dst->getLeafValue());
+
+    const CodeGenRegisterClass &RC = Target.getRegisterClass(RCDef);
+    if (RCDef) {
+      // We need to replace the def and all its uses with the specified
+      // operand. However, we must also insert COPY's wherever needed.
+      // For now, emit a copy and let the register allocator clean up.
+      auto &DstI = Target.getInstruction(RK.getDef("COPY"));
+      const auto &DstIOperand = DstI.Operands[0];
+
+      OperandMatcher &OM0 = InsnMatcher.getOperand(0);
+      OM0.setSymbolicName(DstIOperand.Name);
+      OM0.addPredicate<RegisterBankOperandMatcher>(RC);
+
+      auto &DstMIBuilder = M.addAction<BuildMIAction>(0, &DstI, InsnMatcher);
+      DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher, DstIOperand.Name);
+      DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher, Dst->getName());
+      M.addAction<ConstrainOperandToRegClassAction>(0, 0, RC);
+
+      // We're done with this pattern!  It's eligible for GISel emission; return
+      // it.
+      ++NumPatternImported;
+      return std::move(M);
+    }
+
     return failedImport("Dst pattern root isn't a known leaf");
+  }
 
   // Start with the defined operands (i.e., the results of the root operator).
   Record *DstOp = Dst->getOperator();
@@ -2300,14 +2332,6 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     return failedImport("Src pattern results and dst MI defs are different (" +
                         to_string(Src->getExtTypes().size()) + " def(s) vs " +
                         to_string(DstI.Operands.NumDefs) + " def(s))");
-
-  InstructionMatcher &InsnMatcherTemp = M.addInstructionMatcher(Src->getName());
-  unsigned TempOpIdx = 0;
-  auto InsnMatcherOrError =
-      createAndImportSelDAGMatcher(InsnMatcherTemp, Src, TempOpIdx);
-  if (auto Error = InsnMatcherOrError.takeError())
-    return std::move(Error);
-  InstructionMatcher &InsnMatcher = InsnMatcherOrError.get();
 
   // The root of the match also has constraints on the register bank so that it
   // matches the result instruction.
@@ -2537,13 +2561,14 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   // for the matcher to reference them with.
   std::vector<LLTCodeGen> TypeObjects = {
       LLT::scalar(8),      LLT::scalar(16),     LLT::scalar(32),
-      LLT::scalar(64),     LLT::scalar(80),     LLT::vector(8, 1),
-      LLT::vector(16, 1),  LLT::vector(32, 1),  LLT::vector(64, 1),
-      LLT::vector(8, 8),   LLT::vector(16, 8),  LLT::vector(32, 8),
-      LLT::vector(64, 8),  LLT::vector(4, 16),  LLT::vector(8, 16),
-      LLT::vector(16, 16), LLT::vector(32, 16), LLT::vector(2, 32),
-      LLT::vector(4, 32),  LLT::vector(8, 32),  LLT::vector(16, 32),
-      LLT::vector(2, 64),  LLT::vector(4, 64),  LLT::vector(8, 64),
+      LLT::scalar(64),     LLT::scalar(80),     LLT::scalar(128),
+      LLT::vector(8, 1),   LLT::vector(16, 1),  LLT::vector(32, 1),
+      LLT::vector(64, 1),  LLT::vector(8, 8),   LLT::vector(16, 8),
+      LLT::vector(32, 8),  LLT::vector(64, 8),  LLT::vector(4, 16),
+      LLT::vector(8, 16),  LLT::vector(16, 16), LLT::vector(32, 16),
+      LLT::vector(2, 32),  LLT::vector(4, 32),  LLT::vector(8, 32),
+      LLT::vector(16, 32), LLT::vector(2, 64),  LLT::vector(4, 64),
+      LLT::vector(8, 64),
   };
   std::sort(TypeObjects.begin(), TypeObjects.end());
   OS << "enum {\n";

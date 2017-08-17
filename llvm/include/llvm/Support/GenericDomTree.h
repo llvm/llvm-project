@@ -24,12 +24,6 @@
 #ifndef LLVM_SUPPORT_GENERICDOMTREE_H
 #define LLVM_SUPPORT_GENERICDOMTREE_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -38,6 +32,13 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
@@ -45,7 +46,7 @@ template <typename NodeT, bool IsPostDom>
 class DominatorTreeBase;
 
 namespace DomTreeBuilder {
-template <class DomTreeT>
+template <typename DomTreeT>
 struct SemiNCAInfo;
 }  // namespace DomTreeBuilder
 
@@ -190,13 +191,47 @@ namespace DomTreeBuilder {
 template <typename DomTreeT>
 void Calculate(DomTreeT &DT);
 
-template <class DomTreeT>
+template <typename DomTreeT>
 void InsertEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
                 typename DomTreeT::NodePtr To);
 
-template <class DomTreeT>
+template <typename DomTreeT>
 void DeleteEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
                 typename DomTreeT::NodePtr To);
+
+// UpdateKind and Update are used by the batch update API and it's easiest to
+// define them here.
+enum class UpdateKind : unsigned char { Insert, Delete };
+
+template <typename NodePtr>
+struct Update {
+  using NodeKindPair = PointerIntPair<NodePtr, 1, UpdateKind>;
+
+  NodePtr From;
+  NodeKindPair ToAndKind;
+
+  Update(UpdateKind Kind, NodePtr From, NodePtr To)
+      : From(From), ToAndKind(To, Kind) {}
+
+  UpdateKind getKind() const { return ToAndKind.getInt(); }
+  NodePtr getFrom() const { return From; }
+  NodePtr getTo() const { return ToAndKind.getPointer(); }
+  bool operator==(const Update &RHS) const {
+    return From == RHS.From && ToAndKind == RHS.ToAndKind;
+  }
+
+  friend raw_ostream &operator<<(raw_ostream &OS, const Update &U) {
+    OS << (U.getKind() == UpdateKind::Insert ? "Insert " : "Delete ");
+    U.getFrom()->printAsOperand(OS, false);
+    OS << " -> ";
+    U.getTo()->printAsOperand(OS, false);
+    return OS;
+  }
+};
+
+template <typename DomTreeT>
+void ApplyUpdates(DomTreeT &DT,
+                  ArrayRef<typename DomTreeT::UpdateType> Updates);
 
 template <typename DomTreeT>
 bool Verify(const DomTreeT &DT);
@@ -218,6 +253,11 @@ class DominatorTreeBase {
                 "Currently NodeT's parent must be a pointer type");
   using ParentType = typename std::remove_pointer<ParentPtr>::type;
   static constexpr bool IsPostDominator = IsPostDom;
+
+  using UpdateType = DomTreeBuilder::Update<NodePtr>;
+  using UpdateKind = DomTreeBuilder::UpdateKind;
+  static constexpr UpdateKind Insert = UpdateKind::Insert;
+  static constexpr UpdateKind Delete = UpdateKind::Delete;
 
  protected:
   // Dominators always have a single root, postdominators can have more.
@@ -463,6 +503,39 @@ class DominatorTreeBase {
   // API to update (Post)DominatorTree information based on modifications to
   // the CFG...
 
+  /// Inform the dominator tree about a sequence of CFG edge insertions and
+  /// deletions and perform a batch update on the tree.
+  ///
+  /// This function should be used when there were multiple CFG updates after
+  /// the last dominator tree update. It takes care of performing the updates
+  /// in sync with the CFG and optimizes away the redundant operations that
+  /// cancel each other.
+  /// The functions expects the sequence of updates to be balanced. Eg.:
+  ///  - {{Insert, A, B}, {Delete, A, B}, {Insert, A, B}} is fine, because
+  ///    logically it results in a single insertions.
+  ///  - {{Insert, A, B}, {Insert, A, B}} is invalid, because it doesn't make
+  ///    sense to insert the same edge twice.
+  ///
+  /// What's more, the functions assumes that it's safe to ask every node in the
+  /// CFG about its children and inverse children. This implies that deletions
+  /// of CFG edges must not delete the CFG nodes before calling this function.
+  ///
+  /// Batch updates should be generally faster when performing longer sequences
+  /// of updates than calling insertEdge/deleteEdge manually multiple times, as
+  /// they can reorder the updates and remove redundant ones internally.
+  ///
+  /// Note that for postdominators it automatically takes care of applying
+  /// updates on reverse edges internally (so there's no need to swap the
+  /// From and To pointers when constructing DominatorTree::UpdateType).
+  /// The type of updates is the same for DomTreeBase<T> and PostDomTreeBase<T>
+  /// with the same template parameter T.
+  ///
+  /// \param Updates An unordered sequence of updates to perform.
+  ///
+  void applyUpdates(ArrayRef<UpdateType> Updates) {
+    DomTreeBuilder::ApplyUpdates(*this, Updates);
+  }
+
   /// Inform the dominator tree about a CFG edge insertion and update the tree.
   ///
   /// This function has to be called just before or just after making the update
@@ -486,11 +559,6 @@ class DominatorTreeBase {
   /// CFG. An internal functions checks if the edge doesn't exist in the CFG in
   /// DEBUG mode. There cannot be any other updates that the
   /// dominator tree doesn't know about.
-  ///
-  /// However, it is fine to perform multiple CFG deletions that make different
-  /// subtrees forward-unreachable and to inform the DomTree about them all at
-  /// the same time, as the incremental algorithm doesn't walk the tree above
-  /// the NearestCommonDominator of a deleted edge
   ///
   /// Note that for postdominators it automatically takes care of deleting
   /// a reverse edge internally (so there's no need to swap the parameters).
@@ -678,7 +746,6 @@ public:
 
   /// recalculate - compute a dominator tree for the given function
   void recalculate(ParentType &Func) {
-    reset();
     Parent = &Func;
     DomTreeBuilder::Calculate(*this);
   }

@@ -123,6 +123,10 @@ public:
   void dump(raw_ostream &OS, unsigned recurseDepth, unsigned indent = 0,
             DIDumpOptions DumpOpts = DIDumpOptions()) const;
 
+
+  /// Convenience zero-argument overload for debugging.
+  LLVM_DUMP_METHOD void dump() const;
+
   /// Extract the specified attribute from this DIE.
   ///
   /// Extract an attribute value from this DIE only. This call doesn't look

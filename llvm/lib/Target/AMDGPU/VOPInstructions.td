@@ -112,7 +112,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let AsmMatchConverter =
     !if(!and(P.IsPacked, isVOP3P),
         "cvtVOP3P",
-        !if(!or(P.HasModifiers, P.HasOMod),
+        !if(!or(P.HasModifiers, !or(P.HasOMod, P.HasIntClamp)),
             "cvtVOP3",
             ""));
 
