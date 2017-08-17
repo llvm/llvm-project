@@ -217,11 +217,12 @@ private:
     CaseBlock(ISD::CondCode cc, const Value *cmplhs, const Value *cmprhs,
               const Value *cmpmiddle, MachineBasicBlock *truebb,
               MachineBasicBlock *falsebb, MachineBasicBlock *me,
+              SDLoc dl,
               BranchProbability trueprob = BranchProbability::getUnknown(),
               BranchProbability falseprob = BranchProbability::getUnknown())
         : CC(cc), CmpLHS(cmplhs), CmpMHS(cmpmiddle), CmpRHS(cmprhs),
-          TrueBB(truebb), FalseBB(falsebb), ThisBB(me), TrueProb(trueprob),
-          FalseProb(falseprob) {}
+          TrueBB(truebb), FalseBB(falsebb), ThisBB(me), DL(dl),
+          TrueProb(trueprob), FalseProb(falseprob) {}
 
     // CC - the condition code to use for the case block's setcc node
     ISD::CondCode CC;
@@ -236,6 +237,10 @@ private:
 
     // ThisBB - the block into which to emit the code for the setcc and branches
     MachineBasicBlock *ThisBB;
+
+    /// The debug location of the instruction this CaseBlock was
+    /// produced from.
+    SDLoc DL;
 
     // TrueProb/FalseProb - branch weights.
     BranchProbability TrueProb, FalseProb;
