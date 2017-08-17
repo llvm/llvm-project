@@ -60,11 +60,13 @@ std::vector<std::unique_ptr<MemoryBuffer>> OwningMBs;
 
 // Opens a file. Path has to be resolved already.
 // Newly created memory buffers are owned by this driver.
-MemoryBufferRef openFile(StringRef Path) {
+Optional<MemoryBufferRef> openFile(StringRef Path) {
   ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB = MemoryBuffer::getFile(Path);
 
-  if (std::error_code EC = MB.getError())
+  if (std::error_code EC = MB.getError()) {
     llvm::errs() << "fail openFile: " << EC.message() << "\n";
+    return None;
+  }
 
   MemoryBufferRef MBRef = MB.get()->getMemBufferRef();
   OwningMBs.push_back(std::move(MB.get())); // take ownership
@@ -114,11 +116,16 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
     llvm::errs() << "ignoring unknown argument: " << Arg->getSpelling() << "\n";
 
-  MemoryBufferRef MB;
-  if (auto *Arg = Args.getLastArg(OPT_d))
-    MB = openFile(Arg->getValue());
+  if (!Args.hasArg(OPT_d)) {
+    llvm::errs() << "no definition file specified\n";
+    return 1;
+  }
 
-  if (!MB.getBufferSize()) {
+  Optional<MemoryBufferRef> MB = openFile(Args.getLastArg(OPT_d)->getValue());
+  if (!MB)
+    return 1;
+
+  if (!MB->getBufferSize()) {
     llvm::errs() << "definition file empty\n";
     return 1;
   }
@@ -133,7 +140,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   }
 
   Expected<COFFModuleDefinition> Def =
-      parseCOFFModuleDefinition(MB, Machine, true);
+      parseCOFFModuleDefinition(*MB, Machine, true);
 
   if (!Def) {
     llvm::errs() << "error parsing definition\n"
@@ -154,7 +161,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   if (Path.empty())
     Path = getImplibPath(Def->OutputFile);
 
-  if (writeImportLibrary(Def->OutputFile, Path, Def->Exports, Machine))
+  if (writeImportLibrary(Def->OutputFile, Path, Def->Exports, Machine, true))
     return 1;
   return 0;
 }
