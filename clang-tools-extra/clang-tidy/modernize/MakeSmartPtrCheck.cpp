@@ -147,6 +147,10 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM,
     return;
   }
 
+  if (!replaceNew(Diag, New, SM)) {
+    return;
+  }
+
   // Find the location of the template's left angle.
   size_t LAngle = ExprStr.find("<");
   SourceLocation ConstructCallEnd;
@@ -179,7 +183,6 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM,
         ")");
   }
 
-  replaceNew(Diag, New, SM);
   insertHeader(Diag, SM.getFileID(ConstructCallStart));
 }
 
@@ -214,6 +217,10 @@ void MakeSmartPtrCheck::checkReset(SourceManager &SM,
     return;
   }
 
+  if (!replaceNew(Diag, New, SM)) {
+    return;
+  }
+
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getCharRange(OperatorLoc, ExprEnd),
       (llvm::Twine(" = ") + MakeSmartPtrFunctionName + "<" +
@@ -223,11 +230,10 @@ void MakeSmartPtrCheck::checkReset(SourceManager &SM,
   if (Expr->isArrow())
     Diag << FixItHint::CreateInsertion(ExprStart, "*");
 
-  replaceNew(Diag, New, SM);
   insertHeader(Diag, SM.getFileID(OperatorLoc));
 }
 
-void MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
+bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
                                    const CXXNewExpr *New,
                                    SourceManager& SM) {
   SourceLocation NewStart = New->getSourceRange().getBegin();
@@ -254,6 +260,22 @@ void MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     break;
   }
   case CXXNewExpr::CallInit: {
+    // FIXME: Add fixes for constructors with initializer-list parameters.
+    // Unlike ordinal cases, braced list can not be deduced in
+    // std::make_smart_ptr, we need to specify the type explicitly in the fixes:
+    //   struct S { S(std::initializer_list<int>, int); };
+    //   smart_ptr<S>(new S({1, 2, 3}, 1));  // C++98 call-style initialization
+    //   smart_ptr<S>(new S({}, 1));
+    // The above samples have to be replaced with:
+    //   std::make_smart_ptr<S>(std::initializer_list<int>({1, 2, 3}), 1);
+    //   std::make_smart_ptr<S>(std::initializer_list<int>({}), 1);
+    if (const auto *CE = New->getConstructExpr()) {
+      for (const auto *Arg : CE->arguments()) {
+        if (llvm::isa<CXXStdInitializerListExpr>(Arg)) {
+          return false;
+        }
+      }
+    }
     if (ArraySizeExpr.empty()) {
       SourceRange InitRange = New->getDirectInitRange();
       Diag << FixItHint::CreateRemoval(
@@ -274,19 +296,16 @@ void MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     SourceRange InitRange;
     if (const auto *NewConstruct = New->getConstructExpr()) {
       if (NewConstruct->isStdInitListInitialization()) {
-        // Direct Initialization with the initializer-list constructor.
-        //   struct S { S(std::initializer_list<T>); };
-        //   smart_ptr<S>(new S{1, 2, 3});
-        //   smart_ptr<S>(new S{}); // use initializer-list consturctor
-        // The brace has to be kept, so this has to be replaced with:
-        //   std::make_smart_ptr<S>({1, 2, 3});
-        //   std::make_smart_ptr<S>({});
-        unsigned NumArgs = NewConstruct->getNumArgs();
-        if (NumArgs == 0) {
-          return;
-        }
-        InitRange = SourceRange(NewConstruct->getArg(0)->getLocStart(),
-                                NewConstruct->getArg(NumArgs - 1)->getLocEnd());
+        // FIXME: Add fixes for direct initialization with the initializer-list
+        // constructor. Similar to the above CallInit case, the type has to be
+        // specified explicitly in the fixes.
+        //   struct S { S(std::initializer_list<int>); };
+        //   smart_ptr<S>(new S{1, 2, 3});  // C++11 direct list-initialization
+        //   smart_ptr<S>(new S{});  // use initializer-list consturctor
+        // The above cases have to be replaced with:
+        //   std::make_smart_ptr<S>(std::initializer_list<int>({1, 2, 3}));
+        //   std::make_smart_ptr<S>(std::initializer_list<int>({}));
+        return false;
       } else {
         // Direct initialization with ordinary constructors.
         //   struct S { S(int x); S(); };
@@ -316,6 +335,7 @@ void MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     break;
   }
   }
+  return true;
 }
 
 void MakeSmartPtrCheck::insertHeader(DiagnosticBuilder &Diag, FileID FD) {
