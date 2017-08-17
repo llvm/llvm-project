@@ -1,5 +1,7 @@
+; Make sure we reject GVs without a type and we verify each exactly once.
 ; RUN: not llc %s 2>&1 | FileCheck %s
 ; CHECK: missing global variable type
+; CHECK-NOT: missing global variable type
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!63, !64}

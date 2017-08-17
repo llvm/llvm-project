@@ -1178,8 +1178,6 @@ void Verifier::visitDIExpression(const DIExpression &N) {
 void Verifier::visitDIGlobalVariableExpression(
     const DIGlobalVariableExpression &GVE) {
   AssertDI(GVE.getVariable(), "missing variable");
-  if (auto *Var = GVE.getVariable())
-    visitDIGlobalVariable(*Var);
   if (auto *Expr = GVE.getExpression())
     visitDIExpression(*Expr);
 }
