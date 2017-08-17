@@ -350,7 +350,7 @@ else:
 
 ; CHECK-LABEL: test_phi:
 ; CHECK: mov  x[[PTR:[0-9]+]], x0
-; CHECK: ldr  h[[AB:[0-9]+]], [x0]
+; CHECK: ldr  h[[AB:[0-9]+]], [x[[PTR]]]
 ; CHECK: [[LOOP:LBB[0-9_]+]]:
 ; CHECK: mov.16b  v[[R:[0-9]+]], v[[AB]]
 ; CHECK: ldr  h[[AB]], [x[[PTR]]]

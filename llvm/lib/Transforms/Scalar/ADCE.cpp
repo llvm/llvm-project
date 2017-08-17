@@ -679,9 +679,11 @@ struct ADCELegacyPass : public FunctionPass {
     AU.addRequired<PostDominatorTreeWrapperPass>();
     if (!RemoveControlFlowFlag)
       AU.setPreservesCFG();
+    else {
+      AU.addPreserved<DominatorTreeWrapperPass>();
+      AU.addPreserved<PostDominatorTreeWrapperPass>();
+    }
     AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<PostDominatorTreeWrapperPass>();
   }
 };
 }
@@ -689,6 +691,7 @@ struct ADCELegacyPass : public FunctionPass {
 char ADCELegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ADCELegacyPass, "adce",
                       "Aggressive Dead Code Elimination", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(ADCELegacyPass, "adce", "Aggressive Dead Code Elimination",
                     false, false)

@@ -53,6 +53,7 @@ enum class SymbolKind : uint8_t {
   ConversionFunction,
 
   Parameter,
+  Using,
 };
 
 enum class SymbolLanguage {
@@ -69,6 +70,8 @@ enum class SymbolSubKind {
   CXXMoveConstructor,
   AccessorGetter,
   AccessorSetter,
+  UsingTypename,
+  UsingValue,
 };
 
 /// Set of properties that provide additional info about a symbol.
