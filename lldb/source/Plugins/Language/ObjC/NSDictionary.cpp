@@ -32,13 +32,6 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
-#include "clang/AST/DeclCXX.h"
-
-// FIXME: we should not need this
-#include "Plugins/Language/Swift/SwiftDictionary.h"
-#include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
-#include <mutex>
-
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
