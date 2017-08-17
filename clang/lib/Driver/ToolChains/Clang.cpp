@@ -4261,10 +4261,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(A->getValue());
     } else {
       SmallString<128> F;
-      if (Output.isFilename() && (Args.hasArg(options::OPT_c) ||
-                                  Args.hasArg(options::OPT_S))) {
-        F = Output.getFilename();
-      } else {
+
+      if (Args.hasArg(options::OPT_c) || Args.hasArg(options::OPT_S)) {
+        if (Arg *FinalOutput = Args.getLastArg(options::OPT_o))
+          F = FinalOutput->getValue();
+      }
+
+      if (F.empty()) {
         // Use the input filename.
         F = llvm::sys::path::stem(Input.getBaseInput());
 

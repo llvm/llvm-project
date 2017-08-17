@@ -588,13 +588,13 @@ void BlockWaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
     }
 #if 0 // TODO: check if this is handled by MUBUF code above.
   } else if (Inst.getOpcode() == AMDGPU::BUFFER_STORE_DWORD ||
-	     Inst.getOpcode() == AMDGPU::BUFFER_STORE_DWORDX2 ||
-	     Inst.getOpcode() == AMDGPU::BUFFER_STORE_DWORDX4) {
+       Inst.getOpcode() == AMDGPU::BUFFER_STORE_DWORDX2 ||
+       Inst.getOpcode() == AMDGPU::BUFFER_STORE_DWORDX4) {
     MachineOperand *MO = TII->getNamedOperand(Inst, AMDGPU::OpName::data);
     unsigned OpNo;//TODO: find the OpNo for this operand;
     RegInterval Interval = getRegInterval(&Inst, TII, MRI, TRI, OpNo, false);
     for (signed RegNo = Interval.first; RegNo < Interval.second;
-	 ++RegNo) {
+    ++RegNo) {
       setRegScore(RegNo + NUM_ALL_VGPRS, t, CurrScore);
     }
 #endif
@@ -880,7 +880,7 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
       switch (src_type) {
         case SCMEM_LDS:
           if (group_is_multi_wave ||
-	      context->OptFlagIsOn(OPT_R1100_LDSMEM_FENCE_CHICKEN_BIT)) {
+            context->OptFlagIsOn(OPT_R1100_LDSMEM_FENCE_CHICKEN_BIT)) {
             EmitSwaitcnt |= ScoreBrackets->updateByWait(LGKM_CNT,
                                ScoreBrackets->getScoreUB(LGKM_CNT));
             // LDS may have to wait for VM_CNT after buffer load to LDS
@@ -894,9 +894,9 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
         case SCMEM_GDS:
           if (group_is_multi_wave || fence_is_global) {
             EmitSwaitcnt |= ScoreBrackets->updateByWait(EXP_CNT,
-			       ScoreBrackets->getScoreUB(EXP_CNT));
+              ScoreBrackets->getScoreUB(EXP_CNT));
             EmitSwaitcnt |= ScoreBrackets->updateByWait(LGKM_CNT,
-			       ScoreBrackets->getScoreUB(LGKM_CNT));
+              ScoreBrackets->getScoreUB(LGKM_CNT));
           }
           break;
 
@@ -906,9 +906,9 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
         case SCMEM_SCATTER:
           if (group_is_multi_wave || fence_is_global) {
             EmitSwaitcnt |= ScoreBrackets->updateByWait(EXP_CNT,
-			       ScoreBrackets->getScoreUB(EXP_CNT));
+              ScoreBrackets->getScoreUB(EXP_CNT));
             EmitSwaitcnt |= ScoreBrackets->updateByWait(VM_CNT,
-			       ScoreBrackets->getScoreUB(VM_CNT));
+              ScoreBrackets->getScoreUB(VM_CNT));
           }
           break;
 
@@ -947,7 +947,7 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
     // before the call.
     if (MI.getOpcode() == SC_CALL) {
       if (ScoreBrackets->getScoreUB(EXP_CNT) >
-	  ScoreBrackets->getScoreLB(EXP_CNT)) {
+        ScoreBrackets->getScoreLB(EXP_CNT)) {
         ScoreBrackets->setScoreLB(EXP_CNT, ScoreBrackets->getScoreUB(EXP_CNT));
         EmitSwaitcnt |= CNT_MASK(EXP_CNT);
       }
@@ -1585,7 +1585,7 @@ void SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     if (RequireCheckResourceType(Inst, context)) {
       // Force the score to as if an S_WAITCNT vmcnt(0) is emitted.
       ScoreBrackets->setScoreLB(VM_CNT,
-				   ScoreBrackets->getScoreUB(VM_CNT));
+      ScoreBrackets->getScoreUB(VM_CNT));
     }
 #endif
 

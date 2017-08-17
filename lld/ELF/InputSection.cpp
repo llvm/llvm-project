@@ -200,17 +200,12 @@ void InputSectionBase::uncompress() {
                                                 Config->IsLE, Config->Is64));
 
   size_t Size = Dec.getDecompressedSize();
-  char *OutputBuf;
-  {
-    static std::mutex Mu;
-    std::lock_guard<std::mutex> Lock(Mu);
-    OutputBuf = BAlloc.Allocate<char>(Size);
-  }
-
-  if (Error E = Dec.decompress({OutputBuf, Size}))
+  UncompressBuf.reset(new std::vector<uint8_t>(Size));
+  if (Error E = Dec.decompress({(char *)UncompressBuf->data(), Size}))
     fatal(toString(this) +
           ": decompress failed: " + llvm::toString(std::move(E)));
-  this->Data = ArrayRef<uint8_t>((uint8_t *)OutputBuf, Size);
+
+  this->Data = *UncompressBuf;
   this->Flags &= ~(uint64_t)SHF_COMPRESSED;
 }
 

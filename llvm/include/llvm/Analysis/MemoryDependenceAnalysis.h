@@ -1,4 +1,4 @@
-//===- llvm/Analysis/MemoryDependenceAnalysis.h - Memory Deps  --*- C++ -*-===//
+//===- llvm/Analysis/MemoryDependenceAnalysis.h - Memory Deps ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,26 +15,35 @@
 #define LLVM_ANALYSIS_MEMORYDEPENDENCEANALYSIS_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerSumType.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PredIteratorCache.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstdint>
+#include <utility>
+#include <vector>
 
 namespace llvm {
-class Function;
-class FunctionPass;
-class Instruction;
-class CallSite;
+
 class AssumptionCache;
-class MemoryDependenceResults;
-class PredIteratorCache;
+class CallSite;
 class DominatorTree;
+class Function;
+class Instruction;
+class LoadInst;
 class PHITransAddr;
+class TargetLibraryInfo;
+class Value;
 
 /// A memory dependence query can return one of three different answers.
 class MemDepResult {
@@ -105,17 +114,17 @@ class MemDepResult {
     Unknown
   };
 
-  typedef PointerSumType<
+  using ValueTy = PointerSumType<
       DepType, PointerSumTypeMember<Invalid, Instruction *>,
       PointerSumTypeMember<Clobber, Instruction *>,
       PointerSumTypeMember<Def, Instruction *>,
-      PointerSumTypeMember<Other, PointerEmbeddedInt<OtherType, 3>>>
-      ValueTy;
+      PointerSumTypeMember<Other, PointerEmbeddedInt<OtherType, 3>>>;
   ValueTy Value;
+
   explicit MemDepResult(ValueTy V) : Value(V) {}
 
 public:
-  MemDepResult() : Value() {}
+  MemDepResult() = default;
 
   /// get methods: These are static ctor methods for creating various
   /// MemDepResult kinds.
@@ -266,23 +275,23 @@ public:
 /// internal caching mechanism.
 class MemoryDependenceResults {
   // A map from instructions to their dependency.
-  typedef DenseMap<Instruction *, MemDepResult> LocalDepMapType;
+  using LocalDepMapType = DenseMap<Instruction *, MemDepResult>;
   LocalDepMapType LocalDeps;
 
 public:
-  typedef std::vector<NonLocalDepEntry> NonLocalDepInfo;
+  using NonLocalDepInfo = std::vector<NonLocalDepEntry>;
 
 private:
   /// A pair<Value*, bool> where the bool is true if the dependence is a read
   /// only dependence, false if read/write.
-  typedef PointerIntPair<const Value *, 1, bool> ValueIsLoadPair;
+  using ValueIsLoadPair = PointerIntPair<const Value *, 1, bool>;
 
   /// This pair is used when caching information for a block.
   ///
   /// If the pointer is null, the cache value is not a full query that starts
   /// at the specified block.  If non-null, the bool indicates whether or not
   /// the contents of the block was skipped.
-  typedef PointerIntPair<BasicBlock *, 1, bool> BBSkipFirstBlockPair;
+  using BBSkipFirstBlockPair = PointerIntPair<BasicBlock *, 1, bool>;
 
   /// This record is the information kept for each (value, is load) pair.
   struct NonLocalPointerInfo {
@@ -293,31 +302,32 @@ private:
     /// The maximum size of the dereferences of the pointer.
     ///
     /// May be UnknownSize if the sizes are unknown.
-    uint64_t Size;
+    uint64_t Size = MemoryLocation::UnknownSize;
     /// The AA tags associated with dereferences of the pointer.
     ///
     /// The members may be null if there are no tags or conflicting tags.
     AAMDNodes AATags;
 
-    NonLocalPointerInfo() : Size(MemoryLocation::UnknownSize) {}
+    NonLocalPointerInfo() = default;
   };
 
   /// Cache storing single nonlocal def for the instruction.
   /// It is set when nonlocal def would be found in function returning only
   /// local dependencies.
   DenseMap<Instruction *, NonLocalDepResult> NonLocalDefsCache;
+
   /// This map stores the cached results of doing a pointer lookup at the
   /// bottom of a block.
   ///
   /// The key of this map is the pointer+isload bit, the value is a list of
   /// <bb->result> mappings.
-  typedef DenseMap<ValueIsLoadPair, NonLocalPointerInfo>
-      CachedNonLocalPointerInfo;
+  using CachedNonLocalPointerInfo =
+      DenseMap<ValueIsLoadPair, NonLocalPointerInfo>;
   CachedNonLocalPointerInfo NonLocalPointerDeps;
 
   // A map from instructions to their non-local pointer dependencies.
-  typedef DenseMap<Instruction *, SmallPtrSet<ValueIsLoadPair, 4>>
-      ReverseNonLocalPtrDepTy;
+  using ReverseNonLocalPtrDepTy =
+      DenseMap<Instruction *, SmallPtrSet<ValueIsLoadPair, 4>>;
   ReverseNonLocalPtrDepTy ReverseNonLocalPtrDeps;
 
   /// This is the instruction we keep for each cached access that we have for
@@ -325,17 +335,17 @@ private:
   ///
   /// The pointer is an owning pointer and the bool indicates whether we have
   /// any dirty bits in the set.
-  typedef std::pair<NonLocalDepInfo, bool> PerInstNLInfo;
+  using PerInstNLInfo = std::pair<NonLocalDepInfo, bool>;
 
   // A map from instructions to their non-local dependencies.
-  typedef DenseMap<Instruction *, PerInstNLInfo> NonLocalDepMapType;
+  using NonLocalDepMapType = DenseMap<Instruction *, PerInstNLInfo>;
 
   NonLocalDepMapType NonLocalDeps;
 
   // A reverse mapping from dependencies to the dependees.  This is
   // used when removing instructions to keep the cache coherent.
-  typedef DenseMap<Instruction *, SmallPtrSet<Instruction *, 4>>
-      ReverseDepMapType;
+  using ReverseDepMapType =
+      DenseMap<Instruction *, SmallPtrSet<Instruction *, 4>>;
   ReverseDepMapType ReverseLocalDeps;
 
   // A reverse mapping from dependencies to the non-local dependees.
@@ -493,10 +503,11 @@ private:
 class MemoryDependenceAnalysis
     : public AnalysisInfoMixin<MemoryDependenceAnalysis> {
   friend AnalysisInfoMixin<MemoryDependenceAnalysis>;
+
   static AnalysisKey Key;
 
 public:
-  typedef MemoryDependenceResults Result;
+  using Result = MemoryDependenceResults;
 
   MemoryDependenceResults run(Function &F, FunctionAnalysisManager &AM);
 };
@@ -505,10 +516,12 @@ public:
 /// MemoryDepnedenceResults instance.
 class MemoryDependenceWrapperPass : public FunctionPass {
   Optional<MemoryDependenceResults> MemDep;
+
 public:
+  static char ID;
+
   MemoryDependenceWrapperPass();
   ~MemoryDependenceWrapperPass() override;
-  static char ID;
 
   /// Pass Implementation stuff.  This doesn't do any analysis eagerly.
   bool runOnFunction(Function &) override;
@@ -522,6 +535,6 @@ public:
   MemoryDependenceResults &getMemDep() { return *MemDep; }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ANALYSIS_MEMORYDEPENDENCEANALYSIS_H

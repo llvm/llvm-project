@@ -16,6 +16,7 @@
 
 #include "scudo_allocator.h"
 #include "scudo_crc32.h"
+#include "scudo_flags.h"
 #include "scudo_tls.h"
 #include "scudo_utils.h"
 
@@ -35,7 +36,7 @@ static uptr Cookie;
 // at compilation or at runtime.
 static atomic_uint8_t HashAlgorithm = { CRC32Software };
 
-INLINE u32 computeCRC32(uptr Crc, uptr Value, uptr *Array, uptr ArraySize) {
+INLINE u32 computeCRC32(u32 Crc, uptr Value, uptr *Array, uptr ArraySize) {
   // If the hardware CRC32 feature is defined here, it was enabled everywhere,
   // as opposed to only for scudo_crc32.cpp. This means that other hardware
   // specific instructions were likely emitted at other places, and as a
@@ -87,7 +88,8 @@ struct ScudoChunk : UnpackedHeader {
     ZeroChecksumHeader.Checksum = 0;
     uptr HeaderHolder[sizeof(UnpackedHeader) / sizeof(uptr)];
     memcpy(&HeaderHolder, &ZeroChecksumHeader, sizeof(HeaderHolder));
-    u32 Crc = computeCRC32(Cookie, reinterpret_cast<uptr>(this), HeaderHolder,
+    u32 Crc = computeCRC32(static_cast<u32>(Cookie),
+                           reinterpret_cast<uptr>(this), HeaderHolder,
                            ARRAY_SIZE(HeaderHolder));
     return static_cast<u16>(Crc);
   }
@@ -514,8 +516,8 @@ struct ScudoAllocator {
       if (Header.AllocType != Type) {
         // With the exception of memalign'd Chunks, that can be still be free'd.
         if (Header.AllocType != FromMemalign || Type != FromMalloc) {
-          dieWithMessage("ERROR: allocation type mismatch on address %p\n",
-                         UserPtr);
+          dieWithMessage("ERROR: allocation type mismatch when deallocating "
+                         "address %p\n", UserPtr);
         }
       }
     }
@@ -546,9 +548,11 @@ struct ScudoAllocator {
       dieWithMessage("ERROR: invalid chunk state when reallocating address "
                      "%p\n", OldPtr);
     }
-    if (UNLIKELY(OldHeader.AllocType != FromMalloc)) {
-      dieWithMessage("ERROR: invalid chunk type when reallocating address %p\n",
-                     OldPtr);
+    if (DeallocationTypeMismatch) {
+      if (UNLIKELY(OldHeader.AllocType != FromMalloc)) {
+        dieWithMessage("ERROR: allocation type mismatch when reallocating "
+                       "address %p\n", OldPtr);
+      }
     }
     uptr UsableSize = Chunk->getUsableSize(&OldHeader);
     // The new size still fits in the current chunk, and the size difference
@@ -567,7 +571,7 @@ struct ScudoAllocator {
     if (NewPtr) {
       uptr OldSize = OldHeader.FromPrimary ? OldHeader.SizeOrUnusedBytes :
           UsableSize - OldHeader.SizeOrUnusedBytes;
-      memcpy(NewPtr, OldPtr, Min(NewSize, OldSize));
+      memcpy(NewPtr, OldPtr, Min(NewSize, UsableSize));
       quarantineOrDeallocateChunk(Chunk, &OldHeader, OldSize);
     }
     return NewPtr;
