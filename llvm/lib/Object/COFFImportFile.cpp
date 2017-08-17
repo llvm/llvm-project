@@ -587,7 +587,7 @@ std::error_code writeImportLibrary(StringRef ImportName, StringRef Path,
     if (E.Constant)
       ImportType = IMPORT_CONST;
 
-    StringRef SymbolName = E.isWeak() ? E.ExtName : E.Name;
+    StringRef SymbolName = E.SymbolName.empty() ? E.Name : E.SymbolName;
     ImportNameType NameType = getNameType(SymbolName, E.Name, Machine);
     Expected<std::string> Name = E.ExtName.empty()
                                      ? SymbolName

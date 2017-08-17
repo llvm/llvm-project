@@ -73,6 +73,7 @@ private:
 struct COFFShortExport {
   std::string Name;
   std::string ExtName;
+  std::string SymbolName;
 
   uint16_t Ordinal = 0;
   bool Noname = false;
