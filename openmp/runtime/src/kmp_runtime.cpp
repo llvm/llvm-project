@@ -4082,10 +4082,6 @@ static void __kmp_initialize_info(kmp_info_t *this_thr, kmp_team_t *team,
 
   this_thr->th.th_local.this_construct = 0;
 
-#ifdef BUILD_TV
-  this_thr->th.th_local.tv_data = 0;
-#endif
-
   if (!this_thr->th.th_pri_common) {
     this_thr->th.th_pri_common =
         (struct common_table *)__kmp_allocate(sizeof(struct common_table));
