@@ -474,7 +474,7 @@ define <16 x float> @expand13(<8 x float> %a ) {
 ; SKX64-LABEL: expand13:
 ; SKX64:       # BB#0:
 ; SKX64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; SKX64-NEXT:    vinsertf32x8 $1, %ymm0, %zmm1, %zmm0
+; SKX64-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
 ; SKX64-NEXT:    retq
 ;
 ; KNL64-LABEL: expand13:
@@ -486,7 +486,7 @@ define <16 x float> @expand13(<8 x float> %a ) {
 ; SKX32-LABEL: expand13:
 ; SKX32:       # BB#0:
 ; SKX32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; SKX32-NEXT:    vinsertf32x8 $1, %ymm0, %zmm1, %zmm0
+; SKX32-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
 ; SKX32-NEXT:    retl
 ;
 ; KNL32-LABEL: expand13:

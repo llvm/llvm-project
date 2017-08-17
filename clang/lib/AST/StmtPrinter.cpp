@@ -24,6 +24,7 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Format.h"
 using namespace clang;
@@ -38,12 +39,14 @@ namespace  {
     unsigned IndentLevel;
     clang::PrinterHelper* Helper;
     PrintingPolicy Policy;
+    const ASTContext *Context;
 
   public:
-    StmtPrinter(raw_ostream &os, PrinterHelper* helper,
-                const PrintingPolicy &Policy,
-                unsigned Indentation = 0)
-      : OS(os), IndentLevel(Indentation), Helper(helper), Policy(Policy) {}
+    StmtPrinter(raw_ostream &os, PrinterHelper *helper,
+                const PrintingPolicy &Policy, unsigned Indentation = 0,
+                const ASTContext *Context = nullptr)
+        : OS(os), IndentLevel(Indentation), Helper(helper), Policy(Policy),
+          Context(Context) {}
 
     void PrintStmt(Stmt *S) {
       PrintStmt(S, Policy.Indentation);
@@ -1441,7 +1444,26 @@ void StmtPrinter::VisitCharacterLiteral(CharacterLiteral *Node) {
   }
 }
 
+/// Prints the given expression using the original source text. Returns true on
+/// success, false otherwise.
+static bool printExprAsWritten(raw_ostream &OS, Expr *E,
+                               const ASTContext *Context) {
+  if (!Context)
+    return false;
+  bool Invalid = false;
+  StringRef Source = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(E->getSourceRange()),
+      Context->getSourceManager(), Context->getLangOpts(), &Invalid);
+  if (!Invalid) {
+    OS << Source;
+    return true;
+  }
+  return false;
+}
+
 void StmtPrinter::VisitIntegerLiteral(IntegerLiteral *Node) {
+  if (Policy.ConstantsAsWritten && printExprAsWritten(OS, Node, Context))
+    return;
   bool isSigned = Node->getType()->isSignedIntegerType();
   OS << Node->getValue().toString(10, isSigned);
 
@@ -1485,6 +1507,8 @@ static void PrintFloatingLiteral(raw_ostream &OS, FloatingLiteral *Node,
 }
 
 void StmtPrinter::VisitFloatingLiteral(FloatingLiteral *Node) {
+  if (Policy.ConstantsAsWritten && printExprAsWritten(OS, Node, Context))
+    return;
   PrintFloatingLiteral(OS, Node, /*PrintSuffix=*/true);
 }
 
@@ -2696,11 +2720,10 @@ void Stmt::dumpPretty(const ASTContext &Context) const {
   printPretty(llvm::errs(), nullptr, PrintingPolicy(Context.getLangOpts()));
 }
 
-void Stmt::printPretty(raw_ostream &OS,
-                       PrinterHelper *Helper,
-                       const PrintingPolicy &Policy,
-                       unsigned Indentation) const {
-  StmtPrinter P(OS, Helper, Policy, Indentation);
+void Stmt::printPretty(raw_ostream &OS, PrinterHelper *Helper,
+                       const PrintingPolicy &Policy, unsigned Indentation,
+                       const ASTContext *Context) const {
+  StmtPrinter P(OS, Helper, Policy, Indentation, Context);
   P.Visit(const_cast<Stmt*>(this));
 }
 
