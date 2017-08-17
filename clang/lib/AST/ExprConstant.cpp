@@ -984,6 +984,7 @@ namespace {
     void moveFromAndCancel(SpeculativeEvaluationRAII &&Other) {
       Info = Other.Info;
       OldStatus = Other.OldStatus;
+      OldIsSpeculativelyEvaluating = Other.OldIsSpeculativelyEvaluating;
       Other.Info = nullptr;
     }
 
