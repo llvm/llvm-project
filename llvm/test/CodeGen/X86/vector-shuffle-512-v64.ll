@@ -332,7 +332,7 @@ define <64 x i8> @insert_dup_elt1_mem_v64i8_sext_i8(i8* %ptr) {
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    movsbl (%rdi), %eax
 ; AVX512BW-NEXT:    shrl $8, %eax
-; AVX512BW-NEXT:    vpbroadcastb %al, %zmm0
+; AVX512BW-NEXT:    vpbroadcastb %eax, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: insert_dup_elt1_mem_v64i8_sext_i8:
@@ -348,7 +348,7 @@ define <64 x i8> @insert_dup_elt1_mem_v64i8_sext_i8(i8* %ptr) {
 ; AVX512VBMI:       # BB#0:
 ; AVX512VBMI-NEXT:    movsbl (%rdi), %eax
 ; AVX512VBMI-NEXT:    shrl $8, %eax
-; AVX512VBMI-NEXT:    vpbroadcastb %al, %zmm0
+; AVX512VBMI-NEXT:    vpbroadcastb %eax, %zmm0
 ; AVX512VBMI-NEXT:    retq
   %tmp = load i8, i8* %ptr, align 1
   %tmp1 = sext i8 %tmp to i32

@@ -422,9 +422,9 @@ TEST_F(ClangdVFSTest, SearchLibDir) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
-  CDB.ExtraClangFlags.insert(
-      CDB.ExtraClangFlags.end(),
-      {"-xc++", "-target", "x86_64-linux-unknown", "-m64"});
+  CDB.ExtraClangFlags.insert(CDB.ExtraClangFlags.end(),
+                             {"-xc++", "-target", "x86_64-linux-unknown",
+                              "-m64", "-stdlib=libstdc++"});
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*RunSynchronously=*/true);
 
