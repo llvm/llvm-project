@@ -1,6 +1,10 @@
 // RUN: %clang -### -S -o FOO -fsave-optimization-record %s 2>&1 | FileCheck %s
 // RUN: %clang -### -c -o FOO -fsave-optimization-record %s 2>&1 | FileCheck %s
+// RUN: %clang -### -c -o FOO.o -fsave-optimization-record %s 2>&1 | FileCheck %s
+// RUN: %clang -### -save-temps -S -o FOO -fsave-optimization-record %s 2>&1 | FileCheck %s
+// RUN: %clang -### -save-temps -c -o FOO.o -fsave-optimization-record %s 2>&1 | FileCheck %s
 // RUN: %clang -### -c -fsave-optimization-record %s 2>&1 | FileCheck %s -check-prefix=CHECK-NO-O
+// RUN: %clang -### -save-temps -c -fsave-optimization-record %s 2>&1 | FileCheck %s -check-prefix=CHECK-NO-O
 // RUN: %clang -### -fsave-optimization-record %s 2>&1 | FileCheck %s -check-prefix=CHECK-NO-O
 // RUN: %clang -### -S -fsave-optimization-record -x cuda -nocudainc -nocudalib %s 2>&1 | FileCheck %s -check-prefix=CHECK-NO-O -check-prefix=CHECK-CUDA-DEV
 // RUN: %clang -### -fsave-optimization-record -x cuda -nocudainc -nocudalib %s 2>&1 | FileCheck %s -check-prefix=CHECK-NO-O -check-prefix=CHECK-CUDA-DEV

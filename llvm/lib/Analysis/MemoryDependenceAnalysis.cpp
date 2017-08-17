@@ -15,28 +15,40 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/Analysis/PHITransAddr.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PredIteratorCache.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -45,7 +57,9 @@
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <iterator>
+#include <utility>
 
 using namespace llvm;
 
@@ -322,7 +336,6 @@ static bool isVolatile(Instruction *Inst) {
 MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
-
   MemDepResult InvariantGroupDependency = MemDepResult::getUnknown();
   if (QueryInst != nullptr) {
     if (auto *LI = dyn_cast<LoadInst>(QueryInst)) {
@@ -350,7 +363,6 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
 MemDepResult
 MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
                                                             BasicBlock *BB) {
-
   auto *InvariantGroupMD = LI->getMetadata(LLVMContext::MD_invariant_group);
   if (!InvariantGroupMD)
     return MemDepResult::getUnknown();
@@ -379,7 +391,6 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
       return Other;
     return Best;
   };
-
 
   // FIXME: This loop is O(N^2) because dominates can be O(n) and in worst case
   // we will see all the instructions. This should be fixed in MSSA.
@@ -541,7 +552,6 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     // it does not alias with when this atomic load indicates that another
     // thread may be accessing the location.
     if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
-
       // While volatile access cannot be eliminated, they do not have to clobber
       // non-aliasing locations, as normal accesses, for example, can be safely
       // reordered with volatile accesses.
@@ -1508,7 +1518,6 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
   }
 
   // If we have a cached local dependence query for this instruction, remove it.
-  //
   LocalDepMapType::iterator LocalDepEntry = LocalDeps.find(RemInst);
   if (LocalDepEntry != LocalDeps.end()) {
     // Remove us from DepInst's reverse set now that the local dep info is gone.
@@ -1531,7 +1540,6 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
   }
 
   // Loop over all of the things that depend on the instruction we're removing.
-  //
   SmallVector<std::pair<Instruction *, Instruction *>, 8> ReverseDepsToAdd;
 
   // If we find RemInst as a clobber or Def in any of the maps for other values,
@@ -1726,7 +1734,7 @@ MemoryDependenceWrapperPass::MemoryDependenceWrapperPass() : FunctionPass(ID) {
   initializeMemoryDependenceWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-MemoryDependenceWrapperPass::~MemoryDependenceWrapperPass() {}
+MemoryDependenceWrapperPass::~MemoryDependenceWrapperPass() = default;
 
 void MemoryDependenceWrapperPass::releaseMemory() {
   MemDep.reset();
