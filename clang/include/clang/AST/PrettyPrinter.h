@@ -51,7 +51,7 @@ struct PrintingPolicy {
       TerseOutput(false), PolishForDeclaration(false),
       Half(LO.Half), MSWChar(LO.MicrosoftExt && !LO.WChar),
       IncludeNewlines(true), MSVCFormatting(false),
-      UseStdFunctionForLambda(false), ConstantsAsWritten(false) { }
+      ConstantsAsWritten(false), UseStdFunctionForLambda(false) { }
 
   /// \brief Adjust this printing policy for cases where it's known that
   /// we're printing C++ code (for instance, if AST dumping reaches a
