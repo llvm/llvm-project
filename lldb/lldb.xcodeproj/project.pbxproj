@@ -9895,8 +9895,8 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
 				);
 				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
 				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
@@ -9934,8 +9934,8 @@
 					"$(LLDB_PATH_TO_LLVM_SOURCE)/tools/clang/include",
 					"$(LLDB_PATH_TO_LLVM_BUILD)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLVM_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_PATH_TO_LLVM_SOURCE)/include -I $(LLVM_PATH_TO_LLVM_BUILD)/$(LLVM_BUILD_DIR_ARCH)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
-				LLDB_GTESTS_LDFLAGS = "$(LLVM_PATH_TO_LLVM_BUILD)/$(LLVM_BUILD_DIR_ARCH)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLVM_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_PATH_TO_LLVM_SOURCE)/include -I $(LLVM_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLDB_PATH_TO_LLVM_BUILD)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_LDFLAGS = "$(LLVM_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
@@ -9975,11 +9975,11 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
 				);
 				GCC_ENABLE_CPP_RTTI = NO;
+				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
 				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
-				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"$(LLDB_GTESTS_CFLAGS)",
@@ -10014,7 +10014,7 @@
 					"$(LLDB_PATH_TO_LLVM_SOURCE)/tools/clang/include",
 					"$(LLDB_PATH_TO_LLVM_BUILD)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLDB_PATH_TO_LLVM_BUILD)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -10087,10 +10087,11 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
 				);
 				GCC_ENABLE_CPP_RTTI = NO;
+				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
+				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
 				LLDB_GTESTS_CFLAGS = "-I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"$(LLDB_GTESTS_CFLAGS)",
