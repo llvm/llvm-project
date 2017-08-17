@@ -124,8 +124,9 @@ void Decl::print(raw_ostream &Out, const PrintingPolicy &Policy,
 
 void TemplateParameterList::print(raw_ostream &Out,
                                   const PrintingPolicy &Policy,
+                                  const ASTContext &Context,
                                   unsigned Indentation) const {
-  DeclPrinter Printer(Out, Policy, Indentation);
+  DeclPrinter Printer(Out, Policy, Context, Indentation);
   Printer.printTemplateParameters(this);
 }
 
