@@ -1,0 +1,8 @@
+fun:dfsan_get_label=uninstrumented
+fun:dfsan_get_label=custom
+
+fun:k2=uninstrumented
+fun:k2=custom
+
+fun:k4=uninstrumented
+fun:k4=custom

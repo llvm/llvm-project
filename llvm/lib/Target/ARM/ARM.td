@@ -323,6 +323,9 @@ def FeatureNoNegativeImmediates
 def FeatureUseMISched: SubtargetFeature<"use-misched", "UseMISched", "true",
                                         "Use the MachineScheduler">;
 
+def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
+    "UsePostRAScheduler", "true", "Schedule again after register allocation">;
+
 //===----------------------------------------------------------------------===//
 // ARM architecture class
 //
@@ -869,7 +872,8 @@ def : ProcessorModel<"cortex-r8",   CortexA8Model,      [ARMv7r,
 
 def : ProcessorModel<"cortex-m3", CortexM3Model,        [ARMv7m,
                                                          ProcM3,
-                                                         FeatureHasNoBranchPredictor]>;
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeaturePostRAScheduler]>;
 
 def : ProcessorModel<"sc300",     CortexM3Model,        [ARMv7m,
                                                          ProcM3,
@@ -879,11 +883,13 @@ def : ProcessorModel<"cortex-m4", CortexM3Model,        [ARMv7em,
                                                          FeatureVFP4,
                                                          FeatureVFPOnlySP,
                                                          FeatureD16,
-                                                         FeatureHasNoBranchPredictor]>;
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeaturePostRAScheduler]>;
 
 def : ProcNoItin<"cortex-m7",                           [ARMv7em,
                                                          FeatureFPARMv8,
-                                                         FeatureD16]>;
+                                                         FeatureD16,
+                                                         FeaturePostRAScheduler]>;
 
 def : ProcNoItin<"cortex-m23",                          [ARMv8mBaseline,
                                                          FeatureNoMovt]>;
@@ -893,7 +899,8 @@ def : ProcessorModel<"cortex-m33", CortexM3Model,       [ARMv8mMainline,
                                                          FeatureFPARMv8,
                                                          FeatureD16,
                                                          FeatureVFPOnlySP,
-                                                         FeatureHasNoBranchPredictor]>;
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeaturePostRAScheduler]>;
 
 def : ProcNoItin<"cortex-a32",                           [ARMv8a,
                                                          FeatureHWDivThumb,

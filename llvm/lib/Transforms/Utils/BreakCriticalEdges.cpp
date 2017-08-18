@@ -198,59 +198,23 @@ llvm::SplitCriticalEdge(TerminatorInst *TI, unsigned SuccNum,
   if (!DT && !LI)
     return NewBB;
 
-  // Now update analysis information.  Since the only predecessor of NewBB is
-  // the TIBB, TIBB clearly dominates NewBB.  TIBB usually doesn't dominate
-  // anything, as there are other successors of DestBB.  However, if all other
-  // predecessors of DestBB are already dominated by DestBB (e.g. DestBB is a
-  // loop header) then NewBB dominates DestBB.
-  SmallVector<BasicBlock*, 8> OtherPreds;
-
-  // If there is a PHI in the block, loop over predecessors with it, which is
-  // faster than iterating pred_begin/end.
-  if (PHINode *PN = dyn_cast<PHINode>(DestBB->begin())) {
-    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-      if (PN->getIncomingBlock(i) != NewBB)
-        OtherPreds.push_back(PN->getIncomingBlock(i));
-  } else {
-    for (pred_iterator I = pred_begin(DestBB), E = pred_end(DestBB);
-         I != E; ++I) {
-      BasicBlock *P = *I;
-      if (P != NewBB)
-        OtherPreds.push_back(P);
-    }
-  }
-
-  bool NewBBDominatesDestBB = true;
-
-  // Should we update DominatorTree information?
   if (DT) {
-    DomTreeNode *TINode = DT->getNode(TIBB);
-
-    // The new block is not the immediate dominator for any other nodes, but
-    // TINode is the immediate dominator for the new node.
+    // Update the DominatorTree.
+    //       ---> NewBB -----\
+    //      /                 V
+    //  TIBB -------\\------> DestBB
     //
-    if (TINode) {       // Don't break unreachable code!
-      DomTreeNode *NewBBNode = DT->addNewBlock(NewBB, TIBB);
-      DomTreeNode *DestBBNode = nullptr;
+    // First, inform the DT about the new path from TIBB to DestBB via NewBB,
+    // then delete the old edge from TIBB to DestBB. By doing this in that order
+    // DestBB stays reachable in the DT the whole time and its subtree doesn't
+    // get disconnected.
+    SmallVector<DominatorTree::UpdateType, 3> Updates;
+    Updates.push_back({DominatorTree::Insert, TIBB, NewBB});
+    Updates.push_back({DominatorTree::Insert, NewBB, DestBB});
+    if (llvm::find(successors(TIBB), DestBB) == succ_end(TIBB))
+      Updates.push_back({DominatorTree::Delete, TIBB, DestBB});
 
-      // If NewBBDominatesDestBB hasn't been computed yet, do so with DT.
-      if (!OtherPreds.empty()) {
-        DestBBNode = DT->getNode(DestBB);
-        while (!OtherPreds.empty() && NewBBDominatesDestBB) {
-          if (DomTreeNode *OPNode = DT->getNode(OtherPreds.back()))
-            NewBBDominatesDestBB = DT->dominates(DestBBNode, OPNode);
-          OtherPreds.pop_back();
-        }
-        OtherPreds.clear();
-      }
-
-      // If NewBBDominatesDestBB, then NewBB dominates DestBB, otherwise it
-      // doesn't dominate anything.
-      if (NewBBDominatesDestBB) {
-        if (!DestBBNode) DestBBNode = DT->getNode(DestBB);
-        DT->changeImmediateDominator(DestBBNode, NewBBNode);
-      }
-    }
+    DT->applyUpdates(Updates);
   }
 
   // Update LoopInfo if it is around.

@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s modernize-use-equals-default %t -- -- -std=c++11 -fno-delayed-template-parsing -fexceptions
+// RUN: %check_clang_tidy %s modernize-use-equals-default %t -- \
+// RUN:   -config="{CheckOptions: [{key: modernize-use-equals-default.IgnoreMacros, value: 0}]}" \
+// RUN:   -- -std=c++11 -fno-delayed-template-parsing -fexceptions
 
 // Out of line definition.
 struct OL {

@@ -411,8 +411,8 @@ define void @example25() nounwind {
 ; AVX2-NEXT:    vcmpltps db+4096(%rax), %ymm1, %ymm1
 ; AVX2-NEXT:    vmovups dc+4096(%rax), %ymm2
 ; AVX2-NEXT:    vcmpltps dd+4096(%rax), %ymm2, %ymm2
+; AVX2-NEXT:    vandps %ymm0, %ymm2, %ymm2
 ; AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vandps %ymm0, %ymm1, %ymm1
 ; AVX2-NEXT:    vmovups %ymm1, dj+4096(%rax)
 ; AVX2-NEXT:    addq $32, %rax
 ; AVX2-NEXT:    jne .LBB5_1

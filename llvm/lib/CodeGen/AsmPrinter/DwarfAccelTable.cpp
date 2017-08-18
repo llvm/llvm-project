@@ -1,4 +1,4 @@
-//=-- llvm/CodeGen/DwarfAccelTable.cpp - Dwarf Accelerator Tables -*- C++ -*-=//
+//===- llvm/CodeGen/DwarfAccelTable.cpp - Dwarf Accelerator Tables --------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,16 +12,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfAccelTable.h"
-#include "DwarfCompileUnit.h"
-#include "DwarfDebug.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <limits>
+#include <vector>
 
 using namespace llvm;
 
@@ -142,13 +148,13 @@ void DwarfAccelTable::EmitBuckets(AsmPrinter *Asm) {
   unsigned index = 0;
   for (size_t i = 0, e = Buckets.size(); i < e; ++i) {
     Asm->OutStreamer->AddComment("Bucket " + Twine(i));
-    if (Buckets[i].size() != 0)
+    if (!Buckets[i].empty())
       Asm->EmitInt32(index);
     else
-      Asm->EmitInt32(UINT32_MAX);
+      Asm->EmitInt32(std::numeric_limits<uint32_t>::max());
     // Buckets point in the list of hashes, not to the data. Do not
     // increment the index multiple times in case of hash collisions.
-    uint64_t PrevHash = UINT64_MAX;
+    uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
     for (auto *HD : Buckets[i]) {
       uint32_t HashValue = HD->HashValue;
       if (PrevHash != HashValue)
@@ -161,7 +167,7 @@ void DwarfAccelTable::EmitBuckets(AsmPrinter *Asm) {
 // Walk through the buckets and emit the individual hashes for each
 // bucket.
 void DwarfAccelTable::EmitHashes(AsmPrinter *Asm) {
-  uint64_t PrevHash = UINT64_MAX;
+  uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
   for (size_t i = 0, e = Buckets.size(); i < e; ++i) {
     for (HashList::const_iterator HI = Buckets[i].begin(),
                                   HE = Buckets[i].end();
@@ -181,7 +187,7 @@ void DwarfAccelTable::EmitHashes(AsmPrinter *Asm) {
 // beginning of the section. The non-section symbol will be output later
 // when we emit the actual data.
 void DwarfAccelTable::emitOffsets(AsmPrinter *Asm, const MCSymbol *SecBegin) {
-  uint64_t PrevHash = UINT64_MAX;
+  uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
   for (size_t i = 0, e = Buckets.size(); i < e; ++i) {
     for (HashList::const_iterator HI = Buckets[i].begin(),
                                   HE = Buckets[i].end();
@@ -205,13 +211,14 @@ void DwarfAccelTable::emitOffsets(AsmPrinter *Asm, const MCSymbol *SecBegin) {
 // Terminate each HashData bucket with 0.
 void DwarfAccelTable::EmitData(AsmPrinter *Asm, DwarfDebug *D) {
   for (size_t i = 0, e = Buckets.size(); i < e; ++i) {
-    uint64_t PrevHash = UINT64_MAX;
+    uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
     for (HashList::const_iterator HI = Buckets[i].begin(),
                                   HE = Buckets[i].end();
          HI != HE; ++HI) {
       // Terminate the previous entry if there is no hash collision
       // with the current one.
-      if (PrevHash != UINT64_MAX && PrevHash != (*HI)->HashValue)
+      if (PrevHash != std::numeric_limits<uint64_t>::max() &&
+          PrevHash != (*HI)->HashValue)
         Asm->EmitInt32(0);
       // Remember to emit the label for our offset.
       Asm->OutStreamer->EmitLabel((*HI)->Sym);
@@ -257,31 +264,30 @@ void DwarfAccelTable::emit(AsmPrinter *Asm, const MCSymbol *SecBegin,
 }
 
 #ifndef NDEBUG
-void DwarfAccelTable::print(raw_ostream &O) {
+void DwarfAccelTable::print(raw_ostream &OS) {
+  Header.print(OS);
+  HeaderData.print(OS);
 
-  Header.print(O);
-  HeaderData.print(O);
-
-  O << "Entries: \n";
+  OS << "Entries: \n";
   for (StringMap<DataArray>::const_iterator EI = Entries.begin(),
                                             EE = Entries.end();
        EI != EE; ++EI) {
-    O << "Name: " << EI->getKeyData() << "\n";
+    OS << "Name: " << EI->getKeyData() << "\n";
     for (HashDataContents *HD : EI->second.Values)
-      HD->print(O);
+      HD->print(OS);
   }
 
-  O << "Buckets and Hashes: \n";
+  OS << "Buckets and Hashes: \n";
   for (size_t i = 0, e = Buckets.size(); i < e; ++i)
     for (HashList::const_iterator HI = Buckets[i].begin(),
                                   HE = Buckets[i].end();
          HI != HE; ++HI)
-      (*HI)->print(O);
+      (*HI)->print(OS);
 
-  O << "Data: \n";
+  OS << "Data: \n";
   for (std::vector<HashData *>::const_iterator DI = Data.begin(),
                                                DE = Data.end();
        DI != DE; ++DI)
-    (*DI)->print(O);
+    (*DI)->print(OS);
 }
 #endif

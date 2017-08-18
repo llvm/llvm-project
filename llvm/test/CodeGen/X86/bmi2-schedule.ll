@@ -63,6 +63,49 @@ define i64 @test_bzhi_i64(i64 %a0, i64 %a1, i64 *%a2) {
 }
 declare i64 @llvm.x86.bmi.bzhi.64(i64, i64)
 
+; TODO test_mulx_i32
+
+define i64 @test_mulx_i64(i64 %a0, i64 %a1, i64 *%a2) {
+; GENERIC-LABEL: test_mulx_i64:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    movq %rdx, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    movq %rdi, %rdx # sched: [1:0.33]
+; GENERIC-NEXT:    mulxq %rsi, %rsi, %rcx # sched: [3:1.00]
+; GENERIC-NEXT:    mulxq (%rax), %rdx, %rax # sched: [7:1.00]
+; GENERIC-NEXT:    orq %rcx, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_mulx_i64:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    movq %rdx, %rax # sched: [1:0.25]
+; HASWELL-NEXT:    movq %rdi, %rdx # sched: [1:0.25]
+; HASWELL-NEXT:    mulxq %rsi, %rsi, %rcx # sched: [4:1.00]
+; HASWELL-NEXT:    mulxq (%rax), %rdx, %rax # sched: [8:1.00]
+; HASWELL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [1:1.00]
+;
+; ZNVER1-LABEL: test_mulx_i64:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    movq %rdx, %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    movq %rdi, %rdx # sched: [1:0.25]
+; ZNVER1-NEXT:    mulxq %rsi, %rsi, %rcx # sched: [4:2.00]
+; ZNVER1-NEXT:    mulxq (%rax), %rdx, %rax # sched: [8:2.00]
+; ZNVER1-NEXT:    orq %rcx, %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
+  %1  = load i64, i64 *%a2
+  %2  = zext i64 %a0 to i128
+  %3  = zext i64 %a1 to i128
+  %4  = zext i64 %1 to i128
+  %5  = mul i128 %2, %3
+  %6  = mul i128 %2, %4
+  %7  = lshr i128 %5, 64
+  %8  = lshr i128 %6, 64
+  %9  = trunc i128 %7 to i64
+  %10 = trunc i128 %8 to i64
+  %11 = or i64 %9, %10
+  ret i64 %11
+}
+
 define i32 @test_pdep_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-LABEL: test_pdep_i32:
 ; GENERIC:       # BB#0:

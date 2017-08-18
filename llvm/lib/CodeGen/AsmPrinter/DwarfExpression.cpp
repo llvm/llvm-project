@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/DwarfExpression.cpp - Dwarf Debug Framework ----------===//
+//===- llvm/CodeGen/DwarfExpression.cpp - Dwarf Debug Framework -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,13 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfExpression.h"
-#include "DwarfDebug.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
@@ -339,7 +341,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
     case dwarf::DW_OP_minus:
       emitOp(Op->getOp());
       break;
-    case dwarf::DW_OP_deref: {
+    case dwarf::DW_OP_deref:
       assert(LocationKind != Register);
       if (LocationKind != Memory && isMemoryLocation(ExprCursor))
         // Turning this into a memory location description makes the deref
@@ -348,7 +350,6 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       else
         emitOp(dwarf::DW_OP_deref);
       break;
-    }
     case dwarf::DW_OP_constu:
       assert(LocationKind != Register);
       emitOp(dwarf::DW_OP_constu);
@@ -383,7 +384,6 @@ void DwarfExpression::maskSubRegister() {
   uint64_t Mask = (1ULL << (uint64_t)SubRegisterSizeInBits) - 1ULL;
   addAnd(Mask);
 }
-
 
 void DwarfExpression::finalize() {
   assert(DwarfRegs.size() == 0 && "dwarf registers not emitted");

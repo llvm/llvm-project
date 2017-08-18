@@ -458,7 +458,7 @@ define <4 x float> @stack_fold_extracti32x4(<16 x float> %a0, <16 x float> %a1) 
 
 define <2 x double> @stack_fold_extractf64x2(<8 x double> %a0, <8 x double> %a1) {
   ;CHECK-LABEL: stack_fold_extractf64x2
-  ;CHECK:       vextractf64x2 $3, {{%zmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 16-byte Folded Spill
+  ;CHECK:       vextractf32x4 $3, {{%zmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 16-byte Folded Spill
   %1 = shufflevector <8 x double> %a0, <8 x double> %a1, <2 x i32> <i32 6, i32 7>
   %2 = tail call <2 x double> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   ret <2 x double> %1
@@ -466,7 +466,7 @@ define <2 x double> @stack_fold_extractf64x2(<8 x double> %a0, <8 x double> %a1)
 
 define <8 x float> @stack_fold_extracti32x8(<16 x float> %a0, <16 x float> %a1) {
   ;CHECK-LABEL: stack_fold_extracti32x8
-  ;CHECK:       vextractf32x8 $1, {{%zmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 32-byte Folded Spill
+  ;CHECK:       vextractf64x4 $1, {{%zmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 32-byte Folded Spill
   %1 = shufflevector <16 x float> %a0, <16 x float> %a1, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %2 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   ret <8 x float> %1
@@ -482,7 +482,7 @@ define <4 x double> @stack_fold_extractf64x4(<8 x double> %a0, <8 x double> %a1)
 
 define <16 x float> @stack_fold_insertf32x8(<8 x float> %a0, <8 x float> %a1) {
   ;CHECK-LABEL: stack_fold_insertf32x8
-  ;CHECK:       vinsertf32x8 $1, {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
+  ;CHECK:       vinsertf64x4 $1, {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = shufflevector <8 x float> %a0, <8 x float> %a1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x float> %2

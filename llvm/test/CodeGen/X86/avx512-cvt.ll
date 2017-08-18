@@ -642,19 +642,12 @@ define <4 x i32> @fptosi03(<4 x double> %a) {
 }
 
 define <16 x float> @fptrunc00(<16 x double> %b) nounwind {
-; NODQ-LABEL: fptrunc00:
-; NODQ:       # BB#0:
-; NODQ-NEXT:    vcvtpd2ps %zmm0, %ymm0
-; NODQ-NEXT:    vcvtpd2ps %zmm1, %ymm1
-; NODQ-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
-; NODQ-NEXT:    retq
-;
-; DQ-LABEL: fptrunc00:
-; DQ:       # BB#0:
-; DQ-NEXT:    vcvtpd2ps %zmm0, %ymm0
-; DQ-NEXT:    vcvtpd2ps %zmm1, %ymm1
-; DQ-NEXT:    vinsertf32x8 $1, %ymm1, %zmm0, %zmm0
-; DQ-NEXT:    retq
+; ALL-LABEL: fptrunc00:
+; ALL:       # BB#0:
+; ALL-NEXT:    vcvtpd2ps %zmm0, %ymm0
+; ALL-NEXT:    vcvtpd2ps %zmm1, %ymm1
+; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; ALL-NEXT:    retq
   %a = fptrunc <16 x double> %b to <16 x float>
   ret <16 x float> %a
 }
@@ -876,21 +869,13 @@ define i32 @float_to_int(float %x) {
 }
 
 define <16 x double> @uitof64(<16 x i32> %a) nounwind {
-; NODQ-LABEL: uitof64:
-; NODQ:       # BB#0:
-; NODQ-NEXT:    vcvtudq2pd %ymm0, %zmm2
-; NODQ-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; NODQ-NEXT:    vcvtudq2pd %ymm0, %zmm1
-; NODQ-NEXT:    vmovaps %zmm2, %zmm0
-; NODQ-NEXT:    retq
-;
-; DQ-LABEL: uitof64:
-; DQ:       # BB#0:
-; DQ-NEXT:    vcvtudq2pd %ymm0, %zmm2
-; DQ-NEXT:    vextractf32x8 $1, %zmm0, %ymm0
-; DQ-NEXT:    vcvtudq2pd %ymm0, %zmm1
-; DQ-NEXT:    vmovaps %zmm2, %zmm0
-; DQ-NEXT:    retq
+; ALL-LABEL: uitof64:
+; ALL:       # BB#0:
+; ALL-NEXT:    vcvtudq2pd %ymm0, %zmm2
+; ALL-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; ALL-NEXT:    vcvtudq2pd %ymm0, %zmm1
+; ALL-NEXT:    vmovaps %zmm2, %zmm0
+; ALL-NEXT:    retq
   %b = uitofp <16 x i32> %a to <16 x double>
   ret <16 x double> %b
 }
