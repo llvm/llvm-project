@@ -120,19 +120,8 @@ class TracePC {
     return PCs()[Idx];
   }
 
-  void RecordCurrentStack() {
-    uintptr_t Stack = GetCurrentStack();
-    if (Stack < LowestStack)
-      LowestStack = Stack;
-  }
-  void RecordInitialStack() {
-    InitialStack = GetCurrentStack();
-    LowestStack = InitialStack;
-  }
-  uintptr_t GetCurrentStack() const {
-    return reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
-  }
-  uintptr_t GetMaxStackOffset() const { return InitialStack - LowestStack; }
+  void RecordInitialStack();
+  uintptr_t GetMaxStackOffset() const;
 
   template<class CallBack>
   void ForEachObservedPC(CallBack CB) {
@@ -167,7 +156,7 @@ private:
   std::set<uintptr_t> ObservedPCs;
 
   ValueBitMap ValueProfileMap;
-  uintptr_t InitialStack, LowestStack;  // Assume stack grows down.
+  uintptr_t InitialStack;
 };
 
 template <class Callback>

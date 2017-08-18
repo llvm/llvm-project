@@ -689,8 +689,8 @@ static unsigned getSectionRank(const OutputSection *Sec) {
   if (IsNoBits)
     Rank |= RF_BSS;
 
-  // // Some architectures have additional ordering restrictions for sections
-  // // within the same PT_LOAD.
+  // Some architectures have additional ordering restrictions for sections
+  // within the same PT_LOAD.
   if (Config->EMachine == EM_PPC64) {
     // PPC64 has a number of special SHT_PROGBITS+SHF_ALLOC+SHF_WRITE sections
     // that we would like to make sure appear is a specific order to maximize

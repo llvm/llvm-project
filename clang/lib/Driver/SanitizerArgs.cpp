@@ -58,6 +58,7 @@ enum CoverageFeature {
   CoverageNoPrune = 1 << 11,
   CoverageInline8bitCounters = 1 << 12,
   CoveragePCTable = 1 << 13,
+  CoverageStackDepth = 1 << 14,
 };
 
 /// Parse a -fsanitize= or -fno-sanitize= argument's values, diagnosing any
@@ -556,10 +557,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   // trace-pc w/o func/bb/edge implies edge.
-  if ((CoverageFeatures &
-       (CoverageTracePC | CoverageTracePCGuard | CoverageInline8bitCounters)) &&
-      !(CoverageFeatures & InsertionPointTypes))
-    CoverageFeatures |= CoverageEdge;
+  if (!(CoverageFeatures & InsertionPointTypes)) {
+    if (CoverageFeatures &
+        (CoverageTracePC | CoverageTracePCGuard | CoverageInline8bitCounters))
+      CoverageFeatures |= CoverageEdge;
+
+    if (CoverageFeatures & CoverageStackDepth)
+      CoverageFeatures |= CoverageFunc;
+  }
 
   if (AllAddedKinds & Address) {
     AsanSharedRuntime =
@@ -672,7 +677,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     std::make_pair(CoverageTracePCGuard, "-fsanitize-coverage-trace-pc-guard"),
     std::make_pair(CoverageInline8bitCounters, "-fsanitize-coverage-inline-8bit-counters"),
     std::make_pair(CoveragePCTable, "-fsanitize-coverage-pc-table"),
-    std::make_pair(CoverageNoPrune, "-fsanitize-coverage-no-prune")};
+    std::make_pair(CoverageNoPrune, "-fsanitize-coverage-no-prune"),
+    std::make_pair(CoverageStackDepth, "-fsanitize-coverage-stack-depth")};
   for (auto F : CoverageFlags) {
     if (CoverageFeatures & F.first)
       CmdArgs.push_back(F.second);
@@ -835,6 +841,7 @@ int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A) {
         .Case("no-prune", CoverageNoPrune)
         .Case("inline-8bit-counters", CoverageInline8bitCounters)
         .Case("pc-table", CoveragePCTable)
+        .Case("stack-depth", CoverageStackDepth)
         .Default(0);
     if (F == 0)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)

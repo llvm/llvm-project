@@ -11,8 +11,6 @@
 #ifndef LLVM_CLANG_TOOLING_ASTDIFF_ASTDIFFINTERNAL_H
 #define LLVM_CLANG_TOOLING_ASTDIFF_ASTDIFFINTERNAL_H
 
-#include <utility>
-
 #include "clang/AST/ASTTypeTraits.h"
 
 namespace clang {

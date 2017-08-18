@@ -14,8 +14,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "LegalizeTypes.h"
+#include "SDNodeDbgValue.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -822,6 +826,34 @@ void DAGTypeLegalizer::GetExpandedInteger(SDValue Op, SDValue &Lo,
   Hi = Entry.second;
 }
 
+/// Transfer debug valies by generating fragment expressions for split-up
+/// values.
+static void transferDbgValues(SelectionDAG &DAG, DIBuilder &DIB, SDValue From,
+                              SDValue To, unsigned OffsetInBits) {
+  SDNode *FromNode = From.getNode();
+  SDNode *ToNode = To.getNode();
+  assert(FromNode != ToNode);
+
+  for (SDDbgValue *Dbg : DAG.GetDbgValues(FromNode)) {
+    if (Dbg->getKind() != SDDbgValue::SDNODE)
+      break;
+
+    DIVariable *Var = Dbg->getVariable();
+    DIExpression *Fragment = DIB.createFragmentExpression(
+        OffsetInBits, To.getValueSizeInBits(),
+        cast_or_null<DIExpression>(Dbg->getExpression()));
+    SDDbgValue *Clone =
+        DAG.getDbgValue(Var, Fragment, ToNode, To.getResNo(), Dbg->isIndirect(),
+                        Dbg->getDebugLoc(), Dbg->getOrder());
+    Dbg->setIsInvalidated();
+    DAG.AddDbgValue(Clone, ToNode, false);
+
+    // Add the expression to the metadata graph so isn't lost in MIR dumps.
+    const Module *M = DAG.getMachineFunction().getMMI().getModule();
+    M->getNamedMetadata("llvm.dbg.mir")->addOperand(Fragment);
+  }
+}
+
 void DAGTypeLegalizer::SetExpandedInteger(SDValue Op, SDValue Lo,
                                           SDValue Hi) {
   assert(Lo.getValueType() ==
@@ -831,6 +863,12 @@ void DAGTypeLegalizer::SetExpandedInteger(SDValue Op, SDValue Lo,
   // Lo/Hi may have been newly allocated, if so, add nodeid's as relevant.
   AnalyzeNewValue(Lo);
   AnalyzeNewValue(Hi);
+
+  // Transfer debug values.
+  const Module *M = DAG.getMachineFunction().getMMI().getModule();
+  DIBuilder DIB(*const_cast<Module *>(M));
+  transferDbgValues(DAG, DIB, Op, Lo, 0);
+  transferDbgValues(DAG, DIB, Op, Hi, Lo.getValueSizeInBits());
 
   // Remember that this is the result of the node.
   std::pair<SDValue, SDValue> &Entry = ExpandedIntegers[Op];

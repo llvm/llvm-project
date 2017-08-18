@@ -31,6 +31,9 @@ uint8_t __sancov_trace_pc_guard_8bit_counters[fuzzer::TracePC::kNumPCs];
 ATTRIBUTE_INTERFACE
 uintptr_t __sancov_trace_pc_pcs[fuzzer::TracePC::kNumPCs];
 
+// Used by -fsanitize-coverage=stack-depth to track stack depth
+ATTRIBUTE_INTERFACE thread_local uintptr_t __sancov_lowest_stack;
+
 namespace fuzzer {
 
 TracePC TPC;
@@ -340,6 +343,14 @@ void TracePC::ClearInlineCounters() {
   }
 }
 
+void TracePC::RecordInitialStack() {
+  InitialStack = __sancov_lowest_stack;
+}
+
+uintptr_t TracePC::GetMaxStackOffset() const {
+  return InitialStack - __sancov_lowest_stack;  // Stack grows down
+}
+
 } // namespace fuzzer
 
 extern "C" {
@@ -350,8 +361,6 @@ void __sanitizer_cov_trace_pc_guard(uint32_t *Guard) {
   uint32_t Idx = *Guard;
   __sancov_trace_pc_pcs[Idx] = PC;
   __sancov_trace_pc_guard_8bit_counters[Idx]++;
-  // Uncomment the following line to get stack-depth profiling.
-  // fuzzer::TPC.RecordCurrentStack();
 }
 
 // Best-effort support for -fsanitize-coverage=trace-pc, which is available

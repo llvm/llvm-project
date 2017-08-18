@@ -7513,6 +7513,10 @@ public:
 
   bool TraverseLambdaExpr(LambdaExpr *E) { return true; }
 
+  // for 'case X:' statements, don't bother looking at the 'X'; it can't lead
+  // to any useful diagnostics.
+  bool TraverseCaseStmt(CaseStmt *CS) { return TraverseStmt(CS->getSubStmt()); }
+
   bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *PRE) {
     if (PRE->isClassReceiver())
       DiagnoseDeclAvailability(PRE->getClassReceiver(), PRE->getReceiverLocation());

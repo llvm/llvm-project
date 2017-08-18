@@ -27,6 +27,7 @@ using namespace clang;
 namespace clang {
 namespace diff {
 
+namespace {
 /// Maps nodes of the left tree to ones on the right, and vice versa.
 class Mapping {
 public:
@@ -76,6 +77,7 @@ public:
 private:
   std::unique_ptr<SmallVector<NodeId, 2>[]> SrcToDst, DstToSrc;
 };
+} // end anonymous namespace
 
 class ASTDiff::Impl {
 public:
@@ -109,10 +111,6 @@ private:
 
   // Returns false if the nodes must not be mached.
   bool isMatchingPossible(NodeId Id1, NodeId Id2) const;
-
-  // Adds all corresponding subtrees of the two nodes to the mapping.
-  // The two nodes must be identical.
-  void addIsomorphicSubTrees(Mapping &M, NodeId Id1, NodeId Id2) const;
 
   // Uses an optimal albeit slow algorithm to compute a mapping between two
   // subtrees, but only if both have fewer nodes than MaxSize.
@@ -254,7 +252,10 @@ struct PreorderVisitor : public RecursiveASTVisitor<PreorderVisitor> {
     Parent = PreviousParent;
     --Depth;
     Node &N = Tree.getMutableNode(MyId);
-    N.RightMostDescendant = Id;
+    N.RightMostDescendant = Id - 1;
+    assert(N.RightMostDescendant >= 0 &&
+           N.RightMostDescendant < Tree.getSize() &&
+           "Rightmost descendant must be a valid tree node.");
     if (N.isLeaf())
       Tree.Leaves.push_back(MyId);
     N.Height = 1;
@@ -358,9 +359,7 @@ int SyntaxTree::Impl::getNumberOfDescendants(NodeId Id) const {
 }
 
 bool SyntaxTree::Impl::isInSubtree(NodeId Id, NodeId SubtreeRoot) const {
-  NodeId Lower = SubtreeRoot;
-  NodeId Upper = getNode(SubtreeRoot).RightMostDescendant;
-  return Id >= Lower && Id <= Upper;
+  return Id >= SubtreeRoot && Id <= getNode(SubtreeRoot).RightMostDescendant;
 }
 
 std::string SyntaxTree::Impl::getNodeValue(NodeId Id) const {
@@ -625,12 +624,11 @@ public:
   }
 
 private:
-  /// Simple cost model for edit actions.
+  /// We use a simple cost model for edit actions, which seems good enough.
+  /// Simple cost model for edit actions. This seems to make the matching
+  /// algorithm perform reasonably well.
   /// The values range between 0 and 1, or infinity if this edit action should
   /// always be avoided.
-
-  /// These costs could be modified to better model the estimated cost of /
-  /// inserting / deleting the current node.
   static constexpr double DeletionCost = 1;
   static constexpr double InsertionCost = 1;
 
@@ -687,6 +685,7 @@ struct HeightLess {
 };
 } // end anonymous namespace
 
+namespace {
 // Priority queue for nodes, sorted descendingly by their height.
 class PriorityList {
   const SyntaxTree::Impl &Tree;
@@ -723,6 +722,7 @@ public:
       push(Child);
   }
 };
+} // end anonymous namespace
 
 bool ASTDiff::Impl::identical(NodeId Id1, NodeId Id2) const {
   const Node &N1 = T1.getNode(Id1);
@@ -757,16 +757,6 @@ bool ASTDiff::Impl::canBeAddedToMapping(const Mapping &M, NodeId Id1,
 bool ASTDiff::Impl::isMatchingPossible(NodeId Id1, NodeId Id2) const {
   return Options.isMatchingAllowed(T1.getNode(Id1).ASTNode,
                                    T2.getNode(Id2).ASTNode);
-}
-
-void ASTDiff::Impl::addIsomorphicSubTrees(Mapping &M, NodeId Id1,
-                                          NodeId Id2) const {
-  assert(identical(Id1, Id2) && "Can only be called on identical subtrees.");
-  M.link(Id1, Id2);
-  const Node &N1 = T1.getNode(Id1);
-  const Node &N2 = T2.getNode(Id2);
-  for (size_t Id = 0, E = N1.Children.size(); Id < E; ++Id)
-    addIsomorphicSubTrees(M, N1.Children[Id], N2.Children[Id]);
 }
 
 void ASTDiff::Impl::addOptimalMapping(Mapping &M, NodeId Id1,
@@ -805,7 +795,7 @@ NodeId ASTDiff::Impl::findCandidate(const Mapping &M, NodeId Id1) const {
     if (M.hasDst(Id2))
       continue;
     double Similarity = getSimilarity(M, Id1, Id2);
-    if (Similarity > HighestSimilarity) {
+    if (Similarity >= Options.MinSimilarity && Similarity > HighestSimilarity) {
       HighestSimilarity = Similarity;
       Candidate = Id2;
     }
@@ -816,7 +806,8 @@ NodeId ASTDiff::Impl::findCandidate(const Mapping &M, NodeId Id1) const {
 void ASTDiff::Impl::matchBottomUp(Mapping &M) const {
   std::vector<NodeId> Postorder = getSubtreePostorder(T1, T1.getRootId());
   for (NodeId Id1 : Postorder) {
-    if (Id1 == T1.getRootId()) {
+    if (Id1 == T1.getRootId() && !M.hasSrc(T1.getRootId()) &&
+        !M.hasDst(T2.getRootId())) {
       if (isMatchingPossible(T1.getRootId(), T2.getRootId())) {
         M.link(T1.getRootId(), T2.getRootId());
         addOptimalMapping(M, T1.getRootId(), T2.getRootId());
@@ -831,11 +822,10 @@ void ASTDiff::Impl::matchBottomUp(Mapping &M) const {
     if (Matched || !MatchedChildren)
       continue;
     NodeId Id2 = findCandidate(M, Id1);
-    if (Id2.isInvalid() || !canBeAddedToMapping(M, Id1, Id2) ||
-        getSimilarity(M, Id1, Id2) < Options.MinSimilarity)
-      continue;
-    M.link(Id1, Id2);
-    addOptimalMapping(M, Id1, Id2);
+    if (Id2.isValid() && canBeAddedToMapping(M, Id1, Id2)) {
+      M.link(Id1, Id2);
+      addOptimalMapping(M, Id1, Id2);
+    }
   }
 }
 
@@ -865,9 +855,12 @@ Mapping ASTDiff::Impl::matchTopDown() const {
     H1 = L1.pop();
     H2 = L2.pop();
     for (NodeId Id1 : H1) {
-      for (NodeId Id2 : H2)
-        if (identical(Id1, Id2) && canBeAddedToMapping(M, Id1, Id2))
-          addIsomorphicSubTrees(M, Id1, Id2);
+      for (NodeId Id2 : H2) {
+        if (identical(Id1, Id2) && canBeAddedToMapping(M, Id1, Id2)) {
+          for (int I = 0, E = T1.getNumberOfDescendants(Id1); I < E; ++I)
+            M.link(Id1 + I, Id2 + I);
+        }
+      }
     }
     for (NodeId Id1 : H1) {
       if (!M.hasSrc(Id1))
