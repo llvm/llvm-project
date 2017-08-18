@@ -1,3 +1,12 @@
+set(LLDB_CURSES_LIBS)
+
+if (NOT LLDB_DISABLE_CURSES)
+  list(APPEND LLDB_CURSES_LIBS ${CURSES_LIBRARIES})
+  if(LLVM_ENABLE_TERMINFO AND HAVE_TERMINFO)
+    list(APPEND LLDB_CURSES_LIBS ${TERMINFO_LIBS})
+  endif()
+endif()
+
 add_lldb_library(lldbCore
   Address.cpp
   AddressRange.cpp
@@ -62,6 +71,7 @@ add_lldb_library(lldbCore
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     lldbPluginObjectFileJIT
+    ${LLDB_CURSES_LIBS}
 
   LINK_COMPONENTS
     BinaryFormat

@@ -25,15 +25,12 @@ using namespace llvm::codeview;
 using namespace llvm::pdb;
 
 static std::string getSymbolKindName(SymbolKind K) {
-  switch (K) {
+  switch (uint32_t(K)) {
 #define SYMBOL_RECORD(EnumName, value, name)                                   \
   case EnumName:                                                               \
     return #EnumName;
 #define CV_SYMBOL(EnumName, value) SYMBOL_RECORD(EnumName, value, EnumName)
 #include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
-  default: {
-    return formatv("Unknown Symbol Kind [{0:X}]", uint32_t(K)).str();
-  }
   }
   return "";
 }

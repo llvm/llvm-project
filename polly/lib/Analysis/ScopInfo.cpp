@@ -4705,6 +4705,11 @@ isl::union_map Scop::getAccesses() {
   return getAccessesOfType([](MemoryAccess &MA) { return true; });
 }
 
+isl::union_map Scop::getAccesses(ScopArrayInfo *Array) {
+  return getAccessesOfType(
+      [Array](MemoryAccess &MA) { return MA.getScopArrayInfo() == Array; });
+}
+
 // Check whether @p Node is an extension node.
 //
 // @return true if @p Node is an extension node.

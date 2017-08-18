@@ -1,4 +1,3 @@
-//===----- ScopDetection.cpp  - Detect Scops --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -107,10 +106,12 @@ static cl::list<std::string> IgnoredFunctions(
              "ANY of the regexes provided."),
     cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
 
-static cl::opt<bool>
-    AllowFullFunction("polly-detect-full-functions",
-                      cl::desc("Allow the detection of full functions"),
-                      cl::init(false), cl::cat(PollyCategory));
+bool polly::PollyAllowFullFunction;
+static cl::opt<bool, true>
+    XAllowFullFunction("polly-detect-full-functions",
+                       cl::desc("Allow the detection of full functions"),
+                       cl::location(polly::PollyAllowFullFunction),
+                       cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<std::string> OnlyRegion(
     "polly-only-region",
@@ -1541,7 +1542,7 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
 
   DEBUG(dbgs() << "Checking region: " << CurRegion.getNameStr() << "\n\t");
 
-  if (!AllowFullFunction && CurRegion.isTopLevelRegion()) {
+  if (!PollyAllowFullFunction && CurRegion.isTopLevelRegion()) {
     DEBUG(dbgs() << "Top level region is invalid\n");
     return false;
   }
@@ -1564,7 +1565,7 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
 
   // SCoP cannot contain the entry block of the function, because we need
   // to insert alloca instruction there when translate scalar to array.
-  if (!AllowFullFunction &&
+  if (!PollyAllowFullFunction &&
       CurRegion.getEntry() ==
           &(CurRegion.getEntry()->getParent()->getEntryBlock()))
     return invalid<ReportEntry>(Context, /*Assert=*/true, CurRegion.getEntry());

@@ -1169,7 +1169,7 @@ class AuthReturn<bits<3> op, bits<1> M, string asm>
 let mayLoad = 1 in
 class BaseAuthLoad<bit M, bit W, dag oops, dag iops, string asm,
                    string operands, string cstr, Operand opr>
-  : I<oops, iops, asm, operands, "", []>, Sched<[]> {
+  : I<oops, iops, asm, operands, cstr, []>, Sched<[]> {
   bits<10> offset;
   bits<5> Rn;
   bits<5> Rt;
@@ -1185,14 +1185,13 @@ class BaseAuthLoad<bit M, bit W, dag oops, dag iops, string asm,
 }
 
 multiclass AuthLoad<bit M, string asm, Operand opr> {
-  def indexed   : BaseAuthLoad<M, 0, (outs GPR64:$Rt), (ins GPR64sp:$Rn, opr:$offset),
+  def indexed   : BaseAuthLoad<M, 0, (outs GPR64:$Rt),
+                               (ins GPR64sp:$Rn, opr:$offset),
                                asm, "\t$Rt, [$Rn, $offset]", "", opr>;
   def writeback : BaseAuthLoad<M, 1, (outs GPR64sp:$wback, GPR64:$Rt),
                                (ins GPR64sp:$Rn, opr:$offset),
                                asm, "\t$Rt, [$Rn, $offset]!",
-                               "$Rn = $wback,@earlyclobber $wback", opr> {
-    let DecoderMethod = "DecodeAuthLoadWriteback";
-  }
+                               "$Rn = $wback,@earlyclobber $wback", opr>;
 
   def : InstAlias<asm # "\t$Rt, [$Rn]",
                   (!cast<Instruction>(NAME # "indexed") GPR64:$Rt, GPR64sp:$Rn, 0)>;

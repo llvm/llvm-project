@@ -113,6 +113,7 @@ extern bool PollyUseRuntimeAliasChecks;
 extern bool PollyProcessUnprofitable;
 extern bool PollyInvariantLoadHoisting;
 extern bool PollyAllowUnsignedOperations;
+extern bool PollyAllowFullFunction;
 
 /// A function attribute which will cause Polly to skip the function
 extern llvm::StringRef PollySkipFnAttr;
