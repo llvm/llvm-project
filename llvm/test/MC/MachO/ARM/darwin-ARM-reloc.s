@@ -99,7 +99,7 @@ Lsc0_0:
 @ CHECK: ]
 @ CHECK: Relocations [
 @ CHECK:   Section __text {
-@ CHECK:     0x4 1 2 0 ARM_RELOC_BR24 0 __text
+@ CHECK:     0x4 1 2 1 ARM_RELOC_BR24 0 _f0
 @ CHECK:     0x0 1 2 1 ARM_RELOC_BR24 0 _printf
 @ CHECK:   }
 @ CHECK:   Section __data {
