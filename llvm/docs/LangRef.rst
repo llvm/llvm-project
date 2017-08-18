@@ -5369,6 +5369,10 @@ The following behaviors are supported:
            nodes. However, duplicate entries in the second list are dropped
            during the append operation.
 
+   * - 7
+     - **Max**
+           Takes the max of the two values, which are required to be integers.
+
 It is an error for a particular unique flag ID to have multiple behaviors,
 except in the case of **Require** (which adds restrictions on another metadata
 value) or **Override**.

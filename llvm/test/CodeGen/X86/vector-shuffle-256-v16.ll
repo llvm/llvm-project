@@ -4069,7 +4069,7 @@ define <16 x i16> @insert_dup_mem_v16i16_sext_i16(i16* %ptr) {
 ; AVX512VL-LABEL: insert_dup_mem_v16i16_sext_i16:
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    movswl (%rdi), %eax
-; AVX512VL-NEXT:    vpbroadcastw %ax, %ymm0
+; AVX512VL-NEXT:    vpbroadcastw %eax, %ymm0
 ; AVX512VL-NEXT:    retq
   %tmp = load i16, i16* %ptr, align 2
   %tmp1 = sext i16 %tmp to i32
