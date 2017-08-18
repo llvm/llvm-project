@@ -222,7 +222,7 @@ GlobalFnPtr fp_g = g;
 // Test overloading of destructors
 // Can't mix H and unattributed destructors
 struct d_h {
-  ~d_h() {} // expected-note {{previous declaration is here}}
+  ~d_h() {} // expected-note {{previous definition is here}}
   __host__ ~d_h() {} // expected-error {{destructor cannot be redeclared}}
 };
 
