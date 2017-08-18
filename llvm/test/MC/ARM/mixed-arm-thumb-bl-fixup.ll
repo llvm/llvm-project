@@ -66,10 +66,10 @@ attributes #1 = { "target-features"="-thumb-mode" }
 ; LINUX-NEXT: }
 
 ; IOS:   Section __text {
-; IOS-NEXT: 0x2C 1 2 0 ARM_RELOC_BR24 0 __text
-; IOS-NEXT: 0x28 1 2 0 ARM_RELOC_BR24 0 __text
-; IOS-NEXT: 0x24 1 2 0 ARM_RELOC_BR24 0 __text
-; IOS-NEXT: 0x20 1 2 0 ARM_RELOC_BR24 0 __text
+; IOS-NEXT: 0x2C 1 2 1 ARM_RELOC_BR24 0 _global_thumb_fn
+; IOS-NEXT: 0x28 1 2 1 ARM_RELOC_BR24 0 _internal_thumb_fn
+; IOS-NEXT: 0x24 1 2 1 ARM_RELOC_BR24 0 _global_arm_fn
+; IOS-NEXT: 0x20 1 2 1 ARM_RELOC_BR24 0 _internal_arm_fn
 ; IOS-NEXT: 0x10 1 2 0 ARM_THUMB_RELOC_BR22 0 __text
 ; IOS-NEXT: 0xC 1 2 0 ARM_THUMB_RELOC_BR22 0 __text
 ; IOS-NEXT: 0x8 1 2 0 ARM_THUMB_RELOC_BR22 0 __text
