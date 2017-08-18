@@ -14,8 +14,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "polly-scop-inliner"
-
 #include "polly/LinkAllPasses.h"
 #include "polly/RegisterPasses.h"
 #include "polly/ScopDetection.h"
@@ -24,6 +22,8 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
+
+#define DEBUG_TYPE "polly-scop-inliner"
 
 using namespace polly;
 extern bool polly::PollyAllowFullFunction;
