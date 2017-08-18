@@ -191,6 +191,10 @@ protected:
   /// UseMISched - True if MachineScheduler should be used for this subtarget.
   bool UseMISched = false;
 
+  /// UsePostRAScheduler - True if scheduling should happen again after
+  /// register allocation.
+  bool UsePostRAScheduler = false;
+
   /// HasThumb2 - True if Thumb2 instructions are supported.
   bool HasThumb2 = false;
 
@@ -660,6 +664,7 @@ public:
   bool isRWPI() const;
 
   bool useMachineScheduler() const { return UseMISched; }
+  bool usePostRAScheduler() const { return UsePostRAScheduler; }
   bool useSoftFloat() const { return UseSoftFloat; }
   bool isThumb() const { return InThumbMode; }
   bool isThumb1Only() const { return InThumbMode && !HasThumb2; }

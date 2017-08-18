@@ -17,12 +17,15 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
@@ -73,6 +76,10 @@ static const char *const SanCovGuardsSectionName = "sancov_guards";
 static const char *const SanCovCountersSectionName = "sancov_cntrs";
 static const char *const SanCovPCsSectionName = "sancov_pcs";
 
+static const char *const SanCovLowestStackName = "__sancov_lowest_stack";
+static const char *const SanCovLowestStackTLSWrapperName =
+    "_ZTW21__sancov_lowest_stack";
+
 static cl::opt<int> ClCoverageLevel(
     "sanitizer-coverage-level",
     cl::desc("Sanitizer Coverage. 0: none, 1: entry block, 2: all blocks, "
@@ -119,6 +126,10 @@ static cl::opt<bool>
                   cl::desc("Reduce the number of instrumented blocks"),
                   cl::Hidden, cl::init(true));
 
+static cl::opt<bool> ClStackDepth("sanitizer-coverage-stack-depth",
+                                  cl::desc("max stack depth tracing"),
+                                  cl::Hidden, cl::init(false));
+
 namespace {
 
 SanitizerCoverageOptions getOptions(int LegacyCoverageLevel) {
@@ -156,9 +167,11 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
   Options.TracePCGuard |= ClTracePCGuard;
   Options.Inline8bitCounters |= ClInline8bitCounters;
   Options.PCTable |= ClCreatePCTable;
-  if (!Options.TracePCGuard && !Options.TracePC && !Options.Inline8bitCounters)
-    Options.TracePCGuard = true; // TracePCGuard is default.
   Options.NoPrune |= !ClPruneBlocks;
+  Options.StackDepth |= ClStackDepth;
+  if (!Options.TracePCGuard && !Options.TracePC &&
+      !Options.Inline8bitCounters && !Options.StackDepth)
+    Options.TracePCGuard = true; // TracePCGuard is default.
   return Options;
 }
 
@@ -216,6 +229,8 @@ private:
   Function *SanCovTraceDivFunction[2];
   Function *SanCovTraceGepFunction;
   Function *SanCovTraceSwitchFunction;
+  Function *SanCovLowestStackTLSWrapper;
+  GlobalVariable *SanCovLowestStack;
   InlineAsm *EmptyAsm;
   Type *IntptrTy, *IntptrPtrTy, *Int64Ty, *Int64PtrTy, *Int32Ty, *Int32PtrTy,
       *Int16Ty, *Int8Ty, *Int8PtrTy;
@@ -333,6 +348,24 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   SanCovTraceSwitchFunction =
       checkSanitizerInterfaceFunction(M.getOrInsertFunction(
           SanCovTraceSwitchName, VoidTy, Int64Ty, Int64PtrTy));
+
+  Constant *SanCovLowestStackConstant =
+      M.getOrInsertGlobal(SanCovLowestStackName, IntptrTy);
+  SanCovLowestStackTLSWrapper =
+      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+          SanCovLowestStackTLSWrapperName, IntptrTy->getPointerTo()));
+  if (Options.StackDepth) {
+    assert(isa<GlobalVariable>(SanCovLowestStackConstant));
+    SanCovLowestStack = cast<GlobalVariable>(SanCovLowestStackConstant);
+    if (!SanCovLowestStack->isDeclaration()) {
+      // Check that the user has correctly defined:
+      //     thread_local uintptr_t __sancov_lowest_stack
+      // and initialize it.
+      assert(SanCovLowestStack->isThreadLocal());
+      SanCovLowestStack->setInitializer(Constant::getAllOnesValue(IntptrTy));
+    }
+  }
+
   // Make sure smaller parameters are zero-extended to i64 as required by the
   // x86_64 ABI.
   if (TargetTriple.getArch() == Triple::x86_64) {
@@ -450,6 +483,9 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
   // initialization.
   if (F.getName() == "__local_stdio_printf_options" ||
       F.getName() == "__local_stdio_scanf_options")
+    return false;
+  // Avoid infinite recursion by not instrumenting stack depth TLS wrapper
+  if (F.getName() == SanCovLowestStackTLSWrapperName)
     return false;
   // Don't instrument functions using SEH for now. Splitting basic blocks like
   // we do for coverage breaks WinEHPrepare.
@@ -727,6 +763,20 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     auto Store = IRB.CreateStore(Inc, CounterPtr);
     SetNoSanitizeMetadata(Load);
     SetNoSanitizeMetadata(Store);
+  }
+  if (Options.StackDepth && IsEntryBB) {
+    // Check stack depth.  If it's the deepest so far, record it.
+    Function *GetFrameAddr =
+        Intrinsic::getDeclaration(F.getParent(), Intrinsic::frameaddress);
+    auto FrameAddrPtr =
+        IRB.CreateCall(GetFrameAddr, {Constant::getNullValue(Int32Ty)});
+    auto FrameAddrInt = IRB.CreatePtrToInt(FrameAddrPtr, IntptrTy);
+    auto LowestStackPtr = IRB.CreateCall(SanCovLowestStackTLSWrapper);
+    auto LowestStack = IRB.CreateLoad(LowestStackPtr);
+    auto IsStackLower = IRB.CreateICmpULT(FrameAddrInt, LowestStack);
+    auto ThenTerm = SplitBlockAndInsertIfThen(IsStackLower, &*IP, false);
+    IRBuilder<> ThenIRB(ThenTerm);
+    ThenIRB.CreateStore(FrameAddrInt, LowestStackPtr);
   }
 }
 
