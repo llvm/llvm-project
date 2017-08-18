@@ -361,12 +361,15 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
   DEBUG(dbgs() << "\n\n== Basic Block After==\n");
 
   for (uint64_t SizeId : SizeIds) {
-    ConstantInt *CaseSizeId = ConstantInt::get(Type::getInt64Ty(Ctx), SizeId);
     BasicBlock *CaseBB = BasicBlock::Create(
         Ctx, Twine("MemOP.Case.") + Twine(SizeId), &Func, DefaultBB);
     Instruction *NewInst = MI->clone();
     // Fix the argument.
-    dyn_cast<MemIntrinsic>(NewInst)->setLength(CaseSizeId);
+    MemIntrinsic * MemI = dyn_cast<MemIntrinsic>(NewInst);
+    IntegerType *SizeType = dyn_cast<IntegerType>(MemI->getLength()->getType());
+    assert(SizeType && "Expected integer type size argument.");
+    ConstantInt *CaseSizeId = ConstantInt::get(SizeType, SizeId);
+    MemI->setLength(CaseSizeId);
     CaseBB->getInstList().push_back(NewInst);
     IRBuilder<> IRBCase(CaseBB);
     IRBCase.CreateBr(MergeBB);

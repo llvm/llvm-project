@@ -25,7 +25,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/CommandLine.h"
-#include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 
@@ -54,43 +53,33 @@ const char *const CommonOptionsParser::HelpMessage =
     "\tsuffix of a path in the compile command database.\n"
     "\n";
 
-namespace {
-class ArgumentsAdjustingCompilations : public CompilationDatabase {
-public:
-  ArgumentsAdjustingCompilations(
-      std::unique_ptr<CompilationDatabase> Compilations)
-      : Compilations(std::move(Compilations)) {}
+void ArgumentsAdjustingCompilations::appendArgumentsAdjuster(
+    ArgumentsAdjuster Adjuster) {
+  Adjusters.push_back(std::move(Adjuster));
+}
 
-  void appendArgumentsAdjuster(ArgumentsAdjuster Adjuster) {
-    Adjusters.push_back(std::move(Adjuster));
-  }
+std::vector<CompileCommand> ArgumentsAdjustingCompilations::getCompileCommands(
+    StringRef FilePath) const {
+  return adjustCommands(Compilations->getCompileCommands(FilePath));
+}
 
-  std::vector<CompileCommand>
-  getCompileCommands(StringRef FilePath) const override {
-    return adjustCommands(Compilations->getCompileCommands(FilePath));
-  }
+std::vector<std::string>
+ArgumentsAdjustingCompilations::getAllFiles() const {
+  return Compilations->getAllFiles();
+}
 
-  std::vector<std::string> getAllFiles() const override {
-    return Compilations->getAllFiles();
-  }
+std::vector<CompileCommand>
+ArgumentsAdjustingCompilations::getAllCompileCommands() const {
+  return adjustCommands(Compilations->getAllCompileCommands());
+}
 
-  std::vector<CompileCommand> getAllCompileCommands() const override {
-    return adjustCommands(Compilations->getAllCompileCommands());
-  }
-
-private:
-  std::unique_ptr<CompilationDatabase> Compilations;
-  std::vector<ArgumentsAdjuster> Adjusters;
-
-  std::vector<CompileCommand>
-  adjustCommands(std::vector<CompileCommand> Commands) const {
-    for (CompileCommand &Command : Commands)
-      for (const auto &Adjuster : Adjusters)
-        Command.CommandLine = Adjuster(Command.CommandLine, Command.Filename);
-    return Commands;
-  }
-};
-} // namespace
+std::vector<CompileCommand> ArgumentsAdjustingCompilations::adjustCommands(
+    std::vector<CompileCommand> Commands) const {
+  for (CompileCommand &Command : Commands)
+    for (const auto &Adjuster : Adjusters)
+      Command.CommandLine = Adjuster(Command.CommandLine, Command.Filename);
+  return Commands;
+}
 
 CommonOptionsParser::CommonOptionsParser(
     int &argc, const char **argv, cl::OptionCategory &Category,

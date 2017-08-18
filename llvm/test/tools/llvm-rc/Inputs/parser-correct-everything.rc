@@ -1,0 +1,15 @@
+meh IcOn "hello.bmp"
+Icon Icon "Icon"
+
+LANGUAGE 5, 12
+
+STRINGTABLE
+LANGUAGE 1, 1
+CHARACTERISTICS 500
+LANGUAGE 3, 4
+VERSION 14
+{
+  1 "hello"
+  2 "world"
+}
+STRINGTABLE BEGIN END

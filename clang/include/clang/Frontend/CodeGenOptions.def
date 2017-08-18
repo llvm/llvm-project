@@ -169,6 +169,7 @@ CODEGENOPT(SanitizeCoverageTracePCGuard, 1, 0) ///< Enable PC tracing with guard
 CODEGENOPT(SanitizeCoverageInline8bitCounters, 1, 0) ///< Use inline 8bit counters.
 CODEGENOPT(SanitizeCoveragePCTable, 1, 0) ///< Create a PC Table.
 CODEGENOPT(SanitizeCoverageNoPrune, 1, 0) ///< Disable coverage pruning.
+CODEGENOPT(SanitizeCoverageStackDepth, 1, 0) ///< Enable max stack depth tracing
 CODEGENOPT(SanitizeStats     , 1, 0) ///< Collect statistics for sanitizers.
 CODEGENOPT(SimplifyLibCalls  , 1, 1) ///< Set when -fbuiltin is enabled.
 CODEGENOPT(SoftFloat         , 1, 0) ///< -soft-float.
