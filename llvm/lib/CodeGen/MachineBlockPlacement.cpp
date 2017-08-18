@@ -143,7 +143,7 @@ static cl::opt<unsigned> TailDupPlacementAggressiveThreshold(
     "tail-dup-placement-aggressive-threshold",
     cl::desc("Instruction cutoff for aggressive tail duplication during "
              "layout. Used at -O3. Tail merging during layout is forced to "
-             "have a threshold that won't conflict."), cl::init(3),
+             "have a threshold that won't conflict."), cl::init(4),
     cl::Hidden);
 
 // Heuristic for tail duplication.

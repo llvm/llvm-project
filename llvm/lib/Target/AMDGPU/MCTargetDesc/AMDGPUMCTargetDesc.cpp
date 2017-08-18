@@ -60,7 +60,8 @@ static MCInstPrinter *createAMDGPUMCInstPrinter(const Triple &T,
                                                 const MCAsmInfo &MAI,
                                                 const MCInstrInfo &MII,
                                                 const MCRegisterInfo &MRI) {
-  return new AMDGPUInstPrinter(MAI, MII, MRI);
+  return T.getArch() == Triple::r600 ? new R600InstPrinter(MAI, MII, MRI) : 
+                                       new AMDGPUInstPrinter(MAI, MII, MRI);
 }
 
 static MCTargetStreamer *createAMDGPUAsmTargetStreamer(MCStreamer &S,

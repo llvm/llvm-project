@@ -24,14 +24,16 @@ using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
-static StringRef getSymbolKindName(SymbolKind K) {
-  switch (K) {
+static std::string getSymbolKindName(SymbolKind K) {
+  switch (uint32_t(K)) {
 #define SYMBOL_RECORD(EnumName, value, name)                                   \
   case EnumName:                                                               \
     return #EnumName;
+#define CV_SYMBOL(EnumName, value) SYMBOL_RECORD(EnumName, value, EnumName)
 #include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
-  default:
-    llvm_unreachable("Unknown symbol kind!");
+  default: {
+    return formatv("Unknown Symbol Kind [{0:X}]", uint32_t(K)).str();
+  }
   }
   return "";
 }
@@ -385,6 +387,10 @@ Error MinimalSymbolDumper::visitSymbolBegin(codeview::CVSymbol &Record,
 }
 
 Error MinimalSymbolDumper::visitSymbolEnd(CVSymbol &Record) {
+  if (RecordBytes) {
+    AutoIndent Indent(P, 7);
+    P.formatBinary("bytes", Record.content(), 0);
+  }
   P.Unindent();
   return Error::success();
 }
@@ -669,7 +675,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, FrameProcSym &FP) {
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             HeapAllocationSiteSym &HAS) {
   AutoIndent Indent(P, 7);
-  P.formatLine("type = {0}, addr = {1} call size = {2}", typeIndex(HAS.Type),
+  P.formatLine("type = {0}, addr = {1} call size = {2}", idIndex(HAS.Type),
                formatSegmentOffset(HAS.Segment, HAS.CodeOffset),
                HAS.CallInstructionSize);
   return Error::success();
@@ -681,7 +687,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, InlineSiteSym &IS) {
   StringRef Annotations(reinterpret_cast<const char *>(Bytes.begin()),
                         Bytes.size());
 
-  P.formatLine("inlinee = {0}, parent = {1}, end = {2}", typeIndex(IS.Inlinee),
+  P.formatLine("inlinee = {0}, parent = {1}, end = {2}", idIndex(IS.Inlinee),
                IS.Parent, IS.End);
   P.formatLine("annotations = {0}", toHex(Annotations));
   return Error::success();
@@ -771,7 +777,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, CallerSym &Caller) {
   AutoIndent Indent(P, 7);
   for (const auto &I : Caller.Indices) {
-    P.formatLine("callee: {0}", typeIndex(I));
+    P.formatLine("callee: {0}", idIndex(I));
   }
   return Error::success();
 }

@@ -188,12 +188,16 @@ void AArch64CallLowering::splitToValueTypes(
   }
 
   unsigned FirstRegIdx = SplitArgs.size();
+  bool AlreadySplit = false;
   for (auto SplitVT : SplitVTs) {
-    // FIXME: set split flags if they're actually used (e.g. i128 on AAPCS).
     Type *SplitTy = SplitVT.getTypeForEVT(Ctx);
     SplitArgs.push_back(
         ArgInfo{MRI.createGenericVirtualRegister(getLLTForType(*SplitTy, DL)),
                 SplitTy, OrigArg.Flags, OrigArg.IsFixed});
+    if (!AlreadySplit) {
+      SplitArgs.back().Flags.setSplit();
+      AlreadySplit = true;
+    }
   }
 
   for (unsigned i = 0; i < Offsets.size(); ++i)

@@ -310,6 +310,7 @@ multiclass sse12_fp_packed_logical_rm<bits<8> opc, RegisterClass RC, Domain d,
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
        pat_rr, IIC_SSE_BIT_P_RR, d>,
        Sched<[WriteVecLogic]>;
+  let hasSideEffects = 0, mayLoad = 1 in
   def rm : PI<opc, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
        !if(Is2Addr,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
@@ -2799,54 +2800,36 @@ defm PANDN : PDI_binop_all<0xDF, "pandn", X86andnp, v2i64, v4i64,
 
 /// sse12_fp_packed_logical - SSE 1 & 2 packed FP logical ops
 ///
+/// There are no patterns here because isel prefers integer versions for SSE2
+/// and later. There are SSE1 v4f32 patterns later.
 multiclass sse12_fp_packed_logical<bits<8> opc, string OpcodeStr,
                                    SDNode OpNode> {
   let Predicates = [HasAVX, NoVLX] in {
   defm V#NAME#PSY : sse12_fp_packed_logical_rm<opc, VR256, SSEPackedSingle,
         !strconcat(OpcodeStr, "ps"), f256mem,
-        [(set VR256:$dst, (OpNode (bc_v4i64 (v8f32 VR256:$src1)),
-                                  (bc_v4i64 (v8f32 VR256:$src2))))],
-        [(set VR256:$dst, (OpNode (bc_v4i64 (v8f32 VR256:$src1)),
-                           (loadv4i64 addr:$src2)))], 0>, PS, VEX_4V, VEX_L, VEX_WIG;
+        [], [], 0>, PS, VEX_4V, VEX_L, VEX_WIG;
 
   defm V#NAME#PDY : sse12_fp_packed_logical_rm<opc, VR256, SSEPackedDouble,
         !strconcat(OpcodeStr, "pd"), f256mem,
-        [(set VR256:$dst, (OpNode (bc_v4i64 (v4f64 VR256:$src1)),
-                                  (bc_v4i64 (v4f64 VR256:$src2))))],
-        [(set VR256:$dst, (OpNode (bc_v4i64 (v4f64 VR256:$src1)),
-                                  (loadv4i64 addr:$src2)))], 0>,
-                                  PD, VEX_4V, VEX_L, VEX_WIG;
+        [], [], 0>, PD, VEX_4V, VEX_L, VEX_WIG;
 
   defm V#NAME#PS : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedSingle,
        !strconcat(OpcodeStr, "ps"), f128mem,
-       [(set VR128:$dst, (OpNode (bc_v2i64 (v4f32 VR128:$src1)),
-                                 (bc_v2i64 (v4f32 VR128:$src2))))],
-       [(set VR128:$dst, (OpNode (bc_v2i64 (v4f32 VR128:$src1)),
-                                 (loadv2i64 addr:$src2)))], 0>, PS, VEX_4V, VEX_WIG;
+       [], [], 0>, PS, VEX_4V, VEX_WIG;
 
   defm V#NAME#PD : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedDouble,
        !strconcat(OpcodeStr, "pd"), f128mem,
-       [(set VR128:$dst, (OpNode (bc_v2i64 (v2f64 VR128:$src1)),
-                                 (bc_v2i64 (v2f64 VR128:$src2))))],
-       [(set VR128:$dst, (OpNode (bc_v2i64 (v2f64 VR128:$src1)),
-                                 (loadv2i64 addr:$src2)))], 0>,
-                                                 PD, VEX_4V, VEX_WIG;
+       [], [], 0>, PD, VEX_4V, VEX_WIG;
   }
 
   let Constraints = "$src1 = $dst" in {
     defm PS : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedSingle,
          !strconcat(OpcodeStr, "ps"), f128mem,
-         [(set VR128:$dst, (OpNode (bc_v2i64 (v4f32 VR128:$src1)),
-                                   (bc_v2i64 (v4f32 VR128:$src2))))],
-         [(set VR128:$dst, (OpNode (bc_v2i64 (v4f32 VR128:$src1)),
-                                   (memopv2i64 addr:$src2)))]>, PS;
+         [], []>, PS;
 
     defm PD : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedDouble,
          !strconcat(OpcodeStr, "pd"), f128mem,
-         [(set VR128:$dst, (OpNode (bc_v2i64 (v2f64 VR128:$src1)),
-                                   (bc_v2i64 (v2f64 VR128:$src2))))],
-         [(set VR128:$dst, (OpNode (bc_v2i64 (v2f64 VR128:$src1)),
-                                   (memopv2i64 addr:$src2)))]>, PD;
+         [], []>, PD;
   }
 }
 
