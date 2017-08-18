@@ -1219,6 +1219,8 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
   const char *Str = isl_id_get_name(Id);
   if (!strcmp(Str, "kernel")) {
     createKernel(UserStmt);
+    if (PollyManagedMemory)
+      createCallSynchronizeDevice();
     isl_ast_expr_free(Expr);
     return;
   }
@@ -1248,7 +1250,6 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
     if (!PollyManagedMemory) {
       createDataTransfer(UserStmt, DEVICE_TO_HOST);
     } else {
-      createCallSynchronizeDevice();
       isl_ast_node_free(UserStmt);
     }
     isl_ast_expr_free(Expr);
