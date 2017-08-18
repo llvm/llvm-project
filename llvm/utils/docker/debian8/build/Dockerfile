@@ -18,14 +18,24 @@ RUN grep deb /etc/apt/sources.list | \
 
 # Install compiler, python and subversion.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential python2.7 wget \
-            subversion ninja-build && \
+    apt-get install -y --no-install-recommends ca-certificates gnupg \
+    	    build-essential python2.7 wget subversion ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
-# Install cmake version that can compile clang into /usr/local.
+# Import public key required for verifying signature of cmake download.
+RUN gpg --keyserver hkp://pgp.mit.edu --recv 0x2D2CEF1034921684
+
+# Download, verify and install cmake version that can compile clang into /usr/local.
 # (Version in debian8 repos is is too old)
-RUN wget -O - "https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.tar.gz" | \
-    tar xzf - -C /usr/local --strip-components=1
+RUN mkdir /tmp/cmake-install && cd /tmp/cmake-install && \
+    wget "https://cmake.org/files/v3.7/cmake-3.7.2-SHA-256.txt.asc" && \
+    wget "https://cmake.org/files/v3.7/cmake-3.7.2-SHA-256.txt" && \
+    gpg --verify cmake-3.7.2-SHA-256.txt.asc cmake-3.7.2-SHA-256.txt && \
+    wget "https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.tar.gz" && \
+    ( grep "cmake-3.7.2-Linux-x86_64.tar.gz" cmake-3.7.2-SHA-256.txt | \
+      sha256sum -c - ) && \
+    tar xzf cmake-3.7.2-Linux-x86_64.tar.gz -C /usr/local --strip-components=1 && \
+    cd / && rm -rf /tmp/cmake-install
 
 # Arguments passed to build_install_clang.sh.
 ARG buildscript_args

@@ -31,9 +31,6 @@ static std::string getSymbolKindName(SymbolKind K) {
     return #EnumName;
 #define CV_SYMBOL(EnumName, value) SYMBOL_RECORD(EnumName, value, EnumName)
 #include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
-  default: {
-    return formatv("Unknown Symbol Kind [{0:X}]", uint32_t(K)).str();
-  }
   }
   return "";
 }
