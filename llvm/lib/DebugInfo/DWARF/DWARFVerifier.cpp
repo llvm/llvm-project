@@ -196,7 +196,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
         ++NumErrors;
         OS << "error: DW_AT_stmt_list offset is beyond .debug_line "
               "bounds: "
-           << format("0x%08" PRIx32, *SectionOffset) << "\n";
+           << format("0x%08" PRIx64, *SectionOffset) << "\n";
         Die.dump(OS, 0);
         OS << "\n";
       }
@@ -234,7 +234,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
       if (CUOffset >= CUSize) {
         ++NumErrors;
         OS << "error: " << FormEncodingString(Form) << " CU offset "
-           << format("0x%08" PRIx32, CUOffset)
+           << format("0x%08" PRIx64, CUOffset)
            << " is invalid (must be less than CU size of "
            << format("0x%08" PRIx32, CUSize) << "):\n";
         Die.dump(OS, 0);
@@ -366,7 +366,7 @@ void DWARFVerifier::verifyDebugLineRows() {
       if (Row.Address < PrevAddress) {
         ++NumDebugLineErrors;
         OS << "error: .debug_line["
-           << format("0x%08" PRIx32,
+           << format("0x%08" PRIx64,
                      *toSectionOffset(Die.find(DW_AT_stmt_list)))
            << "] row[" << RowIndex
            << "] decreases in address from previous row:\n";
@@ -381,7 +381,7 @@ void DWARFVerifier::verifyDebugLineRows() {
       if (Row.File > MaxFileIndex) {
         ++NumDebugLineErrors;
         OS << "error: .debug_line["
-           << format("0x%08" PRIx32,
+           << format("0x%08" PRIx64,
                      *toSectionOffset(Die.find(DW_AT_stmt_list)))
            << "][" << RowIndex << "] has invalid file index " << Row.File
            << " (valid values are [1," << MaxFileIndex << "]):\n";
