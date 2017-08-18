@@ -47,13 +47,13 @@ define void @f(i32 %x) {
   ; CHECK: %[[LABELVA1:.*]] = alloca [2 x i16]
   ; CHECK: %[[LABELRETURN:.*]] = alloca i16
 
-  ; CHECK: call void @__dfsw_custom1(i32 1, i32 2, i16 0, i16 0)
+  ; CHECK: call void @__dfsw_custom1(i32 1, i32 2, i16 zeroext 0, i16 zeroext 0)
   call void @custom1(i32 1, i32 2)
 
-  ; CHECK: call i32 @__dfsw_custom2(i32 1, i32 2, i16 0, i16 0, i16* %[[LABELRETURN]])
+  ; CHECK: call i32 @__dfsw_custom2(i32 1, i32 2, i16 zeroext 0, i16 zeroext 0, i16* %[[LABELRETURN]])
   call i32 @custom2(i32 1, i32 2)
 
-  ; CHECK: call void @__dfsw_customcb({{.*}} @"dfst0$customcb", i8* bitcast ({{.*}} @"dfs$cb" to i8*), i16 0)
+  ; CHECK: call void @__dfsw_customcb({{.*}} @"dfst0$customcb", i8* bitcast ({{.*}} @"dfs$cb" to i8*), i16 zeroext 0)
   call void @customcb(i32 (i32)* @cb)
 
   ; CHECK: %[[LABELVA1_0:.*]] = getelementptr inbounds [2 x i16], [2 x i16]* %[[LABELVA1]], i32 0, i32 0
@@ -61,12 +61,12 @@ define void @f(i32 %x) {
   ; CHECK: %[[LABELVA1_1:.*]] = getelementptr inbounds [2 x i16], [2 x i16]* %[[LABELVA1]], i32 0, i32 1
   ; CHECK: store i16 %{{.*}}, i16* %[[LABELVA1_1]]
   ; CHECK: %[[LABELVA1_0A:.*]] = getelementptr inbounds [2 x i16], [2 x i16]* %[[LABELVA1]], i32 0, i32 0
-  ; CHECK: call void (i32, i16, i16*, ...) @__dfsw_custom3(i32 1, i16 0, i16* %[[LABELVA1_0A]], i32 2, i32 %{{.*}})
+  ; CHECK: call void (i32, i16, i16*, ...) @__dfsw_custom3(i32 1, i16 zeroext 0, i16* %[[LABELVA1_0A]], i32 2, i32 %{{.*}})
   call void (i32, ...) @custom3(i32 1, i32 2, i32 %x)
 
   ; CHECK: %[[LABELVA2_0:.*]] = getelementptr inbounds [2 x i16], [2 x i16]* %[[LABELVA2]], i32 0, i32 0
   ; CHECK: %[[LABELVA2_0A:.*]] = getelementptr inbounds [2 x i16], [2 x i16]* %[[LABELVA2]], i32 0, i32 0
-  ; CHECK: call i32 (i32, i16, i16*, i16*, ...) @__dfsw_custom4(i32 1, i16 0, i16* %[[LABELVA2_0A]], i16* %[[LABELRETURN]], i32 2, i32 3)
+  ; CHECK: call i32 (i32, i16, i16*, i16*, ...) @__dfsw_custom4(i32 1, i16 zeroext 0, i16* %[[LABELVA2_0A]], i16* %[[LABELRETURN]], i32 2, i32 3)
   call i32 (i32, ...) @custom4(i32 1, i32 2, i32 3)
 
   ret void
