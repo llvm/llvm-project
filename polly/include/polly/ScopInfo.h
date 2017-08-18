@@ -2913,6 +2913,11 @@ public:
   /// Get a union map of all memory accesses performed in the SCoP.
   isl::union_map getAccesses();
 
+  /// Get a union map of all memory accesses performed in the SCoP.
+  ///
+  /// @param Array The array to which the accesses should belong.
+  isl::union_map getAccesses(ScopArrayInfo *Array);
+
   /// Get the schedule of all the statements in the SCoP.
   ///
   /// @return The schedule of all the statements in the SCoP, if the schedule of

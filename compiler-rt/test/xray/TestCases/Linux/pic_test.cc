@@ -1,6 +1,7 @@
 // Test to check if we handle pic code properly.
 
-// RUN: %clangxx_xray -fxray-instrument -std=c++11 -fpic %s -o %t
+// RUN: %clangxx_xray -fxray-instrument -std=c++11 -ffunction-sections \
+// RUN:     -fdata-sections -fpic -fpie -Wl,--gc-sections %s -o %t
 // RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_logfile_base=pic-test-logging-" %run %t 2>&1 | FileCheck %s
 // After all that, clean up the output xray log.
 //
