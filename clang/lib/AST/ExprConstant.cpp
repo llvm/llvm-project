@@ -9788,6 +9788,8 @@ public:
 
   bool Success(const APValue &V, const Expr *e) { return true; }
 
+  bool ZeroInitialization(const Expr *E) { return true; }
+
   bool VisitCastExpr(const CastExpr *E) {
     switch (E->getCastKind()) {
     default:
