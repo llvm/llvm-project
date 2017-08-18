@@ -197,36 +197,46 @@ static bool bodyEmpty(const ASTContext *Context, const CompoundStmt *Body) {
   return !Invalid && std::strspn(Text.data(), " \t\r\n") == Text.size();
 }
 
+UseEqualsDefaultCheck::UseEqualsDefaultCheck(StringRef Name,
+                                             ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true) != 0) {}
+
+void UseEqualsDefaultCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+}
+
 void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
-  if (getLangOpts().CPlusPlus) {
-    // Destructor.
-    Finder->addMatcher(cxxDestructorDecl(isDefinition()).bind(SpecialFunction),
-                       this);
-    Finder->addMatcher(
-        cxxConstructorDecl(
-            isDefinition(),
-            anyOf(
-                // Default constructor.
-                allOf(unless(hasAnyConstructorInitializer(isWritten())),
-                      parameterCountIs(0)),
-                // Copy constructor.
-                allOf(isCopyConstructor(),
-                      // Discard constructors that can be used as a copy
-                      // constructor because all the other arguments have
-                      // default values.
-                      parameterCountIs(1))))
-            .bind(SpecialFunction),
-        this);
-    // Copy-assignment operator.
-    Finder->addMatcher(
-        cxxMethodDecl(isDefinition(), isCopyAssignmentOperator(),
-                      // isCopyAssignmentOperator() allows the parameter to be
-                      // passed by value, and in this case it cannot be
-                      // defaulted.
-                      hasParameter(0, hasType(lValueReferenceType())))
-            .bind(SpecialFunction),
-        this);
-  }
+  if (!getLangOpts().CPlusPlus)
+    return;
+
+  // Destructor.
+  Finder->addMatcher(cxxDestructorDecl(isDefinition()).bind(SpecialFunction),
+                     this);
+  Finder->addMatcher(
+      cxxConstructorDecl(
+          isDefinition(),
+          anyOf(
+              // Default constructor.
+              allOf(unless(hasAnyConstructorInitializer(isWritten())),
+                    parameterCountIs(0)),
+              // Copy constructor.
+              allOf(isCopyConstructor(),
+                    // Discard constructors that can be used as a copy
+                    // constructor because all the other arguments have
+                    // default values.
+                    parameterCountIs(1))))
+          .bind(SpecialFunction),
+      this);
+  // Copy-assignment operator.
+  Finder->addMatcher(
+      cxxMethodDecl(isDefinition(), isCopyAssignmentOperator(),
+                    // isCopyAssignmentOperator() allows the parameter to be
+                    // passed by value, and in this case it cannot be
+                    // defaulted.
+                    hasParameter(0, hasType(lValueReferenceType())))
+          .bind(SpecialFunction),
+      this);
 }
 
 void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
@@ -235,6 +245,9 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   // Both CXXConstructorDecl and CXXDestructorDecl inherit from CXXMethodDecl.
   const auto *SpecialFunctionDecl =
       Result.Nodes.getNodeAs<CXXMethodDecl>(SpecialFunction);
+
+  if (IgnoreMacros && SpecialFunctionDecl->getLocation().isMacroID())
+    return;
 
   // Discard explicitly deleted/defaulted special member functions and those
   // that are not user-provided (automatically generated).

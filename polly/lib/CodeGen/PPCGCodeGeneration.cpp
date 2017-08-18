@@ -1219,6 +1219,8 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
   const char *Str = isl_id_get_name(Id);
   if (!strcmp(Str, "kernel")) {
     createKernel(UserStmt);
+    if (PollyManagedMemory)
+      createCallSynchronizeDevice();
     isl_ast_expr_free(Expr);
     return;
   }
@@ -1248,7 +1250,6 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
     if (!PollyManagedMemory) {
       createDataTransfer(UserStmt, DEVICE_TO_HOST);
     } else {
-      createCallSynchronizeDevice();
       isl_ast_node_free(UserStmt);
     }
     isl_ast_expr_free(Expr);
@@ -2631,6 +2632,77 @@ public:
     return Names;
   }
 
+  /// Remove unreferenced parameter dimensions from union_map.
+  isl::union_map removeUnusedParameters(isl::union_map UMap) {
+    auto New = isl::union_map::empty(isl::space(UMap.get_ctx(), 0, 0));
+
+    auto RemoveUnusedDims = [&New](isl::map S) -> isl::stat {
+      int Removed = 0;
+      int NumDims = S.dim(isl::dim::param);
+      for (long i = 0; i < NumDims; i++) {
+        const int Dim = i - Removed;
+        if (!S.involves_dims(isl::dim::param, Dim, 1)) {
+          S = S.remove_dims(isl::dim::param, Dim, 1);
+          Removed++;
+        }
+      }
+      New = New.unite(S);
+      return isl::stat::ok;
+    };
+
+    UMap.foreach_map(RemoveUnusedDims);
+    return New;
+  }
+
+  /// Remove unreferenced parameter dimensions from union_set.
+  isl::union_set removeUnusedParameters(isl::union_set USet) {
+    auto New = isl::union_set::empty(isl::space(USet.get_ctx(), 0, 0));
+
+    auto RemoveUnusedDims = [&New](isl::set S) -> isl::stat {
+      int Removed = 0;
+      int NumDims = S.dim(isl::dim::param);
+      for (long i = 0; i < NumDims; i++) {
+        const int Dim = i - Removed;
+        if (!S.involves_dims(isl::dim::param, Dim, 1)) {
+          S = S.remove_dims(isl::dim::param, Dim, 1);
+          Removed++;
+        }
+      }
+      New = New.unite(S);
+      return isl::stat::ok;
+    };
+
+    USet.foreach_set(RemoveUnusedDims);
+    return New;
+  }
+
+  /// Simplify PPCG scop to improve compile time.
+  ///
+  /// We drop unused parameter dimensions to reduce the size of the sets we are
+  /// working with. Especially the computed dependences tend to accumulate a lot
+  /// of parameters that are present in the input memory accesses, but often are
+  /// not necessary to express the actual dependences. As isl represents maps
+  /// and sets with dense matrices, reducing the dimensionality of isl sets
+  /// commonly reduces code generation performance.
+  void simplifyPPCGScop(ppcg_scop *PPCGScop) {
+    PPCGScop->domain =
+        removeUnusedParameters(isl::manage(PPCGScop->domain)).release();
+
+    PPCGScop->dep_forced =
+        removeUnusedParameters(isl::manage(PPCGScop->dep_forced)).release();
+    PPCGScop->dep_false =
+        removeUnusedParameters(isl::manage(PPCGScop->dep_false)).release();
+    PPCGScop->dep_flow =
+        removeUnusedParameters(isl::manage(PPCGScop->dep_flow)).release();
+    PPCGScop->tagged_dep_flow =
+        removeUnusedParameters(isl::manage(PPCGScop->tagged_dep_flow))
+            .release();
+
+    PPCGScop->tagged_dep_order =
+        removeUnusedParameters(isl::manage(PPCGScop->tagged_dep_order))
+            .release();
+  }
+
   /// Create a new PPCG scop from the current scop.
   ///
   /// The PPCG scop is initialized with data from the current polly::Scop. From
@@ -2688,6 +2760,7 @@ public:
     compute_tagger(PPCGScop);
     compute_dependences(PPCGScop);
     eliminate_dead_code(PPCGScop);
+    simplifyPPCGScop(PPCGScop);
 
     return PPCGScop;
   }
@@ -2760,77 +2833,57 @@ public:
   /// @param Array The array to derive the extent for.
   ///
   /// @returns An isl_set describing the extent of the array.
-  __isl_give isl_set *getExtent(ScopArrayInfo *Array) {
+  isl::set getExtent(ScopArrayInfo *Array) {
     unsigned NumDims = Array->getNumberOfDimensions();
-    isl_union_map *Accesses = S->getAccesses().release();
-    Accesses =
-        isl_union_map_intersect_domain(Accesses, S->getDomains().release());
-    Accesses = isl_union_map_detect_equalities(Accesses);
-    isl_union_set *AccessUSet = isl_union_map_range(Accesses);
-    AccessUSet = isl_union_set_coalesce(AccessUSet);
-    AccessUSet = isl_union_set_detect_equalities(AccessUSet);
-    AccessUSet = isl_union_set_coalesce(AccessUSet);
 
-    if (isl_union_set_is_empty(AccessUSet)) {
-      isl_union_set_free(AccessUSet);
-      return isl_set_empty(Array->getSpace().release());
-    }
+    if (Array->getNumberOfDimensions() == 0)
+      return isl::set::universe(Array->getSpace());
 
-    if (Array->getNumberOfDimensions() == 0) {
-      isl_union_set_free(AccessUSet);
-      return isl_set_universe(Array->getSpace().release());
-    }
+    isl::union_map Accesses = S->getAccesses(Array);
+    isl::union_set AccessUSet = Accesses.range();
+    AccessUSet = AccessUSet.coalesce();
+    AccessUSet = AccessUSet.detect_equalities();
+    AccessUSet = AccessUSet.coalesce();
 
-    isl_set *AccessSet =
-        isl_union_set_extract_set(AccessUSet, Array->getSpace().release());
+    if (AccessUSet.is_empty())
+      return isl::set::empty(Array->getSpace());
 
-    isl_union_set_free(AccessUSet);
-    isl_local_space *LS =
-        isl_local_space_from_space(Array->getSpace().release());
+    isl::set AccessSet = AccessUSet.extract_set(Array->getSpace());
 
-    isl_pw_aff *Val =
-        isl_pw_aff_from_aff(isl_aff_var_on_domain(LS, isl_dim_set, 0));
+    isl::local_space LS = isl::local_space(Array->getSpace());
 
-    isl_pw_aff *OuterMin = isl_set_dim_min(isl_set_copy(AccessSet), 0);
-    isl_pw_aff *OuterMax = isl_set_dim_max(AccessSet, 0);
-    OuterMin = isl_pw_aff_add_dims(OuterMin, isl_dim_in,
-                                   isl_pw_aff_dim(Val, isl_dim_in));
-    OuterMax = isl_pw_aff_add_dims(OuterMax, isl_dim_in,
-                                   isl_pw_aff_dim(Val, isl_dim_in));
-    OuterMin = isl_pw_aff_set_tuple_id(OuterMin, isl_dim_in,
-                                       Array->getBasePtrId().release());
-    OuterMax = isl_pw_aff_set_tuple_id(OuterMax, isl_dim_in,
-                                       Array->getBasePtrId().release());
+    isl::pw_aff Val = isl::aff::var_on_domain(LS, isl::dim::set, 0);
+    isl::pw_aff OuterMin = AccessSet.dim_min(0);
+    isl::pw_aff OuterMax = AccessSet.dim_max(0);
+    OuterMin = OuterMin.add_dims(isl::dim::in, Val.dim(isl::dim::in));
+    OuterMax = OuterMax.add_dims(isl::dim::in, Val.dim(isl::dim::in));
+    OuterMin = OuterMin.set_tuple_id(isl::dim::in, Array->getBasePtrId());
+    OuterMax = OuterMax.set_tuple_id(isl::dim::in, Array->getBasePtrId());
 
-    isl_set *Extent = isl_set_universe(Array->getSpace().release());
+    isl::set Extent = isl::set::universe(Array->getSpace());
 
-    Extent = isl_set_intersect(
-        Extent, isl_pw_aff_le_set(OuterMin, isl_pw_aff_copy(Val)));
-    Extent = isl_set_intersect(Extent, isl_pw_aff_ge_set(OuterMax, Val));
+    Extent = Extent.intersect(OuterMin.le_set(Val));
+    Extent = Extent.intersect(OuterMax.ge_set(Val));
 
     for (unsigned i = 1; i < NumDims; ++i)
-      Extent = isl_set_lower_bound_si(Extent, isl_dim_set, i, 0);
+      Extent = Extent.lower_bound_si(isl::dim::set, i, 0);
 
     for (unsigned i = 0; i < NumDims; ++i) {
-      isl_pw_aff *PwAff =
-          const_cast<isl_pw_aff *>(Array->getDimensionSizePw(i).release());
+      isl::pw_aff PwAff = Array->getDimensionSizePw(i);
 
       // isl_pw_aff can be NULL for zero dimension. Only in the case of a
       // Fortran array will we have a legitimate dimension.
-      if (!PwAff) {
+      if (PwAff.is_null()) {
         assert(i == 0 && "invalid dimension isl_pw_aff for nonzero dimension");
         continue;
       }
 
-      isl_pw_aff *Val = isl_pw_aff_from_aff(isl_aff_var_on_domain(
-          isl_local_space_from_space(Array->getSpace().release()), isl_dim_set,
-          i));
-      PwAff = isl_pw_aff_add_dims(PwAff, isl_dim_in,
-                                  isl_pw_aff_dim(Val, isl_dim_in));
-      PwAff = isl_pw_aff_set_tuple_id(PwAff, isl_dim_in,
-                                      isl_pw_aff_get_tuple_id(Val, isl_dim_in));
-      auto *Set = isl_pw_aff_gt_set(PwAff, Val);
-      Extent = isl_set_intersect(Set, Extent);
+      isl::pw_aff Val = isl::aff::var_on_domain(
+          isl::local_space(Array->getSpace()), isl::dim::set, i);
+      PwAff = PwAff.add_dims(isl::dim::in, Val.dim(isl::dim::in));
+      PwAff = PwAff.set_tuple_id(isl::dim::in, Val.get_tuple_id(isl::dim::in));
+      isl::set Set = PwAff.gt_set(Val);
+      Extent = Set.intersect(Extent);
     }
 
     return Extent;
@@ -2931,7 +2984,7 @@ public:
       PPCGArray.name = strdup(Array->getName().c_str());
       PPCGArray.extent = nullptr;
       PPCGArray.n_index = Array->getNumberOfDimensions();
-      PPCGArray.extent = getExtent(Array);
+      PPCGArray.extent = getExtent(Array).release();
       PPCGArray.n_ref = 0;
       PPCGArray.refs = nullptr;
       PPCGArray.accessed = true;
@@ -3008,7 +3061,7 @@ public:
     //     2. Arrays with statically known zero size.
     auto ValidSAIsRange =
         make_filter_range(S->arrays(), [this](ScopArrayInfo *SAI) -> bool {
-          return !isl::manage(getExtent(SAI)).is_empty();
+          return !getExtent(SAI).is_empty();
         });
     SmallVector<ScopArrayInfo *, 4> ValidSAIs(ValidSAIsRange.begin(),
                                               ValidSAIsRange.end());
@@ -3149,17 +3202,22 @@ public:
 
     isl_schedule *Schedule = get_schedule(PPCGGen);
 
-    int has_permutable = has_any_permutable_node(Schedule);
+    /// Copy to and from device functions may introduce new parameters, which
+    /// must be present in the schedule tree root for code generation. Hence,
+    /// we ensure that all possible parameters are introduced from this point.
+    if (!PollyManagedMemory)
+      Schedule =
+          isl_schedule_align_params(Schedule, S->getFullParamSpace().release());
 
-    Schedule =
-        isl_schedule_align_params(Schedule, S->getFullParamSpace().release());
+    int has_permutable = has_any_permutable_node(Schedule);
 
     if (!has_permutable || has_permutable < 0) {
       Schedule = isl_schedule_free(Schedule);
       DEBUG(dbgs() << getUniqueScopName(S)
                    << " does not have permutable bands. Bailing out\n";);
     } else {
-      Schedule = map_to_device(PPCGGen, Schedule);
+      const bool CreateTransferToFromDevice = !PollyManagedMemory;
+      Schedule = map_to_device(PPCGGen, Schedule, CreateTransferToFromDevice);
       PPCGGen->tree = generate_code(PPCGGen, isl_schedule_copy(Schedule));
     }
 
@@ -3451,6 +3509,9 @@ public:
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     DL = &S->getRegion().getEntry()->getModule()->getDataLayout();
     RI = &getAnalysis<RegionInfoPass>().getRegionInfo();
+
+    DEBUG(dbgs() << "PPCGCodeGen running on : " << getUniqueScopName(S)
+                 << " | loop depth: " << S->getMaxLoopDepth() << "\n");
 
     // We currently do not support functions other than intrinsics inside
     // kernels, as code generation will need to offload function calls to the

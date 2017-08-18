@@ -32,6 +32,7 @@ class RegionPass;
 
 namespace polly {
 llvm::Pass *createCodePreparationPass();
+llvm::Pass *createScopInlinerPass();
 llvm::Pass *createDeadCodeElimPass();
 llvm::Pass *createDependenceInfoPass();
 llvm::Pass *createDependenceInfoWrapperPassPass();
@@ -108,6 +109,7 @@ struct PollyForcePassLinking {
 namespace llvm {
 class PassRegistry;
 void initializeCodePreparationPass(llvm::PassRegistry &);
+void initializeScopInlinerPass(llvm::PassRegistry &);
 void initializeDeadCodeElimPass(llvm::PassRegistry &);
 void initializeJSONExporterPass(llvm::PassRegistry &);
 void initializeJSONImporterPass(llvm::PassRegistry &);
