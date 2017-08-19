@@ -29,21 +29,11 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/Error.h"
 
-#if LLVM_LIBXML2_ENABLED
-#include <libxml/xmlreader.h>
-#endif
-
 namespace llvm {
 
 class MemoryBuffer;
 
-#if LLVM_LIBXML2_ENABLED
-typedef xmlDocPtr XMLDocumentImpl;
-typedef xmlNodePtr XMLNodeImpl;
-#else
-typedef void *XMLDocumentImpl;
-typedef void *XMLNodeImpl;
-#endif
+namespace windows_manifest {
 
 class WindowsManifestError : public ErrorInfo<WindowsManifestError, ECError> {
 public:
@@ -57,8 +47,8 @@ private:
 
 class WindowsManifestMerger {
 public:
+  WindowsManifestMerger();
   ~WindowsManifestMerger();
-
   Error merge(const MemoryBuffer &Manifest);
 
   // Returns vector containing merged xml manifest, or uninitialized vector for
@@ -66,15 +56,10 @@ public:
   std::unique_ptr<MemoryBuffer> getMergedManifest();
 
 private:
-  static void errorCallback(void *Ctx, const char *Format, ...);
-  Error getParseError();
-
-#if LLVM_LIBXML2_ENABLED
-  XMLDocumentImpl CombinedDoc = nullptr;
-  std::vector<XMLDocumentImpl> MergedDocs;
-#endif
-  bool ParseErrorOccurred = false;
+  class WindowsManifestMergerImpl;
+  std::unique_ptr<WindowsManifestMergerImpl> Impl;
 };
 
+} // namespace windows_manifest
 } // namespace llvm
 #endif

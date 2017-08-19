@@ -11,8 +11,8 @@ RUN:   FileCheck %s -check-prefix=EMPTY
 
 EMPTY: llvm-mt error: attempted to merge empty manifest
 
-RUN: llvm-mt /inputresource:foo.res /manifest \
-RUN:   %p/Inputs/test_manifest.manifest | FileCheck %s \
-RUN:    -check-prefix=NOT_SUPPORTED
+RUN: llvm-mt /inputresource:foo.res \
+RUN:   /manifest %p/Inputs/test_manifest.manifest \
+RUN:   /out:%t | FileCheck %s -check-prefix=NOT_SUPPORTED
 
 NOT_SUPPORTED: llvm-mt: ignoring unsupported 'inputresource:' option

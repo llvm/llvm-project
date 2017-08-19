@@ -948,17 +948,15 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
         continue;
       }
 
-      // C++1z [expr.prim.lambda]p8:
-      //  If a lambda-capture includes a capture-default that is =, each
-      //  simple-capture of that lambda-capture shall be of the form "&
-      //  identifier" or "* this". [ Note: The form [&,this] is redundant but
-      //  accepted for compatibility with ISO C++14. --end note ]
-      if (Intro.Default == LCD_ByCopy && C->Kind != LCK_StarThis) {
-        Diag(C->Loc, diag::err_this_capture_with_copy_default)
-            << FixItHint::CreateRemoval(
-                SourceRange(getLocForEndOfToken(PrevCaptureLoc), C->Loc));
-        continue;
-      }
+      // C++2a [expr.prim.lambda]p8:
+      //  If a lambda-capture includes a capture-default that is =,
+      //  each simple-capture of that lambda-capture shall be of the form
+      //  "&identifier", "this", or "* this". [ Note: The form [&,this] is
+      //  redundant but accepted for compatibility with ISO C++14. --end note ]
+      if (Intro.Default == LCD_ByCopy && C->Kind != LCK_StarThis)
+        Diag(C->Loc, !getLangOpts().CPlusPlus2a
+                         ? diag::ext_equals_this_lambda_capture_cxx2a
+                         : diag::warn_cxx17_compat_equals_this_lambda_capture);
 
       // C++11 [expr.prim.lambda]p12:
       //   If this is captured by a local lambda expression, its nearest

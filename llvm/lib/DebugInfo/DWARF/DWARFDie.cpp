@@ -106,12 +106,12 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
 
   DWARFUnit *U = Die.getDwarfUnit();
   DWARFFormValue formValue(Form);
-  
+
   if (!formValue.extractValue(U->getDebugInfoExtractor(), OffsetPtr, U))
     return;
-  
+
   OS << "\t(";
-  
+
   StringRef Name;
   std::string File;
   auto Color = syntax::Enumerator;
@@ -124,14 +124,14 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
       }
   } else if (Optional<uint64_t> Val = formValue.getAsUnsignedConstant())
     Name = AttributeValueString(Attr, *Val);
-  
+
   if (!Name.empty())
     WithColor(OS, Color) << Name;
   else if (Attr == DW_AT_decl_line || Attr == DW_AT_call_line)
     OS << *formValue.getAsUnsignedConstant();
   else
-    formValue.dump(OS);
-  
+    formValue.dump(OS, DumpOpts);
+
   // We have dumped the attribute raw value. For some attributes
   // having both the raw value and the pretty-printed value is
   // interesting. These attributes are handled below.
@@ -328,11 +328,11 @@ void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth, unsigned Indent,
   DWARFDataExtractor debug_info_data = U->getDebugInfoExtractor();
   const uint32_t Offset = getOffset();
   uint32_t offset = Offset;
-  
+
   if (debug_info_data.isValidOffset(offset)) {
     uint32_t abbrCode = debug_info_data.getULEB128(&offset);
     WithColor(OS, syntax::Address).get() << format("\n0x%8.8x: ", Offset);
-    
+
     if (abbrCode) {
       auto AbbrevDecl = getAbbreviationDeclarationPtr();
       if (AbbrevDecl) {
@@ -359,7 +359,7 @@ void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth, unsigned Indent,
           dumpAttribute(OS, *this, &offset, AttrSpec.Attr, AttrSpec.Form,
                         Indent, DumpOpts);
         }
-        
+
         DWARFDie child = getFirstChild();
         if (RecurseDepth > 0 && child) {
           while (child) {

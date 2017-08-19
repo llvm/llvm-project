@@ -2196,6 +2196,17 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
     if (Tmp == 1) return 1;  // Early out.
     return std::min(Tmp, Tmp2)-1;
 
+  case Instruction::Mul: {
+    // The output of the Mul can be at most twice the valid bits in the inputs.
+    unsigned SignBitsOp0 = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+    if (SignBitsOp0 == 1) return 1;  // Early out.
+    unsigned SignBitsOp1 = ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
+    if (SignBitsOp1 == 1) return 1;
+    unsigned OutValidBits =
+        (TyBits - SignBitsOp0 + 1) + (TyBits - SignBitsOp1 + 1);
+    return OutValidBits > TyBits ? 1 : TyBits - OutValidBits + 1;
+  }
+
   case Instruction::PHI: {
     const PHINode *PN = cast<PHINode>(U);
     unsigned NumIncomingValues = PN->getNumIncomingValues();
