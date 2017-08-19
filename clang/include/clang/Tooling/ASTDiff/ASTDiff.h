@@ -111,10 +111,6 @@ struct ComparisonOptions {
   /// mapping is computed, unless the size of either subtrees exceeds this.
   int MaxSize = 100;
 
-  /// If this is set to true, nodes that have parents that must not be matched
-  /// (see NodeComparison) will be allowed to be matched.
-  bool EnableMatchingWithUnmatchableParents = false;
-
   /// Returns false if the nodes should never be matched.
   bool isMatchingAllowed(const Node &N1, const Node &N2) const {
     return N1.getType().isSame(N2.getType());

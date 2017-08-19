@@ -1,41 +1,5 @@
-// RUN: %clang_cc1 -E %s > %t.src.cpp
-// RUN: %clang_cc1 -E %s > %t.dst.cpp -DDEST
-// RUN: clang-diff -dump-matches %t.src.cpp %t.dst.cpp -- | FileCheck %s
+// RUN: clang-diff -dump-matches %S/Inputs/clang-diff-basic-src.cpp %s -- | FileCheck %s
 
-#ifndef DEST
-namespace src {
-
-void foo() {
-  int x = 321;
-}
-
-void main() { foo(); };
-
-const char *a = "foo";
-
-typedef unsigned int nat;
-
-int p = 1 * 2 * 3 * 4;
-int squared = p * p;
-
-class X {
-  const char *foo(int i) {
-    if (i == 0)
-      return "foo";
-    return 0;
-  }
-
-public:
-  X(){};
-
-  int id(int i) { return i; }
-};
-}
-
-void m() { int x = 0 + 0 + 0; }
-int um = 1 + 2 + 3;
-
-#else
 // CHECK: Match TranslationUnitDecl{{.*}} to TranslationUnitDecl
 // CHECK: Match NamespaceDecl: src{{.*}} to NamespaceDecl: dst
 namespace dst {
@@ -78,11 +42,16 @@ class X {
 };
 }
 
-// CHECK: Move DeclStmt{{.*}} into CompoundStmt
+// CHECK: Move CompoundStmt{{.*}} into CompoundStmt
 void m() { { int x = 0 + 0 + 0; } }
 // CHECK: Update and Move IntegerLiteral: 7{{.*}} into BinaryOperator: +({{.*}}) at 1
 int um = 1 + 7;
-#endif
+
+namespace {
+// match with parents of different type
+// CHECK: Match FunctionDecl: f1{{.*}} to FunctionDecl: f1
+void f1() {{ (void) __func__;;; }}
+}
 
 // CHECK: Delete AccessSpecDecl: public
 // CHECK: Delete CXXMethodDecl

@@ -121,21 +121,26 @@ static void expandConstantExpr(ConstantExpr *Cur, PollyIRBuilder &Builder,
                                Instruction *Parent, int index,
                                SmallPtrSet<Instruction *, 4> &Expands) {
   assert(Cur && "invalid constant expression passed");
-
   Instruction *I = Cur->getAsInstruction();
+  assert(I && "unable to convert ConstantExpr to Instruction");
+
+  DEBUG(dbgs() << "Expanding ConstantExpression: " << *Cur
+               << " | in Instruction: " << *I << "\n";);
+
+  // Invalidate `Cur` so that no one after this point uses `Cur`. Rather,
+  // they should mutate `I`.
+  Cur = nullptr;
+
   Expands.insert(I);
   Parent->setOperand(index, I);
 
-  assert(I && "unable to convert ConstantExpr to Instruction");
   // The things that `Parent` uses (its operands) should be created
   // before `Parent`.
   Builder.SetInsertPoint(Parent);
   Builder.Insert(I);
 
-  DEBUG(dbgs() << "Expanding ConstantExpression: " << *Cur
-               << " | in Instruction: " << *I << "\n";);
-  for (unsigned i = 0; i < Cur->getNumOperands(); i++) {
-    Value *Op = Cur->getOperand(i);
+  for (unsigned i = 0; i < I->getNumOperands(); i++) {
+    Value *Op = I->getOperand(i);
     assert(isa<Constant>(Op) && "constant must have a constant operand");
 
     if (ConstantExpr *CExprOp = dyn_cast<ConstantExpr>(Op))
