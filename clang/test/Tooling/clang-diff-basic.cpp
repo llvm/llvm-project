@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -E %s > %t.src.cpp
 // RUN: %clang_cc1 -E %s > %t.dst.cpp -DDEST
-// RUN: clang-diff %t.src.cpp %t.dst.cpp -- | FileCheck %s
+// RUN: clang-diff -dump-matches %t.src.cpp %t.dst.cpp -- | FileCheck %s
 
 #ifndef DEST
 namespace src {
