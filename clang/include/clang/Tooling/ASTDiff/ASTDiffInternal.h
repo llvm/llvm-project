@@ -36,6 +36,8 @@ public:
   operator int() const { return Id; }
   NodeId &operator++() { return ++Id, *this; }
   NodeId &operator--() { return --Id, *this; }
+  // Support defining iterators on NodeId.
+  NodeId &operator*() { return *this; }
 
   bool isValid() const { return Id != InvalidNodeId; }
   bool isInvalid() const { return Id == InvalidNodeId; }

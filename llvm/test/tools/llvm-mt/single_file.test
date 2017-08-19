@@ -4,7 +4,7 @@ UNSUPPORTED: windows
 RUN: llvm-mt /manifest %p/Inputs/test_manifest.manifest /out:%t
 RUN: FileCheck %s --input-file=%t
 
-CHECK:      <?xml version="1.0"?>
+CHECK:      <?xml version="1.0" encoding="UTF-8"?>
 CHECK-NEXT: <assembly xmlns="urn:schemas-microsoft-com:asm.v1">
 CHECK-NEXT:   <trustInfo>
 CHECK-NEXT:     <security>

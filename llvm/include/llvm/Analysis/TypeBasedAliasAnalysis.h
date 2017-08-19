@@ -6,21 +6,27 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 /// This is the interface for a metadata-based TBAA. See the source file for
 /// details on the algorithm.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_TYPEBASEDALIASANALYSIS_H
 #define LLVM_ANALYSIS_TYPEBASEDALIASANALYSIS_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Metadata.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include <memory>
 
 namespace llvm {
+
+class Function;
+class MDNode;
+class MemoryLocation;
 
 /// A simple AA result that uses TBAA metadata to answer queries.
 class TypeBasedAAResult : public AAResultBase<TypeBasedAAResult> {
@@ -50,10 +56,11 @@ private:
 /// Analysis pass providing a never-invalidated alias analysis result.
 class TypeBasedAA : public AnalysisInfoMixin<TypeBasedAA> {
   friend AnalysisInfoMixin<TypeBasedAA>;
+
   static AnalysisKey Key;
 
 public:
-  typedef TypeBasedAAResult Result;
+  using Result = TypeBasedAAResult;
 
   TypeBasedAAResult run(Function &F, FunctionAnalysisManager &AM);
 };
@@ -81,6 +88,7 @@ public:
 // type-based alias analysis.
 //
 ImmutablePass *createTypeBasedAAWrapperPass();
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_ANALYSIS_TYPEBASEDALIASANALYSIS_H
