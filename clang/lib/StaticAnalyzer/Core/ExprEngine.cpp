@@ -365,6 +365,7 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
       ProcessImplicitDtor(E.castAs<CFGImplicitDtor>(), Pred);
       return;
     case CFGElement::LifetimeEnds:
+    case CFGElement::LoopExit:
       return;
   }
 }
@@ -1504,7 +1505,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
   if (AMgr.options.shouldUnrollLoops()) {
     const CFGBlock *ActualBlock = nodeBuilder.getContext().getBlock();
     const Stmt *Term = ActualBlock->getTerminator();
-    if (Term && shouldCompletelyUnroll(Term, AMgr.getASTContext())) {
+    if (Term && shouldCompletelyUnroll(Term, AMgr.getASTContext(), Pred)) {
       ProgramStateRef UnrolledState = markLoopAsUnrolled(
               Term, Pred->getState(),
               cast<FunctionDecl>(Pred->getStackFrame()->getDecl()));

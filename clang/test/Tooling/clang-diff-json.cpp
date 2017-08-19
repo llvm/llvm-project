@@ -1,11 +1,11 @@
-// RUN: clang-diff -ast-dump %s -- \
+// RUN: clang-diff -ast-dump-json %s -- \
 // RUN: | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 // RUN: | FileCheck %s
 
-// CHECK: "begin": 294,
+// CHECK: "begin": 299,
 // CHECK: "type": "CXXRecordDecl",
 // CHECK: "type": "FieldDecl",
-// CHECK: "end": 314,
+// CHECK: "end": 319,
 class A {
   int x;
 };
