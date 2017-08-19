@@ -63,9 +63,9 @@ llvm::Optional<MemoryBufferRef> readFile(StringRef Path);
 class InputFile {
 public:
   enum Kind {
-    ObjectKind,
+    ObjKind,
     SharedKind,
-    LazyObjectKind,
+    LazyObjKind,
     ArchiveKind,
     BitcodeKind,
     BinaryKind,
@@ -79,14 +79,14 @@ public:
   // Returns sections. It is a runtime error to call this function
   // on files that don't have the notion of sections.
   ArrayRef<InputSectionBase *> getSections() const {
-    assert(FileKind == ObjectKind || FileKind == BinaryKind);
+    assert(FileKind == ObjKind || FileKind == BinaryKind);
     return Sections;
   }
 
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
   ArrayRef<SymbolBody *> getSymbols() {
-    assert(FileKind == ObjectKind || FileKind == BitcodeKind ||
+    assert(FileKind == ObjKind || FileKind == BitcodeKind ||
            FileKind == ArchiveKind);
     return Symbols;
   }
@@ -124,7 +124,7 @@ public:
   ELFFileBase(Kind K, MemoryBufferRef M);
   static bool classof(const InputFile *F) {
     Kind K = F->kind();
-    return K == ObjectKind || K == SharedKind;
+    return K == ObjKind || K == SharedKind;
   }
 
   llvm::object::ELFFile<ELFT> getObj() const {
@@ -160,9 +160,7 @@ template <class ELFT> class ObjFile : public ELFFileBase<ELFT> {
   ArrayRef<Elf_Word> getShtGroupEntries(const Elf_Shdr &Sec);
 
 public:
-  static bool classof(const InputFile *F) {
-    return F->kind() == Base::ObjectKind;
-  }
+  static bool classof(const InputFile *F) { return F->kind() == Base::ObjKind; }
 
   static std::vector<ObjFile<ELFT> *> Instances;
 
@@ -236,13 +234,11 @@ class LazyObjFile : public InputFile {
 public:
   LazyObjFile(MemoryBufferRef M, StringRef ArchiveName,
               uint64_t OffsetInArchive)
-      : InputFile(LazyObjectKind, M), OffsetInArchive(OffsetInArchive) {
+      : InputFile(LazyObjKind, M), OffsetInArchive(OffsetInArchive) {
     this->ArchiveName = ArchiveName;
   }
 
-  static bool classof(const InputFile *F) {
-    return F->kind() == LazyObjectKind;
-  }
+  static bool classof(const InputFile *F) { return F->kind() == LazyObjKind; }
 
   template <class ELFT> void parse();
   MemoryBufferRef getBuffer();

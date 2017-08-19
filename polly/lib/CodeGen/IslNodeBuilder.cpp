@@ -229,6 +229,12 @@ isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
   }
 
   for (auto &Access : *Stmt) {
+    if (References.ParamSpace) {
+      isl::space ParamSpace = Access->getLatestAccessRelation().get_space();
+      (*References.ParamSpace) =
+          References.ParamSpace->align_params(ParamSpace);
+    }
+
     if (Access->isLatestArrayKind()) {
       auto *BasePtr = Access->getScopArrayInfo()->getBasePtr();
       if (Instruction *OpInst = dyn_cast<Instruction>(BasePtr))
@@ -297,7 +303,7 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
 
   SetVector<const SCEV *> SCEVs;
   struct SubtreeReferences References = {
-      LI, SE, S, ValueMap, Values, SCEVs, getBlockGenerator()};
+      LI, SE, S, ValueMap, Values, SCEVs, getBlockGenerator(), nullptr};
 
   for (const auto &I : IDToValue)
     Values.insert(I.second);
@@ -1554,8 +1560,12 @@ Value *IslNodeBuilder::createRTC(isl_ast_expr *Condition) {
     RuntimeDebugBuilder::createCPUPrinter(
         Builder,
         "F: " + F->getName().str() + " R: " + S.getRegion().getNameStr() +
-            " __RTC: ",
-        RTC, " Overflow: ", OverflowHappened, "\n");
+            "RTC: ",
+        RTC, " Overflow: ", OverflowHappened,
+        "\n"
+        "  (0 failed, -1 succeeded)\n"
+        "  (if one or both are 0 falling back to original code, if both are -1 "
+        "executing Polly code)\n");
   }
 
   RTC = Builder.CreateAnd(RTC, OverflowHappened, "polly.rtc.result");

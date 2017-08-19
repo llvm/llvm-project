@@ -436,7 +436,8 @@ private:
   ///            in the scop, nor do they immediately surroung the Scop.
   ///            See [Code generation of induction variables of loops outside
   ///            Scops]
-  std::tuple<SetVector<Value *>, SetVector<Function *>, SetVector<const Loop *>>
+  std::tuple<SetVector<Value *>, SetVector<Function *>, SetVector<const Loop *>,
+             isl::space>
   getReferencesInKernel(ppcg_kernel *Kernel);
 
   /// Compute the sizes of the execution grid for a given kernel.
@@ -1434,13 +1435,16 @@ getFunctionsFromRawSubtreeValues(SetVector<Value *> RawSubtreeValues,
   return SubtreeFunctions;
 }
 
-std::tuple<SetVector<Value *>, SetVector<Function *>, SetVector<const Loop *>>
+std::tuple<SetVector<Value *>, SetVector<Function *>, SetVector<const Loop *>,
+           isl::space>
 GPUNodeBuilder::getReferencesInKernel(ppcg_kernel *Kernel) {
   SetVector<Value *> SubtreeValues;
   SetVector<const SCEV *> SCEVs;
   SetVector<const Loop *> Loops;
+  isl::space ParamSpace = isl::space(S.getIslCtx(), 0, 0).params();
   SubtreeReferences References = {
-      LI, SE, S, ValueMap, SubtreeValues, SCEVs, getBlockGenerator()};
+      LI,         SE, S, ValueMap, SubtreeValues, SCEVs, getBlockGenerator(),
+      &ParamSpace};
 
   for (const auto &I : IDToValue)
     SubtreeValues.insert(I.second);
@@ -1507,7 +1511,8 @@ GPUNodeBuilder::getReferencesInKernel(ppcg_kernel *Kernel) {
     else
       ReplacedValues.insert(It->second);
   }
-  return std::make_tuple(ReplacedValues, ValidSubtreeFunctions, Loops);
+  return std::make_tuple(ReplacedValues, ValidSubtreeFunctions, Loops,
+                         ParamSpace);
 }
 
 void GPUNodeBuilder::clearDominators(Function *F) {
@@ -1751,8 +1756,15 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   SetVector<Value *> SubtreeValues;
   SetVector<Function *> SubtreeFunctions;
   SetVector<const Loop *> Loops;
-  std::tie(SubtreeValues, SubtreeFunctions, Loops) =
+  isl::space ParamSpace;
+  std::tie(SubtreeValues, SubtreeFunctions, Loops, ParamSpace) =
       getReferencesInKernel(Kernel);
+
+  // Add parameters that appear only in the access function to the kernel
+  // space. This is important to make sure that all isl_ids are passed as
+  // parameters to the kernel, even though we may not have all parameters
+  // in the context to improve compile time.
+  Kernel->space = isl_space_align_params(Kernel->space, ParamSpace.release());
 
   assert(Kernel->tree && "Device AST of kernel node is empty");
 
