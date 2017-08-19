@@ -37,6 +37,10 @@ static cl::opt<bool>
     PrintMatches("dump-matches", cl::desc("Print the matched nodes."),
                  cl::init(false), cl::cat(ClangDiffCategory));
 
+static cl::opt<bool> HtmlDiff("html",
+                              cl::desc("Output a side-by-side diff in HTML."),
+                              cl::init(false), cl::cat(ClangDiffCategory));
+
 static cl::opt<std::string> SourcePath(cl::Positional, cl::desc("<source>"),
                                        cl::Required,
                                        cl::cat(ClangDiffCategory));
@@ -105,8 +109,164 @@ getAST(const std::unique_ptr<CompilationDatabase> &CommonCompilations,
 
 static char hexdigit(int N) { return N &= 0xf, N + (N < 10 ? '0' : 'a' - 10); }
 
+static const char HtmlDiffHeader[] = R"(
+<html>
+<head>
+<meta charset='utf-8'/>
+<style>
+span.d { color: red; }
+span.u { color: #cc00cc; }
+span.i { color: green; }
+span.m { font-weight: bold; }
+span   { font-weight: normal; color: black; }
+div.code {
+  width: 48%;
+  height: 98%;
+  overflow: scroll;
+  float: left;
+  padding: 0 0 0.5% 0.5%;
+  border: solid 2px LightGrey;
+  border-radius: 5px;
+}
+</style>
+</head>
+<script type='text/javascript'>
+highlightStack = []
+function clearHighlight() {
+  while (highlightStack.length) {
+    let [l, r] = highlightStack.pop()
+    document.getElementById(l).style.backgroundColor = 'white'
+    document.getElementById(r).style.backgroundColor = 'white'
+  }
+}
+function highlight(event) {
+  id = event.target['id']
+  doHighlight(id)
+}
+function doHighlight(id) {
+  clearHighlight()
+  source = document.getElementById(id)
+  if (!source.attributes['tid'])
+    return
+  tid = source.attributes['tid'].value
+  target = document.getElementById(tid)
+  if (!target || source.parentElement && source.parentElement.classList.contains('code'))
+    return
+  source.style.backgroundColor = target.style.backgroundColor = 'lightgrey'
+  highlightStack.push([id, tid])
+  source.scrollIntoView()
+  target.scrollIntoView()
+  location.hash = '#' + id
+}
+function scrollToBoth() {
+  doHighlight(location.hash.substr(1))
+}
+window.onload = scrollToBoth
+</script>
+<body>
+<div onclick='highlight(event)'>
+)";
+
+static void printHtml(raw_ostream &OS, char C) {
+  switch (C) {
+  case '&':
+    OS << "&amp;";
+    break;
+  case '<':
+    OS << "&lt;";
+    break;
+  case '>':
+    OS << "&gt;";
+    break;
+  case '\'':
+    OS << "&#x27;";
+    break;
+  case '"':
+    OS << "&quot;";
+    break;
+  default:
+    OS << C;
+  }
+}
+
+static void printHtml(raw_ostream &OS, const StringRef Str) {
+  for (char C : Str)
+    printHtml(OS, C);
+}
+
+static std::string getChangeKindAbbr(diff::ChangeKind Kind) {
+  switch (Kind) {
+  case diff::None:
+    return "";
+  case diff::Delete:
+    return "d";
+  case diff::Update:
+    return "u";
+  case diff::Insert:
+    return "i";
+  case diff::Move:
+    return "m";
+  case diff::UpdateMove:
+    return "u m";
+  }
+  llvm_unreachable("Invalid enumeration value.");
+}
+
+static unsigned printHtmlForNode(raw_ostream &OS, const diff::ASTDiff &Diff,
+                                 diff::SyntaxTree &Tree, bool IsLeft,
+                                 diff::NodeId Id, unsigned Offset) {
+  const diff::Node &Node = Tree.getNode(Id);
+  char MyTag, OtherTag;
+  diff::NodeId LeftId, RightId;
+  diff::NodeId TargetId = Diff.getMapped(Tree, Id);
+  if (IsLeft) {
+    MyTag = 'L';
+    OtherTag = 'R';
+    LeftId = Id;
+    RightId = TargetId;
+  } else {
+    MyTag = 'R';
+    OtherTag = 'L';
+    LeftId = TargetId;
+    RightId = Id;
+  }
+  unsigned Begin, End;
+  std::tie(Begin, End) = Tree.getSourceRangeOffsets(Node);
+  const SourceManager &SrcMgr = Tree.getASTContext().getSourceManager();
+  auto Code = SrcMgr.getBuffer(SrcMgr.getMainFileID())->getBuffer();
+  for (; Offset < Begin; ++Offset)
+    printHtml(OS, Code[Offset]);
+  OS << "<span id='" << MyTag << Id << "' "
+     << "tid='" << OtherTag << TargetId << "' ";
+  OS << "title='";
+  printHtml(OS, Node.getTypeLabel());
+  OS << "\n" << LeftId << " -> " << RightId;
+  std::string Value = Tree.getNodeValue(Node);
+  if (!Value.empty()) {
+    OS << "\n";
+    printHtml(OS, Value);
+  }
+  OS << "'";
+  if (Node.Change != diff::None)
+    OS << " class='" << getChangeKindAbbr(Node.Change) << "'";
+  OS << ">";
+
+  for (diff::NodeId Child : Node.Children)
+    Offset = printHtmlForNode(OS, Diff, Tree, IsLeft, Child, Offset);
+
+  for (; Offset < End; ++Offset)
+    printHtml(OS, Code[Offset]);
+  if (Id == Tree.getRootId()) {
+    End = Code.size();
+    for (; Offset < End; ++Offset)
+      printHtml(OS, Code[Offset]);
+  }
+  OS << "</span>";
+  return Offset;
+}
+
 static void printJsonString(raw_ostream &OS, const StringRef Str) {
-  for (char C : Str) {
+  for (signed char C : Str) {
     switch (C) {
     case '"':
       OS << R"(\")";
@@ -268,6 +428,19 @@ int main(int argc, const char **argv) {
   diff::SyntaxTree SrcTree(Src->getASTContext());
   diff::SyntaxTree DstTree(Dst->getASTContext());
   diff::ASTDiff Diff(SrcTree, DstTree, Options);
+
+  if (HtmlDiff) {
+    llvm::outs() << HtmlDiffHeader << "<pre>";
+    llvm::outs() << "<div id='L' class='code'>";
+    printHtmlForNode(llvm::outs(), Diff, SrcTree, true, SrcTree.getRootId(), 0);
+    llvm::outs() << "</div>";
+    llvm::outs() << "<div id='R' class='code'>";
+    printHtmlForNode(llvm::outs(), Diff, DstTree, false, DstTree.getRootId(),
+                     0);
+    llvm::outs() << "</div>";
+    llvm::outs() << "</pre></div></body></html>\n";
+    return 0;
+  }
 
   for (diff::NodeId Dst : DstTree) {
     diff::NodeId Src = Diff.getMapped(DstTree, Dst);

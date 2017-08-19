@@ -1,4 +1,0 @@
-REQUIRE: windows
-RUN: wmic os get version | FileCheck %s
-CHECK: Version
-CHECK-NOT: 10

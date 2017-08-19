@@ -48,13 +48,13 @@
 
 
 ; IR:       [[DEVPTR:%.*]] = call i8* @polly_getDevicePtr(i8* %p_dev_array_MemRef_A)
-; IR-NEXT:  [[SLOT:%.*]] = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 0
+; IR-NEXT:  [[SLOT:%.*]] = getelementptr [1 x i8*], [1 x i8*]* %polly_launch_0_params, i64 0, i64 0
 ; IR-NEXT:  store i8* [[DEVPTR]], i8** %polly_launch_0_param_0
 ; IR-NEXT:  [[DATA:%.*]] = bitcast i8** %polly_launch_0_param_0 to i8*
 ; IR-NEXT:  store i8* [[DATA]], i8** [[SLOT]]
 
 ; IR:       [[DEVPTR:%.*]] = call i8* @polly_getDevicePtr(i8* %p_dev_array_MemRef_B)
-; IR-NEXT:  [[SLOT:%.*]] = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_1_params, i64 0, i64 0
+; IR-NEXT:  [[SLOT:%.*]] = getelementptr [1 x i8*], [1 x i8*]* %polly_launch_1_params, i64 0, i64 0
 ; IR-NEXT:  store i8* [[DEVPTR]], i8** %polly_launch_1_param_0
 ; IR-NEXT:  [[DATA:%.*]] = bitcast i8** %polly_launch_1_param_0 to i8*
 ; IR-NEXT:  store i8* [[DATA]], i8** [[SLOT]]
