@@ -704,3 +704,20 @@ namespace PR19579 {
     };
   }
 }
+
+namespace NoCrashOnEmptyBaseOptimization {
+  struct NonEmptyBase {
+    int X;
+    explicit NonEmptyBase(int X) : X(X) {}
+  };
+
+  struct EmptyBase {};
+
+  struct S : NonEmptyBase, EmptyBase {
+    S() : NonEmptyBase(0), EmptyBase() {}
+  };
+
+  void testSCtorNoCrash() {
+    S s;
+  }
+}

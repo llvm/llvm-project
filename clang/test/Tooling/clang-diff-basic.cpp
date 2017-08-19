@@ -1,7 +1,6 @@
-// RUN: mkdir -p %t
-// RUN: %clang_cc1 -E %s > %t/src.cpp
-// RUN: %clang_cc1 -E %s > %t/dst.cpp -DDEST
-// RUN: clang-diff -no-compilation-database %t/src.cpp %t/dst.cpp | FileCheck %s
+// RUN: %clang_cc1 -E %s > %t.src.cpp
+// RUN: %clang_cc1 -E %s > %t.dst.cpp -DDEST
+// RUN: clang-diff %t.src.cpp %t.dst.cpp -- | FileCheck %s
 
 #ifndef DEST
 namespace src {
@@ -32,6 +31,10 @@ public:
   int id(int i) { return i; }
 };
 }
+
+void m() { int x = 0 + 0 + 0; }
+int um = 1 + 2 + 3;
+
 #else
 // CHECK: Match TranslationUnitDecl{{.*}} to TranslationUnitDecl
 // CHECK: Match NamespaceDecl: src{{.*}} to NamespaceDecl: dst
@@ -55,8 +58,8 @@ const char *b = "f" "o" "o";
 typedef unsigned nat;
 
 // CHECK: Match VarDecl: p(int){{.*}} to VarDecl: prod(double)
-// CHECK: Match BinaryOperator: *{{.*}} to BinaryOperator: *
 // CHECK: Update VarDecl: p(int){{.*}} to prod(double)
+// CHECK: Match BinaryOperator: *{{.*}} to BinaryOperator: *
 double prod = 1 * 2 * 10;
 // CHECK: Update DeclRefExpr
 int squared = prod * prod;
@@ -71,9 +74,15 @@ class X {
       return "foo";
     return 0;
   }
-  // CHECK: Delete AccessSpecDecl: public
-  X(){};
-  // CHECK: Delete CXXMethodDecl
+  X(){}
 };
 }
+
+// CHECK: Move DeclStmt{{.*}} into CompoundStmt
+void m() { { int x = 0 + 0 + 0; } }
+// CHECK: Update and Move IntegerLiteral: 7{{.*}} into BinaryOperator: +({{.*}}) at 1
+int um = 1 + 7;
 #endif
+
+// CHECK: Delete AccessSpecDecl: public
+// CHECK: Delete CXXMethodDecl
