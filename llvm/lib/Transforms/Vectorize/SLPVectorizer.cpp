@@ -2349,6 +2349,7 @@ void BoUpSLP::reorderAltShuffleOperands(unsigned Opcode, ArrayRef<Value *> VL,
                                         SmallVectorImpl<Value *> &Right) {
   // Push left and right operands of binary operation into Left and Right
   unsigned AltOpcode = getAltOpcode(Opcode);
+  (void)AltOpcode;
   for (Value *V : VL) {
     auto *I = cast<Instruction>(V);
     assert(sameOpcodeOrAlt(Opcode, AltOpcode, I->getOpcode()) &&
