@@ -357,6 +357,10 @@ bool ARMSubtarget::enableMachineScheduler() const {
 
 // This overrides the PostRAScheduler bit in the SchedModel for any CPU.
 bool ARMSubtarget::enablePostRAScheduler() const {
+  if (usePostRAScheduler())
+    return true;
+  if (SchedModel.PostRAScheduler)
+    return true;
   // No need for PostRA scheduling on subtargets where we use the
   // MachineScheduler.
   if (useMachineScheduler())

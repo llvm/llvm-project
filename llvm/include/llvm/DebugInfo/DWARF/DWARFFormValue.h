@@ -14,6 +14,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include <cstdint>
 
@@ -101,7 +102,7 @@ public:
 
   bool isFormClass(FormClass FC) const;
   const DWARFUnit *getUnit() const { return U; }
-  void dump(raw_ostream &OS) const;
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts = DIDumpOptions()) const;
 
   /// Extracts a value in \p Data at offset \p *OffsetPtr.
   ///

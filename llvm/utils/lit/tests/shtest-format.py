@@ -1,3 +1,4 @@
+# UNSUPPORTED: windows
 # Check the various features of the ShTest format.
 #
 # RUN: not %{lit} -j 1 -v %{inputs}/shtest-format > %t.out

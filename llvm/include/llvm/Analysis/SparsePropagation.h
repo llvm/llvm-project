@@ -17,22 +17,22 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/IR/BasicBlock.h"
 #include <set>
+#include <utility>
 #include <vector>
 
 namespace llvm {
-class Value;
-class Constant;
+
 class Argument;
+class BasicBlock;
+class Constant;
+class Function;
 class Instruction;
 class PHINode;
-class TerminatorInst;
-class BasicBlock;
-class Function;
-class SparseSolver;
 class raw_ostream;
-
+class SparseSolver;
+class TerminatorInst;
+class Value;
 template <typename T> class SmallVectorImpl;
 
 /// AbstractLatticeFunction - This class is implemented by the dataflow instance
@@ -44,7 +44,7 @@ template <typename T> class SmallVectorImpl;
 ///
 class AbstractLatticeFunction {
 public:
-  typedef void *LatticeVal;
+  using LatticeVal = void *;
 
 private:
   LatticeVal UndefVal, OverdefinedVal, UntrackedVal;
@@ -56,6 +56,7 @@ public:
     OverdefinedVal = overdefinedVal;
     UntrackedVal = untrackedVal;
   }
+
   virtual ~AbstractLatticeFunction();
 
   LatticeVal getUndefVal()       const { return UndefVal; }
@@ -109,9 +110,8 @@ public:
 
 /// SparseSolver - This class is a general purpose solver for Sparse Conditional
 /// Propagation with a programmable lattice function.
-///
 class SparseSolver {
-  typedef AbstractLatticeFunction::LatticeVal LatticeVal;
+  using LatticeVal = AbstractLatticeFunction::LatticeVal;
 
   /// LatticeFunc - This is the object that knows the lattice and how to do
   /// compute transfer functions.
@@ -126,19 +126,17 @@ class SparseSolver {
 
   /// KnownFeasibleEdges - Entries in this set are edges which have already had
   /// PHI nodes retriggered.
-  typedef std::pair<BasicBlock*,BasicBlock*> Edge;
+  using Edge = std::pair<BasicBlock *, BasicBlock *>;
   std::set<Edge> KnownFeasibleEdges;
-
-  SparseSolver(const SparseSolver&) = delete;
-  void operator=(const SparseSolver&) = delete;
 
 public:
   explicit SparseSolver(AbstractLatticeFunction *Lattice)
       : LatticeFunc(Lattice) {}
+  SparseSolver(const SparseSolver &) = delete;
+  SparseSolver &operator=(const SparseSolver &) = delete;
   ~SparseSolver() { delete LatticeFunc; }
 
   /// Solve - Solve for constants and executable blocks.
-  ///
   void Solve(Function &F);
 
   void Print(Function &F, raw_ostream &OS) const;
@@ -156,7 +154,6 @@ public:
   /// map yet.   This function is necessary because not all values should start
   /// out in the underdefined state... Arguments should be overdefined, and
   /// constants should be marked as constants.
-  ///
   LatticeVal getOrInitValueState(Value *V);
 
   /// isEdgeFeasible - Return true if the control flow edge from the 'From'
