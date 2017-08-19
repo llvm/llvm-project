@@ -93,6 +93,7 @@ public:
   template <class T>
   SyntaxTree(T *Node, const ASTContext &AST)
       : TreeImpl(llvm::make_unique<Impl>(this, Node, AST)) {}
+  SyntaxTree(SyntaxTree &&Other) = default;
   ~SyntaxTree();
 
   const Node &getNode(NodeId Id) const;

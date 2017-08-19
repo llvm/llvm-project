@@ -1,0 +1,67 @@
+; RUN: llvm-rc /V %p/Inputs/parser-correct-everything.rc | FileCheck %s --check-prefix PGOOD
+
+; PGOOD:  Icon (meh): "hello.bmp"
+; PGOOD-NEXT:  Icon (Icon): "Icon"
+; PGOOD-NEXT:  Language: 5, Sublanguage: 12
+; PGOOD-NEXT:  StringTable:
+; PGOOD-NEXT:    Option: Language: 1, Sublanguage: 1
+; PGOOD-NEXT:    Option: Characteristics: 500
+; PGOOD-NEXT:    Option: Language: 3, Sublanguage: 4
+; PGOOD-NEXT:    Option: Version: 14
+; PGOOD-NEXT:    1 => "hello"
+; PGOOD-NEXT:    2 => "world"
+; PGOOD-NEXT:  StringTable:
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-stringtable-no-string.rc 2> %t2
+; RUN: FileCheck %s --check-prefix PSTRINGTABLE1 --input-file %t2
+
+; PSTRINGTABLE1:  llvm-rc: Error parsing file: expected string, got }
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-stringtable-weird-option.rc 2> %t3
+; RUN: FileCheck %s --check-prefix PSTRINGTABLE2 --input-file %t3
+
+; PSTRINGTABLE2:  llvm-rc: Error parsing file: expected optional statement type, BEGIN or '{', got NONSENSETYPE
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-eof.rc 2> %t4
+; RUN: FileCheck %s --check-prefix PEOF --input-file %t4
+
+; PEOF:  llvm-rc: Error parsing file: expected integer, got <EOF>
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-no-characteristics-arg.rc 2> %t5
+; RUN: FileCheck %s --check-prefix PCHARACTERISTICS1 --input-file %t5
+
+; PCHARACTERISTICS1:  llvm-rc: Error parsing file: expected integer, got BEGIN
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-nonsense-token.rc 2> %t6
+; RUN: FileCheck %s --check-prefix PNONSENSE1 --input-file %t6
+
+; PNONSENSE1:  llvm-rc: Error parsing file: expected int or identifier, got &
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-nonsense-type.rc 2> %t7
+; RUN: FileCheck %s --check-prefix PNONSENSE2 --input-file %t7
+
+; PNONSENSE2:  llvm-rc: Error parsing file: expected resource type, got WORLD
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-nonsense-type-eof.rc 2> %t8
+; RUN: FileCheck %s --check-prefix PNONSENSE3 --input-file %t8
+
+; PNONSENSE3:  llvm-rc: Error parsing file: expected int or identifier, got <EOF>
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-language-no-comma.rc 2> %t9
+; RUN: FileCheck %s --check-prefix PLANGUAGE1 --input-file %t9
+
+; PLANGUAGE1:  llvm-rc: Error parsing file: expected ',', got 7
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-language-too-many-commas.rc 2> %t10
+; RUN: FileCheck %s --check-prefix PLANGUAGE2 --input-file %t10
+
+; PLANGUAGE2:  llvm-rc: Error parsing file: expected integer, got ,

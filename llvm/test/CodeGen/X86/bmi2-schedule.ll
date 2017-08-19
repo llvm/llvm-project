@@ -221,3 +221,235 @@ define i64 @test_pext_i64(i64 %a0, i64 %a1, i64 *%a2) {
   ret i64 %4
 }
 declare i64 @llvm.x86.bmi.pext.64(i64, i64)
+
+define i32 @test_rorx_i32(i32 %a0, i32 %a1, i32 *%a2) {
+; GENERIC-LABEL: test_rorx_i32:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    rorxl $5, %edi, %ecx # sched: [1:0.50]
+; GENERIC-NEXT:    rorxl $5, (%rdx), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_rorx_i32:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    rorxl $5, %edi, %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    rorxl $5, (%rdx), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [1:1.00]
+;
+; ZNVER1-LABEL: test_rorx_i32:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    rorxl $5, (%rdx), %eax # sched: [5:0.50]
+; ZNVER1-NEXT:    rorxl $5, %edi, %ecx # sched: [1:0.25]
+; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
+  %1 = load i32, i32 *%a2
+  %2 = lshr i32 %a0, 5
+  %3 = shl i32 %a0, 27
+  %4 = or i32 %2, %3
+  %5 = lshr i32 %1, 5
+  %6 = shl i32 %1, 27
+  %7 = or i32 %5, %6
+  %8 = add i32 %4, %7
+  ret i32 %8
+}
+
+define i64 @test_rorx_i64(i64 %a0, i64 %a1, i64 *%a2) {
+; GENERIC-LABEL: test_rorx_i64:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    rorxq $5, %rdi, %rcx # sched: [1:0.50]
+; GENERIC-NEXT:    rorxq $5, (%rdx), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_rorx_i64:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    rorxq $5, %rdi, %rcx # sched: [1:0.50]
+; HASWELL-NEXT:    rorxq $5, (%rdx), %rax # sched: [5:0.50]
+; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [1:1.00]
+;
+; ZNVER1-LABEL: test_rorx_i64:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    rorxq $5, (%rdx), %rax # sched: [5:0.50]
+; ZNVER1-NEXT:    rorxq $5, %rdi, %rcx # sched: [1:0.25]
+; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
+  %1 = load i64, i64 *%a2
+  %2 = lshr i64 %a0, 5
+  %3 = shl i64 %a0, 59
+  %4 = or i64 %2, %3
+  %5 = lshr i64 %1, 5
+  %6 = shl i64 %1, 59
+  %7 = or i64 %5, %6
+  %8 = add i64 %4, %7
+  ret i64 %8
+}
+
+define i32 @test_sarx_i32(i32 %a0, i32 %a1, i32 *%a2) {
+; GENERIC-LABEL: test_sarx_i32:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    sarxl %esi, %edi, %ecx # sched: [1:0.50]
+; GENERIC-NEXT:    sarxl %esi, (%rdx), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_sarx_i32:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    sarxl %esi, %edi, %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    sarxl %esi, (%rdx), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [1:1.00]
+;
+; ZNVER1-LABEL: test_sarx_i32:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    sarxl %esi, (%rdx), %eax # sched: [5:0.50]
+; ZNVER1-NEXT:    sarxl %esi, %edi, %ecx # sched: [1:0.25]
+; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
+  %1 = load i32, i32 *%a2
+  %2 = ashr i32 %a0, %a1
+  %3 = ashr i32 %1, %a1
+  %4 = add i32 %2, %3
+  ret i32 %4
+}
+
+define i64 @test_sarx_i64(i64 %a0, i64 %a1, i64 *%a2) {
+; GENERIC-LABEL: test_sarx_i64:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    sarxq %rsi, %rdi, %rcx # sched: [1:0.50]
+; GENERIC-NEXT:    sarxq %rsi, (%rdx), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_sarx_i64:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    sarxq %rsi, %rdi, %rcx # sched: [1:0.50]
+; HASWELL-NEXT:    sarxq %rsi, (%rdx), %rax # sched: [5:0.50]
+; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [1:1.00]
+;
+; ZNVER1-LABEL: test_sarx_i64:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    sarxq %rsi, (%rdx), %rax # sched: [5:0.50]
+; ZNVER1-NEXT:    sarxq %rsi, %rdi, %rcx # sched: [1:0.25]
+; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
+  %1 = load i64, i64 *%a2
+  %2 = ashr i64 %a0, %a1
+  %3 = ashr i64 %1, %a1
+  %4 = add i64 %2, %3
+  ret i64 %4
+}
+
+define i32 @test_shlx_i32(i32 %a0, i32 %a1, i32 *%a2) {
+; GENERIC-LABEL: test_shlx_i32:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    shlxl %esi, %edi, %ecx # sched: [1:0.50]
+; GENERIC-NEXT:    shlxl %esi, (%rdx), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_shlx_i32:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    shlxl %esi, %edi, %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    shlxl %esi, (%rdx), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [1:1.00]
+;
+; ZNVER1-LABEL: test_shlx_i32:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    shlxl %esi, (%rdx), %eax # sched: [5:0.50]
+; ZNVER1-NEXT:    shlxl %esi, %edi, %ecx # sched: [1:0.25]
+; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
+  %1 = load i32, i32 *%a2
+  %2 = shl i32 %a0, %a1
+  %3 = shl i32 %1, %a1
+  %4 = add i32 %2, %3
+  ret i32 %4
+}
+
+define i64 @test_shlx_i64(i64 %a0, i64 %a1, i64 *%a2) {
+; GENERIC-LABEL: test_shlx_i64:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    shlxq %rsi, %rdi, %rcx # sched: [1:0.50]
+; GENERIC-NEXT:    shlxq %rsi, (%rdx), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_shlx_i64:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    shlxq %rsi, %rdi, %rcx # sched: [1:0.50]
+; HASWELL-NEXT:    shlxq %rsi, (%rdx), %rax # sched: [5:0.50]
+; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [1:1.00]
+;
+; ZNVER1-LABEL: test_shlx_i64:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    shlxq %rsi, (%rdx), %rax # sched: [5:0.50]
+; ZNVER1-NEXT:    shlxq %rsi, %rdi, %rcx # sched: [1:0.25]
+; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
+  %1 = load i64, i64 *%a2
+  %2 = shl i64 %a0, %a1
+  %3 = shl i64 %1, %a1
+  %4 = add i64 %2, %3
+  ret i64 %4
+}
+
+define i32 @test_shrx_i32(i32 %a0, i32 %a1, i32 *%a2) {
+; GENERIC-LABEL: test_shrx_i32:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    shrxl %esi, %edi, %ecx # sched: [1:0.50]
+; GENERIC-NEXT:    shrxl %esi, (%rdx), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_shrx_i32:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    shrxl %esi, %edi, %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    shrxl %esi, (%rdx), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [1:1.00]
+;
+; ZNVER1-LABEL: test_shrx_i32:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    shrxl %esi, (%rdx), %eax # sched: [5:0.50]
+; ZNVER1-NEXT:    shrxl %esi, %edi, %ecx # sched: [1:0.25]
+; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
+  %1 = load i32, i32 *%a2
+  %2 = lshr i32 %a0, %a1
+  %3 = lshr i32 %1, %a1
+  %4 = add i32 %2, %3
+  ret i32 %4
+}
+
+define i64 @test_shrx_i64(i64 %a0, i64 %a1, i64 *%a2) {
+; GENERIC-LABEL: test_shrx_i64:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    shrxq %rsi, %rdi, %rcx # sched: [1:0.50]
+; GENERIC-NEXT:    shrxq %rsi, (%rdx), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_shrx_i64:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    shrxq %rsi, %rdi, %rcx # sched: [1:0.50]
+; HASWELL-NEXT:    shrxq %rsi, (%rdx), %rax # sched: [5:0.50]
+; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; HASWELL-NEXT:    retq # sched: [1:1.00]
+;
+; ZNVER1-LABEL: test_shrx_i64:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    shrxq %rsi, (%rdx), %rax # sched: [5:0.50]
+; ZNVER1-NEXT:    shrxq %rsi, %rdi, %rcx # sched: [1:0.25]
+; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
+  %1 = load i64, i64 *%a2
+  %2 = lshr i64 %a0, %a1
+  %3 = lshr i64 %1, %a1
+  %4 = add i64 %2, %3
+  ret i64 %4
+}

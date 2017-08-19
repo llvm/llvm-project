@@ -72,6 +72,17 @@
 // CHECK-TRACE_PC_GUARD_FUNC: -fsanitize-coverage-type=1
 // CHECK-TRACE_PC_GUARD_FUNC: -fsanitize-coverage-trace-pc-guard
 
+// RUN: %clang -target x86_64-linux-gnu -fsanitize-coverage=stack-depth %s \
+// RUN:     -### 2>&1 | FileCheck %s --check-prefix=CHECK-STACK-DEPTH
+// RUN: %clang -target x86_64-linux-gnu \
+// RUN:     -fsanitize-coverage=trace-pc-guard,stack-depth %s -### 2>&1 | \
+// RUN:     FileCheck %s --check-prefix=CHECK-STACK-DEPTH-PC-GUARD
+// CHECK-STACK-DEPTH: -fsanitize-coverage-type=1
+// CHECK-STACK-DEPTH: -fsanitize-coverage-stack-depth
+// CHECK-STACK-DEPTH-PC-GUARD: -fsanitize-coverage-type=3
+// CHECK-STACK-DEPTH-PC-GUARD: -fsanitize-coverage-trace-pc-guard
+// CHECK-STACK-DEPTH-PC-GUARD: -fsanitize-coverage-stack-depth
+
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=trace-cmp,indirect-calls %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-TYPE-NECESSARY
 // CHECK-NO-TYPE-NECESSARY-NOT: error:
 // CHECK-NO-TYPE-NECESSARY: -fsanitize-coverage-indirect-calls

@@ -852,8 +852,6 @@ struct SemiNCAInfo {
     DEBUG(dbgs() << "Inserted " << BlockNamePrinter(From)
                  << " -> (prev unreachable) " << BlockNamePrinter(To) << "\n");
 
-    DEBUG(DT.print(dbgs()));
-
     // Used the discovered edges and inset discovered connecting (incoming)
     // edges.
     for (const auto &Edge : DiscoveredEdgesToReachable) {
@@ -888,7 +886,6 @@ struct SemiNCAInfo {
     SNCA.attachNewSubtree(DT, Incoming);
 
     DEBUG(dbgs() << "After adding unreachable nodes\n");
-    DEBUG(DT.print(dbgs()));
   }
 
   static void DeleteEdge(DomTreeT &DT, const BatchUpdatePtr BUI,

@@ -21,11 +21,21 @@
 #ifndef LLVM_ANALYSIS_SCALAREVOLUTION_H
 #define LLVM_ANALYSIS_SCALAREVOLUTION_H
 
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
@@ -33,30 +43,33 @@
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <memory>
+#include <utility>
 
 namespace llvm {
-class APInt;
+
 class AssumptionCache;
+class BasicBlock;
 class Constant;
 class ConstantInt;
-class DominatorTree;
-class Type;
-class ScalarEvolution;
 class DataLayout;
-class TargetLibraryInfo;
+class DominatorTree;
+class GEPOperator;
+class Instruction;
 class LLVMContext;
-class Operator;
-class SCEV;
+class raw_ostream;
+class ScalarEvolution;
 class SCEVAddRecExpr;
-class SCEVConstant;
-class SCEVExpander;
-class SCEVPredicate;
 class SCEVUnknown;
-class Function;
-
-template <> struct FoldingSetTrait<SCEV>;
-template <> struct FoldingSetTrait<SCEVPredicate>;
+class StructType;
+class TargetLibraryInfo;
+class Type;
+class Value;
 
 /// This class represents an analyzed expression in the program.  These are
 /// opaque objects that the client is not allowed to do much with directly.
@@ -74,11 +87,7 @@ class SCEV : public FoldingSetNode {
 protected:
   /// This field is initialized to zero and may be used in subclasses to store
   /// miscellaneous information.
-  unsigned short SubclassData;
-
-private:
-  SCEV(const SCEV &) = delete;
-  void operator=(const SCEV &) = delete;
+  unsigned short SubclassData = 0;
 
 public:
   /// NoWrapFlags are bitfield indices into SubclassData.
@@ -108,24 +117,22 @@ public:
   };
 
   explicit SCEV(const FoldingSetNodeIDRef ID, unsigned SCEVTy)
-      : FastID(ID), SCEVType(SCEVTy), SubclassData(0) {}
+      : FastID(ID), SCEVType(SCEVTy) {}
+  SCEV(const SCEV &) = delete;
+  SCEV &operator=(const SCEV &) = delete;
 
   unsigned getSCEVType() const { return SCEVType; }
 
   /// Return the LLVM type of this SCEV expression.
-  ///
   Type *getType() const;
 
   /// Return true if the expression is a constant zero.
-  ///
   bool isZero() const;
 
   /// Return true if the expression is a constant one.
-  ///
   bool isOne() const;
 
   /// Return true if the expression is a constant all-ones value.
-  ///
   bool isAllOnesValue() const;
 
   /// Return true if the specified scev is negated, but not a constant.
@@ -136,7 +143,6 @@ public:
   void print(raw_ostream &OS) const;
 
   /// This method is used for debugging.
-  ///
   void dump() const;
 };
 
@@ -144,10 +150,12 @@ public:
 // temporary FoldingSetNodeID values.
 template <> struct FoldingSetTrait<SCEV> : DefaultFoldingSetTrait<SCEV> {
   static void Profile(const SCEV &X, FoldingSetNodeID &ID) { ID = X.FastID; }
+
   static bool Equals(const SCEV &X, const FoldingSetNodeID &ID, unsigned IDHash,
                      FoldingSetNodeID &TempID) {
     return ID == X.FastID;
   }
+
   static unsigned ComputeHash(const SCEV &X, FoldingSetNodeID &TempID) {
     return X.FastID.ComputeHash();
   }
@@ -221,7 +229,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const SCEVPredicate &P) {
 // temporary FoldingSetNodeID values.
 template <>
 struct FoldingSetTrait<SCEVPredicate> : DefaultFoldingSetTrait<SCEVPredicate> {
-
   static void Profile(const SCEVPredicate &X, FoldingSetNodeID &ID) {
     ID = X.FastID;
   }
@@ -230,6 +237,7 @@ struct FoldingSetTrait<SCEVPredicate> : DefaultFoldingSetTrait<SCEVPredicate> {
                      unsigned IDHash, FoldingSetNodeID &TempID) {
     return ID == X.FastID;
   }
+
   static unsigned ComputeHash(const SCEVPredicate &X,
                               FoldingSetNodeID &TempID) {
     return X.FastID.ComputeHash();
@@ -351,6 +359,7 @@ public:
 
   /// Returns the set assumed no overflow flags.
   IncrementWrapFlags getFlags() const { return Flags; }
+
   /// Implementation of the SCEVPredicate interface
   const SCEV *getExpr() const override;
   bool implies(const SCEVPredicate *N) const override;
@@ -371,11 +380,12 @@ public:
 /// ScalarEvolution::Preds folding set.  This is why the \c add function is sound.
 class SCEVUnionPredicate final : public SCEVPredicate {
 private:
-  typedef DenseMap<const SCEV *, SmallVector<const SCEVPredicate *, 4>>
-      PredicateMap;
+  using PredicateMap =
+      DenseMap<const SCEV *, SmallVector<const SCEVPredicate *, 4>>;
 
   /// Vector with references to all predicates in this union.
   SmallVector<const SCEVPredicate *, 16> Preds;
+
   /// Maps SCEVs to predicates for quick look-ups.
   PredicateMap SCEVToPreds;
 
@@ -422,13 +432,16 @@ template <> struct DenseMapInfo<ExitLimitQuery> {
   static inline ExitLimitQuery getEmptyKey() {
     return ExitLimitQuery(nullptr, nullptr, true);
   }
+
   static inline ExitLimitQuery getTombstoneKey() {
     return ExitLimitQuery(nullptr, nullptr, false);
   }
+
   static unsigned getHashValue(ExitLimitQuery Val) {
     return hash_combine(hash_combine(Val.L, Val.ExitingBlock),
                         Val.AllowPredicates);
   }
+
   static bool isEqual(ExitLimitQuery LHS, ExitLimitQuery RHS) {
     return LHS.L == RHS.L && LHS.ExitingBlock == RHS.ExitingBlock &&
            LHS.AllowPredicates == RHS.AllowPredicates;
@@ -474,6 +487,7 @@ private:
   /// Value is deleted.
   class SCEVCallbackVH final : public CallbackVH {
     ScalarEvolution *SE;
+
     void deleted() override;
     void allUsesReplacedWith(Value *New) override;
 
@@ -486,44 +500,37 @@ private:
   friend class SCEVUnknown;
 
   /// The function we are analyzing.
-  ///
   Function &F;
 
   /// Does the module have any calls to the llvm.experimental.guard intrinsic
   /// at all?  If this is false, we avoid doing work that will only help if
   /// thare are guards present in the IR.
-  ///
   bool HasGuards;
 
   /// The target library information for the target we are targeting.
-  ///
   TargetLibraryInfo &TLI;
 
   /// The tracker for @llvm.assume intrinsics in this function.
   AssumptionCache &AC;
 
   /// The dominator tree.
-  ///
   DominatorTree &DT;
 
   /// The loop information for the function we are currently analyzing.
-  ///
   LoopInfo &LI;
 
   /// This SCEV is used to represent unknown trip counts and things.
   std::unique_ptr<SCEVCouldNotCompute> CouldNotCompute;
 
-  /// The typedef for HasRecMap.
-  ///
-  typedef DenseMap<const SCEV *, bool> HasRecMapType;
+  /// The type for HasRecMap.
+  using HasRecMapType = DenseMap<const SCEV *, bool>;
 
   /// This is a cache to record whether a SCEV contains any scAddRecExpr.
   HasRecMapType HasRecMap;
 
-  /// The typedef for ExprValueMap.
-  ///
-  typedef std::pair<Value *, ConstantInt *> ValueOffsetPair;
-  typedef DenseMap<const SCEV *, SetVector<ValueOffsetPair>> ExprValueMapType;
+  /// The type for ExprValueMap.
+  using ValueOffsetPair = std::pair<Value *, ConstantInt *>;
+  using ExprValueMapType = DenseMap<const SCEV *, SetVector<ValueOffsetPair>>;
 
   /// ExprValueMap -- This map records the original values from which
   /// the SCEV expr is generated from.
@@ -547,13 +554,11 @@ private:
   /// to V - Offset.
   ExprValueMapType ExprValueMap;
 
-  /// The typedef for ValueExprMap.
-  ///
-  typedef DenseMap<SCEVCallbackVH, const SCEV *, DenseMapInfo<Value *>>
-      ValueExprMapType;
+  /// The type for ValueExprMap.
+  using ValueExprMapType =
+      DenseMap<SCEVCallbackVH, const SCEV *, DenseMapInfo<Value *>>;
 
   /// This is a cache of the values we have analyzed so far.
-  ///
   ValueExprMapType ValueExprMap;
 
   /// Mark predicate values currently being processed by isImpliedCond.
@@ -561,11 +566,11 @@ private:
 
   /// Set to true by isLoopBackedgeGuardedByCond when we're walking the set of
   /// conditions dominating the backedge of a loop.
-  bool WalkingBEDominatingConds;
+  bool WalkingBEDominatingConds = false;
 
   /// Set to true by isKnownPredicateViaSplitting when we're trying to prove a
   /// predicate by splitting it into a set of independent predicates.
-  bool ProvingSplitPredicate;
+  bool ProvingSplitPredicate = false;
 
   /// Memoized values for the GetMinTrailingZeros
   DenseMap<const SCEV *, uint32_t> MinTrailingZerosCache;
@@ -580,7 +585,9 @@ private:
   struct ExitLimit {
     const SCEV *ExactNotTaken; // The exit is not taken exactly this many times
     const SCEV *MaxNotTaken; // The exit is not taken at most this many times
-    bool MaxOrZero; // Not taken either exactly MaxNotTaken or zero times
+
+    // Not taken either exactly MaxNotTaken or zero times
+    bool MaxOrZero = false;
 
     /// A set of predicate guards for this ExitLimit. The result is only valid
     /// if all of the predicates in \c Predicates evaluate to 'true' at
@@ -624,15 +631,16 @@ private:
     PoisoningVH<BasicBlock> ExitingBlock;
     const SCEV *ExactNotTaken;
     std::unique_ptr<SCEVUnionPredicate> Predicate;
-    bool hasAlwaysTruePredicate() const {
-      return !Predicate || Predicate->isAlwaysTrue();
-    }
 
     explicit ExitNotTakenInfo(PoisoningVH<BasicBlock> ExitingBlock,
                               const SCEV *ExactNotTaken,
                               std::unique_ptr<SCEVUnionPredicate> Predicate)
         : ExitingBlock(ExitingBlock), ExactNotTaken(ExactNotTaken),
           Predicate(std::move(Predicate)) {}
+
+    bool hasAlwaysTruePredicate() const {
+      return !Predicate || Predicate->isAlwaysTrue();
+    }
   };
 
   /// Information about the backedge-taken count of a loop. This currently
@@ -662,12 +670,11 @@ private:
     /// @}
 
   public:
-    BackedgeTakenInfo() : MaxAndComplete(nullptr, 0), MaxOrZero(false) {}
-
+    BackedgeTakenInfo() : MaxAndComplete(nullptr, 0) {}
     BackedgeTakenInfo(BackedgeTakenInfo &&) = default;
     BackedgeTakenInfo &operator=(BackedgeTakenInfo &&) = default;
 
-    typedef std::pair<BasicBlock *, ExitLimit> EdgeExitInfo;
+    using EdgeExitInfo = std::pair<BasicBlock *, ExitLimit>;
 
     /// Initialize BackedgeTakenInfo from a list of exact exit counts.
     BackedgeTakenInfo(SmallVectorImpl<EdgeExitInfo> &&ExitCounts, bool Complete,
@@ -857,7 +864,6 @@ private:
 
   /// Implementation code for getSCEVAtScope; called at most once for each
   /// SCEV+Loop pair.
-  ///
   const SCEV *computeSCEVAtScope(const SCEV *S, const Loop *L);
 
   /// This looks up computed SCEV values for all instructions that depend on
@@ -936,7 +942,8 @@ private:
                 const ExitLimit &EL);
   };
 
-  typedef ExitLimitCache ExitLimitCacheTy;
+  using ExitLimitCacheTy = ExitLimitCache;
+
   ExitLimit computeExitLimitFromCondCached(ExitLimitCacheTy &Cache,
                                            const Loop *L, Value *ExitCond,
                                            BasicBlock *TBB, BasicBlock *FBB,
@@ -1099,7 +1106,6 @@ private:
 
   /// Test if the given expression is known to satisfy the condition described
   /// by Pred and the known constant ranges of LHS and RHS.
-  ///
   bool isKnownPredicateViaConstantRanges(ICmpInst::Predicate Pred,
                                          const SCEV *LHS, const SCEV *RHS);
 
@@ -1145,7 +1151,6 @@ private:
   /// equivalent to proving no signed (resp. unsigned) wrap in
   /// {`Start`,+,`Step`} if `ExtendOpTy` is `SCEVSignExtendExpr`
   /// (resp. `SCEVZeroExtendExpr`).
-  ///
   template <typename ExtendOpTy>
   bool proveNoWrapByVaryingStart(const SCEV *Start, const SCEV *Step,
                                  const Loop *L);
@@ -1188,8 +1193,8 @@ private:
 public:
   ScalarEvolution(Function &F, TargetLibraryInfo &TLI, AssumptionCache &AC,
                   DominatorTree &DT, LoopInfo &LI);
-  ~ScalarEvolution();
   ScalarEvolution(ScalarEvolution &&Arg);
+  ~ScalarEvolution();
 
   LLVMContext &getContext() const { return F.getContext(); }
 
@@ -1213,7 +1218,6 @@ public:
 
   /// Return true if the SCEV is a scAddRecExpr or it contains
   /// scAddRecExpr. The result will be cached in HasRecMap.
-  ///
   bool containsAddRecurrence(const SCEV *S);
 
   /// Return the Value set from which the SCEV expr is generated.
@@ -1305,20 +1309,16 @@ public:
   const SCEV *getOne(Type *Ty) { return getConstant(Ty, 1); }
 
   /// Return an expression for sizeof AllocTy that is type IntTy
-  ///
   const SCEV *getSizeOfExpr(Type *IntTy, Type *AllocTy);
 
   /// Return an expression for offsetof on the given field with type IntTy
-  ///
   const SCEV *getOffsetOfExpr(Type *IntTy, StructType *STy, unsigned FieldNo);
 
   /// Return the SCEV object corresponding to -V.
-  ///
   const SCEV *getNegativeSCEV(const SCEV *V,
                               SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap);
 
   /// Return the SCEV object corresponding to ~V.
-  ///
   const SCEV *getNotSCEV(const SCEV *V);
 
   /// Return LHS-RHS.  Minus is represented in SCEV as A+B*-1.
@@ -1446,7 +1446,6 @@ public:
   /// Note that it is not valid to call this method on a loop without a
   /// loop-invariant backedge-taken count (see
   /// hasLoopInvariantBackedgeTakenCount).
-  ///
   const SCEV *getBackedgeTakenCount(const Loop *L);
 
   /// Similar to getBackedgeTakenCount, except it will add a set of
@@ -1527,28 +1526,22 @@ public:
   }
 
   /// Test if the given expression is known to be negative.
-  ///
   bool isKnownNegative(const SCEV *S);
 
   /// Test if the given expression is known to be positive.
-  ///
   bool isKnownPositive(const SCEV *S);
 
   /// Test if the given expression is known to be non-negative.
-  ///
   bool isKnownNonNegative(const SCEV *S);
 
   /// Test if the given expression is known to be non-positive.
-  ///
   bool isKnownNonPositive(const SCEV *S);
 
   /// Test if the given expression is known to be non-zero.
-  ///
   bool isKnownNonZero(const SCEV *S);
 
   /// Test if the given expression is known to satisfy the condition described
   /// by Pred, LHS, and RHS.
-  ///
   bool isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
                         const SCEV *RHS);
 
@@ -1578,7 +1571,6 @@ public:
   /// iff any changes were made. If the operands are provably equal or
   /// unequal, LHS and RHS are set to the same value and Pred is set to either
   /// ICMP_EQ or ICMP_NE.
-  ///
   bool SimplifyICmpOperands(ICmpInst::Predicate &Pred, const SCEV *&LHS,
                             const SCEV *&RHS, unsigned Depth = 0);
 
@@ -1784,17 +1776,18 @@ private:
   /// The head of a linked list of all SCEVUnknown values that have been
   /// allocated. This is used by releaseMemory to locate them all and call
   /// their destructors.
-  SCEVUnknown *FirstUnknown;
+  SCEVUnknown *FirstUnknown = nullptr;
 };
 
 /// Analysis pass that exposes the \c ScalarEvolution for a function.
 class ScalarEvolutionAnalysis
     : public AnalysisInfoMixin<ScalarEvolutionAnalysis> {
   friend AnalysisInfoMixin<ScalarEvolutionAnalysis>;
+
   static AnalysisKey Key;
 
 public:
-  typedef ScalarEvolution Result;
+  using Result = ScalarEvolution;
 
   ScalarEvolution run(Function &F, FunctionAnalysisManager &AM);
 };
@@ -1806,6 +1799,7 @@ class ScalarEvolutionPrinterPass
 
 public:
   explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
+
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
@@ -1843,6 +1837,7 @@ public:
 class PredicatedScalarEvolution {
 public:
   PredicatedScalarEvolution(ScalarEvolution &SE, Loop &L);
+
   const SCEVUnionPredicate &getUnionPredicate() const;
 
   /// Returns the SCEV expression of V, in the context of the current SCEV
@@ -1887,7 +1882,7 @@ private:
 
   /// Holds a SCEV and the version number of the SCEV predicate used to
   /// perform the rewrite of the expression.
-  typedef std::pair<unsigned, const SCEV *> RewriteEntry;
+  using RewriteEntry = std::pair<unsigned, const SCEV *>;
 
   /// Maps a SCEV to the rewrite result of that SCEV at a certain version
   /// number. If this number doesn't match the current Generation, we will
@@ -1913,11 +1908,12 @@ private:
   /// expression we mark it with the version of the predicate. We use this to
   /// figure out if the predicate has changed from the last rewrite of the
   /// SCEV. If so, we need to perform a new rewrite.
-  unsigned Generation;
+  unsigned Generation = 0;
 
   /// The backedge taken count.
-  const SCEV *BackedgeCount;
+  const SCEV *BackedgeCount = nullptr;
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_ANALYSIS_SCALAREVOLUTION_H

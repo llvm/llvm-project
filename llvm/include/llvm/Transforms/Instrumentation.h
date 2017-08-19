@@ -185,6 +185,7 @@ struct SanitizerCoverageOptions {
   bool Inline8bitCounters = false;
   bool PCTable = false;
   bool NoPrune = false;
+  bool StackDepth = false;
 
   SanitizerCoverageOptions() = default;
 };

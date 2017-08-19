@@ -322,11 +322,10 @@ bool ARMMachObjectWriter::requiresExternRelocation(MachObjectWriter *Writer,
   default:
     return false;
   case MachO::ARM_RELOC_BR24:
-    // PC pre-adjustment of 8 for these instructions.
-    Value -= 8;
-    // ARM BL/BLX has a 25-bit offset.
-    Range = 0x1ffffff;
-    break;
+    // An ARM call might be to a Thumb function, in which case the offset may
+    // not be encodable in the instruction and we must use an external
+    // relocation that explicitly mentions the function.
+    return true;
   case MachO::ARM_THUMB_RELOC_BR22:
     // PC pre-adjustment of 4 for these instructions.
     Value -= 4;
