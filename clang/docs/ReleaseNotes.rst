@@ -246,7 +246,19 @@ New Issues Found
 Python Binding Changes
 ----------------------
 
+Python bindings now support both Python 2 and Python 3. 
+
 The following methods have been added:
+
+- ``is_scoped_enum`` has been added to ``Cursor``.
+
+- ``exception_specification_kind`` has been added to ``Cursor``.
+
+- ``get_address_space`` has been added to ``Type``.
+
+- ``get_typedef_name`` has been added to ``Type``.
+
+- ``get_exception_specification_kind`` has been added to ``Type``.
 
 -  ...
 
