@@ -504,6 +504,11 @@ public:
     return getOS() == Triple::Contiki;
   }
 
+  /// Tests whether the OS is Haiku.
+  bool isOSHaiku() const {
+    return getOS() == Triple::Haiku;
+  }
+
   /// Checks if the environment could be MSVC.
   bool isWindowsMSVCEnvironment() const {
     return getOS() == Triple::Win32 &&

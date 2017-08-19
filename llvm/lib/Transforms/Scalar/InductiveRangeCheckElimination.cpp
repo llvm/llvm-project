@@ -1085,7 +1085,8 @@ LoopConstrainer::calculateSubRanges(bool IsSignedPredicate) const {
   }
 
   auto Clamp = [this, Smallest, Greatest, IsSignedPredicate](const SCEV *S) {
-    return IsSignedPredicate
+    bool MaybeNegativeValues = IsSignedPredicate || !SE.isKnownNonNegative(S);
+    return MaybeNegativeValues
                ? SE.getSMaxExpr(Smallest, SE.getSMinExpr(Greatest, S))
                : SE.getUMaxExpr(Smallest, SE.getUMinExpr(Greatest, S));
   };

@@ -157,7 +157,7 @@ void ELFFileBase<ELFT>::initSymtab(ArrayRef<Elf_Shdr> Sections,
 
 template <class ELFT>
 ObjFile<ELFT>::ObjFile(MemoryBufferRef M, StringRef ArchiveName)
-    : ELFFileBase<ELFT>(Base::ObjectKind, M) {
+    : ELFFileBase<ELFT>(Base::ObjKind, M) {
   this->ArchiveName = ArchiveName;
 }
 

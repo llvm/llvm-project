@@ -39,7 +39,7 @@ target triple = "x86_64-apple-macosx10.12.0"
 !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !4)
 !2 = !DIFile(filename: "g.c", directory: "/")
 !3 = !{}
-!4 = !{!12, !13, !14, !15, !17, !18}
+!4 = !{!12, !13, !14, !15, !17, !18, !20}
 !5 = distinct !DICompositeType(tag: DW_TAG_structure_type, file: !2, line: 1, size: 64, elements: !6)
 !6 = !{!7, !9}
 !7 = !DIDerivedType(tag: DW_TAG_member, name: "x", scope: !5, file: !2, line: 1, baseType: !8, size: 32)
@@ -58,3 +58,4 @@ target triple = "x86_64-apple-macosx10.12.0"
 !18 = !DIGlobalVariableExpression(var: !19, expr: !DIExpression(DW_OP_constu, 2,
                                              DW_OP_stack_value, DW_OP_LLVM_fragment, 32, 32))
 !19 = distinct !DIGlobalVariable(name: "full_const", scope: !1, file: !2, line: 1, type: !5, isLocal: false, isDefinition: true)
+!20 = !DIGlobalVariableExpression(var: !0)

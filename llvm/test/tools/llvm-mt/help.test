@@ -1,3 +1,7 @@
 RUN: llvm-mt /h | FileCheck %s -check-prefix=HELP
 
 HELP:      OVERVIEW: Manifest Tool
+
+RUN: not llvm-mt /foo 2>&1 >/dev/null | FileCheck %s -check-prefix=INVALID
+
+INVALID: llvm-mt error: invalid option /foo
