@@ -8,8 +8,9 @@
 //===----------------------------------------------------------------------===//
 ///
 /// This file contains functions which are used to decide if a loop worth to be
-/// unrolled. Moreover contains function which mark the CFGBlocks which belongs
-/// to the unrolled loop and store them in ProgramState.
+/// unrolled. Moreover contains function which mark the loops which are unrolled
+/// and store them in ProgramState. During the analysis we check the analyzed
+/// blocks if they are part of an unrolled loop or reached from one.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -51,47 +52,52 @@ static internal::Matcher<Stmt> simpleCondition(StringRef BindName) {
       hasEitherOperand(ignoringParenImpCasts(integerLiteral())));
 }
 
-static internal::Matcher<Stmt> changeIntBoundNode(StringRef NodeName) {
-  return anyOf(hasDescendant(unaryOperator(
-                   anyOf(hasOperatorName("--"), hasOperatorName("++")),
-                   hasUnaryOperand(ignoringParenImpCasts(
-                       declRefExpr(to(varDecl(equalsBoundNode(NodeName)))))))),
-               hasDescendant(binaryOperator(
-                   anyOf(hasOperatorName("="), hasOperatorName("+="),
-                         hasOperatorName("/="), hasOperatorName("*="),
-                         hasOperatorName("-=")),
-                   hasLHS(ignoringParenImpCasts(
-                       declRefExpr(to(varDecl(equalsBoundNode(NodeName)))))))));
+static internal::Matcher<Stmt>
+changeIntBoundNode(internal::Matcher<Decl> VarNodeMatcher) {
+  return anyOf(
+      unaryOperator(anyOf(hasOperatorName("--"), hasOperatorName("++")),
+                    hasUnaryOperand(ignoringParenImpCasts(
+                        declRefExpr(to(varDecl(VarNodeMatcher)))))),
+      binaryOperator(anyOf(hasOperatorName("="), hasOperatorName("+="),
+                           hasOperatorName("/="), hasOperatorName("*="),
+                           hasOperatorName("-=")),
+                     hasLHS(ignoringParenImpCasts(
+                         declRefExpr(to(varDecl(VarNodeMatcher)))))));
 }
 
-static internal::Matcher<Stmt> callByRef(StringRef NodeName) {
-  return hasDescendant(callExpr(forEachArgumentWithParam(
-      declRefExpr(to(varDecl(equalsBoundNode(NodeName)))),
-      parmVarDecl(hasType(references(qualType(unless(isConstQualified()))))))));
+static internal::Matcher<Stmt>
+callByRef(internal::Matcher<Decl> VarNodeMatcher) {
+  return callExpr(forEachArgumentWithParam(
+      declRefExpr(to(varDecl(VarNodeMatcher))),
+      parmVarDecl(hasType(references(qualType(unless(isConstQualified())))))));
 }
 
-static internal::Matcher<Stmt> assignedToRef(StringRef NodeName) {
-  return hasDescendant(varDecl(
+static internal::Matcher<Stmt>
+assignedToRef(internal::Matcher<Decl> VarNodeMatcher) {
+  return declStmt(hasDescendant(varDecl(
       allOf(hasType(referenceType()),
-            hasInitializer(
-                anyOf(initListExpr(has(
-                          declRefExpr(to(varDecl(equalsBoundNode(NodeName)))))),
-                      declRefExpr(to(varDecl(equalsBoundNode(NodeName)))))))));
+            hasInitializer(anyOf(
+                initListExpr(has(declRefExpr(to(varDecl(VarNodeMatcher))))),
+                declRefExpr(to(varDecl(VarNodeMatcher)))))))));
 }
 
-static internal::Matcher<Stmt> getAddrTo(StringRef NodeName) {
-  return hasDescendant(unaryOperator(
+static internal::Matcher<Stmt>
+getAddrTo(internal::Matcher<Decl> VarNodeMatcher) {
+  return unaryOperator(
       hasOperatorName("&"),
-      hasUnaryOperand(declRefExpr(hasDeclaration(equalsBoundNode(NodeName))))));
+      hasUnaryOperand(declRefExpr(hasDeclaration(VarNodeMatcher))));
 }
 
 static internal::Matcher<Stmt> hasSuspiciousStmt(StringRef NodeName) {
-  return anyOf(hasDescendant(gotoStmt()), hasDescendant(switchStmt()),
-               // Escaping and not known mutation of the loop counter is handled
-               // by exclusion of assigning and address-of operators and
-               // pass-by-ref function calls on the loop counter from the body.
-               changeIntBoundNode(NodeName), callByRef(NodeName),
-               getAddrTo(NodeName), assignedToRef(NodeName));
+  return hasDescendant(stmt(
+      anyOf(gotoStmt(), switchStmt(),
+            // Escaping and not known mutation of the loop counter is handled
+            // by exclusion of assigning and address-of operators and
+            // pass-by-ref function calls on the loop counter from the body.
+            changeIntBoundNode(equalsBoundNode(NodeName)),
+            callByRef(equalsBoundNode(NodeName)),
+            getAddrTo(equalsBoundNode(NodeName)),
+            assignedToRef(equalsBoundNode(NodeName)))));
 }
 
 static internal::Matcher<Stmt> forLoopMatcher() {
@@ -115,16 +121,57 @@ static internal::Matcher<Stmt> forLoopMatcher() {
              unless(hasBody(hasSuspiciousStmt("initVarName")))).bind("forLoop");
 }
 
-bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx) {
+static bool isPossiblyEscaped(const VarDecl *VD, ExplodedNode *N) {
+  // Global variables assumed as escaped variables.
+  if (VD->hasGlobalStorage())
+    return true;
+
+  while (!N->pred_empty()) {
+    const Stmt *S = PathDiagnosticLocation::getStmt(N);
+    if (!S) {
+      N = N->getFirstPred();
+      continue;
+    }
+
+    if (const DeclStmt *DS = dyn_cast<DeclStmt>(S)) {
+      for (const Decl *D : DS->decls()) {
+        // Once we reach the declaration of the VD we can return.
+        if (D->getCanonicalDecl() == VD)
+          return false;
+      }
+    }
+    // Check the usage of the pass-by-ref function calls and adress-of operator
+    // on VD and reference initialized by VD.
+    ASTContext &ASTCtx =
+        N->getLocationContext()->getAnalysisDeclContext()->getASTContext();
+    auto Match =
+        match(stmt(anyOf(callByRef(equalsNode(VD)), getAddrTo(equalsNode(VD)),
+                         assignedToRef(equalsNode(VD)))),
+              *S, ASTCtx);
+    if (!Match.empty())
+      return true;
+
+    N = N->getFirstPred();
+  }
+  llvm_unreachable("Reached root without finding the declaration of VD");
+}
+
+bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
+                            ExplodedNode *Pred) {
 
   if (!isLoopStmt(LoopStmt))
     return false;
 
   // TODO: Match the cases where the bound is not a concrete literal but an
   // integer with known value
-
   auto Matches = match(forLoopMatcher(), *LoopStmt, ASTCtx);
-  return !Matches.empty();
+  if (Matches.empty())
+    return false;
+
+  auto CounterVar = Matches[0].getNodeAs<VarDecl>("initVarName");
+
+  // Check if the counter of the loop is not escaped before.
+  return !isPossiblyEscaped(CounterVar->getCanonicalDecl(), Pred);
 }
 
 namespace {
@@ -185,7 +232,7 @@ bool isUnrolledLoopBlock(const CFGBlock *Block, ExplodedNode *Pred,
     // marked.
     while (BlockSet.find(SearchedBlock) == BlockSet.end() && StackFrame) {
       SearchedBlock = StackFrame->getCallSiteBlock();
-      if(!SearchedBlock || StackFrame->inTopFrame())
+      if (!SearchedBlock || StackFrame->inTopFrame())
         break;
       StackFrame = StackFrame->getParent()->getCurrentStackFrame();
     }
