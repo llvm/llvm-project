@@ -200,7 +200,13 @@ libclang
 Static Analyzer
 ---------------
 
-...
+- The static analyzer now supports using the
+  `z3 theorem prover <https://github.com/z3prover/z3>`_ from Microsoft Research
+  as an external constraint solver. This allows reasoning over more complex
+  queries, but performance is ~15x slower than the default range-based
+  constraint solver. To enable the z3 solver backend, clang must be built with
+  the ``CLANG_ANALYZER_BUILD_Z3=ON`` option, and the
+  ``-Xanalyzer -analyzer-constraints=z3`` arguments passed at runtime.
 
 Undefined Behavior Sanitizer (UBSan)
 ------------------------------------
