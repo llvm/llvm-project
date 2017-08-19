@@ -1,0 +1,8 @@
+RUN: echo a > %t.cpp
+
+CHECK: unknown type name 'X'
+
+check adding compiler cflags
+RUN: clang-diff -ast-dump -extra-arg=-Da=X        %t.cpp -- 2>&1 | FileCheck %s
+RUN: clang-diff -ast-dump -extra-arg-before=-Da=X %t.cpp -- 2>&1 | FileCheck %s
+RUN: clang-diff -ast-dump %t.cpp -- 2>&1 -Da=X | FileCheck %s

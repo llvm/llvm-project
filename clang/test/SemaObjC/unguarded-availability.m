@@ -287,3 +287,27 @@ AVAILABLE_10_12
 @interface BaseClass (CategoryWithNewProtocolRequirement) <NewProtocol>
 
 @end
+
+typedef enum {
+  AK_Dodo __attribute__((availability(macos, deprecated=10.3))), // expected-note 3 {{marked deprecated here}}
+  AK_Cat __attribute__((availability(macos, introduced=10.4))),
+  AK_CyborgCat __attribute__((availability(macos, introduced=10.12))), // expected-note {{marked partial here}}
+} Animals;
+
+void switchAnimals(Animals a) {
+  switch (a) {
+  case AK_Dodo: break; // expected-warning{{'AK_Dodo' is deprecated}}
+  case AK_Cat: break;
+  case AK_Cat|AK_CyborgCat: break; // expected-warning{{case value not in enum}}
+  case AK_CyborgCat: break; // no warn
+  }
+
+  switch (a) {
+  case AK_Dodo...AK_CyborgCat: // expected-warning {{'AK_Dodo' is depr}}
+    break;
+  }
+
+  (void)AK_Dodo; // expected-warning{{'AK_Dodo' is deprecated}}
+  (void)AK_Cat; // no warning
+  (void)AK_CyborgCat; // expected-warning{{'AK_CyborgCat' is only available on macOS 10.12 or newer}} expected-note {{@available}}
+}
