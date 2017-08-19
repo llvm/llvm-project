@@ -5048,7 +5048,8 @@ def : Pat<(v2i64 (X86VBroadcast (loadi64 addr:$src))),
           (VMOVDDUPrm addr:$src)>;
 
 let Predicates = [UseSSE3] in {
-  def : Pat<(X86Movddup (memopv2f64 addr:$src)),
+  // No need for aligned memory as this only loads 64-bits.
+  def : Pat<(X86Movddup (loadv2f64 addr:$src)),
             (MOVDDUPrm addr:$src)>;
 }
 

@@ -34,48 +34,23 @@ public:
   Mapping() = default;
   Mapping(Mapping &&Other) = default;
   Mapping &operator=(Mapping &&Other) = default;
-  Mapping(int Size1, int Size2) {
-    // Maximum possible size after patching one tree.
-    int Size = Size1 + Size2;
-    SrcToDst = llvm::make_unique<SmallVector<NodeId, 2>[]>(Size);
-    DstToSrc = llvm::make_unique<SmallVector<NodeId, 2>[]>(Size);
+
+  Mapping(size_t Size) {
+    SrcToDst = llvm::make_unique<NodeId[]>(Size);
+    DstToSrc = llvm::make_unique<NodeId[]>(Size);
   }
 
   void link(NodeId Src, NodeId Dst) {
-    SrcToDst[Src].push_back(Dst);
-    DstToSrc[Dst].push_back(Src);
+    SrcToDst[Src] = Dst, DstToSrc[Dst] = Src;
   }
 
-  NodeId getDst(NodeId Src) const {
-    if (hasSrc(Src))
-      return SrcToDst[Src][0];
-    return NodeId();
-  }
-  NodeId getSrc(NodeId Dst) const {
-    if (hasDst(Dst))
-      return DstToSrc[Dst][0];
-    return NodeId();
-  }
-  const SmallVector<NodeId, 2> &getAllDsts(NodeId Src) const {
-    return SrcToDst[Src];
-  }
-  const SmallVector<NodeId, 2> &getAllSrcs(NodeId Dst) const {
-    return DstToSrc[Dst];
-  }
-  bool hasSrc(NodeId Src) const { return !SrcToDst[Src].empty(); }
-  bool hasDst(NodeId Dst) const { return !DstToSrc[Dst].empty(); }
-  bool hasSrcDst(NodeId Src, NodeId Dst) const {
-    for (NodeId DstId : SrcToDst[Src])
-      if (DstId == Dst)
-        return true;
-    for (NodeId SrcId : DstToSrc[Dst])
-      if (SrcId == Src)
-        return true;
-    return false;
-  }
+  NodeId getDst(NodeId Src) const { return SrcToDst[Src]; }
+  NodeId getSrc(NodeId Dst) const { return DstToSrc[Dst]; }
+  bool hasSrc(NodeId Src) const { return getDst(Src).isValid(); }
+  bool hasDst(NodeId Dst) const { return getSrc(Dst).isValid(); }
 
 private:
-  std::unique_ptr<SmallVector<NodeId, 2>[]> SrcToDst, DstToSrc;
+  std::unique_ptr<NodeId[]> SrcToDst, DstToSrc;
 };
 } // end anonymous namespace
 
@@ -104,8 +79,6 @@ public:
 private:
   // Returns true if the two subtrees are identical.
   bool identical(NodeId Id1, NodeId Id2) const;
-
-  bool canBeAddedToMapping(const Mapping &M, NodeId Id1, NodeId Id2) const;
 
   // Returns false if the nodes must not be mached.
   bool isMatchingPossible(NodeId Id1, NodeId Id2) const;
@@ -712,23 +685,6 @@ bool ASTDiff::Impl::identical(NodeId Id1, NodeId Id2) const {
   return true;
 }
 
-bool ASTDiff::Impl::canBeAddedToMapping(const Mapping &M, NodeId Id1,
-                                        NodeId Id2) const {
-  assert(isMatchingPossible(Id1, Id2) &&
-         "Matching must be possible in the first place.");
-  if (M.hasSrcDst(Id1, Id2))
-    return false;
-  if (Options.EnableMatchingWithUnmatchableParents)
-    return true;
-  const Node &N1 = T1.getNode(Id1);
-  const Node &N2 = T2.getNode(Id2);
-  NodeId P1 = N1.Parent;
-  NodeId P2 = N2.Parent;
-  // Only allow matching if parents can be matched.
-  return (P1.isInvalid() && P2.isInvalid()) ||
-         (P1.isValid() && P2.isValid() && isMatchingPossible(P1, P2));
-}
-
 bool ASTDiff::Impl::isMatchingPossible(NodeId Id1, NodeId Id2) const {
   return Options.isMatchingAllowed(T1.getNode(Id1), T2.getNode(Id2));
 }
@@ -751,7 +707,7 @@ void ASTDiff::Impl::addOptimalMapping(Mapping &M, NodeId Id1,
   for (const auto Tuple : R) {
     NodeId Src = Tuple.first;
     NodeId Dst = Tuple.second;
-    if (canBeAddedToMapping(M, Src, Dst))
+    if (!M.hasSrc(Src) && !M.hasDst(Dst))
       M.link(Src, Dst);
   }
 }
@@ -804,7 +760,7 @@ void ASTDiff::Impl::matchBottomUp(Mapping &M) const {
     if (Matched || !MatchedChildren)
       continue;
     NodeId Id2 = findCandidate(M, Id1);
-    if (Id2.isValid() && canBeAddedToMapping(M, Id1, Id2)) {
+    if (Id2.isValid()) {
       M.link(Id1, Id2);
       addOptimalMapping(M, Id1, Id2);
     }
@@ -815,7 +771,7 @@ Mapping ASTDiff::Impl::matchTopDown() const {
   PriorityList L1(T1);
   PriorityList L2(T2);
 
-  Mapping M(T1.getSize(), T2.getSize());
+  Mapping M(T1.getSize() + T2.getSize());
 
   L1.push(T1.getRootId());
   L2.push(T2.getRootId());
@@ -838,7 +794,7 @@ Mapping ASTDiff::Impl::matchTopDown() const {
     H2 = L2.pop();
     for (NodeId Id1 : H1) {
       for (NodeId Id2 : H2) {
-        if (identical(Id1, Id2) && canBeAddedToMapping(M, Id1, Id2)) {
+        if (identical(Id1, Id2) && !M.hasSrc(Id1) && !M.hasDst(Id2)) {
           for (int I = 0, E = T1.getNumberOfDescendants(Id1); I < E; ++I)
             M.link(Id1 + I, Id2 + I);
         }
