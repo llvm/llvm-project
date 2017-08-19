@@ -216,7 +216,7 @@ namespace Foundation1437 {
     }
   }
 
-};
+}
 
 template <typename D32, typename D64, bool Inline>
 class GenericNSArrayISyntheticFrontEnd : public SyntheticChildrenFrontEnd {
@@ -257,12 +257,12 @@ namespace Foundation1300 {
     
     using NSArrayISyntheticFrontEnd =
         GenericNSArrayISyntheticFrontEnd<IDD32, IDD64, true>;
-};
+}
 
 namespace Foundation1430 {
     using NSArrayISyntheticFrontEnd =
         Foundation1428::NSArrayMSyntheticFrontEnd;
-};
+}
 
 namespace Foundation1436 {
     struct IDD32 {
@@ -289,7 +289,7 @@ namespace Foundation1436 {
                          Status &error) {
       return Foundation1437::__NSArrayMSize(process, valobj_addr, error);
     }
-};
+}
 
 class NSArray0SyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:

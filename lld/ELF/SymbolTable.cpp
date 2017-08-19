@@ -250,7 +250,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, uint8_t Type,
                                               uint8_t Visibility,
                                               bool CanOmitFromDynSym,
                                               InputFile *File) {
-  bool IsUsedInRegularObj = !File || File->kind() == InputFile::ObjectKind;
+  bool IsUsedInRegularObj = !File || File->kind() == InputFile::ObjKind;
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
