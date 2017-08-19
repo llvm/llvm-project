@@ -427,6 +427,7 @@ public:
                              bool addInitializers = false,
                              bool addTemporaryDtors = false,
                              bool addLifetime = false,
+                             bool addLoopExit = false,
                              bool synthesizeBodies = false,
                              bool addStaticInitBranches = false,
                              bool addCXXNewAllocator = true,
