@@ -430,17 +430,17 @@ int main(int argc, char **argv) {
   if (PassRemarksHotnessThreshold)
     Context.setDiagnosticsHotnessThreshold(PassRemarksHotnessThreshold);
 
-  std::unique_ptr<tool_output_file> YamlFile;
+  std::unique_ptr<tool_output_file> OptRemarkFile;
   if (RemarksFilename != "") {
     std::error_code EC;
-    YamlFile = llvm::make_unique<tool_output_file>(RemarksFilename, EC,
-                                                   sys::fs::F_None);
+    OptRemarkFile = llvm::make_unique<tool_output_file>(RemarksFilename, EC,
+                                                        sys::fs::F_None);
     if (EC) {
       errs() << EC.message() << '\n';
       return 1;
     }
     Context.setDiagnosticsOutputFile(
-        llvm::make_unique<yaml::Output>(YamlFile->os()));
+        llvm::make_unique<yaml::Output>(OptRemarkFile->os()));
   }
 
   // Load the input module...
@@ -540,7 +540,8 @@ int main(int argc, char **argv) {
     // string. Hand off the rest of the functionality to the new code for that
     // layer.
     return runPassPipeline(argv[0], *M, TM.get(), Out.get(), ThinLinkOut.get(),
-                           PassPipeline, OK, VK, PreserveAssemblyUseListOrder,
+                           OptRemarkFile.get(), PassPipeline, OK, VK,
+                           PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
                            EmitModuleHash)
                ? 0
@@ -767,8 +768,8 @@ int main(int argc, char **argv) {
                 "the compile-twice option\n";
       Out->os() << BOS->str();
       Out->keep();
-      if (YamlFile)
-        YamlFile->keep();
+      if (OptRemarkFile)
+        OptRemarkFile->keep();
       return 1;
     }
     Out->os() << BOS->str();
@@ -778,8 +779,8 @@ int main(int argc, char **argv) {
   if (!NoOutput || PrintBreakpoints)
     Out->keep();
 
-  if (YamlFile)
-    YamlFile->keep();
+  if (OptRemarkFile)
+    OptRemarkFile->keep();
 
   if (ThinLinkOut)
     ThinLinkOut->keep();

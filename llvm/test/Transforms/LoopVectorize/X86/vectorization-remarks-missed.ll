@@ -2,6 +2,10 @@
 ; RUN: opt < %s -loop-vectorize -o /dev/null -pass-remarks-output=%t.yaml
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
+; RUN: opt < %s -passes=loop-vectorize -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -o /dev/null -pass-remarks-output=%t.yaml
+; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
+
 ; C/C++ code for tests
 ; void test(int *A, int Length) {
 ; #pragma clang loop vectorize(enable) interleave(enable)

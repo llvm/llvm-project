@@ -647,112 +647,82 @@ def sdmem : Operand<v2f64> {
 
 // Vector load wrappers to prevent folding of non-temporal aligned loads on
 // supporting targets.
-def vec128load : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return !Subtarget->hasSSE41() || !cast<LoadSDNode>(N)->isNonTemporal() ||
-         cast<LoadSDNode>(N)->getAlignment() < 16;
-}]>;
-def vec256load : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return !Subtarget->hasAVX2() || !cast<LoadSDNode>(N)->isNonTemporal() ||
-         cast<LoadSDNode>(N)->getAlignment() < 32;
-}]>;
-def vec512load : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return !Subtarget->hasAVX512() || !cast<LoadSDNode>(N)->isNonTemporal() ||
-         cast<LoadSDNode>(N)->getAlignment() < 64;
+def vecload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
+  return !useNonTemporalLoad(cast<LoadSDNode>(N));
 }]>;
 
 // 128-bit load pattern fragments
 // NOTE: all 128-bit integer vector loads are promoted to v2i64
-def loadv4f32    : PatFrag<(ops node:$ptr), (v4f32 (vec128load node:$ptr))>;
-def loadv2f64    : PatFrag<(ops node:$ptr), (v2f64 (vec128load node:$ptr))>;
-def loadv2i64    : PatFrag<(ops node:$ptr), (v2i64 (vec128load node:$ptr))>;
+def loadv4f32    : PatFrag<(ops node:$ptr), (v4f32 (vecload node:$ptr))>;
+def loadv2f64    : PatFrag<(ops node:$ptr), (v2f64 (vecload node:$ptr))>;
+def loadv2i64    : PatFrag<(ops node:$ptr), (v2i64 (vecload node:$ptr))>;
 
 // 256-bit load pattern fragments
 // NOTE: all 256-bit integer vector loads are promoted to v4i64
-def loadv8f32    : PatFrag<(ops node:$ptr), (v8f32 (vec256load node:$ptr))>;
-def loadv4f64    : PatFrag<(ops node:$ptr), (v4f64 (vec256load node:$ptr))>;
-def loadv4i64    : PatFrag<(ops node:$ptr), (v4i64 (vec256load node:$ptr))>;
+def loadv8f32    : PatFrag<(ops node:$ptr), (v8f32 (vecload node:$ptr))>;
+def loadv4f64    : PatFrag<(ops node:$ptr), (v4f64 (vecload node:$ptr))>;
+def loadv4i64    : PatFrag<(ops node:$ptr), (v4i64 (vecload node:$ptr))>;
 
 // 512-bit load pattern fragments
-def loadv16f32   : PatFrag<(ops node:$ptr), (v16f32 (vec512load node:$ptr))>;
-def loadv8f64    : PatFrag<(ops node:$ptr), (v8f64 (vec512load node:$ptr))>;
-def loadv8i64    : PatFrag<(ops node:$ptr), (v8i64 (vec512load node:$ptr))>;
+def loadv16f32   : PatFrag<(ops node:$ptr), (v16f32 (vecload node:$ptr))>;
+def loadv8f64    : PatFrag<(ops node:$ptr), (v8f64 (vecload node:$ptr))>;
+def loadv8i64    : PatFrag<(ops node:$ptr), (v8i64 (vecload node:$ptr))>;
 
 // 128-/256-/512-bit extload pattern fragments
 def extloadv2f32 : PatFrag<(ops node:$ptr), (v2f64 (extloadvf32 node:$ptr))>;
 def extloadv4f32 : PatFrag<(ops node:$ptr), (v4f64 (extloadvf32 node:$ptr))>;
 def extloadv8f32 : PatFrag<(ops node:$ptr), (v8f64 (extloadvf32 node:$ptr))>;
 
-// Like 'store', but always requires 128-bit vector alignment.
+// Like 'store', but always requires vector size alignment.
 def alignedstore : PatFrag<(ops node:$val, node:$ptr),
                            (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 16;
-}]>;
-
-// Like 'store', but always requires 256-bit vector alignment.
-def alignedstore256 : PatFrag<(ops node:$val, node:$ptr),
-                              (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 32;
-}]>;
-
-// Like 'store', but always requires 512-bit vector alignment.
-def alignedstore512 : PatFrag<(ops node:$val, node:$ptr),
-                              (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 64;
+  auto *St = cast<StoreSDNode>(N);
+  return St->getAlignment() >= St->getMemoryVT().getStoreSize();
 }]>;
 
 // Like 'load', but always requires 128-bit vector alignment.
-def alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 16 &&
-         (!Subtarget->hasSSE41() || !cast<LoadSDNode>(N)->isNonTemporal());
-}]>;
-
-// Like 'load', but always requires 256-bit vector alignment.
-def alignedload256 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 32 &&
-         (!Subtarget->hasAVX2() || !cast<LoadSDNode>(N)->isNonTemporal());
-}]>;
-
-// Like 'load', but always requires 512-bit vector alignment.
-def alignedload512 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 64 &&
-         (!Subtarget->hasAVX512() || !cast<LoadSDNode>(N)->isNonTemporal());
+def alignedvecload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
+  auto *Ld = cast<LoadSDNode>(N);
+  return Ld->getAlignment() >= Ld->getMemoryVT().getStoreSize() &&
+         !useNonTemporalLoad(cast<LoadSDNode>(N));
 }]>;
 
 // 128-bit aligned load pattern fragments
 // NOTE: all 128-bit integer vector loads are promoted to v2i64
 def alignedloadv4f32 : PatFrag<(ops node:$ptr),
-                               (v4f32 (alignedload node:$ptr))>;
+                               (v4f32 (alignedvecload node:$ptr))>;
 def alignedloadv2f64 : PatFrag<(ops node:$ptr),
-                               (v2f64 (alignedload node:$ptr))>;
+                               (v2f64 (alignedvecload node:$ptr))>;
 def alignedloadv2i64 : PatFrag<(ops node:$ptr),
-                               (v2i64 (alignedload node:$ptr))>;
+                               (v2i64 (alignedvecload node:$ptr))>;
 
 // 256-bit aligned load pattern fragments
 // NOTE: all 256-bit integer vector loads are promoted to v4i64
 def alignedloadv8f32 : PatFrag<(ops node:$ptr),
-                               (v8f32 (alignedload256 node:$ptr))>;
+                               (v8f32 (alignedvecload node:$ptr))>;
 def alignedloadv4f64 : PatFrag<(ops node:$ptr),
-                               (v4f64 (alignedload256 node:$ptr))>;
+                               (v4f64 (alignedvecload node:$ptr))>;
 def alignedloadv4i64 : PatFrag<(ops node:$ptr),
-                               (v4i64 (alignedload256 node:$ptr))>;
+                               (v4i64 (alignedvecload node:$ptr))>;
 
 // 512-bit aligned load pattern fragments
 def alignedloadv16f32 : PatFrag<(ops node:$ptr),
-                                (v16f32 (alignedload512 node:$ptr))>;
+                                (v16f32 (alignedvecload node:$ptr))>;
 def alignedloadv8f64  : PatFrag<(ops node:$ptr),
-                                (v8f64  (alignedload512 node:$ptr))>;
+                                (v8f64  (alignedvecload node:$ptr))>;
 def alignedloadv8i64  : PatFrag<(ops node:$ptr),
-                                (v8i64  (alignedload512 node:$ptr))>;
+                                (v8i64  (alignedvecload node:$ptr))>;
 
-// Like 'vec128load', but uses special alignment checks suitable for use in
+// Like 'vecload', but uses special alignment checks suitable for use in
 // memory operands in most SSE instructions, which are required to
 // be naturally aligned on some targets but not on others.  If the subtarget
 // allows unaligned accesses, match any load, though this may require
 // setting a feature bit in the processor (on startup, for example).
 // Opteron 10h and later implement such a feature.
-def memop : PatFrag<(ops node:$ptr), (vec128load node:$ptr), [{
+def memop : PatFrag<(ops node:$ptr), (vecload node:$ptr), [{
+  auto *Ld = cast<LoadSDNode>(N);
   return Subtarget->hasSSEUnalignedMem() ||
-         cast<LoadSDNode>(N)->getAlignment() >= 16;
+         Ld->getAlignment() >= Ld->getMemoryVT().getStoreSize();
 }]>;
 
 // 128-bit memop pattern fragments
