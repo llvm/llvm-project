@@ -31,7 +31,7 @@ class Base {
 // CHECK: CXXRecordDecl: X;class X;(
 class X : Base {
   int m;
-  // CHECK: CXXMethodDecl: foo(const char *(int))(
+  // CHECK: CXXMethodDecl: foo(const char *(int)
   // CHECK: ParmVarDecl: i(int)(
   const char *foo(int i) {
     if (i == 0)
@@ -42,7 +42,7 @@ class X : Base {
 
   // CHECK: AccessSpecDecl: public(
 public:
-  // CHECK: CXXConstructorDecl: X(void (char, int))(
+  // CHECK: CXXConstructorDecl: X(void (char, int){{( __attribute__\(\(thiscall\)\))?}})(
   X(char, int) : Base(), m(0) {
     // CHECK: MemberExpr(
     int x = m;

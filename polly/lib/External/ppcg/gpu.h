@@ -454,4 +454,6 @@ __isl_give isl_ast_node *generate_code(struct gpu_gen *gen,
 
 __isl_give isl_union_set *compute_may_persist(struct gpu_prog *prog);
 void collect_references(struct gpu_prog *prog, struct gpu_array_info *array);
+void collect_order_dependences(struct gpu_prog *prog);
+isl_bool only_fixed_element_accessed(struct gpu_array_info *array);
 #endif

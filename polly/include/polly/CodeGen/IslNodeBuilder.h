@@ -23,6 +23,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "isl/ctx.h"
 #include "isl/union_map.h"
+
+#include "isl-noexceptions.h"
+
 #include <utility>
 #include <vector>
 
@@ -41,6 +44,9 @@ struct SubtreeReferences {
   SetVector<Value *> &Values;
   SetVector<const SCEV *> &SCEVs;
   BlockGenerator &BlockGen;
+  // In case an (optional) parameter space location is provided, parameter space
+  // information is collected as well.
+  isl::space *ParamSpace;
 };
 
 /// Extract the out-of-scop values and SCEVs referenced from a ScopStmt.
@@ -49,6 +55,10 @@ struct SubtreeReferences {
 /// statement and the base pointers of the memory accesses. For scalar
 /// statements we force the generation of alloca memory locations and list
 /// these locations in the set of out-of-scop values as well.
+///
+/// We also collect an isl::space that includes all parameter dimensions
+/// used in the statement's memory accesses, in case the ParamSpace pointer
+/// is non-null.
 ///
 /// @param Stmt             The statement for which to extract the information.
 /// @param UserPtr          A void pointer that can be casted to a
