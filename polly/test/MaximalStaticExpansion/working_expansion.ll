@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-canonicalize -polly-mse -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-mse -analyze < %s | FileCheck %s
 ;
 ; Verify that the accesses are correctly expanded
 ;
@@ -27,75 +27,42 @@
 ;
 ; CHECK: new: { Stmt_for_body3[i0, i1] -> MemRef_B_Stmt_for_body3_expanded[i0, i1] };
 ; CHECK: new: { Stmt_for_end[i0] -> MemRef_B_Stmt_for_body3_expanded[i0, i0] };
-
+;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; Function Attrs: noinline nounwind uwtable
 define double @mse(double* %A, double* %B) {
 entry:
-  %A.addr = alloca double*, align 8
-  %B.addr = alloca double*, align 8
-  %i = alloca i32, align 4
-  %tmp = alloca double, align 8
-  %j = alloca i32, align 4
-  store double* %A, double** %A.addr, align 8
-  store double* %B, double** %B.addr, align 8
-  store double 6.000000e+00, double* %tmp, align 8
-  store i32 0, i32* %i, align 4
-  br label %for.cond
+  br label %entry.split
 
-for.cond:                                         ; preds = %for.inc8, %entry
-  %0 = load i32, i32* %i, align 4
-  %cmp = icmp slt i32 %0, 2000
-  br i1 %cmp, label %for.body, label %for.end10
+entry.split:                                      ; preds = %entry
+  br label %for.body
 
-for.body:                                         ; preds = %for.cond
-  store i32 0, i32* %j, align 4
-  br label %for.cond1
+for.body:                                         ; preds = %entry.split, %for.end
+  %indvars.iv3 = phi i64 [ 0, %entry.split ], [ %indvars.iv.next4, %for.end ]
+  br label %for.body3
 
-for.cond1:                                        ; preds = %for.inc, %for.body
-  %1 = load i32, i32* %j, align 4
-  %cmp2 = icmp slt i32 %1, 3000
-  br i1 %cmp2, label %for.body3, label %for.end
-
-for.body3:                                        ; preds = %for.cond1
-  %2 = load i32, i32* %j, align 4
-  %conv = sitofp i32 %2 to double
-  %3 = load double*, double** %B.addr, align 8
-  %4 = load i32, i32* %j, align 4
-  %idxprom = sext i32 %4 to i64
-  %arrayidx = getelementptr inbounds double, double* %3, i64 %idxprom
+for.body3:                                        ; preds = %for.body, %for.body3
+  %indvars.iv = phi i64 [ 0, %for.body ], [ %indvars.iv.next, %for.body3 ]
+  %0 = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %0 to double
+  %arrayidx = getelementptr inbounds double, double* %B, i64 %indvars.iv
   store double %conv, double* %arrayidx, align 8
-  br label %for.inc
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp ne i64 %indvars.iv.next, 3000
+  br i1 %exitcond, label %for.body3, label %for.end
 
-for.inc:                                          ; preds = %for.body3
-  %5 = load i32, i32* %j, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, i32* %j, align 4
-  br label %for.cond1
+for.end:                                          ; preds = %for.body3
+  %arrayidx5 = getelementptr inbounds double, double* %B, i64 %indvars.iv3
+  %1 = bitcast double* %arrayidx5 to i64*
+  %2 = load i64, i64* %1, align 8
+  %arrayidx7 = getelementptr inbounds double, double* %A, i64 %indvars.iv3
+  %3 = bitcast double* %arrayidx7 to i64*
+  store i64 %2, i64* %3, align 8
+  %indvars.iv.next4 = add nuw nsw i64 %indvars.iv3, 1
+  %exitcond5 = icmp ne i64 %indvars.iv.next4, 2000
+  br i1 %exitcond5, label %for.body, label %for.end10
 
-for.end:                                          ; preds = %for.cond1
-  %6 = load double*, double** %B.addr, align 8
-  %7 = load i32, i32* %i, align 4
-  %idxprom4 = sext i32 %7 to i64
-  %arrayidx5 = getelementptr inbounds double, double* %6, i64 %idxprom4
-  %8 = load double, double* %arrayidx5, align 8
-  %9 = load double*, double** %A.addr, align 8
-  %10 = load i32, i32* %i, align 4
-  %idxprom6 = sext i32 %10 to i64
-  %arrayidx7 = getelementptr inbounds double, double* %9, i64 %idxprom6
-  store double %8, double* %arrayidx7, align 8
-  br label %for.inc8
-
-for.inc8:                                         ; preds = %for.end
-  %11 = load i32, i32* %i, align 4
-  %inc9 = add nsw i32 %11, 1
-  store i32 %inc9, i32* %i, align 4
-  br label %for.cond
-
-for.end10:                                        ; preds = %for.cond
-  %12 = load double, double* %tmp, align 8
-  ret double %12
+for.end10:                                        ; preds = %for.end
+  ret double 6.000000e+00
 }
-

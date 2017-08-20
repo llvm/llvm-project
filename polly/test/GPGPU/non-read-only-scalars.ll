@@ -68,11 +68,16 @@
 ; CODE-NEXT: Stmt_bb17();
 
 ; CODE: # kernel2
-; CODE-NEXT: for (int c0 = 0; c0 <= 32; c0 += 1) {
-; CODE-NEXT:   Stmt_bb18(c0);
-; CODE-NEXT:   if (c0 <= 31)
-; CODE-NEXT:     Stmt_bb20(c0);
-; CODE-NEXT: }
+; CODE_NEXT: {
+; CODE_NEXT:   read();
+; CODE_NEXT:   for (int c0 = 0; c0 <= 32; c0 += 1) {
+; CODE_NEXT:     Stmt_bb18(c0);
+; CODE_NEXT:     if (c0 <= 31)
+; CODE_NEXT:       Stmt_bb20(c0);
+; CODE_NEXT:   }
+; CODE_NEXT:   write();
+; CODE_NEXT: }
+
 
 ; KERNEL-IR: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_1(i8 addrspace(1)* %MemRef_sum_0__phi)
 ; KERNEL-IR:  store float 0.000000e+00, float* %sum.0.phiops

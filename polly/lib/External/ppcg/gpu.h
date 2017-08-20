@@ -447,10 +447,13 @@ __isl_give isl_schedule_node *gpu_create_kernel(struct gpu_gen *gen,
 __isl_give isl_schedule *get_schedule(struct gpu_gen *gen);
 int has_any_permutable_node(__isl_keep isl_schedule *schedule);
 __isl_give isl_schedule *map_to_device(struct gpu_gen *gen,
-                                       __isl_take isl_schedule *schedule);
+                                       __isl_take isl_schedule *schedule,
+                                      int to_from_device);
 __isl_give isl_ast_node *generate_code(struct gpu_gen *gen,
                                        __isl_take isl_schedule *schedule);
 
 __isl_give isl_union_set *compute_may_persist(struct gpu_prog *prog);
 void collect_references(struct gpu_prog *prog, struct gpu_array_info *array);
+void collect_order_dependences(struct gpu_prog *prog);
+isl_bool only_fixed_element_accessed(struct gpu_array_info *array);
 #endif

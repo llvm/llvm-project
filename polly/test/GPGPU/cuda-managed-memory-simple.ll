@@ -38,25 +38,17 @@
 ; CHECK:       %13 = call i8* @polly_initContextCUDA()
 ; CHECK-NEXT:  %14 = bitcast i32* %A to i8*
 ; CHECK-NEXT:  %15 = bitcast i32* %R to i8*
-; CHECK-NEXT:  %16 = getelementptr [4 x i8*], [4 x i8*]* %polly_launch_0_params, i64 0, i64 0
+; CHECK-NEXT:  %16 = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 0
 ; CHECK-NEXT:  store i8* %14, i8** %polly_launch_0_param_0
 ; CHECK-NEXT:  %17 = bitcast i8** %polly_launch_0_param_0 to i8*
 ; CHECK-NEXT:  store i8* %17, i8** %16
-; CHECK-NEXT:  %18 = getelementptr [4 x i8*], [4 x i8*]* %polly_launch_0_params, i64 0, i64 1
+; CHECK-NEXT:  %18 = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 1
 ; CHECK-NEXT:  store i8* %15, i8** %polly_launch_0_param_1
 ; CHECK-NEXT:  %19 = bitcast i8** %polly_launch_0_param_1 to i8*
 ; CHECK-NEXT:  store i8* %19, i8** %18
-; CHECK-NEXT:  store i32 4, i32* %polly_launch_0_param_size_0
-; CHECK-NEXT:  %20 = getelementptr [4 x i8*], [4 x i8*]* %polly_launch_0_params, i64 0, i64 2
-; CHECK-NEXT:  %21 = bitcast i32* %polly_launch_0_param_size_0 to i8*
-; CHECK-NEXT:  store i8* %21, i8** %20
-; CHECK-NEXT:  store i32 4, i32* %polly_launch_0_param_size_1
-; CHECK-NEXT:  %22 = getelementptr [4 x i8*], [4 x i8*]* %polly_launch_0_params, i64 0, i64 3
-; CHECK-NEXT:  %23 = bitcast i32* %polly_launch_0_param_size_1 to i8*
-; CHECK-NEXT:  store i8* %23, i8** %22
-; CHECK-NEXT:  %24 = call i8* @polly_getKernel(i8* getelementptr inbounds ([852 x i8], [852 x i8]* @FUNC_copy_SCOP_0_KERNEL_0, i32 0, i32 0), i8* getelementptr inbounds ([26 x i8], [26 x i8]* @FUNC_copy_SCOP_0_KERNEL_0_name, i32 0, i32 0))
-; CHECK-NEXT:  call void @polly_launchKernel(i8* %24, i32 2, i32 1, i32 32, i32 1, i32 1, i8* %polly_launch_0_params_i8ptr)
-; CHECK-NEXT:  call void @polly_freeKernel(i8* %24)
+; CHECK-NEXT:  %20 = call i8* @polly_getKernel(i8* getelementptr inbounds ([852 x i8], [852 x i8]* @FUNC_copy_SCOP_0_KERNEL_0, i32 0, i32 0), i8* getelementptr inbounds ([26 x i8], [26 x i8]* @FUNC_copy_SCOP_0_KERNEL_0_name, i32 0, i32 0))
+; CHECK-NEXT:  call void @polly_launchKernel(i8* %20, i32 2, i32 1, i32 32, i32 1, i32 1, i8* %polly_launch_0_params_i8ptr)
+; CHECK-NEXT:  call void @polly_freeKernel(i8* %20)
 ; CHECK-NEXT:  call void @polly_synchronizeDevice()
 ; CHECK-NEXT:  call void @polly_freeContext(i8* %13)
 

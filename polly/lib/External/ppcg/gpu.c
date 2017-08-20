@@ -162,7 +162,7 @@ static int is_read_only_scalar(struct gpu_array_info *array,
 /* Is "array" only accessed as individual, fixed elements?
  * That is, does each access to "array" access a single, fixed element?
  */
-static isl_bool only_fixed_element_accessed(struct gpu_array_info *array)
+isl_bool only_fixed_element_accessed(struct gpu_array_info *array)
 {
 	int i;
 
@@ -250,6 +250,9 @@ static int extract_array_info(struct gpu_prog *prog,
 static __isl_give isl_union_map *remove_independences(struct gpu_prog *prog,
 	struct gpu_array_info *array, __isl_take isl_union_map *order)
 {
+	// We do not have independence information in Polly. Hence, make this
+	// function a no-op.
+	return order;
 	int i;
 
 	for (i = 0; i < prog->scop->pet->n_independence; ++i) {
@@ -5277,7 +5280,7 @@ static __isl_give isl_schedule_node *add_init_clear_device(
  * around the entire schedule.
  */
 __isl_give isl_schedule *map_to_device(struct gpu_gen *gen,
-	__isl_take isl_schedule *schedule)
+	__isl_take isl_schedule *schedule, int to_from_device)
 {
 	isl_schedule_node *node;
 	isl_set *context;
@@ -5309,7 +5312,12 @@ __isl_give isl_schedule *map_to_device(struct gpu_gen *gen,
 	prefix = isl_union_map_preimage_domain_union_pw_multi_aff(prefix,
 				    contraction);
 	node = mark_kernels(gen, node);
-	node = add_to_from_device(node, domain, prefix, gen->prog);
+	if (to_from_device) {
+		node = add_to_from_device(node, domain, prefix, gen->prog);
+	} else {
+		isl_union_set_free(domain);
+		isl_union_map_free(prefix);
+	}
 	node = isl_schedule_node_root(node);
 	node = isl_schedule_node_child(node, 0);
 	node = isl_schedule_node_child(node, 0);
@@ -5675,7 +5683,8 @@ static __isl_give isl_printer *generate(__isl_take isl_printer *p,
 			p = print_cpu(p, scop, options);
 		isl_schedule_free(schedule);
 	} else {
-		schedule = map_to_device(gen, schedule);
+		const int create_to_from_device = 1;
+		schedule = map_to_device(gen, schedule, create_to_from_device);
 		gen->tree = generate_code(gen, schedule);
 		p = ppcg_set_macro_names(p);
 		p = ppcg_print_exposed_declarations(p, prog->scop);
