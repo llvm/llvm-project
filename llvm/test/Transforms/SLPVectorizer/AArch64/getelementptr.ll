@@ -1,5 +1,8 @@
 ; RUN: opt -S -slp-vectorizer -slp-threshold=-18 -dce -instcombine -pass-remarks-output=%t < %s | FileCheck %s
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
+; RUN: opt -S -passes='slp-vectorizer,dce,instcombine' -slp-threshold=-18 -pass-remarks-output=%t < %s | FileCheck %s
+; RUN: cat %t | FileCheck -check-prefix=YAML %s
+
 
 target datalayout = "e-m:e-i32:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"

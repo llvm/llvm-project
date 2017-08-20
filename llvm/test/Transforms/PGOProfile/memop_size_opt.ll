@@ -1,6 +1,10 @@
+; RUN: opt < %s -pgo-memop-opt -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 -S | FileCheck %s --check-prefix=MEMOP_OPT
 ; RUN: opt < %s -passes=pgo-memop-opt -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 -S | FileCheck %s --check-prefix=MEMOP_OPT
 ; RUN: opt < %s -pgo-memop-opt -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 -pass-remarks-with-hotness -pass-remarks-output=%t.opt.yaml -S | FileCheck %s --check-prefix=MEMOP_OPT
 ; RUN: FileCheck %s -input-file=%t.opt.yaml --check-prefix=YAML
+; RUN: opt < %s -passes=pgo-memop-opt -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 -pass-remarks-with-hotness -pass-remarks-output=%t.opt.yaml -S | FileCheck %s --check-prefix=MEMOP_OPT
+; RUN: FileCheck %s -input-file=%t.opt.yaml --check-prefix=YAML
+
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

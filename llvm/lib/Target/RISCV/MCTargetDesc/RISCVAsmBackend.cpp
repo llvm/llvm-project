@@ -51,7 +51,7 @@ public:
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                         MCInst &Res) const override {
 
-    llvm_unreachable("RISCVAsmBackend::relaxInstruction() unimplemented");
+    report_fatal_error("RISCVAsmBackend::relaxInstruction() unimplemented");
   }
 
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;

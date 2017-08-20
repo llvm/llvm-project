@@ -29,7 +29,7 @@ protected:
 
 RISCVELFObjectWriter::RISCVELFObjectWriter(uint8_t OSABI, bool Is64Bit)
     : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_RISCV,
-                              /*HasRelocationAddend*/ false) {}
+                              /*HasRelocationAddend*/ true) {}
 
 RISCVELFObjectWriter::~RISCVELFObjectWriter() {}
 
@@ -37,7 +37,7 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
                                             const MCValue &Target,
                                             const MCFixup &Fixup,
                                             bool IsPCRel) const {
-  llvm_unreachable("invalid fixup kind!");
+  report_fatal_error("invalid fixup kind!");
 }
 
 MCObjectWriter *llvm::createRISCVELFObjectWriter(raw_pwrite_stream &OS,
