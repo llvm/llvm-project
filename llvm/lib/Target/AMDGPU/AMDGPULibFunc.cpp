@@ -516,10 +516,12 @@ bool AMDGPULibFunc::parseName(const StringRef& fullName) {
 ///////////////////////////////////////////////////////////////////////////////
 // Itanium Demangling
 
+namespace {
 struct ItaniumParamParser {
   AMDGPULibFunc::Param Prev;
   bool parseItaniumParam(StringRef& param, AMDGPULibFunc::Param &res);
 };
+} // namespace
 
 bool ItaniumParamParser::parseItaniumParam(StringRef& param,
                                            AMDGPULibFunc::Param &res) {
@@ -689,7 +691,7 @@ static const char *getItaniumTypeName(AMDGPULibFunc::EType T) {
   return nullptr;
 }
 
-
+namespace {
 // Itanium mangling ABI says:
 // "5.1.8. Compression
 // ... Each non-terminal in the grammar for which <substitution> appears on the
@@ -784,6 +786,7 @@ public:
     if (Ptr.ArgType) Str.push_back(Ptr);
   }
 };
+} // namespace
 
 std::string AMDGPULibFunc::mangleNameItanium() const {
   SmallString<128> Buf;

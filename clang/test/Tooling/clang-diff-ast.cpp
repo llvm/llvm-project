@@ -12,7 +12,8 @@ void f() {
   // CHECK: IntegerLiteral: 1
   auto i = 1;
   // CHECK: CallExpr(
-  // CHECK: DeclRefExpr: f(
+  // CHECK-NOT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr: f(
   f();
   // CHECK: BinaryOperator: =(
   i = i;
@@ -37,6 +38,7 @@ class X : Base {
     if (i == 0)
       // CHECK: StringLiteral: foo(
       return "foo";
+    // CHECK-NOT: ImplicitCastExpr
     return 0;
   }
 
@@ -48,3 +50,23 @@ public:
     int x = m;
   }
 };
+
+#define M (void)1
+#define MA(a, b) (void)a, b
+// CHECK: FunctionDecl
+// CHECK-NEXT: CompoundStmt
+void macros() {
+  M;
+  MA(1, 2);
+}
+
+#ifndef GUARD
+#define GUARD
+// CHECK-NEXT: NamespaceDecl
+namespace world {
+// nodes from other files are excluded, there should be no output here
+#include "clang-diff-ast.cpp"
+}
+// CHECK-NEXT: FunctionDecl: sentinel
+void sentinel();
+#endif

@@ -105,11 +105,13 @@ struct ComparisonOptions {
 
   /// During bottom-up matching, match only nodes with at least this value as
   /// the ratio of their common descendants.
-  double MinSimilarity = 0.2;
+  double MinSimilarity = 0.5;
 
   /// Whenever two subtrees are matched in the bottom-up phase, the optimal
   /// mapping is computed, unless the size of either subtrees exceeds this.
   int MaxSize = 100;
+
+  bool StopAfterTopDown = false;
 
   /// Returns false if the nodes should never be matched.
   bool isMatchingAllowed(const Node &N1, const Node &N2) const {
