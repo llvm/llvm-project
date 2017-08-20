@@ -170,6 +170,7 @@ void RegisterPollyPasses(PassBuilder &);
 bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                            tool_output_file *Out,
                            tool_output_file *ThinLTOLinkOut,
+                           tool_output_file *OptRemarkFile,
                            StringRef PassPipeline, OutputKind OK,
                            VerifierKind VK,
                            bool ShouldPreserveAssemblyUseListOrder,
@@ -266,5 +267,9 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
     if (OK == OK_OutputThinLTOBitcode && ThinLTOLinkOut)
       ThinLTOLinkOut->keep();
   }
+
+  if (OptRemarkFile)
+    OptRemarkFile->keep();
+
   return true;
 }

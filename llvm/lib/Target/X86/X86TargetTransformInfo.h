@@ -102,6 +102,8 @@ public:
 
   int getIntImmCost(const APInt &Imm, Type *Ty);
 
+  unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands);
+
   int getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm, Type *Ty);
   int getIntImmCost(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
                     Type *Ty);
