@@ -218,13 +218,15 @@ replaceGlobalArray(Module &M, const DataLayout &DL, GlobalVariable &Array,
   // At this point, we have committed to replacing this array.
   ReplacedGlobals.insert(&Array);
 
-  std::string NewName = (Array.getName() + Twine(".toptr")).str();
+  std::string NewName = Array.getName();
+  NewName += ".toptr";
   GlobalVariable *ReplacementToArr =
       cast<GlobalVariable>(M.getOrInsertGlobal(NewName, ElemPtrTy));
   ReplacementToArr->setInitializer(ConstantPointerNull::get(ElemPtrTy));
 
   Function *PollyMallocManaged = getOrCreatePollyMallocManaged(M);
-  Twine FnName = Array.getName() + ".constructor";
+  std::string FnName = Array.getName();
+  FnName += ".constructor";
   PollyIRBuilder Builder(M.getContext());
   FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), false);
   const GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;

@@ -1,5 +1,8 @@
 ; RUN: opt -slp-vectorizer -slp-threshold=-6 -S -pass-remarks-output=%t <  %s | FileCheck %s
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
+; RUN: opt -passes=slp-vectorizer -slp-threshold=-6 -S -pass-remarks-output=%t <  %s | FileCheck %s
+; RUN: cat %t | FileCheck -check-prefix=YAML %s
+
 
 ; FIXME: The threshold is changed to keep this test case a bit smaller.
 ; The AArch64 cost model should not give such high costs to select statements.

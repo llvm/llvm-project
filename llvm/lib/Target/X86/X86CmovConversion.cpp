@@ -646,9 +646,17 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     // Skip any CMOVs in this group which don't load from memory.
     if (!MI.mayLoad()) {
       // Remember the false-side register input.
-      FalseBBRegRewriteTable[MI.getOperand(0).getReg()] =
+      unsigned FalseReg =
           MI.getOperand(X86::getCondFromCMovOpc(MI.getOpcode()) == CC ? 1 : 2)
               .getReg();
+      // Walk back through any intermediate cmovs referenced.
+      for (;;) {
+        auto FRIt = FalseBBRegRewriteTable.find(FalseReg);
+        if (FRIt == FalseBBRegRewriteTable.end())
+          break;
+        FalseReg = FRIt->second;
+      }
+      FalseBBRegRewriteTable[MI.getOperand(0).getReg()] = FalseReg;
       continue;
     }
 

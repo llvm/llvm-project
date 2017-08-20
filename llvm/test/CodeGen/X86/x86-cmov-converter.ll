@@ -428,7 +428,8 @@ entry:
 }
 
 ; Test that we can convert a group of cmovs where only one has a memory
-; operand and where that memory operand's registers come from a prior cmov in the group.
+; operand and where that memory operand's registers come from a prior cmov in
+; the group.
 define i32 @test_cmov_memoperand_in_group_reuse_for_addr(i32 %a, i32 %b, i32* %x, i32* %y) #0 {
 ; CHECK-LABEL: test_cmov_memoperand_in_group_reuse_for_addr:
 entry:
@@ -465,6 +466,27 @@ entry:
 ; CHECK:         movl %[[R2]], %eax
 ; CHECK:         retq
   ret i32 %z
+}
+
+; Test that we can convert a group of cmovs where only one has a memory
+; operand and where that memory operand's registers come from a prior cmov and
+; where that cmov gets *its* input from a prior cmov in the group.
+define i32 @test_cmov_memoperand_in_group_reuse_for_addr3(i32 %a, i32 %b, i32* %x, i32* %y, i32* %z) #0 {
+; CHECK-LABEL: test_cmov_memoperand_in_group_reuse_for_addr3:
+entry:
+  %cond = icmp ugt i32 %a, %b
+; CHECK:         cmpl
+  %p = select i1 %cond, i32* %x, i32* %y
+  %p2 = select i1 %cond, i32* %z, i32* %p
+  %load = load i32, i32* %p2
+  %r = select i1 %cond, i32 %a, i32 %load
+; CHECK-NOT:     cmov
+; CHECK:         ja [[FALSE_BB:.*]]
+; CHECK:         movl (%r{{..}}), %[[R:.*]]
+; CHECK:       [[FALSE_BB]]:
+; CHECK:         movl %[[R]], %eax
+; CHECK:         retq
+  ret i32 %r
 }
 
 attributes #0 = {"target-cpu"="x86-64"}
