@@ -92,7 +92,7 @@ private:
 
   // Computes the ratio of common descendants between the two nodes.
   // Descendants are only considered to be equal when they are mapped in M.
-  double getSimilarity(const Mapping &M, NodeId Id1, NodeId Id2) const;
+  double getJaccardSimilarity(const Mapping &M, NodeId Id1, NodeId Id2) const;
 
   // Returns the node that has the highest degree of similarity.
   NodeId findCandidate(const Mapping &M, NodeId Id1) const;
@@ -158,12 +158,23 @@ private:
   void setLeftMostDescendants();
 };
 
+static bool isSpecializedNodeExcluded(const Decl *D) { return D->isImplicit(); }
+static bool isSpecializedNodeExcluded(const Stmt *S) { return false; }
+
 template <class T>
 static bool isNodeExcluded(const SourceManager &SrcMgr, T *N) {
   if (!N)
     return true;
   SourceLocation SLoc = N->getLocStart();
-  return SLoc.isValid() && SrcMgr.isInSystemHeader(SLoc);
+  if (SLoc.isValid()) {
+    // Ignore everything from other files.
+    if (!SrcMgr.isInMainFile(SLoc))
+      return true;
+    // Ignore macros.
+    if (SLoc != SrcMgr.getSpellingLoc(SLoc))
+      return true;
+  }
+  return isSpecializedNodeExcluded(N);
 }
 
 namespace {
@@ -180,6 +191,8 @@ struct NodeCountVisitor : public RecursiveASTVisitor<NodeCountVisitor> {
     return true;
   }
   bool TraverseStmt(Stmt *S) {
+    if (S)
+      S = S->IgnoreImplicit();
     if (isNodeExcluded(Tree.AST.getSourceManager(), S))
       return true;
     ++Count;
@@ -242,6 +255,8 @@ struct PreorderVisitor : public RecursiveASTVisitor<PreorderVisitor> {
     return true;
   }
   bool TraverseStmt(Stmt *S) {
+    if (S)
+      S = S->IgnoreImplicit();
     if (isNodeExcluded(Tree.AST.getSourceManager(), S))
       return true;
     auto SavedState = PreTraverse(S);
@@ -699,8 +714,8 @@ bool ASTDiff::Impl::haveSameParents(const Mapping &M, NodeId Id1,
 
 void ASTDiff::Impl::addOptimalMapping(Mapping &M, NodeId Id1,
                                       NodeId Id2) const {
-  if (std::max(T1.getNumberOfDescendants(Id1),
-               T2.getNumberOfDescendants(Id2)) >= Options.MaxSize)
+  if (std::max(T1.getNumberOfDescendants(Id1), T2.getNumberOfDescendants(Id2)) >
+      Options.MaxSize)
     return;
   ZhangShashaMatcher Matcher(*this, T1, T2, Id1, Id2);
   std::vector<std::pair<NodeId, NodeId>> R = Matcher.getMatchingNodes();
@@ -712,16 +727,23 @@ void ASTDiff::Impl::addOptimalMapping(Mapping &M, NodeId Id1,
   }
 }
 
-double ASTDiff::Impl::getSimilarity(const Mapping &M, NodeId Id1,
-                                    NodeId Id2) const {
-  if (Id1.isInvalid() || Id2.isInvalid())
-    return 0.0;
+double ASTDiff::Impl::getJaccardSimilarity(const Mapping &M, NodeId Id1,
+                                           NodeId Id2) const {
   int CommonDescendants = 0;
   const Node &N1 = T1.getNode(Id1);
-  for (NodeId Id = Id1 + 1; Id <= N1.RightMostDescendant; ++Id)
-    CommonDescendants += int(T2.isInSubtree(M.getDst(Id), Id2));
-  return 2.0 * CommonDescendants /
-         (T1.getNumberOfDescendants(Id1) + T2.getNumberOfDescendants(Id2));
+  // Count the common descendants, excluding the subtree root.
+  for (NodeId Src = Id1 + 1; Src <= N1.RightMostDescendant; ++Src) {
+    NodeId Dst = M.getDst(Src);
+    CommonDescendants += int(Dst.isValid() && T2.isInSubtree(Dst, Id2));
+  }
+  // We need to subtract 1 to get the number of descendants excluding the root.
+  double Denominator = T1.getNumberOfDescendants(Id1) - 1 +
+                       T2.getNumberOfDescendants(Id2) - 1 - CommonDescendants;
+  // CommonDescendants is less than the size of one subtree.
+  assert(Denominator >= 0 && "Expected non-negative denominator.");
+  if (Denominator == 0)
+    return 0;
+  return CommonDescendants / Denominator;
 }
 
 NodeId ASTDiff::Impl::findCandidate(const Mapping &M, NodeId Id1) const {
@@ -732,7 +754,7 @@ NodeId ASTDiff::Impl::findCandidate(const Mapping &M, NodeId Id1) const {
       continue;
     if (M.hasDst(Id2))
       continue;
-    double Similarity = getSimilarity(M, Id1, Id2);
+    double Similarity = getJaccardSimilarity(M, Id1, Id2);
     if (Similarity >= Options.MinSimilarity && Similarity > HighestSimilarity) {
       HighestSimilarity = Similarity;
       Candidate = Id2;
@@ -752,8 +774,8 @@ void ASTDiff::Impl::matchBottomUp(Mapping &M) const {
       }
       break;
     }
-    const Node &N1 = T1.getNode(Id1);
     bool Matched = M.hasSrc(Id1);
+    const Node &N1 = T1.getNode(Id1);
     bool MatchedChildren =
         std::any_of(N1.Children.begin(), N1.Children.end(),
                     [&](NodeId Child) { return M.hasSrc(Child); });
@@ -821,6 +843,8 @@ ASTDiff::Impl::Impl(SyntaxTree::Impl &T1, SyntaxTree::Impl &T2,
 
 void ASTDiff::Impl::computeMapping() {
   TheMapping = matchTopDown();
+  if (Options.StopAfterTopDown)
+    return;
   matchBottomUp(TheMapping);
 }
 

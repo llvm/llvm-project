@@ -62,8 +62,8 @@ static void ZeroFillBytes(raw_ostream &OS, size_t Size) {
   OS.write(reinterpret_cast<char *>(FillData.data()), Size);
 }
 
-void writeInitialLength(const DWARFYAML::InitialLength &Length, raw_ostream &OS,
-                        bool IsLittleEndian) {
+static void writeInitialLength(const DWARFYAML::InitialLength &Length,
+                               raw_ostream &OS, bool IsLittleEndian) {
   writeInteger((uint32_t)Length.TotalLength, OS, IsLittleEndian);
   if (Length.isDWARF64())
     writeInteger((uint64_t)Length.TotalLength64, OS, IsLittleEndian);
@@ -131,6 +131,7 @@ void DWARFYAML::EmitPubSection(raw_ostream &OS,
   }
 }
 
+namespace {
 /// \brief An extension of the DWARFYAML::ConstVisitor which writes compile
 /// units and DIEs to a stream.
 class DumpVisitor : public DWARFYAML::ConstVisitor {
@@ -195,6 +196,7 @@ public:
   DumpVisitor(const DWARFYAML::Data &DI, raw_ostream &Out)
       : DWARFYAML::ConstVisitor(DI), OS(Out) {}
 };
+} // namespace
 
 void DWARFYAML::EmitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
   DumpVisitor Visitor(DI, OS);

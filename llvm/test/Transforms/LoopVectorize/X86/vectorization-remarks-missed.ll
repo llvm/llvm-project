@@ -24,7 +24,7 @@
 ;   for (int i = 0; i < Length; i++)
 ;     A[i] = i;
 ; }
-; CHECK: remark: source.cpp:13:5: loop not vectorized: vectorization and interleaving are explicitly disabled, or vectorize width and interleave count are both set to 1
+; CHECK: remark: source.cpp:13:5: loop not vectorized: vectorization and interleaving are explicitly disabled, or the loop has already been vectorized
 
 ; void test_array_bounds(int *A, int *B, int Length) {
 ; #pragma clang loop vectorize(enable)
@@ -71,7 +71,7 @@
 ; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 13, Column: 5 }
 ; YAML-NEXT: Function:        _Z13test_disabledPii
 ; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'loop not vectorized: vectorization and interleaving are explicitly disabled, or vectorize width and interleave count are both set to 1'
+; YAML-NEXT:   - String:          'loop not vectorized: vectorization and interleaving are explicitly disabled, or the loop has already been vectorized
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            ''

@@ -169,7 +169,7 @@ Error GSIStreamBuilder::finalizeMsfLayout() {
   return Error::success();
 }
 
-bool comparePubSymByAddrAndName(const CVSymbol *LS, const CVSymbol *RS) {
+static bool comparePubSymByAddrAndName(const CVSymbol *LS, const CVSymbol *RS) {
   assert(LS->kind() == SymbolKind::S_PUB32);
   assert(RS->kind() == SymbolKind::S_PUB32);
 

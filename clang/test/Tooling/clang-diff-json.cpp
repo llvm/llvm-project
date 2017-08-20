@@ -3,9 +3,9 @@
 // RUN: | FileCheck %s
 
 // CHECK: "begin": 299,
-// CHECK: "type": "CXXRecordDecl",
 // CHECK: "type": "FieldDecl",
 // CHECK: "end": 319,
+// CHECK: "type": "CXXRecordDecl",
 class A {
   int x;
 };

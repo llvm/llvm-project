@@ -7015,6 +7015,7 @@ static bool createVirtualRegs(SmallVector<unsigned, 4> &Regs, unsigned NumRegs,
   return true;
 }
 
+namespace {
 class ExtraFlags {
   unsigned Flags = 0;
 
@@ -7048,6 +7049,7 @@ public:
 
   unsigned get() const { return Flags; }
 };
+} // namespace
 
 /// visitInlineAsm - Handle a call to an InlineAsm object.
 ///
