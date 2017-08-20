@@ -53,8 +53,8 @@ enum VerifierKind {
 /// nullptr.
 bool runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                      tool_output_file *Out, tool_output_file *ThinLinkOut,
-                     StringRef PassPipeline, opt_tool::OutputKind OK,
-                     opt_tool::VerifierKind VK,
+                     tool_output_file *OptRemarkFile, StringRef PassPipeline,
+                     opt_tool::OutputKind OK, opt_tool::VerifierKind VK,
                      bool ShouldPreserveAssemblyUseListOrder,
                      bool ShouldPreserveBitcodeUseListOrder,
                      bool EmitSummaryIndex, bool EmitModuleHash);

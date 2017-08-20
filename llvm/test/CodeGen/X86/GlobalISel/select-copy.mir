@@ -1,0 +1,185 @@
+# RUN: llc -mtriple=i386-linux-gnu   -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X32
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
+
+--- |
+
+  define void @test_copy() {
+    ret void
+  }
+
+  define void @test_copy2() {
+    ret void
+  }
+
+  define void @test_copy3() {
+    ret void
+  }
+
+  define void @test_copy4() {
+    ret void
+  }
+
+  define void @test_copy5() {
+    ret void
+  }
+
+  define void @test_copy6() {
+    ret void
+  }
+
+...
+---
+name:            test_copy
+# ALL-LABEL: name:  test_copy
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+# ALL:          %0 = COPY %al
+# ALL-NEXT:     %2 = SUBREG_TO_REG 0, %0, 1
+# ALL-NEXT:     %1 = AND32ri8 %2, 1, implicit-def %eflags
+# ALL-NEXT:     %eax = COPY %1
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %eax
+
+    %0(s1) = COPY %al
+    %1(s32) = G_ZEXT %0(s1)
+    %eax = COPY %1(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_copy2
+# ALL-LABEL: name:  test_copy2
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+# ALL:          %0 = COPY %al
+# ALL-NEXT:     %1 = MOVZX32rr8 %0
+# ALL-NEXT:     %eax = COPY %1
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %eax
+
+    %0(s8) = COPY %al
+    %1(s32) = G_ZEXT %0(s8)
+    %eax = COPY %1(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_copy3
+# ALL-LABEL: name:  test_copy3
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+# ALL:          %0 = COPY %al
+# ALL-NEXT:     %1 = MOVZX32rr8 %0
+# ALL-NEXT:     %eax = COPY %1
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %eax
+
+    %0(s8) = COPY %ax
+    %1(s32) = G_ZEXT %0(s8)
+    %eax = COPY %1(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_copy4
+# ALL-LABEL: name:  test_copy4
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr16, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+# ALL:          %0 = COPY %ax
+# ALL-NEXT:     %1 = MOVZX32rr16 %0
+# ALL-NEXT:     %eax = COPY %1
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %eax
+
+    %0(s16) = COPY %eax
+    %1(s32) = G_ZEXT %0(s16)
+    %eax = COPY %1(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_copy5
+# ALL-LABEL: name:  test_copy5
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+# ALL:          %0 = COPY %dl
+# ALL-NEXT:     %1 = SUBREG_TO_REG 0, %0, 1
+# ALL-NEXT:     %eax = COPY %1
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %eax,%edx
+
+    %0(s8) = COPY %edx
+    %eax = COPY %0(s8)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_copy6
+# ALL-LABEL: name:  test_copy6
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr16, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+# ALL:          %0 = COPY %dx
+# ALL-NEXT:     %1 = SUBREG_TO_REG 0, %0, 3
+# ALL-NEXT:     %eax = COPY %1
+# ALL-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %eax,%edx
+
+    %0(s16) = COPY %edx
+    %eax = COPY %0(s16)
+    RET 0, implicit %eax
+
+...
+
