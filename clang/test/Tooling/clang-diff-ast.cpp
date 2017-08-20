@@ -5,21 +5,30 @@
 // CHECK: {{^}} NamespaceDecl: test;(
 namespace test {
 
-// CHECK: {{^}}  FunctionDecl: f(
+// CHECK: {{^}} FunctionDecl: test::f(
 // CHECK: CompoundStmt(
 void f() {
   // CHECK: VarDecl: i(int)(
   // CHECK: IntegerLiteral: 1
   auto i = 1;
+  // CHECK: FloatingLiteral: 1.5(
+  auto r = 1.5;
+  // CHECK: CXXBoolLiteralExpr: true(
+  auto b = true;
   // CHECK: CallExpr(
   // CHECK-NOT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr: f(
+  // CHECK: DeclRefExpr: test::f(
   f();
+  // CHECK: UnaryOperator: ++(
+  ++i;
   // CHECK: BinaryOperator: =(
   i = i;
 }
 
 } // end namespace test
+
+// CHECK: UsingDirectiveDecl: test(
+using namespace test;
 
 // CHECK: TypedefDecl: nat;unsigned int;(
 typedef unsigned nat;
@@ -29,10 +38,10 @@ using real = double;
 class Base {
 };
 
-// CHECK: CXXRecordDecl: X;class X;(
+// CHECK: CXXRecordDecl: X;X;(
 class X : Base {
   int m;
-  // CHECK: CXXMethodDecl: foo(const char *(int)
+  // CHECK: CXXMethodDecl: X::foo(const char *(int)
   // CHECK: ParmVarDecl: i(int)(
   const char *foo(int i) {
     if (i == 0)
@@ -44,11 +53,16 @@ class X : Base {
 
   // CHECK: AccessSpecDecl: public(
 public:
-  // CHECK: CXXConstructorDecl: X(void (char, int){{( __attribute__\(\(thiscall\)\))?}})(
-  X(char, int) : Base(), m(0) {
-    // CHECK: MemberExpr(
+  int not_initialized;
+  // All initialized members, bases and delegating initializers are are
+  // appended, separated by commas.
+  // CHECK: CXXConstructorDecl: X::X(void (char, int){{( __attribute__\(\(thiscall\)\))?}})Base,X::m,(
+  X(char c, int) : Base(), m(0) {
+    // CHECK: MemberExpr: X::m(
     int x = m;
   }
+  // CHECK: CXXConstructorDecl: X::X(void (char))X,(
+  X(char s) : X(s, 4) {}
 };
 
 #define M (void)1
