@@ -316,6 +316,18 @@ static void printNodeAsJson(raw_ostream &OS, diff::SyntaxTree &Tree,
   const diff::Node &N = Tree.getNode(Id);
   OS << "{";
   printNodeAttributes(OS, Tree, Id);
+  auto Identifier = N.getIdentifier();
+  auto QualifiedIdentifier = N.getQualifiedIdentifier();
+  if (Identifier) {
+    OS << R"(,"identifier":")";
+    printJsonString(OS, *Identifier);
+    OS << R"(")";
+    if (QualifiedIdentifier && *Identifier != *QualifiedIdentifier) {
+      OS << R"(,"qualified_identifier":")";
+      printJsonString(OS, *QualifiedIdentifier);
+      OS << R"(")";
+    }
+  }
   OS << R"(,"children":[)";
   if (N.Children.size() > 0) {
     printNodeAsJson(OS, Tree, N.Children[0]);

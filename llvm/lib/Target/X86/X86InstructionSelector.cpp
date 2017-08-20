@@ -167,7 +167,7 @@ X86InstructionSelector::getRegClass(LLT Ty, unsigned Reg,
   return getRegClass(Ty, RegBank);
 }
 
-unsigned getSubRegIndex(const TargetRegisterClass *RC) {
+static unsigned getSubRegIndex(const TargetRegisterClass *RC) {
   unsigned SubIdx = X86::NoSubRegister;
   if (RC == &X86::GR32RegClass) {
     SubIdx = X86::sub_32bit;
@@ -180,7 +180,7 @@ unsigned getSubRegIndex(const TargetRegisterClass *RC) {
   return SubIdx;
 }
 
-const TargetRegisterClass *getRegClassFromGRPhysReg(unsigned Reg) {
+static const TargetRegisterClass *getRegClassFromGRPhysReg(unsigned Reg) {
   assert(TargetRegisterInfo::isPhysicalRegister(Reg));
   if (X86::GR64RegClass.contains(Reg))
     return &X86::GR64RegClass;
@@ -403,8 +403,9 @@ unsigned X86InstructionSelector::getLoadStoreOp(LLT &Ty, const RegisterBank &RB,
 }
 
 // Fill in an address from the given instruction.
-void X86SelectAddress(const MachineInstr &I, const MachineRegisterInfo &MRI,
-                      X86AddressMode &AM) {
+static void X86SelectAddress(const MachineInstr &I,
+                             const MachineRegisterInfo &MRI,
+                             X86AddressMode &AM) {
 
   assert(I.getOperand(0).isReg() && "unsupported opperand.");
   assert(MRI.getType(I.getOperand(0).getReg()).isPointer() &&

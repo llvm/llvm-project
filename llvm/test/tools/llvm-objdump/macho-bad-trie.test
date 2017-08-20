@@ -2,10 +2,10 @@ RUN: not llvm-objdump -macho -exports-trie %p/Inputs/macho-trie-bad-kind 2>&1 | 
 BAD_KIND: macho-trie-bad-kind': truncated or malformed object (unsupported exported symbol kind: 3 in flags: 0x13 in export trie data at node: 0x53)
 
 RUN: not llvm-objdump -macho -exports-trie %p/Inputs/macho-trie-bad-export-info-malformed-uleb128 2>&1 | FileCheck -check-prefix MALFORMED_ULEB128 %s 
-MALFORMED_ULEB128: macho-trie-bad-export-info-malformed-uleb128': truncated or malformed object (export info size malformed uleb128, extends past end in export trie data at node: 0x5A)
+MALFORMED_ULEB128: macho-trie-bad-export-info-malformed-uleb128': truncated or malformed object (export info size malformed uleb128, extends past end in export trie data at node: 0x5a)
 
 RUN: not llvm-objdump -macho -exports-trie %p/Inputs/macho-trie-bad-export-info-malformed-uleb128_too_big 2>&1 | FileCheck -check-prefix MALFORMED_ULEB128_TOO_BIG %s 
-MALFORMED_ULEB128_TOO_BIG: macho-trie-bad-export-info-malformed-uleb128_too_big': truncated or malformed object (export info size uleb128 too big for uint64 in export trie data at node: 0x5A)
+MALFORMED_ULEB128_TOO_BIG: macho-trie-bad-export-info-malformed-uleb128_too_big': truncated or malformed object (export info size uleb128 too big for uint64 in export trie data at node: 0x5a)
 
 RUN: not llvm-objdump -macho -exports-trie %p/Inputs/macho-trie-export-info-size-too-big 2>&1 | FileCheck -check-prefix EXPORT_INFO_SIZE_TOO_BIG %s 
 EXPORT_INFO_SIZE_TOO_BIG: macho-trie-export-info-size-too-big': truncated or malformed object (export info size: 0x1234 in export trie data at node: 0x33 too big and extends past end of trie data)
@@ -23,7 +23,7 @@ RUN: not llvm-objdump -macho -exports-trie %p/Inputs/macho-trie-edge-string-end 
 EDGE_STRING_END: macho-trie-edge-string-end': truncated or malformed object (edge sub-string in export trie data at node: 0x42 for child #0 extends past end of trie data)
 
 RUN: not llvm-objdump -macho -exports-trie %p/Inputs/macho-trie-not-export-node 2>&1 | FileCheck -check-prefix NOT_EXPORT_NODE %s 
-NOT_EXPORT_NODE: macho-trie-not-export-node': truncated or malformed object (node is not an export node in export trie data at node: 0x5A)
+NOT_EXPORT_NODE: macho-trie-not-export-node': truncated or malformed object (node is not an export node in export trie data at node: 0x5a)
 
 RUN: not llvm-objdump -macho -exports-trie %p/Inputs/macho-trie-node-loop 2>&1 | FileCheck -check-prefix LOOP_OF_CHILDERN %s 
 LOOP_OF_CHILDERN: macho-trie-node-loop': truncated or malformed object (loop in childern in export trie data at node: 0x42 back to node: 0x5)

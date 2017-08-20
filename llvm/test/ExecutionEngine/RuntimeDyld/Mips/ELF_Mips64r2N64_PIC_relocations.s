@@ -1,10 +1,11 @@
-# RUN: llvm-mc -triple=mips64el-unknown-linux -filetype=obj -o %T/test_ELF_Mips64N64.o %s
-# RUN: llc -mtriple=mips64el-unknown-linux -filetype=obj -o %T/test_ELF_ExternalFunction_Mips64N64.o %S/Inputs/ExternalFunction.ll
-# RUN: llvm-rtdyld -triple=mips64el-unknown-linux -verify -map-section test_ELF_Mips64N64.o,.text=0x1000 -map-section test_ELF_ExternalFunction_Mips64N64.o,.text=0x10000 -check=%s %/T/test_ELF_Mips64N64.o %T/test_ELF_ExternalFunction_Mips64N64.o
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=mips64el-unknown-linux -filetype=obj -o %t/test_ELF_Mips64N64.o %s
+# RUN: llc -mtriple=mips64el-unknown-linux -filetype=obj -o %t/test_ELF_ExternalFunction_Mips64N64.o %S/Inputs/ExternalFunction.ll
+# RUN: llvm-rtdyld -triple=mips64el-unknown-linux -verify -map-section test_ELF_Mips64N64.o,.text=0x1000 -map-section test_ELF_ExternalFunction_Mips64N64.o,.text=0x10000 -check=%s %t/test_ELF_Mips64N64.o %t/test_ELF_ExternalFunction_Mips64N64.o
 
-# RUN: llvm-mc -triple=mips64-unknown-linux -filetype=obj -o %T/test_ELF_Mips64N64.o %s
-# RUN: llc -mtriple=mips64-unknown-linux -filetype=obj -o %T/test_ELF_ExternalFunction_Mips64N64.o %S/Inputs/ExternalFunction.ll
-# RUN: llvm-rtdyld -triple=mips64-unknown-linux -verify -map-section test_ELF_Mips64N64.o,.text=0x1000 -map-section test_ELF_ExternalFunction_Mips64N64.o,.text=0x10000 -check=%s %/T/test_ELF_Mips64N64.o %T/test_ELF_ExternalFunction_Mips64N64.o
+# RUN: llvm-mc -triple=mips64-unknown-linux -filetype=obj -o %t/test_ELF_Mips64N64.o %s
+# RUN: llc -mtriple=mips64-unknown-linux -filetype=obj -o %t/test_ELF_ExternalFunction_Mips64N64.o %S/Inputs/ExternalFunction.ll
+# RUN: llvm-rtdyld -triple=mips64-unknown-linux -verify -map-section test_ELF_Mips64N64.o,.text=0x1000 -map-section test_ELF_ExternalFunction_Mips64N64.o,.text=0x10000 -check=%s %t/test_ELF_Mips64N64.o %t/test_ELF_ExternalFunction_Mips64N64.o
 
 	.data
 # Test R_MIPS_PC32 relocation.

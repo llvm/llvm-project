@@ -60,6 +60,7 @@ static cl::opt<bool> PrintOnly("safepoint-ir-verifier-print-only",
 
 static void Verify(const Function &F, const DominatorTree &DT);
 
+namespace {
 struct SafepointIRVerifier : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
   DominatorTree DT;
@@ -79,6 +80,7 @@ struct SafepointIRVerifier : public FunctionPass {
 
   StringRef getPassName() const override { return "safepoint verifier"; }
 };
+} // namespace
 
 void llvm::verifySafepointIR(Function &F) {
   SafepointIRVerifier pass;

@@ -8782,7 +8782,8 @@ static bool matchVectorShuffleAsBlend(SDValue V1, SDValue V2,
   return true;
 }
 
-uint64_t scaleVectorShuffleBlendMask(uint64_t BlendMask, int Size, int Scale) {
+static uint64_t scaleVectorShuffleBlendMask(uint64_t BlendMask, int Size,
+                                            int Scale) {
   uint64_t ScaledMask = 0;
   for (int i = 0; i != Size; ++i)
     if (BlendMask & (1ull << i))

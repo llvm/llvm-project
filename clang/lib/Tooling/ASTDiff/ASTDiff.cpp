@@ -149,6 +149,8 @@ public:
 
   std::string getNodeValue(NodeId Id) const;
   std::string getNodeValue(const Node &Node) const;
+  std::string getDeclValue(const Decl *D) const;
+  std::string getStmtValue(const Stmt *S) const;
 
 private:
   /// Nodes in preorder.
@@ -268,9 +270,6 @@ struct PreorderVisitor : public RecursiveASTVisitor<PreorderVisitor> {
 };
 } // end anonymous namespace
 
-SyntaxTree::Impl::Impl(SyntaxTree *Parent, const ASTContext &AST)
-    : Impl(Parent, AST.getTranslationUnitDecl(), AST) {}
-
 SyntaxTree::Impl::Impl(SyntaxTree *Parent, Decl *N, const ASTContext &AST)
     : Parent(Parent), AST(AST) {
   NodeCountVisitor NodeCounter(*this);
@@ -372,49 +371,82 @@ std::string SyntaxTree::Impl::getNodeValue(NodeId Id) const {
 
 std::string SyntaxTree::Impl::getNodeValue(const Node &N) const {
   const DynTypedNode &DTN = N.ASTNode;
-  if (auto *X = DTN.get<BinaryOperator>())
-    return X->getOpcodeStr();
-  if (auto *X = DTN.get<AccessSpecDecl>()) {
-    CharSourceRange Range(X->getSourceRange(), false);
+  if (auto *S = DTN.get<Stmt>())
+    return getStmtValue(S);
+  if (auto *D = DTN.get<Decl>())
+    return getDeclValue(D);
+  llvm_unreachable("Fatal: unhandled AST node.\n");
+}
+
+std::string SyntaxTree::Impl::getDeclValue(const Decl *D) const {
+  std::string Value;
+  PrintingPolicy TypePP(AST.getLangOpts());
+  TypePP.AnonymousTagLocations = false;
+
+  if (auto *V = dyn_cast<ValueDecl>(D)) {
+    Value += V->getQualifiedNameAsString() + "(" +
+             V->getType().getAsString(TypePP) + ")";
+    if (auto *C = dyn_cast<CXXConstructorDecl>(D)) {
+      for (auto *Init : C->inits()) {
+        if (!Init->isWritten())
+          continue;
+        if (Init->isBaseInitializer()) {
+          Value += Init->getBaseClass()->getCanonicalTypeInternal().getAsString(
+              TypePP);
+        } else if (Init->isDelegatingInitializer()) {
+          Value += C->getNameAsString();
+        } else {
+          assert(Init->isAnyMemberInitializer());
+          Value += Init->getMember()->getQualifiedNameAsString();
+        }
+        Value += ",";
+      }
+    }
+    return Value;
+  }
+  if (auto *N = dyn_cast<NamedDecl>(D))
+    Value += N->getQualifiedNameAsString() + ";";
+  if (auto *T = dyn_cast<TypedefNameDecl>(D))
+    return Value + T->getUnderlyingType().getAsString(TypePP) + ";";
+  if (auto *T = dyn_cast<TypeDecl>(D))
+    if (T->getTypeForDecl())
+      Value +=
+          T->getTypeForDecl()->getCanonicalTypeInternal().getAsString(TypePP) +
+          ";";
+  if (auto *U = dyn_cast<UsingDirectiveDecl>(D))
+    return U->getNominatedNamespace()->getName();
+  if (auto *A = dyn_cast<AccessSpecDecl>(D)) {
+    CharSourceRange Range(A->getSourceRange(), false);
     return Lexer::getSourceText(Range, AST.getSourceManager(),
                                 AST.getLangOpts());
   }
-  if (auto *X = DTN.get<IntegerLiteral>()) {
+  return Value;
+}
+
+std::string SyntaxTree::Impl::getStmtValue(const Stmt *S) const {
+  if (auto *U = dyn_cast<UnaryOperator>(S))
+    return UnaryOperator::getOpcodeStr(U->getOpcode());
+  if (auto *B = dyn_cast<BinaryOperator>(S))
+    return B->getOpcodeStr();
+  if (auto *M = dyn_cast<MemberExpr>(S))
+    return M->getMemberDecl()->getQualifiedNameAsString();
+  if (auto *I = dyn_cast<IntegerLiteral>(S)) {
     SmallString<256> Str;
-    X->getValue().toString(Str, /*Radix=*/10, /*Signed=*/false);
+    I->getValue().toString(Str, /*Radix=*/10, /*Signed=*/false);
     return Str.str();
   }
-  if (auto *X = DTN.get<StringLiteral>())
-    return X->getString();
-  if (auto *X = DTN.get<ValueDecl>())
-    return X->getNameAsString() + "(" + X->getType().getAsString() + ")";
-  if (DTN.get<DeclStmt>() || DTN.get<TranslationUnitDecl>())
-    return "";
-  std::string Value;
-  if (auto *X = DTN.get<DeclRefExpr>()) {
-    if (X->hasQualifier()) {
-      llvm::raw_string_ostream OS(Value);
-      PrintingPolicy PP(AST.getLangOpts());
-      X->getQualifier()->print(OS, PP);
-    }
-    Value += X->getDecl()->getNameAsString();
-    return Value;
+  if (auto *F = dyn_cast<FloatingLiteral>(S)) {
+    SmallString<256> Str;
+    F->getValue().toString(Str);
+    return Str.str();
   }
-  if (auto *X = DTN.get<NamedDecl>())
-    Value += X->getNameAsString() + ";";
-  if (auto *X = DTN.get<TypedefNameDecl>())
-    return Value + X->getUnderlyingType().getAsString() + ";";
-  if (DTN.get<NamespaceDecl>())
-    return Value;
-  if (auto *X = DTN.get<TypeDecl>())
-    if (X->getTypeForDecl())
-      Value +=
-          X->getTypeForDecl()->getCanonicalTypeInternal().getAsString() + ";";
-  if (DTN.get<Decl>())
-    return Value;
-  if (DTN.get<Stmt>())
-    return "";
-  llvm_unreachable("Fatal: unhandled AST node.\n");
+  if (auto *D = dyn_cast<DeclRefExpr>(S))
+    return D->getDecl()->getQualifiedNameAsString();
+  if (auto *String = dyn_cast<StringLiteral>(S))
+    return String->getString();
+  if (auto *B = dyn_cast<CXXBoolLiteralExpr>(S))
+    return B->getValue() ? "true" : "false";
+  return "";
 }
 
 /// Identifies a node in a subtree by its postorder offset, starting at 1.
@@ -636,6 +668,22 @@ ast_type_traits::ASTNodeKind Node::getType() const {
 }
 
 StringRef Node::getTypeLabel() const { return getType().asStringRef(); }
+
+llvm::Optional<std::string> Node::getQualifiedIdentifier() const {
+  if (auto *ND = ASTNode.get<NamedDecl>()) {
+    if (ND->getDeclName().isIdentifier())
+      return ND->getQualifiedNameAsString();
+  }
+  return llvm::None;
+}
+
+llvm::Optional<StringRef> Node::getIdentifier() const {
+  if (auto *ND = ASTNode.get<NamedDecl>()) {
+    if (ND->getDeclName().isIdentifier())
+      return ND->getName();
+  }
+  return llvm::None;
+}
 
 namespace {
 // Compares nodes by their depth.
