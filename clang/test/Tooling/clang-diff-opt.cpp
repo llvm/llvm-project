@@ -41,4 +41,5 @@ void f3() {
   // CHECK: Delete NullStmt(22)
   ;; {{;;;;;;}}
 }
+ 
 #endif

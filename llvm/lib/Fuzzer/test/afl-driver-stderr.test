@@ -5,7 +5,8 @@ RUN: unset AFL_DRIVER_STDERR_DUPLICATE_FILENAME
 RUN: %t-AFLDriverTest
 
 ; Test that specifying an invalid file causes a crash.
-RUN: ASAN_OPTIONS= AFL_DRIVER_STDERR_DUPLICATE_FILENAME="%T" not --crash %t-AFLDriverTest
+RUN: rm -rf %t-dir && mkdir -p %t-dir
+RUN: ASAN_OPTIONS= AFL_DRIVER_STDERR_DUPLICATE_FILENAME="%t-dir" not --crash %t-AFLDriverTest
 
 ; Test that a file is created when specified as the duplicate stderr.
 RUN: AFL_DRIVER_STDERR_DUPLICATE_FILENAME=%t %t-AFLDriverTest

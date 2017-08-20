@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -E %s > %t.src.cpp
 // RUN: %clang_cc1 -E %s > %t.dst.cpp -DDEST
-// RUN: clang-diff -dump-matches -stop-after=topdown %t.src.cpp %t.dst.cpp -- | FileCheck %s
+// RUN: clang-diff -dump-matches -stop-after=topdown %t.src.cpp %t.dst.cpp -- -std=c++11 | FileCheck %s
 //
 // Test the top-down matching of identical subtrees only.
 

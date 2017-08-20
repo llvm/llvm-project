@@ -16,7 +16,7 @@ void f2() { ;; {{;}} }
 void f1() {
 // CompoundStmt: 3 matched descendants, subtree sizes 4 and 5
 // Jaccard similarity = 3 / (4 + 5 - 3) = 3 / 6 >= 0.5
-// CHECK: Match FunctionDecl: f1(void (void))(1) to FunctionDecl: f1(void (void))(1)
+// CHECK: Match FunctionDecl: f1(void ())(1) to FunctionDecl: f1(void ())(1)
 // CHECK: Match CompoundStmt(2) to CompoundStmt(2)
 // CHECK: Match CompoundStmt(4) to CompoundStmt(3)
 // CHECK: Match CompoundStmt(5) to CompoundStmt(4)

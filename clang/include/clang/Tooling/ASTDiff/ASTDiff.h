@@ -45,6 +45,8 @@ struct Node {
   ast_type_traits::ASTNodeKind getType() const;
   StringRef getTypeLabel() const;
   bool isLeaf() const { return Children.empty(); }
+  llvm::Optional<StringRef> getIdentifier() const;
+  llvm::Optional<std::string> getQualifiedIdentifier() const;
 };
 
 class ASTDiff {

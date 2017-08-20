@@ -11,12 +11,12 @@
 // match, move
 // CHECK: <span id='L[[L:[0-9]+]]' tid='R[[R:[0-9]+]]' title='FunctionDecl
 // CHECK-NEXT: [[L]] -> [[R]]
-// CHECK-NEXT: foo(void (void))' class='m'>void foo()
+// CHECK-NEXT: src::foo(void ())' class='u m'>void foo()
 
 // match
 // CHECK: <span id='L[[L:[0-9]+]]' tid='R[[R:[0-9]+]]' title='FunctionDecl
 // CHECK-NEXT: [[L]] -> [[R]]
-// CHECK-NEXT: main(void (void))'>void main()
+// CHECK-NEXT: src::main(void ())' class='u'>void main()
 
 // deletion
 // CHECK: <span id='L[[L:[0-9]+]]' tid='R-1' title='IntegerLiteral

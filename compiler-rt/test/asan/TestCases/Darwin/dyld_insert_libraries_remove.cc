@@ -4,26 +4,24 @@
 
 // UNSUPPORTED: ios
 
-// RUN: mkdir -p %T/dyld_insert_libraries_remove
-// RUN: cp `%clang_asan %s -fsanitize=address -### 2>&1 \
-// RUN:   | grep "libclang_rt.asan_osx_dynamic.dylib" \
-// RUN:   | sed -e 's/.*"\(.*libclang_rt.asan_osx_dynamic.dylib\)".*/\1/'` \
-// RUN:   %T/dyld_insert_libraries_remove/libclang_rt.asan_osx_dynamic.dylib
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: cp `%clang_asan -print-file-name=lib`/darwin/libclang_rt.asan_osx_dynamic.dylib \
+// RUN:   %t/libclang_rt.asan_osx_dynamic.dylib
 
-// RUN: %clangxx_asan %s -o %T/dyld_insert_libraries_remove/a.out
+// RUN: %clangxx_asan %s -o %t/a.out
 // RUN: %clangxx -DSHARED_LIB %s \
-// RUN:     -dynamiclib -o %T/dyld_insert_libraries_remove/dummy-so.dylib
+// RUN:     -dynamiclib -o %t/dummy-so.dylib
 
-// RUN: ( cd %T/dyld_insert_libraries_remove && \
+// RUN: ( cd %t && \
 // RUN:   DYLD_INSERT_LIBRARIES=@executable_path/libclang_rt.asan_osx_dynamic.dylib:dummy-so.dylib \
 // RUN:   %run ./a.out 2>&1 ) | FileCheck %s || exit 1
 
-// RUN: ( cd %T/dyld_insert_libraries_remove && \
+// RUN: ( cd %t && \
 // RUN:   DYLD_INSERT_LIBRARIES=libclang_rt.asan_osx_dynamic.dylib:dummy-so.dylib \
 // RUN:   %run ./a.out 2>&1 ) | FileCheck %s || exit 1
 
-// RUN: ( cd %T/dyld_insert_libraries_remove && \
-// RUN:   DYLD_INSERT_LIBRARIES=%T/dyld_insert_libraries_remove/libclang_rt.asan_osx_dynamic.dylib:dummy-so.dylib \
+// RUN: ( cd %t && \
+// RUN:   DYLD_INSERT_LIBRARIES=%t/libclang_rt.asan_osx_dynamic.dylib:dummy-so.dylib \
 // RUN:   %run ./a.out 2>&1 ) | FileCheck %s || exit 1
 
 #if !defined(SHARED_LIB)
