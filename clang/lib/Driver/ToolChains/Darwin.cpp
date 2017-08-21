@@ -935,18 +935,6 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
-void MachO::AddFuzzerLinkArgs(const ArgList &Args, ArgStringList &CmdArgs) const {
-
-  // Go up one directory from Clang to find the libfuzzer archive file.
-  StringRef ParentDir = llvm::sys::path::parent_path(getDriver().InstalledDir);
-  SmallString<128> P(ParentDir);
-  llvm::sys::path::append(P, "lib", "libLLVMFuzzer.a");
-  CmdArgs.push_back(Args.MakeArgString(P));
-
-  // Libfuzzer is written in C++ and requires libcxx.
-  AddCXXStdlibLibArgs(Args, CmdArgs);
-}
-
 StringRef Darwin::getPlatformFamily() const {
   switch (TargetPlatform) {
     case DarwinPlatformKind::MacOS:
@@ -1008,11 +996,12 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
 
 void DarwinClang::AddLinkSanitizerLibArgs(const ArgList &Args,
                                           ArgStringList &CmdArgs,
-                                          StringRef Sanitizer) const {
+                                          StringRef Sanitizer,
+                                          bool Shared) const {
   AddLinkRuntimeLib(
       Args, CmdArgs,
       (Twine("libclang_rt.") + Sanitizer + "_" +
-       getOSLibraryNameSuffix() + "_dynamic.dylib").str(),
+       getOSLibraryNameSuffix() + (Shared ? "_dynamic.dylib" : ".a")).str(),
       /*AlwaysLink*/ true, /*IsEmbedded*/ false,
       /*AddRPath*/ true);
 }
@@ -1058,8 +1047,12 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     AddLinkSanitizerLibArgs(Args, CmdArgs, "ubsan");
   if (Sanitize.needsTsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan");
-  if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib))
-    AddFuzzerLinkArgs(Args, CmdArgs);
+  if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib)) {
+    AddLinkSanitizerLibArgs(Args, CmdArgs, "fuzzer", /*shared=*/false);
+
+    // Libfuzzer is written in C++ and requires libcxx.
+    AddCXXStdlibLibArgs(Args, CmdArgs);
+  }
   if (Sanitize.needsStatsRt()) {
     StringRef OS = isTargetMacOS() ? "osx" : "iossim";
     AddLinkRuntimeLib(Args, CmdArgs,

@@ -2,7 +2,7 @@
 
 // RUN: %clang -fsanitize=fuzzer %s -target x86_64-apple-darwin14 -### 2>&1 | FileCheck --check-prefixes=CHECK-FUZZER-LIB,CHECK-COVERAGE-FLAGS %s
 //
-// CHECK-FUZZER-LIB: libLLVMFuzzer.a
+// CHECK-FUZZER-LIB: libclang_rt.libfuzzer
 // CHECK-COVERAGE: -fsanitize-coverage-trace-pc-guard
 // CHECK-COVERAGE-SAME: -fsanitize-coverage-indirect-calls
 // CHECK-COVERAGE-SAME: -fsanitize-coverage-trace-cmp
@@ -18,11 +18,11 @@
 
 // Check that we don't link in libFuzzer.a when producing a shared object.
 // RUN: %clang -fsanitize=fuzzer %s -shared -o %t.so -### 2>&1 | FileCheck --check-prefixes=CHECK-NOLIB-SO %s
-// CHECK-NOLIB-SO-NOT: libLLVMFuzzer.a
+// CHECK-NOLIB-SO-NOT: libclang_rt.libfuzzer
 
 // Check that we don't link in libFuzzer when compiling with -fsanitize=fuzzer-no-link.
 // RUN: %clang -fsanitize=fuzzer-no-link %s -target x86_64-apple-darwin14 -### 2>&1 | FileCheck --check-prefixes=CHECK-NOLIB,CHECK-COV %s
-// CHECK-NOLIB-NOT: libLLVMFuzzer.a
+// CHECK-NOLIB-NOT: libclang_rt.libfuzzer
 // CHECK-COV: -fsanitize-coverage-trace-pc-guard
 
 // RUN: %clang -fsanitize=fuzzer -fsanitize-coverage=trace-pc %s -### 2>&1 | FileCheck --check-prefixes=CHECK-MSG %s
