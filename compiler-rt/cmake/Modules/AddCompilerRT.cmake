@@ -368,15 +368,18 @@ function(add_compiler_rt_test test_suite test_name arch)
     set(TEST_LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${TEST_LINK_FLAGS}")
     separate_arguments(TEST_LINK_FLAGS)
   endif()
-  add_custom_target(${test_name}
-    COMMAND ${COMPILER_RT_TEST_COMPILER} ${TEST_OBJECTS}
-            -o "${output_bin}"
+
+  add_custom_command(
+    OUTPUT "${output_bin}"
+    COMMAND ${COMPILER_RT_TEST_COMPILER} ${TEST_OBJECTS} -o "${output_bin}"
             ${TEST_LINK_FLAGS}
-    DEPENDS ${TEST_DEPS})
-  set_target_properties(${test_name} PROPERTIES FOLDER "Compiler-RT Tests")
+    DEPENDS ${TEST_DEPS}
+    )
+  add_custom_target(T${test_name} DEPENDS "${output_bin}")
+  set_target_properties(T${test_name} PROPERTIES FOLDER "Compiler-RT Tests")
 
   # Make the test suite depend on the binary.
-  add_dependencies(${test_suite} ${test_name})
+  add_dependencies(${test_suite} T${test_name})
 endfunction()
 
 macro(add_compiler_rt_resource_file target_name file_name component)
