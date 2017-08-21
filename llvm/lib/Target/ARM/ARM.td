@@ -435,12 +435,16 @@ def ProcA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
                                    "Cortex-A35 ARM processors", []>;
 def ProcA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
                                    "Cortex-A53 ARM processors", []>;
+def ProcA55     : SubtargetFeature<"a55", "ARMProcFamily", "CortexA55",
+                                   "Cortex-A55 ARM processors", []>;
 def ProcA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
                                    "Cortex-A57 ARM processors", []>;
 def ProcA72     : SubtargetFeature<"a72", "ARMProcFamily", "CortexA72",
                                    "Cortex-A72 ARM processors", []>;
 def ProcA73     : SubtargetFeature<"a73", "ARMProcFamily", "CortexA73",
                                    "Cortex-A73 ARM processors", []>;
+def ProcA75     : SubtargetFeature<"a75", "ARMProcFamily", "CortexA75",
+                                   "Cortex-A75 ARM processors", []>;
 
 def ProcKrait   : SubtargetFeature<"krait", "ARMProcFamily", "Krait",
                                    "Qualcomm Krait processors", []>;
@@ -921,6 +925,11 @@ def : ProcNoItin<"cortex-a53",                          [ARMv8a, ProcA53,
                                                          FeatureCRC,
                                                          FeatureFPAO]>;
 
+def : ProcNoItin<"cortex-a55",                          [ARMv82a, ProcA55,
+                                                         FeatureHWDivThumb,
+                                                         FeatureHWDivARM,
+                                                         FeatureDotProd]>;
+
 def : ProcessorModel<"cortex-a57",  CortexA57Model,     [ARMv8a, ProcA57,
                                                          FeatureHWDivThumb,
                                                          FeatureHWDivARM,
@@ -941,6 +950,11 @@ def : ProcNoItin<"cortex-a73",                          [ARMv8a, ProcA73,
                                                          FeatureHWDivARM,
                                                          FeatureCrypto,
                                                          FeatureCRC]>;
+
+def : ProcNoItin<"cortex-a75",                          [ARMv82a, ProcA75,
+                                                         FeatureHWDivThumb,
+                                                         FeatureHWDivARM,
+                                                         FeatureDotProd]>;
 
 def : ProcessorModel<"cyclone",     SwiftModel,         [ARMv8a, ProcSwift,
                                                          FeatureHasRetAddrStack,

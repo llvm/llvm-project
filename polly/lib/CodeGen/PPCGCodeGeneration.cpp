@@ -1380,8 +1380,8 @@ isl_bool collectReferencesInGPUStmt(__isl_keep isl_ast_node *Node, void *User) {
 
 /// A list of functions that are available in NVIDIA's libdevice.
 const std::set<std::string> CUDALibDeviceFunctions = {
-    "exp",  "expf",  "expl",     "cos",       "cosf",
-    "sqrt", "sqrtf", "copysign", "copysignf", "copysignl"};
+    "exp",   "expf",     "expl",      "cos",       "cosf", "sqrt",
+    "sqrtf", "copysign", "copysignf", "copysignl", "log",  "logf"};
 
 /// Return the corresponding CUDA libdevice function name for @p F.
 ///

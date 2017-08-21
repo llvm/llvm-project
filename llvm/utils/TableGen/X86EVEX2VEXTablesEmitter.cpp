@@ -137,6 +137,9 @@ void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
       {"VBROADCASTSDZ256m",   "VBROADCASTSDYrm", false},
       {"VBROADCASTSDZ256r",   "VBROADCASTSDYrr", false},
 
+      {"VBROADCASTF64X2Z128rm", "VBROADCASTF128", false},
+      {"VBROADCASTI64X2Z128rm", "VBROADCASTI128", false},
+
       {"VEXTRACTF64x2Z256mr", "VEXTRACTF128mr",  false},
       {"VEXTRACTF64x2Z256rr", "VEXTRACTF128rr",  false},
       {"VEXTRACTI64x2Z256mr", "VEXTRACTI128mr",  false},

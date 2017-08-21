@@ -2848,6 +2848,10 @@ def : MnemonicAlias<"smovq", "movsq", "att">;
 def : MnemonicAlias<"ud2a",  "ud2",  "att">;
 def : MnemonicAlias<"verrw", "verr", "att">;
 
+// MS recognizes 'xacquire'/'xrelease' as 'acquire'/'release'
+def : MnemonicAlias<"acquire", "xacquire", "intel">;
+def : MnemonicAlias<"release", "xrelease", "intel">;
+
 // System instruction aliases.
 def : MnemonicAlias<"iret",    "iretw",    "att">, Requires<[In16BitMode]>;
 def : MnemonicAlias<"iret",    "iretl",    "att">, Requires<[Not16BitMode]>;

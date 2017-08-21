@@ -2457,11 +2457,21 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   Operands.push_back(X86Operand::CreateToken(PatchedName, NameLoc));
 
   // Determine whether this is an instruction prefix.
-  bool isPrefix =
-    Name == "lock" || Name == "rep" ||
-    Name == "repe" || Name == "repz" ||
-    Name == "repne" || Name == "repnz" ||
-    Name == "rex64" || Name == "data16" || Name == "data32";
+  // FIXME:
+  // Enhace prefixes integrity robustness. for example, following forms
+  // are currently tolerated:
+  // repz repnz <insn>    ; GAS errors for the use of two similar prefixes
+  // lock addq %rax, %rbx ; Destination operand must be of memory type
+  // xacquire <insn>      ; xacquire must be accompanied by 'lock'
+  bool isPrefix = StringSwitch<bool>(Name)
+    .Cases("lock",
+           "rep",       "repe",
+           "repz",      "repne",
+           "repnz",     "rex64",
+           "data32",    "data16",   true)
+    .Cases("xacquire",  "xrelease", true)
+    .Cases("acquire",   "release",  isParsingIntelSyntax())
+    .Default(false);
 
   bool CurlyAsEndOfStatement = false;
   // This does the actual operand parsing.  Don't parse any more if we have a
