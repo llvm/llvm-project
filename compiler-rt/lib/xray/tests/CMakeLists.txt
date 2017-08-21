@@ -14,10 +14,10 @@ set(XRAY_UNITTEST_CFLAGS
 macro(add_xray_unittest testname)
   set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
   cmake_parse_arguments(TEST "" "" "SOURCES;HEADERS" ${ARGN})
-  set(TEST_OBJECTS)
   # FIXME: Figure out how to run even just the unit tests on APPLE.
   if(UNIX AND NOT APPLE)
     foreach(arch ${XRAY_TEST_ARCH})
+      set(TEST_OBJECTS)
       generate_compiler_rt_tests(TEST_OBJECTS
         XRayUnitTests "${testname}-${arch}" "${arch}"
         SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
