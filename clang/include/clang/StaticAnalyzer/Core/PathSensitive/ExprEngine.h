@@ -196,6 +196,8 @@ public:
 
   void ProcessStmt(const CFGStmt S, ExplodedNode *Pred);
 
+  void ProcessLoopExit(const Stmt* S, ExplodedNode *Pred);
+
   void ProcessInitializer(const CFGInitializer I, ExplodedNode *Pred);
 
   void ProcessImplicitDtor(const CFGImplicitDtor D, ExplodedNode *Pred);

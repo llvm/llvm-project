@@ -1,4 +1,6 @@
 ; RUN: llc -relocation-model=static -verify-machineinstrs < %s -mcpu=pwr7 | FileCheck %s
+; RUN: llc -relocation-model=static -verify-machineinstrs < %s -code-model=small -mcpu=pwr7 | FileCheck %s -check-prefix=SCM
+
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -21,13 +23,22 @@ define void @test_direct() nounwind readnone {
   ret void
 }
 
-; Calls to weak function requires a TOC restore 'nop' because they
-; may be overridden in a different module.
+; Calls to weak function requires a TOC restore 'nop' with the small codemodel
+; because the definition that gets choosen at link time may come from a
+; different section even though we have seen a weak definition in the same
+; section at compile time.
+; With large and medium codemodels no TOC restore is needed, since we know
+; whichever definition is choosen it resides within the same DSO boundaries and
+; therefore shares the same TOC.
 define void @test_weak() nounwind readnone {
-; CHECK-LABEL: test_weak:
   tail call void @foo_weak() nounwind
-; CHECK: bl foo
-; CHECK-NEXT: nop
+; CHECK-LABEL: test_weak:
+; CHECK: b foo_weak
+; CHECK-NOT: nop
+
+; SCM-LABEL: test_weak:
+; SCM:       bl foo_weak
+; SCM-NEXT:  nop
   ret void
 }
 

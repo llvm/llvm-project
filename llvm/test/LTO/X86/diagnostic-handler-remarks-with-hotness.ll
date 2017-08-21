@@ -17,6 +17,11 @@
 ; YAML-NEXT:   - Callee:          foo
 ; YAML-NEXT:   - String:          ' inlined into '
 ; YAML-NEXT:   - Caller:          main
+; YAML-NEXT:   - String:          ' with cost='
+; YAML-NEXT:   - Cost:            '-15000'
+; YAML-NEXT:   - String:          ' (threshold='
+; YAML-NEXT:   - Threshold:       '337'
+; YAML-NEXT:   - String:          ')'
 ; YAML-NEXT: ...
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

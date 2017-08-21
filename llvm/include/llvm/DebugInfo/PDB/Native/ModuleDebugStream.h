@@ -32,6 +32,7 @@ public:
   ModuleDebugStreamRef(const DbiModuleDescriptor &Module,
                        std::unique_ptr<msf::MappedBlockStream> Stream);
   ModuleDebugStreamRef(ModuleDebugStreamRef &&Other) = default;
+  ModuleDebugStreamRef(const ModuleDebugStreamRef &Other) = default;
   ~ModuleDebugStreamRef();
 
   Error reload();
