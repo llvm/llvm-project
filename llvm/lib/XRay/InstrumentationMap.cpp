@@ -104,7 +104,8 @@ loadELF64(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
     static constexpr SledEntry::FunctionKinds Kinds[] = {
         SledEntry::FunctionKinds::ENTRY, SledEntry::FunctionKinds::EXIT,
         SledEntry::FunctionKinds::TAIL,
-    };
+        SledEntry::FunctionKinds::LOG_ARGS_ENTER,
+        SledEntry::FunctionKinds::CUSTOM_EVENT};
     if (Kind >= sizeof(Kinds))
       return errorCodeToError(
           std::make_error_code(std::errc::executable_format_error));

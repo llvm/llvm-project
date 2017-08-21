@@ -16,6 +16,7 @@
 #include "polly/CodeGen/CodeGeneration.h"
 #include "polly/CodeGen/IslAst.h"
 #include "polly/CodeGen/IslNodeBuilder.h"
+#include "polly/CodeGen/PerfMonitor.h"
 #include "polly/CodeGen/Utils.h"
 #include "polly/DependenceInfo.h"
 #include "polly/LinkAllPasses.h"
@@ -121,6 +122,8 @@ static cl::opt<int>
     MinCompute("polly-acc-mincompute",
                cl::desc("Minimal number of compute statements to run on GPU."),
                cl::Hidden, cl::init(10 * 512 * 512));
+
+extern bool polly::PerfMonitoring;
 
 /// Return  a unique name for a Scop, which is the scop region with the
 /// function name.
@@ -1380,8 +1383,8 @@ isl_bool collectReferencesInGPUStmt(__isl_keep isl_ast_node *Node, void *User) {
 
 /// A list of functions that are available in NVIDIA's libdevice.
 const std::set<std::string> CUDALibDeviceFunctions = {
-    "exp",  "expf",  "expl",     "cos",       "cosf",
-    "sqrt", "sqrtf", "copysign", "copysignf", "copysignl"};
+    "exp",   "expf",     "expl",      "cos",       "cosf", "sqrt",
+    "sqrtf", "copysign", "copysignf", "copysignl", "log",  "logf"};
 
 /// Return the corresponding CUDA libdevice function name for @p F.
 ///
@@ -1406,7 +1409,7 @@ static bool isValidFunctionInKernel(llvm::Function *F, bool AllowLibDevice) {
 
   return F->isIntrinsic() &&
          (Name.startswith("llvm.sqrt") || Name.startswith("llvm.fabs") ||
-          Name.startswith("llvm.copysign"));
+          Name.startswith("llvm.copysign") || Name.startswith("llvm.powi"));
 }
 
 /// Do not take `Function` as a subtree value.
@@ -3432,6 +3435,22 @@ public:
       isl_ast_expr_free(Condition);
       isl_ast_node_free(Root);
     } else {
+
+      if (polly::PerfMonitoring) {
+        PerfMonitor P(*S, EnteringBB->getParent()->getParent());
+        P.initialize();
+        P.insertRegionStart(SplitBlock->getTerminator());
+
+        // TODO: actually think if this is the correct exiting block to place
+        // the `end` performance marker. Invariant load hoisting changes
+        // the CFG in a way that I do not precisely understand, so I
+        // (Siddharth<siddu.druid@gmail.com>) should come back to this and
+        // think about which exiting block to use.
+        auto *ExitingBlock = StartBlock->getUniqueSuccessor();
+        assert(ExitingBlock);
+        BasicBlock *MergeBlock = ExitingBlock->getUniqueSuccessor();
+        P.insertRegionEnd(MergeBlock->getTerminator());
+      }
 
       NodeBuilder.addParameters(S->getContext().release());
       Value *RTC = NodeBuilder.createRTC(Condition);

@@ -866,9 +866,17 @@ def : Proc<"c3-2",            [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
 // covers a huge swath of x86 processors. If there are specific scheduling
 // knobs which need to be tuned differently for AMD chips, we might consider
 // forming a common base for them.
-def : ProcessorModel<"x86-64", SandyBridgeModel,
-                     [FeatureX87, FeatureMMX, FeatureSSE2, FeatureFXSR,
-                      Feature64Bit, FeatureSlowBTMem ]>;
+def : ProcessorModel<"x86-64", SandyBridgeModel, [
+  FeatureX87,
+  FeatureMMX,
+  FeatureSSE2,
+  FeatureFXSR,
+  Feature64Bit,
+  FeatureSlow3OpsLEA,
+  FeatureSlowBTMem,
+  FeatureSlowIncDec,
+  FeatureSlowUAMem32
+]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

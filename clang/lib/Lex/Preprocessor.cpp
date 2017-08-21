@@ -540,6 +540,8 @@ void Preprocessor::EnterMainSourceFile() {
 void Preprocessor::replayPreambleConditionalStack() {
   // Restore the conditional stack from the preamble, if there is one.
   if (PreambleConditionalStack.isReplaying()) {
+    assert(CurPPLexer &&
+           "CurPPLexer is null when calling replayPreambleConditionalStack.");
     CurPPLexer->setConditionalLevels(PreambleConditionalStack.getStack());
     PreambleConditionalStack.doneReplaying();
   }

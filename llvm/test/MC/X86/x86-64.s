@@ -930,6 +930,21 @@ lock xorq %rsi, (%rdi)
 // CHECK: xorq %rsi, (%rdi)
 // CHECK: encoding: [0x48,0x31,0x37]
 
+xacquire lock addq %rax, (%rax)
+// CHECK: xacquire
+// CHECK: encoding: [0xf2]
+// CHECK: lock
+// CHECK: encoding: [0xf0]
+// CHECK: addq %rax, (%rax)
+// CHECK: encoding: [0x48,0x01,0x00]
+
+xrelease lock addq %rax, (%rax)
+// CHECK: xrelease
+// CHECK: encoding: [0xf3]
+// CHECK: lock
+// CHECK: encoding: [0xf0]
+// CHECK: addq %rax, (%rax)
+// CHECK: encoding: [0x48,0x01,0x00]
 
 // rdar://8033482
 rep movsl
