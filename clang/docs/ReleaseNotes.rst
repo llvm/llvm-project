@@ -58,6 +58,25 @@ Improvements to Clang's diagnostics
 -  -Wunused-lambda-capture warns when a variable explicitly captured
    by a lambda is not used in the body of the lambda.
 
+-  -Wstrict-prototypes is a new warning that warns about non-prototype
+   function and block declarations and types in C and Objective-C.
+
+-  -Wunguarded-availability is a new warning that warns about uses of new
+   APIs that were introduced in a system whose version is newer than the
+   deployment target version. A new Objective-C expression ``@available`` has
+   been introduced to perform system version checking at runtime. This warning
+   is off by default to prevent unexpected warnings in existing projects.
+   However, its less strict sibling -Wunguarded-availability-new is on by
+   default. It warns about unguarded uses of APIs only when they were introduced
+   in or after macOS 10.13, iOS 11, tvOS 11 or watchOS 4.
+
+-  The -Wdocumentation warning now allows the use of ``\param`` and
+   ``\returns`` documentation directives in the documentation comments for
+   declarations with a function or a block pointer type.
+
+-  The compiler no longer warns about unreachable ``__builtin_unreachable``
+   statements.
+
 New Compiler Flags
 ------------------
 
