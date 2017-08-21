@@ -1656,6 +1656,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
   return true;
 }
 
+namespace {
 // This class provides helper functions to expand a memcmp library call into an
 // inline expansion.
 class MemCmpExpansion {
@@ -1703,6 +1704,7 @@ public:
                   unsigned NumLoadsPerBlock, const DataLayout &DL);
   Value *getMemCmpExpansion(uint64_t Size);
 };
+} // namespace
 
 MemCmpExpansion::ResultBlock::ResultBlock()
     : BB(nullptr), PhiSrc1(nullptr), PhiSrc2(nullptr) {}

@@ -1,4 +1,7 @@
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.3a < %s 2>&1 | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mcpu=cortex-a75 < %s 2>&1 | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mcpu=cortex-a55 < %s 2>&1 | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.2a -mattr=+rcpc < %s 2>&1 | FileCheck %s
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-REQ %s < %t
 

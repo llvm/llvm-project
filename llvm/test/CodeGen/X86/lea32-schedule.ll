@@ -179,7 +179,8 @@ define i32 @test_lea_add_offset(i32, i32) {
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
 ; GENERIC-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
-; GENERIC-NEXT:    leal 16(%rdi,%rsi), %eax # sched: [1:0.50]
+; GENERIC-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
+; GENERIC-NEXT:    addl $16, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_add_offset:
@@ -241,7 +242,9 @@ define i32 @test_lea_add_offset_big(i32, i32) {
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
 ; GENERIC-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
-; GENERIC-NEXT:    leal -4096(%rdi,%rsi), %eax # sched: [1:0.50]
+; GENERIC-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
+; GENERIC-NEXT:    addl $-4096, %eax # imm = 0xF000
+; GENERIC-NEXT:    # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_add_offset_big:
@@ -356,7 +359,8 @@ define i32 @test_lea_mul_offset(i32) {
 ; GENERIC-LABEL: test_lea_mul_offset:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
-; GENERIC-NEXT:    leal -32(%rdi,%rdi,2), %eax # sched: [1:0.50]
+; GENERIC-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
+; GENERIC-NEXT:    addl $-32, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_mul_offset:
@@ -411,7 +415,9 @@ define i32 @test_lea_mul_offset_big(i32) {
 ; GENERIC-LABEL: test_lea_mul_offset_big:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
-; GENERIC-NEXT:    leal 10000(%rdi,%rdi,8), %eax # sched: [1:0.50]
+; GENERIC-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:0.50]
+; GENERIC-NEXT:    addl $10000, %eax # imm = 0x2710
+; GENERIC-NEXT:    # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_mul_offset_big:
@@ -529,7 +535,8 @@ define i32 @test_lea_add_scale_offset(i32, i32) {
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
 ; GENERIC-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
-; GENERIC-NEXT:    leal 96(%rdi,%rsi,4), %eax # sched: [1:0.50]
+; GENERIC-NEXT:    leal (%rdi,%rsi,4), %eax # sched: [1:0.50]
+; GENERIC-NEXT:    addl $96, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_add_scale_offset:
@@ -592,7 +599,9 @@ define i32 @test_lea_add_scale_offset_big(i32, i32) {
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
 ; GENERIC-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
-; GENERIC-NEXT:    leal -1200(%rdi,%rsi,8), %eax # sched: [1:0.50]
+; GENERIC-NEXT:    leal (%rdi,%rsi,8), %eax # sched: [1:0.50]
+; GENERIC-NEXT:    addl $-1200, %eax # imm = 0xFB50
+; GENERIC-NEXT:    # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_add_scale_offset_big:

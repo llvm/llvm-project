@@ -70,21 +70,22 @@ enum class ArchKind {
 
 // Arch extension modifiers for CPUs.
 enum ArchExtKind : unsigned {
-  AEK_INVALID = 0x0,
-  AEK_NONE = 0x1,
-  AEK_CRC = 0x2,
-  AEK_CRYPTO = 0x4,
-  AEK_FP = 0x8,
-  AEK_HWDIVTHUMB = 0x10,
-  AEK_HWDIVARM = 0x20,
-  AEK_MP = 0x40,
-  AEK_SIMD = 0x80,
-  AEK_SEC = 0x100,
-  AEK_VIRT = 0x200,
-  AEK_DSP = 0x400,
-  AEK_FP16 = 0x800,
-  AEK_RAS = 0x1000,
-  AEK_SVE = 0x2000,
+  AEK_INVALID =     0,
+  AEK_NONE =        1,
+  AEK_CRC =         1 << 1,
+  AEK_CRYPTO =      1 << 2,
+  AEK_FP =          1 << 3,
+  AEK_HWDIVTHUMB =  1 << 4,
+  AEK_HWDIVARM =    1 << 5,
+  AEK_MP =          1 << 6,
+  AEK_SIMD =        1 << 7,
+  AEK_SEC =         1 << 8,
+  AEK_VIRT =        1 << 9,
+  AEK_DSP =         1 << 10,
+  AEK_FP16 =        1 << 11,
+  AEK_RAS =         1 << 12,
+  AEK_SVE =         1 << 13,
+  AEK_DOTPROD =     1 << 14,
   // Unsupported extensions.
   AEK_OS = 0x8000000,
   AEK_IWMMXT = 0x10000000,
@@ -156,18 +157,19 @@ enum class ArchKind {
 
 // Arch extension modifiers for CPUs.
 enum ArchExtKind : unsigned {
-  AEK_INVALID = 0x0,
-  AEK_NONE = 0x1,
-  AEK_CRC = 0x2,
-  AEK_CRYPTO = 0x4,
-  AEK_FP = 0x8,
-  AEK_SIMD = 0x10,
-  AEK_FP16 = 0x20,
-  AEK_PROFILE = 0x40,
-  AEK_RAS = 0x80,
-  AEK_LSE = 0x100,
-  AEK_SVE = 0x200,
-  AEK_DOTPROD = 0x400
+  AEK_INVALID =     0,
+  AEK_NONE =        1,
+  AEK_CRC =         1 << 1,
+  AEK_CRYPTO =      1 << 2,
+  AEK_FP =          1 << 3,
+  AEK_SIMD =        1 << 4,
+  AEK_FP16 =        1 << 5,
+  AEK_PROFILE =     1 << 6,
+  AEK_RAS =         1 << 7,
+  AEK_LSE =         1 << 8,
+  AEK_SVE =         1 << 9,
+  AEK_DOTPROD =     1 << 10,
+  AEK_RCPC =        1 << 11
 };
 
 StringRef getCanonicalArchName(StringRef Arch);

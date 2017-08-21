@@ -1287,10 +1287,10 @@ static void propagateSwiftErrorVRegs(FunctionLoweringInfo *FuncInfo) {
   }
 }
 
-void preassignSwiftErrorRegs(const TargetLowering *TLI,
-                             FunctionLoweringInfo *FuncInfo,
-                             BasicBlock::const_iterator Begin,
-                             BasicBlock::const_iterator End) {
+static void preassignSwiftErrorRegs(const TargetLowering *TLI,
+                                    FunctionLoweringInfo *FuncInfo,
+                                    BasicBlock::const_iterator Begin,
+                                    BasicBlock::const_iterator End) {
   if (!TLI->supportSwiftError() || FuncInfo->SwiftErrorVals.empty())
     return;
 

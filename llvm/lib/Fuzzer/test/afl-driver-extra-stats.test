@@ -5,7 +5,8 @@ RUN: unset AFL_DRIVER_EXTRA_STATS_FILENAME
 RUN: %t-AFLDriverTest
 
 ; Test that specifying an invalid extra stats file causes a crash.
-RUN: ASAN_OPTIONS= AFL_DRIVER_EXTRA_STATS_FILENAME=%T not --crash %t-AFLDriverTest
+RUN: rm -rf %t-dir && mkdir -p %t-dir
+RUN: ASAN_OPTIONS= AFL_DRIVER_EXTRA_STATS_FILENAME=%t-dir not --crash %t-AFLDriverTest
 
 ; Test that specifying a corrupted stats file causes a crash.
 echo "peak_rss_mb :0" > %t

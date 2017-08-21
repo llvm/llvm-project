@@ -21,6 +21,7 @@ using namespace llvm;
 using namespace llvm::xray;
 using llvm::yaml::Input;
 
+namespace {
 using XRayRecordStorage =
     std::aligned_storage<sizeof(XRayRecord), alignof(XRayRecord)>::type;
 
@@ -134,7 +135,7 @@ struct FDRState {
   uint64_t CurrentBufferConsumed;
 };
 
-Twine fdrStateToTwine(const FDRState::Token &state) {
+const char *fdrStateToTwine(const FDRState::Token &state) {
   switch (state) {
   case FDRState::Token::NEW_BUFFER_RECORD_OR_EOF:
     return "NEW_BUFFER_RECORD_OR_EOF";
@@ -484,6 +485,7 @@ Error loadYAMLLog(StringRef Data, XRayFileHeader &FileHeader,
                  });
   return Error::success();
 }
+} // namespace
 
 Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
   int Fd;
