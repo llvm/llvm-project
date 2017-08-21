@@ -1,34 +1,15 @@
-; RUN: opt %loadPolly -analyze -polly-use-llvm-names -polly-scops \
-; RUN: -polly-invariant-load-hoisting < %s | FileCheck %s -check-prefix=SCOP
+  ; RUN: opt %loadPolly -polly-use-llvm-names -polly-scops \
+; RUN: -polly-invariant-load-hoisting -polly-codegen-ppcg \
+; RUN: -polly-acc-dump-code -disable-output \
+; RUN:   < %s | FileCheck %s -check-prefix=CODE
 
-; RUN: opt %loadPolly -S -polly-use-llvm-names -polly-codegen-ppcg \
-; RUN: -polly-invariant-load-hoisting < %s | FileCheck %s -check-prefix=HOST-IR
+; RUN: opt %loadPolly -polly-use-llvm-names -polly-scops \
+; RUN: -polly-invariant-load-hoisting -polly-codegen-ppcg \
+; RUN: -polly-acc-dump-kernel-ir -disable-output \
+; RUN:   < %s | FileCheck %s -check-prefix=KERNELIR
 
 ; REQUIRES: pollyacc
 
-; SCOP:      Function: f
-; SCOP-NEXT: Region: %entry.split---%for.end
-; SCOP-NEXT: Max Loop Depth:  1
-; SCOP-NEXT: Invariant Accesses: {
-; SCOP-NEXT:         ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; SCOP-NEXT:             [tmp, tmp1] -> { Stmt_if_end[i0] -> MemRef_end[0] };
-; SCOP-NEXT:         Execution Context: [tmp, tmp1] -> {  :  }
-; SCOP-NEXT:         ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; SCOP-NEXT:             [tmp, tmp1] -> { Stmt_for_body[i0] -> MemRef_control[0] };
-; SCOP-NEXT:         Execution Context: [tmp, tmp1] -> {  : tmp > 0 }
-; SCOP-NEXT: }
-
-; Check that we generate a correct "always false" branch.
-; HOST-IR:  br i1 false, label %polly.start, label %entry.split.pre_entry_bb
-
-; This test case checks that we generate correct code if PPCGCodeGeneration
-; decides a build is unsuccessful with invariant load hoisting enabled.
-;
-; There is a conditional branch which switches between the original code and
-; the new code. We try to set this conditional branch to branch on false.
-; However, invariant load hoisting changes the structure of the scop, so we
-; need to change the way we *locate* this instruction.
-;
 ;    void f(const int *end, int *arr, const int *control, const int *readarr) {
 ;      for (int i = 0; i < *end; i++) {
 ;        int t = 0;
@@ -38,7 +19,20 @@
 ;        arr[i] = t;
 ;      }
 ;    }
-;
+
+; This test case tests the ability to infer that `t` is local to each loop
+; iteration, and can therefore be privatized.
+
+; CODE: # kernel0
+; CODE-NEXT: for (int c0 = 0; c0 <= (tmp - 32 * b0 - 1) / 1048576; c0 += 1)
+; CODE-NEXT:   if (tmp >= 32 * b0 + t0 + 1048576 * c0 + 1) {
+; CODE-NEXT:     Stmt_for_body(32 * b0 + t0 + 1048576 * c0);
+; CODE-NEXT:     if (tmp1 >= 4)
+; CODE-NEXT:       Stmt_if_then(32 * b0 + t0 + 1048576 * c0);
+; CODE-NEXT:     Stmt_if_end(32 * b0 + t0 + 1048576 * c0);
+; CODE-NEXT:   }
+
+; KERNELIR: %private_array = alloca i32
 
 target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 target triple = "i386-apple-macosx10.12.0"

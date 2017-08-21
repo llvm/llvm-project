@@ -121,21 +121,26 @@ static void expandConstantExpr(ConstantExpr *Cur, PollyIRBuilder &Builder,
                                Instruction *Parent, int index,
                                SmallPtrSet<Instruction *, 4> &Expands) {
   assert(Cur && "invalid constant expression passed");
-
   Instruction *I = Cur->getAsInstruction();
+  assert(I && "unable to convert ConstantExpr to Instruction");
+
+  DEBUG(dbgs() << "Expanding ConstantExpression: (" << *Cur
+               << ") in Instruction: (" << *I << ")\n";);
+
+  // Invalidate `Cur` so that no one after this point uses `Cur`. Rather,
+  // they should mutate `I`.
+  Cur = nullptr;
+
   Expands.insert(I);
   Parent->setOperand(index, I);
 
-  assert(I && "unable to convert ConstantExpr to Instruction");
   // The things that `Parent` uses (its operands) should be created
   // before `Parent`.
   Builder.SetInsertPoint(Parent);
   Builder.Insert(I);
 
-  DEBUG(dbgs() << "Expanding ConstantExpression: " << *Cur
-               << " | in Instruction: " << *I << "\n";);
-  for (unsigned i = 0; i < Cur->getNumOperands(); i++) {
-    Value *Op = Cur->getOperand(i);
+  for (unsigned i = 0; i < I->getNumOperands(); i++) {
+    Value *Op = I->getOperand(i);
     assert(isa<Constant>(Op) && "constant must have a constant operand");
 
     if (ConstantExpr *CExprOp = dyn_cast<ConstantExpr>(Op))
@@ -203,23 +208,35 @@ replaceGlobalArray(Module &M, const DataLayout &DL, GlobalVariable &Array,
   const bool OnlyVisibleInsideModule = Array.hasPrivateLinkage() ||
                                        Array.hasInternalLinkage() ||
                                        IgnoreLinkageForGlobals;
-  if (!OnlyVisibleInsideModule)
+  if (!OnlyVisibleInsideModule) {
+    DEBUG(dbgs() << "Not rewriting (" << Array
+                 << ") to managed memory "
+                    "because it could be visible externally. To force rewrite, "
+                    "use -polly-acc-rewrite-ignore-linkage-for-globals.\n");
     return;
+  }
 
   if (!Array.hasInitializer() ||
-      !isa<ConstantAggregateZero>(Array.getInitializer()))
+      !isa<ConstantAggregateZero>(Array.getInitializer())) {
+    DEBUG(dbgs() << "Not rewriting (" << Array
+                 << ") to managed memory "
+                    "because it has an initializer which is "
+                    "not a zeroinitializer.\n");
     return;
+  }
 
   // At this point, we have committed to replacing this array.
   ReplacedGlobals.insert(&Array);
 
-  std::string NewName = (Array.getName() + Twine(".toptr")).str();
+  std::string NewName = Array.getName();
+  NewName += ".toptr";
   GlobalVariable *ReplacementToArr =
       cast<GlobalVariable>(M.getOrInsertGlobal(NewName, ElemPtrTy));
   ReplacementToArr->setInitializer(ConstantPointerNull::get(ElemPtrTy));
 
   Function *PollyMallocManaged = getOrCreatePollyMallocManaged(M);
-  Twine FnName = Array.getName() + ".constructor";
+  std::string FnName = Array.getName();
+  FnName += ".constructor";
   PollyIRBuilder Builder(M.getContext());
   FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), false);
   const GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
@@ -271,14 +288,14 @@ static void getAllocasToBeManaged(Function &F,
       auto *Alloca = dyn_cast<AllocaInst>(&I);
       if (!Alloca)
         continue;
-      dbgs() << "Checking if " << *Alloca << "may be captured: ";
+      DEBUG(dbgs() << "Checking if (" << *Alloca << ") may be captured: ");
 
       if (PointerMayBeCaptured(Alloca, /* ReturnCaptures */ false,
                                /* StoreCaptures */ true)) {
         Allocas.insert(Alloca);
-        DEBUG(dbgs() << "YES (captured)\n");
+        DEBUG(dbgs() << "YES (captured).\n");
       } else {
-        DEBUG(dbgs() << "NO (not captured)\n");
+        DEBUG(dbgs() << "NO (not captured).\n");
       }
     }
   }
@@ -286,7 +303,7 @@ static void getAllocasToBeManaged(Function &F,
 
 static void rewriteAllocaAsManagedMemory(AllocaInst *Alloca,
                                          const DataLayout &DL) {
-  DEBUG(dbgs() << "rewriting: " << *Alloca << " to managed mem.\n");
+  DEBUG(dbgs() << "rewriting: (" << *Alloca << ") to managed mem.\n");
   Module *M = Alloca->getModule();
   assert(M && "Alloca does not have a module");
 

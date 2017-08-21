@@ -49,10 +49,12 @@ static cl::opt<bool> Verify("polly-codegen-verify",
                             cl::Hidden, cl::init(false), cl::ZeroOrMore,
                             cl::cat(PollyCategory));
 
-static cl::opt<bool>
-    PerfMonitoring("polly-codegen-perf-monitoring",
-                   cl::desc("Add run-time performance monitoring"), cl::Hidden,
-                   cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+bool polly::PerfMonitoring;
+static cl::opt<bool, true>
+    XPerfMonitoring("polly-codegen-perf-monitoring",
+                    cl::desc("Add run-time performance monitoring"), cl::Hidden,
+                    cl::location(polly::PerfMonitoring), cl::init(false),
+                    cl::ZeroOrMore, cl::cat(PollyCategory));
 
 namespace polly {
 /// Mark a basic block unreachable.
