@@ -470,6 +470,9 @@ public:
 
   MachineMemOperand::Flags getMMOFlags(const Instruction &I) const override;
 
+  bool functionArgumentNeedsConsecutiveRegisters(Type *Ty,
+                                                 CallingConv::ID CallConv,
+                                                 bool isVarArg) const override;
 private:
   bool isExtFreeImpl(const Instruction *Ext) const override;
 
@@ -638,10 +641,6 @@ private:
 
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
-
-  bool functionArgumentNeedsConsecutiveRegisters(Type *Ty,
-                                                 CallingConv::ID CallConv,
-                                                 bool isVarArg) const override;
 
   bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override;
 };
