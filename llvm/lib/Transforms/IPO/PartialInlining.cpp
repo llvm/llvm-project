@@ -462,7 +462,7 @@ bool PartialInlinerImpl::shouldPartialInline(
   Function *Caller = CS.getCaller();
   auto &CalleeTTI = (*GetTTI)(*Callee);
   InlineCost IC = getInlineCost(CS, getInlineParams(), CalleeTTI,
-                                *GetAssumptionCache, GetBFI, PSI);
+                                *GetAssumptionCache, GetBFI, PSI, &ORE);
 
   if (IC.isAlways()) {
     ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "AlwaysInline", Call)

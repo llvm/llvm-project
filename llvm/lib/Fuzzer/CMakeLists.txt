@@ -24,9 +24,9 @@ endif()
 set(LIBFUZZER_ENABLE ${LIBFUZZER_ENABLED_CHECK} CACHE BOOL "Build libFuzzer and its tests")
 set(LIBFUZZER_ENABLE_TESTS OFF CACHE BOOL "Build libFuzzer and its tests")
 
-if (LLVM_USE_SANITIZE_COVERAGE)
+if (CMAKE_CXX_FLAGS MATCHES "fsanitize-coverage")
   set(CMAKE_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS} -fno-sanitize-coverage=trace-pc-guard,edge,trace-cmp,indirect-calls,8bit-counters -Werror")
+    "${CMAKE_CXX_FLAGS} -fsanitize-coverage=0")
 endif()
 
 if (LIBFUZZER_ENABLE)

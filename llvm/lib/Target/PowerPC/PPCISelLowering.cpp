@@ -4255,12 +4255,24 @@ static int CalculateTailCallSPDiff(SelectionDAG& DAG, bool isTailCall,
 static bool isFunctionGlobalAddress(SDValue Callee);
 
 static bool
-resideInSameSection(const Function *Caller, SDValue Callee,
+callsShareTOCBase(const Function *Caller, SDValue Callee,
                     const TargetMachine &TM) {
   // If !G, Callee can be an external symbol.
   GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
   if (!G)
     return false;
+
+  // The medium and large code models are expected to provide a sufficiently
+  // large TOC to provide all data addressing needs of a module with a
+  // single TOC. Since each module will be addressed with a single TOC then we
+  // only need to check that caller and callee don't cross dso boundaries.
+  if (CodeModel::Medium == TM.getCodeModel() ||
+      CodeModel::Large == TM.getCodeModel())
+    return TM.shouldAssumeDSOLocal(*Caller->getParent(), G->getGlobal());
+
+  // Otherwise we need to ensure callee and caller are in the same section,
+  // since the linker may allocate multiple TOCs, and we don't know which
+  // sections will belong to the same TOC base.
 
   const GlobalValue *GV = G->getGlobal();
   if (!GV->isStrongDefinitionForLinker())
@@ -4410,11 +4422,10 @@ PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
       !isa<ExternalSymbolSDNode>(Callee))
     return false;
 
-  // Check if Callee resides in the same section, because for now, PPC64 SVR4
-  // ABI (ELFv1/ELFv2) doesn't allow tail calls to a symbol resides in another
-  // section.
+  // If the caller and callee potentially have different TOC bases then we
+  // cannot tail call since we need to restore the TOC pointer after the call.
   // ref: https://bugzilla.mozilla.org/show_bug.cgi?id=973977
-  if (!resideInSameSection(MF.getFunction(), Callee, getTargetMachine()))
+  if (!callsShareTOCBase(MF.getFunction(), Callee, getTargetMachine()))
     return false;
 
   // TCO allows altering callee ABI, so we don't have to check further.
@@ -4996,7 +5007,7 @@ SDValue PPCTargetLowering::FinishCall(
       // any other variadic arguments).
       Ops.insert(std::next(Ops.begin()), AddTOC);
     } else if (CallOpc == PPCISD::CALL &&
-      !resideInSameSection(MF.getFunction(), Callee, DAG.getTarget())) {
+      !callsShareTOCBase(MF.getFunction(), Callee, DAG.getTarget())) {
       // Otherwise insert NOP for non-local calls.
       CallOpc = PPCISD::CALL_NOP;
     }

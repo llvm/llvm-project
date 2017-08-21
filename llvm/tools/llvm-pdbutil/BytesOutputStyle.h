@@ -12,6 +12,7 @@
 
 #include "LinePrinter.h"
 #include "OutputStyle.h"
+#include "StreamUtil.h"
 
 #include "llvm/Support/Error.h"
 
@@ -60,7 +61,7 @@ private:
   PDBFile &File;
   LinePrinter P;
   ExitOnError Err;
-  SmallVector<std::string, 8> StreamPurposes;
+  SmallVector<StreamInfo, 8> StreamPurposes;
 };
 } // namespace pdb
 } // namespace llvm

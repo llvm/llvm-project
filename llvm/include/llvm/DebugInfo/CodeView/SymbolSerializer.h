@@ -28,7 +28,10 @@ namespace codeview {
 
 class SymbolSerializer : public SymbolVisitorCallbacks {
   BumpPtrAllocator &Storage;
-  std::vector<uint8_t> RecordBuffer;
+  // Since this is a fixed size buffer, use a stack allocated buffer.  This
+  // yields measurable performance increase over the repeated heap allocations
+  // when serializing many independent records via writeOneSymbol.
+  std::array<uint8_t, MaxRecordLength> RecordBuffer;
   MutableBinaryByteStream Stream;
   BinaryStreamWriter Writer;
   SymbolRecordMapping Mapping;

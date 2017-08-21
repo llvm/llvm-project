@@ -77,9 +77,6 @@ BinaryStreamRef::BinaryStreamRef(StringRef Data, endianness Endian)
     : BinaryStreamRef(makeArrayRef(Data.bytes_begin(), Data.bytes_end()),
                       Endian) {}
 
-BinaryStreamRef::BinaryStreamRef(const BinaryStreamRef &Other)
-    : BinaryStreamRefBase(Other) {}
-
 Error BinaryStreamRef::readBytes(uint32_t Offset, uint32_t Size,
                                  ArrayRef<uint8_t> &Buffer) const {
   if (auto EC = checkOffset(Offset, Size))
@@ -117,9 +114,6 @@ WritableBinaryStreamRef::WritableBinaryStreamRef(MutableArrayRef<uint8_t> Data,
     : BinaryStreamRefBase(std::make_shared<MutableArrayRefImpl>(Data, Endian),
                           0, Data.size()) {}
 
-WritableBinaryStreamRef::WritableBinaryStreamRef(
-    const WritableBinaryStreamRef &Other)
-    : BinaryStreamRefBase(Other) {}
 
 Error WritableBinaryStreamRef::writeBytes(uint32_t Offset,
                                           ArrayRef<uint8_t> Data) const {

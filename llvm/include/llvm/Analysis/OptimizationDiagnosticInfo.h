@@ -69,9 +69,6 @@ public:
 
   /// \brief Output the remark via the diagnostic handler and to the
   /// optimization record file.
-  ///
-  /// This is the new interface that should be now used rather than the legacy
-  /// emit* APIs.
   void emit(DiagnosticInfoOptimizationBase &OptDiag);
 
   /// \brief Whether we allow for extra compile-time budget to perform more

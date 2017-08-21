@@ -1,0 +1,81 @@
+; RUN: llvm-pdbutil dump -mod-stats %p/Inputs/empty.pdb | FileCheck --check-prefix=ALL %s
+; RUN: llvm-pdbutil dump -mod-stats -modi=1 %p/Inputs/empty.pdb | FileCheck --check-prefix=ONE %s
+
+ALL:        Mod 0000 | `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
+ALL-NEXT:     Stream 12, 308 bytes
+ALL:            Symbols
+ALL-NEXT:                                          Total:       6 entries (     204 bytes)
+ALL-NEXT:       --------------------------------------------------------------------------
+ALL-NEXT:                                      S_GPROC32:       1 entries (      44 bytes)
+ALL-NEXT:                                    S_FRAMEPROC:       1 entries (      32 bytes)
+ALL-NEXT:                                          S_END:       1 entries (       4 bytes)
+ALL-NEXT:                                      S_OBJNAME:       1 entries (      56 bytes)
+ALL-NEXT:                                     S_COMPILE3:       1 entries (      60 bytes)
+ALL-NEXT:                                    S_BUILDINFO:       1 entries (       8 bytes)
+ALL:            Chunks
+ALL-NEXT:                                          Total:       2 entries (      88 bytes)
+ALL-NEXT:       --------------------------------------------------------------------------
+ALL-NEXT:                             DEBUG_S_FILECHKSMS:       1 entries (      32 bytes)
+ALL-NEXT:                                  DEBUG_S_LINES:       1 entries (      56 bytes)
+ALL-NEXT:   Mod 0001 | `* Linker *`:
+ALL-NEXT:     Stream 14, 520 bytes
+ALL:            Symbols
+ALL-NEXT:                                          Total:      13 entries (     512 bytes)
+ALL-NEXT:       --------------------------------------------------------------------------
+ALL-NEXT:                                      S_SECTION:       4 entries (     112 bytes)
+ALL-NEXT:                                     S_ENVBLOCK:       1 entries (     172 bytes)
+ALL-NEXT:                                   S_TRAMPOLINE:       1 entries (      20 bytes)
+ALL-NEXT:                                      S_OBJNAME:       1 entries (      20 bytes)
+ALL-NEXT:                                     S_COMPILE3:       1 entries (      48 bytes)
+ALL-NEXT:                                    S_COFFGROUP:       5 entries (     140 bytes)
+ALL:            Chunks
+ALL-NEXT:                                          Total:       0 entries (       0 bytes)
+ALL-NEXT:       --------------------------------------------------------------------------
+ALL-NEXT:   Summary |
+ALL:            Symbols
+ALL-NEXT:                                          Total:      19 entries (     716 bytes)
+ALL-NEXT:       --------------------------------------------------------------------------
+ALL-NEXT:                                      S_SECTION:       4 entries (     112 bytes)
+ALL-NEXT:                                      S_GPROC32:       1 entries (      44 bytes)
+ALL-NEXT:                                     S_ENVBLOCK:       1 entries (     172 bytes)
+ALL-NEXT:                                    S_FRAMEPROC:       1 entries (      32 bytes)
+ALL-NEXT:                                   S_TRAMPOLINE:       1 entries (      20 bytes)
+ALL-NEXT:                                          S_END:       1 entries (       4 bytes)
+ALL-NEXT:                                      S_OBJNAME:       2 entries (      76 bytes)
+ALL-NEXT:                                     S_COMPILE3:       2 entries (     108 bytes)
+ALL-NEXT:                                    S_COFFGROUP:       5 entries (     140 bytes)
+ALL-NEXT:                                    S_BUILDINFO:       1 entries (       8 bytes)
+ALL:            Chunks
+ALL-NEXT:                                          Total:       2 entries (      88 bytes)
+ALL-NEXT:       --------------------------------------------------------------------------
+ALL-NEXT:                             DEBUG_S_FILECHKSMS:       1 entries (      32 bytes)
+ALL-NEXT:                                  DEBUG_S_LINES:       1 entries (      56 bytes)
+
+ONE-NOT:      Mod 0000
+ONE:          Mod 0001 | `* Linker *`:
+ONE-NEXT:     Stream 14, 520 bytes
+ONE:            Symbols
+ONE-NEXT:                                          Total:      13 entries (     512 bytes)
+ONE-NEXT:       --------------------------------------------------------------------------
+ONE-NEXT:                                      S_SECTION:       4 entries (     112 bytes)
+ONE-NEXT:                                     S_ENVBLOCK:       1 entries (     172 bytes)
+ONE-NEXT:                                   S_TRAMPOLINE:       1 entries (      20 bytes)
+ONE-NEXT:                                      S_OBJNAME:       1 entries (      20 bytes)
+ONE-NEXT:                                     S_COMPILE3:       1 entries (      48 bytes)
+ONE-NEXT:                                    S_COFFGROUP:       5 entries (     140 bytes)
+ONE:            Chunks
+ONE-NEXT:                                          Total:       0 entries (       0 bytes)
+ONE-NEXT:       --------------------------------------------------------------------------
+ONE-NEXT:   Summary |
+ONE:            Symbols
+ONE-NEXT:                                          Total:      13 entries (     512 bytes)
+ONE-NEXT:       --------------------------------------------------------------------------
+ONE-NEXT:                                      S_SECTION:       4 entries (     112 bytes)
+ONE-NEXT:                                     S_ENVBLOCK:       1 entries (     172 bytes)
+ONE-NEXT:                                   S_TRAMPOLINE:       1 entries (      20 bytes)
+ONE-NEXT:                                      S_OBJNAME:       1 entries (      20 bytes)
+ONE-NEXT:                                     S_COMPILE3:       1 entries (      48 bytes)
+ONE-NEXT:                                    S_COFFGROUP:       5 entries (     140 bytes)
+ONE:            Chunks
+ONE-NEXT:                                          Total:       0 entries (       0 bytes)
+ONE-NEXT:       --------------------------------------------------------------------------

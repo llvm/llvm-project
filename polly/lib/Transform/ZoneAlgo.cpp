@@ -184,15 +184,14 @@ static isl::union_map computeScalarReachingDefinition(isl::union_map Schedule,
                                                       bool InclRedef) {
 
   // { DomainWrite[] -> Element[] }
-  auto Defs = give(isl_union_map_from_domain(Writes.take()));
+  isl::union_map Defs = isl::union_map::from_domain(Writes);
 
   // { [Element[] -> Scatter[]] -> DomainWrite[] }
   auto ReachDefs =
       computeReachingDefinition(Schedule, Defs, InclDef, InclRedef);
 
   // { Scatter[] -> DomainWrite[] }
-  return give(isl_union_set_unwrap(
-      isl_union_map_range(isl_union_map_curry(ReachDefs.take()))));
+  return ReachDefs.curry().range().unwrap();
 }
 
 /// Compute the reaching definition of a scalar.
@@ -209,16 +208,14 @@ static isl::union_map computeScalarReachingDefinition(isl::union_map Schedule,
 static isl::map computeScalarReachingDefinition(isl::union_map Schedule,
                                                 isl::set Writes, bool InclDef,
                                                 bool InclRedef) {
-  auto DomainSpace = give(isl_set_get_space(Writes.keep()));
-  auto ScatterSpace = getScatterSpace(Schedule);
+  isl::space DomainSpace = Writes.get_space();
+  isl::space ScatterSpace = getScatterSpace(Schedule);
 
   //  { Scatter[] -> DomainWrite[] }
-  auto UMap = computeScalarReachingDefinition(
-      Schedule, give(isl_union_set_from_set(Writes.take())), InclDef,
-      InclRedef);
+  isl::union_map UMap = computeScalarReachingDefinition(
+      Schedule, isl::union_set(Writes), InclDef, InclRedef);
 
-  auto ResultSpace = give(isl_space_map_from_domain_and_range(
-      ScatterSpace.take(), DomainSpace.take()));
+  isl::space ResultSpace = ScatterSpace.map_from_domain_and_range(DomainSpace);
   return singleton(UMap, ResultSpace);
 }
 
