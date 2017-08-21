@@ -1349,6 +1349,24 @@ TEST(APFloatTest, isInteger) {
   EXPECT_TRUE(T.isInteger());
 }
 
+TEST(DoubleAPFloatTest, isInteger) {
+  APFloat F1(-0.0);
+  APFloat F2(-0.0);
+  llvm::detail::DoubleAPFloat T(APFloat::PPCDoubleDouble(), std::move(F1),
+                                std::move(F2));
+  EXPECT_TRUE(T.isInteger());
+  APFloat F3(3.14159);
+  APFloat F4(-0.0);
+  llvm::detail::DoubleAPFloat T2(APFloat::PPCDoubleDouble(), std::move(F3),
+                                std::move(F4));
+  EXPECT_FALSE(T2.isInteger());
+  APFloat F5(-0.0);
+  APFloat F6(3.14159);
+  llvm::detail::DoubleAPFloat T3(APFloat::PPCDoubleDouble(), std::move(F5),
+                                std::move(F6));
+  EXPECT_FALSE(T3.isInteger());
+}
+
 TEST(APFloatTest, getLargest) {
   EXPECT_EQ(3.402823466e+38f, APFloat::getLargest(APFloat::IEEEsingle()).convertToFloat());
   EXPECT_EQ(1.7976931348623158e+308, APFloat::getLargest(APFloat::IEEEdouble()).convertToDouble());

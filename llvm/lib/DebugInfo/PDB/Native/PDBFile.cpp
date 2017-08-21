@@ -85,6 +85,11 @@ uint32_t PDBFile::getNumStreams() const {
   return ContainerLayout.StreamSizes.size();
 }
 
+uint32_t PDBFile::getMaxStreamSize() const {
+  return *std::max_element(ContainerLayout.StreamSizes.begin(),
+                           ContainerLayout.StreamSizes.end());
+}
+
 uint32_t PDBFile::getStreamByteSize(uint32_t StreamIndex) const {
   return ContainerLayout.StreamSizes[StreamIndex];
 }
@@ -227,6 +232,13 @@ Error PDBFile::parseStreamData() {
 
 ArrayRef<support::ulittle32_t> PDBFile::getDirectoryBlockArray() const {
   return ContainerLayout.DirectoryBlocks;
+}
+
+std::unique_ptr<MappedBlockStream> PDBFile::createIndexedStream(uint16_t SN) {
+  if (SN == kInvalidStreamIndex)
+    return nullptr;
+  return MappedBlockStream::createIndexedStream(ContainerLayout, *Buffer, SN,
+                                                Allocator);
 }
 
 MSFStreamLayout PDBFile::getStreamLayout(uint32_t StreamIdx) const {

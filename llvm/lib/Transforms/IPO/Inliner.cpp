@@ -335,10 +335,12 @@ shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
   return false;
 }
 
-/// Return true if the inliner should attempt to inline at the given CallSite.
-static bool shouldInline(CallSite CS,
-                         function_ref<InlineCost(CallSite CS)> GetInlineCost,
-                         OptimizationRemarkEmitter &ORE) {
+/// Return the cost only if the inliner should attempt to inline at the given
+/// CallSite. If we return the cost, we will emit an optimisation remark later
+/// using that cost, so we won't do so from this function.
+static Optional<InlineCost>
+shouldInline(CallSite CS, function_ref<InlineCost(CallSite CS)> GetInlineCost,
+             OptimizationRemarkEmitter &ORE) {
   using namespace ore;
   InlineCost IC = GetInlineCost(CS);
   Instruction *Call = CS.getInstruction();
@@ -348,10 +350,7 @@ static bool shouldInline(CallSite CS,
   if (IC.isAlways()) {
     DEBUG(dbgs() << "    Inlining: cost=always"
                  << ", Call: " << *CS.getInstruction() << "\n");
-    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "AlwaysInline", Call)
-             << NV("Callee", Callee)
-             << " should always be inlined (cost=always)");
-    return true;
+    return IC;
   }
 
   if (IC.isNever()) {
@@ -361,19 +360,19 @@ static bool shouldInline(CallSite CS,
              << NV("Callee", Callee) << " not inlined into "
              << NV("Caller", Caller)
              << " because it should never be inlined (cost=never)");
-    return false;
+    return None;
   }
 
   if (!IC) {
     DEBUG(dbgs() << "    NOT Inlining: cost=" << IC.getCost()
-                 << ", thres=" << (IC.getCostDelta() + IC.getCost())
+                 << ", thres=" << IC.getThreshold()
                  << ", Call: " << *CS.getInstruction() << "\n");
     ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "TooCostly", Call)
              << NV("Callee", Callee) << " not inlined into "
              << NV("Caller", Caller) << " because too costly to inline (cost="
-             << NV("Cost", IC.getCost()) << ", threshold="
-             << NV("Threshold", IC.getCostDelta() + IC.getCost()) << ")");
-    return false;
+             << NV("Cost", IC.getCost())
+             << ", threshold=" << NV("Threshold", IC.getThreshold()) << ")");
+    return None;
   }
 
   int TotalSecondaryCost = 0;
@@ -386,18 +385,16 @@ static bool shouldInline(CallSite CS,
              << "Not inlining. Cost of inlining " << NV("Callee", Callee)
              << " increases the cost of inlining " << NV("Caller", Caller)
              << " in other contexts");
-    return false;
+
+    // IC does not bool() to false, so get an InlineCost that will.
+    // This will not be inspected to make an error message.
+    return None;
   }
 
   DEBUG(dbgs() << "    Inlining: cost=" << IC.getCost()
-               << ", thres=" << (IC.getCostDelta() + IC.getCost())
+               << ", thres=" << IC.getThreshold()
                << ", Call: " << *CS.getInstruction() << '\n');
-  ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "CanBeInlined", Call)
-           << NV("Callee", Callee) << " can be inlined into "
-           << NV("Caller", Caller) << " with cost=" << NV("Cost", IC.getCost())
-           << " (threshold="
-           << NV("Threshold", IC.getCostDelta() + IC.getCost()) << ")");
-  return true;
+  return IC;
 }
 
 /// Return true if the specified inline history ID
@@ -545,9 +542,10 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
       // just become a regular analysis dependency.
       OptimizationRemarkEmitter ORE(Caller);
 
+      Optional<InlineCost> OIC = shouldInline(CS, GetInlineCost, ORE);
       // If the policy determines that we should inline this function,
       // delete the call instead.
-      if (!shouldInline(CS, GetInlineCost, ORE))
+      if (!OIC)
         continue;
 
       // If this call site is dead and it is to a readonly function, we should
@@ -562,7 +560,7 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         ++NumCallsDeleted;
       } else {
         // Get DebugLoc to report. CS will be invalid after Inliner.
-        DebugLoc DLoc = Instr->getDebugLoc();
+        DebugLoc DLoc = CS->getDebugLoc();
         BasicBlock *Block = CS.getParent();
 
         // Attempt to inline the function.
@@ -578,10 +576,17 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         }
         ++NumInlined;
 
-        // Report the inline decision.
-        ORE.emit(OptimizationRemark(DEBUG_TYPE, "Inlined", DLoc, Block)
-                 << NV("Callee", Callee) << " inlined into "
-                 << NV("Caller", Caller));
+        if (OIC->isAlways())
+          ORE.emit(OptimizationRemark(DEBUG_TYPE, "AlwaysInline", DLoc, Block)
+                   << NV("Callee", Callee) << " inlined into "
+                   << NV("Caller", Caller) << " with cost=always");
+        else
+          ORE.emit(OptimizationRemark(DEBUG_TYPE, "Inlined", DLoc, Block)
+                   << NV("Callee", Callee) << " inlined into "
+                   << NV("Caller", Caller)
+                   << " with cost=" << NV("Cost", OIC->getCost())
+                   << " (threshold=" << NV("Threshold", OIC->getThreshold())
+                   << ")");
 
         // If inlining this function gave us any new call sites, throw them
         // onto our worklist to process.  They are useful inline candidates.
@@ -885,8 +890,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         continue;
       }
 
+      Optional<InlineCost> OIC = shouldInline(CS, GetInlineCost, ORE);
       // Check whether we want to inline this callsite.
-      if (!shouldInline(CS, GetInlineCost, ORE))
+      if (!OIC)
         continue;
 
       // Setup the data structure used to plumb customization into the
@@ -896,10 +902,31 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           &FAM.getResult<BlockFrequencyAnalysis>(*(CS.getCaller())),
           &FAM.getResult<BlockFrequencyAnalysis>(Callee));
 
-      if (!InlineFunction(CS, IFI))
+      // Get DebugLoc to report. CS will be invalid after Inliner.
+      DebugLoc DLoc = CS->getDebugLoc();
+      BasicBlock *Block = CS.getParent();
+
+      using namespace ore;
+      if (!InlineFunction(CS, IFI)) {
+        ORE.emit(
+            OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
+            << NV("Callee", &Callee) << " will not be inlined into "
+            << NV("Caller", &F));
         continue;
+      }
       DidInline = true;
       InlinedCallees.insert(&Callee);
+
+      if (OIC->isAlways())
+        ORE.emit(OptimizationRemark(DEBUG_TYPE, "AlwaysInline", DLoc, Block)
+                 << NV("Callee", &Callee) << " inlined into "
+                 << NV("Caller", &F) << " with cost=always");
+      else
+        ORE.emit(
+            OptimizationRemark(DEBUG_TYPE, "Inlined", DLoc, Block)
+            << NV("Callee", &Callee) << " inlined into " << NV("Caller", &F)
+            << " with cost=" << NV("Cost", OIC->getCost())
+            << " (threshold=" << NV("Threshold", OIC->getThreshold()) << ")");
 
       // Add any new callsites to defined functions to the worklist.
       if (!IFI.InlinedCallSites.empty()) {

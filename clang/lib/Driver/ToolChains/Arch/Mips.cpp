@@ -232,8 +232,7 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   Arg *ABICallsArg =
       Args.getLastArg(options::OPT_mabicalls, options::OPT_mno_abicalls);
   UseAbiCalls =
-      !ABICallsArg ||
-      (ABICallsArg && ABICallsArg->getOption().matches(options::OPT_mabicalls));
+      !ABICallsArg || ABICallsArg->getOption().matches(options::OPT_mabicalls);
 
   if (UseAbiCalls && IsN64 && NonPIC) {
     D.Diag(diag::warn_drv_unsupported_abicalls);

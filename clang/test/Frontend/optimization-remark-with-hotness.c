@@ -56,8 +56,7 @@ void bar(int x) {
   // THRESHOLD-NOT: hotness
   // NO_PGO: '-fdiagnostics-show-hotness' requires profile-guided optimization information
   // NO_PGO: '-fdiagnostics-hotness-threshold=' requires profile-guided optimization information
-  // expected-remark@+2 {{foo should always be inlined (cost=always) (hotness: 30)}}
-  // expected-remark@+1 {{foo inlined into bar (hotness: 30)}}
+  // expected-remark@+1 {{foo inlined into bar with cost=always}}
   sum += foo(x, x - 2);
 }
 

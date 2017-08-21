@@ -60,7 +60,7 @@ CHECK-NEXT:   |           Public Symbol Hash | {{[EI]}} |
 CHECK-NEXT:   |------------------------------+---|
 CHECK-NEXT:   |           Global Symbol Hash | {{[EI]}} |
 CHECK-NEXT:   |------------------------------+---|
-CHECK-NEXT:   |        Public Symbol Records | {{[EI]}} |
+CHECK-NEXT:   |               Symbol Records | {{[EI]}} |
 CHECK-NEXT:   |------------------------------+---|
 CHECK-NEXT:   ------------------------------------
 CHECK-NEXT:   |           String Table           |

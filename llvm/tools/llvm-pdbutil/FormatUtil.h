@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -63,6 +64,10 @@ std::string typesetItemList(ArrayRef<std::string> Opts, uint32_t IndentLevel,
 
 std::string typesetStringList(uint32_t IndentLevel,
                               ArrayRef<StringRef> Strings);
+
+std::string formatChunkKind(codeview::DebugSubsectionKind Kind,
+                            bool Friendly = true);
+std::string formatSymbolKind(codeview::SymbolKind K);
 
 /// Returns the number of digits in the given integer.
 inline int NumDigits(uint64_t N) {

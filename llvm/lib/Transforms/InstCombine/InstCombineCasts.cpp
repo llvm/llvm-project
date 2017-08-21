@@ -950,8 +950,13 @@ static bool canEvaluateZExtd(Value *V, Type *Ty, unsigned &BitsToClear,
       unsigned VSize = V->getType()->getScalarSizeInBits();
       if (IC.MaskedValueIsZero(I->getOperand(1),
                                APInt::getHighBitsSet(VSize, BitsToClear),
-                               0, CxtI))
+                               0, CxtI)) {
+        // If this is an And instruction and all of the BitsToClear are
+        // known to be zero we can reset BitsToClear.
+        if (Opc == Instruction::And)
+          BitsToClear = 0;
         return true;
+      }
     }
 
     // Otherwise, we don't know how to analyze this BitsToClear case yet.
