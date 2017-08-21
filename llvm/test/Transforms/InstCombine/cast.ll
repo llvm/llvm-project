@@ -1586,3 +1586,22 @@ define i64 @test94(i32 %a) {
   %4 = sext i8 %3 to i64
   ret i64 %4
 }
+
+; We should be able to remove the zext and trunc here.
+; TODO: This is currently blocked because we don't realize the 'and' has cleared the extra bits that would be shifted in widening the lshr.
+define i32 @test95(i32 %x) {
+; CHECK-LABEL: @test95(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], 6
+; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = or i8 [[TMP3]], 40
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[TMP4]] to i32
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %1 = trunc i32 %x to i8
+  %2 = lshr i8 %1, 6
+  %3 = and i8 %2, 2
+  %4 = or i8 %3, 40
+  %5 = zext i8 %4 to i32
+  ret i32 %5
+}

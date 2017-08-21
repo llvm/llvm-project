@@ -322,6 +322,11 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   SmallVector<ArgInfo, 8> SplitArgs;
   for (const auto &OrigArg : OrigArgs) {
+
+    // TODO: handle not simple cases.
+    if (OrigArg.Flags.isByVal())
+      return false;
+
     if (!splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
                            [&](ArrayRef<unsigned> Regs) {
                              MIRBuilder.buildUnmerge(Regs, OrigArg.Reg);

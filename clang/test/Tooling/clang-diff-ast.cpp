@@ -61,7 +61,7 @@ public:
     // CHECK: MemberExpr: X::m(
     int x = m;
   }
-  // CHECK: CXXConstructorDecl: X::X(void (char))X,(
+  // CHECK: CXXConstructorDecl: X::X(void (char){{( __attribute__\(\(thiscall\)\))?}})X,(
   X(char s) : X(s, 4) {}
 };
 

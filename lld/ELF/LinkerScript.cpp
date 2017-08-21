@@ -49,19 +49,24 @@ using namespace lld::elf;
 
 LinkerScript *elf::Script;
 
+static uint64_t getOutputSectionVA(SectionBase *InputSec, StringRef Loc) {
+  if (OutputSection *OS = InputSec->getOutputSection())
+    return OS->Addr;
+  error(Loc + ": unable to evaluate expression: input section " +
+        InputSec->Name + " has no output section assigned");
+  return 0;
+}
+
 uint64_t ExprValue::getValue() const {
-  if (Sec) {
-    if (OutputSection *OS = Sec->getOutputSection())
-      return alignTo(Sec->getOffset(Val) + OS->Addr, Alignment);
-    error(Loc + ": unable to evaluate expression: input section " + Sec->Name +
-          " has no output section assigned");
-  }
+  if (Sec)
+    return alignTo(Sec->getOffset(Val) + getOutputSectionVA(Sec, Loc),
+                   Alignment);
   return alignTo(Val, Alignment);
 }
 
 uint64_t ExprValue::getSecAddr() const {
   if (Sec)
-    return Sec->getOffset(0) + Sec->getOutputSection()->Addr;
+    return Sec->getOffset(0) + getOutputSectionVA(Sec, Loc);
   return 0;
 }
 
