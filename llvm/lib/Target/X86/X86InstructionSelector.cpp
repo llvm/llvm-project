@@ -285,6 +285,11 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   if (!isPreISelGenericOpcode(Opcode)) {
     // Certain non-generic instructions also need some special handling.
 
+    if (Opcode == TargetOpcode::LOAD_STACK_GUARD)
+      return false;
+    if (Opcode == TargetOpcode::PHI)
+      return false;
+
     if (I.isCopy())
       return selectCopy(I, MRI);
 
