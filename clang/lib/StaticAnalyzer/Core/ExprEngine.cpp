@@ -368,7 +368,6 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
       ProcessLoopExit(E.castAs<CFGLoopExit>().getLoopStmt(), Pred);
       return;
     case CFGElement::LifetimeEnds:
-    case CFGElement::LoopExit:
       return;
   }
 }
@@ -520,13 +519,10 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
   ExplodedNodeSet Dst;
   Dst.Add(Pred);
   NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-  ProgramStateRef NewState = Pred->getState();
-
-  if(AMgr.options.shouldUnrollLoops())
-    NewState = processLoopEnd(S, NewState);
 
   LoopExit PP(S, Pred->getLocationContext());
-  Bldr.generateNode(PP, NewState, Pred);
+  Bldr.generateNode(PP, Pred->getState(), Pred);
+
   // Enqueue the new nodes onto the work list.
   Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
