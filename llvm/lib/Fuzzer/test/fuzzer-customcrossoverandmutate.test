@@ -1,1 +1,0 @@
-RUN: LLVMFuzzer-CustomCrossOverAndMutateTest -seed=1 -runs=100000
