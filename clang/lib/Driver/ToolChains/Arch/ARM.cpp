@@ -87,6 +87,15 @@ static bool DecodeARMFeatures(const Driver &D, StringRef text,
   return true;
 }
 
+static void DecodeARMFeaturesFromCPU(const Driver &D, StringRef CPU,
+                                     std::vector<StringRef> &Features) {
+  if (CPU != "generic") {
+    llvm::ARM::ArchKind ArchKind = llvm::ARM::parseCPUArch(CPU);
+    unsigned Extension = llvm::ARM::getDefaultExtensions(CPU, ArchKind);
+    llvm::ARM::getExtensionFeatures(Extension, Features);
+  }
+}
+
 // Check if -march is valid by checking if it can be canonicalised and parsed.
 // getARMArch is used here instead of just checking the -march value in order
 // to handle -march=native correctly.
@@ -331,6 +340,8 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
       for (auto &F : HostFeatures)
         Features.push_back(
             Args.MakeArgString((F.second ? "+" : "-") + F.first()));
+  } else if (!CPUName.empty()) {
+    DecodeARMFeaturesFromCPU(D, CPUName, Features);
   }
 
   // Honor -mfpu=. ClangAs gives preference to -Wa,-mfpu=.

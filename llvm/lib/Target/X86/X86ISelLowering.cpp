@@ -30732,12 +30732,7 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
   if (!CmpLHS.hasOneUse())
     return SDValue();
 
-  auto *CmpRHSC = dyn_cast<ConstantSDNode>(CmpRHS);
-  if (!CmpRHSC || CmpRHSC->getZExtValue() != 0)
-    return SDValue();
-
-  const unsigned Opc = CmpLHS.getOpcode();
-
+  unsigned Opc = CmpLHS.getOpcode();
   if (Opc != ISD::ATOMIC_LOAD_ADD && Opc != ISD::ATOMIC_LOAD_SUB)
     return SDValue();
 
@@ -30749,6 +30744,35 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
   APInt Addend = OpRHSC->getAPIntValue();
   if (Opc == ISD::ATOMIC_LOAD_SUB)
     Addend = -Addend;
+
+  auto *CmpRHSC = dyn_cast<ConstantSDNode>(CmpRHS);
+  if (!CmpRHSC)
+    return SDValue();
+
+  APInt Comparison = CmpRHSC->getAPIntValue();
+
+  // If the addend is the negation of the comparison value, then we can do
+  // a full comparison by emitting the atomic arithmetic is a locked sub.
+  if (Comparison == -Addend) {
+    // The CC is fine, but we need to rewrite the LHS of the comparison as an
+    // atomic sub.
+    auto *AN = cast<AtomicSDNode>(CmpLHS.getNode());
+    auto AtomicSub = DAG.getAtomic(
+        ISD::ATOMIC_LOAD_SUB, SDLoc(CmpLHS), CmpLHS.getValueType(),
+        /*Chain*/ CmpLHS.getOperand(0), /*LHS*/ CmpLHS.getOperand(1),
+        /*RHS*/ DAG.getConstant(-Addend, SDLoc(CmpRHS), CmpRHS.getValueType()),
+        AN->getMemOperand());
+    auto LockOp = lowerAtomicArithWithLOCK(AtomicSub, DAG);
+    DAG.ReplaceAllUsesOfValueWith(CmpLHS.getValue(0),
+                                  DAG.getUNDEF(CmpLHS.getValueType()));
+    DAG.ReplaceAllUsesOfValueWith(CmpLHS.getValue(1), LockOp.getValue(1));
+    return LockOp;
+  }
+
+  // We can handle comparisons with zero in a number of cases by manipulating
+  // the CC used.
+  if (!Comparison.isNullValue())
+    return SDValue();
 
   if (CC == X86::COND_S && Addend == 1)
     CC = X86::COND_LE;

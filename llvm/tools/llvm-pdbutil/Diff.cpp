@@ -135,29 +135,28 @@ struct BinaryPathProvider {
 struct StreamPurposeProvider {
   explicit StreamPurposeProvider(uint32_t MaxLen) : MaxLen(MaxLen) {}
 
-  DiffResult compare(const std::pair<StreamPurpose, std::string> &L,
-                     const std::pair<StreamPurpose, std::string> &R) {
-    if (L.first != R.first)
+  DiffResult compare(const StreamInfo &L, const StreamInfo &R) {
+    if (L.getPurpose() != R.getPurpose())
       return DiffResult::DIFFERENT;
-    if (L.first == StreamPurpose::ModuleStream) {
+    if (L.getPurpose() == StreamPurpose::ModuleStream) {
       BinaryPathProvider PathProvider(MaxLen);
-      return PathProvider.compare(L.second, R.second);
+      return PathProvider.compare(L.getShortName(), R.getShortName());
     }
-    return (L.second == R.second) ? DiffResult::IDENTICAL
-                                  : DiffResult::DIFFERENT;
+    return (L.getShortName() == R.getShortName()) ? DiffResult::IDENTICAL
+                                                  : DiffResult::DIFFERENT;
   }
 
-  std::string format(const std::pair<StreamPurpose, std::string> &P,
-                     bool Right) {
-    if (P.first == StreamPurpose::Other)
-      return truncateStringBack(P.second, MaxLen);
-    if (P.first == StreamPurpose::NamedStream)
-      return truncateQuotedNameBack("Named Stream", P.second, MaxLen);
+  std::string format(const StreamInfo &P, bool Right) {
+    if (P.getPurpose() == StreamPurpose::Other ||
+        P.getPurpose() == StreamPurpose::Symbols)
+      return truncateStringBack(P.getShortName(), MaxLen);
+    if (P.getPurpose() == StreamPurpose::NamedStream)
+      return truncateQuotedNameBack("Named Stream", P.getShortName(), MaxLen);
 
-    assert(P.first == StreamPurpose::ModuleStream);
+    assert(P.getPurpose() == StreamPurpose::ModuleStream);
     uint32_t ExtraChars = strlen("Module \"\"");
     BinaryPathProvider PathProvider(MaxLen - ExtraChars);
-    std::string Result = PathProvider.format(P.second, Right);
+    std::string Result = PathProvider.format(P.getShortName(), Right);
     return formatv("Module \"{0}\"", Result);
   }
 
@@ -256,8 +255,8 @@ Error DiffStyle::diffStreamDirectory() {
                   truncateStringFront(File1.getFilePath(), 18),
                   truncateStringFront(File2.getFilePath(), 18));
 
-  SmallVector<std::pair<StreamPurpose, std::string>, 32> P;
-  SmallVector<std::pair<StreamPurpose, std::string>, 32> Q;
+  SmallVector<StreamInfo, 32> P;
+  SmallVector<StreamInfo, 32> Q;
   discoverStreamPurposes(File1, P);
   discoverStreamPurposes(File2, Q);
   D.print("Stream Count", File1.getNumStreams(), File2.getNumStreams());
@@ -486,10 +485,10 @@ static void diffOneModule(DiffPrinter &D, const IndexedModuleDescriptor &Item,
                           IndexedModuleDescriptorList &Other,
                           bool ItemIsRight) {
   StreamPurposeProvider HeaderProvider(70);
-  std::pair<StreamPurpose, std::string> Header;
-  Header.first = StreamPurpose::ModuleStream;
-  Header.second = Item.second.getModuleName();
-  D.printFullRow(HeaderProvider.format(Header, ItemIsRight));
+  StreamInfo Info = StreamInfo::createModuleStream(
+      Item.second.getModuleName(), Item.second.getModuleStreamIndex(),
+      Item.first);
+  D.printFullRow(HeaderProvider.format(Info, ItemIsRight));
 
   const auto *L = &Item;
 

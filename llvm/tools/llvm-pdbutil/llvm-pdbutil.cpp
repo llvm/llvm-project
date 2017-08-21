@@ -29,6 +29,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
@@ -70,6 +71,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/LineIterator.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -79,6 +81,8 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <set>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -418,6 +422,10 @@ cl::opt<bool> DumpStreamBlocks(
     "stream-blocks",
     cl::desc("Add block information to the output of -streams"),
     cl::cat(MsfOptions), cl::sub(DumpSubcommand));
+cl::opt<bool>
+    DumpModuleStats("mod-stats",
+                    cl::desc("Dump a detailed size breakdown for each module"),
+                    cl::cat(MsfOptions), cl::sub(DumpSubcommand));
 
 // TYPE OPTIONS
 cl::opt<bool> DumpTypes("types",
@@ -507,6 +515,10 @@ cl::opt<uint32_t> DumpModi("modi", cl::Optional,
                            cl::desc("For all options that iterate over "
                                     "modules, limit to the specified module"),
                            cl::cat(FileOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> JustMyCode("jmc", cl::Optional,
+                         cl::desc("For all options that iterate over modules, "
+                                  "ignore modules from system libraries"),
+                         cl::cat(FileOptions), cl::sub(DumpSubcommand));
 
 // MISCELLANEOUS OPTIONS
 cl::opt<bool> DumpStringTable("string-table", cl::desc("dump PDB String Table"),

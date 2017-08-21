@@ -1049,10 +1049,6 @@ public:
   /// which implicitly adds the builtin defines etc.
   void EnterMainSourceFile();
 
-  /// \brief After parser warm-up, initialize the conditional stack from
-  /// the preamble.
-  void replayPreambleConditionalStack();
-
   /// \brief Inform the preprocessor callbacks that processing is complete.
   void EndSourceFile();
 
@@ -2026,6 +2022,10 @@ public:
   }
 
 private:
+  /// \brief After processing predefined file, initialize the conditional stack from
+  /// the preamble.
+  void replayPreambleConditionalStack();
+
   // Macro handling.
   void HandleDefineDirective(Token &Tok, bool ImmediatelyAfterTopLevelIfndef);
   void HandleUndefDirective();

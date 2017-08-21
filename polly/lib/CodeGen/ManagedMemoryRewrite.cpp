@@ -278,7 +278,7 @@ static void getAllocasToBeManaged(Function &F,
       auto *Alloca = dyn_cast<AllocaInst>(&I);
       if (!Alloca)
         continue;
-      dbgs() << "Checking if " << *Alloca << "may be captured: ";
+      DEBUG(dbgs() << "Checking if " << *Alloca << "may be captured: ");
 
       if (PointerMayBeCaptured(Alloca, /* ReturnCaptures */ false,
                                /* StoreCaptures */ true)) {

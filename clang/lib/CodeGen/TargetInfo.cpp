@@ -1085,7 +1085,7 @@ public:
 
   StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
     return "movl\t%ebp, %ebp"
-           "\t\t## marker for objc_retainAutoreleaseReturnValue";
+           "\t\t// marker for objc_retainAutoreleaseReturnValue";
   }
 };
 
@@ -4880,7 +4880,7 @@ public:
       : TargetCodeGenInfo(new AArch64ABIInfo(CGT, Kind)) {}
 
   StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
-    return "mov\tfp, fp\t\t# marker for objc_retainAutoreleaseReturnValue";
+    return "mov\tfp, fp\t\t// marker for objc_retainAutoreleaseReturnValue";
   }
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &M) const override {
@@ -5486,7 +5486,7 @@ public:
   }
 
   StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
-    return "mov\tr7, r7\t\t@ marker for objc_retainAutoreleaseReturnValue";
+    return "mov\tr7, r7\t\t// marker for objc_retainAutoreleaseReturnValue";
   }
 
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,

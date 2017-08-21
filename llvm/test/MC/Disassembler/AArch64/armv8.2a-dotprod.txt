@@ -1,4 +1,6 @@
 # RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+dotprod --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a75 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a55 --disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=-dotprod --disassemble < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
 0x20,0x94,0x82,0x2e

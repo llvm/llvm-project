@@ -32,7 +32,8 @@ AARCH64_ARCH("armv8.2-a", ARMV8_2A, "8.2-A", "v8.2a",
 AARCH64_ARCH("armv8.3-a", ARMV8_3A, "8.3-A", "v8.3a",
              ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
-              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE))
+              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+              AArch64::AEK_RCPC))
 #undef AARCH64_ARCH
 
 #ifndef AARCH64_ARCH_EXT_NAME
@@ -51,6 +52,7 @@ AARCH64_ARCH_EXT_NAME("fp16",     AArch64::AEK_FP16,     "+fullfp16",  "-fullfp1
 AARCH64_ARCH_EXT_NAME("profile",  AArch64::AEK_PROFILE,  "+spe",  "-spe")
 AARCH64_ARCH_EXT_NAME("ras",      AArch64::AEK_RAS,      "+ras",  "-ras")
 AARCH64_ARCH_EXT_NAME("sve",      AArch64::AEK_SVE,      "+sve",  "-sve")
+AARCH64_ARCH_EXT_NAME("rcpc",     AArch64::AEK_RCPC,     "+rcpc", "-rcpc")
 #undef AARCH64_ARCH_EXT_NAME
 
 #ifndef AARCH64_CPU_NAME
@@ -60,12 +62,16 @@ AARCH64_CPU_NAME("cortex-a35", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("cortex-a53", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, true,
                 (AArch64::AEK_CRC))
+AARCH64_CPU_NAME("cortex-a55", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_FP16 | AArch64::AEK_DOTPROD | AArch64::AEK_RCPC))
 AARCH64_CPU_NAME("cortex-a57", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("cortex-a72", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("cortex-a73", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_CRC))
+AARCH64_CPU_NAME("cortex-a75", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
+                 (AArch64::AEK_FP16 | AArch64::AEK_DOTPROD | AArch64::AEK_RCPC))
 AARCH64_CPU_NAME("cyclone", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_NONE))
 AARCH64_CPU_NAME("exynos-m1", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,

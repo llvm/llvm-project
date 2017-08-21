@@ -82,6 +82,12 @@ Error DumpOutputStyle::dump() {
     P.NewLine();
   }
 
+  if (opts::dump::DumpModuleStats.getNumOccurrences() > 0) {
+    if (auto EC = dumpModuleStats())
+      return EC;
+    P.NewLine();
+  }
+
   if (opts::dump::DumpStringTable) {
     if (auto EC = dumpStringTable())
       return EC;
@@ -199,6 +205,77 @@ Error DumpOutputStyle::dumpFileSummary() {
   return Error::success();
 }
 
+static StatCollection getSymbolStats(ModuleDebugStreamRef MDS,
+                                     StatCollection &CumulativeStats) {
+  StatCollection Stats;
+  for (const auto &S : MDS.symbols(nullptr)) {
+    Stats.update(S.kind(), S.length());
+    CumulativeStats.update(S.kind(), S.length());
+  }
+  return Stats;
+}
+
+static StatCollection getChunkStats(ModuleDebugStreamRef MDS,
+                                    StatCollection &CumulativeStats) {
+  StatCollection Stats;
+  for (const auto &Chunk : MDS.subsections()) {
+    Stats.update(uint32_t(Chunk.kind()), Chunk.getRecordLength());
+    CumulativeStats.update(uint32_t(Chunk.kind()), Chunk.getRecordLength());
+  }
+  return Stats;
+}
+
+static inline std::string formatModuleDetailKind(DebugSubsectionKind K) {
+  return formatChunkKind(K, false);
+}
+
+static inline std::string formatModuleDetailKind(SymbolKind K) {
+  return formatSymbolKind(K);
+}
+
+template <typename Kind>
+static void printModuleDetailStats(LinePrinter &P, StringRef Label,
+                                   const StatCollection &Stats) {
+  P.NewLine();
+  P.formatLine("  {0}", Label);
+  AutoIndent Indent(P);
+  P.formatLine("{0,40}: {1,7} entries ({2,8} bytes)", "Total",
+               Stats.Totals.Count, Stats.Totals.Size);
+  P.formatLine("{0}", fmt_repeat('-', 74));
+  for (const auto &K : Stats.Individual) {
+    std::string KindName = formatModuleDetailKind(Kind(K.first));
+    P.formatLine("{0,40}: {1,7} entries ({2,8} bytes)", KindName,
+                 K.second.Count, K.second.Size);
+  }
+}
+
+static bool isMyCode(const DbiModuleDescriptor &Desc) {
+  StringRef Name = Desc.getModuleName();
+  if (Name.startswith("Import:"))
+    return false;
+  if (Name.endswith_lower(".dll"))
+    return false;
+  if (Name.equals_lower("* linker *"))
+    return false;
+  if (Name.startswith_lower("f:\\binaries\\Intermediate\\vctools"))
+    return false;
+  if (Name.startswith_lower("f:\\dd\\vctools\\crt"))
+    return false;
+  return true;
+}
+
+static bool shouldDumpModule(uint32_t Modi, const DbiModuleDescriptor &Desc) {
+  if (opts::dump::JustMyCode && !isMyCode(Desc))
+    return false;
+
+  // If the arg was not specified on the command line, always dump all modules.
+  if (opts::dump::DumpModi.getNumOccurrences() == 0)
+    return true;
+
+  // Otherwise, only dump if this is the same module specified.
+  return (opts::dump::DumpModi == Modi);
+}
+
 Error DumpOutputStyle::dumpStreamSummary() {
   printHeader(P, "Streams");
 
@@ -207,12 +284,16 @@ Error DumpOutputStyle::dumpStreamSummary() {
 
   AutoIndent Indent(P);
   uint32_t StreamCount = File.getNumStreams();
+  uint32_t MaxStreamSize = File.getMaxStreamSize();
 
   for (uint16_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
     P.formatLine(
-        "Stream {0}: [{1}] ({2} bytes)",
+        "Stream {0} ({1} bytes): [{2}]",
         fmt_align(StreamIdx, AlignStyle::Right, NumDigits(StreamCount)),
-        StreamPurposes[StreamIdx], File.getStreamByteSize(StreamIdx));
+        fmt_align(File.getStreamByteSize(StreamIdx), AlignStyle::Right,
+                  NumDigits(MaxStreamSize)),
+        StreamPurposes[StreamIdx].getLongName());
+
     if (opts::dump::DumpStreamBlocks) {
       auto Blocks = File.getStreamBlockList(StreamIdx);
       std::vector<uint32_t> BV(Blocks.begin(), Blocks.end());
@@ -389,8 +470,10 @@ static void iterateModules(PDBFile &File, LinePrinter &P, uint32_t IndentLevel,
   uint32_t Count = Modules.getModuleCount();
   uint32_t Digits = NumDigits(Count);
   for (uint32_t I = 0; I < Count; ++I) {
-    auto Descriptor = Modules.getModuleDescriptor(I);
-    iterateOneModule(File, P, Descriptor, I, IndentLevel, Digits, Callback);
+    auto Desc = Modules.getModuleDescriptor(I);
+    if (!shouldDumpModule(I, Desc))
+      continue;
+    iterateOneModule(File, P, Desc, I, IndentLevel, Digits, Callback);
   }
 }
 
@@ -438,24 +521,21 @@ Error DumpOutputStyle::dumpModules() {
   auto &Stream = Err(File.getPDBDbiStream());
 
   const DbiModuleList &Modules = Stream.modules();
-  uint32_t Count = Modules.getModuleCount();
-  uint32_t Digits = NumDigits(Count);
-  for (uint32_t I = 0; I < Count; ++I) {
-    auto Modi = Modules.getModuleDescriptor(I);
-    P.formatLine("Mod {0:4} | Name: `{1}`: ",
-                 fmt_align(I, AlignStyle::Right, Digits), Modi.getModuleName());
-    P.formatLine("           Obj: `{0}`: ", Modi.getObjFileName());
-    P.formatLine("           debug stream: {0}, # files: {1}, has ec info: {2}",
-                 Modi.getModuleStreamIndex(), Modi.getNumberOfFiles(),
-                 Modi.hasECInfo());
-    StringRef PdbFilePath =
-        Err(Stream.getECName(Modi.getPdbFilePathNameIndex()));
-    StringRef SrcFilePath =
-        Err(Stream.getECName(Modi.getSourceFileNameIndex()));
-    P.formatLine("           pdb file ni: {0} `{1}`, src file ni: {2} `{3}`",
-                 Modi.getPdbFilePathNameIndex(), PdbFilePath,
-                 Modi.getSourceFileNameIndex(), SrcFilePath);
-  }
+  iterateModules(
+      File, P, 11, [&](uint32_t Modi, StringsAndChecksumsPrinter &Strings) {
+        auto Desc = Modules.getModuleDescriptor(Modi);
+        P.formatLine("Obj: `{0}`: ", Desc.getObjFileName());
+        P.formatLine("debug stream: {0}, # files: {1}, has ec info: {2}",
+                     Desc.getModuleStreamIndex(), Desc.getNumberOfFiles(),
+                     Desc.hasECInfo());
+        StringRef PdbFilePath =
+            Err(Stream.getECName(Desc.getPdbFilePathNameIndex()));
+        StringRef SrcFilePath =
+            Err(Stream.getECName(Desc.getSourceFileNameIndex()));
+        P.formatLine("pdb file ni: {0} `{1}`, src file ni: {2} `{3}`",
+                     Desc.getPdbFilePathNameIndex(), PdbFilePath,
+                     Desc.getSourceFileNameIndex(), SrcFilePath);
+      });
   return Error::success();
 }
 
@@ -474,6 +554,56 @@ Error DumpOutputStyle::dumpModuleFiles() {
           Strings.formatFromFileName(P, F);
         }
       });
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpModuleStats() {
+  printHeader(P, "Module Stats");
+
+  ExitOnError Err("Unexpected error processing modules: ");
+
+  StatCollection SymStats;
+  StatCollection ChunkStats;
+  auto &Stream = Err(File.getPDBDbiStream());
+
+  const DbiModuleList &Modules = Stream.modules();
+  uint32_t ModCount = Modules.getModuleCount();
+
+  iterateModules(File, P, 0, [&](uint32_t Modi,
+                                 StringsAndChecksumsPrinter &Strings) {
+    DbiModuleDescriptor Desc = Modules.getModuleDescriptor(Modi);
+    uint32_t StreamIdx = Desc.getModuleStreamIndex();
+
+    if (StreamIdx == kInvalidStreamIndex) {
+      P.formatLine("Mod {0} (debug info not present): [{1}]",
+                   fmt_align(Modi, AlignStyle::Right, NumDigits(ModCount)),
+                   Desc.getModuleName());
+      return;
+    }
+
+    P.formatLine("Stream {0}, {1} bytes", StreamIdx,
+                 File.getStreamByteSize(StreamIdx));
+
+    ModuleDebugStreamRef MDS(Desc, File.createIndexedStream(StreamIdx));
+    if (auto EC = MDS.reload()) {
+      P.printLine("- Error parsing debug info stream");
+      consumeError(std::move(EC));
+      return;
+    }
+
+    printModuleDetailStats<SymbolKind>(P, "Symbols",
+                                       getSymbolStats(MDS, SymStats));
+    printModuleDetailStats<DebugSubsectionKind>(P, "Chunks",
+                                                getChunkStats(MDS, ChunkStats));
+  });
+
+  P.printLine("  Summary |");
+  AutoIndent Indent(P, 4);
+  if (SymStats.Totals.Count > 0) {
+    printModuleDetailStats<SymbolKind>(P, "Symbols", SymStats);
+    printModuleDetailStats<DebugSubsectionKind>(P, "Chunks", ChunkStats);
+  }
+
   return Error::success();
 }
 
