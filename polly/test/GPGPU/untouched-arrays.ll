@@ -4,7 +4,11 @@
 
 ; REQUIRES: pollyacc
 
-; CODE:        cudaCheckReturn(cudaMemcpy(dev_MemRef_global_1, MemRef_global_1, (142) * sizeof(i32), cudaMemcpyHostToDevice));
+; CODE: Code
+; CODE-NEXT: ====
+; CODE-NEXT: # host
+; CODE-NEXT: {
+; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_global_1, MemRef_global_1, (142) * sizeof(i32), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(10);
 ; CODE-NEXT:     dim3 k0_dimGrid(1);
@@ -13,7 +17,6 @@
 ; CODE-NEXT:   }
 
 ; CODE:   cudaCheckReturn(cudaMemcpy(MemRef_global_1, dev_MemRef_global_1, (142) * sizeof(i32), cudaMemcpyDeviceToHost));
-; CODE:   cudaCheckReturn(cudaFree(dev_MemRef_global_1));
 ; CODE-NEXT: }
 
 ; CODE: # kernel0

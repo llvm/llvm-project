@@ -27,6 +27,6 @@ llvm::TargetOptions lld::InitTargetOptionsFromCodeGenFlags() {
   return ::InitTargetOptionsFromCodeGenFlags();
 }
 
-llvm::Optional<llvm::CodeModel::Model> lld::GetCodeModelFromCMModel() {
-  return getCodeModel();
+llvm::CodeModel::Model lld::GetCodeModelFromCMModel() {
+  return CMModel;
 }

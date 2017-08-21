@@ -53,6 +53,12 @@ using namespace llvm;
 
 STATISTIC(VersionedScops, "Number of SCoPs that required versioning.");
 
+// The maximal number of dimensions we allow during invariant load construction.
+// More complex access ranges will result in very high compile time and are also
+// unlikely to result in good code. This value is very high and should only
+// trigger for corner cases (e.g., the "dct_luma" function in h264, SPEC2006).
+static int const MaxDimensionsInAccessRange = 9;
+
 static cl::opt<bool> PollyGenerateRTCPrint(
     "polly-codegen-emit-rtc-print",
     cl::desc("Emit code that prints the runtime check result dynamically."),
@@ -81,6 +87,7 @@ IslNodeBuilder::getUpperBound(__isl_keep isl_ast_node *For,
 
   Cond = isl_ast_node_for_get_cond(For);
   Iterator = isl_ast_node_for_get_iterator(For);
+  isl_ast_expr_get_type(Cond);
   assert(isl_ast_expr_get_type(Cond) == isl_ast_expr_op &&
          "conditional expression is not an atomic upper bound");
 
@@ -196,13 +203,8 @@ int IslNodeBuilder::getNumberOfIterations(__isl_keep isl_ast_node *For) {
 
 /// Extract the values and SCEVs needed to generate code for a block.
 static int findReferencesInBlock(struct SubtreeReferences &References,
-                                 const ScopStmt *Stmt, BasicBlock *BB) {
-  for (Instruction &Inst : *BB) {
-    // Include invariant loads
-    if (isa<LoadInst>(Inst))
-      if (Value *InvariantLoad = References.GlobalMap.lookup(&Inst))
-        References.Values.insert(InvariantLoad);
-
+                                 const ScopStmt *Stmt, const BasicBlock *BB) {
+  for (const Instruction &Inst : *BB)
     for (Value *SrcVal : Inst.operands()) {
       auto *Scope = References.LI.getLoopFor(BB);
       if (canSynthesize(SrcVal, References.S, &References.SE, Scope)) {
@@ -211,7 +213,6 @@ static int findReferencesInBlock(struct SubtreeReferences &References,
       } else if (Value *NewVal = References.GlobalMap.lookup(SrcVal))
         References.Values.insert(NewVal);
     }
-  }
   return 0;
 }
 
@@ -224,18 +225,12 @@ isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
   else {
     assert(Stmt->isRegionStmt() &&
            "Stmt was neither block nor region statement");
-    for (BasicBlock *BB : Stmt->getRegion()->blocks())
+    for (const BasicBlock *BB : Stmt->getRegion()->blocks())
       findReferencesInBlock(References, Stmt, BB);
   }
 
   for (auto &Access : *Stmt) {
-    if (References.ParamSpace) {
-      isl::space ParamSpace = Access->getLatestAccessRelation().get_space();
-      (*References.ParamSpace) =
-          References.ParamSpace->align_params(ParamSpace);
-    }
-
-    if (Access->isLatestArrayKind()) {
+    if (Access->isArrayKind()) {
       auto *BasePtr = Access->getScopArrayInfo()->getBasePtr();
       if (Instruction *OpInst = dyn_cast<Instruction>(BasePtr))
         if (Stmt->getParent()->contains(OpInst))
@@ -303,12 +298,11 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
 
   SetVector<const SCEV *> SCEVs;
   struct SubtreeReferences References = {
-      LI, SE, S, ValueMap, Values, SCEVs, getBlockGenerator(), nullptr};
+      LI, SE, S, ValueMap, Values, SCEVs, getBlockGenerator()};
 
   for (const auto &I : IDToValue)
     Values.insert(I.second);
 
-  // NOTE: this is populated in IslNodeBuilder::addParameters
   for (const auto &I : OutsideLoopIterations)
     Values.insert(cast<SCEVUnknown>(I.second)->getValue());
 
@@ -322,17 +316,9 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
 
   Values.remove_if([](const Value *V) { return isa<GlobalValue>(V); });
 
-  /// Note: Code generation of induction variables of loops outside Scops
-  ///
   /// Remove loops that contain the scop or that are part of the scop, as they
   /// are considered local. This leaves only loops that are before the scop, but
   /// do not contain the scop itself.
-  /// We ignore loops perfectly contained in the Scop because these are already
-  /// generated at `IslNodeBuilder::addParameters`. These `Loops` are loops
-  /// whose induction variables are referred to by the Scop, but the Scop is not
-  /// fully contained in these Loops. Since there can be many of these,
-  /// we choose to codegen these on-demand.
-  /// @see IslNodeBuilder::materializeNonScopLoopInductionVariable.
   Loops.remove_if([this](const Loop *L) {
     return S.contains(L) || L->contains(S.getEntry());
   });
@@ -345,7 +331,11 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
   //     2.  test/Isl/CodeGen/OpenMP/loop-body-references-outer-values-3.ll
   SetVector<Value *> ReplacedValues;
   for (Value *V : Values) {
-    ReplacedValues.insert(getLatestValue(V));
+    auto It = ValueMap.find(V);
+    if (It == ValueMap.end())
+      ReplacedValues.insert(V);
+    else
+      ReplacedValues.insert(It->second);
   }
   Values = ReplacedValues;
 }
@@ -366,13 +356,6 @@ void IslNodeBuilder::updateValues(ValueMapT &NewValues) {
   }
 }
 
-Value *IslNodeBuilder::getLatestValue(Value *Original) const {
-  auto It = ValueMap.find(Original);
-  if (It == ValueMap.end())
-    return Original;
-  return It->second;
-}
-
 void IslNodeBuilder::createUserVector(__isl_take isl_ast_node *User,
                                       std::vector<Value *> &IVS,
                                       __isl_take isl_id *IteratorID,
@@ -384,7 +367,7 @@ void IslNodeBuilder::createUserVector(__isl_take isl_ast_node *User,
   ScopStmt *Stmt = (ScopStmt *)isl_id_get_user(Id);
   std::vector<LoopToScevMapT> VLTS(IVS.size());
 
-  isl_union_set *Domain = isl_union_set_from_set(Stmt->getDomain().release());
+  isl_union_set *Domain = isl_union_set_from_set(Stmt->getDomain());
   Schedule = isl_union_map_intersect_domain(Schedule, Domain);
   isl_map *S = isl_map_from_union_map(Schedule);
 
@@ -648,10 +631,13 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // Create for all loops we depend on values that contain the current loop
   // iteration. These values are necessary to generate code for SCEVs that
   // depend on such loops. As a result we need to pass them to the subfunction.
-  // See [Code generation of induction variables of loops outside Scops]
   for (const Loop *L : Loops) {
-    Value *LoopInductionVar = materializeNonScopLoopInductionVariable(L);
-    SubtreeValues.insert(LoopInductionVar);
+    const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
+                                            SE.getUnknown(Builder.getInt64(1)),
+                                            L, SCEV::FlagAnyWrap);
+    Value *V = generateSCEV(OuterLIV);
+    OutsideLoopIterations[L] = SE.getUnknown(V);
+    SubtreeValues.insert(V);
   }
 
   ValueMapT NewValues;
@@ -714,7 +700,7 @@ static bool hasPartialAccesses(__isl_take isl_ast_node *Node) {
 
                ScopStmt *Stmt =
                    static_cast<ScopStmt *>(isl_id_get_user(Id.keep()));
-               isl::set StmtDom = Stmt->getDomain();
+               isl::set StmtDom = give(Stmt->getDomain());
                for (auto *MA : *Stmt) {
                  if (MA->isLatestPartialAccess())
                    return isl_bool_error;
@@ -798,7 +784,7 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
 
   auto *Build = IslAstInfo::getBuild(Node);
   assert(Build && "Could not obtain isl_ast_build from user node");
-  Stmt->setAstBuild(isl::manage(isl_ast_build_copy(Build)));
+  Stmt->setAstBuild(Build);
 
   for (auto *MA : *Stmt) {
     if (!MA->hasNewAccessRelation()) {
@@ -823,14 +809,13 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
 
 #ifndef NDEBUG
     if (MA->isRead()) {
-      auto Dom = Stmt->getDomain().release();
+      auto Dom = Stmt->getDomain();
       auto SchedDom = isl_set_from_union_set(
           isl_union_map_domain(isl_union_map_copy(Schedule)));
-      auto AccDom = isl_map_domain(MA->getAccessRelation().release());
-      Dom = isl_set_intersect_params(Dom,
-                                     Stmt->getParent()->getContext().release());
-      SchedDom = isl_set_intersect_params(
-          SchedDom, Stmt->getParent()->getContext().release());
+      auto AccDom = isl_map_domain(MA->getAccessRelation());
+      Dom = isl_set_intersect_params(Dom, Stmt->getParent()->getContext());
+      SchedDom =
+          isl_set_intersect_params(SchedDom, Stmt->getParent()->getContext());
       assert(isl_set_is_subset(SchedDom, AccDom) &&
              "Access relation not defined on full schedule domain");
       assert(isl_set_is_subset(Dom, AccDom) &&
@@ -841,8 +826,7 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
     }
 #endif
 
-    auto PWAccRel =
-        MA->applyScheduleToAccessRelation(isl::manage(Schedule)).release();
+    auto PWAccRel = MA->applyScheduleToAccessRelation(Schedule);
 
     // isl cannot generate an index expression for access-nothing accesses.
     isl::set AccDomain =
@@ -853,8 +837,7 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
     }
 
     auto AccessExpr = isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);
-    NewAccesses =
-        isl_id_to_ast_expr_set(NewAccesses, MA->getId().release(), AccessExpr);
+    NewAccesses = isl_id_to_ast_expr_set(NewAccesses, MA->getId(), AccessExpr);
   }
 
   return NewAccesses;
@@ -907,23 +890,11 @@ void IslNodeBuilder::generateCopyStmt(
          "Accesses use the same data type");
   assert((*ReadAccess)->isArrayKind() && (*WriteAccess)->isArrayKind());
   auto *AccessExpr =
-      isl_id_to_ast_expr_get(NewAccesses, (*ReadAccess)->getId().release());
+      isl_id_to_ast_expr_get(NewAccesses, (*ReadAccess)->getId());
   auto *LoadValue = ExprBuilder.create(AccessExpr);
-  AccessExpr =
-      isl_id_to_ast_expr_get(NewAccesses, (*WriteAccess)->getId().release());
+  AccessExpr = isl_id_to_ast_expr_get(NewAccesses, (*WriteAccess)->getId());
   auto *StoreAddr = ExprBuilder.createAccessAddress(AccessExpr);
   Builder.CreateStore(LoadValue, StoreAddr);
-}
-
-Value *IslNodeBuilder::materializeNonScopLoopInductionVariable(const Loop *L) {
-  assert(OutsideLoopIterations.find(L) == OutsideLoopIterations.end() &&
-         "trying to materialize loop induction variable twice");
-  const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
-                                          SE.getUnknown(Builder.getInt64(1)), L,
-                                          SCEV::FlagAnyWrap);
-  Value *V = generateSCEV(OuterLIV);
-  OutsideLoopIterations[L] = SE.getUnknown(V);
-  return V;
 }
 
 void IslNodeBuilder::createUser(__isl_take isl_ast_node *User) {
@@ -1022,7 +993,7 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
           } else if (S.getStmtFor(Inst)) {
             IsDead = false;
           } else {
-            auto *Domain = S.getDomainConditions(Inst->getParent()).release();
+            auto *Domain = S.getDomainConditions(Inst->getParent());
             IsDead = isl_set_is_empty(Domain);
             isl_set_free(Domain);
           }
@@ -1070,7 +1041,7 @@ bool IslNodeBuilder::materializeParameters(isl_set *Set) {
 
 bool IslNodeBuilder::materializeParameters() {
   for (const SCEV *Param : S.parameters()) {
-    isl_id *Id = S.getIdForParam(Param).release();
+    isl_id *Id = S.getIdForParam(Param);
     if (!materializeValue(Id))
       return false;
   }
@@ -1137,7 +1108,7 @@ bool IslNodeBuilder::materializeFortranArrayOutermostDimension() {
       if (!FAD)
         continue;
 
-      isl_pw_aff *ParametricPwAff = Array->getDimensionSizePw(0).release();
+      isl_pw_aff *ParametricPwAff = Array->getDimensionSizePw(0);
       assert(ParametricPwAff && "parametric pw_aff corresponding "
                                 "to outermost dimension does not "
                                 "exist");
@@ -1163,9 +1134,26 @@ bool IslNodeBuilder::materializeFortranArrayOutermostDimension() {
   return true;
 }
 
+/// Add the number of dimensions in @p BS to @p U.
+static isl_stat countTotalDims(__isl_take isl_basic_set *BS, void *U) {
+  unsigned *NumTotalDim = static_cast<unsigned *>(U);
+  *NumTotalDim += isl_basic_set_total_dim(BS);
+  isl_basic_set_free(BS);
+  return isl_stat_ok;
+}
+
 Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
                                               isl_ast_build *Build,
                                               Instruction *AccInst) {
+
+  // TODO: This check could be performed in the ScopInfo already.
+  unsigned NumTotalDim = 0;
+  isl_set_foreach_basic_set(AccessRange, countTotalDims, &NumTotalDim);
+  if (NumTotalDim > MaxDimensionsInAccessRange) {
+    isl_set_free(AccessRange);
+    return nullptr;
+  }
+
   isl_pw_multi_aff *PWAccRel = isl_pw_multi_aff_from_set(AccessRange);
   isl_ast_expr *Access =
       isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);
@@ -1196,8 +1184,8 @@ Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
 Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
                                             isl_set *Domain) {
 
-  isl_set *AccessRange = isl_map_range(MA.getAddressFunction().release());
-  AccessRange = isl_set_gist_params(AccessRange, S.getContext().release());
+  isl_set *AccessRange = isl_map_range(MA.getAddressFunction());
+  AccessRange = isl_set_gist_params(AccessRange, S.getContext());
 
   if (!materializeParameters(AccessRange)) {
     isl_set_free(AccessRange);
@@ -1205,8 +1193,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
     return nullptr;
   }
 
-  auto *Build =
-      isl_ast_build_from_context(isl_set_universe(S.getParamSpace().release()));
+  auto *Build = isl_ast_build_from_context(isl_set_universe(S.getParamSpace()));
   isl_set *Universe = isl_set_universe(isl_set_get_space(Domain));
   bool AlwaysExecuted = isl_set_is_equal(Domain, Universe);
   isl_set_free(Universe);
@@ -1358,7 +1345,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   }
 
   if (SE.isSCEVable(AccInstTy)) {
-    isl_id *ParamId = S.getIdForParam(SE.getSCEV(AccInst)).release();
+    isl_id *ParamId = S.getIdForParam(SE.getSCEV(AccInst));
     if (ParamId)
       IDToValue[ParamId] = PreloadVal;
     isl_id_free(ParamId);
@@ -1515,7 +1502,11 @@ void IslNodeBuilder::addParameters(__isl_take isl_set *Context) {
     L = L->getParentLoop();
 
   while (L != nullptr) {
-    materializeNonScopLoopInductionVariable(L);
+    const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
+                                            SE.getUnknown(Builder.getInt64(1)),
+                                            L, SCEV::FlagAnyWrap);
+    Value *V = generateSCEV(OuterLIV);
+    OutsideLoopIterations[L] = SE.getUnknown(V);
     L = L->getParentLoop();
   }
 
@@ -1560,12 +1551,8 @@ Value *IslNodeBuilder::createRTC(isl_ast_expr *Condition) {
     RuntimeDebugBuilder::createCPUPrinter(
         Builder,
         "F: " + F->getName().str() + " R: " + S.getRegion().getNameStr() +
-            "RTC: ",
-        RTC, " Overflow: ", OverflowHappened,
-        "\n"
-        "  (0 failed, -1 succeeded)\n"
-        "  (if one or both are 0 falling back to original code, if both are -1 "
-        "executing Polly code)\n");
+            " __RTC: ",
+        RTC, " Overflow: ", OverflowHappened, "\n");
   }
 
   RTC = Builder.CreateAnd(RTC, OverflowHappened, "polly.rtc.result");

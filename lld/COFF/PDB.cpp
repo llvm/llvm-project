@@ -13,12 +13,9 @@
 #include "Error.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "Writer.h"
 #include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
-#include "llvm/DebugInfo/CodeView/RecordName.h"
-#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
@@ -31,14 +28,12 @@
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/GSIStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
@@ -46,7 +41,6 @@
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/JamCRC.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <memory>
@@ -76,13 +70,13 @@ public:
         IDTable(Alloc) {}
 
   /// Emit the basic PDB structure: initial streams, headers, etc.
-  void initialize(const llvm::codeview::DebugInfo &BuildId);
+  void initialize(const llvm::codeview::DebugInfo *DI);
 
   /// Link CodeView from each object file in the symbol table into the PDB.
   void addObjectsToPDB();
 
   /// Link CodeView from a single object file into the PDB.
-  void addObjFile(ObjFile *File);
+  void addObjectFile(ObjectFile *File);
 
   /// Produce a mapping from the type and item indices used in the object
   /// file to those in the destination PDB.
@@ -95,17 +89,13 @@ public:
   /// If the object does not use a type server PDB (compiled with /Z7), we merge
   /// all the type and item records from the .debug$S stream and fill in the
   /// caller-provided ObjectIndexMap.
-  const CVIndexMap &mergeDebugT(ObjFile *File, CVIndexMap &ObjectIndexMap);
+  const CVIndexMap &mergeDebugT(ObjectFile *File, CVIndexMap &ObjectIndexMap);
 
-  const CVIndexMap &maybeMergeTypeServerPDB(ObjFile *File,
+  const CVIndexMap &maybeMergeTypeServerPDB(ObjectFile *File,
                                             TypeServer2Record &TS);
 
   /// Add the section map and section contributions to the PDB.
-  void addSections(ArrayRef<OutputSection *> OutputSections,
-                   ArrayRef<uint8_t> SectionTable);
-
-  void addSectionContrib(pdb::DbiModuleDescriptorBuilder &LinkerModule,
-                         OutputSection *OS, Chunk *C);
+  void addSections(ArrayRef<uint8_t> SectionTable);
 
   /// Write the PDB to disk.
   void commit();
@@ -136,6 +126,14 @@ private:
 };
 }
 
+// Returns a list of all SectionChunks.
+static void addSectionContribs(SymbolTable *Symtab,
+                               pdb::DbiStreamBuilder &DbiBuilder) {
+  for (Chunk *C : Symtab->getChunks())
+    if (auto *SC = dyn_cast<SectionChunk>(C))
+      DbiBuilder.addSectionContrib(SC->File->ModuleDBI, SC->Header);
+}
+
 static SectionChunk *findByName(std::vector<SectionChunk *> &Sections,
                                 StringRef Name) {
   for (SectionChunk *C : Sections)
@@ -154,7 +152,7 @@ static ArrayRef<uint8_t> consumeDebugMagic(ArrayRef<uint8_t> Data,
   return Data.slice(4);
 }
 
-static ArrayRef<uint8_t> getDebugSection(ObjFile *File, StringRef SecName) {
+static ArrayRef<uint8_t> getDebugSection(ObjectFile *File, StringRef SecName) {
   if (SectionChunk *Sec = findByName(File->getDebugChunks(), SecName))
     return consumeDebugMagic(Sec->getContents(), SecName);
   return {};
@@ -165,15 +163,10 @@ static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
   // Start the TPI or IPI stream header.
   TpiBuilder.setVersionHeader(pdb::PdbTpiV80);
 
-  // Flatten the in memory type table and hash each type.
+  // Flatten the in memory type table.
   TypeTable.ForEachRecord([&](TypeIndex TI, ArrayRef<uint8_t> Rec) {
-    assert(Rec.size() >= sizeof(RecordPrefix));
-    const RecordPrefix *P = reinterpret_cast<const RecordPrefix *>(Rec.data());
-    CVType Type(static_cast<TypeLeafKind>(unsigned(P->RecordKind)), Rec);
-    auto Hash = pdb::hashTypeRecord(Type);
-    if (auto E = Hash.takeError())
-      fatal("type hashing error");
-    TpiBuilder.addTypeRecord(Rec, *Hash);
+    // FIXME: Hash types.
+    TpiBuilder.addTypeRecord(Rec, None);
   });
 }
 
@@ -191,7 +184,7 @@ maybeReadTypeServerRecord(CVTypeArray &Types) {
   return std::move(TS);
 }
 
-const CVIndexMap &PDBLinker::mergeDebugT(ObjFile *File,
+const CVIndexMap &PDBLinker::mergeDebugT(ObjectFile *File,
                                          CVIndexMap &ObjectIndexMap) {
   ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
   if (Data.empty())
@@ -241,7 +234,7 @@ tryToLoadPDB(const GUID &GuidFromObj, StringRef TSPath) {
   return std::move(NS);
 }
 
-const CVIndexMap &PDBLinker::maybeMergeTypeServerPDB(ObjFile *File,
+const CVIndexMap &PDBLinker::maybeMergeTypeServerPDB(ObjectFile *File,
                                                      TypeServer2Record &TS) {
   // First, check if we already loaded a PDB with this GUID. Return the type
   // index mapping if we have it.
@@ -297,10 +290,9 @@ static bool remapTypeIndex(TypeIndex &TI, ArrayRef<TypeIndex> TypeIndexMap) {
   return true;
 }
 
-static void remapTypesInSymbolRecord(ObjFile *File,
+static void remapTypesInSymbolRecord(ObjectFile *File,
                                      MutableArrayRef<uint8_t> Contents,
                                      const CVIndexMap &IndexMap,
-                                     const TypeTableBuilder &IDTable,
                                      ArrayRef<TiReference> TypeRefs) {
   for (const TiReference &Ref : TypeRefs) {
     unsigned ByteSize = Ref.Count * sizeof(TypeIndex);
@@ -325,55 +317,11 @@ static void remapTypesInSymbolRecord(ObjFile *File,
   }
 }
 
-static SymbolKind symbolKind(ArrayRef<uint8_t> RecordData) {
-  const RecordPrefix *Prefix =
-      reinterpret_cast<const RecordPrefix *>(RecordData.data());
-  return static_cast<SymbolKind>(uint16_t(Prefix->RecordKind));
-}
-
-/// MSVC translates S_PROC_ID_END to S_END, and S_[LG]PROC32_ID to S_[LG]PROC32
-static void translateIdSymbols(MutableArrayRef<uint8_t> &RecordData,
-                               const TypeTableBuilder &IDTable) {
-  RecordPrefix *Prefix = reinterpret_cast<RecordPrefix *>(RecordData.data());
-
-  SymbolKind Kind = symbolKind(RecordData);
-
-  if (Kind == SymbolKind::S_PROC_ID_END) {
-    Prefix->RecordKind = SymbolKind::S_END;
-    return;
-  }
-
-  // In an object file, GPROC32_ID has an embedded reference which refers to the
-  // single object file type index namespace.  This has already been translated
-  // to the PDB file's ID stream index space, but we need to convert this to a
-  // symbol that refers to the type stream index space.  So we remap again from
-  // ID index space to type index space.
-  if (Kind == SymbolKind::S_GPROC32_ID || Kind == SymbolKind::S_LPROC32_ID) {
-    SmallVector<TiReference, 1> Refs;
-    auto Content = RecordData.drop_front(sizeof(RecordPrefix));
-    CVSymbol Sym(Kind, RecordData);
-    discoverTypeIndicesInSymbol(Sym, Refs);
-    assert(Refs.size() == 1);
-    assert(Refs.front().Count == 1);
-
-    TypeIndex *TI =
-        reinterpret_cast<TypeIndex *>(Content.data() + Refs[0].Offset);
-    // `TI` is the index of a FuncIdRecord or MemberFuncIdRecord which lives in
-    // the IPI stream, whose `FunctionType` member refers to the TPI stream.
-    // Note that LF_FUNC_ID and LF_MEMFUNC_ID have the same record layout, and
-    // in both cases we just need the second type index.
-    if (!TI->isSimple() && !TI->isNoneType()) {
-      ArrayRef<uint8_t> FuncIdData = IDTable.records()[TI->toArrayIndex()];
-      SmallVector<TypeIndex, 2> Indices;
-      discoverTypeIndices(FuncIdData, Indices);
-      assert(Indices.size() == 2);
-      *TI = Indices[1];
-    }
-
-    Kind = (Kind == SymbolKind::S_GPROC32_ID) ? SymbolKind::S_GPROC32
-                                              : SymbolKind::S_LPROC32;
-    Prefix->RecordKind = uint16_t(Kind);
-  }
+/// MSVC translates S_PROC_ID_END to S_END.
+uint16_t canonicalizeSymbolKind(SymbolKind Kind) {
+  if (Kind == SymbolKind::S_PROC_ID_END)
+    return SymbolKind::S_END;
+  return Kind;
 }
 
 /// Copy the symbol record. In a PDB, symbol records must be 4 byte aligned.
@@ -391,8 +339,10 @@ static MutableArrayRef<uint8_t> copySymbolForPdb(const CVSymbol &Sym,
   memset(NewData.data() + Sym.length(), 0, Size - Sym.length());
 
   // Update the record prefix length. It should point to the beginning of the
-  // next record.
+  // next record. MSVC does some canonicalization of the record kind, so we do
+  // that as well.
   auto *Prefix = reinterpret_cast<RecordPrefix *>(Mem);
+  Prefix->RecordKind = canonicalizeSymbolKind(Sym.kind());
   Prefix->RecordLen = Size - 2;
   return NewData;
 }
@@ -452,7 +402,7 @@ static void scopeStackOpen(SmallVectorImpl<SymbolScope> &Stack,
 }
 
 static void scopeStackClose(SmallVectorImpl<SymbolScope> &Stack,
-                            uint32_t CurOffset, ObjFile *File) {
+                            uint32_t CurOffset, ObjectFile *File) {
   if (Stack.empty()) {
     warn("symbol scopes are not balanced in " + File->getName());
     return;
@@ -461,86 +411,8 @@ static void scopeStackClose(SmallVectorImpl<SymbolScope> &Stack,
   S.OpeningRecord->PtrEnd = CurOffset;
 }
 
-static bool symbolGoesInModuleStream(const CVSymbol &Sym) {
-  switch (Sym.kind()) {
-  case SymbolKind::S_GDATA32:
-  case SymbolKind::S_CONSTANT:
-  case SymbolKind::S_UDT:
-  // We really should not be seeing S_PROCREF and S_LPROCREF in the first place
-  // since they are synthesized by the linker in response to S_GPROC32 and
-  // S_LPROC32, but if we do see them, don't put them in the module stream I
-  // guess.
-  case SymbolKind::S_PROCREF:
-  case SymbolKind::S_LPROCREF:
-    return false;
-  // S_GDATA32 does not go in the module stream, but S_LDATA32 does.
-  case SymbolKind::S_LDATA32:
-  default:
-    return true;
-  }
-}
-
-static bool symbolGoesInGlobalsStream(const CVSymbol &Sym) {
-  switch (Sym.kind()) {
-  case SymbolKind::S_CONSTANT:
-  case SymbolKind::S_GDATA32:
-  // S_LDATA32 goes in both the module stream and the globals stream.
-  case SymbolKind::S_LDATA32:
-  case SymbolKind::S_GPROC32:
-  case SymbolKind::S_LPROC32:
-  // We really should not be seeing S_PROCREF and S_LPROCREF in the first place
-  // since they are synthesized by the linker in response to S_GPROC32 and
-  // S_LPROC32, but if we do see them, copy them straight through.
-  case SymbolKind::S_PROCREF:
-  case SymbolKind::S_LPROCREF:
-    return true;
-  // FIXME: For now, we drop all S_UDT symbols (i.e. they don't go in the
-  // globals stream or the modules stream).  These have special handling which
-  // needs more investigation before we can get right, but by putting them all
-  // into the globals stream WinDbg fails to display local variables of class
-  // types saying that it cannot find the type Foo *.  So as a stopgap just to
-  // keep things working, we drop them.
-  case SymbolKind::S_UDT:
-  default:
-    return false;
-  }
-}
-
-static void addGlobalSymbol(pdb::GSIStreamBuilder &Builder, ObjFile &File,
-                            const CVSymbol &Sym) {
-  switch (Sym.kind()) {
-  case SymbolKind::S_CONSTANT:
-  case SymbolKind::S_UDT:
-  case SymbolKind::S_GDATA32:
-  case SymbolKind::S_LDATA32:
-  case SymbolKind::S_PROCREF:
-  case SymbolKind::S_LPROCREF:
-    Builder.addGlobalSymbol(Sym);
-    break;
-  case SymbolKind::S_GPROC32:
-  case SymbolKind::S_LPROC32: {
-    SymbolRecordKind K = SymbolRecordKind::ProcRefSym;
-    if (Sym.kind() == SymbolKind::S_LPROC32)
-      K = SymbolRecordKind::LocalProcRef;
-    ProcRefSym PS(K);
-    PS.Module = static_cast<uint16_t>(File.ModuleDBI->getModuleIndex());
-    // For some reason, MSVC seems to add one to this value.
-    ++PS.Module;
-    PS.Name = getSymbolName(Sym);
-    PS.SumName = 0;
-    PS.SymOffset = File.ModuleDBI->getNextSymbolOffset();
-    Builder.addGlobalSymbol(PS);
-    break;
-  }
-  default:
-    llvm_unreachable("Invalid symbol kind!");
-  }
-}
-
-static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
-                               pdb::GSIStreamBuilder &GsiBuilder,
+static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjectFile *File,
                                const CVIndexMap &IndexMap,
-                               const TypeTableBuilder &IDTable,
                                BinaryStreamRef SymData) {
   // FIXME: Improve error recovery by warning and skipping records when
   // possible.
@@ -548,11 +420,11 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
   BinaryStreamReader Reader(SymData);
   ExitOnErr(Reader.readArray(Syms, Reader.getLength()));
   SmallVector<SymbolScope, 4> Scopes;
-  for (CVSymbol Sym : Syms) {
+  for (const CVSymbol &Sym : Syms) {
     // Discover type index references in the record. Skip it if we don't know
     // where they are.
     SmallVector<TiReference, 32> TypeRefs;
-    if (!discoverTypeIndicesInSymbol(Sym, TypeRefs)) {
+    if (!discoverTypeIndices(Sym, TypeRefs)) {
       log("ignoring unknown symbol record with kind 0x" + utohexstr(Sym.kind()));
       continue;
     }
@@ -563,30 +435,17 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
     // Re-map all the type index references.
     MutableArrayRef<uint8_t> Contents =
         NewData.drop_front(sizeof(RecordPrefix));
-    remapTypesInSymbolRecord(File, Contents, IndexMap, IDTable, TypeRefs);
-
-    // An object file may have S_xxx_ID symbols, but these get converted to
-    // "real" symbols in a PDB.
-    translateIdSymbols(NewData, IDTable);
-
-    SymbolKind NewKind = symbolKind(NewData);
+    remapTypesInSymbolRecord(File, Contents, IndexMap, TypeRefs);
 
     // Fill in "Parent" and "End" fields by maintaining a stack of scopes.
-    CVSymbol NewSym(NewKind, NewData);
-    if (symbolOpensScope(NewKind))
+    CVSymbol NewSym(Sym.kind(), NewData);
+    if (symbolOpensScope(Sym.kind()))
       scopeStackOpen(Scopes, File->ModuleDBI->getNextSymbolOffset(), NewSym);
-    else if (symbolEndsScope(NewKind))
+    else if (symbolEndsScope(Sym.kind()))
       scopeStackClose(Scopes, File->ModuleDBI->getNextSymbolOffset(), File);
 
-    // Add the symbol to the globals stream if necessary.  Do this before adding
-    // the symbol to the module since we may need to get the next symbol offset,
-    // and writing to the module's symbol stream will update that offset.
-    if (symbolGoesInGlobalsStream(NewSym))
-      addGlobalSymbol(GsiBuilder, *File, NewSym);
-
     // Add the symbol to the module.
-    if (symbolGoesInModuleStream(NewSym))
-      File->ModuleDBI->addSymbol(NewSym);
+    File->ModuleDBI->addSymbol(NewSym);
   }
 }
 
@@ -601,7 +460,7 @@ static ArrayRef<uint8_t> relocateDebugChunk(BumpPtrAllocator &Alloc,
                            ".debug$S");
 }
 
-void PDBLinker::addObjFile(ObjFile *File) {
+void PDBLinker::addObjectFile(ObjectFile *File) {
   // Add a module descriptor for every object file. We need to put an absolute
   // path to the object into the PDB. If this is a plain object, we make its
   // path absolute. If it's an object in an archive, we make the archive path
@@ -652,8 +511,7 @@ void PDBLinker::addObjFile(ObjFile *File) {
         File->ModuleDBI->addDebugSubsection(SS);
         break;
       case DebugSubsectionKind::Symbols:
-        mergeSymbolRecords(Alloc, File, Builder.getGsiBuilder(), IndexMap,
-                           IDTable, SS.getRecordData());
+        mergeSymbolRecords(Alloc, File, IndexMap, SS.getRecordData());
         break;
       default:
         // FIXME: Process the rest of the subsections.
@@ -681,28 +539,11 @@ void PDBLinker::addObjFile(ObjFile *File) {
   }
 }
 
-static PublicSym32 createPublic(Defined *Def) {
-  PublicSym32 Pub(SymbolKind::S_PUB32);
-  Pub.Name = Def->getName();
-  if (auto *D = dyn_cast<DefinedCOFF>(Def)) {
-    if (D->getCOFFSymbol().isFunctionDefinition())
-      Pub.Flags = PublicSymFlags::Function;
-  } else if (isa<DefinedImportThunk>(Def)) {
-    Pub.Flags = PublicSymFlags::Function;
-  }
-
-  OutputSection *OS = Def->getChunk()->getOutputSection();
-  assert(OS && "all publics should be in final image");
-  Pub.Offset = Def->getRVA() - OS->getRVA();
-  Pub.Segment = OS->SectionIndex;
-  return Pub;
-}
-
 // Add all object files to the PDB. Merge .debug$T sections into IpiData and
 // TpiData.
 void PDBLinker::addObjectsToPDB() {
-  for (ObjFile *File : ObjFile::Instances)
-    addObjFile(File);
+  for (ObjectFile *File : Symtab->ObjectFiles)
+    addObjectFile(File);
 
   Builder.getStringTableBuilder().setStrings(PDBStrTab);
 
@@ -712,55 +553,31 @@ void PDBLinker::addObjectsToPDB() {
   // Construct IPI stream contents.
   addTypeInfo(Builder.getIpiBuilder(), IDTable);
 
-  // Compute the public and global symbols.
-  auto &GsiBuilder = Builder.getGsiBuilder();
-  std::vector<PublicSym32> Publics;
-  Symtab->forEachSymbol([&Publics](Symbol *S) {
-    // Only emit defined, live symbols that have a chunk.
-    auto *Def = dyn_cast<Defined>(S->body());
-    if (Def && Def->isLive() && Def->getChunk())
-      Publics.push_back(createPublic(Def));
-  });
+  // Add public and symbol records stream.
 
-  if (!Publics.empty()) {
-    // Sort the public symbols and add them to the stream.
-    std::sort(Publics.begin(), Publics.end(),
-              [](const PublicSym32 &L, const PublicSym32 &R) {
-                return L.Name < R.Name;
-              });
-    for (const PublicSym32 &Pub : Publics)
-      GsiBuilder.addPublicSymbol(Pub);
-  }
+  // For now we don't actually write any thing useful to the publics stream, but
+  // the act of "getting" it also creates it lazily so that we write an empty
+  // stream.
+  (void)Builder.getPublicsBuilder();
 }
 
-static void addCommonLinkerModuleSymbols(StringRef Path,
-                                         pdb::DbiModuleDescriptorBuilder &Mod,
-                                         BumpPtrAllocator &Allocator) {
-  SymbolSerializer Serializer(Allocator, CodeViewContainer::Pdb);
-  ObjNameSym ONS(SymbolRecordKind::ObjNameSym);
-  Compile3Sym CS(SymbolRecordKind::Compile3Sym);
-  EnvBlockSym EBS(SymbolRecordKind::EnvBlockSym);
+static void addLinkerModuleSymbols(StringRef Path,
+                                   pdb::DbiModuleDescriptorBuilder &Mod,
+                                   BumpPtrAllocator &Allocator) {
+  codeview::SymbolSerializer Serializer(Allocator, CodeViewContainer::Pdb);
+  codeview::ObjNameSym ONS(SymbolRecordKind::ObjNameSym);
+  codeview::Compile3Sym CS(SymbolRecordKind::Compile3Sym);
+  codeview::EnvBlockSym EBS(SymbolRecordKind::EnvBlockSym);
 
   ONS.Name = "* Linker *";
   ONS.Signature = 0;
 
   CS.Machine = Config->is64() ? CPUType::X64 : CPUType::Intel80386;
-  // Interestingly, if we set the string to 0.0.0.0, then when trying to view
-  // local variables WinDbg emits an error that private symbols are not present.
-  // By setting this to a valid MSVC linker version string, local variables are
-  // displayed properly.   As such, even though it is not representative of
-  // LLVM's version information, we need this for compatibility.
   CS.Flags = CompileSym3Flags::None;
-  CS.VersionBackendBuild = 25019;
-  CS.VersionBackendMajor = 14;
-  CS.VersionBackendMinor = 10;
+  CS.VersionBackendBuild = 0;
+  CS.VersionBackendMajor = 0;
+  CS.VersionBackendMinor = 0;
   CS.VersionBackendQFE = 0;
-
-  // MSVC also sets the frontend to 0.0.0.0 since this is specifically for the
-  // linker module (which is by definition a backend), so we don't need to do
-  // anything here.  Also, it seems we can use "LLVM Linker" for the linker name
-  // without any problems.  Only the backend version has to be hardcoded to a
-  // magic number.
   CS.VersionFrontendBuild = 0;
   CS.VersionFrontendMajor = 0;
   CS.VersionFrontendMinor = 0;
@@ -775,9 +592,7 @@ static void addCommonLinkerModuleSymbols(StringRef Path,
   sys::fs::current_path(cwd);
   EBS.Fields.push_back(cwd);
   EBS.Fields.push_back("exe");
-  SmallString<64> exe = Config->Argv[0];
-  llvm::sys::fs::make_absolute(exe);
-  EBS.Fields.push_back(exe);
+  EBS.Fields.push_back(Config->Argv[0]);
   EBS.Fields.push_back("pdb");
   EBS.Fields.push_back(Path);
   EBS.Fields.push_back("cmd");
@@ -790,33 +605,17 @@ static void addCommonLinkerModuleSymbols(StringRef Path,
       EBS, Allocator, CodeViewContainer::Pdb));
 }
 
-static void addLinkerModuleSectionSymbol(pdb::DbiModuleDescriptorBuilder &Mod,
-                                         OutputSection &OS,
-                                         BumpPtrAllocator &Allocator) {
-  SectionSym Sym(SymbolRecordKind::SectionSym);
-  Sym.Alignment = 12; // 2^12 = 4KB
-  Sym.Characteristics = OS.getCharacteristics();
-  Sym.Length = OS.getVirtualSize();
-  Sym.Name = OS.getName();
-  Sym.Rva = OS.getRVA();
-  Sym.SectionNumber = OS.SectionIndex;
-  Mod.addSymbol(codeview::SymbolSerializer::writeOneSymbol(
-      Sym, Allocator, CodeViewContainer::Pdb));
-}
-
 // Creates a PDB file.
-void coff::createPDB(SymbolTable *Symtab,
-                     ArrayRef<OutputSection *> OutputSections,
-                     ArrayRef<uint8_t> SectionTable,
-                     const llvm::codeview::DebugInfo &BuildId) {
+void coff::createPDB(SymbolTable *Symtab, ArrayRef<uint8_t> SectionTable,
+                     const llvm::codeview::DebugInfo *DI) {
   PDBLinker PDB(Symtab);
-  PDB.initialize(BuildId);
+  PDB.initialize(DI);
   PDB.addObjectsToPDB();
-  PDB.addSections(OutputSections, SectionTable);
+  PDB.addSections(SectionTable);
   PDB.commit();
 }
 
-void PDBLinker::initialize(const llvm::codeview::DebugInfo &BuildId) {
+void PDBLinker::initialize(const llvm::codeview::DebugInfo *DI) {
   ExitOnErr(Builder.initialize(4096)); // 4096 is blocksize
 
   // Create streams in MSF for predefined streams, namely
@@ -826,64 +625,25 @@ void PDBLinker::initialize(const llvm::codeview::DebugInfo &BuildId) {
 
   // Add an Info stream.
   auto &InfoBuilder = Builder.getInfoBuilder();
-  InfoBuilder.setAge(BuildId.PDB70.Age);
+  InfoBuilder.setAge(DI ? DI->PDB70.Age : 0);
 
-  GUID uuid;
-  memcpy(&uuid, &BuildId.PDB70.Signature, sizeof(uuid));
+  GUID uuid{};
+  if (DI)
+    memcpy(&uuid, &DI->PDB70.Signature, sizeof(uuid));
   InfoBuilder.setGuid(uuid);
   InfoBuilder.setSignature(time(nullptr));
   InfoBuilder.setVersion(pdb::PdbRaw_ImplVer::PdbImplVC70);
 
   // Add an empty DBI stream.
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
-  DbiBuilder.setAge(BuildId.PDB70.Age);
   DbiBuilder.setVersionHeader(pdb::PdbDbiV70);
   ExitOnErr(DbiBuilder.addDbgStream(pdb::DbgHeaderType::NewFPO, {}));
 }
 
-void PDBLinker::addSectionContrib(pdb::DbiModuleDescriptorBuilder &LinkerModule,
-                                  OutputSection *OS, Chunk *C) {
-  pdb::SectionContrib SC;
-  memset(&SC, 0, sizeof(SC));
-  SC.ISect = OS->SectionIndex;
-  SC.Off = C->getRVA() - OS->getRVA();
-  SC.Size = C->getSize();
-  if (auto *SecChunk = dyn_cast<SectionChunk>(C)) {
-    SC.Characteristics = SecChunk->Header->Characteristics;
-    SC.Imod = SecChunk->File->ModuleDBI->getModuleIndex();
-    ArrayRef<uint8_t> Contents = SecChunk->getContents();
-    JamCRC CRC(0);
-    ArrayRef<char> CharContents = makeArrayRef(
-        reinterpret_cast<const char *>(Contents.data()), Contents.size());
-    CRC.update(CharContents);
-    SC.DataCrc = CRC.getCRC();
-  } else {
-    SC.Characteristics = OS->getCharacteristics();
-    // FIXME: When we start creating DBI for import libraries, use those here.
-    SC.Imod = LinkerModule.getModuleIndex();
-  }
-  SC.RelocCrc = 0; // FIXME
-  Builder.getDbiBuilder().addSectionContrib(SC);
-}
-
-void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
-                            ArrayRef<uint8_t> SectionTable) {
-  // It's not entirely clear what this is, but the * Linker * module uses it.
+void PDBLinker::addSections(ArrayRef<uint8_t> SectionTable) {
+  // Add Section Contributions.
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
-  NativePath = Config->PDBPath;
-  sys::fs::make_absolute(NativePath);
-  sys::path::native(NativePath, sys::path::Style::windows);
-  uint32_t PdbFilePathNI = DbiBuilder.addECName(NativePath);
-  auto &LinkerModule = ExitOnErr(DbiBuilder.addModuleInfo("* Linker *"));
-  LinkerModule.setPdbFilePathNI(PdbFilePathNI);
-  addCommonLinkerModuleSymbols(NativePath, LinkerModule, Alloc);
-
-  // Add section contributions. They must be ordered by ascending RVA.
-  for (OutputSection *OS : OutputSections) {
-    addLinkerModuleSectionSymbol(LinkerModule, *OS, Alloc);
-    for (Chunk *C : OS->getChunks())
-      addSectionContrib(LinkerModule, OS, C);
-  }
+  addSectionContribs(Symtab, DbiBuilder);
 
   // Add Section Map stream.
   ArrayRef<object::coff_section> Sections = {
@@ -891,6 +651,15 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
       SectionTable.size() / sizeof(object::coff_section)};
   SectionMap = pdb::DbiStreamBuilder::createSectionMap(Sections);
   DbiBuilder.setSectionMap(SectionMap);
+
+  // It's not entirely clear what this is, but the * Linker * module uses it.
+  NativePath = Config->PDBPath;
+  sys::fs::make_absolute(NativePath);
+  sys::path::native(NativePath, sys::path::Style::windows);
+  uint32_t PdbFilePathNI = DbiBuilder.addECName(NativePath);
+  auto &LinkerModule = ExitOnErr(DbiBuilder.addModuleInfo("* Linker *"));
+  LinkerModule.setPdbFilePathNI(PdbFilePathNI);
+  addLinkerModuleSymbols(NativePath, LinkerModule, Alloc);
 
   // Add COFF section header stream.
   ExitOnErr(

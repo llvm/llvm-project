@@ -21,13 +21,10 @@ union DebugInfo;
 
 namespace lld {
 namespace coff {
-class OutputSection;
 class SymbolTable;
 
-void createPDB(SymbolTable *Symtab,
-               llvm::ArrayRef<OutputSection *> OutputSections,
-               llvm::ArrayRef<uint8_t> SectionTable,
-               const llvm::codeview::DebugInfo &BuildId);
+void createPDB(SymbolTable *Symtab, llvm::ArrayRef<uint8_t> SectionTable,
+               const llvm::codeview::DebugInfo *DI);
 }
 }
 

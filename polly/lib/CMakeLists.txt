@@ -9,7 +9,6 @@ set(ISL_CODEGEN_FILES
 if (GPU_CODEGEN)
   set (GPGPU_CODEGEN_FILES
        CodeGen/PPCGCodeGeneration.cpp
-       CodeGen/ManagedMemoryRewrite.cpp
        )
 endif (GPU_CODEGEN)
 
@@ -59,13 +58,8 @@ add_library(PollyCore OBJECT
   Transform/ScheduleOptimizer.cpp
   Transform/FlattenSchedule.cpp
   Transform/FlattenAlgo.cpp
-  Transform/ForwardOpTree.cpp
   Transform/DeLICM.cpp
-  Transform/ZoneAlgo.cpp
   Transform/Simplify.cpp
-  Transform/MaximalStaticExpansion.cpp
-  Transform/RewriteByReferenceParameters.cpp
-  Transform/ScopInliner.cpp
   ${POLLY_HEADER_FILES}
   )
 set_target_properties(PollyCore PROPERTIES FOLDER "Polly")
@@ -112,8 +106,6 @@ else ()
     LLVMipo
     LLVMMC
     LLVMPasses
-    LLVMLinker
-    LLVMIRReader
     ${nvptx_libs}
     # The libraries below are required for darwin: http://PR26392
     LLVMBitReader

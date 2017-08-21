@@ -21,7 +21,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libcxxabi CXX C)
 
   set(PACKAGE_NAME libcxxabi)
-  set(PACKAGE_VERSION 6.0.0svn)
+  set(PACKAGE_VERSION 5.0.0)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -343,12 +343,6 @@ if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)
                         " and LIBCXXABI_HAS_EXTERNAL_THREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
-endif()
-
-if (LLVM_ENABLE_MODULES)
-  # Ignore that the rest of the modules flags are now unused.
-  add_compile_flags_if_supported(-Wno-unused-command-line-argument)
-  add_compile_flags(-fno-modules)
 endif()
 
 set(LIBCXXABI_HAS_UNDEFINED_SYMBOLS OFF)

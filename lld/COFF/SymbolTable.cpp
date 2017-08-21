@@ -68,12 +68,12 @@ void SymbolTable::addFile(InputFile *File) {
           " conflicts with " + machineToStr(Config->Machine));
   }
 
-  if (auto *F = dyn_cast<ObjFile>(File)) {
-    ObjFile::Instances.push_back(F);
+  if (auto *F = dyn_cast<ObjectFile>(File)) {
+    ObjectFiles.push_back(F);
   } else if (auto *F = dyn_cast<BitcodeFile>(File)) {
-    BitcodeFile::Instances.push_back(F);
+    BitcodeFiles.push_back(F);
   } else if (auto *F = dyn_cast<ImportFile>(File)) {
-    ImportFile::Instances.push_back(F);
+    ImportFiles.push_back(F);
   }
 
   StringRef S = File->getDirectives();
@@ -135,7 +135,7 @@ void SymbolTable::reportRemainingUndefines() {
   for (SymbolBody *B : Config->GCRoot)
     if (Undefs.count(B))
       warn("<root>: undefined symbol: " + B->getName());
-  for (ObjFile *File : ObjFile::Instances)
+  for (ObjectFile *File : ObjectFiles)
     for (SymbolBody *Sym : File->getSymbols())
       if (Undefs.count(Sym))
         warn(toString(File) + ": undefined symbol: " + Sym->getName());
@@ -296,7 +296,7 @@ Symbol *SymbolTable::addImportThunk(StringRef Name, DefinedImportData *ID,
 
 std::vector<Chunk *> SymbolTable::getChunks() {
   std::vector<Chunk *> Res;
-  for (ObjFile *File : ObjFile::Instances) {
+  for (ObjectFile *File : ObjectFiles) {
     std::vector<Chunk *> &V = File->getChunks();
     Res.insert(Res.end(), V.begin(), V.end());
   }
@@ -356,18 +356,18 @@ SymbolBody *SymbolTable::addUndefined(StringRef Name) {
 
 std::vector<StringRef> SymbolTable::compileBitcodeFiles() {
   LTO.reset(new BitcodeCompiler);
-  for (BitcodeFile *F : BitcodeFile::Instances)
+  for (BitcodeFile *F : BitcodeFiles)
     LTO->add(*F);
   return LTO->compile();
 }
 
 void SymbolTable::addCombinedLTOObjects() {
-  if (BitcodeFile::Instances.empty())
+  if (BitcodeFiles.empty())
     return;
   for (StringRef Object : compileBitcodeFiles()) {
-    auto *Obj = make<ObjFile>(MemoryBufferRef(Object, "lto.tmp"));
+    auto *Obj = make<ObjectFile>(MemoryBufferRef(Object, "lto.tmp"));
     Obj->parse();
-    ObjFile::Instances.push_back(Obj);
+    ObjectFiles.push_back(Obj);
   }
 }
 

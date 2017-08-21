@@ -221,22 +221,6 @@ void parseSection(StringRef S) {
   Config->Section[Name] = parseSectionAttributes(Attrs);
 }
 
-// Parses /aligncomm option argument.
-void parseAligncomm(StringRef S) {
-  StringRef Name, Align;
-  std::tie(Name, Align) = S.split(',');
-  if (Name.empty() || Align.empty()) {
-    error("/aligncomm: invalid argument: " + S);
-    return;
-  }
-  int V;
-  if (Align.getAsInteger(0, V)) {
-    error("/aligncomm: invalid argument: " + S);
-    return;
-  }
-  Config->AlignComm[Name] = std::max(Config->AlignComm[Name], 1 << V);
-}
-
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
 // Results are directly written to Config.
 void parseManifest(StringRef Arg) {
@@ -353,13 +337,13 @@ TemporaryFile createDefaultXml() {
        << "      </requestedPrivileges>\n"
        << "    </security>\n"
        << "  </trustInfo>\n";
-  }
-  if (!Config->ManifestDependency.empty()) {
-    OS << "  <dependency>\n"
-       << "    <dependentAssembly>\n"
-       << "      <assemblyIdentity " << Config->ManifestDependency << " />\n"
-       << "    </dependentAssembly>\n"
-       << "  </dependency>\n";
+    if (!Config->ManifestDependency.empty()) {
+      OS << "  <dependency>\n"
+         << "    <dependentAssembly>\n"
+         << "      <assemblyIdentity " << Config->ManifestDependency << " />\n"
+         << "    </dependentAssembly>\n"
+         << "  </dependency>\n";
+    }
   }
   OS << "</assembly>\n";
   OS.close();
@@ -475,12 +459,12 @@ Export parseExport(StringRef Arg) {
   if (E.Name.empty())
     goto err;
 
-  if (E.Name.contains('=')) {
+  if (E.Name.find('=') != StringRef::npos) {
     StringRef X, Y;
     std::tie(X, Y) = E.Name.split("=");
 
     // If "<name>=<dllname>.<name>".
-    if (Y.contains(".")) {
+    if (Y.find(".") != StringRef::npos) {
       E.Name = X;
       E.ForwardTo = Y;
       return E;
