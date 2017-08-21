@@ -32,7 +32,7 @@
 ; CODE-NEXT:     Stmt_bb2(32 * b0 + t0 + 1048576 * c0);
 
 ; IR: store i64 %n, i64* %polly_launch_0_param_1
-; IR-NEXT: [[REGA:%.+]] = getelementptr [4 x i8*], [4 x i8*]* %polly_launch_0_params, i64 0, i64 1
+; IR-NEXT: [[REGA:%.+]] = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 1
 ; IR-NEXT: [[REGB:%.+]] = bitcast i64* %polly_launch_0_param_1 to i8*
 ; IR-NEXT: store i8* [[REGB]], i8** [[REGA]]
 

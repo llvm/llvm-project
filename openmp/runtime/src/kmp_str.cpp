@@ -168,7 +168,7 @@ void __kmp_str_buf_vprint(kmp_str_buf_t *buffer, char const *format,
 
 #if !KMP_OS_WINDOWS
       va_list _args;
-      __va_copy(_args, args); // Make copy of args.
+      va_copy(_args, args); // Make copy of args.
 #define args _args // Substitute args with its copy, _args.
 #endif // KMP_OS_WINDOWS
       rc = KMP_VSNPRINTF(buffer->str + buffer->used, free, format, args);

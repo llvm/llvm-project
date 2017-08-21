@@ -162,7 +162,7 @@ static int is_read_only_scalar(struct gpu_array_info *array,
 /* Is "array" only accessed as individual, fixed elements?
  * That is, does each access to "array" access a single, fixed element?
  */
-static isl_bool only_fixed_element_accessed(struct gpu_array_info *array)
+isl_bool only_fixed_element_accessed(struct gpu_array_info *array)
 {
 	int i;
 
@@ -250,6 +250,9 @@ static int extract_array_info(struct gpu_prog *prog,
 static __isl_give isl_union_map *remove_independences(struct gpu_prog *prog,
 	struct gpu_array_info *array, __isl_take isl_union_map *order)
 {
+	// We do not have independence information in Polly. Hence, make this
+	// function a no-op.
+	return order;
 	int i;
 
 	for (i = 0; i < prog->scop->pet->n_independence; ++i) {

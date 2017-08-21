@@ -36,6 +36,8 @@ struct CodeGenerationPass : public PassInfoMixin<CodeGenerationPass> {
   PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
                         ScopStandardAnalysisResults &AR, SPMUpdater &U);
 };
+
+extern bool PerfMonitoring;
 } // namespace polly
 
 #endif // POLLY_CODEGENERATION_H

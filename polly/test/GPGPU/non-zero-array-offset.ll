@@ -12,14 +12,14 @@
 
 ; CODE:          dim3 k0_dimBlock(8);
 ; CODE-NEXT:     dim3 k0_dimGrid(1);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_B);
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
 ; CODE:        {
 ; CODE-NEXT:     dim3 k1_dimBlock(8);
 ; CODE-NEXT:     dim3 k1_dimGrid(1);
-; CODE-NEXT:     kernel1 <<<k1_dimGrid, k1_dimBlock>>> (dev_MemRef_A);
+; CODE-NEXT:     kernel1 <<<k1_dimGrid, k1_dimBlock>>> (dev_MemRef_B);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -27,10 +27,10 @@
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(MemRef_A, dev_MemRef_A, (8) * sizeof(float), cudaMemcpyDeviceToHost));
 
 ; CODE: # kernel0
-; CODE-NEXT: Stmt_bb3(t0);
+; CODE-NEXT: Stmt_bb11(t0);
 
 ; CODE: # kernel1
-; CODE-NEXT: Stmt_bb11(t0);
+; CODE-NEXT: Stmt_bb3(t0);
 
 ; IR:       %p_dev_array_MemRef_B = call i8* @polly_allocateMemoryForDevice(i64 32)
 ; IR-NEXT:  %p_dev_array_MemRef_A = call i8* @polly_allocateMemoryForDevice(i64 32)

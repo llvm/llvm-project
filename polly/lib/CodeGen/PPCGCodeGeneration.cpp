@@ -16,6 +16,7 @@
 #include "polly/CodeGen/CodeGeneration.h"
 #include "polly/CodeGen/IslAst.h"
 #include "polly/CodeGen/IslNodeBuilder.h"
+#include "polly/CodeGen/PerfMonitor.h"
 #include "polly/CodeGen/Utils.h"
 #include "polly/DependenceInfo.h"
 #include "polly/LinkAllPasses.h"
@@ -121,6 +122,8 @@ static cl::opt<int>
     MinCompute("polly-acc-mincompute",
                cl::desc("Minimal number of compute statements to run on GPU."),
                cl::Hidden, cl::init(10 * 512 * 512));
+
+extern bool polly::PerfMonitoring;
 
 /// Return  a unique name for a Scop, which is the scop region with the
 /// function name.
@@ -1380,8 +1383,8 @@ isl_bool collectReferencesInGPUStmt(__isl_keep isl_ast_node *Node, void *User) {
 
 /// A list of functions that are available in NVIDIA's libdevice.
 const std::set<std::string> CUDALibDeviceFunctions = {
-    "exp",  "expf",  "expl",     "cos",       "cosf",
-    "sqrt", "sqrtf", "copysign", "copysignf", "copysignl"};
+    "exp",   "expf",     "expl",      "cos",       "cosf", "sqrt",
+    "sqrtf", "copysign", "copysignf", "copysignl", "log",  "logf"};
 
 /// Return the corresponding CUDA libdevice function name for @p F.
 ///
@@ -1406,7 +1409,7 @@ static bool isValidFunctionInKernel(llvm::Function *F, bool AllowLibDevice) {
 
   return F->isIntrinsic() &&
          (Name.startswith("llvm.sqrt") || Name.startswith("llvm.fabs") ||
-          Name.startswith("llvm.copysign"));
+          Name.startswith("llvm.copysign") || Name.startswith("llvm.powi"));
 }
 
 /// Do not take `Function` as a subtree value.
@@ -1591,7 +1594,15 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
   const int NumArgs = F->arg_size();
   std::vector<int> ArgSizes(NumArgs);
 
-  Type *ArrayTy = ArrayType::get(Builder.getInt8PtrTy(), 2 * NumArgs);
+  // If we are using the OpenCL Runtime, we need to add the kernel argument
+  // sizes to the end of the launch-parameter list, so OpenCL can determine
+  // how big the respective kernel arguments are.
+  // Here we need to reserve adequate space for that.
+  Type *ArrayTy;
+  if (Runtime == GPURuntime::OpenCL)
+    ArrayTy = ArrayType::get(Builder.getInt8PtrTy(), 2 * NumArgs);
+  else
+    ArrayTy = ArrayType::get(Builder.getInt8PtrTy(), NumArgs);
 
   BasicBlock *EntryBlock =
       &Builder.GetInsertBlock()->getParent()->getEntryBlock();
@@ -1608,7 +1619,8 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
     const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl::manage(Id));
 
-    ArgSizes[Index] = SAI->getElemSizeInBytes();
+    if (Runtime == GPURuntime::OpenCL)
+      ArgSizes[Index] = SAI->getElemSizeInBytes();
 
     Value *DevArray = nullptr;
     if (PollyManagedMemory) {
@@ -1663,7 +1675,8 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
     Value *Val = IDToValue[Id];
     isl_id_free(Id);
 
-    ArgSizes[Index] = computeSizeInBytes(Val->getType());
+    if (Runtime == GPURuntime::OpenCL)
+      ArgSizes[Index] = computeSizeInBytes(Val->getType());
 
     Instruction *Param =
         new AllocaInst(Val->getType(), AddressSpace,
@@ -1683,7 +1696,8 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
       Val = ValueMap[Val];
     isl_id_free(Id);
 
-    ArgSizes[Index] = computeSizeInBytes(Val->getType());
+    if (Runtime == GPURuntime::OpenCL)
+      ArgSizes[Index] = computeSizeInBytes(Val->getType());
 
     Instruction *Param =
         new AllocaInst(Val->getType(), AddressSpace,
@@ -1695,7 +1709,8 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
   }
 
   for (auto Val : SubtreeValues) {
-    ArgSizes[Index] = computeSizeInBytes(Val->getType());
+    if (Runtime == GPURuntime::OpenCL)
+      ArgSizes[Index] = computeSizeInBytes(Val->getType());
 
     Instruction *Param =
         new AllocaInst(Val->getType(), AddressSpace,
@@ -1706,15 +1721,17 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
     Index++;
   }
 
-  for (int i = 0; i < NumArgs; i++) {
-    Value *Val = ConstantInt::get(Builder.getInt32Ty(), ArgSizes[i]);
-    Instruction *Param =
-        new AllocaInst(Builder.getInt32Ty(), AddressSpace,
-                       Launch + "_param_size_" + std::to_string(i),
-                       EntryBlock->getTerminator());
-    Builder.CreateStore(Val, Param);
-    insertStoreParameter(Parameters, Param, Index);
-    Index++;
+  if (Runtime == GPURuntime::OpenCL) {
+    for (int i = 0; i < NumArgs; i++) {
+      Value *Val = ConstantInt::get(Builder.getInt32Ty(), ArgSizes[i]);
+      Instruction *Param =
+          new AllocaInst(Builder.getInt32Ty(), AddressSpace,
+                         Launch + "_param_size_" + std::to_string(i),
+                         EntryBlock->getTerminator());
+      Builder.CreateStore(Val, Param);
+      insertStoreParameter(Parameters, Param, Index);
+      Index++;
+    }
   }
 
   auto Location = EntryBlock->getTerminator();
@@ -2644,77 +2661,6 @@ public:
     return Names;
   }
 
-  /// Remove unreferenced parameter dimensions from union_map.
-  isl::union_map removeUnusedParameters(isl::union_map UMap) {
-    auto New = isl::union_map::empty(isl::space(UMap.get_ctx(), 0, 0));
-
-    auto RemoveUnusedDims = [&New](isl::map S) -> isl::stat {
-      int Removed = 0;
-      int NumDims = S.dim(isl::dim::param);
-      for (long i = 0; i < NumDims; i++) {
-        const int Dim = i - Removed;
-        if (!S.involves_dims(isl::dim::param, Dim, 1)) {
-          S = S.remove_dims(isl::dim::param, Dim, 1);
-          Removed++;
-        }
-      }
-      New = New.unite(S);
-      return isl::stat::ok;
-    };
-
-    UMap.foreach_map(RemoveUnusedDims);
-    return New;
-  }
-
-  /// Remove unreferenced parameter dimensions from union_set.
-  isl::union_set removeUnusedParameters(isl::union_set USet) {
-    auto New = isl::union_set::empty(isl::space(USet.get_ctx(), 0, 0));
-
-    auto RemoveUnusedDims = [&New](isl::set S) -> isl::stat {
-      int Removed = 0;
-      int NumDims = S.dim(isl::dim::param);
-      for (long i = 0; i < NumDims; i++) {
-        const int Dim = i - Removed;
-        if (!S.involves_dims(isl::dim::param, Dim, 1)) {
-          S = S.remove_dims(isl::dim::param, Dim, 1);
-          Removed++;
-        }
-      }
-      New = New.unite(S);
-      return isl::stat::ok;
-    };
-
-    USet.foreach_set(RemoveUnusedDims);
-    return New;
-  }
-
-  /// Simplify PPCG scop to improve compile time.
-  ///
-  /// We drop unused parameter dimensions to reduce the size of the sets we are
-  /// working with. Especially the computed dependences tend to accumulate a lot
-  /// of parameters that are present in the input memory accesses, but often are
-  /// not necessary to express the actual dependences. As isl represents maps
-  /// and sets with dense matrices, reducing the dimensionality of isl sets
-  /// commonly reduces code generation performance.
-  void simplifyPPCGScop(ppcg_scop *PPCGScop) {
-    PPCGScop->domain =
-        removeUnusedParameters(isl::manage(PPCGScop->domain)).release();
-
-    PPCGScop->dep_forced =
-        removeUnusedParameters(isl::manage(PPCGScop->dep_forced)).release();
-    PPCGScop->dep_false =
-        removeUnusedParameters(isl::manage(PPCGScop->dep_false)).release();
-    PPCGScop->dep_flow =
-        removeUnusedParameters(isl::manage(PPCGScop->dep_flow)).release();
-    PPCGScop->tagged_dep_flow =
-        removeUnusedParameters(isl::manage(PPCGScop->tagged_dep_flow))
-            .release();
-
-    PPCGScop->tagged_dep_order =
-        removeUnusedParameters(isl::manage(PPCGScop->tagged_dep_order))
-            .release();
-  }
-
   /// Create a new PPCG scop from the current scop.
   ///
   /// The PPCG scop is initialized with data from the current polly::Scop. From
@@ -2772,7 +2718,6 @@ public:
     compute_tagger(PPCGScop);
     compute_dependences(PPCGScop);
     eliminate_dead_code(PPCGScop);
-    simplifyPPCGScop(PPCGScop);
 
     return PPCGScop;
   }
@@ -2801,6 +2746,9 @@ public:
       Access->ref_id = Acc->getId().release();
       Access->next = Accesses;
       Access->n_index = Acc->getScopArrayInfo()->getNumberOfDimensions();
+      // TODO: Also mark one-element accesses to arrays as fixed-element.
+      Access->fixed_element =
+          Acc->isLatestScalarKind() ? isl_bool_true : isl_bool_false;
       Accesses = Access;
     }
 
@@ -3015,6 +2963,7 @@ public:
       i++;
 
       collect_references(PPCGProg, &PPCGArray);
+      PPCGArray.only_fixed_element = only_fixed_element_accessed(&PPCGArray);
     }
   }
 
@@ -3056,13 +3005,6 @@ public:
     PPCGProg->to_outer = getArrayIdentity();
     // TODO: verify that this assignment is correct.
     PPCGProg->any_to_outer = nullptr;
-
-    // this needs to be set when live range reordering is enabled.
-    // NOTE: I believe that is conservatively correct. I'm not sure
-    //       what the semantics of this is.
-    // Quoting PPCG/gpu.h: "Order dependences on non-scalars."
-    PPCGProg->array_order =
-        isl_union_map_empty(isl_set_get_space(PPCGScop->context));
     PPCGProg->n_stmts = std::distance(S->begin(), S->end());
     PPCGProg->stmts = getStatements();
 
@@ -3084,6 +3026,9 @@ public:
                                        PPCGProg->n_array);
 
     createArrays(PPCGProg, ValidSAIs);
+
+    PPCGProg->array_order = nullptr;
+    collect_order_dependences(PPCGProg);
 
     PPCGProg->may_persist = compute_may_persist(PPCGProg);
     return PPCGProg;
@@ -3214,14 +3159,10 @@ public:
 
     isl_schedule *Schedule = get_schedule(PPCGGen);
 
-    /// Copy to and from device functions may introduce new parameters, which
-    /// must be present in the schedule tree root for code generation. Hence,
-    /// we ensure that all possible parameters are introduced from this point.
-    if (!PollyManagedMemory)
-      Schedule =
-          isl_schedule_align_params(Schedule, S->getFullParamSpace().release());
-
     int has_permutable = has_any_permutable_node(Schedule);
+
+    Schedule =
+        isl_schedule_align_params(Schedule, S->getFullParamSpace().release());
 
     if (!has_permutable || has_permutable < 0) {
       Schedule = isl_schedule_free(Schedule);
@@ -3494,6 +3435,22 @@ public:
       isl_ast_expr_free(Condition);
       isl_ast_node_free(Root);
     } else {
+
+      if (polly::PerfMonitoring) {
+        PerfMonitor P(*S, EnteringBB->getParent()->getParent());
+        P.initialize();
+        P.insertRegionStart(SplitBlock->getTerminator());
+
+        // TODO: actually think if this is the correct exiting block to place
+        // the `end` performance marker. Invariant load hoisting changes
+        // the CFG in a way that I do not precisely understand, so I
+        // (Siddharth<siddu.druid@gmail.com>) should come back to this and
+        // think about which exiting block to use.
+        auto *ExitingBlock = StartBlock->getUniqueSuccessor();
+        assert(ExitingBlock);
+        BasicBlock *MergeBlock = ExitingBlock->getUniqueSuccessor();
+        P.insertRegionEnd(MergeBlock->getTerminator());
+      }
 
       NodeBuilder.addParameters(S->getContext().release());
       Value *RTC = NodeBuilder.createRTC(Condition);
