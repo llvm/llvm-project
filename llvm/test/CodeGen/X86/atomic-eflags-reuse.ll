@@ -192,4 +192,90 @@ entry:
   ret i8 %s2
 }
 
+define i8 @test_sub_1_cmp_1_setcc_eq(i64* %p) #0 {
+; CHECK-LABEL: test_sub_1_cmp_1_setcc_eq:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    lock decq (%rdi)
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+entry:
+  %tmp0 = atomicrmw sub i64* %p, i64 1 seq_cst
+  %tmp1 = icmp eq i64 %tmp0, 1
+  %tmp2 = zext i1 %tmp1 to i8
+  ret i8 %tmp2
+}
+
+define i8 @test_sub_1_cmp_1_setcc_ne(i64* %p) #0 {
+; CHECK-LABEL: test_sub_1_cmp_1_setcc_ne:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    lock decq (%rdi)
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+entry:
+  %tmp0 = atomicrmw sub i64* %p, i64 1 seq_cst
+  %tmp1 = icmp ne i64 %tmp0, 1
+  %tmp2 = zext i1 %tmp1 to i8
+  ret i8 %tmp2
+}
+
+define i8 @test_sub_1_cmp_1_setcc_ugt(i64* %p) #0 {
+; CHECK-LABEL: test_sub_1_cmp_1_setcc_ugt:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    lock decq (%rdi)
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    retq
+entry:
+  %tmp0 = atomicrmw sub i64* %p, i64 1 seq_cst
+  %tmp1 = icmp ugt i64 %tmp0, 1
+  %tmp2 = zext i1 %tmp1 to i8
+  ret i8 %tmp2
+}
+
+; FIXME: This test canonicalizes in a way that hides the fact that the
+; comparison can be folded into the atomic subtract.
+define i8 @test_sub_1_cmp_1_setcc_sle(i64* %p) #0 {
+; CHECK-LABEL: test_sub_1_cmp_1_setcc_sle:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    movq $-1, %rax
+; CHECK-NEXT:    lock xaddq %rax, (%rdi)
+; CHECK-NEXT:    cmpq $2, %rax
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    retq
+entry:
+  %tmp0 = atomicrmw sub i64* %p, i64 1 seq_cst
+  %tmp1 = icmp sle i64 %tmp0, 1
+  %tmp2 = zext i1 %tmp1 to i8
+  ret i8 %tmp2
+}
+
+define i8 @test_sub_3_cmp_3_setcc_eq(i64* %p) #0 {
+; CHECK-LABEL: test_sub_3_cmp_3_setcc_eq:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    lock subq $3, (%rdi)
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+entry:
+  %tmp0 = atomicrmw sub i64* %p, i64 3 seq_cst
+  %tmp1 = icmp eq i64 %tmp0, 3
+  %tmp2 = zext i1 %tmp1 to i8
+  ret i8 %tmp2
+}
+
+; FIXME: This test canonicalizes in a way that hides the fact that the
+; comparison can be folded into the atomic subtract.
+define i8 @test_sub_3_cmp_3_setcc_uge(i64* %p) #0 {
+; CHECK-LABEL: test_sub_3_cmp_3_setcc_uge:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    movq $-3, %rax
+; CHECK-NEXT:    lock xaddq %rax, (%rdi)
+; CHECK-NEXT:    cmpq $2, %rax
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    retq
+entry:
+  %tmp0 = atomicrmw sub i64* %p, i64 3 seq_cst
+  %tmp1 = icmp uge i64 %tmp0, 3
+  %tmp2 = zext i1 %tmp1 to i8
+  ret i8 %tmp2
+}
+
 attributes #0 = { nounwind }

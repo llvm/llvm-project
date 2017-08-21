@@ -235,6 +235,16 @@ bool llvm::ARM::getExtensionFeatures(unsigned Extensions,
   else
     Features.push_back("-dsp");
 
+  if (Extensions & ARM::AEK_RAS)
+    Features.push_back("+ras");
+  else
+    Features.push_back("-ras");
+
+  if (Extensions & ARM::AEK_DOTPROD)
+    Features.push_back("+dotprod");
+  else
+    Features.push_back("-dotprod");
+
   return getHWDivFeatures(Extensions, Features);
 }
 
@@ -438,6 +448,8 @@ bool llvm::AArch64::getExtensionFeatures(unsigned Extensions,
     Features.push_back("+crc");
   if (Extensions & AArch64::AEK_CRYPTO)
     Features.push_back("+crypto");
+  if (Extensions & AArch64::AEK_DOTPROD)
+    Features.push_back("+dotprod");
   if (Extensions & AArch64::AEK_FP16)
     Features.push_back("+fullfp16");
   if (Extensions & AArch64::AEK_PROFILE)
@@ -448,6 +460,8 @@ bool llvm::AArch64::getExtensionFeatures(unsigned Extensions,
     Features.push_back("+lse");
   if (Extensions & AArch64::AEK_SVE)
     Features.push_back("+sve");
+  if (Extensions & AArch64::AEK_RCPC)
+    Features.push_back("+rcpc");
 
   return true;
 }

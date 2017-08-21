@@ -16,3 +16,14 @@ define void @test_x86_fp80_dump(x86_fp80* %ptr){
   ret void
 }
 
+; Check that we fallback on byVal argument
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: call: '  call void @ScaleObjectOverwrite_3(%struct.PointListStruct* %index, %struct.PointListStruct* byval %index)' (in function: ScaleObjectOverwrite_2)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for ScaleObjectOverwrite_2
+; FALLBACK-WITH-REPORT-OUT-LABEL: ScaleObjectOverwrite_2:
+%struct.PointListStruct = type { i8*, i8* }
+declare void @ScaleObjectOverwrite_3(%struct.PointListStruct* %index, %struct.PointListStruct* byval %index2)
+define void @ScaleObjectOverwrite_2(%struct.PointListStruct* %index) {
+entry:
+  call void @ScaleObjectOverwrite_3(%struct.PointListStruct* %index, %struct.PointListStruct* byval %index)
+  ret void
+}
