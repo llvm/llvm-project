@@ -36,6 +36,8 @@ option(COMPILER_RT_BUILD_SANITIZERS "Build sanitizers" ON)
 mark_as_advanced(COMPILER_RT_BUILD_SANITIZERS)
 option(COMPILER_RT_BUILD_XRAY "Build xray" ON)
 mark_as_advanced(COMPILER_RT_BUILD_XRAY)
+option(COMPILER_RT_BUILD_LIBFUZZER "Build libFuzzer" ON)
+mark_as_advanced(COMPILER_RT_BUILD_LIBFUZZER)
 
 set(COMPILER_RT_BAREMETAL_BUILD OFF CACHE BOOLEAN
   "Build for a bare-metal target.")
