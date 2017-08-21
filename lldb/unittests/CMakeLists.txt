@@ -19,6 +19,12 @@ if (LLDB_BUILT_STANDALONE)
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/unittest AND NOT TARGET gtest)
     add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/unittest utils/unittest)
   endif()
+  # LLVMTestingSupport library is needed for Process/gdb-remote.
+  if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
+      AND NOT TARGET LLVMTestingSupport)
+    add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
+      lib/Testing/Support)
+  endif()
 endif()
 
 function(add_lldb_unittest test_name)
