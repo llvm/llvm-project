@@ -1856,7 +1856,7 @@ template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
 }
 
 static void fillTrap(uint8_t *I, uint8_t *End) {
-  for (; I + 4 < End; I += 4)
+  for (; I + 4 <= End; I += 4)
     memcpy(I, &Target->TrapInstr, 4);
 }
 

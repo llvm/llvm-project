@@ -17,8 +17,8 @@
 ; SCOP-NEXT:              [n, tmp12] -> { Stmt_for_body6[i0, i1, i2] -> MemRef_invariant[0] };
 ; SCOP-NEXT:          Execution Context: [n, tmp12] -> {  : n > 0 }
 ; SCOP-NEXT:  }
-; HOST-IR:      call void @polly_launchKernel(i8* %219, i32 %225, i32 1, i32 32, i32 1, i32 1, i8* %polly_launch_0_params_i8ptr)
-; HOST-IR-NEXT: call void @polly_freeKernel(i8* %219)
+; HOST-IR:      call void @polly_launchKernel(i8* %209, i32 %215, i32 1, i32 32, i32 1, i32 1, i8* %polly_launch_0_params_i8ptr)
+; HOST-IR-NEXT: call void @polly_freeKernel(i8* %209)
 
 ; KERNEL-IR: define ptx_kernel void @FUNC_f_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_B, i8 addrspace(1)* %MemRef_A, i32 %n, i32 %tmp12, i32 %polly.preload.tmp21.merge)
 

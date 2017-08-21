@@ -28,8 +28,10 @@ static cl::opt<bool>
                  cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 void polly::registerCanonicalicationPasses(llvm::legacy::PassManagerBase &PM) {
+  bool UseMemSSA = true;
   PM.add(polly::createRewriteByrefParamsPass());
   PM.add(llvm::createPromoteMemoryToRegisterPass());
+  PM.add(llvm::createEarlyCSEPass(UseMemSSA));
   PM.add(llvm::createInstructionCombiningPass());
   PM.add(llvm::createCFGSimplificationPass());
   PM.add(llvm::createTailCallEliminationPass());

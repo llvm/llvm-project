@@ -148,6 +148,7 @@ PHIExpression::~PHIExpression() = default;
 }
 }
 
+namespace {
 // Tarjan's SCC finding algorithm with Nuutila's improvements
 // SCCIterator is actually fairly complex for the simple thing we want.
 // It also wants to hand us SCC's that are unrelated to the phi node we ask
@@ -380,6 +381,7 @@ private:
   // This is used so we can detect store equivalence changes properly.
   int StoreCount = 0;
 };
+} // namespace
 
 namespace llvm {
 struct ExactEqualsExpression {

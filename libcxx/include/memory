@@ -724,7 +724,7 @@ template <class _Tp, class = void>
 struct __has_element_type : false_type {};
 
 template <class _Tp>
-struct __has_element_type<_Tp, 
+struct __has_element_type<_Tp,
               typename __void_t<typename _Tp::element_type>::type> : true_type {};
 
 template <class _Ptr, bool = __has_element_type<_Ptr>::value>
@@ -808,7 +808,7 @@ template <class _Tp, class = void>
 struct __has_difference_type : false_type {};
 
 template <class _Tp>
-struct __has_difference_type<_Tp, 
+struct __has_difference_type<_Tp,
             typename __void_t<typename _Tp::difference_type>::type> : true_type {};
 
 template <class _Ptr, bool = __has_difference_type<_Ptr>::value>
@@ -994,7 +994,7 @@ template <class _Tp, class = void>
 struct __has_pointer_type : false_type {};
 
 template <class _Tp>
-struct __has_pointer_type<_Tp, 
+struct __has_pointer_type<_Tp,
           typename __void_t<typename _Tp::pointer>::type> : true_type {};
 
 namespace __pointer_type_imp
@@ -1024,7 +1024,7 @@ template <class _Tp, class = void>
 struct __has_const_pointer : false_type {};
 
 template <class _Tp>
-struct __has_const_pointer<_Tp, 
+struct __has_const_pointer<_Tp,
             typename __void_t<typename _Tp::const_pointer>::type> : true_type {};
 
 template <class _Tp, class _Ptr, class _Alloc, bool = __has_const_pointer<_Alloc>::value>
@@ -1047,7 +1047,7 @@ template <class _Tp, class = void>
 struct __has_void_pointer : false_type {};
 
 template <class _Tp>
-struct __has_void_pointer<_Tp, 
+struct __has_void_pointer<_Tp,
                typename __void_t<typename _Tp::void_pointer>::type> : true_type {};
 
 template <class _Ptr, class _Alloc, bool = __has_void_pointer<_Alloc>::value>
@@ -1070,7 +1070,7 @@ template <class _Tp, class = void>
 struct __has_const_void_pointer : false_type {};
 
 template <class _Tp>
-struct __has_const_void_pointer<_Tp, 
+struct __has_const_void_pointer<_Tp,
             typename __void_t<typename _Tp::const_void_pointer>::type> : true_type {};
 
 template <class _Ptr, class _Alloc, bool = __has_const_void_pointer<_Alloc>::value>
@@ -1148,7 +1148,7 @@ template <class _Tp, class = void>
 struct __has_propagate_on_container_move_assignment : false_type {};
 
 template <class _Tp>
-struct __has_propagate_on_container_move_assignment<_Tp, 
+struct __has_propagate_on_container_move_assignment<_Tp,
            typename __void_t<typename _Tp::propagate_on_container_move_assignment>::type>
                : true_type {};
 
@@ -1168,7 +1168,7 @@ template <class _Tp, class = void>
 struct __has_propagate_on_container_swap : false_type {};
 
 template <class _Tp>
-struct __has_propagate_on_container_swap<_Tp, 
+struct __has_propagate_on_container_swap<_Tp,
            typename __void_t<typename _Tp::propagate_on_container_swap>::type>
                : true_type {};
 
@@ -1188,7 +1188,7 @@ template <class _Tp, class = void>
 struct __has_is_always_equal : false_type {};
 
 template <class _Tp>
-struct __has_is_always_equal<_Tp, 
+struct __has_is_always_equal<_Tp,
            typename __void_t<typename _Tp::is_always_equal>::type>
                : true_type {};
 
@@ -1941,7 +1941,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY raw_storage_iterator  operator++(int)
         {raw_storage_iterator __t(*this); ++__x_; return __t;}
 #if _LIBCPP_STD_VER >= 14
-    _LIBCPP_INLINE_VISIBILITY _OutputIterator base() const { return __x_; } 
+    _LIBCPP_INLINE_VISIBILITY _OutputIterator base() const { return __x_; }
 #endif
 };
 
@@ -3850,7 +3850,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         _Dp* __get_deleter() const _NOEXCEPT
             {return static_cast<_Dp*>(__cntrl_
-                    ? const_cast<void *>(__cntrl_->__get_deleter(typeid(_Dp))) 
+                    ? const_cast<void *>(__cntrl_->__get_deleter(typeid(_Dp)))
                       : nullptr);}
 #endif  // _LIBCPP_NO_RTTI
 
@@ -4477,7 +4477,7 @@ inline
 typename enable_if
 <
     !is_array<_Yp>::value &&
-    is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, 
+    is_convertible<typename unique_ptr<_Yp, _Dp>::pointer,
                    typename shared_ptr<_Tp>::element_type*>::value,
     shared_ptr<_Tp>&
 >::type
@@ -4512,7 +4512,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
     !is_array<_Yp>::value &&
-    is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, 
+    is_convertible<typename unique_ptr<_Yp, _Dp>::pointer,
                    typename shared_ptr<_Tp>::element_type*>::value,
     shared_ptr<_Tp>&
 >::type
@@ -5311,7 +5311,7 @@ atomic_load(const shared_ptr<_Tp>* __p)
     __m.unlock();
     return __q;
 }
-  
+
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
@@ -5352,7 +5352,7 @@ atomic_exchange(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r)
     __m.unlock();
     return __r;
 }
-  
+
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
@@ -5484,7 +5484,7 @@ void __swap_allocator(_Alloc & __a1, _Alloc & __a2)
     _NOEXCEPT_(__is_nothrow_swappable<_Alloc>::value)
 #endif
 {
-    __swap_allocator(__a1, __a2, 
+    __swap_allocator(__a1, __a2,
       integral_constant<bool, _VSTD::allocator_traits<_Alloc>::propagate_on_container_swap::value>());
 }
 
@@ -5506,7 +5506,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 void __swap_allocator(_Alloc &, _Alloc &, false_type) _NOEXCEPT {}
 
 template <typename _Alloc, typename _Traits=allocator_traits<_Alloc> >
-struct __noexcept_move_assign_container : public integral_constant<bool, 
+struct __noexcept_move_assign_container : public integral_constant<bool,
     _Traits::propagate_on_container_move_assignment::value
 #if _LIBCPP_STD_VER > 14
         || _Traits::is_always_equal::value
@@ -5520,17 +5520,17 @@ struct __noexcept_move_assign_container : public integral_constant<bool,
 template <class _Tp, class _Alloc>
 struct __temp_value {
     typedef allocator_traits<_Alloc> _Traits;
-    
+
     typename aligned_storage<sizeof(_Tp), alignof(_Tp)>::type __v;
     _Alloc &__a;
 
     _Tp *__addr() { return reinterpret_cast<_Tp *>(addressof(__v)); }
     _Tp &   get() { return *__addr(); }
-        
+
     template<class... _Args>
     __temp_value(_Alloc &__alloc, _Args&& ... __args) : __a(__alloc)
     { _Traits::construct(__a, __addr(), _VSTD::forward<_Args>(__args)...); }
-    
+
     ~__temp_value() { _Traits::destroy(__a, __addr()); }
     };
 #endif

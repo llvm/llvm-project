@@ -1,6 +1,8 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefix=YAML < %t.opt.yaml
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
+; RUN: FileCheck %s -check-prefix=YAML < %t.opt.yaml
+
 ; Original test case.
 ;
 ;     1    #include <stdlib.h>

@@ -6470,8 +6470,6 @@ let CategoryName = "Lambda Issue" in {
     "%0 can appear only once in a capture list">;
   def err_reference_capture_with_reference_default : Error<
     "'&' cannot precede a capture when the capture default is '&'">;
-  def err_this_capture_with_copy_default : Error<
-    "'this' cannot be explicitly captured when the capture default is '='">;
   def err_copy_capture_with_copy_default : Error<
     "'&' must precede a capture when the capture default is '='">;
   def err_capture_does_not_name_variable : Error<
@@ -6544,6 +6542,14 @@ let CategoryName = "Lambda Issue" in {
      InGroup<CXXPre1zCompat>, DefaultIgnore;
   def ext_star_this_lambda_capture_cxx17 : ExtWarn<
     "capture of '*this' by copy is a C++17 extension">, InGroup<CXX17>;
+
+  // C++2a [=, this] captures.
+  def warn_cxx17_compat_equals_this_lambda_capture : Warning<
+    "explicit capture of 'this' with a capture default of '=' is incompatible "
+    "with C++ standards before C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
+  def ext_equals_this_lambda_capture_cxx2a : ExtWarn<
+    "explicit capture of 'this' with a capture default of '=' "
+    "is a C++2a extension">, InGroup<CXX2a>;
 }
 
 def err_return_in_captured_stmt : Error<

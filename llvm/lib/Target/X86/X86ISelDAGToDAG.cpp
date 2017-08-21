@@ -399,6 +399,27 @@ namespace {
         return isInt<Width>(CN->getSExtValue());
       return isSExtAbsoluteSymbolRef(Width, N);
     }
+
+    // Indicates we should prefer to use a non-temporal load for this load.
+    bool useNonTemporalLoad(LoadSDNode *N) const {
+      if (!N->isNonTemporal())
+        return false;
+
+      unsigned StoreSize = N->getMemoryVT().getStoreSize();
+
+      if (N->getAlignment() < StoreSize)
+        return false;
+
+      switch (StoreSize) {
+      default: llvm_unreachable("Unsupported store size");
+      case 16:
+        return Subtarget->hasSSE41();
+      case 32:
+        return Subtarget->hasAVX2();
+      case 64:
+        return Subtarget->hasAVX512();
+      }
+    }
   };
 }
 

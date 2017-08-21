@@ -158,11 +158,11 @@ void parallel_for_each(IterTy Begin, IterTy End, FuncTy Fn) {
     TaskSize = 1;
 
   TaskGroup TG;
-  while (TaskSize <= std::distance(Begin, End)) {
+  while (TaskSize < std::distance(Begin, End)) {
     TG.spawn([=, &Fn] { std::for_each(Begin, Begin + TaskSize, Fn); });
     Begin += TaskSize;
   }
-  TG.spawn([=, &Fn] { std::for_each(Begin, End, Fn); });
+  std::for_each(Begin, End, Fn);
 }
 
 template <class IndexTy, class FuncTy>
@@ -179,10 +179,8 @@ void parallel_for_each_n(IndexTy Begin, IndexTy End, FuncTy Fn) {
         Fn(J);
     });
   }
-  TG.spawn([=, &Fn] {
-    for (IndexTy J = I; J < End; ++J)
-      Fn(J);
-  });
+  for (IndexTy J = I; J < End; ++J)
+    Fn(J);
 }
 
 #endif
