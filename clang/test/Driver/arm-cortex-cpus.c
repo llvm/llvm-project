@@ -507,6 +507,12 @@
 // RUN: %clang -target arm -mcpu=exynos-m3 -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV8A %s
 // CHECK-CPUV8A: "-cc1"{{.*}} "-triple" "armv8-{{.*}}
 
+// RUN: %clang -target arm -mcpu=cortex-a55 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV82A %s
+// RUN: %clang -target arm -mcpu=cortex-a75 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV82A %s
+// RUN: %clang -target arm -mcpu=cortex-a55 -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV82A %s
+// RUN: %clang -target arm -mcpu=cortex-a75 -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV82A %s
+// CHECK-CPUV82A: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}}
+
 // RUN: %clang -target armeb -mcpu=cortex-a32 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV8A %s
 // RUN: %clang -target armeb -mcpu=cortex-a35 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV8A %s
 // RUN: %clang -target armeb -mcpu=cortex-a53 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV8A %s
@@ -526,6 +532,12 @@
 // RUN: %clang -target arm -mcpu=exynos-m2 -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV8A %s
 // RUN: %clang -target arm -mcpu=exynos-m3 -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV8A %s
 // CHECK-BE-CPUV8A: "-cc1"{{.*}} "-triple" "armebv8-{{.*}}
+
+// RUN: %clang -target armeb -mcpu=cortex-a55 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV82A %s
+// RUN: %clang -target armeb -mcpu=cortex-a75 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV82A %s
+// RUN: %clang -target arm -mcpu=cortex-a55 -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV82A %s
+// RUN: %clang -target arm -mcpu=cortex-a75 -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV82A %s
+// CHECK-BE-CPUV82A: "-cc1"{{.*}} "-triple" "armebv8.2a-{{.*}}
 
 // RUN: %clang -target arm-linux-gnueabi -mcpu=cortex-r52 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV8R %s
 // CHECK-CPUV8R: "-cc1"{{.*}} "-triple" "armv8r-{{.*}}
@@ -550,6 +562,12 @@
 // RUN: %clang -target arm -mcpu=exynos-m3 -mlittle-endian -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV8A-THUMB %s
 // CHECK-CPUV8A-THUMB: "-cc1"{{.*}} "-triple" "thumbv8-{{.*}}
 
+// RUN: %clang -target arm -mcpu=cortex-a55 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECKCPUV82A-THUMB %s
+// RUN: %clang -target arm -mcpu=cortex-a75 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECKCPUV82A-THUMB %s
+// RUN: %clang -target arm -mcpu=cortex-a55 -mlittle-endian -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECKCPUV82A-THUMB %s
+// RUN: %clang -target arm -mcpu=cortex-a75 -mlittle-endian -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECKCPUV82A-THUMB %s
+// CHECKCPUV82A-THUMB: "-cc1"{{.*}} "-triple" "thumbv8.2a-{{.*}}
+
 // RUN: %clang -target armeb -mcpu=cortex-a32 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV8A-THUMB %s
 // RUN: %clang -target armeb -mcpu=cortex-a35 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV8A-THUMB %s
 // RUN: %clang -target armeb -mcpu=cortex-a53 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV8A-THUMB %s
@@ -570,6 +588,12 @@
 // RUN: %clang -target arm -mcpu=exynos-m3 -mbig-endian -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV8A-THUMB %s
 // CHECK-BE-CPUV8A-THUMB: "-cc1"{{.*}} "-triple" "thumbebv8-{{.*}}
 
+// RUN: %clang -target armeb -mcpu=cortex-a55 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV82A-THUMB %s
+// RUN: %clang -target armeb -mcpu=cortex-a75 -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV82A-THUMB %s
+// RUN: %clang -target arm -mcpu=cortex-a55 -mbig-endian -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV82A-THUMB %s
+// RUN: %clang -target arm -mcpu=cortex-a75 -mbig-endian -mthumb -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-CPUV82A-THUMB %s
+// CHECK-BE-CPUV82A-THUMB: "-cc1"{{.*}} "-triple" "thumbebv8.2a-{{.*}}
+
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a73 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A73 %s
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a73 -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A73-MFPU %s
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a73 -mfloat-abi=soft -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A73-SOFT %s
@@ -578,6 +602,15 @@
 // CHECK-CORTEX-A73-MFPU: "-target-feature" "+crypto"
 // CHECK-CORTEX-A73-SOFT: "-target-feature" "+soft-float"
 // CHECK-CORTEX-A73-SOFT: "-target-feature" "+soft-float-abi"
+
+// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a75 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A75 %s
+// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a75 -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A75-MFPU %s
+// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a75 -mfloat-abi=soft -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A75-SOFT %s
+// CHECK-CORTEX-A75: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}} "-target-cpu" "cortex-a75"
+// CHECK-CORTEX-A75-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
+// CHECK-CORTEX-A75-MFPU: "-target-feature" "+crypto"
+// CHECK-CORTEX-A75-SOFT: "-target-feature" "+soft-float"
+// CHECK-CORTEX-A75-SOFT: "-target-feature" "+soft-float-abi"
 
 // RUN: %clang -target arm -mcpu=cortex-m23 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV8MBASE %s
 // CHECK-CPUV8MBASE:  "-cc1"{{.*}} "-triple" "thumbv8m.base-

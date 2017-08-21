@@ -1406,7 +1406,7 @@ static bool isValidFunctionInKernel(llvm::Function *F, bool AllowLibDevice) {
 
   return F->isIntrinsic() &&
          (Name.startswith("llvm.sqrt") || Name.startswith("llvm.fabs") ||
-          Name.startswith("llvm.copysign"));
+          Name.startswith("llvm.copysign") || Name.startswith("llvm.powi"));
 }
 
 /// Do not take `Function` as a subtree value.
