@@ -50,6 +50,11 @@ static cl::opt<std::string> DestinationPath(cl::Positional,
                                             cl::Optional,
                                             cl::cat(ClangDiffCategory));
 
+static cl::opt<std::string> StopAfter("stop-after",
+                                      cl::desc("<topdown|bottomup>"),
+                                      cl::Optional, cl::init(""),
+                                      cl::cat(ClangDiffCategory));
+
 static cl::opt<int> MaxSize("s", cl::desc("<maxsize>"), cl::Optional,
                             cl::init(-1), cl::cat(ClangDiffCategory));
 
@@ -311,6 +316,18 @@ static void printNodeAsJson(raw_ostream &OS, diff::SyntaxTree &Tree,
   const diff::Node &N = Tree.getNode(Id);
   OS << "{";
   printNodeAttributes(OS, Tree, Id);
+  auto Identifier = N.getIdentifier();
+  auto QualifiedIdentifier = N.getQualifiedIdentifier();
+  if (Identifier) {
+    OS << R"(,"identifier":")";
+    printJsonString(OS, *Identifier);
+    OS << R"(")";
+    if (QualifiedIdentifier && *Identifier != *QualifiedIdentifier) {
+      OS << R"(,"qualified_identifier":")";
+      printJsonString(OS, *QualifiedIdentifier);
+      OS << R"(")";
+    }
+  }
   OS << R"(,"children":[)";
   if (N.Children.size() > 0) {
     printNodeAsJson(OS, Tree, N.Children[0]);
@@ -425,6 +442,14 @@ int main(int argc, const char **argv) {
   diff::ComparisonOptions Options;
   if (MaxSize != -1)
     Options.MaxSize = MaxSize;
+  if (!StopAfter.empty()) {
+    if (StopAfter == "topdown")
+      Options.StopAfterTopDown = true;
+    else if (StopAfter != "bottomup") {
+      llvm::errs() << "Error: Invalid argument for -stop-after\n";
+      return 1;
+    }
+  }
   diff::SyntaxTree SrcTree(Src->getASTContext());
   diff::SyntaxTree DstTree(Dst->getASTContext());
   diff::ASTDiff Diff(SrcTree, DstTree, Options);
