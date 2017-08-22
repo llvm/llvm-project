@@ -49,6 +49,15 @@ Major New Features
 
 -  ...
 
+C++ coroutines
+^^^^^^^^^^^^^^
+`C++ coroutines TS
+<http://open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4680.pdf>`_
+implementation has landed. Use ``-fcoroutines-ts -stdlib=libc++`` to enable
+coroutine support. Here is `an example
+<https://wandbox.org/permlink/Dth1IO5q8Oe31ew2>`_ to get you started.
+
+
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
