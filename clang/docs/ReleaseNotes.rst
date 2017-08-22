@@ -116,7 +116,41 @@ Clang's support for building native Windows programs ...
 C Language Changes in Clang
 ---------------------------
 
-- ...
+- Added near complete support for implicit scalar to vector conversion, a GNU
+  C/C++ language extension. With this extension, the following code is
+  considered valid:
+
+.. code-block:: c
+
+    typedef unsigned v4i32 __attribute__((vector_size(16)));
+
+    v4i32 foo(v4i32 a) {
+      // Here 5 is implicitly casted to an unsigned value and replicated into a
+      // vector with as many elements as 'a'.
+      return a + 5;
+    }
+
+The implicit conversion of a scalar value to a vector value--in the context of
+a vector expression--occurs when:
+
+- The type of the vector is that of a ``__attribute__((vector_size(size)))``
+  vector, not an OpenCL ``__attribute__((ext_vector_type(size)))`` vector type.
+
+- The scalar value can be casted to that of the vector element's type without
+  the loss of precision based on the type of the scalar and the type of the
+  vector's elements.
+
+- For compile time constant values, the above rule is weakened to consider the
+  value of the scalar constant rather than the constant's type.
+
+- Floating point constants with precise integral representations are not
+  implicitly converted to integer values, this is for compatability with GCC.
+
+
+Currently the basic integer and floating point types with the following
+operators are supported: ``+``, ``/``, ``-``, ``*``, ``%``, ``>``, ``<``,
+``>=``, ``<=``, ``==``, ``!=``, ``&``, ``|``, ``^`` and the corresponding
+assignment operators where applicable.
 
 ...
 
@@ -127,6 +161,10 @@ C11 Feature Support
 
 C++ Language Changes in Clang
 -----------------------------
+
+- As mentioned in `C Language Changes in Clang`_, Clang's support for
+  implicit scalar to vector conversions also applies to C++. Additionally
+  the following operators are also supported: ``&&`` and ``||``.
 
 ...
 
