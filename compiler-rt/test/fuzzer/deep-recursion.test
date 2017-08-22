@@ -1,0 +1,4 @@
+# Test that we can find a stack overflow
+RUN: %cpp_compiler -fsanitize-coverage=stack-depth %S/DeepRecursionTest.cpp -o %t
+RUN: not %t -seed=1 -runs=100000000 2>&1 | FileCheck %s
+CHECK: ERROR: libFuzzer: deadly signal

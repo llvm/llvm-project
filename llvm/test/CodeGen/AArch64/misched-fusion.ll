@@ -1,6 +1,6 @@
-; RUN: llc -o - %s -mattr=+arith-bcc-fusion | FileCheck --check-prefix=FUSEBCC %s
-; RUN: llc -o - %s -mattr=+arith-cbz-fusion | FileCheck --check-prefix=FUSECBZ %s
-; RUN: llc -o - %s -mcpu=cyclone            | FileCheck --check-prefix=FUSEBCC --check-prefix=FUSECBZ %s
+; RUN: llc -o - %s -mtriple=aarch64-unknown -aarch64-enable-cond-br-tune=false -mattr=+arith-bcc-fusion | FileCheck %s --check-prefix=FUSEBCC
+; RUN: llc -o - %s -mtriple=aarch64-unknown -aarch64-enable-cond-br-tune=false -mattr=+arith-cbz-fusion | FileCheck %s --check-prefix=FUSECBZ
+; RUN: llc -o - %s -mtriple=aarch64-unknown -aarch64-enable-cond-br-tune=false -mcpu=cyclone            | FileCheck %s --check-prefix=FUSEBCC --check-prefix=FUSECBZ
 
 target triple = "aarch64-unknown"
 
@@ -27,8 +27,8 @@ exit:
 
 ; Make sure sub is scheduled in front of cbnz
 ; FUSECBZ-LABEL: test_sub_cbz:
-; FUSECBZ: subs [[SUBRES:w[0-9]+]], w0, #13
-; FUSECBZ: b.ne {{.?LBB[0-9_]+}}
+; FUSECBZ: sub [[R:w[0-9]+]], {{w[0-9]+}}, #13
+; FUSECBZ-NEXT: cbnz [[R]], {{.?LBB[0-9_]+}}
 define void @test_sub_cbz(i32 %a0, i32 %a1) {
 entry:
   ; except for the fusion opportunity the sub/add should be equal so the

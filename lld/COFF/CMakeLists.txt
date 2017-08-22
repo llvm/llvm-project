@@ -39,6 +39,7 @@ add_lld_library(lldCOFF
   Target
   Option
   Support
+  WindowsManifest
 
   LINK_LIBS
   lldCore

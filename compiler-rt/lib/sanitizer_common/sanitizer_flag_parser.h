@@ -75,7 +75,7 @@ inline bool FlagHandler<HandleSignalMode>::Parse(const char *value) {
 
 template <>
 inline bool FlagHandler<const char *>::Parse(const char *value) {
-  *t_ = internal_strdup(value);
+  *t_ = value;
   return true;
 }
 
