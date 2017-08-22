@@ -96,7 +96,29 @@ Changes to the MIPS Target
 Changes to the PowerPC Target
 -----------------------------
 
- During this release ...
+* Additional support and exploitation of POWER ISA 3.0: vabsdub, vabsduh,
+  vabsduw, modsw, moduw, modsd, modud, lxv, stxv, vextublx, vextubrx, vextuhlx,
+  vextuhrx, vextuwlx, vextuwrx, vextsb2w, vextsb2d, vextsh2w, vextsh2d, and
+  vextsw2d
+  
+* Implemented Optimal Code Sequences from The PowerPC Compiler Writer's Guide.
+
+* Enable -fomit-frame-pointer by default.
+  
+* Improved handling of bit reverse intrinsic.
+  
+* Improved handling of memcpy and memcmp functions.
+  
+* Improved handling of branches with static branch hints.
+  
+* Improved codegen for atomic load_acquire.
+  
+* Improved block placement during code layout
+
+* Many improvements to instruction selection and code generation
+
+
+
 
 Changes to the X86 Target
 -------------------------
