@@ -2,7 +2,7 @@
 
 // RUN: %clang -fsanitize=fuzzer %s -target x86_64-apple-darwin14 -### 2>&1 | FileCheck --check-prefixes=CHECK-FUZZER-LIB,CHECK-COVERAGE-FLAGS %s
 //
-// CHECK-FUZZER-LIB: libclang_rt.libfuzzer
+// CHECK-FUZZER-LIB: libclang_rt.fuzzer
 // CHECK-COVERAGE: -fsanitize-coverage-trace-pc-guard
 // CHECK-COVERAGE-SAME: -fsanitize-coverage-indirect-calls
 // CHECK-COVERAGE-SAME: -fsanitize-coverage-trace-cmp
