@@ -95,8 +95,8 @@ future versions of Clang.
 New Pragmas in Clang
 -----------------------
 
-Clang now supports the ...
-
+- Clang now supports the ``clang attribute`` pragma that allows users to apply
+  an attribute to multiple declarations.
 
 Attribute Changes in Clang
 --------------------------
