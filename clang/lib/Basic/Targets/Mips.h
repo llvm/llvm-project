@@ -77,7 +77,7 @@ public:
                         Triple.getOS() == llvm::Triple::OpenBSD;
   }
 
-  bool isNaN2008Default() const {
+  bool isIEEE754_2008Default() const {
     return CPU == "mips32r6" || CPU == "mips64r6";
   }
 
@@ -299,7 +299,7 @@ public:
                             DiagnosticsEngine &Diags) override {
     IsMips16 = false;
     IsMicromips = false;
-    IsNan2008 = isNaN2008Default();
+    IsNan2008 = isIEEE754_2008Default();
     IsSingleFloat = false;
     FloatABI = HardFloat;
     DspRev = NoDSP;

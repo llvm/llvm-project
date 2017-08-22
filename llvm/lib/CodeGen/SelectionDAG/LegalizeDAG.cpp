@@ -3666,10 +3666,15 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
                          Tmp2.getOperand(0), Tmp2.getOperand(1),
                          Node->getOperand(2));
     } else {
-      // We test only the i1 bit.  Skip the AND if UNDEF.
-      Tmp3 = (Tmp2.isUndef()) ? Tmp2 :
-        DAG.getNode(ISD::AND, dl, Tmp2.getValueType(), Tmp2,
-                    DAG.getConstant(1, dl, Tmp2.getValueType()));
+      // We test only the i1 bit.  Skip the AND if UNDEF or another AND.
+      if (Tmp2.isUndef() ||
+          (Tmp2.getOpcode() == ISD::AND &&
+           isa<ConstantSDNode>(Tmp2.getOperand(1)) &&
+           dyn_cast<ConstantSDNode>(Tmp2.getOperand(1))->getZExtValue() == 1))
+        Tmp3 = Tmp2;
+      else
+        Tmp3 = DAG.getNode(ISD::AND, dl, Tmp2.getValueType(), Tmp2,
+                           DAG.getConstant(1, dl, Tmp2.getValueType()));
       Tmp1 = DAG.getNode(ISD::BR_CC, dl, MVT::Other, Tmp1,
                          DAG.getCondCode(ISD::SETNE), Tmp3,
                          DAG.getConstant(0, dl, Tmp3.getValueType()),

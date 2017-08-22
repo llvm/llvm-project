@@ -579,7 +579,9 @@ Global variables in other translation units can also be declared, in which
 case they don't have an initializer.
 
 Either global variable definitions or declarations may have an explicit section
-to be placed in and may have an optional explicit alignment specified.
+to be placed in and may have an optional explicit alignment specified. If there 
+is a mismatch between the explicit or inferred section information for the 
+variable declaration and its definition the resulting behavior is undefined. 
 
 A variable may be defined as a global ``constant``, which indicates that
 the contents of the variable will **never** be modified (enabling better
@@ -621,6 +623,12 @@ LLVM allows an explicit section to be specified for globals. If the
 target supports it, it will emit globals to the section specified.
 Additionally, the global can placed in a comdat if the target has the necessary
 support.
+
+External declarations may have an explicit section specified. Section 
+information is retained in LLVM IR for targets that make use of this 
+information. Attaching section information to an external declaration is an 
+assertion that its definition is located in the specified section. If the 
+definition is located in a different section, the behavior is undefined.   
 
 By default, global initializers are optimized by assuming that global
 variables defined within the module are not modified from their

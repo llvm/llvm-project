@@ -14200,6 +14200,7 @@ bool Sema::tryCaptureVariable(
   bool IsGlobal = !Var->hasLocalStorage();
   if (IsGlobal && !(LangOpts.OpenMP && IsOpenMPCapturedDecl(Var)))
     return true;
+  Var = Var->getCanonicalDecl();
 
   // Walk up the stack to determine whether we can capture the variable,
   // performing the "simple" checks that don't depend on type. We stop when

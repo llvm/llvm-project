@@ -1282,7 +1282,7 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
       return 0;
     }
   } else if (Current.is(TT_BlockComment)) {
-    if (!Current.isTrailingComment() || !Style.ReflowComments ||
+    if (!Style.ReflowComments ||
         // If a comment token switches formatting, like
         // /* clang-format on */, we don't want to break it further,
         // but we may still want to adjust its indentation.

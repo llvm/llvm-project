@@ -966,6 +966,8 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
     // that would be an error.
 
     ParsedType InitCaptureType;
+    if (!Init.isInvalid())
+      Init = Actions.CorrectDelayedTyposInExpr(Init.get());
     if (Init.isUsable()) {
       // Get the pointer and store it in an lvalue, so we can use it as an
       // out argument.

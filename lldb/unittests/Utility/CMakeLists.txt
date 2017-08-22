@@ -2,6 +2,7 @@ add_subdirectory(Helpers)
 
 add_lldb_unittest(UtilityTests
   ConstStringTest.cpp
+  JSONTest.cpp
   LogTest.cpp
   NameMatchesTest.cpp
   StatusTest.cpp
