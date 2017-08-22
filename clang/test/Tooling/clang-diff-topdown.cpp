@@ -27,7 +27,18 @@ void f1()
   {{;;}}
 }
 
+int x;
+
+namespace src {
+  int x;
+  int x1 = x + 1;
+  int x2 = ::x + 1;
+}
+
+class A { int x = 1 + 1; void f() { int x1 = x; } };
+
 #else
+
 
 void f1() {
 
@@ -44,5 +55,29 @@ void f1() {
   // CHECK-NOT: Match {{.*}} to NullStmt(14)
   ;
 }
+
+int x;
+
+namespace dst {
+  int x;
+  // CHECK: Match DeclRefExpr: :x(17) to DeclRefExpr: :x(22)
+  int x1 = x + 1;
+  // CHECK: Match DeclRefExpr: x(21) to DeclRefExpr: x(26)
+  int x2 = ::x + 1;
+}
+
+class B {
+  // Only the class name changed; it is not included in the field value,
+  // therefore there is no update.
+  // CHECK: Match FieldDecl: :x(int)(24) to FieldDecl: :x(int)(29)
+  // CHECK-NOT: Update FieldDecl: :x(int)(24)
+  int x = 1+1;
+  void f() {
+    // CHECK: Match MemberExpr: :x(32) to MemberExpr: :x(37)
+    // CHECK-NOT: Update MemberExpr: :x(32)
+    int x1 = B::x;
+  }
+
+};
 
 #endif

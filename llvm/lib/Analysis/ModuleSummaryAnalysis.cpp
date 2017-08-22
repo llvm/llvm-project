@@ -403,6 +403,12 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                            CantBePromoted);
   }
 
+  // Set live flag for all personality functions. That allows to
+  // preserve them during DCE.
+  for (const llvm::Function &F : M)
+    if (!F.isDeclaration() && F.hasPersonalityFn())
+      setLiveRoot(Index, F.getPersonalityFn()->getName());
+
   // Compute summaries for all variables defined in module, and save in the
   // index.
   for (const GlobalVariable &G : M.globals()) {

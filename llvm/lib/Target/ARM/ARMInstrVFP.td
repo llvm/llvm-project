@@ -1561,6 +1561,15 @@ def VTOUIRH : AVConv1IsH_Encode<0b11101, 0b11, 0b1100, 0b1001,
 }
 }
 
+// v8.3-a Javascript Convert to Signed fixed-point
+def VJCVT : AVConv1IsD_Encode<0b11101, 0b11, 0b1001, 0b1011,
+                                (outs SPR:$Sd), (ins DPR:$Dm),
+                                IIC_fpCVTDI, "vjcvt", ".s32.f64\t$Sd, $Dm",
+                                []>,
+            Requires<[HasFPARMv8, HasV8_3a]> {
+  let Inst{7} = 1; // Z bit
+}
+
 // Convert between floating-point and fixed-point
 // Data type for fixed-point naming convention:
 //   S16 (U=0, sx=0) -> SH
