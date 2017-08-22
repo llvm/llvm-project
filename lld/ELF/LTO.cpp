@@ -144,7 +144,13 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // be removed.
     R.Prevailing = !ObjSym.isUndefined() && B->getFile() == &F;
 
-    R.VisibleToRegularObj = Sym->IsUsedInRegularObj ||
+    // We ask LTO to preserve following global symbols:
+    // 1) All symbols when doing relocatable link, so that them can be used
+    //    for doing final link.
+    // 2) Symbols that are used in regular objects.
+    // 3) C named sections if we have corresponding __start_/__stop_ symbol.
+    // 4) Symbols that are defined in bitcode files and used for dynamic linking.
+    R.VisibleToRegularObj = Config->Relocatable || Sym->IsUsedInRegularObj ||
                             (R.Prevailing && Sym->includeInDynsym()) ||
                             UsedStartStop.count(ObjSym.getSectionName());
     if (R.Prevailing)

@@ -546,7 +546,7 @@ SDValue MSP430TargetLowering::LowerFormalArguments(
 
   switch (CallConv) {
   default:
-    llvm_unreachable("Unsupported calling convention");
+    report_fatal_error("Unsupported calling convention");
   case CallingConv::C:
   case CallingConv::Fast:
     return LowerCCCArguments(Chain, CallConv, isVarArg, Ins, dl, DAG, InVals);
@@ -576,7 +576,7 @@ MSP430TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   switch (CallConv) {
   default:
-    llvm_unreachable("Unsupported calling convention");
+    report_fatal_error("Unsupported calling convention");
   case CallingConv::MSP430_BUILTIN:
   case CallingConv::Fast:
   case CallingConv::C:
