@@ -176,7 +176,16 @@ C++1z Feature Support
 Objective-C Language Changes in Clang
 -------------------------------------
 
-...
+- Clang now guarantees that a ``readwrite`` property is synthesized when an
+  ambiguous property (i.e. a property that's declared in multiple protocols)
+  is synthesized. The ``-Wprotocol-property-synthesis-ambiguity`` warning that
+  warns about incompatible property types is now promoted to an error when
+  there's an ambiguity between ``readwrite`` and ``readonly`` properties.
+
+- Clang now prohibits synthesis of ambiguous properties with incompatible
+  explicit property attributes. The following property attributes are
+  checked for differences: ``copy``, ``retain``/``strong``, ``atomic``,
+  ``getter`` and ``setter``.
 
 OpenCL C Language Changes in Clang
 ----------------------------------
