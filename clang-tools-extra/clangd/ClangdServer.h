@@ -169,20 +169,35 @@ private:
 };
 
 /// Provides API to manage ASTs for a collection of C++ files and request
-/// various language features(currently, only codeCompletion and async
-/// diagnostics for tracked files).
+/// various language features.
+/// Currently supports async diagnostics, code completion, formatting and goto
+/// definition.
 class ClangdServer {
 public:
-  /// Creates a new ClangdServer. To server parsing requests ClangdScheduler,
-  /// that spawns \p AsyncThreadsCount worker threads will be created (when \p
-  /// AsyncThreadsCount is 0, requests will be processed on the calling thread).
-  /// instance of parsing will be conducted via a vfs::FileSystem provided by \p
-  /// FSProvider. Results of code completion/diagnostics also include a tag,
-  /// that \p FSProvider returns along with the vfs::FileSystem. When \p
-  /// ResourceDir is set, it will be used to search for internal headers
-  /// (overriding defaults and -resource-dir compiler flag, if set). If \p
-  /// ResourceDir is None, ClangdServer will attempt to set it to a standard
-  /// location, obtained via CompilerInvocation::GetResourcePath.
+  /// Creates a new ClangdServer instance.
+  /// To process parsing requests asynchronously, ClangdServer will spawn \p
+  /// AsyncThreadsCount worker threads. However, if \p AsyncThreadsCount is 0,
+  /// all requests will be processed on the calling thread.
+  ///
+  /// ClangdServer uses \p FSProvider to get an instance of vfs::FileSystem for
+  /// each parsing request. Results of code completion and diagnostics also
+  /// include a tag, that \p FSProvider returns along with the vfs::FileSystem.
+  ///
+  /// The value of \p ResourceDir will be used to search for internal headers
+  /// (overriding defaults and -resource-dir compiler flag). If \p ResourceDir
+  /// is None, ClangdServer will call CompilerInvocation::GetResourcePath() to
+  /// obtain the standard resource directory.
+  ///
+  /// ClangdServer uses \p CDB to obtain compilation arguments for parsing. Note
+  /// that ClangdServer only obtains compilation arguments once for each newly
+  /// added file (i.e., when processing a first call to addDocument) and reuses
+  /// those arguments for subsequent reparses. However, ClangdServer will check
+  /// if compilation arguments changed on calls to forceReparse().
+  ///
+  /// After each parsing request finishes, ClangdServer reports diagnostics to
+  /// \p DiagConsumer. Note that a callback to \p DiagConsumer happens on a
+  /// worker thread. Therefore, instances of \p DiagConsumer must properly
+  /// synchronize access to shared state.
   ClangdServer(GlobalCompilationDatabase &CDB,
                DiagnosticsConsumer &DiagConsumer,
                FileSystemProvider &FSProvider, unsigned AsyncThreadsCount,

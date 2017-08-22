@@ -848,10 +848,11 @@ public:
   /// Get the original base address of this access (e.g. A for A[i+j]) when
   /// detected.
   ///
-  /// This adress may differ from the base address referenced by the Original
+  /// This address may differ from the base address referenced by the original
   /// ScopArrayInfo to which this array belongs, as this memory access may
-  /// have been unified to a ScopArray which has a different but identically
-  /// valued base pointer in case invariant load hoisting is enabled.
+  /// have been canonicalized to a ScopArrayInfo which has a different but
+  /// identically-valued base pointer in case invariant load hoisting is
+  /// enabled.
   Value *getOriginalBaseAddr() const { return BaseAddr; }
 
   /// Get the detection-time base array isl::id for this access.

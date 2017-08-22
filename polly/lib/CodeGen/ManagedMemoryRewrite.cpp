@@ -124,8 +124,8 @@ static void expandConstantExpr(ConstantExpr *Cur, PollyIRBuilder &Builder,
   Instruction *I = Cur->getAsInstruction();
   assert(I && "unable to convert ConstantExpr to Instruction");
 
-  DEBUG(dbgs() << "Expanding ConstantExpression: " << *Cur
-               << " | in Instruction: " << *I << "\n";);
+  DEBUG(dbgs() << "Expanding ConstantExpression: (" << *Cur
+               << ") in Instruction: (" << *I << ")\n";);
 
   // Invalidate `Cur` so that no one after this point uses `Cur`. Rather,
   // they should mutate `I`.
@@ -208,12 +208,22 @@ replaceGlobalArray(Module &M, const DataLayout &DL, GlobalVariable &Array,
   const bool OnlyVisibleInsideModule = Array.hasPrivateLinkage() ||
                                        Array.hasInternalLinkage() ||
                                        IgnoreLinkageForGlobals;
-  if (!OnlyVisibleInsideModule)
+  if (!OnlyVisibleInsideModule) {
+    DEBUG(dbgs() << "Not rewriting (" << Array
+                 << ") to managed memory "
+                    "because it could be visible externally. To force rewrite, "
+                    "use -polly-acc-rewrite-ignore-linkage-for-globals.\n");
     return;
+  }
 
   if (!Array.hasInitializer() ||
-      !isa<ConstantAggregateZero>(Array.getInitializer()))
+      !isa<ConstantAggregateZero>(Array.getInitializer())) {
+    DEBUG(dbgs() << "Not rewriting (" << Array
+                 << ") to managed memory "
+                    "because it has an initializer which is "
+                    "not a zeroinitializer.\n");
     return;
+  }
 
   // At this point, we have committed to replacing this array.
   ReplacedGlobals.insert(&Array);
@@ -234,7 +244,7 @@ replaceGlobalArray(Module &M, const DataLayout &DL, GlobalVariable &Array,
   BasicBlock *Start = BasicBlock::Create(M.getContext(), "entry", F);
   Builder.SetInsertPoint(Start);
 
-  int ArraySizeInt = DL.getTypeAllocSizeInBits(ArrayTy) / 8;
+  const uint64_t ArraySizeInt = DL.getTypeAllocSize(ArrayTy);
   Value *ArraySize = Builder.getInt64(ArraySizeInt);
   ArraySize->setName("array.size");
 
@@ -278,14 +288,14 @@ static void getAllocasToBeManaged(Function &F,
       auto *Alloca = dyn_cast<AllocaInst>(&I);
       if (!Alloca)
         continue;
-      DEBUG(dbgs() << "Checking if " << *Alloca << "may be captured: ");
+      DEBUG(dbgs() << "Checking if (" << *Alloca << ") may be captured: ");
 
       if (PointerMayBeCaptured(Alloca, /* ReturnCaptures */ false,
                                /* StoreCaptures */ true)) {
         Allocas.insert(Alloca);
-        DEBUG(dbgs() << "YES (captured)\n");
+        DEBUG(dbgs() << "YES (captured).\n");
       } else {
-        DEBUG(dbgs() << "NO (not captured)\n");
+        DEBUG(dbgs() << "NO (not captured).\n");
       }
     }
   }
@@ -293,7 +303,7 @@ static void getAllocasToBeManaged(Function &F,
 
 static void rewriteAllocaAsManagedMemory(AllocaInst *Alloca,
                                          const DataLayout &DL) {
-  DEBUG(dbgs() << "rewriting: " << *Alloca << " to managed mem.\n");
+  DEBUG(dbgs() << "rewriting: (" << *Alloca << ") to managed mem.\n");
   Module *M = Alloca->getModule();
   assert(M && "Alloca does not have a module");
 
@@ -301,7 +311,8 @@ static void rewriteAllocaAsManagedMemory(AllocaInst *Alloca,
   Builder.SetInsertPoint(Alloca);
 
   Value *MallocManagedFn = getOrCreatePollyMallocManaged(*Alloca->getModule());
-  const int Size = DL.getTypeAllocSize(Alloca->getType()->getElementType());
+  const uint64_t Size =
+      DL.getTypeAllocSize(Alloca->getType()->getElementType());
   Value *SizeVal = Builder.getInt64(Size);
   Value *RawManagedMem = Builder.CreateCall(MallocManagedFn, {SizeVal});
   Value *Bitcasted = Builder.CreateBitCast(RawManagedMem, Alloca->getType());

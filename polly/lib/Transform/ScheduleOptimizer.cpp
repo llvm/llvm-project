@@ -993,7 +993,7 @@ optimizeDataLayoutMatrMulPattern(isl::schedule_node Node, isl::map MapOldIndVar,
 
   // Create a copy statement that corresponds to the memory access to the
   // matrix B, the second operand of the matrix multiplication.
-  Node = Node.parent().parent().parent().parent().parent();
+  Node = Node.parent().parent().parent().parent().parent().parent();
   Node = isl::manage(isl_schedule_node_band_split(Node.release(), 2)).child(0);
   auto AccRel = getMatMulAccRel(isl::manage(MapOldIndVar.copy()), 3, 7);
   unsigned FirstDimSize = MacroParams.Nc / MicroParams.Nr;
@@ -1046,7 +1046,7 @@ optimizeDataLayoutMatrMulPattern(isl::schedule_node Node, isl::map MapOldIndVar,
   ExtMap = ExtMap.intersect_range(Domain);
   ExtMap = ExtMap.set_tuple_id(isl::dim::out, NewStmt->getDomainId());
   Node = createExtensionNode(Node, ExtMap);
-  return Node.child(0).child(0).child(0).child(0);
+  return Node.child(0).child(0).child(0).child(0).child(0);
 }
 
 /// Get a relation mapping induction variables produced by schedule
@@ -1106,11 +1106,11 @@ isolateAndUnrollMatMulInnerLoops(isl::schedule_node Node,
   isl::union_set Options = IsolateOption.unite(AtomicOption);
   Options = Options.unite(getUnrollIsolatedSetOptions(Ctx));
   Node = Node.band_set_ast_build_options(Options);
-  Node = Node.parent().parent();
+  Node = Node.parent().parent().parent();
   IsolateOption = getIsolateOptions(Prefix, 3);
   Options = IsolateOption.unite(AtomicOption);
   Node = Node.band_set_ast_build_options(Options);
-  Node = Node.child(0).child(0);
+  Node = Node.child(0).child(0).child(0);
   return Node;
 }
 
@@ -1126,6 +1126,15 @@ static isl::schedule_node markInterIterationAliasFree(isl::schedule_node Node,
 
   auto Id =
       isl::id::alloc(Node.get_ctx(), "Inter iteration alias-free", BasePtr);
+  return Node.insert_mark(Id).child(0);
+}
+
+/// Insert "Loop Vectorizer Disabled" mark node.
+///
+/// @param Node The child of the mark node to be inserted.
+/// @return The modified isl_schedule_node.
+static isl::schedule_node markLoopVectorizerDisabled(isl::schedule_node Node) {
+  auto Id = isl::id::alloc(Node.get_ctx(), "Loop Vectorizer Disabled", nullptr);
   return Node.insert_mark(Id).child(0);
 }
 
@@ -1187,6 +1196,7 @@ isl::schedule_node ScheduleTreeOptimizer::optimizeMatMulPattern(
                                                         MacroKernelParams);
   if (!MapOldIndVar)
     return Node;
+  Node = markLoopVectorizerDisabled(Node.parent()).child(0);
   Node = isolateAndUnrollMatMulInnerLoops(Node, MicroKernelParams);
   return optimizeDataLayoutMatrMulPattern(Node, MapOldIndVar, MicroKernelParams,
                                           MacroKernelParams, MMI);
