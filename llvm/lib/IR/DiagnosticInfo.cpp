@@ -45,14 +45,11 @@ namespace {
 
 /// \brief Regular expression corresponding to the value given in one of the
 /// -pass-remarks* command line flags. Passes whose name matches this regexp
-/// will emit a diagnostic when calling the associated diagnostic function
-/// (emitOptimizationRemark, emitOptimizationRemarkMissed or
-/// emitOptimizationRemarkAnalysis).
+/// will emit a diagnostic via ORE->emit(...);
 struct PassRemarksOpt {
   std::shared_ptr<Regex> Pattern;
 
   void operator=(const std::string &Val) {
-    // Create a regexp object to match pass names for emitOptimizationRemark.
     if (!Val.empty()) {
       Pattern = std::make_shared<Regex>(Val);
       std::string RegexError;
@@ -71,7 +68,7 @@ static PassRemarksOpt PassRemarksMissedOptLoc;
 static PassRemarksOpt PassRemarksAnalysisOptLoc;
 
 // -pass-remarks
-//    Command line flag to enable emitOptimizationRemark()
+//    Command line flag to enable optimization remarks
 static cl::opt<PassRemarksOpt, true, cl::parser<std::string>>
 PassRemarks("pass-remarks", cl::value_desc("pattern"),
             cl::desc("Enable optimization remarks from passes whose name match "
@@ -80,7 +77,7 @@ PassRemarks("pass-remarks", cl::value_desc("pattern"),
             cl::ZeroOrMore);
 
 // -pass-remarks-missed
-//    Command line flag to enable emitOptimizationRemarkMissed()
+//    Command line flag to enable missed optimization remarks
 static cl::opt<PassRemarksOpt, true, cl::parser<std::string>> PassRemarksMissed(
     "pass-remarks-missed", cl::value_desc("pattern"),
     cl::desc("Enable missed optimization remarks from passes whose name match "
@@ -89,7 +86,7 @@ static cl::opt<PassRemarksOpt, true, cl::parser<std::string>> PassRemarksMissed(
     cl::ZeroOrMore);
 
 // -pass-remarks-analysis
-//    Command line flag to enable emitOptimizationRemarkAnalysis()
+//    Command line flag to enable optimization analysis remarks
 static cl::opt<PassRemarksOpt, true, cl::parser<std::string>>
 PassRemarksAnalysis(
     "pass-remarks-analysis", cl::value_desc("pattern"),
@@ -332,42 +329,6 @@ bool OptimizationRemarkAnalysis::isEnabled(StringRef PassName) {
 
 void DiagnosticInfoMIRParser::print(DiagnosticPrinter &DP) const {
   DP << Diagnostic;
-}
-
-void llvm::emitOptimizationRemark(LLVMContext &Ctx, const char *PassName,
-                                  const Function &Fn,
-                                  const DiagnosticLocation &Loc,
-                                  const Twine &Msg) {
-  Ctx.diagnose(OptimizationRemark(PassName, Fn, Loc, Msg));
-}
-
-void llvm::emitOptimizationRemarkMissed(LLVMContext &Ctx, const char *PassName,
-                                        const Function &Fn,
-                                        const DiagnosticLocation &Loc,
-                                        const Twine &Msg) {
-  Ctx.diagnose(OptimizationRemarkMissed(PassName, Fn, Loc, Msg));
-}
-
-void llvm::emitOptimizationRemarkAnalysis(LLVMContext &Ctx,
-                                          const char *PassName,
-                                          const Function &Fn,
-                                          const DiagnosticLocation &Loc,
-                                          const Twine &Msg) {
-  Ctx.diagnose(OptimizationRemarkAnalysis(PassName, Fn, Loc, Msg));
-}
-
-void llvm::emitOptimizationRemarkAnalysisFPCommute(
-    LLVMContext &Ctx, const char *PassName, const Function &Fn,
-    const DiagnosticLocation &Loc, const Twine &Msg) {
-  Ctx.diagnose(OptimizationRemarkAnalysisFPCommute(PassName, Fn, Loc, Msg));
-}
-
-void llvm::emitOptimizationRemarkAnalysisAliasing(LLVMContext &Ctx,
-                                                  const char *PassName,
-                                                  const Function &Fn,
-                                                  const DiagnosticLocation &Loc,
-                                                  const Twine &Msg) {
-  Ctx.diagnose(OptimizationRemarkAnalysisAliasing(PassName, Fn, Loc, Msg));
 }
 
 DiagnosticInfoOptimizationFailure::DiagnosticInfoOptimizationFailure(

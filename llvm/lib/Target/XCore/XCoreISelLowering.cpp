@@ -1046,7 +1046,7 @@ XCoreTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   switch (CallConv)
   {
     default:
-      llvm_unreachable("Unsupported calling convention");
+      report_fatal_error("Unsupported calling convention");
     case CallingConv::Fast:
     case CallingConv::C:
       return LowerCCCCallTo(Chain, Callee, CallConv, isVarArg, isTailCall,
@@ -1243,7 +1243,7 @@ SDValue XCoreTargetLowering::LowerFormalArguments(
   switch (CallConv)
   {
     default:
-      llvm_unreachable("Unsupported calling convention");
+      report_fatal_error("Unsupported calling convention");
     case CallingConv::C:
     case CallingConv::Fast:
       return LowerCCCArguments(Chain, CallConv, isVarArg,

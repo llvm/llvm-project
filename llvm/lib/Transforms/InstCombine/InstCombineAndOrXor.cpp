@@ -314,8 +314,8 @@ static unsigned getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C,
                                          ICmpInst::Predicate &PredR) {
   if (LHS->getOperand(0)->getType() != RHS->getOperand(0)->getType())
     return 0;
-  // vectors are not (yet?) supported
-  if (LHS->getOperand(0)->getType()->isVectorTy())
+  // vectors are not (yet?) supported. Don't support pointers either.
+  if (!LHS->getOperand(0)->getType()->isIntegerTy())
     return 0;
 
   // Here comes the tricky part:
@@ -332,20 +332,14 @@ static unsigned getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C,
     L21 = L22 = L1 = nullptr;
   } else {
     // Look for ANDs in the LHS icmp.
-    if (!L1->getType()->isIntegerTy()) {
-      // You can icmp pointers, for example. They really aren't masks.
-      L11 = L12 = nullptr;
-    } else if (!match(L1, m_And(m_Value(L11), m_Value(L12)))) {
+    if (!match(L1, m_And(m_Value(L11), m_Value(L12)))) {
       // Any icmp can be viewed as being trivially masked; if it allows us to
       // remove one, it's worth it.
       L11 = L1;
       L12 = Constant::getAllOnesValue(L1->getType());
     }
 
-    if (!L2->getType()->isIntegerTy()) {
-      // You can icmp pointers, for example. They really aren't masks.
-      L21 = L22 = nullptr;
-    } else if (!match(L2, m_And(m_Value(L21), m_Value(L22)))) {
+    if (!match(L2, m_And(m_Value(L21), m_Value(L22)))) {
       L21 = L2;
       L22 = Constant::getAllOnesValue(L2->getType());
     }
@@ -372,7 +366,7 @@ static unsigned getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C,
     E = R2;
     R1 = nullptr;
     Ok = true;
-  } else if (R1->getType()->isIntegerTy()) {
+  } else {
     if (!match(R1, m_And(m_Value(R11), m_Value(R12)))) {
       // As before, model no mask as a trivial mask if it'll let us do an
       // optimization.
@@ -398,7 +392,7 @@ static unsigned getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C,
     return 0;
 
   // Look for ANDs on the right side of the RHS icmp.
-  if (!Ok && R2->getType()->isIntegerTy()) {
+  if (!Ok) {
     if (!match(R2, m_And(m_Value(R11), m_Value(R12)))) {
       R11 = R2;
       R12 = Constant::getAllOnesValue(R2->getType());

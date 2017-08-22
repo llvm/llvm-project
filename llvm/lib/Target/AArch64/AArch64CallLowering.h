@@ -56,6 +56,7 @@ private:
   void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
                          const DataLayout &DL, MachineRegisterInfo &MRI,
+                         CallingConv::ID CallConv,
                          const SplitArgTy &SplitArg) const;
 };
 

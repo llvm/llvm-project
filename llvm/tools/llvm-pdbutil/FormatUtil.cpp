@@ -11,10 +11,12 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
+using namespace llvm::codeview;
 using namespace llvm::pdb;
 
 std::string llvm::pdb::truncateStringBack(StringRef S, uint32_t MaxLen) {
@@ -95,6 +97,64 @@ std::string llvm::pdb::typesetStringList(uint32_t IndentLevel,
   }
   Result += "]";
   return Result;
+}
+
+std::string llvm::pdb::formatChunkKind(DebugSubsectionKind Kind,
+                                       bool Friendly) {
+  if (Friendly) {
+    switch (Kind) {
+      RETURN_CASE(DebugSubsectionKind, None, "none");
+      RETURN_CASE(DebugSubsectionKind, Symbols, "symbols");
+      RETURN_CASE(DebugSubsectionKind, Lines, "lines");
+      RETURN_CASE(DebugSubsectionKind, StringTable, "strings");
+      RETURN_CASE(DebugSubsectionKind, FileChecksums, "checksums");
+      RETURN_CASE(DebugSubsectionKind, FrameData, "frames");
+      RETURN_CASE(DebugSubsectionKind, InlineeLines, "inlinee lines");
+      RETURN_CASE(DebugSubsectionKind, CrossScopeImports, "xmi");
+      RETURN_CASE(DebugSubsectionKind, CrossScopeExports, "xme");
+      RETURN_CASE(DebugSubsectionKind, ILLines, "il lines");
+      RETURN_CASE(DebugSubsectionKind, FuncMDTokenMap, "func md token map");
+      RETURN_CASE(DebugSubsectionKind, TypeMDTokenMap, "type md token map");
+      RETURN_CASE(DebugSubsectionKind, MergedAssemblyInput,
+                  "merged assembly input");
+      RETURN_CASE(DebugSubsectionKind, CoffSymbolRVA, "coff symbol rva");
+    }
+  } else {
+    switch (Kind) {
+      RETURN_CASE(DebugSubsectionKind, None, "none");
+      RETURN_CASE(DebugSubsectionKind, Symbols, "DEBUG_S_SYMBOLS");
+      RETURN_CASE(DebugSubsectionKind, Lines, "DEBUG_S_LINES");
+      RETURN_CASE(DebugSubsectionKind, StringTable, "DEBUG_S_STRINGTABLE");
+      RETURN_CASE(DebugSubsectionKind, FileChecksums, "DEBUG_S_FILECHKSMS");
+      RETURN_CASE(DebugSubsectionKind, FrameData, "DEBUG_S_FRAMEDATA");
+      RETURN_CASE(DebugSubsectionKind, InlineeLines, "DEBUG_S_INLINEELINES");
+      RETURN_CASE(DebugSubsectionKind, CrossScopeImports,
+                  "DEBUG_S_CROSSSCOPEIMPORTS");
+      RETURN_CASE(DebugSubsectionKind, CrossScopeExports,
+                  "DEBUG_S_CROSSSCOPEEXPORTS");
+      RETURN_CASE(DebugSubsectionKind, ILLines, "DEBUG_S_IL_LINES");
+      RETURN_CASE(DebugSubsectionKind, FuncMDTokenMap,
+                  "DEBUG_S_FUNC_MDTOKEN_MAP");
+      RETURN_CASE(DebugSubsectionKind, TypeMDTokenMap,
+                  "DEBUG_S_TYPE_MDTOKEN_MAP");
+      RETURN_CASE(DebugSubsectionKind, MergedAssemblyInput,
+                  "DEBUG_S_MERGED_ASSEMBLYINPUT");
+      RETURN_CASE(DebugSubsectionKind, CoffSymbolRVA,
+                  "DEBUG_S_COFF_SYMBOL_RVA");
+    }
+  }
+  return formatUnknownEnum(Kind);
+}
+
+std::string llvm::pdb::formatSymbolKind(SymbolKind K) {
+  switch (uint32_t(K)) {
+#define SYMBOL_RECORD(EnumName, value, name)                                   \
+  case EnumName:                                                               \
+    return #EnumName;
+#define CV_SYMBOL(EnumName, value) SYMBOL_RECORD(EnumName, value, EnumName)
+#include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
+  }
+  return formatUnknownEnum(K);
 }
 
 std::string llvm::pdb::formatSegmentOffset(uint16_t Segment, uint32_t Offset) {

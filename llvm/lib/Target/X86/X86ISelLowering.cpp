@@ -29567,8 +29567,9 @@ static bool detectZextAbsDiff(const SDValue &Select, SDValue &Op0,
   // In SetLT case, The second operand of the comparison can be either 1 or 0.
   APInt SplatVal;
   if ((CC == ISD::SETLT) &&
-      !((ISD::isConstantSplatVector(SetCC.getOperand(1).getNode(), SplatVal) &&
-         SplatVal == 1) ||
+      !((ISD::isConstantSplatVector(SetCC.getOperand(1).getNode(), SplatVal,
+                                    /*AllowShrink*/false) &&
+         SplatVal.isOneValue()) ||
         (ISD::isBuildVectorAllZeros(SetCC.getOperand(1).getNode()))))
     return false;
 
@@ -32083,7 +32084,8 @@ static SDValue combineAndMaskToShift(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   APInt SplatVal;
-  if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal) ||
+  if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal,
+                                  /*AllowShrink*/false) ||
       !SplatVal.isMask())
     return SDValue();
 
@@ -32667,7 +32669,8 @@ static SDValue detectUSatPattern(SDValue In, EVT VT) {
     "Unexpected types for truncate operation");
 
   APInt C;
-  if (ISD::isConstantSplatVector(In.getOperand(1).getNode(), C)) {
+  if (ISD::isConstantSplatVector(In.getOperand(1).getNode(), C,
+                                 /*AllowShrink*/false)) {
     // C should be equal to UINT32_MAX / UINT16_MAX / UINT8_MAX according
     // the element size of the destination type.
     return C.isMask(VT.getScalarSizeInBits()) ? In.getOperand(0) :
@@ -35374,7 +35377,8 @@ static SDValue combineIncDecVector(SDNode *N, SelectionDAG &DAG) {
 
   SDNode *N1 = N->getOperand(1).getNode();
   APInt SplatVal;
-  if (!ISD::isConstantSplatVector(N1, SplatVal) || !SplatVal.isOneValue())
+  if (!ISD::isConstantSplatVector(N1, SplatVal, /*AllowShrink*/false) ||
+      !SplatVal.isOneValue())
     return SDValue();
 
   SDValue AllOnesVec = getOnesVector(VT, DAG, SDLoc(N));

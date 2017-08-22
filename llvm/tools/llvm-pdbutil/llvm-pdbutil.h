@@ -127,6 +127,7 @@ namespace dump {
 extern llvm::cl::opt<bool> DumpSummary;
 extern llvm::cl::opt<bool> DumpFpm;
 extern llvm::cl::opt<bool> DumpStreams;
+extern llvm::cl::opt<bool> DumpModuleStats;
 extern llvm::cl::opt<bool> DumpStreamBlocks;
 
 extern llvm::cl::opt<bool> DumpLines;
@@ -146,6 +147,7 @@ extern llvm::cl::opt<bool> DumpIdData;
 extern llvm::cl::opt<bool> DumpIdExtras;
 extern llvm::cl::list<uint32_t> DumpIdIndex;
 extern llvm::cl::opt<uint32_t> DumpModi;
+extern llvm::cl::opt<bool> JustMyCode;
 extern llvm::cl::opt<bool> DumpSymbols;
 extern llvm::cl::opt<bool> DumpSymRecordBytes;
 extern llvm::cl::opt<bool> DumpGlobals;

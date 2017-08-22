@@ -2284,14 +2284,14 @@ bool llvm::UpgradeDebugInfo(Module &M) {
 }
 
 bool llvm::UpgradeModuleFlags(Module &M) {
-  const NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
+  NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
   if (!ModFlags)
     return false;
 
-  bool HasObjCFlag = false, HasClassProperties = false;
+  bool HasObjCFlag = false, HasClassProperties = false, Changed = false;
   for (unsigned I = 0, E = ModFlags->getNumOperands(); I != E; ++I) {
     MDNode *Op = ModFlags->getOperand(I);
-    if (Op->getNumOperands() < 2)
+    if (Op->getNumOperands() != 3)
       continue;
     MDString *ID = dyn_cast_or_null<MDString>(Op->getOperand(1));
     if (!ID)
@@ -2300,7 +2300,24 @@ bool llvm::UpgradeModuleFlags(Module &M) {
       HasObjCFlag = true;
     if (ID->getString() == "Objective-C Class Properties")
       HasClassProperties = true;
+    // Upgrade PIC/PIE Module Flags. The module flag behavior for these two
+    // field was Error and now they are Max.
+    if (ID->getString() == "PIC Level" || ID->getString() == "PIE Level") {
+      if (auto *Behavior =
+              mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(0))) {
+        if (Behavior->getLimitedValue() == Module::Error) {
+          Type *Int32Ty = Type::getInt32Ty(M.getContext());
+          Metadata *Ops[3] = {
+              ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Module::Max)),
+              MDString::get(M.getContext(), ID->getString()),
+              Op->getOperand(2)};
+          ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
+          Changed = true;
+        }
+      }
+    }
   }
+
   // "Objective-C Class Properties" is recently added for Objective-C. We
   // upgrade ObjC bitcodes to contain a "Objective-C Class Properties" module
   // flag of value 0, so we can correclty downgrade this flag when trying to
@@ -2309,9 +2326,10 @@ bool llvm::UpgradeModuleFlags(Module &M) {
   if (HasObjCFlag && !HasClassProperties) {
     M.addModuleFlag(llvm::Module::Override, "Objective-C Class Properties",
                     (uint32_t)0);
-    return true;
+    Changed = true;
   }
-  return false;
+
+  return Changed;
 }
 
 static bool isOldLoopArgument(Metadata *MD) {

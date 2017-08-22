@@ -627,11 +627,6 @@ private:
                      const DiagnosticLocation &Loc, const Twine &Msg)
       : DiagnosticInfoIROptimization(DK_OptimizationRemark, DS_Remark, PassName,
                                      Fn, Loc, Msg) {}
-
-  friend void emitOptimizationRemark(LLVMContext &Ctx, const char *PassName,
-                                     const Function &Fn,
-                                     const DiagnosticLocation &Loc,
-                                     const Twine &Msg);
 };
 
 /// Diagnostic information for missed-optimization remarks.
@@ -675,12 +670,6 @@ private:
                            const DiagnosticLocation &Loc, const Twine &Msg)
       : DiagnosticInfoIROptimization(DK_OptimizationRemarkMissed, DS_Remark,
                                      PassName, Fn, Loc, Msg) {}
-
-  friend void emitOptimizationRemarkMissed(LLVMContext &Ctx,
-                                           const char *PassName,
-                                           const Function &Fn,
-                                           const DiagnosticLocation &Loc,
-                                           const Twine &Msg);
 };
 
 /// Diagnostic information for optimization analysis remarks.
@@ -752,12 +741,6 @@ private:
                              const DiagnosticLocation &Loc, const Twine &Msg)
       : DiagnosticInfoIROptimization(DK_OptimizationRemarkAnalysis, DS_Remark,
                                      PassName, Fn, Loc, Msg) {}
-
-  friend void emitOptimizationRemarkAnalysis(LLVMContext &Ctx,
-                                             const char *PassName,
-                                             const Function &Fn,
-                                             const DiagnosticLocation &Loc,
-                                             const Twine &Msg);
 };
 
 /// Diagnostic information for optimization analysis remarks related to
@@ -799,10 +782,6 @@ private:
                                       const Twine &Msg)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisFPCommute,
                                    PassName, Fn, Loc, Msg) {}
-
-  friend void emitOptimizationRemarkAnalysisFPCommute(
-      LLVMContext &Ctx, const char *PassName, const Function &Fn,
-      const DiagnosticLocation &Loc, const Twine &Msg);
 };
 
 /// Diagnostic information for optimization analysis remarks related to
@@ -843,10 +822,6 @@ private:
                                      const Twine &Msg)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisAliasing,
                                    PassName, Fn, Loc, Msg) {}
-
-  friend void emitOptimizationRemarkAnalysisAliasing(
-      LLVMContext &Ctx, const char *PassName, const Function &Fn,
-      const DiagnosticLocation &Loc, const Twine &Msg);
 };
 
 /// Diagnostic information for machine IR parser.
@@ -888,74 +863,6 @@ public:
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DiagnosticInfo, LLVMDiagnosticInfoRef)
-
-/// \brief Legacy interface to emit an optimization-applied message.  Use
-/// (Machine)OptimizationRemarkEmitter instead.
-///
-/// \p PassName is the name of the pass emitting the message. If -Rpass= is
-/// given and \p PassName matches the regular expression in -Rpass, then the
-/// remark will be emitted. \p Fn is the function triggering the remark, \p Loc
-/// is the debug location where the diagnostic is generated. \p Msg is the
-/// message string to use.
-void emitOptimizationRemark(LLVMContext &Ctx, const char *PassName,
-                            const Function &Fn, const DiagnosticLocation &Loc,
-                            const Twine &Msg);
-
-/// \brief Legacy interface to emit an optimization-missed message.  Use
-/// (Machine)OptimizationRemarkEmitter instead.
-///
-/// \p PassName is the name of the pass emitting the message. If -Rpass-missed=
-/// is given and \p PassName matches the regular expression in -Rpass, then the
-/// remark will be emitted. \p Fn is the function triggering the remark, \p Loc
-/// is the debug location where the diagnostic is generated. \p Msg is the
-/// message string to use.
-void emitOptimizationRemarkMissed(LLVMContext &Ctx, const char *PassName,
-                                  const Function &Fn,
-                                  const DiagnosticLocation &Loc,
-                                  const Twine &Msg);
-
-/// \brief Legacy interface to emit an optimization analysis remark message.
-/// Use (Machine)OptimizationRemarkEmitter instead.
-///
-/// \p PassName is the name of the pass emitting the message. If
-/// -Rpass-analysis= is given and \p PassName matches the regular expression in
-/// -Rpass, then the remark will be emitted. \p Fn is the function triggering
-/// the remark, \p Loc is the debug location where the diagnostic is
-/// generated. \p Msg is the message string to use.
-void emitOptimizationRemarkAnalysis(LLVMContext &Ctx, const char *PassName,
-                                    const Function &Fn,
-                                    const DiagnosticLocation &Loc,
-                                    const Twine &Msg);
-
-/// \brief Legacy interface to emit an optimization analysis remark related to
-/// messages about floating-point non-commutativity.  Use
-/// (Machine)OptimizationRemarkEmitter instead.
-///
-/// \p PassName is the name of the pass emitting the message. If
-/// -Rpass-analysis= is given and \p PassName matches the regular expression in
-/// -Rpass, then the remark will be emitted. \p Fn is the function triggering
-/// the remark, \p Loc is the debug location where the diagnostic is
-/// generated. \p Msg is the message string to use.
-void emitOptimizationRemarkAnalysisFPCommute(LLVMContext &Ctx,
-                                             const char *PassName,
-                                             const Function &Fn,
-                                             const DiagnosticLocation &Loc,
-                                             const Twine &Msg);
-
-/// \brief Legacy interface to emit an optimization analysis remark related to
-/// messages about pointer aliasing.  Use (Machine)OptimizationRemarkEmitter
-/// instead.
-///
-/// \p PassName is the name of the pass emitting the message.
-/// If -Rpass-analysis= is given and \p PassName matches the regular expression
-/// in -Rpass, then the remark will be emitted. \p Fn is the function triggering
-/// the remark, \p Loc is the debug location where the diagnostic is generated.
-/// \p Msg is the message string to use.
-void emitOptimizationRemarkAnalysisAliasing(LLVMContext &Ctx,
-                                            const char *PassName,
-                                            const Function &Fn,
-                                            const DiagnosticLocation &Loc,
-                                            const Twine &Msg);
 
 /// Diagnostic information for optimization failures.
 class DiagnosticInfoOptimizationFailure : public DiagnosticInfoIROptimization {

@@ -1648,16 +1648,6 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     Lex();
     return false;
   }
-  if (Lexer.is(AsmToken::Hash)) {
-    // Seeing a hash here means that it was an end-of-line comment in
-    // an asm syntax where hash's are not comment and the previous
-    // statement parser did not check the end of statement. Relex as
-    // EndOfStatement.
-    StringRef CommentStr = parseStringToEndOfStatement();
-    Lexer.Lex();
-    Lexer.UnLex(AsmToken(AsmToken::EndOfStatement, CommentStr));
-    return false;
-  }
   // Statements always start with an identifier.
   AsmToken ID = getTok();
   SMLoc IDLoc = ID.getLoc();

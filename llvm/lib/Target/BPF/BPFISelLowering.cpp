@@ -158,7 +158,7 @@ SDValue BPFTargetLowering::LowerFormalArguments(
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   switch (CallConv) {
   default:
-    llvm_unreachable("Unsupported calling convention");
+    report_fatal_error("Unsupported calling convention");
   case CallingConv::C:
   case CallingConv::Fast:
     break;

@@ -83,6 +83,8 @@ private:
                     MachineFunction &MF) const;
   bool selectExtract(MachineInstr &I, MachineRegisterInfo &MRI,
                      MachineFunction &MF) const;
+  bool selectCondBranch(MachineInstr &I, MachineRegisterInfo &MRI,
+                        MachineFunction &MF) const;
 
   // emit insert subreg instruction and insert it before MachineInstr &I
   bool emitInsertSubreg(unsigned DstReg, unsigned SrcReg, MachineInstr &I,
@@ -329,6 +331,8 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   if (selectExtract(I, MRI, MF))
     return true;
   if (selectInsert(I, MRI, MF))
+    return true;
+  if (selectCondBranch(I, MRI, MF))
     return true;
 
   return false;
@@ -1101,6 +1105,29 @@ bool X86InstructionSelector::selectMergeValues(MachineInstr &I,
   I.eraseFromParent();
   return true;
 }
+
+bool X86InstructionSelector::selectCondBranch(MachineInstr &I,
+                                              MachineRegisterInfo &MRI,
+                                              MachineFunction &MF) const {
+  if (I.getOpcode() != TargetOpcode::G_BRCOND)
+    return false;
+
+  const unsigned CondReg = I.getOperand(0).getReg();
+  MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
+
+  MachineInstr &TestInst =
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::TEST8ri))
+           .addReg(CondReg)
+           .addImm(1);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::JNE_1))
+      .addMBB(DestMBB);
+
+  constrainSelectedInstRegOperands(TestInst, TII, TRI, RBI);
+
+  I.eraseFromParent();
+  return true;
+}
+
 InstructionSelector *
 llvm::createX86InstructionSelector(const X86TargetMachine &TM,
                                    X86Subtarget &Subtarget,

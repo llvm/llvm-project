@@ -1,7 +1,0 @@
-RUN: %cpp_compiler %S/TraceMallocTest.cpp -o %t-TraceMallocTest
-
-RUN: %t-TraceMallocTest -seed=1 -trace_malloc=1 -runs=10000 2>&1 | FileCheck %s
-CHECK-DAG: MallocFreeTracer: STOP 0 0 (same)
-CHECK-DAG: MallocFreeTracer: STOP 0 1 (DIFFERENT)
-CHECK-DAG: MallocFreeTracer: STOP 1 0 (DIFFERENT)
-CHECK-DAG: MallocFreeTracer: STOP 1 1 (same)
