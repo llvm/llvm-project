@@ -215,7 +215,8 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die) {
   for (auto Range : Die.getAddressRanges()) {
     if (Range.LowPC >= Range.HighPC) {
       ++NumErrors;
-      OS << format("error: Invalid address range [0x%08x - 0x%08x].\n",
+      OS << format("error: Invalid address range [0x%08" PRIx64
+                   " - 0x%08" PRIx64 "].\n",
                    Range.LowPC, Range.HighPC);
     }
   }
@@ -524,15 +525,16 @@ unsigned DWARFVerifier::verifyAccelTable(const DWARFSection *AccelSection,
     uint32_t StrpOffset;
     uint32_t StringOffset;
     uint32_t StringCount = 0;
-    uint32_t DieOffset = dwarf::DW_INVALID_OFFSET;
-
+    unsigned Offset;
+    unsigned Tag;
     while ((StrpOffset = AccelSectionData.getU32(&HashDataOffset)) != 0) {
       const uint32_t NumHashDataObjects =
           AccelSectionData.getU32(&HashDataOffset);
       for (uint32_t HashDataIdx = 0; HashDataIdx < NumHashDataObjects;
            ++HashDataIdx) {
-        DieOffset = AccelTable.readAtoms(HashDataOffset);
-        if (!DCtx.getDIEForOffset(DieOffset)) {
+        std::tie(Offset, Tag) = AccelTable.readAtoms(HashDataOffset);
+        auto Die = DCtx.getDIEForOffset(Offset);
+        if (!Die) {
           const uint32_t BucketIdx =
               NumBuckets ? (Hash % NumBuckets) : UINT32_MAX;
           StringOffset = StrpOffset;
@@ -545,8 +547,16 @@ unsigned DWARFVerifier::verifyAccelTable(const DWARFSection *AccelSection,
               "Str[%u] = 0x%08x "
               "DIE[%d] = 0x%08x is not a valid DIE offset for \"%s\".\n",
               SectionName, BucketIdx, HashIdx, Hash, StringCount, StrpOffset,
-              HashDataIdx, DieOffset, Name);
+              HashDataIdx, Offset, Name);
 
+          ++NumErrors;
+          continue;
+        }
+        if ((Tag != dwarf::DW_TAG_null) && (Die.getTag() != Tag)) {
+          OS << "\terror: Tag " << dwarf::TagString(Tag)
+             << " in accelerator table does not match Tag "
+             << dwarf::TagString(Die.getTag()) << " of DIE[" << HashDataIdx
+             << "].\n";
           ++NumErrors;
         }
       }

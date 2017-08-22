@@ -141,10 +141,11 @@ class DWARFVerifier {
   /// - The size of the section is as large as what the header describes
   /// - There is at least one atom
   /// - The form for each atom is valid
+  /// - The tag for each DIE in the table is valid
   /// - The buckets have a valid index, or they are empty
   /// - Each hashdata offset is valid
   /// - Each DIE is valid
-  /// 
+  ///
   /// \param AccelSection pointer to the section containing the acceleration table
   /// \param StrData pointer to the string section
   /// \param SectionName the name of the table we're verifying
