@@ -24,17 +24,6 @@ using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
-static std::string getSymbolKindName(SymbolKind K) {
-  switch (uint32_t(K)) {
-#define SYMBOL_RECORD(EnumName, value, name)                                   \
-  case EnumName:                                                               \
-    return #EnumName;
-#define CV_SYMBOL(EnumName, value) SYMBOL_RECORD(EnumName, value, EnumName)
-#include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
-  }
-  return "";
-}
-
 static std::string formatLocalSymFlags(uint32_t IndentLevel,
                                        LocalSymFlags Flags) {
   std::vector<std::string> Opts;
@@ -378,7 +367,7 @@ Error MinimalSymbolDumper::visitSymbolBegin(codeview::CVSymbol &Record,
   // append to the existing line.
   P.formatLine("{0} | {1} [size = {2}]",
                fmt_align(Offset, AlignStyle::Right, 6),
-               getSymbolKindName(Record.Type), Record.length());
+               formatSymbolKind(Record.Type), Record.length());
   P.Indent();
   return Error::success();
 }

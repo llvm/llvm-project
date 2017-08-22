@@ -21,8 +21,7 @@ using namespace llvm::codeview;
 
 SymbolSerializer::SymbolSerializer(BumpPtrAllocator &Allocator,
                                    CodeViewContainer Container)
-    : Storage(Allocator), RecordBuffer(MaxRecordLength),
-      Stream(RecordBuffer, support::little), Writer(Stream),
+    : Storage(Allocator), Stream(RecordBuffer, support::little), Writer(Stream),
       Mapping(Writer, Container) {}
 
 Error SymbolSerializer::visitSymbolBegin(CVSymbol &Record) {

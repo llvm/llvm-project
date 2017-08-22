@@ -671,7 +671,7 @@ WindowsManifestMerger::WindowsManifestMergerImpl::~WindowsManifestMergerImpl() {
 
 Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
     const MemoryBuffer &Manifest) {
-  return Error::success();
+  return make_error<WindowsManifestError>("no libxml2");
 }
 
 std::unique_ptr<MemoryBuffer>

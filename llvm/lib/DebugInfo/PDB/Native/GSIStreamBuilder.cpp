@@ -169,21 +169,15 @@ Error GSIStreamBuilder::finalizeMsfLayout() {
   return Error::success();
 }
 
-static bool comparePubSymByAddrAndName(const CVSymbol *LS, const CVSymbol *RS) {
-  assert(LS->kind() == SymbolKind::S_PUB32);
-  assert(RS->kind() == SymbolKind::S_PUB32);
+static bool comparePubSymByAddrAndName(
+    const std::pair<const CVSymbol *, const PublicSym32 *> &LS,
+    const std::pair<const CVSymbol *, const PublicSym32 *> &RS) {
+  if (LS.second->Segment != RS.second->Segment)
+    return LS.second->Segment < RS.second->Segment;
+  if (LS.second->Offset != RS.second->Offset)
+    return LS.second->Offset < RS.second->Offset;
 
-  PublicSym32 PSL =
-      cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(*LS));
-  PublicSym32 PSR =
-      cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(*RS));
-
-  if (PSL.Segment != PSR.Segment)
-    return PSL.Segment < PSR.Segment;
-  if (PSL.Offset != PSR.Offset)
-    return PSL.Offset < PSR.Offset;
-
-  return PSL.Name < PSR.Name;
+  return LS.second->Name < RS.second->Name;
 }
 
 /// Compute the address map. The address map is an array of symbol offsets
@@ -191,12 +185,20 @@ static bool comparePubSymByAddrAndName(const CVSymbol *LS, const CVSymbol *RS) {
 static std::vector<ulittle32_t> computeAddrMap(ArrayRef<CVSymbol> Records) {
   // Make a vector of pointers to the symbols so we can sort it by address.
   // Also gather the symbol offsets while we're at it.
-  std::vector<const CVSymbol *> PublicsByAddr;
+
+  std::vector<PublicSym32> DeserializedPublics;
+  std::vector<std::pair<const CVSymbol *, const PublicSym32 *>> PublicsByAddr;
   std::vector<uint32_t> SymOffsets;
+  DeserializedPublics.reserve(Records.size());
   PublicsByAddr.reserve(Records.size());
+  SymOffsets.reserve(Records.size());
+
   uint32_t SymOffset = 0;
   for (const CVSymbol &Sym : Records) {
-    PublicsByAddr.push_back(&Sym);
+    assert(Sym.kind() == SymbolKind::S_PUB32);
+    DeserializedPublics.push_back(
+        cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(Sym)));
+    PublicsByAddr.emplace_back(&Sym, &DeserializedPublics.back());
     SymOffsets.push_back(SymOffset);
     SymOffset += Sym.length();
   }
@@ -206,8 +208,8 @@ static std::vector<ulittle32_t> computeAddrMap(ArrayRef<CVSymbol> Records) {
   // Fill in the symbol offsets in the appropriate order.
   std::vector<ulittle32_t> AddrMap;
   AddrMap.reserve(Records.size());
-  for (const CVSymbol *Sym : PublicsByAddr) {
-    ptrdiff_t Idx = std::distance(Records.data(), Sym);
+  for (auto &Sym : PublicsByAddr) {
+    ptrdiff_t Idx = std::distance(Records.data(), Sym.first);
     assert(Idx >= 0 && size_t(Idx) < Records.size());
     AddrMap.push_back(ulittle32_t(SymOffsets[Idx]));
   }

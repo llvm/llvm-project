@@ -594,6 +594,15 @@ canonicalizeMinMaxWithConstant(SelectInst &Sel, ICmpInst &Cmp,
 /// icmp instruction with zero, and we have an 'and' with the non-constant value
 /// and a power of two we can turn the select into a shift on the result of the
 /// 'and'.
+/// This folds:
+///  select (icmp eq (and X, C1)), C2, C3
+///    iff C1 is a power 2 and the difference between C2 and C3 is a power of 2.
+/// To something like:
+///  (shr (and (X, C1)), (log2(C1) - log2(C2-C3))) + C3
+/// Or:
+///  (shl (and (X, C1)), (log2(C2-C3) - log2(C1))) + C3
+/// With some variations depending if C3 is larger than C2, or the shift
+/// isn't needed, or the bit widths don't match.
 static Value *foldSelectICmpAnd(Type *SelType, const ICmpInst *IC,
                                 APInt TrueVal, APInt FalseVal,
                                 InstCombiner::BuilderTy &Builder) {
@@ -603,16 +612,32 @@ static Value *foldSelectICmpAnd(Type *SelType, const ICmpInst *IC,
   if (SelType->isVectorTy() != IC->getType()->isVectorTy())
     return nullptr;
 
-  if (!IC->isEquality())
-    return nullptr;
+  Value *V;
+  APInt AndMask;
+  bool CreateAnd = false;
+  ICmpInst::Predicate Pred = IC->getPredicate();
+  if (ICmpInst::isEquality(Pred)) {
+    if (!match(IC->getOperand(1), m_Zero()))
+      return nullptr;
 
-  if (!match(IC->getOperand(1), m_Zero()))
-    return nullptr;
+    V = IC->getOperand(0);
 
-  const APInt *AndRHS;
-  Value *LHS = IC->getOperand(0);
-  if (!match(LHS, m_And(m_Value(), m_Power2(AndRHS))))
+    const APInt *AndRHS;
+    if (!match(V, m_And(m_Value(), m_Power2(AndRHS))))
+      return nullptr;
+
+    AndMask = *AndRHS;
+  } else if (decomposeBitTestICmp(IC->getOperand(0), IC->getOperand(1),
+                                  Pred, V, AndMask)) {
+    assert(ICmpInst::isEquality(Pred) && "Not equality test?");
+
+    if (!AndMask.isPowerOf2())
+      return nullptr;
+
+    CreateAnd = true;
+  } else {
     return nullptr;
+  }
 
   // If both select arms are non-zero see if we have a select of the form
   // 'x ? 2^n + C : C'. Then we can offset both arms by C, use the logic
@@ -639,11 +664,15 @@ static Value *foldSelectICmpAnd(Type *SelType, const ICmpInst *IC,
   // desired result.
   const APInt &ValC = !TrueVal.isNullValue() ? TrueVal : FalseVal;
   unsigned ValZeros = ValC.logBase2();
-  unsigned AndZeros = AndRHS->logBase2();
+  unsigned AndZeros = AndMask.logBase2();
+
+  if (CreateAnd) {
+    // Insert the AND instruction on the input to the truncate.
+    V = Builder.CreateAnd(V, ConstantInt::get(V->getType(), AndMask));
+  }
 
   // If types don't match we can still convert the select by introducing a zext
   // or a trunc of the 'and'.
-  Value *V = LHS;
   if (ValZeros > AndZeros) {
     V = Builder.CreateZExtOrTrunc(V, SelType);
     V = Builder.CreateShl(V, ValZeros - AndZeros);
@@ -656,7 +685,7 @@ static Value *foldSelectICmpAnd(Type *SelType, const ICmpInst *IC,
   // Okay, now we know that everything is set up, we just don't know whether we
   // have a icmp_ne or icmp_eq and whether the true or false val is the zero.
   bool ShouldNotVal = !TrueVal.isNullValue();
-  ShouldNotVal ^= IC->getPredicate() == ICmpInst::ICMP_NE;
+  ShouldNotVal ^= Pred == ICmpInst::ICMP_NE;
   if (ShouldNotVal)
     V = Builder.CreateXor(V, ValC);
 
@@ -672,15 +701,6 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
   Value *TrueVal = SI.getTrueValue();
   Value *FalseVal = SI.getFalseValue();
 
-  {
-    const APInt *TrueValC, *FalseValC;
-    if (match(TrueVal, m_APInt(TrueValC)) &&
-        match(FalseVal, m_APInt(FalseValC)))
-      if (Value *V = foldSelectICmpAnd(SI.getType(), ICI, *TrueValC,
-                                       *FalseValC, Builder))
-        return replaceInstUsesWith(SI, V);
-  }
-
   if (Instruction *NewSel = canonicalizeMinMaxWithConstant(SI, *ICI, Builder))
     return NewSel;
 
@@ -695,6 +715,7 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
   // FIXME: Type and constness constraints could be lifted, but we have to
   //        watch code size carefully. We should consider xor instead of
   //        sub/add when we decide to do that.
+  // TODO: Merge this with foldSelectICmpAnd somehow.
   if (CmpLHS->getType()->isIntOrIntVectorTy() &&
       CmpLHS->getType() == TrueVal->getType()) {
     const APInt *C1, *C2;
@@ -723,6 +744,15 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
         }
       }
     }
+  }
+
+  {
+    const APInt *TrueValC, *FalseValC;
+    if (match(TrueVal, m_APInt(TrueValC)) &&
+        match(FalseVal, m_APInt(FalseValC)))
+      if (Value *V = foldSelectICmpAnd(SI.getType(), ICI, *TrueValC,
+                                       *FalseValC, Builder))
+        return replaceInstUsesWith(SI, V);
   }
 
   // NOTE: if we wanted to, this is where to detect integer MIN/MAX

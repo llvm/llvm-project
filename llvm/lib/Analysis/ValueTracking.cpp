@@ -1562,6 +1562,8 @@ void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
 /// types and vectors of integers.
 bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
                             const Query &Q) {
+  assert(Depth <= MaxDepth && "Limit Search Depth");
+
   if (const Constant *C = dyn_cast<Constant>(V)) {
     if (C->isNullValue())
       return OrZero;
@@ -2021,6 +2023,7 @@ static unsigned ComputeNumSignBits(const Value *V, unsigned Depth,
 /// vector element with the mininum number of known sign bits.
 static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
                                        const Query &Q) {
+  assert(Depth <= MaxDepth && "Limit Search Depth");
 
   // We return the minimum number of sign bits that are guaranteed to be present
   // in V, so for undef we have to conservatively return 1.  We don't have the

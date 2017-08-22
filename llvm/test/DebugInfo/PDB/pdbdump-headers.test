@@ -22,39 +22,39 @@ ALL-NEXT:   Has conflicting types: false
 ALL-NEXT:   Is stripped: false
 ALL:                                  Streams
 ALL-NEXT: ============================================================
-ALL-NEXT:     Stream  0: [Old MSF Directory] (40 bytes)
+ALL-NEXT:     Stream  0 (  40 bytes): [Old MSF Directory]
 ALL-NEXT:                Blocks: [8]
-ALL-NEXT:     Stream  1: [PDB Stream] (118 bytes)
+ALL-NEXT:     Stream  1 ( 118 bytes): [PDB Stream]
 ALL-NEXT:                Blocks: [19]
-ALL-NEXT:     Stream  2: [TPI Stream] (5392 bytes)
+ALL-NEXT:     Stream  2 (5392 bytes): [TPI Stream]
 ALL-NEXT:                Blocks: [18, 17]
-ALL-NEXT:     Stream  3: [DBI Stream] (739 bytes)
+ALL-NEXT:     Stream  3 ( 739 bytes): [DBI Stream]
 ALL-NEXT:                Blocks: [14]
-ALL-NEXT:     Stream  4: [IPI Stream] (784 bytes)
+ALL-NEXT:     Stream  4 ( 784 bytes): [IPI Stream]
 ALL-NEXT:                Blocks: [20]
-ALL-NEXT:     Stream  5: [Named Stream "/LinkInfo"] (0 bytes)
+ALL-NEXT:     Stream  5 (   0 bytes): [Named Stream "/LinkInfo"]
 ALL-NEXT:                Blocks: []
-ALL-NEXT:     Stream  6: [Global Symbol Hash] (556 bytes)
+ALL-NEXT:     Stream  6 ( 556 bytes): [Global Symbol Hash]
 ALL-NEXT:                Blocks: [11]
-ALL-NEXT:     Stream  7: [Public Symbol Hash] (604 bytes)
+ALL-NEXT:     Stream  7 ( 604 bytes): [Public Symbol Hash]
 ALL-NEXT:                Blocks: [13]
-ALL-NEXT:     Stream  8: [Public Symbol Records] (104 bytes)
+ALL-NEXT:     Stream  8 ( 104 bytes): [Symbol Records]
 ALL-NEXT:                Blocks: [12]
-ALL-NEXT:     Stream  9: [Named Stream "/src/headerblock"] (0 bytes)
+ALL-NEXT:     Stream  9 (   0 bytes): [Named Stream "/src/headerblock"]
 ALL-NEXT:                Blocks: []
-ALL-NEXT:     Stream 10: [Section Header Data] (160 bytes)
+ALL-NEXT:     Stream 10 ( 160 bytes): [Section Header Data]
 ALL-NEXT:                Blocks: [10]
-ALL-NEXT:     Stream 11: [New FPO Data] (32 bytes)
+ALL-NEXT:     Stream 11 (  32 bytes): [New FPO Data]
 ALL-NEXT:                Blocks: [15]
-ALL-NEXT:     Stream 12: [Module "d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj"] (308 bytes)
+ALL-NEXT:     Stream 12 ( 308 bytes): [Module "d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj"]
 ALL-NEXT:                Blocks: [6]
-ALL-NEXT:     Stream 13: [Named Stream "/names"] (239 bytes)
+ALL-NEXT:     Stream 13 ( 239 bytes): [Named Stream "/names"]
 ALL-NEXT:                Blocks: [16]
-ALL-NEXT:     Stream 14: [Module "* Linker *"] (520 bytes)
+ALL-NEXT:     Stream 14 ( 520 bytes): [Module "* Linker *"]
 ALL-NEXT:                Blocks: [7]
-ALL-NEXT:     Stream 15: [TPI Hash] (308 bytes)
+ALL-NEXT:     Stream 15 ( 308 bytes): [TPI Hash]
 ALL-NEXT:                Blocks: [21]
-ALL-NEXT:     Stream 16: [IPI Hash] (68 bytes)
+ALL-NEXT:     Stream 16 (  68 bytes): [IPI Hash]
 ALL-NEXT:                Blocks: [22]
 ALL:                                String Table
 ALL-NEXT: ============================================================
@@ -64,11 +64,11 @@ ALL-NEXT:    86 | 'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
 ALL-NEXT:   134 | '$T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + = '
 ALL:      		                    Modules
 ALL-NEXT: ============================================================
-ALL-NEXT:   Mod 0000 | Name: `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
+ALL-NEXT:   Mod 0000 | `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
 ALL-NEXT:              Obj: `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
 ALL-NEXT:              debug stream: 12, # files: 1, has ec info: false
 ALL-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-ALL-NEXT:   Mod 0001 | Name: `* Linker *`:
+ALL-NEXT:   Mod 0001 |  `* Linker *`:
 ALL-NEXT:              Obj: ``:
 ALL-NEXT:              debug stream: 14, # files: 0, has ec info: false
 ALL-NEXT:              pdb file ni: 1 `{{.*empty.pdb}}`, src file ni: 0 ``
@@ -605,195 +605,195 @@ BIG-NEXT:   Has conflicting types: false
 BIG-NEXT:   Is stripped: false
 BIG:                              Modules
 BIG-NEXT: ============================================================
-BIG-NEXT:   Mod 0000 | Name: `D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj`:
+BIG-NEXT:   Mod 0000 | `D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj`:
 BIG-NEXT:              Obj: `D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj`:
 BIG-NEXT:              debug stream: 12, # files: 1, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0001 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_cpu_disp_.obj`:
+BIG-NEXT:   Mod 0001 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_cpu_disp_.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 14, # files: 14, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0002 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_initsect_.obj`:
+BIG-NEXT:   Mod 0002 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_initsect_.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 15, # files: 19, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0003 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_sehprolg4_.obj`:
+BIG-NEXT:   Mod 0003 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_sehprolg4_.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 16, # files: 1, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 1 `f:\dd\vctools\crt\vcstartup\src\eh\i386\sehprolg4.asm`
-BIG-NEXT:   Mod 0004 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_chandler4gs_.obj`:
+BIG-NEXT:   Mod 0004 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_chandler4gs_.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 17, # files: 14, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0005 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_secchk_.obj`:
+BIG-NEXT:   Mod 0005 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_secchk_.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 18, # files: 14, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0006 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_cookie.obj`:
+BIG-NEXT:   Mod 0006 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_cookie.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 19, # files: 9, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0007 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_report.obj`:
+BIG-NEXT:   Mod 0007 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_report.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 20, # files: 14, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0008 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_support.obj`:
+BIG-NEXT:   Mod 0008 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_support.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 21, # files: 10, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0009 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\checkcfg.obj`:
+BIG-NEXT:   Mod 0009 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\checkcfg.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 22, # files: 14, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0010 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\guard_support.obj`:
+BIG-NEXT:   Mod 0010 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\guard_support.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 23, # files: 10, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0011 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\loadcfg.obj`:
+BIG-NEXT:   Mod 0011 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\loadcfg.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 24, # files: 9, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0012 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_dtor.obj`:
+BIG-NEXT:   Mod 0012 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_dtor.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 25, # files: 11, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0013 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_init.obj`:
+BIG-NEXT:   Mod 0013 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_init.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 26, # files: 10, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0014 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr_detection.obj`:
+BIG-NEXT:   Mod 0014 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr_detection.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 27, # files: 1, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0015 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_detection.obj`:
+BIG-NEXT:   Mod 0015 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_detection.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 28, # files: 1, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0016 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\argv_mode.obj`:
+BIG-NEXT:   Mod 0016 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\argv_mode.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 29, # files: 1, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0017 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\commit_mode.obj`:
+BIG-NEXT:   Mod 0017 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\commit_mode.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 30, # files: 1, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0018 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_local_stdio_options.obj`:
+BIG-NEXT:   Mod 0018 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_local_stdio_options.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 31, # files: 24, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0019 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\denormal_control.obj`:
+BIG-NEXT:   Mod 0019 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\denormal_control.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 32, # files: 1, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0020 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\env_mode.obj`:
+BIG-NEXT:   Mod 0020 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\env_mode.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 33, # files: 1, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0021 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\file_mode.obj`:
+BIG-NEXT:   Mod 0021 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\file_mode.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 34, # files: 1, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0022 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\invalid_parameter_handler.obj`:
+BIG-NEXT:   Mod 0022 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\invalid_parameter_handler.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 35, # files: 1, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0023 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr.obj`:
+BIG-NEXT:   Mod 0023 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 36, # files: 2, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0024 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\new_mode.obj`:
+BIG-NEXT:   Mod 0024 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\new_mode.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 37, # files: 1, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0025 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\thread_locale.obj`:
+BIG-NEXT:   Mod 0025 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\thread_locale.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 38, # files: 1, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0026 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\tncleanup.obj`:
+BIG-NEXT:   Mod 0026 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\tncleanup.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 39, # files: 21, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0027 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\exe_main.obj`:
+BIG-NEXT:   Mod 0027 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\exe_main.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 40, # files: 26, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0028 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\initializers.obj`:
+BIG-NEXT:   Mod 0028 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\initializers.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 41, # files: 20, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0029 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility.obj`:
+BIG-NEXT:   Mod 0029 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 42, # files: 20, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0030 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_stubs.obj`:
+BIG-NEXT:   Mod 0030 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_stubs.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 43, # files: 1, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0031 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility_desktop.obj`:
+BIG-NEXT:   Mod 0031 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility_desktop.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 44, # files: 20, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0032 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_precision.obj`:
+BIG-NEXT:   Mod 0032 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_precision.obj`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
 BIG-NEXT:              debug stream: 45, # files: 20, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0033 | Name: `Import:KERNEL32.dll`:
+BIG-NEXT:   Mod 0033 | `Import:KERNEL32.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib`:
 BIG-NEXT:              debug stream: 47, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0034 | Name: `KERNEL32.dll`:
+BIG-NEXT:   Mod 0034 | `KERNEL32.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib`:
 BIG-NEXT:              debug stream: 46, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0035 | Name: `Import:VCRUNTIME140.dll`:
+BIG-NEXT:   Mod 0035 | `Import:VCRUNTIME140.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib`:
 BIG-NEXT:              debug stream: 49, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0036 | Name: `VCRUNTIME140.dll`:
+BIG-NEXT:   Mod 0036 | `VCRUNTIME140.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib`:
 BIG-NEXT:              debug stream: 48, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0037 | Name: `Import:api-ms-win-crt-stdio-l1-1-0.dll`:
+BIG-NEXT:   Mod 0037 | `Import:api-ms-win-crt-stdio-l1-1-0.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
 BIG-NEXT:              debug stream: 59, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0038 | Name: `api-ms-win-crt-stdio-l1-1-0.dll`:
+BIG-NEXT:   Mod 0038 | `api-ms-win-crt-stdio-l1-1-0.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
 BIG-NEXT:              debug stream: 58, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0039 | Name: `Import:api-ms-win-crt-runtime-l1-1-0.dll`:
+BIG-NEXT:   Mod 0039 | `Import:api-ms-win-crt-runtime-l1-1-0.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
 BIG-NEXT:              debug stream: 57, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0040 | Name: `api-ms-win-crt-runtime-l1-1-0.dll`:
+BIG-NEXT:   Mod 0040 | `api-ms-win-crt-runtime-l1-1-0.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
 BIG-NEXT:              debug stream: 56, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0041 | Name: `Import:api-ms-win-crt-math-l1-1-0.dll`:
+BIG-NEXT:   Mod 0041 | `Import:api-ms-win-crt-math-l1-1-0.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
 BIG-NEXT:              debug stream: 55, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0042 | Name: `api-ms-win-crt-math-l1-1-0.dll`:
+BIG-NEXT:   Mod 0042 | `api-ms-win-crt-math-l1-1-0.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
 BIG-NEXT:              debug stream: 54, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0043 | Name: `Import:api-ms-win-crt-locale-l1-1-0.dll`:
+BIG-NEXT:   Mod 0043 | `Import:api-ms-win-crt-locale-l1-1-0.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
 BIG-NEXT:              debug stream: 53, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0044 | Name: `api-ms-win-crt-locale-l1-1-0.dll`:
+BIG-NEXT:   Mod 0044 | `api-ms-win-crt-locale-l1-1-0.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
 BIG-NEXT:              debug stream: 52, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0045 | Name: `Import:api-ms-win-crt-heap-l1-1-0.dll`:
+BIG-NEXT:   Mod 0045 | `Import:api-ms-win-crt-heap-l1-1-0.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
 BIG-NEXT:              debug stream: 51, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0046 | Name: `api-ms-win-crt-heap-l1-1-0.dll`:
+BIG-NEXT:   Mod 0046 | `api-ms-win-crt-heap-l1-1-0.dll`:
 BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
 BIG-NEXT:              debug stream: 50, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
-BIG-NEXT:   Mod 0047 | Name: `* Linker *`:
+BIG-NEXT:   Mod 0047 |  `* Linker *`:
 BIG-NEXT:              Obj: ``:
 BIG-NEXT:              debug stream: 60, # files: 0, has ec info: false
 BIG-NEXT:              pdb file ni: 55 `{{.*test.pdb}}`, src file ni: 0 ``

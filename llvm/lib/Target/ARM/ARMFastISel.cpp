@@ -1846,7 +1846,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
                                            bool isVarArg) {
   switch (CC) {
   default:
-    llvm_unreachable("Unsupported calling convention");
+    report_fatal_error("Unsupported calling convention");
   case CallingConv::Fast:
     if (Subtarget->hasVFP2() && !isVarArg) {
       if (!Subtarget->isAAPCS_ABI())
@@ -1880,7 +1880,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
     return (Return ? RetCC_ARM_APCS: CC_ARM_APCS);
   case CallingConv::GHC:
     if (Return)
-      llvm_unreachable("Can't return in GHC call convention");
+      report_fatal_error("Can't return in GHC call convention");
     else
       return CC_ARM_APCS_GHC;
   }
