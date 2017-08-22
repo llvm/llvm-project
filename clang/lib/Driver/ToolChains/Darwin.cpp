@@ -1837,7 +1837,12 @@ Darwin::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 }
 
 bool MachO::IsUnwindTablesDefault(const ArgList &Args) const {
-  return !UseSjLjExceptions(Args);
+  // Unwind tables are not emitted if -fno-exceptions is supplied (except when
+  // targeting x86_64).
+  return getArch() == llvm::Triple::x86_64 ||
+         (!UseSjLjExceptions(Args) &&
+          Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions,
+                       true));
 }
 
 bool MachO::UseDwarfDebugFlags() const {
