@@ -20,6 +20,7 @@
 #include "Symbols.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/WindowsResource.h"
@@ -32,6 +33,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/WindowsManifest/WindowsManifestMerger.h"
 #include <memory>
 
 using namespace llvm::COFF;
@@ -328,16 +330,9 @@ public:
 };
 }
 
-// Create the default manifest file as a temporary file.
-TemporaryFile createDefaultXml() {
-  // Create a temporary file.
-  TemporaryFile File("defaultxml", "manifest");
-
-  // Open the temporary file for writing.
-  std::error_code EC;
-  raw_fd_ostream OS(File.Path, EC, sys::fs::F_Text);
-  if (EC)
-    fatal(EC, "failed to open " + File.Path);
+static std::string createDefaultXml() {
+  std::string Ret;
+  raw_string_ostream OS(Ret);
 
   // Emit the XML. Note that we do *not* verify that the XML attributes are
   // syntactically correct. This is intentional for link.exe compatibility.
@@ -362,37 +357,83 @@ TemporaryFile createDefaultXml() {
        << "  </dependency>\n";
   }
   OS << "</assembly>\n";
+  return Ret;
+}
+
+static Expected<std::unique_ptr<MemoryBuffer>>
+createManifestXmlWithInternalMt(std::string &DefaultXml) {
+  std::unique_ptr<MemoryBuffer> DefaultXmlCopy =
+      MemoryBuffer::getMemBufferCopy(DefaultXml);
+
+  windows_manifest::WindowsManifestMerger Merger;
+  if (auto E = Merger.merge(*DefaultXmlCopy.get()))
+    return std::move(E);
+
+  for (StringRef Filename : Config->ManifestInput) {
+    std::unique_ptr<MemoryBuffer> Manifest =
+        check(MemoryBuffer::getFile(Filename));
+    if (auto E = Merger.merge(*Manifest.get())) {
+      warn("internal manifest tool failed on file " + Filename);
+      return std::move(E);
+    }
+  }
+
+  return Merger.getMergedManifest();
+}
+
+static std::unique_ptr<MemoryBuffer>
+createManifestXmlWithExternalMt(std::string &DefaultXml) {
+  const Triple HostTriple(Triple::normalize(LLVM_HOST_TRIPLE));
+  if (!HostTriple.isOSWindows())
+    fatal("manifest ignored because no external manifest tool available");
+  // Create the default manifest file as a temporary file.
+  TemporaryFile Default("defaultxml", "manifest");
+  std::error_code EC;
+  raw_fd_ostream OS(Default.Path, EC, sys::fs::F_Text);
+  if (EC)
+    fatal(EC, "failed to open " + Default.Path);
+  OS << DefaultXml;
   OS.close();
-  return File;
-}
 
-static std::string readFile(StringRef Path) {
-  std::unique_ptr<MemoryBuffer> MB =
-      check(MemoryBuffer::getFile(Path), "could not open " + Path);
-  return MB->getBuffer();
-}
-
-static std::string createManifestXml() {
-  // Create the default manifest file.
-  TemporaryFile File1 = createDefaultXml();
-  if (Config->ManifestInput.empty())
-    return readFile(File1.Path);
-
-  // If manifest files are supplied by the user using /MANIFESTINPUT
-  // option, we need to merge them with the default manifest.
-  TemporaryFile File2("user", "manifest");
+  // Merge user-supplied manifests if they are given.  Since libxml2 is not
+  // enabled, we must shell out to Microsoft's mt.exe tool.
+  TemporaryFile User("user", "manifest");
 
   Executor E("mt.exe");
   E.add("/manifest");
-  E.add(File1.Path);
+  E.add(Default.Path);
   for (StringRef Filename : Config->ManifestInput) {
     E.add("/manifest");
     E.add(Filename);
   }
   E.add("/nologo");
-  E.add("/out:" + StringRef(File2.Path));
+  E.add("/out:" + StringRef(User.Path));
   E.run();
-  return readFile(File2.Path);
+
+  return check(MemoryBuffer::getFile(User.Path), "could not open " + User.Path);
+}
+
+static std::string createManifestXml() {
+  std::string DefaultXml = createDefaultXml();
+  if (Config->ManifestInput.empty())
+    return DefaultXml;
+
+  // If manifest files are supplied by the user using /MANIFESTINPUT
+  // option, we need to merge them with the default manifest. If libxml2
+  // is enabled, we may merge them with LLVM's own library.
+  Expected<std::unique_ptr<MemoryBuffer>> OutputBufferOrError =
+      createManifestXmlWithInternalMt(DefaultXml);
+  if (OutputBufferOrError)
+    return OutputBufferOrError.get()->getBuffer();
+  // Using built-in library failed, possibly because libxml2 is not installed.
+  // Shell out to mt.exe instead.
+  handleAllErrors(std::move(OutputBufferOrError.takeError()),
+                  [&](ErrorInfoBase &EIB) {
+                    warn("error with internal manifest tool: " + EIB.message());
+                  });
+  std::unique_ptr<MemoryBuffer> OutputBuffer;
+  OutputBuffer = createManifestXmlWithExternalMt(DefaultXml);
+  return OutputBuffer->getBuffer();
 }
 
 static std::unique_ptr<MemoryBuffer>

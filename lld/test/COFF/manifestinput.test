@@ -1,4 +1,4 @@
-# REQUIRES: win_mt
+# REQUIRES: manifest_tool
 
 # RUN: yaml2obj %p/Inputs/ret42.yaml > %t.obj
 # RUN: lld-link /out:%t.exe /entry:main \

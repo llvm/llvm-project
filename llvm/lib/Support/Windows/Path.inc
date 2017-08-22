@@ -94,13 +94,16 @@ std::error_code widenPath(const Twine &Path8,
         return EC;
       FullPath.append(CurPath);
     }
-    // Traverse the requested path, canonicalizing . and .. as we go (because
-    // the \\?\ prefix is documented to treat them as real components).
-    // The iterators don't report separators and append() always attaches
-    // preferred_separator so we don't need to call native() on the result.
+    // Traverse the requested path, canonicalizing . and .. (because the \\?\
+    // prefix is documented to treat them as real components).  Ignore
+    // separators, which can be returned from the iterator if the path has a
+    // drive name.  We don't need to call native() on the result since append()
+    // always attaches preferred_separator.
     for (llvm::sys::path::const_iterator I = llvm::sys::path::begin(Path8Str),
                                          E = llvm::sys::path::end(Path8Str);
                                          I != E; ++I) {
+      if (I->size() == 1 && is_separator((*I)[0]))
+        continue;
       if (I->size() == 1 && *I == ".")
         continue;
       if (I->size() == 2 && *I == "..")

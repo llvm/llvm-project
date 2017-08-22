@@ -4363,10 +4363,7 @@ bool DoubleAPFloat::isLargest() const {
 
 bool DoubleAPFloat::isInteger() const {
   assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat Tmp(semPPCDoubleDoubleLegacy);
-  (void)Tmp.add(Floats[0], rmNearestTiesToEven);
-  (void)Tmp.add(Floats[1], rmNearestTiesToEven);
-  return Tmp.isInteger();
+  return Floats[0].isInteger() && Floats[1].isInteger();
 }
 
 void DoubleAPFloat::toString(SmallVectorImpl<char> &Str,

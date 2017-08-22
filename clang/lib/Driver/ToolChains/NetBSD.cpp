@@ -428,6 +428,8 @@ SanitizerMask NetBSD::getSupportedSanitizers() const {
     Res |= SanitizerKind::Vptr;
   }
   if (IsX86_64) {
+    Res |= SanitizerKind::Fuzzer;
+    Res |= SanitizerKind::FuzzerNoLink;
     Res |= SanitizerKind::Thread;
   }
   return Res;
