@@ -11,18 +11,18 @@ void foo() {
 }
 }
 
-// CHECK: Match DeclRefExpr: src::foo{{.*}} to DeclRefExpr: dst::inner::foo
+// CHECK: Match DeclRefExpr: :foo{{.*}} to DeclRefExpr: :inner::foo
 void main() { inner::foo(); }
 
 // CHECK: Match StringLiteral: foo{{.*}} to StringLiteral: foo
 const char *b = "f" "o" "o";
 
 // unsigned is canonicalized to unsigned int
-// CHECK: Match TypedefDecl: src::nat;unsigned int;{{.*}} to TypedefDecl: dst::nat;unsigned int;
+// CHECK: Match TypedefDecl: :nat;unsigned int;{{.*}} to TypedefDecl: :nat;unsigned int;
 typedef unsigned nat;
 
-// CHECK: Match VarDecl: src::p(int){{.*}} to VarDecl: dst::prod(double)
-// CHECK: Update VarDecl: src::p(int){{.*}} to dst::prod(double)
+// CHECK: Match VarDecl: :p(int){{.*}} to VarDecl: :prod(double)
+// CHECK: Update VarDecl: :p(int){{.*}} to :prod(double)
 // CHECK: Match BinaryOperator: *{{.*}} to BinaryOperator: *
 double prod = 1 * 2 * 10;
 // CHECK: Update DeclRefExpr

@@ -68,10 +68,10 @@ private:
 class SyntaxTree {
 public:
   /// Constructs a tree from a translation unit.
-  SyntaxTree(const ASTContext &AST);
+  SyntaxTree(ASTContext &AST);
   /// Constructs a tree from any AST node.
   template <class T>
-  SyntaxTree(T *Node, const ASTContext &AST)
+  SyntaxTree(T *Node, ASTContext &AST)
       : TreeImpl(llvm::make_unique<Impl>(this, Node, AST)) {}
   SyntaxTree(SyntaxTree &&Other) = default;
   ~SyntaxTree();

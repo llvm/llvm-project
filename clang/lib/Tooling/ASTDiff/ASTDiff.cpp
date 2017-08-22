@@ -111,24 +111,22 @@ private:
 /// Represents the AST of a TranslationUnit.
 class SyntaxTree::Impl {
 public:
-  /// Constructs a tree from the entire translation unit.
-  Impl(SyntaxTree *Parent, const ASTContext &AST);
   /// Constructs a tree from an AST node.
-  Impl(SyntaxTree *Parent, Decl *N, const ASTContext &AST);
-  Impl(SyntaxTree *Parent, Stmt *N, const ASTContext &AST);
+  Impl(SyntaxTree *Parent, Decl *N, ASTContext &AST);
+  Impl(SyntaxTree *Parent, Stmt *N, ASTContext &AST);
   template <class T>
   Impl(SyntaxTree *Parent,
        typename std::enable_if<std::is_base_of<Stmt, T>::value, T>::type *Node,
-       const ASTContext &AST)
+       ASTContext &AST)
       : Impl(Parent, dyn_cast<Stmt>(Node), AST) {}
   template <class T>
   Impl(SyntaxTree *Parent,
        typename std::enable_if<std::is_base_of<Decl, T>::value, T>::type *Node,
-       const ASTContext &AST)
+       ASTContext &AST)
       : Impl(Parent, dyn_cast<Decl>(Node), AST) {}
 
   SyntaxTree *Parent;
-  const ASTContext &AST;
+  ASTContext &AST;
   std::vector<NodeId> Leaves;
   // Maps preorder indices to postorder ones.
   std::vector<int> PostorderIds;
@@ -146,6 +144,10 @@ public:
   int getNumberOfDescendants(NodeId Id) const;
   bool isInSubtree(NodeId Id, NodeId SubtreeRoot) const;
   int findPositionInParent(NodeId Id, bool Shifted = false) const;
+
+  std::string getRelativeName(const NamedDecl *ND,
+                              const DeclContext *Context) const;
+  std::string getRelativeName(const NamedDecl *ND) const;
 
   std::string getNodeValue(NodeId Id) const;
   std::string getNodeValue(const Node &Node) const;
@@ -270,7 +272,7 @@ struct PreorderVisitor : public RecursiveASTVisitor<PreorderVisitor> {
 };
 } // end anonymous namespace
 
-SyntaxTree::Impl::Impl(SyntaxTree *Parent, Decl *N, const ASTContext &AST)
+SyntaxTree::Impl::Impl(SyntaxTree *Parent, Decl *N, ASTContext &AST)
     : Parent(Parent), AST(AST) {
   NodeCountVisitor NodeCounter(*this);
   NodeCounter.TraverseDecl(N);
@@ -280,7 +282,7 @@ SyntaxTree::Impl::Impl(SyntaxTree *Parent, Decl *N, const ASTContext &AST)
   initTree();
 }
 
-SyntaxTree::Impl::Impl(SyntaxTree *Parent, Stmt *N, const ASTContext &AST)
+SyntaxTree::Impl::Impl(SyntaxTree *Parent, Stmt *N, ASTContext &AST)
     : Parent(Parent), AST(AST) {
   NodeCountVisitor NodeCounter(*this);
   NodeCounter.TraverseStmt(N);
@@ -365,6 +367,48 @@ int SyntaxTree::Impl::findPositionInParent(NodeId Id, bool Shifted) const {
   llvm_unreachable("Node not found in parent's children.");
 }
 
+// Returns the qualified name of ND. If it is subordinate to Context,
+// then the prefix of the latter is removed from the returned value.
+std::string
+SyntaxTree::Impl::getRelativeName(const NamedDecl *ND,
+                                  const DeclContext *Context) const {
+  std::string Val = ND->getQualifiedNameAsString();
+  std::string ContextPrefix;
+  if (!Context)
+    return Val;
+  if (auto *Namespace = dyn_cast<NamespaceDecl>(Context))
+    ContextPrefix = Namespace->getQualifiedNameAsString();
+  else if (auto *Record = dyn_cast<RecordDecl>(Context))
+    ContextPrefix = Record->getQualifiedNameAsString();
+  else if (AST.getLangOpts().CPlusPlus11)
+    if (auto *Tag = dyn_cast<TagDecl>(Context))
+      ContextPrefix = Tag->getQualifiedNameAsString();
+  // Strip the qualifier, if Val refers to somthing in the current scope.
+  // But leave one leading ':' in place, so that we know that this is a
+  // relative path.
+  if (!ContextPrefix.empty() && StringRef(Val).startswith(ContextPrefix))
+    Val = Val.substr(ContextPrefix.size() + 1);
+  return Val;
+}
+
+std::string SyntaxTree::Impl::getRelativeName(const NamedDecl *ND) const {
+  return getRelativeName(ND, ND->getDeclContext());
+}
+
+static const DeclContext *getEnclosingDeclContext(ASTContext &AST,
+                                                  const Stmt *S) {
+  while (S) {
+    const auto &Parents = AST.getParents(*S);
+    if (Parents.empty())
+      return nullptr;
+    const auto &P = Parents[0];
+    if (const auto *D = P.get<Decl>())
+      return D->getDeclContext();
+    S = P.get<Stmt>();
+  }
+  return nullptr;
+}
+
 std::string SyntaxTree::Impl::getNodeValue(NodeId Id) const {
   return getNodeValue(getNode(Id));
 }
@@ -384,8 +428,7 @@ std::string SyntaxTree::Impl::getDeclValue(const Decl *D) const {
   TypePP.AnonymousTagLocations = false;
 
   if (auto *V = dyn_cast<ValueDecl>(D)) {
-    Value += V->getQualifiedNameAsString() + "(" +
-             V->getType().getAsString(TypePP) + ")";
+    Value += getRelativeName(V) + "(" + V->getType().getAsString(TypePP) + ")";
     if (auto *C = dyn_cast<CXXConstructorDecl>(D)) {
       for (auto *Init : C->inits()) {
         if (!Init->isWritten())
@@ -397,7 +440,7 @@ std::string SyntaxTree::Impl::getDeclValue(const Decl *D) const {
           Value += C->getNameAsString();
         } else {
           assert(Init->isAnyMemberInitializer());
-          Value += Init->getMember()->getQualifiedNameAsString();
+          Value += getRelativeName(Init->getMember());
         }
         Value += ",";
       }
@@ -405,7 +448,7 @@ std::string SyntaxTree::Impl::getDeclValue(const Decl *D) const {
     return Value;
   }
   if (auto *N = dyn_cast<NamedDecl>(D))
-    Value += N->getQualifiedNameAsString() + ";";
+    Value += getRelativeName(N) + ";";
   if (auto *T = dyn_cast<TypedefNameDecl>(D))
     return Value + T->getUnderlyingType().getAsString(TypePP) + ";";
   if (auto *T = dyn_cast<TypeDecl>(D))
@@ -429,7 +472,7 @@ std::string SyntaxTree::Impl::getStmtValue(const Stmt *S) const {
   if (auto *B = dyn_cast<BinaryOperator>(S))
     return B->getOpcodeStr();
   if (auto *M = dyn_cast<MemberExpr>(S))
-    return M->getMemberDecl()->getQualifiedNameAsString();
+    return getRelativeName(M->getMemberDecl());
   if (auto *I = dyn_cast<IntegerLiteral>(S)) {
     SmallString<256> Str;
     I->getValue().toString(Str, /*Radix=*/10, /*Signed=*/false);
@@ -441,7 +484,7 @@ std::string SyntaxTree::Impl::getStmtValue(const Stmt *S) const {
     return Str.str();
   }
   if (auto *D = dyn_cast<DeclRefExpr>(S))
-    return D->getDecl()->getQualifiedNameAsString();
+    return getRelativeName(D->getDecl(), getEnclosingDeclContext(AST, S));
   if (auto *String = dyn_cast<StringLiteral>(S))
     return String->getString();
   if (auto *B = dyn_cast<CXXBoolLiteralExpr>(S))
@@ -949,7 +992,7 @@ NodeId ASTDiff::getMapped(const SyntaxTree &SourceTree, NodeId Id) const {
   return DiffImpl->getMapped(SourceTree.TreeImpl, Id);
 }
 
-SyntaxTree::SyntaxTree(const ASTContext &AST)
+SyntaxTree::SyntaxTree(ASTContext &AST)
     : TreeImpl(llvm::make_unique<SyntaxTree::Impl>(
           this, AST.getTranslationUnitDecl(), AST)) {}
 
