@@ -1440,9 +1440,10 @@ static bool isLegalArithImmed(uint64_t C) {
 }
 
 static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
-                              const SDLoc &dl, SelectionDAG &DAG,
-                              bool FullFP16 = false) {
+                              const SDLoc &dl, SelectionDAG &DAG) {
   EVT VT = LHS.getValueType();
+  const bool FullFP16 =
+    static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasFullFP16();
 
   if (VT.isFloatingPoint()) {
     assert(VT != MVT::f128);
@@ -1534,9 +1535,11 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
                                          ISD::CondCode CC, SDValue CCOp,
                                          AArch64CC::CondCode Predicate,
                                          AArch64CC::CondCode OutCC,
-                                         const SDLoc &DL, SelectionDAG &DAG,
-                                         bool FullFP16 = false) {
+                                         const SDLoc &DL, SelectionDAG &DAG) {
   unsigned Opcode = 0;
+  const bool FullFP16 =
+    static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasFullFP16();
+
   if (LHS.getValueType().isFloatingPoint()) {
     assert(LHS.getValueType() != MVT::f128);
     if (LHS.getValueType() == MVT::f16 && !FullFP16) {
@@ -1628,7 +1631,7 @@ static bool isConjunctionDisjunctionTree(const SDValue Val, bool &CanNegate,
 /// depth to avoid stack overflow.
 static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
     AArch64CC::CondCode &OutCC, bool Negate, SDValue CCOp,
-    AArch64CC::CondCode Predicate, bool FullFP16 = false) {
+    AArch64CC::CondCode Predicate) {
   // We're at a tree leaf, produce a conditional comparison operation.
   unsigned Opcode = Val->getOpcode();
   if (Opcode == ISD::SETCC) {
@@ -1654,8 +1657,7 @@ static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
           ExtraCmp = emitComparison(LHS, RHS, CC, DL, DAG);
         else
           ExtraCmp = emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate,
-                                               ExtraCC, DL, DAG,
-                                               FullFP16);
+                                               ExtraCC, DL, DAG);
         CCOp = ExtraCmp;
         Predicate = ExtraCC;
       }
@@ -1666,7 +1668,7 @@ static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
       return emitComparison(LHS, RHS, CC, DL, DAG);
     // Otherwise produce a ccmp.
     return emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate, OutCC, DL,
-                                     DAG, FullFP16);
+                                     DAG);
   }
   assert((Opcode == ISD::AND || (Opcode == ISD::OR && Val->hasOneUse())) &&
          "Valid conjunction/disjunction tree");
@@ -1713,13 +1715,13 @@ static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
   // the "flags to test" afterwards.
   AArch64CC::CondCode RHSCC;
   SDValue CmpR = emitConjunctionDisjunctionTreeRec(DAG, RHS, RHSCC, Negate,
-                                                   CCOp, Predicate, FullFP16);
+                                                   CCOp, Predicate);
   if (NegateOpsAndResult && !Negate)
     RHSCC = AArch64CC::getInvertedCondCode(RHSCC);
   // Emit LHS. We may need to negate it.
   SDValue CmpL = emitConjunctionDisjunctionTreeRec(DAG, LHS, OutCC,
                                                    NegateOpsAndResult, CmpR,
-                                                   RHSCC, FullFP16);
+                                                   RHSCC);
   // If we transformed an OR to and AND then we have to negate the result
   // (or absorb the Negate parameter).
   if (NegateOpsAndResult && !Negate)
@@ -1731,21 +1733,20 @@ static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
 /// of CCMP/CFCMP ops. See @ref AArch64CCMP.
 /// \see emitConjunctionDisjunctionTreeRec().
 static SDValue emitConjunctionDisjunctionTree(SelectionDAG &DAG, SDValue Val,
-                                              AArch64CC::CondCode &OutCC,
-                                              bool FullFP16 = false) {
+                                              AArch64CC::CondCode &OutCC) {
   bool CanNegate;
   if (!isConjunctionDisjunctionTree(Val, CanNegate))
     return SDValue();
 
   return emitConjunctionDisjunctionTreeRec(DAG, Val, OutCC, false, SDValue(),
-                                           AArch64CC::AL, FullFP16);
+                                           AArch64CC::AL);
 }
 
 /// @}
 
 static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                              SDValue &AArch64cc, SelectionDAG &DAG,
-                             const SDLoc &dl, bool FullFP16 = false) {
+                             const SDLoc &dl) {
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS.getNode())) {
     EVT VT = RHS.getValueType();
     uint64_t C = RHSC->getZExtValue();
@@ -1832,13 +1833,13 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                         DAG.getValueType(MVT::i16));
         Cmp = emitComparison(SExt, DAG.getConstant(ValueofRHS, dl,
                                                    RHS.getValueType()),
-                             CC, dl, DAG, FullFP16);
+                             CC, dl, DAG);
         AArch64CC = changeIntCCToAArch64CC(CC);
       }
     }
 
     if (!Cmp && (RHSC->isNullValue() || RHSC->isOne())) {
-      if ((Cmp = emitConjunctionDisjunctionTree(DAG, LHS, AArch64CC, FullFP16))) {
+      if ((Cmp = emitConjunctionDisjunctionTree(DAG, LHS, AArch64CC))) {
         if ((CC == ISD::SETNE) ^ RHSC->isNullValue())
           AArch64CC = AArch64CC::getInvertedCondCode(AArch64CC);
       }
@@ -1846,7 +1847,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   }
 
   if (!Cmp) {
-    Cmp = emitComparison(LHS, RHS, CC, dl, DAG, FullFP16);
+    Cmp = emitComparison(LHS, RHS, CC, dl, DAG);
     AArch64CC = changeIntCCToAArch64CC(CC);
   }
   AArch64cc = DAG.getConstant(AArch64CC, dl, MVT_CC);
@@ -2668,7 +2669,7 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
                                                      bool IsVarArg) const {
   switch (CC) {
   default:
-    llvm_unreachable("Unsupported calling convention.");
+    report_fatal_error("Unsupported calling convention.");
   case CallingConv::WebKit_JS:
     return CC_AArch64_WebKit_JS;
   case CallingConv::GHC:
@@ -4040,8 +4041,7 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     }
 
     SDValue CCVal;
-    SDValue Cmp = getAArch64Cmp(LHS, RHS, CC, CCVal, DAG, dl,
-                                Subtarget->hasFullFP16());
+    SDValue Cmp = getAArch64Cmp(LHS, RHS, CC, CCVal, DAG, dl);
     return DAG.getNode(AArch64ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
                        Cmp);
   }
@@ -4051,7 +4051,7 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
   // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't totally
   // clean.  Some of them require two branches to implement.
-  SDValue Cmp = emitComparison(LHS, RHS, CC, dl, DAG, Subtarget->hasFullFP16());
+  SDValue Cmp = emitComparison(LHS, RHS, CC, dl, DAG);
   AArch64CC::CondCode CC1, CC2;
   changeFPCCToAArch64CC(CC, CC1, CC2);
   SDValue CC1Val = DAG.getConstant(CC1, dl, MVT::i32);
@@ -4206,8 +4206,7 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   if (LHS.getValueType().isInteger()) {
     SDValue CCVal;
     SDValue Cmp =
-        getAArch64Cmp(LHS, RHS, ISD::getSetCCInverse(CC, true), CCVal, DAG, dl,
-                      Subtarget->hasFullFP16());
+        getAArch64Cmp(LHS, RHS, ISD::getSetCCInverse(CC, true), CCVal, DAG, dl);
 
     // Note that we inverted the condition above, so we reverse the order of
     // the true and false operands here.  This will allow the setcc to be
@@ -4221,7 +4220,7 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 
   // If that fails, we'll need to perform an FCMP + CSEL sequence.  Go ahead
   // and do the comparison.
-  SDValue Cmp = emitComparison(LHS, RHS, CC, dl, DAG, Subtarget->hasFullFP16());
+  SDValue Cmp = emitComparison(LHS, RHS, CC, dl, DAG);
 
   AArch64CC::CondCode CC1, CC2;
   changeFPCCToAArch64CC(CC, CC1, CC2);
@@ -4387,9 +4386,7 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
     }
 
     SDValue CCVal;
-    SDValue Cmp = getAArch64Cmp(LHS, RHS, CC, CCVal, DAG, dl,
-                                Subtarget->hasFullFP16());
-
+    SDValue Cmp = getAArch64Cmp(LHS, RHS, CC, CCVal, DAG, dl);
     EVT VT = TVal.getValueType();
     return DAG.getNode(Opcode, dl, VT, TVal, FVal, CCVal, Cmp);
   }
@@ -4399,7 +4396,7 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
          LHS.getValueType() == MVT::f64);
   assert(LHS.getValueType() == RHS.getValueType());
   EVT VT = TVal.getValueType();
-  SDValue Cmp = emitComparison(LHS, RHS, CC, dl, DAG, Subtarget->hasFullFP16());
+  SDValue Cmp = emitComparison(LHS, RHS, CC, dl, DAG);
 
   // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't totally
   // clean.  Some of them require two CSELs to implement.

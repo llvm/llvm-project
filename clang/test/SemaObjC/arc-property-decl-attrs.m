@@ -225,3 +225,30 @@ __attribute__((objc_root_class))
 @implementation TypeVsSetter
 @synthesize prop; // expected-note {{property synthesized here}}
 @end
+
+@protocol AutoStrongProp
+
+@property (nonatomic, readonly) NSObject *prop;
+
+@end
+
+@protocol AutoStrongProp_Internal <AutoStrongProp>
+
+// This property gets the 'strong' attribute automatically.
+@property (nonatomic, readwrite) NSObject *prop;
+
+@end
+
+@interface SynthesizeWithImplicitStrongNoError : NSObject <AutoStrongProp>
+@end
+
+@interface SynthesizeWithImplicitStrongNoError () <AutoStrongProp_Internal>
+
+@end
+
+@implementation SynthesizeWithImplicitStrongNoError
+
+// no error, 'strong' is implicit in the 'readwrite' property.
+@synthesize prop = _prop;
+
+@end

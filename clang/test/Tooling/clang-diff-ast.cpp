@@ -5,7 +5,7 @@
 // CHECK: {{^}} NamespaceDecl: test;(
 namespace test {
 
-// CHECK: {{^}} FunctionDecl: test::f(
+// CHECK: {{^}} FunctionDecl: :f(
 // CHECK: CompoundStmt(
 void f() {
   // CHECK: VarDecl: i(int)(
@@ -17,7 +17,7 @@ void f() {
   auto b = true;
   // CHECK: CallExpr(
   // CHECK-NOT: ImplicitCastExpr
-  // CHECK: DeclRefExpr: test::f(
+  // CHECK: DeclRefExpr: :f(
   f();
   // CHECK: UnaryOperator: ++(
   ++i;
@@ -41,7 +41,7 @@ class Base {
 // CHECK: CXXRecordDecl: X;X;(
 class X : Base {
   int m;
-  // CHECK: CXXMethodDecl: X::foo(const char *(int)
+  // CHECK: CXXMethodDecl: :foo(const char *(int)
   // CHECK: ParmVarDecl: i(int)(
   const char *foo(int i) {
     if (i == 0)
@@ -56,12 +56,12 @@ public:
   int not_initialized;
   // All initialized members, bases and delegating initializers are are
   // appended, separated by commas.
-  // CHECK: CXXConstructorDecl: X::X(void (char, int){{( __attribute__\(\(thiscall\)\))?}})Base,X::m,(
+  // CHECK: CXXConstructorDecl: :X(void (char, int){{( __attribute__\(\(thiscall\)\))?}})Base,:m,(
   X(char c, int) : Base(), m(0) {
-    // CHECK: MemberExpr: X::m(
+    // CHECK: MemberExpr: :m(
     int x = m;
   }
-  // CHECK: CXXConstructorDecl: X::X(void (char){{( __attribute__\(\(thiscall\)\))?}})X,(
+  // CHECK: CXXConstructorDecl: :X(void (char){{( __attribute__\(\(thiscall\)\))?}})X,(
   X(char s) : X(s, 4) {}
 };
 

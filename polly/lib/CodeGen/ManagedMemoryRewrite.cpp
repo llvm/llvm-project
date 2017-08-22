@@ -244,7 +244,7 @@ replaceGlobalArray(Module &M, const DataLayout &DL, GlobalVariable &Array,
   BasicBlock *Start = BasicBlock::Create(M.getContext(), "entry", F);
   Builder.SetInsertPoint(Start);
 
-  int ArraySizeInt = DL.getTypeAllocSizeInBits(ArrayTy) / 8;
+  const uint64_t ArraySizeInt = DL.getTypeAllocSize(ArrayTy);
   Value *ArraySize = Builder.getInt64(ArraySizeInt);
   ArraySize->setName("array.size");
 
@@ -311,7 +311,8 @@ static void rewriteAllocaAsManagedMemory(AllocaInst *Alloca,
   Builder.SetInsertPoint(Alloca);
 
   Value *MallocManagedFn = getOrCreatePollyMallocManaged(*Alloca->getModule());
-  const int Size = DL.getTypeAllocSize(Alloca->getType()->getElementType());
+  const uint64_t Size =
+      DL.getTypeAllocSize(Alloca->getType()->getElementType());
   Value *SizeVal = Builder.getInt64(Size);
   Value *RawManagedMem = Builder.CreateCall(MallocManagedFn, {SizeVal});
   Value *Bitcasted = Builder.CreateBitCast(RawManagedMem, Alloca->getType());
