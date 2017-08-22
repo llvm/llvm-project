@@ -3358,6 +3358,8 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
       Unit->markEverythingAsKept();
     }
   }
+  if (!Unit->getOrigUnit().getUnitDIE().hasChildren())
+    return;
   if (Options.Verbose) {
     outs().indent(Indent);
     outs() << "cloning .debug_info from " << Filename << "\n";
