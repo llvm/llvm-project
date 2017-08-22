@@ -4,10 +4,9 @@
 ; Check that we allow this SCoP even though it has 10 parameters involved in posisbly aliasing accesses.
 ; However, only 7 are involved in accesses through B, 8 through C and none in accesses through A.
 ;
-; MAX8-LABEL:       Printing analysis 'Polly - Create polyhedral description of Scops' for region: 'for.cond => for.end' in function 'jd':
-; MAX8:  Function: jd
+; MAX8-LABEL:  Function: jd
+; MAX8-NEXT: Region: %for.cond---%for.end
 
-; MAX7-LABEL:       Printing analysis 'Polly - Create polyhedral description of Scops' for region: 'for.cond => for.end' in function 'jd':
 ; MAX7:  Invalid Scop!
 ;
 ;    void jd(int *A, int *B, int *C, long p1, long p2, long p3, long p4, long p5,

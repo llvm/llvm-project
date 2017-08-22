@@ -32,10 +32,12 @@ STATISTIC(RichScopFound, "Number of Scops containing a loop");
 STATISTIC(InfeasibleScops,
           "Number of SCoPs with statically infeasible context.");
 
-static cl::opt<bool> ModelReadOnlyScalars(
+bool polly::ModelReadOnlyScalars;
+static cl::opt<bool, true> XModelReadOnlyScalars(
     "polly-analyze-read-only-scalars",
     cl::desc("Model read-only scalar values in the scop description"),
-    cl::Hidden, cl::ZeroOrMore, cl::init(true), cl::cat(PollyCategory));
+    cl::location(ModelReadOnlyScalars), cl::Hidden, cl::ZeroOrMore,
+    cl::init(true), cl::cat(PollyCategory));
 
 static cl::opt<bool> UnprofitableScalarAccs(
     "polly-unprofitable-scalar-accs",
@@ -103,27 +105,8 @@ void ScopBuilder::buildEscapingDependences(Instruction *Inst) {
   // Check for uses of this instruction outside the scop. Because we do not
   // iterate over such instructions and therefore did not "ensure" the existence
   // of a write, we must determine such use here.
-  for (Use &U : Inst->uses()) {
-    Instruction *UI = dyn_cast<Instruction>(U.getUser());
-    if (!UI)
-      continue;
-
-    BasicBlock *UseParent = getUseBlock(U);
-    BasicBlock *UserParent = UI->getParent();
-
-    // An escaping value is either used by an instruction not within the scop,
-    // or (when the scop region's exit needs to be simplified) by a PHI in the
-    // scop's exit block. This is because region simplification before code
-    // generation inserts new basic blocks before the PHI such that its incoming
-    // blocks are not in the scop anymore.
-    if (!scop->contains(UseParent) ||
-        (isa<PHINode>(UI) && scop->isExit(UserParent) &&
-         scop->hasSingleExitEdge())) {
-      // At least one escaping use found.
-      ensureValueWrite(Inst);
-      break;
-    }
-  }
+  if (scop->isEscaping(Inst))
+    ensureValueWrite(Inst);
 }
 
 /// Check that a value is a Fortran Array descriptor.
@@ -656,7 +639,7 @@ void ScopBuilder::buildAccessFunctions(ScopStmt *Stmt, BasicBlock &BB,
   assert(
       !Stmt == IsExitBlock &&
       "The exit BB is the only one that cannot be represented by a statement");
-  assert(IsExitBlock || Stmt->contains(&BB));
+  assert(IsExitBlock || Stmt->represents(&BB));
 
   // We do not build access functions for error blocks, as they may contain
   // instructions we can not model.
@@ -778,6 +761,15 @@ void ScopBuilder::ensureValueWrite(Instruction *Inst) {
 }
 
 void ScopBuilder::ensureValueRead(Value *V, ScopStmt *UserStmt) {
+  // TODO: Make ScopStmt::ensureValueRead(Value*) offer the same functionality
+  // to be able to replace this one. Currently, there is a split responsibility.
+  // In a first step, the MemoryAccess is created, but without the
+  // AccessRelation. In the second step by ScopStmt::buildAccessRelations(), the
+  // AccessRelation is created. At least for scalar accesses, there is no new
+  // information available at ScopStmt::buildAccessRelations(), so we could
+  // create the AccessRelation right away. This is what
+  // ScopStmt::ensureValueRead(Value*) does.
+
   auto *Scope = UserStmt->getSurroundingLoop();
   auto VUse = VirtualUse::create(scop.get(), UserStmt, Scope, V, false);
   switch (VUse.getKind()) {
@@ -880,11 +872,11 @@ static void verifyUse(Scop *S, Use &Op, LoopInfo &LI) {
 /// happened yet, such that virtual and physical uses are equivalent.
 static void verifyUses(Scop *S, LoopInfo &LI, DominatorTree &DT) {
   for (auto *BB : S->getRegion().blocks()) {
-    auto *Stmt = S->getStmtFor(BB);
-    if (!Stmt)
-      continue;
-
     for (auto &Inst : *BB) {
+      auto *Stmt = S->getStmtFor(&Inst);
+      if (!Stmt)
+        continue;
+
       if (isIgnoredIntrinsic(&Inst))
         continue;
 
@@ -974,11 +966,10 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   // Initialize the invalid domain.
   for (ScopStmt &Stmt : scop->Stmts)
     if (Stmt.isBlockStmt())
-      Stmt.setInvalidDomain(InvalidDomainMap[Stmt.getEntryBlock()].copy());
+      Stmt.setInvalidDomain(InvalidDomainMap[Stmt.getEntryBlock()]);
     else
-      Stmt.setInvalidDomain(
-          InvalidDomainMap[getRegionNodeBasicBlock(Stmt.getRegion()->getNode())]
-              .copy());
+      Stmt.setInvalidDomain(InvalidDomainMap[getRegionNodeBasicBlock(
+          Stmt.getRegion()->getNode())]);
 
   // Remove empty statements.
   // Exit early in case there are no executable statements left in this scop.
@@ -1048,7 +1039,7 @@ ScopBuilder::ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
 
   buildScop(*R, AC);
 
-  DEBUG(scop->print(dbgs()));
+  DEBUG(dbgs() << *scop);
 
   if (!scop->hasFeasibleRuntimeContext()) {
     InfeasibleScops++;

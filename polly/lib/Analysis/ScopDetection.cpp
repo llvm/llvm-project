@@ -1,4 +1,3 @@
-//===----- ScopDetection.cpp  - Detect Scops --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -64,6 +63,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Regex.h"
 #include <set>
 #include <stack>
 
@@ -92,16 +92,26 @@ static cl::opt<bool, true> XPollyProcessUnprofitable(
 
 static cl::list<std::string> OnlyFunctions(
     "polly-only-func",
-    cl::desc("Only run on functions that contain a certain string. "
-             "Multiple strings can be comma separated. "
-             "Scop detection will run on all functions that contain "
-             "any of the strings provided."),
+    cl::desc("Only run on functions that match a regex. "
+             "Multiple regexes can be comma separated. "
+             "Scop detection will run on all functions that match "
+             "ANY of the regexes provided."),
     cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
 
-static cl::opt<bool>
-    AllowFullFunction("polly-detect-full-functions",
-                      cl::desc("Allow the detection of full functions"),
-                      cl::init(false), cl::cat(PollyCategory));
+static cl::list<std::string> IgnoredFunctions(
+    "polly-ignore-func",
+    cl::desc("Ignore functions that match a regex. "
+             "Multiple regexes can be comma separated. "
+             "Scop detection will ignore all functions that match "
+             "ANY of the regexes provided."),
+    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
+
+bool polly::PollyAllowFullFunction;
+static cl::opt<bool, true>
+    XAllowFullFunction("polly-detect-full-functions",
+                       cl::desc("Allow the detection of full functions"),
+                       cl::location(polly::PollyAllowFullFunction),
+                       cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<std::string> OnlyRegion(
     "polly-only-region",
@@ -273,10 +283,21 @@ void DiagnosticScopFound::print(DiagnosticPrinter &DP) const {
   DP << FileName << ":" << ExitLine << ": End of scop";
 }
 
-static bool IsFnNameListedInOnlyFunctions(StringRef FnName) {
-  for (auto Name : OnlyFunctions)
-    if (FnName.count(Name) > 0)
+/// Check if a string matches any regex in a list of regexes.
+/// @param Str the input string to match against.
+/// @param RegexList a list of strings that are regular expressions.
+static bool doesStringMatchAnyRegex(StringRef Str,
+                                    const cl::list<std::string> &RegexList) {
+  for (auto RegexStr : RegexList) {
+    Regex R(RegexStr);
+
+    std::string Err;
+    if (!R.isValid(Err))
+      report_fatal_error("invalid regex given as input to polly: " + Err, true);
+
+    if (R.match(Str))
       return true;
+  }
   return false;
 }
 //===----------------------------------------------------------------------===//
@@ -292,7 +313,11 @@ ScopDetection::ScopDetection(Function &F, const DominatorTree &DT,
 
   Region *TopRegion = RI.getTopLevelRegion();
 
-  if (OnlyFunctions.size() > 0 && !IsFnNameListedInOnlyFunctions(F.getName()))
+  if (OnlyFunctions.size() > 0 &&
+      !doesStringMatchAnyRegex(F.getName(), OnlyFunctions))
+    return;
+
+  if (doesStringMatchAnyRegex(F.getName(), IgnoredFunctions))
     return;
 
   if (!isValidFunction(F))
@@ -1517,7 +1542,7 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
 
   DEBUG(dbgs() << "Checking region: " << CurRegion.getNameStr() << "\n\t");
 
-  if (!AllowFullFunction && CurRegion.isTopLevelRegion()) {
+  if (!PollyAllowFullFunction && CurRegion.isTopLevelRegion()) {
     DEBUG(dbgs() << "Top level region is invalid\n");
     return false;
   }
@@ -1540,7 +1565,7 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
 
   // SCoP cannot contain the entry block of the function, because we need
   // to insert alloca instruction there when translate scalar to array.
-  if (!AllowFullFunction &&
+  if (!PollyAllowFullFunction &&
       CurRegion.getEntry() ==
           &(CurRegion.getEntry()->getParent()->getEntryBlock()))
     return invalid<ReportEntry>(Context, /*Assert=*/true, CurRegion.getEntry());
@@ -1756,6 +1781,11 @@ ScopDetectionWrapperPass::ScopDetectionWrapperPass() : FunctionPass(ID) {
   if (IgnoreAliasing)
     PollyUseRuntimeAliasChecks = false;
 }
+ScopAnalysis::ScopAnalysis() {
+  // Disable runtime alias checks if we ignore aliasing all together.
+  if (IgnoreAliasing)
+    PollyUseRuntimeAliasChecks = false;
+}
 
 void ScopDetectionWrapperPass::releaseMemory() { Result.reset(); }
 
@@ -1775,6 +1805,7 @@ ScopDetection ScopAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 
 PreservedAnalyses ScopAnalysisPrinterPass::run(Function &F,
                                                FunctionAnalysisManager &FAM) {
+  Stream << "Detected Scops in Function " << F.getName() << "\n";
   auto &SD = FAM.getResult<ScopAnalysis>(F);
   for (const Region *R : SD.ValidRegions)
     Stream << "Valid Region for Scop: " << R->getNameStr() << '\n';

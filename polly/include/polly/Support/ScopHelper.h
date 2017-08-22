@@ -315,6 +315,16 @@ void simplifyRegion(llvm::Region *R, llvm::DominatorTree *DT,
 ///
 void splitEntryBlockForAlloca(llvm::BasicBlock *EntryBlock, llvm::Pass *P);
 
+/// Split the entry block of a function to store the newly inserted
+///        allocations outside of all Scops.
+///
+/// @param DT DominatorTree to be updated.
+/// @param LI LoopInfo to be updated.
+/// @param RI RegionInfo to be updated.
+void splitEntryBlockForAlloca(llvm::BasicBlock *EntryBlock,
+                              llvm::DominatorTree *DT, llvm::LoopInfo *LI,
+                              llvm::RegionInfo *RI);
+
 /// Wrapper for SCEVExpander extended to all Polly features.
 ///
 /// This wrapper will internally call the SCEVExpander but also makes sure that
@@ -409,7 +419,7 @@ bool canSynthesize(const llvm::Value *V, const Scop &S,
 /// operand must be defined (i.e. its definition dominates this block).
 /// Non-instructions do not use operands at a specific point such that in this
 /// case this function returns nullptr.
-llvm::BasicBlock *getUseBlock(llvm::Use &U);
+llvm::BasicBlock *getUseBlock(const llvm::Use &U);
 
 /// Derive the individual index expressions from a GEP instruction.
 ///

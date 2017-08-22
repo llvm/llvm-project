@@ -345,12 +345,14 @@ IslAst::buildRunCondition(Scop &S, __isl_keep isl_ast_build *Build) {
   // The conditions that need to be checked at run-time for this scop are
   // available as an isl_set in the runtime check context from which we can
   // directly derive a run-time condition.
-  auto *PosCond = isl_ast_build_expr_from_set(Build, S.getAssumedContext());
+  auto *PosCond =
+      isl_ast_build_expr_from_set(Build, S.getAssumedContext().release());
   if (S.hasTrivialInvalidContext()) {
     RunCondition = PosCond;
   } else {
     auto *ZeroV = isl_val_zero(isl_ast_build_get_ctx(Build));
-    auto *NegCond = isl_ast_build_expr_from_set(Build, S.getInvalidContext());
+    auto *NegCond =
+        isl_ast_build_expr_from_set(Build, S.getInvalidContext().release());
     auto *NotNegCond = isl_ast_expr_eq(isl_ast_expr_from_val(ZeroV), NegCond);
     RunCondition = isl_ast_expr_and(PosCond, NotNegCond);
   }
@@ -410,7 +412,7 @@ void IslAst::init(const Dependences &D) {
   // We can not perform the dependence analysis and, consequently,
   // the parallel code generation in case the schedule tree contains
   // extension nodes.
-  auto *ScheduleTree = S.getScheduleTree();
+  auto *ScheduleTree = S.getScheduleTree().release();
   PerformParallelTest =
       PerformParallelTest && !S.containsExtensionNode(ScheduleTree);
   isl_schedule_free(ScheduleTree);
@@ -426,9 +428,10 @@ void IslAst::init(const Dependences &D) {
   AstBuildUserInfo BuildInfo;
 
   if (UseContext)
-    Build = isl_ast_build_from_context(S.getContext());
+    Build = isl_ast_build_from_context(S.getContext().release());
   else
-    Build = isl_ast_build_from_context(isl_set_universe(S.getParamSpace()));
+    Build = isl_ast_build_from_context(
+        isl_set_universe(S.getParamSpace().release()));
 
   Build = isl_ast_build_set_at_each_domain(Build, AtEachDomain, nullptr);
 
@@ -450,7 +453,7 @@ void IslAst::init(const Dependences &D) {
 
   RunCondition = buildRunCondition(S, Build);
 
-  Root = isl_ast_build_node_from_schedule(Build, S.getScheduleTree());
+  Root = isl_ast_build_node_from_schedule(Build, S.getScheduleTree().release());
 
   isl_ast_build_free(Build);
 }
@@ -594,7 +597,7 @@ static __isl_give isl_printer *cbPrintUser(__isl_take isl_printer *P,
         isl::manage(isl_ast_build_copy(IslAstInfo::getBuild(Node)));
     if (MemAcc->isAffine()) {
       isl_pw_multi_aff *PwmaPtr =
-          MemAcc->applyScheduleToAccessRelation(Build.get_schedule().release());
+          MemAcc->applyScheduleToAccessRelation(Build.get_schedule()).release();
       isl::pw_multi_aff Pwma = isl::manage(PwmaPtr);
       isl::ast_expr AccessExpr = Build.access_from(Pwma);
       P = isl_printer_print_ast_expr(P, AccessExpr.get());
@@ -651,7 +654,7 @@ void IslAstInfo::print(raw_ostream &OS) {
   P = isl_ast_node_print(RootNode, P, Options);
   AstStr = isl_printer_get_str(P);
 
-  auto *Schedule = S.getScheduleTree();
+  auto *Schedule = S.getScheduleTree().release();
 
   DEBUG({
     dbgs() << S.getContextStr() << "\n";

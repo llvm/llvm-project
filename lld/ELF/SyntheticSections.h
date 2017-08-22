@@ -504,14 +504,14 @@ class GdbIndexSection final : public SyntheticSection {
 
 public:
   GdbIndexSection(std::vector<GdbIndexChunk> &&Chunks);
-  void finalizeContents() override;
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
   bool empty() const override;
 
+private:
   // Symbol table is a hash table for types and names.
   // It is the area of gdb index.
-  GdbHashTab SymbolTable;
+  GdbHashTab HashTab;
 
   // CU vector is a part of constant pool area of section.
   std::vector<std::set<uint32_t>> CuVectors;
@@ -523,7 +523,6 @@ public:
   // object and used to build different areas of gdb index.
   std::vector<GdbIndexChunk> Chunks;
 
-private:
   void buildIndex();
 
   uint32_t CuTypesOffset;
@@ -533,8 +532,6 @@ private:
 
   size_t CuVectorsSize = 0;
   std::vector<size_t> CuVectorsOffset;
-
-  bool Finalized = false;
 };
 
 template <class ELFT> GdbIndexSection *createGdbIndex();

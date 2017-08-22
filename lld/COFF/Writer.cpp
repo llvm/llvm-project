@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -65,8 +66,9 @@ public:
       D->Type = COFF::IMAGE_DEBUG_TYPE_CODEVIEW;
       D->SizeOfData = Record->getSize();
       D->AddressOfRawData = Record->getRVA();
-      // TODO(compnerd) get the file offset
-      D->PointerToRawData = 0;
+      OutputSection *OS = Record->getOutputSection();
+      uint64_t Offs = OS->getFileOff() + (Record->getRVA() - OS->getRVA());
+      D->PointerToRawData = Offs;
 
       ++D;
     }
@@ -77,26 +79,31 @@ private:
 };
 
 class CVDebugRecordChunk : public Chunk {
+public:
+  CVDebugRecordChunk() {
+    PDBAbsPath = Config->PDBPath;
+    if (!PDBAbsPath.empty())
+      llvm::sys::fs::make_absolute(PDBAbsPath);
+  }
+
   size_t getSize() const override {
-    return sizeof(codeview::DebugInfo) + Config->PDBPath.size() + 1;
+    return sizeof(codeview::DebugInfo) + PDBAbsPath.size() + 1;
   }
 
   void writeTo(uint8_t *B) const override {
     // Save off the DebugInfo entry to backfill the file signature (build id)
     // in Writer::writeBuildId
-    DI = reinterpret_cast<codeview::DebugInfo *>(B + OutputSectionOff);
-
-    DI->Signature.CVSignature = OMF::Signature::PDB70;
+    BuildId = reinterpret_cast<codeview::DebugInfo *>(B + OutputSectionOff);
 
     // variable sized field (PDB Path)
-    auto *P = reinterpret_cast<char *>(B + OutputSectionOff + sizeof(*DI));
-    if (!Config->PDBPath.empty())
-      memcpy(P, Config->PDBPath.data(), Config->PDBPath.size());
-    P[Config->PDBPath.size()] = '\0';
+    char *P = reinterpret_cast<char *>(B + OutputSectionOff + sizeof(*BuildId));
+    if (!PDBAbsPath.empty())
+      memcpy(P, PDBAbsPath.data(), PDBAbsPath.size());
+    P[PDBAbsPath.size()] = '\0';
   }
 
-public:
-  mutable codeview::DebugInfo *DI = nullptr;
+  SmallString<128> PDBAbsPath;
+  mutable codeview::DebugInfo *BuildId = nullptr;
 };
 
 // The writer writes a SymbolTable result to a file.
@@ -118,8 +125,8 @@ private:
   void fixSafeSEHSymbols();
   void setSectionPermissions();
   void writeSections();
-  void sortExceptionTable();
   void writeBuildId();
+  void sortExceptionTable();
 
   llvm::Optional<coff_symbol16> createSymbol(Defined *D);
   size_t addEntryToStringTable(StringRef Str);
@@ -145,6 +152,7 @@ private:
   Chunk *DebugDirectory = nullptr;
   std::vector<Chunk *> DebugRecords;
   CVDebugRecordChunk *BuildId = nullptr;
+  Optional<codeview::DebugInfo> PreviousBuildId;
   ArrayRef<uint8_t> SectionTable;
 
   uint64_t FileSize;
@@ -212,6 +220,67 @@ void OutputSection::writeHeaderTo(uint8_t *Buf) {
 } // namespace coff
 } // namespace lld
 
+// PDBs are matched against executables using a build id which consists of three
+// components:
+//   1. A 16-bit GUID
+//   2. An age
+//   3. A time stamp.
+//
+// Debuggers and symbol servers match executables against debug info by checking
+// each of these components of the EXE/DLL against the corresponding value in
+// the PDB and failing a match if any of the components differ.  In the case of
+// symbol servers, symbols are cached in a folder that is a function of the
+// GUID.  As a result, in order to avoid symbol cache pollution where every
+// incremental build copies a new PDB to the symbol cache, we must try to re-use
+// the existing GUID if one exists, but bump the age.  This way the match will
+// fail, so the symbol cache knows to use the new PDB, but the GUID matches, so
+// it overwrites the existing item in the symbol cache rather than making a new
+// one.
+static Optional<codeview::DebugInfo> loadExistingBuildId(StringRef Path) {
+  // We don't need to incrementally update a previous build id if we're not
+  // writing codeview debug info.
+  if (!Config->Debug)
+    return None;
+
+  auto ExpectedBinary = llvm::object::createBinary(Path);
+  if (!ExpectedBinary) {
+    consumeError(ExpectedBinary.takeError());
+    return None;
+  }
+
+  auto Binary = std::move(*ExpectedBinary);
+  if (!Binary.getBinary()->isCOFF())
+    return None;
+
+  std::error_code EC;
+  COFFObjectFile File(Binary.getBinary()->getMemoryBufferRef(), EC);
+  if (EC)
+    return None;
+
+  // If the machine of the binary we're outputting doesn't match the machine
+  // of the existing binary, don't try to re-use the build id.
+  if (File.is64() != Config->is64() || File.getMachine() != Config->Machine)
+    return None;
+
+  for (const auto &DebugDir : File.debug_directories()) {
+    if (DebugDir.Type != IMAGE_DEBUG_TYPE_CODEVIEW)
+      continue;
+
+    const codeview::DebugInfo *ExistingDI = nullptr;
+    StringRef PDBFileName;
+    if (auto EC = File.getDebugPDBInfo(ExistingDI, PDBFileName)) {
+      (void)EC;
+      return None;
+    }
+    // We only support writing PDBs in v70 format.  So if this is not a build
+    // id that we recognize / support, ignore it.
+    if (ExistingDI->Signature.CVSignature != OMF::Signature::PDB70)
+      return None;
+    return *ExistingDI;
+  }
+  return None;
+}
+
 // The main function of the writer.
 void Writer::run() {
   createSections();
@@ -224,6 +293,10 @@ void Writer::run() {
   removeEmptySections();
   setSectionPermissions();
   createSymbolAndStringTable();
+
+  // We must do this before opening the output file, as it depends on being able
+  // to read the contents of the existing output file.
+  PreviousBuildId = loadExistingBuildId(Config->OutputFile);
   openFile(Config->OutputFile);
   if (Config->is64()) {
     writeHeader<pe32plus_header>();
@@ -236,10 +309,9 @@ void Writer::run() {
   writeBuildId();
 
   if (!Config->PDBPath.empty() && Config->Debug) {
-    const llvm::codeview::DebugInfo *DI = nullptr;
-    if (Config->DebugTypes & static_cast<unsigned>(coff::DebugType::CV))
-      DI = BuildId->DI;
-    createPDB(Symtab, SectionTable, DI);
+
+    assert(BuildId);
+    createPDB(Symtab, OutputSections, SectionTable, *BuildId->BuildId);
   }
 
   writeMapFile(OutputSections);
@@ -303,13 +375,13 @@ void Writer::createMiscChunks() {
   if (Config->Debug) {
     DebugDirectory = make<DebugDirectoryChunk>(DebugRecords);
 
-    // TODO(compnerd) create a coffgrp entry if DebugType::CV is not enabled
-    if (Config->DebugTypes & static_cast<unsigned>(coff::DebugType::CV)) {
-      auto *Chunk = make<CVDebugRecordChunk>();
-
-      BuildId = Chunk;
-      DebugRecords.push_back(Chunk);
-    }
+    // Make a CVDebugRecordChunk even when /DEBUG:CV is not specified.  We
+    // output a PDB no matter what, and this chunk provides the only means of
+    // allowing a debugger to match a PDB and an executable.  So we need it even
+    // if we're ultimately not going to write CodeView data to the PDB.
+    auto *CVChunk = make<CVDebugRecordChunk>();
+    BuildId = CVChunk;
+    DebugRecords.push_back(CVChunk);
 
     RData->addChunk(DebugDirectory);
     for (Chunk *C : DebugRecords)
@@ -322,7 +394,7 @@ void Writer::createMiscChunks() {
 
   std::set<Defined *> Handlers;
 
-  for (lld::coff::ObjectFile *File : Symtab->ObjectFiles) {
+  for (ObjFile *File : ObjFile::Instances) {
     if (!File->SEHCompat)
       return;
     for (SymbolBody *B : File->SEHandlers) {
@@ -345,13 +417,13 @@ void Writer::createMiscChunks() {
 // IdataContents class abstracted away the details for us,
 // so we just let it create chunks and add them to the section.
 void Writer::createImportTables() {
-  if (Symtab->ImportFiles.empty())
+  if (ImportFile::Instances.empty())
     return;
 
   // Initialize DLLOrder so that import entries are ordered in
   // the same order as in the command line. (That affects DLL
   // initialization order, and this ordering is MSVC-compatible.)
-  for (ImportFile *File : Symtab->ImportFiles) {
+  for (ImportFile *File : ImportFile::Instances) {
     if (!File->Live)
       continue;
 
@@ -361,7 +433,7 @@ void Writer::createImportTables() {
   }
 
   OutputSection *Text = createSection(".text");
-  for (ImportFile *File : Symtab->ImportFiles) {
+  for (ImportFile *File : ImportFile::Instances) {
     if (!File->Live)
       continue;
 
@@ -432,19 +504,12 @@ Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
   if (isa<DefinedSynthetic>(Def))
     return None;
 
-  if (auto *D = dyn_cast<DefinedRegular>(Def)) {
-    // Don't write dead symbols or symbols in codeview sections to the symbol
-    // table.
-    if (!D->getChunk()->isLive() || D->getChunk()->isCodeView())
-      return None;
-  }
-
-  if (auto *Sym = dyn_cast<DefinedImportData>(Def))
-    if (!Sym->File->Live)
-      return None;
-
-  if (auto *Sym = dyn_cast<DefinedImportThunk>(Def))
-    if (!Sym->WrappedSym->File->Live)
+  // Don't write dead symbols or symbols in codeview sections to the symbol
+  // table.
+  if (!Def->isLive())
+    return None;
+  if (auto *D = dyn_cast<DefinedRegular>(Def))
+    if (D->getChunk()->isCodeView())
       return None;
 
   coff_symbol16 Sym;
@@ -501,7 +566,7 @@ void Writer::createSymbolAndStringTable() {
     Sec->setStringTableOff(addEntryToStringTable(Name));
   }
 
-  for (lld::coff::ObjectFile *File : Symtab->ObjectFiles) {
+  for (ObjFile *File : ObjFile::Instances) {
     for (SymbolBody *B : File->getSymbols()) {
       auto *D = dyn_cast<Defined>(B);
       if (!D || D->WrittenToSymtab)
@@ -781,6 +846,25 @@ void Writer::writeSections() {
   }
 }
 
+void Writer::writeBuildId() {
+  // If we're not writing a build id (e.g. because /debug is not specified),
+  // then just return;
+  if (!Config->Debug)
+    return;
+
+  assert(BuildId && "BuildId is not set!");
+
+  if (PreviousBuildId.hasValue()) {
+    *BuildId->BuildId = *PreviousBuildId;
+    BuildId->BuildId->PDB70.Age = BuildId->BuildId->PDB70.Age + 1;
+    return;
+  }
+
+  BuildId->BuildId->Signature.CVSignature = OMF::Signature::PDB70;
+  BuildId->BuildId->PDB70.Age = 1;
+  llvm::getRandomBytes(BuildId->BuildId->PDB70.Signature, 16);
+}
+
 // Sort .pdata section contents according to PE/COFF spec 5.5.
 void Writer::sortExceptionTable() {
   OutputSection *Sec = findSection(".pdata");
@@ -802,26 +886,6 @@ void Writer::sortExceptionTable() {
     return;
   }
   errs() << "warning: don't know how to handle .pdata.\n";
-}
-
-// Backfill the CVSignature in a PDB70 Debug Record.  This backfilling allows us
-// to get reproducible builds.
-void Writer::writeBuildId() {
-  // There is nothing to backfill if BuildId was not setup.
-  if (BuildId == nullptr)
-    return;
-
-  assert(BuildId->DI->Signature.CVSignature == OMF::Signature::PDB70 &&
-         "only PDB 7.0 is supported");
-  assert(sizeof(BuildId->DI->PDB70.Signature) == 16 &&
-         "signature size mismatch");
-
-  // Compute an MD5 hash.
-  ArrayRef<uint8_t> Buf(Buffer->getBufferStart(), Buffer->getBufferEnd());
-  memcpy(BuildId->DI->PDB70.Signature, MD5::hash(Buf).data(), 16);
-
-  // TODO(compnerd) track the Age
-  BuildId->DI->PDB70.Age = 1;
 }
 
 OutputSection *Writer::findSection(StringRef Name) {

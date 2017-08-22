@@ -44,9 +44,9 @@ std::string lld::relativeToRoot(StringRef Path) {
 
 // Quote a given string if it contains a space character.
 std::string lld::quote(StringRef S) {
-  if (S.find(' ') == StringRef::npos)
-    return S;
-  return ("\"" + S + "\"").str();
+  if (S.contains(' '))
+    return ("\"" + S + "\"").str();
+  return S;
 }
 
 std::string lld::rewritePath(StringRef S) {
