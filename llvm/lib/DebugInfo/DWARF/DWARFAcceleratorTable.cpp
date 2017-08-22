@@ -73,6 +73,8 @@ bool DWARFAcceleratorTable::validateForms() {
     DWARFFormValue FormValue(Atom.second);
     switch (Atom.first) {
     case dwarf::DW_ATOM_die_offset:
+    case dwarf::DW_ATOM_die_tag:
+    case dwarf::DW_ATOM_type_flags:
       if ((!FormValue.isFormClass(DWARFFormValue::FC_Constant) &&
            !FormValue.isFormClass(DWARFFormValue::FC_Flag)) ||
           FormValue.getForm() == dwarf::DW_FORM_sdata)
@@ -84,8 +86,10 @@ bool DWARFAcceleratorTable::validateForms() {
   return true;
 }
 
-uint32_t DWARFAcceleratorTable::readAtoms(uint32_t &HashDataOffset) {
+std::pair<uint32_t, dwarf::Tag>
+DWARFAcceleratorTable::readAtoms(uint32_t &HashDataOffset) {
   uint32_t DieOffset = dwarf::DW_INVALID_OFFSET;
+  dwarf::Tag DieTag = dwarf::DW_TAG_null;
 
   for (auto Atom : getAtomsDesc()) {
     DWARFFormValue FormValue(Atom.second);
@@ -94,11 +98,14 @@ uint32_t DWARFAcceleratorTable::readAtoms(uint32_t &HashDataOffset) {
     case dwarf::DW_ATOM_die_offset:
       DieOffset = *FormValue.getAsUnsignedConstant();
       break;
+    case dwarf::DW_ATOM_die_tag:
+      DieTag = (dwarf::Tag)*FormValue.getAsUnsignedConstant();
+      break;
     default:
       break;
     }
   }
-  return DieOffset;
+  return {DieOffset, DieTag};
 }
 
 LLVM_DUMP_METHOD void DWARFAcceleratorTable::dump(raw_ostream &OS) const {
