@@ -76,7 +76,7 @@ static bool getSystemRegistryString(const char *keyPath, const char *valueName,
 
 // Check various environment variables to try and find a toolchain.
 static bool findVCToolChainViaEnvironment(std::string &Path,
-                                          bool &IsVS2017OrNewer) {
+                                          MSVCToolChain::ToolsetLayout &VSLayout) {
   // These variables are typically set by vcvarsall.bat
   // when launching a developer command prompt.
   if (llvm::Optional<std::string> VCToolsInstallDir =
@@ -84,7 +84,7 @@ static bool findVCToolChainViaEnvironment(std::string &Path,
     // This is only set by newer Visual Studios, and it leads straight to
     // the toolchain directory.
     Path = std::move(*VCToolsInstallDir);
-    IsVS2017OrNewer = true;
+    VSLayout = MSVCToolChain::ToolsetLayout::VS2017OrNewer;
     return true;
   }
   if (llvm::Optional<std::string> VCInstallDir =
@@ -94,7 +94,7 @@ static bool findVCToolChainViaEnvironment(std::string &Path,
     // so this check has to appear second.
     // In older Visual Studios, the VC directory is the toolchain.
     Path = std::move(*VCInstallDir);
-    IsVS2017OrNewer = false;
+    VSLayout = MSVCToolChain::ToolsetLayout::OlderVS;
     return true;
   }
 
@@ -134,9 +134,16 @@ static bool findVCToolChainViaEnvironment(std::string &Path,
       }
       if (IsBin) {
         llvm::StringRef ParentPath = llvm::sys::path::parent_path(TestPath);
-        if (llvm::sys::path::filename(ParentPath) == "VC") {
+        llvm::StringRef ParentFilename = llvm::sys::path::filename(ParentPath);
+        if (ParentFilename == "VC") {
           Path = ParentPath;
-          IsVS2017OrNewer = false;
+          VSLayout = MSVCToolChain::ToolsetLayout::OlderVS;
+          return true;
+        }
+        if (ParentFilename == "x86ret" || ParentFilename == "x86chk"
+          || ParentFilename == "amd64ret" || ParentFilename == "amd64chk") {
+          Path = ParentPath;
+          VSLayout = MSVCToolChain::ToolsetLayout::DevDivInternal;
           return true;
         }
 
@@ -165,7 +172,7 @@ static bool findVCToolChainViaEnvironment(std::string &Path,
           ToolChainPath = llvm::sys::path::parent_path(ToolChainPath);
 
         Path = ToolChainPath;
-        IsVS2017OrNewer = true;
+        VSLayout = MSVCToolChain::ToolsetLayout::VS2017OrNewer;
         return true;
       }
 
@@ -181,7 +188,7 @@ static bool findVCToolChainViaEnvironment(std::string &Path,
 // This is the preferred way to discover new Visual Studios, as they're no
 // longer listed in the registry.
 static bool findVCToolChainViaSetupConfig(std::string &Path,
-                                          bool &IsVS2017OrNewer) {
+                                          MSVCToolChain::ToolsetLayout &VSLayout) {
 #if !defined(USE_MSVC_SETUP_API)
   return false;
 #else
@@ -263,7 +270,7 @@ static bool findVCToolChainViaSetupConfig(std::string &Path,
     return false;
 
   Path = ToolchainPath.str();
-  IsVS2017OrNewer = true;
+  VSLayout = MSVCToolChain::ToolsetLayout::VS2017OrNewer;
   return true;
 #endif
 }
@@ -272,7 +279,7 @@ static bool findVCToolChainViaSetupConfig(std::string &Path,
 // a toolchain path. VS2017 and newer don't get added to the registry.
 // So if we find something here, we know that it's an older version.
 static bool findVCToolChainViaRegistry(std::string &Path,
-                                       bool &IsVS2017OrNewer) {
+                                       MSVCToolChain::ToolsetLayout &VSLayout) {
   std::string VSInstallPath;
   if (getSystemRegistryString(R"(SOFTWARE\Microsoft\VisualStudio\$VERSION)",
                               "InstallDir", VSInstallPath, nullptr) ||
@@ -284,7 +291,7 @@ static bool findVCToolChainViaRegistry(std::string &Path,
       llvm::sys::path::append(VCPath, "VC");
 
       Path = VCPath.str();
-      IsVS2017OrNewer = false;
+      VSLayout = MSVCToolChain::ToolsetLayout::OlderVS;
       return true;
     }
   }
@@ -475,6 +482,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // native target bin directory.
     // e.g. when compiling for x86 on an x64 host, PATH should start with:
     // /bin/HostX64/x86;/bin/HostX64/x64
+    // This doesn't attempt to handle ToolsetLayout::DevDivInternal.
     if (TC.getIsVS2017OrNewer() &&
         llvm::Triple(llvm::sys::getProcessTriple()).getArch() != TC.getArch()) {
       auto HostArch = llvm::Triple(llvm::sys::getProcessTriple()).getArch();
@@ -677,9 +685,9 @@ MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
   // what they want to use.
   // Failing that, just try to find the newest Visual Studio version we can
   // and use its default VC toolchain.
-  findVCToolChainViaEnvironment(VCToolChainPath, IsVS2017OrNewer) ||
-      findVCToolChainViaSetupConfig(VCToolChainPath, IsVS2017OrNewer) ||
-      findVCToolChainViaRegistry(VCToolChainPath, IsVS2017OrNewer);
+  findVCToolChainViaEnvironment(VCToolChainPath, VSLayout) ||
+      findVCToolChainViaSetupConfig(VCToolChainPath, VSLayout) ||
+      findVCToolChainViaRegistry(VCToolChainPath, VSLayout);
 }
 
 Tool *MSVCToolChain::buildLinker() const {
@@ -766,6 +774,21 @@ static const char *llvmArchToLegacyVCArch(llvm::Triple::ArchType Arch) {
   }
 }
 
+// Similar to the above function, but for DevDiv internal builds.
+static const char *llvmArchToDevDivInternalArch(llvm::Triple::ArchType Arch) {
+  using ArchType = llvm::Triple::ArchType;
+  switch (Arch) {
+  case ArchType::x86:
+    return "i386";
+  case ArchType::x86_64:
+    return "amd64";
+  case ArchType::arm:
+    return "arm";
+  default:
+    return "";
+  }
+}
+
 // Get the path to a specific subdirectory in the current toolchain for
 // a given target architecture.
 // VS2017 changed the VC toolchain layout, so this should be used instead
@@ -773,26 +796,40 @@ static const char *llvmArchToLegacyVCArch(llvm::Triple::ArchType Arch) {
 std::string
 MSVCToolChain::getSubDirectoryPath(SubDirectoryType Type,
                                    llvm::Triple::ArchType TargetArch) const {
+  const char *SubdirName;
+  const char *IncludeName;
+  switch (VSLayout) {
+  case ToolsetLayout::OlderVS:
+    SubdirName = llvmArchToLegacyVCArch(TargetArch);
+    IncludeName = "include";
+    break;
+  case ToolsetLayout::VS2017OrNewer:
+    SubdirName = llvmArchToWindowsSDKArch(TargetArch);
+    IncludeName = "include";
+    break;
+  case ToolsetLayout::DevDivInternal:
+    SubdirName = llvmArchToDevDivInternalArch(TargetArch);
+    IncludeName = "inc";
+    break;
+  }
+
   llvm::SmallString<256> Path(VCToolChainPath);
   switch (Type) {
   case SubDirectoryType::Bin:
-    if (IsVS2017OrNewer) {
-      bool HostIsX64 =
+    if (VSLayout == ToolsetLayout::VS2017OrNewer) {
+      const bool HostIsX64 =
           llvm::Triple(llvm::sys::getProcessTriple()).isArch64Bit();
-      llvm::sys::path::append(Path, "bin", (HostIsX64 ? "HostX64" : "HostX86"),
-                              llvmArchToWindowsSDKArch(TargetArch));
-
-    } else {
-      llvm::sys::path::append(Path, "bin", llvmArchToLegacyVCArch(TargetArch));
+      const char *const HostName = HostIsX64 ? "HostX64" : "HostX86";
+      llvm::sys::path::append(Path, "bin", HostName, SubdirName);
+    } else { // OlderVS or DevDivInternal
+      llvm::sys::path::append(Path, "bin", SubdirName);
     }
     break;
   case SubDirectoryType::Include:
-    llvm::sys::path::append(Path, "include");
+    llvm::sys::path::append(Path, IncludeName);
     break;
   case SubDirectoryType::Lib:
-    llvm::sys::path::append(
-        Path, "lib", IsVS2017OrNewer ? llvmArchToWindowsSDKArch(TargetArch)
-                                     : llvmArchToLegacyVCArch(TargetArch));
+    llvm::sys::path::append(Path, "lib", SubdirName);
     break;
   }
   return Path.str();
