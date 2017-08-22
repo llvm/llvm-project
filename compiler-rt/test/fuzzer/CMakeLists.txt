@@ -34,6 +34,8 @@ foreach(arch ${FUZZER_SUPPORTED_ARCH})
 
 endforeach()
 
+set(EXCLUDE_FROM_ALL ON)
+
 add_lit_testsuite(check-fuzzer "Running Fuzzer tests"
   ${LIBFUZZER_TESTSUITES}
   DEPENDS ${LIBFUZZER_TEST_DEPS})
