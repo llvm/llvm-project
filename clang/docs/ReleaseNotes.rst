@@ -203,7 +203,42 @@ Objective-C Language Changes in Clang
 OpenCL C Language Changes in Clang
 ----------------------------------
 
-...
+Various bug fixes and improvements:
+
+-  Extended OpenCL-related Clang tests.
+
+-  Improved diagnostics across several areas: scoped address space
+   qualified variables, function pointers, atomics, type rank for overloading,
+   block captures, ``reserve_id_t``.
+
+-  Several address space related fixes for constant address space function scope variables,
+   IR generation, mangling of ``generic`` and alloca (post-fix from general Clang
+   refactoring of address spaces).
+
+-  Several improvements in extensions: fixed OpenCL version for ``cl_khr_mipmap_image``,
+   added missing ``cl_khr_3d_image_writes``.
+
+-  Improvements in ``enqueue_kernel``, especially the implementation of ``ndrange_t`` and blocks.
+
+-  OpenCL type related fixes: global samplers, the ``pipe_t`` size, internal type redefinition,
+   and type compatibility checking in ternary and other operations.
+
+-  The OpenCL header has been extended with missing extension guards, and direct mapping of ``as_type``
+   to ``__builtin_astype``.
+
+-  Fixed ``kernel_arg_type_qual`` and OpenCL/SPIR version in metadata.
+
+-  Added proper use of the kernel calling convention to various targets.
+
+The following new functionalities have been added:
+
+-  Added documentation on OpenCL to Clang user manual.
+
+-  Extended Clang builtins with required ``cl_khr_subgroups`` support.
+
+-  Add ``intel_reqd_sub_group_size`` attribute support.
+
+-  Added OpenCL types to ``CIndex``.
 
 OpenMP Support in Clang
 ----------------------------------
