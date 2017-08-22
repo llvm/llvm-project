@@ -375,6 +375,7 @@ class CXXRecordDecl : public RecordDecl {
     /// \brief These flags are \c true if a defaulted corresponding special
     /// member can't be fully analyzed without performing overload resolution.
     /// @{
+    unsigned NeedOverloadResolutionForCopyConstructor : 1;
     unsigned NeedOverloadResolutionForMoveConstructor : 1;
     unsigned NeedOverloadResolutionForMoveAssignment : 1;
     unsigned NeedOverloadResolutionForDestructor : 1;
@@ -383,6 +384,7 @@ class CXXRecordDecl : public RecordDecl {
     /// \brief These flags are \c true if an implicit defaulted corresponding
     /// special member would be defined as deleted.
     /// @{
+    unsigned DefaultedCopyConstructorIsDeleted : 1;
     unsigned DefaultedMoveConstructorIsDeleted : 1;
     unsigned DefaultedMoveAssignmentIsDeleted : 1;
     unsigned DefaultedDestructorIsDeleted : 1;
@@ -414,6 +416,12 @@ class CXXRecordDecl : public RecordDecl {
     /// \brief True if this class has a (possibly implicit) defaulted default
     /// constructor.
     unsigned HasDefaultedDefaultConstructor : 1;
+
+    /// \brief True if this class can be passed in a non-address-preserving
+    /// fashion (such as in registers) according to the C++ language rules.
+    /// This does not imply anything about how the ABI in use will actually
+    /// pass an object of this class.
+    unsigned CanPassInRegisters : 1;
 
     /// \brief True if a defaulted default constructor for this class would
     /// be constexpr.
@@ -811,18 +819,50 @@ public:
     return data().FirstFriend.isValid();
   }
 
+  /// \brief \c true if a defaulted copy constructor for this class would be
+  /// deleted.
+  bool defaultedCopyConstructorIsDeleted() const {
+    assert((!needsOverloadResolutionForCopyConstructor() ||
+            (data().DeclaredSpecialMembers & SMF_CopyConstructor)) &&
+           "this property has not yet been computed by Sema");
+    return data().DefaultedCopyConstructorIsDeleted;
+  }
+
+  /// \brief \c true if a defaulted move constructor for this class would be
+  /// deleted.
+  bool defaultedMoveConstructorIsDeleted() const {
+    assert((!needsOverloadResolutionForMoveConstructor() ||
+            (data().DeclaredSpecialMembers & SMF_MoveConstructor)) &&
+           "this property has not yet been computed by Sema");
+    return data().DefaultedMoveConstructorIsDeleted;
+  }
+
+  /// \brief \c true if a defaulted destructor for this class would be deleted.
+  bool defaultedDestructorIsDeleted() const {
+    return !data().DefaultedDestructorIsDeleted;
+  }
+
+  /// \brief \c true if we know for sure that this class has a single,
+  /// accessible, unambiguous copy constructor that is not deleted.
+  bool hasSimpleCopyConstructor() const {
+    return !hasUserDeclaredCopyConstructor() &&
+           !data().DefaultedCopyConstructorIsDeleted;
+  }
+
   /// \brief \c true if we know for sure that this class has a single,
   /// accessible, unambiguous move constructor that is not deleted.
   bool hasSimpleMoveConstructor() const {
     return !hasUserDeclaredMoveConstructor() && hasMoveConstructor() &&
            !data().DefaultedMoveConstructorIsDeleted;
   }
+
   /// \brief \c true if we know for sure that this class has a single,
   /// accessible, unambiguous move assignment operator that is not deleted.
   bool hasSimpleMoveAssignment() const {
     return !hasUserDeclaredMoveAssignment() && hasMoveAssignment() &&
            !data().DefaultedMoveAssignmentIsDeleted;
   }
+
   /// \brief \c true if we know for sure that this class has an accessible
   /// destructor that is not deleted.
   bool hasSimpleDestructor() const {
@@ -878,7 +918,16 @@ public:
   /// \brief Determine whether we need to eagerly declare a defaulted copy
   /// constructor for this class.
   bool needsOverloadResolutionForCopyConstructor() const {
-    return data().HasMutableFields;
+    // C++17 [class.copy.ctor]p6:
+    //   If the class definition declares a move constructor or move assignment
+    //   operator, the implicitly declared copy constructor is defined as
+    //   deleted.
+    // In MSVC mode, sometimes a declared move assignment does not delete an
+    // implicit copy constructor, so defer this choice to Sema.
+    if (data().UserDeclaredSpecialMembers &
+        (SMF_MoveConstructor | SMF_MoveAssignment))
+      return true;
+    return data().NeedOverloadResolutionForCopyConstructor;
   }
 
   /// \brief Determine whether an implicit copy constructor for this type
@@ -919,7 +968,16 @@ public:
            needsImplicitMoveConstructor();
   }
 
-  /// \brief Set that we attempted to declare an implicitly move
+  /// \brief Set that we attempted to declare an implicit copy
+  /// constructor, but overload resolution failed so we deleted it.
+  void setImplicitCopyConstructorIsDeleted() {
+    assert((data().DefaultedCopyConstructorIsDeleted ||
+            needsOverloadResolutionForCopyConstructor()) &&
+           "Copy constructor should not be deleted");
+    data().DefaultedCopyConstructorIsDeleted = true;
+  }
+
+  /// \brief Set that we attempted to declare an implicit move
   /// constructor, but overload resolution failed so we deleted it.
   void setImplicitMoveConstructorIsDeleted() {
     assert((data().DefaultedMoveConstructorIsDeleted ||
@@ -1314,6 +1372,18 @@ public:
   /// and will call only irrelevant destructors.
   bool hasIrrelevantDestructor() const {
     return data().HasIrrelevantDestructor;
+  }
+
+  /// \brief Determine whether this class has at least one trivial, non-deleted
+  /// copy or move constructor.
+  bool canPassInRegisters() const {
+    return data().CanPassInRegisters;
+  }
+
+  /// \brief Set that we can pass this RecordDecl in registers.
+  // FIXME: This should be set as part of completeDefinition.
+  void setCanPassInRegisters(bool CanPass) {
+    data().CanPassInRegisters = CanPass;
   }
 
   /// \brief Determine whether this class has a non-literal or/ volatile type
