@@ -2780,6 +2780,22 @@ TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
                    "* long */",
                    getLLVMStyleWithColumns(20)));
 }
+
+TEST_F(FormatTestComments, NonTrailingBlockComments) {
+  verifyFormat("const /** comment comment */ A = B;",
+               getLLVMStyleWithColumns(40));
+
+  verifyFormat("const /** comment comment comment */ A =\n"
+               "    B;",
+               getLLVMStyleWithColumns(40));
+
+  EXPECT_EQ("const /** comment comment comment\n"
+            "         comment */\n"
+            "    A = B;",
+            format("const /** comment comment comment comment */\n"
+                   "    A = B;",
+                   getLLVMStyleWithColumns(40)));
+}
 } // end namespace
 } // end namespace format
 } // end namespace clang
