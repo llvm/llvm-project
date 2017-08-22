@@ -168,6 +168,16 @@ static cl::opt<bool> PollyIgnoreParamBounds(
         "Do not add parameter bounds and do no gist simplify sets accordingly"),
     cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
+static cl::opt<bool> PollyAllowDereferenceOfAllFunctionParams(
+    "polly-allow-dereference-of-all-function-parameters",
+    cl::desc(
+        "Treat all parameters to functions that are pointers as dereferencible."
+        " This is useful for invariant load hoisting, since we can generate"
+        " less runtime checks. This is only valid if all pointers to functions"
+        " are always initialized, so that Polly can choose to hoist"
+        " their loads. "),
+    cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+
 static cl::opt<bool> PollyPreciseFoldAccesses(
     "polly-precise-fold-accesses",
     cl::desc("Fold memory accesses to model more possible delinearizations "
@@ -3827,11 +3837,23 @@ InvariantEquivClassTy *Scop::lookupInvariantEquivClass(Value *Val) {
   return nullptr;
 }
 
+bool isAParameter(llvm::Value *maybeParam, const Function &F) {
+  for (const llvm::Argument &Arg : F.args())
+    if (&Arg == maybeParam)
+      return true;
+
+  return false;
+};
+
 bool Scop::canAlwaysBeHoisted(MemoryAccess *MA, bool StmtInvalidCtxIsEmpty,
                               bool MAInvalidCtxIsEmpty,
                               bool NonHoistableCtxIsEmpty) {
   LoadInst *LInst = cast<LoadInst>(MA->getAccessInstruction());
   const DataLayout &DL = LInst->getParent()->getModule()->getDataLayout();
+  if (PollyAllowDereferenceOfAllFunctionParams &&
+      isAParameter(LInst->getPointerOperand(), getFunction()))
+    return true;
+
   // TODO: We can provide more information for better but more expensive
   //       results.
   if (!isDereferenceableAndAlignedPointer(LInst->getPointerOperand(),

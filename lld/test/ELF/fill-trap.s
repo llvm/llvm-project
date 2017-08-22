@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %t2
 # RUN: llvm-readobj -program-headers %t2 | FileCheck %s
-# RUN: hexdump -v -s 0x0001ff0 -x %t2 | FileCheck %s -check-prefix=FILL
+# RUN: od -Ax -x -N16 -j0x1ff0 %t2 | FileCheck %s -check-prefix=FILL
 
 # CHECK: ProgramHeader {
 # CHECK:   Type: PT_LOAD
@@ -17,8 +17,8 @@
 # CHECK-NEXT:     PF_X
 # CHECK-NEXT:   ]
 
-## Check that executable page is filled with traps at it's end.
-# FILL: 0001ff0 cccc cccc cccc cccc cccc cccc cccc cccc
+## Check that executable page is filled with traps at its end.
+# FILL: 001ff0 cccc cccc cccc cccc cccc cccc cccc cccc
 
 .globl _start
 _start:
