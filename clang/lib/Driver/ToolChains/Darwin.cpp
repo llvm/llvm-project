@@ -1003,7 +1003,7 @@ void DarwinClang::AddLinkSanitizerLibArgs(const ArgList &Args,
       (Twine("libclang_rt.") + Sanitizer + "_" +
        getOSLibraryNameSuffix() + (Shared ? "_dynamic.dylib" : ".a")).str(),
       /*AlwaysLink*/ true, /*IsEmbedded*/ false,
-      /*AddRPath*/ true);
+      /*AddRPath*/ Shared);
 }
 
 ToolChain::RuntimeLibType DarwinClang::GetRuntimeLibType(
