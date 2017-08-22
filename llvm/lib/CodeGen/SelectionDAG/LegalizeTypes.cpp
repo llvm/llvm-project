@@ -834,6 +834,7 @@ static void transferDbgValues(SelectionDAG &DAG, DIBuilder &DIB, SDValue From,
   SDNode *ToNode = To.getNode();
   assert(FromNode != ToNode);
 
+  SmallVector<SDDbgValue *, 2> ClonedDVs;
   for (SDDbgValue *Dbg : DAG.GetDbgValues(FromNode)) {
     if (Dbg->getKind() != SDDbgValue::SDNODE)
       break;
@@ -846,12 +847,15 @@ static void transferDbgValues(SelectionDAG &DAG, DIBuilder &DIB, SDValue From,
         DAG.getDbgValue(Var, Fragment, ToNode, To.getResNo(), Dbg->isIndirect(),
                         Dbg->getDebugLoc(), Dbg->getOrder());
     Dbg->setIsInvalidated();
-    DAG.AddDbgValue(Clone, ToNode, false);
+    ClonedDVs.push_back(Clone);
 
     // Add the expression to the metadata graph so isn't lost in MIR dumps.
     const Module *M = DAG.getMachineFunction().getMMI().getModule();
     M->getNamedMetadata("llvm.dbg.mir")->addOperand(Fragment);
   }
+
+  for (SDDbgValue *Dbg : ClonedDVs)
+    DAG.AddDbgValue(Dbg, ToNode, false);
 }
 
 void DAGTypeLegalizer::SetExpandedInteger(SDValue Op, SDValue Lo,
