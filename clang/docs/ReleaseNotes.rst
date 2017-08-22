@@ -98,6 +98,10 @@ New Pragmas in Clang
 - Clang now supports the ``clang attribute`` pragma that allows users to apply
   an attribute to multiple declarations.
 
+- ``pragma pack`` directives that are included in a precompiled header are now
+  applied correctly to the declarations in the compilation unit that includes
+  that precompiled header.
+
 Attribute Changes in Clang
 --------------------------
 
