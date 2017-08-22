@@ -427,7 +427,7 @@ static std::string createManifestXml() {
     return OutputBufferOrError.get()->getBuffer();
   // Using built-in library failed, possibly because libxml2 is not installed.
   // Shell out to mt.exe instead.
-  handleAllErrors(std::move(OutputBufferOrError.takeError()),
+  handleAllErrors(OutputBufferOrError.takeError(),
                   [&](ErrorInfoBase &EIB) {
                     warn("error with internal manifest tool: " + EIB.message());
                   });

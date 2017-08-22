@@ -597,19 +597,6 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     StaticRuntimes.push_back("esan");
 }
 
-static void addLibFuzzerRuntime(const ToolChain &TC,
-                                const ArgList &Args,
-                                ArgStringList &CmdArgs) {
-  StringRef ParentDir =
-      llvm::sys::path::parent_path(TC.getDriver().InstalledDir);
-  SmallString<128> P(ParentDir);
-  llvm::sys::path::append(P, "lib", "libLLVMFuzzer.a");
-  CmdArgs.push_back(Args.MakeArgString(P));
-  if (!Args.hasArg(clang::driver::options::OPT_nostdlibxx))
-    TC.AddCXXStdlibLibArgs(Args, CmdArgs);
-}
-
-
 // Should be called before we add system libraries (C++ ABI, libstdc++/libc++,
 // C runtime, etc). Returns true if sanitizer system deps need to be linked in.
 bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
@@ -619,10 +606,14 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   collectSanitizerRuntimes(TC, Args, SharedRuntimes, StaticRuntimes,
                            NonWholeStaticRuntimes, HelperStaticRuntimes,
                            RequiredSymbols);
+
   // Inject libfuzzer dependencies.
   if (TC.getSanitizerArgs().needsFuzzer()
       && !Args.hasArg(options::OPT_shared)) {
-    addLibFuzzerRuntime(TC, Args, CmdArgs);
+
+    addSanitizerRuntime(TC, Args, CmdArgs, "fuzzer", false, true);
+    if (!Args.hasArg(clang::driver::options::OPT_nostdlibxx))
+      TC.AddCXXStdlibLibArgs(Args, CmdArgs);
   }
 
   for (auto RT : SharedRuntimes)

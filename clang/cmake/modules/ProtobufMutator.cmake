@@ -6,7 +6,7 @@ set(PBM_FUZZ_LIB_PATH ${PBM_PATH}/src/libfuzzer/libprotobuf-mutator-libfuzzer.a)
 ExternalProject_Add(${PBM_PREFIX}
   PREFIX ${PBM_PREFIX}
   GIT_REPOSITORY https://github.com/google/libprotobuf-mutator.git
-  GIT_TAG 34287f8
+  GIT_TAG 17789d1
   CONFIGURE_COMMAND ${CMAKE_COMMAND} -G${CMAKE_GENERATOR}
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
