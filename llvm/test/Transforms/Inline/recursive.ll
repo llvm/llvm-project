@@ -37,3 +37,34 @@ declare void @foo2(i8* %in)
 
 declare i32 @foo(i32 %param)
 
+; Check that when inlining a non-recursive path into a function's own body that
+; we get the re-mapping of instructions correct.
+define i32 @test_recursive_inlining_remapping(i1 %init, i8* %addr) {
+; CHECK-LABEL: define i32 @test_recursive_inlining_remapping(
+bb:
+  %n = alloca i32
+  br i1 %init, label %store, label %load
+; CHECK-NOT:     alloca
+;
+; CHECK:         %[[N:.*]] = alloca i32
+; CHECK-NEXT:    br i1 %init,
+
+store:
+  store i32 0, i32* %n
+  %cast = bitcast i32* %n to i8*
+  %v = call i32 @test_recursive_inlining_remapping(i1 false, i8* %cast)
+  ret i32 %v
+; CHECK-NOT:     call
+;
+; CHECK:         store i32 0, i32* %[[N]]
+; CHECK-NEXT:    %[[CAST:.*]] = bitcast i32* %[[N]] to i8*
+; CHECK-NEXT:    %[[INLINED_LOAD:.*]] = load i32, i32* %[[N]]
+; CHECK-NEXT:    ret i32 %[[INLINED_LOAD]]
+;
+; CHECK-NOT:     call
+
+load:
+  %castback = bitcast i8* %addr to i32*
+  %n.load = load i32, i32* %castback
+  ret i32 %n.load
+}

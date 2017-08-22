@@ -282,6 +282,25 @@ entry:
   ret <8 x i16> %0
 }
 
+; NOTE: The mask here looks like something that could be done with a vzip,
+; but which the current handling of two-result vzip can't do - thus ending up
+; as a vtrn.
+define <8 x i16> @vzip_lower_shufflemask_undef_rev(<4 x i16>* %A, <4 x i16>* %B) {
+; CHECK-LABEL: vzip_lower_shufflemask_undef_rev:
+; CHECK:       @ BB#0: @ %entry
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d19, [r0]
+; CHECK-NEXT:    vtrn.16 d19, d16
+; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vmov r2, r3, d19
+; CHECK-NEXT:    mov pc, lr
+entry:
+  %tmp1 = load <4 x i16>, <4 x i16>* %A
+  %tmp2 = load <4 x i16>, <4 x i16>* %B
+  %0 = shufflevector <4 x i16> %tmp1, <4 x i16> %tmp2, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 4, i32 undef, i32 undef>
+  ret <8 x i16> %0
+}
+
 define <4 x i32> @vzip_lower_shufflemask_zeroed(<2 x i32>* %A) {
 ; CHECK-LABEL: vzip_lower_shufflemask_zeroed:
 ; CHECK:       @ BB#0: @ %entry
