@@ -24,6 +24,7 @@ subdirectories =
  DebugInfo
  Demangle
  ExecutionEngine
+ FuzzMutate
  LineEditor
  Linker
  IR

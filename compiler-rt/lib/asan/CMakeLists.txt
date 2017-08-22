@@ -175,9 +175,9 @@ else()
                                     EXTRA asan.syms.extra)
       set(VERSION_SCRIPT_FLAG
            -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/clang_rt.asan-dynamic-${arch}.vers)
-      set_source_files_properties(
+      set_property(SOURCE
         ${CMAKE_CURRENT_BINARY_DIR}/dummy.cc
-        PROPERTIES
+        APPEND PROPERTY
         OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clang_rt.asan-dynamic-${arch}.vers)
     else()
       set(VERSION_SCRIPT_FLAG)
@@ -203,10 +203,11 @@ else()
       ARCHS ${arch}
       OBJECT_LIBS ${ASAN_COMMON_RUNTIME_OBJECT_LIBS}
               RTAsan_dynamic
-              # The only purpose of RTAsan_dynamic_version_script_dummy is to carry
-              # a dependency of the shared runtime on the version script. With CMake
-              # 3.1 or later it can be replaced with a straightforward
+              # The only purpose of RTAsan_dynamic_version_script_dummy is to
+              # carry a dependency of the shared runtime on the version script.
+              # Replacing it with a straightforward
               # add_dependencies(clang_rt.asan-dynamic-${arch} clang_rt.asan-dynamic-${arch}-version-list)
+              # generates an order-only dependency in ninja.
               RTAsan_dynamic_version_script_dummy
               RTUbsan_cxx
               ${ASAN_DYNAMIC_WEAK_INTERCEPTION}

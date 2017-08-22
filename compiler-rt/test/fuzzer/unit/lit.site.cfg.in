@@ -1,0 +1,9 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.name = "LLVMFuzzer-Unittest"
+# Load common config for all compiler-rt unit tests.
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/unittests/lit.common.unit.configured")
+
+config.test_exec_root = os.path.join("@COMPILER_RT_BINARY_DIR@",
+                                     "lib", "fuzzer", "tests")
+config.test_source_root = config.test_exec_root
