@@ -699,6 +699,21 @@ TEST_F(FileSystemTest, CreateDir) {
     ThisDir = path::parent_path(ThisDir);
   }
 
+  // Also verify that paths with Unix separators are handled correctly.
+  std::string LongPathWithUnixSeparators(TestDirectory.str());
+  // Add at least one subdirectory to TestDirectory, and replace slashes with
+  // backslashes
+  do {
+    LongPathWithUnixSeparators.append("/DirNameWith19Charss");
+  } while (LongPathWithUnixSeparators.size() < 260);
+  std::replace(LongPathWithUnixSeparators.begin(),
+               LongPathWithUnixSeparators.end(),
+               '\\', '/');
+  ASSERT_NO_ERROR(fs::create_directories(Twine(LongPathWithUnixSeparators)));
+  // cleanup
+  ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) +
+                                         "/DirNameWith19Charss"));
+
   // Similarly for a relative pathname.  Need to set the current directory to
   // TestDirectory so that the one we create ends up in the right place.
   char PreviousDir[260];

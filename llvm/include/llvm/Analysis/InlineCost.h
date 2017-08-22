@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include <cassert>
 #include <climits>
 
@@ -185,12 +186,11 @@ int getCallsiteCost(CallSite CS, const DataLayout &DL);
 ///
 /// Also note that calling this function *dynamically* computes the cost of
 /// inlining the callsite. It is an expensive, heavyweight call.
-InlineCost
-getInlineCost(CallSite CS, const InlineParams &Params,
-              TargetTransformInfo &CalleeTTI,
-              std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
-              Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
-              ProfileSummaryInfo *PSI);
+InlineCost getInlineCost(
+    CallSite CS, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
+    std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
+    Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
+    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE = nullptr);
 
 /// \brief Get an InlineCost with the callee explicitly specified.
 /// This allows you to calculate the cost of inlining a function via a
@@ -202,7 +202,7 @@ getInlineCost(CallSite CS, Function *Callee, const InlineParams &Params,
               TargetTransformInfo &CalleeTTI,
               std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
               Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
-              ProfileSummaryInfo *PSI);
+              ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE);
 
 /// \brief Minimal filter to detect invalid constructs for inlining.
 bool isInlineViable(Function &Callee);
