@@ -77,11 +77,15 @@ Changes to the LLVM IR
 * Added speculatable attribute indicating a function which does has no
   side-effects which could inhibit hoisting of calls.
 
-Changes to the ARM Backend
+Changes to the Arm Targets
 --------------------------
 
- During this release ...
+During this release the ARM target has:
 
+* Improved mixed ARM/Thumb code generation. Some cases in which wrong
+  relocations were emitted have been fixed.
+* Added initial support for mixed ARM/Thumb link-time optimization, using the
+  thumb-mode target feature.
 
 Changes to the MIPS Target
 --------------------------
