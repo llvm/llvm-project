@@ -1,7 +1,8 @@
-; RUN: opt %loadPolly -polly-detect -stats < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-detect -stats -disable-output < %s 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 
+; CHECK-DAG: 10 polly-detect     - Number of loops (in- or out of scops, in any function processed by Polly)
 ; CHECK-DAG:  4 polly-detect     - Maximal number of loops in scops (profitable scops only)
 ; CHECK-DAG:  4 polly-detect     - Maximal number of loops in scops
 ; CHECK-DAG: 10 polly-detect     - Number of loops in scops (profitable scops only)

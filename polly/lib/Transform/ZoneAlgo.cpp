@@ -182,7 +182,6 @@ static isl::union_map computeScalarReachingDefinition(isl::union_map Schedule,
                                                       isl::union_set Writes,
                                                       bool InclDef,
                                                       bool InclRedef) {
-
   // { DomainWrite[] -> Element[] }
   isl::union_map Defs = isl::union_map::from_domain(Writes);
 

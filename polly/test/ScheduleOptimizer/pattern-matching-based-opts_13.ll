@@ -28,6 +28,7 @@
 ; CHECK-NEXT:            for (int c3 = 0; c3 <= min(255, -256 * c0 + 332); c3 += 1)
 ; CHECK-NEXT:              for (int c4 = 0; c4 <= 15; c4 += 1)
 ; CHECK-NEXT:                for (int c5 = 0; c5 <= min(306, -307 * c1 + 1999); c5 += 1) {
+; CHECK-NEXT:                  // Loop Vectorizer Disabled
 ; CHECK-NEXT:                  // Register tiling - Points
 ; CHECK-NEXT:                  {
 ; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4, 1536 * c0 + 6 * c3, 307 * c1 + c5);
@@ -65,6 +66,7 @@
 ; CHECK-NEXT:            if (c0 == 1)
 ; CHECK-NEXT:              for (int c4 = 0; c4 <= 15; c4 += 1)
 ; CHECK-NEXT:                for (int c5 = 0; c5 <= min(306, -307 * c1 + 1999); c5 += 1) {
+; CHECK-NEXT:                  // Loop Vectorizer Disabled
 ; CHECK-NEXT:                  // Register tiling - Points
 ; CHECK-NEXT:                  for (int c6 = 0; c6 <= 4; c6 += 1)
 ; CHECK-NEXT:                    for (int c7 = 0; c7 <= 1; c7 += 1)

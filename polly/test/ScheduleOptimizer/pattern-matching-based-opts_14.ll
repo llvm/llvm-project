@@ -12,7 +12,10 @@
 ; Check that we do not create different alias sets for locations represented by
 ; different raw pointers.
 ;
+; Also check that we disable the Loop Vectorizer.
+;
 ; CHECK-NOT: !76 = distinct !{!76, !5, !"second level alias metadata"}
+; CHECK: !{!"llvm.loop.vectorize.enable", i1 false}
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"
