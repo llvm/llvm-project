@@ -89,16 +89,6 @@ if(APPLE)
   option(COMPILER_RT_ENABLE_WATCHOS "Enable building for watchOS - Experimental" Off)
   option(COMPILER_RT_ENABLE_TVOS "Enable building for tvOS - Experimental" Off)
 
-  CHECK_CXX_SOURCE_COMPILES("
-      static thread_local int blah;
-      int main() {
-        return 0;
-      }
-      " HAS_THREAD_LOCAL)
-
-  if( NOT HAS_THREAD_LOCAL )
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Dthread_local=__thread")
-  endif()
 else()
   option(COMPILER_RT_DEFAULT_TARGET_ONLY "Build builtins only for the default target" Off)
 endif()

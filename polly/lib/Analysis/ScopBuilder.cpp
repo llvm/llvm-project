@@ -1,4 +1,4 @@
-//===- ScopBuilder.cpp ---------------------------------------------------===//
+//===- ScopBuilder.cpp ----------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,11 +16,50 @@
 
 #include "polly/ScopBuilder.h"
 #include "polly/Options.h"
-#include "polly/Support/GICHelper.h"
+#include "polly/ScopDetection.h"
+#include "polly/ScopDetectionDiagnostic.h"
+#include "polly/ScopInfo.h"
 #include "polly/Support/SCEVValidator.h"
+#include "polly/Support/ScopHelper.h"
 #include "polly/Support/VirtualInstruction.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <string>
+#include <tuple>
+#include <vector>
 
 using namespace llvm;
 using namespace polly;
@@ -33,6 +72,7 @@ STATISTIC(InfeasibleScops,
           "Number of SCoPs with statically infeasible context.");
 
 bool polly::ModelReadOnlyScalars;
+
 static cl::opt<bool, true> XModelReadOnlyScalars(
     "polly-analyze-read-only-scalars",
     cl::desc("Model read-only scalar values in the scop description"),
@@ -52,7 +92,6 @@ static cl::opt<bool> DetectFortranArrays(
 void ScopBuilder::buildPHIAccesses(ScopStmt *PHIStmt, PHINode *PHI,
                                    Region *NonAffineSubRegion,
                                    bool IsExitBlock) {
-
   // PHI nodes that are in the exit block of the region, hence if IsExitBlock is
   // true, are not modeled as ordinary PHI nodes as they are not part of the
   // region. However, we model the operands in the predecessor blocks that are
@@ -227,7 +266,6 @@ Value *ScopBuilder::findFADAllocationVisible(MemAccInst Inst) {
   // We are looking for a "store" into a struct with the type being the Fortran
   // descriptor type
   for (auto user : MallocMem->users()) {
-
     /// match: 5
     auto *MallocStore = dyn_cast<StoreInst>(user);
     if (!MallocStore)
@@ -513,7 +551,7 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
   case FMRB_OnlyReadsArgumentPointees:
     ReadOnly = true;
   // Fall through
-  case FMRB_OnlyAccessesArgumentPointees:
+  case FMRB_OnlyAccessesArgumentPointees: {
     auto AccType = ReadOnly ? MemoryAccess::READ : MemoryAccess::MAY_WRITE;
     Loop *L = LI.getLoopFor(Inst->getParent());
     for (const auto &Arg : CI->arg_operands()) {
@@ -529,6 +567,7 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
                      ArgBasePtr->getType(), false, {AF}, {nullptr}, CI);
     }
     return true;
+  }
   }
 
   return true;
@@ -579,7 +618,6 @@ void ScopBuilder::buildAccessSingleDim(MemAccInst Inst, ScopStmt *Stmt) {
 }
 
 void ScopBuilder::buildMemoryAccess(MemAccInst Inst, ScopStmt *Stmt) {
-
   if (buildAccessMemIntrinsic(Inst, Stmt))
     return;
 
@@ -1028,7 +1066,6 @@ ScopBuilder::ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
                          const DataLayout &DL, DominatorTree &DT, LoopInfo &LI,
                          ScopDetection &SD, ScalarEvolution &SE)
     : AA(AA), DL(DL), DT(DT), LI(LI), SD(SD), SE(SE) {
-
   DebugLoc Beg, End;
   auto P = getBBPairForRegion(R);
   getDebugLocations(P, Beg, End);

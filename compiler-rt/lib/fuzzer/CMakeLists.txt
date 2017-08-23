@@ -23,8 +23,18 @@ set(LIBFUZZER_SOURCES
   FuzzerUtilWindows.cpp
   )
 
+CHECK_CXX_SOURCE_COMPILES("
+  static thread_local int blah;
+  int main() {
+  return 0;
+  }
+  " HAS_THREAD_LOCAL)
+
 if (CMAKE_CXX_FLAGS MATCHES "fsanitize-coverage")
   set(LIBFUZZER_CFLAGS -fno-sanitize-coverage=trace-pc-guard,edge,trace-cmp,indirect-calls,8bit-counters)
+endif()
+if(NOT HAS_THREAD_LOCAL)
+  set(LIBFUZZER_CFLAGS "${LIBFUZZER_CFLAGS} -Dthread_local=__thread")
 endif()
 
 if(APPLE)
