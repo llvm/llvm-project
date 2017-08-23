@@ -133,10 +133,6 @@ extern char &AMDGPUSimplifyLibCallsID;
 void initializeAMDGPUUseNativeCallsPass(PassRegistry &);
 extern char &AMDGPUUseNativeCallsID;
 
-ModulePass *createAMDGPUConvertAtomicLibCallsPass();
-void initializeAMDGPUConvertAtomicLibCallsPass(PassRegistry &);
-extern char &AMDGPUConvertAtomicLibCallsID;
-
 ModulePass *createAMDGPUclpVectorExpansionPass();
 void initializeAMDGPUclpVectorExpansionPass(PassRegistry &);
 extern char &AMDGPUclpVectorExpansionID;
