@@ -30,6 +30,8 @@ extern bool polly::PollyAllowFullFunction;
 
 namespace {
 class ScopInliner : public CallGraphSCCPass {
+  using llvm::Pass::doInitialization;
+
 public:
   static char ID;
 

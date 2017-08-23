@@ -1936,6 +1936,10 @@ private:
   /// Scop constructor; invoked from ScopBuilder::buildScop.
   Scop(Region &R, ScalarEvolution &SE, LoopInfo &LI,
        ScopDetection::DetectionContext &DC, OptimizationRemarkEmitter &ORE);
+
+  /// Return the LoopInfo used for this Scop.
+  LoopInfo *getLI() const { return Affinator.getLI(); }
+
   //@}
 
   /// Initialize this ScopBuilder.
@@ -3018,6 +3022,25 @@ public:
 
   /// Return whether @p Inst has a use outside of this SCoP.
   bool isEscaping(Instruction *Inst);
+
+  struct ScopStatistics {
+    int NumAffineLoops = 0;
+    int NumBoxedLoops = 0;
+
+    int NumValueWrites = 0;
+    int NumValueWritesInLoops = 0;
+    int NumPHIWrites = 0;
+    int NumPHIWritesInLoops = 0;
+    int NumSingletonWrites = 0;
+    int NumSingletonWritesInLoops = 0;
+  };
+
+  /// Collect statistic about this SCoP.
+  ///
+  /// These are most commonly used for LLVM's static counters (Statistic.h) in
+  /// various places. If statistics are disabled, only zeros are returned to
+  /// avoid the overhead.
+  ScopStatistics getStatistics() const;
 };
 
 /// Print Scop scop to raw_ostream OS.

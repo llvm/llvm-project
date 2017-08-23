@@ -96,6 +96,7 @@ private:
 
 namespace {
 
+#ifndef NDEBUG
 /// Whether a dimension of a set is bounded (lower and upper) by a constant,
 /// i.e. there are two constants Min and Max, such that every value x of the
 /// chosen dimensions is Min <= x <= Max.
@@ -107,6 +108,7 @@ bool isDimBoundedByConstant(isl::set Set, unsigned dim) {
   Set = Set.project_out(isl::dim::set, 1, SetDims - 1);
   return bool(Set.is_bounded());
 }
+#endif
 
 /// If @p PwAff maps to a constant, return said constant. If @p Max/@p Min, it
 /// can also be a piecewise constant and it would return the minimum/maximum
