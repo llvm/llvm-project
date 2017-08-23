@@ -18,11 +18,20 @@
 //   }
 // }
 
+#if defined(COMPILER_RT_ARMHF_TARGET)
+#  define CONVERT_DCMP_ARGS_TO_DF2_ARGS                    \
+        vmov      d0, r0, r1                     SEPARATOR \
+        vmov      d1, r2, r3
+#else
+#  define CONVERT_DCMP_ARGS_TO_DF2_ARGS
+#endif
+
 #define DEFINE_AEABI_DCMP(cond)                            \
         .syntax unified                          SEPARATOR \
         .p2align 2                               SEPARATOR \
 DEFINE_COMPILERRT_FUNCTION(__aeabi_dcmp ## cond)           \
         push      { r4, lr }                     SEPARATOR \
+        CONVERT_DCMP_ARGS_TO_DF2_ARGS            SEPARATOR \
         bl        SYMBOL_NAME(__ ## cond ## df2) SEPARATOR \
         cmp       r0, #0                         SEPARATOR \
         b ## cond 1f                             SEPARATOR \
