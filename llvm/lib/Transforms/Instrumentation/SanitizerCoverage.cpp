@@ -77,8 +77,6 @@ static const char *const SanCovCountersSectionName = "sancov_cntrs";
 static const char *const SanCovPCsSectionName = "sancov_pcs";
 
 static const char *const SanCovLowestStackName = "__sancov_lowest_stack";
-static const char *const SanCovLowestStackTLSWrapperName =
-    "_ZTW21__sancov_lowest_stack";
 
 static cl::opt<int> ClCoverageLevel(
     "sanitizer-coverage-level",
@@ -229,7 +227,6 @@ private:
   Function *SanCovTraceDivFunction[2];
   Function *SanCovTraceGepFunction;
   Function *SanCovTraceSwitchFunction;
-  Function *SanCovLowestStackTLSWrapper;
   GlobalVariable *SanCovLowestStack;
   InlineAsm *EmptyAsm;
   Type *IntptrTy, *IntptrPtrTy, *Int64Ty, *Int64PtrTy, *Int32Ty, *Int32PtrTy,
@@ -351,20 +348,11 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
 
   Constant *SanCovLowestStackConstant =
       M.getOrInsertGlobal(SanCovLowestStackName, IntptrTy);
-  SanCovLowestStackTLSWrapper =
-      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          SanCovLowestStackTLSWrapperName, IntptrTy->getPointerTo()));
-  if (Options.StackDepth) {
-    assert(isa<GlobalVariable>(SanCovLowestStackConstant));
-    SanCovLowestStack = cast<GlobalVariable>(SanCovLowestStackConstant);
-    if (!SanCovLowestStack->isDeclaration()) {
-      // Check that the user has correctly defined:
-      //     thread_local uintptr_t __sancov_lowest_stack
-      // and initialize it.
-      assert(SanCovLowestStack->isThreadLocal());
-      SanCovLowestStack->setInitializer(Constant::getAllOnesValue(IntptrTy));
-    }
-  }
+  SanCovLowestStack = cast<GlobalVariable>(SanCovLowestStackConstant);
+  SanCovLowestStack->setThreadLocalMode(
+      GlobalValue::ThreadLocalMode::InitialExecTLSModel);
+  if (Options.StackDepth && !SanCovLowestStack->isDeclaration())
+    SanCovLowestStack->setInitializer(Constant::getAllOnesValue(IntptrTy));
 
   // Make sure smaller parameters are zero-extended to i64 as required by the
   // x86_64 ABI.
@@ -483,9 +471,6 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
   // initialization.
   if (F.getName() == "__local_stdio_printf_options" ||
       F.getName() == "__local_stdio_scanf_options")
-    return false;
-  // Avoid infinite recursion by not instrumenting stack depth TLS wrapper
-  if (F.getName() == SanCovLowestStackTLSWrapperName)
     return false;
   // Don't instrument functions using SEH for now. Splitting basic blocks like
   // we do for coverage breaks WinEHPrepare.
@@ -771,12 +756,11 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     auto FrameAddrPtr =
         IRB.CreateCall(GetFrameAddr, {Constant::getNullValue(Int32Ty)});
     auto FrameAddrInt = IRB.CreatePtrToInt(FrameAddrPtr, IntptrTy);
-    auto LowestStackPtr = IRB.CreateCall(SanCovLowestStackTLSWrapper);
-    auto LowestStack = IRB.CreateLoad(LowestStackPtr);
+    auto LowestStack = IRB.CreateLoad(SanCovLowestStack);
     auto IsStackLower = IRB.CreateICmpULT(FrameAddrInt, LowestStack);
     auto ThenTerm = SplitBlockAndInsertIfThen(IsStackLower, &*IP, false);
     IRBuilder<> ThenIRB(ThenTerm);
-    ThenIRB.CreateStore(FrameAddrInt, LowestStackPtr);
+    ThenIRB.CreateStore(FrameAddrInt, SanCovLowestStack);
   }
 }
 

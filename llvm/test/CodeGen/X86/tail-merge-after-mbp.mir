@@ -4,28 +4,28 @@
 # check loop bb.7 is not merged with bb.10, bb.13
 # check loop bb.9 is not merged with bb.12
 # CHECK:  bb.2:
-# CHECK-NEXT:    successors: %bb.9(0x30000000), %bb.3(0x50000000)
+# CHECK-NEXT:    successors: %bb.3(0x30000000), %bb.4(0x50000000)
 # CHECK:    %rax = MOV64rm %r14, 1, _, 0, _
 # CHECK-NEXT:    TEST64rr %rax, %rax
-# CHECK-NEXT:    JE_1 %bb.9
-# CHECK:  bb.3:
-# CHECK-NEXT:    successors: %bb.4(0x30000000), %bb.8(0x50000000)
-# CHECK:    CMP64mi8 killed %rax, 1, _, 8, _, 0
-# CHECK-NEXT:    JNE_1 %bb.8
+# CHECK-NEXT:    JE_1 %bb.3
 # CHECK:  bb.4:
-# CHECK-NEXT:    successors: %bb.9(0x30000000), %bb.5(0x50000000)
-# CHECK:    %rax = MOV64rm %r14, 1, _, 0, _
-# CHECK-NEXT:    TEST64rr %rax, %rax
-# CHECK-NEXT:    JE_1 %bb.9
-# CHECK:  bb.5
-# CHECK-NEXT:    successors: %bb.6(0x71555555), %bb.8(0x0eaaaaab)
+# CHECK-NEXT:    successors: %bb.5(0x30000000), %bb.10(0x50000000)
 # CHECK:    CMP64mi8 killed %rax, 1, _, 8, _, 0
-# CHECK-NEXT:    JNE_1 %bb.8
-# CHECK:  bb.6:
-# CHECK-NEXT:    successors: %bb.9(0x04000000), %bb.5(0x7c000000)
+# CHECK-NEXT:    JNE_1 %bb.10
+# CHECK:  bb.5:
+# CHECK-NEXT:    successors: %bb.6(0x30000000), %bb.7(0x50000000)
 # CHECK:    %rax = MOV64rm %r14, 1, _, 0, _
 # CHECK-NEXT:    TEST64rr %rax, %rax
-# CHECK-NEXT:    JNE_1 %bb.5
+# CHECK-NEXT:    JE_1 %bb.6
+# CHECK:  bb.7
+# CHECK-NEXT:    successors: %bb.8(0x71555555), %bb.10(0x0eaaaaab)
+# CHECK:    CMP64mi8 killed %rax, 1, _, 8, _, 0
+# CHECK-NEXT:    JNE_1 %bb.10
+# CHECK:  bb.8:
+# CHECK-NEXT:    successors: %bb.9(0x04000000), %bb.7(0x7c000000)
+# CHECK:    %rax = MOV64rm %r14, 1, _, 0, _
+# CHECK-NEXT:    TEST64rr %rax, %rax
+# CHECK-NEXT:    JNE_1 %bb.7
 
 name:            foo
 body:             |

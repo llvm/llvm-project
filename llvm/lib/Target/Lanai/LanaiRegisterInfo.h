@@ -47,9 +47,6 @@ struct LanaiRegisterInfo : public LanaiGenRegisterInfo {
   unsigned getBaseRegister() const;
   bool hasBasePointer(const MachineFunction &MF) const;
 
-  // Exception handling queries.
-  unsigned getEHExceptionRegister() const;
-  unsigned getEHHandlerRegister() const;
   int getDwarfRegNum(unsigned RegNum, bool IsEH) const;
 };
 

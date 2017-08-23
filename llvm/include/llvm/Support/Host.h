@@ -92,6 +92,7 @@ constexpr bool IsBigEndianHost = false;
   StringRef getHostCPUNameForPowerPC(const StringRef &ProcCpuinfoContent);
   StringRef getHostCPUNameForARM(const StringRef &ProcCpuinfoContent);
   StringRef getHostCPUNameForS390x(const StringRef &ProcCpuinfoContent);
+  StringRef getHostCPUNameForBPF();
   }
 }
 }

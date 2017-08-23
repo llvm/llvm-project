@@ -19,6 +19,12 @@ class Proc<string Name, list<SubtargetFeature> Features>
  : Processor<Name, NoItineraries, Features>;
 
 def : Proc<"generic", []>;
+def : Proc<"v1", []>;
+def : Proc<"v2", []>;
+def : Proc<"probe", []>;
+
+def DummyFeature : SubtargetFeature<"dummy", "isDummyMode",
+                                    "true", "unused feature">;
 
 def BPFInstPrinter : AsmWriter {
   string AsmWriterClassName  = "InstPrinter";

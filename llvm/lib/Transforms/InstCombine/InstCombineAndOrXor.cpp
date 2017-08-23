@@ -991,12 +991,6 @@ bool InstCombiner::shouldOptimizeCast(CastInst *CI) {
     if (isEliminableCastPair(PrecedingCI, CI))
       return false;
 
-  // If this is a vector sext from a compare, then we don't want to break the
-  // idiom where each element of the extended vector is either zero or all ones.
-  if (CI->getOpcode() == Instruction::SExt &&
-      isa<CmpInst>(CastSrc) && CI->getDestTy()->isVectorTy())
-    return false;
-
   return true;
 }
 

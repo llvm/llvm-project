@@ -96,10 +96,9 @@ define <2 x i64> @test6(<4 x float> %a, <4 x float> %b) {
 define <2 x i64> @test7(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult <4 x float> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
 ; CHECK-NEXT:    [[CMP4:%.*]] = fcmp ult <4 x float> [[B:%.*]], zeroinitializer
-; CHECK-NEXT:    [[SEXT5:%.*]] = sext <4 x i1> [[CMP4]] to <4 x i32>
-; CHECK-NEXT:    [[AND:%.*]] = xor <4 x i32> [[SEXT]], [[SEXT5]]
+; CHECK-NEXT:    [[AND1:%.*]] = xor <4 x i1> [[CMP]], [[CMP4]]
+; CHECK-NEXT:    [[AND:%.*]] = sext <4 x i1> [[AND1]] to <4 x i32>
 ; CHECK-NEXT:    [[CONV:%.*]] = bitcast <4 x i32> [[AND]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[CONV]]
 ;

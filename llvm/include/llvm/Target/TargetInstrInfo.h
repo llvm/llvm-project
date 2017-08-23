@@ -324,13 +324,13 @@ public:
                              unsigned SubIdx, const MachineInstr &Orig,
                              const TargetRegisterInfo &TRI) const;
 
-  /// Create a duplicate of the Orig instruction in MF. This is like
-  /// MachineFunction::CloneMachineInstr(), but the target may update operands
+  /// \brief Clones instruction or the whole instruction bundle \p Orig and
+  /// insert into \p MBB before \p InsertBefore. The target may update operands
   /// that are required to be unique.
   ///
-  /// The instruction must be duplicable as indicated by isNotDuplicable().
-  virtual MachineInstr *duplicate(MachineInstr &Orig,
-                                  MachineFunction &MF) const;
+  /// \p Orig must not return true for MachineInstr::isNotDuplicable().
+  virtual MachineInstr &duplicate(MachineBasicBlock &MBB,
+      MachineBasicBlock::iterator InsertBefore, const MachineInstr &Orig) const;
 
   /// This method must be implemented by targets that
   /// set the M_CONVERTIBLE_TO_3_ADDR flag.  When this flag is set, the target
