@@ -22,10 +22,8 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "isl/ctx.h"
+#include "isl/isl-noexceptions.h"
 #include "isl/union_map.h"
-
-#include "isl-noexceptions.h"
-
 #include <utility>
 #include <vector>
 

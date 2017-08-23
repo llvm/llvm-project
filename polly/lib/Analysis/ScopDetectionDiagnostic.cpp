@@ -60,7 +60,6 @@ llvm::Statistic RejectStatistics[] = {
     SCOP_STAT(DifferentElementSize, "Accesses with differing sizes"),
     SCOP_STAT(LastAffFunc, ""),
     SCOP_STAT(LoopBound, "Uncomputable loop bounds"),
-    SCOP_STAT(LoopHasNoExit, "Loop without exit"),
     SCOP_STAT(LoopOnlySomeLatches, "Not all loop latches in scop"),
     SCOP_STAT(FuncCall, "Function call with side effects"),
     SCOP_STAT(NonSimpleMemoryAccess,
@@ -460,29 +459,6 @@ std::string ReportLoopBound::getEndUserMessage() const {
 }
 
 //===----------------------------------------------------------------------===//
-// ReportLoopHasNoExit.
-
-std::string ReportLoopHasNoExit::getRemarkName() const {
-  return "LoopHasNoExit";
-}
-
-const Value *ReportLoopHasNoExit::getRemarkBB() const { return L->getHeader(); }
-
-std::string ReportLoopHasNoExit::getMessage() const {
-  return "Loop " + L->getHeader()->getName() + " has no exit.";
-}
-
-bool ReportLoopHasNoExit::classof(const RejectReason *RR) {
-  return RR->getKind() == RejectReasonKind::LoopHasNoExit;
-}
-
-const DebugLoc &ReportLoopHasNoExit::getDebugLoc() const { return Loc; }
-
-std::string ReportLoopHasNoExit::getEndUserMessage() const {
-  return "Loop cannot be handled because it has no exit.";
-}
-
-//===----------------------------------------------------------------------===//
 // ReportLoopOnlySomeLatches
 
 std::string ReportLoopOnlySomeLatches::getRemarkName() const {
@@ -499,7 +475,7 @@ std::string ReportLoopOnlySomeLatches::getMessage() const {
 }
 
 bool ReportLoopOnlySomeLatches::classof(const RejectReason *RR) {
-  return RR->getKind() == RejectReasonKind::LoopHasNoExit;
+  return RR->getKind() == RejectReasonKind::LoopOnlySomeLatches;
 }
 
 const DebugLoc &ReportLoopOnlySomeLatches::getDebugLoc() const { return Loc; }

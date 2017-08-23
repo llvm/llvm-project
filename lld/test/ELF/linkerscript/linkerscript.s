@@ -38,7 +38,7 @@
 # RUN: not ld.lld %t.script > %t.log 2>&1
 # RUN: FileCheck -check-prefix=INCLUDE_ERR %s < %t.log
 # INCLUDE_ERR: error: {{.+}}.script:1: cannot open foo.script
-# INCLUDE_ERR-NEXT: error: {{.+}}.script:1: INCLUDE "foo.script"
+# INCLUDE_ERR-NEXT: INCLUDE "foo.script"
 # RUN: ld.lld -L %T %t.script %t
 
 # RUN: echo "FOO(BAR)" > %t.script
