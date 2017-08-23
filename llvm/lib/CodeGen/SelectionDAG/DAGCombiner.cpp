@@ -2588,6 +2588,12 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
 
     N0IsConst = ISD::isConstantSplatVector(N0.getNode(), ConstValue0);
     N1IsConst = ISD::isConstantSplatVector(N1.getNode(), ConstValue1);
+    assert((!N0IsConst ||
+            ConstValue0.getBitWidth() == VT.getScalarSizeInBits()) &&
+           "Splat APInt should be element width");
+    assert((!N1IsConst ||
+            ConstValue1.getBitWidth() == VT.getScalarSizeInBits()) &&
+           "Splat APInt should be element width");
   } else {
     N0IsConst = isa<ConstantSDNode>(N0);
     if (N0IsConst) {
@@ -2613,12 +2619,8 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   // fold (mul x, 0) -> 0
   if (N1IsConst && ConstValue1.isNullValue())
     return N1;
-  // We require a splat of the entire scalar bit width for non-contiguous
-  // bit patterns.
-  bool IsFullSplat =
-    ConstValue1.getBitWidth() == VT.getScalarSizeInBits();
   // fold (mul x, 1) -> x
-  if (N1IsConst && ConstValue1.isOneValue() && IsFullSplat)
+  if (N1IsConst && ConstValue1.isOneValue())
     return N0;
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
@@ -2643,8 +2645,7 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
     return DAG.getNode(ISD::SHL, DL, VT, N0, Trunc);
   }
   // fold (mul x, -(1 << c)) -> -(x << c) or (-x) << c
-  if (N1IsConst && !N1IsOpaqueConst && (-ConstValue1).isPowerOf2() &&
-      IsFullSplat) {
+  if (N1IsConst && !N1IsOpaqueConst && (-ConstValue1).isPowerOf2()) {
     unsigned Log2Val = (-ConstValue1).logBase2();
     SDLoc DL(N);
     // FIXME: If the input is something that is easily negated (e.g. a

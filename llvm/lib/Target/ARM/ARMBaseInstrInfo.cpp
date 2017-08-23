@@ -1550,20 +1550,29 @@ void ARMBaseInstrInfo::reMaterialize(MachineBasicBlock &MBB,
   }
 }
 
-MachineInstr *ARMBaseInstrInfo::duplicate(MachineInstr &Orig,
-                                          MachineFunction &MF) const {
-  MachineInstr *MI = TargetInstrInfo::duplicate(Orig, MF);
-  switch (Orig.getOpcode()) {
-  case ARM::tLDRpci_pic:
-  case ARM::t2LDRpci_pic: {
-    unsigned CPI = Orig.getOperand(1).getIndex();
-    unsigned PCLabelId = duplicateCPV(MF, CPI);
-    Orig.getOperand(1).setIndex(CPI);
-    Orig.getOperand(2).setImm(PCLabelId);
-    break;
+MachineInstr &
+ARMBaseInstrInfo::duplicate(MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator InsertBefore,
+    const MachineInstr &Orig) const {
+  MachineInstr &Cloned = TargetInstrInfo::duplicate(MBB, InsertBefore, Orig);
+  MachineBasicBlock::instr_iterator I = Cloned.getIterator();
+  for (;;) {
+    switch (I->getOpcode()) {
+    case ARM::tLDRpci_pic:
+    case ARM::t2LDRpci_pic: {
+      MachineFunction &MF = *MBB.getParent();
+      unsigned CPI = I->getOperand(1).getIndex();
+      unsigned PCLabelId = duplicateCPV(MF, CPI);
+      I->getOperand(1).setIndex(CPI);
+      I->getOperand(2).setImm(PCLabelId);
+      break;
+    }
+    }
+    if (!I->isBundledWithSucc())
+      break;
+    ++I;
   }
-  }
-  return MI;
+  return Cloned;
 }
 
 bool ARMBaseInstrInfo::produceSameValue(const MachineInstr &MI0,

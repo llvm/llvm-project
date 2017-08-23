@@ -522,6 +522,13 @@ let Predicates = [HasV8_3a] in {
   defm LDRAA  : AuthLoad<0, "ldraa", simm10Scaled>;
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
 
+  // v8.3a floating point conversion for javascript
+  let Predicates = [HasV8_3a, HasFPARMv8] in
+  def FJCVTZS  : BaseFPToIntegerUnscaled<0b01, 0b11, 0b110, FPR64, GPR32,
+                                        "fjcvtzs", []> {
+    let Inst{31} = 0;
+  }
+
 } // HasV8_3A
 
 def : InstAlias<"clrex", (CLREX 0xf)>;
