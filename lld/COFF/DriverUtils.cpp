@@ -708,7 +708,7 @@ void runMSVCLinker(std::string Rsp, ArrayRef<StringRef> Objects) {
 #undef PREFIX
 
 // Create table mapping all options defined in Options.td
-static const llvm::opt::OptTable::Info infoTable[] = {
+static const llvm::opt::OptTable::Info InfoTable[] = {
 #define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
   {X1, X2, X10,         X11,         OPT_##ID, llvm::opt::Option::KIND##Class, \
    X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
@@ -718,7 +718,7 @@ static const llvm::opt::OptTable::Info infoTable[] = {
 
 class COFFOptTable : public llvm::opt::OptTable {
 public:
-  COFFOptTable() : OptTable(infoTable, true) {}
+  COFFOptTable() : OptTable(InfoTable, true) {}
 };
 
 // Parses a given list of options.

@@ -1,4 +1,4 @@
-//===- polly/ScopBuilder.h -------------------------------------*- C++ -*-===//
+//===- polly/ScopBuilder.h --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,22 +14,48 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef POLLY_SCOP_BUILDER_H
-#define POLLY_SCOP_BUILDER_H
+#ifndef POLLY_SCOPBUILDER_H
+#define POLLY_SCOPBUILDER_H
 
 #include "polly/ScopInfo.h"
+#include "polly/Support/ScopHelper.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include <algorithm>
+#include <memory>
+#include <utility>
+
+namespace llvm {
+
+class AssumptionCache;
+class BasicBlock;
+class DataLayout;
+class DominatorTree;
+class Instruction;
+class LoopInfo;
+class PassRegistry;
+class PHINode;
+class Region;
+class ScalarEvolution;
+class SCEV;
+class Type;
+class Value;
+
+void initializeScopInfoRegionPassPass(PassRegistry &);
+void initializeScopInfoWrapperPassPass(PassRegistry &);
+
+} // end namespace llvm
 
 namespace polly {
+
+class ScopDetection;
 
 /// Command line switch whether to model read-only accesses.
 extern bool ModelReadOnlyScalars;
 
 /// Build the Polly IR (Scop and ScopStmt) on a Region.
 class ScopBuilder {
-  //===-------------------------------------------------------------------===//
-  ScopBuilder(const ScopBuilder &) = delete;
-  const ScopBuilder &operator=(const ScopBuilder &) = delete;
-
   /// The AliasAnalysis to build AliasSetTracker.
   AliasAnalysis &AA;
 
@@ -312,7 +338,9 @@ public:
   explicit ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
                        const DataLayout &DL, DominatorTree &DT, LoopInfo &LI,
                        ScopDetection &SD, ScalarEvolution &SE);
-  ~ScopBuilder() {}
+  ScopBuilder(const ScopBuilder &) = delete;
+  ScopBuilder &operator=(const ScopBuilder &) = delete;
+  ~ScopBuilder() = default;
 
   /// Try to build the Polly IR of static control part on the current
   /// SESE-Region.
@@ -324,10 +352,4 @@ public:
 
 } // end namespace polly
 
-namespace llvm {
-class PassRegistry;
-void initializeScopInfoRegionPassPass(llvm::PassRegistry &);
-void initializeScopInfoWrapperPassPass(llvm::PassRegistry &);
-} // namespace llvm
-
-#endif
+#endif // POLLY_SCOPBUILDER_H

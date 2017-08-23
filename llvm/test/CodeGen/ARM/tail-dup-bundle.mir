@@ -1,0 +1,36 @@
+# RUN: llc -o - %s -run-pass=block-placement -mtriple=thumbv7k-apple-ios8.0.0 -verify-machineinstrs -O3 | FileCheck %s
+---
+# CHECK-LABEL: name: func
+# Make sure the bundle gets duplicated correctly
+# CHECK: BUNDLE implicit-def dead %itstate, implicit-def %cpsr, implicit killed %r0, implicit killed %cpsr {
+# CHECK:   t2IT 1, 24, implicit-def %itstate
+# CHECK:   t2CMPri killed %r0, 9, 1, killed %cpsr, implicit-def %cpsr, implicit internal killed %itstate
+# CHECK: }
+# CHECK: BUNDLE implicit-def dead %itstate, implicit-def %cpsr, implicit killed %r0, implicit killed %cpsr {
+# CHECK:   t2IT 1, 24, implicit-def %itstate
+# CHECK:   t2CMPri killed %r0, 9, 1, killed %cpsr, implicit-def %cpsr, implicit internal killed %itstate
+# CHECK: }
+name: func
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: %r0, %lr, %r7
+
+  bb.1:
+    liveins: %r0
+
+    t2CMPri %r0, 32, 14, _, implicit-def %cpsr
+    BUNDLE implicit-def dead %itstate, implicit-def %cpsr, implicit killed %r0, implicit killed %cpsr {
+      t2IT 1, 24, implicit-def %itstate
+      t2CMPri killed %r0, 9, 1, killed %cpsr, implicit-def %cpsr, implicit internal killed %itstate
+    }
+    t2Bcc %bb.3, 1, killed %cpsr
+
+  bb.2:
+    %r0 = IMPLICIT_DEF
+    t2B %bb.1, 14, _
+
+  bb.3:
+    %r0 = IMPLICIT_DEF
+    t2B %bb.1, 14, _
+...

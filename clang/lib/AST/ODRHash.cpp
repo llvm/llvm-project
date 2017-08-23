@@ -158,7 +158,14 @@ void ODRHash::AddTemplateArgument(TemplateArgument TA) {
   }
 }
 
-void ODRHash::AddTemplateParameterList(const TemplateParameterList *TPL) {}
+void ODRHash::AddTemplateParameterList(const TemplateParameterList *TPL) {
+  assert(TPL && "Expecting non-null pointer.");
+
+  ID.AddInteger(TPL->size());
+  for (auto *ND : TPL->asArray()) {
+    AddSubDecl(ND);
+  }
+}
 
 void ODRHash::clear() {
   DeclMap.clear();
@@ -234,6 +241,10 @@ public:
     if (D) {
       Hash.AddDecl(D);
     }
+  }
+
+  void AddTemplateArgument(TemplateArgument TA) {
+    Hash.AddTemplateArgument(TA);
   }
 
   void Visit(const Decl *D) {
@@ -343,6 +354,42 @@ public:
       AddDecl(D->getFriendDecl());
     }
   }
+
+  void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
+    // Only care about default arguments as part of the definition.
+    const bool hasDefaultArgument =
+        D->hasDefaultArgument() && !D->defaultArgumentWasInherited();
+    Hash.AddBoolean(hasDefaultArgument);
+    if (hasDefaultArgument) {
+      AddTemplateArgument(D->getDefaultArgument());
+    }
+
+    Inherited::VisitTemplateTypeParmDecl(D);
+  }
+
+  void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *D) {
+    // Only care about default arguments as part of the definition.
+    const bool hasDefaultArgument =
+        D->hasDefaultArgument() && !D->defaultArgumentWasInherited();
+    Hash.AddBoolean(hasDefaultArgument);
+    if (hasDefaultArgument) {
+      AddStmt(D->getDefaultArgument());
+    }
+
+    Inherited::VisitNonTypeTemplateParmDecl(D);
+  }
+
+  void VisitTemplateTemplateParmDecl(const TemplateTemplateParmDecl *D) {
+    // Only care about default arguments as part of the definition.
+    const bool hasDefaultArgument =
+        D->hasDefaultArgument() && !D->defaultArgumentWasInherited();
+    Hash.AddBoolean(hasDefaultArgument);
+    if (hasDefaultArgument) {
+      AddTemplateArgument(D->getDefaultArgument().getArgument());
+    }
+
+    Inherited::VisitTemplateTemplateParmDecl(D);
+  }
 };
 } // namespace
 
@@ -402,6 +449,12 @@ void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
   ID.AddInteger(Decls.size());
   for (auto SubDecl : Decls) {
     AddSubDecl(SubDecl);
+  }
+
+  const ClassTemplateDecl *TD = Record->getDescribedClassTemplate();
+  AddBoolean(TD);
+  if (TD) {
+    AddTemplateParameterList(TD->getTemplateParameters());
   }
 }
 

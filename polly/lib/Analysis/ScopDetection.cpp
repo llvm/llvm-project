@@ -1180,17 +1180,6 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
   return invalid<ReportUnknownInst>(Context, /*Assert=*/true, &Inst);
 }
 
-/// Check whether @p L has exiting blocks.
-///
-/// @param L The loop of interest
-///
-/// @return True if the loop has exiting blocks, false otherwise.
-static bool hasExitingBlocks(Loop *L) {
-  SmallVector<BasicBlock *, 4> ExitingBlocks;
-  L->getExitingBlocks(ExitingBlocks);
-  return !ExitingBlocks.empty();
-}
-
 bool ScopDetection::canUseISLTripCount(Loop *L,
                                        DetectionContext &Context) const {
   // Ensure the loop has valid exiting blocks as well as latches, otherwise we
@@ -1211,34 +1200,18 @@ bool ScopDetection::isValidLoop(Loop *L, DetectionContext &Context) const {
   // Loops that contain part but not all of the blocks of a region cannot be
   // handled by the schedule generation. Such loop constructs can happen
   // because a region can contain BBs that have no path to the exit block
-  // (Infinite loops, UnreachableInst), but such blocks are never part of a
-  // loop.
-  //
-  // _______________
-  // | Loop Header | <-----------.
-  // ---------------             |
-  //        |                    |
-  // _______________       ______________
-  // | RegionEntry |-----> | RegionExit |----->
-  // ---------------       --------------
-  //        |
-  // _______________
-  // | EndlessLoop | <--.
-  // ---------------    |
-  //       |            |
-  //       \------------/
-  //
-  // In the example above, the loop (LoopHeader,RegionEntry,RegionExit) is
-  // neither entirely contained in the region RegionEntry->RegionExit
-  // (containing RegionEntry,EndlessLoop) nor is the region entirely contained
-  // in the loop.
-  // The block EndlessLoop is contained in the region because Region::contains
-  // tests whether it is not dominated by RegionExit. This is probably to not
-  // having to query the PostdominatorTree. Instead of an endless loop, a dead
-  // end can also be formed by an UnreachableInst. This case is already caught
-  // by isErrorBlock(). We hence only have to reject endless loops here.
-  if (!hasExitingBlocks(L))
-    return invalid<ReportLoopHasNoExit>(Context, /*Assert=*/true, L);
+  // (infinite loops, UnreachableInst).
+  // We do not have to verify against infinite loops here -- they are
+  // postdominated only by the virtual exit and do not appear in regions.
+  // Instead of an infinite loop, a dead end can also be formed by an
+  // UnreachableInst. This case is already caught by isErrorBlock().
+
+#ifndef NDEBUG
+  // Make sure that the loop has exits (i.e. is not infinite).
+  SmallVector<BasicBlock *, 4> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  assert(!ExitingBlocks.empty() && "Region with an infinite loop found!");
+#endif
 
   if (canUseISLTripCount(L, Context))
     return true;

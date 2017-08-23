@@ -76,6 +76,18 @@ public:
       return CCCR_OK;
     }
   }
+
+  bool isValidCPUName(StringRef Name) const override {
+    if (Name == "generic" || Name == "v1" ||
+        Name == "v2" || Name == "probe")
+      return true;
+    return false;
+  }
+
+  bool setCPU(const std::string &Name) override {
+    StringRef CPUName(Name);
+    return isValidCPUName(CPUName);
+  }
 };
 } // namespace targets
 } // namespace clang
