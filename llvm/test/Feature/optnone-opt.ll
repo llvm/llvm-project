@@ -57,7 +57,6 @@ attributes #0 = { optnone noinline }
 ; Additional IR passes that opt doesn't turn on by default.
 ; OPT-MORE-DAG: Skipping pass 'Dead Code Elimination'
 ; OPT-MORE-DAG: Skipping pass 'Dead Instruction Elimination'
-; OPT-MORE-DAG: Skipping pass 'Lower atomic intrinsics
 
 ; Loop IR passes that opt doesn't turn on by default.
 ; OPT-LOOP-DAG: Skipping pass 'Delete dead loops'
