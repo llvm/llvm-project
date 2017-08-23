@@ -1500,6 +1500,83 @@ S5 s5;
 // expected-note@first.h:* {{but in 'FirstModule' found friend function 'T5a'}}
 #endif
 }
+
+namespace TemplateParameters {
+#if defined(FIRST)
+template <class A>
+struct S1 {};
+#elif defined(SECOND)
+template <class B>
+struct S1 {};
+#else
+using TemplateParameters::S1;
+// expected-error@second.h:* {{'TemplateParameters::S1' has different definitions in different modules; first difference is definition in module 'SecondModule' found template parameter 'B'}}
+// expected-note@first.h:* {{but in 'FirstModule' found template parameter 'A'}}
+#endif
+
+#if defined(FIRST)
+template <class A = double>
+struct S2 {};
+#elif defined(SECOND)
+template <class A = int>
+struct S2 {};
+#else
+using TemplateParameters::S2;
+// expected-error@second.h:* {{'TemplateParameters::S2' has different definitions in different modules; first difference is definition in module 'SecondModule' found template parameter with default argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found template parameter with different default argument}}
+#endif
+
+#if defined(FIRST)
+template <class A = int>
+struct S3 {};
+#elif defined(SECOND)
+template <class A>
+struct S3 {};
+#else
+using TemplateParameters::S3;
+// expected-error@second.h:* {{'TemplateParameters::S3' has different definitions in different modules; first difference is definition in module 'SecondModule' found template parameter with no default argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found template parameter with default argument}}
+#endif
+
+#if defined(FIRST)
+template <int A>
+struct S4 {};
+#elif defined(SECOND)
+template <int A = 2>
+struct S4 {};
+#else
+using TemplateParameters::S4;
+// expected-error@second.h:* {{'TemplateParameters::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found template parameter with default argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found template parameter with no default argument}}
+#endif
+
+#if defined(FIRST)
+template <int> class S5_first {};
+template <template<int> class A = S5_first>
+struct S5 {};
+#elif defined(SECOND)
+template <int> class S5_second {};
+template <template<int> class A = S5_second>
+struct S5 {};
+#else
+using TemplateParameters::S5;
+// expected-error@second.h:* {{'TemplateParameters::S5' has different definitions in different modules; first difference is definition in module 'SecondModule' found template parameter with default argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found template parameter with different default argument}}
+#endif
+
+#if defined(FIRST)
+template <class A>
+struct S6 {};
+#elif defined(SECOND)
+template <class>
+struct S6 {};
+#else
+using TemplateParameters::S6;
+// expected-error@second.h:* {{'TemplateParameters::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found unnamed template parameter}}
+// expected-note@first.h:* {{but in 'FirstModule' found template parameter 'A'}}
+#endif
+}  // namespace TemplateParameters
+
 // Interesting cases that should not cause errors.  struct S should not error
 // while struct T should error at the access specifier mismatch at the end.
 namespace AllDecls {

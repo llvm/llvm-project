@@ -122,6 +122,24 @@ def note_second_module_difference : Note<
 def err_module_odr_violation_different_instantiations : Error<
   "instantiation of %q0 is different in different modules">;
 
+def err_module_odr_violation_template_parameter : Error <
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "unnamed template parameter|"
+  "template parameter %4|"
+  "template parameter with %select{no |}4default argument|"
+  "template parameter with default argument}3">;
+
+
+def note_module_odr_violation_template_parameter : Note <
+  "but in '%0' found "
+  "%select{"
+  "unnamed template parameter %2|"
+  "template parameter %2|"
+  "template parameter with %select{no |}2default argument|"
+  "template parameter with different default argument}1">;
+
 def err_module_odr_violation_mismatch_decl : Error<
   "%q0 has different definitions in different modules; first difference is "
   "%select{definition in module '%2'|defined here}1 found "
