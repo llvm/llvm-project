@@ -80,6 +80,14 @@ Changes to the LLVM IR
 Changes to the Arm Targets
 --------------------------
 
+During this release the AArch64 target has:
+
+* Made instruction fusion more aggressive, resulting in speedups
+  for code making use of AArch64 AES instructions. AES fusion has been
+  enabled for most Cortex-A cores and the AArch64MacroFusion pass was moved
+  to the generic MacroFusion pass.
+* Added preferred function alignments for most Cortex-A cores.
+
 During this release the ARM target has:
 
 * Improved mixed ARM/Thumb code generation. Some cases in which wrong
