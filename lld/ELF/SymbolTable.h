@@ -90,8 +90,6 @@ public:
 
   void trace(StringRef Name);
 
-  void handleDynamicList();
-
 private:
   std::vector<SymbolBody *> findByVersion(SymbolVersion Ver);
   std::vector<SymbolBody *> findAllByVersion(SymbolVersion Ver);

@@ -369,10 +369,10 @@ void TailDuplicator::duplicateInstruction(
     MachineInstr *MI, MachineBasicBlock *TailBB, MachineBasicBlock *PredBB,
     DenseMap<unsigned, RegSubRegPair> &LocalVRMap,
     const DenseSet<unsigned> &UsedByPhi) {
-  MachineInstr *NewMI = TII->duplicate(*MI, *MF);
+  MachineInstr &NewMI = TII->duplicate(*PredBB, PredBB->end(), *MI);
   if (PreRegAlloc) {
-    for (unsigned i = 0, e = NewMI->getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = NewMI->getOperand(i);
+    for (unsigned i = 0, e = NewMI.getNumOperands(); i != e; ++i) {
+      MachineOperand &MO = NewMI.getOperand(i);
       if (!MO.isReg())
         continue;
       unsigned Reg = MO.getReg();
@@ -443,7 +443,6 @@ void TailDuplicator::duplicateInstruction(
       }
     }
   }
-  PredBB->insert(PredBB->instr_end(), NewMI);
 }
 
 /// After FromBB is tail duplicated into its predecessor blocks, the successors
@@ -825,10 +824,8 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
     // Clone the contents of TailBB into PredBB.
     DenseMap<unsigned, RegSubRegPair> LocalVRMap;
     SmallVector<std::pair<unsigned, RegSubRegPair>, 4> CopyInfos;
-    // Use instr_iterator here to properly handle bundles, e.g.
-    // ARM Thumb2 IT block.
-    MachineBasicBlock::instr_iterator I = TailBB->instr_begin();
-    while (I != TailBB->instr_end()) {
+    for (MachineBasicBlock::iterator I = TailBB->begin(), E = TailBB->end();
+         I != E; /* empty */) {
       MachineInstr *MI = &*I;
       ++I;
       if (MI->isPHI()) {

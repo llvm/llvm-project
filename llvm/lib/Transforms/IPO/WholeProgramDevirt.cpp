@@ -876,8 +876,9 @@ void DevirtModule::applyUniqueRetValOpt(CallSiteInfo &CSInfo, StringRef FnName,
                                         Constant *UniqueMemberAddr) {
   for (auto &&Call : CSInfo.CallSites) {
     IRBuilder<> B(Call.CS.getInstruction());
-    Value *Cmp = B.CreateICmp(IsOne ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE,
-                              Call.VTable, UniqueMemberAddr);
+    Value *Cmp =
+        B.CreateICmp(IsOne ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE,
+                     B.CreateBitCast(Call.VTable, Int8PtrTy), UniqueMemberAddr);
     Cmp = B.CreateZExt(Cmp, Call.CS->getType());
     Call.replaceAndErase("unique-ret-val", FnName, RemarksEnabled, OREGetter,
                          Cmp);
@@ -943,7 +944,8 @@ void DevirtModule::applyVirtualConstProp(CallSiteInfo &CSInfo, StringRef FnName,
   for (auto Call : CSInfo.CallSites) {
     auto *RetType = cast<IntegerType>(Call.CS.getType());
     IRBuilder<> B(Call.CS.getInstruction());
-    Value *Addr = B.CreateGEP(Int8Ty, Call.VTable, Byte);
+    Value *Addr =
+        B.CreateGEP(Int8Ty, B.CreateBitCast(Call.VTable, Int8PtrTy), Byte);
     if (RetType->getBitWidth() == 1) {
       Value *Bits = B.CreateLoad(Addr);
       Value *BitsAndBit = B.CreateAnd(Bits, Bit);
@@ -1147,8 +1149,7 @@ void DevirtModule::scanTypeTestUsers(Function *TypeTestFunc,
       Value *Ptr = CI->getArgOperand(0)->stripPointerCasts();
       if (SeenPtrs.insert(Ptr).second) {
         for (DevirtCallSite Call : DevirtCalls) {
-          CallSlots[{TypeId, Call.Offset}].addCallSite(CI->getArgOperand(0),
-                                                       Call.CS, nullptr);
+          CallSlots[{TypeId, Call.Offset}].addCallSite(Ptr, Call.CS, nullptr);
         }
       }
     }

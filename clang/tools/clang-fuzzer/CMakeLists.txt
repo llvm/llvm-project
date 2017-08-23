@@ -1,5 +1,6 @@
 if( LLVM_USE_SANITIZE_COVERAGE )
   set(LLVM_LINK_COMPONENTS ${LLVM_TARGETS_TO_BUILD})
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=fuzzer")
 
   if(CLANG_ENABLE_PROTO_FUZZER)
     # Create protobuf .h and .cc files, and put them in a library for use by
@@ -38,7 +39,6 @@ if( LLVM_USE_SANITIZE_COVERAGE )
       clangCXXProto
       clangHandleCXX
       clangProtoToCXX
-      LLVMFuzzer
       )
   else()
     # Hack to bypass LLVM's cmake sources check and allow multiple libraries and
@@ -55,6 +55,5 @@ if( LLVM_USE_SANITIZE_COVERAGE )
 
   target_link_libraries(clang-fuzzer
     clangHandleCXX
-    LLVMFuzzer
     )
 endif()
