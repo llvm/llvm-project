@@ -2260,10 +2260,9 @@ Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
 
   // If the condition is irrelevant, remove the use so that other
   // transforms on the condition become more effective.
-  if (BI.isConditional() &&
-      BI.getSuccessor(0) == BI.getSuccessor(1) &&
-      !isa<UndefValue>(BI.getCondition())) {
-    BI.setCondition(UndefValue::get(BI.getCondition()->getType()));
+  if (BI.isConditional() && !isa<ConstantInt>(BI.getCondition()) &&
+      BI.getSuccessor(0) == BI.getSuccessor(1)) {
+    BI.setCondition(ConstantInt::getFalse(BI.getCondition()->getType()));
     return &BI;
   }
 
