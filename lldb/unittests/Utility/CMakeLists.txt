@@ -1,4 +1,5 @@
 add_lldb_unittest(UtilityTests
+  JSONTest.cpp
   ModuleCacheTest.cpp
   StringExtractorTest.cpp
   TaskPoolTest.cpp
