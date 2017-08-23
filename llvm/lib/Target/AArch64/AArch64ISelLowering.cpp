@@ -1436,7 +1436,9 @@ static void changeVectorFPCCToAArch64CC(ISD::CondCode CC,
 
 static bool isLegalArithImmed(uint64_t C) {
   // Matches AArch64DAGToDAGISel::SelectArithImmed().
-  return (C >> 12 == 0) || ((C & 0xFFFULL) == 0 && C >> 24 == 0);
+  bool IsLegal = (C >> 12 == 0) || ((C & 0xFFFULL) == 0 && C >> 24 == 0);
+  DEBUG(dbgs() << "Is imm " << C << " legal: " << (IsLegal ? "yes\n" : "no\n"));
+  return IsLegal;
 }
 
 static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
@@ -2546,6 +2548,9 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
+  DEBUG(dbgs() << "Custom lowering: ");
+  DEBUG(Op.dump());
+
   switch (Op.getOpcode()) {
   default:
     llvm_unreachable("unimplemented operand");
@@ -4880,22 +4885,45 @@ SDValue AArch64TargetLowering::LowerShiftLeftParts(SDValue Op,
 
 bool AArch64TargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
-  // The AArch64 target doesn't support folding offsets into global addresses.
+  DEBUG(dbgs() << "Skipping offset folding global address: ");
+  DEBUG(GA->dump());
+  DEBUG(dbgs() << "AArch64 doesn't support folding offsets into global "
+        "addresses\n");
   return false;
 }
 
 bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
   // We can materialize #0.0 as fmov $Rd, XZR for 64-bit and 32-bit cases.
   // FIXME: We should be able to handle f128 as well with a clever lowering.
-  if (Imm.isPosZero() && (VT == MVT::f64 || VT == MVT::f32))
+  if (Imm.isPosZero() && (VT == MVT::f64 || VT == MVT::f32)) {
+    DEBUG(dbgs() << "Legal fp imm: materialize 0 using the zero register\n");
     return true;
+  }
 
-  if (VT == MVT::f64)
-    return AArch64_AM::getFP64Imm(Imm) != -1;
-  else if (VT == MVT::f32)
-    return AArch64_AM::getFP32Imm(Imm) != -1;
-  else if (VT == MVT::f16 && Subtarget->hasFullFP16())
-    return AArch64_AM::getFP16Imm(Imm) != -1;
+  StringRef FPType;
+  bool IsLegal = false;
+
+  if (VT == MVT::f64) {
+    FPType = "f64";
+    IsLegal = AArch64_AM::getFP64Imm(Imm) != -1;
+  } else if (VT == MVT::f32) {
+    FPType = "f32";
+    IsLegal = AArch64_AM::getFP32Imm(Imm) != -1;
+  } else if (VT == MVT::f16 && Subtarget->hasFullFP16()) {
+    FPType = "f16";
+    IsLegal = AArch64_AM::getFP16Imm(Imm) != -1;
+  }
+
+  if (IsLegal) {
+    DEBUG(dbgs() << "Is legal " << FPType << " imm value: yes\n");
+    return true;
+  }
+
+  if (!FPType.empty())
+    DEBUG(dbgs() << "Is legal " << FPType << " imm value: no\n");
+  else
+    DEBUG(dbgs() << "Is legal " << "fp imm: no, unsupported fp type\n");
+
   return false;
 }
 
@@ -7835,12 +7863,17 @@ EVT AArch64TargetLowering::getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
 
 // 12-bit optionally shifted immediates are legal for adds.
 bool AArch64TargetLowering::isLegalAddImmediate(int64_t Immed) const {
-  // Avoid UB for INT64_MIN.
-  if (Immed == std::numeric_limits<int64_t>::min())
+  if (Immed == std::numeric_limits<int64_t>::min()) {
+    DEBUG(dbgs() << "Illegal add imm " << Immed << ": avoid UB for INT64_MIN\n");
     return false;
+  }
   // Same encoding for add/sub, just flip the sign.
   Immed = std::abs(Immed);
-  return ((Immed >> 12) == 0 || ((Immed & 0xfff) == 0 && Immed >> 24 == 0));
+  bool IsLegal = ((Immed >> 12) == 0 ||
+                  ((Immed & 0xfff) == 0 && Immed >> 24 == 0));
+  DEBUG(dbgs() << "Is " << Immed << " legal add imm: " <<
+        (IsLegal ? "yes" : "no") << "\n");
+  return IsLegal;
 }
 
 // Integer comparisons are implemented with ADDS/SUBS, so the range of valid
@@ -10290,6 +10323,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   switch (N->getOpcode()) {
   default:
+    DEBUG(dbgs() << "Custom combining: skipping\n");
     break;
   case ISD::ADD:
   case ISD::SUB:

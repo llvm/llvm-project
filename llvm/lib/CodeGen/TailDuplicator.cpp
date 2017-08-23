@@ -75,7 +75,7 @@ static cl::opt<bool>
 static cl::opt<unsigned> TailDupLimit("tail-dup-limit", cl::init(~0U),
                                       cl::Hidden);
 
-void TailDuplicator::initMF(MachineFunction &MFin,
+void TailDuplicator::initMF(MachineFunction &MFin, bool PreRegAlloc,
                             const MachineBranchProbabilityInfo *MBPIin,
                             bool LayoutModeIn, unsigned TailDupSizeIn) {
   MF = &MFin;
@@ -89,7 +89,7 @@ void TailDuplicator::initMF(MachineFunction &MFin,
   assert(MBPI != nullptr && "Machine Branch Probability Info required");
 
   LayoutMode = LayoutModeIn;
-  PreRegAlloc = MRI->isSSA();
+  this->PreRegAlloc = PreRegAlloc;
 }
 
 static void VerifyPHIs(MachineFunction &MF, bool CheckExtra) {
