@@ -31,8 +31,8 @@ define <2 x double> @test_addsubpd(<2 x double> %a0, <2 x double> %a1, <2 x doub
 ; SANDY-LABEL: test_addsubpd:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vaddsubpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    vaddsubpd (%rdi), %xmm0, %xmm0 # sched: [9:1.00]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    vaddsubpd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_addsubpd:
 ; HASWELL:       # BB#0:
@@ -80,8 +80,8 @@ define <4 x float> @test_addsubps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ; SANDY-LABEL: test_addsubps:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    vaddsubps (%rdi), %xmm0, %xmm0 # sched: [9:1.00]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    vaddsubps (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_addsubps:
 ; HASWELL:       # BB#0:
@@ -128,9 +128,9 @@ define <2 x double> @test_haddpd(<2 x double> %a0, <2 x double> %a1, <2 x double
 ;
 ; SANDY-LABEL: test_haddpd:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0 # sched: [5:2.00]
-; SANDY-NEXT:    vhaddpd (%rdi), %xmm0, %xmm0 # sched: [11:2.00]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    vhaddpd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_haddpd:
 ; HASWELL:       # BB#0:
@@ -177,9 +177,9 @@ define <4 x float> @test_haddps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%
 ;
 ; SANDY-LABEL: test_haddps:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vhaddps %xmm1, %xmm0, %xmm0 # sched: [5:2.00]
-; SANDY-NEXT:    vhaddps (%rdi), %xmm0, %xmm0 # sched: [11:2.00]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    vhaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    vhaddps (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_haddps:
 ; HASWELL:       # BB#0:
@@ -226,9 +226,9 @@ define <2 x double> @test_hsubpd(<2 x double> %a0, <2 x double> %a1, <2 x double
 ;
 ; SANDY-LABEL: test_hsubpd:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vhsubpd %xmm1, %xmm0, %xmm0 # sched: [5:2.00]
-; SANDY-NEXT:    vhsubpd (%rdi), %xmm0, %xmm0 # sched: [11:2.00]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    vhsubpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    vhsubpd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_hsubpd:
 ; HASWELL:       # BB#0:
@@ -275,9 +275,9 @@ define <4 x float> @test_hsubps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%
 ;
 ; SANDY-LABEL: test_hsubps:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vhsubps %xmm1, %xmm0, %xmm0 # sched: [5:2.00]
-; SANDY-NEXT:    vhsubps (%rdi), %xmm0, %xmm0 # sched: [11:2.00]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    vhsubps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    vhsubps (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_hsubps:
 ; HASWELL:       # BB#0:
@@ -323,8 +323,8 @@ define <16 x i8> @test_lddqu(i8* %a0) {
 ;
 ; SANDY-LABEL: test_lddqu:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vlddqu (%rdi), %xmm0 # sched: [6:0.50]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    vlddqu (%rdi), %xmm0 # sched: [4:0.50]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_lddqu:
 ; HASWELL:       # BB#0:
@@ -371,9 +371,9 @@ define <2 x double> @test_movddup(<2 x double> %a0, <2 x double> *%a1) {
 ; SANDY-LABEL: test_movddup:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0] sched: [1:1.00]
-; SANDY-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0] sched: [6:0.50]
+; SANDY-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0] sched: [4:0.50]
 ; SANDY-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_movddup:
 ; HASWELL:       # BB#0:
@@ -428,9 +428,9 @@ define <4 x float> @test_movshdup(<4 x float> %a0, <4 x float> *%a1) {
 ; SANDY-LABEL: test_movshdup:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3] sched: [1:1.00]
-; SANDY-NEXT:    vmovshdup {{.*#+}} xmm1 = mem[1,1,3,3] sched: [6:0.50]
+; SANDY-NEXT:    vmovshdup {{.*#+}} xmm1 = mem[1,1,3,3] sched: [4:0.50]
 ; SANDY-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_movshdup:
 ; HASWELL:       # BB#0:
@@ -485,9 +485,9 @@ define <4 x float> @test_movsldup(<4 x float> %a0, <4 x float> *%a1) {
 ; SANDY-LABEL: test_movsldup:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2] sched: [1:1.00]
-; SANDY-NEXT:    vmovsldup {{.*#+}} xmm1 = mem[0,0,2,2] sched: [6:0.50]
+; SANDY-NEXT:    vmovsldup {{.*#+}} xmm1 = mem[0,0,2,2] sched: [4:0.50]
 ; SANDY-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_movsldup:
 ; HASWELL:       # BB#0:
