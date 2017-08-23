@@ -3619,8 +3619,8 @@ let Predicates = [HasVLX] in {
   def : Pat<(alignedstore256 (v4f64 (extract_subvector
                                      (v8f64 VR512:$src), (iPTR 0))), addr:$dst),
      (VMOVAPDZ256mr addr:$dst, (v4f64 (EXTRACT_SUBREG VR512:$src,sub_ymm)))>;
-  def : Pat<(alignedstore (v8f32 (extract_subvector
-                                  (v16f32 VR512:$src), (iPTR 0))), addr:$dst),
+  def : Pat<(alignedstore256 (v8f32 (extract_subvector
+                                     (v16f32 VR512:$src), (iPTR 0))), addr:$dst),
      (VMOVAPSZ256mr addr:$dst, (v8f32 (EXTRACT_SUBREG VR512:$src,sub_ymm)))>;
   def : Pat<(alignedstore256 (v4i64 (extract_subvector
                                      (v8i64 VR512:$src), (iPTR 0))), addr:$dst),
