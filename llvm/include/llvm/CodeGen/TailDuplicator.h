@@ -61,13 +61,14 @@ class TailDuplicator {
 public:
   /// Prepare to run on a specific machine function.
   /// @param MF - Function that will be processed
+  /// @param PreRegAlloc - true if used before register allocation
   /// @param MBPI - Branch Probability Info. Used to propagate correct
   ///     probabilities when modifying the CFG.
   /// @param LayoutMode - When true, don't use the existing layout to make
   ///     decisions.
   /// @param TailDupSize - Maxmimum size of blocks to tail-duplicate. Zero
   ///     default implies using the command line value TailDupSize.
-  void initMF(MachineFunction &MF,
+  void initMF(MachineFunction &MF, bool PreRegAlloc,
               const MachineBranchProbabilityInfo *MBPI,
               bool LayoutMode, unsigned TailDupSize = 0);
 

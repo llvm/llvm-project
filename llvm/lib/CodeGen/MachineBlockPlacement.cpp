@@ -2729,7 +2729,8 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
     MPDT = &getAnalysis<MachinePostDominatorTree>();
     if (MF.getFunction()->optForSize())
       TailDupSize = 1;
-    TailDup.initMF(MF, MBPI, /* LayoutMode */ true, TailDupSize);
+    bool PreRegAlloc = false;
+    TailDup.initMF(MF, PreRegAlloc, MBPI, /* LayoutMode */ true, TailDupSize);
     precomputeTriangleChains();
   }
 

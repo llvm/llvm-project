@@ -86,7 +86,6 @@ enum class RejectReasonKind {
   LastAffFunc,
 
   LoopBound,
-  LoopHasNoExit,
   LoopOnlySomeLatches,
 
   FuncCall,
@@ -561,36 +560,6 @@ public:
   ReportLoopBound(Loop *L, const SCEV *LoopCount);
 
   const SCEV *loopCount() { return LoopCount; }
-
-  /// @name LLVM-RTTI interface
-  //@{
-  static bool classof(const RejectReason *RR);
-  //@}
-
-  /// @name RejectReason interface
-  //@{
-  virtual std::string getRemarkName() const override;
-  virtual const Value *getRemarkBB() const override;
-  virtual std::string getMessage() const override;
-  virtual const DebugLoc &getDebugLoc() const override;
-  virtual std::string getEndUserMessage() const override;
-  //@}
-};
-
-//===----------------------------------------------------------------------===//
-/// Captures errors when loop has no exit.
-class ReportLoopHasNoExit : public RejectReason {
-  //===--------------------------------------------------------------------===//
-
-  /// The loop that has no exit.
-  Loop *L;
-
-  const DebugLoc Loc;
-
-public:
-  ReportLoopHasNoExit(Loop *L)
-      : RejectReason(RejectReasonKind::LoopHasNoExit), L(L),
-        Loc(L->getStartLoc()) {}
 
   /// @name LLVM-RTTI interface
   //@{

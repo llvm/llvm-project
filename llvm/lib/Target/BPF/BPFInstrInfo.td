@@ -79,6 +79,14 @@ def BPF_CC_GTU : PatLeaf<(i64 imm),
                          [{return (N->getZExtValue() == ISD::SETUGT);}]>;
 def BPF_CC_GEU : PatLeaf<(i64 imm),
                          [{return (N->getZExtValue() == ISD::SETUGE);}]>;
+def BPF_CC_LE  : PatLeaf<(i64 imm),
+                         [{return (N->getZExtValue() == ISD::SETLE);}]>;
+def BPF_CC_LT  : PatLeaf<(i64 imm),
+                         [{return (N->getZExtValue() == ISD::SETLT);}]>;
+def BPF_CC_LTU : PatLeaf<(i64 imm),
+                         [{return (N->getZExtValue() == ISD::SETULT);}]>;
+def BPF_CC_LEU : PatLeaf<(i64 imm),
+                         [{return (N->getZExtValue() == ISD::SETULE);}]>;
 
 // jump instructions
 class JMP_RR<bits<4> Opc, string OpcodeStr, PatLeaf Cond>
@@ -136,6 +144,10 @@ defm JUGE : J<0x3, ">=", BPF_CC_GEU>;
 defm JNE  : J<0x5, "!=",  BPF_CC_NE>;
 defm JSGT : J<0x6, "s>", BPF_CC_GT>;
 defm JSGE : J<0x7, "s>=", BPF_CC_GE>;
+defm JULT : J<0xa, "<", BPF_CC_LTU>;
+defm JULE : J<0xb, "<=", BPF_CC_LEU>;
+defm JSLT : J<0xc, "s<", BPF_CC_LT>;
+defm JSLE : J<0xd, "s<=", BPF_CC_LE>;
 }
 
 // ALU instructions
