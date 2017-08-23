@@ -92,7 +92,12 @@ public:
     return getSubDirectoryPath(Type, getArch());
   }
 
-  bool getIsVS2017OrNewer() const { return IsVS2017OrNewer; }
+  enum class ToolsetLayout {
+    OlderVS,
+    VS2017OrNewer,
+    DevDivInternal,
+  };
+  bool getIsVS2017OrNewer() const { return VSLayout == ToolsetLayout::VS2017OrNewer; }
 
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -130,7 +135,7 @@ protected:
   Tool *buildAssembler() const override;
 private:
   std::string VCToolChainPath;
-  bool IsVS2017OrNewer = false;
+  ToolsetLayout VSLayout = ToolsetLayout::OlderVS;
   CudaInstallationDetector CudaInstallation;
 };
 
