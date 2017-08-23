@@ -432,8 +432,10 @@ size_t MinComplexityConstraint::calculateStmtComplexity(
   ASTContext &Context = Seq.getASTContext();
 
   // Look up what macros expanded into the current statement.
-  std::string MacroStack =
+  std::string StartMacroStack =
       data_collection::getMacroStack(Seq.getStartLoc(), Context);
+  std::string EndMacroStack =
+      data_collection::getMacroStack(Seq.getEndLoc(), Context);
 
   // First, check if ParentMacroStack is not empty which means we are currently
   // dealing with a parent statement which was expanded from a macro.
