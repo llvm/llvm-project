@@ -5,16 +5,14 @@
 ; BC: GLOBAL_DECL_ATTACHMENT
 ; CHECK: @g = common global i32 0, align 4, !dbg ![[G:[0-9]+]]
 ; CHECK: @h = common global i32 0, align 4, !dbg ![[H:[0-9]+]]
-; CHECK: ![[G]] = {{.*}}!DIGlobalVariableExpression(var: ![[GVAR:[0-9]+]], expr: ![[GEXPR:[0-9]+]])
+; CHECK: ![[G]] = {{.*}}!DIGlobalVariableExpression(var: ![[GVAR:[0-9]+]], expr: !DIExpression(DW_OP_plus_uconst, 1))
 ; CHECK: ![[GVAR]] = distinct !DIGlobalVariable(name: "g",
 ; CHECK: DICompileUnit({{.*}}, imports: ![[IMPORTS:[0-9]+]]
-; CHECK: !DIGlobalVariableExpression(var: ![[CVAR:[0-9]+]], expr: ![[CEXPR:[0-9]+]])
+; CHECK: !DIGlobalVariableExpression(var: ![[CVAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 23, DW_OP_stack_value))
 ; CHECK: ![[CVAR]] = distinct !DIGlobalVariable(name: "c",
-; CHECK: ![[CEXPR]] = !DIExpression(DW_OP_constu, 23, DW_OP_stack_value)
 ; CHECK: ![[HVAR:[0-9]+]] = distinct !DIGlobalVariable(name: "h",
 ; CHECK: ![[IMPORTS]] = !{![[CIMPORT:[0-9]+]]}
 ; CHECK: ![[CIMPORT]] = !DIImportedEntity({{.*}}entity: ![[HVAR]]
-; CHECK: ![[GEXPR]] = !DIExpression(DW_OP_plus_uconst, 1)
 ; CHECK: ![[H]] = {{.*}}!DIGlobalVariableExpression(var: ![[HVAR]])
 
 @g = common global i32 0, align 4, !dbg !0

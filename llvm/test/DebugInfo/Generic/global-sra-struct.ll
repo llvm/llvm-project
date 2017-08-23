@@ -22,11 +22,9 @@ target triple = "x86_64-apple-macosx10.12.0"
 ; CHECK: @static_struct.0 = internal unnamed_addr global i32 0, align 8, !dbg ![[EL0:.*]]
 ; CHECK: @static_struct.1 = internal unnamed_addr global i64 0, align 8, !dbg ![[EL1:.*]]
 
-; CHECK: ![[EL0]] = !DIGlobalVariableExpression(var: ![[VAR:.*]], expr: ![[EX1:.*]])
+; CHECK: ![[EL0]] = !DIGlobalVariableExpression(var: ![[VAR:.*]], expr: !DIExpression(DW_OP_LLVM_fragment, 0, 32))
 ; CHECK: ![[VAR]] = distinct !DIGlobalVariable(name: "static_struct"
-; CHECK: ![[EX1]] = !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK: ![[EL1]] = !DIGlobalVariableExpression(var: ![[VAR]], expr: ![[EX2:.*]])
-; CHECK: ![[EX2]] = !DIExpression(DW_OP_LLVM_fragment, 32, 64)
+; CHECK: ![[EL1]] = !DIGlobalVariableExpression(var: ![[VAR]], expr: !DIExpression(DW_OP_LLVM_fragment, 32, 64))
 
 @static_struct = internal global %struct.mystruct zeroinitializer, align 8, !dbg !0
 

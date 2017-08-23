@@ -100,6 +100,7 @@ struct MIToken {
     md_alias_scope,
     md_noalias,
     md_range,
+    md_diexpr,
 
     // Identifier tokens
     Identifier,
