@@ -137,7 +137,7 @@ class LinuxCoreTestCase(TestBase):
         values = {}
         values["fctrl"] = "0x037f"
         values["fstat"] = "0x0000"
-        values["ftag"] = "0xff"
+        values["ftag"] = "0x00ff"
         values["fop"] = "0x0000"
         values["fiseg"] = "0x00000000"
         values["fioff"] = "0x0040011e"
