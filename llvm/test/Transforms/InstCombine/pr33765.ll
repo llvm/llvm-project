@@ -6,7 +6,7 @@
 define void @patatino(i8 %beth) {
 ; CHECK-LABEL: @patatino(
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[BETH:%.*]] to i32
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN9:%.*]], label [[IF_THEN9]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN9:%.*]], label [[IF_THEN9]]
 ; CHECK:       if.then9:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[CONV]], [[CONV]]
 ; CHECK-NEXT:    [[TINKY:%.*]] = load i16, i16* @glob, align 2

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines classes for searching and anlyzing source code clones.
+/// This file defines classes for searching and analyzing source code clones.
 ///
 //===----------------------------------------------------------------------===//
 

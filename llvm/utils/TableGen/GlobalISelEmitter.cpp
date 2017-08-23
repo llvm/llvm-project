@@ -2567,7 +2567,8 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   for (const auto &Ty : LLTOperandMatcher::KnownTypes)
     TypeObjects.push_back(Ty);
   std::sort(TypeObjects.begin(), TypeObjects.end());
-  OS << "enum {\n";
+  OS << "// LLT Objects.\n"
+     << "enum {\n";
   for (const auto &TypeObject : TypeObjects) {
     OS << "  ";
     TypeObject.emitCxxEnumValue(OS);
@@ -2605,7 +2606,8 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   FeatureBitsets.erase(
       std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
       FeatureBitsets.end());
-  OS << "enum {\n"
+  OS << "// Feature bitsets.\n"
+     << "enum {\n"
      << "  GIFBS_Invalid,\n";
   for (const auto &FeatureBitset : FeatureBitsets) {
     if (FeatureBitset.empty())
@@ -2629,7 +2631,8 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   OS << "};\n\n";
 
   // Emit complex predicate table and an enum to reference them with.
-  OS << "enum {\n"
+  OS << "// ComplexPattern predicates.\n"
+     << "enum {\n"
      << "  GICP_Invalid,\n";
   for (const auto &Record : ComplexPredicates)
     OS << "  GICP_" << Record->getName() << ",\n";

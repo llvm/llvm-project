@@ -2476,6 +2476,13 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
                    "int k; // line longg long",
                    getLLVMStyleWithColumns(20)));
 
+  // Always align if ColumnLimit = 0
+  EXPECT_EQ("int i, j; // line 1\n"
+            "int k;    // line longg long",
+            format("int i, j; // line 1\n"
+                   "int k; // line longg long",
+                   getLLVMStyleWithColumns(0)));
+
   // Align comment line sections aligned with the next token with the next
   // token.
   EXPECT_EQ("class A {\n"

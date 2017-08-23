@@ -78,15 +78,11 @@ void ScriptLexer::setError(const Twine &Msg) {
   if (ErrorCount)
     return;
 
-  if (!Pos) {
-    error(getCurrentLocation() + ": " + Msg);
-    return;
-  }
-
-  std::string S = getCurrentLocation() + ": ";
-  error(S + Msg);
-  error(S + getLine());
-  error(S + std::string(getColumnNumber(), ' ') + "^");
+  std::string S = (getCurrentLocation() + ": " + Msg).str();
+  if (Pos)
+    S += "\n>>> " + getLine().str() + "\n>>> " +
+         std::string(getColumnNumber(), ' ') + "^";
+  error(S);
 }
 
 // Split S into linker script tokens.
