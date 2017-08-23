@@ -77,11 +77,23 @@ Changes to the LLVM IR
 * Added speculatable attribute indicating a function which does has no
   side-effects which could inhibit hoisting of calls.
 
-Changes to the ARM Backend
+Changes to the Arm Targets
 --------------------------
 
- During this release ...
+During this release the AArch64 target has:
 
+* Made instruction fusion more aggressive, resulting in speedups
+  for code making use of AArch64 AES instructions. AES fusion has been
+  enabled for most Cortex-A cores and the AArch64MacroFusion pass was moved
+  to the generic MacroFusion pass.
+* Added preferred function alignments for most Cortex-A cores.
+
+During this release the ARM target has:
+
+* Improved mixed ARM/Thumb code generation. Some cases in which wrong
+  relocations were emitted have been fixed.
+* Added initial support for mixed ARM/Thumb link-time optimization, using the
+  thumb-mode target feature.
 
 Changes to the MIPS Target
 --------------------------
@@ -92,7 +104,29 @@ Changes to the MIPS Target
 Changes to the PowerPC Target
 -----------------------------
 
- During this release ...
+* Additional support and exploitation of POWER ISA 3.0: vabsdub, vabsduh,
+  vabsduw, modsw, moduw, modsd, modud, lxv, stxv, vextublx, vextubrx, vextuhlx,
+  vextuhrx, vextuwlx, vextuwrx, vextsb2w, vextsb2d, vextsh2w, vextsh2d, and
+  vextsw2d
+  
+* Implemented Optimal Code Sequences from The PowerPC Compiler Writer's Guide.
+
+* Enable -fomit-frame-pointer by default.
+  
+* Improved handling of bit reverse intrinsic.
+  
+* Improved handling of memcpy and memcmp functions.
+  
+* Improved handling of branches with static branch hints.
+  
+* Improved codegen for atomic load_acquire.
+  
+* Improved block placement during code layout
+
+* Many improvements to instruction selection and code generation
+
+
+
 
 Changes to the X86 Target
 -------------------------
