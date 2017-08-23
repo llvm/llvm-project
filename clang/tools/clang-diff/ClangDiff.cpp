@@ -50,7 +50,7 @@ static cl::opt<std::string> DestinationPath(cl::Positional,
                                             cl::Optional,
                                             cl::cat(ClangDiffCategory));
 
-static cl::opt<std::string> StopAfter("stop-after",
+static cl::opt<std::string> StopAfter("stop-diff-after",
                                       cl::desc("<topdown|bottomup>"),
                                       cl::Optional, cl::init(""),
                                       cl::cat(ClangDiffCategory));

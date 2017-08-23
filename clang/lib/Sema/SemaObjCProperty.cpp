@@ -872,7 +872,7 @@ SelectPropertyForSynthesisFromProtocols(Sema &S, SourceLocation AtLoc,
   }
 
   QualType RHSType = S.Context.getCanonicalType(Property->getType());
-  unsigned OriginalAttributes = Property->getPropertyAttributes();
+  unsigned OriginalAttributes = Property->getPropertyAttributesAsWritten();
   enum MismatchKind {
     IncompatibleType = 0,
     HasNoExpectedAttribute,
@@ -890,7 +890,7 @@ SelectPropertyForSynthesisFromProtocols(Sema &S, SourceLocation AtLoc,
   SmallVector<MismatchingProperty, 4> Mismatches;
   for (ObjCPropertyDecl *Prop : Properties) {
     // Verify the property attributes.
-    unsigned Attr = Prop->getPropertyAttributes();
+    unsigned Attr = Prop->getPropertyAttributesAsWritten();
     if (Attr != OriginalAttributes) {
       auto Diag = [&](bool OriginalHasAttribute, StringRef AttributeName) {
         MismatchKind Kind = OriginalHasAttribute ? HasNoExpectedAttribute
