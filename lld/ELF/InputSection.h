@@ -32,7 +32,7 @@ class DefinedRegular;
 class SyntheticSection;
 template <class ELFT> class EhFrameSection;
 class MergeSyntheticSection;
-template <class ELFT> class ObjFile;
+template <class ELFT> class ObjectFile;
 class OutputSection;
 
 // This is the base class of all sections that lld handles. Some are sections in
@@ -113,7 +113,7 @@ public:
   }
 
   template <class ELFT>
-  InputSectionBase(ObjFile<ELFT> *File, const typename ELFT::Shdr *Header,
+  InputSectionBase(ObjectFile<ELFT> *File, const typename ELFT::Shdr *Header,
                    StringRef Name, Kind SectionKind);
 
   InputSectionBase(InputFile *File, uint64_t Flags, uint32_t Type,
@@ -157,7 +157,7 @@ public:
   // Returns the size of this section (even if this is a common or BSS.)
   size_t getSize() const;
 
-  template <class ELFT> ObjFile<ELFT> *getFile() const;
+  template <class ELFT> ObjectFile<ELFT> *getFile() const;
 
   template <class ELFT> llvm::object::ELFFile<ELFT> getObj() const {
     return getFile<ELFT>()->getObj();
@@ -183,11 +183,6 @@ public:
     assert(S % sizeof(T) == 0);
     return llvm::makeArrayRef<T>((const T *)Data.data(), S / sizeof(T));
   }
-
-private:
-  // A pointer that owns uncompressed data if a section is compressed by zlib.
-  // Since the feature is not used often, this is usually a nullptr.
-  std::unique_ptr<std::vector<uint8_t>> UncompressBuf;
 };
 
 // SectionPiece represents a piece of splittable section contents.
@@ -209,7 +204,7 @@ static_assert(sizeof(SectionPiece) == 2 * sizeof(size_t),
 class MergeInputSection : public InputSectionBase {
 public:
   template <class ELFT>
-  MergeInputSection(ObjFile<ELFT> *F, const typename ELFT::Shdr *Header,
+  MergeInputSection(ObjectFile<ELFT> *F, const typename ELFT::Shdr *Header,
                     StringRef Name);
   static bool classof(const SectionBase *S);
   void splitIntoPieces();
@@ -278,7 +273,7 @@ struct EhSectionPiece : public SectionPiece {
 class EhInputSection : public InputSectionBase {
 public:
   template <class ELFT>
-  EhInputSection(ObjFile<ELFT> *F, const typename ELFT::Shdr *Header,
+  EhInputSection(ObjectFile<ELFT> *F, const typename ELFT::Shdr *Header,
                  StringRef Name);
   static bool classof(const SectionBase *S);
   template <class ELFT> void split();
@@ -300,7 +295,7 @@ public:
   InputSection(uint64_t Flags, uint32_t Type, uint32_t Alignment,
                ArrayRef<uint8_t> Data, StringRef Name, Kind K = Regular);
   template <class ELFT>
-  InputSection(ObjFile<ELFT> *F, const typename ELFT::Shdr *Header,
+  InputSection(ObjectFile<ELFT> *F, const typename ELFT::Shdr *Header,
                StringRef Name);
 
   // Write this section to a mmap'ed file, assuming Buf is pointing to
@@ -335,9 +330,6 @@ private:
 
 // The list of all input sections.
 extern std::vector<InputSectionBase *> InputSections;
-
-// Builds section order for handling --symbol-ordering-file.
-template <class ELFT> llvm::DenseMap<SectionBase *, int> buildSectionOrder();
 
 } // namespace elf
 

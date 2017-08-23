@@ -39,7 +39,7 @@ StringRef SymbolBody::getName() {
   // is a waste of time.
   if (Name.empty()) {
     auto *D = cast<DefinedCOFF>(this);
-    cast<ObjFile>(D->File)->getCOFFObj()->getSymbolName(D->Sym, Name);
+    cast<ObjectFile>(D->File)->getCOFFObj()->getSymbolName(D->Sym, Name);
   }
   return Name;
 }
@@ -52,19 +52,9 @@ InputFile *SymbolBody::getFile() {
   return nullptr;
 }
 
-bool SymbolBody::isLive() const {
-  if (auto *R = dyn_cast<DefinedRegular>(this))
-    return R->getChunk()->isLive();
-  if (auto *Imp = dyn_cast<DefinedImportData>(this))
-    return Imp->File->Live;
-  if (auto *Imp = dyn_cast<DefinedImportThunk>(this))
-    return Imp->WrappedSym->File->Live;
-  // Assume any other kind of symbol is live.
-  return true;
-}
-
 COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
-  size_t SymSize = cast<ObjFile>(File)->getCOFFObj()->getSymbolTableEntrySize();
+  size_t SymSize =
+      cast<ObjectFile>(File)->getCOFFObj()->getSymbolTableEntrySize();
   if (SymSize == sizeof(coff_symbol16))
     return COFFSymbolRef(reinterpret_cast<const coff_symbol16 *>(Sym));
   assert(SymSize == sizeof(coff_symbol32));

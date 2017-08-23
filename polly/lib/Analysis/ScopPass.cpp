@@ -41,10 +41,6 @@ void ScopPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
 }
 
-namespace polly {
-template class OwningInnerAnalysisManagerProxy<ScopAnalysisManager, Function>;
-}
-
 namespace llvm {
 
 template class PassManager<Scop, ScopAnalysisManager,
@@ -79,11 +75,13 @@ bool ScopAnalysisManagerFunctionProxy::Result::invalidate(
 
   // First, check whether our ScopInfo is about to be invalidated
   auto PAC = PA.getChecker<ScopAnalysisManagerFunctionProxy>();
-  if (!(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>()) ||
-      Inv.invalidate<ScopInfoAnalysis>(F, PA) ||
-      Inv.invalidate<ScalarEvolutionAnalysis>(F, PA) ||
-      Inv.invalidate<LoopAnalysis>(F, PA) ||
-      Inv.invalidate<DominatorTreeAnalysis>(F, PA)) {
+  if (!(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
+        Inv.invalidate<ScopAnalysis>(F, PA) ||
+        Inv.invalidate<ScalarEvolutionAnalysis>(F, PA) ||
+        Inv.invalidate<LoopAnalysis>(F, PA) ||
+        Inv.invalidate<AAManager>(F, PA) ||
+        Inv.invalidate<DominatorTreeAnalysis>(F, PA) ||
+        Inv.invalidate<AssumptionAnalysis>(F, PA))) {
 
     // As everything depends on ScopInfo, we must drop all existing results
     for (auto &S : *SI)
@@ -140,12 +138,3 @@ ScopAnalysisManagerFunctionProxy::run(Function &F,
   return Result(*InnerAM, FAM.getResult<ScopInfoAnalysis>(F));
 }
 } // namespace llvm
-
-namespace polly {
-template <>
-OwningScopAnalysisManagerFunctionProxy::Result
-OwningScopAnalysisManagerFunctionProxy::run(Function &F,
-                                            FunctionAnalysisManager &FAM) {
-  return Result(InnerAM, FAM.getResult<ScopInfoAnalysis>(F));
-}
-} // namespace polly

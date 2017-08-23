@@ -194,19 +194,13 @@ static BasicBlock *splitBlock(BasicBlock *Old, Instruction *SplitPt,
   return NewBlock;
 }
 
-void polly::splitEntryBlockForAlloca(BasicBlock *EntryBlock, DominatorTree *DT,
-                                     LoopInfo *LI, RegionInfo *RI) {
+void polly::splitEntryBlockForAlloca(BasicBlock *EntryBlock, Pass *P) {
   // Find first non-alloca instruction. Every basic block has a non-alloca
   // instruction, as every well formed basic block has a terminator.
   BasicBlock::iterator I = EntryBlock->begin();
   while (isa<AllocaInst>(I))
     ++I;
 
-  // splitBlock updates DT, LI and RI.
-  splitBlock(EntryBlock, &*I, DT, LI, RI);
-}
-
-void polly::splitEntryBlockForAlloca(BasicBlock *EntryBlock, Pass *P) {
   auto *DTWP = P->getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
   auto *LIWP = P->getAnalysisIfAvailable<LoopInfoWrapperPass>();
@@ -215,7 +209,7 @@ void polly::splitEntryBlockForAlloca(BasicBlock *EntryBlock, Pass *P) {
   RegionInfo *RI = RIP ? &RIP->getRegionInfo() : nullptr;
 
   // splitBlock updates DT, LI and RI.
-  polly::splitEntryBlockForAlloca(EntryBlock, DT, LI, RI);
+  splitBlock(EntryBlock, &*I, DT, LI, RI);
 }
 
 /// The SCEVExpander will __not__ generate any code for an existing SDiv/SRem
@@ -514,7 +508,7 @@ bool polly::canSynthesize(const Value *V, const Scop &S, ScalarEvolution *SE,
   return false;
 }
 
-llvm::BasicBlock *polly::getUseBlock(const llvm::Use &U) {
+llvm::BasicBlock *polly::getUseBlock(llvm::Use &U) {
   Instruction *UI = dyn_cast<Instruction>(U.getUser());
   if (!UI)
     return nullptr;

@@ -41,7 +41,7 @@ static void newline(const Twine &Msg) {
 
   if (Flag)
     *ErrorOS << "\n";
-  Flag = StringRef(Msg.str()).contains('\n');
+  Flag = (StringRef(Msg.str()).find('\n') != StringRef::npos);
 }
 
 static void print(StringRef S, raw_ostream::Colors C) {

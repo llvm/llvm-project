@@ -42,6 +42,8 @@ for.end:
 ; AFFINE-NEXT:              [octets, p_1, p] -> { Stmt_if_then84[] : octets = 2 };
 ; AFFINE-NEXT:          Schedule :=
 ; AFFINE-NEXT:              [octets, p_1, p] -> { Stmt_if_then84[] -> [] };
+; AFFINE-NEXT:          ReadAccess :=	[Reduction Type: NONE] [Scalar: 1]
+; AFFINE-NEXT:              [octets, p_1, p] -> { Stmt_if_then84[] -> MemRef_indvars_iv[] };
 ; AFFINE-NEXT:          MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; AFFINE-NEXT:              [octets, p_1, p] -> { Stmt_if_then84[] -> MemRef_input[1 + p] };
 ; AFFINE-NEXT:  }

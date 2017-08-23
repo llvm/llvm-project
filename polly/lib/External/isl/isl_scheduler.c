@@ -308,9 +308,8 @@ static int is_conditional_validity(struct isl_sched_edge *edge)
  *	rows in the node schedules
  * n_total_row is the current number of rows in the node schedules
  * band_start is the starting row in the node schedules of the current band
- * root is set to the the original dependence graph from which this graph
- *	is derived through splitting.  If this graph is not the result of
- *	splitting, then the root field points to the graph itself.
+ * root is set if this graph is the original dependence graph,
+ *	without any splitting
  *
  * sorted contains a list of node indices sorted according to the
  *	SCC to which a node belongs
@@ -358,7 +357,7 @@ struct isl_sched_graph {
 	int n_total_row;
 	int band_start;
 
-	struct isl_sched_graph *root;
+	int root;
 
 	struct isl_sched_edge *edge;
 	int n_edge;
@@ -419,14 +418,6 @@ static struct isl_sched_node *graph_find_node(isl_ctx *ctx,
 				    &node_has_tuples, space, 0);
 
 	return entry ? entry->data : NULL;
-}
-
-/* Is "node" a node in "graph"?
- */
-static int is_node(struct isl_sched_graph *graph,
-	struct isl_sched_node *node)
-{
-	return node && node >= &graph->node[0] && node < &graph->node[graph->n];
 }
 
 static int edge_has_src_and_dst(const void *entry, const void *val)
@@ -669,7 +660,7 @@ static void graph_free(isl_ctx *ctx, struct isl_sched_graph *graph)
 			isl_map_free(graph->node[i].sched_map);
 			isl_mat_free(graph->node[i].indep);
 			isl_mat_free(graph->node[i].vmap);
-			if (graph->root == graph)
+			if (graph->root)
 				free(graph->node[i].coincident);
 			isl_multi_val_free(graph->node[i].sizes);
 			isl_basic_set_free(graph->node[i].bounds);
@@ -1330,7 +1321,7 @@ static isl_stat graph_init(struct isl_sched_graph *graph,
 
 	if (compute_max_row(graph, sc) < 0)
 		return isl_stat_error;
-	graph->root = graph;
+	graph->root = 1;
 	graph->n = 0;
 	domain = isl_schedule_constraints_get_domain(sc);
 	domain = isl_union_set_intersect_params(domain,
@@ -3511,7 +3502,6 @@ static int extract_sub_graph(isl_ctx *ctx, struct isl_sched_graph *graph,
 			++n_edge;
 	if (graph_alloc(ctx, sub, n, n_edge) < 0)
 		return -1;
-	sub->root = graph->root;
 	if (copy_nodes(sub, graph, node_pred, data) < 0)
 		return -1;
 	if (graph_init_table(ctx, sub) < 0)
@@ -3874,10 +3864,6 @@ static void isl_carry_clear(struct isl_carry *carry)
  * If so, return that node.
  * Otherwise, "space" was constructed by construct_compressed_id and
  * contains a user pointer pointing to the node in the tuple id.
- * However, this node belongs to the original dependence graph.
- * If "graph" is a subgraph of this original dependence graph,
- * then the node with the same space still needs to be looked up
- * in the current graph.
  */
 static struct isl_sched_node *graph_find_compressed_node(isl_ctx *ctx,
 	struct isl_sched_graph *graph, __isl_keep isl_space *space)
@@ -3899,11 +3885,9 @@ static struct isl_sched_node *graph_find_compressed_node(isl_ctx *ctx,
 	if (!node)
 		return NULL;
 
-	if (!is_node(graph->root, node))
+	if (!(node >= &graph->node[0] && node < &graph->node[graph->n]))
 		isl_die(ctx, isl_error_internal,
 			"space points to invalid node", return NULL);
-	if (graph != graph->root)
-		node = graph_find_node(ctx, graph, node->space);
 
 	return node;
 }

@@ -27,19 +27,7 @@
 // Header file global to this project
 #include "omptarget.h"
 
-#ifdef OMPTARGET_DEBUG
-static int DebugLevel = 0;
-
-#define DP(...) \
-  do { \
-    if (DebugLevel > 0) { \
-      DEBUGP("Libomptarget", __VA_ARGS__); \
-    } \
-  } while (false)
-#else // OMPTARGET_DEBUG
-#define DP(...) {}
-#endif // OMPTARGET_DEBUG
-
+#define DP(...) DEBUGP("Libomptarget", __VA_ARGS__)
 #define INF_REF_CNT (LONG_MAX>>1) // leave room for additions/subtractions
 #define CONSIDERED_INF(x) (x > (INF_REF_CNT>>1))
 
@@ -293,12 +281,6 @@ public:
 };
 
 void RTLsTy::LoadRTLs() {
-#ifdef OMPTARGET_DEBUG
-  if (char *envStr = getenv("LIBOMPTARGET_DEBUG")) {
-    DebugLevel = std::stoi(envStr);
-  }
-#endif // OMPTARGET_DEBUG
-
   // Parse environment variable OMP_TARGET_OFFLOAD (if set)
   char *envStr = getenv("OMP_TARGET_OFFLOAD");
   if (envStr && !strcmp(envStr, "DISABLED")) {

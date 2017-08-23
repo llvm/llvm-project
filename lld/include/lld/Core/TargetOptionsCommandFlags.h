@@ -11,11 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetOptions.h"
 
 namespace lld {
 llvm::TargetOptions InitTargetOptionsFromCodeGenFlags();
-llvm::Optional<llvm::CodeModel::Model> GetCodeModelFromCMModel();
+llvm::CodeModel::Model GetCodeModelFromCMModel();
 }

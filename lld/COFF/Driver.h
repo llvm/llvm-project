@@ -145,7 +145,6 @@ void parseSubsystem(StringRef Arg, WindowsSubsystem *Sys, uint32_t *Major,
 void parseAlternateName(StringRef);
 void parseMerge(StringRef);
 void parseSection(StringRef);
-void parseAligncomm(StringRef);
 
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
 void parseManifest(StringRef Arg);

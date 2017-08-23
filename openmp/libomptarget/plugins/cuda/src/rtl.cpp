@@ -25,20 +25,9 @@
 #define TARGET_NAME CUDA
 #endif
 
-#ifdef OMPTARGET_DEBUG
-static int DebugLevel = 0;
-
 #define GETNAME2(name) #name
 #define GETNAME(name) GETNAME2(name)
-#define DP(...) \
-  do { \
-    if (DebugLevel > 0) { \
-      DEBUGP("Target " GETNAME(TARGET_NAME) " RTL", __VA_ARGS__); \
-    } \
-  } while (false)
-#else // OMPTARGET_DEBUG
-#define DP(...) {}
-#endif // OMPTARGET_DEBUG
+#define DP(...) DEBUGP("Target " GETNAME(TARGET_NAME) " RTL", __VA_ARGS__)
 
 #include "../../common/elf_common.c"
 
@@ -168,12 +157,6 @@ public:
   }
 
   RTLDeviceInfoTy() {
-#ifdef OMPTARGET_DEBUG
-    if (char *envStr = getenv("LIBOMPTARGET_DEBUG")) {
-      DebugLevel = std::stoi(envStr);
-    }
-#endif // OMPTARGET_DEBUG
-
     DP("Start initializing CUDA\n");
 
     CUresult err = cuInit(0);

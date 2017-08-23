@@ -64,4 +64,5 @@ return:                                           ; preds = %if.else, %if.then
   ret i32 %retval.0
 }
 
+; SCALAR: for region: 'for.cond => for.end' in function 'main':
 ; SCALAR-NOT:   Stmt_for_body(0);
