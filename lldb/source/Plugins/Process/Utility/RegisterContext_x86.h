@@ -257,8 +257,7 @@ struct XMMReg {
 struct FXSAVE {
   uint16_t fctrl;     // FPU Control Word (fcw)
   uint16_t fstat;     // FPU Status Word (fsw)
-  uint8_t ftag;       // FPU Tag Word (ftw)
-  uint8_t reserved_1; // Reserved
+  uint16_t ftag;      // FPU Tag Word (ftw)
   uint16_t fop;       // Last Instruction Opcode (fop)
   union {
     struct {
