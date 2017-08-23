@@ -125,8 +125,7 @@ bool ConstantFPSDNode::isValueValidForType(EVT VT,
 //                              ISD Namespace
 //===----------------------------------------------------------------------===//
 
-bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal,
-                                bool AllowShrink) {
+bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal) {
   auto *BV = dyn_cast<BuildVectorSDNode>(N);
   if (!BV)
     return false;
@@ -135,10 +134,9 @@ bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal,
   unsigned SplatBitSize;
   bool HasUndefs;
   unsigned EltSize = N->getValueType(0).getVectorElementType().getSizeInBits();
-  unsigned MinSplatBits = AllowShrink ? 0 : EltSize;
   return BV->isConstantSplat(SplatVal, SplatUndef, SplatBitSize, HasUndefs,
-                             MinSplatBits) &&
-         EltSize >= SplatBitSize;
+                             EltSize) &&
+         EltSize == SplatBitSize;
 }
 
 // FIXME: AllOnes and AllZeros duplicate a lot of code. Could these be

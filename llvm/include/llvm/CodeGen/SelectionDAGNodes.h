@@ -85,10 +85,7 @@ namespace ISD {
 
   /// If N is a BUILD_VECTOR node whose elements are all the same constant or
   /// undefined, return true and return the constant value in \p SplatValue.
-  /// This sets \p SplatValue to the smallest possible splat unless AllowShrink
-  /// is set to false.
-  bool isConstantSplatVector(const SDNode *N, APInt &SplatValue,
-                             bool AllowShrink = true);
+  bool isConstantSplatVector(const SDNode *N, APInt &SplatValue);
 
   /// Return true if the specified node is a BUILD_VECTOR where all of the
   /// elements are ~0 or undef.

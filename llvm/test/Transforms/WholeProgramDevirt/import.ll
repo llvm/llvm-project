@@ -29,6 +29,7 @@ define i32 @call1(i8* %obj) {
   ; SINGLE-IMPL: call i32 bitcast (void ()* @singleimpl1 to i32 (i8*, i32)*)
   %result = call i32 %fptr_casted(i8* %obj, i32 1)
   ; UNIFORM-RET-VAL: ret i32 42
+  ; VCP: {{.*}} = bitcast {{.*}} to i8*
   ; VCP: [[VT1:%.*]] = bitcast {{.*}} to i8*
   ; VCP: [[GEP1:%.*]] = getelementptr i8, i8* [[VT1]], i32 ptrtoint (i8* @__typeid_typeid1_0_1_byte to i32)
   ; VCP: [[BC1:%.*]] = bitcast i8* [[GEP1]] to i32*

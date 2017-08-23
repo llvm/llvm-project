@@ -15,12 +15,30 @@
 // RUN: %clang_cc1 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK1 --check-prefix CK1-32
 #ifdef CK1
 
+class B {
+public:
+  static double VAR;
+  B() {
+  }
+
+  static void modify(int &res) {
+#pragma omp target map(tofrom \
+                       : res)
+    {
+      res = B::VAR;
+    }
+  }
+};
+double B::VAR = 1.0;
+
 // CK1-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} 4]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_IS_FIRST = 288
 // CK1-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i32] [i32 288]
 
 // CK1-LABEL: implicit_maps_integer
 void implicit_maps_integer (int a){
+  // CK1: call void{{.*}}modify
+  B::modify(a);
   int i = a;
 
   // CK1-DAG: call i32 @__tgt_target(i32 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}})

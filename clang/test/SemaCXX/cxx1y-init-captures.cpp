@@ -206,3 +206,11 @@ void test(double weight) {
   find(weight); // expected-note {{in instantiation of function template specialization}}
 }
 }
+
+namespace init_capture_undeclared_identifier {
+  auto a = [x = y]{}; // expected-error{{use of undeclared identifier 'y'}}
+
+  int typo_foo; // expected-note 2 {{'typo_foo' declared here}}
+  auto b = [x = typo_boo]{}; // expected-error{{use of undeclared identifier 'typo_boo'; did you mean 'typo_foo'}}
+  auto c = [x(typo_boo)]{}; // expected-error{{use of undeclared identifier 'typo_boo'; did you mean 'typo_foo'}}
+}

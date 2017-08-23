@@ -482,6 +482,27 @@ void IslNodeBuilder::createForVector(__isl_take isl_ast_node *For,
   isl_ast_expr_free(Iterator);
 }
 
+namespace {
+/// Restore the initial ordering of dimensions of the band node
+///
+/// In case the band node represents all the dimensions of the iteration
+/// domain, recreate the band node to restore the initial ordering of the
+/// dimensions.
+///
+/// @param Node The band node to be modified.
+/// @return The modified schedule node.
+bool IsLoopVectorizerDisabled(isl::ast_node Node) {
+  assert(isl_ast_node_get_type(Node.keep()) == isl_ast_node_for);
+  auto Body = Node.for_get_body();
+  if (isl_ast_node_get_type(Body.keep()) != isl_ast_node_mark)
+    return false;
+  auto Id = Body.mark_get_id();
+  if (!strcmp(Id.get_name().c_str(), "Loop Vectorizer Disabled"))
+    return true;
+  return false;
+}
+} // namespace
+
 void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For,
                                          bool KnownParallel) {
   isl_ast_node *Body;
@@ -496,6 +517,9 @@ void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For,
 
   Parallel = KnownParallel || (IslAstInfo::isParallel(For) &&
                                !IslAstInfo::isReductionParallel(For));
+
+  bool LoopVectorizerDisabled =
+      IsLoopVectorizerDisabled(isl::manage(isl_ast_node_copy(For)));
 
   Body = isl_ast_node_for_get_body(For);
 
@@ -532,7 +556,8 @@ void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For,
   bool UseGuardBB =
       !SE.isKnownPredicate(Predicate, SE.getSCEV(ValueLB), SE.getSCEV(ValueUB));
   IV = createLoop(ValueLB, ValueUB, ValueInc, Builder, LI, DT, ExitBlock,
-                  Predicate, &Annotator, Parallel, UseGuardBB);
+                  Predicate, &Annotator, Parallel, UseGuardBB,
+                  LoopVectorizerDisabled);
   IDToValue[IteratorID] = IV;
 
   create(Body);

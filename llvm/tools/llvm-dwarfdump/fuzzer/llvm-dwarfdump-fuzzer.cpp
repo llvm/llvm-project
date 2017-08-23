@@ -32,5 +32,9 @@ extern "C" void LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   }
   ObjectFile &Obj = *ObjOrErr.get();
   std::unique_ptr<DIContext> DICtx = DWARFContext::create(Obj);
-  DICtx->dump(nulls(), DIDT_All);
+
+
+  DIDumpOptions opts;
+  opts.DumpType = DIDT_All;
+  DICtx->dump(nulls(), opts);
 }
