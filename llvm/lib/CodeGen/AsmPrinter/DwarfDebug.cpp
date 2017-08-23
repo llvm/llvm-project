@@ -568,8 +568,15 @@ void DwarfDebug::beginModule() {
       CU.addImportedEntity(IE);
 
     // Global Variables.
-    for (auto *GVE : CUNode->getGlobalVariables())
-      GVMap[GVE->getVariable()].push_back({nullptr, GVE->getExpression()});
+    for (auto *GVE : CUNode->getGlobalVariables()) {
+      // Don't bother adding DIGlobalVariableExpressions listed in the CU if we
+      // already know about the variable and it isn't adding a constant
+      // expression.
+      auto &GVMapEntry = GVMap[GVE->getVariable()];
+      auto *Expr = GVE->getExpression();
+      if (!GVMapEntry.size() || (Expr && Expr->isConstant()))
+        GVMapEntry.push_back({nullptr, Expr});
+    }
     DenseSet<DIGlobalVariable *> Processed;
     for (auto *GVE : CUNode->getGlobalVariables()) {
       DIGlobalVariable *GV = GVE->getVariable();
