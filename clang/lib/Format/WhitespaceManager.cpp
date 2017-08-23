@@ -472,9 +472,14 @@ void WhitespaceManager::alignTrailingComments() {
       continue;
 
     unsigned ChangeMinColumn = Changes[i].StartOfTokenColumn;
-    unsigned ChangeMaxColumn = Style.ColumnLimit >= Changes[i].TokenLength
-                                   ? Style.ColumnLimit - Changes[i].TokenLength
-                                   : ChangeMinColumn;
+    unsigned ChangeMaxColumn;
+
+    if (Style.ColumnLimit == 0)
+      ChangeMaxColumn = UINT_MAX;
+    else if (Style.ColumnLimit >= Changes[i].TokenLength)
+      ChangeMaxColumn = Style.ColumnLimit - Changes[i].TokenLength;
+    else
+      ChangeMaxColumn = ChangeMinColumn;
 
     // If we don't create a replacement for this change, we have to consider
     // it to be immovable.

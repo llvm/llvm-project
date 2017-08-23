@@ -14629,7 +14629,7 @@ static void MarkExprReferenced(Sema &SemaRef, SourceLocation Loc,
       ME->getBase(), SemaRef.getLangOpts().AppleKext);
   if (DM)
     SemaRef.MarkAnyDeclReferenced(Loc, DM, MightBeOdrUse);
-} 
+}
 
 /// \brief Perform reference-marking and odr-use handling for a DeclRefExpr.
 void Sema::MarkDeclRefReferenced(DeclRefExpr *E, const Expr *Base) {

@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -march=ppc64le | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -march=ppc64 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s
 
 define i64 @ori_test_a(i64 %a) {
 entry:
