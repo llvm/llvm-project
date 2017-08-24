@@ -11,7 +11,7 @@ source_filename = "test/Linker/odr.ll"
 !llvm.module.flags = !{!8}
 
 !0 = !DIGlobalVariableExpression(var: !1)
-!1 = !DIGlobalVariable(name: "c", scope: null, isLocal: false, isDefinition: true)
+!1 = !DIGlobalVariable(name: "c", scope: null, isLocal: false, isDefinition: true, type: !9)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, retainedTypes: !4, globals: !7)
 !3 = !DIFile(filename: "a", directory: "")
 !4 = !{!5}
@@ -19,4 +19,4 @@ source_filename = "test/Linker/odr.ll"
 !6 = distinct !DISubprogram(name: "b", scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !2)
 !7 = !{!0}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
-
+!9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

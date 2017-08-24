@@ -20,7 +20,8 @@
 
 namespace llvm {
 
-class MDNode;
+class DIVariable;
+class DIExpression;
 class SDNode;
 class Value;
 
@@ -43,8 +44,8 @@ private:
     const Value *Const;     // valid for constants
     unsigned FrameIx;       // valid for stack objects
   } u;
-  MDNode *Var;
-  MDNode *Expr;
+  DIVariable *Var;
+  DIExpression *Expr;
   DebugLoc DL;
   unsigned Order;
   enum DbgValueKind kind;
@@ -53,8 +54,8 @@ private:
 
 public:
   // Constructor for non-constants.
-  SDDbgValue(MDNode *Var, MDNode *Expr, SDNode *N, unsigned R, bool indir,
-             DebugLoc dl, unsigned O)
+  SDDbgValue(DIVariable *Var, DIExpression *Expr, SDNode *N, unsigned R,
+             bool indir, DebugLoc dl, unsigned O)
       : Var(Var), Expr(Expr), DL(std::move(dl)), Order(O), IsIndirect(indir) {
     kind = SDNODE;
     u.s.Node = N;
@@ -62,14 +63,16 @@ public:
   }
 
   // Constructor for constants.
-  SDDbgValue(MDNode *Var, MDNode *Expr, const Value *C, DebugLoc dl, unsigned O)
+  SDDbgValue(DIVariable *Var, DIExpression *Expr, const Value *C, DebugLoc dl,
+             unsigned O)
       : Var(Var), Expr(Expr), DL(std::move(dl)), Order(O), IsIndirect(false) {
     kind = CONST;
     u.Const = C;
   }
 
   // Constructor for frame indices.
-  SDDbgValue(MDNode *Var, MDNode *Expr, unsigned FI, DebugLoc dl, unsigned O)
+  SDDbgValue(DIVariable *Var, DIExpression *Expr, unsigned FI, DebugLoc dl,
+             unsigned O)
       : Var(Var), Expr(Expr), DL(std::move(dl)), Order(O), IsIndirect(false) {
     kind = FRAMEIX;
     u.FrameIx = FI;
@@ -78,11 +81,11 @@ public:
   // Returns the kind.
   DbgValueKind getKind() const { return kind; }
 
-  // Returns the MDNode pointer for the variable.
-  MDNode *getVariable() const { return Var; }
+  // Returns the DIVariable pointer for the variable.
+  DIVariable *getVariable() const { return Var; }
 
-  // Returns the MDNode pointer for the expression.
-  MDNode *getExpression() const { return Expr; }
+  // Returns the DIExpression pointer for the expression.
+  DIExpression *getExpression() const { return Expr; }
 
   // Returns the SDNode* for a register ref
   SDNode *getSDNode() const { assert (kind==SDNODE); return u.s.Node; }

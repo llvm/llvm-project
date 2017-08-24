@@ -9,9 +9,8 @@
 !2 = !{}
 ; CHECK: !3 = !{!4}
 !3 = !{!4}
-; CHECK: !4 = {{.*}}!DIGlobalVariableExpression(var: !5, expr: !8)
+; CHECK: !4 = {{.*}}!DIGlobalVariableExpression(var: !5, expr: !DIExpression(DW_OP_constu, 42, DW_OP_stack_value))
 ; CHECK: !5 = !DIGlobalVariable(name: "c", scope: !0, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true)
-; CHECK: !8 = !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
 !4 = !DIGlobalVariable(name: "c", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, variable: i32 42)
 !5 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !6)
 !6 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

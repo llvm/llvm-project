@@ -14,17 +14,16 @@ define void @use1() {
   ret void
 }
 ; CHECK: [[A]] = !DIGlobalVariableExpression(var: [[AVAR:![0-9]+]])
-; CHECK: [[AVAR]] = !DIGlobalVariable(name: "a", scope: null, isLocal: false, isDefinition: true)
-; CHECK: [[B]] = !DIGlobalVariableExpression(var: [[BVAR:![0-9]+]], expr: [[EXPR:![0-9]+]])
-; CHECK: [[BVAR]] = !DIGlobalVariable(name: "b", scope: null, isLocal: false, isDefinition: true)
-; CHECK: [[EXPR]] = !DIExpression(DW_OP_plus_uconst, 4)
+; CHECK: [[AVAR]] = !DIGlobalVariable(name: "a", scope: null, type: !2, isLocal: false, isDefinition: true)
+; CHECK: [[B]] = !DIGlobalVariableExpression(var: [[BVAR:![0-9]+]], expr: !DIExpression(DW_OP_plus_uconst, 4))
+; CHECK: [[BVAR]] = !DIGlobalVariable(name: "b", scope: null, type: !2, isLocal: false, isDefinition: true)
 
 !llvm.module.flags = !{!4, !5}
 
 !0 = !DIGlobalVariableExpression(var: !1)
-!1 = !DIGlobalVariable(name: "a", scope: null, isLocal: false, isDefinition: true)
+!1 = !DIGlobalVariable(name: "a", scope: null, type: !6, isLocal: false, isDefinition: true)
 !2 = !DIGlobalVariableExpression(var: !3)
-!3 = !DIGlobalVariable(name: "b", scope: null, isLocal: false, isDefinition: true)
+!3 = !DIGlobalVariable(name: "b", scope: null, type: !6, isLocal: false, isDefinition: true)
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 2, !"Dwarf Version", i32 4}
-
+!6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
