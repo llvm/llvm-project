@@ -160,7 +160,7 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   // Try the default logic for non-generic instructions that are either copies
   // or already have some operands assigned to banks.
-  if (!isPreISelGenericOpcode(Opc)) {
+  if (!isPreISelGenericOpcode(Opc) || Opc == TargetOpcode::G_PHI) {
     const InstructionMapping &Mapping = getInstrMappingImpl(MI);
     if (Mapping.isValid())
       return Mapping;
@@ -211,7 +211,8 @@ X86RegisterBankInfo::getInstrAlternativeMappings(const MachineInstr &MI) const {
 
   switch (MI.getOpcode()) {
   case TargetOpcode::G_LOAD:
-  case TargetOpcode::G_STORE: {
+  case TargetOpcode::G_STORE:
+  case TargetOpcode::G_IMPLICIT_DEF: {
     // we going to try to map 32/64 bit to PMI_FP32/PMI_FP64
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
     if (Size != 32 && Size != 64)

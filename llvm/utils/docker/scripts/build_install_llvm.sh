@@ -145,10 +145,12 @@ if [ "$LLVM_BRANCH" == "" ]; then
   LLVM_BRANCH="trunk"
 fi
 
-if [ "$LLVM_SVN_REVISION" != "" ]; then
-  SVN_REV_ARG="-r$LLVM_SVN_REVISION"
+if [ "$LLVM_SVN_REV" != "" ]; then
+  SVN_REV_ARG="-r$LLVM_SVN_REV"
+  echo "Checking out svn revision r$LLVM_SVN_REV."
 else
   SVN_REV_ARG=""
+  echo "Checking out latest svn revision."
 fi
 
 CLANG_BUILD_DIR=/tmp/clang-build

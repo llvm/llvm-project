@@ -32,7 +32,7 @@ entry:
 ; CHECK: define void @salvage_load
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata %struct.entry** %queue,
-; CHECK-SAME:                           metadata ![[LOAD_EXPR:[0-9]+]])
+; CHECK-SAME:                           metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 0))
   store %struct.entry* %1, %struct.entry** %im_not_dead, align 8
   ret void, !dbg !21
 }
@@ -46,7 +46,7 @@ entry:
 ; CHECK: define void @salvage_bitcast
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata %struct.entry* %queue,
-; CHECK-SAME:                           metadata ![[BITCAST_EXPR:[0-9]+]])
+; CHECK-SAME:                           metadata !DIExpression(DW_OP_plus_uconst, 0))
   store i8* %1, i8** %im_not_dead, align 8
   ret void, !dbg !23
 }
@@ -60,7 +60,7 @@ entry:
 ; CHECK: define void @salvage_gep0
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata %struct.entry* %queue,
-; CHECK-SAME:                           metadata ![[GEP0_EXPR:[0-9]+]])
+; CHECK-SAME:                           metadata !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 0, DW_OP_stack_value))
   store %struct.entry** %1, %struct.entry*** %im_not_dead, align 8
   ret void, !dbg !26
 }
@@ -74,7 +74,7 @@ entry:
 ; CHECK: define void @salvage_gep1
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata %struct.entry* %queue,
-; CHECK-SAME:                           metadata ![[GEP1_EXPR:[0-9]+]])
+; CHECK-SAME:     metadata !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 32))
   store %struct.entry** %1, %struct.entry*** %im_not_dead, align 8
   ret void, !dbg !29
 }
@@ -88,17 +88,10 @@ entry:
 ; CHECK: define void @salvage_gep2
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata %struct.entry* %queue,
-; CHECK-SAME:                           metadata ![[GEP2_EXPR:[0-9]+]])
+; CHECK-SAME:     metadata !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value))
   store %struct.entry** %1, %struct.entry*** %im_not_dead, align 8
   ret void, !dbg !32
 }
-
-; CHECK: ![[LOAD_EXPR]] = !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 0)
-; CHECK: ![[BITCAST_EXPR]] = !DIExpression(DW_OP_plus_uconst, 0)
-; CHECK: ![[GEP0_EXPR]] = !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 0, DW_OP_stack_value)
-; CHECK: ![[GEP1_EXPR]] = !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value,
-; CHECK-SAME:                           DW_OP_LLVM_fragment, 0, 32)
-; CHECK: ![[GEP2_EXPR]] = !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value)
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

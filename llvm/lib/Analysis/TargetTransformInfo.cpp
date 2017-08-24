@@ -321,6 +321,16 @@ unsigned TargetTransformInfo::getCacheLineSize() const {
   return TTIImpl->getCacheLineSize();
 }
 
+llvm::Optional<unsigned> TargetTransformInfo::getCacheSize(CacheLevel Level)
+  const {
+  return TTIImpl->getCacheSize(Level);
+}
+
+llvm::Optional<unsigned> TargetTransformInfo::getCacheAssociativity(
+  CacheLevel Level) const {
+  return TTIImpl->getCacheAssociativity(Level);
+}
+
 unsigned TargetTransformInfo::getPrefetchDistance() const {
   return TTIImpl->getPrefetchDistance();
 }

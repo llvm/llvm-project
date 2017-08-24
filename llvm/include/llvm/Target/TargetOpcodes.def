@@ -224,6 +224,9 @@ HANDLE_TARGET_OPCODE(G_XOR)
 
 HANDLE_TARGET_OPCODE(G_IMPLICIT_DEF)
 
+/// Generic PHI instruction with types.
+HANDLE_TARGET_OPCODE(G_PHI)
+
 /// Generic instruction to materialize the address of an alloca or other
 /// stack-based object.
 HANDLE_TARGET_OPCODE(G_FRAME_INDEX)

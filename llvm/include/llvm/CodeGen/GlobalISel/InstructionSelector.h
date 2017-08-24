@@ -93,6 +93,10 @@ enum {
   /// - InsnID - Instruction ID
   /// - Expected number of operands
   GIM_CheckNumOperands,
+  /// Check an immediate predicate on the specified instruction
+  /// - InsnID - Instruction ID
+  /// - The predicate to test
+  GIM_CheckImmPredicate,
 
   /// Check the type for the specified operand
   /// - InsnID - Instruction ID
@@ -222,6 +226,8 @@ enum {
 /// Provides the logic to select generic machine instructions.
 class InstructionSelector {
 public:
+  typedef bool(*ImmediatePredicateFn)(int64_t);
+
   virtual ~InstructionSelector() = default;
 
   /// Select the (possibly generic) instruction \p I to only use target-specific
@@ -254,6 +260,7 @@ public:
   struct MatcherInfoTy {
     const LLT *TypeObjects;
     const PredicateBitset *FeatureBitsets;
+    const ImmediatePredicateFn *ImmPredicateFns;
     const std::vector<ComplexMatcherMemFn> ComplexPredicates;
   };
 
