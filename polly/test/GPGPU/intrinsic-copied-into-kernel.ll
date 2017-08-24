@@ -12,7 +12,9 @@
 
 ; Check that the intrinsic call is present in the kernel IR.
 ; KERNEL-IR:   %p_sqrt = tail call float @llvm.sqrt.f32(float %A.arr.i.val_p_scalar_)
-; KERNEL-IR:   declare float @llvm.sqrt.f32(float) #2
+; KERNEL-IR:   declare float @llvm.sqrt.f32(float)
+; KERNEL-IR:   declare float @llvm.fabs.f32(float)
+; KERNEL-IR:   declare float @llvm.powi.f32(float, i32)
 
 ; Check that kernel launch is generated in host IR.
 ; the declare would not be generated unless a call to a kernel exists.
@@ -21,7 +23,12 @@
 
 ; void f(float *A, float *B, int N) {
 ;   for(int i = 0; i < N; i++) {
-;       B[i] = sqrt(A[i]);
+;       float tmp0 = A[i];
+;       float tmp1 = sqrt(tmp1);
+;       float tmp2 = fabs(tmp2);
+;       float tmp3 = copysignf(tmp1, tmp2);
+;       float tmp4 = powi(tmp3, 2);
+;       B[i] = tmp4;
 ;   }
 ; }
 
@@ -42,10 +49,13 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %A.arr.i = getelementptr inbounds float, float* %A, i64 %indvars.iv
   %A.arr.i.val = load float, float* %A.arr.i, align 4
-  ; Call to intrinsic that should be part of the kernel.
+  ; Call to intrinsics that should be part of the kernel.
   %sqrt = tail call float @llvm.sqrt.f32(float %A.arr.i.val)
+  %fabs = tail call float @llvm.fabs.f32(float %sqrt);
+  %copysign = tail call float @llvm.copysign.f32(float %sqrt, float %fabs);
+  %powi = tail call float @llvm.powi.f32(float %copysign, i32 2);
   %B.arr.i = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  store float %sqrt, float* %B.arr.i, align 4
+  store float %powi, float* %B.arr.i, align 4
 
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %wide.trip.count = zext i32 %N to i64
@@ -61,6 +71,9 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 
 ; Function Attrs: nounwind readnone
 declare float @llvm.sqrt.f32(float) #0
+declare float @llvm.fabs.f32(float) #0
+declare float @llvm.copysign.f32(float, float) #0
+declare float @llvm.powi.f32(float, i32) #0
 
 attributes #0 = { nounwind readnone }
 

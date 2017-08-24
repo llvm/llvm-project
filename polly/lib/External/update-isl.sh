@@ -28,6 +28,6 @@ cp $ISL_SOURCE_DIR/include/isl-noexceptions.h $TMPDIR/isl-noexceptions.h
 rm -rf $ISL_SOURCE_DIR
 mkdir -p $ISL_SOURCE_DIR
 tar -xf $DISTFILE --strip-components=1 --directory $ISL_SOURCE_DIR
-cp $TMPDIR/isl-noexceptions.h $ISL_SOURCE_DIR/include/
+cp $TMPDIR/isl/isl-noexceptions.h $ISL_SOURCE_DIR/include/isl
 
 rm -rf $TMPDIR

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "polly/JSONExporter.h"
 #include "polly/DependenceInfo.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
@@ -59,9 +60,6 @@ struct JSONExporter : public ScopPass {
   static char ID;
   explicit JSONExporter() : ScopPass(ID) {}
 
-  std::string getFileName(Scop &S) const;
-  Json::Value getJSON(Scop &S) const;
-
   /// Export the SCoP @p S to a JSON file.
   bool runOnScop(Scop &S) override;
 
@@ -76,46 +74,6 @@ struct JSONImporter : public ScopPass {
   static char ID;
   std::vector<std::string> NewAccessStrings;
   explicit JSONImporter() : ScopPass(ID) {}
-
-  /// Import a new context from JScop.
-  ///
-  /// @param S The scop to update.
-  /// @param JScop The JScop file describing the new schedule.
-  ///
-  /// @returns True if the import succeeded, otherwise False.
-  bool importContext(Scop &S, Json::Value &JScop);
-
-  /// Import a new schedule from JScop.
-  ///
-  /// ... and verify that the new schedule does preserve existing data
-  /// dependences.
-  ///
-  /// @param S The scop to update.
-  /// @param JScop The JScop file describing the new schedule.
-  /// @param D The data dependences of the @p S.
-  ///
-  /// @returns True if the import succeeded, otherwise False.
-  bool importSchedule(Scop &S, Json::Value &JScop, const Dependences &D);
-
-  /// Import new arrays from JScop.
-  ///
-  /// @param S The scop to update.
-  /// @param JScop The JScop file describing new arrays.
-  ///
-  /// @returns True if the import succeeded, otherwise False.
-  bool importArrays(Scop &S, Json::Value &JScop);
-
-  /// Import new memory accesses from JScop.
-  ///
-  /// @param S The scop to update.
-  /// @param JScop The JScop file describing the new schedule.
-  /// @param DL The data layout to assume.
-  ///
-  /// @returns True if the import succeeded, otherwise False.
-  bool importAccesses(Scop &S, Json::Value &JScop, const DataLayout &DL);
-
-  std::string getFileName(Scop &S) const;
-
   /// Import new access functions for SCoP @p S from a JSON file.
   bool runOnScop(Scop &S) override;
 
@@ -127,21 +85,22 @@ struct JSONImporter : public ScopPass {
 };
 } // namespace
 
-char JSONExporter::ID = 0;
-std::string JSONExporter::getFileName(Scop &S) const {
+static std::string getFileName(Scop &S, StringRef Suffix = "") {
   std::string FunctionName = S.getFunction().getName();
   std::string FileName = FunctionName + "___" + S.getNameStr() + ".jscop";
+
+  if (Suffix != "")
+    FileName += "." + Suffix.str();
+
   return FileName;
 }
-
-void JSONExporter::printScop(raw_ostream &OS, Scop &S) const { S.print(OS); }
 
 /// Export all arrays from the Scop.
 ///
 /// @param S The Scop containing the arrays.
 ///
 /// @returns Json::Value containing the arrays.
-Json::Value exportArrays(const Scop &S) {
+static Json::Value exportArrays(const Scop &S) {
   Json::Value Arrays;
   std::string Buffer;
   llvm::raw_string_ostream RawStringOstream(Buffer);
@@ -170,7 +129,7 @@ Json::Value exportArrays(const Scop &S) {
   return Arrays;
 }
 
-Json::Value JSONExporter::getJSON(Scop &S) const {
+static Json::Value getJSON(Scop &S) {
   Json::Value root;
   unsigned LineBegin, LineEnd;
   std::string FileName;
@@ -213,7 +172,7 @@ Json::Value JSONExporter::getJSON(Scop &S) const {
   return root;
 }
 
-bool JSONExporter::runOnScop(Scop &S) {
+static void exportScop(Scop &S) {
   std::string FileName = ImportDir + "/" + getFileName(S);
 
   Json::Value jscop = getJSON(S);
@@ -234,46 +193,24 @@ bool JSONExporter::runOnScop(Scop &S) {
     if (!F.os().has_error()) {
       errs() << "\n";
       F.keep();
-      return false;
+      return;
     }
   }
 
   errs() << "  error opening file for writing!\n";
   F.os().clear_error();
-
-  return false;
-}
-
-void JSONExporter::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
-  AU.addRequired<ScopInfoRegionPass>();
-}
-
-Pass *polly::createJSONExporterPass() { return new JSONExporter(); }
-
-char JSONImporter::ID = 0;
-std::string JSONImporter::getFileName(Scop &S) const {
-  std::string FunctionName = S.getFunction().getName();
-  std::string FileName = FunctionName + "___" + S.getNameStr() + ".jscop";
-
-  if (ImportPostfix != "")
-    FileName += "." + ImportPostfix;
-
-  return FileName;
-}
-
-void JSONImporter::printScop(raw_ostream &OS, Scop &S) const {
-  S.print(OS);
-  for (std::vector<std::string>::const_iterator I = NewAccessStrings.begin(),
-                                                E = NewAccessStrings.end();
-       I != E; I++)
-    OS << "New access function '" << *I << "' detected in JSCOP file\n";
 }
 
 typedef Dependences::StatementToIslMapTy StatementToIslMapTy;
 
-bool JSONImporter::importContext(Scop &S, Json::Value &JScop) {
-  isl_set *OldContext = S.getContext();
+/// Import a new context from JScop.
+///
+/// @param S The scop to update.
+/// @param JScop The JScop file describing the new schedule.
+///
+/// @returns True if the import succeeded, otherwise False.
+static bool importContext(Scop &S, Json::Value &JScop) {
+  isl_set *OldContext = S.getContext().release();
 
   // Check if key 'context' is present.
   if (!JScop.isMember("context")) {
@@ -324,8 +261,17 @@ bool JSONImporter::importContext(Scop &S, Json::Value &JScop) {
   return true;
 }
 
-bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
-                                  const Dependences &D) {
+/// Import a new schedule from JScop.
+///
+/// ... and verify that the new schedule does preserve existing data
+/// dependences.
+///
+/// @param S The scop to update.
+/// @param JScop The JScop file describing the new schedule.
+/// @param D The data dependences of the @p S.
+///
+/// @returns True if the import succeeded, otherwise False.
+static bool importSchedule(Scop &S, Json::Value &JScop, const Dependences &D) {
   StatementToIslMapTy NewSchedule;
 
   // Check if key 'statements' is present.
@@ -367,7 +313,7 @@ bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
       return false;
     }
 
-    isl_space *Space = Stmt.getDomainSpace();
+    isl_space *Space = Stmt.getDomainSpace().release();
 
     // Copy the old tuple id. This is necessary to retain the user pointer,
     // that stores the reference to the ScopStmt this schedule belongs to.
@@ -391,12 +337,13 @@ bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
     return false;
   }
 
-  auto ScheduleMap = isl_union_map_empty(S.getParamSpace());
+  auto ScheduleMap = isl_union_map_empty(S.getParamSpace().release());
   for (ScopStmt &Stmt : S) {
     if (NewSchedule.find(&Stmt) != NewSchedule.end())
       ScheduleMap = isl_union_map_add_map(ScheduleMap, NewSchedule[&Stmt]);
     else
-      ScheduleMap = isl_union_map_add_map(ScheduleMap, Stmt.getSchedule());
+      ScheduleMap =
+          isl_union_map_add_map(ScheduleMap, Stmt.getSchedule().release());
   }
 
   S.setSchedule(ScheduleMap);
@@ -404,8 +351,17 @@ bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
   return true;
 }
 
-bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
-                                  const DataLayout &DL) {
+/// Import new memory accesses from JScop.
+///
+/// @param S The scop to update.
+/// @param JScop The JScop file describing the new schedule.
+/// @param DL The data layout to assume.
+/// @param NewAccessStrings optionally record the imported access strings
+///
+/// @returns True if the import succeeded, otherwise False.
+static bool
+importAccesses(Scop &S, Json::Value &JScop, const DataLayout &DL,
+               std::vector<std::string> *NewAccessStrings = nullptr) {
   int StatementIdx = 0;
 
   // Check if key 'statements' is present.
@@ -432,7 +388,8 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
       return false;
     }
 
-    // Check whether the number of indices equals the number of memory accesses
+    // Check whether the number of indices equals the number of memory
+    // accesses
     if (Stmt.size() != statements[StatementIdx]["accesses"].size()) {
       errs() << "The number of memory accesses in the JSop file and the number "
                 "of memory accesses differ for index "
@@ -459,7 +416,7 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
         errs() << "The access was not parsed successfully by ISL.\n";
         return false;
       }
-      isl_map *CurrentAccessMap = MA->getAccessRelation();
+      isl_map *CurrentAccessMap = MA->getAccessRelation().release();
 
       // Check if the number of parameter change
       if (isl_map_dim(NewAccessMap, isl_dim_param) !=
@@ -474,13 +431,13 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
 
       // If the NewAccessMap has zero dimensions, it is the scalar access; it
       // must be the same as before.
-      // If it has at least one dimension, it's an array access; search for its
-      // ScopArrayInfo.
+      // If it has at least one dimension, it's an array access; search for
+      // its ScopArrayInfo.
       if (isl_map_dim(NewAccessMap, isl_dim_out) >= 1) {
         NewOutId = isl_map_get_tuple_id(NewAccessMap, isl_dim_out);
         auto *SAI = S.getArrayInfoByName(isl_id_get_name(NewOutId));
         isl_id *OutId = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_out);
-        auto *OutSAI = ScopArrayInfo::getFromId(OutId);
+        auto *OutSAI = ScopArrayInfo::getFromId(isl::manage(OutId));
         if (!SAI || SAI->getElementType() != OutSAI->getElementType()) {
           errs() << "JScop file contains access function with undeclared "
                     "ScopArrayInfo\n";
@@ -490,7 +447,7 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
           return false;
         }
         isl_id_free(NewOutId);
-        NewOutId = SAI->getBasePtrId();
+        NewOutId = SAI->getBasePtrId().release();
       } else {
         NewOutId = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_out);
       }
@@ -560,9 +517,9 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
       }
 
       NewAccessDomain =
-          isl_set_intersect_params(NewAccessDomain, S.getContext());
-      CurrentAccessDomain =
-          isl_set_intersect_params(CurrentAccessDomain, S.getContext());
+          isl_set_intersect_params(NewAccessDomain, S.getContext().release());
+      CurrentAccessDomain = isl_set_intersect_params(CurrentAccessDomain,
+                                                     S.getContext().release());
 
       if (MA->isRead() &&
           isl_set_is_subset(CurrentAccessDomain, NewAccessDomain) ==
@@ -581,8 +538,9 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
       if (!isl_map_is_equal(NewAccessMap, CurrentAccessMap)) {
         // Statistics.
         ++NewAccessMapFound;
-        NewAccessStrings.push_back(Accesses.asCString());
-        MA->setNewAccessRelation(NewAccessMap);
+        if (NewAccessStrings)
+          NewAccessStrings->push_back(Accesses.asCString());
+        MA->setNewAccessRelation(isl::manage(NewAccessMap));
       } else {
         isl_map_free(NewAccessMap);
       }
@@ -596,7 +554,7 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
 }
 
 /// Check whether @p SAI and @p Array represent the same array.
-bool areArraysEqual(ScopArrayInfo *SAI, Json::Value Array) {
+static bool areArraysEqual(ScopArrayInfo *SAI, Json::Value Array) {
   std::string Buffer;
   llvm::raw_string_ostream RawStringOstream(Buffer);
 
@@ -647,8 +605,8 @@ bool areArraysEqual(ScopArrayInfo *SAI, Json::Value Array) {
 /// @param TypeTextRepresentation The textual representation of the type.
 /// @return The pointer to the primitive type, if this type is accepted
 ///         or nullptr otherwise.
-Type *parseTextType(const std::string &TypeTextRepresentation,
-                    LLVMContext &LLVMContext) {
+static Type *parseTextType(const std::string &TypeTextRepresentation,
+                           LLVMContext &LLVMContext) {
   std::map<std::string, Type *> MapStrToType = {
       {"void", Type::getVoidTy(LLVMContext)},
       {"half", Type::getHalfTy(LLVMContext)},
@@ -673,7 +631,13 @@ Type *parseTextType(const std::string &TypeTextRepresentation,
   return nullptr;
 }
 
-bool JSONImporter::importArrays(Scop &S, Json::Value &JScop) {
+/// Import new arrays from JScop.
+///
+/// @param S The scop to update.
+/// @param JScop The JScop file describing new arrays.
+///
+/// @returns True if the import succeeded, otherwise False.
+static bool importArrays(Scop &S, Json::Value &JScop) {
   Json::Value Arrays = JScop["arrays"];
   if (Arrays.size() == 0)
     return true;
@@ -725,12 +689,18 @@ bool JSONImporter::importArrays(Scop &S, Json::Value &JScop) {
   return true;
 }
 
-bool JSONImporter::runOnScop(Scop &S) {
-  const Dependences &D =
-      getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);
-  const DataLayout &DL = S.getFunction().getParent()->getDataLayout();
-
-  std::string FileName = ImportDir + "/" + getFileName(S);
+/// Import a Scop from a JSCOP file
+/// @param S The scop to be modified
+/// @param D Dependence Info
+/// @param DL The DataLayout of the function
+/// @param NewAccessStrings Optionally record the imported access strings
+///
+/// @returns true on success, false otherwise. Beware that if this returns
+/// false, the Scop may still have been modified. In this case the Scop contains
+/// invalid information.
+static bool importScop(Scop &S, const Dependences &D, const DataLayout &DL,
+                       std::vector<std::string> *NewAccessStrings = nullptr) {
+  std::string FileName = ImportDir + "/" + getFileName(S, ImportPostfix);
 
   std::string FunctionName = S.getFunction().getName();
   errs() << "Reading JScop '" << S.getNameStr() << "' in function '"
@@ -769,10 +739,52 @@ bool JSONImporter::runOnScop(Scop &S) {
   if (!Success)
     return false;
 
-  Success = importAccesses(S, jscop, DL);
+  Success = importAccesses(S, jscop, DL, NewAccessStrings);
 
   if (!Success)
     return false;
+  return true;
+}
+
+char JSONExporter::ID = 0;
+void JSONExporter::printScop(raw_ostream &OS, Scop &S) const { OS << S; }
+
+bool JSONExporter::runOnScop(Scop &S) {
+  exportScop(S);
+  return false;
+}
+
+void JSONExporter::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+  AU.addRequired<ScopInfoRegionPass>();
+}
+
+Pass *polly::createJSONExporterPass() { return new JSONExporter(); }
+
+PreservedAnalyses JSONExportPass::run(Scop &S, ScopAnalysisManager &SAM,
+                                      ScopStandardAnalysisResults &SAR,
+                                      SPMUpdater &) {
+  exportScop(S);
+  return PreservedAnalyses::all();
+}
+
+char JSONImporter::ID = 0;
+
+void JSONImporter::printScop(raw_ostream &OS, Scop &S) const {
+  OS << S;
+  for (std::vector<std::string>::const_iterator I = NewAccessStrings.begin(),
+                                                E = NewAccessStrings.end();
+       I != E; I++)
+    OS << "New access function '" << *I << "' detected in JSCOP file\n";
+}
+
+bool JSONImporter::runOnScop(Scop &S) {
+  const Dependences &D =
+      getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);
+  const DataLayout &DL = S.getFunction().getParent()->getDataLayout();
+
+  if (!importScop(S, D, DL, &NewAccessStrings))
+    report_fatal_error("Tried to import a malformed jscop file.");
 
   return false;
 }
@@ -783,6 +795,25 @@ void JSONImporter::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 Pass *polly::createJSONImporterPass() { return new JSONImporter(); }
+
+PreservedAnalyses JSONImportPass::run(Scop &S, ScopAnalysisManager &SAM,
+                                      ScopStandardAnalysisResults &SAR,
+                                      SPMUpdater &) {
+  const Dependences &D =
+      SAM.getResult<DependenceAnalysis>(S, SAR).getDependences(
+          Dependences::AL_Statement);
+  const DataLayout &DL = S.getFunction().getParent()->getDataLayout();
+
+  if (!importScop(S, D, DL))
+    report_fatal_error("Tried to import a malformed jscop file.");
+
+  // This invalidates all analyses on Scop.
+  PreservedAnalyses PA;
+  PA.preserveSet<AllAnalysesOn<Module>>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  PA.preserveSet<AllAnalysesOn<Loop>>();
+  return PA;
+}
 
 INITIALIZE_PASS_BEGIN(JSONExporter, "polly-export-jscop",
                       "Polly - Export Scops as JSON"

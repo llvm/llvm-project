@@ -77,6 +77,21 @@ private:
   ScopInfo *SI;
 };
 
+// A partial specialization of the require analysis template pass to handle
+// extra parameters
+template <typename AnalysisT>
+struct RequireAnalysisPass<AnalysisT, Scop, ScopAnalysisManager,
+                           ScopStandardAnalysisResults &, SPMUpdater &>
+    : PassInfoMixin<
+          RequireAnalysisPass<AnalysisT, Scop, ScopAnalysisManager,
+                              ScopStandardAnalysisResults &, SPMUpdater &>> {
+  PreservedAnalyses run(Scop &L, ScopAnalysisManager &AM,
+                        ScopStandardAnalysisResults &AR, SPMUpdater &) {
+    (void)AM.template getResult<AnalysisT>(L, AR);
+    return PreservedAnalyses::all();
+  }
+};
+
 template <>
 InnerAnalysisManagerProxy<ScopAnalysisManager, Function>::Result
 InnerAnalysisManagerProxy<ScopAnalysisManager, Function>::run(
@@ -95,6 +110,35 @@ extern template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Scop,
 } // namespace llvm
 
 namespace polly {
+
+template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
+class OwningInnerAnalysisManagerProxy
+    : public InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT> {
+public:
+  OwningInnerAnalysisManagerProxy()
+      : InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT>(InnerAM) {}
+  using Result = typename InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT,
+                                                    ExtraArgTs...>::Result;
+  Result run(IRUnitT &IR, AnalysisManager<IRUnitT, ExtraArgTs...> &AM,
+             ExtraArgTs...) {
+    return Result(InnerAM);
+  }
+
+  AnalysisManagerT &getManager() { return InnerAM; }
+
+private:
+  AnalysisManagerT InnerAM;
+};
+
+template <>
+OwningInnerAnalysisManagerProxy<ScopAnalysisManager, Function>::Result
+OwningInnerAnalysisManagerProxy<ScopAnalysisManager, Function>::run(
+    Function &F, FunctionAnalysisManager &FAM);
+extern template class OwningInnerAnalysisManagerProxy<ScopAnalysisManager,
+                                                      Function>;
+
+using OwningScopAnalysisManagerFunctionProxy =
+    OwningInnerAnalysisManagerProxy<ScopAnalysisManager, Function>;
 using ScopPassManager =
     PassManager<Scop, ScopAnalysisManager, ScopStandardAnalysisResults &,
                 SPMUpdater &>;
@@ -128,6 +172,7 @@ private:
 
 struct ScopStandardAnalysisResults {
   DominatorTree &DT;
+  ScopInfo &SI;
   ScalarEvolution &SE;
   LoopInfo &LI;
   RegionInfo &RI;
@@ -135,18 +180,26 @@ struct ScopStandardAnalysisResults {
 
 class SPMUpdater {
 public:
-  SPMUpdater(SmallPriorityWorklist<Scop *, 4> &Worklist,
+  SPMUpdater(SmallPriorityWorklist<Region *, 4> &Worklist,
              ScopAnalysisManager &SAM)
-      : Worklist(Worklist), SAM(SAM) {}
+      : InvalidateCurrentScop(false), Worklist(Worklist), SAM(SAM) {}
 
-  void SkipScop(Scop &S) {
-    if (Worklist.erase(&S))
-      SAM.clear(S);
+  bool invalidateCurrentScop() const { return InvalidateCurrentScop; }
+
+  void invalidateScop(Scop &S) {
+    if (&S == CurrentScop)
+      InvalidateCurrentScop = true;
+
+    Worklist.erase(&S.getRegion());
+    SAM.clear(S);
   }
 
 private:
-  SmallPriorityWorklist<Scop *, 4> &Worklist;
+  Scop *CurrentScop;
+  bool InvalidateCurrentScop;
+  SmallPriorityWorklist<Region *, 4> &Worklist;
   ScopAnalysisManager &SAM;
+  template <typename ScopPassT> friend class FunctionToScopPassAdaptor;
 };
 
 template <typename ScopPassT>
@@ -157,35 +210,52 @@ public:
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
     PreservedAnalyses PA = PreservedAnalyses::all();
-    auto &Scops = AM.getResult<ScopInfoAnalysis>(F);
-    if (Scops.empty())
+    auto &SD = AM.getResult<ScopAnalysis>(F);
+    auto &SI = AM.getResult<ScopInfoAnalysis>(F);
+    if (SI.empty())
       return PA;
 
-    ScopAnalysisManager &SAM =
-        AM.getResult<ScopAnalysisManagerFunctionProxy>(F).getManager();
+    SmallPriorityWorklist<Region *, 4> Worklist;
+    for (auto &S : SI)
+      if (S.second)
+        Worklist.insert(S.first);
 
     ScopStandardAnalysisResults AR = {AM.getResult<DominatorTreeAnalysis>(F),
+                                      AM.getResult<ScopInfoAnalysis>(F),
                                       AM.getResult<ScalarEvolutionAnalysis>(F),
                                       AM.getResult<LoopAnalysis>(F),
                                       AM.getResult<RegionInfoAnalysis>(F)};
 
-    SmallPriorityWorklist<Scop *, 4> Worklist;
+    ScopAnalysisManager &SAM =
+        AM.getResult<ScopAnalysisManagerFunctionProxy>(F).getManager();
+
     SPMUpdater Updater{Worklist, SAM};
 
-    for (auto &S : Scops)
-      if (auto *scop = S.second.get())
-        Worklist.insert(scop);
-
     while (!Worklist.empty()) {
-      Scop *scop = Worklist.pop_back_val();
+      Region *R = Worklist.pop_back_val();
+      if (!SD.isMaxRegionInScop(*R))
+        continue;
+      Scop *scop = SI.getScop(R);
+      if (!scop)
+        continue;
+      Updater.CurrentScop = scop;
+      Updater.InvalidateCurrentScop = false;
       PreservedAnalyses PassPA = Pass.run(*scop, SAM, AR, Updater);
 
       SAM.invalidate(*scop, PassPA);
       PA.intersect(std::move(PassPA));
+      if (Updater.invalidateCurrentScop())
+        SI.recompute();
     };
 
     PA.preserveSet<AllAnalysesOn<Scop>>();
     PA.preserve<ScopAnalysisManagerFunctionProxy>();
+    PA.preserve<DominatorTreeAnalysis>();
+    PA.preserve<ScopAnalysis>();
+    PA.preserve<ScopInfoAnalysis>();
+    PA.preserve<ScalarEvolutionAnalysis>();
+    PA.preserve<LoopAnalysis>();
+    PA.preserve<RegionInfoAnalysis>();
     return PA;
   }
 

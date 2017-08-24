@@ -23,16 +23,20 @@
 #include <OpenCL/opencl.h>
 #else
 #include <CL/cl.h>
-#endif
+#endif /* __APPLE__ */
 #endif /* HAS_LIBOPENCL */
 
+#include <assert.h>
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 static int DebugMode;
 static int CacheMode;
+#define max(x, y) ((x) > (y) ? (x) : (y))
 
 static PollyGPURuntime Runtime = RUNTIME_NONE;
 
@@ -89,6 +93,7 @@ struct OpenCLDevicePtrT {
 
 /* Dynamic library handles for the OpenCL runtime library. */
 static void *HandleOpenCL;
+static void *HandleOpenCLBeignet;
 
 /* Type-defines of function pointer to OpenCL Runtime API. */
 typedef cl_int clGetPlatformIDsFcnTy(cl_uint NumEntries,
@@ -138,6 +143,12 @@ clEnqueueWriteBufferFcnTy(cl_command_queue CommandQueue, cl_mem Buffer,
                           const void *Ptr, cl_uint NumEventsInWaitList,
                           const cl_event *EventWaitList, cl_event *Event);
 static clEnqueueWriteBufferFcnTy *clEnqueueWriteBufferFcnPtr;
+
+typedef cl_program
+clCreateProgramWithLLVMIntelFcnTy(cl_context Context, cl_uint NumDevices,
+                                  const cl_device_id *DeviceList,
+                                  const char *Filename, cl_int *ErrcodeRet);
+static clCreateProgramWithLLVMIntelFcnTy *clCreateProgramWithLLVMIntelFcnPtr;
 
 typedef cl_program clCreateProgramWithBinaryFcnTy(
     cl_context Context, cl_uint NumDevices, const cl_device_id *DeviceList,
@@ -210,6 +221,7 @@ static void *getAPIHandleCL(void *Handle, const char *FuncName) {
 }
 
 static int initialDeviceAPILibrariesCL() {
+  HandleOpenCLBeignet = dlopen("/usr/local/lib/beignet/libcl.so", RTLD_LAZY);
   HandleOpenCL = dlopen("libOpenCL.so", RTLD_LAZY);
   if (!HandleOpenCL) {
     fprintf(stderr, "Cannot open library: %s. \n", dlerror());
@@ -237,67 +249,79 @@ static int initialDeviceAPIsCL() {
   if (initialDeviceAPILibrariesCL() == 0)
     return 0;
 
+  // FIXME: We are now always selecting the Intel Beignet driver if it is
+  // available on the system, instead of a possible NVIDIA or AMD OpenCL
+  // API. This selection should occurr based on the target architecture
+  // chosen when compiling.
+  void *Handle =
+      (HandleOpenCLBeignet != NULL ? HandleOpenCLBeignet : HandleOpenCL);
+
   clGetPlatformIDsFcnPtr =
-      (clGetPlatformIDsFcnTy *)getAPIHandleCL(HandleOpenCL, "clGetPlatformIDs");
+      (clGetPlatformIDsFcnTy *)getAPIHandleCL(Handle, "clGetPlatformIDs");
 
   clGetDeviceIDsFcnPtr =
-      (clGetDeviceIDsFcnTy *)getAPIHandleCL(HandleOpenCL, "clGetDeviceIDs");
+      (clGetDeviceIDsFcnTy *)getAPIHandleCL(Handle, "clGetDeviceIDs");
 
   clGetDeviceInfoFcnPtr =
-      (clGetDeviceInfoFcnTy *)getAPIHandleCL(HandleOpenCL, "clGetDeviceInfo");
+      (clGetDeviceInfoFcnTy *)getAPIHandleCL(Handle, "clGetDeviceInfo");
 
   clGetKernelInfoFcnPtr =
-      (clGetKernelInfoFcnTy *)getAPIHandleCL(HandleOpenCL, "clGetKernelInfo");
+      (clGetKernelInfoFcnTy *)getAPIHandleCL(Handle, "clGetKernelInfo");
 
   clCreateContextFcnPtr =
-      (clCreateContextFcnTy *)getAPIHandleCL(HandleOpenCL, "clCreateContext");
+      (clCreateContextFcnTy *)getAPIHandleCL(Handle, "clCreateContext");
 
   clCreateCommandQueueFcnPtr = (clCreateCommandQueueFcnTy *)getAPIHandleCL(
-      HandleOpenCL, "clCreateCommandQueue");
+      Handle, "clCreateCommandQueue");
 
   clCreateBufferFcnPtr =
-      (clCreateBufferFcnTy *)getAPIHandleCL(HandleOpenCL, "clCreateBuffer");
+      (clCreateBufferFcnTy *)getAPIHandleCL(Handle, "clCreateBuffer");
 
   clEnqueueWriteBufferFcnPtr = (clEnqueueWriteBufferFcnTy *)getAPIHandleCL(
-      HandleOpenCL, "clEnqueueWriteBuffer");
+      Handle, "clEnqueueWriteBuffer");
+
+  if (HandleOpenCLBeignet)
+    clCreateProgramWithLLVMIntelFcnPtr =
+        (clCreateProgramWithLLVMIntelFcnTy *)getAPIHandleCL(
+            Handle, "clCreateProgramWithLLVMIntel");
 
   clCreateProgramWithBinaryFcnPtr =
       (clCreateProgramWithBinaryFcnTy *)getAPIHandleCL(
-          HandleOpenCL, "clCreateProgramWithBinary");
+          Handle, "clCreateProgramWithBinary");
 
   clBuildProgramFcnPtr =
-      (clBuildProgramFcnTy *)getAPIHandleCL(HandleOpenCL, "clBuildProgram");
+      (clBuildProgramFcnTy *)getAPIHandleCL(Handle, "clBuildProgram");
 
   clCreateKernelFcnPtr =
-      (clCreateKernelFcnTy *)getAPIHandleCL(HandleOpenCL, "clCreateKernel");
+      (clCreateKernelFcnTy *)getAPIHandleCL(Handle, "clCreateKernel");
 
   clSetKernelArgFcnPtr =
-      (clSetKernelArgFcnTy *)getAPIHandleCL(HandleOpenCL, "clSetKernelArg");
+      (clSetKernelArgFcnTy *)getAPIHandleCL(Handle, "clSetKernelArg");
 
   clEnqueueNDRangeKernelFcnPtr = (clEnqueueNDRangeKernelFcnTy *)getAPIHandleCL(
-      HandleOpenCL, "clEnqueueNDRangeKernel");
+      Handle, "clEnqueueNDRangeKernel");
 
-  clEnqueueReadBufferFcnPtr = (clEnqueueReadBufferFcnTy *)getAPIHandleCL(
-      HandleOpenCL, "clEnqueueReadBuffer");
+  clEnqueueReadBufferFcnPtr =
+      (clEnqueueReadBufferFcnTy *)getAPIHandleCL(Handle, "clEnqueueReadBuffer");
 
-  clFlushFcnPtr = (clFlushFcnTy *)getAPIHandleCL(HandleOpenCL, "clFlush");
+  clFlushFcnPtr = (clFlushFcnTy *)getAPIHandleCL(Handle, "clFlush");
 
-  clFinishFcnPtr = (clFinishFcnTy *)getAPIHandleCL(HandleOpenCL, "clFinish");
+  clFinishFcnPtr = (clFinishFcnTy *)getAPIHandleCL(Handle, "clFinish");
 
   clReleaseKernelFcnPtr =
-      (clReleaseKernelFcnTy *)getAPIHandleCL(HandleOpenCL, "clReleaseKernel");
+      (clReleaseKernelFcnTy *)getAPIHandleCL(Handle, "clReleaseKernel");
 
   clReleaseProgramFcnPtr =
-      (clReleaseProgramFcnTy *)getAPIHandleCL(HandleOpenCL, "clReleaseProgram");
+      (clReleaseProgramFcnTy *)getAPIHandleCL(Handle, "clReleaseProgram");
 
-  clReleaseMemObjectFcnPtr = (clReleaseMemObjectFcnTy *)getAPIHandleCL(
-      HandleOpenCL, "clReleaseMemObject");
+  clReleaseMemObjectFcnPtr =
+      (clReleaseMemObjectFcnTy *)getAPIHandleCL(Handle, "clReleaseMemObject");
 
   clReleaseCommandQueueFcnPtr = (clReleaseCommandQueueFcnTy *)getAPIHandleCL(
-      HandleOpenCL, "clReleaseCommandQueue");
+      Handle, "clReleaseCommandQueue");
 
   clReleaseContextFcnPtr =
-      (clReleaseContextFcnTy *)getAPIHandleCL(HandleOpenCL, "clReleaseContext");
+      (clReleaseContextFcnTy *)getAPIHandleCL(Handle, "clReleaseContext");
 
   return 1;
 }
@@ -481,12 +505,32 @@ static PollyGPUFunction *getKernelCL(const char *BinaryBuffer,
   }
 
   cl_int Ret;
-  size_t BinarySize = strlen(BinaryBuffer);
-  ((OpenCLKernel *)Function->Kernel)->Program = clCreateProgramWithBinaryFcnPtr(
-      ((OpenCLContext *)GlobalContext->Context)->Context, 1, &GlobalDeviceID,
-      (const size_t *)&BinarySize, (const unsigned char **)&BinaryBuffer, NULL,
-      &Ret);
-  checkOpenCLError(Ret, "Failed to create program from binary.\n");
+
+  if (HandleOpenCLBeignet) {
+    // TODO: This is a workaround, since clCreateProgramWithLLVMIntel only
+    // accepts a filename to a valid llvm-ir file as an argument, instead
+    // of accepting the BinaryBuffer directly.
+    FILE *fp = fopen("kernel.ll", "wb");
+    if (fp != NULL) {
+      fputs(BinaryBuffer, fp);
+      fclose(fp);
+    }
+
+    ((OpenCLKernel *)Function->Kernel)->Program =
+        clCreateProgramWithLLVMIntelFcnPtr(
+            ((OpenCLContext *)GlobalContext->Context)->Context, 1,
+            &GlobalDeviceID, "kernel.ll", &Ret);
+    checkOpenCLError(Ret, "Failed to create program from llvm.\n");
+    unlink("kernel.ll");
+  } else {
+    size_t BinarySize = strlen(BinaryBuffer);
+    ((OpenCLKernel *)Function->Kernel)->Program =
+        clCreateProgramWithBinaryFcnPtr(
+            ((OpenCLContext *)GlobalContext->Context)->Context, 1,
+            &GlobalDeviceID, (const size_t *)&BinarySize,
+            (const unsigned char **)&BinaryBuffer, NULL, &Ret);
+    checkOpenCLError(Ret, "Failed to create program from binary.\n");
+  }
 
   Ret = clBuildProgramFcnPtr(((OpenCLKernel *)Function->Kernel)->Program, 1,
                              &GlobalDeviceID, NULL, NULL, NULL);
@@ -898,6 +942,10 @@ static void *HandleCudaRT;
 typedef CUresult CUDAAPI CuMemAllocFcnTy(CUdeviceptr *, size_t);
 static CuMemAllocFcnTy *CuMemAllocFcnPtr;
 
+typedef CUresult CUDAAPI CuMemAllocManagedFcnTy(CUdeviceptr *, size_t,
+                                                unsigned int);
+static CuMemAllocManagedFcnTy *CuMemAllocManagedFcnPtr;
+
 typedef CUresult CUDAAPI CuLaunchKernelFcnTy(
     CUfunction F, unsigned int GridDimX, unsigned int GridDimY,
     unsigned int gridDimZ, unsigned int blockDimX, unsigned int BlockDimY,
@@ -917,6 +965,9 @@ static CuMemFreeFcnTy *CuMemFreeFcnPtr;
 typedef CUresult CUDAAPI CuModuleUnloadFcnTy(CUmodule);
 static CuModuleUnloadFcnTy *CuModuleUnloadFcnPtr;
 
+typedef CUresult CUDAAPI CuProfilerStopFcnTy();
+static CuProfilerStopFcnTy *CuProfilerStopFcnPtr;
+
 typedef CUresult CUDAAPI CuCtxDestroyFcnTy(CUcontext);
 static CuCtxDestroyFcnTy *CuCtxDestroyFcnPtr;
 
@@ -928,6 +979,9 @@ static CuDeviceGetCountFcnTy *CuDeviceGetCountFcnPtr;
 
 typedef CUresult CUDAAPI CuCtxCreateFcnTy(CUcontext *, unsigned int, CUdevice);
 static CuCtxCreateFcnTy *CuCtxCreateFcnPtr;
+
+typedef CUresult CUDAAPI CuCtxGetCurrentFcnTy(CUcontext *);
+static CuCtxGetCurrentFcnTy *CuCtxGetCurrentFcnPtr;
 
 typedef CUresult CUDAAPI CuDeviceGetFcnTy(CUdevice *, int);
 static CuDeviceGetFcnTy *CuDeviceGetFcnPtr;
@@ -1032,6 +1086,9 @@ static int initialDeviceAPIsCUDA() {
   CuMemAllocFcnPtr =
       (CuMemAllocFcnTy *)getAPIHandleCUDA(HandleCuda, "cuMemAlloc_v2");
 
+  CuMemAllocManagedFcnPtr = (CuMemAllocManagedFcnTy *)getAPIHandleCUDA(
+      HandleCuda, "cuMemAllocManaged");
+
   CuMemFreeFcnPtr =
       (CuMemFreeFcnTy *)getAPIHandleCUDA(HandleCuda, "cuMemFree_v2");
 
@@ -1043,6 +1100,9 @@ static int initialDeviceAPIsCUDA() {
 
   CuModuleUnloadFcnPtr =
       (CuModuleUnloadFcnTy *)getAPIHandleCUDA(HandleCuda, "cuModuleUnload");
+
+  CuProfilerStopFcnPtr =
+      (CuProfilerStopFcnTy *)getAPIHandleCUDA(HandleCuda, "cuProfilerStop");
 
   CuCtxDestroyFcnPtr =
       (CuCtxDestroyFcnTy *)getAPIHandleCUDA(HandleCuda, "cuCtxDestroy");
@@ -1057,6 +1117,9 @@ static int initialDeviceAPIsCUDA() {
 
   CuCtxCreateFcnPtr =
       (CuCtxCreateFcnTy *)getAPIHandleCUDA(HandleCuda, "cuCtxCreate_v2");
+
+  CuCtxGetCurrentFcnPtr =
+      (CuCtxGetCurrentFcnTy *)getAPIHandleCUDA(HandleCuda, "cuCtxGetCurrent");
 
   CuModuleLoadDataExFcnPtr = (CuModuleLoadDataExFcnTy *)getAPIHandleCUDA(
       HandleCuda, "cuModuleLoadDataEx");
@@ -1147,7 +1210,33 @@ static PollyGPUContext *initContextCUDA() {
     fprintf(stderr, "Allocate memory for Polly CUDA context failed.\n");
     exit(-1);
   }
-  CuCtxCreateFcnPtr(&(((CUDAContext *)Context->Context)->Cuda), 0, Device);
+
+  // In cases where managed memory is used, it is quite likely that
+  // `cudaMallocManaged` / `polly_mallocManaged` was called before
+  // `polly_initContext` was called.
+  //
+  // If `polly_initContext` calls `CuCtxCreate` when there already was a
+  // pre-existing context created by the runtime API, this causes code running
+  // on P100 to hang. So, we query for a pre-existing context to try and use.
+  // If there is no pre-existing context, we create a new context
+
+  // The possible pre-existing context from previous runtime API calls.
+  CUcontext MaybeRuntimeAPIContext;
+  if (CuCtxGetCurrentFcnPtr(&MaybeRuntimeAPIContext) != CUDA_SUCCESS) {
+    fprintf(stderr, "cuCtxGetCurrent failed.\n");
+    exit(-1);
+  }
+
+  // There was no previous context, initialise it.
+  if (MaybeRuntimeAPIContext == NULL) {
+    if (CuCtxCreateFcnPtr(&(((CUDAContext *)Context->Context)->Cuda), 0,
+                          Device) != CUDA_SUCCESS) {
+      fprintf(stderr, "cuCtxCreateFcnPtr failed.\n");
+      exit(-1);
+    }
+  } else {
+    ((CUDAContext *)Context->Context)->Cuda = MaybeRuntimeAPIContext;
+  }
 
   if (CacheMode)
     CurrentContext = Context;
@@ -1330,6 +1419,86 @@ static void launchKernelCUDA(PollyGPUFunction *Kernel, unsigned int GridDimX,
   }
 }
 
+// Maximum number of managed memory pointers.
+#define DEFAULT_MAX_POINTERS 4000
+// For the rationale behing a list of free pointers, see `polly_freeManaged`.
+void **g_managedptrs;
+unsigned long long g_nmanagedptrs = 0;
+unsigned long long g_maxmanagedptrs = 0;
+
+__attribute__((constructor)) static void initManagedPtrsBuffer() {
+  g_maxmanagedptrs = DEFAULT_MAX_POINTERS;
+  const char *maxManagedPointersString = getenv("POLLY_MAX_MANAGED_POINTERS");
+  if (maxManagedPointersString)
+    g_maxmanagedptrs = atoll(maxManagedPointersString);
+
+  g_managedptrs = (void **)malloc(sizeof(void *) * g_maxmanagedptrs);
+}
+
+// Add a pointer as being allocated by cuMallocManaged
+void addManagedPtr(void *mem) {
+  assert(g_maxmanagedptrs > 0 && "g_maxmanagedptrs was set to 0!");
+  assert(g_nmanagedptrs < g_maxmanagedptrs &&
+         "We have hit the maximum number of "
+         "managed pointers allowed. Set the "
+         "POLLY_MAX_MANAGED_POINTERS environment variable. ");
+  g_managedptrs[g_nmanagedptrs++] = mem;
+}
+
+int isManagedPtr(void *mem) {
+  for (unsigned long long i = 0; i < g_nmanagedptrs; i++) {
+    if (g_managedptrs[i] == mem)
+      return 1;
+  }
+  return 0;
+}
+
+void polly_freeManaged(void *mem) {
+  dump_function();
+
+  // In a real-world program this was used (COSMO), there were more `free`
+  // calls in the original source than `malloc` calls. Hence, replacing all
+  // `free`s with `cudaFree` does not work, since we would try to free
+  // 'illegal' memory.
+  // As a quick fix, we keep a free list and check if `mem` is a managed memory
+  // pointer. If it is, we call `cudaFree`.
+  // If not, we pass it along to the underlying allocator.
+  // This is a hack, and can be removed if the underlying issue is fixed.
+  if (isManagedPtr(mem)) {
+    if (CuMemFreeFcnPtr((size_t)mem) != CUDA_SUCCESS) {
+      fprintf(stderr, "cudaFree failed.\n");
+      exit(-1);
+    }
+    return;
+  } else {
+    free(mem);
+  }
+}
+
+void *polly_mallocManaged(size_t size) {
+  // Note: [Size 0 allocations]
+  // Sometimes, some runtime computation of size could create a size of 0
+  // for an allocation. In these cases, we do not wish to fail.
+  // The CUDA API fails on size 0 allocations.
+  // So, we allocate size a minimum of size 1.
+  if (!size && DebugMode)
+    fprintf(stderr, "cudaMallocManaged called with size 0. "
+                    "Promoting to size 1");
+  size = max(size, 1);
+  PollyGPUContext *_ = polly_initContextCUDA();
+  assert(_ && "polly_initContextCUDA failed");
+
+  void *newMemPtr;
+  const CUresult Res = CuMemAllocManagedFcnPtr((CUdeviceptr *)&newMemPtr, size,
+                                               CU_MEM_ATTACH_GLOBAL);
+  if (Res != CUDA_SUCCESS) {
+    fprintf(stderr, "cudaMallocManaged failed for size: %zu\n", size);
+    exit(-1);
+  }
+  addManagedPtr(newMemPtr);
+  return newMemPtr;
+}
+
 static void freeDeviceMemoryCUDA(PollyGPUDevicePtr *Allocation) {
   dump_function();
   CUDADevicePtr *DevPtr = (CUDADevicePtr *)Allocation->DevicePtr;
@@ -1339,16 +1508,27 @@ static void freeDeviceMemoryCUDA(PollyGPUDevicePtr *Allocation) {
 }
 
 static PollyGPUDevicePtr *allocateMemoryForDeviceCUDA(long MemSize) {
+  if (!MemSize && DebugMode)
+    fprintf(stderr, "allocateMemoryForDeviceCUDA called with size 0. "
+                    "Promoting to size 1");
+  // see: [Size 0 allocations]
+  MemSize = max(MemSize, 1);
   dump_function();
 
   PollyGPUDevicePtr *DevData = malloc(sizeof(PollyGPUDevicePtr));
   if (DevData == 0) {
-    fprintf(stderr, "Allocate memory for GPU device memory pointer failed.\n");
+    fprintf(stderr,
+            "Allocate memory for GPU device memory pointer failed."
+            " Line: %d | Size: %ld\n",
+            __LINE__, MemSize);
     exit(-1);
   }
   DevData->DevicePtr = (CUDADevicePtr *)malloc(sizeof(CUDADevicePtr));
   if (DevData->DevicePtr == 0) {
-    fprintf(stderr, "Allocate memory for GPU device memory pointer failed.\n");
+    fprintf(stderr,
+            "Allocate memory for GPU device memory pointer failed."
+            " Line: %d | Size: %ld\n",
+            __LINE__, MemSize);
     exit(-1);
   }
 
@@ -1356,7 +1536,10 @@ static PollyGPUDevicePtr *allocateMemoryForDeviceCUDA(long MemSize) {
       CuMemAllocFcnPtr(&(((CUDADevicePtr *)DevData->DevicePtr)->Cuda), MemSize);
 
   if (Res != CUDA_SUCCESS) {
-    fprintf(stderr, "Allocate memory for GPU device memory pointer failed.\n");
+    fprintf(stderr,
+            "Allocate memory for GPU device memory pointer failed."
+            " Line: %d | Size: %ld\n",
+            __LINE__, MemSize);
     exit(-1);
   }
 
@@ -1375,6 +1558,7 @@ static void freeContextCUDA(PollyGPUContext *Context) {
 
   CUDAContext *Ctx = (CUDAContext *)Context->Context;
   if (Ctx->Cuda) {
+    CuProfilerStopFcnPtr();
     CuCtxDestroyFcnPtr(Ctx->Cuda);
     free(Ctx);
     free(Context);

@@ -29,7 +29,7 @@ using llvm::support::ulittle32_t;
 namespace lld {
 namespace coff {
 
-SectionChunk::SectionChunk(ObjectFile *F, const coff_section *H)
+SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
     : Chunk(SectionKind), Repl(this), Header(H), File(F),
       Relocs(File->getCOFFObj()->getRelocations(Header)),
       NumRelocs(std::distance(Relocs.begin(), Relocs.end())) {
@@ -119,7 +119,7 @@ static uint16_t readMOV(uint8_t *Off) {
   return Imm;
 }
 
-static void applyMOV32T(uint8_t *Off, uint32_t V) {
+void applyMOV32T(uint8_t *Off, uint32_t V) {
   uint16_t ImmW = readMOV(Off);     // read MOVW operand
   uint16_t ImmT = readMOV(Off + 4); // read MOVT operand
   uint32_t Imm = ImmW | (ImmT << 16);
@@ -136,7 +136,7 @@ static void applyBranch20T(uint8_t *Off, int32_t V) {
   or16(Off + 2, (J1 << 13) | (J2 << 11) | ((V >> 1) & 0x7ff));
 }
 
-static void applyBranch24T(uint8_t *Off, int32_t V) {
+void applyBranch24T(uint8_t *Off, int32_t V) {
   if (!isInt<25>(V))
     fatal("relocation out of range");
   uint32_t S = V < 0 ? 1 : 0;
@@ -167,32 +167,55 @@ void SectionChunk::applyRelARM(uint8_t *Off, uint16_t Type, OutputSection *OS,
   }
 }
 
-static void applyArm64Addr(uint8_t *Off, uint64_t Imm) {
+// Interpret the existing immediate value as a byte offset to the
+// target symbol, then update the instruction with the immediate as
+// the page offset from the current instruction to the target.
+static void applyArm64Addr(uint8_t *Off, uint64_t S, uint64_t P) {
+  uint32_t Orig = read32le(Off);
+  uint64_t Imm = ((Orig >> 29) & 0x3) | ((Orig >> 3) & 0x1FFFFC);
+  S += Imm;
+  Imm = (S >> 12) - (P >> 12);
   uint32_t ImmLo = (Imm & 0x3) << 29;
   uint32_t ImmHi = (Imm & 0x1FFFFC) << 3;
   uint64_t Mask = (0x3 << 29) | (0x1FFFFC << 3);
-  write32le(Off, (read32le(Off) & ~Mask) | ImmLo | ImmHi);
+  write32le(Off, (Orig & ~Mask) | ImmLo | ImmHi);
 }
 
 // Update the immediate field in a AARCH64 ldr, str, and add instruction.
-static void applyArm64Imm(uint8_t *Off, uint64_t Imm) {
+// Optionally limit the range of the written immediate by one or more bits
+// (RangeLimit).
+static void applyArm64Imm(uint8_t *Off, uint64_t Imm, uint32_t RangeLimit) {
   uint32_t Orig = read32le(Off);
   Imm += (Orig >> 10) & 0xFFF;
   Orig &= ~(0xFFF << 10);
-  write32le(Off, Orig | ((Imm & 0xFFF) << 10));
+  write32le(Off, Orig | ((Imm & (0xFFF >> RangeLimit)) << 10));
 }
 
+// Add the 12 bit page offset to the existing immediate.
+// Ldr/str instructions store the opcode immediate scaled
+// by the load/store size (giving a larger range for larger
+// loads/stores). The immediate is always (both before and after
+// fixing up the relocation) stored scaled similarly.
+// Even if larger loads/stores have a larger range, limit the
+// effective offset to 12 bit, since it is intended to be a
+// page offset.
 static void applyArm64Ldr(uint8_t *Off, uint64_t Imm) {
-  int Size = read32le(Off) >> 30;
-  Imm >>= Size;
-  applyArm64Imm(Off, Imm);
+  uint32_t Orig = read32le(Off);
+  uint32_t Size = Orig >> 30;
+  // 0x04000000 indicates SIMD/FP registers
+  // 0x00800000 indicates 128 bit
+  if ((Orig & 0x4800000) == 0x4800000)
+    Size += 4;
+  if ((Imm & ((1 << Size) - 1)) != 0)
+    fatal("misaligned ldr/str offset");
+  applyArm64Imm(Off, Imm >> Size, Size);
 }
 
 void SectionChunk::applyRelARM64(uint8_t *Off, uint16_t Type, OutputSection *OS,
                                  uint64_t S, uint64_t P) const {
   switch (Type) {
-  case IMAGE_REL_ARM64_PAGEBASE_REL21: applyArm64Addr(Off, (S >> 12) - (P >> 12)); break;
-  case IMAGE_REL_ARM64_PAGEOFFSET_12A: applyArm64Imm(Off, S & 0xfff); break;
+  case IMAGE_REL_ARM64_PAGEBASE_REL21: applyArm64Addr(Off, S, P); break;
+  case IMAGE_REL_ARM64_PAGEOFFSET_12A: applyArm64Imm(Off, S & 0xfff, 0); break;
   case IMAGE_REL_ARM64_PAGEOFFSET_12L: applyArm64Ldr(Off, S & 0xfff); break;
   case IMAGE_REL_ARM64_BRANCH26:       or32(Off, ((S - P) & 0x0FFFFFFC) >> 2); break;
   case IMAGE_REL_ARM64_ADDR32:         add32(Off, S + Config->ImageBase); break;
@@ -354,6 +377,10 @@ CommonChunk::CommonChunk(const COFFSymbolRef S) : Sym(S) {
   Align = std::min(uint64_t(32), PowerOf2Ceil(Sym.getValue()));
 }
 
+void CommonChunk::setAlign(uint32_t NewAlign) {
+  Align = std::max(Align, NewAlign);
+}
+
 uint32_t CommonChunk::getPermissions() const {
   return IMAGE_SCN_CNT_UNINITIALIZED_DATA | IMAGE_SCN_MEM_READ |
          IMAGE_SCN_MEM_WRITE;
@@ -397,10 +424,9 @@ void ImportThunkChunkARM::writeTo(uint8_t *Buf) const {
 }
 
 void ImportThunkChunkARM64::writeTo(uint8_t *Buf) const {
-  int64_t PageOff = (ImpSymbol->getRVA() >> 12) - (RVA >> 12);
   int64_t Off = ImpSymbol->getRVA() & 0xfff;
   memcpy(Buf + OutputSectionOff, ImportThunkARM64, sizeof(ImportThunkARM64));
-  applyArm64Addr(Buf + OutputSectionOff, PageOff);
+  applyArm64Addr(Buf + OutputSectionOff, ImpSymbol->getRVA(), RVA);
   applyArm64Ldr(Buf + OutputSectionOff + 4, Off);
 }
 
@@ -490,6 +516,7 @@ uint8_t Baserel::getDefaultType() {
   case AMD64:
     return IMAGE_REL_BASED_DIR64;
   case I386:
+  case ARMNT:
     return IMAGE_REL_BASED_HIGHLOW;
   default:
     llvm_unreachable("unknown machine type");

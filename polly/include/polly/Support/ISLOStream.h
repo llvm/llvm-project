@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "isl-noexceptions.h"
 #include "llvm/Support/raw_ostream.h"
+#include "isl/isl-noexceptions.h"
 namespace polly {
 
 #define ADD_OSTREAM_PRINTER(name)                                              \
@@ -44,4 +44,4 @@ ADD_OSTREAM_PRINTER(isl::union_set)
 ADD_OSTREAM_PRINTER(isl::union_map)
 ADD_OSTREAM_PRINTER(isl::union_pw_aff)
 ADD_OSTREAM_PRINTER(isl::union_pw_multi_aff)
-}
+} // namespace polly

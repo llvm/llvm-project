@@ -49,10 +49,33 @@ static cl::opt<bool> Verify("polly-codegen-verify",
                             cl::Hidden, cl::init(false), cl::ZeroOrMore,
                             cl::cat(PollyCategory));
 
-static cl::opt<bool>
-    PerfMonitoring("polly-codegen-perf-monitoring",
-                   cl::desc("Add run-time performance monitoring"), cl::Hidden,
-                   cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+bool polly::PerfMonitoring;
+static cl::opt<bool, true>
+    XPerfMonitoring("polly-codegen-perf-monitoring",
+                    cl::desc("Add run-time performance monitoring"), cl::Hidden,
+                    cl::location(polly::PerfMonitoring), cl::init(false),
+                    cl::ZeroOrMore, cl::cat(PollyCategory));
+
+STATISTIC(ScopsProcessed, "Number of SCoP processed");
+STATISTIC(CodegenedScops, "Number of successfully generated SCoPs");
+STATISTIC(CodegenedAffineLoops,
+          "Number of original affine loops in SCoPs that have been generated");
+STATISTIC(CodegenedBoxedLoops,
+          "Number of original boxed loops in SCoPs that have been generated");
+
+namespace polly {
+/// Mark a basic block unreachable.
+///
+/// Marks the basic block @p Block unreachable by equipping it with an
+/// UnreachableInst.
+void markBlockUnreachable(BasicBlock &Block, PollyIRBuilder &Builder) {
+  auto *OrigTerminator = Block.getTerminator();
+  Builder.SetInsertPoint(OrigTerminator);
+  Builder.CreateUnreachable();
+  OrigTerminator->eraseFromParent();
+}
+
+} // namespace polly
 
 namespace {
 
@@ -63,7 +86,7 @@ static void verifyGeneratedFunction(Scop &S, Function &F, IslAstInfo &AI) {
   DEBUG({
     errs() << "== ISL Codegen created an invalid function ==\n\n== The "
               "SCoP ==\n";
-    S.print(errs());
+    errs() << S;
     errs() << "\n== The isl AST ==\n";
     AI.print(errs());
     errs() << "\n== The invalid function ==\n";
@@ -84,17 +107,6 @@ static void fixRegionInfo(Function &F, Region &ParentRegion, RegionInfo &RI) {
 
     RI.setRegionFor(&BB, &ParentRegion);
   }
-}
-
-/// Mark a basic block unreachable.
-///
-/// Marks the basic block @p Block unreachable by equipping it with an
-/// UnreachableInst.
-static void markBlockUnreachable(BasicBlock &Block, PollyIRBuilder &Builder) {
-  auto *OrigTerminator = Block.getTerminator();
-  Builder.SetInsertPoint(OrigTerminator);
-  Builder.CreateUnreachable();
-  OrigTerminator->eraseFromParent();
 }
 
 /// Remove all lifetime markers (llvm.lifetime.start, llvm.lifetime.end) from
@@ -156,6 +168,11 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
   isl_ast_node *AstRoot = AI.getAst();
   if (!AstRoot)
     return false;
+
+  // Collect statistics. Do it before we modify the IR to avoid having it any
+  // influence on the result.
+  auto ScopStats = S.getStatistics();
+  ScopsProcessed++;
 
   auto &DL = S.getFunction().getParent()->getDataLayout();
   Region *R = &S.getRegion();
@@ -228,7 +245,7 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
 
     isl_ast_node_free(AstRoot);
   } else {
-    NodeBuilder.addParameters(S.getContext());
+    NodeBuilder.addParameters(S.getContext().release());
     Value *RTC = NodeBuilder.createRTC(AI.getRunCondition());
 
     Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
@@ -244,6 +261,10 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
     NodeBuilder.create(AstRoot);
     NodeBuilder.finalize();
     fixRegionInfo(*EnteringBB->getParent(), *R->getParent(), RI);
+
+    CodegenedScops++;
+    CodegenedAffineLoops += ScopStats.NumAffineLoops;
+    CodegenedBoxedLoops += ScopStats.NumBoxedLoops;
   }
 
   Function *F = EnteringBB->getParent();
@@ -325,8 +346,10 @@ PreservedAnalyses
 polly::CodeGenerationPass::run(Scop &S, ScopAnalysisManager &SAM,
                                ScopStandardAnalysisResults &AR, SPMUpdater &U) {
   auto &AI = SAM.getResult<IslAstAnalysis>(S, AR);
-  if (CodeGen(S, AI, AR.LI, AR.DT, AR.SE, AR.RI))
+  if (CodeGen(S, AI, AR.LI, AR.DT, AR.SE, AR.RI)) {
+    U.invalidateScop(S);
     return PreservedAnalyses::none();
+  }
 
   return PreservedAnalyses::all();
 }

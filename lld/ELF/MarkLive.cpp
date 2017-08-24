@@ -42,15 +42,6 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-namespace {
-// A resolved relocation. The Sec and Offset fields are set if the relocation
-// was resolved to an offset within a section.
-struct ResolvedReloc {
-  InputSectionBase *Sec;
-  uint64_t Offset;
-};
-} // end anonymous namespace
-
 template <class ELFT>
 static typename ELFT::uint getAddend(InputSectionBase &Sec,
                                      const typename ELFT::Rel &Rel) {
@@ -70,25 +61,34 @@ static DenseMap<StringRef, std::vector<InputSectionBase *>> CNamedSections;
 
 template <class ELFT, class RelT>
 static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
-                         std::function<void(ResolvedReloc)> Fn) {
+                         std::function<void(InputSectionBase *, uint64_t)> Fn) {
   SymbolBody &B = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
+
+  if (auto *Sym = dyn_cast<DefinedCommon>(&B)) {
+    Sym->Live = true;
+    return;
+  }
+
   if (auto *D = dyn_cast<DefinedRegular>(&B)) {
     if (!D->Section)
       return;
-    typename ELFT::uint Offset = D->Value;
+    uint64_t Offset = D->Value;
     if (D->isSection())
       Offset += getAddend<ELFT>(Sec, Rel);
-    Fn({cast<InputSectionBase>(D->Section), Offset});
-  } else if (auto *U = dyn_cast<Undefined>(&B)) {
-    for (InputSectionBase *Sec : CNamedSections.lookup(U->getName()))
-      Fn({Sec, 0});
+    Fn(cast<InputSectionBase>(D->Section), Offset);
+    return;
   }
+
+  if (auto *U = dyn_cast<Undefined>(&B))
+    for (InputSectionBase *Sec : CNamedSections.lookup(U->getName()))
+      Fn(Sec, 0);
 }
 
 // Calls Fn for each section that Sec refers to via relocations.
 template <class ELFT>
-static void forEachSuccessor(InputSection &Sec,
-                             std::function<void(ResolvedReloc)> Fn) {
+static void
+forEachSuccessor(InputSection &Sec,
+                 std::function<void(InputSectionBase *, uint64_t)> Fn) {
   if (Sec.AreRelocsRela) {
     for (const typename ELFT::Rela &Rel : Sec.template relas<ELFT>())
       resolveReloc<ELFT>(Sec, Rel, Fn);
@@ -96,8 +96,9 @@ static void forEachSuccessor(InputSection &Sec,
     for (const typename ELFT::Rel &Rel : Sec.template rels<ELFT>())
       resolveReloc<ELFT>(Sec, Rel, Fn);
   }
+
   for (InputSectionBase *IS : Sec.DependentSections)
-    Fn({IS, 0});
+    Fn(IS, 0);
 }
 
 // The .eh_frame section is an unfortunate special case.
@@ -115,9 +116,11 @@ static void forEachSuccessor(InputSection &Sec,
 // the gc pass. With that we would be able to also gc some sections holding
 // LSDAs and personality functions if we found that they were unused.
 template <class ELFT, class RelTy>
-static void scanEhFrameSection(EhInputSection &EH, ArrayRef<RelTy> Rels,
-                               std::function<void(ResolvedReloc)> Enqueue) {
+static void
+scanEhFrameSection(EhInputSection &EH, ArrayRef<RelTy> Rels,
+                   std::function<void(InputSectionBase *, uint64_t)> Fn) {
   const endianness E = ELFT::TargetEndianness;
+
   for (unsigned I = 0, N = EH.Pieces.size(); I < N; ++I) {
     EhSectionPiece &Piece = EH.Pieces[I];
     unsigned FirstRelI = Piece.FirstRelocation;
@@ -126,7 +129,7 @@ static void scanEhFrameSection(EhInputSection &EH, ArrayRef<RelTy> Rels,
     if (read32<E>(Piece.data().data() + 4) == 0) {
       // This is a CIE, we only need to worry about the first relocation. It is
       // known to point to the personality function.
-      resolveReloc<ELFT>(EH, Rels[FirstRelI], Enqueue);
+      resolveReloc<ELFT>(EH, Rels[FirstRelI], Fn);
       continue;
     }
     // This is a FDE. The relocations point to the described function or to
@@ -137,20 +140,20 @@ static void scanEhFrameSection(EhInputSection &EH, ArrayRef<RelTy> Rels,
       const RelTy &Rel = Rels[I2];
       if (Rel.r_offset >= PieceEnd)
         break;
-      resolveReloc<ELFT>(EH, Rels[I2], [&](ResolvedReloc R) {
-        if (!R.Sec || R.Sec == &InputSection::Discarded)
-          return;
-        if (R.Sec->Flags & SHF_EXECINSTR)
-          return;
-        Enqueue({R.Sec, 0});
-      });
+      resolveReloc<ELFT>(EH, Rels[I2],
+                         [&](InputSectionBase *Sec, uint64_t Offset) {
+                           if (Sec && Sec != &InputSection::Discarded &&
+                               !(Sec->Flags & SHF_EXECINSTR))
+                             Fn(Sec, 0);
+                         });
     }
   }
 }
 
 template <class ELFT>
-static void scanEhFrameSection(EhInputSection &EH,
-                               std::function<void(ResolvedReloc)> Enqueue) {
+static void
+scanEhFrameSection(EhInputSection &EH,
+                   std::function<void(InputSectionBase *, uint64_t)> Fn) {
   if (!EH.NumRelocations)
     return;
 
@@ -159,9 +162,9 @@ static void scanEhFrameSection(EhInputSection &EH,
   EH.split<ELFT>();
 
   if (EH.AreRelocsRela)
-    scanEhFrameSection<ELFT>(EH, EH.template relas<ELFT>(), Enqueue);
+    scanEhFrameSection<ELFT>(EH, EH.template relas<ELFT>(), Fn);
   else
-    scanEhFrameSection<ELFT>(EH, EH.template rels<ELFT>(), Enqueue);
+    scanEhFrameSection<ELFT>(EH, EH.template rels<ELFT>(), Fn);
 }
 
 // We do not garbage-collect two types of sections:
@@ -192,50 +195,55 @@ template <class ELFT> void elf::markLive() {
   SmallVector<InputSection *, 256> Q;
   CNamedSections.clear();
 
-  auto Enqueue = [&](ResolvedReloc R) {
+  auto Enqueue = [&](InputSectionBase *Sec, uint64_t Offset) {
     // Skip over discarded sections. This in theory shouldn't happen, because
     // the ELF spec doesn't allow a relocation to point to a deduplicated
     // COMDAT section directly. Unfortunately this happens in practice (e.g.
     // .eh_frame) so we need to add a check.
-    if (R.Sec == &InputSection::Discarded)
+    if (Sec == &InputSection::Discarded)
       return;
 
     // We don't gc non alloc sections.
-    if (!(R.Sec->Flags & SHF_ALLOC))
+    if (!(Sec->Flags & SHF_ALLOC))
       return;
 
     // Usually, a whole section is marked as live or dead, but in mergeable
     // (splittable) sections, each piece of data has independent liveness bit.
     // So we explicitly tell it which offset is in use.
-    if (auto *MS = dyn_cast<MergeInputSection>(R.Sec))
-      MS->markLiveAt(R.Offset);
+    if (auto *MS = dyn_cast<MergeInputSection>(Sec))
+      MS->markLiveAt(Offset);
 
-    if (R.Sec->Live)
+    if (Sec->Live)
       return;
-    R.Sec->Live = true;
+    Sec->Live = true;
+
     // Add input section to the queue.
-    if (InputSection *S = dyn_cast<InputSection>(R.Sec))
+    if (InputSection *S = dyn_cast<InputSection>(Sec))
       Q.push_back(S);
   };
 
-  auto MarkSymbol = [&](const SymbolBody *Sym) {
-    if (auto *D = dyn_cast_or_null<DefinedRegular>(Sym))
+  auto MarkSymbol = [&](SymbolBody *Sym) {
+    if (auto *D = dyn_cast_or_null<DefinedRegular>(Sym)) {
       if (auto *IS = cast_or_null<InputSectionBase>(D->Section))
-        Enqueue({IS, D->Value});
+        Enqueue(IS, D->Value);
+      return;
+    }
+    if (auto *S = dyn_cast_or_null<DefinedCommon>(Sym))
+      S->Live = true;
   };
 
   // Add GC root symbols.
-  MarkSymbol(Symtab<ELFT>::X->find(Config->Entry));
-  MarkSymbol(Symtab<ELFT>::X->find(Config->Init));
-  MarkSymbol(Symtab<ELFT>::X->find(Config->Fini));
+  MarkSymbol(Symtab->find(Config->Entry));
+  MarkSymbol(Symtab->find(Config->Init));
+  MarkSymbol(Symtab->find(Config->Fini));
   for (StringRef S : Config->Undefined)
-    MarkSymbol(Symtab<ELFT>::X->find(S));
+    MarkSymbol(Symtab->find(S));
   for (StringRef S : Script->Opt.ReferencedSymbols)
-    MarkSymbol(Symtab<ELFT>::X->find(S));
+    MarkSymbol(Symtab->find(S));
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.
-  for (const Symbol *S : Symtab<ELFT>::X->getSymbols())
+  for (Symbol *S : Symtab->getSymbols())
     if (S->includeInDynsym())
       MarkSymbol(S->body());
 
@@ -250,10 +258,10 @@ template <class ELFT> void elf::markLive() {
     if (Sec->Flags & SHF_LINK_ORDER)
       continue;
     if (isReserved<ELFT>(Sec) || Script->shouldKeep(Sec))
-      Enqueue({Sec, 0});
+      Enqueue(Sec, 0);
     else if (isValidCIdentifier(Sec->Name)) {
       CNamedSections[Saver.save("__start_" + Sec->Name)].push_back(Sec);
-      CNamedSections[Saver.save("__end_" + Sec->Name)].push_back(Sec);
+      CNamedSections[Saver.save("__stop_" + Sec->Name)].push_back(Sec);
     }
   }
 

@@ -33,7 +33,7 @@ class Baserel;
 class Defined;
 class DefinedImportData;
 class DefinedRegular;
-class ObjectFile;
+class ObjFile;
 class OutputSection;
 class SymbolBody;
 
@@ -82,7 +82,7 @@ public:
   // An output section has pointers to chunks in the section, and each
   // chunk has a back pointer to an output section.
   void setOutputSection(OutputSection *O) { Out = O; }
-  OutputSection *getOutputSection() { return Out; }
+  OutputSection *getOutputSection() const { return Out; }
 
   // Windows-specific.
   // Collect all locations that contain absolute addresses for base relocations.
@@ -122,9 +122,9 @@ public:
                               std::random_access_iterator_tag, SymbolBody *> {
     friend SectionChunk;
 
-    ObjectFile *File;
+    ObjFile *File;
 
-    symbol_iterator(ObjectFile *File, const coff_relocation *I)
+    symbol_iterator(ObjFile *File, const coff_relocation *I)
         : symbol_iterator::iterator_adaptor_base(I), File(File) {}
 
   public:
@@ -135,7 +135,7 @@ public:
     }
   };
 
-  SectionChunk(ObjectFile *File, const coff_section *Header);
+  SectionChunk(ObjFile *File, const coff_section *Header);
   static bool classof(const Chunk *C) { return C->kind() == SectionKind; }
   size_t getSize() const override { return Header->SizeOfRawData; }
   ArrayRef<uint8_t> getContents() const;
@@ -213,7 +213,7 @@ public:
   const coff_section *Header;
 
   // The file that this chunk was created from.
-  ObjectFile *File;
+  ObjFile *File;
 
 private:
   StringRef SectionName;
@@ -243,6 +243,7 @@ public:
   bool hasData() const override { return false; }
   uint32_t getPermissions() const override;
   StringRef getSectionName() const override { return ".bss"; }
+  void setAlign(uint32_t NewAlign);
 
 private:
   const COFFSymbolRef Sym;
@@ -368,6 +369,9 @@ public:
   uint32_t RVA;
   uint8_t Type;
 };
+
+void applyMOV32T(uint8_t *Off, uint32_t V);
+void applyBranch24T(uint8_t *Off, int32_t V);
 
 } // namespace coff
 } // namespace lld
