@@ -59,18 +59,13 @@ int t2(int *arr, int i) {
     mov eax, arr[1 + (2 * 5) - 3 + 1<<1];
   }
 
-  // expected-error@+1 {{cannot use base register with variable reference}}
-  __asm { mov eax, arr[ebp + 1 + (2 * 5) - 3 + 1<<1] }
-  // expected-error@+1 {{cannot use index register with variable reference}}
-  __asm { mov eax, arr[esi * 4] }
   // expected-error@+1 {{cannot use more than one symbol in memory operand}}
   __asm { mov eax, arr[i] }
   // expected-error@+1 {{cannot use more than one symbol in memory operand}}
   __asm { mov eax, global[i] }
 
-  // FIXME: Why don't we diagnose this?
-  // expected-Xerror@+1 {{cannot reference multiple local variables in assembly operand}}
-  //__asm mov eax, [arr + i];
+  // expected-error@+1 {{cannot use more than one symbol in memory operand}}
+  __asm mov eax, [arr + i];
   return 0;
 }
 
@@ -98,7 +93,7 @@ void t4() {
   __asm { mov eax, fs:[0] A.a }
   __asm { mov eax, fs:[0].A.a }
   __asm { mov eax, fs:[0].a } // expected-error {{Unable to lookup field reference!}}
-  __asm { mov eax, fs:[0]. A.a } // expected-error {{Unexpected token type!}}
+  __asm { mov eax, fs:[0]. A.a } // expected-error {{unexpected token in argument list}}
 }
 
 void test_operand_size() {

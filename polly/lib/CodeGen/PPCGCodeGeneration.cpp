@@ -3338,17 +3338,18 @@ public:
     for (const Instruction &Inst : *BB) {
       const CallInst *Call = dyn_cast<CallInst>(&Inst);
       if (Call && isValidFunctionInKernel(Call->getCalledFunction(),
-                                          AllowCUDALibDevice)) {
+                                          AllowCUDALibDevice))
         continue;
-      }
 
-      for (Value *SrcVal : Inst.operands()) {
-        PointerType *p = dyn_cast<PointerType>(SrcVal->getType());
-        if (!p)
-          continue;
-        if (isa<FunctionType>(p->getElementType()))
-          return true;
-      }
+      for (Value *Op : Inst.operands())
+        // Look for (<func-type>*) among operands of Inst
+        if (auto PtrTy = dyn_cast<PointerType>(Op->getType())) {
+          if (isa<FunctionType>(PtrTy->getElementType())) {
+            DEBUG(dbgs() << Inst
+                         << " has illegal use of function in kernel.\n");
+            return true;
+          }
+        }
     }
     return false;
   }

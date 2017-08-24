@@ -30,36 +30,75 @@ template <typename T> class SmallVectorImpl;
 using OperandVector = SmallVectorImpl<std::unique_ptr<MCParsedAsmOperand>>;
 
 enum AsmRewriteKind {
-  AOK_Delete = 0,     // Rewrite should be ignored.
   AOK_Align,          // Rewrite align as .align.
   AOK_EVEN,           // Rewrite even as .even.
-  AOK_DotOperator,    // Rewrite a dot operator expression as an immediate.
-                      // E.g., [eax].foo.bar -> [eax].8
   AOK_Emit,           // Rewrite _emit as .byte.
-  AOK_Imm,            // Rewrite as $$N.
-  AOK_ImmPrefix,      // Add $$ before a parsed Imm.
   AOK_Input,          // Rewrite in terms of $N.
   AOK_Output,         // Rewrite in terms of $N.
   AOK_SizeDirective,  // Add a sizing directive (e.g., dword ptr).
   AOK_Label,          // Rewrite local labels.
   AOK_EndOfStatement, // Add EndOfStatement (e.g., "\n\t").
-  AOK_Skip            // Skip emission (e.g., offset/type operators).
+  AOK_Skip,           // Skip emission (e.g., offset/type operators).
+  AOK_IntelExpr       // SizeDirective SymDisp [BaseReg + IndexReg * Scale + ImmDisp]
 };
 
 const char AsmRewritePrecedence [] = {
-  0, // AOK_Delete
   2, // AOK_Align
   2, // AOK_EVEN
-  2, // AOK_DotOperator
   2, // AOK_Emit
-  4, // AOK_Imm
-  4, // AOK_ImmPrefix
   3, // AOK_Input
   3, // AOK_Output
   5, // AOK_SizeDirective
   1, // AOK_Label
   5, // AOK_EndOfStatement
-  2  // AOK_Skip
+  2, // AOK_Skip
+  2  // AOK_IntelExpr
+};
+
+// Represnt the various parts which makes up an intel expression,
+// used for emitting compound intel expressions
+struct IntelExpr {
+  bool NeedBracs;
+  int64_t Imm;
+  StringRef BaseReg;
+  StringRef IndexReg;
+  unsigned Scale;
+
+  IntelExpr(bool needBracs = false) : NeedBracs(needBracs), Imm(0),
+    BaseReg(StringRef()), IndexReg(StringRef()),
+    Scale(1) {}
+  // Compund immediate expression
+  IntelExpr(int64_t imm, bool needBracs) : IntelExpr(needBracs) {
+    Imm = imm;
+  }
+  // [Reg + ImmediateExpression]
+  // We don't bother to emit an immediate expression evaluated to zero
+  IntelExpr(StringRef reg, int64_t imm = 0, unsigned scale = 0,
+    bool needBracs = true) :
+    IntelExpr(imm, needBracs) {
+    IndexReg = reg;
+    if (scale)
+      Scale = scale;
+  }
+  // [BaseReg + IndexReg * ScaleExpression + ImmediateExpression]
+  IntelExpr(StringRef baseReg, StringRef indexReg, unsigned scale = 0,
+    int64_t imm = 0, bool needBracs = true) :
+    IntelExpr(indexReg, imm, scale, needBracs) {
+    BaseReg = baseReg;
+  }
+  bool hasBaseReg() const {
+    return BaseReg.size();
+  }
+  bool hasIndexReg() const {
+    return IndexReg.size();
+  }
+  bool hasRegs() const {
+    return hasBaseReg() || hasIndexReg();
+  }
+  bool isValid() const {
+    return (Scale == 1) ||
+           (hasIndexReg() && (Scale == 2 || Scale == 4 || Scale == 8));
+  }
 };
 
 struct AsmRewrite {
@@ -68,12 +107,15 @@ struct AsmRewrite {
   unsigned Len;
   int64_t Val;
   StringRef Label;
+  IntelExpr IntelExp;
 
 public:
   AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len = 0, int64_t val = 0)
     : Kind(kind), Loc(loc), Len(len), Val(val) {}
   AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len, StringRef label)
     : Kind(kind), Loc(loc), Len(len), Val(0), Label(label) {}
+  AsmRewrite(SMLoc loc, unsigned len, IntelExpr exp)
+    : Kind(AOK_IntelExpr), Loc(loc), Len(len), IntelExp(exp) {}
 };
 
 struct ParseInstructionInfo {

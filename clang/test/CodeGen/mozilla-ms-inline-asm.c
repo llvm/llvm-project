@@ -33,7 +33,7 @@ void invoke(void* that, unsigned methodIndex,
 // CHECK-SAME: push ecx
 // CHECK-SAME: mov edx,[ecx]
 // CHECK-SAME: mov eax,$4
-// CHECK-SAME: call dword ptr[edx+eax*$$4]
+// CHECK-SAME: call dword ptr[edx + eax * $$4]
 // CHECK-SAME: mov esp,ebp
 // CHECK-SAME: pop ebp
 // CHECK-SAME: ret

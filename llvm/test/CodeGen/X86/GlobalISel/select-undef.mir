@@ -1,0 +1,71 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
+--- |
+
+  define i8 @test() {
+    ret i8 undef
+  }
+
+  define i8 @test2(i8 %a) {
+    %r = add i8 %a, undef
+    ret i8 %r
+  }
+
+...
+---
+name:            test
+# ALL-LABEL: name:  test
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# ALL:          %0 = IMPLICIT_DEF
+# ALL-NEXT:     %al = COPY %0
+# ALL-NEXT:     RET 0, implicit %al
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s8) = G_IMPLICIT_DEF
+    %al = COPY %0(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            test2
+# ALL-LABEL: name:  test2
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+  - { id: 2, class: gpr, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# ALL:          %0 = COPY %dil
+# ALL-NEXT:     %1 = IMPLICIT_DEF
+# ALL-NEXT:     %2 = ADD8rr %0, %1, implicit-def %eflags
+# ALL-NEXT:     %al = COPY %2
+# ALL-NEXT:     RET 0, implicit %al
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s8) = COPY %edi
+    %1(s8) = G_IMPLICIT_DEF
+    %2(s8) = G_ADD %0, %1
+    %al = COPY %2(s8)
+    RET 0, implicit %al
+
+...
