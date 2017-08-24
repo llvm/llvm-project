@@ -1324,6 +1324,12 @@ public:
   /// \param C 'depend' clause with 'sink|source' dependency kind.
   virtual void emitDoacrossOrdered(CodeGenFunction &CGF,
                                    const OMPDependClause *C);
+
+  /// Emits call of the outlined function with the provided arguments,
+  /// translating these arguments to correct target-specific arguments.
+  virtual void
+  emitOutlinedFunctionCall(CodeGenFunction &CGF, llvm::Value *OutlinedFn,
+                           ArrayRef<llvm::Value *> Args = llvm::None) const;
 };
 
 } // namespace CodeGen
