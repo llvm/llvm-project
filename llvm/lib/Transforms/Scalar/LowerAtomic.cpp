@@ -155,8 +155,7 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
+    // Don't skip optnone functions; atomics still need to be lowered.
     FunctionAnalysisManager DummyFAM;
     auto PA = Impl.run(F, DummyFAM);
     return !PA.areAllPreserved();

@@ -154,3 +154,25 @@ define i4 @test13(i4 %x) {
   %add = add i4 %mul, 3
   ret i4 %add
 }
+
+; This tests used to cause an infinite loop where we would loop between
+; canonicalizing the negated constant (i.e., (X + Y*-5.0) -> (X - Y*5.0)) and
+; breaking up a subtract (i.e., (X - Y*5.0) -> X + (0 - Y*5.0)). To break the
+; cycle, we don't canonicalize the negative constant if we're going to later
+; break up the subtract.
+;
+; Check to make sure we don't canonicalize
+;   (%pow2*-5.0 + %sub) -> (%sub - %pow2*5.0)
+; as we would later break up this subtract causing a cycle.
+;
+; CHECK-LABEL: @pr34078
+; CHECK: %mul5.neg = fmul fast double %pow2, -5.000000e-01
+; CHECK: %sub1 = fadd fast double %mul5.neg, %sub
+define double @pr34078(double %A) {
+  %sub = fsub fast double 1.000000e+00, %A
+  %pow2 = fmul double %A, %A
+  %mul5 = fmul fast double %pow2, 5.000000e-01
+  %sub1 = fsub fast double %sub, %mul5
+  %add = fadd fast double %sub1, %sub1
+  ret double %add
+}
