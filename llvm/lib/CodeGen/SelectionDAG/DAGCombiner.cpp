@@ -1168,22 +1168,30 @@ SDValue DAGCombiner::PromoteIntBinOp(SDValue Op) {
     SDValue RV =
         DAG.getNode(ISD::TRUNCATE, DL, VT, DAG.getNode(Opc, DL, PVT, NN0, NN1));
 
-    // New replace instances of N0 and N1
-    if (Replace0 && N0 && N0.getOpcode() != ISD::DELETED_NODE && NN0 &&
-        NN0.getOpcode() != ISD::DELETED_NODE) {
+    // We are always replacing N0/N1's use in N and only need
+    // additional replacements if there are additional uses.
+    Replace0 &= !N0->hasOneUse();
+    Replace1 &= (N0 != N1) && !N1->hasOneUse();
+
+    // Combine Op here so it is presreved past replacements.
+    CombineTo(Op.getNode(), RV);
+
+    // If operands have a use ordering, make sur we deal with
+    // predecessor first.
+    if (Replace0 && Replace1 && N0.getNode()->isPredecessorOf(N1.getNode())) {
+      std::swap(N0, N1);
+      std::swap(NN0, NN1);
+    }
+
+    if (Replace0) {
       AddToWorklist(NN0.getNode());
       ReplaceLoadWithPromotedLoad(N0.getNode(), NN0.getNode());
     }
-
-    if (Replace1 && N1 && N1.getOpcode() != ISD::DELETED_NODE && NN1 &&
-        NN1.getOpcode() != ISD::DELETED_NODE) {
+    if (Replace1) {
       AddToWorklist(NN1.getNode());
       ReplaceLoadWithPromotedLoad(N1.getNode(), NN1.getNode());
     }
-
-    // Deal with Op being deleted.
-    if (Op && Op.getOpcode() != ISD::DELETED_NODE)
-      return RV;
+    return Op;
   }
   return SDValue();
 }

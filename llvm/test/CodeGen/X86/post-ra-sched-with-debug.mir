@@ -227,6 +227,11 @@
   !47 = !DIBasicType(name: "long int", size: 64, encoding: DW_ATE_signed)
   !48 = !DILocation(line: 10, column: 8, scope: !40, inlinedAt: !45)
 
+# CHECK: ![[I_VAR:[0-9]+]] = !DILocalVariable(name: "i", {{.*}}line: 9, {{.*}})
+# CHECK: ![[I_LOC:[0-9]+]] = !DILocation(line: 9, column: 37, {{.*}})
+# CHECK: ![[J_VAR:[0-9]+]] = !DILocalVariable(name: "j", {{.*}}line: 10, {{.*}})
+# CHECK: ![[J_LOC:[0-9]+]] = !DILocation(line: 10, column: 8, {{.*}})
+
 ...
 ---
 name:            _ZN1sC2Ei
@@ -246,8 +251,8 @@ body:             |
     liveins: %esi, %rdi, %r14, %rbx, %rbp
 
     ; CHECK:      [[REGISTER:%r[a-z0-9]+]] = LEA64r {{%r[a-z0-9]+}}, 1, _, -20, _
-    ; CHECK-NEXT: DBG_VALUE debug-use [[REGISTER]], debug-use _, !46, !17, debug-location !48
-    ; CHECK-NEXT: DBG_VALUE debug-use [[REGISTER]], debug-use _, !39, !17, debug-location !44
+    ; CHECK-NEXT: DBG_VALUE debug-use [[REGISTER]], debug-use _, ![[J_VAR]], !DIExpression(), debug-location ![[J_LOC]]
+    ; CHECK-NEXT: DBG_VALUE debug-use [[REGISTER]], debug-use _, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
 
     frame-setup PUSH64r killed %rbp, implicit-def %rsp, implicit %rsp
     CFI_INSTRUCTION def_cfa_offset 16

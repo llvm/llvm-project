@@ -56,6 +56,13 @@ static cl::opt<bool, true>
                     cl::location(polly::PerfMonitoring), cl::init(false),
                     cl::ZeroOrMore, cl::cat(PollyCategory));
 
+STATISTIC(ScopsProcessed, "Number of SCoP processed");
+STATISTIC(CodegenedScops, "Number of successfully generated SCoPs");
+STATISTIC(CodegenedAffineLoops,
+          "Number of original affine loops in SCoPs that have been generated");
+STATISTIC(CodegenedBoxedLoops,
+          "Number of original boxed loops in SCoPs that have been generated");
+
 namespace polly {
 /// Mark a basic block unreachable.
 ///
@@ -162,6 +169,11 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
   if (!AstRoot)
     return false;
 
+  // Collect statistics. Do it before we modify the IR to avoid having it any
+  // influence on the result.
+  auto ScopStats = S.getStatistics();
+  ScopsProcessed++;
+
   auto &DL = S.getFunction().getParent()->getDataLayout();
   Region *R = &S.getRegion();
   assert(!R->isTopLevelRegion() && "Top level regions are not supported");
@@ -249,6 +261,10 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
     NodeBuilder.create(AstRoot);
     NodeBuilder.finalize();
     fixRegionInfo(*EnteringBB->getParent(), *R->getParent(), RI);
+
+    CodegenedScops++;
+    CodegenedAffineLoops += ScopStats.NumAffineLoops;
+    CodegenedBoxedLoops += ScopStats.NumBoxedLoops;
   }
 
   Function *F = EnteringBB->getParent();

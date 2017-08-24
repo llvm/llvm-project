@@ -13,6 +13,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "PPC.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -27,18 +28,18 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "branch-coalescing"
-
-static cl::opt<cl::boolOrDefault>
-    EnableBranchCoalescing("enable-branch-coalesce", cl::Hidden,
-                           cl::desc("enable coalescing of duplicate branches"));
+#define DEBUG_TYPE "ppc-branch-coalescing"
 
 STATISTIC(NumBlocksCoalesced, "Number of blocks coalesced");
 STATISTIC(NumPHINotMoved, "Number of PHI Nodes that cannot be merged");
 STATISTIC(NumBlocksNotCoalesced, "Number of blocks not coalesced");
 
+namespace llvm {
+    void initializePPCBranchCoalescingPass(PassRegistry&);
+}
+
 //===----------------------------------------------------------------------===//
-//                               BranchCoalescing
+//                               PPCBranchCoalescing
 //===----------------------------------------------------------------------===//
 ///
 /// Improve scheduling by coalescing branches that depend on the same condition.
@@ -46,13 +47,17 @@ STATISTIC(NumBlocksNotCoalesced, "Number of blocks not coalesced");
 /// and attempts to merge the blocks together. Such opportunities arise from
 /// the expansion of select statements in the IR.
 ///
-/// For example, consider the following LLVM IR:
+/// This pass does not handle implicit operands on branch statements. In order
+/// to run on targets that use implicit operands, changes need to be made in the
+/// canCoalesceBranch and canMerge methods.
 ///
-/// %test = icmp eq i32 %x 0
-/// %tmp1 = select i1 %test, double %a, double 2.000000e-03
-/// %tmp2 = select i1 %test, double %b, double 5.000000e-03
+/// Example: the following LLVM IR
 ///
-/// This IR expands to the following machine code on PowerPC:
+///     %test = icmp eq i32 %x 0
+///     %tmp1 = select i1 %test, double %a, double 2.000000e-03
+///     %tmp2 = select i1 %test, double %b, double 5.000000e-03
+///
+/// expands to the following machine code:
 ///
 /// BB#0: derived from LLVM BB %entry
 ///    Live Ins: %F1 %F3 %X6
@@ -132,7 +137,7 @@ STATISTIC(NumBlocksNotCoalesced, "Number of blocks not coalesced");
 
 namespace {
 
-class BranchCoalescing : public MachineFunctionPass {
+class PPCBranchCoalescing : public MachineFunctionPass {
   struct CoalescingCandidateInfo {
     MachineBasicBlock *BranchBlock;       // Block containing the branch
     MachineBasicBlock *BranchTargetBlock; // Block branched to
@@ -157,15 +162,11 @@ class BranchCoalescing : public MachineFunctionPass {
   bool validateCandidates(CoalescingCandidateInfo &SourceRegion,
                           CoalescingCandidateInfo &TargetRegion) const;
 
-  static bool isBranchCoalescingEnabled() {
-    return EnableBranchCoalescing == cl::BOU_TRUE;
-  }
-
 public:
   static char ID;
 
-  BranchCoalescing() : MachineFunctionPass(ID) {
-    initializeBranchCoalescingPass(*PassRegistry::getPassRegistry());
+  PPCBranchCoalescing() : MachineFunctionPass(ID) {
+    initializePPCBranchCoalescingPass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -190,21 +191,25 @@ public:
 };
 } // End anonymous namespace.
 
-char BranchCoalescing::ID = 0;
-char &llvm::BranchCoalescingID = BranchCoalescing::ID;
+char PPCBranchCoalescing::ID = 0;
+/// createPPCBranchCoalescingPass - returns an instance of the Branch Coalescing
+/// Pass
+FunctionPass *llvm::createPPCBranchCoalescingPass() {
+  return new PPCBranchCoalescing();
+}
 
-INITIALIZE_PASS_BEGIN(BranchCoalescing, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(PPCBranchCoalescing, DEBUG_TYPE,
                       "Branch Coalescing", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
-INITIALIZE_PASS_END(BranchCoalescing, DEBUG_TYPE, "Branch Coalescing",
+INITIALIZE_PASS_END(PPCBranchCoalescing, DEBUG_TYPE, "Branch Coalescing",
                     false, false)
 
-BranchCoalescing::CoalescingCandidateInfo::CoalescingCandidateInfo()
+PPCBranchCoalescing::CoalescingCandidateInfo::CoalescingCandidateInfo()
     : BranchBlock(nullptr), BranchTargetBlock(nullptr),
       FallThroughBlock(nullptr), MustMoveDown(false), MustMoveUp(false) {}
 
-void BranchCoalescing::CoalescingCandidateInfo::clear() {
+void PPCBranchCoalescing::CoalescingCandidateInfo::clear() {
   BranchBlock = nullptr;
   BranchTargetBlock = nullptr;
   FallThroughBlock = nullptr;
@@ -213,7 +218,7 @@ void BranchCoalescing::CoalescingCandidateInfo::clear() {
   MustMoveUp = false;
 }
 
-void BranchCoalescing::initialize(MachineFunction &MF) {
+void PPCBranchCoalescing::initialize(MachineFunction &MF) {
   MDT = &getAnalysis<MachineDominatorTree>();
   MPDT = &getAnalysis<MachinePostDominatorTree>();
   TII = MF.getSubtarget().getInstrInfo();
@@ -230,7 +235,7 @@ void BranchCoalescing::initialize(MachineFunction &MF) {
 ///\param[in,out] Cand The coalescing candidate to analyze
 ///\return true if and only if the branch can be coalesced, false otherwise
 ///
-bool BranchCoalescing::canCoalesceBranch(CoalescingCandidateInfo &Cand) {
+bool PPCBranchCoalescing::canCoalesceBranch(CoalescingCandidateInfo &Cand) {
   DEBUG(dbgs() << "Determine if branch block " << Cand.BranchBlock->getNumber()
                << " can be coalesced:");
   MachineBasicBlock *FalseMBB = nullptr;
@@ -246,6 +251,19 @@ bool BranchCoalescing::canCoalesceBranch(CoalescingCandidateInfo &Cand) {
     if (!I.isBranch())
       continue;
 
+    // The analyzeBranch method does not include any implicit operands.
+    // This is not an issue on PPC but must be handled on other targets.
+    // For this pass to be made target-independent, the analyzeBranch API
+    // need to be updated to support implicit operands and there would
+    // need to be a way to verify that any implicit operands would not be
+    // clobbered by merging blocks.  This would include identifying the
+    // implicit operands as well as the basic block they are defined in.
+    // This could be done by changing the analyzeBranch API to have it also
+    // record and return the implicit operands and the blocks where they are
+    // defined. Alternatively, the BranchCoalescing code would need to be
+    // extended to identify the implicit operands.  The analysis in canMerge
+    // must then be extended to prove that none of the implicit operands are
+    // changed in the blocks that are combined during coalescing.
     if (I.getNumOperands() != I.getNumExplicitOperands()) {
       DEBUG(dbgs() << "Terminator contains implicit operands - skip : " << I
                    << "\n");
@@ -309,7 +327,7 @@ bool BranchCoalescing::canCoalesceBranch(CoalescingCandidateInfo &Cand) {
 /// \param[in] OpList2 operand list
 /// \return true if and only if the operands lists are identical
 ///
-bool BranchCoalescing::identicalOperands(
+bool PPCBranchCoalescing::identicalOperands(
     ArrayRef<MachineOperand> OpList1, ArrayRef<MachineOperand> OpList2) const {
 
   if (OpList1.size() != OpList2.size()) {
@@ -361,7 +379,7 @@ bool BranchCoalescing::identicalOperands(
 /// \param[in] SourceMBB block to move PHI instructions from
 /// \param[in] TargetMBB block to move PHI instructions to
 ///
-void BranchCoalescing::moveAndUpdatePHIs(MachineBasicBlock *SourceMBB,
+void PPCBranchCoalescing::moveAndUpdatePHIs(MachineBasicBlock *SourceMBB,
                                          MachineBasicBlock *TargetMBB) {
 
   MachineBasicBlock::iterator MI = SourceMBB->begin();
@@ -394,7 +412,7 @@ void BranchCoalescing::moveAndUpdatePHIs(MachineBasicBlock *SourceMBB,
 /// \return true if it is safe to move MI to beginning of TargetMBB,
 ///         false otherwise.
 ///
-bool BranchCoalescing::canMoveToBeginning(const MachineInstr &MI,
+bool PPCBranchCoalescing::canMoveToBeginning(const MachineInstr &MI,
                                           const MachineBasicBlock &TargetMBB
                                           ) const {
 
@@ -425,7 +443,7 @@ bool BranchCoalescing::canMoveToBeginning(const MachineInstr &MI,
 /// \return true if it is safe to move MI to end of TargetMBB,
 ///         false otherwise.
 ///
-bool BranchCoalescing::canMoveToEnd(const MachineInstr &MI,
+bool PPCBranchCoalescing::canMoveToEnd(const MachineInstr &MI,
                                     const MachineBasicBlock &TargetMBB
                                     ) const {
 
@@ -457,7 +475,7 @@ bool BranchCoalescing::canMoveToEnd(const MachineInstr &MI,
 /// \return true if all instructions in SourceRegion.BranchBlock can be merged
 /// into a block in TargetRegion; false otherwise.
 ///
-bool BranchCoalescing::validateCandidates(
+bool PPCBranchCoalescing::validateCandidates(
     CoalescingCandidateInfo &SourceRegion,
     CoalescingCandidateInfo &TargetRegion) const {
 
@@ -500,7 +518,7 @@ bool BranchCoalescing::validateCandidates(
 /// \return true if all instructions in SourceRegion.BranchBlock can be merged
 ///         into a block in TargetRegion, false otherwise.
 ///
-bool BranchCoalescing::canMerge(CoalescingCandidateInfo &SourceRegion,
+bool PPCBranchCoalescing::canMerge(CoalescingCandidateInfo &SourceRegion,
                                 CoalescingCandidateInfo &TargetRegion) const {
   if (!validateCandidates(SourceRegion, TargetRegion))
     return false;
@@ -605,7 +623,7 @@ bool BranchCoalescing::canMerge(CoalescingCandidateInfo &SourceRegion,
 /// \param[in] SourceRegion The candidate to move blocks from
 /// \param[in] TargetRegion The candidate to move blocks to
 ///
-bool BranchCoalescing::mergeCandidates(CoalescingCandidateInfo &SourceRegion,
+bool PPCBranchCoalescing::mergeCandidates(CoalescingCandidateInfo &SourceRegion,
                                        CoalescingCandidateInfo &TargetRegion) {
 
   if (SourceRegion.MustMoveUp && SourceRegion.MustMoveDown) {
@@ -685,10 +703,9 @@ bool BranchCoalescing::mergeCandidates(CoalescingCandidateInfo &SourceRegion,
   return true;
 }
 
-bool BranchCoalescing::runOnMachineFunction(MachineFunction &MF) {
+bool PPCBranchCoalescing::runOnMachineFunction(MachineFunction &MF) {
 
-  if (skipFunction(*MF.getFunction()) || MF.empty() ||
-      !isBranchCoalescingEnabled())
+  if (skipFunction(*MF.getFunction()) || MF.empty())
     return false;
 
   bool didSomething = false;

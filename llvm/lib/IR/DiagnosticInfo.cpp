@@ -221,13 +221,21 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, StringRef S)
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, int N)
     : Key(Key), Val(itostr(N)) {}
 
-DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, int64_t N)
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, long N)
+    : Key(Key), Val(itostr(N)) {}
+
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, long long N)
     : Key(Key), Val(itostr(N)) {}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, unsigned N)
     : Key(Key), Val(utostr(N)) {}
 
-DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, uint64_t N)
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
+                                                   unsigned long N)
+    : Key(Key), Val(utostr(N)) {}
+
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
+                                                   unsigned long long N)
     : Key(Key), Val(utostr(N)) {}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, DebugLoc Loc)

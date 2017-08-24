@@ -324,8 +324,17 @@ bool ARMMachObjectWriter::requiresExternRelocation(MachObjectWriter *Writer,
   case MachO::ARM_RELOC_BR24:
     // An ARM call might be to a Thumb function, in which case the offset may
     // not be encodable in the instruction and we must use an external
-    // relocation that explicitly mentions the function.
-    return true;
+    // relocation that explicitly mentions the function. Not a problem if it's
+    // to a temporary "Lwhatever" symbol though, and in fact trying to use an
+    // external relocation there causes more issues.
+    if (!S.isTemporary())
+       return true;
+
+    // PC pre-adjustment of 8 for these instructions.
+    Value -= 8;
+    // ARM BL/BLX has a 25-bit offset.
+    Range = 0x1ffffff;
+    break;
   case MachO::ARM_THUMB_RELOC_BR22:
     // PC pre-adjustment of 4 for these instructions.
     Value -= 4;

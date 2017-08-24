@@ -194,7 +194,7 @@ OutputSection *SectionBase::getOutputSection() {
 }
 
 // Uncompress section contents. Note that this function is called
-// from parallel_for_each, so it must be thread-safe.
+// from parallelForEach, so it must be thread-safe.
 void InputSectionBase::uncompress() {
   Decompressor Dec = check(Decompressor::create(Name, toStringRef(Data),
                                                 Config->IsLE, Config->Is64));
@@ -920,7 +920,7 @@ MergeInputSection::MergeInputSection(ObjFile<ELFT> *F,
 // that need to be linked. This is responsible to split section contents
 // into small chunks for further processing.
 //
-// Note that this function is called from parallel_for_each. This must be
+// Note that this function is called from parallelForEach. This must be
 // thread-safe (i.e. no memory allocation from the pools).
 void MergeInputSection::splitIntoPieces() {
   ArrayRef<uint8_t> Data = this->Data;

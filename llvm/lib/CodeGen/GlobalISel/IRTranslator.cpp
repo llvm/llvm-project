@@ -1098,7 +1098,7 @@ bool IRTranslator::translateShuffleVector(const User &U,
 
 bool IRTranslator::translatePHI(const User &U, MachineIRBuilder &MIRBuilder) {
   const PHINode &PI = cast<PHINode>(U);
-  auto MIB = MIRBuilder.buildInstr(TargetOpcode::PHI);
+  auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_PHI);
   MIB.addDef(getOrCreateVReg(PI));
 
   PendingPHIs.emplace_back(&PI, MIB.getInstr());

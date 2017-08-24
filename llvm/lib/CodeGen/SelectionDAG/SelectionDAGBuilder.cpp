@@ -5432,6 +5432,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   case Intrinsic::experimental_constrained_fmul:
   case Intrinsic::experimental_constrained_fdiv:
   case Intrinsic::experimental_constrained_frem:
+  case Intrinsic::experimental_constrained_fma:
   case Intrinsic::experimental_constrained_sqrt:
   case Intrinsic::experimental_constrained_pow:
   case Intrinsic::experimental_constrained_powi:
@@ -5963,6 +5964,9 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   case Intrinsic::experimental_constrained_frem:
     Opcode = ISD::STRICT_FREM;
     break;
+  case Intrinsic::experimental_constrained_fma:
+    Opcode = ISD::STRICT_FMA;
+    break;
   case Intrinsic::experimental_constrained_sqrt:
     Opcode = ISD::STRICT_FSQRT;
     break;
@@ -6009,10 +6013,15 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   SDVTList VTs = DAG.getVTList(ValueVTs);
   SDValue Result;
   if (FPI.isUnaryOp())
-    Result = DAG.getNode(Opcode, sdl, VTs, 
+    Result = DAG.getNode(Opcode, sdl, VTs,
                          { Chain, getValue(FPI.getArgOperand(0)) });
+  else if (FPI.isTernaryOp())
+    Result = DAG.getNode(Opcode, sdl, VTs,
+                         { Chain, getValue(FPI.getArgOperand(0)),
+                                  getValue(FPI.getArgOperand(1)),
+                                  getValue(FPI.getArgOperand(2)) });
   else
-    Result = DAG.getNode(Opcode, sdl, VTs, 
+    Result = DAG.getNode(Opcode, sdl, VTs,
                          { Chain, getValue(FPI.getArgOperand(0)),
                            getValue(FPI.getArgOperand(1))  });
 

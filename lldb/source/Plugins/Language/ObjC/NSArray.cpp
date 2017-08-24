@@ -124,7 +124,7 @@ namespace Foundation109 {
   
   using NSArrayMSyntheticFrontEnd =
       GenericNSArrayMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
-};
+}
   
 namespace Foundation1010 {
   struct DataDescriptor_32 {
@@ -147,7 +147,7 @@ namespace Foundation1010 {
   
   using NSArrayMSyntheticFrontEnd =
       GenericNSArrayMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
-};
+}
   
 namespace Foundation1428 {
   struct DataDescriptor_32 {
@@ -166,7 +166,7 @@ namespace Foundation1428 {
   
   using NSArrayMSyntheticFrontEnd =
       GenericNSArrayMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
-};
+}
   
 namespace Foundation1437 {
   template <typename PtrType>

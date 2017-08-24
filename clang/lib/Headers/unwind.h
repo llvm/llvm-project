@@ -149,7 +149,7 @@ struct _Unwind_Control_Block {
     uint32_t reserved1;
   } pr_cache;
   long long int : 0; /* force alignment of next item to 8-byte boundary */
-};
+} __attribute__((__aligned__(8)));
 #else
 struct _Unwind_Exception {
   _Unwind_Exception_Class exception_class;

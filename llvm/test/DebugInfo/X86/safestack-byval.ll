@@ -14,8 +14,7 @@
 ; }
 
 ; CHECK: ![[ZZZ:.*]] = !DILocalVariable(name: "zzz",
-; CHECK: ![[ZZZ_EXPR:.*]] = !DIExpression(DW_OP_deref, DW_OP_constu, 400, DW_OP_minus)
-; CHECK: DBG_VALUE {{.*}} ![[ZZZ]], ![[ZZZ_EXPR]]
+; CHECK: DBG_VALUE {{.*}} ![[ZZZ]], !DIExpression(DW_OP_deref, DW_OP_constu, 400, DW_OP_minus)
 
 %struct.S = type { [100 x i32] }
 

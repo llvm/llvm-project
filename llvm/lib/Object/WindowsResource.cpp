@@ -57,19 +57,22 @@ WindowsResource::createWindowsResource(MemoryBufferRef Source) {
 }
 
 Expected<ResourceEntryRef> WindowsResource::getHeadEntry() {
-  Error Err = Error::success();
-  auto Ref = ResourceEntryRef(BinaryStreamRef(BBS), this, Err);
-  if (Err)
-    return std::move(Err);
-  return Ref;
+  if (BBS.getLength() < sizeof(WinResHeaderPrefix) + sizeof(WinResHeaderSuffix))
+    return make_error<EmptyResError>(".res contains no entries",
+                                     object_error::unexpected_eof);
+  return ResourceEntryRef::create(BinaryStreamRef(BBS), this);
 }
 
 ResourceEntryRef::ResourceEntryRef(BinaryStreamRef Ref,
-                                   const WindowsResource *Owner, Error &Err)
-    : Reader(Ref), OwningRes(Owner) {
-  if (loadNext())
-    Err = make_error<GenericBinaryError>("Could not read first entry.\n",
-                                         object_error::unexpected_eof);
+                                   const WindowsResource *Owner)
+    : Reader(Ref), OwningRes(Owner) {}
+
+Expected<ResourceEntryRef>
+ResourceEntryRef::create(BinaryStreamRef BSR, const WindowsResource *Owner) {
+  auto Ref = ResourceEntryRef(BSR, Owner);
+  if (auto E = Ref.loadNext())
+    return std::move(E);
+  return Ref;
 }
 
 Error ResourceEntryRef::moveNext(bool &End) {
@@ -127,8 +130,20 @@ WindowsResourceParser::WindowsResourceParser() : Root(false) {}
 
 Error WindowsResourceParser::parse(WindowsResource *WR) {
   auto EntryOrErr = WR->getHeadEntry();
-  if (!EntryOrErr)
-    return EntryOrErr.takeError();
+  if (!EntryOrErr) {
+    auto E = EntryOrErr.takeError();
+    if (E.isA<EmptyResError>()) {
+      // Check if the .res file contains no entries.  In this case we don't have
+      // to throw an error but can rather just return without parsing anything.
+      // This applies for files which have a valid PE header magic and the
+      // mandatory empty null resource entry.  Files which do not fit this
+      // criteria would have already been filtered out by
+      // WindowsResource::createWindowsResource().
+      consumeError(std::move(E));
+      return Error::success();
+    }
+    return E;
+  }
 
   ResourceEntryRef Entry = EntryOrErr.get();
   bool End = false;

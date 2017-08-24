@@ -13,14 +13,25 @@
   ; This test verifies that LiveDebugValues doesn't propagate DBG_VALUEs into
   ; basic blocks that are beyond the scope of the source variable.
   ;
+  ; CHECK: ![[F_SP:[0-9]+]] = distinct !DISubprogram(name: "f", {{.*}})
+  ; CHECK: ![[A_VAR:[0-9]+]] = !DILocalVariable(name: "a",{{.*}})
+  ; CHECK: ![[I_VAR:[0-9]+]] = !DILocalVariable(name: "i",{{.*}})
+  ; CHECK: ![[I_LOC:[0-9]+]] = !DILocation(line: 4, column: 14, scope: !{{[0-9]+}})
+  ; CHECK: ![[INLCS1:[0-9]+]] = !DILocation(line: 3, column: 41, scope: ![[F_SP]], inlinedAt: ![[CS1:[0-9]+]])
+  ; CHECK: ![[CS1]] = distinct !DILocation(line: 5, column: 3, scope: !{{[0-9]+}})
+  ; CHECK: ![[INLCS2:[0-9]+]] = !DILocation(line: 3, column: 41, scope: ![[F_SP]], inlinedAt: ![[CS2:[0-9]+]])
+  ; CHECK: ![[CS2]] = distinct !DILocation(line: 7, column: 5, scope: !{{[0-9]+}})
+  ; CHECK: ![[INLCS3:[0-9]+]] = !DILocation(line: 3, column: 41, scope: ![[F_SP]], inlinedAt: ![[CS3:[0-9]+]])
+  ; CHECK: ![[CS3]] = distinct !DILocation(line: 8, column: 3, scope: !{{[0-9]+}})
+  ;
   ; CHECK:  bb.1.if.then:
-  ; CHECK:      DBG_VALUE debug-use %ebx, debug-use _, !19, !13, debug-location !20
-  ; CHECK-NOT:  DBG_VALUE debug-use %ebx, debug-use _, !12, !13, debug-location !21
-  ; CHECK:      DBG_VALUE debug-use %ebx, debug-use _, !12, !13, debug-location !27
+  ; CHECK:      DBG_VALUE debug-use %ebx, debug-use _, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
+  ; CHECK-NOT:  DBG_VALUE debug-use %ebx, debug-use _, ![[A_VAR]], !DIExpression(), debug-location
+  ; CHECK:      DBG_VALUE debug-use %ebx, debug-use _, ![[A_VAR]], !DIExpression(), debug-location ![[INLCS2]]
   ; CHECK: bb.2.if.end:
-  ; CHECK:     DBG_VALUE debug-use %ebx, debug-use _, !19, !13, debug-location !20
-  ; CHECK-NOT: DBG_VALUE debug-use %ebx, debug-use _, !12, !13, debug-location !21
-  ; CHECK:     DBG_VALUE debug-use %ebx, debug-use _, !12, !13, debug-location !31
+  ; CHECK:     DBG_VALUE debug-use %ebx, debug-use _, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
+  ; CHECK-NOT: DBG_VALUE debug-use %ebx, debug-use _, ![[A_VAR]], !DIExpression(), debug-location
+  ; CHECK:     DBG_VALUE debug-use %ebx, debug-use _, ![[A_VAR]], !DIExpression(), debug-location ![[INLCS3]]
   ;
   ; ModuleID = 'livedebugvalues-limit.ll'
   source_filename = "livedebugvalues-limit.c"
