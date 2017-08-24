@@ -1,15 +1,18 @@
 ; RUN: llc < %s -mtriple=aarch64-none-eabi -mattr=+fullfp16 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ILLEGAL
+; RUN: llc < %s -mtriple=aarch64-none-eabi -mattr=+fullfp16,+zcz | FileCheck %s --check-prefix=CHECK-ZCZ
 ; RUN: llc < %s -mtriple=aarch64-none-eabi -mattr=-fullfp16 | FileCheck %s --check-prefix=CHECK-NOFP16 --check-prefix=CHECK-ILLEGAL
 
 define half @Const0() {
 entry:
   ret half 0xH0000
 }
-; CHECK-ILLEGAL:        .[[LBL0:LCPI0_[0-9]]]:
-; CHECK-ILLEGAL-NEXT:   .hword  0 // half 0
-; CHECK-ILLEGAL-LABEL:  Const0:
-; CHECK-ILLEGAL:        adrp x[[NUM:[0-9]+]], .[[LBL0]]
-; CHECK-ILLEGAL-NEXT:   ldr h0, [x[[NUM]], :lo12:.[[LBL0]]]
+; CHECK-DAG-ILLEGAL-LABEL:  Const0:
+; CHECK-DAG-ILLEGAL-NEXT:   fmov  h0, wzr
+; CHECK-DAG-ILLEGAL-NEXT:   ret
+
+; CHECK-ZCZ-LABEL:  Const0:
+; CHECK-ZCZ:        movi  v0.2d, #0000000000000000
+; CHECK-ZCZ-NEXT:   ret
 
 define half @Const1() {
 entry:

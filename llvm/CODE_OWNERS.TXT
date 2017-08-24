@@ -44,6 +44,10 @@ N: Greg Clayton
 E: clayborg@gmail.com
 D: LLDB
 
+N: Pete Couperus
+E: petecoup@synopsys.com
+D: ARC backend (lib/Target/ARC/*)
+
 N: Sanjoy Das
 E: sanjoy@playingwithpointers.com
 D: IndVar Simplify, Scalar Evolution
