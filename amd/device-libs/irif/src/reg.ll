@@ -12,23 +12,22 @@ declare i32 @llvm.read_register.i32(metadata) #0
 declare i64 @llvm.read_register.i64(metadata) #0
 
 define i64 @__llvm_amdgcn_read_exec() #1 {
-    %1 = call i64 @llvm.read_register.i64(metadata !0) #2
+    %1 = call i64 @llvm.read_register.i64(metadata !0) #0
     ret i64 %1
 }
 
 define i32 @__llvm_amdgcn_read_exec_lo() #1 {
-    %1 = call i32 @llvm.read_register.i32(metadata !1) #2
+    %1 = call i32 @llvm.read_register.i32(metadata !1) #0
     ret i32 %1
 }
 
 define i32 @__llvm_amdgcn_read_exec_hi() #1 {
-    %1 = call i32 @llvm.read_register.i32(metadata !2) #2
+    %1 = call i32 @llvm.read_register.i32(metadata !2) #0
     ret i32 %1
 }
 
-attributes #0 = { nounwind }
-attributes #1 = { alwaysinline nounwind }
-attributes #2 = { nounwind convergent }
+attributes #0 = { nounwind convergent }
+attributes #1 = { alwaysinline nounwind convergent }
 
 !0 = !{!"exec"}
 !1 = !{!"exec_lo"}
