@@ -14,7 +14,7 @@ entry:
   %0 = zext i32 %n to i64, !dbg !16
 
 ; CHECK:  store i8* %[[VLA:.*]], i8** @__safestack_unsafe_stack_ptr
-; CHECK:  tail call void @llvm.dbg.value(metadata i8* %[[VLA]], metadata ![[TYPE:.*]], metadata ![[EXPR:.*]])
+; CHECK:  tail call void @llvm.dbg.value(metadata i8* %[[VLA]], metadata ![[TYPE:.*]], metadata !DIExpression(DW_OP_deref))
 ; CHECK:  call void @capture({{.*}} %[[VLA]])
 
   %vla = alloca i8, i64 %0, align 16, !dbg !16
@@ -50,7 +50,6 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !15 = !DILocation(line: 2, column: 12, scope: !6)
 !16 = !DILocation(line: 3, column: 3, scope: !6)
 
-; CHECK-DAG: ![[EXPR]] = !DIExpression(DW_OP_deref)
 !17 = !DIExpression(DW_OP_deref)
 !18 = !DILocation(line: 3, column: 8, scope: !6)
 !19 = !DILocation(line: 4, column: 3, scope: !6)

@@ -19,14 +19,10 @@
 ; parameter. It can reference the register it's in directly without masking off
 ; high bits or anything
 
-; CHECK: call void @llvm.dbg.value(metadata i8 %g.coerce0, metadata ![[VAR_STRUCT:[0-9]+]], metadata ![[EXPR_STRUCT1:[0-9]+]])
-; CHECK: call void @llvm.dbg.value(metadata i64 %g.coerce1, metadata ![[VAR_STRUCT]], metadata ![[EXPR_STRUCT2:[0-9]+]])
-; CHECK: call void @llvm.dbg.value(metadata i1 %b, metadata ![[VAR_BOOL:[0-9]+]], metadata ![[EXPR_BOOL:[0-9]+]])
-; CHECK: call void @llvm.dbg.value(metadata i1 %frag, metadata ![[FRAG_BOOL:[0-9]+]], metadata ![[FRAG_BOOL:[0-9]+]])
-; CHECK: ![[EXPR_STRUCT1]] = !DIExpression(DW_OP_LLVM_fragment, 0, 8)
-; CHECK: ![[EXPR_STRUCT2]] = !DIExpression(DW_OP_LLVM_fragment, 32, 64)
-; CHECK: ![[EXPR_BOOL]] = !DIExpression()
-; CHECK: ![[FRAG_BOOL]] = !DIExpression(DW_OP_LLVM_fragment, 0, 1)
+; CHECK: call void @llvm.dbg.value(metadata i8 %g.coerce0, metadata ![[VAR_STRUCT:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 8))
+; CHECK: call void @llvm.dbg.value(metadata i64 %g.coerce1, metadata ![[VAR_STRUCT]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 64))
+; CHECK: call void @llvm.dbg.value(metadata i1 %b, metadata ![[VAR_BOOL:[0-9]+]], metadata !DIExpression())
+; CHECK: call void @llvm.dbg.value(metadata i1 %frag, metadata ![[VAR_FRAG:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 1))
 
 %struct.foo = type { i8, i64 }
 
