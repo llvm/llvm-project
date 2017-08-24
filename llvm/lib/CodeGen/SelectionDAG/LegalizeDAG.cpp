@@ -4064,9 +4064,6 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                       RTLIB::REM_PPCF128));
     break;
   case ISD::FMA:
-    Results.push_back(ExpandFPLibCall(Node, RTLIB::FMA_F32, RTLIB::FMA_F64,
-                                      RTLIB::FMA_F80, RTLIB::FMA_F128,
-                                      RTLIB::FMA_PPCF128));
   case ISD::STRICT_FMA:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::FMA_F32, RTLIB::FMA_F64,
                                       RTLIB::FMA_F80, RTLIB::FMA_F128,

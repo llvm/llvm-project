@@ -167,9 +167,10 @@ enum ArchExtKind : unsigned {
   AEK_PROFILE =     1 << 6,
   AEK_RAS =         1 << 7,
   AEK_LSE =         1 << 8,
-  AEK_SVE =         1 << 9,
-  AEK_DOTPROD =     1 << 10,
-  AEK_RCPC =        1 << 11
+  AEK_RDM =         1 << 9,
+  AEK_SVE =         1 << 10,
+  AEK_DOTPROD =     1 << 11,
+  AEK_RCPC =        1 << 12
 };
 
 StringRef getCanonicalArchName(StringRef Arch);

@@ -2117,9 +2117,10 @@ CleanupAndExit:
     Value *CmpA = Builder.CreateICmpULT(LowA, HighA);
     Value *Cond = CmpA;
 
-    // Check for distance between pointers.
-    Value *Dist = Builder.CreateSub(HighA, LowA);
-    Value *CmpD = Builder.CreateICmpSLT(NumBytes, Dist);
+    // Check for distance between pointers. Since the case LowA < HighA
+    // is checked for above, assume LowA >= HighA.
+    Value *Dist = Builder.CreateSub(LowA, HighA);
+    Value *CmpD = Builder.CreateICmpSLE(NumBytes, Dist);
     Value *CmpEither = Builder.CreateOr(Cond, CmpD);
     Cond = CmpEither;
 

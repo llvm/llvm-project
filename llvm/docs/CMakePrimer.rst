@@ -336,15 +336,15 @@ to the ``macro`` block as well.
 CMake commands can have named arguments that are requried at every call site. In
 addition, all commands will implicitly accept a variable number of extra
 arguments (In C parlance, all commands are varargs functions). When a command is
-invoked with extra arguments (beyond the named ones) CMake will store the extra
-arguments in a list named ``ARGV``, and the count of the extra arguments in
-``ARGN``. Below is a trivial example of providing a wrapper function for CMake's
-built in function ``add_dependencies``.
+invoked with extra arguments (beyond the named ones) CMake will store the full
+list of arguments (both named and unnamed) in a list named ``ARGV``, and the
+sublist of unnamed arguments in ``ARGN``. Below is a trivial example of
+providing a wrapper function for CMake's built in function ``add_dependencies``.
 
 .. code-block:: cmake
 
    function(add_deps target)
-     add_dependencies(${target} ${ARGV})
+     add_dependencies(${target} ${ARGN})
    endfunction()
 
 This example defines a new macro named ``add_deps`` which takes a required first

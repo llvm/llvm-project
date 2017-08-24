@@ -23,6 +23,36 @@
 
 namespace llvm {
 
+struct DivRemMapKey {
+  bool SignedOp;
+  Value *Dividend;
+  Value *Divisor;
+
+  DivRemMapKey(bool InSignedOp, Value *InDividend, Value *InDivisor)
+      : SignedOp(InSignedOp), Dividend(InDividend), Divisor(InDivisor) {}
+};
+
+template <> struct DenseMapInfo<DivRemMapKey> {
+  static bool isEqual(const DivRemMapKey &Val1, const DivRemMapKey &Val2) {
+    return Val1.SignedOp == Val2.SignedOp && Val1.Dividend == Val2.Dividend &&
+           Val1.Divisor == Val2.Divisor;
+  }
+
+  static DivRemMapKey getEmptyKey() {
+    return DivRemMapKey(false, nullptr, nullptr);
+  }
+
+  static DivRemMapKey getTombstoneKey() {
+    return DivRemMapKey(true, nullptr, nullptr);
+  }
+
+  static unsigned getHashValue(const DivRemMapKey &Val) {
+    return (unsigned)(reinterpret_cast<uintptr_t>(Val.Dividend) ^
+                      reinterpret_cast<uintptr_t>(Val.Divisor)) ^
+           (unsigned)Val.SignedOp;
+  }
+};
+
 /// This optimization identifies DIV instructions in a BB that can be
 /// profitably bypassed and carried out with a shorter, faster divide.
 ///

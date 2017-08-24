@@ -458,6 +458,8 @@ bool llvm::AArch64::getExtensionFeatures(unsigned Extensions,
     Features.push_back("+ras");
   if (Extensions & AArch64::AEK_LSE)
     Features.push_back("+lse");
+  if (Extensions & AArch64::AEK_RDM)
+    Features.push_back("+rdm");
   if (Extensions & AArch64::AEK_SVE)
     Features.push_back("+sve");
   if (Extensions & AArch64::AEK_RCPC)

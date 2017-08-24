@@ -545,15 +545,18 @@ void BreakableBlockComment::insertBreak(unsigned LineIndex, unsigned TailOffset,
 }
 
 BreakableToken::Split BreakableBlockComment::getSplitBefore(
-    unsigned LineIndex,
-    unsigned PreviousEndColumn,
-    unsigned ColumnLimit,
+    unsigned LineIndex, unsigned PreviousEndColumn, unsigned ColumnLimit,
     llvm::Regex &CommentPragmasRegex) const {
   if (!mayReflow(LineIndex, CommentPragmasRegex))
     return Split(StringRef::npos, 0);
   StringRef TrimmedContent = Content[LineIndex].ltrim(Blanks);
-  return getReflowSplit(TrimmedContent, ReflowPrefix, PreviousEndColumn,
-                        ColumnLimit);
+  Split Result = getReflowSplit(TrimmedContent, ReflowPrefix, PreviousEndColumn,
+                                ColumnLimit);
+  // Result is relative to TrimmedContent. Adapt it relative to
+  // Content[LineIndex].
+  if (Result.first != StringRef::npos)
+    Result.first += Content[LineIndex].size() - TrimmedContent.size();
+  return Result;
 }
 
 unsigned BreakableBlockComment::getReflownColumn(
@@ -633,17 +636,12 @@ void BreakableBlockComment::replaceWhitespaceBefore(
         /*CurrentPrefix=*/ReflowPrefix, InPPDirective, /*Newlines=*/0,
         /*Spaces=*/0);
     // Check if we need to also insert a break at the whitespace range.
-    // For this we first adapt the reflow split relative to the beginning of the
-    // content.
     // Note that we don't need a penalty for this break, since it doesn't change
     // the total number of lines.
-    Split BreakSplit = SplitBefore;
-    BreakSplit.first += TrimmedContent.data() - Content[LineIndex].data();
     unsigned ReflownColumn =
         getReflownColumn(TrimmedContent, LineIndex, PreviousEndColumn);
-    if (ReflownColumn > ColumnLimit) {
-      insertBreak(LineIndex, 0, BreakSplit, Whitespaces);
-    }
+    if (ReflownColumn > ColumnLimit)
+      insertBreak(LineIndex, 0, SplitBefore, Whitespaces);
     return;
   }
 
