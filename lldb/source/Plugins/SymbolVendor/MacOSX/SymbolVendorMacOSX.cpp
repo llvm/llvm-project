@@ -220,6 +220,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                         // the original
                         // gloal DBGSourcePath string.
                         bool new_style_source_remapping_dictionary = false;
+                        bool do_truncate_remapping_names = false;
                         std::string original_DBGSourcePath_value =
                             DBGSourcePath;
                         if (plist_sp->GetAsDictionary()->HasKey("DBGVersion")) {
@@ -233,6 +234,9 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                             if (version_number > 1) {
                               new_style_source_remapping_dictionary = true;
                             }
+                            if (version_number == 2) {
+                                do_truncate_remapping_names = true;
+                            }
                           }
                         }
 
@@ -242,7 +246,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                 ->GetAsDictionary();
                         remappings_dict->ForEach(
                             [&module_sp, new_style_source_remapping_dictionary,
-                             original_DBGSourcePath_value](
+                             original_DBGSourcePath_value, do_truncate_remapping_names](
                                 ConstString key,
                                 StructuredData::Object *object) -> bool {
                               if (object && object->GetAsString()) {
@@ -264,6 +268,21 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                 }
                                 module_sp->GetSourceMappingList().Append(
                                     key, ConstString(DBGSourcePath), true);
+                                // With version 2 of DBGSourcePathRemapping, we can chop off the
+                                // last two filename parts from the source remapping and get a
+                                // more general source remapping that still works.  Add this as
+                                // another option in addition to the full source path remap.
+                                if (do_truncate_remapping_names) {
+                                  FileSpec build_path(key.AsCString(), false);
+                                  FileSpec source_path(DBGSourcePath.c_str(), false);
+                                  build_path.RemoveLastPathComponent();
+                                  build_path.RemoveLastPathComponent();
+                                  source_path.RemoveLastPathComponent();
+                                  source_path.RemoveLastPathComponent();
+                                  module_sp->GetSourceMappingList().Append(
+                                      ConstString(build_path.GetPath().c_str()),
+                                      ConstString(source_path.GetPath().c_str()), true);
+                                }
                               }
                               return true;
                             });
