@@ -24646,7 +24646,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VPCOM:              return "X86ISD::VPCOM";
   case X86ISD::VPCOMU:             return "X86ISD::VPCOMU";
   case X86ISD::VPERMIL2:           return "X86ISD::VPERMIL2";
-  case X86ISD::FMADD:              return "X86ISD::FMADD";
   case X86ISD::FMSUB:              return "X86ISD::FMSUB";
   case X86ISD::FNMADD:             return "X86ISD::FNMADD";
   case X86ISD::FNMSUB:             return "X86ISD::FNMSUB";
@@ -30629,6 +30628,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     // Byte blends are only available in AVX2
     if (VT == MVT::v32i8 && !Subtarget.hasAVX2())
       return SDValue();
+    // There are no 512-bit blend instructions that use sign bits.
+    if (VT.is512BitVector())
+      return SDValue();
 
     assert(BitWidth >= 8 && BitWidth <= 64 && "Invalid mask size");
     APInt DemandedMask(APInt::getSignMask(BitWidth));
@@ -34011,10 +34013,10 @@ static SDValue combineFneg(SDNode *N, SelectionDAG &DAG,
   unsigned NewOpcode = 0;
   if (Arg.hasOneUse()) {
     switch (Arg.getOpcode()) {
-    case X86ISD::FMADD:        NewOpcode = X86ISD::FNMSUB;       break;
+    case ISD::FMA:             NewOpcode = X86ISD::FNMSUB;       break;
     case X86ISD::FMSUB:        NewOpcode = X86ISD::FNMADD;       break;
     case X86ISD::FNMADD:       NewOpcode = X86ISD::FMSUB;        break;
-    case X86ISD::FNMSUB:       NewOpcode = X86ISD::FMADD;        break;
+    case X86ISD::FNMSUB:       NewOpcode = ISD::FMA;             break;
     case X86ISD::FMADD_RND:    NewOpcode = X86ISD::FNMSUB_RND;   break;
     case X86ISD::FMSUB_RND:    NewOpcode = X86ISD::FNMADD_RND;   break;
     case X86ISD::FNMADD_RND:   NewOpcode = X86ISD::FMSUB_RND;    break;
@@ -34608,14 +34610,14 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
 
   unsigned NewOpcode;
   if (!NegMul)
-    NewOpcode = (!NegC) ? X86ISD::FMADD : X86ISD::FMSUB;
+    NewOpcode = (!NegC) ? unsigned(ISD::FMA) : unsigned(X86ISD::FMSUB);
   else
     NewOpcode = (!NegC) ? X86ISD::FNMADD : X86ISD::FNMSUB;
 
-  // For FMA and FMADD, we risk reconstructing the node we started with.
+  // For FMA, we risk reconstructing the node we started with.
   // In order to avoid this, we check for negation or opcode change. If
   // one of the two happened, then it is a new node and we return it.
-  if (N->getOpcode() == X86ISD::FMADD || N->getOpcode() == ISD::FMA) {
+  if (N->getOpcode() == ISD::FMA) {
     if (HasNeg || NewOpcode != N->getOpcode())
       return DAG.getNode(NewOpcode, dl, VT, A, B, C);
     return SDValue();
@@ -34623,21 +34625,21 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
 
   if (N->getOpcode() == X86ISD::FMADD_RND) {
     switch (NewOpcode) {
-    case X86ISD::FMADD:  NewOpcode = X86ISD::FMADD_RND; break;
+    case ISD::FMA:       NewOpcode = X86ISD::FMADD_RND; break;
     case X86ISD::FMSUB:  NewOpcode = X86ISD::FMSUB_RND; break;
     case X86ISD::FNMADD: NewOpcode = X86ISD::FNMADD_RND; break;
     case X86ISD::FNMSUB: NewOpcode = X86ISD::FNMSUB_RND; break;
     }
   } else if (N->getOpcode() == X86ISD::FMADDS1_RND) {
     switch (NewOpcode) {
-    case X86ISD::FMADD:  NewOpcode = X86ISD::FMADDS1_RND; break;
+    case ISD::FMA:       NewOpcode = X86ISD::FMADDS1_RND; break;
     case X86ISD::FMSUB:  NewOpcode = X86ISD::FMSUBS1_RND; break;
     case X86ISD::FNMADD: NewOpcode = X86ISD::FNMADDS1_RND; break;
     case X86ISD::FNMSUB: NewOpcode = X86ISD::FNMSUBS1_RND; break;
     }
   } else if (N->getOpcode() == X86ISD::FMADDS3_RND) {
     switch (NewOpcode) {
-    case X86ISD::FMADD:  NewOpcode = X86ISD::FMADDS3_RND; break;
+    case ISD::FMA:       NewOpcode = X86ISD::FMADDS3_RND; break;
     case X86ISD::FMSUB:  NewOpcode = X86ISD::FMSUBS3_RND; break;
     case X86ISD::FNMADD: NewOpcode = X86ISD::FNMADDS3_RND; break;
     case X86ISD::FNMSUB: NewOpcode = X86ISD::FNMSUBS3_RND; break;
@@ -35789,7 +35791,6 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VPERM2X128:
   case X86ISD::VZEXT_MOVL:
   case ISD::VECTOR_SHUFFLE: return combineShuffle(N, DAG, DCI,Subtarget);
-  case X86ISD::FMADD:
   case X86ISD::FMADD_RND:
   case X86ISD::FMADDS1_RND:
   case X86ISD::FMADDS3_RND:

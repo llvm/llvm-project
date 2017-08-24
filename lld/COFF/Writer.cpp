@@ -26,7 +26,6 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/RandomNumberGenerator.h"
-#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdio>
 #include <map>

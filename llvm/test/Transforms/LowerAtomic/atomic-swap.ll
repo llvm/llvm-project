@@ -26,3 +26,14 @@ define i8 @swap() {
   ret i8 %j
 ; CHECK: ret i8 [[INST]]
 }
+
+
+define i8 @swap_optnone() noinline optnone {
+; CHECK-LABEL: @swap_optnone(
+  %i = alloca i8
+  %j = atomicrmw xchg i8* %i, i8 42 monotonic
+; CHECK: [[INST:%[a-z0-9]+]] = load
+; CHECK-NEXT: store
+  ret i8 %j
+; CHECK: ret i8 [[INST]]
+}

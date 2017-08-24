@@ -53,6 +53,11 @@ using namespace llvm;
 
 STATISTIC(VersionedScops, "Number of SCoPs that required versioning.");
 
+STATISTIC(SequentialLoops, "Number of generated sequential for-loops");
+STATISTIC(ParallelLoops, "Number of generated parallel for-loops");
+STATISTIC(VectorLoops, "Number of generated vector for-loops");
+STATISTIC(IfConditions, "Number of generated if-conditions");
+
 static cl::opt<bool> PollyGenerateRTCPrint(
     "polly-codegen-emit-rtc-print",
     cl::desc("Emit code that prints the runtime check result dynamically."),
@@ -480,6 +485,8 @@ void IslNodeBuilder::createForVector(__isl_take isl_ast_node *For,
 
   isl_ast_node_free(For);
   isl_ast_expr_free(Iterator);
+
+  VectorLoops++;
 }
 
 namespace {
@@ -571,6 +578,8 @@ void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For,
   isl_ast_node_free(For);
   isl_ast_expr_free(Iterator);
   isl_id_free(IteratorID);
+
+  SequentialLoops++;
 }
 
 /// Remove the BBs contained in a (sub)function from the dominator tree.
@@ -720,6 +729,8 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   isl_ast_node_free(For);
   isl_ast_expr_free(Iterator);
   isl_id_free(IteratorID);
+
+  ParallelLoops++;
 }
 
 /// Return whether any of @p Node's statements contain partial accesses.
@@ -813,6 +824,8 @@ void IslNodeBuilder::createIf(__isl_take isl_ast_node *If) {
   Builder.SetInsertPoint(&MergeBB->front());
 
   isl_ast_node_free(If);
+
+  IfConditions++;
 }
 
 __isl_give isl_id_to_ast_expr *

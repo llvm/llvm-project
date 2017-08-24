@@ -1,36 +1,36 @@
-// RUN: clang-diff -html %S/Inputs/clang-diff-basic-src.cpp %S/clang-diff-basic.cpp -- | FileCheck %s
+RUN: clang-diff -html %S/Inputs/clang-diff-basic-src.cpp %S/clang-diff-basic.cpp -- | FileCheck %s
 
-// CHECK: <pre><div id='L' class='code'><span id='L0' tid='R0' title='TranslationUnitDecl
-// CHECK-NEXT: 0 -> 0'>
+CHECK: <pre><div id='L' class='code'><span id='L0' tid='R0' title='TranslationUnitDecl
+CHECK-NEXT: 0 -> 0'>
 
-// match, update
-// CHECK: <span id='L[[L:[0-9]+]]' tid='R[[R:[0-9]+]]' title='NamespaceDecl
-// CHECK-NEXT: [[L]] -> [[R]]
-// CHECK-NEXT: src;' class='u'>namespace src {
+match, update
+CHECK: <span id='L[[L:[0-9]+]]' tid='R[[R:[0-9]+]]' title='NamespaceDecl
+CHECK-NEXT: [[L]] -> [[R]]
+CHECK-NEXT: src;' class='u'>namespace src {
 
-// match, move
-// CHECK: <span id='L[[L:[0-9]+]]' tid='R[[R:[0-9]+]]' title='FunctionDecl
-// CHECK-NEXT: [[L]] -> [[R]]
-// CHECK-NEXT: :foo(void ())' class='m'>void foo()
+match, move
+CHECK: <span id='L[[L:[0-9]+]]' tid='R[[R:[0-9]+]]' title='FunctionDecl
+CHECK-NEXT: [[L]] -> [[R]]
+CHECK-NEXT: :foo(void ())' class='m'>void foo()
 
-// match
-// CHECK: <span id='L[[L:[0-9]+]]' tid='R[[R:[0-9]+]]' title='FunctionDecl
-// CHECK-NEXT: [[L]] -> [[R]]
-// CHECK-NEXT: :main(void ())'>void main()
+match
+CHECK: <span id='L[[L:[0-9]+]]' tid='R[[R:[0-9]+]]' title='FunctionDecl
+CHECK-NEXT: [[L]] -> [[R]]
+CHECK-NEXT: :main(void ())'>void main()
 
-// deletion
-// CHECK: <span id='L[[L:[0-9]+]]' tid='R-1' title='IntegerLiteral
-// CHECK-NEXT: [[L]] -> -1
-// CHECK-NEXT: 4' class='d'>4</span>
+deletion
+CHECK: <span id='L[[L:[0-9]+]]' tid='R-1' title='IntegerLiteral
+CHECK-NEXT: [[L]] -> -1
+CHECK-NEXT: 4' class='d'>4</span>
 
-// update + move
-// CHECK: 2' class='u m'>2</span>
+update + move
+CHECK: 2' class='u m'>2</span>
 
-// insertion
-// CHECK: <span id='R[[R:[0-9]+]]' tid='L-1' title='StringLiteral
-// CHECK-NEXT: -1 -> [[R]]
-// CHECK-NEXT: Bar' class='i'>&quot;Bar&quot;</span>
+insertion
+CHECK: <span id='R[[R:[0-9]+]]' tid='L-1' title='StringLiteral
+CHECK-NEXT: -1 -> [[R]]
+CHECK-NEXT: Bar' class='i'>&quot;Bar&quot;</span>
 
-// comments
-// CHECK: // CHECK: Insert IfStmt{{.*}} into IfStmt
-// CHECK: // CHECK: Delete AccessSpecDecl: public
+comments
+CHECK: // CHECK: Insert IfStmt{{.*}} into IfStmt
+CHECK: // CHECK: Delete AccessSpecDecl: public

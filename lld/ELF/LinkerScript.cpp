@@ -723,6 +723,17 @@ void LinkerScript::adjustSectionsAfterSorting() {
   removeEmptyCommands();
 }
 
+// Try to find an address for the file and program headers output sections,
+// which were unconditionally added to the first PT_LOAD segment earlier.
+//
+// When using the default layout, we check if the headers fit below the first
+// allocated section. When using a linker script, we also check if the headers
+// are covered by the output section. This allows omitting the headers by not
+// leaving enough space for them in the linker script; this pattern is common
+// in embedded systems.
+//
+// If there isn't enough space for these sections, we'll remove them from the
+// PT_LOAD segment, and we'll also remove the PT_PHDR segment.
 void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &Phdrs) {
   uint64_t Min = std::numeric_limits<uint64_t>::max();
   for (OutputSection *Sec : OutputSections)
@@ -736,14 +747,17 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &Phdrs) {
   PhdrEntry *FirstPTLoad = *It;
 
   uint64_t HeaderSize = getHeaderSize();
-  if (HeaderSize <= Min || Script->hasPhdrsCommands()) {
-    Min = alignDown(Min - HeaderSize, Config->MaxPageSize);
+  // When linker script with SECTIONS is being used, don't output headers
+  // unless there's a space for them.
+  uint64_t Base = Opt.HasSections ? alignDown(Min, Config->MaxPageSize) : 0;
+  if (HeaderSize <= Min - Base || Script->hasPhdrsCommands()) {
+    Min = Opt.HasSections ? Base
+                          : alignDown(Min - HeaderSize, Config->MaxPageSize);
     Out::ElfHeader->Addr = Min;
     Out::ProgramHeaders->Addr = Min + Out::ElfHeader->Size;
     return;
   }
 
-  assert(FirstPTLoad->First == Out::ElfHeader);
   OutputSection *ActualFirst = nullptr;
   for (OutputSection *Sec : OutputSections) {
     if (Sec->FirstInPtLoad == Out::ElfHeader) {

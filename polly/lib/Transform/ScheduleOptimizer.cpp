@@ -237,6 +237,33 @@ static cl::opt<bool> OptimizedScops(
              "transformations is applied on the schedule tree"),
     cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+STATISTIC(ScopsProcessed, "Number of scops processed");
+STATISTIC(ScopsRescheduled, "Number of scops rescheduled");
+STATISTIC(ScopsOptimized, "Number of scops optimized");
+
+STATISTIC(NumAffineLoopsOptimized, "Number of affine loops optimized");
+STATISTIC(NumBoxedLoopsOptimized, "Number of boxed loops optimized");
+
+#define THREE_STATISTICS(VARNAME, DESC)                                        \
+  static llvm::Statistic VARNAME[3] = {                                        \
+      {DEBUG_TYPE, #VARNAME "0", DESC " (original)", {0}, false},              \
+      {DEBUG_TYPE, #VARNAME "1", DESC " (after scheduler)", {0}, false},       \
+      {DEBUG_TYPE, #VARNAME "2", DESC " (after optimizer)", {0}, false}}
+
+THREE_STATISTICS(NumBands, "Number of bands");
+THREE_STATISTICS(NumBandMembers, "Number of band members");
+THREE_STATISTICS(NumCoincident, "Number of coincident band members");
+THREE_STATISTICS(NumPermutable, "Number of permutable bands");
+THREE_STATISTICS(NumFilters, "Number of filter nodes");
+THREE_STATISTICS(NumExtension, "Number of extension nodes");
+
+STATISTIC(FirstLevelTileOpts, "Number of first level tiling applied");
+STATISTIC(SecondLevelTileOpts, "Number of second level tiling applied");
+STATISTIC(RegisterTileOpts, "Number of register tiling applied");
+STATISTIC(PrevectOpts, "Number of strip-mining for prevectorization applied");
+STATISTIC(MatMulOpts,
+          "Number of matrix multiplication patterns detected and optimized");
+
 /// Create an isl::union_set, which describes the isolate option based on
 /// IsolateDomain.
 ///
@@ -368,6 +395,7 @@ isl::schedule_node ScheduleTreeOptimizer::prevectSchedBand(
   if (isl_schedule_node_get_type(Node.get()) == isl_schedule_node_leaf)
     Node = Node.parent();
   auto LoopMarker = isl::id::alloc(Node.get_ctx(), "SIMD", nullptr);
+  PrevectOpts++;
   return Node.insert_mark(LoopMarker);
 }
 
@@ -456,17 +484,23 @@ bool ScheduleTreeOptimizer::isTileableBandNode(isl::schedule_node Node) {
 
 __isl_give isl::schedule_node
 ScheduleTreeOptimizer::standardBandOpts(isl::schedule_node Node, void *User) {
-  if (FirstLevelTiling)
+  if (FirstLevelTiling) {
     Node = tileNode(Node, "1st level tiling", FirstLevelTileSizes,
                     FirstLevelDefaultTileSize);
+    FirstLevelTileOpts++;
+  }
 
-  if (SecondLevelTiling)
+  if (SecondLevelTiling) {
     Node = tileNode(Node, "2nd level tiling", SecondLevelTileSizes,
                     SecondLevelDefaultTileSize);
+    SecondLevelTileOpts++;
+  }
 
-  if (RegisterTiling)
+  if (RegisterTiling) {
     Node =
         applyRegisterTiling(Node, RegisterTileSizes, RegisterDefaultTileSize);
+    RegisterTileOpts++;
+  }
 
   if (PollyVectorizerChoice == VECTORIZER_NONE)
     return Node;
@@ -1235,6 +1269,7 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *Node,
       isMatrMultPattern(isl::manage(isl_schedule_node_copy(Node)), OAI->D,
                         MMI)) {
     DEBUG(dbgs() << "The matrix multiplication pattern was detected\n");
+    MatMulOpts++;
     return optimizeMatMulPattern(isl::manage(Node), OAI->TTI, MMI).release();
   }
 
@@ -1308,6 +1343,52 @@ private:
 
 char IslScheduleOptimizer::ID = 0;
 
+/// Collect statistics for the schedule tree.
+///
+/// @param Schedule The schedule tree to analyze. If not a schedule tree it is
+/// ignored.
+/// @param Version  The version of the schedule tree that is analyzed.
+///                 0 for the original schedule tree before any transformation.
+///                 1 for the schedule tree after isl's rescheduling.
+///                 2 for the schedule tree after optimizations are applied
+///                 (tiling, pattern matching)
+static void walkScheduleTreeForStatistics(isl::schedule Schedule, int Version) {
+  auto Root = Schedule.get_root();
+  if (!Root)
+    return;
+
+  Root.foreach_ancestor_top_down([Version](
+                                     isl::schedule_node Node) -> isl::stat {
+    switch (isl_schedule_node_get_type(Node.get())) {
+    case isl_schedule_node_band: {
+      NumBands[Version]++;
+      if (isl_schedule_node_band_get_permutable(Node.get()) == isl_bool_true)
+        NumPermutable[Version]++;
+
+      int CountMembers = isl_schedule_node_band_n_member(Node.get());
+      NumBandMembers[Version] += CountMembers;
+      for (int i = 0; i < CountMembers; i += 1) {
+        if (Node.band_member_get_coincident(i))
+          NumCoincident[Version]++;
+      }
+    } break;
+
+    case isl_schedule_node_filter:
+      NumFilters[Version]++;
+      break;
+
+    case isl_schedule_node_extension:
+      NumExtension[Version]++;
+      break;
+
+    default:
+      break;
+    }
+
+    return isl::stat::ok;
+  });
+}
+
 bool IslScheduleOptimizer::runOnScop(Scop &S) {
 
   // Skip SCoPs in case they're already optimised by PPCGCodeGeneration
@@ -1351,6 +1432,9 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
 
   if (!Domain)
     return false;
+
+  ScopsProcessed++;
+  walkScheduleTreeForStatistics(S.getScheduleTree(), 0);
 
   isl::union_map Validity = give(D.getDependences(ValidityKinds));
   isl::union_map Proximity = give(D.getDependences(ProximityKinds));
@@ -1432,10 +1516,14 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
   auto Schedule = SC.compute_schedule();
   isl_options_set_on_error(Ctx, OnErrorStatus);
 
+  walkScheduleTreeForStatistics(Schedule, 1);
+
   // In cases the scheduler is not able to optimize the code, we just do not
   // touch the schedule.
   if (!Schedule)
     return false;
+
+  ScopsRescheduled++;
 
   DEBUG({
     auto *P = isl_printer_to_str(Ctx);
@@ -1451,9 +1539,15 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
   auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   const OptimizerAdditionalInfoTy OAI = {TTI, const_cast<Dependences *>(&D)};
   auto NewSchedule = ScheduleTreeOptimizer::optimizeSchedule(Schedule, &OAI);
+  walkScheduleTreeForStatistics(NewSchedule, 1);
 
   if (!ScheduleTreeOptimizer::isProfitableSchedule(S, NewSchedule))
     return false;
+
+  auto ScopStats = S.getStatistics();
+  ScopsOptimized++;
+  NumAffineLoopsOptimized += ScopStats.NumAffineLoops;
+  NumBoxedLoopsOptimized += ScopStats.NumBoxedLoops;
 
   S.setScheduleTree(NewSchedule.release());
   S.markAsOptimized();

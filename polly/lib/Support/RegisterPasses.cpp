@@ -328,13 +328,13 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
     PM.add(polly::createPolyhedralInfoPass());
 
   if (EnableSimplify)
-    PM.add(polly::createSimplifyPass());
+    PM.add(polly::createSimplifyPass(0));
   if (EnableForwardOpTree)
     PM.add(polly::createForwardOpTreePass());
   if (EnableDeLICM)
     PM.add(polly::createDeLICMPass());
   if (EnableSimplify)
-    PM.add(polly::createSimplifyPass());
+    PM.add(polly::createSimplifyPass(1));
 
   if (ImportJScop)
     PM.add(polly::createJSONImporterPass());
