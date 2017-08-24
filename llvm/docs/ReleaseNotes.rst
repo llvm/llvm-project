@@ -49,7 +49,7 @@ Changes to the LLVM IR
 * The datalayout string may now indicate an address space to use for
   the pointer type of ``alloca`` rather than the default of 0.
 
-* Added ``speculatable`` attribute indicating a function which does has no
+* Added ``speculatable`` attribute indicating a function which has no
   side-effects which could inhibit hoisting of calls.
 
 Changes to the Arm Targets
