@@ -56,6 +56,16 @@ STATISTIC(TotalModifiedStmts,
 
 STATISTIC(ScopsModified, "Number of SCoPs with at least one forwarded tree");
 
+STATISTIC(NumValueWrites, "Number of scalar value writes after OpTree");
+STATISTIC(NumValueWritesInLoops,
+          "Number of scalar value writes nested in affine loops after OpTree");
+STATISTIC(NumPHIWrites, "Number of scalar phi writes after OpTree");
+STATISTIC(NumPHIWritesInLoops,
+          "Number of scalar phi writes nested in affine loops after OpTree");
+STATISTIC(NumSingletonWrites, "Number of singleton writes after OpTree");
+STATISTIC(NumSingletonWritesInLoops,
+          "Number of singleton writes nested in affine loops after OpTree");
+
 namespace {
 
 /// The state of whether an operand tree was/can be forwarded.
@@ -843,6 +853,15 @@ public:
 
     DEBUG(dbgs() << "\nFinal Scop:\n");
     DEBUG(dbgs() << S);
+
+    // Update statistics
+    auto ScopStats = S.getStatistics();
+    NumValueWrites += ScopStats.NumValueWrites;
+    NumValueWritesInLoops += ScopStats.NumValueWritesInLoops;
+    NumPHIWrites += ScopStats.NumPHIWrites;
+    NumPHIWritesInLoops += ScopStats.NumPHIWritesInLoops;
+    NumSingletonWrites += ScopStats.NumSingletonWrites;
+    NumSingletonWritesInLoops += ScopStats.NumSingletonWritesInLoops;
 
     return false;
   }

@@ -15,6 +15,7 @@
 #include "polly/CodeGen/IRBuilder.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/ScopHelper.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Debug.h"
 
@@ -60,21 +61,28 @@ void ScopAnnotator::buildAliasScopes(Scop &S) {
   AliasScopeMap.clear();
   OtherAliasScopeListMap.clear();
 
+  // We are only interested in arrays, but no scalar references. Scalars should
+  // be handled easily by basicaa.
+  SmallVector<ScopArrayInfo *, 10> Arrays;
+  for (ScopArrayInfo *Array : S.arrays())
+    if (Array->isArrayKind())
+      Arrays.push_back(Array);
+
   // The construction of alias scopes is quadratic in the number of arrays
   // involved. In case of too many arrays, skip the construction of alias
   // information to avoid quadratic increases in compile time and code size.
-  if (std::distance(S.array_begin(), S.array_end()) > MaxArraysInAliasScops)
+  if (Arrays.size() > MaxArraysInAliasScops)
     return;
 
   std::string AliasScopeStr = "polly.alias.scope.";
-  for (const ScopArrayInfo *Array : S.arrays()) {
+  for (const ScopArrayInfo *Array : Arrays) {
     assert(Array->getBasePtr() && "Base pointer must be present");
     AliasScopeMap[Array->getBasePtr()] =
         getID(Ctx, AliasScopeDomain,
               MDString::get(Ctx, (AliasScopeStr + Array->getName()).c_str()));
   }
 
-  for (const ScopArrayInfo *Array : S.arrays()) {
+  for (const ScopArrayInfo *Array : Arrays) {
     MDNode *AliasScopeList = MDNode::get(Ctx, {});
     for (const auto &AliasScopePair : AliasScopeMap) {
       if (Array->getBasePtr() == AliasScopePair.first)

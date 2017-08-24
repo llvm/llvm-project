@@ -30,7 +30,7 @@
 //  - We have tens of millions of small strings when constructing a
 //    mergeable string section.
 //
-// For the cases such as the former, we can just use parallel_for_each
+// For the cases such as the former, we can just use parallelForEach
 // instead of std::for_each (or a plain for loop). Because tasks are
 // completely independent from each other, we can run them in parallel
 // without any coordination between them. That's very easy to understand

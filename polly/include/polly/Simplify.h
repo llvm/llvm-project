@@ -41,7 +41,16 @@ class ScopStmt;
 ///   The order in which implicit writes are executed relative to each other is
 ///   undefined.
 llvm::SmallVector<MemoryAccess *, 32> getAccessesInOrder(ScopStmt &Stmt);
-llvm::Pass *createSimplifyPass();
+
+/// Create a Simplify pass
+///
+/// @param CallNo Disambiguates this instance for when there are multiple
+///               instances of this pass in the pass manager. It is used only to
+///               keep the statistics apart and has no influence on the
+///               simplification itself.
+///
+/// @return The Simplify pass.
+llvm::Pass *createSimplifyPass(int CallNo = 0);
 } // namespace polly
 
 namespace llvm {

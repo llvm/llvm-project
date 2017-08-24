@@ -61,6 +61,16 @@ STATISTIC(MappedPHIScalars, "Number of mapped PHI scalars");
 STATISTIC(TargetsMapped, "Number of stores used for at least one mapping");
 STATISTIC(DeLICMScopsModified, "Number of SCoPs optimized");
 
+STATISTIC(NumValueWrites, "Number of scalar value writes after DeLICM");
+STATISTIC(NumValueWritesInLoops,
+          "Number of scalar value writes nested in affine loops after DeLICM");
+STATISTIC(NumPHIWrites, "Number of scalar phi writes after DeLICM");
+STATISTIC(NumPHIWritesInLoops,
+          "Number of scalar phi writes nested in affine loops after DeLICM");
+STATISTIC(NumSingletonWrites, "Number of singleton writes after DeLICM");
+STATISTIC(NumSingletonWritesInLoops,
+          "Number of singleton writes nested in affine loops after DeLICM");
+
 isl::union_map computeReachingOverwrite(isl::union_map Schedule,
                                         isl::union_map Writes,
                                         bool InclPrevWrite,
@@ -1401,6 +1411,14 @@ public:
     releaseMemory();
 
     collapseToUnused(S);
+
+    auto ScopStats = S.getStatistics();
+    NumValueWrites += ScopStats.NumValueWrites;
+    NumValueWritesInLoops += ScopStats.NumValueWritesInLoops;
+    NumPHIWrites += ScopStats.NumPHIWrites;
+    NumPHIWritesInLoops += ScopStats.NumPHIWritesInLoops;
+    NumSingletonWrites += ScopStats.NumSingletonWrites;
+    NumSingletonWritesInLoops += ScopStats.NumSingletonWritesInLoops;
 
     return false;
   }

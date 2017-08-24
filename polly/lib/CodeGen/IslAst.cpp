@@ -78,6 +78,19 @@ static cl::opt<bool> DetectParallel("polly-ast-detect-parallel",
                                     cl::init(false), cl::ZeroOrMore,
                                     cl::cat(PollyCategory));
 
+STATISTIC(ScopsProcessed, "Number of SCoPs processed");
+STATISTIC(ScopsBeneficial, "Number of beneficial SCoPs");
+STATISTIC(BeneficialAffineLoops, "Number of beneficial affine loops");
+STATISTIC(BeneficialBoxedLoops, "Number of beneficial boxed loops");
+
+STATISTIC(NumForLoops, "Number of for-loops");
+STATISTIC(NumParallel, "Number of parallel for-loops");
+STATISTIC(NumInnermostParallel, "Number of innermost parallel for-loops");
+STATISTIC(NumOutermostParallel, "Number of outermost parallel for-loops");
+STATISTIC(NumReductionParallel, "Number of reduction-parallel for-loops");
+STATISTIC(NumExecutedInParallel, "Number of for-loops executed in parallel");
+STATISTIC(NumIfConditions, "Number of if-conditions");
+
 namespace polly {
 /// Temporary information used when building the ast.
 struct AstBuildUserInfo {
@@ -401,6 +414,41 @@ static bool benefitsFromPolly(Scop &Scop, bool PerformParallelTest) {
   return true;
 }
 
+/// Collect statistics for the syntax tree rooted at @p Ast.
+static void walkAstForStatistics(__isl_keep isl_ast_node *Ast) {
+  assert(Ast);
+  isl_ast_node_foreach_descendant_top_down(
+      Ast,
+      [](__isl_keep isl_ast_node *Node, void *User) -> isl_bool {
+        switch (isl_ast_node_get_type(Node)) {
+        case isl_ast_node_for:
+          NumForLoops++;
+          if (IslAstInfo::isParallel(Node))
+            NumParallel++;
+          if (IslAstInfo::isInnermostParallel(Node))
+            NumInnermostParallel++;
+          if (IslAstInfo::isOutermostParallel(Node))
+            NumOutermostParallel++;
+          if (IslAstInfo::isReductionParallel(Node))
+            NumReductionParallel++;
+          if (IslAstInfo::isExecutedInParallel(Node))
+            NumExecutedInParallel++;
+          break;
+
+        case isl_ast_node_if:
+          NumIfConditions++;
+          break;
+
+        default:
+          break;
+        }
+
+        // Continue traversing subtrees.
+        return isl_bool_true;
+      },
+      nullptr);
+}
+
 IslAst::IslAst(Scop &Scop)
     : S(Scop), Root(nullptr), RunCondition(nullptr),
       Ctx(Scop.getSharedIslCtx()) {}
@@ -420,6 +468,11 @@ void IslAst::init(const Dependences &D) {
   // Skip AST and code generation if there was no benefit achieved.
   if (!benefitsFromPolly(S, PerformParallelTest))
     return;
+
+  auto ScopStats = S.getStatistics();
+  ScopsBeneficial++;
+  BeneficialAffineLoops += ScopStats.NumAffineLoops;
+  BeneficialBoxedLoops += ScopStats.NumBoxedLoops;
 
   isl_ctx *Ctx = S.getIslCtx();
   isl_options_set_ast_build_atomic_upper_bound(Ctx, true);
@@ -454,6 +507,7 @@ void IslAst::init(const Dependences &D) {
   RunCondition = buildRunCondition(S, Build);
 
   Root = isl_ast_build_node_from_schedule(Build, S.getScheduleTree().release());
+  walkAstForStatistics(Root);
 
   isl_ast_build_free(Build);
 }
@@ -691,6 +745,8 @@ bool IslAstInfoWrapperPass::runOnScop(Scop &Scop) {
   // Skip SCoPs in case they're already handled by PPCGCodeGeneration.
   if (Scop.isToBeSkipped())
     return false;
+
+  ScopsProcessed++;
 
   const Dependences &D =
       getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);

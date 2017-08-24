@@ -14,8 +14,8 @@
 #ifndef POLLY_ZONEALGO_H
 #define POLLY_ZONEALGO_H
 
-#include "isl-noexceptions.h"
 #include "llvm/ADT/DenseMap.h"
+#include "isl/isl-noexceptions.h"
 #include <memory>
 
 namespace llvm {

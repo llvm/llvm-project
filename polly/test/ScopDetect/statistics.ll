@@ -2,20 +2,19 @@
 
 ; REQUIRES: asserts
 
-; CHECK-DAG: 10 polly-detect     - Number of loops (in- or out of scops, in any function processed by Polly)
 ; CHECK-DAG:  4 polly-detect     - Maximal number of loops in scops (profitable scops only)
 ; CHECK-DAG:  4 polly-detect     - Maximal number of loops in scops
-; CHECK-DAG: 10 polly-detect     - Number of loops in scops (profitable scops only)
-; CHECK-DAG: 10 polly-detect     - Number of loops in scops
-; CHECK-DAG: 10 polly-detect     - Number of total loops
-; CHECK-DAG:  4 polly-detect     - Number of scops (profitable scops only)
+; CHECK-DAG: 11 polly-detect     - Number of loops in scops (profitable scops only)
+; CHECK-DAG: 11 polly-detect     - Number of loops in scops
+; CHECK-DAG: 11 polly-detect     - Number of total loops
+; CHECK-DAG:  5 polly-detect     - Number of scops (profitable scops only)
 ; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 4 (profitable scops only)
-; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 1 (profitable scops only)
+; CHECK-DAG:  2 polly-detect     - Number of scops with maximal loop depth 1 (profitable scops only)
 ; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 3 (profitable scops only)
 ; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 2 (profitable scops only)
-; CHECK-DAG:  4 polly-detect     - Number of scops
+; CHECK-DAG:  5 polly-detect     - Number of scops
 ; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 4
-; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 1
+; CHECK-DAG:  2 polly-detect     - Number of scops with maximal loop depth 1
 ; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 3
 ; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 2
 
@@ -45,6 +44,10 @@
 ;              A[i + j + k + l] += i + j + k + l;
 ;    }
 ;
+;    void foo_zero_iterations(float *S) {
+;      for (long i = 0; i < 0; i++)
+;        A[i] += i;
+;    }
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @foo_1d(float* %A) {
@@ -246,5 +249,30 @@ bb30:                                             ; preds = %bb29
   br label %bb4
 
 bb32:                                             ; preds = %bb4
+  ret void
+}
+
+define void @foo_zero_iterations(float* %A) {
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb6, %bb
+  %i.0 = phi i64 [ 0, %bb ], [ %tmp7, %bb6 ]
+  %exitcond = icmp ne i64 %i.0, 0
+  br i1 %exitcond, label %bb2, label %bb8
+
+bb2:                                              ; preds = %bb1
+  %tmp = sitofp i64 %i.0 to float
+  %tmp3 = getelementptr inbounds float, float* %A, i64 %i.0
+  %tmp4 = load float, float* %tmp3, align 4
+  %tmp5 = fadd float %tmp4, %tmp
+  store float %tmp5, float* %tmp3, align 4
+  br label %bb6
+
+bb6:                                              ; preds = %bb2
+  %tmp7 = add nuw nsw i64 %i.0, 1
+  br label %bb1
+
+bb8:                                              ; preds = %bb1
   ret void
 }
