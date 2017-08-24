@@ -2787,6 +2787,24 @@ TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
                    "* long */",
                    getLLVMStyleWithColumns(20)));
 }
+
+TEST_F(FormatTestComments, NoCrush_Bug34236) {
+  // This is a test case from a crasher reported in:
+  // https://bugs.llvm.org/show_bug.cgi?id=34236
+  // Temporarily disable formatting for readability.
+  // clang-format off
+  EXPECT_EQ(
+"/*                                                                */ /*\n"
+"                                                                      *       a\n"
+"                                                                      * b c\n"
+"                                                                      * d*/",
+      format(
+"/*                                                                */ /*\n"
+" *       a b\n"
+" *       c     d*/",
+          getLLVMStyleWithColumns(80)));
+  // clang-format on
+}
 } // end namespace
 } // end namespace format
 } // end namespace clang

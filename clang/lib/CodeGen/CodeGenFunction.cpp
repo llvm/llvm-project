@@ -1014,11 +1014,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
     }
 
     // Check the 'this' pointer once per function, if it's available.
-    if (CXXABIThisValue) {
+    if (CXXThisValue) {
       SanitizerSet SkippedChecks;
       SkippedChecks.set(SanitizerKind::ObjectSize, true);
       QualType ThisTy = MD->getThisType(getContext());
-      EmitTypeCheck(TCK_Load, Loc, CXXABIThisValue, ThisTy,
+      EmitTypeCheck(TCK_Load, Loc, CXXThisValue, ThisTy,
                     getContext().getTypeAlignInChars(ThisTy->getPointeeType()),
                     SkippedChecks);
     }
