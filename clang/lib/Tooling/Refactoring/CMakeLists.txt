@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS Support)
 
 add_clang_library(clangToolingRefactoring
+  ASTSelection.cpp
   AtomicChange.cpp
   Rename/RenamingAction.cpp
   Rename/SymbolOccurrences.cpp

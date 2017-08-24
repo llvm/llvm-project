@@ -4860,6 +4860,16 @@
 // RUN:   | FileCheck -match-full-lines -check-prefix NOMIPS-NAN2008 %s
 // NOMIPS-NAN2008-NOT:#define __mips_nan2008 1
 //
+// RUN: %clang_cc1 -target-cpu mips32r3 -target-feature +abs2008 \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ABS2008 %s
+// MIPS-ABS2008:#define __mips_abs2008 1
+//
+// RUN: %clang_cc1 -target-cpu mips32r3 -target-feature -abs2008 \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix NOMIPS-ABS2008 %s
+// NOMIPS-ABS2008-NOT:#define __mips_abs2008 1
+//
 // RUN: %clang_cc1 -target-feature -fp64 \
 // RUN:   -E -dM -triple=mips-none-none < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS32-MFP32 %s

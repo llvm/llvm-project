@@ -149,6 +149,9 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (IsNan2008)
     Builder.defineMacro("__mips_nan2008", Twine(1));
 
+  if (IsAbs2008)
+    Builder.defineMacro("__mips_abs2008", Twine(1));
+
   switch (DspRev) {
   default:
     break;
