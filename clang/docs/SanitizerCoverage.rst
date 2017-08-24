@@ -119,6 +119,51 @@ Example:
   guard: 0x71bcdc 4 PC 0x4ecdc7 in main trace-pc-guard-example.cc:4:17
   guard: 0x71bcd0 1 PC 0x4ecd20 in foo() trace-pc-guard-example.cc:2:14
 
+Inline 8bit-counters
+====================
+
+**Experimental, may change or disappear in future**
+
+With ``-fsanitize-coverage=inline-8bit-counters`` the compiler will insert
+inline counter increments on every edge.
+This is similar to ``-fsanitize-coverage=trace-pc-guard`` but instead of a
+callback the instrumentation simply increments a counter.
+
+Users need to implement a single function to capture the counters at startup.
+
+.. code-block:: c++
+
+  extern "C"
+  void __sanitizer_cov_8bit_counters_init(char *start, char *end) {
+    // [start,end) is the array of 8-bit counters created for the current DSO.
+    // Capture this array in order to read/modify the counters.
+  }
+
+PC-Table
+========
+
+**Experimental, may change or disappear in future**
+
+With ``-fsanitize-coverage=pc-table`` the compiler will create a table of
+instrumented PCs. Requires either ``-fsanitize-coverage=inline-8bit-counters`` or
+``-fsanitize-coverage=trace-pc-guard``.
+
+Users need to implement a single function to capture the counters at startup:
+
+.. code-block:: c++
+
+  extern "C"
+  void __sanitizer_cov_pcs_init(const uint8_t *pcs_beg,
+                                const uint8_t *pcs_end) {
+    // [pcs_beg,pcs_end) is the array of ptr-sized integers representing
+    // PCs of the instrumented blocks in the current DSO.
+    // Capture this array in order to read the PCs.
+    // The number of PCs for a given DSO is the same as the number of
+    // 8-bit counters (-fsanitize-coverage=inline-8bit-counters) or
+    // trace_pc_guard callbacks (-fsanitize-coverage=trace-pc-guard)
+  }
+
+
 Tracing PCs
 ===========
 
@@ -130,7 +175,6 @@ These callbacks are not implemented in the Sanitizer run-time and should be defi
 by the user.
 This mechanism is used for fuzzing the Linux kernel
 (https://github.com/google/syzkaller).
-
 
 Instrumentation points
 ======================
