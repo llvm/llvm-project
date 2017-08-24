@@ -181,6 +181,23 @@
     ret i32* @g_int
   }
   
+  define i8 @test_undef() {
+    ret i8 undef
+  }
+
+  define i8 @test_undef2(i8 %a) {
+    %r = add i8 %a, undef
+    ret i8 %r
+  }
+
+  define float @test_undef3() {
+    ret float undef
+  }
+
+  define float @test_undef4(float %a) {
+    %r = fadd float %a, undef
+    ret float %r
+  }  
 ...
 ---
 name:            test_add_i8
@@ -1109,6 +1126,124 @@ body:             |
     %0(p0) = G_GLOBAL_VALUE @g_int
     %rax = COPY %0(p0)
     RET 0, implicit %rax
+
+...
+---
+name:            test_undef
+# CHECK-LABEL: name:  test_undef
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# CHECK:           %0(s8) = G_IMPLICIT_DEF
+# CHECK-NEXT:      %al = COPY %0(s8)
+# CHECK-NEXT:      RET 0, implicit %al
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s8) = G_IMPLICIT_DEF
+    %al = COPY %0(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            test_undef2
+# CHECK-LABEL: name:  test_undef2
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 2, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# CHECK:           %0(s8) = COPY %edi
+# CHECK-NEXT:      %1(s8) = G_IMPLICIT_DEF
+# CHECK-NEXT:      %2(s8) = G_ADD %0, %1
+# CHECK-NEXT:      %al = COPY %2(s8)
+# CHECK-NEXT:      RET 0, implicit %al
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s8) = COPY %edi
+    %1(s8) = G_IMPLICIT_DEF
+    %2(s8) = G_ADD %0, %1
+    %al = COPY %2(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            test_undef3
+# CHECK-LABEL: name:  test_undef3
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# CHECK:           %0(s32) = G_IMPLICIT_DEF
+# CHECK-NEXT:      %xmm0 = COPY %0(s32)
+# CHECK-NEXT:      RET 0, implicit %xmm0
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = G_IMPLICIT_DEF
+    %xmm0 = COPY %0(s32)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_undef4
+# CHECK-LABEL: name:  test_undef4
+alignment:       4
+legalized:       true
+regBankSelected: false
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 2, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 3, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# CHECK:           %0(s32) = COPY %xmm0
+# CHECK-NEXT:      %1(s32) = G_IMPLICIT_DEF
+# CHECK-NEXT:      %3(s32) = COPY %1(s32)
+# CHECK-NEXT:      %2(s32) = G_FADD %0, %3
+# CHECK-NEXT:      %xmm0 = COPY %2(s32)
+# CHECK-NEXT:      RET 0, implicit %xmm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %xmm0
+
+    %0(s32) = COPY %xmm0
+    %1(s32) = G_IMPLICIT_DEF
+    %2(s32) = G_FADD %0, %1
+    %xmm0 = COPY %2(s32)
+    RET 0, implicit %xmm0
 
 ...
 
