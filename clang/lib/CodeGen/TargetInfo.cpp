@@ -22,6 +22,7 @@
 #include "clang/CodeGen/SwiftCallingConv.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Type.h"
@@ -870,7 +871,10 @@ bool IsX86_MMXType(llvm::Type *IRType) {
 static llvm::Type* X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
                                           StringRef Constraint,
                                           llvm::Type* Ty) {
-  if ((Constraint == "y" || Constraint == "&y") && Ty->isVectorTy()) {
+  bool IsMMXCons = llvm::StringSwitch<bool>(Constraint)
+                     .Cases("y", "&y", "^Ym", true)
+                     .Default(false);
+  if (IsMMXCons && Ty->isVectorTy()) {
     if (cast<llvm::VectorType>(Ty)->getBitWidth() != 64) {
       // Invalid MMX constraint
       return nullptr;

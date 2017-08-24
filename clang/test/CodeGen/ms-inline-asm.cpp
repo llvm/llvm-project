@@ -130,7 +130,7 @@ void t7_struct() {
   __asm mov eax, [eax].A.b
   // CHECK-LABEL: define void @_Z9t7_structv
   // CHECK: call void asm sideeffect inteldialect
-  // CHECK-SAME: mov eax, [eax].4
+  // CHECK-SAME: mov eax, [eax + $$4]
   // CHECK-SAME: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
@@ -142,7 +142,7 @@ void t7_typedef() {
   __asm mov eax, [eax].A.b
   // CHECK-LABEL: define void @_Z10t7_typedefv
   // CHECK: call void asm sideeffect inteldialect
-  // CHECK-SAME: mov eax, [eax].4
+  // CHECK-SAME: mov eax, [eax + $$4]
   // CHECK-SAME: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
@@ -154,7 +154,7 @@ void t7_using() {
   __asm mov eax, [eax].A.b
   // CHECK-LABEL: define void @_Z8t7_usingv
   // CHECK: call void asm sideeffect inteldialect
-  // CHECK-SAME: mov eax, [eax].4
+  // CHECK-SAME: mov eax, [eax + $$4]
   // CHECK-SAME: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
@@ -188,7 +188,7 @@ void t9() {
     void g() {
       __asm mov eax, dword ptr [eax]this.b
       // CHECK: call void asm sideeffect inteldialect
-      // CHECK-SAME: mov eax, dword ptr [eax].4
+      // CHECK-SAME: mov eax, dword ptr [eax + $$4]
       // CHECK-SAME: "~{eax},~{dirflag},~{fpsr},~{flags}"()
     }
   };

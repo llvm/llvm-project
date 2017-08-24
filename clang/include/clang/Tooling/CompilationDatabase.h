@@ -104,7 +104,7 @@ public:
   /// \brief Returns all compile commands in which the specified file was
   /// compiled.
   ///
-  /// This includes compile comamnds that span multiple source files.
+  /// This includes compile commands that span multiple source files.
   /// For example, consider a project with the following compilations:
   /// $ clang++ -o test a.cc b.cc t.cc
   /// $ clang++ -o production a.cc b.cc -DPRODUCTION

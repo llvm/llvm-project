@@ -23,7 +23,7 @@
 //    NON_CANONICAL_TYPE(Class, Base) - A type that can show up
 //    anywhere in the AST but will never be a part of a canonical
 //    type. Clients that only need to deal with canonical types
-//    (ignoring, e.g., typedefs and other type alises used for
+//    (ignoring, e.g., typedefs and other type aliases used for
 //    pretty-printing) can ignore these types.
 //
 //    DEPENDENT_TYPE(Class, Base) - A type that will only show up

@@ -2027,7 +2027,10 @@ public:
 
   /// \brief Returns the type of the \c this pointer.
   ///
-  /// Should only be called for instance (i.e., non-static) methods.
+  /// Should only be called for instance (i.e., non-static) methods. Note
+  /// that for the call operator of a lambda closure type, this returns the
+  /// desugared 'this' type (a pointer to the closure type), not the captured
+  /// 'this' type.
   QualType getThisType(ASTContext &C) const;
 
   unsigned getTypeQualifiers() const {
