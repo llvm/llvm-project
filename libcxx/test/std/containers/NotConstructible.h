@@ -29,8 +29,10 @@ namespace std
 
 template <>
 struct hash<NotConstructible>
-    : public std::unary_function<NotConstructible, std::size_t>
 {
+    typedef NotConstructible argument_type;
+    typedef std::size_t result_type;
+
     std::size_t operator()(const NotConstructible&) const {return 0;}
 };
 

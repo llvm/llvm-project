@@ -1,10 +1,10 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-// RUN: ld.lld -O2 %t.o -o %t.so -shared
+// RUN: ld.lld -O 2 %t.o -o %t.so -shared
 // RUN: llvm-readobj -s -section-data -t %t.so | FileCheck %s
-// RUN: ld.lld -O1 %t.o -o %t.so -shared
+// RUN: ld.lld -O 1 %t.o -o %t.so -shared
 // RUN: llvm-readobj -s -section-data -t %t.so | FileCheck --check-prefix=NOTAIL %s
-// RUN: ld.lld -O0 %t.o -o %t.so -shared
+// RUN: ld.lld -O 0 %t.o -o %t.so -shared
 // RUN: llvm-readobj -s -section-data -t %t.so | FileCheck --check-prefix=NOMERGE %s
 
         .section	.rodata1,"aMS",@progbits,1

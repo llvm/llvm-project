@@ -1,4 +1,4 @@
-//===------ IslNodeBuilder.cpp - Translate an isl AST into a LLVM-IR AST---===//
+//=- IslNodeBuilder.cpp - Translate an isl AST into a LLVM-IR AST -*- C++ -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,29 +6,57 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 // This file contains the IslNodeBuilder, a class to translate an isl AST into
 // a LLVM-IR AST.
+//
 //===----------------------------------------------------------------------===//
 
-#ifndef POLLY_ISL_NODE_BUILDER_H
-#define POLLY_ISL_NODE_BUILDER_H
+#ifndef POLLY_ISLNODEBUILDER_H
+#define POLLY_ISLNODEBUILDER_H
 
 #include "polly/CodeGen/BlockGenerators.h"
 #include "polly/CodeGen/IslExprBuilder.h"
-#include "polly/CodeGen/LoopGenerators.h"
-#include "polly/ScopInfo.h"
+#include "polly/ScopDetectionDiagnostic.h"
+#include "polly/Support/ScopHelper.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/InstrTypes.h"
 #include "isl/ctx.h"
 #include "isl/isl-noexceptions.h"
-#include "isl/union_map.h"
 #include <utility>
 #include <vector>
 
-using namespace polly;
 using namespace llvm;
+using namespace polly;
+
+namespace llvm {
+
+class BasicBlock;
+class DataLayout;
+class DominatorTree;
+class Function;
+class Instruction;
+class Loop;
+class LoopInfo;
+class ScalarEvolution;
+class SCEV;
+class Type;
+class Value;
+
+} // namespace llvm
+
+namespace polly {
+
+struct InvariantEquivClassTy;
+class MemoryAccess;
+class Scop;
+class ScopStmt;
+
+} // namespace polly
 
 struct isl_ast_node;
 struct isl_ast_build;
@@ -180,7 +208,7 @@ protected:
   /// points to and the resulting value is returned.
   ///
   /// @param Expr The expression to code generate.
-  llvm::Value *generateSCEV(const SCEV *Expr);
+  Value *generateSCEV(const SCEV *Expr);
 
   /// A set of Value -> Value remappings to apply when generating new code.
   ///
@@ -286,6 +314,7 @@ protected:
   ///
   /// @param Mark The node we generate code for.
   virtual void createMark(__isl_take isl_ast_node *Marker);
+
   virtual void createFor(__isl_take isl_ast_node *For);
 
   /// Set to remember materialized invariant loads.
@@ -432,4 +461,4 @@ private:
   Value *materializeNonScopLoopInductionVariable(const Loop *L);
 };
 
-#endif // POLLY_ISL_NODE_BUILDER_H
+#endif // POLLY_ISLNODEBUILDER_H

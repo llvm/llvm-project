@@ -601,11 +601,6 @@ void BlockGenerator::generateConditionalExecution(
     const std::function<void()> &GenThenFunc) {
   isl::set StmtDom = Stmt.getDomain();
 
-  // Don't call GenThenFunc if it is never executed. An ast index expression
-  // might not be defined in this case.
-  if (Subdomain.is_empty())
-    return;
-
   // If the condition is a tautology, don't generate a condition around the
   // code.
   bool IsPartialWrite =
@@ -618,6 +613,13 @@ void BlockGenerator::generateConditionalExecution(
 
   // Generate the condition.
   Value *Cond = buildContainsCondition(Stmt, Subdomain);
+
+  // Don't call GenThenFunc if it is never executed. An ast index expression
+  // might not be defined in this case.
+  if (auto *Const = dyn_cast<ConstantInt>(Cond))
+    if (Const->isZero())
+      return;
+
   BasicBlock *HeadBlock = Builder.GetInsertBlock();
   StringRef BlockName = HeadBlock->getName();
 

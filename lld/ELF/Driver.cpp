@@ -283,7 +283,7 @@ static int getInteger(opt::InputArgList &Args, unsigned Key, int Default) {
   if (auto *Arg = Args.getLastArg(Key)) {
     StringRef S = Arg->getValue();
     if (!to_integer(S, V, 10))
-      error(Arg->getSpelling() + ": number expected, but got " + S);
+      error(Arg->getSpelling() + ": number expected, but got '" + S + "'");
   }
   return V;
 }
