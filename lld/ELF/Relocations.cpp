@@ -669,10 +669,7 @@ static int64_t computeMipsAddend(const RelTy &Rel, InputSectionBase &Sec,
     if (RI->getSymbol(Config->IsMips64EL) != SymIndex)
       continue;
 
-    endianness E = Config->Endianness;
-    int32_t Hi = (read32(Buf + Rel.r_offset, E) & 0xffff) << 16;
-    int32_t Lo = SignExtend32<16>(read32(Buf + RI->r_offset, E));
-    return Hi + Lo;
+    return Target->getImplicitAddend(Buf + RI->r_offset, PairTy);
   }
 
   warn("can't find matching " + toString(PairTy) + " relocation for " +
