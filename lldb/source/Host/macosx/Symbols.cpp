@@ -361,6 +361,7 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
       // If we see DBGVersion with a value of 2 or higher, this is a new style
       // DBGSourcePathRemapping dictionary
       bool new_style_source_remapping_dictionary = false;
+      bool do_truncate_remapping_names = false;
       std::string original_DBGSourcePath_value = DBGSourcePath;
       cf_str = (CFStringRef)CFDictionaryGetValue((CFDictionaryRef)uuid_dict,
                                                  CFSTR("DBGVersion"));
@@ -371,6 +372,9 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
           int version_number = atoi(version.c_str());
           if (version_number > 1) {
             new_style_source_remapping_dictionary = true;
+          }
+          if (version_number == 2) {
+            do_truncate_remapping_names = true;
           }
         }
       }
@@ -409,9 +413,24 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
               FileSpec resolved_source_path(DBGSourcePath.c_str(), true);
               DBGSourcePath = resolved_source_path.GetPath();
             }
+            // With version 2 of DBGSourcePathRemapping, we can chop off the
+            // last two filename parts from the source remapping and get a
+            // more general source remapping that still works. Add this as
+            // another option in addition to the full source path remap.
             module_spec.GetSourceMappingList().Append(
                 ConstString(DBGBuildSourcePath.c_str()),
                 ConstString(DBGSourcePath.c_str()), true);
+            if (do_truncate_remapping_names) {
+              FileSpec build_path(DBGBuildSourcePath.c_str(), false);
+              FileSpec source_path(DBGSourcePath.c_str(), false);
+              build_path.RemoveLastPathComponent();
+              build_path.RemoveLastPathComponent();
+              source_path.RemoveLastPathComponent();
+              source_path.RemoveLastPathComponent();
+              module_spec.GetSourceMappingList().Append(
+                ConstString(build_path.GetPath().c_str()),
+                ConstString(source_path.GetPath().c_str()), true);
+            }
           }
         }
         if (keys)
