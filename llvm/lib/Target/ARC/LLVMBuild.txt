@@ -1,0 +1,45 @@
+;===- ./lib/Target/ARC/LLVMBuild.txt -------------------------*- Conf -*--===;
+;
+;                     The LLVM Compiler Infrastructure
+;
+; This file is distributed under the University of Illinois Open Source
+; License. See LICENSE.TXT for details.
+;
+;===------------------------------------------------------------------------===;
+;
+; This is an LLVMBuild description file for the components in this subdirectory.
+;
+; For more information on the LLVMBuild system, please see:
+;
+;   http://llvm.org/docs/LLVMBuild.html
+;
+;===------------------------------------------------------------------------===;
+
+[common]
+subdirectories = Disassembler InstPrinter MCTargetDesc TargetInfo
+
+[component_0]
+type = TargetGroup
+name = ARC
+parent = Target
+has_asmprinter = 1
+has_disassembler = 1
+
+[component_1]
+type = Library
+name = ARCCodeGen
+parent = ARC
+required_libraries =
+ Analysis
+ AsmPrinter
+ CodeGen
+ Core
+ MC
+ SelectionDAG
+ Support
+ Target
+ TransformUtils
+ ARCAsmPrinter
+ ARCDesc
+ ARCInfo
+add_to_library_groups = ARC

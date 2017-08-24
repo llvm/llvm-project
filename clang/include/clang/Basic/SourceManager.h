@@ -1520,6 +1520,14 @@ public:
     return LHSLoaded;
   }
 
+  /// Return true if the Point is within Start and End.
+  bool isPointWithin(SourceLocation Location, SourceLocation Start,
+                     SourceLocation End) const {
+    return Location == Start || Location == End ||
+           (isBeforeInTranslationUnit(Start, Location) &&
+            isBeforeInTranslationUnit(Location, End));
+  }
+
   // Iterators over FileInfos.
   typedef llvm::DenseMap<const FileEntry*, SrcMgr::ContentCache*>
       ::const_iterator fileinfo_iterator;

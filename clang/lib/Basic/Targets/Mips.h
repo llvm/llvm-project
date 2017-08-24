@@ -46,6 +46,7 @@ class LLVM_LIBRARY_VISIBILITY MipsTargetInfo : public TargetInfo {
   bool IsMips16;
   bool IsMicromips;
   bool IsNan2008;
+  bool IsAbs2008;
   bool IsSingleFloat;
   bool IsNoABICalls;
   bool CanUseBSDABICalls;
@@ -61,9 +62,9 @@ protected:
 public:
   MipsTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple), IsMips16(false), IsMicromips(false),
-        IsNan2008(false), IsSingleFloat(false), IsNoABICalls(false),
-        CanUseBSDABICalls(false), FloatABI(HardFloat), DspRev(NoDSP),
-        HasMSA(false), DisableMadd4(false), HasFP64(false) {
+        IsNan2008(false), IsAbs2008(false), IsSingleFloat(false),
+        IsNoABICalls(false), CanUseBSDABICalls(false), FloatABI(HardFloat),
+        DspRev(NoDSP), HasMSA(false), DisableMadd4(false), HasFP64(false) {
     TheCXXABI.set(TargetCXXABI::GenericMIPS);
 
     setABI((getTriple().getArch() == llvm::Triple::mips ||
@@ -300,6 +301,7 @@ public:
     IsMips16 = false;
     IsMicromips = false;
     IsNan2008 = isIEEE754_2008Default();
+    IsAbs2008 = isIEEE754_2008Default();
     IsSingleFloat = false;
     FloatABI = HardFloat;
     DspRev = NoDSP;
@@ -330,6 +332,10 @@ public:
         IsNan2008 = true;
       else if (Feature == "-nan2008")
         IsNan2008 = false;
+      else if (Feature == "+abs2008")
+        IsAbs2008 = true;
+      else if (Feature == "-abs2008")
+        IsAbs2008 = false;
       else if (Feature == "+noabicalls")
         IsNoABICalls = true;
     }

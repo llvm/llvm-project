@@ -43,6 +43,14 @@ struct G {
   G(int);
 };
 
+struct H {
+  H(std::vector<int>);
+};
+
+struct I {
+  I(G);
+};
+
 namespace {
 class Foo {};
 } // namespace
@@ -315,6 +323,20 @@ void initialization(int T, Base b) {
   std::unique_ptr<G> PG3 = std::unique_ptr<G>(new G{1, 2});
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
   // CHECK-FIXES: std::unique_ptr<G> PG3 = std::unique_ptr<G>(new G{1, 2});
+
+  std::unique_ptr<H> PH1 = std::unique_ptr<H>(new H({1, 2, 3}));
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<H> PH1 = std::unique_ptr<H>(new H({1, 2, 3}));
+  PH1.reset(new H({1, 2, 3}));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PH1.reset(new H({1, 2, 3}));
+
+  std::unique_ptr<I> PI1 = std::unique_ptr<I>(new I(G({1, 2, 3})));
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<I> PI1 = std::make_unique<I>(G({1, 2, 3}));
+  PI1.reset(new I(G({1, 2, 3})));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PI1 = std::make_unique<I>(G({1, 2, 3}));
 
   std::unique_ptr<Foo> FF = std::unique_ptr<Foo>(new Foo());
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning:
