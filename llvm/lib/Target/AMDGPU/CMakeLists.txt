@@ -53,7 +53,6 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUUnifyDivergentExitNodes.cpp
   AMDGPUUnifyMetadata.cpp
   AMDILCFGStructurizer.cpp
-  AMDGPUConvertAtomicLibCalls.cpp
   AMDGPUOCL12Adapter.cpp
   AMDGPUPrintfRuntimeBinding.cpp
   GCNHazardRecognizer.cpp
