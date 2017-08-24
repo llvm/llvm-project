@@ -113,9 +113,9 @@ public:
   AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len = 0, int64_t val = 0)
     : Kind(kind), Loc(loc), Len(len), Val(val) {}
   AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len, StringRef label)
-    : Kind(kind), Loc(loc), Len(len), Val(0), Label(label) {}
+    : AsmRewrite(kind, loc, len) { Label = label; }
   AsmRewrite(SMLoc loc, unsigned len, IntelExpr exp)
-    : Kind(AOK_IntelExpr), Loc(loc), Len(len), IntelExp(exp) {}
+    : AsmRewrite(AOK_IntelExpr, loc, len) { IntelExp = exp; }
 };
 
 struct ParseInstructionInfo {

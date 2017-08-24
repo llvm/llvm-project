@@ -329,6 +329,10 @@ class InstrItineraryData;
 
     bool isLegalT2ScaledAddressingMode(const AddrMode &AM, EVT VT) const;
 
+    /// \brief Returns true if the addresing mode representing by AM is legal
+    /// for the Thumb1 target, for a load/store of the specified type.
+    bool isLegalT1ScaledAddressingMode(const AddrMode &AM, EVT VT) const;
+
     /// isLegalICmpImmediate - Return true if the specified immediate is legal
     /// icmp immediate, that is the target has icmp instructions which can
     /// compare a register against the immediate without having to materialize

@@ -4895,13 +4895,15 @@ bool AArch64TargetLowering::isOffsetFoldingLegal(
 bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
   // We can materialize #0.0 as fmov $Rd, XZR for 64-bit and 32-bit cases.
   // FIXME: We should be able to handle f128 as well with a clever lowering.
-  if (Imm.isPosZero() && (VT == MVT::f64 || VT == MVT::f32)) {
+  if (Imm.isPosZero() && (VT == MVT::f16 || VT == MVT::f64 || VT == MVT::f32)) {
     DEBUG(dbgs() << "Legal fp imm: materialize 0 using the zero register\n");
     return true;
   }
 
   StringRef FPType;
   bool IsLegal = false;
+  SmallString<128> ImmStrVal;
+  Imm.toString(ImmStrVal);
 
   if (VT == MVT::f64) {
     FPType = "f64";
@@ -4915,14 +4917,14 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
   }
 
   if (IsLegal) {
-    DEBUG(dbgs() << "Is legal " << FPType << " imm value: yes\n");
+    DEBUG(dbgs() << "Legal " << FPType << " imm value: " << ImmStrVal << "\n");
     return true;
   }
 
   if (!FPType.empty())
-    DEBUG(dbgs() << "Is legal " << FPType << " imm value: no\n");
+    DEBUG(dbgs() << "Illegal " << FPType << " imm value: " << ImmStrVal << "\n");
   else
-    DEBUG(dbgs() << "Is legal " << "fp imm: no, unsupported fp type\n");
+    DEBUG(dbgs() << "Illegal fp imm " << ImmStrVal << ": unsupported fp type\n");
 
   return false;
 }
