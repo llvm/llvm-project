@@ -7766,3 +7766,9 @@ void CGOpenMPRuntime::emitOutlinedFunctionCall(
   }
   CGF.EmitRuntimeCall(OutlinedFn, Args);
 }
+
+Address CGOpenMPRuntime::getParameterAddress(CodeGenFunction &CGF,
+                                             const VarDecl *NativeParam,
+                                             const VarDecl *TargetParam) const {
+  return CGF.GetAddrOfLocalVar(NativeParam);
+}
