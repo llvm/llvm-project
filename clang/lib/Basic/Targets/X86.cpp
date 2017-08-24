@@ -1386,7 +1386,9 @@ bool X86TargetInfo::validateAsmConstraint(
     switch (*Name) {
     default:
       return false;
+    case 'z':
     case '0': // First SSE register.
+    case '2':
     case 't': // Any SSE register, when SSE2 is enabled.
     case 'i': // Any SSE register, when SSE2 and inter-unit moves enabled.
     case 'm': // Any MMX register, when inter-unit moves enabled.
@@ -1455,6 +1457,29 @@ bool X86TargetInfo::validateOperandSize(StringRef Constraint,
   case 't':
   case 'u':
     return Size <= 128;
+  case 'Y':
+    // 'Y' is the first character for several 2-character constraints.
+    switch (Constraint[1]) {
+    default:
+      return false;
+    case 'm':
+      // 'Ym' is synonymous with 'y'.
+    case 'k':
+      return Size <= 64;
+    case 'z':
+    case '0':
+      // XMM0
+      if (SSELevel >= SSE1)
+        return Size <= 128U;
+      return false;
+    case 'i':
+    case 't':
+    case '2':
+      // 'Yi','Yt','Y2' are synonymous with 'x' when SSE2 is enabled.
+      if (SSELevel < SSE2)
+        return false;
+      break;
+    }
   case 'v':
   case 'x':
     if (SSELevel >= AVX512F)
@@ -1464,24 +1489,7 @@ bool X86TargetInfo::validateOperandSize(StringRef Constraint,
       // 256-bit ymm registers can be used if target supports AVX.
       return Size <= 256U;
     return Size <= 128U;
-  case 'Y':
-    // 'Y' is the first character for several 2-character constraints.
-    switch (Constraint[1]) {
-    default:
-      break;
-    case 'm':
-      // 'Ym' is synonymous with 'y'.
-    case 'k':
-      return Size <= 64;
-    case 'i':
-    case 't':
-      // 'Yi' and 'Yt' are synonymous with 'x' when SSE2 is enabled.
-      if (SSELevel >= AVX512F)
-        return Size <= 512U;
-      else if (SSELevel >= AVX)
-        return Size <= 256U;
-      return SSELevel >= SSE2 && Size <= 128U;
-    }
+
   }
 
   return true;
@@ -1515,6 +1523,12 @@ std::string X86TargetInfo::convertConstraint(const char *&Constraint) const {
       // the return string.
       break;
     case 'k':
+    case 'm':
+    case 'i':
+    case 't':
+    case 'z':
+    case '0':
+    case '2':
       // "^" hints llvm that this is a 2 letter constraint.
       // "Constraint++" is used to promote the string iterator
       // to the next constraint.

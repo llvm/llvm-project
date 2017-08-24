@@ -3056,6 +3056,11 @@ public:
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
+  /// Determine whether this expression models list-initialization.
+  /// If so, there will be exactly one subexpression, which will be
+  /// an InitListExpr.
+  bool isListInitialization() const { return LParenLoc.isInvalid(); }
+
   /// \brief Retrieve the number of arguments.
   unsigned arg_size() const { return NumArgs; }
 

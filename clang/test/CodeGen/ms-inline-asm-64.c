@@ -34,8 +34,8 @@ int t3() {
 // CHECK: t3
 // CHECK: call void asm sideeffect inteldialect
 // CHECK-SAME: lea ebx, $0
-// CHECK-SAME: mov eax, [ebx].0
-// CHECK-SAME: mov [ebx].4, ecx
+// CHECK-SAME: mov eax, [ebx]
+// CHECK-SAME: mov [ebx + $$4], ecx
 // CHECK-SAME: "*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(%struct.t3_type* %{{.*}})
 }
 
@@ -54,7 +54,7 @@ int t4() {
 // CHECK: t4
 // CHECK: call void asm sideeffect inteldialect
 // CHECK-SAME: lea ebx, $0
-// CHECK-SAME: mov eax, [ebx].0
-// CHECK-SAME: mov [ebx].4, ecx
+// CHECK-SAME: mov eax, [ebx]
+// CHECK-SAME: mov [ebx + $$4], ecx
 // CHECK-SAME: "*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(%struct.t3_type* %{{.*}})
 }
