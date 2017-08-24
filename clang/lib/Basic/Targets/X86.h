@@ -437,9 +437,12 @@ public:
     // In case the constraint is 'r' we need to return Expression
     case 'r':
       return Expression;
+    // Double letters Y<x> constraints
+    case 'Y':
+      if ((++I != E) && ((*I == '0') || (*I == 'z')))
+        return "xmm0";
     default:
-      // Default value if there is no constraint for the register
-      return "";
+      break;
     }
     return "";
   }

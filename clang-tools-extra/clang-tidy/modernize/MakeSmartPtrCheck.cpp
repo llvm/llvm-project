@@ -262,19 +262,31 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     break;
   }
   case CXXNewExpr::CallInit: {
-    // FIXME: Add fixes for constructors with initializer-list parameters.
+    // FIXME: Add fixes for constructors with parameters that can be created
+    // with a C++11 braced-init-list (e.g. std::vector, std::map).
     // Unlike ordinal cases, braced list can not be deduced in
     // std::make_smart_ptr, we need to specify the type explicitly in the fixes:
     //   struct S { S(std::initializer_list<int>, int); };
+    //   struct S2 { S2(std::vector<int>); };
     //   smart_ptr<S>(new S({1, 2, 3}, 1));  // C++98 call-style initialization
     //   smart_ptr<S>(new S({}, 1));
+    //   smart_ptr<S2>(new S2({1})); // implicit conversion:
+    //                               //   std::initializer_list => std::vector
     // The above samples have to be replaced with:
     //   std::make_smart_ptr<S>(std::initializer_list<int>({1, 2, 3}), 1);
     //   std::make_smart_ptr<S>(std::initializer_list<int>({}), 1);
+    //   std::make_smart_ptr<S2>(std::vector<int>({1}));
     if (const auto *CE = New->getConstructExpr()) {
       for (const auto *Arg : CE->arguments()) {
-        if (llvm::isa<CXXStdInitializerListExpr>(Arg)) {
+        if (isa<CXXStdInitializerListExpr>(Arg)) {
           return false;
+        }
+        // Check the implicit conversion from the std::initializer_list type to
+        // a class type.
+        if (const auto *ImplicitCE = dyn_cast<CXXConstructExpr>(Arg)) {
+          if (ImplicitCE->isStdInitListInitialization()) {
+            return false;
+          }
         }
       }
     }

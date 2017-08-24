@@ -2788,20 +2788,22 @@ TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
                    getLLVMStyleWithColumns(20)));
 }
 
-TEST_F(FormatTestComments, NonTrailingBlockComments) {
-  verifyFormat("const /** comment comment */ A = B;",
-               getLLVMStyleWithColumns(40));
-
-  verifyFormat("const /** comment comment comment */ A =\n"
-               "    B;",
-               getLLVMStyleWithColumns(40));
-
-  EXPECT_EQ("const /** comment comment comment\n"
-            "         comment */\n"
-            "    A = B;",
-            format("const /** comment comment comment comment */\n"
-                   "    A = B;",
-                   getLLVMStyleWithColumns(40)));
+TEST_F(FormatTestComments, NoCrush_Bug34236) {
+  // This is a test case from a crasher reported in:
+  // https://bugs.llvm.org/show_bug.cgi?id=34236
+  // Temporarily disable formatting for readability.
+  // clang-format off
+  EXPECT_EQ(
+"/*                                                                */ /*\n"
+"                                                                      *       a\n"
+"                                                                      * b c\n"
+"                                                                      * d*/",
+      format(
+"/*                                                                */ /*\n"
+" *       a b\n"
+" *       c     d*/",
+          getLLVMStyleWithColumns(80)));
+  // clang-format on
 }
 } // end namespace
 } // end namespace format

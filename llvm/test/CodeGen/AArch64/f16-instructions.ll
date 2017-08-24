@@ -934,37 +934,57 @@ define half @test_maxnum(half %a, half %b) #0 {
   ret half %r
 }
 
-; CHECK-COMMON-LABEL: test_copysign:
-; CHECK-COMMON-NEXT: fcvt s1, h1
-; CHECK-COMMON-NEXT: fcvt s0, h0
-; CHECK-COMMON-NEXT: movi.4s v2, #128, lsl #24
-; CHECK-COMMON-NEXT: bit.16b v0, v1, v2
-; CHECK-COMMON-NEXT: fcvt h0, s0
-; CHECK-COMMON-NEXT: ret
+; CHECK-CVT-LABEL: test_copysign:
+; CHECK-CVT-NEXT: fcvt s1, h1
+; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: movi.4s v2, #128, lsl #24
+; CHECK-CVT-NEXT: bit.16b v0, v1, v2
+; CHECK-CVT-NEXT: fcvt h0, s0
+; CHECK-CVT-NEXT: ret
+
+; CHECK-FP16-LABEL: test_copysign:
+; CHECK-FP16-NEXT: movi.8h v2, #128, lsl #8
+; CHECK-FP16-NEXT: bit.16b  v0, v1, v2
+; CHECK-FP16-NEXT: ret
+
 define half @test_copysign(half %a, half %b) #0 {
   %r = call half @llvm.copysign.f16(half %a, half %b)
   ret half %r
 }
 
-; CHECK-COMMON-LABEL: test_copysign_f32:
-; CHECK-COMMON-NEXT: fcvt s0, h0
-; CHECK-COMMON-NEXT: movi.4s v2, #128, lsl #24
-; CHECK-COMMON-NEXT: bit.16b v0, v1, v2
-; CHECK-COMMON-NEXT: fcvt h0, s0
-; CHECK-COMMON-NEXT: ret
+; CHECK-CVT-LABEL: test_copysign_f32:
+; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: movi.4s v2, #128, lsl #24
+; CHECK-CVT-NEXT: bit.16b v0, v1, v2
+; CHECK-CVT-NEXT: fcvt h0, s0
+; CHECK-CVT-NEXT: ret
+
+; CHECK-FP16-LABEL: test_copysign_f32:
+; CHECK-FP16-NEXT: fcvt h1, s1
+; CHECK-FP16-NEXT: movi.8h	v2, #128, lsl #8
+; CHECK-FP16-NEXT: bit.16b v0, v1, v2
+; CHECK-FP16-NEXT: ret
+
 define half @test_copysign_f32(half %a, float %b) #0 {
   %tb = fptrunc float %b to half
   %r = call half @llvm.copysign.f16(half %a, half %tb)
   ret half %r
 }
 
-; CHECK-COMMON-LABEL: test_copysign_f64:
-; CHECK-COMMON-NEXT: fcvt s1, d1
-; CHECK-COMMON-NEXT: fcvt s0, h0
-; CHECK-COMMON-NEXT: movi.4s v2, #128, lsl #24
-; CHECK-COMMON-NEXT: bit.16b v0, v1, v2
-; CHECK-COMMON-NEXT: fcvt h0, s0
-; CHECK-COMMON-NEXT: ret
+; CHECK-CVT-LABEL: test_copysign_f64:
+; CHECK-CVT-NEXT: fcvt s1, d1
+; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: movi.4s v2, #128, lsl #24
+; CHECK-CVT-NEXT: bit.16b v0, v1, v2
+; CHECK-CVT-NEXT: fcvt h0, s0
+; CHECK-CVT-NEXT: ret
+
+; CHECK-FP16-LABEL: test_copysign_f64:
+; CHECK-FP16-NEXT: fcvt h1, d1
+; CHECK-FP16-NEXT: movi.8h v2, #128, lsl #8
+; CHECK-FP16-NEXT: bit.16b v0, v1, v2
+; CHECK-FP16-NEXT: ret
+
 define half @test_copysign_f64(half %a, double %b) #0 {
   %tb = fptrunc double %b to half
   %r = call half @llvm.copysign.f16(half %a, half %tb)
@@ -974,12 +994,19 @@ define half @test_copysign_f64(half %a, double %b) #0 {
 ; Check that the FP promotion will use a truncating FP_ROUND, so we can fold
 ; away the (fpext (fp_round <result>)) here.
 
-; CHECK-COMMON-LABEL: test_copysign_extended:
-; CHECK-COMMON-NEXT: fcvt s1, h1
-; CHECK-COMMON-NEXT: fcvt s0, h0
-; CHECK-COMMON-NEXT: movi.4s v2, #128, lsl #24
-; CHECK-COMMON-NEXT: bit.16b v0, v1, v2
-; CHECK-COMMON-NEXT: ret
+; CHECK-CVT-LABEL: test_copysign_extended:
+; CHECK-CVT-NEXT: fcvt s1, h1
+; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: movi.4s v2, #128, lsl #24
+; CHECK-CVT-NEXT: bit.16b v0, v1, v2
+; CHECK-CVT-NEXT: ret
+
+; CHECK-FP16-LABEL: test_copysign_extended:
+; CHECK-FP16-NEXT: movi.8h v2, #128, lsl #8
+; CHECK-FP16-NEXT: bit.16b v0, v1, v2
+; CHECK-FP16-NEXT: fcvt s0, h0
+; CHECK-FP16-NEXT: ret
+
 define float @test_copysign_extended(half %a, half %b) #0 {
   %r = call half @llvm.copysign.f16(half %a, half %b)
   %xr = fpext half %r to float

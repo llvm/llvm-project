@@ -671,8 +671,8 @@ TEST(TargetParserTest, testAArch64CPU) {
       "cortex-a55", "armv8.2-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
       AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
-      AArch64::AEK_FP16 | AArch64::AEK_DOTPROD | AArch64::AEK_RCPC,
-      "8.2-A"));
+      AArch64::AEK_RDM | AArch64::AEK_FP16 | AArch64::AEK_DOTPROD |
+      AArch64::AEK_RCPC, "8.2-A"));
   EXPECT_TRUE(testAArch64CPU(
       "cortex-a57", "armv8-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
@@ -689,8 +689,8 @@ TEST(TargetParserTest, testAArch64CPU) {
       "cortex-a75", "armv8.2-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
       AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
-      AArch64::AEK_FP16 | AArch64::AEK_DOTPROD | AArch64::AEK_RCPC,
-      "8.2-A"));
+      AArch64::AEK_RDM | AArch64::AEK_FP16 | AArch64::AEK_DOTPROD |
+      AArch64::AEK_RCPC, "8.2-A"));
   EXPECT_TRUE(testAArch64CPU(
       "cyclone", "armv8-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRYPTO | AArch64::AEK_FP | AArch64::AEK_SIMD, "8-A"));
@@ -709,7 +709,7 @@ TEST(TargetParserTest, testAArch64CPU) {
   EXPECT_TRUE(testAArch64CPU(
       "falkor", "armv8-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
-      AArch64::AEK_SIMD, "8-A"));
+      AArch64::AEK_SIMD | AArch64::AEK_RDM, "8-A"));
   EXPECT_TRUE(testAArch64CPU(
       "kryo", "armv8-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
@@ -717,7 +717,7 @@ TEST(TargetParserTest, testAArch64CPU) {
   EXPECT_TRUE(testAArch64CPU(
       "thunderx2t99", "armv8.1-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_LSE |
-      AArch64::AEK_FP | AArch64::AEK_SIMD, "8.1-A"));
+      AArch64::AEK_RDM | AArch64::AEK_FP | AArch64::AEK_SIMD, "8.1-A"));
   EXPECT_TRUE(testAArch64CPU(
       "thunderx", "armv8-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_SIMD |
@@ -785,6 +785,8 @@ TEST(TargetParserTest, testAArch64Extension) {
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("exynos-m1",
                                     AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("falkor",
+                                   AArch64::ArchKind::INVALID, "rdm"));
   EXPECT_FALSE(testAArch64Extension("kryo",
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("thunderx2t99",
@@ -811,7 +813,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   unsigned Extensions = AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
                         AArch64::AEK_FP | AArch64::AEK_SIMD |
                         AArch64::AEK_FP16 | AArch64::AEK_PROFILE |
-                        AArch64::AEK_RAS | AArch64::AEK_SVE |
+                        AArch64::AEK_RAS | AArch64::AEK_LSE |
+                        AArch64::AEK_RDM | AArch64::AEK_SVE |
                         AArch64::AEK_DOTPROD | AArch64::AEK_RCPC;
 
   for (unsigned i = 0; i <= Extensions; i++)
@@ -841,6 +844,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
                               {"fp16", "nofp16", "+fullfp16", "-fullfp16"},
                               {"profile", "noprofile", "+spe", "-spe"},
                               {"ras", "noras", "+ras", "-ras"},
+                              {"lse", "nolse", "+lse", "-lse"},
+                              {"rdm", "nordm", "+rdm", "-rdm"},
                               {"sve", "nosve", "+sve", "-sve"},
                               {"dotprod", "nodotprod", "+dotprod", "-dotprod"},
                               {"rcpc", "norcpc", "+rcpc", "-rcpc" }};

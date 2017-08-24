@@ -1086,9 +1086,6 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
         auto *DIExpr = DIExpression::prepend(MI.getDebugExpression(),
                                              DIExpression::NoDeref, Offset);
         MI.getOperand(3).setMetadata(DIExpr);
-        const Module *M = Fn.getMMI().getModule();
-        // Add the expression to the metadata graph so isn't lost in MIR dumps.
-        M->getNamedMetadata("llvm.dbg.mir")->addOperand(DIExpr);
         continue;
       }
 

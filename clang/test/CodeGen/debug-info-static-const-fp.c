@@ -33,20 +33,17 @@ int main() {
   return hVal + fVal + dVal + ldVal;
 }
 
-// CHECK: !DIGlobalVariableExpression(var: [[HVAL:.*]], expr: [[HEXPR:.*]])
+// CHECK: !DIGlobalVariableExpression(var: [[HVAL:.*]], expr: !DIExpression(DW_OP_constu, 16502, DW_OP_stack_value))
 // CHECK: [[HVAL]] = distinct !DIGlobalVariable(name: "hVal",
 // CHECK-SAME:                                  isLocal: true, isDefinition: true
-// CHECK: [[HEXPR]] = !DIExpression(DW_OP_constu, 16502, DW_OP_stack_value)
 
-// CHECK: !DIGlobalVariableExpression(var: [[FVAL:.*]], expr: [[FEXPR:.*]])
+// CHECK: !DIGlobalVariableExpression(var: [[FVAL:.*]], expr: !DIExpression(DW_OP_constu, 3238681178, DW_OP_stack_value))
 // CHECK: [[FVAL]] = distinct !DIGlobalVariable(name: "fVal",
 // CHECK-SAME:                                  isLocal: true, isDefinition: true
-// CHECK: [[FEXPR]] = !DIExpression(DW_OP_constu, 3238681178, DW_OP_stack_value)
 
-// CHECK: !DIGlobalVariableExpression(var: [[DVAL:.*]], expr: [[DEXPR:.*]])
+// CHECK: !DIGlobalVariableExpression(var: [[DVAL:.*]], expr: !DIExpression(DW_OP_constu, 4658387303597904457, DW_OP_stack_value))
 // CHECK: [[DVAL]] = distinct !DIGlobalVariable(name: "dVal",
 // CHECK-SAME:                                  isLocal: true, isDefinition: true
-// CHECK: [[DEXPR]] = !DIExpression(DW_OP_constu, 4658387303597904457, DW_OP_stack_value)
 
 // CHECK-LDlg-DAG: [[LDVAL:.*]] = distinct !DIGlobalVariable(name: "ldVal", {{.*}}, isLocal: true, isDefinition: true)
 // CHECK-LDlg-DAG: !DIGlobalVariableExpression(var: [[LDVAL]])

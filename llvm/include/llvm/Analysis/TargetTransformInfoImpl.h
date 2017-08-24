@@ -340,6 +340,29 @@ public:
 
   unsigned getCacheLineSize() { return 0; }
 
+  llvm::Optional<unsigned> getCacheSize(TargetTransformInfo::CacheLevel Level) {
+    switch (Level) {
+    case TargetTransformInfo::CacheLevel::L1D:
+      LLVM_FALLTHROUGH;
+    case TargetTransformInfo::CacheLevel::L2D:
+      return llvm::Optional<unsigned>();
+    }
+
+    llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
+  }
+
+  llvm::Optional<unsigned> getCacheAssociativity(
+    TargetTransformInfo::CacheLevel Level) {
+    switch (Level) {
+    case TargetTransformInfo::CacheLevel::L1D:
+      LLVM_FALLTHROUGH;
+    case TargetTransformInfo::CacheLevel::L2D:
+      return llvm::Optional<unsigned>();
+    }
+
+    llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
+  }
+
   unsigned getPrefetchDistance() { return 0; }
 
   unsigned getMinPrefetchStride() { return 1; }

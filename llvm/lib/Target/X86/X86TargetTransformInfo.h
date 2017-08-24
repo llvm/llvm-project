@@ -47,6 +47,14 @@ public:
 
   /// @}
 
+  /// \name Cache TTI Implementation
+  /// @{
+  llvm::Optional<unsigned> getCacheSize(
+    TargetTransformInfo::CacheLevel Level) const;
+  llvm::Optional<unsigned> getCacheAssociativity(
+    TargetTransformInfo::CacheLevel Level) const;
+  /// @}
+
   /// \name Vector TTI Implementations
   /// @{
 

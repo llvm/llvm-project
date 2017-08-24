@@ -221,6 +221,31 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NANLEGACY %s
 // CHECK-NANLEGACY: "-target-feature" "-nan2008"
 //
+// -mabs=2008 on pre R2
+// RUN: %clang -target mips-linux-gnu -march=mips32 -### -c %s \
+// RUN:     -mabs=2008 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-ABSLEGACY %s
+//
+// -mabs=2008
+// RUN: %clang -target mips-linux-gnu -march=mips32r3 -### -c %s \
+// RUN:     -mabs=2008 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-ABS2008 %s
+//
+// -mabs=legacy
+// RUN: %clang -target mips-linux-gnu -march=mips32r3 -### -c %s \
+// RUN:     -mabs=legacy 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-ABSLEGACY %s
+//
+// -mabs=legacy on R6
+// RUN: %clang -target mips-linux-gnu -march=mips32r6 -### -c %s \
+// RUN:     -mabs=legacy 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-ABS2008 %s
+//
+// CHECK-ABSLEGACY: "-target-feature" "-abs2008"
+// CHECK-ABSLEGACY-NOT: "-target-feature" "+abs2008"
+// CHECK-ABS2008: "-target-feature" "+abs2008"
+// CHECK-ABS2008-NOT: "-target-feature" "-abs2008"
+//
 // -mcompact-branches=never
 // RUN: %clang -target mips-linux-gnu -march=mips32r6 -### -c %s \
 // RUN:     -mcompact-branches=never 2>&1 \

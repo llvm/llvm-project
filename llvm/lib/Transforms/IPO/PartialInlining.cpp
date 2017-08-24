@@ -845,7 +845,7 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
 
   // The call sequence to the outlined function is larger than the original
   // outlined region size, it does not increase the chances of inlining
-  // the function with outlining (The inliner usies the size increase to
+  // the function with outlining (The inliner uses the size increase to
   // model the cost of inlining a callee).
   if (!SkipCostAnalysis && Cloner.OutlinedRegionCost < SizeCost) {
     OptimizationRemarkEmitter ORE(Cloner.OrigFunc);

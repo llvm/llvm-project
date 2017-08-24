@@ -203,7 +203,16 @@ WasmObjectFile::WasmObjectFile(MemoryBufferRef Buffer, Error &Err)
                                   object_error::parse_failed);
     return;
   }
+
+  const uint8_t *Eof = getPtr(getData().size());
   const uint8_t *Ptr = getPtr(4);
+
+  if (Ptr + 4 > Eof) {
+    Err = make_error<StringError>("Missing version number",
+                                  object_error::parse_failed);
+    return;
+  }
+
   Header.Version = readUint32(Ptr);
   if (Header.Version != wasm::WasmVersion) {
     Err = make_error<StringError>("Bad version number",
@@ -211,7 +220,6 @@ WasmObjectFile::WasmObjectFile(MemoryBufferRef Buffer, Error &Err)
     return;
   }
 
-  const uint8_t *Eof = getPtr(getData().size());
   WasmSection Sec;
   while (Ptr < Eof) {
     if ((Err = readSection(Sec, Ptr, getPtr(0))))

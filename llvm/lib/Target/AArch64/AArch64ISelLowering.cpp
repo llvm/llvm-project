@@ -321,6 +321,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FPOW, MVT::f64, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::f64, Custom);
   setOperationAction(ISD::FCOPYSIGN, MVT::f32, Custom);
+  if (Subtarget->hasFullFP16())
+    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Custom);
+  else
+    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Promote);
 
   setOperationAction(ISD::FREM,        MVT::f16,  Promote);
   setOperationAction(ISD::FPOW,        MVT::f16,  Promote);
@@ -333,7 +337,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FLOG,        MVT::f16,  Promote);
   setOperationAction(ISD::FLOG2,       MVT::f16,  Promote);
   setOperationAction(ISD::FLOG10,      MVT::f16,  Promote);
-  setOperationAction(ISD::FCOPYSIGN,   MVT::f16,  Promote);
 
   if (!Subtarget->hasFullFP16()) {
     setOperationAction(ISD::SELECT,      MVT::f16,  Promote);
@@ -344,13 +347,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSUB,        MVT::f16,  Promote);
     setOperationAction(ISD::FMUL,        MVT::f16,  Promote);
     setOperationAction(ISD::FDIV,        MVT::f16,  Promote);
-    setOperationAction(ISD::FREM,        MVT::f16,  Promote);
     setOperationAction(ISD::FMA,         MVT::f16,  Promote);
     setOperationAction(ISD::FNEG,        MVT::f16,  Promote);
     setOperationAction(ISD::FABS,        MVT::f16,  Promote);
     setOperationAction(ISD::FCEIL,       MVT::f16,  Promote);
     setOperationAction(ISD::FSQRT,       MVT::f16,  Promote);
-    setOperationAction(ISD::FCOS,        MVT::f16,  Promote);
     setOperationAction(ISD::FFLOOR,      MVT::f16,  Promote);
     setOperationAction(ISD::FNEARBYINT,  MVT::f16,  Promote);
     setOperationAction(ISD::FRINT,       MVT::f16,  Promote);
@@ -4086,25 +4087,26 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
     In2 = DAG.getNode(ISD::FP_ROUND, DL, VT, In2, DAG.getIntPtrConstant(0, DL));
 
   EVT VecVT;
-  EVT EltVT;
   uint64_t EltMask;
   SDValue VecVal1, VecVal2;
-  if (VT == MVT::f32 || VT == MVT::v2f32 || VT == MVT::v4f32) {
-    EltVT = MVT::i32;
-    VecVT = (VT == MVT::v2f32 ? MVT::v2i32 : MVT::v4i32);
-    EltMask = 0x80000000ULL;
 
+  auto setVecVal = [&] (int Idx) {
     if (!VT.isVector()) {
-      VecVal1 = DAG.getTargetInsertSubreg(AArch64::ssub, DL, VecVT,
+      VecVal1 = DAG.getTargetInsertSubreg(Idx, DL, VecVT,
                                           DAG.getUNDEF(VecVT), In1);
-      VecVal2 = DAG.getTargetInsertSubreg(AArch64::ssub, DL, VecVT,
+      VecVal2 = DAG.getTargetInsertSubreg(Idx, DL, VecVT,
                                           DAG.getUNDEF(VecVT), In2);
     } else {
       VecVal1 = DAG.getNode(ISD::BITCAST, DL, VecVT, In1);
       VecVal2 = DAG.getNode(ISD::BITCAST, DL, VecVT, In2);
     }
+  };
+
+  if (VT == MVT::f32 || VT == MVT::v2f32 || VT == MVT::v4f32) {
+    VecVT = (VT == MVT::v2f32 ? MVT::v2i32 : MVT::v4i32);
+    EltMask = 0x80000000ULL;
+    setVecVal(AArch64::ssub);
   } else if (VT == MVT::f64 || VT == MVT::v2f64) {
-    EltVT = MVT::i64;
     VecVT = MVT::v2i64;
 
     // We want to materialize a mask with the high bit set, but the AdvSIMD
@@ -4112,15 +4114,11 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
     // 64-bit elements. Instead, materialize zero and then negate it.
     EltMask = 0;
 
-    if (!VT.isVector()) {
-      VecVal1 = DAG.getTargetInsertSubreg(AArch64::dsub, DL, VecVT,
-                                          DAG.getUNDEF(VecVT), In1);
-      VecVal2 = DAG.getTargetInsertSubreg(AArch64::dsub, DL, VecVT,
-                                          DAG.getUNDEF(VecVT), In2);
-    } else {
-      VecVal1 = DAG.getNode(ISD::BITCAST, DL, VecVT, In1);
-      VecVal2 = DAG.getNode(ISD::BITCAST, DL, VecVT, In2);
-    }
+    setVecVal(AArch64::dsub);
+  } else if (VT == MVT::f16 || VT == MVT::v4f16 || VT == MVT::v8f16) {
+    VecVT = (VT == MVT::v4f16 ? MVT::v4i16 : MVT::v8i16);
+    EltMask = 0x8000ULL;
+    setVecVal(AArch64::hsub);
   } else {
     llvm_unreachable("Invalid type for copysign!");
   }
@@ -4138,6 +4136,8 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
   SDValue Sel =
       DAG.getNode(AArch64ISD::BIT, DL, VecVT, VecVal1, VecVal2, BuildVec);
 
+  if (VT == MVT::f16)
+    return DAG.getTargetExtractSubreg(AArch64::hsub, DL, VT, Sel);
   if (VT == MVT::f32)
     return DAG.getTargetExtractSubreg(AArch64::ssub, DL, VT, Sel);
   else if (VT == MVT::f64)
@@ -4895,13 +4895,15 @@ bool AArch64TargetLowering::isOffsetFoldingLegal(
 bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
   // We can materialize #0.0 as fmov $Rd, XZR for 64-bit and 32-bit cases.
   // FIXME: We should be able to handle f128 as well with a clever lowering.
-  if (Imm.isPosZero() && (VT == MVT::f64 || VT == MVT::f32)) {
+  if (Imm.isPosZero() && (VT == MVT::f16 || VT == MVT::f64 || VT == MVT::f32)) {
     DEBUG(dbgs() << "Legal fp imm: materialize 0 using the zero register\n");
     return true;
   }
 
   StringRef FPType;
   bool IsLegal = false;
+  SmallString<128> ImmStrVal;
+  Imm.toString(ImmStrVal);
 
   if (VT == MVT::f64) {
     FPType = "f64";
@@ -4915,14 +4917,14 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
   }
 
   if (IsLegal) {
-    DEBUG(dbgs() << "Is legal " << FPType << " imm value: yes\n");
+    DEBUG(dbgs() << "Legal " << FPType << " imm value: " << ImmStrVal << "\n");
     return true;
   }
 
   if (!FPType.empty())
-    DEBUG(dbgs() << "Is legal " << FPType << " imm value: no\n");
+    DEBUG(dbgs() << "Illegal " << FPType << " imm value: " << ImmStrVal << "\n");
   else
-    DEBUG(dbgs() << "Is legal " << "fp imm: no, unsupported fp type\n");
+    DEBUG(dbgs() << "Illegal fp imm " << ImmStrVal << ": unsupported fp type\n");
 
   return false;
 }

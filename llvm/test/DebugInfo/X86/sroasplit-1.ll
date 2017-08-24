@@ -21,13 +21,11 @@
 
 ; Verify that SROA creates a variable piece when splitting i1.
 ; CHECK: %[[I1:.*]] = alloca [12 x i8], align 4
-; CHECK: call void @llvm.dbg.declare(metadata [12 x i8]* %[[I1]], metadata ![[VAR:[0-9]+]], metadata ![[PIECE1:[0-9]+]])
-; CHECK: call void @llvm.dbg.value(metadata i32 %[[A:.*]], metadata ![[VAR]], metadata ![[PIECE2:[0-9]+]])
+; CHECK: call void @llvm.dbg.declare(metadata [12 x i8]* %[[I1]], metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 96))
+; CHECK: call void @llvm.dbg.value(metadata i32 %[[A:.*]], metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32))
 ; CHECK: ret i32 %[[A]]
 ; Read Var and Piece:
 ; CHECK: ![[VAR]] = !DILocalVariable(name: "i1",{{.*}} line: 11,
-; CHECK: ![[PIECE1]] = !DIExpression(DW_OP_LLVM_fragment, 32, 96)
-; CHECK: ![[PIECE2]] = !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"

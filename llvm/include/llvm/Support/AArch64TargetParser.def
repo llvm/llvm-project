@@ -24,16 +24,17 @@ AARCH64_ARCH("armv8-a", ARMV8A, "8-A", "v8", ARMBuildAttrs::CPUArch::v8_A,
 AARCH64_ARCH("armv8.1-a", ARMV8_1A, "8.1-A", "v8.1a",
              ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
-              AArch64::AEK_SIMD | AArch64::AEK_LSE))
+              AArch64::AEK_SIMD | AArch64::AEK_LSE | AArch64::AEK_RDM))
 AARCH64_ARCH("armv8.2-a", ARMV8_2A, "8.2-A", "v8.2a",
              ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
-              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE))
+              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+              AArch64::AEK_RDM))
 AARCH64_ARCH("armv8.3-a", ARMV8_3A, "8.3-A", "v8.3a",
              ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
-              AArch64::AEK_RCPC))
+              AArch64::AEK_RDM | AArch64::AEK_RCPC))
 #undef AARCH64_ARCH
 
 #ifndef AARCH64_ARCH_EXT_NAME
@@ -44,6 +45,7 @@ AARCH64_ARCH_EXT_NAME("invalid",  AArch64::AEK_INVALID,  nullptr,  nullptr)
 AARCH64_ARCH_EXT_NAME("none",     AArch64::AEK_NONE,     nullptr,  nullptr)
 AARCH64_ARCH_EXT_NAME("crc",      AArch64::AEK_CRC,      "+crc",   "-crc")
 AARCH64_ARCH_EXT_NAME("lse",      AArch64::AEK_LSE,      "+lse",   "-lse")
+AARCH64_ARCH_EXT_NAME("rdm",      AArch64::AEK_RDM,      "+rdm",   "-rdm")
 AARCH64_ARCH_EXT_NAME("crypto",   AArch64::AEK_CRYPTO,   "+crypto","-crypto")
 AARCH64_ARCH_EXT_NAME("dotprod",  AArch64::AEK_DOTPROD,  "+dotprod","-dotprod")
 AARCH64_ARCH_EXT_NAME("fp",       AArch64::AEK_FP,       "+fp-armv8",  "-fp-armv8")
@@ -81,7 +83,7 @@ AARCH64_CPU_NAME("exynos-m2", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
 AARCH64_CPU_NAME("exynos-m3", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("falkor", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_CRC))
+                (AArch64::AEK_CRC | AArch64::AEK_RDM))
 AARCH64_CPU_NAME("kryo", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("thunderx2t99", ARMV8_1A, FK_CRYPTO_NEON_FP_ARMV8, false,

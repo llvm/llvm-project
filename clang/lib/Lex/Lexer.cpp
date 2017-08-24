@@ -3073,6 +3073,8 @@ LexNextToken:
       
   case '\n':
   case '\r':
+    if (CurPtr[0] != Char && (CurPtr[0] == '\n' || CurPtr[0] == '\r'))
+      Char = getAndAdvanceChar(CurPtr, Result);
     // If we are inside a preprocessor directive and we see the end of line,
     // we know we are done with the directive, so return an EOD token.
     if (ParsingPreprocessorDirective) {

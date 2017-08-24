@@ -11,9 +11,8 @@ entry:
 ; Checks that SROA still inserts a bit_piece expression, even if it produces only one piece
 ; (as long as that piece is smaller than the whole thing)
 ; CHECK-NOT: call void @llvm.dbg.value
-; CHECK: call void @llvm.dbg.value(metadata %foo* undef, {{.*}}, metadata ![[BIT_PIECE:[0-9]+]]), !dbg
+; CHECK: call void @llvm.dbg.value(metadata %foo* undef, {{.*}}, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg
 ; CHECK-NOT: call void @llvm.dbg.value
-; CHECK: ![[BIT_PIECE]] = !DIExpression(DW_OP_LLVM_fragment, 64, 64)
   %0 = bitcast %foo* %retval to i8*
   %1 = getelementptr inbounds i8, i8* %0, i64 8
   %2 = bitcast i8* %1 to %foo**
