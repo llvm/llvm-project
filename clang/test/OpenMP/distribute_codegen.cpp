@@ -34,7 +34,7 @@ void without_schedule_clause(float *a, float *b, float *c, float *d) {
   }
 }
 
-// CHECK: define {{.*}}void @.omp_outlined.(i32* noalias [[GBL_TIDP:%.+]], i32* noalias [[BND_TID:%.+]], float** dereferenceable({{[0-9]+}}) [[APTR:%.+]], float** dereferenceable({{[0-9]+}}) [[BPTR:%.+]], float** dereferenceable({{[0-9]+}}) [[CPTR:%.+]], float** dereferenceable({{[0-9]+}}) [[DPTR:%.+]])
+// CHECK: define {{.*}}void @{{.+}}(i32* noalias [[GBL_TIDP:%.+]], i32* noalias [[BND_TID:%.+]], float** dereferenceable({{[0-9]+}}) [[APTR:%.+]], float** dereferenceable({{[0-9]+}}) [[BPTR:%.+]], float** dereferenceable({{[0-9]+}}) [[CPTR:%.+]], float** dereferenceable({{[0-9]+}}) [[DPTR:%.+]])
 // CHECK:  [[TID_ADDR:%.+]] = alloca i32*
 // CHECK:  [[IV:%.+iv]] = alloca i32
 // CHECK:  [[LB:%.+lb]] = alloca i32
