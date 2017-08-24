@@ -300,7 +300,11 @@ StringRef sys::detail::getHostCPUNameForBPF() {
   attr.license = (uint64_t)"DUMMY";
 
   int fd = syscall(321 /* __NR_bpf */, 5 /* BPF_PROG_LOAD */, &attr, sizeof(attr));
-  return (fd > 0) ? "v2" : "v1";
+  if (fd >= 0) {
+    close(fd);
+    return "v2";
+  }
+  return "v1";
 #endif
 }
 

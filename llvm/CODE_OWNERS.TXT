@@ -41,7 +41,7 @@ E: andrey.churbanov@intel.com
 D: OpenMP runtime library
 
 N: Greg Clayton
-E: gclayton@apple.com
+E: clayborg@gmail.com
 D: LLDB
 
 N: Sanjoy Das

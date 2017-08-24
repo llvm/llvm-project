@@ -447,12 +447,9 @@ void LiveDebugValues::transferSpillInst(MachineInstr &MI,
       // iterator in our caller.
       unsigned SpillBase;
       int SpillOffset = extractSpillBaseRegAndOffset(MI, SpillBase);
-      const Module *M = MF->getMMI().getModule();
       const MachineInstr *DMI = &VarLocIDs[ID].MI;
       auto *SpillExpr = DIExpression::prepend(
           DMI->getDebugExpression(), DIExpression::NoDeref, SpillOffset);
-      // Add the expression to the metadata graph so isn't lost in MIR dumps.
-      M->getNamedMetadata("llvm.dbg.mir")->addOperand(SpillExpr);
       MachineInstr *SpDMI =
           BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(), true, SpillBase,
                   DMI->getDebugVariable(), SpillExpr);

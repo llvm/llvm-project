@@ -9,11 +9,10 @@
 ;     ++x;
 ;   return x; // check that x is not a constant here.
 ; }
-; CHECK: ![[EXPR:.*]] = !DIExpression(DW_OP_plus_uconst, 4, DW_OP_deref)
 ; CHECK: ![[X:.*]] = !DILocalVariable(name: "x",
 ; CHECK: bb.0.entry:
 ; CHECK:   DBG_VALUE 23, 0, ![[X]],
-; CHECK:   DBG_VALUE %rsp, 0, ![[X]], ![[EXPR]],
+; CHECK:   DBG_VALUE %rsp, 0, ![[X]], !DIExpression(DW_OP_plus_uconst, 4, DW_OP_deref),
 ; CHECK: bb.1.if.then:
 ; CHECK:   DBG_VALUE 43, 0, ![[X]],
 ; CHECK: bb.2.if.end:

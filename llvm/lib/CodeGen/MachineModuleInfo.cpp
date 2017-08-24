@@ -210,8 +210,6 @@ bool MachineModuleInfo::doInitialization(Module &M) {
   DbgInfoAvailable = UsesVAFloatArgument = UsesMorestackAddr = false;
   AddrLabelSymbols = nullptr;
   TheModule = &M;
-  if (getDebugMetadataVersionFromModule(M))
-    M.getOrInsertNamedMetadata("llvm.dbg.mir");
   return false;
 }
 

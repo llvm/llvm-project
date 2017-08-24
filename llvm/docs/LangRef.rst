@@ -10155,7 +10155,7 @@ argument to specify the step of the increment.
 Arguments:
 """"""""""
 The first four arguments are the same as '``llvm.instrprof_increment``'
-instrinsic.
+intrinsic.
 
 The last argument specifies the value of the increment of the counter variable.
 

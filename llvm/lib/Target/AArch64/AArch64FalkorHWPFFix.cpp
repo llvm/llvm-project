@@ -592,7 +592,6 @@ static Optional<LoadInfo> getLoadInfo(const MachineInstr &MI) {
     IsPrePost = true;
     break;
 
-  case AArch64::LDPDi:
   case AArch64::LDPQi:
     DestRegIdx = -1;
     BaseRegIdx = 2;
@@ -600,6 +599,7 @@ static Optional<LoadInfo> getLoadInfo(const MachineInstr &MI) {
     IsPrePost = false;
     break;
 
+  case AArch64::LDPDi:
   case AArch64::LDPSWi:
   case AArch64::LDPSi:
   case AArch64::LDPWi:

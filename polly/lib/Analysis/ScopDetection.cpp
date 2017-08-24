@@ -212,8 +212,6 @@ StringRef polly::PollySkipFnAttr = "polly.skip.fn";
 //===----------------------------------------------------------------------===//
 // Statistics.
 
-STATISTIC(NumTotalLoops, "Number of loops (in- or out of scops, in any "
-                         "function processed by Polly)");
 STATISTIC(NumScopRegions, "Number of scops");
 STATISTIC(NumLoopsInScop, "Number of loops in scops");
 STATISTIC(NumScopsDepthOne, "Number of scops with maximal loop depth 1");
@@ -305,17 +303,6 @@ static bool doesStringMatchAnyRegex(StringRef Str,
 //===----------------------------------------------------------------------===//
 // ScopDetection.
 
-static void countTotalLoops(Loop *L) {
-  NumTotalLoops++;
-  for (Loop *SubLoop : L->getSubLoops())
-    countTotalLoops(SubLoop);
-}
-
-static void countTotalLoops(LoopInfo &LI) {
-  for (Loop *L : LI)
-    countTotalLoops(L);
-}
-
 ScopDetection::ScopDetection(Function &F, const DominatorTree &DT,
                              ScalarEvolution &SE, LoopInfo &LI, RegionInfo &RI,
                              AliasAnalysis &AA, OptimizationRemarkEmitter &ORE)
@@ -338,7 +325,6 @@ ScopDetection::ScopDetection(Function &F, const DominatorTree &DT,
 
   findScops(*TopRegion);
 
-  countTotalLoops(LI);
   NumScopRegions += ValidRegions.size();
 
   // Prune non-profitable regions.
@@ -1238,10 +1224,11 @@ ScopDetection::countBeneficialSubLoops(Loop *L, ScalarEvolution &SE,
 
   int NumLoops = 1;
   int MaxLoopDepth = 1;
-  if (auto *TripCountC = dyn_cast<SCEVConstant>(TripCount))
-    if (TripCountC->getType()->getScalarSizeInBits() <= 64)
-      if (TripCountC->getValue()->getZExtValue() <= MinProfitableTrips)
-        NumLoops -= 1;
+  if (MinProfitableTrips > 0)
+    if (auto *TripCountC = dyn_cast<SCEVConstant>(TripCount))
+      if (TripCountC->getType()->getScalarSizeInBits() <= 64)
+        if (TripCountC->getValue()->getZExtValue() <= MinProfitableTrips)
+          NumLoops -= 1;
 
   for (auto &SubLoop : *L) {
     LoopStats Stats = countBeneficialSubLoops(SubLoop, SE, MinProfitableTrips);

@@ -6,7 +6,7 @@
 define void @f() !dbg !3 {
 entry:
   ; CHECK-NOT: call void @llvm.dbg.value
-  ; CHECK: call void @llvm.dbg.value(metadata i32 42, metadata !8, metadata !9), !dbg !10
+  ; CHECK: call void @llvm.dbg.value(metadata i32 42, metadata !8, metadata !DIExpression())
   call void @llvm.dbg.value(metadata i32 42, i64 0, metadata !8, metadata !9), !dbg !10
   ; CHECK-NOT: call void @llvm.dbg.value
   call void @llvm.dbg.value(metadata i32 0, i64 1, metadata !8, metadata !9), !dbg !10

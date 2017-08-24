@@ -4,7 +4,7 @@
 // CHECK: @_ZN6pr96081xE = global [3 x i8]* null, align 8, !dbg [[X:![0-9]+]]
 
 // CHECK: define void @_ZN7pr147634funcENS_3fooE
-// CHECK: call void @llvm.dbg.declare({{.*}}, metadata ![[F:[0-9]+]], metadata ![[EXPR:[0-9]+]])
+// CHECK: call void @llvm.dbg.declare({{.*}}, metadata ![[F:[0-9]+]], metadata !DIExpression())
 
 // !llvm.dbg.cu pulls in globals and their types first.
 // CHECK-NOT: !DIGlobalVariable(name: "c"
@@ -21,7 +21,6 @@
 
 // CHECK: ![[INCTYPE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "incomplete"
 // CHECK-SAME:                                   DIFlagFwdDecl
-// CHECK: ![[EXPR]] = !DIExpression()
 
 template<typename T> struct Identity {
   typedef T Type;

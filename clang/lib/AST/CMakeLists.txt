@@ -20,6 +20,7 @@ add_clang_library(clangAST
   CommentLexer.cpp
   CommentParser.cpp
   CommentSema.cpp
+  DataCollection.cpp
   Decl.cpp
   DeclarationName.cpp
   DeclBase.cpp

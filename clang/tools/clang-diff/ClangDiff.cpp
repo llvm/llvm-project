@@ -139,13 +139,14 @@ div.code {
 highlightStack = []
 function clearHighlight() {
   while (highlightStack.length) {
-    let [l, r] = highlightStack.pop()
-    document.getElementById(l).style.backgroundColor = 'white'
-    document.getElementById(r).style.backgroundColor = 'white'
+    var [l, r] = highlightStack.pop()
+    document.getElementById(l).style.backgroundColor = 'inherit'
+    if (r[1] != '-')
+      document.getElementById(r).style.backgroundColor = 'inherit'
   }
 }
 function highlight(event) {
-  id = event.target['id']
+  var id = event.target['id']
   doHighlight(id)
 }
 function doHighlight(id) {
@@ -153,20 +154,66 @@ function doHighlight(id) {
   source = document.getElementById(id)
   if (!source.attributes['tid'])
     return
-  tid = source.attributes['tid'].value
-  target = document.getElementById(tid)
-  if (!target || source.parentElement && source.parentElement.classList.contains('code'))
+  var mapped = source
+  while (mapped && mapped.parentElement && mapped.attributes['tid'].value.substr(1) === '-1')
+    mapped = mapped.parentElement
+  var tid = null, target = null
+  if (mapped) {
+    tid = mapped.attributes['tid'].value
+    target = document.getElementById(tid)
+  }
+  if (source.parentElement && source.parentElement.classList.contains('code'))
     return
-  source.style.backgroundColor = target.style.backgroundColor = 'lightgrey'
-  highlightStack.push([id, tid])
+  source.style.backgroundColor = 'lightgrey'
   source.scrollIntoView()
-  target.scrollIntoView()
+  if (target) {
+    if (mapped === source)
+      target.style.backgroundColor = 'lightgrey'
+    target.scrollIntoView()
+  }
+  highlightStack.push([id, tid])
   location.hash = '#' + id
 }
 function scrollToBoth() {
   doHighlight(location.hash.substr(1))
 }
+function changed(elem) {
+  return elem.classList.length == 0
+}
+function nextChangedNode(prefix, increment, number) {
+  do {
+    number += increment
+    var elem = document.getElementById(prefix + number)
+  } while(elem && !changed(elem))
+  return elem ? number : null
+}
+function handleKey(e) {
+  var down = e.code === "KeyJ"
+  var up = e.code === "KeyK"
+  if (!down && !up)
+    return
+  var id = highlightStack[0] ? highlightStack[0][0] : 'R0'
+  var oldelem = document.getElementById(id)
+  var number = parseInt(id.substr(1))
+  var increment = down ? 1 : -1
+  var lastnumber = number
+  var prefix = id[0]
+  do {
+    number = nextChangedNode(prefix, increment, number)
+    var elem = document.getElementById(prefix + number)
+    if (up && elem) {
+      while (elem.parentElement && changed(elem.parentElement))
+        elem = elem.parentElement
+      number = elem.id.substr(1)
+    }
+  } while ((down && id !== 'R0' && oldelem.contains(elem)))
+  if (!number)
+    number = lastnumber
+  elem = document.getElementById(prefix + number)
+  doHighlight(prefix + number)
+}
 window.onload = scrollToBoth
+window.onkeydown = handleKey
 </script>
 <body>
 <div onclick='highlight(event)'>

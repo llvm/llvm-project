@@ -256,7 +256,7 @@ class RegisterCommandsTestCase(TestBase):
             self.expect(
                 "register read ftag", substrs=[
                     'ftag' + ' = ', str(
-                        "0x%0.2x" %
+                        "0x%0.4x" %
                         (reg_value_ftag_initial | (
                             1 << fstat_top_pointer_initial)))])
             reg_value_ftag_initial = reg_value_ftag_initial | (

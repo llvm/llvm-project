@@ -481,7 +481,7 @@ def X86fsqrtRnds    : SDNode<"X86ISD::FSQRTS_RND", SDTFPBinOpRound>;
 def X86fgetexpRnd   : SDNode<"X86ISD::FGETEXP_RND", SDTFPUnaryOpRound>;
 def X86fgetexpRnds  : SDNode<"X86ISD::FGETEXPS_RND", SDTFPBinOpRound>;
 
-def X86Fmadd     : SDNode<"X86ISD::FMADD",     SDTFPTernaryOp>;
+// No need for FMADD because we use ISD::FMA.
 def X86Fnmadd    : SDNode<"X86ISD::FNMADD",    SDTFPTernaryOp>;
 def X86Fmsub     : SDNode<"X86ISD::FMSUB",     SDTFPTernaryOp>;
 def X86Fnmsub    : SDNode<"X86ISD::FNMSUB",    SDTFPTernaryOp>;

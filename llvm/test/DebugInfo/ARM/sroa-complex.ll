@@ -20,14 +20,14 @@ entry:
   ; no native double data type available.
   ; Test that debug info for both values survives:
   ; CHECK: call void @llvm.dbg.value(metadata i64 0,
-  ; CHECK-SAME:                      metadata ![[C:.*]], metadata ![[REAL:.*]])
+  ; CHECK-SAME:                      metadata ![[C:[^,]*]],
+  ; CHECK-SAME:                      metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))
   store double 0.000000e+00, double* %c.imagp, align 8, !dbg !17
   ; CHECK: call void @llvm.dbg.value(metadata i64 0,
-  ; CHECK-SAME:                      metadata ![[C]], metadata ![[IMG:.*]])
+  ; CHECK-SAME:                      metadata ![[C]],
+  ; CHECK-SAME:                      metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
   ret void, !dbg !18
 }
-; CHECK: ![[REAL]] = !DIExpression(DW_OP_LLVM_fragment, 0, 64)
-; CHECK: ![[IMG]] = !DIExpression(DW_OP_LLVM_fragment, 64, 64)
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
