@@ -3260,7 +3260,7 @@ void CGDebugInfo::EmitInlineFunctionStart(CGBuilderTy &Builder, GlobalDecl GD) {
   llvm::DISubprogram *SP = nullptr;
   if (FI != SPCache.end())
     SP = dyn_cast_or_null<llvm::DISubprogram>(FI->second);
-  if (!SP)
+  if (!SP || !SP->isDefinition())
     SP = getFunctionStub(GD);
   FnBeginRegionCount.push_back(LexicalBlockStack.size());
   LexicalBlockStack.emplace_back(SP);
