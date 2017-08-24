@@ -237,7 +237,7 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
 bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   const TerminatorInst *TI = BB->getTerminator();
   assert(TI->getNumSuccessors() > 1 && "expected more than one successor!");
-  if (!isa<BranchInst>(TI) && !isa<SwitchInst>(TI))
+  if (!(isa<BranchInst>(TI) || isa<SwitchInst>(TI) || isa<IndirectBrInst>(TI)))
     return false;
 
   MDNode *WeightsNode = TI->getMetadata(LLVMContext::MD_prof);

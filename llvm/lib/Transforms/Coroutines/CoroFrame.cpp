@@ -673,8 +673,8 @@ static bool materializable(Instruction &V) {
 // Check for structural coroutine intrinsics that should not be spilled into
 // the coroutine frame.
 static bool isCoroutineStructureIntrinsic(Instruction &I) {
-  return isa<CoroIdInst>(&I) || isa<CoroBeginInst>(&I) ||
-         isa<CoroSaveInst>(&I) || isa<CoroSuspendInst>(&I);
+  return isa<CoroIdInst>(&I) || isa<CoroSaveInst>(&I) ||
+         isa<CoroSuspendInst>(&I);
 }
 
 // For every use of the value that is across suspend point, recreate that value
@@ -839,7 +839,7 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   for (Instruction &I : instructions(F)) {
     // Values returned from coroutine structure intrinsics should not be part
     // of the Coroutine Frame.
-    if (isCoroutineStructureIntrinsic(I))
+    if (isCoroutineStructureIntrinsic(I) || &I == Shape.CoroBegin)
       continue;
     // The Coroutine Promise always included into coroutine frame, no need to
     // check for suspend crossing.

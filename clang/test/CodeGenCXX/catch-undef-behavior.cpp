@@ -449,6 +449,27 @@ void upcast_to_vbase() {
 }
 }
 
+struct ThisAlign {
+  void this_align_lambda();
+};
+void ThisAlign::this_align_lambda() {
+  // CHECK-LABEL: define {{.*}}@"_ZZN9ThisAlign17this_align_lambdaEvENK3$_0clEv"
+  // CHECK-SAME: (%{{.*}}* %[[this:[^)]*]])
+  // CHECK: %[[this_addr:.*]] = alloca
+  // CHECK: store %{{.*}}* %[[this]], %{{.*}}** %[[this_addr]],
+  // CHECK: %[[this_inner:.*]] = load %{{.*}}*, %{{.*}}** %[[this_addr]],
+  // CHECK: %[[this_outer_addr:.*]] = getelementptr inbounds %{{.*}}, %{{.*}}* %[[this_inner]], i32 0, i32 0
+  // CHECK: %[[this_outer:.*]] = load %{{.*}}*, %{{.*}}** %[[this_outer_addr]],
+  //
+  // CHECK: %[[this_inner_isnonnull:.*]] = icmp ne %{{.*}}* %[[this_inner]], null
+  // CHECK: %[[this_inner_asint:.*]] = ptrtoint %{{.*}}* %[[this_inner]] to i
+  // CHECK: %[[this_inner_misalignment:.*]] = and i{{32|64}} %[[this_inner_asint]], {{3|7}},
+  // CHECK: %[[this_inner_isaligned:.*]] = icmp eq i{{32|64}} %[[this_inner_misalignment]], 0
+  // CHECK: %[[this_inner_valid:.*]] = and i1 %[[this_inner_isnonnull]], %[[this_inner_isaligned]],
+  // CHECK: br i1 %[[this_inner_valid:.*]]
+  [&] { return this; } ();
+}
+
 namespace CopyValueRepresentation {
   // CHECK-LABEL: define {{.*}} @_ZN23CopyValueRepresentation2S3aSERKS0_
   // CHECK-NOT: call {{.*}} @__ubsan_handle_load_invalid_value

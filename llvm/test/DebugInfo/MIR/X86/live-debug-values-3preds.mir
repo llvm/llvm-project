@@ -24,12 +24,16 @@
 # with clang -g -O1 -c -emit-llvm LiveDebugValues-3preds.c -S -o live-debug-values-3preds.ll
 # then llc -stop-after stackmap-liveness live-debug-values-3preds.ll -o /dev/null > live-debug-values-3preds.mir
 
+# CHECK: ![[X_VAR:[0-9]+]] = !DILocalVariable(name: "x", {{.*}})
+# CHECK: ![[Y_VAR:[0-9]+]] = !DILocalVariable(name: "y", {{.*}})
+# CHECK: ![[Z_VAR:[0-9]+]] = !DILocalVariable(name: "z", {{.*}})
+
 # DBG_VALUE for variables "x", "y" and "z" are extended into BB#9 from its
 # predecessors BB#0, BB#2 and BB#8.
 # CHECK:      bb.9.for.end:
-# CHECK-DAG:  DBG_VALUE debug-use %edi, debug-use _, !11, !16, debug-location !17
-# CHECK-DAG:  DBG_VALUE debug-use %edx, debug-use _, !13, !16, debug-location !20
-# CHECK-DAG:  DBG_VALUE debug-use %esi, debug-use _, !12, !16, debug-location !18
+# CHECK-DAG:  DBG_VALUE debug-use %edi, debug-use _, ![[X_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
+# CHECK-DAG:  DBG_VALUE debug-use %esi, debug-use _, ![[Y_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
+# CHECK-DAG:  DBG_VALUE debug-use %edx, debug-use _, ![[Z_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
 # CHECK:      RET
 
 --- |

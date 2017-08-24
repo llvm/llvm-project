@@ -474,7 +474,7 @@ namespace llvm {
       VPMADD52L, VPMADD52H,
 
       // FMA nodes.
-      FMADD,
+      // We use the target independent ISD::FMA for the non-inverted case.
       FNMADD,
       FMSUB,
       FNMSUB,

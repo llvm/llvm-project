@@ -87,17 +87,17 @@ define i32 @maxB(i32 %x, i32 %y) !dbg !34 {
 ; OPTIMIZATION_LEVEL_0-NEXT: %x.addr = alloca i32, align 4
 ; OPTIMIZATION_LEVEL_0-NEXT: %y.addr = alloca i32, align 4
 ; OPTIMIZATION_LEVEL_0-NEXT: store i32 %x, i32* %x.addr, align 4
-; OPTIMIZATION_LEVEL_0-NEXT: call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !{{[0-9]+}}, metadata !{{[0-9]+}}), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_0-NEXT: call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
 ; OPTIMIZATION_LEVEL_0-NEXT: store i32 %y, i32* %y.addr, align 4
-; OPTIMIZATION_LEVEL_0-NEXT: call void @llvm.dbg.declare(metadata i32* %y.addr, metadata !{{[0-9]+}}, metadata !{{[0-9]+}}), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_0-NEXT: call void @llvm.dbg.declare(metadata i32* %y.addr, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
 ; OPTIMIZATION_LEVEL_0-NEXT: %0 = tail call i32 @maxA(i32 %x, i32 %y), !dbg !{{[0-9]+}}
 ; OPTIMIZATION_LEVEL_0-NEXT: ret i32 %0, !dbg !{{[0-9]+}}
 ; OPTIMIZATION_LEVEL_0-NEXT: }
 
 ; OPTIMIZATION_LEVEL_2: define i32 @maxB(i32 %x, i32 %y)
 ; OPTIMIZATION_LEVEL_2-NEXT: entry:
-; OPTIMIZATION_LEVEL_2-NEXT: tail call void @llvm.dbg.value(metadata i32 %x, metadata !{{[0-9]+}}, metadata !{{[0-9]+}}), !dbg !{{[0-9]+}}
-; OPTIMIZATION_LEVEL_2-NEXT: tail call void @llvm.dbg.value(metadata i32 %y, metadata !{{[0-9]+}}, metadata !{{[0-9]+}}), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_2-NEXT: tail call void @llvm.dbg.value(metadata i32 %x, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+; OPTIMIZATION_LEVEL_2-NEXT: tail call void @llvm.dbg.value(metadata i32 %y, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
 ; OPTIMIZATION_LEVEL_2-NEXT: %0 = tail call i32 @maxA(i32 %x, i32 %y) #{{[0-9]+}}, !dbg !{{[0-9]+}}
 ; OPTIMIZATION_LEVEL_2-NEXT: ret i32 %0, !dbg !{{[0-9]+}}
 ; OPTIMIZATION_LEVEL_2-NEXT: }

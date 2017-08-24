@@ -15,9 +15,8 @@ define void @use1() {
 }
 ; CHECK: [[A]] = !DIGlobalVariableExpression(var: [[AVAR:![0-9]+]])
 ; CHECK: [[AVAR]] = !DIGlobalVariable(name: "a", scope: null, type: !2, isLocal: false, isDefinition: true)
-; CHECK: [[B]] = !DIGlobalVariableExpression(var: [[BVAR:![0-9]+]], expr: [[EXPR:![0-9]+]])
+; CHECK: [[B]] = !DIGlobalVariableExpression(var: [[BVAR:![0-9]+]], expr: !DIExpression(DW_OP_plus_uconst, 4))
 ; CHECK: [[BVAR]] = !DIGlobalVariable(name: "b", scope: null, type: !2, isLocal: false, isDefinition: true)
-; CHECK: [[EXPR]] = !DIExpression(DW_OP_plus_uconst, 4)
 
 !llvm.module.flags = !{!4, !5}
 

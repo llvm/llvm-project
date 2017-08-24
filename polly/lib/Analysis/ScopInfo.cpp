@@ -121,7 +121,11 @@ STATISTIC(AssumptionsInvariantLoad,
 STATISTIC(AssumptionsDelinearization,
           "Number of delinearization assumptions taken.");
 
+STATISTIC(NumScops, "Number of feasible SCoPs after ScopInfo");
 STATISTIC(NumLoopsInScop, "Number of loops in scops");
+STATISTIC(NumBoxedLoops, "Number of boxed loops in SCoPs after ScopInfo");
+STATISTIC(NumAffineLoops, "Number of affine loops in SCoPs after ScopInfo");
+
 STATISTIC(NumScopsDepthOne, "Number of scops with maximal loop depth 1");
 STATISTIC(NumScopsDepthTwo, "Number of scops with maximal loop depth 2");
 STATISTIC(NumScopsDepthThree, "Number of scops with maximal loop depth 3");
@@ -130,6 +134,17 @@ STATISTIC(NumScopsDepthFive, "Number of scops with maximal loop depth 5");
 STATISTIC(NumScopsDepthLarger,
           "Number of scops with maximal loop depth 6 and larger");
 STATISTIC(MaxNumLoopsInScop, "Maximal number of loops in scops");
+
+STATISTIC(NumValueWrites, "Number of scalar value writes after ScopInfo");
+STATISTIC(
+    NumValueWritesInLoops,
+    "Number of scalar value writes nested in affine loops after ScopInfo");
+STATISTIC(NumPHIWrites, "Number of scalar phi writes after ScopInfo");
+STATISTIC(NumPHIWritesInLoops,
+          "Number of scalar phi writes nested in affine loops after ScopInfo");
+STATISTIC(NumSingletonWrites, "Number of singleton writes after ScopInfo");
+STATISTIC(NumSingletonWritesInLoops,
+          "Number of singleton writes nested in affine loops after ScopInfo");
 
 // The maximal number of basic sets we allow during domain construction to
 // be created. More complex scops will result in very high compile time and
@@ -3869,7 +3884,7 @@ bool isAParameter(llvm::Value *maybeParam, const Function &F) {
       return true;
 
   return false;
-};
+}
 
 bool Scop::canAlwaysBeHoisted(MemoryAccess *MA, bool StmtInvalidCtxIsEmpty,
                               bool MAInvalidCtxIsEmpty,
@@ -5160,6 +5175,47 @@ bool Scop::isEscaping(Instruction *Inst) {
   return false;
 }
 
+Scop::ScopStatistics Scop::getStatistics() const {
+  ScopStatistics Result;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
+  auto LoopStat = ScopDetection::countBeneficialLoops(&R, *SE, *getLI(), 0);
+
+  int NumTotalLoops = LoopStat.NumLoops;
+  Result.NumBoxedLoops = getBoxedLoops().size();
+  Result.NumAffineLoops = NumTotalLoops - Result.NumBoxedLoops;
+
+  for (const ScopStmt &Stmt : *this) {
+    isl::set Domain = Stmt.getDomain().intersect_params(getContext());
+    bool IsInLoop = Stmt.getNumIterators() >= 1;
+    for (MemoryAccess *MA : Stmt) {
+      if (!MA->isWrite())
+        continue;
+
+      if (MA->isLatestValueKind()) {
+        Result.NumValueWrites += 1;
+        if (IsInLoop)
+          Result.NumValueWritesInLoops += 1;
+      }
+
+      if (MA->isLatestAnyPHIKind()) {
+        Result.NumPHIWrites += 1;
+        if (IsInLoop)
+          Result.NumPHIWritesInLoops += 1;
+      }
+
+      isl::set AccSet =
+          MA->getAccessRelation().intersect_domain(Domain).range();
+      if (AccSet.is_singleton()) {
+        Result.NumSingletonWrites += 1;
+        if (IsInLoop)
+          Result.NumSingletonWritesInLoops += 1;
+      }
+    }
+  }
+#endif
+  return Result;
+}
+
 raw_ostream &polly::operator<<(raw_ostream &OS, const Scop &scop) {
   scop.print(OS, PollyPrintInstructions);
   return OS;
@@ -5177,7 +5233,11 @@ void ScopInfoRegionPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
 }
 
-void updateLoopCountStatistic(ScopDetection::LoopStats Stats) {
+void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
+                              Scop::ScopStatistics ScopStats) {
+  assert(Stats.NumLoops == ScopStats.NumAffineLoops + ScopStats.NumBoxedLoops);
+
+  NumScops++;
   NumLoopsInScop += Stats.NumLoops;
   MaxNumLoopsInScop =
       std::max(MaxNumLoopsInScop.getValue(), (unsigned)Stats.NumLoops);
@@ -5194,6 +5254,16 @@ void updateLoopCountStatistic(ScopDetection::LoopStats Stats) {
     NumScopsDepthFive++;
   else
     NumScopsDepthLarger++;
+
+  NumAffineLoops += ScopStats.NumAffineLoops;
+  NumBoxedLoops += ScopStats.NumBoxedLoops;
+
+  NumValueWrites += ScopStats.NumValueWrites;
+  NumValueWritesInLoops += ScopStats.NumValueWritesInLoops;
+  NumPHIWrites += ScopStats.NumPHIWrites;
+  NumPHIWritesInLoops += ScopStats.NumPHIWritesInLoops;
+  NumSingletonWrites += ScopStats.NumSingletonWrites;
+  NumSingletonWritesInLoops += ScopStats.NumSingletonWritesInLoops;
 }
 
 bool ScopInfoRegionPass::runOnRegion(Region *R, RGPassManager &RGM) {
@@ -5213,11 +5283,13 @@ bool ScopInfoRegionPass::runOnRegion(Region *R, RGPassManager &RGM) {
   ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE);
   S = SB.getScop(); // take ownership of scop object
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
   if (S) {
     ScopDetection::LoopStats Stats =
         ScopDetection::countBeneficialLoops(&S->getRegion(), SE, LI, 0);
-    updateLoopCountStatistic(Stats);
+    updateLoopCountStatistic(Stats, S->getStatistics());
   }
+#endif
 
   return false;
 }
@@ -5268,9 +5340,11 @@ void ScopInfo::recompute() {
     std::unique_ptr<Scop> S = SB.getScop();
     if (!S)
       continue;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
     ScopDetection::LoopStats Stats =
         ScopDetection::countBeneficialLoops(&S->getRegion(), SE, LI, 0);
-    updateLoopCountStatistic(Stats);
+    updateLoopCountStatistic(Stats, S->getStatistics());
+#endif
     bool Inserted = RegionToScopMap.insert({R, std::move(S)}).second;
     assert(Inserted && "Building Scop for the same region twice!");
     (void)Inserted;

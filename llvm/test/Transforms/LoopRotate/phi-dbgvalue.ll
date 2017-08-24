@@ -3,10 +3,12 @@
 ;CHECK-LABEL: func
 ;CHECK-LABEL: entry
 ;CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 %a
-;CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 1, metadata !13, metadata !11), !dbg !15
+;CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 1, metadata ![[I_VAR:[0-9]+]], metadata !DIExpression())
 ;CHECK-LABEL: for.body:
 ;CHECK-NEXT: [[I:%.*]] = phi i32 [ 1, %entry ], [ %inc, %for.body ]
-;CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 [[I]], metadata !13, metadata !11), !dbg !15
+;CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 [[I]], metadata ![[I_VAR]], metadata !DIExpression())
+
+; CHECK: ![[I_VAR]] = !DILocalVariable(name: "i",{{.*}})
 
 ; Function Attrs: noinline nounwind
 define void @func(i32 %a) local_unnamed_addr #0 !dbg !6 {

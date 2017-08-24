@@ -1238,35 +1238,55 @@ isReMaterializable = 1 in
                  Requires<[HasSRAM]>;
 }
 
-class AtomicLoad<PatFrag Op, RegisterClass DRC> :
-  Pseudo<(outs DRC:$rd), (ins PTRREGS:$rr), "atomic_op",
+class AtomicLoad<PatFrag Op, RegisterClass DRC,
+                 RegisterClass PTRRC> :
+  Pseudo<(outs DRC:$rd), (ins PTRRC:$rr), "atomic_op",
          [(set DRC:$rd, (Op i16:$rr))]>;
 
-class AtomicStore<PatFrag Op, RegisterClass DRC> :
-  Pseudo<(outs), (ins PTRDISPREGS:$rd, DRC:$rr), "atomic_op",
+class AtomicStore<PatFrag Op, RegisterClass DRC,
+                  RegisterClass PTRRC> :
+  Pseudo<(outs), (ins PTRRC:$rd, DRC:$rr), "atomic_op",
          [(Op i16:$rd, DRC:$rr)]>;
 
-class AtomicLoadOp<PatFrag Op, RegisterClass DRC> :
-  Pseudo<(outs DRC:$rd), (ins PTRREGS:$rr, DRC:$operand),
+class AtomicLoadOp<PatFrag Op, RegisterClass DRC,
+                   RegisterClass PTRRC> :
+  Pseudo<(outs DRC:$rd), (ins PTRRC:$rr, DRC:$operand),
          "atomic_op",
          [(set DRC:$rd, (Op i16:$rr, DRC:$operand))]>;
 
-def AtomicLoad8   : AtomicLoad<atomic_load_8, GPR8>;
-def AtomicLoad16  : AtomicLoad<atomic_load_16, DREGS>;
+// FIXME: I think 16-bit atomic binary ops need to mark
+// r0 as clobbered.
 
-def AtomicStore8  : AtomicStore<atomic_store_8, GPR8>;
-def AtomicStore16 : AtomicStore<atomic_store_16, DREGS>;
+// Atomic instructions
+// ===================
+//
+// These are all expanded by AVRExpandPseudoInsts
+//
+// 8-bit operations can use any pointer register because
+// they are expanded directly into an LD/ST instruction.
+//
+// 16-bit operations use 16-bit load/store postincrement instructions,
+// which require PTRDISPREGS.
 
-def AtomicLoadAdd8  : AtomicLoadOp<atomic_load_add_8, GPR8>;
-def AtomicLoadAdd16 : AtomicLoadOp<atomic_load_add_16, DREGS>;
-def AtomicLoadSub8  : AtomicLoadOp<atomic_load_sub_8, GPR8>;
-def AtomicLoadSub16 : AtomicLoadOp<atomic_load_sub_16, DREGS>;
-def AtomicLoadAnd8  : AtomicLoadOp<atomic_load_and_8, GPR8>;
-def AtomicLoadAnd16 : AtomicLoadOp<atomic_load_and_16, DREGS>;
-def AtomicLoadOr8   : AtomicLoadOp<atomic_load_or_8, GPR8>;
-def AtomicLoadOr16  : AtomicLoadOp<atomic_load_or_16, DREGS>;
-def AtomicLoadXor8  : AtomicLoadOp<atomic_load_xor_8, GPR8>;
-def AtomicLoadXor16 : AtomicLoadOp<atomic_load_xor_16, DREGS>;
+def AtomicLoad8   : AtomicLoad<atomic_load_8, GPR8, PTRREGS>;
+def AtomicLoad16  : AtomicLoad<atomic_load_16, DREGS, PTRDISPREGS>;
+
+def AtomicStore8  : AtomicStore<atomic_store_8, GPR8, PTRREGS>;
+def AtomicStore16 : AtomicStore<atomic_store_16, DREGS, PTRDISPREGS>;
+
+class AtomicLoadOp8<PatFrag Op> : AtomicLoadOp<Op, GPR8, PTRREGS>;
+class AtomicLoadOp16<PatFrag Op> : AtomicLoadOp<Op, DREGS, PTRDISPREGS>;
+
+def AtomicLoadAdd8  : AtomicLoadOp8<atomic_load_add_8>;
+def AtomicLoadAdd16 : AtomicLoadOp16<atomic_load_add_16>;
+def AtomicLoadSub8  : AtomicLoadOp8<atomic_load_sub_8>;
+def AtomicLoadSub16 : AtomicLoadOp16<atomic_load_sub_16>;
+def AtomicLoadAnd8  : AtomicLoadOp8<atomic_load_and_8>;
+def AtomicLoadAnd16 : AtomicLoadOp16<atomic_load_and_16>;
+def AtomicLoadOr8   : AtomicLoadOp8<atomic_load_or_8>;
+def AtomicLoadOr16  : AtomicLoadOp16<atomic_load_or_16>;
+def AtomicLoadXor8  : AtomicLoadOp8<atomic_load_xor_8>;
+def AtomicLoadXor16 : AtomicLoadOp16<atomic_load_xor_16>;
 def AtomicFence     : Pseudo<(outs), (ins), "atomic_fence",
                              [(atomic_fence imm, imm)]>;
 

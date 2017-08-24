@@ -191,8 +191,12 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
       if (!m_sub_plan_sp) {
         // Otherwise check the ShouldStopHere for step out:
         m_sub_plan_sp = CheckShouldStopHereAndQueueStepOut(frame_order);
-        if (log)
-          log->Printf("ShouldStopHere says we should step out of this frame.");
+        if (log) {
+          if (m_sub_plan_sp)
+            log->Printf("ShouldStopHere found plan to step out of this frame.");
+          else
+            log->Printf("ShouldStopHere no plan to step out of this frame.");
+        }
       } else if (log) {
         log->Printf(
             "Thought I stepped out, but in fact arrived at a trampoline.");
