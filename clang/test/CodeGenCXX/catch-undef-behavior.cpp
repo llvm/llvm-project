@@ -451,6 +451,7 @@ void upcast_to_vbase() {
 
 struct ThisAlign {
   void this_align_lambda();
+  void this_align_lambda_2();
 };
 void ThisAlign::this_align_lambda() {
   // CHECK-LABEL: define {{.*}}@"_ZZN9ThisAlign17this_align_lambdaEvENK3$_0clEv"
@@ -551,6 +552,20 @@ namespace CopyValueRepresentation {
     S5 s52;
     s52 = s51;
   }
+}
+
+void ThisAlign::this_align_lambda_2() {
+  // CHECK-LABEL: define {{.*}}@"_ZZN9ThisAlign19this_align_lambda_2EvENK3$_1clEv"
+  // CHECK-SAME: (%{{.*}}* %[[this:[^)]*]])
+  // CHECK: %[[this_addr:.*]] = alloca
+  // CHECK: store %{{.*}}* %[[this]], %{{.*}}** %[[this_addr]],
+  // CHECK: %[[this_inner:.*]] = load %{{.*}}*, %{{.*}}** %[[this_addr]],
+  //
+  // Do not perform a null check on the 'this' pointer if the function might be
+  // called from a static invoker.
+  // CHECK-NOT: icmp ne %{{.*}}* %[[this_inner]], null
+  auto *p = +[] {};
+  p();
 }
 
 // CHECK: attributes [[NR_NUW]] = { noreturn nounwind }

@@ -15,34 +15,40 @@ main:
 
 // CHECK: leaq    _foo(%rbx,%rax,8), %rdx
   lea RDX, [8 * RAX + RBX      + _foo]
-
 // CHECK: leaq _foo(%rbx,%rax,8), %rdx
   lea RDX, [_foo + 8 * RAX + RBX]
-
 // CHECK: leaq 8(%rcx,%rax,8), %rdx
   lea RDX, [8 + RAX * 8 + RCX]
-
 // CHECK: leaq 8(%rcx,%rax,8), %rdx
   lea RDX, [number + 8 * RAX + RCX]
-
 // CHECK: leaq _foo(,%rax,8), %rdx
   lea RDX, [_foo + RAX * 8]
-
 // CHECK:  leaq _foo(%rbx,%rax,8), %rdx
   lea RDX, [_foo + RAX * 8 + RBX]
-
-// CHECK: leaq 8(%rax), %rdx
+// CHECK: leaq -8(%rax), %rdx
   lea RDX, [RAX - number]
 // CHECK: leaq -8(%rax), %rdx
   lea RDX, [RAX - 8]
-
 // CHECK: leaq    _foo(%rax), %rdx
   lea RDX, [RAX + _foo]
 // CHECK: leaq    8(%rax), %rdx
   lea RDX, [RAX + number]
 // CHECK: leaq    8(%rax), %rdx
   lea RDX, [RAX + 8]
-
+// CHECK: leaq    _foo(%rbx,%rax,8), %rdx
+  lea RDX, [RAX * number + RBX + _foo]
+// CHECK: leaq    _foo(%rbx,%rax,8), %rdx
+  lea RDX, [_foo + RAX * number + RBX]
+// CHECK: leaq    8(%rcx,%rax,8), %rdx
+  lea RDX, [number + RAX * number + RCX]
+// CHECK: leaq    _foo(,%rax,8), %rdx
+  lea RDX, [_foo + RAX * number]
+// CHECK: leaq    _foo(%rbx,%rax,8), %rdx
+  lea RDX, [number * RAX + RBX + _foo]
+// CHECK: leaq    _foo(%rbx,%rax,8), %rdx
+  lea RDX, [_foo + number * RAX + RBX]
+// CHECK: leaq    8(%rcx,%rax,8), %rdx
+  lea RDX, [8 + number * RAX + RCX]
 // CHECK: leaq    _foo(%rax), %rdx
   lea RDX, [_foo + RAX]
 // CHECK: leaq    8(%rax), %rdx
@@ -671,8 +677,12 @@ fxrstor64 opaque ptr [rax]
 
 // CHECK: movq _g0, %rbx
 // CHECK: movq _g0+8, %rcx
+// CHECK: movq _g0+18(%rbp), %rax
+// CHECK: movq _g0(,%rsi,4), %rax
 mov rbx, qword ptr [_g0]
 mov rcx, qword ptr [_g0 + 8]
+mov rax, QWORD PTR _g0[rbp + 1 + (2 * 5) - 3 + 1<<1]
+mov rax, QWORD PTR _g0[rsi*4]
 
 "?half@?0??bar@@YAXXZ@4NA":
 	.quad   4602678819172646912

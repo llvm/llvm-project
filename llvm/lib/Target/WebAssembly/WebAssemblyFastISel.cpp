@@ -700,9 +700,12 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   if (Func && Func->isIntrinsic())
     return false;
 
+  bool IsDirect = Func != nullptr;
+  if (!IsDirect && isa<ConstantExpr>(Call->getCalledValue()))
+    return false;
+
   FunctionType *FuncTy = Call->getFunctionType();
   unsigned Opc;
-  bool IsDirect = Func != nullptr;
   bool IsVoid = FuncTy->getReturnType()->isVoidTy();
   unsigned ResultReg;
   if (IsVoid) {

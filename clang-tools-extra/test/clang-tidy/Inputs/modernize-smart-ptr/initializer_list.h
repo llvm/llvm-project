@@ -22,4 +22,10 @@ public:
   const _E *begin() const { return __begin_; }
   const _E *end() const { return __begin_ + __size_; }
 };
+
+template <class _E>
+class vector {
+ public:
+  vector(initializer_list<_E> init);
+};
 } // namespace std

@@ -603,6 +603,22 @@ public:
   /// \return The size of a cache line in bytes.
   unsigned getCacheLineSize() const;
 
+  /// The possible cache levels
+  enum class CacheLevel {
+    L1D,   // The L1 data cache
+    L2D,   // The L2 data cache
+
+    // We currently do not model L3 caches, as their sizes differ widely between
+    // microarchitectures. Also, we currently do not have a use for L3 cache
+    // size modeling yet.
+  };
+
+  /// \return The size of the cache level in bytes, if available.
+  llvm::Optional<unsigned> getCacheSize(CacheLevel Level) const;
+
+  /// \return The associativity of the cache level, if available.
+  llvm::Optional<unsigned> getCacheAssociativity(CacheLevel Level) const;
+
   /// \return How much before a load we should place the prefetch instruction.
   /// This is currently measured in number of instructions.
   unsigned getPrefetchDistance() const;
@@ -937,6 +953,8 @@ public:
   virtual bool shouldConsiderAddressTypePromotion(
       const Instruction &I, bool &AllowPromotionWithoutCommonHeader) = 0;
   virtual unsigned getCacheLineSize() = 0;
+  virtual llvm::Optional<unsigned> getCacheSize(CacheLevel Level) = 0;
+  virtual llvm::Optional<unsigned> getCacheAssociativity(CacheLevel Level) = 0;
   virtual unsigned getPrefetchDistance() = 0;
   virtual unsigned getMinPrefetchStride() = 0;
   virtual unsigned getMaxPrefetchIterationsAhead() = 0;
@@ -1208,6 +1226,12 @@ public:
   }
   unsigned getCacheLineSize() override {
     return Impl.getCacheLineSize();
+  }
+  llvm::Optional<unsigned> getCacheSize(CacheLevel Level) override {
+    return Impl.getCacheSize(Level);
+  }
+  llvm::Optional<unsigned> getCacheAssociativity(CacheLevel Level) override {
+    return Impl.getCacheAssociativity(Level);
   }
   unsigned getPrefetchDistance() override { return Impl.getPrefetchDistance(); }
   unsigned getMinPrefetchStride() override {

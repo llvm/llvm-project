@@ -18,10 +18,7 @@ _test2:
 .global arr
 .global i
 .set FOO, 2
-//CHECK: error: cannot use base register with variable reference
-mov eax, DWORD PTR arr[ebp + 1 + (2 * 5) - 3 + 1<<1]
-//CHECK: error: cannot use index register with variable reference
-mov eax, DWORD PTR arr[esi*4]
+
 //CHECK: error: cannot use more than one symbol in memory operand
 mov eax, DWORD PTR arr[i]
 //CHECK: error: rip can only be used as a base register
@@ -29,3 +26,11 @@ mov eax, DWORD PTR arr[i]
 mov rax, rip
 //CHECK: error: invalid base+index expression
 mov rbx, [rax+rip]
+//CHECK: error: scale factor in address must be 1, 2, 4 or 8
+lea RDX, [unknown_number * RAX + RBX + _foo]
+//CHECK: error: BaseReg/IndexReg already set!
+lea RDX, [4 * RAX + 27 * RBX + _pat]
+//CHECK: error: unexpected bracket encountered
+lea RDX, [[arr]
+//CHECK: error: unexpected bracket encountered
+lea RDX, [arr[]

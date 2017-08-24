@@ -1,5 +1,6 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -aarch64-neon-syntax=generic | FileCheck %s --check-prefix=CHECK-V8a
 ; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -mattr=+rdm -aarch64-neon-syntax=generic | FileCheck %s --check-prefix=CHECK-V81a
+; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -mcpu=falkor -aarch64-neon-syntax=generic | FileCheck %s --check-prefix=CHECK-V81a
 ; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -mattr=+v8.1a -aarch64-neon-syntax=generic | FileCheck %s --check-prefix=CHECK-V81a
 ; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -mattr=+v8.1a -aarch64-neon-syntax=apple | FileCheck %s --check-prefix=CHECK-V81a-apple
 

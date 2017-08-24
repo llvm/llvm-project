@@ -521,6 +521,8 @@ def FeatureISAVersion8_0_0 : SubtargetFeatureISAVersion <8,0,0,
 
 def FeatureISAVersion8_0_1 : SubtargetFeatureISAVersion <8,0,1,
   [FeatureVolcanicIslands,
+   FeatureFastFMAF32,
+   HalfRate64Ops,
    FeatureLDSBankCount32,
    FeatureXNACK]>;
 
