@@ -82,14 +82,24 @@ Changes to the Arm Targets
 
 During this release the AArch64 target has:
 
+* A much improved Global ISel at O0.
+* Support for ARMv8.1 8.2 and 8.3 instructions.
+* New scheduler information for ThunderX2.
+* Some SVE type changes but not much more than that.
 * Made instruction fusion more aggressive, resulting in speedups
   for code making use of AArch64 AES instructions. AES fusion has been
   enabled for most Cortex-A cores and the AArch64MacroFusion pass was moved
   to the generic MacroFusion pass.
 * Added preferred function alignments for most Cortex-A cores.
+* OpenMP "offload-to-self" base support.
 
 During this release the ARM target has:
 
+* Improved, but still mostly broken, Global ISel.
+* Scheduling models update, new schedule for Cortex-A57.
+* Hardware breakpoint support in LLDB.
+* New assembler error handling, with spelling corrections and multiple
+  suggestions on how to fix problems.
 * Improved mixed ARM/Thumb code generation. Some cases in which wrong
   relocations were emitted have been fixed.
 * Added initial support for mixed ARM/Thumb link-time optimization, using the

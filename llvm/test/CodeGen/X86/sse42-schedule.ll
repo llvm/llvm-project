@@ -26,9 +26,9 @@ define i32 @crc32_32_8(i32 %a0, i8 %a1, i8 *%a2) {
 ; SANDY-LABEL: crc32_32_8:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
-; SANDY-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
+; SANDY-NEXT:    crc32b (%rdx), %edi # sched: [7:1.00]
 ; SANDY-NEXT:    movl %edi, %eax # sched: [1:0.33]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: crc32_32_8:
 ; HASWELL:       # BB#0:
@@ -75,9 +75,9 @@ define i32 @crc32_32_16(i32 %a0, i16 %a1, i16 *%a2) {
 ; SANDY-LABEL: crc32_32_16:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    crc32w %si, %edi # sched: [3:1.00]
-; SANDY-NEXT:    crc32w (%rdx), %edi # sched: [8:1.00]
+; SANDY-NEXT:    crc32w (%rdx), %edi # sched: [7:1.00]
 ; SANDY-NEXT:    movl %edi, %eax # sched: [1:0.33]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: crc32_32_16:
 ; HASWELL:       # BB#0:
@@ -126,7 +126,7 @@ define i32 @crc32_32_32(i32 %a0, i32 %a1, i32 *%a2) {
 ; SANDY-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
 ; SANDY-NEXT:    crc32l (%rdx), %edi # sched: [7:1.00]
 ; SANDY-NEXT:    movl %edi, %eax # sched: [1:0.33]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: crc32_32_32:
 ; HASWELL:       # BB#0:
@@ -173,9 +173,9 @@ define i64 @crc32_64_8(i64 %a0, i8 %a1, i8 *%a2) nounwind {
 ; SANDY-LABEL: crc32_64_8:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
-; SANDY-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
+; SANDY-NEXT:    crc32b (%rdx), %edi # sched: [7:1.00]
 ; SANDY-NEXT:    movq %rdi, %rax # sched: [1:0.33]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: crc32_64_8:
 ; HASWELL:       # BB#0:
@@ -224,7 +224,7 @@ define i64 @crc32_64_64(i64 %a0, i64 %a1, i64 *%a2) {
 ; SANDY-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
 ; SANDY-NEXT:    crc32q (%rdx), %rdi # sched: [7:1.00]
 ; SANDY-NEXT:    movq %rdi, %rax # sched: [1:0.33]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: crc32_64_64:
 ; HASWELL:       # BB#0:
@@ -291,7 +291,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SANDY-NEXT:    vpcmpestri $7, (%rdi), %xmm0 # sched: [4:2.33]
 ; SANDY-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<def>
 ; SANDY-NEXT:    leal (%rcx,%rsi), %eax # sched: [1:0.50]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpestri:
 ; HASWELL:       # BB#0:
@@ -368,7 +368,7 @@ define <16 x i8> @test_pcmpestrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SANDY-NEXT:    movl $7, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    movl $7, %edx # sched: [1:0.33]
 ; SANDY-NEXT:    vpcmpestrm $7, (%rdi), %xmm0 # sched: [11:2.33]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpestrm:
 ; HASWELL:       # BB#0:
@@ -427,12 +427,12 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; SANDY-LABEL: test_pcmpistri:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [11:3.00]
+; SANDY-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    movl %ecx, %eax # sched: [1:0.33]
-; SANDY-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [17:3.00]
+; SANDY-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<def>
 ; SANDY-NEXT:    leal (%rcx,%rax), %eax # sched: [1:0.50]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpistri:
 ; HASWELL:       # BB#0:
@@ -483,9 +483,9 @@ define <16 x i8> @test_pcmpistrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; SANDY-LABEL: test_pcmpistrm:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [11:3.00]
-; SANDY-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [17:3.00]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [11:1.00]
+; SANDY-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [11:1.00]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpistrm:
 ; HASWELL:       # BB#0:
@@ -526,9 +526,9 @@ define <2 x i64> @test_pcmpgtq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ;
 ; SANDY-LABEL: test_pcmpgtq:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; SANDY-NEXT:    vpcmpgtq (%rdi), %xmm0, %xmm0 # sched: [11:1.00]
-; SANDY-NEXT:    retq # sched: [1:1.00]
+; SANDY-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; SANDY-NEXT:    vpcmpgtq (%rdi), %xmm0, %xmm0 # sched: [5:0.50]
+; SANDY-NEXT:    retq # sched: [5:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpgtq:
 ; HASWELL:       # BB#0:

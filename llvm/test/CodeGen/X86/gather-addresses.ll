@@ -16,10 +16,10 @@
 ; LIN: sarq    $32, %r[[REG2]]
 ; LIN: movslq	%e[[REG4]], %r[[REG3:.+]]
 ; LIN: sarq    $32, %r[[REG4]]
-; LIN: movsd    (%rdi,%r[[REG3]],8), %xmm1
-; LIN: movhpd   (%rdi,%r[[REG4]],8), %xmm1 
-; LIN: movq     %rdi, %xmm1 
-; LIN: movq     %r[[REG3]], %xmm0
+; LIN: movsd	(%rdi,%r[[REG1]],8), %xmm0
+; LIN: movhpd	(%rdi,%r[[REG2]],8), %xmm0
+; LIN: movsd	(%rdi,%r[[REG3]],8), %xmm1
+; LIN: movhpd	(%rdi,%r[[REG4]],8), %xmm1
 
 ; WIN: movdqa	(%rdx), %xmm0
 ; WIN: pand 	(%r8), %xmm0
@@ -29,10 +29,10 @@
 ; WIN: sarq    $32, %r[[REG2]]
 ; WIN: movslq	%e[[REG4]], %r[[REG3:.+]]
 ; WIN: sarq    $32, %r[[REG4]]
-; WIN: movsd    (%rcx,%r[[REG3]],8), %xmm1
-; WIN: movhpd   (%rcx,%r[[REG4]],8), %xmm1
-; WIN: movdqa   (%r[[REG2]]), %xmm0
-; WIN: movq     %r[[REG2]], %xmm1
+; WIN: movsd	(%rcx,%r[[REG1]],8), %xmm0
+; WIN: movhpd	(%rcx,%r[[REG2]],8), %xmm0
+; WIN: movsd	(%rcx,%r[[REG3]],8), %xmm1
+; WIN: movhpd	(%rcx,%r[[REG4]],8), %xmm1
 
 define <4 x double> @foo(double* %p, <4 x i32>* %i, <4 x i32>* %h) nounwind {
   %a = load <4 x i32>, <4 x i32>* %i
