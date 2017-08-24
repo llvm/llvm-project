@@ -14,22 +14,22 @@
   @d = common local_unnamed_addr global i32 0, align 4
   @b = common local_unnamed_addr global i32 0, align 4
 
-  define i32 @fn1() local_unnamed_addr !dbg !9 {
-    %1 = load %struct.A*, %struct.A** @c, align 8, !dbg !14
-    %2 = load i32, i32* @a, align 4, !dbg !14
-    %3 = sext i32 %2 to i64, !dbg !14
-    %4 = getelementptr inbounds %struct.A, %struct.A* %1, i64 %3, !dbg !14
-    %5 = ptrtoint %struct.A* %4 to i64, !dbg !14
-    %6 = trunc i64 %5 to i32, !dbg !14
-    store i32 %6, i32* @d, align 4, !dbg !14
-    %7 = getelementptr inbounds %struct.A, %struct.A* %1, i64 %3, i32 2, !dbg !15
-    tail call void @llvm.dbg.value(metadata i32* %7, i64 0, metadata !12, metadata !16), !dbg !17
-    br label %8, !dbg !18
+  define i32 @fn1() local_unnamed_addr !dbg !8 {
+    %1 = load %struct.A*, %struct.A** @c, align 8, !dbg !13
+    %2 = load i32, i32* @a, align 4, !dbg !13
+    %3 = sext i32 %2 to i64, !dbg !13
+    %4 = getelementptr inbounds %struct.A, %struct.A* %1, i64 %3, !dbg !13
+    %5 = ptrtoint %struct.A* %4 to i64, !dbg !13
+    %6 = trunc i64 %5 to i32, !dbg !13
+    store i32 %6, i32* @d, align 4, !dbg !13
+    %7 = getelementptr inbounds %struct.A, %struct.A* %1, i64 %3, i32 2, !dbg !14
+    tail call void @llvm.dbg.value(metadata i32* %7, i64 0, metadata !11, metadata !DIExpression()), !dbg !15
+    br label %8, !dbg !16
 
   ; <label>:8:                                      ; preds = %8, %0
-    %9 = load i32, i32* %7, align 4, !dbg !19
-    store i32 %9, i32* @d, align 4, !dbg !19
-    br label %8, !dbg !20
+    %9 = load i32, i32* %7, align 4, !dbg !17
+    store i32 %9, i32* @d, align 4, !dbg !17
+    br label %8, !dbg !18
   }
 
   ; Function Attrs: nounwind readnone
@@ -39,7 +39,6 @@
 
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!5, !6, !7}
-  !misc = !{!8}
 
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, globals: !2)
   !1 = !DIFile(filename: "test.c", directory: "")
@@ -49,19 +48,17 @@
   !5 = !{i32 2, !"Dwarf Version", i32 4}
   !6 = !{i32 2, !"Debug Info Version", i32 3}
   !7 = !{i32 1, !"PIC Level", i32 2}
-  !8 = !DIExpression(DW_OP_plus_uconst, 8, DW_OP_stack_value)
-  !9 = distinct !DISubprogram(name: "fn1", scope: !1, file: !1, line: 7, type: !10, isLocal: false, isDefinition: true, scopeLine: 7, isOptimized: true, unit: !0, variables: !11)
-  !10 = !DISubroutineType(types: !3)
-  !11 = !{!12}
-  !12 = !DILocalVariable(name: "e", scope: !9, file: !1, line: 8, type: !13)
-  !13 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-  !14 = !DILocation(line: 9, scope: !9)
-  !15 = !DILocation(line: 10, scope: !9)
-  !16 = !DIExpression()
-  !17 = !DILocation(line: 8, scope: !9)
-  !18 = !DILocation(line: 11, scope: !9)
-  !19 = !DILocation(line: 13, scope: !9)
-  !20 = !DILocation(line: 14, scope: !9)
+  !8 = distinct !DISubprogram(name: "fn1", scope: !1, file: !1, line: 7, type: !9, isLocal: false, isDefinition: true, scopeLine: 7, isOptimized: true, unit: !0, variables: !10)
+  !9 = !DISubroutineType(types: !3)
+  !10 = !{!11}
+  !11 = !DILocalVariable(name: "e", scope: !8, file: !1, line: 8, type: !12)
+  !12 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+  !13 = !DILocation(line: 9, scope: !8)
+  !14 = !DILocation(line: 10, scope: !8)
+  !15 = !DILocation(line: 8, scope: !8)
+  !16 = !DILocation(line: 11, scope: !8)
+  !17 = !DILocation(line: 13, scope: !8)
+  !18 = !DILocation(line: 14, scope: !8)
 
 ...
 ---
@@ -98,28 +95,28 @@ body:             |
   bb.0 (%ir-block.0):
     successors: %bb.1(0x80000000)
 
-    ; CHECK: %3 = LEA64r %2, 2, %2, 0, _, debug-location !14
-    ; CHECK-NEXT: %4 = LEA64r %1, 4, %3, 0, _, debug-location !14
-    ; CHECK-NOT: %0 = LEA64r %1, 4, %3, 8, _, debug-location !15
-    ; CHECK: DBG_VALUE debug-use %4, debug-use _, !12, !8, debug-location !17
+    ; CHECK: %3 = LEA64r %2, 2, %2, 0, _, debug-location !13
+    ; CHECK-NEXT: %4 = LEA64r %1, 4, %3, 0, _, debug-location !13
+    ; CHECK-NOT: %0 = LEA64r %1, 4, %3, 8, _, debug-location !14
+    ; CHECK: DBG_VALUE debug-use %4, debug-use _, !11, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_stack_value), debug-location !15
 
-    %1 = MOV64rm %rip, 1, _, @c, _, debug-location !14 :: (dereferenceable load 8 from @c)
-    %2 = MOVSX64rm32 %rip, 1, _, @a, _, debug-location !14 :: (dereferenceable load 4 from @a)
-    %3 = LEA64r %2, 2, %2, 0, _, debug-location !14
-    %4 = LEA64r %1, 4, %3, 0, _, debug-location !14
-    %5 = COPY %4.sub_32bit, debug-location !14
-    MOV32mr %rip, 1, _, @d, _, killed %5, debug-location !14 :: (store 4 into @d)
-    %0 = LEA64r %1, 4, %3, 8, _, debug-location !15
-    DBG_VALUE debug-use %0, debug-use _, !12, !16, debug-location !17
+    %1 = MOV64rm %rip, 1, _, @c, _, debug-location !13 :: (dereferenceable load 8 from @c)
+    %2 = MOVSX64rm32 %rip, 1, _, @a, _, debug-location !13 :: (dereferenceable load 4 from @a)
+    %3 = LEA64r %2, 2, %2, 0, _, debug-location !13
+    %4 = LEA64r %1, 4, %3, 0, _, debug-location !13
+    %5 = COPY %4.sub_32bit, debug-location !13
+    MOV32mr %rip, 1, _, @d, _, killed %5, debug-location !13 :: (store 4 into @d)
+    %0 = LEA64r %1, 4, %3, 8, _, debug-location !14
+    DBG_VALUE debug-use %0, debug-use _, !11, !DIExpression(), debug-location !15
 
     ; CHECK-LABEL: bb.1 (%ir-block.8):
-    ; CHECK: %6 = MOV32rm %4, 1, _, 8, _, debug-location !19 :: (load 4 from %ir.7)
+    ; CHECK: %6 = MOV32rm %4, 1, _, 8, _, debug-location !17 :: (load 4 from %ir.7)
 
   bb.1 (%ir-block.8):
     successors: %bb.1(0x80000000)
 
-    %6 = MOV32rm %0, 1, _, 0, _, debug-location !19 :: (load 4 from %ir.7)
-    MOV32mr %rip, 1, _, @d, _, killed %6, debug-location !19 :: (store 4 into @d)
-    JMP_1 %bb.1, debug-location !20
+    %6 = MOV32rm %0, 1, _, 0, _, debug-location !17 :: (load 4 from %ir.7)
+    MOV32mr %rip, 1, _, @d, _, killed %6, debug-location !17 :: (store 4 into @d)
+    JMP_1 %bb.1, debug-location !18
 
 ...

@@ -32,8 +32,10 @@
 
 # DBG_VALUE for variable "n" is extended into BB#5 from its predecessors BB#3
 # and BB#4.
+# CHECK: ![[N_VAR:[0-9]+]] = !DILocalVariable(name: "n",{{.*}})
+#
 # CHECK:      bb.5.if.end.7:
-# CHECK:        DBG_VALUE debug-use %ebx, debug-use _, !19, !20, debug-location !33
+# CHECK:        DBG_VALUE debug-use %ebx, debug-use _, ![[N_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
 
 
 --- |

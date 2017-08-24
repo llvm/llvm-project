@@ -848,10 +848,6 @@ static void transferDbgValues(SelectionDAG &DAG, DIBuilder &DIB, SDValue From,
                         Dbg->getDebugLoc(), Dbg->getOrder());
     Dbg->setIsInvalidated();
     ClonedDVs.push_back(Clone);
-
-    // Add the expression to the metadata graph so isn't lost in MIR dumps.
-    const Module *M = DAG.getMachineFunction().getMMI().getModule();
-    M->getNamedMetadata("llvm.dbg.mir")->addOperand(Fragment);
   }
 
   for (SDDbgValue *Dbg : ClonedDVs)

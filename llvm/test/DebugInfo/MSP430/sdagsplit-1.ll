@@ -13,14 +13,10 @@
 ;      return 0;
 ;    }
 ;
-; CHECK: ![[MDN1:[0-9]+]] = !DIExpression(DW_OP_LLVM_fragment, 32, 16)
-; CHECK: ![[MDN2:[0-9]+]] = !DIExpression(DW_OP_LLVM_fragment, 48, 16)
-; CHECK: ![[MDN3:[0-9]+]] = !DIExpression(DW_OP_LLVM_fragment, 0, 16)
-; CHECK: ![[MDN4:[0-9]+]] = !DIExpression(DW_OP_LLVM_fragment, 16, 16)
-; CHECK-DAG: DBG_VALUE debug-use %r{{[0-9]+}}, debug-use _, !{{[0-9]+}}, ![[MDN1]], debug-location !{{[0-9]+}}
-; CHECK-DAG: DBG_VALUE debug-use %r{{[0-9]+}}, debug-use _, !{{[0-9]+}}, ![[MDN2]], debug-location !{{[0-9]+}}
-; CHECK-DAG: DBG_VALUE debug-use %r{{[0-9]+}}, debug-use _, !{{[0-9]+}}, ![[MDN3]], debug-location !{{[0-9]+}}
-; CHECK-DAG: DBG_VALUE debug-use %r{{[0-9]+}}, debug-use _, !{{[0-9]+}}, ![[MDN4]], debug-location !{{[0-9]+}}
+; CHECK-DAG: DBG_VALUE debug-use %r{{[0-9]+}}, debug-use _, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 32, 16), debug-location !{{[0-9]+}}
+; CHECK-DAG: DBG_VALUE debug-use %r{{[0-9]+}}, debug-use _, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 48, 16), debug-location !{{[0-9]+}}
+; CHECK-DAG: DBG_VALUE debug-use %r{{[0-9]+}}, debug-use _, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 0, 16), debug-location !{{[0-9]+}}
+; CHECK-DAG: DBG_VALUE debug-use %r{{[0-9]+}}, debug-use _, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 16, 16), debug-location !{{[0-9]+}}
 
 ; ModuleID = 'sdagsplit-1.c'
 target datalayout = "e-m:e-p:16:16-i32:16-i64:16-f32:16-f64:16-a:8-n8:16-S16"

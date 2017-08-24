@@ -1938,6 +1938,12 @@ Instruction *ReassociatePass::canonicalizeNegConstExpr(Instruction *I) {
   if (!User->isCommutative() && User->getOperand(1) != I)
     return nullptr;
 
+  // Don't canonicalize x + (-Constant * y) -> x - (Constant * y), if the
+  // resulting subtract will be broken up later.  This can get us into an
+  // infinite loop during reassociation.
+  if (UserOpcode == Instruction::FAdd && ShouldBreakUpSubtract(User))
+    return nullptr;
+
   // Change the sign of the constant.
   APFloat Val = CF->getValueAPF();
   Val.changeSign();
@@ -2131,7 +2137,8 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
     DEBUG(dbgs() << "Reassoc to scalar: " << *V << '\n');
     I->replaceAllUsesWith(V);
     if (Instruction *VI = dyn_cast<Instruction>(V))
-      VI->setDebugLoc(I->getDebugLoc());
+      if (I->getDebugLoc())
+        VI->setDebugLoc(I->getDebugLoc());
     RedoInsts.insert(I);
     ++NumAnnihil;
     return;

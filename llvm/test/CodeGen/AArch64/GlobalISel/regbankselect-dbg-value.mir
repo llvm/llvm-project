@@ -5,7 +5,7 @@
 
   define void @test_dbg_value() !dbg !5 {
     ; Keep the dbg metadata live by referencing it in the IR.
-    call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !7, metadata !9), !dbg !10
+    call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !7, metadata !DIExpression()), !dbg !9
     ret void
   }
 
@@ -23,8 +23,7 @@
   !6 = !DISubroutineType(types: !2)
   !7 = !DILocalVariable(name: "in", arg: 1, scope: !5, file: !1, line: 1, type: !8)
   !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-  !9 = !DIExpression()
-  !10 = !DILocation(line: 1, column: 1, scope: !5)
+  !9 = !DILocation(line: 1, column: 1, scope: !5)
 ...
 
 ---
@@ -37,9 +36,9 @@ body: |
   bb.0:
     liveins: %w0
     %0:_(s32) = COPY %w0
-    ; CHECK: DBG_VALUE debug-use %0(s32), debug-use _, !7, !9, debug-location !10
-    DBG_VALUE debug-use %0(s32), debug-use _, !7, !9, debug-location !10
+    ; CHECK: DBG_VALUE debug-use %0(s32), debug-use _, !7, !DIExpression(), debug-location !9
+    DBG_VALUE debug-use %0(s32), debug-use _, !7, !DIExpression(), debug-location !9
 
-    ; CHECK: DBG_VALUE _, 0, !7, !9, debug-location !10
-    DBG_VALUE _, 0, !7, !9, debug-location !10
+    ; CHECK: DBG_VALUE _, 0, !7, !DIExpression(), debug-location !9
+    DBG_VALUE _, 0, !7, !DIExpression(), debug-location !9
 ...

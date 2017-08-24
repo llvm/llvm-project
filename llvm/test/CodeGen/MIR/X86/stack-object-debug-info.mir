@@ -15,7 +15,7 @@
     %1 = bitcast [256 x i8]* %y.i to i8*
     call void @llvm.lifetime.end(i64 -1, i8* %1) #3
     call void @llvm.lifetime.start(i64 -1, i8* %0) #3
-    call void @llvm.dbg.declare(metadata i8* %0, metadata !4, metadata !7) #3, !dbg !8
+    call void @llvm.dbg.declare(metadata i8* %0, metadata !4, metadata !DIExpression()) #3, !dbg !7
     br label %for.body
   }
 
@@ -35,14 +35,13 @@
   !1 = !DIFile(filename: "t.c", directory: "")
   !2 = !{}
   !3 = !{i32 1, !"Debug Info Version", i32 3}
-  !4 = !DILocalVariable(name: "x", scope: !5, file: !1, line: 16, type: !9)
+  !4 = !DILocalVariable(name: "x", scope: !5, file: !1, line: 16, type: !8)
   !5 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0)
   !6 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
-  !7 = !DIExpression()
-  !8 = !DILocation(line: 0, scope: !5)
-  !9 = !DICompositeType(tag: DW_TAG_array_type, baseType: !6, size: 2048, align: 8, elements: !10)
-  !10 = !{!11}
-  !11 = !DISubrange(count: 256)
+  !7 = !DILocation(line: 0, scope: !5)
+  !8 = !DICompositeType(tag: DW_TAG_array_type, baseType: !6, size: 2048, align: 8, elements: !9)
+  !9 = !{!10}
+  !10 = !DISubrange(count: 256)
 ...
 ---
 name:            foo
@@ -52,17 +51,17 @@ frameInfo:
 # CHECK-LABEL: foo
 # CHECK: stack:
 # CHECK:  - { id: 0, name: y.i, type: default, offset: 0, size: 256, alignment: 16,
-# CHECK-NEXT: callee-saved-register: '', di-variable: '!4', di-expression: '!10',
-# CHECK-NEXT: di-location: '!11' }
+# CHECK-NEXT: callee-saved-register: '', di-variable: '!4', di-expression: '!DIExpression()',
+# CHECK-NEXT: di-location: '!10' }
 stack:
   - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16, di-variable: '!4',
-      di-expression: '!7', di-location: '!8' }
+      di-expression: '!DIExpression()', di-location: '!7' }
 body: |
   bb.0.entry:
     successors: %bb.1.for.body
   bb.1.for.body:
     successors: %bb.1.for.body
 
-    DBG_VALUE %stack.0.y.i, 0, !4, !7, debug-location !8
+    DBG_VALUE %stack.0.y.i, 0, !4, !DIExpression(), debug-location !7
     JMP_1 %bb.1.for.body
 ...

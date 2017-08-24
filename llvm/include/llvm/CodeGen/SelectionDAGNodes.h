@@ -623,13 +623,14 @@ public:
   /// Test if this node is a strict floating point pseudo-op.
   bool isStrictFPOpcode() {
     switch (NodeType) {
-      default: 
+      default:
         return false;
       case ISD::STRICT_FADD:
       case ISD::STRICT_FSUB:
       case ISD::STRICT_FMUL:
       case ISD::STRICT_FDIV:
       case ISD::STRICT_FREM:
+      case ISD::STRICT_FMA:
       case ISD::STRICT_FSQRT:
       case ISD::STRICT_FPOW:
       case ISD::STRICT_FPOWI:
