@@ -5,11 +5,10 @@
 // exactly once.
 
 // CHECK: @i = internal constant i32 1, align 4, !dbg ![[I:[0-9]+]]
-// CHECK: ![[I]] = !DIGlobalVariableExpression(var: ![[VAR:.*]], expr: ![[EXPR:[0-9]+]])
+// CHECK: ![[I]] = !DIGlobalVariableExpression(var: ![[VAR:.*]], expr: !DIExpression(DW_OP_constu, 1, DW_OP_stack_value))
 // CHECK: ![[VAR]] = distinct !DIGlobalVariable(name: "i",
 // CHECK: !DICompileUnit({{.*}}globals: ![[GLOBALS:[0-9]+]])
 // CHECK: ![[GLOBALS]] = !{![[I]]}
-// CHECK: ![[EXPR]] = !DIExpression(DW_OP_constu, 1, DW_OP_stack_value)
 static const int i = 1;
 
 void g(const int *, int);

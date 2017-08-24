@@ -250,6 +250,11 @@ protected:
   //
   virtual StringRef getOutlinedHelperName() const { return ".omp_outlined."; }
 
+  /// Emits \p Callee function call with arguments \p Args with location \p Loc.
+  void emitCall(CodeGenFunction &CGF, llvm::Value *Callee,
+                ArrayRef<llvm::Value *> Args = llvm::None,
+                SourceLocation Loc = SourceLocation()) const;
+
 private:
   /// \brief Default const ident_t object used for initialization of all other
   /// ident_t objects.
@@ -1324,6 +1329,30 @@ public:
   /// \param C 'depend' clause with 'sink|source' dependency kind.
   virtual void emitDoacrossOrdered(CodeGenFunction &CGF,
                                    const OMPDependClause *C);
+
+  /// Translates the native parameter of outlined function if this is required
+  /// for target.
+  /// \param FD Field decl from captured record for the paramater.
+  /// \param NativeParam Parameter itself.
+  virtual const VarDecl *translateParameter(const FieldDecl *FD,
+                                            const VarDecl *NativeParam) const {
+    return NativeParam;
+  }
+
+  /// Gets the address of the native argument basing on the address of the
+  /// target-specific parameter.
+  /// \param NativeParam Parameter itself.
+  /// \param TargetParam Corresponding target-specific parameter.
+  virtual Address getParameterAddress(CodeGenFunction &CGF,
+                                      const VarDecl *NativeParam,
+                                      const VarDecl *TargetParam) const;
+
+  /// Emits call of the outlined function with the provided arguments,
+  /// translating these arguments to correct target-specific arguments.
+  virtual void
+  emitOutlinedFunctionCall(CodeGenFunction &CGF, SourceLocation Loc,
+                           llvm::Value *OutlinedFn,
+                           ArrayRef<llvm::Value *> Args = llvm::None) const;
 };
 
 } // namespace CodeGen

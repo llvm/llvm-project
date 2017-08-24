@@ -301,7 +301,7 @@ clang-format
   |   namespace A {     |   namespace A {     |
   |   int i;            |   int i;            |
   |   int j;            |   int j;            |
-  |   }                 |   }                 |
+  |   }                 |   } // namespace A  |
   +---------------------+---------------------+
 
 * Comment reflow support added. Overly long comment lines will now be reflown with the rest of
@@ -384,7 +384,7 @@ New Issues Found
 Python Binding Changes
 ----------------------
 
-Python bindings now support both Python 2 and Python 3. 
+Python bindings now support both Python 2 and Python 3.
 
 The following methods have been added:
 
