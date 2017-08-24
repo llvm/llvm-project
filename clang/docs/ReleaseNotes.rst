@@ -1,18 +1,12 @@
-=======================================
-Clang 5.0.0 (In-Progress) Release Notes
-=======================================
+=========================
+Clang 5.0.0 Release Notes
+=========================
 
 .. contents::
    :local:
    :depth: 2
 
 Written by the `LLVM Team <http://llvm.org/>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming Clang 5 release.
-   Release notes for previous releases can be found on
-   `the Download Page <http://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
@@ -46,8 +40,6 @@ sections with improvements to Clang's support for those languages.
 
 Major New Features
 ------------------
-
--  ...
 
 C++ coroutines
 ^^^^^^^^^^^^^^
@@ -120,12 +112,6 @@ Attribute Changes in Clang
 -  The ```ms_abi`` attribute and the ``__builtin_ms_va_list`` types and builtins
    are now supported on AArch64.
 
-Windows Support
----------------
-
-Clang's support for building native Windows programs ...
-
-
 C Language Changes in Clang
 ---------------------------
 
@@ -157,7 +143,7 @@ a vector expression--occurs when:
   value of the scalar constant rather than the constant's type.
 
 - Floating point constants with precise integral representations are not
-  implicitly converted to integer values, this is for compatability with GCC.
+  implicitly converted to integer values, this is for compatibility with GCC.
 
 
 Currently the basic integer and floating point types with the following
@@ -165,12 +151,6 @@ operators are supported: ``+``, ``/``, ``-``, ``*``, ``%``, ``>``, ``<``,
 ``>=``, ``<=``, ``==``, ``!=``, ``&``, ``|``, ``^`` and the corresponding
 assignment operators where applicable.
 
-...
-
-C11 Feature Support
-^^^^^^^^^^^^^^^^^^^
-
-...
 
 C++ Language Changes in Clang
 -----------------------------
@@ -179,12 +159,6 @@ C++ Language Changes in Clang
   implicit scalar to vector conversions also applies to C++. Additionally
   the following operators are also supported: ``&&`` and ``||``.
 
-...
-
-C++1z Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-...
 
 Objective-C Language Changes in Clang
 -------------------------------------
@@ -239,25 +213,6 @@ The following new functionalities have been added:
 -  Add ``intel_reqd_sub_group_size`` attribute support.
 
 -  Added OpenCL types to ``CIndex``.
-
-OpenMP Support in Clang
-----------------------------------
-
-...
-
-Internal API Changes
---------------------
-
-These are major API changes that have happened since the 4.0.0 release of
-Clang. If upgrading an external codebase that uses Clang as a library,
-this section should help get you past the largest hurdles of upgrading.
-
--  ...
-
-AST Matchers
-------------
-
-...
 
 
 clang-format
@@ -371,15 +326,6 @@ Undefined Behavior Sanitizer (UBSan)
   also avoid emitting unnecessary overflow checks in arithmetic expressions
   with promoted integer operands.
 
-Core Analysis Improvements
-==========================
-
-- ...
-
-New Issues Found
-================
-
-- ...
 
 Python Binding Changes
 ----------------------
@@ -398,10 +344,6 @@ The following methods have been added:
 
 - ``get_exception_specification_kind`` has been added to ``Type``.
 
--  ...
-
-Significant Known Problems
-==========================
 
 Additional Information
 ======================
