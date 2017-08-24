@@ -283,6 +283,28 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
           << A->getOption().getName() << Val;
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_mabs_EQ)) {
+    StringRef Val = StringRef(A->getValue());
+    if (Val == "2008") {
+      if (mips::getIEEE754Standard(CPUName) & mips::Std2008) {
+        Features.push_back("+abs2008");
+      } else {
+        Features.push_back("-abs2008");
+        D.Diag(diag::warn_target_unsupported_abs2008) << CPUName;
+      }
+    } else if (Val == "legacy") {
+      if (mips::getIEEE754Standard(CPUName) & mips::Legacy) {
+        Features.push_back("-abs2008");
+      } else {
+        Features.push_back("+abs2008");
+        D.Diag(diag::warn_target_unsupported_abslegacy) << CPUName;
+      }
+    } else {
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getOption().getName() << Val;
+    }
+  }
+
   AddTargetFeature(Args, Features, options::OPT_msingle_float,
                    options::OPT_mdouble_float, "single-float");
   AddTargetFeature(Args, Features, options::OPT_mips16, options::OPT_mno_mips16,

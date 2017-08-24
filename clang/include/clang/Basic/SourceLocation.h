@@ -172,6 +172,11 @@ public:
     return getFromRawEncoding((unsigned)(uintptr_t)Encoding);
   }
 
+  static bool isPairOfFileLocations(SourceLocation Start, SourceLocation End) {
+    return Start.isValid() && Start.isFileID() && End.isValid() &&
+           End.isFileID();
+  }
+
   void print(raw_ostream &OS, const SourceManager &SM) const;
   std::string printToString(const SourceManager &SM) const;
   void dump(const SourceManager &SM) const;
