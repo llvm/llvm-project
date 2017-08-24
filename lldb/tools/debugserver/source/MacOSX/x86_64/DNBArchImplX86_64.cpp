@@ -1380,7 +1380,7 @@ const DNBRegisterInfo DNBArchImplX86_64::g_fpu_registers_no_avx[] = {
      FPU_OFFSET(fcw), -1U, -1U, -1U, -1U, NULL, NULL},
     {e_regSetFPU, fpu_fsw, "fstat", NULL, Uint, Hex, FPU_SIZE_UINT(fsw),
      FPU_OFFSET(fsw), -1U, -1U, -1U, -1U, NULL, NULL},
-    {e_regSetFPU, fpu_ftw, "ftag", NULL, Uint, Hex, FPU_SIZE_UINT(ftw),
+    {e_regSetFPU, fpu_ftw, "ftag", NULL, Uint, Hex, 2 /* sizeof __fpu_ftw + sizeof __fpu_rsrv1 */,
      FPU_OFFSET(ftw), -1U, -1U, -1U, -1U, NULL, NULL},
     {e_regSetFPU, fpu_fop, "fop", NULL, Uint, Hex, FPU_SIZE_UINT(fop),
      FPU_OFFSET(fop), -1U, -1U, -1U, -1U, NULL, NULL},
@@ -1495,7 +1495,7 @@ const DNBRegisterInfo DNBArchImplX86_64::g_fpu_registers_avx[] = {
      AVX_OFFSET(fcw), -1U, -1U, -1U, -1U, NULL, NULL},
     {e_regSetFPU, fpu_fsw, "fstat", NULL, Uint, Hex, FPU_SIZE_UINT(fsw),
      AVX_OFFSET(fsw), -1U, -1U, -1U, -1U, NULL, NULL},
-    {e_regSetFPU, fpu_ftw, "ftag", NULL, Uint, Hex, FPU_SIZE_UINT(ftw),
+    {e_regSetFPU, fpu_ftw, "ftag", NULL, Uint, Hex, 2 /* sizeof __fpu_ftw + sizeof __fpu_rsrv1 */,
      AVX_OFFSET(ftw), -1U, -1U, -1U, -1U, NULL, NULL},
     {e_regSetFPU, fpu_fop, "fop", NULL, Uint, Hex, FPU_SIZE_UINT(fop),
      AVX_OFFSET(fop), -1U, -1U, -1U, -1U, NULL, NULL},
@@ -1776,7 +1776,7 @@ bool DNBArchImplX86_64::GetRegisterValue(uint32_t set, uint32_t reg,
             *((uint16_t *)(&m_state.context.fpu.no_avx.__fpu_fsw));
         return true;
       case fpu_ftw:
-        value->value.uint8 = m_state.context.fpu.no_avx.__fpu_ftw;
+        memcpy (&value->value.uint16, &m_state.context.fpu.no_avx.__fpu_ftw, 2);
         return true;
       case fpu_fop:
         value->value.uint16 = m_state.context.fpu.no_avx.__fpu_fop;
@@ -1932,7 +1932,7 @@ bool DNBArchImplX86_64::SetRegisterValue(uint32_t set, uint32_t reg,
         success = true;
         break;
       case fpu_ftw:
-        m_state.context.fpu.no_avx.__fpu_ftw = value->value.uint8;
+        memcpy (&m_state.context.fpu.no_avx.__fpu_ftw, &value->value.uint8, 2);
         success = true;
         break;
       case fpu_fop:
