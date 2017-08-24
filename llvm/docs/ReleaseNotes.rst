@@ -21,11 +21,6 @@ have questions or comments, the `LLVM Developer's Mailing List
 <http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ is a good place to send
 them.
 
-Note that if you are reading this file from a Subversion checkout or the main
-LLVM web page, this document applies to the *next* release, not the current
-one.  To see the release notes for a specific release, please see the `releases
-page <http://llvm.org/releases/>`_.
-
 Non-comprehensive list of changes in this release
 =================================================
 
