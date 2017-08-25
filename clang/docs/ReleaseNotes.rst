@@ -66,6 +66,12 @@ Improvements to Clang's diagnostics
     a non-default alignment that has been specified using a ``#pragma pack``
     directive prior to the ``#include``.
 
+- ``-Wobjc-messaging-id`` is a new, non-default warning that warns about
+  message sends to unqualified ``id`` in Objective-C. This warning is useful
+  for projects that would like to avoid any potential future compiler
+  errors/warnings, as the system frameworks might add a method with the same
+  selector which could make the message send to ``id`` ambiguous.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 

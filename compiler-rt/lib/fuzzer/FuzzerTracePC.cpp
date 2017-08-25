@@ -70,9 +70,9 @@ void TracePC::HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop) {
   NumInline8bitCounters += Stop - Start;
 }
 
-void TracePC::HandlePCsInit(const uint8_t *Start, const uint8_t *Stop) {
-  const uintptr_t *B = reinterpret_cast<const uintptr_t *>(Start);
-  const uintptr_t *E = reinterpret_cast<const uintptr_t *>(Stop);
+void TracePC::HandlePCsInit(const uintptr_t *Start, const uintptr_t *Stop) {
+  const PCTableEntry *B = reinterpret_cast<const PCTableEntry *>(Start);
+  const PCTableEntry *E = reinterpret_cast<const PCTableEntry *>(Stop);
   if (NumPCTables && ModulePCTable[NumPCTables - 1].Start == B) return;
   assert(NumPCTables < sizeof(ModulePCTable) / sizeof(ModulePCTable[0]));
   ModulePCTable[NumPCTables++] = {B, E};
@@ -157,7 +157,7 @@ void TracePC::UpdateObservedPCs() {
                (size_t)(ModulePCTable[i].Stop - ModulePCTable[i].Start));
         for (size_t j = 0; j < Size; j++)
           if (Beg[j])
-            Observe(ModulePCTable[i].Start[j]);
+            Observe(ModulePCTable[i].Start[j].PC);
       }
     } else if (NumGuards == NumPCsInPCTables) {
       size_t GuardIdx = 1;
@@ -168,7 +168,7 @@ void TracePC::UpdateObservedPCs() {
                (size_t)(ModulePCTable[i].Stop - ModulePCTable[i].Start));
         for (size_t j = 0; j < Size; j++, GuardIdx++)
           if (Counters()[GuardIdx])
-            Observe(ModulePCTable[i].Start[j]);
+            Observe(ModulePCTable[i].Start[j].PC);
       }
     }
   }
@@ -240,9 +240,9 @@ void TracePC::PrintCoverage() {
   for (size_t i = 0; i < NumPCTables; i++) {
     auto &M = ModulePCTable[i];
     assert(M.Start < M.Stop);
-    auto ModuleName = GetModuleName(*M.Start);
+    auto ModuleName = GetModuleName(M.Start->PC);
     for (auto Ptr = M.Start; Ptr < M.Stop; Ptr++) {
-      auto PC = *Ptr;
+      auto PC = Ptr->PC;
       auto VisualizePC = GetNextInstructionPc(PC);
       bool IsObserved = ObservedPCs.count(PC);
       std::string FileStr = DescribePC("%s", VisualizePC);
@@ -388,7 +388,8 @@ void __sanitizer_cov_8bit_counters_init(uint8_t *Start, uint8_t *Stop) {
 }
 
 ATTRIBUTE_INTERFACE
-void __sanitizer_cov_pcs_init(const uint8_t *pcs_beg, const uint8_t *pcs_end) {
+void __sanitizer_cov_pcs_init(const uintptr_t *pcs_beg,
+                              const uintptr_t *pcs_end) {
   fuzzer::TPC.HandlePCsInit(pcs_beg, pcs_end);
 }
 

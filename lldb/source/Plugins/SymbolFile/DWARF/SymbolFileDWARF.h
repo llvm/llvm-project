@@ -61,6 +61,7 @@ class DWARFDIECollection;
 class DWARFFormValue;
 class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
+class SymbolFileDWARFDwp;
 
 #define DIE_IS_BEING_PARSED ((lldb_private::Type *)1)
 
@@ -464,8 +465,14 @@ protected:
     return m_forward_decl_clang_type_to_die;
   }
 
+  SymbolFileDWARFDwp *GetDwpSymbolFile();
+
   lldb::ModuleWP m_debug_map_module_wp;
   SymbolFileDWARFDebugMap *m_debug_map_symfile;
+
+  llvm::once_flag m_dwp_symfile_once_flag;
+  std::unique_ptr<SymbolFileDWARFDwp> m_dwp_symfile;
+
   lldb_private::DWARFDataExtractor m_dwarf_data;
 
   DWARFDataSegment m_data_debug_abbrev;

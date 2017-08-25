@@ -628,6 +628,7 @@ enum SectionType {
   eSectionTypeDWARFDebugAbbrev,
   eSectionTypeDWARFDebugAddr,
   eSectionTypeDWARFDebugAranges,
+  eSectionTypeDWARFDebugCuIndex,
   eSectionTypeDWARFDebugFrame,
   eSectionTypeDWARFDebugInfo,
   eSectionTypeDWARFDebugLine,

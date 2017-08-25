@@ -389,13 +389,13 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
     Ctor = CreateInitCallsForSections(M, SanCov8bitCountersInitName, Int8PtrTy,
                                       SanCovCountersSectionName);
   if (Ctor && Options.PCTable) {
-    auto SecStartEnd = CreateSecStartEnd(M, SanCovPCsSectionName, Int8PtrTy);
+    auto SecStartEnd = CreateSecStartEnd(M, SanCovPCsSectionName, IntptrPtrTy);
     Function *InitFunction = declareSanitizerInitFunction(
-        M, SanCovPCsInitName, {Int8PtrTy, Int8PtrTy});
+        M, SanCovPCsInitName, {IntptrPtrTy, IntptrPtrTy});
     IRBuilder<> IRBCtor(Ctor->getEntryBlock().getTerminator());
     IRBCtor.CreateCall(InitFunction,
-                       {IRB.CreatePointerCast(SecStartEnd.first, Int8PtrTy),
-                        IRB.CreatePointerCast(SecStartEnd.second, Int8PtrTy)});
+                       {IRB.CreatePointerCast(SecStartEnd.first, IntptrPtrTy),
+                        IRB.CreatePointerCast(SecStartEnd.second, IntptrPtrTy)});
   }
   return true;
 }
@@ -545,17 +545,24 @@ void SanitizerCoverageModule::CreatePCArray(Function &F,
                                             ArrayRef<BasicBlock *> AllBlocks) {
   size_t N = AllBlocks.size();
   assert(N);
-  SmallVector<Constant *, 16> PCs;
+  SmallVector<Constant *, 32> PCs;
   IRBuilder<> IRB(&*F.getEntryBlock().getFirstInsertionPt());
-  for (size_t i = 0; i < N; i++)
-    if (&F.getEntryBlock() == AllBlocks[i])
-      PCs.push_back((Constant *)IRB.CreatePointerCast(&F, Int8PtrTy));
-    else
-      PCs.push_back(BlockAddress::get(AllBlocks[i]));
-  FunctionPCsArray =
-      CreateFunctionLocalArrayInSection(N, F, Int8PtrTy, SanCovPCsSectionName);
+  for (size_t i = 0; i < N; i++) {
+    if (&F.getEntryBlock() == AllBlocks[i]) {
+      PCs.push_back((Constant *)IRB.CreatePointerCast(&F, IntptrPtrTy));
+      PCs.push_back((Constant *)IRB.CreateIntToPtr(
+          ConstantInt::get(IntptrTy, 1), IntptrPtrTy));
+    } else {
+      PCs.push_back((Constant *)IRB.CreatePointerCast(
+          BlockAddress::get(AllBlocks[i]), IntptrPtrTy));
+      PCs.push_back((Constant *)IRB.CreateIntToPtr(
+          ConstantInt::get(IntptrTy, 0), IntptrPtrTy));
+    }
+  }
+  FunctionPCsArray = CreateFunctionLocalArrayInSection(N * 2, F, IntptrPtrTy,
+                                                       SanCovPCsSectionName);
   FunctionPCsArray->setInitializer(
-      ConstantArray::get(ArrayType::get(Int8PtrTy, N), PCs));
+      ConstantArray::get(ArrayType::get(IntptrPtrTy, N * 2), PCs));
   FunctionPCsArray->setConstant(true);
 
   // We don't reference the PCs array in any of our runtime functions, so we
