@@ -30,7 +30,26 @@ template <size_t N>
 struct ConstantLog2
     : std::integral_constant<size_t, ConstantLog2<N / 2>::value + 1> {};
 template <> struct ConstantLog2<1> : std::integral_constant<size_t, 0> {};
-}
+
+// Provide a trait to check if T is pointer-like.
+template <typename T, typename U = void> struct HasPointerLikeTypeTraits {
+  static const bool value = false;
+};
+
+// sizeof(T) is valid only for a complete T.
+template <typename T> struct HasPointerLikeTypeTraits<
+  T, decltype((sizeof(PointerLikeTypeTraits<T>) + sizeof(T)), void())> {
+  static const bool value = true;
+};
+
+template <typename T> struct IsPointerLike {
+  static const bool value = HasPointerLikeTypeTraits<T>::value;
+};
+
+template <typename T> struct IsPointerLike<T *> {
+  static const bool value = true;
+};
+} // namespace detail
 
 // Provide PointerLikeTypeTraits for non-cvr pointers.
 template <typename T> struct PointerLikeTypeTraits<T *> {
