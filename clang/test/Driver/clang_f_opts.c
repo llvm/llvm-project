@@ -53,6 +53,9 @@
 // CHECK-REROLL-LOOPS: "-freroll-loops"
 // CHECK-NO-REROLL-LOOPS-NOT: "-freroll-loops"
 
+// RUN: %clang -### -S -fprofile-sample-accurate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-SAMPLE-ACCURATE %s
+// CHECK-PROFILE-SAMPLE-ACCURATE: "-fprofile-sample-accurate"
+
 // RUN: %clang -### -S -fprofile-sample-use=%S/Inputs/file.prof %s 2>&1 | FileCheck -check-prefix=CHECK-SAMPLE-PROFILE %s
 // CHECK-SAMPLE-PROFILE: "-fprofile-sample-use={{.*}}/file.prof"
 

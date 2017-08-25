@@ -388,13 +388,14 @@ define void @test20(i32 %bf.load, i8 %x1, i8* %b_addr) {
 ; CHECK-LABEL: test20:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; CHECK-NEXT:    andl $16777215, %edi ## encoding: [0x81,0xe7,0xff,0xff,0xff,0x00]
+; CHECK-NEXT:    testl $16777215, %edi ## encoding: [0xf7,0xc7,0xff,0xff,0xff,0x00]
 ; CHECK-NEXT:    ## imm = 0xFFFFFF
 ; CHECK-NEXT:    setne %al ## encoding: [0x0f,0x95,0xc0]
 ; CHECK-NEXT:    movzbl %sil, %ecx ## encoding: [0x40,0x0f,0xb6,0xce]
 ; CHECK-NEXT:    addl %eax, %ecx ## encoding: [0x01,0xc1]
 ; CHECK-NEXT:    setne (%rdx) ## encoding: [0x0f,0x95,0x02]
-; CHECK-NEXT:    testl %edi, %edi ## encoding: [0x85,0xff]
+; CHECK-NEXT:    testl $16777215, %edi ## encoding: [0xf7,0xc7,0xff,0xff,0xff,0x00]
+; CHECK-NEXT:    ## imm = 0xFFFFFF
 ; CHECK-NEXT:    setne {{.*}}(%rip) ## encoding: [0x0f,0x95,0x05,A,A,A,A]
 ; CHECK-NEXT:    ## fixup A - offset: 3, value: _d-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]

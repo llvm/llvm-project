@@ -126,7 +126,116 @@ JumpThreadingPass::JumpThreadingPass(int T) {
   BBDupThreshold = (T == -1) ? BBDuplicateThreshold : unsigned(T);
 }
 
-/// runOnFunction - Top level algorithm.
+// Update branch probability information according to conditional
+// branch probablity. This is usually made possible for cloned branches
+// in inline instances by the context specific profile in the caller.
+// For instance,
+//
+//  [Block PredBB]
+//  [Branch PredBr]
+//  if (t) {
+//     Block A;
+//  } else {
+//     Block B;
+//  }
+//
+//  [Block BB]
+//  cond = PN([true, %A], [..., %B]); // PHI node
+//  [Branch CondBr]
+//  if (cond) {
+//    ...  // P(cond == true) = 1%
+//  }
+//
+//  Here we know that when block A is taken, cond must be true, which means
+//      P(cond == true | A) = 1
+//
+//  Given that P(cond == true) = P(cond == true | A) * P(A) +
+//                               P(cond == true | B) * P(B)
+//  we get
+//     P(cond == true ) = P(A) + P(cond == true | B) * P(B)
+//
+//  which gives us:
+//     P(A) <= P(c == true), i.e.
+//     P(t == true) <= P(cond == true)
+//
+//  In other words, if we know P(cond == true), we know that P(t == true)
+//  can not be greater than 1%.
+static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
+  BranchInst *CondBr = dyn_cast<BranchInst>(BB->getTerminator());
+  if (!CondBr)
+    return;
+
+  BranchProbability BP;
+  uint64_t TrueWeight, FalseWeight;
+  if (!CondBr->extractProfMetadata(TrueWeight, FalseWeight))
+    return;
+
+  // Returns the outgoing edge of the dominating predecessor block
+  // that leads to the PhiNode's incoming block:
+  auto GetPredOutEdge =
+      [](BasicBlock *IncomingBB,
+         BasicBlock *PhiBB) -> std::pair<BasicBlock *, BasicBlock *> {
+    auto *PredBB = IncomingBB;
+    auto *SuccBB = PhiBB;
+    for (;;) {
+      BranchInst *PredBr = dyn_cast<BranchInst>(PredBB->getTerminator());
+      if (PredBr && PredBr->isConditional())
+        return {PredBB, SuccBB};
+      auto *SinglePredBB = PredBB->getSinglePredecessor();
+      if (!SinglePredBB)
+        return {nullptr, nullptr};
+      SuccBB = PredBB;
+      PredBB = SinglePredBB;
+    }
+  };
+
+  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+    Value *PhiOpnd = PN->getIncomingValue(i);
+    ConstantInt *CI = dyn_cast<ConstantInt>(PhiOpnd);
+
+    if (!CI || !CI->getType()->isIntegerTy(1))
+      continue;
+
+    BP = (CI->isOne() ? BranchProbability::getBranchProbability(
+                            TrueWeight, TrueWeight + FalseWeight)
+                      : BranchProbability::getBranchProbability(
+                            FalseWeight, TrueWeight + FalseWeight));
+
+    auto PredOutEdge = GetPredOutEdge(PN->getIncomingBlock(i), BB);
+    if (!PredOutEdge.first)
+      return;
+
+    BasicBlock *PredBB = PredOutEdge.first;
+    BranchInst *PredBr = cast<BranchInst>(PredBB->getTerminator());
+
+    uint64_t PredTrueWeight, PredFalseWeight;
+    // FIXME: We currently only set the profile data when it is missing.
+    // With PGO, this can be used to refine even existing profile data with
+    // context information. This needs to be done after more performance
+    // testing.
+    if (PredBr->extractProfMetadata(PredTrueWeight, PredFalseWeight))
+      continue;
+
+    // We can not infer anything useful when BP >= 50%, because BP is the
+    // upper bound probability value.
+    if (BP >= BranchProbability(50, 100))
+      continue;
+
+    SmallVector<uint32_t, 2> Weights;
+    if (PredBr->getSuccessor(0) == PredOutEdge.second) {
+      Weights.push_back(BP.getNumerator());
+      Weights.push_back(BP.getCompl().getNumerator());
+    } else {
+      Weights.push_back(BP.getCompl().getNumerator());
+      Weights.push_back(BP.getNumerator());
+    }
+    PredBr->setMetadata(LLVMContext::MD_prof,
+                        MDBuilder(PredBr->getParent()->getContext())
+                            .createBranchWeights(Weights));
+  }
+}
+
+/// runOnFunction - Toplevel algorithm.
 ///
 bool JumpThreading::runOnFunction(Function &F) {
   if (skipFunction(F))
@@ -990,6 +1099,11 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
   if (LoadInst *LI = dyn_cast<LoadInst>(SimplifyValue))
     if (SimplifyPartiallyRedundantLoad(LI))
       return true;
+
+  // Before threading, try to propagate profile data backwards:
+  if (PHINode *PN = dyn_cast<PHINode>(CondInst))
+    if (PN->getParent() == BB && isa<BranchInst>(BB->getTerminator()))
+      updatePredecessorProfileMetadata(PN, BB);
 
   // Handle a variety of cases where we are branching on something derived from
   // a PHI node in the current block.  If we can prove that any predecessors

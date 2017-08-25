@@ -557,6 +557,10 @@ void SanitizerCoverageModule::CreatePCArray(Function &F,
   FunctionPCsArray->setInitializer(
       ConstantArray::get(ArrayType::get(Int8PtrTy, N), PCs));
   FunctionPCsArray->setConstant(true);
+
+  // We don't reference the PCs array in any of our runtime functions, so we
+  // need to prevent it from being dead stripped.
+  appendToUsed(*F.getParent(), {FunctionPCsArray});
 }
 
 void SanitizerCoverageModule::CreateFunctionLocalArrays(

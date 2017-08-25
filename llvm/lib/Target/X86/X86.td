@@ -874,8 +874,7 @@ def : ProcessorModel<"x86-64", SandyBridgeModel, [
   Feature64Bit,
   FeatureSlow3OpsLEA,
   FeatureSlowBTMem,
-  FeatureSlowIncDec,
-  FeatureSlowUAMem32
+  FeatureSlowIncDec
 ]>;
 
 //===----------------------------------------------------------------------===//
