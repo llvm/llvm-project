@@ -67,8 +67,8 @@ function(clang_compile object_file source)
   if(NOT COMPILER_RT_STANDALONE_BUILD)
     list(APPEND SOURCE_DEPS clang compiler-rt-headers)
   endif()
-  if (TARGET CheckClangHeaders)
-    list(APPEND SOURCE_DEPS CheckClangHeaders)
+  if (TARGET CompilerRTUnitTestCheckCxx)
+    list(APPEND SOURCE_DEPS CompilerRTUnitTestCheckCxx)
   endif()
   string(REGEX MATCH "[.](cc|cpp)$" is_cxx ${source_rpath})
   string(REGEX MATCH "[.](m|mm)$" is_objc ${source_rpath})
@@ -132,10 +132,12 @@ macro(clang_compiler_add_cxx_check)
       "  false"
       "fi"
       )
-    add_custom_target(CheckClangHeaders
+    add_custom_target(CompilerRTUnitTestCheckCxx
       COMMAND bash -c "${CMD}"
       COMMENT "Checking that just-built clang can find C++ headers..."
       VERBATIM)
-    ADD_DEPENDENCIES(CheckClangHeaders clang)
+    if (TARGET clang)
+      ADD_DEPENDENCIES(CompilerRTUnitTestCheckCxx clang)
+    endif()
   endif()
 endmacro()
