@@ -1110,6 +1110,7 @@ bool IRExecutionUnit::CommitOneAllocation(lldb::ProcessSP &process_sp,
   case lldb::eSectionTypeDWARFDebugAbbrev:
   case lldb::eSectionTypeDWARFDebugAddr:
   case lldb::eSectionTypeDWARFDebugAranges:
+  case lldb::eSectionTypeDWARFDebugCuIndex:
   case lldb::eSectionTypeDWARFDebugFrame:
   case lldb::eSectionTypeDWARFDebugInfo:
   case lldb::eSectionTypeDWARFDebugLine:

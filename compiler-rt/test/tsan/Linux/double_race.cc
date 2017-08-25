@@ -1,5 +1,5 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
-#include "test.h"
+#include "../test.h"
 #include <memory.h>
 
 // A reproducer for a known issue.

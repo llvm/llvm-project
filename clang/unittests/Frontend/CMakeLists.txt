@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_unittest(FrontendTests
+  ASTUnitTest.cpp
   FrontendActionTest.cpp
   CodeGenActionTest.cpp
   )

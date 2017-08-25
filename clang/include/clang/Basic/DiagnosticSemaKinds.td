@@ -1211,6 +1211,10 @@ def err_objc_method_unsupported_param_ret_type : Error<
   "%0 %select{parameter|return}1 type is unsupported; "
   "support for vector types for this target is introduced in %2">;
 
+def warn_messaging_unqualified_id : Warning<
+  "messaging unqualified id">, DefaultIgnore,
+  InGroup<DiagGroup<"objc-messaging-id">>;
+
 // C++ declarations
 def err_static_assert_expression_is_not_constant : Error<
   "static_assert expression is not an integral constant expression">;

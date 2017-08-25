@@ -1080,7 +1080,7 @@ Sema::ActOnTemplateParameterList(unsigned Depth,
                                  SourceLocation ExportLoc,
                                  SourceLocation TemplateLoc,
                                  SourceLocation LAngleLoc,
-                                 ArrayRef<Decl *> Params,
+                                 ArrayRef<NamedDecl *> Params,
                                  SourceLocation RAngleLoc,
                                  Expr *RequiresClause) {
   if (ExportLoc.isValid())
@@ -1088,7 +1088,7 @@ Sema::ActOnTemplateParameterList(unsigned Depth,
 
   return TemplateParameterList::Create(
       Context, TemplateLoc, LAngleLoc,
-      llvm::makeArrayRef((NamedDecl *const *)Params.data(), Params.size()),
+      llvm::makeArrayRef(Params.data(), Params.size()),
       RAngleLoc, RequiresClause);
 }
 
