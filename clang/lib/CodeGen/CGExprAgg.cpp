@@ -124,24 +124,7 @@ public:
   }
 
   // l-values.
-  void VisitDeclRefExpr(DeclRefExpr *E) {
-    // For aggregates, we should always be able to emit the variable
-    // as an l-value unless it's a reference.  This is due to the fact
-    // that we can't actually ever see a normal l2r conversion on an
-    // aggregate in C++, and in C there's no language standard
-    // actively preventing us from listing variables in the captures
-    // list of a block.
-    if (E->getDecl()->getType()->isReferenceType()) {
-      if (CodeGenFunction::ConstantEmission result
-            = CGF.tryEmitAsConstant(E)) {
-        EmitFinalDestCopy(E->getType(), result.getReferenceLValue(CGF, E));
-        return;
-      }
-    }
-
-    EmitAggLoadOfLValue(E);
-  }
-
+  void VisitDeclRefExpr(DeclRefExpr *E) { EmitAggLoadOfLValue(E); }
   void VisitMemberExpr(MemberExpr *ME) { EmitAggLoadOfLValue(ME); }
   void VisitUnaryDeref(UnaryOperator *E) { EmitAggLoadOfLValue(E); }
   void VisitStringLiteral(StringLiteral *E) { EmitAggLoadOfLValue(E); }

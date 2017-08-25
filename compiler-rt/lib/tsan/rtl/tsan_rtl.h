@@ -825,7 +825,7 @@ void ALWAYS_INLINE TraceAddEvent(ThreadState *thr, FastState fs,
     return;
   DCHECK_GE((int)typ, 0);
   DCHECK_LE((int)typ, 7);
-  DCHECK_EQ(GetLsb(addr, 61), addr);
+  DCHECK_EQ(GetLsb(addr, kEventPCBits), addr);
   StatInc(thr, StatEvents);
   u64 pos = fs.GetTracePos();
   if (UNLIKELY((pos % kTracePartSize) == 0)) {
@@ -837,7 +837,7 @@ void ALWAYS_INLINE TraceAddEvent(ThreadState *thr, FastState fs,
   }
   Event *trace = (Event*)GetThreadTrace(fs.tid());
   Event *evp = &trace[pos];
-  Event ev = (u64)addr | ((u64)typ << 61);
+  Event ev = (u64)addr | ((u64)typ << kEventPCBits);
   *evp = ev;
 }
 
