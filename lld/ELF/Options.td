@@ -35,7 +35,7 @@ defm defsym: Eq<"defsym">, HelpText<"Define a symbol alias">;
 defm library_path: Eq<"library-path">,
   HelpText<"Add a directory to the library search path">, MetaVarName<"<dir>">;
 
-def O: Joined<["-"], "O">, HelpText<"Optimize output file size">;
+def O: JoinedOrSeparate<["-"], "O">, HelpText<"Optimize output file size">;
 
 defm Tbss: Eq<"Tbss">,
   HelpText<"Same as --section-start with .bss as the sectionname">;

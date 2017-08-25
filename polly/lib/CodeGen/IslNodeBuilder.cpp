@@ -1,4 +1,4 @@
-//===------ IslNodeBuilder.cpp - Translate an isl AST into a LLVM-IR AST---===//
+//===- IslNodeBuilder.cpp - Translate an isl AST into a LLVM-IR AST -------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,35 +19,57 @@
 #include "polly/CodeGen/IslExprBuilder.h"
 #include "polly/CodeGen/LoopGenerators.h"
 #include "polly/CodeGen/RuntimeDebugBuilder.h"
-#include "polly/CodeGen/Utils.h"
 #include "polly/Config/config.h"
-#include "polly/DependenceInfo.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/SCEVValidator.h"
 #include "polly/Support/ScopHelper.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/RegionInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Verifier.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "isl/aff.h"
+#include "isl/aff_type.h"
 #include "isl/ast.h"
 #include "isl/ast_build.h"
-#include "isl/list.h"
+#include "isl/isl-noexceptions.h"
 #include "isl/map.h"
 #include "isl/set.h"
 #include "isl/union_map.h"
 #include "isl/union_set.h"
+#include "isl/val.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <string>
+#include <utility>
+#include <vector>
 
-using namespace polly;
 using namespace llvm;
+using namespace polly;
 
 #define DEBUG_TYPE "polly-codegen"
 
@@ -138,7 +160,7 @@ static bool checkIslAstExprInt(__isl_take isl_ast_expr *Expr,
   }
   auto ExprVal = isl_ast_expr_get_val(Expr);
   isl_ast_expr_free(Expr);
-  if (Predicate(ExprVal) != true) {
+  if (Predicate(ExprVal) != isl_bool_true) {
     isl_val_free(ExprVal);
     return false;
   }
@@ -305,7 +327,6 @@ IslNodeBuilder::getScheduleForAstNode(__isl_keep isl_ast_node *For) {
 void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
                                             SetVector<Value *> &Values,
                                             SetVector<const Loop *> &Loops) {
-
   SetVector<const SCEV *> SCEVs;
   struct SubtreeReferences References = {
       LI, SE, S, ValueMap, Values, SCEVs, getBlockGenerator(), nullptr};
@@ -408,7 +429,7 @@ void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
   isl_ast_node_free(Node);
   // If a child node of a 'SIMD mark' is a loop that has a single iteration,
   // it will be optimized away and we should skip it.
-  if (!strcmp(isl_id_get_name(Id), "SIMD") &&
+  if (strcmp(isl_id_get_name(Id), "SIMD") == 0 &&
       isl_ast_node_get_type(Child) == isl_ast_node_for) {
     bool Vector = PollyVectorizerChoice == VECTORIZER_POLLY;
     int VectorWidth = getNumberOfIterations(Child);
@@ -419,7 +440,7 @@ void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
     isl_id_free(Id);
     return;
   }
-  if (!strcmp(isl_id_get_name(Id), "Inter iteration alias-free")) {
+  if (strcmp(isl_id_get_name(Id), "Inter iteration alias-free") == 0) {
     auto *BasePtr = static_cast<Value *>(isl_id_get_user(Id));
     Annotator.addInterIterationAliasFreeBasePtr(BasePtr);
   }
@@ -489,7 +510,6 @@ void IslNodeBuilder::createForVector(__isl_take isl_ast_node *For,
   VectorLoops++;
 }
 
-namespace {
 /// Restore the initial ordering of dimensions of the band node
 ///
 /// In case the band node represents all the dimensions of the iteration
@@ -498,17 +518,16 @@ namespace {
 ///
 /// @param Node The band node to be modified.
 /// @return The modified schedule node.
-bool IsLoopVectorizerDisabled(isl::ast_node Node) {
+static bool IsLoopVectorizerDisabled(isl::ast_node Node) {
   assert(isl_ast_node_get_type(Node.keep()) == isl_ast_node_for);
   auto Body = Node.for_get_body();
   if (isl_ast_node_get_type(Body.keep()) != isl_ast_node_mark)
     return false;
   auto Id = Body.mark_get_id();
-  if (!strcmp(Id.get_name().c_str(), "Loop Vectorizer Disabled"))
+  if (strcmp(Id.get_name().c_str(), "Loop Vectorizer Disabled") == 0)
     return true;
   return false;
 }
-} // namespace
 
 void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For,
                                          bool KnownParallel) {
@@ -1042,7 +1061,6 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
     SetVector<Value *> Values;
     findValues(ParamSCEV, SE, Values);
     for (auto *Val : Values) {
-
       // Check if the value is an instruction in a dead block within the SCoP
       // and if so do not code generate it.
       if (auto *Inst = dyn_cast<Instruction>(Val)) {
@@ -1073,7 +1091,6 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
       }
 
       if (auto *IAClass = S.lookupInvariantEquivClass(Val)) {
-
         // Check if this invariant access class is empty, hence if we never
         // actually added a loads instruction to it. In that case it has no
         // (meaningful) users and we should not try to code generate it.
@@ -1233,7 +1250,6 @@ Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
 
 Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
                                             isl_set *Domain) {
-
   isl_set *AccessRange = isl_map_range(MA.getAddressFunction().release());
   AccessRange = isl_set_gist_params(AccessRange, S.getContext().release());
 
@@ -1431,7 +1447,6 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   }
 
   for (const MemoryAccess *MA : MAs) {
-
     Instruction *MAAccInst = MA->getAccessInstruction();
     // Use the escape system to get the correct value to users outside the SCoP.
     BlockGenerator::EscapeUserVectorTy EscapeUsers;
@@ -1498,7 +1513,6 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
       // Insert the free call at polly.exiting
       CallInst::CreateFree(CreatedArray,
                            std::get<1>(StartExitBlocks)->getTerminator());
-
     } else {
       auto InstIt = Builder.GetInsertBlock()
                         ->getParent()
@@ -1514,7 +1528,6 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
 }
 
 bool IslNodeBuilder::preloadInvariantLoads() {
-
   auto &InvariantEquivClasses = S.getInvariantAccesses();
   if (InvariantEquivClasses.empty())
     return true;
