@@ -1,0 +1,433 @@
+# RUN: llc -mtriple=aarch64-unknown-unknown -global-isel -verify-machineinstrs -run-pass=legalizer %s -o - | FileCheck %s
+--- |
+  ; ModuleID = '/tmp/test.ll'
+  source_filename = "/tmp/test.ll"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-unknown"
+  
+  define i32 @legalize_phi(i32 %argc) {
+  entry:
+    ret i32 0
+  }
+
+  define i32 @legalize_phi_empty(i32 %argc) {
+  entry:
+    ret i32 0
+  }
+
+  define i32 @legalize_phi_loop(i32 %argc) {
+  entry:
+    ret i32 0
+  }
+
+  define i32 @legalize_phi_cycle(i32 %argc) {
+  entry:
+    ret i32 0
+  }
+  define i32 @legalize_phi_same_bb(i32 %argc) {
+  entry:
+    ret i32 0
+  }
+
+  define i32 @legalize_phi_diff_bb(i32 %argc, i32 %argc2) {
+  entry:
+    ret i32 0
+  }
+
+...
+---
+name:            legalize_phi
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+  - { id: 6, class: _, preferred-register: '' }
+  - { id: 7, class: _, preferred-register: '' }
+  - { id: 8, class: _, preferred-register: '' }
+  - { id: 9, class: _, preferred-register: '' }
+  - { id: 10, class: _, preferred-register: '' }
+liveins:         
+body:             |
+  bb.0:
+   ; Test that we insert legalization artifacts(Truncs here) into the correct BBs
+   ; while legalizing the G_PHI to s16.
+   ; CHECK-LABEL: name: legalize_phi
+   ; CHECK-LABEL: bb.1:
+   ; CHECK: [[ADD_BB1:%.*]](s32) = G_ADD
+   ; CHECK: [[RES_BB1:%.*]](s16) = G_TRUNC [[ADD_BB1]]
+
+   ; CHECK-LABEL: bb.2:
+   ; CHECK: [[ADD_BB2:%.*]](s32) = G_ADD
+   ; CHECK: [[RES_BB2:%.*]](s16) = G_TRUNC [[ADD_BB2]]
+
+   ; CHECK-LABEL: bb.3:
+   ; CHECK: [[RES_PHI:%.*]](s16) = G_PHI [[RES_BB1]](s16), %bb.1, [[RES_BB2]](s16), %bb.2
+   ; CHECK: [[RES:%.*]](s1) = G_TRUNC [[RES_PHI]]
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: %w0
+  
+    %0(s32) = COPY %w0
+    %1(s32) = G_CONSTANT i32 0
+    %3(s32) = G_CONSTANT i32 1
+    %6(s32) = G_CONSTANT i32 2
+    %2(s1) = G_ICMP intpred(ugt), %0(s32), %1
+    G_BRCOND %2(s1), %bb.1
+    G_BR %bb.2
+  
+  bb.1:
+    successors: %bb.3(0x80000000)
+  
+    %4(s32) = G_ADD %0, %3
+    %5(s1) = G_TRUNC %4(s32)
+    G_BR %bb.3
+  
+  bb.2:
+    successors: %bb.3(0x80000000)
+  
+    %7(s32) = G_ADD %0, %6
+    %8(s1) = G_TRUNC %7(s32)
+  
+  bb.3:
+    %9(s1) = G_PHI %5(s1), %bb.1, %8(s1), %bb.2
+    %10(s32) = G_ZEXT %9(s1)
+    %w0 = COPY %10(s32)
+    RET_ReallyLR implicit %w0
+
+...
+---
+name:            legalize_phi_empty
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+  - { id: 6, class: _, preferred-register: '' }
+  - { id: 7, class: _, preferred-register: '' }
+  - { id: 8, class: _, preferred-register: '' }
+  - { id: 9, class: _, preferred-register: '' }
+  - { id: 10, class: _, preferred-register: '' }
+liveins:
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: %w0
+   ; Test that we properly legalize a phi with a predecessor that's empty
+   ; CHECK-LABEL: name: legalize_phi_empty
+   ; CHECK-LABEL: bb.0:
+   ; CHECK: [[ENTRY_ADD:%.*]](s32) = G_ADD
+
+   ; CHECK-LABEL: bb.1:
+   ; CHECK: [[ADD_BB1:%.*]](s32) = G_ADD
+   ; CHECK: [[RES_BB1:%.*]](s16) = G_TRUNC [[ADD_BB1]]
+
+   ; CHECK-LABEL: bb.2:
+   ; CHECK: [[RES_BB2:%.*]](s16) = G_TRUNC [[ENTRY_ADD]]
+
+   ; CHECK: [[RES_PHI:%.*]](s16) = G_PHI [[RES_BB1]](s16), %bb.1, [[RES_BB2]](s16), %bb.2
+   ; CHECK: [[RES:%.*]](s1) = G_TRUNC [[RES_PHI]]
+
+    %0(s32) = COPY %w0
+    %1(s32) = G_CONSTANT i32 0
+    %3(s32) = G_CONSTANT i32 3
+    %6(s32) = G_CONSTANT i32 1
+    %2(s1) = G_ICMP intpred(ugt), %0(s32), %1
+    %4(s32) = G_ADD %0, %3
+    %5(s1) = G_TRUNC %4(s32)
+    G_BRCOND %2(s1), %bb.1
+    G_BR %bb.2
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+
+    %7(s32) = G_ADD %0, %6
+    %8(s1) = G_TRUNC %7(s32)
+    G_BR %bb.3
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+
+  bb.3:
+    %9(s1) = G_PHI %8(s1), %bb.1, %5(s1), %bb.2
+    %10(s32) = G_ZEXT %9(s1)
+    %w0 = COPY %10(s32)
+    RET_ReallyLR implicit %w0
+
+...
+---
+name:            legalize_phi_loop
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+  - { id: 6, class: _, preferred-register: '' }
+  - { id: 7, class: _, preferred-register: '' }
+liveins:
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: %w0
+   ; Test that we properly legalize a phi that uses a value from the same BB
+   ; CHECK-LABEL: name: legalize_phi_loop
+   ; CHECK-LABEL: bb.0:
+   ; CHECK: [[C0:%.*]](s32) = G_CONSTANT i32 0
+   ; CHECK: [[RES_BB1:%.*]](s16) = G_TRUNC [[C0]]
+
+   ; CHECK-LABEL: bb.1:
+   ; CHECK: [[RES_PHI:%.*]](s16) = G_PHI [[RES_BB1]](s16), %bb.0, [[RES_BB2:%.*]](s16), %bb.1
+   ; CHECK-NEXT: G_TRUNC
+   ; CHECK: [[RES_BB2]](s16) = G_ANYEXT
+    %0(s32) = COPY %w0
+    %2(s8) = G_CONSTANT i8 1
+    %7(s8) = G_CONSTANT i8 0
+
+  bb.1:
+    successors: %bb.1(0x40000000), %bb.3(0x40000000)
+
+    %1(s8) = G_PHI %7(s8), %bb.0, %3(s8), %bb.1
+    %3(s8) = G_ADD %1, %2
+    %4(s32) = G_ZEXT %3(s8)
+    %5(s1) = G_ICMP intpred(ugt), %4(s32), %0
+    G_BRCOND %5(s1), %bb.1
+
+  bb.3:
+    %6(s32) = G_ZEXT %3(s8)
+    %w0 = COPY %6(s32)
+    RET_ReallyLR implicit %w0
+
+...
+---
+name:            legalize_phi_cycle
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+liveins:
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: %w0
+   ; Test that we properly legalize a phi that uses itself
+   ; CHECK-LABEL: name: legalize_phi_cycle
+   ; CHECK-LABEL: bb.0:
+   ; CHECK: [[C0:%.*]](s32) = G_CONSTANT i32 0
+   ; CHECK: [[RES_BB1:%.*]](s16) = G_TRUNC [[C0]]
+
+   ; CHECK-LABEL: bb.1:
+   ; CHECK: [[RES_PHI:%.*]](s16) = G_PHI [[RES_BB1]](s16), %bb.0, [[RES_BB2:%.*]](s16), %bb.1
+   ; CHECK-NEXT: G_TRUNC
+   ; CHECK: [[RES_BB2]](s16) = G_ANYEXT
+
+    %0(s32) = COPY %w0
+    %4(s8) = G_CONSTANT i8 0
+
+  bb.1:
+    successors: %bb.1(0x40000000), %bb.3(0x40000000)
+
+    %1(s8) = G_PHI %4(s8), %bb.0, %1(s8), %bb.1
+    %2(s32) = G_ZEXT %1(s8)
+    %3(s1) = G_ICMP intpred(ugt), %2(s32), %0
+    G_BRCOND %3(s1), %bb.1
+
+  bb.3:
+    %w0 = COPY %2(s32)
+    RET_ReallyLR implicit %w0
+
+...
+---
+name:            legalize_phi_same_bb
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+  - { id: 6, class: _, preferred-register: '' }
+  - { id: 7, class: _, preferred-register: '' }
+  - { id: 8, class: _, preferred-register: '' }
+  - { id: 9, class: _, preferred-register: '' }
+  - { id: 10, class: _, preferred-register: '' }
+  - { id: 11, class: _, preferred-register: '' }
+  - { id: 12, class: _, preferred-register: '' }
+  - { id: 13, class: _, preferred-register: '' }
+  - { id: 14, class: _, preferred-register: '' }
+liveins:
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: %w0
+   ; Make sure that we correctly insert the new legalized G_PHI at the
+   ; correct location (ie make sure G_PHIs are the first insts in the BB).
+   ; CHECK-LABEL: name: legalize_phi_same_bb
+   ; CHECK-LABEL: bb.0:
+   ; CHECK: [[C42:%.*]](s32) = G_CONSTANT i32 42
+   ; CHECK: [[ENTRY_ADD:%.*]](s32) = G_ADD
+
+   ; CHECK-LABEL: bb.1:
+   ; CHECK: [[BB1_ADD:%.*]](s32) = G_ADD
+   ; CHECK: [[RES1_BB1:%.*]](s16) = G_TRUNC [[BB1_ADD]]
+   ; CHECK: [[RES2_BB1:%.*]](s16) = G_TRUNC [[BB1_ADD]]
+
+   ; CHECK-LABEL: bb.2:
+   ; CHECK: [[RES1_BB2:%.*]](s16) = G_TRUNC [[ENTRY_ADD]]
+   ; CHECK: [[RES2_BB2:%.*]](s16) = G_TRUNC [[C42]]
+
+   ; CHECK-LABEL: bb.3:
+   ; CHECK: [[RES1_PHI:%.*]](s16) = G_PHI [[RES1_BB1]](s16), %bb.1, [[RES1_BB2]](s16), %bb.2
+   ; CHECK-NEXT: [[RES_PHI:%.*]](s16) = G_PHI [[RES2_BB1]](s16), %bb.1, [[RES2_BB2]](s16), %bb.2
+   ; CHECK-NEXT: G_TRUNC
+   ; CHECK-NEXT: G_TRUNC
+
+    %0(s32) = COPY %w0
+    %1(s32) = G_CONSTANT i32 0
+    %3(s32) = G_CONSTANT i32 3
+    %6(s32) = G_CONSTANT i32 1
+    %14(s8) = G_CONSTANT i8 42
+    %2(s1) = G_ICMP intpred(ugt), %0(s32), %1
+    %4(s32) = G_ADD %0, %3
+    %5(s8) = G_TRUNC %4(s32)
+    G_BRCOND %2(s1), %bb.1
+    G_BR %bb.2
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+
+    %7(s32) = G_ADD %0, %6
+    %8(s8) = G_TRUNC %7(s32)
+    G_BR %bb.3
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+
+  bb.3:
+    %9(s8) = G_PHI %8(s8), %bb.1, %5(s8), %bb.2
+    %10(s8) = G_PHI %8(s8), %bb.1, %14(s8), %bb.2
+    %11(s32) = G_ZEXT %9(s8)
+    %12(s32) = G_ZEXT %10(s8)
+    %13(s32) = G_ADD %11, %12
+    %w0 = COPY %13(s32)
+    RET_ReallyLR implicit %w0
+
+...
+---
+name:            legalize_phi_diff_bb
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+  - { id: 6, class: _, preferred-register: '' }
+  - { id: 7, class: _, preferred-register: '' }
+  - { id: 8, class: _, preferred-register: '' }
+  - { id: 9, class: _, preferred-register: '' }
+  - { id: 10, class: _, preferred-register: '' }
+  - { id: 11, class: _, preferred-register: '' }
+  - { id: 12, class: _, preferred-register: '' }
+  - { id: 13, class: _, preferred-register: '' }
+  - { id: 14, class: _, preferred-register: '' }
+  - { id: 15, class: _, preferred-register: '' }
+liveins:
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.3(0x40000000)
+    liveins: %w0, %w1
+   ; Make sure that we correctly legalize PHIs sharing common defs
+   ; in different BBs.
+   ; CHECK-LABEL: name: legalize_phi_diff_bb
+   ; CHECK-LABEL: bb.0:
+   ; CHECK: [[C44:%.*]](s32) = G_CONSTANT i32 44
+   ; CHECK: [[C43:%.*]](s32) = G_CONSTANT i32 43
+   ; CHECK: [[ENTRY_ADD:%.*]](s32) = G_ADD
+   ; CHECK: [[RES_ENTRY:%.*]](s16) = G_TRUNC [[ENTRY_ADD]]
+   ; CHECK: [[RES_ENTRY1:%.*]](s16) = G_TRUNC [[ENTRY_ADD]]
+
+   ; CHECK-LABEL: bb.1:
+   ; CHECK: [[RES1_PHI:%.*]](s16) = G_PHI [[RES_ENTRY]](s16), %bb.0, [[RES_BB1:%.*]](s16), %bb.1
+   ; CHECK: [[RES_BB1:%.*]](s16) = G_TRUNC
+   ; CHECK: [[RES_FOR_BB2:%.*]](s16) = COPY [[RES1_PHI]]
+
+   ; CHECK-LABEL: bb.2:
+   ; CHECK: [[RES2_PHI:%.*]](s16) = G_PHI [[RES_FOR_BB2]](s16), %bb.1, [[RES_ENTRY1:%.*]](s16), %bb.0
+   ; CHECK-NEXT: G_TRUNC
+
+    %0(s32) = COPY %w0
+    %1(s32) = COPY %w1
+    %2(s32) = G_CONSTANT i32 0
+    %4(s32) = G_CONSTANT i32 3
+    %9(s32) = G_CONSTANT i32 1
+    %11(s32) = G_CONSTANT i32 44
+    %15(s8) = G_CONSTANT i8 43
+    %3(s1) = G_ICMP intpred(ugt), %0(s32), %2
+    %5(s32) = G_ADD %0, %4
+    %6(s8) = G_TRUNC %5(s32)
+    G_BRCOND %3(s1), %bb.1
+    G_BR %bb.3
+
+  bb.1:
+    successors: %bb.3(0x40000000), %bb.1(0x40000000)
+
+    %7(s8) = G_PHI %6(s8), %bb.0, %15(s8), %bb.1
+    %8(s32) = G_ZEXT %7(s8)
+    %10(s32) = G_ADD %8, %9
+    %12(s1) = G_ICMP intpred(ugt), %10(s32), %11
+    G_BRCOND %12(s1), %bb.3
+    G_BR %bb.1
+
+  bb.3:
+    %13(s8) = G_PHI %7(s8), %bb.1, %6(s8), %bb.0
+    %14(s32) = G_ZEXT %13(s8)
+    %w0 = COPY %14(s32)
+    RET_ReallyLR implicit %w0
+
+...
+

@@ -168,10 +168,8 @@ public:
 
     void deregisterEHFrames() override {
       for (auto &Frame : RegisteredEHFrames) {
-        auto Err = Client.deregisterEHFrames(Frame.Addr, Frame.Size);
         // FIXME: Add error poll.
-        assert(!Err && "Failed to register remote EH frames.");
-        (void)Err;
+        llvm::cantFail(Client.deregisterEHFrames(Frame.Addr, Frame.Size));
       }
     }
 

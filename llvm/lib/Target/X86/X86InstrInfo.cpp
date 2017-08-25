@@ -7148,6 +7148,22 @@ inline static bool isDefConvertible(MachineInstr &MI) {
   case X86::TZCNT16rr: case X86::TZCNT16rm:
   case X86::TZCNT32rr: case X86::TZCNT32rm:
   case X86::TZCNT64rr: case X86::TZCNT64rm:
+  case X86::BEXTRI32ri:  case X86::BEXTRI32mi:
+  case X86::BEXTRI64ri:  case X86::BEXTRI64mi:
+  case X86::BLCFILL32rr: case X86::BLCFILL32rm:
+  case X86::BLCFILL64rr: case X86::BLCFILL64rm:
+  case X86::BLCI32rr:    case X86::BLCI32rm:
+  case X86::BLCI64rr:    case X86::BLCI64rm:
+  case X86::BLCIC32rr:   case X86::BLCIC32rm:
+  case X86::BLCIC64rr:   case X86::BLCIC64rm:
+  case X86::BLCMSK32rr:  case X86::BLCMSK32rm:
+  case X86::BLCMSK64rr:  case X86::BLCMSK64rm:
+  case X86::BLCS32rr:    case X86::BLCS32rm:
+  case X86::BLCS64rr:    case X86::BLCS64rm:
+  case X86::BLSFILL32rr: case X86::BLSFILL32rm:
+  case X86::BLSFILL64rr: case X86::BLSFILL64rm:
+  case X86::BLSIC32rr:   case X86::BLSIC32rm:
+  case X86::BLSIC64rr:   case X86::BLSIC64rm:
     return true;
   }
 }
