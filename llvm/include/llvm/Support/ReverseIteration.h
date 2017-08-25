@@ -2,16 +2,18 @@
 #define LLVM_SUPPORT_REVERSEITERATION_H
 
 #include "llvm/Config/abi-breaking.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace llvm {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-template <class T = void> struct ReverseIterate { static bool value; };
+
+template<class T = void *>
+bool shouldReverseIterate() {
 #if LLVM_ENABLE_REVERSE_ITERATION
-template <class T> bool ReverseIterate<T>::value = true;
+  return detail::IsPointerLike<T>::value;
 #else
-template <class T> bool ReverseIterate<T>::value = false;
-#endif
+  return false;
 #endif
 }
 
+}
 #endif

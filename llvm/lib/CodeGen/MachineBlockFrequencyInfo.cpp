@@ -12,22 +12,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/raw_ostream.h"
+#include <string>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-block-freq"
-
 
 static cl::opt<GVDAGType> ViewMachineBlockFreqPropagationDAG(
     "view-machine-block-freq-propagation-dags", cl::Hidden,
@@ -42,6 +42,7 @@ static cl::opt<GVDAGType> ViewMachineBlockFreqPropagationDAG(
                           "integer fractional block frequency representation."),
                clEnumValN(GVDT_Count, "count", "display a graph using the real "
                                                "profile count if available.")));
+
 // Similar option above, but used to control BFI display only after MBP pass
 cl::opt<GVDAGType> ViewBlockLayoutWithBFI(
     "view-block-layout-with-bfi", cl::Hidden,
@@ -62,6 +63,7 @@ cl::opt<GVDAGType> ViewBlockLayoutWithBFI(
 // Command line option to specify the name of the function for CFG dump
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
+
 // Command line option to specify hot frequency threshold.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-hot-freq-perc=
 extern cl::opt<unsigned> ViewHotFreqPercent;
@@ -76,9 +78,9 @@ static GVDAGType getGVDT() {
 namespace llvm {
 
 template <> struct GraphTraits<MachineBlockFrequencyInfo *> {
-  typedef const MachineBasicBlock *NodeRef;
-  typedef MachineBasicBlock::const_succ_iterator ChildIteratorType;
-  typedef pointer_iterator<MachineFunction::const_iterator> nodes_iterator;
+  using NodeRef = const MachineBasicBlock *;
+  using ChildIteratorType = MachineBasicBlock::const_succ_iterator;
+  using nodes_iterator = pointer_iterator<MachineFunction::const_iterator>;
 
   static NodeRef getEntryNode(const MachineBlockFrequencyInfo *G) {
     return &G->getFunction()->front();
@@ -99,21 +101,21 @@ template <> struct GraphTraits<MachineBlockFrequencyInfo *> {
   }
 };
 
-typedef BFIDOTGraphTraitsBase<MachineBlockFrequencyInfo,
-                              MachineBranchProbabilityInfo>
-    MBFIDOTGraphTraitsBase;
+using MBFIDOTGraphTraitsBase =
+    BFIDOTGraphTraitsBase<MachineBlockFrequencyInfo,
+                          MachineBranchProbabilityInfo>;
+
 template <>
 struct DOTGraphTraits<MachineBlockFrequencyInfo *>
     : public MBFIDOTGraphTraitsBase {
-  explicit DOTGraphTraits(bool isSimple = false)
-      : MBFIDOTGraphTraitsBase(isSimple), CurFunc(nullptr), LayoutOrderMap() {}
-
-  const MachineFunction *CurFunc;
+  const MachineFunction *CurFunc = nullptr;
   DenseMap<const MachineBasicBlock *, int> LayoutOrderMap;
+
+  explicit DOTGraphTraits(bool isSimple = false)
+      : MBFIDOTGraphTraitsBase(isSimple) {}
 
   std::string getNodeLabel(const MachineBasicBlock *Node,
                            const MachineBlockFrequencyInfo *Graph) {
-
     int layout_order = -1;
     // Attach additional ordering information if 'isSimple' is false.
     if (!isSimple()) {
@@ -163,7 +165,7 @@ MachineBlockFrequencyInfo::MachineBlockFrequencyInfo()
   initializeMachineBlockFrequencyInfoPass(*PassRegistry::getPassRegistry());
 }
 
-MachineBlockFrequencyInfo::~MachineBlockFrequencyInfo() {}
+MachineBlockFrequencyInfo::~MachineBlockFrequencyInfo() = default;
 
 void MachineBlockFrequencyInfo::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfo>();

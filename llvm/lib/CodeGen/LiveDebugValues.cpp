@@ -1,4 +1,4 @@
-//===------ LiveDebugValues.cpp - Tracking Debug Value MIs ----------------===//G
+//===- LiveDebugValues.cpp - Tracking Debug Value MIs ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,20 +18,32 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/CodeGen/LexicalScopes.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetFrameLowering.h"
@@ -39,16 +51,19 @@
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include <list>
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <functional>
 #include <queue>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "livedebugvalues"
 
 STATISTIC(NumInserted, "Number of DBG_VALUE instructions inserted");
-
-namespace {
 
 // \brief If @MI is a DBG_VALUE with debug value described by a defined
 // register, returns the number of this register. In the other case, returns 0.
@@ -60,8 +75,9 @@ static unsigned isDbgValueDescribedByReg(const MachineInstr &MI) {
   return MI.getOperand(0).isReg() ? MI.getOperand(0).getReg() : 0;
 }
 
-class LiveDebugValues : public MachineFunctionPass {
+namespace {
 
+class LiveDebugValues : public MachineFunctionPass {
 private:
   const TargetRegisterInfo *TRI;
   const TargetInstrInfo *TII;
@@ -88,15 +104,15 @@ private:
   };
 
   /// Based on std::pair so it can be used as an index into a DenseMap.
-  typedef std::pair<const DILocalVariable *, const DILocation *>
-      DebugVariableBase;
+  using DebugVariableBase =
+      std::pair<const DILocalVariable *, const DILocation *>;
   /// A potentially inlined instance of a variable.
   struct DebugVariable : public DebugVariableBase {
     DebugVariable(const DILocalVariable *Var, const DILocation *InlinedAt)
         : DebugVariableBase(Var, InlinedAt) {}
 
-    const DILocalVariable *getVar() const { return this->first; };
-    const DILocation *getInlinedAt() const { return this->second; };
+    const DILocalVariable *getVar() const { return this->first; }
+    const DILocation *getInlinedAt() const { return this->second; }
 
     bool operator<(const DebugVariable &DV) const {
       if (getVar() == DV.getVar())
@@ -110,7 +126,7 @@ private:
     const DebugVariable Var;
     const MachineInstr &MI; ///< Only used for cloning a new DBG_VALUE.
     mutable UserValueScopes UVS;
-    enum { InvalidKind = 0, RegisterKind } Kind;
+    enum { InvalidKind = 0, RegisterKind } Kind = InvalidKind;
 
     /// The value location. Stored separately to avoid repeatedly
     /// extracting it from MI.
@@ -121,7 +137,7 @@ private:
 
     VarLoc(const MachineInstr &MI, LexicalScopes &LS)
         : Var(MI.getDebugVariable(), MI.getDebugLoc()->getInlinedAt()), MI(MI),
-          UVS(MI.getDebugLoc(), LS), Kind(InvalidKind) {
+          UVS(MI.getDebugLoc(), LS) {
       static_assert((sizeof(Loc) == sizeof(uint64_t)),
                     "hash does not cover all members of Loc");
       assert(MI.isDebugValue() && "not a DBG_VALUE");
@@ -160,14 +176,14 @@ private:
     }
   };
 
-  typedef UniqueVector<VarLoc> VarLocMap;
-  typedef SparseBitVector<> VarLocSet;
-  typedef SmallDenseMap<const MachineBasicBlock *, VarLocSet> VarLocInMBB;
+  using VarLocMap = UniqueVector<VarLoc>;
+  using VarLocSet = SparseBitVector<>;
+  using VarLocInMBB = SmallDenseMap<const MachineBasicBlock *, VarLocSet>;
   struct SpillDebugPair {
     MachineInstr *SpillInst;
     MachineInstr *DebugInst;
   };
-  typedef SmallVector<SpillDebugPair, 4> SpillMap;
+  using SpillMap = SmallVector<SpillDebugPair, 4>;
 
   /// This holds the working set of currently open ranges. For fast
   /// access, this is done both as a set of VarLocIDs, and a map of
@@ -263,14 +279,16 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-} // namespace
+} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 //            Implementation
 //===----------------------------------------------------------------------===//
 
 char LiveDebugValues::ID = 0;
+
 char &llvm::LiveDebugValuesID = LiveDebugValues::ID;
+
 INITIALIZE_PASS(LiveDebugValues, DEBUG_TYPE, "Live DEBUG_VALUE analysis",
                 false, false)
 
@@ -586,7 +604,6 @@ bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
 /// Calculate the liveness information for the given machine function and
 /// extend ranges across basic blocks.
 bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
-
   DEBUG(dbgs() << "\nDebug Range Extension\n");
 
   bool Changed = false;

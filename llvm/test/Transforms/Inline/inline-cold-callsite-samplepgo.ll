@@ -1,8 +1,7 @@
-; For SamplePGO, if -accurate-sample-profile is specified, cold callsite
+; For SamplePGO, if -profile-sample-accurate is specified, cold callsite
 ; heuristics should be honored if the caller has no profile.
 
 ; RUN: opt < %s -inline -S -inline-cold-callsite-threshold=0 | FileCheck %s
-; RUN: opt < %s -inline -S -inline-cold-callsite-threshold=0 -accurate-sample-profile | FileCheck %s --check-prefix=ACCURATE
 
 define i32 @callee(i32 %x) {
   %x1 = add i32 %x, 1
@@ -14,13 +13,22 @@ define i32 @callee(i32 %x) {
 }
 
 define i32 @caller(i32 %y1) {
+; CHECK-LABEL: @caller
 ; CHECK-NOT: call i32 @callee
-; ACCURATE: call i32 @callee
+  %y2 = call i32 @callee(i32 %y1)
+  ret i32 %y2
+}
+
+define i32 @caller_accurate(i32 %y1) #0 {
+; CHECK-LABEL: @caller_accurate
+; CHECK: call i32 @callee
   %y2 = call i32 @callee(i32 %y1)
   ret i32 %y2
 }
 
 declare void @extern()
+
+attributes #0 = { "profile-sample-accurate" }
 
 !llvm.module.flags = !{!1}
 !1 = !{i32 1, !"ProfileSummary", !2}

@@ -765,7 +765,7 @@ namespace llvm {
     bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                            Type *Ty) const override;
 
-    bool convertSelectOfConstantsToMath() const override {
+    bool convertSelectOfConstantsToMath(EVT VT) const override {
       return true;
     }
 

@@ -363,6 +363,32 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
   return S.ActOnCallExpr(nullptr, Result.get(), Loc, Args, Loc, nullptr);
 }
 
+// See if return type is coroutine-handle and if so, invoke builtin coro-resume
+// on its address. This is to enable experimental support for coroutine-handle
+// returning await_suspend that results in a guranteed tail call to the target
+// coroutine.
+static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
+                           SourceLocation Loc) {
+  if (RetType->isReferenceType())
+    return nullptr;
+  Type const *T = RetType.getTypePtr();
+  if (!T->isClassType() && !T->isStructureType())
+    return nullptr;
+
+  // FIXME: Add convertability check to coroutine_handle<>. Possibly via
+  // EvaluateBinaryTypeTrait(BTT_IsConvertible, ...) which is at the moment
+  // a private function in SemaExprCXX.cpp
+
+  ExprResult AddressExpr = buildMemberCall(S, E, Loc, "address", None);
+  if (AddressExpr.isInvalid())
+    return nullptr;
+
+  Expr *JustAddress = AddressExpr.get();
+  // FIXME: Check that the type of AddressExpr is void*
+  return buildBuiltinCall(S, Loc, Builtin::BI__builtin_coro_resume,
+                          JustAddress);
+}
+
 /// Build calls to await_ready, await_suspend, and await_resume for a co_await
 /// expression.
 static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
@@ -412,16 +438,21 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     //   - await-suspend is the expression e.await_suspend(h), which shall be
     //     a prvalue of type void or bool.
     QualType RetType = AwaitSuspend->getCallReturnType(S.Context);
-    // non-class prvalues always have cv-unqualified types
-    QualType AdjRetType = RetType.getUnqualifiedType();
-    if (RetType->isReferenceType() ||
-        (AdjRetType != S.Context.BoolTy && AdjRetType != S.Context.VoidTy)) {
-      S.Diag(AwaitSuspend->getCalleeDecl()->getLocation(),
-             diag::err_await_suspend_invalid_return_type)
-          << RetType;
-      S.Diag(Loc, diag::note_coroutine_promise_call_implicitly_required)
-          << AwaitSuspend->getDirectCallee();
-      Calls.IsInvalid = true;
+    // Experimental support for coroutine_handle returning await_suspend.
+    if (Expr *TailCallSuspend = maybeTailCall(S, RetType, AwaitSuspend, Loc))
+      Calls.Results[ACT::ACT_Suspend] = TailCallSuspend;
+    else {
+      // non-class prvalues always have cv-unqualified types
+      QualType AdjRetType = RetType.getUnqualifiedType();
+      if (RetType->isReferenceType() ||
+          (AdjRetType != S.Context.BoolTy && AdjRetType != S.Context.VoidTy)) {
+        S.Diag(AwaitSuspend->getCalleeDecl()->getLocation(),
+               diag::err_await_suspend_invalid_return_type)
+            << RetType;
+        S.Diag(Loc, diag::note_coroutine_promise_call_implicitly_required)
+            << AwaitSuspend->getDirectCallee();
+        Calls.IsInvalid = true;
+      }
     }
   }
 

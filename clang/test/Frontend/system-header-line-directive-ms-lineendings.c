@@ -5,7 +5,7 @@
 #include "line-directive.h"
 
 // This tests that the line numbers for the current file are correctly outputted
-// for the include-file-completed test case.  
+// for the include-file-completed test case. This file should be CRLF.
 
 // CHECK: # 1 "{{.*}}system-header-line-directive-ms-lineendings.c" 2
 // CHECK: # 1 "{{.*}}noline.h" 1 3

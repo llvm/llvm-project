@@ -28,7 +28,6 @@ define i32 @test_x86_tbm_bextri_u32_z(i32 %a, i32 %b) nounwind readonly {
 ; CHECK-LABEL: test_x86_tbm_bextri_u32_z:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    bextr $2814, %edi, %eax # imm = 0xAFE
-; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -65,7 +64,6 @@ define i64 @test_x86_tbm_bextri_u64_z(i64 %a, i64 %b) nounwind readnone {
 ; CHECK-LABEL: test_x86_tbm_bextri_u64_z:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    bextr $2814, %rdi, %rax # imm = 0xAFE
-; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    retq
 entry:

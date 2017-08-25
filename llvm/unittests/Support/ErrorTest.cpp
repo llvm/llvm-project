@@ -483,7 +483,7 @@ TEST(Error, CantFailSuccess) {
 }
 
 // Test that cantFail results in a crash if you pass it a failure value.
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
 TEST(Error, CantFailDeath) {
   EXPECT_DEATH(
       cantFail(make_error<StringError>("foo", inconvertibleErrorCode())),
