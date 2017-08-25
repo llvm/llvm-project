@@ -1835,6 +1835,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
       static ConstString g_sect_name_dwarf_debug_abbrev(".debug_abbrev");
       static ConstString g_sect_name_dwarf_debug_addr(".debug_addr");
       static ConstString g_sect_name_dwarf_debug_aranges(".debug_aranges");
+      static ConstString g_sect_name_dwarf_debug_cu_index(".debug_cu_index");
       static ConstString g_sect_name_dwarf_debug_frame(".debug_frame");
       static ConstString g_sect_name_dwarf_debug_info(".debug_info");
       static ConstString g_sect_name_dwarf_debug_line(".debug_line");
@@ -1904,6 +1905,8 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         sect_type = eSectionTypeDWARFDebugAddr;
       else if (name == g_sect_name_dwarf_debug_aranges)
         sect_type = eSectionTypeDWARFDebugAranges;
+      else if (name == g_sect_name_dwarf_debug_cu_index)
+        sect_type = eSectionTypeDWARFDebugCuIndex;
       else if (name == g_sect_name_dwarf_debug_frame)
         sect_type = eSectionTypeDWARFDebugFrame;
       else if (name == g_sect_name_dwarf_debug_info)
@@ -2017,13 +2020,14 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   if (m_sections_ap.get()) {
     if (GetType() == eTypeDebugInfo) {
       static const SectionType g_sections[] = {
-          eSectionTypeDWARFDebugAbbrev,     eSectionTypeDWARFDebugAddr,
-          eSectionTypeDWARFDebugAranges,    eSectionTypeDWARFDebugFrame,
-          eSectionTypeDWARFDebugInfo,       eSectionTypeDWARFDebugLine,
-          eSectionTypeDWARFDebugLoc,        eSectionTypeDWARFDebugMacInfo,
-          eSectionTypeDWARFDebugPubNames,   eSectionTypeDWARFDebugPubTypes,
-          eSectionTypeDWARFDebugRanges,     eSectionTypeDWARFDebugStr,
-          eSectionTypeDWARFDebugStrOffsets, eSectionTypeELFSymbolTable,
+          eSectionTypeDWARFDebugAbbrev,   eSectionTypeDWARFDebugAddr,
+          eSectionTypeDWARFDebugAranges,  eSectionTypeDWARFDebugCuIndex,
+          eSectionTypeDWARFDebugFrame,    eSectionTypeDWARFDebugInfo,
+          eSectionTypeDWARFDebugLine,     eSectionTypeDWARFDebugLoc,
+          eSectionTypeDWARFDebugMacInfo,  eSectionTypeDWARFDebugPubNames,
+          eSectionTypeDWARFDebugPubTypes, eSectionTypeDWARFDebugRanges,
+          eSectionTypeDWARFDebugStr,      eSectionTypeDWARFDebugStrOffsets,
+          eSectionTypeELFSymbolTable,
       };
       SectionList *elf_section_list = m_sections_ap.get();
       for (size_t idx = 0; idx < sizeof(g_sections) / sizeof(g_sections[0]);

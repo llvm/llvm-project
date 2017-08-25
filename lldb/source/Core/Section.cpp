@@ -65,6 +65,8 @@ static const char *GetSectionTypeAsCString(lldb::SectionType sect_type) {
     return "dwarf-addr";
   case eSectionTypeDWARFDebugAranges:
     return "dwarf-aranges";
+  case eSectionTypeDWARFDebugCuIndex:
+    return "dwarf-cu-index";
   case eSectionTypeDWARFDebugFrame:
     return "dwarf-frame";
   case eSectionTypeDWARFDebugInfo:

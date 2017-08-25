@@ -75,7 +75,7 @@ class TracePC {
 
   void HandleInit(uint32_t *Start, uint32_t *Stop);
   void HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop);
-  void HandlePCsInit(const uint8_t *Start, const uint8_t *Stop);
+  void HandlePCsInit(const uintptr_t *Start, const uintptr_t *Stop);
   void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
   template <class T> void HandleCmp(uintptr_t PC, T Arg1, T Arg2);
   size_t GetTotalPCCoverage();
@@ -146,7 +146,11 @@ private:
   size_t NumModulesWithInline8bitCounters;  // linker-initialized.
   size_t NumInline8bitCounters;
 
-  struct { const uintptr_t *Start, *Stop; } ModulePCTable[4096];
+  struct PCTableEntry {
+    uintptr_t PC, PCFlags;
+  };
+
+  struct { const PCTableEntry *Start, *Stop; } ModulePCTable[4096];
   size_t NumPCTables;
   size_t NumPCsInPCTables;
 

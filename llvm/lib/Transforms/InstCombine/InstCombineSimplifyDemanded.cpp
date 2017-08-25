@@ -396,38 +396,39 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     /// If the high-bits of an ADD/SUB are not demanded, then we do not care
     /// about the high bits of the operands.
     unsigned NLZ = DemandedMask.countLeadingZeros();
-    if (NLZ > 0) {
-      // Right fill the mask of bits for this ADD/SUB to demand the most
-      // significant bit and all those below it.
-      APInt DemandedFromOps(APInt::getLowBitsSet(BitWidth, BitWidth-NLZ));
-      if (ShrinkDemandedConstant(I, 0, DemandedFromOps) ||
-          SimplifyDemandedBits(I, 0, DemandedFromOps, LHSKnown, Depth + 1) ||
-          ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
-          SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Depth + 1)) {
+    // Right fill the mask of bits for this ADD/SUB to demand the most
+    // significant bit and all those below it.
+    APInt DemandedFromOps(APInt::getLowBitsSet(BitWidth, BitWidth-NLZ));
+    if (ShrinkDemandedConstant(I, 0, DemandedFromOps) ||
+        SimplifyDemandedBits(I, 0, DemandedFromOps, LHSKnown, Depth + 1) ||
+        ShrinkDemandedConstant(I, 1, DemandedFromOps) ||
+        SimplifyDemandedBits(I, 1, DemandedFromOps, RHSKnown, Depth + 1)) {
+      if (NLZ > 0) {
         // Disable the nsw and nuw flags here: We can no longer guarantee that
         // we won't wrap after simplification. Removing the nsw/nuw flags is
         // legal here because the top bit is not demanded.
         BinaryOperator &BinOP = *cast<BinaryOperator>(I);
         BinOP.setHasNoSignedWrap(false);
         BinOP.setHasNoUnsignedWrap(false);
-        return I;
       }
-
-      // If we are known to be adding/subtracting zeros to every bit below
-      // the highest demanded bit, we just return the other side.
-      if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
-        return I->getOperand(0);
-      // We can't do this with the LHS for subtraction, unless we are only
-      // demanding the LSB.
-      if ((I->getOpcode() == Instruction::Add ||
-           DemandedFromOps.isOneValue()) &&
-          DemandedFromOps.isSubsetOf(LHSKnown.Zero))
-        return I->getOperand(1);
+      return I;
     }
 
-    // Otherwise just hand the add/sub off to computeKnownBits to fill in
-    // the known zeros and ones.
-    computeKnownBits(V, Known, Depth, CxtI);
+    // If we are known to be adding/subtracting zeros to every bit below
+    // the highest demanded bit, we just return the other side.
+    if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
+      return I->getOperand(0);
+    // We can't do this with the LHS for subtraction, unless we are only
+    // demanding the LSB.
+    if ((I->getOpcode() == Instruction::Add ||
+         DemandedFromOps.isOneValue()) &&
+        DemandedFromOps.isSubsetOf(LHSKnown.Zero))
+      return I->getOperand(1);
+
+    // Otherwise just compute the known bits of the result.
+    bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
+    Known = KnownBits::computeForAddSub(I->getOpcode() == Instruction::Add,
+                                        NSW, LHSKnown, RHSKnown);
     break;
   }
   case Instruction::Shl: {
