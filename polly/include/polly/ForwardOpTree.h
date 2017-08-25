@@ -1,4 +1,4 @@
-//===------ ForwardOpTree.h -------------------------------------*- C++ -*-===//
+//===- ForwardOpTree.h ------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,15 +14,20 @@
 #ifndef POLLY_FORWARDOPTREE_H
 #define POLLY_FORWARDOPTREE_H
 
+namespace llvm {
+
+class PassRegistry;
+
+void initializeForwardOpTreePass(PassRegistry &);
+
+} // namespace llvm
+
 namespace polly {
+
 class ScopPass;
 
 ScopPass *createForwardOpTreePass();
+
 } // namespace polly
 
-namespace llvm {
-class PassRegistry;
-void initializeForwardOpTreePass(llvm::PassRegistry &);
-} // namespace llvm
-
-#endif /* POLLY_FORWARDOPTREE_H */
+#endif // POLLY_FORWARDOPTREE_H
