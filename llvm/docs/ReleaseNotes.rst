@@ -87,7 +87,41 @@ During this release the ARM target has:
 Changes to the MIPS Target
 --------------------------
 
- During this release ...
+* The microMIPS64R6 backend is deprecated and will be removed in the next
+  release.
+
+* The MIPS backend now directly supports vector types for arguments and return
+  values (previously this required ABI specific LLVM IR).
+
+* Added documentation for how the MIPS backend handles address lowering.
+
+* Added a GCC compatible option -m(no-)madd4 to control the generation of four
+  operand multiply addition/subtraction instructions.
+
+* Added basic support for the XRay instrumentation system.
+
+* Added support for more assembly aliases and macros.
+
+* Added support for the ``micromips`` and ``nomicromips`` function attributes
+  which control micromips code generation on a per function basis.
+
+* Added the ``long-calls`` feature for non-pic environments. This feature is
+  used where the callee is out of range of the caller using a standard call
+  sequence. It must be enabled specifically.
+
+* Added support for performing microMIPS code generation via function
+  attributes.
+
+* Added experimental support for the static relocation model for the N64 ABI.
+
+* Added partial support for the MT ASE.
+
+* Added basic support for code size reduction for microMIPS.
+
+* Fixed numerous bugs including: multi-precision arithmetic support, various
+  vectorization bugs, debug information for thread local variables, debug
+  sections lacking the correct flags, crashing when disassembling sections
+  whose size is not a multiple of two or four.
 
 
 Changes to the PowerPC Target
