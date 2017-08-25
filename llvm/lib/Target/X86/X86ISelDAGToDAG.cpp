@@ -420,6 +420,8 @@ namespace {
         return Subtarget->hasAVX512();
       }
     }
+
+    bool foldLoadStoreIntoMemOperand(SDNode *Node);
   };
 }
 
@@ -1930,15 +1932,48 @@ static bool hasNoSignedComparisonUses(SDNode *N) {
   return true;
 }
 
+/// Get the appropriate X86 opcode for an in-memory arithmetic operation that
+/// also sets flags.
+///
+/// FIXME: This is essentially re-implemneting a subset of the patterns for
+/// these instructions. Instead, we should compute this from the patterns
+/// somehow.
+///
+/// FIXME: Currently we only support integer operations.
+///
+/// If there is no X86 opcode, returns none.
+static Optional<unsigned> getFusedLdStWithFlagsOpcode(EVT LdVT, unsigned Opc) {
+  auto SelectSize = [&](unsigned Opc64, unsigned Opc32, unsigned Opc16,
+                        unsigned Opc8) -> Optional<unsigned> {
+    switch (LdVT.getSimpleVT().SimpleTy) {
+    case MVT::i64:
+      return Opc64;
+    case MVT::i32:
+      return Opc32;
+    case MVT::i16:
+      return Opc16;
+    case MVT::i8:
+      return Opc8;
+    default:
+      return None;
+    }
+  };
+  switch (Opc) {
+  default:
+    return None;
+  case X86ISD::DEC:
+    return SelectSize(X86::DEC64m, X86::DEC32m, X86::DEC16m, X86::DEC8m);
+  case X86ISD::INC:
+    return SelectSize(X86::INC64m, X86::INC32m, X86::INC16m, X86::INC8m);
+  }
+}
+
 /// Check whether or not the chain ending in StoreNode is suitable for doing
-/// the {load; increment or decrement; store} to modify transformation.
-static bool isLoadIncOrDecStore(StoreSDNode *StoreNode, unsigned Opc,
-                                SDValue StoredVal, SelectionDAG *CurDAG,
-                                LoadSDNode* &LoadNode, SDValue &InputChain) {
-
-  // is the value stored the result of a DEC or INC?
-  if (!(Opc == X86ISD::DEC || Opc == X86ISD::INC)) return false;
-
+/// the {load; op; store} to modify transformation.
+static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
+                                        SDValue StoredVal, SelectionDAG *CurDAG,
+                                        LoadSDNode *&LoadNode,
+                                        SDValue &InputChain) {
   // is the stored value result 0 of the load?
   if (StoredVal.getResNo() != 0) return false;
 
@@ -1955,11 +1990,6 @@ static bool isLoadIncOrDecStore(StoreSDNode *StoreNode, unsigned Opc,
 
   // Return LoadNode by reference.
   LoadNode = cast<LoadSDNode>(Load);
-  // is the size of the value one that we can handle? (i.e. 64, 32, 16, or 8)
-  EVT LdVT = LoadNode->getMemoryVT();
-  if (LdVT != MVT::i64 && LdVT != MVT::i32 && LdVT != MVT::i16 &&
-      LdVT != MVT::i8)
-    return false;
 
   // Is store the only read of the loaded value?
   if (!Load.hasOneUse())
@@ -2017,22 +2047,60 @@ static bool isLoadIncOrDecStore(StoreSDNode *StoreNode, unsigned Opc,
   return true;
 }
 
-/// Get the appropriate X86 opcode for an in-memory increment or decrement.
-/// Opc should be X86ISD::DEC or X86ISD::INC.
-static unsigned getFusedLdStOpcode(EVT &LdVT, unsigned Opc) {
-  if (Opc == X86ISD::DEC) {
-    if (LdVT == MVT::i64) return X86::DEC64m;
-    if (LdVT == MVT::i32) return X86::DEC32m;
-    if (LdVT == MVT::i16) return X86::DEC16m;
-    if (LdVT == MVT::i8)  return X86::DEC8m;
-  } else {
-    assert(Opc == X86ISD::INC && "unrecognized opcode");
-    if (LdVT == MVT::i64) return X86::INC64m;
-    if (LdVT == MVT::i32) return X86::INC32m;
-    if (LdVT == MVT::i16) return X86::INC16m;
-    if (LdVT == MVT::i8)  return X86::INC8m;
-  }
-  llvm_unreachable("unrecognized size for LdVT");
+// Change a chain of {load; incr or dec; store} of the same value into
+// a simple increment or decrement through memory of that value, if the
+// uses of the modified value and its address are suitable.
+// The DEC64m tablegen pattern is currently not able to match the case where
+// the EFLAGS on the original DEC are used. (This also applies to
+// {INC,DEC}X{64,32,16,8}.)
+// We'll need to improve tablegen to allow flags to be transferred from a
+// node in the pattern to the result node.  probably with a new keyword
+// for example, we have this
+// def DEC64m : RI<0xFF, MRM1m, (outs), (ins i64mem:$dst), "dec{q}\t$dst",
+//  [(store (add (loadi64 addr:$dst), -1), addr:$dst),
+//   (implicit EFLAGS)]>;
+// but maybe need something like this
+// def DEC64m : RI<0xFF, MRM1m, (outs), (ins i64mem:$dst), "dec{q}\t$dst",
+//  [(store (add (loadi64 addr:$dst), -1), addr:$dst),
+//   (transferrable EFLAGS)]>;
+//
+// FIXME: This should handle a wide range of operations which support RMW
+// memory operands, not just inc and dec.
+bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
+  StoreSDNode *StoreNode = cast<StoreSDNode>(Node);
+  SDValue StoredVal = StoreNode->getOperand(1);
+  unsigned Opc = StoredVal->getOpcode();
+
+  EVT MemVT = StoreNode->getMemoryVT();
+  if (!MemVT.isSimple())
+    return false;
+  Optional<unsigned> NewOpc = getFusedLdStWithFlagsOpcode(MemVT, Opc);
+  if (!NewOpc)
+    return false;
+
+  LoadSDNode *LoadNode = nullptr;
+  SDValue InputChain;
+  if (!isFusableLoadOpStorePattern(StoreNode, StoredVal, CurDAG, LoadNode,
+                                   InputChain))
+    return false;
+
+  SDValue Base, Scale, Index, Disp, Segment;
+  if (!selectAddr(LoadNode, LoadNode->getBasePtr(), Base, Scale, Index, Disp,
+                  Segment))
+    return false;
+
+  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(2);
+  MemOp[0] = StoreNode->getMemOperand();
+  MemOp[1] = LoadNode->getMemOperand();
+  const SDValue Ops[] = {Base, Scale, Index, Disp, Segment, InputChain};
+  MachineSDNode *Result =
+      CurDAG->getMachineNode(*NewOpc, SDLoc(Node), MVT::i32, MVT::Other, Ops);
+  Result->setMemRefs(MemOp, MemOp + 2);
+
+  ReplaceUses(SDValue(StoreNode, 0), SDValue(Result, 1));
+  ReplaceUses(SDValue(StoredVal.getNode(), 1), SDValue(Result, 0));
+  CurDAG->RemoveDeadNode(Node);
+  return true;
 }
 
 void X86DAGToDAGISel::Select(SDNode *Node) {
@@ -2570,19 +2638,19 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     // Look for (X86cmp (and $op, $imm), 0) and see if we can convert it to
     // use a smaller encoding.
     // Look past the truncate if CMP is the only use of it.
-    if ((N0.getNode()->getOpcode() == ISD::AND ||
-         (N0.getResNo() == 0 && N0.getNode()->getOpcode() == X86ISD::AND)) &&
+    if ((N0.getOpcode() == ISD::AND ||
+         (N0.getResNo() == 0 && N0.getOpcode() == X86ISD::AND)) &&
         N0.getNode()->hasOneUse() &&
         N0.getValueType() != MVT::i8 &&
         X86::isZeroNode(N1)) {
       ConstantSDNode *C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
       if (!C) break;
+      uint64_t Mask = C->getZExtValue();
 
       // For example, convert "testl %eax, $8" to "testb %al, $8"
-      if ((C->getZExtValue() & ~UINT64_C(0xff)) == 0 &&
-          (!(C->getZExtValue() & 0x80) ||
-           hasNoSignedComparisonUses(Node))) {
-        SDValue Imm = CurDAG->getTargetConstant(C->getZExtValue(), dl, MVT::i8);
+      if (isUInt<8>(Mask) &&
+          (!(Mask & 0x80) || hasNoSignedComparisonUses(Node))) {
+        SDValue Imm = CurDAG->getTargetConstant(Mask, dl, MVT::i8);
         SDValue Reg = N0.getOperand(0);
 
         // On x86-32, only the ABCD registers have 8-bit subregisters.
@@ -2613,12 +2681,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       }
 
       // For example, "testl %eax, $2048" to "testb %ah, $8".
-      if ((C->getZExtValue() & ~UINT64_C(0xff00)) == 0 &&
-          (!(C->getZExtValue() & 0x8000) ||
-           hasNoSignedComparisonUses(Node))) {
+      if (isShiftedUInt<8, 8>(Mask) &&
+          (!(Mask & 0x8000) || hasNoSignedComparisonUses(Node))) {
         // Shift the immediate right by 8 bits.
-        SDValue ShiftedImm = CurDAG->getTargetConstant(C->getZExtValue() >> 8,
-                                                       dl, MVT::i8);
+        SDValue ShiftedImm = CurDAG->getTargetConstant(Mask >> 8, dl, MVT::i8);
         SDValue Reg = N0.getOperand(0);
 
         // Put the value in an ABCD register.
@@ -2650,12 +2716,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       }
 
       // For example, "testl %eax, $32776" to "testw %ax, $32776".
-      if ((C->getZExtValue() & ~UINT64_C(0xffff)) == 0 &&
-          N0.getValueType() != MVT::i16 &&
-          (!(C->getZExtValue() & 0x8000) ||
-           hasNoSignedComparisonUses(Node))) {
-        SDValue Imm = CurDAG->getTargetConstant(C->getZExtValue(), dl,
-                                                MVT::i16);
+      if (isUInt<16>(Mask) && N0.getValueType() != MVT::i16 &&
+          (!(Mask & 0x8000) || hasNoSignedComparisonUses(Node))) {
+        SDValue Imm = CurDAG->getTargetConstant(Mask, dl, MVT::i16);
         SDValue Reg = N0.getOperand(0);
 
         // Extract the 16-bit subregister.
@@ -2673,12 +2736,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       }
 
       // For example, "testq %rax, $268468232" to "testl %eax, $268468232".
-      if ((C->getZExtValue() & ~UINT64_C(0xffffffff)) == 0 &&
-          N0.getValueType() == MVT::i64 &&
-          (!(C->getZExtValue() & 0x80000000) ||
-           hasNoSignedComparisonUses(Node))) {
-        SDValue Imm = CurDAG->getTargetConstant(C->getZExtValue(), dl,
-                                                MVT::i32);
+      if (isUInt<32>(Mask) && N0.getValueType() == MVT::i64 &&
+          (!(Mask & 0x80000000) || hasNoSignedComparisonUses(Node))) {
+        SDValue Imm = CurDAG->getTargetConstant(Mask, dl, MVT::i32);
         SDValue Reg = N0.getOperand(0);
 
         // Extract the 32-bit subregister.
@@ -2697,55 +2757,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
-  case ISD::STORE: {
-    // Change a chain of {load; incr or dec; store} of the same value into
-    // a simple increment or decrement through memory of that value, if the
-    // uses of the modified value and its address are suitable.
-    // The DEC64m tablegen pattern is currently not able to match the case where
-    // the EFLAGS on the original DEC are used. (This also applies to
-    // {INC,DEC}X{64,32,16,8}.)
-    // We'll need to improve tablegen to allow flags to be transferred from a
-    // node in the pattern to the result node.  probably with a new keyword
-    // for example, we have this
-    // def DEC64m : RI<0xFF, MRM1m, (outs), (ins i64mem:$dst), "dec{q}\t$dst",
-    //  [(store (add (loadi64 addr:$dst), -1), addr:$dst),
-    //   (implicit EFLAGS)]>;
-    // but maybe need something like this
-    // def DEC64m : RI<0xFF, MRM1m, (outs), (ins i64mem:$dst), "dec{q}\t$dst",
-    //  [(store (add (loadi64 addr:$dst), -1), addr:$dst),
-    //   (transferrable EFLAGS)]>;
-
-    StoreSDNode *StoreNode = cast<StoreSDNode>(Node);
-    SDValue StoredVal = StoreNode->getOperand(1);
-    unsigned Opc = StoredVal->getOpcode();
-
-    LoadSDNode *LoadNode = nullptr;
-    SDValue InputChain;
-    if (!isLoadIncOrDecStore(StoreNode, Opc, StoredVal, CurDAG,
-                             LoadNode, InputChain))
-      break;
-
-    SDValue Base, Scale, Index, Disp, Segment;
-    if (!selectAddr(LoadNode, LoadNode->getBasePtr(),
-                    Base, Scale, Index, Disp, Segment))
-      break;
-
-    MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(2);
-    MemOp[0] = StoreNode->getMemOperand();
-    MemOp[1] = LoadNode->getMemOperand();
-    const SDValue Ops[] = { Base, Scale, Index, Disp, Segment, InputChain };
-    EVT LdVT = LoadNode->getMemoryVT();
-    unsigned newOpc = getFusedLdStOpcode(LdVT, Opc);
-    MachineSDNode *Result = CurDAG->getMachineNode(newOpc,
-                                                   SDLoc(Node),
-                                                   MVT::i32, MVT::Other, Ops);
-    Result->setMemRefs(MemOp, MemOp + 2);
-
-    ReplaceUses(SDValue(StoreNode, 0), SDValue(Result, 1));
-    ReplaceUses(SDValue(StoredVal.getNode(), 1), SDValue(Result, 0));
-    CurDAG->RemoveDeadNode(Node);
-    return;
-  }
+  case ISD::STORE:
+    if (foldLoadStoreIntoMemOperand(Node))
+      return;
+    break;
   }
 
   SelectCode(Node);

@@ -659,6 +659,37 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     MI.getOperand(2).setReg(OffsetExt);
     return Legalized;
   }
+  case TargetOpcode::G_PHI: {
+    assert(TypeIdx == 0 && "Expecting only Idx 0");
+    MachineFunction *MF = MI.getParent()->getParent();
+    auto getExtendedReg = [this, MF, WideTy](unsigned Reg,
+                                             MachineBasicBlock &MBB) {
+      auto FirstTermIt = MBB.getFirstTerminator();
+      MIRBuilder.setInsertPt(MBB, FirstTermIt);
+      MachineInstr *DefMI = MRI.getVRegDef(Reg);
+      MachineInstrBuilder MIB;
+      if (DefMI->getOpcode() == TargetOpcode::G_TRUNC)
+        MIB = MIRBuilder.buildAnyExtOrTrunc(WideTy,
+                                            DefMI->getOperand(1).getReg());
+      else
+        MIB = MIRBuilder.buildAnyExt(WideTy, Reg);
+      return MIB->getOperand(0).getReg();
+    };
+    auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_PHI, WideTy);
+    for (auto OpIt = MI.operands_begin() + 1, OpE = MI.operands_end();
+         OpIt != OpE;) {
+      unsigned Reg = OpIt++->getReg();
+      MachineBasicBlock *OpMBB = OpIt++->getMBB();
+      MIB.addReg(getExtendedReg(Reg, *OpMBB));
+      MIB.addMBB(OpMBB);
+    }
+    auto *MBB = MI.getParent();
+    MIRBuilder.setInsertPt(*MBB, MBB->getFirstNonPHI());
+    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(),
+                          MIB->getOperand(0).getReg());
+    MI.eraseFromParent();
+    return Legalized;
+  }
   }
 }
 

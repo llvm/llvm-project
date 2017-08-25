@@ -128,30 +128,36 @@ if [ $SEEN_INSTALL_TARGET -eq 0 ]; then
   exit 1
 fi
 
-cd $(dirname $0)
-if [ ! -d $IMAGE_SOURCE ]; then
-  echo "No sources for '$IMAGE_SOURCE' were found in $PWD"
+SOURCE_DIR=$(dirname $0)
+if [ ! -d "$SOURCE_DIR/$IMAGE_SOURCE" ]; then
+  echo "No sources for '$IMAGE_SOURCE' were found in $SOURCE_DIR"
   exit 1
 fi
 
-echo "Building from $IMAGE_SOURCE"
+BUILD_DIR=$(mktemp -d)
+trap "rm -rf $BUILD_DIR" EXIT
+echo "Using a temporary directory for the build: $BUILD_DIR"
+
+cp -r "$SOURCE_DIR/$IMAGE_SOURCE" "$BUILD_DIR/$IMAGE_SOURCE"
+cp -r "$SOURCE_DIR/scripts" "$BUILD_DIR/scripts"
 
 if [ "$DOCKER_TAG" != "" ]; then
   DOCKER_TAG=":$DOCKER_TAG"
 fi
 
+echo "Building from $IMAGE_SOURCE"
 echo "Building $DOCKER_REPOSITORY-build$DOCKER_TAG"
 docker build -t "$DOCKER_REPOSITORY-build$DOCKER_TAG" \
   --build-arg "buildscript_args=$BUILDSCRIPT_ARGS" \
-  -f "$IMAGE_SOURCE/build/Dockerfile" .
+  -f "$BUILD_DIR/$IMAGE_SOURCE/build/Dockerfile" \
+  "$BUILD_DIR"
 
 echo "Copying clang installation to release image sources"
-docker run -v "$PWD/$IMAGE_SOURCE:/workspace" "$DOCKER_REPOSITORY-build$DOCKER_TAG" \
+docker run -v "$BUILD_DIR/$IMAGE_SOURCE:/workspace" "$DOCKER_REPOSITORY-build$DOCKER_TAG" \
   cp /tmp/clang.tar.gz /workspace/release
-trap "rm -f $PWD/$IMAGE_SOURCE/release/clang.tar.gz" EXIT
 
 echo "Building release image"
 docker build -t "${DOCKER_REPOSITORY}${DOCKER_TAG}" \
-  "$IMAGE_SOURCE/release"
+  "$BUILD_DIR/$IMAGE_SOURCE/release"
 
 echo "Done"
