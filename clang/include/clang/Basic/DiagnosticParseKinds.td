@@ -215,7 +215,7 @@ def ext_nested_namespace_definition : ExtWarn<
   "define each namespace separately">, InGroup<CXX17>;
 def warn_cxx14_compat_nested_namespace_definition : Warning<
   "nested namespace definition is incompatible with C++ standards before C++17">,
-  InGroup<CXXPre1zCompat>, DefaultIgnore;
+  InGroup<CXXPre17Compat>, DefaultIgnore;
 def err_inline_nested_namespace_definition : Error<
   "nested namespace definition cannot be 'inline'">;
 def err_expected_semi_after_attribute_list : Error<
@@ -525,13 +525,13 @@ def ext_constexpr_if : ExtWarn<
   "constexpr if is a C++17 extension">, InGroup<CXX17>;
 def warn_cxx14_compat_constexpr_if : Warning<
   "constexpr if is incompatible with C++ standards before C++17">,
-  DefaultIgnore, InGroup<CXXPre1zCompat>;
+  DefaultIgnore, InGroup<CXXPre17Compat>;
 def ext_init_statement : ExtWarn<
   "'%select{if|switch}0' initialization statements are a C++17 extension">,
   InGroup<CXX17>;
 def warn_cxx14_compat_init_statement : Warning<
   "%select{if|switch}0 initialization statements are incompatible with "
-  "C++ standards before C++17">, DefaultIgnore, InGroup<CXXPre1zCompat>;
+  "C++ standards before C++17">, DefaultIgnore, InGroup<CXXPre17Compat>;
 
 // C++ derived classes
 def err_dup_virtual : Error<"duplicate 'virtual' in base specifier">;
@@ -561,7 +561,7 @@ def warn_cxx98_compat_nullptr : Warning<
 def warn_cxx14_compat_attribute : Warning<
   "attributes on %select{a namespace|an enumerator}0 declaration are "
   "incompatible with C++ standards before C++17">,
-  InGroup<CXXPre1zCompat>, DefaultIgnore;
+  InGroup<CXXPre17Compat>, DefaultIgnore;
 def warn_cxx98_compat_alignas : Warning<"'alignas' is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def warn_cxx98_compat_attribute : Warning<
@@ -577,7 +577,7 @@ def err_cxx11_attribute_repeated : Error<
   "attribute %0 cannot appear multiple times in an attribute specifier">;
 def warn_cxx14_compat_using_attribute_ns : Warning<
   "default scope specifier for attributes is incompatible with C++ standards "
-  "before C++17">, InGroup<CXXPre1zCompat>, DefaultIgnore;
+  "before C++17">, InGroup<CXXPre17Compat>, DefaultIgnore;
 def ext_using_attribute_ns : ExtWarn<
   "default scope specifier for attributes is a C++17 extension">,
   InGroup<CXX17>;
@@ -622,7 +622,7 @@ def ext_template_template_param_typename : ExtWarn<
 def warn_cxx14_compat_template_template_param_typename : Warning<
   "template template parameter using 'typename' is "
   "incompatible with C++ standards before C++17">,
-  InGroup<CXXPre1zCompat>, DefaultIgnore;
+  InGroup<CXXPre17Compat>, DefaultIgnore;
 def err_template_spec_syntax_non_template : Error<
   "identifier followed by '<' indicates a class template specialization but "
   "%0 %select{does not refer to a template|refers to a function template|"
@@ -699,7 +699,7 @@ def ext_fold_expression : ExtWarn<
   InGroup<CXX17>;
 def warn_cxx14_compat_fold_expression : Warning<
   "pack fold expression is incompatible with C++ standards before C++17">,
-  InGroup<CXXPre1zCompat>, DefaultIgnore;
+  InGroup<CXXPre17Compat>, DefaultIgnore;
 def err_expected_fold_operator : Error<
   "expected a foldable binary operator in fold expression">;
 def err_fold_operator_mismatch : Error<
@@ -748,19 +748,19 @@ def err_alias_declaration_specialization : Error<
 def err_alias_declaration_pack_expansion : Error<
   "alias declaration cannot be a pack expansion">;
 
-// C++1z using-declaration pack expansions
+// C++17 using-declaration pack expansions
 def ext_multi_using_declaration : ExtWarn<
   "use of multiple declarators in a single using declaration is "
   "a C++17 extension">, InGroup<CXX17>;
 def warn_cxx17_compat_multi_using_declaration : Warning<
   "use of multiple declarators in a single using declaration is "
   "incompatible with C++ standards before C++17">,
-  InGroup<CXXPre1zCompat>, DefaultIgnore;
+  InGroup<CXXPre17Compat>, DefaultIgnore;
 def ext_using_declaration_pack : ExtWarn<
   "pack expansion of using declaration is a C++17 extension">, InGroup<CXX17>;
 def warn_cxx17_compat_using_declaration_pack : Warning<
   "pack expansion using declaration is incompatible with C++ standards "
-  "before C++17">, InGroup<CXXPre1zCompat>, DefaultIgnore;
+  "before C++17">, InGroup<CXXPre17Compat>, DefaultIgnore;
 
 // C++11 override control
 def ext_override_control_keyword : ExtWarn<
@@ -811,14 +811,14 @@ def err_lambda_missing_parens : Error<
   "attribute specifier|'constexpr'}0">;
 def err_lambda_decl_specifier_repeated : Error<
   "%select{'mutable'|'constexpr'}0 cannot appear multiple times in a lambda declarator">;
-// C++1z lambda expressions
+// C++17 lambda expressions
 def err_expected_star_this_capture : Error<
   "expected 'this' following '*' in lambda capture list">;
 
-// C++1z constexpr lambda expressions
+// C++17 constexpr lambda expressions
 def warn_cxx14_compat_constexpr_on_lambda : Warning<
   "constexpr on lambda expressions is incompatible with C++ standards before C++17">,
-  InGroup<CXXPre1zCompat>, DefaultIgnore;
+  InGroup<CXXPre17Compat>, DefaultIgnore;
 def ext_constexpr_on_lambda_cxx17 : ExtWarn<
   "'constexpr' on lambda expressions is a C++17 extension">, InGroup<CXX17>;
 
