@@ -41,6 +41,8 @@ enum EventType {
 // u64 addr : 61;  // Associated pc.
 typedef u64 Event;
 
+const uptr kEventPCBits = 61;
+
 struct TraceHeader {
 #if !SANITIZER_GO
   BufferedStackTrace stack0;  // Start stack for the trace.
