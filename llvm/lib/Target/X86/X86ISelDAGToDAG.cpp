@@ -2638,19 +2638,19 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     // Look for (X86cmp (and $op, $imm), 0) and see if we can convert it to
     // use a smaller encoding.
     // Look past the truncate if CMP is the only use of it.
-    if ((N0.getNode()->getOpcode() == ISD::AND ||
-         (N0.getResNo() == 0 && N0.getNode()->getOpcode() == X86ISD::AND)) &&
+    if ((N0.getOpcode() == ISD::AND ||
+         (N0.getResNo() == 0 && N0.getOpcode() == X86ISD::AND)) &&
         N0.getNode()->hasOneUse() &&
         N0.getValueType() != MVT::i8 &&
         X86::isZeroNode(N1)) {
       ConstantSDNode *C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
       if (!C) break;
+      uint64_t Mask = C->getZExtValue();
 
       // For example, convert "testl %eax, $8" to "testb %al, $8"
-      if ((C->getZExtValue() & ~UINT64_C(0xff)) == 0 &&
-          (!(C->getZExtValue() & 0x80) ||
-           hasNoSignedComparisonUses(Node))) {
-        SDValue Imm = CurDAG->getTargetConstant(C->getZExtValue(), dl, MVT::i8);
+      if (isUInt<8>(Mask) &&
+          (!(Mask & 0x80) || hasNoSignedComparisonUses(Node))) {
+        SDValue Imm = CurDAG->getTargetConstant(Mask, dl, MVT::i8);
         SDValue Reg = N0.getOperand(0);
 
         // On x86-32, only the ABCD registers have 8-bit subregisters.
@@ -2681,12 +2681,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       }
 
       // For example, "testl %eax, $2048" to "testb %ah, $8".
-      if ((C->getZExtValue() & ~UINT64_C(0xff00)) == 0 &&
-          (!(C->getZExtValue() & 0x8000) ||
-           hasNoSignedComparisonUses(Node))) {
+      if (isShiftedUInt<8, 8>(Mask) &&
+          (!(Mask & 0x8000) || hasNoSignedComparisonUses(Node))) {
         // Shift the immediate right by 8 bits.
-        SDValue ShiftedImm = CurDAG->getTargetConstant(C->getZExtValue() >> 8,
-                                                       dl, MVT::i8);
+        SDValue ShiftedImm = CurDAG->getTargetConstant(Mask >> 8, dl, MVT::i8);
         SDValue Reg = N0.getOperand(0);
 
         // Put the value in an ABCD register.
@@ -2718,12 +2716,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       }
 
       // For example, "testl %eax, $32776" to "testw %ax, $32776".
-      if ((C->getZExtValue() & ~UINT64_C(0xffff)) == 0 &&
-          N0.getValueType() != MVT::i16 &&
-          (!(C->getZExtValue() & 0x8000) ||
-           hasNoSignedComparisonUses(Node))) {
-        SDValue Imm = CurDAG->getTargetConstant(C->getZExtValue(), dl,
-                                                MVT::i16);
+      if (isUInt<16>(Mask) && N0.getValueType() != MVT::i16 &&
+          (!(Mask & 0x8000) || hasNoSignedComparisonUses(Node))) {
+        SDValue Imm = CurDAG->getTargetConstant(Mask, dl, MVT::i16);
         SDValue Reg = N0.getOperand(0);
 
         // Extract the 16-bit subregister.
@@ -2741,12 +2736,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       }
 
       // For example, "testq %rax, $268468232" to "testl %eax, $268468232".
-      if ((C->getZExtValue() & ~UINT64_C(0xffffffff)) == 0 &&
-          N0.getValueType() == MVT::i64 &&
-          (!(C->getZExtValue() & 0x80000000) ||
-           hasNoSignedComparisonUses(Node))) {
-        SDValue Imm = CurDAG->getTargetConstant(C->getZExtValue(), dl,
-                                                MVT::i32);
+      if (isUInt<32>(Mask) && N0.getValueType() == MVT::i64 &&
+          (!(Mask & 0x80000000) || hasNoSignedComparisonUses(Node))) {
+        SDValue Imm = CurDAG->getTargetConstant(Mask, dl, MVT::i32);
         SDValue Reg = N0.getOperand(0);
 
         // Extract the 32-bit subregister.
