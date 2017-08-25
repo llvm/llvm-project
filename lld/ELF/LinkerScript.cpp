@@ -174,18 +174,22 @@ bool BytesDataCommand::classof(const BaseCommand *C) {
   return C->Kind == BytesDataKind;
 }
 
-static StringRef basename(InputSectionBase *S) {
-  if (S->File)
-    return sys::path::filename(S->File->getName());
-  return "";
+static std::string filename(InputSectionBase *S) {
+  if (!S->File)
+    return "";
+  if (S->File->ArchiveName.empty())
+    return S->File->getName();
+  return (S->File->ArchiveName + "(" + S->File->getName() + ")").str();
 }
 
 bool LinkerScript::shouldKeep(InputSectionBase *S) {
-  for (InputSectionDescription *ID : Opt.KeptSections)
-    if (ID->FilePat.match(basename(S)))
+  for (InputSectionDescription *ID : Opt.KeptSections) {
+    std::string Filename = filename(S);
+    if (ID->FilePat.match(Filename))
       for (SectionPattern &P : ID->SectionPatterns)
         if (P.SectionPat.match(S->Name))
           return true;
+  }
   return false;
 }
 
@@ -280,7 +284,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
       if (Sec->Type == SHT_REL || Sec->Type == SHT_RELA)
         continue;
 
-      StringRef Filename = basename(Sec);
+      std::string Filename = filename(Sec);
       if (!Cmd->FilePat.match(Filename) ||
           Pat.ExcludedFilePat.match(Filename) ||
           !Pat.SectionPat.match(Sec->Name))

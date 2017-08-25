@@ -39,8 +39,8 @@ static cl::opt<int> ProfileSummaryCutoffCold(
     cl::desc("A count is cold if it is below the minimum count"
              " to reach this percentile of total counts."));
 
-static cl::opt<bool> AccurateSampleProfile(
-    "accurate-sample-profile", cl::Hidden, cl::init(false),
+static cl::opt<bool> ProfileSampleAccurate(
+    "profile-sample-accurate", cl::Hidden, cl::init(false),
     cl::desc("If the sample profile is accurate, we will mark all un-sampled "
              "callsite as cold. Otherwise, treat un-sampled callsites as if "
              "we have no profile."));
@@ -231,7 +231,8 @@ bool ProfileSummaryInfo::isColdCallSite(const CallSite &CS,
   // If there is no profile for the caller, and we know the profile is
   // accurate, we consider the callsite as cold.
   return (hasSampleProfile() &&
-          (CS.getCaller()->getEntryCount() || AccurateSampleProfile));
+          (CS.getCaller()->getEntryCount() || ProfileSampleAccurate ||
+           CS.getCaller()->hasFnAttribute("profile-sample-accurate")));
 }
 
 INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",

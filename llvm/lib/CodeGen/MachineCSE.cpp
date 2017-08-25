@@ -1,4 +1,4 @@
-//===-- MachineCSE.cpp - Machine Common Subexpression Elimination Pass ----===//
+//===- MachineCSE.cpp - Machine Common Subexpression Elimination Pass -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,18 +15,35 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetOpcodes.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <iterator>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-cse"
@@ -40,15 +57,18 @@ STATISTIC(NumCrossBBCSEs,
 STATISTIC(NumCommutes,  "Number of copies coalesced after commuting");
 
 namespace {
+
   class MachineCSE : public MachineFunctionPass {
     const TargetInstrInfo *TII;
     const TargetRegisterInfo *TRI;
     AliasAnalysis *AA;
     MachineDominatorTree *DT;
     MachineRegisterInfo *MRI;
+
   public:
     static char ID; // Pass identification
-    MachineCSE() : MachineFunctionPass(ID), LookAheadLimit(0), CurrVN(0) {
+
+    MachineCSE() : MachineFunctionPass(ID) {
       initializeMachineCSEPass(*PassRegistry::getPassRegistry());
     }
 
@@ -69,16 +89,18 @@ namespace {
     }
 
   private:
-    unsigned LookAheadLimit;
-    typedef RecyclingAllocator<BumpPtrAllocator,
-        ScopedHashTableVal<MachineInstr*, unsigned> > AllocatorTy;
-    typedef ScopedHashTable<MachineInstr*, unsigned,
-        MachineInstrExpressionTrait, AllocatorTy> ScopedHTType;
-    typedef ScopedHTType::ScopeTy ScopeType;
-    DenseMap<MachineBasicBlock*, ScopeType*> ScopeMap;
+    using AllocatorTy = RecyclingAllocator<BumpPtrAllocator,
+                            ScopedHashTableVal<MachineInstr *, unsigned>>;
+    using ScopedHTType =
+        ScopedHashTable<MachineInstr *, unsigned, MachineInstrExpressionTrait,
+                        AllocatorTy>;
+    using ScopeType = ScopedHTType::ScopeTy;
+
+    unsigned LookAheadLimit = 0;
+    DenseMap<MachineBasicBlock *, ScopeType *> ScopeMap;
     ScopedHTType VNT;
-    SmallVector<MachineInstr*, 64> Exps;
-    unsigned CurrVN;
+    SmallVector<MachineInstr *, 64> Exps;
+    unsigned CurrVN = 0;
 
     bool PerformTrivialCopyPropagation(MachineInstr *MI,
                                        MachineBasicBlock *MBB);
@@ -104,10 +126,13 @@ namespace {
                          DenseMap<MachineDomTreeNode*, unsigned> &OpenChildren);
     bool PerformCSE(MachineDomTreeNode *Node);
   };
+
 } // end anonymous namespace
 
 char MachineCSE::ID = 0;
+
 char &llvm::MachineCSEID = MachineCSE::ID;
+
 INITIALIZE_PASS_BEGIN(MachineCSE, DEBUG_TYPE,
                       "Machine Common Subexpression Elimination", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)

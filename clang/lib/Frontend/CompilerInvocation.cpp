@@ -652,6 +652,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.NoUseJumpTables = Args.hasArg(OPT_fno_jump_tables);
 
+  Opts.ProfileSampleAccurate = Args.hasArg(OPT_fprofile_sample_accurate);
+
   Opts.PrepareForLTO = Args.hasArg(OPT_flto, OPT_flto_EQ);
   Opts.EmitSummaryIndex = false;
   if (Arg *A = Args.getLastArg(OPT_flto_EQ)) {

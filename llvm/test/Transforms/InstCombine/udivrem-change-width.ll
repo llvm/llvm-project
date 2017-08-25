@@ -79,10 +79,9 @@ define i32 @udiv_i32_multiuse(i8 %a, i8 %b) {
 ; CHECK-LABEL: @udiv_i32_multiuse(
 ; CHECK-NEXT:    [[ZA:%.*]] = zext i8 %a to i32
 ; CHECK-NEXT:    [[ZB:%.*]] = zext i8 %b to i32
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 %a, %b
-; CHECK-NEXT:    [[UDIV:%.*]] = zext i8 [[DIV]] to i32
+; CHECK-NEXT:    [[UDIV:%.*]] = udiv i32 [[ZA]], [[ZB]]
 ; CHECK-NEXT:    [[EXTRA_USES:%.*]] = add nuw nsw i32 [[ZA]], [[ZB]]
-; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw i32 [[EXTRA_USES]], [[UDIV]]
+; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw i32 [[UDIV]], [[EXTRA_USES]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %za = zext i8 %a to i32
@@ -133,10 +132,9 @@ define i32 @urem_i32_multiuse(i8 %a, i8 %b) {
 ; CHECK-LABEL: @urem_i32_multiuse(
 ; CHECK-NEXT:    [[ZA:%.*]] = zext i8 %a to i32
 ; CHECK-NEXT:    [[ZB:%.*]] = zext i8 %b to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 %a, %b
-; CHECK-NEXT:    [[UREM:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[UREM:%.*]] = urem i32 [[ZA]], [[ZB]]
 ; CHECK-NEXT:    [[EXTRA_USES:%.*]] = add nuw nsw i32 [[ZA]], [[ZB]]
-; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw i32 [[EXTRA_USES]], [[UREM]]
+; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw i32 [[UREM]], [[EXTRA_USES]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %za = zext i8 %a to i32
@@ -172,8 +170,8 @@ define i32 @udiv_i32_c(i8 %a) {
 
 define <2 x i32> @udiv_i32_c_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @udiv_i32_c_vec(
-; CHECK-NEXT:    [[ZA:%.*]] = zext <2 x i8> %a to <2 x i32>
-; CHECK-NEXT:    [[UDIV:%.*]] = udiv <2 x i32> [[ZA]], <i32 10, i32 17>
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv <2 x i8> %a, <i8 10, i8 17>
+; CHECK-NEXT:    [[UDIV:%.*]] = zext <2 x i8> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[UDIV]]
 ;
   %za = zext <2 x i8> %a to <2 x i32>
@@ -184,9 +182,8 @@ define <2 x i32> @udiv_i32_c_vec(<2 x i8> %a) {
 define i32 @udiv_i32_c_multiuse(i8 %a) {
 ; CHECK-LABEL: @udiv_i32_c_multiuse(
 ; CHECK-NEXT:    [[ZA:%.*]] = zext i8 %a to i32
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 %a, 10
-; CHECK-NEXT:    [[UDIV:%.*]] = zext i8 [[DIV]] to i32
-; CHECK-NEXT:    [[EXTRA_USE:%.*]] = add nuw nsw i32 [[ZA]], [[UDIV]]
+; CHECK-NEXT:    [[UDIV:%.*]] = udiv i32 [[ZA]], 10
+; CHECK-NEXT:    [[EXTRA_USE:%.*]] = add nuw nsw i32 [[UDIV]], [[ZA]]
 ; CHECK-NEXT:    ret i32 [[EXTRA_USE]]
 ;
   %za = zext i8 %a to i32
@@ -219,8 +216,8 @@ define i32 @urem_i32_c(i8 %a) {
 
 define <2 x i32> @urem_i32_c_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @urem_i32_c_vec(
-; CHECK-NEXT:    [[ZA:%.*]] = zext <2 x i8> %a to <2 x i32>
-; CHECK-NEXT:    [[UREM:%.*]] = urem <2 x i32> [[ZA]], <i32 10, i32 17>
+; CHECK-NEXT:    [[TMP1:%.*]] = urem <2 x i8> %a, <i8 10, i8 17>
+; CHECK-NEXT:    [[UREM:%.*]] = zext <2 x i8> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[UREM]]
 ;
   %za = zext <2 x i8> %a to <2 x i32>
@@ -231,9 +228,8 @@ define <2 x i32> @urem_i32_c_vec(<2 x i8> %a) {
 define i32 @urem_i32_c_multiuse(i8 %a) {
 ; CHECK-LABEL: @urem_i32_c_multiuse(
 ; CHECK-NEXT:    [[ZA:%.*]] = zext i8 %a to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 %a, 10
-; CHECK-NEXT:    [[UREM:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[EXTRA_USE:%.*]] = add nuw nsw i32 [[ZA]], [[UREM]]
+; CHECK-NEXT:    [[UREM:%.*]] = urem i32 [[ZA]], 10
+; CHECK-NEXT:    [[EXTRA_USE:%.*]] = add nuw nsw i32 [[UREM]], [[ZA]]
 ; CHECK-NEXT:    ret i32 [[EXTRA_USE]]
 ;
   %za = zext i8 %a to i32
@@ -255,8 +251,8 @@ define i32 @urem_illegal_type_c(i9 %a) {
 
 define i32 @udiv_c_i32(i8 %a) {
 ; CHECK-LABEL: @udiv_c_i32(
-; CHECK-NEXT:    [[ZA:%.*]] = zext i8 %a to i32
-; CHECK-NEXT:    [[UDIV:%.*]] = udiv i32 10, [[ZA]]
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i8 10, %a
+; CHECK-NEXT:    [[UDIV:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[UDIV]]
 ;
   %za = zext i8 %a to i32
@@ -266,12 +262,27 @@ define i32 @udiv_c_i32(i8 %a) {
 
 define i32 @urem_c_i32(i8 %a) {
 ; CHECK-LABEL: @urem_c_i32(
-; CHECK-NEXT:    [[ZA:%.*]] = zext i8 %a to i32
-; CHECK-NEXT:    [[UREM:%.*]] = urem i32 10, [[ZA]]
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 10, %a
+; CHECK-NEXT:    [[UREM:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[UREM]]
 ;
   %za = zext i8 %a to i32
   %urem = urem i32 10, %za
   ret i32 %urem
+}
+
+; Make sure constexpr is handled.
+
+@b = external global [1 x i8]
+
+define i32 @udiv_constexpr(i8 %a) {
+; CHECK-LABEL: @udiv_constexpr(
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i8 %a, ptrtoint ([1 x i8]* @b to i8)
+; CHECK-NEXT:    [[D:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %za = zext i8 %a to i32
+  %d = udiv i32 %za, zext (i8 ptrtoint ([1 x i8]* @b to i8) to i32)
+  ret i32 %d
 }
 
