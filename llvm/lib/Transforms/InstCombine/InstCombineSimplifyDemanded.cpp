@@ -521,9 +521,12 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1))
         return I;
 
+      unsigned SignBits = ComputeNumSignBits(I->getOperand(0), Depth + 1, CxtI);
+
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-      // Compute the new bits that are at the top now.
-      APInt HighBits(APInt::getHighBitsSet(BitWidth, ShiftAmt));
+      // Compute the new bits that are at the top now plus sign bits.
+      APInt HighBits(APInt::getHighBitsSet(
+          BitWidth, std::min(SignBits + ShiftAmt - 1, BitWidth)));
       Known.Zero.lshrInPlace(ShiftAmt);
       Known.One.lshrInPlace(ShiftAmt);
 
