@@ -42,6 +42,10 @@ Non-comprehensive list of changes in this release
   longer used back in 2014 but we didn't get around to removing it. Now it is
   gone. The SLP vectorizer is the suggested non-loop vectorization pass.
 
+* A new tool opt-viewer.py has been added to visualize optimization remarks in
+  HTML.  The tool processes the YAML files produced by clang with the
+  -fsave-optimization-record option.
+
 
 Changes to the LLVM IR
 ----------------------
