@@ -637,12 +637,25 @@ def fno_profile_sample_use : Flag<["-"], "fno-profile-sample-use">, Group<f_Grou
 def fprofile_sample_use_EQ : Joined<["-"], "fprofile-sample-use=">,
     Group<f_Group>, Flags<[DriverOption, CC1Option]>,
     HelpText<"Enable sample-based profile guided optimizations">;
+def fprofile_sample_accurate : Flag<["-"], "fprofile-sample-accurate">,
+    Group<f_Group>, Flags<[DriverOption, CC1Option]>,
+    HelpText<"Specifies that the sample profile is accurate">,
+    DocBrief<[{Specifies that the sample profile is accurate. If the sample
+               profile is accurate, callsites without profile samples are marked
+               as cold. Otherwise, treat callsites without profile samples as if
+               we have no profile}]>;
+def fno_profile_sample_accurate : Flag<["-"], "fno-profile-sample-accurate">,
+  Group<f_Group>, Flags<[DriverOption]>;
 def fauto_profile : Flag<["-"], "fauto-profile">, Group<f_Group>,
     Alias<fprofile_sample_use>;
 def fno_auto_profile : Flag<["-"], "fno-auto-profile">, Group<f_Group>,
     Alias<fno_profile_sample_use>;
 def fauto_profile_EQ : Joined<["-"], "fauto-profile=">,
     Alias<fprofile_sample_use_EQ>;
+def fauto_profile_accurate : Flag<["-"], "fauto-profile-accurate">,
+    Group<f_Group>, Alias<fprofile_sample_accurate>;
+def fno_auto_profile_accurate : Flag<["-"], "fno-auto-profile-accurate">,
+    Group<f_Group>, Alias<fno_profile_sample_accurate>;
 def fdebug_info_for_profiling : Flag<["-"], "fdebug-info-for-profiling">, Group<f_Group>,
     Flags<[CC1Option]>,
     HelpText<"Emit extra debug info to make sample profile more accurate.">;

@@ -183,6 +183,7 @@ CODEGENOPT(UnsafeFPMath      , 1, 0) ///< Allow unsafe floating point optzns.
 CODEGENOPT(UnwindTables      , 1, 0) ///< Emit unwind tables.
 CODEGENOPT(VectorizeLoop     , 1, 0) ///< Run loop vectorizer.
 CODEGENOPT(VectorizeSLP      , 1, 0) ///< Run SLP vectorizer.
+CODEGENOPT(ProfileSampleAccurate, 1, 0) ///< Sample profile is accurate.
 
   /// Attempt to use register sized accesses to bit-fields in structures, when
   /// possible.

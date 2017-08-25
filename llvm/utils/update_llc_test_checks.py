@@ -35,7 +35,7 @@ SCRUB_LOOP_COMMENT_RE = re.compile(
 ASM_FUNCTION_X86_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n[^:]*?'
     r'(?P<body>^##?[ \t]+[^:]+:.*?)\s*'
-    r'^\s*(?:[^:\n]+?:\s*\n\s*\.size|\.cfi_endproc|\.globl|\.comm|\.(?:sub)?section)',
+    r'^\s*(?:[^:\n]+?:\s*\n\s*\.size|\.cfi_endproc|\.globl|\.comm|\.(?:sub)?section|# -- End function)',
     flags=(re.M | re.S))
 SCRUB_X86_SHUFFLES_RE = (
     re.compile(
@@ -49,7 +49,7 @@ ASM_FUNCTION_ARM_RE = re.compile(
         r'^(?P<func>[0-9a-zA-Z_]+):\n' # f: (name of function)
         r'\s+\.fnstart\n' # .fnstart
         r'(?P<body>.*?)\n' # (body of the function)
-        r'.Lfunc_end[0-9]+:', # .Lfunc_end0:
+        r'.Lfunc_end[0-9]+:', # .Lfunc_end0: or # -- End function
         flags=(re.M | re.S))
 
 RUN_LINE_RE = re.compile('^\s*;\s*RUN:\s*(.*)$')

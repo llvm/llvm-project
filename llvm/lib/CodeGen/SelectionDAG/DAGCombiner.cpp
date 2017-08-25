@@ -348,6 +348,7 @@ namespace {
     SDValue visitShiftByConstant(SDNode *N, ConstantSDNode *Amt);
 
     SDValue foldSelectOfConstants(SDNode *N);
+    SDValue foldVSelectOfConstants(SDNode *N);
     SDValue foldBinOpIntoSelect(SDNode *BO);
     bool SimplifySelectOps(SDNode *SELECT, SDValue LHS, SDValue RHS);
     SDValue SimplifyBinOpWithSameOpcodeHands(SDNode *N);
@@ -6191,7 +6192,7 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
     // For any constants that differ by 1, we can transform the select into an
     // extend and add. Use a target hook because some targets may prefer to
     // transform in the other direction.
-    if (TLI.convertSelectOfConstantsToMath()) {
+    if (TLI.convertSelectOfConstantsToMath(VT)) {
       if (C1->getAPIntValue() - 1 == C2->getAPIntValue()) {
         // select Cond, C1, C1-1 --> add (zext Cond), C1-1
         if (VT != MVT::i1)
@@ -6760,6 +6761,57 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
   return SDValue();
 }
 
+/// A vector select of 2 constant vectors can be simplified to math/logic to
+/// avoid a variable select instruction and possibly avoid constant loads.
+SDValue DAGCombiner::foldVSelectOfConstants(SDNode *N) {
+  SDValue Cond = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue N2 = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  if (!Cond.hasOneUse() || Cond.getScalarValueSizeInBits() != 1 ||
+      !TLI.convertSelectOfConstantsToMath(VT) ||
+      !ISD::isBuildVectorOfConstantSDNodes(N1.getNode()) ||
+      !ISD::isBuildVectorOfConstantSDNodes(N2.getNode()))
+    return SDValue();
+
+  // Check if we can use the condition value to increment/decrement a single
+  // constant value. This simplifies a select to an add and removes a constant
+  // load/materialization from the general case.
+  bool AllAddOne = true;
+  bool AllSubOne = true;
+  unsigned Elts = VT.getVectorNumElements();
+  for (unsigned i = 0; i != Elts; ++i) {
+    SDValue N1Elt = N1.getOperand(i);
+    SDValue N2Elt = N2.getOperand(i);
+    if (N1Elt.isUndef() || N2Elt.isUndef())
+      continue;
+
+    const APInt &C1 = cast<ConstantSDNode>(N1Elt)->getAPIntValue();
+    const APInt &C2 = cast<ConstantSDNode>(N2Elt)->getAPIntValue();
+    if (C1 != C2 + 1)
+      AllAddOne = false;
+    if (C1 != C2 - 1)
+      AllSubOne = false;
+  }
+
+  // Further simplifications for the extra-special cases where the constants are
+  // all 0 or all -1 should be implemented as folds of these patterns.
+  SDLoc DL(N);
+  if (AllAddOne || AllSubOne) {
+    // vselect <N x i1> Cond, C+1, C --> add (zext Cond), C
+    // vselect <N x i1> Cond, C-1, C --> add (sext Cond), C
+    auto ExtendOpcode = AllAddOne ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
+    SDValue ExtendedCond = DAG.getNode(ExtendOpcode, DL, VT, Cond);
+    return DAG.getNode(ISD::ADD, DL, VT, ExtendedCond, N2);
+  }
+
+  // The general case for select-of-constants:
+  // vselect <N x i1> Cond, C1, C2 --> xor (and (sext Cond), (C1^C2)), C2
+  // ...but that only makes sense if a vselect is slower than 2 logic ops, so
+  // leave that to a machine-specific pass.
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitVSELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -6823,6 +6875,9 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     if (SDValue CV = ConvertSelectToConcatVector(N, DAG))
       return CV;
   }
+
+  if (SDValue V = foldVSelectOfConstants(N))
+    return V;
 
   return SDValue();
 }
@@ -7409,7 +7464,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
             SimplifySelectCC(DL, N00, N01, ExtTrueVal, Zero, CC, true))
       return SCC;
 
-    if (!VT.isVector() && !TLI.convertSelectOfConstantsToMath()) {
+    if (!VT.isVector() && !TLI.convertSelectOfConstantsToMath(VT)) {
       EVT SetCCVT = getSetCCResultType(N00VT);
       // Don't do this transform for i1 because there's a select transform
       // that would reverse it.

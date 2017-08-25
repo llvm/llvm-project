@@ -42,7 +42,6 @@ set(ADTSources
   PostOrderIteratorTest.cpp
   PriorityWorklistTest.cpp
   RangeAdapterTest.cpp
-  ReverseIterationTest.cpp
   SCCIteratorTest.cpp
   STLExtrasTest.cpp
   ScopeExitTest.cpp

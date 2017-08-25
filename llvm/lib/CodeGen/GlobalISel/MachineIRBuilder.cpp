@@ -346,14 +346,17 @@ MachineInstrBuilder MachineIRBuilder::buildZExt(unsigned Res, unsigned Op) {
   return buildInstr(TargetOpcode::G_ZEXT).addDef(Res).addUse(Op);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildSExtOrTrunc(unsigned Res,
-                                                       unsigned Op) {
+MachineInstrBuilder
+MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc, unsigned Res, unsigned Op) {
+  assert((TargetOpcode::G_ANYEXT == ExtOpc || TargetOpcode::G_ZEXT == ExtOpc ||
+          TargetOpcode::G_SEXT == ExtOpc) &&
+         "Expecting Extending Opc");
   assert(MRI->getType(Res).isScalar() || MRI->getType(Res).isVector());
   assert(MRI->getType(Res).isScalar() == MRI->getType(Op).isScalar());
 
   unsigned Opcode = TargetOpcode::COPY;
   if (MRI->getType(Res).getSizeInBits() > MRI->getType(Op).getSizeInBits())
-    Opcode = TargetOpcode::G_SEXT;
+    Opcode = ExtOpc;
   else if (MRI->getType(Res).getSizeInBits() < MRI->getType(Op).getSizeInBits())
     Opcode = TargetOpcode::G_TRUNC;
   else
@@ -362,20 +365,19 @@ MachineInstrBuilder MachineIRBuilder::buildSExtOrTrunc(unsigned Res,
   return buildInstr(Opcode).addDef(Res).addUse(Op);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildSExtOrTrunc(unsigned Res,
+                                                       unsigned Op) {
+  return buildExtOrTrunc(TargetOpcode::G_SEXT, Res, Op);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildZExtOrTrunc(unsigned Res,
                                                        unsigned Op) {
-  assert(MRI->getType(Res).isScalar() || MRI->getType(Res).isVector());
-  assert(MRI->getType(Res).isScalar() == MRI->getType(Op).isScalar());
+  return buildExtOrTrunc(TargetOpcode::G_ZEXT, Res, Op);
+}
 
-  unsigned Opcode = TargetOpcode::COPY;
-  if (MRI->getType(Res).getSizeInBits() > MRI->getType(Op).getSizeInBits())
-    Opcode = TargetOpcode::G_ZEXT;
-  else if (MRI->getType(Res).getSizeInBits() < MRI->getType(Op).getSizeInBits())
-    Opcode = TargetOpcode::G_TRUNC;
-  else
-    assert(MRI->getType(Res) == MRI->getType(Op));
-
-  return buildInstr(Opcode).addDef(Res).addUse(Op);
+MachineInstrBuilder MachineIRBuilder::buildAnyExtOrTrunc(unsigned Res,
+                                                         unsigned Op) {
+  return buildExtOrTrunc(TargetOpcode::G_ANYEXT, Res, Op);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildCast(unsigned Dst, unsigned Src) {

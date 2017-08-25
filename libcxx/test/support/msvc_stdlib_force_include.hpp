@@ -69,12 +69,6 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
     // atomic_is_lock_free.pass.cpp needs this VS 2015 Update 2 fix.
     #define _ENABLE_ATOMIC_ALIGNMENT_FIX
 
-    // Enable features that /std:c++latest removes by default.
-    #define _HAS_AUTO_PTR_ETC               1
-    #define _HAS_FUNCTION_ALLOCATOR_SUPPORT 1
-    #define _HAS_OLD_IOSTREAMS_MEMBERS      1
-    #define _HAS_UNEXPECTED                 1
-
     // Silence warnings about raw pointers and other unchecked iterators.
     #define _SCL_SECURE_NO_WARNINGS
 

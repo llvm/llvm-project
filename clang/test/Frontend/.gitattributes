@@ -1,2 +1,0 @@
-# Below test validates crlf line endings, so it should stay crlf.
-system-header-line-directive-ms-lineendings.c text eol=crlf

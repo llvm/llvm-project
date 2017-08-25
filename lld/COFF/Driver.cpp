@@ -57,8 +57,7 @@ bool link(ArrayRef<const char *> Args, raw_ostream &Diag) {
   ErrorOS = &Diag;
   Config = make<Configuration>();
   Config->Argv = {Args.begin(), Args.end()};
-  Config->ColorDiagnostics =
-      (ErrorOS == &llvm::errs() && Process::StandardErrHasColors());
+  Config->ColorDiagnostics = ErrorOS->has_colors();
   Driver = make<LinkerDriver>();
   Driver->link(Args);
   return !ErrorCount;

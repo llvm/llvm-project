@@ -51,7 +51,7 @@ static cl::opt<bool> SkipCostAnalysis("skip-partial-inlining-cost-analysis",
 
 static cl::opt<unsigned> MaxNumInlineBlocks(
     "max-num-inline-blocks", cl::init(5), cl::Hidden,
-    cl::desc("Max Number of Blocks  To be Partially Inlined"));
+    cl::desc("Max number of blocks to be partially inlined"));
 
 // Command line option to set the maximum number of partial inlining allowed
 // for the module. The default value of -1 means no limit.
