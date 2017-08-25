@@ -1,16 +1,8 @@
-============================
-Release Notes 5.0 (upcoming)
-============================
+=================
+Release Notes 5.0
+=================
 
 In Polly 5 the following important changes have been incorporated.
-
-.. warning::
-
-  These releaes notes are for the next release of Polly and describe
-  the new features that have recently been committed to our development
-  branch.
-
-- Change ...
 
 -----------------------------------
 Robustness testing: AOSP and FFMPEG
@@ -86,12 +78,12 @@ Improved Polly Diagnostics
 
 Polly now uses the LLVM OptimizationDiagnosticInfo API for emitting diagnostic remarks.
 This allows Polly remarks to appear in the yaml optimization record when compiling
-with the flag -fsave-optimization-record. This also allow Polly remarks to appear in the opt-viewer
+with the flag -fsave-optimization-record. This also allows Polly remarks to appear in the opt-viewer
 tool, allowing for remarks to be viewed next to the source code, and sorted by hotness.
 
 --------------------------
 Polly-ACC works with Julia
 --------------------------
 
-Polly can now offload Julia to GPUs. This feature is enabled by setting the 
+Polly can now offload Julia to GPUs. This feature is enabled by setting the
 USE_POLLY_ACC variable to 1, i.e. USE_POLLY_ACC:=1.

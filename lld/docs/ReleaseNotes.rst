@@ -5,11 +5,6 @@ lld 5.0.0 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 5.0.0 release.
-   Release notes for previous releases can be found on
-   `the Download Page <http://releases.llvm.org/download.html>`_.
-
 Introduction
 ============
 
@@ -37,14 +32,14 @@ ELF Improvements
 
 * Error message format has changed in order to improve readability.
   Traditionally, linker's error messages are concise and arguably too terse.
-  This is an example of lld 4.0's error message (they are actually in one line)::
+  This is an example of lld 4.0.0's error message (they are actually in one line)::
 
     /ssd/clang/bin/ld.lld: error: /ssd/llvm-project/lld/ELF/Writer.cpp:207:
       undefined symbol 'lld::elf::EhFrameSection::addSection()'
 
   It is not easy to read because too much information is packed into a single line
   and the embedded text, particularly a symbol name, is sometimes too long.
-  In lld 5.0, we use more vertical space to print out error messages in a more
+  In lld 5.0.0, we use more vertical space to print out error messages in a more
   structured manner like this::
 
     bin/ld.lld: error: undefined symbol: lld::elf::EhFrameSection::addSection()
@@ -106,11 +101,6 @@ ELF Improvements
   ``-print-map``, ``-warn-unresolved-symbols``, ``-z nocopyreloc``,
   ``-z notext``, ``-z rodynamic``
 
-
-COFF Improvements
------------------
-
-* Item 1.
 
 Contributors to lld 5.0
 =======================

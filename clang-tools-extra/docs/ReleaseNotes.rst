@@ -1,18 +1,12 @@
-===================================================
-Extra Clang Tools 5.0.0 (In-Progress) Release Notes
-===================================================
+=====================================
+Extra Clang Tools 5.0.0 Release Notes
+=====================================
 
 .. contents::
    :local:
    :depth: 3
 
 Written by the `LLVM Team <http://llvm.org/>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming Extra Clang Tools 5 release.
-   Release notes for previous releases can be found on
-   `the Download Page <http://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
@@ -34,25 +28,6 @@ see the `releases page <http://llvm.org/releases/>`_.
 
 What's New in Extra Clang Tools 5.0.0?
 ======================================
-
-Some of the major new features and improvements to Extra Clang Tools are listed
-here. Generic improvements to Extra Clang Tools as a whole or to its underlying
-infrastructure are described first, followed by tool-specific sections.
-
-Major New Features
-------------------
-
-...
-
-Improvements to clang-query
----------------------------
-
-The improvements are...
-
-Improvements to clang-rename
-----------------------------
-
-The improvements are...
 
 Improvements to clang-tidy
 --------------------------
@@ -177,13 +152,3 @@ Improvements to clang-tidy
 
   Adds checks that implement the `High Integrity C++ Coding Standard <http://www.codingstandard.com/section/index/>`_ and other safety
   standards. Many checks are aliased to other modules.
-
-Improvements to include-fixer
------------------------------
-
-The improvements are...
-
-Improvements to modularize
---------------------------
-
-The improvements are...
