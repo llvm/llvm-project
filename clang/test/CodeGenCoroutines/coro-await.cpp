@@ -12,6 +12,7 @@ template <>
 struct coroutine_handle<void> {
   void *ptr;
   static coroutine_handle from_address(void *);
+  void *address();
 };
 
 template <typename Promise>
@@ -325,4 +326,21 @@ void AwaitReturnsLValue(double) {
   // CHECK: %[[RES3:.+]] = call dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[TMP2]])
   // CHECK-NEXT: store %struct.RefTag* %[[RES3]], %struct.RefTag** %[[ZVAR]],
   RefTag& z = co_yield 42;
+}
+
+struct TailCallAwait {
+  bool await_ready();
+  std::experimental::coroutine_handle<> await_suspend(std::experimental::coroutine_handle<>);
+  void await_resume();
+};
+
+// CHECK-LABEL: @TestTailcall(
+extern "C" void TestTailcall() {
+  co_await TailCallAwait{};
+
+  // CHECK: %[[RESULT:.+]] = call i8* @_ZN13TailCallAwait13await_suspendENSt12experimental16coroutine_handleIvEE(%struct.TailCallAwait*
+  // CHECK: %[[COERCE:.+]] = getelementptr inbounds %"struct.std::experimental::coroutine_handle", %"struct.std::experimental::coroutine_handle"* %[[TMP:.+]], i32 0, i32 0
+  // CHECK: store i8* %[[RESULT]], i8** %[[COERCE]]
+  // CHECK: %[[ADDR:.+]] = call i8* @_ZNSt12experimental16coroutine_handleIvE7addressEv(%"struct.std::experimental::coroutine_handle"* %[[TMP]])
+  // CHECK: call void @llvm.coro.resume(i8* %[[ADDR]])
 }

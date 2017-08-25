@@ -127,6 +127,8 @@ public:
 
   SyntaxTree *Parent;
   ASTContext &AST;
+  /// Nodes in preorder.
+  std::vector<Node> Nodes;
   std::vector<NodeId> Leaves;
   // Maps preorder indices to postorder ones.
   std::vector<int> PostorderIds;
@@ -155,9 +157,6 @@ public:
   std::string getStmtValue(const Stmt *S) const;
 
 private:
-  /// Nodes in preorder.
-  std::vector<Node> Nodes;
-
   void initTree();
   void setLeftMostDescendants();
 };
@@ -182,32 +181,6 @@ static bool isNodeExcluded(const SourceManager &SrcMgr, T *N) {
 }
 
 namespace {
-/// Counts the number of nodes that will be compared.
-struct NodeCountVisitor : public RecursiveASTVisitor<NodeCountVisitor> {
-  int Count = 0;
-  const SyntaxTree::Impl &Tree;
-  NodeCountVisitor(const SyntaxTree::Impl &Tree) : Tree(Tree) {}
-  bool TraverseDecl(Decl *D) {
-    if (isNodeExcluded(Tree.AST.getSourceManager(), D))
-      return true;
-    ++Count;
-    RecursiveASTVisitor<NodeCountVisitor>::TraverseDecl(D);
-    return true;
-  }
-  bool TraverseStmt(Stmt *S) {
-    if (S)
-      S = S->IgnoreImplicit();
-    if (isNodeExcluded(Tree.AST.getSourceManager(), S))
-      return true;
-    ++Count;
-    RecursiveASTVisitor<NodeCountVisitor>::TraverseStmt(S);
-    return true;
-  }
-  bool TraverseType(QualType T) { return true; }
-};
-} // end anonymous namespace
-
-namespace {
 // Sets Height, Parent and Children for each node.
 struct PreorderVisitor : public RecursiveASTVisitor<PreorderVisitor> {
   int Id = 0, Depth = 0;
@@ -218,6 +191,7 @@ struct PreorderVisitor : public RecursiveASTVisitor<PreorderVisitor> {
 
   template <class T> std::tuple<NodeId, NodeId> PreTraverse(T *ASTNode) {
     NodeId MyId = Id;
+    Tree.Nodes.emplace_back();
     Node &N = Tree.getMutableNode(MyId);
     N.Parent = Parent;
     N.Depth = Depth;
@@ -274,9 +248,6 @@ struct PreorderVisitor : public RecursiveASTVisitor<PreorderVisitor> {
 
 SyntaxTree::Impl::Impl(SyntaxTree *Parent, Decl *N, ASTContext &AST)
     : Parent(Parent), AST(AST) {
-  NodeCountVisitor NodeCounter(*this);
-  NodeCounter.TraverseDecl(N);
-  Nodes.resize(NodeCounter.Count);
   PreorderVisitor PreorderWalker(*this);
   PreorderWalker.TraverseDecl(N);
   initTree();
@@ -284,9 +255,6 @@ SyntaxTree::Impl::Impl(SyntaxTree *Parent, Decl *N, ASTContext &AST)
 
 SyntaxTree::Impl::Impl(SyntaxTree *Parent, Stmt *N, ASTContext &AST)
     : Parent(Parent), AST(AST) {
-  NodeCountVisitor NodeCounter(*this);
-  NodeCounter.TraverseStmt(N);
-  Nodes.resize(NodeCounter.Count);
   PreorderVisitor PreorderWalker(*this);
   PreorderWalker.TraverseStmt(N);
   initTree();
