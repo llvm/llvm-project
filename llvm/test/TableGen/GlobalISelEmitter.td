@@ -111,10 +111,11 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GIPFP_Predicate_simm8 = GIPFP_Invalid,
+// CHECK-NEXT:    GIPFP_Predicate_simm8 = GIPFP_Invalid + 1,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  static bool Predicate_simm8(int64_t Imm) { return isInt<8>(Imm);   }
 // CHECK-NEXT:  static InstructionSelector::ImmediatePredicateFn ImmPredicateFns[] = {
+// CHECK-NEXT:    nullptr,
 // CHECK-NEXT:    Predicate_simm8,
 // CHECK-NEXT:  };
 

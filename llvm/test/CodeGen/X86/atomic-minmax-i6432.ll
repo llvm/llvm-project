@@ -15,29 +15,16 @@ define i64 @atomic_max_i64() nounwind {
 ; LINUX-NEXT:    .p2align 4, 0x90
 ; LINUX-NEXT:  .LBB0_1: # %atomicrmw.start
 ; LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
-; LINUX-NEXT:    xorl %ecx, %ecx
 ; LINUX-NEXT:    cmpl %eax, %esi
+; LINUX-NEXT:    movl $0, %ecx
 ; LINUX-NEXT:    sbbl %edx, %ecx
-; LINUX-NEXT:    setl %cl
-; LINUX-NEXT:    andb $1, %cl
-; LINUX-NEXT:    movl %eax, %ebx
-; LINUX-NEXT:    jne .LBB0_3
-; LINUX-NEXT:  # BB#2: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; LINUX-NEXT:    movl $0, %ecx
+; LINUX-NEXT:    cmovll %edx, %ecx
 ; LINUX-NEXT:    movl $5, %ebx
-; LINUX-NEXT:  .LBB0_3: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; LINUX-NEXT:    testb %cl, %cl
-; LINUX-NEXT:    movl %edx, %ecx
-; LINUX-NEXT:    jne .LBB0_5
-; LINUX-NEXT:  # BB#4: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; LINUX-NEXT:    xorl %ecx, %ecx
-; LINUX-NEXT:  .LBB0_5: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; LINUX-NEXT:    cmovll %eax, %ebx
 ; LINUX-NEXT:    lock cmpxchg8b sc64
 ; LINUX-NEXT:    jne .LBB0_1
-; LINUX-NEXT:  # BB#6: # %atomicrmw.end
+; LINUX-NEXT:  # BB#2: # %atomicrmw.end
 ; LINUX-NEXT:    popl %esi
 ; LINUX-NEXT:    popl %ebx
 ; LINUX-NEXT:    retl
@@ -57,29 +44,16 @@ define i64 @atomic_max_i64() nounwind {
 ; PIC-NEXT:    .p2align 4, 0x90
 ; PIC-NEXT:  LBB0_1: ## %atomicrmw.start
 ; PIC-NEXT:    ## =>This Inner Loop Header: Depth=1
-; PIC-NEXT:    xorl %ecx, %ecx
 ; PIC-NEXT:    cmpl %eax, %edi
+; PIC-NEXT:    movl $0, %ecx
 ; PIC-NEXT:    sbbl %edx, %ecx
-; PIC-NEXT:    setl %cl
-; PIC-NEXT:    andb $1, %cl
-; PIC-NEXT:    movl %eax, %ebx
-; PIC-NEXT:    jne LBB0_3
-; PIC-NEXT:  ## BB#2: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB0_1 Depth=1
+; PIC-NEXT:    movl $0, %ecx
+; PIC-NEXT:    cmovll %edx, %ecx
 ; PIC-NEXT:    movl $5, %ebx
-; PIC-NEXT:  LBB0_3: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB0_1 Depth=1
-; PIC-NEXT:    testb %cl, %cl
-; PIC-NEXT:    movl %edx, %ecx
-; PIC-NEXT:    jne LBB0_5
-; PIC-NEXT:  ## BB#4: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB0_1 Depth=1
-; PIC-NEXT:    xorl %ecx, %ecx
-; PIC-NEXT:  LBB0_5: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB0_1 Depth=1
+; PIC-NEXT:    cmovll %eax, %ebx
 ; PIC-NEXT:    lock cmpxchg8b (%esi)
 ; PIC-NEXT:    jne LBB0_1
-; PIC-NEXT:  ## BB#6: ## %atomicrmw.end
+; PIC-NEXT:  ## BB#2: ## %atomicrmw.end
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %edi
 ; PIC-NEXT:    popl %ebx
@@ -102,26 +76,13 @@ define i64 @atomic_min_i64() nounwind {
 ; LINUX-NEXT:    cmpl $7, %eax
 ; LINUX-NEXT:    movl %edx, %ecx
 ; LINUX-NEXT:    sbbl $0, %ecx
-; LINUX-NEXT:    setl %cl
-; LINUX-NEXT:    andb $1, %cl
-; LINUX-NEXT:    movl %eax, %ebx
-; LINUX-NEXT:    jne .LBB1_3
-; LINUX-NEXT:  # BB#2: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; LINUX-NEXT:    movl $0, %ecx
+; LINUX-NEXT:    cmovll %edx, %ecx
 ; LINUX-NEXT:    movl $6, %ebx
-; LINUX-NEXT:  .LBB1_3: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; LINUX-NEXT:    testb %cl, %cl
-; LINUX-NEXT:    movl %edx, %ecx
-; LINUX-NEXT:    jne .LBB1_5
-; LINUX-NEXT:  # BB#4: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; LINUX-NEXT:    xorl %ecx, %ecx
-; LINUX-NEXT:  .LBB1_5: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; LINUX-NEXT:    cmovll %eax, %ebx
 ; LINUX-NEXT:    lock cmpxchg8b sc64
 ; LINUX-NEXT:    jne .LBB1_1
-; LINUX-NEXT:  # BB#6: # %atomicrmw.end
+; LINUX-NEXT:  # BB#2: # %atomicrmw.end
 ; LINUX-NEXT:    popl %ebx
 ; LINUX-NEXT:    retl
 ;
@@ -141,26 +102,13 @@ define i64 @atomic_min_i64() nounwind {
 ; PIC-NEXT:    cmpl $7, %eax
 ; PIC-NEXT:    movl %edx, %ecx
 ; PIC-NEXT:    sbbl $0, %ecx
-; PIC-NEXT:    setl %cl
-; PIC-NEXT:    andb $1, %cl
-; PIC-NEXT:    movl %eax, %ebx
-; PIC-NEXT:    jne LBB1_3
-; PIC-NEXT:  ## BB#2: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB1_1 Depth=1
+; PIC-NEXT:    movl $0, %ecx
+; PIC-NEXT:    cmovll %edx, %ecx
 ; PIC-NEXT:    movl $6, %ebx
-; PIC-NEXT:  LBB1_3: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB1_1 Depth=1
-; PIC-NEXT:    testb %cl, %cl
-; PIC-NEXT:    movl %edx, %ecx
-; PIC-NEXT:    jne LBB1_5
-; PIC-NEXT:  ## BB#4: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB1_1 Depth=1
-; PIC-NEXT:    xorl %ecx, %ecx
-; PIC-NEXT:  LBB1_5: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB1_1 Depth=1
+; PIC-NEXT:    cmovll %eax, %ebx
 ; PIC-NEXT:    lock cmpxchg8b (%esi)
 ; PIC-NEXT:    jne LBB1_1
-; PIC-NEXT:  ## BB#6: ## %atomicrmw.end
+; PIC-NEXT:  ## BB#2: ## %atomicrmw.end
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %ebx
 ; PIC-NEXT:    retl
@@ -181,29 +129,16 @@ define i64 @atomic_umax_i64() nounwind {
 ; LINUX-NEXT:    .p2align 4, 0x90
 ; LINUX-NEXT:  .LBB2_1: # %atomicrmw.start
 ; LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
-; LINUX-NEXT:    xorl %ecx, %ecx
 ; LINUX-NEXT:    cmpl %eax, %esi
+; LINUX-NEXT:    movl $0, %ecx
 ; LINUX-NEXT:    sbbl %edx, %ecx
-; LINUX-NEXT:    setb %cl
-; LINUX-NEXT:    andb $1, %cl
-; LINUX-NEXT:    movl %eax, %ebx
-; LINUX-NEXT:    jne .LBB2_3
-; LINUX-NEXT:  # BB#2: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; LINUX-NEXT:    movl $0, %ecx
+; LINUX-NEXT:    cmovbl %edx, %ecx
 ; LINUX-NEXT:    movl $7, %ebx
-; LINUX-NEXT:  .LBB2_3: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB2_1 Depth=1
-; LINUX-NEXT:    testb %cl, %cl
-; LINUX-NEXT:    movl %edx, %ecx
-; LINUX-NEXT:    jne .LBB2_5
-; LINUX-NEXT:  # BB#4: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB2_1 Depth=1
-; LINUX-NEXT:    xorl %ecx, %ecx
-; LINUX-NEXT:  .LBB2_5: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; LINUX-NEXT:    cmovbl %eax, %ebx
 ; LINUX-NEXT:    lock cmpxchg8b sc64
 ; LINUX-NEXT:    jne .LBB2_1
-; LINUX-NEXT:  # BB#6: # %atomicrmw.end
+; LINUX-NEXT:  # BB#2: # %atomicrmw.end
 ; LINUX-NEXT:    popl %esi
 ; LINUX-NEXT:    popl %ebx
 ; LINUX-NEXT:    retl
@@ -223,29 +158,16 @@ define i64 @atomic_umax_i64() nounwind {
 ; PIC-NEXT:    .p2align 4, 0x90
 ; PIC-NEXT:  LBB2_1: ## %atomicrmw.start
 ; PIC-NEXT:    ## =>This Inner Loop Header: Depth=1
-; PIC-NEXT:    xorl %ecx, %ecx
 ; PIC-NEXT:    cmpl %eax, %edi
+; PIC-NEXT:    movl $0, %ecx
 ; PIC-NEXT:    sbbl %edx, %ecx
-; PIC-NEXT:    setb %cl
-; PIC-NEXT:    andb $1, %cl
-; PIC-NEXT:    movl %eax, %ebx
-; PIC-NEXT:    jne LBB2_3
-; PIC-NEXT:  ## BB#2: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB2_1 Depth=1
+; PIC-NEXT:    movl $0, %ecx
+; PIC-NEXT:    cmovbl %edx, %ecx
 ; PIC-NEXT:    movl $7, %ebx
-; PIC-NEXT:  LBB2_3: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB2_1 Depth=1
-; PIC-NEXT:    testb %cl, %cl
-; PIC-NEXT:    movl %edx, %ecx
-; PIC-NEXT:    jne LBB2_5
-; PIC-NEXT:  ## BB#4: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB2_1 Depth=1
-; PIC-NEXT:    xorl %ecx, %ecx
-; PIC-NEXT:  LBB2_5: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB2_1 Depth=1
+; PIC-NEXT:    cmovbl %eax, %ebx
 ; PIC-NEXT:    lock cmpxchg8b (%esi)
 ; PIC-NEXT:    jne LBB2_1
-; PIC-NEXT:  ## BB#6: ## %atomicrmw.end
+; PIC-NEXT:  ## BB#2: ## %atomicrmw.end
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %edi
 ; PIC-NEXT:    popl %ebx
@@ -268,26 +190,13 @@ define i64 @atomic_umin_i64() nounwind {
 ; LINUX-NEXT:    cmpl $9, %eax
 ; LINUX-NEXT:    movl %edx, %ecx
 ; LINUX-NEXT:    sbbl $0, %ecx
-; LINUX-NEXT:    setb %cl
-; LINUX-NEXT:    andb $1, %cl
-; LINUX-NEXT:    movl %eax, %ebx
-; LINUX-NEXT:    jne .LBB3_3
-; LINUX-NEXT:  # BB#2: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; LINUX-NEXT:    movl $0, %ecx
+; LINUX-NEXT:    cmovbl %edx, %ecx
 ; LINUX-NEXT:    movl $8, %ebx
-; LINUX-NEXT:  .LBB3_3: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; LINUX-NEXT:    testb %cl, %cl
-; LINUX-NEXT:    movl %edx, %ecx
-; LINUX-NEXT:    jne .LBB3_5
-; LINUX-NEXT:  # BB#4: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; LINUX-NEXT:    xorl %ecx, %ecx
-; LINUX-NEXT:  .LBB3_5: # %atomicrmw.start
-; LINUX-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; LINUX-NEXT:    cmovbl %eax, %ebx
 ; LINUX-NEXT:    lock cmpxchg8b sc64
 ; LINUX-NEXT:    jne .LBB3_1
-; LINUX-NEXT:  # BB#6: # %atomicrmw.end
+; LINUX-NEXT:  # BB#2: # %atomicrmw.end
 ; LINUX-NEXT:    popl %ebx
 ; LINUX-NEXT:    retl
 ;
@@ -307,26 +216,13 @@ define i64 @atomic_umin_i64() nounwind {
 ; PIC-NEXT:    cmpl $9, %eax
 ; PIC-NEXT:    movl %edx, %ecx
 ; PIC-NEXT:    sbbl $0, %ecx
-; PIC-NEXT:    setb %cl
-; PIC-NEXT:    andb $1, %cl
-; PIC-NEXT:    movl %eax, %ebx
-; PIC-NEXT:    jne LBB3_3
-; PIC-NEXT:  ## BB#2: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB3_1 Depth=1
+; PIC-NEXT:    movl $0, %ecx
+; PIC-NEXT:    cmovbl %edx, %ecx
 ; PIC-NEXT:    movl $8, %ebx
-; PIC-NEXT:  LBB3_3: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB3_1 Depth=1
-; PIC-NEXT:    testb %cl, %cl
-; PIC-NEXT:    movl %edx, %ecx
-; PIC-NEXT:    jne LBB3_5
-; PIC-NEXT:  ## BB#4: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB3_1 Depth=1
-; PIC-NEXT:    xorl %ecx, %ecx
-; PIC-NEXT:  LBB3_5: ## %atomicrmw.start
-; PIC-NEXT:    ## in Loop: Header=BB3_1 Depth=1
+; PIC-NEXT:    cmovbl %eax, %ebx
 ; PIC-NEXT:    lock cmpxchg8b (%esi)
 ; PIC-NEXT:    jne LBB3_1
-; PIC-NEXT:  ## BB#6: ## %atomicrmw.end
+; PIC-NEXT:  ## BB#2: ## %atomicrmw.end
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %ebx
 ; PIC-NEXT:    retl

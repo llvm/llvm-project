@@ -2731,7 +2731,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   {
     OS << "// PatFrag predicates.\n"
        << "enum {\n";
-    StringRef EnumeratorSeparator = " = GIPFP_Invalid,\n";
+    StringRef EnumeratorSeparator = " = GIPFP_Invalid + 1,\n";
     for (const auto *Record : RK.getAllDerivedDefinitions("PatFrag")) {
       if (!Record->getValueAsString("ImmediateCode").empty()) {
         OS << "  GIPFP_Predicate_" << Record->getName() << EnumeratorSeparator;
@@ -2744,7 +2744,9 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     if (!Record->getValueAsString("ImmediateCode").empty())
       OS << "  static bool Predicate_" << Record->getName() << "(int64_t Imm) {"
          << Record->getValueAsString("ImmediateCode") << "  }\n";
-  OS << "static InstructionSelector::ImmediatePredicateFn ImmPredicateFns[] = {\n";
+  OS << "static InstructionSelector::ImmediatePredicateFn ImmPredicateFns[] = "
+        "{\n"
+     << "  nullptr,\n";
   for (const auto *Record : RK.getAllDerivedDefinitions("PatFrag"))
     if (!Record->getValueAsString("ImmediateCode").empty())
       OS << "  Predicate_" << Record->getName() << ",\n";

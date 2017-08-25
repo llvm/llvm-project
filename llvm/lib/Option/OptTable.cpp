@@ -34,7 +34,7 @@ namespace llvm {
 namespace opt {
 
 // Ordering on Info. The ordering is *almost* case-insensitive lexicographic,
-// with an exceptions. '\0' comes at the end of the alphabet instead of the
+// with an exception. '\0' comes at the end of the alphabet instead of the
 // beginning (thus options precede any other options which prefix them).
 static int StrCmpOptionNameIgnoreCase(const char *A, const char *B) {
   const char *X = A, *Y = B;

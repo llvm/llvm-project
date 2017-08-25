@@ -1591,7 +1591,7 @@ public:
   /// Return true if a select of constants (select Cond, C1, C2) should be
   /// transformed into simple math ops with the condition value. For example:
   /// select Cond, C1, C1-1 --> add (zext Cond), C1-1
-  virtual bool convertSelectOfConstantsToMath() const {
+  virtual bool convertSelectOfConstantsToMath(EVT VT) const {
     return false;
   }
 

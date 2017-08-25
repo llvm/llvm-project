@@ -208,7 +208,8 @@ define i8 @test7(i1 inreg %c, i8 inreg %a, i8 inreg %b) nounwind {
 define i32 @smin(i32 %x) {
 ; CHECK-LABEL: smin:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    xorl $-1, %edi
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    cmovsl %edi, %eax
 ; CHECK-NEXT:    retq
