@@ -82,6 +82,7 @@ class TracePC {
   void SetUseCounters(bool UC) { UseCounters = UC; }
   void SetUseValueProfile(bool VP) { UseValueProfile = VP; }
   void SetPrintNewPCs(bool P) { DoPrintNewPCs = P; }
+  void SetPrintNewFuncs(bool P) { DoPrintNewFuncs = P; }
   void UpdateObservedPCs();
   template <class Callback> void CollectFeatures(Callback CB) const;
 
@@ -133,6 +134,7 @@ private:
   bool UseCounters = false;
   bool UseValueProfile = false;
   bool DoPrintNewPCs = false;
+  bool DoPrintNewFuncs = false;
 
   struct Module {
     uint32_t *Start, *Stop;
@@ -158,6 +160,7 @@ private:
   uintptr_t *PCs() const;
 
   std::set<uintptr_t> ObservedPCs;
+  std::set<uintptr_t> ObservedFuncs;
 
   ValueBitMap ValueProfileMap;
   uintptr_t InitialStack;

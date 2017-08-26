@@ -1,4 +1,4 @@
-//=== ScopDetectionDiagnostic.cpp - Error diagnostics --------- -*- C++ -*-===//
+//===- ScopDetectionDiagnostic.cpp - Error diagnostics --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,32 +17,38 @@
 // to diagnose the error and generate a helpful error message.
 //
 //===----------------------------------------------------------------------===//
+
 #include "polly/ScopDetectionDiagnostic.h"
-#include "polly/Support/ScopLocation.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Value.h"
-
-#define DEBUG_TYPE "polly-detect"
-#include "llvm/Support/Debug.h"
-
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
 #include <string>
+#include <utility>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "polly-detect"
 
 #define SCOP_STAT(NAME, DESC)                                                  \
   { "polly-detect", "NAME", "Number of rejected regions: " DESC, {0}, false }
 
-llvm::Statistic RejectStatistics[] = {
+Statistic RejectStatistics[] = {
     SCOP_STAT(CFG, ""),
     SCOP_STAT(InvalidTerminator, "Unsupported terminator instruction"),
     SCOP_STAT(UnreachableInExit, "Unreachable in exit block"),
@@ -76,6 +82,7 @@ llvm::Statistic RejectStatistics[] = {
 };
 
 namespace polly {
+
 /// Small string conversion via raw_string_stream.
 template <typename T> std::string operator+(Twine LHS, const T &RHS) {
   std::string Buf;
@@ -85,17 +92,21 @@ template <typename T> std::string operator+(Twine LHS, const T &RHS) {
 
   return LHS.concat(Buf).str();
 }
+
 } // namespace polly
 
 namespace llvm {
+
 // Lexicographic order on (line, col) of our debug locations.
-static bool operator<(const llvm::DebugLoc &LHS, const llvm::DebugLoc &RHS) {
+static bool operator<(const DebugLoc &LHS, const DebugLoc &RHS) {
   return LHS.getLine() < RHS.getLine() ||
          (LHS.getLine() == RHS.getLine() && LHS.getCol() < RHS.getCol());
 }
+
 } // namespace llvm
 
 namespace polly {
+
 BBPair getBBPairForRegion(const Region *R) {
   return std::make_pair(R->getEntry(), R->getExit());
 }
@@ -163,7 +174,7 @@ RejectReason::RejectReason(RejectReasonKind K) : Kind(K) {
 
 const DebugLoc RejectReason::Unknown = DebugLoc();
 
-const llvm::DebugLoc &RejectReason::getDebugLoc() const {
+const DebugLoc &RejectReason::getDebugLoc() const {
   // Allocate an empty DebugLoc and return it a reference to it.
   return Unknown;
 }
@@ -401,8 +412,8 @@ bool ReportDifferentArrayElementSize::classof(const RejectReason *RR) {
 }
 
 std::string ReportDifferentArrayElementSize::getEndUserMessage() const {
-  llvm::StringRef BaseName = BaseValue->getName();
-  std::string Name = (BaseName.size() > 0) ? BaseName : "UNKNOWN";
+  StringRef BaseName = BaseValue->getName();
+  std::string Name = BaseName.empty() ? "UNKNOWN" : BaseName;
   return "The array \"" + Name +
          "\" is accessed through elements that differ "
          "in size";
@@ -428,8 +439,8 @@ bool ReportNonAffineAccess::classof(const RejectReason *RR) {
 }
 
 std::string ReportNonAffineAccess::getEndUserMessage() const {
-  llvm::StringRef BaseName = BaseValue->getName();
-  std::string Name = (BaseName.size() > 0) ? BaseName : "UNKNOWN";
+  StringRef BaseName = BaseValue->getName();
+  std::string Name = BaseName.empty() ? "UNKNOWN" : BaseName;
   return "The array subscript of \"" + Name + "\" is not affine";
 }
 
@@ -572,7 +583,6 @@ bool ReportNonSimpleMemoryAccess::classof(const RejectReason *RR) {
 
 ReportAlias::ReportAlias(Instruction *Inst, AliasSet &AS)
     : RejectReason(RejectReasonKind::Alias), Inst(Inst) {
-
   for (const auto &I : AS)
     Pointers.push_back(I.getValue());
 }
@@ -590,7 +600,7 @@ std::string ReportAlias::formatInvalidAlias(std::string Prefix,
     const Value *V = *PI;
     assert(V && "Diagnostic info does not match found LLVM-IR anymore.");
 
-    if (V->getName().size() == 0)
+    if (V->getName().empty())
       OS << "\" <unknown> \"";
     else
       OS << "\"" << V->getName() << "\"";
@@ -712,6 +722,7 @@ bool ReportUnknownInst::classof(const RejectReason *RR) {
 
 //===----------------------------------------------------------------------===//
 // ReportEntry.
+
 ReportEntry::ReportEntry(BasicBlock *BB)
     : ReportOther(RejectReasonKind::Entry), BB(BB) {}
 
@@ -737,6 +748,7 @@ bool ReportEntry::classof(const RejectReason *RR) {
 
 //===----------------------------------------------------------------------===//
 // ReportUnprofitable.
+
 ReportUnprofitable::ReportUnprofitable(Region *R)
     : ReportOther(RejectReasonKind::Unprofitable), R(R) {}
 
@@ -764,4 +776,5 @@ const DebugLoc &ReportUnprofitable::getDebugLoc() const {
 bool ReportUnprofitable::classof(const RejectReason *RR) {
   return RR->getKind() == RejectReasonKind::Unprofitable;
 }
+
 } // namespace polly
