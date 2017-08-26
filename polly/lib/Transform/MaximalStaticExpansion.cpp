@@ -1,4 +1,4 @@
-//===----------------  MaximalStaticExpansion.cpp -------------------------===//
+//===- MaximalStaticExpansion.cpp -----------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,14 +13,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/DependenceInfo.h"
-#include "polly/FlattenAlgo.h"
 #include "polly/LinkAllPasses.h"
-#include "polly/Options.h"
 #include "polly/ScopInfo.h"
+#include "polly/ScopPass.h"
 #include "polly/Support/GICHelper.h"
-#include "polly/Support/ISLOStream.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Pass.h"
+#include "isl/isl-noexceptions.h"
+#include "isl/union_map.h"
+#include <cassert>
+#include <limits>
+#include <string>
+#include <vector>
 
 using namespace llvm;
 using namespace polly;
@@ -28,12 +34,14 @@ using namespace polly;
 #define DEBUG_TYPE "polly-mse"
 
 namespace {
+
 class MaximalStaticExpander : public ScopPass {
 public:
   static char ID;
+
   explicit MaximalStaticExpander() : ScopPass(ID) {}
 
-  ~MaximalStaticExpander() {}
+  ~MaximalStaticExpander() override = default;
 
   /// Expand the accesses of the SCoP.
   ///
@@ -104,15 +112,14 @@ private:
   void expandPhi(Scop &S, const ScopArrayInfo *SAI,
                  const isl::union_map &Dependences);
 };
-} // namespace
 
-namespace {
+} // namespace
 
 #ifndef NDEBUG
 /// Whether a dimension of a set is bounded (lower and upper) by a constant,
 /// i.e. there are two constants Min and Max, such that every value x of the
 /// chosen dimensions is Min <= x <= Max.
-bool isDimBoundedByConstant(isl::set Set, unsigned dim) {
+static bool isDimBoundedByConstant(isl::set Set, unsigned dim) {
   auto ParamDims = Set.dim(isl::dim::param);
   Set = Set.project_out(isl::dim::param, 0, ParamDims);
   Set = Set.project_out(isl::dim::set, 0, dim);
@@ -125,7 +132,7 @@ bool isDimBoundedByConstant(isl::set Set, unsigned dim) {
 /// If @p PwAff maps to a constant, return said constant. If @p Max/@p Min, it
 /// can also be a piecewise constant and it would return the minimum/maximum
 /// value. Otherwise, return NaN.
-isl::val getConstant(isl::pw_aff PwAff, bool Max, bool Min) {
+static isl::val getConstant(isl::pw_aff PwAff, bool Max, bool Min) {
   assert(!Max || !Min);
   isl::val Result;
   PwAff.foreach_piece([=, &Result](isl::set Set, isl::aff Aff) -> isl::stat {
@@ -165,13 +172,10 @@ isl::val getConstant(isl::pw_aff PwAff, bool Max, bool Min) {
   return Result;
 }
 
-} // namespace
-
 char MaximalStaticExpander::ID = 0;
 
 isl::union_map MaximalStaticExpander::filterDependences(
     Scop &S, const isl::union_map &Dependences, MemoryAccess *MA) {
-
   auto SAI = MA->getLatestScopArrayInfo();
 
   auto AccessDomainSet = MA->getAccessRelation().domain();
@@ -216,7 +220,6 @@ bool MaximalStaticExpander::isExpandable(
     const ScopArrayInfo *SAI, SmallPtrSetImpl<MemoryAccess *> &Writes,
     SmallPtrSetImpl<MemoryAccess *> &Reads, Scop &S,
     const isl::union_map &Dependences) {
-
   if (SAI->isValueKind()) {
     Writes.insert(S.getValueDef(SAI));
     for (auto MA : S.getValueUses(SAI))
@@ -262,7 +265,6 @@ bool MaximalStaticExpander::isExpandable(
     auto StmtWrites = isl::union_map::empty(S.getParamSpace());
 
     for (MemoryAccess *MA : Stmt) {
-
       // Check if the current MemoryAccess involved the current SAI.
       if (SAI != MA->getLatestScopArrayInfo())
         continue;
@@ -308,7 +310,6 @@ bool MaximalStaticExpander::isExpandable(
 
       // Check if it is possible to expand this read.
       if (MA->isRead()) {
-
         // Get the domain of the current ScopStmt.
         auto StmtDomain = Stmt.getDomain();
 
@@ -368,9 +369,7 @@ void MaximalStaticExpander::mapAccess(Scop &S,
                                       const isl::union_map &Dependences,
                                       ScopArrayInfo *ExpandedSAI,
                                       bool Reverse) {
-
   for (auto MA : Accesses) {
-
     // Get the current AM.
     auto CurrentAccessMap = MA->getAccessRelation();
 
@@ -405,7 +404,6 @@ void MaximalStaticExpander::mapAccess(Scop &S,
 }
 
 ScopArrayInfo *MaximalStaticExpander::expandAccess(Scop &S, MemoryAccess *MA) {
-
   // Get the current AM.
   auto CurrentAccessMap = MA->getAccessRelation();
 

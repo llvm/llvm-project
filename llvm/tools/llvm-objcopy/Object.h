@@ -71,6 +71,8 @@ public:
   uint64_t Type;
   uint64_t VAddr;
 
+  uint64_t OriginalOffset;
+
   Segment(llvm::ArrayRef<uint8_t> Data) : Contents(Data) {}
   void finalize();
   const SectionBase *firstSection() const {

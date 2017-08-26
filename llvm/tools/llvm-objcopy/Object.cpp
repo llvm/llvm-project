@@ -112,6 +112,7 @@ void Object<ELFT>::readProgramHeaders(const ELFFile<ELFT> &ElfFile) {
     Segment &Seg = *Segments.back();
     Seg.Type = Phdr.p_type;
     Seg.Flags = Phdr.p_flags;
+    Seg.OriginalOffset = Phdr.p_offset;
     Seg.Offset = Phdr.p_offset;
     Seg.VAddr = Phdr.p_vaddr;
     Seg.PAddr = Phdr.p_paddr;
@@ -254,57 +255,47 @@ template <class ELFT> void ELFObject<ELFT>::sortSections() {
 }
 
 template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
-  // Decide file offsets and indexes.
-  size_t PhdrSize = this->Segments.size() * sizeof(Elf_Phdr);
-  // We can put section data after the ELF header and the program headers.
-  uint64_t Offset = sizeof(Elf_Ehdr) + PhdrSize;
-  uint64_t Index = 1;
-  for (auto &Section : this->Sections) {
-    // The segment can have a different alignment than the section. In the case
-    // that there is a parent segment then as long as we satisfy the alignment
-    // of the segment it should follow that that the section is aligned.
-    if (Section->ParentSegment) {
-      auto FirstInSeg = Section->ParentSegment->firstSection();
-      if (FirstInSeg == Section.get()) {
-        Offset = alignTo(Offset, Section->ParentSegment->Align);
-        // There can be gaps at the start of a segment before the first section.
-        // So first we assign the alignment of the segment and then assign the
-        // location of the section from there
-        Section->Offset =
-            Offset + Section->OriginalOffset - Section->ParentSegment->Offset;
-      }
-      // We should respect interstitial gaps of allocated sections. We *must*
-      // maintain the memory image so that addresses are preserved. As, with the
-      // exception of SHT_NOBITS sections at the end of segments, the memory
-      // image is a copy of the file image, we preserve the file image as well.
-      // There's a strange case where a thread local SHT_NOBITS can cause the
-      // memory image and file image to not be the same. This occurs, on some
-      // systems, when a thread local SHT_NOBITS is between two SHT_PROGBITS
-      // and the thread local SHT_NOBITS section is at the end of a TLS segment.
-      // In this case to faithfully copy the segment file image we must use
-      // relative offsets. In any other case this would be the same as using the
-      // relative addresses so this should maintian the memory image as desired.
-      Offset = FirstInSeg->Offset + Section->OriginalOffset -
-               FirstInSeg->OriginalOffset;
-    }
-    // Alignment should have already been handled by the above if statement if
-    // this if this section is in a segment. Technically this shouldn't do
-    // anything bad if the alignments of the sections are all correct and the
-    // file image isn't corrupted. Still in sticking with the motto "maintain
-    // the file image" we should avoid messing up the file image if the
-    // alignment disagrees with the file image.
-    if (!Section->ParentSegment && Section->Align)
-      Offset = alignTo(Offset, Section->Align);
-    Section->Offset = Offset;
-    Section->Index = Index++;
-    if (Section->Type != SHT_NOBITS)
-      Offset += Section->Size;
+  // The size of ELF + program headers will not change so it is ok to assume
+  // that the first offset of the first segment is a good place to start
+  // outputting sections. This covers both the standard case and the PT_PHDR
+  // case.
+  uint64_t Offset;
+  if (!this->Segments.empty()) {
+    Offset = this->Segments[0]->Offset;
+  } else {
+    Offset = sizeof(Elf_Ehdr);
   }
-  // 'offset' should now be just after all the section data so we should set the
-  // section header table offset to be exactly here. This spot might not be
-  // aligned properly however so we should align it as needed. For 32-bit ELF
-  // this needs to be 4-byte aligned and on 64-bit it needs to be 8-byte aligned
-  // so the size of ELFT::Addr is used to ensure this.
+  // The only way a segment should move is if a section was between two
+  // segments and that section was removed. If that section isn't in a segment
+  // then it's acceptable, but not ideal, to simply move it to after the
+  // segments. So we can simply layout segments one after the other accounting
+  // for alignment.
+  for (auto &Segment : this->Segments) {
+    Offset = alignTo(Offset, Segment->Align);
+    Segment->Offset = Offset;
+    Offset += Segment->FileSize;
+  }
+  // Now the offset of every segment has been set we can assign the offsets
+  // of each section. For sections that are covered by a segment we should use
+  // the segment's original offset and the section's original offset to compute
+  // the offset from the start of the segment. Using the offset from the start
+  // of the segment we can assign a new offset to the section. For sections not
+  // covered by segments we can just bump Offset to the next valid location.
+  uint32_t Index = 1;
+  for (auto &Section : this->Sections) {
+    Section->Index = Index++;
+    if (Section->ParentSegment != nullptr) {
+      auto Segment = Section->ParentSegment;
+      Section->Offset =
+          Segment->Offset + (Section->OriginalOffset - Segment->OriginalOffset);
+    } else {
+      Offset = alignTo(Offset, Section->Offset);
+      Section->Offset = Offset;
+      if (Section->Type != SHT_NOBITS)
+        Offset += Section->Size;
+    }
+  }
+
   Offset = alignTo(Offset, sizeof(typename ELFT::Addr));
   this->SHOffset = Offset;
 }
