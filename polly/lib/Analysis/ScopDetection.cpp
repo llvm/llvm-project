@@ -1,3 +1,4 @@
+//===- ScopDetection.cpp - Detect Scops -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -44,28 +45,59 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/ScopDetection.h"
-#include "polly/CodeGen/CodeGeneration.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopDetectionDiagnostic.h"
 #include "polly/Support/SCEVValidator.h"
+#include "polly/Support/ScopHelper.h"
 #include "polly/Support/ScopLocation.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/RegionIterator.h"
+#include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
-#include <set>
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <memory>
 #include <stack>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 using namespace polly;
@@ -83,6 +115,7 @@ static cl::opt<int> ProfitabilityMinPerLoopInstructions(
     cl::Hidden, cl::ValueRequired, cl::init(100000000), cl::cat(PollyCategory));
 
 bool polly::PollyProcessUnprofitable;
+
 static cl::opt<bool, true> XPollyProcessUnprofitable(
     "polly-process-unprofitable",
     cl::desc(
@@ -107,6 +140,7 @@ static cl::list<std::string> IgnoredFunctions(
     cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
 
 bool polly::PollyAllowFullFunction;
+
 static cl::opt<bool, true>
     XAllowFullFunction("polly-detect-full-functions",
                        cl::desc("Allow the detection of full functions"),
@@ -127,6 +161,7 @@ static cl::opt<bool>
                    cl::cat(PollyCategory));
 
 bool polly::PollyAllowUnsignedOperations;
+
 static cl::opt<bool, true> XPollyAllowUnsignedOperations(
     "polly-allow-unsigned-operations",
     cl::desc("Allow unsigned operations such as comparisons or zero-extends."),
@@ -134,6 +169,7 @@ static cl::opt<bool, true> XPollyAllowUnsignedOperations(
     cl::init(true), cl::cat(PollyCategory));
 
 bool polly::PollyUseRuntimeAliasChecks;
+
 static cl::opt<bool, true> XPollyUseRuntimeAliasChecks(
     "polly-use-runtime-alias-checks",
     cl::desc("Use runtime alias checks to resolve possible aliasing."),
@@ -197,6 +233,7 @@ static cl::opt<bool>
                 cl::cat(PollyCategory));
 
 bool polly::PollyInvariantLoadHoisting;
+
 static cl::opt<bool, true> XPollyInvariantLoadHoisting(
     "polly-invariant-load-hoisting", cl::desc("Hoist invariant loads."),
     cl::location(PollyInvariantLoadHoisting), cl::Hidden, cl::ZeroOrMore,
@@ -245,6 +282,8 @@ STATISTIC(MaxNumLoopsInProfScop,
 static void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
                                      bool OnlyProfitable);
 
+namespace {
+
 class DiagnosticScopFound : public DiagnosticInfo {
 private:
   static int PluginDiagnosticKind;
@@ -259,12 +298,14 @@ public:
       : DiagnosticInfo(PluginDiagnosticKind, DS_Note), F(F), FileName(FileName),
         EntryLine(EntryLine), ExitLine(ExitLine) {}
 
-  virtual void print(DiagnosticPrinter &DP) const;
+  void print(DiagnosticPrinter &DP) const override;
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == PluginDiagnosticKind;
   }
 };
+
+} // namespace
 
 int DiagnosticScopFound::PluginDiagnosticKind =
     getNextAvailablePluginDiagnosticKind();
@@ -307,13 +348,12 @@ ScopDetection::ScopDetection(Function &F, const DominatorTree &DT,
                              ScalarEvolution &SE, LoopInfo &LI, RegionInfo &RI,
                              AliasAnalysis &AA, OptimizationRemarkEmitter &ORE)
     : DT(DT), SE(SE), LI(LI), RI(RI), AA(AA), ORE(ORE) {
-
   if (!PollyProcessUnprofitable && LI.empty())
     return;
 
   Region *TopRegion = RI.getTopLevelRegion();
 
-  if (OnlyFunctions.size() > 0 &&
+  if (!OnlyFunctions.empty() &&
       !doesStringMatchAnyRegex(F.getName(), OnlyFunctions))
     return;
 
@@ -361,7 +401,6 @@ ScopDetection::ScopDetection(Function &F, const DominatorTree &DT,
 template <class RR, typename... Args>
 inline bool ScopDetection::invalid(DetectionContext &Context, bool Assert,
                                    Args &&... Arguments) const {
-
   if (!Context.Verifying) {
     RejectLog &Log = Context.Log;
     std::shared_ptr<RR> RejectReason = std::make_shared<RR>(Arguments...);
@@ -410,7 +449,6 @@ std::string ScopDetection::regionIsInvalidBecause(const Region *R) const {
 
 bool ScopDetection::addOverApproximatedRegion(Region *AR,
                                               DetectionContext &Context) const {
-
   // If we already know about Ar we can exit.
   if (!Context.NonAffineSubRegionSet.insert(AR))
     return true;
@@ -448,7 +486,6 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
       return false;
 
     for (auto NonAffineRegion : Context.NonAffineSubRegionSet) {
-
       if (isSafeToLoadUnconditionally(Load->getPointerOperand(),
                                       Load->getAlignment(), DL))
         continue;
@@ -500,7 +537,6 @@ bool ScopDetection::involvesMultiplePtrs(const SCEV *S0, const SCEV *S1,
 
 bool ScopDetection::isAffine(const SCEV *S, Loop *Scope,
                              DetectionContext &Context) const {
-
   InvariantLoadsSetTy AccessILS;
   if (!isAffineExpr(&Context.CurRegion, Scope, S, SE, &AccessILS))
     return false;
@@ -538,7 +574,6 @@ bool ScopDetection::isValidSwitch(BasicBlock &BB, SwitchInst *SI,
 bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
                                   Value *Condition, bool IsLoopBranch,
                                   DetectionContext &Context) const {
-
   // Constant integer conditions are always affine.
   if (isa<ConstantInt>(Condition))
     return true;
@@ -708,8 +743,8 @@ bool ScopDetection::isValidIntrinsicInst(IntrinsicInst &II,
 
   switch (II.getIntrinsicID()) {
   // Memory intrinsics that can be represented are supported.
-  case llvm::Intrinsic::memmove:
-  case llvm::Intrinsic::memcpy:
+  case Intrinsic::memmove:
+  case Intrinsic::memcpy:
     AF = SE.getSCEVAtScope(cast<MemTransferInst>(II).getSource(), L);
     if (!AF->isZero()) {
       BP = dyn_cast<SCEVUnknown>(SE.getPointerBase(AF));
@@ -718,7 +753,7 @@ bool ScopDetection::isValidIntrinsicInst(IntrinsicInst &II,
         return false;
     }
   // Fall through
-  case llvm::Intrinsic::memset:
+  case Intrinsic::memset:
     AF = SE.getSCEVAtScope(cast<MemIntrinsic>(II).getDest(), L);
     if (!AF->isZero()) {
       BP = dyn_cast<SCEVUnknown>(SE.getPointerBase(AF));
@@ -764,6 +799,8 @@ bool ScopDetection::isInvariant(Value &Val, const Region &Reg,
   return false;
 }
 
+namespace {
+
 /// Remove smax of smax(0, size) expressions from a SCEV expression and
 /// register the '...' components.
 ///
@@ -778,14 +815,14 @@ bool ScopDetection::isInvariant(Value &Val, const Region &Reg,
 /// that 0 <= size, which means smax(0, size) == size.
 class SCEVRemoveMax : public SCEVRewriteVisitor<SCEVRemoveMax> {
 public:
+  SCEVRemoveMax(ScalarEvolution &SE, std::vector<const SCEV *> *Terms)
+      : SCEVRewriteVisitor(SE), Terms(Terms) {}
+
   static const SCEV *rewrite(const SCEV *Scev, ScalarEvolution &SE,
                              std::vector<const SCEV *> *Terms = nullptr) {
     SCEVRemoveMax Rewriter(SE, Terms);
     return Rewriter.visit(Scev);
   }
-
-  SCEVRemoveMax(ScalarEvolution &SE, std::vector<const SCEV *> *Terms)
-      : SCEVRewriteVisitor(SE), Terms(Terms) {}
 
   const SCEV *visitSMaxExpr(const SCEVSMaxExpr *Expr) {
     if ((Expr->getNumOperands() == 2) && Expr->getOperand(0)->isZero()) {
@@ -802,6 +839,8 @@ private:
   std::vector<const SCEV *> *Terms;
 };
 
+} // namespace
+
 SmallVector<const SCEV *, 4>
 ScopDetection::getDelinearizationTerms(DetectionContext &Context,
                                        const SCEVUnknown *BasePointer) const {
@@ -809,7 +848,7 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
   for (const auto &Pair : Context.Accesses[BasePointer]) {
     std::vector<const SCEV *> MaxTerms;
     SCEVRemoveMax::rewrite(Pair.second, SE, &MaxTerms);
-    if (MaxTerms.size() > 0) {
+    if (!MaxTerms.empty()) {
       Terms.insert(Terms.begin(), MaxTerms.begin(), MaxTerms.end());
       continue;
     }
@@ -1345,6 +1384,7 @@ Region *ScopDetection::expandRegion(Region &R) {
 
   return LastValidRegion.release();
 }
+
 static bool regionWithoutLoops(Region &R, LoopInfo &LI) {
   for (const BasicBlock *BB : R.blocks())
     if (R.contains(LI.getLoopFor(BB)))
@@ -1586,11 +1626,11 @@ void ScopDetection::markFunctionAsInvalid(Function *F) {
   F->addFnAttr(PollySkipFnAttr);
 }
 
-bool ScopDetection::isValidFunction(llvm::Function &F) {
+bool ScopDetection::isValidFunction(Function &F) {
   return !F.hasFnAttribute(PollySkipFnAttr);
 }
 
-void ScopDetection::printLocations(llvm::Function &F) {
+void ScopDetection::printLocations(Function &F) {
   for (const Region *R : *this) {
     unsigned LineEntry, LineExit;
     std::string FileName;
@@ -1733,14 +1773,14 @@ const RejectLog *ScopDetection::lookupRejectionLog(const Region *R) const {
   return DC ? &DC->Log : nullptr;
 }
 
-void polly::ScopDetection::verifyRegion(const Region &R) const {
+void ScopDetection::verifyRegion(const Region &R) const {
   assert(isMaxRegionInScop(R) && "Expect R is a valid region.");
 
   DetectionContext Context(const_cast<Region &>(R), AA, true /*verifying*/);
   isValidRegion(Context);
 }
 
-void polly::ScopDetection::verifyAnalysis() const {
+void ScopDetection::verifyAnalysis() const {
   if (!VerifyScops)
     return;
 
@@ -1748,7 +1788,7 @@ void polly::ScopDetection::verifyAnalysis() const {
     verifyRegion(*R);
 }
 
-bool ScopDetectionWrapperPass::runOnFunction(llvm::Function &F) {
+bool ScopDetectionWrapperPass::runOnFunction(Function &F) {
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto &RI = getAnalysis<RegionInfoPass>().getRegionInfo();
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
@@ -1782,6 +1822,7 @@ ScopDetectionWrapperPass::ScopDetectionWrapperPass() : FunctionPass(ID) {
   if (IgnoreAliasing)
     PollyUseRuntimeAliasChecks = false;
 }
+
 ScopAnalysis::ScopAnalysis() {
   // Disable runtime alias checks if we ignore aliasing all together.
   if (IgnoreAliasing)
@@ -1806,12 +1847,12 @@ ScopDetection ScopAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 
 PreservedAnalyses ScopAnalysisPrinterPass::run(Function &F,
                                                FunctionAnalysisManager &FAM) {
-  Stream << "Detected Scops in Function " << F.getName() << "\n";
+  OS << "Detected Scops in Function " << F.getName() << "\n";
   auto &SD = FAM.getResult<ScopAnalysis>(F);
   for (const Region *R : SD.ValidRegions)
-    Stream << "Valid Region for Scop: " << R->getNameStr() << '\n';
+    OS << "Valid Region for Scop: " << R->getNameStr() << '\n';
 
-  Stream << "\n";
+  OS << "\n";
   return PreservedAnalyses::all();
 }
 

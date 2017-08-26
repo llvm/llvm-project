@@ -92,6 +92,22 @@ T foo(T a) {
   return a;
 }
 
+struct Summary {
+  void merge(const Summary& other) {}
+};
+
+template <typename K>
+void work() {
+  Summary global_summary;
+#pragma omp declare reduction(+ : Summary : omp_out.merge(omp_in))
+#pragma omp parallel for reduction(+ : global_summary)
+  for (int k = 1; k <= 100; ++k) {
+  }
+}
+
+struct A {};
+
+
 // CHECK-LABEL: @main
 int main() {
   int i = 0;
@@ -110,6 +126,8 @@ int main() {
   // CHECK: call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
   // CHECK: call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
   // CHECK: call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call({{[^@]*}} @{{[^@]*}}[[REGION:@[^ ]+]]
+  // CHECK-LABEL: work
+  work<A>();
   // CHECK-LABEL: foo
   return foo(15);
 }

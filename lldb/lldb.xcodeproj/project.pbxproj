@@ -721,6 +721,8 @@
 		4C56543119D1EFAA002E9C44 /* ThreadPlanPython.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543019D1EFAA002E9C44 /* ThreadPlanPython.cpp */; };
 		4C56543519D2297A002E9C44 /* SBThreadPlan.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C56543419D2297A002E9C44 /* SBThreadPlan.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C56543719D22B32002E9C44 /* SBThreadPlan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543619D22B32002E9C44 /* SBThreadPlan.cpp */; };
+		4C7D48241F5099A1005314B4 /* SymbolFileDWARFDwp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D481C1F509963005314B4 /* SymbolFileDWARFDwp.cpp */; };
+		4C7D48251F5099B2005314B4 /* SymbolFileDWARFDwoDwp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D481F1F509964005314B4 /* SymbolFileDWARFDwoDwp.cpp */; };
 		4C877B391F30EF990068FCFB /* SBProcessInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 4987FB201F30EC9900E5C17D /* SBProcessInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C88BC2A1BA3722B00AA0964 /* Expression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C88BC291BA3722B00AA0964 /* Expression.cpp */; };
 		4C88BC2D1BA391B000AA0964 /* UserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083331B9A5DE200D5CF24 /* UserExpression.cpp */; };
@@ -768,8 +770,8 @@
 		8C26C4261C3EA5F90031DF7C /* TSanRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C26C4241C3EA4340031DF7C /* TSanRuntime.cpp */; };
 		8C2D6A53197A1EAF006989C9 /* MemoryHistory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C2D6A52197A1EAF006989C9 /* MemoryHistory.cpp */; };
 		8C2D6A5E197A250F006989C9 /* MemoryHistoryASan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C2D6A5A197A1FDC006989C9 /* MemoryHistoryASan.cpp */; };
-		8C3BD9A01EF5D1FF0016C343 /* JSONTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C3BD99F1EF5D1B50016C343 /* JSONTest.cpp */; };
 		8C3BD9961EF45DA50016C343 /* MainThreadCheckerRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C3BD9951EF45D9B0016C343 /* MainThreadCheckerRuntime.cpp */; };
+		8C3BD9A01EF5D1FF0016C343 /* JSONTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C3BD99F1EF5D1B50016C343 /* JSONTest.cpp */; };
 		8CCB017E19BA28A80009FD44 /* ThreadCollection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8CCB017A19BA283D0009FD44 /* ThreadCollection.cpp */; };
 		8CCB018219BA4E270009FD44 /* SBThreadCollection.h in Headers */ = {isa = PBXBuildFile; fileRef = 8CCB018119BA4E210009FD44 /* SBThreadCollection.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8CCB018319BA51BF0009FD44 /* SBThreadCollection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8CCB017F19BA4DD00009FD44 /* SBThreadCollection.cpp */; };
@@ -2549,6 +2551,10 @@
 		4C73152119B7D71700F865A4 /* Iterable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Iterable.h; path = include/lldb/Utility/Iterable.h; sourceTree = "<group>"; };
 		4C7CF7E31295E10E00B4FBB5 /* ThreadPlanCallUserExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ThreadPlanCallUserExpression.h; path = include/lldb/Target/ThreadPlanCallUserExpression.h; sourceTree = "<group>"; };
 		4C7CF7E51295E12B00B4FBB5 /* ThreadPlanCallUserExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanCallUserExpression.cpp; path = source/Target/ThreadPlanCallUserExpression.cpp; sourceTree = "<group>"; };
+		4C7D481C1F509963005314B4 /* SymbolFileDWARFDwp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolFileDWARFDwp.cpp; sourceTree = "<group>"; };
+		4C7D481D1F509964005314B4 /* SymbolFileDWARFDwoDwp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SymbolFileDWARFDwoDwp.h; sourceTree = "<group>"; };
+		4C7D481E1F509964005314B4 /* SymbolFileDWARFDwp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SymbolFileDWARFDwp.h; sourceTree = "<group>"; };
+		4C7D481F1F509964005314B4 /* SymbolFileDWARFDwoDwp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolFileDWARFDwoDwp.cpp; sourceTree = "<group>"; };
 		4C88BC291BA3722B00AA0964 /* Expression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Expression.cpp; path = source/Expression/Expression.cpp; sourceTree = "<group>"; };
 		4C98D3DA118FB96F00E575D0 /* ClangFunctionCaller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangFunctionCaller.cpp; path = ExpressionParser/Clang/ClangFunctionCaller.cpp; sourceTree = "<group>"; };
 		4C98D3DB118FB96F00E575D0 /* IRExecutionUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = IRExecutionUnit.cpp; path = source/Expression/IRExecutionUnit.cpp; sourceTree = "<group>"; };
@@ -2654,9 +2660,9 @@
 		8C2D6A54197A1EBE006989C9 /* MemoryHistory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MemoryHistory.h; path = include/lldb/Target/MemoryHistory.h; sourceTree = "<group>"; };
 		8C2D6A5A197A1FDC006989C9 /* MemoryHistoryASan.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MemoryHistoryASan.cpp; sourceTree = "<group>"; };
 		8C2D6A5B197A1FDC006989C9 /* MemoryHistoryASan.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MemoryHistoryASan.h; sourceTree = "<group>"; };
-		8C3BD99F1EF5D1B50016C343 /* JSONTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JSONTest.cpp; sourceTree = "<group>"; };
 		8C3BD9931EF45D9B0016C343 /* MainThreadCheckerRuntime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MainThreadCheckerRuntime.h; sourceTree = "<group>"; };
 		8C3BD9951EF45D9B0016C343 /* MainThreadCheckerRuntime.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MainThreadCheckerRuntime.cpp; sourceTree = "<group>"; };
+		8C3BD99F1EF5D1B50016C343 /* JSONTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JSONTest.cpp; sourceTree = "<group>"; };
 		8CCB017A19BA283D0009FD44 /* ThreadCollection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadCollection.cpp; path = source/Target/ThreadCollection.cpp; sourceTree = "<group>"; };
 		8CCB017C19BA289B0009FD44 /* ThreadCollection.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ThreadCollection.h; path = include/lldb/Target/ThreadCollection.h; sourceTree = "<group>"; };
 		8CCB017F19BA4DD00009FD44 /* SBThreadCollection.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SBThreadCollection.cpp; path = source/API/SBThreadCollection.cpp; sourceTree = "<group>"; };
@@ -3888,6 +3894,10 @@
 				260C89DA10F57C5600BB2B04 /* SymbolFileDWARF.h */,
 				260C89DB10F57C5600BB2B04 /* SymbolFileDWARFDebugMap.cpp */,
 				260C89DC10F57C5600BB2B04 /* SymbolFileDWARFDebugMap.h */,
+				4C7D481C1F509963005314B4 /* SymbolFileDWARFDwp.cpp */,
+				4C7D481E1F509964005314B4 /* SymbolFileDWARFDwp.h */,
+				4C7D481F1F509964005314B4 /* SymbolFileDWARFDwoDwp.cpp */,
+				4C7D481D1F509964005314B4 /* SymbolFileDWARFDwoDwp.h */,
 				26B8B42212EEC52A00A831B2 /* UniqueDWARFASTType.h */,
 				26B8B42312EEC52A00A831B2 /* UniqueDWARFASTType.cpp */,
 			);
@@ -7649,6 +7659,7 @@
 				268900DC13353E6F00698AC0 /* ObjectFile.cpp in Sources */,
 				268900DD13353E6F00698AC0 /* Symbol.cpp in Sources */,
 				AF26703A1852D01E00B6CC36 /* Queue.cpp in Sources */,
+				4C7D48241F5099A1005314B4 /* SymbolFileDWARFDwp.cpp in Sources */,
 				949EEDAE1BA7671C008C63CF /* CF.cpp in Sources */,
 				268900DE13353E6F00698AC0 /* SymbolContext.cpp in Sources */,
 				49CA97001E6AACC900C03FEE /* UUID.cpp in Sources */,
@@ -7830,6 +7841,7 @@
 				26957D9C13D381C900670048 /* RegisterContextDarwin_x86_64.cpp in Sources */,
 				94CD7D0919A3FBA300908B7C /* AppleObjCClassDescriptorV2.cpp in Sources */,
 				945261C31B9A11FC00BF138D /* LibCxxMap.cpp in Sources */,
+				4C7D48251F5099B2005314B4 /* SymbolFileDWARFDwoDwp.cpp in Sources */,
 				265205A813D3E3F700132FE2 /* RegisterContextKDP_arm.cpp in Sources */,
 				265205AA13D3E3F700132FE2 /* RegisterContextKDP_i386.cpp in Sources */,
 				6DEC6F391BD66D750091ABA6 /* TaskPool.cpp in Sources */,

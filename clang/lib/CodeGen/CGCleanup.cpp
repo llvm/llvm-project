@@ -1096,7 +1096,7 @@ void CodeGenFunction::EmitBranchThroughCleanup(JumpDest Dest) {
         break;
       }
 
-      // Otherwise, tell the scope that there's a jump propoagating
+      // Otherwise, tell the scope that there's a jump propagating
       // through it.  If this isn't new information, all the rest of
       // the work has been done before.
       if (!Scope.addBranchThrough(Dest.getBlock()))

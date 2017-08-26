@@ -148,19 +148,21 @@ With ``-fsanitize-coverage=pc-table`` the compiler will create a table of
 instrumented PCs. Requires either ``-fsanitize-coverage=inline-8bit-counters`` or
 ``-fsanitize-coverage=trace-pc-guard``.
 
-Users need to implement a single function to capture the counters at startup:
+Users need to implement a single function to capture the PC table at startup:
 
 .. code-block:: c++
 
   extern "C"
-  void __sanitizer_cov_pcs_init(const uint8_t *pcs_beg,
-                                const uint8_t *pcs_end) {
+  void __sanitizer_cov_pcs_init(const uintptr_t *pcs_beg,
+                                const uintptr_t *pcs_end) {
     // [pcs_beg,pcs_end) is the array of ptr-sized integers representing
-    // PCs of the instrumented blocks in the current DSO.
-    // Capture this array in order to read the PCs.
-    // The number of PCs for a given DSO is the same as the number of
-    // 8-bit counters (-fsanitize-coverage=inline-8bit-counters) or
+    // pairs [PC,PCFlags] for every instrumented block in the current DSO.
+    // Capture this array in order to read the PCs and their Flags.
+    // The number of PCs and PCFlags for a given DSO is the same as the number
+    // of 8-bit counters (-fsanitize-coverage=inline-8bit-counters) or
     // trace_pc_guard callbacks (-fsanitize-coverage=trace-pc-guard)
+    // A PCFlags describes the basic block:
+    //  * bit0: 1 if the block is the function entry block, 0 otherwise.
   }
 
 

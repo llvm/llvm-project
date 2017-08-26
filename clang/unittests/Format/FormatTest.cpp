@@ -8958,6 +8958,16 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                Alignment);
   Alignment.BinPackParameters = true;
   Alignment.ColumnLimit = 80;
+
+  // Bug 33507
+  Alignment.PointerAlignment = FormatStyle::PAS_Middle;
+  verifyFormat(
+      "auto found = range::find_if(vsProducts, [&](auto * aProduct) {\n"
+      "  static const Version verVs2017;\n"
+      "  return true;\n"
+      "});\n",
+      Alignment);
+  Alignment.PointerAlignment = FormatStyle::PAS_Right;
 }
 
 TEST_F(FormatTest, LinuxBraceBreaking) {
