@@ -75,6 +75,15 @@ cl::opt<bool>
                            "display to only one function, use filtering option "
                            "-view-bfi-func-name."));
 
+static cl::opt<bool> PrintBlockFreq(
+    "print-bfi", cl::init(false), cl::Hidden,
+    cl::desc("Print the block frequency info."));
+
+cl::opt<std::string> PrintBlockFreqFuncName(
+    "print-bfi-func-name", cl::Hidden,
+    cl::desc("The option to specify the name of the function "
+             "whose block frequency info is printed."));
+
 namespace llvm {
 
 static GVDAGType getGVDT() {
@@ -179,6 +188,11 @@ void BlockFrequencyInfo::calculate(const Function &F,
       (ViewBlockFreqFuncName.empty() ||
        F.getName().equals(ViewBlockFreqFuncName))) {
     view();
+  }
+  if (PrintBlockFreq &&
+      (PrintBlockFreqFuncName.empty() ||
+       F.getName().equals(PrintBlockFreqFuncName))) {
+    print(dbgs());
   }
 }
 

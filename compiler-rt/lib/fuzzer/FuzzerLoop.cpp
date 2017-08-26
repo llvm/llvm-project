@@ -626,6 +626,7 @@ void Fuzzer::MutateAndTestOne() {
 
 void Fuzzer::Loop() {
   TPC.SetPrintNewPCs(Options.PrintNewCovPcs);
+  TPC.SetPrintNewFuncs(Options.PrintNewCovFuncs);
   system_clock::time_point LastCorpusReload = system_clock::now();
   if (Options.DoCrossOver)
     MD.SetCorpus(&Corpus);

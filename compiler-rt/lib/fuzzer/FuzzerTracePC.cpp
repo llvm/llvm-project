@@ -143,11 +143,18 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
 }
 
 void TracePC::UpdateObservedPCs() {
-  auto Observe = [&](uintptr_t PC) {
-    bool Inserted = ObservedPCs.insert(PC).second;
-    if (Inserted && DoPrintNewPCs)
+  auto ObservePC = [&](uintptr_t PC) {
+    if (ObservedPCs.insert(PC).second && DoPrintNewPCs)
       PrintPC("\tNEW_PC: %p %F %L\n", "\tNEW_PC: %p\n", PC + 1);
   };
+
+  auto Observe = [&](const PCTableEntry &TE) {
+    if (TE.PCFlags & 1)
+      if (ObservedFuncs.insert(TE.PC).second && DoPrintNewFuncs)
+        PrintPC("\tNEW_FUNC: %p %F %L\n", "\tNEW_PC: %p\n", TE.PC + 1);
+    ObservePC(TE.PC);
+  };
+
   if (NumPCsInPCTables) {
     if (NumInline8bitCounters == NumPCsInPCTables) {
       for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
@@ -157,7 +164,7 @@ void TracePC::UpdateObservedPCs() {
                (size_t)(ModulePCTable[i].Stop - ModulePCTable[i].Start));
         for (size_t j = 0; j < Size; j++)
           if (Beg[j])
-            Observe(ModulePCTable[i].Start[j].PC);
+            Observe(ModulePCTable[i].Start[j]);
       }
     } else if (NumGuards == NumPCsInPCTables) {
       size_t GuardIdx = 1;
@@ -168,7 +175,7 @@ void TracePC::UpdateObservedPCs() {
                (size_t)(ModulePCTable[i].Stop - ModulePCTable[i].Start));
         for (size_t j = 0; j < Size; j++, GuardIdx++)
           if (Counters()[GuardIdx])
-            Observe(ModulePCTable[i].Start[j].PC);
+            Observe(ModulePCTable[i].Start[j]);
       }
     }
   }
@@ -177,7 +184,7 @@ void TracePC::UpdateObservedPCs() {
     auto P = ClangCountersBegin();
     for (size_t Idx = 0; Idx < NumClangCounters; Idx++)
       if (P[Idx])
-        Observe((uintptr_t)Idx);
+        ObservePC((uintptr_t)Idx);
   }
 }
 

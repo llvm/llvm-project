@@ -2933,6 +2933,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addPGOAndCoverageFlags(C, D, Output, Args, CmdArgs);
 
+  if (auto *ABICompatArg = Args.getLastArg(options::OPT_fclang_abi_compat_EQ))
+    ABICompatArg->render(Args, CmdArgs);
+
   // Add runtime flag for PS4 when PGO or Coverage are enabled.
   if (getToolChain().getTriple().isPS4CPU())
     PS4cpu::addProfileRTArgs(getToolChain(), Args, CmdArgs);

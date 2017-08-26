@@ -27,7 +27,7 @@
 
 #if !defined(BLOCK_EXPORT)
 #   if defined(__cplusplus)
-#       define BLOCK_EXPORT extern "C" 
+#       define BLOCK_EXPORT extern "C"
 #   else
 #       define BLOCK_EXPORT extern
 #   endif
