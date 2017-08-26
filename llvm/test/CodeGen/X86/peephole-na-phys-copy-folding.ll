@@ -65,10 +65,9 @@ exit2:
 define i1 @plus_forty_two() nounwind {
 ; CHECK32-LABEL: plus_forty_two:
 ; CHECK32:       # BB#0: # %entry
-; CHECK32-NEXT:    movl L, %ecx
 ; CHECK32-NEXT:    movb M, %al
-; CHECK32-NEXT:    addl $42, %ecx
-; CHECK32-NEXT:    movl %ecx, L
+; CHECK32-NEXT:    movl $42, %ecx
+; CHECK32-NEXT:    addl %ecx, L
 ; CHECK32-NEXT:    jne .LBB1_2
 ; CHECK32-NEXT:  # BB#1: # %entry
 ; CHECK32-NEXT:    andb $8, %al
@@ -82,10 +81,9 @@ define i1 @plus_forty_two() nounwind {
 ;
 ; CHECK64-LABEL: plus_forty_two:
 ; CHECK64:       # BB#0: # %entry
-; CHECK64-NEXT:    movl {{.*}}(%rip), %ecx
 ; CHECK64-NEXT:    movb {{.*}}(%rip), %al
-; CHECK64-NEXT:    addl $42, %ecx
-; CHECK64-NEXT:    movl %ecx, {{.*}}(%rip)
+; CHECK64-NEXT:    movl $42, %ecx
+; CHECK64-NEXT:    addl %ecx, {{.*}}(%rip)
 ; CHECK64-NEXT:    jne .LBB1_2
 ; CHECK64-NEXT:  # BB#1: # %entry
 ; CHECK64-NEXT:    andb $8, %al
@@ -165,10 +163,9 @@ exit2:
 define i1 @minus_forty_two() nounwind {
 ; CHECK32-LABEL: minus_forty_two:
 ; CHECK32:       # BB#0: # %entry
-; CHECK32-NEXT:    movl L, %ecx
 ; CHECK32-NEXT:    movb M, %al
-; CHECK32-NEXT:    addl $-42, %ecx
-; CHECK32-NEXT:    movl %ecx, L
+; CHECK32-NEXT:    movl $-42, %ecx
+; CHECK32-NEXT:    addl %ecx, L
 ; CHECK32-NEXT:    jne .LBB3_2
 ; CHECK32-NEXT:  # BB#1: # %entry
 ; CHECK32-NEXT:    andb $8, %al
@@ -182,10 +179,9 @@ define i1 @minus_forty_two() nounwind {
 ;
 ; CHECK64-LABEL: minus_forty_two:
 ; CHECK64:       # BB#0: # %entry
-; CHECK64-NEXT:    movl {{.*}}(%rip), %ecx
 ; CHECK64-NEXT:    movb {{.*}}(%rip), %al
-; CHECK64-NEXT:    addl $-42, %ecx
-; CHECK64-NEXT:    movl %ecx, {{.*}}(%rip)
+; CHECK64-NEXT:    movl $-42, %ecx
+; CHECK64-NEXT:    addl %ecx, {{.*}}(%rip)
 ; CHECK64-NEXT:    jne .LBB3_2
 ; CHECK64-NEXT:  # BB#1: # %entry
 ; CHECK64-NEXT:    andb $8, %al

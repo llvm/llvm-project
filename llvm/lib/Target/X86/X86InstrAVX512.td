@@ -3739,6 +3739,139 @@ let Predicates = [HasVLX] in {
      (VMOVDQU32Z256mr addr:$dst, (v32i8 (EXTRACT_SUBREG VR512:$src,sub_ymm)))>;
 }
 
+let Predicates = [HasVLX] in {
+// A masked extract from the first 128-bits of a 256-bit vector can be
+// implemented with masked move.
+def : Pat<(v2i64 (vselect VK2WM:$mask,
+                          (extract_subvector (v4i64 VR256X:$src), (iPTR 0)),
+                          VR128X:$src0)),
+          (v2i64 (VMOVDQA64Z128rrk VR128X:$src0, VK2WM:$mask,
+                               (EXTRACT_SUBREG (v4i64 VR256X:$src), sub_xmm)))>;
+def : Pat<(v4i32 (vselect VK4WM:$mask,
+                          (extract_subvector (v8i32 VR256X:$src), (iPTR 0)),
+                          VR128X:$src0)),
+          (v4i32 (VMOVDQA32Z128rrk VR128X:$src0, VK4WM:$mask,
+                               (EXTRACT_SUBREG (v8i32 VR256X:$src), sub_xmm)))>;
+def : Pat<(v2f64 (vselect VK2WM:$mask,
+                          (extract_subvector (v4f64 VR256X:$src), (iPTR 0)),
+                          VR128X:$src0)),
+          (v2f64 (VMOVAPDZ128rrk VR128X:$src0, VK2WM:$mask,
+                               (EXTRACT_SUBREG (v4f64 VR256X:$src), sub_xmm)))>;
+def : Pat<(v4f32 (vselect VK4WM:$mask,
+                          (extract_subvector (v8f32 VR256X:$src), (iPTR 0)),
+                          VR128X:$src0)),
+          (v4f32 (VMOVAPSZ128rrk VR128X:$src0, VK4WM:$mask,
+                               (EXTRACT_SUBREG (v8f32 VR256X:$src), sub_xmm)))>;
+
+def : Pat<(v2i64 (vselect VK2WM:$mask,
+                          (extract_subvector (v4i64 VR256X:$src), (iPTR 0)),
+                          (bitconvert (v4i32 immAllZerosV)))),
+          (v2i64 (VMOVDQA64Z128rrkz VK2WM:$mask,
+                               (EXTRACT_SUBREG (v4i64 VR256X:$src), sub_xmm)))>;
+def : Pat<(v4i32 (vselect VK4WM:$mask,
+                          (extract_subvector (v8i32 VR256X:$src), (iPTR 0)),
+                          (bitconvert (v4i32 immAllZerosV)))),
+          (v4i32 (VMOVDQA32Z128rrkz VK4WM:$mask,
+                               (EXTRACT_SUBREG (v8i32 VR256X:$src), sub_xmm)))>;
+def : Pat<(v2f64 (vselect VK2WM:$mask,
+                          (extract_subvector (v4f64 VR256X:$src), (iPTR 0)),
+                          (bitconvert (v4i32 immAllZerosV)))),
+          (v2f64 (VMOVAPDZ128rrkz VK2WM:$mask,
+                               (EXTRACT_SUBREG (v4f64 VR256X:$src), sub_xmm)))>;
+def : Pat<(v4f32 (vselect VK4WM:$mask,
+                          (extract_subvector (v8f32 VR256X:$src), (iPTR 0)),
+                          (bitconvert (v4i32 immAllZerosV)))),
+          (v4f32 (VMOVAPSZ128rrkz VK4WM:$mask,
+                               (EXTRACT_SUBREG (v8f32 VR256X:$src), sub_xmm)))>;
+
+// A masked extract from the first 128-bits of a 512-bit vector can be
+// implemented with masked move.
+def : Pat<(v2i64 (vselect VK2WM:$mask,
+                          (extract_subvector (v8i64 VR512:$src), (iPTR 0)),
+                          VR128X:$src0)),
+          (v2i64 (VMOVDQA64Z128rrk VR128X:$src0, VK2WM:$mask,
+                                (EXTRACT_SUBREG (v8i64 VR512:$src), sub_xmm)))>;
+def : Pat<(v4i32 (vselect VK4WM:$mask,
+                          (extract_subvector (v16i32 VR512:$src), (iPTR 0)),
+                          VR128X:$src0)),
+          (v4i32 (VMOVDQA32Z128rrk VR128X:$src0, VK4WM:$mask,
+                               (EXTRACT_SUBREG (v16i32 VR512:$src), sub_xmm)))>;
+def : Pat<(v2f64 (vselect VK2WM:$mask,
+                          (extract_subvector (v8f64 VR512:$src), (iPTR 0)),
+                          VR128X:$src0)),
+          (v2f64 (VMOVAPDZ128rrk VR128X:$src0, VK2WM:$mask,
+                                (EXTRACT_SUBREG (v8f64 VR512:$src), sub_xmm)))>;
+def : Pat<(v4f32 (vselect VK4WM:$mask,
+                          (extract_subvector (v16f32 VR512:$src), (iPTR 0)),
+                          VR128X:$src0)),
+          (v4f32 (VMOVAPSZ128rrk VR128X:$src0, VK4WM:$mask,
+                               (EXTRACT_SUBREG (v16f32 VR512:$src), sub_xmm)))>;
+
+def : Pat<(v2i64 (vselect VK2WM:$mask,
+                          (extract_subvector (v8i64 VR512:$src), (iPTR 0)),
+                          (bitconvert (v4i32 immAllZerosV)))),
+          (v2i64 (VMOVDQA64Z128rrkz VK2WM:$mask,
+                                (EXTRACT_SUBREG (v8i64 VR512:$src), sub_xmm)))>;
+def : Pat<(v4i32 (vselect VK4WM:$mask,
+                          (extract_subvector (v16i32 VR512:$src), (iPTR 0)),
+                          (bitconvert (v4i32 immAllZerosV)))),
+          (v4i32 (VMOVDQA32Z128rrkz VK4WM:$mask,
+                               (EXTRACT_SUBREG (v16i32 VR512:$src), sub_xmm)))>;
+def : Pat<(v2f64 (vselect VK2WM:$mask,
+                          (extract_subvector (v8f64 VR512:$src), (iPTR 0)),
+                          (bitconvert (v4i32 immAllZerosV)))),
+          (v2f64 (VMOVAPDZ128rrkz VK2WM:$mask,
+                                (EXTRACT_SUBREG (v8f64 VR512:$src), sub_xmm)))>;
+def : Pat<(v4f32 (vselect VK4WM:$mask,
+                          (extract_subvector (v16f32 VR512:$src), (iPTR 0)),
+                          (bitconvert (v4i32 immAllZerosV)))),
+          (v4f32 (VMOVAPSZ128rrkz VK4WM:$mask,
+                               (EXTRACT_SUBREG (v16f32 VR512:$src), sub_xmm)))>;
+
+// A masked extract from the first 256-bits of a 512-bit vector can be
+// implemented with masked move.
+def : Pat<(v4i64 (vselect VK4WM:$mask,
+                          (extract_subvector (v8i64 VR512:$src), (iPTR 0)),
+                          VR256X:$src0)),
+          (v4i64 (VMOVDQA64Z256rrk VR256X:$src0, VK4WM:$mask,
+                                (EXTRACT_SUBREG (v8i64 VR512:$src), sub_ymm)))>;
+def : Pat<(v8i32 (vselect VK8WM:$mask,
+                          (extract_subvector (v16i32 VR512:$src), (iPTR 0)),
+                          VR256X:$src0)),
+          (v8i32 (VMOVDQA32Z256rrk VR256X:$src0, VK8WM:$mask,
+                               (EXTRACT_SUBREG (v16i32 VR512:$src), sub_ymm)))>;
+def : Pat<(v4f64 (vselect VK4WM:$mask,
+                          (extract_subvector (v8f64 VR512:$src), (iPTR 0)),
+                          VR256X:$src0)),
+          (v4f64 (VMOVAPDZ256rrk VR256X:$src0, VK4WM:$mask,
+                                (EXTRACT_SUBREG (v8f64 VR512:$src), sub_ymm)))>;
+def : Pat<(v8f32 (vselect VK8WM:$mask,
+                          (extract_subvector (v16f32 VR512:$src), (iPTR 0)),
+                          VR256X:$src0)),
+          (v8f32 (VMOVAPSZ256rrk VR256X:$src0, VK8WM:$mask,
+                               (EXTRACT_SUBREG (v16f32 VR512:$src), sub_ymm)))>;
+
+def : Pat<(v4i64 (vselect VK4WM:$mask,
+                          (extract_subvector (v8i64 VR512:$src), (iPTR 0)),
+                          (bitconvert (v8i32 immAllZerosV)))),
+          (v4i64 (VMOVDQA64Z256rrkz VK4WM:$mask,
+                                (EXTRACT_SUBREG (v8i64 VR512:$src), sub_ymm)))>;
+def : Pat<(v8i32 (vselect VK8WM:$mask,
+                          (extract_subvector (v16i32 VR512:$src), (iPTR 0)),
+                          (bitconvert (v8i32 immAllZerosV)))),
+          (v8i32 (VMOVDQA32Z256rrkz VK8WM:$mask,
+                               (EXTRACT_SUBREG (v16i32 VR512:$src), sub_ymm)))>;
+def : Pat<(v4f64 (vselect VK4WM:$mask,
+                          (extract_subvector (v8f64 VR512:$src), (iPTR 0)),
+                          (bitconvert (v8i32 immAllZerosV)))),
+          (v4f64 (VMOVAPDZ256rrkz VK4WM:$mask,
+                                (EXTRACT_SUBREG (v8f64 VR512:$src), sub_ymm)))>;
+def : Pat<(v8f32 (vselect VK8WM:$mask,
+                          (extract_subvector (v16f32 VR512:$src), (iPTR 0)),
+                          (bitconvert (v8i32 immAllZerosV)))),
+          (v8f32 (VMOVAPSZ256rrkz VK8WM:$mask,
+                               (EXTRACT_SUBREG (v16f32 VR512:$src), sub_ymm)))>;
+}
 
 // Move Int Doubleword to Packed Double Int
 //

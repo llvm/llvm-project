@@ -1932,42 +1932,6 @@ static bool hasNoSignedComparisonUses(SDNode *N) {
   return true;
 }
 
-/// Get the appropriate X86 opcode for an in-memory arithmetic operation that
-/// also sets flags.
-///
-/// FIXME: This is essentially re-implemneting a subset of the patterns for
-/// these instructions. Instead, we should compute this from the patterns
-/// somehow.
-///
-/// FIXME: Currently we only support integer operations.
-///
-/// If there is no X86 opcode, returns none.
-static Optional<unsigned> getFusedLdStWithFlagsOpcode(EVT LdVT, unsigned Opc) {
-  auto SelectSize = [&](unsigned Opc64, unsigned Opc32, unsigned Opc16,
-                        unsigned Opc8) -> Optional<unsigned> {
-    switch (LdVT.getSimpleVT().SimpleTy) {
-    case MVT::i64:
-      return Opc64;
-    case MVT::i32:
-      return Opc32;
-    case MVT::i16:
-      return Opc16;
-    case MVT::i8:
-      return Opc8;
-    default:
-      return None;
-    }
-  };
-  switch (Opc) {
-  default:
-    return None;
-  case X86ISD::DEC:
-    return SelectSize(X86::DEC64m, X86::DEC32m, X86::DEC16m, X86::DEC8m);
-  case X86ISD::INC:
-    return SelectSize(X86::INC64m, X86::INC32m, X86::INC16m, X86::INC8m);
-  }
-}
-
 /// Check whether or not the chain ending in StoreNode is suitable for doing
 /// the {load; op; store} to modify transformation.
 static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
@@ -2047,15 +2011,16 @@ static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
   return true;
 }
 
-// Change a chain of {load; incr or dec; store} of the same value into
-// a simple increment or decrement through memory of that value, if the
-// uses of the modified value and its address are suitable.
-// The DEC64m tablegen pattern is currently not able to match the case where
-// the EFLAGS on the original DEC are used. (This also applies to
-// {INC,DEC}X{64,32,16,8}.)
-// We'll need to improve tablegen to allow flags to be transferred from a
-// node in the pattern to the result node.  probably with a new keyword
-// for example, we have this
+// Change a chain of {load; op; store} of the same value into a simple op
+// through memory of that value, if the uses of the modified value and its
+// address are suitable.
+//
+// The tablegen pattern memory operand pattern is currently not able to match
+// the case where the EFLAGS on the original operation are used.
+//
+// To move this to tablegen, we'll need to improve tablegen to allow flags to
+// be transferred from a node in the pattern to the result node, probably with
+// a new keyword. For example, we have this
 // def DEC64m : RI<0xFF, MRM1m, (outs), (ins i64mem:$dst), "dec{q}\t$dst",
 //  [(store (add (loadi64 addr:$dst), -1), addr:$dst),
 //   (implicit EFLAGS)]>;
@@ -2064,19 +2029,29 @@ static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
 //  [(store (add (loadi64 addr:$dst), -1), addr:$dst),
 //   (transferrable EFLAGS)]>;
 //
-// FIXME: This should handle a wide range of operations which support RMW
-// memory operands, not just inc and dec.
+// Until then, we manually fold these and instruction select the operation
+// here.
 bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
   StoreSDNode *StoreNode = cast<StoreSDNode>(Node);
   SDValue StoredVal = StoreNode->getOperand(1);
   unsigned Opc = StoredVal->getOpcode();
 
+  // Before we try to select anything, make sure this is memory operand size
+  // and opcode we can handle. Note that this must match the code below that
+  // actually lowers the opcodes.
   EVT MemVT = StoreNode->getMemoryVT();
-  if (!MemVT.isSimple())
+  if (MemVT != MVT::i64 && MemVT != MVT::i32 && MemVT != MVT::i16 &&
+      MemVT != MVT::i8)
     return false;
-  Optional<unsigned> NewOpc = getFusedLdStWithFlagsOpcode(MemVT, Opc);
-  if (!NewOpc)
+  switch (Opc) {
+  default:
     return false;
+  case X86ISD::INC:
+  case X86ISD::DEC:
+  case X86ISD::ADD:
+  case X86ISD::SUB:
+    break;
+  }
 
   LoadSDNode *LoadNode = nullptr;
   SDValue InputChain;
@@ -2089,12 +2064,57 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
                   Segment))
     return false;
 
+  auto SelectOpcodeForSize = [&](unsigned Opc64, unsigned Opc32, unsigned Opc16,
+                                 unsigned Opc8) {
+    switch (MemVT.getSimpleVT().SimpleTy) {
+    case MVT::i64:
+      return Opc64;
+    case MVT::i32:
+      return Opc32;
+    case MVT::i16:
+      return Opc16;
+    case MVT::i8:
+      return Opc8;
+    default:
+      llvm_unreachable("Invalid size!");
+    }
+  };
+
+  MachineSDNode *Result;
+  switch (Opc) {
+  case X86ISD::INC:
+  case X86ISD::DEC: {
+    unsigned NewOpc = Opc == X86ISD::INC
+                          ? SelectOpcodeForSize(X86::INC64m, X86::INC32m,
+                                                X86::INC16m, X86::INC8m)
+                          : SelectOpcodeForSize(X86::DEC64m, X86::DEC32m,
+                                                X86::DEC16m, X86::DEC8m);
+    const SDValue Ops[] = {Base, Scale, Index, Disp, Segment, InputChain};
+    Result =
+        CurDAG->getMachineNode(NewOpc, SDLoc(Node), MVT::i32, MVT::Other, Ops);
+    break;
+  }
+  case X86ISD::ADD:
+  case X86ISD::SUB: {
+    unsigned NewOpc = Opc == X86ISD::ADD
+                          ? SelectOpcodeForSize(X86::ADD64mr, X86::ADD32mr,
+                                                X86::ADD16mr, X86::ADD8mr)
+                          : SelectOpcodeForSize(X86::SUB64mr, X86::SUB32mr,
+                                                X86::SUB16mr, X86::SUB8mr);
+    const SDValue Ops[] = {Base,      Scale,   Index,
+                           Disp,      Segment, StoredVal->getOperand(1),
+                           InputChain};
+    Result =
+        CurDAG->getMachineNode(NewOpc, SDLoc(Node), MVT::i32, MVT::Other, Ops);
+    break;
+  }
+  default:
+    llvm_unreachable("Invalid opcode!");
+  }
+
   MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(2);
   MemOp[0] = StoreNode->getMemOperand();
   MemOp[1] = LoadNode->getMemOperand();
-  const SDValue Ops[] = {Base, Scale, Index, Disp, Segment, InputChain};
-  MachineSDNode *Result =
-      CurDAG->getMachineNode(*NewOpc, SDLoc(Node), MVT::i32, MVT::Other, Ops);
   Result->setMemRefs(MemOp, MemOp + 2);
 
   ReplaceUses(SDValue(StoreNode, 0), SDValue(Result, 1));
