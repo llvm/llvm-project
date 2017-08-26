@@ -44,5 +44,6 @@ return:                                           ; preds = %bb3, %entry
   ret void
 }
 
-; CHECK-LABEL:      Function: f
+; CHECK-LABEL: Printing analysis 'Polly - Create polyhedral description of Scops' for region: 'bb => return' in function 'f':
+; CHECK-NEXT:      Function: f
 ; CHECK-NEXT:      Region: %bb---%return

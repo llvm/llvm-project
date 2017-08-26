@@ -74,7 +74,7 @@ enum {
 #undef PREFIX
 
 // Create table mapping all options defined in DarwinLdOptions.td
-static const llvm::opt::OptTable::Info InfoTable[] = {
+static const llvm::opt::OptTable::Info infoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {PREFIX,      NAME,      HELPTEXT,                                           \
@@ -88,7 +88,7 @@ static const llvm::opt::OptTable::Info InfoTable[] = {
 // Create OptTable class for parsing actual command line arguments
 class DarwinLdOptTable : public llvm::opt::OptTable {
 public:
-  DarwinLdOptTable() : OptTable(InfoTable) {}
+  DarwinLdOptTable() : OptTable(infoTable) {}
 };
 
 static std::vector<std::unique_ptr<File>>

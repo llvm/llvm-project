@@ -100,7 +100,7 @@ struct _Unwind_Control_Block {
   } pr_cache;
 
   long long int :0; /* Enforce the 8-byte alignment */
-} __attribute__((__aligned__(8)));
+};
 
 typedef _Unwind_Reason_Code (*_Unwind_Stop_Fn)
       (_Unwind_State state,

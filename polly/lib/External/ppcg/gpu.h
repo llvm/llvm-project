@@ -2,58 +2,10 @@
 #define _GPU_H
 
 #include <isl/ast.h>
-#include <isl/id.h>
 #include <isl/id_to_ast_expr.h>
-
-#include <pet.h>
 
 #include "ppcg.h"
 #include "ppcg_options.h"
-
-/* An access to an outer array element or an iterator.
- * Accesses to iterators have an access relation that maps to an unnamed space.
- * An access may be both read and write.
- * If the access relation is empty, then the output dimension may
- * not be equal to the dimension of the corresponding array.
- */
-struct gpu_stmt_access {
-	/* Access reads elements */
-	int read;
-	/* Access writes elements */
-	int write;
-	/* All writes are definite writes. */
-	int exact_write;
-	/* Is a single, fixed element being accessed? */
-	isl_bool fixed_element;
-	/* The number of index expressions specified in the access. */
-	int n_index;
-
-	/* May access relation */
-	isl_map *access;
-	/* May access relation with as domain a mapping from iteration domain
-	 * to a reference identifier.
-	 */
-	isl_map *tagged_access;
-	/* The reference id of the corresponding pet_expr. */
-	isl_id *ref_id;
-
-	struct gpu_stmt_access *next;
-};
-
-/* A representation of a user statement.
- * "stmt" points to the corresponding pet statement.
- * "id" is the identifier of the instance set of the statement.
- * "accesses" is a linked list of accesses performed by the statement.
- * If the statement has been killed, i.e., if it will not be scheduled,
- * then this linked list may be empty even if the actual statement does
- * perform accesses.
- */
-struct gpu_stmt {
-	isl_id *id;
-	struct pet_stmt *stmt;
-
-	struct gpu_stmt_access *accesses;
-};
 
 /* Represents an outer array possibly accessed by a gpu_prog.
  */
@@ -66,20 +18,12 @@ struct gpu_array_info {
 	int size;
 	/* Name of the array. */
 	char *name;
-	/* Declared extent of original array. */
-	isl_set *declared_extent;
-	/* AST expression for declared size of original array. */
-	isl_ast_expr *declared_size;
 	/* Extent of the array that needs to be copied. */
 	isl_set *extent;
 	/* Number of indices. */
 	unsigned n_index;
 	/* For each index, a bound on "extent" in that direction. */
-	isl_multi_pw_aff *bound;
-	/* The corresponding access AST expression, if the array needs
-	 * to be allocated on the device.
-	 */
-	isl_ast_expr *bound_expr;
+	isl_pw_aff **bound;
 
 	/* All references to this array; point to elements of a linked list. */
 	int n_ref;
@@ -93,9 +37,6 @@ struct gpu_array_info {
 
 	/* Are the elements of the array structures? */
 	int has_compound_element;
-
-	/* Are the elements only accessed through constant index expressions? */
-	int only_fixed_element;
 
 	/* Is the array local to the scop? */
 	int local;
@@ -114,7 +55,7 @@ struct gpu_array_info {
 	 */
 	isl_union_map *dep_order;
 
-    void *user;
+        void *user;
 };
 
 /* Represents an outer array accessed by a ppcg_kernel, localized
@@ -126,8 +67,8 @@ struct gpu_array_info {
  * must be mapped to a register.
  * "global" is set if the global device memory corresponding
  * to this array is accessed by the kernel.
- * "bound" is equal to array->bound specialized to the current kernel.
- * "bound_expr" is the corresponding access AST expression.
+ * For each index i with 0 <= i < n_index,
+ * bound[i] is equal to array->bound[i] specialized to the current kernel.
  */
 struct gpu_local_array_info {
 	struct gpu_array_info *array;
@@ -139,8 +80,7 @@ struct gpu_local_array_info {
 	int global;
 
 	unsigned n_index;
-	isl_multi_pw_aff *bound;
-	isl_ast_expr *bound_expr;
+	isl_pw_aff_list *bound;
 };
 
 __isl_give isl_ast_expr *gpu_local_array_info_linearize_index(
@@ -185,7 +125,7 @@ struct gpu_prog {
 	/* A mapping from the outer arrays to all corresponding inner arrays. */
 	isl_union_map *to_inner;
 	/* A mapping from all intermediate arrays to their outer arrays,
-	 * including an identity mapping from the anonymous 1D space to itself.
+	 * including an identity mapping from the anoymous 1D space to itself.
 	 */
 	isl_union_map *any_to_outer;
 
@@ -210,15 +150,16 @@ struct gpu_gen {
 		struct gpu_types *types, void *user);
 	void *print_user;
 
-    isl_id_to_ast_expr *(*build_ast_expr)(void *stmt,
-            isl_ast_build *build,
-            isl_multi_pw_aff *(*fn_index)(
-                __isl_take isl_multi_pw_aff *mpa, isl_id *id,
-                void *user),
-            void *user_index,
-            isl_ast_expr *(*fn_expr)(isl_ast_expr *expr,
-                isl_id *id, void *user),
+        isl_id_to_ast_expr *(*build_ast_expr)(void *stmt,
+	        isl_ast_build *build,
+        	isl_multi_pw_aff *(*fn_index)(
+	        	__isl_take isl_multi_pw_aff *mpa, isl_id *id,
+		        void *user),
+                void *user_index,
+        	isl_ast_expr *(*fn_expr)(isl_ast_expr *expr,
+		        isl_id *id, void *user),
         void *user_expr);
+
 
 	struct gpu_prog *prog;
 	/* The generated AST. */
@@ -237,7 +178,7 @@ struct gpu_gen {
 	int kernel_id;
 };
 
-enum ppcg_group_access_type {
+enum ppcg_kernel_access_type {
 	ppcg_access_global,
 	ppcg_access_shared,
 	ppcg_access_private
@@ -297,7 +238,7 @@ struct ppcg_kernel_stmt {
  */
 struct ppcg_kernel_var {
 	struct gpu_array_info *array;
-	enum ppcg_group_access_type type;
+	enum ppcg_kernel_access_type type;
 	char *name;
 	isl_vec *size;
 };
@@ -321,8 +262,6 @@ struct ppcg_kernel_var {
  * refers to the x dimension.
  *
  * grid_size reflects the effective grid size.
- * grid_size_expr contains a corresponding access AST expression, built within
- * the context where the launch appears.
  *
  * context contains the values of the parameters and outer schedule dimensions
  * for which any statement instance in this kernel needs to be executed.
@@ -333,14 +272,7 @@ struct ppcg_kernel_var {
  * core contains the spaces of the statement domains that form
  * the core computation of the kernel.  It is used to navigate
  * the tree during the construction of the device part of the schedule
- * tree in gpu_create_kernel.
- *
- * expanded_domain contains the original statement instances,
- * i.e., those that appear in the domains of access relations,
- * that are involved in the kernel.
- * contraction maps those original statement instances to
- * the statement instances that are active at the point
- * in the schedule tree where the kernel is created.
+ * tree in create_kernel.
  *
  * arrays is the set of possibly accessed outer array elements.
  *
@@ -365,12 +297,10 @@ struct ppcg_kernel_var {
  * are represented by "n_block" parameters with as names the elements
  * of "thread_ids".
  *
- * copy_schedule corresponds to the schedule dimensions of
+ * shared_schedule corresponds to the schedule dimensions of
  * the (tiled) schedule for this kernel that have been taken into account
  * for computing private/shared memory tiles.
- * The domain corresponds to the original statement instances, i.e.,
- * those that appear in the leaves of the schedule tree.
- * copy_schedule_dim is the dimension of this schedule.
+ * shared_schedule_dim is the dimension of this schedule.
  *
  * sync_writes contains write references that require synchronization.
  * Each reference is represented by a universe set in a space [S[i,j] -> R[]]
@@ -393,15 +323,11 @@ struct ppcg_kernel {
 	int block_dim[3];
 
 	isl_multi_pw_aff *grid_size;
-	isl_ast_expr *grid_size_expr;
 	isl_set *context;
 
 	int n_sync;
 	isl_union_set *core;
 	isl_union_set *arrays;
-
-	isl_union_pw_multi_aff *contraction;
-	isl_union_set *expanded_domain;
 
 	isl_space *space;
 
@@ -415,8 +341,8 @@ struct ppcg_kernel {
 
 	isl_union_set *block_filter;
 	isl_union_set *thread_filter;
-	isl_union_pw_multi_aff *copy_schedule;
-	int copy_schedule_dim;
+	isl_union_pw_multi_aff *shared_schedule;
+	int shared_schedule_dim;
 
 	isl_union_set *sync_writes;
 
@@ -427,7 +353,6 @@ int gpu_array_is_scalar(struct gpu_array_info *array);
 int gpu_array_is_read_only_scalar(struct gpu_array_info *array);
 int gpu_array_requires_device_allocation(struct gpu_array_info *array);
 __isl_give isl_set *gpu_array_positive_size_guard(struct gpu_array_info *array);
-isl_bool gpu_array_can_be_private(struct gpu_array_info *array);
 
 struct gpu_prog *gpu_prog_alloc(isl_ctx *ctx, struct ppcg_scop *scop);
 void *gpu_prog_free(struct gpu_prog *prog);
@@ -440,20 +365,13 @@ int generate_gpu(isl_ctx *ctx, const char *input, FILE *out,
 		struct gpu_prog *prog, __isl_keep isl_ast_node *tree,
 		struct gpu_types *types, void *user), void *user);
 
-__isl_give isl_schedule_node *gpu_create_kernel(struct gpu_gen *gen,
-	__isl_take isl_schedule_node *node, int scale,
-	__isl_keep isl_multi_val *sizes);
-
 __isl_give isl_schedule *get_schedule(struct gpu_gen *gen);
 int has_any_permutable_node(__isl_keep isl_schedule *schedule);
 __isl_give isl_schedule *map_to_device(struct gpu_gen *gen,
-                                       __isl_take isl_schedule *schedule,
-                                      int to_from_device);
+                                       __isl_take isl_schedule *schedule);
 __isl_give isl_ast_node *generate_code(struct gpu_gen *gen,
                                        __isl_take isl_schedule *schedule);
 
 __isl_give isl_union_set *compute_may_persist(struct gpu_prog *prog);
 void collect_references(struct gpu_prog *prog, struct gpu_array_info *array);
-void collect_order_dependences(struct gpu_prog *prog);
-isl_bool only_fixed_element_accessed(struct gpu_array_info *array);
 #endif

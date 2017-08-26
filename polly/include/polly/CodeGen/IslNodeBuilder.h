@@ -1,4 +1,4 @@
-//=- IslNodeBuilder.cpp - Translate an isl AST into a LLVM-IR AST -*- C++ -*-=//
+//===------ IslNodeBuilder.cpp - Translate an isl AST into a LLVM-IR AST---===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,57 +6,28 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
 // This file contains the IslNodeBuilder, a class to translate an isl AST into
 // a LLVM-IR AST.
-//
 //===----------------------------------------------------------------------===//
 
-#ifndef POLLY_ISLNODEBUILDER_H
-#define POLLY_ISLNODEBUILDER_H
+#ifndef POLLY_ISL_NODE_BUILDER_H
+#define POLLY_ISL_NODE_BUILDER_H
 
 #include "polly/CodeGen/BlockGenerators.h"
 #include "polly/CodeGen/IslExprBuilder.h"
-#include "polly/ScopDetectionDiagnostic.h"
-#include "polly/Support/ScopHelper.h"
+#include "polly/CodeGen/LoopGenerators.h"
+#include "polly/ScopInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/InstrTypes.h"
 #include "isl/ctx.h"
-#include "isl/isl-noexceptions.h"
+#include "isl/union_map.h"
 #include <utility>
 #include <vector>
 
-using namespace llvm;
 using namespace polly;
-
-namespace llvm {
-
-class BasicBlock;
-class DataLayout;
-class DominatorTree;
-class Function;
-class Instruction;
-class Loop;
-class LoopInfo;
-class ScalarEvolution;
-class SCEV;
-class Type;
-class Value;
-
-} // namespace llvm
-
-namespace polly {
-
-struct InvariantEquivClassTy;
-class MemoryAccess;
-class Scop;
-class ScopStmt;
-
-} // namespace polly
+using namespace llvm;
 
 struct isl_ast_node;
 struct isl_ast_build;
@@ -70,9 +41,6 @@ struct SubtreeReferences {
   SetVector<Value *> &Values;
   SetVector<const SCEV *> &SCEVs;
   BlockGenerator &BlockGen;
-  // In case an (optional) parameter space location is provided, parameter space
-  // information is collected as well.
-  isl::space *ParamSpace;
 };
 
 /// Extract the out-of-scop values and SCEVs referenced from a ScopStmt.
@@ -81,10 +49,6 @@ struct SubtreeReferences {
 /// statement and the base pointers of the memory accesses. For scalar
 /// statements we force the generation of alloca memory locations and list
 /// these locations in the set of out-of-scop values as well.
-///
-/// We also collect an isl::space that includes all parameter dimensions
-/// used in the statement's memory accesses, in case the ParamSpace pointer
-/// is non-null.
 ///
 /// @param Stmt             The statement for which to extract the information.
 /// @param UserPtr          A void pointer that can be casted to a
@@ -208,7 +172,7 @@ protected:
   /// points to and the resulting value is returned.
   ///
   /// @param Expr The expression to code generate.
-  Value *generateSCEV(const SCEV *Expr);
+  llvm::Value *generateSCEV(const SCEV *Expr);
 
   /// A set of Value -> Value remappings to apply when generating new code.
   ///
@@ -298,14 +262,6 @@ protected:
   /// @param NewValues A map that maps certain llvm::Values to new llvm::Values.
   void updateValues(ValueMapT &NewValues);
 
-  /// Return the most up-to-date version of the llvm::Value for code generation.
-  /// @param Original The Value to check for an up to date version.
-  /// @returns A remapped `Value` from ValueMap, or `Original` if no mapping
-  ///          exists.
-  /// @see IslNodeBuilder::updateValues
-  /// @see IslNodeBuilder::ValueMap
-  Value *getLatestValue(Value *Original) const;
-
   /// Generate code for a marker now.
   ///
   /// For mark nodes with an unknown name, we just forward the code generation
@@ -314,7 +270,6 @@ protected:
   ///
   /// @param Mark The node we generate code for.
   virtual void createMark(__isl_take isl_ast_node *Marker);
-
   virtual void createFor(__isl_take isl_ast_node *For);
 
   /// Set to remember materialized invariant loads.
@@ -449,16 +404,6 @@ private:
   ///                    ids to new access expressions.
   void generateCopyStmt(ScopStmt *Stmt,
                         __isl_keep isl_id_to_ast_expr *NewAccesses);
-
-  /// Materialize a canonical loop induction variable for `L`, which is a loop
-  /// that is *not* present in the Scop.
-  ///
-  /// Note that this is materialized at the point where the `Builder` is
-  /// currently pointing.
-  /// We also populate the `OutsideLoopIterations` map with `L`s SCEV to keep
-  /// track of the induction variable.
-  /// See [Code generation of induction variables of loops outside Scops]
-  Value *materializeNonScopLoopInductionVariable(const Loop *L);
 };
 
-#endif // POLLY_ISLNODEBUILDER_H
+#endif // POLLY_ISL_NODE_BUILDER_H

@@ -101,9 +101,9 @@ private:
 };
 
 // .obj or .o file. This may be a member of an archive file.
-class ObjFile : public InputFile {
+class ObjectFile : public InputFile {
 public:
-  explicit ObjFile(MemoryBufferRef M) : InputFile(ObjectKind, M) {}
+  explicit ObjectFile(MemoryBufferRef M) : InputFile(ObjectKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == ObjectKind; }
   void parse() override;
   MachineTypes getMachineType() override;
@@ -119,8 +119,6 @@ public:
 
   // Returns the underying COFF file.
   COFFObjectFile *getCOFFObj() { return COFFObj.get(); }
-
-  static std::vector<ObjFile *> Instances;
 
   // True if this object file is compatible with SEH.
   // COFF-specific and x86-only.
@@ -181,8 +179,6 @@ public:
 
   static bool classof(const InputFile *F) { return F->kind() == ImportKind; }
 
-  static std::vector<ImportFile *> Instances;
-
   DefinedImportData *ImpSym = nullptr;
   DefinedImportData *ConstSym = nullptr;
   DefinedImportThunk *ThunkSym = nullptr;
@@ -212,7 +208,6 @@ public:
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
   std::vector<SymbolBody *> &getSymbols() { return SymbolBodies; }
   MachineTypes getMachineType() override;
-  static std::vector<BitcodeFile *> Instances;
   std::unique_ptr<llvm::lto::InputFile> Obj;
 
 private:

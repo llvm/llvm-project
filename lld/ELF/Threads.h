@@ -30,7 +30,7 @@
 //  - We have tens of millions of small strings when constructing a
 //    mergeable string section.
 //
-// For the cases such as the former, we can just use parallelForEach
+// For the cases such as the former, we can just use parallel_for_each
 // instead of std::for_each (or a plain for loop). Because tasks are
 // completely independent from each other, we can run them in parallel
 // without any coordination between them. That's very easy to understand
@@ -67,11 +67,12 @@
 namespace lld {
 namespace elf {
 
-template <typename R, class FuncTy> void parallelForEach(R &&Range, FuncTy Fn) {
+template <class IterTy, class FuncTy>
+void parallelForEach(IterTy Begin, IterTy End, FuncTy Fn) {
   if (Config->Threads)
-    for_each(llvm::parallel::par, std::begin(Range), std::end(Range), Fn);
+    for_each(llvm::parallel::par, Begin, End, Fn);
   else
-    for_each(llvm::parallel::seq, std::begin(Range), std::end(Range), Fn);
+    for_each(llvm::parallel::seq, Begin, End, Fn);
 }
 
 inline void parallelForEachN(size_t Begin, size_t End,

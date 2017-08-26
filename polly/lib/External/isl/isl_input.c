@@ -1805,8 +1805,11 @@ static struct isl_map *read_disjuncts(__isl_keep isl_stream *s,
 {
 	isl_map *res;
 
-	if (isl_stream_next_token_is(s, '}'))
-		return map;
+	if (isl_stream_next_token_is(s, '}')) {
+		isl_space *dim = isl_map_get_space(map);
+		isl_map_free(map);
+		return isl_map_universe(dim);
+	}
 
 	res = read_conjuncts(s, v, isl_map_copy(map), rational);
 	while (isl_stream_eat_if_available(s, ISL_TOKEN_OR)) {

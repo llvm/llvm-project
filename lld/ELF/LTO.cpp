@@ -11,7 +11,6 @@
 #include "Config.h"
 #include "Error.h"
 #include "InputFiles.h"
-#include "SymbolTable.h"
 #include "Symbols.h"
 #include "lld/Core/TargetOptionsCommandFlags.h"
 #include "llvm/ADT/STLExtras.h"
@@ -74,10 +73,6 @@ static std::unique_ptr<lto::LTO> createLTO() {
   Conf.Options = InitTargetOptionsFromCodeGenFlags();
   Conf.Options.RelaxELFRelocations = true;
 
-  // Always emit a section per function/datum with LTO.
-  Conf.Options.FunctionSections = true;
-  Conf.Options.DataSections = true;
-
   if (Config->Relocatable)
     Conf.RelocModel = None;
   else if (Config->Pic)
@@ -108,51 +103,37 @@ static std::unique_ptr<lto::LTO> createLTO() {
                                      Config->LTOPartitions);
 }
 
-BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {
-  for (Symbol *Sym : Symtab->getSymbols()) {
-    StringRef Name = Sym->body()->getName();
-    for (StringRef Prefix : {"__start_", "__stop_"})
-      if (Name.startswith(Prefix))
-        UsedStartStop.insert(Name.substr(Prefix.size()));
-  }
-}
+BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {}
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
 static void undefine(Symbol *S) {
-  replaceBody<Undefined>(S, nullptr, S->body()->getName(), /*IsLocal=*/false,
-                         STV_DEFAULT, S->body()->Type);
+  replaceBody<Undefined>(S, S->body()->getName(), /*IsLocal=*/false,
+                         STV_DEFAULT, S->body()->Type, nullptr);
 }
 
 void BitcodeCompiler::add(BitcodeFile &F) {
   lto::InputFile &Obj = *F.Obj;
   unsigned SymNum = 0;
-  std::vector<SymbolBody *> Syms = F.getSymbols();
+  std::vector<Symbol *> Syms = F.getSymbols();
   std::vector<lto::SymbolResolution> Resols(Syms.size());
 
   // Provide a resolution to the LTO API for each symbol.
   for (const lto::InputFile::Symbol &ObjSym : Obj.symbols()) {
-    SymbolBody *B = Syms[SymNum];
-    Symbol *Sym = B->symbol();
+    Symbol *Sym = Syms[SymNum];
     lto::SymbolResolution &R = Resols[SymNum];
     ++SymNum;
+    SymbolBody *B = Sym->body();
 
     // Ideally we shouldn't check for SF_Undefined but currently IRObjectFile
     // reports two symbols for module ASM defined. Without this check, lld
     // flags an undefined in IR with a definition in ASM as prevailing.
     // Once IRObjectFile is fixed to report only one symbol this hack can
     // be removed.
-    R.Prevailing = !ObjSym.isUndefined() && B->getFile() == &F;
+    R.Prevailing = !ObjSym.isUndefined() && B->File == &F;
 
-    // We ask LTO to preserve following global symbols:
-    // 1) All symbols when doing relocatable link, so that them can be used
-    //    for doing final link.
-    // 2) Symbols that are used in regular objects.
-    // 3) C named sections if we have corresponding __start_/__stop_ symbol.
-    // 4) Symbols that are defined in bitcode files and used for dynamic linking.
-    R.VisibleToRegularObj = Config->Relocatable || Sym->IsUsedInRegularObj ||
-                            (R.Prevailing && Sym->includeInDynsym()) ||
-                            UsedStartStop.count(ObjSym.getSectionName());
+    R.VisibleToRegularObj =
+        Sym->IsUsedInRegularObj || (R.Prevailing && Sym->includeInDynsym());
     if (R.Prevailing)
       undefine(Sym);
     R.LinkerRedefined = Config->RenamedSymbols.count(Sym);

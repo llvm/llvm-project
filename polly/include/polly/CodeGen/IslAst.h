@@ -1,4 +1,4 @@
-//===- IslAst.h - Interface to the isl code generator -----------*- C++ -*-===//
+//===- IslAst.h - Interface to the isl code generator-------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,51 +19,37 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef POLLY_ISLAST_H
-#define POLLY_ISLAST_H
+#ifndef POLLY_ISL_AST_H
+#define POLLY_ISL_AST_H
 
 #include "polly/Config/config.h"
 #include "polly/ScopPass.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/IR/PassManager.h"
 #include "isl/ast.h"
-#include "isl/ctx.h"
-#include <memory>
 
 namespace llvm {
-
-class PassRegistry;
 class raw_ostream;
-
-void initializeIslAstInfoWrapperPassPass(PassRegistry &);
-
 } // namespace llvm
 
-struct isl_ast_build;
-struct isl_ast_expr;
-struct isl_ast_node;
 struct isl_pw_aff;
-struct isl_pw_multi_aff;
+struct isl_ast_node;
+struct isl_ast_expr;
+struct isl_ast_build;
 struct isl_union_map;
+struct isl_pw_multi_aff;
 
 namespace polly {
-
-struct Dependences;
-class MemoryAccess;
 class Scop;
+class IslAst;
+class MemoryAccess;
+struct Dependences;
 
 class IslAst {
 public:
-  IslAst(const IslAst &) = delete;
-  IslAst &operator=(const IslAst &) = delete;
-  IslAst(IslAst &&);
-  IslAst &operator=(IslAst &&) = delete;
+  static IslAst create(Scop &Scop, const Dependences &D);
   ~IslAst();
 
-  static IslAst create(Scop &Scop, const Dependences &D);
-
   /// Print a source code representation of the program.
-  void pprint(raw_ostream &OS);
+  void pprint(llvm::raw_ostream &OS);
 
   __isl_give isl_ast_node *getAst();
 
@@ -79,14 +65,18 @@ public:
   static isl_ast_expr *buildRunCondition(Scop &S,
                                          __isl_keep isl_ast_build *Build);
 
+  IslAst(const IslAst &) = delete;
+  IslAst &operator=(const IslAst &) = delete;
+  IslAst(IslAst &&);
+  IslAst &operator=(IslAst &&) = delete;
+
 private:
   Scop &S;
-  isl_ast_node *Root = nullptr;
-  isl_ast_expr *RunCondition = nullptr;
+  isl_ast_node *Root;
+  isl_ast_expr *RunCondition;
   std::shared_ptr<isl_ctx> Ctx;
 
   IslAst(Scop &Scop);
-
   void init(const Dependences &D);
 };
 
@@ -97,28 +87,31 @@ public:
   /// Payload information used to annotate an AST node.
   struct IslAstUserPayload {
     /// Construct and initialize the payload.
-    IslAstUserPayload() = default;
+    IslAstUserPayload()
+        : IsInnermost(false), IsInnermostParallel(false),
+          IsOutermostParallel(false), IsReductionParallel(false),
+          MinimalDependenceDistance(nullptr), Build(nullptr) {}
 
     /// Cleanup all isl structs on destruction.
     ~IslAstUserPayload();
 
     /// Flag to mark innermost loops.
-    bool IsInnermost = false;
+    bool IsInnermost;
 
     /// Flag to mark innermost parallel loops.
-    bool IsInnermostParallel = false;
+    bool IsInnermostParallel;
 
     /// Flag to mark outermost parallel loops.
-    bool IsOutermostParallel = false;
+    bool IsOutermostParallel;
 
     /// Flag to mark parallel loops which break reductions.
-    bool IsReductionParallel = false;
+    bool IsReductionParallel;
 
     /// The minimal dependence distance for non parallel loops.
-    isl_pw_aff *MinimalDependenceDistance = nullptr;
+    isl_pw_aff *MinimalDependenceDistance;
 
     /// The build environment at the time this node was constructed.
-    isl_ast_build *Build = nullptr;
+    isl_ast_build *Build;
 
     /// Set of accesses which break reduction dependences.
     MemoryAccessSet BrokenReductions;
@@ -186,9 +179,7 @@ public:
 
 struct IslAstAnalysis : public AnalysisInfoMixin<IslAstAnalysis> {
   static AnalysisKey Key;
-
   using Result = IslAstInfo;
-
   IslAstInfo run(Scop &S, ScopAnalysisManager &SAM,
                  ScopStandardAnalysisResults &SAR);
 };
@@ -198,7 +189,6 @@ class IslAstInfoWrapperPass : public ScopPass {
 
 public:
   static char ID;
-
   IslAstInfoWrapperPass() : ScopPass(ID) {}
 
   IslAstInfo &getAI() { return *Ast; }
@@ -214,18 +204,19 @@ public:
   void releaseMemory() override;
 
   /// Print a source code representation of the program.
-  void printScop(raw_ostream &OS, Scop &S) const override;
+  void printScop(llvm::raw_ostream &OS, Scop &S) const override;
 };
 
 struct IslAstPrinterPass : public PassInfoMixin<IslAstPrinterPass> {
-  IslAstPrinterPass(raw_ostream &OS) : OS(OS) {}
-
+  IslAstPrinterPass(raw_ostream &O) : Stream(O) {}
   PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
                         ScopStandardAnalysisResults &, SPMUpdater &U);
-
-  raw_ostream &OS;
+  raw_ostream &Stream;
 };
-
 } // namespace polly
 
-#endif // POLLY_ISLAST_H
+namespace llvm {
+class PassRegistry;
+void initializeIslAstInfoWrapperPassPass(llvm::PassRegistry &);
+} // namespace llvm
+#endif /* POLLY_ISL_AST_H */

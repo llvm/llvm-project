@@ -20,7 +20,6 @@
 #include "Symbols.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/WindowsResource.h"
@@ -33,7 +32,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/WindowsManifest/WindowsManifestMerger.h"
 #include <memory>
 
 using namespace llvm::COFF;
@@ -223,22 +221,6 @@ void parseSection(StringRef S) {
   Config->Section[Name] = parseSectionAttributes(Attrs);
 }
 
-// Parses /aligncomm option argument.
-void parseAligncomm(StringRef S) {
-  StringRef Name, Align;
-  std::tie(Name, Align) = S.split(',');
-  if (Name.empty() || Align.empty()) {
-    error("/aligncomm: invalid argument: " + S);
-    return;
-  }
-  int V;
-  if (Align.getAsInteger(0, V)) {
-    error("/aligncomm: invalid argument: " + S);
-    return;
-  }
-  Config->AlignComm[Name] = std::max(Config->AlignComm[Name], 1 << V);
-}
-
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
 // Results are directly written to Config.
 void parseManifest(StringRef Arg) {
@@ -330,9 +312,16 @@ public:
 };
 }
 
-static std::string createDefaultXml() {
-  std::string Ret;
-  raw_string_ostream OS(Ret);
+// Create the default manifest file as a temporary file.
+TemporaryFile createDefaultXml() {
+  // Create a temporary file.
+  TemporaryFile File("defaultxml", "manifest");
+
+  // Open the temporary file for writing.
+  std::error_code EC;
+  raw_fd_ostream OS(File.Path, EC, sys::fs::F_Text);
+  if (EC)
+    fatal(EC, "failed to open " + File.Path);
 
   // Emit the XML. Note that we do *not* verify that the XML attributes are
   // syntactically correct. This is intentional for link.exe compatibility.
@@ -348,92 +337,46 @@ static std::string createDefaultXml() {
        << "      </requestedPrivileges>\n"
        << "    </security>\n"
        << "  </trustInfo>\n";
-  }
-  if (!Config->ManifestDependency.empty()) {
-    OS << "  <dependency>\n"
-       << "    <dependentAssembly>\n"
-       << "      <assemblyIdentity " << Config->ManifestDependency << " />\n"
-       << "    </dependentAssembly>\n"
-       << "  </dependency>\n";
-  }
-  OS << "</assembly>\n";
-  return Ret;
-}
-
-static Expected<std::unique_ptr<MemoryBuffer>>
-createManifestXmlWithInternalMt(std::string &DefaultXml) {
-  std::unique_ptr<MemoryBuffer> DefaultXmlCopy =
-      MemoryBuffer::getMemBufferCopy(DefaultXml);
-
-  windows_manifest::WindowsManifestMerger Merger;
-  if (auto E = Merger.merge(*DefaultXmlCopy.get()))
-    return std::move(E);
-
-  for (StringRef Filename : Config->ManifestInput) {
-    std::unique_ptr<MemoryBuffer> Manifest =
-        check(MemoryBuffer::getFile(Filename));
-    if (auto E = Merger.merge(*Manifest.get())) {
-      warn("internal manifest tool failed on file " + Filename);
-      return std::move(E);
+    if (!Config->ManifestDependency.empty()) {
+      OS << "  <dependency>\n"
+         << "    <dependentAssembly>\n"
+         << "      <assemblyIdentity " << Config->ManifestDependency << " />\n"
+         << "    </dependentAssembly>\n"
+         << "  </dependency>\n";
     }
   }
-
-  return Merger.getMergedManifest();
+  OS << "</assembly>\n";
+  OS.close();
+  return File;
 }
 
-static std::unique_ptr<MemoryBuffer>
-createManifestXmlWithExternalMt(std::string &DefaultXml) {
-  const Triple HostTriple(Triple::normalize(LLVM_HOST_TRIPLE));
-  if (!HostTriple.isOSWindows())
-    fatal("manifest ignored because no external manifest tool available");
-  // Create the default manifest file as a temporary file.
-  TemporaryFile Default("defaultxml", "manifest");
-  std::error_code EC;
-  raw_fd_ostream OS(Default.Path, EC, sys::fs::F_Text);
-  if (EC)
-    fatal(EC, "failed to open " + Default.Path);
-  OS << DefaultXml;
-  OS.close();
+static std::string readFile(StringRef Path) {
+  std::unique_ptr<MemoryBuffer> MB =
+      check(MemoryBuffer::getFile(Path), "could not open " + Path);
+  return MB->getBuffer();
+}
 
-  // Merge user-supplied manifests if they are given.  Since libxml2 is not
-  // enabled, we must shell out to Microsoft's mt.exe tool.
-  TemporaryFile User("user", "manifest");
+static std::string createManifestXml() {
+  // Create the default manifest file.
+  TemporaryFile File1 = createDefaultXml();
+  if (Config->ManifestInput.empty())
+    return readFile(File1.Path);
+
+  // If manifest files are supplied by the user using /MANIFESTINPUT
+  // option, we need to merge them with the default manifest.
+  TemporaryFile File2("user", "manifest");
 
   Executor E("mt.exe");
   E.add("/manifest");
-  E.add(Default.Path);
+  E.add(File1.Path);
   for (StringRef Filename : Config->ManifestInput) {
     E.add("/manifest");
     E.add(Filename);
   }
   E.add("/nologo");
-  E.add("/out:" + StringRef(User.Path));
+  E.add("/out:" + StringRef(File2.Path));
   E.run();
-
-  return check(MemoryBuffer::getFile(User.Path), "could not open " + User.Path);
-}
-
-static std::string createManifestXml() {
-  std::string DefaultXml = createDefaultXml();
-  if (Config->ManifestInput.empty())
-    return DefaultXml;
-
-  // If manifest files are supplied by the user using /MANIFESTINPUT
-  // option, we need to merge them with the default manifest. If libxml2
-  // is enabled, we may merge them with LLVM's own library.
-  Expected<std::unique_ptr<MemoryBuffer>> OutputBufferOrError =
-      createManifestXmlWithInternalMt(DefaultXml);
-  if (OutputBufferOrError)
-    return OutputBufferOrError.get()->getBuffer();
-  // Using built-in library failed, possibly because libxml2 is not installed.
-  // Shell out to mt.exe instead.
-  handleAllErrors(OutputBufferOrError.takeError(),
-                  [&](ErrorInfoBase &EIB) {
-                    warn("error with internal manifest tool: " + EIB.message());
-                  });
-  std::unique_ptr<MemoryBuffer> OutputBuffer;
-  OutputBuffer = createManifestXmlWithExternalMt(DefaultXml);
-  return OutputBuffer->getBuffer();
+  return readFile(File2.Path);
 }
 
 static std::unique_ptr<MemoryBuffer>
@@ -516,12 +459,12 @@ Export parseExport(StringRef Arg) {
   if (E.Name.empty())
     goto err;
 
-  if (E.Name.contains('=')) {
+  if (E.Name.find('=') != StringRef::npos) {
     StringRef X, Y;
     std::tie(X, Y) = E.Name.split("=");
 
     // If "<name>=<dllname>.<name>".
-    if (Y.contains(".")) {
+    if (Y.find(".") != StringRef::npos) {
       E.Name = X;
       E.ForwardTo = Y;
       return E;
@@ -708,7 +651,7 @@ void runMSVCLinker(std::string Rsp, ArrayRef<StringRef> Objects) {
 #undef PREFIX
 
 // Create table mapping all options defined in Options.td
-static const llvm::opt::OptTable::Info InfoTable[] = {
+static const llvm::opt::OptTable::Info infoTable[] = {
 #define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
   {X1, X2, X10,         X11,         OPT_##ID, llvm::opt::Option::KIND##Class, \
    X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
@@ -718,7 +661,7 @@ static const llvm::opt::OptTable::Info InfoTable[] = {
 
 class COFFOptTable : public llvm::opt::OptTable {
 public:
-  COFFOptTable() : OptTable(InfoTable, true) {}
+  COFFOptTable() : OptTable(infoTable, true) {}
 };
 
 // Parses a given list of options.

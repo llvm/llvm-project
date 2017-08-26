@@ -43,10 +43,6 @@ using llvm::support::ulittle32_t;
 namespace lld {
 namespace coff {
 
-std::vector<ObjFile *> ObjFile::Instances;
-std::vector<ImportFile *> ImportFile::Instances;
-std::vector<BitcodeFile *> BitcodeFile::Instances;
-
 /// Checks that Source is compatible with being a weak alias to Target.
 /// If Source is Undefined and has no weak alias set, makes it a weak
 /// alias to Target.
@@ -83,7 +79,7 @@ void ArchiveFile::addMember(const Archive::Symbol *Sym) {
   Driver->enqueueArchiveMember(C, Sym->getName(), getName());
 }
 
-void ObjFile::parse() {
+void ObjectFile::parse() {
   // Parse a memory buffer as a COFF file.
   std::unique_ptr<Binary> Bin = check(createBinary(MB), toString(this));
 
@@ -100,7 +96,7 @@ void ObjFile::parse() {
   initializeSEH();
 }
 
-void ObjFile::initializeChunks() {
+void ObjectFile::initializeChunks() {
   uint32_t NumSections = COFFObj->getNumberOfSections();
   Chunks.reserve(NumSections);
   SparseChunks.resize(NumSections + 1);
@@ -151,7 +147,7 @@ void ObjFile::initializeChunks() {
   }
 }
 
-void ObjFile::initializeSymbols() {
+void ObjectFile::initializeSymbols() {
   uint32_t NumSymbols = COFFObj->getNumberOfSymbols();
   SymbolBodies.reserve(NumSymbols);
   SparseSymbolBodies.resize(NumSymbols);
@@ -197,14 +193,14 @@ void ObjFile::initializeSymbols() {
   }
 }
 
-SymbolBody *ObjFile::createUndefined(COFFSymbolRef Sym) {
+SymbolBody *ObjectFile::createUndefined(COFFSymbolRef Sym) {
   StringRef Name;
   COFFObj->getSymbolName(Sym, Name);
   return Symtab->addUndefined(Name, this, Sym.isWeakExternal())->body();
 }
 
-SymbolBody *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
-                                   bool IsFirst) {
+SymbolBody *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
+                                      bool IsFirst) {
   StringRef Name;
   if (Sym.isCommon()) {
     auto *C = make<CommonChunk>(Sym);
@@ -277,7 +273,7 @@ SymbolBody *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
   return B;
 }
 
-void ObjFile::initializeSEH() {
+void ObjectFile::initializeSEH() {
   if (!SEHCompat || !SXData)
     return;
   ArrayRef<uint8_t> A;
@@ -290,7 +286,7 @@ void ObjFile::initializeSEH() {
     SEHandlers.insert(SparseSymbolBodies[*I]);
 }
 
-MachineTypes ObjFile::getMachineType() {
+MachineTypes ObjectFile::getMachineType() {
   if (COFFObj)
     return static_cast<MachineTypes>(COFFObj->getMachine());
   return IMAGE_FILE_MACHINE_UNKNOWN;

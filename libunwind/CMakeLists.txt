@@ -79,7 +79,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   set(PACKAGE_NAME libunwind)
-  set(PACKAGE_VERSION 5.0.0svn)
+  set(PACKAGE_VERSION 5.0.0)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -133,8 +133,6 @@ option(LIBUNWIND_ENABLE_THREADS "Build libunwind with threading support." ON)
 option(LIBUNWIND_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 option(LIBUNWIND_INCLUDE_DOCS "Build the libunwind documentation." ${LLVM_INCLUDE_DOCS})
 
-set(LIBUNWIND_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
-    "Define suffix of library directory name (32/64)")
 set(LIBUNWIND_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
 set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
 set(LIBUNWIND_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
@@ -167,7 +165,7 @@ set(LIBUNWIND_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 if (LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
 else()
-  set(LIBUNWIND_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBUNWIND_LIBDIR_SUFFIX})
+  set(LIBUNWIND_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBUNWIND_LIBRARY_DIR})

@@ -33,43 +33,41 @@ struct Symbol;
 // to replace the lazy symbol. The logic is implemented in the
 // add*() functions, which are called by input files as they are parsed. There
 // is one add* function per symbol type.
-class SymbolTable {
+template <class ELFT> class SymbolTable {
+  typedef typename ELFT::Sym Elf_Sym;
+
 public:
-  template <class ELFT> void addFile(InputFile *File);
-  template <class ELFT> void addCombinedLTOObject();
-  template <class ELFT> void addSymbolAlias(StringRef Alias, StringRef Name);
-  template <class ELFT> void addSymbolWrap(StringRef Name);
+  void addFile(InputFile *File);
+  void addCombinedLTOObject();
+  void addSymbolAlias(StringRef Alias, StringRef Name);
+  void addSymbolWrap(StringRef Name);
   void applySymbolRenames();
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
+  ArrayRef<ObjectFile<ELFT> *> getObjectFiles() const { return ObjectFiles; }
+  ArrayRef<BinaryFile *> getBinaryFiles() const { return BinaryFiles; }
+  ArrayRef<SharedFile<ELFT> *> getSharedFiles() const { return SharedFiles; }
 
-  template <class ELFT>
   DefinedRegular *addAbsolute(StringRef Name,
                               uint8_t Visibility = llvm::ELF::STV_HIDDEN,
                               uint8_t Binding = llvm::ELF::STB_GLOBAL);
-  template <class ELFT>
   DefinedRegular *addIgnored(StringRef Name,
                              uint8_t Visibility = llvm::ELF::STV_HIDDEN);
 
-  template <class ELFT> Symbol *addUndefined(StringRef Name);
-  template <class ELFT>
+  Symbol *addUndefined(StringRef Name);
   Symbol *addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,
                        uint8_t StOther, uint8_t Type, bool CanOmitFromDynSym,
                        InputFile *File);
-  template <class ELFT>
+
   Symbol *addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
                      uint64_t Value, uint64_t Size, uint8_t Binding,
                      SectionBase *Section, InputFile *File);
 
-  template <class ELFT>
-  void addShared(SharedFile<ELFT> *F, StringRef Name,
-                 const typename ELFT::Sym &Sym,
+  void addShared(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
                  const typename ELFT::Verdef *Verdef);
 
-  template <class ELFT>
   Symbol *addLazyArchive(ArchiveFile *F, const llvm::object::Archive::Symbol S);
-  template <class ELFT> void addLazyObject(StringRef Name, LazyObjFile &Obj);
-
+  void addLazyObject(StringRef Name, LazyObjectFile &Obj);
   Symbol *addBitcode(StringRef Name, uint8_t Binding, uint8_t StOther,
                      uint8_t Type, bool CanOmitFromDynSym, BitcodeFile *File);
 
@@ -82,11 +80,12 @@ public:
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    InputFile *File);
 
-  template <class ELFT> void scanUndefinedFlags();
-  template <class ELFT> void scanShlibUndefined();
+  void scanUndefinedFlags();
+  void scanShlibUndefined();
   void scanVersionScript();
 
   SymbolBody *find(StringRef Name);
+  SymbolBody *findInCurrentDSO(StringRef Name);
 
   void trace(StringRef Name);
 
@@ -121,6 +120,11 @@ private:
   // is used to uniquify them.
   llvm::DenseSet<llvm::CachedHashStringRef> ComdatGroups;
 
+  std::vector<ObjectFile<ELFT> *> ObjectFiles;
+  std::vector<SharedFile<ELFT> *> SharedFiles;
+  std::vector<BitcodeFile *> BitcodeFiles;
+  std::vector<BinaryFile *> BinaryFiles;
+
   // Set of .so files to not link the same shared object file more than once.
   llvm::DenseSet<StringRef> SoNames;
 
@@ -134,7 +138,9 @@ private:
   std::unique_ptr<BitcodeCompiler> LTO;
 };
 
-extern SymbolTable *Symtab;
+template <class ELFT> struct Symtab { static SymbolTable<ELFT> *X; };
+template <class ELFT> SymbolTable<ELFT> *Symtab<ELFT>::X;
+
 } // namespace elf
 } // namespace lld
 

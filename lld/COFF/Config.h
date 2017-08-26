@@ -139,9 +139,6 @@ struct Configuration {
   StringRef ManifestUIAccess = "'false'";
   StringRef ManifestFile;
 
-  // Used for /aligncomm.
-  std::map<std::string, int> AlignComm;
-
   // Used for /failifmismatch.
   std::map<StringRef, StringRef> MustMatch;
 

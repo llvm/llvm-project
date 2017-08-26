@@ -1,4 +1,4 @@
-//===- ScopBuilder.cpp ----------------------------------------------------===//
+//===- ScopBuilder.cpp ---------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,50 +16,11 @@
 
 #include "polly/ScopBuilder.h"
 #include "polly/Options.h"
-#include "polly/ScopDetection.h"
-#include "polly/ScopDetectionDiagnostic.h"
-#include "polly/ScopInfo.h"
+#include "polly/Support/GICHelper.h"
 #include "polly/Support/SCEVValidator.h"
-#include "polly/Support/ScopHelper.h"
 #include "polly/Support/VirtualInstruction.h"
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
-#include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
-#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Operator.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Use.h"
-#include "llvm/IR/Value.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cassert>
-#include <string>
-#include <tuple>
-#include <vector>
 
 using namespace llvm;
 using namespace polly;
@@ -71,13 +32,10 @@ STATISTIC(RichScopFound, "Number of Scops containing a loop");
 STATISTIC(InfeasibleScops,
           "Number of SCoPs with statically infeasible context.");
 
-bool polly::ModelReadOnlyScalars;
-
-static cl::opt<bool, true> XModelReadOnlyScalars(
+static cl::opt<bool> ModelReadOnlyScalars(
     "polly-analyze-read-only-scalars",
     cl::desc("Model read-only scalar values in the scop description"),
-    cl::location(ModelReadOnlyScalars), cl::Hidden, cl::ZeroOrMore,
-    cl::init(true), cl::cat(PollyCategory));
+    cl::Hidden, cl::ZeroOrMore, cl::init(true), cl::cat(PollyCategory));
 
 static cl::opt<bool> UnprofitableScalarAccs(
     "polly-unprofitable-scalar-accs",
@@ -92,6 +50,7 @@ static cl::opt<bool> DetectFortranArrays(
 void ScopBuilder::buildPHIAccesses(ScopStmt *PHIStmt, PHINode *PHI,
                                    Region *NonAffineSubRegion,
                                    bool IsExitBlock) {
+
   // PHI nodes that are in the exit block of the region, hence if IsExitBlock is
   // true, are not modeled as ordinary PHI nodes as they are not part of the
   // region. However, we model the operands in the predecessor blocks that are
@@ -144,8 +103,27 @@ void ScopBuilder::buildEscapingDependences(Instruction *Inst) {
   // Check for uses of this instruction outside the scop. Because we do not
   // iterate over such instructions and therefore did not "ensure" the existence
   // of a write, we must determine such use here.
-  if (scop->isEscaping(Inst))
-    ensureValueWrite(Inst);
+  for (Use &U : Inst->uses()) {
+    Instruction *UI = dyn_cast<Instruction>(U.getUser());
+    if (!UI)
+      continue;
+
+    BasicBlock *UseParent = getUseBlock(U);
+    BasicBlock *UserParent = UI->getParent();
+
+    // An escaping value is either used by an instruction not within the scop,
+    // or (when the scop region's exit needs to be simplified) by a PHI in the
+    // scop's exit block. This is because region simplification before code
+    // generation inserts new basic blocks before the PHI such that its incoming
+    // blocks are not in the scop anymore.
+    if (!scop->contains(UseParent) ||
+        (isa<PHINode>(UI) && scop->isExit(UserParent) &&
+         scop->hasSingleExitEdge())) {
+      // At least one escaping use found.
+      ensureValueWrite(Inst);
+      break;
+    }
+  }
 }
 
 /// Check that a value is a Fortran Array descriptor.
@@ -266,6 +244,7 @@ Value *ScopBuilder::findFADAllocationVisible(MemAccInst Inst) {
   // We are looking for a "store" into a struct with the type being the Fortran
   // descriptor type
   for (auto user : MallocMem->users()) {
+
     /// match: 5
     auto *MallocStore = dyn_cast<StoreInst>(user);
     if (!MallocStore)
@@ -551,7 +530,7 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
   case FMRB_OnlyReadsArgumentPointees:
     ReadOnly = true;
   // Fall through
-  case FMRB_OnlyAccessesArgumentPointees: {
+  case FMRB_OnlyAccessesArgumentPointees:
     auto AccType = ReadOnly ? MemoryAccess::READ : MemoryAccess::MAY_WRITE;
     Loop *L = LI.getLoopFor(Inst->getParent());
     for (const auto &Arg : CI->arg_operands()) {
@@ -567,7 +546,6 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
                      ArgBasePtr->getType(), false, {AF}, {nullptr}, CI);
     }
     return true;
-  }
   }
 
   return true;
@@ -618,6 +596,7 @@ void ScopBuilder::buildAccessSingleDim(MemAccInst Inst, ScopStmt *Stmt) {
 }
 
 void ScopBuilder::buildMemoryAccess(MemAccInst Inst, ScopStmt *Stmt) {
+
   if (buildAccessMemIntrinsic(Inst, Stmt))
     return;
 
@@ -677,7 +656,7 @@ void ScopBuilder::buildAccessFunctions(ScopStmt *Stmt, BasicBlock &BB,
   assert(
       !Stmt == IsExitBlock &&
       "The exit BB is the only one that cannot be represented by a statement");
-  assert(IsExitBlock || Stmt->represents(&BB));
+  assert(IsExitBlock || Stmt->contains(&BB));
 
   // We do not build access functions for error blocks, as they may contain
   // instructions we can not model.
@@ -799,15 +778,6 @@ void ScopBuilder::ensureValueWrite(Instruction *Inst) {
 }
 
 void ScopBuilder::ensureValueRead(Value *V, ScopStmt *UserStmt) {
-  // TODO: Make ScopStmt::ensureValueRead(Value*) offer the same functionality
-  // to be able to replace this one. Currently, there is a split responsibility.
-  // In a first step, the MemoryAccess is created, but without the
-  // AccessRelation. In the second step by ScopStmt::buildAccessRelations(), the
-  // AccessRelation is created. At least for scalar accesses, there is no new
-  // information available at ScopStmt::buildAccessRelations(), so we could
-  // create the AccessRelation right away. This is what
-  // ScopStmt::ensureValueRead(Value*) does.
-
   auto *Scope = UserStmt->getSurroundingLoop();
   auto VUse = VirtualUse::create(scop.get(), UserStmt, Scope, V, false);
   switch (VUse.getKind()) {
@@ -910,11 +880,11 @@ static void verifyUse(Scop *S, Use &Op, LoopInfo &LI) {
 /// happened yet, such that virtual and physical uses are equivalent.
 static void verifyUses(Scop *S, LoopInfo &LI, DominatorTree &DT) {
   for (auto *BB : S->getRegion().blocks()) {
-    for (auto &Inst : *BB) {
-      auto *Stmt = S->getStmtFor(&Inst);
-      if (!Stmt)
-        continue;
+    auto *Stmt = S->getStmtFor(BB);
+    if (!Stmt)
+      continue;
 
+    for (auto &Inst : *BB) {
       if (isIgnoredIntrinsic(&Inst))
         continue;
 
@@ -1004,10 +974,11 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   // Initialize the invalid domain.
   for (ScopStmt &Stmt : scop->Stmts)
     if (Stmt.isBlockStmt())
-      Stmt.setInvalidDomain(InvalidDomainMap[Stmt.getEntryBlock()]);
+      Stmt.setInvalidDomain(InvalidDomainMap[Stmt.getEntryBlock()].copy());
     else
-      Stmt.setInvalidDomain(InvalidDomainMap[getRegionNodeBasicBlock(
-          Stmt.getRegion()->getNode())]);
+      Stmt.setInvalidDomain(
+          InvalidDomainMap[getRegionNodeBasicBlock(Stmt.getRegion()->getNode())]
+              .copy());
 
   // Remove empty statements.
   // Exit early in case there are no executable statements left in this scop.
@@ -1066,6 +1037,7 @@ ScopBuilder::ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
                          const DataLayout &DL, DominatorTree &DT, LoopInfo &LI,
                          ScopDetection &SD, ScalarEvolution &SE)
     : AA(AA), DL(DL), DT(DT), LI(LI), SD(SD), SE(SE) {
+
   DebugLoc Beg, End;
   auto P = getBBPairForRegion(R);
   getDebugLocations(P, Beg, End);
@@ -1076,7 +1048,7 @@ ScopBuilder::ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
 
   buildScop(*R, AC);
 
-  DEBUG(dbgs() << *scop);
+  DEBUG(scop->print(dbgs()));
 
   if (!scop->hasFeasibleRuntimeContext()) {
     InfeasibleScops++;
