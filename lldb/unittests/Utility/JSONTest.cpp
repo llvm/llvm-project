@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
-#include "lldb/Core/StreamString.h"
 #include "lldb/Utility/JSON.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
 
