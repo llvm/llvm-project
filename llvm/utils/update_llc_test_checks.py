@@ -26,24 +26,11 @@ def llc(args, cmd_args, ir):
 
 # RegEx: this is where the magic happens.
 
-SCRUB_WHITESPACE_RE = re.compile(r'(?!^(|  \w))[ \t]+', flags=re.M)
-SCRUB_TRAILING_WHITESPACE_RE = re.compile(r'[ \t]+$', flags=re.M)
-SCRUB_KILL_COMMENT_RE = re.compile(r'^ *#+ +kill:.*\n')
-SCRUB_LOOP_COMMENT_RE = re.compile(
-    r'# =>This Inner Loop Header:.*|# in Loop:.*', flags=re.M)
-
 ASM_FUNCTION_X86_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n[^:]*?'
     r'(?P<body>^##?[ \t]+[^:]+:.*?)\s*'
     r'^\s*(?:[^:\n]+?:\s*\n\s*\.size|\.cfi_endproc|\.globl|\.comm|\.(?:sub)?section|# -- End function)',
     flags=(re.M | re.S))
-SCRUB_X86_SHUFFLES_RE = (
-    re.compile(
-        r'^(\s*\w+) [^#\n]+#+ ((?:[xyz]mm\d+|mem)( \{%k\d+\}( \{z\})?)? = .*)$',
-        flags=re.M))
-SCRUB_X86_SP_RE = re.compile(r'\d+\(%(esp|rsp)\)')
-SCRUB_X86_RIP_RE = re.compile(r'[.\w]+\(%rip\)')
-SCRUB_X86_LCP_RE = re.compile(r'\.LCPI[0-9]+_[0-9]+')
 
 ASM_FUNCTION_ARM_RE = re.compile(
         r'^(?P<func>[0-9a-zA-Z_]+):\n' # f: (name of function)
@@ -52,12 +39,13 @@ ASM_FUNCTION_ARM_RE = re.compile(
         r'.Lfunc_end[0-9]+:', # .Lfunc_end0: or # -- End function
         flags=(re.M | re.S))
 
-RUN_LINE_RE = re.compile('^\s*;\s*RUN:\s*(.*)$')
-TRIPLE_ARG_RE = re.compile(r'-mtriple=([^ ]+)')
-TRIPLE_IR_RE = re.compile(r'^target\s+triple\s*=\s*"([^"]+)"$')
-IR_FUNCTION_RE = re.compile('^\s*define\s+(?:internal\s+)?[^@]*@(\w+)\s*\(')
-CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?=(\S+)')
-CHECK_RE = re.compile(r'^\s*;\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
+ASM_FUNCTION_AARCH64_RE = re.compile(
+     r'^_?(?P<func>[^:]+):[ \t]*\/\/[ \t]*@(?P=func)\n'
+     r'[ \t]+.cfi_startproc\n'
+     r'(?P<body>.*?)\n'
+     # This list is incomplete
+     r'.Lfunc_end[0-9]+:\n',
+     flags=(re.M | re.S))
 
 ASM_FUNCTION_PPC_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n'
@@ -77,6 +65,27 @@ ASM_FUNCTION_SYSTEMZ_RE = re.compile(
     r'.Lfunc_end[0-9]+:\n',
     flags=(re.M | re.S))
 
+
+SCRUB_WHITESPACE_RE = re.compile(r'(?!^(|  \w))[ \t]+', flags=re.M)
+SCRUB_TRAILING_WHITESPACE_RE = re.compile(r'[ \t]+$', flags=re.M)
+SCRUB_KILL_COMMENT_RE = re.compile(r'^ *#+ +kill:.*\n')
+SCRUB_LOOP_COMMENT_RE = re.compile(
+    r'# =>This Inner Loop Header:.*|# in Loop:.*', flags=re.M)
+
+SCRUB_X86_SHUFFLES_RE = (
+    re.compile(
+        r'^(\s*\w+) [^#\n]+#+ ((?:[xyz]mm\d+|mem)( \{%k\d+\}( \{z\})?)? = .*)$',
+        flags=re.M))
+SCRUB_X86_SP_RE = re.compile(r'\d+\(%(esp|rsp)\)')
+SCRUB_X86_RIP_RE = re.compile(r'[.\w]+\(%rip\)')
+SCRUB_X86_LCP_RE = re.compile(r'\.LCPI[0-9]+_[0-9]+')
+
+RUN_LINE_RE = re.compile('^\s*;\s*RUN:\s*(.*)$')
+TRIPLE_ARG_RE = re.compile(r'-mtriple=([^ ]+)')
+TRIPLE_IR_RE = re.compile(r'^target\s+triple\s*=\s*"([^"]+)"$')
+IR_FUNCTION_RE = re.compile('^\s*define\s+(?:internal\s+)?[^@]*@(\w+)\s*\(')
+CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?=(\S+)')
+CHECK_RE = re.compile(r'^\s*;\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
 
 def scrub_asm_x86(asm):
   # Scrub runs of whitespace out of the assembly, but leave the leading
@@ -141,6 +150,7 @@ def build_function_body_dictionary(raw_tool_output, triple, prefixes, func_dict,
       'i686': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'x86': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'i386': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
+      'aarch64': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
       'arm-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
       'thumb-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
       'thumbv8-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),

@@ -17,7 +17,7 @@ entry:
   ret void
 }
 
-; CHECK: private constant [3 x i8*] [{{.*}}@foo{{.*}}blockaddress{{.*}}blockaddress{{.*}}], section "__sancov_pcs", align 8
+; CHECK: private constant [6 x i64*] [{{.*}}@foo{{.*}}blockaddress{{.*}}blockaddress{{.*}}], section "__sancov_pcs", align 8
 ; CHECK: define internal void @sancov.module_ctor
 ; CHECK: call void @__sanitizer_cov
 ; CHECK: call void @__sanitizer_cov_pcs_init

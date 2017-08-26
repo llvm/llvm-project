@@ -908,7 +908,8 @@ bool LoopInterchangeLegality::currentLimitations() {
 
   bool FoundInduction = false;
   for (const Instruction &I : reverse(*InnerLoopLatch)) {
-    if (isa<BranchInst>(I) || isa<CmpInst>(I) || isa<TruncInst>(I))
+    if (isa<BranchInst>(I) || isa<CmpInst>(I) || isa<TruncInst>(I) ||
+        isa<ZExtInst>(I))
       continue;
 
     // We found an instruction. If this is not induction variable then it is not
