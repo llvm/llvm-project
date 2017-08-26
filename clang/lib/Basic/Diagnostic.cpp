@@ -11,8 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticError.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -1050,3 +1051,5 @@ PartialDiagnostic::StorageAllocator::~StorageAllocator() {
           llvm::CrashRecoveryContext::isRecoveringFromCrash()) &&
          "A partial is on the lam");
 }
+
+char DiagnosticError::ID;
