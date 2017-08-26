@@ -70,9 +70,9 @@ void TracePC::HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop) {
   NumInline8bitCounters += Stop - Start;
 }
 
-void TracePC::HandlePCsInit(const uint8_t *Start, const uint8_t *Stop) {
-  const uintptr_t *B = reinterpret_cast<const uintptr_t *>(Start);
-  const uintptr_t *E = reinterpret_cast<const uintptr_t *>(Stop);
+void TracePC::HandlePCsInit(const uintptr_t *Start, const uintptr_t *Stop) {
+  const PCTableEntry *B = reinterpret_cast<const PCTableEntry *>(Start);
+  const PCTableEntry *E = reinterpret_cast<const PCTableEntry *>(Stop);
   if (NumPCTables && ModulePCTable[NumPCTables - 1].Start == B) return;
   assert(NumPCTables < sizeof(ModulePCTable) / sizeof(ModulePCTable[0]));
   ModulePCTable[NumPCTables++] = {B, E};
@@ -143,11 +143,18 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
 }
 
 void TracePC::UpdateObservedPCs() {
-  auto Observe = [&](uintptr_t PC) {
-    bool Inserted = ObservedPCs.insert(PC).second;
-    if (Inserted && DoPrintNewPCs)
+  auto ObservePC = [&](uintptr_t PC) {
+    if (ObservedPCs.insert(PC).second && DoPrintNewPCs)
       PrintPC("\tNEW_PC: %p %F %L\n", "\tNEW_PC: %p\n", PC + 1);
   };
+
+  auto Observe = [&](const PCTableEntry &TE) {
+    if (TE.PCFlags & 1)
+      if (ObservedFuncs.insert(TE.PC).second && DoPrintNewFuncs)
+        PrintPC("\tNEW_FUNC: %p %F %L\n", "\tNEW_PC: %p\n", TE.PC + 1);
+    ObservePC(TE.PC);
+  };
+
   if (NumPCsInPCTables) {
     if (NumInline8bitCounters == NumPCsInPCTables) {
       for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
@@ -177,7 +184,7 @@ void TracePC::UpdateObservedPCs() {
     auto P = ClangCountersBegin();
     for (size_t Idx = 0; Idx < NumClangCounters; Idx++)
       if (P[Idx])
-        Observe((uintptr_t)Idx);
+        ObservePC((uintptr_t)Idx);
   }
 }
 
@@ -240,9 +247,9 @@ void TracePC::PrintCoverage() {
   for (size_t i = 0; i < NumPCTables; i++) {
     auto &M = ModulePCTable[i];
     assert(M.Start < M.Stop);
-    auto ModuleName = GetModuleName(*M.Start);
+    auto ModuleName = GetModuleName(M.Start->PC);
     for (auto Ptr = M.Start; Ptr < M.Stop; Ptr++) {
-      auto PC = *Ptr;
+      auto PC = Ptr->PC;
       auto VisualizePC = GetNextInstructionPc(PC);
       bool IsObserved = ObservedPCs.count(PC);
       std::string FileStr = DescribePC("%s", VisualizePC);
@@ -388,7 +395,8 @@ void __sanitizer_cov_8bit_counters_init(uint8_t *Start, uint8_t *Stop) {
 }
 
 ATTRIBUTE_INTERFACE
-void __sanitizer_cov_pcs_init(const uint8_t *pcs_beg, const uint8_t *pcs_end) {
+void __sanitizer_cov_pcs_init(const uintptr_t *pcs_beg,
+                              const uintptr_t *pcs_end) {
   fuzzer::TPC.HandlePCsInit(pcs_beg, pcs_end);
 }
 
