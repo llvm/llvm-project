@@ -243,7 +243,6 @@ Sema::BuildPossibleImplicitMemberExpr(const CXXScopeSpec &SS,
     return BuildImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs, true, S);
 
   case IMA_Mixed:
-  case IMA_Mixed_Unrelated:
   case IMA_Unresolved:
     return BuildImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs, false,
                                    S);
@@ -252,6 +251,7 @@ Sema::BuildPossibleImplicitMemberExpr(const CXXScopeSpec &SS,
     Diag(R.getNameLoc(), diag::warn_cxx98_compat_non_static_member_use)
       << R.getLookupNameInfo().getName();
     // Fall through.
+  case IMA_Mixed_Unrelated:
   case IMA_Static:
   case IMA_Abstract:
   case IMA_Mixed_StaticContext:
