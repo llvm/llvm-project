@@ -471,7 +471,7 @@ else()
 endif()
 
 set(ALL_SANITIZERS asan;dfsan;msan;tsan;safestack;cfi;esan;scudo)
-set(COMPILER_RT_SANITIZERS_TO_BUILD ${ALL_SANITIZERS} CACHE STRING
+set(COMPILER_RT_SANITIZERS_TO_BUILD all CACHE STRING
     "sanitizers to build if supported on the target (all;${ALL_SANITIZERS})")
 list_replace(COMPILER_RT_SANITIZERS_TO_BUILD all "${ALL_SANITIZERS}")
 

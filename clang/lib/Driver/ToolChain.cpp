@@ -297,15 +297,12 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
   const llvm::Triple &Triple = TC.getTriple();
   bool IsWindows = Triple.isOSWindows();
 
-  if (Triple.isWindowsMSVCEnvironment() && TC.getArch() == llvm::Triple::x86)
-    return "i386";
-
   if (TC.getArch() == llvm::Triple::arm || TC.getArch() == llvm::Triple::armeb)
     return (arm::getARMFloatABI(TC, Args) == arm::FloatABI::Hard && !IsWindows)
                ? "armhf"
                : "arm";
 
-  return TC.getArchName();
+  return llvm::Triple::getArchTypeName(TC.getArch());
 }
 
 std::string ToolChain::getCompilerRTPath() const {

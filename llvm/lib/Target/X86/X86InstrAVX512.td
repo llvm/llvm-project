@@ -887,6 +887,112 @@ def : Pat<(v64i8 (insert_subvector undef, (v32i8 VR256X:$src), (iPTR 0))),
           (INSERT_SUBREG (v64i8 (IMPLICIT_DEF)), VR256X:$src, sub_ymm)>;
 }
 
+// Additional patterns for handling a bitcast between the vselect and the
+// extract_subvector.
+multiclass vextract_for_mask_cast<string InstrStr, X86VectorVTInfo From,
+                                  X86VectorVTInfo To, X86VectorVTInfo Cast,
+                                  PatFrag vextract_extract,
+                                  SDNodeXForm EXTRACT_get_vextract_imm,
+                                  list<Predicate> p> {
+let Predicates = p in {
+  def : Pat<(Cast.VT (vselect Cast.KRCWM:$mask,
+                              (bitconvert
+                               (To.VT (vextract_extract:$ext
+                                       (From.VT From.RC:$src), (iPTR imm)))),
+                              To.RC:$src0)),
+            (Cast.VT (!cast<Instruction>(InstrStr#"rrk")
+                      Cast.RC:$src0, Cast.KRCWM:$mask, From.RC:$src,
+                      (EXTRACT_get_vextract_imm To.RC:$ext)))>;
+
+  def : Pat<(Cast.VT (vselect Cast.KRCWM:$mask,
+                              (bitconvert
+                               (To.VT (vextract_extract:$ext
+                                       (From.VT From.RC:$src), (iPTR imm)))),
+                              Cast.ImmAllZerosV)),
+            (Cast.VT (!cast<Instruction>(InstrStr#"rrkz")
+                      Cast.KRCWM:$mask, From.RC:$src,
+                      (EXTRACT_get_vextract_imm To.RC:$ext)))>;
+}
+}
+
+defm : vextract_for_mask_cast<"VEXTRACTF32x4Z256", v4f64x_info, v2f64x_info,
+                              v4f32x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasVLX]>;
+defm : vextract_for_mask_cast<"VEXTRACTF64x2Z256", v8f32x_info, v4f32x_info,
+                              v2f64x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasDQI, HasVLX]>;
+
+defm : vextract_for_mask_cast<"VEXTRACTI32x4Z256", v4i64x_info, v2i64x_info,
+                              v4i32x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasVLX]>;
+defm : vextract_for_mask_cast<"VEXTRACTI32x4Z256", v16i16x_info, v8i16x_info,
+                              v4i32x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasVLX]>;
+defm : vextract_for_mask_cast<"VEXTRACTI32x4Z256", v32i8x_info, v16i8x_info,
+                              v4i32x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasVLX]>;
+defm : vextract_for_mask_cast<"VEXTRACTI64x2Z256", v8i32x_info, v4i32x_info,
+                              v2i64x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasDQI, HasVLX]>;
+defm : vextract_for_mask_cast<"VEXTRACTI64x2Z256", v16i16x_info, v8i16x_info,
+                              v2i64x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasDQI, HasVLX]>;
+defm : vextract_for_mask_cast<"VEXTRACTI64x2Z256", v32i8x_info, v16i8x_info,
+                              v2i64x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasDQI, HasVLX]>;
+
+defm : vextract_for_mask_cast<"VEXTRACTF32x4Z", v8f64_info, v2f64x_info,
+                              v4f32x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasAVX512]>;
+defm : vextract_for_mask_cast<"VEXTRACTF64x2Z", v16f32_info, v4f32x_info,
+                              v2f64x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasDQI]>;
+
+defm : vextract_for_mask_cast<"VEXTRACTI32x4Z", v8i64_info, v2i64x_info,
+                              v4i32x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasAVX512]>;
+defm : vextract_for_mask_cast<"VEXTRACTI32x4Z", v32i16_info, v8i16x_info,
+                              v4i32x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasAVX512]>;
+defm : vextract_for_mask_cast<"VEXTRACTI32x4Z", v64i8_info, v16i8x_info,
+                              v4i32x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasAVX512]>;
+defm : vextract_for_mask_cast<"VEXTRACTI64x2Z", v16i32_info, v4i32x_info,
+                              v2i64x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasDQI]>;
+defm : vextract_for_mask_cast<"VEXTRACTI64x2Z", v32i16_info, v8i16x_info,
+                              v2i64x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasDQI]>;
+defm : vextract_for_mask_cast<"VEXTRACTI64x2Z", v64i8_info, v16i8x_info,
+                              v2i64x_info, vextract128_extract,
+                              EXTRACT_get_vextract128_imm, [HasDQI]>;
+
+defm : vextract_for_mask_cast<"VEXTRACTF32x8Z", v8f64_info, v4f64x_info,
+                              v8f32x_info, vextract256_extract,
+                              EXTRACT_get_vextract256_imm, [HasDQI]>;
+defm : vextract_for_mask_cast<"VEXTRACTF64x4Z", v16f32_info, v8f32x_info,
+                              v4f64x_info, vextract256_extract,
+                              EXTRACT_get_vextract256_imm, [HasAVX512]>;
+
+defm : vextract_for_mask_cast<"VEXTRACTI32x8Z", v8i64_info, v4i64x_info,
+                              v8i32x_info, vextract256_extract,
+                              EXTRACT_get_vextract256_imm, [HasDQI]>;
+defm : vextract_for_mask_cast<"VEXTRACTI32x8Z", v32i16_info, v16i16x_info,
+                              v8i32x_info, vextract256_extract,
+                              EXTRACT_get_vextract256_imm, [HasDQI]>;
+defm : vextract_for_mask_cast<"VEXTRACTI32x8Z", v64i8_info, v32i8x_info,
+                              v8i32x_info, vextract256_extract,
+                              EXTRACT_get_vextract256_imm, [HasDQI]>;
+defm : vextract_for_mask_cast<"VEXTRACTI64x4Z", v16i32_info, v8i32x_info,
+                              v4i64x_info, vextract256_extract,
+                              EXTRACT_get_vextract256_imm, [HasAVX512]>;
+defm : vextract_for_mask_cast<"VEXTRACTI64x4Z", v32i16_info, v16i16x_info,
+                              v4i64x_info, vextract256_extract,
+                              EXTRACT_get_vextract256_imm, [HasAVX512]>;
+defm : vextract_for_mask_cast<"VEXTRACTI64x4Z", v64i8_info, v32i8x_info,
+                              v4i64x_info, vextract256_extract,
+                              EXTRACT_get_vextract256_imm, [HasAVX512]>;
+
 // vextractps - extract 32 bits from XMM
 def VEXTRACTPSZrr : AVX512AIi8<0x17, MRMDestReg, (outs GR32:$dst),
       (ins VR128X:$src1, u8imm:$src2),
