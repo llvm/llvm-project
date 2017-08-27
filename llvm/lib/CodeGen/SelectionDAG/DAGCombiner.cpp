@@ -8863,12 +8863,15 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
       if (Op.getOpcode() == ISD::BITCAST &&
           Op.getOperand(0).getValueType() == VT)
         return SDValue(Op.getOperand(0));
-      if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
+      if (Op.isUndef() || ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
           ISD::isBuildVectorOfConstantFPSDNodes(Op.getNode()))
         return DAG.getBitcast(VT, Op);
       return SDValue();
     };
 
+    // FIXME: If either input vector is bitcast, try to convert the shuffle to
+    // the result type of this bitcast. This would eliminate at least one
+    // bitcast. See the transform in InstCombine.
     SDValue SV0 = PeekThroughBitcast(N0->getOperand(0));
     SDValue SV1 = PeekThroughBitcast(N0->getOperand(1));
     if (!(SV0 && SV1))
