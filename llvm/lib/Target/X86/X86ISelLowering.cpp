@@ -1628,6 +1628,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTargetDAGCombine(ISD::VECTOR_SHUFFLE);
   setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
   setTargetDAGCombine(ISD::INSERT_SUBVECTOR);
+  setTargetDAGCombine(ISD::EXTRACT_SUBVECTOR);
   setTargetDAGCombine(ISD::BITCAST);
   setTargetDAGCombine(ISD::VSELECT);
   setTargetDAGCombine(ISD::SELECT);
@@ -35678,6 +35679,25 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
+                                       TargetLowering::DAGCombinerInfo &DCI,
+                                       const X86Subtarget &Subtarget) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  MVT OpVT = N->getSimpleValueType(0);
+
+  if (ISD::isBuildVectorAllZeros(N->getOperand(0).getNode()))
+    return getZeroVector(OpVT, Subtarget, DAG, SDLoc(N));
+
+  if (ISD::isBuildVectorAllOnes(N->getOperand(0).getNode())) {
+    if (OpVT.getScalarType() == MVT::i1)
+      return DAG.getConstant(1, SDLoc(N), OpVT);
+    return getZeroVector(OpVT, Subtarget, DAG, SDLoc(N));
+  }
+
+  return SDValue();
+}
 
 SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -35691,6 +35711,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
     return combineExtractVectorElt_SSE(N, DAG, DCI, Subtarget);
   case ISD::INSERT_SUBVECTOR:
     return combineInsertSubvector(N, DAG, DCI, Subtarget);
+  case ISD::EXTRACT_SUBVECTOR:
+    return combineExtractSubvector(N, DAG, DCI, Subtarget);
   case ISD::VSELECT:
   case ISD::SELECT:
   case X86ISD::SHRUNKBLEND: return combineSelect(N, DAG, DCI, Subtarget);

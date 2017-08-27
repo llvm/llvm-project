@@ -487,16 +487,12 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
     PrioritizedCXXGlobalInits.clear();
   }
 
-  SmallString<128> FileName;
-  SourceManager &SM = Context.getSourceManager();
-  if (const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID())) {
-    // Include the filename in the symbol name. Including "sub_" matches gcc and
-    // makes sure these symbols appear lexicographically behind the symbols with
-    // priority emitted above.
-    FileName = llvm::sys::path::filename(MainFile->getName());
-  } else {
+  // Include the filename in the symbol name. Including "sub_" matches gcc and
+  // makes sure these symbols appear lexicographically behind the symbols with
+  // priority emitted above.
+  SmallString<128> FileName = llvm::sys::path::filename(getModule().getName());
+  if (FileName.empty())
     FileName = "<null>";
-  }
 
   for (size_t i = 0; i < FileName.size(); ++i) {
     // Replace everything that's not [a-zA-Z0-9._] with a _. This set happens
