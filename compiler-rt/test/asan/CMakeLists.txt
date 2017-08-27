@@ -18,7 +18,7 @@ if (SHADOW_MAPPING_UNRELIABLE)
 endif()
 
 macro(get_bits_for_arch arch bits)
-  if (${arch} MATCHES "i386|arm|mips|mipsel")
+  if (${arch} MATCHES "i386|i686|arm|mips|mipsel")
     set(${bits} 32)
   elseif (${arch} MATCHES "x86_64|powerpc64|powerpc64le|aarch64|mips64|mips64el|s390x")
     set(${bits} 64)

@@ -271,6 +271,9 @@ if (NOT MSVC)
         i386/chkstk.S
         i386/chkstk2.S)
   endif()
+
+  set(i686_SOURCES
+      ${i386_SOURCES})
 else () # MSVC
   # Use C versions of functions when building on MSVC
   # MSVC's assembler takes Intel syntax, not AT&T syntax.
@@ -282,6 +285,7 @@ else () # MSVC
       ${GENERIC_SOURCES})
   set(x86_64h_SOURCES ${x86_64_SOURCES})
   set(i386_SOURCES ${GENERIC_SOURCES})
+  set(i686_SOURCES ${i386_SOURCES})
 endif () # if (NOT MSVC)
 
 set(arm_SOURCES
@@ -489,7 +493,9 @@ else ()
       # NOTE: some architectures (e.g. i386) have multiple names.  Ensure that
       # we catch them all.
       set(_arch ${arch})
-      if("${arch}" STREQUAL "armv6m")
+      if("${arch}" STREQUAL "i686")
+        set(_arch "i386|i686")
+      elseif("${arch}" STREQUAL "armv6m")
         set(_arch "arm|armv6m")
       elseif("${arch}" MATCHES "^(armhf|armv7|armv7s|armv7k|armv7m|armv7em)$")
         set(_arch "arm")

@@ -27,5 +27,5 @@
 //
 // CHECK-LINUX-NOSTDLIB: warning: argument unused during compilation: '--rtlib=compiler-rt'
 // CHECK-LINUX-NOSTDLIB: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-LINUX-NOSTDLIB-NOT: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.builtins-i386.a"
+// CHECK-LINUX-NOSTDLIB-NOT: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.builtins-i686.a"
 // CHECK-MSVC-NOSTDLIB: warning: argument unused during compilation: '--rtlib=compiler-rt'
