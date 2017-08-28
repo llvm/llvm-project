@@ -1527,8 +1527,11 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     if (Term) {
       ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
                                                  Pred);
-      if (NewState != Pred->getState()){
-        Pred = nodeBuilder.generateNode(NewState, Pred);
+      if (NewState != Pred->getState()) {
+        ExplodedNode *UpdatedNode = nodeBuilder.generateNode(NewState, Pred);
+        if (!UpdatedNode)
+          return;
+        Pred = UpdatedNode;
       }
     }
     // Is we are inside an unrolled loop then no need the check the counters.

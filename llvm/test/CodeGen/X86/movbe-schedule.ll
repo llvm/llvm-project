@@ -33,9 +33,9 @@ define i16 @test_ctlz_i16(i16 *%a0, i16 %a1, i16 *%a2) {
 ;
 ; HASWELL-LABEL: test_ctlz_i16:
 ; HASWELL:       # BB#0:
-; HASWELL-NEXT:    movbew (%rdi), %ax # sched: [6:0.50]
+; HASWELL-NEXT:    movbew (%rdi), %ax # sched: [1:0.50]
 ; HASWELL-NEXT:    movbew %si, (%rdx) # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_ctlz_i16:
 ; BTVER2:       # BB#0:
@@ -83,7 +83,7 @@ define i32 @test_ctlz_i32(i32 *%a0, i32 %a1, i32 *%a2) {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    movbel (%rdi), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    movbel %esi, (%rdx) # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_ctlz_i32:
 ; BTVER2:       # BB#0:
@@ -129,9 +129,9 @@ define i64 @test_ctlz_i64(i64 *%a0, i64 %a1, i64 *%a2) {
 ;
 ; HASWELL-LABEL: test_ctlz_i64:
 ; HASWELL:       # BB#0:
-; HASWELL-NEXT:    movbeq (%rdi), %rax # sched: [6:0.50]
+; HASWELL-NEXT:    movbeq (%rdi), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    movbeq %rsi, (%rdx) # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_ctlz_i64:
 ; BTVER2:       # BB#0:

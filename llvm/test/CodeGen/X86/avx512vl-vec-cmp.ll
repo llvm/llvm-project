@@ -314,8 +314,8 @@ define <4 x i64> @test256_11(<4 x i64> %x, <4 x i64>* %y.ptr, <4 x i64> %x1, <4 
 ;
 ; NoVLX-LABEL: test256_11:
 ; NoVLX:       # BB#0:
-; NoVLX-NEXT:    vpcmpgtq %ymm2, %ymm1, %ymm2
 ; NoVLX-NEXT:    vpcmpgtq (%rdi), %ymm0, %ymm3
+; NoVLX-NEXT:    vpcmpgtq %ymm2, %ymm1, %ymm2
 ; NoVLX-NEXT:    vpand %ymm2, %ymm3, %ymm2
 ; NoVLX-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; NoVLX-NEXT:    retq
@@ -824,8 +824,8 @@ define <2 x i64> @test128_11(<2 x i64> %x, <2 x i64>* %y.ptr, <2 x i64> %x1, <2 
 ;
 ; NoVLX-LABEL: test128_11:
 ; NoVLX:       # BB#0:
-; NoVLX-NEXT:    vpcmpgtq %xmm2, %xmm1, %xmm2
 ; NoVLX-NEXT:    vpcmpgtq (%rdi), %xmm0, %xmm3
+; NoVLX-NEXT:    vpcmpgtq %xmm2, %xmm1, %xmm2
 ; NoVLX-NEXT:    vpand %xmm2, %xmm3, %xmm2
 ; NoVLX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    retq

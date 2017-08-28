@@ -32,6 +32,7 @@
 // Miscellaneous builtin for checking x86 cpu features.
 // TODO: Make this somewhat generic so that other backends
 // can use it?
+BUILTIN(__builtin_cpu_init, "v", "n")
 BUILTIN(__builtin_cpu_supports, "bcC*", "nc")
 BUILTIN(__builtin_cpu_is, "bcC*", "nc")
 
