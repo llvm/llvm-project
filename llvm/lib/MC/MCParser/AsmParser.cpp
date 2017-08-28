@@ -1327,10 +1327,10 @@ bool AsmParser::isAltmacroString(SMLoc &StrLoc, SMLoc &EndLoc) {
   assert((StrLoc.getPointer() != NULL) &&
          "Argument to the function cannot be a NULL value");
   const char *CharPtr = StrLoc.getPointer();
-  while ((*CharPtr != '>') && (*CharPtr != '\n') &&
-         (*CharPtr != '\r') && (*CharPtr != '\0')){
-	  if(*CharPtr == '!')
-		  CharPtr++;
+  while ((*CharPtr != '>') && (*CharPtr != '\n') && (*CharPtr != '\r') &&
+         (*CharPtr != '\0')) {
+    if (*CharPtr == '!')
+      CharPtr++;
     CharPtr++;
   }
   if (*CharPtr == '>') {

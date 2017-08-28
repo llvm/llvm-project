@@ -2134,31 +2134,31 @@ void AddressSanitizer::initializeCallbacks(Module &M) {
         Args2.push_back(ExpType);
         Args1.push_back(ExpType);
       }
-	    AsanErrorCallbackSized[AccessIsWrite][Exp] =
-	        checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-	            kAsanReportErrorTemplate + ExpStr + TypeStr + SuffixStr +
-	                EndingStr,
-	            FunctionType::get(IRB.getVoidTy(), Args2, false)));
+      AsanErrorCallbackSized[AccessIsWrite][Exp] =
+          checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+              kAsanReportErrorTemplate + ExpStr + TypeStr + SuffixStr +
+                  EndingStr,
+              FunctionType::get(IRB.getVoidTy(), Args2, false)));
 
-	    AsanMemoryAccessCallbackSized[AccessIsWrite][Exp] =
-	        checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-	            ClMemoryAccessCallbackPrefix + ExpStr + TypeStr + "N" + EndingStr,
-	            FunctionType::get(IRB.getVoidTy(), Args2, false)));
+      AsanMemoryAccessCallbackSized[AccessIsWrite][Exp] =
+          checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+              ClMemoryAccessCallbackPrefix + ExpStr + TypeStr + "N" + EndingStr,
+              FunctionType::get(IRB.getVoidTy(), Args2, false)));
 
-	    for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
-	         AccessSizeIndex++) {
-	      const std::string Suffix = TypeStr + itostr(1ULL << AccessSizeIndex);
-	      AsanErrorCallback[AccessIsWrite][Exp][AccessSizeIndex] =
-	          checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-	              kAsanReportErrorTemplate + ExpStr + Suffix + EndingStr,
-	              FunctionType::get(IRB.getVoidTy(), Args1, false)));
+      for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
+           AccessSizeIndex++) {
+        const std::string Suffix = TypeStr + itostr(1ULL << AccessSizeIndex);
+        AsanErrorCallback[AccessIsWrite][Exp][AccessSizeIndex] =
+            checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+                kAsanReportErrorTemplate + ExpStr + Suffix + EndingStr,
+                FunctionType::get(IRB.getVoidTy(), Args1, false)));
 
-	      AsanMemoryAccessCallback[AccessIsWrite][Exp][AccessSizeIndex] =
-	          checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-	              ClMemoryAccessCallbackPrefix + ExpStr + Suffix + EndingStr,
-	              FunctionType::get(IRB.getVoidTy(), Args1, false)));
-	    }
-	  }
+        AsanMemoryAccessCallback[AccessIsWrite][Exp][AccessSizeIndex] =
+            checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+                ClMemoryAccessCallbackPrefix + ExpStr + Suffix + EndingStr,
+                FunctionType::get(IRB.getVoidTy(), Args1, false)));
+      }
+    }
   }
 
   const std::string MemIntrinCallbackPrefix =

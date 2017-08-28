@@ -62,8 +62,8 @@ public:
              IndirectStubsManagerBuilder IndirectStubsMgrBuilder,
              bool InlineStubs)
       : TM(std::move(TM)), DL(this->TM->createDataLayout()),
-	CCMgr(std::move(CCMgr)),
-	ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
+        CCMgr(std::move(CCMgr)),
+        ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
         CompileLayer(ObjectLayer, orc::SimpleCompiler(*this->TM)),
         IRDumpLayer(CompileLayer, createDebugDumper()),
         CODLayer(IRDumpLayer, extractSingleFunction, *this->CCMgr,

@@ -269,6 +269,12 @@ let AdditionalPredicates = [InMicroMips] in {
          ISA_MIPS1_NOT_32R6_64R6, HARDFLOAT;
 }
 
+// To generate NMADD and NMSUB instructions when fneg node is present
+let AdditionalPredicates = [NoNaNsFPMath, HasMadd4, InMicroMips, NotMips32r6] in {
+  defm : NMADD_NMSUB<NMADD_S_MM, NMSUB_S_MM, FGR32Opnd>;
+  defm : NMADD_NMSUB<NMADD_D32_MM, NMSUB_D32_MM, AFGR64Opnd>;
+}
+
 //===----------------------------------------------------------------------===//
 // Floating Point Patterns
 //===----------------------------------------------------------------------===//

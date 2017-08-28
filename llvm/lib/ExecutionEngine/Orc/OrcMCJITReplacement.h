@@ -225,9 +225,9 @@ public:
   bool removeModule(Module *M) override {
     for (auto I = LocalModules.begin(), E = LocalModules.end(); I != E; ++I) {
       if (I->get() == M) {
-	ShouldDelete[M] = false;
-	LocalModules.erase(I);
-	return true;
+        ShouldDelete[M] = false;
+        LocalModules.erase(I);
+        return true;
       }
     }
     return false;
