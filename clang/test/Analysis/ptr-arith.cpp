@@ -107,7 +107,7 @@ unsigned ptrSubtractionNoCrash(char *Begin, char *End) {
 }
 
 // Bug 34309
-bool ptrAsIntegerSubtractionNoCrash(long x, char *p) {
-  long y = (long)p - 1;
+bool ptrAsIntegerSubtractionNoCrash(__UINTPTR_TYPE__ x, char *p) {
+  __UINTPTR_TYPE__ y = (__UINTPTR_TYPE__)p - 1;
   return y == x;
 }
