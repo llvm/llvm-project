@@ -204,6 +204,26 @@ bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
   return !isPossiblyEscaped(CounterVar->getCanonicalDecl(), Pred);
 }
 
+bool madeNewBranch(ExplodedNode* N, const Stmt* LoopStmt) {
+  const Stmt* S = nullptr;
+  while (!N->pred_empty())
+  {
+    if (N->succ_size() > 1)
+      return true;
+
+    ProgramPoint P = N->getLocation();
+    if (Optional<BlockEntrance> BE = P.getAs<BlockEntrance>())
+      S = BE->getBlock()->getTerminator();
+
+    if (S == LoopStmt)
+      return false;
+
+    N = N->getFirstPred();
+  }
+
+  llvm_unreachable("Reached root without encountering the previous step");
+}
+
 // updateLoopStack is called on every basic block, therefore it needs to be fast
 ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
                                 ExplodedNode* Pred) {
@@ -215,8 +235,13 @@ ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
 
   auto LS = State->get<LoopStack>();
   if (!LS.isEmpty() && LoopStmt == LS.getHead().getLoopStmt() &&
-      LCtx == LS.getHead().getLocationContext())
+      LCtx == LS.getHead().getLocationContext()) {
+    if (LS.getHead().isUnrolled() && madeNewBranch(Pred, LoopStmt)) {
+      State = State->set<LoopStack>(LS.getTail());
+      State = State->add<LoopStack>(LoopState::getNormal(LoopStmt, LCtx));
+    }
     return State;
+  }
 
   if (!shouldCompletelyUnroll(LoopStmt, ASTCtx, Pred)) {
     State = State->add<LoopStack>(LoopState::getNormal(LoopStmt, LCtx));
