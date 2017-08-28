@@ -335,6 +335,7 @@ bool ZoneAlgorithm::isCompatibleStmt(ScopStmt *Stmt) {
     if (MA->isRead()) {
       // Reject load after store to same location.
       if (!isl_union_map_is_disjoint(Stores.keep(), AccRel.keep())) {
+        DEBUG(dbgs() << "Load after store of same element in same statement\n");
         OptimizationRemarkMissed R(PassName, "LoadAfterStore",
                                    MA->getAccessInstruction());
         R << "load after store of same element in same statement";
@@ -363,6 +364,7 @@ bool ZoneAlgorithm::isCompatibleStmt(ScopStmt *Stmt) {
     // might be in a boxed loop.
     if (Stmt->isRegionStmt() &&
         !isl_union_map_is_disjoint(Loads.keep(), AccRel.keep())) {
+      DEBUG(dbgs() << "WRITE in non-affine subregion not supported\n");
       OptimizationRemarkMissed R(PassName, "StoreInSubregion",
                                  MA->getAccessInstruction());
       R << "store is in a non-affine subregion";
@@ -373,6 +375,7 @@ bool ZoneAlgorithm::isCompatibleStmt(ScopStmt *Stmt) {
     // Do not allow more than one store to the same location.
     if (!isl_union_map_is_disjoint(Stores.keep(), AccRel.keep()) &&
         !onlySameValueWrites(Stmt)) {
+      DEBUG(dbgs() << "WRITE after WRITE to same element\n");
       OptimizationRemarkMissed R(PassName, "StoreAfterStore",
                                  MA->getAccessInstruction());
       R << "store after store of same element in same statement";

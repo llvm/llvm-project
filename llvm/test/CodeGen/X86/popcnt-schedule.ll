@@ -37,11 +37,11 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ;
 ; HASWELL-LABEL: test_ctpop_i16:
 ; HASWELL:       # BB#0:
-; HASWELL-NEXT:    popcntw (%rsi), %cx # sched: [7:1.00]
+; HASWELL-NEXT:    popcntw (%rsi), %cx # sched: [3:1.00]
 ; HASWELL-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; HASWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_ctpop_i16:
 ; BTVER2:       # BB#0:
@@ -90,10 +90,10 @@ define i32 @test_ctpop_i32(i32 %a0, i32 *%a1) {
 ;
 ; HASWELL-LABEL: test_ctpop_i32:
 ; HASWELL:       # BB#0:
-; HASWELL-NEXT:    popcntl (%rsi), %ecx # sched: [7:1.00]
+; HASWELL-NEXT:    popcntl (%rsi), %ecx # sched: [3:1.00]
 ; HASWELL-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; HASWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_ctpop_i32:
 ; BTVER2:       # BB#0:
@@ -140,10 +140,10 @@ define i64 @test_ctpop_i64(i64 %a0, i64 *%a1) {
 ;
 ; HASWELL-LABEL: test_ctpop_i64:
 ; HASWELL:       # BB#0:
-; HASWELL-NEXT:    popcntq (%rsi), %rcx # sched: [7:1.00]
+; HASWELL-NEXT:    popcntq (%rsi), %rcx # sched: [3:1.00]
 ; HASWELL-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; HASWELL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_ctpop_i64:
 ; BTVER2:       # BB#0:

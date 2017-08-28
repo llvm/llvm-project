@@ -1464,7 +1464,7 @@ TEST(APFloatTest, getZero) {
     EXPECT_TRUE(test.bitwiseIsEqual(expected));
     for (unsigned j = 0, je = GetZeroTest[i].bitPatternLength; j < je; ++j) {
       EXPECT_EQ(GetZeroTest[i].bitPattern[j],
-		test.bitcastToAPInt().getRawData()[j]);
+                test.bitcastToAPInt().getRawData()[j]);
     }
   }
 }

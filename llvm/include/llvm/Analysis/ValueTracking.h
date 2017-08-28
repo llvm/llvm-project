@@ -86,7 +86,7 @@ template <typename T> class ArrayRef;
                               const DominatorTree *DT = nullptr);
 
   bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);
-  
+
   /// Return true if the given value is known to be non-zero when defined. For
   /// vectors, return true if every element is known to be non-zero when
   /// defined. For pointers, if the context instruction and dominator tree are

@@ -48,7 +48,7 @@ public:
 
   /// Return true if, during analysis, I could not be reached.
   bool isInstructionDead(Instruction *I);
-  
+
   void print(raw_ostream &OS);
 
 private:
@@ -80,10 +80,10 @@ public:
 
   bool runOnFunction(Function &F) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-  
+
   /// Clean up memory in between runs
   void releaseMemory() override;
-  
+
   DemandedBits &getDemandedBits() { return *DB; }
 
   void print(raw_ostream &OS, const Module *M) const override;
