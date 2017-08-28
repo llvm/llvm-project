@@ -131,13 +131,12 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
 
     // Intersection between the bits we already emitted and the bits
     // covered by this subregister.
-    SmallBitVector Intersection(RegSize, false);
-    Intersection.set(Offset, Offset + Size);
-    Intersection ^= Coverage;
+    SmallBitVector CurSubReg(RegSize, false);
+    CurSubReg.set(Offset, Offset + Size);
 
     // If this sub-register has a DWARF number and we haven't covered
     // its range, emit a DWARF piece for it.
-    if (Reg >= 0 && Intersection.any()) {
+    if (Reg >= 0 && CurSubReg.test(Coverage)) {
       // Emit a piece for any gap in the coverage.
       if (Offset > CurPos)
         DwarfRegs.push_back({-1, Offset - CurPos, nullptr});
