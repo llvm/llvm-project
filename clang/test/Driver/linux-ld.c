@@ -71,6 +71,27 @@
 // CHECK-LD-RT: libclang_rt.builtins-x86_64.a"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=i686-unknown-linux \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     --rtlib=compiler-rt \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-RT-I686 %s
+// CHECK-LD-RT-I686-NOT: warning:
+// CHECK-LD-RT-I686: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-LD-RT-I686: "--eh-frame-hdr"
+// CHECK-LD-RT-I686: "-m" "elf_i386"
+// CHECK-LD-RT-I686: "-dynamic-linker"
+// CHECK-LD-RT-I686: "{{.*}}/usr/lib/gcc/i686-unknown-linux/4.6.0{{/|\\\\}}crtbegin.o"
+// CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/4.6.0"
+// CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/4.6.0/../../../../i686-unknown-linux/lib"
+// CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/4.6.0/../../.."
+// CHECK-LD-RT-I686: "-L[[SYSROOT]]/lib"
+// CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib"
+// CHECK-LD-RT-I686: libclang_rt.builtins-i386.a"
+// CHECK-LD-RT-I686: "-lc"
+// CHECK-LD-RT-I686: libclang_rt.builtins-i386.a"
+//
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-linux-androideabi \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \

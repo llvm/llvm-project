@@ -360,10 +360,18 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
       Loc lhsL = lhs.castAs<nonloc::LocAsInteger>().getLoc();
       switch (rhs.getSubKind()) {
         case nonloc::LocAsIntegerKind:
+          // FIXME: at the moment the implementation 
+          // of modeling "pointers as integers" is not complete.
+          if (!BinaryOperator::isComparisonOp(op))
+            return UnknownVal();     
           return evalBinOpLL(state, op, lhsL,
                              rhs.castAs<nonloc::LocAsInteger>().getLoc(),
                              resultTy);
         case nonloc::ConcreteIntKind: {
+          // FIXME: at the moment the implementation 
+          // of modeling "pointers as integers" is not complete.
+          if (!BinaryOperator::isComparisonOp(op))
+            return UnknownVal();
           // Transform the integer into a location and compare.
           // FIXME: This only makes sense for comparisons. If we want to, say,
           // add 1 to a LocAsInteger, we'd better unpack the Loc and add to it,
