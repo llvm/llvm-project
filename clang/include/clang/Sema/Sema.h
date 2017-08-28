@@ -6052,7 +6052,7 @@ public:
                              SourceLocation ExportLoc,
                              SourceLocation TemplateLoc,
                              SourceLocation LAngleLoc,
-                             ArrayRef<Decl *> Params,
+                             ArrayRef<NamedDecl *> Params,
                              SourceLocation RAngleLoc,
                              Expr *RequiresClause);
 

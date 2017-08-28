@@ -790,11 +790,10 @@ public:
        getOperationAction(Op, VT) == Promote);
   }
 
-  /// Return true if the specified operation is illegal but has a custom lowering
-  /// on that type. This is used to help guide high-level lowering
-  /// decisions.
+  /// Return true if the operation uses custom lowering, regardless of whether
+  /// the type is legal or not.
   bool isOperationCustom(unsigned Op, EVT VT) const {
-    return (!isTypeLegal(VT) && getOperationAction(Op, VT) == Custom);
+    return getOperationAction(Op, VT) == Custom;
   }
 
   /// Return true if lowering to a jump table is allowed.

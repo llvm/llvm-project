@@ -146,7 +146,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
       DwarfRegs.push_back(
           {Reg, std::min<unsigned>(Size, MaxSize - Offset), "sub-register"});
       if (Offset >= MaxSize)
-	break;
+        break;
 
       // Mark it as emitted.
       Coverage.set(Offset, Offset + Size);

@@ -4062,7 +4062,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
         uint64_t Size = Fragment.Size;
         if (ExprFragment) {
           uint64_t AbsEnd =
-	    ExprFragment->OffsetInBits + ExprFragment->SizeInBits;
+              ExprFragment->OffsetInBits + ExprFragment->SizeInBits;
           if (Start >= AbsEnd)
             // No need to describe a SROAed padding.
             continue;

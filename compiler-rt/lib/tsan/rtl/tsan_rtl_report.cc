@@ -406,8 +406,8 @@ void RestoreStack(int tid, const u64 epoch, VarSizeStackTrace *stk,
   Event *events = (Event*)GetThreadTrace(tid);
   for (uptr i = ebegin; i <= eend; i++) {
     Event ev = events[i];
-    EventType typ = (EventType)(ev >> 61);
-    uptr pc = (uptr)(ev & ((1ull << 61) - 1));
+    EventType typ = (EventType)(ev >> kEventPCBits);
+    uptr pc = (uptr)(ev & ((1ull << kEventPCBits) - 1));
     DPrintf2("  %zu typ=%d pc=%zx\n", i, typ, pc);
     if (typ == EventTypeMop) {
       stack[pos] = pc;
@@ -634,7 +634,27 @@ void ReportRace(ThreadState *thr) {
   const uptr kMop = 2;
   VarSizeStackTrace traces[kMop];
   uptr tags[kMop] = {kExternalTagNone};
-  const uptr toppc = TraceTopPC(thr);
+  uptr toppc = TraceTopPC(thr);
+  if (toppc >> kEventPCBits) {
+    // This is a work-around for a known issue.
+    // The scenario where this happens is rather elaborate and requires
+    // an instrumented __sanitizer_report_error_summary callback and
+    // a __tsan_symbolize_external callback and a race during a range memory
+    // access larger than 8 bytes. MemoryAccessRange adds the current PC to
+    // the trace and starts processing memory accesses. A first memory access
+    // triggers a race, we report it and call the instrumented
+    // __sanitizer_report_error_summary, which adds more stuff to the trace
+    // since it is intrumented. Then a second memory access in MemoryAccessRange
+    // also triggers a race and we get here and call TraceTopPC to get the
+    // current PC, however now it contains some unrelated events from the
+    // callback. Most likely, TraceTopPC will now return a EventTypeFuncExit
+    // event. Later we subtract -1 from it (in GetPreviousInstructionPc)
+    // and the resulting PC has kExternalPCBit set, so we pass it to
+    // __tsan_symbolize_external. __tsan_symbolize_external is within its rights
+    // to crash since the PC is completely bogus.
+    // test/tsan/double_race.cc contains a test case for this.
+    toppc = 0;
+  }
   ObtainCurrentStack(thr, toppc, &traces[0], &tags[0]);
   if (IsFiredSuppression(ctx, typ, traces[0]))
     return;

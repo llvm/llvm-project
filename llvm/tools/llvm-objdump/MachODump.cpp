@@ -1226,7 +1226,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
 
   if (Disassemble) {
     if (MachOOF->getHeader().filetype == MachO::MH_KEXT_BUNDLE &&
-	MachOOF->getHeader().cputype == MachO::CPU_TYPE_ARM64)
+        MachOOF->getHeader().cputype == MachO::CPU_TYPE_ARM64)
       DisassembleMachO(FileName, MachOOF, "__TEXT_EXEC", "__text");
     else
       DisassembleMachO(FileName, MachOOF, "__TEXT", "__text");
@@ -6013,7 +6013,7 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
     xp = xar_iter_new();
     if(!xp){
       errs() << "Can't obtain an xar iterator for xar archive "
-	     << XarFilename.c_str() << "\n";
+             << XarFilename.c_str() << "\n";
       xar_close(xar);
       return;
     }
@@ -6026,12 +6026,12 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
 #if 0 // Useful for debugging.
       outs() << "key: " << key << " value: " << val << "\n";
 #endif
-      if(strcmp(key, "name") == 0)
-	member_name = val;
-      if(strcmp(key, "type") == 0)
-	member_type = val;
-      if(strcmp(key, "data/size") == 0)
-	member_size_string = val;
+      if (strcmp(key, "name") == 0)
+        member_name = val;
+      if (strcmp(key, "type") == 0)
+        member_type = val;
+      if (strcmp(key, "data/size") == 0)
+        member_size_string = val;
     }
     /*
      * If we find a file with a name, date/size and type properties
@@ -6044,38 +6044,38 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
       char *endptr;
       member_size = strtoul(member_size_string, &endptr, 10);
       if (*endptr == '\0' && member_size != 0) {
-	char *buffer = (char *) ::operator new (member_size);
-	if (xar_extract_tobuffersz(xar, xf, &buffer, &member_size) == 0) {
+        char *buffer = (char *)::operator new(member_size);
+        if (xar_extract_tobuffersz(xar, xf, &buffer, &member_size) == 0) {
 #if 0 // Useful for debugging.
 	  outs() << "xar member: " << member_name << " extracted\n";
 #endif
           // Set the XarMemberName we want to see printed in the header.
-	  std::string OldXarMemberName;
-	  // If XarMemberName is already set this is nested. So
-	  // save the old name and create the nested name.
-	  if (!XarMemberName.empty()) {
-	    OldXarMemberName = XarMemberName;
+          std::string OldXarMemberName;
+          // If XarMemberName is already set this is nested. So
+          // save the old name and create the nested name.
+          if (!XarMemberName.empty()) {
+            OldXarMemberName = XarMemberName;
             XarMemberName =
-             (Twine("[") + XarMemberName + "]" + member_name).str();
-	  } else {
-	    OldXarMemberName = "";
-	    XarMemberName = member_name;
-	  }
-	  // See if this is could be a xar file (nested).
-	  if (member_size >= sizeof(struct xar_header)) {
+                (Twine("[") + XarMemberName + "]" + member_name).str();
+          } else {
+            OldXarMemberName = "";
+            XarMemberName = member_name;
+          }
+          // See if this is could be a xar file (nested).
+          if (member_size >= sizeof(struct xar_header)) {
 #if 0 // Useful for debugging.
 	    outs() << "could be a xar file: " << member_name << "\n";
 #endif
-	    memcpy((char *)&XarHeader, buffer, sizeof(struct xar_header));
+            memcpy((char *)&XarHeader, buffer, sizeof(struct xar_header));
             if (sys::IsLittleEndianHost)
-	      swapStruct(XarHeader);
-	    if(XarHeader.magic == XAR_HEADER_MAGIC)
-	      DumpBitcodeSection(O, buffer, member_size, verbose,
+              swapStruct(XarHeader);
+            if (XarHeader.magic == XAR_HEADER_MAGIC)
+              DumpBitcodeSection(O, buffer, member_size, verbose,
                                  PrintXarHeader, PrintXarFileHeaders,
-		                 XarMemberName);
-	  }
-	  XarMemberName = OldXarMemberName;
-	}
+                                 XarMemberName);
+          }
+          XarMemberName = OldXarMemberName;
+        }
         delete buffer;
       }
     }
@@ -6703,7 +6703,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         if (!DisSymName.empty() && DisSymName == SymName) {
           outs() << "-dis-symname: " << DisSymName << " not in the section\n";
           return;
-	}
+        }
         continue;
       }
       // The __mh_execute_header is special and we need to deal with that fact

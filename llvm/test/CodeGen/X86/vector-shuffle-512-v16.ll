@@ -299,8 +299,7 @@ define <4 x i32> @test_v16i32_0_1_2_12 (<16 x i32> %v) {
 define <8 x float> @shuffle_v16f32_extract_256(float* %RET, float* %a) {
 ; ALL-LABEL: shuffle_v16f32_extract_256:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovups 32(%rsi), %xmm0
-; ALL-NEXT:    vinsertf128 $1, 48(%rsi), %ymm0, %ymm0
+; ALL-NEXT:    vmovups 32(%rsi), %ymm0
 ; ALL-NEXT:    retq
   %ptr_a = bitcast float* %a to <16 x float>*
   %v_a = load <16 x float>, <16 x float>* %ptr_a, align 4

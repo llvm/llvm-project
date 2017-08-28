@@ -279,11 +279,11 @@ private:
   // when we have multiple instances of the same pass since they'll usually
   // have the same analysis usage and can share storage.
   FoldingSet<AUFoldingSetNode> UniqueAnalysisUsages;
-  
+
   // Allocator used for allocating UAFoldingSetNodes.  This handles deletion of
   // all allocated nodes in one fell swoop.
   SpecificBumpPtrAllocator<AUFoldingSetNode> AUFoldingSetNodeAllocator;
-  
+
   // Maps from a pass to it's associated entry in UniqueAnalysisUsages.  Does
   // not own the storage associated with either key or value.. 
   DenseMap<Pass *, AnalysisUsage*> AnUsageMap;

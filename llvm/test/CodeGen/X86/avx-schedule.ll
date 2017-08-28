@@ -752,9 +752,7 @@ define <8 x float> @test_cvtdq2ps(<8 x i32> %a0, <8 x i32> *%a1) {
 ; GENERIC-LABEL: test_cvtdq2ps:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    vcvtdq2ps %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vmovaps (%rdi), %xmm1 # sched: [6:0.50]
-; GENERIC-NEXT:    vinsertf128 $1, 16(%rdi), %ymm1, %ymm1 # sched: [7:0.50]
-; GENERIC-NEXT:    vcvtdq2ps %ymm1, %ymm1 # sched: [3:1.00]
+; GENERIC-NEXT:    vcvtdq2ps (%rdi), %ymm1 # sched: [10:1.00]
 ; GENERIC-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -1956,11 +1954,9 @@ define <8 x float> @test_movsldup(<8 x float> %a0, <8 x float> *%a1) {
 define <4 x double> @test_movupd(<4 x double> *%a0, <4 x double> *%a1) {
 ; GENERIC-LABEL: test_movupd:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    vmovups (%rdi), %xmm0 # sched: [6:0.50]
-; GENERIC-NEXT:    vinsertf128 $1, 16(%rdi), %ymm0, %ymm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vmovupd (%rdi), %ymm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vextractf128 $1, %ymm0, 16(%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    vmovupd %xmm0, (%rsi) # sched: [5:1.00]
+; GENERIC-NEXT:    vmovupd %ymm0, (%rsi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movupd:
@@ -2001,11 +1997,9 @@ define <4 x double> @test_movupd(<4 x double> *%a0, <4 x double> *%a1) {
 define <8 x float> @test_movups(<8 x float> *%a0, <8 x float> *%a1) {
 ; GENERIC-LABEL: test_movups:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    vmovups (%rdi), %xmm0 # sched: [6:0.50]
-; GENERIC-NEXT:    vinsertf128 $1, 16(%rdi), %ymm0, %ymm0 # sched: [7:0.50]
+; GENERIC-NEXT:    vmovups (%rdi), %ymm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vextractf128 $1, %ymm0, 16(%rsi) # sched: [5:1.00]
-; GENERIC-NEXT:    vmovups %xmm0, (%rsi) # sched: [5:1.00]
+; GENERIC-NEXT:    vmovups %ymm0, (%rsi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movups:

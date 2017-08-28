@@ -228,3 +228,25 @@ namespace pr16676 {
         .i;  // expected-error {{member reference type 'pr16676::S *' is a pointer; did you mean to use '->'}}
   }
 }
+
+namespace unrelated_class_instance_call_should_be_illformed {
+
+
+struct A {
+  void bar(int) { }
+  static void bar(double) { }
+  
+  void g(int*);
+  static void g(char *);
+};
+
+
+struct B {
+  void f() {
+    A::bar(3);  //expected-error{{call to non-static member}}
+    A::g((int*)0); //expected-error{{call to non-static member}}
+  }
+};
+
+
+} // ns unrelated_class_mixed_static_nonstatic_call_should_be_illformed

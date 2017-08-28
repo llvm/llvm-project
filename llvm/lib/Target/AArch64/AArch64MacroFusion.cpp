@@ -33,8 +33,8 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
 
   // Assume wildcards for unspecified instrs.
   unsigned FirstOpcode =
-    FirstMI ? FirstMI->getOpcode()
-	    : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
+      FirstMI ? FirstMI->getOpcode()
+              : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
   unsigned SecondOpcode = SecondMI.getOpcode();
 
   if (ST.hasArithmeticBccFusion())

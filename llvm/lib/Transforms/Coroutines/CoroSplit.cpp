@@ -27,6 +27,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -400,6 +401,91 @@ static void postSplitCleanup(Function &F) {
   FPM.doFinalization();
 }
 
+// Assuming we arrived at the block NewBlock from Prev instruction, store
+// PHI's incoming values in the ResolvedValues map.
+static void
+scanPHIsAndUpdateValueMap(Instruction *Prev, BasicBlock *NewBlock,
+                          DenseMap<Value *, Value *> &ResolvedValues) {
+  auto *PrevBB = Prev->getParent();
+  auto *I = &*NewBlock->begin();
+  while (auto PN = dyn_cast<PHINode>(I)) {
+    auto V = PN->getIncomingValueForBlock(PrevBB);
+    // See if we already resolved it.
+    auto VI = ResolvedValues.find(V);
+    if (VI != ResolvedValues.end())
+      V = VI->second;
+    // Remember the value.
+    ResolvedValues[PN] = V;
+    I = I->getNextNode();
+  }
+}
+
+// Replace a sequence of branches leading to a ret, with a clone of a ret
+// instruction. Suspend instruction represented by a switch, track the PHI
+// values and select the correct case successor when possible.
+static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
+  DenseMap<Value *, Value *> ResolvedValues;
+
+  Instruction *I = InitialInst;
+  while (isa<TerminatorInst>(I)) {
+    if (isa<ReturnInst>(I)) {
+      if (I != InitialInst)
+        ReplaceInstWithInst(InitialInst, I->clone());
+      return true;
+    }
+    if (auto *BR = dyn_cast<BranchInst>(I)) {
+      if (BR->isUnconditional()) {
+        BasicBlock *BB = BR->getSuccessor(0);
+        scanPHIsAndUpdateValueMap(I, BB, ResolvedValues);
+        I = BB->getFirstNonPHIOrDbgOrLifetime();
+        continue;
+      }
+    } else if (auto *SI = dyn_cast<SwitchInst>(I)) {
+      Value *V = SI->getCondition();
+      auto it = ResolvedValues.find(V);
+      if (it != ResolvedValues.end())
+        V = it->second;
+      if (ConstantInt *Cond = dyn_cast<ConstantInt>(V)) {
+        BasicBlock *BB = SI->findCaseValue(Cond)->getCaseSuccessor();
+        scanPHIsAndUpdateValueMap(I, BB, ResolvedValues);
+        I = BB->getFirstNonPHIOrDbgOrLifetime();
+        continue;
+      }
+    }
+    return false;
+  }
+  return false;
+}
+
+// Add musttail to any resume instructions that is immediately followed by a
+// suspend (i.e. ret). We do this even in -O0 to support guaranteed tail call
+// for symmetrical coroutine control transfer (C++ Coroutines TS extension).
+// This transformation is done only in the resume part of the coroutine that has
+// identical signature and calling convention as the coro.resume call.
+static void addMustTailToCoroResumes(Function &F) {
+  bool changed = false;
+
+  // Collect potential resume instructions.
+  SmallVector<CallInst *, 4> Resumes;
+  for (auto &I : instructions(F))
+    if (auto *Call = dyn_cast<CallInst>(&I))
+      if (auto *CalledValue = Call->getCalledValue())
+        // CoroEarly pass replaced coro resumes with indirect calls to an
+        // address return by CoroSubFnInst intrinsic. See if it is one of those.
+        if (isa<CoroSubFnInst>(CalledValue->stripPointerCasts()))
+          Resumes.push_back(Call);
+
+  // Set musttail on those that are followed by a ret instruction.
+  for (CallInst *Call : Resumes)
+    if (simplifyTerminatorLeadingToRet(Call->getNextNode())) {
+      Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
+      changed = true;
+    }
+
+  if (changed)
+    removeUnreachableBlocks(F);
+}
+
 // Coroutine has no suspend points. Remove heap allocation for the coroutine
 // frame if possible.
 static void handleNoSuspendCoroutine(CoroBeginInst *CoroBegin, Type *FrameTy) {
@@ -607,6 +693,8 @@ static void splitCoroutine(Function &F, CallGraph &CG, CallGraphSCC &SCC) {
   postSplitCleanup(*ResumeClone);
   postSplitCleanup(*DestroyClone);
   postSplitCleanup(*CleanupClone);
+
+  addMustTailToCoroResumes(*ResumeClone);
 
   // Store addresses resume/destroy/cleanup functions in the coroutine frame.
   updateCoroFrame(Shape, ResumeClone, DestroyClone, CleanupClone);

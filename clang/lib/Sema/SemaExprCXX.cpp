@@ -5175,9 +5175,16 @@ QualType Sema::CheckPointerToMemberOperands(ExprResult &LHS, ExprResult &RHS,
       break;
 
     case RQ_LValue:
-      if (!isIndirect && !LHS.get()->Classify(Context).isLValue())
-        Diag(Loc, diag::err_pointer_to_member_oper_value_classify)
-          << RHSType << 1 << LHS.get()->getSourceRange();
+      if (!isIndirect && !LHS.get()->Classify(Context).isLValue()) {
+        // C++2a allows functions with ref-qualifier & if they are also 'const'.
+        if (Proto->isConst())
+          Diag(Loc, getLangOpts().CPlusPlus2a
+                        ? diag::warn_cxx17_compat_pointer_to_const_ref_member_on_rvalue
+                        : diag::ext_pointer_to_const_ref_member_on_rvalue);
+        else
+          Diag(Loc, diag::err_pointer_to_member_oper_value_classify)
+              << RHSType << 1 << LHS.get()->getSourceRange();
+      }
       break;
 
     case RQ_RValue:

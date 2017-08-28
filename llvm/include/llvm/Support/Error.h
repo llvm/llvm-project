@@ -878,6 +878,43 @@ inline void handleAllErrors(Error E) {
   cantFail(std::move(E));
 }
 
+/// Handle any errors (if present) in an Expected<T>, then try a recovery path.
+///
+/// If the incoming value is a success value it is returned unmodified. If it
+/// is a failure value then it the contained error is passed to handleErrors.
+/// If handleErrors is able to handle the error then the RecoveryPath functor
+/// is called to supply the final result. If handleErrors is not able to
+/// handle all errors then the unhandled errors are returned.
+///
+/// This utility enables the follow pattern:
+///
+///   @code{.cpp}
+///   enum FooStrategy { Aggressive, Conservative };
+///   Expected<Foo> foo(FooStrategy S);
+///
+///   auto ResultOrErr =
+///     handleExpected(
+///       foo(Aggressive),
+///       []() { return foo(Conservative); },
+///       [](AggressiveStrategyError&) {
+///         // Implicitly conusme this - we'll recover by using a conservative
+///         // strategy.
+///       });
+///
+///   @endcode
+template <typename T, typename RecoveryFtor, typename... HandlerTs>
+Expected<T> handleExpected(Expected<T> ValOrErr, RecoveryFtor &&RecoveryPath,
+                           HandlerTs &&... Handlers) {
+  if (ValOrErr)
+    return ValOrErr;
+
+  if (auto Err = handleErrors(ValOrErr.takeError(),
+                              std::forward<HandlerTs>(Handlers)...))
+    return std::move(Err);
+
+  return RecoveryPath();
+}
+
 /// Log all errors (if any) in E to OS. If there are any errors, ErrorBanner
 /// will be printed before the first one is logged. A newline will be printed
 /// after each error.

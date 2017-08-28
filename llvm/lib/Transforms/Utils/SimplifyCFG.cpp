@@ -1336,8 +1336,6 @@ HoistTerminator:
     I2->replaceAllUsesWith(NT);
     NT->takeName(I1);
   }
-  NT->setDebugLoc(DILocation::getMergedLocation(
-      I1->getDebugLoc(), I2->getDebugLoc()));
 
   IRBuilder<NoFolder> Builder(NT);
   // Hoisting one of the terminators from our successor is a great thing.

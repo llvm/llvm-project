@@ -120,18 +120,22 @@ public:
     return Visit(E->getSubExpr());
   }
 
+  ComplexPairTy emitConstant(const CodeGenFunction::ConstantEmission &Constant,
+                             Expr *E) {
+    assert(Constant && "not a constant");
+    if (Constant.isReference())
+      return EmitLoadOfLValue(Constant.getReferenceLValue(CGF, E),
+                              E->getExprLoc());
+
+    llvm::Constant *pair = Constant.getValue();
+    return ComplexPairTy(pair->getAggregateElement(0U),
+                         pair->getAggregateElement(1U));
+  }
 
   // l-values.
   ComplexPairTy VisitDeclRefExpr(DeclRefExpr *E) {
-    if (CodeGenFunction::ConstantEmission result = CGF.tryEmitAsConstant(E)) {
-      if (result.isReference())
-        return EmitLoadOfLValue(result.getReferenceLValue(CGF, E),
-                                E->getExprLoc());
-
-      llvm::Constant *pair = result.getValue();
-      return ComplexPairTy(pair->getAggregateElement(0U),
-                           pair->getAggregateElement(1U));
-    }
+    if (CodeGenFunction::ConstantEmission Constant = CGF.tryEmitAsConstant(E))
+      return emitConstant(Constant, E);
     return EmitLoadOfLValue(E);
   }
   ComplexPairTy VisitObjCIvarRefExpr(ObjCIvarRefExpr *E) {
@@ -141,7 +145,14 @@ public:
     return CGF.EmitObjCMessageExpr(E).getComplexVal();
   }
   ComplexPairTy VisitArraySubscriptExpr(Expr *E) { return EmitLoadOfLValue(E); }
-  ComplexPairTy VisitMemberExpr(const Expr *E) { return EmitLoadOfLValue(E); }
+  ComplexPairTy VisitMemberExpr(MemberExpr *ME) {
+    if (CodeGenFunction::ConstantEmission Constant =
+            CGF.tryEmitAsConstant(ME)) {
+      CGF.EmitIgnoredExpr(ME->getBase());
+      return emitConstant(Constant, ME);
+    }
+    return EmitLoadOfLValue(ME);
+  }
   ComplexPairTy VisitOpaqueValueExpr(OpaqueValueExpr *E) {
     if (E->isGLValue())
       return EmitLoadOfLValue(CGF.getOpaqueLValueMapping(E), E->getExprLoc());

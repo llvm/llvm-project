@@ -1384,7 +1384,7 @@ bool CallAnalyzer::analyzeBlock(BasicBlock *BB,
 
     // Check if we've past the maximum possible threshold so we don't spin in
     // huge basic blocks that will never inline.
-    if (Cost > Threshold && !ComputeFullInlineCost)
+    if (Cost >= Threshold && !ComputeFullInlineCost)
       return false;
   }
 
@@ -1470,7 +1470,7 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
     Cost += InlineConstants::ColdccPenalty;
 
   // Check if we're done. This can happen due to bonuses and penalties.
-  if (Cost > Threshold && !ComputeFullInlineCost)
+  if (Cost >= Threshold && !ComputeFullInlineCost)
     return false;
 
   if (F.empty())
@@ -1536,7 +1536,7 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
   for (unsigned Idx = 0; Idx != BBWorklist.size(); ++Idx) {
     // Bail out the moment we cross the threshold. This means we'll under-count
     // the cost, but only when undercounting doesn't matter.
-    if (Cost > Threshold && !ComputeFullInlineCost)
+    if (Cost >= Threshold && !ComputeFullInlineCost)
       break;
 
     BasicBlock *BB = BBWorklist[Idx];

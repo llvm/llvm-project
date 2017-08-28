@@ -859,6 +859,20 @@ def : MipsPat<(f32 (fpround FGR64Opnd:$src)),
 def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
               (CVT_D64_S FGR32Opnd:$src)>, FGR_64;
 
+// To generate NMADD and NMSUB instructions when fneg node is present
+multiclass NMADD_NMSUB<Instruction Nmadd, Instruction Nmsub, RegisterOperand RC> {
+  def : MipsPat<(fneg (fadd (fmul RC:$fs, RC:$ft), RC:$fr)),
+                (Nmadd RC:$fr, RC:$fs, RC:$ft)>;
+  def : MipsPat<(fneg (fsub (fmul RC:$fs, RC:$ft), RC:$fr)),
+                (Nmsub RC:$fr, RC:$fs, RC:$ft)>;
+}
+
+let AdditionalPredicates = [NoNaNsFPMath, HasMadd4, NotInMicroMips] in {
+  defm : NMADD_NMSUB<NMADD_S, NMSUB_S, FGR32Opnd>, INSN_MIPS4_32R2_NOT_32R6_64R6;
+  defm : NMADD_NMSUB<NMADD_D32, NMSUB_D32, AFGR64Opnd>, FGR_32, INSN_MIPS4_32R2_NOT_32R6_64R6;
+  defm : NMADD_NMSUB<NMADD_D64, NMSUB_D64, FGR64Opnd>, FGR_64, INSN_MIPS4_32R2_NOT_32R6_64R6;
+}
+
 // Patterns for loads/stores with a reg+imm operand.
 let AdditionalPredicates = [NotInMicroMips] in {
   let AddedComplexity = 40 in {

@@ -40,7 +40,7 @@ TEST(FileOutputBuffer, Test) {
 
   // TEST 1: Verify commit case.
   SmallString<128> File1(TestDirectory);
-	File1.append("/file1");
+  File1.append("/file1");
   {
     ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
         FileOutputBuffer::create(File1, 8192);
@@ -79,7 +79,7 @@ TEST(FileOutputBuffer, Test) {
 
   // TEST 3: Verify sizing down case.
   SmallString<128> File3(TestDirectory);
-	File3.append("/file3");
+  File3.append("/file3");
   {
     ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
         FileOutputBuffer::create(File3, 8192000);
@@ -100,7 +100,7 @@ TEST(FileOutputBuffer, Test) {
 
   // TEST 4: Verify file can be made executable.
   SmallString<128> File4(TestDirectory);
-	File4.append("/file4");
+  File4.append("/file4");
   {
     ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
         FileOutputBuffer::create(File4, 8192, FileOutputBuffer::F_executable);

@@ -243,8 +243,8 @@ bool PPCCTRLoops::mightUseCTR(BasicBlock *BB) {
     if (CallInst *CI = dyn_cast<CallInst>(J)) {
       // Inline ASM is okay, unless it clobbers the ctr register.
       if (InlineAsm *IA = dyn_cast<InlineAsm>(CI->getCalledValue())) {
-	if (asmClobbersCTR(IA))
-	  return true;
+        if (asmClobbersCTR(IA))
+          return true;
         continue;
       }
 
