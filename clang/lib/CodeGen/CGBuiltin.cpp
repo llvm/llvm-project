@@ -7404,9 +7404,6 @@ static Value *EmitX86CpuIs(CodeGenFunction &CGF, const CallExpr *E) {
 
 Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E) {
-  if (BuiltinID == X86::BI__builtin_cpu_is)
-    return EmitX86CpuIs(*this, E);
-
   SmallVector<Value*, 4> Ops;
 
   // Find out if any arguments are required to be integer constant expressions.
@@ -7457,6 +7454,15 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
   switch (BuiltinID) {
   default: return nullptr;
+  case X86::BI__builtin_cpu_init: {
+    llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy,
+                                                      /*Variadic*/false);
+    llvm::Constant *Func = CGM.CreateRuntimeFunction(FTy,
+                                                     "__cpu_indicator_init");
+    return Builder.CreateCall(Func);
+  }
+  case X86::BI__builtin_cpu_is:
+    return EmitX86CpuIs(*this, E);
   case X86::BI__builtin_cpu_supports: {
     const Expr *FeatureExpr = E->getArg(0)->IgnoreParenCasts();
     StringRef FeatureStr = cast<StringLiteral>(FeatureExpr)->getString();

@@ -54,14 +54,20 @@ class X : Base {
   // CHECK: AccessSpecDecl: public(
 public:
   int not_initialized;
-  // All initialized members, bases and delegating initializers are are
-  // appended, separated by commas.
-  // CHECK: CXXConstructorDecl: :X(void (char, int){{( __attribute__\(\(thiscall\)\))?}})Base,:m,(
-  X(char c, int) : Base(), m(0) {
+  // CHECK: CXXConstructorDecl: :X(void (char, int){{( __attribute__\(\(thiscall\)\))?}})(
+  // CHECK-NEXT: ParmVarDecl: s(char)
+  // CHECK-NEXT: ParmVarDecl: (int)
+  // CHECK-NEXT: CXXCtorInitializer: Base
+  // CHECK-NEXT: CXXConstructExpr
+  // CHECK-NEXT: CXXCtorInitializer: m
+  // CHECK-NEXT: IntegerLiteral: 0
+  X(char s, int) : Base(), m(0) {
+    // CHECK-NEXT: CompoundStmt
     // CHECK: MemberExpr: :m(
     int x = m;
   }
-  // CHECK: CXXConstructorDecl: :X(void (char){{( __attribute__\(\(thiscall\)\))?}})X,(
+  // CHECK: CXXConstructorDecl: :X(void (char){{( __attribute__\(\(thiscall\)\))?}})(
+  // CHECK: CXXCtorInitializer: X
   X(char s) : X(s, 4) {}
 };
 
