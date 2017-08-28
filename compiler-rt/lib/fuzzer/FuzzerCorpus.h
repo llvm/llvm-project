@@ -35,7 +35,7 @@ struct InputInfo {
   size_t NumSuccessfullMutations = 0;
   bool MayDeleteFile = false;
   bool Reduced = false;
-  std::vector<uint32_t> UniqFeatureSet;
+  Vector<uint32_t> UniqFeatureSet;
 };
 
 class InputCorpus {
@@ -71,7 +71,7 @@ class InputCorpus {
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
   void AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
-                   const std::vector<uint32_t> &FeatureSet) {
+                   const Vector<uint32_t> &FeatureSet) {
     assert(!U.empty());
     if (FeatureDebug)
       Printf("ADD_TO_CORPUS %zd NF %zd\n", Inputs.size(), NumFeatures);
@@ -100,7 +100,7 @@ class InputCorpus {
   }
 
   // Debug-only
-  void PrintFeatureSet(const std::vector<uint32_t> &FeatureSet) {
+  void PrintFeatureSet(const Vector<uint32_t> &FeatureSet) {
     if (!FeatureDebug) return;
     Printf("{");
     for (uint32_t Feature: FeatureSet)
@@ -256,11 +256,11 @@ private:
   }
   std::piecewise_constant_distribution<double> CorpusDistribution;
 
-  std::vector<double> Intervals;
-  std::vector<double> Weights;
+  Vector<double> Intervals;
+  Vector<double> Weights;
 
   std::unordered_set<std::string> Hashes;
-  std::vector<InputInfo*> Inputs;
+  Vector<InputInfo*> Inputs;
 
   size_t NumAddedFeatures = 0;
   size_t NumUpdatedFeatures = 0;

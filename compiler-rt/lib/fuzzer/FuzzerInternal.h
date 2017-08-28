@@ -69,9 +69,9 @@ public:
               InputInfo *II = nullptr);
 
   // Merge Corpora[1:] into Corpora[0].
-  void Merge(const std::vector<std::string> &Corpora);
-  void CrashResistantMerge(const std::vector<std::string> &Args,
-                           const std::vector<std::string> &Corpora,
+  void Merge(const Vector<std::string> &Corpora);
+  void CrashResistantMerge(const Vector<std::string> &Args,
+                           const Vector<std::string> &Corpora,
                            const char *CoverageSummaryInputPathOrNull,
                            const char *CoverageSummaryOutputPathOrNull);
   void CrashResistantMergeInternalStep(const std::string &ControlFilePath);
@@ -139,7 +139,7 @@ private:
   size_t MaxMutationLen = 0;
   size_t TmpMaxMutationLen = 0;
 
-  std::vector<uint32_t> UniqFeatureSetTmp;
+  Vector<uint32_t> UniqFeatureSetTmp;
 
   // Need to know our own thread.
   static thread_local bool IsMyThread;

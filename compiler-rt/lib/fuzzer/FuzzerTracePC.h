@@ -159,8 +159,8 @@ private:
   uint8_t *Counters() const;
   uintptr_t *PCs() const;
 
-  std::set<uintptr_t> ObservedPCs;
-  std::set<uintptr_t> ObservedFuncs;
+  Set<uintptr_t> ObservedPCs;
+  Set<uintptr_t> ObservedFuncs;
 
   ValueBitMap ValueProfileMap;
   uintptr_t InitialStack;
