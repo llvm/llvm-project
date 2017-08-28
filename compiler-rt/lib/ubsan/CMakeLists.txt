@@ -178,7 +178,7 @@ else()
 
     if (UNIX)
       set(ARCHS_FOR_SYMBOLS ${UBSAN_SUPPORTED_ARCH})
-      list(REMOVE_ITEM ARCHS_FOR_SYMBOLS i386 i686)
+      list(REMOVE_ITEM ARCHS_FOR_SYMBOLS i386)
       add_sanitizer_rt_symbols(clang_rt.ubsan_standalone
         ARCHS ${ARCHS_FOR_SYMBOLS}
         PARENT_TARGET ubsan

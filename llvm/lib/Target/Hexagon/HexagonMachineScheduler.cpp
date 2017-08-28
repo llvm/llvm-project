@@ -15,7 +15,6 @@
 #include "HexagonMachineScheduler.h"
 #include "HexagonSubtarget.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/IR/Function.h"
 
 #include <iomanip>
@@ -23,9 +22,6 @@
 
 static cl::opt<bool> IgnoreBBRegPressure("ignore-bb-reg-pressure",
     cl::Hidden, cl::ZeroOrMore, cl::init(false));
-
-static cl::opt<bool> SchedPredsCloser("sched-preds-closer",
-    cl::Hidden, cl::ZeroOrMore, cl::init(true));
 
 static cl::opt<unsigned> SchedDebugVerboseLevel("misched-verbose-level",
     cl::Hidden, cl::ZeroOrMore, cl::init(1));
@@ -39,9 +35,6 @@ static cl::opt<bool> BotUseShorterTie("bot-use-shorter-tie",
 static cl::opt<bool> DisableTCTie("disable-tc-tie",
     cl::Hidden, cl::ZeroOrMore, cl::init(false));
 
-static cl::opt<bool> SchedRetvalOptimization("sched-retval-optimization",
-    cl::Hidden, cl::ZeroOrMore, cl::init(true));
-
 // Check if the scheduler should penalize instructions that are available to
 // early due to a zero-latency dependence.
 static cl::opt<bool> CheckEarlyAvail("check-early-avail", cl::Hidden,
@@ -50,87 +43,6 @@ static cl::opt<bool> CheckEarlyAvail("check-early-avail", cl::Hidden,
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
-
-namespace {
-class HexagonCallMutation : public ScheduleDAGMutation {
-public:
-  void apply(ScheduleDAGInstrs *DAG) override;
-private:
-  bool shouldTFRICallBind(const HexagonInstrInfo &HII,
-                          const SUnit &Inst1, const SUnit &Inst2) const;
-};
-} // end anonymous namespace
-
-// Check if a call and subsequent A2_tfrpi instructions should maintain
-// scheduling affinity. We are looking for the TFRI to be consumed in
-// the next instruction. This should help reduce the instances of
-// double register pairs being allocated and scheduled before a call
-// when not used until after the call. This situation is exacerbated
-// by the fact that we allocate the pair from the callee saves list,
-// leading to excess spills and restores.
-bool HexagonCallMutation::shouldTFRICallBind(const HexagonInstrInfo &HII,
-      const SUnit &Inst1, const SUnit &Inst2) const {
-  if (Inst1.getInstr()->getOpcode() != Hexagon::A2_tfrpi)
-    return false;
-
-  // TypeXTYPE are 64 bit operations.
-  unsigned Type = HII.getType(*Inst2.getInstr());
-  if (Type == HexagonII::TypeS_2op || Type == HexagonII::TypeS_3op ||
-    Type == HexagonII::TypeALU64 || Type == HexagonII::TypeM)
-    return true;
-  return false;
-}
-
-void HexagonCallMutation::apply(ScheduleDAGInstrs *DAG) {
-  SUnit* LastSequentialCall = nullptr;
-  unsigned VRegHoldingRet = 0;
-  unsigned RetRegister;
-  SUnit* LastUseOfRet = nullptr;
-  auto &TRI = *DAG->MF.getSubtarget().getRegisterInfo();
-  auto &HII = *DAG->MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
-
-  // Currently we only catch the situation when compare gets scheduled
-  // before preceding call.
-  for (unsigned su = 0, e = DAG->SUnits.size(); su != e; ++su) {
-    // Remember the call.
-    if (DAG->SUnits[su].getInstr()->isCall())
-      LastSequentialCall = &DAG->SUnits[su];
-    // Look for a compare that defines a predicate.
-    else if (DAG->SUnits[su].getInstr()->isCompare() && LastSequentialCall)
-      DAG->SUnits[su].addPred(SDep(LastSequentialCall, SDep::Barrier));
-    // Look for call and tfri* instructions.
-    else if (SchedPredsCloser && LastSequentialCall && su > 1 && su < e-1 &&
-             shouldTFRICallBind(HII, DAG->SUnits[su], DAG->SUnits[su+1]))
-      DAG->SUnits[su].addPred(SDep(&DAG->SUnits[su-1], SDep::Barrier));
-    // Prevent redundant register copies between two calls, which are caused by
-    // both the return value and the argument for the next call being in %R0.
-    // Example:
-    //   1: <call1>
-    //   2: %VregX = COPY %R0
-    //   3: <use of %VregX>
-    //   4: %R0 = ...
-    //   5: <call2>
-    // The scheduler would often swap 3 and 4, so an additional register is
-    // needed. This code inserts a Barrier dependence between 3 & 4 to prevent
-    // this. The same applies for %D0 and %V0/%W0, which are also handled.
-    else if (SchedRetvalOptimization) {
-      const MachineInstr *MI = DAG->SUnits[su].getInstr();
-      if (MI->isCopy() && (MI->readsRegister(Hexagon::R0, &TRI) ||
-                           MI->readsRegister(Hexagon::V0, &TRI)))  {
-        // %vregX = COPY %R0
-        VRegHoldingRet = MI->getOperand(0).getReg();
-        RetRegister = MI->getOperand(1).getReg();
-        LastUseOfRet = nullptr;
-      } else if (VRegHoldingRet && MI->readsVirtualRegister(VRegHoldingRet))
-        // <use of %vregX>
-        LastUseOfRet = &DAG->SUnits[su];
-      else if (LastUseOfRet && MI->definesRegister(RetRegister, &TRI))
-        // %R0 = ...
-        DAG->SUnits[su].addPred(SDep(LastUseOfRet, SDep::Barrier));
-    }
-  }
-}
-
 
 /// Save the last formed packet
 void VLIWResourceModel::savePacket() {
@@ -336,9 +248,6 @@ void ConvergingVLIWScheduler::initialize(ScheduleDAGMI *dag) {
 
   assert((!llvm::ForceTopDown || !llvm::ForceBottomUp) &&
          "-misched-topdown incompatible with -misched-bottomup");
-
-  DAG->addMutation(make_unique<HexagonSubtarget::HexagonDAGMutation>());
-  DAG->addMutation(make_unique<HexagonCallMutation>());
 }
 
 void ConvergingVLIWScheduler::releaseTopNode(SUnit *SU) {

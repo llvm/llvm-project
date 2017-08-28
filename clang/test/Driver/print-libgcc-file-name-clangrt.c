@@ -6,9 +6,15 @@
 // CHECK-CLANGRT-X8664: libclang_rt.builtins-x86_64.a
 
 // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
+// RUN:     --target=i386-pc-linux \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-I386 %s
+// CHECK-CLANGRT-I386: libclang_rt.builtins-i386.a
+
+// Check whether alternate arch values map to the correct library.
+//
+// RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
 // RUN:     --target=i686-pc-linux \
-// RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-I686 %s
-// CHECK-CLANGRT-I686: libclang_rt.builtins-i686.a
+// RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-I386 %s
 
 // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
 // RUN:     --target=arm-linux-gnueabi \

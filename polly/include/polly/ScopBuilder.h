@@ -143,7 +143,8 @@ class ScopBuilder {
   // @}
 
   // Build the SCoP for Region @p R.
-  void buildScop(Region &R, AssumptionCache &AC);
+  void buildScop(Region &R, AssumptionCache &AC,
+                 OptimizationRemarkEmitter &ORE);
 
   /// Try to build a multi-dimensional fixed sized MemoryAccess from the
   /// Load/Store instruction.
@@ -337,7 +338,8 @@ class ScopBuilder {
 public:
   explicit ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
                        const DataLayout &DL, DominatorTree &DT, LoopInfo &LI,
-                       ScopDetection &SD, ScalarEvolution &SE);
+                       ScopDetection &SD, ScalarEvolution &SE,
+                       OptimizationRemarkEmitter &ORE);
   ScopBuilder(const ScopBuilder &) = delete;
   ScopBuilder &operator=(const ScopBuilder &) = delete;
   ~ScopBuilder() = default;

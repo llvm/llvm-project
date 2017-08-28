@@ -18,6 +18,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_mac.cc
   sanitizer_persistent_allocator.cc
   sanitizer_platform_limits_linux.cc
+  sanitizer_platform_limits_netbsd.cc
   sanitizer_platform_limits_posix.cc
   sanitizer_posix.cc
   sanitizer_printf.cc
@@ -118,6 +119,7 @@ set(SANITIZER_HEADERS
   sanitizer_placement_new.h
   sanitizer_platform.h
   sanitizer_platform_interceptors.h
+  sanitizer_platform_limits_netbsd.h
   sanitizer_platform_limits_posix.h
   sanitizer_posix.h
   sanitizer_procmaps.h

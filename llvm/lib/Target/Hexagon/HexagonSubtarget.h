@@ -56,8 +56,19 @@ public:
   /// default for V60.
   bool UseBSBScheduling;
 
-  class HexagonDAGMutation : public ScheduleDAGMutation {
-  public:
+  struct UsrOverflowMutation : public ScheduleDAGMutation {
+    void apply(ScheduleDAGInstrs *DAG) override;
+  };
+  struct HVXMemLatencyMutation : public ScheduleDAGMutation {
+    void apply(ScheduleDAGInstrs *DAG) override;
+  };
+  struct CallMutation : public ScheduleDAGMutation {
+    void apply(ScheduleDAGInstrs *DAG) override;
+  private:
+    bool shouldTFRICallBind(const HexagonInstrInfo &HII,
+          const SUnit &Inst1, const SUnit &Inst2) const;
+  };
+  struct BankConflictMutation : public ScheduleDAGMutation {
     void apply(ScheduleDAGInstrs *DAG) override;
   };
 

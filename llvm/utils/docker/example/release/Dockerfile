@@ -21,4 +21,4 @@ LABEL maintainer "Maintainer <maintainer@email>"
 
 # Unpack clang installation into this container.
 # It is copied to this directory by build_docker_image.sh script.
-ADD clang.tar.gz /
+ADD clang.tar.gz /usr/local/

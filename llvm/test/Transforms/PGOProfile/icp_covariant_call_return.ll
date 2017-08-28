@@ -12,7 +12,7 @@ declare noalias i8* @_Znwm(i64)
 declare void @_ZN1DC2Ev(%struct.D*);
 declare %struct.Derived* @_ZN1D4funcEv(%struct.D*);
 
-define i32 @bar() {
+define %struct.Base* @bar() {
 entry:
   %call = call noalias i8* @_Znwm(i64 8)
   %tmp = bitcast i8* %call to %struct.D*
@@ -36,7 +36,7 @@ entry:
 ; ICALL-PROM:if.end.icp:
 ; ICALL-PROM:  [[PHI_RET:%[0-9]+]] = phi %struct.Base* [ %call1, %if.false.orig_indirect ], [ [[DIRCALL_RET_CAST]], %if.true.direct_targ ]
   %call1 = call %struct.Base* %tmp3(%struct.B* %tmp1), !prof !1
-  ret i32 0
+  ret %struct.Base* %call1
 }
 
 !1 = !{!"VP", i32 0, i64 12345, i64 -3913987384944532146, i64 12345}

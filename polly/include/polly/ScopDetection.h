@@ -630,6 +630,7 @@ public:
   countBeneficialLoops(Region *R, ScalarEvolution &SE, LoopInfo &LI,
                        unsigned MinProfitableTrips);
 
+private:
   /// OptimizationRemarkEmitter object used to emit diagnostic remarks
   OptimizationRemarkEmitter &ORE;
 };

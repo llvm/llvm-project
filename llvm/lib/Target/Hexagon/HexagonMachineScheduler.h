@@ -251,5 +251,4 @@ protected:
 
 } // namespace
 
-
 #endif
