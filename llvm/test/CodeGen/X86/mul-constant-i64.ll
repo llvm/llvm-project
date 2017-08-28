@@ -18,7 +18,7 @@ define i64 @test_mul_by_1(i64 %x) nounwind {
 ; X64-HSW-LABEL: test_mul_by_1:
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    movq %rdi, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_1:
 ; X64-JAG:       # BB#0:
@@ -34,7 +34,7 @@ define i64 @test_mul_by_1(i64 %x) nounwind {
 ; HSW-NOOPT-LABEL: test_mul_by_1:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    movq %rdi, %rax # sched: [1:0.25]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_1:
 ; JAG-NOOPT:       # BB#0:
@@ -66,7 +66,7 @@ define i64 @test_mul_by_2(i64 %x) {
 ; X64-HSW-LABEL: test_mul_by_2:
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_2:
 ; X64-JAG:       # BB#0:
@@ -84,7 +84,7 @@ define i64 @test_mul_by_2(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_2:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    leaq (%rdi,%rdi), %rax # sched: [1:0.50]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_2:
 ; JAG-NOOPT:       # BB#0:
@@ -116,7 +116,7 @@ define i64 @test_mul_by_3(i64 %x) {
 ; X64-HSW-LABEL: test_mul_by_3:
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_3:
 ; X64-JAG:       # BB#0:
@@ -134,7 +134,7 @@ define i64 @test_mul_by_3(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_3:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_3:
 ; JAG-NOOPT:       # BB#0:
@@ -166,7 +166,7 @@ define i64 @test_mul_by_4(i64 %x) {
 ; X64-HSW-LABEL: test_mul_by_4:
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    leaq (,%rdi,4), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_4:
 ; X64-JAG:       # BB#0:
@@ -184,7 +184,7 @@ define i64 @test_mul_by_4(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_4:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    leaq (,%rdi,4), %rax # sched: [1:0.50]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_4:
 ; JAG-NOOPT:       # BB#0:
@@ -216,7 +216,7 @@ define i64 @test_mul_by_5(i64 %x) {
 ; X64-HSW-LABEL: test_mul_by_5:
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_5:
 ; X64-JAG:       # BB#0:
@@ -234,7 +234,7 @@ define i64 @test_mul_by_5(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_5:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_5:
 ; JAG-NOOPT:       # BB#0:
@@ -268,7 +268,7 @@ define i64 @test_mul_by_6(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    addq %rdi, %rdi # sched: [1:0.25]
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_6:
 ; X64-JAG:       # BB#0:
@@ -287,7 +287,7 @@ define i64 @test_mul_by_6(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_6:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $6, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_6:
 ; JAG-NOOPT:       # BB#0:
@@ -323,7 +323,7 @@ define i64 @test_mul_by_7(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    leaq (,%rdi,8), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    subq %rdi, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_7:
 ; X64-JAG:       # BB#0:
@@ -342,7 +342,7 @@ define i64 @test_mul_by_7(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_7:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $7, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_7:
 ; JAG-NOOPT:       # BB#0:
@@ -375,7 +375,7 @@ define i64 @test_mul_by_8(i64 %x) {
 ; X64-HSW-LABEL: test_mul_by_8:
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    leaq (,%rdi,8), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_8:
 ; X64-JAG:       # BB#0:
@@ -393,7 +393,7 @@ define i64 @test_mul_by_8(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_8:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    leaq (,%rdi,8), %rax # sched: [1:0.50]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_8:
 ; JAG-NOOPT:       # BB#0:
@@ -425,7 +425,7 @@ define i64 @test_mul_by_9(i64 %x) {
 ; X64-HSW-LABEL: test_mul_by_9:
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,8), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_9:
 ; X64-JAG:       # BB#0:
@@ -443,7 +443,7 @@ define i64 @test_mul_by_9(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_9:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    leaq (%rdi,%rdi,8), %rax # sched: [1:0.50]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_9:
 ; JAG-NOOPT:       # BB#0:
@@ -477,7 +477,7 @@ define i64 @test_mul_by_10(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    addq %rdi, %rdi # sched: [1:0.25]
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_10:
 ; X64-JAG:       # BB#0:
@@ -496,7 +496,7 @@ define i64 @test_mul_by_10(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_10:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $10, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_10:
 ; JAG-NOOPT:       # BB#0:
@@ -532,7 +532,7 @@ define i64 @test_mul_by_11(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rdi,%rax,2), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_11:
 ; X64-JAG:       # BB#0:
@@ -551,7 +551,7 @@ define i64 @test_mul_by_11(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_11:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $11, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_11:
 ; JAG-NOOPT:       # BB#0:
@@ -585,7 +585,7 @@ define i64 @test_mul_by_12(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    shlq $2, %rdi # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_12:
 ; X64-JAG:       # BB#0:
@@ -604,7 +604,7 @@ define i64 @test_mul_by_12(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_12:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $12, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_12:
 ; JAG-NOOPT:       # BB#0:
@@ -640,7 +640,7 @@ define i64 @test_mul_by_13(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rdi,%rax,4), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_13:
 ; X64-JAG:       # BB#0:
@@ -659,7 +659,7 @@ define i64 @test_mul_by_13(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_13:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $13, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_13:
 ; JAG-NOOPT:       # BB#0:
@@ -696,7 +696,7 @@ define i64 @test_mul_by_14(i64 %x) {
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rdi,%rax,4), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    addq %rdi, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_14:
 ; X64-JAG:       # BB#0:
@@ -716,7 +716,7 @@ define i64 @test_mul_by_14(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_14:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $14, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_14:
 ; JAG-NOOPT:       # BB#0:
@@ -751,7 +751,7 @@ define i64 @test_mul_by_15(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rax,%rax,2), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_15:
 ; X64-JAG:       # BB#0:
@@ -770,7 +770,7 @@ define i64 @test_mul_by_15(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_15:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $15, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_15:
 ; JAG-NOOPT:       # BB#0:
@@ -804,7 +804,7 @@ define i64 @test_mul_by_16(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    shlq $4, %rdi # sched: [1:0.50]
 ; X64-HSW-NEXT:    movq %rdi, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_16:
 ; X64-JAG:       # BB#0:
@@ -824,7 +824,7 @@ define i64 @test_mul_by_16(i64 %x) {
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    shlq $4, %rdi # sched: [1:0.50]
 ; HSW-NOOPT-NEXT:    movq %rdi, %rax # sched: [1:0.25]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_16:
 ; JAG-NOOPT:       # BB#0:
@@ -864,7 +864,7 @@ define i64 @test_mul_by_17(i64 %x) {
 ; X64-HSW-NEXT:    movq %rdi, %rax # sched: [1:0.25]
 ; X64-HSW-NEXT:    shlq $4, %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rax,%rdi), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_17:
 ; X64-JAG:       # BB#0:
@@ -884,7 +884,7 @@ define i64 @test_mul_by_17(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_17:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $17, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_17:
 ; JAG-NOOPT:       # BB#0:
@@ -920,7 +920,7 @@ define i64 @test_mul_by_18(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    addq %rdi, %rdi # sched: [1:0.25]
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,8), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_18:
 ; X64-JAG:       # BB#0:
@@ -939,7 +939,7 @@ define i64 @test_mul_by_18(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_18:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $18, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_18:
 ; JAG-NOOPT:       # BB#0:
@@ -977,7 +977,7 @@ define i64 @test_mul_by_19(i64 %x) {
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    shlq $2, %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    subq %rdi, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_19:
 ; X64-JAG:       # BB#0:
@@ -997,7 +997,7 @@ define i64 @test_mul_by_19(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_19:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $19, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_19:
 ; JAG-NOOPT:       # BB#0:
@@ -1031,7 +1031,7 @@ define i64 @test_mul_by_20(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    shlq $2, %rdi # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_20:
 ; X64-JAG:       # BB#0:
@@ -1050,7 +1050,7 @@ define i64 @test_mul_by_20(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_20:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $20, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_20:
 ; JAG-NOOPT:       # BB#0:
@@ -1086,7 +1086,7 @@ define i64 @test_mul_by_21(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rdi,%rax,4), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_21:
 ; X64-JAG:       # BB#0:
@@ -1105,7 +1105,7 @@ define i64 @test_mul_by_21(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_21:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $21, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_21:
 ; JAG-NOOPT:       # BB#0:
@@ -1142,7 +1142,7 @@ define i64 @test_mul_by_22(i64 %x) {
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rdi,%rax,4), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    addq %rdi, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_22:
 ; X64-JAG:       # BB#0:
@@ -1162,7 +1162,7 @@ define i64 @test_mul_by_22(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_22:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $22, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_22:
 ; JAG-NOOPT:       # BB#0:
@@ -1199,7 +1199,7 @@ define i64 @test_mul_by_23(i64 %x) {
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    shlq $3, %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    subq %rdi, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_23:
 ; X64-JAG:       # BB#0:
@@ -1219,7 +1219,7 @@ define i64 @test_mul_by_23(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_23:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $23, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_23:
 ; JAG-NOOPT:       # BB#0:
@@ -1253,7 +1253,7 @@ define i64 @test_mul_by_24(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    shlq $3, %rdi # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_24:
 ; X64-JAG:       # BB#0:
@@ -1272,7 +1272,7 @@ define i64 @test_mul_by_24(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_24:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $24, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_24:
 ; JAG-NOOPT:       # BB#0:
@@ -1308,7 +1308,7 @@ define i64 @test_mul_by_25(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rax,%rax,4), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_25:
 ; X64-JAG:       # BB#0:
@@ -1327,7 +1327,7 @@ define i64 @test_mul_by_25(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_25:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $25, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_25:
 ; JAG-NOOPT:       # BB#0:
@@ -1365,7 +1365,7 @@ define i64 @test_mul_by_26(i64 %x) {
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,8), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rax,%rax,2), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    subq %rdi, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_26:
 ; X64-JAG:       # BB#0:
@@ -1385,7 +1385,7 @@ define i64 @test_mul_by_26(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_26:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $26, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_26:
 ; JAG-NOOPT:       # BB#0:
@@ -1420,7 +1420,7 @@ define i64 @test_mul_by_27(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,8), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rax,%rax,2), %rax # sched: [1:0.50]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_27:
 ; X64-JAG:       # BB#0:
@@ -1439,7 +1439,7 @@ define i64 @test_mul_by_27(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_27:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $27, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_27:
 ; JAG-NOOPT:       # BB#0:
@@ -1477,7 +1477,7 @@ define i64 @test_mul_by_28(i64 %x) {
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,8), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    leaq (%rax,%rax,2), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    addq %rdi, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_28:
 ; X64-JAG:       # BB#0:
@@ -1497,7 +1497,7 @@ define i64 @test_mul_by_28(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_28:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $28, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_28:
 ; JAG-NOOPT:       # BB#0:
@@ -1536,7 +1536,7 @@ define i64 @test_mul_by_29(i64 %x) {
 ; X64-HSW-NEXT:    leaq (%rax,%rax,2), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    addq %rdi, %rax # sched: [1:0.25]
 ; X64-HSW-NEXT:    addq %rdi, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_29:
 ; X64-JAG:       # BB#0:
@@ -1557,7 +1557,7 @@ define i64 @test_mul_by_29(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_29:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $29, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_29:
 ; JAG-NOOPT:       # BB#0:
@@ -1596,7 +1596,7 @@ define i64 @test_mul_by_30(i64 %x) {
 ; X64-HSW-NEXT:    shlq $5, %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    subq %rdi, %rax # sched: [1:0.25]
 ; X64-HSW-NEXT:    subq %rdi, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_30:
 ; X64-JAG:       # BB#0:
@@ -1617,7 +1617,7 @@ define i64 @test_mul_by_30(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_30:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $30, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_30:
 ; JAG-NOOPT:       # BB#0:
@@ -1654,7 +1654,7 @@ define i64 @test_mul_by_31(i64 %x) {
 ; X64-HSW-NEXT:    movq %rdi, %rax # sched: [1:0.25]
 ; X64-HSW-NEXT:    shlq $5, %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    subq %rdi, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_31:
 ; X64-JAG:       # BB#0:
@@ -1674,7 +1674,7 @@ define i64 @test_mul_by_31(i64 %x) {
 ; HSW-NOOPT-LABEL: test_mul_by_31:
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    imulq $31, %rdi, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_31:
 ; JAG-NOOPT:       # BB#0:
@@ -1709,7 +1709,7 @@ define i64 @test_mul_by_32(i64 %x) {
 ; X64-HSW:       # BB#0:
 ; X64-HSW-NEXT:    shlq $5, %rdi # sched: [1:0.50]
 ; X64-HSW-NEXT:    movq %rdi, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_32:
 ; X64-JAG:       # BB#0:
@@ -1729,7 +1729,7 @@ define i64 @test_mul_by_32(i64 %x) {
 ; HSW-NOOPT:       # BB#0:
 ; HSW-NOOPT-NEXT:    shlq $5, %rdi # sched: [1:0.50]
 ; HSW-NOOPT-NEXT:    movq %rdi, %rax # sched: [1:0.25]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_32:
 ; JAG-NOOPT:       # BB#0:
@@ -1792,8 +1792,8 @@ define i64 @test_mul_spec(i64 %x) nounwind {
 ; X64-HSW-NEXT:    addq $42, %rcx # sched: [1:0.25]
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    addq $2, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    imulq %rcx, %rax # sched: [3:1.00]
-; X64-HSW-NEXT:    retq # sched: [1:1.00]
+; X64-HSW-NEXT:    imulq %rcx, %rax # sched: [4:1.00]
+; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_spec:
 ; X64-JAG:       # BB#0:
@@ -1840,8 +1840,8 @@ define i64 @test_mul_spec(i64 %x) nounwind {
 ; HSW-NOOPT-NEXT:    addq $42, %rcx # sched: [1:0.25]
 ; HSW-NOOPT-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
 ; HSW-NOOPT-NEXT:    addq $2, %rax # sched: [1:0.25]
-; HSW-NOOPT-NEXT:    imulq %rcx, %rax # sched: [3:1.00]
-; HSW-NOOPT-NEXT:    retq # sched: [1:1.00]
+; HSW-NOOPT-NEXT:    imulq %rcx, %rax # sched: [4:1.00]
+; HSW-NOOPT-NEXT:    retq # sched: [2:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_spec:
 ; JAG-NOOPT:       # BB#0:

@@ -83,8 +83,7 @@ define <4 x i32> @test_sext_4i8_4i32_undef() {
 define <4 x i64> @test_sext_4i8_4i64() {
 ; X32-LABEL: test_sext_4i8_4i64:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,4294967295,4294967295]
-; X32-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm0, %ymm0
+; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [0,0,4294967295,4294967295,2,0,4294967293,4294967295]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_sext_4i8_4i64:
@@ -102,8 +101,7 @@ define <4 x i64> @test_sext_4i8_4i64() {
 define <4 x i64> @test_sext_4i8_4i64_undef() {
 ; X32-LABEL: test_sext_4i8_4i64_undef:
 ; X32:       # BB#0:
-; X32-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; X32-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm0, %ymm0
+; X32-NEXT:    vmovaps {{.*#+}} ymm0 = <u,u,4294967295,4294967295,u,u,4294967293,4294967295>
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_sext_4i8_4i64_undef:
@@ -245,8 +243,7 @@ define <4 x i32> @test_zext_4i8_4i32() {
 define <4 x i64> @test_zext_4i8_4i64() {
 ; X32-LABEL: test_zext_4i8_4i64:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,255,0]
-; X32-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm0, %ymm0
+; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [0,0,255,0,2,0,253,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_zext_4i8_4i64:
@@ -300,10 +297,7 @@ define <4 x i32> @test_zext_4i8_4i32_undef() {
 define <4 x i64> @test_zext_4i8_4i64_undef() {
 ; X32-LABEL: test_zext_4i8_4i64_undef:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = <u,u,255,0>
-; X32-NEXT:    movl $2, %eax
-; X32-NEXT:    vmovd %eax, %xmm1
-; X32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X32-NEXT:    vmovaps {{.*#+}} ymm0 = <u,u,255,0,2,0,u,u>
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_zext_4i8_4i64_undef:

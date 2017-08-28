@@ -1559,12 +1559,10 @@ static bool isMemoryOp(const MachineInstr &MI) {
 
 static void InsertLDR_STR(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator &MBBI, int Offset,
-                          bool isDef, const DebugLoc &DL, unsigned NewOpc,
-                          unsigned Reg, bool RegDeadKill, bool RegUndef,
-                          unsigned BaseReg, bool BaseKill, bool BaseUndef,
-                          bool OffKill, bool OffUndef, ARMCC::CondCodes Pred,
-                          unsigned PredReg, const TargetInstrInfo *TII,
-                          bool isT2) {
+                          bool isDef, unsigned NewOpc, unsigned Reg,
+                          bool RegDeadKill, bool RegUndef, unsigned BaseReg,
+                          bool BaseKill, bool BaseUndef, ARMCC::CondCodes Pred,
+                          unsigned PredReg, const TargetInstrInfo *TII) {
   if (isDef) {
     MachineInstrBuilder MIB = BuildMI(MBB, MBBI, MBBI->getDebugLoc(),
                                       TII->get(NewOpc))
@@ -1584,6 +1582,8 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator &MBBI) {
   MachineInstr *MI = &*MBBI;
   unsigned Opcode = MI->getOpcode();
+  // FIXME: Code/comments below check Opcode == t2STRDi8, but this check returns
+  // if we see this opcode.
   if (Opcode != ARM::LDRD && Opcode != ARM::STRD && Opcode != ARM::t2LDRDi8)
     return false;
 
@@ -1615,8 +1615,8 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
   bool OddUndef = MI->getOperand(1).isUndef();
   bool BaseKill = BaseOp.isKill();
   bool BaseUndef = BaseOp.isUndef();
-  bool OffKill = isT2 ? false : MI->getOperand(3).isKill();
-  bool OffUndef = isT2 ? false : MI->getOperand(3).isUndef();
+  assert((isT2 || MI->getOperand(3).getReg() == ARM::NoRegister) &&
+         "register offset not handled below");
   int OffImm = getMemoryOpOffset(*MI);
   unsigned PredReg = 0;
   ARMCC::CondCodes Pred = getInstrPredicate(*MI, PredReg);
@@ -1654,21 +1654,14 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
     unsigned NewOpc2 = (isLd)
       ? (isT2 ? (OffImm+4 < 0 ? ARM::t2LDRi8 : ARM::t2LDRi12) : ARM::LDRi12)
       : (isT2 ? (OffImm+4 < 0 ? ARM::t2STRi8 : ARM::t2STRi12) : ARM::STRi12);
-    DebugLoc dl = MBBI->getDebugLoc();
-    // If this is a load and base register is killed, it may have been
-    // re-defed by the load, make sure the first load does not clobber it.
-    if (isLd &&
-        (BaseKill || OffKill) &&
-        (TRI->regsOverlap(EvenReg, BaseReg))) {
+    // If this is a load, make sure the first load does not clobber the base
+    // register before the second load reads it.
+    if (isLd && TRI->regsOverlap(EvenReg, BaseReg)) {
       assert(!TRI->regsOverlap(OddReg, BaseReg));
-      InsertLDR_STR(MBB, MBBI, OffImm+4, isLd, dl, NewOpc2,
-                    OddReg, OddDeadKill, false,
-                    BaseReg, false, BaseUndef, false, OffUndef,
-                    Pred, PredReg, TII, isT2);
-      InsertLDR_STR(MBB, MBBI, OffImm, isLd, dl, NewOpc,
-                    EvenReg, EvenDeadKill, false,
-                    BaseReg, BaseKill, BaseUndef, OffKill, OffUndef,
-                    Pred, PredReg, TII, isT2);
+      InsertLDR_STR(MBB, MBBI, OffImm + 4, isLd, NewOpc2, OddReg, OddDeadKill,
+                    false, BaseReg, false, BaseUndef, Pred, PredReg, TII);
+      InsertLDR_STR(MBB, MBBI, OffImm, isLd, NewOpc, EvenReg, EvenDeadKill,
+                    false, BaseReg, BaseKill, BaseUndef, Pred, PredReg, TII);
     } else {
       if (OddReg == EvenReg && EvenDeadKill) {
         // If the two source operands are the same, the kill marker is
@@ -1680,14 +1673,10 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
       // Never kill the base register in the first instruction.
       if (EvenReg == BaseReg)
         EvenDeadKill = false;
-      InsertLDR_STR(MBB, MBBI, OffImm, isLd, dl, NewOpc,
-                    EvenReg, EvenDeadKill, EvenUndef,
-                    BaseReg, false, BaseUndef, false, OffUndef,
-                    Pred, PredReg, TII, isT2);
-      InsertLDR_STR(MBB, MBBI, OffImm+4, isLd, dl, NewOpc2,
-                    OddReg, OddDeadKill, OddUndef,
-                    BaseReg, BaseKill, BaseUndef, OffKill, OffUndef,
-                    Pred, PredReg, TII, isT2);
+      InsertLDR_STR(MBB, MBBI, OffImm, isLd, NewOpc, EvenReg, EvenDeadKill,
+                    EvenUndef, BaseReg, false, BaseUndef, Pred, PredReg, TII);
+      InsertLDR_STR(MBB, MBBI, OffImm + 4, isLd, NewOpc2, OddReg, OddDeadKill,
+                    OddUndef, BaseReg, BaseKill, BaseUndef, Pred, PredReg, TII);
     }
     if (isLd)
       ++NumLDRD2LDR;

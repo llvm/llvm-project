@@ -2571,6 +2571,35 @@ let Uses = [RM] in {
   let Defs = [CR1] in
   def MFFSo : XForm_42<63, 583, (outs f8rc:$rT), (ins),
                       "mffs. $rT", IIC_IntMFFS, []>, isDOT;
+
+  def MFFSCE : X_FRT5_XO2_XO3_XO10<63, 0, 1, 583, (outs f8rc:$rT), (ins),
+                                  "mffsce $rT", IIC_IntMFFS, []>,
+               PPC970_DGroup_Single, PPC970_Unit_FPU;
+
+  def MFFSCDRN : X_FRT5_XO2_XO3_FRB5_XO10<63, 2, 4, 583, (outs f8rc:$rT),
+                                         (ins f8rc:$FRB), "mffscdrn $rT, $FRB",
+                                         IIC_IntMFFS, []>,
+                 PPC970_DGroup_Single, PPC970_Unit_FPU;
+
+  def MFFSCDRNI : X_FRT5_XO2_XO3_DRM3_XO10<63, 2, 5, 583, (outs f8rc:$rT),
+                                          (ins u3imm:$DRM),
+                                          "mffscdrni $rT, $DRM",
+                                          IIC_IntMFFS, []>,
+                  PPC970_DGroup_Single, PPC970_Unit_FPU;
+
+  def MFFSCRN : X_FRT5_XO2_XO3_FRB5_XO10<63, 2, 6, 583, (outs f8rc:$rT),
+                                        (ins f8rc:$FRB), "mffscrn $rT, $FRB",
+                                        IIC_IntMFFS, []>,
+                PPC970_DGroup_Single, PPC970_Unit_FPU;
+
+  def MFFSCRNI : X_FRT5_XO2_XO3_RM2_X10<63, 2, 7, 583, (outs f8rc:$rT),
+                                       (ins u2imm:$RM), "mffscrni $rT, $RM",
+                                       IIC_IntMFFS, []>,
+                 PPC970_DGroup_Single, PPC970_Unit_FPU;
+
+  def MFFSL  : X_FRT5_XO2_XO3_XO10<63, 3, 0, 583, (outs f8rc:$rT), (ins),
+                                  "mffsl $rT", IIC_IntMFFS, []>,
+               PPC970_DGroup_Single, PPC970_Unit_FPU;
 }
 
 let Predicates = [IsISA3_0] in {

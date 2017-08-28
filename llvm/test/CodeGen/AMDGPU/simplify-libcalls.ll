@@ -641,7 +641,18 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}define amdgpu_kernel void @test_dont_use_native_sqrt_fast_f64
+; GCN: tail call fast double @_Z4sqrtd(double %tmp)
+define amdgpu_kernel void @test_dont_use_native_sqrt_fast_f64(double addrspace(1)* nocapture %a) {
+entry:
+  %tmp = load double, double addrspace(1)* %a, align 8
+  %call = tail call fast double @_Z4sqrtd(double %tmp)
+  store double %call, double addrspace(1)* %a, align 8
+  ret void
+}
+
 declare float @_Z4sqrtf(float)
+declare double @_Z4sqrtd(double)
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_use_native_rsqrt
 ; GCN-NATIVE: tail call fast float @_Z12native_rsqrtf(float %tmp)

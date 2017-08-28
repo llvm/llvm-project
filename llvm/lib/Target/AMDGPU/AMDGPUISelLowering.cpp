@@ -3841,7 +3841,6 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
 
   Known.resetAll(); // Don't know anything.
 
-  KnownBits Known2;
   unsigned Opc = Op.getOpcode();
 
   switch (Opc) {
@@ -3872,6 +3871,37 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
 
     // High bits are zero.
     Known.Zero = APInt::getHighBitsSet(BitWidth, BitWidth - 16);
+    break;
+  }
+  case AMDGPUISD::MUL_U24:
+  case AMDGPUISD::MUL_I24: {
+    KnownBits LHSKnown, RHSKnown;
+    DAG.computeKnownBits(Op.getOperand(0), LHSKnown);
+    DAG.computeKnownBits(Op.getOperand(1), RHSKnown);
+
+    unsigned TrailZ = LHSKnown.countMinTrailingZeros() +
+                      RHSKnown.countMinTrailingZeros();
+    Known.Zero.setLowBits(std::min(TrailZ, 32u));
+
+    unsigned LHSValBits = 32 - std::max(LHSKnown.countMinSignBits(), 8u);
+    unsigned RHSValBits = 32 - std::max(RHSKnown.countMinSignBits(), 8u);
+    unsigned MaxValBits = std::min(LHSValBits + RHSValBits, 32u);
+    if (MaxValBits >= 32)
+      break;
+    bool Negative = false;
+    if (Opc == AMDGPUISD::MUL_I24) {
+      bool LHSNegative = !!(LHSKnown.One  & (1 << 23));
+      bool LHSPositive = !!(LHSKnown.Zero & (1 << 23));
+      bool RHSNegative = !!(RHSKnown.One  & (1 << 23));
+      bool RHSPositive = !!(RHSKnown.Zero & (1 << 23));
+      if ((!LHSNegative && !LHSPositive) || (!RHSNegative && !RHSPositive))
+        break;
+      Negative = (LHSNegative && RHSPositive) || (LHSPositive && RHSNegative);
+    }
+    if (Negative)
+      Known.One.setHighBits(32 - MaxValBits);
+    else
+      Known.Zero.setHighBits(32 - MaxValBits);
     break;
   }
   }
