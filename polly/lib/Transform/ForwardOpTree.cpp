@@ -60,7 +60,6 @@ static cl::opt<unsigned long>
 STATISTIC(KnownAnalyzed, "Number of successfully analyzed SCoPs");
 STATISTIC(KnownOutOfQuota,
           "Analyses aborted because max_operations was reached");
-STATISTIC(KnownIncompatible, "Number of SCoPs incompatible for analysis");
 
 STATISTIC(TotalInstructionsCopied, "Number of copied instructions");
 STATISTIC(TotalKnownLoadsForwarded,
@@ -259,10 +258,7 @@ public:
     isl::union_map MustKnown, KnownFromLoad, KnownFromInit;
 
     // Check that nothing strange occurs.
-    if (!isCompatibleScop()) {
-      KnownIncompatible++;
-      return false;
-    }
+    collectCompatibleElts();
 
     isl_ctx_reset_error(IslCtx.get());
     {

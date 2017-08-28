@@ -350,6 +350,20 @@ static __isl_give isl_ast_node *AtEachDomain(__isl_take isl_ast_node *Node,
 static __isl_give isl_ast_expr *
 buildCondition(__isl_keep isl_ast_build *Build, const Scop::MinMaxAccessTy *It0,
                const Scop::MinMaxAccessTy *It1) {
+  isl::id Left =
+      isl::manage(isl_pw_multi_aff_get_tuple_id(It0->first, isl_dim_set));
+  isl::id Right =
+      isl::manage(isl_pw_multi_aff_get_tuple_id(It1->first, isl_dim_set));
+
+  const ScopArrayInfo *BaseLeft =
+      ScopArrayInfo::getFromId(Left)->getBasePtrOriginSAI();
+  const ScopArrayInfo *BaseRight =
+      ScopArrayInfo::getFromId(Right)->getBasePtrOriginSAI();
+  if (BaseLeft && BaseLeft == BaseRight) {
+    return isl_ast_expr_from_val(
+        isl_val_int_from_si(isl_ast_build_get_ctx(Build), 1));
+  }
+
   isl_ast_expr *NonAliasGroup, *MinExpr, *MaxExpr;
   MinExpr = isl_ast_expr_address_of(isl_ast_build_access_from_pw_multi_aff(
       Build, isl_pw_multi_aff_copy(It0->first)));

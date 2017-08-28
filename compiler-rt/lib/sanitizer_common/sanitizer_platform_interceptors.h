@@ -33,6 +33,7 @@
 #endif
 
 #if SI_POSIX
+# include "sanitizer_platform_limits_netbsd.h"
 # include "sanitizer_platform_limits_posix.h"
 #endif
 

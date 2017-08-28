@@ -154,8 +154,12 @@
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLTools.h"
 #include "polly/Support/VirtualInstruction.h"
+#include "llvm/ADT/Statistic.h"
 
 #define DEBUG_TYPE "polly-zone"
+
+STATISTIC(NumIncompatibleArrays, "Number of not zone-analyzable arrays");
+STATISTIC(NumCompatibleArrays, "Number of zone-analyzable arrays");
 
 using namespace polly;
 using namespace llvm;
@@ -320,7 +324,9 @@ static bool onlySameValueWrites(ScopStmt *Stmt) {
   return true;
 }
 
-bool ZoneAlgorithm::isCompatibleStmt(ScopStmt *Stmt) {
+void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
+                                            isl::union_set &IncompatibleElts,
+                                            isl::union_set &AllElts) {
   auto Stores = makeEmptyUnionMap();
   auto Loads = makeEmptyUnionMap();
 
@@ -330,7 +336,13 @@ bool ZoneAlgorithm::isCompatibleStmt(ScopStmt *Stmt) {
     if (!MA->isLatestArrayKind())
       continue;
 
-    auto AccRel = give(isl_union_map_from_map(getAccessRelationFor(MA).take()));
+    isl::map AccRelMap = getAccessRelationFor(MA);
+    isl::union_map AccRel = AccRelMap;
+
+    // To avoid solving any ILP problems, always add entire arrays instead of
+    // just the elements that are accessed.
+    auto ArrayElts = isl::set::universe(AccRelMap.get_space().range());
+    AllElts = AllElts.add_set(ArrayElts);
 
     if (MA->isRead()) {
       // Reject load after store to same location.
@@ -342,7 +354,8 @@ bool ZoneAlgorithm::isCompatibleStmt(ScopStmt *Stmt) {
         R << " (previous stores: " << Stores;
         R << ", loading: " << AccRel << ")";
         S->getFunction().getContext().diagnose(R);
-        return false;
+
+        IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
       }
 
       Loads = give(isl_union_map_union(Loads.take(), AccRel.take()));
@@ -357,7 +370,8 @@ bool ZoneAlgorithm::isCompatibleStmt(ScopStmt *Stmt) {
       R << "encountered write that is not a StoreInst: "
         << printInstruction(MA->getAccessInstruction());
       S->getFunction().getContext().diagnose(R);
-      return false;
+
+      IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
     }
 
     // In region statements the order is less clear, eg. the load and store
@@ -369,7 +383,8 @@ bool ZoneAlgorithm::isCompatibleStmt(ScopStmt *Stmt) {
                                  MA->getAccessInstruction());
       R << "store is in a non-affine subregion";
       S->getFunction().getContext().diagnose(R);
-      return false;
+
+      IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
     }
 
     // Do not allow more than one store to the same location.
@@ -382,13 +397,12 @@ bool ZoneAlgorithm::isCompatibleStmt(ScopStmt *Stmt) {
       R << " (previous stores: " << Stores;
       R << ", storing: " << AccRel << ")";
       S->getFunction().getContext().diagnose(R);
-      return false;
+
+      IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
     }
 
     Stores = give(isl_union_map_union(Stores.take(), AccRel.take()));
   }
-
-  return true;
 }
 
 void ZoneAlgorithm::addArrayReadAccess(MemoryAccess *MA) {
@@ -397,7 +411,7 @@ void ZoneAlgorithm::addArrayReadAccess(MemoryAccess *MA) {
   ScopStmt *Stmt = MA->getStatement();
 
   // { DomainRead[] -> Element[] }
-  auto AccRel = getAccessRelationFor(MA);
+  auto AccRel = intersectRange(getAccessRelationFor(MA), CompatibleElts);
   AllReads = give(isl_union_map_add_map(AllReads.take(), AccRel.copy()));
 
   if (LoadInst *Load = dyn_cast_or_null<LoadInst>(MA->getAccessInstruction())) {
@@ -424,7 +438,7 @@ void ZoneAlgorithm::addArrayWriteAccess(MemoryAccess *MA) {
   auto *Stmt = MA->getStatement();
 
   // { Domain[] -> Element[] }
-  auto AccRel = getAccessRelationFor(MA);
+  auto AccRel = intersectRange(getAccessRelationFor(MA), CompatibleElts);
 
   if (MA->isMustWrite())
     AllMustWrites =
@@ -459,12 +473,21 @@ isl::union_map ZoneAlgorithm::makeEmptyUnionMap() const {
   return give(isl_union_map_empty(ParamSpace.copy()));
 }
 
-bool ZoneAlgorithm::isCompatibleScop() {
-  for (auto &Stmt : *S) {
-    if (!isCompatibleStmt(&Stmt))
-      return false;
-  }
-  return true;
+void ZoneAlgorithm::collectCompatibleElts() {
+  // First find all the incompatible elements, then take the complement.
+  // We compile the list of compatible (rather than incompatible) elements so
+  // users can intersect with the list, not requiring a subtract operation. It
+  // also allows us to define a 'universe' of all elements and makes it more
+  // explicit in which array elements can be used.
+  isl::union_set AllElts = makeEmptyUnionSet();
+  isl::union_set IncompatibleElts = makeEmptyUnionSet();
+
+  for (auto &Stmt : *S)
+    collectIncompatibleElts(&Stmt, IncompatibleElts, AllElts);
+
+  NumIncompatibleArrays += isl_union_set_n_set(IncompatibleElts.keep());
+  CompatibleElts = AllElts.subtract(IncompatibleElts);
+  NumCompatibleArrays += isl_union_set_n_set(CompatibleElts.keep());
 }
 
 isl::map ZoneAlgorithm::getScatterFor(ScopStmt *Stmt) const {
@@ -655,6 +678,15 @@ isl::map ZoneAlgorithm::makeValInst(Value *Val, ScopStmt *UserStmt, Loop *Scope,
   llvm_unreachable("Unhandled use type");
 }
 
+bool ZoneAlgorithm::isCompatibleAccess(MemoryAccess *MA) {
+  if (!MA)
+    return false;
+  if (!MA->isLatestArrayKind())
+    return false;
+  Instruction *AccInst = MA->getAccessInstruction();
+  return isa<StoreInst>(AccInst) || isa<LoadInst>(AccInst);
+}
+
 void ZoneAlgorithm::computeCommon() {
   AllReads = makeEmptyUnionMap();
   AllMayWrites = makeEmptyUnionMap();
@@ -665,6 +697,8 @@ void ZoneAlgorithm::computeCommon() {
   for (auto &Stmt : *S) {
     for (auto *MA : Stmt) {
       if (!MA->isLatestArrayKind())
+        continue;
+      if (!isCompatibleAccess(MA))
         continue;
 
       if (MA->isRead())
