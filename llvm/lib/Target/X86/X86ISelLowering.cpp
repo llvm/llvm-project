@@ -31373,7 +31373,7 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
       // Repack the lower part and higher part result of mul into a wider
       // result. Make sure the type of mul result is VT.
       MVT ResVT = MVT::getVectorVT(MVT::i32, RegSize / 32);
-      SDValue Res = DAG.getNode(X86ISD::UNPCKL, DL, OpsVT, MulLo, MulHi);
+      SDValue Res = getUnpackl(DAG, DL, OpsVT, MulLo, MulHi);
       Res = DAG.getNode(ISD::BITCAST, DL, ResVT, Res);
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
                          DAG.getIntPtrConstant(0, DL));
@@ -35230,6 +35230,9 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
 
 static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasSSE2())
+    return SDValue();
+
   SDValue MulOp = N->getOperand(0);
   SDValue Phi = N->getOperand(1);
 
@@ -35275,6 +35278,9 @@ static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineLoopSADPattern(SDNode *N, SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasSSE2())
+    return SDValue();
+
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);

@@ -253,7 +253,7 @@ std::error_code create_link(const Twine &to, const Twine &from) {
 }
 
 std::error_code create_hard_link(const Twine &to, const Twine &from) {
-	return create_link(to, from);
+  return create_link(to, from);
 }
 
 std::error_code remove(const Twine &path, bool IgnoreNonExisting) {

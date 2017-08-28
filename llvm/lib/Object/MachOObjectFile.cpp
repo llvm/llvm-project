@@ -500,7 +500,7 @@ static Error checkDysymtabCommand(const MachOObjectFile &Obj,
                           "past the end of the file");
   if (Error Err = checkOverlappingElement(Elements, Dysymtab.modtaboff,
                                           Dysymtab.nmodtab * sizeof_modtab,
-					  "module table"))
+                                          "module table"))
     return Err;
   if (Dysymtab.extrefsymoff > FileSize)
     return malformedError("extrefsymoff field of LC_DYSYMTAB command " +
@@ -516,8 +516,8 @@ static Error checkDysymtabCommand(const MachOObjectFile &Obj,
                           "past the end of the file");
   if (Error Err = checkOverlappingElement(Elements, Dysymtab.extrefsymoff,
                                           Dysymtab.nextrefsyms *
-                                          sizeof(MachO::dylib_reference),
-					  "reference table"))
+                                              sizeof(MachO::dylib_reference),
+                                          "reference table"))
     return Err;
   if (Dysymtab.indirectsymoff > FileSize)
     return malformedError("indirectsymoff field of LC_DYSYMTAB command " +
@@ -550,8 +550,8 @@ static Error checkDysymtabCommand(const MachOObjectFile &Obj,
                           "the file");
   if (Error Err = checkOverlappingElement(Elements, Dysymtab.extreloff,
                                           Dysymtab.nextrel *
-                                          sizeof(MachO::relocation_info),
-					  "external relocation table"))
+                                              sizeof(MachO::relocation_info),
+                                          "external relocation table"))
     return Err;
   if (Dysymtab.locreloff > FileSize)
     return malformedError("locreloff field of LC_DYSYMTAB command " +
@@ -567,8 +567,8 @@ static Error checkDysymtabCommand(const MachOObjectFile &Obj,
                           "the file");
   if (Error Err = checkOverlappingElement(Elements, Dysymtab.locreloff,
                                           Dysymtab.nlocrel *
-                                          sizeof(MachO::relocation_info),
-					  "local relocation table"))
+                                              sizeof(MachO::relocation_info),
+                                          "local relocation table"))
     return Err;
   *DysymtabLoadCmd = Load.Ptr;
   return Error::success();
@@ -3088,7 +3088,7 @@ void MachORebaseEntry::moveNext() {
                             Twine(error) + " for opcode at: 0x" +
                             Twine::utohexstr(OpcodeStart - Opcodes.begin()));
         moveToEnd();
-	return;
+        return;
       }
       DEBUG_WITH_TYPE(
           "mach-o-rebase",
@@ -3129,7 +3129,7 @@ void MachORebaseEntry::moveNext() {
                             Twine(error) + " for opcode at: 0x" +
                             Twine::utohexstr(OpcodeStart - Opcodes.begin()));
         moveToEnd();
-	return;
+        return;
       }
       DEBUG_WITH_TYPE(
           "mach-o-rebase",
@@ -3167,7 +3167,7 @@ void MachORebaseEntry::moveNext() {
                             Twine(error) + " for opcode at: 0x" +
                             Twine::utohexstr(OpcodeStart - Opcodes.begin()));
         moveToEnd();
-	return;
+        return;
       }
       DEBUG_WITH_TYPE(
           "mach-o-rebase",
@@ -3220,7 +3220,7 @@ void MachORebaseEntry::moveNext() {
                             Twine(error) + " for opcode at: 0x" +
                             Twine::utohexstr(OpcodeStart - Opcodes.begin()));
         moveToEnd();
-	return;
+        return;
       }
       DEBUG_WITH_TYPE(
           "mach-o-rebase",
@@ -3770,7 +3770,7 @@ void MachOBindEntry::moveNext() {
                            Twine(error) + " for opcode at: 0x" +
                            Twine::utohexstr(OpcodeStart - Opcodes.begin()));
         moveToEnd();
-	return;
+        return;
       }
       DEBUG_WITH_TYPE(
           "mach-o-bind",

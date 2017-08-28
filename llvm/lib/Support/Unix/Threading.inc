@@ -108,14 +108,14 @@ uint64_t llvm::get_threadid() {
 
 static constexpr uint32_t get_max_thread_name_length_impl() {
 #if defined(__NetBSD__)
-	return PTHREAD_MAX_NAMELEN_NP;
+  return PTHREAD_MAX_NAMELEN_NP;
 #elif defined(__APPLE__)
-	return 64;
+  return 64;
 #elif defined(__linux__)
 #if HAVE_PTHREAD_SETNAME_NP
-	return 16;
+  return 16;
 #else
-	return 0;
+  return 0;
 #endif
 #elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
   return 16;

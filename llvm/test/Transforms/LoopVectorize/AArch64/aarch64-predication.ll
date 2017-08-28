@@ -26,9 +26,9 @@ target triple = "aarch64--linux-gnu"
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_UDIV_IF:.*]], label %[[PRED_UDIV_CONTINUE:.*]]
 ; CHECK:       [[PRED_UDIV_IF]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i64 [[TMP5]], %x
-; CHECK-NEXT:    [[TMP7:%.*]] = udiv i64 [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], %x
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = udiv i64 [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> undef, i64 [[TMP7]], i32 0
 ; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE]]
 ; CHECK:       [[PRED_UDIV_CONTINUE]]:
@@ -37,9 +37,9 @@ target triple = "aarch64--linux-gnu"
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_UDIV_IF1:.*]], label %[[PRED_UDIV_CONTINUE2]]
 ; CHECK:       [[PRED_UDIV_IF1]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP12]], %x
-; CHECK-NEXT:    [[TMP14:%.*]] = udiv i64 [[TMP11]], [[TMP13]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i64 [[TMP11]], %x
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = udiv i64 [[TMP13]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP14]], i32 1
 ; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE2]]
 ; CHECK:       [[PRED_UDIV_CONTINUE2]]:
