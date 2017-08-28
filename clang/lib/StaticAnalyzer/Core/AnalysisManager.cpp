@@ -27,7 +27,9 @@ AnalysisManager::AnalysisManager(ASTContext &ctx, DiagnosticsEngine &diags,
               /*AddInitializers=*/true,
               Options.includeTemporaryDtorsInCFG(),
 	            Options.includeLifetimeInCFG(),
-              Options.includeLoopExitInCFG(),
+              // Adding LoopExit elements to the CFG is a requirement for loop
+              // unrolling.
+              Options.includeLoopExitInCFG() || Options.shouldUnrollLoops(),
               Options.shouldSynthesizeBodies(),
               Options.shouldConditionalizeStaticInitializers(),
               /*addCXXNewAllocator=*/true,
