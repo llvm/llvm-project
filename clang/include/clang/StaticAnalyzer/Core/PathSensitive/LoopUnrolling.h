@@ -38,7 +38,7 @@ bool isUnrolledState(ProgramStateRef State);
 
 /// Updates the stack of loops contained by the ProgramState.
 ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
-                                ExplodedNode* Pred);
+                                ExplodedNode* Pred, unsigned maxVisitOnPath);
 
 /// Updates the given ProgramState. In current implementation it removes the top
 /// element of the stack of loops.

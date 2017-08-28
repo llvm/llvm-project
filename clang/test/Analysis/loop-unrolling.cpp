@@ -5,7 +5,7 @@ void clang_analyzer_warnIfReached();
 
 int getNum();
 void foo(int &);
-// Testing for loops.
+
 int simple_unroll1() {
   int a[9];
   int k = 42;
@@ -259,7 +259,6 @@ int nested_inlined_no_unroll1() {
   return 0;
 }
 
-
 int recursion_unroll1(bool b) {
   int k = 2;
   for (int i = 0; i < 5; i++) {
@@ -289,7 +288,7 @@ int recursion_unroll3(bool b) {
   int k = 2;
   for (int i = 0; i < 5; i++) {
     clang_analyzer_numTimesReached(); // expected-warning {{10}}
-    if(i == 4 && b) {
+    if (i == 4 && b) {
       recursion_unroll3(false);
       break;
     }
@@ -317,6 +316,60 @@ int loop_exit_while_empty_loop_stack() {
   if (getNum())
     for (int i = 1; i < 8; i++)
       ;
+  return 0;
+}
+
+int num_steps_on_limit() {
+  for (int i = 0; i < 128; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{128}}
+  }
+  clang_analyzer_numTimesReached(); // expected-warning {{1}}
+  return 0;
+}
+
+int num_steps_over_limit1() {
+  for (int i = 0; i < 129; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+  }
+  return 0;
+}
+
+int num_steps_on_limit2() {
+  for (int i = 0; i < 2; i++) {
+    for (int j = 0; j < 64; j++) {
+      clang_analyzer_numTimesReached(); // expected-warning {{128}}
+    }
+  }
+  return 0;
+}
+
+int num_steps_over_limit2() {
+  for (int i = 0; i < 2; i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{1}}
+    for (int j = 0; j <= 64; j++) {
+      clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    }
+  }
+  return 0;
+}
+
+int num_steps_on_limit3() {
+  for (int i = 0; i < getNum(); i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    for (int j = 0; j < 32; j++) {
+      clang_analyzer_numTimesReached(); // expected-warning {{128}}
+    }
+  }
+  return 0;
+}
+
+int num_steps_over_limit3() {
+  for (int i = 0; i < getNum(); i++) {
+    clang_analyzer_numTimesReached(); // expected-warning {{1}}
+    for (int j = 0; j < 33; j++) {
+      clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    }
+  }
   return 0;
 }
 
