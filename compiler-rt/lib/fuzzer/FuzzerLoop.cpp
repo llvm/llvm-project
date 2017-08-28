@@ -327,7 +327,7 @@ void Fuzzer::SetMaxMutationLen(size_t MaxMutationLen) {
 
 void Fuzzer::CheckExitOnSrcPosOrItem() {
   if (!Options.ExitOnSrcPos.empty()) {
-    static auto *PCsSet = new std::set<uintptr_t>;
+    static auto *PCsSet = new Set<uintptr_t>;
     auto HandlePC = [&](uintptr_t PC) {
       if (!PCsSet->insert(PC).second) return;
       std::string Descr = DescribePC("%F %L", PC + 1);
@@ -350,7 +350,7 @@ void Fuzzer::CheckExitOnSrcPosOrItem() {
 
 void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
   if (Options.OutputCorpus.empty() || !Options.ReloadIntervalSec) return;
-  std::vector<Unit> AdditionalCorpus;
+  Vector<Unit> AdditionalCorpus;
   ReadDirToVectorOfUnits(Options.OutputCorpus.c_str(), &AdditionalCorpus,
                          &EpochOfLastReadOfOutputCorpus, MaxSize,
                          /*ExitOnError*/ false);

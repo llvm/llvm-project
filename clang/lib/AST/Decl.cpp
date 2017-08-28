@@ -3553,8 +3553,7 @@ bool FieldDecl::isAnonymousStructOrUnion() const {
 
 unsigned FieldDecl::getBitWidthValue(const ASTContext &Ctx) const {
   assert(isBitField() && "not a bitfield");
-  auto *BitWidth = static_cast<Expr *>(InitStorage.getPointer());
-  return BitWidth->EvaluateKnownConstInt(Ctx).getZExtValue();
+  return getBitWidth()->EvaluateKnownConstInt(Ctx).getZExtValue();
 }
 
 unsigned FieldDecl::getFieldIndex() const {
@@ -3577,25 +3576,18 @@ unsigned FieldDecl::getFieldIndex() const {
 }
 
 SourceRange FieldDecl::getSourceRange() const {
-  switch (InitStorage.getInt()) {
-  // All three of these cases store an optional Expr*.
-  case ISK_BitWidthOrNothing:
-  case ISK_InClassCopyInit:
-  case ISK_InClassListInit:
-    if (const auto *E = static_cast<const Expr *>(InitStorage.getPointer()))
-      return SourceRange(getInnerLocStart(), E->getLocEnd());
-    // FALLTHROUGH
-
-  case ISK_CapturedVLAType:
-    return DeclaratorDecl::getSourceRange();
-  }
-  llvm_unreachable("bad init storage kind");
+  const Expr *FinalExpr = getInClassInitializer();
+  if (!FinalExpr)
+    FinalExpr = getBitWidth();
+  if (FinalExpr)
+    return SourceRange(getInnerLocStart(), FinalExpr->getLocEnd());
+  return DeclaratorDecl::getSourceRange();
 }
 
 void FieldDecl::setCapturedVLAType(const VariableArrayType *VLAType) {
   assert((getParent()->isLambda() || getParent()->isCapturedRecord()) &&
          "capturing type in non-lambda or captured record.");
-  assert(InitStorage.getInt() == ISK_BitWidthOrNothing &&
+  assert(InitStorage.getInt() == ISK_NoInit &&
          InitStorage.getPointer() == nullptr &&
          "bit width, initializer or captured type already set");
   InitStorage.setPointerAndInt(const_cast<VariableArrayType *>(VLAType),

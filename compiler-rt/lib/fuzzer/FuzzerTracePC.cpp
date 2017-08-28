@@ -221,8 +221,8 @@ void TracePC::PrintCoverage() {
   Printf("COVERAGE:\n");
   std::string LastFunctionName = "";
   std::string LastFileStr = "";
-  std::set<size_t> UncoveredLines;
-  std::set<size_t> CoveredLines;
+  Set<size_t> UncoveredLines;
+  Set<size_t> CoveredLines;
 
   auto FunctionEndCallback = [&](const std::string &CurrentFunc,
                                  const std::string &CurrentFile) {
@@ -270,7 +270,7 @@ void TracePC::PrintCoverage() {
 
 void TracePC::DumpCoverage() {
   if (EF->__sanitizer_dump_coverage) {
-    std::vector<uintptr_t> PCsCopy(GetNumPCs());
+    Vector<uintptr_t> PCsCopy(GetNumPCs());
     for (size_t i = 0; i < GetNumPCs(); i++)
       PCsCopy[i] = PCs()[i] ? GetPreviousInstructionPc(PCs()[i]) : 0;
     EF->__sanitizer_dump_coverage(PCsCopy.data(), PCsCopy.size());

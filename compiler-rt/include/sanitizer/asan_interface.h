@@ -144,6 +144,10 @@ extern "C" {
   void *__asan_addr_is_in_fake_stack(void *fake_stack, void *addr, void **beg,
                                      void **end);
 
+  // Performs cleanup before a [[noreturn]] function.  Must be called
+  // before things like _exit and execl to avoid false positives on stack.
+  void __asan_handle_no_return(void);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif
