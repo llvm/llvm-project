@@ -5230,6 +5230,7 @@ void ScopInfoRegionPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<ScopDetectionWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<AssumptionCacheTracker>();
+  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   AU.setPreservesAll();
 }
 
@@ -5279,8 +5280,9 @@ bool ScopInfoRegionPass::runOnRegion(Region *R, RGPassManager &RGM) {
   auto const &DL = F->getParent()->getDataLayout();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(*F);
+  auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
-  ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE);
+  ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE, ORE);
   S = SB.getScop(); // take ownership of scop object
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
@@ -5322,8 +5324,8 @@ INITIALIZE_PASS_END(ScopInfoRegionPass, "polly-scops",
 //===----------------------------------------------------------------------===//
 ScopInfo::ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
                    LoopInfo &LI, AliasAnalysis &AA, DominatorTree &DT,
-                   AssumptionCache &AC)
-    : DL(DL), SD(SD), SE(SE), LI(LI), AA(AA), DT(DT), AC(AC) {
+                   AssumptionCache &AC, OptimizationRemarkEmitter &ORE)
+    : DL(DL), SD(SD), SE(SE), LI(LI), AA(AA), DT(DT), AC(AC), ORE(ORE) {
   recompute();
 }
 
@@ -5336,7 +5338,7 @@ void ScopInfo::recompute() {
     if (!SD.isMaxRegionInScop(*R))
       continue;
 
-    ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE);
+    ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE, ORE);
     std::unique_ptr<Scop> S = SB.getScop();
     if (!S)
       continue;
@@ -5376,7 +5378,8 @@ ScopInfoAnalysis::Result ScopInfoAnalysis::run(Function &F,
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = FAM.getResult<AssumptionAnalysis>(F);
   auto &DL = F.getParent()->getDataLayout();
-  return {DL, SD, SE, LI, AA, DT, AC};
+  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  return {DL, SD, SE, LI, AA, DT, AC, ORE};
 }
 
 PreservedAnalyses ScopInfoPrinterPass::run(Function &F,
@@ -5401,6 +5404,7 @@ void ScopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<ScopDetectionWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<AssumptionCacheTracker>();
+  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   AU.setPreservesAll();
 }
 
@@ -5412,8 +5416,9 @@ bool ScopInfoWrapperPass::runOnFunction(Function &F) {
   auto const &DL = F.getParent()->getDataLayout();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
-  Result.reset(new ScopInfo{DL, SD, SE, LI, AA, DT, AC});
+  Result.reset(new ScopInfo{DL, SD, SE, LI, AA, DT, AC, ORE});
   return false;
 }
 

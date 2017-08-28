@@ -1591,6 +1591,8 @@ void IslScheduleOptimizer::getAnalysisUsage(AnalysisUsage &AU) const {
   ScopPass::getAnalysisUsage(AU);
   AU.addRequired<DependenceInfo>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
+
+  AU.addPreserved<DependenceInfo>();
 }
 
 Pass *polly::createIslScheduleOptimizerPass() {

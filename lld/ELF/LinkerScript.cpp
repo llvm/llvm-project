@@ -642,13 +642,11 @@ void LinkerScript::removeEmptyCommands() {
   // clutter the output.
   // We instead remove trivially empty sections. The bfd linker seems even
   // more aggressive at removing them.
-  auto Pos = std::remove_if(Opt.Commands.begin(), Opt.Commands.end(),
-                            [&](BaseCommand *Base) {
-                              if (auto *Sec = dyn_cast<OutputSection>(Base))
-                                return !Sec->Live;
-                              return false;
-                            });
-  Opt.Commands.erase(Pos, Opt.Commands.end());
+  llvm::erase_if(Opt.Commands, [&](BaseCommand *Base) {
+    if (auto *Sec = dyn_cast<OutputSection>(Base))
+      return !Sec->Live;
+    return false;
+  });
 }
 
 static bool isAllSectionDescription(const OutputSection &Cmd) {
@@ -778,10 +776,8 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &Phdrs) {
     Phdrs.erase(It);
   }
 
-  auto PhdrI = llvm::find_if(
-      Phdrs, [](const PhdrEntry *E) { return E->p_type == PT_PHDR; });
-  if (PhdrI != Phdrs.end())
-    Phdrs.erase(PhdrI);
+  llvm::erase_if(Phdrs,
+                 [](const PhdrEntry *E) { return E->p_type == PT_PHDR; });
 }
 
 LinkerScript::AddressState::AddressState(const ScriptConfiguration &Opt) {

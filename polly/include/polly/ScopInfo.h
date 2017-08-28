@@ -3096,11 +3096,12 @@ private:
   AliasAnalysis &AA;
   DominatorTree &DT;
   AssumptionCache &AC;
+  OptimizationRemarkEmitter &ORE;
 
 public:
   ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
            LoopInfo &LI, AliasAnalysis &AA, DominatorTree &DT,
-           AssumptionCache &AC);
+           AssumptionCache &AC, OptimizationRemarkEmitter &ORE);
 
   /// Get the Scop object for the given Region.
   ///

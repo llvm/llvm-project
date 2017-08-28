@@ -333,6 +333,8 @@ public:
 
   /// Register all analyses and transformation required.
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    ScopPass::getAnalysisUsage(AU);
+
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<IslAstInfoWrapperPass>();
     AU.addRequired<RegionInfoPass>();
@@ -342,21 +344,10 @@ public:
     AU.addRequired<LoopInfoWrapperPass>();
 
     AU.addPreserved<DependenceInfo>();
-
-    AU.addPreserved<AAResultsWrapperPass>();
-    AU.addPreserved<BasicAAWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addPreserved<IslAstInfoWrapperPass>();
-    AU.addPreserved<ScopDetectionWrapperPass>();
-    AU.addPreserved<ScalarEvolutionWrapperPass>();
-    AU.addPreserved<SCEVAAWrapperPass>();
 
     // FIXME: We do not yet add regions for the newly generated code to the
     //        region tree.
-    AU.addPreserved<RegionInfoPass>();
-    AU.addPreserved<ScopInfoRegionPass>();
   }
 };
 
