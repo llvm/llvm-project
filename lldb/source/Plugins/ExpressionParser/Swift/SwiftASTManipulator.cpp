@@ -582,10 +582,10 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
       is_static, specifier, is_capture_list, source_loc, name, swift::Type(),
       new_decl_context);
   result_loc_info.tmp_var_decl->setImplicit();
-  result_loc_info.tmp_var_decl->setAccessibility(
-      swift::Accessibility::Internal);
-  result_loc_info.tmp_var_decl->setSetterAccessibility(
-      swift::Accessibility::Internal);
+  result_loc_info.tmp_var_decl->setAccess(
+      swift::AccessLevel::Internal);
+  result_loc_info.tmp_var_decl->setSetterAccess(
+      swift::AccessLevel::Internal);
 
   swift::NamedPattern *var_pattern =
       new (ast_context) swift::NamedPattern(result_loc_info.tmp_var_decl, true);
@@ -836,16 +836,16 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
     virtual bool walkToDeclPre(swift::Decl *decl) {
       if (swift::ValueDecl *value_decl =
               llvm::dyn_cast<swift::ValueDecl>(decl)) {
-        auto access = swift::Accessibility::Public;
+        auto access = swift::AccessLevel::Public;
         if (swift::isa<swift::ClassDecl>(value_decl) ||
             swift::isa<swift::ClassDecl>(value_decl->getDeclContext())) {
-          access = swift::Accessibility::Open;
+          access = swift::AccessLevel::Open;
         }
 
-        value_decl->overwriteAccessibility(access);
+        value_decl->overwriteAccess(access);
         if (swift::AbstractStorageDecl *var_decl =
                 llvm::dyn_cast<swift::AbstractStorageDecl>(decl))
-          var_decl->overwriteSetterAccessibility(access);
+          var_decl->overwriteSetterAccess(access);
       }
 
       return true;
@@ -981,8 +981,8 @@ void SwiftASTManipulator::InsertResult(
 
   CompilerType return_ast_type(&ast_context, result_type.getPointer());
 
-  result_var->overwriteAccessibility(swift::Accessibility::Public);
-  result_var->overwriteSetterAccessibility(swift::Accessibility::Public);
+  result_var->overwriteAccess(swift::AccessLevel::Public);
+  result_var->overwriteSetterAccess(swift::AccessLevel::Public);
 
   // Finally, go reset the return expression to the new result variable for each
   // of the return expressions.
@@ -1022,8 +1022,8 @@ void SwiftASTManipulator::InsertError(swift::VarDecl *error_var,
 
   CompilerType error_ast_type(&ast_context, error_type.getPointer());
 
-  error_var->overwriteAccessibility(swift::Accessibility::Public);
-  error_var->overwriteSetterAccessibility(swift::Accessibility::Public);
+  error_var->overwriteAccess(swift::AccessLevel::Public);
+  error_var->overwriteSetterAccess(swift::AccessLevel::Public);
 
   // Finally, go reset the return expression to the new result variable for each
   // of the return expressions.
@@ -1129,8 +1129,8 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
   swift::VarDecl *result_var =
       AddExternalVariable(result_var_name, return_ast_type, metadata_sp);
 
-  result_var->overwriteAccessibility(swift::Accessibility::Public);
-  result_var->overwriteSetterAccessibility(swift::Accessibility::Public);
+  result_var->overwriteAccess(swift::AccessLevel::Public);
+  result_var->overwriteSetterAccess(swift::AccessLevel::Public);
 
   // Finally, go reset the return expression to the new result variable for each
   // of the return expressions.
@@ -1171,9 +1171,9 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
             swift::VarDecl *error_var = AddExternalVariable(
                 error_var_name, error_ast_type, error_metadata_sp);
 
-            error_var->overwriteAccessibility(swift::Accessibility::Public);
-            error_var->overwriteSetterAccessibility(
-                swift::Accessibility::Public);
+            error_var->overwriteAccess(swift::AccessLevel::Public);
+            error_var->overwriteSetterAccess(
+                swift::AccessLevel::Public);
 
             InsertError(error_var, error_type);
             break;
@@ -1546,7 +1546,7 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
 
   if (type_alias_decl) {
     if (make_private) {
-      type_alias_decl->overwriteAccessibility(swift::Accessibility::Private);
+      type_alias_decl->overwriteAccess(swift::AccessLevel::Private);
     }
     m_source_file.Decls.push_back(type_alias_decl);
   }
