@@ -46,6 +46,12 @@ public:
   AtomicChange(llvm::StringRef FilePath, llvm::StringRef Key)
       : Key(Key), FilePath(FilePath) {}
 
+  AtomicChange(AtomicChange &&) = default;
+  AtomicChange(const AtomicChange &) = default;
+
+  AtomicChange &operator=(AtomicChange &&) = default;
+  AtomicChange &operator=(const AtomicChange &) = default;
+
   /// \brief Returns the atomic change as a YAML string.
   std::string toYAMLString();
 
@@ -129,6 +135,8 @@ private:
   std::vector<std::string> RemovedHeaders;
   tooling::Replacements Replaces;
 };
+
+using AtomicChanges = std::vector<AtomicChange>;
 
 // Defines specs for applying changes.
 struct ApplyChangesSpec {
