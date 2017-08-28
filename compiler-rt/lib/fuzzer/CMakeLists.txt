@@ -30,11 +30,14 @@ CHECK_CXX_SOURCE_COMPILES("
   }
   " HAS_THREAD_LOCAL)
 
+set(LIBFUZZER_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+
 if (CMAKE_CXX_FLAGS MATCHES "fsanitize-coverage")
-  set(LIBFUZZER_CFLAGS -fno-sanitize-coverage=trace-pc-guard,edge,trace-cmp,indirect-calls,8bit-counters)
+  list(APPEND LIBFUZZER_CFLAGS -fno-sanitize-coverage=trace-pc-guard,edge,trace-cmp,indirect-calls,8bit-counters)
 endif()
+
 if(NOT HAS_THREAD_LOCAL)
-  set(LIBFUZZER_CFLAGS "${LIBFUZZER_CFLAGS} -Dthread_local=__thread")
+  list(APPEND LIBFUZZER_CFLAGS -Dthread_local=__thread)
 endif()
 
 if(APPLE)

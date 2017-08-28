@@ -2415,9 +2415,8 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   BuildMI(AllocMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 
-  // bx lr - Return from this function.
-  Opcode = Thumb ? ARM::tBX_RET : ARM::BX_RET;
-  BuildMI(AllocMBB, DL, TII.get(Opcode)).add(predOps(ARMCC::AL));
+  // Return from this function.
+  BuildMI(AllocMBB, DL, TII.get(ST->getReturnOpcode())).add(predOps(ARMCC::AL));
 
   // Restore SR0 and SR1 in case of __morestack() was not called.
   // pop {SR0, SR1}

@@ -41,6 +41,11 @@ void markLive(const std::vector<Chunk *> &Chunks);
 // Implemented in ICF.cpp.
 void doICF(const std::vector<Chunk *> &Chunks);
 
+class COFFOptTable : public llvm::opt::OptTable {
+public:
+  COFFOptTable();
+};
+
 class ArgParser {
 public:
   // Parses command line options.
@@ -54,8 +59,9 @@ public:
 
 private:
   std::vector<const char *> tokenize(StringRef S);
-
   std::vector<const char *> replaceResponseFiles(std::vector<const char *>);
+
+  COFFOptTable Table;
 };
 
 class LinkerDriver {
@@ -71,7 +77,6 @@ public:
                             StringRef ParentName);
 
 private:
-  ArgParser Parser;
   SymbolTable Symtab;
 
   std::unique_ptr<llvm::TarWriter> Tar; // for /linkrepro

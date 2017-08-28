@@ -100,7 +100,13 @@ extern "C" int HexagonTargetMachineModule;
 int HexagonTargetMachineModule = 0;
 
 static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
-  return new VLIWMachineScheduler(C, make_unique<ConvergingVLIWScheduler>());
+  ScheduleDAGMILive *DAG =
+    new VLIWMachineScheduler(C, make_unique<ConvergingVLIWScheduler>());
+  DAG->addMutation(make_unique<HexagonSubtarget::UsrOverflowMutation>());
+  DAG->addMutation(make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
+  DAG->addMutation(make_unique<HexagonSubtarget::CallMutation>());
+  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
+  return DAG;
 }
 
 static MachineSchedRegistry

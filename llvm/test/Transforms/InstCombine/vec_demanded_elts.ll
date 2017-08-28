@@ -141,3 +141,34 @@ define <2 x i64> @PR24922(<2 x i64> %v) {
   %result = select <2 x i1> <i1 icmp eq (i64 extractelement (<2 x i64> bitcast (<4 x i32> <i32 15, i32 15, i32 15, i32 15> to <2 x i64>), i64 0), i64 0), i1 true>, <2 x i64> %v, <2 x i64> zeroinitializer
   ret <2 x i64> %result
 }
+
+; FIXME: The shuffle only demands the 0th (undef) element of 'out123', so everything should fold away.
+
+define <4 x float> @inselt_shuf_no_demand(float %a1, float %a2, float %a3) {
+; CHECK-LABEL: @inselt_shuf_no_demand(
+; CHECK-NEXT:    [[OUT1:%.*]] = insertelement <4 x float> undef, float %a1, i32 1
+; CHECK-NEXT:    [[OUT12:%.*]] = insertelement <4 x float> [[OUT1]], float %a2, i32 2
+; CHECK-NEXT:    ret <4 x float> [[OUT12]]
+;
+  %out1 = insertelement <4 x float> undef, float %a1, i32 1
+  %out12 = insertelement <4 x float> %out1, float %a2, i32 2
+  %out123 = insertelement <4 x float> %out12, float %a3, i32 3
+  %shuffle = shufflevector <4 x float> %out123, <4 x float> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  ret <4 x float> %shuffle
+}
+
+; FIXME: The shuffle only demands the 0th (undef) element of 'out123', so everything should fold away.
+
+define <4 x float> @inselt_shuf_no_demand_commute(float %a1, float %a2, float %a3) {
+; CHECK-LABEL: @inselt_shuf_no_demand_commute(
+; CHECK-NEXT:    [[OUT1:%.*]] = insertelement <4 x float> undef, float %a1, i32 1
+; CHECK-NEXT:    [[OUT12:%.*]] = insertelement <4 x float> [[OUT1]], float %a2, i32 2
+; CHECK-NEXT:    ret <4 x float> [[OUT12]]
+;
+  %out1 = insertelement <4 x float> undef, float %a1, i32 1
+  %out12 = insertelement <4 x float> %out1, float %a2, i32 2
+  %out123 = insertelement <4 x float> %out12, float %a3, i32 3
+  %shuffle = shufflevector <4 x float> undef, <4 x float> %out123, <4 x i32> <i32 4, i32 undef, i32 undef, i32 undef>
+  ret <4 x float> %shuffle
+}
+

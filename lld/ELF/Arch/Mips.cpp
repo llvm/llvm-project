@@ -143,7 +143,7 @@ void MIPS<ELFT>::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
 }
 
 template <endianness E, uint8_t BSIZE, uint8_t SHIFT>
-static void writeRelocation(uint8_t *Loc, uint32_t Type, uint64_t V) {
+static void writeRelocation(uint8_t *Loc, uint64_t V) {
   uint32_t Instr = read32<E>(Loc);
   uint32_t Mask = 0xffffffff >> (32 - BSIZE);
   uint32_t Data = (Instr & ~Mask) | ((V >> SHIFT) & Mask);
@@ -176,9 +176,9 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *Buf) const {
   write32<E>(Buf + 28, 0x2718fffe); // subu  $24, $24, 2
 
   uint64_t GotPlt = InX::GotPlt->getVA();
-  writeRelocation<E, 16, 16>(Buf, R_MIPS_HI16, GotPlt + 0x8000);
-  writeRelocation<E, 16, 0>(Buf + 4, R_MIPS_LO16, GotPlt);
-  writeRelocation<E, 16, 0>(Buf + 8, R_MIPS_LO16, GotPlt);
+  writeRelocation<E, 16, 16>(Buf, GotPlt + 0x8000);
+  writeRelocation<E, 16, 0>(Buf + 4, GotPlt);
+  writeRelocation<E, 16, 0>(Buf + 8, GotPlt);
 }
 
 template <class ELFT>
@@ -191,9 +191,9 @@ void MIPS<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                                    // jr    $25
   write32<E>(Buf + 8, isMipsR6<ELFT>() ? 0x03200009 : 0x03200008);
   write32<E>(Buf + 12, 0x25f80000); // addiu $24, $15, %lo(.got.plt entry)
-  writeRelocation<E, 16, 16>(Buf, R_MIPS_HI16, GotPltEntryAddr + 0x8000);
-  writeRelocation<E, 16, 0>(Buf + 4, R_MIPS_LO16, GotPltEntryAddr);
-  writeRelocation<E, 16, 0>(Buf + 12, R_MIPS_LO16, GotPltEntryAddr);
+  writeRelocation<E, 16, 16>(Buf, GotPltEntryAddr + 0x8000);
+  writeRelocation<E, 16, 0>(Buf + 4, GotPltEntryAddr);
+  writeRelocation<E, 16, 0>(Buf + 12, GotPltEntryAddr);
 }
 
 template <class ELFT>
@@ -312,17 +312,17 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
     write64<E>(Loc, Val);
     break;
   case R_MIPS_26:
-    writeRelocation<E, 26, 2>(Loc, Type, Val);
+    writeRelocation<E, 26, 2>(Loc, Val);
     break;
   case R_MIPS_GOT16:
     // The R_MIPS_GOT16 relocation's value in "relocatable" linking mode
     // is updated addend (not a GOT index). In that case write high 16 bits
     // to store a correct addend value.
     if (Config->Relocatable)
-      writeRelocation<E, 16, 16>(Loc, Type, Val + 0x8000);
+      writeRelocation<E, 16, 16>(Loc, Val + 0x8000);
     else {
       checkInt<16>(Loc, Val, Type);
-      writeRelocation<E, 16, 0>(Loc, Type, Val);
+      writeRelocation<E, 16, 0>(Loc, Val);
     }
     break;
   case R_MIPS_GOT_DISP:
@@ -341,7 +341,7 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   case R_MIPS_TLS_DTPREL_LO16:
   case R_MIPS_TLS_GOTTPREL:
   case R_MIPS_TLS_TPREL_LO16:
-    writeRelocation<E, 16, 0>(Loc, Type, Val);
+    writeRelocation<E, 16, 0>(Loc, Val);
     break;
   case R_MIPS_CALL_HI16:
   case R_MIPS_GOT_HI16:
@@ -349,13 +349,13 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   case R_MIPS_PCHI16:
   case R_MIPS_TLS_DTPREL_HI16:
   case R_MIPS_TLS_TPREL_HI16:
-    writeRelocation<E, 16, 16>(Loc, Type, Val + 0x8000);
+    writeRelocation<E, 16, 16>(Loc, Val + 0x8000);
     break;
   case R_MIPS_HIGHER:
-    writeRelocation<E, 16, 32>(Loc, Type, Val + 0x80008000);
+    writeRelocation<E, 16, 32>(Loc, Val + 0x80008000);
     break;
   case R_MIPS_HIGHEST:
-    writeRelocation<E, 16, 48>(Loc, Type, Val + 0x800080008000);
+    writeRelocation<E, 16, 48>(Loc, Val + 0x800080008000);
     break;
   case R_MIPS_JALR:
     // Ignore this optimization relocation for now
@@ -363,25 +363,25 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   case R_MIPS_PC16:
     checkAlignment<4>(Loc, Val, Type);
     checkInt<18>(Loc, Val, Type);
-    writeRelocation<E, 16, 2>(Loc, Type, Val);
+    writeRelocation<E, 16, 2>(Loc, Val);
     break;
   case R_MIPS_PC19_S2:
     checkAlignment<4>(Loc, Val, Type);
     checkInt<21>(Loc, Val, Type);
-    writeRelocation<E, 19, 2>(Loc, Type, Val);
+    writeRelocation<E, 19, 2>(Loc, Val);
     break;
   case R_MIPS_PC21_S2:
     checkAlignment<4>(Loc, Val, Type);
     checkInt<23>(Loc, Val, Type);
-    writeRelocation<E, 21, 2>(Loc, Type, Val);
+    writeRelocation<E, 21, 2>(Loc, Val);
     break;
   case R_MIPS_PC26_S2:
     checkAlignment<4>(Loc, Val, Type);
     checkInt<28>(Loc, Val, Type);
-    writeRelocation<E, 26, 2>(Loc, Type, Val);
+    writeRelocation<E, 26, 2>(Loc, Val);
     break;
   case R_MIPS_PC32:
-    writeRelocation<E, 32, 0>(Loc, Type, Val);
+    writeRelocation<E, 32, 0>(Loc, Val);
     break;
   default:
     error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));

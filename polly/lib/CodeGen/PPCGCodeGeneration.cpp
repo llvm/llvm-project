@@ -3520,6 +3520,8 @@ public:
   void printScop(raw_ostream &, Scop &) const override {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    ScopPass::getAnalysisUsage(AU);
+
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<RegionInfoPass>();
     AU.addRequired<ScalarEvolutionWrapperPass>();
@@ -3527,19 +3529,8 @@ public:
     AU.addRequired<ScopInfoRegionPass>();
     AU.addRequired<LoopInfoWrapperPass>();
 
-    AU.addPreserved<AAResultsWrapperPass>();
-    AU.addPreserved<BasicAAWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<ScopDetectionWrapperPass>();
-    AU.addPreserved<ScalarEvolutionWrapperPass>();
-    AU.addPreserved<SCEVAAWrapperPass>();
-
     // FIXME: We do not yet add regions for the newly generated code to the
     //        region tree.
-    AU.addPreserved<RegionInfoPass>();
-    AU.addPreserved<ScopInfoRegionPass>();
   }
 };
 } // namespace
