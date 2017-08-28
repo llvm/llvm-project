@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=arm-linux-androideabi -verify-machineinstrs | FileCheck %s -check-prefix=ARM-android
-; RUN: llc < %s -mtriple=arm-linux-unknown-gnueabi -verify-machineinstrs | FileCheck %s -check-prefix=ARM-linux
-; RUN: llc < %s -mtriple=arm-linux-androideabi -filetype=obj
-; RUN: llc < %s -mtriple=arm-linux-unknown-gnueabi -filetype=obj
+; RUN: llc < %s -mtriple=arm-linux-androideabi -mattr=+v4t -verify-machineinstrs | FileCheck %s -check-prefix=ARM-android
+; RUN: llc < %s -mtriple=arm-linux-unknown-gnueabi -mattr=+v4t -verify-machineinstrs | FileCheck %s -check-prefix=ARM-linux
+; RUN: llc < %s -mtriple=arm-linux-androideabi -mattr=+v4t -filetype=obj
+; RUN: llc < %s -mtriple=arm-linux-unknown-gnueabi -mattr=+v4t -filetype=obj
 
 ; Just to prevent the alloca from being optimized away
 declare void @dummy_use(i32*, i32)
