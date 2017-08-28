@@ -240,6 +240,23 @@ TEST(SanitizerCommon, SizeClassAllocator32Compact) {
   TestSizeClassAllocator<Allocator32Compact>();
 }
 
+struct AP32SeparateBatches {
+  static const uptr kSpaceBeg = 0;
+  static const u64 kSpaceSize = kAddressSpaceSize;
+  static const uptr kMetadataSize = 16;
+  typedef DefaultSizeClassMap SizeClassMap;
+  static const uptr kRegionSizeLog = ::kRegionSizeLog;
+  typedef FlatByteMap<kFlatByteMapSize> ByteMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags =
+      SizeClassAllocator32FlagMasks::kUseSeparateSizeClassForBatch;
+};
+typedef SizeClassAllocator32<AP32SeparateBatches> Allocator32SeparateBatches;
+
+TEST(SanitizerCommon, SizeClassAllocator32SeparateBatches) {
+  TestSizeClassAllocator<Allocator32SeparateBatches>();
+}
+
 template <class Allocator>
 void SizeClassAllocatorMetadataStress() {
   Allocator *a = new Allocator;

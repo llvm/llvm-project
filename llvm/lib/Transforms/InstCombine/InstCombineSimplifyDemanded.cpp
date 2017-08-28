@@ -426,7 +426,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I->getOperand(1);
 
     // Otherwise just compute the known bits of the result.
-    bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
+    bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
     Known = KnownBits::computeForAddSub(I->getOpcode() == Instruction::Add,
                                         NSW, LHSKnown, RHSKnown);
     break;

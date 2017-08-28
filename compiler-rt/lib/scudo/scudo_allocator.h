@@ -23,10 +23,10 @@
 namespace __scudo {
 
 enum AllocType : u8 {
-  FromMalloc    = 0, // Memory block came from malloc, realloc, calloc, etc.
-  FromNew       = 1, // Memory block came from operator new.
-  FromNewArray  = 2, // Memory block came from operator new [].
-  FromMemalign  = 3, // Memory block came from memalign, posix_memalign, etc.
+  FromMalloc    = 0,  // Memory block came from malloc, realloc, calloc, etc.
+  FromNew       = 1,  // Memory block came from operator new.
+  FromNewArray  = 2,  // Memory block came from operator new [].
+  FromMemalign  = 3,  // Memory block came from memalign, posix_memalign, etc.
 };
 
 enum ChunkState : u8 {
@@ -43,15 +43,15 @@ enum ChunkState : u8 {
 typedef u64 PackedHeader;
 struct UnpackedHeader {
   u64 Checksum          : 16;
-  u64 SizeOrUnusedBytes : 19; // Size for Primary backed allocations, amount of
-                              // unused bytes in the chunk for Secondary ones.
+  u64 SizeOrUnusedBytes : 19;  // Size for Primary backed allocations, amount of
+                               // unused bytes in the chunk for Secondary ones.
   u64 FromPrimary       : 1;
-  u64 State             : 2;  // available, allocated, or quarantined
-  u64 AllocType         : 2;  // malloc, new, new[], or memalign
-  u64 Offset            : 16; // Offset from the beginning of the backend
-                              // allocation to the beginning of the chunk
-                              // itself, in multiples of MinAlignment. See
-                              // comment about its maximum value and in init().
+  u64 State             : 2;   // available, allocated, or quarantined
+  u64 AllocType         : 2;   // malloc, new, new[], or memalign
+  u64 Offset            : 16;  // Offset from the beginning of the backend
+                               // allocation to the beginning of the chunk
+                               // itself, in multiples of MinAlignment. See
+                               // comment about its maximum value and in init().
   u64 Salt              : 8;
 };
 
@@ -109,7 +109,8 @@ struct AP32 {
   typedef __scudo::ByteMap ByteMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags =
-      SizeClassAllocator32FlagMasks::kRandomShuffleChunks;
+      SizeClassAllocator32FlagMasks::kRandomShuffleChunks |
+      SizeClassAllocator32FlagMasks::kUseSeparateSizeClassForBatch;
 };
 typedef SizeClassAllocator32<AP32> PrimaryAllocator;
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64

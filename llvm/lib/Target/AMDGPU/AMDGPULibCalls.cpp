@@ -1170,6 +1170,8 @@ bool AMDGPULibCalls::fold_fma_mad(CallInst *CI, IRBuilder<> &B,
 
 // Get a scalar native builtin signle argument FP function
 Constant* AMDGPULibCalls::getNativeFunction(Module* M, const FuncInfo& FInfo) {
+  if (getArgType(FInfo) == AMDGPULibFunc::F64 || !HasNative(FInfo.getId()))
+    return nullptr;
   FuncInfo nf = FInfo;
   nf.setPrefix(AMDGPULibFunc::NATIVE);
   return getFunction(M, nf);
@@ -1178,9 +1180,7 @@ Constant* AMDGPULibCalls::getNativeFunction(Module* M, const FuncInfo& FInfo) {
 // fold sqrt -> native_sqrt (x)
 bool AMDGPULibCalls::fold_sqrt(CallInst *CI, IRBuilder<> &B,
                                const FuncInfo &FInfo) {
-  if ((getArgType(FInfo) == AMDGPULibFunc::F32 ||
-       getArgType(FInfo) == AMDGPULibFunc::F64) &&
-      (getVecSize(FInfo) == 1) &&
+  if (getArgType(FInfo) == AMDGPULibFunc::F32 && (getVecSize(FInfo) == 1) &&
       (FInfo.getPrefix() != AMDGPULibFunc::NATIVE)) {
     if (Constant *FPExpr = getNativeFunction(
         CI->getModule(), AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {

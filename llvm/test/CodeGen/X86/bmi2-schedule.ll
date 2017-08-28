@@ -15,10 +15,10 @@ define i32 @test_bzhi_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ;
 ; HASWELL-LABEL: test_bzhi_i32:
 ; HASWELL:       # BB#0:
-; HASWELL-NEXT:    bzhil %edi, (%rdx), %ecx # sched: [4:0.50]
+; HASWELL-NEXT:    bzhil %edi, (%rdx), %ecx # sched: [1:0.50]
 ; HASWELL-NEXT:    bzhil %edi, %esi, %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_bzhi_i32:
 ; ZNVER1:       # BB#0:
@@ -44,10 +44,10 @@ define i64 @test_bzhi_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ;
 ; HASWELL-LABEL: test_bzhi_i64:
 ; HASWELL:       # BB#0:
-; HASWELL-NEXT:    bzhiq %rdi, (%rdx), %rcx # sched: [4:0.50]
+; HASWELL-NEXT:    bzhiq %rdi, (%rdx), %rcx # sched: [1:0.50]
 ; HASWELL-NEXT:    bzhiq %rdi, %rsi, %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_bzhi_i64:
 ; ZNVER1:       # BB#0:
@@ -80,9 +80,9 @@ define i64 @test_mulx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; HASWELL-NEXT:    movq %rdx, %rax # sched: [1:0.25]
 ; HASWELL-NEXT:    movq %rdi, %rdx # sched: [1:0.25]
 ; HASWELL-NEXT:    mulxq %rsi, %rsi, %rcx # sched: [4:1.00]
-; HASWELL-NEXT:    mulxq (%rax), %rdx, %rax # sched: [8:1.00]
+; HASWELL-NEXT:    mulxq (%rax), %rdx, %rax # sched: [4:1.00]
 ; HASWELL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_mulx_i64:
 ; ZNVER1:       # BB#0:
@@ -116,10 +116,10 @@ define i32 @test_pdep_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ;
 ; HASWELL-LABEL: test_pdep_i32:
 ; HASWELL:       # BB#0:
-; HASWELL-NEXT:    pdepl (%rdx), %edi, %ecx # sched: [7:1.00]
+; HASWELL-NEXT:    pdepl (%rdx), %edi, %ecx # sched: [3:1.00]
 ; HASWELL-NEXT:    pdepl %esi, %edi, %eax # sched: [3:1.00]
 ; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_pdep_i32:
 ; ZNVER1:       # BB#0:
@@ -145,10 +145,10 @@ define i64 @test_pdep_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ;
 ; HASWELL-LABEL: test_pdep_i64:
 ; HASWELL:       # BB#0:
-; HASWELL-NEXT:    pdepq (%rdx), %rdi, %rcx # sched: [7:1.00]
+; HASWELL-NEXT:    pdepq (%rdx), %rdi, %rcx # sched: [3:1.00]
 ; HASWELL-NEXT:    pdepq %rsi, %rdi, %rax # sched: [3:1.00]
 ; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_pdep_i64:
 ; ZNVER1:       # BB#0:
@@ -174,10 +174,10 @@ define i32 @test_pext_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ;
 ; HASWELL-LABEL: test_pext_i32:
 ; HASWELL:       # BB#0:
-; HASWELL-NEXT:    pextl (%rdx), %edi, %ecx # sched: [7:1.00]
+; HASWELL-NEXT:    pextl (%rdx), %edi, %ecx # sched: [3:1.00]
 ; HASWELL-NEXT:    pextl %esi, %edi, %eax # sched: [3:1.00]
 ; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_pext_i32:
 ; ZNVER1:       # BB#0:
@@ -203,10 +203,10 @@ define i64 @test_pext_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ;
 ; HASWELL-LABEL: test_pext_i64:
 ; HASWELL:       # BB#0:
-; HASWELL-NEXT:    pextq (%rdx), %rdi, %rcx # sched: [7:1.00]
+; HASWELL-NEXT:    pextq (%rdx), %rdi, %rcx # sched: [3:1.00]
 ; HASWELL-NEXT:    pextq %rsi, %rdi, %rax # sched: [3:1.00]
 ; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_pext_i64:
 ; ZNVER1:       # BB#0:
@@ -233,9 +233,9 @@ define i32 @test_rorx_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; HASWELL-LABEL: test_rorx_i32:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    rorxl $5, %edi, %ecx # sched: [1:0.50]
-; HASWELL-NEXT:    rorxl $5, (%rdx), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    rorxl $5, (%rdx), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_rorx_i32:
 ; ZNVER1:       # BB#0:
@@ -265,9 +265,9 @@ define i64 @test_rorx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; HASWELL-LABEL: test_rorx_i64:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    rorxq $5, %rdi, %rcx # sched: [1:0.50]
-; HASWELL-NEXT:    rorxq $5, (%rdx), %rax # sched: [5:0.50]
+; HASWELL-NEXT:    rorxq $5, (%rdx), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_rorx_i64:
 ; ZNVER1:       # BB#0:
@@ -297,9 +297,9 @@ define i32 @test_sarx_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; HASWELL-LABEL: test_sarx_i32:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    sarxl %esi, %edi, %ecx # sched: [1:0.50]
-; HASWELL-NEXT:    sarxl %esi, (%rdx), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    sarxl %esi, (%rdx), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_sarx_i32:
 ; ZNVER1:       # BB#0:
@@ -325,9 +325,9 @@ define i64 @test_sarx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; HASWELL-LABEL: test_sarx_i64:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    sarxq %rsi, %rdi, %rcx # sched: [1:0.50]
-; HASWELL-NEXT:    sarxq %rsi, (%rdx), %rax # sched: [5:0.50]
+; HASWELL-NEXT:    sarxq %rsi, (%rdx), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_sarx_i64:
 ; ZNVER1:       # BB#0:
@@ -353,9 +353,9 @@ define i32 @test_shlx_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; HASWELL-LABEL: test_shlx_i32:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    shlxl %esi, %edi, %ecx # sched: [1:0.50]
-; HASWELL-NEXT:    shlxl %esi, (%rdx), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    shlxl %esi, (%rdx), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_shlx_i32:
 ; ZNVER1:       # BB#0:
@@ -381,9 +381,9 @@ define i64 @test_shlx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; HASWELL-LABEL: test_shlx_i64:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    shlxq %rsi, %rdi, %rcx # sched: [1:0.50]
-; HASWELL-NEXT:    shlxq %rsi, (%rdx), %rax # sched: [5:0.50]
+; HASWELL-NEXT:    shlxq %rsi, (%rdx), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_shlx_i64:
 ; ZNVER1:       # BB#0:
@@ -409,9 +409,9 @@ define i32 @test_shrx_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; HASWELL-LABEL: test_shrx_i32:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    shrxl %esi, %edi, %ecx # sched: [1:0.50]
-; HASWELL-NEXT:    shrxl %esi, (%rdx), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    shrxl %esi, (%rdx), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_shrx_i32:
 ; ZNVER1:       # BB#0:
@@ -437,9 +437,9 @@ define i64 @test_shrx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; HASWELL-LABEL: test_shrx_i64:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    shrxq %rsi, %rdi, %rcx # sched: [1:0.50]
-; HASWELL-NEXT:    shrxq %rsi, (%rdx), %rax # sched: [5:0.50]
+; HASWELL-NEXT:    shrxq %rsi, (%rdx), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_shrx_i64:
 ; ZNVER1:       # BB#0:

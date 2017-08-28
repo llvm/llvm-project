@@ -103,7 +103,9 @@ HexagonPacketizerList::HexagonPacketizerList(MachineFunction &MF,
   HII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   HRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
-  addMutation(make_unique<HexagonSubtarget::HexagonDAGMutation>());
+  addMutation(make_unique<HexagonSubtarget::UsrOverflowMutation>());
+  addMutation(make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
+  addMutation(make_unique<HexagonSubtarget::BankConflictMutation>());
 }
 
 // Check if FirstI modifies a register that SecondI reads.

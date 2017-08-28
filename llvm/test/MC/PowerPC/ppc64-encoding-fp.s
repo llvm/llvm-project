@@ -382,6 +382,24 @@
 # CHECK-BE: mffs. 7                         # encoding: [0xfc,0xe0,0x04,0x8f]
 # CHECK-LE: mffs. 7                         # encoding: [0x8f,0x04,0xe0,0xfc]
             mffs. 7
+# CHECK-BE: mffsce 2                        # encoding: [0xfc,0x41,0x04,0x8e]
+# CHECK-LE: mffsce 2                        # encoding: [0x8e,0x04,0x41,0xfc]
+            mffsce 2
+# CHECK-BE: mffscdrn 2, 3                   # encoding: [0xfc,0x54,0x1c,0x8e]
+# CHECK-LE: mffscdrn 2, 3                   # encoding: [0x8e,0x1c,0x54,0xfc]
+            mffscdrn 2, 3
+# CHECK-BE: mffscdrni 2, 3                  # encoding: [0xfc,0x55,0x1c,0x8e]
+# CHECK-LE: mffscdrni 2, 3                  # encoding: [0x8e,0x1c,0x55,0xfc]
+            mffscdrni 2, 3
+# CHECK-BE: mffscrn 2, 3                    # encoding: [0xfc,0x56,0x1c,0x8e]
+# CHECK-LE: mffscrn 2, 3                    # encoding: [0x8e,0x1c,0x56,0xfc]
+            mffscrn 2, 3
+# CHECK-BE: mffscrni 2, 3                   # encoding: [0xfc,0x57,0x1c,0x8e]
+# CHECK-LE: mffscrni 2, 3                   # encoding: [0x8e,0x1c,0x57,0xfc]
+            mffscrni 2, 3
+# CHECK-BE: mffsl 2                         # encoding: [0xfc,0x58,0x04,0x8e]
+# CHECK-LE: mffsl 2                         # encoding: [0x8e,0x04,0x58,0xfc]
+            mffsl 2
 # CHECK-BE: mcrfs 4, 5                      # encoding: [0xfe,0x14,0x00,0x80]
 # CHECK-LE: mcrfs 4, 5                      # encoding: [0x80,0x00,0x14,0xfe]
             mcrfs 4, 5

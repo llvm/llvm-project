@@ -197,6 +197,7 @@ static bool isDecorated(StringRef Sym) {
 // Parses .drectve section contents and returns a list of files
 // specified by /defaultlib.
 void LinkerDriver::parseDirectives(StringRef S) {
+  ArgParser Parser;
   opt::InputArgList Args = Parser.parse(S);
 
   for (auto *Arg : Args) {
@@ -691,6 +692,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   InitializeAllDisassemblers();
 
   // Parse command line options.
+  ArgParser Parser;
   opt::InputArgList Args = Parser.parseLINK(ArgsArr.slice(1));
 
   // Parse and evaluate -mllvm options.
