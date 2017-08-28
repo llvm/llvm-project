@@ -52,6 +52,11 @@ Non-comprehensive list of changes in this release
   containers. Currently, it supports reverse iteration of SmallPtrSet and
   DenseMap.
 
+* A new tool ``llvm-dlltool`` has been added to create short import libraries
+  from GNU style definition files. The tool utilizes the PE COFF SPEC Import
+  Library Format and PE COFF Auxiliary Weak Externals Format to achieve
+  compatibility with LLD and MSVC LINK.
+
 
 Changes to the LLVM IR
 ----------------------
