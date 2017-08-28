@@ -1759,30 +1759,6 @@ void __kmp_clear_system_time(void) {
   TIMEVAL_TO_TIMESPEC(&tval, &__kmp_sys_timer_data.start);
 }
 
-#ifdef BUILD_TV
-
-void __kmp_tv_threadprivate_store(kmp_info_t *th, void *global_addr,
-                                  void *thread_addr) {
-  struct tv_data *p;
-
-  p = (struct tv_data *)__kmp_allocate(sizeof(*p));
-
-  p->u.tp.global_addr = global_addr;
-  p->u.tp.thread_addr = thread_addr;
-
-  p->type = (void *)1;
-
-  p->next = th->th.th_local.tv_data;
-  th->th.th_local.tv_data = p;
-
-  if (p->next == 0) {
-    int rc = pthread_setspecific(__kmp_tv_key, p);
-    KMP_CHECK_SYSFAIL("pthread_setspecific", rc);
-  }
-}
-
-#endif /* BUILD_TV */
-
 static int __kmp_get_xproc(void) {
 
   int r = 0;
@@ -1872,13 +1848,6 @@ void __kmp_runtime_initialize(void) {
   /* Set up minimum number of threads to switch to TLS gtid */
   __kmp_tls_gtid_min = KMP_TLS_GTID_MIN;
 
-#ifdef BUILD_TV
-  {
-    int rc = pthread_key_create(&__kmp_tv_key, 0);
-    KMP_CHECK_SYSFAIL("pthread_key_create", rc);
-  }
-#endif
-
   status = pthread_key_create(&__kmp_gtid_threadprivate_key,
                               __kmp_internal_end_dest);
   KMP_CHECK_SYSFAIL("pthread_key_create", status);
@@ -1910,10 +1879,6 @@ void __kmp_runtime_destroy(void) {
 
   status = pthread_key_delete(__kmp_gtid_threadprivate_key);
   KMP_CHECK_SYSFAIL("pthread_key_delete", status);
-#ifdef BUILD_TV
-  status = pthread_key_delete(__kmp_tv_key);
-  KMP_CHECK_SYSFAIL("pthread_key_delete", status);
-#endif
 
   status = pthread_mutex_destroy(&__kmp_wait_mx.m_mutex);
   if (status != 0 && status != EBUSY) {

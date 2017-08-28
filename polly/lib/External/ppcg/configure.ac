@@ -1,4 +1,4 @@
-AC_INIT([ppcg], [0.04], [isl-development@googlegroups.com])
+AC_INIT([ppcg], [0.07], [isl-development@googlegroups.com])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
@@ -25,6 +25,7 @@ bundled)
 	ISL_CFLAGS="$ISL_CFLAGS"
 	ppcg_configure_args="$ppcg_configure_args --with-isl-builddir=../isl"
 	ppcg_configure_args="$ppcg_configure_args --with-isl=build"
+	ppcg_configure_args="$ppcg_configure_args --with-clang=system"
 	;;
 build)
 	ISL_BUILDDIR=`echo @abs_builddir@ | $with_isl_builddir/config.status --file=-`

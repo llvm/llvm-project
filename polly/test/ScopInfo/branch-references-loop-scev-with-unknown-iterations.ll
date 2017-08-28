@@ -4,14 +4,7 @@
 ; RUN:     -polly-allow-nonaffine-branches=false < %s | \
 ; RUN:     FileCheck %s -check-prefix=NO-NONEAFFINE
 
-; NONAFFINE:      Printing analysis 'Polly - Create polyhedral description of Scops' for region: 'branch => end' in function 'f':
-; NONAFFINE-NEXT: Invalid Scop!
-; NONAFFINE-NEXT: Printing analysis 'Polly - Create polyhedral description of Scops' for region: 'loop => branch' in function 'f':
-; NONAFFINE-NEXT: Invalid Scop!
-; NONAFFINE-NEXT: Printing analysis 'Polly - Create polyhedral description of Scops' for region: 'loop => end' in function 'f':
-; NONAFFINE-NEXT: Invalid Scop!
-; NONAFFINE-NEXT: Printing analysis 'Polly - Create polyhedral description of Scops' for region: 'entry => <Function Return>' in function 'f':
-; NONAFFINE-NEXT: Invalid Scop!
+; NONAFFINE-NOT: Statements
 
 ; NO-NONEAFFINE: Statements {
 ; NO-NONEAFFINE-NEXT: 	Stmt_then

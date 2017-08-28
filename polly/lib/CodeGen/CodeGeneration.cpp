@@ -1,4 +1,4 @@
-//===------ CodeGeneration.cpp - Code generate the Scops using ISL. ----======//
+//===- CodeGeneration.cpp - Code generate the Scops using ISL. ---------======//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/CodeGen/CodeGeneration.h"
+#include "polly/CodeGen/IRBuilder.h"
 #include "polly/CodeGen/IslAst.h"
 #include "polly/CodeGen/IslNodeBuilder.h"
 #include "polly/CodeGen/PerfMonitor.h"
@@ -27,20 +28,37 @@
 #include "polly/DependenceInfo.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
+#include "polly/ScopDetectionDiagnostic.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/ScopHelper.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include "isl/ast.h"
+#include <cassert>
+#include <utility>
 
-using namespace polly;
 using namespace llvm;
+using namespace polly;
 
 #define DEBUG_TYPE "polly-codegen"
 
@@ -49,12 +67,35 @@ static cl::opt<bool> Verify("polly-codegen-verify",
                             cl::Hidden, cl::init(false), cl::ZeroOrMore,
                             cl::cat(PollyCategory));
 
-static cl::opt<bool>
-    PerfMonitoring("polly-codegen-perf-monitoring",
-                   cl::desc("Add run-time performance monitoring"), cl::Hidden,
-                   cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+bool polly::PerfMonitoring;
 
-namespace {
+static cl::opt<bool, true>
+    XPerfMonitoring("polly-codegen-perf-monitoring",
+                    cl::desc("Add run-time performance monitoring"), cl::Hidden,
+                    cl::location(polly::PerfMonitoring), cl::init(false),
+                    cl::ZeroOrMore, cl::cat(PollyCategory));
+
+STATISTIC(ScopsProcessed, "Number of SCoP processed");
+STATISTIC(CodegenedScops, "Number of successfully generated SCoPs");
+STATISTIC(CodegenedAffineLoops,
+          "Number of original affine loops in SCoPs that have been generated");
+STATISTIC(CodegenedBoxedLoops,
+          "Number of original boxed loops in SCoPs that have been generated");
+
+namespace polly {
+
+/// Mark a basic block unreachable.
+///
+/// Marks the basic block @p Block unreachable by equipping it with an
+/// UnreachableInst.
+void markBlockUnreachable(BasicBlock &Block, PollyIRBuilder &Builder) {
+  auto *OrigTerminator = Block.getTerminator();
+  Builder.SetInsertPoint(OrigTerminator);
+  Builder.CreateUnreachable();
+  OrigTerminator->eraseFromParent();
+}
+
+} // namespace polly
 
 static void verifyGeneratedFunction(Scop &S, Function &F, IslAstInfo &AI) {
   if (!Verify || !verifyFunction(F, &errs()))
@@ -63,7 +104,7 @@ static void verifyGeneratedFunction(Scop &S, Function &F, IslAstInfo &AI) {
   DEBUG({
     errs() << "== ISL Codegen created an invalid function ==\n\n== The "
               "SCoP ==\n";
-    S.print(errs());
+    errs() << S;
     errs() << "\n== The isl AST ==\n";
     AI.print(errs());
     errs() << "\n== The invalid function ==\n";
@@ -84,17 +125,6 @@ static void fixRegionInfo(Function &F, Region &ParentRegion, RegionInfo &RI) {
 
     RI.setRegionFor(&BB, &ParentRegion);
   }
-}
-
-/// Mark a basic block unreachable.
-///
-/// Marks the basic block @p Block unreachable by equipping it with an
-/// UnreachableInst.
-static void markBlockUnreachable(BasicBlock &Block, PollyIRBuilder &Builder) {
-  auto *OrigTerminator = Block.getTerminator();
-  Builder.SetInsertPoint(OrigTerminator);
-  Builder.CreateUnreachable();
-  OrigTerminator->eraseFromParent();
 }
 
 /// Remove all lifetime markers (llvm.lifetime.start, llvm.lifetime.end) from
@@ -136,8 +166,8 @@ static void removeLifetimeMarkers(Region *R) {
 
       if (auto *IT = dyn_cast<IntrinsicInst>(&*InstIt)) {
         switch (IT->getIntrinsicID()) {
-        case llvm::Intrinsic::lifetime_start:
-        case llvm::Intrinsic::lifetime_end:
+        case Intrinsic::lifetime_start:
+        case Intrinsic::lifetime_end:
           BB->getInstList().erase(InstIt);
           break;
         default:
@@ -156,6 +186,11 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
   isl_ast_node *AstRoot = AI.getAst();
   if (!AstRoot)
     return false;
+
+  // Collect statistics. Do it before we modify the IR to avoid having it any
+  // influence on the result.
+  auto ScopStats = S.getStatistics();
+  ScopsProcessed++;
 
   auto &DL = S.getFunction().getParent()->getDataLayout();
   Region *R = &S.getRegion();
@@ -206,7 +241,6 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
   // If the hoisting fails we have to bail and execute the original code.
   Builder.SetInsertPoint(SplitBlock->getTerminator());
   if (!NodeBuilder.preloadInvariantLoads()) {
-
     // Patch the introduced branch condition to ensure that we always execute
     // the original SCoP.
     auto *FalseI1 = Builder.getFalse();
@@ -228,7 +262,7 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
 
     isl_ast_node_free(AstRoot);
   } else {
-    NodeBuilder.addParameters(S.getContext());
+    NodeBuilder.addParameters(S.getContext().release());
     Value *RTC = NodeBuilder.createRTC(AI.getRunCondition());
 
     Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
@@ -244,6 +278,10 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
     NodeBuilder.create(AstRoot);
     NodeBuilder.finalize();
     fixRegionInfo(*EnteringBB->getParent(), *R->getParent(), RI);
+
+    CodegenedScops++;
+    CodegenedAffineLoops += ScopStats.NumAffineLoops;
+    CodegenedBoxedLoops += ScopStats.NumBoxedLoops;
   }
 
   Function *F = EnteringBB->getParent();
@@ -257,11 +295,11 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
   return true;
 }
 
+namespace {
+
 class CodeGeneration : public ScopPass {
 public:
   static char ID;
-
-  CodeGeneration() : ScopPass(ID) {}
 
   /// The data layout used.
   const DataLayout *DL;
@@ -275,6 +313,8 @@ public:
   ScalarEvolution *SE;
   RegionInfo *RI;
   ///}
+
+  CodeGeneration() : ScopPass(ID) {}
 
   /// Generate LLVM-IR for the SCoP @p S.
   bool runOnScop(Scop &S) override {
@@ -293,6 +333,8 @@ public:
 
   /// Register all analyses and transformation required.
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    ScopPass::getAnalysisUsage(AU);
+
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<IslAstInfoWrapperPass>();
     AU.addRequired<RegionInfoPass>();
@@ -302,31 +344,23 @@ public:
     AU.addRequired<LoopInfoWrapperPass>();
 
     AU.addPreserved<DependenceInfo>();
-
-    AU.addPreserved<AAResultsWrapperPass>();
-    AU.addPreserved<BasicAAWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addPreserved<IslAstInfoWrapperPass>();
-    AU.addPreserved<ScopDetectionWrapperPass>();
-    AU.addPreserved<ScalarEvolutionWrapperPass>();
-    AU.addPreserved<SCEVAAWrapperPass>();
 
     // FIXME: We do not yet add regions for the newly generated code to the
     //        region tree.
-    AU.addPreserved<RegionInfoPass>();
-    AU.addPreserved<ScopInfoRegionPass>();
   }
 };
+
 } // namespace
 
-PreservedAnalyses
-polly::CodeGenerationPass::run(Scop &S, ScopAnalysisManager &SAM,
-                               ScopStandardAnalysisResults &AR, SPMUpdater &U) {
+PreservedAnalyses CodeGenerationPass::run(Scop &S, ScopAnalysisManager &SAM,
+                                          ScopStandardAnalysisResults &AR,
+                                          SPMUpdater &U) {
   auto &AI = SAM.getResult<IslAstAnalysis>(S, AR);
-  if (CodeGen(S, AI, AR.LI, AR.DT, AR.SE, AR.RI))
+  if (CodeGen(S, AI, AR.LI, AR.DT, AR.SE, AR.RI)) {
+    U.invalidateScop(S);
     return PreservedAnalyses::none();
+  }
 
   return PreservedAnalyses::all();
 }

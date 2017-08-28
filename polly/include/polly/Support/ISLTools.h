@@ -368,6 +368,11 @@ isl::union_set convertZoneToTimepoints(isl::union_set Zone, bool InclStart,
 isl::union_map convertZoneToTimepoints(isl::union_map Zone, isl::dim Dim,
                                        bool InclStart, bool InclEnd);
 
+/// Overload of convertZoneToTimepoints(isl::map,InclStart,InclEnd) to process
+/// only a single map.
+isl::map convertZoneToTimepoints(isl::map Zone, isl::dim Dim, bool InclStart,
+                                 bool InclEnd);
+
 /// Distribute the domain to the tuples of a wrapped range map.
 ///
 /// @param Map { Domain[] -> [Range1[] -> Range2[]] }
@@ -393,6 +398,18 @@ isl::union_map liftDomains(isl::union_map UMap, isl::union_set Factor);
 ///
 /// @return { [DomainDomain[] -> NewDomainRange[]] -> Range[] }
 isl::union_map applyDomainRange(isl::union_map UMap, isl::union_map Func);
+
+/// Intersect the range of @p Map with @p Range.
+///
+/// Since @p Map is an isl::map, the result will be a single space, even though
+/// @p Range is an isl::union_set. This is the only difference to
+/// isl::map::intersect_range and isl::union_map::interset_range.
+///
+/// @param Map   { Domain[] -> Range[] }
+/// @param Range { Range[] }
+///
+/// @return { Domain[] -> Range[] }
+isl::map intersectRange(isl::map Map, isl::union_set Range);
 } // namespace polly
 
 #endif /* POLLY_ISLTOOLS_H */

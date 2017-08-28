@@ -26,7 +26,7 @@ class AMDGPU final : public TargetInfo {
 public:
   AMDGPU();
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S, const InputFile &File,
                      const uint8_t *Loc) const override;
 };
 } // namespace
@@ -59,7 +59,7 @@ void AMDGPU::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
 }
 
 RelExpr AMDGPU::getRelExpr(uint32_t Type, const SymbolBody &S,
-                           const uint8_t *Loc) const {
+                           const InputFile &File, const uint8_t *Loc) const {
   switch (Type) {
   case R_AMDGPU_ABS32:
   case R_AMDGPU_ABS64:
@@ -73,7 +73,7 @@ RelExpr AMDGPU::getRelExpr(uint32_t Type, const SymbolBody &S,
   case R_AMDGPU_GOTPCREL32_HI:
     return R_GOT_PC;
   default:
-    error(toString(S.File) + ": unknown relocation type: " + toString(Type));
+    error(toString(&File) + ": unknown relocation type: " + toString(Type));
     return R_HINT;
   }
 }

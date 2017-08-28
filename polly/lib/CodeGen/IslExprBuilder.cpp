@@ -233,7 +233,7 @@ Value *IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
     SAI = (*IDToSAI)[BaseId];
 
   if (!SAI)
-    SAI = ScopArrayInfo::getFromId(BaseId);
+    SAI = ScopArrayInfo::getFromId(isl::manage(BaseId));
   else
     isl_id_free(BaseId);
 

@@ -279,12 +279,13 @@ set(LIBOMP_USE_DEBUGGER FALSE CACHE BOOL
 set(LIBOMP_USE_STDCPPLIB FALSE CACHE BOOL
   "Should we link to C++ library?")
 
-# TSX (x86) based locks have __asm code which can be troublesome for some compilers.
+# Intel(R) Transactional Synchronization Extensions (Intel(R) TSX) based locks have
+# __asm code which can be troublesome for some compilers.  This feature is also x86 specific.
 # TODO: Make this a real feature check
 set(LIBOMP_USE_ADAPTIVE_LOCKS "${LIBOMP_HAVE_ADAPTIVE_LOCKS}" CACHE BOOL
-  "Should TSX-based lock be compiled (adaptive lock in kmp_lock.cpp).  These are x86 specific.")
+  "Should Intel(R) TSX lock be compiled (adaptive lock in kmp_lock.cpp).  These are x86 specific.")
 if(LIBOMP_USE_ADAPTIVE_LOCKS AND (NOT LIBOMP_HAVE_ADAPTIVE_LOCKS))
-  libomp_error_say("Adaptive locks (TSX) functionality requested but not available")
+  libomp_error_say("Adaptive locks (Intel(R) TSX) functionality is only supported on x86 Architecture")
 endif()
 
 # - stats-gathering enables OpenMP stats where things like the number of
@@ -310,6 +311,11 @@ endif()
 if(LIBOMP_USE_ITT_NOTIFY AND NOT LIBOMP_ENABLE_SHARED)
   message(STATUS "ITT Notify not supported for static libraries - forcing ITT Notify off")
   set(LIBOMP_USE_ITT_NOTIFY FALSE)
+endif()
+
+if(LIBOMP_USE_VERSION_SYMBOLS AND (NOT LIBOMP_ENABLE_SHARED) )
+  message(STATUS "Version symbols not supported for static libraries - forcing Version symbols functionality off")
+  set (LIBOMP_USE_VERSION_SYMBOLS FALSE)
 endif()
 
 # OMPT-support

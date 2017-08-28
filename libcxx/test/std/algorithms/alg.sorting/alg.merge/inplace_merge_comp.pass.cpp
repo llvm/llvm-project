@@ -116,6 +116,25 @@ test()
     test<Iter>(1000);
 }
 
+struct less_by_first {
+  template <typename Pair>
+  bool operator()(const Pair& lhs, const Pair& rhs) {
+    return std::less<typename Pair::first_type>()(lhs.first, rhs.first);
+  }
+};
+
+void test_PR31166 ()
+{
+    typedef std::pair<int, int> P;
+    typedef std::vector<P> V;
+    const V vec {{1, 0}, {2, 0}, {2, 1}, {2, 2}, {2, 3}};
+    for ( int i = 0; i < 5; ++i ) {
+        V res = vec;
+        std::inplace_merge(res.begin(), res.begin() + i, res.end(), less_by_first());
+        assert(res == vec);
+    }
+}
+
 int main()
 {
     test<bidirectional_iterator<int*> >();
@@ -146,4 +165,6 @@ int main()
     delete [] ia;
     }
 #endif  // TEST_STD_VER >= 11
+
+    test_PR31166();
 }

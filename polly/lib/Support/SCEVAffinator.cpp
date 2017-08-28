@@ -134,7 +134,7 @@ __isl_give PWACtx SCEVAffinator::getPwAff(const SCEV *Expr, BasicBlock *BB) {
   this->BB = BB;
 
   if (BB) {
-    auto *DC = S->getDomainConditions(BB);
+    auto *DC = S->getDomainConditions(BB).release();
     NumIterators = isl_set_n_dim(DC);
     isl_set_free(DC);
   } else
@@ -233,7 +233,7 @@ __isl_give PWACtx SCEVAffinator::visit(const SCEV *Expr) {
   // expression, but create a new parameter in the isl_pw_aff. This allows us
   // to treat subexpressions that we cannot translate into an piecewise affine
   // expression, as constant parameters of the piecewise affine expression.
-  if (isl_id *Id = S->getIdForParam(Expr)) {
+  if (isl_id *Id = S->getIdForParam(Expr).release()) {
     isl_space *Space = isl_space_set_alloc(Ctx, 1, NumIterators);
     Space = isl_space_set_dim_id(Space, isl_dim_param, 0, Id);
 

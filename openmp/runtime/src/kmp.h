@@ -1193,28 +1193,6 @@ typedef struct kmp_cpuinfo {
 } kmp_cpuinfo_t;
 #endif
 
-#ifdef BUILD_TV
-
-struct tv_threadprivate {
-  /* Record type #1 */
-  void *global_addr;
-  void *thread_addr;
-};
-
-struct tv_data {
-  struct tv_data *next;
-  void *type;
-  union tv_union {
-    struct tv_threadprivate tp;
-  } u;
-};
-
-extern kmp_key_t __kmp_tv_key;
-
-#endif /* BUILD_TV */
-
-/* ------------------------------------------------------------------------ */
-
 #if USE_ITT_BUILD
 // We cannot include "kmp_itt.h" due to circular dependency. Declare the only
 // required type here. Later we will check the type meets requirements.
@@ -1961,10 +1939,6 @@ typedef struct kmp_local {
 #endif /* ! USE_CMP_XCHG_FOR_BGET */
 #endif /* KMP_USE_BGET */
 
-#ifdef BUILD_TV
-  struct tv_data *tv_data;
-#endif
-
   PACKED_REDUCTION_METHOD_T
   packed_reduction_method; /* stored by __kmpc_reduce*(), used by
                               __kmpc_end_reduce*() */
@@ -2689,6 +2663,7 @@ typedef struct kmp_base_root {
   kmp_lock_t r_begin_lock;
   volatile int r_begin;
   int r_blocktime; /* blocktime for this root and descendants */
+  int r_cg_nthreads; // count of active threads in a contention group
 } kmp_base_root_t;
 
 typedef union KMP_ALIGN_CACHE kmp_root {
@@ -2833,16 +2808,10 @@ extern int __kmp_stkpadding; /* Should we pad root thread(s) stack */
 
 extern size_t
     __kmp_malloc_pool_incr; /* incremental size of pool for kmp_malloc() */
-extern int __kmp_env_chunk; /* was KMP_CHUNK specified?     */
 extern int __kmp_env_stksize; /* was KMP_STACKSIZE specified? */
-extern int __kmp_env_omp_stksize; /* was OMP_STACKSIZE specified? */
-extern int __kmp_env_all_threads; /* was KMP_ALL_THREADS or KMP_MAX_THREADS
-                                     specified? */
-extern int __kmp_env_omp_all_threads; /* was OMP_THREAD_LIMIT specified? */
 extern int __kmp_env_blocktime; /* was KMP_BLOCKTIME specified? */
 extern int __kmp_env_checks; /* was KMP_CHECKS specified?    */
-extern int
-    __kmp_env_consistency_check; /* was KMP_CONSISTENCY_CHECK specified?    */
+extern int __kmp_env_consistency_check; // was KMP_CONSISTENCY_CHECK specified?
 extern int __kmp_generate_warnings; /* should we issue warnings? */
 extern int __kmp_reserve_warn; /* have we issued reserve_threads warning? */
 
@@ -2869,8 +2838,11 @@ extern int __kmp_xproc; /* number of processors in the system */
 extern int __kmp_avail_proc; /* number of processors available to the process */
 extern size_t __kmp_sys_min_stksize; /* system-defined minimum stack size */
 extern int __kmp_sys_max_nth; /* system-imposed maximum number of threads */
-extern int
-    __kmp_max_nth; /* maximum total number of concurrently-existing threads */
+// maximum total number of concurrently-existing threads on device
+extern int __kmp_max_nth;
+// maximum total number of concurrently-existing threads in a contention group
+extern int __kmp_cg_max_nth;
+extern int __kmp_teams_max_nth; // max threads used in a teams construct
 extern int __kmp_threads_capacity; /* capacity of the arrays __kmp_threads and
                                       __kmp_root */
 extern int __kmp_dflt_team_nth; /* default number of threads in a parallel
@@ -3057,11 +3029,6 @@ extern void __kmp_parallel_dxo(int *gtid_ref, int *cid_ref, ident_t *loc_ref);
 
 #ifdef USE_LOAD_BALANCE
 extern int __kmp_get_load_balance(int);
-#endif
-
-#ifdef BUILD_TV
-extern void __kmp_tv_threadprivate_store(kmp_info_t *th, void *global_addr,
-                                         void *thread_addr);
 #endif
 
 extern int __kmp_get_global_thread_id(void);

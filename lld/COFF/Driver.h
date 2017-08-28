@@ -41,6 +41,11 @@ void markLive(const std::vector<Chunk *> &Chunks);
 // Implemented in ICF.cpp.
 void doICF(const std::vector<Chunk *> &Chunks);
 
+class COFFOptTable : public llvm::opt::OptTable {
+public:
+  COFFOptTable();
+};
+
 class ArgParser {
 public:
   // Parses command line options.
@@ -54,13 +59,13 @@ public:
 
 private:
   std::vector<const char *> tokenize(StringRef S);
-
   std::vector<const char *> replaceResponseFiles(std::vector<const char *>);
+
+  COFFOptTable Table;
 };
 
 class LinkerDriver {
 public:
-  LinkerDriver() { coff::Symtab = &Symtab; }
   void link(llvm::ArrayRef<const char *> Args);
 
   // Used by the resolver to parse .drectve section contents.
@@ -71,9 +76,6 @@ public:
                             StringRef ParentName);
 
 private:
-  ArgParser Parser;
-  SymbolTable Symtab;
-
   std::unique_ptr<llvm::TarWriter> Tar; // for /linkrepro
 
   // Opens a file. Path has to be resolved already.
@@ -145,6 +147,7 @@ void parseSubsystem(StringRef Arg, WindowsSubsystem *Sys, uint32_t *Major,
 void parseAlternateName(StringRef);
 void parseMerge(StringRef);
 void parseSection(StringRef);
+void parseAligncomm(StringRef);
 
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
 void parseManifest(StringRef Arg);

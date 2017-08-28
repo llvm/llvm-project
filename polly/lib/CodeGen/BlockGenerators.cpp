@@ -237,6 +237,15 @@ void BlockGenerator::copyInstScalar(ScopStmt &Stmt, Instruction *Inst,
   Builder.Insert(NewInst);
   BBMap[Inst] = NewInst;
 
+  // When copying the instruction onto the Module meant for the GPU,
+  // debug metadata attached to an instruction causes all related
+  // metadata to be pulled into the Module. This includes the DICompileUnit,
+  // which will not be listed in llvm.dbg.cu of the Module since the Module
+  // doesn't contain one. This fails the verification of the Module and the
+  // subsequent generation of the ASM string.
+  if (NewInst->getModule() != Inst->getModule())
+    NewInst->setDebugLoc(llvm::DebugLoc());
+
   if (!NewInst->getType()->isVoidTy())
     NewInst->setName("p_" + Inst->getName());
 }
@@ -249,7 +258,7 @@ BlockGenerator::generateLocationAccessed(ScopStmt &Stmt, MemAccInst Inst,
   return generateLocationAccessed(
       Stmt, getLoopForStmt(Stmt),
       Inst.isNull() ? nullptr : Inst.getPointerOperand(), BBMap, LTS,
-      NewAccesses, MA.getId(), MA.getAccessValue()->getType());
+      NewAccesses, MA.getId().release(), MA.getAccessValue()->getType());
 }
 
 Value *BlockGenerator::generateLocationAccessed(
@@ -286,7 +295,7 @@ BlockGenerator::getImplicitAddress(MemoryAccess &Access, Loop *L,
                                    __isl_keep isl_id_to_ast_expr *NewAccesses) {
   if (Access.isLatestArrayKind())
     return generateLocationAccessed(*Access.getStatement(), L, nullptr, BBMap,
-                                    LTS, NewAccesses, Access.getId(),
+                                    LTS, NewAccesses, Access.getId().release(),
                                     Access.getAccessValue()->getType());
 
   return getOrCreateAlloca(Access);
@@ -319,10 +328,10 @@ void BlockGenerator::generateArrayStore(ScopStmt &Stmt, StoreInst *Store,
                                         ValueMapT &BBMap, LoopToScevMapT &LTS,
                                         isl_id_to_ast_expr *NewAccesses) {
   MemoryAccess &MA = Stmt.getArrayAccessFor(Store);
-  isl::set AccDom = give(isl_map_domain(MA.getAccessRelation()));
-  const char *Subject = isl_id_get_name(give(MA.getId()).keep());
+  isl::set AccDom = MA.getAccessRelation().domain();
+  std::string Subject = MA.getId().get_name();
 
-  generateConditionalExecution(Stmt, AccDom, Subject, [&, this]() {
+  generateConditionalExecution(Stmt, AccDom, Subject.c_str(), [&, this]() {
     Value *NewPointer =
         generateLocationAccessed(Stmt, Store, BBMap, LTS, NewAccesses);
     Value *ValueOperand = getNewValue(Stmt, Store->getValueOperand(), BBMap,
@@ -544,8 +553,8 @@ void BlockGenerator::generateScalarLoads(
       continue;
 
 #ifndef NDEBUG
-    auto *StmtDom = Stmt.getDomain();
-    auto *AccDom = isl_map_domain(MA->getAccessRelation());
+    auto *StmtDom = Stmt.getDomain().release();
+    auto *AccDom = isl_map_domain(MA->getAccessRelation().release());
     assert(isl_set_is_subset(StmtDom, AccDom) &&
            "Scalar must be loaded in all statement instances");
     isl_set_free(StmtDom);
@@ -565,8 +574,8 @@ void BlockGenerator::generateScalarLoads(
 
 Value *BlockGenerator::buildContainsCondition(ScopStmt &Stmt,
                                               const isl::set &Subdomain) {
-  isl::ast_build AstBuild = give(isl_ast_build_copy(Stmt.getAstBuild()));
-  isl::set Domain = give(Stmt.getDomain());
+  isl::ast_build AstBuild = Stmt.getAstBuild();
+  isl::set Domain = Stmt.getDomain();
 
   isl::union_map USchedule = AstBuild.get_schedule();
   USchedule = USchedule.intersect_domain(Domain);
@@ -590,17 +599,12 @@ Value *BlockGenerator::buildContainsCondition(ScopStmt &Stmt,
 void BlockGenerator::generateConditionalExecution(
     ScopStmt &Stmt, const isl::set &Subdomain, StringRef Subject,
     const std::function<void()> &GenThenFunc) {
-  isl::set StmtDom = give(Stmt.getDomain());
-
-  // Don't call GenThenFunc if it is never executed. An ast index expression
-  // might not be defined in this case.
-  if (Subdomain.is_empty())
-    return;
+  isl::set StmtDom = Stmt.getDomain();
 
   // If the condition is a tautology, don't generate a condition around the
   // code.
   bool IsPartialWrite =
-      !StmtDom.intersect_params(give(Stmt.getParent()->getContext()))
+      !StmtDom.intersect_params(Stmt.getParent()->getContext())
            .is_subset(Subdomain);
   if (!IsPartialWrite) {
     GenThenFunc();
@@ -609,6 +613,13 @@ void BlockGenerator::generateConditionalExecution(
 
   // Generate the condition.
   Value *Cond = buildContainsCondition(Stmt, Subdomain);
+
+  // Don't call GenThenFunc if it is never executed. An ast index expression
+  // might not be defined in this case.
+  if (auto *Const = dyn_cast<ConstantInt>(Cond))
+    if (Const->isZero())
+      return;
+
   BasicBlock *HeadBlock = Builder.GetInsertBlock();
   StringRef BlockName = HeadBlock->getName();
 
@@ -645,38 +656,40 @@ void BlockGenerator::generateScalarStores(
     if (MA->isOriginalArrayKind() || MA->isRead())
       continue;
 
-    isl::set AccDom = give(isl_map_domain(MA->getAccessRelation()));
-    const char *Subject = isl_id_get_name(give(MA->getId()).keep());
+    isl::set AccDom = MA->getAccessRelation().domain();
+    std::string Subject = MA->getId().get_name();
 
-    generateConditionalExecution(Stmt, AccDom, Subject, [&, this, MA]() {
-      Value *Val = MA->getAccessValue();
-      if (MA->isAnyPHIKind()) {
-        assert(
-            MA->getIncoming().size() >= 1 &&
-            "Block statements have exactly one exiting block, or multiple but "
-            "with same incoming block and value");
-        assert(std::all_of(MA->getIncoming().begin(), MA->getIncoming().end(),
-                           [&](std::pair<BasicBlock *, Value *> p) -> bool {
-                             return p.first == Stmt.getBasicBlock();
-                           }) &&
-               "Incoming block must be statement's block");
-        Val = MA->getIncoming()[0].second;
-      }
-      auto Address = getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS, BBMap,
-                                        NewAccesses);
+    generateConditionalExecution(
+        Stmt, AccDom, Subject.c_str(), [&, this, MA]() {
+          Value *Val = MA->getAccessValue();
+          if (MA->isAnyPHIKind()) {
+            assert(MA->getIncoming().size() >= 1 &&
+                   "Block statements have exactly one exiting block, or "
+                   "multiple but "
+                   "with same incoming block and value");
+            assert(std::all_of(MA->getIncoming().begin(),
+                               MA->getIncoming().end(),
+                               [&](std::pair<BasicBlock *, Value *> p) -> bool {
+                                 return p.first == Stmt.getBasicBlock();
+                               }) &&
+                   "Incoming block must be statement's block");
+            Val = MA->getIncoming()[0].second;
+          }
+          auto Address = getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS,
+                                            BBMap, NewAccesses);
 
-      Val = getNewValue(Stmt, Val, BBMap, LTS, L);
-      assert((!isa<Instruction>(Val) ||
-              DT.dominates(cast<Instruction>(Val)->getParent(),
-                           Builder.GetInsertBlock())) &&
-             "Domination violation");
-      assert((!isa<Instruction>(Address) ||
-              DT.dominates(cast<Instruction>(Address)->getParent(),
-                           Builder.GetInsertBlock())) &&
-             "Domination violation");
-      Builder.CreateStore(Val, Address);
+          Val = getNewValue(Stmt, Val, BBMap, LTS, L);
+          assert((!isa<Instruction>(Val) ||
+                  DT.dominates(cast<Instruction>(Val)->getParent(),
+                               Builder.GetInsertBlock())) &&
+                 "Domination violation");
+          assert((!isa<Instruction>(Address) ||
+                  DT.dominates(cast<Instruction>(Address)->getParent(),
+                               Builder.GetInsertBlock())) &&
+                 "Domination violation");
+          Builder.CreateStore(Val, Address);
 
-    });
+        });
   }
 }
 
@@ -1016,11 +1029,11 @@ void VectorBlockGenerator::generateLoad(
   extractScalarValues(Load, VectorMap, ScalarMaps);
 
   Value *NewLoad;
-  if (Access.isStrideZero(isl_map_copy(Schedule)))
+  if (Access.isStrideZero(isl::manage(isl_map_copy(Schedule))))
     NewLoad = generateStrideZeroLoad(Stmt, Load, ScalarMaps[0], NewAccesses);
-  else if (Access.isStrideOne(isl_map_copy(Schedule)))
+  else if (Access.isStrideOne(isl::manage(isl_map_copy(Schedule))))
     NewLoad = generateStrideOneLoad(Stmt, Load, ScalarMaps, NewAccesses);
-  else if (Access.isStrideX(isl_map_copy(Schedule), -1))
+  else if (Access.isStrideX(isl::manage(isl_map_copy(Schedule)), -1))
     NewLoad = generateStrideOneLoad(Stmt, Load, ScalarMaps, NewAccesses, true);
   else
     NewLoad = generateUnknownStrideLoad(Stmt, Load, ScalarMaps, NewAccesses);
@@ -1071,7 +1084,7 @@ void VectorBlockGenerator::copyStore(
   // the data location.
   extractScalarValues(Store, VectorMap, ScalarMaps);
 
-  if (Access.isStrideOne(isl_map_copy(Schedule))) {
+  if (Access.isStrideOne(isl::manage(isl_map_copy(Schedule)))) {
     Type *VectorPtrType = getVectorPtrTy(Pointer, getVectorWidth());
     Value *NewPointer = generateLocationAccessed(Stmt, Store, ScalarMaps[0],
                                                  VLTS[0], NewAccesses);
@@ -1568,23 +1581,24 @@ void RegionGenerator::generateScalarStores(
     if (MA->isOriginalArrayKind() || MA->isRead())
       continue;
 
-    isl::set AccDom = give(isl_map_domain(MA->getAccessRelation()));
-    const char *Subject = isl_id_get_name(give(MA->getId()).keep());
-    generateConditionalExecution(Stmt, AccDom, Subject, [&, this, MA]() {
+    isl::set AccDom = MA->getAccessRelation().domain();
+    std::string Subject = MA->getId().get_name();
+    generateConditionalExecution(
+        Stmt, AccDom, Subject.c_str(), [&, this, MA]() {
 
-      Value *NewVal = getExitScalar(MA, LTS, BBMap);
-      Value *Address = getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS, BBMap,
-                                          NewAccesses);
-      assert((!isa<Instruction>(NewVal) ||
-              DT.dominates(cast<Instruction>(NewVal)->getParent(),
-                           Builder.GetInsertBlock())) &&
-             "Domination violation");
-      assert((!isa<Instruction>(Address) ||
-              DT.dominates(cast<Instruction>(Address)->getParent(),
-                           Builder.GetInsertBlock())) &&
-             "Domination violation");
-      Builder.CreateStore(NewVal, Address);
-    });
+          Value *NewVal = getExitScalar(MA, LTS, BBMap);
+          Value *Address = getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS,
+                                              BBMap, NewAccesses);
+          assert((!isa<Instruction>(NewVal) ||
+                  DT.dominates(cast<Instruction>(NewVal)->getParent(),
+                               Builder.GetInsertBlock())) &&
+                 "Domination violation");
+          assert((!isa<Instruction>(Address) ||
+                  DT.dominates(cast<Instruction>(Address)->getParent(),
+                               Builder.GetInsertBlock())) &&
+                 "Domination violation");
+          Builder.CreateStore(NewVal, Address);
+        });
   }
 }
 
@@ -1597,7 +1611,7 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, PHINode *PHI,
   BasicBlock *BBCopyEnd = EndBlockMap[IncomingBB];
   if (!BBCopyStart) {
     assert(!BBCopyEnd);
-    assert(Stmt.contains(IncomingBB) &&
+    assert(Stmt.represents(IncomingBB) &&
            "Bad incoming block for PHI in non-affine region");
     IncompletePHINodeMap[IncomingBB].push_back(std::make_pair(PHI, PHICopy));
     return;
@@ -1609,7 +1623,7 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, PHINode *PHI,
 
   Value *OpCopy = nullptr;
 
-  if (Stmt.contains(IncomingBB)) {
+  if (Stmt.represents(IncomingBB)) {
     Value *Op = PHI->getIncomingValueForBlock(IncomingBB);
 
     // If the current insert block is different from the PHIs incoming block
