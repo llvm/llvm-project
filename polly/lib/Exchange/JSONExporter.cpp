@@ -792,6 +792,9 @@ bool JSONImporter::runOnScop(Scop &S) {
 void JSONImporter::getAnalysisUsage(AnalysisUsage &AU) const {
   ScopPass::getAnalysisUsage(AU);
   AU.addRequired<DependenceInfo>();
+
+  // TODO: JSONImporter should throw away DependenceInfo.
+  AU.addPreserved<DependenceInfo>();
 }
 
 Pass *polly::createJSONImporterPass() { return new JSONImporter(); }

@@ -771,6 +771,8 @@ void IslAstInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   ScopPass::getAnalysisUsage(AU);
   AU.addRequired<ScopInfoRegionPass>();
   AU.addRequired<DependenceInfo>();
+
+  AU.addPreserved<DependenceInfo>();
 }
 
 void IslAstInfoWrapperPass::printScop(raw_ostream &OS, Scop &S) const {

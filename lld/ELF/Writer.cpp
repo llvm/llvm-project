@@ -123,7 +123,7 @@ template <class ELFT> static bool needsInterpSection() {
 template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
 
 template <class ELFT> void Writer<ELFT>::removeEmptyPTLoad() {
-  auto I = llvm::remove_if(Phdrs, [&](const PhdrEntry *P) {
+  llvm::erase_if(Phdrs, [&](const PhdrEntry *P) {
     if (P->p_type != PT_LOAD)
       return false;
     if (!P->First)
@@ -131,7 +131,6 @@ template <class ELFT> void Writer<ELFT>::removeEmptyPTLoad() {
     uint64_t Size = P->Last->Addr + P->Last->Size - P->First->Addr;
     return Size == 0;
   });
-  Phdrs.erase(I, Phdrs.end());
 }
 
 template <class ELFT> static void combineEhFrameSections() {
@@ -1141,13 +1140,11 @@ static void removeUnusedSyntheticSections() {
     // output.
     if (OS->Commands.empty()) {
       // Also remove script commands matching the output section.
-      auto &Cmds = Script->Opt.Commands;
-      auto I = std::remove_if(Cmds.begin(), Cmds.end(), [&](BaseCommand *Cmd2) {
-        if (auto *Sec = dyn_cast<OutputSection>(Cmd2))
+      llvm::erase_if(Script->Opt.Commands, [&](BaseCommand *Cmd) {
+        if (auto *Sec = dyn_cast<OutputSection>(Cmd))
           return Sec == OS;
         return false;
       });
-      Cmds.erase(I, Cmds.end());
     }
   }
 }
