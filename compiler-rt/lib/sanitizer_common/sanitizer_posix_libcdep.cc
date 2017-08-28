@@ -18,7 +18,9 @@
 
 #include "sanitizer_common.h"
 #include "sanitizer_flags.h"
+#include "sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_platform_limits_posix.h"
+
 #include "sanitizer_posix.h"
 #include "sanitizer_procmaps.h"
 #include "sanitizer_stacktrace.h"

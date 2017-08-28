@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=arm-linux-androideabi -verify-machineinstrs | FileCheck %s -check-prefix=ARM-android
-; RUN: llc < %s -mtriple=arm-linux-unknown-gnueabi -verify-machineinstrs | FileCheck %s -check-prefix=ARM-linux
+; RUN: llc < %s -mtriple=arm-linux-androideabi -mattr=+v4t -verify-machineinstrs | FileCheck %s -check-prefix=ARM-android
+; RUN: llc < %s -mtriple=arm-linux-unknown-gnueabi -mattr=+v4t  -verify-machineinstrs | FileCheck %s -check-prefix=ARM-linux
 
 ; We used to crash with filetype=obj
 ; RUN: llc < %s -mtriple=arm-linux-androideabi -filetype=obj

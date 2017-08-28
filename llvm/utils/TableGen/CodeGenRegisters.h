@@ -72,6 +72,10 @@ namespace llvm {
     mutable LaneBitmask LaneMask;
     mutable SmallVector<MaskRolPair,1> CompositionLaneMaskTransform;
 
+    /// A list of subregister indexes concatenated resulting in this
+    /// subregister index. This is the reverse of CodeGenRegBank::ConcatIdx.
+    SmallVector<CodeGenSubRegIndex*,4> ConcatenationOf;
+
     // Are all super-registers containing this SubRegIndex covered by their
     // sub-registers?
     bool AllSuperRegsCovered;
@@ -122,6 +126,12 @@ namespace llvm {
 
     // Compute LaneMask from Composed. Return LaneMask.
     LaneBitmask computeLaneMask() const;
+
+    void setConcatenationOf(ArrayRef<CodeGenSubRegIndex*> Parts);
+
+    /// Replaces subregister indexes in the `ConcatenationOf` list with
+    /// list of subregisters they are composed of (if any). Do this recursively.
+    void computeConcatTransitiveClosure();
 
   private:
     CompMap Composed;
@@ -608,12 +618,6 @@ namespace llvm {
     // non-overlapping sibling indices.
     CodeGenSubRegIndex *
       getConcatSubRegIndex(const SmallVector<CodeGenSubRegIndex *, 8>&);
-
-    void
-    addConcatSubRegIndex(const SmallVector<CodeGenSubRegIndex *, 8> &Parts,
-                         CodeGenSubRegIndex *Idx) {
-      ConcatIdx.insert(std::make_pair(Parts, Idx));
-    }
 
     const std::deque<CodeGenRegister> &getRegisters() { return Registers; }
 

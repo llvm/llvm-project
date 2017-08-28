@@ -1,5 +1,5 @@
-; RUN: llc -mtriple arm-unknown -mattr=+vfp2 -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LITTLE
-; RUN: llc -mtriple armeb-unknown -mattr=+vfp2 -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=BIG
+; RUN: llc -mtriple arm-unknown -mattr=+vfp2,+v4t -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LITTLE
+; RUN: llc -mtriple armeb-unknown -mattr=+vfp2,+v4t -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=BIG
 
 define void @test_void_return() {
 ; CHECK-LABEL: name: test_void_return

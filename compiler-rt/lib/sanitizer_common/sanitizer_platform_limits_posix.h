@@ -15,6 +15,8 @@
 #ifndef SANITIZER_PLATFORM_LIMITS_POSIX_H
 #define SANITIZER_PLATFORM_LIMITS_POSIX_H
 
+#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC
+
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_platform.h"
 
@@ -1484,5 +1486,7 @@ struct __sanitizer_cookie_io_functions_t {
                  sizeof(((struct CLASS *) NULL)->MEMBER));                \
   COMPILER_CHECK(offsetof(struct __sanitizer_##CLASS, MEMBER) ==          \
                  offsetof(struct CLASS, MEMBER))
+
+#endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC
 
 #endif

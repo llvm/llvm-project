@@ -3072,22 +3072,18 @@ multiclass Load128RO<bits<2> sz, bit V, bits<2> opc, RegisterClass regtype,
 
 multiclass Store128RO<bits<2> sz, bit V, bits<2> opc, RegisterClass regtype,
                       string asm, ValueType Ty, SDPatternOperator storeop> {
-  let AddedComplexity = 10, mayLoad = 0, mayStore = 1, hasSideEffects = 0 in
+  let mayLoad = 0, mayStore = 1, hasSideEffects = 0 in
   def roW : LoadStore128RO<sz, V, opc, regtype, asm, (outs),
                (ins regtype:$Rt, GPR64sp:$Rn, GPR32:$Rm, ro_Wextend128:$extend),
-                [(storeop (Ty regtype:$Rt),
-                          (ro_Windexed128 GPR64sp:$Rn, GPR32:$Rm,
-                                          ro_Wextend128:$extend))]>,
+                []>,
             Sched<[WriteSTIdx, ReadAdrBase]> {
     let Inst{13} = 0b0;
   }
 
-  let AddedComplexity = 10, mayLoad = 0, mayStore = 1, hasSideEffects = 0 in
+  let mayLoad = 0, mayStore = 1, hasSideEffects = 0 in
   def roX : LoadStore128RO<sz, V, opc, regtype, asm, (outs),
                (ins regtype:$Rt, GPR64sp:$Rn, GPR64:$Rm, ro_Xextend128:$extend),
-                [(storeop (Ty regtype:$Rt),
-                          (ro_Xindexed128 GPR64sp:$Rn, GPR64:$Rm,
-                                          ro_Xextend128:$extend))]>,
+                []>,
             Sched<[WriteSTIdx, ReadAdrBase]> {
     let Inst{13} = 0b1;
   }

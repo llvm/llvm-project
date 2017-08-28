@@ -18,4 +18,4 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Unpack clang installation into this image.
-ADD clang.tar.gz /
+ADD clang.tar.gz /usr/local/

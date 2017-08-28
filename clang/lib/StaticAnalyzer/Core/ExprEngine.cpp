@@ -1523,10 +1523,11 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
   // If we reach a loop which has a known bound (and meets
   // other constraints) then consider completely unrolling it.
   if(AMgr.options.shouldUnrollLoops()) {
+    unsigned maxBlockVisitOnPath = AMgr.options.maxBlockVisitOnPath;
     const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminator();
     if (Term) {
       ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
-                                                 Pred);
+                                                 Pred, maxBlockVisitOnPath);
       if (NewState != Pred->getState()) {
         ExplodedNode *UpdatedNode = nodeBuilder.generateNode(NewState, Pred);
         if (!UpdatedNode)

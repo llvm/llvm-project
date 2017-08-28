@@ -15,6 +15,11 @@
 #include "polly/ScopInfo.h"
 
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 
 using namespace llvm;
 using namespace polly;
@@ -38,7 +43,19 @@ void ScopPass::print(raw_ostream &OS, const Module *M) const {
 
 void ScopPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<ScopInfoRegionPass>();
-  AU.setPreservesAll();
+
+  AU.addPreserved<AAResultsWrapperPass>();
+  AU.addPreserved<BasicAAWrapperPass>();
+  AU.addPreserved<LoopInfoWrapperPass>();
+  AU.addPreserved<DominatorTreeWrapperPass>();
+  AU.addPreserved<GlobalsAAWrapperPass>();
+  AU.addPreserved<ScopDetectionWrapperPass>();
+  AU.addPreserved<ScalarEvolutionWrapperPass>();
+  AU.addPreserved<SCEVAAWrapperPass>();
+  AU.addPreserved<OptimizationRemarkEmitterWrapperPass>();
+  AU.addPreserved<RegionInfoPass>();
+  AU.addPreserved<ScopInfoRegionPass>();
+  AU.addPreserved<TargetTransformInfoWrapperPass>();
 }
 
 namespace polly {

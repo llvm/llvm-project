@@ -1257,10 +1257,7 @@ public:
   /// @return True if the computed lifetimes (#Zone) is usable.
   bool computeZone() {
     // Check that nothing strange occurs.
-    if (!isCompatibleScop()) {
-      DeLICMIncompatible++;
-      return false;
-    }
+    collectCompatibleElts();
 
     isl::union_set EltUnused;
     isl::union_map EltKnown, EltWritten;
@@ -1345,6 +1342,32 @@ public:
           continue;
         }
 
+        if (!isa<StoreInst>(MA->getAccessInstruction())) {
+          DEBUG(dbgs() << "Access " << MA
+                       << " pruned because it is not a StoreInst\n");
+          OptimizationRemarkMissed R(DEBUG_TYPE, "NotAStore",
+                                     MA->getAccessInstruction());
+          R << "skipped possible mapping target because non-store instructions "
+               "are not supported";
+          S->getFunction().getContext().diagnose(R);
+          continue;
+        }
+
+        isl::union_set TouchedElts = MA->getLatestAccessRelation().range();
+        if (!TouchedElts.is_subset(CompatibleElts)) {
+          DEBUG(
+              dbgs()
+              << "Access " << MA
+              << " is incompatible because it touches incompatible elements\n");
+          OptimizationRemarkMissed R(DEBUG_TYPE, "IncompatibleElts",
+                                     MA->getAccessInstruction());
+          R << "skipped possible mapping target because a target location "
+               "cannot be reliably analyzed";
+          S->getFunction().getContext().diagnose(R);
+          continue;
+        }
+
+        assert(isCompatibleAccess(MA));
         NumberOfCompatibleTargets++;
         DEBUG(dbgs() << "Analyzing target access " << MA << "\n");
         if (collapseScalarsToStore(MA))
