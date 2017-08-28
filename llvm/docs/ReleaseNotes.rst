@@ -195,6 +195,9 @@ Changes to the X86 Target
 
 * Fixed many inline assembly bugs.
 
+* Preliminary support for tracing NetBSD processes and core files with a single
+  thread in LLDB.
+
 Changes to the AMDGPU Target
 -----------------------------
 
