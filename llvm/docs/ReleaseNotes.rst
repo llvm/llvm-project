@@ -46,6 +46,12 @@ Non-comprehensive list of changes in this release
   HTML.  The tool processes the YAML files produced by clang with the
   -fsave-optimization-record option.
 
+* A new CMake macro ``LLVM_REVERSE_ITERATION`` has been added. If enabled, all
+  supported unordered LLVM containers would be iterated in reverse order. This
+  is useful for uncovering non-determinism caused by iteration of unordered
+  containers. Currently, it supports reverse iteration of SmallPtrSet and
+  DenseMap.
+
 
 Changes to the LLVM IR
 ----------------------
