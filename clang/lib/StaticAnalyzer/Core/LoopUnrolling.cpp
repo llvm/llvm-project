@@ -13,15 +13,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/AST/ParentMap.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopUnrolling.h"
-#include "llvm/ADT/Statistic.h"
 
 using namespace clang;
 using namespace ento;
@@ -72,11 +68,8 @@ static bool isLoopStmt(const Stmt *S) {
 
 ProgramStateRef processLoopEnd(const Stmt *LoopStmt, ProgramStateRef State) {
   auto LS = State->get<LoopStack>();
-  assert(!LS.isEmpty() && "Loop not added to the stack.");
-  assert(LoopStmt == LS.getHead().getLoopStmt() &&
-         "Loop is not on top of the stack.");
-
-  State = State->set<LoopStack>(LS.getTail());
+  if (!LS.isEmpty() && LS.getHead().getLoopStmt() == LoopStmt)
+    State = State->set<LoopStack>(LS.getTail());
   return State;
 }
 
@@ -211,6 +204,26 @@ bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
   return !isPossiblyEscaped(CounterVar->getCanonicalDecl(), Pred);
 }
 
+bool madeNewBranch(ExplodedNode* N, const Stmt* LoopStmt) {
+  const Stmt* S = nullptr;
+  while (!N->pred_empty())
+  {
+    if (N->succ_size() > 1)
+      return true;
+
+    ProgramPoint P = N->getLocation();
+    if (Optional<BlockEntrance> BE = P.getAs<BlockEntrance>())
+      S = BE->getBlock()->getTerminator();
+
+    if (S == LoopStmt)
+      return false;
+
+    N = N->getFirstPred();
+  }
+
+  llvm_unreachable("Reached root without encountering the previous step");
+}
+
 // updateLoopStack is called on every basic block, therefore it needs to be fast
 ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
                                 ExplodedNode* Pred) {
@@ -222,8 +235,13 @@ ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
 
   auto LS = State->get<LoopStack>();
   if (!LS.isEmpty() && LoopStmt == LS.getHead().getLoopStmt() &&
-      LCtx == LS.getHead().getLocationContext())
+      LCtx == LS.getHead().getLocationContext()) {
+    if (LS.getHead().isUnrolled() && madeNewBranch(Pred, LoopStmt)) {
+      State = State->set<LoopStack>(LS.getTail());
+      State = State->add<LoopStack>(LoopState::getNormal(LoopStmt, LCtx));
+    }
     return State;
+  }
 
   if (!shouldCompletelyUnroll(LoopStmt, ASTCtx, Pred)) {
     State = State->add<LoopStack>(LoopState::getNormal(LoopStmt, LCtx));

@@ -2880,7 +2880,6 @@ declare <8 x i64> @llvm.x86.avx512.mask.pmulu.dq.512(<16 x i32>, <16 x i32>, <8 
 define <4 x float> @test_mask_vextractf32x4(<4 x float> %b, <16 x float> %a, i8 %mask) {
 ; CHECK-LABEL: test_mask_vextractf32x4:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vextractf32x4 $2, %zmm1, %xmm1
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    kshiftlw $12, %k0, %k1
 ; CHECK-NEXT:    kshiftrw $15, %k1, %k1
@@ -2898,6 +2897,7 @@ define <4 x float> @test_mask_vextractf32x4(<4 x float> %b, <16 x float> %a, i8 
 ; CHECK-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
 ; CHECK-NEXT:    kmovw %k1, %eax
 ; CHECK-NEXT:    vpinsrb $12, %eax, %xmm2, %xmm2
+; CHECK-NEXT:    vextractf32x4 $2, %zmm1, %xmm1
 ; CHECK-NEXT:    vpslld $31, %xmm2, %xmm2
 ; CHECK-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -2941,7 +2941,6 @@ declare <4 x i64> @llvm.x86.avx512.mask.vextracti64x4.512(<8 x i64>, i32, <4 x i
 define <4 x i32> @test_maskz_vextracti32x4(<16 x i32> %a, i8 %mask) {
 ; CHECK-LABEL: test_maskz_vextracti32x4:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vextracti32x4 $2, %zmm0, %xmm0
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    kshiftlw $12, %k0, %k1
 ; CHECK-NEXT:    kshiftrw $15, %k1, %k1
@@ -2959,6 +2958,7 @@ define <4 x i32> @test_maskz_vextracti32x4(<16 x i32> %a, i8 %mask) {
 ; CHECK-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; CHECK-NEXT:    kmovw %k1, %eax
 ; CHECK-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
+; CHECK-NEXT:    vextracti32x4 $2, %zmm0, %xmm0
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; CHECK-NEXT:    vpand %xmm0, %xmm1, %xmm0

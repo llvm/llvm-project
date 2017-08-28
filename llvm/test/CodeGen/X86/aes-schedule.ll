@@ -32,7 +32,7 @@ define <2 x i64> @test_aesdec(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vaesdec %xmm1, %xmm0, %xmm0 # sched: [7:1.00]
 ; HASWELL-NEXT:    vaesdec (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_aesdec:
 ; BTVER2:       # BB#0:
@@ -75,7 +75,7 @@ define <2 x i64> @test_aesdeclast(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) 
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vaesdeclast %xmm1, %xmm0, %xmm0 # sched: [7:1.00]
 ; HASWELL-NEXT:    vaesdeclast (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_aesdeclast:
 ; BTVER2:       # BB#0:
@@ -118,7 +118,7 @@ define <2 x i64> @test_aesenc(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vaesenc %xmm1, %xmm0, %xmm0 # sched: [7:1.00]
 ; HASWELL-NEXT:    vaesenc (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_aesenc:
 ; BTVER2:       # BB#0:
@@ -161,7 +161,7 @@ define <2 x i64> @test_aesenclast(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) 
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vaesenclast %xmm1, %xmm0, %xmm0 # sched: [7:1.00]
 ; HASWELL-NEXT:    vaesenclast (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_aesenclast:
 ; BTVER2:       # BB#0:
@@ -208,7 +208,7 @@ define <2 x i64> @test_aesimc(<2 x i64> %a0, <2 x i64> *%a1) {
 ; HASWELL-NEXT:    vaesimc %xmm0, %xmm0 # sched: [14:2.00]
 ; HASWELL-NEXT:    vaesimc (%rdi), %xmm1 # sched: [14:2.00]
 ; HASWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_aesimc:
 ; BTVER2:       # BB#0:
@@ -255,10 +255,10 @@ define <2 x i64> @test_aeskeygenassist(<2 x i64> %a0, <2 x i64> *%a1) {
 ;
 ; HASWELL-LABEL: test_aeskeygenassist:
 ; HASWELL:       # BB#0:
-; HASWELL-NEXT:    vaeskeygenassist $7, %xmm0, %xmm0 # sched: [10:8.00]
-; HASWELL-NEXT:    vaeskeygenassist $7, (%rdi), %xmm1 # sched: [10:7.00]
+; HASWELL-NEXT:    vaeskeygenassist $7, %xmm0, %xmm0 # sched: [29:7.00]
+; HASWELL-NEXT:    vaeskeygenassist $7, (%rdi), %xmm1 # sched: [28:7.00]
 ; HASWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BTVER2-LABEL: test_aeskeygenassist:
 ; BTVER2:       # BB#0:

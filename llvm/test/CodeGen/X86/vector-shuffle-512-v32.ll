@@ -68,13 +68,13 @@ define <32 x i16> @shuffle_v32i16_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_1
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm4 = xmm1[8,9,12,13,12,13,10,11,0,1,4,5,4,5,0,1]
 ; KNL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm2[0,1,0,3]
 ; KNL-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm1[0,3,2,2,4,5,6,7]
-; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm4, %ymm1
-; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm5
-; KNL-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm5[4],xmm0[4],xmm5[5],xmm0[5],xmm5[6],xmm0[6],xmm5[7],xmm0[7]
+; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; KNL-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[12,13,10,11,8,9,14,15,4,5,2,3,2,3,6,7]
-; KNL-NEXT:    vpshufb {{.*#+}} xmm5 = xmm5[6,7,2,3,4,5,6,7,2,3,2,3,0,1,14,15]
-; KNL-NEXT:    vinserti128 $1, %xmm5, %ymm0, %ymm0
-; KNL-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
+; KNL-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[6,7,2,3,4,5,6,7,2,3,2,3,0,1,14,15]
+; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm4, %ymm5
+; KNL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; KNL-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0],ymm5[1],ymm0[2],ymm5[3],ymm0[4],ymm5[5],ymm0[6],ymm5[7],ymm0[8],ymm5[9],ymm0[10],ymm5[11],ymm0[12],ymm5[13],ymm0[14],ymm5[15]
 ; KNL-NEXT:    vextracti128 $1, %ymm3, %xmm3
 ; KNL-NEXT:    vpbroadcastw %xmm3, %ymm3
 ; KNL-NEXT:    vmovdqa {{.*#+}} ymm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0]

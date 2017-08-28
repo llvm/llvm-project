@@ -777,9 +777,9 @@ define <32 x i8> @splatvar_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ;
 ; AVX512DQ-LABEL: splatvar_shift_v32i8:
 ; AVX512DQ:       # BB#0:
-; AVX512DQ-NEXT:    vpbroadcastb %xmm1, %ymm1
 ; AVX512DQ-NEXT:    vpsrlw $4, %ymm0, %ymm2
 ; AVX512DQ-NEXT:    vpand {{.*}}(%rip), %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpbroadcastb %xmm1, %ymm1
 ; AVX512DQ-NEXT:    vpsllw $5, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpsrlw $2, %ymm0, %ymm2
