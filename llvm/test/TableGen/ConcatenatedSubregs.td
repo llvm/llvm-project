@@ -13,6 +13,12 @@ class MyClass<int size, list<ValueType> types, dag registers>
   let Size = size;
 }
 
+// Register Example:
+// D0_D1 -- D0 (sub0) -- S0 (ssub0)
+//       \            \- S1 (ssub1)
+//        \ D1 (sub1) -- S2 (ssub2)
+//                    \- S3 (ssub3)
+
 def sub0 : SubRegIndex<32>;
 def sub1 : SubRegIndex<32, 32>;
 def sub2 : SubRegIndex<32, 64>;

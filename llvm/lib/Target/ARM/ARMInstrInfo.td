@@ -2431,7 +2431,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP] in {
   def TAILJMPr : ARMPseudoExpand<(outs), (ins tcGPR:$dst),
                                  4, IIC_Br, [],
                                  (BX GPR:$dst)>, Sched<[WriteBr]>,
-                                 Requires<[IsARM]>;
+                                 Requires<[IsARM, HasV4T]>;
 }
 
 // Secure Monitor Call is a system instruction.
@@ -5609,6 +5609,12 @@ def Int_eh_sjlj_dispatchsetup : PseudoInst<(outs), (ins), NoItinerary, []>;
 let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in
   def MOVPCRX : ARMPseudoExpand<(outs), (ins GPR:$dst),
                     4, IIC_Br, [(brind GPR:$dst)],
+                    (MOVr PC, GPR:$dst, (ops 14, zero_reg), zero_reg)>,
+                  Requires<[IsARM, NoV4T]>, Sched<[WriteBr]>;
+
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP] in
+  def TAILJMPr4 : ARMPseudoExpand<(outs), (ins GPR:$dst),
+                    4, IIC_Br, [],
                     (MOVr PC, GPR:$dst, (ops 14, zero_reg), zero_reg)>,
                   Requires<[IsARM, NoV4T]>, Sched<[WriteBr]>;
 
