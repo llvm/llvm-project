@@ -19,4 +19,11 @@ struct B {
     // expected-warning@-4 {{explicit capture of 'this' with a capture default of '=' is incompatible with C++ standards before C++2a}}
 #endif
   }
+
+  int n : 5 = 0;
+#if __cplusplus <= 201703L
+    // expected-warning@-2 {{default member initializer for bit-field is a C++2a extension}}
+#else
+    // expected-warning@-4 {{default member initializer for bit-field is incompatible with C++ standards before C++2a}}
+#endif
 };
