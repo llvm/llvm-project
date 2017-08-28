@@ -1312,8 +1312,13 @@ ScopDetection::countBeneficialLoops(Region *R, ScalarEvolution &SE,
   int MaxLoopDepth = 0;
 
   auto L = LI.getLoopFor(R->getEntry());
-  L = L ? R->outermostLoopInRegion(L) : nullptr;
-  L = L ? L->getParentLoop() : nullptr;
+
+  // If L is fully contained in R, move to first loop surrounding R. Otherwise,
+  // L is either nullptr or already surrounding R.
+  if (L && R->contains(L)) {
+    L = R->outermostLoopInRegion(L);
+    L = L->getParentLoop();
+  }
 
   auto SubLoops =
       L ? L->getSubLoopsVector() : std::vector<Loop *>(LI.begin(), LI.end());
