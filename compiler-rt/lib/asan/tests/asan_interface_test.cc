@@ -423,3 +423,11 @@ TEST(AddressSanitizerInterface, GetOwnershipStressTest) {
     free(pointers[i]);
 }
 
+TEST(AddressSanitizerInterface, HandleNoReturnTest) {
+  char array[40];
+  __asan_poison_memory_region(array, sizeof(array));
+  BAD_ACCESS(array, 20);
+  __asan_handle_no_return();
+  // It unpoisons the whole thread stack.
+  GOOD_ACCESS(array, 20);
+}

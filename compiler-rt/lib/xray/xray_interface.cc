@@ -331,7 +331,7 @@ uintptr_t __xray_function_address(int32_t FuncId) XRAY_NEVER_INSTRUMENT {
   __sanitizer::SpinMutexLock Guard(&XRayInstrMapMutex);
   if (FuncId <= 0 || static_cast<size_t>(FuncId) > XRayInstrMap.Functions)
     return 0;
-  return XRayInstrMap.SledsIndex[FuncId - 1].Begin->Address
+  return XRayInstrMap.SledsIndex[FuncId - 1].Begin->Function
 // On PPC, function entries are always aligned to 16 bytes. The beginning of a
 // sled might be a local entry, which is always +8 based on the global entry.
 // Always return the global entry.
