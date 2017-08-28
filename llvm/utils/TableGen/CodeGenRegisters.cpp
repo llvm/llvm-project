@@ -36,6 +36,7 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
+#include <queue>
 #include <set>
 #include <string>
 #include <tuple>
@@ -98,7 +99,7 @@ void CodeGenSubRegIndex::updateComponents(CodeGenRegBank &RegBank) {
     SmallVector<CodeGenSubRegIndex*, 8> IdxParts;
     for (unsigned i = 0, e = Parts.size(); i != e; ++i)
       IdxParts.push_back(RegBank.getSubRegIdx(Parts[i]));
-    RegBank.addConcatSubRegIndex(IdxParts, this);
+    setConcatenationOf(IdxParts);
   }
 }
 
@@ -117,6 +118,37 @@ LaneBitmask CodeGenSubRegIndex::computeLaneMask() const {
   assert(M.any() && "Missing lane mask, sub-register cycle?");
   LaneMask = M;
   return LaneMask;
+}
+
+void CodeGenSubRegIndex::setConcatenationOf(
+    ArrayRef<CodeGenSubRegIndex*> Parts) {
+  if (ConcatenationOf.empty()) {
+    ConcatenationOf.assign(Parts.begin(), Parts.end());
+  } else {
+    assert(std::equal(Parts.begin(), Parts.end(),
+                      ConcatenationOf.begin()) && "parts consistent");
+  }
+}
+
+void CodeGenSubRegIndex::computeConcatTransitiveClosure() {
+  for (SmallVectorImpl<CodeGenSubRegIndex*>::iterator
+       I = ConcatenationOf.begin(); I != ConcatenationOf.end(); /*empty*/) {
+    CodeGenSubRegIndex *SubIdx = *I;
+    SubIdx->computeConcatTransitiveClosure();
+#ifndef NDEBUG
+    for (CodeGenSubRegIndex *SRI : SubIdx->ConcatenationOf)
+      assert(SRI->ConcatenationOf.empty() && "No transitive closure?");
+#endif
+
+    if (SubIdx->ConcatenationOf.empty()) {
+      ++I;
+    } else {
+      I = ConcatenationOf.erase(I);
+      I = ConcatenationOf.insert(I, SubIdx->ConcatenationOf.begin(),
+                                 SubIdx->ConcatenationOf.end());
+      I += SubIdx->ConcatenationOf.size();
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -369,7 +401,8 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
       Parts.push_back(getSubRegIndex(SR->ExplicitSubRegs[j]));
 
     // Offer this as an existing spelling for the concatenation of Parts.
-    RegBank.addConcatSubRegIndex(Parts, ExplicitSubRegIndices[i]);
+    CodeGenSubRegIndex &Idx = *ExplicitSubRegIndices[i];
+    Idx.setConcatenationOf(Parts);
   }
 
   // Initialize RegUnitList. Because getSubRegs is called recursively, this
@@ -430,14 +463,21 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
 // sub-register relationships that would force a DAG.
 //
 void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
-  // Collect new sub-registers first, add them later.
   SmallVector<SubRegMap::value_type, 8> NewSubRegs;
+
+  std::queue<std::pair<CodeGenSubRegIndex*,CodeGenRegister*>> SubRegQueue;
+  for (std::pair<CodeGenSubRegIndex*,CodeGenRegister*> P : SubRegs)
+    SubRegQueue.push(P);
 
   // Look at the leading super-registers of each sub-register. Those are the
   // candidates for new sub-registers, assuming they are fully contained in
   // this register.
-  for (SubRegMap::iterator I = SubRegs.begin(), E = SubRegs.end(); I != E; ++I){
-    const CodeGenRegister *SubReg = I->second;
+  while (!SubRegQueue.empty()) {
+    CodeGenSubRegIndex *SubRegIdx;
+    const CodeGenRegister *SubReg;
+    std::tie(SubRegIdx, SubReg) = SubRegQueue.front();
+    SubRegQueue.pop();
+
     const CodeGenRegister::SuperRegList &Leads = SubReg->LeadingSuperRegs;
     for (unsigned i = 0, e = Leads.size(); i != e; ++i) {
       CodeGenRegister *Cand = const_cast<CodeGenRegister*>(Leads[i]);
@@ -445,41 +485,48 @@ void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
       if (Cand == this || getSubRegIndex(Cand))
         continue;
       // Check if each component of Cand is already a sub-register.
-      // We know that the first component is I->second, and is present with the
-      // name I->first.
-      SmallVector<CodeGenSubRegIndex*, 8> Parts(1, I->first);
       assert(!Cand->ExplicitSubRegs.empty() &&
              "Super-register has no sub-registers");
-      for (unsigned j = 1, e = Cand->ExplicitSubRegs.size(); j != e; ++j) {
-        if (CodeGenSubRegIndex *Idx = getSubRegIndex(Cand->ExplicitSubRegs[j]))
-          Parts.push_back(Idx);
-        else {
+      if (Cand->ExplicitSubRegs.size() == 1)
+        continue;
+      SmallVector<CodeGenSubRegIndex*, 8> Parts;
+      // We know that the first component is (SubRegIdx,SubReg). However we
+      // may still need to split it into smaller subregister parts.
+      assert(Cand->ExplicitSubRegs[0] == SubReg);
+      assert(getSubRegIndex(SubReg) == SubRegIdx);
+      for (CodeGenRegister *SubReg : Cand->ExplicitSubRegs) {
+        if (CodeGenSubRegIndex *SubRegIdx = getSubRegIndex(SubReg)) {
+          if (SubRegIdx->ConcatenationOf.empty()) {
+            Parts.push_back(SubRegIdx);
+          } else {
+            for (CodeGenSubRegIndex *SubIdx : SubRegIdx->ConcatenationOf)
+              Parts.push_back(SubIdx);
+          }
+        } else {
           // Sub-register doesn't exist.
           Parts.clear();
           break;
         }
       }
-      // If some Cand sub-register is not part of this register, or if Cand only
-      // has one sub-register, there is nothing to do.
-      if (Parts.size() <= 1)
+      // There is nothing to do if some Cand sub-register is not part of this
+      // register.
+      if (Parts.empty())
         continue;
 
       // Each part of Cand is a sub-register of this. Make the full Cand also
       // a sub-register with a concatenated sub-register index.
-      CodeGenSubRegIndex *Concat= RegBank.getConcatSubRegIndex(Parts);
-      NewSubRegs.push_back(std::make_pair(Concat, Cand));
+      CodeGenSubRegIndex *Concat = RegBank.getConcatSubRegIndex(Parts);
+      std::pair<CodeGenSubRegIndex*,CodeGenRegister*> NewSubReg =
+          std::make_pair(Concat, Cand);
+
+      if (!SubRegs.insert(NewSubReg).second)
+        continue;
+
+      // We inserted a new subregister.
+      NewSubRegs.push_back(NewSubReg);
+      SubRegQueue.push(NewSubReg);
+      SubReg2Idx.insert(std::make_pair(Cand, Concat));
     }
-  }
-
-  // Now add all the new sub-registers.
-  for (unsigned i = 0, e = NewSubRegs.size(); i != e; ++i) {
-    // Don't add Cand if another sub-register is already using the index.
-    if (!SubRegs.insert(NewSubRegs[i]).second)
-      continue;
-
-    CodeGenSubRegIndex *NewIdx = NewSubRegs[i].first;
-    CodeGenRegister *NewSubReg = NewSubRegs[i].second;
-    SubReg2Idx.insert(std::make_pair(NewSubReg, NewIdx));
   }
 
   // Create sub-register index composition maps for the synthesized indices.
@@ -1070,6 +1117,14 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records) {
   for (auto &Reg : Registers)
     Reg.computeSubRegs(*this);
 
+  // Compute transitive closure of subregister index ConcatenationOf vectors
+  // and initialize ConcatIdx map.
+  for (CodeGenSubRegIndex &SRI : SubRegIndices) {
+    SRI.computeConcatTransitiveClosure();
+    if (!SRI.ConcatenationOf.empty())
+      ConcatIdx.insert(std::make_pair(SRI.ConcatenationOf, &SRI));
+  }
+
   // Infer even more sub-registers by combining leading super-registers.
   for (auto &Reg : Registers)
     if (Reg.CoveredBySubRegs)
@@ -1183,6 +1238,11 @@ CodeGenRegBank::getCompositeSubRegIndex(CodeGenSubRegIndex *A,
 CodeGenSubRegIndex *CodeGenRegBank::
 getConcatSubRegIndex(const SmallVector<CodeGenSubRegIndex *, 8> &Parts) {
   assert(Parts.size() > 1 && "Need two parts to concatenate");
+#ifndef NDEBUG
+  for (CodeGenSubRegIndex *Idx : Parts) {
+    assert(Idx->ConcatenationOf.empty() && "No transitive closure?");
+  }
+#endif
 
   // Look for an existing entry.
   CodeGenSubRegIndex *&Idx = ConcatIdx[Parts];
@@ -1208,6 +1268,7 @@ getConcatSubRegIndex(const SmallVector<CodeGenSubRegIndex *, 8> &Parts) {
   Idx = createSubRegIndex(Name, Parts.front()->getNamespace());
   Idx->Size = Size;
   Idx->Offset = isContinuous ? Parts.front()->Offset : -1;
+  Idx->ConcatenationOf.assign(Parts.begin(), Parts.end());
   return Idx;
 }
 

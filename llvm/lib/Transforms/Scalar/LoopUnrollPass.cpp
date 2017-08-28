@@ -80,6 +80,10 @@ static cl::opt<unsigned> UnrollFullMaxCount(
     cl::desc(
         "Set the max unroll count for full unrolling, for testing purposes"));
 
+static cl::opt<unsigned> UnrollPeelCount(
+    "unroll-peel-count", cl::Hidden,
+    cl::desc("Set the unroll peeling count, for testing purposes"));
+
 static cl::opt<bool>
     UnrollAllowPartial("unroll-allow-partial", cl::Hidden,
                        cl::desc("Allows loops to be partially unrolled until "
@@ -183,6 +187,8 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     UP.MaxCount = UnrollMaxCount;
   if (UnrollFullMaxCount.getNumOccurrences() > 0)
     UP.FullUnrollMaxCount = UnrollFullMaxCount;
+  if (UnrollPeelCount.getNumOccurrences() > 0)
+    UP.PeelCount = UnrollPeelCount;
   if (UnrollAllowPartial.getNumOccurrences() > 0)
     UP.Partial = UnrollAllowPartial;
   if (UnrollAllowRemainder.getNumOccurrences() > 0)

@@ -15157,6 +15157,29 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode* N) {
   // Skip bitcasting
   V = peekThroughBitcast(V);
 
+  // If the input is a build vector. Try to make a smaller build vector.
+  if (V->getOpcode() == ISD::BUILD_VECTOR) {
+    if (auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
+      EVT InVT = V->getValueType(0);
+      unsigned NumElems = NVT.getSizeInBits() / InVT.getScalarSizeInBits();
+      if (NumElems > 0) {
+        EVT ExtractVT = EVT::getVectorVT(*DAG.getContext(),
+                                         InVT.getVectorElementType(), NumElems);
+        if (!LegalOperations ||
+            TLI.isOperationLegal(ISD::BUILD_VECTOR, ExtractVT)) {
+          unsigned IdxVal = Idx->getZExtValue() * NVT.getScalarSizeInBits() /
+                            InVT.getScalarSizeInBits();
+
+          // Extract the pieces from the original build_vector.
+          SDValue BuildVec = DAG.getBuildVector(ExtractVT, SDLoc(N),
+                                            makeArrayRef(V->op_begin() + IdxVal,
+                                                         NumElems));
+          return DAG.getBitcast(NVT, BuildVec);
+        }
+      }
+    }
+  }
+
   if (V->getOpcode() == ISD::INSERT_SUBVECTOR) {
     // Handle only simple case where vector being inserted and vector
     // being extracted are of same size.

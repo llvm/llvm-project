@@ -508,6 +508,9 @@ static void insertCallRetPHI(Instruction *Inst, Instruction *CallResult,
   if (Inst->getType()->isVoidTy())
     return;
 
+  if (Inst->use_empty())
+    return;
+
   BasicBlock *RetValBB = CallResult->getParent();
 
   BasicBlock *PHIBB;
