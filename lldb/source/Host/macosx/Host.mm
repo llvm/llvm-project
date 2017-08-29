@@ -20,7 +20,7 @@
 #define __XPC_PRIVATE_H__
 #include <xpc/xpc.h>
 
-#define LaunchUsingXPCRightName "com.apple.dt.Xcode.RootDebuggingXPCService"
+#define LaunchUsingXPCRightName "com.apple.lldb.RootDebuggingXPCService"
 
 // These XPC messaging keys are used for communication between Host.mm and the
 // XPC service.

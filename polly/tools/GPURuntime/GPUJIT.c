@@ -1453,7 +1453,7 @@ int isManagedPtr(void *mem) {
   return 0;
 }
 
-void polly_freeManaged(void *mem) {
+void freeManagedCUDA(void *mem) {
   dump_function();
 
   // In a real-world program this was used (COSMO), there were more `free`
@@ -1475,7 +1475,7 @@ void polly_freeManaged(void *mem) {
   }
 }
 
-void *polly_mallocManaged(size_t size) {
+void *mallocManagedCUDA(size_t size) {
   // Note: [Size 0 allocations]
   // Sometimes, some runtime computation of size could create a size of 0
   // for an allocation. In these cases, we do not wish to fail.
@@ -1810,6 +1810,28 @@ void polly_freeContext(PollyGPUContext *Context) {
   default:
     err_runtime();
   }
+}
+
+void polly_freeManaged(void *mem) {
+  dump_function();
+
+#ifdef HAS_LIBCUDART
+  freeManagedCUDA(mem);
+#else
+  fprintf(stderr, "No CUDA Runtime. Managed memory only supported by CUDA\n");
+  exit(-1);
+#endif
+}
+
+void *polly_mallocManaged(size_t size) {
+  dump_function();
+
+#ifdef HAS_LIBCUDART
+  return mallocManagedCUDA(size);
+#else
+  fprintf(stderr, "No CUDA Runtime. Managed memory only supported by CUDA\n");
+  exit(-1);
+#endif
 }
 
 /* Initialize GPUJIT with CUDA as runtime library. */

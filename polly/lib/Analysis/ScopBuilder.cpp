@@ -964,8 +964,9 @@ static inline BasicBlock *getRegionNodeBasicBlock(RegionNode *RN) {
                            : RN->getNodeAs<BasicBlock>();
 }
 
-void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
-  scop.reset(new Scop(R, SE, LI, *SD.getDetectionContext(&R), SD.ORE));
+void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
+                            OptimizationRemarkEmitter &ORE) {
+  scop.reset(new Scop(R, SE, LI, *SD.getDetectionContext(&R), ORE));
 
   buildStmts(R);
   buildAccessFunctions();
@@ -1064,17 +1065,18 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
 
 ScopBuilder::ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
                          const DataLayout &DL, DominatorTree &DT, LoopInfo &LI,
-                         ScopDetection &SD, ScalarEvolution &SE)
+                         ScopDetection &SD, ScalarEvolution &SE,
+                         OptimizationRemarkEmitter &ORE)
     : AA(AA), DL(DL), DT(DT), LI(LI), SD(SD), SE(SE) {
   DebugLoc Beg, End;
   auto P = getBBPairForRegion(R);
   getDebugLocations(P, Beg, End);
 
   std::string Msg = "SCoP begins here.";
-  SD.ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "ScopEntry", Beg, P.first)
-              << Msg);
+  ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "ScopEntry", Beg, P.first)
+           << Msg);
 
-  buildScop(*R, AC);
+  buildScop(*R, AC, ORE);
 
   DEBUG(dbgs() << *scop);
 
@@ -1090,9 +1092,9 @@ ScopBuilder::ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
   }
 
   if (R->isTopLevelRegion())
-    SD.ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "ScopEnd", End, P.first)
-                << Msg);
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "ScopEnd", End, P.first)
+             << Msg);
   else
-    SD.ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "ScopEnd", End, P.second)
-                << Msg);
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "ScopEnd", End, P.second)
+             << Msg);
 }
