@@ -5,16 +5,10 @@
 ; CHECK-NOT: DW_TAG_subprogram
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
-; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]	([[MYDATA_LOC:0x[0-9a-f]*]])
+; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
+; CHECK-NEXT:    0x{{.*}} - 0x{{.*}}: {{.*}} DW_OP_plus_uconst 0x4, DW_OP_deref, DW_OP_plus_uconst 0x18
+; CHECK-NEXT:    0x{{.*}} - 0x{{.*}}: {{.*}} DW_OP_plus_uconst 0x4, DW_OP_deref, DW_OP_plus_uconst 0x18
 ; CHECK-NEXT: DW_AT_name {{.*}} "mydata"
-
-; debug_loc content
-; CHECK: .debug_loc contents:
-; CHECK: [[MYDATA_LOC]]: Beginning address offset: {{.*}}
-; CHECK-NOT: {{0x[0-9a-f]*}}: Beginning address offset
-; CHECK: Location description: {{.*}} 23 04 06 23 18
-; CHECK-NOT: {{0x[0-9a-f]*}}: Beginning address offset
-; CHECK: Location description: {{.*}} 23 04 06 23 18
 
 ; Radar 9331779
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:64-v128:32:128-a0:0:32-n32"

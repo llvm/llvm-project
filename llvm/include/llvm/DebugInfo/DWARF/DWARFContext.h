@@ -43,6 +43,7 @@
 namespace llvm {
 
 class DataExtractor;
+class MCRegisterInfo;
 class MemoryBuffer;
 class raw_ostream;
 
@@ -85,6 +86,8 @@ class DWARFContext : public DIContext {
   bool CheckedForDWP = false;
   std::string DWPName;
 
+  std::unique_ptr<MCRegisterInfo> RegInfo;
+
   /// Read compile units from the debug_info section (if necessary)
   /// and store them in CUs.
   void parseCompileUnits();
@@ -106,9 +109,9 @@ protected:
 
 public:
   DWARFContext(std::unique_ptr<const DWARFObject> DObj,
-               std::string DWPName = "")
-      : DIContext(CK_DWARF), DWPName(std::move(DWPName)),
-        DObj(std::move(DObj)) {}
+               std::string DWPName = "");
+  ~DWARFContext();
+
   DWARFContext(DWARFContext &) = delete;
   DWARFContext &operator=(DWARFContext &) = delete;
 
@@ -243,6 +246,8 @@ public:
 
   std::shared_ptr<DWARFContext> getDWOContext(StringRef AbsolutePath);
 
+  const MCRegisterInfo *getRegisterInfo() const { return RegInfo.get(); }
+
   /// Function used to handle default error reporting policy. Prints a error
   /// message and returns Continue, so DWARF context ignores the error.
   static ErrorPolicy defaultErrorHandler(Error E);
@@ -254,6 +259,11 @@ public:
   static std::unique_ptr<DWARFContext>
   create(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,
          uint8_t AddrSize, bool isLittleEndian = sys::IsLittleEndianHost);
+
+  /// Loads register info for the architecture of the provided object file.
+  /// Improves readability of dumped DWARF expressions. Requires the caller to
+  /// have initialized the relevant target descriptions.
+  Error loadRegisterInfo(const object::ObjectFile &Obj);
 
 private:
   /// Return the compile unit that includes an offset (relative to .debug_info).

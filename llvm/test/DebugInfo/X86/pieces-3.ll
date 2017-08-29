@@ -16,26 +16,14 @@
 ;    }
 ;
 ; CHECK: DW_TAG_formal_parameter [3]
-; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        ([[LOC1:.*]])
+; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        (
+; CHECK-NEXT:     0x0000000000000000 - 0x0000000000000004: DW_OP_reg5 RDI, DW_OP_piece 0x8, DW_OP_piece 0x4, DW_OP_reg4 RSI, DW_OP_piece 0x4
+; CHECK-NEXT:     0x0000000000000004 - 0x0000000000000008: DW_OP_reg5 RDI, DW_OP_piece 0x8, DW_OP_piece 0x4, DW_OP_reg4 RSI, DW_OP_piece 0x4)
 ; CHECK-NEXT:   DW_AT_name {{.*}}"outer"
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT:   DW_AT_location
-;                                     rsi, piece 0x00000004
-; CHECK-SAME:                         54 93 04
+; CHECK-NEXT:   DW_AT_location {{.*}}(DW_OP_reg4 RSI, DW_OP_piece 0x4)
 ; CHECK-NEXT:   "i1"
-;
-; CHECK: .debug_loc
-; CHECK: [[LOC1]]: Beginning address offset: 0x0000000000000000
-; CHECK-NEXT:         Ending address offset: 0x0000000000000004
-;             rdi, piece 0x00000008, piece 0x00000004, rsi, piece 0x00000004
-; CHECK-NEXT: Location description: 55 93 08 93 04 54 93 04
-; This location is split into two ranges with identical locations
-; because it comes from a DBG_VALUE %RSI followed by a DBG_VALUE %ESI.
-; CHECK:           Beginning address offset: 0x0000000000000004
-; CHECK-NEXT:         Ending address offset: 0x0000000000000008
-; CHECK-NEXT: Location description: 55 93 08 93 04 54 93 04
 
-;
 ; ModuleID = '/Volumes/Data/llvm/test/DebugInfo/X86/sroasplit-2.ll'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"

@@ -8,9 +8,8 @@
 ; CHECK-LABEL: use_dbg_declare:
 ; CHECK-NOT: #DEBUG_VALUE
 
-; 	"<0x2> 91 00" means "fbreg uleb(0)", i.e. RSP+0.
 ; DWARF: DW_TAG_variable
-; DWARF-NEXT:              DW_AT_location [DW_FORM_exprloc]      (<0x2> 91 00 )
+; DWARF-NEXT:              DW_AT_location [DW_FORM_exprloc]      (DW_OP_fbreg +0)
 ; DWARF-NEXT:              DW_AT_name [DW_FORM_strp]     ( {{.*}} = "o")
 
 

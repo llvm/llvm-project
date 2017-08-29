@@ -21,8 +21,7 @@
 ; CHECK: callq _f
 
 ; DWARF: DW_TAG_variable
-; 	"<0x2> 91 00" means fbreg 0, i.e. offset RSP+0.
-; DWARF-NEXT:              DW_AT_location [DW_FORM_exprloc]      (<0x2> 91 00 )
+; DWARF-NEXT:              DW_AT_location [DW_FORM_exprloc]      (DW_OP_fbreg +0)
 ; DWARF-NEXT:              DW_AT_name [DW_FORM_strp]     ( {{.*}} = "array")
 
 ; ModuleID = '/tmp/array.c'
