@@ -77,10 +77,11 @@ private:
 
   // The following methods try to read a single token, check if it has the
   // correct type and then parse it.
-  Expected<uint32_t> readInt();           // Parse an integer.
-  Expected<StringRef> readString();       // Parse a string.
-  Expected<StringRef> readIdentifier();   // Parse an identifier.
-  Expected<IntOrString> readTypeOrName(); // Parse an integer or an identifier.
+  Expected<uint32_t> readInt();            // Parse an integer.
+  Expected<StringRef> readString();        // Parse a string.
+  Expected<StringRef> readIdentifier();    // Parse an identifier.
+  Expected<IntOrString> readIntOrString(); // Parse an integer or a string.
+  Expected<IntOrString> readTypeOrName();  // Parse an integer or an identifier.
 
   // Advance the state by one, discarding the current token.
   // If the discarded token had an incorrect type, fail.
@@ -96,6 +97,13 @@ private:
   // expects an integer to follow.
   Expected<SmallVector<uint32_t, 8>> readIntsWithCommas(size_t MinCount,
                                                         size_t MaxCount);
+
+  // Read an unknown number of flags preceded by commas. Each correct flag
+  // has an entry in FlagDesc array of length NumFlags. In case i-th
+  // flag (0-based) has been read, the i-th bit of the result is set.
+  // As long as parser has a comma to read, it expects to be fed with
+  // a correct flag afterwards.
+  Expected<uint32_t> parseFlags(ArrayRef<StringRef> FlagDesc);
 
   // Reads a set of optional statements. These can change the behavior of
   // a number of resource types (e.g. STRINGTABLE, MENU or DIALOG) if provided
@@ -118,8 +126,15 @@ private:
 
   // Top-level resource parsers.
   ParseType parseLanguageResource();
+  ParseType parseAcceleratorsResource();
+  ParseType parseCursorResource();
   ParseType parseIconResource();
+  ParseType parseHTMLResource();
+  ParseType parseMenuResource();
   ParseType parseStringTableResource();
+
+  // Helper MENU parser.
+  Expected<MenuDefinitionList> parseMenuItemsList();
 
   // Optional statement parsers.
   ParseOptionType parseLanguageStmt();

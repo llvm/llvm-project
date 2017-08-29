@@ -245,9 +245,9 @@ protected:
   /// a stall when returning too early.
   bool PadShortFunctions;
 
-  /// True if the Calls with memory reference should be converted
-  /// to a register-based indirect call.
-  bool CallRegIndirect;
+  /// True if two memory operand instructions should use a temporary register
+  /// instead.
+  bool SlowTwoMemOps;
 
   /// True if the LEA instruction inputs have to be ready at address generation
   /// (AG) time.
@@ -492,7 +492,7 @@ public:
   bool hasSlowDivide32() const { return HasSlowDivide32; }
   bool hasSlowDivide64() const { return HasSlowDivide64; }
   bool padShortFunctions() const { return PadShortFunctions; }
-  bool callRegIndirect() const { return CallRegIndirect; }
+  bool slowTwoMemOps() const { return SlowTwoMemOps; }
   bool LEAusesAG() const { return LEAUsesAG; }
   bool slowLEA() const { return SlowLEA; }
   bool slow3OpsLEA() const { return Slow3OpsLEA; }

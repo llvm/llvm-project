@@ -90,6 +90,70 @@ void StringTableSection::writeSection(FileOutputBuffer &Out) const {
   StrTabBuilder.write(Out.getBufferStart() + Offset);
 }
 
+void SymbolTableSection::addSymbol(StringRef Name, uint8_t Bind, uint8_t Type,
+                                   SectionBase *DefinedIn, uint64_t Value,
+                                   uint64_t Sz) {
+  Symbol Sym;
+  Sym.Name = Name;
+  Sym.Binding = Bind;
+  Sym.Type = Type;
+  Sym.DefinedIn = DefinedIn;
+  Sym.Value = Value;
+  Sym.Size = Sz;
+  Sym.Index = Symbols.size();
+  Symbols.emplace_back(llvm::make_unique<Symbol>(Sym));
+  Size += this->EntrySize;
+}
+
+void SymbolTableSection::finalize() {
+  // Make sure SymbolNames is finalized before getting name indexes.
+  SymbolNames->finalize();
+
+  uint32_t MaxLocalIndex = 0;
+  for (auto &Sym : Symbols) {
+    Sym->NameIndex = SymbolNames->findIndex(Sym->Name);
+    if (Sym->Binding == STB_LOCAL)
+      MaxLocalIndex = std::max(MaxLocalIndex, Sym->Index);
+  }
+  // Now we need to set the Link and Info fields.
+  Link = SymbolNames->Index;
+  Info = MaxLocalIndex + 1;
+}
+
+void SymbolTableSection::addSymbolNames() {
+  // Add all of our strings to SymbolNames so that SymbolNames has the right
+  // size before layout is decided.
+  for (auto &Sym : Symbols)
+    SymbolNames->addString(Sym->Name);
+}
+
+const Symbol *SymbolTableSection::getSymbolByIndex(uint32_t Index) const {
+  if (Symbols.size() <= Index)
+    error("Invalid symbol index: " + Twine(Index));
+  return Symbols[Index].get();
+}
+
+template <class ELFT>
+void SymbolTableSectionImpl<ELFT>::writeSection(
+    llvm::FileOutputBuffer &Out) const {
+  uint8_t *Buf = Out.getBufferStart();
+  Buf += Offset;
+  typename ELFT::Sym *Sym = reinterpret_cast<typename ELFT::Sym *>(Buf);
+  // Loop though symbols setting each entry of the symbol table.
+  for (auto &Symbol : Symbols) {
+    Sym->st_name = Symbol->NameIndex;
+    Sym->st_value = Symbol->Value;
+    Sym->st_size = Symbol->Size;
+    Sym->setBinding(Symbol->Binding);
+    Sym->setType(Symbol->Type);
+    if (Symbol->DefinedIn)
+      Sym->st_shndx = Symbol->DefinedIn->Index;
+    else
+      Sym->st_shndx = SHN_UNDEF;
+    ++Sym;
+  }
+}
+
 // Returns true IFF a section is wholly inside the range of a segment
 static bool sectionWithinSegment(const SectionBase &Section,
                                  const Segment &Segment) {
@@ -133,6 +197,40 @@ void Object<ELFT>::readProgramHeaders(const ELFFile<ELFT> &ElfFile) {
 }
 
 template <class ELFT>
+void Object<ELFT>::initSymbolTable(const llvm::object::ELFFile<ELFT> &ElfFile,
+                                   SymbolTableSection *SymTab) {
+
+  SymTab->Size = 0;
+  if (SymbolTable->Link - 1 >= Sections.size())
+    error("Symbol table has link index of " + Twine(SymbolTable->Link) +
+          " which is not a valid index");
+
+  if (auto StrTab =
+          dyn_cast<StringTableSection>(Sections[SymbolTable->Link - 1].get()))
+    SymTab->setStrTab(StrTab);
+  else
+    error("Symbol table has link index of " + Twine(SymbolTable->Link) +
+          "which is not a string table");
+
+  const Elf_Shdr &Shdr = *unwrapOrError(ElfFile.getSection(SymTab->Index));
+  StringRef StrTabData = unwrapOrError(ElfFile.getStringTableForSymtab(Shdr));
+
+  for (const auto &Sym : unwrapOrError(ElfFile.symbols(&Shdr))) {
+    SectionBase *DefSection = nullptr;
+    StringRef Name = unwrapOrError(Sym.getName(StrTabData));
+    if (Sym.st_shndx != SHN_UNDEF) {
+      if (Sym.st_shndx >= Sections.size())
+        error("Symbol '" + Name +
+              "' is defined in invalid section with index " +
+              Twine(Sym.st_shndx));
+      DefSection = Sections[Sym.st_shndx - 1].get();
+    }
+    SymTab->addSymbol(Name, Sym.getBinding(), Sym.getType(), DefSection,
+                      Sym.getValue(), Sym.st_size);
+  }
+}
+
+template <class ELFT>
 std::unique_ptr<SectionBase>
 Object<ELFT>::makeSection(const llvm::object::ELFFile<ELFT> &ElfFile,
                           const Elf_Shdr &Shdr) {
@@ -140,6 +238,11 @@ Object<ELFT>::makeSection(const llvm::object::ELFFile<ELFT> &ElfFile,
   switch (Shdr.sh_type) {
   case SHT_STRTAB:
     return llvm::make_unique<StringTableSection>();
+  case SHT_SYMTAB: {
+    auto SymTab = llvm::make_unique<SymbolTableSectionImpl<ELFT>>();
+    SymbolTable = SymTab.get();
+    return std::move(SymTab);
+  }
   case SHT_NOBITS:
     return llvm::make_unique<Section>(Data);
   default:
@@ -171,6 +274,11 @@ void Object<ELFT>::readSectionHeaders(const ELFFile<ELFT> &ElfFile) {
     Sec->Index = Index++;
     Sections.push_back(std::move(Sec));
   }
+
+  // Now that all of the sections have been added we can fill out some extra
+  // details about symbol tables.
+  if (SymbolTable)
+    initSymbolTable(ElfFile, SymbolTable);
 }
 
 template <class ELFT> Object<ELFT>::Object(const ELFObjectFile<ELFT> &Obj) {
@@ -315,9 +423,12 @@ template <class ELFT> void ELFObject<ELFT>::write(FileOutputBuffer &Out) const {
 }
 
 template <class ELFT> void ELFObject<ELFT>::finalize() {
+  // Make sure we add the names of all the sections.
   for (const auto &Section : this->Sections) {
     this->SectionNames->addString(Section->Name);
   }
+  // Make sure we add the names of all the symbols.
+  this->SymbolTable->addSymbolNames();
 
   sortSections();
   assignOffsets();

@@ -2027,6 +2027,14 @@ void LSRInstance::OptimizeShadowIV() {
     if (!PH) continue;
     if (PH->getNumIncomingValues() != 2) continue;
 
+    // If the calculation in integers overflows, the result in FP type will
+    // differ. So we only can do this transformation if we are guaranteed to not
+    // deal with overflowing values
+    const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(PH));
+    if (!AR) continue;
+    if (IsSigned && !AR->hasNoSignedWrap()) continue;
+    if (!IsSigned && !AR->hasNoUnsignedWrap()) continue;
+
     Type *SrcTy = PH->getType();
     int Mantissa = DestTy->getFPMantissaWidth();
     if (Mantissa == -1) continue;
