@@ -1,1 +1,0 @@
-RUN: LLVMFuzzer-BadStrcmpTest -runs=100000

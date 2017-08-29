@@ -1,4 +1,0 @@
-REQUIRES: linux
-CHECK: INFO: Loaded 1 modules with {{.*}} inline 8-bit counters
-CHECK: BINGO
-RUN: LLVMFuzzer-SimpleTest-Inline8bitCounters -runs=1000000 -seed=1 2>&1 | FileCheck %s
