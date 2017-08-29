@@ -1,3 +1,0 @@
-RUN: echo -n 0123456789ABCDEFGHIZ > %t-in
-RUN: LLVMFuzzer-CleanseTest -cleanse_crash=1 %t-in -exact_artifact_path=%t-out
-RUN: echo -n ' 1   5    A        Z' | diff - %t-out

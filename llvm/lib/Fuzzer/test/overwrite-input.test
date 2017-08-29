@@ -1,2 +1,0 @@
-RUN: not LLVMFuzzer-OverwriteInputTest 2>&1 | FileCheck %s
-CHECK: ERROR: libFuzzer: fuzz target overwrites it's const input
