@@ -127,11 +127,12 @@ void test_PR31166 ()
 {
     typedef std::pair<int, int> P;
     typedef std::vector<P> V;
-    const V vec {{1, 0}, {2, 0}, {2, 1}, {2, 2}, {2, 3}};
+    P vec[5] = {P(1, 0), P(2, 0), P(2, 1), P(2, 2), P(2, 3)};
     for ( int i = 0; i < 5; ++i ) {
-        V res = vec;
+        V res(vec, vec + 5);
         std::inplace_merge(res.begin(), res.begin() + i, res.end(), less_by_first());
-        assert(res == vec);
+        assert(res.size() == 5);
+        assert(std::equal(res.begin(), res.end(), vec));
     }
 }
 
