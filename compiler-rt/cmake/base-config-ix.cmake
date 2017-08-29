@@ -4,6 +4,8 @@
 # runtime libraries.
 
 include(CheckIncludeFile)
+include(CheckCXXSourceCompiles)
+
 check_include_file(unwind.h HAVE_UNWIND_H)
 
 # Top level target used to build all compiler-rt libraries.
@@ -86,6 +88,7 @@ if(APPLE)
   option(COMPILER_RT_ENABLE_IOS "Enable building for iOS" On)
   option(COMPILER_RT_ENABLE_WATCHOS "Enable building for watchOS - Experimental" Off)
   option(COMPILER_RT_ENABLE_TVOS "Enable building for tvOS - Experimental" Off)
+
 else()
   option(COMPILER_RT_DEFAULT_TARGET_ONLY "Build builtins only for the default target" Off)
 endif()

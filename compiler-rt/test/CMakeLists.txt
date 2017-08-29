@@ -58,6 +58,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     # CFI tests require diagnostic mode, which is implemented in UBSan.
     compiler_rt_test_runtime(ubsan cfi)
     compiler_rt_test_runtime(sanitizer_common)
+    compiler_rt_test_runtime(fuzzer)
 
     foreach(sanitizer ${COMPILER_RT_SANITIZERS_TO_BUILD})
       # cfi testing is gated on ubsan

@@ -3,6 +3,8 @@
 // RUN: %env_tool_opts=stack_trace_format='"frame:%n lineno:%l"' %run %t 2>&1 | FileCheck %s --check-prefix=CUSTOM
 // RUN: %env_tool_opts=symbolize_inline_frames=false:stack_trace_format=DEFAULT %run %t 2>&1 | FileCheck %s --check-prefix=NOINLINE
 
+// UNSUPPORTED: darwin
+
 #include <sanitizer/common_interface_defs.h>
 
 static inline void FooBarBaz() {
