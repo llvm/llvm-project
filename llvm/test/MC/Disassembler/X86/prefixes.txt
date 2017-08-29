@@ -1,60 +1,5 @@
 # RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s
 
-# CHECK: rep
-# CHECK-NEXT: insb    %dx, %es:(%rdi)
-0xf3 0x6c #rep ins
-# CHECK: rep
-# CHECK-NEXT: insl    %dx, %es:(%rdi)
-0xf3 0x6d #rep ins
-# CHECK: rep
-# CHECK-NEXT: movsb   (%rsi), %es:(%rdi)
-0xf3 0xa4 #rep movs
-# CHECK: rep
-# CHECK-NEXT: movsl   (%rsi), %es:(%rdi)
-0xf3 0xa5 #rep movs
-# CHECK: rep
-# CHECK-NEXT: outsb   (%rsi), %dx
-0xf3 0x6e #rep outs
-# CHECK: rep
-# CHECK-NEXT: outsl   (%rsi), %dx
-0xf3 0x6f #rep outs
-# CHECK: rep
-# CHECK-NEXT: lodsb   (%rsi), %al
-0xf3 0xac #rep lods
-# CHECK: rep
-# CHECK-NEXT: lodsl   (%rsi), %eax
-0xf3 0xad #rep lods
-# CHECK: rep
-# CHECK-NEXT: stosb   %al, %es:(%rdi)
-0xf3 0xaa #rep stos
-# CHECK: rep
-# CHECK-NEXT: stosl   %eax, %es:(%rdi)
-0xf3 0xab #rep stos
-# CHECK: rep
-# CHECK-NEXT: cmpsb   %es:(%rdi), (%rsi)
-0xf3 0xa6 #rep cmps
-# CHECK: rep
-# CHECK-NEXT: cmpsl   %es:(%rdi), (%rsi)
-0xf3 0xa7 #repe cmps
-# CHECK: rep
-# CHECK-NEXT: scasb   %es:(%rdi), %al
-0xf3 0xae #repe scas
-# CHECK: rep
-# CHECK-NEXT: scasl   %es:(%rdi), %eax
-0xf3 0xaf #repe scas
-# CHECK: repne
-# CHECK-NEXT: cmpsb   %es:(%rdi), (%rsi)
-0xf2 0xa6 #repne cmps
-# CHECK: repne
-# CHECK-NEXT: cmpsl   %es:(%rdi), (%rsi)
-0xf2 0xa7 #repne cmps
-# CHECK: repne
-# CHECK-NEXT: scasb   %es:(%rdi), %al
-0xf2 0xae #repne scas
-# CHECK: repne
-# CHECK-NEXT: scasl   %es:(%rdi), %eax
-0xf2 0xaf #repne scas
-
 # CHECK: lock
 # CHECK-NEXT:	orl	$16, %fs:776
 0xf0 0x64 0x83 0x0c 0x25 0x08 0x03 0x00 0x00 0x10
@@ -105,6 +50,7 @@
 
 # Test that multiple redundant prefixes work (redundant, but valid x86).
 # CHECK: rep
+# CHECK-NEXT: rep
 # CHECK-NEXT: stosq
 0xf3 0xf3 0x48 0xab
 

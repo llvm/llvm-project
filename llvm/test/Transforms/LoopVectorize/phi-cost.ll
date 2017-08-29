@@ -10,8 +10,8 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK:         [[WIDE_LOAD:%.*]] = load <2 x i32>, <2 x i32>* {{.*}}
 ; CHECK:         [[TMP5:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[WIDE_LOAD]], <i32 1, i32 1>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> [[TMP6]], <2 x i32> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP5]] to <2 x i32>
+; CHECK-NEXT:    [[PREDPHI:%.*]] = add <2 x i32> [[WIDE_LOAD]], [[TMP6]]
 ; CHECK:         store <2 x i32> [[PREDPHI]], <2 x i32>* {{.*}}
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ;

@@ -16,6 +16,7 @@
 
 #include "ARMBaseInstrInfo.h"
 #include "ARMBaseRegisterInfo.h"
+#include "ARMConstantPoolValue.h"
 #include "ARMFrameLowering.h"
 #include "ARMISelLowering.h"
 #include "ARMSelectionDAGInfo.h"
@@ -749,6 +750,9 @@ public:
 
   /// True if the GV will be accessed via an indirect symbol.
   bool isGVIndirectSymbol(const GlobalValue *GV) const;
+
+  /// Returns the constant pool modifier needed to access the GV.
+  ARMCP::ARMCPModifier getCPModifier(const GlobalValue *GV) const;
 
   /// True if fast-isel is used.
   bool useFastISel() const;

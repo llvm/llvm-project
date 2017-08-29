@@ -277,12 +277,6 @@ static void dbgprintf(struct InternalInstruction* insn,
   insn->dlog(insn->dlogArg, buffer);
 }
 
-static bool isREX(struct InternalInstruction *insn, uint8_t prefix) {
-  if (insn->mode == MODE_64BIT)
-    return prefix >= 0x40 && prefix <= 0x4f;
-  return false;
-}
-
 /*
  * setPrefixPresent - Marks that a particular prefix is present at a particular
  *   location.
@@ -296,38 +290,6 @@ static void setPrefixPresent(struct InternalInstruction* insn,
                                     uint8_t prefix,
                                     uint64_t location)
 {
-  uint8_t nextByte;
-  switch (prefix) {
-  case 0xf2:
-  case 0xf3:
-    if (lookAtByte(insn, &nextByte))
-      break;
-    // TODO:
-    //  1. There could be several 0x66
-    //  2. if (nextByte == 0x66) and nextNextByte != 0x0f then
-    //      it's not mandatory prefix
-    //  3. if (nextByte >= 0x40 && nextByte <= 0x4f) it's REX and we need
-    //     0x0f exactly after it to be mandatory prefix
-    if (isREX(insn, nextByte) || nextByte == 0x0f || nextByte == 0x66) {
-      // The last of 0xf2 /0xf3 is mandatory prefix
-      insn->mandatory_prefix = prefix;
-      insn->necessaryPrefixLocation = location;
-      break;
-    }
-    break;
-  case 0x66:
-    if (lookAtByte(insn, &nextByte))
-      break;
-    // 0x66 can't overwrite existing mandatory prefix and should be ignored
-    if (!insn->mandatory_prefix &&
-        (nextByte == 0x0f || isREX(insn, nextByte))) {
-      insn->mandatory_prefix = prefix;
-      insn->necessaryPrefixLocation = location;
-    }
-    break;
-  }
-  if (!insn->mandatory_prefix)
-    insn->necessaryPrefixLocation = location;
   insn->prefixPresent[prefix] = 1;
   insn->prefixLocations[prefix] = location;
 }
@@ -381,10 +343,13 @@ static int readPrefixes(struct InternalInstruction* insn) {
      * If the byte is a LOCK/REP/REPNE prefix and not a part of the opcode, then
      * break and let it be disassembled as a normal "instruction".
      */
-    if (insn->readerCursor - 1 == insn->startLocation && byte == 0xf0) // LOCK
+    if (insn->readerCursor - 1 == insn->startLocation && byte == 0xf0)
       break;
 
-    if ((byte == 0xf2 || byte == 0xf3) && !lookAtByte(insn, &nextByte)) {
+    if (insn->readerCursor - 1 == insn->startLocation
+        && (byte == 0xf2 || byte == 0xf3)
+        && !lookAtByte(insn, &nextByte))
+    {
       /*
        * If the byte is 0xf2 or 0xf3, and any of the following conditions are
        * met:
@@ -392,8 +357,9 @@ static int readPrefixes(struct InternalInstruction* insn) {
        * - it is followed by an xchg instruction
        * then it should be disassembled as a xacquire/xrelease not repne/rep.
        */
-      if (((nextByte == 0xf0) ||
-           ((nextByte & 0xfe) == 0x86 || (nextByte & 0xf8) == 0x90)))
+      if ((byte == 0xf2 || byte == 0xf3) &&
+          ((nextByte == 0xf0) ||
+          ((nextByte & 0xfe) == 0x86 || (nextByte & 0xf8) == 0x90)))
         insn->xAcquireRelease = true;
       /*
        * Also if the byte is 0xf3, and the following condition is met:
@@ -412,13 +378,7 @@ static int readPrefixes(struct InternalInstruction* insn) {
           return -1;
         unconsumeByte(insn);
       }
-      // If the current byte can't be mandatory prefix then it's a simple repeat
-      // prefix and should be elaborated as a separated instr
-      if (nextByte != 0x0f &&
-          // We can have f2 f3 f2 66 f2 0f (in any order) as a valid set
-          // of prefixes with the last one as a mandatory prefix (SSE/SSE2...)
-          nextByte != 0xf2 && nextByte != 0xf3 && nextByte != 0x66 &&
-          nextByte != 0x90 && !isREX(insn, nextByte))
+      if (nextByte != 0x0f && nextByte != 0x90)
         break;
     }
 
@@ -466,13 +426,11 @@ static int readPrefixes(struct InternalInstruction* insn) {
       setPrefixPresent(insn, byte, prefixLocation);
       break;
     case 0x66:  /* Operand-size override */
-      setPrefixPresent(insn, byte, prefixLocation);
-      if (!insn->mandatory_prefix) {
-        if (prefixGroups[2])
-          dbgprintf(insn, "Redundant Group 3 prefix");
-        prefixGroups[2] = true;
-      }
+      if (prefixGroups[2])
+        dbgprintf(insn, "Redundant Group 3 prefix");
+      prefixGroups[2] = true;
       hasOpSize = true;
+      setPrefixPresent(insn, byte, prefixLocation);
       break;
     case 0x67:  /* Address-size override */
       if (prefixGroups[3])
@@ -666,8 +624,10 @@ static int readPrefixes(struct InternalInstruction* insn) {
         insn->necessaryPrefixLocation = insn->readerCursor - 2;
 
         dbgprintf(insn, "Found REX prefix 0x%hhx", byte);
-      } else
+      } else {
         unconsumeByte(insn);
+        insn->necessaryPrefixLocation = insn->readerCursor - 1;
+      }
     } else {
       unconsumeByte(insn);
       insn->necessaryPrefixLocation = insn->readerCursor - 1;
@@ -990,19 +950,8 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
     } else {
       return -1;
     }
-  } else if (insn->mode != MODE_16BIT && !insn->mandatory_prefix) {
-    // If we don't have mandatory prefix we should use "standard" prefixes here
-    if (insn->prefixPresent[0x66])
-      attrMask |= ATTR_OPSIZE;
-    if (insn->prefixPresent[0x67])
-      attrMask |= ATTR_ADSIZE;
-    if (insn->prefixPresent[0xf2])
-      attrMask |= ATTR_XD;
-    if (insn->prefixPresent[0xf3])
-      attrMask |= ATTR_XS;
   } else {
-    if (insn->mode != MODE_16BIT &&
-        isPrefixAtLocation(insn, 0x66, insn->necessaryPrefixLocation))
+    if (insn->mode != MODE_16BIT && isPrefixAtLocation(insn, 0x66, insn->necessaryPrefixLocation))
       attrMask |= ATTR_OPSIZE;
     else if (isPrefixAtLocation(insn, 0x67, insn->necessaryPrefixLocation))
       attrMask |= ATTR_ADSIZE;

@@ -165,7 +165,8 @@ void OptimizationRemarkEmitter::emit(
 
   yaml::Output *Out = F->getContext().getDiagnosticsOutputFile();
   if (Out) {
-    auto *P = const_cast<DiagnosticInfoOptimizationBase *>(&OptDiagBase);
+    // For remarks the << operator takes a reference to a pointer.
+    auto *P = &OptDiagBase;
     *Out << P;
   }
   // FIXME: now that IsVerbose is part of DI, filtering for this will be moved

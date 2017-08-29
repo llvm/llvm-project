@@ -27,7 +27,12 @@ private:
     StringRef String;
     Data(uint32_t Value) : Int(Value) {}
     Data(const StringRef Value) : String(Value) {}
-    Data(const RCToken &Token);
+    Data(const RCToken &Token) {
+      if (Token.kind() == RCToken::Kind::Int)
+        Int = Token.intValue();
+      else
+        String = Token.value();
+    }
   } Data;
   bool IsInt;
 
@@ -90,6 +95,53 @@ public:
   raw_ostream &log(raw_ostream &) const override;
 };
 
+// ACCELERATORS resource. Defines a named table of accelerators for the app.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380610(v=vs.85).aspx
+class AcceleratorsResource : public RCResource {
+public:
+  class Accelerator {
+  public:
+    IntOrString Event;
+    uint32_t Id;
+    uint8_t Flags;
+
+    enum Options {
+      ASCII = (1 << 0),
+      VIRTKEY = (1 << 1),
+      NOINVERT = (1 << 2),
+      ALT = (1 << 3),
+      SHIFT = (1 << 4),
+      CONTROL = (1 << 5)
+    };
+
+    static constexpr size_t NumFlags = 6;
+    static StringRef OptionsStr[NumFlags];
+  };
+
+  AcceleratorsResource(OptionalStmtList &&OptStmts)
+      : OptStatements(std::move(OptStmts)) {}
+  void addAccelerator(IntOrString Event, uint32_t Id, uint8_t Flags) {
+    Accelerators.push_back(Accelerator{Event, Id, Flags});
+  }
+  raw_ostream &log(raw_ostream &) const override;
+
+private:
+  std::vector<Accelerator> Accelerators;
+  OptionalStmtList OptStatements;
+};
+
+// CURSOR resource. Represents a single cursor (".cur") file.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380920(v=vs.85).aspx
+class CursorResource : public RCResource {
+  StringRef CursorLoc;
+
+public:
+  CursorResource(StringRef Location) : CursorLoc(Location) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
 // ICON resource. Represents a single ".ico" file containing a group of icons.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381018(v=vs.85).aspx
@@ -98,6 +150,105 @@ class IconResource : public RCResource {
 
 public:
   IconResource(StringRef Location) : IconLoc(Location) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// HTML resource. Represents a local webpage that is to be embedded into the
+// resulting resource file. It embeds a file only - no additional resources
+// (images etc.) are included with this resource.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa966018(v=vs.85).aspx
+class HTMLResource : public RCResource {
+  StringRef HTMLLoc;
+
+public:
+  HTMLResource(StringRef Location) : HTMLLoc(Location) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// -- MENU resource and its helper classes --
+// This resource describes the contents of an application menu
+// (usually located in the upper part of the dialog.)
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381025(v=vs.85).aspx
+
+// Description of a single submenu item.
+class MenuDefinition {
+public:
+  enum Options {
+    CHECKED = (1 << 0),
+    GRAYED = (1 << 1),
+    HELP = (1 << 2),
+    INACTIVE = (1 << 3),
+    MENUBARBREAK = (1 << 4),
+    MENUBREAK = (1 << 5)
+  };
+
+  static constexpr size_t NumFlags = 6;
+  static StringRef OptionsStr[NumFlags];
+  static raw_ostream &logFlags(raw_ostream &, uint8_t Flags);
+  virtual raw_ostream &log(raw_ostream &OS) const {
+    return OS << "Base menu definition\n";
+  }
+  virtual ~MenuDefinition() {}
+};
+
+// Recursive description of a whole submenu.
+class MenuDefinitionList : public MenuDefinition {
+  std::vector<std::unique_ptr<MenuDefinition>> Definitions;
+
+public:
+  void addDefinition(std::unique_ptr<MenuDefinition> Def) {
+    Definitions.push_back(std::move(Def));
+  }
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// Separator in MENU definition (MENUITEM SEPARATOR).
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381024(v=vs.85).aspx
+class MenuSeparator : public MenuDefinition {
+public:
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// MENUITEM statement definition.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381024(v=vs.85).aspx
+class MenuItem : public MenuDefinition {
+  StringRef Name;
+  uint32_t Id;
+  uint8_t Flags;
+
+public:
+  MenuItem(StringRef Caption, uint32_t ItemId, uint8_t ItemFlags)
+      : Name(Caption), Id(ItemId), Flags(ItemFlags) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// POPUP statement definition.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381030(v=vs.85).aspx
+class PopupItem : public MenuDefinition {
+  StringRef Name;
+  uint8_t Flags;
+  MenuDefinitionList SubItems;
+
+public:
+  PopupItem(StringRef Caption, uint8_t ItemFlags,
+            MenuDefinitionList &&SubItemsList)
+      : Name(Caption), Flags(ItemFlags), SubItems(std::move(SubItemsList)) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// Menu resource definition.
+class MenuResource : public RCResource {
+  OptionalStmtList OptStatements;
+  MenuDefinitionList Elements;
+
+public:
+  MenuResource(OptionalStmtList &&OptStmts, MenuDefinitionList &&Items)
+      : OptStatements(std::move(OptStmts)), Elements(std::move(Items)) {}
   raw_ostream &log(raw_ostream &) const override;
 };
 

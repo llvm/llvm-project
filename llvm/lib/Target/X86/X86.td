@@ -226,14 +226,12 @@ def FeatureCLFLUSHOPT : SubtargetFeature<"clflushopt", "HasCLFLUSHOPT", "true",
                                       "Flush A Cache Line Optimized">;
 def FeatureCLWB    : SubtargetFeature<"clwb", "HasCLWB", "true",
                                       "Cache Line Write Back">;
-// TODO: This feature ought to be renamed.
-// What it really refers to are CPUs for which certain instructions
-// (which ones besides the example below?) are microcoded.
-// The best examples of this are the memory forms of CALL and PUSH
-// instructions, which should be avoided in favor of a MOV + register CALL/PUSH.
-def FeatureCallRegIndirect : SubtargetFeature<"call-reg-indirect",
-                                     "CallRegIndirect", "true",
-                                     "Call register indirect">;
+// On some processors, instructions that implicitly take two memory operands are
+// slow. In practice, this means that CALL, PUSH, and POP with memory operands
+// should be avoided in favor of a MOV + register CALL/PUSH/POP.
+def FeatureSlowTwoMemOps : SubtargetFeature<"slow-two-mem-ops",
+                                     "SlowTwoMemOps", "true",
+                                     "Two memory operand instructions are slow">;
 def FeatureLEAUsesAG : SubtargetFeature<"lea-uses-ag", "LEAUsesAG", "true",
                                    "LEA instruction needs inputs at AG stage">;
 def FeatureSlowLEA : SubtargetFeature<"slow-lea", "SlowLEA", "true",
@@ -401,7 +399,7 @@ class BonnellProc<string Name> : ProcessorModel<Name, AtomModel, [
   FeatureLEAForSP,
   FeatureSlowDivide32,
   FeatureSlowDivide64,
-  FeatureCallRegIndirect,
+  FeatureSlowTwoMemOps,
   FeatureLEAUsesAG,
   FeaturePadShortFunctions,
   FeatureLAHFSAHF
@@ -421,7 +419,7 @@ class SilvermontProc<string Name> : ProcessorModel<Name, SLMModel, [
   FeaturePCLMUL,
   FeatureAES,
   FeatureSlowDivide64,
-  FeatureCallRegIndirect,
+  FeatureSlowTwoMemOps,
   FeaturePRFCHW,
   FeatureSlowLEA,
   FeatureSlowIncDec,
@@ -444,7 +442,7 @@ class GoldmontProc<string Name> : ProcessorModel<Name, SLMModel, [
   FeaturePCLMUL,
   FeatureAES,
   FeaturePRFCHW,
-  FeatureCallRegIndirect,
+  FeatureSlowTwoMemOps,
   FeatureSlowLEA,
   FeatureSlowIncDec,
   FeatureSlowBTMem,
@@ -597,6 +595,7 @@ class KnightsLandingProc<string Name> : ProcModel<Name, HaswellModel,
   FeatureBMI,
   FeatureBMI2,
   FeatureFMA,
+  FeatureSlowTwoMemOps,
   FeatureFastPartialYMMorZMMWrite
 ]>;
 def : KnightsLandingProc<"knl">;
