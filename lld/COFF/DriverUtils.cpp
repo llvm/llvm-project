@@ -716,10 +716,7 @@ static const llvm::opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class COFFOptTable : public llvm::opt::OptTable {
-public:
-  COFFOptTable() : OptTable(InfoTable, true) {}
-};
+COFFOptTable::COFFOptTable() : OptTable(InfoTable, true) {}
 
 // Parses a given list of options.
 opt::InputArgList ArgParser::parse(ArrayRef<const char *> ArgsArr) {
@@ -727,7 +724,6 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> ArgsArr) {
   std::vector<const char *> Argv = replaceResponseFiles(ArgsArr);
 
   // Make InputArgList from string vectors.
-  COFFOptTable Table;
   unsigned MissingIndex;
   unsigned MissingCount;
   opt::InputArgList Args = Table.ParseArgs(Argv, MissingIndex, MissingCount);

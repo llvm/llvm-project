@@ -533,3 +533,8 @@ isl::union_map polly::applyDomainRange(isl::union_map UMap,
 
   return std::move(UMap).apply_domain(std::move(LifetedFunc));
 }
+
+isl::map polly::intersectRange(isl::map Map, isl::union_set Range) {
+  isl::set RangeSet = Range.extract_set(Map.get_space().range());
+  return Map.intersect_range(RangeSet);
+}

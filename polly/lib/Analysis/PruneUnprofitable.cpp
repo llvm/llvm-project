@@ -1,4 +1,4 @@
-//===- PruneUnprofitable.cpp ------------------------------------*- C++ -*-===//
+//===- PruneUnprofitable.cpp ----------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,12 +12,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/PruneUnprofitable.h"
+#include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
 #include "polly/ScopPass.h"
-#define DEBUG_TYPE "polly-prune-unprofitable"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
-using namespace polly;
 using namespace llvm;
+using namespace polly;
+
+#define DEBUG_TYPE "polly-prune-unprofitable"
 
 namespace {
 
@@ -37,9 +44,6 @@ STATISTIC(NumAffineLoops, "Number of affine loops in SCoPs after pruning");
 
 class PruneUnprofitable : public ScopPass {
 private:
-  PruneUnprofitable(const PruneUnprofitable &) = delete;
-  const PruneUnprofitable &operator=(const PruneUnprofitable &) = delete;
-
   void updateStatistics(Scop &S, bool Pruned) {
     auto ScopStats = S.getStatistics();
     if (Pruned) {
@@ -57,14 +61,17 @@ private:
 
 public:
   static char ID;
-  explicit PruneUnprofitable() : ScopPass(ID) {}
 
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
+  explicit PruneUnprofitable() : ScopPass(ID) {}
+  PruneUnprofitable(const PruneUnprofitable &) = delete;
+  PruneUnprofitable &operator=(const PruneUnprofitable &) = delete;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<ScopInfoRegionPass>();
     AU.setPreservesAll();
   }
 
-  virtual bool runOnScop(Scop &S) override {
+  bool runOnScop(Scop &S) override {
     if (PollyProcessUnprofitable) {
       DEBUG(dbgs() << "NOTE: -polly-process-unprofitable active, won't prune "
                       "anything\n");
@@ -86,8 +93,9 @@ public:
   }
 };
 
+} // namespace
+
 char PruneUnprofitable::ID;
-} // anonymous namespace
 
 Pass *polly::createPruneUnprofitablePass() { return new PruneUnprofitable(); }
 

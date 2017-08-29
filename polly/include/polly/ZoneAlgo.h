@@ -104,6 +104,10 @@ protected:
   /// unique ids that do not depend on pointer values.
   llvm::DenseMap<llvm::Value *, isl::id> ValueIds;
 
+  /// Set of array elements that can be reliably used for zone analysis.
+  /// { Element[] }
+  isl::union_set CompatibleElts;
+
   /// Prepare the object before computing the zones of @p S.
   ///
   /// @param PassName Name of the pass using this analysis.
@@ -112,7 +116,7 @@ protected:
   ZoneAlgorithm(const char *PassName, Scop *S, llvm::LoopInfo *LI);
 
 private:
-  /// Check whether @p Stmt can be accurately analyzed by zones.
+  /// Find the array elements that violate the zone analysis assumptions.
   ///
   /// What violates our assumptions:
   /// - A load after a write of the same location; we assume that all reads
@@ -123,7 +127,13 @@ private:
   /// Scalar reads implicitly always occur before other accesses therefore never
   /// violate the first condition. There is also at most one write to a scalar,
   /// satisfying the second condition.
-  bool isCompatibleStmt(ScopStmt *Stmt);
+  ///
+  /// @param Stmt                  The statement to be analyzed.
+  /// @param[out] IncompatibleElts Receives the elements that are not
+  ///                              zone-analysis compatible.
+  /// @param[out]                  AllElts receives all encountered elements.
+  void collectIncompatibleElts(ScopStmt *Stmt, isl::union_set &IncompatibleElts,
+                               isl::union_set &AllElts);
 
   void addArrayReadAccess(MemoryAccess *MA);
 
@@ -134,8 +144,8 @@ protected:
 
   isl::union_map makeEmptyUnionMap() const;
 
-  /// Check whether @p S can be accurately analyzed by zones.
-  bool isCompatibleScop();
+  /// Find the array elements that can be used for zone analysis.
+  void collectCompatibleElts();
 
   /// Get the schedule for @p Stmt.
   ///
@@ -226,6 +236,10 @@ protected:
   /// @return { DomainUse[] -> ValInst[] }
   isl::map makeValInst(llvm::Value *Val, ScopStmt *UserStmt, llvm::Loop *Scope,
                        bool IsCertain = true);
+
+  /// Return whether @p MA can be used for transformations (e.g. OpTree load
+  /// forwarding, DeLICM mapping).
+  bool isCompatibleAccess(MemoryAccess *MA);
 
   /// Compute the different zones.
   void computeCommon();
