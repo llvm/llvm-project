@@ -1,9 +1,0 @@
-REQUIRES: posix
-# Run EquivalenceATest against itself with a small timeout
-# to stress the signal handling and ensure that shmem doesn't mind
-# the signals.
-
-RUN: LLVMFuzzer-EquivalenceATest -timeout=1 -run_equivalence_server=EQUIV_SIG_TEST & export APID=$!
-RUN: sleep 3
-RUN: LLVMFuzzer-EquivalenceATest -timeout=1 -use_equivalence_server=EQUIV_SIG_TEST -runs=500000 2>&1
-RUN: kill -9 $APID
