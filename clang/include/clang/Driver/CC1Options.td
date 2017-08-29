@@ -99,7 +99,19 @@ def analyzer_stats : Flag<["-"], "analyzer-stats">,
   HelpText<"Print internal analyzer statistics.">;
 
 def analyzer_checker : Separate<["-"], "analyzer-checker">,
-  HelpText<"Choose analyzer checkers to enable">;
+  HelpText<"Choose analyzer checkers to enable">,
+  ValuesCode<[{
+    const char *Values =
+    #define GET_CHECKERS
+    #define CHECKER(FULLNAME, CLASS, DESCFILE, HT, G, H)  FULLNAME ","
+    #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+    #undef GET_CHECKERS
+    #define GET_PACKAGES
+    #define PACKAGE(FULLNAME, G, D)  FULLNAME ","
+    #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+    #undef GET_PACKAGES
+    ;
+  }]>;
 def analyzer_checker_EQ : Joined<["-"], "analyzer-checker=">,
   Alias<analyzer_checker>;
 

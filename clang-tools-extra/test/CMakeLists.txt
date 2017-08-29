@@ -15,6 +15,9 @@ endif ()
 
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} CLANG_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 
+llvm_canonicalize_cmake_booleans(
+  CLANG_ENABLE_STATIC_ANALYZER)
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
@@ -31,11 +34,6 @@ if(CLANG_TOOLS_TEST_USE_VG)
 endif()
 
 set(CLANG_TOOLS_TEST_DEPS
-  # clang-tidy tests require it.
-  clang-headers
-
-  # For the clang-tidy libclang integration test.
-  c-index-test
   # For the clang-apply-replacements test that uses clang-rename.
   clang-rename
 
@@ -47,7 +45,6 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-move
   clang-query
   clang-reorder-fields
-  clang-tidy
   find-all-symbols
   modularize
   pp-trace
@@ -55,6 +52,17 @@ set(CLANG_TOOLS_TEST_DEPS
   # Unit tests
   ExtraToolsUnitTests
   )
+
+if(CLANG_ENABLE_STATIC_ANALYZER)
+  list(APPEND CLANG_TOOLS_TEST_DEPS
+    # For the clang-tidy libclang integration test.
+    c-index-test
+    # clang-tidy tests require it.
+    clang-headers
+
+    clang-tidy
+    )
+endif()
 
 set(llvm_utils
   FileCheck count not
