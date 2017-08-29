@@ -558,8 +558,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.workers > 0 && Flags.jobs > 0)
     return RunInMultipleProcesses(Args, Flags.workers, Flags.jobs);
 
-  const size_t kMaxSaneLen = 1 << 20;
-  const size_t kMinDefaultLen = 4096;
   FuzzingOptions Options;
   Options.Verbosity = Flags.verbosity;
   Options.MaxLen = Flags.max_len;
@@ -702,8 +700,10 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   }
 
   if (Flags.merge) {
+    const size_t kDefaultMaxMergeLen = 1 << 20;
     if (Options.MaxLen == 0)
-      F->SetMaxInputLen(kMaxSaneLen);
+      F->SetMaxInputLen(kDefaultMaxMergeLen);
+
     if (Flags.merge_control_file)
       F->CrashResistantMergeInternalStep(Flags.merge_control_file);
     else
@@ -713,16 +713,16 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
-  size_t TemporaryMaxLen = Options.MaxLen ? Options.MaxLen : kMaxSaneLen;
-
-  UnitVector InitialCorpus;
-  for (auto &Inp : *Inputs) {
-    Printf("Loading corpus dir: %s\n", Inp.c_str());
-    ReadDirToVectorOfUnits(Inp.c_str(), &InitialCorpus, nullptr,
-                           TemporaryMaxLen, /*ExitOnError=*/false);
-  }
 
   if (Flags.analyze_dict) {
+    size_t MaxLen = INT_MAX;  // Large max length.
+    UnitVector InitialCorpus;
+    for (auto &Inp : *Inputs) {
+      Printf("Loading corpus dir: %s\n", Inp.c_str());
+      ReadDirToVectorOfUnits(Inp.c_str(), &InitialCorpus, nullptr,
+                             MaxLen, /*ExitOnError=*/false);
+    }
+
     if (Dictionary.empty() || Inputs->empty()) {
       Printf("ERROR: can't analyze dict without dict and corpus provided\n");
       return 1;
@@ -735,21 +735,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
-  if (Options.MaxLen == 0) {
-    size_t MaxLen = 0;
-    for (auto &U : InitialCorpus)
-      MaxLen = std::max(U.size(), MaxLen);
-    F->SetMaxInputLen(std::min(std::max(kMinDefaultLen, MaxLen), kMaxSaneLen));
-  }
-
-  if (InitialCorpus.empty()) {
-    InitialCorpus.push_back(Unit({'\n'}));  // Valid ASCII input.
-    if (Options.Verbosity)
-      Printf("INFO: A corpus is not provided, starting from an empty corpus\n");
-  }
-  F->ShuffleAndMinimize(&InitialCorpus);
-  InitialCorpus.clear();  // Don't need this memory any more.
-  F->Loop();
+  F->Loop(*Inputs);
 
   if (Flags.verbosity)
     Printf("Done %zd runs in %zd second(s)\n", F->getTotalNumberOfRuns(),

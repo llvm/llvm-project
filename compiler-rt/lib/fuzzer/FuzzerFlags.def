@@ -91,7 +91,8 @@ FUZZER_FLAG_STRING(exact_artifact_path,
                    "and will not use checksum in the file name. Do not "
                    "use the same path for several parallel processes.")
 FUZZER_FLAG_INT(print_pcs, 0, "If 1, print out newly covered PCs.")
-FUZZER_FLAG_INT(print_funcs, 1, "If 1, print out newly covered functions.")
+FUZZER_FLAG_INT(print_funcs, 2, "If >=1, print out at most this number of "
+                                "newly covered functions.")
 FUZZER_FLAG_INT(print_final_stats, 0, "If 1, print statistics at exit.")
 FUZZER_FLAG_INT(print_corpus_stats, 0,
   "If 1, print statistics on corpus elements at exit.")

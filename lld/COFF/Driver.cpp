@@ -55,9 +55,13 @@ std::vector<SpecificAllocBase *> SpecificAllocBase::Instances;
 bool link(ArrayRef<const char *> Args, raw_ostream &Diag) {
   ErrorCount = 0;
   ErrorOS = &Diag;
+
   Config = make<Configuration>();
   Config->Argv = {Args.begin(), Args.end()};
   Config->ColorDiagnostics = ErrorOS->has_colors();
+
+  Symtab = make<SymbolTable>();
+
   Driver = make<LinkerDriver>();
   Driver->link(Args);
   return !ErrorCount;
@@ -118,15 +122,15 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB) {
 
   FilePaths.push_back(MBRef.getBufferIdentifier());
   if (Magic == file_magic::archive)
-    return Symtab.addFile(make<ArchiveFile>(MBRef));
+    return Symtab->addFile(make<ArchiveFile>(MBRef));
   if (Magic == file_magic::bitcode)
-    return Symtab.addFile(make<BitcodeFile>(MBRef));
+    return Symtab->addFile(make<BitcodeFile>(MBRef));
 
   if (Magic == file_magic::coff_cl_gl_object)
     error(MBRef.getBufferIdentifier() + ": is not a native COFF file. "
           "Recompile without /GL");
   else
-    Symtab.addFile(make<ObjFile>(MBRef));
+    Symtab->addFile(make<ObjFile>(MBRef));
 }
 
 void LinkerDriver::enqueuePath(StringRef Path) {
@@ -146,7 +150,7 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef MB, StringRef SymName,
                                     StringRef ParentName) {
   file_magic Magic = identify_magic(MB.getBuffer());
   if (Magic == file_magic::coff_import_library) {
-    Symtab.addFile(make<ImportFile>(MB));
+    Symtab->addFile(make<ImportFile>(MB));
     return;
   }
 
@@ -161,7 +165,7 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef MB, StringRef SymName,
   }
 
   Obj->ParentName = ParentName;
-  Symtab.addFile(Obj);
+  Symtab->addFile(Obj);
   log("Loaded " + toString(Obj) + " for " + SymName);
 }
 
@@ -314,7 +318,7 @@ void LinkerDriver::addLibSearchPaths() {
 }
 
 SymbolBody *LinkerDriver::addUndefined(StringRef Name) {
-  SymbolBody *B = Symtab.addUndefined(Name);
+  SymbolBody *B = Symtab->addUndefined(Name);
   Config->GCRoot.insert(B);
   return B;
 }
@@ -337,8 +341,8 @@ StringRef LinkerDriver::findDefaultEntry() {
       {"wWinMain", "wWinMainCRTStartup"},
   };
   for (auto E : Entries) {
-    StringRef Entry = Symtab.findMangle(mangle(E[0]));
-    if (!Entry.empty() && !isa<Undefined>(Symtab.find(Entry)->body()))
+    StringRef Entry = Symtab->findMangle(mangle(E[0]));
+    if (!Entry.empty() && !isa<Undefined>(Symtab->find(Entry)->body()))
       return mangle(E[1]);
   }
   return "";
@@ -347,9 +351,9 @@ StringRef LinkerDriver::findDefaultEntry() {
 WindowsSubsystem LinkerDriver::inferSubsystem() {
   if (Config->DLL)
     return IMAGE_SUBSYSTEM_WINDOWS_GUI;
-  if (Symtab.findUnderscore("main") || Symtab.findUnderscore("wmain"))
+  if (Symtab->findUnderscore("main") || Symtab->findUnderscore("wmain"))
     return IMAGE_SUBSYSTEM_WINDOWS_CUI;
-  if (Symtab.findUnderscore("WinMain") || Symtab.findUnderscore("wWinMain"))
+  if (Symtab->findUnderscore("WinMain") || Symtab->findUnderscore("wWinMain"))
     return IMAGE_SUBSYSTEM_WINDOWS_GUI;
   return IMAGE_SUBSYSTEM_UNKNOWN;
 }
@@ -654,7 +658,7 @@ void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
     }
   }
 
-  std::vector<StringRef> ObjFiles = Symtab.compileBitcodeFiles();
+  std::vector<StringRef> ObjFiles = Symtab->compileBitcodeFiles();
   runMSVCLinker(Rsp, ObjFiles);
 
   for (StringRef Path : Temps)
@@ -1071,21 +1075,21 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Config->ImageBase == uint64_t(-1))
     Config->ImageBase = getDefaultImageBase();
 
-  Symtab.addSynthetic(mangle("__ImageBase"), nullptr);
+  Symtab->addSynthetic(mangle("__ImageBase"), nullptr);
   if (Config->Machine == I386) {
-    Symtab.addAbsolute("___safe_se_handler_table", 0);
-    Symtab.addAbsolute("___safe_se_handler_count", 0);
+    Symtab->addAbsolute("___safe_se_handler_table", 0);
+    Symtab->addAbsolute("___safe_se_handler_count", 0);
   }
 
   // We do not support /guard:cf (control flow protection) yet.
   // Define CFG symbols anyway so that we can link MSVC 2015 CRT.
-  Symtab.addAbsolute(mangle("__guard_fids_count"), 0);
-  Symtab.addAbsolute(mangle("__guard_fids_table"), 0);
-  Symtab.addAbsolute(mangle("__guard_flags"), 0x100);
-  Symtab.addAbsolute(mangle("__guard_iat_count"), 0);
-  Symtab.addAbsolute(mangle("__guard_iat_table"), 0);
-  Symtab.addAbsolute(mangle("__guard_longjmp_count"), 0);
-  Symtab.addAbsolute(mangle("__guard_longjmp_table"), 0);
+  Symtab->addAbsolute(mangle("__guard_fids_count"), 0);
+  Symtab->addAbsolute(mangle("__guard_fids_table"), 0);
+  Symtab->addAbsolute(mangle("__guard_flags"), 0x100);
+  Symtab->addAbsolute(mangle("__guard_iat_count"), 0);
+  Symtab->addAbsolute(mangle("__guard_iat_table"), 0);
+  Symtab->addAbsolute(mangle("__guard_longjmp_count"), 0);
+  Symtab->addAbsolute(mangle("__guard_longjmp_table"), 0);
 
   // This code may add new undefined symbols to the link, which may enqueue more
   // symbol resolution tasks, so we need to continue executing tasks until we
@@ -1094,7 +1098,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     // Windows specific -- if entry point is not found,
     // search for its mangled names.
     if (Config->Entry)
-      Symtab.mangleMaybe(Config->Entry);
+      Symtab->mangleMaybe(Config->Entry);
 
     // Windows specific -- Make sure we resolve all dllexported symbols.
     for (Export &E : Config->Exports) {
@@ -1102,7 +1106,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         continue;
       E.Sym = addUndefined(E.Name);
       if (!E.Directives)
-        Symtab.mangleMaybe(E.Sym);
+        Symtab->mangleMaybe(E.Sym);
     }
 
     // Add weak aliases. Weak aliases is a mechanism to give remaining
@@ -1110,16 +1114,16 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     for (auto Pair : Config->AlternateNames) {
       StringRef From = Pair.first;
       StringRef To = Pair.second;
-      Symbol *Sym = Symtab.find(From);
+      Symbol *Sym = Symtab->find(From);
       if (!Sym)
         continue;
       if (auto *U = dyn_cast<Undefined>(Sym->body()))
         if (!U->WeakAlias)
-          U->WeakAlias = Symtab.addUndefined(To);
+          U->WeakAlias = Symtab->addUndefined(To);
     }
 
     // Windows specific -- if __load_config_used can be resolved, resolve it.
-    if (Symtab.findUnderscore("_load_config_used"))
+    if (Symtab->findUnderscore("_load_config_used"))
       addUndefined(mangle("_load_config_used"));
   } while (run());
 
@@ -1135,11 +1139,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Do LTO by compiling bitcode input files to a set of native COFF files then
   // link those files.
-  Symtab.addCombinedLTOObjects();
+  Symtab->addCombinedLTOObjects();
   run();
 
   // Make sure we have resolved all symbols.
-  Symtab.reportRemainingUndefines();
+  Symtab->reportRemainingUndefines();
 
   // Windows specific -- if no /subsystem is given, we need to infer
   // that from entry point name.
@@ -1170,7 +1174,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   for (auto Pair : Config->AlignComm) {
     StringRef Name = Pair.first;
     int Align = Pair.second;
-    Symbol *Sym = Symtab.find(Name);
+    Symbol *Sym = Symtab->find(Name);
     if (!Sym) {
       warn("/aligncomm symbol " + Name + " not found");
       continue;
@@ -1189,14 +1193,14 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Identify unreferenced COMDAT sections.
   if (Config->DoGC)
-    markLive(Symtab.getChunks());
+    markLive(Symtab->getChunks());
 
   // Identify identical COMDAT sections to merge them.
   if (Config->DoICF)
-    doICF(Symtab.getChunks());
+    doICF(Symtab->getChunks());
 
   // Write the result.
-  writeResult(&Symtab);
+  writeResult();
 
   // Call exit to avoid calling destructors.
   exit(0);
