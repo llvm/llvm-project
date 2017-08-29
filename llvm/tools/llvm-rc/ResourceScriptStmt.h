@@ -90,6 +90,17 @@ public:
   raw_ostream &log(raw_ostream &) const override;
 };
 
+// CURSOR resource. Represents a single cursor (".cur") file.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380920(v=vs.85).aspx
+class CursorResource : public RCResource {
+  StringRef CursorLoc;
+
+public:
+  CursorResource(StringRef Location) : CursorLoc(Location) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
 // ICON resource. Represents a single ".ico" file containing a group of icons.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381018(v=vs.85).aspx
@@ -98,6 +109,19 @@ class IconResource : public RCResource {
 
 public:
   IconResource(StringRef Location) : IconLoc(Location) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// HTML resource. Represents a local webpage that is to be embedded into the
+// resulting resource file. It embeds a file only - no additional resources
+// (images etc.) are included with this resource.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa966018(v=vs.85).aspx
+class HTMLResource : public RCResource {
+  StringRef HTMLLoc;
+
+public:
+  HTMLResource(StringRef Location) : HTMLLoc(Location) {}
   raw_ostream &log(raw_ostream &) const override;
 };
 

@@ -13,3 +13,6 @@ VERSION 14
   2 "world"
 }
 STRINGTABLE BEGIN END
+
+500 HTML "index.html"
+Name Cursor "hello.ico"

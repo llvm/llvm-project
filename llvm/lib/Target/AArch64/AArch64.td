@@ -94,6 +94,9 @@ def FeatureSlowMisaligned128Store : SubtargetFeature<"slow-misaligned-128store",
 def FeatureSlowPaired128 : SubtargetFeature<"slow-paired-128",
     "Paired128IsSlow", "true", "Paired 128 bit loads and stores are slow">;
 
+def FeatureSlowSTRQro : SubtargetFeature<"slow-strqro-store", "STRQroIsSlow",
+    "true", "STR of Q register with register offset is slow">;
+
 def FeatureAlternateSExtLoadCVTF32Pattern : SubtargetFeature<
     "alternate-sextload-cvt-f32-pattern", "UseAlternateSExtLoadCVTF32Pattern",
     "true", "Use alternative pattern for sextload convert to f32">;
@@ -339,7 +342,8 @@ def ProcFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
                                    FeaturePredictableSelectIsExpensive,
                                    FeatureRDM,
                                    FeatureZCZeroing,
-                                   FeatureLSLFast
+                                   FeatureLSLFast,
+                                   FeatureSlowSTRQro
                                    ]>;
 
 def ProcThunderX2T99  : SubtargetFeature<"thunderx2t99", "ARMProcFamily",

@@ -36,8 +36,16 @@ raw_ostream &LanguageResource::log(raw_ostream &OS) const {
   return OS << "Language: " << Lang << ", Sublanguage: " << SubLang << "\n";
 }
 
+raw_ostream &CursorResource::log(raw_ostream &OS) const {
+  return OS << "Cursor (" << ResName << "): " << CursorLoc << "\n";
+}
+
 raw_ostream &IconResource::log(raw_ostream &OS) const {
   return OS << "Icon (" << ResName << "): " << IconLoc << "\n";
+}
+
+raw_ostream &HTMLResource::log(raw_ostream &OS) const {
+  return OS << "HTML (" << ResName << "): " << HTMLLoc << "\n";
 }
 
 raw_ostream &StringTableResource::log(raw_ostream &OS) const {

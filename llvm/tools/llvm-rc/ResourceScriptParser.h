@@ -118,7 +118,9 @@ private:
 
   // Top-level resource parsers.
   ParseType parseLanguageResource();
+  ParseType parseCursorResource();
   ParseType parseIconResource();
+  ParseType parseHTMLResource();
   ParseType parseStringTableResource();
 
   // Optional statement parsers.

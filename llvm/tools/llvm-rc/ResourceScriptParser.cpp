@@ -63,8 +63,12 @@ RCParser::ParseType RCParser::parseSingleResource() {
   ParseType Result = std::unique_ptr<RCResource>();
   (void)!Result;
 
-  if (TypeToken->equalsLower("ICON"))
+  if (TypeToken->equalsLower("CURSOR"))
+    Result = parseCursorResource();
+  else if (TypeToken->equalsLower("ICON"))
     Result = parseIconResource();
+  else if (TypeToken->equalsLower("HTML"))
+    Result = parseHTMLResource();
   else
     return getExpectedError("resource type", /* IsAlreadyRead = */ true);
 
@@ -219,9 +223,19 @@ RCParser::ParseType RCParser::parseLanguageResource() {
   return parseLanguageStmt();
 }
 
+RCParser::ParseType RCParser::parseCursorResource() {
+  ASSIGN_OR_RETURN(Arg, readString());
+  return make_unique<CursorResource>(*Arg);
+}
+
 RCParser::ParseType RCParser::parseIconResource() {
   ASSIGN_OR_RETURN(Arg, readString());
   return make_unique<IconResource>(*Arg);
+}
+
+RCParser::ParseType RCParser::parseHTMLResource() {
+  ASSIGN_OR_RETURN(Arg, readString());
+  return make_unique<HTMLResource>(*Arg);
 }
 
 RCParser::ParseType RCParser::parseStringTableResource() {

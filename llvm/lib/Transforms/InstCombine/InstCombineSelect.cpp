@@ -220,16 +220,15 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
 }
 
 static bool isSelect01(Constant *C1, Constant *C2) {
-  ConstantInt *C1I = dyn_cast<ConstantInt>(C1);
-  if (!C1I)
+  const APInt *C1I, *C2I;
+  if (!match(C1, m_APInt(C1I)))
     return false;
-  ConstantInt *C2I = dyn_cast<ConstantInt>(C2);
-  if (!C2I)
+  if (!match(C2, m_APInt(C2I)))
     return false;
-  if (!C1I->isZero() && !C2I->isZero()) // One side must be zero.
+  if (!C1I->isNullValue() && !C2I->isNullValue()) // One side must be zero.
     return false;
-  return C1I->isOne() || C1I->isMinusOne() ||
-         C2I->isOne() || C2I->isMinusOne();
+  return C1I->isOneValue() || C1I->isAllOnesValue() ||
+         C2I->isOneValue() || C2I->isAllOnesValue();
 }
 
 /// Try to fold the select into one of the operands to allow further

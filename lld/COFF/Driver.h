@@ -66,7 +66,6 @@ private:
 
 class LinkerDriver {
 public:
-  LinkerDriver() { coff::Symtab = &Symtab; }
   void link(llvm::ArrayRef<const char *> Args);
 
   // Used by the resolver to parse .drectve section contents.
@@ -77,8 +76,6 @@ public:
                             StringRef ParentName);
 
 private:
-  SymbolTable Symtab;
-
   std::unique_ptr<llvm::TarWriter> Tar; // for /linkrepro
 
   // Opens a file. Path has to be resolved already.

@@ -230,6 +230,17 @@ define i32 @test12(i1 %cond, i32 %a) {
 ; CHECK: ret i32 %c
 }
 
+define <2 x i32> @test12vec(<2 x i1> %cond, <2 x i32> %a) {
+; CHECK-LABEL: @test12vec(
+; CHECK-NEXT:    [[B:%.*]] = zext <2 x i1> [[COND:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = or <2 x i32> [[B]], [[A:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %b = or <2 x i32> %a, <i32 1, i32 1>
+  %c = select <2 x i1> %cond, <2 x i32> %b, <2 x i32> %a
+  ret <2 x i32> %c
+}
+
 define i32 @test12a(i1 %cond, i32 %a) {
         %b = ashr i32 %a, 1
         %c = select i1 %cond, i32 %b, i32 %a
@@ -238,6 +249,17 @@ define i32 @test12a(i1 %cond, i32 %a) {
 ; CHECK: %b = zext i1 %cond to i32
 ; CHECK: %c = ashr i32 %a, %b
 ; CHECK: ret i32 %c
+}
+
+define <2 x i32> @test12avec(<2 x i1> %cond, <2 x i32> %a) {
+; CHECK-LABEL: @test12avec(
+; CHECK-NEXT:    [[B:%.*]] = zext <2 x i1> [[COND:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = ashr <2 x i32> [[A:%.*]], [[B]]
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %b = ashr <2 x i32> %a, <i32 1, i32 1>
+  %c = select <2 x i1> %cond, <2 x i32> %b, <2 x i32> %a
+  ret <2 x i32> %c
 }
 
 define i32 @test12b(i1 %cond, i32 %a) {
@@ -250,6 +272,18 @@ define i32 @test12b(i1 %cond, i32 %a) {
   %b = ashr i32 %a, 1
   %d = select i1 %cond, i32 %a, i32 %b
   ret i32 %d
+}
+
+define <2 x i32> @test12bvec(<2 x i1> %cond, <2 x i32> %a) {
+; CHECK-LABEL: @test12bvec(
+; CHECK-NEXT:    [[NOT_COND:%.*]] = xor <2 x i1> [[COND:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[B:%.*]] = zext <2 x i1> [[NOT_COND]] to <2 x i32>
+; CHECK-NEXT:    [[D:%.*]] = ashr <2 x i32> [[A:%.*]], [[B]]
+; CHECK-NEXT:    ret <2 x i32> [[D]]
+;
+  %b = ashr <2 x i32> %a, <i32 1, i32 1>
+  %d = select <2 x i1> %cond, <2 x i32> %a, <2 x i32> %b
+  ret <2 x i32> %d
 }
 
 define i32 @test13(i32 %a, i32 %b) {
@@ -770,6 +804,19 @@ define i32 @test42(i32 %x, i32 %y) {
 ; CHECK-NEXT: %b = sext i1 %cond to i32
 ; CHECK-NEXT: %c = add i32 %b, %y
 ; CHECK-NEXT: ret i32 %c
+}
+
+define <2 x i32> @test42vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @test42vec(
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = sext <2 x i1> [[COND]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %b = add <2 x i32> %y, <i32 -1, i32 -1>
+  %cond = icmp eq <2 x i32> %x, zeroinitializer
+  %c = select <2 x i1> %cond, <2 x i32> %b, <2 x i32> %y
+  ret <2 x i32> %c
 }
 
 ; PR8994
