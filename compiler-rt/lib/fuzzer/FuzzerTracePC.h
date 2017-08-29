@@ -82,7 +82,7 @@ class TracePC {
   void SetUseCounters(bool UC) { UseCounters = UC; }
   void SetUseValueProfile(bool VP) { UseValueProfile = VP; }
   void SetPrintNewPCs(bool P) { DoPrintNewPCs = P; }
-  void SetPrintNewFuncs(bool P) { DoPrintNewFuncs = P; }
+  void SetPrintNewFuncs(size_t P) { NumPrintNewFuncs = P; }
   void UpdateObservedPCs();
   template <class Callback> void CollectFeatures(Callback CB) const;
 
@@ -134,7 +134,7 @@ private:
   bool UseCounters = false;
   bool UseValueProfile = false;
   bool DoPrintNewPCs = false;
-  bool DoPrintNewFuncs = false;
+  size_t NumPrintNewFuncs = 0;
 
   struct Module {
     uint32_t *Start, *Stop;
