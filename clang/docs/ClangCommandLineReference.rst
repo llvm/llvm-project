@@ -656,6 +656,10 @@ Pass <arg> to the assembler
 
 Pass <arg> to the clang compiler
 
+.. option:: -fclang-abi-compat=<version>
+
+Attempt to match the ABI of Clang <version>
+
 .. option:: -fcomment-block-commands=<arg>,<arg2>...
 
 Treat each comma separated argument in <arg> as a documentation comment block command
