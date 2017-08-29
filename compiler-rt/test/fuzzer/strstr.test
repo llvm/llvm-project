@@ -1,0 +1,4 @@
+RUN: %cpp_compiler %S/StrstrTest.cpp -o %t-StrstrTest
+RUN: not %t-StrstrTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
+CHECK: BINGO
+

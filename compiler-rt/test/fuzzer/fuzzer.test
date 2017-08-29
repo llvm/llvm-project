@@ -1,0 +1,70 @@
+CHECK: BINGO
+Done1000000: Done 1000000 runs in
+RUN: %cpp_compiler %S/BogusInitializeTest.cpp -o %t-BogusInitializeTest
+RUN: %cpp_compiler %S/BufferOverflowOnInput.cpp -o %t-BufferOverflowOnInput
+RUN: %cpp_compiler %S/CounterTest.cpp -o %t-CounterTest
+RUN: %cpp_compiler %S/DSO1.cpp -fPIC -shared -o %t-DSO1.so
+RUN: %cpp_compiler %S/DSO2.cpp -fPIC -shared -o %t-DSO2.so
+RUN: %cpp_compiler %S/DSOTestMain.cpp %S/DSOTestExtra.cpp -L. %t-DSO1.so %t-DSO2.so -o %t-DSOTest
+RUN: %cpp_compiler %S/FullCoverageSetTest.cpp -o %t-FullCoverageSetTest
+RUN: %cpp_compiler %S/InitializeTest.cpp -o %t-InitializeTest
+RUN: %cpp_compiler %S/NotinstrumentedTest.cpp -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters,trace-pc-guard -o %t-NotinstrumentedTest-NoCoverage
+RUN: %cpp_compiler %S/NullDerefOnEmptyTest.cpp -o %t-NullDerefOnEmptyTest
+RUN: %cpp_compiler %S/NullDerefTest.cpp -o %t-NullDerefTest
+RUN: %cpp_compiler %S/SimpleCmpTest.cpp -o %t-SimpleCmpTest
+RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
+RUN: %cpp_compiler %S/StrncmpOOBTest.cpp -o %t-StrncmpOOBTest
+
+RUN: not %t-SimpleTest 2>&1 | FileCheck %s
+
+# only_ascii mode. Will perform some minimal self-validation.
+RUN: not %t-SimpleTest -only_ascii=1 2>&1
+
+RUN: %t-SimpleCmpTest -max_total_time=1 -use_cmp=0 2>&1 | FileCheck %s --check-prefix=MaxTotalTime
+MaxTotalTime: Done {{.*}} runs in {{.}} second(s)
+
+RUN: not %t-NullDerefTest                  2>&1 | FileCheck %s --check-prefix=NullDerefTest
+RUN: not %t-NullDerefTest -close_fd_mask=3 2>&1 | FileCheck %s --check-prefix=NullDerefTest
+NullDerefTest: ERROR: AddressSanitizer: {{SEGV|access-violation}} on unknown address
+NullDerefTest: Test unit written to ./crash-
+RUN: not %t-NullDerefTest  -artifact_prefix=ZZZ 2>&1 | FileCheck %s --check-prefix=NullDerefTestPrefix
+NullDerefTestPrefix: Test unit written to ZZZcrash-
+RUN: not %t-NullDerefTest  -artifact_prefix=ZZZ -exact_artifact_path=FOOBAR 2>&1 | FileCheck %s --check-prefix=NullDerefTestExactPath
+NullDerefTestExactPath: Test unit written to FOOBAR
+
+RUN: not %t-NullDerefOnEmptyTest -print_final_stats=1 2>&1 | FileCheck %s --check-prefix=NULL_DEREF_ON_EMPTY
+NULL_DEREF_ON_EMPTY: stat::number_of_executed_units:
+
+#not %t-FullCoverageSetTest -timeout=15 -seed=1 -mutate_depth=2 -use_full_coverage_set=1 2>&1 | FileCheck %s
+
+RUN: not %t-CounterTest  -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s --check-prefix=COUNTERS
+
+COUNTERS: INITED {{.*}} {{bits:|ft:}}
+COUNTERS: NEW {{.*}} {{bits:|ft:}} {{[1-9]*}}
+COUNTERS: NEW {{.*}} {{bits:|ft:}} {{[1-9]*}}
+COUNTERS: BINGO
+
+# Don't run UninstrumentedTest for now since we build libFuzzer itself with asan.
+DISABLED: not %t-UninstrumentedTest-Uninstrumented 2>&1 | FileCheck %s --check-prefix=UNINSTRUMENTED
+UNINSTRUMENTED: ERROR: __sanitizer_set_death_callback is not defined. Exiting.
+
+RUN: not %t-NotinstrumentedTest-NoCoverage 2>&1 | FileCheck %s --check-prefix=NO_COVERAGE
+NO_COVERAGE: ERROR: no interesting inputs were found. Is the code instrumented for coverage? Exiting
+
+RUN: not %t-BufferOverflowOnInput 2>&1 | FileCheck %s --check-prefix=OOB
+OOB: AddressSanitizer: heap-buffer-overflow
+OOB: is located 0 bytes to the right of 3-byte region
+
+RUN: not %t-InitializeTest -use_value_profile=1 2>&1 | FileCheck %s
+
+RUN: not %t-DSOTest 2>&1 | FileCheck %s --check-prefix=DSO
+DSO: INFO: Loaded 3 modules
+DSO: BINGO
+
+RUN: env ASAN_OPTIONS=strict_string_checks=1 not %t-StrncmpOOBTest -seed=1 -runs=1000000 2>&1 | FileCheck %s --check-prefix=STRNCMP
+STRNCMP: AddressSanitizer: heap-buffer-overflow
+STRNCMP-NOT: __sanitizer_weak_hook_strncmp
+STRNCMP: in LLVMFuzzerTestOneInput
+
+RUN: not %t-BogusInitializeTest 2>&1 | FileCheck %s --check-prefix=BOGUS_INITIALIZE
+BOGUS_INITIALIZE: argv[0] has been modified in LLVMFuzzerInitialize
