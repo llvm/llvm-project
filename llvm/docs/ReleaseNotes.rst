@@ -46,6 +46,17 @@ Non-comprehensive list of changes in this release
   HTML.  The tool processes the YAML files produced by clang with the
   -fsave-optimization-record option.
 
+* A new CMake macro ``LLVM_REVERSE_ITERATION`` has been added. If enabled, all
+  supported unordered LLVM containers would be iterated in reverse order. This
+  is useful for uncovering non-determinism caused by iteration of unordered
+  containers. Currently, it supports reverse iteration of SmallPtrSet and
+  DenseMap.
+
+* A new tool ``llvm-dlltool`` has been added to create short import libraries
+  from GNU style definition files. The tool utilizes the PE COFF SPEC Import
+  Library Format and PE COFF Auxiliary Weak Externals Format to achieve
+  compatibility with LLD and MSVC LINK.
+
 
 Changes to the LLVM IR
 ----------------------
@@ -183,6 +194,9 @@ Changes to the X86 Target
 * Fix scalar code performance when AVX512 is enabled by making i1's illegal.
 
 * Fixed many inline assembly bugs.
+
+* Preliminary support for tracing NetBSD processes and core files with a single
+  thread in LLDB.
 
 Changes to the AMDGPU Target
 -----------------------------
