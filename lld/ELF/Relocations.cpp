@@ -566,7 +566,8 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
     error("can't create dynamic relocation " + toString(Type) + " against " +
           (Body.getName().empty() ? "local symbol"
                                   : "symbol: " + toString(Body)) +
-          " in readonly segment" + getLocation<ELFT>(S, Body, RelOff));
+          " in readonly segment; recompile object files with -fPIC" +
+          getLocation<ELFT>(S, Body, RelOff));
     return Expr;
   }
 
