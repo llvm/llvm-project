@@ -46,6 +46,28 @@ namespace driver {
   class Tool;
   class XRayArgs;
 
+/// Helper structure used to pass information extracted from clang executable
+/// name such as `i686-linux-android-g++`.
+///
+struct ParsedClangName {
+  /// Target part of the executable name, as `i686-linux-android`.
+  std::string TargetPrefix;
+  /// Driver mode part of the executable name, as `g++`.
+  std::string ModeSuffix;
+  /// Corresponding driver mode argument, as '--driver-mode=g++'
+  const char *DriverMode;
+  /// True if TargetPrefix is recognized as a registered target name.
+  bool TargetIsValid;
+
+  ParsedClangName() : DriverMode(nullptr), TargetIsValid(false) {}
+  ParsedClangName(std::string Suffix, const char *Mode)
+      : ModeSuffix(Suffix), DriverMode(Mode), TargetIsValid(false) {}
+  ParsedClangName(std::string Target, std::string Suffix, const char *Mode,
+                  bool IsRegistered)
+      : TargetPrefix(Target), ModeSuffix(Suffix), DriverMode(Mode),
+        TargetIsValid(IsRegistered) {}
+};
+
 /// ToolChain - Access to tools for a single platform.
 class ToolChain {
 public:
@@ -193,13 +215,16 @@ public:
   /// For example, when called with i686-linux-android-g++, the first element
   /// of the return value will be set to `"i686-linux-android"` and the second
   /// will be set to "--driver-mode=g++"`.
+  /// It is OK if the target name is not registered. In this case the return
+  /// value contains false in the field TargetIsValid.
   ///
   /// \pre `llvm::InitializeAllTargets()` has been called.
   /// \param ProgName The name the Clang driver was invoked with (from,
-  /// e.g., argv[0])
-  /// \return A pair of (`target`, `mode-flag`), where one or both may be empty.
-  static std::pair<std::string, std::string>
-  getTargetAndModeFromProgramName(StringRef ProgName);
+  /// e.g., argv[0]).
+  /// \return A structure of type ParsedClangName that contains the executable
+  /// name parts.
+  ///
+  static ParsedClangName getTargetAndModeFromProgramName(StringRef ProgName);
 
   // Tool access.
 

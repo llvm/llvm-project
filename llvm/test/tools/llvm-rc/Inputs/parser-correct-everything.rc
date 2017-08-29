@@ -13,3 +13,46 @@ VERSION 14
   2 "world"
 }
 STRINGTABLE BEGIN END
+
+500 HTML "index.html"
+Name Cursor "hello.ico"
+
+12 ACCELERATORS
+VERSION 5000
+LANGUAGE 0, 2
+{
+  "^C", 10
+  14, 11
+  5, 12, VIRTKEY
+  0, 0, ASCII
+  1, 1, VIRTKEY, CONTROL
+  2, 2, CONTROL, VIRTKEY
+  3, 3, ALT, CONTROL, SHIFT, NOINVERT, ASCII, VIRTKEY
+}
+
+LLVMTest MENU
+LANGUAGE 4, 1
+{
+  POPUP "&OneMenu"
+  {
+    POPUP "Menu&1"
+    {
+      MENUITEM "Item&1", 301, MENUBREAK, CHECKED
+      MENUITEM "Item&2", 302, CHECKED, MENUBARBREAK
+      MENUITEM "Item&3", 303, MENUBREAK, INACTIVE, HELP
+      MENUITEM "Item&4", 304, GRAYED
+    }
+    POPUP "Menu&2"
+    {
+      MENUITEM "&A", 401
+      MENUITEM "&B", 402
+    }
+  }
+  POPUP "&Items"
+  {
+    MENUITEM "&Row", 500
+    MENUITEM "&Column", 501, CHECKED
+    MENUITEM SEPARATOR
+    MENUITEM "&Word", 502
+  }
+}
