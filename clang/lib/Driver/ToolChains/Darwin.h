@@ -154,8 +154,6 @@ public:
   /// Add the linker arguments to link the compiler runtime library.
   virtual void AddLinkRuntimeLibArgs(const llvm::opt::ArgList &Args,
                                      llvm::opt::ArgStringList &CmdArgs) const;
-  virtual void AddFuzzerLinkArgs(const llvm::opt::ArgList &Args,
-                               llvm::opt::ArgStringList &CmdArgs) const;
 
   virtual void addStartObjectFileArgs(const llvm::opt::ArgList &Args,
                                       llvm::opt::ArgStringList &CmdArgs) const {
@@ -489,7 +487,8 @@ public:
 private:
   void AddLinkSanitizerLibArgs(const llvm::opt::ArgList &Args,
                                llvm::opt::ArgStringList &CmdArgs,
-                               StringRef Sanitizer) const;
+                               StringRef Sanitizer,
+                               bool shared = true) const;
 };
 
 } // end namespace toolchains
