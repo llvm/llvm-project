@@ -2270,7 +2270,14 @@ def static_libstdcxx : Flag<["-"], "static-libstdc++">;
 def static : Flag<["-", "--"], "static">, Flags<[NoArgumentUnused]>;
 def std_default_EQ : Joined<["-"], "std-default=">;
 def std_EQ : Joined<["-", "--"], "std=">, Flags<[CC1Option]>,
-  Group<CompileOnly_Group>, HelpText<"Language standard to compile for">;
+  Group<CompileOnly_Group>, HelpText<"Language standard to compile for">,
+  ValuesCode<[{
+    const char *Values =
+    #define LANGSTANDARD(id, name, lang, desc, features) name ","
+    #define LANGSTANDARD_ALIAS(id, alias) alias ","
+    #include "clang/Frontend/LangStandards.def"
+    ;
+  }]>;
 def stdlib_EQ : Joined<["-", "--"], "stdlib=">, Flags<[CC1Option]>,
   HelpText<"C++ standard library to use">, Values<"libc++,libstdc++,platform">;
 def sub__library : JoinedOrSeparate<["-"], "sub_library">;

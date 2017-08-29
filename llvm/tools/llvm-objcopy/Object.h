@@ -113,6 +113,39 @@ public:
   }
 };
 
+struct Symbol {
+  uint8_t Binding;
+  SectionBase *DefinedIn;
+  uint32_t Index;
+  llvm::StringRef Name;
+  uint32_t NameIndex;
+  uint64_t Size;
+  uint8_t Type;
+  uint64_t Value;
+};
+
+class SymbolTableSection : public SectionBase {
+protected:
+  std::vector<std::unique_ptr<Symbol>> Symbols;
+  StringTableSection *SymbolNames;
+
+public:
+  void setStrTab(StringTableSection *StrTab) { SymbolNames = StrTab; }
+  void addSymbol(llvm::StringRef Name, uint8_t Bind, uint8_t Type,
+                 SectionBase *DefinedIn, uint64_t Value, uint64_t Sz);
+  void addSymbolNames();
+  const Symbol *getSymbolByIndex(uint32_t Index) const;
+  void finalize() override;
+  static bool classof(const SectionBase *S) {
+    return S->Type == llvm::ELF::SHT_SYMTAB;
+  }
+};
+
+// Only writeSection depends on the ELF type so we implement it in a subclass.
+template <class ELFT> class SymbolTableSectionImpl : public SymbolTableSection {
+  void writeSection(llvm::FileOutputBuffer &Out) const override;
+};
+
 template <class ELFT> class Object {
 private:
   typedef std::unique_ptr<SectionBase> SecPtr;
@@ -122,6 +155,8 @@ private:
   typedef typename ELFT::Ehdr Elf_Ehdr;
   typedef typename ELFT::Phdr Elf_Phdr;
 
+  void initSymbolTable(const llvm::object::ELFFile<ELFT> &ElfFile,
+                       SymbolTableSection *SymTab);
   SecPtr makeSection(const llvm::object::ELFFile<ELFT> &ElfFile,
                      const Elf_Shdr &Shdr);
   void readProgramHeaders(const llvm::object::ELFFile<ELFT> &ElfFile);
@@ -129,6 +164,7 @@ private:
 
 protected:
   StringTableSection *SectionNames;
+  SymbolTableSection *SymbolTable;
   std::vector<SecPtr> Sections;
   std::vector<SegPtr> Segments;
 

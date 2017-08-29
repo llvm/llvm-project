@@ -108,7 +108,6 @@ public:
 // The writer writes a SymbolTable result to a file.
 class Writer {
 public:
-  Writer(SymbolTable *T) : Symtab(T) {}
   void run();
 
 private:
@@ -138,7 +137,6 @@ private:
   uint32_t getSizeOfInitializedData();
   std::map<StringRef, std::vector<DefinedImportData *>> binImports();
 
-  SymbolTable *Symtab;
   std::unique_ptr<FileOutputBuffer> Buffer;
   std::vector<OutputSection *> OutputSections;
   std::vector<char> Strtab;
@@ -164,7 +162,7 @@ private:
 namespace lld {
 namespace coff {
 
-void writeResult(SymbolTable *T) { Writer(T).run(); }
+void writeResult() { Writer().run(); }
 
 void OutputSection::setRVA(uint64_t RVA) {
   Header.VirtualAddress = RVA;

@@ -661,9 +661,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   // before the corresponding } or ].
   if (PreviousNonComment &&
       (PreviousNonComment->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
-       opensProtoMessageField(*PreviousNonComment, Style) ||
-       (PreviousNonComment->is(TT_TemplateString) &&
-        PreviousNonComment->opensScope())))
+       opensProtoMessageField(*PreviousNonComment, Style)))
     State.Stack.back().BreakBeforeClosingBrace = true;
 
   if (State.Stack.back().AvoidBinPacking) {
@@ -925,11 +923,6 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
 
   moveStatePastFakeLParens(State, Newline);
   moveStatePastScopeCloser(State);
-  if (Current.is(TT_TemplateString) && Current.opensScope())
-    State.Stack.back().LastSpace =
-        (Current.IsMultiline ? Current.LastLineColumnWidth
-                             : State.Column + Current.ColumnWidth) -
-        strlen("${");
   bool CanBreakProtrudingToken = !State.Stack.back().NoLineBreak &&
                                  !State.Stack.back().NoLineBreakInOperand;
   moveStatePastScopeOpener(State, Newline);
@@ -1099,18 +1092,6 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     if (Current.is(tok::less) && Current.ParentBracket == tok::l_paren) {
       NewIndent = std::max(NewIndent, State.Stack.back().Indent);
       LastSpace = std::max(LastSpace, State.Stack.back().Indent);
-    }
-
-    // JavaScript template strings are special as we always want to indent
-    // nested expressions relative to the ${}. Otherwise, this can create quite
-    // a mess.
-    if (Current.is(TT_TemplateString)) {
-      unsigned Column = Current.IsMultiline
-                            ? Current.LastLineColumnWidth
-                            : State.Column + Current.ColumnWidth;
-      NewIndent = Column;
-      LastSpace = Column;
-      NestedBlockIndent = Column;
     }
 
     bool EndsInComma =

@@ -604,6 +604,34 @@ static_assert(NATDCArray{}[1][1].n == 0, "");
 
 }
 
+// FIXME: The rules in this case are unclear, but we conservatively choose to
+// reject any cases where pointer arithmetic is not statically known to be
+// valid.
+namespace ArrayOfUnknownBound {
+  extern int arr[];
+  constexpr int *a = arr;
+  constexpr int *b = &arr[0];
+  static_assert(a == b, "");
+  constexpr int *c = &arr[1]; // expected-error {{constant}} expected-note {{indexing of array without known bound}}
+  constexpr int *d = &a[1]; // expected-error {{constant}} expected-note {{indexing of array without known bound}}
+  constexpr int *e = a + 1; // expected-error {{constant}} expected-note {{indexing of array without known bound}}
+
+  struct X {
+    int a;
+    int b[]; // expected-warning {{C99}}
+  };
+  extern X x;
+  constexpr int *xb = x.b; // expected-error {{constant}} expected-note {{not supported}}
+
+  struct Y { int a; };
+  extern Y yarr[];
+  constexpr Y *p = yarr;
+  constexpr int *q = &p->a;
+
+  extern const int carr[]; // expected-note {{here}}
+  constexpr int n = carr[0]; // expected-error {{constant}} expected-note {{non-constexpr variable}}
+}
+
 namespace DependentValues {
 
 struct I { int n; typedef I V[10]; };

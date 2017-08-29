@@ -49,13 +49,13 @@ static const char *const SanCovTraceCmp1 = "__sanitizer_cov_trace_cmp1";
 static const char *const SanCovTraceCmp2 = "__sanitizer_cov_trace_cmp2";
 static const char *const SanCovTraceCmp4 = "__sanitizer_cov_trace_cmp4";
 static const char *const SanCovTraceCmp8 = "__sanitizer_cov_trace_cmp8";
-static const char *const SanCovTraceConstCmp1 = 
+static const char *const SanCovTraceConstCmp1 =
     "__sanitizer_cov_trace_const_cmp1";
-static const char *const SanCovTraceConstCmp2 = 
+static const char *const SanCovTraceConstCmp2 =
     "__sanitizer_cov_trace_const_cmp2";
-static const char *const SanCovTraceConstCmp4 = 
+static const char *const SanCovTraceConstCmp4 =
     "__sanitizer_cov_trace_const_cmp4";
-static const char *const SanCovTraceConstCmp8 = 
+static const char *const SanCovTraceConstCmp8 =
     "__sanitizer_cov_trace_const_cmp8";
 static const char *const SanCovTraceDiv4 = "__sanitizer_cov_trace_div4";
 static const char *const SanCovTraceDiv8 = "__sanitizer_cov_trace_div8";
@@ -204,8 +204,8 @@ private:
   GlobalVariable *CreateFunctionLocalArrayInSection(size_t NumElements,
                                                     Function &F, Type *Ty,
                                                     const char *Section);
+  GlobalVariable *CreatePCArray(Function &F, ArrayRef<BasicBlock *> AllBlocks);
   void CreateFunctionLocalArrays(Function &F, ArrayRef<BasicBlock *> AllBlocks);
-  void CreatePCArray(Function &F, ArrayRef<BasicBlock *> AllBlocks);
   void InjectCoverageAtBlock(Function &F, BasicBlock &BB, size_t Idx);
   Function *CreateInitCallsForSections(Module &M, const char *InitFunctionName,
                                        Type *Ty, const char *Section);
@@ -541,8 +541,9 @@ GlobalVariable *SanitizerCoverageModule::CreateFunctionLocalArrayInSection(
   return Array;
 }
 
-void SanitizerCoverageModule::CreatePCArray(Function &F,
-                                            ArrayRef<BasicBlock *> AllBlocks) {
+GlobalVariable *
+SanitizerCoverageModule::CreatePCArray(Function &F,
+                                       ArrayRef<BasicBlock *> AllBlocks) {
   size_t N = AllBlocks.size();
   assert(N);
   SmallVector<Constant *, 32> PCs;
@@ -559,27 +560,36 @@ void SanitizerCoverageModule::CreatePCArray(Function &F,
           ConstantInt::get(IntptrTy, 0), IntptrPtrTy));
     }
   }
-  FunctionPCsArray = CreateFunctionLocalArrayInSection(N * 2, F, IntptrPtrTy,
-                                                       SanCovPCsSectionName);
-  FunctionPCsArray->setInitializer(
+  auto *PCArray = CreateFunctionLocalArrayInSection(N * 2, F, IntptrPtrTy,
+                                                    SanCovPCsSectionName);
+  PCArray->setInitializer(
       ConstantArray::get(ArrayType::get(IntptrPtrTy, N * 2), PCs));
-  FunctionPCsArray->setConstant(true);
+  PCArray->setConstant(true);
 
-  // We don't reference the PCs array in any of our runtime functions, so we
-  // need to prevent it from being dead stripped.
-  appendToUsed(*F.getParent(), {FunctionPCsArray});
+  return PCArray;
 }
 
 void SanitizerCoverageModule::CreateFunctionLocalArrays(
     Function &F, ArrayRef<BasicBlock *> AllBlocks) {
-  if (Options.TracePCGuard)
+  SmallVector<GlobalValue *, 3> LocalArrays;
+  if (Options.TracePCGuard) {
     FunctionGuardArray = CreateFunctionLocalArrayInSection(
         AllBlocks.size(), F, Int32Ty, SanCovGuardsSectionName);
-  if (Options.Inline8bitCounters)
+    LocalArrays.push_back(FunctionGuardArray);
+  }
+  if (Options.Inline8bitCounters) {
     Function8bitCounterArray = CreateFunctionLocalArrayInSection(
         AllBlocks.size(), F, Int8Ty, SanCovCountersSectionName);
-  if (Options.PCTable)
-    CreatePCArray(F, AllBlocks);
+    LocalArrays.push_back(Function8bitCounterArray);
+  }
+  if (Options.PCTable) {
+    FunctionPCsArray = CreatePCArray(F, AllBlocks);
+    LocalArrays.push_back(FunctionPCsArray);
+  }
+
+  // We don't reference these arrays directly in any of our runtime functions,
+  // so we need to prevent them from being dead stripped.
+  appendToUsed(*F.getParent(), LocalArrays);
 }
 
 bool SanitizerCoverageModule::InjectCoverage(Function &F,
@@ -709,12 +719,12 @@ void SanitizerCoverageModule::InjectTraceForCmp(
       // If only one is const, then make it the first callback argument.
       if (FirstIsConst || SecondIsConst) {
         CallbackFunc = SanCovTraceConstCmpFunction[CallbackIdx];
-        if (SecondIsConst) 
+        if (SecondIsConst)
           std::swap(A0, A1);
       }
 
       auto Ty = Type::getIntNTy(*C, TypeSize);
-      IRB.CreateCall(CallbackFunc, {IRB.CreateIntCast(A0, Ty, true), 
+      IRB.CreateCall(CallbackFunc, {IRB.CreateIntCast(A0, Ty, true),
               IRB.CreateIntCast(A1, Ty, true)});
     }
   }

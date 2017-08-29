@@ -207,19 +207,26 @@ void ICF<ELFT>::segregate(size_t Begin, size_t End, bool Constant) {
 // Compare two lists of relocations.
 template <class ELFT>
 template <class RelTy>
-bool ICF<ELFT>::constantEq(const InputSection *A, ArrayRef<RelTy> RelsA,
-                           const InputSection *B, ArrayRef<RelTy> RelsB) {
-  auto Eq = [&](const RelTy &RA, const RelTy &RB) {
-    if (RA.r_offset != RB.r_offset ||
-        RA.getType(Config->IsMips64EL) != RB.getType(Config->IsMips64EL))
-      return false;
-    uint64_t AddA = getAddend<ELFT>(RA);
-    uint64_t AddB = getAddend<ELFT>(RB);
+bool ICF<ELFT>::constantEq(const InputSection *SecA, ArrayRef<RelTy> RA,
+                           const InputSection *SecB, ArrayRef<RelTy> RB) {
+  if (RA.size() != RB.size())
+    return false;
 
-    SymbolBody &SA = A->template getFile<ELFT>()->getRelocTargetSym(RA);
-    SymbolBody &SB = B->template getFile<ELFT>()->getRelocTargetSym(RB);
-    if (&SA == &SB)
-      return AddA == AddB;
+  for (size_t I = 0; I < RA.size(); ++I) {
+    if (RA[I].r_offset != RB[I].r_offset ||
+        RA[I].getType(Config->IsMips64EL) != RB[I].getType(Config->IsMips64EL))
+      return false;
+
+    uint64_t AddA = getAddend<ELFT>(RA[I]);
+    uint64_t AddB = getAddend<ELFT>(RB[I]);
+
+    SymbolBody &SA = SecA->template getFile<ELFT>()->getRelocTargetSym(RA[I]);
+    SymbolBody &SB = SecB->template getFile<ELFT>()->getRelocTargetSym(RB[I]);
+    if (&SA == &SB) {
+      if (AddA == AddB)
+        continue;
+      return false;
+    }
 
     auto *DA = dyn_cast<DefinedRegular>(&SA);
     auto *DB = dyn_cast<DefinedRegular>(&SB);
@@ -228,17 +235,21 @@ bool ICF<ELFT>::constantEq(const InputSection *A, ArrayRef<RelTy> RelsA,
 
     // Relocations referring to absolute symbols are constant-equal if their
     // values are equal.
+    if (!DA->Section && !DB->Section && DA->Value + AddA == DB->Value + AddB)
+      continue;
     if (!DA->Section || !DB->Section)
-      return !DA->Section && !DB->Section &&
-             DA->Value + AddA == DB->Value + AddB;
+      return false;
 
     if (DA->Section->kind() != DB->Section->kind())
       return false;
 
     // Relocations referring to InputSections are constant-equal if their
     // section offsets are equal.
-    if (isa<InputSection>(DA->Section))
-      return DA->Value + AddA == DB->Value + AddB;
+    if (isa<InputSection>(DA->Section)) {
+      if (DA->Value + AddA == DB->Value + AddB)
+        continue;
+      return false;
+    }
 
     // Relocations referring to MergeInputSections are constant-equal if their
     // offsets in the output section are equal.
@@ -253,11 +264,11 @@ bool ICF<ELFT>::constantEq(const InputSection *A, ArrayRef<RelTy> RelsA,
         SA.isSection() ? X->getOffset(AddA) : X->getOffset(DA->Value) + AddA;
     uint64_t OffsetB =
         SB.isSection() ? Y->getOffset(AddB) : Y->getOffset(DB->Value) + AddB;
-    return OffsetA == OffsetB;
-  };
+    if (OffsetA != OffsetB)
+      return false;
+  }
 
-  return RelsA.size() == RelsB.size() &&
-         std::equal(RelsA.begin(), RelsA.end(), RelsB.begin(), Eq);
+  return true;
 }
 
 // Compare "non-moving" part of two InputSections, namely everything
@@ -278,14 +289,16 @@ bool ICF<ELFT>::equalsConstant(const InputSection *A, const InputSection *B) {
 // relocations point to the same section in terms of ICF.
 template <class ELFT>
 template <class RelTy>
-bool ICF<ELFT>::variableEq(const InputSection *A, ArrayRef<RelTy> RelsA,
-                           const InputSection *B, ArrayRef<RelTy> RelsB) {
-  auto Eq = [&](const RelTy &RA, const RelTy &RB) {
+bool ICF<ELFT>::variableEq(const InputSection *SecA, ArrayRef<RelTy> RA,
+                           const InputSection *SecB, ArrayRef<RelTy> RB) {
+  assert(RA.size() == RB.size());
+
+  for (size_t I = 0; I < RA.size(); ++I) {
     // The two sections must be identical.
-    SymbolBody &SA = A->template getFile<ELFT>()->getRelocTargetSym(RA);
-    SymbolBody &SB = B->template getFile<ELFT>()->getRelocTargetSym(RB);
+    SymbolBody &SA = SecA->template getFile<ELFT>()->getRelocTargetSym(RA[I]);
+    SymbolBody &SB = SecB->template getFile<ELFT>()->getRelocTargetSym(RB[I]);
     if (&SA == &SB)
-      return true;
+      continue;
 
     auto *DA = cast<DefinedRegular>(&SA);
     auto *DB = cast<DefinedRegular>(&SB);
@@ -294,21 +307,21 @@ bool ICF<ELFT>::variableEq(const InputSection *A, ArrayRef<RelTy> RelsA,
     // constantEq, and for InputSections we have already checked everything
     // except the equivalence class.
     if (!DA->Section)
-      return true;
+      continue;
     auto *X = dyn_cast<InputSection>(DA->Section);
     if (!X)
-      return true;
+      continue;
     auto *Y = cast<InputSection>(DB->Section);
 
     // Ineligible sections are in the special equivalence class 0.
     // They can never be the same in terms of the equivalence class.
     if (X->Class[Current] == 0)
       return false;
-
-    return X->Class[Current] == Y->Class[Current];
+    if (X->Class[Current] != Y->Class[Current])
+      return false;
   };
 
-  return std::equal(RelsA.begin(), RelsA.end(), RelsB.begin(), Eq);
+  return true;
 }
 
 // Compare "moving" part of two InputSections, namely relocation targets.

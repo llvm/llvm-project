@@ -47,7 +47,7 @@ struct FuzzingOptions {
   bool SaveArtifacts = true;
   bool PrintNEW = true; // Print a status line when new units are found;
   bool PrintNewCovPcs = false;
-  bool PrintNewCovFuncs = false;
+  int PrintNewCovFuncs = 0;
   bool PrintFinalStats = false;
   bool PrintCorpusStats = false;
   bool PrintCoverage = false;

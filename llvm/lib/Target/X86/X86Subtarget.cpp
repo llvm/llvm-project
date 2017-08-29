@@ -351,7 +351,7 @@ void X86Subtarget::initializeEnvironment() {
   HasSlowDivide32 = false;
   HasSlowDivide64 = false;
   PadShortFunctions = false;
-  CallRegIndirect = false;
+  SlowTwoMemOps = false;
   LEAUsesAG = false;
   SlowLEA = false;
   Slow3OpsLEA = false;

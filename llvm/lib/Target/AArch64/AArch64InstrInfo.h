@@ -367,6 +367,9 @@ public:
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      unsigned CallClass) const override;
+  /// Returns true if the instruction has a shift left that can be executed
+  /// more efficiently.
+  bool isExynosShiftLeftFast(const MachineInstr &MI) const;
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
   bool isFalkorShiftExtFast(const MachineInstr &MI) const;
