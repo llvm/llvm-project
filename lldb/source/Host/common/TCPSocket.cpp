@@ -198,9 +198,14 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
     ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, option_value_p,
                  sizeof(option_value));
 
-    address.SetPort(port);
+    SocketAddress listen_address = address;
+    if(!listen_address.IsLocalhost())
+      listen_address.SetToAnyAddress(address.GetFamily(), port);
+    else
+      listen_address.SetPort(port);
 
-    int err = ::bind(fd, &address.sockaddr(), address.GetLength());
+    int err =
+        ::bind(fd, &listen_address.sockaddr(), listen_address.GetLength());
     if (-1 != err)
       err = ::listen(fd, backlog);
 
