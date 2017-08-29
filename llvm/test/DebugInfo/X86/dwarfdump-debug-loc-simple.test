@@ -1,4 +1,4 @@
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-test-loc-list-32bit.elf.o | FileCheck %s
+RUN: llvm-dwarfdump %p/../Inputs/dwarfdump-test-loc-list-32bit.elf.o | FileCheck %s
 Note: the input file was generated from Inputs/dwarfdump-test-loc-list-32bit.elf.cpp
 
 CHECK: .debug_info
