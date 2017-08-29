@@ -1,0 +1,63 @@
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=pic -mattr=+no-movt -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,ELF
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=pic -mattr=-no-movt,+v8m -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,ELF
+# RUN: llc -O0 -mtriple arm-darwin -relocation-model=pic -mattr=+no-movt -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,DARWIN-NOMOVT
+# RUN: llc -O0 -mtriple arm-darwin -relocation-model=pic -mattr=-no-movt,+v8m -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,DARWIN-MOVT
+--- |
+  @internal_global = internal global i32 42
+  define void @test_internal_global() { ret void }
+
+  @external_global = external global i32
+  define void @test_external_global() { ret void }
+...
+---
+name:            test_internal_global
+# CHECK-LABEL: name: test_internal_global
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    %0(p0) = G_GLOBAL_VALUE @internal_global
+    ; DARWIN-MOVT: [[G:%[0-9]+]] = MOV_ga_pcrel {{.*}}@internal_global
+    ; DARWIN-NOMOVT: [[G:%[0-9]+]] = LDRLIT_ga_pcrel {{.*}}@internal_global
+    ; ELF: [[G:%[0-9]+]] = LDRLIT_ga_pcrel {{.*}}@internal_global
+
+    %1(s32) = G_LOAD %0(p0) :: (load 4 from @internal_global)
+    ; CHECK: [[V:%[0-9]+]] = LDRi12 [[G]], 0, 14, _ :: (load 4 from @internal_global)
+
+    %r0 = COPY %1(s32)
+    ; CHECK: %r0 = COPY [[V]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_external_global
+# CHECK-LABEL: name: test_external_global
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    %0(p0) = G_GLOBAL_VALUE @external_global
+    ; DARWIN-MOVT: [[G:%[0-9]+]] = MOV_ga_pcrel_ldr {{.*}} @external_global :: (load 4 from got)
+    ; DARWIN-NOMOVT: [[G:%[0-9]+]] = LDRLIT_ga_pcrel_ldr {{.*}}@external_global :: (load 4 from got)
+    ; ELF: [[G:%[0-9]+]] = LDRLIT_ga_pcrel_ldr @external_global :: (load 4 from got)
+
+    %1(s32) = G_LOAD %0(p0) :: (load 4 from @external_global)
+    ; CHECK: [[V:%[0-9]+]] = LDRi12 [[G]], 0, 14, _ :: (load 4 from @external_global)
+
+    %r0 = COPY %1(s32)
+    ; CHECK: %r0 = COPY [[V]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
