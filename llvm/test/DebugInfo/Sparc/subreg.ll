@@ -1,60 +1,35 @@
 ; RUN: llc -filetype=obj -O0 < %s -mtriple sparc64-unknown-linux-gnu | llvm-dwarfdump - | FileCheck %s
 ; The undescribable 128-bit register should be split into two 64-bit registers.
-; CHECK: Location description: 90 4a 93 08 90 4b 93 08
+; CHECK: Location description: 90 48 93 08 90 49 93 08
 ;                              DW_OP_reg74 DW_OP_piece 8 DW_OP_reg75 DW_OP_piece 8 ...
-source_filename = "/tmp/t.c"
+
 target datalayout = "E-m:e-i64:64-n32:64-S128"
 target triple = "sparc64"
 
-@a = common local_unnamed_addr global fp128 0xL00000000000000000000000000000000, align 16, !dbg !0
-
-; Function Attrs: nounwind
-define signext i32 @fn1() local_unnamed_addr #0 !dbg !11 {
+; Function Attrs: nounwind readnone
+define void @fn1(fp128 %b) local_unnamed_addr !dbg !7 {
 entry:
-  tail call void @llvm.dbg.declare(metadata { fp128, fp128 }* undef, metadata !16, metadata !DIExpression()), !dbg !18
-  store fp128 fmul (fp128 undef, fp128 0xL00000000000000003FFF000000000000), fp128* @a, align 16, !dbg !19, !tbaa !20
-  tail call void @llvm.dbg.value(metadata fp128 fmul (fp128 undef, fp128 0xL00000000000000003FFF000000000000), metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 128)), !dbg !18
-  tail call void @llvm.dbg.value(metadata fp128 0xL00000000000000000000000000000000, metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 128, 128)), !dbg !18
-  ret i32 undef, !dbg !24
+  tail call void @llvm.dbg.value(metadata fp128 %b, i64 0, metadata !13, metadata !18), !dbg !17
+  tail call void @llvm.dbg.value(metadata fp128 0xL00000000000000000000000000000000, i64 0, metadata !13, metadata !19), !dbg !17
+  ret void, !dbg !20
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
-; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!4}
 
-; Function Attrs: nounwind
-declare void @llvm.stackprotector(i8*, i8**) #2
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { nounwind }
-
-!llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!7, !8, !9}
-
-!0 = !DIGlobalVariableExpression(var: !1)
-!1 = distinct !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 6.0.0 (trunk 311908) (llvm/trunk 311915)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
-!3 = !DIFile(filename: "t.c", directory: "/")
-!4 = !{}
-!5 = !{!0}
-!6 = !DIBasicType(name: "long double", size: 128, encoding: DW_ATE_float)
-!7 = !{i32 2, !"Dwarf Version", i32 4}
-!8 = !{i32 2, !"Debug Info Version", i32 3}
-!9 = !{i32 1, !"wchar_size", i32 4}
-!11 = distinct !DISubprogram(name: "fn1", scope: !3, file: !3, line: 1, type: !12, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !2, variables: !15)
-!12 = !DISubroutineType(types: !13)
-!13 = !{!14}
-!14 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!15 = !{!16}
-!16 = !DILocalVariable(name: "b", scope: !11, file: !3, line: 1, type: !17)
-!17 = !DIBasicType(name: "complex", size: 256, encoding: DW_ATE_complex_float)
-!18 = !DILocation(line: 1, column: 45, scope: !11)
-!19 = !DILocation(line: 1, column: 51, scope: !11)
-!20 = !{!21, !21, i64 0}
-!21 = !{!"long double", !22, i64 0}
-!22 = !{!"omnipotent char", !23, i64 0}
-!23 = !{!"Simple C/C++ TBAA"}
-!24 = !DILocation(line: 1, column: 63, scope: !11)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, emissionKind: FullDebug)
+!1 = !DIFile(filename: "subreg.c", directory: ".")
+!4 = !{i32 2, !"Debug Info Version", i32 3}
+!7 = distinct !DISubprogram(name: "fn1", scope: !1, file: !1, line: 1, type: !8, unit: !0)
+!8 = !DISubroutineType(types: !9)
+!9 = !{null, !10}
+!10 = !DIBasicType(name: "long double", size: 128, encoding: DW_ATE_float)
+!13 = !DILocalVariable(name: "a", scope: !7, file: !1, line: 1, type: !14)
+!14 = !DIBasicType(name: "complex", size: 256, encoding: DW_ATE_complex_float)
+!17 = !DILocation(line: 1, column: 48, scope: !7)
+!18 = !DIExpression(DW_OP_LLVM_fragment, 0, 128)
+!19 = !DIExpression(DW_OP_LLVM_fragment, 128, 128)
+!20 = !DILocation(line: 1, column: 55, scope: !7)
