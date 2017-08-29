@@ -129,6 +129,9 @@ public:
   /// The original path to the clang executable.
   std::string ClangExecutable;
 
+  /// Target and driver mode components extracted from clang executable name.
+  ParsedClangName ClangNameParts;
+
   /// The path to the installed clang directory, if any.
   std::string InstalledDir;
 
@@ -283,6 +286,8 @@ public:
   bool getCheckInputsExist() const { return CheckInputsExist; }
 
   void setCheckInputsExist(bool Value) { CheckInputsExist = Value; }
+
+  void setTargetAndMode(const ParsedClangName &TM) { ClangNameParts = TM; }
 
   const std::string &getTitle() { return DriverTitle; }
   void setTitle(std::string Value) { DriverTitle = std::move(Value); }

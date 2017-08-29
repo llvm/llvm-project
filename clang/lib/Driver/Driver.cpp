@@ -119,9 +119,8 @@ Driver::Driver(StringRef ClangExecutable, StringRef DefaultTargetTriple,
 
 void Driver::ParseDriverMode(StringRef ProgramName,
                              ArrayRef<const char *> Args) {
-  auto Default = ToolChain::getTargetAndModeFromProgramName(ProgramName);
-  StringRef DefaultMode(Default.second);
-  setDriverModeFromOption(DefaultMode);
+  ClangNameParts = ToolChain::getTargetAndModeFromProgramName(ProgramName);
+  setDriverModeFromOption(ClangNameParts.DriverMode);
 
   for (const char *ArgPtr : Args) {
     // Ingore nullptrs, they are response file's EOL markers
