@@ -2622,7 +2622,7 @@ public:
   ///
   /// This function will add the assumption to the RecordedAssumptions. This
   /// collection will be added (@see addAssumption) to the assumed context once
-  /// all paramaters are known and the context is fully build.
+  /// all paramaters are known and the context is fully built.
   ///
   /// @param Kind The assumption kind describing the underlying cause.
   /// @param Set  The relations between parameters that are assumed to hold.

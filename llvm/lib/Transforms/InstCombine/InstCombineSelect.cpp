@@ -220,16 +220,15 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
 }
 
 static bool isSelect01(Constant *C1, Constant *C2) {
-  ConstantInt *C1I = dyn_cast<ConstantInt>(C1);
-  if (!C1I)
+  const APInt *C1I, *C2I;
+  if (!match(C1, m_APInt(C1I)))
     return false;
-  ConstantInt *C2I = dyn_cast<ConstantInt>(C2);
-  if (!C2I)
+  if (!match(C2, m_APInt(C2I)))
     return false;
-  if (!C1I->isZero() && !C2I->isZero()) // One side must be zero.
+  if (!C1I->isNullValue() && !C2I->isNullValue()) // One side must be zero.
     return false;
-  return C1I->isOne() || C1I->isMinusOne() ||
-         C2I->isOne() || C2I->isMinusOne();
+  return C1I->isOneValue() || C1I->isAllOnesValue() ||
+         C2I->isOneValue() || C2I->isAllOnesValue();
 }
 
 /// Try to fold the select into one of the operands to allow further
@@ -310,11 +309,13 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
 /// 1. The icmp predicate is inverted
 /// 2. The select operands are reversed
 /// 3. The magnitude of C2 and C1 are flipped
-static Value *foldSelectICmpAndOr(const SelectInst &SI, Value *TrueVal,
+static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
                                   Value *FalseVal,
                                   InstCombiner::BuilderTy &Builder) {
-  const ICmpInst *IC = dyn_cast<ICmpInst>(SI.getCondition());
-  if (!IC || !SI.getType()->isIntegerTy())
+  // Only handle integer compares. Also, if this is a vector select, we need a
+  // vector compare.
+  if (!TrueVal->getType()->isIntOrIntVectorTy() ||
+      TrueVal->getType()->isVectorTy() != IC->getType()->isVectorTy())
     return nullptr;
 
   Value *CmpLHS = IC->getOperand(0);
@@ -368,8 +369,8 @@ static Value *foldSelectICmpAndOr(const SelectInst &SI, Value *TrueVal,
 
   bool NeedXor = (!IsEqualZero && OrOnFalseVal) || (IsEqualZero && OrOnTrueVal);
   bool NeedShift = C1Log != C2Log;
-  bool NeedZExtTrunc = Y->getType()->getIntegerBitWidth() !=
-                       V->getType()->getIntegerBitWidth();
+  bool NeedZExtTrunc = Y->getType()->getScalarSizeInBits() !=
+                       V->getType()->getScalarSizeInBits();
 
   // Make sure we don't create more instructions than we save.
   Value *Or = OrOnFalseVal ? FalseVal : TrueVal;
@@ -819,7 +820,7 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
     }
   }
 
-  if (Value *V = foldSelectICmpAndOr(SI, TrueVal, FalseVal, Builder))
+  if (Value *V = foldSelectICmpAndOr(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectCttzCtlz(ICI, TrueVal, FalseVal, Builder))

@@ -143,6 +143,7 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
 }
 
 void TracePC::UpdateObservedPCs() {
+  Vector<uintptr_t> CoveredFuncs;
   auto ObservePC = [&](uintptr_t PC) {
     if (ObservedPCs.insert(PC).second && DoPrintNewPCs)
       PrintPC("\tNEW_PC: %p %F %L\n", "\tNEW_PC: %p\n", PC + 1);
@@ -150,8 +151,8 @@ void TracePC::UpdateObservedPCs() {
 
   auto Observe = [&](const PCTableEntry &TE) {
     if (TE.PCFlags & 1)
-      if (ObservedFuncs.insert(TE.PC).second && DoPrintNewFuncs)
-        PrintPC("\tNEW_FUNC: %p %F %L\n", "\tNEW_PC: %p\n", TE.PC + 1);
+      if (ObservedFuncs.insert(TE.PC).second && NumPrintNewFuncs)
+        CoveredFuncs.push_back(TE.PC);
     ObservePC(TE.PC);
   };
 
@@ -185,6 +186,11 @@ void TracePC::UpdateObservedPCs() {
     for (size_t Idx = 0; Idx < NumClangCounters; Idx++)
       if (P[Idx])
         ObservePC((uintptr_t)Idx);
+  }
+
+  for (size_t i = 0, N = Min(CoveredFuncs.size(), NumPrintNewFuncs); i < N; i++) {
+    Printf("\tNEW_FUNC[%zd/%zd]: ", i, CoveredFuncs.size());
+    PrintPC("%p %F %L\n", "%p\n", CoveredFuncs[i] + 1);
   }
 }
 
