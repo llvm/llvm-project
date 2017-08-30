@@ -133,7 +133,7 @@ private:
   StringMap<std::string> RemappedFilenames;
 
   /// The architecture the coverage mapping data targets.
-  std::string CoverageArch;
+  std::vector<StringRef> CoverageArches;
 
   /// A cache for demangled symbols.
   DemangleCache DC;
@@ -289,25 +289,31 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
                                          ViewOpts, std::move(FileCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
 
-  for (const auto *Function : Coverage.getInstantiations(SourceFile)) {
-    std::unique_ptr<SourceCoverageView> SubView{nullptr};
+  for (const auto &Group : Coverage.getInstantiationGroups(SourceFile)) {
+    // Skip functions which have a single instantiation.
+    if (Group.size() < 2)
+      continue;
 
-    StringRef Funcname = DC.demangle(Function->Name);
+    for (const FunctionRecord *Function : Group.getInstantiations()) {
+      std::unique_ptr<SourceCoverageView> SubView{nullptr};
 
-    if (Function->ExecutionCount > 0) {
-      auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
-      auto SubViewExpansions = SubViewCoverage.getExpansions();
-      SubView = SourceCoverageView::create(
-          Funcname, SourceBuffer.get(), ViewOpts, std::move(SubViewCoverage));
-      attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
+      StringRef Funcname = DC.demangle(Function->Name);
+
+      if (Function->ExecutionCount > 0) {
+        auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
+        auto SubViewExpansions = SubViewCoverage.getExpansions();
+        SubView = SourceCoverageView::create(
+            Funcname, SourceBuffer.get(), ViewOpts, std::move(SubViewCoverage));
+        attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
+      }
+
+      unsigned FileID = Function->CountedRegions.front().FileID;
+      unsigned Line = 0;
+      for (const auto &CR : Function->CountedRegions)
+        if (CR.FileID == FileID)
+          Line = std::max(CR.LineEnd, Line);
+      View->addInstantiation(Funcname, Line, std::move(SubView));
     }
-
-    unsigned FileID = Function->CountedRegions.front().FileID;
-    unsigned Line = 0;
-    for (const auto &CR : Function->CountedRegions)
-      if (CR.FileID == FileID)
-        Line = std::max(CR.LineEnd, Line);
-    View->addInstantiation(Funcname, Line, std::move(SubView));
   }
   return View;
 }
@@ -329,7 +335,7 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
       warning("profile data may be out of date - object is newer",
               ObjectFilename);
   auto CoverageOrErr =
-      CoverageMapping::load(ObjectFilenames, PGOFilename, CoverageArch);
+      CoverageMapping::load(ObjectFilenames, PGOFilename, CoverageArches);
   if (Error E = CoverageOrErr.takeError()) {
     error("Failed to load coverage: " + toString(std::move(E)),
           join(ObjectFilenames.begin(), ObjectFilenames.end(), ", "));
@@ -499,8 +505,8 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       cl::desc(
           "File with the profile data obtained after an instrumented run"));
 
-  cl::opt<std::string> Arch(
-      "arch", cl::desc("architecture of the coverage mapping binary"));
+  cl::list<std::string> Arches(
+      "arch", cl::desc("architectures of the coverage mapping binaries"));
 
   cl::opt<bool> DebugDump("dump", cl::Optional,
                           cl::desc("Show internal debug dump"));
@@ -632,12 +638,19 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       Filters.push_back(std::unique_ptr<CoverageFilter>(StatFilterer));
     }
 
-    if (!Arch.empty() &&
-        Triple(Arch).getArch() == llvm::Triple::ArchType::UnknownArch) {
-      error("Unknown architecture: " + Arch);
-      return 1;
+    if (!Arches.empty()) {
+      for (const std::string &Arch : Arches) {
+        if (Triple(Arch).getArch() == llvm::Triple::ArchType::UnknownArch) {
+          error("Unknown architecture: " + Arch);
+          return 1;
+        }
+        CoverageArches.emplace_back(Arch);
+      }
+      if (CoverageArches.size() != ObjectFilenames.size()) {
+        error("Number of architectures doesn't match the number of objects");
+        return 1;
+      }
     }
-    CoverageArch = Arch;
 
     for (const std::string &File : InputSourceFiles)
       collectPaths(File);
