@@ -497,7 +497,7 @@ RATTR float4
 OCKL_MANGLE_T(image_sample,1D)(TSHARP i, SSHARP s, float c)
 {
     ADJUST_X(c, i, s);
-    return __llvm_amdgcn_image_sample_v4f32_f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
+    return __llvm_amdgcn_image_sample_lz_v4f32_f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
 }
 
 RATTR float4
@@ -505,14 +505,14 @@ OCKL_MANGLE_T(image_sample,1Da)(TSHARP i, SSHARP s, float2 c)
 {
     ADJUST_X(c.x, i, s);
     c.y = __llvm_rint_f32(c.y);
-    return __llvm_amdgcn_image_sample_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, true);
+    return __llvm_amdgcn_image_sample_lz_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, true);
 }
 
 RATTR float4
 OCKL_MANGLE_T(image_sample,2D)(TSHARP i, SSHARP s, float2 c)
 {
     ADJUST_XY(c, i, s);
-    return __llvm_amdgcn_image_sample_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
+    return __llvm_amdgcn_image_sample_lz_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
 }
 
 RATTR float4
@@ -520,7 +520,7 @@ OCKL_MANGLE_T(image_sample,2Da)(TSHARP i, SSHARP s, float4 c)
 {
     ADJUST_XY(c, i, s);
     c.z = __llvm_rint_f32(c.z);
-    return __llvm_amdgcn_image_sample_v4f32_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, true);
+    return __llvm_amdgcn_image_sample_lz_v4f32_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, true);
 }
 
 RATTR float
@@ -528,28 +528,28 @@ OCKL_MANGLE_T(image_sample,2Dad)(TSHARP i, SSHARP s, float4 c)
 {
     ADJUST_XY(c, i, s);
     c.z = __llvm_rint_f32(c.z);
-    return __llvm_amdgcn_image_sample_f32_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x1, false, false, false, false, true);
+    return __llvm_amdgcn_image_sample_lz_f32_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x1, false, false, false, false, true);
 }
 
 RATTR float
 OCKL_MANGLE_T(image_sample,2Dd)(TSHARP i, SSHARP s, float2 c)
 {
     ADJUST_XY(c, i, s);
-    return __llvm_amdgcn_image_sample_f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x1, false, false, false, false, false);
+    return __llvm_amdgcn_image_sample_lz_f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x1, false, false, false, false, false);
 }
 
 RATTR float4
 OCKL_MANGLE_T(image_sample,3D)(TSHARP i, SSHARP s, float4 c)
 {
     ADJUST_XYZ(c, i, s);
-    return __llvm_amdgcn_image_sample_v4f32_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
+    return __llvm_amdgcn_image_sample_lz_v4f32_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
 }
 
 RATTR float4
 OCKL_MANGLE_T(image_sample,CM)(TSHARP i, SSHARP s, float4 c)
 {
     CUBE_PREP(c);
-    return __llvm_amdgcn_image_sample_v4f32_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
+    return __llvm_amdgcn_image_sample_lz_v4f32_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
 }
 
 RATTR float4
@@ -557,7 +557,7 @@ OCKL_MANGLE_T(image_sample,CMa)(TSHARP i, SSHARP s, float4 c)
 {
     CUBE_PREP(c);
     c.z = SAMPLE_ARRAY_FACE(c.w, c.z);
-    return __llvm_amdgcn_image_sample_v4f32_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
+    return __llvm_amdgcn_image_sample_lz_v4f32_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
 }
 
 RATTR float4
@@ -685,7 +685,7 @@ RATTR half4
 OCKL_MANGLE_T(image_sampleh,1D)(TSHARP i, SSHARP s, float c)
 {
     ADJUST_X(c, i, s);
-    return __llvm_amdgcn_image_sample_v4f16_f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
+    return __llvm_amdgcn_image_sample_lz_v4f16_f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
 }
 
 RATTR half4
@@ -693,14 +693,14 @@ OCKL_MANGLE_T(image_sampleh,1Da)(TSHARP i, SSHARP s, float2 c)
 {
     ADJUST_X(c.x, i, s);
     c.y = __llvm_rint_f32(c.y);
-    return __llvm_amdgcn_image_sample_v4f16_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, true);
+    return __llvm_amdgcn_image_sample_lz_v4f16_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, true);
 }
 
 RATTR half4
 OCKL_MANGLE_T(image_sampleh,2D)(TSHARP i, SSHARP s, float2 c)
 {
     ADJUST_XY(c, i, s);
-    return __llvm_amdgcn_image_sample_v4f16_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
+    return __llvm_amdgcn_image_sample_lz_v4f16_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
 }
 
 RATTR half4
@@ -708,21 +708,21 @@ OCKL_MANGLE_T(image_sampleh,2Da)(TSHARP i, SSHARP s, float4 c)
 {
     ADJUST_XY(c, i, s);
     c.z = __llvm_rint_f32(c.z);
-    return __llvm_amdgcn_image_sample_v4f16_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, true);
+    return __llvm_amdgcn_image_sample_lz_v4f16_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, true);
 }
 
 RATTR half4
 OCKL_MANGLE_T(image_sampleh,3D)(TSHARP i, SSHARP s, float4 c)
 {
     ADJUST_XYZ(c, i, s);
-    return __llvm_amdgcn_image_sample_v4f16_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
+    return __llvm_amdgcn_image_sample_lz_v4f16_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
 }
 
 RATTR half4
 OCKL_MANGLE_T(image_sampleh,CM)(TSHARP i, SSHARP s, float4 c)
 {
     CUBE_PREP(c);
-    return __llvm_amdgcn_image_sample_v4f16_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
+    return __llvm_amdgcn_image_sample_lz_v4f16_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
 }
 
 RATTR half4
@@ -730,7 +730,7 @@ OCKL_MANGLE_T(image_sampleh,CMa)(TSHARP i, SSHARP s, float4 c)
 {
     CUBE_PREP(c);
     c.z = SAMPLE_ARRAY_FACE(c.w, c.z);
-    return __llvm_amdgcn_image_sample_v4f16_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
+    return __llvm_amdgcn_image_sample_lz_v4f16_v4f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0xf, false, false, false, false, false);
 }
 
 RATTR half4
@@ -828,28 +828,28 @@ RATTR float4
 OCKL_MANGLE_T(image_gather4r,2D)(TSHARP i, SSHARP s, float2 c)
 {
     ADJUST_XY(c, i, s);
-    return __llvm_amdgcn_image_gather4_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x1, false, false, false, false, false);
+    return __llvm_amdgcn_image_gather4_lz_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x1, false, false, false, false, false);
 }
 
 RATTR float4
 OCKL_MANGLE_T(image_gather4g,2D)(TSHARP i, SSHARP s, float2 c)
 {
     ADJUST_XY(c, i, s);
-    return __llvm_amdgcn_image_gather4_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x2, false, false, false, false, false);
+    return __llvm_amdgcn_image_gather4_lz_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x2, false, false, false, false, false);
 }
 
 RATTR float4
 OCKL_MANGLE_T(image_gather4b,2D)(TSHARP i, SSHARP s, float2 c)
 {
     ADJUST_XY(c, i, s);
-    return __llvm_amdgcn_image_gather4_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x4, false, false, false, false, false);
+    return __llvm_amdgcn_image_gather4_lz_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x4, false, false, false, false, false);
 }
 
 RATTR float4
 OCKL_MANGLE_T(image_gather4a,2D)(TSHARP i, SSHARP s, float2 c)
 {
     ADJUST_XY(c, i, s);
-    return __llvm_amdgcn_image_gather4_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x8, false, false, false, false, false);
+    return __llvm_amdgcn_image_gather4_lz_v4f32_v2f32(c, LOAD_TSHARP(i), LOAD_SSHARP(s), 0x8, false, false, false, false, false);
 }
 
 // We rely on the fact that the runtime allocates 12 words for the T# or V#
