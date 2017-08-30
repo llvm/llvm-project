@@ -220,3 +220,14 @@ TEST_F(SocketTest, UDPConnect) {
   EXPECT_TRUE(error.Success());
   EXPECT_TRUE(socket_up->IsValid());
 }
+
+TEST_F(SocketTest, TCPListen0GetPort) {
+  Socket *server_socket;
+  Predicate<uint16_t> port_predicate;
+  port_predicate.SetValue(0, eBroadcastNever);
+  Status err =
+      Socket::TcpListen("10.10.12.3:0", false, server_socket, &port_predicate);
+  std::unique_ptr<TCPSocket> socket_up((TCPSocket*)server_socket);
+  EXPECT_TRUE(socket_up->IsValid());
+  EXPECT_NE(socket_up->GetLocalPortNumber(), 0);
+}

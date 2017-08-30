@@ -6,7 +6,7 @@ RUN: echo a > %t/SUB1/a
 RUN: echo b > %t/SUB1/SUB2/b
 RUN: echo c > %t/SUB1/SUB2/SUB3/c
 RUN: %t-SimpleTest %t/SUB1 -runs=0 2>&1 | FileCheck %s --check-prefix=SUBDIRS
-SUBDIRS: READ   units: 3
+SUBDIRS: INFO: seed corpus: files: 3 min: 2b max: 2b total: 6b
 RUN: echo -n zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz > %t/SUB1/f64
 RUN: cat %t/SUB1/f64 %t/SUB1/f64 %t/SUB1/f64 %t/SUB1/f64 > %t/SUB1/f256
 RUN: cat %t/SUB1/f256 %t/SUB1/f256 %t/SUB1/f256 %t/SUB1/f256 > %t/SUB1/f1024

@@ -371,39 +371,6 @@ void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
     PrintStats("RELOAD");
 }
 
-void Fuzzer::ShuffleCorpus(UnitVector *V) {
-  std::shuffle(V->begin(), V->end(), MD.GetRand());
-  if (Options.PreferSmall)
-    std::stable_sort(V->begin(), V->end(), [](const Unit &A, const Unit &B) {
-      return A.size() < B.size();
-    });
-}
-
-void Fuzzer::ShuffleAndMinimize(UnitVector *InitialCorpus) {
-  Printf("#0\tREAD units: %zd; rss: %zdMb\n", InitialCorpus->size(),
-         GetPeakRSSMb());
-  if (Options.ShuffleAtStartUp)
-    ShuffleCorpus(InitialCorpus);
-
-  // Test the callback with empty input and never try it again.
-  uint8_t dummy;
-  ExecuteCallback(&dummy, 0);
-
-  for (auto &U : *InitialCorpus) {
-    RunOne(U.data(), U.size());
-    CheckExitOnSrcPosOrItem();
-    TryDetectingAMemoryLeak(U.data(), U.size(),
-                            /*DuringInitialCorpusExecution*/ true);
-    U.clear();
-  }
-  PrintStats("INITED");
-  if (Corpus.empty()) {
-    Printf("ERROR: no interesting inputs were found. "
-           "Is the code instrumented for coverage? Exiting.\n");
-    exit(1);
-  }
-}
-
 void Fuzzer::PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size) {
   auto TimeOfUnit =
       duration_cast<seconds>(UnitStopTime - UnitStartTime).count();
@@ -628,26 +595,68 @@ void Fuzzer::MutateAndTestOne() {
 void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
   const size_t kMaxSaneLen = 1 << 20;
   const size_t kMinDefaultLen = 4096;
-  size_t TemporaryMaxLen = Options.MaxLen ? Options.MaxLen : kMaxSaneLen;
-  UnitVector InitialCorpus;
-  for (auto &Inp : CorpusDirs) {
-    Printf("Loading corpus dir: %s\n", Inp.c_str());
-    ReadDirToVectorOfUnits(Inp.c_str(), &InitialCorpus, nullptr,
-                           TemporaryMaxLen, /*ExitOnError=*/false);
+  struct SizedFile {
+    std::string File;
+    size_t Size;
+  };
+  Vector<SizedFile> SizedFiles;
+  size_t MaxSize = 0;
+  size_t MinSize = -1;
+  size_t TotalSize = 0;
+  for (auto &Dir : CorpusDirs) {
+    Vector<std::string> Files;
+    ListFilesInDirRecursive(Dir, 0, &Files, /*TopDir*/true);
+    Printf("INFO: % 8zd files found in %s\n", Files.size(), Dir.c_str());
+    for (auto &File : Files) {
+      if (size_t Size = FileSize(File)) {
+        MaxSize = Max(Size, MaxSize);
+        MinSize = Min(Size, MinSize);
+        TotalSize += Size;
+        SizedFiles.push_back({File, Size});
+      }
+    }
   }
-  if (Options.MaxLen == 0) {
-    size_t MaxLen = 0;
-    for (auto &U : InitialCorpus)
-      MaxLen = std::max(U.size(), MaxLen);
-    SetMaxInputLen(std::min(std::max(kMinDefaultLen, MaxLen), kMaxSaneLen));
+  if (Options.MaxLen == 0)
+    SetMaxInputLen(std::min(std::max(kMinDefaultLen, MaxSize), kMaxSaneLen));
+  assert(MaxInputLen > 0);
+
+  if (SizedFiles.empty()) {
+    Printf("INFO: A corpus is not provided, starting from an empty corpus\n");
+    Unit U({'\n'}); // Valid ASCII input.
+    RunOne(U.data(), U.size());
+  } else {
+    Printf("INFO: seed corpus: files: %zd min: %zdb max: %zdb total: %zdb"
+           " rss: %zdMb\n",
+           SizedFiles.size(), MinSize, MaxSize, TotalSize, GetPeakRSSMb());
+    if (Options.ShuffleAtStartUp)
+      std::shuffle(SizedFiles.begin(), SizedFiles.end(), MD.GetRand());
+
+    if (Options.PreferSmall)
+      std::stable_sort(
+          SizedFiles.begin(), SizedFiles.end(),
+          [](const SizedFile &A, const SizedFile &B) { return A.Size < B.Size; });
+
+    // Load and execute inputs one by one.
+    for (auto &SF : SizedFiles) {
+      auto U = FileToVector(SF.File, MaxInputLen);
+      assert(U.size() <= MaxInputLen);
+      RunOne(U.data(), U.size());
+      CheckExitOnSrcPosOrItem();
+      TryDetectingAMemoryLeak(U.data(), U.size(),
+                              /*DuringInitialCorpusExecution*/ true);
+    }
   }
 
-  if (InitialCorpus.empty()) {
-    InitialCorpus.push_back(Unit({'\n'}));  // Valid ASCII input.
-    if (Options.Verbosity)
-      Printf("INFO: A corpus is not provided, starting from an empty corpus\n");
+  // Test the callback with empty input and never try it again.
+  uint8_t dummy;
+  ExecuteCallback(&dummy, 0);
+
+  PrintStats("INITED");
+  if (Corpus.empty()) {
+    Printf("ERROR: no interesting inputs were found. "
+           "Is the code instrumented for coverage? Exiting.\n");
+    exit(1);
   }
-  ShuffleAndMinimize(&InitialCorpus);
 }
 
 void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {

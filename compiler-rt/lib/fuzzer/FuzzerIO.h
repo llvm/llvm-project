@@ -53,6 +53,7 @@ void RawPrint(const char *Str);
 
 // Platform specific functions:
 bool IsFile(const std::string &Path);
+size_t FileSize(const std::string &Path);
 
 void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
                              Vector<std::string> *V, bool TopDir);

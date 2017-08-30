@@ -223,7 +223,8 @@ void fdrLoggingHandleCustomEvent(void *Event,
     (void)Once;
   }
   int32_t ReducedEventSize = static_cast<int32_t>(EventSize);
-  if (!isLogInitializedAndReady(*LocalBQ, TSC, CPU, clock_gettime))
+  auto &TLD = getThreadLocalData();
+  if (!isLogInitializedAndReady(TLD.LocalBQ, TSC, CPU, clock_gettime))
     return;
 
   // Here we need to prepare the log to handle:
@@ -231,7 +232,7 @@ void fdrLoggingHandleCustomEvent(void *Event,
   //   - The additional data we're going to write. Currently, that's the size of
   //   the event we're going to dump into the log as free-form bytes.
   if (!prepareBuffer(clock_gettime, MetadataRecSize + EventSize)) {
-    LocalBQ = nullptr;
+    TLD.LocalBQ = nullptr;
     return;
   }
 
@@ -246,9 +247,9 @@ void fdrLoggingHandleCustomEvent(void *Event,
   constexpr auto TSCSize = sizeof(std::get<0>(TSC_CPU));
   std::memcpy(&CustomEvent.Data, &ReducedEventSize, sizeof(int32_t));
   std::memcpy(&CustomEvent.Data[sizeof(int32_t)], &TSC, TSCSize);
-  std::memcpy(RecordPtr, &CustomEvent, sizeof(CustomEvent));
-  RecordPtr += sizeof(CustomEvent);
-  std::memcpy(RecordPtr, Event, ReducedEventSize);
+  std::memcpy(TLD.RecordPtr, &CustomEvent, sizeof(CustomEvent));
+  TLD.RecordPtr += sizeof(CustomEvent);
+  std::memcpy(TLD.RecordPtr, Event, ReducedEventSize);
   endBufferIfFull();
 }
 
