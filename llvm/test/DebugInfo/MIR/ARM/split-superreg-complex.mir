@@ -1,4 +1,5 @@
-# RUN: llc -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+# RUN: llc -start-before=livedebugvalues -filetype=obj -o - %s | \
+# RUN:    llvm-dwarfdump - | FileCheck %s
 #
 # This is an artificial example of a debug value residing in a composite
 # location with a complex expression. Because the semantics of applying a DWARF
