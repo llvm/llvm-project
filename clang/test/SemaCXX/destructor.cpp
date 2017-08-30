@@ -1,5 +1,31 @@
 // RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -std=c++11 -triple %ms_abi_triple -DMSABI -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -verify %s
+
+#if defined(BE_THE_HEADER)
+
+// Wdelete-non-virtual-dtor should warn about the delete from smart pointer
+// classes in system headers (std::unique_ptr...) too.
+
+#pragma clang system_header
+namespace dnvd {
+template <typename T>
+class simple_ptr {
+public:
+  simple_ptr(T* t): _ptr(t) {}
+  ~simple_ptr() { delete _ptr; } // \
+    // expected-warning {{delete called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}} \
+    // expected-warning {{delete called on non-final 'dnvd::D' that has virtual functions but non-virtual destructor}}
+  T& operator*() const { return *_ptr; }
+private:
+  T* _ptr;
+};
+}
+
+#else
+
+#define BE_THE_HEADER
+#include __FILE__
+
 class A {
 public:
   ~A();
@@ -213,18 +239,6 @@ struct VD: VB {};
 struct VF final: VB {};
 
 template <typename T>
-class simple_ptr {
-public:
-  simple_ptr(T* t): _ptr(t) {}
-  ~simple_ptr() { delete _ptr; } // \
-    // expected-warning {{delete called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}} \
-    // expected-warning {{delete called on non-final 'dnvd::D' that has virtual functions but non-virtual destructor}}
-  T& operator*() const { return *_ptr; }
-private:
-  T* _ptr;
-};
-
-template <typename T>
 class simple_ptr2 {
 public:
   simple_ptr2(T* t): _ptr(t) {}
@@ -335,9 +349,27 @@ void warn0() {
   }
 }
 
+// Taken from libc++, slightly simplified.
+template <class>
+struct __is_destructible_apply { typedef int type; };
+struct __two {char __lx[2];};
+template <typename _Tp>
+struct __is_destructor_wellformed {
+  template <typename _Tp1>
+  static char __test(typename __is_destructible_apply<
+                       decltype(_Tp1().~_Tp1())>::type);
+  template <typename _Tp1>
+  static __two __test (...);
+              
+  static const bool value = sizeof(__test<_Tp>(12)) == sizeof(char);
+};
+
 void warn0_explicit_dtor(B* b, B& br, D* d) {
   b->~B(); // expected-warning {{destructor called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}} expected-note{{qualify call to silence this warning}}
   b->B::~B(); // No warning when the call isn't virtual.
+
+  // No warning in unevaluated contexts.
+  (void)__is_destructor_wellformed<B>::value;
 
   br.~B(); // expected-warning {{destructor called on non-final 'dnvd::B' that has virtual functions but non-virtual destructor}} expected-note{{qualify call to silence this warning}}
   br.B::~B();
@@ -451,3 +483,4 @@ void foo1() {
   x.foo1();
 }
 }
+#endif // BE_THE_HEADER

@@ -1680,3 +1680,158 @@ define <8 x i64> @test_broadcast_8i32_8i64(<8 x i32> *%p, i8 %mask) nounwind {
  %res = select <8 x i1> %mask.cast, <8 x i64> %3, <8 x i64> zeroinitializer
  ret <8 x i64> %res
 }
+
+define <4 x float> @test_broadcastf32x2_v4f32(<4 x float> %vec, <4 x float> %passthru, i8 %mask) {
+; CHECK-LABEL: test_broadcastf32x2_v4f32:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vblendmps %xmm0, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    retq
+  %shuf = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %mask.extract = shufflevector <8 x i1> %mask.cast, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res = select <4 x i1> %mask.extract, <4 x float> %shuf, <4 x float> %passthru
+  ret <4 x float> %res
+}
+
+define <4 x float> @test_broadcastf32x2_v4f32_z(<4 x float> %vec, i8 %mask) {
+; CHECK-LABEL: test_broadcastf32x2_v4f32_z:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmovaps %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %shuf = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %mask.extract = shufflevector <8 x i1> %mask.cast, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res = select <4 x i1> %mask.extract, <4 x float> %shuf, <4 x float> zeroinitializer
+  ret <4 x float> %res
+}
+
+define <4 x i32> @test_broadcasti32x2_v4i32(<4 x i32> %vec, <4 x i32> %passthru, i8 %mask) {
+; CHECK-LABEL: test_broadcasti32x2_v4i32:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %mask.extract = shufflevector <8 x i1> %mask.cast, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res = select <4 x i1> %mask.extract, <4 x i32> %shuf, <4 x i32> %passthru
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @test_broadcasti32x2_v4i32_z(<4 x i32> %vec, i8 %mask) {
+; CHECK-LABEL: test_broadcasti32x2_v4i32_z:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %shuf = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %mask.extract = shufflevector <8 x i1> %mask.cast, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res = select <4 x i1> %mask.extract, <4 x i32> %shuf, <4 x i32> zeroinitializer
+  ret <4 x i32> %res
+}
+
+define <8 x float> @test_broadcastf32x2_v8f32(<8 x float> %vec, <8 x float> %passthru, i8 %mask) {
+; CHECK-LABEL: test_broadcastf32x2_v8f32:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} ymm1 {%k1} = xmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vmovapd %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %res = select <8 x i1> %mask.cast, <8 x float> %shuf, <8 x float> %passthru
+  ret <8 x float> %res
+}
+
+define <8 x float> @test_broadcastf32x2_v8f32_z(<8 x float> %vec, i8 %mask) {
+; CHECK-LABEL: test_broadcastf32x2_v8f32_z:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} ymm0 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    retq
+  %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %res = select <8 x i1> %mask.cast, <8 x float> %shuf, <8 x float> zeroinitializer
+  ret <8 x float> %res
+}
+
+define <8 x i32> @test_broadcasti32x2_v8i32(<8 x i32> %vec, <8 x i32> %passthru, i8 %mask) {
+; CHECK-LABEL: test_broadcasti32x2_v8i32:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} ymm1 {%k1} = xmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vmovdqa %ymm1, %ymm0
+; CHECK-NEXT:    retq
+  %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %res = select <8 x i1> %mask.cast, <8 x i32> %shuf, <8 x i32> %passthru
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @test_broadcasti32x2_v8i32_z(<8 x i32> %vec, i8 %mask) {
+; CHECK-LABEL: test_broadcasti32x2_v8i32_z:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} ymm0 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    retq
+  %shuf = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %res = select <8 x i1> %mask.cast, <8 x i32> %shuf, <8 x i32> zeroinitializer
+  ret <8 x i32> %res
+}
+
+define <16 x float> @test_broadcastf32x2_v16f32_z(<16 x float> %vec, i16 %mask) {
+; CHECK-LABEL: test_broadcastf32x2_v16f32_z:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} zmm0 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    retq
+  %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res = select <16 x i1> %mask.cast, <16 x float> %shuf, <16 x float> zeroinitializer
+  ret <16 x float> %res
+}
+
+define <16 x i32> @test_broadcasti32x2_v16i32(<16 x i32> %vec, <16 x i32> %passthru, i16 %mask) {
+; CHECK-LABEL: test_broadcasti32x2_v16i32:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} zmm1 {%k1} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res = select <16 x i1> %mask.cast, <16 x i32> %shuf, <16 x i32> %passthru
+  ret <16 x i32> %res
+}
+
+define <16 x float> @test_broadcastf32x2_v16f32(<16 x float> %vec, <16 x float> %passthru, i16 %mask) {
+; CHECK-LABEL: test_broadcastf32x2_v16f32:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vbroadcastf32x2 {{.*#+}} zmm1 {%k1} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vmovapd %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res = select <16 x i1> %mask.cast, <16 x float> %shuf, <16 x float> %passthru
+  ret <16 x float> %res
+}
+
+define <16 x i32> @test_broadcasti32x2_v16i32_z(<16 x i32> %vec, i16 %mask) {
+; CHECK-LABEL: test_broadcasti32x2_v16i32_z:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vbroadcasti32x2 {{.*#+}} zmm0 {%k1} {z} = xmm0[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    retq
+  %shuf = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res = select <16 x i1> %mask.cast, <16 x i32> %shuf, <16 x i32> zeroinitializer
+  ret <16 x i32> %res
+}

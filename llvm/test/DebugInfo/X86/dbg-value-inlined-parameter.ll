@@ -87,7 +87,7 @@ attributes #4 = { nounwind }
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!14}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "p", scope: !2, file: !3, line: 14, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 2.9 (trunk 125693)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5, imports: !4)
 !3 = !DIFile(filename: "nm2.c", directory: "/private/tmp")

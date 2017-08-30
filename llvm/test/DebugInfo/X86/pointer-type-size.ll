@@ -13,7 +13,7 @@ source_filename = "test/DebugInfo/X86/pointer-type-size.ll"
 !llvm.dbg.cu = !{!9}
 !llvm.module.flags = !{!12}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "crass", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "foo.c", directory: "/Users/echristo/tmp")
 !3 = !DICompositeType(tag: DW_TAG_structure_type, name: "crass", file: !2, line: 1, size: 64, align: 64, elements: !4)

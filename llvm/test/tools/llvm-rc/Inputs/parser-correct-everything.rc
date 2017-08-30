@@ -56,3 +56,25 @@ LANGUAGE 4, 1
     MENUITEM "&Word", 502
   }
 }
+
+14 DIALOGEX 50, 60, 10, 20, 500
+LANGUAGE 1, 2
+CHARACTERISTICS 50
+VERSION 100
+FONT 12, "Arial"
+CAPTION "RC parser dialog"
+STYLE 0x51234
+BEGIN
+  LTEXT "Hello world!", 14, 20, 20, 50, 50
+  RTEXT "Heh", 50, 51, 52, 53, 54, 55, 56
+  CTEXT "Muuuu", 1, 2, 3, 4, 5, 6, 7, 8
+  PUSHBUTTON "Muuuu", 1, 2, 3, 4, 5, 6, 7, 8
+  DEFPUSHBUTTON "Muuuu", 1, 2, 3, 4, 5, 6
+  EDITTEXT 5, 1, 2, 4, 7, 8
+END
+
+25 DIALOG 1, 2, 3, 4
+BEGIN
+END
+
+26 DIALOGEX 1, 2, 3, 4 {}

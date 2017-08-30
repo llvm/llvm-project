@@ -158,7 +158,7 @@ define <8 x i1> @shuf8i1_u_2_u_u_2_u_2_u(i8 %a) {
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512F-NEXT:    vpbroadcastq %xmm0, %zmm0
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
@@ -171,7 +171,7 @@ define <8 x i1> @shuf8i1_u_2_u_u_2_u_2_u(i8 %a) {
 ; VL_BW_DQ:       # BB#0:
 ; VL_BW_DQ-NEXT:    kmovd %edi, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2q %k0, %zmm0
-; VL_BW_DQ-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
+; VL_BW_DQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; VL_BW_DQ-NEXT:    vpbroadcastq %xmm0, %zmm0
 ; VL_BW_DQ-NEXT:    vpmovq2m %zmm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2w %k0, %xmm0

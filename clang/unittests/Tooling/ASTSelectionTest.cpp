@@ -494,4 +494,159 @@ void foo() {
       });
 }
 
+TEST(ASTSelectionFinder, CorrectEndForObjectiveCImplementation) {
+  StringRef Source = R"(
+@interface I
+@end
+@implementation I
+@ end
+)";
+  // Just after '@ end'
+  findSelectedASTNodes(Source, {5, 6}, None,
+                       [](Optional<SelectedASTNode> Node) {
+                         EXPECT_TRUE(Node);
+                         EXPECT_EQ(Node->Children.size(), 1u);
+                         checkNode<ObjCImplementationDecl>(
+                             Node->Children[0],
+                             SourceSelectionKind::ContainsSelection);
+                       },
+                       SelectionFinderVisitor::Lang_OBJC);
+}
+
+const SelectedASTNode &checkFnBody(const Optional<SelectedASTNode> &Node,
+                                   StringRef Name) {
+  EXPECT_TRUE(Node);
+  EXPECT_EQ(Node->Children.size(), 1u);
+  const auto &Fn = checkNode<FunctionDecl>(
+      Node->Children[0], SourceSelectionKind::ContainsSelection,
+      /*NumChildren=*/1, Name);
+  return checkNode<CompoundStmt>(Fn.Children[0],
+                                 SourceSelectionKind::ContainsSelection,
+                                 /*NumChildren=*/1);
+}
+
+TEST(ASTSelectionFinder, SelectObjectiveCPseudoObjectExprs) {
+  StringRef Source = R"(
+@interface I
+@property(readwrite) int prop;
+@end
+void selectProp(I *i) {
+(void)i.prop;
+i.prop = 21;
+}
+
+
+@interface NSMutableArray
+- (id)objectAtIndexedSubscript:(unsigned int)index;
+- (void)setObject:(id)object atIndexedSubscript:(unsigned int)index;
+@end
+
+void selectSubscript(NSMutableArray *array, I *i) {
+  (void)array[10];
+  array[i.prop] = i;
+}
+)";
+  // Just 'i.prop'.
+  findSelectedASTNodes(
+      Source, {6, 7}, FileRange{{6, 7}, {6, 13}},
+      [](Optional<SelectedASTNode> Node) {
+        const auto &CS = checkFnBody(Node, /*Name=*/"selectProp");
+        const auto &CCast = checkNode<CStyleCastExpr>(
+            CS.Children[0], SourceSelectionKind::ContainsSelection,
+            /*NumChildren=*/1);
+        const auto &POE = checkNode<PseudoObjectExpr>(
+            CCast.Children[0], SourceSelectionKind::ContainsSelection,
+            /*NumChildren=*/1);
+        const auto &PRE = checkNode<ObjCPropertyRefExpr>(
+            POE.Children[0], SourceSelectionKind::ContainsSelection,
+            /*NumChildren=*/1);
+        const auto &Cast = checkNode<ImplicitCastExpr>(
+            PRE.Children[0], SourceSelectionKind::InsideSelection,
+            /*NumChildren=*/1);
+        checkNode<DeclRefExpr>(Cast.Children[0],
+                               SourceSelectionKind::InsideSelection);
+      },
+      SelectionFinderVisitor::Lang_OBJC);
+  // Just 'i.prop = 21'
+  findSelectedASTNodes(
+      Source, {7, 1}, FileRange{{7, 1}, {7, 12}},
+      [](Optional<SelectedASTNode> Node) {
+        const auto &CS = checkFnBody(Node, /*Name=*/"selectProp");
+        const auto &POE = checkNode<PseudoObjectExpr>(
+            CS.Children[0], SourceSelectionKind::ContainsSelection,
+            /*NumChildren=*/1);
+        const auto &BinOp = checkNode<BinaryOperator>(
+            POE.Children[0], SourceSelectionKind::ContainsSelection,
+            /*NumChildren=*/2);
+        const auto &PRE = checkNode<ObjCPropertyRefExpr>(
+            BinOp.Children[0], SourceSelectionKind::InsideSelection,
+            /*NumChildren=*/1);
+        const auto &Cast = checkNode<ImplicitCastExpr>(
+            PRE.Children[0], SourceSelectionKind::InsideSelection,
+            /*NumChildren=*/1);
+        checkNode<DeclRefExpr>(Cast.Children[0],
+                               SourceSelectionKind::InsideSelection);
+        checkNode<IntegerLiteral>(BinOp.Children[1],
+                                  SourceSelectionKind::InsideSelection);
+      },
+      SelectionFinderVisitor::Lang_OBJC);
+  // Just 'array[10]'
+  findSelectedASTNodes(
+      Source, {17, 9}, FileRange{{17, 9}, {17, 18}},
+      [](Optional<SelectedASTNode> Node) {
+        const auto &CS = checkFnBody(Node, /*Name=*/"selectSubscript");
+        const auto &CCast = checkNode<CStyleCastExpr>(
+            CS.Children[0], SourceSelectionKind::ContainsSelection,
+            /*NumChildren=*/1);
+        const auto &POE = checkNode<PseudoObjectExpr>(
+            CCast.Children[0], SourceSelectionKind::ContainsSelection,
+            /*NumChildren=*/1);
+        const auto &SRE = checkNode<ObjCSubscriptRefExpr>(
+            POE.Children[0], SourceSelectionKind::ContainsSelection,
+            /*NumChildren=*/2);
+        const auto &Cast = checkNode<ImplicitCastExpr>(
+            SRE.Children[0], SourceSelectionKind::InsideSelection,
+            /*NumChildren=*/1);
+        checkNode<DeclRefExpr>(Cast.Children[0],
+                               SourceSelectionKind::InsideSelection);
+        checkNode<IntegerLiteral>(SRE.Children[1],
+                                  SourceSelectionKind::InsideSelection);
+      },
+      SelectionFinderVisitor::Lang_OBJC);
+  // Just 'array[i.prop] = array'
+  findSelectedASTNodes(
+      Source, {18, 3}, FileRange{{18, 3}, {18, 20}},
+      [](Optional<SelectedASTNode> Node) {
+        const auto &CS = checkFnBody(Node, /*Name=*/"selectSubscript");
+        const auto &POE = checkNode<PseudoObjectExpr>(
+            CS.Children[0], SourceSelectionKind::ContainsSelection,
+            /*NumChildren=*/1);
+        const auto &BinOp = checkNode<BinaryOperator>(
+            POE.Children[0], SourceSelectionKind::ContainsSelection,
+            /*NumChildren=*/2);
+        const auto &SRE = checkNode<ObjCSubscriptRefExpr>(
+            BinOp.Children[0], SourceSelectionKind::InsideSelection,
+            /*NumChildren=*/2);
+        const auto &Cast = checkNode<ImplicitCastExpr>(
+            SRE.Children[0], SourceSelectionKind::InsideSelection,
+            /*NumChildren=*/1);
+        checkNode<DeclRefExpr>(Cast.Children[0],
+                               SourceSelectionKind::InsideSelection);
+        const auto &POE2 = checkNode<PseudoObjectExpr>(
+            SRE.Children[1], SourceSelectionKind::InsideSelection,
+            /*NumChildren=*/1);
+        const auto &PRE = checkNode<ObjCPropertyRefExpr>(
+            POE2.Children[0], SourceSelectionKind::InsideSelection,
+            /*NumChildren=*/1);
+        const auto &Cast2 = checkNode<ImplicitCastExpr>(
+            PRE.Children[0], SourceSelectionKind::InsideSelection,
+            /*NumChildren=*/1);
+        checkNode<DeclRefExpr>(Cast2.Children[0],
+                               SourceSelectionKind::InsideSelection);
+        checkNode<DeclRefExpr>(BinOp.Children[1],
+                               SourceSelectionKind::InsideSelection);
+      },
+      SelectionFinderVisitor::Lang_OBJC);
+}
+
 } // end anonymous namespace

@@ -14,7 +14,7 @@ define <2 x float> @complex_square_f32(<2 x float>) #0 {
 ; SSE:       # BB#0:
 ; SSE-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    addss %xmm2, %xmm2
+; SSE-NEXT:    addss %xmm0, %xmm2
 ; SSE-NEXT:    mulss %xmm1, %xmm2
 ; SSE-NEXT:    mulss %xmm0, %xmm0
 ; SSE-NEXT:    mulss %xmm1, %xmm1
@@ -58,9 +58,9 @@ define <2 x double> @complex_square_f64(<2 x double>) #0 {
 ; SSE-LABEL: complex_square_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
 ; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    addsd %xmm2, %xmm2
+; SSE-NEXT:    addsd %xmm0, %xmm2
 ; SSE-NEXT:    mulsd %xmm1, %xmm2
 ; SSE-NEXT:    mulsd %xmm0, %xmm0
 ; SSE-NEXT:    mulsd %xmm1, %xmm1
@@ -161,9 +161,9 @@ define <2 x double> @complex_mul_f64(<2 x double>, <2 x double>) #0 {
 ; SSE-LABEL: complex_mul_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
+; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm0[1],xmm2[1]
 ; SSE-NEXT:    movaps %xmm1, %xmm3
-; SSE-NEXT:    movhlps {{.*#+}} xmm3 = xmm3[1,1]
+; SSE-NEXT:    movhlps {{.*#+}} xmm3 = xmm1[1],xmm3[1]
 ; SSE-NEXT:    movaps %xmm3, %xmm4
 ; SSE-NEXT:    mulsd %xmm0, %xmm4
 ; SSE-NEXT:    mulsd %xmm1, %xmm0

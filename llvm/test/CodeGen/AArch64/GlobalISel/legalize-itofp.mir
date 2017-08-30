@@ -130,8 +130,11 @@ body: |
     %1:_(s1) = G_TRUNC %0
 
     ; CHECK-LABEL: name: test_sitofp_s32_s1
-    ; CHECK: %3(s32) = G_SEXT %1
-    ; CHECK: %2(s32) = G_SITOFP %3
+    ; CHECK: [[C1:%.*]](s32) = G_CONSTANT i32 31
+    ; CHECK: [[SRC:%.*]](s32) = COPY %0(s32)
+    ; CHECK: [[SHL1:%.*]](s32) = G_SHL [[SRC]], [[C1]]
+    ; CHECK: [[SEXT:%.*]](s32) = G_ASHR [[SHL1]], [[C1]]
+    ; CHECK: %2(s32) = G_SITOFP [[SEXT]]
     %2:_(s32) = G_SITOFP %1
 ...
 
@@ -144,8 +147,10 @@ body: |
     %1:_(s1) = G_TRUNC %0
 
     ; CHECK-LABEL: name: test_uitofp_s32_s1
-    ; CHECK: %3(s32) = G_ZEXT %1
-    ; CHECK: %2(s32) = G_UITOFP %3
+    ; CHECK: [[C:%.*]](s32) = G_CONSTANT i32 1
+    ; CHECK: [[SRC:%.*]](s32) = COPY %0(s32)
+    ; CHECK: [[ZEXT:%.*]](s32) = G_AND [[SRC]], [[C]]
+    ; CHECK: [[RES:%.*]](s32) = G_UITOFP [[ZEXT]]
     %2:_(s32) = G_UITOFP %1
 ...
 
@@ -158,8 +163,11 @@ body: |
     %1:_(s8) = G_TRUNC %0
 
     ; CHECK-LABEL: name: test_sitofp_s64_s8
-    ; CHECK: %3(s32) = G_SEXT %1
-    ; CHECK: %2(s64) = G_SITOFP %3
+    ; CHECK: [[C1:%.*]](s32) = G_CONSTANT i32 24
+    ; CHECK: [[SRC:%.*]](s32) = COPY %0(s32)
+    ; CHECK: [[SHL1:%.*]](s32) = G_SHL [[SRC]], [[C1]]
+    ; CHECK: [[SEXT:%.*]](s32) = G_ASHR [[SHL1]], [[C1]]
+    ; CHECK: %2(s64) = G_SITOFP [[SEXT]]
     %2:_(s64) = G_SITOFP %1
 ...
 
@@ -172,8 +180,10 @@ body: |
     %1:_(s8) = G_TRUNC %0
 
     ; CHECK-LABEL: name: test_uitofp_s64_s8
-    ; CHECK: %3(s32) = G_ZEXT %1
-    ; CHECK: %2(s64) = G_UITOFP %3
+    ; CHECK: [[C:%.*]](s32) = G_CONSTANT i32 255
+    ; CHECK: [[SRC:%.*]](s32) = COPY %0(s32)
+    ; CHECK: [[ZEXT:%.*]](s32) = G_AND [[SRC]], [[C]]
+    ; CHECK: %2(s64) = G_UITOFP [[ZEXT]]
     %2:_(s64) = G_UITOFP %1
 ...
 
@@ -186,8 +196,11 @@ body: |
     %1:_(s16) = G_TRUNC %0
 
     ; CHECK-LABEL: name: test_sitofp_s32_s16
-    ; CHECK: %3(s32) = G_SEXT %1
-    ; CHECK: %2(s32) = G_SITOFP %3
+    ; CHECK: [[C1:%.*]](s32) = G_CONSTANT i32 16
+    ; CHECK: [[SRC:%.*]](s32) = COPY %0(s32)
+    ; CHECK: [[SHL1:%.*]](s32) = G_SHL [[SRC]], [[C1]]
+    ; CHECK: [[SEXT:%.*]](s32) = G_ASHR [[SHL1]], [[C1]]
+    ; CHECK: %2(s32) = G_SITOFP [[SEXT]]
     %2:_(s32) = G_SITOFP %1
 ...
 
@@ -200,7 +213,9 @@ body: |
     %1:_(s16) = G_TRUNC %0
 
     ; CHECK-LABEL: name: test_uitofp_s32_s16
-    ; CHECK: %3(s32) = G_ZEXT %1
-    ; CHECK: %2(s32) = G_UITOFP %3
+    ; CHECK: [[C:%.*]](s32) = G_CONSTANT i32 65535
+    ; CHECK: [[SRC:%.*]](s32) = COPY %0(s32)
+    ; CHECK: [[ZEXT:%.*]](s32) = G_AND [[SRC]], [[C]]
+    ; CHECK: [[RES:%.*]](s32) = G_UITOFP [[ZEXT]]
     %2:_(s32) = G_UITOFP %1
 ...

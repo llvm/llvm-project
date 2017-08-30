@@ -26,18 +26,10 @@
 ; CHECK:      DW_TAG_subprogram
 ; CHECK-NOT:  NULL
 ; CHECK:      DW_TAG_variable
-; CHECK:      DW_AT_location [DW_FORM_sec_offset] ([[DEBUGLOCOFFSET:0x[0-9a-f]+]]){{[[:space:]].*}}"val"
-
-; See that 'val' has at least one location entry with a DW_op_breg? operand.
-; The DWARF DW_op_breg* ops are encoded from 0x70 to 0x8f, but checking for an
-; op in the range from 0x70 to 0x7f should suffice because that range covers
-; all integer GPRs.
-;
-; CHECK: .debug_loc contents:
-; CHECK-NOT: .debug{{.*}} contents
-; CHECK: [[DEBUGLOCOFFSET]]: Beginning
-; CHECK-NOT: {{0x[0-9a-f]+}}: Beginning
-; CHECK: Location description: 7{{[0-9a-f] .*}}
+; CHECK:      DW_AT_location [DW_FORM_sec_offset] ({{.*}}
+; CHECK-NEXT:   {{0x.*}} - {{0x.*}}: DW_OP_reg0 RAX
+; CHECK-NEXT:   {{0x.*}} - {{0x.*}}: DW_OP_breg7 RSP+4, DW_OP_deref)
+; CHECK-NEXT: DW_AT_name {{.*}}"val"
 
 ; ModuleID = 'frame.c'
 source_filename = "frame.c"
@@ -81,18 +73,18 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!14, !15}
 !llvm.ident = !{!16}
 
-!0 = distinct !DIGlobalVariableExpression(var: !1)
+!0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "data", scope: !2, file: !3, line: 1, type: !8, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.9.0 (trunk 273961)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "frame.c", directory: "/home/user/test")
 !4 = !{}
 !5 = !{!0, !6, !9, !11}
-!6 = distinct !DIGlobalVariableExpression(var: !7)
+!6 = distinct !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !7 = !DIGlobalVariable(name: "sum", scope: !2, file: !3, line: 2, type: !8, isLocal: false, isDefinition: true)
 !8 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!9 = distinct !DIGlobalVariableExpression(var: !10)
+!9 = distinct !DIGlobalVariableExpression(var: !10, expr: !DIExpression())
 !10 = !DIGlobalVariable(name: "zero", scope: !2, file: !3, line: 3, type: !8, isLocal: false, isDefinition: true)
-!11 = distinct !DIGlobalVariableExpression(var: !12)
+!11 = distinct !DIGlobalVariableExpression(var: !12, expr: !DIExpression())
 !12 = !DIGlobalVariable(name: "ptr", scope: !2, file: !3, line: 4, type: !13, isLocal: false, isDefinition: true)
 !13 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !8, size: 64, align: 64)
 !14 = !{i32 2, !"Dwarf Version", i32 4}

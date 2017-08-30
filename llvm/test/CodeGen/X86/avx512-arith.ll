@@ -607,17 +607,17 @@ define <8 x i64> @orq_broadcast(<8 x i64> %a) nounwind {
 define <16 x i32> @andd512fold(<16 x i32> %y, <16 x i32>* %x) {
 ; AVX512F-LABEL: andd512fold:
 ; AVX512F:       # BB#0: # %entry
-; AVX512F-NEXT:    vpandd (%rdi), %zmm0, %zmm0
+; AVX512F-NEXT:    vpandq (%rdi), %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: andd512fold:
 ; AVX512VL:       # BB#0: # %entry
-; AVX512VL-NEXT:    vpandd (%rdi), %zmm0, %zmm0
+; AVX512VL-NEXT:    vpandq (%rdi), %zmm0, %zmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: andd512fold:
 ; AVX512BW:       # BB#0: # %entry
-; AVX512BW-NEXT:    vpandd (%rdi), %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandq (%rdi), %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: andd512fold:

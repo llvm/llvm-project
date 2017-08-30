@@ -9,6 +9,6 @@
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "", emissionKind: FullDebug, globals: !5)
 !3 = !DIFile(filename: "patatino.c", directory: "/")
 !5 = !{!6}
-!6 = !DIGlobalVariableExpression(var: !1)
+!6 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !63 = !{i32 2, !"Dwarf Version", i32 4}
 !64 = !{i32 2, !"Debug Info Version", i32 3}

@@ -68,7 +68,7 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!6, !7}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "Stop", scope: !2, file: !3, line: 2, type: !5, isLocal: true, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C89, file: !3, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !4)
 !3 = !DIFile(filename: "g.c", directory: "/tmp")

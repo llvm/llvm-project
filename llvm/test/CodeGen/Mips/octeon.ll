@@ -164,3 +164,59 @@ if:
 endif:
   ret i64 12
 }
+
+; extern void foo(void);
+; long long var = 7;
+; void bbit0i32 () {
+;   if ((var & 0x2)) {
+;     foo();
+;   }
+; }
+;
+; void bbit1i32() {
+;   if (!(var & 0x2)) {
+;     foo();
+;   }
+; }
+
+@var = local_unnamed_addr global i64 7, align 8
+
+define void @bbit0i32() local_unnamed_addr {
+entry:
+; ALL-LABEL: bbit0i32:
+; OCTEON: bbit0 $1, 1, [[BB0:(\$|\.L)BB[0-9_]+]]
+; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
+; OCTEON-NOT: j  {{[[:space:]].*}}
+  %0 = load i64, i64* @var, align 8
+  %and = and i64 %0, 2
+  %tobool = icmp eq i64 %and, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  tail call void @foo() #2
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  ret void
+}
+
+declare void @foo() local_unnamed_addr
+
+define void @bbit1i32() local_unnamed_addr {
+entry:
+; ALL-LABEL: bbit1i32:
+; OCTEON: bbit1 $1, 1, [[BB0:(\$|\.L)BB[0-9_]+]]
+; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
+; OCTEON-NOT: j  {{[[:space:]].*}}
+  %0 = load i64, i64* @var, align 8
+  %and = and i64 %0, 2
+  %tobool = icmp eq i64 %and, 0
+  br i1 %tobool, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  tail call void @foo() #2
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  ret void
+}

@@ -248,9 +248,10 @@ LLVM-specific variables
 
 **LLVM_APPEND_VC_REV**:BOOL
   Embed version control revision info (svn revision number or Git revision id).
-  This is used among other things in the LLVM version string (stored in the
-  PACKAGE_VERSION macro). For this to work cmake must be invoked before the
-  build. Defaults to ON.
+  The version info is provided by the ``LLVM_REVISION`` macro in
+  ``llvm/include/llvm/Support/VCSRevision.h``. Developers using git who don't
+  need revision info can disable this option to avoid re-linking most binaries
+  after a branch switch. Defaults to ON.
 
 **LLVM_ENABLE_THREADS**:BOOL
   Build with threads support, if available. Defaults to ON.

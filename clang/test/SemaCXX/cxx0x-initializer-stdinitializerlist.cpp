@@ -136,9 +136,15 @@ void auto_deduction() {
   auto l3 {1};
   static_assert(same_type<decltype(l), std::initializer_list<int>>::value, "");
   static_assert(same_type<decltype(l3), int>::value, "");
-  auto bl = {1, 2.0}; // expected-error {{cannot deduce}}
+  auto bl = {1, 2.0}; // expected-error {{deduced conflicting types ('int' vs 'double') for initializer list element type}}
+
+  void f1(int), f1(float), f2(int), f3(float);
+  auto fil = {f1, f2};
+  auto ffl = {f1, f3};
+  auto fl = {f1, f2, f3}; // expected-error {{deduced conflicting types ('void (*)(int)' vs 'void (*)(float)') for initializer list element type}}
 
   for (int i : {1, 2, 3, 4}) {}
+  for (int j : {1.0, 2.0, 3.0f, 4.0}) {} // expected-error {{deduced conflicting types ('double' vs 'float') for initializer list element type}}
 }
 
 void dangle() {

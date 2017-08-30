@@ -231,10 +231,15 @@ UnwrappedLineParser::UnwrappedLineParser(const FormatStyle &Style,
     : Line(new UnwrappedLine), MustBreakBeforeNextToken(false),
       CurrentLines(&Lines), Style(Style), Keywords(Keywords),
       CommentPragmasRegex(Style.CommentPragmas), Tokens(nullptr),
-      Callback(Callback), AllTokens(Tokens), PPBranchLevel(-1) {}
+      Callback(Callback), AllTokens(Tokens), PPBranchLevel(-1),
+      IfNdefCondition(nullptr), FoundIncludeGuardStart(false),
+      IncludeGuardRejected(false) {}
 
 void UnwrappedLineParser::reset() {
   PPBranchLevel = -1;
+  IfNdefCondition = nullptr;
+  FoundIncludeGuardStart = false;
+  IncludeGuardRejected = false;
   Line.reset(new UnwrappedLine);
   CommentsBeforeNextToken.clear();
   FormatTok = nullptr;
@@ -679,7 +684,7 @@ void UnwrappedLineParser::conditionalCompilationEnd() {
     }
   }
   // Guard against #endif's without #if.
-  if (PPBranchLevel > 0)
+  if (PPBranchLevel > -1)
     --PPBranchLevel;
   if (!PPChainBranchIndex.empty())
     PPChainBranchIndex.pop();
@@ -696,12 +701,35 @@ void UnwrappedLineParser::parsePPIf(bool IfDef) {
   if (IfDef && !IfNDef && FormatTok->TokenText == "SWIG")
     Unreachable = true;
   conditionalCompilationStart(Unreachable);
+  FormatToken *IfCondition = FormatTok;
+  // If there's a #ifndef on the first line, and the only lines before it are
+  // comments, it could be an include guard.
+  bool MaybeIncludeGuard = IfNDef;
+  if (!IncludeGuardRejected && !FoundIncludeGuardStart && MaybeIncludeGuard) {
+    for (auto &Line : Lines) {
+      if (!Line.Tokens.front().Tok->is(tok::comment)) {
+        MaybeIncludeGuard = false;
+        IncludeGuardRejected = true;
+        break;
+      }
+    }
+  }
+  --PPBranchLevel;
   parsePPUnknown();
+  ++PPBranchLevel;
+  if (!IncludeGuardRejected && !FoundIncludeGuardStart && MaybeIncludeGuard)
+    IfNdefCondition = IfCondition;
 }
 
 void UnwrappedLineParser::parsePPElse() {
+  // If a potential include guard has an #else, it's not an include guard.
+  if (FoundIncludeGuardStart && PPBranchLevel == 0)
+    FoundIncludeGuardStart = false;
   conditionalCompilationAlternative();
+  if (PPBranchLevel > -1)
+    --PPBranchLevel;
   parsePPUnknown();
+  ++PPBranchLevel;
 }
 
 void UnwrappedLineParser::parsePPElIf() { parsePPElse(); }
@@ -709,6 +737,17 @@ void UnwrappedLineParser::parsePPElIf() { parsePPElse(); }
 void UnwrappedLineParser::parsePPEndIf() {
   conditionalCompilationEnd();
   parsePPUnknown();
+  // If the #endif of a potential include guard is the last thing in the file,
+  // then we count it as a real include guard and subtract one from every
+  // preprocessor indent.
+  unsigned TokenPosition = Tokens->getPosition();
+  FormatToken *PeekNext = AllTokens[TokenPosition];
+  if (FoundIncludeGuardStart && PPBranchLevel == -1 && PeekNext->is(tok::eof)) {
+    for (auto &Line : Lines) {
+      if (Line.InPPDirective && Line.Level > 0)
+        --Line.Level;
+    }
+  }
 }
 
 void UnwrappedLineParser::parsePPDefine() {
@@ -718,14 +757,26 @@ void UnwrappedLineParser::parsePPDefine() {
     parsePPUnknown();
     return;
   }
+  if (IfNdefCondition && IfNdefCondition->TokenText == FormatTok->TokenText) {
+    FoundIncludeGuardStart = true;
+    for (auto &Line : Lines) {
+      if (!Line.Tokens.front().Tok->isOneOf(tok::comment, tok::hash)) {
+        FoundIncludeGuardStart = false;
+        break;
+      }
+    }
+  }
+  IfNdefCondition = nullptr;
   nextToken();
   if (FormatTok->Tok.getKind() == tok::l_paren &&
       FormatTok->WhitespaceRange.getBegin() ==
           FormatTok->WhitespaceRange.getEnd()) {
     parseParens();
   }
+  if (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash)
+    Line->Level += PPBranchLevel + 1;
   addUnwrappedLine();
-  Line->Level = 1;
+  ++Line->Level;
 
   // Errors during a preprocessor directive can only affect the layout of the
   // preprocessor directive, and thus we ignore them. An alternative approach
@@ -739,7 +790,10 @@ void UnwrappedLineParser::parsePPUnknown() {
   do {
     nextToken();
   } while (!eof());
+  if (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash)
+    Line->Level += PPBranchLevel + 1;
   addUnwrappedLine();
+  IfNdefCondition = nullptr;
 }
 
 // Here we blacklist certain tokens that are not usually the first token in an

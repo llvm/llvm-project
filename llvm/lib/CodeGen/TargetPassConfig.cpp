@@ -88,6 +88,8 @@ static cl::opt<bool> DisableCGP("disable-cgp", cl::Hidden,
     cl::desc("Disable Codegen Prepare"));
 static cl::opt<bool> DisableCopyProp("disable-copyprop", cl::Hidden,
     cl::desc("Disable Copy Propagation pass"));
+static cl::opt<bool> DisableCopyPropPreRegRewrite("disable-copyprop-prerewrite", cl::Hidden,
+    cl::desc("Disable Copy Propagation Pre-Register Re-write pass"));
 static cl::opt<bool> DisablePartialLibcallInlining("disable-partial-libcall-inlining",
     cl::Hidden, cl::desc("Disable Partial Libcall Inlining"));
 static cl::opt<bool> EnableImplicitNullChecks(
@@ -247,6 +249,9 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
 
   if (StandardID == &MachineCopyPropagationID)
     return applyDisable(TargetID, DisableCopyProp);
+
+  if (StandardID == &MachineCopyPropagationPreRegRewriteID)
+    return applyDisable(TargetID, DisableCopyPropPreRegRewrite);
 
   return TargetID;
 }
@@ -1055,6 +1060,10 @@ void TargetPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
 
     // Allow targets to change the register assignments before rewriting.
     addPreRewrite();
+
+    // Copy propagate to forward register uses and try to eliminate COPYs that
+    // were not coalesced.
+    addPass(&MachineCopyPropagationPreRegRewriteID);
 
     // Finally rewrite virtual registers.
     addPass(&VirtRegRewriterID);

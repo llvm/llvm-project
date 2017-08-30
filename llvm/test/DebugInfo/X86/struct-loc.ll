@@ -16,7 +16,7 @@ source_filename = "test/DebugInfo/X86/struct-loc.ll"
 !llvm.dbg.cu = !{!7}
 !llvm.module.flags = !{!10}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "f", scope: null, file: !2, line: 5, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "struct_bug.c", directory: "/Users/echristo/tmp")
 !3 = !DICompositeType(tag: DW_TAG_structure_type, name: "foo", file: !2, line: 1, size: 32, align: 32, elements: !4)

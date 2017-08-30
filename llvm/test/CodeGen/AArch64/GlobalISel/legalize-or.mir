@@ -22,8 +22,8 @@ body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
     ; CHECK-LABEL: name: test_scalar_or_small
-    ; CHECK: [[OP0:%.*]](s32) = G_ANYEXT %2(s8)
-    ; CHECK: [[OP1:%.*]](s32) = G_ANYEXT %3(s8)
+    ; CHECK: [[OP0:%.*]](s32) = G_TRUNC %0
+    ; CHECK: [[OP1:%.*]](s32) = G_TRUNC %1
     ; CHECK: [[RES32:%.*]](s32) = G_OR [[OP0]], [[OP1]]
     ; CHECK: [[RES:%.*]](s8) = G_TRUNC [[RES32]](s32)
 

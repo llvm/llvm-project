@@ -425,6 +425,10 @@ public:
   // FIXME: This should be in CompilationInfo.
   std::string GetProgramPath(StringRef Name, const ToolChain &TC) const;
 
+  /// handleAutocompletions - Handle --autocomplete by searching and printing
+  /// possible flags, descriptions, and its arguments.
+  void handleAutocompletions(StringRef PassedFlags) const;
+
   /// HandleImmediateArgs - Handle any arguments which should be
   /// treated before building actions or binding tools.
   ///

@@ -1179,6 +1179,33 @@ the configuration (without a prefix: ``Auto``).
        plop();                                  plop();
      }                                      }
 
+**IndentPPDirectives** (``PPDirectiveIndentStyle``)
+  Indent preprocessor directives on conditionals.
+
+  Possible values:
+
+  * ``PPDIS_None`` (in configuration: ``None``)
+    Does not indent any directives.
+
+    .. code-block:: c++
+
+      #if FOO
+      #if BAR
+      #include <foo>
+      #endif
+      #endif
+
+  * ``PPDIS_AfterHash`` (in configuration: ``AfterHash``)
+    Indents directives after the hash.
+
+    .. code-block:: c++
+
+      #if FOO
+      #  if BAR
+      #    include <foo>
+      #  endif
+      #endif
+
 **IndentWidth** (``unsigned``)
   The number of columns to use for indentation.
 

@@ -78,7 +78,7 @@ attributes #2 = { optsize }
 !llvm.module.flags = !{!15, !16, !17, !18}
 !llvm.ident = !{!19}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "array", scope: !2, file: !3, line: 1, type: !6, isLocal: true, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 6.0.0 (trunk 309960) (llvm/trunk 309961)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "test.c", directory: "/")

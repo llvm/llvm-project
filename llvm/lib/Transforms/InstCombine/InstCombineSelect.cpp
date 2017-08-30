@@ -1566,10 +1566,6 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
         return replaceInstUsesWith(SI, V);
       return &SI;
     }
-
-    if (isa<ConstantAggregateZero>(CondVal)) {
-      return replaceInstUsesWith(SI, FalseVal);
-    }
   }
 
   // See if we can determine the result of this select based on a dominating

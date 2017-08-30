@@ -19,4 +19,4 @@
 type = Library
 name = DebugInfoDWARF
 parent = DebugInfo
-required_libraries = BinaryFormat Object Support
+required_libraries = BinaryFormat Object MC Support

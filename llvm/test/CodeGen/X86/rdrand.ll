@@ -93,7 +93,7 @@ define void @loop(i32* %p, i32 %n) nounwind {
 ; X86-NEXT:    rdrandl %edx
 ; X86-NEXT:    movl %edx, (%ecx)
 ; X86-NEXT:    leal 4(%ecx), %ecx
-; X86-NEXT:    decl %eax
+; X86-NEXT:    addl $-1, %eax
 ; X86-NEXT:    jne .LBB3_2
 ; X86-NEXT:  .LBB3_3: # %while.end
 ; X86-NEXT:    retl
@@ -108,7 +108,7 @@ define void @loop(i32* %p, i32 %n) nounwind {
 ; X64-NEXT:    rdrandl %eax
 ; X64-NEXT:    movl %eax, (%rdi)
 ; X64-NEXT:    leaq 4(%rdi), %rdi
-; X64-NEXT:    decl %esi
+; X64-NEXT:    addl $-1, %esi
 ; X64-NEXT:    jne .LBB3_1
 ; X64-NEXT:  .LBB3_2: # %while.end
 ; X64-NEXT:    retq

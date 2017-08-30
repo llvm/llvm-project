@@ -118,17 +118,17 @@ define void @i56_or(i56* %a) {
 ; X64:       # BB#0:
 ; X64-NEXT:    movzwl 4(%rdi), %eax
 ; X64-NEXT:    movzbl 6(%rdi), %ecx
-; X64-NEXT:    movl (%rdi), %edx
 ; X64-NEXT:    movb %cl, 6(%rdi)
 ; X64-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<kill> %RCX<def>
 ; X64-NEXT:    shll $16, %ecx
 ; X64-NEXT:    orl %eax, %ecx
 ; X64-NEXT:    shlq $32, %rcx
-; X64-NEXT:    orq %rcx, %rdx
-; X64-NEXT:    orq $384, %rdx # imm = 0x180
-; X64-NEXT:    movl %edx, (%rdi)
-; X64-NEXT:    shrq $32, %rdx
-; X64-NEXT:    movw %dx, 4(%rdi)
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    orq %rcx, %rax
+; X64-NEXT:    orq $384, %rax # imm = 0x180
+; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    shrq $32, %rax
+; X64-NEXT:    movw %ax, 4(%rdi)
 ; X64-NEXT:    retq
   %aa = load i56, i56* %a, align 1
   %b = or i56 %aa, 384
@@ -150,19 +150,19 @@ define void @i56_and_or(i56* %a) {
 ; X64:       # BB#0:
 ; X64-NEXT:    movzwl 4(%rdi), %eax
 ; X64-NEXT:    movzbl 6(%rdi), %ecx
-; X64-NEXT:    movl (%rdi), %edx
 ; X64-NEXT:    movb %cl, 6(%rdi)
 ; X64-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<kill> %RCX<def>
 ; X64-NEXT:    shll $16, %ecx
 ; X64-NEXT:    orl %eax, %ecx
 ; X64-NEXT:    shlq $32, %rcx
-; X64-NEXT:    orq %rcx, %rdx
-; X64-NEXT:    orq $384, %rdx # imm = 0x180
-; X64-NEXT:    movabsq $72057594037927808, %rax # imm = 0xFFFFFFFFFFFF80
-; X64-NEXT:    andq %rdx, %rax
-; X64-NEXT:    movl %eax, (%rdi)
-; X64-NEXT:    shrq $32, %rax
-; X64-NEXT:    movw %ax, 4(%rdi)
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    orq %rcx, %rax
+; X64-NEXT:    orq $384, %rax # imm = 0x180
+; X64-NEXT:    movabsq $72057594037927808, %rcx # imm = 0xFFFFFFFFFFFF80
+; X64-NEXT:    andq %rax, %rcx
+; X64-NEXT:    movl %ecx, (%rdi)
+; X64-NEXT:    shrq $32, %rcx
+; X64-NEXT:    movw %cx, 4(%rdi)
 ; X64-NEXT:    retq
   %b = load i56, i56* %a, align 1
   %c = and i56 %b, -128
@@ -188,20 +188,20 @@ define void @i56_insert_bit(i56* %a, i1 zeroext %bit) {
 ; X64-NEXT:    movzbl %sil, %eax
 ; X64-NEXT:    movzwl 4(%rdi), %ecx
 ; X64-NEXT:    movzbl 6(%rdi), %edx
-; X64-NEXT:    movl (%rdi), %esi
 ; X64-NEXT:    movb %dl, 6(%rdi)
 ; X64-NEXT:    # kill: %EDX<def> %EDX<kill> %RDX<kill> %RDX<def>
 ; X64-NEXT:    shll $16, %edx
 ; X64-NEXT:    orl %ecx, %edx
 ; X64-NEXT:    shlq $32, %rdx
-; X64-NEXT:    orq %rdx, %rsi
+; X64-NEXT:    movl (%rdi), %ecx
+; X64-NEXT:    orq %rdx, %rcx
 ; X64-NEXT:    shlq $13, %rax
-; X64-NEXT:    movabsq $72057594037919743, %rcx # imm = 0xFFFFFFFFFFDFFF
-; X64-NEXT:    andq %rsi, %rcx
-; X64-NEXT:    orq %rax, %rcx
-; X64-NEXT:    movl %ecx, (%rdi)
-; X64-NEXT:    shrq $32, %rcx
-; X64-NEXT:    movw %cx, 4(%rdi)
+; X64-NEXT:    movabsq $72057594037919743, %rdx # imm = 0xFFFFFFFFFFDFFF
+; X64-NEXT:    andq %rcx, %rdx
+; X64-NEXT:    orq %rax, %rdx
+; X64-NEXT:    movl %edx, (%rdi)
+; X64-NEXT:    shrq $32, %rdx
+; X64-NEXT:    movw %dx, 4(%rdi)
 ; X64-NEXT:    retq
   %extbit = zext i1 %bit to i56
   %b = load i56, i56* %a, align 1

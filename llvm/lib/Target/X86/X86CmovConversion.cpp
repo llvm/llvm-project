@@ -7,28 +7,28 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// This file implements a pass that converts X86 cmov instructions into branch
-/// when profitable. This pass is conservative, i.e., it applies transformation
-/// if and only if it can gaurantee a gain with high confidence.
+/// This file implements a pass that converts X86 cmov instructions into
+/// branches when profitable. This pass is conservative. It transforms if and
+/// only if it can guarantee a gain with high confidence.
 ///
 /// Thus, the optimization applies under the following conditions:
-///   1. Consider as a candidate only CMOV in most inner loop, assuming that
-///       most hotspots are represented by these loops.
-///   2. Given a group of CMOV instructions, that are using same EFLAGS def
+///   1. Consider as candidates only CMOVs in innermost loops (assume that
+///      most hotspots are represented by these loops).
+///   2. Given a group of CMOV instructions that are using the same EFLAGS def
 ///      instruction:
-///      a. Consider them as candidates only if all have same code condition or
-///         opposite one, to prevent generating more than one conditional jump
-///         per EFLAGS def instruction.
+///      a. Consider them as candidates only if all have the same code condition
+///         or the opposite one to prevent generating more than one conditional
+///         jump per EFLAGS def instruction.
 ///      b. Consider them as candidates only if all are profitable to be
-///         converted, assuming that one bad conversion may casue a degradation.
-///   3. Apply conversion only for loop that are found profitable and only for
+///         converted (assume that one bad conversion may cause a degradation).
+///   3. Apply conversion only for loops that are found profitable and only for
 ///      CMOV candidates that were found profitable.
-///      a. Loop is considered profitable only if conversion will reduce its
-///         depth cost by some thrishold.
+///      a. A loop is considered profitable only if conversion will reduce its
+///         depth cost by some threshold.
 ///      b. CMOV is considered profitable if the cost of its condition is higher
 ///         than the average cost of its true-value and false-value by 25% of
-///         branch-misprediction-penalty, this to assure no degredassion even
-///         with 25% branch misprediction.
+///         branch-misprediction-penalty. This assures no degradation even with
+///         25% branch misprediction.
 ///
 /// Note: This pass is assumed to run on SSA machine code.
 //===----------------------------------------------------------------------===//

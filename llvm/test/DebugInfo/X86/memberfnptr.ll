@@ -25,7 +25,7 @@ declare void @_ZN1A3fooEv(%struct.A*)
 !llvm.module.flags = !{!14, !15, !16}
 !llvm.ident = !{!17}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "p", scope: null, file: !2, line: 5, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "memberfnptr.cpp", directory: "")
 !3 = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, baseType: !4, size: 64, extraData: !7)

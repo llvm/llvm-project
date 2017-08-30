@@ -27,13 +27,11 @@
 ; CHECK-NEXT:   DW_AT_high_pc [DW_FORM_addr]    ([[FN_END:.*]])
 ; CHECK: "_cmd"
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-NEXT: DW_AT_location {{.*}} ([[OFS:.*]])
+; CHECK-NEXT: DW_AT_location
+; CHECK-NEXT:   0x{{0*}} - 0x{{.*}}:
+; CHECK-NOT:    DW_AT_
+; CHECK:        0x{{.*}} - [[FN_END]]:
 ; CHECK-NEXT: DW_AT_name {{.*}}"imageSize"
-;
-; CHECK: .debug_loc contents:
-; CHECK: [[OFS]]: Beginning address offset: 0x0000000000000000
-; CHECK_NOT: 0x{{.*}}: Beginning
-; CHECK:          Ending address offset: [[FN_END]]
 
 ; ModuleID = 'm.m'
 source_filename = "m.m"

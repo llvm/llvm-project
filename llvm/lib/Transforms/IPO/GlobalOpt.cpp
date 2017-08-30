@@ -29,7 +29,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -422,14 +421,13 @@ static bool GlobalUsersSafeToSRA(GlobalValue *GV) {
 static void transferSRADebugInfo(GlobalVariable *GV, GlobalVariable *NGV,
                                  uint64_t FragmentOffsetInBits,
                                  uint64_t FragmentSizeInBits) {
-  DIBuilder DIB(*GV->getParent(), /*AllowUnresolved*/ false);
   SmallVector<DIGlobalVariableExpression *, 1> GVs;
   GV->getDebugInfo(GVs);
   for (auto *GVE : GVs) {
     DIVariable *Var = GVE->getVariable();
     DIExpression *Expr = GVE->getExpression();
-    DIExpression *NExpr = DIB.createFragmentExpression(
-        FragmentOffsetInBits, FragmentSizeInBits, Expr);
+    auto *NExpr = DIExpression::createFragmentExpression(
+        Expr, FragmentOffsetInBits, FragmentSizeInBits);
     auto *NGVE = DIGlobalVariableExpression::get(GVE->getContext(), Var, NExpr);
     NGV->addDebugInfo(NGVE);
   }

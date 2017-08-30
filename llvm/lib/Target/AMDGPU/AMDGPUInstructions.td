@@ -42,9 +42,12 @@ class AMDGPUShaderInst <dag outs, dag ins, string asm = "",
   field bits<32> Inst = 0xffffffff;
 }
 
-def FP16Denormals : Predicate<"Subtarget.hasFP16Denormals()">;
-def FP32Denormals : Predicate<"Subtarget.hasFP32Denormals()">;
-def FP64Denormals : Predicate<"Subtarget.hasFP64Denormals()">;
+def FP16Denormals : Predicate<"Subtarget->hasFP16Denormals()">;
+def FP32Denormals : Predicate<"Subtarget->hasFP32Denormals()">;
+def FP64Denormals : Predicate<"Subtarget->hasFP64Denormals()">;
+def NoFP16Denormals : Predicate<"!Subtarget->hasFP16Denormals()">;
+def NoFP32Denormals : Predicate<"!Subtarget->hasFP32Denormals()">;
+def NoFP64Denormals : Predicate<"!Subtarget->hasFP64Denormals()">;
 def UnsafeFPMath : Predicate<"TM.Options.UnsafeFPMath">;
 
 def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
