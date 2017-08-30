@@ -131,6 +131,23 @@ DependentTemplateName *TemplateName::getAsDependentTemplateName() const {
   return Storage.dyn_cast<DependentTemplateName *>();
 }
 
+TemplateName TemplateName::getNameToSubstitute() const {
+  TemplateDecl *Decl = getAsTemplateDecl();
+
+  // Substituting a dependent template name: preserve it as written.
+  if (!Decl)
+    return *this;
+
+  // If we have a template declaration, use the most recent non-friend
+  // declaration of that template.
+  Decl = cast<TemplateDecl>(Decl->getMostRecentDecl());
+  while (Decl->getFriendObjectKind()) {
+    Decl = cast<TemplateDecl>(Decl->getPreviousDecl());
+    assert(Decl && "all declarations of template are friends");
+  }
+  return TemplateName(Decl);
+}
+
 bool TemplateName::isDependent() const {
   if (TemplateDecl *Template = getAsTemplateDecl()) {
     if (isa<TemplateTemplateParmDecl>(Template))

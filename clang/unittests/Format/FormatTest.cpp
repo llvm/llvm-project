@@ -1324,6 +1324,32 @@ TEST_F(FormatTest, FormatsEnumTypes) {
   verifyFormat("enum X : std::uint32_t { A, B };");
 }
 
+TEST_F(FormatTest, FormatsTypedefEnum) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 40;
+  verifyFormat("typedef enum {} EmptyEnum;");
+  verifyFormat("typedef enum { A, B, C } ShortEnum;");
+  verifyFormat("typedef enum {\n"
+               "  ZERO = 0,\n"             
+               "  ONE = 1,\n"
+               "  TWO = 2,\n"
+               "  THREE = 3\n"
+               "} LongEnum;",
+               Style);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterEnum = true;
+  verifyFormat("typedef enum {} EmptyEnum;");
+  verifyFormat("typedef enum { A, B, C } ShortEnum;");
+  verifyFormat("typedef enum\n"
+               "{\n"
+               "  ZERO = 0,\n"             
+               "  ONE = 1,\n"
+               "  TWO = 2,\n"
+               "  THREE = 3\n"
+               "} LongEnum;",
+               Style);
+}
+
 TEST_F(FormatTest, FormatsNSEnums) {
   verifyGoogleFormat("typedef NS_ENUM(NSInteger, SomeName) { AAA, BBB }");
   verifyGoogleFormat("typedef NS_ENUM(NSInteger, MyType) {\n"
@@ -11225,6 +11251,13 @@ TEST_F(FormatTest, UTF8CharacterLiteralCpp11) {
   // u8'a' is a C++17 feature, utf8 literal character, LS_Cpp11 covers
   // all modes, including C++11, C++14 and C++17
   EXPECT_EQ("auto c = u8'a';", format("auto c = u8'a';"));
+}
+
+TEST_F(FormatTest, DoNotFormatLikelyXml) {
+  EXPECT_EQ("<!-- ;> -->",
+            format("<!-- ;> -->", getGoogleStyle()));
+  EXPECT_EQ(" <!-- >; -->",
+            format(" <!-- >; -->", getGoogleStyle()));
 }
 
 } // end namespace
