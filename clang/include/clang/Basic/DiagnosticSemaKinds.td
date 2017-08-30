@@ -1990,6 +1990,9 @@ def err_auto_var_deduction_failure_from_init_list : Error<
   "cannot deduce actual type for variable %0 with type %1 from initializer list">;
 def err_auto_new_deduction_failure : Error<
   "new expression for type %0 has incompatible constructor argument of type %1">;
+def err_auto_inconsistent_deduction : Error<
+  "deduced conflicting types %diff{($ vs $) |}0,1"
+  "for initializer list element type">;
 def err_auto_different_deductions : Error<
   "%select{'auto'|'decltype(auto)'|'__auto_type'|template arguments}0 "
   "deduced as %1 in declaration of %2 and "

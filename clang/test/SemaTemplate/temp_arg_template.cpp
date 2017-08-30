@@ -141,3 +141,10 @@ namespace PR32185 {
   template<template<typename T, T> class U> struct A {};
   template<template<typename T, T> class U> struct B : A<U> {};
 }
+
+namespace PR10147 {
+  template<typename T> struct A {};
+  template<typename T = int> struct A;
+  template<template<typename...> class A> void f(A<int>*) { A<> a; } // expected-warning 0-1{{extension}}
+  void g() { f((A<>*)0); }
+}

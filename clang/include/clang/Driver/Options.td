@@ -907,6 +907,10 @@ def fsanitize_undefined_trap_on_error : Flag<["-"], "fsanitize-undefined-trap-on
                                         Group<f_clang_Group>;
 def fno_sanitize_undefined_trap_on_error : Flag<["-"], "fno-sanitize-undefined-trap-on-error">,
                                            Group<f_clang_Group>;
+def fsanitize_minimal_runtime : Flag<["-"], "fsanitize-minimal-runtime">,
+                                        Group<f_clang_Group>;
+def fno_sanitize_minimal_runtime : Flag<["-"], "fno-sanitize-minimal-runtime">,
+                                        Group<f_clang_Group>;
 def fsanitize_link_cxx_runtime : Flag<["-"], "fsanitize-link-c++-runtime">,
                                  Group<f_clang_Group>;
 def fsanitize_cfi_cross_dso : Flag<["-"], "fsanitize-cfi-cross-dso">,
@@ -1143,8 +1147,8 @@ def fmodule_map_file : Joined<["-"], "fmodule-map-file=">,
   Group<f_Group>, Flags<[DriverOption,CC1Option]>, MetaVarName<"<file>">,
   HelpText<"Load this module map file">;
 def fmodule_file : Joined<["-"], "fmodule-file=">,
-  Group<f_Group>, Flags<[DriverOption,CC1Option]>,
-  HelpText<"Load this precompiled module file">, MetaVarName<"<file>">;
+  Group<i_Group>, Flags<[DriverOption,CC1Option]>, MetaVarName<"[<name>=]<file>">,
+  HelpText<"Specify the mapping of module name to precompiled module file, or load a module file if name is omitted.">;
 def fmodules_ignore_macro : Joined<["-"], "fmodules-ignore-macro=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Ignore the definition of the given macro when building and loading modules">;
 def fmodules_decluse : Flag <["-"], "fmodules-decluse">, Group<f_Group>,

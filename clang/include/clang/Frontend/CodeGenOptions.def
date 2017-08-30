@@ -152,6 +152,8 @@ CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0) ///< Enable tracking origins in
 CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0) ///< Enable use-after-delete detection
                                              ///< in MemorySanitizer
 CODEGENOPT(SanitizeCfiCrossDso, 1, 0) ///< Enable cross-dso support in CFI.
+CODEGENOPT(SanitizeMinimalRuntime, 1, 0) ///< Use "_minimal" sanitizer runtime for
+                                         ///< diagnostics.
 CODEGENOPT(SanitizeCoverageType, 2, 0) ///< Type of sanitizer coverage
                                        ///< instrumentation.
 CODEGENOPT(SanitizeCoverageIndirectCalls, 1, 0) ///< Enable sanitizer coverage

@@ -1636,7 +1636,22 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
                              Module::NameVisibilityKind Visibility,
                              bool IsInclusionDirective) {
   // Determine what file we're searching from.
-  StringRef ModuleName = Path[0].first->getName();
+  // FIXME: Should we be deciding whether this is a submodule (here and
+  // below) based on -fmodules-ts or should we pass a flag and make the
+  // caller decide?
+  std::string ModuleName;
+  if (getLangOpts().ModulesTS) {
+    // FIXME: Same code as Sema::ActOnModuleDecl() so there is probably a
+    // better place/way to do this.
+    for (auto &Piece : Path) {
+      if (!ModuleName.empty())
+        ModuleName += ".";
+      ModuleName += Piece.first->getName();
+    }
+  }
+  else
+    ModuleName = Path[0].first->getName();
+
   SourceLocation ModuleNameLoc = Path[0].second;
 
   // If we've already handled this import, just return the cached result.
@@ -1661,6 +1676,14 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   } else if (ModuleName == getLangOpts().CurrentModule) {
     // This is the module we're building. 
     Module = PP->getHeaderSearchInfo().lookupModule(ModuleName);
+    /// FIXME: perhaps we should (a) look for a module using the module name
+    //  to file map (PrebuiltModuleFiles) and (b) diagnose if still not found?
+    //if (Module == nullptr) {
+    //  getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_found)
+    //    << ModuleName;
+    //  ModuleBuildFailed = true;
+    //  return ModuleLoadResult();
+    //}
     Known = KnownModules.insert(std::make_pair(Path[0].first, Module)).first;
   } else {
     // Search for a module with the given name.
@@ -1682,16 +1705,17 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     }
 
     // Try to load the module from the prebuilt module path.
-    if (Source == ModuleNotFound && !HSOpts.PrebuiltModulePaths.empty()) {
-      ModuleFileName = PP->getHeaderSearchInfo().getModuleFileName(
-          ModuleName, "", /*UsePrebuiltPath*/ true);
+    if (Source == ModuleNotFound && (!HSOpts.PrebuiltModuleFiles.empty() ||
+                                     !HSOpts.PrebuiltModulePaths.empty())) {
+      ModuleFileName =
+        PP->getHeaderSearchInfo().getPrebuiltModuleFileName(ModuleName);
       if (!ModuleFileName.empty())
         Source = PrebuiltModulePath;
     }
 
     // Try to load the module from the module cache.
     if (Source == ModuleNotFound && Module) {
-      ModuleFileName = PP->getHeaderSearchInfo().getModuleFileName(Module);
+      ModuleFileName = PP->getHeaderSearchInfo().getCachedModuleFileName(Module);
       Source = ModuleCache;
     }
 
@@ -1851,7 +1875,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
 
   // Verify that the rest of the module path actually corresponds to
   // a submodule.
-  if (Path.size() > 1) {
+  if (!getLangOpts().ModulesTS && Path.size() > 1) {
     for (unsigned I = 1, N = Path.size(); I != N; ++I) {
       StringRef Name = Path[I].first->getName();
       clang::Module *Sub = Module->findSubmodule(Name);

@@ -2647,6 +2647,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return Right.HasUnescapedNewline;
   if (isAllmanBrace(Left) || isAllmanBrace(Right))
     return (Line.startsWith(tok::kw_enum) && Style.BraceWrapping.AfterEnum) ||
+           (Line.startsWith(tok::kw_typedef, tok::kw_enum) && Style.BraceWrapping.AfterEnum) ||
            (Line.startsWith(tok::kw_class) && Style.BraceWrapping.AfterClass) ||
            (Line.startsWith(tok::kw_struct) && Style.BraceWrapping.AfterStruct);
   if (Left.is(TT_ObjCBlockLBrace) && !Style.AllowShortBlocksOnASingleLine)
