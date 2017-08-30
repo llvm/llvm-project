@@ -36,9 +36,13 @@ body: |
     ; CHECK: [[CMP_T1:%[0-9]+]](s1) = G_TRUNC [[CMP1]]
     %4(s1) = G_ICMP intpred(sge), %0, %1
 
-    ; CHECK: [[LHS32:%[0-9]+]](s32) = G_ZEXT %2
-    ; CHECK: [[RHS32:%[0-9]+]](s32) = G_ZEXT %3
-    ; CHECK: [[CMP2:%[0-9]+]](s32) = G_ICMP intpred(ult), [[LHS32]](s32), [[RHS32]]
+    ; CHECK: [[CSTMASK1:%[0-9]+]](s32) = G_CONSTANT i32 255
+    ; CHECK: [[T1:%[0-9]+]](s32) = G_TRUNC %0(s64)
+    ; CHECK: [[AND1:%[0-9]+]](s32) = G_AND [[T1]], [[CSTMASK1]]
+    ; CHECK: [[CSTMASK2:%[0-9]+]](s32) = G_CONSTANT i32 255
+    ; CHECK: [[T2:%[0-9]+]](s32) = G_TRUNC %1(s64)
+    ; CHECK: [[AND2:%[0-9]+]](s32) = G_AND [[T2]], [[CSTMASK2]]
+    ; CHECK: [[CMP2:%[0-9]+]](s32) = G_ICMP intpred(ult), [[AND1]](s32), [[AND2]]
     ; CHECK: [[CMP_T2:%[0-9]+]](s1) = G_TRUNC [[CMP2]]
     %8(s1) = G_ICMP intpred(ult), %2, %3
 
