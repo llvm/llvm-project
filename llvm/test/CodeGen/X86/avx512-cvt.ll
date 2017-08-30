@@ -33,7 +33,7 @@ define <8 x double> @sltof864(<8 x i64> %a) {
 ; NODQ-NEXT:    vcvtsi2sdq %rax, %xmm4, %xmm2
 ; NODQ-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
 ; NODQ-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; NODQ-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; NODQ-NEXT:    vpextrq $1, %xmm2, %rax
 ; NODQ-NEXT:    vcvtsi2sdq %rax, %xmm4, %xmm3
 ; NODQ-NEXT:    vmovq %xmm2, %rax
@@ -407,7 +407,7 @@ define <8 x double> @ultof64(<8 x i64> %a) {
 ; NODQ-NEXT:    vcvtusi2sdq %rax, %xmm4, %xmm2
 ; NODQ-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
 ; NODQ-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; NODQ-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; NODQ-NEXT:    vpextrq $1, %xmm2, %rax
 ; NODQ-NEXT:    vcvtusi2sdq %rax, %xmm4, %xmm3
 ; NODQ-NEXT:    vmovq %xmm2, %rax

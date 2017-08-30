@@ -67,6 +67,10 @@ RCParser::ParseType RCParser::parseSingleResource() {
     Result = parseAcceleratorsResource();
   else if (TypeToken->equalsLower("CURSOR"))
     Result = parseCursorResource();
+  else if (TypeToken->equalsLower("DIALOG"))
+    Result = parseDialogResource(false);
+  else if (TypeToken->equalsLower("DIALOGEX"))
+    Result = parseDialogResource(true);
   else if (TypeToken->equalsLower("ICON"))
     Result = parseIconResource();
   else if (TypeToken->equalsLower("HTML"))
@@ -235,17 +239,26 @@ Expected<OptionalStmtList> RCParser::parseOptionalStatements(bool IsExtended) {
 }
 
 Expected<std::unique_ptr<OptionalStmt>>
-RCParser::parseSingleOptionalStatement(bool) {
+RCParser::parseSingleOptionalStatement(bool IsExtended) {
   ASSIGN_OR_RETURN(TypeToken, readIdentifier());
   if (TypeToken->equals_lower("CHARACTERISTICS"))
     return parseCharacteristicsStmt();
-  else if (TypeToken->equals_lower("LANGUAGE"))
+  if (TypeToken->equals_lower("LANGUAGE"))
     return parseLanguageStmt();
-  else if (TypeToken->equals_lower("VERSION"))
+  if (TypeToken->equals_lower("VERSION"))
     return parseVersionStmt();
-  else
-    return getExpectedError("optional statement type, BEGIN or '{'",
-                            /* IsAlreadyRead = */ true);
+
+  if (IsExtended) {
+    if (TypeToken->equals_lower("CAPTION"))
+      return parseCaptionStmt();
+    if (TypeToken->equals_lower("FONT"))
+      return parseFontStmt();
+    if (TypeToken->equals_lower("STYLE"))
+      return parseStyleStmt();
+  }
+
+  return getExpectedError("optional statement type, BEGIN or '{'",
+                          /* IsAlreadyRead = */ true);
 }
 
 RCParser::ParseType RCParser::parseLanguageResource() {
@@ -275,6 +288,68 @@ RCParser::ParseType RCParser::parseAcceleratorsResource() {
 RCParser::ParseType RCParser::parseCursorResource() {
   ASSIGN_OR_RETURN(Arg, readString());
   return make_unique<CursorResource>(*Arg);
+}
+
+RCParser::ParseType RCParser::parseDialogResource(bool IsExtended) {
+  // Dialog resources have the following format of the arguments:
+  //  DIALOG:   x, y, width, height [opt stmts...] {controls...}
+  //  DIALOGEX: x, y, width, height [, helpID] [opt stmts...] {controls...}
+  // These are very similar, so we parse them together.
+  ASSIGN_OR_RETURN(LocResult, readIntsWithCommas(4, 4));
+
+  uint32_t HelpID = 0; // When HelpID is unset, it's assumed to be 0.
+  if (IsExtended && consumeOptionalType(Kind::Comma)) {
+    ASSIGN_OR_RETURN(HelpIDResult, readInt());
+    HelpID = *HelpIDResult;
+  }
+
+  ASSIGN_OR_RETURN(OptStatements,
+                   parseOptionalStatements(/*UseExtendedStmts = */ true));
+
+  assert(isNextTokenKind(Kind::BlockBegin) &&
+         "parseOptionalStatements, when successful, halts on BlockBegin.");
+  consume();
+
+  auto Dialog = make_unique<DialogResource>(
+      (*LocResult)[0], (*LocResult)[1], (*LocResult)[2], (*LocResult)[3],
+      HelpID, std::move(*OptStatements), IsExtended);
+
+  while (!consumeOptionalType(Kind::BlockEnd)) {
+    ASSIGN_OR_RETURN(ControlDefResult, parseControl());
+    Dialog->addControl(std::move(*ControlDefResult));
+  }
+
+  return std::move(Dialog);
+}
+
+Expected<Control> RCParser::parseControl() {
+  // Each control definition (except CONTROL) follows one of the schemes below
+  // depending on the control class:
+  //  [class] text, id, x, y, width, height [, style] [, exstyle] [, helpID]
+  //  [class]       id, x, y, width, height [, style] [, exstyle] [, helpID]
+  // Note that control ids must be integers.
+  ASSIGN_OR_RETURN(ClassResult, readIdentifier());
+  std::string ClassUpper = ClassResult->upper();
+  if (Control::SupportedCtls.find(ClassUpper) == Control::SupportedCtls.end())
+    return getExpectedError("control type, END or '}'", true);
+
+  // Read caption if necessary.
+  StringRef Caption;
+  if (Control::CtlsWithTitle.find(ClassUpper) != Control::CtlsWithTitle.end()) {
+    ASSIGN_OR_RETURN(CaptionResult, readString());
+    RETURN_IF_ERROR(consumeType(Kind::Comma));
+    Caption = *CaptionResult;
+  }
+
+  ASSIGN_OR_RETURN(Args, readIntsWithCommas(5, 8));
+
+  auto TakeOptArg = [&Args](size_t Id) -> Optional<uint32_t> {
+    return Args->size() > Id ? (*Args)[Id] : Optional<uint32_t>();
+  };
+
+  return Control(*ClassResult, Caption, (*Args)[0], (*Args)[1], (*Args)[2],
+                 (*Args)[3], (*Args)[4], TakeOptArg(5), TakeOptArg(6),
+                 TakeOptArg(7));
 }
 
 RCParser::ParseType RCParser::parseIconResource() {
@@ -384,6 +459,23 @@ RCParser::ParseOptionType RCParser::parseCharacteristicsStmt() {
 RCParser::ParseOptionType RCParser::parseVersionStmt() {
   ASSIGN_OR_RETURN(Arg, readInt());
   return make_unique<VersionStmt>(*Arg);
+}
+
+RCParser::ParseOptionType RCParser::parseCaptionStmt() {
+  ASSIGN_OR_RETURN(Arg, readString());
+  return make_unique<CaptionStmt>(*Arg);
+}
+
+RCParser::ParseOptionType RCParser::parseFontStmt() {
+  ASSIGN_OR_RETURN(SizeResult, readInt());
+  RETURN_IF_ERROR(consumeType(Kind::Comma));
+  ASSIGN_OR_RETURN(NameResult, readString());
+  return make_unique<FontStmt>(*SizeResult, *NameResult);
+}
+
+RCParser::ParseOptionType RCParser::parseStyleStmt() {
+  ASSIGN_OR_RETURN(Arg, readInt());
+  return make_unique<StyleStmt>(*Arg);
 }
 
 Error RCParser::getExpectedError(const Twine Message, bool IsAlreadyRead) {

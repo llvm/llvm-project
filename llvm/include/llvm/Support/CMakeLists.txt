@@ -9,26 +9,26 @@ function(find_first_existing_file out_var)
 endfunction()
 
 macro(find_first_existing_vc_file out_var path)
-    find_program(git_executable NAMES git git.exe git.cmd)
-    # Run from a subdirectory to force git to print an absolute path.
-    execute_process(COMMAND ${git_executable} rev-parse --git-dir
-      WORKING_DIRECTORY ${path}/cmake
-      RESULT_VARIABLE git_result
-      OUTPUT_VARIABLE git_dir
-      ERROR_QUIET)
-    if(git_result EQUAL 0)
-      string(STRIP "${git_dir}" git_dir)
-      set(${out_var} "${git_dir}/logs/HEAD")
-      # some branchless cases (e.g. 'repo') may not yet have .git/logs/HEAD
-      if (NOT EXISTS "${git_dir}/logs/HEAD")
-        file(WRITE "${git_dir}/logs/HEAD" "")
-      endif()
-    else()
-      find_first_existing_file(${out_var}
-        "${path}/.svn/wc.db"   # SVN 1.7
-        "${path}/.svn/entries" # SVN 1.6
-      )
+  find_program(git_executable NAMES git git.exe git.cmd)
+  # Run from a subdirectory to force git to print an absolute path.
+  execute_process(COMMAND ${git_executable} rev-parse --git-dir
+    WORKING_DIRECTORY ${path}/cmake
+    RESULT_VARIABLE git_result
+    OUTPUT_VARIABLE git_dir
+    ERROR_QUIET)
+  if(git_result EQUAL 0)
+    string(STRIP "${git_dir}" git_dir)
+    set(${out_var} "${git_dir}/logs/HEAD")
+    # some branchless cases (e.g. 'repo') may not yet have .git/logs/HEAD
+    if (NOT EXISTS "${git_dir}/logs/HEAD")
+      file(WRITE "${git_dir}/logs/HEAD" "")
     endif()
+  else()
+    find_first_existing_file(${out_var}
+      "${path}/.svn/wc.db"   # SVN 1.7
+      "${path}/.svn/entries" # SVN 1.6
+    )
+  endif()
 endmacro()
 
 find_first_existing_vc_file(llvm_vc "${LLVM_MAIN_SRC_DIR}")
@@ -46,7 +46,7 @@ if((DEFINED llvm_vc) AND LLVM_APPEND_VC_REV)
       RESULT_VARIABLE files_not_equal
       OUTPUT_QUIET
       ERROR_QUIET)
-  # Remove ${version_inc} if it's empty -- toggling LLMV_APPEND_VC_REV
+  # Remove ${version_inc} if it's empty -- toggling LLVM_APPEND_VC_REV
   # from OFF to ON.
   if(NOT files_not_equal)
     file(REMOVE "${version_inc}")

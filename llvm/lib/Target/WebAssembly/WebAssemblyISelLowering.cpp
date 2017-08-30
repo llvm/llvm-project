@@ -146,6 +146,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // Trap lowers to wasm unreachable
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
+
+  setMaxAtomicSizeInBitsSupported(64);
 }
 
 FastISel *WebAssemblyTargetLowering::createFastISel(

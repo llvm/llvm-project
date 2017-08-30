@@ -2,7 +2,7 @@ include_directories(../rtl)
 
 add_custom_target(TsanUnitTests)
 set_target_properties(TsanUnitTests PROPERTIES
-  FOLDER "TSan unittests")
+  FOLDER "Compiler-RT Tests")
 
 set(TSAN_UNITTEST_CFLAGS
   ${TSAN_CFLAGS}
@@ -49,9 +49,11 @@ endforeach()
 macro(add_tsan_unittest testname)
   cmake_parse_arguments(TEST "" "" "SOURCES;HEADERS" ${ARGN})
   if(UNIX)
-    foreach(arch ${ASAN_TEST_ARCH})
-      generate_compiler_rt_tests(TsanUnitTests ${testname} ${arch}
-        SOURCES ${TEST_SOURCES}
+    foreach(arch ${TSAN_TEST_ARCH})
+      set(TsanUnitTestsObjects)
+      generate_compiler_rt_tests(TsanUnitTestsObjects TsanUnitTests
+        "${testname}-${arch}-Test" ${arch}
+        SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
         RUNTIME ${TSAN_TEST_RUNTIME}
         COMPILE_DEPS ${TEST_HEADERS} ${TSAN_RTL_HEADERS}
         DEPS gtest tsan

@@ -697,3 +697,92 @@ define void @test_abi_exts_call(i8* %addr) {
   ret void
 }
 
+declare void @variadic_callee(i8*, ...)
+define void @test_variadic_call_1(i8** %addr_ptr, i32* %val_ptr) {
+; ALL-LABEL: name:            test_variadic_call_1
+
+; X32:      fixedStack:      
+; X32-NEXT:  - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: 0, 
+; X32-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '' }
+; X32-NEXT:  - { id: 1, type: default, offset: 0, size: 4, alignment: 16, stack-id: 0, 
+; X32-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '' }
+; X32:         %2(p0) = G_FRAME_INDEX %fixed-stack.1
+; X32-NEXT:    %0(p0) = G_LOAD %2(p0) :: (invariant load 4 from %fixed-stack.1, align 0)
+; X32-NEXT:    %3(p0) = G_FRAME_INDEX %fixed-stack.0
+; X32-NEXT:    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+; X32-NEXT:    %4(p0) = G_LOAD %0(p0) :: (load 4 from %ir.addr_ptr)
+; X32-NEXT:    %5(s32) = G_LOAD %1(p0) :: (load 4 from %ir.val_ptr)
+; X32-NEXT:    ADJCALLSTACKDOWN32 8, 0, 0, implicit-def %esp, implicit-def %eflags, implicit %esp
+; X32-NEXT:    %6(p0) = COPY %esp
+; X32-NEXT:    %7(s32) = G_CONSTANT i32 0
+; X32-NEXT:    %8(p0) = G_GEP %6, %7(s32)
+; X32-NEXT:    G_STORE %4(p0), %8(p0) :: (store 4 into stack, align 0)
+; X32-NEXT:    %9(p0) = COPY %esp
+; X32-NEXT:    %10(s32) = G_CONSTANT i32 4
+; X32-NEXT:    %11(p0) = G_GEP %9, %10(s32)
+; X32-NEXT:    G_STORE %5(s32), %11(p0) :: (store 4 into stack + 4, align 0)
+; X32-NEXT:    CALLpcrel32 @variadic_callee, csr_32, implicit %esp
+; X32-NEXT:    ADJCALLSTACKUP32 8, 0, implicit-def %esp, implicit-def %eflags, implicit %esp
+; X32-NEXT:    RET 0
+  
+; X64:         %0(p0) = COPY %rdi
+; X64-NEXT:    %1(p0) = COPY %rsi
+; X64-NEXT:    %2(p0) = G_LOAD %0(p0) :: (load 8 from %ir.addr_ptr)
+; X64-NEXT:    %3(s32) = G_LOAD %1(p0) :: (load 4 from %ir.val_ptr)
+; X64-NEXT:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit %rsp
+; X64-NEXT:    %rdi = COPY %2(p0)
+; X64-NEXT:    %esi = COPY %3(s32)
+; X64-NEXT:    %al = MOV8ri 0
+; X64-NEXT:    CALL64pcrel32 @variadic_callee, csr_64, implicit %rsp, implicit %rdi, implicit %esi, implicit %al
+; X64-NEXT:    ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit %rsp
+; X64-NEXT:    RET 0
+  
+  %addr = load i8*, i8** %addr_ptr
+  %val = load i32, i32* %val_ptr
+  call void (i8*, ...) @variadic_callee(i8* %addr, i32 %val)
+  ret void
+}
+
+define void @test_variadic_call_2(i8** %addr_ptr, double* %val_ptr) {
+; ALL-LABEL: name:            test_variadic_call_2
+
+; X32:      fixedStack:      
+; X32-NEXT:  - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: 0, 
+; X32-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '' }
+; X32-NEXT:  - { id: 1, type: default, offset: 0, size: 4, alignment: 16, stack-id: 0, 
+; X32-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '' }
+; X32:         %2(p0) = G_FRAME_INDEX %fixed-stack.1
+; X32-NEXT:    %0(p0) = G_LOAD %2(p0) :: (invariant load 4 from %fixed-stack.1, align 0)
+; X32-NEXT:    %3(p0) = G_FRAME_INDEX %fixed-stack.0
+; X32-NEXT:    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+; X32-NEXT:    %4(p0) = G_LOAD %0(p0) :: (load 4 from %ir.addr_ptr)
+; X32-NEXT:    %5(s64) = G_LOAD %1(p0) :: (load 8 from %ir.val_ptr, align 4)
+; X32-NEXT:    ADJCALLSTACKDOWN32 12, 0, 0, implicit-def %esp, implicit-def %eflags, implicit %esp
+; X32-NEXT:    %6(p0) = COPY %esp
+; X32-NEXT:    %7(s32) = G_CONSTANT i32 0
+; X32-NEXT:    %8(p0) = G_GEP %6, %7(s32)
+; X32-NEXT:    G_STORE %4(p0), %8(p0) :: (store 4 into stack, align 0)
+; X32-NEXT:    %9(p0) = COPY %esp
+; X32-NEXT:    %10(s32) = G_CONSTANT i32 4
+; X32-NEXT:    %11(p0) = G_GEP %9, %10(s32)
+; X32-NEXT:    G_STORE %5(s64), %11(p0) :: (store 8 into stack + 4, align 0)
+; X32-NEXT:    CALLpcrel32 @variadic_callee, csr_32, implicit %esp
+; X32-NEXT:    ADJCALLSTACKUP32 12, 0, implicit-def %esp, implicit-def %eflags, implicit %esp
+; X32-NEXT:    RET 0
+  
+; X64:         %1(p0) = COPY %rsi
+; X64-NEXT:    %2(p0) = G_LOAD %0(p0) :: (load 8 from %ir.addr_ptr)
+; X64-NEXT:    %3(s64) = G_LOAD %1(p0) :: (load 8 from %ir.val_ptr)
+; X64-NEXT:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %eflags, implicit %rsp
+; X64-NEXT:    %rdi = COPY %2(p0)
+; X64-NEXT:    %xmm0 = COPY %3(s64)
+; X64-NEXT:    %al = MOV8ri 1
+; X64-NEXT:    CALL64pcrel32 @variadic_callee, csr_64, implicit %rsp, implicit %rdi, implicit %xmm0, implicit %al
+; X64-NEXT:    ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %eflags, implicit %rsp
+; X64-NEXT:    RET 0
+  
+  %addr = load i8*, i8** %addr_ptr
+  %val = load double, double* %val_ptr
+  call void (i8*, ...) @variadic_callee(i8* %addr, double %val)
+  ret void
+}

@@ -45,6 +45,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -4808,6 +4809,26 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     // Check if ValueMap has reg number.
     DenseMap<const Value *, unsigned>::iterator VMI = FuncInfo.ValueMap.find(V);
     if (VMI != FuncInfo.ValueMap.end()) {
+      auto *Ty = V->getType();
+      const auto &TLI = DAG.getTargetLoweringInfo();
+      EVT VT = TLI.getValueType(DAG.getDataLayout(), Ty);
+      unsigned NumRegs = TLI.getNumRegisters(Ty->getContext(), VT);
+      if (NumRegs > 1) {
+        // The registers are guaranteed to be allocated in sequence.
+        unsigned Offset = 0;
+        MVT RegisterVT = TLI.getRegisterType(Ty->getContext(), VT);
+        unsigned RegisterSize = RegisterVT.getSizeInBits();
+        for (unsigned I = 0; I != NumRegs; ++I) {
+          Op = MachineOperand::CreateReg(VMI->second + I, false);
+          auto *FragmentExpr = DIExpression::createFragmentExpression(
+              Expr, Offset, RegisterSize);
+          FuncInfo.ArgDbgValues.push_back(
+              BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), IsDbgDeclare,
+                      Op->getReg(), Variable, FragmentExpr));
+          Offset += RegisterSize;
+        }
+        return true;
+      }
       Op = MachineOperand::CreateReg(VMI->second, false);
       IsIndirect = IsDbgDeclare;
     }

@@ -305,6 +305,10 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
                ? "armhf"
                : "arm";
 
+  // For historic reasons, Android library is using i686 instead of i386.
+  if (TC.getArch() == llvm::Triple::x86 && Triple.isAndroid())
+    return "i686";
+
   return llvm::Triple::getArchTypeName(TC.getArch());
 }
 

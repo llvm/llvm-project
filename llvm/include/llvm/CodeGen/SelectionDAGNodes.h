@@ -799,7 +799,8 @@ public:
   /// if DAG changes.
   static bool hasPredecessorHelper(const SDNode *N,
                                    SmallPtrSetImpl<const SDNode *> &Visited,
-                                   SmallVectorImpl<const SDNode *> &Worklist) {
+                                   SmallVectorImpl<const SDNode *> &Worklist,
+                                   unsigned int MaxSteps = 0) {
     if (Visited.count(N))
       return true;
     while (!Worklist.empty()) {
@@ -814,6 +815,8 @@ public:
       }
       if (Found)
         return true;
+      if (MaxSteps != 0 && Visited.size() >= MaxSteps)
+        return false;
     }
     return false;
   }

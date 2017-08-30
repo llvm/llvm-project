@@ -7,7 +7,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-darwin8"
 
 ; Test that consecutive, identical DBG_VALUEs are merged.
-;CHECK: DW_AT_location{{.*}}(<0x1> 55 )
+; CHECK: DW_AT_location{{.*}}(DW_OP_reg5 RDI)
 
 %0 = type { i64, i1 }
 

@@ -19,7 +19,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: DW_AT_external
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x09> 03 00 00 00 00 00 00 00 00 )
+; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (DW_OP_addr 0x0)
 @GlobA = common addrspace(1) global i32 0, align 4, !dbg !0
 
 ; CHECK: {{.*}}DW_TAG_variable
@@ -28,20 +28,20 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: DW_AT_external
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x09> 03 00 00 00 00 00 00 00 00 )
+; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (DW_OP_addr 0x0)
 @GlobB = common addrspace(1) global i32 0, align 4, !dbg !6
 
 define amdgpu_kernel void @kernel1(
 ; CHECK: {{.*}}DW_TAG_formal_parameter
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x06> 91 04 10 01 16 18 )
+; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (DW_OP_fbreg +4, DW_OP_constu 0x1, DW_OP_swap, DW_OP_xderef)
 ; CHECK-NEXT: DW_AT_name {{.*}}"ArgN"
     i32 %ArgN,
 ; CHECK: {{.*}}DW_TAG_formal_parameter
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x06> 91 08 10 01 16 18 )
+; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (DW_OP_fbreg +8, DW_OP_constu 0x1, DW_OP_swap, DW_OP_xderef)
 ; CHECK-NEXT: DW_AT_name {{.*}}"ArgA"
     i32 addrspace(1)* %ArgA,
 ; CHECK: {{.*}}DW_TAG_formal_parameter
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x06> 91 10 10 01 16 18 )
+; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (DW_OP_fbreg +16, DW_OP_constu 0x1, DW_OP_swap, DW_OP_xderef)
 ; CHECK-NEXT: DW_AT_name {{.*}}"ArgB"
     i32 addrspace(1)* %ArgB) !dbg !13 {
 entry:
@@ -74,13 +74,13 @@ entry:
 !llvm.module.flags = !{!10, !11}
 !llvm.ident = !{!12}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "GlobA", scope: !2, file: !3, line: 1, type: !8, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 5.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "variable-locations.cl", directory: "/some/random/directory")
 !4 = !{}
 !5 = !{!0, !6}
-!6 = !DIGlobalVariableExpression(var: !7)
+!6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !7 = distinct !DIGlobalVariable(name: "GlobB", scope: !2, file: !3, line: 2, type: !8, isLocal: false, isDefinition: true)
 !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !9 = !{i32 2, i32 0}

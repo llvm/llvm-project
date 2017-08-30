@@ -68,7 +68,7 @@ attributes #0 = { nounwind readnone }
 !llvm.module.flags = !{!13, !14}
 !llvm.ident = !{!15}
 
-!0 = distinct !DIGlobalVariableExpression(var: !1)
+!0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "glb_start", scope: !2, file: !3, line: 4, type: !11, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.9.0 (trunk 268246)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !5, globals: !8)
 !3 = !DIFile(filename: "/home/wpieb/test/D12094.cpp", directory: "/home/wpieb/build/llvm/trunk/llvm-RelWithDebInfo")
@@ -77,7 +77,7 @@ attributes #0 = { nounwind readnone }
 !6 = !DIDerivedType(tag: DW_TAG_typedef, name: "fp_t", file: !3, line: 1, baseType: !7)
 !7 = !DIBasicType(name: "double", size: 64, align: 64, encoding: DW_ATE_float)
 !8 = !{!0, !9}
-!9 = distinct !DIGlobalVariableExpression(var: !10)
+!9 = distinct !DIGlobalVariableExpression(var: !10, expr: !DIExpression())
 !10 = !DIGlobalVariable(name: "glb_end", scope: !2, file: !3, line: 5, type: !11, isLocal: false, isDefinition: true)
 !11 = !DIDerivedType(tag: DW_TAG_typedef, name: "int_t", file: !3, line: 2, baseType: !12)
 !12 = !DIBasicType(name: "long unsigned int", size: 64, align: 64, encoding: DW_ATE_unsigned)

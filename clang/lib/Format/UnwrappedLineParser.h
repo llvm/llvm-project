@@ -246,6 +246,11 @@ private:
   // sequence.
   std::stack<int> PPChainBranchIndex;
 
+  // Contains the #ifndef condition for a potential include guard.
+  FormatToken *IfNdefCondition;
+  bool FoundIncludeGuardStart;
+  bool IncludeGuardRejected;
+
   friend class ScopedLineState;
   friend class CompoundStatementIndenter;
 };

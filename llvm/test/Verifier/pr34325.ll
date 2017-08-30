@@ -7,7 +7,7 @@
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!8}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "c", scope: null, isLocal: false, isDefinition: true, type: !6)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, retainedTypes: !4, globals: !7)
 !3 = !DIFile(filename: "a", directory: "")

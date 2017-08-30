@@ -1,10 +1,23 @@
 ; RUN: llc -filetype=asm < %s | FileCheck %s
 ; RUN: llc -filetype=obj < %s \
-; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
+; RUN:   | llvm-dwarfdump -debug-dump=info - | FileCheck %s --check-prefix=DWARF
 ;
 ; CHECK: @DEBUG_VALUE: h:x <- [DW_OP_plus_uconst {{.*}}] [%R{{.*}}+0]
-; DWARF: Location description: {{7[0-9] [0-9]+ $}}
-;                              DW_OP_breg. +..
+; DWARF: DW_TAG_formal_parameter
+; DWARF:       DW_AT_location
+; DWARF-NEXT:    DW_OP_reg0 R0
+; DWARF: DW_TAG_formal_parameter
+; DWARF:       DW_AT_location
+; DWARF-NEXT:    DW_OP_reg1 R1
+; DWARF: DW_TAG_formal_parameter
+; DWARF:       DW_AT_location
+; DWARF-NEXT:    DW_OP_reg2 R2
+; DWARF: DW_TAG_formal_parameter
+; DWARF:       DW_AT_location
+; DWARF-NEXT:    DW_OP_reg3 R3
+; DWARF: DW_TAG_formal_parameter
+; DWARF: DW_AT_location
+; DWARF-NEXT: DW_OP_breg7 R7+8
 ; generated from:
 ; clang -cc1 -triple  thumbv7 -S -O1 arm.cpp  -g
 ;

@@ -130,11 +130,11 @@ define void @check_i128_align() {
                                    i32 42, i128 %val)
 ; CHECK: add x[[VAR128:[0-9]+]], {{x[0-9]+}}, :lo12:var128
 ; CHECK: ldp [[I128LO:x[0-9]+]], [[I128HI:x[0-9]+]], [x[[VAR128]]]
-; CHECK: stp [[I128LO]], [[I128HI]], [sp, #16]
+; CHECK: stp [[I128HI]], {{x[0-9]+}}, [sp, #24]
 
 ; CHECK-NONEON: add x[[VAR128:[0-9]+]], {{x[0-9]+}}, :lo12:var128
 ; CHECK-NONEON: ldp [[I128LO:x[0-9]+]], [[I128HI:x[0-9]+]], [x[[VAR128]]]
-; CHECK-NONEON: stp [[I128LO]], [[I128HI]], [sp, #16]
+; CHECK-NONEON: stp [[I128HI]], {{x[0-9]+}}, [sp, #24]
 ; CHECK: bl check_i128_stackalign
 
   call void @check_i128_regalign(i32 0, i128 42)

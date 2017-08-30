@@ -176,7 +176,7 @@ define <16 x i32> @testv16i32(<16 x i32> %in) nounwind {
 ; AVX512BW-LABEL: testv16i32:
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vpsrld $1, %zmm0, %zmm1
-; AVX512BW-NEXT:    vpord %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpsrld $2, %zmm0, %zmm1
 ; AVX512BW-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpsrld $4, %zmm0, %zmm1
@@ -206,7 +206,7 @@ define <16 x i32> @testv16i32(<16 x i32> %in) nounwind {
 ; AVX512DQ-LABEL: testv16i32:
 ; AVX512DQ:       # BB#0:
 ; AVX512DQ-NEXT:    vpsrld $1, %zmm0, %zmm1
-; AVX512DQ-NEXT:    vpord %zmm1, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    vpsrld $2, %zmm0, %zmm1
 ; AVX512DQ-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    vpsrld $4, %zmm0, %zmm1
@@ -263,7 +263,7 @@ define <16 x i32> @testv16i32u(<16 x i32> %in) nounwind {
 ; AVX512BW-LABEL: testv16i32u:
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vpsrld $1, %zmm0, %zmm1
-; AVX512BW-NEXT:    vpord %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpsrld $2, %zmm0, %zmm1
 ; AVX512BW-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpsrld $4, %zmm0, %zmm1
@@ -293,7 +293,7 @@ define <16 x i32> @testv16i32u(<16 x i32> %in) nounwind {
 ; AVX512DQ-LABEL: testv16i32u:
 ; AVX512DQ:       # BB#0:
 ; AVX512DQ-NEXT:    vpsrld $1, %zmm0, %zmm1
-; AVX512DQ-NEXT:    vpord %zmm1, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    vpsrld $2, %zmm0, %zmm1
 ; AVX512DQ-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    vpsrld $4, %zmm0, %zmm1

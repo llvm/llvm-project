@@ -25,14 +25,14 @@ source_filename = "test/DebugInfo/Generic/member-pointers.ll"
 !llvm.dbg.cu = !{!13}
 !llvm.module.flags = !{!15}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x", scope: null, file: !2, line: 4, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "simple.cpp", directory: "/home/blaikie/Development/scratch")
 !3 = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, baseType: !4, extraData: !5)
 !4 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !5 = !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: !2, line: 1, size: 8, align: 8, elements: !6)
 !6 = !{}
-!7 = !DIGlobalVariableExpression(var: !8)
+!7 = !DIGlobalVariableExpression(var: !8, expr: !DIExpression())
 !8 = !DIGlobalVariable(name: "y", scope: null, file: !2, line: 5, type: !9, isLocal: false, isDefinition: true)
 !9 = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, baseType: !10, extraData: !5)
 !10 = !DISubroutineType(types: !11)

@@ -21,7 +21,7 @@ entry:
 !llvm.dbg.cu = !{!8}
 !llvm.module.flags = !{!16}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x", scope: !2, file: !3, line: 5, type: !14, isLocal: true, isDefinition: true)
 !2 = distinct !DISubprogram(name: "bar", linkageName: "_ZN3foo3barEv", scope: null, file: !3, line: 4, type: !4, isLocal: false, isDefinition: true, scopeLine: 4, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !8, declaration: !11)
 !3 = !DIFile(filename: "nsNativeAppSupportBase.ii", directory: "/Users/espindola/mozilla-central/obj-x86_64-apple-darwin11.2.0/toolkit/library")

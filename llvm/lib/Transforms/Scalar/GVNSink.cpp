@@ -229,12 +229,14 @@ public:
   ModelledPHI(const VArray &V, const BArray &B) {
     std::copy(V.begin(), V.end(), std::back_inserter(Values));
     std::copy(B.begin(), B.end(), std::back_inserter(Blocks));
+    std::sort(Blocks.begin(), Blocks.end());
   }
 
   /// Create a PHI from [I[OpNum] for I in Insts].
   template <typename BArray>
   ModelledPHI(ArrayRef<Instruction *> Insts, unsigned OpNum, const BArray &B) {
     std::copy(B.begin(), B.end(), std::back_inserter(Blocks));
+    std::sort(Blocks.begin(), Blocks.end());
     for (auto *I : Insts)
       Values.push_back(I->getOperand(OpNum));
   }

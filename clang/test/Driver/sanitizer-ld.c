@@ -133,6 +133,18 @@
 // CHECK-ASAN-ANDROID-NOT: "-lpthread"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     -target i686-linux-android -fuse-ld=ld -fsanitize=address \
+// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-ANDROID-X86 %s
+//
+// CHECK-ASAN-ANDROID-X86: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-ASAN-ANDROID-X86-NOT: "-lc"
+// CHECK-ASAN-ANDROID-X86: "-pie"
+// CHECK-ASAN-ANDROID-X86-NOT: "-lpthread"
+// CHECK-ASAN-ANDROID-X86: libclang_rt.asan-i686-android.so"
+// CHECK-ASAN-ANDROID-X86-NOT: "-lpthread"
+//
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm-linux-androideabi -fsanitize=address \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared-libasan \
@@ -233,6 +245,14 @@
 // CHECK-UBSAN-LINUX-CXX: "-lstdc++"
 // CHECK-UBSAN-LINUX-CXX-NOT: libclang_rt.asan
 // CHECK-UBSAN-LINUX-CXX: "-lpthread"
+
+// RUN: %clang -fsanitize=undefined -fsanitize-minimal-runtime %s -### -o %t.o 2>&1 \
+// RUN:     -target i386-unknown-linux -fuse-ld=ld \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-UBSAN-MINIMAL-LINUX %s
+// CHECK-UBSAN-MINIMAL-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-UBSAN-MINIMAL-LINUX: "-whole-archive" "{{.*}}libclang_rt.ubsan_minimal-i386.a" "-no-whole-archive"
+// CHECK-UBSAN-MINIMAL-LINUX: "-lpthread"
 
 // RUN: %clang -fsanitize=address,undefined %s -### -o %t.o 2>&1 \
 // RUN:     -target i386-unknown-linux -fuse-ld=ld \

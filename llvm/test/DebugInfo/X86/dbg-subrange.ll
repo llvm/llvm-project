@@ -19,7 +19,7 @@ attributes #0 = { nounwind ssp uwtable }
 !llvm.dbg.cu = !{!7}
 !llvm.module.flags = !{!10}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "s", scope: null, file: !2, line: 2, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "small.c", directory: "/private/tmp")
 !3 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 34359738368, align: 8, elements: !5)

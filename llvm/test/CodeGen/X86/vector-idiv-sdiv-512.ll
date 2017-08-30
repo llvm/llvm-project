@@ -43,7 +43,7 @@ define <8 x i64> @test_div7_8i64(<8 x i64> %a) nounwind {
 ; AVX-NEXT:    vmovq %rdx, %xmm2
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
 ; AVX-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX-NEXT:    vpextrq $1, %xmm2, %rax
 ; AVX-NEXT:    imulq %rcx
 ; AVX-NEXT:    movq %rdx, %rax
@@ -167,7 +167,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm2
 ; AVX-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX-NEXT:    vpextrd $1, %xmm2, %eax
 ; AVX-NEXT:    cltq
 ; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
@@ -685,7 +685,7 @@ define <64 x i8> @test_div7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    movzbl %al, %eax
 ; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm3, %xmm2
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX512BW-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX512BW-NEXT:    vpextrb $1, %xmm2, %eax
 ; AVX512BW-NEXT:    movsbl %al, %eax
 ; AVX512BW-NEXT:    imull $-109, %eax, %ecx
@@ -1102,7 +1102,7 @@ define <8 x i64> @test_rem7_8i64(<8 x i64> %a) nounwind {
 ; AVX-NEXT:    vmovq %rcx, %xmm2
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
 ; AVX-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX-NEXT:    vpextrq $1, %xmm2, %rcx
 ; AVX-NEXT:    movq %rcx, %rax
 ; AVX-NEXT:    imulq %rsi
@@ -1266,7 +1266,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    subl %edx, %eax
 ; AVX-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm2
 ; AVX-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX-NEXT:    vpextrd $1, %xmm2, %eax
 ; AVX-NEXT:    cltq
 ; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
@@ -1935,7 +1935,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    movzbl %cl, %eax
 ; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm3, %xmm2
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX512BW-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX512BW-NEXT:    vpextrb $1, %xmm2, %eax
 ; AVX512BW-NEXT:    movsbl %al, %ecx
 ; AVX512BW-NEXT:    imull $-109, %ecx, %eax
