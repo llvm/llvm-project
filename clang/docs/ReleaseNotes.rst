@@ -149,10 +149,23 @@ assignment operators where applicable.
 C++ Language Changes in Clang
 -----------------------------
 
+- Support for the C++17 standard has been completed. This mode can be enabled
+  using ``-std=c++17`` (the old flag ``-std=c++1z`` is still supported for
+  compatibility).
+
+- When targeting a platform that uses the Itanium C++ ABI, Clang implements a
+  `recent change to the ABI`__ that passes objects of class type indirectly if they
+  have a non-trivial move constructor. Previous versions of Clang only
+  considered the copy constructor, resulting in an ABI change in rare cases,
+  but GCC has already implemented this change for several releases.
+  This affects all targets other than Windows and PS4. You can opt out of this
+  ABI change with ``-fclang-abi-compat=4.0``.
+
 - As mentioned in `C Language Changes in Clang`_, Clang's support for
   implicit scalar to vector conversions also applies to C++. Additionally
   the following operators are also supported: ``&&`` and ``||``.
 
+.. __: https://github.com/itanium-cxx-abi/cxx-abi/commit/7099637aba11fed6bdad7ee65bf4fd3f97fbf076
 
 Objective-C Language Changes in Clang
 -------------------------------------
