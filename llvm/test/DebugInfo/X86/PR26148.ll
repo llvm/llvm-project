@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -o - < %s | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -filetype=obj -o - < %s | llvm-dwarfdump - -debug-dump=loc | FileCheck %s
 ;
 ; Created using clang -g -O3 from:
 ; struct S0 {
@@ -19,14 +19,8 @@
 ; AS in 26163, we expect two ranges (as opposed to one), the first one being zero sized
 ;
 ;
-; CHECK:             Beginning address offset: 0x0000000000000004
-; CHECK:                Ending address offset: 0x0000000000000004
-; CHECK:                 Location description: 10 03 93 04 55 93 02
-; constu 0x00000003, piece 0x00000004, rdi, piece 0x00000002
-; CHECK:             Beginning address offset: 0x0000000000000004
-; CHECK:                Ending address offset: 0x0000000000000014
-; CHECK:                 Location description: 10 03 93 04 10 00
-; constu 0x00000003, piece 0x00000004, constu 0x00000000, piece 0x00000004
+; CHECK: 0x0000000000000004 - 0x0000000000000004: DW_OP_constu 0x3, DW_OP_piece 0x4, DW_OP_reg5 RDI, DW_OP_piece 0x2
+; CHECK: 0x0000000000000004 - 0x0000000000000014: DW_OP_constu 0x3, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_piece 0x4
 
 source_filename = "test/DebugInfo/X86/PR26148.ll"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

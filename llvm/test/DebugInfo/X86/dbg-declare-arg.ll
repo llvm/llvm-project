@@ -5,13 +5,9 @@ target triple = "x86_64-apple-macosx10.6.7"
 ;
 ; CHECK: DW_AT_name {{.*}}"j"
 ; CHECK: DW_TAG_variable  
-; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset] (0x00000000)
+; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset] (
+; CHECK-NEXT:     0x{{.*}} - 0x{{.*}}: DW_OP_breg7 RSP+8)
 ; CHECK-NEXT:   DW_AT_name {{.*}}"my_a"
-; CHECK: .debug_loc contents:
-; CHECK: 0x00000000: Beginning address offset:
-; CHECK-NEXT:           Ending address offset:
-; CHECK-NEXT:            Location description: 77 08
-;                                              rsp+8
 
 %class.A = type { i32, i32, i32, i32 }
 

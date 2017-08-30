@@ -381,6 +381,9 @@ private:
   std::shared_ptr<JITSymbolResolver> ClientResolver;
   Mangler Mang;
 
+  std::map<Module*, bool> ShouldDelete;
+  std::vector<std::shared_ptr<Module>> LocalModules;
+
   NotifyObjectLoadedT NotifyObjectLoaded;
   NotifyFinalizedT NotifyFinalized;
 
@@ -402,8 +405,6 @@ private:
   std::map<ObjectLayerT::ObjHandleT, SectionAddrSet, ObjHandleCompare>
       UnfinalizedSections;
 
-  std::map<Module*, bool> ShouldDelete;
-  std::vector<std::shared_ptr<Module>> LocalModules;
   std::vector<object::OwningBinary<object::Archive>> Archives;
 };
 

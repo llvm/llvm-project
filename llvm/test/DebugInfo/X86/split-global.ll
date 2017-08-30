@@ -11,21 +11,19 @@ target triple = "x86_64-apple-macosx10.12.0"
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_name {{.*}}"point"
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_location [DW_FORM_exprloc]	(<0x16> 03 04 00 00 00 00 00 00 00 93 04 03 00 00 00 00 00 00 00 00 93 04 )
-;     [0x0000000000000004], piece 0x00000004, [0x0000000000000000], piece 0x00000004
+; CHECK: DW_AT_location [DW_FORM_exprloc]	(DW_OP_addr 0x4, DW_OP_piece 0x4, DW_OP_addr 0x0, DW_OP_piece 0x4)
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_TAG
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_name {{.*}}"part_const"
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_location [DW_FORM_exprloc]	(<0x10> 03 08 00 00 00 00 00 00 00 93 04 10 02 9f 93 04 )
+; CHECK: DW_AT_location [DW_FORM_exprloc]	(DW_OP_addr 0x8, DW_OP_piece 0x4, DW_OP_constu 0x2, DW_OP_stack_value, DW_OP_piece 0x4)
 ;     [0x0000000000000008], piece 0x00000004, constu 0x00000002, stack-value, piece 0x00000004
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_name {{.*}}"full_const"
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_location [DW_FORM_exprloc]	(<0xa> 10 01 9f 93 04 10 02 9f 93 04 )
-;     constu 0x00000001, stack-value, piece 0x00000004, constu 0x00000002, stack-value, piece 0x00000004
+; CHECK: DW_AT_location [DW_FORM_exprloc]	(DW_OP_constu 0x1, DW_OP_stack_value, DW_OP_piece 0x4, DW_OP_constu 0x2, DW_OP_stack_value, DW_OP_piece 0x4)
 ; CHECK-NOT: DW_TAG
 @point.y = global i32 2, align 4, !dbg !13
 @point.x = global i32 1, align 4, !dbg !12

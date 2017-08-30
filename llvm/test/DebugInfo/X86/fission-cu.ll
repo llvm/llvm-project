@@ -79,7 +79,7 @@ source_filename = "test/DebugInfo/X86/fission-cu.ll"
 ; CHECK: DW_AT_external [DW_FORM_flag_present]   (true)
 ; CHECK: DW_AT_decl_file [DW_FORM_data1] (0x01)
 ; CHECK: DW_AT_decl_line [DW_FORM_data1] (1)
-; CHECK: DW_AT_location [DW_FORM_exprloc] (<0x2> fb 00 )
+; CHECK: DW_AT_location [DW_FORM_exprloc] (DW_OP_GNU_addr_index 0x0)
 ; CHECK: [[TYPE]]: DW_TAG_base_type
 ; CHECK: DW_AT_name [DW_FORM_GNU_str_index]     ( indexed (00000004) string = "int")
 

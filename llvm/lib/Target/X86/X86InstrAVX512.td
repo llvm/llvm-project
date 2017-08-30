@@ -840,6 +840,64 @@ def : Pat<(v8i16 (extract_subvector (v32i16 VR512:$src), (iPTR 0))),
 def : Pat<(v16i8 (extract_subvector (v64i8 VR512:$src), (iPTR 0))),
           (v16i8 (EXTRACT_SUBREG (v64i8 VR512:$src), sub_xmm))>;
 
+// A 128-bit extract from bits [255:128] of a 512-bit vector should use a
+// smaller extract to enable EVEX->VEX.
+let Predicates = [NoVLX] in {
+def : Pat<(v2i64 (extract_subvector (v8i64 VR512:$src), (iPTR 2))),
+          (v2i64 (VEXTRACTI128rr
+                  (v4i64 (EXTRACT_SUBREG (v8i64 VR512:$src), sub_ymm)),
+                  (iPTR 1)))>;
+def : Pat<(v2f64 (extract_subvector (v8f64 VR512:$src), (iPTR 2))),
+          (v2f64 (VEXTRACTF128rr
+                  (v4f64 (EXTRACT_SUBREG (v8f64 VR512:$src), sub_ymm)),
+                  (iPTR 1)))>;
+def : Pat<(v4i32 (extract_subvector (v16i32 VR512:$src), (iPTR 4))),
+          (v4i32 (VEXTRACTI128rr
+                  (v8i32 (EXTRACT_SUBREG (v16i32 VR512:$src), sub_ymm)),
+                  (iPTR 1)))>;
+def : Pat<(v4f32 (extract_subvector (v16f32 VR512:$src), (iPTR 4))),
+          (v4f32 (VEXTRACTF128rr
+                  (v8f32 (EXTRACT_SUBREG (v16f32 VR512:$src), sub_ymm)),
+                  (iPTR 1)))>;
+def : Pat<(v8i16 (extract_subvector (v32i16 VR512:$src), (iPTR 8))),
+          (v8i16 (VEXTRACTI128rr
+                  (v16i16 (EXTRACT_SUBREG (v32i16 VR512:$src), sub_ymm)),
+                  (iPTR 1)))>;
+def : Pat<(v16i8 (extract_subvector (v64i8 VR512:$src), (iPTR 16))),
+          (v16i8 (VEXTRACTI128rr
+                  (v32i8 (EXTRACT_SUBREG (v64i8 VR512:$src), sub_ymm)),
+                  (iPTR 1)))>;
+}
+
+// A 128-bit extract from bits [255:128] of a 512-bit vector should use a
+// smaller extract to enable EVEX->VEX.
+let Predicates = [HasVLX] in {
+def : Pat<(v2i64 (extract_subvector (v8i64 VR512:$src), (iPTR 2))),
+          (v2i64 (VEXTRACTI32x4Z256rr
+                  (v4i64 (EXTRACT_SUBREG (v8i64 VR512:$src), sub_ymm)),
+                  (iPTR 1)))>;
+def : Pat<(v2f64 (extract_subvector (v8f64 VR512:$src), (iPTR 2))),
+          (v2f64 (VEXTRACTF32x4Z256rr
+                  (v4f64 (EXTRACT_SUBREG (v8f64 VR512:$src), sub_ymm)),
+                  (iPTR 1)))>;
+def : Pat<(v4i32 (extract_subvector (v16i32 VR512:$src), (iPTR 4))),
+          (v4i32 (VEXTRACTI32x4Z256rr
+                  (v8i32 (EXTRACT_SUBREG (v16i32 VR512:$src), sub_ymm)),
+                  (iPTR 1)))>;
+def : Pat<(v4f32 (extract_subvector (v16f32 VR512:$src), (iPTR 4))),
+          (v4f32 (VEXTRACTF32x4Z256rr
+                  (v8f32 (EXTRACT_SUBREG (v16f32 VR512:$src), sub_ymm)),
+                  (iPTR 1)))>;
+def : Pat<(v8i16 (extract_subvector (v32i16 VR512:$src), (iPTR 8))),
+          (v8i16 (VEXTRACTI32x4Z256rr
+                  (v16i16 (EXTRACT_SUBREG (v32i16 VR512:$src), sub_ymm)),
+                  (iPTR 1)))>;
+def : Pat<(v16i8 (extract_subvector (v64i8 VR512:$src), (iPTR 16))),
+          (v16i8 (VEXTRACTI32x4Z256rr
+                  (v32i8 (EXTRACT_SUBREG (v64i8 VR512:$src), sub_ymm)),
+                  (iPTR 1)))>;
+}
+
 // A 256-bit subvector extract from the first 256-bit vector position
 // is a subregister copy that needs no instruction.
 def : Pat<(v4i64 (extract_subvector (v8i64 VR512:$src), (iPTR 0))),
@@ -1028,39 +1086,60 @@ multiclass avx512_broadcast_scalar<bits<8> opc, string OpcodeStr,
              DestInfo.KRCWM:$mask, (COPY_TO_REGCLASS SrcInfo.FRC:$src, SrcInfo.RC))>;
 }
 
-multiclass avx512_broadcast_rm<bits<8> opc, string OpcodeStr,
-                            X86VectorVTInfo DestInfo, X86VectorVTInfo SrcInfo> {
+// Split version to allow mask and broadcast node to be different types. This
+// helps support the 32x2 broadcasts.
+multiclass avx512_broadcast_rm_split<bits<8> opc, string OpcodeStr,
+                                     X86VectorVTInfo MaskInfo,
+                                     X86VectorVTInfo DestInfo,
+                                     X86VectorVTInfo SrcInfo> {
   let ExeDomain = DestInfo.ExeDomain in {
-  defm r : AVX512_maskable<opc, MRMSrcReg, DestInfo, (outs DestInfo.RC:$dst),
+  defm r : AVX512_maskable<opc, MRMSrcReg, MaskInfo, (outs MaskInfo.RC:$dst),
                    (ins SrcInfo.RC:$src), OpcodeStr, "$src", "$src",
-                   (DestInfo.VT (X86VBroadcast (SrcInfo.VT SrcInfo.RC:$src)))>,
+                   (MaskInfo.VT
+                    (bitconvert
+                     (DestInfo.VT
+                      (X86VBroadcast (SrcInfo.VT SrcInfo.RC:$src)))))>,
                    T8PD, EVEX;
-  defm m : AVX512_maskable<opc, MRMSrcMem, DestInfo, (outs DestInfo.RC:$dst),
+  defm m : AVX512_maskable<opc, MRMSrcMem, MaskInfo, (outs MaskInfo.RC:$dst),
                    (ins SrcInfo.ScalarMemOp:$src), OpcodeStr, "$src", "$src",
-                   (DestInfo.VT (X86VBroadcast
-                                   (SrcInfo.ScalarLdFrag addr:$src)))>,
+                   (MaskInfo.VT
+                    (bitconvert
+                     (DestInfo.VT (X86VBroadcast
+                                   (SrcInfo.ScalarLdFrag addr:$src)))))>,
                    T8PD, EVEX, EVEX_CD8<SrcInfo.EltSize, CD8VT1>;
   }
 
-  def : Pat<(DestInfo.VT (X86VBroadcast
-                          (SrcInfo.VT (scalar_to_vector
-                                       (SrcInfo.ScalarLdFrag addr:$src))))),
-            (!cast<Instruction>(NAME#DestInfo.ZSuffix#m) addr:$src)>;
-  def : Pat<(DestInfo.VT (vselect DestInfo.KRCWM:$mask,
-                          (X86VBroadcast
-                           (SrcInfo.VT (scalar_to_vector
-                                        (SrcInfo.ScalarLdFrag addr:$src)))),
-                          DestInfo.RC:$src0)),
+  def : Pat<(MaskInfo.VT
+             (bitconvert
+              (DestInfo.VT (X86VBroadcast
+                            (SrcInfo.VT (scalar_to_vector
+                                         (SrcInfo.ScalarLdFrag addr:$src))))))),
+            (!cast<Instruction>(NAME#MaskInfo.ZSuffix#m) addr:$src)>;
+  def : Pat<(MaskInfo.VT (vselect MaskInfo.KRCWM:$mask,
+                          (bitconvert
+                           (DestInfo.VT
+                            (X86VBroadcast
+                             (SrcInfo.VT (scalar_to_vector
+                                          (SrcInfo.ScalarLdFrag addr:$src)))))),
+                          MaskInfo.RC:$src0)),
             (!cast<Instruction>(NAME#DestInfo.ZSuffix#mk)
-             DestInfo.RC:$src0, DestInfo.KRCWM:$mask, addr:$src)>;
-  def : Pat<(DestInfo.VT (vselect DestInfo.KRCWM:$mask,
-                          (X86VBroadcast
-                           (SrcInfo.VT (scalar_to_vector
-                                        (SrcInfo.ScalarLdFrag addr:$src)))),
-                          DestInfo.ImmAllZerosV)),
-            (!cast<Instruction>(NAME#DestInfo.ZSuffix#mkz)
-             DestInfo.KRCWM:$mask, addr:$src)>;
+             MaskInfo.RC:$src0, MaskInfo.KRCWM:$mask, addr:$src)>;
+  def : Pat<(MaskInfo.VT (vselect MaskInfo.KRCWM:$mask,
+                          (bitconvert
+                           (DestInfo.VT
+                            (X86VBroadcast
+                             (SrcInfo.VT (scalar_to_vector
+                                          (SrcInfo.ScalarLdFrag addr:$src)))))),
+                          MaskInfo.ImmAllZerosV)),
+            (!cast<Instruction>(NAME#MaskInfo.ZSuffix#mkz)
+             MaskInfo.KRCWM:$mask, addr:$src)>;
 }
+
+// Helper class to force mask and broadcast result to same type.
+multiclass avx512_broadcast_rm<bits<8> opc, string OpcodeStr,
+                               X86VectorVTInfo DestInfo,
+                               X86VectorVTInfo SrcInfo> :
+  avx512_broadcast_rm_split<opc, OpcodeStr, DestInfo, DestInfo, SrcInfo>;
 
 multiclass avx512_fp_broadcast_sd<bits<8> opc, string OpcodeStr,
                                                        AVX512VLVectorVTInfo _> {
@@ -1384,11 +1463,13 @@ defm VBROADCASTF32X8 : avx512_subvec_broadcast_rm_dq<0x1b, "vbroadcastf32x8",
 multiclass avx512_common_broadcast_32x2<bits<8> opc, string OpcodeStr,
                          AVX512VLVectorVTInfo _Dst, AVX512VLVectorVTInfo _Src> {
   let Predicates = [HasDQI] in
-    defm Z :    avx512_broadcast_rm<opc, OpcodeStr, _Dst.info512, _Src.info128>,
-                                  EVEX_V512;
+    defm Z :    avx512_broadcast_rm_split<opc, OpcodeStr, _Dst.info512,
+                                          _Src.info512, _Src.info128>,
+                                          EVEX_V512;
   let Predicates = [HasDQI, HasVLX] in
-    defm Z256 : avx512_broadcast_rm<opc, OpcodeStr, _Dst.info256, _Src.info128>,
-                                  EVEX_V256;
+    defm Z256 : avx512_broadcast_rm_split<opc, OpcodeStr, _Dst.info256,
+                                          _Src.info256, _Src.info128>,
+                                          EVEX_V256;
 }
 
 multiclass avx512_common_broadcast_i32x2<bits<8> opc, string OpcodeStr,
@@ -1396,8 +1477,9 @@ multiclass avx512_common_broadcast_i32x2<bits<8> opc, string OpcodeStr,
   avx512_common_broadcast_32x2<opc, OpcodeStr, _Dst, _Src> {
 
   let Predicates = [HasDQI, HasVLX] in
-    defm Z128 : avx512_broadcast_rm<opc, OpcodeStr, _Dst.info128, _Src.info128>,
-                                      EVEX_V128;
+    defm Z128 : avx512_broadcast_rm_split<opc, OpcodeStr, _Dst.info128,
+                                          _Src.info128, _Src.info128>,
+                                          EVEX_V128;
 }
 
 defm VBROADCASTI32X2  : avx512_common_broadcast_i32x2<0x59, "vbroadcasti32x2",

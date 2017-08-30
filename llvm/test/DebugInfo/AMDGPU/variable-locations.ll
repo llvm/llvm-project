@@ -19,7 +19,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: DW_AT_external
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x09> 03 00 00 00 00 00 00 00 00 )
+; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (DW_OP_addr 0x0)
 @GlobA = common addrspace(1) global i32 0, align 4, !dbg !0
 
 ; CHECK: {{.*}}DW_TAG_variable
@@ -28,20 +28,20 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: DW_AT_external
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x09> 03 00 00 00 00 00 00 00 00 )
+; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (DW_OP_addr 0x0)
 @GlobB = common addrspace(1) global i32 0, align 4, !dbg !6
 
 define amdgpu_kernel void @kernel1(
 ; CHECK: {{.*}}DW_TAG_formal_parameter
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x06> 91 04 10 01 16 18 )
+; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (DW_OP_fbreg +4, DW_OP_constu 0x1, DW_OP_swap, DW_OP_xderef)
 ; CHECK-NEXT: DW_AT_name {{.*}}"ArgN"
     i32 %ArgN,
 ; CHECK: {{.*}}DW_TAG_formal_parameter
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x06> 91 08 10 01 16 18 )
+; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (DW_OP_fbreg +8, DW_OP_constu 0x1, DW_OP_swap, DW_OP_xderef)
 ; CHECK-NEXT: DW_AT_name {{.*}}"ArgA"
     i32 addrspace(1)* %ArgA,
 ; CHECK: {{.*}}DW_TAG_formal_parameter
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x06> 91 10 10 01 16 18 )
+; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (DW_OP_fbreg +16, DW_OP_constu 0x1, DW_OP_swap, DW_OP_xderef)
 ; CHECK-NEXT: DW_AT_name {{.*}}"ArgB"
     i32 addrspace(1)* %ArgB) !dbg !13 {
 entry:

@@ -13,13 +13,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -28,38 +33,71 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLowering.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/BypassSlowDivision.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -157,19 +195,21 @@ static cl::opt<unsigned> MemCmpNumLoadsPerBlock(
              "memcmp that is only being compared against zero."));
 
 namespace {
-typedef SmallPtrSet<Instruction *, 16> SetOfInstrs;
-typedef PointerIntPair<Type *, 1, bool> TypeIsSExt;
-typedef DenseMap<Instruction *, TypeIsSExt> InstrToOrigTy;
-typedef SmallVector<Instruction *, 16> SExts;
-typedef DenseMap<Value *, SExts> ValueToSExts;
+
+using SetOfInstrs = SmallPtrSet<Instruction *, 16>;
+using TypeIsSExt = PointerIntPair<Type *, 1, bool>;
+using InstrToOrigTy = DenseMap<Instruction *, TypeIsSExt>;
+using SExts = SmallVector<Instruction *, 16>;
+using ValueToSExts = DenseMap<Value *, SExts>;
+
 class TypePromotionTransaction;
 
   class CodeGenPrepare : public FunctionPass {
-    const TargetMachine *TM;
+    const TargetMachine *TM = nullptr;
     const TargetSubtargetInfo *SubtargetInfo;
-    const TargetLowering *TLI;
+    const TargetLowering *TLI = nullptr;
     const TargetRegisterInfo *TRI;
-    const TargetTransformInfo *TTI;
+    const TargetTransformInfo *TTI = nullptr;
     const TargetLibraryInfo *TLInfo;
     const LoopInfo *LI;
     std::unique_ptr<BlockFrequencyInfo> BFI;
@@ -186,6 +226,7 @@ class TypePromotionTransaction;
 
     /// Keeps track of all instructions inserted for the current function.
     SetOfInstrs InsertedInsts;
+
     /// Keeps track of the type of the related instruction before their
     /// promotion for the current function.
     InstrToOrigTy PromotedInsts;
@@ -206,15 +247,15 @@ class TypePromotionTransaction;
     bool OptSize;
 
     /// DataLayout for the Function being processed.
-    const DataLayout *DL;
+    const DataLayout *DL = nullptr;
 
   public:
     static char ID; // Pass identification, replacement for typeid
-    CodeGenPrepare()
-        : FunctionPass(ID), TM(nullptr), TLI(nullptr), TTI(nullptr),
-          DL(nullptr) {
+
+    CodeGenPrepare() : FunctionPass(ID) {
       initializeCodeGenPreparePass(*PassRegistry::getPassRegistry());
     }
+
     bool runOnFunction(Function &F) override;
 
     StringRef getPassName() const override { return "CodeGen Prepare"; }
@@ -266,9 +307,11 @@ class TypePromotionTransaction;
     bool simplifyOffsetableRelocate(Instruction &I);
     bool splitIndirectCriticalEdges(Function &F);
   };
-}
+
+} // end anonymous namespace
 
 char CodeGenPrepare::ID = 0;
+
 INITIALIZE_PASS_BEGIN(CodeGenPrepare, DEBUG_TYPE,
                       "Optimize for code generation", false, false)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
@@ -827,7 +870,6 @@ bool CodeGenPrepare::canMergeBlocks(const BasicBlock *BB,
   return true;
 }
 
-
 /// Eliminate a basic block that has only phi's and an unconditional branch in
 /// it.
 void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
@@ -1152,7 +1194,6 @@ static bool SinkCast(CastInst *CI) {
 /// reduce the number of virtual registers that must be created and coalesced.
 ///
 /// Return true if any changes are made.
-///
 static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
                                        const DataLayout &DL) {
   // Sink only "cheap" (or nop) address-space casts.  This is a weaker condition
@@ -1657,14 +1698,16 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
 }
 
 namespace {
+
 // This class provides helper functions to expand a memcmp library call into an
 // inline expansion.
 class MemCmpExpansion {
   struct ResultBlock {
-    BasicBlock *BB;
-    PHINode *PhiSrc1;
-    PHINode *PhiSrc2;
-    ResultBlock();
+    BasicBlock *BB = nullptr;
+    PHINode *PhiSrc1 = nullptr;
+    PHINode *PhiSrc2 = nullptr;
+
+    ResultBlock() = default;
   };
 
   CallInst *CI;
@@ -1702,12 +1745,11 @@ class MemCmpExpansion {
 public:
   MemCmpExpansion(CallInst *CI, uint64_t Size, unsigned MaxLoadSize,
                   unsigned NumLoadsPerBlock, const DataLayout &DL);
+
   Value *getMemCmpExpansion(uint64_t Size);
 };
-} // namespace
 
-MemCmpExpansion::ResultBlock::ResultBlock()
-    : BB(nullptr), PhiSrc1(nullptr), PhiSrc2(nullptr) {}
+} // end anonymous namespace
 
 // Initialize the basic block structure required for expansion of memcmp call
 // with given maximum load size and memcmp size parameter.
@@ -1722,7 +1764,6 @@ MemCmpExpansion::MemCmpExpansion(CallInst *CI, uint64_t Size,
                                  const DataLayout &TheDataLayout)
     : CI(CI), MaxLoadSize(MaxLoadSize), NumLoadsPerBlock(LoadsPerBlock),
       DL(TheDataLayout), Builder(CI) {
-
   // A memcmp with zero-comparison with only one block of load and compare does
   // not need to set up any extra blocks. This case could be handled in the DAG,
   // but since we have all of the machinery to flexibly expand any memcpy here,
@@ -2633,9 +2674,11 @@ namespace {
 /// This is an extended version of TargetLowering::AddrMode
 /// which holds actual Value*'s for register values.
 struct ExtAddrMode : public TargetLowering::AddrMode {
-  Value *BaseReg;
-  Value *ScaledReg;
-  ExtAddrMode() : BaseReg(nullptr), ScaledReg(nullptr) {}
+  Value *BaseReg = nullptr;
+  Value *ScaledReg = nullptr;
+
+  ExtAddrMode() = default;
+
   void print(raw_ostream &OS) const;
   void dump() const;
 
@@ -2645,6 +2688,8 @@ struct ExtAddrMode : public TargetLowering::AddrMode {
            (HasBaseReg == O.HasBaseReg) && (Scale == O.Scale);
   }
 };
+
+} // end anonymous namespace
 
 #ifndef NDEBUG
 static inline raw_ostream &operator<<(raw_ostream &OS, const ExtAddrMode &AM) {
@@ -2691,11 +2736,12 @@ LLVM_DUMP_METHOD void ExtAddrMode::dump() const {
 }
 #endif
 
+namespace {
+
 /// \brief This class provides transaction based operation on the IR.
 /// Every change made through this class is recorded in the internal state and
 /// can be undone (rollback) until commit is called.
 class TypePromotionTransaction {
-
   /// \brief This represents the common interface of the individual transaction.
   /// Each class implements the logic for doing one specific modification on
   /// the IR via the TypePromotionTransaction.
@@ -2709,7 +2755,7 @@ class TypePromotionTransaction {
     /// The constructor performs the related action on the IR.
     TypePromotionAction(Instruction *Inst) : Inst(Inst) {}
 
-    virtual ~TypePromotionAction() {}
+    virtual ~TypePromotionAction() = default;
 
     /// \brief Undo the modification done by this action.
     /// When this method is called, the IR must be in the same state as it was
@@ -2736,6 +2782,7 @@ class TypePromotionTransaction {
       Instruction *PrevInst;
       BasicBlock *BB;
     } Point;
+
     /// Remember whether or not the instruction had a previous instruction.
     bool HasPrevInstruction;
 
@@ -2790,6 +2837,7 @@ class TypePromotionTransaction {
   class OperandSetter : public TypePromotionAction {
     /// Original operand of the instruction.
     Value *Origin;
+
     /// Index of the modified instruction.
     unsigned Idx;
 
@@ -2847,6 +2895,7 @@ class TypePromotionTransaction {
   /// \brief Build a truncate instruction.
   class TruncBuilder : public TypePromotionAction {
     Value *Val;
+
   public:
     /// \brief Build a truncate instruction of \p Opnd producing a \p Ty
     /// result.
@@ -2871,6 +2920,7 @@ class TypePromotionTransaction {
   /// \brief Build a sign extension instruction.
   class SExtBuilder : public TypePromotionAction {
     Value *Val;
+
   public:
     /// \brief Build a sign extension instruction of \p Opnd producing a \p Ty
     /// result.
@@ -2896,6 +2946,7 @@ class TypePromotionTransaction {
   /// \brief Build a zero extension instruction.
   class ZExtBuilder : public TypePromotionAction {
     Value *Val;
+
   public:
     /// \brief Build a zero extension instruction of \p Opnd producing a \p Ty
     /// result.
@@ -2946,15 +2997,18 @@ class TypePromotionTransaction {
     struct InstructionAndIdx {
       /// The instruction using the instruction.
       Instruction *Inst;
+
       /// The index where this instruction is used for Inst.
       unsigned Idx;
+
       InstructionAndIdx(Instruction *Inst, unsigned Idx)
           : Inst(Inst), Idx(Idx) {}
     };
 
     /// Keep track of the original uses (pair Instruction, Index).
     SmallVector<InstructionAndIdx, 4> OriginalUses;
-    typedef SmallVectorImpl<InstructionAndIdx>::iterator use_iterator;
+
+    using use_iterator = SmallVectorImpl<InstructionAndIdx>::iterator;
 
   public:
     /// \brief Replace all the use of \p Inst by \p New.
@@ -2985,11 +3039,14 @@ class TypePromotionTransaction {
   class InstructionRemover : public TypePromotionAction {
     /// Original position of the instruction.
     InsertionHandler Inserter;
+
     /// Helper structure to hide all the link to the instruction. In other
     /// words, this helps to do as if the instruction was removed.
     OperandsHider Hider;
+
     /// Keep track of the uses replaced, if any.
-    UsesReplacer *Replacer;
+    UsesReplacer *Replacer = nullptr;
+
     /// Keep track of instructions removed.
     SetOfInstrs &RemovedInsts;
 
@@ -3001,7 +3058,7 @@ class TypePromotionTransaction {
     InstructionRemover(Instruction *Inst, SetOfInstrs &RemovedInsts,
                        Value *New = nullptr)
         : TypePromotionAction(Inst), Inserter(Inst), Hider(Inst),
-          Replacer(nullptr), RemovedInsts(RemovedInsts) {
+          RemovedInsts(RemovedInsts) {
       if (New)
         Replacer = new UsesReplacer(Inst, New);
       DEBUG(dbgs() << "Do: InstructionRemover: " << *Inst << "\n");
@@ -3030,15 +3087,17 @@ public:
   /// Restoration point.
   /// The restoration point is a pointer to an action instead of an iterator
   /// because the iterator may be invalidated but not the pointer.
-  typedef const TypePromotionAction *ConstRestorationPt;
+  using ConstRestorationPt = const TypePromotionAction *;
 
   TypePromotionTransaction(SetOfInstrs &RemovedInsts)
       : RemovedInsts(RemovedInsts) {}
 
   /// Advocate every changes made in that transaction.
   void commit();
+
   /// Undo all the changes made after the given point.
   void rollback(ConstRestorationPt Point);
+
   /// Get the current restoration point.
   ConstRestorationPt getRestorationPoint() const;
 
@@ -3046,18 +3105,25 @@ public:
   /// @{
   /// Same as Instruction::setOperand.
   void setOperand(Instruction *Inst, unsigned Idx, Value *NewVal);
+
   /// Same as Instruction::eraseFromParent.
   void eraseInstruction(Instruction *Inst, Value *NewVal = nullptr);
+
   /// Same as Value::replaceAllUsesWith.
   void replaceAllUsesWith(Instruction *Inst, Value *New);
+
   /// Same as Value::mutateType.
   void mutateType(Instruction *Inst, Type *NewTy);
+
   /// Same as IRBuilder::createTrunc.
   Value *createTrunc(Instruction *Opnd, Type *Ty);
+
   /// Same as IRBuilder::createSExt.
   Value *createSExt(Instruction *Inst, Value *Opnd, Type *Ty);
+
   /// Same as IRBuilder::createZExt.
   Value *createZExt(Instruction *Inst, Value *Opnd, Type *Ty);
+
   /// Same as Instruction::moveBefore.
   void moveBefore(Instruction *Inst, Instruction *Before);
   /// @}
@@ -3065,30 +3131,36 @@ public:
 private:
   /// The ordered list of actions made so far.
   SmallVector<std::unique_ptr<TypePromotionAction>, 16> Actions;
-  typedef SmallVectorImpl<std::unique_ptr<TypePromotionAction>>::iterator CommitPt;
+
+  using CommitPt = SmallVectorImpl<std::unique_ptr<TypePromotionAction>>::iterator;
+
   SetOfInstrs &RemovedInsts;
 };
 
+} // end anonymous namespace
+
 void TypePromotionTransaction::setOperand(Instruction *Inst, unsigned Idx,
                                           Value *NewVal) {
-  Actions.push_back(
-      make_unique<TypePromotionTransaction::OperandSetter>(Inst, Idx, NewVal));
+  Actions.push_back(llvm::make_unique<TypePromotionTransaction::OperandSetter>(
+      Inst, Idx, NewVal));
 }
 
 void TypePromotionTransaction::eraseInstruction(Instruction *Inst,
                                                 Value *NewVal) {
   Actions.push_back(
-      make_unique<TypePromotionTransaction::InstructionRemover>(Inst,
-                                                         RemovedInsts, NewVal));
+      llvm::make_unique<TypePromotionTransaction::InstructionRemover>(
+          Inst, RemovedInsts, NewVal));
 }
 
 void TypePromotionTransaction::replaceAllUsesWith(Instruction *Inst,
                                                   Value *New) {
-  Actions.push_back(make_unique<TypePromotionTransaction::UsesReplacer>(Inst, New));
+  Actions.push_back(
+      llvm::make_unique<TypePromotionTransaction::UsesReplacer>(Inst, New));
 }
 
 void TypePromotionTransaction::mutateType(Instruction *Inst, Type *NewTy) {
-  Actions.push_back(make_unique<TypePromotionTransaction::TypeMutator>(Inst, NewTy));
+  Actions.push_back(
+      llvm::make_unique<TypePromotionTransaction::TypeMutator>(Inst, NewTy));
 }
 
 Value *TypePromotionTransaction::createTrunc(Instruction *Opnd,
@@ -3118,7 +3190,8 @@ Value *TypePromotionTransaction::createZExt(Instruction *Inst,
 void TypePromotionTransaction::moveBefore(Instruction *Inst,
                                           Instruction *Before) {
   Actions.push_back(
-      make_unique<TypePromotionTransaction::InstructionMoveBefore>(Inst, Before));
+      llvm::make_unique<TypePromotionTransaction::InstructionMoveBefore>(
+          Inst, Before));
 }
 
 TypePromotionTransaction::ConstRestorationPt
@@ -3141,6 +3214,8 @@ void TypePromotionTransaction::rollback(
   }
 }
 
+namespace {
+
 /// \brief A helper class for matching addressing modes.
 ///
 /// This encapsulates the logic for matching the target-legal addressing modes.
@@ -3162,8 +3237,10 @@ class AddressingModeMatcher {
 
   /// The instructions inserted by other CodeGenPrepare optimizations.
   const SetOfInstrs &InsertedInsts;
+
   /// A map from the instructions to their type before promotion.
   InstrToOrigTy &PromotedInsts;
+
   /// The ongoing transaction where every action should be registered.
   TypePromotionTransaction &TPT;
 
@@ -3185,8 +3262,8 @@ class AddressingModeMatcher {
         PromotedInsts(PromotedInsts), TPT(TPT) {
     IgnoreProfitability = false;
   }
-public:
 
+public:
   /// Find the maximal addressing mode that a load/store of V can fold,
   /// give an access type of AccessTy.  This returns a list of involved
   /// instructions in AddrModeInsts.
@@ -3211,6 +3288,7 @@ public:
     (void)Success; assert(Success && "Couldn't select *anything*?");
     return Result;
   }
+
 private:
   bool matchScaledValue(Value *ScaleReg, int64_t Scale, unsigned Depth);
   bool matchAddr(Value *V, unsigned Depth);
@@ -3223,6 +3301,8 @@ private:
   bool isPromotionProfitable(unsigned NewCost, unsigned OldCost,
                              Value *PromotedOperand) const;
 };
+
+} // end anonymous namespace
 
 /// Try adding ScaleReg*Scale to the current addressing mode.
 /// Return true and update AddrMode if this addr mode is legal for the target,
@@ -3328,6 +3408,8 @@ static bool isPromotedInstructionLegal(const TargetLowering &TLI,
       ISDOpcode, TLI.getValueType(DL, PromotedInst->getType()));
 }
 
+namespace {
+
 /// \brief Hepler class to perform type promotion.
 class TypePromotionHelper {
   /// \brief Utility function to check whether or not a sign or zero extension
@@ -3404,12 +3486,13 @@ class TypePromotionHelper {
 
 public:
   /// Type for the utility function that promotes the operand of Ext.
-  typedef Value *(*Action)(Instruction *Ext, TypePromotionTransaction &TPT,
-                           InstrToOrigTy &PromotedInsts,
-                           unsigned &CreatedInstsCost,
-                           SmallVectorImpl<Instruction *> *Exts,
-                           SmallVectorImpl<Instruction *> *Truncs,
-                           const TargetLowering &TLI);
+  using Action = Value *(*)(Instruction *Ext, TypePromotionTransaction &TPT,
+                            InstrToOrigTy &PromotedInsts,
+                            unsigned &CreatedInstsCost,
+                            SmallVectorImpl<Instruction *> *Exts,
+                            SmallVectorImpl<Instruction *> *Truncs,
+                            const TargetLowering &TLI);
+
   /// \brief Given a sign/zero extend instruction \p Ext, return the approriate
   /// action to promote the operand of \p Ext instead of using Ext.
   /// \return NULL if no promotable action is possible with the current
@@ -3423,6 +3506,8 @@ public:
                           const TargetLowering &TLI,
                           const InstrToOrigTy &PromotedInsts);
 };
+
+} // end anonymous namespace
 
 bool TypePromotionHelper::canGetThrough(const Instruction *Inst,
                                         Type *ConsideredExtType,
@@ -3522,7 +3607,7 @@ TypePromotionHelper::Action TypePromotionHelper::getAction(
 }
 
 Value *TypePromotionHelper::promoteOperandForTruncAndAnyExt(
-    llvm::Instruction *SExt, TypePromotionTransaction &TPT,
+    Instruction *SExt, TypePromotionTransaction &TPT,
     InstrToOrigTy &PromotedInsts, unsigned &CreatedInstsCost,
     SmallVectorImpl<Instruction *> *Exts,
     SmallVectorImpl<Instruction *> *Truncs, const TargetLowering &TLI) {
@@ -3586,9 +3671,8 @@ Value *TypePromotionHelper::promoteOperandForOther(
     // Create the truncate now.
     Value *Trunc = TPT.createTrunc(Ext, ExtOpnd->getType());
     if (Instruction *ITrunc = dyn_cast<Instruction>(Trunc)) {
-      ITrunc->removeFromParent();
       // Insert it just after the definition.
-      ITrunc->insertAfter(ExtOpnd);
+      ITrunc->moveAfter(ExtOpnd);
       if (Truncs)
         Truncs->push_back(ITrunc);
     }
@@ -4268,8 +4352,6 @@ isProfitableToFoldIntoAddressingMode(Instruction *I, ExtAddrMode &AMBefore,
   return true;
 }
 
-} // end anonymous namespace
-
 /// Return true if the specified values are defined in a
 /// different basic block than BB.
 static bool IsNonLocalValue(Value *V, BasicBlock *BB) {
@@ -4943,8 +5025,7 @@ bool CodeGenPrepare::optimizeExt(Instruction *&Inst) {
     assert(LI && ExtFedByLoad && "Expect a valid load and extension");
     TPT.commit();
     // Move the extend into the same block as the load
-    ExtFedByLoad->removeFromParent();
-    ExtFedByLoad->insertAfter(LI);
+    ExtFedByLoad->moveAfter(LI);
     // CGP does not check if the zext would be speculatively executed when moved
     // to the same basic block as the load. Preserving its original location
     // would pessimize the debugging experience, as well as negatively impact
@@ -5161,10 +5242,7 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
 // b2:
 //   x = phi x1', x2'
 //   y = and x, 0xff
-//
-
 bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
-
   if (!Load->isSimple() ||
       !(Load->getType()->isIntegerTy() || Load->getType()->isPointerTy()))
     return false;
@@ -5203,7 +5281,7 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
     }
 
     switch (I->getOpcode()) {
-    case llvm::Instruction::And: {
+    case Instruction::And: {
       auto *AndC = dyn_cast<ConstantInt>(I->getOperand(1));
       if (!AndC)
         return false;
@@ -5217,7 +5295,7 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
       break;
     }
 
-    case llvm::Instruction::Shl: {
+    case Instruction::Shl: {
       auto *ShlC = dyn_cast<ConstantInt>(I->getOperand(1));
       if (!ShlC)
         return false;
@@ -5226,7 +5304,7 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
       break;
     }
 
-    case llvm::Instruction::Trunc: {
+    case Instruction::Trunc: {
       EVT TruncVT = TLI->getValueType(*DL, I->getType());
       unsigned TruncBitWidth = TruncVT.getSizeInBits();
       DemandBits.setLowBits(TruncBitWidth);
@@ -5630,6 +5708,7 @@ bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI) {
 
 
 namespace {
+
 /// \brief Helper class to promote a scalar operation to a vector one.
 /// This class is used to move downward extractelement transition.
 /// E.g.,
@@ -5657,12 +5736,15 @@ class VectorPromoteHelper {
 
   /// The transition being moved downwards.
   Instruction *Transition;
+
   /// The sequence of instructions to be promoted.
   SmallVector<Instruction *, 4> InstsToBePromoted;
+
   /// Cost of combining a store and an extract.
   unsigned StoreExtractCombineCost;
+
   /// Instruction that will be combined with the transition.
-  Instruction *CombineInst;
+  Instruction *CombineInst = nullptr;
 
   /// \brief The instruction that represents the current end of the transition.
   /// Since we are faking the promotion until we reach the end of the chain
@@ -5768,7 +5850,7 @@ class VectorPromoteHelper {
   /// <undef, ..., undef, Val, undef, ..., undef> where \p Val is only
   /// used at the index of the extract.
   Value *getConstantVector(Constant *Val, bool UseSplat) const {
-    unsigned ExtractIdx = UINT_MAX;
+    unsigned ExtractIdx = std::numeric_limits<unsigned>::max();
     if (!UseSplat) {
       // If we cannot determine where the constant must be, we have to
       // use a splat constant.
@@ -5822,7 +5904,7 @@ public:
                       const TargetTransformInfo &TTI, Instruction *Transition,
                       unsigned CombineCost)
       : DL(DL), TLI(TLI), TTI(TTI), Transition(Transition),
-        StoreExtractCombineCost(CombineCost), CombineInst(nullptr) {
+        StoreExtractCombineCost(CombineCost) {
     assert(Transition && "Do not know how to promote null");
   }
 
@@ -5897,7 +5979,8 @@ public:
     return true;
   }
 };
-} // End of anonymous namespace.
+
+} // end anonymous namespace
 
 void VectorPromoteHelper::promoteImpl(Instruction *ToBePromoted) {
   // At this point, we know that all the operands of ToBePromoted but Def
@@ -5936,8 +6019,7 @@ void VectorPromoteHelper::promoteImpl(Instruction *ToBePromoted) {
                        "this?");
     ToBePromoted->setOperand(U.getOperandNo(), NewVal);
   }
-  Transition->removeFromParent();
-  Transition->insertAfter(ToBePromoted);
+  Transition->moveAfter(ToBePromoted);
   Transition->setOperand(getTransitionOriginalValueIdx(), ToBePromoted);
 }
 
@@ -5945,7 +6027,7 @@ void VectorPromoteHelper::promoteImpl(Instruction *ToBePromoted) {
 /// Try to push the extractelement towards the stores when the target
 /// has this feature and this is profitable.
 bool CodeGenPrepare::optimizeExtractElementInst(Instruction *Inst) {
-  unsigned CombineCost = UINT_MAX;
+  unsigned CombineCost = std::numeric_limits<unsigned>::max();
   if (DisableStoreExtract || !TLI ||
       (!StressStoreExtract &&
        !TLI->canCombineStoreAndExtract(Inst->getOperand(0)->getType(),
@@ -6332,7 +6414,7 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
 /// \brief Scale down both weights to fit into uint32_t.
 static void scaleWeights(uint64_t &NewTrue, uint64_t &NewFalse) {
   uint64_t NewMax = (NewTrue > NewFalse) ? NewTrue : NewFalse;
-  uint32_t Scale = (NewMax / UINT32_MAX) + 1;
+  uint32_t Scale = (NewMax / std::numeric_limits<uint32_t>::max()) + 1;
   NewTrue = NewTrue / Scale;
   NewFalse = NewFalse / Scale;
 }

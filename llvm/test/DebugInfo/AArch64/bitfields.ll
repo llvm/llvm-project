@@ -19,12 +19,12 @@
 ; CHECK:      DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK-NEXT: DW_AT_bit_size   {{.*}} (0x02)
 ; CHECK-NEXT: DW_AT_bit_offset {{.*}} (0x00)
-; CHECK-NEXT: DW_AT_data_member_location {{.*}} 00
+; CHECK-NEXT: DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
 
 ; CHECK: DW_TAG_member
 ; CHECK-NEXT: DW_AT_name{{.*}}"b"
 ; CHECK-NOT: DW_TAG_member
-; CHECK:      DW_AT_data_member_location {{.*}} 04
+; CHECK:      DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x4)
 
 ; CHECK: DW_TAG_member
 ; CHECK-NEXT: DW_AT_name{{.*}}"c"
@@ -32,7 +32,7 @@
 ; CHECK:      DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK-NEXT: DW_AT_bit_size   {{.*}} (0x01)
 ; CHECK-NEXT: DW_AT_bit_offset {{.*}} (0x00)
-; CHECK-NEXT: DW_AT_data_member_location {{.*}} 08
+; CHECK:      DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x8)
 
 ; CHECK: DW_TAG_member
 ; CHECK-NEXT: DW_AT_name{{.*}}"d"
@@ -40,7 +40,7 @@
 ; CHECK:      DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK-NEXT: DW_AT_bit_size   {{.*}} (0x1c)
 ; CHECK-NEXT: DW_AT_bit_offset {{.*}} (0x01)
-; CHECK-NEXT: DW_AT_data_member_location {{.*}} 08
+; CHECK-NEXT: DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x8)
 
 ; ModuleID = 'bitfields.c'
 source_filename = "test/DebugInfo/AArch64/bitfields.ll"

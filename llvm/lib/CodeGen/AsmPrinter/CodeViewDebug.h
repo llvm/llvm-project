@@ -94,6 +94,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   struct LocalVariable {
     const DILocalVariable *DIVar = nullptr;
     SmallVector<LocalVarDefRange, 1> DefRanges;
+    bool Deref = false;
   };
 
   struct InlineSite {
@@ -146,6 +147,9 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
                             const DISubprogram *Inlinee);
 
   codeview::TypeIndex getFuncIdForSubprogram(const DISubprogram *SP);
+
+  void calculateRanges(LocalVariable &Var,
+                       const DbgValueHistoryMap::InstrRanges &Ranges);
 
   static void collectInlineSiteChildren(SmallVectorImpl<unsigned> &Children,
                                         const FunctionInfo &FI,
@@ -258,6 +262,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// for it.
   codeview::TypeIndex getTypeIndex(DITypeRef TypeRef,
                                    DITypeRef ClassTyRef = DITypeRef());
+
+  codeview::TypeIndex getTypeIndexForReferenceTo(DITypeRef TypeRef);
 
   codeview::TypeIndex getMemberFunctionType(const DISubprogram *SP,
                                             const DICompositeType *Class);

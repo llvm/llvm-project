@@ -486,8 +486,9 @@ TEST(Error, CantFailSuccess) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
 TEST(Error, CantFailDeath) {
   EXPECT_DEATH(
-      cantFail(make_error<StringError>("foo", inconvertibleErrorCode())),
-      "Failure value returned from cantFail wrapped call")
+      cantFail(make_error<StringError>("foo", inconvertibleErrorCode()),
+               "Cantfail call failed"),
+      "Cantfail call failed")
     << "cantFail(Error) did not cause an abort for failure value";
 
   EXPECT_DEATH(

@@ -23,8 +23,11 @@
 ;   return c;
 ; }
 
-; DWARF23: Location description: 10 0d {{$}}
-; DWARF4: Location description: 10 0d 9f
+; CHECK: DW_TAG_variable
+; CHECK: DW_AT_location
+; CHECK-NOT: DW_AT
+; DWARF23: DW_OP_constu 0xd{{$}}
+; DWARF4: DW_OP_constu 0xd, DW_OP_stack_value{{$}}
 
 ; Function Attrs: uwtable
 define i32 @main() #0 !dbg !4 {

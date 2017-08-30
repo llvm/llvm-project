@@ -128,10 +128,14 @@ private:
   ParseType parseLanguageResource();
   ParseType parseAcceleratorsResource();
   ParseType parseCursorResource();
+  ParseType parseDialogResource(bool IsExtended);
   ParseType parseIconResource();
   ParseType parseHTMLResource();
   ParseType parseMenuResource();
   ParseType parseStringTableResource();
+
+  // Helper DIALOG parser - a single control.
+  Expected<Control> parseControl();
 
   // Helper MENU parser.
   Expected<MenuDefinitionList> parseMenuItemsList();
@@ -140,6 +144,9 @@ private:
   ParseOptionType parseLanguageStmt();
   ParseOptionType parseCharacteristicsStmt();
   ParseOptionType parseVersionStmt();
+  ParseOptionType parseCaptionStmt();
+  ParseOptionType parseFontStmt();
+  ParseOptionType parseStyleStmt();
 
   // Raises an error. If IsAlreadyRead = false (default), this complains about
   // the token that couldn't be parsed. If the flag is on, this complains about

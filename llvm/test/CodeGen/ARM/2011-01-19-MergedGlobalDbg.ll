@@ -9,24 +9,17 @@ target triple = "thumbv7-apple-darwin10"
 @x3 = internal global i8 1, align 1, !dbg !6
 @x4 = internal global i8 1, align 1, !dbg !8
 @x5 = global i8 1, align 1, !dbg !10
-; Check debug info output for merged global.
-; DW_AT_location
-; 0x03 DW_OP_addr
-; 0x.. .long __MergedGlobals
-; 0x10 DW_OP_constu
-; 0x.. offset
-; 0x22 DW_OP_plus
 
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK:    DW_AT_name {{.*}} "x1"
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:    DW_AT_location [DW_FORM_exprloc]        (<0x5> 03 [[ADDR:.. .. .. ..]]   )
+; CHECK:    DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr [[ADDR:0x[0-9a-fA-F]+]])
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK:    DW_AT_name {{.*}} "x2"
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:    DW_AT_location [DW_FORM_exprloc]        (<0x7> 03 [[ADDR]] 23 01  )
+; CHECK:    DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr [[ADDR]], DW_OP_plus_uconst 0x1)
 
 ; Function Attrs: nounwind optsize
 define zeroext i8 @get1(i8 zeroext %a) #0 !dbg !16 {

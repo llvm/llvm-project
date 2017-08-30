@@ -22,13 +22,9 @@
 ; argc is the first formal parameter.
 ; DWARF: .debug_info contents:
 ; DWARF:  DW_TAG_formal_parameter
-; DWARF-NEXT:    DW_AT_location [DW_FORM_sec_offset]   ([[argc_loc_offset:0x.*]])
+; DWARF-NEXT:    DW_AT_location [DW_FORM_sec_offset]   ({{0x.*}}
+; DWARF-NEXT:      0x0000000000000000 - 0x0000000000000013: DW_OP_reg2 RCX)
 ; DWARF-NEXT:    DW_AT_name [DW_FORM_strp]     {{.*}} "argc"
-
-; DWARF: .debug_loc contents:
-; DWARF: [[argc_loc_offset]]: Beginning address offset: 0x0000000000000000
-; DWARF-NEXT:                    Ending address offset: 0x0000000000000013
-; DWARF-NEXT:                     Location description: 52
 
 ; ModuleID = 't.cpp'
 source_filename = "test/DebugInfo/X86/dbg-value-regmask-clobber.ll"

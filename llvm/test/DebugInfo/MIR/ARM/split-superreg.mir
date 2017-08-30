@@ -2,13 +2,10 @@
 # RUN:     llvm-dwarfdump - | FileCheck %s
 # CHECK: .debug_info contents:
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_AT_location [DW_FORM_data4]	([[OFS:.*]])
+# CHECK-NEXT: DW_AT_location
+# CHECK-NEXT: 0x0000000000000010 - 0x0000000000000018: DW_OP_regx D0, DW_OP_piece 0x8, DW_OP_regx D1, DW_OP_piece 0x8)
 # CHECK-NEXT: DW_AT_name {{.*}}"vec"
-# CHECK: .debug_loc contents:
-# CHECK: [[OFS]]: Beginning address offset: 0x0000000000000010
-# CHECK:             Ending address offset: 0x0000000000000018
-# CHECK:              Location description: 90 80 02 93 08 90 81 02 93 08 
-#                                           d0, piece 0x00000008, d1, piece 0x00000008
+
 --- |
   ; Generated from:
   ; typedef float vec2 __attribute__((vector_size(16)));

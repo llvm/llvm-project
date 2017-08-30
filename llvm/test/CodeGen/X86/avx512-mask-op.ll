@@ -692,8 +692,8 @@ define <16 x i8> @test8(<16 x i32>%a, <16 x i32>%b, i32 %a1, i32 %b1) {
 ;
 ; AVX512BW-LABEL: test8:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512BW-NEXT:    cmpl %esi, %edi
+; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512BW-NEXT:    jg LBB17_1
 ; AVX512BW-NEXT:  ## BB#2:
 ; AVX512BW-NEXT:    vpcmpltud %zmm2, %zmm1, %k0
@@ -708,8 +708,8 @@ define <16 x i8> @test8(<16 x i32>%a, <16 x i32>%b, i32 %a1, i32 %b1) {
 ;
 ; AVX512DQ-LABEL: test8:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512DQ-NEXT:    cmpl %esi, %edi
+; AVX512DQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512DQ-NEXT:    jg LBB17_1
 ; AVX512DQ-NEXT:  ## BB#2:
 ; AVX512DQ-NEXT:    vpcmpltud %zmm2, %zmm1, %k0

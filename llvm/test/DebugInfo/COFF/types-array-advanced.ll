@@ -50,28 +50,40 @@
 ; CHECK:     SizeOf: 4
 ; CHECK:     Name: 
 ; CHECK:   }
-; CHECK:   Array (0x1004) {
+; CHECK:   Pointer (0x1004) {
+; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
+; CHECK:     PointeeType: 0x1003
+; CHECK:     PointerAttributes: 0x2A
+; CHECK:     PtrType: Near32 (0xA)
+; CHECK:     PtrMode: LValueReference (0x1)
+; CHECK:     IsFlat: 0
+; CHECK:     IsConst: 0
+; CHECK:     IsVolatile: 0
+; CHECK:     IsUnaligned: 0
+; CHECK:     SizeOf: 0
+; CHECK:   }
+; CHECK:   Array (0x1005) {
 ; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
 ; CHECK:     ElementType: char (0x70)
 ; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 7
 ; CHECK:     Name: 
 ; CHECK:   }
-; CHECK:   Array (0x1005) {
-; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
-; CHECK:     ElementType: 0x1004
-; CHECK:     IndexType: unsigned long (0x22)
-; CHECK:     SizeOf: 35
-; CHECK:     Name: 
-; CHECK:   }
 ; CHECK:   Array (0x1006) {
 ; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
 ; CHECK:     ElementType: 0x1005
 ; CHECK:     IndexType: unsigned long (0x22)
+; CHECK:     SizeOf: 35
+; CHECK:     Name: 
+; CHECK:   }
+; CHECK:   Array (0x1007) {
+; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
+; CHECK:     ElementType: 0x1006
+; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 70
 ; CHECK:     Name: 
 ; CHECK:   }
-; CHECK:   Struct (0x1007) {
+; CHECK:   Struct (0x1008) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK:     MemberCount: 0
 ; CHECK:     Properties [ (0x280)
@@ -85,16 +97,16 @@
 ; CHECK:     Name: incomplete_struct
 ; CHECK:     LinkageName: .?AUincomplete_struct@@
 ; CHECK:   }
-; CHECK:   Array (0x1008) {
+; CHECK:   Array (0x1009) {
 ; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
-; CHECK:     ElementType: incomplete_struct (0x1007)
+; CHECK:     ElementType: incomplete_struct (0x1008)
 ; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 12
 ; CHECK:     Name: 
 ; CHECK:   }
-; CHECK:   Pointer (0x1009) {
+; CHECK:   Pointer (0x100A) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
-; CHECK:     PointeeType: 0x1008
+; CHECK:     PointeeType: 0x1009
 ; CHECK:     PointerAttributes: 0x800A
 ; CHECK:     PtrType: Near32 (0xA)
 ; CHECK:     PtrMode: Pointer (0x0)
@@ -104,8 +116,41 @@
 ; CHECK:     IsUnaligned: 0
 ; CHECK:     SizeOf: 4
 ; CHECK:   }
-;
-; CHECK:   Modifier (0x100E) {
+; CHECK:   FieldList (0x100B) {
+; CHECK:     TypeLeafKind: LF_FIELDLIST (0x1203)
+; CHECK:     DataMember {
+; CHECK:       TypeLeafKind: LF_MEMBER (0x150D)
+; CHECK:       AccessSpecifier: Public (0x3)
+; CHECK:       Type: int (0x74)
+; CHECK:       FieldOffset: 0x0
+; CHECK:       Name: s1
+; CHECK:     }
+; CHECK:   }
+; CHECK:   Struct (0x100C) {
+; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
+; CHECK:     MemberCount: 1
+; CHECK:     Properties [ (0x200)
+; CHECK:       HasUniqueName (0x200)
+; CHECK:     ]
+; CHECK:     FieldList: <field list> (0x100B)
+; CHECK:     DerivedFrom: 0x0
+; CHECK:     VShape: 0x0
+; CHECK:     SizeOf: 4
+; CHECK:     Name: incomplete_struct
+; CHECK:     LinkageName: .?AUincomplete_struct@@
+; CHECK:   }
+; CHECK:   StringId (0x100D) {
+; CHECK:     TypeLeafKind: LF_STRING_ID (0x1605)
+; CHECK:     Id: 0x0
+; CHECK:     StringData: \t.cpp
+; CHECK:   }
+; CHECK:   UdtSourceLine (0x100E) {
+; CHECK:     TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
+; CHECK:     UDT: incomplete_struct (0x100C)
+; CHECK:     SourceFile: \t.cpp (0x100D)
+; CHECK:     LineNumber: 4
+; CHECK:   }
+; CHECK:   Modifier (0x100F) {
 ; CHECK:     TypeLeafKind: LF_MODIFIER (0x1001)
 ; CHECK:     ModifiedType: int (0x74)
 ; CHECK:     Modifiers [ (0x3)
@@ -113,12 +158,12 @@
 ; CHECK:       Volatile (0x2)
 ; CHECK:     ]
 ; CHECK:   }
-; CHECK:   Array (0x100F) {
+; CHECK:   Array (0x1010) {
 ; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
-; CHECK:     ElementType: const volatile int (0x100E)
+; CHECK:     ElementType: const volatile int (0x100F)
 ; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 16
-; CHECK:     Name:
+; CHECK:     Name: 
 ; CHECK:   }
 ; CHECK: ]
 

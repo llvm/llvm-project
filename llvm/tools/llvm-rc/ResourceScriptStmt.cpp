@@ -113,12 +113,53 @@ raw_ostream &StringTableResource::log(raw_ostream &OS) const {
   return OS;
 }
 
+const StringSet<> Control::SupportedCtls = {
+    "LTEXT", "RTEXT", "CTEXT", "PUSHBUTTON", "DEFPUSHBUTTON", "EDITTEXT"};
+
+const StringSet<> Control::CtlsWithTitle = {"LTEXT", "RTEXT", "CTEXT",
+                                            "PUSHBUTTON", "DEFPUSHBUTTON"};
+
+raw_ostream &Control::log(raw_ostream &OS) const {
+  OS << "  Control (" << ID << "): " << Type << ", title: " << Title
+     << ", loc: (" << X << ", " << Y << "), size: [" << Width << ", " << Height
+     << "]";
+  if (Style)
+    OS << ", style: " << *Style;
+  if (ExtStyle)
+    OS << ", ext. style: " << *ExtStyle;
+  if (HelpID)
+    OS << ", help ID: " << *HelpID;
+  return OS << "\n";
+}
+
+raw_ostream &DialogResource::log(raw_ostream &OS) const {
+  OS << "Dialog" << (IsExtended ? "Ex" : "") << " (" << ResName << "): loc: ("
+     << X << ", " << Y << "), size: [" << Width << ", " << Height
+     << "], help ID: " << HelpID << "\n";
+  OptStatements.log(OS);
+  for (auto &Ctl : Controls)
+    Ctl.log(OS);
+  return OS;
+}
+
 raw_ostream &CharacteristicsStmt::log(raw_ostream &OS) const {
   return OS << "Characteristics: " << Value << "\n";
 }
 
 raw_ostream &VersionStmt::log(raw_ostream &OS) const {
   return OS << "Version: " << Value << "\n";
+}
+
+raw_ostream &CaptionStmt::log(raw_ostream &OS) const {
+  return OS << "Caption: " << Value << "\n";
+}
+
+raw_ostream &FontStmt::log(raw_ostream &OS) const {
+  return OS << "Font: size = " << Size << ", face = " << Typeface << "\n";
+}
+
+raw_ostream &StyleStmt::log(raw_ostream &OS) const {
+  return OS << "Style: " << Value << "\n";
 }
 
 } // namespace rc

@@ -31,21 +31,17 @@
 ; // The 'x' variable and its symbol reference location
 ; CHECK: .debug_info contents:
 ; CHECK:      DW_TAG_variable
-; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset] (0x00000000)
+; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset] (0x00000000
+; Check that the location contains only 4 ranges - this verifies that the 4th
+; and 5th ranges were successfully merged into a single range.
+; CHECK-NEXT:   0x{{[0-9a-f]*}} - 0x{{[0-9a-f]*}}:
+; CHECK-NEXT:   0x{{[0-9a-f]*}} - 0x{{[0-9a-f]*}}:
+; CHECK-NEXT:   0x{{[0-9a-f]*}} - 0x{{[0-9a-f]*}}:
+; CHECK-NEXT:   0x{{[0-9a-f]*}} - 0x{{[0-9a-f]*}}: {{.*}})
 ; CHECK-NEXT:   DW_AT_name {{.*}} "x"
 ; CHECK-NEXT:   DW_AT_decl_file
 ; CHECK-NEXT:   DW_AT_decl_line
 ; CHECK-NEXT:   DW_AT_type
-
-; Check that the location contains only 4 ranges - this verifies that the 4th
-; and 5th ranges were successfully merged into a single range.
-; CHECK: .debug_loc contents:
-; CHECK: 0x00000000:
-; CHECK: Beginning address offset:
-; CHECK: Beginning address offset:
-; CHECK: Beginning address offset:
-; CHECK: Beginning address offset:
-; CHECK-NOT: Beginning address offset:
 
 ; Check that we have no relocations in Darwin's output.
 ; DARWIN-NOT: X86_64_RELOC{{.*}} __debug_loc

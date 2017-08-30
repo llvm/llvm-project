@@ -320,16 +320,10 @@ bool AtomicExpand::bracketInstWithFences(Instruction *I, AtomicOrdering Order) {
   auto LeadingFence = TLI->emitLeadingFence(Builder, I, Order);
 
   auto TrailingFence = TLI->emitTrailingFence(Builder, I, Order);
-  // The trailing fence is emitted before the instruction instead of after
-  // because there is no easy way of setting Builder insertion point after
-  // an instruction. So we must erase it from the BB, and insert it back
-  // in the right place.
   // We have a guard here because not every atomic operation generates a
   // trailing fence.
-  if (TrailingFence) {
-    TrailingFence->removeFromParent();
-    TrailingFence->insertAfter(I);
-  }
+  if (TrailingFence)
+    TrailingFence->moveAfter(I);
 
   return (LeadingFence || TrailingFence);
 }
