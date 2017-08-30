@@ -17,10 +17,10 @@ StreamClass &operator>>(StreamClass &os, int i) {
 }
 struct AnotherStream {
   AnotherStream &operator<<(unsigned char c) { return *this; }
-  AnotherStream &operator<<(char c) { return *this; }
+  AnotherStream &operator<<(signed char c) { return *this; }
 
   AnotherStream &operator>>(unsigned char c) { return *this; }
-  AnotherStream &operator>>(char c) { return *this; }
+  AnotherStream &operator>>(signed char c) { return *this; }
 };
 
 void binary_bitwise() {
@@ -47,8 +47,8 @@ void binary_bitwise() {
 
   unsigned char UByte1 = 0u;
   unsigned char UByte2 = 16u;
-  char SByte1 = 0;
-  char SByte2 = 16;
+  signed char SByte1 = 0;
+  signed char SByte2 = 16;
 
   UByte1 = UByte1 & UByte2; // Ok
   UByte1 = SByte1 & UByte2;
@@ -88,12 +88,12 @@ void binary_bitwise() {
 }
 
 void f1(unsigned char c) {}
-void f2(char c) {}
+void f2(signed char c) {}
 void f3(int c) {}
 
 void unary_bitwise() {
   unsigned char UByte1 = 0u;
-  char SByte1 = 0;
+  signed char SByte1 = 0;
 
   UByte1 = ~UByte1; // Ok
   SByte1 = ~UByte1;
@@ -164,7 +164,7 @@ void streams_should_work() {
 
   AnotherStream as;
   unsigned char uc = 1u;
-  char sc = 1;
+  signed char sc = 1;
   as << uc; // Ok
   as << sc; // Ok
   as >> uc; // Ok
