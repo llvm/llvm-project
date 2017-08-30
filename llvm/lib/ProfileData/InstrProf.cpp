@@ -111,6 +111,8 @@ static std::string getInstrProfErrString(instrprof_error Err) {
     return "Failed to uncompress data (zlib)";
   case instrprof_error::empty_raw_profile:
     return "Empty raw profile file";
+  case instrprof_error::zlib_unavailable:
+    return "Profile uses zlib compression but the profile reader was built without zlib support";
   }
   llvm_unreachable("A value of instrprof_error has no message.");
 }
@@ -430,6 +432,9 @@ Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
     SmallString<128> UncompressedNameStrings;
     StringRef NameStrings;
     if (isCompressed) {
+      if (!llvm::zlib::isAvailable())
+        return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
+
       StringRef CompressedNameStrings(reinterpret_cast<const char *>(P),
                                       CompressedSize);
       if (Error E =
