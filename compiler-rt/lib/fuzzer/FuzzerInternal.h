@@ -38,7 +38,6 @@ public:
   void Loop(const Vector<std::string> &CorpusDirs);
   void ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs);
   void MinimizeCrashLoop(const Unit &U);
-  void ShuffleAndMinimize(UnitVector *V);
   void RereadOutputCorpus(size_t MaxSize);
 
   size_t secondsSinceProcessStartUp() {
@@ -103,7 +102,6 @@ private:
   void WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix);
   void PrintStats(const char *Where, const char *End = "\n", size_t Units = 0);
   void PrintStatusForNewUnit(const Unit &U, const char *Text);
-  void ShuffleCorpus(UnitVector *V);
   void CheckExitOnSrcPosOrItem();
 
   static void StaticDeathCallback();
