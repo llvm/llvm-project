@@ -347,11 +347,12 @@ void X86Subtarget::initializeEnvironment() {
   HasFastVectorFSQRT = false;
   HasFastLZCNT = false;
   HasFastSHLDRotate = false;
+  HasMacroFusion = false;
   HasERMSB = false;
   HasSlowDivide32 = false;
   HasSlowDivide64 = false;
   PadShortFunctions = false;
-  CallRegIndirect = false;
+  SlowTwoMemOps = false;
   LEAUsesAG = false;
   SlowLEA = false;
   Slow3OpsLEA = false;

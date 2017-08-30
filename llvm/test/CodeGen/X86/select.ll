@@ -349,8 +349,8 @@ define void @test8(i1 %c, <6 x i32>* %dst.addr, <6 x i32> %src1,<6 x i32> %src2)
 ; ATOM-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
 ; ATOM-NEXT:    paddd %xmm2, %xmm0
 ; ATOM-NEXT:    paddd %xmm2, %xmm1
-; ATOM-NEXT:    movq %xmm1, 16(%rsi)
 ; ATOM-NEXT:    movdqa %xmm0, (%rsi)
+; ATOM-NEXT:    movq %xmm1, 16(%rsi)
 ; ATOM-NEXT:    retq
 ; ATOM-NEXT:    ## -- End function
 ;

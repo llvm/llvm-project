@@ -1308,9 +1308,11 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       if (IsPIC) {
         unsigned PCAdj = IsARM ? 8 : 4;
+        auto Modifier = STI->getCPModifier(GV);
         ARMPCLabelIndex = AFI->createPICLabelUId();
-        CPV = ARMConstantPoolConstant::Create(GV, ARMPCLabelIndex,
-                                              ARMCP::CPValue, PCAdj);
+        CPV = ARMConstantPoolConstant::Create(
+            GV, ARMPCLabelIndex, ARMCP::CPValue, PCAdj, Modifier,
+            /*AddCurrentAddr*/ Modifier == ARMCP::GOT_PREL);
       } else
         CPV = ARMConstantPoolConstant::Create(GV, ARMCP::no_modifier);
 

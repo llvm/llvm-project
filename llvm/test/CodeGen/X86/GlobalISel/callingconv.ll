@@ -356,3 +356,77 @@ define void @test_abi_exts_call(i8* %addr) {
   call void @take_char(i8 zeroext %val)
  ret void
 }
+
+declare void @variadic_callee(i8*, ...)
+define void @test_variadic_call_1(i8** %addr_ptr, i32* %val_ptr) {
+; X32-LABEL: test_variadic_call_1:
+; X32:       # BB#0:
+; X32-NEXT:    subl $12, %esp
+; X32-NEXT:  .Lcfi10:
+; X32-NEXT:    .cfi_def_cfa_offset 16
+; X32-NEXT:    movl 16(%esp), %eax
+; X32-NEXT:    movl 20(%esp), %ecx
+; X32-NEXT:    movl (%eax), %eax
+; X32-NEXT:    movl (%ecx), %ecx
+; X32-NEXT:    movl %eax, (%esp)
+; X32-NEXT:    movl %ecx, 4(%esp)
+; X32-NEXT:    calll variadic_callee
+; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_variadic_call_1:
+; X64:       # BB#0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:  .Lcfi8:
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    movq (%rdi), %rdi
+; X64-NEXT:    movl (%rsi), %esi
+; X64-NEXT:    movb $0, %al
+; X64-NEXT:    callq variadic_callee
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+
+  %addr = load i8*, i8** %addr_ptr
+  %val = load i32, i32* %val_ptr
+  call void (i8*, ...) @variadic_callee(i8* %addr, i32 %val)
+  ret void
+}
+
+define void @test_variadic_call_2(i8** %addr_ptr, double* %val_ptr) {
+; X32-LABEL: test_variadic_call_2:
+; X32:       # BB#0:
+; X32-NEXT:    subl $12, %esp
+; X32-NEXT:  .Lcfi11:
+; X32-NEXT:    .cfi_def_cfa_offset 16
+; X32-NEXT:    movl 16(%esp), %eax
+; X32-NEXT:    movl 20(%esp), %ecx
+; X32-NEXT:    movl (%eax), %eax
+; X32-NEXT:    movl (%ecx), %edx
+; X32-NEXT:    movl 4(%ecx), %ecx
+; X32-NEXT:    movl %eax, (%esp)
+; X32-NEXT:    movl $4, %eax
+; X32-NEXT:    leal (%esp,%eax), %eax
+; X32-NEXT:    movl %edx, 4(%esp)
+; X32-NEXT:    movl %ecx, 4(%eax)
+; X32-NEXT:    calll variadic_callee
+; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_variadic_call_2:
+; X64:       # BB#0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:  .Lcfi9:
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    movq (%rdi), %rdi
+; X64-NEXT:    movq (%rsi), %rcx
+; X64-NEXT:    movb $1, %al
+; X64-NEXT:    movq %rcx, %xmm0
+; X64-NEXT:    callq variadic_callee
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+
+  %addr = load i8*, i8** %addr_ptr
+  %val = load double, double* %val_ptr
+  call void (i8*, ...) @variadic_callee(i8* %addr, double %val)
+  ret void
+}

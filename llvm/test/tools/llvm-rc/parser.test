@@ -13,6 +13,57 @@
 ; PGOOD-NEXT:  StringTable:
 ; PGOOD-NEXT:  HTML (500): "index.html"
 ; PGOOD-NEXT:  Cursor (Name): "hello.ico"
+; PGOOD-NEXT:  Accelerators (12):
+; PGOOD-NEXT:    Option: Version: 5000
+; PGOOD-NEXT:    Option: Language: 0, Sublanguage: 2
+; PGOOD-NEXT:    Accelerator: "^C" 10
+; PGOOD-NEXT:    Accelerator: 14 11
+; PGOOD-NEXT:    Accelerator: 5 12 VIRTKEY
+; PGOOD-NEXT:    Accelerator: 0 0 ASCII
+; PGOOD-NEXT:    Accelerator: 1 1 VIRTKEY CONTROL
+; PGOOD-NEXT:    Accelerator: 2 2 VIRTKEY CONTROL
+; PGOOD-NEXT:    Accelerator: 3 3 ASCII VIRTKEY NOINVERT ALT SHIFT CONTROL
+; PGOOD-NEXT:  Menu (LLVMTest):
+; PGOOD-NEXT:    Option: Language: 4, Sublanguage: 1
+; PGOOD-NEXT:    Menu list starts
+; PGOOD-NEXT:    Popup ("&OneMenu"):
+; PGOOD-NEXT:    Menu list starts
+; PGOOD-NEXT:    Popup ("Menu&1"):
+; PGOOD-NEXT:    Menu list starts
+; PGOOD-NEXT:    MenuItem ("Item&1"), ID = 301 CHECKED MENUBREAK
+; PGOOD-NEXT:    MenuItem ("Item&2"), ID = 302 CHECKED MENUBARBREAK
+; PGOOD-NEXT:    MenuItem ("Item&3"), ID = 303 HELP INACTIVE MENUBREAK
+; PGOOD-NEXT:    MenuItem ("Item&4"), ID = 304 GRAYED
+; PGOOD-NEXT:    Menu list ends
+; PGOOD-NEXT:    Popup ("Menu&2"):
+; PGOOD-NEXT:    Menu list starts
+; PGOOD-NEXT:    MenuItem ("&A"), ID = 401
+; PGOOD-NEXT:    MenuItem ("&B"), ID = 402
+; PGOOD-NEXT:    Menu list ends
+; PGOOD-NEXT:    Menu list ends
+; PGOOD-NEXT:    Popup ("&Items"):
+; PGOOD-NEXT:    Menu list starts
+; PGOOD-NEXT:    MenuItem ("&Row"), ID = 500
+; PGOOD-NEXT:    MenuItem ("&Column"), ID = 501 CHECKED
+; PGOOD-NEXT:    Menu separator
+; PGOOD-NEXT:    MenuItem ("&Word"), ID = 502
+; PGOOD-NEXT:    Menu list ends
+; PGOOD-NEXT:    Menu list ends
+; PGOOD-NEXT:  DialogEx (14): loc: (50, 60), size: [10, 20], help ID: 500
+; PGOOD-NEXT:    Option: Language: 1, Sublanguage: 2
+; PGOOD-NEXT:    Option: Characteristics: 50
+; PGOOD-NEXT:    Option: Version: 100
+; PGOOD-NEXT:    Option: Font: size = 12, face = "Arial"
+; PGOOD-NEXT:    Option: Caption: "RC parser dialog"
+; PGOOD-NEXT:    Option: Style: 332340
+; PGOOD-NEXT:    Control (14): LTEXT, title: "Hello world!", loc: (20, 20), size: [50, 50]
+; PGOOD-NEXT:    Control (50): RTEXT, title: "Heh", loc: (51, 52), size: [53, 54], style: 55, ext. style: 56
+; PGOOD-NEXT:    Control (1): CTEXT, title: "Muuuu", loc: (2, 3), size: [4, 5], style: 6, ext. style: 7, help ID: 8
+; PGOOD-NEXT:    Control (1): PUSHBUTTON, title: "Muuuu", loc: (2, 3), size: [4, 5], style: 6, ext. style: 7, help ID: 8
+; PGOOD-NEXT:    Control (1): DEFPUSHBUTTON, title: "Muuuu", loc: (2, 3), size: [4, 5], style: 6
+; PGOOD-NEXT:    Control (5): EDITTEXT, title: , loc: (1, 2), size: [4, 7], style: 8
+; PGOOD-NEXT:  Dialog (25): loc: (1, 2), size: [3, 4], help ID: 0
+; PGOOD-NEXT:  DialogEx (26): loc: (1, 2), size: [3, 4], help ID: 0
 
 
 ; RUN: not llvm-rc /V %p/Inputs/parser-stringtable-no-string.rc 2>&1 | FileCheck %s --check-prefix PSTRINGTABLE1
@@ -68,3 +119,68 @@
 ; RUN: not llvm-rc /V %p/Inputs/parser-html-extra-comma.rc 2>&1 | FileCheck %s --check-prefix PHTML2
 
 ; PHTML2:  llvm-rc: Error parsing file: expected string, got ,
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-accelerators-bad-flag.rc 2>&1 | FileCheck %s --check-prefix PACCELERATORS1
+
+; PACCELERATORS1:  llvm-rc: Error parsing file: expected ASCII/VIRTKEY/NOINVERT/ALT/SHIFT/CONTROL, got HELLO
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-accelerators-bad-int-or-string.rc 2>&1 | FileCheck %s --check-prefix PACCELERATORS2
+
+; PACCELERATORS2:  llvm-rc: Error parsing file: expected int or string, got NotIntOrString
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-accelerators-no-comma.rc 2>&1 | FileCheck %s --check-prefix PACCELERATORS3
+
+; PACCELERATORS3:  llvm-rc: Error parsing file: expected int or string, got CONTROL
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-accelerators-no-comma-2.rc 2>&1 | FileCheck %s --check-prefix PACCELERATORS4
+
+; PACCELERATORS4:  llvm-rc: Error parsing file: expected ',', got 10
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-menu-bad-id.rc 2>&1 | FileCheck %s --check-prefix PMENU1
+
+; PMENU1:  llvm-rc: Error parsing file: expected integer, got A
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-menu-bad-flag.rc 2>&1 | FileCheck %s --check-prefix PMENU2
+
+; PMENU2:  llvm-rc: Error parsing file: expected CHECKED/GRAYED/HELP/INACTIVE/MENUBARBREAK/MENUBREAK, got ERRONEOUS
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-menu-missing-block.rc 2>&1 | FileCheck %s --check-prefix PMENU3
+
+; PMENU3:  llvm-rc: Error parsing file: expected '{', got POPUP
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-menu-misspelled-separator.rc 2>&1 | FileCheck %s --check-prefix PMENU4
+
+; PMENU4:  llvm-rc: Error parsing file: expected SEPARATOR or string, got NOTSEPARATOR
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-dialog-cant-give-helpid.rc 2>&1 | FileCheck %s --check-prefix PDIALOG1
+
+; PDIALOG1:  llvm-rc: Error parsing file: expected identifier, got ,
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-dialog-too-few-args.rc 2>&1 | FileCheck %s --check-prefix PDIALOG2
+
+; PDIALOG2:  llvm-rc: Error parsing file: expected ',', got }
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-dialog-too-many-args.rc 2>&1 | FileCheck %s --check-prefix PDIALOG3
+
+; PDIALOG3:  llvm-rc: Error parsing file: expected identifier, got ,
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-dialog-unknown-type.rc 2>&1 | FileCheck %s --check-prefix PDIALOG4
+
+; PDIALOG4:  llvm-rc: Error parsing file: expected control type, END or '}', got UNKNOWN
+
+
+; RUN: not llvm-rc /V %p/Inputs/parser-dialog-unnecessary-string.rc 2>&1 | FileCheck %s --check-prefix PDIALOG5
+
+; PDIALOG5:  llvm-rc: Error parsing file: expected integer, got "This shouldn't be here"

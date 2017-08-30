@@ -5,10 +5,10 @@
 ; CHECK: @x = internal global i32 0, align 4, !dbg [[DI1:![0-9]+]]
 ; CHECK: @x.1 = internal global i32 0, align 4, !dbg [[DI2:![0-9]+]]
 
-; CHECK: [[DI1]] = !DIGlobalVariableExpression(var: [[V1:.*]])
+; CHECK: [[DI1]] = !DIGlobalVariableExpression(var: [[V1:.*]], expr: !DIExpression())
 ; CHECK: [[V1]] = !DIGlobalVariable(name: "x",
 ; CHECK-NOT:                        linkageName:
-; CHECK: [[DI2]] = !DIGlobalVariableExpression(var: [[V2:.*]])
+; CHECK: [[DI2]] = !DIGlobalVariableExpression(var: [[V2:.*]], expr: !DIExpression())
 ; CHECK: [[V2]] = !DIGlobalVariable(name: "x",
 ; CHECK-NOT:                        linkageName:
 source_filename = "test/Linker/2011-08-04-Metadata.ll"
@@ -29,7 +29,7 @@ attributes #0 = { nounwind ssp uwtable }
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!7}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x", scope: !2, file: !3, line: 2, type: !6, isLocal: true, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.0 ()", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5)
 !3 = !DIFile(filename: "/tmp/one.c", directory: "/Volumes/Lalgate/Slate/D")

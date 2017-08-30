@@ -20,6 +20,8 @@ def HasAddr32 : Predicate<"!Subtarget->hasAddr64()">;
 def HasAddr64 : Predicate<"Subtarget->hasAddr64()">;
 def HasSIMD128 : Predicate<"Subtarget->hasSIMD128()">,
                            AssemblerPredicate<"FeatureSIMD128", "simd128">;
+def HasAtomics : Predicate<"Subtarget->hasAtomics()">,
+                           AssemblerPredicate<"FeatureAtomics", "atomics">;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.

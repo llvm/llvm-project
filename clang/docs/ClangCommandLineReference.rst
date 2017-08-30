@@ -56,6 +56,16 @@ Pass <arg> to fatbinary invocation
 
 Pass <arg> to the ptxas assembler
 
+.. option:: -Xopenmp-target <arg>
+
+Pass <arg> to the target offloading toolchain.
+
+.. program:: clang1
+.. option:: -Xopenmp-target=<arg> <arg2>
+.. program:: clang
+
+Pass <arg> to the specified target offloading toolchain. The triple that identifies the toolchain must be provided after the equals sign.
+
 .. option:: -Z<arg>
 
 .. option:: -a<arg>, --profile-blocks
@@ -311,6 +321,10 @@ Disable builtin #include directories
 Disable standard #include directories for the C++ standard library
 
 .. option:: -nostdlib, --no-standard-libraries
+
+.. program:: clang1
+.. option:: -nostdlib++
+.. program:: clang
 
 .. option:: -nostdlibinc
 
@@ -656,6 +670,10 @@ Pass <arg> to the assembler
 
 Pass <arg> to the clang compiler
 
+.. option:: -fclang-abi-compat=<version>
+
+Attempt to match the ABI of Clang <version>
+
 .. option:: -fcomment-block-commands=<arg>,<arg2>...
 
 Treat each comma separated argument in <arg> as a documentation comment block command
@@ -741,6 +759,8 @@ Enable origins tracking in MemorySanitizer
 .. option:: -fsanitize-memory-use-after-dtor
 
 Enable use-after-destroy detection in MemorySanitizer
+
+.. option:: -fsanitize-minimal-runtime, -fno-sanitize-minimal-runtime
 
 .. option:: -fsanitize-recover, -fno-sanitize-recover
 
@@ -851,6 +871,10 @@ Use the last modification time of <file> as the build session timestamp
 .. option:: -fbuild-session-timestamp=<time since Epoch in seconds>
 
 Time when the current build session started
+
+.. option:: -fmodule-file=\[<name>=\]<file>
+
+Specify the mapping of module name to precompiled module file, or load a module file if name is omitted.
 
 .. option:: -fmodules-cache-path=<directory>
 
@@ -1361,10 +1385,6 @@ Specify the maximum alignment to enforce on pointers lacking an explicit alignme
 
 .. option:: -fmodule-file-deps, -fno-module-file-deps
 
-.. option:: -fmodule-file=<file>
-
-Load this precompiled module file
-
 .. option:: -fmodule-map-file=<file>
 
 Load this module map file
@@ -1447,6 +1467,10 @@ Do not treat C++ operator name keywords as synonyms for operators
 
 .. option:: -fno-working-directory
 
+.. option:: -fnoopenmp-relocatable-target
+
+Do not compile OpenMP target code as relocatable.
+
 .. option:: -fnoopenmp-use-tls
 
 .. option:: -fobjc-abi-version=<arg>
@@ -1488,6 +1512,10 @@ Enable ARC-style weak references in Objective-C
 .. option:: -fopenmp, -fno-openmp
 
 .. option:: -fopenmp-dump-offload-linker-script
+
+.. option:: -fopenmp-relocatable-target
+
+OpenMP target code is compiled as relocatable using the -c flag. For OpenMP targets the code is relocatable by default.
 
 .. option:: -fopenmp-use-tls
 
@@ -1566,6 +1594,13 @@ Generate instrumented code to collect execution counts into <file> (overridden b
 .. program:: clang
 
 Use instrumentation data for profile-guided optimization
+
+.. option:: -fprofile-sample-accurate, -fauto-profile-accurate, -fno-profile-sample-accurate
+
+Specifies that the sample profile is accurate. If the sample
+               profile is accurate, callsites without profile samples are marked
+               as cold. Otherwise, treat callsites without profile samples as if
+               we have no profile
 
 .. option:: -fprofile-sample-use, -fauto-profile, -fno-profile-sample-use
 
@@ -1901,6 +1936,8 @@ Put objects of at most <size> bytes into small data section (MIPS / Hexagon)
 
 Enable SVR4-style position-independent code (Mips only)
 
+.. option:: -mabs=<arg>
+
 .. option:: -malign-double
 
 Align doubles to two words in structs (x86 only)
@@ -1938,6 +1975,14 @@ Link stack frames through backchain on System Z
 .. option:: -meabi <arg>
 
 Set EABI type, e.g. 4, 5 or gnu (default depends on triple)
+
+.. option:: -membedded-data, -mno-embedded-data
+
+Place constants in the .rodata section instead of the .sdata section even if they meet the -G <size> threshold (MIPS)
+
+.. option:: -mextern-sdata, -mno-extern-sdata
+
+Assume that externally defined data is in the small data if it meets the -G <size> threshold (MIPS)
 
 .. option:: -mfentry
 
@@ -1988,6 +2033,10 @@ Use Intel MCU ABI
 .. option:: -mkernel
 
 .. option:: -mldc1-sdc1, -mno-ldc1-sdc1
+
+.. option:: -mlocal-sdata, -mno-local-sdata
+
+Extend the -G behaviour to object local data (MIPS)
 
 .. option:: -mlong-calls, -mno-long-calls
 

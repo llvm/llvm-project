@@ -734,15 +734,15 @@ struct __less<_T1, const _T1>
 };
 
 template <class _Predicate>
-class __negate
+class __invert // invert the sense of a comparison
 {
 private:
     _Predicate __p_;
 public:
-    _LIBCPP_INLINE_VISIBILITY __negate() {}
+    _LIBCPP_INLINE_VISIBILITY __invert() {}
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit __negate(_Predicate __p) : __p_(__p) {}
+    explicit __invert(_Predicate __p) : __p_(__p) {}
 
     template <class _T1>
     _LIBCPP_INLINE_VISIBILITY
@@ -750,7 +750,7 @@ public:
 
     template <class _T1, class _T2>
     _LIBCPP_INLINE_VISIBILITY
-    bool operator()(const _T1& __x, const _T2& __y) {return !__p_(__x, __y);}
+    bool operator()(const _T1& __x, const _T2& __y) {return __p_(__y, __x);}
 };
 
 #ifdef _LIBCPP_DEBUG
@@ -4567,7 +4567,7 @@ __buffered_inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator 
         typedef reverse_iterator<value_type*> _Rv;
         __half_inplace_merge(_Rv(__p), _Rv(__buff),
                              _RBi(__middle), _RBi(__first),
-                             _RBi(__last), __negate<_Compare>(__comp));
+                             _RBi(__last), __invert<_Compare>(__comp));
     }
 }
 

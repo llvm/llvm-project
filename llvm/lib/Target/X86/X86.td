@@ -226,14 +226,12 @@ def FeatureCLFLUSHOPT : SubtargetFeature<"clflushopt", "HasCLFLUSHOPT", "true",
                                       "Flush A Cache Line Optimized">;
 def FeatureCLWB    : SubtargetFeature<"clwb", "HasCLWB", "true",
                                       "Cache Line Write Back">;
-// TODO: This feature ought to be renamed.
-// What it really refers to are CPUs for which certain instructions
-// (which ones besides the example below?) are microcoded.
-// The best examples of this are the memory forms of CALL and PUSH
-// instructions, which should be avoided in favor of a MOV + register CALL/PUSH.
-def FeatureCallRegIndirect : SubtargetFeature<"call-reg-indirect",
-                                     "CallRegIndirect", "true",
-                                     "Call register indirect">;
+// On some processors, instructions that implicitly take two memory operands are
+// slow. In practice, this means that CALL, PUSH, and POP with memory operands
+// should be avoided in favor of a MOV + register CALL/PUSH/POP.
+def FeatureSlowTwoMemOps : SubtargetFeature<"slow-two-mem-ops",
+                                     "SlowTwoMemOps", "true",
+                                     "Two memory operand instructions are slow">;
 def FeatureLEAUsesAG : SubtargetFeature<"lea-uses-ag", "LEAUsesAG", "true",
                                    "LEA instruction needs inputs at AG stage">;
 def FeatureSlowLEA : SubtargetFeature<"slow-lea", "SlowLEA", "true",
@@ -289,6 +287,13 @@ def FeatureERMSB
     : SubtargetFeature<
           "ermsb", "HasERMSB", "true",
           "REP MOVS/STOS are fast">;
+
+// Sandy Bridge and newer processors have many instructions that can be
+// fused with conditional branches and pass through the CPU as a single
+// operation.
+def FeatureMacroFusion
+    : SubtargetFeature<"macrofusion", "HasMacroFusion", "true",
+                 "Various instructions can be fused with conditional branches">;
 
 //===----------------------------------------------------------------------===//
 // X86 processors supported.
@@ -374,7 +379,8 @@ def : ProcessorModel<"core2", SandyBridgeModel, [
   FeatureFXSR,
   FeatureCMPXCHG16B,
   FeatureSlowBTMem,
-  FeatureLAHFSAHF
+  FeatureLAHFSAHF,
+  FeatureMacroFusion
 ]>;
 def : ProcessorModel<"penryn", SandyBridgeModel, [
   FeatureX87,
@@ -384,7 +390,8 @@ def : ProcessorModel<"penryn", SandyBridgeModel, [
   FeatureFXSR,
   FeatureCMPXCHG16B,
   FeatureSlowBTMem,
-  FeatureLAHFSAHF
+  FeatureLAHFSAHF,
+  FeatureMacroFusion
 ]>;
 
 // Atom CPUs.
@@ -401,7 +408,7 @@ class BonnellProc<string Name> : ProcessorModel<Name, AtomModel, [
   FeatureLEAForSP,
   FeatureSlowDivide32,
   FeatureSlowDivide64,
-  FeatureCallRegIndirect,
+  FeatureSlowTwoMemOps,
   FeatureLEAUsesAG,
   FeaturePadShortFunctions,
   FeatureLAHFSAHF
@@ -421,7 +428,7 @@ class SilvermontProc<string Name> : ProcessorModel<Name, SLMModel, [
   FeaturePCLMUL,
   FeatureAES,
   FeatureSlowDivide64,
-  FeatureCallRegIndirect,
+  FeatureSlowTwoMemOps,
   FeaturePRFCHW,
   FeatureSlowLEA,
   FeatureSlowIncDec,
@@ -444,7 +451,7 @@ class GoldmontProc<string Name> : ProcessorModel<Name, SLMModel, [
   FeaturePCLMUL,
   FeatureAES,
   FeaturePRFCHW,
-  FeatureCallRegIndirect,
+  FeatureSlowTwoMemOps,
   FeatureSlowLEA,
   FeatureSlowIncDec,
   FeatureSlowBTMem,
@@ -470,7 +477,8 @@ class NehalemProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
   FeatureCMPXCHG16B,
   FeatureSlowBTMem,
   FeaturePOPCNT,
-  FeatureLAHFSAHF
+  FeatureLAHFSAHF,
+  FeatureMacroFusion
 ]>;
 def : NehalemProc<"nehalem">;
 def : NehalemProc<"corei7">;
@@ -487,7 +495,8 @@ class WestmereProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
   FeaturePOPCNT,
   FeatureAES,
   FeaturePCLMUL,
-  FeatureLAHFSAHF
+  FeatureLAHFSAHF,
+  FeatureMacroFusion
 ]>;
 def : WestmereProc<"westmere">;
 
@@ -518,7 +527,9 @@ def SNBFeatures : ProcessorFeatures<[], [
   FeatureLAHFSAHF,
   FeatureSlow3OpsLEA,
   FeatureFastScalarFSQRT,
-  FeatureFastSHLDRotate
+  FeatureFastSHLDRotate,
+  FeatureSlowIncDec,
+  FeatureMacroFusion
 ]>;
 
 class SandyBridgeProc<string Name> : ProcModel<Name, SandyBridgeModel,
@@ -550,8 +561,7 @@ def HSWFeatures : ProcessorFeatures<IVBFeatures.Value, [
   FeatureERMSB,
   FeatureFMA,
   FeatureLZCNT,
-  FeatureMOVBE,
-  FeatureSlowIncDec
+  FeatureMOVBE
 ]>;
 
 class HaswellProc<string Name> : ProcModel<Name, HaswellModel,
@@ -597,6 +607,7 @@ class KnightsLandingProc<string Name> : ProcModel<Name, HaswellModel,
   FeatureBMI,
   FeatureBMI2,
   FeatureFMA,
+  FeatureSlowTwoMemOps,
   FeatureFastPartialYMMorZMMWrite
 ]>;
 def : KnightsLandingProc<"knl">;
@@ -732,7 +743,8 @@ def : Proc<"bdver1", [
   FeatureXSAVE,
   FeatureLWP,
   FeatureSlowSHLD,
-  FeatureLAHFSAHF
+  FeatureLAHFSAHF,
+  FeatureMacroFusion
 ]>;
 // Piledriver
 def : Proc<"bdver2", [
@@ -756,7 +768,8 @@ def : Proc<"bdver2", [
   FeatureLWP,
   FeatureFMA,
   FeatureSlowSHLD,
-  FeatureLAHFSAHF
+  FeatureLAHFSAHF,
+  FeatureMacroFusion
 ]>;
 
 // Steamroller
@@ -783,7 +796,8 @@ def : Proc<"bdver3", [
   FeatureXSAVEOPT,
   FeatureSlowSHLD,
   FeatureFSGSBase,
-  FeatureLAHFSAHF
+  FeatureLAHFSAHF,
+  FeatureMacroFusion
 ]>;
 
 // Excavator
@@ -811,7 +825,8 @@ def : Proc<"bdver4", [
   FeatureSlowSHLD,
   FeatureFSGSBase,
   FeatureLAHFSAHF,
-  FeatureMWAITX
+  FeatureMWAITX,
+  FeatureMacroFusion
 ]>;
 
 // Znver1
@@ -831,6 +846,7 @@ def: ProcessorModel<"znver1", Znver1Model, [
   FeatureFastLZCNT,
   FeatureLAHFSAHF,
   FeatureLZCNT,
+  FeatureMacroFusion,
   FeatureMMX,
   FeatureMOVBE,
   FeatureMWAITX,
@@ -874,7 +890,8 @@ def : ProcessorModel<"x86-64", SandyBridgeModel, [
   Feature64Bit,
   FeatureSlow3OpsLEA,
   FeatureSlowBTMem,
-  FeatureSlowIncDec
+  FeatureSlowIncDec,
+  FeatureMacroFusion
 ]>;
 
 //===----------------------------------------------------------------------===//

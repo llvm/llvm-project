@@ -48,7 +48,7 @@ entry:
 !6 = !{!7}
 !7 = !DICompositeType(tag: DW_TAG_structure_type, name: "Base", file: !1, line: 1, size: 32, align: 32, elements: !5, identifier: "_ZTS4Base")
 !8 = !{!9}
-!9 = !DIGlobalVariableExpression(var: !10)
+!9 = !DIGlobalVariableExpression(var: !10, expr: !DIExpression())
 !10 = !DIGlobalVariable(name: "version", scope: !4, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true)
 !11 = !{!12, !16}
 !12 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !4, entity: !13, file: !1, line: 8)

@@ -173,10 +173,10 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (! ThumbIndirectPads.empty()) {
     OutStreamer->EmitAssemblerFlag(MCAF_Code16);
     EmitAlignment(1);
-    for (unsigned i = 0, e = ThumbIndirectPads.size(); i < e; i++) {
-      OutStreamer->EmitLabel(ThumbIndirectPads[i].second);
+    for (std::pair<unsigned, MCSymbol *> &TIP : ThumbIndirectPads) {
+      OutStreamer->EmitLabel(TIP.second);
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tBX)
-        .addReg(ThumbIndirectPads[i].first)
+        .addReg(TIP.first)
         // Add predicate operands.
         .addImm(ARMCC::AL)
         .addReg(0));
@@ -945,8 +945,7 @@ void ARMAsmPrinter::EmitJumpTableAddrs(const MachineInstr *MI) {
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
   const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
 
-  for (unsigned i = 0, e = JTBBs.size(); i != e; ++i) {
-    MachineBasicBlock *MBB = JTBBs[i];
+  for (MachineBasicBlock *MBB : JTBBs) {
     // Construct an MCExpr for the entry. We want a value of the form:
     // (BasicBlockAddr - TableBeginAddr)
     //
@@ -989,8 +988,7 @@ void ARMAsmPrinter::EmitJumpTableInsts(const MachineInstr *MI) {
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
   const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
 
-  for (unsigned i = 0, e = JTBBs.size(); i != e; ++i) {
-    MachineBasicBlock *MBB = JTBBs[i];
+  for (MachineBasicBlock *MBB : JTBBs) {
     const MCExpr *MBBSymbolExpr = MCSymbolRefExpr::create(MBB->getSymbol(),
                                                           OutContext);
     // If this isn't a TBB or TBH, the entries are direct branch instructions.
@@ -1289,9 +1287,9 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
     unsigned TReg = MI->getOperand(0).getReg();
     MCSymbol *TRegSym = nullptr;
-    for (unsigned i = 0, e = ThumbIndirectPads.size(); i < e; i++) {
-      if (ThumbIndirectPads[i].first == TReg) {
-        TRegSym = ThumbIndirectPads[i].second;
+    for (std::pair<unsigned, MCSymbol *> &TIP : ThumbIndirectPads) {
+      if (TIP.first == TReg) {
+        TRegSym = TIP.second;
         break;
       }
     }

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7-avx -disable-lsr -pre-RA-sched=source -enable-misched -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=corei7-avx -mattr=-slow-incdec -disable-lsr -pre-RA-sched=source -enable-misched -verify-machineinstrs | FileCheck %s
 
 ; Verify that TEST+JE are scheduled together.
 ; CHECK: test_je

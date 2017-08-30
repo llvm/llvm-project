@@ -2,7 +2,7 @@
 
 // CHECK: @f.xyzzy = internal global i32 0, align 4, !dbg [[XYZZY:![0-9]+]]
 
-// CHECK: [[XYZZY]] = !DIGlobalVariableExpression(var: [[VAR:.*]])
+// CHECK: [[XYZZY]] = !DIGlobalVariableExpression(var: [[VAR:.*]], expr: !DIExpression())
 // CHECK: [[VAR]] = distinct !DIGlobalVariable
 void f(void)
 {

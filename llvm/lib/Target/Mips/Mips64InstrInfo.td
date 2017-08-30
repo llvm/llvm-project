@@ -58,6 +58,15 @@ def PowerOf2HI : PatLeaf<(imm), [{
     return false;
 }]>;
 
+def PowerOf2LO_i32 : PatLeaf<(imm), [{
+  if (N->getValueType(0) == MVT::i32) {
+    uint64_t Imm = N->getZExtValue();
+    return isPowerOf2_32(Imm) && isUInt<32>(Imm);
+  }
+  else
+    return false;
+}]>;
+
 def assertzext_lt_i32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLT(MVT::i32);
 }]>;
@@ -709,6 +718,12 @@ def : MipsPat<(brcond (i32 (setne (and i64:$lhs, PowerOf2LO:$mask), 0)), bb:$dst
               (BBIT1 i64:$lhs, (Log2LO PowerOf2LO:$mask), bb:$dst)>, ASE_MIPS64_CNMIPS;
 def : MipsPat<(brcond (i32 (setne (and i64:$lhs, PowerOf2HI:$mask), 0)), bb:$dst),
               (BBIT132 i64:$lhs, (Log2HI PowerOf2HI:$mask), bb:$dst)>, ASE_MIPS64_CNMIPS;
+def : MipsPat<(brcond (i32 (seteq (and i32:$lhs, PowerOf2LO_i32:$mask), 0)), bb:$dst),
+              (BBIT0 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), i32:$lhs, sub_32),
+                     (Log2LO PowerOf2LO_i32:$mask), bb:$dst)>, ASE_MIPS64_CNMIPS;
+def : MipsPat<(brcond (i32 (setne (and i32:$lhs, PowerOf2LO_i32:$mask), 0)), bb:$dst),
+              (BBIT1 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), i32:$lhs, sub_32),
+                     (Log2LO PowerOf2LO_i32:$mask), bb:$dst)>, ASE_MIPS64_CNMIPS;
 
 // Atomic load patterns.
 def : MipsPat<(atomic_load_8 addr:$a), (LB64 addr:$a)>;

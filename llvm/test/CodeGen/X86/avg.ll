@@ -407,7 +407,6 @@ define void @avg_v64i8(<64 x i8>* %a, <64 x i8>* %b) {
 ; SSE2-NEXT:    pand %xmm0, %xmm2
 ; SSE2-NEXT:    packuswb %xmm1, %xmm2
 ; SSE2-NEXT:    packuswb %xmm10, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; SSE2-NEXT:    psrld $1, %xmm4
 ; SSE2-NEXT:    psrld $1, %xmm12
 ; SSE2-NEXT:    pand %xmm0, %xmm12
@@ -444,7 +443,7 @@ define void @avg_v64i8(<64 x i8>* %a, <64 x i8>* %b) {
 ; SSE2-NEXT:    movdqu %xmm7, (%rax)
 ; SSE2-NEXT:    movdqu %xmm11, (%rax)
 ; SSE2-NEXT:    movdqu %xmm13, (%rax)
-; SSE2-NEXT:    movdqu %xmm1, (%rax)
+; SSE2-NEXT:    movdqu %xmm2, (%rax)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: avg_v64i8:

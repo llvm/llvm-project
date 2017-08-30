@@ -20,11 +20,11 @@
 
 ; DWARF2: DW_AT_name {{.*}} "c"
 ; DWARF2-NOT: DW_TAG
-; DWARF2: DW_AT_data_member_location {{.*}} (<0x02> 23 00 )
+; DWARF2: DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
 
 ; DWARF2: DW_AT_name {{.*}} "i"
 ; DWARF2-NOT: DW_TAG
-; DWARF2: DW_AT_data_member_location {{.*}} (<0x02> 23 04 )
+; DWARF2: DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x4)
 
 source_filename = "test/DebugInfo/X86/data_member_location.ll"
 
@@ -36,7 +36,7 @@ source_filename = "test/DebugInfo/X86/data_member_location.ll"
 !llvm.module.flags = !{!13, !14}
 !llvm.ident = !{!15}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "f", scope: null, file: !2, line: 6, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "data_member_location.cpp", directory: "/tmp/dbginfo")
 !3 = !DICompositeType(tag: DW_TAG_structure_type, name: "foo", file: !2, line: 1, size: 64, align: 32, elements: !4, identifier: "_ZTS3foo")

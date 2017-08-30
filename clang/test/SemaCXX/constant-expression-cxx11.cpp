@@ -604,6 +604,22 @@ static_assert(NATDCArray{}[1][1].n == 0, "");
 
 }
 
+// Tests for indexes into arrays of unknown bounds.
+namespace ArrayOfUnknownBound {
+  // This is a corner case of the language where it's not clear whether this
+  // should be an error: When we see the initializer for Z::a, the bounds of
+  // Z::b aren't known yet, but they will be known by the end of the translation
+  // unit, so the compiler can in theory check the indexing into Z::b.
+  // For the time being, as long as this is unclear, we want to make sure that
+  // this compiles.
+  struct Z {
+    static const void *const a[];
+    static const void *const b[];
+  };
+  constexpr const void *Z::a[] = {&b[0], &b[1]};
+  constexpr const void *Z::b[] = {&a[0], &a[1]};
+}
+
 namespace DependentValues {
 
 struct I { int n; typedef I V[10]; };

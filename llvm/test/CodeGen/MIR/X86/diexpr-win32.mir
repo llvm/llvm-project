@@ -1,0 +1,253 @@
+# RUN: llc -filetype=obj -O0 %s -o - | llvm-readobj -codeview | FileCheck %s
+#
+# (DW_OP_plus_uconst 12)
+# CHECK: LocalSym {
+# CHECK-NEXT:   Kind: S_LOCAL (0x113E)
+# CHECK-NEXT:   Type: string* (0x
+# CHECK-NEXT:   Flags [ (0x0)
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   VarName: Str
+# CHECK-NEXT: }
+# CHECK-NEXT: DefRangeRegisterRelSym {
+# CHECK-NEXT:   Kind: S_DEFRANGE_REGISTER_REL (0x1145)
+# CHECK-NEXT:   BaseRegister:
+# CHECK-NEXT:   HasSpilledUDTMember: No
+# CHECK-NEXT:   OffsetInParent: 0
+# CHECK-NEXT:   BasePointerOffset: 12
+# CHECK-NEXT:   LocalVariableAddrRange {
+# CHECK-NEXT:     OffsetStart:
+# CHECK-NEXT:     ISectStart:
+# CHECK-NEXT:     Range:
+# CHECK-NEXT:   }
+# CHECK-NEXT: }
+# (DW_OP_plus_uconst, 8, DW_OP_deref)
+# CHECK: LocalSym {
+# CHECK-NEXT:   Kind: S_LOCAL (0x113E)
+# CHECK-NEXT:   Type: string& (0x
+# CHECK-NEXT:   Flags [ (0x0)
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   VarName: Result
+# CHECK-NEXT: }
+# CHECK-NEXT: DefRangeRegisterRelSym {
+# CHECK-NEXT:   Kind: S_DEFRANGE_REGISTER_REL (0x1145)
+# CHECK-NEXT:   BaseRegister:
+# CHECK-NEXT:   HasSpilledUDTMember: No
+# CHECK-NEXT:   OffsetInParent: 0
+# CHECK-NEXT:   BasePointerOffset: 8
+# CHECK-NEXT:   LocalVariableAddrRange {
+# CHECK-NEXT:     OffsetStart:
+# CHECK-NEXT:     ISectStart:
+# CHECK-NEXT:     Range:
+# CHECK-NEXT:   }
+# CHECK-NEXT: }
+# (DW_OP_constu, 4, DW_OP_minus)
+# CHECK: LocalSym {
+# CHECK-NEXT:   Kind: S_LOCAL (0x113E)
+# CHECK-NEXT:   Type: long (0x12)
+# CHECK-NEXT:   Flags [ (0x0)
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   VarName: Bytes
+# CHECK-NEXT: }
+# CHECK-NEXT: DefRangeRegisterRelSym {
+# CHECK-NEXT:   Kind: S_DEFRANGE_REGISTER_REL (0x1145)
+# CHECK-NEXT:   BaseRegister:
+# CHECK-NEXT:   HasSpilledUDTMember: No
+# CHECK-NEXT:   OffsetInParent: 0
+# CHECK-NEXT:   BasePointerOffset: -4
+# CHECK-NEXT:   LocalVariableAddrRange {
+# CHECK-NEXT:     OffsetStart:
+# CHECK-NEXT:     ISectStart:
+# CHECK-NEXT:     Range:
+# CHECK-NEXT:   }
+# CHECK-NEXT: }
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
+  target triple = "i386-pc-windows-msvc19.0.24215"
+
+  %struct.string = type { i32, i32, i8* }
+
+  define void @fun(%struct.string* noalias sret %agg.result, %struct.string* noalias %str) !dbg !12 {
+  entry:
+    call void @llvm.dbg.value(metadata %struct.string* %agg.result, metadata !23, metadata !24), !dbg !25
+    call void @llvm.dbg.value(metadata %struct.string* %str, metadata !26, metadata !28), !dbg !25
+    %call = call dereferenceable(12) %struct.string* @getString(), !dbg !29
+    %0 = bitcast %struct.string* %agg.result to i8*, !dbg !29
+    %1 = bitcast %struct.string* %call to i8*, !dbg !29
+    call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* %1, i32 12, i32 4, i1 false), !dbg !29
+    ret void, !dbg !30
+  }
+
+  define i32 @len(%struct.string* %s, i32 %acc) !dbg !31 {
+  entry:
+    %0 = bitcast %struct.string* %s to i32*
+    %bytes = load i32, i32* %0, !dbg !34
+    call void @llvm.dbg.declare(metadata i32 %bytes, metadata !35, metadata !28), !dbg !34
+    %1 = add i32 %bytes, %acc, !dbg !36
+    ret i32 %1, !dbg !36
+  }
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+
+  declare dereferenceable(12) %struct.string* @getString()
+
+  ; Function Attrs: argmemonly nounwind
+  declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i32, i1) #1
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+
+  attributes #0 = { nounwind readnone speculatable }
+  attributes #1 = { argmemonly nounwind }
+  attributes #2 = { nounwind }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.linker.options = !{!3, !4}
+  !llvm.module.flags = !{!5, !6, !7, !8}
+  !llvm.ident = !{!9}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 6.0.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+  !1 = !DIFile(filename: "diexpr.ll", directory: "C:\5Csrc", checksumkind: CSK_MD5, checksum: "c547c362c610fa79e7abaddc76e1efe7")
+  !2 = !{}
+  !3 = !{!"/DEFAULTLIB:libcmt.lib"}
+  !4 = !{!"/DEFAULTLIB:oldnames.lib"}
+  !5 = !{i32 1, !"NumRegisterParameters", i32 0}
+  !6 = !{i32 2, !"CodeView", i32 1}
+  !7 = !{i32 2, !"Debug Info Version", i32 3}
+  !8 = !{i32 1, !"wchar_size", i32 2}
+  !9 = !{!"clang version 6.0.0 "}
+  !10 = !DIExpression(DW_OP_plus_uconst, 12)
+  !11 = !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref)
+  !12 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: !1, file: !1, line: 9, type: !13, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{!15}
+  !15 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "string", file: !1, line: 1, size: 96, elements: !16, identifier: ".?AUstring@@")
+  !16 = !{!17, !19, !20}
+  !17 = !DIDerivedType(tag: DW_TAG_member, name: "length", scope: !15, file: !1, line: 2, baseType: !18, size: 32)
+  !18 = !DIBasicType(name: "long int", size: 32, encoding: DW_ATE_signed)
+  !19 = !DIDerivedType(tag: DW_TAG_member, name: "size", scope: !15, file: !1, line: 3, baseType: !18, size: 32, offset: 32)
+  !20 = !DIDerivedType(tag: DW_TAG_member, name: "data", scope: !15, file: !1, line: 4, baseType: !21, size: 32, offset: 64)
+  !21 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 32)
+  !22 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
+  !23 = !DILocalVariable(name: "Result", scope: !12, file: !1, line: 10, type: !15)
+  !24 = !DIExpression(DW_OP_deref)
+  !25 = !DILocation(line: 10, scope: !12)
+  !26 = !DILocalVariable(name: "Str", scope: !12, file: !1, line: 10, type: !27)
+  !27 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !15, size: 32)
+  !28 = !DIExpression(DW_OP_constu, 4, DW_OP_minus)
+  !29 = !DILocation(line: 11, scope: !12)
+  !30 = !DILocation(line: 12, scope: !12)
+  !31 = distinct !DISubprogram(name: "len", linkageName: "len", scope: !1, file: !1, line: 14, type: !32, isLocal: false, isDefinition: true, scopeLine: 14, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+  !32 = !DISubroutineType(types: !33)
+  !33 = !{!18}
+  !34 = !DILocation(line: 15, scope: !31)
+  !35 = !DILocalVariable(name: "Bytes", scope: !31, file: !1, line: 15, type: !18)
+  !36 = !DILocation(line: 16, scope: !31)
+
+...
+---
+name:            fun
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       4
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 4, stack-id: 0,
+      callee-saved-register: '%esi' }
+  - { id: 1, type: default, offset: 4, size: 4, alignment: 4, stack-id: 0,
+      isImmutable: true, isAliased: false, callee-saved-register: '' }
+  - { id: 2, type: default, offset: 0, size: 4, alignment: 4, stack-id: 0,
+      isImmutable: true, isAliased: false, callee-saved-register: '' }
+stack:
+constants:
+body:             |
+  bb.0.entry:
+    liveins: %esi
+
+    frame-setup PUSH32r killed %esi, implicit-def %esp, implicit %esp
+    CFI_INSTRUCTION def_cfa_offset 8
+    CFI_INSTRUCTION offset %esi, -8
+    %esi = MOV32rm %esp, 1, _, 8, _ :: (load 4 from %fixed-stack.2)
+    DBG_VALUE %esp, 0, !26, !10, debug-location !25
+    DBG_VALUE %esp, 0, !23, !11, debug-location !25
+    CALLpcrel32 @getString, csr_32, implicit %esp, implicit-def %esp, implicit-def %eax, debug-location !29
+    %ecx = MOV32rm %eax, 1, _, 0, _, debug-location !29 :: (dereferenceable load 4 from %ir.1)
+    %edx = MOV32rm %eax, 1, _, 4, _, debug-location !29 :: (dereferenceable load 4 from %ir.1 + 4)
+    MOV32mr %esi, 1, _, 0, _, killed %ecx, debug-location !29 :: (store 4 into %ir.0)
+    MOV32mr %esi, 1, _, 4, _, killed %edx, debug-location !29 :: (store 4 into %ir.0 + 4)
+    %eax = MOV32rm killed %eax, 1, _, 8, _, debug-location !29 :: (dereferenceable load 4 from %ir.1 + 8)
+    MOV32mr %esi, 1, _, 8, _, killed %eax, debug-location !29 :: (store 4 into %ir.0 + 8)
+    %eax = COPY killed %esi, debug-location !30
+    %esi = POP32r implicit-def %esp, implicit %esp, debug-location !30
+    RET 0, %eax, debug-location !30
+
+...
+---
+name:            len
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: 0,
+      isImmutable: true, isAliased: false, callee-saved-register: '' }
+  - { id: 1, type: default, offset: 0, size: 4, alignment: 4, stack-id: 0,
+      isImmutable: true, isAliased: false, callee-saved-register: '' }
+stack:
+constants:
+body:             |
+  bb.0.entry:
+    %eax = MOV32rm %esp, 1, _, 4, _ :: (load 4 from %fixed-stack.1)
+    %eax = MOV32rm killed %eax, 1, _, 0, _, debug-location !34 :: (load 4 from %ir.0)
+    DBG_VALUE debug-use %eax, 0, !35, !28, debug-location !34
+    %eax = ADD32rm killed %eax, %esp, 1, _, 8, _, implicit-def dead %eflags, debug-location !36 :: (load 4 from %fixed-stack.0)
+    RET 0, %eax, debug-location !36
+
+...

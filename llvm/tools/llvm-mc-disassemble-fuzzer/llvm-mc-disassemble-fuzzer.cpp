@@ -73,11 +73,12 @@ int DisassembleOneInput(const uint8_t *Data, size_t Size) {
   return 0;
 }
 
-int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   return DisassembleOneInput(Data, Size);
 }
 
-int LLVMFuzzerInitialize(int *argc, char ***argv) {
+extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
+                                                        char ***argv) {
   // The command line is unusual compared to other fuzzers due to the need to
   // specify the target. Options like -triple, -mcpu, and -mattr work like
   // their counterparts in llvm-mc, while -fuzzer-args collects options for the

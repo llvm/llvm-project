@@ -29,15 +29,15 @@ target triple = "x86_64-apple-darwin"
 ; CHECK:      DW_AT_byte_size {{.*}} (0x18)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l0_ofs0"
-; CHECK:          DW_AT_data_member_location {{.*}}00
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l0_ofs8"
-; CHECK:          DW_AT_data_member_location {{.*}}08
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x8)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l0_ofs16"
 ; CHECK:          DW_AT_bit_size   {{.*}} (0x01)
 ; CHECK:          DW_AT_bit_offset {{.*}} (0x1f)
-; CHECK:          DW_AT_data_member_location {{.*}}10
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x10)
 
 ; // ---------------------------------------------------------------------
 ; // Implicitly packed.
@@ -62,16 +62,16 @@ target triple = "x86_64-apple-darwin"
 ; CHECK:      DW_AT_byte_size {{.*}} (0x0c)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l1_ofs0"
-; CHECK:          DW_AT_data_member_location {{.*}}00
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l1_ofs1"
-; CHECK:          DW_AT_data_member_location {{.*}}01
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x1)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l1_ofs9"
 ; CHECK:          DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK:          DW_AT_bit_size   {{.*}} (0x01)
 ; CHECK:          DW_AT_bit_offset {{.*}} (0x17)
-; CHECK:          DW_AT_data_member_location {{.*}}08
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x8)
 
 ; // ---------------------------------------------------------------------
 ; // Explicitly packed.
@@ -95,16 +95,16 @@ target triple = "x86_64-apple-darwin"
 ; CHECK:      DW_AT_byte_size {{.*}} (0x0a)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l2_ofs0"
-; CHECK:          DW_AT_data_member_location {{.*}}00
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l2_ofs1"
-; CHECK:          DW_AT_data_member_location {{.*}}01
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x1)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l2_ofs9"
 ; CHECK:          DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK:          DW_AT_bit_size   {{.*}} (0x01)
 ; CHECK:          DW_AT_bit_offset {{.*}} (0x17)
-; CHECK:          DW_AT_data_member_location {{.*}}08
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x8)
 
 ; // ---------------------------------------------------------------------
 ; // Explicitly packed with different alignment.
@@ -128,28 +128,28 @@ target triple = "x86_64-apple-darwin"
 ; CHECK:      DW_AT_byte_size {{.*}} (0x10)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l3_ofs0"
-; CHECK:          DW_AT_data_member_location {{.*}}00
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l3_ofs4"
-; CHECK:          DW_AT_data_member_location {{.*}}04
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x4)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l3_ofs12"
 ; CHECK:          DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK:          DW_AT_bit_size   {{.*}} (0x01)
 ; CHECK:          DW_AT_bit_offset {{.*}} (0x1f)
-; CHECK:          DW_AT_data_member_location {{.*}}0c
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0xc)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!49, !50}
 !llvm.ident = !{!51}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "l0", scope: !2, file: !8, line: 88, type: !40, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.7.0 (trunk 240791) (llvm/trunk 240790)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5, imports: !4)
 !3 = !DIFile(filename: "/llvm/tools/clang/test/CodeGen/<stdin>", directory: "/llvm/_build.ninja.release")
 !4 = !{}
 !5 = !{!0, !6, !17, !29}
-!6 = !DIGlobalVariableExpression(var: !7)
+!6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !7 = !DIGlobalVariable(name: "l1", scope: !2, file: !8, line: 89, type: !9, isLocal: false, isDefinition: true)
 !8 = !DIFile(filename: "/llvm/tools/clang/test/CodeGen/debug-info-packed-struct.c", directory: "/llvm/_build.ninja.release")
 !9 = !DICompositeType(tag: DW_TAG_structure_type, name: "layout1", file: !8, line: 34, size: 96, elements: !10)
@@ -160,7 +160,7 @@ target triple = "x86_64-apple-darwin"
 !14 = !DICompositeType(tag: DW_TAG_structure_type, name: "size8_anon", file: !8, line: 30, size: 64, elements: !4)
 !15 = !DIDerivedType(tag: DW_TAG_member, name: "l1_ofs9", scope: !9, file: !8, line: 37, baseType: !16, size: 1, offset: 72)
 !16 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!17 = !DIGlobalVariableExpression(var: !18)
+!17 = !DIGlobalVariableExpression(var: !18, expr: !DIExpression())
 !18 = !DIGlobalVariable(name: "l2", scope: !2, file: !8, line: 90, type: !19, isLocal: false, isDefinition: true)
 !19 = !DICompositeType(tag: DW_TAG_structure_type, name: "layout2", file: !8, line: 54, size: 80, elements: !20)
 !20 = !{!21, !22, !28}
@@ -172,7 +172,7 @@ target triple = "x86_64-apple-darwin"
 !26 = !DIDerivedType(tag: DW_TAG_member, name: "l", scope: !23, file: !8, line: 52, baseType: !27, size: 60, offset: 4)
 !27 = !DIBasicType(name: "long long int", size: 64, encoding: DW_ATE_signed)
 !28 = !DIDerivedType(tag: DW_TAG_member, name: "l2_ofs9", scope: !19, file: !8, line: 57, baseType: !16, size: 1, offset: 72)
-!29 = !DIGlobalVariableExpression(var: !30)
+!29 = !DIGlobalVariableExpression(var: !30, expr: !DIExpression())
 !30 = !DIGlobalVariable(name: "l3", scope: !2, file: !8, line: 91, type: !31, isLocal: false, isDefinition: true)
 !31 = !DICompositeType(tag: DW_TAG_structure_type, name: "layout3", file: !8, line: 76, size: 128, elements: !32)
 !32 = !{!33, !34, !39}

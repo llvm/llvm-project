@@ -5644,15 +5644,27 @@ SDValue SITargetLowering::performIntMed3ImmCombine(
   return DAG.getNode(ISD::TRUNCATE, SL, VT, Med3);
 }
 
+static ConstantFPSDNode *getSplatConstantFP(SDValue Op) {
+  if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op))
+    return C;
+
+  if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(Op)) {
+    if (ConstantFPSDNode *C = BV->getConstantFPSplatNode())
+      return C;
+  }
+
+  return nullptr;
+}
+
 SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
                                                   const SDLoc &SL,
                                                   SDValue Op0,
                                                   SDValue Op1) const {
-  ConstantFPSDNode *K1 = dyn_cast<ConstantFPSDNode>(Op1);
+  ConstantFPSDNode *K1 = getSplatConstantFP(Op1);
   if (!K1)
     return SDValue();
 
-  ConstantFPSDNode *K0 = dyn_cast<ConstantFPSDNode>(Op0.getOperand(1));
+  ConstantFPSDNode *K0 = getSplatConstantFP(Op0.getOperand(1));
   if (!K0)
     return SDValue();
 
@@ -5662,7 +5674,7 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
     return SDValue();
 
   // TODO: Check IEEE bit enabled?
-  EVT VT = K0->getValueType(0);
+  EVT VT = Op0.getValueType();
   if (Subtarget->enableDX10Clamp()) {
     // If dx10_clamp is enabled, NaNs clamp to 0.0. This is the same as the
     // hardware fmed3 behavior converting to a min.
@@ -5671,19 +5683,21 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
       return DAG.getNode(AMDGPUISD::CLAMP, SL, VT, Op0.getOperand(0));
   }
 
-  // med3 for f16 is only available on gfx9+.
-  if (VT == MVT::f64 || (VT == MVT::f16 && !Subtarget->hasMed3_16()))
-    return SDValue();
+  // med3 for f16 is only available on gfx9+, and not available for v2f16.
+  if (VT == MVT::f32 || (VT == MVT::f16 && Subtarget->hasMed3_16())) {
+    // This isn't safe with signaling NaNs because in IEEE mode, min/max on a
+    // signaling NaN gives a quiet NaN. The quiet NaN input to the min would
+    // then give the other result, which is different from med3 with a NaN
+    // input.
+    SDValue Var = Op0.getOperand(0);
+    if (!isKnownNeverSNan(DAG, Var))
+      return SDValue();
 
-  // This isn't safe with signaling NaNs because in IEEE mode, min/max on a
-  // signaling NaN gives a quiet NaN. The quiet NaN input to the min would then
-  // give the other result, which is different from med3 with a NaN input.
-  SDValue Var = Op0.getOperand(0);
-  if (!isKnownNeverSNan(DAG, Var))
-    return SDValue();
+    return DAG.getNode(AMDGPUISD::FMED3, SL, K0->getValueType(0),
+                       Var, SDValue(K0, 0), SDValue(K1, 0));
+  }
 
-  return DAG.getNode(AMDGPUISD::FMED3, SL, K0->getValueType(0),
-                     Var, SDValue(K0, 0), SDValue(K1, 0));
+  return SDValue();
 }
 
 SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
@@ -5744,7 +5758,8 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
        (Opc == AMDGPUISD::FMIN_LEGACY &&
         Op0.getOpcode() == AMDGPUISD::FMAX_LEGACY)) &&
       (VT == MVT::f32 || VT == MVT::f64 ||
-       (VT == MVT::f16 && Subtarget->has16BitInsts())) &&
+       (VT == MVT::f16 && Subtarget->has16BitInsts()) ||
+       (VT == MVT::v2f16 && Subtarget->hasVOP3PInsts())) &&
       Op0.hasOneUse()) {
     if (SDValue Res = performFPMed3ImmCombine(DAG, SDLoc(N), Op0, Op1))
       return Res;

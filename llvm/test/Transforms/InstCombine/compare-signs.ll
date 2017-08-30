@@ -3,24 +3,36 @@
 ; PR5438
 
 ; TODO: This should also optimize down.
-;define i32 @test1(i32 %a, i32 %b) nounwind readnone {
-;entry:
-;        %0 = icmp sgt i32 %a, -1
-;        %1 = icmp slt i32 %b, 0
-;        %2 = xor i1 %1, %0
-;        %3 = zext i1 %2 to i32
-;        ret i32 %3
-;}
+define i32 @test1(i32 %a, i32 %b) nounwind readnone {
+; CHECK-LABEL: @test1(
+; CHECK-NEXT:    [[T0:%.*]] = icmp sgt i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[T1:%.*]] = icmp slt i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[T2:%.*]] = xor i1 [[T1]], [[T0]]
+; CHECK-NEXT:    [[T3:%.*]] = zext i1 [[T2]] to i32
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t0 = icmp sgt i32 %a, -1
+  %t1 = icmp slt i32 %b, 0
+  %t2 = xor i1 %t1, %t0
+  %t3 = zext i1 %t2 to i32
+  ret i32 %t3
+}
 
 ; TODO: This optimizes partially but not all the way.
-;define i32 @test2(i32 %a, i32 %b) nounwind readnone {
-;entry:
-;        %0 = and i32 %a, 8
-;        %1 = and i32 %b, 8
-;        %2 = icmp eq i32 %0, %1
-;        %3 = zext i1 %2 to i32
-;        ret i32 %3
-;}
+define i32 @test2(i32 %a, i32 %b) nounwind readnone {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 3
+; CHECK-NEXT:    [[DOTLOBIT:%.*]] = and i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[DOTLOBIT]], 1
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %t0 = and i32 %a, 8
+  %t1 = and i32 %b, 8
+  %t2 = icmp eq i32 %t0, %t1
+  %t3 = zext i1 %t2 to i32
+  ret i32 %t3
+}
 
 define i32 @test3(i32 %a, i32 %b) nounwind readnone {
 ; CHECK-LABEL: @test3(
@@ -34,6 +46,22 @@ define i32 @test3(i32 %a, i32 %b) nounwind readnone {
   %t2 = icmp eq i32 %t0, %t1
   %t3 = zext i1 %t2 to i32
   ret i32 %t3
+}
+
+; TODO this should optimize but doesn't due to missing vector support in InstCombiner::foldICmpEquality.
+define <2 x i32> @test3vec(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
+; CHECK-LABEL: @test3vec(
+; CHECK-NEXT:    [[T0:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T0]], [[T1]]
+; CHECK-NEXT:    [[T3:%.*]] = zext <2 x i1> [[T2]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[T3]]
+;
+  %t0 = lshr <2 x i32> %a, <i32 31, i32 31>
+  %t1 = lshr <2 x i32> %b, <i32 31, i32 31>
+  %t2 = icmp eq <2 x i32> %t0, %t1
+  %t3 = zext <2 x i1> %t2 to <2 x i32>
+  ret <2 x i32> %t3
 }
 
 ; Variation on @test3: checking the 2nd bit in a situation where the 5th bit

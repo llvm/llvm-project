@@ -16,6 +16,8 @@
 
 #include "ResourceScriptToken.h"
 
+#include "llvm/ADT/StringSet.h"
+
 namespace llvm {
 namespace rc {
 
@@ -27,7 +29,12 @@ private:
     StringRef String;
     Data(uint32_t Value) : Int(Value) {}
     Data(const StringRef Value) : String(Value) {}
-    Data(const RCToken &Token);
+    Data(const RCToken &Token) {
+      if (Token.kind() == RCToken::Kind::Int)
+        Int = Token.intValue();
+      else
+        String = Token.value();
+    }
   } Data;
   bool IsInt;
 
@@ -90,6 +97,42 @@ public:
   raw_ostream &log(raw_ostream &) const override;
 };
 
+// ACCELERATORS resource. Defines a named table of accelerators for the app.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380610(v=vs.85).aspx
+class AcceleratorsResource : public RCResource {
+public:
+  class Accelerator {
+  public:
+    IntOrString Event;
+    uint32_t Id;
+    uint8_t Flags;
+
+    enum Options {
+      ASCII = (1 << 0),
+      VIRTKEY = (1 << 1),
+      NOINVERT = (1 << 2),
+      ALT = (1 << 3),
+      SHIFT = (1 << 4),
+      CONTROL = (1 << 5)
+    };
+
+    static constexpr size_t NumFlags = 6;
+    static StringRef OptionsStr[NumFlags];
+  };
+
+  AcceleratorsResource(OptionalStmtList &&OptStmts)
+      : OptStatements(std::move(OptStmts)) {}
+  void addAccelerator(IntOrString Event, uint32_t Id, uint8_t Flags) {
+    Accelerators.push_back(Accelerator{Event, Id, Flags});
+  }
+  raw_ostream &log(raw_ostream &) const override;
+
+private:
+  std::vector<Accelerator> Accelerators;
+  OptionalStmtList OptStatements;
+};
+
 // CURSOR resource. Represents a single cursor (".cur") file.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380920(v=vs.85).aspx
@@ -125,6 +168,92 @@ public:
   raw_ostream &log(raw_ostream &) const override;
 };
 
+// -- MENU resource and its helper classes --
+// This resource describes the contents of an application menu
+// (usually located in the upper part of the dialog.)
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381025(v=vs.85).aspx
+
+// Description of a single submenu item.
+class MenuDefinition {
+public:
+  enum Options {
+    CHECKED = (1 << 0),
+    GRAYED = (1 << 1),
+    HELP = (1 << 2),
+    INACTIVE = (1 << 3),
+    MENUBARBREAK = (1 << 4),
+    MENUBREAK = (1 << 5)
+  };
+
+  static constexpr size_t NumFlags = 6;
+  static StringRef OptionsStr[NumFlags];
+  static raw_ostream &logFlags(raw_ostream &, uint8_t Flags);
+  virtual raw_ostream &log(raw_ostream &OS) const {
+    return OS << "Base menu definition\n";
+  }
+  virtual ~MenuDefinition() {}
+};
+
+// Recursive description of a whole submenu.
+class MenuDefinitionList : public MenuDefinition {
+  std::vector<std::unique_ptr<MenuDefinition>> Definitions;
+
+public:
+  void addDefinition(std::unique_ptr<MenuDefinition> Def) {
+    Definitions.push_back(std::move(Def));
+  }
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// Separator in MENU definition (MENUITEM SEPARATOR).
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381024(v=vs.85).aspx
+class MenuSeparator : public MenuDefinition {
+public:
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// MENUITEM statement definition.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381024(v=vs.85).aspx
+class MenuItem : public MenuDefinition {
+  StringRef Name;
+  uint32_t Id;
+  uint8_t Flags;
+
+public:
+  MenuItem(StringRef Caption, uint32_t ItemId, uint8_t ItemFlags)
+      : Name(Caption), Id(ItemId), Flags(ItemFlags) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// POPUP statement definition.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381030(v=vs.85).aspx
+class PopupItem : public MenuDefinition {
+  StringRef Name;
+  uint8_t Flags;
+  MenuDefinitionList SubItems;
+
+public:
+  PopupItem(StringRef Caption, uint8_t ItemFlags,
+            MenuDefinitionList &&SubItemsList)
+      : Name(Caption), Flags(ItemFlags), SubItems(std::move(SubItemsList)) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// Menu resource definition.
+class MenuResource : public RCResource {
+  OptionalStmtList OptStatements;
+  MenuDefinitionList Elements;
+
+public:
+  MenuResource(OptionalStmtList &&OptStmts, MenuDefinitionList &&Items)
+      : OptStatements(std::move(OptStmts)), Elements(std::move(Items)) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
 // STRINGTABLE resource. Contains a list of strings, each having its unique ID.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381050(v=vs.85).aspx
@@ -138,6 +267,55 @@ public:
   void addString(uint32_t ID, StringRef String) {
     Table.emplace_back(ID, String);
   }
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// -- DIALOG(EX) resource and its helper classes --
+//
+// This resource describes dialog boxes and controls residing inside them.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381003(v=vs.85).aspx
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381002(v=vs.85).aspx
+
+// Single control definition.
+class Control {
+  StringRef Type, Title;
+  uint32_t ID, X, Y, Width, Height;
+  Optional<uint32_t> Style, ExtStyle, HelpID;
+
+public:
+  Control(StringRef CtlType, StringRef CtlTitle, uint32_t CtlID, uint32_t PosX,
+          uint32_t PosY, uint32_t ItemWidth, uint32_t ItemHeight,
+          Optional<uint32_t> ItemStyle, Optional<uint32_t> ExtItemStyle,
+          Optional<uint32_t> CtlHelpID)
+      : Type(CtlType), Title(CtlTitle), ID(CtlID), X(PosX), Y(PosY),
+        Width(ItemWidth), Height(ItemHeight), Style(ItemStyle),
+        ExtStyle(ExtItemStyle), HelpID(CtlHelpID) {}
+
+  static const StringSet<> SupportedCtls;
+  static const StringSet<> CtlsWithTitle;
+
+  raw_ostream &log(raw_ostream &) const;
+};
+
+// Single dialog definition. We don't create distinct classes for DIALOG and
+// DIALOGEX because of their being too similar to each other. We only have a
+// flag determining the type of the dialog box.
+class DialogResource : public RCResource {
+  uint32_t X, Y, Width, Height, HelpID;
+  OptionalStmtList OptStatements;
+  std::vector<Control> Controls;
+  bool IsExtended;
+
+public:
+  DialogResource(uint32_t PosX, uint32_t PosY, uint32_t DlgWidth,
+                 uint32_t DlgHeight, uint32_t DlgHelpID,
+                 OptionalStmtList &&OptStmts, bool IsDialogEx)
+      : X(PosX), Y(PosY), Width(DlgWidth), Height(DlgHeight), HelpID(DlgHelpID),
+        OptStatements(std::move(OptStmts)), IsExtended(IsDialogEx) {}
+
+  void addControl(Control &&Ctl) { Controls.push_back(std::move(Ctl)); }
+
   raw_ostream &log(raw_ostream &) const override;
 };
 
@@ -160,6 +338,44 @@ class VersionStmt : public OptionalStmt {
 
 public:
   VersionStmt(uint32_t Version) : Value(Version) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// CAPTION optional statement.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380778(v=vs.85).aspx
+class CaptionStmt : public OptionalStmt {
+  StringRef Value;
+
+public:
+  CaptionStmt(StringRef Caption) : Value(Caption) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// FONT optional statement.
+// Note that the documentation is inaccurate: it expects five arguments to be
+// given, however the example provides only two. In fact, the original tool
+// expects two arguments - point size and name of the typeface.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381013(v=vs.85).aspx
+class FontStmt : public OptionalStmt {
+  uint32_t Size;
+  StringRef Typeface;
+
+public:
+  FontStmt(uint32_t FontSize, StringRef FontName)
+      : Size(FontSize), Typeface(FontName) {}
+  raw_ostream &log(raw_ostream &) const override;
+};
+
+// STYLE optional statement.
+//
+// Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa381051(v=vs.85).aspx
+class StyleStmt : public OptionalStmt {
+  uint32_t Value;
+
+public:
+  StyleStmt(uint32_t Style) : Value(Style) {}
   raw_ostream &log(raw_ostream &) const override;
 };
 

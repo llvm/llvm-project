@@ -38,7 +38,7 @@ define <8 x double> @test2(<8 x double> %x, double* %br, double %y) nounwind {
 define <16 x float> @test3(<16 x float> %x) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vextractf32x4 $1, %zmm0, %xmm1
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vinsertf32x4 $0, %xmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
@@ -451,14 +451,14 @@ define i64 @extract_v8i64(<8 x i64> %x, i64* %dst) {
 ; KNL-LABEL: extract_v8i64:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpextrq $1, %xmm0, %rax
-; KNL-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
+; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; KNL-NEXT:    vpextrq $1, %xmm0, (%rdi)
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: extract_v8i64:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpextrq $1, %xmm0, %rax
-; SKX-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
+; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vpextrq $1, %xmm0, (%rdi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -505,14 +505,14 @@ define i32 @extract_v16i32(<16 x i32> %x, i32* %dst) {
 ; KNL-LABEL: extract_v16i32:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpextrd $1, %xmm0, %eax
-; KNL-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
+; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; KNL-NEXT:    vpextrd $1, %xmm0, (%rdi)
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: extract_v16i32:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpextrd $1, %xmm0, %eax
-; SKX-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
+; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vpextrd $1, %xmm0, (%rdi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -567,7 +567,7 @@ define i16 @extract_v32i16(<32 x i16> %x, i16* %dst) {
 ; SKX-LABEL: extract_v32i16:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpextrw $1, %xmm0, %eax
-; SKX-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
+; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vpextrw $1, %xmm0, (%rdi)
 ; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; SKX-NEXT:    vzeroupper
@@ -626,7 +626,7 @@ define i8 @extract_v64i8(<64 x i8> %x, i8* %dst) {
 ; SKX-LABEL: extract_v64i8:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpextrb $1, %xmm0, %eax
-; SKX-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
+; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vpextrb $1, %xmm0, (%rdi)
 ; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    vzeroupper
@@ -678,7 +678,7 @@ define <8 x i64> @insert_v8i64(<8 x i64> %x, i64 %y , i64* %ptr) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpinsrq $1, (%rsi), %xmm0, %xmm1
 ; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm1
-; CHECK-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0
 ; CHECK-NEXT:    vinserti32x4 $1, %xmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
@@ -720,7 +720,7 @@ define <16 x i32> @insert_v16i32(<16 x i32> %x, i32 %y, i32* %ptr) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpinsrd $1, (%rsi), %xmm0, %xmm1
 ; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm1
-; CHECK-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpinsrd $1, %edi, %xmm0, %xmm0
 ; CHECK-NEXT:    vinserti32x4 $1, %xmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
@@ -771,7 +771,7 @@ define <32 x i16> @insert_v32i16(<32 x i16> %x, i16 %y, i16* %ptr) {
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpinsrw $1, (%rsi), %xmm0, %xmm1
 ; SKX-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm1
-; SKX-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
+; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vpinsrw $1, %edi, %xmm0, %xmm0
 ; SKX-NEXT:    vinserti32x4 $1, %xmm0, %zmm1, %zmm0
 ; SKX-NEXT:    retq

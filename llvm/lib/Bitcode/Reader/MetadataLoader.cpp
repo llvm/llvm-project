@@ -497,8 +497,8 @@ class MetadataLoader::MetadataLoaderImpl {
           for (unsigned I = 0; I < GVs->getNumOperands(); I++)
             if (auto *GV =
                     dyn_cast_or_null<DIGlobalVariable>(GVs->getOperand(I))) {
-              auto *DGVE =
-                  DIGlobalVariableExpression::getDistinct(Context, GV, nullptr);
+              auto *DGVE = DIGlobalVariableExpression::getDistinct(
+                  Context, GV, DIExpression::get(Context, {}));
               GVs->replaceOperandWith(I, DGVE);
             }
       }
@@ -510,8 +510,8 @@ class MetadataLoader::MetadataLoaderImpl {
       GV.eraseMetadata(LLVMContext::MD_dbg);
       for (auto *MD : MDs)
         if (auto *DGV = dyn_cast_or_null<DIGlobalVariable>(MD)) {
-          auto *DGVE =
-              DIGlobalVariableExpression::getDistinct(Context, DGV, nullptr);
+          auto *DGVE = DIGlobalVariableExpression::getDistinct(
+              Context, DGV, DIExpression::get(Context, {}));
           GV.addMetadata(LLVMContext::MD_dbg, *DGVE);
         } else
           GV.addMetadata(LLVMContext::MD_dbg, *MD);
@@ -1585,7 +1585,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
       DIGlobalVariableExpression *DGVE = nullptr;
       if (Attach || Expr)
-        DGVE = DIGlobalVariableExpression::getDistinct(Context, DGV, Expr);
+        DGVE = DIGlobalVariableExpression::getDistinct(
+            Context, DGV, Expr ? Expr : DIExpression::get(Context, {}));
       if (Attach)
         Attach->addDebugInfo(DGVE);
 
@@ -1648,10 +1649,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     IsDistinct = Record[0];
-    MetadataList.assignValue(GET_OR_DISTINCT(DIGlobalVariableExpression,
-                                             (Context, getMDOrNull(Record[1]),
-                                              getMDOrNull(Record[2]))),
-                             NextMetadataNo);
+    Metadata *Expr = getMDOrNull(Record[2]);
+    if (!Expr)
+      Expr = DIExpression::get(Context, {});
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DIGlobalVariableExpression,
+                        (Context, getMDOrNull(Record[1]), Expr)),
+        NextMetadataNo);
     NextMetadataNo++;
     break;
   }

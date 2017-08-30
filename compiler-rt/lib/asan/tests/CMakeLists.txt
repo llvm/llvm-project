@@ -265,7 +265,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
       FOLDER "Compiler-RT Runtime tests")
 
     add_asan_tests(${arch} ${ASAN_TEST_RUNTIME} KIND "-inline")
-    add_asan_tests(${arch} ${ASAN_TEST_RUNTIME} KIND "-with-calls"
+    add_asan_tests(${arch} ${ASAN_TEST_RUNTIME} KIND "-calls"
       CFLAGS -mllvm -asan-instrumentation-with-call-threshold=0)
   endforeach()
 endif()

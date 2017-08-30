@@ -128,6 +128,7 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
   case WebAssembly::LOAD32_S_I64:
   case WebAssembly::LOAD32_U_I64:
   case WebAssembly::STORE32_I64:
+  case WebAssembly::ATOMIC_LOAD_I32:
     return 2;
   case WebAssembly::LOAD_I64:
   case WebAssembly::LOAD_F64:

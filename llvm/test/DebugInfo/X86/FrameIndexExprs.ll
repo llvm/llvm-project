@@ -3,8 +3,7 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -filetype=obj < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]  (<0xa> 91 78 93 03 93 06 91 7d 93 03 )
-;           fbreg -8, piece 0x00000003, piece 0x00000006, fbreg -3, piece 0x00000003 
+; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_fbreg -8, DW_OP_piece 0x3, DW_OP_piece 0x6, DW_OP_fbreg -3, DW_OP_piece 0x3)
 ; CHECK-NEXT: DW_AT_abstract_origin {{.*}}"p"
 source_filename = "bugpoint-reduced-simplified.ll"
 target triple = "x86_64-apple-darwin"
@@ -47,13 +46,13 @@ attributes #0 = { nounwind readnone }
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!9, !10, !11}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "f", scope: !2, file: !3, line: 8, type: !8, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "PR31381.c", directory: "/")
 !4 = !{}
 !5 = !{!0, !6}
-!6 = !DIGlobalVariableExpression(var: !7)
+!6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !7 = distinct !DIGlobalVariable(name: "h", scope: !2, file: !3, line: 8, type: !8, isLocal: false, isDefinition: true)
 !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !9 = !{i32 2, !"Dwarf Version", i32 4}

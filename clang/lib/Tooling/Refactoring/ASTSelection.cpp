@@ -10,12 +10,28 @@
 #include "clang/Tooling/Refactoring/ASTSelection.h"
 #include "clang/AST/LexicallyOrderedRecursiveASTVisitor.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace tooling;
 using ast_type_traits::DynTypedNode;
 
 namespace {
+
+CharSourceRange getLexicalDeclRange(Decl *D, const SourceManager &SM,
+                                    const LangOptions &LangOpts) {
+  if (!isa<ObjCImplDecl>(D))
+    return CharSourceRange::getTokenRange(D->getSourceRange());
+  // Objective-C implementation declarations end at the '@' instead of the 'end'
+  // keyword. Use the lexer to find the location right after 'end'.
+  SourceRange R = D->getSourceRange();
+  SourceLocation LocAfterEnd = Lexer::findLocationAfterToken(
+      R.getEnd(), tok::raw_identifier, SM, LangOpts,
+      /*SkipTrailingWhitespaceAndNewLine=*/false);
+  return LocAfterEnd.isValid()
+             ? CharSourceRange::getCharRange(R.getBegin(), LocAfterEnd)
+             : CharSourceRange::getTokenRange(R);
+}
 
 /// Constructs the tree of selected AST nodes that either contain the location
 /// of the cursor or overlap with the selection range.
@@ -45,6 +61,21 @@ public:
     return std::move(Result);
   }
 
+  bool TraversePseudoObjectExpr(PseudoObjectExpr *E) {
+    // Avoid traversing the semantic expressions. They should be handled by
+    // looking through the appropriate opaque expressions in order to build
+    // a meaningful selection tree.
+    llvm::SaveAndRestore<bool> LookThrough(LookThroughOpaqueValueExprs, true);
+    return TraverseStmt(E->getSyntacticForm());
+  }
+
+  bool TraverseOpaqueValueExpr(OpaqueValueExpr *E) {
+    if (!LookThroughOpaqueValueExprs)
+      return true;
+    llvm::SaveAndRestore<bool> LookThrough(LookThroughOpaqueValueExprs, false);
+    return TraverseStmt(E->getSourceExpr());
+  }
+
   bool TraverseDecl(Decl *D) {
     if (isa<TranslationUnitDecl>(D))
       return LexicallyOrderedRecursiveASTVisitor::TraverseDecl(D);
@@ -62,9 +93,8 @@ public:
     if (SM.getFileID(FileLoc) != TargetFile)
       return true;
 
-    // FIXME (Alex Lorenz): Add location adjustment for ObjCImplDecls.
     SourceSelectionKind SelectionKind =
-        selectionKindFor(CharSourceRange::getTokenRange(D->getSourceRange()));
+        selectionKindFor(getLexicalDeclRange(D, SM, Context.getLangOpts()));
     SelectionStack.push_back(
         SelectedASTNode(DynTypedNode::create(*D), SelectionKind));
     LexicallyOrderedRecursiveASTVisitor::TraverseDecl(D);
@@ -83,6 +113,8 @@ public:
   bool TraverseStmt(Stmt *S) {
     if (!S)
       return true;
+    if (auto *Opaque = dyn_cast<OpaqueValueExpr>(S))
+      return TraverseOpaqueValueExpr(Opaque);
     // FIXME (Alex Lorenz): Improve handling for macro locations.
     SourceSelectionKind SelectionKind =
         selectionKindFor(CharSourceRange::getTokenRange(S->getSourceRange()));
@@ -135,6 +167,10 @@ private:
   FileID TargetFile;
   const ASTContext &Context;
   std::vector<SelectedASTNode> SelectionStack;
+  /// Controls whether we can traverse through the OpaqueValueExpr. This is
+  /// typically enabled during the traversal of syntactic form for
+  /// PseudoObjectExprs.
+  bool LookThroughOpaqueValueExprs = false;
 };
 
 } // end anonymous namespace

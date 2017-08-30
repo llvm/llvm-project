@@ -179,8 +179,7 @@
 ; ASM:        .asciz  "nested"                # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "o"
-; FIXME: We should have a .cv_def_range for 'o', but we don't yet.
-; ASM-NOT:    .cv_def_range
+; ASM:        .cv_def_range    .Lfunc_begin3 .Lfunc_end3, "E\021J\001\000\000\000\000\000\000"
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "p"
 ; ASM:        .cv_def_range    [[p_start]] .Lfunc_end3, "C\021\021\000\000\000\004\000\000\000"
@@ -190,7 +189,16 @@
 ; OBJ:         DisplayName: nested
 ; OBJ:       }
 ; OBJ:       LocalSym {
+; OBJ:         Type: Nested&
 ; OBJ:         VarName: o
+; OBJ:       }
+; OBJ:       DefRangeRegisterRelSym {
+; OBJ:         BaseRegister: 330
+; OBJ:         HasSpilledUDTMember: No
+; OBJ:         OffsetInParent: 0
+; OBJ:         BasePointerOffset: 0
+; OBJ:         LocalVariableAddrRange {
+; OBJ:         }
 ; OBJ:       }
 ; OBJ:       LocalSym {
 ; OBJ:         VarName: p

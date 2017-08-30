@@ -97,13 +97,13 @@ attributes #3 = { nounwind readnone }
 !llvm.module.flags = !{!24, !25}
 !llvm.ident = !{!26}
 
-!0 = distinct !DIGlobalVariableExpression(var: !1)
+!0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "force_fwd_decl", linkageName: "\01?force_fwd_decl@@3UGetFwdDecl@@A", scope: !2, file: !8, line: 5, type: !21, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 4.0.0 (trunk 281056) (llvm/trunk 281051)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "<stdin>", directory: "C:\5Csrc\5Cllvm\5Cbuild")
 !4 = !{}
 !5 = !{!0, !6}
-!6 = distinct !DIGlobalVariableExpression(var: !7)
+!6 = distinct !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !7 = !DIGlobalVariable(name: "require_complete", linkageName: "\01?require_complete@@3UUseCompleteType@@A", scope: !2, file: !8, line: 15, type: !9, isLocal: false, isDefinition: true)
 !8 = !DIFile(filename: "t.cpp", directory: "C:\5Csrc\5Cllvm\5Cbuild")
 !9 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "UseCompleteType", file: !8, line: 10, size: 64, align: 64, elements: !10, identifier: ".?AUUseCompleteType@@")

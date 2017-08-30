@@ -46,6 +46,6 @@ int main() {
 // CHECK-SAME:                                  isLocal: true, isDefinition: true
 
 // CHECK-LDlg-DAG: [[LDVAL:.*]] = distinct !DIGlobalVariable(name: "ldVal", {{.*}}, isLocal: true, isDefinition: true)
-// CHECK-LDlg-DAG: !DIGlobalVariableExpression(var: [[LDVAL]])
+// CHECK-LDlg-DAG: !DIGlobalVariableExpression(var: [[LDVAL]], expr: !DIExpression())
 // CHECK-LDsm-DAG: [[LDVAL:.*]] = distinct !DIGlobalVariable(name: "ldVal", {{.*}}, isLocal: true, isDefinition: true)
 // CHECK-LDsm-DAG: !DIGlobalVariableExpression(var: [[LDVAL]], expr:

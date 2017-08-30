@@ -33,12 +33,12 @@ attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"=
 !llvm.module.flags = !{!8, !9, !10, !11}
 !llvm.ident = !{!12}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "ch", scope: !2, file: !3, line: 1, type: !4, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
 !3 = !DIFile(filename: "test.c", directory: "/home/user/clang/build")
 !4 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_unsigned_char)
-!5 = !DIGlobalVariableExpression(var: !6)
+!5 = !DIGlobalVariableExpression(var: !6, expr: !DIExpression())
 !6 = !DIGlobalVariable(name: "b", scope: !2, file: !3, line: 2, type: !7, isLocal: false, isDefinition: true)
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !8 = !{i32 2, !"Dwarf Version", i32 4}
