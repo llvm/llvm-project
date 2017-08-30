@@ -174,14 +174,6 @@ static cl::opt<bool> PollyRemarksMinimal(
     cl::desc("Do not emit remarks about assumptions that are known"),
     cl::Hidden, cl::ZeroOrMore, cl::init(false), cl::cat(PollyCategory));
 
-// Multiplicative reductions can be disabled separately as these kind of
-// operations can overflow easily. Additive reductions and bit operations
-// are in contrast pretty stable.
-static cl::opt<bool> DisableMultiplicativeReductions(
-    "polly-disable-multiplicative-reductions",
-    cl::desc("Disable multiplicative reductions"), cl::Hidden, cl::ZeroOrMore,
-    cl::init(false), cl::cat(PollyCategory));
-
 static cl::opt<int> RunTimeChecksMaxAccessDisjuncts(
     "polly-rtc-max-array-disjuncts",
     cl::desc("The maximal number of disjunts allowed in memory accesses to "
@@ -202,11 +194,6 @@ static cl::opt<std::string> UserContextStr(
     "polly-context", cl::value_desc("isl parameter set"),
     cl::desc("Provide additional constraints on the context parameters"),
     cl::init(""), cl::cat(PollyCategory));
-
-static cl::opt<bool> DetectReductions("polly-detect-reductions",
-                                      cl::desc("Detect and exploit reductions"),
-                                      cl::Hidden, cl::ZeroOrMore,
-                                      cl::init(true), cl::cat(PollyCategory));
 
 static cl::opt<bool>
     IslOnErrorAbort("polly-on-isl-error-abort",
@@ -675,37 +662,6 @@ MemoryAccess::getReductionOperatorStr(MemoryAccess::ReductionType RT) {
     return "&";
   }
   llvm_unreachable("Unknown reduction type");
-}
-
-/// Return the reduction type for a given binary operator.
-static MemoryAccess::ReductionType getReductionType(const BinaryOperator *BinOp,
-                                                    const Instruction *Load) {
-  if (!BinOp)
-    return MemoryAccess::RT_NONE;
-  switch (BinOp->getOpcode()) {
-  case Instruction::FAdd:
-    if (!BinOp->hasUnsafeAlgebra())
-      return MemoryAccess::RT_NONE;
-  // Fall through
-  case Instruction::Add:
-    return MemoryAccess::RT_ADD;
-  case Instruction::Or:
-    return MemoryAccess::RT_BOR;
-  case Instruction::Xor:
-    return MemoryAccess::RT_BXOR;
-  case Instruction::And:
-    return MemoryAccess::RT_BAND;
-  case Instruction::FMul:
-    if (!BinOp->hasUnsafeAlgebra())
-      return MemoryAccess::RT_NONE;
-  // Fall through
-  case Instruction::Mul:
-    if (DisableMultiplicativeReductions)
-      return MemoryAccess::RT_NONE;
-    return MemoryAccess::RT_MUL;
-  default:
-    return MemoryAccess::RT_NONE;
-  }
 }
 
 const ScopArrayInfo *MemoryAccess::getOriginalScopArrayInfo() const {
@@ -1313,28 +1269,6 @@ void ScopStmt::restrictDomain(isl::set NewDomain) {
   Domain = NewDomain;
 }
 
-void ScopStmt::buildAccessRelations() {
-  Scop &S = *getParent();
-  for (MemoryAccess *Access : MemAccs) {
-    Type *ElementType = Access->getElementType();
-
-    MemoryKind Ty;
-    if (Access->isPHIKind())
-      Ty = MemoryKind::PHI;
-    else if (Access->isExitPHIKind())
-      Ty = MemoryKind::ExitPHI;
-    else if (Access->isValueKind())
-      Ty = MemoryKind::Value;
-    else
-      Ty = MemoryKind::Array;
-
-    auto *SAI = S.getOrCreateScopArrayInfo(Access->getOriginalBaseAddr(),
-                                           ElementType, Access->Sizes, Ty);
-    Access->buildAccessRelation(SAI);
-    S.addAccessData(Access);
-  }
-}
-
 void ScopStmt::addAccess(MemoryAccess *Access, bool Prepend) {
   Instruction *AccessInst = Access->getAccessInstruction();
 
@@ -1742,33 +1676,24 @@ buildConditionSets(Scop &S, BasicBlock *BB, TerminatorInst *TI, Loop *L,
                             ConditionSets);
 }
 
-void ScopStmt::buildDomain() {
-  isl::id Id = isl::id::alloc(getIslCtx(), getBaseName(), this);
-
-  Domain = getParent()->getDomainConditions(this);
-  Domain = Domain.set_tuple_id(Id);
-}
-
-void ScopStmt::collectSurroundingLoops() {
-  for (unsigned u = 0, e = Domain.dim(isl::dim::set); u < e; u++) {
-    isl::id DimId = Domain.get_dim_id(isl::dim::set, u);
-    NestLoops.push_back(static_cast<Loop *>(DimId.get_user()));
-  }
-}
-
-ScopStmt::ScopStmt(Scop &parent, Region &R, Loop *SurroundingLoop)
+ScopStmt::ScopStmt(Scop &parent, Region &R, Loop *SurroundingLoop,
+                   std::vector<Instruction *> EntryBlockInstructions)
     : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), R(&R),
-      Build(nullptr), SurroundingLoop(SurroundingLoop) {
+      Build(nullptr), SurroundingLoop(SurroundingLoop),
+      Instructions(EntryBlockInstructions) {
   BaseName = getIslCompatibleName(
       "Stmt", R.getNameStr(), parent.getNextStmtIdx(), "", UseInstructionNames);
 }
 
 ScopStmt::ScopStmt(Scop &parent, BasicBlock &bb, Loop *SurroundingLoop,
-                   std::vector<Instruction *> Instructions)
+                   std::vector<Instruction *> Instructions, int Count)
     : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), BB(&bb),
       Build(nullptr), SurroundingLoop(SurroundingLoop),
       Instructions(Instructions) {
-  BaseName = getIslCompatibleName("Stmt", &bb, parent.getNextStmtIdx(), "",
+  std::string S = "";
+  if (Count != 0)
+    S += std::to_string(Count);
+  BaseName = getIslCompatibleName("Stmt", &bb, parent.getNextStmtIdx(), S,
                                   UseInstructionNames);
 }
 
@@ -1792,141 +1717,6 @@ ScopStmt::ScopStmt(Scop &parent, isl::map SourceRel, isl::map TargetRel,
 }
 
 ScopStmt::~ScopStmt() = default;
-
-void ScopStmt::init(LoopInfo &LI) {
-  assert(!Domain && "init must be called only once");
-
-  buildDomain();
-  collectSurroundingLoops();
-  buildAccessRelations();
-
-  if (DetectReductions)
-    checkForReductions();
-}
-
-/// Collect loads which might form a reduction chain with @p StoreMA.
-///
-/// Check if the stored value for @p StoreMA is a binary operator with one or
-/// two loads as operands. If the binary operand is commutative & associative,
-/// used only once (by @p StoreMA) and its load operands are also used only
-/// once, we have found a possible reduction chain. It starts at an operand
-/// load and includes the binary operator and @p StoreMA.
-///
-/// Note: We allow only one use to ensure the load and binary operator cannot
-///       escape this block or into any other store except @p StoreMA.
-void ScopStmt::collectCandiateReductionLoads(
-    MemoryAccess *StoreMA, SmallVectorImpl<MemoryAccess *> &Loads) {
-  auto *Store = dyn_cast<StoreInst>(StoreMA->getAccessInstruction());
-  if (!Store)
-    return;
-
-  // Skip if there is not one binary operator between the load and the store
-  auto *BinOp = dyn_cast<BinaryOperator>(Store->getValueOperand());
-  if (!BinOp)
-    return;
-
-  // Skip if the binary operators has multiple uses
-  if (BinOp->getNumUses() != 1)
-    return;
-
-  // Skip if the opcode of the binary operator is not commutative/associative
-  if (!BinOp->isCommutative() || !BinOp->isAssociative())
-    return;
-
-  // Skip if the binary operator is outside the current SCoP
-  if (BinOp->getParent() != Store->getParent())
-    return;
-
-  // Skip if it is a multiplicative reduction and we disabled them
-  if (DisableMultiplicativeReductions &&
-      (BinOp->getOpcode() == Instruction::Mul ||
-       BinOp->getOpcode() == Instruction::FMul))
-    return;
-
-  // Check the binary operator operands for a candidate load
-  auto *PossibleLoad0 = dyn_cast<LoadInst>(BinOp->getOperand(0));
-  auto *PossibleLoad1 = dyn_cast<LoadInst>(BinOp->getOperand(1));
-  if (!PossibleLoad0 && !PossibleLoad1)
-    return;
-
-  // A load is only a candidate if it cannot escape (thus has only this use)
-  if (PossibleLoad0 && PossibleLoad0->getNumUses() == 1)
-    if (PossibleLoad0->getParent() == Store->getParent())
-      Loads.push_back(&getArrayAccessFor(PossibleLoad0));
-  if (PossibleLoad1 && PossibleLoad1->getNumUses() == 1)
-    if (PossibleLoad1->getParent() == Store->getParent())
-      Loads.push_back(&getArrayAccessFor(PossibleLoad1));
-}
-
-/// Check for reductions in this ScopStmt.
-///
-/// Iterate over all store memory accesses and check for valid binary reduction
-/// like chains. For all candidates we check if they have the same base address
-/// and there are no other accesses which overlap with them. The base address
-/// check rules out impossible reductions candidates early. The overlap check,
-/// together with the "only one user" check in collectCandiateReductionLoads,
-/// guarantees that none of the intermediate results will escape during
-/// execution of the loop nest. We basically check here that no other memory
-/// access can access the same memory as the potential reduction.
-void ScopStmt::checkForReductions() {
-  SmallVector<MemoryAccess *, 2> Loads;
-  SmallVector<std::pair<MemoryAccess *, MemoryAccess *>, 4> Candidates;
-
-  // First collect candidate load-store reduction chains by iterating over all
-  // stores and collecting possible reduction loads.
-  for (MemoryAccess *StoreMA : MemAccs) {
-    if (StoreMA->isRead())
-      continue;
-
-    Loads.clear();
-    collectCandiateReductionLoads(StoreMA, Loads);
-    for (MemoryAccess *LoadMA : Loads)
-      Candidates.push_back(std::make_pair(LoadMA, StoreMA));
-  }
-
-  // Then check each possible candidate pair.
-  for (const auto &CandidatePair : Candidates) {
-    bool Valid = true;
-    isl::map LoadAccs = CandidatePair.first->getAccessRelation();
-    isl::map StoreAccs = CandidatePair.second->getAccessRelation();
-
-    // Skip those with obviously unequal base addresses.
-    if (!LoadAccs.has_equal_space(StoreAccs)) {
-      continue;
-    }
-
-    // And check if the remaining for overlap with other memory accesses.
-    isl::map AllAccsRel = LoadAccs.unite(StoreAccs);
-    AllAccsRel = AllAccsRel.intersect_domain(getDomain());
-    isl::set AllAccs = AllAccsRel.range();
-
-    for (MemoryAccess *MA : MemAccs) {
-      if (MA == CandidatePair.first || MA == CandidatePair.second)
-        continue;
-
-      isl::map AccRel = MA->getAccessRelation().intersect_domain(getDomain());
-      isl::set Accs = AccRel.range();
-
-      if (AllAccs.has_equal_space(Accs)) {
-        isl::set OverlapAccs = Accs.intersect(AllAccs);
-        Valid = Valid && OverlapAccs.is_empty();
-      }
-    }
-
-    if (!Valid)
-      continue;
-
-    const LoadInst *Load =
-        dyn_cast<const LoadInst>(CandidatePair.first->getAccessInstruction());
-    MemoryAccess::ReductionType RT =
-        getReductionType(dyn_cast<BinaryOperator>(Load->user_back()), Load);
-
-    // If no overlapping access was found we mark the load and store as
-    // reduction like.
-    CandidatePair.first->markAsReductionLike(RT);
-    CandidatePair.second->markAsReductionLike(RT);
-  }
-}
 
 std::string ScopStmt::getDomainStr() const { return Domain.to_str(); }
 
@@ -1991,7 +1781,7 @@ void ScopStmt::print(raw_ostream &OS, bool PrintInstructions) const {
   for (MemoryAccess *Access : MemAccs)
     Access->print(OS);
 
-  if (PrintInstructions && isBlockStmt())
+  if (PrintInstructions)
     printInstructions(OS.indent(12));
 }
 
@@ -3800,16 +3590,21 @@ void Scop::assumeNoOutOfBounds() {
 }
 
 void Scop::removeFromStmtMap(ScopStmt &Stmt) {
-  if (Stmt.isRegionStmt())
+  for (Instruction *Inst : Stmt.getInstructions())
+    InstStmtMap.erase(Inst);
+
+  if (Stmt.isRegionStmt()) {
     for (BasicBlock *BB : Stmt.getRegion()->blocks()) {
       StmtMap.erase(BB);
+      // Skip entry basic block, as its instructions are already deleted as
+      // part of the statement's instruction list.
+      if (BB == Stmt.getEntryBlock())
+        continue;
       for (Instruction &Inst : *BB)
         InstStmtMap.erase(&Inst);
     }
-  else {
+  } else {
     StmtMap.erase(Stmt.getBasicBlock());
-    for (Instruction *Inst : Stmt.getInstructions())
-      InstStmtMap.erase(Inst);
   }
 }
 
@@ -4571,6 +4366,7 @@ void Scop::addRecordedAssumptions() {
 }
 
 void Scop::invalidate(AssumptionKind Kind, DebugLoc Loc, BasicBlock *BB) {
+  DEBUG(dbgs() << "Invalidate SCoP because of reason " << Kind << "\n");
   addAssumption(Kind, isl_set_empty(getParamSpace().release()), Loc,
                 AS_ASSUMPTION, BB);
 }
@@ -4880,9 +4676,9 @@ static isl::multi_union_pw_aff mapToDimension(isl::union_set USet, int N) {
 }
 
 void Scop::addScopStmt(BasicBlock *BB, Loop *SurroundingLoop,
-                       std::vector<Instruction *> Instructions) {
+                       std::vector<Instruction *> Instructions, int Count) {
   assert(BB && "Unexpected nullptr!");
-  Stmts.emplace_back(*this, *BB, SurroundingLoop, Instructions);
+  Stmts.emplace_back(*this, *BB, SurroundingLoop, Instructions, Count);
   auto *Stmt = &Stmts.back();
   StmtMap[BB].push_back(Stmt);
   for (Instruction *Inst : Instructions) {
@@ -4892,9 +4688,10 @@ void Scop::addScopStmt(BasicBlock *BB, Loop *SurroundingLoop,
   }
 }
 
-void Scop::addScopStmt(Region *R, Loop *SurroundingLoop) {
+void Scop::addScopStmt(Region *R, Loop *SurroundingLoop,
+                       std::vector<Instruction *> Instructions) {
   assert(R && "Unexpected nullptr!");
-  Stmts.emplace_back(*this, *R, SurroundingLoop);
+  Stmts.emplace_back(*this, *R, SurroundingLoop, Instructions);
   auto *Stmt = &Stmts.back();
   for (BasicBlock *BB : R->blocks()) {
     StmtMap[BB].push_back(Stmt);
@@ -5049,8 +4846,6 @@ ArrayRef<ScopStmt *> Scop::getStmtListFor(BasicBlock *BB) const {
   auto StmtMapIt = StmtMap.find(BB);
   if (StmtMapIt == StmtMap.end())
     return {};
-  assert(StmtMapIt->second.size() == 1 &&
-         "Each statement corresponds to exactly one BB.");
   return StmtMapIt->second;
 }
 

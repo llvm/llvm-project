@@ -89,6 +89,19 @@ static cl::opt<bool> DetectFortranArrays(
     cl::desc("Detect Fortran arrays and use this for code generation"),
     cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
+static cl::opt<bool> DetectReductions("polly-detect-reductions",
+                                      cl::desc("Detect and exploit reductions"),
+                                      cl::Hidden, cl::ZeroOrMore,
+                                      cl::init(true), cl::cat(PollyCategory));
+
+// Multiplicative reductions can be disabled separately as these kind of
+// operations can overflow easily. Additive reductions and bit operations
+// are in contrast pretty stable.
+static cl::opt<bool> DisableMultiplicativeReductions(
+    "polly-disable-multiplicative-reductions",
+    cl::desc("Disable multiplicative reductions"), cl::Hidden, cl::ZeroOrMore,
+    cl::init(false), cl::cat(PollyCategory));
+
 void ScopBuilder::buildPHIAccesses(ScopStmt *PHIStmt, PHINode *PHI,
                                    Region *NonAffineSubRegion,
                                    bool IsExitBlock) {
@@ -646,11 +659,20 @@ void ScopBuilder::buildAccessFunctions() {
   }
 }
 
+bool ScopBuilder::shouldModelInst(Instruction *Inst, Loop *L) {
+  return !isa<TerminatorInst>(Inst) && !isIgnoredIntrinsic(Inst) &&
+         !canSynthesize(Inst, *scop, &SE, L);
+}
+
 void ScopBuilder::buildStmts(Region &SR) {
   if (scop->isNonAffineSubRegion(&SR)) {
+    std::vector<Instruction *> Instructions;
     Loop *SurroundingLoop =
         getFirstNonBoxedLoopFor(SR.getEntry(), LI, scop->getBoxedLoops());
-    scop->addScopStmt(&SR, SurroundingLoop);
+    for (Instruction &Inst : *SR.getEntry())
+      if (shouldModelInst(&Inst, SurroundingLoop))
+        Instructions.push_back(&Inst);
+    scop->addScopStmt(&SR, SurroundingLoop, Instructions);
     return;
   }
 
@@ -658,16 +680,23 @@ void ScopBuilder::buildStmts(Region &SR) {
     if (I->isSubRegion())
       buildStmts(*I->getNodeAs<Region>());
     else {
+      int Count = 0;
       std::vector<Instruction *> Instructions;
       for (Instruction &Inst : *I->getNodeAs<BasicBlock>()) {
         Loop *L = LI.getLoopFor(Inst.getParent());
-        if (!isa<TerminatorInst>(&Inst) && !isIgnoredIntrinsic(&Inst) &&
-            !canSynthesize(&Inst, *scop, &SE, L))
+        if (shouldModelInst(&Inst, L))
           Instructions.push_back(&Inst);
+        if (Inst.getMetadata("polly_split_after")) {
+          Loop *SurroundingLoop = LI.getLoopFor(I->getNodeAs<BasicBlock>());
+          scop->addScopStmt(I->getNodeAs<BasicBlock>(), SurroundingLoop,
+                            Instructions, Count);
+          Count++;
+          Instructions.clear();
+        }
       }
       Loop *SurroundingLoop = LI.getLoopFor(I->getNodeAs<BasicBlock>());
       scop->addScopStmt(I->getNodeAs<BasicBlock>(), SurroundingLoop,
-                        Instructions);
+                        Instructions, Count);
     }
 }
 
@@ -684,7 +713,19 @@ void ScopBuilder::buildAccessFunctions(ScopStmt *Stmt, BasicBlock &BB,
   if (isErrorBlock(BB, scop->getRegion(), LI, DT) && !IsExitBlock)
     return;
 
+  int Count = 0;
+  bool Split = false;
   for (Instruction &Inst : BB) {
+    if (Split) {
+      Split = false;
+      Count++;
+    }
+    if (Inst.getMetadata("polly_split_after"))
+      Split = true;
+
+    if (Stmt && Stmt->isBlockStmt() && Stmt != scop->getStmtListFor(&BB)[Count])
+      continue;
+
     PHINode *PHI = dyn_cast<PHINode>(&Inst);
     if (PHI)
       buildPHIAccesses(Stmt, PHI, NonAffineSubRegion, IsExitBlock);
@@ -886,6 +927,180 @@ void ScopBuilder::addPHIReadAccess(ScopStmt *PHIStmt, PHINode *PHI) {
                   MemoryKind::PHI);
 }
 
+void ScopBuilder::buildDomain(ScopStmt &Stmt) {
+  isl::id Id = isl::id::alloc(scop->getIslCtx(), Stmt.getBaseName(), &Stmt);
+
+  Stmt.Domain = scop->getDomainConditions(&Stmt);
+  Stmt.Domain = Stmt.Domain.set_tuple_id(Id);
+}
+
+void ScopBuilder::collectSurroundingLoops(ScopStmt &Stmt) {
+  isl::set Domain = Stmt.getDomain();
+  for (unsigned u = 0, e = Domain.dim(isl::dim::set); u < e; u++) {
+    isl::id DimId = Domain.get_dim_id(isl::dim::set, u);
+    Stmt.NestLoops.push_back(static_cast<Loop *>(DimId.get_user()));
+  }
+}
+
+/// Return the reduction type for a given binary operator.
+static MemoryAccess::ReductionType getReductionType(const BinaryOperator *BinOp,
+                                                    const Instruction *Load) {
+  if (!BinOp)
+    return MemoryAccess::RT_NONE;
+  switch (BinOp->getOpcode()) {
+  case Instruction::FAdd:
+    if (!BinOp->hasUnsafeAlgebra())
+      return MemoryAccess::RT_NONE;
+    // Fall through
+  case Instruction::Add:
+    return MemoryAccess::RT_ADD;
+  case Instruction::Or:
+    return MemoryAccess::RT_BOR;
+  case Instruction::Xor:
+    return MemoryAccess::RT_BXOR;
+  case Instruction::And:
+    return MemoryAccess::RT_BAND;
+  case Instruction::FMul:
+    if (!BinOp->hasUnsafeAlgebra())
+      return MemoryAccess::RT_NONE;
+    // Fall through
+  case Instruction::Mul:
+    if (DisableMultiplicativeReductions)
+      return MemoryAccess::RT_NONE;
+    return MemoryAccess::RT_MUL;
+  default:
+    return MemoryAccess::RT_NONE;
+  }
+}
+
+void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
+  SmallVector<MemoryAccess *, 2> Loads;
+  SmallVector<std::pair<MemoryAccess *, MemoryAccess *>, 4> Candidates;
+
+  // First collect candidate load-store reduction chains by iterating over all
+  // stores and collecting possible reduction loads.
+  for (MemoryAccess *StoreMA : Stmt) {
+    if (StoreMA->isRead())
+      continue;
+
+    Loads.clear();
+    collectCandiateReductionLoads(StoreMA, Loads);
+    for (MemoryAccess *LoadMA : Loads)
+      Candidates.push_back(std::make_pair(LoadMA, StoreMA));
+  }
+
+  // Then check each possible candidate pair.
+  for (const auto &CandidatePair : Candidates) {
+    bool Valid = true;
+    isl::map LoadAccs = CandidatePair.first->getAccessRelation();
+    isl::map StoreAccs = CandidatePair.second->getAccessRelation();
+
+    // Skip those with obviously unequal base addresses.
+    if (!LoadAccs.has_equal_space(StoreAccs)) {
+      continue;
+    }
+
+    // And check if the remaining for overlap with other memory accesses.
+    isl::map AllAccsRel = LoadAccs.unite(StoreAccs);
+    AllAccsRel = AllAccsRel.intersect_domain(Stmt.getDomain());
+    isl::set AllAccs = AllAccsRel.range();
+
+    for (MemoryAccess *MA : Stmt) {
+      if (MA == CandidatePair.first || MA == CandidatePair.second)
+        continue;
+
+      isl::map AccRel =
+          MA->getAccessRelation().intersect_domain(Stmt.getDomain());
+      isl::set Accs = AccRel.range();
+
+      if (AllAccs.has_equal_space(Accs)) {
+        isl::set OverlapAccs = Accs.intersect(AllAccs);
+        Valid = Valid && OverlapAccs.is_empty();
+      }
+    }
+
+    if (!Valid)
+      continue;
+
+    const LoadInst *Load =
+        dyn_cast<const LoadInst>(CandidatePair.first->getAccessInstruction());
+    MemoryAccess::ReductionType RT =
+        getReductionType(dyn_cast<BinaryOperator>(Load->user_back()), Load);
+
+    // If no overlapping access was found we mark the load and store as
+    // reduction like.
+    CandidatePair.first->markAsReductionLike(RT);
+    CandidatePair.second->markAsReductionLike(RT);
+  }
+}
+
+void ScopBuilder::collectCandiateReductionLoads(
+    MemoryAccess *StoreMA, SmallVectorImpl<MemoryAccess *> &Loads) {
+  ScopStmt *Stmt = StoreMA->getStatement();
+
+  auto *Store = dyn_cast<StoreInst>(StoreMA->getAccessInstruction());
+  if (!Store)
+    return;
+
+  // Skip if there is not one binary operator between the load and the store
+  auto *BinOp = dyn_cast<BinaryOperator>(Store->getValueOperand());
+  if (!BinOp)
+    return;
+
+  // Skip if the binary operators has multiple uses
+  if (BinOp->getNumUses() != 1)
+    return;
+
+  // Skip if the opcode of the binary operator is not commutative/associative
+  if (!BinOp->isCommutative() || !BinOp->isAssociative())
+    return;
+
+  // Skip if the binary operator is outside the current SCoP
+  if (BinOp->getParent() != Store->getParent())
+    return;
+
+  // Skip if it is a multiplicative reduction and we disabled them
+  if (DisableMultiplicativeReductions &&
+      (BinOp->getOpcode() == Instruction::Mul ||
+       BinOp->getOpcode() == Instruction::FMul))
+    return;
+
+  // Check the binary operator operands for a candidate load
+  auto *PossibleLoad0 = dyn_cast<LoadInst>(BinOp->getOperand(0));
+  auto *PossibleLoad1 = dyn_cast<LoadInst>(BinOp->getOperand(1));
+  if (!PossibleLoad0 && !PossibleLoad1)
+    return;
+
+  // A load is only a candidate if it cannot escape (thus has only this use)
+  if (PossibleLoad0 && PossibleLoad0->getNumUses() == 1)
+    if (PossibleLoad0->getParent() == Store->getParent())
+      Loads.push_back(&Stmt->getArrayAccessFor(PossibleLoad0));
+  if (PossibleLoad1 && PossibleLoad1->getNumUses() == 1)
+    if (PossibleLoad1->getParent() == Store->getParent())
+      Loads.push_back(&Stmt->getArrayAccessFor(PossibleLoad1));
+}
+
+void ScopBuilder::buildAccessRelations(ScopStmt &Stmt) {
+  for (MemoryAccess *Access : Stmt.MemAccs) {
+    Type *ElementType = Access->getElementType();
+
+    MemoryKind Ty;
+    if (Access->isPHIKind())
+      Ty = MemoryKind::PHI;
+    else if (Access->isExitPHIKind())
+      Ty = MemoryKind::ExitPHI;
+    else if (Access->isValueKind())
+      Ty = MemoryKind::Value;
+    else
+      Ty = MemoryKind::Array;
+
+    auto *SAI = scop->getOrCreateScopArrayInfo(Access->getOriginalBaseAddr(),
+                                               ElementType, Access->Sizes, Ty);
+    Access->buildAccessRelation(SAI);
+    scop->addAccessData(Access);
+  }
+}
+
 #ifndef NDEBUG
 static void verifyUse(Scop *S, Use &Op, LoopInfo &LI) {
   auto PhysUse = VirtualUse::create(S, Op, &LI, false);
@@ -997,8 +1212,10 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
   /// A map from basic blocks to their invalid domains.
   DenseMap<BasicBlock *, isl::set> InvalidDomainMap;
 
-  if (!scop->buildDomains(&R, DT, LI, InvalidDomainMap))
+  if (!scop->buildDomains(&R, DT, LI, InvalidDomainMap)) {
+    DEBUG(dbgs() << "Bailing-out because buildDomains encountered problems\n");
     return;
+  }
 
   scop->addUserAssumptions(AC, DT, LI, InvalidDomainMap);
 
@@ -1014,21 +1231,32 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
   // Exit early in case there are no executable statements left in this scop.
   scop->removeStmtNotInDomainMap();
   scop->simplifySCoP(false);
-  if (scop->isEmpty())
+  if (scop->isEmpty()) {
+    DEBUG(dbgs() << "Bailing-out because SCoP is empty\n");
     return;
+  }
 
   // The ScopStmts now have enough information to initialize themselves.
-  for (ScopStmt &Stmt : *scop)
-    Stmt.init(LI);
+  for (ScopStmt &Stmt : *scop) {
+    buildDomain(Stmt);
+    collectSurroundingLoops(Stmt);
+    buildAccessRelations(Stmt);
+
+    if (DetectReductions)
+      checkForReductions(Stmt);
+  }
 
   // Check early for a feasible runtime context.
-  if (!scop->hasFeasibleRuntimeContext())
+  if (!scop->hasFeasibleRuntimeContext()) {
+    DEBUG(dbgs() << "Bailing-out because of unfeasible context (early)\n");
     return;
+  }
 
   // Check early for profitability. Afterwards it cannot change anymore,
   // only the runtime context could become infeasible.
   if (!scop->isProfitable(UnprofitableScalarAccs)) {
     scop->invalidate(PROFITABLE, DebugLoc());
+    DEBUG(dbgs() << "Bailing-out because SCoP is not considered profitable\n");
     return;
   }
 
@@ -1045,8 +1273,10 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
   scop->addRecordedAssumptions();
 
   scop->simplifyContexts();
-  if (!scop->buildAliasChecks(AA))
+  if (!scop->buildAliasChecks(AA)) {
+    DEBUG(dbgs() << "Bailing-out because could not build alias checks\n");
     return;
+  }
 
   scop->hoistInvariantLoads();
   scop->canonicalizeDynamicBasePtrs();
@@ -1055,8 +1285,10 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
 
   // Check late for a feasible runtime context because profitability did not
   // change.
-  if (!scop->hasFeasibleRuntimeContext())
+  if (!scop->hasFeasibleRuntimeContext()) {
+    DEBUG(dbgs() << "Bailing-out because of unfeasible context (late)\n");
     return;
+  }
 
 #ifndef NDEBUG
   verifyUses(scop.get(), LI, DT);
@@ -1083,6 +1315,7 @@ ScopBuilder::ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
   if (!scop->hasFeasibleRuntimeContext()) {
     InfeasibleScops++;
     Msg = "SCoP ends here but was dismissed.";
+    DEBUG(dbgs() << "SCoP detected but dismissed\n");
     scop.reset();
   } else {
     Msg = "SCoP ends here.";

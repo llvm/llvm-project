@@ -221,6 +221,14 @@ class ScopBuilder {
   /// Build the access functions for the subregion @p SR.
   void buildAccessFunctions();
 
+  /// Should an instruction be modeled in a ScopStmt.
+  ///
+  /// @param Inst The instruction to check.
+  /// @param L    The loop in which context the instruction is looked at.
+  ///
+  /// @returns True if the instruction should be modeled.
+  bool shouldModelInst(Instruction *Inst, Loop *L);
+
   /// Create ScopStmt for all BBs and non-affine subregions of @p SR.
   ///
   /// @param SR A subregion of @p R.
@@ -229,8 +237,8 @@ class ScopBuilder {
   /// access any memory and thus have no effect.
   void buildStmts(Region &SR);
 
-  /// Build the access functions for the basic block @p BB in or represented by
-  /// @p Stmt.
+  /// Build the access functions for the statement @p Stmt in or represented by
+  /// @p BB.
   ///
   /// @param Stmt               Statement to add MemoryAccesses to.
   /// @param BB                 A basic block in @p R.
@@ -334,6 +342,41 @@ class ScopBuilder {
   /// @see ensurePHIWrite()
   /// @see MemoryKind
   void addPHIReadAccess(ScopStmt *PHIStmt, PHINode *PHI);
+
+  /// Build the domain of @p Stmt.
+  void buildDomain(ScopStmt &Stmt);
+
+  /// Fill NestLoops with loops surrounding @p Stmt.
+  void collectSurroundingLoops(ScopStmt &Stmt);
+
+  /// Check for reductions in @p Stmt.
+  ///
+  /// Iterate over all store memory accesses and check for valid binary
+  /// reduction like chains. For all candidates we check if they have the same
+  /// base address and there are no other accesses which overlap with them. The
+  /// base address check rules out impossible reductions candidates early. The
+  /// overlap check, together with the "only one user" check in
+  /// collectCandiateReductionLoads, guarantees that none of the intermediate
+  /// results will escape during execution of the loop nest. We basically check
+  /// here that no other memory access can access the same memory as the
+  /// potential reduction.
+  void checkForReductions(ScopStmt &Stmt);
+
+  /// Collect loads which might form a reduction chain with @p StoreMA.
+  ///
+  /// Check if the stored value for @p StoreMA is a binary operator with one or
+  /// two loads as operands. If the binary operand is commutative & associative,
+  /// used only once (by @p StoreMA) and its load operands are also used only
+  /// once, we have found a possible reduction chain. It starts at an operand
+  /// load and includes the binary operator and @p StoreMA.
+  ///
+  /// Note: We allow only one use to ensure the load and binary operator cannot
+  ///       escape this block or into any other store except @p StoreMA.
+  void collectCandiateReductionLoads(MemoryAccess *StoreMA,
+                                     SmallVectorImpl<MemoryAccess *> &Loads);
+
+  /// Build the access relation of all memory accesses of @p Stmt.
+  void buildAccessRelations(ScopStmt &Stmt);
 
 public:
   explicit ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
