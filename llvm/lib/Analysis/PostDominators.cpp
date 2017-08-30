@@ -23,8 +23,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "postdomtree"
 
-template class llvm::DominatorTreeBase<BasicBlock, true>; // PostDomTreeBase
-
 //===----------------------------------------------------------------------===//
 //  PostDominatorTree Implementation
 //===----------------------------------------------------------------------===//
