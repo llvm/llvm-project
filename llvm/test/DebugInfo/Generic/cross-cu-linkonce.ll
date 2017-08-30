@@ -50,14 +50,14 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!16, !17}
 !llvm.ident = !{!18, !18}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x", scope: null, file: !2, line: 4, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "func.h", directory: "/tmp/dbginfo")
 !3 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64, align: 64)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !6}
 !6 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!7 = !DIGlobalVariableExpression(var: !8)
+!7 = !DIGlobalVariableExpression(var: !8, expr: !DIExpression())
 !8 = !DIGlobalVariable(name: "y", scope: null, file: !2, line: 4, type: !3, isLocal: false, isDefinition: true)
 !9 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !10, producer: "clang version 3.5.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !11, retainedTypes: !11, globals: !12, imports: !11)
 !10 = !DIFile(filename: "a.cpp", directory: "/tmp/dbginfo")

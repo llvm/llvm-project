@@ -10,10 +10,10 @@ target triple = "x86_64-apple-macosx10.12.0"
 !llvm.module.flags = !{!11, !12, !13}
 !llvm.ident = !{!14}
 ; Should not have an expression:
-; CHECK: ![[GV]] = !DIGlobalVariableExpression(var: ![[GVAR:.*]])
+; CHECK: ![[GV]] = !DIGlobalVariableExpression(var: ![[GVAR:.*]], expr: !DIExpression())
 ; CHECK: ![[GVAR]] = !DIGlobalVariable(name: "version"
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "version", scope: !2, file: !3, line: 2, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 4.0.0 (trunk 281923) (llvm/trunk 281916)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "version.c", directory: "/Volumes/Fusion/Data/radar/24899262")
