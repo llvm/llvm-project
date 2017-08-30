@@ -659,11 +659,20 @@ void ScopBuilder::buildAccessFunctions() {
   }
 }
 
+bool ScopBuilder::shouldModelInst(Instruction *Inst, Loop *L) {
+  return !isa<TerminatorInst>(Inst) && !isIgnoredIntrinsic(Inst) &&
+         !canSynthesize(Inst, *scop, &SE, L);
+}
+
 void ScopBuilder::buildStmts(Region &SR) {
   if (scop->isNonAffineSubRegion(&SR)) {
+    std::vector<Instruction *> Instructions;
     Loop *SurroundingLoop =
         getFirstNonBoxedLoopFor(SR.getEntry(), LI, scop->getBoxedLoops());
-    scop->addScopStmt(&SR, SurroundingLoop);
+    for (Instruction &Inst : *SR.getEntry())
+      if (shouldModelInst(&Inst, SurroundingLoop))
+        Instructions.push_back(&Inst);
+    scop->addScopStmt(&SR, SurroundingLoop, Instructions);
     return;
   }
 
@@ -675,8 +684,7 @@ void ScopBuilder::buildStmts(Region &SR) {
       std::vector<Instruction *> Instructions;
       for (Instruction &Inst : *I->getNodeAs<BasicBlock>()) {
         Loop *L = LI.getLoopFor(Inst.getParent());
-        if (!isa<TerminatorInst>(&Inst) && !isIgnoredIntrinsic(&Inst) &&
-            !canSynthesize(&Inst, *scop, &SE, L))
+        if (shouldModelInst(&Inst, L))
           Instructions.push_back(&Inst);
         if (Inst.getMetadata("polly_split_after")) {
           Loop *SurroundingLoop = LI.getLoopFor(I->getNodeAs<BasicBlock>());

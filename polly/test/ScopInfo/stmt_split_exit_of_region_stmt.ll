@@ -8,6 +8,9 @@
 ; CHECK-NEXT:           { Stmt_Region__TO__Stmt[i0] -> [i0, 0] };
 ; CHECK-NEXT:       MayWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:           { Stmt_Region__TO__Stmt[i0] -> MemRef_C[0] };
+; CHECK-NEXT:       Instructions {
+; CHECK-NEXT:             %cond = fcmp oeq double 2.100000e+01, 2.100000e+01
+; CHECK-NEXT:       }
 ; CHECK-NEXT:   Stmt_Stmt
 ; CHECK-NEXT:       Domain :=
 ; CHECK-NEXT:           { Stmt_Stmt[i0] : 0 <= i0 <= 1023 };

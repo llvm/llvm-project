@@ -1676,9 +1676,11 @@ buildConditionSets(Scop &S, BasicBlock *BB, TerminatorInst *TI, Loop *L,
                             ConditionSets);
 }
 
-ScopStmt::ScopStmt(Scop &parent, Region &R, Loop *SurroundingLoop)
+ScopStmt::ScopStmt(Scop &parent, Region &R, Loop *SurroundingLoop,
+                   std::vector<Instruction *> EntryBlockInstructions)
     : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), R(&R),
-      Build(nullptr), SurroundingLoop(SurroundingLoop) {
+      Build(nullptr), SurroundingLoop(SurroundingLoop),
+      Instructions(EntryBlockInstructions) {
   BaseName = getIslCompatibleName(
       "Stmt", R.getNameStr(), parent.getNextStmtIdx(), "", UseInstructionNames);
 }
@@ -1779,7 +1781,7 @@ void ScopStmt::print(raw_ostream &OS, bool PrintInstructions) const {
   for (MemoryAccess *Access : MemAccs)
     Access->print(OS);
 
-  if (PrintInstructions && isBlockStmt())
+  if (PrintInstructions)
     printInstructions(OS.indent(12));
 }
 
@@ -3588,16 +3590,21 @@ void Scop::assumeNoOutOfBounds() {
 }
 
 void Scop::removeFromStmtMap(ScopStmt &Stmt) {
-  if (Stmt.isRegionStmt())
+  for (Instruction *Inst : Stmt.getInstructions())
+    InstStmtMap.erase(Inst);
+
+  if (Stmt.isRegionStmt()) {
     for (BasicBlock *BB : Stmt.getRegion()->blocks()) {
       StmtMap.erase(BB);
+      // Skip entry basic block, as its instructions are already deleted as
+      // part of the statement's instruction list.
+      if (BB == Stmt.getEntryBlock())
+        continue;
       for (Instruction &Inst : *BB)
         InstStmtMap.erase(&Inst);
     }
-  else {
+  } else {
     StmtMap.erase(Stmt.getBasicBlock());
-    for (Instruction *Inst : Stmt.getInstructions())
-      InstStmtMap.erase(Inst);
   }
 }
 
@@ -4681,9 +4688,10 @@ void Scop::addScopStmt(BasicBlock *BB, Loop *SurroundingLoop,
   }
 }
 
-void Scop::addScopStmt(Region *R, Loop *SurroundingLoop) {
+void Scop::addScopStmt(Region *R, Loop *SurroundingLoop,
+                       std::vector<Instruction *> Instructions) {
   assert(R && "Unexpected nullptr!");
-  Stmts.emplace_back(*this, *R, SurroundingLoop);
+  Stmts.emplace_back(*this, *R, SurroundingLoop, Instructions);
   auto *Stmt = &Stmts.back();
   for (BasicBlock *BB : R->blocks()) {
     StmtMap[BB].push_back(Stmt);
