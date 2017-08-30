@@ -17,6 +17,21 @@ using ast_type_traits::DynTypedNode;
 
 namespace {
 
+CharSourceRange getLexicalDeclRange(Decl *D, const SourceManager &SM,
+                                    const LangOptions &LangOpts) {
+  if (!isa<ObjCImplDecl>(D))
+    return CharSourceRange::getTokenRange(D->getSourceRange());
+  // Objective-C implementation declarations end at the '@' instead of the 'end'
+  // keyword. Use the lexer to find the location right after 'end'.
+  SourceRange R = D->getSourceRange();
+  SourceLocation LocAfterEnd = Lexer::findLocationAfterToken(
+      R.getEnd(), tok::raw_identifier, SM, LangOpts,
+      /*SkipTrailingWhitespaceAndNewLine=*/false);
+  return LocAfterEnd.isValid()
+             ? CharSourceRange::getCharRange(R.getBegin(), LocAfterEnd)
+             : CharSourceRange::getTokenRange(R);
+}
+
 /// Constructs the tree of selected AST nodes that either contain the location
 /// of the cursor or overlap with the selection range.
 class ASTSelectionFinder
@@ -62,9 +77,8 @@ public:
     if (SM.getFileID(FileLoc) != TargetFile)
       return true;
 
-    // FIXME (Alex Lorenz): Add location adjustment for ObjCImplDecls.
     SourceSelectionKind SelectionKind =
-        selectionKindFor(CharSourceRange::getTokenRange(D->getSourceRange()));
+        selectionKindFor(getLexicalDeclRange(D, SM, Context.getLangOpts()));
     SelectionStack.push_back(
         SelectedASTNode(DynTypedNode::create(*D), SelectionKind));
     LexicallyOrderedRecursiveASTVisitor::TraverseDecl(D);

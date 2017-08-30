@@ -471,41 +471,29 @@ public:
   /// \brief Get filenames for all registered header maps.
   void getHeaderMapFileNames(SmallVectorImpl<std::string> &Names) const;
 
-  /// \brief Retrieve the name of the cached module file that should be used
-  /// to load the given module.
+  /// \brief Retrieve the name of the module file that should be used to 
+  /// load the given module.
   ///
   /// \param Module The module whose module file name will be returned.
   ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getCachedModuleFileName(Module *Module);
+  std::string getModuleFileName(Module *Module);
 
-  /// \brief Retrieve the name of the prebuilt module file that should be used
-  /// to load a module with the given name.
-  ///
-  /// \param ModuleName The module whose module file name will be returned.
-  ///
-  /// \param FileMapOnly If true, then only look in the explicit module name
-  //  to file name map and skip the directory search.
-  ///
-  /// \returns The name of the module file that corresponds to this module,
-  /// or an empty string if this module does not correspond to any module file.
-  std::string getPrebuiltModuleFileName(StringRef ModuleName,
-                                        bool FileMapOnly = false);
-
-
-  /// \brief Retrieve the name of the (to-be-)cached module file that should
-  /// be used to load a module with the given name.
+  /// \brief Retrieve the name of the module file that should be used to 
+  /// load a module with the given name.
   ///
   /// \param ModuleName The module whose module file name will be returned.
   ///
   /// \param ModuleMapPath A path that when combined with \c ModuleName
   /// uniquely identifies this module. See Module::ModuleMap.
   ///
+  /// \param UsePrebuiltPath Whether we should use the prebuilt module path.
+  ///
   /// \returns The name of the module file that corresponds to this module,
   /// or an empty string if this module does not correspond to any module file.
-  std::string getCachedModuleFileName(StringRef ModuleName,
-                                      StringRef ModuleMapPath);
+  std::string getModuleFileName(StringRef ModuleName, StringRef ModuleMapPath,
+                                bool UsePrebuiltPath);
 
   /// \brief Lookup a module Search for a module with the given name.
   ///
