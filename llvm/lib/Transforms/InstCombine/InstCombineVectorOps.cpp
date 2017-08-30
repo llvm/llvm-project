@@ -615,6 +615,7 @@ static Instruction *foldInsSequenceIntoBroadcast(InsertElementInst &InsElt) {
   Value *SplatVal = InsElt.getOperand(1);
   InsertElementInst *CurrIE = &InsElt;  
   SmallVector<bool, 16> ElementPresent(NumElements, false);
+  InsertElementInst *FirstIE = nullptr;
 
   // Walk the chain backwards, keeping track of which indices we inserted into,
   // until we hit something that isn't an insert of the splatted value.
@@ -623,12 +624,18 @@ static Instruction *foldInsSequenceIntoBroadcast(InsertElementInst &InsElt) {
     if (!Idx || CurrIE->getOperand(1) != SplatVal)
       return nullptr;
 
-    // Check none of the intermediate steps have any additional uses.
-    if ((CurrIE != &InsElt) && !CurrIE->hasOneUse())
+    InsertElementInst *NextIE =
+      dyn_cast<InsertElementInst>(CurrIE->getOperand(0));
+    // Check none of the intermediate steps have any additional uses, except
+    // for the root insertelement instruction, which can be re-used, if it
+    // inserts at position 0.
+    if (CurrIE != &InsElt &&
+        (!CurrIE->hasOneUse() && (NextIE != nullptr || !Idx->isZero())))
       return nullptr;
 
     ElementPresent[Idx->getZExtValue()] = true;
-    CurrIE = dyn_cast<InsertElementInst>(CurrIE->getOperand(0));
+    FirstIE = CurrIE;
+    CurrIE = NextIE;
   }
 
   // Make sure we've seen an insert into every element.
@@ -636,9 +643,14 @@ static Instruction *foldInsSequenceIntoBroadcast(InsertElementInst &InsElt) {
     return nullptr;
 
   // All right, create the insert + shuffle.
-  Instruction *InsertFirst = InsertElementInst::Create(
-      UndefValue::get(VT), SplatVal,
-      ConstantInt::get(Type::getInt32Ty(InsElt.getContext()), 0), "", &InsElt);
+  Instruction *InsertFirst;
+  if (cast<ConstantInt>(FirstIE->getOperand(2))->isZero())
+    InsertFirst = FirstIE;
+  else
+    InsertFirst = InsertElementInst::Create(
+        UndefValue::get(VT), SplatVal,
+        ConstantInt::get(Type::getInt32Ty(InsElt.getContext()), 0),
+        "", &InsElt);
 
   Constant *ZeroMask = ConstantAggregateZero::get(
       VectorType::get(Type::getInt32Ty(InsElt.getContext()), NumElements));
