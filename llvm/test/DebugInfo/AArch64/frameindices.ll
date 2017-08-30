@@ -160,11 +160,11 @@ attributes #4 = { builtin }
 !llvm.module.flags = !{!29, !30}
 !llvm.ident = !{!31}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "test.cpp", directory: "")
 !3 = !DIBasicType(name: "long int", size: 64, align: 64, encoding: DW_ATE_signed)
-!4 = !DIGlobalVariableExpression(var: !5)
+!4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
 !5 = !DIGlobalVariable(name: "b", scope: null, file: !2, line: 7, type: !6, isLocal: false, isDefinition: true)
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64, align: 64)
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

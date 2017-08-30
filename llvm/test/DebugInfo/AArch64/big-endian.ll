@@ -10,7 +10,7 @@ target triple = "aarch64_be--none-eabi"
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "<stdin>", directory: "/work/validation")
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

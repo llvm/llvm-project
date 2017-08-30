@@ -595,6 +595,8 @@ DIGlobalVariableExpression *DIBuilder::createGlobalVariableExpression(
       VMContext, cast_or_null<DIScope>(Context), Name, LinkageName, F,
       LineNumber, Ty, isLocalToUnit, true, cast_or_null<DIDerivedType>(Decl),
       AlignInBits);
+  if (!Expr)
+    Expr = createExpression();
   auto *N = DIGlobalVariableExpression::get(VMContext, GV, Expr);
   AllGVs.push_back(N);
   return N;

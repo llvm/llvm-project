@@ -56,4 +56,4 @@ target triple = "x86_64-apple-macosx10.12.0"
 !18 = !DIGlobalVariableExpression(var: !19, expr: !DIExpression(DW_OP_constu, 2,
                                              DW_OP_stack_value, DW_OP_LLVM_fragment, 32, 32))
 !19 = distinct !DIGlobalVariable(name: "full_const", scope: !1, file: !2, line: 1, type: !5, isLocal: false, isDefinition: true)
-!20 = !DIGlobalVariableExpression(var: !0)
+!20 = !DIGlobalVariableExpression(var: !0, expr: !DIExpression())

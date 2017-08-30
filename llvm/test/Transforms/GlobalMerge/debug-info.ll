@@ -13,16 +13,16 @@ define void @use1() {
   %y = load i32, i32* @b
   ret void
 }
-; CHECK: [[A]] = !DIGlobalVariableExpression(var: [[AVAR:![0-9]+]])
+; CHECK: [[A]] = !DIGlobalVariableExpression(var: [[AVAR:![0-9]+]], expr: !DIExpression())
 ; CHECK: [[AVAR]] = !DIGlobalVariable(name: "a", scope: null, type: !2, isLocal: false, isDefinition: true)
 ; CHECK: [[B]] = !DIGlobalVariableExpression(var: [[BVAR:![0-9]+]], expr: !DIExpression(DW_OP_plus_uconst, 4))
 ; CHECK: [[BVAR]] = !DIGlobalVariable(name: "b", scope: null, type: !2, isLocal: false, isDefinition: true)
 
 !llvm.module.flags = !{!4, !5}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "a", scope: null, type: !6, isLocal: false, isDefinition: true)
-!2 = !DIGlobalVariableExpression(var: !3)
+!2 = !DIGlobalVariableExpression(var: !3, expr: !DIExpression())
 !3 = !DIGlobalVariable(name: "b", scope: null, type: !6, isLocal: false, isDefinition: true)
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 2, !"Dwarf Version", i32 4}

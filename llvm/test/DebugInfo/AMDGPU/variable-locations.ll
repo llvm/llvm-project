@@ -74,13 +74,13 @@ entry:
 !llvm.module.flags = !{!10, !11}
 !llvm.ident = !{!12}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "GlobA", scope: !2, file: !3, line: 1, type: !8, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 5.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "variable-locations.cl", directory: "/some/random/directory")
 !4 = !{}
 !5 = !{!0, !6}
-!6 = !DIGlobalVariableExpression(var: !7)
+!6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !7 = distinct !DIGlobalVariable(name: "GlobB", scope: !2, file: !3, line: 2, type: !8, isLocal: false, isDefinition: true)
 !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !9 = !{i32 2, i32 0}

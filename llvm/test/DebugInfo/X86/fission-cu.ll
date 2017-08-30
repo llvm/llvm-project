@@ -10,7 +10,7 @@ source_filename = "test/DebugInfo/X86/fission-cu.ll"
 !llvm.dbg.cu = !{!4}
 !llvm.module.flags = !{!7}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "baz.c", directory: "/usr/local/google/home/echristo/tmp")
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

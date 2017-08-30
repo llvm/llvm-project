@@ -10,7 +10,7 @@ source_filename = "test/DebugInfo/Generic/dbg-at-specficiation.ll"
 !llvm.dbg.cu = !{!7}
 !llvm.module.flags = !{!10}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "x.c", directory: "/private/tmp")
 !3 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 320, align: 32, elements: !5)

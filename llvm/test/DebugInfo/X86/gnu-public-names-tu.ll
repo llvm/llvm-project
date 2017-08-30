@@ -37,7 +37,7 @@
 !llvm.module.flags = !{!11, !12}
 !llvm.ident = !{!13}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "b", scope: !2, file: !3, line: 8, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 5.0.0 (trunk 293904) (llvm/trunk 293908)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "type.cpp", directory: "/tmp/dbginfo")
