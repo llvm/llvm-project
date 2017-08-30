@@ -103,7 +103,7 @@ Attribute Changes in Clang
 -  The ``overloadable`` attribute now allows at most one function with a given
    name to lack the ``overloadable`` attribute. This unmarked function will not
    have its name mangled.
--  The ```ms_abi`` attribute and the ``__builtin_ms_va_list`` types and builtins
+-  The ``ms_abi`` attribute and the ``__builtin_ms_va_list`` types and builtins
    are now supported on AArch64.
 
 C Language Changes in Clang
