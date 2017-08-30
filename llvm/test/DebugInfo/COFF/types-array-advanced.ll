@@ -50,28 +50,40 @@
 ; CHECK:     SizeOf: 4
 ; CHECK:     Name: 
 ; CHECK:   }
-; CHECK:   Array (0x1004) {
+; CHECK:   Pointer (0x1004) {
+; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
+; CHECK:     PointeeType: 0x1003
+; CHECK:     PointerAttributes: 0x2A
+; CHECK:     PtrType: Near32 (0xA)
+; CHECK:     PtrMode: LValueReference (0x1)
+; CHECK:     IsFlat: 0
+; CHECK:     IsConst: 0
+; CHECK:     IsVolatile: 0
+; CHECK:     IsUnaligned: 0
+; CHECK:     SizeOf: 0
+; CHECK:   }
+; CHECK:   Array (0x1005) {
 ; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
 ; CHECK:     ElementType: char (0x70)
 ; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 7
 ; CHECK:     Name: 
 ; CHECK:   }
-; CHECK:   Array (0x1005) {
-; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
-; CHECK:     ElementType: 0x1004
-; CHECK:     IndexType: unsigned long (0x22)
-; CHECK:     SizeOf: 35
-; CHECK:     Name: 
-; CHECK:   }
 ; CHECK:   Array (0x1006) {
 ; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
 ; CHECK:     ElementType: 0x1005
 ; CHECK:     IndexType: unsigned long (0x22)
+; CHECK:     SizeOf: 35
+; CHECK:     Name: 
+; CHECK:   }
+; CHECK:   Array (0x1007) {
+; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
+; CHECK:     ElementType: 0x1006
+; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 70
 ; CHECK:     Name: 
 ; CHECK:   }
-; CHECK:   Struct (0x1007) {
+; CHECK:   Struct (0x1008) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK:     MemberCount: 0
 ; CHECK:     Properties [ (0x280)
@@ -85,16 +97,16 @@
 ; CHECK:     Name: incomplete_struct
 ; CHECK:     LinkageName: .?AUincomplete_struct@@
 ; CHECK:   }
-; CHECK:   Array (0x1008) {
+; CHECK:   Array (0x1009) {
 ; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
-; CHECK:     ElementType: incomplete_struct (0x1007)
+; CHECK:     ElementType: incomplete_struct (0x1008)
 ; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 12
 ; CHECK:     Name: 
 ; CHECK:   }
-; CHECK:   Pointer (0x1009) {
+; CHECK:   Pointer (0x100A) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
-; CHECK:     PointeeType: 0x1008
+; CHECK:     PointeeType: 0x1009
 ; CHECK:     PointerAttributes: 0x800A
 ; CHECK:     PtrType: Near32 (0xA)
 ; CHECK:     PtrMode: Pointer (0x0)
@@ -104,8 +116,41 @@
 ; CHECK:     IsUnaligned: 0
 ; CHECK:     SizeOf: 4
 ; CHECK:   }
-;
-; CHECK:   Modifier (0x100E) {
+; CHECK:   FieldList (0x100B) {
+; CHECK:     TypeLeafKind: LF_FIELDLIST (0x1203)
+; CHECK:     DataMember {
+; CHECK:       TypeLeafKind: LF_MEMBER (0x150D)
+; CHECK:       AccessSpecifier: Public (0x3)
+; CHECK:       Type: int (0x74)
+; CHECK:       FieldOffset: 0x0
+; CHECK:       Name: s1
+; CHECK:     }
+; CHECK:   }
+; CHECK:   Struct (0x100C) {
+; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
+; CHECK:     MemberCount: 1
+; CHECK:     Properties [ (0x200)
+; CHECK:       HasUniqueName (0x200)
+; CHECK:     ]
+; CHECK:     FieldList: <field list> (0x100B)
+; CHECK:     DerivedFrom: 0x0
+; CHECK:     VShape: 0x0
+; CHECK:     SizeOf: 4
+; CHECK:     Name: incomplete_struct
+; CHECK:     LinkageName: .?AUincomplete_struct@@
+; CHECK:   }
+; CHECK:   StringId (0x100D) {
+; CHECK:     TypeLeafKind: LF_STRING_ID (0x1605)
+; CHECK:     Id: 0x0
+; CHECK:     StringData: \t.cpp
+; CHECK:   }
+; CHECK:   UdtSourceLine (0x100E) {
+; CHECK:     TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
+; CHECK:     UDT: incomplete_struct (0x100C)
+; CHECK:     SourceFile: \t.cpp (0x100D)
+; CHECK:     LineNumber: 4
+; CHECK:   }
+; CHECK:   Modifier (0x100F) {
 ; CHECK:     TypeLeafKind: LF_MODIFIER (0x1001)
 ; CHECK:     ModifiedType: int (0x74)
 ; CHECK:     Modifiers [ (0x3)
@@ -113,12 +158,12 @@
 ; CHECK:       Volatile (0x2)
 ; CHECK:     ]
 ; CHECK:   }
-; CHECK:   Array (0x100F) {
+; CHECK:   Array (0x1010) {
 ; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
-; CHECK:     ElementType: const volatile int (0x100E)
+; CHECK:     ElementType: const volatile int (0x100F)
 ; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 16
-; CHECK:     Name:
+; CHECK:     Name: 
 ; CHECK:   }
 ; CHECK: ]
 
@@ -168,13 +213,13 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!32, !33}
 !llvm.ident = !{!34}
 
-!0 = distinct !DIGlobalVariableExpression(var: !1)
+!0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "multi_dim_arr", linkageName: "\01?multi_dim_arr@@3PAY146DA", scope: !2, file: !3, line: 1, type: !26, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.9.0 (trunk 273874)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "t.cpp", directory: "/")
 !4 = !{}
 !5 = !{!0, !6, !16, !18}
-!6 = distinct !DIGlobalVariableExpression(var: !7)
+!6 = distinct !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !7 = !DIGlobalVariable(name: "p_incomplete_struct_arr", linkageName: "\01?p_incomplete_struct_arr@@3PAY02Uincomplete_struct@@A", scope: !2, file: !3, line: 3, type: !8, isLocal: false, isDefinition: true)
 !8 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !9, size: 32, align: 32)
 !9 = !DICompositeType(tag: DW_TAG_array_type, baseType: !10, elements: !14)
@@ -184,9 +229,9 @@ attributes #1 = { nounwind readnone }
 !13 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !14 = !{!15}
 !15 = !DISubrange(count: 3)
-!16 = distinct !DIGlobalVariableExpression(var: !17)
+!16 = distinct !DIGlobalVariableExpression(var: !17, expr: !DIExpression())
 !17 = !DIGlobalVariable(name: "incomplete_struct_arr", linkageName: "\01?incomplete_struct_arr@@3PAUincomplete_struct@@A", scope: !2, file: !3, line: 6, type: !9, isLocal: false, isDefinition: true)
-!18 = distinct !DIGlobalVariableExpression(var: !19)
+!18 = distinct !DIGlobalVariableExpression(var: !19, expr: !DIExpression())
 !19 = !DIGlobalVariable(name: "typedef_arr", linkageName: "\01?typedef_arr@@3SDHD", scope: !2, file: !3, line: 14, type: !20, isLocal: false, isDefinition: true)
 !20 = !DICompositeType(tag: DW_TAG_array_type, baseType: !21, size: 128, align: 32, elements: !24)
 !21 = !DIDerivedType(tag: DW_TAG_typedef, name: "T_INT", file: !3, line: 13, baseType: !22)

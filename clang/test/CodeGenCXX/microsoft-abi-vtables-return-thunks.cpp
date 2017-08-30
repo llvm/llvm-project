@@ -201,3 +201,18 @@ D::D() {}
 // GLOBALS: @"\01?fn@D@test3@@$4PPPPPPPM@A@AEPAUB@2@XZ"
 // GLOBALS: @"\01?fn@D@test3@@$4PPPPPPPM@A@AEPAU12@XZ"
 }
+
+namespace pr34302 {
+// C::f is lives in the vftable inside its virtual B subobject. In the MS ABI,
+// covariant return type virtual methods extend vftables from virtual bases,
+// even though that can make it impossible to implement certain diamond
+// hierarchies correctly.
+struct A { virtual ~A(); };
+struct B : A { virtual B *f(); };
+struct C : virtual B { C *f(); };
+C c;
+// VFTABLES-LABEL: VFTable indices for 'pr34302::C' (2 entries).
+// VFTABLES-NEXT:  -- accessible via vbtable index 1, vfptr at offset 0 --
+// VFTABLES-NEXT:    0 | pr34302::C::~C() [scalar deleting]
+// VFTABLES-NEXT:    2 | pr34302::C *pr34302::C::f()
+}

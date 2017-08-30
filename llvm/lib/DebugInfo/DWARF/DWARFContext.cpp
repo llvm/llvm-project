@@ -31,6 +31,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
@@ -40,6 +41,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdint>
@@ -58,6 +60,12 @@ using namespace object;
 using DWARFLineTable = DWARFDebugLine::LineTable;
 using FileLineInfoKind = DILineInfoSpecifier::FileLineInfoKind;
 using FunctionNameKind = DILineInfoSpecifier::FunctionNameKind;
+
+DWARFContext::DWARFContext(std::unique_ptr<const DWARFObject> DObj,
+                           std::string DWPName)
+    : DIContext(CK_DWARF), DWPName(std::move(DWPName)), DObj(std::move(DObj)) {}
+
+DWARFContext::~DWARFContext() = default;
 
 static void dumpAccelSection(raw_ostream &OS, StringRef Name,
                              const DWARFObject &Obj,
@@ -237,12 +245,12 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
 
   if (DumpType == DIDT_All || DumpType == DIDT_Loc) {
     OS << "\n.debug_loc contents:\n";
-    getDebugLoc()->dump(OS);
+    getDebugLoc()->dump(OS, getRegisterInfo());
   }
 
   if (DumpType == DIDT_All || DumpType == DIDT_LocDwo) {
     OS << "\n.debug_loc.dwo contents:\n";
-    getDebugLocDWO()->dump(OS);
+    getDebugLocDWO()->dump(OS, getRegisterInfo());
   }
 
   if (DumpType == DIDT_All || DumpType == DIDT_Frames) {
@@ -1294,4 +1302,20 @@ DWARFContext::create(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,
   auto DObj =
       llvm::make_unique<DWARFObjInMemory>(Sections, AddrSize, isLittleEndian);
   return llvm::make_unique<DWARFContext>(std::move(DObj), "");
+}
+
+Error DWARFContext::loadRegisterInfo(const object::ObjectFile &Obj) {
+  // Detect the architecture from the object file. We usually don't need OS
+  // info to lookup a target and create register info.
+  Triple TT;
+  TT.setArch(Triple::ArchType(Obj.getArch()));
+  TT.setVendor(Triple::UnknownVendor);
+  TT.setOS(Triple::UnknownOS);
+  std::string TargetLookupError;
+  const Target *TheTarget =
+      TargetRegistry::lookupTarget(TT.str(), TargetLookupError);
+  if (!TargetLookupError.empty())
+    return make_error<StringError>(TargetLookupError, inconvertibleErrorCode());
+  RegInfo.reset(TheTarget->createMCRegInfo(TT.str()));
+  return Error::success();
 }

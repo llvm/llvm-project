@@ -9,7 +9,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_var_f16:
-; GCN: v_mul_f16_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_max_f16_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GCN: buffer_store_short [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_var_f16(half addrspace(1)* %out) #1 {
   %val = load half, half addrspace(1)* %out
@@ -19,7 +19,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_f16(half addrspace(1)* %out) 
 }
 
 ; GCN-LABEL: {{^}}s_test_canonicalize_var_f16:
-; GCN: v_mul_f16_e64 [[REG:v[0-9]+]], 1.0, {{s[0-9]+}}
+; GCN: v_max_f16_e64 [[REG:v[0-9]+]], {{s[0-9]+}}, {{s[0-9]+}}
 ; GCN: buffer_store_short [[REG]]
 define amdgpu_kernel void @s_test_canonicalize_var_f16(half addrspace(1)* %out, i16 zeroext %val.arg) #1 {
   %val = bitcast i16 %val.arg to half
@@ -29,7 +29,7 @@ define amdgpu_kernel void @s_test_canonicalize_var_f16(half addrspace(1)* %out, 
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_fabs_var_f16:
-; GCN: v_mul_f16_e64 [[REG:v[0-9]+]], 1.0, |{{v[0-9]+}}|
+; GCN: v_max_f16_e64 [[REG:v[0-9]+]], |{{v[0-9]+}}|, |{{v[0-9]+}}|
 ; GCN: buffer_store_short [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(half addrspace(1)* %out) #1 {
   %val = load half, half addrspace(1)* %out
@@ -40,7 +40,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(half addrspace(1)* %
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_fabs_var_f16:
-; GCN: v_mul_f16_e64 [[REG:v[0-9]+]], 1.0, -|{{v[0-9]+}}|
+; GCN: v_max_f16_e64 [[REG:v[0-9]+]], -|{{v[0-9]+}}|, -|{{v[0-9]+}}|
 ; GCN: buffer_store_short [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(half addrspace(1)* %out) #1 {
   %val = load half, half addrspace(1)* %out
@@ -52,7 +52,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(half addrspace(
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_var_f16:
-; GCN: v_mul_f16_e64 [[REG:v[0-9]+]], 1.0, -{{v[0-9]+}}
+; GCN: v_max_f16_e64 [[REG:v[0-9]+]], -{{v[0-9]+}}, -{{v[0-9]+}}
 ; GCN: buffer_store_short [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(half addrspace(1)* %out) #1 {
   %val = load half, half addrspace(1)* %out
@@ -207,9 +207,8 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(half addrspace
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_var_v2f16:
-; VI: v_mov_b32_e32 v[[CONST1:[0-9]+]], 0x3c00
-; VI-DAG: v_mul_f16_sdwa [[REG0:v[0-9]+]], v[[CONST1]], {{v[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; VI-DAG: v_mul_f16_e32 [[REG1:v[0-9]+]], 1.0, {{v[0-9]+}}
+; VI-DAG: v_max_f16_sdwa [[REG0:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-DAG: v_max_f16_e32 [[REG1:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; VI-NOT: v_and_b32
 
 ; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, {{v[0-9]+$}}
@@ -227,9 +226,8 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f16(<2 x half> addrspace(1)
 ; GCN-LABEL: {{^}}v_test_canonicalize_fabs_var_v2f16:
 ; VI-DAG: v_bfe_u32
 ; VI-DAG: v_and_b32_e32 v{{[0-9]+}}, 0x7fff7fff, v{{[0-9]+}}
-; VI-DAG: v_mov_b32_e32 v[[CONST1:[0-9]+]], 0x3c00
-; VI: v_mul_f16_sdwa [[REG0:v[0-9]+]], v[[CONST1]], v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI: v_mul_f16_e32 [[REG1:v[0-9]+]], 1.0, v{{[0-9]+}}
+; VI: v_max_f16_sdwa [[REG0:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI: v_max_f16_e32 [[REG1:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; VI-NOT: 0xffff
 ; VI: v_or_b32
 
@@ -247,10 +245,9 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(<2 x half> addrspa
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_fabs_var_v2f16:
-; VI-DAG: v_mov_b32_e32 v[[CONST1:[0-9]+]], 0x3c00
 ; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, 0x80008000, v{{[0-9]+}}
-; VI-DAG: v_mul_f16_sdwa [[REG0:v[0-9]+]], v[[CONST1]], v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; VI-DAG: v_mul_f16_e32 [[REG1:v[0-9]+]], 1.0, v{{[0-9]+}}
+; VI-DAG: v_max_f16_sdwa [[REG0:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-DAG: v_max_f16_e32 [[REG1:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; VI: v_or_b32
 
 ; GFX9: v_and_b32_e32 [[ABS:v[0-9]+]], 0x7fff7fff, v{{[0-9]+}}
@@ -269,10 +266,10 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(<2 x half> ad
 
 ; FIXME: Fold modifier
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_var_v2f16:
-; VI-DAG: v_mov_b32_e32 v[[CONST1:[0-9]+]], 0x3c00
-; VI-DAG: v_xor_b32_e32 [[FNEG:v[0-9]+]], 0x80008000, v{{[0-9]+}}
-; VI-DAG: v_mul_f16_sdwa [[REG1:v[0-9]+]], v[[CONST1]], [[FNEG]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; VI-DAG: v_mul_f16_e32 [[REG0:v[0-9]+]], 1.0, [[FNEG]]
+; VI:     v_xor_b32_e32 [[FNEG:v[0-9]+]], 0x80008000, v{{[0-9]+}}
+; VI:     v_lshrrev_b32_e32 [[FNEGHI:v[0-9]+]], 16, [[FNEG]]
+; VI-DAG: v_max_f16_sdwa [[REG1:v[0-9]+]], [[FNEG]], [[FNEGHI]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-DAG: v_max_f16_e32 [[REG0:v[0-9]+]], [[FNEG]], [[FNEG]]
 ; VI-NOT: 0xffff
 
 ; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}} neg_lo:[0,1] neg_hi:[0,1]{{$}}
@@ -288,9 +285,8 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(<2 x half> addrspa
 }
 
 ; GCN-LABEL: {{^}}s_test_canonicalize_var_v2f16:
-; VI: v_mov_b32_e32 [[ONE:v[0-9]+]], 0x3c00
-; VI: v_mul_f16_sdwa [[REG0:v[0-9]+]], [[ONE]], {{v[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI: v_mul_f16_e64 [[REG1:v[0-9]+]], 1.0, {{s[0-9]+}}
+; VI: v_max_f16_sdwa [[REG0:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI: v_max_f16_e64 [[REG1:v[0-9]+]], {{s[0-9]+}}, {{s[0-9]+}}
 ; VI-NOT: v_and_b32
 
 ; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, {{s[0-9]+$}}

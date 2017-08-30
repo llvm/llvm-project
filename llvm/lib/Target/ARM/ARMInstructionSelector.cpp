@@ -492,10 +492,6 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
     DEBUG(dbgs() << "ROPI and RWPI not supported yet\n");
     return false;
   }
-  if (TM.isPositionIndependent()) {
-    DEBUG(dbgs() << "PIC not supported yet\n");
-    return false;
-  }
 
   auto GV = MIB->getOperand(1).getGlobal();
   if (GV->isThreadLocal()) {
@@ -509,6 +505,28 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
   auto ObjectFormat = TII.getSubtarget().getTargetTriple().getObjectFormat();
   bool UseMovt = TII.getSubtarget().useMovt(MF);
 
+  unsigned Alignment = 4;
+  if (TM.isPositionIndependent()) {
+    bool Indirect = TII.getSubtarget().isGVIndirectSymbol(GV);
+    // FIXME: Taking advantage of MOVT for ELF is pretty involved, so we don't
+    // support it yet. See PR28229.
+    unsigned Opc =
+        UseMovt && !TII.getSubtarget().isTargetELF()
+            ? (Indirect ? ARM::MOV_ga_pcrel_ldr : ARM::MOV_ga_pcrel)
+            : (Indirect ? ARM::LDRLIT_ga_pcrel_ldr : ARM::LDRLIT_ga_pcrel);
+    MIB->setDesc(TII.get(Opc));
+
+    if (TII.getSubtarget().isTargetDarwin())
+      MIB->getOperand(1).setTargetFlags(ARMII::MO_NONLAZY);
+
+    if (Indirect)
+      MIB.addMemOperand(MF.getMachineMemOperand(
+          MachinePointerInfo::getGOT(MF), MachineMemOperand::MOLoad,
+          TM.getPointerSize(), Alignment));
+
+    return true;
+  }
+
   if (ObjectFormat == Triple::ELF) {
     if (UseMovt) {
       MIB->setDesc(TII.get(ARM::MOVi32imm));
@@ -516,7 +534,6 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
       // Load the global's address from the constant pool.
       MIB->setDesc(TII.get(ARM::LDRi12));
       MIB->RemoveOperand(1);
-      unsigned Alignment = 4;
       MIB.addConstantPoolIndex(
              MF.getConstantPool()->getConstantPoolIndex(GV, Alignment),
              /* Offset */ 0, /* TargetFlags */ 0)

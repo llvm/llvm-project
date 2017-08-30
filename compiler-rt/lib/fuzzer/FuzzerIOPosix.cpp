@@ -32,6 +32,13 @@ bool IsFile(const std::string &Path) {
   return S_ISREG(St.st_mode);
 }
 
+size_t FileSize(const std::string &Path) {
+  struct stat St;
+  if (stat(Path.c_str(), &St))
+    return 0;
+  return St.st_size;
+}
+
 void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
                              Vector<std::string> *V, bool TopDir) {
   auto E = GetEpoch(Dir);

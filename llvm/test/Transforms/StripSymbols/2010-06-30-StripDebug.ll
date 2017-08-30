@@ -22,7 +22,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!4}
 !llvm.dbg.cu = !{!5}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x", scope: !2, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "b.c", directory: "/tmp")
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

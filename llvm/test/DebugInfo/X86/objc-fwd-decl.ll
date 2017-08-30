@@ -14,7 +14,7 @@ source_filename = "test/DebugInfo/X86/objc-fwd-decl.ll"
 !llvm.dbg.cu = !{!5}
 !llvm.module.flags = !{!8, !9, !10, !11, !12, !13}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 3, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "foo.m", directory: "/Users/echristo")
 !3 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64, align: 64)

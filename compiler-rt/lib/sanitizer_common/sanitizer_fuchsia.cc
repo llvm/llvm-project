@@ -480,6 +480,14 @@ uptr ReadLongProcessName(/*out*/ char *buf, uptr buf_len) {
 
 uptr MainThreadStackBase, MainThreadStackSize;
 
+bool GetRandom(void *buffer, uptr length, bool blocking) {
+  CHECK_LE(length, MX_CPRNG_DRAW_MAX_LEN);
+  size_t size;
+  CHECK_EQ(_mx_cprng_draw(buffer, length, &size), MX_OK);
+  CHECK_EQ(size, length);
+  return true;
+}
+
 }  // namespace __sanitizer
 
 using namespace __sanitizer;  // NOLINT

@@ -18,8 +18,8 @@
 ; modified by the debugger.
 ;
 ; ASM: [DW_OP_stack_value]
-; CHECK:  DW_AT_location {{.*}} 70 00 9f
-;                               rax+0, stack-value
+; CHECK:  DW_AT_location {{.*}} (DW_OP_breg0 RAX+0, DW_OP_stack_value)
+
 source_filename = "ab.cpp"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"

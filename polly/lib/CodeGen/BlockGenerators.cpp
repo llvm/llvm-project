@@ -450,7 +450,12 @@ void BlockGenerator::copyBB(ScopStmt &Stmt, BasicBlock *BB, BasicBlock *CopyBB,
                             isl_id_to_ast_expr *NewAccesses) {
   EntryBB = &CopyBB->getParent()->getEntryBlock();
 
-  if (Stmt.isBlockStmt())
+  // Block statements and the entry blocks of region statement are code
+  // generated from instruction lists. This allow us to optimize the
+  // instructions that belong to a certain scop statement. As the code
+  // structure of region statements might be arbitrary complex, optimizing the
+  // instruction list is not yet supported.
+  if (Stmt.isBlockStmt() || (Stmt.isRegionStmt() && Stmt.getEntryBlock() == BB))
     for (Instruction *Inst : Stmt.getInstructions())
       copyInstruction(Stmt, Inst, BBMap, LTS, NewAccesses);
   else

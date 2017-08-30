@@ -15,7 +15,7 @@ define void @bar(i32 %arg) {
 !1 = !DIFile(filename: "2.cpp", directory: "some_dir")
 !2 = !{}
 !3 = !{!4}
-!4 = !DIGlobalVariableExpression(var: !5)
+!4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
 !5 = !DIGlobalVariable(name: "a_global", linkageName: "a_global", scope: null, line: 52, type: !6, isLocal: true, isDefinition: true)
 !6 = !DISubroutineType(types: !2)
 !7 = !{i32 2, !"Debug Info Version", i32 3}

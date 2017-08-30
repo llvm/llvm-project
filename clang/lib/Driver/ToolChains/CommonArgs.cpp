@@ -555,6 +555,7 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   if (SanArgs.needsAsanRt() && SanArgs.needsSharedAsanRt()) {
     SharedRuntimes.push_back("asan");
   }
+
   // The stats_client library is also statically linked into DSOs.
   if (SanArgs.needsStatsRt())
     StaticRuntimes.push_back("stats_client");
@@ -588,9 +589,13 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       StaticRuntimes.push_back("tsan_cxx");
   }
   if (SanArgs.needsUbsanRt()) {
-    StaticRuntimes.push_back("ubsan_standalone");
-    if (SanArgs.linkCXXRuntimes())
-      StaticRuntimes.push_back("ubsan_standalone_cxx");
+    if (SanArgs.requiresMinimalRuntime()) {
+      StaticRuntimes.push_back("ubsan_minimal");
+    } else {
+      StaticRuntimes.push_back("ubsan_standalone");
+      if (SanArgs.linkCXXRuntimes())
+        StaticRuntimes.push_back("ubsan_standalone_cxx");
+    }
   }
   if (SanArgs.needsSafeStackRt()) {
     NonWholeStaticRuntimes.push_back("safestack");

@@ -633,7 +633,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->Discard = getDiscard(Args);
   Config->DynamicLinker = getDynamicLinker(Args);
-  Config->EhFrameHdr = Args.hasArg(OPT_eh_frame_hdr);
+  Config->EhFrameHdr =
+      getArg(Args, OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);
   Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
   Config->EnableNewDtags = !Args.hasArg(OPT_disable_new_dtags);
   Config->Entry = Args.getLastArgValue(OPT_entry);

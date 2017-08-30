@@ -3,20 +3,11 @@
 # CHECK: .debug_info contents:
 # CHECK: DW_TAG_formal_parameter
 # CHECK: DW_TAG_formal_parameter
-# CHECK-NEXT: DW_AT_location [DW_FORM_data4]	([[LOC:.*]])
+# CHECK-NEXT: DW_AT_location
+# CHECK-NEXT:   0x0000000000000000 - 0x0000000000000014: DW_OP_reg1 W1
+# CHECK-NEXT:   0x0000000000000014 - 0x0000000000000038: DW_OP_breg31 WSP+8
 # CHECK-NEXT: DW_AT_name {{.*}}"y"
-# CHECK: .debug_loc contents:
-# CHECK: [[LOC]]:
-# CHECK-SAME:        Beginning address offset: 0x0000000000000000
-# CHECK-NEXT:		Ending address offset: 0x0000000000000014
-# CHECK-NEXT:		 Location description: 51
-#                                              reg1
-#
-# The range of y's [SP+8] location must not be interrupted by the call to h.
-# CHECK:	     Beginning address offset: 0x0000000000000014
-# CHECK-NEXT:		Ending address offset: 0x0000000000000038
-# CHECK-NEXT:   	 Location description: 8f 08
-#                                              breg31 +8
+
 --- |
   ; Generated at -Os from:
   ;   struct Rect {

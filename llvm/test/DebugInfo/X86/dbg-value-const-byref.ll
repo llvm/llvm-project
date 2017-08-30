@@ -21,29 +21,14 @@
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_location [DW_FORM_data4]	([[LOC:.*]])
+; CHECK:     DW_AT_location {{.*}}({{.*}}
+; CHECK-NEXT:  0x{{0*.*}} - [[C1:0x.*]]: DW_OP_consts +3
+; CHECK-NEXT:      [[C1]] - [[C2:0x.*]]: DW_OP_consts +7
+; CHECK-NEXT:      [[C2]] - [[R1:0x.*]]: DW_OP_reg0 RAX
+; CHECK-NEXT:      [[R1]] - [[R2:0x.*]]: DW_OP_breg7 RSP+4, DW_OP_deref)
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name{{.*}}"i"
-; CHECK: .debug_loc contents:
-; CHECK: [[LOC]]:
-;        consts 0x00000003
-; CHECK: Beginning address offset: 0x0000000000000{{.*}}
-; CHECK:    Ending address offset: [[C1:.*]]
-; CHECK:     Location description: 11 03
-;        consts 0x00000007
-; CHECK: Beginning address offset: [[C1]]
-; CHECK:    Ending address offset: [[C2:.*]]
-; CHECK:     Location description: 11 07
-;        rax
-; CHECK: Beginning address offset: [[C2]]
-; CHECK:    Ending address offset: [[R1:.*]]
-; CHECK:     Location description: 50
-;         rdi+0
-; CHECK: Beginning address offset: [[R1]]
-; CHECK:    Ending address offset: [[R2:.*]]
-; CHECK:     Location description: 77 04
-;         rsp+4
-;
+
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
 

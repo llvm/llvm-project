@@ -26,6 +26,7 @@
 #include "../readability/IdentifierNamingCheck.h"
 #include "ExceptionBaseclassCheck.h"
 #include "NoAssemblerCheck.h"
+#include "SignedBitwiseCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -38,6 +39,8 @@ public:
         "hicpp-braces-around-statements");
     CheckFactories.registerCheck<ExceptionBaseclassCheck>(
         "hicpp-exception-baseclass");
+    CheckFactories.registerCheck<SignedBitwiseCheck>(
+        "hicpp-signed-bitwise");
     CheckFactories.registerCheck<google::ExplicitConstructorCheck>(
         "hicpp-explicit-conversions");
     CheckFactories.registerCheck<readability::FunctionSizeCheck>(

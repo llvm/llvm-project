@@ -1,5 +1,5 @@
 ; RUN: llc < %s | FileCheck %s
-; RUN: llc -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
+; RUN: llc -filetype=obj < %s | llvm-dwarfdump -debug-dump=loc - | FileCheck %s --check-prefix=DWARF
 
 ; Compile the following with -O1:
 
@@ -22,8 +22,10 @@
 ; CHECK:               #NO_APP
 ; CHECK:               movl    [[offs]](%rsp), %eax          # 4-byte Reload
 ; CHECK:               retq
-; DWARF: Location description: {{77 .. 93 04 10 00 9f 93 04}}
-; DW_OP_breg7+offs DW_OP_piece 4 DW_OP_constu 0 DW_OP_stack_value DW_OP_piece 4
+
+; DWARF: .debug_loc contents:
+; DWARF-NEXT: 0x00000000:
+; DWARF-NEXT: {{.*}}: DW_OP_breg7 RSP+{{[0-9]+}}, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4
 
 ; ModuleID = 't.c'
 source_filename = "t.c"

@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -o - < %s | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -filetype=obj -o - < %s | llvm-dwarfdump - -debug-dump=loc | FileCheck %s
 ;
 ; Created using clang -g -O3 from:
 ; struct S0 {
@@ -19,14 +19,8 @@
 ; AS in 26163, we expect two ranges (as opposed to one), the first one being zero sized
 ;
 ;
-; CHECK:             Beginning address offset: 0x0000000000000004
-; CHECK:                Ending address offset: 0x0000000000000004
-; CHECK:                 Location description: 10 03 93 04 55 93 02
-; constu 0x00000003, piece 0x00000004, rdi, piece 0x00000002
-; CHECK:             Beginning address offset: 0x0000000000000004
-; CHECK:                Ending address offset: 0x0000000000000014
-; CHECK:                 Location description: 10 03 93 04 10 00
-; constu 0x00000003, piece 0x00000004, constu 0x00000000, piece 0x00000004
+; CHECK: 0x0000000000000004 - 0x0000000000000004: DW_OP_constu 0x3, DW_OP_piece 0x4, DW_OP_reg5 RDI, DW_OP_piece 0x2
+; CHECK: 0x0000000000000004 - 0x0000000000000014: DW_OP_constu 0x3, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_piece 0x4
 
 source_filename = "test/DebugInfo/X86/PR26148.ll"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -72,7 +66,7 @@ attributes #1 = { "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf
 !llvm.module.flags = !{!12, !13, !14}
 !llvm.ident = !{!15}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 4, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.9.0 (https://github.com/llvm-mirror/clang 8f258397c5afd7a708bd95770c718e81d08fb11a) (https://github.com/llvm-mirror/llvm 18481855bdfa1b4a424f81be8525db002671348d)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "small.c", directory: "/Users/kfischer/Projects/clangbug")

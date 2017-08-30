@@ -14,9 +14,8 @@
 ; CHECK: brasl   %r14, populate_array@PLT
 
 ; DEBUG: DW_TAG_variable
-; Rather hard-coded, but 0x91 => DW_OP_fbreg and 0xa401 is SLEB128 encoded 164.
 ; DEBUG-NOT: DW_TAG
-; DEBUG: DW_AT_location {{.*}}(<0x3> 91 a4 01 )
+; DEBUG: DW_AT_location {{.*}}(DW_OP_fbreg +164)
 ; DEBUG-NOT: DW_TAG
 ; DEBUG: DW_AT_name {{.*}} "main_arr"
 

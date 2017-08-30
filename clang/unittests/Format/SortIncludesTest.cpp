@@ -398,6 +398,17 @@ TEST_F(SortIncludesTest, ValidAffactedRangesAfterDeduplicatingIncludes) {
   EXPECT_EQ(26u, Ranges[0].getLength());
 }
 
+TEST_F(SortIncludesTest, DoNotSortLikelyXml) {
+  EXPECT_EQ("<!--;\n"
+            "#include <b>\n"
+            "#include <a>\n"
+            "-->",
+            sort("<!--;\n"
+                 "#include <b>\n"
+                 "#include <a>\n"
+                 "-->"));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

@@ -120,6 +120,12 @@ Improvements to clang-tidy
   Ensures that all exception will be instances of ``std::exception`` and classes 
   that are derived from it.
 
+- New `hicpp-signed-bitwise
+  <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-signed-bitwise.html>`_ check
+
+  Finds uses of bitwise operations on signed integer types, which may lead to 
+  undefined or implementation defined behaviour.
+
 - New `android-cloexec-inotify-init1
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-inotify-init1.html>`_ check
 

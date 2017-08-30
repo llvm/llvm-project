@@ -1,4 +1,4 @@
-//===-- ImplicitNullChecks.cpp - Fold null checks into memory accesses ----===//
+//===- ImplicitNullChecks.cpp - Fold null checks into memory accesses -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -26,26 +26,38 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/FaultMaps.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Instruction.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetOpcodes.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 
 using namespace llvm;
 
@@ -152,7 +164,6 @@ class ImplicitNullChecks : public MachineFunctionPass {
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   AliasAnalysis *AA = nullptr;
-  MachineModuleInfo *MMI = nullptr;
   MachineFrameInfo *MFI = nullptr;
 
   bool analyzeBlockForNullChecks(MachineBasicBlock &MBB,
@@ -166,6 +177,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
     AR_MayAlias,
     AR_WillAliasEverything
   };
+
   /// Returns AR_NoAlias if \p MI memory operation does not alias with
   /// \p PrevMI, AR_MayAlias if they may alias and AR_WillAliasEverything if
   /// they may alias and any further memory operation may alias with \p PrevMI.
@@ -176,6 +188,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
     SR_Unsuitable,
     SR_Impossible
   };
+
   /// Return SR_Suitable if \p MI a memory operation that can be used to
   /// implicitly null check the value in \p PointerReg, SR_Unsuitable if
   /// \p MI cannot be used to null check and SR_Impossible if there is
@@ -200,6 +213,7 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -211,7 +225,7 @@ public:
   }
 };
 
-}
+} // end anonymous namespace
 
 bool ImplicitNullChecks::canHandle(const MachineInstr *MI) {
   if (MI->isCall() || MI->hasUnmodeledSideEffects())
@@ -230,7 +244,7 @@ ImplicitNullChecks::DependenceResult
 ImplicitNullChecks::computeDependence(const MachineInstr *MI,
                                       ArrayRef<MachineInstr *> Block) {
   assert(llvm::all_of(Block, canHandle) && "Check this first!");
-  assert(!llvm::is_contained(Block, MI) && "Block must be exclusive of MI!");
+  assert(!is_contained(Block, MI) && "Block must be exclusive of MI!");
 
   Optional<ArrayRef<MachineInstr *>::iterator> Dep;
 
@@ -280,7 +294,6 @@ bool ImplicitNullChecks::canReorder(const MachineInstr *A,
 bool ImplicitNullChecks::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getRegInfo().getTargetRegisterInfo();
-  MMI = &MF.getMMI();
   MFI = &MF.getFrameInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
@@ -443,7 +456,7 @@ bool ImplicitNullChecks::canHoistInst(MachineInstr *FaultingMI,
 /// NullCheckList and return true, else return false.
 bool ImplicitNullChecks::analyzeBlockForNullChecks(
     MachineBasicBlock &MBB, SmallVectorImpl<NullCheck> &NullCheckList) {
-  typedef TargetInstrInfo::MachineBranchPredicate MachineBranchPredicate;
+  using MachineBranchPredicate = TargetInstrInfo::MachineBranchPredicate;
 
   MDNode *BranchMD = nullptr;
   if (auto *BB = MBB.getBasicBlock())
@@ -557,7 +570,7 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
     }
 
     // If MI re-defines the PointerReg then we cannot move further.
-    if (any_of(MI.operands(), [&](MachineOperand &MO) {
+    if (llvm::any_of(MI.operands(), [&](MachineOperand &MO) {
           return MO.isReg() && MO.getReg() && MO.isDef() &&
                  TRI->regsOverlap(MO.getReg(), PointerReg);
         }))
@@ -676,9 +689,10 @@ void ImplicitNullChecks::rewriteNullChecks(
   }
 }
 
-
 char ImplicitNullChecks::ID = 0;
+
 char &llvm::ImplicitNullChecksID = ImplicitNullChecks::ID;
+
 INITIALIZE_PASS_BEGIN(ImplicitNullChecks, DEBUG_TYPE,
                       "Implicit null checks", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)

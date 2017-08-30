@@ -282,6 +282,17 @@ define i32 @test20(i32 %A) {
   ret i32 %D
 }
 
+define <2 x i32> @test20vec(<2 x i32> %A) {
+; CHECK-LABEL: @test20vec(
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[B]]
+;
+  %B = and <2 x i32> %A, <i32 1, i32 1>
+  %C = icmp ne <2 x i32> %B, zeroinitializer
+  %D = zext <2 x i1> %C to <2 x i32>
+  ret <2 x i32> %D
+}
+
 define i32 @test21(i32 %a) {
 ; CHECK-LABEL: @test21(
 ; CHECK-NEXT:    [[TMP_6:%.*]] = lshr i32 %a, 2
@@ -292,6 +303,18 @@ define i32 @test21(i32 %a) {
   %not.tmp.7 = icmp ne i32 %tmp.6, 0
   %retval = zext i1 %not.tmp.7 to i32
   ret i32 %retval
+}
+
+define <2 x i32> @test21vec(<2 x i32> %a) {
+; CHECK-LABEL: @test21vec(
+; CHECK-NEXT:    [[TMP_6:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP_6_LOBIT:%.*]] = and <2 x i32> [[TMP_6]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[TMP_6_LOBIT]]
+;
+  %tmp.6 = and <2 x i32> %a, <i32 4, i32 4>
+  %not.tmp.7 = icmp ne <2 x i32> %tmp.6, zeroinitializer
+  %retval = zext <2 x i1> %not.tmp.7 to <2 x i32>
+  ret <2 x i32> %retval
 }
 
 define i1 @test22(i32 %A, i32 %X) {
@@ -318,6 +341,18 @@ define i32 @test23(i32 %a) {
   ret i32 %tmp.3
 }
 
+define <2 x i32> @test23vec(<2 x i32> %a) {
+; CHECK-LABEL: @test23vec(
+; CHECK-NEXT:    [[TMP_1:%.*]] = and <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[TMP_1]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+;
+  %tmp.1 = and <2 x i32> %a, <i32 1, i32 1>
+  %tmp.2 = icmp eq <2 x i32> %tmp.1, zeroinitializer
+  %tmp.3 = zext <2 x i1> %tmp.2 to <2 x i32>
+  ret <2 x i32> %tmp.3
+}
+
 define i32 @test24(i32 %a) {
 ; CHECK-LABEL: @test24(
 ; CHECK-NEXT:    [[TMP_1:%.*]] = lshr i32 %a, 2
@@ -330,6 +365,20 @@ define i32 @test24(i32 %a) {
   %tmp.2 = icmp eq i32 %tmp.1, 0
   %tmp.3 = zext i1 %tmp.2 to i32
   ret i32 %tmp.3
+}
+
+define <2 x i32> @test24vec(<2 x i32> %a) {
+; CHECK-LABEL: @test24vec(
+; CHECK-NEXT:    [[TMP_1:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP_1_LOBIT:%.*]] = and <2 x i32> [[TMP_1]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[TMP_1_LOBIT]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+;
+  %tmp1 = and <2 x i32> %a, <i32 4, i32 4>
+  %tmp.1 = lshr <2 x i32> %tmp1, <i32 2, i32 2>
+  %tmp.2 = icmp eq <2 x i32> %tmp.1, zeroinitializer
+  %tmp.3 = zext <2 x i1> %tmp.2 to <2 x i32>
+  ret <2 x i32> %tmp.3
 }
 
 define i1 @test25(i32 %A) {

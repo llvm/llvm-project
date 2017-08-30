@@ -705,10 +705,8 @@ bool LoopUnswitch::processCurrentLoop() {
         // unswitch on it if we desire.
         Value *LoopCond = FindLIVLoopCondition(BI->getCondition(),
                                                currentLoop, Changed).first;
-        if (!LoopCond || EqualityPropUnSafe(*LoopCond))
-          continue;
-
-        if (UnswitchIfProfitable(LoopCond, ConstantInt::getTrue(Context), TI)) {
+        if (LoopCond && !EqualityPropUnSafe(*LoopCond) &&
+            UnswitchIfProfitable(LoopCond, ConstantInt::getTrue(Context), TI)) {
           ++NumBranches;
           return true;
         }

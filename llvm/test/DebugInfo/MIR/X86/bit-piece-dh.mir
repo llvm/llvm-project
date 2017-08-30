@@ -1,8 +1,7 @@
 # RUN: llc -filetype=obj -o - %s | llvm-dwarfdump --debug-dump=info - | FileCheck %s
 # CHECK: .debug_info contents:
 # CHECK: DW_TAG_variable
-#                                           rdx, bit-piece 8 8
-# CHECK-NEXT: DW_AT_location {{.*}}         51 9d 08 08
+# CHECK-NEXT: DW_AT_location {{.*}}         (DW_OP_reg1 RDX, DW_OP_bit_piece 0x8 0x8)
 # CHECK-NEXT: DW_AT_name {{.*}}"dh"
 --- |
   ; Manually created after:

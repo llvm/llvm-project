@@ -55,7 +55,7 @@
   !llvm.module.flags = !{!6, !7}
   !llvm.ident = !{!8}
 
-  !0 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", scope: !1, file: !2, line: 1, type: !5, isLocal: false, isDefinition: true))
+  !0 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", scope: !1, file: !2, line: 1, type: !5, isLocal: false, isDefinition: true), expr: !DIExpression())
   !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang version 4.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, globals: !4)
   !2 = !DIFile(filename: "t.c", directory: "/home/test")
   !3 = !{}

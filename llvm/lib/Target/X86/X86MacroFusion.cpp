@@ -27,10 +27,8 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const MachineInstr *FirstMI,
                                    const MachineInstr &SecondMI) {
   const X86Subtarget &ST = static_cast<const X86Subtarget&>(TSI);
-  // Check if this processor supports macro-fusion. Since this is a minor
-  // heuristic, we haven't specifically reserved a feature. hasAVX is a decent
-  // proxy for SandyBridge+.
-  if (!ST.hasAVX())
+  // Check if this processor supports macro-fusion.
+  if (!ST.hasMacroFusion())
     return false;
 
   enum {

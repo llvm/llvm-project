@@ -1,13 +1,29 @@
-; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -mattr=-fullfp16 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -mattr=+fullfp16 | FileCheck %s --check-prefix=CHECK-FP16
 
 ;;; Float vectors
 
 %v2f32 = type <2 x float>
-; CHECK: test_v2f32.sqrt:
+%v4f16 = type <4 x half>
+
+; CHECK-LABEL: test_v2f32.sqrt:
 define %v2f32 @test_v2f32.sqrt(%v2f32 %a) {
   ; CHECK: fsqrt.2s
   %1 = call %v2f32 @llvm.sqrt.v2f32(%v2f32 %a)
   ret %v2f32 %1
+}
+define %v4f16 @test_v4f16.sqrt(%v4f16 %a) {
+; CHECK-LABEL: test_v4f16.sqrt:
+; CHECK:       fsqrt s{{.}}, s{{.}}
+; CHECK:       fsqrt s{{.}}, s{{.}}
+; CHECK:       fsqrt s{{.}}, s{{.}}
+; CHECK:       fsqrt s{{.}}, s{{.}}
+
+; CHECK-FP16-LABEL: test_v4f16.sqrt:
+; CHECK-FP16:       fsqrt.4h
+; CHECK-FP16-NEXT:  ret
+  %1 = call %v4f16 @llvm.sqrt.v4f16(%v4f16 %a)
+  ret %v4f16 %1
 }
 ; CHECK: test_v2f32.powi:
 define %v2f32 @test_v2f32.powi(%v2f32 %a, i32 %b) {
@@ -63,50 +79,142 @@ define %v2f32 @test_v2f32.log2(%v2f32 %a) {
   %1 = call %v2f32 @llvm.log2.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
-; CHECK: test_v2f32.fma:
+; CHECK-LABEL: test_v2f32.fma:
 define %v2f32 @test_v2f32.fma(%v2f32 %a, %v2f32 %b, %v2f32 %c) {
-  ; CHECK: fma
+  ; CHECK: fmla.2s
   %1 = call %v2f32 @llvm.fma.v2f32(%v2f32 %a, %v2f32 %b, %v2f32 %c)
   ret %v2f32 %1
 }
-; CHECK: test_v2f32.fabs:
+define %v4f16 @test_v4f16.fma(%v4f16 %a, %v4f16 %b, %v4f16 %c) {
+; CHECK-LABEL: test_v4f16.fma:
+; CHECK:       fmadd s{{.}}, s{{.}}, s{{.}}, s{{.}}
+; CHECK:       fmadd s{{.}}, s{{.}}, s{{.}}, s{{.}}
+; CHECK:       fmadd s{{.}}, s{{.}}, s{{.}}, s{{.}}
+; CHECK:       fmadd s{{.}}, s{{.}}, s{{.}}, s{{.}}
+
+; CHECK-FP16-LABEL: test_v4f16.fma:
+; CHECK-FP16:       fmla.4h
+  %1 = call %v4f16 @llvm.fma.v4f16(%v4f16 %a, %v4f16 %b, %v4f16 %c)
+  ret %v4f16 %1
+}
+; CHECK-LABEL: test_v2f32.fabs:
 define %v2f32 @test_v2f32.fabs(%v2f32 %a) {
-  ; CHECK: fabs
+  ; CHECK: fabs.2s
   %1 = call %v2f32 @llvm.fabs.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
-; CHECK: test_v2f32.floor:
+define %v4f16 @test_v4f16.fabs(%v4f16 %a) {
+; CHECK-LABEL: test_v4f16.fabs:
+; CHECK:       fabs s{{.}}, s{{.}}
+; CHECK:       fabs s{{.}}, s{{.}}
+; CHECK:       fabs s{{.}}, s{{.}}
+; CHECK:       fabs s{{.}}, s{{.}}
+
+; CHECK-FP16-LABEL: test_v4f16.fabs:
+; CHECK-FP16:       fabs.4h
+; CHECK-FP16-NEXT:  ret
+  %1 = call %v4f16 @llvm.fabs.v4f16(%v4f16 %a)
+  ret %v4f16 %1
+}
+; CHECK-LABEL: test_v2f32.floor:
 define %v2f32 @test_v2f32.floor(%v2f32 %a) {
   ; CHECK: frintm.2s
   %1 = call %v2f32 @llvm.floor.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
-; CHECK: test_v2f32.ceil:
+define %v4f16 @test_v4f16.floor(%v4f16 %a) {
+; CHECK-LABEL: test_v4f16.floor:
+; CHECK:       frintm s{{.}}, s{{.}}
+; CHECK:       frintm s{{.}}, s{{.}}
+; CHECK:       frintm s{{.}}, s{{.}}
+; CHECK:       frintm s{{.}}, s{{.}}
+
+; CHECK-FP16-LABEL: test_v4f16.floor:
+; CHECK-FP16:       frintm.4h
+; CHECK-FP16-NEXT:  ret
+  %1 = call %v4f16 @llvm.floor.v4f16(%v4f16 %a)
+  ret %v4f16 %1
+}
+; CHECK-LABEL: test_v2f32.ceil:
 define %v2f32 @test_v2f32.ceil(%v2f32 %a) {
   ; CHECK: frintp.2s
   %1 = call %v2f32 @llvm.ceil.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
-; CHECK: test_v2f32.trunc:
+define %v4f16 @test_v4f16.ceil(%v4f16 %a) {
+; CHECK-LABEL: test_v4f16.ceil:
+; CHECK:       frintp s{{.}}, s{{.}}
+; CHECK:       frintp s{{.}}, s{{.}}
+; CHECK:       frintp s{{.}}, s{{.}}
+; CHECK:       frintp s{{.}}, s{{.}}
+
+; CHECK-FP16-LABEL: test_v4f16.ceil:
+; CHECK-FP16:       frintp.4h
+; CHECK-FP16-NEXT:  ret
+  %1 = call %v4f16 @llvm.ceil.v4f16(%v4f16 %a)
+  ret %v4f16 %1
+}
+; CHECK-LABEL: test_v2f32.trunc:
 define %v2f32 @test_v2f32.trunc(%v2f32 %a) {
   ; CHECK: frintz.2s
   %1 = call %v2f32 @llvm.trunc.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
-; CHECK: test_v2f32.rint:
+define %v4f16 @test_v4f16.trunc(%v4f16 %a) {
+; CHECK-LABEL: test_v4f16.trunc:
+; CHECK:       frintz s{{.}}, s{{.}}
+; CHECK:       frintz s{{.}}, s{{.}}
+; CHECK:       frintz s{{.}}, s{{.}}
+; CHECK:       frintz s{{.}}, s{{.}}
+
+; CHECK-FP16-LABEL: test_v4f16.trunc:
+; CHECK-FP16:       frintz.4h
+; CHECK-FP16-NEXT:  ret
+  %1 = call %v4f16 @llvm.trunc.v4f16(%v4f16 %a)
+  ret %v4f16 %1
+}
+; CHECK-LABEL: test_v2f32.rint:
 define %v2f32 @test_v2f32.rint(%v2f32 %a) {
   ; CHECK: frintx.2s
   %1 = call %v2f32 @llvm.rint.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
-; CHECK: test_v2f32.nearbyint:
+define %v4f16 @test_v4f16.rint(%v4f16 %a) {
+; CHECK-LABEL: test_v4f16.rint:
+; CHECK:       frintx s{{.}}, s{{.}}
+; CHECK:       frintx s{{.}}, s{{.}}
+; CHECK:       frintx s{{.}}, s{{.}}
+; CHECK:       frintx s{{.}}, s{{.}}
+
+; CHECK-FP16-LABEL: test_v4f16.rint:
+; CHECK-FP16:       frintx.4h
+; CHECK-FP16-NEXT:  ret
+  %1 = call %v4f16 @llvm.rint.v4f16(%v4f16 %a)
+  ret %v4f16 %1
+}
+; CHECK-LABEL: test_v2f32.nearbyint:
 define %v2f32 @test_v2f32.nearbyint(%v2f32 %a) {
   ; CHECK: frinti.2s
   %1 = call %v2f32 @llvm.nearbyint.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
+define %v4f16 @test_v4f16.nearbyint(%v4f16 %a) {
+; CHECK-LABEL: test_v4f16.nearbyint:
+; CHECK:       frinti s{{.}}, s{{.}}
+; CHECK:       frinti s{{.}}, s{{.}}
+; CHECK:       frinti s{{.}}, s{{.}}
+; CHECK:       frinti s{{.}}, s{{.}}
+
+; CHECK-FP16-LABEL: test_v4f16.nearbyint:
+; CHECK-FP16:       frinti.4h
+; CHECK-FP16-NEXT:  ret
+  %1 = call %v4f16 @llvm.nearbyint.v4f16(%v4f16 %a)
+  ret %v4f16 %1
+}
 
 declare %v2f32 @llvm.sqrt.v2f32(%v2f32) #0
+declare %v4f16 @llvm.sqrt.v4f16(%v4f16) #0
+
 declare %v2f32 @llvm.powi.v2f32(%v2f32, i32) #0
 declare %v2f32 @llvm.sin.v2f32(%v2f32) #0
 declare %v2f32 @llvm.cos.v2f32(%v2f32) #0
@@ -116,13 +224,27 @@ declare %v2f32 @llvm.exp2.v2f32(%v2f32) #0
 declare %v2f32 @llvm.log.v2f32(%v2f32) #0
 declare %v2f32 @llvm.log10.v2f32(%v2f32) #0
 declare %v2f32 @llvm.log2.v2f32(%v2f32) #0
+
 declare %v2f32 @llvm.fma.v2f32(%v2f32, %v2f32, %v2f32) #0
+declare %v4f16 @llvm.fma.v4f16(%v4f16, %v4f16, %v4f16) #0
+
 declare %v2f32 @llvm.fabs.v2f32(%v2f32) #0
+declare %v4f16 @llvm.fabs.v4f16(%v4f16) #0
+
 declare %v2f32 @llvm.floor.v2f32(%v2f32) #0
+declare %v4f16 @llvm.floor.v4f16(%v4f16) #0
+
 declare %v2f32 @llvm.ceil.v2f32(%v2f32) #0
+declare %v4f16 @llvm.ceil.v4f16(%v4f16) #0
+
 declare %v2f32 @llvm.trunc.v2f32(%v2f32) #0
+declare %v4f16 @llvm.trunc.v4f16(%v4f16) #0
+
 declare %v2f32 @llvm.rint.v2f32(%v2f32) #0
+declare %v4f16 @llvm.rint.v4f16(%v4f16) #0
+
 declare %v2f32 @llvm.nearbyint.v2f32(%v2f32) #0
+declare %v4f16 @llvm.nearbyint.v4f16(%v4f16) #0
 
 ;;;
 

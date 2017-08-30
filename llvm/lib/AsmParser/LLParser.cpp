@@ -4383,7 +4383,7 @@ bool LLParser::ParseDIGlobalVariableExpression(MDNode *&Result,
                                                bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(var, MDField, );                                                    \
-  OPTIONAL(expr, MDField, );
+  REQUIRED(expr, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 

@@ -108,7 +108,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!16, !17, !18}
 !llvm.ident = !{!19}
 
-!0 = distinct !DIGlobalVariableExpression(var: !1)
+!0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "g", linkageName: "\01?g@bar@foo@@3UGlobalRecord@12@A", scope: !2, file: !3, line: 12, type: !5, isLocal: false, isDefinition: true)
 !2 = !DINamespace(name: "bar", scope: !4)
 !3 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")

@@ -296,9 +296,9 @@ while.end:                                        ; preds = %while.body, %entry
 ; CHECK-LABEL: Transform
 ; CHECK-NOT: cmov
 ; CHECK:         divl    [[a:%[0-9a-z]*]]
-; CHECK:         cmpl    [[a]], %eax
 ; CHECK:         movl    $11, [[s1:%[0-9a-z]*]]
 ; CHECK:         movl    [[a]], [[s2:%[0-9a-z]*]]
+; CHECK:         cmpl    [[a]], %edx
 ; CHECK:         ja      [[SinkBB:.*]]
 ; CHECK: [[FalseBB:.*]]:
 ; CHECK:         movl    $22, [[s1]]

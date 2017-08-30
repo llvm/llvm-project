@@ -89,6 +89,10 @@ void Instruction::moveBefore(Instruction *MovePos) {
   moveBefore(*MovePos->getParent(), MovePos->getIterator());
 }
 
+void Instruction::moveAfter(Instruction *MovePos) {
+  moveBefore(*MovePos->getParent(), ++MovePos->getIterator());
+}
+
 void Instruction::moveBefore(BasicBlock &BB,
                              SymbolTableList<Instruction>::iterator I) {
   assert(I == BB.end() || I->getParent() == &BB);
