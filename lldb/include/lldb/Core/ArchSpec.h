@@ -177,6 +177,7 @@ public:
     eCore_ppc_ppc7450,
     eCore_ppc_ppc970,
 
+    eCore_ppc64le_generic,
     eCore_ppc64_generic,
     eCore_ppc64_ppc970_64,
 

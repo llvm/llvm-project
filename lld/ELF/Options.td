@@ -176,6 +176,9 @@ def no_demangle: F<"no-demangle">,
 def no_dynamic_linker: F<"no-dynamic-linker">,
   HelpText<"Inhibit output of .interp section">;
 
+def no_eh_frame_hdr: F<"no-eh-frame-hdr">,
+  HelpText<"Do not create .eh_frame_hdr section">;
+
 def no_export_dynamic: F<"no-export-dynamic">;
 def no_fatal_warnings: F<"no-fatal-warnings">;
 
