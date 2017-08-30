@@ -619,10 +619,6 @@ bool GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
               (uint32_t)Record[Idx++], (uint32_t)Record[Idx++],
               (uint32_t)Record[Idx++]}}};
 
-        // Skip the module name (currently this is only used for prebuilt
-        // modules while here we are only dealing with cached).
-        Idx += Record[Idx] + 1;
-
         // Retrieve the imported file name.
         unsigned Length = Record[Idx++];
         SmallString<128> ImportedFile(Record.begin() + Idx,

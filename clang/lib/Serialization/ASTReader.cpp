@@ -2485,23 +2485,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             {{(uint32_t)Record[Idx++], (uint32_t)Record[Idx++],
               (uint32_t)Record[Idx++], (uint32_t)Record[Idx++],
               (uint32_t)Record[Idx++]}}};
-
-        std::string ImportedName = ReadString(Record, Idx);
-        std::string ImportedFile;
-
-        // For prebuilt and explicit modules first consult the file map for
-        // an override. Note that here we don't search prebuilt module
-        // directories, only the explicit name to file mappings. Also, we will
-        // still verify the size/signature making sure it is essentially the
-        // same file but perhaps in a different location.
-        if (ImportedKind == MK_PrebuiltModule || ImportedKind == MK_ExplicitModule)
-          ImportedFile = PP.getHeaderSearchInfo().getPrebuiltModuleFileName(
-            ImportedName, /*FileMapOnly*/ true);
-
-        if (ImportedFile.empty())
-          ImportedFile = ReadPath(F, Record, Idx);
-        else
-          SkipPath(Record, Idx);
+        auto ImportedFile = ReadPath(F, Record, Idx);
 
         // If our client can't cope with us being out of date, we can't cope with
         // our dependency being missing.
@@ -3436,18 +3420,12 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
   RemapBuilder TypeRemap(F.TypeRemap);
 
   while (Data < DataEnd) {
-    // FIXME: Looking up dependency modules by filename is horrible. Let's
-    // start fixing this with prebuilt and explicit modules and see how it
-    // goes...
+    // FIXME: Looking up dependency modules by filename is horrible.
     using namespace llvm::support;
-    ModuleKind Kind = static_cast<ModuleKind>(
-      endian::readNext<uint8_t, little, unaligned>(Data));
     uint16_t Len = endian::readNext<uint16_t, little, unaligned>(Data);
     StringRef Name = StringRef((const char*)Data, Len);
     Data += Len;
-    ModuleFile *OM = (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule
-                      ? ModuleMgr.lookupByModuleName(Name)
-                      : ModuleMgr.lookupByFileName(Name));
+    ModuleFile *OM = ModuleMgr.lookup(Name);
     if (!OM) {
       std::string Msg =
           "SourceLocation remap refers to unknown module, cannot find ";
@@ -4778,7 +4756,6 @@ bool ASTReader::readASTFileControlBlock(
       while (Idx < N) {
         // Read information about the AST file.
         Idx += 5; // ImportLoc, Size, ModTime, Signature
-        SkipString(Record, Idx); // Module name; FIXME: pass to listener?
         std::string Filename = ReadString(Record, Idx);
         ResolveImportedPath(Filename, ModuleDir);
         Listener.visitImport(Filename);
@@ -10371,8 +10348,7 @@ ASTReader::ASTReader(Preprocessor &PP, ASTContext *Context,
       SourceMgr(PP.getSourceManager()), FileMgr(PP.getFileManager()),
       PCHContainerRdr(PCHContainerRdr), Diags(PP.getDiagnostics()), PP(PP),
       ContextObj(Context),
-      ModuleMgr(PP.getFileManager(), PP.getPCMCache(), PCHContainerRdr,
-                PP.getHeaderSearchInfo()),
+      ModuleMgr(PP.getFileManager(), PP.getPCMCache(), PCHContainerRdr),
       PCMCache(PP.getPCMCache()), DummyIdResolver(PP),
       ReadTimer(std::move(ReadTimer)), isysroot(isysroot),
       DisableValidation(DisableValidation),

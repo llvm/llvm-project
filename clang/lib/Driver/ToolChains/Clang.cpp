@@ -1968,6 +1968,78 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
 }
 
+static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,
+                                  const llvm::Triple &Triple,
+                                  const InputInfo &Input) {
+  // Enable region store model by default.
+  CmdArgs.push_back("-analyzer-store=region");
+
+  // Treat blocks as analysis entry points.
+  CmdArgs.push_back("-analyzer-opt-analyze-nested-blocks");
+
+  CmdArgs.push_back("-analyzer-eagerly-assume");
+
+  // Add default argument set.
+  if (!Args.hasArg(options::OPT__analyzer_no_default_checks)) {
+    CmdArgs.push_back("-analyzer-checker=core");
+    CmdArgs.push_back("-analyzer-checker=apiModeling");
+
+    if (!Triple.isWindowsMSVCEnvironment()) {
+      CmdArgs.push_back("-analyzer-checker=unix");
+    } else {
+      // Enable "unix" checkers that also work on Windows.
+      CmdArgs.push_back("-analyzer-checker=unix.API");
+      CmdArgs.push_back("-analyzer-checker=unix.Malloc");
+      CmdArgs.push_back("-analyzer-checker=unix.MallocSizeof");
+      CmdArgs.push_back("-analyzer-checker=unix.MismatchedDeallocator");
+      CmdArgs.push_back("-analyzer-checker=unix.cstring.BadSizeArg");
+      CmdArgs.push_back("-analyzer-checker=unix.cstring.NullArg");
+    }
+
+    // Disable some unix checkers for PS4.
+    if (Triple.isPS4CPU()) {
+      CmdArgs.push_back("-analyzer-disable-checker=unix.API");
+      CmdArgs.push_back("-analyzer-disable-checker=unix.Vfork");
+    }
+
+    if (Triple.isOSDarwin())
+      CmdArgs.push_back("-analyzer-checker=osx");
+
+    CmdArgs.push_back("-analyzer-checker=deadcode");
+
+    if (types::isCXX(Input.getType()))
+      CmdArgs.push_back("-analyzer-checker=cplusplus");
+
+    if (!Triple.isPS4CPU()) {
+      CmdArgs.push_back("-analyzer-checker=security.insecureAPI.UncheckedReturn");
+      CmdArgs.push_back("-analyzer-checker=security.insecureAPI.getpw");
+      CmdArgs.push_back("-analyzer-checker=security.insecureAPI.gets");
+      CmdArgs.push_back("-analyzer-checker=security.insecureAPI.mktemp");
+      CmdArgs.push_back("-analyzer-checker=security.insecureAPI.mkstemp");
+      CmdArgs.push_back("-analyzer-checker=security.insecureAPI.vfork");
+    }
+
+    // Default nullability checks.
+    CmdArgs.push_back("-analyzer-checker=nullability.NullPassedToNonnull");
+    CmdArgs.push_back("-analyzer-checker=nullability.NullReturnedFromNonnull");
+  }
+
+  // Set the output format. The default is plist, for (lame) historical reasons.
+  CmdArgs.push_back("-analyzer-output");
+  if (Arg *A = Args.getLastArg(options::OPT__analyzer_output))
+    CmdArgs.push_back(A->getValue());
+  else
+    CmdArgs.push_back("plist");
+
+  // Disable the presentation of standard compiler warnings when using
+  // --analyze.  We only want to show static analyzer diagnostics or frontend
+  // errors.
+  CmdArgs.push_back("-w");
+
+  // Add -Xanalyzer arguments when running as analyzer.
+  Args.AddAllArgValues(CmdArgs, options::OPT_Xanalyzer);
+}
+
 static void RenderSSPOptions(const ToolChain &TC, const ArgList &Args,
                              ArgStringList &CmdArgs, bool KernelOrKext,
                              bool IsHosted) {
@@ -2273,78 +2345,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_static))
     CmdArgs.push_back("-static-define");
 
-  if (isa<AnalyzeJobAction>(JA)) {
-    // Enable region store model by default.
-    CmdArgs.push_back("-analyzer-store=region");
-
-    // Treat blocks as analysis entry points.
-    CmdArgs.push_back("-analyzer-opt-analyze-nested-blocks");
-
-    CmdArgs.push_back("-analyzer-eagerly-assume");
-
-    // Add default argument set.
-    if (!Args.hasArg(options::OPT__analyzer_no_default_checks)) {
-      CmdArgs.push_back("-analyzer-checker=core");
-      CmdArgs.push_back("-analyzer-checker=apiModeling");
-
-    if (!IsWindowsMSVC) {
-      CmdArgs.push_back("-analyzer-checker=unix");
-    } else {
-      // Enable "unix" checkers that also work on Windows.
-      CmdArgs.push_back("-analyzer-checker=unix.API");
-      CmdArgs.push_back("-analyzer-checker=unix.Malloc");
-      CmdArgs.push_back("-analyzer-checker=unix.MallocSizeof");
-      CmdArgs.push_back("-analyzer-checker=unix.MismatchedDeallocator");
-      CmdArgs.push_back("-analyzer-checker=unix.cstring.BadSizeArg");
-      CmdArgs.push_back("-analyzer-checker=unix.cstring.NullArg");
-    }
-
-      // Disable some unix checkers for PS4.
-      if (IsPS4CPU) {
-        CmdArgs.push_back("-analyzer-disable-checker=unix.API");
-        CmdArgs.push_back("-analyzer-disable-checker=unix.Vfork");
-      }
-
-      if (RawTriple.getVendor() == llvm::Triple::Apple)
-        CmdArgs.push_back("-analyzer-checker=osx");
-
-      CmdArgs.push_back("-analyzer-checker=deadcode");
-
-      if (types::isCXX(Input.getType()))
-        CmdArgs.push_back("-analyzer-checker=cplusplus");
-
-      if (!IsPS4CPU) {
-        CmdArgs.push_back(
-            "-analyzer-checker=security.insecureAPI.UncheckedReturn");
-        CmdArgs.push_back("-analyzer-checker=security.insecureAPI.getpw");
-        CmdArgs.push_back("-analyzer-checker=security.insecureAPI.gets");
-        CmdArgs.push_back("-analyzer-checker=security.insecureAPI.mktemp");
-        CmdArgs.push_back("-analyzer-checker=security.insecureAPI.mkstemp");
-        CmdArgs.push_back("-analyzer-checker=security.insecureAPI.vfork");
-      }
-
-      // Default nullability checks.
-      CmdArgs.push_back("-analyzer-checker=nullability.NullPassedToNonnull");
-      CmdArgs.push_back(
-          "-analyzer-checker=nullability.NullReturnedFromNonnull");
-    }
-
-    // Set the output format. The default is plist, for (lame) historical
-    // reasons.
-    CmdArgs.push_back("-analyzer-output");
-    if (Arg *A = Args.getLastArg(options::OPT__analyzer_output))
-      CmdArgs.push_back(A->getValue());
-    else
-      CmdArgs.push_back("plist");
-
-    // Disable the presentation of standard compiler warnings when
-    // using --analyze.  We only want to show static analyzer diagnostics
-    // or frontend errors.
-    CmdArgs.push_back("-w");
-
-    // Add -Xanalyzer arguments when running as analyzer.
-    Args.AddAllArgValues(CmdArgs, options::OPT_Xanalyzer);
-  }
+  if (isa<AnalyzeJobAction>(JA))
+    RenderAnalyzerOptions(Args, CmdArgs, Triple, Input);
 
   CheckCodeGenerationOptions(D, Args);
 
@@ -3704,11 +3706,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (HaveAnyModules) {
     // -fprebuilt-module-path specifies where to load the prebuilt module files.
-    for (const Arg *A : Args.filtered(options::OPT_fprebuilt_module_path)) {
+    for (const Arg *A : Args.filtered(options::OPT_fprebuilt_module_path))
       CmdArgs.push_back(Args.MakeArgString(
           std::string("-fprebuilt-module-path=") + A->getValue()));
-      A->claim();
-    }
   }
 
   // -fmodule-name specifies the module that is currently being built (or
@@ -3731,10 +3731,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  // The -fmodule-file=<name>=<file> form specifies the mapping of module
-  // names to precompiled module files (the module is loaded only if used).
-  // The -fmodule-file=<file> form can be used to unconditionally load
-  // precompiled module files (whether used or not).
+  // -fmodule-file can be used to specify files containing precompiled modules.
   if (HaveAnyModules)
     Args.AddAllArgs(CmdArgs, options::OPT_fmodule_file);
   else

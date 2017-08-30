@@ -494,4 +494,23 @@ void foo() {
       });
 }
 
+TEST(ASTSelectionFinder, CorrectEndForObjectiveCImplementation) {
+  StringRef Source = R"(
+@interface I
+@end
+@implementation I
+@ end
+)";
+  // Just after '@ end'
+  findSelectedASTNodes(Source, {5, 6}, None,
+                       [](Optional<SelectedASTNode> Node) {
+                         EXPECT_TRUE(Node);
+                         EXPECT_EQ(Node->Children.size(), 1u);
+                         checkNode<ObjCImplementationDecl>(
+                             Node->Children[0],
+                             SourceSelectionKind::ContainsSelection);
+                       },
+                       SelectionFinderVisitor::Lang_OBJC);
+}
+
 } // end anonymous namespace
