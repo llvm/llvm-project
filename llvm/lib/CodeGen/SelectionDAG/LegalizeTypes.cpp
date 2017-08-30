@@ -19,8 +19,8 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/CallingConv.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -826,10 +826,10 @@ void DAGTypeLegalizer::GetExpandedInteger(SDValue Op, SDValue &Lo,
   Hi = Entry.second;
 }
 
-/// Transfer debug valies by generating fragment expressions for split-up
+/// Transfer debug values by generating fragment expressions for split-up
 /// values.
-static void transferDbgValues(SelectionDAG &DAG, DIBuilder &DIB, SDValue From,
-                              SDValue To, unsigned OffsetInBits) {
+static void transferDbgValues(SelectionDAG &DAG, SDValue From, SDValue To,
+                              unsigned OffsetInBits) {
   SDNode *FromNode = From.getNode();
   SDNode *ToNode = To.getNode();
   assert(FromNode != ToNode);
@@ -840,9 +840,8 @@ static void transferDbgValues(SelectionDAG &DAG, DIBuilder &DIB, SDValue From,
       break;
 
     DIVariable *Var = Dbg->getVariable();
-    DIExpression *Fragment = DIB.createFragmentExpression(
-        OffsetInBits, To.getValueSizeInBits(),
-        cast_or_null<DIExpression>(Dbg->getExpression()));
+    auto *Fragment = DIExpression::createFragmentExpression(
+        Dbg->getExpression(), OffsetInBits, To.getValueSizeInBits());
     SDDbgValue *Clone =
         DAG.getDbgValue(Var, Fragment, ToNode, To.getResNo(), Dbg->isIndirect(),
                         Dbg->getDebugLoc(), Dbg->getOrder());
@@ -865,10 +864,8 @@ void DAGTypeLegalizer::SetExpandedInteger(SDValue Op, SDValue Lo,
   AnalyzeNewValue(Hi);
 
   // Transfer debug values.
-  const Module *M = DAG.getMachineFunction().getMMI().getModule();
-  DIBuilder DIB(*const_cast<Module *>(M));
-  transferDbgValues(DAG, DIB, Op, Lo, 0);
-  transferDbgValues(DAG, DIB, Op, Hi, Lo.getValueSizeInBits());
+  transferDbgValues(DAG, Op, Lo, 0);
+  transferDbgValues(DAG, Op, Hi, Lo.getValueSizeInBits());
 
   // Remember that this is the result of the node.
   std::pair<SDValue, SDValue> &Entry = ExpandedIntegers[Op];

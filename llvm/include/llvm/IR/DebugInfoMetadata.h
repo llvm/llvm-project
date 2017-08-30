@@ -2293,6 +2293,18 @@ public:
   /// into a stack value.
   static DIExpression *prepend(const DIExpression *DIExpr, bool Deref,
                                int64_t Offset = 0, bool StackValue = false);
+
+  /// Create a DIExpression to describe one part of an aggregate variable that
+  /// is fragmented across multiple Values. The DW_OP_LLVM_fragment operation
+  /// will be appended to the elements of \c Expr. If \c Expr already contains
+  /// a \c DW_OP_LLVM_fragment \c OffsetInBits is interpreted as an offset
+  /// into the existing fragment.
+  ///
+  /// \param OffsetInBits Offset of the piece in bits.
+  /// \param SizeInBits   Size of the piece in bits.
+  static DIExpression *createFragmentExpression(const DIExpression *Exp,
+                                                unsigned OffsetInBits,
+                                                unsigned SizeInBits);
 };
 
 /// Global variables.

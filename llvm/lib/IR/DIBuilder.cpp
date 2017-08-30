@@ -670,33 +670,6 @@ DIExpression *DIBuilder::createExpression(ArrayRef<int64_t> Signed) {
   return createExpression(Addr);
 }
 
-DIExpression *DIBuilder::createFragmentExpression(unsigned OffsetInBits,
-                                                  unsigned SizeInBits,
-                                                  const DIExpression *Expr) {
-  SmallVector<uint64_t, 8> Ops;
-  // Copy over the expression, but leave off any trailing DW_OP_LLVM_fragment.
-  if (Expr) {
-    for (auto Op : Expr->expr_ops()) {
-      if (Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
-        // Make the new offset point into the existing fragment.
-        uint64_t FragmentOffsetInBits = Op.getArg(0);
-        // Op.getArg(1) is FragmentSizeInBits.
-        assert((OffsetInBits + SizeInBits <= Op.getArg(1)) &&
-               "new fragment outside of original fragment");
-        OffsetInBits += FragmentOffsetInBits;
-        break;
-      }
-      Ops.push_back(Op.getOp());
-      for (unsigned I = 0; I < Op.getNumArgs(); ++I)
-        Ops.push_back(Op.getArg(I));
-    }
-  }
-  Ops.push_back(dwarf::DW_OP_LLVM_fragment);
-  Ops.push_back(OffsetInBits);
-  Ops.push_back(SizeInBits);
-  return DIExpression::get(VMContext, Ops);
-}
-
 template <class... Ts>
 static DISubprogram *getSubprogram(bool IsDistinct, Ts &&... Args) {
   if (IsDistinct)
