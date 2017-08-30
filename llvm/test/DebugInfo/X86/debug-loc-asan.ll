@@ -1,6 +1,6 @@
 ; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
 ; RUN: llc  -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj < %s \
-; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
+; RUN:   | llvm-dwarfdump -debug-dump=info - | FileCheck %s --check-prefix=DWARF
 
 ; Verify that we have correct debug info for local variables in code
 ; instrumented with AddressSanitizer.
@@ -30,8 +30,9 @@
 ; CHECK:      .quad .Lfunc_begin0-.Lfunc_begin0
 ; CHECK-NEXT: .quad [[START_LABEL]]-.Lfunc_begin0
 ; CHECK: DW_OP_breg5
-; DWARF: Location description: 75 00 06
-;                              DW_OP_breg5+0 DW_OP_deref
+; DWARF:       DW_TAG_formal_parameter
+; DWARF:         DW_AT_location
+; DWARF-NEXT:      {{.*}} - {{.*}}: DW_OP_breg5 RDI+0, DW_OP_deref
 
 ; Then it's addressed via %rsp:
 ; CHECK:      .quad [[START_LABEL]]-.Lfunc_begin0
@@ -39,8 +40,7 @@
 ; CHECK: DW_OP_breg7
 ; CHECK-NEXT: [[OFFSET]]
 ; CHECK: DW_OP_deref
-; DWARF: Location description: {{77 .. 06 06}}
-;                              DW_OP_breg7+OFFSET DW_OP_deref DW_OP_deref
+; DWARF-NEXT:      {{.*}} - {{.*}}: DW_OP_breg7 RSP+{{[0-9]+}}, DW_OP_deref, DW_OP_deref)
 
 ; ModuleID = 'test.cc'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

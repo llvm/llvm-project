@@ -26,6 +26,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstring>
@@ -94,7 +95,9 @@ static void error(StringRef Filename, std::error_code EC) {
 }
 
 static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
-  std::unique_ptr<DIContext> DICtx = DWARFContext::create(Obj);
+  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
+  logAllUnhandledErrors(DICtx->loadRegisterInfo(Obj), errs(),
+                        Filename.str() + ": ");
 
   outs() << Filename.str() << ":\tfile format " << Obj.getFileFormatName()
          << "\n\n";
@@ -208,6 +211,9 @@ int main(int argc, char **argv) {
   sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
+
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
 
   cl::ParseCommandLineOptions(argc, argv, "llvm dwarf dumper\n");
 

@@ -238,6 +238,9 @@ protected:
   /// True if SHLD based rotate is fast.
   bool HasFastSHLDRotate;
 
+  /// True if the processor supports macrofusion.
+  bool HasMacroFusion;
+
   /// True if the processor has enhanced REP MOVSB/STOSB.
   bool HasERMSB;
 
@@ -488,6 +491,7 @@ public:
   bool hasFastVectorFSQRT() const { return HasFastVectorFSQRT; }
   bool hasFastLZCNT() const { return HasFastLZCNT; }
   bool hasFastSHLDRotate() const { return HasFastSHLDRotate; }
+  bool hasMacroFusion() const { return HasMacroFusion; }
   bool hasERMSB() const { return HasERMSB; }
   bool hasSlowDivide32() const { return HasSlowDivide32; }
   bool hasSlowDivide64() const { return HasSlowDivide64; }
@@ -507,6 +511,7 @@ public:
   bool hasPKU() const { return HasPKU; }
   bool hasMPX() const { return HasMPX; }
   bool hasCLFLUSHOPT() const { return HasCLFLUSHOPT; }
+  bool hasCLWB() const { return HasCLWB; }
 
   bool isXRaySupported() const override { return is64Bit(); }
 

@@ -2942,7 +2942,7 @@ define zeroext i64 @test_vpcmpeqw_v32i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %__
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; NoVLX-NEXT:    vmovq %xmm2, %rax
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    movq %rax, %rdx
@@ -3023,7 +3023,7 @@ define zeroext i64 @test_vpcmpeqw_v32i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %__
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm1, %xmm6
+; NoVLX-NEXT:    vextracti128 $1, %ymm1, %xmm6
 ; NoVLX-NEXT:    vmovq %xmm6, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm5
@@ -3293,7 +3293,7 @@ define zeroext i64 @test_vpcmpeqw_v32i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm1
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; NoVLX-NEXT:    vmovq %xmm1, %rax
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    movq %rax, %rdx
@@ -3602,7 +3602,7 @@ define zeroext i64 @test_masked_vpcmpeqw_v32i1_v64i1_mask(i32 zeroext %__u, <8 x
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm3, %xmm3
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm4
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm4
 ; NoVLX-NEXT:    vmovq %xmm4, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm3, %xmm3
@@ -3685,7 +3685,7 @@ define zeroext i64 @test_masked_vpcmpeqw_v32i1_v64i1_mask(i32 zeroext %__u, <8 x
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm6, %xmm6
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm1, %xmm7
+; NoVLX-NEXT:    vextracti128 $1, %ymm1, %xmm7
 ; NoVLX-NEXT:    vmovq %xmm7, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm6, %xmm6
@@ -3965,7 +3965,7 @@ define zeroext i64 @test_masked_vpcmpeqw_v32i1_v64i1_mask_mem(i32 zeroext %__u, 
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm2, %xmm2
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm3
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm3
 ; NoVLX-NEXT:    vmovq %xmm3, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm2, %xmm2
@@ -15327,7 +15327,7 @@ define zeroext i64 @test_vpcmpsgtw_v32i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %_
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; NoVLX-NEXT:    vmovq %xmm2, %rax
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    movq %rax, %rdx
@@ -15408,7 +15408,7 @@ define zeroext i64 @test_vpcmpsgtw_v32i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %_
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm1, %xmm6
+; NoVLX-NEXT:    vextracti128 $1, %ymm1, %xmm6
 ; NoVLX-NEXT:    vmovq %xmm6, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm5
@@ -15678,7 +15678,7 @@ define zeroext i64 @test_vpcmpsgtw_v32i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm1
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; NoVLX-NEXT:    vmovq %xmm1, %rax
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    movq %rax, %rdx
@@ -15987,7 +15987,7 @@ define zeroext i64 @test_masked_vpcmpsgtw_v32i1_v64i1_mask(i32 zeroext %__u, <8 
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm3, %xmm3
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm4
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm4
 ; NoVLX-NEXT:    vmovq %xmm4, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm3, %xmm3
@@ -16070,7 +16070,7 @@ define zeroext i64 @test_masked_vpcmpsgtw_v32i1_v64i1_mask(i32 zeroext %__u, <8 
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm6, %xmm6
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm1, %xmm7
+; NoVLX-NEXT:    vextracti128 $1, %ymm1, %xmm7
 ; NoVLX-NEXT:    vmovq %xmm7, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm6, %xmm6
@@ -16350,7 +16350,7 @@ define zeroext i64 @test_masked_vpcmpsgtw_v32i1_v64i1_mask_mem(i32 zeroext %__u,
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm2, %xmm2
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm3
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm3
 ; NoVLX-NEXT:    vmovq %xmm3, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm2, %xmm2
@@ -27792,7 +27792,7 @@ define zeroext i64 @test_vpcmpsgew_v32i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %_
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; NoVLX-NEXT:    vmovq %xmm2, %rax
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    movq %rax, %rdx
@@ -27873,7 +27873,7 @@ define zeroext i64 @test_vpcmpsgew_v32i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %_
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm4, %xmm4
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm1, %xmm5
+; NoVLX-NEXT:    vextracti128 $1, %ymm1, %xmm5
 ; NoVLX-NEXT:    vmovq %xmm5, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm4, %xmm4
@@ -28146,7 +28146,7 @@ define zeroext i64 @test_vpcmpsgew_v32i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm1
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; NoVLX-NEXT:    vmovq %xmm1, %rax
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    movq %rax, %rdx
@@ -28460,7 +28460,7 @@ define zeroext i64 @test_masked_vpcmpsgew_v32i1_v64i1_mask(i32 zeroext %__u, <8 
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm2, %xmm2
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm3
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm3
 ; NoVLX-NEXT:    vmovq %xmm3, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm2, %xmm5
@@ -28543,7 +28543,7 @@ define zeroext i64 @test_masked_vpcmpsgew_v32i1_v64i1_mask(i32 zeroext %__u, <8 
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm3, %xmm3
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm1, %xmm7
+; NoVLX-NEXT:    vextracti128 $1, %ymm1, %xmm7
 ; NoVLX-NEXT:    vmovq %xmm7, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm3, %xmm3
@@ -28826,7 +28826,7 @@ define zeroext i64 @test_masked_vpcmpsgew_v32i1_v64i1_mask_mem(i32 zeroext %__u,
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm2, %xmm2
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm3
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm3
 ; NoVLX-NEXT:    vmovq %xmm3, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm2, %xmm2
@@ -40469,7 +40469,7 @@ define zeroext i64 @test_vpcmpultw_v32i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %_
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; NoVLX-NEXT:    vmovq %xmm2, %rax
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    movq %rax, %rdx
@@ -40550,7 +40550,7 @@ define zeroext i64 @test_vpcmpultw_v32i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %_
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm1, %xmm6
+; NoVLX-NEXT:    vextracti128 $1, %ymm1, %xmm6
 ; NoVLX-NEXT:    vmovq %xmm6, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm5
@@ -40825,7 +40825,7 @@ define zeroext i64 @test_vpcmpultw_v32i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm1
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; NoVLX-NEXT:    vmovq %xmm1, %rax
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    movq %rax, %rdx
@@ -41139,7 +41139,7 @@ define zeroext i64 @test_masked_vpcmpultw_v32i1_v64i1_mask(i32 zeroext %__u, <8 
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm3, %xmm3
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm4
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm4
 ; NoVLX-NEXT:    vmovq %xmm4, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm3, %xmm9
@@ -41222,7 +41222,7 @@ define zeroext i64 @test_masked_vpcmpultw_v32i1_v64i1_mask(i32 zeroext %__u, <8 
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm6, %xmm6
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm1, %xmm7
+; NoVLX-NEXT:    vextracti128 $1, %ymm1, %xmm7
 ; NoVLX-NEXT:    vmovq %xmm7, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm6, %xmm6
@@ -41507,7 +41507,7 @@ define zeroext i64 @test_masked_vpcmpultw_v32i1_v64i1_mask_mem(i32 zeroext %__u,
 ; NoVLX-NEXT:    movq %rax, %rcx
 ; NoVLX-NEXT:    shrq $32, %rcx
 ; NoVLX-NEXT:    vpinsrw $6, %ecx, %xmm2, %xmm2
-; NoVLX-NEXT:    vextracti32x4 $1, %zmm0, %xmm3
+; NoVLX-NEXT:    vextracti128 $1, %ymm0, %xmm3
 ; NoVLX-NEXT:    vmovq %xmm3, %rcx
 ; NoVLX-NEXT:    shrq $48, %rax
 ; NoVLX-NEXT:    vpinsrw $7, %eax, %xmm2, %xmm2

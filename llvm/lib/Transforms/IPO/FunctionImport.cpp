@@ -726,43 +726,17 @@ Expected<bool> FunctionImporter::importFunctions(
         GlobalsToImport.insert(&GV);
       }
     }
+#ifndef NDEBUG
     for (GlobalAlias &GA : SrcModule->aliases()) {
-      // FIXME: This should eventually be controlled entirely by the summary.
-      if (FunctionImportGlobalProcessing::doImportAsDefinition(
-              &GA, &GlobalsToImport)) {
-        GlobalsToImport.insert(&GA);
-        continue;
-      }
-
       if (!GA.hasName())
         continue;
       auto GUID = GA.getGUID();
-      auto Import = ImportGUIDs.count(GUID);
-      DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing alias " << GUID
+      assert(!ImportGUIDs.count(GUID) && "Unexpected alias in import list");
+      DEBUG(dbgs() << "Not importing alias " << GUID
                    << " " << GA.getName() << " from "
                    << SrcModule->getSourceFileName() << "\n");
-      if (Import) {
-        // Alias can't point to "available_externally". However when we import
-        // linkOnceODR the linkage does not change. So we import the alias
-        // and aliasee only in this case. This has been handled by
-        // computeImportForFunction()
-        GlobalObject *GO = GA.getBaseObject();
-        assert(GO->hasLinkOnceODRLinkage() &&
-               "Unexpected alias to a non-linkonceODR in import list");
-#ifndef NDEBUG
-        if (!GlobalsToImport.count(GO))
-          DEBUG(dbgs() << " alias triggers importing aliasee " << GO->getGUID()
-                       << " " << GO->getName() << " from "
-                       << SrcModule->getSourceFileName() << "\n");
-#endif
-        if (Error Err = GO->materialize())
-          return std::move(Err);
-        GlobalsToImport.insert(GO);
-        if (Error Err = GA.materialize())
-          return std::move(Err);
-        GlobalsToImport.insert(&GA);
-      }
     }
+#endif
 
     // Upgrade debug info after we're done materializing all the globals and we
     // have loaded all the required metadata!

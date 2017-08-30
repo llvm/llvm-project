@@ -12,19 +12,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <iterator>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-cp"
@@ -32,9 +40,10 @@ using namespace llvm;
 STATISTIC(NumDeletes, "Number of dead copies deleted");
 
 namespace {
-  typedef SmallVector<unsigned, 4> RegList;
-  typedef DenseMap<unsigned, RegList> SourceMap;
-  typedef DenseMap<unsigned, MachineInstr*> Reg2MIMap;
+
+using RegList = SmallVector<unsigned, 4>;
+using SourceMap = DenseMap<unsigned, RegList>;
+using Reg2MIMap = DenseMap<unsigned, MachineInstr *>;
 
   class MachineCopyPropagation : public MachineFunctionPass {
     const TargetRegisterInfo *TRI;
@@ -43,6 +52,7 @@ namespace {
 
   public:
     static char ID; // Pass identification, replacement for typeid
+
     MachineCopyPropagation() : MachineFunctionPass(ID) {
       initializeMachineCopyPropagationPass(*PassRegistry::getPassRegistry());
     }
@@ -67,16 +77,23 @@ namespace {
 
     /// Candidates for deletion.
     SmallSetVector<MachineInstr*, 8> MaybeDeadCopies;
+
     /// Def -> available copies map.
     Reg2MIMap AvailCopyMap;
+
     /// Def -> copies map.
     Reg2MIMap CopyMap;
+
     /// Src -> Def map
     SourceMap SrcMap;
+
     bool Changed;
   };
-}
+
+} // end anonymous namespace
+
 char MachineCopyPropagation::ID = 0;
+
 char &llvm::MachineCopyPropagationID = MachineCopyPropagation::ID;
 
 INITIALIZE_PASS(MachineCopyPropagation, DEBUG_TYPE,
@@ -374,4 +391,3 @@ bool MachineCopyPropagation::runOnMachineFunction(MachineFunction &MF) {
 
   return Changed;
 }
-

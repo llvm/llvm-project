@@ -1,7 +1,8 @@
-; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump -debug-dump=loc - | FileCheck %s
+
 ; Note that it would be even better to avoid emitting the empty piece.
-; CHECK:  Location description: 93 08
-;                               piece 0x00000008
+; CHECK:  {{.*}}: DW_OP_piece 0x8{{$}}
+
 source_filename = "bugpoint-reduced-simplified.ll"
 target triple = "i386-apple-ios7.0.0"
 

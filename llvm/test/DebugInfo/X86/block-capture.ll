@@ -4,8 +4,7 @@
 ; Checks that we emit debug info for the block variable declare.
 ; CHECK: DW_TAG_subprogram
 ; CHECK: DW_TAG_variable
-;                                              fbreg +8, deref, +32
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (<0x05> 91 08 06 23 20 )
+; CHECK-NEXT: DW_AT_location [DW_FORM_block1] (DW_OP_fbreg +8, DW_OP_deref, DW_OP_plus_uconst 0x20)
 ; CHECK-NEXT: DW_AT_name {{.*}} "block"
 
 ; Extracted from the clang output for:

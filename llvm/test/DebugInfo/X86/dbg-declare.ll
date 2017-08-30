@@ -8,7 +8,7 @@
 
 ; "[DW_FORM_exprloc] <0x2> 91 XX" means fbreg uleb(XX)
 ; DWARF-LABEL: DW_TAG_formal_parameter
-; DWARF-NEXT:              DW_AT_location [DW_FORM_exprloc]      (<0x2> 91 70 )
+; DWARF-NEXT:              DW_AT_location [DW_FORM_exprloc]      (DW_OP_fbreg -16)
 ; DWARF-NEXT:              DW_AT_name [DW_FORM_strp]     ( {{.*}} = "x")
 
 ; FIXME: There is no debug info to describe "a".

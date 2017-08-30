@@ -48,6 +48,22 @@ define i32 @test3(i32 %a, i32 %b) nounwind readnone {
   ret i32 %t3
 }
 
+; TODO this should optimize but doesn't due to missing vector support in InstCombiner::foldICmpEquality.
+define <2 x i32> @test3vec(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
+; CHECK-LABEL: @test3vec(
+; CHECK-NEXT:    [[T0:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T0]], [[T1]]
+; CHECK-NEXT:    [[T3:%.*]] = zext <2 x i1> [[T2]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[T3]]
+;
+  %t0 = lshr <2 x i32> %a, <i32 31, i32 31>
+  %t1 = lshr <2 x i32> %b, <i32 31, i32 31>
+  %t2 = icmp eq <2 x i32> %t0, %t1
+  %t3 = zext <2 x i1> %t2 to <2 x i32>
+  ret <2 x i32> %t3
+}
+
 ; Variation on @test3: checking the 2nd bit in a situation where the 5th bit
 ; is one, not zero.
 define i32 @test3i(i32 %a, i32 %b) nounwind readnone {

@@ -4467,8 +4467,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
                 cast<Instruction>(Builder.CreateExtractElement(
                     VectorizedRoot, Builder.getInt32(VecIdx++)));
             I->setOperand(1, Extract);
-            I->removeFromParent();
-            I->insertAfter(Extract);
+            I->moveAfter(Extract);
             InsertAfter = I;
           }
         }

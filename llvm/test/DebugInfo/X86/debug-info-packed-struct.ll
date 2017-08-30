@@ -29,15 +29,15 @@ target triple = "x86_64-apple-darwin"
 ; CHECK:      DW_AT_byte_size {{.*}} (0x18)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l0_ofs0"
-; CHECK:          DW_AT_data_member_location {{.*}}00
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l0_ofs8"
-; CHECK:          DW_AT_data_member_location {{.*}}08
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x8)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l0_ofs16"
 ; CHECK:          DW_AT_bit_size   {{.*}} (0x01)
 ; CHECK:          DW_AT_bit_offset {{.*}} (0x1f)
-; CHECK:          DW_AT_data_member_location {{.*}}10
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x10)
 
 ; // ---------------------------------------------------------------------
 ; // Implicitly packed.
@@ -62,16 +62,16 @@ target triple = "x86_64-apple-darwin"
 ; CHECK:      DW_AT_byte_size {{.*}} (0x0c)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l1_ofs0"
-; CHECK:          DW_AT_data_member_location {{.*}}00
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l1_ofs1"
-; CHECK:          DW_AT_data_member_location {{.*}}01
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x1)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l1_ofs9"
 ; CHECK:          DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK:          DW_AT_bit_size   {{.*}} (0x01)
 ; CHECK:          DW_AT_bit_offset {{.*}} (0x17)
-; CHECK:          DW_AT_data_member_location {{.*}}08
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x8)
 
 ; // ---------------------------------------------------------------------
 ; // Explicitly packed.
@@ -95,16 +95,16 @@ target triple = "x86_64-apple-darwin"
 ; CHECK:      DW_AT_byte_size {{.*}} (0x0a)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l2_ofs0"
-; CHECK:          DW_AT_data_member_location {{.*}}00
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l2_ofs1"
-; CHECK:          DW_AT_data_member_location {{.*}}01
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x1)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l2_ofs9"
 ; CHECK:          DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK:          DW_AT_bit_size   {{.*}} (0x01)
 ; CHECK:          DW_AT_bit_offset {{.*}} (0x17)
-; CHECK:          DW_AT_data_member_location {{.*}}08
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x8)
 
 ; // ---------------------------------------------------------------------
 ; // Explicitly packed with different alignment.
@@ -128,16 +128,16 @@ target triple = "x86_64-apple-darwin"
 ; CHECK:      DW_AT_byte_size {{.*}} (0x10)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l3_ofs0"
-; CHECK:          DW_AT_data_member_location {{.*}}00
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l3_ofs4"
-; CHECK:          DW_AT_data_member_location {{.*}}04
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x4)
 ; CHECK:      DW_TAG_member
 ; CHECK:          DW_AT_name {{.*}} "l3_ofs12"
 ; CHECK:          DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK:          DW_AT_bit_size   {{.*}} (0x01)
 ; CHECK:          DW_AT_bit_offset {{.*}} (0x1f)
-; CHECK:          DW_AT_data_member_location {{.*}}0c
+; CHECK:          DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0xc)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!49, !50}

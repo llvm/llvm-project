@@ -26,18 +26,10 @@
 ; CHECK:      DW_TAG_subprogram
 ; CHECK-NOT:  NULL
 ; CHECK:      DW_TAG_variable
-; CHECK:      DW_AT_location [DW_FORM_sec_offset] ([[DEBUGLOCOFFSET:0x[0-9a-f]+]]){{[[:space:]].*}}"val"
-
-; See that 'val' has at least one location entry with a DW_op_breg? operand.
-; The DWARF DW_op_breg* ops are encoded from 0x70 to 0x8f, but checking for an
-; op in the range from 0x70 to 0x7f should suffice because that range covers
-; all integer GPRs.
-;
-; CHECK: .debug_loc contents:
-; CHECK-NOT: .debug{{.*}} contents
-; CHECK: [[DEBUGLOCOFFSET]]: Beginning
-; CHECK-NOT: {{0x[0-9a-f]+}}: Beginning
-; CHECK: Location description: 7{{[0-9a-f] .*}}
+; CHECK:      DW_AT_location [DW_FORM_sec_offset] ({{.*}}
+; CHECK-NEXT:   {{0x.*}} - {{0x.*}}: DW_OP_reg0 RAX
+; CHECK-NEXT:   {{0x.*}} - {{0x.*}}: DW_OP_breg7 RSP+4, DW_OP_deref)
+; CHECK-NEXT: DW_AT_name {{.*}}"val"
 
 ; ModuleID = 'frame.c'
 source_filename = "frame.c"

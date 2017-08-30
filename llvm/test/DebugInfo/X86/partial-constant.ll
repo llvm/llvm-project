@@ -16,9 +16,10 @@
 ;
 ; The constant should NOT be available for the entire function.
 ; CHECK-NOT: DW_AT_const_value
-; CHECK: .debug_loc
-; CHECK: Location description: 10 01 9f
-;                              constu 0x00000001, stack-value
+; CHECK: .debug_loc contents:
+; CHECK-NEXT: 0x00000000:
+; CHECK-NEXT:   {{.*}}: DW_OP_constu 0x1, DW_OP_stack_value
+
 source_filename = "test.ii"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"

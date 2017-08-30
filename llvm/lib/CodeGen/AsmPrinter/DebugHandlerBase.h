@@ -17,13 +17,43 @@
 
 #include "AsmPrinterHandler.h"
 #include "DbgValueHistoryCalculator.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 
 namespace llvm {
 
 class AsmPrinter;
+class MachineInstr;
 class MachineModuleInfo;
+
+/// Represents the location at which a variable is stored.
+struct DbgVariableLocation {
+  /// Offset relative to base register.
+  int64_t Offset;
+
+  /// Base register.
+  unsigned Register;
+
+  /// If false, Register is the location. If true,
+  /// Register+Offset point at the location.
+  unsigned InMemory : 1;
+
+  /// If false, the location holds the variable's value.
+  /// If true, the location holds the variable's address.
+  unsigned Deref : 1;
+
+  /// Present if the location is part of a larger variable.
+  llvm::Optional<llvm::DIExpression::FragmentInfo> FragmentInfo;
+
+  /// Extract a VariableLocation from a MachineInstr.  The struct passed in as
+  /// Location is populated.  The MachineInstr must be a debug value
+  /// instruction.
+  /// @return true if successful and false if not.
+  static bool extractFromMachineInstruction(DbgVariableLocation &Location,
+                                            const MachineInstr &Instruction);
+};
 
 /// Base class for debug information backends. Common functionality related to
 /// tracking which variables and scopes are alive at a given PC live here.

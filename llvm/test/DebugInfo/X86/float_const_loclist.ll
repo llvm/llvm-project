@@ -20,21 +20,14 @@
 ;
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT:  DW_AT_location {{.*}} (0x[[LD:.*]])
+; CHECK-NEXT:  DW_AT_location {{.*}} (
+; CHECK-NEXT:    [[START:0x.*]] - [[END:0x.*]]: DW_OP_constu 0xc8f5c28f5c28f800, DW_OP_piece 0x8, DW_OP_constu 0x4000, DW_OP_bit_piece 0x10 0x40)
 ; CHECK-NEXT:  DW_AT_name {{.*}}"ld"
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT:  DW_AT_location {{.*}} (0x[[F:.*]])
+; CHECK-NEXT:  DW_AT_location {{.*}} (
+; CHECK-NEXT:    [[START]] - [[END]]: DW_OP_constu 0x4048f5c3)
 ; CHECK-NEXT:  DW_AT_name {{.*}}"f"
-;
-; CHECK: .debug_loc contents:
-; CHECK: [[LD]]: Beginning address offset: [[START:.*]]
-; CHECK:            Ending address offset: [[END:.*]]
-; CHECK: Location description: 10 80 f0 a3 e1 f5 d1 f0 fa c8 01 93 08 10 80 80 01 9d 10 40
-;                   constu 0xc8f5c28f5c28f800, piece 8, constu 0x00004000, bit-piece 16 64
-; CHECK: [[F]]: Beginning address offset: [[START]]
-; CHECK:           Ending address offset: [[END]]
-; CHECK:            Location description: 10 c3 eb a3 82 04
-;                                         constu ...
+
 source_filename = "test.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"

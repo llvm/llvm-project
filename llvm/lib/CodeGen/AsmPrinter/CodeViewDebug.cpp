@@ -949,12 +949,106 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
   }
 }
 
+void CodeViewDebug::calculateRanges(
+    LocalVariable &Var, const DbgValueHistoryMap::InstrRanges &Ranges) {
+  const TargetRegisterInfo *TRI = Asm->MF->getSubtarget().getRegisterInfo();
+
+  // calculate the definition ranges.
+  for (auto I = Ranges.begin(), E = Ranges.end(); I != E; ++I) {
+    const InsnRange &Range = *I;
+    const MachineInstr *DVInst = Range.first;
+    assert(DVInst->isDebugValue() && "Invalid History entry");
+    // FIXME: Find a way to represent constant variables, since they are
+    // relatively common.
+    DbgVariableLocation Location;
+    bool Supported =
+        DbgVariableLocation::extractFromMachineInstruction(Location, *DVInst);
+    // If not Supported, don't even look at Location because it's invalid.
+    if (!Supported)
+      continue;
+
+    // Because we cannot express DW_OP_deref in CodeView directly,
+    // we use a trick: we encode the type as a reference to the
+    // real type.
+    if (Var.Deref) {
+      // When we're encoding the type as a reference to the original type,
+      // we need to remove a level of indirection from incoming locations.
+      // E.g. [RSP+8] with DW_OP_deref becomes [RSP+8],
+      // and [RCX+0] without DW_OP_deref becomes RCX.
+      if (!Location.Deref) {
+        if (Location.InMemory)
+          Location.InMemory = false;
+        else
+          Supported = false;
+      }
+    } else if (Location.Deref) {
+      // We've encountered a Deref range when we had not applied the
+      // reference encoding. Start over using reference encoding.
+      Var.Deref = true;
+      Var.DefRanges.clear();
+      calculateRanges(Var, Ranges);
+      return;
+    }
+
+    // If we don't know how to handle this range, skip past it.
+    if (!Supported || Location.Register == 0 ||
+        (Location.Offset && !Location.InMemory))
+      continue;
+
+    // Handle the two cases we can handle: indirect in memory and in register.
+    {
+      LocalVarDefRange DR;
+      DR.CVRegister = TRI->getCodeViewRegNum(Location.Register);
+      DR.InMemory = Location.InMemory;
+      DR.DataOffset = Location.Offset;
+      if (Location.FragmentInfo) {
+        DR.IsSubfield = true;
+        DR.StructOffset = Location.FragmentInfo->OffsetInBits / 8;
+      } else {
+        DR.IsSubfield = false;
+        DR.StructOffset = 0;
+      }
+
+      if (Var.DefRanges.empty() ||
+          Var.DefRanges.back().isDifferentLocation(DR)) {
+        Var.DefRanges.emplace_back(std::move(DR));
+      }
+    }
+
+    // Compute the label range.
+    const MCSymbol *Begin = getLabelBeforeInsn(Range.first);
+    const MCSymbol *End = getLabelAfterInsn(Range.second);
+    if (!End) {
+      // This range is valid until the next overlapping bitpiece. In the
+      // common case, ranges will not be bitpieces, so they will overlap.
+      auto J = std::next(I);
+      const DIExpression *DIExpr = DVInst->getDebugExpression();
+      while (J != E &&
+             !fragmentsOverlap(DIExpr, J->first->getDebugExpression()))
+        ++J;
+      if (J != E)
+        End = getLabelBeforeInsn(J->first);
+      else
+        End = Asm->getFunctionEnd();
+    }
+
+    // If the last range end is our begin, just extend the last range.
+    // Otherwise make a new range.
+    SmallVectorImpl<std::pair<const MCSymbol *, const MCSymbol *>> &R =
+        Var.DefRanges.back().Ranges;
+    if (!R.empty() && R.back().second == Begin)
+      R.back().second = End;
+    else
+      R.emplace_back(Begin, End);
+
+    // FIXME: Do more range combining.
+  }
+}
+
 void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
   DenseSet<InlinedVariable> Processed;
   // Grab the variable info that was squirreled away in the MMI side-table.
   collectVariableInfoFromMFTable(Processed);
-
-  const TargetRegisterInfo *TRI = Asm->MF->getSubtarget().getRegisterInfo();
 
   for (const auto &I : DbgValues) {
     InlinedVariable IV = I.first;
@@ -978,89 +1072,7 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
     LocalVariable Var;
     Var.DIVar = DIVar;
 
-    // Calculate the definition ranges.
-    for (auto I = Ranges.begin(), E = Ranges.end(); I != E; ++I) {
-      const InsnRange &Range = *I;
-      const MachineInstr *DVInst = Range.first;
-      assert(DVInst->isDebugValue() && "Invalid History entry");
-      const DIExpression *DIExpr = DVInst->getDebugExpression();
-      bool InMemory = DVInst->getOperand(1).isImm();
-      bool IsSubfield = false;
-      unsigned StructOffset = 0;
-      // Recognize a +Offset expression.
-      int Offset = 0;
-      DIExpressionCursor Ops(DIExpr);
-      auto Op = Ops.peek();
-      if (Op && Op->getOp() == dwarf::DW_OP_plus_uconst) {
-        Offset = Op->getArg(0);
-        Ops.take();
-      }
-
-      // Handle fragments.
-      auto Fragment = Ops.getFragmentInfo();
-      if (Fragment) {
-        IsSubfield = true;
-        StructOffset = Fragment->OffsetInBits / 8;
-      }
-      // Ignore unrecognized exprs.
-      if (Ops.peek() && Ops.peek()->getOp() != dwarf::DW_OP_LLVM_fragment)
-        continue;
-      if (!InMemory && Offset)
-        continue;
-
-      // Bail if operand 0 is not a valid register. This means the variable is a
-      // simple constant, or is described by a complex expression.
-      // FIXME: Find a way to represent constant variables, since they are
-      // relatively common.
-      unsigned Reg =
-          DVInst->getOperand(0).isReg() ? DVInst->getOperand(0).getReg() : 0;
-      if (Reg == 0)
-        continue;
-
-      // Handle the two cases we can handle: indirect in memory and in register.
-      unsigned CVReg = TRI->getCodeViewRegNum(Reg);
-      {
-        LocalVarDefRange DR;
-        DR.CVRegister = CVReg;
-        DR.InMemory = InMemory;
-        DR.DataOffset = Offset;
-        DR.IsSubfield = IsSubfield;
-        DR.StructOffset = StructOffset;
-
-        if (Var.DefRanges.empty() ||
-            Var.DefRanges.back().isDifferentLocation(DR)) {
-          Var.DefRanges.emplace_back(std::move(DR));
-        }
-      }
-
-      // Compute the label range.
-      const MCSymbol *Begin = getLabelBeforeInsn(Range.first);
-      const MCSymbol *End = getLabelAfterInsn(Range.second);
-      if (!End) {
-        // This range is valid until the next overlapping bitpiece. In the
-        // common case, ranges will not be bitpieces, so they will overlap.
-        auto J = std::next(I);
-        while (J != E &&
-               !fragmentsOverlap(DIExpr, J->first->getDebugExpression()))
-          ++J;
-        if (J != E)
-          End = getLabelBeforeInsn(J->first);
-        else
-          End = Asm->getFunctionEnd();
-      }
-
-      // If the last range end is our begin, just extend the last range.
-      // Otherwise make a new range.
-      SmallVectorImpl<std::pair<const MCSymbol *, const MCSymbol *>> &Ranges =
-          Var.DefRanges.back().Ranges;
-      if (!Ranges.empty() && Ranges.back().second == Begin)
-        Ranges.back().second = End;
-      else
-        Ranges.emplace_back(Begin, End);
-
-      // FIXME: Do more range combining.
-    }
-
+    calculateRanges(Var, Ranges);
     recordLocalVariable(std::move(Var), InlinedAt);
   }
 }
@@ -1987,6 +1999,16 @@ TypeIndex CodeViewDebug::getTypeIndex(DITypeRef TypeRef, DITypeRef ClassTyRef) {
   return recordTypeIndexForDINode(Ty, TI, ClassTy);
 }
 
+TypeIndex CodeViewDebug::getTypeIndexForReferenceTo(DITypeRef TypeRef) {
+  DIType *Ty = TypeRef.resolve();
+  PointerRecord PR(getTypeIndex(Ty),
+                   getPointerSizeInBytes() == 8 ? PointerKind::Near64
+                                                : PointerKind::Near32,
+                   PointerMode::LValueReference, PointerOptions::None,
+                   Ty->getSizeInBits() / 8);
+  return TypeTable.writeKnownType(PR);
+}
+
 TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {
   const DIType *Ty = TypeRef.resolve();
 
@@ -2094,7 +2116,8 @@ void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
     Flags |= LocalSymFlags::IsOptimizedOut;
 
   OS.AddComment("TypeIndex");
-  TypeIndex TI = getCompleteTypeIndex(Var.DIVar->getType());
+  TypeIndex TI = Var.Deref ? getTypeIndexForReferenceTo(Var.DIVar->getType())
+                           : getCompleteTypeIndex(Var.DIVar->getType());
   OS.EmitIntValue(TI.getIndex(), 4);
   OS.AddComment("Flags");
   OS.EmitIntValue(static_cast<uint16_t>(Flags), 2);
