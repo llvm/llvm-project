@@ -1223,7 +1223,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   MCObjectFileInfo MOFI;
   MCContext Ctx(AsmInfo.get(), MRI.get(), &MOFI);
   // FIXME: for now initialize MCObjectFileInfo with default values
-  MOFI.InitMCObjectFileInfo(Triple(TripleName), false, CodeModel::Default, Ctx);
+  MOFI.InitMCObjectFileInfo(Triple(TripleName), false, Ctx);
 
   std::unique_ptr<MCDisassembler> DisAsm(
     TheTarget->createMCDisassembler(*STI, Ctx));
