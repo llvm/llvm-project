@@ -24,15 +24,15 @@ CHECK:      DW_AT_external [DW_FORM_flag]	(0x01)
 CHECK:      DW_AT_accessibility [DW_FORM_data1]	(DW_ACCESS_public)
 CHECK:      DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000f40)
 CHECK:      DW_AT_high_pc [DW_FORM_addr]     (0x0000000100000f4b)
-CHECK:      DW_AT_frame_base [DW_FORM_block1]	(<0x01> 56 )
+CHECK:      DW_AT_frame_base [DW_FORM_block1]	(DW_OP_reg6 RBP)
 CHECK:      DW_TAG_formal_parameter [3]
 CHECK:        DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00000056] = "argc")
 CHECK:        DW_AT_type [DW_FORM_ref4]     (cu + 0x0063 => {0x00000063})
-CHECK:        DW_AT_location [DW_FORM_block1]	(<0x03> 55 93 04 )
+CHECK:        DW_AT_location [DW_FORM_block1]	(DW_OP_reg5 RDI, DW_OP_piece 0x4)
 CHECK:      DW_TAG_formal_parameter [3]
 CHECK:        DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000005b] = "argv")
 CHECK:        DW_AT_type [DW_FORM_ref4]     (cu + 0x006a => {0x0000006a})
-CHECK:        DW_AT_location [DW_FORM_block1]	(<0x01> 54 )
+CHECK:        DW_AT_location [DW_FORM_block1]	(DW_OP_reg4 RSI)
 CHECK:      NULL
 CHECK:    DW_TAG_base_type [4]
 CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x00000060] = "int")
@@ -62,21 +62,22 @@ CHECK:    DW_TAG_variable [7]
 CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x00000072] = "private_int")
 CHECK:      DW_AT_type [DW_FORM_ref_addr]   (0x0000000000000063)
 CHECK:      DW_AT_decl_file [DW_FORM_data1] ("/Inputs{{[/\\]}}basic2.c")
-CHECK:      DW_AT_location [DW_FORM_block1] (<0x09> 03 08 10 00 00 01 00 00 00 )
+CHECK:      DW_AT_location [DW_FORM_block1] (DW_OP_addr 0x100001008)
 CHECK:    DW_TAG_variable [7]
 CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x0000007e] = "baz")
 CHECK:      DW_AT_type [DW_FORM_ref_addr]   (0x0000000000000063)
-CHECK:      DW_AT_location [DW_FORM_block1] (<0x09> 03 00 10 00 00 01 00 00 00 )
+CHECK:      DW_AT_location [DW_FORM_block1] (DW_OP_addr 0x100001000)
 CHECK:    DW_TAG_subprogram [8] *
 CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x00000082] = "foo")
 CHECK:      DW_AT_type [DW_FORM_ref_addr]   (0x0000000000000063)
 CHECK:      DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000f50)
 CHECK:      DW_AT_high_pc [DW_FORM_addr]    (0x0000000100000f89)
-CHECK:      DW_AT_frame_base [DW_FORM_block1]	(<0x01> 56 )
+CHECK:      DW_AT_frame_base [DW_FORM_block1]	(DW_OP_reg6 RBP)
 CHECK:      DW_TAG_formal_parameter [9]
 CHECK:        DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00000086] = "arg")
 CHECK:        DW_AT_type [DW_FORM_ref_addr] (0x0000000000000063)
-CHECK:        DW_AT_location [DW_FORM_data4]        (0x00000000)
+CHECK:        DW_AT_location [DW_FORM_data4]        (0x00000000
+CHECK:          0x0000000000000000 - 0x000000000000000e: DW_OP_reg5 RDI, DW_OP_piece 0x4)
 CHECK:      DW_TAG_inlined_subroutine [10]
 CHECK:        DW_AT_abstract_origin [DW_FORM_ref4]  (cu + 0x00a7 => {0x00000128} "inc")
 CHECK:        DW_AT_low_pc [DW_FORM_addr]   (0x0000000100000f63)
@@ -101,7 +102,7 @@ CHECK:    DW_TAG_variable [12]
 CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x00000097] = "val")
 CHECK:      DW_AT_type [DW_FORM_ref4]       (cu + 0x003c => {0x00000176})
 CHECK:      DW_AT_decl_file [DW_FORM_data1] ("/Inputs{{[/\\]}}basic3.c")
-CHECK:      DW_AT_location [DW_FORM_block1] (<0x09> 03 04 10 00 00 01 00 00 00 )
+CHECK:      DW_AT_location [DW_FORM_block1] (DW_OP_addr 0x100001004)
 CHECK:    DW_TAG_volatile_type [13]
 CHECK:      DW_AT_type [DW_FORM_ref_addr]   (0x0000000000000063)
 CHECK:    DW_TAG_subprogram [8] *
@@ -109,11 +110,13 @@ CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x0000009b] = "bar")
 CHECK:      DW_AT_type [DW_FORM_ref_addr]   (0x0000000000000063)
 CHECK:      DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000f90)
 CHECK:      DW_AT_high_pc [DW_FORM_addr]    (0x0000000100000fb4)
-CHECK:      DW_AT_frame_base [DW_FORM_block1]	(<0x01> 56 )
+CHECK:      DW_AT_frame_base [DW_FORM_block1]	(DW_OP_reg6 RBP)
 CHECK:      DW_TAG_formal_parameter [9]
 CHECK:        DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00000086] = "arg")
 CHECK:        DW_AT_type [DW_FORM_ref_addr] (0x0000000000000063)
-CHECK:        DW_AT_location [DW_FORM_data4]        (0x00000025)
+CHECK:        DW_AT_location [DW_FORM_data4]        (0x00000025
+CHECK:          0x0000000000000000 - 0x000000000000000f: DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK:          0x0000000000000019 - 0x000000000000001d: DW_OP_reg5 RDI, DW_OP_piece 0x4)
 CHECK:      DW_TAG_lexical_block [14] *
 CHECK:        DW_AT_low_pc [DW_FORM_addr]   (0x0000000100000f94)
 CHECK:        DW_AT_high_pc [DW_FORM_addr]  (0x0000000100000fa7)
@@ -129,18 +132,13 @@ CHECK:      DW_AT_name [DW_FORM_strp]       ( .debug_str[0x0000008a] = "inc")
 CHECK:      DW_AT_type [DW_FORM_ref_addr]   (0x0000000000000063)
 CHECK:    NULL
 
-CHECK:.debug_loc contents:
-CHECK-NEXT: 0x00000000: Beginning address offset: 0x0000000000000000
-CHECK-NEXT:                Ending address offset: 0x000000000000000e
-CHECK-NEXT:                 Location description: 55 93 04 
-CHECK-NEXT: {{^$}}
-CHECK-NEXT: 0x00000025: Beginning address offset: 0x0000000000000000
-CHECK-NEXT:                Ending address offset: 0x000000000000000f
-CHECK-NEXT:                 Location description: 55 93 04 
-CHECK-NEXT: {{^$}}
-CHECK-NEXT:             Beginning address offset: 0x0000000000000019
-CHECK-NEXT:                Ending address offset: 0x000000000000001d
-CHECK-NEXT:                 Location description: 55 93 04 
+CHECK: .debug_loc contents:
+CHECK-NEXT: 0x00000000:
+CHECK-NEXT:              0x0000000000000000 - 0x000000000000000e: DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK-NOT: :
+CHECK:      0x00000025:
+CHECK-NEXT:              0x0000000000000000 - 0x000000000000000f: DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK-NEXT:              0x0000000000000019 - 0x000000000000001d: DW_OP_reg5 RDI, DW_OP_piece 0x4
 
 CHECK: .debug_aranges contents:
 CHECK-NEXT: Address Range Header: length = 0x0000002c, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x08, seg_size = 0x00

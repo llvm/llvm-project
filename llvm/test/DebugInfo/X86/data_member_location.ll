@@ -20,11 +20,11 @@
 
 ; DWARF2: DW_AT_name {{.*}} "c"
 ; DWARF2-NOT: DW_TAG
-; DWARF2: DW_AT_data_member_location {{.*}} (<0x02> 23 00 )
+; DWARF2: DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x0)
 
 ; DWARF2: DW_AT_name {{.*}} "i"
 ; DWARF2-NOT: DW_TAG
-; DWARF2: DW_AT_data_member_location {{.*}} (<0x02> 23 04 )
+; DWARF2: DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x4)
 
 source_filename = "test/DebugInfo/X86/data_member_location.ll"
 

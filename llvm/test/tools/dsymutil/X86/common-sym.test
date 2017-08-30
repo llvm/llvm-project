@@ -11,7 +11,7 @@ $ clang common.macho.x86_64.o -o common.macho.x86_64
 CHECK:   DW_TAG_variable
 CHECK:     DW_AT_name {{.*}} "common"
 CHECK-NOT: {{NULL|DW_TAG}}
-CHECK:     DW_AT_location {{.*}} (<0x09> 03 00 10 00 00 01 00 00 00 )
+CHECK:     DW_AT_location {{.*}} (DW_OP_addr 0x100001000)
 
 CHECK:   DW_TAG_subprogram
 CHECK-NEXT:     DW_AT_low_pc{{.*}}(0x0000000100000f80)

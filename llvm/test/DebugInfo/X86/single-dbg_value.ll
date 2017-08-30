@@ -5,14 +5,13 @@
 ;
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]
+; CHECK-NEXT:   DW_AT_location [DW_FORM_data4] (
+; CHECK-NEXT:     {{.*}}: DW_OP_reg0 RAX)
 ; CHECK-NEXT:   DW_AT_name{{.*}}"a"
-; CHECK: .debug_loc contents:
-;                               rax
-; CHECK:  Location description: 50
+
 ; SANITY: DBG_VALUE
 ; SANITY-NOT: DBG_VALUE
-; ModuleID = 'test.ll'
+
 ; Compiled with -O:
 ;   void h(int);
 ;   int g();
@@ -21,6 +20,8 @@
 ;     int a = g();
 ;     h(a);
 ;   }
+
+; ModuleID = 'test.ll'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx"
 

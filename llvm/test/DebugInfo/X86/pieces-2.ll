@@ -17,15 +17,10 @@
 ;
 ;
 ; CHECK: DW_TAG_variable [4]
-; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        ([[LOC:.*]])
+; CHECK-NEXT:   DW_AT_location [DW_FORM_data4] (
+; CHECK-NEXT:     0x0000000000000004 - 0x0000000000000005: DW_OP_reg0 RAX, DW_OP_piece 0x4)
 ; CHECK-NEXT:  DW_AT_name {{.*}}"i1"
-;
-; CHECK: .debug_loc
-; CHECK: [[LOC]]: Beginning address offset: 0x0000000000000004
-; CHECK-NEXT:        Ending address offset: 0x0000000000000005
-;                                           rax, piece 0x00000004
-; CHECK-NEXT:         Location description: 50 93 04
-;
+
 ; ModuleID = '/Volumes/Data/llvm/test/DebugInfo/X86/sroasplit-1.ll'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"

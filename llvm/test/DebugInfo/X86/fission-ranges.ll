@@ -12,10 +12,10 @@
 
 
 ; CHECK: .debug_info.dwo contents:
-; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[A:0x[0-9a-z]*]])
-; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[E:0x[0-9a-z]*]])
-; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[B:0x[0-9a-z]*]])
-; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[D:0x[0-9a-z]*]])
+; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[A:0x[0-9a-z]*]]
+; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[E:0x[0-9a-z]*]]
+; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[B:0x[0-9a-z]*]]
+; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[D:0x[0-9a-z]*]]
 ; CHECK: DW_AT_ranges [DW_FORM_sec_offset]   (0x00000000
 ; CHECK: .debug_loc contents:
 ; CHECK-NOT: Beginning address offset
@@ -24,22 +24,16 @@
 ; Don't assume these locations are entirely correct - feel free to update them
 ; if they've changed due to a bugfix, change in register allocation, etc.
 
-; CHECK: [[A]]: Beginning address index: 2
-; CHECK-NEXT:                    Length: 169
-; CHECK-NEXT:      Location description: 11 00
-; CHECK-NEXT: {{^$}}
-; CHECK-NEXT:   Beginning address index: 3
-; CHECK-NEXT:                    Length: 25
-; CHECK-NEXT:      Location description: 50
-; CHECK: [[E]]: Beginning address index: 4
-; CHECK-NEXT:                    Length: 19
-; CHECK-NEXT:      Location description: 50
-; CHECK: [[B]]: Beginning address index: 5
-; CHECK-NEXT:                    Length: 17
-; CHECK-NEXT:      Location description: 50
-; CHECK: [[D]]: Beginning address index: 6
-; CHECK-NEXT:                    Length: 17
-; CHECK-NEXT:      Location description: 50
+; CHECK:      [[A]]:
+; CHECK-NEXT:   Addr idx 2 (w/ length 169): DW_OP_consts +0, DW_OP_stack_value
+; CHECK-NEXT:   Addr idx 3 (w/ length 25): DW_OP_reg0 RAX
+; CHECK:      [[E]]:
+; CHECK-NEXT:   Addr idx 4 (w/ length 19): DW_OP_reg0 RAX
+; CHECK:      [[B]]:
+; CHECK-NEXT:   Addr idx 5 (w/ length 17): DW_OP_reg0 RAX
+; CHECK:      [[D]]:
+; CHECK-NEXT:   Addr idx 6 (w/ length 17): DW_OP_reg0 RAX
+
 
 ; Make sure we don't produce any relocations in any .dwo section (though in particular, debug_info.dwo)
 ; HDR-NOT: .rela.{{.*}}.dwo

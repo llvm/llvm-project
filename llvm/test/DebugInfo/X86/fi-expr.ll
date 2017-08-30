@@ -3,8 +3,9 @@
 ; A hand-crafted FrameIndex location with a DW_OP_deref.
 ; CHECK: DW_TAG_formal_parameter
 ;                                          fbreg -8, deref
-; CHECK-NEXT: DW_AT_location {{.*}} (<0x3> 91 78 06 )
+; CHECK-NEXT: DW_AT_location {{.*}} (DW_OP_fbreg -8, DW_OP_deref)
 ; CHECK-NEXT: DW_AT_name {{.*}} "foo"
+
 define void @f(i8* %bar) !dbg !6 {
 entry:
   %foo.addr = alloca i8*

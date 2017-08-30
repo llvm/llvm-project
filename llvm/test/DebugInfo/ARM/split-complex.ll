@@ -14,8 +14,7 @@ entry:
   ; The target has no native double type.
   ; SROA split the complex value into two i64 values.
   ; CHECK: DW_TAG_formal_parameter
-  ; CHECK-NEXT:  DW_AT_location [DW_FORM_block1]	(<0x04> 10 00 93 08 )
-  ;              DW_AT_location       ( constu 0x00000000, piece 0x00000008 )
+  ; CHECK-NEXT:  DW_AT_location [DW_FORM_block1]	(DW_OP_constu 0x0, DW_OP_piece 0x8)
   ; CHECK-NEXT:  DW_AT_name {{.*}} "c"
   tail call void @llvm.dbg.value(metadata i64 0, metadata !14, metadata !17), !dbg !16
   ; Manually removed to disable location list emission:

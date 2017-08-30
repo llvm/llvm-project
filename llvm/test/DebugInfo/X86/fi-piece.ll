@@ -5,8 +5,7 @@
 ; CHECK: DW_TAG_subprogram
 ; CHECK:   DW_AT_abstract_origin
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT:   DW_AT_location [DW_FORM_exprloc]	(<0x8> 91 7c 93 02 91 78 93 02 )
-;                       fbreg -8, piece 0x00000002, fbreg -4, piece 0x00000002
+; CHECK-NEXT:   DW_AT_location [DW_FORM_exprloc]	(DW_OP_fbreg -4, DW_OP_piece 0x2, DW_OP_fbreg -8, DW_OP_piece 0x2)
 ; CHECK-NEXT:   DW_AT_abstract_origin {{.*}}"a"
 ; Inlined variable, not to be merged.
 ; CHECK-NOT: DW_TAG

@@ -13,12 +13,13 @@
 ; DWARF2: .debug_info
 ; DWARF2: DW_TAG_formal_parameter
 ; DWARF2-NEXT: DW_AT_name {{.*}}"i"
-; DWARF2-NOT:  DW_AT_location
+; DWARF2-NOT:      DW_AT_location
 
-; CHECK: Beginning address offset: 0x0000000000000000
-; CHECK:    Ending address offset: 0x0000000000000004
-; CHECK:     Location description: 70 00 10 ff ff ff ff 0f 1a 10 01 1c 9f
+; CHECK: .debug_loc contents:
+; CHECK: 0x00000000:
+; CHECK-NEXT:   0x0000000000000000 - 0x0000000000000004: DW_OP_breg0 RAX+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_constu 0x1, DW_OP_minus, DW_OP_stack_value
 ;        rax+0, constu 0xffffffff, and, constu 0x00000001, minus, stack-value
+
 source_filename = "minus.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"

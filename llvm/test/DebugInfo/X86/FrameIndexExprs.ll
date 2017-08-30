@@ -3,8 +3,7 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -filetype=obj < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]  (<0xa> 91 78 93 03 93 06 91 7d 93 03 )
-;           fbreg -8, piece 0x00000003, piece 0x00000006, fbreg -3, piece 0x00000003 
+; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_fbreg -8, DW_OP_piece 0x3, DW_OP_piece 0x6, DW_OP_fbreg -3, DW_OP_piece 0x3)
 ; CHECK-NEXT: DW_AT_abstract_origin {{.*}}"p"
 source_filename = "bugpoint-reduced-simplified.ll"
 target triple = "x86_64-apple-darwin"
