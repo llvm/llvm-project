@@ -1,5 +1,5 @@
-# RUN: llvm-mc -triple=arm64-none-linux-gnu -filetype=obj -o %T/reloc.o %s
-# RUN: llvm-rtdyld -triple=arm64-none-linux-gnu -verify -dummy-extern f=0x0123456789abcdef -check=%s %T/reloc.o
+# RUN: llvm-mc -triple=arm64-none-linux-gnu -filetype=obj -o %t %s
+# RUN: llvm-rtdyld -triple=arm64-none-linux-gnu -verify -dummy-extern f=0x0123456789abcdef -check=%s %t
         
         .globl Q
         .section .dummy, "ax"
