@@ -22,6 +22,11 @@
 ; KERNEL-IR:   %p_cosf = tail call float @__nv_cosf(float %p_expf)
 ; KERNEL-IR:   %p_logf = tail call float @__nv_logf(float %p_cosf)
 
+; Powi and exp cannot be lowered directly. Rather, we expect them to be
+; lowered by libdevice.
+; KERNEL-IR: %p_powi = tail call float @__nv_powif(float %p_logf, i32 2)
+; KERNEL-IR: %p_exp = tail call float @__nv_expf(float %p_powi)
+
 ; Check that kernel launch is generated in host IR.
 ; the declare would not be generated unless a call to a kernel exists.
 ; HOST-IR: declare void @polly_launchKernel(i8*, i32, i32, i32, i32, i32, i8*)
@@ -33,6 +38,8 @@
 ;       float expf  = expf(tmp1);
 ;       cosf = cosf(expf);
 ;       logf = logf(cosf);
+;       powi = powi(logf, 2);
+;       exp = exp(powi);
 ;       B[i] = logf;
 ;   }
 ; }
@@ -58,8 +65,10 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %expf = tail call float @expf(float %A.arr.i.val)
   %cosf = tail call float @cosf(float %expf)
   %logf = tail call float @logf(float %cosf)
+  %powi = tail call float @llvm.powi.f32(float %logf, i32 2)
+  %exp = tail call float @llvm.exp.f32(float %powi)
   %B.arr.i = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  store float %logf, float* %B.arr.i, align 4
+  store float %exp, float* %B.arr.i, align 4
 
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %wide.trip.count = zext i32 %N to i64
@@ -77,6 +86,8 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 declare float @expf(float) #0
 declare float @cosf(float) #0
 declare float @logf(float) #0
+declare float @llvm.powi.f32(float, i32) #0
+declare float @llvm.exp.f32(float) #0
 
 attributes #0 = { nounwind readnone }
 
