@@ -180,19 +180,9 @@ static Error failedImport(const Twine &Reason) {
 static Error isTrivialOperatorNode(const TreePatternNode *N) {
   std::string Explanation = "";
   std::string Separator = "";
-
-  bool HasUnsupportedPredicate = false;
-  for (const auto &Predicate : N->getPredicateFns()) {
-    if (Predicate.isAlwaysTrue())
-      continue;
-
-    if (Predicate.isImmediatePattern())
-      continue;
-
-    HasUnsupportedPredicate = true;
+  if (N->hasAnyPredicate()) {
     Explanation = Separator + "Has a predicate (" + explainPredicates(N) + ")";
     Separator = ", ";
-    break;
   }
 
   if (N->getTransformFn()) {
@@ -200,7 +190,7 @@ static Error isTrivialOperatorNode(const TreePatternNode *N) {
     Separator = ", ";
   }
 
-  if (!HasUnsupportedPredicate && !N->getTransformFn())
+  if (!N->hasAnyPredicate() && !N->getTransformFn())
     return Error::success();
 
   return failedImport(Explanation);
@@ -525,10 +515,6 @@ private:
   typedef std::vector<std::unique_ptr<PredicateTy>> PredicateVec;
   PredicateVec Predicates;
 
-  /// Template instantiations should specialize this to return a string to use
-  /// for the comment emitted when there are no predicates.
-  std::string getNoPredicateComment() const;
-
 public:
   /// Construct a new operand predicate and add it to the matcher.
   template <class Kind, class... Args>
@@ -555,8 +541,7 @@ public:
   template <class... Args>
   void emitPredicateListOpcodes(MatchTable &Table, Args &&... args) const {
     if (Predicates.empty()) {
-      Table << MatchTable::Comment(getNoPredicateComment())
-            << MatchTable::LineBreak;
+      Table << MatchTable::Comment("No predicates") << MatchTable::LineBreak;
       return;
     }
 
@@ -632,12 +617,6 @@ public:
   /// matcher.
   virtual unsigned countRendererFns() const { return 0; }
 };
-
-template <>
-std::string
-PredicateListMatcher<OperandPredicateMatcher>::getNoPredicateComment() const {
-  return "No operand predicates";
-}
 
 /// Generates code to check that an operand is a particular LLT.
 class LLTOperandMatcher : public OperandPredicateMatcher {
@@ -936,7 +915,6 @@ protected:
   /// must be tested first.
   enum PredicateKind {
     IPM_Opcode,
-    IPM_ImmPredicate,
   };
 
   PredicateKind Kind;
@@ -964,12 +942,6 @@ public:
   /// matcher.
   virtual unsigned countRendererFns() const { return 0; }
 };
-
-template <>
-std::string
-PredicateListMatcher<InstructionPredicateMatcher>::getNoPredicateComment() const {
-  return "No instruction predicates";
-}
 
 /// Generates code to check the opcode of an instruction.
 class InstructionOpcodeMatcher : public InstructionPredicateMatcher {
@@ -1014,54 +986,6 @@ public:
 
   bool isConstantInstruction() const {
     return I->TheDef->getName() == "G_CONSTANT";
-  }
-};
-
-/// Generates code to check that this instruction is a constant whose value
-/// meets an immediate predicate.
-///
-/// Immediates are slightly odd since they are typically used like an operand
-/// but are represented as an operator internally. We typically write simm8:$src
-/// in a tablegen pattern, but this is just syntactic sugar for
-/// (imm:i32)<<P:Predicate_simm8>>:$imm which more directly describes the nodes
-/// that will be matched and the predicate (which is attached to the imm
-/// operator) that will be tested. In SelectionDAG this describes a
-/// ConstantSDNode whose internal value will be tested using the simm8 predicate.
-///
-/// The corresponding GlobalISel representation is %1 = G_CONSTANT iN Value. In
-/// this representation, the immediate could be tested with an
-/// InstructionMatcher, InstructionOpcodeMatcher, OperandMatcher, and a
-/// OperandPredicateMatcher-subclass to check the Value meets the predicate but
-/// there are two implementation issues with producing that matcher
-/// configuration from the SelectionDAG pattern:
-/// * ImmLeaf is a PatFrag whose root is an InstructionMatcher. This means that
-///   were we to sink the immediate predicate to the operand we would have to
-///   have two partial implementations of PatFrag support, one for immediates
-///   and one for non-immediates.
-/// * At the point we handle the predicate, the OperandMatcher hasn't been
-///   created yet. If we were to sink the predicate to the OperandMatcher we
-///   would also have to complicate (or duplicate) the code that descends and
-///   creates matchers for the subtree.
-/// Overall, it's simpler to handle it in the place it was found.
-class InstructionImmPredicateMatcher : public InstructionPredicateMatcher {
-protected:
-  TreePredicateFn Predicate;
-
-public:
-  InstructionImmPredicateMatcher(const TreePredicateFn &Predicate)
-      : InstructionPredicateMatcher(IPM_ImmPredicate), Predicate(Predicate) {}
-
-  static bool classof(const InstructionPredicateMatcher *P) {
-    return P->getKind() == IPM_ImmPredicate;
-  }
-
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                            unsigned InsnVarID) const override {
-    Table << MatchTable::Opcode("GIM_CheckImmPredicate")
-          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
-          << MatchTable::Comment("Predicate")
-          << MatchTable::NamedValue("GIPFP_" + Predicate.getFnName())
-          << MatchTable::LineBreak;
   }
 };
 
@@ -1999,19 +1923,6 @@ GlobalISelEmitter::createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
     OM.addPredicate<LLTOperandMatcher>(*OpTyOrNone);
   }
 
-  for (const auto &Predicate : Src->getPredicateFns()) {
-    if (Predicate.isAlwaysTrue())
-      continue;
-
-    if (Predicate.isImmediatePattern()) {
-      InsnMatcher.addPredicate<InstructionImmPredicateMatcher>(Predicate);
-      continue;
-    }
-
-    return failedImport("Src pattern child has predicate (" +
-                        explainPredicates(Src) + ")");
-  }
-
   if (Src->isLeaf()) {
     Init *SrcInit = Src->getLeafValue();
     if (IntInit *SrcIntInit = dyn_cast<IntInit>(SrcInit)) {
@@ -2063,6 +1974,10 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
                                             unsigned &TempOpIdx) const {
   OperandMatcher &OM =
       InsnMatcher.addOperand(OpIdx, SrcChild->getName(), TempOpIdx);
+
+  if (SrcChild->hasAnyPredicate())
+    return failedImport("Src pattern child has predicate (" +
+                        explainPredicates(SrcChild) + ")");
 
   ArrayRef<EEVT::TypeSet> ChildTypes = SrcChild->getExtTypes();
   if (ChildTypes.size() != 1)
@@ -2143,11 +2058,6 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
 Error GlobalISelEmitter::importExplicitUseRenderer(
     BuildMIAction &DstMIBuilder, TreePatternNode *DstChild,
     const InstructionMatcher &InsnMatcher) const {
-  if (DstChild->getTransformFn() != nullptr) {
-    return failedImport("Dst pattern child has transform fn " +
-                        DstChild->getTransformFn()->getName());
-  }
-
   if (!DstChild->isLeaf()) {
     // We accept 'bb' here. It's an operator because BasicBlockSDNode isn't
     // inline, but in MI it's just another operand.
@@ -2170,10 +2080,14 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
       return Error::success();
     }
 
-    return failedImport("Dst pattern child isn't a leaf node or an MBB" + llvm::to_string(*DstChild));
+    return failedImport("Dst pattern child isn't a leaf node or an MBB");
   }
 
   // Otherwise, we're looking for a bog-standard RegisterClass operand.
+  if (DstChild->hasAnyPredicate())
+    return failedImport("Dst pattern child has predicate (" +
+                        explainPredicates(DstChild) + ")");
+
   if (auto *ChildDefInit = dyn_cast<DefInit>(DstChild->getLeafValue())) {
     auto *ChildRec = ChildDefInit->getDef();
 
@@ -2612,7 +2526,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
   OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n"
      << ", State(" << MaxTemporaries << "),\n"
-     << "MatcherInfo({TypeObjects, FeatureBitsets, ImmPredicateFns, {\n"
+     << "MatcherInfo({TypeObjects, FeatureBitsets, {\n"
      << "  nullptr, // GICP_Invalid\n";
   for (const auto &Record : ComplexPredicates)
     OS << "  &" << Target.getName()
@@ -2724,31 +2638,6 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     OS << "  GICP_" << Record->getName() << ",\n";
   OS << "};\n"
      << "// See constructor for table contents\n\n";
-
-  // Emit imm predicate table and an enum to reference them with.
-  // The 'Predicate_' part of the name is redundant but eliminating it is more
-  // trouble than it's worth.
-  {
-    OS << "// PatFrag predicates.\n"
-       << "enum {\n";
-    StringRef EnumeratorSeparator = " = GIPFP_Invalid,\n";
-    for (const auto *Record : RK.getAllDerivedDefinitions("PatFrag")) {
-      if (!Record->getValueAsString("ImmediateCode").empty()) {
-        OS << "  GIPFP_Predicate_" << Record->getName() << EnumeratorSeparator;
-        EnumeratorSeparator = ",\n";
-      }
-    }
-    OS << "};\n";
-  }
-  for (const auto *Record : RK.getAllDerivedDefinitions("PatFrag"))
-    if (!Record->getValueAsString("ImmediateCode").empty())
-      OS << "  static bool Predicate_" << Record->getName() << "(int64_t Imm) {"
-         << Record->getValueAsString("ImmediateCode") << "  }\n";
-  OS << "static InstructionSelector::ImmediatePredicateFn ImmPredicateFns[] = {\n";
-  for (const auto *Record : RK.getAllDerivedDefinitions("PatFrag"))
-    if (!Record->getValueAsString("ImmediateCode").empty())
-      OS << "  Predicate_" << Record->getName() << ",\n";
-  OS << "};\n";
 
   OS << "bool " << Target.getName()
      << "InstructionSelector::selectImpl(MachineInstr &I) const {\n"
