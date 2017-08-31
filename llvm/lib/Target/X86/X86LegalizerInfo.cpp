@@ -80,6 +80,9 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   for (auto Ty : {s1, s8, s16})
     setAction({G_GEP, 1, Ty}, WidenScalar);
 
+  // Control-flow
+  setAction({G_BRCOND, s1}, Legal);
+
   // Constants
   for (auto Ty : {s8, s16, s32, p0})
     setAction({TargetOpcode::G_CONSTANT, Ty}, Legal);
@@ -140,6 +143,9 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
 
   for (auto Ty : {s1, s8, s16})
     setAction({G_GEP, 1, Ty}, WidenScalar);
+
+  // Control-flow
+  setAction({G_BRCOND, s1}, Legal);
 
   // Constants
   for (auto Ty : {s8, s16, s32, s64, p0})
