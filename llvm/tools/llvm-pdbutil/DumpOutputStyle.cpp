@@ -59,6 +59,7 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#include <cctype>
 #include <unordered_map>
 
 using namespace llvm;
@@ -82,8 +83,14 @@ Error DumpOutputStyle::dump() {
     P.NewLine();
   }
 
-  if (opts::dump::DumpModuleStats.getNumOccurrences() > 0) {
-    if (auto EC = dumpModuleStats())
+  if (opts::dump::DumpSymbolStats.getNumOccurrences() > 0) {
+    if (auto EC = dumpSymbolStats())
+      return EC;
+    P.NewLine();
+  }
+
+  if (opts::dump::DumpUdtStats.getNumOccurrences() > 0) {
+    if (auto EC = dumpUdtStats())
       return EC;
     P.NewLine();
   }
@@ -557,7 +564,7 @@ Error DumpOutputStyle::dumpModuleFiles() {
   return Error::success();
 }
 
-Error DumpOutputStyle::dumpModuleStats() {
+Error DumpOutputStyle::dumpSymbolStats() {
   printHeader(P, "Module Stats");
 
   ExitOnError Err("Unexpected error processing modules: ");
@@ -604,6 +611,154 @@ Error DumpOutputStyle::dumpModuleStats() {
     printModuleDetailStats<DebugSubsectionKind>(P, "Chunks", ChunkStats);
   }
 
+  return Error::success();
+}
+
+static bool isValidNamespaceIdentifier(StringRef S) {
+  if (S.empty())
+    return false;
+
+  if (std::isdigit(S[0]))
+    return false;
+
+  return llvm::all_of(S, [](char C) { return std::isalnum(C); });
+}
+
+namespace {
+constexpr uint32_t kNoneUdtKind = 0;
+constexpr uint32_t kSimpleUdtKind = 1;
+constexpr uint32_t kUnknownUdtKind = 2;
+const StringRef NoneLabel("<none type>");
+const StringRef SimpleLabel("<simple type>");
+const StringRef UnknownLabel("<unknown type>");
+
+} // namespace
+
+static StringRef getUdtStatLabel(uint32_t Kind) {
+  if (Kind == kNoneUdtKind)
+    return NoneLabel;
+
+  if (Kind == kSimpleUdtKind)
+    return SimpleLabel;
+
+  if (Kind == kUnknownUdtKind)
+    return UnknownLabel;
+
+  return formatTypeLeafKind(static_cast<TypeLeafKind>(Kind));
+}
+
+static uint32_t getLongestTypeLeafName(const StatCollection &Stats) {
+  size_t L = 0;
+  for (const auto &Stat : Stats.Individual) {
+    StringRef Label = getUdtStatLabel(Stat.first);
+    L = std::max(L, Label.size());
+  }
+  return static_cast<uint32_t>(L);
+}
+
+Error DumpOutputStyle::dumpUdtStats() {
+  printHeader(P, "S_UDT Record Stats");
+
+  StatCollection UdtStats;
+  StatCollection UdtTargetStats;
+  if (!File.hasPDBGlobalsStream()) {
+    P.printLine("- Error: globals stream not present");
+    return Error::success();
+  }
+
+  AutoIndent Indent(P, 4);
+
+  auto &SymbolRecords = cantFail(File.getPDBSymbolStream());
+  auto &Globals = cantFail(File.getPDBGlobalsStream());
+  auto &TpiTypes = cantFail(initializeTypes(StreamTPI));
+
+  StringMap<StatCollection::Stat> NamespacedStats;
+
+  P.NewLine();
+
+  size_t LongestNamespace = 0;
+  for (uint32_t PubSymOff : Globals.getGlobalsTable()) {
+    CVSymbol Sym = SymbolRecords.readRecord(PubSymOff);
+    if (Sym.kind() != SymbolKind::S_UDT)
+      continue;
+    UdtStats.update(SymbolKind::S_UDT, Sym.length());
+
+    UDTSym UDT = cantFail(SymbolDeserializer::deserializeAs<UDTSym>(Sym));
+
+    uint32_t Kind = 0;
+    uint32_t RecordSize = 0;
+    if (UDT.Type.isSimple() ||
+        (UDT.Type.toArrayIndex() >= TpiTypes.capacity())) {
+      if (UDT.Type.isNoneType())
+        Kind = kNoneUdtKind;
+      else if (UDT.Type.isSimple())
+        Kind = kSimpleUdtKind;
+      else
+        Kind = kUnknownUdtKind;
+    } else {
+      CVType T = TpiTypes.getType(UDT.Type);
+      Kind = T.kind();
+      RecordSize = T.length();
+    }
+
+    UdtTargetStats.update(Kind, RecordSize);
+
+    size_t Pos = UDT.Name.find("::");
+    if (Pos == StringRef::npos)
+      continue;
+
+    StringRef Scope = UDT.Name.take_front(Pos);
+    if (Scope.empty() || !isValidNamespaceIdentifier(Scope))
+      continue;
+
+    LongestNamespace = std::max(LongestNamespace, Scope.size());
+    NamespacedStats[Scope].update(RecordSize);
+  }
+
+  LongestNamespace += StringRef(" namespace ''").size();
+  size_t LongestTypeLeafKind = getLongestTypeLeafName(UdtTargetStats);
+  size_t FieldWidth = std::max(LongestNamespace, LongestTypeLeafKind);
+
+  // Compute the max number of digits for count and size fields, including comma
+  // separators.
+  StringRef CountHeader("Count");
+  StringRef SizeHeader("Size");
+  size_t CD = NumDigits(UdtStats.Totals.Count);
+  CD += (CD - 1) / 3;
+  CD = std::max(CD, CountHeader.size());
+
+  size_t SD = NumDigits(UdtStats.Totals.Size);
+  SD += (SD - 1) / 3;
+  SD = std::max(SD, SizeHeader.size());
+
+  uint32_t TableWidth = FieldWidth + 3 + CD + 2 + SD + 1;
+
+  P.formatLine("{0} | {1}  {2}",
+               fmt_align("Record Kind", AlignStyle::Right, FieldWidth),
+               fmt_align(CountHeader, AlignStyle::Right, CD),
+               fmt_align(SizeHeader, AlignStyle::Right, SD));
+
+  P.formatLine("{0}", fmt_repeat('-', TableWidth));
+  for (const auto &Stat : UdtTargetStats.Individual) {
+    StringRef Label = getUdtStatLabel(Stat.first);
+    P.formatLine("{0} | {1:N}  {2:N}",
+                 fmt_align(Label, AlignStyle::Right, FieldWidth),
+                 fmt_align(Stat.second.Count, AlignStyle::Right, CD),
+                 fmt_align(Stat.second.Size, AlignStyle::Right, SD));
+  }
+  P.formatLine("{0}", fmt_repeat('-', TableWidth));
+  P.formatLine("{0} | {1:N}  {2:N}",
+               fmt_align("Total (S_UDT)", AlignStyle::Right, FieldWidth),
+               fmt_align(UdtStats.Totals.Count, AlignStyle::Right, CD),
+               fmt_align(UdtStats.Totals.Size, AlignStyle::Right, SD));
+  P.formatLine("{0}", fmt_repeat('-', TableWidth));
+  for (const auto &Stat : NamespacedStats) {
+    std::string Label = formatv("namespace '{0}'", Stat.getKey());
+    P.formatLine("{0} | {1:N}  {2:N}",
+                 fmt_align(Label, AlignStyle::Right, FieldWidth),
+                 fmt_align(Stat.second.Count, AlignStyle::Right, CD),
+                 fmt_align(Stat.second.Size, AlignStyle::Right, SD));
+  }
   return Error::success();
 }
 

@@ -15173,14 +15173,17 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode* N) {
   if (V->getOpcode() == ISD::BUILD_VECTOR) {
     if (auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
       EVT InVT = V->getValueType(0);
-      unsigned NumElems = NVT.getSizeInBits() / InVT.getScalarSizeInBits();
-      if (NumElems > 0) {
+      unsigned ExtractSize = NVT.getSizeInBits();
+      unsigned EltSize = InVT.getScalarSizeInBits();
+      // Only do this if we won't split any elements.
+      if (ExtractSize % EltSize == 0) {
+        unsigned NumElems = ExtractSize / EltSize;
         EVT ExtractVT = EVT::getVectorVT(*DAG.getContext(),
                                          InVT.getVectorElementType(), NumElems);
         if (!LegalOperations ||
             TLI.isOperationLegal(ISD::BUILD_VECTOR, ExtractVT)) {
-          unsigned IdxVal = Idx->getZExtValue() * NVT.getScalarSizeInBits() /
-                            InVT.getScalarSizeInBits();
+          unsigned IdxVal = (Idx->getZExtValue() * NVT.getScalarSizeInBits()) /
+                            EltSize;
 
           // Extract the pieces from the original build_vector.
           SDValue BuildVec = DAG.getBuildVector(ExtractVT, SDLoc(N),

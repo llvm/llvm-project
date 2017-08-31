@@ -26,10 +26,26 @@ int f(struct S s, unsigned i) {
 
 // DEBUGGER: r
 // DEBUGGER: p s
-// CHECK: a = ([0] = 0, [1] = 1, [2] = 2, [3] = 3, [4] = 4, [5] = 5, [6] = 6, [7] = 7)
+// CHECK: a =
+// DEBUGGER: p s.a[0]
+// CHECK: = 0
+// DEBUGGER: p s.a[1]
+// CHECK: = 1
+// DEBUGGER: p s.a[7]
+// CHECK: = 7
 // DEBUGGER: c
 // DEBUGGER: p s
-// CHECK: a = ([0] = 0, [1] = 1, [2] = 2, [3] = 3, [4] = 4, [5] = 5, [6] = 6, [7] = 7)
+// CHECK: a =
+// DEBUGGER: p s.a[0]
+// CHECK: = 0
+// DEBUGGER: p s.a[1]
+// CHECK: = 1
+// DEBUGGER: p s.a[7]
 // DEBUGGER: c
 // DEBUGGER: p s
-// CHECK: a = ([0] = 0, [1] = 1, [2] = 2, [3] = 3, [4] = 4, [5] = 5, [6] = 6, [7] = 7)
+// CHECK: a =
+// DEBUGGER: p s.a[0]
+// CHECK: = 0
+// DEBUGGER: p s.a[1]
+// CHECK: = 1
+// DEBUGGER: p s.a[7]

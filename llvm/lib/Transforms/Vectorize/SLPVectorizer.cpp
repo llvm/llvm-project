@@ -3198,14 +3198,15 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   for (TreeEntry &EIdx : VectorizableTree) {
     TreeEntry *Entry = &EIdx;
 
+    // No need to handle users of gathered values.
+    if (Entry->NeedToGather)
+      continue;
+
+    assert(Entry->VectorizedValue && "Can't find vectorizable value");
+    
     // For each lane:
     for (int Lane = 0, LE = Entry->Scalars.size(); Lane != LE; ++Lane) {
       Value *Scalar = Entry->Scalars[Lane];
-      // No need to handle users of gathered values.
-      if (Entry->NeedToGather)
-        continue;
-
-      assert(Entry->VectorizedValue && "Can't find vectorizable value");
 
       Type *Ty = Scalar->getType();
       if (!Ty->isVoidTy()) {

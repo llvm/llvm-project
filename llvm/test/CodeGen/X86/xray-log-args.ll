@@ -7,33 +7,29 @@ define i32 @callee(i32 %arg) nounwind noinline uwtable "function-instrument"="xr
   ret i32 %arg
 }
 ; CHECK-LABEL: Lxray_sleds_start0:
-; CHECK:  .quad {{\.?}}Lxray_sled_0
-; CHECK:  .quad {{_?}}callee
-; CHECK:  .byte 0x03
-; CHECK:  .byte 0x01
-; CHECK:  .byte 0x00
-; CHECK:  .{{(zero|space)}}  13
-; CHECK:  .quad {{\.?}}Lxray_sled_1
-; CHECK:  .quad {{_?}}callee
-; CHECK:  .byte 0x01
-; CHECK:  .byte 0x01
-; CHECK:  .byte 0x00
-; CHECK:  .{{(zero|space)}}  13
+; CHECK:	.quad	{{\.?}}Lxray_sled_0
+; CHECK:	.quad	{{_?}}callee
+; CHECK:	.byte	3
+; CHECK:	.byte	1
+; CHECK:	.{{(zero|space)}}	14
+; CHECK:	.quad	{{\.?}}Lxray_sled_1
+; CHECK:	.quad	{{_?}}callee
+; CHECK:	.byte	1
+; CHECK:	.byte	1
+; CHECK:	.{{(zero|space)}}	14
 
 define i32 @caller(i32 %arg) nounwind noinline uwtable "function-instrument"="xray-always" "xray-log-args"="1" {
   %retval = tail call i32 @callee(i32 %arg)
   ret i32 %retval
 }
 ; CHECK-LABEL: Lxray_sleds_start1:
-; CHECK:  .quad {{\.?}}Lxray_sled_2
-; CHECK:  .quad {{_?}}caller
-; CHECK:  .byte 0x03
-; CHECK:  .byte 0x01
-; CHECK:  .byte 0x00
-; CHECK:  .{{(zero|space)}}  13
-; CHECK:  .quad {{\.?}}Lxray_sled_3
-; CHECK:  .quad {{_?}}caller
-; CHECK:  .byte 0x02
-; CHECK:  .byte 0x01
-; CHECK:  .byte 0x00
-; CHECK:  .{{(zero|space)}}  13
+; CHECK:	.quad	{{\.?}}Lxray_sled_2
+; CHECK:	.quad	{{_?}}caller
+; CHECK:	.byte	3
+; CHECK:	.byte	1
+; CHECK:	.{{(zero|space)}}	14
+; CHECK:	.quad	{{\.?}}Lxray_sled_3
+; CHECK:	.quad	{{_?}}caller
+; CHECK:	.byte	2
+; CHECK:	.byte	1
+; CHECK:	.{{(zero|space)}}	14

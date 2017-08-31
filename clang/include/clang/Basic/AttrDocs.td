@@ -2803,6 +2803,31 @@ For example:
   }];
 }
 
+def X86ForceAlignArgPointerDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Use this attribute to force stack alignment.
+
+Legacy x86 code uses 4-byte stack alignment. Newer aligned SSE instructions
+(like 'movaps') that work with the stack require operands to be 16-byte aligned.
+This attribute realigns the stack in the function prologue to make sure the
+stack can be used with SSE instructions.
+
+Note that the x86_64 ABI forces 16-byte stack alignment at the call site.
+Because of this, 'force_align_arg_pointer' is not needed on x86_64, except in
+rare cases where the caller does not align the stack properly (e.g. flow
+jumps from i386 arch code).
+
+  .. code-block:: c
+
+    __attribute__ ((force_align_arg_pointer))
+    void f () {
+      ...
+    }
+
+  }];
+}
+
 def SwiftCallDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{

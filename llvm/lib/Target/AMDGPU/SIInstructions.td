@@ -1340,6 +1340,13 @@ def : Pat <
   (v2i16 (S_PACK_LL_B32_B16 $src0, $src1))
 >;
 
+// COPY_TO_REGCLASS is workaround tablegen bug from multiple outputs
+// from S_LSHL_B32's multiple outputs from implicit scc def.
+def : Pat <
+  (v2i16 (build_vector (i16 0), i16:$src1)),
+  (v2i16 (COPY_TO_REGCLASS (S_LSHL_B32 i16:$src1, (i16 16)), SReg_32_XM0))
+>;
+
 // With multiple uses of the shift, this will duplicate the shift and
 // increase register pressure.
 def : Pat <

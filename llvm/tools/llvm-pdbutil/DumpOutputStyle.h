@@ -66,7 +66,8 @@ private:
 
   Error dumpFileSummary();
   Error dumpStreamSummary();
-  Error dumpModuleStats();
+  Error dumpSymbolStats();
+  Error dumpUdtStats();
   Error dumpStringTable();
   Error dumpLines();
   Error dumpInlineeLines();
