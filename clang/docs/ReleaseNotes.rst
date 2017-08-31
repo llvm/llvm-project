@@ -148,6 +148,12 @@ assignment operators where applicable.
 C++ Language Changes in Clang
 -----------------------------
 
+- We expect this to be the last Clang release that defaults to ``-std=gnu++98``
+  when using the GCC-compatible ``clang++`` driver. From Clang 6 onwards we
+  expect to use ``-std=gnu++14`` or a later standard by default, to match the
+  behavior of recent GCC releases. Users are encouraged to change their build
+  files to explicitly specify their desired C++ standard.
+
 - Support for the C++17 standard has been completed. This mode can be enabled
   using ``-std=c++17`` (the old flag ``-std=c++1z`` is still supported for
   compatibility).
