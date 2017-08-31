@@ -134,6 +134,14 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BreakConstructorInitiali
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::PPDirectiveIndentStyle> {
+  static void enumeration(IO &IO, FormatStyle::PPDirectiveIndentStyle &Value) {
+    IO.enumCase(Value, "None", FormatStyle::PPDIS_None);
+    IO.enumCase(Value, "AfterHash", FormatStyle::PPDIS_AfterHash);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::ReturnTypeBreakingStyle> {
   static void enumeration(IO &IO, FormatStyle::ReturnTypeBreakingStyle &Value) {
     IO.enumCase(Value, "None", FormatStyle::RTBS_None);
@@ -350,6 +358,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IncludeCategories", Style.IncludeCategories);
     IO.mapOptional("IncludeIsMainRegex", Style.IncludeIsMainRegex);
     IO.mapOptional("IndentCaseLabels", Style.IndentCaseLabels);
+    IO.mapOptional("IndentPPDirectives", Style.IndentPPDirectives);
     IO.mapOptional("IndentWidth", Style.IndentWidth);
     IO.mapOptional("IndentWrappedFunctionNames",
                    Style.IndentWrappedFunctionNames);
@@ -589,6 +598,7 @@ FormatStyle getLLVMStyle() {
                                  {".*", 1}};
   LLVMStyle.IncludeIsMainRegex = "(Test)?$";
   LLVMStyle.IndentCaseLabels = false;
+  LLVMStyle.IndentPPDirectives = FormatStyle::PPDIS_None;
   LLVMStyle.IndentWrappedFunctionNames = false;
   LLVMStyle.IndentWidth = 2;
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;

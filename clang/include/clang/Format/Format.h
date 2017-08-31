@@ -1024,6 +1024,31 @@ struct FormatStyle {
   /// \endcode
   bool IndentCaseLabels;
 
+  /// \brief Options for indenting preprocessor directives.
+  enum PPDirectiveIndentStyle {
+    /// Does not indent any directives.
+    /// \code
+    ///    #if FOO
+    ///    #if BAR
+    ///    #include <foo>
+    ///    #endif
+    ///    #endif
+    /// \endcode
+    PPDIS_None,
+    /// Indents directives after the hash.
+    /// \code
+    ///    #if FOO
+    ///    #  if BAR
+    ///    #    include <foo>
+    ///    #  endif
+    ///    #endif
+    /// \endcode
+    PPDIS_AfterHash
+  };
+
+  /// \brief The preprocessor directive indenting style to use.
+  PPDirectiveIndentStyle IndentPPDirectives;
+
   /// \brief The number of columns to use for indentation.
   /// \code
   ///    IndentWidth: 3
@@ -1514,6 +1539,7 @@ struct FormatStyle {
            ForEachMacros == R.ForEachMacros &&
            IncludeCategories == R.IncludeCategories &&
            IndentCaseLabels == R.IndentCaseLabels &&
+           IndentPPDirectives == R.IndentPPDirectives &&
            IndentWidth == R.IndentWidth && Language == R.Language &&
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
            JavaScriptQuotes == R.JavaScriptQuotes &&

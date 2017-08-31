@@ -32,7 +32,7 @@ public:
 // why the definition of "a" comes before the declarations while
 // "b" and "c" come after.
 
-// CHECK: [[A]] = !DIGlobalVariableExpression(var: [[AV:.*]])
+// CHECK: [[A]] = !DIGlobalVariableExpression(var: [[AV:.*]], expr: !DIExpression())
 // CHECK: [[AV]] = distinct !DIGlobalVariable(name: "a",
 // CHECK-SAME:                                declaration: ![[DECL_A:[0-9]+]])
 //
@@ -45,7 +45,7 @@ public:
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "static_decl_templ_var"
 
 int C::a = 4;
-// CHECK: [[B]] = !DIGlobalVariableExpression(var: [[BV:.*]])
+// CHECK: [[B]] = !DIGlobalVariableExpression(var: [[BV:.*]], expr: !DIExpression())
 // CHECK: [[BV]] = distinct !DIGlobalVariable(name: "b",
 // CHECK-SAME:                                declaration: ![[DECL_B:[0-9]+]])
 // CHECK: ![[DECL_B]] = !DIDerivedType(tag: DW_TAG_member, name: "b"
@@ -93,7 +93,7 @@ int C::a = 4;
 // CHECK-SAME:           flags: DIFlagPublic | DIFlagStaticMember)
 
 int C::b = 2;
-// CHECK: [[C]] = !DIGlobalVariableExpression(var: [[CV:.*]])
+// CHECK: [[C]] = !DIGlobalVariableExpression(var: [[CV:.*]], expr: !DIExpression())
 // CHECK: [[CV]] = distinct !DIGlobalVariable(name: "c", {{.*}} declaration: ![[DECL_C]])
 int C::c = 1;
 

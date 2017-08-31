@@ -28,11 +28,19 @@
 using namespace clang;
 using namespace serialization;
 
-ModuleFile *ModuleManager::lookup(StringRef Name) const {
+ModuleFile *ModuleManager::lookupByFileName(StringRef Name) const {
   const FileEntry *Entry = FileMgr.getFile(Name, /*openFile=*/false,
                                            /*cacheFailure=*/false);
   if (Entry)
     return lookup(Entry);
+
+  return nullptr;
+}
+
+ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
+  if (const Module *Mod = HeaderSearchInfo.getModuleMap().findModule(Name))
+    if (const FileEntry *File = Mod->getASTFile())
+      return lookup(File);
 
   return nullptr;
 }
@@ -306,9 +314,11 @@ void ModuleManager::moduleFileAccepted(ModuleFile *MF) {
 }
 
 ModuleManager::ModuleManager(FileManager &FileMgr, MemoryBufferCache &PCMCache,
-                             const PCHContainerReader &PCHContainerRdr)
+                             const PCHContainerReader &PCHContainerRdr,
+                             const HeaderSearch& HeaderSearchInfo)
     : FileMgr(FileMgr), PCMCache(&PCMCache), PCHContainerRdr(PCHContainerRdr),
-      GlobalIndex(), FirstVisitState(nullptr) {}
+      HeaderSearchInfo (HeaderSearchInfo), GlobalIndex(),
+      FirstVisitState(nullptr) {}
 
 ModuleManager::~ModuleManager() { delete FirstVisitState; }
 

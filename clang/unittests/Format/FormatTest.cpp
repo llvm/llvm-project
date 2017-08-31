@@ -2312,8 +2312,183 @@ TEST_F(FormatTest, LayoutMacroDefinitionsStatementsSpanningBlocks) {
                getLLVMStyleWithColumns(11));
 }
 
-TEST_F(FormatTest, IndentPreprocessorDirectivesAtZero) {
-  EXPECT_EQ("{\n  {\n#define A\n  }\n}", format("{{\n#define A\n}}"));
+TEST_F(FormatTest, IndentPreprocessorDirectives) {
+  FormatStyle Style = getLLVMStyle();
+  Style.IndentPPDirectives = FormatStyle::PPDIS_None;
+  Style.ColumnLimit = 40;
+  verifyFormat("#ifdef _WIN32\n"
+               "#define A 0\n"
+               "#ifdef VAR2\n"
+               "#define B 1\n"
+               "#include <someheader.h>\n"
+               "#define MACRO                          \\\n"
+               "  some_very_long_func_aaaaaaaaaa();\n"
+               "#endif\n"
+               "#else\n"
+               "#define A 1\n"
+               "#endif",
+               Style);
+
+  Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
+  verifyFormat("#ifdef _WIN32\n"
+               "#  define A 0\n"
+               "#  ifdef VAR2\n"
+               "#    define B 1\n"
+               "#    include <someheader.h>\n"
+               "#    define MACRO                      \\\n"
+               "      some_very_long_func_aaaaaaaaaa();\n"
+               "#  endif\n"
+               "#else\n"
+               "#  define A 1\n"
+               "#endif",
+               Style);
+  verifyFormat("#if A\n"
+               "#  define MACRO                        \\\n"
+               "    void a(int x) {                    \\\n"
+               "      b();                             \\\n"
+               "      c();                             \\\n"
+               "      d();                             \\\n"
+               "      e();                             \\\n"
+               "      f();                             \\\n"
+               "    }\n"
+               "#endif",
+               Style);
+  // Comments before include guard.
+  verifyFormat("// file comment\n"
+               "// file comment\n"
+               "#ifndef HEADER_H\n"
+               "#define HEADER_H\n"
+               "code();\n"
+               "#endif",
+               Style);
+  // Test with include guards.
+  // EXPECT_EQ is used because verifyFormat() calls messUp() which incorrectly
+  // merges lines.
+  verifyFormat("#ifndef HEADER_H\n"
+               "#define HEADER_H\n"
+               "code();\n"
+               "#endif",
+               Style);
+  // Include guards must have a #define with the same variable immediately
+  // after #ifndef.
+  verifyFormat("#ifndef NOT_GUARD\n"
+               "#  define FOO\n"
+               "code();\n"
+               "#endif",
+               Style);
+
+  // Include guards must cover the entire file.
+  verifyFormat("code();\n"
+               "code();\n"
+               "#ifndef NOT_GUARD\n"
+               "#  define NOT_GUARD\n"
+               "code();\n"
+               "#endif",
+               Style);
+  verifyFormat("#ifndef NOT_GUARD\n"
+               "#  define NOT_GUARD\n"
+               "code();\n"
+               "#endif\n"
+               "code();",
+               Style);
+  // Test with trailing blank lines.
+  verifyFormat("#ifndef HEADER_H\n"
+               "#define HEADER_H\n"
+               "code();\n"
+               "#endif\n",
+               Style);
+  // Include guards don't have #else.
+  verifyFormat("#ifndef NOT_GUARD\n"
+               "#  define NOT_GUARD\n"
+               "code();\n"
+               "#else\n"
+               "#endif",
+               Style);
+  verifyFormat("#ifndef NOT_GUARD\n"
+               "#  define NOT_GUARD\n"
+               "code();\n"
+               "#elif FOO\n"
+               "#endif",
+               Style);
+  // FIXME: This doesn't handle the case where there's code between the
+  // #ifndef and #define but all other conditions hold. This is because when
+  // the #define line is parsed, UnwrappedLineParser::Lines doesn't hold the
+  // previous code line yet, so we can't detect it.
+  EXPECT_EQ("#ifndef NOT_GUARD\n"
+            "code();\n"
+            "#define NOT_GUARD\n"
+            "code();\n"
+            "#endif",
+            format("#ifndef NOT_GUARD\n"
+                   "code();\n"
+                   "#  define NOT_GUARD\n"
+                   "code();\n"
+                   "#endif",
+                   Style));
+  // FIXME: This doesn't handle cases where legitimate preprocessor lines may
+  // be outside an include guard. Examples are #pragma once and
+  // #pragma GCC diagnostic, or anything else that does not change the meaning
+  // of the file if it's included multiple times.
+  EXPECT_EQ("#ifdef WIN32\n"
+            "#  pragma once\n"
+            "#endif\n"
+            "#ifndef HEADER_H\n"
+            "#  define HEADER_H\n"
+            "code();\n"
+            "#endif",
+            format("#ifdef WIN32\n"
+                   "#  pragma once\n"
+                   "#endif\n"
+                   "#ifndef HEADER_H\n"
+                   "#define HEADER_H\n"
+                   "code();\n"
+                   "#endif",
+                   Style));
+  // FIXME: This does not detect when there is a single non-preprocessor line
+  // in front of an include-guard-like structure where other conditions hold
+  // because ScopedLineState hides the line.
+  EXPECT_EQ("code();\n"
+            "#ifndef HEADER_H\n"
+            "#define HEADER_H\n"
+            "code();\n"
+            "#endif",
+            format("code();\n"
+                   "#ifndef HEADER_H\n"
+                   "#  define HEADER_H\n"
+                   "code();\n"
+                   "#endif",
+                   Style));
+  // FIXME: The comment indent corrector in TokenAnnotator gets thrown off by
+  // preprocessor indentation.
+  EXPECT_EQ("#if 1\n"
+            "  // comment\n"
+            "#  define A 0\n"
+            "// comment\n"
+            "#  define B 0\n"
+            "#endif",
+            format("#if 1\n"
+                   "// comment\n"
+                   "#  define A 0\n"
+                   "   // comment\n"
+                   "#  define B 0\n"
+                   "#endif",
+                   Style));
+  // Test with tabs.
+  Style.UseTab = FormatStyle::UT_Always;
+  Style.IndentWidth = 8;
+  Style.TabWidth = 8;
+  verifyFormat("#ifdef _WIN32\n"
+               "#\tdefine A 0\n"
+               "#\tifdef VAR2\n"
+               "#\t\tdefine B 1\n"
+               "#\t\tinclude <someheader.h>\n"
+               "#\t\tdefine MACRO          \\\n"
+               "\t\t\tsome_very_long_func_aaaaaaaaaa();\n"
+               "#\tendif\n"
+               "#else\n"
+               "#\tdefine A 1\n"
+               "#endif",
+               Style);
 }
 
 TEST_F(FormatTest, FormatHashIfNotAtStartOfLine) {

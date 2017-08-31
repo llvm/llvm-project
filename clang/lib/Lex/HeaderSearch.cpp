@@ -128,21 +128,24 @@ void HeaderSearch::getHeaderMapFileNames(
     Names.push_back(HM.first->getName());
 }
 
-std::string HeaderSearch::getModuleFileName(Module *Module) {
+std::string HeaderSearch::getCachedModuleFileName(Module *Module) {
   const FileEntry *ModuleMap =
       getModuleMap().getModuleMapFileForUniquing(Module);
-  return getModuleFileName(Module->Name, ModuleMap->getName(),
-                           /*UsePrebuiltPath*/false);
+  return getCachedModuleFileName(Module->Name, ModuleMap->getName());
 }
 
-std::string HeaderSearch::getModuleFileName(StringRef ModuleName,
-                                            StringRef ModuleMapPath,
-                                            bool UsePrebuiltPath) {
-  if (UsePrebuiltPath) {
-    if (HSOpts->PrebuiltModulePaths.empty())
+std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
+                                                    bool FileMapOnly) {
+  // First check the module name to pcm file map.
+  auto i (HSOpts->PrebuiltModuleFiles.find(ModuleName));
+  if (i != HSOpts->PrebuiltModuleFiles.end())
+    return i->second;
+
+  if (FileMapOnly || HSOpts->PrebuiltModulePaths.empty())
       return std::string();
 
-    // Go though each prebuilt module path and try to find the pcm file.
+  // Then go through each prebuilt module directory and try to find the pcm
+  // file.
     for (const std::string &Dir : HSOpts->PrebuiltModulePaths) {
       SmallString<256> Result(Dir);
       llvm::sys::fs::make_absolute(Result);
@@ -154,6 +157,8 @@ std::string HeaderSearch::getModuleFileName(StringRef ModuleName,
     return std::string();
   }
 
+std::string HeaderSearch::getCachedModuleFileName(StringRef ModuleName,
+                                                  StringRef ModuleMapPath) {
   // If we don't have a module cache path or aren't supposed to use one, we
   // can't do anything.
   if (getModuleCachePath().empty())
