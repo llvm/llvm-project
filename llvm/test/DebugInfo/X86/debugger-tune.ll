@@ -33,7 +33,7 @@ source_filename = "test/DebugInfo/X86/debugger-tune.ll"
 !llvm.module.flags = !{!7, !8}
 !llvm.ident = !{!9}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "globalvar", scope: !2, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.7.0 (trunk 238808)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5, imports: !4)
 !3 = !DIFile(filename: "debugger-tune.cpp", directory: "/home/probinson/projects/scratch")

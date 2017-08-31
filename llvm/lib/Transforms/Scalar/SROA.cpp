@@ -4068,7 +4068,14 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
             continue;
           Size = std::min(Size, AbsEnd - Start);
         }
-        FragmentExpr = DIB.createFragmentExpression(Start, Size);
+        // The new, smaller fragment is stenciled out from the old fragment.
+        if (auto OrigFragment = FragmentExpr->getFragmentInfo()) {
+          assert(Start >= OrigFragment->OffsetInBits &&
+                 "new fragment is outside of original fragment");
+          Start -= OrigFragment->OffsetInBits;
+        }
+        FragmentExpr =
+            DIExpression::createFragmentExpression(Expr, Start, Size);
       }
 
       // Remove any existing dbg.declare intrinsic describing the same alloca.

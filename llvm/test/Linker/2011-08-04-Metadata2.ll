@@ -20,7 +20,7 @@ attributes #0 = { nounwind ssp uwtable }
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!7}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x", scope: !2, file: !3, line: 1, type: !6, isLocal: true, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.0 ()", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5)
 !3 = !DIFile(filename: "/tmp/two.c", directory: "/Volumes/Lalgate/Slate/D")

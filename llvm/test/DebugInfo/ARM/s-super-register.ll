@@ -4,8 +4,7 @@ target triple = "thumbv7-apple-macosx10.6.7"
 
 ; The S registers on ARM are expressed as pieces of their super-registers in DWARF.
 ;
-; 0x90   DW_OP_regx of super-register
-; CHECK:            Location description: 90
+; CHECK: DW_OP_regx
 
 define void @_Z3foov() optsize ssp !dbg !1 {
 entry:

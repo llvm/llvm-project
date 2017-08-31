@@ -29,7 +29,7 @@
 ; The address of the global 'glbl', followed by DW_OP_stack_value (9f), to use
 ; the value immediately, rather than indirecting through the address.
 
-; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]{{ *}}(<0xa> 03 00 00 00 00 00 00 00 00 9f )
+; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]{{ *}}(DW_OP_addr 0x0, DW_OP_stack_value)
 ; CHECK-NOT: NULL
 
 ; CHECK: DW_TAG_GNU_template_template_param
@@ -91,11 +91,11 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !llvm.module.flags = !{!14, !15}
 !llvm.ident = !{!16}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "glbl", scope: null, file: !2, line: 3, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "template.cpp", directory: "/tmp/dbginfo")
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!4 = !DIGlobalVariableExpression(var: !5)
+!4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
 !5 = !DIGlobalVariable(name: "n", scope: null, file: !2, line: 4, type: !6, isLocal: false, isDefinition: true)
 !6 = !DICompositeType(tag: DW_TAG_structure_type, name: "nested", scope: !7, file: !2, line: 2, size: 8, align: 8, elements: !8, identifier: "_ZTSN6y_implIiE6nestedE")
 !7 = !DICompositeType(tag: DW_TAG_structure_type, name: "y_impl<int>", file: !2, line: 2, size: 8, align: 8, elements: !8, templateParams: !9, identifier: "_ZTS6y_implIiE")

@@ -1,7 +1,5 @@
 ; RUN: llc -march=mips -mcpu=mips32r2 -O1 -filetype=obj -relocation-model=pic <%s | \
-; RUN:    llvm-dwarfdump -debug-dump=all - | FileCheck %s -check-prefix=F0
-; RUN: llc -march=mips -mcpu=mips32r2 -O1 -filetype=obj -relocation-model=pic <%s | \
-; RUN:    llvm-dwarfdump -debug-dump=all - | FileCheck %s -check-prefix=F1
+; RUN:    llvm-dwarfdump -debug-dump=all - | FileCheck %s
 
 ; void foo(int *);
 ;
@@ -22,15 +20,12 @@ declare void @llvm.lifetime.end(i64, i8* nocapture)
 
 declare void @foo(i32*)
 
-; F0: DW_AT_name {{.*}}"e"
-; F0: DW_TAG_variable
-; F0-NEXT: DW_AT_location [DW_FORM_sec_offset]   ([[LOC:.*]])
-; F0-NEXT: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
-;
-; x -> DW_OP_reg1(51)
-; F0: [[LOC]]: Beginning address offset: 0x0000000000000028
-; F0:             Ending address offset: 0x000000000000002c
-; F0:              Location description: 51
+; CHECK: DW_AT_name {{.*}}"e"
+; CHECK: DW_TAG_variable
+; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset] (
+; CHECK-NEXT:   0x0000000000000028 - 0x000000000000002c: DW_OP_reg1 AT_64
+; CHECK-NEXT:   0x000000000000002c - 0x0000000000000048: DW_OP_breg29 SP_64+16, DW_OP_deref)
+; CHECK-NEXT: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
 
 define i32 @f0(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !4 {
 entry:
@@ -57,16 +52,11 @@ entry:
 }
 
 
-; F1: DW_AT_name {{.*}}"x"
-; F1: DW_AT_name {{.*}}"e"
-; F1: DW_TAG_variable
-; F1-NEXT: DW_AT_location [DW_FORM_sec_offset]   ([[LOC:.*]])
-; F1-NEXT: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
-
-; x -> DW_OP_reg1(51)
-; F1: [[LOC]]: Beginning address offset: 0x0000000000000080
-; F1:             Ending address offset: 0x0000000000000084
-; F1:              Location description: 51
+; CHECK: DW_TAG_variable
+; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]  (
+; CHECK-NEXT:   0x0000000000000080 - 0x0000000000000084: DW_OP_reg1 AT_64
+; CHECK-NEXT:   0x0000000000000084 - 0x0000000000000098: DW_OP_breg29 SP_64+16, DW_OP_deref)
+; CHECK-NEXT: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
 
 define i32 @f1(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !15 {
 entry:

@@ -1,7 +1,7 @@
 RUN: llvm-dwp %p/../Inputs/type_dedup/a.dwo %p/../Inputs/type_dedup/b.dwo -o %t
 RUN: llvm-dwarfdump %t | FileCheck %s
-RUN: llvm-dwp %p/../Inputs/type_dedup/b.dwo -o %T/b.dwp
-RUN: llvm-dwp %p/../Inputs/type_dedup/a.dwo %T/b.dwp -o %t
+RUN: llvm-dwp %p/../Inputs/type_dedup/b.dwo -o %tb.dwp
+RUN: llvm-dwp %p/../Inputs/type_dedup/a.dwo %tb.dwp -o %t
 RUN: llvm-dwarfdump %t | FileCheck %s
 
 a.cpp:

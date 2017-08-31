@@ -85,7 +85,7 @@ attributes #3 = { noreturn nounwind }
 !llvm.module.flags = !{!19, !20}
 !llvm.ident = !{!21}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 4, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "test.cpp", directory: "")
 !3 = !DICompositeType(tag: DW_TAG_structure_type, name: "A", file: !2, line: 1, size: 192, align: 64, elements: !4, identifier: "_ZTS1A")
@@ -97,7 +97,7 @@ attributes #3 = { noreturn nounwind }
 !9 = !DIBasicType(name: "double", size: 64, align: 64, encoding: DW_ATE_float)
 !10 = !{!11}
 !11 = !DISubrange(count: 2)
-!12 = !DIGlobalVariableExpression(var: !13)
+!12 = !DIGlobalVariableExpression(var: !13, expr: !DIExpression())
 !13 = !DIGlobalVariable(name: "b", scope: null, file: !2, line: 4, type: !3, isLocal: false, isDefinition: true)
 !14 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !15, producer: "clang version 3.7.0 (trunk 227480) (llvm/trunk 227517)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !16, retainedTypes: !17, globals: !18, imports: !16)
 !15 = !DIFile(filename: "<stdin>", directory: "")

@@ -68,7 +68,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!11, !12}
 !llvm.ident = !{!13}
 
-!0 = distinct !DIGlobalVariableExpression(var: !1)
+!0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "s0", scope: !2, file: !3, line: 10, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_ObjC, file: !3, producer: "clang version 4.0.0 (http://llvm.org/git/clang.git 9ce5220b821054019059c2ac4a9b132c7723832d) (http://llvm.org/git/llvm.git 9a6298be89ce0359b151c0a37af2776a12c69e85)", isOptimized: false, runtimeVersion: 1, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "test.m", directory: "/tmp")

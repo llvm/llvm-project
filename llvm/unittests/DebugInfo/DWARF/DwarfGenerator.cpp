@@ -153,7 +153,7 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
 
   MOFI.reset(new MCObjectFileInfo);
   MC.reset(new MCContext(MAI.get(), MRI.get(), MOFI.get()));
-  MOFI->InitMCObjectFileInfo(TheTriple, /*PIC*/ false, CodeModel::Default, *MC);
+  MOFI->InitMCObjectFileInfo(TheTriple, /*PIC*/ false, *MC);
 
   MCTargetOptions Options;
   MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, "", Options);

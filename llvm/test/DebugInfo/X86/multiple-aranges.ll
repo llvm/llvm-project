@@ -41,11 +41,11 @@ target triple = "x86_64-unknown-linux-gnu"
 !llvm.dbg.cu = !{!7, !10}
 !llvm.module.flags = !{!12, !13}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "kittens", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "test1.c", directory: "/home/kayamon")
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!4 = !DIGlobalVariableExpression(var: !5)
+!4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
 !5 = !DIGlobalVariable(name: "rainbows", scope: null, file: !6, line: 1, type: !3, isLocal: false, isDefinition: true)
 !6 = !DIFile(filename: "test2.c", directory: "/home/kayamon")
 !7 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang version 3.4 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !8, retainedTypes: !8, globals: !9, imports: !8)

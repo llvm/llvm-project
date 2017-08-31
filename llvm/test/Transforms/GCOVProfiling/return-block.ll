@@ -1,23 +1,24 @@
 ; Inject metadata to set the .gcno file location
-; RUN: echo '!19 = !{!"%/T/return-block.ll", !0}' > %t1
-; RUN: cat %s %t1 > %t2
+; RUN: rm -rf %t && mkdir -p %t
+; RUN: echo '!19 = !{!"%/t/return-block.ll", !0}' > %t/1
+; RUN: cat %s %t/1 > %t/2
 
 ; By default, the return block is last.
-; RUN: opt -insert-gcov-profiling -disable-output %t2
-; RUN: llvm-cov gcov -n -dump %T/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-LAST %s
+; RUN: opt -insert-gcov-profiling -disable-output %t/2
+; RUN: llvm-cov gcov -n -dump %t/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-LAST %s
 
 ; But we can optionally emit it second, to match newer gcc versions.
-; RUN: opt -insert-gcov-profiling -gcov-exit-block-before-body -disable-output %t2
-; RUN: llvm-cov gcov -n -dump %T/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-SECOND %s
-; RUN: rm  %T/return-block.gcno
+; RUN: opt -insert-gcov-profiling -gcov-exit-block-before-body -disable-output %t/2
+; RUN: llvm-cov gcov -n -dump %t/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-SECOND %s
+; RUN: rm  %t/return-block.gcno
 
 ; By default, the return block is last.
-; RUN: opt -passes=insert-gcov-profiling -disable-output %t2
-; RUN: llvm-cov gcov -n -dump %T/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-LAST %s
+; RUN: opt -passes=insert-gcov-profiling -disable-output %t/2
+; RUN: llvm-cov gcov -n -dump %t/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-LAST %s
 
 ; But we can optionally emit it second, to match newer gcc versions.
-; RUN: opt -passes=insert-gcov-profiling -gcov-exit-block-before-body -disable-output %t2
-; RUN: llvm-cov gcov -n -dump %T/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-SECOND %s
+; RUN: opt -passes=insert-gcov-profiling -gcov-exit-block-before-body -disable-output %t/2
+; RUN: llvm-cov gcov -n -dump %t/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-SECOND %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -61,7 +62,7 @@ attributes #2 = { nounwind }
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
 !8 = !{!9}
-!9 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "A", line: 3, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10))
+!9 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "A", line: 3, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10), expr: !DIExpression())
 !10 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !11 = !{i32 2, !"Dwarf Version", i32 4}
 !12 = !{i32 2, !"Debug Info Version", i32 3}

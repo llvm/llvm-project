@@ -9,24 +9,17 @@ target triple = "thumbv7-apple-darwin10"
 @x3 = internal global i8 1, align 1, !dbg !6
 @x4 = internal global i8 1, align 1, !dbg !8
 @x5 = global i8 1, align 1, !dbg !10
-; Check debug info output for merged global.
-; DW_AT_location
-; 0x03 DW_OP_addr
-; 0x.. .long __MergedGlobals
-; 0x10 DW_OP_constu
-; 0x.. offset
-; 0x22 DW_OP_plus
 
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK:    DW_AT_name {{.*}} "x1"
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:    DW_AT_location [DW_FORM_exprloc]        (<0x5> 03 [[ADDR:.. .. .. ..]]   )
+; CHECK:    DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr [[ADDR:0x[0-9a-fA-F]+]])
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK:    DW_AT_name {{.*}} "x2"
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:    DW_AT_location [DW_FORM_exprloc]        (<0x7> 03 [[ADDR]] 23 01  )
+; CHECK:    DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr [[ADDR]], DW_OP_plus_uconst 0x1)
 
 ; Function Attrs: nounwind optsize
 define zeroext i8 @get1(i8 zeroext %a) #0 !dbg !16 {
@@ -90,17 +83,17 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!12}
 !llvm.module.flags = !{!15}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x1", scope: !2, file: !2, line: 3, type: !3, isLocal: true, isDefinition: true)
 !2 = !DIFile(filename: "foo.c", directory: "/tmp/")
 !3 = !DIBasicType(name: "_Bool", size: 8, align: 8, encoding: DW_ATE_boolean)
-!4 = !DIGlobalVariableExpression(var: !5)
+!4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
 !5 = !DIGlobalVariable(name: "x2", scope: !2, file: !2, line: 6, type: !3, isLocal: true, isDefinition: true)
-!6 = !DIGlobalVariableExpression(var: !7)
+!6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !7 = !DIGlobalVariable(name: "x3", scope: !2, file: !2, line: 9, type: !3, isLocal: true, isDefinition: true)
-!8 = !DIGlobalVariableExpression(var: !9)
+!8 = !DIGlobalVariableExpression(var: !9, expr: !DIExpression())
 !9 = !DIGlobalVariable(name: "x4", scope: !2, file: !2, line: 12, type: !3, isLocal: true, isDefinition: true)
-!10 = !DIGlobalVariableExpression(var: !11)
+!10 = !DIGlobalVariableExpression(var: !11, expr: !DIExpression())
 !11 = !DIGlobalVariable(name: "x5", scope: !2, file: !2, line: 15, type: !3, isLocal: false, isDefinition: true)
 !12 = distinct !DICompileUnit(language: DW_LANG_C89, file: !2, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 2369.8)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !13, retainedTypes: !13, globals: !14, imports: !13)
 !13 = !{}

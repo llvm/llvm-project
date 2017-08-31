@@ -1,5 +1,5 @@
-# RUN: llvm-mc -triple=powerpc-unknown-linux-gnu -filetype=obj -o %T/ppc32_elf_rel_addr16.o %s
-# RUN: llvm-rtdyld -triple=powerpc-unknown-linux-gnu -verify -check=%s %T/ppc32_elf_rel_addr16.o
+# RUN: llvm-mc -triple=powerpc-unknown-linux-gnu -filetype=obj -o %t %s
+# RUN: llvm-rtdyld -triple=powerpc-unknown-linux-gnu -verify -check=%s %t
 	.text
 	.file	"ppc32_elf_rel_addr16.ll"
 	.globl	lookup

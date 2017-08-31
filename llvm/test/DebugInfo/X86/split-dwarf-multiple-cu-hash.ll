@@ -1,6 +1,7 @@
-; RUN: %llc_dwarf -split-dwarf-file=foo.dwo  %s -filetype=obj -o %T/a.o
-; RUN: %llc_dwarf -split-dwarf-file=bar.dwo  %s -filetype=obj -o %T/b.o
-; RUN: llvm-dwarfdump -debug-dump=info %T/a.o %T/b.o | FileCheck %s
+; RUN: rm -rf %t && mkdir -p %t
+; RUN: %llc_dwarf -split-dwarf-file=foo.dwo  %s -filetype=obj -o %t/a.o
+; RUN: %llc_dwarf -split-dwarf-file=bar.dwo  %s -filetype=obj -o %t/b.o
+; RUN: llvm-dwarfdump -debug-dump=info %t/a.o %t/b.o | FileCheck %s
 
 ; CHECK: dwo_id {{.*}}([[HASH:.*]])
 ; CHECK-NOT: dwo_id {{.*}}([[HASH]])

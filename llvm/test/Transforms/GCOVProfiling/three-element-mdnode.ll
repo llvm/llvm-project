@@ -1,9 +1,10 @@
-; RUN: echo '!10 = !{!"%/T/aaa.gcno", !"%/T/bbb.gcda", !0}' > %t1
-; RUN: cat %s %t1 > %t2
-; RUN: opt -insert-gcov-profiling -S -o %t3 < %t2
-; RUN: grep _Z3foov %T/aaa.gcno
-; RUN: grep bbb.gcda %t3
-; RUN: rm %T/aaa.gcno
+; RUN: rm -rf %t && mkdir -p %t
+; RUN: echo '!10 = !{!"%/t/aaa.gcno", !"%/t/bbb.gcda", !0}' > %t/1
+; RUN: cat %s %t/1 > %t/2
+; RUN: opt -insert-gcov-profiling -S -o %t/3 < %t/2
+; RUN: grep _Z3foov %t/aaa.gcno
+; RUN: grep bbb.gcda %t/3
+; RUN: rm %t/aaa.gcno
 
 define void @_Z3foov() !dbg !5 {
 entry:

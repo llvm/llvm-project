@@ -34,7 +34,7 @@ target triple = "i686-pc-windows-msvc18.0.0"
 !llvm.module.flags = !{!11, !12}
 !llvm.ident = !{!13}
 
-!0 = distinct !DIGlobalVariableExpression(var: !1)
+!0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "e", linkageName: "\01?e@@3W4E@@A", scope: !2, file: !6, line: 2, type: !5, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.9.0 (trunk 272790) (llvm/trunk 272813)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !10)
 !3 = !DIFile(filename: "-", directory: "/")

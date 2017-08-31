@@ -22,13 +22,9 @@
 ; argc is the first formal parameter.
 ; DWARF: .debug_info contents:
 ; DWARF:  DW_TAG_formal_parameter
-; DWARF-NEXT:    DW_AT_location [DW_FORM_sec_offset]   ([[argc_loc_offset:0x.*]])
+; DWARF-NEXT:    DW_AT_location [DW_FORM_sec_offset]   ({{0x.*}}
+; DWARF-NEXT:      0x0000000000000000 - 0x0000000000000013: DW_OP_reg2 RCX)
 ; DWARF-NEXT:    DW_AT_name [DW_FORM_strp]     {{.*}} "argc"
-
-; DWARF: .debug_loc contents:
-; DWARF: [[argc_loc_offset]]: Beginning address offset: 0x0000000000000000
-; DWARF-NEXT:                    Ending address offset: 0x0000000000000013
-; DWARF-NEXT:                     Location description: 52
 
 ; ModuleID = 't.cpp'
 source_filename = "test/DebugInfo/X86/dbg-value-regmask-clobber.ll"
@@ -75,7 +71,7 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!8, !9, !10}
 !llvm.ident = !{!11}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x", scope: !2, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.9.0 (trunk 260617) (llvm/trunk 260619)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
