@@ -53,6 +53,8 @@ STATISTIC(NumPatternTotal, "Total number of patterns");
 STATISTIC(NumPatternImported, "Number of patterns imported from SelectionDAG");
 STATISTIC(NumPatternImportsSkipped, "Number of SelectionDAG imports skipped");
 STATISTIC(NumPatternEmitted, "Number of patterns emitted");
+/// A unique identifier for a MatchTable.
+static unsigned CurrentMatchTableID = 0;
 
 cl::OptionCategory GlobalISelEmitterCat("Options for -gen-global-isel");
 
@@ -301,9 +303,6 @@ class MatchTable {
   /// Tracks the sum of MatchTableRecord::NumElements as the table is built.
   unsigned CurrentSize;
 
-  /// A unique identifier for a MatchTable label.
-  static unsigned CurrentLabelID;
-
 public:
   static MatchTableRecord LineBreak;
   static MatchTableRecord Comment(StringRef Comment) {
@@ -339,7 +338,7 @@ public:
                                 MatchTableRecord::MTRF_LineBreakFollows);
   }
   static MatchTableRecord JumpTarget(unsigned LabelID) {
-    return MatchTableRecord(LabelID, "Label " + llvm::to_string(LabelID), 1,
+    return MatchTableRecord(LabelID, "Label " + llvm::to_string(LabelID), 0,
                             MatchTableRecord::MTRF_JumpTarget |
                                 MatchTableRecord::MTRF_Comment |
                                 MatchTableRecord::MTRF_CommaFollows);
@@ -354,10 +353,8 @@ public:
     CurrentSize += Value.size();
   }
 
-  unsigned allocateLabelID() const { return CurrentLabelID++; }
-
   void defineLabel(unsigned LabelID) {
-    LabelMap.insert(std::make_pair(LabelID, CurrentSize));
+    LabelMap.insert(std::make_pair(LabelID, CurrentSize + 1));
   }
 
   unsigned getLabelIndex(unsigned LabelID) const {
@@ -366,9 +363,7 @@ public:
     return I->second;
   }
 
-  void emitUse(raw_ostream &OS) const { OS << "MatchTable" << ID; }
-
-  void emitDeclaration(raw_ostream &OS) const {
+  void emit(raw_ostream &OS) const {
     unsigned Indentation = 4;
     OS << "  const static int64_t MatchTable" << ID << "[] = {";
     LineBreak.emit(OS, true, *this);
@@ -398,8 +393,6 @@ public:
     OS << "};\n";
   }
 };
-
-unsigned MatchTable::CurrentLabelID = 0;
 
 MatchTableRecord MatchTable::LineBreak = {
     None, "" /* Emit String */, 0 /* Elements */,
@@ -441,6 +434,11 @@ void MatchTableRecord::emit(raw_ostream &OS, bool LineBreakIsNextAfterThis,
 MatchTable &operator<<(MatchTable &Table, const MatchTableRecord &Value) {
   Table.push_back(Value);
   return Table;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const MatchTable &Table) {
+  Table.emit(OS);
+  return OS;
 }
 
 //===- Matchers -----------------------------------------------------------===//
@@ -491,7 +489,7 @@ public:
 
   void emitCaptureOpcodes(MatchTable &Table);
 
-  void emit(MatchTable &Table);
+  void emit(raw_ostream &OS);
 
   /// Compare the priority of this object and B.
   ///
@@ -1550,7 +1548,7 @@ void RuleMatcher::emitCaptureOpcodes(MatchTable &Table) {
   Matchers.front()->emitCaptureOpcodes(Table, *this, InsnVarID);
 }
 
-void RuleMatcher::emit(MatchTable &Table) {
+void RuleMatcher::emit(raw_ostream &OS) {
   if (Matchers.empty())
     llvm_unreachable("Unexpected empty matcher!");
 
@@ -1565,9 +1563,9 @@ void RuleMatcher::emit(MatchTable &Table) {
   // on some targets but we don't need to make use of that yet.
   assert(Matchers.size() == 1 && "Cannot handle multi-root matchers yet");
 
-  unsigned LabelID = Table.allocateLabelID();
+  MatchTable Table(CurrentMatchTableID);
   Table << MatchTable::Opcode("GIM_Try", +1)
-        << MatchTable::Comment("On fail goto") << MatchTable::JumpTarget(LabelID)
+        << MatchTable::Comment("On fail goto") << MatchTable::JumpTarget(0)
         << MatchTable::LineBreak;
 
   if (!RequiredFeatures.empty()) {
@@ -1641,7 +1639,16 @@ void RuleMatcher::emit(MatchTable &Table) {
   for (const auto &MA : Actions)
     MA->emitActionOpcodes(Table, *this, 0);
   Table << MatchTable::Opcode("GIR_Done", -1) << MatchTable::LineBreak
-        << MatchTable::Label(LabelID);
+        << MatchTable::Label(0) << MatchTable::Opcode("GIM_Reject")
+        << MatchTable::LineBreak;
+  OS << Table
+     << "  State.MIs.resize(1);\n"
+     << "  DEBUG(dbgs() << \"Processing MatchTable" << CurrentMatchTableID
+     << "\\n\");\n"
+     << "  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable"
+     << CurrentMatchTableID << ", TII, MRI, TRI, RBI, AvailableFeatures)) {\n"
+     << "    return true;\n"
+     << "  }\n\n";
 }
 
 bool RuleMatcher::isHigherPriorityThan(const RuleMatcher &B) const {
@@ -2491,18 +2498,13 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n\n";
 
-  MatchTable Table(0);
   for (auto &Rule : Rules) {
-    Rule.emit(Table);
+    Rule.emit(OS);
+    ++CurrentMatchTableID;
     ++NumPatternEmitted;
+    assert(CurrentMatchTableID == NumPatternEmitted &&
+           "Statistic deviates from number of emitted tables");
   }
-  Table << MatchTable::Opcode("GIM_Reject") << MatchTable::LineBreak;
-  Table.emitDeclaration(OS);
-  OS << "  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, ";
-  Table.emitUse(OS);
-  OS << ", TII, MRI, TRI, RBI, AvailableFeatures)) {\n"
-     << "    return true;\n"
-     << "  }\n\n";
 
   OS << "  return false;\n"
      << "}\n"
