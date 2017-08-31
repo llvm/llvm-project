@@ -13,4 +13,4 @@ config.test_source_root = config.test_exec_root
 
 # Do not patch the XRay unit tests pre-main, and also make the error logging
 # verbose to get a more accurate error logging mechanism.
-config.environment['XRAY_OPTIONS'] = 'patch_premain=false verbose=1'
+config.environment['XRAY_OPTIONS'] = 'patch_premain=false'

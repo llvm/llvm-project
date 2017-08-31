@@ -17,6 +17,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
+#include "AArch64TargetObjectFile.h"
 #include "InstPrinter/AArch64InstPrinter.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
@@ -208,6 +209,29 @@ void AArch64AsmPrinter::EmitEndOfAsmFile(Module &M) {
     // generates code that does this, it is always safe to set.
     OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
     SM.serializeToStackMapSection();
+  }
+
+  if (TT.isOSBinFormatCOFF()) {
+    const auto &TLOF =
+        static_cast<const TargetLoweringObjectFileCOFF &>(getObjFileLowering());
+
+    std::string Flags;
+    raw_string_ostream OS(Flags);
+
+    for (const auto &Function : M)
+      TLOF.emitLinkerFlagsForGlobal(OS, &Function);
+    for (const auto &Global : M.globals())
+      TLOF.emitLinkerFlagsForGlobal(OS, &Global);
+    for (const auto &Alias : M.aliases())
+      TLOF.emitLinkerFlagsForGlobal(OS, &Alias);
+
+    OS.flush();
+
+    // Output collected flags
+    if (!Flags.empty()) {
+      OutStreamer->SwitchSection(TLOF.getDrectveSection());
+      OutStreamer->EmitBytes(Flags);
+    }
   }
 }
 

@@ -185,8 +185,8 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
 
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
     CI.getFrontendOpts().OutputFile =
-        HS.getModuleFileName(CI.getLangOpts().CurrentModule, ModuleMapFile,
-                             /*UsePrebuiltPath=*/false);
+        HS.getCachedModuleFileName(CI.getLangOpts().CurrentModule,
+                                   ModuleMapFile);
   }
 
   // We use createOutputFile here because this is exposed via libclang, and we

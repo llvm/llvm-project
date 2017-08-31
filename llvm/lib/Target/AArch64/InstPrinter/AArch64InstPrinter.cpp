@@ -1331,3 +1331,12 @@ void AArch64InstPrinter::printSIMDType10Operand(const MCInst *MI, unsigned OpNo,
   uint64_t Val = AArch64_AM::decodeAdvSIMDModImmType10(RawVal);
   O << format("#%#016llx", Val);
 }
+
+template<int64_t Angle, int64_t Remainder>
+void AArch64InstPrinter::printComplexRotationOp(const MCInst *MI, unsigned OpNo,
+                                                const MCSubtargetInfo &STI,
+                                                raw_ostream &O) {
+  unsigned Val = MI->getOperand(OpNo).getImm();
+  O << "#" << (Val * Angle) + Remainder;
+}
+

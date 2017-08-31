@@ -1505,6 +1505,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
       for (auto I : M.Signature)
         Record.push_back(I);
 
+      AddString(M.ModuleName, Record);
       AddPath(M.FileName, Record);
     }
     Stream.EmitRecord(IMPORTS, Record);
@@ -4779,7 +4780,8 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     // each of those modules were mapped into our own offset/ID space, so that
     // the reader can build the appropriate mapping to its own offset/ID space.
     // The map consists solely of a blob with the following format:
-    // *(module-name-len:i16 module-name:len*i8
+    // *(module-kind:i8
+    //   module-name-len:i16 module-name:len*i8
     //   source-location-offset:i32
     //   identifier-id:i32
     //   preprocessed-entity-id:i32
@@ -4790,6 +4792,10 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     //   c++-base-specifiers-id:i32
     //   type-id:i32)
     // 
+    // module-kind is the ModuleKind enum value. If it is MK_PrebuiltModule or
+    // MK_ExplicitModule, then the module-name is the module name. Otherwise,
+    // it is the module file name.
+    //
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(MODULE_OFFSET_MAP));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
@@ -4800,9 +4806,13 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
       for (ModuleFile &M : Chain->ModuleMgr) {
         using namespace llvm::support;
         endian::Writer<little> LE(Out);
-        StringRef FileName = M.FileName;
-        LE.write<uint16_t>(FileName.size());
-        Out.write(FileName.data(), FileName.size());
+        LE.write<uint8_t>(static_cast<uint8_t>(M.Kind));
+        StringRef Name =
+          M.Kind == MK_PrebuiltModule || M.Kind == MK_ExplicitModule
+          ? M.ModuleName
+          : M.FileName;
+        LE.write<uint16_t>(Name.size());
+        Out.write(Name.data(), Name.size());
 
         // Note: if a base ID was uint max, it would not be possible to load
         // another module after it or have more than one entity inside it.

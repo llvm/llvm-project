@@ -8,9 +8,15 @@ define <2 x i64> @bar(<2 x i64> %a, <2 x i64> %b) nounwind readnone {
 ; CHECK: add.2d	v[[REG:[0-9]+]], v0, v1
 ; CHECK: add	d[[REG3:[0-9]+]], d[[REG]], d1
 ; CHECK: sub	d[[REG2:[0-9]+]], d[[REG]], d1
-; CHECK-NOT: fmov
+; Without advanced copy optimization, we end up with cross register
+; banks copies that cannot be coalesced.
+; CHECK-NOOPT: fmov [[COPY_REG3:x[0-9]+]], d[[REG3]]
+; With advanced copy optimization, we end up with just one copy
+; to insert the computed high part into the V register. 
+; CHECK-OPT-NOT: fmov
 ; CHECK: fmov [[COPY_REG2:x[0-9]+]], d[[REG2]]
-; CHECK-NOT: fmov
+; CHECK-NOOPT: fmov d0, [[COPY_REG3]]
+; CHECK-OPT-NOT: fmov
 ; CHECK: ins.d v0[1], [[COPY_REG2]]
 ; CHECK-NEXT: ret
 ;
@@ -18,9 +24,11 @@ define <2 x i64> @bar(<2 x i64> %a, <2 x i64> %b) nounwind readnone {
 ; GENERIC: add	v[[REG:[0-9]+]].2d, v0.2d, v1.2d
 ; GENERIC: add	d[[REG3:[0-9]+]], d[[REG]], d1
 ; GENERIC: sub	d[[REG2:[0-9]+]], d[[REG]], d1
-; GENERIC-NOT: fmov
+; GENERIC-NOOPT: fmov [[COPY_REG3:x[0-9]+]], d[[REG3]]
+; GENERIC-OPT-NOT: fmov
 ; GENERIC: fmov [[COPY_REG2:x[0-9]+]], d[[REG2]]
-; GENERIC-NOT: fmov
+; GENERIC-NOOPT: fmov d0, [[COPY_REG3]]
+; GENERIC-OPT-NOT: fmov
 ; GENERIC: ins v0.d[1], [[COPY_REG2]]
 ; GENERIC-NEXT: ret
   %add = add <2 x i64> %a, %b

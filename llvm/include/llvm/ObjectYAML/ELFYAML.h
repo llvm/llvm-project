@@ -161,7 +161,7 @@ struct Relocation {
   llvm::yaml::Hex64 Offset;
   int64_t Addend;
   ELF_REL Type;
-  StringRef Symbol;
+  Optional<StringRef> Symbol;
 };
 
 struct RelocationSection : Section {

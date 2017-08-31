@@ -7,7 +7,7 @@
 // UNSUPPORTED: android
 
 #include <stdlib.h>
-#if !defined(__APPLE__) && !defined(__FreeBSD__)
+#if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(__NetBSD__)
 #include <malloc.h>
 #endif
 int *p1 = (int*)malloc(900);

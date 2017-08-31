@@ -450,23 +450,34 @@ struct LoopStructure {
   // equivalent to:
   //
   // intN_ty inc = IndVarIncreasing ? 1 : -1;
-  // pred_ty predicate = IndVarIncreasing ? ICMP_SLT : ICMP_SGT;
+  // pred_ty predicate = IndVarIncreasing
+  //                         ? IsSignedPredicate ? ICMP_SLT : ICMP_ULT
+  //                         : IsSignedPredicate ? ICMP_SGT : ICMP_UGT;
   //
-  // for (intN_ty iv = IndVarStart; predicate(iv, LoopExitAt); iv = IndVarNext)
+  //
+  // for (intN_ty iv = IndVarStart; predicate(IndVarBase, LoopExitAt);
+  //      iv = IndVarNext)
   //   ... body ...
+  //
+  // Here IndVarBase is either current or next value of the induction variable.
+  // in the former case, IsIndVarNext = false and IndVarBase points to the
+  // Phi node of the induction variable. Otherwise, IsIndVarNext = true and
+  // IndVarBase points to IV increment instruction.
+  //
 
-  Value *IndVarNext;
+  Value *IndVarBase;
   Value *IndVarStart;
   Value *IndVarStep;
   Value *LoopExitAt;
   bool IndVarIncreasing;
   bool IsSignedPredicate;
+  bool IsIndVarNext;
 
   LoopStructure()
       : Tag(""), Header(nullptr), Latch(nullptr), LatchBr(nullptr),
-        LatchExit(nullptr), LatchBrExitIdx(-1), IndVarNext(nullptr),
+        LatchExit(nullptr), LatchBrExitIdx(-1), IndVarBase(nullptr),
         IndVarStart(nullptr), IndVarStep(nullptr), LoopExitAt(nullptr),
-        IndVarIncreasing(false), IsSignedPredicate(true) {}
+        IndVarIncreasing(false), IsSignedPredicate(true), IsIndVarNext(false) {}
 
   template <typename M> LoopStructure map(M Map) const {
     LoopStructure Result;
@@ -476,12 +487,13 @@ struct LoopStructure {
     Result.LatchBr = cast<BranchInst>(Map(LatchBr));
     Result.LatchExit = cast<BasicBlock>(Map(LatchExit));
     Result.LatchBrExitIdx = LatchBrExitIdx;
-    Result.IndVarNext = Map(IndVarNext);
+    Result.IndVarBase = Map(IndVarBase);
     Result.IndVarStart = Map(IndVarStart);
     Result.IndVarStep = Map(IndVarStep);
     Result.LoopExitAt = Map(LoopExitAt);
     Result.IndVarIncreasing = IndVarIncreasing;
     Result.IsSignedPredicate = IsSignedPredicate;
+    Result.IsIndVarNext = IsIndVarNext;
     return Result;
   }
 
@@ -829,21 +841,42 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
     return false;
   };
 
-  // `ICI` is interpreted as taking the backedge if the *next* value of the
-  // induction variable satisfies some constraint.
+  // `ICI` can either be a comparison against IV or a comparison of IV.next.
+  // Depending on the interpretation, we calculate the start value differently.
 
-  const SCEVAddRecExpr *IndVarNext = cast<SCEVAddRecExpr>(LeftSCEV);
+  // Pair {IndVarBase; IsIndVarNext} semantically designates whether the latch
+  // comparisons happens against the IV before or after its value is
+  // incremented. Two valid combinations for them are:
+  //
+  // 1) { phi [ iv.start, preheader ], [ iv.next, latch ]; false },
+  // 2) { iv.next; true }.
+  //
+  // The latch comparison happens against IndVarBase which can be either current
+  // or next value of the induction variable.
+  const SCEVAddRecExpr *IndVarBase = cast<SCEVAddRecExpr>(LeftSCEV);
   bool IsIncreasing = false;
   bool IsSignedPredicate = true;
+  bool IsIndVarNext = false;
   ConstantInt *StepCI;
-  if (!IsInductionVar(IndVarNext, IsIncreasing, StepCI)) {
+  if (!IsInductionVar(IndVarBase, IsIncreasing, StepCI)) {
     FailureReason = "LHS in icmp not induction variable";
     return None;
   }
 
-  const SCEV *StartNext = IndVarNext->getStart();
-  const SCEV *Addend = SE.getNegativeSCEV(IndVarNext->getStepRecurrence(SE));
-  const SCEV *IndVarStart = SE.getAddExpr(StartNext, Addend);
+  const SCEV *IndVarStart = nullptr;
+  // TODO: Currently we only handle comparison against IV, but we can extend
+  // this analysis to be able to deal with comparison against sext(iv) and such.
+  if (isa<PHINode>(LeftValue) &&
+      cast<PHINode>(LeftValue)->getParent() == Header)
+    // The comparison is made against current IV value.
+    IndVarStart = IndVarBase->getStart();
+  else {
+    // Assume that the comparison is made against next IV value.
+    const SCEV *StartNext = IndVarBase->getStart();
+    const SCEV *Addend = SE.getNegativeSCEV(IndVarBase->getStepRecurrence(SE));
+    IndVarStart = SE.getAddExpr(StartNext, Addend);
+    IsIndVarNext = true;
+  }
   const SCEV *Step = SE.getSCEV(StepCI);
 
   ConstantInt *One = ConstantInt::get(IndVarTy, 1);
@@ -1023,10 +1056,11 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
   Result.LatchBrExitIdx = LatchBrExitIdx;
   Result.IndVarStart = IndVarStartV;
   Result.IndVarStep = StepCI;
-  Result.IndVarNext = LeftValue;
+  Result.IndVarBase = LeftValue;
   Result.IndVarIncreasing = IsIncreasing;
   Result.LoopExitAt = RightValue;
   Result.IsSignedPredicate = IsSignedPredicate;
+  Result.IsIndVarNext = IsIndVarNext;
 
   FailureReason = nullptr;
 
@@ -1273,12 +1307,12 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   Value *TakeBackedgeLoopCond = nullptr;
   if (Increasing)
     TakeBackedgeLoopCond = IsSignedPredicate
-                        ? B.CreateICmpSLT(LS.IndVarNext, ExitSubloopAt)
-                        : B.CreateICmpULT(LS.IndVarNext, ExitSubloopAt);
+                        ? B.CreateICmpSLT(LS.IndVarBase, ExitSubloopAt)
+                        : B.CreateICmpULT(LS.IndVarBase, ExitSubloopAt);
   else
     TakeBackedgeLoopCond = IsSignedPredicate
-                        ? B.CreateICmpSGT(LS.IndVarNext, ExitSubloopAt)
-                        : B.CreateICmpUGT(LS.IndVarNext, ExitSubloopAt);
+                        ? B.CreateICmpSGT(LS.IndVarBase, ExitSubloopAt)
+                        : B.CreateICmpUGT(LS.IndVarBase, ExitSubloopAt);
   Value *CondForBranch = LS.LatchBrExitIdx == 1
                              ? TakeBackedgeLoopCond
                              : B.CreateNot(TakeBackedgeLoopCond);
@@ -1293,12 +1327,12 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   Value *IterationsLeft = nullptr;
   if (Increasing)
     IterationsLeft = IsSignedPredicate
-                         ? B.CreateICmpSLT(LS.IndVarNext, LS.LoopExitAt)
-                         : B.CreateICmpULT(LS.IndVarNext, LS.LoopExitAt);
+                         ? B.CreateICmpSLT(LS.IndVarBase, LS.LoopExitAt)
+                         : B.CreateICmpULT(LS.IndVarBase, LS.LoopExitAt);
   else
     IterationsLeft = IsSignedPredicate
-                         ? B.CreateICmpSGT(LS.IndVarNext, LS.LoopExitAt)
-                         : B.CreateICmpUGT(LS.IndVarNext, LS.LoopExitAt);
+                         ? B.CreateICmpSGT(LS.IndVarBase, LS.LoopExitAt)
+                         : B.CreateICmpUGT(LS.IndVarBase, LS.LoopExitAt);
   B.CreateCondBr(IterationsLeft, RRI.PseudoExit, LS.LatchExit);
 
   BranchInst *BranchToContinuation =
@@ -1316,15 +1350,16 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
                                       BranchToContinuation);
 
     NewPHI->addIncoming(PN->getIncomingValueForBlock(Preheader), Preheader);
-    NewPHI->addIncoming(PN->getIncomingValueForBlock(LS.Latch),
-                        RRI.ExitSelector);
+    auto *FixupValue =
+        LS.IsIndVarNext ? PN->getIncomingValueForBlock(LS.Latch) : PN;
+    NewPHI->addIncoming(FixupValue, RRI.ExitSelector);
     RRI.PHIValuesAtPseudoExit.push_back(NewPHI);
   }
 
-  RRI.IndVarEnd = PHINode::Create(LS.IndVarNext->getType(), 2, "indvar.end",
+  RRI.IndVarEnd = PHINode::Create(LS.IndVarBase->getType(), 2, "indvar.end",
                                   BranchToContinuation);
   RRI.IndVarEnd->addIncoming(LS.IndVarStart, Preheader);
-  RRI.IndVarEnd->addIncoming(LS.IndVarNext, RRI.ExitSelector);
+  RRI.IndVarEnd->addIncoming(LS.IndVarBase, RRI.ExitSelector);
 
   // The latch exit now has a branch from `RRI.ExitSelector' instead of
   // `LS.Latch'.  The PHI nodes need to be updated to reflect that.
@@ -1425,7 +1460,7 @@ bool LoopConstrainer::run() {
   SubRanges SR = MaybeSR.getValue();
   bool Increasing = MainLoopStructure.IndVarIncreasing;
   IntegerType *IVTy =
-      cast<IntegerType>(MainLoopStructure.IndVarNext->getType());
+      cast<IntegerType>(MainLoopStructure.IndVarBase->getType());
 
   SCEVExpander Expander(SE, F.getParent()->getDataLayout(), "irce");
   Instruction *InsertPt = OriginalPreheader->getTerminator();
@@ -1700,7 +1735,10 @@ bool InductiveRangeCheckElimination::runOnLoop(Loop *L, LPPassManager &LPM) {
   }
   LoopStructure LS = MaybeLoopStructure.getValue();
   const SCEVAddRecExpr *IndVar =
-      cast<SCEVAddRecExpr>(SE.getMinusSCEV(SE.getSCEV(LS.IndVarNext), SE.getSCEV(LS.IndVarStep)));
+      cast<SCEVAddRecExpr>(SE.getSCEV(LS.IndVarBase));
+  if (LS.IsIndVarNext)
+    IndVar = cast<SCEVAddRecExpr>(SE.getMinusSCEV(IndVar,
+                                                  SE.getSCEV(LS.IndVarStep)));
 
   Optional<InductiveRangeCheck::Range> SafeIterRange;
   Instruction *ExprInsertPt = Preheader->getTerminator();

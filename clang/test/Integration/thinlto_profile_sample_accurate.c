@@ -3,7 +3,7 @@
 // RUN: llvm-lto -thinlto -o %t %t.o
 // RUN: %clang_cc1 -O2 -x ir %t.o -fthinlto-index=%t.thinlto.bc -emit-llvm -o - | FileCheck %s
 
-// CHECK: define void @foo()
-// CHECK: attributes {{.*}} "profile-sample-accurate"
+// CHECK: define{{.*}} void @foo()
+// CHECK: attributes{{.*}} "profile-sample-accurate"
 void foo() {
 }
