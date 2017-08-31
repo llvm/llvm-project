@@ -50,6 +50,7 @@ using namespace llvm;
 AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {}
 
+namespace {
 struct IncomingArgHandler : public CallLowering::ValueHandler {
   IncomingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                      CCAssignFn *AssignFn)
@@ -167,6 +168,7 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
   CCAssignFn *AssignFnVarArg;
   uint64_t StackSize;
 };
+} // namespace
 
 void AArch64CallLowering::splitToValueTypes(
     const ArgInfo &OrigArg, SmallVectorImpl<ArgInfo> &SplitArgs,
