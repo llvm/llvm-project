@@ -346,6 +346,23 @@ bool InstructionSelector::executeMatchTable(
       break;
     }
 
+    case GIR_CopyConstantAsSImm: {
+      int64_t NewInsnID = MatchTable[CurrentIdx++];
+      int64_t OldInsnID = MatchTable[CurrentIdx++];
+      assert(OutMIs[NewInsnID] && "Attempted to add to undefined instruction");
+      assert(State.MIs[OldInsnID]->getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
+      if (State.MIs[OldInsnID]->getOperand(1).isCImm()) {
+        OutMIs[NewInsnID].addImm(
+            State.MIs[OldInsnID]->getOperand(1).getCImm()->getSExtValue());
+      } else if (State.MIs[OldInsnID]->getOperand(1).isImm())
+        OutMIs[NewInsnID].add(State.MIs[OldInsnID]->getOperand(1));
+      else
+        llvm_unreachable("Expected Imm or CImm operand");
+      DEBUG(dbgs() << CurrentIdx << ": GIR_CopyConstantAsSImm(OutMIs[" << NewInsnID
+                   << "], MIs[" << OldInsnID << "])\n");
+      break;
+    }
+
     case GIR_ConstrainOperandRC: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t OpIdx = MatchTable[CurrentIdx++];
