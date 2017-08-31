@@ -633,5 +633,3 @@ Additionally:
 
 * ``TargetPassConfig`` --- create the passes constituting the pipeline,
   including additional passes not included in the :ref:`pipeline`.
-* ``GISelAccessor`` --- setup the various subtarget-provided classes, with a
-  graceful fallback to no-op when GlobalISel isn't enabled.
