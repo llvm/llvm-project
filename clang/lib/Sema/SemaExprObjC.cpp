@@ -2705,6 +2705,9 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
     }
   }
 
+  if (ReceiverType->isObjCIdType() && !isImplicit)
+    Diag(Receiver->getExprLoc(), diag::warn_messaging_unqualified_id);
+
   // There's a somewhat weird interaction here where we assume that we
   // won't actually have a method unless we also don't need to do some
   // of the more detailed type-checking on the receiver.
