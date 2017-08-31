@@ -247,7 +247,9 @@ bool ARMCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                   const Value *Val, unsigned VReg) const {
   assert(!Val == !VReg && "Return value without a vreg");
 
-  auto Ret = MIRBuilder.buildInstrNoInsert(ARM::BX_RET).add(predOps(ARMCC::AL));
+  auto const &ST = MIRBuilder.getMF().getSubtarget<ARMSubtarget>();
+  unsigned Opcode = ST.getReturnOpcode();
+  auto Ret = MIRBuilder.buildInstrNoInsert(Opcode).add(predOps(ARMCC::AL));
 
   if (!lowerReturnVal(MIRBuilder, Val, VReg, Ret))
     return false;
