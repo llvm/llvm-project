@@ -16,8 +16,8 @@ define <2 x i64> @test_extrq(<2 x i64> %a0, <16 x i8> %a1) {
 ;
 ; ZNVER1-LABEL: test_extrq:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    extrq %xmm1, %xmm0
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    extrq %xmm1, %xmm0 # sched: [2:1.00]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %a0, <16 x i8> %a1)
   ret <2 x i64> %1
 }
@@ -36,8 +36,8 @@ define <2 x i64> @test_extrqi(<2 x i64> %a0) {
 ;
 ; ZNVER1-LABEL: test_extrqi:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    extrq $2, $3, %xmm0
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    extrq $2, $3, %xmm0 # sched: [2:1.00]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> %a0, i8 3, i8 2)
   ret <2 x i64> %1
 }
@@ -56,8 +56,8 @@ define <2 x i64> @test_insertq(<2 x i64> %a0, <2 x i64> %a1) {
 ;
 ; ZNVER1-LABEL: test_insertq:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    insertq %xmm1, %xmm0
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    insertq %xmm1, %xmm0 # sched: [4:1.00]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> %a0, <2 x i64> %a1)
   ret <2 x i64> %1
 }
@@ -76,8 +76,8 @@ define <2 x i64> @test_insertqi(<2 x i64> %a0, <2 x i64> %a1) {
 ;
 ; ZNVER1-LABEL: test_insertqi:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    insertq $6, $5, %xmm1, %xmm0
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    insertq $6, $5, %xmm1, %xmm0 # sched: [4:1.00]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %a0, <2 x i64> %a1, i8 5, i8 6)
   ret <2 x i64> %1
 }
@@ -96,8 +96,8 @@ define void @test_movntsd(i8* %p, <2 x double> %a) {
 ;
 ; ZNVER1-LABEL: test_movntsd:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    movntsd %xmm0, (%rdi) # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    movntsd %xmm0, (%rdi) # sched: [8:1.00]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void @llvm.x86.sse4a.movnt.sd(i8* %p, <2 x double> %a)
   ret void
 }
@@ -116,8 +116,8 @@ define void @test_movntss(i8* %p, <4 x float> %a) {
 ;
 ; ZNVER1-LABEL: test_movntss:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    movntss %xmm0, (%rdi) # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    movntss %xmm0, (%rdi) # sched: [8:1.00]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void @llvm.x86.sse4a.movnt.ss(i8* %p, <4 x float> %a)
   ret void
 }

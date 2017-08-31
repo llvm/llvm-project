@@ -652,13 +652,11 @@ WindowsManifestMerger::WindowsManifestMergerImpl::getMergedManifest() {
     xmlNodePtr CombinedRoot = xmlDocGetRootElement(CombinedDoc);
     std::vector<xmlNsPtr> RequiredPrefixes;
     checkAndStripPrefixes(CombinedRoot, RequiredPrefixes);
-    std::unique_ptr<xmlDoc, decltype(&xmlFreeDoc)> OutputDoc(
-        xmlNewDoc((const unsigned char *)"1.0"), &xmlFreeDoc);
+    std::unique_ptr<xmlDoc> OutputDoc(xmlNewDoc((const unsigned char *)"1.0"));
     xmlDocSetRootElement(OutputDoc.get(), CombinedRoot);
     xmlKeepBlanksDefault(0);
     xmlDocDumpFormatMemoryEnc(OutputDoc.get(), &XmlBuff, &BufferSize, "UTF-8",
                               1);
-    xmlDocSetRootElement(OutputDoc.get(), nullptr);
   }
   if (BufferSize == 0)
     return nullptr;

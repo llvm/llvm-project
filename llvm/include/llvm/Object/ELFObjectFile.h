@@ -667,6 +667,10 @@ std::error_code
 ELFObjectFile<ELFT>::getSectionContents(DataRefImpl Sec,
                                         StringRef &Result) const {
   const Elf_Shdr *EShdr = getSection(Sec);
+  if (std::error_code EC =
+          checkOffset(getMemoryBufferRef(),
+                      (uintptr_t)base() + EShdr->sh_offset, EShdr->sh_size))
+    return EC;
   Result = StringRef((const char *)base() + EShdr->sh_offset, EShdr->sh_size);
   return std::error_code();
 }

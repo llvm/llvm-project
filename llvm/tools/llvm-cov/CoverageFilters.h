@@ -15,6 +15,7 @@
 #define LLVM_COV_COVERAGEFILTERS_H
 
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
+#include "llvm/Support/SpecialCaseList.h"
 #include <memory>
 #include <vector>
 
@@ -47,6 +48,18 @@ class NameRegexCoverageFilter : public CoverageFilter {
 
 public:
   NameRegexCoverageFilter(StringRef Regex) : Regex(Regex) {}
+
+  bool matches(const coverage::FunctionRecord &Function) override;
+};
+
+/// \brief Matches functions whose name appears in a SpecialCaseList in the
+/// whitelist_fun section.
+class NameWhitelistCoverageFilter : public CoverageFilter {
+  const SpecialCaseList &Whitelist;
+
+public:
+  NameWhitelistCoverageFilter(const SpecialCaseList &Whitelist)
+      : Whitelist(Whitelist) {}
 
   bool matches(const coverage::FunctionRecord &Function) override;
 };

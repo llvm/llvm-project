@@ -27,6 +27,7 @@ class GlobalModuleIndex;
 class MemoryBufferCache;
 class ModuleMap;
 class PCHContainerReader;
+class HeaderSearch;
 
 namespace serialization {
 
@@ -57,6 +58,9 @@ class ModuleManager {
 
   /// \brief Knows how to unwrap module containers.
   const PCHContainerReader &PCHContainerRdr;
+
+  /// \brief Preprocessor's HeaderSearchInfo containing the module map.
+  const HeaderSearch &HeaderSearchInfo;
 
   /// \brief A lookup of in-memory (virtual file) buffers
   llvm::DenseMap<const FileEntry *, std::unique_ptr<llvm::MemoryBuffer>>
@@ -128,7 +132,8 @@ public:
   typedef std::pair<uint32_t, StringRef> ModuleOffset;
 
   explicit ModuleManager(FileManager &FileMgr, MemoryBufferCache &PCMCache,
-                         const PCHContainerReader &PCHContainerRdr);
+                         const PCHContainerReader &PCHContainerRdr,
+                         const HeaderSearch &HeaderSearchInfo);
   ~ModuleManager();
 
   /// \brief Forward iterator to traverse all loaded modules.
@@ -163,8 +168,11 @@ public:
   /// \brief Returns the module associated with the given index
   ModuleFile &operator[](unsigned Index) const { return *Chain[Index]; }
   
-  /// \brief Returns the module associated with the given name
-  ModuleFile *lookup(StringRef Name) const;
+  /// \brief Returns the module associated with the given file name.
+  ModuleFile *lookupByFileName(StringRef FileName) const;
+
+  /// \brief Returns the module associated with the given module name.
+  ModuleFile *lookupByModuleName(StringRef ModName) const;
 
   /// \brief Returns the module associated with the given module file.
   ModuleFile *lookup(const FileEntry *File) const;

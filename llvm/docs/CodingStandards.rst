@@ -941,8 +941,8 @@ loops.  A silly example is something like this:
 
 .. code-block:: c++
 
-  for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E; ++II) {
-    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(II)) {
+  for (Instruction &I : BB) {
+    if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
       Value *LHS = BO->getOperand(0);
       Value *RHS = BO->getOperand(1);
       if (LHS != RHS) {
@@ -961,8 +961,8 @@ It is strongly preferred to structure the loop like this:
 
 .. code-block:: c++
 
-  for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E; ++II) {
-    BinaryOperator *BO = dyn_cast<BinaryOperator>(II);
+  for (Instruction &I : BB) {
+    auto *BO = dyn_cast<BinaryOperator>(&I);
     if (!BO) continue;
 
     Value *LHS = BO->getOperand(0);
@@ -1322,19 +1322,31 @@ that the enum expression may take any representable value, not just those of
 individual enumerators. To suppress this warning, use ``llvm_unreachable`` after
 the switch.
 
-Don't evaluate ``end()`` every time through a loop
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Use range-based ``for`` loops wherever possible
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Because C++ doesn't have a standard "``foreach``" loop (though it can be
-emulated with macros and may be coming in C++'0x) we end up writing a lot of
-loops that manually iterate from begin to end on a variety of containers or
-through other data structures.  One common mistake is to write a loop in this
-style:
+The introduction of range-based ``for`` loops in C++11 means that explicit
+manipulation of iterators is rarely necessary. We use range-based ``for``
+loops wherever possible for all newly added code. For example:
 
 .. code-block:: c++
 
   BasicBlock *BB = ...
-  for (BasicBlock::iterator I = BB->begin(); I != BB->end(); ++I)
+  for (Instruction &I : *BB)
+    ... use I ...
+
+Don't evaluate ``end()`` every time through a loop
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In cases where range-based ``for`` loops can't be used and it is necessary
+to write an explicit iterator-based loop, pay close attention to whether
+``end()`` is re-evaluted on each loop iteration. One common mistake is to
+write a loop in this style:
+
+.. code-block:: c++
+
+  BasicBlock *BB = ...
+  for (auto I = BB->begin(); I != BB->end(); ++I)
     ... use I ...
 
 The problem with this construct is that it evaluates "``BB->end()``" every time
@@ -1345,7 +1357,7 @@ convenient way to do this is like so:
 .. code-block:: c++
 
   BasicBlock *BB = ...
-  for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I)
+  for (auto I = BB->begin(), E = BB->end(); I != E; ++I)
     ... use I ...
 
 The observant may quickly point out that these two loops may have different

@@ -16,7 +16,6 @@ add_llvm_target(PowerPCCodeGen
   PPCBoolRetToInt.cpp
   PPCAsmPrinter.cpp
   PPCBranchSelector.cpp
-  PPCBranchCoalescing.cpp
   PPCCCState.cpp
   PPCCTRLoops.cpp
   PPCHazardRecognizers.cpp
