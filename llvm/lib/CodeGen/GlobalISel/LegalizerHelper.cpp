@@ -661,8 +661,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   }
   case TargetOpcode::G_PHI: {
     assert(TypeIdx == 0 && "Expecting only Idx 0");
-    auto getExtendedReg = [this, WideTy](unsigned Reg,
-                                             MachineBasicBlock &MBB) {
+    auto getExtendedReg = [&](unsigned Reg, MachineBasicBlock &MBB) {
       auto FirstTermIt = MBB.getFirstTerminator();
       MIRBuilder.setInsertPt(MBB, FirstTermIt);
       MachineInstr *DefMI = MRI.getVRegDef(Reg);
