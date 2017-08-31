@@ -195,6 +195,8 @@ enum {
   GIR_ConstrainSelectedInstOperands,
   /// Merge all memory operands into instruction.
   /// - InsnID - Instruction ID to modify
+  /// - MergeInsnID... - One or more Instruction ID to merge into the result.
+  /// - -1 - Terminates the list of instructions to merge.
   GIR_MergeMemOperands,
   /// Erase from parent.
   /// - InsnID - Instruction ID to erase
@@ -202,6 +204,12 @@ enum {
 
   /// A successful emission
   GIR_Done,
+};
+
+enum {
+  /// Indicates the end of the variable-length MergeInsnID list in a
+  /// GIR_MergeMemOperands opcode.
+  GIU_MergeMemOperands_EndOfList = -1,
 };
 
 /// Provides the logic to select generic machine instructions.
