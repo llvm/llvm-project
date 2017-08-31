@@ -13,11 +13,9 @@
 
 #include "ARM.h"
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
 #include "ARMCallLowering.h"
 #include "ARMLegalizerInfo.h"
 #include "ARMRegisterBankInfo.h"
-#endif
 #include "ARMSubtarget.h"
 #include "ARMFrameLowering.h"
 #include "ARMInstrInfo.h"
@@ -30,13 +28,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
-#ifdef LLVM_BUILD_GLOBAL_ISEL
 #include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
-#endif
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -101,7 +97,6 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
   return new ARMFrameLowering(STI);
 }
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
 namespace {
 
 struct ARMGISelActualAccessor : public GISelAccessor {
@@ -128,7 +123,6 @@ struct ARMGISelActualAccessor : public GISelAccessor {
 };
 
 } // end anonymous namespace
-#endif
 
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
@@ -147,9 +141,6 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
   assert((isThumb() || hasARMOps()) &&
          "Target must either be thumb or support ARM operations!");
 
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-  GISelAccessor *GISel = new GISelAccessor();
-#else
   ARMGISelActualAccessor *GISel = new ARMGISelActualAccessor();
   GISel->CallLoweringInfo.reset(new ARMCallLowering(*getTargetLowering()));
   GISel->Legalizer.reset(new ARMLegalizerInfo(*this));
@@ -163,7 +154,6 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
       *static_cast<const ARMBaseTargetMachine *>(&TM), *this, *RBI));
 
   GISel->RegBankInfo.reset(RBI);
-#endif
   setGISelAccessor(*GISel);
 }
 
