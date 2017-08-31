@@ -110,28 +110,30 @@ public:
   const LLT &get() const { return Ty; }
 
   /// This ordering is used for std::unique() and std::sort(). There's no
-  /// particular logic behind the order but either A < B or B < A must be
-  /// true if A != B.
+  /// particular logic behind the order.
   bool operator<(const LLTCodeGen &Other) const {
-    if (Ty.isValid() != Other.Ty.isValid())
-      return Ty.isValid() < Other.Ty.isValid();
     if (!Ty.isValid())
+      return Other.Ty.isValid();
+    if (Ty.isScalar()) {
+      if (!Other.Ty.isValid())
+        return false;
+      if (Other.Ty.isScalar())
+        return Ty.getSizeInBits() < Other.Ty.getSizeInBits();
       return false;
-
-    if (Ty.isVector() != Other.Ty.isVector())
-      return Ty.isVector() < Other.Ty.isVector();
-    if (Ty.isScalar() != Other.Ty.isScalar())
-      return Ty.isScalar() < Other.Ty.isScalar();
-    if (Ty.isPointer() != Other.Ty.isPointer())
-      return Ty.isPointer() < Other.Ty.isPointer();
-
-    if (Ty.isPointer() && Ty.getAddressSpace() != Other.Ty.getAddressSpace())
-      return Ty.getAddressSpace() < Other.Ty.getAddressSpace();
-
-    if (Ty.isVector() && Ty.getNumElements() != Other.Ty.getNumElements())
-      return Ty.getNumElements() < Other.Ty.getNumElements();
-
-    return Ty.getSizeInBits() < Other.Ty.getSizeInBits();
+    }
+    if (Ty.isVector()) {
+      if (!Other.Ty.isValid() || Other.Ty.isScalar())
+        return false;
+      if (Other.Ty.isVector()) {
+        if (Ty.getNumElements() < Other.Ty.getNumElements())
+          return true;
+        if (Ty.getNumElements() > Other.Ty.getNumElements())
+          return false;
+        return Ty.getSizeInBits() < Other.Ty.getSizeInBits();
+      }
+      return false;
+    }
+    llvm_unreachable("Unhandled LLT");
   }
 };
 
@@ -180,6 +182,14 @@ static Error failedImport(const Twine &Reason) {
 static Error isTrivialOperatorNode(const TreePatternNode *N) {
   std::string Explanation = "";
   std::string Separator = "";
+  if (N->isLeaf()) {
+    if (isa<IntInit>(N->getLeafValue()))
+      return Error::success();
+
+    Explanation = "Is a leaf";
+    Separator = ", ";
+  }
+
   if (N->hasAnyPredicate()) {
     Explanation = Separator + "Has a predicate (" + explainPredicates(N) + ")";
     Separator = ", ";
@@ -190,7 +200,7 @@ static Error isTrivialOperatorNode(const TreePatternNode *N) {
     Separator = ", ";
   }
 
-  if (!N->hasAnyPredicate() && !N->getTransformFn())
+  if (!N->isLeaf() && !N->hasAnyPredicate() && !N->getTransformFn())
     return Error::success();
 
   return failedImport(Explanation);
@@ -624,12 +634,8 @@ protected:
   LLTCodeGen Ty;
 
 public:
-  static std::set<LLTCodeGen> KnownTypes;
-
   LLTOperandMatcher(const LLTCodeGen &Ty)
-      : OperandPredicateMatcher(OPM_LLT), Ty(Ty) {
-    KnownTypes.insert(Ty);
-  }
+      : OperandPredicateMatcher(OPM_LLT), Ty(Ty) {}
 
   static bool classof(const OperandPredicateMatcher *P) {
     return P->getKind() == OPM_LLT;
@@ -644,8 +650,6 @@ public:
           << MatchTable::LineBreak;
   }
 };
-
-std::set<LLTCodeGen> LLTOperandMatcher::KnownTypes;
 
 /// Generates code to check that an operand is a particular target constant.
 class ComplexPatternOperandMatcher : public OperandPredicateMatcher {
@@ -2283,42 +2287,8 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     return failedImport("Src pattern root isn't a trivial operator (" +
                         toString(std::move(Err)) + ")");
 
-  InstructionMatcher &InsnMatcherTemp = M.addInstructionMatcher(Src->getName());
-  unsigned TempOpIdx = 0;
-  auto InsnMatcherOrError =
-      createAndImportSelDAGMatcher(InsnMatcherTemp, Src, TempOpIdx);
-  if (auto Error = InsnMatcherOrError.takeError())
-    return std::move(Error);
-  InstructionMatcher &InsnMatcher = InsnMatcherOrError.get();
-
-  if (Dst->isLeaf()) {
-    Record *RCDef = getInitValueAsRegClass(Dst->getLeafValue());
-
-    const CodeGenRegisterClass &RC = Target.getRegisterClass(RCDef);
-    if (RCDef) {
-      // We need to replace the def and all its uses with the specified
-      // operand. However, we must also insert COPY's wherever needed.
-      // For now, emit a copy and let the register allocator clean up.
-      auto &DstI = Target.getInstruction(RK.getDef("COPY"));
-      const auto &DstIOperand = DstI.Operands[0];
-
-      OperandMatcher &OM0 = InsnMatcher.getOperand(0);
-      OM0.setSymbolicName(DstIOperand.Name);
-      OM0.addPredicate<RegisterBankOperandMatcher>(RC);
-
-      auto &DstMIBuilder = M.addAction<BuildMIAction>(0, &DstI, InsnMatcher);
-      DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher, DstIOperand.Name);
-      DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher, Dst->getName());
-      M.addAction<ConstrainOperandToRegClassAction>(0, 0, RC);
-
-      // We're done with this pattern!  It's eligible for GISel emission; return
-      // it.
-      ++NumPatternImported;
-      return std::move(M);
-    }
-
+  if (Dst->isLeaf())
     return failedImport("Dst pattern root isn't a known leaf");
-  }
 
   // Start with the defined operands (i.e., the results of the root operator).
   Record *DstOp = Dst->getOperator();
@@ -2330,6 +2300,14 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     return failedImport("Src pattern results and dst MI defs are different (" +
                         to_string(Src->getExtTypes().size()) + " def(s) vs " +
                         to_string(DstI.Operands.NumDefs) + " def(s))");
+
+  InstructionMatcher &InsnMatcherTemp = M.addInstructionMatcher(Src->getName());
+  unsigned TempOpIdx = 0;
+  auto InsnMatcherOrError =
+      createAndImportSelDAGMatcher(InsnMatcherTemp, Src, TempOpIdx);
+  if (auto Error = InsnMatcherOrError.takeError())
+    return std::move(Error);
+  InstructionMatcher &InsnMatcher = InsnMatcherOrError.get();
 
   // The root of the match also has constraints on the register bank so that it
   // matches the result instruction.
@@ -2557,9 +2535,16 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
   // Emit a table containing the LLT objects needed by the matcher and an enum
   // for the matcher to reference them with.
-  std::vector<LLTCodeGen> TypeObjects;
-  for (const auto &Ty : LLTOperandMatcher::KnownTypes)
-    TypeObjects.push_back(Ty);
+  std::vector<LLTCodeGen> TypeObjects = {
+      LLT::scalar(8),      LLT::scalar(16),     LLT::scalar(32),
+      LLT::scalar(64),     LLT::scalar(80),     LLT::vector(8, 1),
+      LLT::vector(16, 1),  LLT::vector(32, 1),  LLT::vector(64, 1),
+      LLT::vector(8, 8),   LLT::vector(16, 8),  LLT::vector(32, 8),
+      LLT::vector(64, 8),  LLT::vector(4, 16),  LLT::vector(8, 16),
+      LLT::vector(16, 16), LLT::vector(32, 16), LLT::vector(2, 32),
+      LLT::vector(4, 32),  LLT::vector(8, 32),  LLT::vector(16, 32),
+      LLT::vector(2, 64),  LLT::vector(4, 64),  LLT::vector(8, 64),
+  };
   std::sort(TypeObjects.begin(), TypeObjects.end());
   OS << "enum {\n";
   for (const auto &TypeObject : TypeObjects) {
