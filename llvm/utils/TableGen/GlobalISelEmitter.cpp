@@ -110,30 +110,28 @@ public:
   const LLT &get() const { return Ty; }
 
   /// This ordering is used for std::unique() and std::sort(). There's no
-  /// particular logic behind the order.
+  /// particular logic behind the order but either A < B or B < A must be
+  /// true if A != B.
   bool operator<(const LLTCodeGen &Other) const {
+    if (Ty.isValid() != Other.Ty.isValid())
+      return Ty.isValid() < Other.Ty.isValid();
     if (!Ty.isValid())
-      return Other.Ty.isValid();
-    if (Ty.isScalar()) {
-      if (!Other.Ty.isValid())
-        return false;
-      if (Other.Ty.isScalar())
-        return Ty.getSizeInBits() < Other.Ty.getSizeInBits();
       return false;
-    }
-    if (Ty.isVector()) {
-      if (!Other.Ty.isValid() || Other.Ty.isScalar())
-        return false;
-      if (Other.Ty.isVector()) {
-        if (Ty.getNumElements() < Other.Ty.getNumElements())
-          return true;
-        if (Ty.getNumElements() > Other.Ty.getNumElements())
-          return false;
-        return Ty.getSizeInBits() < Other.Ty.getSizeInBits();
-      }
-      return false;
-    }
-    llvm_unreachable("Unhandled LLT");
+
+    if (Ty.isVector() != Other.Ty.isVector())
+      return Ty.isVector() < Other.Ty.isVector();
+    if (Ty.isScalar() != Other.Ty.isScalar())
+      return Ty.isScalar() < Other.Ty.isScalar();
+    if (Ty.isPointer() != Other.Ty.isPointer())
+      return Ty.isPointer() < Other.Ty.isPointer();
+
+    if (Ty.isPointer() && Ty.getAddressSpace() != Other.Ty.getAddressSpace())
+      return Ty.getAddressSpace() < Other.Ty.getAddressSpace();
+
+    if (Ty.isVector() && Ty.getNumElements() != Other.Ty.getNumElements())
+      return Ty.getNumElements() < Other.Ty.getNumElements();
+
+    return Ty.getSizeInBits() < Other.Ty.getSizeInBits();
   }
 };
 
@@ -626,8 +624,12 @@ protected:
   LLTCodeGen Ty;
 
 public:
+  static std::set<LLTCodeGen> KnownTypes;
+
   LLTOperandMatcher(const LLTCodeGen &Ty)
-      : OperandPredicateMatcher(OPM_LLT), Ty(Ty) {}
+      : OperandPredicateMatcher(OPM_LLT), Ty(Ty) {
+    KnownTypes.insert(Ty);
+  }
 
   static bool classof(const OperandPredicateMatcher *P) {
     return P->getKind() == OPM_LLT;
@@ -642,6 +644,8 @@ public:
           << MatchTable::LineBreak;
   }
 };
+
+std::set<LLTCodeGen> LLTOperandMatcher::KnownTypes;
 
 /// Generates code to check that an operand is a particular target constant.
 class ComplexPatternOperandMatcher : public OperandPredicateMatcher {
@@ -2559,17 +2563,9 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
   // Emit a table containing the LLT objects needed by the matcher and an enum
   // for the matcher to reference them with.
-  std::vector<LLTCodeGen> TypeObjects = {
-      LLT::scalar(8),      LLT::scalar(16),     LLT::scalar(32),
-      LLT::scalar(64),     LLT::scalar(80),     LLT::scalar(128),
-      LLT::vector(8, 1),   LLT::vector(16, 1),  LLT::vector(32, 1),
-      LLT::vector(64, 1),  LLT::vector(8, 8),   LLT::vector(16, 8),
-      LLT::vector(32, 8),  LLT::vector(64, 8),  LLT::vector(4, 16),
-      LLT::vector(8, 16),  LLT::vector(16, 16), LLT::vector(32, 16),
-      LLT::vector(2, 32),  LLT::vector(4, 32),  LLT::vector(8, 32),
-      LLT::vector(16, 32), LLT::vector(2, 64),  LLT::vector(4, 64),
-      LLT::vector(8, 64),
-  };
+  std::vector<LLTCodeGen> TypeObjects;
+  for (const auto &Ty : LLTOperandMatcher::KnownTypes)
+    TypeObjects.push_back(Ty);
   std::sort(TypeObjects.begin(), TypeObjects.end());
   OS << "enum {\n";
   for (const auto &TypeObject : TypeObjects) {
