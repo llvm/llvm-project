@@ -60,7 +60,7 @@ attributes #2 = { nounwind readnone }
 !llvm.dbg.cu = !{!4}
 !llvm.module.flags = !{!7, !8}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "global", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "tmp/debug_ranges/a.cc", directory: "/")
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

@@ -47,12 +47,13 @@ struct DbgVariableLocation {
   /// Present if the location is part of a larger variable.
   llvm::Optional<llvm::DIExpression::FragmentInfo> FragmentInfo;
 
-  /// Extract a VariableLocation from a MachineInstr.  The struct passed in as
-  /// Location is populated.  The MachineInstr must be a debug value
-  /// instruction.
-  /// @return true if successful and false if not.
-  static bool extractFromMachineInstruction(DbgVariableLocation &Location,
-                                            const MachineInstr &Instruction);
+  /// Extract a VariableLocation from a MachineInstr.
+  /// This will only work if Instruction is a debug value instruction
+  /// and the associated DIExpression is in one of the supported forms.
+  /// If these requirements are not met, the returned Optional will not
+  /// have a value.
+  static Optional<DbgVariableLocation>
+  extractFromMachineInstruction(const MachineInstr &Instruction);
 };
 
 /// Base class for debug information backends. Common functionality related to

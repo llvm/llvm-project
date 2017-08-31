@@ -696,7 +696,7 @@ define <16 x i32> @splatconstant_rotate_mask_v16i32(<16 x i32> %a) nounwind {
 ; AVX512-LABEL: splatconstant_rotate_mask_v16i32:
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vprold $4, %zmm0, %zmm0
-; AVX512-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm0
+; AVX512-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %shl = shl <16 x i32> %a, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
   %lshr = lshr <16 x i32> %a, <i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28>

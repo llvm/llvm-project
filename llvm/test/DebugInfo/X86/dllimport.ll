@@ -11,7 +11,7 @@ target triple = "i686-pc-windows-msvc"
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!14, !15}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "id", linkageName: "\01?id@?$numpunct@D@@0HA", scope: !2, file: !6, line: 4, type: !7, isLocal: false, isDefinition: true, declaration: !8)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.9.0 (trunk 272628) (llvm/trunk 272566)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "/usr/local/google/home/majnemer/Downloads/<stdin>", directory: "/usr/local/google/home/majnemer/llvm/src")

@@ -150,6 +150,9 @@ private:
   std::mutex LoadedSourceFilesLock;
   std::vector<std::pair<std::string, std::unique_ptr<MemoryBuffer>>>
       LoadedSourceFiles;
+
+  /// Whitelist from -name-whitelist to be used for filtering.
+  std::unique_ptr<SpecialCaseList> NameWhitelist;
 };
 }
 
@@ -561,6 +564,12 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       cl::desc("Show code coverage only for functions with the given name"),
       cl::ZeroOrMore, cl::cat(FilteringCategory));
 
+  cl::list<std::string> NameFilterFiles(
+      "name-whitelist", cl::Optional,
+      cl::desc("Show code coverage only for functions listed in the given "
+               "file"),
+      cl::ZeroOrMore, cl::cat(FilteringCategory));
+
   cl::list<std::string> NameRegexFilters(
       "name-regex", cl::Optional,
       cl::desc("Show code coverage only for functions that match the given "
@@ -643,11 +652,23 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       ViewOpts.DemanglerOpts.swap(DemanglerOpts);
     }
 
+    // Read in -name-whitelist files.
+    if (!NameFilterFiles.empty()) {
+      std::string SpecialCaseListErr;
+      NameWhitelist =
+          SpecialCaseList::create(NameFilterFiles, SpecialCaseListErr);
+      if (!NameWhitelist)
+        error(SpecialCaseListErr);
+    }
+
     // Create the function filters
-    if (!NameFilters.empty() || !NameRegexFilters.empty()) {
+    if (!NameFilters.empty() || NameWhitelist || !NameRegexFilters.empty()) {
       auto NameFilterer = llvm::make_unique<CoverageFilters>();
       for (const auto &Name : NameFilters)
         NameFilterer->push_back(llvm::make_unique<NameCoverageFilter>(Name));
+      if (NameWhitelist)
+        NameFilterer->push_back(
+            llvm::make_unique<NameWhitelistCoverageFilter>(*NameWhitelist));
       for (const auto &Regex : NameRegexFilters)
         NameFilterer->push_back(
             llvm::make_unique<NameRegexCoverageFilter>(Regex));

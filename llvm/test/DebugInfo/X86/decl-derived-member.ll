@@ -102,7 +102,7 @@ attributes #4 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !llvm.module.flags = !{!12, !13}
 !llvm.ident = !{!14}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "f", scope: null, file: !2, line: 8, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "decl-derived-member.cpp", directory: "/tmp/dbginfo")
 !3 = !DICompositeType(tag: DW_TAG_structure_type, name: "foo", file: !2, line: 5, size: 64, align: 64, elements: !4, identifier: "_ZTS3foo")

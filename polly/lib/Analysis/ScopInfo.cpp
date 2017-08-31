@@ -4693,8 +4693,17 @@ void Scop::addScopStmt(Region *R, Loop *SurroundingLoop,
   assert(R && "Unexpected nullptr!");
   Stmts.emplace_back(*this, *R, SurroundingLoop, Instructions);
   auto *Stmt = &Stmts.back();
+
+  for (Instruction *Inst : Instructions) {
+    assert(!InstStmtMap.count(Inst) &&
+           "Unexpected statement corresponding to the instruction.");
+    InstStmtMap[Inst] = Stmt;
+  }
+
   for (BasicBlock *BB : R->blocks()) {
     StmtMap[BB].push_back(Stmt);
+    if (BB == R->getEntry())
+      continue;
     for (Instruction &Inst : *BB) {
       assert(!InstStmtMap.count(&Inst) &&
              "Unexpected statement corresponding to the instruction.");

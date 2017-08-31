@@ -960,11 +960,9 @@ void CodeViewDebug::calculateRanges(
     assert(DVInst->isDebugValue() && "Invalid History entry");
     // FIXME: Find a way to represent constant variables, since they are
     // relatively common.
-    DbgVariableLocation Location;
-    bool Supported =
-        DbgVariableLocation::extractFromMachineInstruction(Location, *DVInst);
-    // If not Supported, don't even look at Location because it's invalid.
-    if (!Supported)
+    Optional<DbgVariableLocation> Location =
+        DbgVariableLocation::extractFromMachineInstruction(*DVInst);
+    if (!Location)
       continue;
 
     // Because we cannot express DW_OP_deref in CodeView directly,
@@ -975,13 +973,13 @@ void CodeViewDebug::calculateRanges(
       // we need to remove a level of indirection from incoming locations.
       // E.g. [RSP+8] with DW_OP_deref becomes [RSP+8],
       // and [RCX+0] without DW_OP_deref becomes RCX.
-      if (!Location.Deref) {
-        if (Location.InMemory)
-          Location.InMemory = false;
+      if (!Location->Deref) {
+        if (Location->InMemory)
+          Location->InMemory = false;
         else
-          Supported = false;
+          continue;
       }
-    } else if (Location.Deref) {
+    } else if (Location->Deref) {
       // We've encountered a Deref range when we had not applied the
       // reference encoding. Start over using reference encoding.
       Var.Deref = true;
@@ -991,19 +989,18 @@ void CodeViewDebug::calculateRanges(
     }
 
     // If we don't know how to handle this range, skip past it.
-    if (!Supported || Location.Register == 0 ||
-        (Location.Offset && !Location.InMemory))
+    if (Location->Register == 0 || (Location->Offset && !Location->InMemory))
       continue;
 
     // Handle the two cases we can handle: indirect in memory and in register.
     {
       LocalVarDefRange DR;
-      DR.CVRegister = TRI->getCodeViewRegNum(Location.Register);
-      DR.InMemory = Location.InMemory;
-      DR.DataOffset = Location.Offset;
-      if (Location.FragmentInfo) {
+      DR.CVRegister = TRI->getCodeViewRegNum(Location->Register);
+      DR.InMemory = Location->InMemory;
+      DR.DataOffset = Location->Offset;
+      if (Location->FragmentInfo) {
         DR.IsSubfield = true;
-        DR.StructOffset = Location.FragmentInfo->OffsetInBits / 8;
+        DR.StructOffset = Location->FragmentInfo->OffsetInBits / 8;
       } else {
         DR.IsSubfield = false;
         DR.StructOffset = 0;

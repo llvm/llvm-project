@@ -50,13 +50,13 @@ select.end:                                       ; preds = %select.mid, %entry
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!10, !11}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x", scope: !2, file: !3, line: 1, type: !9, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5, imports: !4)
 !3 = !DIFile(filename: "inline-break.c", directory: "/build/dir")
 !4 = !{}
 !5 = !{!0, !6}
-!6 = !DIGlobalVariableExpression(var: !7)
+!6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !7 = !DIGlobalVariable(name: "y", scope: !2, file: !3, line: 2, type: !8, isLocal: false, isDefinition: true)
 !8 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !9 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !8)

@@ -80,13 +80,13 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!9}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x1", scope: !2, file: !3, line: 4, type: !8, isLocal: true, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5, imports: !4)
 !3 = !DIFile(filename: "ss3.c", directory: "/private/tmp")
 !4 = !{}
 !5 = !{!0, !6}
-!6 = !DIGlobalVariableExpression(var: !7)
+!6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !7 = !DIGlobalVariable(name: "x2", scope: !2, file: !3, line: 7, type: !8, isLocal: true, isDefinition: true)
 !8 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !9 = !{i32 1, !"Debug Info Version", i32 3}

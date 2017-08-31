@@ -58,9 +58,6 @@ public:
   bool combineExtracts(MachineInstr &MI, MachineRegisterInfo &MRI,
                        const TargetInstrInfo &TII);
 
-  bool combineMerges(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     const TargetInstrInfo &TII, MachineIRBuilder &MIRBuilder);
-
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 } // End namespace llvm.

@@ -33,7 +33,7 @@ lpad:                                             ; preds = %0
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!15, !16}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "zed", scope: !2, file: !6, line: 6, type: !7, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.7.0 (trunk 234308) (llvm/trunk 234310)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5, imports: !4)
 !3 = !DIFile(filename: "/Users/espindola/llvm/<stdin>", directory: "/Users/espindola/llvm/build")

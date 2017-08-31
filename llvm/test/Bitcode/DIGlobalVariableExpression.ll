@@ -13,7 +13,7 @@
 ; CHECK: ![[HVAR:[0-9]+]] = distinct !DIGlobalVariable(name: "h",
 ; CHECK: ![[IMPORTS]] = !{![[CIMPORT:[0-9]+]]}
 ; CHECK: ![[CIMPORT]] = !DIImportedEntity({{.*}}entity: ![[HVAR]]
-; CHECK: ![[H]] = {{.*}}!DIGlobalVariableExpression(var: ![[HVAR]])
+; CHECK: ![[H]] = {{.*}}!DIGlobalVariableExpression(var: ![[HVAR]], expr: !DIExpression())
 
 @g = common global i32 0, align 4, !dbg !0
 @h = common global i32 0, align 4, !dbg !11

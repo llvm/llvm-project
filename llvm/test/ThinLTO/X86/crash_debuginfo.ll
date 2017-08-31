@@ -27,7 +27,7 @@ declare void @bar(i32)
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "Apple LLVM version 8.0.0 (clang-800.0.24.1)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !2)
 !1 = !DIFile(filename: "1.cpp", directory: "/another_dir")
 !2 = !{!3}
-!3 = !DIGlobalVariableExpression(var: !4)
+!3 = !DIGlobalVariableExpression(var: !4, expr: !DIExpression())
 !4 = !DIGlobalVariable(name: "_", linkageName: "some_global", scope: null, file: !1, line: 20, type: !5, isLocal: true, isDefinition: true)
 !5 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "slice_nil", file: !1, line: 13, size: 64, align: 64, elements: !6, identifier: "_ZTSN5boost6python3api9slice_nilE")
 !6 = !{}

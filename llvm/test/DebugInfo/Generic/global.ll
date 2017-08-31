@@ -32,7 +32,7 @@ attributes #0 = { nounwind readnone uwtable "less-precise-fpmad"="false" "no-fra
 !1 = !DIFile(filename: "global.cpp", directory: "/tmp")
 !2 = !{}
 !3 = !{!4}
-!4 = !DIGlobalVariableExpression(var: !5)
+!4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
 !5 = !DIGlobalVariable(name: "i", linkageName: "_ZL1i", scope: null, file: !1, line: 1, type: !6, isLocal: true, isDefinition: true)
 !6 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !7 = !{i32 2, !"Dwarf Version", i32 3}

@@ -56,7 +56,7 @@ attributes #2 = { nounwind readnone }
 !llvm.dbg.cu = !{!4}
 !llvm.module.flags = !{!6, !7}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "length", linkageName: "length", scope: !2, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "t.c", directory: "/private/tmp")
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
