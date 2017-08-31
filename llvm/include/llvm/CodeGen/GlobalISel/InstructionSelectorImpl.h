@@ -243,6 +243,7 @@ bool InstructionSelector::executeMatchTable(
       DEBUG(dbgs() << CurrentIdx << ": GIM_Reject");
       if (handleReject() == RejectAndGiveUp)
         return false;
+      break;
 
     case GIR_MutateOpcode: {
       int64_t OldInsnID = MatchTable[CurrentIdx++];
