@@ -185,13 +185,14 @@ class CompileUnit {
 public:
   /// Information gathered about a DIE in the object file.
   struct DIEInfo {
-    int64_t AddrAdjust; ///< Address offset to apply to the described entity.
-    DeclContext *Ctxt;  ///< ODR Declaration context.
-    DIE *Clone;         ///< Cloned version of that DIE.
-    uint32_t ParentIdx; ///< The index of this DIE's parent.
-    bool Keep : 1;      ///< Is the DIE part of the linked output?
-    bool InDebugMap : 1;///< Was this DIE's entity found in the map?
-    bool Prune : 1;     ///< Is this a pure forward declaration we can strip?
+    int64_t AddrAdjust;  ///< Address offset to apply to the described entity.
+    DeclContext *Ctxt;   ///< ODR Declaration context.
+    DIE *Clone;          ///< Cloned version of that DIE.
+    uint32_t ParentIdx;  ///< The index of this DIE's parent.
+    bool Keep : 1;       ///< Is the DIE part of the linked output?
+    bool InDebugMap : 1; ///< Was this DIE's entity found in the map?
+    bool Prune : 1;      ///< Is this a pure forward declaration we can strip?
+    bool Incomplete : 1; ///< Does DIE transitively refer an incomplete decl?
   };
 
   CompileUnit(DWARFUnit &OrigUnit, unsigned ID, bool CanUseODR,
@@ -1198,8 +1199,9 @@ private:
   /// @{
   /// Recursively walk the \p DIE tree and look for DIEs to
   /// keep. Store that information in \p CU's DIEInfo.
-  void lookForDIEsToKeep(RelocationManager &RelocMgr,
-                         const DWARFDie &DIE,
+  ///
+  /// The return value indicates whether the DIE is incomplete.
+  bool lookForDIEsToKeep(RelocationManager &RelocMgr, const DWARFDie &DIE,
                          const DebugMapObject &DMO, CompileUnit &CU,
                          unsigned Flags);
 
@@ -2196,6 +2198,11 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
   DWARFUnit &Unit = CU.getOrigUnit();
   MyInfo.Keep = true;
 
+  // We're looking for incomplete types.
+  MyInfo.Incomplete = Die.getTag() != dwarf::DW_TAG_subprogram &&
+                      Die.getTag() != dwarf::DW_TAG_member &&
+                      dwarf::toUnsigned(Die.find(dwarf::DW_AT_declaration), 0);
+
   // First mark all the parent chain as kept.
   unsigned AncestorIdx = MyInfo.ParentIdx;
   while (!CU.getInfo(AncestorIdx).Keep) {
@@ -2211,7 +2218,7 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
   const auto *Abbrev = Die.getAbbreviationDeclarationPtr();
   uint32_t Offset = Die.getOffset() + getULEB128Size(Abbrev->getCode());
 
-  // Mark all DIEs referenced through atttributes as kept.
+  // Mark all DIEs referenced through attributes as kept.
   for (const auto &AttrSpec : Abbrev->attributes()) {
     DWARFFormValue Val(AttrSpec.Form);
 
@@ -2251,6 +2258,16 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
       unsigned ODRFlag = UseODR ? TF_ODR : 0;
       lookForDIEsToKeep(RelocMgr, RefDie, DMO, *ReferencedCU,
                         TF_Keep | TF_DependencyWalk | ODRFlag);
+
+      // The incomplete property is propagated if the current DIE is complete
+      // but references an incomplete DIE.
+      if (Info.Incomplete && !MyInfo.Incomplete &&
+          (Die.getTag() == dwarf::DW_TAG_typedef ||
+           Die.getTag() == dwarf::DW_TAG_member ||
+           Die.getTag() == dwarf::DW_TAG_reference_type ||
+           Die.getTag() == dwarf::DW_TAG_ptr_to_member_type ||
+           Die.getTag() == dwarf::DW_TAG_pointer_type))
+        MyInfo.Incomplete = true;
     }
   }
 }
@@ -2267,7 +2284,9 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
 /// also called, but during these dependency walks the file order is
 /// not respected. The TF_DependencyWalk flag tells us which kind of
 /// traversal we are currently doing.
-void DwarfLinker::lookForDIEsToKeep(RelocationManager &RelocMgr,
+///
+/// The return value indicates whether the DIE is incomplete.
+bool DwarfLinker::lookForDIEsToKeep(RelocationManager &RelocMgr,
                                     const DWARFDie &Die,
                                     const DebugMapObject &DMO, CompileUnit &CU,
                                     unsigned Flags) {
@@ -2275,13 +2294,13 @@ void DwarfLinker::lookForDIEsToKeep(RelocationManager &RelocMgr,
   CompileUnit::DIEInfo &MyInfo = CU.getInfo(Idx);
   bool AlreadyKept = MyInfo.Keep;
   if (MyInfo.Prune)
-    return;
+    return true;
 
   // If the Keep flag is set, we are marking a required DIE's
   // dependencies. If our target is already marked as kept, we're all
   // set.
   if ((Flags & TF_DependencyWalk) && AlreadyKept)
-    return;
+    return MyInfo.Incomplete;
 
   // We must not call shouldKeepDIE while called from keepDIEAndDependencies,
   // because it would screw up the relocation finding logic.
@@ -2303,10 +2322,19 @@ void DwarfLinker::lookForDIEsToKeep(RelocationManager &RelocMgr,
     Flags &= ~TF_ParentWalk;
 
   if (!Die.hasChildren() || (Flags & TF_ParentWalk))
-    return;
+    return MyInfo.Incomplete;
 
-  for (auto Child: Die.children())
-    lookForDIEsToKeep(RelocMgr, Child, DMO, CU, Flags);
+  bool Incomplete = false;
+  for (auto Child : Die.children()) {
+    Incomplete |= lookForDIEsToKeep(RelocMgr, Child, DMO, CU, Flags);
+
+    // If any of the members are incomplete we propagate the incompleteness.
+    if (!MyInfo.Incomplete && Incomplete &&
+        (Die.getTag() == dwarf::DW_TAG_structure_type ||
+         Die.getTag() == dwarf::DW_TAG_class_type))
+      MyInfo.Incomplete = true;
+  }
+  return MyInfo.Incomplete;
 }
 
 /// Assign an abbreviation numer to \p Abbrev.
@@ -2716,7 +2744,7 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
 
   assert(Die->getTag() == InputDIE.getTag());
   Die->setOffset(OutOffset);
-  if ((Unit.hasODR() || Unit.isClangModule()) &&
+  if ((Unit.hasODR() || Unit.isClangModule()) && !Info.Incomplete &&
       Die->getTag() != dwarf::DW_TAG_namespace && Info.Ctxt &&
       Info.Ctxt != Unit.getInfo(Info.ParentIdx).Ctxt &&
       !Info.Ctxt->getCanonicalDIEOffset()) {
