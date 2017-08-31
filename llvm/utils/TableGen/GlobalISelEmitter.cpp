@@ -370,7 +370,7 @@ public:
 
   void emitDeclaration(raw_ostream &OS) const {
     unsigned Indentation = 4;
-    OS << "  const static int64_t MatchTable" << ID << "[] = {";
+    OS << "  constexpr static int64_t MatchTable" << ID << "[] = {";
     LineBreak.emit(OS, true, *this);
     OS << std::string(Indentation, ' ');
 
