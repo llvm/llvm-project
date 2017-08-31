@@ -27,7 +27,7 @@ target triple = "thumbv7-apple-ios"
 !llvm.module.flags = !{!12, !13, !14, !15, !16}
 !llvm.ident = !{!17}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 5, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.7.0 (trunk 240548) (llvm/trunk 240554)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5, imports: !4)
 !3 = !DIFile(filename: "test.i", directory: "/")

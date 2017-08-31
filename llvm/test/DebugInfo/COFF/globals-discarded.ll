@@ -21,13 +21,13 @@ target triple = "x86_64-pc-windows-msvc19.0.0"
 !llvm.module.flags = !{!9, !10, !11}
 !llvm.ident = !{!12}
 
-!0 = distinct !DIGlobalVariableExpression(var: !1)
+!0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x", scope: !2, file: !3, line: 4, type: !8, isLocal: true, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.9.0 (trunk 272215) (llvm/trunk 272226)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5)
 !3 = !DIFile(filename: "t.c", directory: "foo")
 !4 = !{}
 !5 = !{!6, !0}
-!6 = distinct !DIGlobalVariableExpression(var: !7)
+!6 = distinct !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
 !7 = !DIGlobalVariable(name: "_OptionsStorage", scope: !2, file: !3, line: 3, type: !8, isLocal: true, isDefinition: true)
 !8 = !DIBasicType(name: "unsigned int", size: 32, align: 32, encoding: DW_ATE_unsigned)
 !9 = !{i32 2, !"CodeView", i32 1}

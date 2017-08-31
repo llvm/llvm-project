@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DebugHandlerBase.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -23,12 +25,14 @@
 
 using namespace llvm;
 
-bool DbgVariableLocation::extractFromMachineInstruction(
-    DbgVariableLocation &Location, const MachineInstr &Instruction) {
+Optional<DbgVariableLocation>
+DbgVariableLocation::extractFromMachineInstruction(
+    const MachineInstr &Instruction) {
+  DbgVariableLocation Location;
   if (!Instruction.isDebugValue())
-    return false;
+    return None;
   if (!Instruction.getOperand(0).isReg())
-    return false;
+    return None;
   Location.Register = Instruction.getOperand(0).getReg();
   Location.InMemory = Instruction.getOperand(1).isImm();
   Location.Deref = false;
@@ -66,13 +70,13 @@ bool DbgVariableLocation::extractFromMachineInstruction(
       Location.Deref = true;
       break;
     default:
-      return false;
+      return None;
     }
     ++Op;
   }
 
   Location.Offset = Offset;
-  return true;
+  return Location;
 }
 
 DebugHandlerBase::DebugHandlerBase(AsmPrinter *A) : Asm(A), MMI(Asm->MMI) {}

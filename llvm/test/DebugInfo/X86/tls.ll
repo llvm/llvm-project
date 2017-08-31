@@ -111,11 +111,11 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !llvm.module.flags = !{!9, !10}
 !llvm.ident = !{!11}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "tls", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "tls.cpp", directory: "/tmp/dbginfo")
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!4 = !DIGlobalVariableExpression(var: !5)
+!4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
 !5 = !DIGlobalVariable(name: "glbl", scope: null, file: !2, line: 2, type: !3, isLocal: false, isDefinition: true)
 !6 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 3.5 ", isOptimized: false, runtimeVersion: 0, splitDebugFilename: "-.dwo", emissionKind: FullDebug, enums: !7, retainedTypes: !7, globals: !8, imports: !7)
 !7 = !{}

@@ -460,6 +460,15 @@ let Predicates = [HasRCPC] in {
   def LDAPRX  : RCPCLoad<0b11, "ldapr", GPR64>;
 }
 
+// v8.3a complex add and multiply-accumulate. No predicate here, that is done
+// inside the multiclass as the FP16 versions need different predicates.
+defm FCMLA : SIMDThreeSameVectorTiedComplexHSD<1, 0b110, complexrotateop,
+                                               "fcmla", null_frag>;
+defm FCADD : SIMDThreeSameVectorComplexHSD<1, 0b111, complexrotateopodd,
+                                           "fcadd", null_frag>;
+defm FCMLA : SIMDIndexedTiedComplexHSD<1, 0, 1, complexrotateop, "fcmla",
+                                       null_frag>;
+
 let Predicates = [HasV8_3a] in {
   // v8.3a Pointer Authentication
   let Uses = [LR], Defs = [LR] in {

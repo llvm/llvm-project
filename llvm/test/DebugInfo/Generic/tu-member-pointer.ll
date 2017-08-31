@@ -18,7 +18,7 @@ source_filename = "test/DebugInfo/Generic/tu-member-pointer.ll"
 !llvm.dbg.cu = !{!6}
 !llvm.module.flags = !{!10, !11}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x", scope: null, file: !2, line: 4, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "foo.cpp", directory: ".")
 !3 = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, baseType: !4, extraData: !5)

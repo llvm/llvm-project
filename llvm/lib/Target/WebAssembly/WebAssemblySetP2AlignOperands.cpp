@@ -96,6 +96,7 @@ bool WebAssemblySetP2AlignOperands::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::LOAD16_U_I64:
       case WebAssembly::LOAD32_S_I64:
       case WebAssembly::LOAD32_U_I64:
+      case WebAssembly::ATOMIC_LOAD_I32:
         RewriteP2Align(MI, WebAssembly::LoadP2AlignOperandNo);
         break;
       case WebAssembly::STORE_I32:

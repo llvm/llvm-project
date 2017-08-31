@@ -35,6 +35,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/SubtargetFeature.h"
@@ -353,7 +354,6 @@ int AMDGPUTTIImpl::getArithmeticInstrCost(
     // but the current lowering is also not entirely correct.
     if (SLT == MVT::f64) {
       int Cost = 4 * get64BitInstrCost() + 7 * getQuarterRateInstrCost();
-
       // Add cost of workaround.
       if (ST->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS)
         Cost += 3 * getFullRateInstrCost();
@@ -361,10 +361,32 @@ int AMDGPUTTIImpl::getArithmeticInstrCost(
       return LT.first * Cost * NElts;
     }
 
-    // Assuming no fp32 denormals lowering.
+    if (!Args.empty() && match(Args[0], PatternMatch::m_FPOne())) {
+      // TODO: This is more complicated, unsafe flags etc.
+      if ((SLT == MVT::f32 && !ST->hasFP32Denormals()) ||
+          (SLT == MVT::f16 && ST->has16BitInsts())) {
+        return LT.first * getQuarterRateInstrCost() * NElts;
+      }
+    }
+
+    if (SLT == MVT::f16 && ST->has16BitInsts()) {
+      // 2 x v_cvt_f32_f16
+      // f32 rcp
+      // f32 fmul
+      // v_cvt_f16_f32
+      // f16 div_fixup
+      int Cost = 4 * getFullRateInstrCost() + 2 * getQuarterRateInstrCost();
+      return LT.first * Cost * NElts;
+    }
+
     if (SLT == MVT::f32 || SLT == MVT::f16) {
-      assert(!ST->hasFP32Denormals() && "will change when supported");
       int Cost = 7 * getFullRateInstrCost() + 1 * getQuarterRateInstrCost();
+
+      if (!ST->hasFP32Denormals()) {
+        // FP mode switches.
+        Cost += 2 * getFullRateInstrCost();
+      }
+
       return LT.first * NElts * Cost;
     }
     break;

@@ -32,7 +32,7 @@ source_filename = "test/DebugInfo/X86/default-subrange-array.ll"
 !llvm.dbg.cu = !{!14}
 !llvm.module.flags = !{!17}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "t.cpp", directory: "/Volumes/Sandbox/llvm")
 !3 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !2, line: 1, align: 32, elements: !4)

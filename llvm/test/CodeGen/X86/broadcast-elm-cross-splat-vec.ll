@@ -1335,7 +1335,7 @@ define <16 x i32> @f16xi32_i128(<16 x i32> %a) {
 ; AVX512-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpandd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retl
 ;
 ; AVX-64-LABEL: f16xi32_i128:
@@ -1369,7 +1369,7 @@ define <16 x i32> @f16xi32_i128(<16 x i32> %a) {
 ; AVX512F-64-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512F-64-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512F-64-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
-; AVX512F-64-NEXT:    vpandd %zmm1, %zmm0, %zmm0
+; AVX512F-64-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512F-64-NEXT:    retq
   %res1 = add <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>, %a
   %res2 = and <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>, %res1

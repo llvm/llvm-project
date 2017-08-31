@@ -49,14 +49,14 @@ attributes #0 = { nounwind readnone }
 !llvm.dbg.cu = !{!10}
 !llvm.module.flags = !{!14, !15}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "g1", scope: null, file: !2, line: 5, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "f1.cpp", directory: "x87stackifier")
 !3 = !DIDerivedType(tag: DW_TAG_typedef, name: "fpu_extended", file: !2, line: 3, baseType: !4)
 !4 = !DIDerivedType(tag: DW_TAG_typedef, name: "fpu_register", file: !2, line: 2, baseType: !5)
 !5 = !DIDerivedType(tag: DW_TAG_typedef, name: "uae_f64", file: !2, line: 1, baseType: !6)
 !6 = !DIBasicType(name: "long double", size: 128, align: 128, encoding: DW_ATE_float)
-!7 = !DIGlobalVariableExpression(var: !8)
+!7 = !DIGlobalVariableExpression(var: !8, expr: !DIExpression())
 !8 = !DIGlobalVariable(name: "g2", scope: null, file: !2, line: 6, type: !9, isLocal: false, isDefinition: true)
 !9 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !10 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !11, producer: "clang version 3.6.0 (http://llvm.org/git/clang 8444ae7cfeaefae031f8fedf0d1435ca3b14d90b) (http://llvm.org/git/llvm 886f0101a7d176543b831f5efb74c03427244a55)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !12, retainedTypes: !12, globals: !13, imports: !12)

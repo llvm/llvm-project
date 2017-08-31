@@ -32,6 +32,10 @@ class SIMD_I<dag oops, dag iops, list<dag> pattern,
              string asmstr = "", bits<32> inst = -1>
     : I<oops, iops, pattern, asmstr, inst>, Requires<[HasSIMD128]>;
 
+class ATOMIC_I<dag oops, dag iops, list<dag> pattern,
+               string asmstr = "", bits<32> inst = -1>
+    : I<oops, iops, pattern, asmstr, inst>, Requires<[HasAtomics]>;
+
 // Unary and binary instructions, for the local types that WebAssembly supports.
 multiclass UnaryInt<SDNode node, string name, bits<32> i32Inst, bits<32> i64Inst> {
   def _I32 : I<(outs I32:$dst), (ins I32:$src),

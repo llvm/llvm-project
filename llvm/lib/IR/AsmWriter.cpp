@@ -3592,7 +3592,7 @@ static void printMetadataImpl(raw_ostream &ROS, const Metadata &MD,
                          /* FromValue */ true);
 
   auto *N = dyn_cast<MDNode>(&MD);
-  if (OnlyAsOperand || !N)
+  if (OnlyAsOperand || !N || isa<DIExpression>(MD))
     return;
 
   OS << " = ";

@@ -84,7 +84,7 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
                        MachineInstrBuilder &MIB, CCAssignFn *AssignFn)
       : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB), StackSize(0),
         DL(MIRBuilder.getMF().getDataLayout()),
-        STI(MIRBuilder.getMF().getSubtarget<X86Subtarget>()) {}
+        STI(MIRBuilder.getMF().getSubtarget<X86Subtarget>()), NumXMMRegs(0) {}
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -125,21 +125,27 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
                  CCValAssign::LocInfo LocInfo,
                  const CallLowering::ArgInfo &Info, CCState &State) override {
 
-    if (!Info.IsFixed)
-      return true; // TODO: handle variadic function
-
     bool Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
     StackSize = State.getNextStackOffset();
+
+    static const MCPhysReg XMMArgRegs[] = {X86::XMM0, X86::XMM1, X86::XMM2,
+                                           X86::XMM3, X86::XMM4, X86::XMM5,
+                                           X86::XMM6, X86::XMM7};
+    if (!Info.IsFixed)
+      NumXMMRegs = State.getFirstUnallocated(XMMArgRegs);
+
     return Res;
   }
 
   uint64_t getStackSize() { return StackSize; }
+  uint64_t getNumXmmRegs() { return NumXMMRegs; }
 
 protected:
   MachineInstrBuilder &MIB;
   uint64_t StackSize;
   const DataLayout &DL;
   const X86Subtarget &STI;
+  unsigned NumXMMRegs;
 };
 } // End anonymous namespace.
 
@@ -337,6 +343,22 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   OutgoingValueHandler Handler(MIRBuilder, MRI, MIB, CC_X86);
   if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
     return false;
+
+  bool IsFixed = OrigArgs.empty() ? true : OrigArgs.back().IsFixed;
+  if (STI.is64Bit() && !IsFixed && !STI.isCallingConvWin64(CallConv)) {
+    // From AMD64 ABI document:
+    // For calls that may call functions that use varargs or stdargs
+    // (prototype-less calls or calls to functions containing ellipsis (...) in
+    // the declaration) %al is used as hidden argument to specify the number
+    // of SSE registers used. The contents of %al do not need to match exactly
+    // the number of registers, but must be an ubound on the number of SSE
+    // registers used and is in the range 0 - 8 inclusive.
+
+    MIRBuilder.buildInstr(X86::MOV8ri)
+        .addDef(X86::AL)
+        .addImm(Handler.getNumXmmRegs());
+    MIB.addUse(X86::AL, RegState::Implicit);
+  }
 
   // Now we can add the actual call instruction to the correct basic block.
   MIRBuilder.insertInstr(MIB);

@@ -153,15 +153,14 @@ int llvm::libDriverMain(llvm::ArrayRef<const char*> ArgsArr) {
     Members.emplace_back(std::move(*MOrErr));
   }
 
-  std::pair<StringRef, std::error_code> Result =
-      llvm::writeArchive(getOutputPath(&Args, Members[0]), Members,
+  std::string OutputPath = getOutputPath(&Args, Members[0]);
+  std::error_code EC =
+      llvm::writeArchive(OutputPath, Members,
                          /*WriteSymtab=*/true, object::Archive::K_GNU,
                          /*Deterministic*/ true, Args.hasArg(OPT_llvmlibthin));
 
-  if (Result.second) {
-    if (Result.first.empty())
-      Result.first = ArgsArr[0];
-    llvm::errs() << Result.first << ": " << Result.second.message() << "\n";
+  if (EC) {
+    llvm::errs() << OutputPath << ": " << EC.message() << "\n";
     return 1;
   }
 

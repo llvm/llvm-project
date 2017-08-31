@@ -68,7 +68,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!14, !15}
 !llvm.ident = !{!16}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "i", scope: null, file: !2, line: 5, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "inline.cpp", directory: "/tmp/dbginfo")
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

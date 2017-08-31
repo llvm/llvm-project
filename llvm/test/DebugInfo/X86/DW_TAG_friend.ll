@@ -19,7 +19,7 @@ source_filename = "test/DebugInfo/X86/DW_TAG_friend.ll"
 !llvm.dbg.cu = !{!21}
 !llvm.module.flags = !{!24}
 
-!0 = !DIGlobalVariableExpression(var: !1)
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 10, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "foo.cpp", directory: "/Users/echristo/tmp")
 !3 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !2, line: 1, size: 32, align: 32, elements: !4)
@@ -30,7 +30,7 @@ source_filename = "test/DebugInfo/X86/DW_TAG_friend.ll"
 !8 = !DISubroutineType(types: !9)
 !9 = !{null, !10}
 !10 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !3, size: 64, align: 64, flags: DIFlagArtificial)
-!11 = !DIGlobalVariableExpression(var: !12)
+!11 = !DIGlobalVariableExpression(var: !12, expr: !DIExpression())
 !12 = !DIGlobalVariable(name: "b", scope: null, file: !2, line: 11, type: !13, isLocal: false, isDefinition: true)
 !13 = !DICompositeType(tag: DW_TAG_class_type, name: "B", file: !2, line: 5, size: 32, align: 32, elements: !14)
 !14 = !{!15, !16, !20}
