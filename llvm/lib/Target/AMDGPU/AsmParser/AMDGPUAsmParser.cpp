@@ -1074,7 +1074,10 @@ public:
                OptionalImmIndexMap &OptionalIdx);
   void cvtVOP3OpSel(MCInst &Inst, const OperandVector &Operands);
   void cvtVOP3(MCInst &Inst, const OperandVector &Operands);
+  void cvtVOP3PImpl(MCInst &Inst, const OperandVector &Operands,
+                    bool IsPacked);
   void cvtVOP3P(MCInst &Inst, const OperandVector &Operands);
+  void cvtVOP3P_NotPacked(MCInst &Inst, const OperandVector &Operands);
 
   void cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands);
 
@@ -4254,7 +4257,9 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands) {
   cvtVOP3(Inst, Operands, OptionalIdx);
 }
 
-void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands) {
+void AMDGPUAsmParser::cvtVOP3PImpl(MCInst &Inst,
+                                   const OperandVector &Operands,
+                                   bool IsPacked) {
   OptionalImmIndexMap OptIdx;
 
   cvtVOP3(Inst, Operands, OptIdx);
@@ -4267,11 +4272,15 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands) {
 
   int OpSelHiIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel_hi);
   if (OpSelHiIdx != -1) {
-    addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyOpSelHi, -1);
+    // TODO: Should we change the printing to match?
+    int DefaultVal = IsPacked ? -1 : 0;
+    addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyOpSelHi,
+                          DefaultVal);
   }
 
   int NegLoIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_lo);
   if (NegLoIdx != -1) {
+    assert(IsPacked);
     addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyNegLo);
     addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyNegHi);
   }
@@ -4323,6 +4332,15 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands) {
 
     Inst.getOperand(ModIdx).setImm(Inst.getOperand(ModIdx).getImm() | ModVal);
   }
+}
+
+void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands) {
+  cvtVOP3PImpl(Inst, Operands, true);
+}
+
+void AMDGPUAsmParser::cvtVOP3P_NotPacked(MCInst &Inst,
+                                         const OperandVector &Operands) {
+  cvtVOP3PImpl(Inst, Operands, false);
 }
 
 //===----------------------------------------------------------------------===//
