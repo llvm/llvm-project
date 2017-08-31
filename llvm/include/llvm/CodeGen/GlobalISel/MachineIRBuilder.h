@@ -82,7 +82,7 @@ class MachineIRBuilder {
   template<typename UseArgTy, typename ... UseArgsTy>
   void addUsesFromArgs(MachineInstrBuilder &MIB, UseArgTy &&Arg1, UseArgsTy &&... Args) {
     addUseFromArg(MIB, Arg1);
-    addUsesFromArgs(std::forward<UseArgsTy>(Args)...);
+    addUsesFromArgs(MIB, std::forward<UseArgsTy>(Args)...);
   }
 public:
   /// Getter for the function we currently build.
