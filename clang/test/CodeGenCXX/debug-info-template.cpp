@@ -25,7 +25,7 @@ struct TC {
 int glb;
 void func();
 
-// CHECK: [[TCI]] = !DIGlobalVariableExpression(var: [[TCIV:.*]])
+// CHECK: [[TCI]] = !DIGlobalVariableExpression(var: [[TCIV:.*]], expr: !DIExpression())
 // CHECK: [[TCIV]] = distinct !DIGlobalVariable(name: "tci",
 // CHECK-SAME:                                  type: ![[TCNESTED:[0-9]+]]
 // CHECK: ![[TCNESTED]] ={{.*}}!DICompositeType(tag: DW_TAG_structure_type, name: "nested",
@@ -84,7 +84,7 @@ TC
 // CHECK: [[TCARG7_3]] = !DITemplateValueParameter(type: [[INT]], value: i32 3)
   3>::nested tci;
 
-// CHECK: [[TCN]] = !DIGlobalVariableExpression(var: [[TCNV:.*]])
+// CHECK: [[TCN]] = !DIGlobalVariableExpression(var: [[TCNV:.*]], expr: !DIExpression())
 // CHECK: [[TCNV]] = distinct !DIGlobalVariable(name: "tcn"
 // CHECK-SAME:                                  type: ![[TCNT:[0-9]+]]
 TC
@@ -125,7 +125,7 @@ template <template <typename> class tmpl, int &lvr, int &&rvr>
 struct NN {
 };
 
-// CHECK: [[NN]] = !DIGlobalVariableExpression(var: [[NNV:.*]])
+// CHECK: [[NN]] = !DIGlobalVariableExpression(var: [[NNV:.*]], expr: !DIExpression())
 // CHECK: [[NNV]] = distinct !DIGlobalVariable(name: "nn"
 // CHECK-SAME:                                 type: ![[NNT:[0-9]+]]
 

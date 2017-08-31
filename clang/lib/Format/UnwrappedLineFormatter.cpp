@@ -1037,6 +1037,10 @@ void UnwrappedLineFormatter::formatFirstToken(const AnnotatedLine &Line,
   if (RootToken.IsFirst && !RootToken.HasUnescapedNewline)
     Newlines = 0;
 
+  // Preprocessor directives get indented after the hash, if indented.
+  if (Line.Type == LT_PreprocessorDirective || Line.Type == LT_ImportStatement)
+    Indent = 0;
+
   // Remove empty lines after "{".
   if (!Style.KeepEmptyLinesAtTheStartOfBlocks && PreviousLine &&
       PreviousLine->Last->is(tok::l_brace) &&

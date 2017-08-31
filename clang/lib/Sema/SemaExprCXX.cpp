@@ -3284,7 +3284,7 @@ void Sema::CheckVirtualDtorCall(CXXDestructorDecl *dtor, SourceLocation Loc,
                                 bool IsDelete, bool CallCanBeVirtual,
                                 bool WarnOnNonAbstractTypes,
                                 SourceLocation DtorLoc) {
-  if (!dtor || dtor->isVirtual() || !CallCanBeVirtual)
+  if (!dtor || dtor->isVirtual() || !CallCanBeVirtual || isUnevaluatedContext())
     return;
 
   // C++ [expr.delete]p3:
@@ -3297,6 +3297,12 @@ void Sema::CheckVirtualDtorCall(CXXDestructorDecl *dtor, SourceLocation Loc,
   const CXXRecordDecl *PointeeRD = dtor->getParent();
   // Note: a final class cannot be derived from, no issue there
   if (!PointeeRD->isPolymorphic() || PointeeRD->hasAttr<FinalAttr>())
+    return;
+
+  // If the superclass is in a system header, there's nothing that can be done.
+  // The `delete` (where we emit the warning) can be in a system header,
+  // what matters for this warning is where the deleted type is defined.
+  if (getSourceManager().isInSystemHeader(PointeeRD->getLocation()))
     return;
 
   QualType ClassType = dtor->getThisType(Context)->getPointeeType();

@@ -41,7 +41,7 @@
 EXPORT module PARTITION MODULE_NAME;
 #if TEST == 4
 // expected-error@-2 {{redefinition of module 'x'}}
-// expected-note-re@module-declaration.cpp:* {{loaded from '{{.*}}/x.pcm'}}
+// expected-note-re@module-declaration.cpp:* {{loaded from '{{.*[/\\]}}x.pcm'}}
 #elif TEST == 6
 // expected-error@-5 {{module partition must be declared 'export'}}
 #elif TEST == 7

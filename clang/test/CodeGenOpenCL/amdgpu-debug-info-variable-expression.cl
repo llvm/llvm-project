@@ -2,51 +2,51 @@
 // RUN: %clang -cl-std=CL2.0 -emit-llvm -g -O0 -S -target amdgcn-amd-amdhsa-opencl -mcpu=fiji -o - %s | FileCheck %s
 
 // CHECK-DAG: ![[FILEVAR0:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar0", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR0]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR0]], expr: !DIExpression())
 global int *FileVar0;
 // CHECK-DAG: ![[FILEVAR1:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar1", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR1]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR1]], expr: !DIExpression())
 constant int *FileVar1;
 // CHECK-DAG: ![[FILEVAR2:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar2", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR2]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR2]], expr: !DIExpression())
 local int *FileVar2;
 // CHECK-DAG: ![[FILEVAR3:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar3", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR3]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR3]], expr: !DIExpression())
 private int *FileVar3;
 // CHECK-DAG: ![[FILEVAR4:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar4", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR4]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR4]], expr: !DIExpression())
 int *FileVar4;
 
 // CHECK-DAG: ![[FILEVAR5:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar5", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR5]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR5]], expr: !DIExpression())
 global int *global FileVar5;
 // CHECK-DAG: ![[FILEVAR6:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar6", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR6]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR6]], expr: !DIExpression())
 constant int *global FileVar6;
 // CHECK-DAG: ![[FILEVAR7:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar7", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR7]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR7]], expr: !DIExpression())
 local int *global FileVar7;
 // CHECK-DAG: ![[FILEVAR8:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar8", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR8]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR8]], expr: !DIExpression())
 private int *global FileVar8;
 // CHECK-DAG: ![[FILEVAR9:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar9", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR9]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR9]], expr: !DIExpression())
 int *global FileVar9;
 
 // CHECK-DAG: ![[FILEVAR10:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar10", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR10]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR10]], expr: !DIExpression())
 global int *constant FileVar10 = 0;
 // CHECK-DAG: ![[FILEVAR11:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar11", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR11]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR11]], expr: !DIExpression())
 constant int *constant FileVar11 = 0;
 // CHECK-DAG: ![[FILEVAR12:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar12", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR12]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR12]], expr: !DIExpression())
 local int *constant FileVar12 = 0;
 // CHECK-DAG: ![[FILEVAR13:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar13", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR13]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR13]], expr: !DIExpression())
 private int *constant FileVar13 = 0;
 // CHECK-DAG: ![[FILEVAR14:[0-9]+]] = distinct !DIGlobalVariable(name: "FileVar14", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: false, isDefinition: true)
-// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR14]])
+// CHECK-DAG: !DIGlobalVariableExpression(var: ![[FILEVAR14]], expr: !DIExpression())
 int *constant FileVar14 = 0;
 
 kernel void kernel1(
@@ -79,19 +79,19 @@ kernel void kernel1(
   int *FuncVar4 = Tmp1;
 
   // CHECK-DAG: ![[FUNCVAR5:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar5", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
-  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR5]])
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR5]], expr: !DIExpression())
   global int *constant FuncVar5 = 0;
   // CHECK-DAG: ![[FUNCVAR6:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar6", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
-  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR6]])
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR6]], expr: !DIExpression())
   constant int *constant FuncVar6 = 0;
   // CHECK-DAG: ![[FUNCVAR7:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar7", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
-  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR7]])
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR7]], expr: !DIExpression())
   local int *constant FuncVar7 = 0;
   // CHECK-DAG: ![[FUNCVAR8:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar8", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
-  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR8]])
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR8]], expr: !DIExpression())
   private int *constant FuncVar8 = 0;
   // CHECK-DAG: ![[FUNCVAR9:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar9", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
-  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR9]])
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR9]], expr: !DIExpression())
   int *constant FuncVar9 = 0;
 
   // CHECK-DAG: ![[FUNCVAR10:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar10", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)

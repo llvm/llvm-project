@@ -10,6 +10,7 @@
 #include "clang/Tooling/Refactoring/ASTSelection.h"
 #include "clang/AST/LexicallyOrderedRecursiveASTVisitor.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace tooling;
@@ -60,6 +61,21 @@ public:
     return std::move(Result);
   }
 
+  bool TraversePseudoObjectExpr(PseudoObjectExpr *E) {
+    // Avoid traversing the semantic expressions. They should be handled by
+    // looking through the appropriate opaque expressions in order to build
+    // a meaningful selection tree.
+    llvm::SaveAndRestore<bool> LookThrough(LookThroughOpaqueValueExprs, true);
+    return TraverseStmt(E->getSyntacticForm());
+  }
+
+  bool TraverseOpaqueValueExpr(OpaqueValueExpr *E) {
+    if (!LookThroughOpaqueValueExprs)
+      return true;
+    llvm::SaveAndRestore<bool> LookThrough(LookThroughOpaqueValueExprs, false);
+    return TraverseStmt(E->getSourceExpr());
+  }
+
   bool TraverseDecl(Decl *D) {
     if (isa<TranslationUnitDecl>(D))
       return LexicallyOrderedRecursiveASTVisitor::TraverseDecl(D);
@@ -97,6 +113,8 @@ public:
   bool TraverseStmt(Stmt *S) {
     if (!S)
       return true;
+    if (auto *Opaque = dyn_cast<OpaqueValueExpr>(S))
+      return TraverseOpaqueValueExpr(Opaque);
     // FIXME (Alex Lorenz): Improve handling for macro locations.
     SourceSelectionKind SelectionKind =
         selectionKindFor(CharSourceRange::getTokenRange(S->getSourceRange()));
@@ -149,6 +167,10 @@ private:
   FileID TargetFile;
   const ASTContext &Context;
   std::vector<SelectedASTNode> SelectionStack;
+  /// Controls whether we can traverse through the OpaqueValueExpr. This is
+  /// typically enabled during the traversal of syntactic form for
+  /// PseudoObjectExprs.
+  bool LookThroughOpaqueValueExprs = false;
 };
 
 } // end anonymous namespace

@@ -30,7 +30,8 @@ inline std::string messUp(llvm::StringRef Code) {
       if (JustReplacedNewline)
         MessedUp[i - 1] = '\n';
       InComment = true;
-    } else if (MessedUp[i] == '#' && (JustReplacedNewline || i == 0)) {
+    } else if (MessedUp[i] == '#' &&
+               (JustReplacedNewline || i == 0 || MessedUp[i - 1] == '\n')) {
       if (i != 0)
         MessedUp[i - 1] = '\n';
       InPreprocessorDirective = true;

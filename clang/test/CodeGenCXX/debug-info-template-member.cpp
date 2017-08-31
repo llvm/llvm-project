@@ -19,7 +19,7 @@ inline int add3(int x) {
 }
 
 // The compile unit pulls in the global variables first.
-// CHECK: [[X]] = !DIGlobalVariableExpression(var: [[XV:.*]])
+// CHECK: [[X]] = !DIGlobalVariableExpression(var: [[XV:.*]], expr: !DIExpression())
 // CHECK: [[XV]] = distinct !DIGlobalVariable(name: "x",
 // CHECK-SAME:                                type: ![[OUTER_FOO_INNER_ID:[0-9]+]]
 

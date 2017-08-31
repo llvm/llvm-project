@@ -93,6 +93,13 @@ LineState ContinuationIndenter::getInitialState(unsigned FirstIndent,
   LineState State;
   State.FirstIndent = FirstIndent;
   State.Column = FirstIndent;
+  // With preprocessor directive indentation, the line starts on column 0
+  // since it's indented after the hash, but FirstIndent is set to the
+  // preprocessor indent.
+  if (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash &&
+      (Line->Type == LT_PreprocessorDirective ||
+       Line->Type == LT_ImportStatement))
+    State.Column = 0;
   State.Line = Line;
   State.NextToken = Line->First;
   State.Stack.push_back(ParenState(FirstIndent, FirstIndent,
@@ -376,9 +383,25 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
   unsigned Spaces = Current.SpacesRequiredBefore + ExtraSpaces;
 
+  // Indent preprocessor directives after the hash if required.
+  int PPColumnCorrection = 0;
+  if (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash &&
+      Previous.is(tok::hash) && State.FirstIndent > 0 &&
+      (State.Line->Type == LT_PreprocessorDirective ||
+       State.Line->Type == LT_ImportStatement)) {
+    Spaces += State.FirstIndent;
+
+    // For preprocessor indent with tabs, State.Column will be 1 because of the
+    // hash. This causes second-level indents onward to have an extra space
+    // after the tabs. We avoid this misalignment by subtracting 1 from the
+    // column value passed to replaceWhitespace().
+    if (Style.UseTab != FormatStyle::UT_Never)
+      PPColumnCorrection = -1;
+  }
+
   if (!DryRun)
     Whitespaces.replaceWhitespace(Current, /*Newlines=*/0, Spaces,
-                                  State.Column + Spaces);
+                                  State.Column + Spaces + PPColumnCorrection);
 
   // If "BreakBeforeInheritanceComma" mode, don't break within the inheritance
   // declaration unless there is multiple inheritance.

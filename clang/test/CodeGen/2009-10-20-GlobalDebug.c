@@ -10,11 +10,11 @@ int main() {
   return 0;
 }
 
-// CHECK: [[L]] = !DIGlobalVariableExpression(var: [[LV:.*]])
+// CHECK: [[L]] = !DIGlobalVariableExpression(var: [[LV:.*]], expr: !DIExpression())
 // CHECK: [[LV]] = distinct !DIGlobalVariable(name: "localstatic"
 // CHECK-NOT:                                 linkageName:
 // CHECK-SAME:                                line: 9,
-// CHECK: [[G]] = !DIGlobalVariableExpression(var: [[GV:.*]])
+// CHECK: [[G]] = !DIGlobalVariableExpression(var: [[GV:.*]], expr: !DIExpression())
 // CHECK: [[GV]] = distinct !DIGlobalVariable(name: "global"
 // CHECK-NOT:                                 linkageName:
 // CHECK-SAME:                                line: 7,
