@@ -281,8 +281,6 @@ the `LLVM GEP instructions <http://llvm.org/docs/GetElementPtr.html>`_
   // for every non-constant array index.
   void __sanitizer_cov_trace_gep(uintptr_t Idx);
 
-This interface is a subject to change.
-
 Default implementation
 ======================
 

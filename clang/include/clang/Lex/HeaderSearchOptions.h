@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <string>
 #include <vector>
+#include <map>
 
 namespace clang {
 
@@ -93,6 +94,9 @@ public:
 
   /// \brief The directory used for a user build.
   std::string ModuleUserBuildPath;
+
+  /// \brief The mapping of module names to prebuilt module files.
+  std::map<std::string, std::string> PrebuiltModuleFiles;
 
   /// \brief The directories used to load prebuilt module files.
   std::vector<std::string> PrebuiltModulePaths;

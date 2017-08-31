@@ -50,7 +50,7 @@ define <2 x i64> @test_aesdec(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vaesdec %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; ZNVER1-NEXT:    vaesdec (%rdi), %xmm0, %xmm0 # sched: [11:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <2 x i64>, <2 x i64> *%a2, align 16
   %2 = call <2 x i64> @llvm.x86.aesni.aesdec(<2 x i64> %a0, <2 x i64> %a1)
   %3 = call <2 x i64> @llvm.x86.aesni.aesdec(<2 x i64> %2, <2 x i64> %1)
@@ -99,7 +99,7 @@ define <2 x i64> @test_aesdeclast(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) 
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vaesdeclast %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; ZNVER1-NEXT:    vaesdeclast (%rdi), %xmm0, %xmm0 # sched: [11:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <2 x i64>, <2 x i64> *%a2, align 16
   %2 = call <2 x i64> @llvm.x86.aesni.aesdeclast(<2 x i64> %a0, <2 x i64> %a1)
   %3 = call <2 x i64> @llvm.x86.aesni.aesdeclast(<2 x i64> %2, <2 x i64> %1)
@@ -148,7 +148,7 @@ define <2 x i64> @test_aesenc(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vaesenc %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; ZNVER1-NEXT:    vaesenc (%rdi), %xmm0, %xmm0 # sched: [11:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <2 x i64>, <2 x i64> *%a2, align 16
   %2 = call <2 x i64> @llvm.x86.aesni.aesenc(<2 x i64> %a0, <2 x i64> %a1)
   %3 = call <2 x i64> @llvm.x86.aesni.aesenc(<2 x i64> %2, <2 x i64> %1)
@@ -197,7 +197,7 @@ define <2 x i64> @test_aesenclast(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) 
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vaesenclast %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; ZNVER1-NEXT:    vaesenclast (%rdi), %xmm0, %xmm0 # sched: [11:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <2 x i64>, <2 x i64> *%a2, align 16
   %2 = call <2 x i64> @llvm.x86.aesni.aesenclast(<2 x i64> %a0, <2 x i64> %a1)
   %3 = call <2 x i64> @llvm.x86.aesni.aesenclast(<2 x i64> %2, <2 x i64> %1)
@@ -253,7 +253,7 @@ define <2 x i64> @test_aesimc(<2 x i64> %a0, <2 x i64> *%a1) {
 ; ZNVER1-NEXT:    vaesimc (%rdi), %xmm1 # sched: [11:0.50]
 ; ZNVER1-NEXT:    vaesimc %xmm0, %xmm0 # sched: [4:0.50]
 ; ZNVER1-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <2 x i64>, <2 x i64> *%a1, align 16
   %2 = call <2 x i64> @llvm.x86.aesni.aesimc(<2 x i64> %a0)
   %3 = call <2 x i64> @llvm.x86.aesni.aesimc(<2 x i64> %1)
@@ -310,7 +310,7 @@ define <2 x i64> @test_aeskeygenassist(<2 x i64> %a0, <2 x i64> *%a1) {
 ; ZNVER1-NEXT:    vaeskeygenassist $7, (%rdi), %xmm1 # sched: [11:0.50]
 ; ZNVER1-NEXT:    vaeskeygenassist $7, %xmm0, %xmm0 # sched: [4:0.50]
 ; ZNVER1-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <2 x i64>, <2 x i64> *%a1, align 16
   %2 = call <2 x i64> @llvm.x86.aesni.aeskeygenassist(<2 x i64> %a0, i8 7)
   %3 = call <2 x i64> @llvm.x86.aesni.aeskeygenassist(<2 x i64> %1, i8 7)

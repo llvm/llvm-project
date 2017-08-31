@@ -8,6 +8,11 @@
 
 #pragma clang system_header
 namespace dnvd {
+
+struct SystemB {
+  virtual void foo();
+};
+
 template <typename T>
 class simple_ptr {
 public:
@@ -249,6 +254,7 @@ private:
 };
 
 void use(B&);
+void use(SystemB&);
 void use(VB&);
 
 void nowarnstack() {
@@ -398,6 +404,10 @@ void nowarn1() {
   {
     simple_ptr<VF> vf(new VF());
     use(*vf);
+  }
+  {
+    simple_ptr<SystemB> sb(new SystemB());
+    use(*sb);
   }
 }
 
