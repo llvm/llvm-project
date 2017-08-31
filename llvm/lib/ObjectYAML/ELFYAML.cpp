@@ -853,7 +853,7 @@ void MappingTraits<ELFYAML::Relocation>::mapping(IO &IO,
   assert(Object && "The IO context is not initialized");
 
   IO.mapRequired("Offset", Rel.Offset);
-  IO.mapRequired("Symbol", Rel.Symbol);
+  IO.mapOptional("Symbol", Rel.Symbol);
 
   if (Object->Header.Machine == ELFYAML::ELF_EM(ELF::EM_MIPS) &&
       Object->Header.Class == ELFYAML::ELF_ELFCLASS(ELF::ELFCLASS64)) {

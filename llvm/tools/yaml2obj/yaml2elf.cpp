@@ -459,7 +459,8 @@ ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     // Some special relocation, R_ARM_v4BX for instance, does not have
     // an external reference.  So it ignores the return value of lookup()
     // here.
-    SymN2I.lookup(Rel.Symbol, SymIdx);
+    if (Rel.Symbol)
+      SymN2I.lookup(*Rel.Symbol, SymIdx);
 
     if (IsRela) {
       Elf_Rela REntry;

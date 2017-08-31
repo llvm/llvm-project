@@ -46,6 +46,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Allocator.h"
@@ -64,6 +65,7 @@
 #define DEBUG_TYPE "machine-outliner"
 
 using namespace llvm;
+using namespace ore;
 
 STATISTIC(NumOutlined, "Number of candidates outlined");
 STATISTIC(FunctionsCreated, "Number of functions created");
@@ -895,8 +897,41 @@ MachineOutliner::findCandidates(SuffixTree &ST, const TargetInstrInfo &TII,
     size_t OutliningCost = CallOverhead + FrameOverhead + SequenceOverhead;
     size_t NotOutliningCost = SequenceOverhead * Parent.OccurrenceCount;
 
-    if (NotOutliningCost <= OutliningCost)
+    // Is it better to outline this candidate than not?
+    if (NotOutliningCost <= OutliningCost) {
+      // Outlining this candidate would take more instructions than not
+      // outlining.
+      // Emit a remark explaining why we didn't outline this candidate.
+      std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator> C =
+          CandidateClass[0];
+      MachineOptimizationRemarkEmitter MORE(
+          *(C.first->getParent()->getParent()), nullptr);
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "NotOutliningCheaper",
+                                        C.first->getDebugLoc(),
+                                        C.first->getParent());
+      R << "Did not outline " << NV("Length", StringLen) << " instructions"
+        << " from " << NV("NumOccurrences", CandidateClass.size())
+        << " locations."
+        << " Instructions from outlining all occurrences ("
+        << NV("OutliningCost", OutliningCost) << ")"
+        << " >= Unoutlined instruction count ("
+        << NV("NotOutliningCost", NotOutliningCost) << ")"
+        << " (Also found at: ";
+
+      // Tell the user the other places the candidate was found.
+      for (size_t i = 1, e = CandidateClass.size(); i < e; i++) {
+        R << NV((Twine("OtherStartLoc") + Twine(i)).str(),
+                CandidateClass[i].first->getDebugLoc());
+        if (i != e - 1)
+          R << ", ";
+      }
+
+      R << ")";
+      MORE.emit(R);
+
+      // Move to the next candidate.
       continue;
+    }
 
     size_t Benefit = NotOutliningCost - OutliningCost;
 

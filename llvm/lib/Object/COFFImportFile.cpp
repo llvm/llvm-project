@@ -604,11 +604,9 @@ std::error_code writeImportLibrary(StringRef ImportName, StringRef Path,
         OF.createShortImport(*Name, E.Ordinal, ImportType, NameType));
   }
 
-  std::pair<StringRef, std::error_code> Result =
-      writeArchive(Path, Members, /*WriteSymtab*/ true, object::Archive::K_GNU,
-                   /*Deterministic*/ true, /*Thin*/ false);
-
-  return Result.second;
+  return writeArchive(Path, Members, /*WriteSymtab*/ true,
+                      object::Archive::K_GNU,
+                      /*Deterministic*/ true, /*Thin*/ false);
 }
 
 } // namespace object
