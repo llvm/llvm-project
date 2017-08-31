@@ -147,12 +147,13 @@ bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
   auto &ThreadStack = PerThreadFunctionStack[Record.TId];
   switch (Record.Type) {
   case RecordTypes::ENTER: {
-    // Function Enter
     ThreadStack.emplace_back(Record.FuncId, Record.TSC);
     break;
   }
   case RecordTypes::EXIT: {
-    // Function Exit
+    if (ThreadStack.empty())
+      return false;
+
     if (ThreadStack.back().first == Record.FuncId) {
       const auto &Top = ThreadStack.back();
       recordLatency(Top.first, diff(Top.second, Record.TSC));
@@ -407,6 +408,22 @@ void LatencyAccountant::exportStatsAsCSV(raw_ostream &OS,
 
 using namespace llvm::xray;
 
+namespace llvm {
+template <> struct format_provider<llvm::xray::RecordTypes> {
+  static void format(const llvm::xray::RecordTypes &T, raw_ostream &Stream,
+                     StringRef Style) {
+    switch(T) {
+      case RecordTypes::ENTER:
+        Stream << "enter";
+        break;
+      case RecordTypes::EXIT:
+        Stream << "exit";
+        break;
+    }
+  }
+};
+} // namespace llvm
+
 static CommandRegistration Unused(&Account, []() -> Error {
   InstrumentationMap Map;
   if (!AccountInstrMap.empty()) {
@@ -445,11 +462,22 @@ static CommandRegistration Unused(&Account, []() -> Error {
   for (const auto &Record : T) {
     if (FCA.accountRecord(Record))
       continue;
+    errs()
+        << "Error processing record: "
+        << llvm::formatv(
+               R"({{type: {0}; cpu: {1}; record-type: {2}; function-id: {3}; tsc: {4}; thread-id: {5}}})",
+               Record.RecordType, Record.CPU, Record.Type, Record.FuncId,
+               Record.TId)
+        << '\n';
     for (const auto &ThreadStack : FCA.getPerThreadFunctionStack()) {
       errs() << "Thread ID: " << ThreadStack.first << "\n";
+      if (ThreadStack.second.empty()) {
+        errs() << "  (empty stack)\n";
+        continue;
+      }
       auto Level = ThreadStack.second.size();
       for (const auto &Entry : llvm::reverse(ThreadStack.second))
-        errs() << "#" << Level-- << "\t"
+        errs() << "  #" << Level-- << "\t"
                << FuncIdHelper.SymbolOrNumber(Entry.first) << '\n';
     }
     if (!AccountKeepGoing)

@@ -57,7 +57,6 @@ TEST(FDRLoggingTest, Simple) {
   fdrLoggingHandleArg0(1, XRayEntryType::EXIT);
   ASSERT_EQ(fdrLoggingFinalize(), XRayLogInitStatus::XRAY_LOG_FINALIZED);
   ASSERT_EQ(fdrLoggingFlush(), XRayLogFlushStatus::XRAY_LOG_FLUSHED);
-  ASSERT_EQ(fdrLoggingReset(), XRayLogInitStatus::XRAY_LOG_UNINITIALIZED);
 
   // To do this properly, we have to close the file descriptor then re-open the
   // file for reading this time.
@@ -98,7 +97,6 @@ TEST(FDRLoggingTest, Multiple) {
   }
   ASSERT_EQ(fdrLoggingFinalize(), XRayLogInitStatus::XRAY_LOG_FINALIZED);
   ASSERT_EQ(fdrLoggingFlush(), XRayLogFlushStatus::XRAY_LOG_FLUSHED);
-  ASSERT_EQ(fdrLoggingReset(), XRayLogInitStatus::XRAY_LOG_UNINITIALIZED);
 
   // To do this properly, we have to close the file descriptor then re-open the
   // file for reading this time.

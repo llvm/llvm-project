@@ -11,7 +11,7 @@
     .svn  { background-color: #FFFF99 }
     .full { background-color: #CCFF99 }
     .na { background-color: #DDDDDD }
-    span:target { background-color: #FFFFBB; outline: #DDDD55 solid thin; }
+    :target { background-color: #FFFFBB; outline: #DDDD55 solid thin; }
     th { background-color: #FFDDAA }
     td { vertical-align: middle }
     tt { white-space: nowrap }
@@ -524,7 +524,8 @@ version 3.7.
 <p>Clang 5 and later implement all the features
 of the C++ 2017 Draft International Standard.
 
-<p>You can use Clang in C++17 mode with the <code>-std=c++1z</code> option.</p>
+<p>You can use Clang in C++17 mode with the <code>-std=c++17</code> option
+(use <code>-std=c++1z</code> in Clang 4 and earlier).</p>
 
 <details open>
 <summary>List of features and minimum Clang version with support</summary>
@@ -829,7 +830,7 @@ as the draft C++2a standard evolves.
       <td><a href="http://wg21.link/p0702r1">P0702R1</a></td>
       <td class="none" align="center">No</td>
     </tr>
-    <tr>
+    <tr id="p0374">
       <td>Concepts</td>
       <td><a href="http://wg21.link/p0734r0">P0734R0</a></td>
       <td class="none" align="center">No</td>
@@ -893,7 +894,7 @@ and library features that are not part of standard C++.</p>
       <td>[TS] Concepts</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0121r0.pdf">P0121R0</a></td>
       <td></td>
-      <td class="none" align="center">WIP</td>
+      <td class="na" align="center">Superseded by <a href="#p0374">P0734R0</a></td>
     </tr>
     <tr>
       <td>[DRAFT TS] Coroutines</td>
