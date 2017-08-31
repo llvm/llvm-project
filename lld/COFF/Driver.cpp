@@ -522,25 +522,6 @@ static void parseModuleDefs(StringRef Path) {
   }
 }
 
-std::vector<MemoryBufferRef> getArchiveMembers(Archive *File) {
-  std::vector<MemoryBufferRef> V;
-  Error Err = Error::success();
-  for (const ErrorOr<Archive::Child> &COrErr : File->children(Err)) {
-    Archive::Child C =
-        check(COrErr,
-              File->getFileName() + ": could not get the child of the archive");
-    MemoryBufferRef MBRef =
-        check(C.getMemoryBufferRef(),
-              File->getFileName() +
-                  ": could not get the buffer for a child of the archive");
-    V.push_back(MBRef);
-  }
-  if (Err)
-    fatal(File->getFileName() +
-          ": Archive::children failed: " + toString(std::move(Err)));
-  return V;
-}
-
 // A helper function for filterBitcodeFiles.
 static bool needsRebuilding(MemoryBufferRef MB) {
   // The MSVC linker doesn't support thin archives, so if it's a thin
@@ -600,12 +581,12 @@ filterBitcodeFiles(StringRef Path, std::vector<std::string> &TemporaryFiles) {
   std::string Temp = S.str();
   TemporaryFiles.push_back(Temp);
 
-  std::pair<StringRef, std::error_code> Ret =
+  std::error_code EC =
       llvm::writeArchive(Temp, New, /*WriteSymtab=*/true, Archive::Kind::K_GNU,
                          /*Deterministics=*/true,
                          /*Thin=*/false);
-  if (Ret.second)
-    error("failed to create a new archive " + S.str() + ": " + Ret.first);
+  if (EC)
+    error("failed to create a new archive " + S.str() + ": " + EC.message());
   return Temp;
 }
 

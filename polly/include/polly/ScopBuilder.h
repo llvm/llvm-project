@@ -221,6 +221,14 @@ class ScopBuilder {
   /// Build the access functions for the subregion @p SR.
   void buildAccessFunctions();
 
+  /// Should an instruction be modeled in a ScopStmt.
+  ///
+  /// @param Inst The instruction to check.
+  /// @param L    The loop in which context the instruction is looked at.
+  ///
+  /// @returns True if the instruction should be modeled.
+  bool shouldModelInst(Instruction *Inst, Loop *L);
+
   /// Create ScopStmt for all BBs and non-affine subregions of @p SR.
   ///
   /// @param SR A subregion of @p R.

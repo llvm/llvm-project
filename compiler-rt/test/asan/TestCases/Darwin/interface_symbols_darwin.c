@@ -12,6 +12,7 @@
 // RUN:  | grep -v "__sanitizer_weak_hook"                                     \
 // RUN:  | grep -v "__sanitizer_mz"                                            \
 // RUN:  | grep -v "__ubsan_handle_dynamic_type_cache_miss"                    \
+// RUN:  | grep -v "__sancov_lowest_stack"                                     \
 // RUN:  | sed -e "s/__asan_version_mismatch_check_v[0-9]+/__asan_version_mismatch_check/" \
 // RUN:  > %t.exports
 //
