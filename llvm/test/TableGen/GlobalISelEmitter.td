@@ -83,11 +83,30 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    return Features;
 // CHECK-NEXT:  }
 
-// CHECK-LABEL: enum {
+// CHECK-LABEL: // LLT Objects.
+// CHECK-NEXT:  enum {
 // CHECK-NEXT:    GILLT_s32,
 // CHECK-NEXT:  }
 // CHECK-NEXT:  const static LLT TypeObjects[] = {
 // CHECK-NEXT:    LLT::scalar(32),
+// CHECK-NEXT:  };
+
+// CHECK-LABEL: // Feature bitsets.
+// CHECK-NEXT:  enum {
+// CHECK-NEXT:    GIFBS_Invalid,
+// CHECK-NEXT:    GIFBS_HasA,
+// CHECK-NEXT:    GIFBS_HasA_HasB_HasC,
+// CHECK-NEXT:  }
+// CHECK-NEXT:  const static PredicateBitset FeatureBitsets[] {
+// CHECK-NEXT:    {}, // GIFBS_Invalid
+// CHECK-NEXT:    {Feature_HasABit, },
+// CHECK-NEXT:    {Feature_HasABit, Feature_HasBBit, Feature_HasCBit, },
+// CHECK-NEXT:  };
+
+// CHECK-LABEL: // ComplexPattern predicates.
+// CHECK-NEXT:  enum {
+// CHECK-NEXT:    GICP_Invalid,
+// CHECK-NEXT:    GICP_gi_complex,
 // CHECK-NEXT:  };
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I) const {
