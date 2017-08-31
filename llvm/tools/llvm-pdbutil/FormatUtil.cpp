@@ -157,6 +157,18 @@ std::string llvm::pdb::formatSymbolKind(SymbolKind K) {
   return formatUnknownEnum(K);
 }
 
+StringRef llvm::pdb::formatTypeLeafKind(TypeLeafKind K) {
+  switch (K) {
+#define TYPE_RECORD(EnumName, value, name)                                     \
+  case EnumName:                                                               \
+    return #EnumName;
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
+  default:
+    llvm_unreachable("Unknown type leaf kind!");
+  }
+  return "";
+}
+
 std::string llvm::pdb::formatSegmentOffset(uint16_t Segment, uint32_t Offset) {
   return formatv("{0:4}:{1:4}", Segment, Offset);
 }

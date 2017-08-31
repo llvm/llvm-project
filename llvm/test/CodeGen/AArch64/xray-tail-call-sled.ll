@@ -27,12 +27,15 @@ define i32 @callee() nounwind noinline uwtable "function-instrument"="xray-alway
 ; CHECK-LABEL: .Ltmp1:
 ; CHECK-NEXT:  ret
 }
-; CHECK-LABEL: xray_instr_map
+; CHECK:       .p2align 4
+; CHECK-NEXT:  .xword .Lxray_fn_idx_synth_0
+; CHECK-NEXT:  .section xray_instr_map,{{.*}}
 ; CHECK-LABEL: Lxray_sleds_start0:
 ; CHECK:       .xword .Lxray_sled_0
 ; CHECK:       .xword .Lxray_sled_1
 ; CHECK-LABEL: Lxray_sleds_end0:
-; CHECK-LABEL: xray_fn_idx
+; CHECK:       .section xray_fn_idx,{{.*}}
+; CHECK-LABEL: Lxray_fn_idx_synth_0:
 ; CHECK:       .xword .Lxray_sleds_start0
 ; CHECK-NEXT:  .xword .Lxray_sleds_end0
 
@@ -63,11 +66,14 @@ define i32 @caller() nounwind noinline uwtable "function-instrument"="xray-alway
 ; CHECK:       b	callee
   ret i32 %retval
 }
-; CHECK-LABEL: xray_instr_map
+; CHECK:       .p2align 4
+; CHECK-NEXT:  .xword .Lxray_fn_idx_synth_1
+; CHECK-NEXT:  .section xray_instr_map,{{.*}}
 ; CHECK-LABEL: Lxray_sleds_start1:
 ; CHECK:       .xword .Lxray_sled_2
 ; CHECK:       .xword .Lxray_sled_3
 ; CHECK-LABEL: Lxray_sleds_end1:
 ; CHECK:       .section xray_fn_idx,{{.*}}
+; CHECK-LABEL: Lxray_fn_idx_synth_1:
 ; CHECK:       .xword .Lxray_sleds_start1
 ; CHECK-NEXT:  .xword .Lxray_sleds_end1

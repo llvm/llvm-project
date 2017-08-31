@@ -2027,7 +2027,8 @@ void ObjCARCOpt::OptimizeReturns(Function &F) {
       continue;
 
     CallInst *Retain = FindPredecessorRetainWithSafePath(
-        Arg, &BB, Autorelease, DependingInstructions, Visited, PA);
+        Arg, Autorelease->getParent(), Autorelease, DependingInstructions,
+        Visited, PA);
     DependingInstructions.clear();
     Visited.clear();
 

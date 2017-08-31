@@ -30,19 +30,12 @@ class MachineModuleInfo;
 
 /// Represents the location at which a variable is stored.
 struct DbgVariableLocation {
-  /// Offset relative to base register.
-  int64_t Offset;
-
   /// Base register.
   unsigned Register;
 
-  /// If false, Register is the location. If true,
-  /// Register+Offset point at the location.
-  unsigned InMemory : 1;
-
-  /// If false, the location holds the variable's value.
-  /// If true, the location holds the variable's address.
-  unsigned Deref : 1;
+  /// Chain of offsetted loads necessary to load the value if it lives in
+  /// memory. Every load except for the last is pointer-sized.
+  SmallVector<int64_t, 1> LoadChain;
 
   /// Present if the location is part of a larger variable.
   llvm::Optional<llvm::DIExpression::FragmentInfo> FragmentInfo;

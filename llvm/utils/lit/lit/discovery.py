@@ -52,13 +52,14 @@ def getTestSuite(item, litConfig, cache):
 
     def search(path):
         # Check for an already instantiated test suite.
-        res = cache.get(path)
+        real_path = os.path.realpath(path)
+        res = cache.get(real_path)
         if res is None:
-            cache[path] = res = search1(path)
+            cache[real_path] = res = search1(path)
         return res
 
     # Canonicalize the path.
-    item = os.path.realpath(item)
+    item = os.path.normpath(item)
 
     # Skip files and virtual components.
     components = []

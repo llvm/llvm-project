@@ -314,6 +314,25 @@ define void @test25() {
   ret void
 }
 
+; Check that ObjCARCOpt::OptimizeReturns removes the redundant calls even when
+; they are not in the same basic block. This code used to cause an assertion
+; failure.
+
+; CHECK-LABEL: define i8* @test26()
+; CHECK: call i8* @returner()
+; CHECK-NOT:  call
+define i8* @test26() {
+bb0:
+  %v0 = call i8* @returner()
+  %v1 = tail call i8* @objc_retain(i8* %v0)
+  br label %bb1
+bb1:
+  %v2 = tail call i8* @objc_autoreleaseReturnValue(i8* %v1)
+  br label %bb2
+bb2:
+  ret i8* %v2
+}
+
 !0 = !{}
 
 ; CHECK: attributes [[NUW]] = { nounwind }
