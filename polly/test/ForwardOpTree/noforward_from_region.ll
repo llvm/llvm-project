@@ -1,14 +1,19 @@
 ; RUN: opt %loadPolly -polly-optree -analyze < %s | FileCheck %s -match-full-lines
 ;
-; Do not move instructions to region statements.
+; Ensure we do not move instructions from region statements in case the
+; instruction to move loads from an array which is also written to from
+; within the region. This is necessary as complex region statements may prevent
+; us from detecting possible memory conflicts.
 ;
 ; for (int j = 0; j < n; j += 1) {
 ; bodyA:
-;   double val = 21.0 + 21.0;
+;   double val = A[0];
+;   if (cond)
 ;
-; bodyB_entry:
-;   if (undef)
-; body_true:
+; bodyA_true:
+;     A[0] = 42;
+;
+; bodyB:
 ;     A[0] = val;
 ; }
 ;
@@ -22,14 +27,15 @@ for:
   br i1 %j.cmp, label %bodyA, label %exit
 
     bodyA:
-      %val = fadd double 21.0, 21.0
+      %val = load double, double* %A
+      %cond = fcmp oeq double 21.0, 21.0
+      br i1 %cond, label %bodyA_true, label %bodyB
+
+    bodyA_true:
+      store double 42.0, double* %A
       br label %bodyB
 
     bodyB:
-      %cond = fcmp oeq double 21.0, 21.0
-      br i1 %cond, label %bodyB_true, label %bodyB_exit
-
-    bodyB_true:
       store double %val, double* %A
       br label %bodyB_exit
 
@@ -46,6 +52,5 @@ exit:
 return:
   ret void
 }
-
 
 ; CHECK: ForwardOpTree executed, but did not modify anything

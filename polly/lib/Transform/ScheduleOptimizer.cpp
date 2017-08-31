@@ -153,28 +153,51 @@ static cl::opt<int> ThroughputVectorFma(
 // represent the parameters of the target cache, which do not have typical
 // values that can be used by default. However, to apply the pattern matching
 // optimizations, we use the values of the parameters of Intel Core i7-3820
-// SandyBridge in case the parameters are not specified. Such an approach helps
-// also to attain the high-performance on IBM POWER System S822 and IBM Power
-// 730 Express server.
+// SandyBridge in case the parameters are not specified or not provided by the
+// TargetTransformInfo.
 static cl::opt<int> FirstCacheLevelAssociativity(
     "polly-target-1st-cache-level-associativity",
     cl::desc("The associativity of the first cache level."), cl::Hidden,
-    cl::init(8), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::init(-1), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<int> FirstCacheLevelDefaultAssociativity(
+    "polly-target-1st-cache-level-default-associativity",
+    cl::desc("The default associativity of the first cache level"
+             " (if not enough were provided by the TargetTransformInfo)."),
+    cl::Hidden, cl::init(8), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 static cl::opt<int> SecondCacheLevelAssociativity(
     "polly-target-2nd-cache-level-associativity",
     cl::desc("The associativity of the second cache level."), cl::Hidden,
-    cl::init(8), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::init(-1), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<int> SecondCacheLevelDefaultAssociativity(
+    "polly-target-2nd-cache-level-default-associativity",
+    cl::desc("The default associativity of the second cache level"
+             " (if not enough were provided by the TargetTransformInfo)."),
+    cl::Hidden, cl::init(8), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 static cl::opt<int> FirstCacheLevelSize(
     "polly-target-1st-cache-level-size",
     cl::desc("The size of the first cache level specified in bytes."),
+    cl::Hidden, cl::init(-1), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<int> FirstCacheLevelDefaultSize(
+    "polly-target-1st-cache-level-default-size",
+    cl::desc("The default size of the first cache level specified in bytes"
+             " (if not enough were provided by the TargetTransformInfo)."),
     cl::Hidden, cl::init(32768), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 static cl::opt<int> SecondCacheLevelSize(
     "polly-target-2nd-cache-level-size",
     cl::desc("The size of the second level specified in bytes."), cl::Hidden,
-    cl::init(262144), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::init(-1), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<int> SecondCacheLevelDefaultSize(
+    "polly-target-2nd-cache-level-default-size",
+    cl::desc("The default size of the second cache level specified in bytes"
+             " (if not enough were provided by the TargetTransformInfo)."),
+    cl::Hidden, cl::init(262144), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 static cl::opt<int> VectorRegisterBitwidth(
     "polly-target-vector-register-bitwidth",
@@ -893,6 +916,44 @@ getMicroKernelParams(const TargetTransformInfo *TTI, MatMulInfoTy MMI) {
   return {Mr, Nr};
 }
 
+namespace {
+/// Determine parameters of the target cache.
+///
+/// @param TTI Target Transform Info.
+void getTargetCacheParameters(const llvm::TargetTransformInfo *TTI) {
+  auto L1DCache = llvm::TargetTransformInfo::CacheLevel::L1D;
+  auto L2DCache = llvm::TargetTransformInfo::CacheLevel::L2D;
+  if (FirstCacheLevelSize == -1) {
+    if (TTI->getCacheSize(L1DCache).hasValue())
+      FirstCacheLevelSize = TTI->getCacheSize(L1DCache).getValue();
+    else
+      FirstCacheLevelSize = static_cast<int>(FirstCacheLevelDefaultSize);
+  }
+  if (SecondCacheLevelSize == -1) {
+    if (TTI->getCacheSize(L2DCache).hasValue())
+      SecondCacheLevelSize = TTI->getCacheSize(L2DCache).getValue();
+    else
+      SecondCacheLevelSize = static_cast<int>(SecondCacheLevelDefaultSize);
+  }
+  if (FirstCacheLevelAssociativity == -1) {
+    if (TTI->getCacheAssociativity(L1DCache).hasValue())
+      FirstCacheLevelAssociativity =
+          TTI->getCacheAssociativity(L1DCache).getValue();
+    else
+      FirstCacheLevelAssociativity =
+          static_cast<int>(FirstCacheLevelDefaultAssociativity);
+  }
+  if (SecondCacheLevelAssociativity == -1) {
+    if (TTI->getCacheAssociativity(L2DCache).hasValue())
+      SecondCacheLevelAssociativity =
+          TTI->getCacheAssociativity(L2DCache).getValue();
+    else
+      SecondCacheLevelAssociativity =
+          static_cast<int>(SecondCacheLevelDefaultAssociativity);
+  }
+}
+} // namespace
+
 /// Get parameters of the BLIS macro kernel.
 ///
 /// During the computation of matrix multiplication, blocks of partitioned
@@ -901,6 +962,7 @@ getMicroKernelParams(const TargetTransformInfo *TTI, MatMulInfoTy MMI) {
 /// iterations. Since parameters of the macro kernel determine sizes of these
 /// blocks, there are upper and lower bounds on these parameters.
 ///
+/// @param TTI Target Transform Info.
 /// @param MicroKernelParams Parameters of the micro-kernel
 ///                          to be taken into account.
 /// @param MMI Parameters of the matrix multiplication operands.
@@ -908,8 +970,10 @@ getMicroKernelParams(const TargetTransformInfo *TTI, MatMulInfoTy MMI) {
 /// @see MacroKernelParamsTy
 /// @see MicroKernelParamsTy
 static struct MacroKernelParamsTy
-getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams,
+getMacroKernelParams(const llvm::TargetTransformInfo *TTI,
+                     const MicroKernelParamsTy &MicroKernelParams,
                      MatMulInfoTy MMI) {
+  getTargetCacheParameters(TTI);
   // According to www.cs.utexas.edu/users/flame/pubs/TOMS-BLIS-Analytical.pdf,
   // it requires information about the first two levels of a cache to determine
   // all the parameters of a macro-kernel. It also checks that an associativity
@@ -1227,7 +1291,7 @@ ScheduleTreeOptimizer::optimizeMatMulPattern(isl::schedule_node Node,
   NewK = NewK == DimOutNum - 2 ? NewJ : NewK;
   Node = permuteBandNodeDimensions(Node, NewK, DimOutNum - 1);
   auto MicroKernelParams = getMicroKernelParams(TTI, MMI);
-  auto MacroKernelParams = getMacroKernelParams(MicroKernelParams, MMI);
+  auto MacroKernelParams = getMacroKernelParams(TTI, MicroKernelParams, MMI);
   Node = createMacroKernel(Node, MacroKernelParams);
   Node = createMicroKernel(Node, MicroKernelParams);
   if (MacroKernelParams.Mc == 1 || MacroKernelParams.Nc == 1 ||

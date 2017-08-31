@@ -14,7 +14,7 @@
 ; KERNEL-IR:   %p_sqrt = tail call float @llvm.sqrt.f32(float %A.arr.i.val_p_scalar_)
 ; KERNEL-IR:   declare float @llvm.sqrt.f32(float)
 ; KERNEL-IR:   declare float @llvm.fabs.f32(float)
-; KERNEL-IR:   declare float @llvm.powi.f32(float, i32)
+
 
 ; Check that kernel launch is generated in host IR.
 ; the declare would not be generated unless a call to a kernel exists.
@@ -27,7 +27,6 @@
 ;       float tmp1 = sqrt(tmp1);
 ;       float tmp2 = fabs(tmp2);
 ;       float tmp3 = copysignf(tmp1, tmp2);
-;       float tmp4 = powi(tmp3, 2);
 ;       B[i] = tmp4;
 ;   }
 ; }
@@ -53,9 +52,8 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %sqrt = tail call float @llvm.sqrt.f32(float %A.arr.i.val)
   %fabs = tail call float @llvm.fabs.f32(float %sqrt);
   %copysign = tail call float @llvm.copysign.f32(float %sqrt, float %fabs);
-  %powi = tail call float @llvm.powi.f32(float %copysign, i32 2);
   %B.arr.i = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  store float %powi, float* %B.arr.i, align 4
+  store float %copysign, float* %B.arr.i, align 4
 
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %wide.trip.count = zext i32 %N to i64
@@ -73,7 +71,6 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 declare float @llvm.sqrt.f32(float) #0
 declare float @llvm.fabs.f32(float) #0
 declare float @llvm.copysign.f32(float, float) #0
-declare float @llvm.powi.f32(float, i32) #0
 
 attributes #0 = { nounwind readnone }
 
