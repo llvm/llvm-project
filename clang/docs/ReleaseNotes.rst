@@ -20,15 +20,9 @@ documentation <http://llvm.org/docs/ReleaseNotes.html>`_. All LLVM
 releases may be downloaded from the `LLVM releases web
 site <http://llvm.org/releases/>`_.
 
-For more information about Clang or LLVM, including information about
-the latest release, please check out the main please see the `Clang Web
-Site <http://clang.llvm.org>`_ or the `LLVM Web
-Site <http://llvm.org>`_.
-
-Note that if you are reading this file from a Subversion checkout or the
-main Clang web page, this document applies to the *next* release, not
-the current one. To see the release notes for a specific release, please
-see the `releases page <http://llvm.org/releases/>`_.
+For more information about Clang or LLVM, including information about the
+latest release, please see the `Clang Web Site <http://clang.llvm.org>`_ or the
+`LLVM Web Site <http://llvm.org>`_.
 
 What's New in Clang 5.0.0?
 ==========================
@@ -53,25 +47,25 @@ coroutine support. Here is `an example
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  -Wcast-qual was implemented for C++. C-style casts are now properly
+-  ``-Wcast-qual`` was implemented for C++. C-style casts are now properly
    diagnosed.
 
--  -Wunused-lambda-capture warns when a variable explicitly captured
+-  ``-Wunused-lambda-capture`` warns when a variable explicitly captured
    by a lambda is not used in the body of the lambda.
 
--  -Wstrict-prototypes is a new warning that warns about non-prototype
+-  ``-Wstrict-prototypes`` is a new warning that warns about non-prototype
    function and block declarations and types in C and Objective-C.
 
--  -Wunguarded-availability is a new warning that warns about uses of new
+-  ``-Wunguarded-availability`` is a new warning that warns about uses of new
    APIs that were introduced in a system whose version is newer than the
    deployment target version. A new Objective-C expression ``@available`` has
    been introduced to perform system version checking at runtime. This warning
    is off by default to prevent unexpected warnings in existing projects.
-   However, its less strict sibling -Wunguarded-availability-new is on by
+   However, its less strict sibling ``-Wunguarded-availability-new`` is on by
    default. It warns about unguarded uses of APIs only when they were introduced
    in or after macOS 10.13, iOS 11, tvOS 11 or watchOS 4.
 
--  The -Wdocumentation warning now allows the use of ``\param`` and
+-  The ``-Wdocumentation`` warning now allows the use of ``\param`` and
    ``\returns`` documentation directives in the documentation comments for
    declarations with a function or a block pointer type.
 
@@ -81,7 +75,8 @@ Improvements to Clang's diagnostics
 New Compiler Flags
 ------------------
 
-- --autocomplete was implemented to obtain a list of flags and its arguments. This is used for shell autocompletion.
+- ``--autocomplete`` was implemented to obtain a list of flags and its arguments.
+  This is used for shell autocompletion.
 
 Deprecated Compiler Flags
 -------------------------
@@ -89,9 +84,9 @@ Deprecated Compiler Flags
 The following options are deprecated and ignored. They will be removed in
 future versions of Clang.
 
-- -fslp-vectorize-aggressive used to enable the BB vectorizing pass. They have been superseeded
+- ``-fslp-vectorize-aggressive`` used to enable the BB vectorizing pass. They have been superseeded
   by the normal SLP vectorizer.
-- -fno-slp-vectorize-aggressive used to be the default behavior of clang.
+- ``-fno-slp-vectorize-aggressive`` used to be the default behavior of clang.
 
 New Pragmas in Clang
 -----------------------
@@ -109,7 +104,7 @@ Attribute Changes in Clang
 -  The ``overloadable`` attribute now allows at most one function with a given
    name to lack the ``overloadable`` attribute. This unmarked function will not
    have its name mangled.
--  The ```ms_abi`` attribute and the ``__builtin_ms_va_list`` types and builtins
+-  The ``ms_abi`` attribute and the ``__builtin_ms_va_list`` types and builtins
    are now supported on AArch64.
 
 C Language Changes in Clang
@@ -140,11 +135,9 @@ a vector expression--occurs when:
   vector's elements.
 
 - For compile time constant values, the above rule is weakened to consider the
-  value of the scalar constant rather than the constant's type.
-
-- Floating point constants with precise integral representations are not
-  implicitly converted to integer values, this is for compatibility with GCC.
-
+  value of the scalar constant rather than the constant's type. However,
+  for compatibility with GCC, floating point constants with precise integral
+  representations are not implicitly converted to integer values.
 
 Currently the basic integer and floating point types with the following
 operators are supported: ``+``, ``/``, ``-``, ``*``, ``%``, ``>``, ``<``,
@@ -155,10 +148,23 @@ assignment operators where applicable.
 C++ Language Changes in Clang
 -----------------------------
 
+- Support for the C++17 standard has been completed. This mode can be enabled
+  using ``-std=c++17`` (the old flag ``-std=c++1z`` is still supported for
+  compatibility).
+
+- When targeting a platform that uses the Itanium C++ ABI, Clang implements a
+  `recent change to the ABI`__ that passes objects of class type indirectly if they
+  have a non-trivial move constructor. Previous versions of Clang only
+  considered the copy constructor, resulting in an ABI change in rare cases,
+  but GCC has already implemented this change for several releases.
+  This affects all targets other than Windows and PS4. You can opt out of this
+  ABI change with ``-fclang-abi-compat=4.0``.
+
 - As mentioned in `C Language Changes in Clang`_, Clang's support for
   implicit scalar to vector conversions also applies to C++. Additionally
   the following operators are also supported: ``&&`` and ``||``.
 
+.. __: https://github.com/itanium-cxx-abi/cxx-abi/commit/7099637aba11fed6bdad7ee65bf4fd3f97fbf076
 
 Objective-C Language Changes in Clang
 -------------------------------------
@@ -306,7 +312,7 @@ Undefined Behavior Sanitizer (UBSan)
 
 - The Undefined Behavior Sanitizer has a new check for pointer overflow. This
   check is on by default. The flag to control this functionality is
-  -fsanitize=pointer-overflow.
+  ``-fsanitize=pointer-overflow``.
 
   Pointer overflow is an indicator of undefined behavior: when a pointer
   indexing expression wraps around the address space, or produces other
@@ -314,10 +320,10 @@ Undefined Behavior Sanitizer (UBSan)
 
 - UBSan has several new checks which detect violations of nullability
   annotations. These checks are off by default. The flag to control this group
-  of checks is -fsanitize=nullability. The checks can be individially enabled
-  by -fsanitize=nullability-arg (which checks calls),
-  -fsanitize=nullability-assign (which checks assignments), and
-  -fsanitize=nullability-return (which checks return statements).
+  of checks is ``-fsanitize=nullability``. The checks can be individially enabled
+  by ``-fsanitize=nullability-arg`` (which checks calls),
+  ``-fsanitize=nullability-assign`` (which checks assignments), and
+  ``-fsanitize=nullability-return`` (which checks return statements).
 
 - UBSan can now detect invalid loads from bitfields and from ObjC BOOLs.
 
