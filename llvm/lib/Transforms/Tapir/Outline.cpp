@@ -58,7 +58,7 @@ void llvm::findInputsOutputs(const SmallPtrSetImpl<BasicBlock *> &Blocks,
         // The PHI nodes in each exit block will be updated after the exit block
         // is cloned.  Hence, we don't want to count their uses of values
         // defined outside the region.
-        if (ExitBlocks->count(BB))
+        if (ExitBlocks && ExitBlocks->count(BB))
           if (PHINode *PN = dyn_cast<PHINode>(&II))
             if (!Blocks.count(PN->getIncomingBlock(*OI)))
               continue;
