@@ -835,6 +835,17 @@ public:
       AArch64MCRegisterClasses[AArch64::GPR64spRegClassID].contains(Reg.RegNum);
   }
 
+  template<int64_t Angle, int64_t Remainder>
+  bool isComplexRotation() const {
+    if (!isImm()) return false;
+
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    if (!CE) return false;
+    uint64_t Value = CE->getValue();
+
+    return (Value % Angle == Remainder && Value <= 270);
+  }
+
   /// Is this a vector list with the type implicit (presumably attached to the
   /// instruction itself)?
   template <unsigned NumRegs> bool isImplicitlyTypedVectorList() const {
@@ -1525,6 +1536,18 @@ public:
     const MCConstantExpr *CE = cast<MCConstantExpr>(getImm());
     uint64_t Value = CE->getValue();
     Inst.addOperand(MCOperand::createImm((~Value >> Shift) & 0xffff));
+  }
+
+  void addComplexRotationEvenOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
+    Inst.addOperand(MCOperand::createImm(MCE->getValue() / 90));
+  }
+
+  void addComplexRotationOddOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
+    Inst.addOperand(MCOperand::createImm((MCE->getValue() - 90) / 180));
   }
 
   void print(raw_ostream &OS) const override;
@@ -3402,6 +3425,10 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "expected readable system register");
   case Match_MSR:
     return Error(Loc, "expected writable system register or pstate");
+  case Match_InvalidComplexRotationEven:
+    return Error(Loc, "complex rotation must be 0, 90, 180 or 270.");
+  case Match_InvalidComplexRotationOdd:
+    return Error(Loc, "complex rotation must be 90 or 270.");
   case Match_MnemonicFail: {
     std::string Suggestion = AArch64MnemonicSpellCheck(
         ((AArch64Operand &)*Operands[0]).getToken(),
@@ -3802,6 +3829,8 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidIndexS:
   case Match_InvalidIndexD:
   case Match_InvalidLabel:
+  case Match_InvalidComplexRotationEven:
+  case Match_InvalidComplexRotationOdd:
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())

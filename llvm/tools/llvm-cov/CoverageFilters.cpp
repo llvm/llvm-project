@@ -27,6 +27,11 @@ NameRegexCoverageFilter::matches(const coverage::FunctionRecord &Function) {
   return llvm::Regex(Regex).match(Function.Name);
 }
 
+bool NameWhitelistCoverageFilter::matches(
+    const coverage::FunctionRecord &Function) {
+  return Whitelist.inSection("whitelist_fun", Function.Name);
+}
+
 bool RegionCoverageFilter::matches(const coverage::FunctionRecord &Function) {
   return PassesThreshold(FunctionCoverageSummary::get(Function)
                              .RegionCoverage.getPercentCovered());

@@ -69,8 +69,9 @@ TEST(CloneDetector, FilterFunctionsByName) {
   // all statements from functions which names start with "bar".
   std::vector<CloneDetector::CloneGroup> CloneGroups;
   Detector.findClones(CloneGroups, NoBarFunctionConstraint(),
-                      RecursiveCloneTypeIIConstraint(),
+                      RecursiveCloneTypeIIHashConstraint(),
                       MinComplexityConstraint(2), MinGroupSizeConstraint(2),
+                      RecursiveCloneTypeIIVerifyConstraint(),
                       OnlyLargestCloneConstraint());
 
   ASSERT_EQ(CloneGroups.size(), 1u);
@@ -86,8 +87,9 @@ TEST(CloneDetector, FilterFunctionsByName) {
   // Retry above's example without the filter...
   CloneGroups.clear();
 
-  Detector.findClones(CloneGroups, RecursiveCloneTypeIIConstraint(),
+  Detector.findClones(CloneGroups, RecursiveCloneTypeIIHashConstraint(),
                       MinComplexityConstraint(2), MinGroupSizeConstraint(2),
+                      RecursiveCloneTypeIIVerifyConstraint(),
                       OnlyLargestCloneConstraint());
   ASSERT_EQ(CloneGroups.size(), 1u);
   ASSERT_EQ(CloneGroups.front().size(), 4u);

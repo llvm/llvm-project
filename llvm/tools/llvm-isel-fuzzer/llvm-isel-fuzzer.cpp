@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FuzzerInterface.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"

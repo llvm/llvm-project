@@ -892,6 +892,13 @@ macro(add_llvm_utility name)
   endif()
 endmacro(add_llvm_utility name)
 
+macro(add_llvm_fuzzer name)
+  if( LLVM_USE_SANITIZE_COVERAGE )
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=fuzzer")
+    add_llvm_executable(${name} ${ARGN})
+    set_target_properties(${name} PROPERTIES FOLDER "Fuzzers")
+  endif()
+endmacro()
 
 macro(add_llvm_target target_name)
   include_directories(BEFORE

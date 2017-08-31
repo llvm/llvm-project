@@ -40,10 +40,6 @@
 
 using namespace llvm;
 
-
-static cl::opt<bool>
-    DisableBranchCoalescing("disable-ppc-branch-coalesce", cl::Hidden,
-                           cl::desc("disable coalescing of duplicate branches for PPC"));
 static cl::
 opt<bool> DisableCTRLoops("disable-ppc-ctrloops", cl::Hidden,
                         cl::desc("Disable CTR loops for PPC"));
@@ -382,10 +378,6 @@ bool PPCPassConfig::addInstSelector() {
 }
 
 void PPCPassConfig::addMachineSSAOptimization() {
-  // PPCBranchCoalescingPass need to be done before machine sinking
-  // since it merges empty blocks.
-  if (!DisableBranchCoalescing && getOptLevel() != CodeGenOpt::None)
-    addPass(createPPCBranchCoalescingPass());
   TargetPassConfig::addMachineSSAOptimization();
   // For little endian, remove where possible the vector swap instructions
   // introduced at code generation to normalize vector element order.

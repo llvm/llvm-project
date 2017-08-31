@@ -323,8 +323,9 @@ def FeatureNoNegativeImmediates
 def FeatureUseMISched: SubtargetFeature<"use-misched", "UseMISched", "true",
                                         "Use the MachineScheduler">;
 
-def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
-    "UsePostRAScheduler", "true", "Schedule again after register allocation">;
+def FeatureNoPostRASched : SubtargetFeature<"disable-postra-scheduler",
+    "DisablePostRAScheduler", "true",
+    "Don't schedule again after register allocation">;
 
 //===----------------------------------------------------------------------===//
 // ARM architecture class
@@ -829,7 +830,8 @@ def : ProcessorModel<"swift",       SwiftModel,         [ARMv7a, ProcSwift,
                                                          FeatureSlowLoadDSubreg,
                                                          FeatureSlowVGETLNi32,
                                                          FeatureSlowVDUP32,
-                                                         FeatureUseMISched]>;
+                                                         FeatureUseMISched,
+                                                         FeatureNoPostRASched]>;
 
 def : ProcessorModel<"cortex-r4",   CortexA8Model,      [ARMv7r, ProcR4,
                                                          FeatureHasRetAddrStack,
@@ -876,8 +878,7 @@ def : ProcessorModel<"cortex-r8",   CortexA8Model,      [ARMv7r,
 
 def : ProcessorModel<"cortex-m3", CortexM3Model,        [ARMv7m,
                                                          ProcM3,
-                                                         FeatureHasNoBranchPredictor,
-                                                         FeaturePostRAScheduler]>;
+                                                         FeatureHasNoBranchPredictor]>;
 
 def : ProcessorModel<"sc300",     CortexM3Model,        [ARMv7m,
                                                          ProcM3,
@@ -887,13 +888,11 @@ def : ProcessorModel<"cortex-m4", CortexM3Model,        [ARMv7em,
                                                          FeatureVFP4,
                                                          FeatureVFPOnlySP,
                                                          FeatureD16,
-                                                         FeatureHasNoBranchPredictor,
-                                                         FeaturePostRAScheduler]>;
+                                                         FeatureHasNoBranchPredictor]>;
 
 def : ProcNoItin<"cortex-m7",                           [ARMv7em,
                                                          FeatureFPARMv8,
-                                                         FeatureD16,
-                                                         FeaturePostRAScheduler]>;
+                                                         FeatureD16]>;
 
 def : ProcNoItin<"cortex-m23",                          [ARMv8mBaseline,
                                                          FeatureNoMovt]>;
@@ -903,8 +902,7 @@ def : ProcessorModel<"cortex-m33", CortexM3Model,       [ARMv8mMainline,
                                                          FeatureFPARMv8,
                                                          FeatureD16,
                                                          FeatureVFPOnlySP,
-                                                         FeatureHasNoBranchPredictor,
-                                                         FeaturePostRAScheduler]>;
+                                                         FeatureHasNoBranchPredictor]>;
 
 def : ProcNoItin<"cortex-a32",                           [ARMv8a,
                                                          FeatureHWDivThumb,
@@ -968,7 +966,8 @@ def : ProcessorModel<"cyclone",     SwiftModel,         [ARMv8a, ProcSwift,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureCrypto,
                                                          FeatureUseMISched,
-                                                         FeatureZCZeroing]>;
+                                                         FeatureZCZeroing,
+                                                         FeatureNoPostRASched]>;
 
 def : ProcNoItin<"exynos-m1",                           [ARMv8a, ProcExynosM1,
                                                          FeatureHWDivThumb,

@@ -68,9 +68,9 @@ TEST(BufferQueueTest, ErrorsWhenFinalising) {
   ASSERT_NE(nullptr, Buf.Buffer);
   ASSERT_EQ(Buffers.finalize(), BufferQueue::ErrorCode::Ok);
   BufferQueue::Buffer OtherBuf;
-  ASSERT_EQ(BufferQueue::ErrorCode::AlreadyFinalized,
+  ASSERT_EQ(BufferQueue::ErrorCode::QueueFinalizing,
             Buffers.getBuffer(OtherBuf));
-  ASSERT_EQ(BufferQueue::ErrorCode::AlreadyFinalized,
+  ASSERT_EQ(BufferQueue::ErrorCode::QueueFinalizing,
             Buffers.finalize());
   ASSERT_EQ(Buffers.releaseBuffer(Buf), BufferQueue::ErrorCode::Ok);
 }

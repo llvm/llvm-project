@@ -1009,9 +1009,12 @@ static void ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
   // They won't be discovered by the regular preprocessor, so
   // we let make / ninja to know about this implicit dependency.
   Opts.ExtraDeps = Args.getAllArgValues(OPT_fdepfile_entry);
-  auto ModuleFiles = Args.getAllArgValues(OPT_fmodule_file);
-  Opts.ExtraDeps.insert(Opts.ExtraDeps.end(), ModuleFiles.begin(),
-                        ModuleFiles.end());
+  // Only the -fmodule-file=<file> form.
+  for (const Arg *A : Args.filtered(OPT_fmodule_file)) {
+    StringRef Val = A->getValue();
+    if (Val.find('=') == StringRef::npos)
+      Opts.ExtraDeps.push_back(Val);
+  }
 }
 
 static bool parseShowColorsArgs(const ArgList &Args, bool DefaultColor) {
@@ -1340,7 +1343,12 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.UseGlobalModuleIndex = !Args.hasArg(OPT_fno_modules_global_index);
   Opts.GenerateGlobalModuleIndex = Opts.UseGlobalModuleIndex;
   Opts.ModuleMapFiles = Args.getAllArgValues(OPT_fmodule_map_file);
-  Opts.ModuleFiles = Args.getAllArgValues(OPT_fmodule_file);
+  // Only the -fmodule-file=<file> form.
+  for (const Arg *A : Args.filtered(OPT_fmodule_file)) {
+    StringRef Val = A->getValue();
+    if (Val.find('=') == StringRef::npos)
+      Opts.ModuleFiles.push_back(Val);
+  }
   Opts.ModulesEmbedFiles = Args.getAllArgValues(OPT_fmodules_embed_file_EQ);
   Opts.ModulesEmbedAllFiles = Args.hasArg(OPT_fmodules_embed_all_files);
   Opts.IncludeTimestamps = !Args.hasArg(OPT_fno_pch_timestamp);
@@ -1544,6 +1552,12 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   Opts.ModuleCachePath = P.str();
 
   Opts.ModuleUserBuildPath = Args.getLastArgValue(OPT_fmodules_user_build_path);
+  // Only the -fmodule-file=<name>=<file> form.
+  for (const Arg *A : Args.filtered(OPT_fmodule_file)) {
+    StringRef Val = A->getValue();
+    if (Val.find('=') != StringRef::npos)
+      Opts.PrebuiltModuleFiles.insert(Val.split('='));
+  }
   for (const Arg *A : Args.filtered(OPT_fprebuilt_module_path))
     Opts.AddPrebuiltModulePath(A->getValue());
   Opts.DisableModuleHash = Args.hasArg(OPT_fdisable_module_hash);

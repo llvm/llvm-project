@@ -11,22 +11,21 @@ set(XRAY_UNITTEST_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/lib/xray
   -I${COMPILER_RT_SOURCE_DIR}/lib)
 
+set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
 macro(add_xray_unittest testname)
-  set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
   cmake_parse_arguments(TEST "" "" "SOURCES;HEADERS" ${ARGN})
-  # FIXME: Figure out how to run even just the unit tests on APPLE.
   if(UNIX AND NOT APPLE)
     foreach(arch ${XRAY_TEST_ARCH})
       set(TEST_OBJECTS)
       generate_compiler_rt_tests(TEST_OBJECTS
-        XRayUnitTests "${testname}-${arch}" "${arch}"
+        XRayUnitTests "${testname}-${arch}-Test" "${arch}"
         SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
-        DEPS gtest_main xray
+        DEPS gtest xray
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
-        LINK_FLAGS
+        LINK_FLAGS -fxray-instrument
+          ${TARGET_LINK_FLAGS}
           -lstdc++ -lm ${CMAKE_THREAD_LIBS_INIT}
           -lpthread
-          -L${COMPILER_RT_LIBRARY_OUTPUT_DIR} -lclang_rt.xray-${arch}
           -ldl -lrt)
     endforeach()
   endif()
