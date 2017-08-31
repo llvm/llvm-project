@@ -38,6 +38,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
   for (auto Ty : {p0, s1, s8, s16, s32, s64})
     setAction({G_IMPLICIT_DEF, Ty}, Legal);
 
+  for (auto Ty : {s16, s32, s64})
+    setAction({G_PHI, Ty}, Legal);
+
   for (unsigned BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR, G_SHL}) {
     // These operations naturally get the right answer when used on
     // GPR32, even if the actual type is narrower.
