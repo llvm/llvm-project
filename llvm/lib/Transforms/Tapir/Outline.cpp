@@ -92,9 +92,10 @@ void llvm::CloneIntoFunction(Function *NewFunc, const Function *OldFunc,
                              ValueMaterializer *Materializer) {
   // Get the predecessors of the exit blocks
   SmallPtrSet<const BasicBlock *, 4> ExitBlockPreds, ClonedEBPreds;
-  for (BasicBlock *EB : *ExitBlocks)
-    for (BasicBlock *Pred : predecessors(EB))
-      ExitBlockPreds.insert(Pred);
+  if (ExitBlocks)
+    for (BasicBlock *EB : *ExitBlocks)
+      for (BasicBlock *Pred : predecessors(EB))
+        ExitBlockPreds.insert(Pred);
 
   // When we remap instructions, we want to avoid duplicating inlined
   // DISubprograms, so record all subprograms we find as we duplicate
