@@ -345,33 +345,6 @@ X86Subtarget &X86Subtarget::initializeSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
-namespace {
-
-struct X86GISelActualAccessor : public GISelAccessor {
-  std::unique_ptr<CallLowering> CallLoweringInfo;
-  std::unique_ptr<LegalizerInfo> Legalizer;
-  std::unique_ptr<RegisterBankInfo> RegBankInfo;
-  std::unique_ptr<InstructionSelector> InstSelector;
-
-  const CallLowering *getCallLowering() const override {
-    return CallLoweringInfo.get();
-  }
-
-  const InstructionSelector *getInstructionSelector() const override {
-    return InstSelector.get();
-  }
-
-  const LegalizerInfo *getLegalizerInfo() const override {
-    return Legalizer.get();
-  }
-
-  const RegisterBankInfo *getRegBankInfo() const override {
-    return RegBankInfo.get();
-  }
-};
-
-} // end anonymous namespace
-
 X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
                            const X86TargetMachine &TM,
                            unsigned StackAlignOverride)
@@ -396,35 +369,29 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
     setPICStyle(PICStyles::StubPIC);
   else if (isTargetELF())
     setPICStyle(PICStyles::GOT);
-  X86GISelActualAccessor *GISel = new X86GISelActualAccessor();
 
-  GISel->CallLoweringInfo.reset(new X86CallLowering(*getTargetLowering()));
-  GISel->Legalizer.reset(new X86LegalizerInfo(*this, TM));
+  CallLoweringInfo.reset(new X86CallLowering(*getTargetLowering()));
+  Legalizer.reset(new X86LegalizerInfo(*this, TM));
 
   auto *RBI = new X86RegisterBankInfo(*getRegisterInfo());
-  GISel->RegBankInfo.reset(RBI);
-  GISel->InstSelector.reset(createX86InstructionSelector(TM, *this, *RBI));
-  setGISelAccessor(*GISel);
+  RegBankInfo.reset(RBI);
+  InstSelector.reset(createX86InstructionSelector(TM, *this, *RBI));
 }
 
 const CallLowering *X86Subtarget::getCallLowering() const {
-  assert(GISel && "Access to GlobalISel APIs not set");
-  return GISel->getCallLowering();
+  return CallLoweringInfo.get();
 }
 
 const InstructionSelector *X86Subtarget::getInstructionSelector() const {
-  assert(GISel && "Access to GlobalISel APIs not set");
-  return GISel->getInstructionSelector();
+  return InstSelector.get();
 }
 
 const LegalizerInfo *X86Subtarget::getLegalizerInfo() const {
-  assert(GISel && "Access to GlobalISel APIs not set");
-  return GISel->getLegalizerInfo();
+  return Legalizer.get();
 }
 
 const RegisterBankInfo *X86Subtarget::getRegBankInfo() const {
-  assert(GISel && "Access to GlobalISel APIs not set");
-  return GISel->getRegBankInfo();
+  return RegBankInfo.get();
 }
 
 bool X86Subtarget::enableEarlyIfConversion() const {
