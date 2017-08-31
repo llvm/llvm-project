@@ -235,6 +235,12 @@ OPTIONS
 
  Show code coverage only for functions with the given name.
 
+.. option:: -name-whitelist=<FILE>
+
+ Show code coverage only for functions listed in the given file. Each line in
+ the file should start with `whitelist_fun:`, immediately followed by the name
+ of the function to accept. This name can be a wildcard expression.
+
 .. option:: -name-regex=<PATTERN>
 
  Show code coverage only for functions that match the given regular expression.
