@@ -767,10 +767,6 @@ public:
   /// to forward them into the statement.
   bool forwardOperandTrees() {
     for (ScopStmt &Stmt : *S) {
-      // Currently we cannot modify the instruction list of region statements.
-      if (!Stmt.isBlockStmt())
-        continue;
-
       bool StmtModified = false;
 
       // Because we are modifying the MemoryAccess list, collect them first to

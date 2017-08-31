@@ -3440,6 +3440,10 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
                Style);
 }
 
+#ifndef EXPENSIVE_CHECKS
+// Expensive checks enables libstdc++ checking which includes validating the
+// state of ranges used in std::priority_queue - this blows out the
+// runtime/scalability of the function and makes this test unacceptably slow.
 TEST_F(FormatTest, MemoizationTests) {
   // This breaks if the memoization lookup does not take \c Indent and
   // \c LastSpace into account.
@@ -3518,6 +3522,7 @@ TEST_F(FormatTest, MemoizationTests) {
   input += "           a) {}";
   verifyFormat(input, OnePerLine);
 }
+#endif
 
 TEST_F(FormatTest, BreaksAsHighAsPossible) {
   verifyFormat(

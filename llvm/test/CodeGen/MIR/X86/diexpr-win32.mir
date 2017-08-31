@@ -195,7 +195,7 @@ body:             |
     CFI_INSTRUCTION offset %esi, -8
     %esi = MOV32rm %esp, 1, _, 8, _ :: (load 4 from %fixed-stack.2)
     DBG_VALUE %esp, 0, !26, !10, debug-location !25
-    DBG_VALUE %esp, 0, !23, !11, debug-location !25
+    DBG_VALUE %esp, 0, !23, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref), debug-location !25
     CALLpcrel32 @getString, csr_32, implicit %esp, implicit-def %esp, implicit-def %eax, debug-location !29
     %ecx = MOV32rm %eax, 1, _, 0, _, debug-location !29 :: (dereferenceable load 4 from %ir.1)
     %edx = MOV32rm %eax, 1, _, 4, _, debug-location !29 :: (dereferenceable load 4 from %ir.1 + 4)
@@ -246,7 +246,7 @@ body:             |
   bb.0.entry:
     %eax = MOV32rm %esp, 1, _, 4, _ :: (load 4 from %fixed-stack.1)
     %eax = MOV32rm killed %eax, 1, _, 0, _, debug-location !34 :: (load 4 from %ir.0)
-    DBG_VALUE debug-use %eax, 0, !35, !28, debug-location !34
+    DBG_VALUE debug-use %eax, 0, !35, !DIExpression(DW_OP_constu, 4, DW_OP_minus), debug-location !34
     %eax = ADD32rm killed %eax, %esp, 1, _, 8, _, implicit-def dead %eflags, debug-location !36 :: (load 4 from %fixed-stack.0)
     RET 0, %eax, debug-location !36
 

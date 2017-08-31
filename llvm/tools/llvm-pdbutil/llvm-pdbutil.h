@@ -127,7 +127,8 @@ namespace dump {
 extern llvm::cl::opt<bool> DumpSummary;
 extern llvm::cl::opt<bool> DumpFpm;
 extern llvm::cl::opt<bool> DumpStreams;
-extern llvm::cl::opt<bool> DumpModuleStats;
+extern llvm::cl::opt<bool> DumpSymbolStats;
+extern llvm::cl::opt<bool> DumpUdtStats;
 extern llvm::cl::opt<bool> DumpStreamBlocks;
 
 extern llvm::cl::opt<bool> DumpLines;

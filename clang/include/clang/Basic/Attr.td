@@ -2043,11 +2043,11 @@ def AnyX86NoCallerSavedRegisters : InheritableAttr,
 }
 
 def X86ForceAlignArgPointer : InheritableAttr, TargetSpecificAttr<TargetAnyX86> {
-  let Spellings = [GNU<"force_align_arg_pointer">];
+  let Spellings = [GCC<"force_align_arg_pointer">];
   // Technically, this appertains to a FunctionDecl, but the target-specific
   // code silently allows anything function-like (such as typedefs or function
   // pointers), but does not apply the attribute to them.
-  let Documentation = [Undocumented];
+  let Documentation = [X86ForceAlignArgPointerDocs];
 }
 
 def NoSanitize : InheritableAttr {

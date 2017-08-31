@@ -487,8 +487,6 @@ public:
   template <class ELFT> void addEntry(SymbolBody &Sym);
 
 private:
-  void writeHeader(uint8_t *Buf){};
-  void addHeaderSymbols(){};
   unsigned getPltRelocOff() const;
   std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
   // Iplt always has HeaderSize of 0, the Plt HeaderSize is always non-zero

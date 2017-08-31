@@ -94,7 +94,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   struct LocalVariable {
     const DILocalVariable *DIVar = nullptr;
     SmallVector<LocalVarDefRange, 1> DefRanges;
-    bool Deref = false;
+    bool UseReferenceType = false;
   };
 
   struct InlineSite {
