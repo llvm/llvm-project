@@ -63,6 +63,18 @@ public:
 };
 
 enum {
+  /// Begin a try-block to attempt a match and jump to OnFail if it is
+  /// unsuccessful.
+  /// - OnFail - The MatchTable entry at which to resume if the match fails.
+  ///
+  /// FIXME: This ought to take an argument indicating the number of try-blocks
+  ///        to exit on failure. It's usually one but the last match attempt of
+  ///        a block will need more. The (implemented) alternative is to tack a
+  ///        GIM_Reject on the end of each try-block which is simpler but
+  ///        requires an extra opcode and iteration in the interpreter on each
+  ///        failed match.
+  GIM_Try,
+
   /// Record the specified instruction
   /// - NewInsnID - Instruction ID to define
   /// - InsnID - Instruction ID
@@ -81,6 +93,10 @@ enum {
   /// - InsnID - Instruction ID
   /// - Expected number of operands
   GIM_CheckNumOperands,
+  /// Check an immediate predicate on the specified instruction
+  /// - InsnID - Instruction ID
+  /// - The predicate to test
+  GIM_CheckImmPredicate,
 
   /// Check the type for the specified operand
   /// - InsnID - Instruction ID
@@ -123,6 +139,10 @@ enum {
   /// instruction.
   /// - InsnID - Instruction ID
   GIM_CheckIsSafeToFold,
+
+  /// Fail the current try-block, or completely fail to match if there is no
+  /// current try-block.
+  GIM_Reject,
 
   //=== Renderers ===
 
@@ -168,6 +188,12 @@ enum {
   /// - RendererID - The renderer to call
   GIR_ComplexRenderer,
 
+  /// Render a G_CONSTANT operator as a sign-extended immediate.
+  /// - NewInsnID - Instruction ID to modify
+  /// - OldInsnID - Instruction ID to copy from
+  /// The operand index is implicitly 1.
+  GIR_CopyConstantAsSImm,
+
   /// Constrain an instruction operand to a register class.
   /// - InsnID - Instruction ID to modify
   /// - OpIdx - Operand index
@@ -179,6 +205,9 @@ enum {
   GIR_ConstrainSelectedInstOperands,
   /// Merge all memory operands into instruction.
   /// - InsnID - Instruction ID to modify
+  /// - MergeInsnID... - One or more Instruction ID to merge into the result.
+  /// - GIU_MergeMemOperands_EndOfList - Terminates the list of instructions to
+  ///                                    merge.
   GIR_MergeMemOperands,
   /// Erase from parent.
   /// - InsnID - Instruction ID to erase
@@ -188,9 +217,17 @@ enum {
   GIR_Done,
 };
 
+enum {
+  /// Indicates the end of the variable-length MergeInsnID list in a
+  /// GIR_MergeMemOperands opcode.
+  GIU_MergeMemOperands_EndOfList = -1,
+};
+
 /// Provides the logic to select generic machine instructions.
 class InstructionSelector {
 public:
+  typedef bool(*ImmediatePredicateFn)(int64_t);
+
   virtual ~InstructionSelector() = default;
 
   /// Select the (possibly generic) instruction \p I to only use target-specific
@@ -223,6 +260,7 @@ public:
   struct MatcherInfoTy {
     const LLT *TypeObjects;
     const PredicateBitset *FeatureBitsets;
+    const ImmediatePredicateFn *ImmPredicateFns;
     const std::vector<ComplexMatcherMemFn> ComplexPredicates;
   };
 

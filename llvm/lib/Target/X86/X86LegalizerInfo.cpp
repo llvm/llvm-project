@@ -22,10 +22,6 @@
 using namespace llvm;
 using namespace TargetOpcode;
 
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-#error "You shouldn't build this"
-#endif
-
 X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                    const X86TargetMachine &TM)
     : Subtarget(STI), TM(TM) {
@@ -56,6 +52,9 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
+  for (auto Ty : {p0, s1, s8, s16, s32})
+    setAction({G_IMPLICIT_DEF, Ty}, Legal);
+
   for (unsigned BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
     for (auto Ty : {s8, s16, s32})
       setAction({BinOp, Ty}, Legal);
@@ -83,6 +82,9 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
 
   for (auto Ty : {s1, s8, s16})
     setAction({G_GEP, 1, Ty}, WidenScalar);
+
+  // Control-flow
+  setAction({G_BRCOND, s1}, Legal);
 
   // Constants
   for (auto Ty : {s8, s16, s32, p0})
@@ -121,6 +123,9 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
+  for (auto Ty : {p0, s1, s8, s16, s32, s64})
+    setAction({G_IMPLICIT_DEF, Ty}, Legal);
+
   for (unsigned BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
     for (auto Ty : {s8, s16, s32, s64})
       setAction({BinOp, Ty}, Legal);
@@ -144,6 +149,9 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
 
   for (auto Ty : {s1, s8, s16})
     setAction({G_GEP, 1, Ty}, WidenScalar);
+
+  // Control-flow
+  setAction({G_BRCOND, s1}, Legal);
 
   // Constants
   for (auto Ty : {s8, s16, s32, s64, p0})

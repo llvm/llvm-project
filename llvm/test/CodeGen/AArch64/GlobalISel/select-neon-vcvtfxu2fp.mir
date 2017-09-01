@@ -1,0 +1,37 @@
+# RUN: llc -mtriple=aarch64-- -mattr=+neon,+fullfp16 -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+
+  define void @vcvtfxu2fp_s64_fpr() { ret void }
+...
+
+---
+# Check that we select a 64-bit FPR vcvtfxu2fp intrinsic into UCVTFd for FPR64.
+# CHECK-LABEL: name: vcvtfxu2fp_s64_fpr
+name:            vcvtfxu2fp_s64_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 2, class: fpr64, preferred-register: '' }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %d0
+# CHECK:    %2 = UCVTFd %0, 12
+# CHECK:    %d1 = COPY %2
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s32) = G_CONSTANT i32 12
+    %2(s64) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.vcvtfxu2fp.f64), %0, %1
+    %d1 = COPY %2(s64)
+...

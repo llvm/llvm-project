@@ -1030,8 +1030,11 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         if (STI->isThumb())
           MIB.add(predOps(ARMCC::AL));
       } else if (RetOpcode == ARM::TCRETURNri) {
+        unsigned Opcode =
+          STI->isThumb() ? ARM::tTAILJMPr
+                         : (STI->hasV4TOps() ? ARM::TAILJMPr : ARM::TAILJMPr4);
         BuildMI(MBB, MBBI, dl,
-                TII.get(STI->isThumb() ? ARM::tTAILJMPr : ARM::TAILJMPr))
+                TII.get(Opcode))
             .addReg(JumpTarget.getReg(), RegState::Kill);
       }
 
@@ -1312,9 +1315,11 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       if (IsPIC) {
         unsigned PCAdj = IsARM ? 8 : 4;
+        auto Modifier = STI->getCPModifier(GV);
         ARMPCLabelIndex = AFI->createPICLabelUId();
-        CPV = ARMConstantPoolConstant::Create(GV, ARMPCLabelIndex,
-                                              ARMCP::CPValue, PCAdj);
+        CPV = ARMConstantPoolConstant::Create(
+            GV, ARMPCLabelIndex, ARMCP::CPValue, PCAdj, Modifier,
+            /*AddCurrentAddr*/ Modifier == ARMCP::GOT_PREL);
       } else
         CPV = ARMConstantPoolConstant::Create(GV, ARMCP::no_modifier);
 

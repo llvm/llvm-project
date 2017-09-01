@@ -16,11 +16,15 @@
 
 #include "ARMBaseInstrInfo.h"
 #include "ARMBaseRegisterInfo.h"
+#include "ARMConstantPoolValue.h"
 #include "ARMFrameLowering.h"
 #include "ARMISelLowering.h"
 #include "ARMSelectionDAGInfo.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
@@ -413,9 +417,6 @@ public:
   ARMSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
                const ARMBaseTargetMachine &TM, bool IsLittle);
 
-  /// This object will take onwership of \p GISelAccessor.
-  void setGISelAccessor(GISelAccessor &GISel) { this->GISel.reset(&GISel); }
-
   /// getMaxInlineSizeThreshold - Returns the maximum memset / memcpy size
   /// that still makes it profitable to inline the call.
   unsigned getMaxInlineSizeThreshold() const {
@@ -463,10 +464,11 @@ private:
   std::unique_ptr<ARMBaseInstrInfo> InstrInfo;
   ARMTargetLowering   TLInfo;
 
-  /// Gather the accessor points to GlobalISel-related APIs.
-  /// This is used to avoid ifndefs spreading around while GISel is
-  /// an optional library.
-  std::unique_ptr<GISelAccessor> GISel;
+  /// GlobalISel related APIs.
+  std::unique_ptr<CallLowering> CallLoweringInfo;
+  std::unique_ptr<InstructionSelector> InstSelector;
+  std::unique_ptr<LegalizerInfo> Legalizer;
+  std::unique_ptr<RegisterBankInfo> RegBankInfo;
 
   void initializeEnvironment();
   void initSubtargetFeatures(StringRef CPU, StringRef FS);
@@ -727,8 +729,22 @@ public:
   /// True if the GV will be accessed via an indirect symbol.
   bool isGVIndirectSymbol(const GlobalValue *GV) const;
 
+  /// Returns the constant pool modifier needed to access the GV.
+  ARMCP::ARMCPModifier getCPModifier(const GlobalValue *GV) const;
+
   /// True if fast-isel is used.
   bool useFastISel() const;
+
+  /// Returns the correct return opcode for the current feature set.
+  /// Use BX if available to allow mixing thumb/arm code, but fall back
+  /// to plain mov pc,lr on ARMv4.
+  unsigned getReturnOpcode() const {
+    if (isThumb())
+      return ARM::tBX_RET;
+    if (hasV4TOps())
+      return ARM::BX_RET;
+    return ARM::MOVPCLR;
+  }
 };
 
 } // end namespace llvm

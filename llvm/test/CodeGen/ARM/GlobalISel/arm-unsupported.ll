@@ -1,4 +1,8 @@
-; RUN: llc -mtriple arm-unknown -verify-machineinstrs -global-isel -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -o - 2>&1 | FileCheck %s
+; RUN: llc -mtriple arm-unknown -verify-machineinstrs -global-isel -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -o - 2>&1 | FileCheck %s -check-prefixes=CHECK
+; RUN: llc -mtriple arm-unknown -verify-machineinstrs -global-isel -global-isel-abort=2 -pass-remarks-missed='gisel*' -relocation-model=pic %s -o - 2>&1 | FileCheck %s -check-prefixes=PIC
+; RUN: llc -mtriple arm-unknown -verify-machineinstrs -global-isel -global-isel-abort=2 -pass-remarks-missed='gisel*' -relocation-model=ropi %s -o - 2>&1 | FileCheck %s -check-prefixes=ROPI
+; RUN: llc -mtriple arm-unknown -verify-machineinstrs -global-isel -global-isel-abort=2 -pass-remarks-missed='gisel*' -relocation-model=rwpi %s -o - 2>&1 | FileCheck %s -check-prefixes=RWPI
+; RUN: llc -mtriple arm-unknown -verify-machineinstrs -global-isel -global-isel-abort=2 -pass-remarks-missed='gisel*' -relocation-model=ropi-rwpi %s -o - 2>&1 | FileCheck %s -check-prefixes=ROPI-RWPI
 
 ; This file checks that we use the fallback path for things that are known to
 ; be unsupported on the ARM target. It should progressively shrink in size.
@@ -90,6 +94,37 @@ define i32 @test_thumb(i32 %a) #0 {
 ; CHECK: remark: {{.*}} unable to lower arguments: i32 (i32)*
 ; CHECK-LABEL: warning: Instruction selection used fallback path for test_thumb
   ret i32 %a
+}
+
+@thread_local_global = thread_local global i32 42
+
+define i32 @test_thread_local_global() {
+; CHECK: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
+; CHECK-LABEL: warning: Instruction selection used fallback path for test_thread_local_global
+; PIC: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
+; PIC-LABEL: warning: Instruction selection used fallback path for test_thread_local_global
+; ROPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
+; ROPI-LABEL: warning: Instruction selection used fallback path for test_thread_local_global
+; RWPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
+; RWPI-LABEL: warning: Instruction selection used fallback path for test_thread_local_global
+; ROPI-RWPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
+; ROPI-RWPI-LABEL: warning: Instruction selection used fallback path for test_thread_local_global
+  %v = load i32, i32* @thread_local_global
+  ret i32 %v
+}
+
+@a_global = external global i32
+
+define i32 @test_global_reloc_models() {
+; This is only unsupported for the PIC, ROPI, RWPI relocation modes.
+; ROPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
+; ROPI-LABEL: warning: Instruction selection used fallback path for test_global_reloc_models
+; RWPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
+; RWPI-LABEL: warning: Instruction selection used fallback path for test_global_reloc_models
+; ROPI-RWPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
+; ROPI-RWPI-LABEL: warning: Instruction selection used fallback path for test_global_reloc_models
+  %v = load i32, i32* @a_global
+  ret i32 %v
 }
 
 attributes #0 = { "target-features"="+thumb-mode" }

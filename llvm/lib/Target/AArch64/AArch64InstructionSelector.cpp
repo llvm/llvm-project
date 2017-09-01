@@ -37,10 +37,6 @@
 
 using namespace llvm;
 
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-#error "You shouldn't build this"
-#endif
-
 namespace {
 
 #define GET_GLOBALISEL_PREDICATE_BITSET
@@ -513,6 +509,8 @@ bool AArch64InstructionSelector::selectCompareBranch(
   const unsigned CondReg = I.getOperand(0).getReg();
   MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
   MachineInstr *CCMI = MRI.getVRegDef(CondReg);
+  if (CCMI->getOpcode() == TargetOpcode::G_TRUNC)
+    CCMI = MRI.getVRegDef(CCMI->getOperand(1).getReg());
   if (CCMI->getOpcode() != TargetOpcode::G_ICMP)
     return false;
 
@@ -592,13 +590,14 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   unsigned Opcode = I.getOpcode();
-  if (!isPreISelGenericOpcode(I.getOpcode())) {
+  // G_PHI requires same handling as PHI
+  if (!isPreISelGenericOpcode(Opcode) || Opcode == TargetOpcode::G_PHI) {
     // Certain non-generic instructions also need some special handling.
 
     if (Opcode ==  TargetOpcode::LOAD_STACK_GUARD)
       return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 
-    if (Opcode == TargetOpcode::PHI) {
+    if (Opcode == TargetOpcode::PHI || Opcode == TargetOpcode::G_PHI) {
       const unsigned DefReg = I.getOperand(0).getReg();
       const LLT DefTy = MRI.getType(DefReg);
 
@@ -623,6 +622,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
           }
         }
       }
+      I.setDesc(TII.get(TargetOpcode::PHI));
 
       return RBI.constrainGenericRegister(DefReg, *DefRC, MRI);
     }
@@ -704,7 +704,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
         return false;
       }
     } else {
-      if (Ty != s32 && Ty != s64 && Ty != p0) {
+      // s32 and s64 are covered by tablegen.
+      if (Ty != p0) {
         DEBUG(dbgs() << "Unable to materialize integer " << Ty
                      << " constant, expected: " << s32 << ", " << s64 << ", or "
                      << p0 << '\n');
@@ -758,7 +759,55 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
     return true;
   }
+  case TargetOpcode::G_EXTRACT: {
+    LLT SrcTy = MRI.getType(I.getOperand(1).getReg());
+    // Larger extracts are vectors, same-size extracts should be something else
+    // by now (either split up or simplified to a COPY).
+    if (SrcTy.getSizeInBits() > 64 || Ty.getSizeInBits() > 32)
+      return false;
 
+    I.setDesc(TII.get(AArch64::UBFMXri));
+    MachineInstrBuilder(MF, I).addImm(I.getOperand(2).getImm() +
+                                      Ty.getSizeInBits() - 1);
+
+    unsigned DstReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
+    BuildMI(MBB, std::next(I.getIterator()), I.getDebugLoc(),
+            TII.get(AArch64::COPY))
+        .addDef(I.getOperand(0).getReg())
+        .addUse(DstReg, 0, AArch64::sub_32);
+    RBI.constrainGenericRegister(I.getOperand(0).getReg(),
+                                 AArch64::GPR32RegClass, MRI);
+    I.getOperand(0).setReg(DstReg);
+
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
+
+  case TargetOpcode::G_INSERT: {
+    LLT SrcTy = MRI.getType(I.getOperand(2).getReg());
+    // Larger inserts are vectors, same-size ones should be something else by
+    // now (split up or turned into COPYs).
+    if (Ty.getSizeInBits() > 64 || SrcTy.getSizeInBits() > 32)
+      return false;
+
+    I.setDesc(TII.get(AArch64::BFMXri));
+    unsigned LSB = I.getOperand(3).getImm();
+    unsigned Width = MRI.getType(I.getOperand(2).getReg()).getSizeInBits();
+    I.getOperand(3).setImm((64 - LSB) % 64);
+    MachineInstrBuilder(MF, I).addImm(Width - 1);
+
+    unsigned SrcReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
+    BuildMI(MBB, I.getIterator(), I.getDebugLoc(),
+            TII.get(AArch64::SUBREG_TO_REG))
+        .addDef(SrcReg)
+        .addImm(0)
+        .addUse(I.getOperand(2).getReg())
+        .addImm(AArch64::sub_32);
+    RBI.constrainGenericRegister(I.getOperand(2).getReg(),
+                                 AArch64::GPR32RegClass, MRI);
+    I.getOperand(2).setReg(SrcReg);
+
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
   case TargetOpcode::G_FRAME_INDEX: {
     // allocas and G_FRAME_INDEX are only supported in addrspace(0).
     if (Ty != LLT::pointer(0, 64)) {
@@ -766,7 +815,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
             << ", expected: " << LLT::pointer(0, 64) << '\n');
       return false;
     }
-
     I.setDesc(TII.get(AArch64::ADDXri));
 
     // MOs for a #0 shifted immediate.
@@ -1117,8 +1165,18 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
 
   case TargetOpcode::G_INTTOPTR:
-  case TargetOpcode::G_BITCAST:
+    // The importer is currently unable to import pointer types since they
+    // didn't exist in SelectionDAG.
     return selectCopy(I, TII, MRI, TRI, RBI);
+
+  case TargetOpcode::G_BITCAST:
+    // Imported SelectionDAG rules can handle every bitcast except those that
+    // bitcast from a type to the same type. Ideally, these shouldn't occur
+    // but we might not run an optimizer that deletes them.
+    if (MRI.getType(I.getOperand(0).getReg()) ==
+        MRI.getType(I.getOperand(1).getReg()))
+      return selectCopy(I, TII, MRI, TRI, RBI);
+    return false;
 
   case TargetOpcode::G_FPEXT: {
     if (MRI.getType(I.getOperand(0).getReg()) != LLT::scalar(64)) {
@@ -1214,9 +1272,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return true;
   }
   case TargetOpcode::G_ICMP: {
-    if (Ty != LLT::scalar(1)) {
+    if (Ty != LLT::scalar(32)) {
       DEBUG(dbgs() << "G_ICMP result has type: " << Ty
-                   << ", expected: " << LLT::scalar(1) << '\n');
+                   << ", expected: " << LLT::scalar(32) << '\n');
       return false;
     }
 
@@ -1261,9 +1319,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
   }
 
   case TargetOpcode::G_FCMP: {
-    if (Ty != LLT::scalar(1)) {
+    if (Ty != LLT::scalar(32)) {
       DEBUG(dbgs() << "G_FCMP result has type: " << Ty
-                   << ", expected: " << LLT::scalar(1) << '\n');
+                   << ", expected: " << LLT::scalar(32) << '\n');
       return false;
     }
 

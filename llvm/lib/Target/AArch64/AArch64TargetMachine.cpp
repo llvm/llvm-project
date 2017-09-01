@@ -308,13 +308,11 @@ public:
   void addIRPasses()  override;
   bool addPreISel() override;
   bool addInstSelector() override;
-#ifdef LLVM_BUILD_GLOBAL_ISEL
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
-#endif
   bool addILPOpts() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
@@ -410,7 +408,6 @@ bool AArch64PassConfig::addInstSelector() {
   return false;
 }
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
 bool AArch64PassConfig::addIRTranslator() {
   addPass(new IRTranslator());
   return false;
@@ -436,7 +433,6 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
   return false;
 }
-#endif
 
 bool AArch64PassConfig::isGlobalISelEnabled() const {
   return TM->getOptLevel() <= EnableGlobalISelAtO;

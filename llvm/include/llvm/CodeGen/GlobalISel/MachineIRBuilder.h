@@ -70,13 +70,34 @@ class MachineIRBuilder {
     return getMF().getRegInfo().createVirtualRegister(RC);
   }
 
-  unsigned getRegFromArg(unsigned Reg) { return Reg; }
+  void addUseFromArg(MachineInstrBuilder &MIB, unsigned Reg) {
+    MIB.addUse(Reg);
+  }
 
+  void addUseFromArg(MachineInstrBuilder &MIB, const MachineInstrBuilder &UseMIB) {
+    MIB.addUse(UseMIB->getOperand(0).getReg());
+  }
+
+  void addUsesFromArgs(MachineInstrBuilder &MIB) { }
+  template<typename UseArgTy, typename ... UseArgsTy>
+  void addUsesFromArgs(MachineInstrBuilder &MIB, UseArgTy &&Arg1, UseArgsTy &&... Args) {
+    addUseFromArg(MIB, Arg1);
+    addUsesFromArgs(MIB, std::forward<UseArgsTy>(Args)...);
+  }
+  unsigned getRegFromArg(unsigned Reg) { return Reg; }
   unsigned getRegFromArg(const MachineInstrBuilder &MIB) {
     return MIB->getOperand(0).getReg();
   }
 
 public:
+  /// Some constructors for easy use.
+  MachineIRBuilder() = default;
+  MachineIRBuilder(MachineFunction &MF) { setMF(MF); }
+  MachineIRBuilder(MachineInstr &MI)
+      : MachineIRBuilder(*MI.getParent()->getParent()) {
+    setInstr(MI);
+  }
+
   /// Getter for the function we currently build.
   MachineFunction &getMF() {
     assert(MF && "MachineFunction is not set");
@@ -146,9 +167,7 @@ public:
   MachineInstrBuilder buildInstr(unsigned Opc, DstTy &&Ty,
                                  UseArgsTy &&... Args) {
     auto MIB = buildInstr(Opc).addDef(getDestFromArg(Ty));
-    unsigned It[] = {(getRegFromArg(Args))...};
-    for (const auto &i : It)
-      MIB.addUse(i);
+    addUsesFromArgs(MIB, std::forward<UseArgsTy>(Args)...);
     return MIB;
   }
 
@@ -330,6 +349,10 @@ public:
   ///      with the same (scalar or vector) type).
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
+  template <typename DstTy, typename... UseArgsTy>
+  MachineInstrBuilder buildAnd(DstTy &&Dst, UseArgsTy &&... UseArgs) {
+    return buildAnd(getDestFromArg(Dst), getRegFromArg(UseArgs)...);
+  }
   MachineInstrBuilder buildAnd(unsigned Res, unsigned Op0,
                                unsigned Op1);
 
@@ -358,7 +381,12 @@ public:
   /// \pre \p Op must be smaller than \p Res
   ///
   /// \return The newly created instruction.
+
   MachineInstrBuilder buildAnyExt(unsigned Res, unsigned Op);
+  template <typename DstType, typename ArgType>
+  MachineInstrBuilder buildAnyExt(DstType &&Res, ArgType &&Arg) {
+    return buildAnyExt(getDestFromArg(Res), getRegFromArg(Arg));
+  }
 
   /// Build and insert \p Res<def> = G_SEXT \p Op
   ///
@@ -407,6 +435,32 @@ public:
   ///
   /// \return The newly created instruction.
   MachineInstrBuilder buildZExtOrTrunc(unsigned Res, unsigned Op);
+
+  // Build and insert \p Res<def> = G_ANYEXT \p Op, \p Res = G_TRUNC \p Op, or
+  /// \p Res = COPY \p Op depending on the differing sizes of \p Res and \p Op.
+  ///  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar or vector type.
+  /// \pre \p Op must be a generic virtual register with scalar or vector type.
+  ///
+  /// \return The newly created instruction.
+  template <typename DstTy, typename UseArgTy>
+  MachineInstrBuilder buildAnyExtOrTrunc(DstTy &&Dst, UseArgTy &&Use) {
+    return buildAnyExtOrTrunc(getDestFromArg(Dst), getRegFromArg(Use));
+  }
+  MachineInstrBuilder buildAnyExtOrTrunc(unsigned Res, unsigned Op);
+
+  /// Build and insert \p Res<def> = \p ExtOpc, \p Res = G_TRUNC \p
+  /// Op, or \p Res = COPY \p Op depending on the differing sizes of \p Res and
+  /// \p Op.
+  ///  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar or vector type.
+  /// \pre \p Op must be a generic virtual register with scalar or vector type.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildExtOrTrunc(unsigned ExtOpc, unsigned Res,
+                                      unsigned Op);
 
   /// Build and insert an appropriate cast between two registers of equal size.
   MachineInstrBuilder buildCast(unsigned Dst, unsigned Src);

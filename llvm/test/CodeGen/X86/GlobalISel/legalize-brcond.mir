@@ -1,0 +1,58 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
+# RUN: llc -mtriple=i386-linux-gnu   -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X32
+
+--- |
+
+  define i32 @test(i32 %a) {
+  entry:
+    %cmp = trunc i32 %a to i1
+    br i1 %cmp, label %if.then, label %if.else
+
+  if.then:                                          ; preds = %entry
+    ret i32 0
+
+  if.else:                                          ; preds = %entry
+    ret i32 1
+  }
+...
+---
+name:            test
+# ALL-LABEL: name:  test
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+# ALL:         %1(s1) = G_TRUNC %0(s32)
+# ALL-NEXT:    G_BRCOND %1(s1), %[[TRUE:bb.[0-9]+.if.then]]
+# ALL-NEXT:    G_BR %[[FALSE:bb.[0-9]+.if.else]]
+# ALL:       [[TRUE]]:
+# ALL-NEXT:    %eax = COPY %2(s32)
+# ALL-NEXT:    RET 0, implicit %eax
+# ALL:       [[FALSE]]:
+# ALL-NEXT:    %eax = COPY %3(s32)
+# ALL-NEXT:    RET 0, implicit %eax
+body:             |
+  bb.1.entry:
+    successors: %bb.2.if.then(0x40000000), %bb.3.if.else(0x40000000)
+    liveins: %edi
+
+    %0(s32) = COPY %edi
+    %2(s32) = G_CONSTANT i32 0
+    %3(s32) = G_CONSTANT i32 1
+    %1(s1) = G_TRUNC %0(s32)
+    G_BRCOND %1(s1), %bb.2.if.then
+    G_BR %bb.3.if.else
+
+  bb.2.if.then:
+    %eax = COPY %2(s32)
+    RET 0, implicit %eax
+
+  bb.3.if.else:
+    %eax = COPY %3(s32)
+    RET 0, implicit %eax
+
+...

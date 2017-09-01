@@ -69,8 +69,10 @@ body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
     ; CHECK-LABEL: name: test_scalar_add_small
-    ; CHECK: [[OP0:%.*]](s32) = G_ANYEXT %2(s8)
-    ; CHECK: [[OP1:%.*]](s32) = G_ANYEXT %3(s8)
+    ; CHECK: [[A:%.*]](s64) = COPY %x0
+    ; CHECK: [[B:%.*]](s64) = COPY %x1
+    ; CHECK: [[OP0:%.*]](s32) = G_TRUNC [[A]]
+    ; CHECK: [[OP1:%.*]](s32) = G_TRUNC [[B]]
     ; CHECK: [[RES32:%.*]](s32) = G_ADD [[OP0]], [[OP1]]
     ; CHECK: [[RES:%.*]](s8) = G_TRUNC [[RES32]](s32)
 

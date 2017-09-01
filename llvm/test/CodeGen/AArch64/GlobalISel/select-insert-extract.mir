@@ -1,0 +1,54 @@
+# RUN: llc -mtriple=aarch64-- -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+
+---
+# CHECK-LABEL: name: insert_gprs
+name:            insert_gprs
+legalized:       true
+regBankSelected: true
+
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0:gpr(s32) = COPY %w0
+
+    %1:gpr(s64) = G_IMPLICIT_DEF
+
+    ; CHECK:  body:
+    ; CHECK: [[TMP:%[0-9]+]] = SUBREG_TO_REG 0, %0, 15
+    ; CHECK: %2 = BFMXri %1, [[TMP]], 0, 31
+    %2:gpr(s64) = G_INSERT %1, %0, 0
+
+    ; CHECK: [[TMP:%[0-9]+]] = SUBREG_TO_REG 0, %0, 15
+    ; CHECK: %3 = BFMXri %1, [[TMP]], 51, 31
+    %3:gpr(s64) = G_INSERT %1, %0, 13
+
+    %x0 = COPY %2
+    %x1 = COPY %3
+...
+
+
+---
+# CHECK-LABEL: name: extract_gprs
+name:            extract_gprs
+legalized:       true
+regBankSelected: true
+
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0:gpr(s64) = COPY %x0
+
+    ; CHECK:  body:
+    ; CHECK: [[TMP:%[0-9]+]] = UBFMXri %0, 0, 31
+    ; CHECK: %1 = COPY [[TMP]].sub_32
+    %1:gpr(s32) = G_EXTRACT %0, 0
+
+    ; CHECK: [[TMP:%[0-9]+]] = UBFMXri %0, 13, 44
+    ; CHECK: %2 = COPY [[TMP]].sub_32
+    %2:gpr(s32) = G_EXTRACT %0, 13
+
+    %w0 = COPY %1
+    %w1 = COPY %2
+...

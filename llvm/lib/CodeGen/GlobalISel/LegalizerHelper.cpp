@@ -597,22 +597,58 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_FCMP: {
+    unsigned Op0Ext, Op1Ext, DstReg;
+    unsigned Cmp1 = MI.getOperand(2).getReg();
+    unsigned Cmp2 = MI.getOperand(3).getReg();
+    if (TypeIdx == 0) {
+      Op0Ext = Cmp1;
+      Op1Ext = Cmp2;
+      DstReg = MRI.createGenericVirtualRegister(WideTy);
+    } else {
+      Op0Ext = MRI.createGenericVirtualRegister(WideTy);
+      Op1Ext = MRI.createGenericVirtualRegister(WideTy);
+      DstReg = MI.getOperand(0).getReg();
+      MIRBuilder.buildInstr(TargetOpcode::G_FPEXT, Op0Ext, Cmp1);
+      MIRBuilder.buildInstr(TargetOpcode::G_FPEXT, Op1Ext, Cmp2);
+    }
+    MIRBuilder.buildFCmp(
+        static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate()),
+        DstReg, Op0Ext, Op1Ext);
+    if (TypeIdx == 0)
+      MIRBuilder.buildInstr(TargetOpcode::G_TRUNC, MI.getOperand(0).getReg(),
+                            DstReg);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_ICMP: {
-    assert(TypeIdx == 1 && "unable to legalize predicate");
     bool IsSigned = CmpInst::isSigned(
         static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate()));
-    unsigned Op0Ext = MRI.createGenericVirtualRegister(WideTy);
-    unsigned Op1Ext = MRI.createGenericVirtualRegister(WideTy);
-    if (IsSigned) {
-      MIRBuilder.buildSExt(Op0Ext, MI.getOperand(2).getReg());
-      MIRBuilder.buildSExt(Op1Ext, MI.getOperand(3).getReg());
+    unsigned Cmp1 = MI.getOperand(2).getReg();
+    unsigned Cmp2 = MI.getOperand(3).getReg();
+    unsigned Op0Ext, Op1Ext, DstReg;
+    if (TypeIdx == 0) {
+      Op0Ext = Cmp1;
+      Op1Ext = Cmp2;
+      DstReg = MRI.createGenericVirtualRegister(WideTy);
     } else {
-      MIRBuilder.buildZExt(Op0Ext, MI.getOperand(2).getReg());
-      MIRBuilder.buildZExt(Op1Ext, MI.getOperand(3).getReg());
+      Op0Ext = MRI.createGenericVirtualRegister(WideTy);
+      Op1Ext = MRI.createGenericVirtualRegister(WideTy);
+      DstReg = MI.getOperand(0).getReg();
+      if (IsSigned) {
+        MIRBuilder.buildSExt(Op0Ext, Cmp1);
+        MIRBuilder.buildSExt(Op1Ext, Cmp2);
+      } else {
+        MIRBuilder.buildZExt(Op0Ext, Cmp1);
+        MIRBuilder.buildZExt(Op1Ext, Cmp2);
+      }
     }
     MIRBuilder.buildICmp(
         static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate()),
-        MI.getOperand(0).getReg(), Op0Ext, Op1Ext);
+        DstReg, Op0Ext, Op1Ext);
+    if (TypeIdx == 0)
+      MIRBuilder.buildInstr(TargetOpcode::G_TRUNC, MI.getOperand(0).getReg(),
+                            DstReg);
     MI.eraseFromParent();
     return Legalized;
   }
@@ -621,6 +657,35 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     unsigned OffsetExt = MRI.createGenericVirtualRegister(WideTy);
     MIRBuilder.buildSExt(OffsetExt, MI.getOperand(2).getReg());
     MI.getOperand(2).setReg(OffsetExt);
+    return Legalized;
+  }
+  case TargetOpcode::G_PHI: {
+    assert(TypeIdx == 0 && "Expecting only Idx 0");
+    auto getExtendedReg = [&](unsigned Reg, MachineBasicBlock &MBB) {
+      auto FirstTermIt = MBB.getFirstTerminator();
+      MIRBuilder.setInsertPt(MBB, FirstTermIt);
+      MachineInstr *DefMI = MRI.getVRegDef(Reg);
+      MachineInstrBuilder MIB;
+      if (DefMI->getOpcode() == TargetOpcode::G_TRUNC)
+        MIB = MIRBuilder.buildAnyExtOrTrunc(WideTy,
+                                            DefMI->getOperand(1).getReg());
+      else
+        MIB = MIRBuilder.buildAnyExt(WideTy, Reg);
+      return MIB->getOperand(0).getReg();
+    };
+    auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_PHI, WideTy);
+    for (auto OpIt = MI.operands_begin() + 1, OpE = MI.operands_end();
+         OpIt != OpE;) {
+      unsigned Reg = OpIt++->getReg();
+      MachineBasicBlock *OpMBB = OpIt++->getMBB();
+      MIB.addReg(getExtendedReg(Reg, *OpMBB));
+      MIB.addMBB(OpMBB);
+    }
+    auto *MBB = MI.getParent();
+    MIRBuilder.setInsertPt(*MBB, MBB->getFirstNonPHI());
+    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(),
+                          MIB->getOperand(0).getReg());
+    MI.eraseFromParent();
     return Legalized;
   }
   }

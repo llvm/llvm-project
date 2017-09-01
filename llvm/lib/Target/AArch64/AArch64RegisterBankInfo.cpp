@@ -37,10 +37,6 @@
 
 using namespace llvm;
 
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-#error "You shouldn't build this"
-#endif
-
 AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
     : AArch64GenRegisterBankInfo() {
   static bool AlreadyInit = false;
@@ -424,7 +420,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   // Try the default logic for non-generic instructions that are either copies
   // or already have some operands assigned to banks.
-  if (!isPreISelGenericOpcode(Opc)) {
+  if (!isPreISelGenericOpcode(Opc) ||
+      Opc == TargetOpcode::G_PHI) {
     const RegisterBankInfo::InstructionMapping &Mapping =
         getInstrMappingImpl(MI);
     if (Mapping.isValid())
@@ -488,7 +485,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     // As a top-level guess, vectors go in FPRs, scalars and pointers in GPRs.
     // For floating-point instructions, scalars go in FPRs.
-    if (Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc))
+    if (Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc) ||
+        Ty.getSizeInBits() > 64)
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else
       OpRegBankIdx[Idx] = PMI_FirstGPR;
