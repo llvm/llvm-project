@@ -89,32 +89,44 @@
 #ifndef LLVM_ANALYSIS_CGSCCPASSMANAGER_H
 #define LLVM_ANALYSIS_CGSCCPASSMANAGER_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PriorityWorklist.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <utility>
 
 namespace llvm {
 
+struct CGSCCUpdateResult;
+class Module;
+
 // Allow debug logging in this inline function.
 #define DEBUG_TYPE "cgscc"
-
-struct CGSCCUpdateResult;
 
 /// Extern template declaration for the analysis set for this IR unit.
 extern template class AllAnalysesOn<LazyCallGraph::SCC>;
 
 extern template class AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
+
 /// \brief The CGSCC analysis manager.
 ///
 /// See the documentation for the AnalysisManager template for detail
-/// documentation. This typedef serves as a convenient way to refer to this
+/// documentation. This type serves as a convenient way to refer to this
 /// construct in the adaptors and proxies used to integrate this into the larger
 /// pass manager infrastructure.
-typedef AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>
-    CGSCCAnalysisManager;
+using CGSCCAnalysisManager =
+    AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
 
 // Explicit specialization and instantiation declarations for the pass manager.
 // See the comments on the definition of the specialization for details on how
@@ -132,10 +144,10 @@ extern template class PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager,
 ///
 /// See the documentation for the PassManager template for details. It runs
 /// a sequence of SCC passes over each SCC that the manager is run over. This
-/// typedef serves as a convenient way to refer to this construct.
-typedef PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
-                    CGSCCUpdateResult &>
-    CGSCCPassManager;
+/// type serves as a convenient way to refer to this construct.
+using CGSCCPassManager =
+    PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
+                CGSCCUpdateResult &>;
 
 /// An explicit specialization of the require analysis template pass.
 template <typename AnalysisT>
@@ -152,8 +164,8 @@ struct RequireAnalysisPass<AnalysisT, LazyCallGraph::SCC, CGSCCAnalysisManager,
 };
 
 /// A proxy from a \c CGSCCAnalysisManager to a \c Module.
-typedef InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>
-    CGSCCAnalysisManagerModuleProxy;
+using CGSCCAnalysisManagerModuleProxy =
+    InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
 
 /// We need a specialized result for the \c CGSCCAnalysisManagerModuleProxy so
 /// it can have access to the call graph in order to walk all the SCCs when
@@ -196,10 +208,11 @@ extern template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
 
 extern template class OuterAnalysisManagerProxy<
     ModuleAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &>;
+
 /// A proxy from a \c ModuleAnalysisManager to an \c SCC.
-typedef OuterAnalysisManagerProxy<ModuleAnalysisManager, LazyCallGraph::SCC,
-                                  LazyCallGraph &>
-    ModuleAnalysisManagerCGSCCProxy;
+using ModuleAnalysisManagerCGSCCProxy =
+    OuterAnalysisManagerProxy<ModuleAnalysisManager, LazyCallGraph::SCC,
+                              LazyCallGraph &>;
 
 /// Support structure for SCC passes to communicate updates the call graph back
 /// to the CGSCC pass manager infrsatructure.
@@ -304,18 +317,21 @@ class ModuleToPostOrderCGSCCPassAdaptor
 public:
   explicit ModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass)
       : Pass(std::move(Pass)) {}
+
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
   ModuleToPostOrderCGSCCPassAdaptor(
       const ModuleToPostOrderCGSCCPassAdaptor &Arg)
       : Pass(Arg.Pass) {}
+
   ModuleToPostOrderCGSCCPassAdaptor(ModuleToPostOrderCGSCCPassAdaptor &&Arg)
       : Pass(std::move(Arg.Pass)) {}
+
   friend void swap(ModuleToPostOrderCGSCCPassAdaptor &LHS,
                    ModuleToPostOrderCGSCCPassAdaptor &RHS) {
-    using std::swap;
-    swap(LHS.Pass, RHS.Pass);
+    std::swap(LHS.Pass, RHS.Pass);
   }
+
   ModuleToPostOrderCGSCCPassAdaptor &
   operator=(ModuleToPostOrderCGSCCPassAdaptor RHS) {
     swap(*this, RHS);
@@ -383,7 +399,7 @@ public:
 
         // Push the initial SCCs in reverse post-order as we'll pop off the the
         // back and so see this in post-order.
-        for (LazyCallGraph::SCC &C : reverse(*RC))
+        for (LazyCallGraph::SCC &C : llvm::reverse(*RC))
           CWorklist.insert(&C);
 
         do {
@@ -505,13 +521,15 @@ public:
 
 private:
   friend AnalysisInfoMixin<FunctionAnalysisManagerCGSCCProxy>;
+
   static AnalysisKey Key;
 };
 
 extern template class OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
+
 /// A proxy from a \c CGSCCAnalysisManager to a \c Function.
-typedef OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>
-    CGSCCAnalysisManagerFunctionProxy;
+using CGSCCAnalysisManagerFunctionProxy =
+    OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
 
 /// Helper to update the call graph after running a function pass.
 ///
@@ -537,17 +555,20 @@ class CGSCCToFunctionPassAdaptor
 public:
   explicit CGSCCToFunctionPassAdaptor(FunctionPassT Pass)
       : Pass(std::move(Pass)) {}
+
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
   CGSCCToFunctionPassAdaptor(const CGSCCToFunctionPassAdaptor &Arg)
       : Pass(Arg.Pass) {}
+
   CGSCCToFunctionPassAdaptor(CGSCCToFunctionPassAdaptor &&Arg)
       : Pass(std::move(Arg.Pass)) {}
+
   friend void swap(CGSCCToFunctionPassAdaptor &LHS,
                    CGSCCToFunctionPassAdaptor &RHS) {
-    using std::swap;
-    swap(LHS.Pass, RHS.Pass);
+    std::swap(LHS.Pass, RHS.Pass);
   }
+
   CGSCCToFunctionPassAdaptor &operator=(CGSCCToFunctionPassAdaptor RHS) {
     swap(*this, RHS);
     return *this;
@@ -733,7 +754,7 @@ public:
         // so iterate to process this devirtualization site.
         return true;
       };
-      bool Devirt = any_of(CallHandles, IsDevirtualizedHandle);
+      bool Devirt = llvm::any_of(CallHandles, IsDevirtualizedHandle);
 
       // Rescan to build up a new set of handles and count how many direct
       // calls remain. If we decide to iterate, this also sets up the input to
@@ -802,6 +823,7 @@ DevirtSCCRepeatedPass<PassT> createDevirtSCCRepeatedPass(PassT Pass,
 
 // Clear out the debug logging macro.
 #undef DEBUG_TYPE
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_ANALYSIS_CGSCCPASSMANAGER_H

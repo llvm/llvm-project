@@ -221,6 +221,8 @@ private:
   uint32_t StartFunction = -1;
   bool HasLinkingSection = false;
   wasm::WasmLinkingData LinkingData;
+  uint32_t NumImportedGlobals = 0;
+  uint32_t NumImportedFunctions = 0;
 
   StringMap<uint32_t> SymbolMap;
 };

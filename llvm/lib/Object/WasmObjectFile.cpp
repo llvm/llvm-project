@@ -472,6 +472,7 @@ Error WasmObjectFile::parseImportSection(const uint8_t *Ptr, const uint8_t *End)
     Im.Kind = readUint8(Ptr);
     switch (Im.Kind) {
     case wasm::WASM_EXTERNAL_FUNCTION:
+      NumImportedFunctions++;
       Im.SigIndex = readVaruint32(Ptr);
       SymbolMap.try_emplace(Im.Field, Symbols.size());
       Symbols.emplace_back(Im.Field, WasmSymbol::SymbolType::FUNCTION_IMPORT,
@@ -480,6 +481,7 @@ Error WasmObjectFile::parseImportSection(const uint8_t *Ptr, const uint8_t *End)
                    << " sym index:" << Symbols.size() << "\n");
       break;
     case wasm::WASM_EXTERNAL_GLOBAL:
+      NumImportedGlobals++;
       Im.Global.Type = readVarint7(Ptr);
       Im.Global.Mutable = readVaruint1(Ptr);
       SymbolMap.try_emplace(Im.Field, Symbols.size());
@@ -580,10 +582,16 @@ Error WasmObjectFile::parseExportSection(const uint8_t *Ptr, const uint8_t *End)
     switch (Ex.Kind) {
     case wasm::WASM_EXTERNAL_FUNCTION:
       ExportType = WasmSymbol::SymbolType::FUNCTION_EXPORT;
+      if (Ex.Index >= FunctionTypes.size() + NumImportedFunctions)
+        return make_error<GenericBinaryError>("Invalid function export",
+                                              object_error::parse_failed);
       MakeSymbol = true;
       break;
     case wasm::WASM_EXTERNAL_GLOBAL:
       ExportType = WasmSymbol::SymbolType::GLOBAL_EXPORT;
+      if (Ex.Index >= Globals.size() + NumImportedGlobals)
+        return make_error<GenericBinaryError>("Invalid global export",
+                                              object_error::parse_failed);
       MakeSymbol = true;
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
@@ -778,8 +786,13 @@ uint64_t WasmObjectFile::getSymbolValueImpl(DataRefImpl Symb) const {
   case WasmSymbol::SymbolType::GLOBAL_IMPORT:
     return 0;
   case WasmSymbol::SymbolType::FUNCTION_EXPORT:
-  case WasmSymbol::SymbolType::GLOBAL_EXPORT:
     return Exports[Sym.ElementIndex].Index;
+  case WasmSymbol::SymbolType::GLOBAL_EXPORT: {
+    uint32_t GlobalIndex = Exports[Sym.ElementIndex].Index;
+    assert(GlobalIndex < Globals.size());
+    const wasm::WasmGlobal& Global = Globals[GlobalIndex];
+    return Global.InitExpr.Value.Int32;
+  }
   case WasmSymbol::SymbolType::DEBUG_FUNCTION_NAME:
     return Sym.ElementIndex;
   }
