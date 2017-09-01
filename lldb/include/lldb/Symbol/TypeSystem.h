@@ -94,6 +94,9 @@ public:
                                            Target *target,
                                            const char *compiler_options);
 
+  static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
+                                           Target *target);
+
   // Free up any resources associated with this TypeSystem.  Done before
   // removing
   // all the TypeSystems from the TypeSystemMap.
