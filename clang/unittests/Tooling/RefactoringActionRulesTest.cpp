@@ -32,11 +32,23 @@ protected:
   std::string DefaultCode = std::string(100, 'a');
 };
 
-Expected<Optional<AtomicChanges>>
+Expected<AtomicChanges>
 createReplacements(const std::unique_ptr<RefactoringActionRule> &Rule,
                    RefactoringRuleContext &Context) {
-  return cast<SourceChangeRefactoringRule>(*Rule).createSourceReplacements(
-      Context);
+  class Consumer final : public RefactoringResultConsumer {
+    void handleError(llvm::Error Err) override { Result = std::move(Err); }
+
+    void handle(AtomicChanges SourceReplacements) override {
+      Result = std::move(SourceReplacements);
+    }
+
+  public:
+    Optional<Expected<AtomicChanges>> Result;
+  };
+
+  Consumer C;
+  Rule->invoke(C, Context);
+  return std::move(*C.Result);
 }
 
 TEST_F(RefactoringActionRulesTest, MyFirstRefactoringRule) {
@@ -70,11 +82,10 @@ TEST_F(RefactoringActionRulesTest, MyFirstRefactoringRule) {
             .getLocWithOffset(10);
     RefContext.setSelectionRange({Cursor, Cursor});
 
-    Expected<Optional<AtomicChanges>> ErrorOrResult =
+    Expected<AtomicChanges> ErrorOrResult =
         createReplacements(Rule, RefContext);
     ASSERT_FALSE(!ErrorOrResult);
-    ASSERT_FALSE(!*ErrorOrResult);
-    AtomicChanges Result = std::move(**ErrorOrResult);
+    AtomicChanges Result = std::move(*ErrorOrResult);
     ASSERT_EQ(Result.size(), 1u);
     std::string YAMLString =
         const_cast<AtomicChange &>(Result[0]).toYAMLString();
@@ -94,16 +105,20 @@ TEST_F(RefactoringActionRulesTest, MyFirstRefactoringRule) {
                  YAMLString.c_str());
   }
 
-  // When one of the requirements is not satisfied, perform should return either
-  // None or a valid diagnostic.
+  // When one of the requirements is not satisfied, invoke should return a
+  // valid error.
   {
     RefactoringRuleContext RefContext(Context.Sources);
-    Expected<Optional<AtomicChanges>> ErrorOrResult =
+    Expected<AtomicChanges> ErrorOrResult =
         createReplacements(Rule, RefContext);
 
-    ASSERT_FALSE(!ErrorOrResult);
-    Optional<AtomicChanges> Value = std::move(*ErrorOrResult);
-    EXPECT_TRUE(!Value);
+    ASSERT_TRUE(!ErrorOrResult);
+    std::string Message;
+    llvm::handleAllErrors(
+        ErrorOrResult.takeError(),
+        [&](llvm::StringError &Error) { Message = Error.getMessage(); });
+    EXPECT_EQ(Message, "refactoring action can't be initiated with the "
+                       "specified selection range");
   }
 }
 
@@ -121,8 +136,7 @@ TEST_F(RefactoringActionRulesTest, ReturnError) {
   SourceLocation Cursor =
       Context.Sources.getLocForStartOfFile(Context.Sources.getMainFileID());
   RefContext.setSelectionRange({Cursor, Cursor});
-  Expected<Optional<AtomicChanges>> Result =
-      createReplacements(Rule, RefContext);
+  Expected<AtomicChanges> Result = createReplacements(Rule, RefContext);
 
   ASSERT_TRUE(!Result);
   std::string Message;
@@ -151,8 +165,7 @@ TEST_F(RefactoringActionRulesTest, ReturnInitiationDiagnostic) {
   SourceLocation Cursor =
       Context.Sources.getLocForStartOfFile(Context.Sources.getMainFileID());
   RefContext.setSelectionRange({Cursor, Cursor});
-  Expected<Optional<AtomicChanges>> Result =
-      createReplacements(Rule, RefContext);
+  Expected<AtomicChanges> Result = createReplacements(Rule, RefContext);
 
   ASSERT_TRUE(!Result);
   std::string Message;
