@@ -313,7 +313,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
       // Enable coverage if the fuzzing flag is set.
       if (Add & FuzzerNoLink) {
-        CoverageFeatures |= CoverageTracePCGuard | CoverageIndirCall |
+        CoverageFeatures |= CoverageInline8bitCounters | CoverageIndirCall |
                             CoverageTraceCmp | CoveragePCTable;
         // Due to TLS differences, stack depth tracking is only enabled on Linux
         if (TC.getTriple().isOSLinux())

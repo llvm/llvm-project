@@ -233,9 +233,9 @@ public:
   ///                    filtered.
   /// \param Filter The filter function that should return true for all groups
   ///               that should be removed from the list.
-  static void
-  filterGroups(std::vector<CloneDetector::CloneGroup> &CloneGroups,
-               std::function<bool(const CloneDetector::CloneGroup &)> Filter) {
+  static void filterGroups(
+      std::vector<CloneDetector::CloneGroup> &CloneGroups,
+      llvm::function_ref<bool(const CloneDetector::CloneGroup &)> Filter) {
     CloneGroups.erase(
         std::remove_if(CloneGroups.begin(), CloneGroups.end(), Filter),
         CloneGroups.end());
@@ -249,7 +249,8 @@ public:
   ///                to the same CloneGroup.
   static void splitCloneGroups(
       std::vector<CloneDetector::CloneGroup> &CloneGroups,
-      std::function<bool(const StmtSequence &, const StmtSequence &)> Compare);
+      llvm::function_ref<bool(const StmtSequence &, const StmtSequence &)>
+          Compare);
 };
 
 /// This constraint moves clones into clone groups of type II via hashing.
