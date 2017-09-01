@@ -108,7 +108,7 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
                     USES_TERMINAL)
 
   # Add top-level targets that build specific compiler-rt runtimes.
-  set(COMPILER_RT_RUNTIMES asan builtins dfsan lsan msan profile tsan ubsan)
+  set(COMPILER_RT_RUNTIMES asan builtins dfsan lsan msan profile tsan ubsan ubsan-minimal)
   foreach(runtime ${COMPILER_RT_RUNTIMES})
     get_ext_project_build_command(build_runtime_cmd ${runtime})
     add_custom_target(${runtime}
@@ -125,7 +125,7 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
 
     # Add top-level targets for various compiler-rt test suites.
     set(COMPILER_RT_TEST_SUITES check-asan check-asan-dynamic check-dfsan
-      check-lsan check-msan check-sanitizer check-tsan check-ubsan
+      check-lsan check-msan check-sanitizer check-tsan check-ubsan check-ubsan-minimal
       check-profile check-cfi check-cfi-and-supported check-safestack)
     foreach(test_suite ${COMPILER_RT_TEST_SUITES})
       get_ext_project_build_command(run_test_suite ${test_suite})
