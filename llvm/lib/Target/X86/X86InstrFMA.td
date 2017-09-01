@@ -242,14 +242,31 @@ multiclass fma3s<bits<8> opc132, bits<8> opc213, bits<8> opc231,
   // This is because src1 is tied to dest, and the scalar intrinsics
   // require the pass-through values to come from the first source
   // operand, not the second.
+  // TODO: Use AVX512 instructions when possible.
   let Predicates = [HasFMA] in {
     def : Pat<(IntF32 VR128:$src1, VR128:$src2, VR128:$src3),
-              (COPY_TO_REGCLASS(!cast<Instruction>(NAME#"213SSr_Int")
-               $src1, $src2, $src3), VR128)>;
+              (!cast<Instruction>(NAME#"213SSr_Int")
+               VR128:$src1, VR128:$src2, VR128:$src3)>;
 
     def : Pat<(IntF64 VR128:$src1, VR128:$src2, VR128:$src3),
-              (COPY_TO_REGCLASS(!cast<Instruction>(NAME#"213SDr_Int")
-               $src1, $src2, $src3), VR128)>;
+              (!cast<Instruction>(NAME#"213SDr_Int")
+               VR128:$src1, VR128:$src2, VR128:$src3)>;
+
+    def : Pat<(IntF32 VR128:$src1, VR128:$src2, sse_load_f32:$src3),
+              (!cast<Instruction>(NAME#"213SSm_Int")
+               VR128:$src1, VR128:$src2, sse_load_f32:$src3)>;
+
+    def : Pat<(IntF64 VR128:$src1, VR128:$src2, sse_load_f64:$src3),
+              (!cast<Instruction>(NAME#"213SDm_Int")
+               VR128:$src1, VR128:$src2, sse_load_f64:$src3)>;
+
+    def : Pat<(IntF32 VR128:$src1, sse_load_f32:$src3, VR128:$src2),
+              (!cast<Instruction>(NAME#"132SSm_Int")
+               VR128:$src1, VR128:$src2, sse_load_f32:$src3)>;
+
+    def : Pat<(IntF64 VR128:$src1, sse_load_f64:$src3, VR128:$src2),
+              (!cast<Instruction>(NAME#"132SDm_Int")
+               VR128:$src1, VR128:$src2, sse_load_f64:$src3)>;
   }
 }
 

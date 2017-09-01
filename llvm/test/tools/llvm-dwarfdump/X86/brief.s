@@ -2,12 +2,19 @@
 # RUN: | llvm-dwarfdump -debug-dump=info -brief - \
 # RUN: | FileCheck %s
 
+# CHECK-NOT: .debug_abbrev contents:
+#
+# CHECK: .debug_info contents:
 # CHECK: DW_TAG_compile_unit
 # CHECK-NOT: DW_FORM
-# CHECK: DW_AT
+# CHECK: DW_AT_name        ("brief.c")
+# CHECK: DW_AT_name      ("main")
+# CHECK: DW_AT_name      ("int")
 # CHECK-NOT: debug_str
 # CHECK-NOT: DW_AT_type {{.*}} =>
-
+#
+# CHECK-NOT: {{.*}} contents:
+#
 # This test is meant to verify that -brief hides DW_FORMs and abbreviation
 # codes from .debug_info section. Furthermore it verifies that it also hides
 # .debug_str and die reference offsets into the CU.

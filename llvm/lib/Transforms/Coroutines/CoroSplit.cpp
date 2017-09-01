@@ -19,18 +19,53 @@
 // coroutine.
 //===----------------------------------------------------------------------===//
 
+#include "CoroInstr.h"
 #include "CoroInternal.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
-#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <initializer_list>
+#include <iterator>
 
 using namespace llvm;
 
@@ -343,7 +378,6 @@ static void replaceFrameSize(coro::Shape &Shape) {
 // Assumes that all the functions have the same signature.
 static void setCoroInfo(Function &F, CoroBeginInst *CoroBegin,
                         std::initializer_list<Function *> Fns) {
-
   SmallVector<Constant *, 4> Args(Fns.begin(), Fns.end());
   assert(!Args.empty());
   Function *Part = *Fns.begin();
@@ -364,7 +398,6 @@ static void setCoroInfo(Function &F, CoroBeginInst *CoroBegin,
 // Store addresses of Resume/Destroy/Cleanup functions in the coroutine frame.
 static void updateCoroFrame(coro::Shape &Shape, Function *ResumeFn,
                             Function *DestroyFn, Function *CleanupFn) {
-
   IRBuilder<> Builder(Shape.FramePtr->getNextNode());
   auto *ResumeAddr = Builder.CreateConstInBoundsGEP2_32(
       Shape.FrameTy, Shape.FramePtr, 0, coro::Shape::ResumeField,
@@ -388,7 +421,7 @@ static void updateCoroFrame(coro::Shape &Shape, Function *ResumeFn,
 
 static void postSplitCleanup(Function &F) {
   removeUnreachableBlocks(F);
-  llvm::legacy::FunctionPassManager FPM(F.getParent());
+  legacy::FunctionPassManager FPM(F.getParent());
 
   FPM.add(createVerifierPass());
   FPM.add(createSCCPPass());
@@ -478,7 +511,7 @@ static void addMustTailToCoroResumes(Function &F) {
   // Set musttail on those that are followed by a ret instruction.
   for (CallInst *Call : Resumes)
     if (simplifyTerminatorLeadingToRet(Call->getNextNode())) {
-      Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
+      Call->setTailCallKind(CallInst::TCK_MustTail);
       changed = true;
     }
 
@@ -574,7 +607,7 @@ static void simplifySuspendPoints(coro::Shape &Shape) {
   size_t I = 0, N = S.size();
   if (N == 0)
     return;
-  for (;;) {
+  while (true) {
     if (simplifySuspendPoint(S[I], Shape.CoroBegin)) {
       if (--N == I)
         break;
@@ -769,6 +802,7 @@ namespace {
 
 struct CoroSplit : public CallGraphSCCPass {
   static char ID; // Pass identification, replacement for typeid
+
   CoroSplit() : CallGraphSCCPass(ID) {
     initializeCoroSplitPass(*PassRegistry::getPassRegistry());
   }
@@ -817,11 +851,14 @@ struct CoroSplit : public CallGraphSCCPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     CallGraphSCCPass::getAnalysisUsage(AU);
   }
+
   StringRef getPassName() const override { return "Coroutine Splitting"; }
 };
-}
+
+} // end anonymous namespace
 
 char CoroSplit::ID = 0;
+
 INITIALIZE_PASS(
     CoroSplit, "coro-split",
     "Split coroutine into a set of functions driving its state machine", false,

@@ -949,11 +949,19 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
   }
 }
 
+static bool canUseReferenceType(const DbgVariableLocation &Loc) {
+  return !Loc.LoadChain.empty() && Loc.LoadChain.back() == 0;
+}
+
+static bool needsReferenceType(const DbgVariableLocation &Loc) {
+  return Loc.LoadChain.size() == 2 && Loc.LoadChain.back() == 0;
+}
+
 void CodeViewDebug::calculateRanges(
     LocalVariable &Var, const DbgValueHistoryMap::InstrRanges &Ranges) {
   const TargetRegisterInfo *TRI = Asm->MF->getSubtarget().getRegisterInfo();
 
-  // calculate the definition ranges.
+  // Calculate the definition ranges.
   for (auto I = Ranges.begin(), E = Ranges.end(); I != E; ++I) {
     const InsnRange &Range = *I;
     const MachineInstr *DVInst = Range.first;
@@ -965,39 +973,37 @@ void CodeViewDebug::calculateRanges(
     if (!Location)
       continue;
 
-    // Because we cannot express DW_OP_deref in CodeView directly,
-    // we use a trick: we encode the type as a reference to the
-    // real type.
-    if (Var.Deref) {
-      // When we're encoding the type as a reference to the original type,
-      // we need to remove a level of indirection from incoming locations.
-      // E.g. [RSP+8] with DW_OP_deref becomes [RSP+8],
-      // and [RCX+0] without DW_OP_deref becomes RCX.
-      if (!Location->Deref) {
-        if (Location->InMemory)
-          Location->InMemory = false;
-        else
-          continue;
-      }
-    } else if (Location->Deref) {
-      // We've encountered a Deref range when we had not applied the
-      // reference encoding. Start over using reference encoding.
-      Var.Deref = true;
+    // CodeView can only express variables in register and variables in memory
+    // at a constant offset from a register. However, for variables passed
+    // indirectly by pointer, it is common for that pointer to be spilled to a
+    // stack location. For the special case of one offseted load followed by a
+    // zero offset load (a pointer spilled to the stack), we change the type of
+    // the local variable from a value type to a reference type. This tricks the
+    // debugger into doing the load for us.
+    if (Var.UseReferenceType) {
+      // We're using a reference type. Drop the last zero offset load.
+      if (canUseReferenceType(*Location))
+        Location->LoadChain.pop_back();
+      else
+        continue;
+    } else if (needsReferenceType(*Location)) {
+      // This location can't be expressed without switching to a reference type.
+      // Start over using that.
+      Var.UseReferenceType = true;
       Var.DefRanges.clear();
       calculateRanges(Var, Ranges);
       return;
     }
 
-    // If we don't know how to handle this range, skip past it.
-    if (Location->Register == 0 || (Location->Offset && !Location->InMemory))
+    // We can only handle a register or an offseted load of a register.
+    if (Location->Register == 0 || Location->LoadChain.size() > 1)
       continue;
-
-    // Handle the two cases we can handle: indirect in memory and in register.
     {
       LocalVarDefRange DR;
       DR.CVRegister = TRI->getCodeViewRegNum(Location->Register);
-      DR.InMemory = Location->InMemory;
-      DR.DataOffset = Location->Offset;
+      DR.InMemory = !Location->LoadChain.empty();
+      DR.DataOffset =
+          !Location->LoadChain.empty() ? Location->LoadChain.back() : 0;
       if (Location->FragmentInfo) {
         DR.IsSubfield = true;
         DR.StructOffset = Location->FragmentInfo->OffsetInBits / 8;
@@ -2113,8 +2119,9 @@ void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
     Flags |= LocalSymFlags::IsOptimizedOut;
 
   OS.AddComment("TypeIndex");
-  TypeIndex TI = Var.Deref ? getTypeIndexForReferenceTo(Var.DIVar->getType())
-                           : getCompleteTypeIndex(Var.DIVar->getType());
+  TypeIndex TI = Var.UseReferenceType
+                     ? getTypeIndexForReferenceTo(Var.DIVar->getType())
+                     : getCompleteTypeIndex(Var.DIVar->getType());
   OS.EmitIntValue(TI.getIndex(), 4);
   OS.AddComment("Flags");
   OS.EmitIntValue(static_cast<uint16_t>(Flags), 2);

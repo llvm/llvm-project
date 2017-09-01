@@ -422,10 +422,15 @@ cl::opt<bool> DumpStreamBlocks(
     "stream-blocks",
     cl::desc("Add block information to the output of -streams"),
     cl::cat(MsfOptions), cl::sub(DumpSubcommand));
-cl::opt<bool>
-    DumpModuleStats("mod-stats",
-                    cl::desc("Dump a detailed size breakdown for each module"),
-                    cl::cat(MsfOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpSymbolStats(
+    "sym-stats",
+    cl::desc("Dump a detailed breakdown of symbol usage/size for each module"),
+    cl::cat(MsfOptions), cl::sub(DumpSubcommand));
+
+cl::opt<bool> DumpUdtStats(
+    "udt-stats",
+    cl::desc("Dump a detailed breakdown of S_UDT record usage / stats"),
+    cl::cat(MsfOptions), cl::sub(DumpSubcommand));
 
 // TYPE OPTIONS
 cl::opt<bool> DumpTypes("types",
@@ -1095,27 +1100,28 @@ int main(int argc_, const char *argv_[]) {
 
   if (opts::DumpSubcommand) {
     if (opts::dump::RawAll) {
-      opts::dump::DumpLines = true;
-      opts::dump::DumpInlineeLines = true;
-      opts::dump::DumpXme = true;
-      opts::dump::DumpXmi = true;
-      opts::dump::DumpIds = true;
       opts::dump::DumpGlobals = true;
+      opts::dump::DumpInlineeLines = true;
+      opts::dump::DumpIds = true;
+      opts::dump::DumpIdExtras = true;
+      opts::dump::DumpLines = true;
+      opts::dump::DumpModules = true;
+      opts::dump::DumpModuleFiles = true;
       opts::dump::DumpPublics = true;
       opts::dump::DumpSectionContribs = true;
+      opts::dump::DumpSectionHeaders = true;
       opts::dump::DumpSectionMap = true;
       opts::dump::DumpStreams = true;
       opts::dump::DumpStreamBlocks = true;
       opts::dump::DumpStringTable = true;
-      opts::dump::DumpSectionHeaders = true;
       opts::dump::DumpSummary = true;
       opts::dump::DumpSymbols = true;
-      opts::dump::DumpIds = true;
-      opts::dump::DumpIdExtras = true;
+      opts::dump::DumpSymbolStats = true;
       opts::dump::DumpTypes = true;
       opts::dump::DumpTypeExtras = true;
-      opts::dump::DumpModules = true;
-      opts::dump::DumpModuleFiles = true;
+      opts::dump::DumpUdtStats = true;
+      opts::dump::DumpXme = true;
+      opts::dump::DumpXmi = true;
     }
   }
   if (opts::PdbToYamlSubcommand) {

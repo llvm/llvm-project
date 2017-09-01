@@ -90,6 +90,13 @@
 # RUN:   -j 1 --show-tests --show-suites -v > %t.out
 # RUN: FileCheck --check-prefix=CHECK-ASEXEC-INTREE < %t.out %s
 #
+# Try it again after cd'ing into the test suite using a short relative path.
+#
+# RUN: cd %{inputs}/exec-discovery-in-tree/obj/
+# RUN: %{lit} . \
+# RUN:   -j 1 --show-tests --show-suites -v > %t.out
+# RUN: FileCheck --check-prefix=CHECK-ASEXEC-INTREE < %t.out %s
+#
 #      CHECK-ASEXEC-INTREE:   exec-discovery-in-tree-suite - 1 tests
 # CHECK-ASEXEC-INTREE-NEXT:     Source Root: {{.*[/\\]exec-discovery-in-tree$}}
 # CHECK-ASEXEC-INTREE-NEXT:     Exec Root  : {{.*[/\\]exec-discovery-in-tree[/\\]obj$}}

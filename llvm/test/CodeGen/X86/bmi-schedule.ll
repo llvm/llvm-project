@@ -41,7 +41,7 @@ define i16 @test_andn_i16(i16 zeroext %a0, i16 zeroext %a1, i16 *%a2) {
 ; ZNVER1-NEXT:    andw (%rdx), %di # sched: [5:0.50]
 ; ZNVER1-NEXT:    addl %edi, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i16, i16 *%a2
   %2 = xor i16 %a0, -1
   %3 = and i16 %2, %a1
@@ -77,7 +77,7 @@ define i32 @test_andn_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; ZNVER1-NEXT:    andnl (%rdx), %edi, %eax # sched: [5:0.50]
 ; ZNVER1-NEXT:    andnl %esi, %edi, %ecx # sched: [1:0.25]
 ; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i32, i32 *%a2
   %2 = xor i32 %a0, -1
   %3 = and i32 %2, %a1
@@ -113,7 +113,7 @@ define i64 @test_andn_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; ZNVER1-NEXT:    andnq (%rdx), %rdi, %rax # sched: [5:0.50]
 ; ZNVER1-NEXT:    andnq %rsi, %rdi, %rcx # sched: [1:0.25]
 ; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i64, i64 *%a2
   %2 = xor i64 %a0, -1
   %3 = and i64 %2, %a1
@@ -146,10 +146,10 @@ define i32 @test_bextr_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ;
 ; ZNVER1-LABEL: test_bextr_i32:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    bextrl %edi, (%rdx), %ecx
-; ZNVER1-NEXT:    bextrl %edi, %esi, %eax
+; ZNVER1-NEXT:    bextrl %edi, (%rdx), %ecx # sched: [5:0.50]
+; ZNVER1-NEXT:    bextrl %edi, %esi, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i32, i32 *%a2
   %2 = tail call i32 @llvm.x86.bmi.bextr.32(i32 %1, i32 %a0)
   %3 = tail call i32 @llvm.x86.bmi.bextr.32(i32 %a1, i32 %a0)
@@ -182,10 +182,10 @@ define i64 @test_bextr_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ;
 ; ZNVER1-LABEL: test_bextr_i64:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    bextrq %rdi, (%rdx), %rcx
-; ZNVER1-NEXT:    bextrq %rdi, %rsi, %rax
+; ZNVER1-NEXT:    bextrq %rdi, (%rdx), %rcx # sched: [5:0.50]
+; ZNVER1-NEXT:    bextrq %rdi, %rsi, %rax # sched: [1:0.25]
 ; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i64, i64 *%a2
   %2 = tail call i64 @llvm.x86.bmi.bextr.64(i64 %1, i64 %a0)
   %3 = tail call i64 @llvm.x86.bmi.bextr.64(i64 %a1, i64 %a0)
@@ -218,10 +218,10 @@ define i32 @test_blsi_i32(i32 %a0, i32 *%a1) {
 ;
 ; ZNVER1-LABEL: test_blsi_i32:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    blsil (%rsi), %ecx
-; ZNVER1-NEXT:    blsil %edi, %eax
+; ZNVER1-NEXT:    blsil (%rsi), %ecx # sched: [6:0.50]
+; ZNVER1-NEXT:    blsil %edi, %eax # sched: [2:0.25]
 ; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i32, i32 *%a1
   %2 = sub i32 0, %1
   %3 = sub i32 0, %a0
@@ -255,10 +255,10 @@ define i64 @test_blsi_i64(i64 %a0, i64 *%a1) {
 ;
 ; ZNVER1-LABEL: test_blsi_i64:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    blsiq (%rsi), %rcx
-; ZNVER1-NEXT:    blsiq %rdi, %rax
+; ZNVER1-NEXT:    blsiq (%rsi), %rcx # sched: [6:0.50]
+; ZNVER1-NEXT:    blsiq %rdi, %rax # sched: [2:0.25]
 ; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i64, i64 *%a1
   %2 = sub i64 0, %1
   %3 = sub i64 0, %a0
@@ -292,10 +292,10 @@ define i32 @test_blsmsk_i32(i32 %a0, i32 *%a1) {
 ;
 ; ZNVER1-LABEL: test_blsmsk_i32:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    blsmskl (%rsi), %ecx
-; ZNVER1-NEXT:    blsmskl %edi, %eax
+; ZNVER1-NEXT:    blsmskl (%rsi), %ecx # sched: [6:0.50]
+; ZNVER1-NEXT:    blsmskl %edi, %eax # sched: [2:0.25]
 ; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i32, i32 *%a1
   %2 = sub i32 %1, 1
   %3 = sub i32 %a0, 1
@@ -329,10 +329,10 @@ define i64 @test_blsmsk_i64(i64 %a0, i64 *%a1) {
 ;
 ; ZNVER1-LABEL: test_blsmsk_i64:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    blsmskq (%rsi), %rcx
-; ZNVER1-NEXT:    blsmskq %rdi, %rax
+; ZNVER1-NEXT:    blsmskq (%rsi), %rcx # sched: [6:0.50]
+; ZNVER1-NEXT:    blsmskq %rdi, %rax # sched: [2:0.25]
 ; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i64, i64 *%a1
   %2 = sub i64 %1, 1
   %3 = sub i64 %a0, 1
@@ -366,10 +366,10 @@ define i32 @test_blsr_i32(i32 %a0, i32 *%a1) {
 ;
 ; ZNVER1-LABEL: test_blsr_i32:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    blsrl (%rsi), %ecx
-; ZNVER1-NEXT:    blsrl %edi, %eax
+; ZNVER1-NEXT:    blsrl (%rsi), %ecx # sched: [6:0.50]
+; ZNVER1-NEXT:    blsrl %edi, %eax # sched: [2:0.25]
 ; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i32, i32 *%a1
   %2 = sub i32 %1, 1
   %3 = sub i32 %a0, 1
@@ -403,10 +403,10 @@ define i64 @test_blsr_i64(i64 %a0, i64 *%a1) {
 ;
 ; ZNVER1-LABEL: test_blsr_i64:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    blsrq (%rsi), %rcx
-; ZNVER1-NEXT:    blsrq %rdi, %rax
+; ZNVER1-NEXT:    blsrq (%rsi), %rcx # sched: [6:0.50]
+; ZNVER1-NEXT:    blsrq %rdi, %rax # sched: [2:0.25]
 ; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i64, i64 *%a1
   %2 = sub i64 %1, 1
   %3 = sub i64 %a0, 1
@@ -443,11 +443,11 @@ define i16 @test_cttz_i16(i16 zeroext %a0, i16 *%a1) {
 ;
 ; ZNVER1-LABEL: test_cttz_i16:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    tzcntw (%rsi), %cx
-; ZNVER1-NEXT:    tzcntw %di, %ax
+; ZNVER1-NEXT:    tzcntw (%rsi), %cx # sched: [6:0.50]
+; ZNVER1-NEXT:    tzcntw %di, %ax # sched: [2:0.25]
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i16, i16 *%a1
   %2 = tail call i16 @llvm.cttz.i16( i16 %1, i1 false )
   %3 = tail call i16 @llvm.cttz.i16( i16 %a0, i1 false )
@@ -480,10 +480,10 @@ define i32 @test_cttz_i32(i32 %a0, i32 *%a1) {
 ;
 ; ZNVER1-LABEL: test_cttz_i32:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    tzcntl (%rsi), %ecx
-; ZNVER1-NEXT:    tzcntl %edi, %eax
+; ZNVER1-NEXT:    tzcntl (%rsi), %ecx # sched: [6:0.50]
+; ZNVER1-NEXT:    tzcntl %edi, %eax # sched: [2:0.25]
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i32, i32 *%a1
   %2 = tail call i32 @llvm.cttz.i32( i32 %1, i1 false )
   %3 = tail call i32 @llvm.cttz.i32( i32 %a0, i1 false )
@@ -516,10 +516,10 @@ define i64 @test_cttz_i64(i64 %a0, i64 *%a1) {
 ;
 ; ZNVER1-LABEL: test_cttz_i64:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    tzcntq (%rsi), %rcx
-; ZNVER1-NEXT:    tzcntq %rdi, %rax
+; ZNVER1-NEXT:    tzcntq (%rsi), %rcx # sched: [6:0.50]
+; ZNVER1-NEXT:    tzcntq %rdi, %rax # sched: [2:0.25]
 ; ZNVER1-NEXT:    orq %rcx, %rax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i64, i64 *%a1
   %2 = tail call i64 @llvm.cttz.i64( i64 %1, i1 false )
   %3 = tail call i64 @llvm.cttz.i64( i64 %a0, i1 false )

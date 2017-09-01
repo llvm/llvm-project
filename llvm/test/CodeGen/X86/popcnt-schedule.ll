@@ -57,7 +57,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; ZNVER1-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i16, i16 *%a1
   %2 = tail call i16 @llvm.ctpop.i16( i16 %1 )
   %3 = tail call i16 @llvm.ctpop.i16( i16 %a0 )
@@ -107,7 +107,7 @@ define i32 @test_ctpop_i32(i32 %a0, i32 *%a1) {
 ; ZNVER1-NEXT:    popcntl (%rsi), %ecx # sched: [10:1.00]
 ; ZNVER1-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i32, i32 *%a1
   %2 = tail call i32 @llvm.ctpop.i32( i32 %1 )
   %3 = tail call i32 @llvm.ctpop.i32( i32 %a0 )
@@ -157,7 +157,7 @@ define i64 @test_ctpop_i64(i64 %a0, i64 *%a1) {
 ; ZNVER1-NEXT:    popcntq (%rsi), %rcx # sched: [10:1.00]
 ; ZNVER1-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; ZNVER1-NEXT:    orq %rcx, %rax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i64, i64 *%a1
   %2 = tail call i64 @llvm.ctpop.i64( i64 %1 )
   %3 = tail call i64 @llvm.ctpop.i64( i64 %a0 )

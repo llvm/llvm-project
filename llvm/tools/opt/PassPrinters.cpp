@@ -11,12 +11,18 @@
 /// \brief Utilities to print analysis info for various kinds of passes.
 ///
 //===----------------------------------------------------------------------===//
+
 #include "PassPrinters.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionPass.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 using namespace llvm;
@@ -226,7 +232,8 @@ struct BasicBlockPassPrinter : public BasicBlockPass {
 };
 
 char BasicBlockPassPrinter::ID = 0;
-}
+
+} // end anonymous namespace
 
 FunctionPass *llvm::createFunctionPassPrinter(const PassInfo *PI,
                                               raw_ostream &OS, bool Quiet) {

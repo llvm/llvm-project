@@ -1,0 +1,15 @@
+; RUN: llvm-pdbutil dump -udt-stats %p/Inputs/big-read.pdb | FileCheck %s
+
+CHECK:                      S_UDT Record Stats
+CHECK-NEXT: ============================================================
+CHECK:            Record Kind | Count   Size
+CHECK-NEXT:     -----------------------------
+CHECK-NEXT:           LF_ENUM |     3    188
+CHECK-NEXT:        LF_POINTER |    39    468
+CHECK-NEXT:          LF_UNION |     1     52
+CHECK-NEXT:     <simple type> |    43      0
+CHECK-NEXT:      LF_PROCEDURE |     1     16
+CHECK-NEXT:      LF_STRUCTURE |    27  1,788
+CHECK-NEXT:     -----------------------------
+CHECK-NEXT:     Total (S_UDT) |   114  2,604
+CHECK-NEXT:     -----------------------------

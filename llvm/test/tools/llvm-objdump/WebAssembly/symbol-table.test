@@ -4,7 +4,7 @@ CHECK:      SYMBOL TABLE:
 CHECK-NEXT: 00000000 l     F IMPORT	puts
 CHECK-NEXT: 00000000 l     F IMPORT	SomeOtherFunction
 CHECK-NEXT: 00000002 g     F EXPORT	main
-CHECK-NEXT: 00000001 g       EXPORT	var
+CHECK-NEXT: 00000010 g       EXPORT	var
 CHECK-NEXT: 00000000 l     F name	puts
 CHECK-NEXT: 00000001 l     F name	SomeOtherFunction
 CHECK-NEXT: 00000002 l     F name	main
