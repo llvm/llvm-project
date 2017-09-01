@@ -56,6 +56,11 @@ lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
   return CreateInstanceHelper(language, nullptr, target, compiler_options);
 }
 
+lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
+                                              Target *target) {
+  return CreateInstanceHelper(language, nullptr, target, nullptr);
+}
+
 bool TypeSystem::IsAnonymousType(lldb::opaque_compiler_type_t type) {
   return false;
 }

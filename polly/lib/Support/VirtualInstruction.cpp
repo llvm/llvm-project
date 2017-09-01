@@ -180,12 +180,16 @@ static bool isEscaping(MemoryAccess *MA) {
 static void
 addInstructionRoots(ScopStmt *Stmt,
                     SmallVectorImpl<VirtualInstruction> &RootInsts) {
-  // For region statements we must keep all instructions because we do not
-  // support removing instructions from region statements.
   if (!Stmt->isBlockStmt()) {
-    for (auto *BB : Stmt->getRegion()->blocks())
-      for (Instruction &Inst : *BB)
-        RootInsts.emplace_back(Stmt, &Inst);
+    // In region statements the terminator statement and all statements that
+    // are not in the entry block cannot be eliminated and consequently must
+    // be roots.
+    RootInsts.emplace_back(Stmt,
+                           Stmt->getRegion()->getEntry()->getTerminator());
+    for (BasicBlock *BB : Stmt->getRegion()->blocks())
+      if (Stmt->getRegion()->getEntry() != BB)
+        for (Instruction &Inst : *BB)
+          RootInsts.emplace_back(Stmt, &Inst);
     return;
   }
 

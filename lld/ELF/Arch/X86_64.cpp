@@ -125,7 +125,7 @@ template <class ELFT> void X86_64<ELFT>::writeGotPltHeader(uint8_t *Buf) const {
 
 template <class ELFT>
 void X86_64<ELFT>::writeGotPlt(uint8_t *Buf, const SymbolBody &S) const {
-  // See comments in X86TargetInfo::writeGotPlt.
+  // See comments in X86::writeGotPlt.
   write32le(Buf, S.getPltVA() + 6);
 }
 
