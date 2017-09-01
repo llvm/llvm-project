@@ -30,6 +30,10 @@
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
+#include <algorithm>
+#include <numeric>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -41,14 +45,16 @@ namespace {
 
 // A BCE atom.
 struct BCEAtom {
+  BCEAtom() : GEP(nullptr), LoadI(nullptr), Offset() {}
+
   const Value *Base() const { return GEP ? GEP->getPointerOperand() : nullptr; }
 
   bool operator<(const BCEAtom &O) const {
     return Base() == O.Base() ? Offset.slt(O.Offset) : Base() < O.Base();
   }
 
-  GetElementPtrInst *GEP = nullptr;
-  LoadInst *LoadI = nullptr;
+  GetElementPtrInst *GEP;
+  LoadInst *LoadI;
   APInt Offset;
 };
 

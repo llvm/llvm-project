@@ -1,4 +1,4 @@
-# RUN: yaml2obj < %s | llvm-nm - | FileCheck %s
+# RUN: yaml2obj < %s | llvm-nm - | FileCheck -strict-whitespace %s
 
 # That wasm exports of functions and globals are displayed as global data and
 # code symbols.
@@ -49,7 +49,7 @@ Sections:
         Index:           0x00000004
       - Name:            weak_global_data
         Kind:            GLOBAL
-        Index:           0x00000002
+        Index:           0x00000003
   - Type:            CUSTOM
     Name:            linking
     DataSize:        0

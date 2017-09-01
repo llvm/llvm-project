@@ -370,9 +370,9 @@ int WasmWriter::writeRelocSection(raw_ostream &OS,
     encodeULEB128(Reloc.Offset, OS);
     encodeULEB128(Reloc.Index, OS);
     switch (Reloc.Type) {
-      case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB:
-      case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
-      case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
+      case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+      case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+      case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
         encodeULEB128(Reloc.Addend, OS);
     }
   }

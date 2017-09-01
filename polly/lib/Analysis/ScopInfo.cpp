@@ -3604,7 +3604,13 @@ void Scop::removeFromStmtMap(ScopStmt &Stmt) {
         InstStmtMap.erase(&Inst);
     }
   } else {
-    StmtMap.erase(Stmt.getBasicBlock());
+    auto StmtMapIt = StmtMap.find(Stmt.getBasicBlock());
+    if (StmtMapIt != StmtMap.end())
+      StmtMapIt->second.erase(std::remove(StmtMapIt->second.begin(),
+                                          StmtMapIt->second.end(), &Stmt),
+                              StmtMapIt->second.end());
+    for (Instruction *Inst : Stmt.getInstructions())
+      InstStmtMap.erase(Inst);
   }
 }
 

@@ -2762,7 +2762,7 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
 /// \endverbatim
 bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                                  SmallVectorImpl<SourceLocation> &CommaLocs,
-                                 std::function<void()> Completer) {
+                                 llvm::function_ref<void()> Completer) {
   bool SawError = false;
   while (1) {
     if (Tok.is(tok::code_completion)) {

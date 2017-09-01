@@ -2981,6 +2981,34 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
   return getOrCreateMulExpr(Ops, Flags);
 }
 
+/// Represents an unsigned remainder expression based on unsigned division.
+const SCEV *ScalarEvolution::getURemExpr(const SCEV *LHS,
+                                         const SCEV *RHS) {
+  assert(getEffectiveSCEVType(LHS->getType()) ==
+         getEffectiveSCEVType(RHS->getType()) &&
+         "SCEVURemExpr operand types don't match!");
+
+  // Short-circuit easy cases
+  if (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS)) {
+    // If constant is one, the result is trivial
+    if (RHSC->getValue()->isOne())
+      return getZero(LHS->getType()); // X urem 1 --> 0
+
+    // If constant is a power of two, fold into a zext(trunc(LHS)).
+    if (RHSC->getAPInt().isPowerOf2()) {
+      Type *FullTy = LHS->getType();
+      Type *TruncTy =
+          IntegerType::get(getContext(), RHSC->getAPInt().logBase2());
+      return getZeroExtendExpr(getTruncateExpr(LHS, TruncTy), FullTy);
+    }
+  }
+
+  // Fallback to %a == %x urem %y == %x -<nuw> ((%x udiv %y) *<nuw> %y)
+  const SCEV *UDiv = getUDivExpr(LHS, RHS);
+  const SCEV *Mult = getMulExpr(UDiv, RHS, SCEV::FlagNUW);
+  return getMinusSCEV(LHS, Mult, SCEV::FlagNUW);
+}
+
 /// Get a canonical unsigned division expression, or something simpler if
 /// possible.
 const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
@@ -4144,6 +4172,7 @@ static Optional<BinaryOp> MatchBinaryOp(Value *V, DominatorTree &DT) {
   case Instruction::Sub:
   case Instruction::Mul:
   case Instruction::UDiv:
+  case Instruction::URem:
   case Instruction::And:
   case Instruction::Or:
   case Instruction::AShr:
@@ -5782,6 +5811,8 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     }
     case Instruction::UDiv:
       return getUDivExpr(getSCEV(BO->LHS), getSCEV(BO->RHS));
+    case Instruction::URem:
+      return getURemExpr(getSCEV(BO->LHS), getSCEV(BO->RHS));
     case Instruction::Sub: {
       SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
       if (BO->Op)
