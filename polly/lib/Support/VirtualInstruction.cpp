@@ -78,7 +78,7 @@ VirtualUse VirtualUse::create(Scop *S, ScopStmt *UserStmt, Loop *UserScope,
   // A use is inter-statement if either it is defined in another statement, or
   // there is a MemoryAccess that reads its value that has been written by
   // another statement.
-  if (InputMA || (!Virtual && !UserStmt->represents(Inst->getParent())))
+  if (InputMA || (!Virtual && UserStmt != S->getStmtFor(Inst)))
     return VirtualUse(UserStmt, Val, Inter, nullptr, InputMA);
 
   return VirtualUse(UserStmt, Val, Intra, nullptr, nullptr);

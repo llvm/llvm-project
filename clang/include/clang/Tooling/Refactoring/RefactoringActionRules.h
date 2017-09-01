@@ -42,15 +42,12 @@ std::unique_ptr<RefactoringActionRule>
 createRefactoringRule(Expected<ResultType> (*RefactoringFunction)(
                           typename RequirementTypes::OutputType...),
                       const RequirementTypes &... Requirements) {
-  static_assert(
-      std::is_base_of<
-          RefactoringActionRule,
-          internal::SpecificRefactoringRuleAdapter<ResultType>>::value,
-      "invalid refactoring result type");
+  static_assert(tooling::traits::IsValidRefactoringResult<ResultType>::value,
+                "invalid refactoring result type");
   static_assert(traits::IsRequirement<RequirementTypes...>::value,
                 "invalid refactoring action rule requirement");
   return llvm::make_unique<internal::PlainFunctionRule<
-      ResultType, decltype(RefactoringFunction), RequirementTypes...>>(
+      decltype(RefactoringFunction), RequirementTypes...>>(
       RefactoringFunction, std::make_tuple(Requirements...));
 }
 

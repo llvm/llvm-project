@@ -997,6 +997,9 @@ let isAdd = 1 in {
   }
 }
 
+def : tInstAlias <"add${s}${p} $Rdn, $Rm",
+                 (tADDrr tGPR:$Rdn,s_cc_out:$s, tGPR:$Rdn, tGPR:$Rm, pred:$p)>;
+
 def : tInstSubst<"sub${s}${p} $rd, $rn, $imm",
                  (tADDi3 tGPR:$rd, s_cc_out:$s, tGPR:$rn, mod_imm1_7_neg:$imm, pred:$p)>;
 def : tInstSubst<"sub${s}${p} $rdn, $imm",
@@ -1285,6 +1288,9 @@ def tSUBrr :                    // A8.6.212
                 "sub", "\t$Rd, $Rn, $Rm",
                 [(set tGPR:$Rd, (sub tGPR:$Rn, tGPR:$Rm))]>,
                 Sched<[WriteALU]>;
+
+def : tInstAlias <"sub${s}${p} $Rdn, $Rm",
+                 (tSUBrr tGPR:$Rdn,s_cc_out:$s, tGPR:$Rdn, tGPR:$Rm, pred:$p)>;
 
 /// Similar to the above except these set the 's' bit so the
 /// instruction modifies the CPSR register.

@@ -116,9 +116,7 @@ define i32 @test_thread_local_global() {
 @a_global = external global i32
 
 define i32 @test_global_reloc_models() {
-; This is only unsupported for the PIC, ROPI, RWPI relocation modes.
-; ROPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
-; ROPI-LABEL: warning: Instruction selection used fallback path for test_global_reloc_models
+; This is only unsupported for the RWPI relocation modes.
 ; RWPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
 ; RWPI-LABEL: warning: Instruction selection used fallback path for test_global_reloc_models
 ; ROPI-RWPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE

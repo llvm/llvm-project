@@ -55,7 +55,6 @@ cl::opt<bool>
 STATISTIC(DeLICMAnalyzed, "Number of successfully analyzed SCoPs");
 STATISTIC(DeLICMOutOfQuota,
           "Analyses aborted because max_operations was reached");
-STATISTIC(DeLICMIncompatible, "Number of SCoPs incompatible for analysis");
 STATISTIC(MappedValueScalars, "Number of mapped Value scalars");
 STATISTIC(MappedPHIScalars, "Number of mapped PHI scalars");
 STATISTIC(TargetsMapped, "Number of stores used for at least one mapping");
