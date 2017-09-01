@@ -3,6 +3,20 @@
 FileHeader:
   Version:         0x00000001
 Sections:
+  - Type:            FUNCTION
+    FunctionTypes: [ 0, 0 ]
+  - Type:            GLOBAL
+    Globals:
+      - Type:        I32
+        Mutable:     false
+        InitExpr:
+          Opcode:          I64_CONST
+          Value:           32
+      - Type:        I32
+        Mutable:     false
+        InitExpr:
+          Opcode:          I64_CONST
+          Value:           64
   - Type:            EXPORT
     Exports:         
       - Name:            function_export

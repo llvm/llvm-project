@@ -1,5 +1,5 @@
-; RUN: llvm-pdbutil dump -mod-stats %p/Inputs/empty.pdb | FileCheck --check-prefix=ALL %s
-; RUN: llvm-pdbutil dump -mod-stats -modi=1 %p/Inputs/empty.pdb | FileCheck --check-prefix=ONE %s
+; RUN: llvm-pdbutil dump -sym-stats %p/Inputs/empty.pdb | FileCheck --check-prefix=ALL %s
+; RUN: llvm-pdbutil dump -sym-stats -modi=1 %p/Inputs/empty.pdb | FileCheck --check-prefix=ONE %s
 
 ALL:        Mod 0000 | `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
 ALL-NEXT:     Stream 12, 308 bytes

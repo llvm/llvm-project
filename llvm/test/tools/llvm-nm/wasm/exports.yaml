@@ -12,6 +12,25 @@ Sections:
       - ReturnType:      I32
         ParamTypes:
           - I32
+  - Type:            FUNCTION
+    FunctionTypes: [ 0, 0, 0, 0, 0 ]
+  - Type:            GLOBAL
+    Globals:
+      - Type:        I32
+        Mutable:     false
+        InitExpr:
+          Opcode:          I64_CONST
+          Value:           32
+      - Type:        I32
+        Mutable:     false
+        InitExpr:
+          Opcode:          I64_CONST
+          Value:           64
+      - Type:        I32
+        Mutable:     false
+        InitExpr:
+          Opcode:          I64_CONST
+          Value:           1024
   - Type:            EXPORT
     Exports:
       - Name:            foo
@@ -21,5 +40,5 @@ Sections:
         Kind:            GLOBAL
         Index:           0x00000002
 
-# CHECK: 00000002 D bar
+# CHECK: 00000400 D bar
 # CHECK: 00000004 T foo

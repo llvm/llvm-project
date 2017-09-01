@@ -1,4 +1,4 @@
-//===----------- llvm/IR/OptBisect.h - LLVM Bisect support -------------===//
+//===- llvm/IR/OptBisect.h - LLVM Bisect support ----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,11 +15,11 @@
 #ifndef LLVM_IR_OPTBISECT_H
 #define LLVM_IR_OPTBISECT_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 
 class Pass;
-class StringRef;
-class Twine;
 
 /// This class implements a mechanism to disable passes and individual
 /// optimizations at compile time based on a command line option

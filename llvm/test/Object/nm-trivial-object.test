@@ -62,7 +62,7 @@ COFF32-NEXT:          U _puts
 WASM:               U SomeOtherFunction
 WASM-NEXT: 00000002 T main
 WASM-NEXT:          U puts
-WASM-NEXT: 00000001 D var
+WASM-NEXT: 00000010 D var
 
 COFF64: 00000000 d .data
 COFF64-NEXT: 00000000 t .text

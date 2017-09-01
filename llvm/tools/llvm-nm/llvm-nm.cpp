@@ -709,9 +709,13 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     } else if (OutputFormat == bsd && MultipleFiles && printName) {
       outs() << "\n" << CurrentFilename << ":\n";
     } else if (OutputFormat == sysv) {
-      outs() << "\n\nSymbols from " << CurrentFilename << ":\n\n"
-             << "Name                  Value   Class        Type"
-             << "         Size   Line  Section\n";
+      outs() << "\n\nSymbols from " << CurrentFilename << ":\n\n";
+      if (isSymbolList64Bit(Obj))
+        outs() << "Name                  Value           Class        Type"
+               << "         Size             Line  Section\n";
+      else
+        outs() << "Name                  Value   Class        Type"
+               << "         Size     Line  Section\n";
     }
   }
 

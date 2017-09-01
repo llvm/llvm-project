@@ -142,13 +142,11 @@ define <2 x i64> @PR24922(<2 x i64> %v) {
   ret <2 x i64> %result
 }
 
-; FIXME: The shuffle only demands the 0th (undef) element of 'out123', so everything should fold away.
+; The shuffle only demands the 0th (undef) element of 'out123', so everything should fold away.
 
 define <4 x float> @inselt_shuf_no_demand(float %a1, float %a2, float %a3) {
 ; CHECK-LABEL: @inselt_shuf_no_demand(
-; CHECK-NEXT:    [[OUT1:%.*]] = insertelement <4 x float> undef, float %a1, i32 1
-; CHECK-NEXT:    [[OUT12:%.*]] = insertelement <4 x float> [[OUT1]], float %a2, i32 2
-; CHECK-NEXT:    ret <4 x float> [[OUT12]]
+; CHECK-NEXT:    ret <4 x float> undef
 ;
   %out1 = insertelement <4 x float> undef, float %a1, i32 1
   %out12 = insertelement <4 x float> %out1, float %a2, i32 2
@@ -157,13 +155,11 @@ define <4 x float> @inselt_shuf_no_demand(float %a1, float %a2, float %a3) {
   ret <4 x float> %shuffle
 }
 
-; FIXME: The shuffle only demands the 0th (undef) element of 'out123', so everything should fold away.
+; The shuffle only demands the 0th (undef) element of 'out123', so everything should fold away.
 
 define <4 x float> @inselt_shuf_no_demand_commute(float %a1, float %a2, float %a3) {
 ; CHECK-LABEL: @inselt_shuf_no_demand_commute(
-; CHECK-NEXT:    [[OUT1:%.*]] = insertelement <4 x float> undef, float %a1, i32 1
-; CHECK-NEXT:    [[OUT12:%.*]] = insertelement <4 x float> [[OUT1]], float %a2, i32 2
-; CHECK-NEXT:    ret <4 x float> [[OUT12]]
+; CHECK-NEXT:    ret <4 x float> undef
 ;
   %out1 = insertelement <4 x float> undef, float %a1, i32 1
   %out12 = insertelement <4 x float> %out1, float %a2, i32 2
@@ -172,15 +168,14 @@ define <4 x float> @inselt_shuf_no_demand_commute(float %a1, float %a2, float %a
   ret <4 x float> %shuffle
 }
 
-; FIXME: The add uses 'out012' giving it multiple uses after the shuffle is transformed to also
+; The add uses 'out012' giving it multiple uses after the shuffle is transformed to also
 ; use 'out012'. The analysis should be able to see past that.
 
 define <4 x i32> @inselt_shuf_no_demand_multiuse(i32 %a0, i32 %a1, <4 x i32> %b) {
 ; CHECK-LABEL: @inselt_shuf_no_demand_multiuse(
 ; CHECK-NEXT:    [[OUT0:%.*]] = insertelement <4 x i32> undef, i32 %a0, i32 0
 ; CHECK-NEXT:    [[OUT01:%.*]] = insertelement <4 x i32> [[OUT0]], i32 %a1, i32 1
-; CHECK-NEXT:    [[OUT012:%.*]] = insertelement <4 x i32> [[OUT01]], i32 %a0, i32 2
-; CHECK-NEXT:    [[FOO:%.*]] = add <4 x i32> [[OUT012]], %b
+; CHECK-NEXT:    [[FOO:%.*]] = add <4 x i32> [[OUT01]], %b
 ; CHECK-NEXT:    ret <4 x i32> [[FOO]]
 ;
   %out0 = insertelement <4 x i32> undef, i32 %a0, i32 0

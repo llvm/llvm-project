@@ -56,7 +56,7 @@ define i32 @crc32_32_8(i32 %a0, i8 %a1, i8 *%a2) {
 ; ZNVER1-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; ZNVER1-NEXT:    crc32b (%rdx), %edi # sched: [10:1.00]
 ; ZNVER1-NEXT:    movl %edi, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i32 @llvm.x86.sse42.crc32.32.8(i32 %a0, i8 %a1)
   %2 = load i8, i8 *%a2
   %3 = call i32 @llvm.x86.sse42.crc32.32.8(i32 %1, i8 %2)
@@ -112,7 +112,7 @@ define i32 @crc32_32_16(i32 %a0, i16 %a1, i16 *%a2) {
 ; ZNVER1-NEXT:    crc32w %si, %edi # sched: [3:1.00]
 ; ZNVER1-NEXT:    crc32w (%rdx), %edi # sched: [10:1.00]
 ; ZNVER1-NEXT:    movl %edi, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i32 @llvm.x86.sse42.crc32.32.16(i32 %a0, i16 %a1)
   %2 = load i16, i16 *%a2
   %3 = call i32 @llvm.x86.sse42.crc32.32.16(i32 %1, i16 %2)
@@ -168,7 +168,7 @@ define i32 @crc32_32_32(i32 %a0, i32 %a1, i32 *%a2) {
 ; ZNVER1-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
 ; ZNVER1-NEXT:    crc32l (%rdx), %edi # sched: [10:1.00]
 ; ZNVER1-NEXT:    movl %edi, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i32 @llvm.x86.sse42.crc32.32.32(i32 %a0, i32 %a1)
   %2 = load i32, i32 *%a2
   %3 = call i32 @llvm.x86.sse42.crc32.32.32(i32 %1, i32 %2)
@@ -224,7 +224,7 @@ define i64 @crc32_64_8(i64 %a0, i8 %a1, i8 *%a2) nounwind {
 ; ZNVER1-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; ZNVER1-NEXT:    crc32b (%rdx), %edi # sched: [10:1.00]
 ; ZNVER1-NEXT:    movq %rdi, %rax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i64 @llvm.x86.sse42.crc32.64.8(i64 %a0, i8 %a1)
   %2 = load i8, i8 *%a2
   %3 = call i64 @llvm.x86.sse42.crc32.64.8(i64 %1, i8 %2)
@@ -280,7 +280,7 @@ define i64 @crc32_64_64(i64 %a0, i64 %a1, i64 *%a2) {
 ; ZNVER1-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
 ; ZNVER1-NEXT:    crc32q (%rdx), %rdi # sched: [10:1.00]
 ; ZNVER1-NEXT:    movq %rdi, %rax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i64 @llvm.x86.sse42.crc32.64.64(i64 %a0, i64 %a1)
   %2 = load i64, i64 *%a2
   %3 = call i64 @llvm.x86.sse42.crc32.64.64(i64 %1, i64 %2)
@@ -378,7 +378,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; ZNVER1-NEXT:    vpcmpestri $7, (%rdi), %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<def>
 ; ZNVER1-NEXT:    leal (%rcx,%rsi), %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %a0, i32 7, <16 x i8> %a1, i32 7, i8 7)
   %2 = load <16 x i8>, <16 x i8> *%a2, align 16
   %3 = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %a0, i32 7, <16 x i8> %2, i32 7, i8 7)
@@ -456,7 +456,7 @@ define <16 x i8> @test_pcmpestrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; ZNVER1-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpcmpestrm $7, (%rdi), %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8> %a0, i32 7, <16 x i8> %a1, i32 7, i8 7)
   %2 = load <16 x i8>, <16 x i8> *%a2, align 16
   %3 = call <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8> %1, i32 7, <16 x i8> %2, i32 7, i8 7)
@@ -526,7 +526,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; ZNVER1-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<def>
 ; ZNVER1-NEXT:    leal (%rcx,%rax), %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %a0, <16 x i8> %a1, i8 7)
   %2 = load <16 x i8>, <16 x i8> *%a2, align 16
   %3 = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %a0, <16 x i8> %2, i8 7)
@@ -576,7 +576,7 @@ define <16 x i8> @test_pcmpistrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %a0, <16 x i8> %a1, i8 7)
   %2 = load <16 x i8>, <16 x i8> *%a2, align 16
   %3 = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %1, <16 x i8> %2, i8 7)
@@ -623,9 +623,9 @@ define <2 x i64> @test_pcmpgtq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ;
 ; ZNVER1-LABEL: test_pcmpgtq:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
+; ZNVER1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; ZNVER1-NEXT:    vpcmpgtq (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = icmp sgt <2 x i64> %a0, %a1
   %2 = sext <2 x i1> %1 to <2 x i64>
   %3 = load <2 x i64>, <2 x i64>*%a2, align 16
@@ -675,7 +675,7 @@ define <2 x i64> @test_pclmulqdq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    vpclmulqdq $0, (%rdi), %xmm0, %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <2 x i64>, <2 x i64> *%a2, align 16
   %2 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> %a0, <2 x i64> %a1, i8 0)
   %3 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> %1, <2 x i64> %2, i8 0)

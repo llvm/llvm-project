@@ -2767,13 +2767,10 @@ void AsmPrinter::XRayFunctionEntry::emit(int Bytes, MCStreamer *Out,
   Out->EmitSymbolValue(Sled, Bytes);
   Out->EmitSymbolValue(CurrentFnSym, Bytes);
   auto Kind8 = static_cast<uint8_t>(Kind);
-  Out->EmitBinaryData(StringRef(reinterpret_cast<const char *>(&Kind8), 1));
-  Out->EmitBinaryData(
+  Out->EmitBytes(StringRef(reinterpret_cast<const char *>(&Kind8), 1));
+  Out->EmitBytes(
       StringRef(reinterpret_cast<const char *>(&AlwaysInstrument), 1));
-  Out->EmitBinaryData(StringRef(reinterpret_cast<const char *>(&Version), 1));
-  auto Padding = (4 * Bytes) - ((2 * Bytes) + 3);
-  assert(Padding >= 0 && "Instrumentation map entry > 4 * Word Size");
-  Out->EmitZeros(Padding);
+  Out->EmitZeros(2 * Bytes - 2);  // Pad the previous two entries
 }
 
 void AsmPrinter::emitXRayTable() {
@@ -2785,22 +2782,19 @@ void AsmPrinter::emitXRayTable() {
   MCSection *InstMap = nullptr;
   MCSection *FnSledIndex = nullptr;
   if (MF->getSubtarget().getTargetTriple().isOSBinFormatELF()) {
-    auto Associated = dyn_cast<MCSymbolELF>(PrevSection->getBeginSymbol());
-    assert(Associated != nullptr);
-    auto Flags = ELF::SHF_WRITE | ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER;
-    std::string GroupName;
     if (Fn->hasComdat()) {
-      Flags |= ELF::SHF_GROUP;
-      GroupName = Fn->getComdat()->getName();
+      InstMap = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
+                                         ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
+                                         Fn->getComdat()->getName());
+      FnSledIndex = OutContext.getELFSection("xray_fn_idx", ELF::SHT_PROGBITS,
+                                             ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
+                                             Fn->getComdat()->getName());
+    } else {
+      InstMap = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
+                                         ELF::SHF_ALLOC);
+      FnSledIndex = OutContext.getELFSection("xray_fn_idx", ELF::SHT_PROGBITS,
+                                             ELF::SHF_ALLOC);
     }
-
-    auto UniqueID = ++XRayFnUniqueID;
-    InstMap =
-        OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS, Flags, 0,
-                                 GroupName, UniqueID, Associated);
-    FnSledIndex =
-        OutContext.getELFSection("xray_fn_idx", ELF::SHT_PROGBITS, Flags, 0,
-                                 GroupName, UniqueID, Associated);
   } else if (MF->getSubtarget().getTargetTriple().isOSBinFormatMachO()) {
     InstMap = OutContext.getMachOSection("__DATA", "xray_instr_map", 0,
                                          SectionKind::getReadOnlyWithRel());
@@ -2810,7 +2804,15 @@ void AsmPrinter::emitXRayTable() {
     llvm_unreachable("Unsupported target");
   }
 
+  // Before we switch over, we force a reference to a label inside the
+  // xray_fn_idx sections. This makes sure that the xray_fn_idx section is kept
+  // live by the linker if the function is not garbage-collected. Since this
+  // function is always called just before the function's end, we assume that
+  // this is happening after the last return instruction.
   auto WordSizeBytes = MAI->getCodePointerSize();
+  MCSymbol *IdxRef = OutContext.createTempSymbol("xray_fn_idx_synth_", true);
+  OutStreamer->EmitCodeAlignment(16);
+  OutStreamer->EmitSymbolValue(IdxRef, WordSizeBytes, false);
 
   // Now we switch to the instrumentation map section. Because this is done
   // per-function, we are able to create an index entry that will represent the
@@ -2829,14 +2831,15 @@ void AsmPrinter::emitXRayTable() {
   // pointers. This should work for both 32-bit and 64-bit platforms.
   OutStreamer->SwitchSection(FnSledIndex);
   OutStreamer->EmitCodeAlignment(2 * WordSizeBytes);
-  OutStreamer->EmitSymbolValue(SledsStart, WordSizeBytes, false);
-  OutStreamer->EmitSymbolValue(SledsEnd, WordSizeBytes, false);
+  OutStreamer->EmitLabel(IdxRef);
+  OutStreamer->EmitSymbolValue(SledsStart, WordSizeBytes);
+  OutStreamer->EmitSymbolValue(SledsEnd, WordSizeBytes);
   OutStreamer->SwitchSection(PrevSection);
   Sleds.clear();
 }
 
 void AsmPrinter::recordSled(MCSymbol *Sled, const MachineInstr &MI,
-                            SledKind Kind, uint8_t Version) {
+  SledKind Kind) {
   auto Fn = MI.getParent()->getParent()->getFunction();
   auto Attr = Fn->getFnAttribute("function-instrument");
   bool LogArgs = Fn->hasFnAttribute("xray-log-args");
@@ -2844,8 +2847,8 @@ void AsmPrinter::recordSled(MCSymbol *Sled, const MachineInstr &MI,
     Attr.isStringAttribute() && Attr.getValueAsString() == "xray-always";
   if (Kind == SledKind::FUNCTION_ENTER && LogArgs)
     Kind = SledKind::LOG_ARGS_ENTER;
-  Sleds.emplace_back(XRayFunctionEntry{Sled, CurrentFnSym, Kind,
-                                       AlwaysInstrument, Fn, Version});
+  Sleds.emplace_back(
+    XRayFunctionEntry{ Sled, CurrentFnSym, Kind, AlwaysInstrument, Fn });
 }
 
 uint16_t AsmPrinter::getDwarfVersion() const {
