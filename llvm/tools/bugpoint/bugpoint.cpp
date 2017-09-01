@@ -50,10 +50,10 @@ static cl::opt<unsigned> TimeoutValue(
     cl::desc("Number of seconds program is allowed to run before it "
              "is killed (default is 300s), 0 disables timeout"));
 
-static cl::opt<int>
-    MemoryLimit("mlimit", cl::init(-1), cl::value_desc("MBytes"),
-                cl::desc("Maximum amount of memory to use. 0 disables check."
-                         " Defaults to 400MB (800MB under valgrind)."));
+static cl::opt<int> MemoryLimit(
+    "mlimit", cl::init(-1), cl::value_desc("MBytes"),
+    cl::desc("Maximum amount of memory to use. 0 disables check. Defaults to "
+             "400MB (800MB under valgrind, 0 with sanitizers)."));
 
 static cl::opt<bool>
     UseValgrind("enable-valgrind",
@@ -169,6 +169,12 @@ int main(int argc, char **argv) {
       MemoryLimit = 800;
     else
       MemoryLimit = 400;
+#if (LLVM_ADDRESS_SANITIZER_BUILD || LLVM_MEMORY_SANITIZER_BUILD ||            \
+     LLVM_THREAD_SANITIZER_BUILD)
+    // Starting from kernel 4.9 memory allocated with mmap is counted against
+    // RLIMIT_DATA. Sanitizers need to allocate tens of terabytes for shadow.
+    MemoryLimit = 0;
+#endif
   }
 
   BugDriver D(argv[0], FindBugs, TimeoutValue, MemoryLimit, UseValgrind,

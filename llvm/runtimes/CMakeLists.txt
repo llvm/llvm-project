@@ -24,6 +24,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   endfunction()
 
   cmake_minimum_required(VERSION 3.4.3)
+  project(Runtimes C CXX ASM)
 
   # Add the root project's CMake modules, and the LLVM build's modules to the
   # CMake module path.
