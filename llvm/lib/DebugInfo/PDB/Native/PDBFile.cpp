@@ -312,6 +312,9 @@ Expected<TpiStream &> PDBFile::getPDBTpiStream() {
 
 Expected<TpiStream &> PDBFile::getPDBIpiStream() {
   if (!Ipi) {
+    if (!hasPDBIpiStream())
+      return make_error<RawError>(raw_error_code::no_stream);
+
     auto IpiS = safelyCreateIndexedStream(ContainerLayout, *Buffer, StreamIPI);
     if (!IpiS)
       return IpiS.takeError();
@@ -407,9 +410,18 @@ bool PDBFile::hasPDBGlobalsStream() {
   return DbiS->getGlobalSymbolStreamIndex() < getNumStreams();
 }
 
-bool PDBFile::hasPDBInfoStream() { return StreamPDB < getNumStreams(); }
+bool PDBFile::hasPDBInfoStream() const { return StreamPDB < getNumStreams(); }
 
-bool PDBFile::hasPDBIpiStream() const { return StreamIPI < getNumStreams(); }
+bool PDBFile::hasPDBIpiStream() const {
+  if (!hasPDBInfoStream())
+    return false;
+
+  if (StreamIPI >= getNumStreams())
+    return false;
+
+  auto &InfoStream = cantFail(const_cast<PDBFile *>(this)->getPDBInfoStream());
+  return InfoStream.containsIdStream();
+}
 
 bool PDBFile::hasPDBPublicsStream() {
   auto DbiS = getPDBDbiStream();

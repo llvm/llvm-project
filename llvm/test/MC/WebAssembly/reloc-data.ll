@@ -11,13 +11,13 @@
 ; CHECK: Relocations [
 ; CHECK:   Section (6) DATA {
 ; CHECK:     Relocation {
-; CHECK:       Type: R_WEBASSEMBLY_GLOBAL_ADDR_I32 (5)
+; CHECK:       Type: R_WEBASSEMBLY_MEMORY_ADDR_I32 (5)
 ; CHECK:       Offset: 0xE
 ; CHECK:       Index: 0x0
 ; CHECK:       Addend: 8
 ; CHECK:     }
 ; CHECK:     Relocation {
-; CHECK:       Type: R_WEBASSEMBLY_GLOBAL_ADDR_I32 (5)
+; CHECK:       Type: R_WEBASSEMBLY_MEMORY_ADDR_I32 (5)
 ; CHECK:       Offset: 0x16
 ; CHECK:       Index: 0x1
 ; CHECK:       Addend: -16

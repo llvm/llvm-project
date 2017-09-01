@@ -142,9 +142,9 @@ struct WasmRelocationEntry {
 
   bool hasAddend() const {
     switch (Type) {
-    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB:
-    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
-    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
+    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
       return true;
     default:
       return false;
@@ -495,9 +495,9 @@ uint32_t WasmObjectWriter::getRelocationIndexValue(
     return IndirectSymbolIndices[RelEntry.Symbol];
   case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
   case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB:
-  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
-  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
+  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
     if (!SymbolIndices.count(RelEntry.Symbol))
       report_fatal_error("symbol not found function/global index space: " +
                          RelEntry.Symbol->getName());
@@ -537,17 +537,17 @@ void WasmObjectWriter::applyRelocations(
       WriteI32(Stream, Index, Offset);
       break;
     }
-    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB: {
+    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB: {
       uint32_t Value = ProvisionalValue(RelEntry);
       WritePatchableSLEB(Stream, Value, Offset);
       break;
     }
-    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB: {
+    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB: {
       uint32_t Value = ProvisionalValue(RelEntry);
       WritePatchableLEB(Stream, Value, Offset);
       break;
     }
-    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32: {
+    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32: {
       uint32_t Value = ProvisionalValue(RelEntry);
       WriteI32(Stream, Value, Offset);
       break;
@@ -967,7 +967,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   for (const WasmRelocationEntry &RelEntry : CodeRelocations) {
     switch (RelEntry.Type) {
     case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
+    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
       IsAddressTaken.insert(RelEntry.Symbol);
       break;
     default:
@@ -977,7 +977,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   for (const WasmRelocationEntry &RelEntry : DataRelocations) {
     switch (RelEntry.Type) {
     case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
-    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
+    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
       IsAddressTaken.insert(RelEntry.Symbol);
       break;
     default:

@@ -7288,9 +7288,13 @@ static Value *EmitX86SExtMask(CodeGenFunction &CGF, Value *Op,
   return CGF.Builder.CreateSExt(Mask, DstTy, "vpmovm2");
 }
 
-static Value *EmitX86CpuIs(CodeGenFunction &CGF, const CallExpr *E) {
+Value *CodeGenFunction::EmitX86CpuIs(const CallExpr *E) {
   const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
   StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+  return EmitX86CpuIs(CPUStr);
+}
+
+Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
 
   // This enum contains the vendor, type, and subtype enums from the
   // runtime library concatenated together. The _START labels mark
@@ -7332,7 +7336,9 @@ static Value *EmitX86CpuIs(CodeGenFunction &CGF, const CallExpr *E) {
     StringSwitch<X86CPUs>(CPUStr)
       .Case("amd", AMD)
       .Case("amdfam10h", AMDFAM10H)
+      .Case("amdfam10", AMDFAM10H)
       .Case("amdfam15h", AMDFAM15H)
+      .Case("amdfam15", AMDFAM15H)
       .Case("atom", INTEL_BONNELL)
       .Case("barcelona", AMDFAM10H_BARCELONA)
       .Case("bdver1", AMDFAM15H_BDVER1)
@@ -7360,7 +7366,7 @@ static Value *EmitX86CpuIs(CodeGenFunction &CGF, const CallExpr *E) {
       .Case("westmere", INTEL_COREI7_WESTMERE)
       .Case("znver1", AMDFAM17H_ZNVER1);
 
-  llvm::Type *Int32Ty = CGF.Builder.getInt32Ty();
+  llvm::Type *Int32Ty = Builder.getInt32Ty();
 
   // Matching the struct layout from the compiler-rt/libgcc structure that is
   // filled in:
@@ -7372,7 +7378,7 @@ static Value *EmitX86CpuIs(CodeGenFunction &CGF, const CallExpr *E) {
                                           llvm::ArrayType::get(Int32Ty, 1));
 
   // Grab the global __cpu_model.
-  llvm::Constant *CpuModel = CGF.CGM.CreateRuntimeVariable(STy, "__cpu_model");
+  llvm::Constant *CpuModel = CGM.CreateRuntimeVariable(STy, "__cpu_model");
 
   // Calculate the index needed to access the correct field based on the
   // range. Also adjust the expected value.
@@ -7394,16 +7400,133 @@ static Value *EmitX86CpuIs(CodeGenFunction &CGF, const CallExpr *E) {
     ConstantInt::get(Int32Ty, 0),
     ConstantInt::get(Int32Ty, Index)
   };
-  llvm::Value *CpuValue = CGF.Builder.CreateGEP(STy, CpuModel, Idxs);
-  CpuValue = CGF.Builder.CreateAlignedLoad(CpuValue, CharUnits::fromQuantity(4));
+  llvm::Value *CpuValue = Builder.CreateGEP(STy, CpuModel, Idxs);
+  CpuValue = Builder.CreateAlignedLoad(CpuValue, CharUnits::fromQuantity(4));
 
   // Check the value of the field against the requested value.
-  return CGF.Builder.CreateICmpEQ(CpuValue,
+  return Builder.CreateICmpEQ(CpuValue,
                                   llvm::ConstantInt::get(Int32Ty, Value));
+}
+
+Value *CodeGenFunction::EmitX86CpuSupports(const CallExpr *E) {
+  const Expr *FeatureExpr = E->getArg(0)->IgnoreParenCasts();
+  StringRef FeatureStr = cast<StringLiteral>(FeatureExpr)->getString();
+  return EmitX86CpuSupports(FeatureStr);
+}
+
+Value *CodeGenFunction::EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs) {
+  // TODO: When/if this becomes more than x86 specific then use a TargetInfo
+  // based mapping.
+  // Processor features and mapping to processor feature value.
+  enum X86Features {
+    CMOV = 0,
+    MMX,
+    POPCNT,
+    SSE,
+    SSE2,
+    SSE3,
+    SSSE3,
+    SSE4_1,
+    SSE4_2,
+    AVX,
+    AVX2,
+    SSE4_A,
+    FMA4,
+    XOP,
+    FMA,
+    AVX512F,
+    BMI,
+    BMI2,
+    AES,
+    PCLMUL,
+    AVX512VL,
+    AVX512BW,
+    AVX512DQ,
+    AVX512CD,
+    AVX512ER,
+    AVX512PF,
+    AVX512VBMI,
+    AVX512IFMA,
+    AVX5124VNNIW,
+    AVX5124FMAPS,
+    AVX512VPOPCNTDQ,
+    MAX
+  };
+
+  uint32_t FeaturesMask = 0;
+
+  for (const StringRef &FeatureStr : FeatureStrs) {
+    X86Features Feature =
+        StringSwitch<X86Features>(FeatureStr)
+            .Case("cmov", X86Features::CMOV)
+            .Case("mmx", X86Features::MMX)
+            .Case("popcnt", X86Features::POPCNT)
+            .Case("sse", X86Features::SSE)
+            .Case("sse2", X86Features::SSE2)
+            .Case("sse3", X86Features::SSE3)
+            .Case("ssse3", X86Features::SSSE3)
+            .Case("sse4.1", X86Features::SSE4_1)
+            .Case("sse4.2", X86Features::SSE4_2)
+            .Case("avx", X86Features::AVX)
+            .Case("avx2", X86Features::AVX2)
+            .Case("sse4a", X86Features::SSE4_A)
+            .Case("fma4", X86Features::FMA4)
+            .Case("xop", X86Features::XOP)
+            .Case("fma", X86Features::FMA)
+            .Case("avx512f", X86Features::AVX512F)
+            .Case("bmi", X86Features::BMI)
+            .Case("bmi2", X86Features::BMI2)
+            .Case("aes", X86Features::AES)
+            .Case("pclmul", X86Features::PCLMUL)
+            .Case("avx512vl", X86Features::AVX512VL)
+            .Case("avx512bw", X86Features::AVX512BW)
+            .Case("avx512dq", X86Features::AVX512DQ)
+            .Case("avx512cd", X86Features::AVX512CD)
+            .Case("avx512er", X86Features::AVX512ER)
+            .Case("avx512pf", X86Features::AVX512PF)
+            .Case("avx512vbmi", X86Features::AVX512VBMI)
+            .Case("avx512ifma", X86Features::AVX512IFMA)
+            .Case("avx5124vnniw", X86Features::AVX5124VNNIW)
+            .Case("avx5124fmaps", X86Features::AVX5124FMAPS)
+            .Case("avx512vpopcntdq", X86Features::AVX512VPOPCNTDQ)
+            .Default(X86Features::MAX);
+    assert(Feature != X86Features::MAX && "Invalid feature!");
+    FeaturesMask |= (1U << Feature);
+  }
+
+  // Matching the struct layout from the compiler-rt/libgcc structure that is
+  // filled in:
+  // unsigned int __cpu_vendor;
+  // unsigned int __cpu_type;
+  // unsigned int __cpu_subtype;
+  // unsigned int __cpu_features[1];
+  llvm::Type *STy = llvm::StructType::get(Int32Ty, Int32Ty, Int32Ty,
+                                          llvm::ArrayType::get(Int32Ty, 1));
+
+  // Grab the global __cpu_model.
+  llvm::Constant *CpuModel = CGM.CreateRuntimeVariable(STy, "__cpu_model");
+
+  // Grab the first (0th) element from the field __cpu_features off of the
+  // global in the struct STy.
+  Value *Idxs[] = {ConstantInt::get(Int32Ty, 0), ConstantInt::get(Int32Ty, 3),
+                   ConstantInt::get(Int32Ty, 0)};
+  Value *CpuFeatures = Builder.CreateGEP(STy, CpuModel, Idxs);
+  Value *Features =
+      Builder.CreateAlignedLoad(CpuFeatures, CharUnits::fromQuantity(4));
+
+  // Check the value of the bit corresponding to the feature requested.
+  Value *Bitset = Builder.CreateAnd(
+      Features, llvm::ConstantInt::get(Int32Ty, FeaturesMask));
+  return Builder.CreateICmpNE(Bitset, llvm::ConstantInt::get(Int32Ty, 0));
 }
 
 Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E) {
+  if (BuiltinID == X86::BI__builtin_cpu_is)
+    return EmitX86CpuIs(E);
+  if (BuiltinID == X86::BI__builtin_cpu_supports)
+    return EmitX86CpuSupports(E);
+
   SmallVector<Value*, 4> Ops;
 
   // Find out if any arguments are required to be integer constant expressions.
@@ -7460,114 +7583,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     llvm::Constant *Func = CGM.CreateRuntimeFunction(FTy,
                                                      "__cpu_indicator_init");
     return Builder.CreateCall(Func);
-  }
-  case X86::BI__builtin_cpu_is:
-    return EmitX86CpuIs(*this, E);
-  case X86::BI__builtin_cpu_supports: {
-    const Expr *FeatureExpr = E->getArg(0)->IgnoreParenCasts();
-    StringRef FeatureStr = cast<StringLiteral>(FeatureExpr)->getString();
-
-    // TODO: When/if this becomes more than x86 specific then use a TargetInfo
-    // based mapping.
-    // Processor features and mapping to processor feature value.
-    enum X86Features {
-      CMOV = 0,
-      MMX,
-      POPCNT,
-      SSE,
-      SSE2,
-      SSE3,
-      SSSE3,
-      SSE4_1,
-      SSE4_2,
-      AVX,
-      AVX2,
-      SSE4_A,
-      FMA4,
-      XOP,
-      FMA,
-      AVX512F,
-      BMI,
-      BMI2,
-      AES,
-      PCLMUL,
-      AVX512VL,
-      AVX512BW,
-      AVX512DQ,
-      AVX512CD,
-      AVX512ER,
-      AVX512PF,
-      AVX512VBMI,
-      AVX512IFMA,
-      AVX5124VNNIW,
-      AVX5124FMAPS,
-      AVX512VPOPCNTDQ,
-      MAX
-    };
-
-    X86Features Feature =
-        StringSwitch<X86Features>(FeatureStr)
-            .Case("cmov", X86Features::CMOV)
-            .Case("mmx", X86Features::MMX)
-            .Case("popcnt", X86Features::POPCNT)
-            .Case("sse", X86Features::SSE)
-            .Case("sse2", X86Features::SSE2)
-            .Case("sse3", X86Features::SSE3)
-            .Case("ssse3", X86Features::SSSE3)
-            .Case("sse4.1", X86Features::SSE4_1)
-            .Case("sse4.2", X86Features::SSE4_2)
-            .Case("avx", X86Features::AVX)
-            .Case("avx2", X86Features::AVX2)
-            .Case("sse4a", X86Features::SSE4_A)
-            .Case("fma4", X86Features::FMA4)
-            .Case("xop", X86Features::XOP)
-            .Case("fma", X86Features::FMA)
-            .Case("avx512f", X86Features::AVX512F)
-            .Case("bmi", X86Features::BMI)
-            .Case("bmi2", X86Features::BMI2)
-            .Case("aes", X86Features::AES)
-            .Case("pclmul", X86Features::PCLMUL)
-            .Case("avx512vl", X86Features::AVX512VL)
-            .Case("avx512bw", X86Features::AVX512BW)
-            .Case("avx512dq", X86Features::AVX512DQ)
-            .Case("avx512cd", X86Features::AVX512CD)
-            .Case("avx512er", X86Features::AVX512ER)
-            .Case("avx512pf", X86Features::AVX512PF)
-            .Case("avx512vbmi", X86Features::AVX512VBMI)
-            .Case("avx512ifma", X86Features::AVX512IFMA)
-            .Case("avx5124vnniw", X86Features::AVX5124VNNIW)
-            .Case("avx5124fmaps", X86Features::AVX5124FMAPS)
-            .Case("avx512vpopcntdq", X86Features::AVX512VPOPCNTDQ)
-            .Default(X86Features::MAX);
-    assert(Feature != X86Features::MAX && "Invalid feature!");
-
-    // Matching the struct layout from the compiler-rt/libgcc structure that is
-    // filled in:
-    // unsigned int __cpu_vendor;
-    // unsigned int __cpu_type;
-    // unsigned int __cpu_subtype;
-    // unsigned int __cpu_features[1];
-    llvm::Type *STy = llvm::StructType::get(Int32Ty, Int32Ty, Int32Ty,
-                                            llvm::ArrayType::get(Int32Ty, 1));
-
-    // Grab the global __cpu_model.
-    llvm::Constant *CpuModel = CGM.CreateRuntimeVariable(STy, "__cpu_model");
-
-    // Grab the first (0th) element from the field __cpu_features off of the
-    // global in the struct STy.
-    Value *Idxs[] = {
-      ConstantInt::get(Int32Ty, 0),
-      ConstantInt::get(Int32Ty, 3),
-      ConstantInt::get(Int32Ty, 0)
-    };
-    Value *CpuFeatures = Builder.CreateGEP(STy, CpuModel, Idxs);
-    Value *Features = Builder.CreateAlignedLoad(CpuFeatures,
-                                                CharUnits::fromQuantity(4));
-
-    // Check the value of the bit corresponding to the feature requested.
-    Value *Bitset = Builder.CreateAnd(
-        Features, llvm::ConstantInt::get(Int32Ty, 1ULL << Feature));
-    return Builder.CreateICmpNE(Bitset, llvm::ConstantInt::get(Int32Ty, 0));
   }
   case X86::BI_mm_prefetch: {
     Value *Address = Ops[0];

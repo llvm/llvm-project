@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  BinaryFormat
   DebugInfoCodeView
   DebugInfoMSF
   DebugInfoPDB
@@ -13,6 +14,7 @@ add_llvm_tool(llvm-pdbutil
   Diff.cpp
   DiffPrinter.cpp
   DumpOutputStyle.cpp
+  InputFile.cpp
   llvm-pdbutil.cpp
   FormatUtil.cpp
   LinePrinter.cpp

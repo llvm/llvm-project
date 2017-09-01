@@ -331,3 +331,35 @@ global_atomic_inc_x2 v[3:4], v[5:6], off offset:-16
 global_atomic_dec_x2 v[3:4], v[5:6], off offset:-16
 // GFX9: global_atomic_dec_x2 v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0xb0,0xdd,0x03,0x05,0x7f,0x00]
 // VI-ERR: :48: error: not a valid operand
+
+global_load_ubyte_d16 v1, v[3:4], off
+// GFX9: global_load_ubyte_d16 v1, v[3:4], off ; encoding: [0x00,0x80,0x80,0xdc,0x03,0x00,0x7f,0x01]
+// VI-ERR: instruction not supported on this GPU
+
+global_load_ubyte_d16_hi v1, v[3:4], off
+// GFX9: global_load_ubyte_d16_hi v1, v[3:4], off ; encoding: [0x00,0x80,0x84,0xdc,0x03,0x00,0x7f,0x01]
+// VI-ERR: instruction not supported on this GPU
+
+global_load_sbyte_d16 v1, v[3:4], off
+// GFX9: global_load_sbyte_d16 v1, v[3:4], off ; encoding: [0x00,0x80,0x88,0xdc,0x03,0x00,0x7f,0x01]
+// VI-ERR: instruction not supported on this GPU
+
+global_load_sbyte_d16_hi v1, v[3:4], off
+// GFX9: global_load_sbyte_d16_hi v1, v[3:4], off ; encoding: [0x00,0x80,0x8c,0xdc,0x03,0x00,0x7f,0x01]
+// VI-ERR: instruction not supported on this GPU
+
+global_load_short_d16 v1, v[3:4], off
+// GFX9: global_load_short_d16 v1, v[3:4], off ; encoding: [0x00,0x80,0x90,0xdc,0x03,0x00,0x7f,0x01]
+// VI-ERR: instruction not supported on this GPU
+
+global_load_short_d16_hi v1, v[3:4], off
+// GFX9: global_load_short_d16_hi v1, v[3:4], off ; encoding: [0x00,0x80,0x94,0xdc,0x03,0x00,0x7f,0x01]
+// VI-ERR: instruction not supported on this GPU
+
+global_store_byte_d16_hi v[3:4], v1, off
+// GFX9: global_store_byte_d16_hi v[3:4], v1, off ; encoding: [0x00,0x80,0x64,0xdc,0x03,0x01,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_store_short_d16_hi v[3:4], v1, off
+// GFX9: global_store_short_d16_hi v[3:4], v1, off ; encoding: [0x00,0x80,0x6c,0xdc,0x03,0x01,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
