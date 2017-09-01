@@ -24,13 +24,13 @@ entry:
 ; CHECK: Relocations [
 ; CHECK-NEXT:   Section (8) CODE {
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_GLOBAL_ADDR_LEB (3)
+; CHECK-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_LEB (3)
 ; CHECK-NEXT:       Offset: 0x9
 ; CHECK-NEXT:       Index: 0x0
 ; CHECK-NEXT:       Addend: 0
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_GLOBAL_ADDR_LEB (3)
+; CHECK-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_LEB (3)
 ; CHECK-NEXT:       Offset: 0x14
 ; CHECK-NEXT:       Index: 0x1
 ; CHECK-NEXT:       Addend: 0

@@ -3,4 +3,4 @@
 // TEST0: clang{{.*}}" "-cc1"
 // TEST0: "-rewrite-objc"
 // FIXME: CHECK-NOT is broken somehow, it doesn't work here. Check adjacency instead.
-// TEST0: "-fmessage-length" "0" "-stack-protector" "1" "-fblocks" "-fobjc-runtime=macosx" "-fencode-extended-block-signature" "-fno-objc-infer-related-result-type" "-fobjc-exceptions" "-fexceptions" "-fmax-type-align=16" "-fdiagnostics-show-option"
+// TEST0: "-fmessage-length" "0" "-stack-protector" "1" "-fblocks" "-fencode-extended-block-signature" "-fobjc-runtime=macosx" "-fno-objc-infer-related-result-type" "-fobjc-exceptions" "-fexceptions" "-fmax-type-align=16" "-fdiagnostics-show-option"

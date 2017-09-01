@@ -427,6 +427,10 @@ public:
     return FlatScratchInsts;
   }
 
+  bool hasD16LoadStore() const {
+    return getGeneration() >= GFX9;
+  }
+
   bool hasAddNoCarry() const {
     return AddNoCarryInsts;
   }

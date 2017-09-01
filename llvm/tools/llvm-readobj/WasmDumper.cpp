@@ -83,9 +83,9 @@ void WasmDumper::printRelocation(const SectionRef &Section,
 
   bool HasAddend = false;
   switch (RelocType) {
-  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB:
-  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
-  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
+  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
     HasAddend = true;
     break;
   default:

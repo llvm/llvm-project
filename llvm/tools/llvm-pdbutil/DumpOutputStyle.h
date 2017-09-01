@@ -28,8 +28,13 @@ namespace codeview {
 class LazyRandomTypeCollection;
 }
 
+namespace object {
+class COFFObjectFile;
+}
+
 namespace pdb {
 class GSIHashTable;
+class InputFile;
 
 struct StatCollection {
   struct Stat {
@@ -57,12 +62,13 @@ struct StatCollection {
 class DumpOutputStyle : public OutputStyle {
 
 public:
-  DumpOutputStyle(PDBFile &File);
+  DumpOutputStyle(InputFile &File);
 
   Error dump() override;
 
 private:
-  Expected<codeview::LazyRandomTypeCollection &> initializeTypes(uint32_t SN);
+  PDBFile &getPdb();
+  object::COFFObjectFile &getObj();
 
   Error dumpFileSummary();
   Error dumpStreamSummary();
@@ -76,7 +82,8 @@ private:
   Error dumpTpiStream(uint32_t StreamIdx);
   Error dumpModules();
   Error dumpModuleFiles();
-  Error dumpModuleSyms();
+  Error dumpModuleSymsForPdb();
+  Error dumpModuleSymsForObj();
   Error dumpGlobals();
   Error dumpPublics();
   Error dumpSymbolsFromGSI(const GSIHashTable &Table, bool HashExtras);
@@ -86,10 +93,8 @@ private:
 
   void dumpSectionHeaders(StringRef Label, DbgHeaderType Type);
 
-  PDBFile &File;
+  InputFile &File;
   LinePrinter P;
-  std::unique_ptr<codeview::LazyRandomTypeCollection> TpiTypes;
-  std::unique_ptr<codeview::LazyRandomTypeCollection> IpiTypes;
   SmallVector<StreamInfo, 32> StreamPurposes;
 };
 } // namespace pdb

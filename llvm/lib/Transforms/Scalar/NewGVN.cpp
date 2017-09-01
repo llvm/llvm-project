@@ -1782,10 +1782,15 @@ const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
       if (PI == LastPredInfo)
         continue;
       LastPredInfo = PI;
-
-      // TODO: Along the false edge, we may know more things too, like icmp of
+      // In phi of ops cases, we may have predicate info that we are evaluating
+      // in a different context.
+      if (!DT->dominates(PBranch->To, getBlockForValue(I)))
+        continue;
+      // TODO: Along the false edge, we may know more things too, like
+      // icmp of
       // same operands is false.
-      // TODO: We only handle actual comparison conditions below, not and/or.
+      // TODO: We only handle actual comparison conditions below, not
+      // and/or.
       auto *BranchCond = dyn_cast<CmpInst>(PBranch->Condition);
       if (!BranchCond)
         continue;
@@ -2533,11 +2538,13 @@ NewGVN::makePossiblePhiOfOps(Instruction *I,
         // and make sure anything that tries to add it's DFS number is
         // redirected to the instruction we are making a phi of ops
         // for.
+        TempToBlock.insert({ValueOp, PredBB});
         InstrDFS.insert({ValueOp, IDFSNum});
         const Expression *E = performSymbolicEvaluation(ValueOp, Visited);
         InstrDFS.erase(ValueOp);
         AllTempInstructions.erase(ValueOp);
         ValueOp->deleteValue();
+        TempToBlock.erase(ValueOp);
         if (MemAccess)
           TempToMemory.erase(ValueOp);
         if (!E)

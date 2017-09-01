@@ -1,4 +1,4 @@
-# RUN: yaml2obj < %s | llvm-nm - | FileCheck %s
+# RUN: yaml2obj < %s | llvm-nm - | FileCheck -strict-whitespace %s
 
 --- !WASM
 FileHeader:

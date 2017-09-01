@@ -70,6 +70,8 @@ public:
 
   uint32_t getOffsetOfType(TypeIndex Index);
 
+  Optional<CVType> tryGetType(TypeIndex Index);
+
   CVType getType(TypeIndex Index) override;
   StringRef getTypeName(TypeIndex Index) override;
   bool contains(TypeIndex Index) override;
