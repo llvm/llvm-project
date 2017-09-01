@@ -1047,20 +1047,20 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   // We want to emit the following pattern, which follows the x86 calling
   // convention to prepare for the trampoline call to be patched in.
   //
+  //   <args placement according SysV64 calling convention>
   //   .p2align 1, ...
   // .Lxray_event_sled_N:
-  //   jmp +N                    // jump across the instrumentation sled
-  //   ...                       // set up arguments in register
-  //   callq __xray_CustomEvent  // force dependency to symbol
-  //   ...
-  //   <jump here>
+  //   jmp +N                    // jump across the call instruction
+  //   callq __xray_CustomEvent  // force relocation to symbol
+  //   <args cleanup, jump to here>
+  //
+  // The relative jump needs to jump forward 24 bytes:
+  // 10 (args) + 5 (nops) + 9 (cleanup)
   //
   // After patching, it would look something like:
   //
   //   nopw (2-byte nop)
-  //   ...
   //   callq __xrayCustomEvent  // already lowered
-  //   ...
   //
   // ---
   // First we emit the label and the jump.
@@ -1072,55 +1072,49 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
   // an operand (computed as an offset from the jmp instruction).
   // FIXME: Find another less hacky way do force the relative jump.
-  OutStreamer->EmitBinaryData("\xeb\x0f");
+  OutStreamer->EmitBytes("\xeb\x14");
 
   // The default C calling convention will place two arguments into %rcx and
   // %rdx -- so we only work with those.
-  unsigned UsedRegs[] = {X86::RDI, X86::RSI};
-  bool UsedMask[] = {false, false};
+  unsigned UsedRegs[] = {X86::RDI, X86::RSI, X86::RAX};
 
-  // Then we put the operands in the %rdi and %rsi registers. We spill the
-  // values in the register before we clobber them, and mark them as used in
-  // UsedMask. In case the arguments are already in the correct register, we use
-  // emit nops appropriately sized to keep the sled the same size in every
-  // situation.
+  // Because we will use %rax, we preserve that across the call.
+  EmitAndCountInstruction(MCInstBuilder(X86::PUSH64r).addReg(X86::RAX));
+
+  // Then we put the operands in the %rdi and %rsi registers.
   for (unsigned I = 0; I < MI.getNumOperands(); ++I)
     if (auto Op = MCIL.LowerMachineOperand(&MI, MI.getOperand(I))) {
-      assert(Op->isReg() && "Only support arguments in registers");
-      if (Op->getReg() != UsedRegs[I]) {
-        UsedMask[I] = true;
-        EmitAndCountInstruction(
-            MCInstBuilder(X86::PUSH64r).addReg(UsedRegs[I]));
-        EmitAndCountInstruction(MCInstBuilder(X86::MOV64rr)
+      if (Op->isImm())
+        EmitAndCountInstruction(MCInstBuilder(X86::MOV64ri)
                                     .addReg(UsedRegs[I])
-                                    .addReg(Op->getReg()));
-      } else {
-        EmitNops(*OutStreamer, 4, Subtarget->is64Bit(), getSubtargetInfo());
+                                    .addImm(Op->getImm()));
+      else if (Op->isReg()) {
+        if (Op->getReg() != UsedRegs[I])
+          EmitAndCountInstruction(MCInstBuilder(X86::MOV64rr)
+                                      .addReg(UsedRegs[I])
+                                      .addReg(Op->getReg()));
+        else
+          EmitNops(*OutStreamer, 3, Subtarget->is64Bit(), getSubtargetInfo());
       }
     }
 
   // We emit a hard dependency on the __xray_CustomEvent symbol, which is the
-  // name of the trampoline to be implemented by the XRay runtime.
+  // name of the trampoline to be implemented by the XRay runtime. We put this
+  // explicitly in the %rax register.
   auto TSym = OutContext.getOrCreateSymbol("__xray_CustomEvent");
   MachineOperand TOp = MachineOperand::CreateMCSymbol(TSym);
-
-  // Emit the call instruction.
-  EmitAndCountInstruction(MCInstBuilder(X86::CALL64pcrel32)
+  EmitAndCountInstruction(MCInstBuilder(X86::MOV64ri)
+                              .addReg(X86::RAX)
                               .addOperand(MCIL.LowerSymbolOperand(TOp, TSym)));
 
+  // Emit the call instruction.
+  EmitAndCountInstruction(MCInstBuilder(X86::CALL64r).addReg(X86::RAX));
+
   // Restore caller-saved and used registers.
-  for (unsigned I = sizeof UsedMask; I-- > 0;)
-    if (UsedMask[I])
-      EmitAndCountInstruction(MCInstBuilder(X86::POP64r).addReg(UsedRegs[I]));
-    else
-      EmitNops(*OutStreamer, 1, Subtarget->is64Bit(), getSubtargetInfo());
-
   OutStreamer->AddComment("xray custom event end.");
+  EmitAndCountInstruction(MCInstBuilder(X86::POP64r).addReg(X86::RAX));
 
-  // Record the sled version. Older versions of this sled were spelled
-  // differently, so we let the runtime handle the different offsets we're
-  // using.
-  recordSled(CurSled, MI, SledKind::CUSTOM_EVENT, 1);
+  recordSled(CurSled, MI, SledKind::CUSTOM_EVENT);
 }
 
 void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
@@ -1131,6 +1125,7 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
   // .Lxray_sled_N:
   //   jmp .tmpN
   //   # 9 bytes worth of noops
+  // .tmpN
   //
   // We need the 9 bytes because at runtime, we'd be patching over the full 11
   // bytes with the following pattern:
@@ -1141,12 +1136,14 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->EmitCodeAlignment(2);
   OutStreamer->EmitLabel(CurSled);
+  auto Target = OutContext.createTempSymbol();
 
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
   // an operand (computed as an offset from the jmp instruction).
   // FIXME: Find another less hacky way do force the relative jump.
   OutStreamer->EmitBytes("\xeb\x09");
   EmitNops(*OutStreamer, 9, Subtarget->is64Bit(), getSubtargetInfo());
+  OutStreamer->EmitLabel(Target);
   recordSled(CurSled, MI, SledKind::FUNCTION_ENTER);
 }
 

@@ -28,14 +28,14 @@ TypeSystem::TypeSystem(LLVMCastKind kind) : m_kind(kind), m_sym_file(nullptr) {}
 
 TypeSystem::~TypeSystem() {}
 
-lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
-                                              Module *module) {
+static lldb::TypeSystemSP CreateInstanceHelper(lldb::LanguageType language,
+                                               Module *module, Target *target) {
   uint32_t i = 0;
   TypeSystemCreateInstance create_callback;
   while ((create_callback = PluginManager::GetTypeSystemCreateCallbackAtIndex(
               i++)) != nullptr) {
     lldb::TypeSystemSP type_system_sp =
-        create_callback(language, module, nullptr);
+        create_callback(language, module, target);
     if (type_system_sp)
       return type_system_sp;
   }
@@ -44,18 +44,13 @@ lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
 }
 
 lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
-                                              Target *target) {
-  uint32_t i = 0;
-  TypeSystemCreateInstance create_callback;
-  while ((create_callback = PluginManager::GetTypeSystemCreateCallbackAtIndex(
-              i++)) != nullptr) {
-    lldb::TypeSystemSP type_system_sp =
-        create_callback(language, nullptr, target);
-    if (type_system_sp)
-      return type_system_sp;
-  }
+                                              Module *module) {
+  return CreateInstanceHelper(language, module, nullptr);
+}
 
-  return lldb::TypeSystemSP();
+lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
+                                              Target *target) {
+  return CreateInstanceHelper(language, nullptr, target);
 }
 
 bool TypeSystem::IsAnonymousType(lldb::opaque_compiler_type_t type) {

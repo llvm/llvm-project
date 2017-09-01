@@ -1,4 +1,4 @@
-;  REQUIRES: x86_64-linux
+;  REQUIRES: shell
 ;  RUN: sed -e "s,SRC_COMPDIR,%p/Inputs,g" %s > %t.ll
 ;  RUN: llc  -o %t.o -filetype=obj -mtriple=x86_64-pc-linux  %t.ll
 ;  RUN: llvm-objdump -d -l %t.o | FileCheck --check-prefix="LINES" %t.ll

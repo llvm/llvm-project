@@ -29,9 +29,9 @@ define <4 x i32> @test_sha1msg1(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; ZNVER1-LABEL: test_sha1msg1:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    sha1msg1 %xmm1, %xmm0
-; ZNVER1-NEXT:    sha1msg1 (%rdi), %xmm0
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    sha1msg1 %xmm1, %xmm0 # sched: [2:1.00]
+; ZNVER1-NEXT:    sha1msg1 (%rdi), %xmm0 # sched: [9:1.00]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <4 x i32>, <4 x i32>* %a2
   %2 = tail call <4 x i32> @llvm.x86.sha1msg1(<4 x i32> %a0, <4 x i32> %a1)
   %3 = tail call <4 x i32> @llvm.x86.sha1msg1(<4 x i32> %2, <4 x i32> %1)
@@ -60,9 +60,9 @@ define <4 x i32> @test_sha1msg2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; ZNVER1-LABEL: test_sha1msg2:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    sha1msg2 %xmm1, %xmm0
-; ZNVER1-NEXT:    sha1msg2 (%rdi), %xmm0
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    sha1msg2 %xmm1, %xmm0 # sched: [1:0.50]
+; ZNVER1-NEXT:    sha1msg2 (%rdi), %xmm0 # sched: [8:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <4 x i32>, <4 x i32>* %a2
   %2 = tail call <4 x i32> @llvm.x86.sha1msg2(<4 x i32> %a0, <4 x i32> %a1)
   %3 = tail call <4 x i32> @llvm.x86.sha1msg2(<4 x i32> %2, <4 x i32> %1)
@@ -91,9 +91,9 @@ define <4 x i32> @test_sha1nexte(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; ZNVER1-LABEL: test_sha1nexte:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    sha1nexte %xmm1, %xmm0
-; ZNVER1-NEXT:    sha1nexte (%rdi), %xmm0
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    sha1nexte %xmm1, %xmm0 # sched: [1:1.00]
+; ZNVER1-NEXT:    sha1nexte (%rdi), %xmm0 # sched: [8:1.00]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <4 x i32>, <4 x i32>* %a2
   %2 = tail call <4 x i32> @llvm.x86.sha1nexte(<4 x i32> %a0, <4 x i32> %a1)
   %3 = tail call <4 x i32> @llvm.x86.sha1nexte(<4 x i32> %2, <4 x i32> %1)
@@ -122,9 +122,9 @@ define <4 x i32> @test_sha1rnds4(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; ZNVER1-LABEL: test_sha1rnds4:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    sha1rnds4 $3, %xmm1, %xmm0
-; ZNVER1-NEXT:    sha1rnds4 $3, (%rdi), %xmm0
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    sha1rnds4 $3, %xmm1, %xmm0 # sched: [6:1.00]
+; ZNVER1-NEXT:    sha1rnds4 $3, (%rdi), %xmm0 # sched: [13:1.00]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <4 x i32>, <4 x i32>* %a2
   %2 = tail call <4 x i32> @llvm.x86.sha1rnds4(<4 x i32> %a0, <4 x i32> %a1, i8 3)
   %3 = tail call <4 x i32> @llvm.x86.sha1rnds4(<4 x i32> %2, <4 x i32> %1, i8 3)
@@ -157,9 +157,9 @@ define <4 x i32> @test_sha256msg1(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) 
 ;
 ; ZNVER1-LABEL: test_sha256msg1:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    sha256msg1 %xmm1, %xmm0
-; ZNVER1-NEXT:    sha256msg1 (%rdi), %xmm0
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    sha256msg1 %xmm1, %xmm0 # sched: [2:1.00]
+; ZNVER1-NEXT:    sha256msg1 (%rdi), %xmm0 # sched: [9:1.00]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <4 x i32>, <4 x i32>* %a2
   %2 = tail call <4 x i32> @llvm.x86.sha256msg1(<4 x i32> %a0, <4 x i32> %a1)
   %3 = tail call <4 x i32> @llvm.x86.sha256msg1(<4 x i32> %2, <4 x i32> %1)
@@ -188,9 +188,9 @@ define <4 x i32> @test_sha256msg2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) 
 ;
 ; ZNVER1-LABEL: test_sha256msg2:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    sha256msg2 %xmm1, %xmm0
-; ZNVER1-NEXT:    sha256msg2 (%rdi), %xmm0
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    sha256msg2 %xmm1, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    sha256msg2 (%rdi), %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <4 x i32>, <4 x i32>* %a2
   %2 = tail call <4 x i32> @llvm.x86.sha256msg2(<4 x i32> %a0, <4 x i32> %a1)
   %3 = tail call <4 x i32> @llvm.x86.sha256msg2(<4 x i32> %2, <4 x i32> %1)
@@ -230,10 +230,10 @@ define <4 x i32> @test_sha256rnds2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, 
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vmovaps %xmm0, %xmm3 # sched: [1:0.50]
 ; ZNVER1-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.50]
-; ZNVER1-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3
-; ZNVER1-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3
+; ZNVER1-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3 # sched: [4:1.00]
+; ZNVER1-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3 # sched: [11:1.00]
 ; ZNVER1-NEXT:    vmovaps %xmm3, %xmm0 # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <4 x i32>, <4 x i32>* %a3
   %2 = tail call <4 x i32> @llvm.x86.sha256rnds2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2)
   %3 = tail call <4 x i32> @llvm.x86.sha256rnds2(<4 x i32> %2, <4 x i32> %1, <4 x i32> %a2)

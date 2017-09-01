@@ -46,8 +46,8 @@ define i16 @test_ctlz_i16(i16 *%a0, i16 %a1, i16 *%a2) {
 ; ZNVER1-LABEL: test_ctlz_i16:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    movbew (%rdi), %ax # sched: [5:0.50]
-; ZNVER1-NEXT:    movbew %si, (%rdx) # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    movbew %si, (%rdx) # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i16, i16 *%a0
   %2 = tail call i16 @llvm.bswap.i16( i16 %1 )
   %3 = tail call i16 @llvm.bswap.i16( i16 %a1 )
@@ -94,8 +94,8 @@ define i32 @test_ctlz_i32(i32 *%a0, i32 %a1, i32 *%a2) {
 ; ZNVER1-LABEL: test_ctlz_i32:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    movbel (%rdi), %eax # sched: [5:0.50]
-; ZNVER1-NEXT:    movbel %esi, (%rdx) # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    movbel %esi, (%rdx) # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i32, i32 *%a0
   %2 = tail call i32 @llvm.bswap.i32( i32 %1 )
   %3 = tail call i32 @llvm.bswap.i32( i32 %a1 )
@@ -142,8 +142,8 @@ define i64 @test_ctlz_i64(i64 *%a0, i64 %a1, i64 *%a2) {
 ; ZNVER1-LABEL: test_ctlz_i64:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    movbeq (%rdi), %rax # sched: [5:0.50]
-; ZNVER1-NEXT:    movbeq %rsi, (%rdx) # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    movbeq %rsi, (%rdx) # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i64, i64 *%a0
   %2 = tail call i64 @llvm.bswap.i64( i64 %1 )
   %3 = tail call i64 @llvm.bswap.i64( i64 %a1 )

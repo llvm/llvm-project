@@ -57,7 +57,7 @@ define i32 @test_lea_offset(i32) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; ZNVER1-NEXT:    leal -24(%rdi), %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %2 = add nsw i32 %0, -24
   ret i32 %2
 }
@@ -109,7 +109,7 @@ define i32 @test_lea_offset_big(i32) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; ZNVER1-NEXT:    leal 1024(%rdi), %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %2 = add nsw i32 %0, 1024
   ret i32 %2
 }
@@ -169,7 +169,7 @@ define i32 @test_lea_add(i32, i32) {
 ; ZNVER1-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
 ; ZNVER1-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; ZNVER1-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %3 = add nsw i32 %1, %0
   ret i32 %3
 }
@@ -231,7 +231,7 @@ define i32 @test_lea_add_offset(i32, i32) {
 ; ZNVER1-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
 ; ZNVER1-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; ZNVER1-NEXT:    leal 16(%rdi,%rsi), %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %3 = add i32 %0, 16
   %4 = add i32 %3, %1
   ret i32 %4
@@ -297,7 +297,7 @@ define i32 @test_lea_add_offset_big(i32, i32) {
 ; ZNVER1-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
 ; ZNVER1-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; ZNVER1-NEXT:    leal -4096(%rdi,%rsi), %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %3 = add i32 %0, -4096
   %4 = add i32 %3, %1
   ret i32 %4
@@ -350,7 +350,7 @@ define i32 @test_lea_mul(i32) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; ZNVER1-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %2 = mul nsw i32 %0, 3
   ret i32 %2
 }
@@ -405,7 +405,7 @@ define i32 @test_lea_mul_offset(i32) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; ZNVER1-NEXT:    leal -32(%rdi,%rdi,2), %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %2 = mul nsw i32 %0, 3
   %3 = add nsw i32 %2, -32
   ret i32 %3
@@ -464,7 +464,7 @@ define i32 @test_lea_mul_offset_big(i32) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; ZNVER1-NEXT:    leal 10000(%rdi,%rdi,8), %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %2 = mul nsw i32 %0, 9
   %3 = add nsw i32 %2, 10000
   ret i32 %3
@@ -524,7 +524,7 @@ define i32 @test_lea_add_scale(i32, i32) {
 ; ZNVER1-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
 ; ZNVER1-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; ZNVER1-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %3 = shl i32 %1, 1
   %4 = add nsw i32 %3, %0
   ret i32 %4
@@ -587,7 +587,7 @@ define i32 @test_lea_add_scale_offset(i32, i32) {
 ; ZNVER1-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
 ; ZNVER1-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; ZNVER1-NEXT:    leal 96(%rdi,%rsi,4), %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %3 = shl i32 %1, 2
   %4 = add i32 %0, 96
   %5 = add i32 %4, %3
@@ -654,7 +654,7 @@ define i32 @test_lea_add_scale_offset_big(i32, i32) {
 ; ZNVER1-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
 ; ZNVER1-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; ZNVER1-NEXT:    leal -1200(%rdi,%rsi,8), %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %3 = shl i32 %1, 3
   %4 = add i32 %0, -1200
   %5 = add i32 %4, %3

@@ -485,9 +485,8 @@ define <16 x i8> @demanded_elts_insertion(<16 x i8> %InVec, <16 x i8> %BaseMask,
 
 define <32 x i8> @demanded_elts_insertion_avx2(<32 x i8> %InVec, <32 x i8> %BaseMask, i8 %M0, i8 %M22) {
 ; CHECK-LABEL: @demanded_elts_insertion_avx2(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <32 x i8> %BaseMask, i8 %M0, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %InVec, <32 x i8> [[TMP1]])
-; CHECK-NEXT:    ret <32 x i8> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %InVec, <32 x i8> %BaseMask)
+; CHECK-NEXT:    ret <32 x i8> [[TMP1]]
 ;
   %1 = insertelement <32 x i8> %BaseMask, i8 %M0, i32 0
   %2 = insertelement <32 x i8> %1, i8 %M22, i32 22

@@ -548,11 +548,23 @@ public:
   }
 
   static bool hasFPClamp(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::HasFPClamp;
+    return MI.getDesc().TSFlags & SIInstrFlags::FPClamp;
   }
 
   bool hasFPClamp(uint16_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::HasFPClamp;
+    return get(Opcode).TSFlags & SIInstrFlags::FPClamp;
+  }
+
+  static bool hasIntClamp(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IntClamp;
+  }
+
+  uint64_t getClampMask(const MachineInstr &MI) const {
+    const uint64_t ClampFlags = SIInstrFlags::FPClamp |
+                                SIInstrFlags::IntClamp |
+                                SIInstrFlags::ClampLo |
+                                SIInstrFlags::ClampHi;
+      return MI.getDesc().TSFlags & ClampFlags;
   }
 
   bool isVGPRCopy(const MachineInstr &MI) const {

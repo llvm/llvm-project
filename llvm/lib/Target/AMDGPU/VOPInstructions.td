@@ -106,6 +106,10 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let VOP3 = 1;
   let VALU = 1;
   let FPClamp = P.HasFPClamp;
+  let IntClamp = P.HasIntClamp;
+  let ClampLo = P.HasClampLo;
+  let ClampHi = P.HasClampHi;
+
   let Uses = [EXEC];
 
   let AsmVariantName = AMDGPUAsmVariants.VOP3;

@@ -638,7 +638,7 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
 
     // Load and execute inputs one by one.
     for (auto &SF : SizedFiles) {
-      auto U = FileToVector(SF.File, MaxInputLen);
+      auto U = FileToVector(SF.File, MaxInputLen, /*ExitOnError=*/false);
       assert(U.size() <= MaxInputLen);
       RunOne(U.data(), U.size());
       CheckExitOnSrcPosOrItem();

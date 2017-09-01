@@ -56,7 +56,7 @@ define <4 x float> @test_addps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vaddps (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = fadd <4 x float> %a0, %a1
   %2 = load <4 x float>, <4 x float> *%a2, align 16
   %3 = fadd <4 x float> %1, %2
@@ -110,7 +110,7 @@ define float @test_addss(float %a0, float %a1, float *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vaddss %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vaddss (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = fadd float %a0, %a1
   %2 = load float, float *%a2, align 4
   %3 = fadd float %1, %2
@@ -168,7 +168,7 @@ define <4 x float> @test_andps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vandps %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vandps (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = bitcast <4 x float> %a0 to <4 x i32>
   %2 = bitcast <4 x float> %a1 to <4 x i32>
   %3 = and <4 x i32> %1, %2
@@ -230,7 +230,7 @@ define <4 x float> @test_andnotps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vandnps %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vandnps (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = bitcast <4 x float> %a0 to <4 x i32>
   %2 = bitcast <4 x float> %a1 to <4 x i32>
   %3 = xor <4 x i32> %1, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -298,7 +298,7 @@ define <4 x float> @test_cmpps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ZNVER1-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm1 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vcmpeqps (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    vorps %xmm0, %xmm1, %xmm0 # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = fcmp oeq <4 x float> %a0, %a1
   %2 = load <4 x float>, <4 x float> *%a2, align 16
   %3 = fcmp oeq <4 x float> %a0, %2
@@ -355,7 +355,7 @@ define float @test_cmpss(float %a0, float %a1, float *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vcmpeqss (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = insertelement <4 x float> undef, float %a0, i32 0
   %2 = insertelement <4 x float> undef, float %a1, i32 0
   %3 = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %1, <4 x float> %2, i8 0)
@@ -478,7 +478,7 @@ define i32 @test_comiss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; ZNVER1-NEXT:    andb %al, %dl # sched: [1:0.25]
 ; ZNVER1-NEXT:    orb %cl, %dl # sched: [1:0.25]
 ; ZNVER1-NEXT:    movzbl %dl, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i32 @llvm.x86.sse.comieq.ss(<4 x float> %a0, <4 x float> %a1)
   %2 = load <4 x float>, <4 x float> *%a2, align 4
   %3 = call i32 @llvm.x86.sse.comieq.ss(<4 x float> %a0, <4 x float> %2)
@@ -542,7 +542,7 @@ define float @test_cvtsi2ss(i32 %a0, i32 *%a1) {
 ; ZNVER1-NEXT:    vcvtsi2ssl %edi, %xmm0, %xmm0 # sched: [5:1.00]
 ; ZNVER1-NEXT:    vcvtsi2ssl (%rsi), %xmm1, %xmm1 # sched: [12:1.00]
 ; ZNVER1-NEXT:    vaddss %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = sitofp i32 %a0 to float
   %2 = load i32, i32 *%a1, align 4
   %3 = sitofp i32 %2 to float
@@ -605,7 +605,7 @@ define float @test_cvtsi2ssq(i64 %a0, i64 *%a1) {
 ; ZNVER1-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0 # sched: [5:1.00]
 ; ZNVER1-NEXT:    vcvtsi2ssq (%rsi), %xmm1, %xmm1 # sched: [12:1.00]
 ; ZNVER1-NEXT:    vaddss %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = sitofp i64 %a0 to float
   %2 = load i64, i64 *%a1, align 8
   %3 = sitofp i64 %2 to float
@@ -668,7 +668,7 @@ define i32 @test_cvtss2si(float %a0, float *%a1) {
 ; ZNVER1-NEXT:    vcvtss2si (%rdi), %eax # sched: [12:1.00]
 ; ZNVER1-NEXT:    vcvtss2si %xmm0, %ecx # sched: [5:1.00]
 ; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = insertelement <4 x float> undef, float %a0, i32 0
   %2 = call i32 @llvm.x86.sse.cvtss2si(<4 x float> %1)
   %3 = load float, float *%a1, align 4
@@ -734,7 +734,7 @@ define i64 @test_cvtss2siq(float %a0, float *%a1) {
 ; ZNVER1-NEXT:    vcvtss2si (%rdi), %rax # sched: [12:1.00]
 ; ZNVER1-NEXT:    vcvtss2si %xmm0, %rcx # sched: [5:1.00]
 ; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = insertelement <4 x float> undef, float %a0, i32 0
   %2 = call i64 @llvm.x86.sse.cvtss2si64(<4 x float> %1)
   %3 = load float, float *%a1, align 4
@@ -800,7 +800,7 @@ define i32 @test_cvttss2si(float %a0, float *%a1) {
 ; ZNVER1-NEXT:    vcvttss2si (%rdi), %eax # sched: [12:1.00]
 ; ZNVER1-NEXT:    vcvttss2si %xmm0, %ecx # sched: [5:1.00]
 ; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = fptosi float %a0 to i32
   %2 = load float, float *%a1, align 4
   %3 = fptosi float %2 to i32
@@ -863,7 +863,7 @@ define i64 @test_cvttss2siq(float %a0, float *%a1) {
 ; ZNVER1-NEXT:    vcvttss2si (%rdi), %rax # sched: [12:1.00]
 ; ZNVER1-NEXT:    vcvttss2si %xmm0, %rcx # sched: [5:1.00]
 ; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = fptosi float %a0 to i64
   %2 = load float, float *%a1, align 4
   %3 = fptosi float %2 to i64
@@ -918,7 +918,7 @@ define <4 x float> @test_divps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vdivps %xmm1, %xmm0, %xmm0 # sched: [15:1.00]
 ; ZNVER1-NEXT:    vdivps (%rdi), %xmm0, %xmm0 # sched: [22:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = fdiv <4 x float> %a0, %a1
   %2 = load <4 x float>, <4 x float> *%a2, align 16
   %3 = fdiv <4 x float> %1, %2
@@ -972,7 +972,7 @@ define float @test_divss(float %a0, float %a1, float *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vdivss %xmm1, %xmm0, %xmm0 # sched: [15:1.00]
 ; ZNVER1-NEXT:    vdivss (%rdi), %xmm0, %xmm0 # sched: [22:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = fdiv float %a0, %a1
   %2 = load float, float *%a2, align 4
   %3 = fdiv float %1, %2
@@ -1025,8 +1025,8 @@ define void @test_ldmxcsr(i32 %a0) {
 ; ZNVER1-LABEL: test_ldmxcsr:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [1:0.50]
-; ZNVER1-NEXT:    vldmxcsr -{{[0-9]+}}(%rsp) # sched: [8:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    vldmxcsr -{{[0-9]+}}(%rsp) # sched: [100:?]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = alloca i32, align 4
   %2 = bitcast i32* %1 to i8*
   store i32 %a0, i32* %1
@@ -1082,7 +1082,7 @@ define <4 x float> @test_maxps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vmaxps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmaxps (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.sse.max.ps(<4 x float> %a0, <4 x float> %a1)
   %2 = load <4 x float>, <4 x float> *%a2, align 16
   %3 = call <4 x float> @llvm.x86.sse.max.ps(<4 x float> %1, <4 x float> %2)
@@ -1137,7 +1137,7 @@ define <4 x float> @test_maxss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vmaxss %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmaxss (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> %a0, <4 x float> %a1)
   %2 = load <4 x float>, <4 x float> *%a2, align 16
   %3 = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> %1, <4 x float> %2)
@@ -1192,7 +1192,7 @@ define <4 x float> @test_minps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vminps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vminps (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.sse.min.ps(<4 x float> %a0, <4 x float> %a1)
   %2 = load <4 x float>, <4 x float> *%a2, align 16
   %3 = call <4 x float> @llvm.x86.sse.min.ps(<4 x float> %1, <4 x float> %2)
@@ -1247,7 +1247,7 @@ define <4 x float> @test_minss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vminss %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vminss (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> %a0, <4 x float> %a1)
   %2 = load <4 x float>, <4 x float> *%a2, align 16
   %3 = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> %1, <4 x float> %2)
@@ -1310,7 +1310,7 @@ define void @test_movaps(<4 x float> *%a0, <4 x float> *%a1) {
 ; ZNVER1-NEXT:    vmovaps (%rdi), %xmm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddps %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmovaps %xmm0, (%rsi) # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <4 x float>, <4 x float> *%a0, align 16
   %2 = fadd <4 x float> %1, %1
   store <4 x float> %2, <4 x float> *%a1, align 16
@@ -1364,7 +1364,7 @@ define <4 x float> @test_movhlps(<4 x float> %a0, <4 x float> %a1) {
 ; ZNVER1-LABEL: test_movhlps:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm1[1],xmm0[1] sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 6, i32 7, i32 2, i32 3>
   ret <4 x float> %1
 }
@@ -1428,7 +1428,7 @@ define void @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) {
 ; ZNVER1-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vpextrq $1, %xmm0, (%rdi) # sched: [8:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = bitcast x86_mmx* %a2 to <2 x float>*
   %2 = load <2 x float>, <2 x float> *%1, align 8
   %3 = shufflevector <2 x float> %2, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1488,7 +1488,7 @@ define <4 x float> @test_movlhps(<4 x float> %a0, <4 x float> %a1) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:0.50]
 ; ZNVER1-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   %2 = fadd <4 x float> %a1, %1
   ret <4 x float> %2
@@ -1549,7 +1549,7 @@ define void @test_movlps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) {
 ; ZNVER1-NEXT:    vmovlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmovlps %xmm0, (%rdi) # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = bitcast x86_mmx* %a2 to <2 x float>*
   %2 = load <2 x float>, <2 x float> *%1, align 8
   %3 = shufflevector <2 x float> %2, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1600,8 +1600,8 @@ define i32 @test_movmskps(<4 x float> %a0) {
 ;
 ; ZNVER1-LABEL: test_movmskps:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    vmovmskps %xmm0, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    vmovmskps %xmm0, %eax # sched: [1:1.00]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %a0)
   ret i32 %1
 }
@@ -1652,7 +1652,7 @@ define void @test_movntps(<4 x float> %a0, <4 x float> *%a1) {
 ; ZNVER1-LABEL: test_movntps:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vmovntps %xmm0, (%rdi) # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   store <4 x float> %a0, <4 x float> *%a1, align 16, !nontemporal !0
   ret void
 }
@@ -1712,7 +1712,7 @@ define void @test_movss_mem(float* %a0, float* %a1) {
 ; ZNVER1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddss %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmovss %xmm0, (%rsi) # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load float, float* %a0, align 1
   %2 = fadd float %1, %1
   store float %2, float *%a1, align 1
@@ -1764,7 +1764,7 @@ define <4 x float> @test_movss_reg(<4 x float> %a0, <4 x float> %a1) {
 ; ZNVER1-LABEL: test_movss_reg:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3] sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
   ret <4 x float> %1
 }
@@ -1824,7 +1824,7 @@ define void @test_movups(<4 x float> *%a0, <4 x float> *%a1) {
 ; ZNVER1-NEXT:    vmovups (%rdi), %xmm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddps %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmovups %xmm0, (%rsi) # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <4 x float>, <4 x float> *%a0, align 1
   %2 = fadd <4 x float> %1, %1
   store <4 x float> %2, <4 x float> *%a1, align 1
@@ -1876,9 +1876,9 @@ define <4 x float> @test_mulps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; ZNVER1-LABEL: test_mulps:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    vmulps %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; ZNVER1-NEXT:    vmulps (%rdi), %xmm0, %xmm0 # sched: [12:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    vmulps %xmm1, %xmm0, %xmm0 # sched: [3:0.50]
+; ZNVER1-NEXT:    vmulps (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = fmul <4 x float> %a0, %a1
   %2 = load <4 x float>, <4 x float> *%a2, align 16
   %3 = fmul <4 x float> %1, %2
@@ -1930,9 +1930,9 @@ define float @test_mulss(float %a0, float %a1, float *%a2) {
 ;
 ; ZNVER1-LABEL: test_mulss:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    vmulss %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; ZNVER1-NEXT:    vmulss (%rdi), %xmm0, %xmm0 # sched: [12:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    vmulss %xmm1, %xmm0, %xmm0 # sched: [3:0.50]
+; ZNVER1-NEXT:    vmulss (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = fmul float %a0, %a1
   %2 = load float, float *%a2, align 4
   %3 = fmul float %1, %2
@@ -1990,7 +1990,7 @@ define <4 x float> @test_orps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vorps %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vorps (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = bitcast <4 x float> %a0 to <4 x i32>
   %2 = bitcast <4 x float> %a1 to <4 x i32>
   %3 = or <4 x i32> %1, %2
@@ -2046,7 +2046,7 @@ define void @test_prefetchnta(i8* %a0) {
 ; ZNVER1-LABEL: test_prefetchnta:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    prefetchnta (%rdi) # sched: [8:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void @llvm.prefetch(i8* %a0, i32 0, i32 0, i32 1)
   ret void
 }
@@ -2109,7 +2109,7 @@ define <4 x float> @test_rcpps(<4 x float> %a0, <4 x float> *%a1) {
 ; ZNVER1-NEXT:    vrcpps (%rdi), %xmm1 # sched: [12:0.50]
 ; ZNVER1-NEXT:    vrcpps %xmm0, %xmm0 # sched: [5:0.50]
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> %a0)
   %2 = load <4 x float>, <4 x float> *%a1, align 16
   %3 = call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> %2)
@@ -2183,7 +2183,7 @@ define <4 x float> @test_rcpss(float %a0, float *%a1) {
 ; ZNVER1-NEXT:    vrcpss %xmm0, %xmm0, %xmm0 # sched: [12:0.50]
 ; ZNVER1-NEXT:    vrcpss %xmm1, %xmm1, %xmm1 # sched: [12:0.50]
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = insertelement <4 x float> undef, float %a0, i32 0
   %2 = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %1)
   %3 = load float, float *%a1, align 4
@@ -2251,7 +2251,7 @@ define <4 x float> @test_rsqrtps(<4 x float> %a0, <4 x float> *%a1) {
 ; ZNVER1-NEXT:    vrsqrtps (%rdi), %xmm1 # sched: [12:0.50]
 ; ZNVER1-NEXT:    vrsqrtps %xmm0, %xmm0 # sched: [5:0.50]
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> %a0)
   %2 = load <4 x float>, <4 x float> *%a1, align 16
   %3 = call <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> %2)
@@ -2322,10 +2322,10 @@ define <4 x float> @test_rsqrtss(float %a0, float *%a1) {
 ; ZNVER1-LABEL: test_rsqrtss:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [8:0.50]
-; ZNVER1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm0 # sched: [12:0.50]
-; ZNVER1-NEXT:    vrsqrtss %xmm1, %xmm1, %xmm1 # sched: [12:0.50]
+; ZNVER1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm0 # sched: [5:0.50]
+; ZNVER1-NEXT:    vrsqrtss %xmm1, %xmm1, %xmm1 # sched: [5:0.50]
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = insertelement <4 x float> undef, float %a0, i32 0
   %2 = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %1)
   %3 = load float, float *%a1, align 4
@@ -2381,7 +2381,7 @@ define void @test_sfence() {
 ; ZNVER1-LABEL: test_sfence:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    sfence # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void @llvm.x86.sse.sfence()
   ret void
 }
@@ -2438,7 +2438,7 @@ define <4 x float> @test_shufps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[0,0] sched: [1:0.50]
 ; ZNVER1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3],mem[0,0] sched: [8:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 0, i32 0, i32 4, i32 4>
   %2 = load <4 x float>, <4 x float> *%a2, align 16
   %3 = shufflevector <4 x float> %1, <4 x float> %2, <4 x i32> <i32 0, i32 3, i32 4, i32 4>
@@ -2501,7 +2501,7 @@ define <4 x float> @test_sqrtps(<4 x float> %a0, <4 x float> *%a1) {
 ; ZNVER1-NEXT:    vsqrtps (%rdi), %xmm1 # sched: [27:1.00]
 ; ZNVER1-NEXT:    vsqrtps %xmm0, %xmm0 # sched: [20:1.00]
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float> %a0)
   %2 = load <4 x float>, <4 x float> *%a1, align 16
   %3 = call <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float> %2)
@@ -2575,7 +2575,7 @@ define <4 x float> @test_sqrtss(<4 x float> %a0, <4 x float> *%a1) {
 ; ZNVER1-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0 # sched: [27:1.00]
 ; ZNVER1-NEXT:    vsqrtss %xmm1, %xmm1, %xmm1 # sched: [27:1.00]
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float> %a0)
   %2 = load <4 x float>, <4 x float> *%a1, align 16
   %3 = call <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float> %2)
@@ -2629,9 +2629,9 @@ define i32 @test_stmxcsr() {
 ;
 ; ZNVER1-LABEL: test_stmxcsr:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    vstmxcsr -{{[0-9]+}}(%rsp) # sched: [1:0.50]
+; ZNVER1-NEXT:    vstmxcsr -{{[0-9]+}}(%rsp) # sched: [100:?]
 ; ZNVER1-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # sched: [8:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = alloca i32, align 4
   %2 = bitcast i32* %1 to i8*
   call void @llvm.x86.sse.stmxcsr(i8* %2)
@@ -2687,7 +2687,7 @@ define <4 x float> @test_subps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vsubps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vsubps (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = fsub <4 x float> %a0, %a1
   %2 = load <4 x float>, <4 x float> *%a2, align 16
   %3 = fsub <4 x float> %1, %2
@@ -2741,7 +2741,7 @@ define float @test_subss(float %a0, float %a1, float *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vsubss %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vsubss (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = fsub float %a0, %a1
   %2 = load float, float *%a2, align 4
   %3 = fsub float %1, %2
@@ -2859,7 +2859,7 @@ define i32 @test_ucomiss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; ZNVER1-NEXT:    andb %al, %dl # sched: [1:0.25]
 ; ZNVER1-NEXT:    orb %cl, %dl # sched: [1:0.25]
 ; ZNVER1-NEXT:    movzbl %dl, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i32 @llvm.x86.sse.ucomieq.ss(<4 x float> %a0, <4 x float> %a1)
   %2 = load <4 x float>, <4 x float> *%a2, align 4
   %3 = call i32 @llvm.x86.sse.ucomieq.ss(<4 x float> %a0, <4 x float> %2)
@@ -2919,7 +2919,7 @@ define <4 x float> @test_unpckhps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3] sched: [1:0.50]
 ; ZNVER1-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],mem[2],xmm0[3],mem[3] sched: [8:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
   %2 = load <4 x float>, <4 x float> *%a2, align 16
   %3 = shufflevector <4 x float> %1, <4 x float> %2, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
@@ -2977,7 +2977,7 @@ define <4 x float> @test_unpcklps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1] sched: [1:0.50]
 ; ZNVER1-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1] sched: [8:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   %2 = load <4 x float>, <4 x float> *%a2, align 16
   %3 = shufflevector <4 x float> %1, <4 x float> %2, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
@@ -3035,7 +3035,7 @@ define <4 x float> @test_xorps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    vxorps %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vxorps (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
-; ZNVER1-NEXT:    retq # sched: [5:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = bitcast <4 x float> %a0 to <4 x i32>
   %2 = bitcast <4 x float> %a1 to <4 x i32>
   %3 = xor <4 x i32> %1, %2

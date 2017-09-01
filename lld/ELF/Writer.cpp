@@ -54,6 +54,7 @@ private:
   void sortSections();
   void finalizeSections();
   void addPredefinedSections();
+  void addPredefinedSymbols();
 
   std::vector<PhdrEntry *> createPhdrs();
   void removeEmptyPTLoad();
@@ -199,6 +200,12 @@ template <class ELFT> void Writer<ELFT>::run() {
   // output sections.
   parallelForEach(OutputSections,
                   [](OutputSection *Sec) { Sec->maybeCompress<ELFT>(); });
+
+  // Generate assignments for predefined symbols (e.g. _end or _etext)
+  // before assigning addresses. These symbols may be referred to from
+  // the linker script and we need to ensure they have the correct value
+  // prior evaluating any expressions using these symbols.
+  addPredefinedSymbols();
 
   Script->assignAddresses();
   Script->allocateHeaders(Phdrs);
@@ -918,6 +925,80 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   sortInitFini(findSection(".fini_array"));
   sortCtorsDtors(findSection(".ctors"));
   sortCtorsDtors(findSection(".dtors"));
+}
+
+// This function generates assignments for predefined symbols (e.g. _end or
+// _etext) and inserts them into the commands sequence to be processed at the
+// appropriate time. This ensures that the value is going to be correct by the
+// time any references to these symbols are processed and is equivalent to
+// defining these symbols explicitly in the linker script.
+template <class ELFT> void Writer<ELFT>::addPredefinedSymbols() {
+  PhdrEntry *Last = nullptr;
+  PhdrEntry *LastRO = nullptr;
+  PhdrEntry *LastRW = nullptr;
+  for (PhdrEntry *P : Phdrs) {
+    if (P->p_type != PT_LOAD)
+      continue;
+    Last = P;
+    if (P->p_flags & PF_W)
+      LastRW = P;
+    else
+      LastRO = P;
+  }
+
+  auto Make = [](DefinedRegular *S) {
+    auto *Cmd = make<SymbolAssignment>(
+        S->getName(), [=] { return Script->getSymbolValue("", "."); }, "");
+    Cmd->Sym = S;
+    return Cmd;
+  };
+
+  auto IsSection = [](OutputSection *Sec) {
+    return [=](BaseCommand *Base) { return Base == Sec; };
+  };
+
+  auto IsNoBits = [](BaseCommand *Base) {
+    if (auto *Sec = dyn_cast<OutputSection>(Base))
+      return Sec->Type == SHT_NOBITS;
+    return false;
+  };
+
+  if (Last) {
+    // _end is the first location after the uninitialized data region.
+    auto E = Script->Opt.Commands.end();
+    auto I = Script->Opt.Commands.begin();
+    I = std::find_if(I, E, IsSection(Last->Last));
+    if (I != E) {
+      if (ElfSym::End1)
+        Script->Opt.Commands.insert(++I, Make(ElfSym::End1));
+      if (ElfSym::End2)
+        Script->Opt.Commands.insert(++I, Make(ElfSym::End2));
+    }
+  }
+  if (LastRO) {
+    // _etext is the first location after the last read-only loadable segment.
+    auto E = Script->Opt.Commands.end();
+    auto I = Script->Opt.Commands.begin();
+    I = std::find_if(I, E, IsSection(LastRO->Last));
+    if (I != E) {
+      if (ElfSym::Etext1)
+        Script->Opt.Commands.insert(++I, Make(ElfSym::Etext1));
+      if (ElfSym::Etext2)
+        Script->Opt.Commands.insert(++I, Make(ElfSym::Etext2));
+    }
+  }
+  if (LastRW) {
+    // _edata points to the end of the last non SHT_NOBITS section.
+    auto E = Script->Opt.Commands.end();
+    auto I = Script->Opt.Commands.begin();
+    I = std::find_if(std::find_if(I, E, IsSection(LastRW->First)), E, IsNoBits);
+    if (I != E) {
+      if (ElfSym::Edata2)
+        I = Script->Opt.Commands.insert(I, Make(ElfSym::Edata2));
+      if (ElfSym::Edata1)
+        I = Script->Opt.Commands.insert(I, Make(ElfSym::Edata1));
+    }
+  }
 }
 
 // We want to find how similar two ranks are.
@@ -1718,42 +1799,6 @@ static uint16_t getELFType() {
 // to each section. This function fixes some predefined
 // symbol values that depend on section address and size.
 template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
-  // _etext is the first location after the last read-only loadable segment.
-  // _edata is the first location after the last read-write loadable segment.
-  // _end is the first location after the uninitialized data region.
-  PhdrEntry *Last = nullptr;
-  PhdrEntry *LastRO = nullptr;
-  PhdrEntry *LastRW = nullptr;
-  for (PhdrEntry *P : Phdrs) {
-    if (P->p_type != PT_LOAD)
-      continue;
-    Last = P;
-    if (P->p_flags & PF_W)
-      LastRW = P;
-    else
-      LastRO = P;
-  }
-
-  auto Set = [](DefinedRegular *S, OutputSection *Cmd, uint64_t Value) {
-    if (S) {
-      S->Section = Cmd;
-      S->Value = Value;
-    }
-  };
-
-  if (Last) {
-    Set(ElfSym::End1, Last->First, Last->p_memsz);
-    Set(ElfSym::End2, Last->First, Last->p_memsz);
-  }
-  if (LastRO) {
-    Set(ElfSym::Etext1, LastRO->First, LastRO->p_filesz);
-    Set(ElfSym::Etext2, LastRO->First, LastRO->p_filesz);
-  }
-  if (LastRW) {
-    Set(ElfSym::Edata1, LastRW->First, LastRW->p_filesz);
-    Set(ElfSym::Edata2, LastRW->First, LastRW->p_filesz);
-  }
-
   if (ElfSym::Bss)
     ElfSym::Bss->Section = findSection(".bss");
 
