@@ -1529,6 +1529,8 @@ class VOPProfile <list<ValueType> _ArgVT> {
   field bit HasSDWAClamp = EmitDst;
   field bit HasFPClamp = BitAnd<isFloatType<DstVT>.ret, HasClamp>.ret;
   field bit HasIntClamp = !if(isFloatType<DstVT>.ret, 0, HasClamp);
+  field bit HasClampLo = HasClamp;
+  field bit HasClampHi = BitAnd<isPackedType<DstVT>.ret, HasClamp>.ret;
   field bit HasHigh = 0;
 
   field bit IsPacked = isPackedType<Src0VT>.ret;

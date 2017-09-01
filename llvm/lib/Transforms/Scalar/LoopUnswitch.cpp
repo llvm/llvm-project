@@ -1,4 +1,4 @@
-//===-- LoopUnswitch.cpp - Hoist loop-invariant conditionals in loop ------===//
+//===- LoopUnswitch.cpp - Hoist loop-invariant conditionals in loop -------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -26,30 +26,40 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
-#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/DivergenceAnalysis.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/BranchProbability.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -58,9 +68,15 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
+#include <cassert>
 #include <map>
 #include <set>
+#include <tuple>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-unswitch"
@@ -82,11 +98,9 @@ Threshold("loop-unswitch-threshold", cl::desc("Max loop size to unswitch"),
 namespace {
 
   class LUAnalysisCache {
-
-    typedef DenseMap<const SwitchInst*, SmallPtrSet<const Value *, 8> >
-      UnswitchedValsMap;
-
-    typedef UnswitchedValsMap::iterator UnswitchedValsIt;
+    using UnswitchedValsMap =
+        DenseMap<const SwitchInst *, SmallPtrSet<const Value *, 8>>;
+    using UnswitchedValsIt = UnswitchedValsMap::iterator;
 
     struct LoopProperties {
       unsigned CanBeUnswitchedCount;
@@ -97,12 +111,12 @@ namespace {
 
     // Here we use std::map instead of DenseMap, since we need to keep valid
     // LoopProperties pointer for current loop for better performance.
-    typedef std::map<const Loop*, LoopProperties> LoopPropsMap;
-    typedef LoopPropsMap::iterator LoopPropsMapIt;
+    using LoopPropsMap = std::map<const Loop *, LoopProperties>;
+    using LoopPropsMapIt = LoopPropsMap::iterator;
 
     LoopPropsMap LoopsProperties;
-    UnswitchedValsMap *CurLoopInstructions;
-    LoopProperties *CurrentLoopProperties;
+    UnswitchedValsMap *CurLoopInstructions = nullptr;
+    LoopProperties *CurrentLoopProperties = nullptr;
 
     // A loop unswitching with an estimated cost above this threshold
     // is not performed. MaxSize is turned into unswitching quota for
@@ -121,9 +135,7 @@ namespace {
     unsigned MaxSize;
 
   public:
-    LUAnalysisCache()
-        : CurLoopInstructions(nullptr), CurrentLoopProperties(nullptr),
-          MaxSize(Threshold) {}
+    LUAnalysisCache() : MaxSize(Threshold) {}
 
     // Analyze loop. Check its size, calculate is it possible to unswitch
     // it. Returns true if we can unswitch this loop.
@@ -164,12 +176,12 @@ namespace {
     LUAnalysisCache BranchesInfo;
 
     bool OptimizeForSize;
-    bool redoLoop;
+    bool redoLoop = false;
 
-    Loop *currentLoop;
-    DominatorTree *DT;
-    BasicBlock *loopHeader;
-    BasicBlock *loopPreheader;
+    Loop *currentLoop = nullptr;
+    DominatorTree *DT = nullptr;
+    BasicBlock *loopHeader = nullptr;
+    BasicBlock *loopPreheader = nullptr;
 
     bool SanitizeMemory;
     LoopSafetyInfo SafetyInfo;
@@ -185,16 +197,17 @@ namespace {
 
   public:
     static char ID; // Pass ID, replacement for typeid
-    explicit LoopUnswitch(bool Os = false, bool hasBranchDivergence = false) :
-      LoopPass(ID), OptimizeForSize(Os), redoLoop(false),
-      currentLoop(nullptr), DT(nullptr), loopHeader(nullptr),
-      loopPreheader(nullptr), hasBranchDivergence(hasBranchDivergence) {
+
+    explicit LoopUnswitch(bool Os = false, bool hasBranchDivergence = false)
+        : LoopPass(ID), OptimizeForSize(Os),
+          hasBranchDivergence(hasBranchDivergence) {
         initializeLoopUnswitchPass(*PassRegistry::getPassRegistry());
-      }
+    }
 
     bool runOnLoop(Loop *L, LPPassManager &LPM) override;
     bool processCurrentLoop();
     bool isUnreachableDueToPreviousUnswitching(BasicBlock *);
+
     /// This transformation requires natural loop information & requires that
     /// loop preheaders be inserted into the CFG.
     ///
@@ -207,7 +220,6 @@ namespace {
     }
 
   private:
-
     void releaseMemory() override {
       BranchesInfo.forgetLoop(currentLoop);
     }
@@ -247,13 +259,13 @@ namespace {
     Value *SimplifyInstructionWithNotEqual(Instruction *Inst, Value *Invariant,
                                            Constant *Val);
   };
-}
+
+} // end anonymous namespace
 
 // Analyze loop. Check its size, calculate is it possible to unswitch
 // it. Returns true if we can unswitch this loop.
 bool LUAnalysisCache::countLoop(const Loop *L, const TargetTransformInfo &TTI,
                                 AssumptionCache *AC) {
-
   LoopPropsMapIt PropsIt;
   bool Inserted;
   std::tie(PropsIt, Inserted) =
@@ -302,7 +314,6 @@ bool LUAnalysisCache::countLoop(const Loop *L, const TargetTransformInfo &TTI,
 
 // Clean all data related to given loop.
 void LUAnalysisCache::forgetLoop(const Loop *L) {
-
   LoopPropsMapIt LIt = LoopsProperties.find(L);
 
   if (LIt != LoopsProperties.end()) {
@@ -337,7 +348,6 @@ bool LUAnalysisCache::CostAllowsUnswitching() {
 // Note, that new loop data is stored inside the VMap.
 void LUAnalysisCache::cloneData(const Loop *NewLoop, const Loop *OldLoop,
                                 const ValueToValueMapTy &VMap) {
-
   LoopProperties &NewLoopProps = LoopsProperties[NewLoop];
   LoopProperties &OldLoopProps = *CurrentLoopProperties;
   UnswitchedValsMap &Insts = OldLoopProps.UnswitchedVals;
@@ -367,6 +377,7 @@ void LUAnalysisCache::cloneData(const Loop *NewLoop, const Loop *OldLoop,
 }
 
 char LoopUnswitch::ID = 0;
+
 INITIALIZE_PASS_BEGIN(LoopUnswitch, "loop-unswitch", "Unswitch loops",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)

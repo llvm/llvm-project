@@ -59,7 +59,7 @@ def getTestSuite(item, litConfig, cache):
         return res
 
     # Canonicalize the path.
-    item = os.path.normpath(item)
+    item = os.path.normpath(os.path.join(os.getcwd(), item))
 
     # Skip files and virtual components.
     components = []
