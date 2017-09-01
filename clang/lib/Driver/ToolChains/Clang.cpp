@@ -2191,6 +2191,244 @@ static void RenderARCMigrateToolOptions(const Driver &D, const ArgList &Args,
   }
 }
 
+static void RenderModulesOptions(Compilation &C, const Driver &D,
+                                 const ArgList &Args, const InputInfo &Input,
+                                 const InputInfo &Output,
+                                 ArgStringList &CmdArgs, bool &HaveModules) {
+  // -fmodules enables the use of precompiled modules (off by default).
+  // Users can pass -fno-cxx-modules to turn off modules support for
+  // C++/Objective-C++ programs.
+  bool HaveClangModules = false;
+  if (Args.hasFlag(options::OPT_fmodules, options::OPT_fno_modules, false)) {
+    bool AllowedInCXX = Args.hasFlag(options::OPT_fcxx_modules,
+                                     options::OPT_fno_cxx_modules, true);
+    if (AllowedInCXX || !types::isCXX(Input.getType())) {
+      CmdArgs.push_back("-fmodules");
+      HaveClangModules = true;
+    }
+  }
+
+  HaveModules = HaveClangModules;
+  if (Args.hasArg(options::OPT_fmodules_ts)) {
+    CmdArgs.push_back("-fmodules-ts");
+    HaveModules = true;
+  }
+
+  // -fmodule-maps enables implicit reading of module map files. By default,
+  // this is enabled if we are using Clang's flavor of precompiled modules.
+  if (Args.hasFlag(options::OPT_fimplicit_module_maps,
+                   options::OPT_fno_implicit_module_maps, HaveClangModules))
+    CmdArgs.push_back("-fimplicit-module-maps");
+
+  // -fmodules-decluse checks that modules used are declared so (off by default)
+  if (Args.hasFlag(options::OPT_fmodules_decluse,
+                   options::OPT_fno_modules_decluse, false))
+    CmdArgs.push_back("-fmodules-decluse");
+
+  // -fmodules-strict-decluse is like -fmodule-decluse, but also checks that
+  // all #included headers are part of modules.
+  if (Args.hasFlag(options::OPT_fmodules_strict_decluse,
+                   options::OPT_fno_modules_strict_decluse, false))
+    CmdArgs.push_back("-fmodules-strict-decluse");
+
+  // -fno-implicit-modules turns off implicitly compiling modules on demand.
+  if (!Args.hasFlag(options::OPT_fimplicit_modules,
+                    options::OPT_fno_implicit_modules, HaveClangModules)) {
+    if (HaveModules)
+      CmdArgs.push_back("-fno-implicit-modules");
+  } else if (HaveModules) {
+    // -fmodule-cache-path specifies where our implicitly-built module files
+    // should be written.
+    SmallString<128> Path;
+    if (Arg *A = Args.getLastArg(options::OPT_fmodules_cache_path))
+      Path = A->getValue();
+
+    if (C.isForDiagnostics()) {
+      // When generating crash reports, we want to emit the modules along with
+      // the reproduction sources, so we ignore any provided module path.
+      Path = Output.getFilename();
+      llvm::sys::path::replace_extension(Path, ".cache");
+      llvm::sys::path::append(Path, "modules");
+    } else if (Path.empty()) {
+      // No module path was provided: use the default.
+      llvm::sys::path::system_temp_directory(/*erasedOnReboot=*/false, Path);
+      llvm::sys::path::append(Path, "org.llvm.clang.");
+      appendUserToPath(Path);
+      llvm::sys::path::append(Path, "ModuleCache");
+    }
+
+    const char Arg[] = "-fmodules-cache-path=";
+    Path.insert(Path.begin(), Arg, Arg + strlen(Arg));
+    CmdArgs.push_back(Args.MakeArgString(Path));
+  }
+
+  if (HaveModules) {
+    // -fprebuilt-module-path specifies where to load the prebuilt module files.
+    for (const Arg *A : Args.filtered(options::OPT_fprebuilt_module_path)) {
+      CmdArgs.push_back(Args.MakeArgString(
+          std::string("-fprebuilt-module-path=") + A->getValue()));
+      A->claim();
+    }
+  }
+
+  // -fmodule-name specifies the module that is currently being built (or
+  // used for header checking by -fmodule-maps).
+  Args.AddLastArg(CmdArgs, options::OPT_fmodule_name_EQ);
+
+  // -fmodule-map-file can be used to specify files containing module
+  // definitions.
+  Args.AddAllArgs(CmdArgs, options::OPT_fmodule_map_file);
+
+  // -fbuiltin-module-map can be used to load the clang
+  // builtin headers modulemap file.
+  if (Args.hasArg(options::OPT_fbuiltin_module_map)) {
+    SmallString<128> BuiltinModuleMap(D.ResourceDir);
+    llvm::sys::path::append(BuiltinModuleMap, "include");
+    llvm::sys::path::append(BuiltinModuleMap, "module.modulemap");
+    if (llvm::sys::fs::exists(BuiltinModuleMap))
+      CmdArgs.push_back(
+          Args.MakeArgString("-fmodule-map-file=" + BuiltinModuleMap));
+  }
+
+  // The -fmodule-file=<name>=<file> form specifies the mapping of module
+  // names to precompiled module files (the module is loaded only if used).
+  // The -fmodule-file=<file> form can be used to unconditionally load
+  // precompiled module files (whether used or not).
+  if (HaveModules)
+    Args.AddAllArgs(CmdArgs, options::OPT_fmodule_file);
+  else
+    Args.ClaimAllArgs(options::OPT_fmodule_file);
+
+  // When building modules and generating crashdumps, we need to dump a module
+  // dependency VFS alongside the output.
+  if (HaveClangModules && C.isForDiagnostics()) {
+    SmallString<128> VFSDir(Output.getFilename());
+    llvm::sys::path::replace_extension(VFSDir, ".cache");
+    // Add the cache directory as a temp so the crash diagnostics pick it up.
+    C.addTempFile(Args.MakeArgString(VFSDir));
+
+    llvm::sys::path::append(VFSDir, "vfs");
+    CmdArgs.push_back("-module-dependency-dir");
+    CmdArgs.push_back(Args.MakeArgString(VFSDir));
+  }
+
+  if (HaveClangModules)
+    Args.AddLastArg(CmdArgs, options::OPT_fmodules_user_build_path);
+
+  // Pass through all -fmodules-ignore-macro arguments.
+  Args.AddAllArgs(CmdArgs, options::OPT_fmodules_ignore_macro);
+  Args.AddLastArg(CmdArgs, options::OPT_fmodules_prune_interval);
+  Args.AddLastArg(CmdArgs, options::OPT_fmodules_prune_after);
+
+  Args.AddLastArg(CmdArgs, options::OPT_fbuild_session_timestamp);
+
+  if (Arg *A = Args.getLastArg(options::OPT_fbuild_session_file)) {
+    if (Args.hasArg(options::OPT_fbuild_session_timestamp))
+      D.Diag(diag::err_drv_argument_not_allowed_with)
+          << A->getAsString(Args) << "-fbuild-session-timestamp";
+
+    llvm::sys::fs::file_status Status;
+    if (llvm::sys::fs::status(A->getValue(), Status))
+      D.Diag(diag::err_drv_no_such_file) << A->getValue();
+    CmdArgs.push_back(
+        Args.MakeArgString("-fbuild-session-timestamp=" +
+                           Twine((uint64_t)Status.getLastModificationTime()
+                                     .time_since_epoch()
+                                     .count())));
+  }
+
+  if (Args.getLastArg(options::OPT_fmodules_validate_once_per_build_session)) {
+    if (!Args.getLastArg(options::OPT_fbuild_session_timestamp,
+                         options::OPT_fbuild_session_file))
+      D.Diag(diag::err_drv_modules_validate_once_requires_timestamp);
+
+    Args.AddLastArg(CmdArgs,
+                    options::OPT_fmodules_validate_once_per_build_session);
+  }
+
+  Args.AddLastArg(CmdArgs, options::OPT_fmodules_validate_system_headers);
+  Args.AddLastArg(CmdArgs, options::OPT_fmodules_disable_diagnostic_validation);
+}
+
+static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
+                              const llvm::Triple &T, const ArgList &Args,
+                              ObjCRuntime &Runtime, bool InferCovariantReturns,
+                              const InputInfo &Input, ArgStringList &CmdArgs) {
+  const llvm::Triple::ArchType Arch = TC.getArch();
+
+  // -fobjc-dispatch-method is only relevant with the nonfragile-abi, and legacy
+  // is the default. Except for deployment target of 10.5, next runtime is
+  // always legacy dispatch and -fno-objc-legacy-dispatch gets ignored silently.
+  if (Runtime.isNonFragile()) {
+    if (!Args.hasFlag(options::OPT_fobjc_legacy_dispatch,
+                      options::OPT_fno_objc_legacy_dispatch,
+                      Runtime.isLegacyDispatchDefaultForArch(Arch))) {
+      if (TC.UseObjCMixedDispatch())
+        CmdArgs.push_back("-fobjc-dispatch-method=mixed");
+      else
+        CmdArgs.push_back("-fobjc-dispatch-method=non-legacy");
+    }
+  }
+
+  // When ObjectiveC legacy runtime is in effect on MacOSX, turn on the option
+  // to do Array/Dictionary subscripting by default.
+  if (Arch == llvm::Triple::x86 && T.isMacOSX() &&
+      !T.isMacOSXVersionLT(10, 7) &&
+      Runtime.getKind() == ObjCRuntime::FragileMacOSX && Runtime.isNeXTFamily())
+    CmdArgs.push_back("-fobjc-subscripting-legacy-runtime");
+
+  // Allow -fno-objc-arr to trump -fobjc-arr/-fobjc-arc.
+  // NOTE: This logic is duplicated in ToolChains.cpp.
+  if (isObjCAutoRefCount(Args)) {
+    TC.CheckObjCARC();
+
+    CmdArgs.push_back("-fobjc-arc");
+
+    // FIXME: It seems like this entire block, and several around it should be
+    // wrapped in isObjC, but for now we just use it here as this is where it
+    // was being used previously.
+    if (types::isCXX(Input.getType()) && types::isObjC(Input.getType())) {
+      if (TC.GetCXXStdlibType(Args) == ToolChain::CST_Libcxx)
+        CmdArgs.push_back("-fobjc-arc-cxxlib=libc++");
+      else
+        CmdArgs.push_back("-fobjc-arc-cxxlib=libstdc++");
+    }
+
+    // Allow the user to enable full exceptions code emission.
+    // We default off for Objective-C, on for Objective-C++.
+    if (Args.hasFlag(options::OPT_fobjc_arc_exceptions,
+                     options::OPT_fno_objc_arc_exceptions,
+                     /*default=*/types::isCXX(Input.getType())))
+      CmdArgs.push_back("-fobjc-arc-exceptions");
+  }
+
+  // Silence warning for full exception code emission options when explicitly
+  // set to use no ARC.
+  if (Args.hasArg(options::OPT_fno_objc_arc)) {
+    Args.ClaimAllArgs(options::OPT_fobjc_arc_exceptions);
+    Args.ClaimAllArgs(options::OPT_fno_objc_arc_exceptions);
+  }
+
+  // -fobjc-infer-related-result-type is the default, except in the Objective-C
+  // rewriter.
+  if (InferCovariantReturns)
+    CmdArgs.push_back("-fno-objc-infer-related-result-type");
+
+  // Pass down -fobjc-weak or -fno-objc-weak if present.
+  if (types::isObjC(Input.getType())) {
+    auto WeakArg =
+        Args.getLastArg(options::OPT_fobjc_weak, options::OPT_fno_objc_weak);
+    if (!WeakArg) {
+      // nothing to do
+    } else if (!Runtime.allowsWeak()) {
+      if (WeakArg->getOption().matches(options::OPT_fobjc_weak))
+        D.Diag(diag::err_objc_weak_unsupported);
+    } else {
+      WeakArg->render(Args, CmdArgs);
+    }
+  }
+}
+
 void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
@@ -3633,168 +3871,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fblocks-runtime-optional");
   }
 
+  // -fencode-extended-block-signature=1 is default.
+  if (getToolChain().IsEncodeExtendedBlockSignatureDefault())
+    CmdArgs.push_back("-fencode-extended-block-signature");
+
   if (Args.hasFlag(options::OPT_fcoroutines_ts, options::OPT_fno_coroutines_ts,
                    false) &&
       types::isCXX(InputType)) {
     CmdArgs.push_back("-fcoroutines-ts");
   }
 
-  // -fmodules enables the use of precompiled modules (off by default).
-  // Users can pass -fno-cxx-modules to turn off modules support for
-  // C++/Objective-C++ programs.
-  bool HaveClangModules = false;
-  if (Args.hasFlag(options::OPT_fmodules, options::OPT_fno_modules, false)) {
-    bool AllowedInCXX = Args.hasFlag(options::OPT_fcxx_modules,
-                                     options::OPT_fno_cxx_modules, true);
-    if (AllowedInCXX || !types::isCXX(InputType)) {
-      CmdArgs.push_back("-fmodules");
-      HaveClangModules = true;
-    }
-  }
-
-  bool HaveAnyModules = HaveClangModules;
-  if (Args.hasArg(options::OPT_fmodules_ts)) {
-    CmdArgs.push_back("-fmodules-ts");
-    HaveAnyModules = true;
-  }
-
-  // -fmodule-maps enables implicit reading of module map files. By default,
-  // this is enabled if we are using Clang's flavor of precompiled modules.
-  if (Args.hasFlag(options::OPT_fimplicit_module_maps,
-                   options::OPT_fno_implicit_module_maps, HaveClangModules)) {
-    CmdArgs.push_back("-fimplicit-module-maps");
-  }
-
-  // -fmodules-decluse checks that modules used are declared so (off by
-  // default).
-  if (Args.hasFlag(options::OPT_fmodules_decluse,
-                   options::OPT_fno_modules_decluse, false)) {
-    CmdArgs.push_back("-fmodules-decluse");
-  }
-
-  // -fmodules-strict-decluse is like -fmodule-decluse, but also checks that
-  // all #included headers are part of modules.
-  if (Args.hasFlag(options::OPT_fmodules_strict_decluse,
-                   options::OPT_fno_modules_strict_decluse, false)) {
-    CmdArgs.push_back("-fmodules-strict-decluse");
-  }
-
-  // -fno-implicit-modules turns off implicitly compiling modules on demand.
-  if (!Args.hasFlag(options::OPT_fimplicit_modules,
-                    options::OPT_fno_implicit_modules, HaveClangModules)) {
-    if (HaveAnyModules)
-      CmdArgs.push_back("-fno-implicit-modules");
-  } else if (HaveAnyModules) {
-    // -fmodule-cache-path specifies where our implicitly-built module files
-    // should be written.
-    SmallString<128> Path;
-    if (Arg *A = Args.getLastArg(options::OPT_fmodules_cache_path))
-      Path = A->getValue();
-    if (C.isForDiagnostics()) {
-      // When generating crash reports, we want to emit the modules along with
-      // the reproduction sources, so we ignore any provided module path.
-      Path = Output.getFilename();
-      llvm::sys::path::replace_extension(Path, ".cache");
-      llvm::sys::path::append(Path, "modules");
-    } else if (Path.empty()) {
-      // No module path was provided: use the default.
-      llvm::sys::path::system_temp_directory(/*erasedOnReboot=*/false, Path);
-      llvm::sys::path::append(Path, "org.llvm.clang.");
-      appendUserToPath(Path);
-      llvm::sys::path::append(Path, "ModuleCache");
-    }
-    const char Arg[] = "-fmodules-cache-path=";
-    Path.insert(Path.begin(), Arg, Arg + strlen(Arg));
-    CmdArgs.push_back(Args.MakeArgString(Path));
-  }
-
-  if (HaveAnyModules) {
-    // -fprebuilt-module-path specifies where to load the prebuilt module files.
-    for (const Arg *A : Args.filtered(options::OPT_fprebuilt_module_path)) {
-      CmdArgs.push_back(Args.MakeArgString(
-          std::string("-fprebuilt-module-path=") + A->getValue()));
-      A->claim();
-    }
-  }
-
-  // -fmodule-name specifies the module that is currently being built (or
-  // used for header checking by -fmodule-maps).
-  Args.AddLastArg(CmdArgs, options::OPT_fmodule_name_EQ);
-
-  // -fmodule-map-file can be used to specify files containing module
-  // definitions.
-  Args.AddAllArgs(CmdArgs, options::OPT_fmodule_map_file);
-
-  // -fbuiltin-module-map can be used to load the clang
-  // builtin headers modulemap file.
-  if (Args.hasArg(options::OPT_fbuiltin_module_map)) {
-    SmallString<128> BuiltinModuleMap(D.ResourceDir);
-    llvm::sys::path::append(BuiltinModuleMap, "include");
-    llvm::sys::path::append(BuiltinModuleMap, "module.modulemap");
-    if (llvm::sys::fs::exists(BuiltinModuleMap)) {
-      CmdArgs.push_back(Args.MakeArgString("-fmodule-map-file=" +
-                                           BuiltinModuleMap));
-    }
-  }
-
-  // The -fmodule-file=<name>=<file> form specifies the mapping of module
-  // names to precompiled module files (the module is loaded only if used).
-  // The -fmodule-file=<file> form can be used to unconditionally load
-  // precompiled module files (whether used or not).
-  if (HaveAnyModules)
-    Args.AddAllArgs(CmdArgs, options::OPT_fmodule_file);
-  else
-    Args.ClaimAllArgs(options::OPT_fmodule_file);
-
-  // When building modules and generating crashdumps, we need to dump a module
-  // dependency VFS alongside the output.
-  if (HaveClangModules && C.isForDiagnostics()) {
-    SmallString<128> VFSDir(Output.getFilename());
-    llvm::sys::path::replace_extension(VFSDir, ".cache");
-    // Add the cache directory as a temp so the crash diagnostics pick it up.
-    C.addTempFile(Args.MakeArgString(VFSDir));
-
-    llvm::sys::path::append(VFSDir, "vfs");
-    CmdArgs.push_back("-module-dependency-dir");
-    CmdArgs.push_back(Args.MakeArgString(VFSDir));
-  }
-
-  if (HaveClangModules)
-    Args.AddLastArg(CmdArgs, options::OPT_fmodules_user_build_path);
-
-  // Pass through all -fmodules-ignore-macro arguments.
-  Args.AddAllArgs(CmdArgs, options::OPT_fmodules_ignore_macro);
-  Args.AddLastArg(CmdArgs, options::OPT_fmodules_prune_interval);
-  Args.AddLastArg(CmdArgs, options::OPT_fmodules_prune_after);
-
-  Args.AddLastArg(CmdArgs, options::OPT_fbuild_session_timestamp);
-
-  if (Arg *A = Args.getLastArg(options::OPT_fbuild_session_file)) {
-    if (Args.hasArg(options::OPT_fbuild_session_timestamp))
-      D.Diag(diag::err_drv_argument_not_allowed_with)
-          << A->getAsString(Args) << "-fbuild-session-timestamp";
-
-    llvm::sys::fs::file_status Status;
-    if (llvm::sys::fs::status(A->getValue(), Status))
-      D.Diag(diag::err_drv_no_such_file) << A->getValue();
-    CmdArgs.push_back(
-        Args.MakeArgString("-fbuild-session-timestamp=" +
-                           Twine((uint64_t)Status.getLastModificationTime()
-                                     .time_since_epoch()
-                                     .count())));
-  }
-
-  if (Args.getLastArg(options::OPT_fmodules_validate_once_per_build_session)) {
-    if (!Args.getLastArg(options::OPT_fbuild_session_timestamp,
-                         options::OPT_fbuild_session_file))
-      D.Diag(diag::err_drv_modules_validate_once_requires_timestamp);
-
-    Args.AddLastArg(CmdArgs,
-                    options::OPT_fmodules_validate_once_per_build_session);
-  }
-
-  Args.AddLastArg(CmdArgs, options::OPT_fmodules_validate_system_headers);
-  Args.AddLastArg(CmdArgs, options::OPT_fmodules_disable_diagnostic_validation);
+  bool HaveModules = false;
+  RenderModulesOptions(C, D, Args, Input, Output, CmdArgs, HaveModules);
 
   // -faccess-control is default.
   if (Args.hasFlag(options::OPT_fno_access_control,
@@ -3936,89 +4024,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fexperimental_new_pass_manager,
                   options::OPT_fno_experimental_new_pass_manager);
 
-  ObjCRuntime objcRuntime = AddObjCRuntimeArgs(Args, CmdArgs, rewriteKind);
-
-  // -fobjc-dispatch-method is only relevant with the nonfragile-abi, and
-  // legacy is the default. Except for deployment target of 10.5,
-  // next runtime is always legacy dispatch and -fno-objc-legacy-dispatch
-  // gets ignored silently.
-  if (objcRuntime.isNonFragile()) {
-    if (!Args.hasFlag(options::OPT_fobjc_legacy_dispatch,
-                      options::OPT_fno_objc_legacy_dispatch,
-                      objcRuntime.isLegacyDispatchDefaultForArch(
-                          getToolChain().getArch()))) {
-      if (getToolChain().UseObjCMixedDispatch())
-        CmdArgs.push_back("-fobjc-dispatch-method=mixed");
-      else
-        CmdArgs.push_back("-fobjc-dispatch-method=non-legacy");
-    }
-  }
-
-  // When ObjectiveC legacy runtime is in effect on MacOSX,
-  // turn on the option to do Array/Dictionary subscripting
-  // by default.
-  if (getToolChain().getArch() == llvm::Triple::x86 && RawTriple.isMacOSX() &&
-      !RawTriple.isMacOSXVersionLT(10, 7) &&
-      objcRuntime.getKind() == ObjCRuntime::FragileMacOSX &&
-      objcRuntime.isNeXTFamily())
-    CmdArgs.push_back("-fobjc-subscripting-legacy-runtime");
-
-  // -fencode-extended-block-signature=1 is default.
-  if (getToolChain().IsEncodeExtendedBlockSignatureDefault()) {
-    CmdArgs.push_back("-fencode-extended-block-signature");
-  }
-
-  // Allow -fno-objc-arr to trump -fobjc-arr/-fobjc-arc.
-  // NOTE: This logic is duplicated in ToolChains.cpp.
-  bool ARC = isObjCAutoRefCount(Args);
-  if (ARC) {
-    getToolChain().CheckObjCARC();
-
-    CmdArgs.push_back("-fobjc-arc");
-
-    // FIXME: It seems like this entire block, and several around it should be
-    // wrapped in isObjC, but for now we just use it here as this is where it
-    // was being used previously.
-    if (types::isCXX(InputType) && types::isObjC(InputType)) {
-      if (getToolChain().GetCXXStdlibType(Args) == ToolChain::CST_Libcxx)
-        CmdArgs.push_back("-fobjc-arc-cxxlib=libc++");
-      else
-        CmdArgs.push_back("-fobjc-arc-cxxlib=libstdc++");
-    }
-
-    // Allow the user to enable full exceptions code emission.
-    // We define off for Objective-CC, on for Objective-C++.
-    if (Args.hasFlag(options::OPT_fobjc_arc_exceptions,
-                     options::OPT_fno_objc_arc_exceptions,
-                     /*default*/ types::isCXX(InputType)))
-      CmdArgs.push_back("-fobjc-arc-exceptions");
-  }
-
-  // Silence warning for full exception code emission options when explicitly
-  // set to use no ARC.
-  if (Args.hasArg(options::OPT_fno_objc_arc)) {
-    Args.ClaimAllArgs(options::OPT_fobjc_arc_exceptions);
-    Args.ClaimAllArgs(options::OPT_fno_objc_arc_exceptions);
-  }
-
-  // -fobjc-infer-related-result-type is the default, except in the Objective-C
-  // rewriter.
-  if (rewriteKind != RK_None)
-    CmdArgs.push_back("-fno-objc-infer-related-result-type");
-
-  // Pass down -fobjc-weak or -fno-objc-weak if present.
-  if (types::isObjC(InputType)) {
-    auto WeakArg = Args.getLastArg(options::OPT_fobjc_weak,
-                                   options::OPT_fno_objc_weak);
-    if (!WeakArg) {
-      // nothing to do
-    } else if (!objcRuntime.allowsWeak()) {
-      if (WeakArg->getOption().matches(options::OPT_fobjc_weak))
-        D.Diag(diag::err_objc_weak_unsupported);
-    } else {
-      WeakArg->render(Args, CmdArgs);
-    }
-  }
+  ObjCRuntime Runtime = AddObjCRuntimeArgs(Args, CmdArgs, rewriteKind);
+  RenderObjCOptions(getToolChain(), D, RawTriple, Args, Runtime,
+                    rewriteKind != RK_None, Input, CmdArgs);
 
   if (Args.hasFlag(options::OPT_fapplication_extension,
                    options::OPT_fno_application_extension, false))
@@ -4026,7 +4034,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Handle GCC-style exception args.
   if (!C.getDriver().IsCLMode())
-    addExceptionArgs(Args, InputType, getToolChain(), KernelOrKext, objcRuntime,
+    addExceptionArgs(Args, InputType, getToolChain(), KernelOrKext, Runtime,
                      CmdArgs);
 
   if (Args.hasArg(options::OPT_fsjlj_exceptions) ||
@@ -4382,7 +4390,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // nice to enable this when doing a crashdump for modules as well.
   if (Args.hasFlag(options::OPT_frewrite_includes,
                    options::OPT_fno_rewrite_includes, false) ||
-      (C.isForDiagnostics() && (RewriteImports || !HaveAnyModules)))
+      (C.isForDiagnostics() && (RewriteImports || !HaveModules)))
     CmdArgs.push_back("-frewrite-includes");
 
   // Only allow -traditional or -traditional-cpp outside in preprocessing modes.
