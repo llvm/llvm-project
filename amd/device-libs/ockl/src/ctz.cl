@@ -8,17 +8,27 @@
 #include "irif.h"
 #include "ockl.h"
 
+__attribute__((always_inline, const)) uchar
+OCKL_MANGLE_T(ctz,u8)(uchar i)
+{
+    return __llvm_cttz_i8(i);
+}
+
+__attribute__((always_inline, const)) ushort
+OCKL_MANGLE_T(ctz,u16)(ushort i)
+{
+    return __llvm_cttz_i16(i);
+}
+
 __attribute__((always_inline, const)) uint
 OCKL_MANGLE_U32(ctz)(uint i)
 {
-    uint r = (uint)__llvm_cttz_i32((int)i);
-    return i ? r : 32u;
+    return __llvm_cttz_i32(i);
 }
 
 __attribute__((always_inline, const)) ulong
 OCKL_MANGLE_U64(ctz)(ulong i)
 {
-    ulong r = (ulong)__llvm_cttz_i64((long)i);
-    return i ? r : 64ul;
+    return __llvm_cttz_i64(i);
 }
 

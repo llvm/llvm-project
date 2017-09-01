@@ -120,11 +120,15 @@ extern bool __llvm_umul_with_overflow_i32(uint, uint, __private uint*);
 extern bool __llvm_smul_with_overflow_i64(long, long, __private long*);
 extern bool __llvm_umul_with_overflow_i64(ulong, ulong, __private ulong*);
 
-extern __attribute__((const)) int __llvm_ctlz_i32(int);
-extern __attribute__((const)) long __llvm_ctlz_i64(long);
+extern __attribute__((const)) uchar __llvm_ctlz_i8(uchar);
+extern __attribute__((const)) ushort __llvm_ctlz_i16(ushort);
+extern __attribute__((const)) uint __llvm_ctlz_i32(uint);
+extern __attribute__((const)) ulong __llvm_ctlz_i64(ulong);
 
-extern __attribute__((const)) int __llvm_cttz_i32(int);
-extern __attribute__((const)) long __llvm_cttz_i64(long);
+extern __attribute__((const)) uchar __llvm_cttz_i8(uchar);
+extern __attribute__((const)) ushort __llvm_cttz_i16(ushort);
+extern __attribute__((const)) uint __llvm_cttz_i32(uint);
+extern __attribute__((const)) ulong __llvm_cttz_i64(ulong);
 
 // Fence intrinsics
 extern void __llvm_fence_acq_wi(void);

@@ -20,33 +20,25 @@ UEXP(ulong,clz)
 UEXPATTR char
 clz(char x)
 {
-    uint y = (uint)(uchar)x;
-    uint z = __ockl_clz_u32(y);
-    return (char)(z - 24u);
+    return (char)__ockl_clz_u8((uchar)x);
 }
 
 UEXPATTR uchar
 clz(uchar x)
 {
-    uint y = (uint)x;
-    uint z = __ockl_clz_u32(y);
-    return (uchar)(z - 24u);
+    return __ockl_clz_u8(x);
 }
 
 UEXPATTR short
 clz(short x)
 {
-    uint y = (uint)(ushort)x;
-    uint z = __ockl_clz_u32(y);
-    return (short)(z - 16u);
+    return (short)__ockl_clz_u16((ushort)x);
 }
 
 UEXPATTR ushort
 clz(ushort x)
 {
-    uint y = (uint)x;
-    uint z = __ockl_clz_u32(y);
-    return (ushort)(z - 16u);
+    return __ockl_clz_u16(x);
 }
 
 UEXPATTR int
