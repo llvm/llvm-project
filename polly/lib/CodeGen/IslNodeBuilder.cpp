@@ -1176,44 +1176,35 @@ static Value *buildFADOutermostDimensionLoad(Value *GlobalDescriptor,
 }
 
 bool IslNodeBuilder::materializeFortranArrayOutermostDimension() {
-  for (const ScopStmt &Stmt : S) {
-    for (const MemoryAccess *Access : Stmt) {
-      if (!Access->isArrayKind())
-        continue;
+  for (ScopArrayInfo *Array : S.arrays()) {
+    if (Array->getNumberOfDimensions() == 0)
+      continue;
 
-      const ScopArrayInfo *Array = Access->getScopArrayInfo();
-      if (!Array)
-        continue;
+    Value *FAD = Array->getFortranArrayDescriptor();
+    if (!FAD)
+      continue;
 
-      if (Array->getNumberOfDimensions() == 0)
-        continue;
+    isl_pw_aff *ParametricPwAff = Array->getDimensionSizePw(0).release();
+    assert(ParametricPwAff && "parametric pw_aff corresponding "
+                              "to outermost dimension does not "
+                              "exist");
 
-      Value *FAD = Access->getFortranArrayDescriptor();
-      if (!FAD)
-        continue;
+    isl_id *Id = isl_pw_aff_get_dim_id(ParametricPwAff, isl_dim_param, 0);
+    isl_pw_aff_free(ParametricPwAff);
 
-      isl_pw_aff *ParametricPwAff = Array->getDimensionSizePw(0).release();
-      assert(ParametricPwAff && "parametric pw_aff corresponding "
-                                "to outermost dimension does not "
-                                "exist");
+    assert(Id && "pw_aff is not parametric");
 
-      isl_id *Id = isl_pw_aff_get_dim_id(ParametricPwAff, isl_dim_param, 0);
-      isl_pw_aff_free(ParametricPwAff);
-
-      assert(Id && "pw_aff is not parametric");
-
-      if (IDToValue.count(Id)) {
-        isl_id_free(Id);
-        continue;
-      }
-
-      Value *FinalValue =
-          buildFADOutermostDimensionLoad(FAD, Builder, Array->getName());
-      assert(FinalValue && "unable to build Fortran array "
-                           "descriptor load of outermost dimension");
-      IDToValue[Id] = FinalValue;
+    if (IDToValue.count(Id)) {
       isl_id_free(Id);
+      continue;
     }
+
+    Value *FinalValue =
+        buildFADOutermostDimensionLoad(FAD, Builder, Array->getName());
+    assert(FinalValue && "unable to build Fortran array "
+                         "descriptor load of outermost dimension");
+    IDToValue[Id] = FinalValue;
+    isl_id_free(Id);
   }
   return true;
 }

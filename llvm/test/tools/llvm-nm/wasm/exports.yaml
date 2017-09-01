@@ -1,4 +1,4 @@
-# RUN: yaml2obj < %s | llvm-nm - | FileCheck %s
+# RUN: yaml2obj < %s | llvm-nm - | FileCheck -strict-whitespace %s
 
 # That wasm exports of functions and globals are displayed as global data and
 # code symbols.
@@ -31,6 +31,17 @@ Sections:
         InitExpr:
           Opcode:          I64_CONST
           Value:           1024
+  - Type:            IMPORT
+    Imports:
+      - Module:          env
+        Field:           fimport
+        Kind:            FUNCTION
+        SigIndex:        0
+      - Module:          env
+        Field:           gimport
+        Kind:            GLOBAL
+        GlobalType:      I32
+        GlobalMutable:   false
   - Type:            EXPORT
     Exports:
       - Name:            foo
@@ -38,7 +49,9 @@ Sections:
         Index:           0x00000004
       - Name:            bar
         Kind:            GLOBAL
-        Index:           0x00000002
+        Index:           0x00000003
 
-# CHECK: 00000400 D bar
-# CHECK: 00000004 T foo
+# CHECK:      00000400 D bar
+# CHECK-NEXT:          U fimport
+# CHECK-NEXT: 00000004 T foo
+# CHECK-NEXT:          U gimport

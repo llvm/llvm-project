@@ -25,8 +25,8 @@ pdb_comdat_main.obj should be included in the PDB.
 RUN: rm -rf %t && mkdir -p %t && cd %t
 RUN: yaml2obj %S/Inputs/pdb_comdat_main.yaml -o pdb_comdat_main.obj
 RUN: yaml2obj %S/Inputs/pdb_comdat_bar.yaml -o pdb_comdat_bar.obj
-RUN: lld-link pdb_comdat_main.obj pdb_comdat_bar.obj -out:t.exe -debug -pdb:t.pdb -nodefaultlib -entry:main
-RUN: llvm-pdbutil dump -l -symbols -globals t.pdb | FileCheck %s
+RUN: lld-link pdb_comdat_main.obj pdb_comdat_bar.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main
+RUN: llvm-pdbutil dump -l -symbols -globals %t.pdb | FileCheck %s
 
 CHECK:                            Lines
 CHECK: ============================================================

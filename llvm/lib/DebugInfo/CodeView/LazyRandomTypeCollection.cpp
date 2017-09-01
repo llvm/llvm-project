@@ -90,6 +90,16 @@ CVType LazyRandomTypeCollection::getType(TypeIndex Index) {
   return Records[Index.toArrayIndex()].Type;
 }
 
+Optional<CVType> LazyRandomTypeCollection::tryGetType(TypeIndex Index) {
+  if (auto EC = ensureTypeExists(Index)) {
+    consumeError(std::move(EC));
+    return None;
+  }
+
+  assert(contains(Index));
+  return Records[Index.toArrayIndex()].Type;
+}
+
 StringRef LazyRandomTypeCollection::getTypeName(TypeIndex Index) {
   if (Index.isNoneType() || Index.isSimple())
     return TypeIndex::simpleTypeName(Index);
@@ -113,6 +123,9 @@ StringRef LazyRandomTypeCollection::getTypeName(TypeIndex Index) {
 }
 
 bool LazyRandomTypeCollection::contains(TypeIndex Index) {
+  if (Index.isSimple() || Index.isNoneType())
+    return false;
+
   if (Records.size() <= Index.toArrayIndex())
     return false;
   if (!Records[Index.toArrayIndex()].Type.valid())

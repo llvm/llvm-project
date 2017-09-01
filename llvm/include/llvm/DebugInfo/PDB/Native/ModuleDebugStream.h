@@ -52,6 +52,9 @@ public:
   ModuleDebugStreamRef &operator=(ModuleDebugStreamRef &&Other) = default;
 
   iterator_range<DebugSubsectionIterator> subsections() const;
+  codeview::DebugSubsectionArray getSubsectionsArray() const {
+    return Subsections;
+  }
 
   bool hasDebugSubsections() const;
 

@@ -17,6 +17,7 @@
 #include "BytesOutputStyle.h"
 #include "Diff.h"
 #include "DumpOutputStyle.h"
+#include "InputFile.h"
 #include "LinePrinter.h"
 #include "OutputStyle.h"
 #include "PrettyCompilandDumper.h"
@@ -32,6 +33,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/config.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
@@ -761,11 +763,10 @@ static void pdb2Yaml(StringRef Path) {
 }
 
 static void dumpRaw(StringRef Path) {
-  std::unique_ptr<IPDBSession> Session;
-  auto &File = loadPDB(Path, Session);
 
-  auto O = llvm::make_unique<DumpOutputStyle>(File);
+  InputFile IF = ExitOnErr(InputFile::open(Path));
 
+  auto O = llvm::make_unique<DumpOutputStyle>(IF);
   ExitOnErr(O->dump());
 }
 
