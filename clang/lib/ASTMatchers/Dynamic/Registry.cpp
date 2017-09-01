@@ -355,6 +355,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(labelDecl);
   REGISTER_MATCHER(labelStmt);
   REGISTER_MATCHER(lambdaExpr);
+  REGISTER_MATCHER(linkageSpecDecl);
   REGISTER_MATCHER(lValueReferenceType);
   REGISTER_MATCHER(matchesName);
   REGISTER_MATCHER(matchesSelector);
