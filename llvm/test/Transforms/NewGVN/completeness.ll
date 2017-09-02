@@ -8,9 +8,9 @@ define i32 @test1(i32, i8**) {
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
 ; CHECK:         br label [[TMP6:%.*]]
 ; CHECK:         br label [[TMP6]]
-; CHECK:         [[TMP7:%.*]] = phi i32 [ 75, [[TMP4]] ], [ 105, [[TMP5]] ]
+; CHECK:         [[PHIOFOPS:%.*]] = phi i32 [ 75, [[TMP4]] ], [ 105, [[TMP5]] ]
 ; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 5, [[TMP4]] ], [ 7, [[TMP5]] ]
-; CHECK-NEXT:    ret i32 [[TMP7]]
+; CHECK-NEXT:    ret i32 [[PHIOFOPS]]
 ;
   %3 = icmp ne i32 %0, 0
   br i1 %3, label %4, label %5
@@ -59,9 +59,9 @@ define i32 @test3(i1 %which) {
 ; CHECK:       delay:
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ -877, [[ENTRY:%.*]] ], [ 113, [[DELAY]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i32 [ -877, [[ENTRY:%.*]] ], [ 113, [[DELAY]] ]
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 1000, [[ENTRY]] ], [ 10, [[DELAY]] ]
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    ret i32 [[PHIOFOPS]]
 ;
 
 entry:
@@ -83,9 +83,9 @@ define <2 x i32> @test3vec(i1 %which) {
 ; CHECK:       delay:
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ <i32 -877, i32 -877>, [[ENTRY:%.*]] ], [ <i32 113, i32 113>, [[DELAY]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi <2 x i32> [ <i32 -877, i32 -877>, [[ENTRY:%.*]] ], [ <i32 113, i32 113>, [[DELAY]] ]
 ; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ <i32 1000, i32 1000>, [[ENTRY]] ], [ <i32 10, i32 10>, [[DELAY]] ]
-; CHECK-NEXT:    ret <2 x i32> [[TMP0]]
+; CHECK-NEXT:    ret <2 x i32> [[PHIOFOPS]]
 ;
 
 entry:
@@ -107,9 +107,9 @@ define <2 x i32> @test3vec2(i1 %which) {
 ; CHECK:       delay:
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ <i32 -877, i32 -2167>, [[ENTRY:%.*]] ], [ <i32 113, i32 303>, [[DELAY]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi <2 x i32> [ <i32 -877, i32 -2167>, [[ENTRY:%.*]] ], [ <i32 113, i32 303>, [[DELAY]] ]
 ; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ <i32 1000, i32 2500>, [[ENTRY]] ], [ <i32 10, i32 30>, [[DELAY]] ]
-; CHECK-NEXT:    ret <2 x i32> [[TMP0]]
+; CHECK-NEXT:    ret <2 x i32> [[PHIOFOPS]]
 ;
 
 entry:
@@ -188,11 +188,11 @@ define i64 @test5(i64 %arg) {
 ; CHECK:       bb14:
 ; CHECK-NEXT:    br label [[BB15:%.*]]
 ; CHECK:       bb15:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ [[TMP25:%.*]], [[BB15]] ], [ [[TMP12]], [[BB14]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i64 [ [[TMP25:%.*]], [[BB15]] ], [ [[TMP12]], [[BB14]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi i64 [ [[TMP24:%.*]], [[BB15]] ], [ [[TMP11]], [[BB14]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = phi i64 [ [[TMP22:%.*]], [[BB15]] ], [ [[TMP10]], [[BB14]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = phi i64 [ [[TMP20:%.*]], [[BB15]] ], [ 0, [[BB14]] ]
-; CHECK-NEXT:    store i64 [[TMP0]], i64* [[TMP]], align 8
+; CHECK-NEXT:    store i64 [[PHIOFOPS]], i64* [[TMP]], align 8
 ; CHECK-NEXT:    [[TMP20]] = add nuw nsw i64 [[TMP18]], 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [100 x i64], [100 x i64]* @global, i64 0, i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP22]] = load i64, i64* [[TMP21]], align 8
@@ -263,17 +263,17 @@ define i8 @test6(i8* %addr) {
 ; CHECK-NEXT:  entry-block:
 ; CHECK-NEXT:    br label %main-loop
 ; CHECK:       main-loop:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, %entry-block ], [ false, [[CORE:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, %entry-block ], [ true, [[CORE]] ]
+; CHECK-NEXT:    [[PHIOFOPS1:%.*]] = phi i1 [ true, %entry-block ], [ false, [[CORE:%.*]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i1 [ false, %entry-block ], [ true, [[CORE]] ]
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ 0, %entry-block ], [ 1, [[CORE]] ]
 ; CHECK-NEXT:    store volatile i8 0, i8* [[ADDR:%.*]]
-; CHECK-NEXT:    br i1 [[TMP0]], label %busy-wait-phi-0, label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[PHIOFOPS1]], label %busy-wait-phi-0, label [[EXIT:%.*]]
 ; CHECK:       busy-wait-phi-0:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load volatile i8, i8* [[ADDR]]
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[LOAD]], 0
 ; CHECK-NEXT:    br i1 [[ICMP]], label %busy-wait-phi-0, label [[CORE]]
 ; CHECK:       core:
-; CHECK-NEXT:    br i1 [[TMP1]], label [[TRAP:%.*]], label %main-loop
+; CHECK-NEXT:    br i1 [[PHIOFOPS]], label [[TRAP:%.*]], label %main-loop
 ; CHECK:       trap:
 ; CHECK-NEXT:    ret i8 1
 ; CHECK:       exit:
@@ -357,7 +357,7 @@ define void @test9() {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ -13, [[BB2]] ], [ [[TMP11:%.*]], [[BB6]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i32 [ -13, [[BB2]] ], [ [[TMP11:%.*]], [[BB6]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i32 [ 1, [[BB2]] ], [ [[TMP8:%.*]], [[BB6]] ]
 ; CHECK-NEXT:    [[TMP8]] = add nuw nsw i32 [[TMP7]], 1
 ; CHECK-NEXT:    [[TMP11]] = add i32 -14, [[TMP8]]
@@ -430,3 +430,43 @@ c:                                                ; preds = %o, %k, %g
   %0 = phi i32* [ undef, %o ], [ %m, %k ], [ %m, %g ]
   ret void
 }
+
+;; Ensure we handle VariableExpression properly.
+define void @test11() {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB2]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP:%.*]] = phi i1 [ false, [[BB1]] ], [ true, [[BB:%.*]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32* @wombat()
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32* [[TMP3]], null
+; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[BB6:%.*]], label [[BB7:%.*]]
+; CHECK:       bb6:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb7:
+; CHECK-NEXT:    ret void
+;
+bb:
+  br i1 undef, label %bb1, label %bb2
+
+bb1:                                              ; preds = %bb
+  br label %bb2
+
+bb2:                                              ; preds = %bb1, %bb
+  %tmp = phi i1 [ false, %bb1 ], [ true, %bb ]
+  %tmp3 = call i32* @wombat()
+  %tmp4 = icmp ne i32* %tmp3, null
+  %tmp5 = and i1 %tmp, %tmp4
+  br i1 %tmp5, label %bb6, label %bb7
+
+bb6:                                              ; preds = %bb2
+  unreachable
+
+bb7:                                              ; preds = %bb2
+  ret void
+}
+
+declare i32* @wombat()

@@ -9,7 +9,7 @@
 
 ; CHECK:   - Type:            DATA
 ; CHECK:     Relocations:
-; CHECK:       - Type:            R_WEBASSEMBLY_GLOBAL_ADDR_I32
+; CHECK:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
 ; CHECK:         Index:           0
 ; CHECK:         Offset:          0x0000000E
 ; CHECK:     Segments:

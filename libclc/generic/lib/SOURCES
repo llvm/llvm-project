@@ -123,6 +123,8 @@ math/sqrt.cl
 math/tan.cl
 math/tanh.cl
 math/tgamma.cl
+misc/shuffle.cl
+misc/shuffle2.cl
 relational/all.cl
 relational/any.cl
 relational/bitselect.cl

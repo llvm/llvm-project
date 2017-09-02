@@ -3886,8 +3886,8 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   case AMDGPUISD::MUL_U24:
   case AMDGPUISD::MUL_I24: {
     KnownBits LHSKnown, RHSKnown;
-    DAG.computeKnownBits(Op.getOperand(0), LHSKnown);
-    DAG.computeKnownBits(Op.getOperand(1), RHSKnown);
+    DAG.computeKnownBits(Op.getOperand(0), LHSKnown, Depth + 1);
+    DAG.computeKnownBits(Op.getOperand(1), RHSKnown, Depth + 1);
 
     unsigned TrailZ = LHSKnown.countMinTrailingZeros() +
                       RHSKnown.countMinTrailingZeros();

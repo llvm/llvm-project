@@ -1333,6 +1333,8 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       // Check the cached regunit intervals.
       if (TargetRegisterInfo::isPhysicalRegister(Reg) && !isReserved(Reg)) {
         for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units) {
+          if (MRI->isReservedRegUnit(*Units))
+            continue;
           if (const LiveRange *LR = LiveInts->getCachedRegUnit(*Units))
             checkLivenessAtUse(MO, MONum, UseIdx, *LR, *Units);
         }

@@ -275,6 +275,8 @@ class InstrItineraryData;
       return (Kind != ScalarCondVectorVal);
     }
 
+    bool isReadOnly(const GlobalValue *GV) const;
+
     /// getSetCCResultType - Return the value type to use for ISD::SETCC.
     EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                            EVT VT) const override;

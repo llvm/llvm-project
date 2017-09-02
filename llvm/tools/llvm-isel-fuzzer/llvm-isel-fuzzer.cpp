@@ -88,7 +88,7 @@ std::unique_ptr<IRMutator> createISelMutator() {
       new InjectorIRStrategy(InjectorIRStrategy::getDefaultOps()));
   Strategies.emplace_back(new InstDeleterIRStrategy());
 
-  return make_unique<IRMutator>(std::move(Types), std::move(Strategies));
+  return llvm::make_unique<IRMutator>(std::move(Types), std::move(Strategies));
 }
 
 extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomMutator(

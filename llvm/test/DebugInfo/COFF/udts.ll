@@ -1,4 +1,7 @@
-; RUN: llc < %s -filetype=obj | llvm-readobj - -codeview | FileCheck %s
+; RUN: llc < %s -filetype=obj > %t.obj
+; RUN: llvm-readobj -codeview %t.obj | FileCheck --check-prefix=READOBJ %s
+; RUN: llvm-pdbutil dump -udt-stats %t.obj | FileCheck --check-prefix=PDBUTIL %s
+
 source_filename = "test/DebugInfo/COFF/udts.ll"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
@@ -18,39 +21,52 @@ target triple = "i686-pc-windows-msvc18.0.0"
 ; typedef struct { int x; } U;
 ; U u;
 
-; CHECK:      {{.*}}Proc{{.*}}Sym {
-; CHECK:        DisplayName: f
-; CHECK:        LinkageName: ?f@@YAXXZ
-; CHECK:      }
-; CHECK:      UDTSym {
-; CHECK-NEXT:   Kind: S_UDT (0x1108)
-; CHECK-NEXT:   Type: int (0x74)
-; CHECK-NEXT:   UDTName: f::FOO
-; CHECK-NEXT: }
-; CHECK-NEXT: ProcEnd {
+; READOBJ:      {{.*}}Proc{{.*}}Sym {
+; READOBJ:        DisplayName: f
+; READOBJ:        LinkageName: ?f@@YAXXZ
+; READOBJ:      }
+; READOBJ:      UDTSym {
+; READOBJ-NEXT:   Kind: S_UDT (0x1108)
+; READOBJ-NEXT:   Type: int (0x74)
+; READOBJ-NEXT:   UDTName: f::FOO
+; READOBJ-NEXT: }
+; READOBJ-NEXT: ProcEnd {
 
-; CHECK:      {{.*}}Proc{{.*}}Sym {
-; CHECK:        DisplayName: g
-; CHECK:        LinkageName: ?g@@YAMPEAUS@@@Z
-; CHECK:      }
-; CHECK:      UDTSym {
-; CHECK-NEXT:   Kind: S_UDT (0x1108)
-; CHECK-NEXT:   Type: g::pun (0x{{[0-9A-F]+}})
-; CHECK-NEXT:   UDTName: g::pun
-; CHECK-NEXT: }
-; CHECK-NEXT: ProcEnd {
+; READOBJ:      {{.*}}Proc{{.*}}Sym {
+; READOBJ:        DisplayName: g
+; READOBJ:        LinkageName: ?g@@YAMPEAUS@@@Z
+; READOBJ:      }
+; READOBJ:      UDTSym {
+; READOBJ-NEXT:   Kind: S_UDT (0x1108)
+; READOBJ-NEXT:   Type: g::pun (0x{{[0-9A-F]+}})
+; READOBJ-NEXT:   UDTName: g::pun
+; READOBJ-NEXT: }
+; READOBJ-NEXT: ProcEnd {
 
-; CHECK:      Subsection
-; CHECK-NOT:  {{.*}}Proc{{.*}}Sym
-; CHECK:      UDTSym {
-; CHECK-NEXT:   Kind: S_UDT (0x1108)
-; CHECK-NEXT: Type: S (0x{{[0-9A-F]+}})
-; CHECK-NEXT: UDTName: S
-; CHECK:      UDTSym {
-; CHECK-NEXT:   Kind: S_UDT (0x1108)
-; CHECK-NEXT: Type: <unnamed-tag> (0x{{[0-9A-F]+}})
-; CHECK-NEXT: UDTName: U
-; CHECK-NOT: UDTSym {
+; READOBJ:      Subsection
+; READOBJ-NOT:  {{.*}}Proc{{.*}}Sym
+; READOBJ:      UDTSym {
+; READOBJ-NEXT:   Kind: S_UDT (0x1108)
+; READOBJ-NEXT: Type: S (0x{{[0-9A-F]+}})
+; READOBJ-NEXT: UDTName: S
+; READOBJ:      UDTSym {
+; READOBJ-NEXT:   Kind: S_UDT (0x1108)
+; READOBJ-NEXT: Type: <unnamed-tag> (0x{{[0-9A-F]+}})
+; READOBJ-NEXT: UDTName: U
+; READOBJ-NOT:  UDTSym {
+
+; PDBUTIL:                           S_UDT Record Stats
+; PDBUTIL-NEXT: ============================================================
+; PDBUTIL:             Record Kind | Count  Size
+; PDBUTIL-NEXT:     -----------------------------
+; PDBUTIL-NEXT:           LF_UNION |     1    24
+; PDBUTIL-NEXT:      <simple type> |     1     0
+; PDBUTIL-NEXT:       LF_STRUCTURE |     2    76
+; PDBUTIL-NEXT:     -----------------------------
+; PDBUTIL-NEXT:      Total (S_UDT) |     4    50
+; PDBUTIL-NEXT:     -----------------------------
+; PDBUTIL-NEXT:      namespace 'f' |     1     0
+; PDBUTIL-NEXT:      namespace 'g' |     1    24
 
 %struct.U = type { i32 }
 %struct.S = type { i32 }
