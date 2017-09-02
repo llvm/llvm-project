@@ -186,7 +186,6 @@ public:
   static std::vector<ImportFile *> Instances;
 
   DefinedImportData *ImpSym = nullptr;
-  DefinedImportData *ConstSym = nullptr;
   DefinedImportThunk *ThunkSym = nullptr;
   std::string DLLName;
 

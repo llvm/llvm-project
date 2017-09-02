@@ -3629,19 +3629,6 @@ static Value *simplifySelectWithFakeICmpEq(Value *CmpLHS, Value *CmpRHS,
   if (!decomposeBitTestICmp(CmpLHS, CmpRHS, Pred, X, Mask))
     return nullptr;
 
-  unsigned BitWidth = TrueVal->getType()->getScalarSizeInBits();
-  if (!BitWidth)
-    return nullptr;
-
-  Value *ExtX;
-  if (match(X, m_Trunc(m_Value(ExtX))) &&
-      (ExtX == TrueVal || ExtX == FalseVal)) {
-    // icmp slt (trunc X), 0  <--> icmp ne (and X, C), 0
-    // icmp sgt (trunc X), -1 <--> icmp eq (and X, C), 0
-    X = ExtX;
-    Mask = Mask.zext(BitWidth);
-  }
-
   return simplifySelectBitTest(TrueVal, FalseVal, X, &Mask,
                                Pred == ICmpInst::ICMP_EQ);
 }

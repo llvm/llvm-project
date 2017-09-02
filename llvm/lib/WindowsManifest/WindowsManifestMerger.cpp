@@ -44,6 +44,14 @@ private:
 #if LLVM_LIBXML2_ENABLED
   xmlDocPtr CombinedDoc = nullptr;
   std::vector<xmlDocPtr> MergedDocs;
+
+  bool Merged = false;
+  struct XmlDeleter {
+    void operator()(xmlChar *Ptr) { xmlFree(Ptr); }
+    void operator()(xmlDoc *Ptr) { xmlFreeDoc(Ptr); }
+  };
+  int BufferSize = 0;
+  std::unique_ptr<xmlChar, XmlDeleter> Buffer;
 #endif
   bool ParseErrorOccurred = false;
 };
@@ -613,14 +621,17 @@ WindowsManifestMerger::WindowsManifestMergerImpl::~WindowsManifestMergerImpl() {
 
 Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
     const MemoryBuffer &Manifest) {
+  if (Merged)
+    return make_error<WindowsManifestError>(
+        "merge after getMergedManifest is not supported");
   if (Manifest.getBufferSize() == 0)
     return make_error<WindowsManifestError>(
         "attempted to merge empty manifest");
   xmlSetGenericErrorFunc((void *)this,
                          WindowsManifestMergerImpl::errorCallback);
-  xmlDocPtr ManifestXML =
-      xmlReadMemory(Manifest.getBufferStart(), Manifest.getBufferSize(),
-                    "manifest.xml", nullptr, XML_PARSE_NOBLANKS);
+  xmlDocPtr ManifestXML = xmlReadMemory(
+      Manifest.getBufferStart(), Manifest.getBufferSize(), "manifest.xml",
+      nullptr, XML_PARSE_NOBLANKS | XML_PARSE_NODICT);
   xmlSetGenericErrorFunc(nullptr, nullptr);
   if (auto E = getParseError())
     return E;
@@ -646,22 +657,29 @@ Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
 
 std::unique_ptr<MemoryBuffer>
 WindowsManifestMerger::WindowsManifestMergerImpl::getMergedManifest() {
-  unsigned char *XmlBuff;
-  int BufferSize = 0;
-  if (CombinedDoc) {
+  if (!Merged) {
+    Merged = true;
+
+    if (!CombinedDoc)
+      return nullptr;
+
     xmlNodePtr CombinedRoot = xmlDocGetRootElement(CombinedDoc);
     std::vector<xmlNsPtr> RequiredPrefixes;
     checkAndStripPrefixes(CombinedRoot, RequiredPrefixes);
-    std::unique_ptr<xmlDoc> OutputDoc(xmlNewDoc((const unsigned char *)"1.0"));
+    std::unique_ptr<xmlDoc, XmlDeleter> OutputDoc(
+        xmlNewDoc((const unsigned char *)"1.0"));
     xmlDocSetRootElement(OutputDoc.get(), CombinedRoot);
+    assert(0 == xmlDocGetRootElement(CombinedDoc));
+
     xmlKeepBlanksDefault(0);
-    xmlDocDumpFormatMemoryEnc(OutputDoc.get(), &XmlBuff, &BufferSize, "UTF-8",
-                              1);
+    xmlChar *Buff = nullptr;
+    xmlDocDumpFormatMemoryEnc(OutputDoc.get(), &Buff, &BufferSize, "UTF-8", 1);
+    Buffer.reset(Buff);
   }
-  if (BufferSize == 0)
-    return nullptr;
-  return MemoryBuffer::getMemBuffer(
-      StringRef(FROM_XML_CHAR(XmlBuff), (size_t)BufferSize));
+
+  return BufferSize ? MemoryBuffer::getMemBuffer(StringRef(
+                          FROM_XML_CHAR(Buffer.get()), (size_t)BufferSize))
+                    : nullptr;
 }
 
 #else
