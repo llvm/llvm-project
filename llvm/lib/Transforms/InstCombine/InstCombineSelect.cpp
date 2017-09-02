@@ -724,7 +724,7 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
       ICmpInst::Predicate Pred = ICI->getPredicate();
       Value *X;
       APInt Mask;
-      if (decomposeBitTestICmp(CmpLHS, CmpRHS, Pred, X, Mask)) {
+      if (decomposeBitTestICmp(CmpLHS, CmpRHS, Pred, X, Mask, false)) {
         if (Mask.isSignMask()) {
           assert(X == CmpLHS && "Expected to use the compare input directly");
           assert(ICmpInst::isEquality(Pred) && "Expected equality predicate");

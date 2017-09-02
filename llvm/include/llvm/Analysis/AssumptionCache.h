@@ -1,4 +1,4 @@
-//===- llvm/Analysis/AssumptionCache.h - Track @llvm.assume ---*- C++ -*-===//
+//===- llvm/Analysis/AssumptionCache.h - Track @llvm.assume -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,15 +18,19 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include <memory>
 
 namespace llvm {
+
+class CallInst;
+class Function;
+class raw_ostream;
+class Value;
 
 /// \brief A cache of @llvm.assume calls within a function.
 ///
@@ -47,6 +51,7 @@ class AssumptionCache {
 
   class AffectedValueCallbackVH final : public CallbackVH {
     AssumptionCache *AC;
+
     void deleted() override;
     void allUsesReplacedWith(Value *) override;
 
@@ -76,7 +81,7 @@ class AssumptionCache {
   ///
   /// We want to be as lazy about this as possible, and so we scan the function
   /// at the last moment.
-  bool Scanned;
+  bool Scanned = false;
 
   /// \brief Scan the function for assumptions and add them to the cache.
   void scanFunction();
@@ -84,7 +89,7 @@ class AssumptionCache {
 public:
   /// \brief Construct an AssumptionCache from a function by scanning all of
   /// its instructions.
-  AssumptionCache(Function &F) : F(F), Scanned(false) {}
+  AssumptionCache(Function &F) : F(F) {}
 
   /// This cache is designed to be self-updating and so it should never be
   /// invalidated.
@@ -145,10 +150,11 @@ public:
 /// assumption caches for a given function.
 class AssumptionAnalysis : public AnalysisInfoMixin<AssumptionAnalysis> {
   friend AnalysisInfoMixin<AssumptionAnalysis>;
+
   static AnalysisKey Key;
 
 public:
-  typedef AssumptionCache Result;
+  using Result = AssumptionCache;
 
   AssumptionCache run(Function &F, FunctionAnalysisManager &) {
     return AssumptionCache(F);
@@ -161,6 +167,7 @@ class AssumptionPrinterPass : public PassInfoMixin<AssumptionPrinterPass> {
 
 public:
   explicit AssumptionPrinterPass(raw_ostream &OS) : OS(OS) {}
+
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
@@ -177,10 +184,11 @@ class AssumptionCacheTracker : public ImmutablePass {
   /// delete our cache of intrinsics for a function when it is deleted.
   class FunctionCallbackVH final : public CallbackVH {
     AssumptionCacheTracker *ACT;
+
     void deleted() override;
 
   public:
-    typedef DenseMapInfo<Value *> DMI;
+    using DMI = DenseMapInfo<Value *>;
 
     FunctionCallbackVH(Value *V, AssumptionCacheTracker *ACT = nullptr)
         : CallbackVH(V), ACT(ACT) {}
@@ -188,8 +196,10 @@ class AssumptionCacheTracker : public ImmutablePass {
 
   friend FunctionCallbackVH;
 
-  typedef DenseMap<FunctionCallbackVH, std::unique_ptr<AssumptionCache>,
-                   FunctionCallbackVH::DMI> FunctionCallsMap;
+  using FunctionCallsMap =
+      DenseMap<FunctionCallbackVH, std::unique_ptr<AssumptionCache>,
+               FunctionCallbackVH::DMI>;
+
   FunctionCallsMap AssumptionCaches;
 
 public:
@@ -208,6 +218,7 @@ public:
   }
 
   void verifyAnalysis() const override;
+
   bool doFinalization(Module &) override {
     verifyAnalysis();
     return false;
@@ -218,4 +229,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_ANALYSIS_ASSUMPTIONCACHE_H

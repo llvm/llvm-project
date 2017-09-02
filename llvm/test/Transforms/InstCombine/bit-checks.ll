@@ -520,12 +520,9 @@ define i32 @main7g(i32 %argc, i32 %argc2, i32 %argc3, i32 %argc4, i32 %argc5) {
 
 define i32 @main8(i32 %argc) {
 ; CHECK-LABEL: @main8(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARGC:%.*]], 64
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    [[TRUNC2:%.*]] = trunc i32 [[ARGC]] to i8
-; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp slt i8 [[TRUNC2]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TOBOOL]], [[TOBOOL3]]
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND]], i32 2, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 192
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 1, i32 2
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
   %and = and i32 %argc, 64
@@ -539,12 +536,9 @@ define i32 @main8(i32 %argc) {
 
 define i32 @main9(i32 %argc) {
 ; CHECK-LABEL: @main9(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARGC:%.*]], 64
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    [[TRUNC2:%.*]] = trunc i32 [[ARGC]] to i8
-; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp slt i8 [[TRUNC2]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TOBOOL]], [[TOBOOL3]]
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND]], i32 2, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 192
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 192
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 2, i32 1
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
   %and = and i32 %argc, 64
@@ -558,12 +552,9 @@ define i32 @main9(i32 %argc) {
 
 define i32 @main10(i32 %argc) {
 ; CHECK-LABEL: @main10(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARGC:%.*]], 64
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[TRUNC2:%.*]] = trunc i32 [[ARGC]] to i8
-; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp sgt i8 [[TRUNC2]], -1
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TOBOOL]], [[TOBOOL3]]
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND]], i32 2, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 192
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 2, i32 1
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
   %and = and i32 %argc, 64
@@ -577,12 +568,9 @@ define i32 @main10(i32 %argc) {
 
 define i32 @main11(i32 %argc) {
 ; CHECK-LABEL: @main11(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARGC:%.*]], 64
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[TRUNC2:%.*]] = trunc i32 [[ARGC]] to i8
-; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp sgt i8 [[TRUNC2]], -1
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TOBOOL]], [[TOBOOL3]]
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND]], i32 2, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 192
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 192
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 1, i32 2
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
   %and = and i32 %argc, 64
@@ -596,12 +584,9 @@ define i32 @main11(i32 %argc) {
 
 define i32 @main12(i32 %argc) {
 ; CHECK-LABEL: @main12(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[ARGC:%.*]] to i16
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i16 [[TRUNC]], 0
-; CHECK-NEXT:    [[TRUNC2:%.*]] = trunc i32 [[ARGC]] to i8
-; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp slt i8 [[TRUNC2]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TOBOOL]], [[TOBOOL3]]
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND]], i32 2, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 32896
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 1, i32 2
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
   %trunc = trunc i32 %argc to i16
@@ -615,12 +600,9 @@ define i32 @main12(i32 %argc) {
 
 define i32 @main13(i32 %argc) {
 ; CHECK-LABEL: @main13(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[ARGC:%.*]] to i16
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i16 [[TRUNC]], 0
-; CHECK-NEXT:    [[TRUNC2:%.*]] = trunc i32 [[ARGC]] to i8
-; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp slt i8 [[TRUNC2]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TOBOOL]], [[TOBOOL3]]
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND]], i32 2, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 32896
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 32896
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 2, i32 1
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
   %trunc = trunc i32 %argc to i16
@@ -634,12 +616,9 @@ define i32 @main13(i32 %argc) {
 
 define i32 @main14(i32 %argc) {
 ; CHECK-LABEL: @main14(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[ARGC:%.*]] to i16
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp sgt i16 [[TRUNC]], -1
-; CHECK-NEXT:    [[TRUNC2:%.*]] = trunc i32 [[ARGC]] to i8
-; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp sgt i8 [[TRUNC2]], -1
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TOBOOL]], [[TOBOOL3]]
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND]], i32 2, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 32896
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 2, i32 1
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
   %trunc = trunc i32 %argc to i16
@@ -653,12 +632,9 @@ define i32 @main14(i32 %argc) {
 
 define i32 @main15(i32 %argc) {
 ; CHECK-LABEL: @main15(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[ARGC:%.*]] to i16
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp sgt i16 [[TRUNC]], -1
-; CHECK-NEXT:    [[TRUNC2:%.*]] = trunc i32 [[ARGC]] to i8
-; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp sgt i8 [[TRUNC2]], -1
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TOBOOL]], [[TOBOOL3]]
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND]], i32 2, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARGC:%.*]], 32896
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 32896
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TMP2]], i32 1, i32 2
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
   %trunc = trunc i32 %argc to i16

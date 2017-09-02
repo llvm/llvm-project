@@ -1931,7 +1931,8 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
       LastRX = nullptr;
   }
   if (LastRX)
-    LastRX->p_filesz = alignTo(LastRX->p_filesz, Target->PageSize);
+    LastRX->p_memsz = LastRX->p_filesz =
+        alignTo(LastRX->p_filesz, Target->PageSize);
 }
 
 // Write section contents to a mmap'ed file.

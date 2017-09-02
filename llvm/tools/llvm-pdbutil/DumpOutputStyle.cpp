@@ -503,11 +503,16 @@ Error DumpOutputStyle::dumpSymbolStats() {
   StatCollection SymStats;
   StatCollection ChunkStats;
 
-  iterateSymbolGroups(File, None, [&](uint32_t Modi, const SymbolGroup &SG) {
+  Optional<PrintScope> Scope;
+  if (File.isPdb())
+    Scope.emplace(P, 2);
+
+  iterateSymbolGroups(File, Scope, [&](uint32_t Modi, const SymbolGroup &SG) {
     StatCollection SS = getSymbolStats(SG, SymStats);
     StatCollection CS = getChunkStats(SG, ChunkStats);
 
     if (SG.getFile().isPdb()) {
+      AutoIndent Indent(P);
       auto Modules = cantFail(File.pdb().getPDBDbiStream()).modules();
       uint32_t ModCount = Modules.getModuleCount();
       DbiModuleDescriptor Desc = Modules.getModuleDescriptor(Modi);
@@ -519,7 +524,6 @@ Error DumpOutputStyle::dumpSymbolStats() {
                      Desc.getModuleName());
         return;
       }
-
       P.formatLine("Stream {0}, {1} bytes", StreamIdx,
                    getPdb().getStreamByteSize(StreamIdx));
 
