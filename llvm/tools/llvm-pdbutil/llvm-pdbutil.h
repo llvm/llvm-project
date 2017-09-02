@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -19,11 +20,17 @@
 #include <stdint.h>
 
 namespace llvm {
+namespace object {
+class COFFObjectFile;
+}
 namespace pdb {
 class PDBSymbolData;
 class PDBSymbolFunc;
+class PDBFile;
 uint32_t getTypeLength(const PDBSymbolData &Symbol);
 }
+typedef llvm::PointerUnion<object::COFFObjectFile *, pdb::PDBFile *>
+    PdbOrCoffObj;
 }
 
 namespace opts {

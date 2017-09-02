@@ -88,11 +88,17 @@ static cl::opt<bool> DisableCGP("disable-cgp", cl::Hidden,
     cl::desc("Disable Codegen Prepare"));
 static cl::opt<bool> DisableCopyProp("disable-copyprop", cl::Hidden,
     cl::desc("Disable Copy Propagation pass"));
+static cl::opt<bool> DisableCopyPropPreRegRewrite("disable-copyprop-prerewrite", cl::Hidden,
+    cl::desc("Disable Copy Propagation Pre-Register Re-write pass"));
 static cl::opt<bool> DisablePartialLibcallInlining("disable-partial-libcall-inlining",
     cl::Hidden, cl::desc("Disable Partial Libcall Inlining"));
 static cl::opt<bool> EnableImplicitNullChecks(
     "enable-implicit-null-checks",
     cl::desc("Fold null checks into faulting memory operations"),
+    cl::init(false));
+static cl::opt<bool> EnableMergeICmps(
+    "enable-mergeicmps",
+    cl::desc("Merge ICmp chains into a single memcmp"),
     cl::init(false));
 static cl::opt<bool> PrintLSR("print-lsr-output", cl::Hidden,
     cl::desc("Print LLVM IR produced by the loop-reduce pass"));
@@ -247,6 +253,9 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
 
   if (StandardID == &MachineCopyPropagationID)
     return applyDisable(TargetID, DisableCopyProp);
+
+  if (StandardID == &MachineCopyPropagationPreRegRewriteID)
+    return applyDisable(TargetID, DisableCopyPropPreRegRewrite);
 
   return TargetID;
 }
@@ -589,6 +598,10 @@ void TargetPassConfig::addIRPasses() {
     addPass(createLoopStrengthReducePass());
     if (PrintLSR)
       addPass(createPrintFunctionPass(dbgs(), "\n\n*** Code after LSR ***\n"));
+  }
+
+  if (getOptLevel() != CodeGenOpt::None && EnableMergeICmps) {
+    addPass(createMergeICmpsPass());
   }
 
   // Run GC lowering passes for builtin collectors
@@ -1058,6 +1071,10 @@ void TargetPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
 
     // Allow targets to change the register assignments before rewriting.
     addPreRewrite();
+
+    // Copy propagate to forward register uses and try to eliminate COPYs that
+    // were not coalesced.
+    addPass(&MachineCopyPropagationPreRegRewriteID);
 
     // Finally rewrite virtual registers.
     addPass(&VirtRegRewriterID);

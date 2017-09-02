@@ -31,7 +31,12 @@ public:
   StringsAndChecksumsRef(const DebugStringTableSubsectionRef &Strings,
                          const DebugChecksumsSubsectionRef &Checksums);
 
+  void setStrings(const DebugStringTableSubsectionRef &Strings);
   void setChecksums(const DebugChecksumsSubsectionRef &CS);
+
+  void reset();
+  void resetStrings();
+  void resetChecksums();
 
   template <typename T> void initialize(T &&FragmentRange) {
     for (const DebugSubsectionRecord &R : FragmentRange) {
@@ -67,8 +72,8 @@ private:
   void initializeStrings(const DebugSubsectionRecord &SR);
   void initializeChecksums(const DebugSubsectionRecord &FCR);
 
-  std::unique_ptr<DebugStringTableSubsectionRef> OwnedStrings;
-  std::unique_ptr<DebugChecksumsSubsectionRef> OwnedChecksums;
+  std::shared_ptr<DebugStringTableSubsectionRef> OwnedStrings;
+  std::shared_ptr<DebugChecksumsSubsectionRef> OwnedChecksums;
 
   const DebugStringTableSubsectionRef *Strings = nullptr;
   const DebugChecksumsSubsectionRef *Checksums = nullptr;

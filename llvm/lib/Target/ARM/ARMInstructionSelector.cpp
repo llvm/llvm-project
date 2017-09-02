@@ -488,8 +488,13 @@ bool ARMInstructionSelector::insertComparison(CmpConstants Helper, InsertInfo I,
 
 bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
                                           MachineRegisterInfo &MRI) const {
-  if (TII.getSubtarget().isROPI() || TII.getSubtarget().isRWPI()) {
-    DEBUG(dbgs() << "ROPI and RWPI not supported yet\n");
+  if (TII.getSubtarget().isRWPI()) {
+    DEBUG(dbgs() << "RWPI not supported yet\n");
+    return false;
+  }
+
+  if (STI.isROPI() && !STI.isTargetELF()) {
+    DEBUG(dbgs() << "ROPI only supported for ELF\n");
     return false;
   }
 
@@ -525,6 +530,13 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
           TM.getPointerSize(), Alignment));
 
     return true;
+  }
+
+  bool isReadOnly = STI.getTargetLowering()->isReadOnly(GV);
+  if (STI.isROPI() && isReadOnly) {
+    unsigned Opc = UseMovt ? ARM::MOV_ga_pcrel : ARM::LDRLIT_ga_pcrel;
+    MIB->setDesc(TII.get(Opc));
+    return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
   }
 
   if (ObjectFormat == Triple::ELF) {

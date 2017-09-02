@@ -218,12 +218,17 @@ void GCNHazardRecognizer::RecedeCycle() {
 
 int GCNHazardRecognizer::getWaitStatesSince(
     function_ref<bool(MachineInstr *)> IsHazard) {
-  int WaitStates = -1;
+  int WaitStates = 0;
   for (MachineInstr *MI : EmittedInstrs) {
+    if (MI) {
+      if (IsHazard(MI))
+        return WaitStates;
+
+      unsigned Opcode = MI->getOpcode();
+      if (Opcode == AMDGPU::DBG_VALUE || Opcode == AMDGPU::IMPLICIT_DEF)
+        continue;
+    }
     ++WaitStates;
-    if (!MI || !IsHazard(MI))
-      continue;
-    return WaitStates;
   }
   return std::numeric_limits<int>::max();
 }

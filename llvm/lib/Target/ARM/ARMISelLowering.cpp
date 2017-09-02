@@ -3135,7 +3135,7 @@ static SDValue promoteToConstantPool(const GlobalValue *GV, SelectionDAG &DAG,
   return DAG.getNode(ARMISD::Wrapper, dl, MVT::i32, CPAddr);
 }
 
-static bool isReadOnly(const GlobalValue *GV) {
+bool ARMTargetLowering::isReadOnly(const GlobalValue *GV) const {
   if (const GlobalAlias *GA = dyn_cast<GlobalAlias>(GV))
     GV = GA->getBaseObject();
   return (isa<GlobalVariable>(GV) && cast<GlobalVariable>(GV)->isConstant()) ||

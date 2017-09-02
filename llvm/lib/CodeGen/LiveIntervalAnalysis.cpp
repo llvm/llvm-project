@@ -269,8 +269,9 @@ void LiveIntervals::computeRegUnitRange(LiveRange &LR, unsigned Unit) {
   // may share super-registers. That's OK because createDeadDefs() is
   // idempotent. It is very rare for a register unit to have multiple roots, so
   // uniquing super-registers is probably not worthwhile.
-  bool IsReserved = true;
+  bool IsReserved = false;
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
+    bool IsRootReserved = true;
     for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
          Super.isValid(); ++Super) {
       unsigned Reg = *Super;
@@ -279,9 +280,12 @@ void LiveIntervals::computeRegUnitRange(LiveRange &LR, unsigned Unit) {
       // A register unit is considered reserved if all its roots and all their
       // super registers are reserved.
       if (!MRI->isReserved(Reg))
-        IsReserved = false;
+        IsRootReserved = false;
     }
+    IsReserved |= IsRootReserved;
   }
+  assert(IsReserved == MRI->isReservedRegUnit(Unit) &&
+         "reserved computation mismatch");
 
   // Now extend LR to reach all uses.
   // Ignore uses of reserved registers. We only track defs of those.
@@ -924,7 +928,7 @@ public:
   // kill flags. This is wasteful. Eventually, LiveVariables will strip all kill
   // flags, and postRA passes will use a live register utility instead.
   LiveRange *getRegUnitLI(unsigned Unit) {
-    if (UpdateFlags)
+    if (UpdateFlags && !MRI.isReservedRegUnit(Unit))
       return &LIS.getRegUnit(Unit);
     return LIS.getCachedRegUnit(Unit);
   }

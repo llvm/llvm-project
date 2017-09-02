@@ -105,7 +105,7 @@ public:
 
   bool hasPDBDbiStream() const;
   bool hasPDBGlobalsStream();
-  bool hasPDBInfoStream();
+  bool hasPDBInfoStream() const;
   bool hasPDBIpiStream() const;
   bool hasPDBPublicsStream();
   bool hasPDBSymbolStream();

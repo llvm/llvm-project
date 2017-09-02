@@ -143,3 +143,35 @@ scratch_load_dword v1, off, m0
 scratch_store_dword off, v2, m0
 // GFX9: scratch_store_dword off, v2, m0 ; encoding: [0x00,0x40,0x70,0xdc,0x00,0x02,0x7c,0x00]
 // VI-ERR: instruction not supported on this GPU
+
+scratch_load_ubyte_d16 v1, v2, off
+// GFX9: scratch_load_ubyte_d16 v1, v2, off ; encoding: [0x00,0x40,0x80,0xdc,0x02,0x00,0x7f,0x01]
+// VI-ERR: instruction not supported on this GPU
+
+scratch_load_ubyte_d16_hi v1, v2, off
+// GFX9: scratch_load_ubyte_d16_hi v1, v2, off ; encoding: [0x00,0x40,0x84,0xdc,0x02,0x00,0x7f,0x01]
+// VI-ERR: instruction not supported on this GPU
+
+scratch_load_sbyte_d16 v1, v2, off
+// GFX9: scratch_load_sbyte_d16 v1, v2, off ; encoding: [0x00,0x40,0x88,0xdc,0x02,0x00,0x7f,0x01]
+// VI-ERR: instruction not supported on this GPU
+
+scratch_load_sbyte_d16_hi v1, v2, off
+// GFX9: scratch_load_sbyte_d16_hi v1, v2, off ; encoding: [0x00,0x40,0x8c,0xdc,0x02,0x00,0x7f,0x01]
+// VI-ERR: instruction not supported on this GPU
+
+scratch_load_short_d16 v1, v2, off
+// GFX9: scratch_load_short_d16 v1, v2, off ; encoding: [0x00,0x40,0x90,0xdc,0x02,0x00,0x7f,0x01]
+// VI-ERR: instruction not supported on this GPU
+
+scratch_load_short_d16_hi v1, v2, off
+// GFX9: scratch_load_short_d16_hi v1, v2, off ; encoding: [0x00,0x40,0x94,0xdc,0x02,0x00,0x7f,0x01]
+// VI-ERR: instruction not supported on this GPU
+
+scratch_store_byte_d16_hi off, v2, s1
+// GFX9: scratch_store_byte_d16_hi off, v2, s1 ; encoding: [0x00,0x40,0x64,0xdc,0x00,0x02,0x01,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+scratch_store_short_d16_hi off, v2, s1
+// GFX9: scratch_store_short_d16_hi off, v2, s1 ; encoding: [0x00,0x40,0x6c,0xdc,0x00,0x02,0x01,0x00]
+// VI-ERR: instruction not supported on this GPU

@@ -66,9 +66,11 @@ bool llvm::PredicatesFoldable(ICmpInst::Predicate p1, ICmpInst::Predicate p2) {
 
 bool llvm::decomposeBitTestICmp(Value *LHS, Value *RHS,
                                 CmpInst::Predicate &Pred,
-                                Value *&X, APInt &Mask) {
+                                Value *&X, APInt &Mask, bool LookThruTrunc) {
+  using namespace PatternMatch;
+
   const APInt *C;
-  if (!match(RHS, PatternMatch::m_APInt(C)))
+  if (!match(RHS, m_APInt(C)))
     return false;
 
   switch (Pred) {
@@ -132,6 +134,11 @@ bool llvm::decomposeBitTestICmp(Value *LHS, Value *RHS,
     break;
   }
 
-  X = LHS;
+  if (LookThruTrunc && match(LHS, m_Trunc(m_Value(X)))) {
+    Mask = Mask.zext(X->getType()->getScalarSizeInBits());
+  } else {
+    X = LHS;
+  }
+
   return true;
 }
