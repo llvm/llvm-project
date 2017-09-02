@@ -43,7 +43,7 @@ _start:
 // CHECK-NEXT:     VirtualAddress: 0x201000
 // CHECK-NEXT:     PhysicalAddress: 0x201000
 // CHECK-NEXT:     FileSize: 4096
-// CHECK-NEXT:     MemSize: 1
+// CHECK-NEXT:     MemSize: 4096
 // CHECK-NEXT:     Flags [ (0x5)
 // CHECK-NEXT:       PF_R (0x4)
 // CHECK-NEXT:       PF_X (0x1)

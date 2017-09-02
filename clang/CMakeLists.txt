@@ -181,10 +181,14 @@ endif()
 # we can include cmake files from this directory.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
-set (LIBXML2_FOUND 0)
-find_package(LibXml2 2.5.3 QUIET)
-if (LIBXML2_FOUND)
-  set(CLANG_HAVE_LIBXML 1)
+# Don't look for libxml if we're using MSan, since uninstrumented third party
+# code may call MSan interceptors like strlen, leading to false positives.
+if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
+  set (LIBXML2_FOUND 0)
+  find_package(LibXml2 2.5.3 QUIET)
+  if (LIBXML2_FOUND)
+    set(CLANG_HAVE_LIBXML 1)
+  endif()
 endif()
 
 include(CheckIncludeFile)

@@ -306,22 +306,24 @@ else() # if this is included from LLVM's CMake
 
     foreach(runtime_name ${runtime_names})
       list(APPEND ${name}_extra_targets
-        ${runtime_name}-${name}
-        install-${runtime_name}-${name})
+        "${runtime_name}:${runtime_name}-${name}"
+        "install-${runtime_name}:install-${runtime_name}-${name}")
       if(LLVM_INCLUDE_TESTS)
-        list(APPEND ${name}_test_targets check-${runtime_name}-${name})
+        list(APPEND ${name}_test_targets "check-${runtime_name}:check-${runtime_name}-${name}")
       endif()
     endforeach()
 
-    foreach(name IN LISTS SUB_COMPONENTS SUB_INSTALL_TARGETS)
-      list(APPEND ${name}_extra_targets "${name}:${name}-${name}")
+    foreach(target_name IN LISTS SUB_COMPONENTS SUB_INSTALL_TARGETS)
+      list(APPEND ${name}_extra_targets "${target_name}:${target_name}-${name}")
     endforeach()
 
     if(LLVM_INCLUDE_TESTS)
-      list(APPEND ${name}_test_targets runtimes-test-depends-${name} check-runtimes-${name})
+      list(APPEND ${name}_test_targets
+        "runtimes-test-depends:runtimes-test-depends-${name}"
+        "check-runtimes:check-runtimes-${name}")
       foreach(target_name IN LISTS SUB_CHECK_TARGETS)
         list(APPEND ${name}_test_targets "${target_name}:${target_name}-${name}")
-        list(APPEND test_targets ${target_name}-${name})
+        list(APPEND test_targets "${target_name}-${name}")
       endforeach()
       set(test_targets "${test_targets}" PARENT_SCOPE)
     endif()

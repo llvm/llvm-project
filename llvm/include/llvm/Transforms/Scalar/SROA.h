@@ -17,14 +17,22 @@
 #define LLVM_TRANSFORMS_SCALAR_SROA_H
 
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/Function.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {
+
+class AllocaInst;
+class AssumptionCache;
+class DominatorTree;
+class Function;
+class Instruction;
+class LLVMContext;
+class PHINode;
+class SelectInst;
+class Use;
 
 /// A private "module" namespace for types and utilities used by SROA. These
 /// are implementation details and should not be used by clients.

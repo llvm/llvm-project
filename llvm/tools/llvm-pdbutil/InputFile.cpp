@@ -64,13 +64,13 @@ static inline bool isCodeViewDebugSubsection(object::SectionRef Section,
                                              StringRef Name,
                                              BinaryStreamReader &Reader) {
   StringRef SectionName, Contents;
-  if (auto EC = Section.getName(SectionName))
+  if (Section.getName(SectionName))
     return false;
 
   if (SectionName != Name)
     return false;
 
-  if (auto EC = Section.getContents(Contents))
+  if (Section.getContents(Contents))
     return false;
 
   Reader = BinaryStreamReader(Contents, support::little);
