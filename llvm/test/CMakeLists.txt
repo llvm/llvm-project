@@ -53,6 +53,7 @@ set(LLVM_TEST_DEPENDS
           llvm-dwarfdump
           llvm-dwp
           llvm-extract
+          llvm-isel-fuzzer
           llvm-lib
           llvm-link
           llvm-lto2

@@ -21,7 +21,7 @@ public:
   DummyCallbackManager() : JITCompileCallbackManager(0) {}
 
 public:
-  void grow() override { llvm_unreachable("not implemented"); }
+  Error grow() override { llvm_unreachable("not implemented"); }
 };
 
 class DummyStubsManager : public orc::IndirectStubsManager {

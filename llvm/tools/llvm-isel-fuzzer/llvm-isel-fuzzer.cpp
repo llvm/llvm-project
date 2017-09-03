@@ -16,6 +16,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/FuzzMutate/FuzzerCLI.h"
 #include "llvm/FuzzMutate/IRMutator.h"
 #include "llvm/FuzzMutate/Operations.h"
 #include "llvm/FuzzMutate/Random.h"
@@ -133,21 +134,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   return 0;
 }
 
-/// Parse command line options, but ignore anything before '--'.
-static void parseCLOptsAfterDashDash(int argc, char *argv[]) {
-  std::vector<const char *> CLArgs;
-  CLArgs.push_back(argv[0]);
-
-  int I = 1;
-  while (I < argc)
-    if (StringRef(argv[I++]).equals("-ignore_remaining_args=1"))
-      break;
-  while (I < argc)
-    CLArgs.push_back(argv[I++]);
-
-  cl::ParseCommandLineOptions(CLArgs.size(), CLArgs.data());
-}
-
 static void handleLLVMFatalError(void *, const std::string &Message, bool) {
   // TODO: Would it be better to call into the fuzzer internals directly?
   dbgs() << "LLVM ERROR: " << Message << "\n"
@@ -164,7 +150,7 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
 
-  parseCLOptsAfterDashDash(*argc, *argv);
+  parseFuzzerCLOpts(*argc, *argv);
 
   if (TargetTriple.empty()) {
     errs() << *argv[0] << ": -mtriple must be specified\n";
