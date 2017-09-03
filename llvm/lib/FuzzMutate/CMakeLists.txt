@@ -1,4 +1,5 @@
 add_llvm_library(LLVMFuzzMutate
+  FuzzerCLI.cpp
   IRMutator.cpp
   OpDescriptor.cpp
   Operations.cpp
