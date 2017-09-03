@@ -657,6 +657,10 @@ TEST_F(FormatTest, FormatsForLoop) {
       "     I != E;\n"
       "     ++I) {\n}",
       NoBinPacking);
+
+  FormatStyle AlignLeft = getLLVMStyle();
+  AlignLeft.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("for (A* a = start; a < end; ++a, ++value) {\n}", AlignLeft);
 }
 
 TEST_F(FormatTest, RangeBasedForLoops) {
