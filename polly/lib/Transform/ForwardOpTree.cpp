@@ -410,12 +410,12 @@ public:
     if (!LI)
       return FD_NotApplicable;
 
-    // If the load is already in the statement, not forwarding is necessary.
+    // If the load is already in the statement, no forwarding is necessary.
     // However, it might happen that the LoadInst is already present in the
     // statement's instruction list. In that case we do as follows:
     // - For the evaluation (DoIt==false), we can trivially forward it as it is
     //   benefit of forwarding an already present instruction.
-    // - For the execution (DoIt==false), prepend the instruction (to make it
+    // - For the execution (DoIt==true), prepend the instruction (to make it
     //   available to all instructions following in the instruction list), but
     //   do not add another MemoryAccess.
     MemoryAccess *Access = TargetStmt->getArrayAccessOrNULLFor(LI);

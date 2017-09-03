@@ -3903,6 +3903,187 @@ let Predicates = [HasVLX] in {
   def : Pat<(store (v32i8 (extract_subvector
                            (v64i8 VR512:$src), (iPTR 0))), addr:$dst),
      (VMOVDQU32Z256mr addr:$dst, (v32i8 (EXTRACT_SUBREG VR512:$src,sub_ymm)))>;
+
+  // If we're inserting into an all zeros vector, just use a plain move which
+  // will zero the upper bits.
+  // TODO: Is there a safe way to detect whether the producing instruction
+  // already zeroed the upper bits?
+
+  // 128->256 register form.
+  def : Pat<(v4f64 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
+                                     (v2f64 VR128:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPDZ128rr VR128:$src), sub_xmm)>;
+  def : Pat<(v8f32 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
+                                     (v4f32 VR128:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPSZ128rr VR128:$src), sub_xmm)>;
+  def : Pat<(v4i64 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
+                                     (v2i64 VR128:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rr VR128:$src), sub_xmm)>;
+  def : Pat<(v8i32 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
+                                     (v4i32 VR128:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rr VR128:$src), sub_xmm)>;
+  def : Pat<(v16i16 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
+                                      (v8i16 VR128:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rr VR128:$src), sub_xmm)>;
+  def : Pat<(v32i8 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
+                                     (v16i8 VR128:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rr VR128:$src), sub_xmm)>;
+
+  // 128->256 memory form.
+  def : Pat<(v4f64 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
+                                     (loadv2f64 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPDZ128rm addr:$src), sub_xmm)>;
+  def : Pat<(v8f32 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
+                                     (loadv4f32 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPSZ128rm addr:$src), sub_xmm)>;
+  def : Pat<(v4i64 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
+                                     (loadv2i64 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rm addr:$src), sub_xmm)>;
+  def : Pat<(v8i32 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
+                                     (bc_v4i32 (loadv2i64 addr:$src)),
+                                     (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rm addr:$src), sub_xmm)>;
+  def : Pat<(v16i16 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
+                                      (bc_v8i16 (loadv2i64 addr:$src)),
+                                      (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rm addr:$src), sub_xmm)>;
+  def : Pat<(v32i8 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
+                                     (bc_v16i8 (loadv2i64 addr:$src)),
+                                     (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rm addr:$src), sub_xmm)>;
+
+  // 128->512 register form.
+  def : Pat<(v8f64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (v2f64 VR128X:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPDZ128rr VR128X:$src), sub_xmm)>;
+  def : Pat<(v16f32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v4f32 VR128X:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPSZ128rr VR128X:$src), sub_xmm)>;
+  def : Pat<(v8i64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v2i64 VR128X:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rr VR128X:$src), sub_xmm)>;
+  def : Pat<(v16i32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v4i32 VR128X:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rr VR128X:$src), sub_xmm)>;
+  def : Pat<(v32i16 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v8i16 VR128X:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rr VR128X:$src), sub_xmm)>;
+  def : Pat<(v64i8 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (v16i8 VR128X:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rr VR128X:$src), sub_xmm)>;
+
+  // 128->512 memory form.
+  def : Pat<(v8f64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (loadv2f64 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPDZ128rm addr:$src), sub_xmm)>;
+  def : Pat<(v16f32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (loadv4f32 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPSZ128rm addr:$src), sub_xmm)>;
+  def : Pat<(v8i64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (loadv2i64 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rm addr:$src), sub_xmm)>;
+  def : Pat<(v16i32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (bc_v4i32 (loadv2i64 addr:$src)),
+                                      (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rm addr:$src), sub_xmm)>;
+  def : Pat<(v32i16 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (bc_v8i16 (loadv2i64 addr:$src)),
+                                      (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rm addr:$src), sub_xmm)>;
+  def : Pat<(v64i8 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (bc_v16i8 (loadv2i64 addr:$src)),
+                                     (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z128rm addr:$src), sub_xmm)>;
+
+  // 256->512 register form.
+  def : Pat<(v8f64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (v4f64 VR256X:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPDZ256rr VR256X:$src), sub_ymm)>;
+  def : Pat<(v16f32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v8f32 VR256X:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPSZ256rr VR256X:$src), sub_ymm)>;
+  def : Pat<(v8i64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (v4i64 VR256X:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z256rr VR256X:$src), sub_ymm)>;
+  def : Pat<(v16i32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v8i32 VR256X:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z256rr VR256X:$src), sub_ymm)>;
+  def : Pat<(v32i16 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v16i16 VR256X:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z256rr VR256X:$src), sub_ymm)>;
+  def : Pat<(v64i8 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (v32i8 VR256X:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z256rr VR256X:$src), sub_ymm)>;
+
+  // 256->512 memory form.
+  def : Pat<(v8f64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (loadv4f64 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPDZ256rm addr:$src), sub_ymm)>;
+  def : Pat<(v16f32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (loadv8f32 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPSZ256rm addr:$src), sub_ymm)>;
+  def : Pat<(v8i64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (loadv4i64 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z256rm addr:$src), sub_ymm)>;
+  def : Pat<(v16i32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (bc_v8i32 (loadv4i64 addr:$src)),
+                                      (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z256rm addr:$src), sub_ymm)>;
+  def : Pat<(v32i16 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (bc_v16i16 (loadv4i64 addr:$src)),
+                                      (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z256rm addr:$src), sub_ymm)>;
+  def : Pat<(v64i8 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (bc_v32i8 (loadv4i64 addr:$src)),
+                                     (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQA64Z256rm addr:$src), sub_ymm)>;
+}
+
+let Predicates = [HasAVX512, NoVLX] in {
+  // If we're inserting into an all zeros vector, just use a plain move which
+  // will zero the upper bits.
+  // TODO: Is there a safe way to detect whether the producing instruction
+  // already zeroed the upper bits?
+  def : Pat<(v8f64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (v4f64 VR256:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPDYrr VR256:$src), sub_ymm)>;
+  def : Pat<(v16f32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v8f32 VR256:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPSYrr VR256:$src), sub_ymm)>;
+  def : Pat<(v8i64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (v4i64 VR256:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQAYrr VR256:$src), sub_ymm)>;
+  def : Pat<(v16i32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v8i32 VR256:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQAYrr VR256:$src), sub_ymm)>;
+  def : Pat<(v32i16 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v16i16 VR256:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQAYrr VR256:$src), sub_ymm)>;
+  def : Pat<(v64i8 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (v32i8 VR256:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQAYrr VR256:$src), sub_ymm)>;
+
+  def : Pat<(v8f64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (loadv4f64 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPDYrm addr:$src), sub_ymm)>;
+  def : Pat<(v16f32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (loadv8f32 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPSYrm addr:$src), sub_ymm)>;
+  def : Pat<(v8i64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (loadv4i64 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQAYrm addr:$src), sub_ymm)>;
+  def : Pat<(v16i32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (bc_v8i32 (loadv4i64 addr:$src)),
+                                      (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQAYrm addr:$src), sub_ymm)>;
+  def : Pat<(v32i16 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (bc_v16i16 (loadv4i64 addr:$src)),
+                                      (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQAYrm addr:$src), sub_ymm)>;
+  def : Pat<(v64i8 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (bc_v32i8 (loadv4i64 addr:$src)),
+                                     (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQAYrm addr:$src), sub_ymm)>;
 }
 
 multiclass masked_move_for_extract<string InstrStr, X86VectorVTInfo From,

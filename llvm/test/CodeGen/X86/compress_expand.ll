@@ -204,8 +204,7 @@ define void @test10(i64* %base, <4 x i64> %V, <4 x i1> %mask) {
 ; KNL-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; KNL-NEXT:    vpmovsxdq %xmm1, %ymm1
-; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; KNL-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
+; KNL-NEXT:    vmovdqa %ymm1, %ymm1
 ; KNL-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL-NEXT:    vpcompressq %zmm0, (%rdi) {%k1}
