@@ -135,7 +135,7 @@ public:
   Error addFunctionAST(std::unique_ptr<FunctionAST> FnAST) {
     // Create a CompileCallback - this is the re-entry point into the compiler
     // for functions that haven't been compiled yet.
-    auto CCInfo = CompileCallbackMgr->getCompileCallback();
+    auto CCInfo = cantFail(CompileCallbackMgr->getCompileCallback());
 
     // Create an indirect stub. This serves as the functions "canonical
     // definition" - an unchanging (constant address) entry point to the

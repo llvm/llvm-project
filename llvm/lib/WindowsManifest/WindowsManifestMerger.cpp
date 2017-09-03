@@ -677,7 +677,7 @@ WindowsManifestMerger::WindowsManifestMergerImpl::getMergedManifest() {
     Buffer.reset(Buff);
   }
 
-  return BufferSize ? MemoryBuffer::getMemBuffer(StringRef(
+  return BufferSize ? MemoryBuffer::getMemBufferCopy(StringRef(
                           FROM_XML_CHAR(Buffer.get()), (size_t)BufferSize))
                     : nullptr;
 }

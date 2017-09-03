@@ -1,4 +1,5 @@
 ;RUN: opt -globalopt -f %s | llc -filetype=obj -o -| llvm-dwarfdump - | FileCheck %s
+;REQUIRES: x86-registered-target
 
 ;CHECK: DW_AT_name [DW_FORM_strp] {{.*}} "foo"
 ;CHECK-NEXT: DW_AT_type {{.*}}

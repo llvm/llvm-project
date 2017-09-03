@@ -896,6 +896,7 @@ macro(add_llvm_fuzzer name)
   cmake_parse_arguments(ARG "" "DUMMY_MAIN" "" ${ARGN})
   if( LLVM_USE_SANITIZE_COVERAGE )
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=fuzzer")
+    set(LLVM_OPTIONAL_SOURCES ${ARG_DUMMY_MAIN})
     add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS})
     set_target_properties(${name} PROPERTIES FOLDER "Fuzzers")
   elseif( ARG_DUMMY_MAIN )
@@ -1499,3 +1500,36 @@ function(setup_dependency_debugging name)
   set(sandbox_command "sandbox-exec -p '(version 1) (allow default) ${deny_attributes_gen} ${deny_intrinsics_gen}'")
   set_target_properties(${name} PROPERTIES RULE_LAUNCH_COMPILE ${sandbox_command})
 endfunction()
+
+# Figure out if we can track VC revisions.
+function(find_first_existing_file out_var)
+  foreach(file ${ARGN})
+    if(EXISTS "${file}")
+      set(${out_var} "${file}" PARENT_SCOPE)
+      return()
+    endif()
+  endforeach()
+endfunction()
+
+macro(find_first_existing_vc_file out_var path)
+    find_program(git_executable NAMES git git.exe git.cmd)
+    # Run from a subdirectory to force git to print an absolute path.
+    execute_process(COMMAND ${git_executable} rev-parse --git-dir
+      WORKING_DIRECTORY ${path}/cmake
+      RESULT_VARIABLE git_result
+      OUTPUT_VARIABLE git_dir
+      ERROR_QUIET)
+    if(git_result EQUAL 0)
+      string(STRIP "${git_dir}" git_dir)
+      set(${out_var} "${git_dir}/logs/HEAD")
+      # some branchless cases (e.g. 'repo') may not yet have .git/logs/HEAD
+      if (NOT EXISTS "${git_dir}/logs/HEAD")
+        file(WRITE "${git_dir}/logs/HEAD" "")
+      endif()
+    else()
+      find_first_existing_file(${out_var}
+        "${path}/.svn/wc.db"   # SVN 1.7
+        "${path}/.svn/entries" # SVN 1.6
+      )
+    endif()
+endmacro()
