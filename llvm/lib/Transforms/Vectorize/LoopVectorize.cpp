@@ -7987,22 +7987,53 @@ VPWidenRecipe *LoopVectorizationPlanner::tryToWiden(
   if (Legal->isScalarWithPredication(I))
     return nullptr;
 
-  static DenseSet<unsigned> VectorizableOpcodes = {
-      Instruction::Br,      Instruction::PHI,      Instruction::GetElementPtr,
-      Instruction::UDiv,    Instruction::SDiv,     Instruction::SRem,
-      Instruction::URem,    Instruction::Add,      Instruction::FAdd,
-      Instruction::Sub,     Instruction::FSub,     Instruction::Mul,
-      Instruction::FMul,    Instruction::FDiv,     Instruction::FRem,
-      Instruction::Shl,     Instruction::LShr,     Instruction::AShr,
-      Instruction::And,     Instruction::Or,       Instruction::Xor,
-      Instruction::Select,  Instruction::ICmp,     Instruction::FCmp,
-      Instruction::Store,   Instruction::Load,     Instruction::ZExt,
-      Instruction::SExt,    Instruction::FPToUI,   Instruction::FPToSI,
-      Instruction::FPExt,   Instruction::PtrToInt, Instruction::IntToPtr,
-      Instruction::SIToFP,  Instruction::UIToFP,   Instruction::Trunc,
-      Instruction::FPTrunc, Instruction::BitCast,  Instruction::Call};
+  auto IsVectorizableOpcode = [](unsigned Opcode) {
+    switch (Opcode) {
+    case Instruction::Add:
+    case Instruction::And:
+    case Instruction::AShr:
+    case Instruction::BitCast:
+    case Instruction::Br:
+    case Instruction::Call:
+    case Instruction::FAdd:
+    case Instruction::FCmp:
+    case Instruction::FDiv:
+    case Instruction::FMul:
+    case Instruction::FPExt:
+    case Instruction::FPToSI:
+    case Instruction::FPToUI:
+    case Instruction::FPTrunc:
+    case Instruction::FRem:
+    case Instruction::FSub:
+    case Instruction::GetElementPtr:
+    case Instruction::ICmp:
+    case Instruction::IntToPtr:
+    case Instruction::Load:
+    case Instruction::LShr:
+    case Instruction::Mul:
+    case Instruction::Or:
+    case Instruction::PHI:
+    case Instruction::PtrToInt:
+    case Instruction::SDiv:
+    case Instruction::Select:
+    case Instruction::SExt:
+    case Instruction::Shl:
+    case Instruction::SIToFP:
+    case Instruction::SRem:
+    case Instruction::Store:
+    case Instruction::Sub:
+    case Instruction::Trunc:
+    case Instruction::UDiv:
+    case Instruction::UIToFP:
+    case Instruction::URem:
+    case Instruction::Xor:
+    case Instruction::ZExt:
+      return true;
+    }
+    return false;
+  };
 
-  if (!VectorizableOpcodes.count(I->getOpcode()))
+  if (!IsVectorizableOpcode(I->getOpcode()))
     return nullptr;
 
   if (CallInst *CI = dyn_cast<CallInst>(I)) {

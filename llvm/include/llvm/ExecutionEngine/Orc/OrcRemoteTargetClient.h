@@ -543,19 +543,19 @@ public:
         : JITCompileCallbackManager(ErrorHandlerAddress), Remote(Remote) {}
 
   private:
-    void grow() override {
+    Error grow() override {
       JITTargetAddress BlockAddr = 0;
       uint32_t NumTrampolines = 0;
       if (auto TrampolineInfoOrErr = Remote.emitTrampolineBlock())
         std::tie(BlockAddr, NumTrampolines) = *TrampolineInfoOrErr;
-      else {
-        // FIXME: Return error.
-        llvm_unreachable("Failed to create trampolines");
-      }
+      else
+        return TrampolineInfoOrErr.takeError();
 
       uint32_t TrampolineSize = Remote.getTrampolineSize();
       for (unsigned I = 0; I < NumTrampolines; ++I)
         this->AvailableTrampolines.push_back(BlockAddr + (I * TrampolineSize));
+
+      return Error::success();
     }
 
     OrcRemoteTargetClient &Remote;

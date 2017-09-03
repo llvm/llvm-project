@@ -1736,14 +1736,14 @@ def BT64mi8 : RIi8<0xBA, MRM4m, (outs), (ins i64mem:$src1, i64i8imm:$src2),
 } // SchedRW
 
 let hasSideEffects = 0 in {
-let SchedRW = [WriteALU] in {
-def BTC16rr : I<0xBB, MRMDestReg, (outs), (ins GR16:$src1, GR16:$src2),
+let SchedRW = [WriteALU], Constraints = "$src1 = $dst" in {
+def BTC16rr : I<0xBB, MRMDestReg, (outs GR16:$dst), (ins GR16:$src1, GR16:$src2),
                 "btc{w}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RR>,
                 OpSize16, TB;
-def BTC32rr : I<0xBB, MRMDestReg, (outs), (ins GR32:$src1, GR32:$src2),
+def BTC32rr : I<0xBB, MRMDestReg, (outs GR32:$dst), (ins GR32:$src1, GR32:$src2),
                 "btc{l}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RR>,
                 OpSize32, TB;
-def BTC64rr : RI<0xBB, MRMDestReg, (outs), (ins GR64:$src1, GR64:$src2),
+def BTC64rr : RI<0xBB, MRMDestReg, (outs GR64:$dst), (ins GR64:$src1, GR64:$src2),
                  "btc{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RR>, TB;
 } // SchedRW
 
@@ -1758,14 +1758,14 @@ def BTC64mr : RI<0xBB, MRMDestMem, (outs), (ins i64mem:$src1, GR64:$src2),
                  "btc{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MR>, TB;
 }
 
-let SchedRW = [WriteALU] in {
-def BTC16ri8 : Ii8<0xBA, MRM7r, (outs), (ins GR16:$src1, i16i8imm:$src2),
+let SchedRW = [WriteALU], Constraints = "$src1 = $dst" in {
+def BTC16ri8 : Ii8<0xBA, MRM7r, (outs GR16:$dst), (ins GR16:$src1, i16i8imm:$src2),
                     "btc{w}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RI>,
                     OpSize16, TB;
-def BTC32ri8 : Ii8<0xBA, MRM7r, (outs), (ins GR32:$src1, i32i8imm:$src2),
+def BTC32ri8 : Ii8<0xBA, MRM7r, (outs GR32:$dst), (ins GR32:$src1, i32i8imm:$src2),
                     "btc{l}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RI>,
                     OpSize32, TB;
-def BTC64ri8 : RIi8<0xBA, MRM7r, (outs), (ins GR64:$src1, i64i8imm:$src2),
+def BTC64ri8 : RIi8<0xBA, MRM7r, (outs GR64:$dst), (ins GR64:$src1, i64i8imm:$src2),
                     "btc{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RI>, TB;
 } // SchedRW
 
@@ -1780,14 +1780,14 @@ def BTC64mi8 : RIi8<0xBA, MRM7m, (outs), (ins i64mem:$src1, i64i8imm:$src2),
                     "btc{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MI>, TB;
 }
 
-let SchedRW = [WriteALU] in {
-def BTR16rr : I<0xB3, MRMDestReg, (outs), (ins GR16:$src1, GR16:$src2),
+let SchedRW = [WriteALU], Constraints = "$src1 = $dst" in {
+def BTR16rr : I<0xB3, MRMDestReg, (outs GR16:$dst), (ins GR16:$src1, GR16:$src2),
                 "btr{w}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RR>,
                 OpSize16, TB;
-def BTR32rr : I<0xB3, MRMDestReg, (outs), (ins GR32:$src1, GR32:$src2),
+def BTR32rr : I<0xB3, MRMDestReg, (outs GR32:$dst), (ins GR32:$src1, GR32:$src2),
                 "btr{l}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RR>,
                 OpSize32, TB;
-def BTR64rr : RI<0xB3, MRMDestReg, (outs), (ins GR64:$src1, GR64:$src2),
+def BTR64rr : RI<0xB3, MRMDestReg, (outs GR64:$dst), (ins GR64:$src1, GR64:$src2),
                  "btr{q}\t{$src2, $src1|$src1, $src2}", []>, TB;
 } // SchedRW
 
@@ -1802,14 +1802,14 @@ def BTR64mr : RI<0xB3, MRMDestMem, (outs), (ins i64mem:$src1, GR64:$src2),
                  "btr{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MR>, TB;
 }
 
-let SchedRW = [WriteALU] in {
-def BTR16ri8 : Ii8<0xBA, MRM6r, (outs), (ins GR16:$src1, i16i8imm:$src2),
+let SchedRW = [WriteALU], Constraints = "$src1 = $dst" in {
+def BTR16ri8 : Ii8<0xBA, MRM6r, (outs GR16:$dst), (ins GR16:$src1, i16i8imm:$src2),
                     "btr{w}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RI>,
                     OpSize16, TB;
-def BTR32ri8 : Ii8<0xBA, MRM6r, (outs), (ins GR32:$src1, i32i8imm:$src2),
+def BTR32ri8 : Ii8<0xBA, MRM6r, (outs GR32:$dst), (ins GR32:$src1, i32i8imm:$src2),
                     "btr{l}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RI>,
                     OpSize32, TB;
-def BTR64ri8 : RIi8<0xBA, MRM6r, (outs), (ins GR64:$src1, i64i8imm:$src2),
+def BTR64ri8 : RIi8<0xBA, MRM6r, (outs GR64:$dst), (ins GR64:$src1, i64i8imm:$src2),
                     "btr{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RI>, TB;
 } // SchedRW
 
@@ -1824,14 +1824,14 @@ def BTR64mi8 : RIi8<0xBA, MRM6m, (outs), (ins i64mem:$src1, i64i8imm:$src2),
                     "btr{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MI>, TB;
 }
 
-let SchedRW = [WriteALU] in {
-def BTS16rr : I<0xAB, MRMDestReg, (outs), (ins GR16:$src1, GR16:$src2),
+let SchedRW = [WriteALU], Constraints = "$src1 = $dst" in {
+def BTS16rr : I<0xAB, MRMDestReg, (outs GR16:$dst), (ins GR16:$src1, GR16:$src2),
                 "bts{w}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RR>,
                 OpSize16, TB;
-def BTS32rr : I<0xAB, MRMDestReg, (outs), (ins GR32:$src1, GR32:$src2),
+def BTS32rr : I<0xAB, MRMDestReg, (outs GR32:$dst), (ins GR32:$src1, GR32:$src2),
                 "bts{l}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RR>,
               OpSize32, TB;
-def BTS64rr : RI<0xAB, MRMDestReg, (outs), (ins GR64:$src1, GR64:$src2),
+def BTS64rr : RI<0xAB, MRMDestReg, (outs GR64:$dst), (ins GR64:$src1, GR64:$src2),
                "bts{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RR>, TB;
 } // SchedRW
 
@@ -1846,14 +1846,14 @@ def BTS64mr : RI<0xAB, MRMDestMem, (outs), (ins i64mem:$src1, GR64:$src2),
                  "bts{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MR>, TB;
 }
 
-let SchedRW = [WriteALU] in {
-def BTS16ri8 : Ii8<0xBA, MRM5r, (outs), (ins GR16:$src1, i16i8imm:$src2),
+let SchedRW = [WriteALU], Constraints = "$src1 = $dst" in {
+def BTS16ri8 : Ii8<0xBA, MRM5r, (outs GR16:$dst), (ins GR16:$src1, i16i8imm:$src2),
                     "bts{w}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RI>,
                     OpSize16, TB;
-def BTS32ri8 : Ii8<0xBA, MRM5r, (outs), (ins GR32:$src1, i32i8imm:$src2),
+def BTS32ri8 : Ii8<0xBA, MRM5r, (outs GR32:$dst), (ins GR32:$src1, i32i8imm:$src2),
                     "bts{l}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RI>,
                     OpSize32, TB;
-def BTS64ri8 : RIi8<0xBA, MRM5r, (outs), (ins GR64:$src1, i64i8imm:$src2),
+def BTS64ri8 : RIi8<0xBA, MRM5r, (outs GR64:$dst), (ins GR64:$src1, i64i8imm:$src2),
                     "bts{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_RI>, TB;
 } // SchedRW
 
