@@ -90,9 +90,9 @@ public:
   Symbol *addCommon(InputFile *F, StringRef N, uint64_t Size,
                     const llvm::object::coff_symbol_generic *S = nullptr,
                     CommonChunk *C = nullptr);
-  Symbol *addImportData(StringRef N, ImportFile *F);
-  Symbol *addImportThunk(StringRef Name, DefinedImportData *S,
-                         uint16_t Machine);
+  DefinedImportData *addImportData(StringRef N, ImportFile *F);
+  DefinedImportThunk *addImportThunk(StringRef Name, DefinedImportData *S,
+                                     uint16_t Machine);
 
   void reportDuplicate(Symbol *Existing, InputFile *NewFile);
 

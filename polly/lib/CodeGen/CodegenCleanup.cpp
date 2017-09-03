@@ -68,6 +68,7 @@ public:
     FPM->add(createCFGSimplificationPass());
     FPM->add(createReassociatePass());
     FPM->add(createLoopRotatePass());
+    FPM->add(createNewGVNPass());
     FPM->add(createLICMPass());
     FPM->add(createLoopUnswitchPass());
     FPM->add(createCFGSimplificationPass());
