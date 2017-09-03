@@ -4933,17 +4933,16 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
     Changed = true;
   }
 
+  const CmpInst::Predicate Pred = I.getPredicate();
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  if (Value *V =
-          SimplifyFCmpInst(I.getPredicate(), Op0, Op1, I.getFastMathFlags(),
-                           SQ.getWithInstruction(&I)))
+  if (Value *V = SimplifyFCmpInst(Pred, Op0, Op1, I.getFastMathFlags(),
+                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   // Simplify 'fcmp pred X, X'
   if (Op0 == Op1) {
-    switch (I.getPredicate()) {
-    default: llvm_unreachable("Unknown predicate!");
+    switch (Pred) {
+      default: break;
     case FCmpInst::FCMP_UNO:    // True if unordered: isnan(X) | isnan(Y)
     case FCmpInst::FCMP_ULT:    // True if unordered or less than
     case FCmpInst::FCMP_UGT:    // True if unordered or greater than
@@ -5017,7 +5016,7 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
             ((Fabs.compare(APFloat::getSmallestNormalized(*Sem)) !=
                  APFloat::cmpLessThan) || Fabs.isZero()))
 
-          return new FCmpInst(I.getPredicate(), LHSExt->getOperand(0),
+          return new FCmpInst(Pred, LHSExt->getOperand(0),
                               ConstantFP::get(RHSC->getContext(), F));
         break;
       }
@@ -5062,7 +5061,7 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
           break;
 
         // Various optimization for fabs compared with zero.
-        switch (I.getPredicate()) {
+        switch (Pred) {
         default:
           break;
         // fabs(x) < 0 --> false
@@ -5083,7 +5082,7 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
         case FCmpInst::FCMP_UEQ:
         case FCmpInst::FCMP_ONE:
         case FCmpInst::FCMP_UNE:
-          return new FCmpInst(I.getPredicate(), CI->getArgOperand(0), RHSC);
+          return new FCmpInst(Pred, CI->getArgOperand(0), RHSC);
         }
       }
       }
@@ -5098,8 +5097,7 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
   if (FPExtInst *LHSExt = dyn_cast<FPExtInst>(Op0))
     if (FPExtInst *RHSExt = dyn_cast<FPExtInst>(Op1))
       if (LHSExt->getSrcTy() == RHSExt->getSrcTy())
-        return new FCmpInst(I.getPredicate(), LHSExt->getOperand(0),
-                            RHSExt->getOperand(0));
+        return new FCmpInst(Pred, LHSExt->getOperand(0), RHSExt->getOperand(0));
 
   return Changed ? &I : nullptr;
 }

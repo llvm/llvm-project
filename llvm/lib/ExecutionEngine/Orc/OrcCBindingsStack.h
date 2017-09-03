@@ -145,12 +145,15 @@ public:
   createLazyCompileCallback(JITTargetAddress &RetAddr,
                             LLVMOrcLazyCompileCallbackFn Callback,
                             void *CallbackCtx) {
-    auto CCInfo = CCMgr->getCompileCallback();
-    CCInfo.setCompileAction([=]() -> JITTargetAddress {
-      return Callback(wrap(this), CallbackCtx);
-    });
-    RetAddr = CCInfo.getAddress();
-    return LLVMOrcErrSuccess;
+    if (auto CCInfoOrErr = CCMgr->getCompileCallback()) {
+      auto &CCInfo = *CCInfoOrErr;
+      CCInfo.setCompileAction([=]() -> JITTargetAddress {
+          return Callback(wrap(this), CallbackCtx);
+        });
+      RetAddr = CCInfo.getAddress();
+      return LLVMOrcErrSuccess;
+    } else
+      return mapError(CCInfoOrErr.takeError());
   }
 
   LLVMOrcErrorCode createIndirectStub(StringRef StubName,
