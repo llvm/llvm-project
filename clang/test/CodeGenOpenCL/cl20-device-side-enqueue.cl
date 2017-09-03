@@ -49,8 +49,14 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
 
   // COMMON: [[DEF_Q:%[0-9]+]] = load %opencl.queue_t{{.*}}*, %opencl.queue_t{{.*}}** %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, i32* %flags
-  // B32: call i32 (%opencl.queue_t{{.*}}*, i32, %struct.ndrange_t*, i8 addrspace(4)*, i32, ...) @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i32 256)
-  // B64: call i32 (%opencl.queue_t{{.*}}*, i32, %struct.ndrange_t*, i8 addrspace(4)*, i32, ...) @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i64 256)
+  // B32: %[[TMP:.*]] = alloca [1 x i32]
+  // B32: %[[TMP1:.*]] = getelementptr [1 x i32], [1 x i32]* %[[TMP]], i32 0, i32 0
+  // B32: store i32 256, i32* %[[TMP1]], align 4
+  // B32: call i32 @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i32* %[[TMP1]])
+  // B64: %[[TMP:.*]] = alloca [1 x i64]
+  // B64: %[[TMP1:.*]] = getelementptr [1 x i64], [1 x i64]* %[[TMP]], i32 0, i32 0
+  // B64: store i64 256, i64* %[[TMP1]], align 8
+  // B64: call i32 @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i64* %[[TMP1]])
   enqueue_kernel(default_queue, flags, ndrange,
                  ^(local void *p) {
                    return;
@@ -59,10 +65,14 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   char c;
   // COMMON: [[DEF_Q:%[0-9]+]] = load %opencl.queue_t{{.*}}*, %opencl.queue_t{{.*}}** %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, i32* %flags
-  // B32: [[SIZE:%[0-9]+]] = zext i8 {{%[0-9]+}} to i32
-  // B32: call i32 (%opencl.queue_t{{.*}}*, i32, %struct.ndrange_t*, i8 addrspace(4)*, i32, ...) @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i32 [[SIZE]])
-  // B64: [[SIZE:%[0-9]+]] = zext i8 {{%[0-9]+}} to i64
-  // B64: call i32 (%opencl.queue_t{{.*}}*, i32, %struct.ndrange_t*, i8 addrspace(4)*, i32, ...) @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i64 [[SIZE]])
+  // B32: %[[TMP:.*]] = alloca [1 x i32]
+  // B32: %[[TMP1:.*]] = getelementptr [1 x i32], [1 x i32]* %[[TMP]], i32 0, i32 0
+  // B32: store i32 %{{.*}}, i32* %[[TMP1]], align 4
+  // B32: call i32 @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i32* %[[TMP1]])
+  // B64: %[[TMP:.*]] = alloca [1 x i64]
+  // B64: %[[TMP1:.*]] = getelementptr [1 x i64], [1 x i64]* %[[TMP]], i32 0, i32 0
+  // B64: store i64 %{{.*}}, i64* %[[TMP1]], align 8
+  // B64: call i32 @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i64* %[[TMP1]])
   enqueue_kernel(default_queue, flags, ndrange,
                  ^(local void *p) {
                    return;
@@ -74,8 +84,14 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // COMMON: [[AD:%arraydecay[0-9]*]] = getelementptr inbounds [1 x %opencl.clk_event_t*], [1 x %opencl.clk_event_t*]* %event_wait_list2, i32 0, i32 0
   // COMMON: [[WAIT_EVNT:%[0-9]+]] = addrspacecast %opencl.clk_event_t{{.*}}** [[AD]] to %opencl.clk_event_t{{.*}}* addrspace(4)*
   // COMMON: [[EVNT:%[0-9]+]]  = addrspacecast %opencl.clk_event_t{{.*}}** %clk_event to %opencl.clk_event_t{{.*}}* addrspace(4)*
-  // B32: call i32 (%opencl.queue_t{{.*}}*, i32,  %struct.ndrange_t*, i32, %opencl.clk_event_t{{.*}}* addrspace(4)*, %opencl.clk_event_t{{.*}}* addrspace(4)*, i8 addrspace(4)*, i32, ...) @__enqueue_kernel_events_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]],  %struct.ndrange_t* {{.*}}, i32 2, %opencl.clk_event_t{{.*}} [[WAIT_EVNT]], %opencl.clk_event_t{{.*}} [[EVNT]], i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i32 256)
-  // B64: call i32 (%opencl.queue_t{{.*}}*, i32,  %struct.ndrange_t*, i32, %opencl.clk_event_t{{.*}}* addrspace(4)*, %opencl.clk_event_t{{.*}}* addrspace(4)*, i8 addrspace(4)*, i32, ...) @__enqueue_kernel_events_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]],  %struct.ndrange_t* {{.*}}, i32 2, %opencl.clk_event_t{{.*}} [[WAIT_EVNT]], %opencl.clk_event_t{{.*}} [[EVNT]], i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i64 256)
+  // B32: %[[TMP:.*]] = alloca [1 x i32]
+  // B32: %[[TMP1:.*]] = getelementptr [1 x i32], [1 x i32]* %[[TMP]], i32 0, i32 0
+  // B32: store i32 256, i32* %[[TMP1]], align 4
+  // B32: call i32 @__enqueue_kernel_events_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]],  %struct.ndrange_t* {{.*}}, i32 2, %opencl.clk_event_t{{.*}} [[WAIT_EVNT]], %opencl.clk_event_t{{.*}} [[EVNT]], i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i32* %[[TMP1]])
+  // B64: %[[TMP:.*]] = alloca [1 x i64]
+  // B64: %[[TMP1:.*]] = getelementptr [1 x i64], [1 x i64]* %[[TMP]], i32 0, i32 0
+  // B64: store i64 256, i64* %[[TMP1]], align 8
+  // B64: call i32 @__enqueue_kernel_events_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]],  %struct.ndrange_t* {{.*}}, i32 2, %opencl.clk_event_t{{.*}} [[WAIT_EVNT]], %opencl.clk_event_t{{.*}} [[EVNT]], i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i64* %[[TMP1]])
   enqueue_kernel(default_queue, flags, ndrange, 2, event_wait_list2, &clk_event,
                  ^(local void *p) {
                    return;
@@ -87,10 +103,14 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // COMMON: [[AD:%arraydecay[0-9]*]] = getelementptr inbounds [1 x %opencl.clk_event_t*], [1 x %opencl.clk_event_t*]* %event_wait_list2, i32 0, i32 0
   // COMMON: [[WAIT_EVNT:%[0-9]+]] = addrspacecast %opencl.clk_event_t{{.*}}** [[AD]] to %opencl.clk_event_t{{.*}}* addrspace(4)*
   // COMMON: [[EVNT:%[0-9]+]]  = addrspacecast %opencl.clk_event_t{{.*}}** %clk_event to %opencl.clk_event_t{{.*}}* addrspace(4)*
-  // B32: [[SIZE:%[0-9]+]] = zext i8 {{%[0-9]+}} to i32
-  // B32: call i32 (%opencl.queue_t{{.*}}*, i32,  %struct.ndrange_t*, i32, %opencl.clk_event_t{{.*}}* addrspace(4)*, %opencl.clk_event_t{{.*}}* addrspace(4)*, i8 addrspace(4)*, i32, ...) @__enqueue_kernel_events_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]],  %struct.ndrange_t* {{.*}}, i32 2, %opencl.clk_event_t{{.*}}* addrspace(4)* [[WAIT_EVNT]], %opencl.clk_event_t{{.*}}* addrspace(4)* [[EVNT]], i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i32 [[SIZE]])
-  // B64: [[SIZE:%[0-9]+]] = zext i8 {{%[0-9]+}} to i64
-  // B64: call i32 (%opencl.queue_t{{.*}}*, i32,  %struct.ndrange_t*, i32, %opencl.clk_event_t{{.*}}* addrspace(4)*, %opencl.clk_event_t{{.*}}* addrspace(4)*, i8 addrspace(4)*, i32, ...) @__enqueue_kernel_events_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]],  %struct.ndrange_t* {{.*}}, i32 2, %opencl.clk_event_t{{.*}}* addrspace(4)* [[WAIT_EVNT]], %opencl.clk_event_t{{.*}}* addrspace(4)* [[EVNT]], i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i64 [[SIZE]])
+  // B32: %[[TMP:.*]] = alloca [1 x i32]
+  // B32: %[[TMP1:.*]] = getelementptr [1 x i32], [1 x i32]* %[[TMP]], i32 0, i32 0
+  // B32: store i32 %{{.*}}, i32* %[[TMP1]], align 4
+  // B32: call i32 @__enqueue_kernel_events_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]],  %struct.ndrange_t* {{.*}}, i32 2, %opencl.clk_event_t{{.*}}* addrspace(4)* [[WAIT_EVNT]], %opencl.clk_event_t{{.*}}* addrspace(4)* [[EVNT]], i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i32* %[[TMP1]])
+  // B64: %[[TMP:.*]] = alloca [1 x i64]
+  // B64: %[[TMP1:.*]] = getelementptr [1 x i64], [1 x i64]* %[[TMP]], i32 0, i32 0
+  // B64: store i64 %{{.*}}, i64* %[[TMP1]], align 8
+  // B64: call i32 @__enqueue_kernel_events_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]],  %struct.ndrange_t* {{.*}}, i32 2, %opencl.clk_event_t{{.*}}* addrspace(4)* [[WAIT_EVNT]], %opencl.clk_event_t{{.*}}* addrspace(4)* [[EVNT]], i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i64* %[[TMP1]])
   enqueue_kernel(default_queue, flags, ndrange, 2, event_wait_list2, &clk_event,
                  ^(local void *p) {
                    return;
@@ -100,20 +120,54 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   long l;
   // COMMON: [[DEF_Q:%[0-9]+]] = load %opencl.queue_t{{.*}}*, %opencl.queue_t{{.*}}** %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, i32* %flags
-  // B32: [[SIZE:%[0-9]+]] = trunc i64 {{%[0-9]+}} to i32
-  // B32: call i32 (%opencl.queue_t{{.*}}*, i32, %struct.ndrange_t*, i8 addrspace(4)*, i32, ...) @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i32 [[SIZE]])
-  // B64: [[SIZE:%[0-9]+]] = load i64, i64* %l
-  // B64: call i32 (%opencl.queue_t{{.*}}*, i32, %struct.ndrange_t*, i8 addrspace(4)*, i32, ...) @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i64 [[SIZE]])
+  // B32: %[[TMP:.*]] = alloca [1 x i32]
+  // B32: %[[TMP1:.*]] = getelementptr [1 x i32], [1 x i32]* %[[TMP]], i32 0, i32 0
+  // B32: store i32 %{{.*}}, i32* %[[TMP1]], align 4
+  // B32: call i32 @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i32* %[[TMP1]])
+  // B64: %[[TMP:.*]] = alloca [1 x i64]
+  // B64: %[[TMP1:.*]] = getelementptr [1 x i64], [1 x i64]* %[[TMP]], i32 0, i32 0
+  // B64: store i64 %{{.*}}, i64* %[[TMP1]], align 8
+  // B64: call i32 @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i64* %[[TMP1]])
   enqueue_kernel(default_queue, flags, ndrange,
                  ^(local void *p) {
                    return;
                  },
                  l);
 
+  // COMMON: [[DEF_Q:%[0-9]+]] = load %opencl.queue_t{{.*}}*, %opencl.queue_t{{.*}}** %default_queue
+  // COMMON: [[FLAGS:%[0-9]+]] = load i32, i32* %flags
+  // B32: %[[TMP:.*]] = alloca [3 x i32]
+  // B32: %[[TMP1:.*]] = getelementptr [3 x i32], [3 x i32]* %[[TMP]], i32 0, i32 0
+  // B32: store i32 1, i32* %[[TMP1]], align 4
+  // B32: %[[TMP2:.*]] = getelementptr [3 x i32], [3 x i32]* %[[TMP]], i32 0, i32 1
+  // B32: store i32 2, i32* %[[TMP2]], align 4
+  // B32: %[[TMP3:.*]] = getelementptr [3 x i32], [3 x i32]* %[[TMP]], i32 0, i32 2
+  // B32: store i32 4, i32* %[[TMP3]], align 4
+  // B32: call i32 @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 3, i32* %[[TMP1]])
+  // B64: %[[TMP:.*]] = alloca [3 x i64]
+  // B64: %[[TMP1:.*]] = getelementptr [3 x i64], [3 x i64]* %[[TMP]], i32 0, i32 0
+  // B64: store i64 1, i64* %[[TMP1]], align 8
+  // B64: %[[TMP2:.*]] = getelementptr [3 x i64], [3 x i64]* %[[TMP]], i32 0, i32 1
+  // B64: store i64 2, i64* %[[TMP2]], align 8
+  // B64: %[[TMP3:.*]] = getelementptr [3 x i64], [3 x i64]* %[[TMP]], i32 0, i32 2
+  // B64: store i64 4, i64* %[[TMP3]], align 8
+  // B64: call i32 @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 3, i64* %[[TMP1]])
+  enqueue_kernel(default_queue, flags, ndrange,
+                 ^(local void *p1, local void *p2, local void *p3) {
+                   return;
+                 },
+                 1, 2, 4);
+
   // COMMON: [[DEF_Q:%[0-9]+]] = load %opencl.queue_t*, %opencl.queue_t** %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, i32* %flags
-  // B32: call i32 (%opencl.queue_t{{.*}}*, i32, %struct.ndrange_t*, i8 addrspace(4)*, i32, ...) @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i32 0)
-  // B64: call i32 (%opencl.queue_t{{.*}}*, i32, %struct.ndrange_t*, i8 addrspace(4)*, i32, ...) @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i64 4294967296)
+  // B32: %[[TMP:.*]] = alloca [1 x i32]
+  // B32: %[[TMP1:.*]] = getelementptr [1 x i32], [1 x i32]* %[[TMP]], i32 0, i32 0
+  // B32: store i32 0, i32* %[[TMP1]], align 4
+  // B32: call i32 @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i32* %[[TMP1]])
+  // B64: %[[TMP:.*]] = alloca [1 x i64]
+  // B64: %[[TMP1:.*]] = getelementptr [1 x i64], [1 x i64]* %[[TMP]], i32 0, i32 0
+  // B64: store i64 4294967296, i64* %[[TMP1]], align 8
+  // B64: call i32 @__enqueue_kernel_vaargs(%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* [[NDR]]{{(.[0-9]+)?}}, i8 addrspace(4)* addrspacecast (i8 addrspace(1)* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor addrspace(2)* } addrspace(1)* @__block_literal_global{{(.[0-9]+)?}} to i8 addrspace(1)*) to i8 addrspace(4)*), i32 1, i64* %[[TMP1]])
   enqueue_kernel(default_queue, flags, ndrange,
                  ^(local void *p) {
                    return;
