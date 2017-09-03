@@ -35728,6 +35728,16 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
         return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, OpVT,
                            SubVec.getOperand(0));
       }
+
+      // If we're inserting all zeros into the upper half, change this to
+      // an insert into an all zeros vector. We will match this to a move
+      // with implicit upper bit zeroing during isel.
+      if (ISD::isBuildVectorAllZeros(SubVec.getNode())) {
+        return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
+                           getZeroVector(OpVT, Subtarget, DAG, dl), SubVec2,
+                           Vec.getOperand(2));
+
+      }
     }
   }
 

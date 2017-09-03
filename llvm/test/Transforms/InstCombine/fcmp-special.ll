@@ -21,3 +21,126 @@ define i1 @une_self(double %x) {
   ret i1 %tmp
 }
 
+; When just checking for a NaN (ORD/UNO), canonicalize constants.
+; Float/double are alternated for additional coverage.
+
+define i1 @ord_zero(float %x) {
+; CHECK-LABEL: @ord_zero(
+; CHECK-NEXT:    [[F:%.*]] = fcmp ord float %x, 0.000000e+00
+; CHECK-NEXT:    ret i1 [[F]]
+;
+  %f = fcmp ord float %x, 0.0
+  ret i1 %f
+}
+
+define i1 @ord_nonzero(double %x) {
+; CHECK-LABEL: @ord_nonzero(
+; CHECK-NEXT:    [[F:%.*]] = fcmp ord double %x, 3.000000e+00
+; CHECK-NEXT:    ret i1 [[F]]
+;
+  %f = fcmp ord double %x, 3.0
+  ret i1 %f
+}
+
+define i1 @ord_self(float %x) {
+; CHECK-LABEL: @ord_self(
+; CHECK-NEXT:    [[F:%.*]] = fcmp ord float %x, 0.000000e+00
+; CHECK-NEXT:    ret i1 [[F]]
+;
+  %f = fcmp ord float %x, %x
+  ret i1 %f
+}
+
+define i1 @uno_zero(double %x) {
+; CHECK-LABEL: @uno_zero(
+; CHECK-NEXT:    [[F:%.*]] = fcmp uno double %x, 0.000000e+00
+; CHECK-NEXT:    ret i1 [[F]]
+;
+  %f = fcmp uno double %x, 0.0
+  ret i1 %f
+}
+
+define i1 @uno_nonzero(float %x) {
+; CHECK-LABEL: @uno_nonzero(
+; CHECK-NEXT:    [[F:%.*]] = fcmp uno float %x, 3.000000e+00
+; CHECK-NEXT:    ret i1 [[F]]
+;
+  %f = fcmp uno float %x, 3.0
+  ret i1 %f
+}
+
+define i1 @uno_self(double %x) {
+; CHECK-LABEL: @uno_self(
+; CHECK-NEXT:    [[F:%.*]] = fcmp uno double %x, 0.000000e+00
+; CHECK-NEXT:    ret i1 [[F]]
+;
+  %f = fcmp uno double %x, %x
+  ret i1 %f
+}
+
+define <2 x i1> @ord_zero_vec(<2 x double> %x) {
+; CHECK-LABEL: @ord_zero_vec(
+; CHECK-NEXT:    [[F:%.*]] = fcmp ord <2 x double> %x, zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[F]]
+;
+  %f = fcmp ord <2 x double> %x, zeroinitializer
+  ret <2 x i1> %f
+}
+
+define <2 x i1> @ord_nonzero_vec(<2 x float> %x) {
+; CHECK-LABEL: @ord_nonzero_vec(
+; CHECK-NEXT:    [[F:%.*]] = fcmp ord <2 x float> %x, <float 3.000000e+00, float 5.000000e+00>
+; CHECK-NEXT:    ret <2 x i1> [[F]]
+;
+  %f = fcmp ord <2 x float> %x, <float 3.0, float 5.0>
+  ret <2 x i1> %f
+}
+
+define <2 x i1> @ord_self_vec(<2 x double> %x) {
+; CHECK-LABEL: @ord_self_vec(
+; CHECK-NEXT:    [[F:%.*]] = fcmp ord <2 x double> %x, zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[F]]
+;
+  %f = fcmp ord <2 x double> %x, %x
+  ret <2 x i1> %f
+}
+
+define <2 x i1> @uno_zero_vec(<2 x float> %x) {
+; CHECK-LABEL: @uno_zero_vec(
+; CHECK-NEXT:    [[F:%.*]] = fcmp uno <2 x float> %x, zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[F]]
+;
+  %f = fcmp uno <2 x float> %x, zeroinitializer
+  ret <2 x i1> %f
+}
+
+define <2 x i1> @uno_nonzero_vec(<2 x double> %x) {
+; CHECK-LABEL: @uno_nonzero_vec(
+; CHECK-NEXT:    [[F:%.*]] = fcmp uno <2 x double> %x, <double 3.000000e+00, double 5.000000e+00>
+; CHECK-NEXT:    ret <2 x i1> [[F]]
+;
+  %f = fcmp uno <2 x double> %x, <double 3.0, double 5.0>
+  ret <2 x i1> %f
+}
+
+define <2 x i1> @uno_self_vec(<2 x float> %x) {
+; CHECK-LABEL: @uno_self_vec(
+; CHECK-NEXT:    [[F:%.*]] = fcmp uno <2 x float> %x, zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[F]]
+;
+  %f = fcmp uno <2 x float> %x, %x
+  ret <2 x i1> %f
+}
+
+; If a scalar constant is NaN in any of the above tests, it would have been eliminated by InstSimplify.
+; If a vector has a NaN element, we don't do anything with it.
+
+define <2 x i1> @uno_vec_with_nan(<2 x double> %x) {
+; CHECK-LABEL: @uno_vec_with_nan(
+; CHECK-NEXT:    [[F:%.*]] = fcmp uno <2 x double> %x, <double 3.000000e+00, double 0x7FF00000FFFFFFFF>
+; CHECK-NEXT:    ret <2 x i1> [[F]]
+;
+  %f = fcmp uno <2 x double> %x, <double 3.0, double 0x7FF00000FFFFFFFF>
+  ret <2 x i1> %f
+}
+

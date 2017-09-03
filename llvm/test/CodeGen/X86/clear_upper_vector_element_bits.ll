@@ -21,8 +21,8 @@ define <2 x i64> @_clearupper2xi64a(<2 x i64>) nounwind {
 ;
 ; AVX2-LABEL: _clearupper2xi64a:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
 ; AVX2-NEXT:    retq
   %x0 = extractelement <2 x i64> %0, i32 0
   %x1 = extractelement <2 x i64> %0, i32 1
@@ -43,17 +43,11 @@ define <4 x i64> @_clearupper4xi64a(<4 x i64>) nounwind {
 ; SSE-NEXT:    andps %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: _clearupper4xi64a:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: _clearupper4xi64a:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
-; AVX2-NEXT:    retq
+; AVX-LABEL: _clearupper4xi64a:
+; AVX:       # BB#0:
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX-NEXT:    retq
   %x0 = extractelement <4 x i64> %0, i32 0
   %x1 = extractelement <4 x i64> %0, i32 1
   %x2 = extractelement <4 x i64> %0, i32 2
@@ -646,8 +640,8 @@ define <2 x i64> @_clearupper2xi64b(<2 x i64>) nounwind {
 ;
 ; AVX2-LABEL: _clearupper2xi64b:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
 ; AVX2-NEXT:    retq
   %x32 = bitcast <2 x i64> %0 to <4 x i32>
   %r0 = insertelement <4 x i32> %x32, i32 zeroinitializer, i32 1
@@ -664,17 +658,11 @@ define <4 x i64> @_clearupper4xi64b(<4 x i64>) nounwind {
 ; SSE-NEXT:    andps %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: _clearupper4xi64b:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: _clearupper4xi64b:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
-; AVX2-NEXT:    retq
+; AVX-LABEL: _clearupper4xi64b:
+; AVX:       # BB#0:
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX-NEXT:    retq
   %x32 = bitcast <4 x i64> %0 to <8 x i32>
   %r0 = insertelement <8 x i32> %x32, i32 zeroinitializer, i32 1
   %r1 = insertelement <8 x i32> %r0,  i32 zeroinitializer, i32 3
@@ -766,25 +754,15 @@ define <16 x i16> @_clearupper16xi16b(<16 x i16>) nounwind {
 ; SSE-NEXT:    andps %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: _clearupper16xi16b:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX1-NEXT:    vandps %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vandps %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: _clearupper16xi16b:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm2
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: _clearupper16xi16b:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm2
+; AVX-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm0[4,5,6,7]
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX-NEXT:    retq
   %x8 = bitcast <16 x i16> %0 to <32 x i8>
   %r0  = insertelement <32 x i8> %x8,  i8 zeroinitializer, i32 1
   %r1  = insertelement <32 x i8> %r0,  i8 zeroinitializer, i32 3
@@ -1451,8 +1429,8 @@ define <2 x i64> @_clearupper2xi64c(<2 x i64>) nounwind {
 ;
 ; AVX2-LABEL: _clearupper2xi64c:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
 ; AVX2-NEXT:    retq
   %r = and <2 x i64> <i64 4294967295, i64 4294967295>, %0
   ret <2 x i64> %r
@@ -1466,17 +1444,11 @@ define <4 x i64> @_clearupper4xi64c(<4 x i64>) nounwind {
 ; SSE-NEXT:    andps %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: _clearupper4xi64c:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: _clearupper4xi64c:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
-; AVX2-NEXT:    retq
+; AVX-LABEL: _clearupper4xi64c:
+; AVX:       # BB#0:
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX-NEXT:    retq
   %r = and <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>, %0
   ret <4 x i64> %r
 }

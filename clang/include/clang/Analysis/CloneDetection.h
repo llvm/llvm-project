@@ -288,14 +288,19 @@ public:
   MinComplexityConstraint(unsigned MinComplexity)
       : MinComplexity(MinComplexity) {}
 
-  size_t calculateStmtComplexity(const StmtSequence &Seq,
+  /// Calculates the complexity of the given StmtSequence.
+  /// \param Limit The limit of complexity we probe for. After reaching
+  ///              this limit during calculation, this method is exiting
+  ///              early to improve performance and returns this limit.
+  size_t calculateStmtComplexity(const StmtSequence &Seq, std::size_t Limit,
                                  const std::string &ParentMacroStack = "");
 
   void constrain(std::vector<CloneDetector::CloneGroup> &CloneGroups) {
     CloneConstraint::filterGroups(
         CloneGroups, [this](const CloneDetector::CloneGroup &A) {
           if (!A.empty())
-            return calculateStmtComplexity(A.front()) < MinComplexity;
+            return calculateStmtComplexity(A.front(), MinComplexity) <
+                   MinComplexity;
           else
             return false;
         });

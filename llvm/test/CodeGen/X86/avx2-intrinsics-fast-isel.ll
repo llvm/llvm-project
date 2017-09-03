@@ -315,12 +315,12 @@ define <4 x i64> @test_mm256_blend_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 define <2 x i64> @test_mm_blend_epi32(<2 x i64> %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_blend_epi32:
 ; X32:       # BB#0:
-; X32-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3]
+; X32-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_blend_epi32:
 ; X64:       # BB#0:
-; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3]
+; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3]
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
@@ -332,12 +332,12 @@ define <2 x i64> @test_mm_blend_epi32(<2 x i64> %a0, <2 x i64> %a1) {
 define <4 x i64> @test_mm256_blend_epi32(<4 x i64> %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_blend_epi32:
 ; X32:       # BB#0:
-; X32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4,5],ymm0[6,7]
+; X32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4,5],ymm0[6,7]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_blend_epi32:
 ; X64:       # BB#0:
-; X64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4,5],ymm0[6,7]
+; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4,5],ymm0[6,7]
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <8 x i32>
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>
@@ -1753,13 +1753,13 @@ define <4 x i64> @test0_mm256_inserti128_si256(<4 x i64> %a0, <2 x i64> %a1) nou
 ; X32-LABEL: test0_mm256_inserti128_si256:
 ; X32:       # BB#0:
 ; X32-NEXT:    # kill: %XMM1<def> %XMM1<kill> %YMM1<def>
-; X32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; X32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test0_mm256_inserti128_si256:
 ; X64:       # BB#0:
 ; X64-NEXT:    # kill: %XMM1<def> %XMM1<kill> %YMM1<def>
-; X64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; X64-NEXT:    retq
   %ext = shufflevector <2 x i64> %a1, <2 x i64> %a1, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %res = shufflevector <4 x i64> %a0, <4 x i64> %ext, <4 x i32> <i32 4, i32 5, i32 2, i32 3>

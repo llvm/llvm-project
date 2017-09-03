@@ -86,7 +86,7 @@ define <4 x i8> @vsel_4xi8(<4 x i8> %v1, <4 x i8> %v2) {
 ;
 ; AVX2-LABEL: vsel_4xi8:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3]
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3]
 ; AVX2-NEXT:    retq
 entry:
   %vsel = select <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i8> %v1, <4 x i8> %v2
@@ -120,7 +120,7 @@ define <4 x i16> @vsel_4xi16(<4 x i16> %v1, <4 x i16> %v2) {
 ;
 ; AVX2-LABEL: vsel_4xi16:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
 ; AVX2-NEXT:    retq
 entry:
   %vsel = select <4 x i1> <i1 true, i1 false, i1 true, i1 true>, <4 x i16> %v1, <4 x i16> %v2
@@ -154,7 +154,7 @@ define <4 x i32> @vsel_i32(<4 x i32> %v1, <4 x i32> %v2) {
 ;
 ; AVX2-LABEL: vsel_i32:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
 ; AVX2-NEXT:    retq
 entry:
   %vsel = select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i32> %v1, <4 x i32> %v2
@@ -213,7 +213,7 @@ define <2 x i64> @vsel_i64(<2 x i64> %v1, <2 x i64> %v2) {
 ;
 ; AVX2-LABEL: vsel_i64:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX2-NEXT:    retq
 entry:
   %vsel = select <2 x i1> <i1 true, i1 false>, <2 x i64> %v1, <2 x i64> %v2
@@ -346,15 +346,10 @@ define <8 x i32> @vsel_i328(<8 x i32> %v1, <8 x i32> %v2) {
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3,4,5,6,7]
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: vsel_i328:
-; AVX1:       # BB#0: # %entry
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: vsel_i328:
-; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7]
-; AVX2-NEXT:    retq
+; AVX-LABEL: vsel_i328:
+; AVX:       # BB#0: # %entry
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7]
+; AVX-NEXT:    retq
 entry:
   %vsel = select <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false>, <8 x i32> %v1, <8 x i32> %v2
   ret <8 x i32> %vsel
@@ -436,8 +431,8 @@ define <8 x i64> @vsel_i648(<8 x i64> %v1, <8 x i64> %v2) {
 ;
 ; AVX2-LABEL: vsel_i648:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3,4,5,6,7]
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1],ymm3[2,3,4,5,6,7]
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3,4,5,6,7]
+; AVX2-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],ymm3[2,3,4,5,6,7]
 ; AVX2-NEXT:    retq
 entry:
   %vsel = select <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false>, <8 x i64> %v1, <8 x i64> %v2
@@ -795,7 +790,7 @@ define <4 x i64> @blend_shufflevector_4xi64(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX2-LABEL: blend_shufflevector_4xi64:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5,6,7]
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    retq
 entry:
   %select = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 4, i32 1, i32 6, i32 7>

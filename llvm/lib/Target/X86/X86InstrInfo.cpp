@@ -9426,6 +9426,10 @@ static const uint16_t ReplaceableInstrsAVX2[][3] = {
   { X86::VBROADCASTSDYrr, X86::VBROADCASTSDYrr, X86::VPBROADCASTQYrr},
   { X86::VBROADCASTSDYrm, X86::VBROADCASTSDYrm, X86::VPBROADCASTQYrm},
   { X86::VBROADCASTF128,  X86::VBROADCASTF128,  X86::VBROADCASTI128 },
+  { X86::VBLENDPSrri,     X86::VBLENDPSrri,     X86::VPBLENDDrri },
+  { X86::VBLENDPSrmi,     X86::VBLENDPSrmi,     X86::VPBLENDDrmi },
+  { X86::VBLENDPSYrri,    X86::VBLENDPSYrri,    X86::VPBLENDDYrri },
+  { X86::VBLENDPSYrmi,    X86::VBLENDPSYrmi,    X86::VPBLENDDYrmi },
 };
 
 static const uint16_t ReplaceableInstrsAVX2InsertExtract[][3] = {
