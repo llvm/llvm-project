@@ -1116,6 +1116,11 @@ private:
                (!Line.MightBeFunctionDecl || Current.NestingLevel != 0)) {
       Contexts.back().FirstStartOfName = &Current;
       Current.Type = TT_StartOfName;
+    } else if (Current.is(tok::semi)) {
+      // Reset FirstStartOfName after finding a semicolon so that a for loop
+      // with multiple increment statements is not confused with a for loop
+      // having multiple variable declarations.
+      Contexts.back().FirstStartOfName = nullptr;
     } else if (Current.isOneOf(tok::kw_auto, tok::kw___auto_type)) {
       AutoFound = true;
     } else if (Current.is(tok::arrow) &&
