@@ -110,6 +110,12 @@ private:
   }
 };
 
+/// Represents base address of the CU.
+struct BaseAddress {
+  uint64_t Address;
+  uint64_t SectionIndex;
+};
+
 class DWARFUnit {
   DWARFContext &Context;
   /// Section containing this DWARFUnit.
@@ -135,7 +141,7 @@ class DWARFUnit {
   uint32_t Length;
   const DWARFAbbreviationDeclarationSet *Abbrevs;
   uint8_t UnitType;
-  uint64_t BaseAddr;
+  llvm::Optional<BaseAddress> BaseAddr;
   /// The compile unit debug information entry items.
   std::vector<DWARFDebugInfoEntry> DieArray;
 
@@ -259,11 +265,9 @@ public:
     llvm_unreachable("Invalid UnitType.");
   }
 
-  uint64_t getBaseAddress() const { return BaseAddr; }
+  llvm::Optional<BaseAddress> getBaseAddress() const { return BaseAddr; }
 
-  void setBaseAddress(uint64_t base_addr) {
-    BaseAddr = base_addr;
-  }
+  void setBaseAddress(BaseAddress BaseAddr) { this->BaseAddr = BaseAddr; }
 
   DWARFDie getUnitDIE(bool ExtractUnitDIEOnly = true) {
     extractDIEsIfNeeded(ExtractUnitDIEOnly);
