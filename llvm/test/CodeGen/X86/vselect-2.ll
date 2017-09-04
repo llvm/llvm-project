@@ -23,7 +23,7 @@ define <4 x i32> @test1(<4 x i32> %A, <4 x i32> %B) {
 ;
 ; AVX2-LABEL: test1:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX2-NEXT:    retq
   %select = select <4 x i1><i1 true, i1 true, i1 false, i1 false>, <4 x i32> %A, <4 x i32> %B
   ret <4 x i32> %select
@@ -47,7 +47,7 @@ define <4 x i32> @test2(<4 x i32> %A, <4 x i32> %B) {
 ;
 ; AVX2-LABEL: test2:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; AVX2-NEXT:    retq
   %select = select <4 x i1><i1 false, i1 false, i1 true, i1 true>, <4 x i32> %A, <4 x i32> %B
   ret <4 x i32> %select

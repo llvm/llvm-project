@@ -1,4 +1,6 @@
-target triple = "x86_64-unknown-linux-gnu"
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=haswell %s -o - > /dev/null
+
+; Fix PR34397
 
 define internal fastcc <32 x i64> @test(<32 x i64> %s.0.6, <32 x i64> %s.0.7) {
 entry:

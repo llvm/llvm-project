@@ -33,7 +33,7 @@ for.cond.cleanup:
 
 ; CHECK: [[EPIL_PEEL0]]:
 ; CHECK: [[PEEL_CMP0:%[a-z.0-9]+]] = icmp eq i64 %xtraiter, 1
-; CHECK: br i1 [[PEEL_CMP0]], label %[[EPIL_EXIT:.*]], label %[[EPIL_PEEL1:.*]],
+; CHECK: br i1 [[PEEL_CMP0]], label %[[EPIL_EXIT:.*]], label %[[EPIL_PEEL1:.*]]
 
 ; CHECK: [[EPIL_EXIT]]:
 ; CHECK: br label %[[EXIT]]
@@ -54,7 +54,7 @@ for.cond.cleanup:
 
 ; CHECK: [[EPIL_PEEL1]]:
 ; CHECK: [[PEEL_CMP1:%[a-z.0-9]+]] = icmp eq i64 %xtraiter, 2
-; CHECK: br i1 [[PEEL_CMP1]], label %[[EPIL_EXIT]], label %[[EPIL_PEEL2:.*]],
+; CHECK: br i1 [[PEEL_CMP1]], label %[[EPIL_EXIT]], label %[[EPIL_PEEL2:.*]]
 
 ; CHECK: [[EPIL_PEEL2]]:
 ; CHECK: br label %[[EXIT]]

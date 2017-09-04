@@ -420,7 +420,7 @@ public:
     //   do not add another MemoryAccess.
     MemoryAccess *Access = TargetStmt->getArrayAccessOrNULLFor(LI);
     if (Access && !DoIt)
-      return FD_CanForwardLeaf;
+      return FD_CanForwardTree;
 
     if (DoIt)
       TargetStmt->prependInstruction(LI);

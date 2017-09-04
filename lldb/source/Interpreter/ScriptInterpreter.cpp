@@ -69,10 +69,9 @@ lldb::ScriptLanguage
 ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
   if (language.equals_lower(LanguageToString(eScriptLanguageNone)))
     return eScriptLanguageNone;
-  else if (language.equals_lower(LanguageToString(eScriptLanguagePython)))
+  if (language.equals_lower(LanguageToString(eScriptLanguagePython)))
     return eScriptLanguagePython;
-  else
-    return eScriptLanguageUnknown;
+  return eScriptLanguageUnknown;
 }
 
 Status ScriptInterpreter::SetBreakpointCommandCallback(

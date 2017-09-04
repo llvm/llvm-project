@@ -197,7 +197,41 @@
   define float @test_undef4(float %a) {
     %r = fadd float %a, undef
     ret float %r
-  }  
+  }
+  
+  define i32 @test_i32(i32 %a, i32 %f, i32 %t) {
+  entry:
+    %cmp = icmp sgt i32 %a, 0
+    br i1 %cmp, label %cond.true, label %cond.false
+
+  cond.true:                                        ; preds = %entry
+    br label %cond.end
+
+  cond.false:                                       ; preds = %entry
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.false, %cond.true
+    %cond = phi i32 [ %f, %cond.true ], [ %t, %cond.false ]
+    ret i32 %cond
+  }
+
+  define float @test_float(i32 %a, float %f, float %t) {
+  entry:
+    %cmp = icmp sgt i32 %a, 0
+    br i1 %cmp, label %cond.true, label %cond.false
+
+  cond.true:                                        ; preds = %entry
+    br label %cond.end
+
+  cond.false:                                       ; preds = %entry
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.false, %cond.true
+    %cond = phi float [ %f, %cond.true ], [ %t, %cond.false ]
+    ret float %cond
+  }
+
+  
 ...
 ---
 name:            test_add_i8
@@ -1246,4 +1280,107 @@ body:             |
     RET 0, implicit %xmm0
 
 ...
+---
+name:            test_i32
+# CHECK-LABEL: name:  test_i32
+alignment:       4
+legalized:       true
+regBankSelected: false
+tracksRegLiveness: true
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 2, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 3, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 4, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 5, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+# CHECK:       bb.3.cond.end:
+# CHECK-NEXT:      %5(s32) = G_PHI %1(s32), %bb.1.cond.true, %2(s32), %bb.2.cond.false
+# CHECK-NEXT:      %eax = COPY %5(s32)
+# CHECK-NEXT:      RET 0, implicit %eax
+body:             |
+  bb.0.entry:
+    successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
+    liveins: %edi, %edx, %esi
 
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s32) = COPY %edx
+    %3(s32) = G_CONSTANT i32 0
+    %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+    G_BRCOND %4(s1), %bb.1.cond.true
+    G_BR %bb.2.cond.false
+
+  bb.1.cond.true:
+    successors: %bb.3.cond.end(0x80000000)
+
+    G_BR %bb.3.cond.end
+
+  bb.2.cond.false:
+    successors: %bb.3.cond.end(0x80000000)
+
+  bb.3.cond.end:
+    %5(s32) = G_PHI %1(s32), %bb.1.cond.true, %2(s32), %bb.2.cond.false
+    %eax = COPY %5(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_float
+# CHECK-LABEL: name:  test_float
+alignment:       4
+legalized:       true
+regBankSelected: false
+tracksRegLiveness: true
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 2, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 3, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 4, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 5, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+# CHECK:         bb.3.cond.end:
+# CHECK-NEXT:      %5(s32) = G_PHI %1(s32), %bb.1.cond.true, %2(s32), %bb.2.cond.false
+# CHECK-NEXT:      %xmm0 = COPY %5(s32)
+# CHECK-NEXT:      RET 0, implicit %xmm0
+body:             |
+  bb.0.entry:
+    successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
+    liveins: %edi, %xmm0, %xmm1
+
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %xmm0
+    %2(s32) = COPY %xmm1
+    %3(s32) = G_CONSTANT i32 0
+    %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+    G_BRCOND %4(s1), %bb.1.cond.true
+    G_BR %bb.2.cond.false
+
+  bb.1.cond.true:
+    successors: %bb.3.cond.end(0x80000000)
+
+    G_BR %bb.3.cond.end
+
+  bb.2.cond.false:
+    successors: %bb.3.cond.end(0x80000000)
+
+  bb.3.cond.end:
+    %5(s32) = G_PHI %1(s32), %bb.1.cond.true, %2(s32), %bb.2.cond.false
+    %xmm0 = COPY %5(s32)
+    RET 0, implicit %xmm0
+
+...

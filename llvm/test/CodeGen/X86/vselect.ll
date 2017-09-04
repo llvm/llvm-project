@@ -123,7 +123,7 @@ define <8 x i16> @test7(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX2-LABEL: test7:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX2-NEXT:    retq
   %1 = select <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i16> %a, <8 x i16> %b
   ret <8 x i16> %1
@@ -147,7 +147,7 @@ define <8 x i16> @test8(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX2-LABEL: test8:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; AVX2-NEXT:    retq
   %1 = select <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <8 x i16> %a, <8 x i16> %b
   ret <8 x i16> %1
@@ -320,7 +320,7 @@ define <4 x i32> @test19(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; AVX2-LABEL: test19:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX2-NEXT:    retq
   %1 = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x i32> %a, <4 x i32> %b
   ret <4 x i32> %1
@@ -363,7 +363,7 @@ define <2 x i64> @test21(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX2-LABEL: test21:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; AVX2-NEXT:    retq
   %1 = select <2 x i1> <i1 false, i1 true>, <2 x i64> %a, <2 x i64> %b
   ret <2 x i64> %1
@@ -408,7 +408,7 @@ define <4 x i32> @test23(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; AVX2-LABEL: test23:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX2-NEXT:    retq
   %1 = select <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i32> %a, <4 x i32> %b
   ret <4 x i32> %1
@@ -453,7 +453,7 @@ define <2 x i64> @test25(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX2-LABEL: test25:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX2-NEXT:    retq
   %1 = select <2 x i1> <i1 true, i1 false>, <2 x i64> %a, <2 x i64> %b
   ret <2 x i64> %1

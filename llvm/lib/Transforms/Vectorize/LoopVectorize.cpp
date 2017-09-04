@@ -1960,7 +1960,7 @@ public:
 private:
   /// \return An upper bound for the vectorization factor, larger than zero.
   /// One is returned if vectorization should best be avoided due to cost.
-  unsigned computeFeasibleMaxVF(bool OptForSize);
+  unsigned computeFeasibleMaxVF(bool OptForSize, unsigned ConstTripCount = 0);
 
   /// The vectorization cost is a combination of the cost itself and a boolean
   /// indicating whether any of the contributing operations will actually
@@ -6187,7 +6187,7 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(bool OptForSize) {
     return None;
   }
 
-  unsigned MaxVF = computeFeasibleMaxVF(OptForSize);
+  unsigned MaxVF = computeFeasibleMaxVF(OptForSize, TC);
 
   if (TC % MaxVF != 0) {
     // If the trip count that we found modulo the vectorization factor is not
@@ -6208,7 +6208,9 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(bool OptForSize) {
   return MaxVF;
 }
 
-unsigned LoopVectorizationCostModel::computeFeasibleMaxVF(bool OptForSize) {
+unsigned
+LoopVectorizationCostModel::computeFeasibleMaxVF(bool OptForSize,
+                                                 unsigned ConstTripCount) {
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
   unsigned SmallestType, WidestType;
   std::tie(SmallestType, WidestType) = getSmallestAndWidestTypes();
@@ -6237,7 +6239,9 @@ unsigned LoopVectorizationCostModel::computeFeasibleMaxVF(bool OptForSize) {
   if (MaxVectorSize == 0) {
     DEBUG(dbgs() << "LV: The target has no vector registers.\n");
     MaxVectorSize = 1;
-  }
+  } else if (ConstTripCount && ConstTripCount < MaxVectorSize &&
+             isPowerOf2_32(ConstTripCount))
+    MaxVectorSize = ConstTripCount;
 
   assert(MaxVectorSize <= 64 && "Did not expect to pack so many elements"
                                 " into one vector!");

@@ -146,41 +146,22 @@ define <4 x i64> @var_shuffle_v4i64_v4i64_xxxx_i64(<4 x i64> %x, i64 %i0, i64 %i
 }
 
 define <4 x i64> @var_shuffle_v4i64_v4i64_xx00_i64(<4 x i64> %x, i64 %i0, i64 %i1, i64 %i2, i64 %i3) nounwind {
-; AVX1-LABEL: var_shuffle_v4i64_v4i64_xx00_i64:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    pushq %rbp
-; AVX1-NEXT:    movq %rsp, %rbp
-; AVX1-NEXT:    andq $-32, %rsp
-; AVX1-NEXT:    subq $64, %rsp
-; AVX1-NEXT:    andl $3, %edi
-; AVX1-NEXT:    andl $3, %esi
-; AVX1-NEXT:    vmovaps %ymm0, (%rsp)
-; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    movq %rbp, %rsp
-; AVX1-NEXT:    popq %rbp
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: var_shuffle_v4i64_v4i64_xx00_i64:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    pushq %rbp
-; AVX2-NEXT:    movq %rsp, %rbp
-; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $64, %rsp
-; AVX2-NEXT:    andl $3, %edi
-; AVX2-NEXT:    andl $3, %esi
-; AVX2-NEXT:    vmovaps %ymm0, (%rsp)
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    movq %rbp, %rsp
-; AVX2-NEXT:    popq %rbp
-; AVX2-NEXT:    retq
+; ALL-LABEL: var_shuffle_v4i64_v4i64_xx00_i64:
+; ALL:       # BB#0:
+; ALL-NEXT:    pushq %rbp
+; ALL-NEXT:    movq %rsp, %rbp
+; ALL-NEXT:    andq $-32, %rsp
+; ALL-NEXT:    subq $64, %rsp
+; ALL-NEXT:    andl $3, %edi
+; ALL-NEXT:    andl $3, %esi
+; ALL-NEXT:    vmovaps %ymm0, (%rsp)
+; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; ALL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; ALL-NEXT:    vmovdqa %xmm0, %xmm0
+; ALL-NEXT:    movq %rbp, %rsp
+; ALL-NEXT:    popq %rbp
+; ALL-NEXT:    retq
   %x0 = extractelement <4 x i64> %x, i64 %i0
   %x1 = extractelement <4 x i64> %x, i64 %i1
   %x2 = extractelement <4 x i64> %x, i64 %i2

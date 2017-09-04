@@ -164,14 +164,14 @@ define <8 x float> @combine_as_vpermps(<8 x float> %a0) {
 define <32 x i8> @combine_permq_pshufb_as_vpblendd(<4 x i64> %a0) {
 ; X32-LABEL: combine_permq_pshufb_as_vpblendd:
 ; X32:       # BB#0:
-; X32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_permq_pshufb_as_vpblendd:
 ; X64:       # BB#0:
-; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; X64-NEXT:    retq
   %1 = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   %2 = bitcast <4 x i64> %1 to <32 x i8>

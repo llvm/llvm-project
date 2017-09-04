@@ -3744,7 +3744,7 @@ static void GenerateVariantsOf(TreePatternNode *N,
   // If this node is commutative, consider the commuted order.
   bool isCommIntrinsic = N->isCommutativeIntrinsic(CDP);
   if (NodeInfo.hasProperty(SDNPCommutative) || isCommIntrinsic) {
-    assert((N->getNumChildren()==2 || isCommIntrinsic) &&
+    assert((N->getNumChildren()>=2 || isCommIntrinsic) &&
            "Commutative but doesn't have 2 children!");
     // Don't count children which are actually register references.
     unsigned NC = 0;
@@ -3772,9 +3772,14 @@ static void GenerateVariantsOf(TreePatternNode *N,
       for (unsigned i = 3; i != NC; ++i)
         Variants.push_back(ChildVariants[i]);
       CombineChildVariants(N, Variants, OutVariants, CDP, DepVars);
-    } else if (NC == 2)
-      CombineChildVariants(N, ChildVariants[1], ChildVariants[0],
-                           OutVariants, CDP, DepVars);
+    } else if (NC == N->getNumChildren()) {
+      std::vector<std::vector<TreePatternNode*> > Variants;
+      Variants.push_back(ChildVariants[1]);
+      Variants.push_back(ChildVariants[0]);
+      for (unsigned i = 2; i != NC; ++i)
+        Variants.push_back(ChildVariants[i]);
+      CombineChildVariants(N, Variants, OutVariants, CDP, DepVars);
+    }
   }
 }
 
