@@ -607,13 +607,11 @@ int main(int argc, char **argv, char * const *envp) {
     }
 
     // Create a remote target client running over the channel.
-    typedef orc::remote::OrcRemoteTargetClient<orc::rpc::RawByteChannel>
-      MyRemote;
-    auto R = ExitOnErr(MyRemote::Create(*C));
+    typedef orc::remote::OrcRemoteTargetClient MyRemote;
+    auto R = ExitOnErr(MyRemote::Create(*C, ExitOnErr));
 
     // Create a remote memory manager.
-    std::unique_ptr<MyRemote::RCMemoryManager> RemoteMM;
-    ExitOnErr(R->createRemoteMemoryManager(RemoteMM));
+    auto RemoteMM = ExitOnErr(R->createRemoteMemoryManager());
 
     // Forward MCJIT's memory manager calls to the remote memory manager.
     static_cast<ForwardingMemoryManager*>(RTDyldMM)->setMemMgr(

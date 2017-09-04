@@ -13452,6 +13452,15 @@ static SDValue lowerV16F32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     // Otherwise, fall back to a SHUFPS sequence.
     return lowerVectorShuffleWithSHUFPS(DL, MVT::v16f32, RepeatedMask, V1, V2, DAG);
   }
+
+  // If we have a single input shuffle with different shuffle patterns in the
+  // 128-bit lanes and don't lane cross, use variable mask VPERMILPS.
+  if (V2.isUndef() &&
+      !is128BitLaneCrossingShuffleMask(MVT::v16f32, Mask)) {
+    SDValue VPermMask = getConstVector(Mask, MVT::v16i32, DAG, DL, true);
+    return DAG.getNode(X86ISD::VPERMILPV, DL, MVT::v16f32, V1, VPermMask);
+  }
+
   // If we have AVX512F support, we can use VEXPAND.
   if (SDValue V = lowerVectorShuffleToEXPAND(DL, MVT::v16f32, Zeroable, Mask,
                                              V1, V2, DAG, Subtarget))

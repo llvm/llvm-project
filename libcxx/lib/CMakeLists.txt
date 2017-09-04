@@ -91,6 +91,7 @@ else()
   add_library_flags_if(LIBCXX_HAS_GCC_S_LIB gcc_s)
 endif()
 add_library_flags_if(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB atomic)
+add_library_flags_if(MINGW "${MINGW_LIBRARIES}")
 
 # Add the unwinder library.
 if (LIBCXXABI_USE_LLVM_UNWINDER)

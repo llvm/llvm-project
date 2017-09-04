@@ -1,15 +1,6 @@
-;RUN: opt -globalopt -f %s | llc -filetype=obj -o -| llvm-dwarfdump - | FileCheck %s
-;REQUIRES: x86-registered-target
+;RUN: opt -S -globalopt -f %s | FileCheck %s
 
-;CHECK: DW_AT_name [DW_FORM_strp] {{.*}} "foo"
-;CHECK-NEXT: DW_AT_type {{.*}}
-;CHECK-NEXT: DW_AT_decl_file {{.*}}
-;CHECK-NEXT: DW_AT_decl_line {{.*}}
-;CHECK-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_addr 0x0, DW_OP_deref, DW_OP_constu 0x6f, DW_OP_mul, DW_OP_constu 0x0, DW_OP_plus, DW_OP_stack_value)
-
-source_filename = "integer-bool-dwarf.c"
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
+;CHECK: !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression(DW_OP_deref, DW_OP_constu, 111, DW_OP_mul, DW_OP_constu, 0, DW_OP_plus, DW_OP_stack_value))
 
 @foo = internal global i32 0, align 4, !dbg !0
 
