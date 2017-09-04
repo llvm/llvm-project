@@ -85,7 +85,7 @@ private:
                      MachineFunction &MF) const;
   bool selectCondBranch(MachineInstr &I, MachineRegisterInfo &MRI,
                         MachineFunction &MF) const;
-  bool selectImplicitDef(MachineInstr &I, MachineRegisterInfo &MRI) const;
+  bool selectImplicitDefOrPHI(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
   // emit insert subreg instruction and insert it before MachineInstr &I
   bool emitInsertSubreg(unsigned DstReg, unsigned SrcReg, MachineInstr &I,
@@ -290,13 +290,10 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
 
     if (Opcode == TargetOpcode::LOAD_STACK_GUARD)
       return false;
-    if (Opcode == TargetOpcode::PHI)
-      return false;
 
     if (I.isCopy())
       return selectCopy(I, MRI);
 
-    // TODO: handle more cases - LOAD_STACK_GUARD, PHI
     return true;
   }
 
@@ -335,7 +332,7 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
     return true;
   if (selectCondBranch(I, MRI, MF))
     return true;
-  if (selectImplicitDef(I, MRI))
+  if (selectImplicitDefOrPHI(I, MRI))
     return true;
 
   return false;
@@ -1131,10 +1128,11 @@ bool X86InstructionSelector::selectCondBranch(MachineInstr &I,
   return true;
 }
 
-bool X86InstructionSelector::selectImplicitDef(MachineInstr &I,
-                                               MachineRegisterInfo &MRI) const {
+bool X86InstructionSelector::selectImplicitDefOrPHI(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
 
-  if (I.getOpcode() != TargetOpcode::G_IMPLICIT_DEF)
+  if (I.getOpcode() != TargetOpcode::G_IMPLICIT_DEF &&
+      I.getOpcode() != TargetOpcode::G_PHI)
     return false;
 
   unsigned DstReg = I.getOperand(0).getReg();
@@ -1150,7 +1148,11 @@ bool X86InstructionSelector::selectImplicitDef(MachineInstr &I,
     }
   }
 
-  I.setDesc(TII.get(X86::IMPLICIT_DEF));
+  if (I.getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+    I.setDesc(TII.get(X86::IMPLICIT_DEF));
+  else
+    I.setDesc(TII.get(X86::PHI));
+
   return true;
 }
 

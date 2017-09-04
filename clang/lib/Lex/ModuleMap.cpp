@@ -746,8 +746,16 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
   return std::make_pair(Result, true);
 }
 
+Module *ModuleMap::createGlobalModuleForInterfaceUnit(SourceLocation Loc) {
+  auto *Result = new Module("<global>", Loc, nullptr, /*IsFramework*/ false,
+                            /*IsExplicit*/ true, NumCreatedModules++);
+  Result->Kind = Module::GlobalModuleFragment;
+  return Result;
+}
+
 Module *ModuleMap::createModuleForInterfaceUnit(SourceLocation Loc,
-                                                StringRef Name) {
+                                                StringRef Name,
+                                                Module *GlobalModule) {
   assert(LangOpts.CurrentModule == Name && "module name mismatch");
   assert(!Modules[Name] && "redefining existing module");
 
@@ -756,6 +764,9 @@ Module *ModuleMap::createModuleForInterfaceUnit(SourceLocation Loc,
                  /*IsExplicit*/ false, NumCreatedModules++);
   Result->Kind = Module::ModuleInterfaceUnit;
   Modules[Name] = SourceModule = Result;
+
+  // Reparent the current global module fragment as a submodule of this module.
+  GlobalModule->setParent(Result);
 
   // Mark the main source file as being within the newly-created module so that
   // declarations and macros are properly visibility-restricted to it.

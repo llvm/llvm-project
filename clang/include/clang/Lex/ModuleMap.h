@@ -472,6 +472,14 @@ public:
                                                bool IsFramework,
                                                bool IsExplicit);
 
+  /// \brief Create a 'global module' for a C++ Modules TS module interface
+  /// unit.
+  ///
+  /// We model the global module as a submodule of the module interface unit.
+  /// Unfortunately, we can't create the module interface unit's Module until
+  /// later, because we don't know what it will be called.
+  Module *createGlobalModuleForInterfaceUnit(SourceLocation Loc);
+
   /// \brief Create a new module for a C++ Modules TS module interface unit.
   /// The module must not already exist, and will be configured for the current
   /// compilation.
@@ -479,7 +487,8 @@ public:
   /// Note that this also sets the current module to the newly-created module.
   ///
   /// \returns The newly-created module.
-  Module *createModuleForInterfaceUnit(SourceLocation Loc, StringRef Name);
+  Module *createModuleForInterfaceUnit(SourceLocation Loc, StringRef Name,
+                                       Module *GlobalModule);
 
   /// \brief Infer the contents of a framework module map from the given
   /// framework directory.

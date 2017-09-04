@@ -372,6 +372,10 @@ public:
     return hasCachedLinkage();
   }
 
+  /// Get the module that owns this declaration for linkage purposes.
+  /// There only ever is such a module under the C++ Modules TS.
+  Module *getOwningModuleForLinkage() const;
+
   /// \brief Looks through UsingDecls and ObjCCompatibleAliasDecls for
   /// the underlying named decl.
   NamedDecl *getUnderlyingDecl() {

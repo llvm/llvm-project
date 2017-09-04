@@ -733,7 +733,7 @@ public:
     return getModuleOwnershipKind() != ModuleOwnershipKind::Unowned;
   }
 
-  /// Get the module that owns this declaration.
+  /// Get the module that owns this declaration (for visibility purposes).
   Module *getOwningModule() const {
     return isFromASTFile() ? getImportedOwningModule() : getLocalOwningModule();
   }
