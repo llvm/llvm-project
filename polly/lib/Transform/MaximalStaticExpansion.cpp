@@ -496,7 +496,7 @@ bool MaximalStaticExpander::runOnScop(Scop &S) {
   auto &D = DI.getDependences(Dependences::AL_Reference);
   auto Dependences = isl::give(D.getDependences(Dependences::TYPE_RAW));
 
-  SmallPtrSet<ScopArrayInfo *, 4> CurrentSAI(S.arrays().begin(),
+  SmallVector<ScopArrayInfo *, 4> CurrentSAI(S.arrays().begin(),
                                              S.arrays().end());
 
   for (auto SAI : CurrentSAI) {
