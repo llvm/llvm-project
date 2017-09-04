@@ -742,12 +742,11 @@ void UnwrappedLineParser::parsePPEndIf() {
   // preprocessor indent.
   unsigned TokenPosition = Tokens->getPosition();
   FormatToken *PeekNext = AllTokens[TokenPosition];
-  if (FoundIncludeGuardStart && PPBranchLevel == -1 && PeekNext->is(tok::eof)) {
-    for (auto &Line : Lines) {
+  if (FoundIncludeGuardStart && PPBranchLevel == -1 && PeekNext->is(tok::eof) &&
+      Style.IndentPPDirectives != FormatStyle::PPDIS_None)
+    for (auto &Line : Lines)
       if (Line.InPPDirective && Line.Level > 0)
         --Line.Level;
-    }
-  }
 }
 
 void UnwrappedLineParser::parsePPDefine() {

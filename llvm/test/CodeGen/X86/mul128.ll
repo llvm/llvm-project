@@ -7,7 +7,7 @@ define i128 @foo(i128 %t, i128 %u) {
 ; X64-NEXT:    movq %rdx, %r8
 ; X64-NEXT:    imulq %rdi, %rcx
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    mulq %rdx
+; X64-NEXT:    mulq %r8
 ; X64-NEXT:    addq %rcx, %rdx
 ; X64-NEXT:    imulq %r8, %rsi
 ; X64-NEXT:    addq %rsi, %rdx
