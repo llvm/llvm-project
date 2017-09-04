@@ -198,8 +198,7 @@ bool lldb_private::operator==(const lldb_private::UUID &lhs,
 
 bool lldb_private::operator!=(const lldb_private::UUID &lhs,
                               const lldb_private::UUID &rhs) {
-  return ::memcmp(lhs.GetBytes(), rhs.GetBytes(),
-                  sizeof(lldb_private::UUID::ValueType)) != 0;
+  return !(lhs == rhs);
 }
 
 bool lldb_private::operator<(const lldb_private::UUID &lhs,
@@ -210,18 +209,15 @@ bool lldb_private::operator<(const lldb_private::UUID &lhs,
 
 bool lldb_private::operator<=(const lldb_private::UUID &lhs,
                               const lldb_private::UUID &rhs) {
-  return ::memcmp(lhs.GetBytes(), rhs.GetBytes(),
-                  sizeof(lldb_private::UUID::ValueType)) <= 0;
+  return !(lhs > rhs);
 }
 
 bool lldb_private::operator>(const lldb_private::UUID &lhs,
                              const lldb_private::UUID &rhs) {
-  return ::memcmp(lhs.GetBytes(), rhs.GetBytes(),
-                  sizeof(lldb_private::UUID::ValueType)) > 0;
+  return rhs < lhs;
 }
 
 bool lldb_private::operator>=(const lldb_private::UUID &lhs,
                               const lldb_private::UUID &rhs) {
-  return ::memcmp(lhs.GetBytes(), rhs.GetBytes(),
-                  sizeof(lldb_private::UUID::ValueType)) >= 0;
+  return !(lhs < rhs);
 }

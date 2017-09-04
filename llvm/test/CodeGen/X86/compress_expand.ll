@@ -226,8 +226,7 @@ define void @test11(i64* %base, <2 x i64> %V, <2 x i1> %mask) {
 ; KNL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
 ; KNL-NEXT:    vpsllq $63, %xmm1, %xmm1
 ; KNL-NEXT:    vpsraq $63, %zmm1, %zmm1
-; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; KNL-NEXT:    vinserti32x4 $0, %xmm1, %zmm2, %zmm1
+; KNL-NEXT:    vmovdqa %xmm1, %xmm1
 ; KNL-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL-NEXT:    vpcompressq %zmm0, (%rdi) {%k1}
@@ -249,8 +248,7 @@ define void @test12(float* %base, <4 x float> %V, <4 x i1> %mask) {
 ; KNL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
 ; KNL-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL-NEXT:    vpsrad $31, %xmm1, %xmm1
-; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; KNL-NEXT:    vinserti32x4 $0, %xmm1, %zmm2, %zmm1
+; KNL-NEXT:    vmovdqa %xmm1, %xmm1
 ; KNL-NEXT:    vpslld $31, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k1
 ; KNL-NEXT:    vcompressps %zmm0, (%rdi) {%k1}
@@ -275,8 +273,7 @@ define <2 x float> @test13(float* %base, <2 x float> %src0, <2 x i32> %trigger) 
 ; KNL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
 ; KNL-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,2],zero,zero
-; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; KNL-NEXT:    vinserti32x4 $0, %xmm1, %zmm2, %zmm1
+; KNL-NEXT:    vmovaps %xmm1, %xmm1
 ; KNL-NEXT:    vpslld $31, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k1
 ; KNL-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
@@ -303,8 +300,7 @@ define void @test14(float* %base, <2 x float> %V, <2 x i32> %trigger) {
 ; KNL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
 ; KNL-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,2],zero,zero
-; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; KNL-NEXT:    vinserti32x4 $0, %xmm1, %zmm2, %zmm1
+; KNL-NEXT:    vmovaps %xmm1, %xmm1
 ; KNL-NEXT:    vpslld $31, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k1
 ; KNL-NEXT:    vcompressps %zmm0, (%rdi) {%k1}

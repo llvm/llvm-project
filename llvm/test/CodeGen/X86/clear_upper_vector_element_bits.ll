@@ -758,7 +758,6 @@ define <16 x i16> @_clearupper16xi16b(<16 x i16>) nounwind {
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm0[4,5,6,7]
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
