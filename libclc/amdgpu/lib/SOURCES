@@ -1,7 +1,6 @@
 atomic/atomic.cl
 math/nextafter.cl
 math/sqrt.cl
-synchronization/barrier.cl
 image/get_image_width.cl
 image/get_image_height.cl
 image/get_image_depth.cl
