@@ -394,6 +394,12 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
   if (CreateRemainderLoop) {
     Loop *NewLoop = NewLoops[L];
     assert(NewLoop && "L should have been cloned");
+
+    // Only add loop metadata if the loop is not going to be completely
+    // unrolled.
+    if (UnrollRemainder)
+      return NewLoop;
+
     // Add unroll disable metadata to disable future unrolling for this loop.
     SmallVector<Metadata *, 4> MDs;
     // Reserve first location for self reference to the LoopID metadata node.
@@ -414,13 +420,11 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
     }
 
     LLVMContext &Context = NewLoop->getHeader()->getContext();
-    if (!UnrollRemainder) {
-      SmallVector<Metadata *, 1> DisableOperands;
-      DisableOperands.push_back(MDString::get(Context,
-                                              "llvm.loop.unroll.disable"));
-      MDNode *DisableNode = MDNode::get(Context, DisableOperands);
-      MDs.push_back(DisableNode);
-    }
+    SmallVector<Metadata *, 1> DisableOperands;
+    DisableOperands.push_back(MDString::get(Context,
+                                            "llvm.loop.unroll.disable"));
+    MDNode *DisableNode = MDNode::get(Context, DisableOperands);
+    MDs.push_back(DisableNode);
 
     MDNode *NewLoopID = MDNode::get(Context, MDs);
     // Set operand 0 to refer to the loop id itself.
@@ -536,6 +540,8 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                       bool PreserveLCSSA) {
   DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   DEBUG(L->dump());
+  DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n" :
+        dbgs() << "Using prolog remainder.\n");
 
   // Make sure the loop is in canonical form.
   if (!L->isLoopSimplifyForm()) {
@@ -892,6 +898,7 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   }
 
   if (remainderLoop && UnrollRemainder) {
+    DEBUG(dbgs() << "Unrolling remainder loop\n");
     UnrollLoop(remainderLoop, /*Count*/Count - 1, /*TripCount*/Count - 1,
                /*Force*/false, /*AllowRuntime*/false,
                /*AllowExpensiveTripCount*/false, /*PreserveCondBr*/true,

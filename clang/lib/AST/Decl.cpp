@@ -652,7 +652,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   //   If the declaration of an identifier for an object has file
   //   scope and no storage-class specifier, its linkage is
   //   external.
-  LinkageInfo LV;
+  LinkageInfo LV = getExternalLinkageFor(D);
 
   if (!hasExplicitVisibilityAlready(computation)) {
     if (Optional<Visibility> Vis = getExplicitVisibility(D, computation)) {
@@ -1397,6 +1397,30 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
 
 LinkageInfo LinkageComputer::getDeclLinkageAndVisibility(const NamedDecl *D) {
   return getLVForDecl(D, usesTypeVisibility(D) ? LVForType : LVForValue);
+}
+
+Module *NamedDecl::getOwningModuleForLinkage() const {
+  Module *M = getOwningModule();
+  if (!M)
+    return nullptr;
+
+  switch (M->Kind) {
+  case Module::ModuleMapModule:
+    // Module map modules have no special linkage semantics.
+    return nullptr;
+
+  case Module::ModuleInterfaceUnit:
+    return M;
+
+  case Module::GlobalModuleFragment:
+    // External linkage declarations in the global module have no owning module
+    // for linkage purposes. But internal linkage declarations in the global
+    // module fragment of a particular module are owned by that module for
+    // linkage purposes.
+    return hasExternalFormalLinkage() ? nullptr : M->Parent;
+  }
+
+  llvm_unreachable("unknown module kind");
 }
 
 void NamedDecl::printName(raw_ostream &os) const {

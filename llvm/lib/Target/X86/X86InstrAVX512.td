@@ -6680,14 +6680,6 @@ multiclass avx512_fma3p_213_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
              _.RC:$src1,(_.VT (X86VBroadcast (_.ScalarLdFrag addr:$src3)))), 1, 0>,
             AVX512FMA3Base, EVEX_B;
   }
-
-  // Additional pattern for folding broadcast nodes in other orders.
-  def : Pat<(_.VT (vselect _.KRCWM:$mask,
-                   (OpNode _.RC:$src1, _.RC:$src2,
-                    (X86VBroadcast (_.ScalarLdFrag addr:$src3))),
-                   _.RC:$src1)),
-            (!cast<Instruction>(NAME#Suff#_.ZSuffix#mbk) _.RC:$src1,
-             _.KRCWM:$mask, _.RC:$src2, addr:$src3)>;
 }
 
 multiclass avx512_fma3_213_round<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -6724,7 +6716,7 @@ multiclass avx512_fma3p_213_f<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                       avx512vl_f64_info, "PD">, VEX_W;
 }
 
-defm VFMADD213    : avx512_fma3p_213_f<0xA8, "vfmadd213", fma, X86FmaddRnd>;
+defm VFMADD213    : avx512_fma3p_213_f<0xA8, "vfmadd213", X86Fmadd, X86FmaddRnd>;
 defm VFMSUB213    : avx512_fma3p_213_f<0xAA, "vfmsub213", X86Fmsub, X86FmsubRnd>;
 defm VFMADDSUB213 : avx512_fma3p_213_f<0xA6, "vfmaddsub213", X86Fmaddsub, X86FmaddsubRnd>;
 defm VFMSUBADD213 : avx512_fma3p_213_f<0xA7, "vfmsubadd213", X86Fmsubadd, X86FmsubaddRnd>;
@@ -6755,24 +6747,6 @@ multiclass avx512_fma3p_231_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                       (_.VT (X86VBroadcast(_.ScalarLdFrag addr:$src3))),
                       _.RC:$src1)), 1, 0>, AVX512FMA3Base, EVEX_B;
   }
-
-  // Additional patterns for folding broadcast nodes in other orders.
-  def : Pat<(_.VT (OpNode (X86VBroadcast (_.ScalarLdFrag addr:$src3)),
-                   _.RC:$src2, _.RC:$src1)),
-            (!cast<Instruction>(NAME#Suff#_.ZSuffix#mb) _.RC:$src1,
-             _.RC:$src2, addr:$src3)>;
-  def : Pat<(_.VT (vselect _.KRCWM:$mask,
-                   (OpNode (X86VBroadcast (_.ScalarLdFrag addr:$src3)),
-                    _.RC:$src2, _.RC:$src1),
-                   _.RC:$src1)),
-            (!cast<Instruction>(NAME#Suff#_.ZSuffix#mbk) _.RC:$src1,
-             _.KRCWM:$mask, _.RC:$src2, addr:$src3)>;
-  def : Pat<(_.VT (vselect _.KRCWM:$mask,
-                   (OpNode (X86VBroadcast (_.ScalarLdFrag addr:$src3)),
-                    _.RC:$src2, _.RC:$src1),
-                   _.ImmAllZerosV)),
-            (!cast<Instruction>(NAME#Suff#_.ZSuffix#mbkz) _.RC:$src1,
-             _.KRCWM:$mask, _.RC:$src2, addr:$src3)>;
 }
 
 multiclass avx512_fma3_231_round<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -6810,7 +6784,7 @@ multiclass avx512_fma3p_231_f<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                       avx512vl_f64_info, "PD">, VEX_W;
 }
 
-defm VFMADD231    : avx512_fma3p_231_f<0xB8, "vfmadd231", fma, X86FmaddRnd>;
+defm VFMADD231    : avx512_fma3p_231_f<0xB8, "vfmadd231", X86Fmadd, X86FmaddRnd>;
 defm VFMSUB231    : avx512_fma3p_231_f<0xBA, "vfmsub231", X86Fmsub, X86FmsubRnd>;
 defm VFMADDSUB231 : avx512_fma3p_231_f<0xB6, "vfmaddsub231", X86Fmaddsub, X86FmaddsubRnd>;
 defm VFMSUBADD231 : avx512_fma3p_231_f<0xB7, "vfmsubadd231", X86Fmsubadd, X86FmsubaddRnd>;
@@ -6826,28 +6800,23 @@ multiclass avx512_fma3p_132_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
           (_.VT (OpNode _.RC:$src1, _.RC:$src3, _.RC:$src2)), 1, 1, vselect, 1>,
          AVX512FMA3Base;
 
+  // Pattern is 312 order so that the load is in a different place from the
+  // 213 and 231 patterns this helps tablegen's duplicate pattern detection.
   defm m: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
           (ins _.RC:$src2, _.MemOp:$src3),
           OpcodeStr, "$src3, $src2", "$src2, $src3",
-          (_.VT (OpNode _.RC:$src1, (_.LdFrag addr:$src3), _.RC:$src2)), 1, 0>,
+          (_.VT (OpNode (_.LdFrag addr:$src3), _.RC:$src1, _.RC:$src2)), 1, 0>,
          AVX512FMA3Base;
 
+  // Pattern is 312 order so that the load is in a different place from the
+  // 213 and 231 patterns this helps tablegen's duplicate pattern detection.
   defm mb: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
          (ins _.RC:$src2, _.ScalarMemOp:$src3),
          OpcodeStr, "${src3}"##_.BroadcastStr##", $src2",
          "$src2, ${src3}"##_.BroadcastStr,
-         (_.VT (OpNode _.RC:$src1,
-                      (_.VT (X86VBroadcast(_.ScalarLdFrag addr:$src3))),
-                      _.RC:$src2)), 1, 0>, AVX512FMA3Base, EVEX_B;
+         (_.VT (OpNode (_.VT (X86VBroadcast(_.ScalarLdFrag addr:$src3))),
+                       _.RC:$src1, _.RC:$src2)), 1, 0>, AVX512FMA3Base, EVEX_B;
   }
-
-  // Additional patterns for folding broadcast nodes in other orders.
-  def : Pat<(_.VT (vselect _.KRCWM:$mask,
-                   (OpNode (X86VBroadcast (_.ScalarLdFrag addr:$src3)),
-                    _.RC:$src1, _.RC:$src2),
-                   _.RC:$src1)),
-            (!cast<Instruction>(NAME#Suff#_.ZSuffix#mbk) _.RC:$src1,
-             _.KRCWM:$mask, _.RC:$src2, addr:$src3)>;
 }
 
 multiclass avx512_fma3_132_round<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -6885,7 +6854,7 @@ multiclass avx512_fma3p_132_f<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                       avx512vl_f64_info, "PD">, VEX_W;
 }
 
-defm VFMADD132    : avx512_fma3p_132_f<0x98, "vfmadd132", fma, X86FmaddRnd>;
+defm VFMADD132    : avx512_fma3p_132_f<0x98, "vfmadd132", X86Fmadd, X86FmaddRnd>;
 defm VFMSUB132    : avx512_fma3p_132_f<0x9A, "vfmsub132", X86Fmsub, X86FmsubRnd>;
 defm VFMADDSUB132 : avx512_fma3p_132_f<0x96, "vfmaddsub132", X86Fmaddsub, X86FmaddsubRnd>;
 defm VFMSUBADD132 : avx512_fma3p_132_f<0x97, "vfmsubadd132", X86Fmsubadd, X86FmsubaddRnd>;
@@ -6895,13 +6864,11 @@ defm VFNMSUB132   : avx512_fma3p_132_f<0x9E, "vfnmsub132", X86Fnmsub, X86FnmsubR
 // Scalar FMA
 multiclass avx512_fma3s_common<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                                dag RHS_VEC_r, dag RHS_VEC_m, dag RHS_VEC_rb,
-                               dag RHS_r, dag RHS_m, bit MaskOnlyReg,
-                               bit MaskOnlyRegInt> {
+                               dag RHS_r, dag RHS_m, bit MaskOnlyReg> {
 let Constraints = "$src1 = $dst", hasSideEffects = 0 in {
   defm r_Int: AVX512_maskable_3src_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
           (ins _.RC:$src2, _.RC:$src3), OpcodeStr,
-          "$src3, $src2", "$src2, $src3", RHS_VEC_r, 1, 1, MaskOnlyRegInt>,
-          AVX512FMA3Base;
+          "$src3, $src2", "$src2, $src3", RHS_VEC_r, 1, 1>, AVX512FMA3Base;
 
   defm m_Int: AVX512_maskable_3src_scalar<opc, MRMSrcMem, _, (outs _.RC:$dst),
           (ins _.RC:$src2, _.IntScalarMemOp:$src3), OpcodeStr,
@@ -6909,8 +6876,8 @@ let Constraints = "$src1 = $dst", hasSideEffects = 0 in {
 
   defm rb_Int: AVX512_maskable_3src_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
          (ins _.RC:$src2, _.RC:$src3, AVX512RC:$rc),
-         OpcodeStr, "$rc, $src3, $src2", "$src2, $src3, $rc", RHS_VEC_rb, 1, 1,
-         MaskOnlyRegInt>, AVX512FMA3Base, EVEX_B, EVEX_RC;
+         OpcodeStr, "$rc, $src3, $src2", "$src2, $src3, $rc", RHS_VEC_rb, 1, 1>,
+         AVX512FMA3Base, EVEX_B, EVEX_RC;
 
   let isCodeGenOnly = 1, isCommutable = 1 in {
     def r     : AVX512FMA3<opc, MRMSrcReg, (outs _.FRC:$dst),
@@ -6943,7 +6910,7 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src2, _.FRC:$src1,
                          _.FRC:$src3))),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src2, _.FRC:$src1,
-                         (_.ScalarLdFrag addr:$src3)))), 0, 0>;
+                         (_.ScalarLdFrag addr:$src3)))), 0>;
 
   defm NAME#231#SUFF#Z: avx512_fma3s_common<opc231, OpcodeStr#"231"#_.Suffix, _,
                 (_.VT (OpNodeRnds3 _.RC:$src2, _.RC:$src3, _.RC:$src1,
@@ -6955,19 +6922,17 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src2, _.FRC:$src3,
                                           _.FRC:$src1))),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src2,
-                            (_.ScalarLdFrag addr:$src3), _.FRC:$src1))), 1, 0>;
+                            (_.ScalarLdFrag addr:$src3), _.FRC:$src1))), 1>;
 
   defm NAME#132#SUFF#Z: avx512_fma3s_common<opc132, OpcodeStr#"132"#_.Suffix, _,
-                (_.VT (OpNodeRnds1 _.RC:$src1, _.RC:$src3, _.RC:$src2,
-                                   (i32 FROUND_CURRENT))),
+                (null_frag),
                 (_.VT (OpNodeRnds1 _.RC:$src1, _.ScalarIntMemCPat:$src3,
                               _.RC:$src2, (i32 FROUND_CURRENT))),
-                (_.VT (OpNodeRnds1 _.RC:$src1, _.RC:$src3, _.RC:$src2,
-                         (i32 imm:$rc))),
+                (null_frag),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src1, _.FRC:$src3,
                          _.FRC:$src2))),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src1,
-                          (_.ScalarLdFrag addr:$src3), _.FRC:$src2))), 1, 1>;
+                          (_.ScalarLdFrag addr:$src3), _.FRC:$src2))), 1>;
   }
 }
 
@@ -6984,7 +6949,7 @@ multiclass avx512_fma3s<bits<8> opc213, bits<8> opc231, bits<8> opc132,
   }
 }
 
-defm VFMADD  : avx512_fma3s<0xA9, 0xB9, 0x99, "vfmadd", fma, X86FmaddRnds1,
+defm VFMADD  : avx512_fma3s<0xA9, 0xB9, 0x99, "vfmadd", X86Fmadd, X86FmaddRnds1,
                             X86FmaddRnds3>;
 defm VFMSUB  : avx512_fma3s<0xAB, 0xBB, 0x9B, "vfmsub", X86Fmsub, X86FmsubRnds1,
                             X86FmsubRnds3>;
