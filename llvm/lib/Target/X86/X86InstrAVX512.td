@@ -4044,6 +4044,51 @@ let Predicates = [HasAVX512, NoVLX] in {
   // will zero the upper bits.
   // TODO: Is there a safe way to detect whether the producing instruction
   // already zeroed the upper bits?
+
+  // 128->512 register form.
+  def : Pat<(v8f64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (v2f64 VR128:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPDrr VR128:$src), sub_xmm)>;
+  def : Pat<(v16f32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v4f32 VR128:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPSrr VR128:$src), sub_xmm)>;
+  def : Pat<(v8i64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v2i64 VR128:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQArr VR128:$src), sub_xmm)>;
+  def : Pat<(v16i32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v4i32 VR128:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQArr VR128:$src), sub_xmm)>;
+  def : Pat<(v32i16 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (v8i16 VR128:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQArr VR128:$src), sub_xmm)>;
+  def : Pat<(v64i8 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (v16i8 VR128:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQArr VR128:$src), sub_xmm)>;
+
+  // 128->512 memory form.
+  def : Pat<(v8f64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (loadv2f64 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPDrm addr:$src), sub_xmm)>;
+  def : Pat<(v16f32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (loadv4f32 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVAPSrm addr:$src), sub_xmm)>;
+  def : Pat<(v8i64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (loadv2i64 addr:$src), (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQArm addr:$src), sub_xmm)>;
+  def : Pat<(v16i32 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (bc_v4i32 (loadv2i64 addr:$src)),
+                                      (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQArm addr:$src), sub_xmm)>;
+  def : Pat<(v32i16 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                      (bc_v8i16 (loadv2i64 addr:$src)),
+                                      (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQArm addr:$src), sub_xmm)>;
+  def : Pat<(v64i8 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
+                                     (bc_v16i8 (loadv2i64 addr:$src)),
+                                     (iPTR 0))),
+            (SUBREG_TO_REG (i64 0), (VMOVDQArm addr:$src), sub_xmm)>;
+
+  // 256->512 register form.
   def : Pat<(v8f64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
                                      (v4f64 VR256:$src), (iPTR 0))),
             (SUBREG_TO_REG (i64 0), (VMOVAPDYrr VR256:$src), sub_ymm)>;
@@ -4063,6 +4108,7 @@ let Predicates = [HasAVX512, NoVLX] in {
                                      (v32i8 VR256:$src), (iPTR 0))),
             (SUBREG_TO_REG (i64 0), (VMOVDQAYrr VR256:$src), sub_ymm)>;
 
+  // 256->512 memory form.
   def : Pat<(v8f64 (insert_subvector (bitconvert (v16i32 immAllZerosV)),
                                      (loadv4f64 addr:$src), (iPTR 0))),
             (SUBREG_TO_REG (i64 0), (VMOVAPDYrm addr:$src), sub_ymm)>;

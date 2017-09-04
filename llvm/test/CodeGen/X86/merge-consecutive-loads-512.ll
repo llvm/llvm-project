@@ -107,14 +107,12 @@ define <8 x double> @merge_8f64_f64_12zzuuzz(double* %ptr) nounwind uwtable noin
 ; ALL-LABEL: merge_8f64_f64_12zzuuzz:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    vmovaps 8(%rdi), %xmm0
-; ALL-NEXT:    vmovaps %ymm0, %ymm0
 ; ALL-NEXT:    retq
 ;
 ; X32-AVX512F-LABEL: merge_8f64_f64_12zzuuzz:
 ; X32-AVX512F:       # BB#0:
 ; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX512F-NEXT:    vmovaps 8(%eax), %xmm0
-; X32-AVX512F-NEXT:    vmovaps %ymm0, %ymm0
 ; X32-AVX512F-NEXT:    retl
   %ptr0 = getelementptr inbounds double, double* %ptr, i64 1
   %ptr1 = getelementptr inbounds double, double* %ptr, i64 2
