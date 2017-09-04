@@ -27,7 +27,7 @@ define void @print_framealloc_from_fp(i8* %fp) {
 
 ; X64-LABEL: print_framealloc_from_fp:
 ; X64: movq %rcx, %[[parent_fp:[a-z]+]]
-; X64: movl .Lalloc_func$frame_escape_0(%rcx), %edx
+; X64: movl .Lalloc_func$frame_escape_0(%[[parent_fp]]), %edx
 ; X64: leaq {{.*}}(%rip), %[[str:[a-z]+]]
 ; X64: movq %[[str]], %rcx
 ; X64: callq printf

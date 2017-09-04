@@ -701,8 +701,7 @@ define <8 x float> @test_masked_z_8xfloat_perm_imm_mem_mask7(<8 x float>* %vp) {
 define <16 x float> @test_16xfloat_perm_mask0(<16 x float> %vec) {
 ; CHECK-LABEL: test_16xfloat_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [1,1,3,1,6,4,6,5,8,9,8,11,13,13,13,15]
-; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[1,1,3,1,6,4,6,5,8,9,8,11,13,13,13,15]
 ; CHECK-NEXT:    retq
   %res = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 1, i32 1, i32 3, i32 1, i32 6, i32 4, i32 6, i32 5, i32 8, i32 9, i32 8, i32 11, i32 13, i32 13, i32 13, i32 15>
   ret <16 x float> %res
@@ -710,10 +709,9 @@ define <16 x float> @test_16xfloat_perm_mask0(<16 x float> %vec) {
 define <16 x float> @test_masked_16xfloat_perm_mask0(<16 x float> %vec, <16 x float> %vec2) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [1,1,3,1,6,4,6,5,8,9,8,11,13,13,13,15]
 ; CHECK-NEXT:    movw $16429, %ax # imm = 0x402D
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm1 {%k1}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm1 {%k1} = zmm0[1,1,3,1,6,4,6,5,8,9,8,11,13,13,13,15]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 1, i32 1, i32 3, i32 1, i32 6, i32 4, i32 6, i32 5, i32 8, i32 9, i32 8, i32 11, i32 13, i32 13, i32 13, i32 15>
@@ -724,10 +722,9 @@ define <16 x float> @test_masked_16xfloat_perm_mask0(<16 x float> %vec, <16 x fl
 define <16 x float> @test_masked_z_16xfloat_perm_mask0(<16 x float> %vec) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [1,1,3,1,6,4,6,5,8,9,8,11,13,13,13,15]
 ; CHECK-NEXT:    movw $16429, %ax # imm = 0x402D
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[1,1,3,1,6,4,6,5,8,9,8,11,13,13,13,15]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 1, i32 1, i32 3, i32 1, i32 6, i32 4, i32 6, i32 5, i32 8, i32 9, i32 8, i32 11, i32 13, i32 13, i32 13, i32 15>
   %res = select <16 x i1> <i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 0>, <16 x float> %shuf, <16 x float> zeroinitializer
@@ -760,10 +757,9 @@ define <16 x float> @test_masked_z_16xfloat_perm_imm_mask1(<16 x float> %vec) {
 define <16 x float> @test_masked_16xfloat_perm_mask2(<16 x float> %vec, <16 x float> %vec2) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [1,2,0,0,5,4,6,5,11,10,9,9,14,13,14,12]
 ; CHECK-NEXT:    movw $28987, %ax # imm = 0x713B
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm1 {%k1}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm1 {%k1} = zmm0[1,2,0,0,5,4,6,5,11,10,9,9,14,13,14,12]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 1, i32 2, i32 0, i32 0, i32 5, i32 4, i32 6, i32 5, i32 11, i32 10, i32 9, i32 9, i32 14, i32 13, i32 14, i32 12>
@@ -774,10 +770,9 @@ define <16 x float> @test_masked_16xfloat_perm_mask2(<16 x float> %vec, <16 x fl
 define <16 x float> @test_masked_z_16xfloat_perm_mask2(<16 x float> %vec) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [1,2,0,0,5,4,6,5,11,10,9,9,14,13,14,12]
 ; CHECK-NEXT:    movw $28987, %ax # imm = 0x713B
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[1,2,0,0,5,4,6,5,11,10,9,9,14,13,14,12]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 1, i32 2, i32 0, i32 0, i32 5, i32 4, i32 6, i32 5, i32 11, i32 10, i32 9, i32 9, i32 14, i32 13, i32 14, i32 12>
   %res = select <16 x i1> <i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0>, <16 x float> %shuf, <16 x float> zeroinitializer
@@ -818,10 +813,9 @@ define <16 x float> @test_masked_z_16xfloat_perm_imm_mask3(<16 x float> %vec) {
 define <16 x float> @test_masked_16xfloat_perm_mask4(<16 x float> %vec, <16 x float> %vec2) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [1,2,3,3,5,5,5,7,11,11,8,11,14,12,14,15]
 ; CHECK-NEXT:    movw $30908, %ax # imm = 0x78BC
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm1 {%k1}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm1 {%k1} = zmm0[1,2,3,3,5,5,5,7,11,11,8,11,14,12,14,15]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 1, i32 2, i32 3, i32 3, i32 5, i32 5, i32 5, i32 7, i32 11, i32 11, i32 8, i32 11, i32 14, i32 12, i32 14, i32 15>
@@ -832,10 +826,9 @@ define <16 x float> @test_masked_16xfloat_perm_mask4(<16 x float> %vec, <16 x fl
 define <16 x float> @test_masked_z_16xfloat_perm_mask4(<16 x float> %vec) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [1,2,3,3,5,5,5,7,11,11,8,11,14,12,14,15]
 ; CHECK-NEXT:    movw $30908, %ax # imm = 0x78BC
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[1,2,3,3,5,5,5,7,11,11,8,11,14,12,14,15]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 1, i32 2, i32 3, i32 3, i32 5, i32 5, i32 5, i32 7, i32 11, i32 11, i32 8, i32 11, i32 14, i32 12, i32 14, i32 15>
   %res = select <16 x i1> <i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0>, <16 x float> %shuf, <16 x float> zeroinitializer
@@ -868,8 +861,7 @@ define <16 x float> @test_masked_z_16xfloat_perm_imm_mask5(<16 x float> %vec) {
 define <16 x float> @test_16xfloat_perm_mask6(<16 x float> %vec) {
 ; CHECK-LABEL: test_16xfloat_perm_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [2,0,3,2,4,4,6,7,9,11,8,11,13,12,13,13]
-; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[2,0,3,2,4,4,6,7,9,11,8,11,13,12,13,13]
 ; CHECK-NEXT:    retq
   %res = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 2, i32 0, i32 3, i32 2, i32 4, i32 4, i32 6, i32 7, i32 9, i32 11, i32 8, i32 11, i32 13, i32 12, i32 13, i32 13>
   ret <16 x float> %res
@@ -877,10 +869,9 @@ define <16 x float> @test_16xfloat_perm_mask6(<16 x float> %vec) {
 define <16 x float> @test_masked_16xfloat_perm_mask6(<16 x float> %vec, <16 x float> %vec2) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [2,0,3,2,4,4,6,7,9,11,8,11,13,12,13,13]
 ; CHECK-NEXT:    movw $-28239, %ax # imm = 0x91B1
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm1 {%k1}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm1 {%k1} = zmm0[2,0,3,2,4,4,6,7,9,11,8,11,13,12,13,13]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 2, i32 0, i32 3, i32 2, i32 4, i32 4, i32 6, i32 7, i32 9, i32 11, i32 8, i32 11, i32 13, i32 12, i32 13, i32 13>
@@ -891,10 +882,9 @@ define <16 x float> @test_masked_16xfloat_perm_mask6(<16 x float> %vec, <16 x fl
 define <16 x float> @test_masked_z_16xfloat_perm_mask6(<16 x float> %vec) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [2,0,3,2,4,4,6,7,9,11,8,11,13,12,13,13]
 ; CHECK-NEXT:    movw $-28239, %ax # imm = 0x91B1
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[2,0,3,2,4,4,6,7,9,11,8,11,13,12,13,13]
 ; CHECK-NEXT:    retq
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 2, i32 0, i32 3, i32 2, i32 4, i32 4, i32 6, i32 7, i32 9, i32 11, i32 8, i32 11, i32 13, i32 12, i32 13, i32 13>
   %res = select <16 x i1> <i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 0, i1 1>, <16 x float> %shuf, <16 x float> zeroinitializer
@@ -927,8 +917,8 @@ define <16 x float> @test_masked_z_16xfloat_perm_imm_mask7(<16 x float> %vec) {
 define <16 x float> @test_16xfloat_perm_mem_mask0(<16 x float>* %vp) {
 ; CHECK-LABEL: test_16xfloat_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [3,3,3,0,6,6,6,6,11,10,9,10,12,14,12,12]
-; CHECK-NEXT:    vpermps (%rdi), %zmm0, %zmm0
+; CHECK-NEXT:    vmovaps (%rdi), %zmm0
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[3,3,3,0,6,6,6,6,11,10,9,10,12,14,12,12]
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, <16 x float>* %vp
   %res = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 3, i32 3, i32 3, i32 0, i32 6, i32 6, i32 6, i32 6, i32 11, i32 10, i32 9, i32 10, i32 12, i32 14, i32 12, i32 12>
@@ -937,10 +927,10 @@ define <16 x float> @test_16xfloat_perm_mem_mask0(<16 x float>* %vp) {
 define <16 x float> @test_masked_16xfloat_perm_mem_mask0(<16 x float>* %vp, <16 x float> %vec2) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [3,3,3,0,6,6,6,6,11,10,9,10,12,14,12,12]
+; CHECK-NEXT:    vmovaps (%rdi), %zmm1
 ; CHECK-NEXT:    movw $-22887, %ax # imm = 0xA699
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} = zmm1[3,3,3,0,6,6,6,6,11,10,9,10,12,14,12,12]
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 3, i32 3, i32 3, i32 0, i32 6, i32 6, i32 6, i32 6, i32 11, i32 10, i32 9, i32 10, i32 12, i32 14, i32 12, i32 12>
@@ -951,10 +941,10 @@ define <16 x float> @test_masked_16xfloat_perm_mem_mask0(<16 x float>* %vp, <16 
 define <16 x float> @test_masked_z_16xfloat_perm_mem_mask0(<16 x float>* %vp) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [3,3,3,0,6,6,6,6,11,10,9,10,12,14,12,12]
+; CHECK-NEXT:    vmovaps (%rdi), %zmm0
 ; CHECK-NEXT:    movw $-22887, %ax # imm = 0xA699
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps (%rdi), %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[3,3,3,0,6,6,6,6,11,10,9,10,12,14,12,12]
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 3, i32 3, i32 3, i32 0, i32 6, i32 6, i32 6, i32 6, i32 11, i32 10, i32 9, i32 10, i32 12, i32 14, i32 12, i32 12>
@@ -991,10 +981,10 @@ define <16 x float> @test_masked_z_16xfloat_perm_imm_mem_mask1(<16 x float>* %vp
 define <16 x float> @test_masked_16xfloat_perm_mem_mask2(<16 x float>* %vp, <16 x float> %vec2) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [2,0,0,3,5,5,6,5,9,8,8,8,14,12,13,13]
+; CHECK-NEXT:    vmovaps (%rdi), %zmm1
 ; CHECK-NEXT:    movw $-8399, %ax # imm = 0xDF31
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} = zmm1[2,0,0,3,5,5,6,5,9,8,8,8,14,12,13,13]
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 2, i32 0, i32 0, i32 3, i32 5, i32 5, i32 6, i32 5, i32 9, i32 8, i32 8, i32 8, i32 14, i32 12, i32 13, i32 13>
@@ -1005,10 +995,10 @@ define <16 x float> @test_masked_16xfloat_perm_mem_mask2(<16 x float>* %vp, <16 
 define <16 x float> @test_masked_z_16xfloat_perm_mem_mask2(<16 x float>* %vp) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [2,0,0,3,5,5,6,5,9,8,8,8,14,12,13,13]
+; CHECK-NEXT:    vmovaps (%rdi), %zmm0
 ; CHECK-NEXT:    movw $-8399, %ax # imm = 0xDF31
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps (%rdi), %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[2,0,0,3,5,5,6,5,9,8,8,8,14,12,13,13]
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 2, i32 0, i32 0, i32 3, i32 5, i32 5, i32 6, i32 5, i32 9, i32 8, i32 8, i32 8, i32 14, i32 12, i32 13, i32 13>
@@ -1054,10 +1044,10 @@ define <16 x float> @test_masked_z_16xfloat_perm_imm_mem_mask3(<16 x float>* %vp
 define <16 x float> @test_masked_16xfloat_perm_mem_mask4(<16 x float>* %vp, <16 x float> %vec2) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mem_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [3,3,1,1,6,5,5,6,11,11,10,9,15,14,12,12]
+; CHECK-NEXT:    vmovaps (%rdi), %zmm1
 ; CHECK-NEXT:    movw $1218, %ax # imm = 0x4C2
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} = zmm1[3,3,1,1,6,5,5,6,11,11,10,9,15,14,12,12]
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 3, i32 3, i32 1, i32 1, i32 6, i32 5, i32 5, i32 6, i32 11, i32 11, i32 10, i32 9, i32 15, i32 14, i32 12, i32 12>
@@ -1068,10 +1058,10 @@ define <16 x float> @test_masked_16xfloat_perm_mem_mask4(<16 x float>* %vp, <16 
 define <16 x float> @test_masked_z_16xfloat_perm_mem_mask4(<16 x float>* %vp) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mem_mask4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [3,3,1,1,6,5,5,6,11,11,10,9,15,14,12,12]
+; CHECK-NEXT:    vmovaps (%rdi), %zmm0
 ; CHECK-NEXT:    movw $1218, %ax # imm = 0x4C2
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps (%rdi), %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[3,3,1,1,6,5,5,6,11,11,10,9,15,14,12,12]
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 3, i32 3, i32 1, i32 1, i32 6, i32 5, i32 5, i32 6, i32 11, i32 11, i32 10, i32 9, i32 15, i32 14, i32 12, i32 12>
@@ -1108,8 +1098,8 @@ define <16 x float> @test_masked_z_16xfloat_perm_imm_mem_mask5(<16 x float>* %vp
 define <16 x float> @test_16xfloat_perm_mem_mask6(<16 x float>* %vp) {
 ; CHECK-LABEL: test_16xfloat_perm_mem_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [2,1,1,2,6,5,5,7,9,11,9,9,12,15,14,15]
-; CHECK-NEXT:    vpermps (%rdi), %zmm0, %zmm0
+; CHECK-NEXT:    vmovaps (%rdi), %zmm0
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[2,1,1,2,6,5,5,7,9,11,9,9,12,15,14,15]
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, <16 x float>* %vp
   %res = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 2, i32 1, i32 1, i32 2, i32 6, i32 5, i32 5, i32 7, i32 9, i32 11, i32 9, i32 9, i32 12, i32 15, i32 14, i32 15>
@@ -1118,10 +1108,10 @@ define <16 x float> @test_16xfloat_perm_mem_mask6(<16 x float>* %vp) {
 define <16 x float> @test_masked_16xfloat_perm_mem_mask6(<16 x float>* %vp, <16 x float> %vec2) {
 ; CHECK-LABEL: test_masked_16xfloat_perm_mem_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [2,1,1,2,6,5,5,7,9,11,9,9,12,15,14,15]
+; CHECK-NEXT:    vmovaps (%rdi), %zmm1
 ; CHECK-NEXT:    movw $-20907, %ax # imm = 0xAE55
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} = zmm1[2,1,1,2,6,5,5,7,9,11,9,9,12,15,14,15]
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 2, i32 1, i32 1, i32 2, i32 6, i32 5, i32 5, i32 7, i32 9, i32 11, i32 9, i32 9, i32 12, i32 15, i32 14, i32 15>
@@ -1132,10 +1122,10 @@ define <16 x float> @test_masked_16xfloat_perm_mem_mask6(<16 x float>* %vp, <16 
 define <16 x float> @test_masked_z_16xfloat_perm_mem_mask6(<16 x float>* %vp) {
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mem_mask6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [2,1,1,2,6,5,5,7,9,11,9,9,12,15,14,15]
+; CHECK-NEXT:    vmovaps (%rdi), %zmm0
 ; CHECK-NEXT:    movw $-20907, %ax # imm = 0xAE55
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vpermps (%rdi), %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[2,1,1,2,6,5,5,7,9,11,9,9,12,15,14,15]
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, <16 x float>* %vp
   %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 2, i32 1, i32 1, i32 2, i32 6, i32 5, i32 5, i32 7, i32 9, i32 11, i32 9, i32 9, i32 12, i32 15, i32 14, i32 15>

@@ -7,71 +7,25 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is a simple MachineInstr-level copy forwarding pass.  It may be run at
-// two places in the codegen pipeline:
-//   - After register allocation but before virtual registers have been remapped
-//     to physical registers.
-//   - After physical register remapping.
-//
-// The optimizations done vary slightly based on whether virtual registers are
-// still present.  In both cases, this pass forwards the source of COPYs to the
-// users of their destinations when doing so is legal.  For example:
-//
-//   %vreg1 = COPY %vreg0
-//   ...
-//   ... = OP %vreg1
-//
-// If
-//   - the physical register assigned to %vreg0 has not been clobbered by the
-//     time of the use of %vreg1
-//   - the register class constraints are satisfied
-//   - the COPY def is the only value that reaches OP
-// then this pass replaces the above with:
-//
-//   %vreg1 = COPY %vreg0
-//   ...
-//   ... = OP %vreg0
-//
-// and updates the relevant state required by VirtRegMap (e.g. LiveIntervals).
-// COPYs whose LiveIntervals become dead as a result of this forwarding (i.e. if
-// all uses of %vreg1 are changed to %vreg0) are removed.
-//
-// When being run with only physical registers, this pass will also remove some
-// redundant COPYs.  For example:
-//
-//    %R1 = COPY %R0
-//    ... // No clobber of %R1
-//    %R0 = COPY %R1 <<< Removed
-//
-// or
-//
-//    %R1 = COPY %R0
-//    ... // No clobber of %R0
-//    %R1 = COPY %R0 <<< Removed
+// This is an extremely simple MachineInstr-level copy propagation pass.
 //
 //===----------------------------------------------------------------------===//
 
-#include "LiveDebugVariables.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/CodeGen/LiveRangeEdit.h"
-#include "llvm/CodeGen/LiveStackAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
@@ -84,9 +38,6 @@ using namespace llvm;
 #define DEBUG_TYPE "machine-cp"
 
 STATISTIC(NumDeletes, "Number of dead copies deleted");
-STATISTIC(NumCopyForwards, "Number of copy uses forwarded");
-DEBUG_COUNTER(FwdCounter, "machine-cp-fwd",
-              "Controls which register COPYs are forwarded");
 
 namespace {
 
@@ -94,42 +45,19 @@ using RegList = SmallVector<unsigned, 4>;
 using SourceMap = DenseMap<unsigned, RegList>;
 using Reg2MIMap = DenseMap<unsigned, MachineInstr *>;
 
-  class MachineCopyPropagation : public MachineFunctionPass,
-                                 private LiveRangeEdit::Delegate {
+  class MachineCopyPropagation : public MachineFunctionPass {
     const TargetRegisterInfo *TRI;
     const TargetInstrInfo *TII;
-    MachineRegisterInfo *MRI;
-    MachineFunction *MF;
-    SlotIndexes *Indexes;
-    LiveIntervals *LIS;
-    const VirtRegMap *VRM;
-    // True if this pass being run before virtual registers are remapped to
-    // physical ones.
-    bool PreRegRewrite;
-    bool NoSubRegLiveness;
-
-  protected:
-    MachineCopyPropagation(char &ID, bool PreRegRewrite)
-        : MachineFunctionPass(ID), PreRegRewrite(PreRegRewrite) {}
+    const MachineRegisterInfo *MRI;
 
   public:
     static char ID; // Pass identification, replacement for typeid
 
-    MachineCopyPropagation() : MachineCopyPropagation(ID, false) {
+    MachineCopyPropagation() : MachineFunctionPass(ID) {
       initializeMachineCopyPropagationPass(*PassRegistry::getPassRegistry());
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      if (PreRegRewrite) {
-        AU.addRequired<SlotIndexes>();
-        AU.addPreserved<SlotIndexes>();
-        AU.addRequired<LiveIntervals>();
-        AU.addPreserved<LiveIntervals>();
-        AU.addRequired<VirtRegMap>();
-        AU.addPreserved<VirtRegMap>();
-        AU.addPreserved<LiveDebugVariables>();
-        AU.addPreserved<LiveStacks>();
-      }
       AU.setPreservesCFG();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -137,10 +65,6 @@ using Reg2MIMap = DenseMap<unsigned, MachineInstr *>;
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      if (PreRegRewrite)
-        return MachineFunctionProperties()
-            .set(MachineFunctionProperties::Property::NoPHIs)
-            .set(MachineFunctionProperties::Property::TracksLiveness);
       return MachineFunctionProperties().set(
           MachineFunctionProperties::Property::NoVRegs);
     }
@@ -150,32 +74,9 @@ using Reg2MIMap = DenseMap<unsigned, MachineInstr *>;
     void ReadRegister(unsigned Reg);
     void CopyPropagateBlock(MachineBasicBlock &MBB);
     bool eraseIfRedundant(MachineInstr &Copy, unsigned Src, unsigned Def);
-    unsigned getPhysReg(unsigned Reg, unsigned SubReg);
-    unsigned getPhysReg(const MachineOperand &Opnd) {
-      return getPhysReg(Opnd.getReg(), Opnd.getSubReg());
-    }
-    unsigned getFullPhysReg(const MachineOperand &Opnd) {
-      return getPhysReg(Opnd.getReg(), 0);
-    }
-    void forwardUses(MachineInstr &MI);
-    bool isForwardableRegClassCopy(const MachineInstr &Copy,
-                                   const MachineInstr &UseI);
-    std::tuple<unsigned, unsigned, bool>
-    checkUseSubReg(const MachineOperand &CopySrc, const MachineOperand &MOUse);
-    bool hasImplicitOverlap(const MachineInstr &MI, const MachineOperand &Use);
-    void narrowRegClass(const MachineInstr &MI, const MachineOperand &MOUse,
-                        unsigned NewUseReg, unsigned NewUseSubReg);
-    void updateForwardedCopyLiveInterval(const MachineInstr &Copy,
-                                         const MachineInstr &UseMI,
-                                         unsigned OrigUseReg,
-                                         unsigned NewUseReg,
-                                         unsigned NewUseSubReg);
-    /// LiveRangeEdit callback for eliminateDeadDefs().
-    void LRE_WillEraseInstruction(MachineInstr *MI) override;
 
     /// Candidates for deletion.
     SmallSetVector<MachineInstr*, 8> MaybeDeadCopies;
-    SmallVector<MachineInstr*, 8> ShrunkDeadInsts;
 
     /// Def -> available copies map.
     Reg2MIMap AvailCopyMap;
@@ -189,14 +90,6 @@ using Reg2MIMap = DenseMap<unsigned, MachineInstr *>;
     bool Changed;
   };
 
-  class MachineCopyPropagationPreRegRewrite : public MachineCopyPropagation {
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    MachineCopyPropagationPreRegRewrite()
-        : MachineCopyPropagation(ID, true) {
-      initializeMachineCopyPropagationPreRegRewritePass(*PassRegistry::getPassRegistry());
-    }
-  };
 } // end anonymous namespace
 
 char MachineCopyPropagation::ID = 0;
@@ -205,29 +98,6 @@ char &llvm::MachineCopyPropagationID = MachineCopyPropagation::ID;
 
 INITIALIZE_PASS(MachineCopyPropagation, DEBUG_TYPE,
                 "Machine Copy Propagation Pass", false, false)
-
-/// We have two separate passes that are very similar, the only difference being
-/// where they are meant to be run in the pipeline.  This is done for several
-/// reasons:
-/// - the two passes have different dependencies
-/// - some targets want to disable the later run of this pass, but not the
-///   earlier one (e.g. NVPTX and WebAssembly)
-/// - it allows for easier debugging via llc
-
-char MachineCopyPropagationPreRegRewrite::ID = 0;
-char &llvm::MachineCopyPropagationPreRegRewriteID = MachineCopyPropagationPreRegRewrite::ID;
-
-INITIALIZE_PASS_BEGIN(MachineCopyPropagationPreRegRewrite,
-                      "machine-cp-prerewrite",
-                      "Machine Copy Propagation Pre-Register Rewrite Pass",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
-INITIALIZE_PASS_END(MachineCopyPropagationPreRegRewrite,
-                    "machine-cp-prerewrite",
-                    "Machine Copy Propagation Pre-Register Rewrite Pass", false,
-                    false)
 
 /// Remove any entry in \p Map where the register is a subregister or equal to
 /// a register contained in \p Regs.
@@ -269,10 +139,6 @@ void MachineCopyPropagation::ClobberRegister(unsigned Reg) {
 }
 
 void MachineCopyPropagation::ReadRegister(unsigned Reg) {
-  // We don't track MaybeDeadCopies when running pre-VirtRegRewriter.
-  if (PreRegRewrite)
-    return;
-
   // If 'Reg' is defined by a copy, the copy is no longer a candidate
   // for elimination.
   for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI) {
@@ -302,46 +168,6 @@ static bool isNopCopy(const MachineInstr &PreviousCopy, unsigned Src,
     return false;
   unsigned SubIdx = TRI->getSubRegIndex(PreviousSrc, Src);
   return SubIdx == TRI->getSubRegIndex(PreviousDef, Def);
-}
-
-/// Return the physical register assigned to \p Reg if it is a virtual register,
-/// otherwise just return the physical reg from the operand itself.
-///
-/// If \p SubReg is 0 then return the full physical register assigned to the
-/// virtual register ignoring subregs.  If we aren't tracking sub-reg liveness
-/// then we need to use this to be more conservative with clobbers by killing
-/// all super reg and their sub reg COPYs as well.  This is to prevent COPY
-/// forwarding in cases like the following:
-///
-///    %vreg2 = COPY %vreg1:sub1
-///    %vreg3 = COPY %vreg1:sub0
-///    ...    = OP1 %vreg2
-///    ...    = OP2 %vreg3
-///
-/// After forward %vreg2 (assuming this is the last use of %vreg1) and
-/// VirtRegRewriter adding kill markers we have:
-///
-///    %vreg3 = COPY %vreg1:sub0
-///    ...    = OP1 %vreg1:sub1<kill>
-///    ...    = OP2 %vreg3
-///
-/// If %vreg3 is assigned to a sub-reg of %vreg1, then after rewriting we have:
-///
-///    ...     = OP1 R0:sub1, R0<imp-use,kill>
-///    ...     = OP2 R0:sub0
-///
-/// and the use of R0 by OP2 will not have a valid definition.
-unsigned MachineCopyPropagation::getPhysReg(unsigned Reg, unsigned SubReg) {
-
-  // Physical registers cannot have subregs.
-  if (!TargetRegisterInfo::isVirtualRegister(Reg))
-    return Reg;
-
-  assert(PreRegRewrite && "Unexpected virtual register encountered");
-  Reg = VRM->getPhys(Reg);
-  if (SubReg && !NoSubRegLiveness)
-    Reg = TRI->getSubReg(Reg, SubReg);
-  return Reg;
 }
 
 /// Remove instruction \p Copy if there exists a previous copy that copies the
@@ -381,342 +207,6 @@ bool MachineCopyPropagation::eraseIfRedundant(MachineInstr &Copy, unsigned Src,
   return true;
 }
 
-
-/// Decide whether we should forward the destination of \param Copy to its use
-/// in \param UseI based on the register class of the Copy operands.  Same-class
-/// COPYs are always accepted by this function, but cross-class COPYs are only
-/// accepted if they are forwarded to another COPY with the operand register
-/// classes reversed.  For example:
-///
-///   RegClassA = COPY RegClassB  // Copy parameter
-///   ...
-///   RegClassB = COPY RegClassA  // UseI parameter
-///
-/// which after forwarding becomes
-///
-///   RegClassA = COPY RegClassB
-///   ...
-///   RegClassB = COPY RegClassB
-///
-/// so we have reduced the number of cross-class COPYs and potentially
-/// introduced a no COPY that can be removed.
-bool MachineCopyPropagation::isForwardableRegClassCopy(
-    const MachineInstr &Copy, const MachineInstr &UseI) {
-  auto isCross = [&](const MachineOperand &Dst, const MachineOperand &Src) {
-    unsigned DstReg = Dst.getReg();
-    unsigned SrcPhysReg = getPhysReg(Src);
-    const TargetRegisterClass *DstRC;
-    if (TargetRegisterInfo::isVirtualRegister(DstReg)) {
-      DstRC = MRI->getRegClass(DstReg);
-      unsigned DstSubReg = Dst.getSubReg();
-      if (DstSubReg)
-        SrcPhysReg = TRI->getMatchingSuperReg(SrcPhysReg, DstSubReg, DstRC);
-    } else
-      DstRC = TRI->getMinimalPhysRegClass(DstReg);
-
-    return !DstRC->contains(SrcPhysReg);
-  };
-
-  const MachineOperand &CopyDst = Copy.getOperand(0);
-  const MachineOperand &CopySrc = Copy.getOperand(1);
-
-  if (!isCross(CopyDst, CopySrc))
-    return true;
-
-  if (!UseI.isCopy())
-    return false;
-
-  assert(getFullPhysReg(UseI.getOperand(1)) == getFullPhysReg(CopyDst));
-  return !isCross(UseI.getOperand(0), CopySrc);
-}
-
-/// Check that the subregs on the copy source operand (\p CopySrc) and the use
-/// operand to be forwarded to (\p MOUse) are compatible with doing the
-/// forwarding.  Also computes the new register and subregister to be used in
-/// the forwarded-to instruction.
-std::tuple<unsigned, unsigned, bool> MachineCopyPropagation::checkUseSubReg(
-    const MachineOperand &CopySrc, const MachineOperand &MOUse) {
-  unsigned NewUseReg = CopySrc.getReg();
-  unsigned NewUseSubReg;
-
-  if (TargetRegisterInfo::isPhysicalRegister(NewUseReg)) {
-    // If MOUse is a virtual reg, we need to apply it to the new physical reg
-    // we're going to replace it with.
-    if (MOUse.getSubReg())
-      NewUseReg = TRI->getSubReg(NewUseReg, MOUse.getSubReg());
-    // If the original use subreg isn't valid on the new src reg, we can't
-    // forward it here.
-    if (!NewUseReg)
-      return std::make_tuple(0, 0, false);
-    NewUseSubReg = 0;
-  } else {
-    // %v1 = COPY %v2:sub1
-    //    USE %v1:sub2
-    // The new use is %v2:sub1:sub2
-    NewUseSubReg =
-        TRI->composeSubRegIndices(CopySrc.getSubReg(), MOUse.getSubReg());
-    // Check that NewUseSubReg is valid on NewUseReg
-    if (NewUseSubReg &&
-        !TRI->getSubClassWithSubReg(MRI->getRegClass(NewUseReg), NewUseSubReg))
-      return std::make_tuple(0, 0, false);
-  }
-
-  return std::make_tuple(NewUseReg, NewUseSubReg, true);
-}
-
-/// Check that \p MI does not have implicit uses that overlap with it's \p Use
-/// operand (the register being replaced), since these can sometimes be
-/// implicitly tied to other operands.  For example, on AMDGPU:
-///
-/// V_MOVRELS_B32_e32 %VGPR2, %M0<imp-use>, %EXEC<imp-use>, %VGPR2_VGPR3_VGPR4_VGPR5<imp-use>
-///
-/// the %VGPR2 is implicitly tied to the larger reg operand, but we have no
-/// way of knowing we need to update the latter when updating the former.
-bool MachineCopyPropagation::hasImplicitOverlap(const MachineInstr &MI,
-                                                const MachineOperand &Use) {
-  if (!TargetRegisterInfo::isPhysicalRegister(Use.getReg()))
-    return false;
-
-  for (const MachineOperand &MIUse : MI.uses())
-    if (&MIUse != &Use && MIUse.isReg() && MIUse.isImplicit() &&
-        TRI->regsOverlap(Use.getReg(), MIUse.getReg()))
-      return true;
-
-  return false;
-}
-
-/// Narrow the register class of the forwarded vreg so it matches any
-/// instruction constraints.  \p MI is the instruction being forwarded to. \p
-/// MOUse is the operand being replaced in \p MI (which hasn't yet been updated
-/// at the time this function is called).  \p NewUseReg and \p NewUseSubReg are
-/// what the \p MOUse will be changed to after forwarding.
-///
-/// If we are forwarding
-///    A:RCA = COPY B:RCB
-/// into
-///    ... = OP A:RCA
-///
-/// then we need to narrow the register class of B so that it is a subclass
-/// of RCA so that it meets the instruction register class constraints.
-void MachineCopyPropagation::narrowRegClass(const MachineInstr &MI,
-                                            const MachineOperand &MOUse,
-                                            unsigned NewUseReg,
-                                            unsigned NewUseSubReg) {
-  if (!TargetRegisterInfo::isVirtualRegister(NewUseReg))
-    return;
-
-  // Make sure the virtual reg class allows the subreg.
-  if (NewUseSubReg) {
-    const TargetRegisterClass *CurUseRC = MRI->getRegClass(NewUseReg);
-    const TargetRegisterClass *NewUseRC =
-        TRI->getSubClassWithSubReg(CurUseRC, NewUseSubReg);
-    if (CurUseRC != NewUseRC) {
-      DEBUG(dbgs() << "MCP: Setting regclass of " << PrintReg(NewUseReg, TRI)
-                   << " to " << TRI->getRegClassName(NewUseRC) << "\n");
-      MRI->setRegClass(NewUseReg, NewUseRC);
-    }
-  }
-
-  unsigned MOUseOpNo = &MOUse - &MI.getOperand(0);
-  const TargetRegisterClass *InstRC =
-      TII->getRegClass(MI.getDesc(), MOUseOpNo, TRI, *MF);
-  if (InstRC) {
-    const TargetRegisterClass *CurUseRC = MRI->getRegClass(NewUseReg);
-    if (NewUseSubReg)
-      InstRC = TRI->getMatchingSuperRegClass(CurUseRC, InstRC, NewUseSubReg);
-    if (!InstRC->hasSubClassEq(CurUseRC)) {
-      const TargetRegisterClass *NewUseRC =
-          TRI->getCommonSubClass(InstRC, CurUseRC);
-      DEBUG(dbgs() << "MCP: Setting regclass of " << PrintReg(NewUseReg, TRI)
-                   << " to " << TRI->getRegClassName(NewUseRC) << "\n");
-      MRI->setRegClass(NewUseReg, NewUseRC);
-    }
-  }
-}
-
-/// Update the LiveInterval information to reflect the destination of \p Copy
-/// being forwarded to a use in \p UseMI.  \p OrigUseReg is the register being
-/// forwarded through. It should be the destination register of \p Copy and has
-/// already been replaced in \p UseMI at the point this function is called.  \p
-/// NewUseReg and \p NewUseSubReg are the register and subregister being
-/// forwarded.  They should be the source register of the \p Copy and should be
-/// the value of the \p UseMI operand being forwarded at the point this function
-/// is called.
-void MachineCopyPropagation::updateForwardedCopyLiveInterval(
-    const MachineInstr &Copy, const MachineInstr &UseMI, unsigned OrigUseReg,
-    unsigned NewUseReg, unsigned NewUseSubReg) {
-
-  assert(TRI->isSubRegisterEq(getPhysReg(OrigUseReg, 0),
-                              getFullPhysReg(Copy.getOperand(0))) &&
-         "OrigUseReg mismatch");
-  assert(TRI->isSubRegisterEq(getFullPhysReg(Copy.getOperand(1)),
-                              getPhysReg(NewUseReg, 0)) &&
-         "NewUseReg mismatch");
-
-  // Extend live range starting from COPY early-clobber slot, since that
-  // is where the original src live range ends.
-  SlotIndex CopyUseIdx =
-      Indexes->getInstructionIndex(Copy).getRegSlot(true /*=EarlyClobber*/);
-  SlotIndex UseIdx = Indexes->getInstructionIndex(UseMI).getRegSlot();
-  if (TargetRegisterInfo::isVirtualRegister(NewUseReg)) {
-    LiveInterval &LI = LIS->getInterval(NewUseReg);
-    LI.extendInBlock(CopyUseIdx, UseIdx);
-    LaneBitmask UseMask = TRI->getSubRegIndexLaneMask(NewUseSubReg);
-    for (auto &S : LI.subranges())
-      if ((S.LaneMask & UseMask).any() && S.find(CopyUseIdx))
-        S.extendInBlock(CopyUseIdx, UseIdx);
-  } else {
-    assert(NewUseSubReg == 0 && "Unexpected subreg on physical register!");
-    for (MCRegUnitIterator UI(NewUseReg, TRI); UI.isValid(); ++UI) {
-      LiveRange &LR = LIS->getRegUnit(*UI);
-      LR.extendInBlock(CopyUseIdx, UseIdx);
-    }
-  }
-
-  if (!TargetRegisterInfo::isVirtualRegister(OrigUseReg))
-    return;
-
-  LiveInterval &LI = LIS->getInterval(OrigUseReg);
-
-  // Can happen for undef uses.
-  if (LI.empty())
-    return;
-
-  SlotIndex UseIndex = Indexes->getInstructionIndex(UseMI);
-  const LiveRange::Segment *UseSeg = LI.getSegmentContaining(UseIndex);
-
-  // Only shrink if forwarded use is the end of a segment.
-  if (UseSeg->end != UseIndex.getRegSlot())
-    return;
-
-  LIS->shrinkToUses(&LI, &ShrunkDeadInsts);
-}
-
-void MachineCopyPropagation::LRE_WillEraseInstruction(MachineInstr *MI) {
-  Changed = true;
-}
-
-/// Look for available copies whose destination register is used by \p MI and
-/// replace the use in \p MI with the copy's source register.
-void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
-  // We can't generally forward uses after virtual registers have been renamed
-  // because some targets generate code that has implicit dependencies on the
-  // physical register numbers.  For example, in PowerPC, when spilling
-  // condition code registers, the following code pattern is generated:
-  //
-  //   %CR7 = COPY %CR0
-  //   %R6 = MFOCRF %CR7
-  //   %R6 = RLWINM %R6, 29, 31, 31
-  //
-  // where the shift amount in the RLWINM instruction depends on the source
-  // register number of the MFOCRF instruction.  If we were to forward %CR0 to
-  // the MFOCRF instruction, the shift amount would no longer be correct.
-  //
-  // FIXME: It may be possible to define a target hook that checks the register
-  // class or user opcode and allows some cases, but prevents cases like the
-  // above from being broken to enable later register copy forwarding.
-  if (!PreRegRewrite)
-    return;
-
-  if (AvailCopyMap.empty())
-    return;
-
-  // Look for non-tied explicit vreg uses that have an active COPY
-  // instruction that defines the physical register allocated to them.
-  // Replace the vreg with the source of the active COPY.
-  for (MachineOperand &MOUse : MI.explicit_uses()) {
-    // Don't forward into undef use operands since doing so can cause problems
-    // with the machine verifier, since it doesn't treat undef reads as reads,
-    // so we can end up with a live range the ends on an undef read, leading to
-    // an error that the live range doesn't end on a read of the live range
-    // register.
-    if (!MOUse.isReg() || MOUse.isTied() || MOUse.isUndef())
-      continue;
-
-    unsigned UseReg = MOUse.getReg();
-    if (!UseReg)
-      continue;
-
-    // See comment above check for !PreRegRewrite regarding forwarding changing
-    // physical registers.
-    if (!TargetRegisterInfo::isVirtualRegister(UseReg))
-      continue;
-
-    UseReg = VRM->getPhys(UseReg);
-
-    // Don't forward COPYs via non-allocatable regs since they can have
-    // non-standard semantics.
-    if (!MRI->isAllocatable(UseReg))
-      continue;
-
-    auto CI = AvailCopyMap.find(UseReg);
-    if (CI == AvailCopyMap.end())
-      continue;
-
-    MachineInstr &Copy = *CI->second;
-    MachineOperand &CopyDst = Copy.getOperand(0);
-    MachineOperand &CopySrc = Copy.getOperand(1);
-
-    // Don't forward COPYs that are already NOPs due to register assignment.
-    if (getPhysReg(CopyDst) == getPhysReg(CopySrc))
-      continue;
-
-    // FIXME: Don't handle partial uses of wider COPYs yet.
-    if (CopyDst.getSubReg() != 0 || UseReg != getPhysReg(CopyDst))
-      continue;
-
-    // Don't forward COPYs of non-allocatable regs unless they are constant.
-    unsigned CopySrcReg = CopySrc.getReg();
-    if (TargetRegisterInfo::isPhysicalRegister(CopySrcReg) &&
-        !MRI->isAllocatable(CopySrcReg) && !MRI->isConstantPhysReg(CopySrcReg))
-      continue;
-
-    if (!isForwardableRegClassCopy(Copy, MI))
-      continue;
-
-    unsigned NewUseReg, NewUseSubReg;
-    bool SubRegOK;
-    std::tie(NewUseReg, NewUseSubReg, SubRegOK) =
-        checkUseSubReg(CopySrc, MOUse);
-    if (!SubRegOK)
-      continue;
-
-    if (hasImplicitOverlap(MI, MOUse))
-      continue;
-
-    if (!DebugCounter::shouldExecute(FwdCounter))
-      continue;
-
-    DEBUG(dbgs() << "MCP: Replacing "
-          << PrintReg(MOUse.getReg(), TRI, MOUse.getSubReg())
-          << "\n     with "
-          << PrintReg(NewUseReg, TRI, CopySrc.getSubReg())
-          << "\n     in "
-          << MI
-          << "     from "
-          << Copy);
-
-    narrowRegClass(MI, MOUse, NewUseReg, NewUseSubReg);
-
-    unsigned OrigUseReg = MOUse.getReg();
-    MOUse.setReg(NewUseReg);
-    MOUse.setSubReg(NewUseSubReg);
-
-    DEBUG(dbgs() << "MCP: After replacement: " << MI << "\n");
-
-    if (PreRegRewrite)
-      updateForwardedCopyLiveInterval(Copy, MI, OrigUseReg, NewUseReg,
-                                      NewUseSubReg);
-    else
-      for (MachineInstr &KMI :
-             make_range(Copy.getIterator(), std::next(MI.getIterator())))
-        KMI.clearRegisterKills(NewUseReg, TRI);
-
-    ++NumCopyForwards;
-    Changed = true;
-  }
-}
-
 void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
   DEBUG(dbgs() << "MCP: CopyPropagateBlock " << MBB.getName() << "\n");
 
@@ -725,8 +215,12 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
     ++I;
 
     if (MI->isCopy()) {
-      unsigned Def = getPhysReg(MI->getOperand(0));
-      unsigned Src = getPhysReg(MI->getOperand(1));
+      unsigned Def = MI->getOperand(0).getReg();
+      unsigned Src = MI->getOperand(1).getReg();
+
+      assert(!TargetRegisterInfo::isVirtualRegister(Def) &&
+             !TargetRegisterInfo::isVirtualRegister(Src) &&
+             "MachineCopyPropagation should be run after register allocation!");
 
       // The two copies cancel out and the source of the first copy
       // hasn't been overridden, eliminate the second one. e.g.
@@ -743,16 +237,8 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       //  %ECX<def> = COPY %EAX
       // =>
       //  %ECX<def> = COPY %EAX
-      if (!PreRegRewrite)
-        if (eraseIfRedundant(*MI, Def, Src) || eraseIfRedundant(*MI, Src, Def))
-          continue;
-
-      forwardUses(*MI);
-
-      // Src may have been changed by forwardUses()
-      Src = getPhysReg(MI->getOperand(1));
-      unsigned DefClobber = getFullPhysReg(MI->getOperand(0));
-      unsigned SrcClobber = getFullPhysReg(MI->getOperand(1));
+      if (eraseIfRedundant(*MI, Def, Src) || eraseIfRedundant(*MI, Src, Def))
+        continue;
 
       // If Src is defined by a previous copy, the previous copy cannot be
       // eliminated.
@@ -769,10 +255,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       DEBUG(dbgs() << "MCP: Copy is a deletion candidate: "; MI->dump());
 
       // Copy is now a candidate for deletion.
-      // Only look for dead COPYs if we're not running just before
-      // VirtRegRewriter, since presumably these COPYs will have already been
-      // removed.
-      if (!PreRegRewrite && !MRI->isReserved(Def))
+      if (!MRI->isReserved(Def))
         MaybeDeadCopies.insert(MI);
 
       // If 'Def' is previously source of another copy, then this earlier copy's
@@ -782,11 +265,11 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       // %xmm2<def> = copy %xmm0
       // ...
       // %xmm2<def> = copy %xmm9
-      ClobberRegister(DefClobber);
+      ClobberRegister(Def);
       for (const MachineOperand &MO : MI->implicit_operands()) {
         if (!MO.isReg() || !MO.isDef())
           continue;
-        unsigned Reg = getFullPhysReg(MO);
+        unsigned Reg = MO.getReg();
         if (!Reg)
           continue;
         ClobberRegister(Reg);
@@ -801,26 +284,12 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 
       // Remember source that's copied to Def. Once it's clobbered, then
       // it's no longer available for copy propagation.
-      RegList &DestList = SrcMap[SrcClobber];
-      if (!is_contained(DestList, DefClobber))
-        DestList.push_back(DefClobber);
+      RegList &DestList = SrcMap[Src];
+      if (!is_contained(DestList, Def))
+        DestList.push_back(Def);
 
       continue;
     }
-
-    // Clobber any earlyclobber regs first.
-    for (const MachineOperand &MO : MI->operands())
-      if (MO.isReg() && MO.isEarlyClobber()) {
-        unsigned Reg = getFullPhysReg(MO);
-        // If we have a tied earlyclobber, that means it is also read by this
-        // instruction, so we need to make sure we don't remove it as dead
-        // later.
-        if (MO.isTied())
-          ReadRegister(Reg);
-        ClobberRegister(Reg);
-      }
-
-    forwardUses(*MI);
 
     // Not a copy.
     SmallVector<unsigned, 2> Defs;
@@ -830,11 +299,14 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
         RegMask = &MO;
       if (!MO.isReg())
         continue;
-      unsigned Reg = getFullPhysReg(MO);
+      unsigned Reg = MO.getReg();
       if (!Reg)
         continue;
 
-      if (MO.isDef() && !MO.isEarlyClobber()) {
+      assert(!TargetRegisterInfo::isVirtualRegister(Reg) &&
+             "MachineCopyPropagation should be run after register allocation!");
+
+      if (MO.isDef()) {
         Defs.push_back(Reg);
         continue;
       } else if (MO.readsReg())
@@ -886,22 +358,11 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       ClobberRegister(Reg);
   }
 
-  // Remove instructions that were made dead by shrinking live ranges.  Do this
-  // after iterating over instructions to avoid instructions changing while
-  // iterating.
-  if (!ShrunkDeadInsts.empty()) {
-    SmallVector<unsigned, 8> NewRegs;
-    LiveRangeEdit(nullptr, NewRegs, *MF, *LIS, nullptr, this)
-        .eliminateDeadDefs(ShrunkDeadInsts);
-  }
-
   // If MBB doesn't have successors, delete the copies whose defs are not used.
   // If MBB does have successors, then conservative assume the defs are live-out
   // since we don't want to trust live-in lists.
   if (MBB.succ_empty()) {
     for (MachineInstr *MaybeDead : MaybeDeadCopies) {
-      DEBUG(dbgs() << "MCP: Removing copy due to no live-out succ: ";
-            MaybeDead->dump());
       assert(!MRI->isReserved(MaybeDead->getOperand(0).getReg()));
       MaybeDead->eraseFromParent();
       Changed = true;
@@ -913,7 +374,6 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
   AvailCopyMap.clear();
   CopyMap.clear();
   SrcMap.clear();
-  ShrunkDeadInsts.clear();
 }
 
 bool MachineCopyPropagation::runOnMachineFunction(MachineFunction &MF) {
@@ -925,13 +385,6 @@ bool MachineCopyPropagation::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   TII = MF.getSubtarget().getInstrInfo();
   MRI = &MF.getRegInfo();
-  this->MF = &MF;
-  if (PreRegRewrite) {
-    Indexes = &getAnalysis<SlotIndexes>();
-    LIS = &getAnalysis<LiveIntervals>();
-    VRM = &getAnalysis<VirtRegMap>();
-  }
-  NoSubRegLiveness = !MRI->subRegLivenessEnabled();
 
   for (MachineBasicBlock &MBB : MF)
     CopyPropagateBlock(MBB);
