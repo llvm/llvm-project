@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++1z -analyzer-checker=alpha.clone.CloneChecker -verify %s
+// RUN: %clang_analyze_cc1 -std=c++1z -analyzer-checker=alpha.clone.CloneChecker -analyzer-config alpha.clone.CloneChecker:MinimumCloneComplexity=10 -verify %s
 
 // expected-no-diagnostics
 
