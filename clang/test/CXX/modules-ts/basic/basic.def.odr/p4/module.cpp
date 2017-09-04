@@ -4,15 +4,15 @@
 // CHECK-DAG: @extern_var_exported = external global
 // FIXME: Should this be 'external global'?
 // CHECK-DAG: @inline_var_exported = linkonce_odr global
-// CHECK-DAG: @_ZL19static_var_exported = external global
+// CHECK-DAG: @_ZW6ModuleE19static_var_exported = external global
 // CHECK-DAG: @const_var_exported = external constant
 //
 // FIXME: The module name should be mangled into all of these.
 // CHECK-DAG: @extern_var_module_linkage = external global
 // FIXME: Should this be 'external global'?
 // CHECK-DAG: @inline_var_module_linkage = linkonce_odr global
-// CHECK-DAG: @_ZL25static_var_module_linkage = external global
-// CHECK-DAG: @_ZL24const_var_module_linkage = external constant
+// CHECK-DAG: @_ZW6ModuleE25static_var_module_linkage = external global
+// CHECK-DAG: @_ZW6ModuleE24const_var_module_linkage = external constant
 
 module Module;
 
@@ -28,15 +28,13 @@ void use() {
   (void)&const_var_exported;
 
   // FIXME: This symbol should not be visible here.
-  // CHECK: declare {{.*}}@_ZL26used_static_module_linkagev
+  // CHECK: declare {{.*}}@_ZW6ModuleE26used_static_module_linkagev
   used_static_module_linkage();
 
-  // FIXME: The module name should be mangled into the name of this function.
-  // CHECK: define linkonce_odr {{.*}}@_Z26used_inline_module_linkagev
+  // CHECK: define linkonce_odr {{.*}}@_ZW6ModuleE26used_inline_module_linkagev
   used_inline_module_linkage();
 
-  // FIXME: The module name should be mangled into the name of this function.
-  // CHECK: declare {{.*}}@_Z24noninline_module_linkagev
+  // CHECK: declare {{.*}}@_ZW6ModuleE24noninline_module_linkagev
   noninline_module_linkage();
 
   (void)&extern_var_module_linkage;

@@ -2726,17 +2726,17 @@ define <4 x i64> @test_v8i64_1257 (<8 x i64> %v) {
 define <2 x i64> @test_v8i64_2_5 (<8 x i64> %v) {
 ; AVX512F-LABEL: test_v8i64_2_5:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
+; AVX512F-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX512F-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_v8i64_2_5:
 ; AVX512F-32:       # BB#0:
-; AVX512F-32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512F-32-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512F-32-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512F-32-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
+; AVX512F-32-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX512F-32-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX512F-32-NEXT:    vzeroupper
 ; AVX512F-32-NEXT:    retl
   %res = shufflevector <8 x i64> %v, <8 x i64> undef, <2 x i32> <i32 2, i32 5>

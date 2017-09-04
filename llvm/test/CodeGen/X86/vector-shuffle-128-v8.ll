@@ -2197,7 +2197,7 @@ define <8 x i16> @mask_v8i16_012345ef(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX2OR512VL-LABEL: mask_v8i16_012345ef:
 ; AVX2OR512VL:       # BB#0:
-; AVX2OR512VL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3]
+; AVX2OR512VL-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3]
 ; AVX2OR512VL-NEXT:    retq
   %1 = bitcast <8 x i16> %a to <2 x i64>
   %2 = bitcast <8 x i16> %b to <2 x i64>

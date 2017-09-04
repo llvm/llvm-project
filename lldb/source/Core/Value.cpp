@@ -379,31 +379,6 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
             } else
               address = LLDB_INVALID_ADDRESS;
           }
-          //                    else
-          //                    {
-          //                        ModuleSP exe_module_sp
-          //                        (target->GetExecutableModule());
-          //                        if (exe_module_sp)
-          //                        {
-          //                            address =
-          //                            m_value.ULongLong(LLDB_INVALID_ADDRESS);
-          //                            if (address != LLDB_INVALID_ADDRESS)
-          //                            {
-          //                                if
-          //                                (exe_module_sp->ResolveFileAddress(address,
-          //                                file_so_addr))
-          //                                {
-          //                                    data.SetByteOrder(target->GetArchitecture().GetByteOrder());
-          //                                    data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
-          //                                    address_type = eAddressTypeFile;
-          //                                }
-          //                                else
-          //                                {
-          //                                    address = LLDB_INVALID_ADDRESS;
-          //                                }
-          //                            }
-          //                        }
-          //                    }
         } else {
           error.SetErrorString("can't read load address (invalid process)");
         }

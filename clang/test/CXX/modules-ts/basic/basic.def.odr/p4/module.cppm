@@ -11,7 +11,7 @@
 // can discard this global and its initializer (if any), and other TUs are not
 // permitted to run the initializer for this variable.
 // CHECK-DAG: @inline_var_exported = linkonce_odr global
-// CHECK-DAG: @_ZL19static_var_exported = global
+// CHECK-DAG: @_ZW6ModuleE19static_var_exported = global
 // CHECK-DAG: @const_var_exported = constant
 //
 // FIXME: The module name should be mangled into all of these.
@@ -20,8 +20,8 @@
 // can discard this global and its initializer (if any), and other TUs are not
 // permitted to run the initializer for this variable.
 // CHECK-DAG: @inline_var_module_linkage = linkonce_odr global
-// CHECK-DAG: @_ZL25static_var_module_linkage = global
-// CHECK-DAG: @_ZL24const_var_module_linkage = constant
+// CHECK-DAG: @_ZW6ModuleE25static_var_module_linkage = global
+// CHECK-DAG: @_ZW6ModuleE24const_var_module_linkage = constant
 
 static void unused_static_global_module() {}
 static void used_static_global_module() {}
@@ -57,9 +57,9 @@ export module Module;
 export {
   // FIXME: These should be ill-formed: you can't export an internal linkage
   // symbol, per [dcl.module.interface]p2.
-  // CHECK: define void {{.*}}@_ZL22unused_static_exportedv
+  // CHECK: define void {{.*}}@_ZW6ModuleE22unused_static_exportedv
   static void unused_static_exported() {}
-  // CHECK: define void {{.*}}@_ZL20used_static_exportedv
+  // CHECK: define void {{.*}}@_ZW6ModuleE20used_static_exportedv
   static void used_static_exported() {}
 
   inline void unused_inline_exported() {}
@@ -88,11 +88,9 @@ export {
 // FIXME: Ideally we wouldn't emit this as its name is not visible outside this
 // TU, but this module interface might contain a template that can use this
 // function so we conservatively emit it for now.
-// FIXME: The module name should be mangled into the name of this function.
-// CHECK: define void {{.*}}@_ZL28unused_static_module_linkagev
+// CHECK: define void {{.*}}@_ZW6ModuleE28unused_static_module_linkagev
 static void unused_static_module_linkage() {}
-// FIXME: The module name should be mangled into the name of this function.
-// CHECK: define void {{.*}}@_ZL26used_static_module_linkagev
+// CHECK: define void {{.*}}@_ZW6ModuleE26used_static_module_linkagev
 static void used_static_module_linkage() {}
 
 inline void unused_inline_module_linkage() {}
@@ -103,12 +101,10 @@ inline int inline_var_module_linkage;
 static int static_var_module_linkage;
 const int const_var_module_linkage = 3;
 
-// FIXME: The module name should be mangled into the name of this function.
-// CHECK: define void {{.*}}@_Z24noninline_module_linkagev
+// CHECK: define void {{.*}}@_ZW6ModuleE24noninline_module_linkagev
 void noninline_module_linkage() {
   used_static_module_linkage();
-  // FIXME: The module name should be mangled into the name of this function.
-  // CHECK: define linkonce_odr {{.*}}@_Z26used_inline_module_linkagev
+  // CHECK: define linkonce_odr {{.*}}@_ZW6ModuleE26used_inline_module_linkagev
   used_inline_module_linkage();
 
   (void)&extern_var_module_linkage;
@@ -116,3 +112,10 @@ void noninline_module_linkage() {
   (void)&static_var_module_linkage;
   (void)&const_var_module_linkage;
 }
+
+struct a {
+  struct b {};
+  struct c {};
+};
+// CHECK: define void @_ZW6ModuleE1fW_0EN1a1bEW_0ENS_1cE(
+void f(a::b, a::c) {}

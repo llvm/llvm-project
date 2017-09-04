@@ -118,15 +118,13 @@ isl::union_map computeScalarReachingOverwrite(isl::union_map Schedule,
 isl::map computeScalarReachingOverwrite(isl::union_map Schedule,
                                         isl::set Writes, bool InclPrevWrite,
                                         bool InclOverwrite) {
-  auto ScatterSpace = getScatterSpace(Schedule);
-  auto DomSpace = give(isl_set_get_space(Writes.keep()));
+  isl::space ScatterSpace = getScatterSpace(Schedule);
+  isl::space DomSpace = Writes.get_space();
 
-  auto ReachOverwrite = computeScalarReachingOverwrite(
-      Schedule, give(isl_union_set_from_set(Writes.take())), InclPrevWrite,
-      InclOverwrite);
+  isl::union_map ReachOverwrite = computeScalarReachingOverwrite(
+      Schedule, isl::union_set(Writes), InclPrevWrite, InclOverwrite);
 
-  auto ResultSpace = give(isl_space_map_from_domain_and_range(
-      ScatterSpace.take(), DomSpace.take()));
+  isl::space ResultSpace = ScatterSpace.map_from_domain_and_range(DomSpace);
   return singleton(std::move(ReachOverwrite), ResultSpace);
 }
 
@@ -140,13 +138,11 @@ isl::map computeScalarReachingOverwrite(isl::union_map Schedule,
 ///         same elements and in addition the elements of @p Universe to some
 ///         undefined elements. The function prefers to return simple maps.
 isl::union_map expandMapping(isl::union_map Relevant, isl::union_set Universe) {
-  Relevant = give(isl_union_map_coalesce(Relevant.take()));
-  auto RelevantDomain = give(isl_union_map_domain(Relevant.copy()));
-  auto Simplified =
-      give(isl_union_map_gist_domain(Relevant.take(), RelevantDomain.take()));
-  Simplified = give(isl_union_map_coalesce(Simplified.take()));
-  return give(
-      isl_union_map_intersect_domain(Simplified.take(), Universe.take()));
+  Relevant = Relevant.coalesce();
+  isl::union_set RelevantDomain = Relevant.domain();
+  isl::union_map Simplified = Relevant.gist_domain(RelevantDomain);
+  Simplified = Simplified.coalesce();
+  return Simplified.intersect_domain(Universe);
 }
 
 /// Represent the knowledge of the contents of any array elements in any zone or

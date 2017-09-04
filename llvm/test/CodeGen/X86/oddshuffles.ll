@@ -542,7 +542,7 @@ define void @v12i32(<8 x i32> %a, <8 x i32> %b, <12 x i32>* %p) nounwind {
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3],xmm3[3,3]
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,1]
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3]
-; AVX1-NEXT:    vmovaps %xmm0, 32(%rdi)
+; AVX1-NEXT:    vmovapd %xmm0, 32(%rdi)
 ; AVX1-NEXT:    vmovaps %ymm2, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1373,8 +1373,8 @@ define void @interleave_24i32_in(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2,
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2,3],ymm0[4],ymm2[5,6],ymm0[7]
 ; AVX1-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[0,0,3,3,4,4,7,7]
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3,4],ymm1[5],ymm0[6,7]
-; AVX1-NEXT:    vmovups %ymm0, 32(%rdi)
-; AVX1-NEXT:    vmovups %ymm4, 64(%rdi)
+; AVX1-NEXT:    vmovupd %ymm0, 32(%rdi)
+; AVX1-NEXT:    vmovupd %ymm4, 64(%rdi)
 ; AVX1-NEXT:    vmovups %ymm3, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq

@@ -26,7 +26,7 @@ declare <16 x i16> @llvm.x86.avx2.pblendw(<16 x i16>, <16 x i16>, i8) nounwind r
 define <4 x i32> @commute_fold_vpblendd_128(<4 x i32> %a, <4 x i32>* %b) #0 {
 ; CHECK-LABEL: commute_fold_vpblendd_128:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],mem[1,2,3]
+; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],mem[1,2,3]
 ; CHECK-NEXT:    retq
   %1 = load <4 x i32>, <4 x i32>* %b
   %2 = call <4 x i32> @llvm.x86.avx2.pblendd.128(<4 x i32> %1, <4 x i32> %a, i8 1)
@@ -37,7 +37,7 @@ declare <4 x i32> @llvm.x86.avx2.pblendd.128(<4 x i32>, <4 x i32>, i8) nounwind 
 define <8 x i32> @commute_fold_vpblendd_256(<8 x i32> %a, <8 x i32>* %b) #0 {
 ; CHECK-LABEL: commute_fold_vpblendd_256:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],mem[1,2,3,4,5,6],ymm0[7]
+; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],mem[1,2,3,4,5,6],ymm0[7]
 ; CHECK-NEXT:    retq
   %1 = load <8 x i32>, <8 x i32>* %b
   %2 = call <8 x i32> @llvm.x86.avx2.pblendd.256(<8 x i32> %1, <8 x i32> %a, i8 129)

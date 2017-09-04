@@ -125,8 +125,8 @@ return:
 
 ; CHECK: Statistics {
 ; CHECK:     Instructions copied: 1
-; CHECK:     Known loads forwarded: 2
-; CHECK:     Operand trees forwarded: 1
+; CHECK:     Known loads forwarded: 3
+; CHECK:     Operand trees forwarded: 2
 ; CHECK:     Statements with forwarded operand trees: 1
 ; CHECK: }
 
@@ -150,9 +150,8 @@ return:
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_B[i0] };
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_C[i0] };
-; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_val1[] };
 ; CHECK-NEXT:             Instructions {
+; CHECK-NEXT:                   %val1 = load double, double* %A_idx
 ; CHECK-NEXT:                   %val1 = load double, double* %A_idx
 ; CHECK-NEXT:                   %val1 = load double, double* %A_idx
 ; CHECK-NEXT:                   %val2 = fadd double %val1, %val1

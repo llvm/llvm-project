@@ -89,7 +89,7 @@ multiclass fma3p_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
 // Fused Multiply-Add
 let ExeDomain = SSEPackedSingle in {
   defm VFMADD    : fma3p_forms<0x98, 0xA8, 0xB8, "vfmadd", "ps", "PS",
-                               loadv4f32, loadv8f32, fma, v4f32, v8f32>;
+                               loadv4f32, loadv8f32, X86Fmadd, v4f32, v8f32>;
   defm VFMSUB    : fma3p_forms<0x9A, 0xAA, 0xBA, "vfmsub", "ps", "PS",
                                loadv4f32, loadv8f32, X86Fmsub, v4f32, v8f32>;
   defm VFMADDSUB : fma3p_forms<0x96, 0xA6, 0xB6, "vfmaddsub", "ps", "PS",
@@ -102,7 +102,7 @@ let ExeDomain = SSEPackedSingle in {
 
 let ExeDomain = SSEPackedDouble in {
   defm VFMADD    : fma3p_forms<0x98, 0xA8, 0xB8, "vfmadd", "pd", "PD",
-                               loadv2f64, loadv4f64, fma, v2f64,
+                               loadv2f64, loadv4f64, X86Fmadd, v2f64,
                                v4f64>, VEX_W;
   defm VFMSUB    : fma3p_forms<0x9A, 0xAA, 0xBA, "vfmsub", "pd", "PD",
                                loadv2f64, loadv4f64, X86Fmsub, v2f64,
@@ -271,7 +271,7 @@ multiclass fma3s<bits<8> opc132, bits<8> opc213, bits<8> opc231,
 }
 
 defm VFMADD : fma3s<0x99, 0xA9, 0xB9, "vfmadd", int_x86_fma_vfmadd_ss,
-                    int_x86_fma_vfmadd_sd, fma>, VEX_LIG;
+                    int_x86_fma_vfmadd_sd, X86Fmadd>, VEX_LIG;
 defm VFMSUB : fma3s<0x9B, 0xAB, 0xBB, "vfmsub", int_x86_fma_vfmsub_ss,
                     int_x86_fma_vfmsub_sd, X86Fmsub>, VEX_LIG;
 
@@ -407,7 +407,7 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
 
 let ExeDomain = SSEPackedSingle in {
   // Scalar Instructions
-  defm VFMADDSS4  : fma4s<0x6A, "vfmaddss", FR32, f32mem, f32, fma, loadf32>,
+  defm VFMADDSS4  : fma4s<0x6A, "vfmaddss", FR32, f32mem, f32, X86Fmadd, loadf32>,
                     fma4s_int<0x6A, "vfmaddss", ssmem, sse_load_f32,
                               int_x86_fma_vfmadd_ss>;
   defm VFMSUBSS4  : fma4s<0x6E, "vfmsubss", FR32, f32mem, f32, X86Fmsub, loadf32>,
@@ -422,7 +422,7 @@ let ExeDomain = SSEPackedSingle in {
                     fma4s_int<0x7E, "vfnmsubss", ssmem, sse_load_f32,
                               int_x86_fma_vfnmsub_ss>;
   // Packed Instructions
-  defm VFMADDPS4    : fma4p<0x68, "vfmaddps", fma, v4f32, v8f32,
+  defm VFMADDPS4    : fma4p<0x68, "vfmaddps", X86Fmadd, v4f32, v8f32,
                             loadv4f32, loadv8f32>;
   defm VFMSUBPS4    : fma4p<0x6C, "vfmsubps", X86Fmsub, v4f32, v8f32,
                             loadv4f32, loadv8f32>;
@@ -438,7 +438,7 @@ let ExeDomain = SSEPackedSingle in {
 
 let ExeDomain = SSEPackedDouble in {
   // Scalar Instructions
-  defm VFMADDSD4  : fma4s<0x6B, "vfmaddsd", FR64, f64mem, f64, fma, loadf64>,
+  defm VFMADDSD4  : fma4s<0x6B, "vfmaddsd", FR64, f64mem, f64, X86Fmadd, loadf64>,
                     fma4s_int<0x6B, "vfmaddsd", sdmem, sse_load_f64,
                               int_x86_fma_vfmadd_sd>;
   defm VFMSUBSD4  : fma4s<0x6F, "vfmsubsd", FR64, f64mem, f64, X86Fmsub, loadf64>,
@@ -453,7 +453,7 @@ let ExeDomain = SSEPackedDouble in {
                     fma4s_int<0x7F, "vfnmsubsd", sdmem, sse_load_f64,
                               int_x86_fma_vfnmsub_sd>;
   // Packed Instructions
-  defm VFMADDPD4    : fma4p<0x69, "vfmaddpd", fma, v2f64, v4f64,
+  defm VFMADDPD4    : fma4p<0x69, "vfmaddpd", X86Fmadd, v2f64, v4f64,
                             loadv2f64, loadv4f64>;
   defm VFMSUBPD4    : fma4p<0x6D, "vfmsubpd", X86Fmsub, v2f64, v4f64,
                             loadv2f64, loadv4f64>;
