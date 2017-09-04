@@ -126,9 +126,9 @@ define <8 x i32> @expand3(<4 x i32> %a ) {
 ;
 ; KNL64-LABEL: expand3:
 ; KNL64:       # BB#0:
-; KNL64-NEXT:    vpbroadcastq %xmm0, %ymm0
-; KNL64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; KNL64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6],ymm0[7]
+; KNL64-NEXT:    vbroadcastsd %xmm0, %ymm0
+; KNL64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6],ymm0[7]
 ; KNL64-NEXT:    retq
 ;
 ; SKX32-LABEL: expand3:
@@ -141,9 +141,9 @@ define <8 x i32> @expand3(<4 x i32> %a ) {
 ;
 ; KNL32-LABEL: expand3:
 ; KNL32:       # BB#0:
-; KNL32-NEXT:    vpbroadcastq %xmm0, %ymm0
-; KNL32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; KNL32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6],ymm0[7]
+; KNL32-NEXT:    vbroadcastsd %xmm0, %ymm0
+; KNL32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6],ymm0[7]
 ; KNL32-NEXT:    retl
    %res = shufflevector <4 x i32> zeroinitializer, <4 x i32> %a, <8 x i32> <i32 4, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0,i32 5>
    ret <8 x i32> %res

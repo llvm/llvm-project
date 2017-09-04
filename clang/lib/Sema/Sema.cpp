@@ -766,10 +766,24 @@ void Sema::emitAndClearUnusedLocalTypedefWarnings() {
 /// declarations.
 void Sema::ActOnStartOfTranslationUnit() {
   if (getLangOpts().ModulesTS) {
+    SourceLocation StartOfTU =
+        SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
+
     // We start in the global module; all those declarations are implicitly
     // module-private (though they do not have module linkage).
-    Context.getTranslationUnitDecl()->setModuleOwnershipKind(
-        Decl::ModuleOwnershipKind::ModulePrivate);
+    auto &Map = PP.getHeaderSearchInfo().getModuleMap();
+    auto *GlobalModule = Map.createGlobalModuleForInterfaceUnit(StartOfTU);
+    assert(GlobalModule && "module creation should not fail");
+
+    // Enter the scope of the global module.
+    ModuleScopes.push_back({});
+    ModuleScopes.back().Module = GlobalModule;
+    VisibleModules.setVisible(GlobalModule, StartOfTU);
+
+    // All declarations created from now on are owned by the global module.
+    auto *TU = Context.getTranslationUnitDecl();
+    TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::Visible);
+    TU->setLocalOwningModule(GlobalModule);
   }
 }
 

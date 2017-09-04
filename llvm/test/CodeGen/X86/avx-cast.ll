@@ -41,8 +41,8 @@ define <4 x i64> @castC(<2 x i64> %m) nounwind uwtable readnone ssp {
 ; AVX2-LABEL: castC:
 ; AVX2:       ## BB#0:
 ; AVX2-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    retq
   %shuffle.i = shufflevector <2 x i64> %m, <2 x i64> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
   ret <4 x i64> %shuffle.i

@@ -35,14 +35,13 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    xorl %ecx, %ecx
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    .p2align 4, 0x90
 ; AVX2-NEXT:  .LBB0_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX2-NEXT:    vmovdqu (%rsi,%rcx,2), %xmm2
-; AVX2-NEXT:    vpmaddwd (%rdi,%rcx,2), %xmm2, %xmm2
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm2
-; AVX2-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vmovdqu (%rsi,%rcx,2), %xmm1
+; AVX2-NEXT:    vpmaddwd (%rdi,%rcx,2), %xmm1, %xmm1
+; AVX2-NEXT:    vmovdqa %xmm1, %xmm1
+; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    addq $8, %rcx
 ; AVX2-NEXT:    cmpq %rcx, %rax
 ; AVX2-NEXT:    jne .LBB0_1
@@ -61,14 +60,13 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB0_1: # %vector.body
 ; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512-NEXT:    vmovdqu (%rsi,%rcx,2), %xmm2
-; AVX512-NEXT:    vpmaddwd (%rdi,%rcx,2), %xmm2, %xmm2
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm2
-; AVX512-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; AVX512-NEXT:    vmovdqu (%rsi,%rcx,2), %xmm1
+; AVX512-NEXT:    vpmaddwd (%rdi,%rcx,2), %xmm1, %xmm1
+; AVX512-NEXT:    vmovdqa %xmm1, %xmm1
+; AVX512-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    addq $8, %rcx
 ; AVX512-NEXT:    cmpq %rcx, %rax
 ; AVX512-NEXT:    jne .LBB0_1
@@ -310,15 +308,14 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB2_1: # %vector.body
 ; AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512-NEXT:    vpmovsxbw (%rdi,%rcx), %ymm2
-; AVX512-NEXT:    vpmovsxbw (%rsi,%rcx), %ymm3
-; AVX512-NEXT:    vpmaddwd %ymm2, %ymm3, %ymm2
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm2
-; AVX512-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
+; AVX512-NEXT:    vpmovsxbw (%rdi,%rcx), %ymm1
+; AVX512-NEXT:    vpmovsxbw (%rsi,%rcx), %ymm2
+; AVX512-NEXT:    vpmaddwd %ymm1, %ymm2, %ymm1
+; AVX512-NEXT:    vmovdqa %ymm1, %ymm1
+; AVX512-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    addq $16, %rcx
 ; AVX512-NEXT:    cmpq %rcx, %rax
 ; AVX512-NEXT:    jne .LBB2_1

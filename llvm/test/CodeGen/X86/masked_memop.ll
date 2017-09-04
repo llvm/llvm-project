@@ -787,15 +787,10 @@ define <4 x double> @mload_constmask_v4f64(<4 x double>* %addr, <4 x double> %ds
 ; 256-bit integer vectors are supported with AVX2.
 
 define <8 x i32> @mload_constmask_v8i32(<8 x i32>* %addr, <8 x i32> %dst) {
-; AVX1-LABEL: mload_constmask_v8i32:
-; AVX1:       ## BB#0:
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2],ymm0[3,4,5,6],mem[7]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: mload_constmask_v8i32:
-; AVX2:       ## BB#0:
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = mem[0,1,2],ymm0[3,4,5,6],mem[7]
-; AVX2-NEXT:    retq
+; AVX-LABEL: mload_constmask_v8i32:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2],ymm0[3,4,5,6],mem[7]
+; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: mload_constmask_v8i32:
 ; AVX512F:       ## BB#0:
@@ -824,7 +819,7 @@ define <4 x i64> @mload_constmask_v4i64(<4 x i64>* %addr, <4 x i64> %dst) {
 ;
 ; AVX2-LABEL: mload_constmask_v4i64:
 ; AVX2:       ## BB#0:
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = mem[0,1],ymm0[2,3,4,5],mem[6,7]
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2,3,4,5],mem[6,7]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: mload_constmask_v4i64:

@@ -8,12 +8,12 @@ define void @patatino() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND1:%.*]], label [[FOR_INC:%.*]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i16 [ [[INC:%.*]], [[FOR_INC]] ], [ undef, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    store i16 [[TMP0]], i16* @b, align 2
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i16 [ [[INC:%.*]], [[FOR_INC]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i16 [[PHIOFOPS]], i16* @b, align 2
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, i16* @b, align 2
-; CHECK-NEXT:    [[INC]] = add i16 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* @b, align 2
+; CHECK-NEXT:    [[INC]] = add i16 [[TMP0]], 1
 ; CHECK-NEXT:    store i16 [[INC]], i16* @b, align 2
 ; CHECK-NEXT:    br label [[FOR_COND1]]
 ;

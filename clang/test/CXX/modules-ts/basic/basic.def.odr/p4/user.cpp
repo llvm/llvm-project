@@ -5,7 +5,7 @@
 // FIXME: Should this be 'external global'?
 // CHECK-DAG: @inline_var_exported = linkonce_odr global
 // FIXME: These should be 'extern global' and 'extern constant'.
-// CHECK-DAG: @_ZL19static_var_exported = global
+// CHECK-DAG: @_ZW6ModuleE19static_var_exported = global
 // CHECK-DAG: @const_var_exported = constant
 
 import Module;

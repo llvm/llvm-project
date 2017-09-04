@@ -64,7 +64,7 @@ void CloneChecker::checkEndOfTranslationUnit(const TranslationUnitDecl *TU,
   // the CloneDetector. The only thing left to do is to report the found clones.
 
   int MinComplexity = Mgr.getAnalyzerOptions().getOptionAsInteger(
-      "MinimumCloneComplexity", 10, this);
+      "MinimumCloneComplexity", 50, this);
   assert(MinComplexity >= 0);
 
   bool ReportSuspiciousClones = Mgr.getAnalyzerOptions().getBooleanOption(

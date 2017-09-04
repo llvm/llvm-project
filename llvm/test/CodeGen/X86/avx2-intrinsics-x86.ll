@@ -1024,7 +1024,7 @@ declare <4 x i64> @llvm.x86.avx2.pmul.dq(<8 x i32>, <8 x i32>) nounwind readnone
 define <4 x i32> @test_x86_avx2_pblendd_128(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: test_x86_avx2_pblendd_128:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpblendd $8, %xmm0, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x71,0x02,0xc0,0x08]
+; CHECK-NEXT:    vblendps $8, %xmm0, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x71,0x0c,0xc0,0x08]
 ; CHECK-NEXT:    ## xmm0 = xmm1[0,1,2],xmm0[3]
 ; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx2.pblendd.128(<4 x i32> %a0, <4 x i32> %a1, i8 7) ; <<4 x i32>> [#uses=1]
@@ -1036,7 +1036,7 @@ declare <4 x i32> @llvm.x86.avx2.pblendd.128(<4 x i32>, <4 x i32>, i8) nounwind 
 define <8 x i32> @test_x86_avx2_pblendd_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; CHECK-LABEL: test_x86_avx2_pblendd_256:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpblendd $7, %ymm1, %ymm0, %ymm0 ## encoding: [0xc4,0xe3,0x7d,0x02,0xc1,0x07]
+; CHECK-NEXT:    vblendps $7, %ymm1, %ymm0, %ymm0 ## encoding: [0xc4,0xe3,0x7d,0x0c,0xc1,0x07]
 ; CHECK-NEXT:    ## ymm0 = ymm1[0,1,2],ymm0[3,4,5,6,7]
 ; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.pblendd.256(<8 x i32> %a0, <8 x i32> %a1, i8 7) ; <<8 x i32>> [#uses=1]
