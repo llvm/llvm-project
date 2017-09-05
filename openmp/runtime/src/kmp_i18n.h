@@ -142,17 +142,17 @@ typedef enum kmp_msg_severity kmp_msg_severity_t;
 // mandatory. Any number of system errors and hints may be specified. Argument
 // list must be finished with __kmp_msg_null.
 void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, ...);
+KMP_NORETURN void __kmp_fatal(kmp_msg_t message, ...);
 
 // Helper macros to make calls shorter in simple cases.
 #define KMP_INFORM(...)                                                        \
   __kmp_msg(kmp_ms_inform, KMP_MSG(__VA_ARGS__), __kmp_msg_null)
 #define KMP_WARNING(...)                                                       \
   __kmp_msg(kmp_ms_warning, KMP_MSG(__VA_ARGS__), __kmp_msg_null)
-#define KMP_FATAL(...)                                                         \
-  __kmp_msg(kmp_ms_fatal, KMP_MSG(__VA_ARGS__), __kmp_msg_null)
+#define KMP_FATAL(...) __kmp_fatal(KMP_MSG(__VA_ARGS__), __kmp_msg_null)
 #define KMP_SYSFAIL(func, error)                                               \
-  __kmp_msg(kmp_ms_fatal, KMP_MSG(FunctionError, func), KMP_SYSERRCODE(error), \
-            __kmp_msg_null)
+  __kmp_fatal(KMP_MSG(FunctionError, func), KMP_SYSERRCODE(error),             \
+              __kmp_msg_null)
 
 // Check error, if not zero, generate fatal error message.
 #define KMP_CHECK_SYSFAIL(func, error)                                         \
