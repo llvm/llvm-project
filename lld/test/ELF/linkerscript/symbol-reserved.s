@@ -28,6 +28,12 @@
 # ALIGN-SUB: 0000000000000006 *ABS* 00000000 .hidden newsym
 
 # RUN: echo "PROVIDE_HIDDEN(newsym = ALIGN(_end, CONSTANT(MAXPAGESIZE)) + 5);" > %t.script
+# RUN: ld.lld -o %t1 %t %t.script
+# RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=RELATIVE %s
+# RELATIVE: 0000000000202005 .text 00000000 .hidden newsym
+# RELATIVE: 0000000000201007 .text 00000000 _end
+
+# RUN: echo "PROVIDE_HIDDEN(newsym = ALIGN(_end, CONSTANT(MAXPAGESIZE)) + 5);" > %t.script
 # RUN: ld.lld -o %t1 --script %p/Inputs/symbol-reserved.script %t %t.script
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=RELATIVE-ADD %s
 # RELATIVE-ADD: 0000000000001005 .text 00000000 .hidden newsym

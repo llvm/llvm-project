@@ -85,3 +85,11 @@ typedef __attribute__((ext_vector_type(4))) double double4;
 typedef __attribute__((ext_vector_type(8))) double double8;
 typedef __attribute__((ext_vector_type(16))) double double16;
 #endif
+
+#ifdef cl_khr_fp16
+typedef __attribute__((ext_vector_type(2))) half half2;
+typedef __attribute__((ext_vector_type(3))) half half3;
+typedef __attribute__((ext_vector_type(4))) half half4;
+typedef __attribute__((ext_vector_type(8))) half half8;
+typedef __attribute__((ext_vector_type(16))) half half16;
+#endif

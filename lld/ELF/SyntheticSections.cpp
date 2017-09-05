@@ -112,7 +112,6 @@ template <class ELFT> MergeInputSection *elf::createCommentSection() {
   auto *Ret =
       make<MergeInputSection>((ObjFile<ELFT> *)nullptr, &Hdr, ".comment");
   Ret->Data = getVersion();
-  Ret->splitIntoPieces();
   return Ret;
 }
 

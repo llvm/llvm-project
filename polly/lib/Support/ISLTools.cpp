@@ -135,12 +135,11 @@ isl::map polly::singleton(isl::union_map UMap, isl::space ExpectedSpace) {
     return nullptr;
 
   if (isl_union_map_n_map(UMap.keep()) == 0)
-    return give(isl_map_empty(ExpectedSpace.take()));
+    return isl::map::empty(ExpectedSpace);
 
-  auto Result = give(isl_map_from_union_map(UMap.take()));
-  assert(!Result || isl_space_has_equal_tuples(
-                        give(isl_map_get_space(Result.keep())).keep(),
-                        ExpectedSpace.keep()) == isl_bool_true);
+  isl::map Result = isl::map::from_union_map(UMap);
+  assert(!Result || Result.get_space().has_equal_tuples(ExpectedSpace));
+
   return Result;
 }
 
@@ -149,12 +148,11 @@ isl::set polly::singleton(isl::union_set USet, isl::space ExpectedSpace) {
     return nullptr;
 
   if (isl_union_set_n_set(USet.keep()) == 0)
-    return give(isl_set_empty(ExpectedSpace.copy()));
+    return isl::set::empty(ExpectedSpace);
 
-  auto Result = give(isl_set_from_union_set(USet.take()));
-  assert(!Result || isl_space_has_equal_tuples(
-                        give(isl_set_get_space(Result.keep())).keep(),
-                        ExpectedSpace.keep()) == isl_bool_true);
+  isl::set Result(USet);
+  assert(!Result || Result.get_space().has_equal_tuples(ExpectedSpace));
+
   return Result;
 }
 

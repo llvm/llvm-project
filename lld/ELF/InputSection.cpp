@@ -923,6 +923,7 @@ MergeInputSection::MergeInputSection(ObjFile<ELFT> *F,
 // Note that this function is called from parallelForEach. This must be
 // thread-safe (i.e. no memory allocation from the pools).
 void MergeInputSection::splitIntoPieces() {
+  assert(Pieces.empty());
   ArrayRef<uint8_t> Data = this->Data;
   uint64_t EntSize = this->Entsize;
   if (this->Flags & SHF_STRINGS)
