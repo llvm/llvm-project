@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
+#include "MCTargetDesc/PPCPredicates.h"
 
 using namespace llvm;
 
@@ -55,6 +56,9 @@ private:
 
   // Perform peepholes.
   bool simplifyCode(void);
+
+  // Perform peepholes.
+  bool eliminateRedundantCompare(void);
 
   // Find the "true" register represented by SrcReg (following chains
   // of copies and subreg_to_reg operations).
@@ -344,6 +348,301 @@ bool PPCMIPeephole::simplifyCode(void) {
       ToErase->eraseFromParent();
       ToErase = nullptr;
     }
+  }
+
+  // We try to eliminate redundant compare instruction.
+  Simplified |= eliminateRedundantCompare();
+
+  return Simplified;
+}
+
+// helper functions for eliminateRedundantCompare
+static bool isEqOrNe(MachineInstr *BI) {
+  PPC::Predicate Pred = (PPC::Predicate)BI->getOperand(0).getImm();
+  unsigned PredCond = PPC::getPredicateCondition(Pred);
+  return (PredCond == PPC::PRED_EQ || PredCond == PPC::PRED_NE);
+}
+
+static bool isSupportedCmpOp(unsigned opCode) {
+  return (opCode == PPC::CMPLD  || opCode == PPC::CMPD  ||
+          opCode == PPC::CMPLW  || opCode == PPC::CMPW  ||
+          opCode == PPC::CMPLDI || opCode == PPC::CMPDI ||
+          opCode == PPC::CMPLWI || opCode == PPC::CMPWI);
+}
+
+static bool is64bitCmpOp(unsigned opCode) {
+  return (opCode == PPC::CMPLD  || opCode == PPC::CMPD ||
+          opCode == PPC::CMPLDI || opCode == PPC::CMPDI);
+}
+
+static bool isSignedCmpOp(unsigned opCode) {
+  return (opCode == PPC::CMPD  || opCode == PPC::CMPW ||
+          opCode == PPC::CMPDI || opCode == PPC::CMPWI);
+}
+
+static unsigned getSignedCmpOpCode(unsigned opCode) {
+  if (opCode == PPC::CMPLD)  return PPC::CMPD;
+  if (opCode == PPC::CMPLW)  return PPC::CMPW;
+  if (opCode == PPC::CMPLDI) return PPC::CMPDI;
+  if (opCode == PPC::CMPLWI) return PPC::CMPWI;
+  return opCode;
+}
+
+// We can decrement immediate x in (GE x) by changing it to (GT x-1) or
+// (LT x) to (LE x-1)
+static unsigned getPredicateToDecImm(MachineInstr *BI, MachineInstr *CMPI) {
+  uint64_t Imm = CMPI->getOperand(2).getImm();
+  bool SignedCmp = isSignedCmpOp(CMPI->getOpcode());
+  if ((!SignedCmp && Imm == 0) || (SignedCmp && Imm == 0x8000))
+    return 0;
+
+  PPC::Predicate Pred = (PPC::Predicate)BI->getOperand(0).getImm();
+  unsigned PredCond = PPC::getPredicateCondition(Pred);
+  unsigned PredHint = PPC::getPredicateHint(Pred);
+  if (PredCond == PPC::PRED_GE)
+    return PPC::getPredicate(PPC::PRED_GT, PredHint);
+  if (PredCond == PPC::PRED_LT)
+    return PPC::getPredicate(PPC::PRED_LE, PredHint);
+
+  return 0;
+}
+
+// We can increment immediate x in (GT x) by changing it to (GE x+1) or
+// (LE x) to (LT x+1)
+static unsigned getPredicateToIncImm(MachineInstr *BI, MachineInstr *CMPI) {
+  uint64_t Imm = CMPI->getOperand(2).getImm();
+  bool SignedCmp = isSignedCmpOp(CMPI->getOpcode());
+  if ((!SignedCmp && Imm == 0xFFFF) || (SignedCmp && Imm == 0x7FFF))
+    return 0;
+
+  PPC::Predicate Pred = (PPC::Predicate)BI->getOperand(0).getImm();
+  unsigned PredCond = PPC::getPredicateCondition(Pred);
+  unsigned PredHint = PPC::getPredicateHint(Pred);
+  if (PredCond == PPC::PRED_GT)
+    return PPC::getPredicate(PPC::PRED_GE, PredHint);
+  if (PredCond == PPC::PRED_LE)
+    return PPC::getPredicate(PPC::PRED_LT, PredHint);
+
+  return 0;
+}
+
+static bool eligibleForCompareElimination(MachineBasicBlock &MBB,
+                                          MachineRegisterInfo *MRI) {
+
+  auto isEligibleBB = [&](MachineBasicBlock &BB) {
+    auto BII = BB.getFirstInstrTerminator();
+    // We optimize BBs ending with a conditional branch.
+    // We check only for BCC here, not BCCLR, because BCCLR
+    // will be formed only later in the pipeline. 
+    if (BB.succ_size() == 2 &&
+        BII != BB.instr_end() &&
+        (*BII).getOpcode() == PPC::BCC &&
+        (*BII).getOperand(1).isReg()) {
+      // We optimize only if the condition code is used only by one BCC.
+      unsigned CndReg = (*BII).getOperand(1).getReg();
+      if (!TargetRegisterInfo::isVirtualRegister(CndReg) ||
+          !MRI->hasOneNonDBGUse(CndReg))
+        return false;
+
+      // We skip this BB if a physical register is used in comparison.
+      MachineInstr *CMPI = MRI->getVRegDef(CndReg);
+      for (MachineOperand &MO : CMPI->operands())
+        if (MO.isReg() && !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+          return false;
+
+      return true;
+    }
+    return false;
+  };
+
+  if (MBB.pred_size() != 1)
+    return false;
+
+  MachineBasicBlock *PredMBB = *MBB.pred_begin();
+  if (isEligibleBB(MBB) && isEligibleBB(*PredMBB))
+    return true;
+
+  return false;
+}
+
+// If multiple conditional branches are executed based on the (essentially)
+// same comparison, we merge compare instructions into one and make multiple
+// conditional branches on this comparison.
+// For example,
+//   if (a == 0) { ... }
+//   else if (a < 0) { ... }
+// can be executed by one compare and two conditional branches instead of
+// two pairs of a compare and a conditional branch.
+//
+// This method merges two compare instructions in two MBBs and modifies the
+// compare and conditional branch instructions if needed.
+// For the above example, the input for this pass looks like:
+//   cmplwi r3, 0
+//   beq    0, .LBB0_3
+//   cmpwi  r3, -1
+//   bgt    0, .LBB0_4
+// So, before merging two compares, we need to modify these instructions as
+//   cmpwi  r3, 0       ; cmplwi and cmpwi yield same result for beq
+//   beq    0, .LBB0_3
+//   cmpwi  r3, 0       ; greather than -1 means greater or equal to 0
+//   bge    0, .LBB0_4
+
+bool PPCMIPeephole::eliminateRedundantCompare(void) {
+  bool Simplified = false;
+
+  for (MachineBasicBlock &MBB2 : *MF) {
+    // We only consider two basic blocks MBB1 and MBB2 if
+    // - both MBBs end with a conditional branch,
+    // - MBB1 is the only predecessor of MBB2, and
+    // - compare does not take a physical register as a operand in both MBBs.
+    if (!eligibleForCompareElimination(MBB2, MRI))
+      continue;
+
+    MachineBasicBlock *MBB1 = *MBB2.pred_begin();
+    MachineInstr *BI1   = &*MBB1->getFirstInstrTerminator();
+    MachineInstr *CMPI1 = MRI->getVRegDef(BI1->getOperand(1).getReg());
+
+    MachineInstr *BI2   = &*MBB2.getFirstInstrTerminator();
+    MachineInstr *CMPI2 = MRI->getVRegDef(BI2->getOperand(1).getReg());
+
+    // We cannot optimize an unsupported compare opcode or
+    // a mix of 32-bit and 64-bit comaprisons
+    if (!isSupportedCmpOp(CMPI1->getOpcode()) ||
+        !isSupportedCmpOp(CMPI2->getOpcode()) ||
+        is64bitCmpOp(CMPI1->getOpcode()) != is64bitCmpOp(CMPI2->getOpcode()))
+      continue;
+
+    unsigned NewOpCode = 0;
+    unsigned NewPredicate1 = 0, NewPredicate2 = 0;
+    int16_t Imm1 = 0, NewImm1 = 0, Imm2 = 0, NewImm2 = 0;
+
+    if (CMPI1->getOpcode() != CMPI2->getOpcode()) {
+      // Typically, unsigned comparison is used for equality check, but
+      // we replace it with a signed comparison if the comparison
+      // to be merged is a signed comparison.
+      // In other cases of opcode mismatch, we cannot optimize this.
+      if (isEqOrNe(BI2) &&
+          CMPI1->getOpcode() == getSignedCmpOpCode(CMPI2->getOpcode()))
+        NewOpCode = CMPI1->getOpcode();
+      else if (isEqOrNe(BI1) &&
+               getSignedCmpOpCode(CMPI1->getOpcode()) == CMPI2->getOpcode())
+        NewOpCode = CMPI2->getOpcode();
+      else continue;
+    }
+
+    if (CMPI1->getOperand(2).isReg() && CMPI2->getOperand(2).isReg()) {
+      // In case of comparisons between two registers, these two registers
+      // must be same to merge two comparisons.
+      unsigned Cmp1Operand1 = CMPI1->getOperand(1).getReg();
+      unsigned Cmp1Operand2 = CMPI1->getOperand(2).getReg();
+      unsigned Cmp2Operand1 = CMPI2->getOperand(1).getReg();
+      unsigned Cmp2Operand2 = CMPI2->getOperand(2).getReg();
+      if (Cmp1Operand1 == Cmp2Operand1 && Cmp1Operand2 == Cmp2Operand2) {
+        // Same pair of registers in the same order; ready to merge as is.
+      }
+      else if (Cmp1Operand1 == Cmp2Operand2 && Cmp1Operand2 == Cmp2Operand1) {
+        // Same pair of registers in different order.
+        // We reverse the predicate to merge compare instructions.
+        PPC::Predicate Pred = (PPC::Predicate)BI2->getOperand(0).getImm();
+        NewPredicate2 = (unsigned)PPC::getSwappedPredicate(Pred);
+      }
+      else continue;
+    }
+    else if (CMPI1->getOperand(2).isImm() && CMPI2->getOperand(2).isImm()){
+      // In case of comparisons between a register and an immediate,
+      // the operand register must be same for two compare instructions.
+      if (CMPI1->getOperand(1).getReg() != CMPI2->getOperand(1).getReg())
+        continue;
+
+      NewImm1 = Imm1 = (int16_t)CMPI1->getOperand(2).getImm();
+      NewImm2 = Imm2 = (int16_t)CMPI2->getOperand(2).getImm();
+
+      // If immediate are not same, we try to adjust by changing predicate;
+      // e.g. GT imm means GE (imm+1).
+      if (Imm1 != Imm2 && (!isEqOrNe(BI2) || !isEqOrNe(BI1))) {
+        int Diff = Imm1 - Imm2;
+        if (Diff < -2 || Diff > 2)
+          continue;
+
+        unsigned PredToInc1 = getPredicateToIncImm(BI1, CMPI1);
+        unsigned PredToDec1 = getPredicateToDecImm(BI1, CMPI1);
+        unsigned PredToInc2 = getPredicateToIncImm(BI2, CMPI2);
+        unsigned PredToDec2 = getPredicateToDecImm(BI2, CMPI2);
+        if (Diff == 2) {
+          if (PredToInc2 && PredToDec1) {
+            NewPredicate2 = PredToInc2;
+            NewPredicate1 = PredToDec1;
+            NewImm2++;
+            NewImm1--;
+          }
+        }
+        else if (Diff == 1) {
+          if (PredToInc2) {
+            NewImm2++;
+            NewPredicate2 = PredToInc2;
+          }
+          else if (PredToDec1) {
+            NewImm1--;
+            NewPredicate1 = PredToDec1;
+          }
+        }
+        else if (Diff == -1) {
+          if (PredToDec2) {
+            NewImm2--;
+            NewPredicate2 = PredToDec2;
+          }
+          else if (PredToInc1) {
+            NewImm1++;
+            NewPredicate1 = PredToInc1;
+          }
+        }
+        else if (Diff == -2) {
+          if (PredToDec2 && PredToInc1) {
+            NewPredicate2 = PredToDec2;
+            NewPredicate1 = PredToInc1;
+            NewImm2--;
+            NewImm1++;
+          }
+        }
+      }
+
+      // We cannnot merge two compares if the immediates are not same.
+      if (NewImm2 != NewImm1)
+        continue;
+    }
+
+    DEBUG(dbgs() << "Optimize two pairs of compare and branch:\n");
+    DEBUG(CMPI1->dump());
+    DEBUG(BI1->dump());
+    DEBUG(CMPI2->dump());
+    DEBUG(BI2->dump());
+
+    // We adjust opcode, predicates and immediate as we determined above.
+    if (NewOpCode != 0 && NewOpCode != CMPI1->getOpcode()) {
+      CMPI1->setDesc(TII->get(NewOpCode));
+    }
+    if (NewPredicate1) {
+      BI1->getOperand(0).setImm(NewPredicate1);
+    }
+    if (NewPredicate2) {
+      BI2->getOperand(0).setImm(NewPredicate2);
+    }
+    if (NewImm1 != Imm1) {
+      CMPI1->getOperand(2).setImm(NewImm1);
+    }
+
+    // We finally eliminate compare instruction in MBB2.
+    BI2->getOperand(1).setReg(BI1->getOperand(1).getReg());
+    BI2->getOperand(1).setIsKill(true);
+    BI1->getOperand(1).setIsKill(false);
+    CMPI2->eraseFromParent();
+
+    DEBUG(dbgs() << "into a compare and two branches:\n");
+    DEBUG(CMPI1->dump());
+    DEBUG(BI1->dump());
+    DEBUG(BI2->dump());
+
+    Simplified = true;
   }
 
   return Simplified;

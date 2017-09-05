@@ -25,6 +25,37 @@ namespace orc {
 
 namespace remote {
 
+/// Template error for missing resources.
+template <typename ResourceIdT>
+class ResourceNotFound
+  : public ErrorInfo<ResourceNotFound<ResourceIdT>> {
+public:
+  static char ID;
+
+  ResourceNotFound(ResourceIdT ResourceId,
+                   std::string ResourceDescription = "")
+    : ResourceId(std::move(ResourceId)),
+      ResourceDescription(std::move(ResourceDescription)) {}
+
+  std::error_code convertToErrorCode() const override {
+    return orcError(OrcErrorCode::UnknownResourceHandle);
+  }
+
+  void log(raw_ostream &OS) const override {
+    OS << (ResourceDescription.empty()
+             ? "Remote resource with id "
+               : ResourceDescription)
+       << " " << ResourceId << " not found";
+  }
+
+private:
+  ResourceIdT ResourceId;
+  std::string ResourceDescription;
+};
+
+template <typename ResourceIdT>
+char ResourceNotFound<ResourceIdT>::ID = 0;
+
 class DirectBufferWriter {
 public:
   DirectBufferWriter() = default;
@@ -44,6 +75,32 @@ private:
 } // end namespace remote
 
 namespace rpc {
+
+template <>
+class RPCTypeName<JITSymbolFlags> {
+public:
+  static const char *getName() { return "JITSymbolFlags"; }
+};
+
+template <typename ChannelT>
+class SerializationTraits<ChannelT, JITSymbolFlags> {
+public:
+
+  static Error serialize(ChannelT &C, const JITSymbolFlags &Flags) {
+    return serializeSeq(C, static_cast<JITSymbolFlags::UnderlyingType>(Flags),
+                        Flags.getTargetFlags());
+  }
+
+  static Error deserialize(ChannelT &C, JITSymbolFlags &Flags) {
+    JITSymbolFlags::UnderlyingType JITFlags;
+    JITSymbolFlags::TargetFlagsType TargetFlags;
+    if (auto Err = deserializeSeq(C, JITFlags, TargetFlags))
+      return Err;
+    Flags = JITSymbolFlags(static_cast<JITSymbolFlags::FlagNames>(JITFlags),
+                           TargetFlags);
+    return Error::success();
+  }
+};
 
 template <> class RPCTypeName<remote::DirectBufferWriter> {
 public:
