@@ -62,20 +62,16 @@ public:
     resetColor();
 
     ++Indent;
-    for (GroupRecord::subgroup_iterator I = Group.subgroup_begin(),
-                                        E = Group.subgroup_end();
-         I != E; ++I) {
-      printGroup(*I, Indent);
+    for (const GroupRecord &GR : Group.subgroups()) {
+      printGroup(GR, Indent);
     }
 
     if (!FlagsOnly) {
-      for (GroupRecord::diagnostics_iterator I = Group.diagnostics_begin(),
-                                             E = Group.diagnostics_end();
-           I != E; ++I) {
-        if (ShowColors && !isIgnored(I->DiagID))
+      for (const DiagnosticRecord &DR : Group.diagnostics()) {
+        if (ShowColors && !isIgnored(DR.DiagID))
           setColor(llvm::raw_ostream::GREEN);
         out.indent(Indent * 2);
-        out << I->getName();
+        out << DR.getName();
         resetColor();
         out << "\n";
       }
@@ -107,12 +103,9 @@ public:
     ArrayRef<GroupRecord> AllGroups = getDiagnosticGroups();
     llvm::DenseSet<unsigned> NonRootGroupIDs;
 
-    for (ArrayRef<GroupRecord>::iterator I = AllGroups.begin(),
-                                         E = AllGroups.end();
-         I != E; ++I) {
-      for (GroupRecord::subgroup_iterator SI = I->subgroup_begin(),
-                                          SE = I->subgroup_end();
-           SI != SE; ++SI) {
+    for (const GroupRecord &GR : AllGroups) {
+      for (auto SI = GR.subgroup_begin(), SE = GR.subgroup_end(); SI != SE;
+           ++SI) {
         NonRootGroupIDs.insert((unsigned)SI.getID());
       }
     }
