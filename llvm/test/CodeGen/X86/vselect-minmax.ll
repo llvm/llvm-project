@@ -3344,12 +3344,12 @@ define <64 x i8> @test98(<64 x i8> %a, <64 x i8> %b) {
 ; SSE2:       # BB#0: # %entry
 ; SSE2-NEXT:    movdqa %xmm3, %xmm8
 ; SSE2-NEXT:    movdqa %xmm2, %xmm9
-; SSE2-NEXT:    movdqa %xmm3, %xmm12
+; SSE2-NEXT:    movdqa %xmm8, %xmm12
 ; SSE2-NEXT:    pcmpgtb %xmm7, %xmm12
 ; SSE2-NEXT:    pcmpeqd %xmm13, %xmm13
 ; SSE2-NEXT:    movdqa %xmm12, %xmm3
 ; SSE2-NEXT:    pxor %xmm13, %xmm3
-; SSE2-NEXT:    movdqa %xmm2, %xmm14
+; SSE2-NEXT:    movdqa %xmm9, %xmm14
 ; SSE2-NEXT:    pcmpgtb %xmm6, %xmm14
 ; SSE2-NEXT:    movdqa %xmm14, %xmm2
 ; SSE2-NEXT:    pxor %xmm13, %xmm2
@@ -3487,12 +3487,12 @@ define <64 x i8> @test100(<64 x i8> %a, <64 x i8> %b) {
 ; SSE2-NEXT:    movdqa %xmm2, %xmm9
 ; SSE2-NEXT:    movdqa %xmm0, %xmm10
 ; SSE2-NEXT:    movdqa %xmm7, %xmm12
-; SSE2-NEXT:    pcmpgtb %xmm3, %xmm12
+; SSE2-NEXT:    pcmpgtb %xmm8, %xmm12
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE2-NEXT:    movdqa %xmm12, %xmm3
 ; SSE2-NEXT:    pxor %xmm0, %xmm3
 ; SSE2-NEXT:    movdqa %xmm6, %xmm13
-; SSE2-NEXT:    pcmpgtb %xmm2, %xmm13
+; SSE2-NEXT:    pcmpgtb %xmm9, %xmm13
 ; SSE2-NEXT:    movdqa %xmm13, %xmm2
 ; SSE2-NEXT:    pxor %xmm0, %xmm2
 ; SSE2-NEXT:    movdqa %xmm5, %xmm14
@@ -4225,12 +4225,12 @@ define <16 x i32> @test114(<16 x i32> %a, <16 x i32> %b) {
 ; SSE2:       # BB#0: # %entry
 ; SSE2-NEXT:    movdqa %xmm3, %xmm8
 ; SSE2-NEXT:    movdqa %xmm2, %xmm9
-; SSE2-NEXT:    movdqa %xmm3, %xmm12
+; SSE2-NEXT:    movdqa %xmm8, %xmm12
 ; SSE2-NEXT:    pcmpgtd %xmm7, %xmm12
 ; SSE2-NEXT:    pcmpeqd %xmm13, %xmm13
 ; SSE2-NEXT:    movdqa %xmm12, %xmm3
 ; SSE2-NEXT:    pxor %xmm13, %xmm3
-; SSE2-NEXT:    movdqa %xmm2, %xmm14
+; SSE2-NEXT:    movdqa %xmm9, %xmm14
 ; SSE2-NEXT:    pcmpgtd %xmm6, %xmm14
 ; SSE2-NEXT:    movdqa %xmm14, %xmm2
 ; SSE2-NEXT:    pxor %xmm13, %xmm2
@@ -4368,12 +4368,12 @@ define <16 x i32> @test116(<16 x i32> %a, <16 x i32> %b) {
 ; SSE2-NEXT:    movdqa %xmm2, %xmm9
 ; SSE2-NEXT:    movdqa %xmm0, %xmm10
 ; SSE2-NEXT:    movdqa %xmm7, %xmm12
-; SSE2-NEXT:    pcmpgtd %xmm3, %xmm12
+; SSE2-NEXT:    pcmpgtd %xmm8, %xmm12
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE2-NEXT:    movdqa %xmm12, %xmm3
 ; SSE2-NEXT:    pxor %xmm0, %xmm3
 ; SSE2-NEXT:    movdqa %xmm6, %xmm13
-; SSE2-NEXT:    pcmpgtd %xmm2, %xmm13
+; SSE2-NEXT:    pcmpgtd %xmm9, %xmm13
 ; SSE2-NEXT:    movdqa %xmm13, %xmm2
 ; SSE2-NEXT:    pxor %xmm0, %xmm2
 ; SSE2-NEXT:    movdqa %xmm5, %xmm14
@@ -4890,7 +4890,7 @@ define <8 x i64> @test122(<8 x i64> %a, <8 x i64> %b) {
 ; SSE2-LABEL: test122:
 ; SSE2:       # BB#0: # %entry
 ; SSE2-NEXT:    movdqa %xmm7, %xmm8
-; SSE2-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm8, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm3, %xmm7
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
@@ -5164,7 +5164,7 @@ define <8 x i64> @test124(<8 x i64> %a, <8 x i64> %b) {
 ; SSE2-LABEL: test124:
 ; SSE2:       # BB#0: # %entry
 ; SSE2-NEXT:    movdqa %xmm7, %xmm11
-; SSE2-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm11, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm3, %xmm7
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
@@ -5467,7 +5467,7 @@ define <8 x i64> @test126(<8 x i64> %a, <8 x i64> %b) {
 ; SSE2-LABEL: test126:
 ; SSE2:       # BB#0: # %entry
 ; SSE2-NEXT:    movdqa %xmm7, %xmm8
-; SSE2-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm8, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm3, %xmm7
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
@@ -5795,7 +5795,7 @@ define <8 x i64> @test128(<8 x i64> %a, <8 x i64> %b) {
 ; SSE2-LABEL: test128:
 ; SSE2:       # BB#0: # %entry
 ; SSE2-NEXT:    movdqa %xmm7, %xmm11
-; SSE2-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm11, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm3, %xmm7
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
@@ -6047,7 +6047,7 @@ define <64 x i8> @test130(<64 x i8> %a, <64 x i8> %b) {
 ; SSE2-NEXT:    pcmpeqd %xmm13, %xmm13
 ; SSE2-NEXT:    movdqa %xmm12, %xmm9
 ; SSE2-NEXT:    pxor %xmm13, %xmm9
-; SSE2-NEXT:    movdqa %xmm2, %xmm14
+; SSE2-NEXT:    movdqa %xmm8, %xmm14
 ; SSE2-NEXT:    pcmpgtb %xmm6, %xmm14
 ; SSE2-NEXT:    movdqa %xmm14, %xmm2
 ; SSE2-NEXT:    pxor %xmm13, %xmm2
@@ -6190,7 +6190,7 @@ define <64 x i8> @test132(<64 x i8> %a, <64 x i8> %b) {
 ; SSE2-NEXT:    movdqa %xmm12, %xmm9
 ; SSE2-NEXT:    pxor %xmm0, %xmm9
 ; SSE2-NEXT:    movdqa %xmm6, %xmm13
-; SSE2-NEXT:    pcmpgtb %xmm2, %xmm13
+; SSE2-NEXT:    pcmpgtb %xmm8, %xmm13
 ; SSE2-NEXT:    movdqa %xmm13, %xmm2
 ; SSE2-NEXT:    pxor %xmm0, %xmm2
 ; SSE2-NEXT:    movdqa %xmm5, %xmm14
@@ -6941,7 +6941,7 @@ define <16 x i32> @test146(<16 x i32> %a, <16 x i32> %b) {
 ; SSE2-NEXT:    pcmpeqd %xmm13, %xmm13
 ; SSE2-NEXT:    movdqa %xmm12, %xmm9
 ; SSE2-NEXT:    pxor %xmm13, %xmm9
-; SSE2-NEXT:    movdqa %xmm2, %xmm14
+; SSE2-NEXT:    movdqa %xmm8, %xmm14
 ; SSE2-NEXT:    pcmpgtd %xmm6, %xmm14
 ; SSE2-NEXT:    movdqa %xmm14, %xmm2
 ; SSE2-NEXT:    pxor %xmm13, %xmm2
@@ -7084,7 +7084,7 @@ define <16 x i32> @test148(<16 x i32> %a, <16 x i32> %b) {
 ; SSE2-NEXT:    movdqa %xmm12, %xmm9
 ; SSE2-NEXT:    pxor %xmm0, %xmm9
 ; SSE2-NEXT:    movdqa %xmm6, %xmm13
-; SSE2-NEXT:    pcmpgtd %xmm2, %xmm13
+; SSE2-NEXT:    pcmpgtd %xmm8, %xmm13
 ; SSE2-NEXT:    movdqa %xmm13, %xmm2
 ; SSE2-NEXT:    pxor %xmm0, %xmm2
 ; SSE2-NEXT:    movdqa %xmm5, %xmm14
@@ -7610,7 +7610,7 @@ define <8 x i64> @test154(<8 x i64> %a, <8 x i64> %b) {
 ; SSE2-LABEL: test154:
 ; SSE2:       # BB#0: # %entry
 ; SSE2-NEXT:    movdqa %xmm7, %xmm8
-; SSE2-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm8, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm3, %xmm7
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
@@ -7882,7 +7882,7 @@ define <8 x i64> @test156(<8 x i64> %a, <8 x i64> %b) {
 ; SSE2-LABEL: test156:
 ; SSE2:       # BB#0: # %entry
 ; SSE2-NEXT:    movdqa %xmm7, %xmm11
-; SSE2-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm11, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm3, %xmm7
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
@@ -8183,7 +8183,7 @@ define <8 x i64> @test158(<8 x i64> %a, <8 x i64> %b) {
 ; SSE2-LABEL: test158:
 ; SSE2:       # BB#0: # %entry
 ; SSE2-NEXT:    movdqa %xmm7, %xmm8
-; SSE2-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm8, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm3, %xmm7
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
@@ -8509,7 +8509,7 @@ define <8 x i64> @test160(<8 x i64> %a, <8 x i64> %b) {
 ; SSE2-LABEL: test160:
 ; SSE2:       # BB#0: # %entry
 ; SSE2-NEXT:    movdqa %xmm7, %xmm11
-; SSE2-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movdqa %xmm11, -{{[0-9]+}}(%rsp) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm3, %xmm7
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
@@ -10289,7 +10289,7 @@ define <2 x i64> @test180(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4:       # BB#0: # %entry
 ; SSE4-NEXT:    movdqa %xmm0, %xmm2
 ; SSE4-NEXT:    movdqa %xmm1, %xmm3
-; SSE4-NEXT:    pcmpgtq %xmm0, %xmm3
+; SSE4-NEXT:    pcmpgtq %xmm2, %xmm3
 ; SSE4-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE4-NEXT:    pxor %xmm3, %xmm0
 ; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
@@ -10768,7 +10768,7 @@ define <2 x i64> @test188(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4:       # BB#0: # %entry
 ; SSE4-NEXT:    movdqa %xmm0, %xmm2
 ; SSE4-NEXT:    movdqa %xmm1, %xmm3
-; SSE4-NEXT:    pcmpgtq %xmm0, %xmm3
+; SSE4-NEXT:    pcmpgtq %xmm2, %xmm3
 ; SSE4-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE4-NEXT:    pxor %xmm3, %xmm0
 ; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2

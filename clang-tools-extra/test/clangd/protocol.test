@@ -1,0 +1,82 @@
+# RUN: clangd -run-synchronously < %s | FileCheck %s
+# RUN: clangd -run-synchronously < %s 2>&1 | FileCheck -check-prefix=STDERR %s
+# vim: fileformat=dos
+# It is absolutely vital that this file has CRLF line endings.
+#
+# Test protocol parsing
+Content-Length: 125
+Content-Type: application/vscode-jsonrpc; charset-utf-8
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+# Test message with Content-Type after Content-Length
+#
+# CHECK: "jsonrpc":"2.0","id":0,"result":{"capabilities":{
+# CHECK-DAG: "textDocumentSync": 1,
+# CHECK-DAG: "documentFormattingProvider": true,
+# CHECK-DAG: "documentRangeFormattingProvider": true,
+# CHECK-DAG: "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
+# CHECK-DAG: "codeActionProvider": true,
+# CHECK-DAG: "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">",":"]},
+# CHECK-DAG: "definitionProvider": true
+# CHECK: }}
+
+Content-Length: 246
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"struct fake { int a, bb, ccc; int f(int i, const float f) const; };\nint main() {\n  fake f;\n  f.\n}\n"}}}
+
+Content-Type: application/vscode-jsonrpc; charset-utf-8
+Content-Length: 146
+
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
+# Test message with Content-Type before Content-Length
+#
+# CHECK: {"jsonrpc":"2.0","id":1,"result":[
+# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"00035a","filterText":"a","insertText":"a"}
+# CHECK: ]}
+
+X-Test: Testing
+Content-Type: application/vscode-jsonrpc; charset-utf-8
+Content-Length: 146
+Content-Type: application/vscode-jsonrpc; charset-utf-8
+X-Testing: Test
+
+{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
+
+Content-Type: application/vscode-jsonrpc; charset-utf-8
+Content-Length: 10
+Content-Length: 146
+
+{"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
+# Test message with duplicate Content-Length headers
+#
+# CHECK: {"jsonrpc":"2.0","id":3,"result":[
+# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"00035a","filterText":"a","insertText":"a"}
+# CHECK: ]}
+# STDERR: Warning: Duplicate Content-Length header received. The previous value for this message (10) was ignored.
+
+Content-Type: application/vscode-jsonrpc; charset-utf-8
+Content-Length: 10
+
+{"jsonrpc":"2.0","id":4,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
+# Test message with malformed Content-Length
+#
+# STDERR: JSON dispatch failed!
+# Ensure we recover by sending another (valid) message
+
+Content-Length: 146
+
+{"jsonrpc":"2.0","id":5,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
+# Test message with Content-Type before Content-Length
+#
+# CHECK: {"jsonrpc":"2.0","id":5,"result":[
+# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"00035a","filterText":"a","insertText":"a"}
+# CHECK: ]}
+
+Content-Length: 1024
+
+{"jsonrpc":"2.0","id":5,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
+# Test message which reads beyond the end of the stream.
+#
+# Ensure this is the last test in the file!
+# STDERR: Input was aborted. Read only {{[0-9]+}} bytes of expected {{[0-9]+}}.
+

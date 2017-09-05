@@ -18,6 +18,7 @@ add_llvm_unittest(OrcJITTests
   OrcCAPITest.cpp
   OrcTestCommon.cpp
   QueueChannel.cpp
+  RemoteObjectLayerTest.cpp
   RPCUtilsTest.cpp
   RTDyldObjectLinkingLayerTest.cpp
   )

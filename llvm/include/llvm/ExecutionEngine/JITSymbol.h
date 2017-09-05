@@ -89,8 +89,14 @@ public:
   /// @brief Implicitly convert to the underlying flags type.
   operator UnderlyingType&() { return Flags; }
 
+  /// @brief Implicitly convert to the underlying flags type.
+  operator const UnderlyingType&() const { return Flags; }
+
   /// @brief Return a reference to the target-specific flags.
   TargetFlagsType& getTargetFlags() { return TargetFlags; }
+
+  /// @brief Return a reference to the target-specific flags.
+  const TargetFlagsType& getTargetFlags() const { return TargetFlags; }
 
   /// Construct a JITSymbolFlags value based on the flags of the given global
   /// value.

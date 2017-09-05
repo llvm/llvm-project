@@ -437,7 +437,7 @@ define <2 x i64> @max_ge_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE42:       # BB#0:
 ; SSE42-NEXT:    movdqa %xmm0, %xmm2
 ; SSE42-NEXT:    movdqa %xmm1, %xmm3
-; SSE42-NEXT:    pcmpgtq %xmm0, %xmm3
+; SSE42-NEXT:    pcmpgtq %xmm2, %xmm3
 ; SSE42-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE42-NEXT:    pxor %xmm3, %xmm0
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm2, %xmm1

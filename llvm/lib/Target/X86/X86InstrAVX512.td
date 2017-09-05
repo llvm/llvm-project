@@ -519,7 +519,7 @@ multiclass vinsert_for_size_split<int Opcode, X86VectorVTInfo From,
                                   X86VectorVTInfo To,
                                   SDPatternOperator vinsert_insert,
                                   SDPatternOperator vinsert_for_mask> {
-  let ExeDomain = To.ExeDomain in {
+  let hasSideEffects = 0, ExeDomain = To.ExeDomain in {
     defm rr : AVX512_maskable_split<Opcode, MRMSrcReg, To, (outs To.RC:$dst),
                    (ins To.RC:$src1, From.RC:$src2, u8imm:$src3),
                    "vinsert" # From.EltTypeName # "x" # From.NumElts,
@@ -531,6 +531,7 @@ multiclass vinsert_for_size_split<int Opcode, X86VectorVTInfo From,
                                            (From.VT From.RC:$src2),
                                            (iPTR imm))>, AVX512AIi8Base, EVEX_4V;
 
+    let mayLoad = 1 in
     defm rm : AVX512_maskable_split<Opcode, MRMSrcMem, To, (outs To.RC:$dst),
                    (ins To.RC:$src1, From.MemOp:$src2, u8imm:$src3),
                    "vinsert" # From.EltTypeName # "x" # From.NumElts,
@@ -1283,6 +1284,7 @@ multiclass avx512_subvec_broadcast_rm<bits<8> opc, string OpcodeStr,
 //  is requested.
 multiclass avx512_subvec_broadcast_rm_dq<bits<8> opc, string OpcodeStr,
                           X86VectorVTInfo _Dst, X86VectorVTInfo _Src> {
+  let hasSideEffects = 0, mayLoad = 1 in
   defm rm : AVX512_maskable_split<opc, MRMSrcMem, _Dst, (outs _Dst.RC:$dst),
                            (ins _Src.MemOp:$src), OpcodeStr, "$src", "$src",
                            (null_frag),
