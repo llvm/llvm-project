@@ -1,5 +1,9 @@
 # RUN: llc -O0 -mtriple arm-linux -relocation-model=ropi -mattr=-no-movt,+v8m -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RW-DEFAULT-MOVT,RW-DEFAULT,ROPI-MOVT,ROPI
 # RUN: llc -O0 -mtriple arm-linux -relocation-model=ropi -mattr=+no-movt -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RW-DEFAULT-NOMOVT,RW-DEFAULT,ROPI-NOMOVT,ROPI
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=rwpi -mattr=-no-movt,+v8m -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RWPI-MOVT,RWPI,RO-DEFAULT-MOVT,RO-DEFAULT
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=rwpi -mattr=+no-movt -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RWPI-NOMOVT,RWPI,RO-DEFAULT-NOMOVT,RO-DEFAULT
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=ropi-rwpi -mattr=-no-movt,+v8m -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RWPI-MOVT,RWPI,ROPI-MOVT,ROPI
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=ropi-rwpi -mattr=+no-movt -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,RWPI-NOMOVT,RWPI,ROPI-NOMOVT,ROPI
 --- |
   @internal_global = internal global i32 42
   define void @test_internal_global() { ret void }
@@ -26,11 +30,17 @@ registers:
 # RW-DEFAULT-NOMOVT: constants:
 # RW-DEFAULT-NOMOVT: id: 0
 # RW-DEFAULT-NOMOVT: value: 'i32* @internal_global'
+# RWPI-NOMOVT: constants:
+# RWPI-NOMOVT: id: 0
+# RWPI-NOMOVT: value: 'internal_global(SBREL)'
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @internal_global
     ; RW-DEFAULT-MOVT: [[G:%[0-9]+]] = MOVi32imm @internal_global
     ; RW-DEFAULT-NOMOVT: [[G:%[0-9]+]] = LDRi12 %const.0, 0, 14, _ :: (load 4 from constant-pool)
+    ; RWPI-MOVT: [[OFF:%[0-9]+]] = MOVi32imm {{.*}} @internal_global
+    ; RWPI-NOMOVT: [[OFF:%[0-9]+]] = LDRi12 %const.0, 0, 14, _ :: (load 4 from constant-pool)
+    ; RWPI: [[G:%[0-9]+]] = ADDrr %r9, [[OFF]], 14, _, _
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @internal_global)
     ; CHECK: [[V:%[0-9]+]] = LDRi12 [[G]], 0, 14, _ :: (load 4 from @internal_global)
@@ -54,11 +64,17 @@ registers:
 # RW-DEFAULT-NOMOVT: constants:
 # RW-DEFAULT-NOMOVT: id: 0
 # RW-DEFAULT-NOMOVT: value: 'i32* @external_global'
+# RWPI-NOMOVT: constants:
+# RWPI-NOMOVT: id: 0
+# RWPI-NOMOVT: value: 'external_global(SBREL)'
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @external_global
     ; RW-DEFAULT-MOVT: [[G:%[0-9]+]] = MOVi32imm @external_global
     ; RW-DEFAULT-NOMOVT: [[G:%[0-9]+]] = LDRi12 %const.0, 0, 14, _ :: (load 4 from constant-pool)
+    ; RWPI-MOVT: [[OFF:%[0-9]+]] = MOVi32imm {{.*}} @external_global
+    ; RWPI-NOMOVT: [[OFF:%[0-9]+]] = LDRi12 %const.0, 0, 14, _ :: (load 4 from constant-pool)
+    ; RWPI: [[G:%[0-9]+]] = ADDrr %r9, [[OFF]], 14, _, _
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @external_global)
     ; CHECK: [[V:%[0-9]+]] = LDRi12 [[G]], 0, 14, _ :: (load 4 from @external_global)
@@ -79,11 +95,16 @@ selected:        false
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
+# RO-DEFAULT-NOMOVT: constants:
+# RO-DEFAULT-NOMOVT: id: 0
+# RO-DEFAULT-NOMOVT: value: 'i32* @internal_constant'
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @internal_constant
     ; ROPI-MOVT: [[G:%[0-9]+]] = MOV_ga_pcrel @internal_constant
     ; ROPI-NOMOVT: [[G:%[0-9]+]] = LDRLIT_ga_pcrel @internal_constant
+    ; RO-DEFAULT-MOVT: [[G:%[0-9]+]] = MOVi32imm @internal_constant
+    ; RO-DEFAULT-NOMOVT: [[G:%[0-9]+]] = LDRi12 %const.0, 0, 14, _ :: (load 4 from constant-pool)
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @internal_constant)
     ; CHECK: [[V:%[0-9]+]] = LDRi12 [[G]], 0, 14, _ :: (load 4 from @internal_constant)
@@ -104,11 +125,16 @@ selected:        false
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
+# RO-DEFAULT-NOMOVT: constants:
+# RO-DEFAULT-NOMOVT: id: 0
+# RO-DEFAULT-NOMOVT: value: 'i32* @external_constant'
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @external_constant
     ; ROPI-MOVT: [[G:%[0-9]+]] = MOV_ga_pcrel @external_constant
     ; ROPI-NOMOVT: [[G:%[0-9]+]] = LDRLIT_ga_pcrel @external_constant
+    ; RO-DEFAULT-MOVT: [[G:%[0-9]+]] = MOVi32imm @external_constant
+    ; RO-DEFAULT-NOMOVT: [[G:%[0-9]+]] = LDRi12 %const.0, 0, 14, _ :: (load 4 from constant-pool)
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @external_constant)
     ; CHECK: [[V:%[0-9]+]] = LDRi12 [[G]], 0, 14, _ :: (load 4 from @external_constant)
