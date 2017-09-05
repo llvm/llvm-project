@@ -63,6 +63,16 @@ define <16 x float> @shuffle_v16f32_vunpcklps_swap(<16 x float> %a, <16 x float>
   ret <16 x float> %shuffle
 }
 
+; PR34382
+define <16 x float> @shuffle_v16f32_01_01_03_00_06_04_05_07_08_08_09_09_15_14_14_12(<16 x float> %a0) {
+; ALL-LABEL: shuffle_v16f32_01_01_03_00_06_04_05_07_08_08_09_09_15_14_14_12:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[1,1,3,0,6,4,5,7,8,8,9,9,15,14,14,12]
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <16 x float> %a0, <16 x float> undef, <16 x i32> <i32 1, i32 1, i32 3, i32 0, i32 6, i32 4, i32 5, i32 7, i32 8, i32 8, i32 9, i32 9, i32 15, i32 14, i32 14, i32 12>
+  ret <16 x float> %shuffle
+}
+
 define <16 x i32> @shuffle_v16i32_00_10_01_11_04_14_05_15_08_18_09_19_0c_1c_0d_1d(<16 x i32> %a, <16 x i32> %b) {
 ; ALL-LABEL: shuffle_v16i32_00_10_01_11_04_14_05_15_08_18_09_19_0c_1c_0d_1d:
 ; ALL:       # BB#0:

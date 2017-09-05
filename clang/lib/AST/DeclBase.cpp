@@ -74,8 +74,9 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Ctx,
                          DeclContext *Parent, std::size_t Extra) {
   assert(!Parent || &Parent->getParentASTContext() == &Ctx);
   // With local visibility enabled, we track the owning module even for local
-  // declarations.
-  if (Ctx.getLangOpts().trackLocalOwningModule()) {
+  // declarations. We create the TU decl early and may not yet know what the
+  // LangOpts are, so conservatively allocate the storage.
+  if (Ctx.getLangOpts().trackLocalOwningModule() || !Parent) {
     // Ensure required alignment of the resulting object by adding extra
     // padding at the start if required.
     size_t ExtraAlign =

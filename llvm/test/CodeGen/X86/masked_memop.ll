@@ -1140,6 +1140,34 @@ define <8 x double> @load_one_mask_bit_set5(<8 x double>* %addr, <8 x double> %v
   ret <8 x double> %res
 }
 
+; FIXME: The mask bit for each data element is the most significant bit of the mask operand, so a compare isn't needed.
+
+define void @trunc_mask(<4 x float> %x, <4 x float>* %ptr, <4 x float> %y, <4 x i32> %mask) {
+; AVX-LABEL: trunc_mask:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vmaskmovps %xmm0, %xmm1, (%rdi)
+; AVX-NEXT:    retq
+;
+; AVX512F-LABEL: trunc_mask:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
+; AVX512F-NEXT:    vmaskmovps %xmm0, %xmm1, (%rdi)
+; AVX512F-NEXT:    retq
+;
+; SKX-LABEL: trunc_mask:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; SKX-NEXT:    vpcmpgtd %xmm2, %xmm1, %k1
+; SKX-NEXT:    vmovups %xmm0, (%rdi) {%k1}
+; SKX-NEXT:    retq
+  %bool_mask = icmp slt <4 x i32> %mask, zeroinitializer
+  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %x, <4 x float>* %ptr, i32 1, <4 x i1> %bool_mask)
+  ret void
+}
+
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
 declare <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>*, i32, <2 x i1>, <2 x i32>)
 declare <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>*, i32, <4 x i1>, <4 x i64>)

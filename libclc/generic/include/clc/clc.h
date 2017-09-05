@@ -235,12 +235,11 @@
 #include <clc/cl_khr_local_int32_extended_atomics/atom_or.h>
 #include <clc/cl_khr_local_int32_extended_atomics/atom_xor.h>
 
-/* 6.11.13 Image Read and Write Functions */
-
 /* 6.12.12 Miscellaneous Vector Functions */
 #include <clc/misc/shuffle.h>
 #include <clc/misc/shuffle2.h>
 
+/* 6.11.13 Image Read and Write Functions */
 #include <clc/image/image_defines.h>
 #include <clc/image/image.h>
 

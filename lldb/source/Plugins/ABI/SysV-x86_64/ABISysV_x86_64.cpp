@@ -13,6 +13,7 @@
 // C++ Includes
 // Other libraries and framework includes
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 
 // Project includes
@@ -1908,52 +1909,16 @@ bool ABISysV_x86_64::RegisterIsVolatile(const RegisterInfo *reg_info) {
 // It's being revised & updated at https://github.com/hjl-tools/x86-psABI/
 
 bool ABISysV_x86_64::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
-  if (reg_info) {
-    // Preserved registers are :
-    //    rbx, rsp, rbp, r12, r13, r14, r15
-    //    mxcsr (partially preserved)
-    //    x87 control word
-
-    const char *name = reg_info->name;
-    if (name[0] == 'r') {
-      switch (name[1]) {
-      case '1': // r12, r13, r14, r15
-        if (name[2] >= '2' && name[2] <= '5')
-          return name[3] == '\0';
-        break;
-
-      default:
-        break;
-      }
-    }
-
-    // Accept shorter-variant versions, rbx/ebx, rip/ eip, etc.
-    if (name[0] == 'r' || name[0] == 'e') {
-      switch (name[1]) {
-      case 'b': // rbp, rbx
-        if (name[2] == 'p' || name[2] == 'x')
-          return name[3] == '\0';
-        break;
-
-      case 'i': // rip
-        if (name[2] == 'p')
-          return name[3] == '\0';
-        break;
-
-      case 's': // rsp
-        if (name[2] == 'p')
-          return name[3] == '\0';
-        break;
-      }
-    }
-    if (name[0] == 's' && name[1] == 'p' && name[2] == '\0') // sp
-      return true;
-    if (name[0] == 'f' && name[1] == 'p' && name[2] == '\0') // fp
-      return true;
-    if (name[0] == 'p' && name[1] == 'c' && name[2] == '\0') // pc
-      return true;
-  }
-  return false;
+  if (!reg_info)
+    return false;
+  assert(reg_info->name != nullptr && "unnamed register?");
+  std::string Name = std::string(reg_info->name);
+  bool IsCalleeSaved =
+      llvm::StringSwitch<bool>(Name)
+          .Cases("r12", "r13", "r14", "r15", "rbp", "ebp", "rbx", "ebx", true)
+          .Cases("rip", "eip", "rsp", "esp", "sp", "fp", "pc", true)
+          .Default(false);
+  return IsCalleeSaved;
 }
 
 void ABISysV_x86_64::Initialize() {

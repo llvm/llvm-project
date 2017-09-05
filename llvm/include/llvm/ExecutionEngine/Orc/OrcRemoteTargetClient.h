@@ -53,26 +53,25 @@ namespace remote {
 /// Each of the utility classes talks to a JIT server (an instance of the
 /// OrcRemoteTargetServer class) via an RPC system (see RPCUtils.h) to carry out
 /// its actions.
-template <typename ChannelT>
-class OrcRemoteTargetClient : public OrcRemoteTargetRPCAPI {
+class OrcRemoteTargetClient
+    : public rpc::SingleThreadedRPCEndpoint<rpc::RawByteChannel> {
 public:
-  /// Remote memory manager.
-  class RCMemoryManager : public RuntimeDyld::MemoryManager {
+  /// Remote-mapped RuntimeDyld-compatible memory manager.
+  class RemoteRTDyldMemoryManager : public RuntimeDyld::MemoryManager {
+    friend class OrcRemoteTargetClient;
+
   public:
-    RCMemoryManager(OrcRemoteTargetClient &Client, ResourceIdMgr::ResourceId Id)
-        : Client(Client), Id(Id) {
-      DEBUG(dbgs() << "Created remote allocator " << Id << "\n");
-    }
-
-    RCMemoryManager(const RCMemoryManager &) = delete;
-    RCMemoryManager &operator=(const RCMemoryManager &) = delete;
-    RCMemoryManager(RCMemoryManager &&) = default;
-    RCMemoryManager &operator=(RCMemoryManager &&) = default;
-
-    ~RCMemoryManager() override {
+    ~RemoteRTDyldMemoryManager() {
       Client.destroyRemoteAllocator(Id);
       DEBUG(dbgs() << "Destroyed remote allocator " << Id << "\n");
     }
+
+    RemoteRTDyldMemoryManager(const RemoteRTDyldMemoryManager &) = delete;
+    RemoteRTDyldMemoryManager &
+    operator=(const RemoteRTDyldMemoryManager &) = delete;
+    RemoteRTDyldMemoryManager(RemoteRTDyldMemoryManager &&) = default;
+    RemoteRTDyldMemoryManager &
+    operator=(RemoteRTDyldMemoryManager &&) = default;
 
     uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
                                  unsigned SectionID,
@@ -117,12 +116,8 @@ public:
       DEBUG(dbgs() << "Allocator " << Id << " reserved:\n");
 
       if (CodeSize != 0) {
-        if (auto AddrOrErr = Client.reserveMem(Id, CodeSize, CodeAlign))
-          Unmapped.back().RemoteCodeAddr = *AddrOrErr;
-        else {
-          // FIXME; Add error to poll.
-          assert(!AddrOrErr.takeError() && "Failed reserving remote memory.");
-        }
+        Unmapped.back().RemoteCodeAddr =
+            Client.reserveMem(Id, CodeSize, CodeAlign);
 
         DEBUG(dbgs() << "  code: "
                      << format("0x%016x", Unmapped.back().RemoteCodeAddr)
@@ -131,12 +126,8 @@ public:
       }
 
       if (RODataSize != 0) {
-        if (auto AddrOrErr = Client.reserveMem(Id, RODataSize, RODataAlign))
-          Unmapped.back().RemoteRODataAddr = *AddrOrErr;
-        else {
-          // FIXME; Add error to poll.
-          assert(!AddrOrErr.takeError() && "Failed reserving remote memory.");
-        }
+        Unmapped.back().RemoteRODataAddr =
+            Client.reserveMem(Id, RODataSize, RODataAlign);
 
         DEBUG(dbgs() << "  ro-data: "
                      << format("0x%016x", Unmapped.back().RemoteRODataAddr)
@@ -145,12 +136,8 @@ public:
       }
 
       if (RWDataSize != 0) {
-        if (auto AddrOrErr = Client.reserveMem(Id, RWDataSize, RWDataAlign))
-          Unmapped.back().RemoteRWDataAddr = *AddrOrErr;
-        else {
-          // FIXME; Add error to poll.
-          assert(!AddrOrErr.takeError() && "Failed reserving remote memory.");
-        }
+        Unmapped.back().RemoteRWDataAddr =
+            Client.reserveMem(Id, RWDataSize, RWDataAlign);
 
         DEBUG(dbgs() << "  rw-data: "
                      << format("0x%016x", Unmapped.back().RemoteRWDataAddr)
@@ -169,7 +156,7 @@ public:
     void deregisterEHFrames() override {
       for (auto &Frame : RegisteredEHFrames) {
         // FIXME: Add error poll.
-        llvm::cantFail(Client.deregisterEHFrames(Frame.Addr, Frame.Size));
+        Client.deregisterEHFrames(Frame.Addr, Frame.Size);
       }
     }
 
@@ -177,44 +164,12 @@ public:
                             const object::ObjectFile &Obj) override {
       DEBUG(dbgs() << "Allocator " << Id << " applied mappings:\n");
       for (auto &ObjAllocs : Unmapped) {
-        {
-          JITTargetAddress NextCodeAddr = ObjAllocs.RemoteCodeAddr;
-          for (auto &Alloc : ObjAllocs.CodeAllocs) {
-            NextCodeAddr = alignTo(NextCodeAddr, Alloc.getAlign());
-            Dyld.mapSectionAddress(Alloc.getLocalAddress(), NextCodeAddr);
-            DEBUG(dbgs() << "     code: "
-                         << static_cast<void *>(Alloc.getLocalAddress())
-                         << " -> " << format("0x%016x", NextCodeAddr) << "\n");
-            Alloc.setRemoteAddress(NextCodeAddr);
-            NextCodeAddr += Alloc.getSize();
-          }
-        }
-        {
-          JITTargetAddress NextRODataAddr = ObjAllocs.RemoteRODataAddr;
-          for (auto &Alloc : ObjAllocs.RODataAllocs) {
-            NextRODataAddr = alignTo(NextRODataAddr, Alloc.getAlign());
-            Dyld.mapSectionAddress(Alloc.getLocalAddress(), NextRODataAddr);
-            DEBUG(dbgs() << "  ro-data: "
-                         << static_cast<void *>(Alloc.getLocalAddress())
-                         << " -> " << format("0x%016x", NextRODataAddr)
-                         << "\n");
-            Alloc.setRemoteAddress(NextRODataAddr);
-            NextRODataAddr += Alloc.getSize();
-          }
-        }
-        {
-          JITTargetAddress NextRWDataAddr = ObjAllocs.RemoteRWDataAddr;
-          for (auto &Alloc : ObjAllocs.RWDataAllocs) {
-            NextRWDataAddr = alignTo(NextRWDataAddr, Alloc.getAlign());
-            Dyld.mapSectionAddress(Alloc.getLocalAddress(), NextRWDataAddr);
-            DEBUG(dbgs() << "  rw-data: "
-                         << static_cast<void *>(Alloc.getLocalAddress())
-                         << " -> " << format("0x%016x", NextRWDataAddr)
-                         << "\n");
-            Alloc.setRemoteAddress(NextRWDataAddr);
-            NextRWDataAddr += Alloc.getSize();
-          }
-        }
+        mapAllocsToRemoteAddrs(Dyld, ObjAllocs.CodeAllocs,
+                               ObjAllocs.RemoteCodeAddr);
+        mapAllocsToRemoteAddrs(Dyld, ObjAllocs.RODataAllocs,
+                               ObjAllocs.RemoteRODataAddr);
+        mapAllocsToRemoteAddrs(Dyld, ObjAllocs.RWDataAllocs,
+                               ObjAllocs.RemoteRWDataAddr);
         Unfinalized.push_back(std::move(ObjAllocs));
       }
       Unmapped.clear();
@@ -224,114 +179,17 @@ public:
       DEBUG(dbgs() << "Allocator " << Id << " finalizing:\n");
 
       for (auto &ObjAllocs : Unfinalized) {
-        for (auto &Alloc : ObjAllocs.CodeAllocs) {
-          DEBUG(dbgs() << "  copying code: "
-                       << static_cast<void *>(Alloc.getLocalAddress()) << " -> "
-                       << format("0x%016x", Alloc.getRemoteAddress()) << " ("
-                       << Alloc.getSize() << " bytes)\n");
-          if (auto Err =
-                  Client.writeMem(Alloc.getRemoteAddress(),
-                                  Alloc.getLocalAddress(), Alloc.getSize())) {
-            // FIXME: Replace this once finalizeMemory can return an Error.
-            handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
-              if (ErrMsg) {
-                raw_string_ostream ErrOut(*ErrMsg);
-                EIB.log(ErrOut);
-              }
-            });
-            return true;
-          }
-        }
+        if (copyAndProtect(ObjAllocs.CodeAllocs, ObjAllocs.RemoteCodeAddr,
+                           sys::Memory::MF_READ | sys::Memory::MF_EXEC))
+          return true;
 
-        if (ObjAllocs.RemoteCodeAddr) {
-          DEBUG(dbgs() << "  setting R-X permissions on code block: "
-                       << format("0x%016x", ObjAllocs.RemoteCodeAddr) << "\n");
-          if (auto Err = Client.setProtections(Id, ObjAllocs.RemoteCodeAddr,
-                                               sys::Memory::MF_READ |
-                                                   sys::Memory::MF_EXEC)) {
-            // FIXME: Replace this once finalizeMemory can return an Error.
-            handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
-              if (ErrMsg) {
-                raw_string_ostream ErrOut(*ErrMsg);
-                EIB.log(ErrOut);
-              }
-            });
-            return true;
-          }
-        }
+        if (copyAndProtect(ObjAllocs.RODataAllocs, ObjAllocs.RemoteRODataAddr,
+                           sys::Memory::MF_READ))
+          return true;
 
-        for (auto &Alloc : ObjAllocs.RODataAllocs) {
-          DEBUG(dbgs() << "  copying ro-data: "
-                       << static_cast<void *>(Alloc.getLocalAddress()) << " -> "
-                       << format("0x%016x", Alloc.getRemoteAddress()) << " ("
-                       << Alloc.getSize() << " bytes)\n");
-          if (auto Err =
-                  Client.writeMem(Alloc.getRemoteAddress(),
-                                  Alloc.getLocalAddress(), Alloc.getSize())) {
-            // FIXME: Replace this once finalizeMemory can return an Error.
-            handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
-              if (ErrMsg) {
-                raw_string_ostream ErrOut(*ErrMsg);
-                EIB.log(ErrOut);
-              }
-            });
-            return true;
-          }
-        }
-
-        if (ObjAllocs.RemoteRODataAddr) {
-          DEBUG(dbgs() << "  setting R-- permissions on ro-data block: "
-                       << format("0x%016x", ObjAllocs.RemoteRODataAddr)
-                       << "\n");
-          if (auto Err = Client.setProtections(Id, ObjAllocs.RemoteRODataAddr,
-                                               sys::Memory::MF_READ)) {
-            // FIXME: Replace this once finalizeMemory can return an Error.
-            handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
-              if (ErrMsg) {
-                raw_string_ostream ErrOut(*ErrMsg);
-                EIB.log(ErrOut);
-              }
-            });
-            return false;
-          }
-        }
-
-        for (auto &Alloc : ObjAllocs.RWDataAllocs) {
-          DEBUG(dbgs() << "  copying rw-data: "
-                       << static_cast<void *>(Alloc.getLocalAddress()) << " -> "
-                       << format("0x%016x", Alloc.getRemoteAddress()) << " ("
-                       << Alloc.getSize() << " bytes)\n");
-          if (auto Err =
-                  Client.writeMem(Alloc.getRemoteAddress(),
-                                  Alloc.getLocalAddress(), Alloc.getSize())) {
-            // FIXME: Replace this once finalizeMemory can return an Error.
-            handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
-              if (ErrMsg) {
-                raw_string_ostream ErrOut(*ErrMsg);
-                EIB.log(ErrOut);
-              }
-            });
-            return false;
-          }
-        }
-
-        if (ObjAllocs.RemoteRWDataAddr) {
-          DEBUG(dbgs() << "  setting RW- permissions on rw-data block: "
-                       << format("0x%016x", ObjAllocs.RemoteRWDataAddr)
-                       << "\n");
-          if (auto Err = Client.setProtections(Id, ObjAllocs.RemoteRWDataAddr,
-                                               sys::Memory::MF_READ |
-                                                   sys::Memory::MF_WRITE)) {
-            // FIXME: Replace this once finalizeMemory can return an Error.
-            handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
-              if (ErrMsg) {
-                raw_string_ostream ErrOut(*ErrMsg);
-                EIB.log(ErrOut);
-              }
-            });
-            return false;
-          }
-        }
+        if (copyAndProtect(ObjAllocs.RWDataAllocs, ObjAllocs.RemoteRWDataAddr,
+                           sys::Memory::MF_READ | sys::Memory::MF_WRITE))
+          return true;
       }
       Unfinalized.clear();
 
@@ -400,6 +258,60 @@ public:
       std::vector<Alloc> CodeAllocs, RODataAllocs, RWDataAllocs;
     };
 
+    RemoteRTDyldMemoryManager(OrcRemoteTargetClient &Client,
+                              ResourceIdMgr::ResourceId Id)
+        : Client(Client), Id(Id) {
+      DEBUG(dbgs() << "Created remote allocator " << Id << "\n");
+    }
+
+    // Maps all allocations in Allocs to aligned blocks
+    void mapAllocsToRemoteAddrs(RuntimeDyld &Dyld, std::vector<Alloc> &Allocs,
+                                JITTargetAddress NextAddr) {
+      for (auto &Alloc : Allocs) {
+        NextAddr = alignTo(NextAddr, Alloc.getAlign());
+        Dyld.mapSectionAddress(Alloc.getLocalAddress(), NextAddr);
+        DEBUG(dbgs() << "     " << static_cast<void *>(Alloc.getLocalAddress())
+                     << " -> " << format("0x%016x", NextAddr) << "\n");
+        Alloc.setRemoteAddress(NextAddr);
+
+        // Only advance NextAddr if it was non-null to begin with,
+        // otherwise leave it as null.
+        if (NextAddr)
+          NextAddr += Alloc.getSize();
+      }
+    }
+
+    // Copies data for each alloc in the list, then set permissions on the
+    // segment.
+    bool copyAndProtect(const std::vector<Alloc> &Allocs,
+                        JITTargetAddress RemoteSegmentAddr,
+                        unsigned Permissions) {
+      if (RemoteSegmentAddr) {
+        assert(!Allocs.empty() && "No sections in allocated segment");
+
+        for (auto &Alloc : Allocs) {
+          DEBUG(dbgs() << "  copying section: "
+                       << static_cast<void *>(Alloc.getLocalAddress()) << " -> "
+                       << format("0x%016x", Alloc.getRemoteAddress()) << " ("
+                       << Alloc.getSize() << " bytes)\n";);
+
+          if (Client.writeMem(Alloc.getRemoteAddress(), Alloc.getLocalAddress(),
+                              Alloc.getSize()))
+            return true;
+        }
+
+        DEBUG(dbgs() << "  setting "
+                     << (Permissions & sys::Memory::MF_READ ? 'R' : '-')
+                     << (Permissions & sys::Memory::MF_WRITE ? 'W' : '-')
+                     << (Permissions & sys::Memory::MF_EXEC ? 'X' : '-')
+                     << " permissions on block: "
+                     << format("0x%016x", RemoteSegmentAddr) << "\n");
+        if (Client.setProtections(Id, RemoteSegmentAddr, Permissions))
+          return true;
+      }
+      return false;
+    }
+
     OrcRemoteTargetClient &Client;
     ResourceIdMgr::ResourceId Id;
     std::vector<ObjectAllocs> Unmapped;
@@ -414,17 +326,14 @@ public:
   };
 
   /// Remote indirect stubs manager.
-  class RCIndirectStubsManager : public IndirectStubsManager {
+  class RemoteIndirectStubsManager : public IndirectStubsManager {
   public:
-    RCIndirectStubsManager(OrcRemoteTargetClient &Remote,
-                           ResourceIdMgr::ResourceId Id)
-        : Remote(Remote), Id(Id) {}
+    RemoteIndirectStubsManager(OrcRemoteTargetClient &Client,
+                               ResourceIdMgr::ResourceId Id)
+        : Client(Client), Id(Id) {}
 
-    ~RCIndirectStubsManager() override {
-      if (auto Err = Remote.destroyIndirectStubsManager(Id)) {
-        // FIXME: Thread this error back to clients.
-        consumeError(std::move(Err));
-      }
+    ~RemoteIndirectStubsManager() override {
+      Client.destroyIndirectStubsManager(Id);
     }
 
     Error createStub(StringRef StubName, JITTargetAddress StubAddr,
@@ -472,7 +381,7 @@ public:
       auto I = StubIndexes.find(Name);
       assert(I != StubIndexes.end() && "No stub pointer for symbol");
       auto Key = I->second.first;
-      return Remote.writePointer(getPtrAddr(Key), NewAddr);
+      return Client.writePointer(getPtrAddr(Key), NewAddr);
     }
 
   private:
@@ -482,12 +391,7 @@ public:
       unsigned NumStubs;
     };
 
-    OrcRemoteTargetClient &Remote;
-    ResourceIdMgr::ResourceId Id;
-    std::vector<RemoteIndirectStubsInfo> RemoteIndirectStubsInfos;
     using StubKey = std::pair<uint16_t, uint16_t>;
-    std::vector<StubKey> FreeStubs;
-    StringMap<std::pair<StubKey, JITSymbolFlags>> StubIndexes;
 
     Error reserveStubs(unsigned NumStubs) {
       if (NumStubs <= FreeStubs.size())
@@ -498,7 +402,7 @@ public:
       JITTargetAddress PtrBase;
       unsigned NumStubsEmitted;
 
-      if (auto StubInfoOrErr = Remote.emitIndirectStubs(Id, NewStubsRequired))
+      if (auto StubInfoOrErr = Client.emitIndirectStubs(Id, NewStubsRequired))
         std::tie(StubBase, PtrBase, NumStubsEmitted) = *StubInfoOrErr;
       else
         return StubInfoOrErr.takeError();
@@ -517,58 +421,64 @@ public:
       auto Key = FreeStubs.back();
       FreeStubs.pop_back();
       StubIndexes[StubName] = std::make_pair(Key, StubFlags);
-      return Remote.writePointer(getPtrAddr(Key), InitAddr);
+      return Client.writePointer(getPtrAddr(Key), InitAddr);
     }
 
     JITTargetAddress getStubAddr(StubKey K) {
       assert(RemoteIndirectStubsInfos[K.first].StubBase != 0 &&
              "Missing stub address");
       return RemoteIndirectStubsInfos[K.first].StubBase +
-             K.second * Remote.getIndirectStubSize();
+             K.second * Client.getIndirectStubSize();
     }
 
     JITTargetAddress getPtrAddr(StubKey K) {
       assert(RemoteIndirectStubsInfos[K.first].PtrBase != 0 &&
              "Missing pointer address");
       return RemoteIndirectStubsInfos[K.first].PtrBase +
-             K.second * Remote.getPointerSize();
+             K.second * Client.getPointerSize();
     }
+
+    OrcRemoteTargetClient &Client;
+    ResourceIdMgr::ResourceId Id;
+    std::vector<RemoteIndirectStubsInfo> RemoteIndirectStubsInfos;
+    std::vector<StubKey> FreeStubs;
+    StringMap<std::pair<StubKey, JITSymbolFlags>> StubIndexes;
   };
 
   /// Remote compile callback manager.
-  class RCCompileCallbackManager : public JITCompileCallbackManager {
+  class RemoteCompileCallbackManager : public JITCompileCallbackManager {
   public:
-    RCCompileCallbackManager(JITTargetAddress ErrorHandlerAddress,
-                             OrcRemoteTargetClient &Remote)
-        : JITCompileCallbackManager(ErrorHandlerAddress), Remote(Remote) {}
+    RemoteCompileCallbackManager(OrcRemoteTargetClient &Client,
+                                 JITTargetAddress ErrorHandlerAddress)
+        : JITCompileCallbackManager(ErrorHandlerAddress), Client(Client) {}
 
   private:
     Error grow() override {
       JITTargetAddress BlockAddr = 0;
       uint32_t NumTrampolines = 0;
-      if (auto TrampolineInfoOrErr = Remote.emitTrampolineBlock())
+      if (auto TrampolineInfoOrErr = Client.emitTrampolineBlock())
         std::tie(BlockAddr, NumTrampolines) = *TrampolineInfoOrErr;
       else
         return TrampolineInfoOrErr.takeError();
 
-      uint32_t TrampolineSize = Remote.getTrampolineSize();
+      uint32_t TrampolineSize = Client.getTrampolineSize();
       for (unsigned I = 0; I < NumTrampolines; ++I)
         this->AvailableTrampolines.push_back(BlockAddr + (I * TrampolineSize));
 
       return Error::success();
     }
 
-    OrcRemoteTargetClient &Remote;
+    OrcRemoteTargetClient &Client;
   };
 
   /// Create an OrcRemoteTargetClient.
   /// Channel is the ChannelT instance to communicate on. It is assumed that
   /// the channel is ready to be read from and written to.
   static Expected<std::unique_ptr<OrcRemoteTargetClient>>
-  Create(ChannelT &Channel) {
+  Create(rpc::RawByteChannel &Channel, std::function<void(Error)> ReportError) {
     Error Err = Error::success();
-    std::unique_ptr<OrcRemoteTargetClient> Client(
-        new OrcRemoteTargetClient(Channel, Err));
+    auto Client = std::unique_ptr<OrcRemoteTargetClient>(
+        new OrcRemoteTargetClient(Channel, std::move(ReportError), Err));
     if (Err)
       return std::move(Err);
     return std::move(Client);
@@ -578,7 +488,7 @@ public:
   /// its result.
   Expected<int> callIntVoid(JITTargetAddress Addr) {
     DEBUG(dbgs() << "Calling int(*)(void) " << format("0x%016x", Addr) << "\n");
-    return callB<CallIntVoid>(Addr);
+    return callB<exec::CallIntVoid>(Addr);
   }
 
   /// Call the int(int, char*[]) function at the given address in the target and
@@ -587,7 +497,7 @@ public:
                          const std::vector<std::string> &Args) {
     DEBUG(dbgs() << "Calling int(*)(int, char*[]) " << format("0x%016x", Addr)
                  << "\n");
-    return callB<CallMain>(Addr, Args);
+    return callB<exec::CallMain>(Addr, Args);
   }
 
   /// Call the void() function at the given address in the target and wait for
@@ -595,45 +505,39 @@ public:
   Error callVoidVoid(JITTargetAddress Addr) {
     DEBUG(dbgs() << "Calling void(*)(void) " << format("0x%016x", Addr)
                  << "\n");
-    return callB<CallVoidVoid>(Addr);
+    return callB<exec::CallVoidVoid>(Addr);
   }
 
   /// Create an RCMemoryManager which will allocate its memory on the remote
   /// target.
-  Error createRemoteMemoryManager(std::unique_ptr<RCMemoryManager> &MM) {
-    assert(!MM && "MemoryManager should be null before creation.");
-
+  Expected<std::unique_ptr<RemoteRTDyldMemoryManager>>
+  createRemoteMemoryManager() {
     auto Id = AllocatorIds.getNext();
-    if (auto Err = callB<CreateRemoteAllocator>(Id))
-      return Err;
-    MM = llvm::make_unique<RCMemoryManager>(*this, Id);
-    return Error::success();
+    if (auto Err = callB<mem::CreateRemoteAllocator>(Id))
+      return std::move(Err);
+    return std::unique_ptr<RemoteRTDyldMemoryManager>(
+        new RemoteRTDyldMemoryManager(*this, Id));
   }
 
   /// Create an RCIndirectStubsManager that will allocate stubs on the remote
   /// target.
-  Error createIndirectStubsManager(std::unique_ptr<RCIndirectStubsManager> &I) {
-    assert(!I && "Indirect stubs manager should be null before creation.");
+  Expected<std::unique_ptr<RemoteIndirectStubsManager>>
+  createIndirectStubsManager() {
     auto Id = IndirectStubOwnerIds.getNext();
-    if (auto Err = callB<CreateIndirectStubsOwner>(Id))
-      return Err;
-    I = llvm::make_unique<RCIndirectStubsManager>(*this, Id);
-    return Error::success();
+    if (auto Err = callB<stubs::CreateIndirectStubsOwner>(Id))
+      return std::move(Err);
+    return llvm::make_unique<RemoteIndirectStubsManager>(*this, Id);
   }
 
-  Expected<RCCompileCallbackManager &>
+  Expected<RemoteCompileCallbackManager &>
   enableCompileCallbacks(JITTargetAddress ErrorHandlerAddress) {
-    // Check for an 'out-of-band' error, e.g. from an MM destructor.
-    if (ExistingError)
-      return std::move(ExistingError);
-
     // Emit the resolver block on the JIT server.
-    if (auto Err = callB<EmitResolverBlock>())
+    if (auto Err = callB<stubs::EmitResolverBlock>())
       return std::move(Err);
 
     // Create the callback manager.
-    CallbackManager.emplace(ErrorHandlerAddress, *this);
-    RCCompileCallbackManager &Mgr = *CallbackManager;
+    CallbackManager.emplace(*this, ErrorHandlerAddress);
+    RemoteCompileCallbackManager &Mgr = *CallbackManager;
     return Mgr;
   }
 
@@ -641,45 +545,43 @@ public:
   /// symbol resolvers *after* they've searched the local symbol table in the
   /// JIT stack.
   Expected<JITTargetAddress> getSymbolAddress(StringRef Name) {
-    // Check for an 'out-of-band' error, e.g. from an MM destructor.
-    if (ExistingError)
-      return std::move(ExistingError);
-
-    return callB<GetSymbolAddress>(Name);
+    return callB<utils::GetSymbolAddress>(Name);
   }
 
   /// Get the triple for the remote target.
   const std::string &getTargetTriple() const { return RemoteTargetTriple; }
 
-  Error terminateSession() { return callB<TerminateSession>(); }
+  Error terminateSession() { return callB<utils::TerminateSession>(); }
 
 private:
-  OrcRemoteTargetClient(ChannelT &Channel, Error &Err)
-      : OrcRemoteTargetRPCAPI(Channel) {
+  OrcRemoteTargetClient(rpc::RawByteChannel &Channel,
+                        std::function<void(Error)> ReportError, Error &Err)
+      : rpc::SingleThreadedRPCEndpoint<rpc::RawByteChannel>(Channel, true),
+        ReportError(std::move(ReportError)) {
     ErrorAsOutParameter EAO(&Err);
 
-    addHandler<RequestCompile>(
+    addHandler<utils::RequestCompile>(
         [this](JITTargetAddress Addr) -> JITTargetAddress {
           if (CallbackManager)
             return CallbackManager->executeCompileCallback(Addr);
           return 0;
         });
 
-    if (auto RIOrErr = callB<GetRemoteInfo>()) {
+    if (auto RIOrErr = callB<utils::GetRemoteInfo>()) {
       std::tie(RemoteTargetTriple, RemotePointerSize, RemotePageSize,
                RemoteTrampolineSize, RemoteIndirectStubSize) = *RIOrErr;
       Err = Error::success();
-    } else {
-      Err = joinErrors(RIOrErr.takeError(), std::move(ExistingError));
-    }
+    } else
+      Err = RIOrErr.takeError();
   }
 
-  Error deregisterEHFrames(JITTargetAddress Addr, uint32_t Size) {
-    return callB<RegisterEHFrames>(Addr, Size);
+  void deregisterEHFrames(JITTargetAddress Addr, uint32_t Size) {
+    if (auto Err = callB<eh::RegisterEHFrames>(Addr, Size))
+      ReportError(std::move(Err));
   }
 
   void destroyRemoteAllocator(ResourceIdMgr::ResourceId Id) {
-    if (auto Err = callB<DestroyRemoteAllocator>(Id)) {
+    if (auto Err = callB<mem::DestroyRemoteAllocator>(Id)) {
       // FIXME: This will be triggered by a removeModuleSet call: Propagate
       //        error return up through that.
       llvm_unreachable("Failed to destroy remote allocator.");
@@ -687,22 +589,19 @@ private:
     }
   }
 
-  Error destroyIndirectStubsManager(ResourceIdMgr::ResourceId Id) {
+  void destroyIndirectStubsManager(ResourceIdMgr::ResourceId Id) {
     IndirectStubOwnerIds.release(Id);
-    return callB<DestroyIndirectStubsOwner>(Id);
+    if (auto Err = callB<stubs::DestroyIndirectStubsOwner>(Id))
+      ReportError(std::move(Err));
   }
 
   Expected<std::tuple<JITTargetAddress, JITTargetAddress, uint32_t>>
   emitIndirectStubs(ResourceIdMgr::ResourceId Id, uint32_t NumStubsRequired) {
-    return callB<EmitIndirectStubs>(Id, NumStubsRequired);
+    return callB<stubs::EmitIndirectStubs>(Id, NumStubsRequired);
   }
 
   Expected<std::tuple<JITTargetAddress, uint32_t>> emitTrampolineBlock() {
-    // Check for an 'out-of-band' error, e.g. from an MM destructor.
-    if (ExistingError)
-      return std::move(ExistingError);
-
-    return callB<EmitTrampolineBlock>();
+    return callB<stubs::EmitTrampolineBlock>();
   }
 
   uint32_t getIndirectStubSize() const { return RemoteIndirectStubSize; }
@@ -711,59 +610,57 @@ private:
 
   uint32_t getTrampolineSize() const { return RemoteTrampolineSize; }
 
-  Expected<std::vector<char>> readMem(char *Dst, JITTargetAddress Src,
-                                      uint64_t Size) {
-    // Check for an 'out-of-band' error, e.g. from an MM destructor.
-    if (ExistingError)
-      return std::move(ExistingError);
-
-    return callB<ReadMem>(Src, Size);
+  Expected<std::vector<uint8_t>> readMem(char *Dst, JITTargetAddress Src,
+                                         uint64_t Size) {
+    return callB<mem::ReadMem>(Src, Size);
   }
 
   Error registerEHFrames(JITTargetAddress &RAddr, uint32_t Size) {
-    return callB<RegisterEHFrames>(RAddr, Size);
+    // FIXME: Duplicate error and report it via ReportError too?
+    return callB<eh::RegisterEHFrames>(RAddr, Size);
   }
 
-  Expected<JITTargetAddress> reserveMem(ResourceIdMgr::ResourceId Id,
-                                        uint64_t Size, uint32_t Align) {
-    // Check for an 'out-of-band' error, e.g. from an MM destructor.
-    if (ExistingError)
-      return std::move(ExistingError);
-
-    return callB<ReserveMem>(Id, Size, Align);
+  JITTargetAddress reserveMem(ResourceIdMgr::ResourceId Id, uint64_t Size,
+                              uint32_t Align) {
+    if (auto AddrOrErr = callB<mem::ReserveMem>(Id, Size, Align))
+      return *AddrOrErr;
+    else {
+      ReportError(AddrOrErr.takeError());
+      return 0;
+    }
   }
 
-  Error setProtections(ResourceIdMgr::ResourceId Id,
-                       JITTargetAddress RemoteSegAddr, unsigned ProtFlags) {
-    return callB<SetProtections>(Id, RemoteSegAddr, ProtFlags);
+  bool setProtections(ResourceIdMgr::ResourceId Id,
+                      JITTargetAddress RemoteSegAddr, unsigned ProtFlags) {
+    if (auto Err = callB<mem::SetProtections>(Id, RemoteSegAddr, ProtFlags)) {
+      ReportError(std::move(Err));
+      return true;
+    } else
+      return false;
   }
 
-  Error writeMem(JITTargetAddress Addr, const char *Src, uint64_t Size) {
-    // Check for an 'out-of-band' error, e.g. from an MM destructor.
-    if (ExistingError)
-      return std::move(ExistingError);
-
-    return callB<WriteMem>(DirectBufferWriter(Src, Addr, Size));
+  bool writeMem(JITTargetAddress Addr, const char *Src, uint64_t Size) {
+    if (auto Err = callB<mem::WriteMem>(DirectBufferWriter(Src, Addr, Size))) {
+      ReportError(std::move(Err));
+      return true;
+    } else
+      return false;
   }
 
   Error writePointer(JITTargetAddress Addr, JITTargetAddress PtrVal) {
-    // Check for an 'out-of-band' error, e.g. from an MM destructor.
-    if (ExistingError)
-      return std::move(ExistingError);
-
-    return callB<WritePtr>(Addr, PtrVal);
+    return callB<mem::WritePtr>(Addr, PtrVal);
   }
 
   static Error doNothing() { return Error::success(); }
 
-  Error ExistingError = Error::success();
+  std::function<void(Error)> ReportError;
   std::string RemoteTargetTriple;
   uint32_t RemotePointerSize = 0;
   uint32_t RemotePageSize = 0;
   uint32_t RemoteTrampolineSize = 0;
   uint32_t RemoteIndirectStubSize = 0;
   ResourceIdMgr AllocatorIds, IndirectStubOwnerIds;
-  Optional<RCCompileCallbackManager> CallbackManager;
+  Optional<RemoteCompileCallbackManager> CallbackManager;
 };
 
 } // end namespace remote
