@@ -41,7 +41,7 @@ InputFilenames(cl::Positional, cl::desc("<input object files or .dSYM bundles>")
                cl::ZeroOrMore);
 
 static cl::opt<DIDumpType> DumpType(
-    "debug-dump", cl::init(DIDT_All), cl::desc("Dump of debug sections:"),
+    "debug-dump", cl::init(DIDT_Null), cl::desc("Dump of debug sections:"),
     cl::values(
         clEnumValN(DIDT_All, "all", "Dump all debug sections"),
         clEnumValN(DIDT_Abbrev, "abbrev", ".debug_abbrev"),
@@ -154,12 +154,12 @@ static bool VerifyInput(StringRef Filename) {
   MemoryBuffer::getFileOrSTDIN(Filename);
   error(Filename, BuffOrErr.getError());
   std::unique_ptr<MemoryBuffer> Buff = std::move(BuffOrErr.get());
-  
+
   Expected<std::unique_ptr<Binary>> BinOrErr =
   object::createBinary(Buff->getMemBufferRef());
   if (!BinOrErr)
     error(Filename, errorToErrorCode(BinOrErr.takeError()));
-  
+
   bool Result = true;
   if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get()))
     Result = VerifyObjectFile(*Obj, Filename);
@@ -216,6 +216,15 @@ int main(int argc, char **argv) {
   llvm::InitializeAllTargetMCs();
 
   cl::ParseCommandLineOptions(argc, argv, "llvm dwarf dumper\n");
+
+  // Defaults to dumping all sections, unless brief mode is specified in which
+  // case only the .debug_info section in dumped.
+  if (DumpType == DIDT_Null) {
+    if (Brief)
+      DumpType = DIDT_Info;
+    else
+      DumpType = DIDT_All;
+  }
 
   // Defaults to a.out if no filenames specified.
   if (InputFilenames.size() == 0)
