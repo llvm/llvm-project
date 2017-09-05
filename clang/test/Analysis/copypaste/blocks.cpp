@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -fblocks -std=c++11 -analyzer-checker=alpha.clone.CloneChecker -verify %s
+// RUN: %clang_analyze_cc1 -fblocks -std=c++11 -analyzer-checker=alpha.clone.CloneChecker -analyzer-config alpha.clone.CloneChecker:MinimumCloneComplexity=10 -verify %s
 
 // This tests if we search for clones in blocks.
 

@@ -2332,7 +2332,6 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                "#define A 1\n"
                "#endif",
                Style);
-
   Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
   verifyFormat("#ifdef _WIN32\n"
                "#  define A 0\n"
@@ -2493,6 +2492,15 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                "#\tdefine A 1\n"
                "#endif",
                Style);
+
+  // Regression test: Multiline-macro inside include guards.
+  verifyFormat("#ifndef HEADER_H\n"
+               "#define HEADER_H\n"
+               "#define A()        \\\n"
+               "  int i;           \\\n"
+               "  int j;\n"
+               "#endif // HEADER_H",
+               getLLVMStyleWithColumns(20));
 }
 
 TEST_F(FormatTest, FormatHashIfNotAtStartOfLine) {
