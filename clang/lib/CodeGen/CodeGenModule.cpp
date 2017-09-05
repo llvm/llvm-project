@@ -2437,6 +2437,48 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
         D->getType().isConstant(Context) &&
         isExternallyVisible(D->getLinkageAndVisibility().getLinkage()))
       GV->setSection(".cp.rodata");
+
+    // Check if we a have a const declaration with an initializer, we may be
+    // able to emit it as available_externally to expose it's value to the
+    // optimizer.
+    if (Context.getLangOpts().CPlusPlus && GV->hasExternalLinkage() &&
+        D->getType().isConstQualified() && !GV->hasInitializer() &&
+        !D->hasDefinition() && D->hasInit() && !D->hasAttr<DLLImportAttr>()) {
+      const auto *Record =
+          Context.getBaseElementType(D->getType())->getAsCXXRecordDecl();
+      bool HasMutableFields = Record && Record->hasMutableFields();
+      if (!HasMutableFields) {
+        const VarDecl *InitDecl;
+        const Expr *InitExpr = D->getAnyInitializer(InitDecl);
+        if (InitExpr) {
+          ConstantEmitter emitter(*this);
+          llvm::Constant *Init = emitter.tryEmitForInitializer(*InitDecl);
+          if (Init) {
+            auto *InitType = Init->getType();
+            if (GV->getType()->getElementType() != InitType) {
+              // The type of the initializer does not match the definition.
+              // This happens when an initializer has a different type from
+              // the type of the global (because of padding at the end of a
+              // structure for instance).
+              GV->setName(StringRef());
+              // Make a new global with the correct type, this is now guaranteed
+              // to work.
+              auto *NewGV = cast<llvm::GlobalVariable>(
+                  GetAddrOfGlobalVar(D, InitType, IsForDefinition));
+
+              // Erase the old global, since it is no longer used.
+              cast<llvm::GlobalValue>(GV)->eraseFromParent();
+              GV = NewGV;
+            } else {
+              GV->setInitializer(Init);
+              GV->setConstant(true);
+              GV->setLinkage(llvm::GlobalValue::AvailableExternallyLinkage);
+            }
+            emitter.finalize(GV);
+          }
+        }
+      }
+    }
   }
 
   auto ExpectedAS =

@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "InputInfo.h"
 #include "CommonArgs.h"
+#include "InputInfo.h"
 #include "clang/Driver/Compilation.h"
 #include "llvm/Option/ArgList.h"
 
@@ -38,8 +38,45 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 /// AMDGPU Toolchain
 AMDGPUToolChain::AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
                                  const ArgList &Args)
-  : Generic_ELF(D, Triple, Args) { }
+    : Generic_ELF(D, Triple, Args),
+      OptionsDefault({{options::OPT_O, "3"},
+                      {options::OPT_cl_std_EQ, "CL1.2"}}) {}
 
 Tool *AMDGPUToolChain::buildLinker() const {
   return new tools::amdgpu::Linker(*this);
+}
+
+DerivedArgList *
+AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
+                               Action::OffloadKind DeviceOffloadKind) const {
+
+  DerivedArgList *DAL =
+      Generic_ELF::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
+
+  // Do nothing if not OpenCL (-x cl)
+  if (!Args.getLastArgValue(options::OPT_x).equals("cl"))
+    return DAL;
+
+  if (!DAL)
+    DAL = new DerivedArgList(Args.getBaseArgs());
+  for (auto *A : Args)
+    DAL->append(A);
+
+  const OptTable &Opts = getDriver().getOpts();
+
+  // Phase 1 (.cl -> .bc)
+  if (Args.hasArg(options::OPT_c) && Args.hasArg(options::OPT_emit_llvm)) {
+    DAL->AddFlagArg(nullptr, Opts.getOption(getTriple().isArch64Bit()
+                                                ? options::OPT_m64
+                                                : options::OPT_m32));
+
+    // Have to check OPT_O4, OPT_O0 & OPT_Ofast separately
+    // as they defined that way in Options.td
+    if (!Args.hasArg(options::OPT_O, options::OPT_O0, options::OPT_O4,
+                     options::OPT_Ofast))
+      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_O),
+                        getOptionDefault(options::OPT_O));
+  }
+
+  return DAL;
 }
