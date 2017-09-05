@@ -32,10 +32,10 @@ class TreePrinter {
 public:
   llvm::raw_ostream &out;
   const bool ShowColors;
-  bool FlagsOnly;
+  bool Internal;
 
   TreePrinter(llvm::raw_ostream &out)
-      : out(out), ShowColors(hasColors(out)), FlagsOnly(false) {}
+      : out(out), ShowColors(hasColors(out)), Internal(false) {}
 
   void setColor(llvm::raw_ostream::Colors Color) {
     if (ShowColors)
@@ -54,10 +54,28 @@ public:
     return Diags.isIgnored(DiagID, SourceLocation());
   }
 
+  static bool enabledByDefault(const GroupRecord &Group) {
+    for (const DiagnosticRecord &DR : Group.diagnostics()) {
+      if (isIgnored(DR.DiagID))
+        return false;
+    }
+
+    for (const GroupRecord &GR : Group.subgroups()) {
+      if (!enabledByDefault(GR))
+        return false;
+    }
+
+    return true;
+  }
+
   void printGroup(const GroupRecord &Group, unsigned Indent = 0) {
     out.indent(Indent * 2);
 
-    setColor(llvm::raw_ostream::YELLOW);
+    if (enabledByDefault(Group))
+      setColor(llvm::raw_ostream::GREEN);
+    else
+      setColor(llvm::raw_ostream::YELLOW);
+
     out << "-W" << Group.getName() << "\n";
     resetColor();
 
@@ -66,7 +84,7 @@ public:
       printGroup(GR, Indent);
     }
 
-    if (!FlagsOnly) {
+    if (Internal) {
       for (const DiagnosticRecord &DR : Group.diagnostics()) {
         if (ShowColors && !isIgnored(DR.DiagID))
           setColor(llvm::raw_ostream::GREEN);
@@ -132,16 +150,16 @@ public:
 };
 
 static void printUsage() {
-  llvm::errs() << "Usage: diagtool tree [--flags-only] [<diagnostic-group>]\n";
+  llvm::errs() << "Usage: diagtool tree [--internal] [<diagnostic-group>]\n";
 }
 
 int TreeView::run(unsigned int argc, char **argv, llvm::raw_ostream &out) {
   // First check our one flag (--flags-only).
-  bool FlagsOnly = false;
+  bool Internal = false;
   if (argc > 0) {
     StringRef FirstArg(*argv);
-    if (FirstArg.equals("--flags-only")) {
-      FlagsOnly = true;
+    if (FirstArg.equals("--internal")) {
+      Internal = true;
       --argc;
       ++argv;
     }
@@ -168,7 +186,7 @@ int TreeView::run(unsigned int argc, char **argv, llvm::raw_ostream &out) {
   }
 
   TreePrinter TP(out);
-  TP.FlagsOnly = FlagsOnly;
+  TP.Internal = Internal;
   TP.showKey();
   return ShowAll ? TP.showAll() : TP.showGroup(RootGroup);
 }

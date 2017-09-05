@@ -1,6 +1,6 @@
-// RUN: diagtool tree | FileCheck -strict-whitespace %s
-// RUN: diagtool tree -Weverything | FileCheck -strict-whitespace %s
-// RUN: diagtool tree everything | FileCheck -strict-whitespace %s
+// RUN: diagtool tree --internal | FileCheck -strict-whitespace %s
+// RUN: diagtool tree --internal -Weverything | FileCheck -strict-whitespace %s
+// RUN: diagtool tree --internal everything | FileCheck -strict-whitespace %s
 //
 // These three ways of running diagtool tree are the same:
 // they produce a tree for every top-level diagnostic flag.
@@ -29,8 +29,7 @@
 
 // RUN: not diagtool tree -Wthis-is-not-a-valid-flag
 
-
-// RUN: diagtool tree -Wgnu | FileCheck -strict-whitespace -check-prefix CHECK-GNU %s
+// RUN: diagtool tree --internal -Wgnu | FileCheck -strict-whitespace -check-prefix CHECK-GNU %s
 // CHECK-GNU: -Wgnu
 // CHECK-GNU:   -Wgnu-designator
 // CHECK-GNU:     ext_gnu_array_range
@@ -40,7 +39,7 @@
 // CHECK-GNU:     ext_vla
 // There are more GNU extensions but we don't need to check them all.
 
-// RUN: diagtool tree --flags-only -Wgnu | FileCheck -check-prefix CHECK-FLAGS-ONLY %s
+// RUN: diagtool tree -Wgnu | FileCheck -check-prefix CHECK-FLAGS-ONLY %s
 // CHECK-FLAGS-ONLY: -Wgnu
 // CHECK-FLAGS-ONLY:   -Wgnu-designator
 // CHECK-FLAGS-ONLY-NOT:     ext_gnu_array_range
