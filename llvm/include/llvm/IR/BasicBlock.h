@@ -224,6 +224,14 @@ public:
                  static_cast<const BasicBlock *>(this)->getSinglePredecessor());
   }
 
+  /// \brief Return the predecessor of this block if it has a single non-reattach predecessor
+  /// block. Otherwise return a null pointer.
+  const BasicBlock *getSingleNonReattachPredecessor() const;
+  BasicBlock *getSingleNonReattachPredecessor() {
+    return const_cast<BasicBlock *>(
+                 static_cast<const BasicBlock *>(this)->getSingleNonReattachPredecessor());
+  }
+
   /// Return the predecessor of this block if it has a unique predecessor
   /// block. Otherwise return a null pointer.
   ///

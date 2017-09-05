@@ -287,7 +287,7 @@ FunctionPass *createTailCallEliminationPass();
 // EarlyCSE - This pass performs a simple and fast CSE pass over the dominator
 // tree.
 //
-FunctionPass *createEarlyCSEPass(bool UseMemorySSA = false);
+FunctionPass *createEarlyCSEPass(bool UseMemorySSA = false, bool Rhino=false);
 
 //===----------------------------------------------------------------------===//
 //

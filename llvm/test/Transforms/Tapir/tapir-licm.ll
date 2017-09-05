@@ -45,7 +45,7 @@ pfor.end.continue:                                ; preds = %pfor.end
   ret void
 }
 
-; Function Attrs: nounwind readnone
+; Function Attrs: nounwind readonly
 declare double @norm(double*, i32) #1
 
 ; Function Attrs: argmemonly nounwind

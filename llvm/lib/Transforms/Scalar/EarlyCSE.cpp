@@ -448,6 +448,8 @@ public:
   MemorySSA *MSSA;
   std::unique_ptr<MemorySSAUpdater> MSSAUpdater;
 
+  const bool Rhino;
+
   using AllocatorTy =
       RecyclingAllocator<BumpPtrAllocator,
                          ScopedHashTableVal<SimpleValue, Value *>>;
@@ -524,9 +526,9 @@ public:
   /// Set up the EarlyCSE runner for a particular function.
   EarlyCSE(const DataLayout &DL, const TargetLibraryInfo &TLI,
            const TargetTransformInfo &TTI, DominatorTree &DT,
-           AssumptionCache &AC, MemorySSA *MSSA)
+           AssumptionCache &AC, MemorySSA *MSSA, const bool Rhino = false)
       : TLI(TLI), TTI(TTI), DT(DT), AC(AC), SQ(DL, &TLI, &DT, &AC), MSSA(MSSA),
-        MSSAUpdater(llvm::make_unique<MemorySSAUpdater>(MSSA)) {}
+        MSSAUpdater(llvm::make_unique<MemorySSAUpdater>(MSSA)), Rhino(Rhino) {}
 
   bool run();
 
@@ -868,8 +870,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
   // in this block.  If this block has multiple predecessors, then they could
   // have invalidated the live-out memory values of our parent value.  For now,
   // just be conservative and invalidate memory if this block has multiple
-  // predecessors.
-  if (!BB->getSinglePredecessor())
+  // non-reattach predecessors.
+  if (!(Rhino?BB->getSingleNonReattachPredecessor():BB->getSinglePredecessor()))
     ++CurrentGeneration;
 
   // If this node has a single predecessor which ends in a conditional branch,
@@ -878,7 +880,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
   // which reaches this block where the condition might hold a different
   // value.  Since we're adding this to the scoped hash table (like any other
   // def), it will have been popped if we encounter a future merge block.
-  if (BasicBlock *Pred = BB->getSinglePredecessor()) {
+  if (BasicBlock *Pred = (Rhino?BB->getSingleNonReattachPredecessor():BB->getSinglePredecessor())) {
     auto *BI = dyn_cast<BranchInst>(Pred->getTerminator());
     if (BI && BI->isConditional()) {
       auto *CondInst = dyn_cast<Instruction>(BI->getCondition());
@@ -1321,7 +1323,7 @@ PreservedAnalyses EarlyCSEPass::run(Function &F,
   auto *MSSA =
       UseMemorySSA ? &AM.getResult<MemorySSAAnalysis>(F).getMSSA() : nullptr;
 
-  EarlyCSE CSE(F.getParent()->getDataLayout(), TLI, TTI, DT, AC, MSSA);
+  EarlyCSE CSE(F.getParent()->getDataLayout(), TLI, TTI, DT, AC, MSSA, Rhino);
 
   if (!CSE.run())
     return PreservedAnalyses::all();
@@ -1343,16 +1345,22 @@ namespace {
 /// canonicalize things as it goes. It is intended to be fast and catch obvious
 /// cases so that instcombine and other passes are more effective. It is
 /// expected that a later pass of GVN will catch the interesting/hard cases.
-template<bool UseMemorySSA>
+template<bool UseMemorySSA, bool Rhino=false>
 class EarlyCSELegacyCommonPass : public FunctionPass {
 public:
   static char ID;
-
   EarlyCSELegacyCommonPass() : FunctionPass(ID) {
-    if (UseMemorySSA)
-      initializeEarlyCSEMemSSALegacyPassPass(*PassRegistry::getPassRegistry());
-    else
-      initializeEarlyCSELegacyPassPass(*PassRegistry::getPassRegistry());
+    if (Rhino) {
+      if (UseMemorySSA)
+        initializeEarlyCSEMemSSARhinoLegacyPassPass(*PassRegistry::getPassRegistry());
+      else
+        initializeEarlyCSERhinoLegacyPassPass(*PassRegistry::getPassRegistry());
+    } else {
+      if (UseMemorySSA)
+        initializeEarlyCSEMemSSALegacyPassPass(*PassRegistry::getPassRegistry());
+      else
+        initializeEarlyCSELegacyPassPass(*PassRegistry::getPassRegistry());
+    }
   }
 
   bool runOnFunction(Function &F) override {
@@ -1366,7 +1374,7 @@ public:
     auto *MSSA =
         UseMemorySSA ? &getAnalysis<MemorySSAWrapperPass>().getMSSA() : nullptr;
 
-    EarlyCSE CSE(F.getParent()->getDataLayout(), TLI, TTI, DT, AC, MSSA);
+    EarlyCSE CSE(F.getParent()->getDataLayout(), TLI, TTI, DT, AC, MSSA, Rhino);
 
     return CSE.run();
   }
@@ -1406,13 +1414,6 @@ using EarlyCSEMemSSALegacyPass =
 template<>
 char EarlyCSEMemSSALegacyPass::ID = 0;
 
-FunctionPass *llvm::createEarlyCSEPass(bool UseMemorySSA) {
-  if (UseMemorySSA)
-    return new EarlyCSEMemSSALegacyPass();
-  else
-    return new EarlyCSELegacyPass();
-}
-
 INITIALIZE_PASS_BEGIN(EarlyCSEMemSSALegacyPass, "early-cse-memssa",
                       "Early CSE w/ MemorySSA", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
@@ -1422,3 +1423,47 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(EarlyCSEMemSSALegacyPass, "early-cse-memssa",
                     "Early CSE w/ MemorySSA", false, false)
+
+using EarlyCSERhinoLegacyPass = EarlyCSELegacyCommonPass</*UseMemorySSA=*/false, /*Rhino*/true>;
+
+template<>
+char EarlyCSERhinoLegacyPass::ID = 0;
+
+INITIALIZE_PASS_BEGIN(EarlyCSERhinoLegacyPass, "early-cse-rhino", "Early CSE with Rhino", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(EarlyCSERhinoLegacyPass, "early-cse-rhino", "Early CSE with Rhino", false, false)
+
+using EarlyCSEMemSSARhinoLegacyPass =
+    EarlyCSELegacyCommonPass</*UseMemorySSA=*/true, /*Rhino*/true>;
+
+template<>
+char EarlyCSEMemSSARhinoLegacyPass::ID = 0;
+
+INITIALIZE_PASS_BEGIN(EarlyCSEMemSSARhinoLegacyPass, "early-cse-memssa-rhino",
+                      "Early CSE w/ MemorySSA and Rhino", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
+INITIALIZE_PASS_END(EarlyCSEMemSSARhinoLegacyPass, "early-cse-memssa-rhino",
+                    "Early CSE w/ MemorySSAand Rhino", false, false)
+
+
+FunctionPass *llvm::createEarlyCSEPass(bool UseMemorySSA, bool Rhino) {
+  if (Rhino) {
+    if (UseMemorySSA)
+      return new EarlyCSEMemSSARhinoLegacyPass();
+    else
+      return new EarlyCSERhinoLegacyPass();
+  } else {
+    if (UseMemorySSA)
+      return new EarlyCSEMemSSALegacyPass();
+    else
+      return new EarlyCSELegacyPass();
+  }
+}
