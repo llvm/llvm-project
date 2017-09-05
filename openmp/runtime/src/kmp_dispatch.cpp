@@ -1137,11 +1137,10 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
   break;
 
   default: {
-    __kmp_msg(kmp_ms_fatal, // Severity
-              KMP_MSG(UnknownSchedTypeDetected), // Primary message
-              KMP_HNT(GetNewerLibrary), // Hint
-              __kmp_msg_null // Variadic argument list terminator
-              );
+    __kmp_fatal(KMP_MSG(UnknownSchedTypeDetected), // Primary message
+                KMP_HNT(GetNewerLibrary), // Hint
+                __kmp_msg_null // Variadic argument list terminator
+                );
   } break;
   } // switch
   pr->schedule = schedule;
@@ -2287,11 +2286,10 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
       break;
       default: {
         status = 0; // to avoid complaints on uninitialized variable use
-        __kmp_msg(kmp_ms_fatal, // Severity
-                  KMP_MSG(UnknownSchedTypeDetected), // Primary message
-                  KMP_HNT(GetNewerLibrary), // Hint
-                  __kmp_msg_null // Variadic argument list terminator
-                  );
+        __kmp_fatal(KMP_MSG(UnknownSchedTypeDetected), // Primary message
+                    KMP_HNT(GetNewerLibrary), // Hint
+                    __kmp_msg_null // Variadic argument list terminator
+                    );
       } break;
       } // switch
     } // if tc == 0;

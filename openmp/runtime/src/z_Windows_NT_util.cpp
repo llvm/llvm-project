@@ -848,9 +848,8 @@ void __kmp_initialize_system_tick(void) {
     status = QueryPerformanceFrequency(&freq);
     if (!status) {
       DWORD error = GetLastError();
-      __kmp_msg(kmp_ms_fatal,
-                KMP_MSG(FunctionError, "QueryPerformanceFrequency()"),
-                KMP_ERR(error), __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(FunctionError, "QueryPerformanceFrequency()"),
+                  KMP_ERR(error), __kmp_msg_null);
 
     } else {
       __kmp_win32_tick = ((double)1.0) / (double)freq.QuadPart;
@@ -966,8 +965,7 @@ void *__stdcall __kmp_launch_monitor(void *arg) {
   status = SetThreadPriority(monitor, THREAD_PRIORITY_HIGHEST);
   if (!status) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetThreadPriority), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantSetThreadPriority), KMP_ERR(error), __kmp_msg_null);
   }
 
   /* register us as monitor */
@@ -1008,8 +1006,7 @@ void *__stdcall __kmp_launch_monitor(void *arg) {
   status = SetThreadPriority(monitor, THREAD_PRIORITY_NORMAL);
   if (!status) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetThreadPriority), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantSetThreadPriority), KMP_ERR(error), __kmp_msg_null);
   }
 
   if (__kmp_global.g.g_abort != 0) {
@@ -1109,8 +1106,7 @@ void __kmp_create_worker(int gtid, kmp_info_t *th, size_t stack_size) {
 
     if (handle == 0) {
       DWORD error = GetLastError();
-      __kmp_msg(kmp_ms_fatal, KMP_MSG(CantCreateThread), KMP_ERR(error),
-                __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(CantCreateThread), KMP_ERR(error), __kmp_msg_null);
     } else {
       th->th.th_info.ds.ds_thread = handle;
     }
@@ -1147,8 +1143,7 @@ void __kmp_create_monitor(kmp_info_t *th) {
   __kmp_monitor_ev = CreateEvent(NULL, TRUE, FALSE, NULL);
   if (__kmp_monitor_ev == NULL) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantCreateEvent), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantCreateEvent), KMP_ERR(error), __kmp_msg_null);
   }; // if
 #if USE_ITT_BUILD
   __kmp_itt_system_object_created(__kmp_monitor_ev, "Event");
@@ -1177,8 +1172,7 @@ void __kmp_create_monitor(kmp_info_t *th) {
                    STACK_SIZE_PARAM_IS_A_RESERVATION, &idThread);
   if (handle == 0) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantCreateThread), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantCreateThread), KMP_ERR(error), __kmp_msg_null);
   } else
     th->th.th_info.ds.ds_thread = handle;
 
@@ -1200,8 +1194,8 @@ int __kmp_is_thread_alive(kmp_info_t *th, DWORD *exit_val) {
   rc = GetExitCodeThread(th->th.th_info.ds.ds_thread, exit_val);
   if (rc == 0) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(FunctionError, "GetExitCodeThread()"),
-              KMP_ERR(error), __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(FunctionError, "GetExitCodeThread()"), KMP_ERR(error),
+                __kmp_msg_null);
   }; // if
   return (*exit_val == STILL_ACTIVE);
 }
@@ -1299,8 +1293,7 @@ void __kmp_reap_monitor(kmp_info_t *th) {
   status = SetEvent(__kmp_monitor_ev);
   if (status == FALSE) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetEvent), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantSetEvent), KMP_ERR(error), __kmp_msg_null);
   }
   KA_TRACE(10, ("__kmp_reap_monitor: reaping thread (%d)\n",
                 th->th.th_info.ds.ds_gtid));
@@ -1338,8 +1331,8 @@ static sig_func_t __kmp_signal(int signum, sig_func_t handler) {
   sig_func_t old = signal(signum, handler);
   if (old == SIG_ERR) {
     int error = errno;
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(FunctionError, "signal"), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(FunctionError, "signal"), KMP_ERR(error),
+                __kmp_msg_null);
   }; // if
   return old;
 }
@@ -1418,8 +1411,8 @@ void __kmp_thread_sleep(int millis) {
   status = SleepEx((DWORD)millis, FALSE);
   if (status) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(FunctionError, "SleepEx()"), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(FunctionError, "SleepEx()"), KMP_ERR(error),
+                __kmp_msg_null);
   }
 }
 
@@ -1453,8 +1446,7 @@ void __kmp_free_handle(kmp_thread_t tHandle) {
   rc = CloseHandle(tHandle);
   if (!rc) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantCloseHandle), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantCloseHandle), KMP_ERR(error), __kmp_msg_null);
   }
 }
 

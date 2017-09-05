@@ -113,7 +113,7 @@ void __kmp_error_construct(kmp_i18n_id_t id, // Message identifier.
                            ident_t const *ident // Construct ident.
                            ) {
   char const *construct = __kmp_pragma(ct, ident);
-  __kmp_msg(kmp_ms_fatal, __kmp_msg_format(id, construct), __kmp_msg_null);
+  __kmp_fatal(__kmp_msg_format(id, construct), __kmp_msg_null);
   KMP_INTERNAL_FREE(CCAST(char *, construct));
 }
 
@@ -124,8 +124,7 @@ void __kmp_error_construct2(kmp_i18n_id_t id, // Message identifier.
                             ) {
   char const *construct1 = __kmp_pragma(ct, ident);
   char const *construct2 = __kmp_pragma(cons->type, cons->ident);
-  __kmp_msg(kmp_ms_fatal, __kmp_msg_format(id, construct1, construct2),
-            __kmp_msg_null);
+  __kmp_fatal(__kmp_msg_format(id, construct1, construct2), __kmp_msg_null);
   KMP_INTERNAL_FREE(CCAST(char *, construct1));
   KMP_INTERNAL_FREE(CCAST(char *, construct2));
 }

@@ -433,8 +433,8 @@ void __kmp_terminate_thread(int gtid) {
   KA_TRACE(10, ("__kmp_terminate_thread: kill (%d)\n", gtid));
   status = pthread_cancel(th->th.th_info.ds.ds_thread);
   if (status != 0 && status != ESRCH) {
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantTerminateWorkerThread), KMP_ERR(status),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantTerminateWorkerThread), KMP_ERR(status),
+                __kmp_msg_null);
   }; // if
 #endif
   __kmp_yield(TRUE);
@@ -808,13 +808,11 @@ void __kmp_create_worker(int gtid, kmp_info_t *th, size_t stack_size) {
 #ifdef KMP_THREAD_ATTR
   status = pthread_attr_init(&thread_attr);
   if (status != 0) {
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantInitThreadAttrs), KMP_ERR(status),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantInitThreadAttrs), KMP_ERR(status), __kmp_msg_null);
   }; // if
   status = pthread_attr_setdetachstate(&thread_attr, PTHREAD_CREATE_JOINABLE);
   if (status != 0) {
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetWorkerState), KMP_ERR(status),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantSetWorkerState), KMP_ERR(status), __kmp_msg_null);
   }; // if
 
   /* Set stack size for this thread now.
@@ -846,8 +844,8 @@ void __kmp_create_worker(int gtid, kmp_info_t *th, size_t stack_size) {
   }; // if
 #endif /* KMP_BACKUP_STKSIZE */
   if (status != 0) {
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetWorkerStackSize, stack_size),
-              KMP_ERR(status), KMP_HNT(ChangeWorkerStackSize), __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantSetWorkerStackSize, stack_size), KMP_ERR(status),
+                KMP_HNT(ChangeWorkerStackSize), __kmp_msg_null);
   }; // if
 #endif /* _POSIX_THREAD_ATTR_STACKSIZE */
 
@@ -858,19 +856,17 @@ void __kmp_create_worker(int gtid, kmp_info_t *th, size_t stack_size) {
   if (status != 0 || !handle) { // ??? Why do we check handle??
 #ifdef _POSIX_THREAD_ATTR_STACKSIZE
     if (status == EINVAL) {
-      __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetWorkerStackSize, stack_size),
-                KMP_ERR(status), KMP_HNT(IncreaseWorkerStackSize),
-                __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(CantSetWorkerStackSize, stack_size), KMP_ERR(status),
+                  KMP_HNT(IncreaseWorkerStackSize), __kmp_msg_null);
     };
     if (status == ENOMEM) {
-      __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetWorkerStackSize, stack_size),
-                KMP_ERR(status), KMP_HNT(DecreaseWorkerStackSize),
-                __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(CantSetWorkerStackSize, stack_size), KMP_ERR(status),
+                  KMP_HNT(DecreaseWorkerStackSize), __kmp_msg_null);
     };
 #endif /* _POSIX_THREAD_ATTR_STACKSIZE */
     if (status == EAGAIN) {
-      __kmp_msg(kmp_ms_fatal, KMP_MSG(NoResourcesForWorkerThread),
-                KMP_ERR(status), KMP_HNT(Decrease_NUM_THREADS), __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(NoResourcesForWorkerThread), KMP_ERR(status),
+                  KMP_HNT(Decrease_NUM_THREADS), __kmp_msg_null);
     }; // if
     KMP_SYSFAIL("pthread_create", status);
   }; // if
@@ -931,13 +927,11 @@ void __kmp_create_monitor(kmp_info_t *th) {
   }
   status = pthread_attr_init(&thread_attr);
   if (status != 0) {
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantInitThreadAttrs), KMP_ERR(status),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantInitThreadAttrs), KMP_ERR(status), __kmp_msg_null);
   }; // if
   status = pthread_attr_setdetachstate(&thread_attr, PTHREAD_CREATE_JOINABLE);
   if (status != 0) {
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetMonitorState), KMP_ERR(status),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantSetMonitorState), KMP_ERR(status), __kmp_msg_null);
   }; // if
 
 #ifdef _POSIX_THREAD_ATTR_STACKSIZE
@@ -991,20 +985,19 @@ retry:
         __kmp_monitor_stksize *= 2;
         goto retry;
       }
-      __kmp_msg(
-          kmp_ms_fatal, KMP_MSG(CantSetMonitorStackSize, __kmp_monitor_stksize),
-          KMP_ERR(status), KMP_HNT(IncreaseMonitorStackSize), __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(CantSetMonitorStackSize, __kmp_monitor_stksize),
+                  KMP_ERR(status), KMP_HNT(IncreaseMonitorStackSize),
+                  __kmp_msg_null);
     }; // if
     if (status == ENOMEM) {
-      __kmp_msg(
-          kmp_ms_fatal, KMP_MSG(CantSetMonitorStackSize, __kmp_monitor_stksize),
-          KMP_ERR(status), KMP_HNT(DecreaseMonitorStackSize), __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(CantSetMonitorStackSize, __kmp_monitor_stksize),
+                  KMP_ERR(status), KMP_HNT(DecreaseMonitorStackSize),
+                  __kmp_msg_null);
     }; // if
 #endif /* _POSIX_THREAD_ATTR_STACKSIZE */
     if (status == EAGAIN) {
-      __kmp_msg(kmp_ms_fatal, KMP_MSG(NoResourcesForMonitorThread),
-                KMP_ERR(status), KMP_HNT(DecreaseNumberOfThreadsInUse),
-                __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(NoResourcesForMonitorThread), KMP_ERR(status),
+                  KMP_HNT(DecreaseNumberOfThreadsInUse), __kmp_msg_null);
     }; // if
     KMP_SYSFAIL("pthread_create", status);
   }; // if
@@ -1076,8 +1069,7 @@ void __kmp_reap_monitor(kmp_info_t *th) {
   KA_TRACE(10, ("__kmp_reap_monitor: try to join with monitor\n"));
   status = pthread_join(th->th.th_info.ds.ds_thread, &exit_val);
   if (exit_val != th) {
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(ReapMonitorError), KMP_ERR(status),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(ReapMonitorError), KMP_ERR(status), __kmp_msg_null);
   }
 
   th->th.th_info.ds.ds_tid = KMP_GTID_DNE;
@@ -1104,8 +1096,7 @@ void __kmp_reap_worker(kmp_info_t *th) {
 #ifdef KMP_DEBUG
   /* Don't expose these to the user until we understand when they trigger */
   if (status != 0) {
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(ReapWorkerError), KMP_ERR(status),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(ReapWorkerError), KMP_ERR(status), __kmp_msg_null);
   }
   if (exit_val != th) {
     KA_TRACE(10, ("__kmp_reap_worker: worker T#%d did not reap properly, "

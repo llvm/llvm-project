@@ -161,9 +161,9 @@ bool DWARFDebugInfoEntry::FastExtract(
           case DW_FORM_strp:
           case DW_FORM_sec_offset:
             if (cu->IsDWARF64())
-              debug_info_data.GetU64(offset_ptr);
+              debug_info_data.GetU64(&offset);
             else
-              debug_info_data.GetU32(offset_ptr);
+              debug_info_data.GetU32(&offset);
             break;
 
           default:
@@ -325,9 +325,9 @@ bool DWARFDebugInfoEntry::Extract(SymbolFileDWARF *dwarf2Data,
               case DW_FORM_strp:
               case DW_FORM_sec_offset:
                 if (cu->IsDWARF64())
-                  debug_info_data.GetU64(offset_ptr);
+                  debug_info_data.GetU64(&offset);
                 else
-                  debug_info_data.GetU32(offset_ptr);
+                  debug_info_data.GetU32(&offset);
                 break;
 
               default:
