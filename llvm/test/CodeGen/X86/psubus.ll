@@ -638,7 +638,7 @@ define <16 x i8> @test14(<16 x i8> %x, <16 x i32> %y) nounwind {
 ; SSE41-LABEL: test14:
 ; SSE41:       ## BB#0: ## %vector.ph
 ; SSE41-NEXT:    movdqa %xmm0, %xmm5
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[1,1,2,3]
 ; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm8 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm5[0],zero,zero,zero,xmm5[1],zero,zero,zero,xmm5[2],zero,zero,zero,xmm5[3],zero,zero,zero
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[2,3,0,1]

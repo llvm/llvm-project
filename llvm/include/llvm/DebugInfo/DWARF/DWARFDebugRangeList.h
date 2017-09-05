@@ -18,6 +18,7 @@
 
 namespace llvm {
 
+struct BaseAddress;
 class raw_ostream;
 
 struct DWARFAddressRange {
@@ -85,7 +86,8 @@ public:
   /// getAbsoluteRanges - Returns absolute address ranges defined by this range
   /// list. Has to be passed base address of the compile unit referencing this
   /// range list.
-  DWARFAddressRangesVector getAbsoluteRanges(uint64_t BaseAddress) const;
+  DWARFAddressRangesVector
+  getAbsoluteRanges(llvm::Optional<BaseAddress> BaseAddr) const;
 };
 
 } // end namespace llvm
