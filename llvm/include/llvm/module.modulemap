@@ -148,6 +148,7 @@ module LLVM_ExecutionEngine {
   exclude header "ExecutionEngine/Orc/OrcRemoteTargetRPCAPI.h"
   exclude header "ExecutionEngine/Orc/OrcRemoteTargetClient.h"
   exclude header "ExecutionEngine/Orc/OrcRemoteTargetServer.h"
+  exclude header "ExecutionEngine/Orc/RemoteObjectLayer.h"
 }
 
 module LLVM_Pass {

@@ -23,7 +23,7 @@ Expected<Decompressor> Decompressor::create(StringRef Name, StringRef Data,
   if (!zlib::isAvailable())
     return createError("zlib is not available");
 
-  Decompressor D(Data);
+  Decompressor D(Name, Data);
   Error Err = isGnuStyle(Name) ? D.consumeCompressedGnuHeader()
                                : D.consumeCompressedZLibHeader(Is64Bit, IsLE);
   if (Err)
@@ -31,8 +31,8 @@ Expected<Decompressor> Decompressor::create(StringRef Name, StringRef Data,
   return D;
 }
 
-Decompressor::Decompressor(StringRef Data)
-    : SectionData(Data), DecompressedSize(0) {}
+Decompressor::Decompressor(StringRef Name, StringRef Data)
+    : SectionName(Name), SectionData(Data), DecompressedSize(0) {}
 
 Error Decompressor::consumeCompressedGnuHeader() {
   if (!SectionData.startswith("ZLIB"))
@@ -91,4 +91,12 @@ bool Decompressor::isCompressedELFSection(uint64_t Flags, StringRef Name) {
 Error Decompressor::decompress(MutableArrayRef<char> Buffer) {
   size_t Size = Buffer.size();
   return zlib::uncompress(SectionData, Buffer.data(), Size);
+}
+
+void Decompressor::outOfMemoryHandler(void *Data, const std::string &Message,
+                                      bool) {
+  const auto *D = static_cast<const Decompressor *>(Data);
+  report_fatal_error("decompression of '" + Twine(D->SectionName) +
+                     "' failed: unable to allocate " +
+                     Twine(D->DecompressedSize) + " bytes.");
 }

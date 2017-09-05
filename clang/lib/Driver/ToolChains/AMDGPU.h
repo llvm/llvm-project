@@ -11,8 +11,10 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AMDGPU_H
 
 #include "Gnu.h"
+#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include <map>
 
 namespace clang {
 namespace driver {
@@ -37,14 +39,26 @@ public:
 namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY AMDGPUToolChain : public Generic_ELF {
+
+private:
+  const std::map<options::ID, const StringRef> OptionsDefault;
+
 protected:
   Tool *buildLinker() const override;
+  const StringRef getOptionDefault(options::ID OptID) const {
+    auto opt = OptionsDefault.find(OptID);
+    assert(opt != OptionsDefault.end() && "No Default for Option");
+    return opt->second;
+  }
 
 public:
   AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
-            const llvm::opt::ArgList &Args);
+                  const llvm::opt::ArgList &Args);
   unsigned GetDefaultDwarfVersion() const override { return 2; }
   bool IsIntegratedAssemblerDefault() const override { return true; }
+  llvm::opt::DerivedArgList *
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+                Action::OffloadKind DeviceOffloadKind) const override;
 };
 
 } // end namespace toolchains

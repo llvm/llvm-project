@@ -124,9 +124,15 @@ public:
 
 protected:
 
+  /// This class is used as the symbol materializer for JITSymbols returned by
+  /// RemoteObjectLayerClient/RemoteObjectLayerServer -- the materializer knows
+  /// how to call back to the other RPC endpoint to get the address when
+  /// requested.
   class RemoteSymbolMaterializer {
   public:
 
+    /// Construct a RemoteSymbolMaterializer for the given RemoteObjectLayer
+    /// with the given Id.
     RemoteSymbolMaterializer(RemoteObjectLayer &C,
                              RemoteSymbolId Id)
       : C(C), Id(Id) {}
@@ -143,11 +149,13 @@ protected:
     RemoteSymbolMaterializer&
     operator=(const RemoteSymbolMaterializer&) = delete;
 
+    /// Release the remote symbol.
     ~RemoteSymbolMaterializer() {
       if (Id)
         C.releaseRemoteSymbol(Id);
     }
 
+    /// Materialize the symbol on the remote and get its address.
     Expected<JITTargetAddress> materialize() {
       auto Addr = C.materializeRemoteSymbol(Id);
       Id = 0;
@@ -159,15 +167,16 @@ protected:
     RemoteSymbolId Id;
   };
 
+  /// Convenience function for getting a null remote symbol value.
   RemoteSymbol nullRemoteSymbol() {
     return RemoteSymbol(0, JITSymbolFlags());
   }
 
-  // Creates a StringError that contains a copy of Err's log message, then
-  // sends that StringError to ReportError.
-  //
-  // This allows us to locally log error messages for errors that will actually
-  // be delivered to the remote.
+  /// Creates a StringError that contains a copy of Err's log message, then
+  /// sends that StringError to ReportError.
+  ///
+  /// This allows us to locally log error messages for errors that will actually
+  /// be delivered to the remote.
   Error teeLog(Error Err) {
     return handleErrors(std::move(Err),
                         [this](std::unique_ptr<ErrorInfoBase> EIB) {
@@ -187,6 +196,7 @@ protected:
              H, "Bad object handle");
   }
 
+  /// Create a RemoteSymbol wrapping the given JITSymbol.
   Expected<RemoteSymbol> jitSymbolToRemote(JITSymbol Sym) {
     if (Sym) {
       auto Id = SymbolIdMgr.getNext();
@@ -200,6 +210,7 @@ protected:
     return nullRemoteSymbol();
   }
 
+  /// Convert an Expected<RemoteSymbol> to a JITSymbol.
   JITSymbol remoteToJITSymbol(Expected<RemoteSymbol> RemoteSymOrErr) {
     if (RemoteSymOrErr) {
       auto &RemoteSym = *RemoteSymOrErr;
@@ -212,32 +223,24 @@ protected:
       return RemoteSymOrErr.takeError();
   }
 
-  template <typename Func, typename... ArgTs>
-  using CallBResult = decltype(foldRemoteERror(
-                                 std::declval<RPCEndpoint>()
-                                   .template callB<Func>(
-                                     std::declval<const ArgTs&>()...)));
-
-  /// API checked callB function.
-  template <typename Func, typename... ArgTs>
-  CallBResult<Func> callB(const ArgTs &... Args) {
-    return foldRemoteError(Remote.template callB<Func>(Args...));
-  }
-
   RPCEndpoint &Remote;
   std::function<void(Error)> ReportError;
 
 private:
 
+  /// Notify the remote to release the given JITSymbol.
   void releaseRemoteSymbol(RemoteSymbolId Id) {
     if (auto Err = Remote.template callB<ReleaseRemoteSymbol>(Id))
       ReportError(std::move(Err));
   }
 
+  /// Notify the remote to materialize the JITSymbol with the given Id and
+  /// return its address.
   Expected<JITTargetAddress> materializeRemoteSymbol(RemoteSymbolId Id) {
     return Remote.template callB<MaterializeRemoteSymbol>(Id);
   }
 
+  /// Release the JITSymbol with the given Id.
   Error handleReleaseRemoteSymbol(RemoteSymbolId Id) {
     auto SI = InUseSymbols.find(Id);
     if (SI != InUseSymbols.end()) {
@@ -247,6 +250,8 @@ private:
       return teeLog(badRemoteSymbolIdError(Id));
   }
 
+  /// Run the materializer for the JITSymbol with the given Id and return its
+  /// address.
   Expected<JITTargetAddress> handleMaterializeRemoteSymbol(RemoteSymbolId Id) {
     auto SI = InUseSymbols.find(Id);
     if (SI != InUseSymbols.end()) {
@@ -266,6 +271,17 @@ private:
   std::map<RemoteSymbolId, JITSymbol> InUseSymbols;
 };
 
+/// RemoteObjectClientLayer forwards the ORC Object Layer API over an RPC
+/// connection.
+///
+/// This class can be used as the base layer of a JIT stack on the client and
+/// will forward operations to a corresponding RemoteObjectServerLayer on the
+/// server (which can be composed on top of a "real" object layer like
+/// RTDyldObjectLinkingLayer to actually carry out the operations).
+///
+/// Sending relocatable objects to the server (rather than fully relocated
+/// bits) allows JIT'd code to be cached on the server side and re-used in
+/// subsequent JIT sessions.
 template <typename RPCEndpoint>
 class RemoteObjectClientLayer : public RemoteObjectLayer<RPCEndpoint> {
 private:
@@ -290,6 +306,11 @@ public:
   using ObjectPtr =
     std::shared_ptr<object::OwningBinary<object::ObjectFile>>;
 
+  /// Create a RemoteObjectClientLayer that communicates with a
+  /// RemoteObjectServerLayer instance via the given RPCEndpoint.
+  ///
+  /// The ReportError functor can be used locally log errors that are intended
+  /// to be sent  sent
   RemoteObjectClientLayer(RPCEndpoint &Remote,
                           std::function<void(Error)> ReportError)
       : RemoteObjectLayer<RPCEndpoint>(Remote, std::move(ReportError)) {
@@ -299,6 +320,10 @@ public:
             *this, &ThisT::lookupInLogicalDylib);
   }
 
+  /// @brief Add an object to the JIT.
+  ///
+  /// @return A handle that can be used to refer to the loaded object (for
+  ///         symbol searching, finalization, freeing memory, etc.).
   Expected<ObjHandleT>
   addObject(ObjectPtr Object, std::shared_ptr<JITSymbolResolver> Resolver) {
     StringRef ObjBuffer = Object->getBinary()->getData();
@@ -313,22 +338,26 @@ public:
       return HandleOrErr.takeError();
   }
 
+  /// @brief Remove the given object from the JIT.
   Error removeObject(ObjHandleT H) {
     return this->Remote.template callB<RemoveObject>(H);
   }
 
+  /// @brief Search for the given named symbol.
   JITSymbol findSymbol(StringRef Name, bool ExportedSymbolsOnly) {
     return remoteToJITSymbol(
              this->Remote.template callB<FindSymbol>(Name,
                                                      ExportedSymbolsOnly));
   }
 
+  /// @brief Search for the given named symbol within the given context.
   JITSymbol findSymbolIn(ObjHandleT H, StringRef Name, bool ExportedSymbolsOnly) {
     return remoteToJITSymbol(
              this->Remote.template callB<FindSymbolIn>(H, Name,
                                                        ExportedSymbolsOnly));
   }
 
+  /// @brief Immediately emit and finalize the object with the given handle.
   Error emitAndFinalize(ObjHandleT H) {
     return this->Remote.template callB<EmitAndFinalize>(H);
   }
@@ -357,6 +386,12 @@ private:
            std::shared_ptr<JITSymbolResolver>> Resolvers;
 };
 
+/// RemoteObjectServerLayer acts as a server and handling RPC calls for the
+/// object layer API from the given RPC connection.
+///
+/// This class can be composed on top of a 'real' object layer (e.g.
+/// RTDyldObjectLinkingLayer) to do the actual work of relocating objects
+/// and making them executable.
 template <typename BaseLayerT, typename RPCEndpoint>
 class RemoteObjectServerLayer : public RemoteObjectLayer<RPCEndpoint> {
 private:
@@ -378,6 +413,8 @@ private:
 
 public:
 
+  /// Create a RemoteObjectServerLayer with the given base layer (which must be
+  /// an object layer), RPC endpoint, and error reporter function.
   RemoteObjectServerLayer(BaseLayerT &BaseLayer,
                           RPCEndpoint &Remote,
                           std::function<void(Error)> ReportError)
