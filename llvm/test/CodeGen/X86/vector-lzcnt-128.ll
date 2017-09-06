@@ -7,8 +7,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=X64 --check-prefix=NOBW --check-prefix=AVX --check-prefix=AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl | FileCheck %s --check-prefix=X64 --check-prefix=NOBW --check-prefix=AVX --check-prefix=AVX512VL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512bw,+avx512dq | FileCheck %s --check-prefix=X64 --check-prefix=AVX512VLBWDQ
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=knl -mattr=+avx512cd -mattr=+avx512vl | FileCheck %s --check-prefix=X64 --check-prefix=NOBW --check-prefix=AVX512 --check-prefix=AVX512VLCD
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=knl -mattr=+avx512cd | FileCheck %s --check-prefix=X64 --check-prefix=NOBW --check-prefix=AVX512 --check-prefix=AVX512CD
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq,+avx512cd,+avx512vl | FileCheck %s --check-prefix=X64 --check-prefix=NOBW --check-prefix=AVX512 --check-prefix=AVX512VLCD
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq,+avx512cd | FileCheck %s --check-prefix=X64 --check-prefix=NOBW --check-prefix=AVX512 --check-prefix=AVX512CD
 ;
 ; Just one 32-bit run to make sure we do reasonable things for i64 lzcnt.
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefix=X32-SSE
@@ -236,6 +236,7 @@ define <2 x i64> @testv2i64(<2 x i64> %in) nounwind {
 ; AVX512CD-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
 ; AVX512CD-NEXT:    vplzcntq %zmm0, %zmm0
 ; AVX512CD-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq
 ;
 ; X32-SSE-LABEL: testv2i64:
@@ -501,6 +502,7 @@ define <2 x i64> @testv2i64u(<2 x i64> %in) nounwind {
 ; AVX512CD-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
 ; AVX512CD-NEXT:    vplzcntq %zmm0, %zmm0
 ; AVX512CD-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq
 ;
 ; X32-SSE-LABEL: testv2i64u:
@@ -748,6 +750,7 @@ define <4 x i32> @testv4i32(<4 x i32> %in) nounwind {
 ; AVX512CD-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
 ; AVX512CD-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512CD-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq
 ;
 ; X32-SSE-LABEL: testv4i32:
@@ -989,6 +992,7 @@ define <4 x i32> @testv4i32u(<4 x i32> %in) nounwind {
 ; AVX512CD-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
 ; AVX512CD-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512CD-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq
 ;
 ; X32-SSE-LABEL: testv4i32u:
@@ -1192,6 +1196,7 @@ define <8 x i16> @testv8i16(<8 x i16> %in) nounwind {
 ; AVX512VLCD-NEXT:    vplzcntd %ymm0, %ymm0
 ; AVX512VLCD-NEXT:    vpmovdw %ymm0, %xmm0
 ; AVX512VLCD-NEXT:    vpsubw {{.*}}(%rip), %xmm0, %xmm0
+; AVX512VLCD-NEXT:    vzeroupper
 ; AVX512VLCD-NEXT:    retq
 ;
 ; AVX512CD-LABEL: testv8i16:
@@ -1200,6 +1205,7 @@ define <8 x i16> @testv8i16(<8 x i16> %in) nounwind {
 ; AVX512CD-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512CD-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512CD-NEXT:    vpsubw {{.*}}(%rip), %xmm0, %xmm0
+; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq
 ;
 ; X32-SSE-LABEL: testv8i16:
@@ -1396,6 +1402,7 @@ define <8 x i16> @testv8i16u(<8 x i16> %in) nounwind {
 ; AVX512VLCD-NEXT:    vplzcntd %ymm0, %ymm0
 ; AVX512VLCD-NEXT:    vpmovdw %ymm0, %xmm0
 ; AVX512VLCD-NEXT:    vpsubw {{.*}}(%rip), %xmm0, %xmm0
+; AVX512VLCD-NEXT:    vzeroupper
 ; AVX512VLCD-NEXT:    retq
 ;
 ; AVX512CD-LABEL: testv8i16u:
@@ -1404,6 +1411,7 @@ define <8 x i16> @testv8i16u(<8 x i16> %in) nounwind {
 ; AVX512CD-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512CD-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512CD-NEXT:    vpsubw {{.*}}(%rip), %xmm0, %xmm0
+; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq
 ;
 ; X32-SSE-LABEL: testv8i16u:
@@ -1572,6 +1580,7 @@ define <16 x i8> @testv16i8(<16 x i8> %in) nounwind {
 ; AVX512-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512-NEXT:    vpsubb {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
 ; X32-SSE-LABEL: testv16i8:
@@ -1734,6 +1743,7 @@ define <16 x i8> @testv16i8u(<16 x i8> %in) nounwind {
 ; AVX512-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512-NEXT:    vpsubb {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
 ; X32-SSE-LABEL: testv16i8u:

@@ -1277,6 +1277,7 @@ define <4 x double> @insert_reg_and_zero_v4f64(double %a) {
 ;
 ; AVX512VL-LABEL: insert_reg_and_zero_v4f64:
 ; AVX512VL:       # BB#0:
+; AVX512VL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
 ; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX512VL-NEXT:    retq

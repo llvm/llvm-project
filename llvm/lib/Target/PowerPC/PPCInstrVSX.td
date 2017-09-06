@@ -2344,7 +2344,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
     XX2_RD6_UIM5_RS6<60, 181, (outs vsrc:$XT),
                      (ins vsrc:$XTi, vsrc:$XB, u4imm:$UIM),
                      "xxinsertw $XT, $XB, $UIM", IIC_VecFP,
-                     [(set v4i32:$XT, (PPCxxinsert v4i32:$XTi, v4i32:$XB,
+                     [(set v4i32:$XT, (PPCvecinsert v4i32:$XTi, v4i32:$XB,
                                                    imm32SExt16:$UIM))]>,
                      RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
 

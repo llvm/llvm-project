@@ -4443,7 +4443,7 @@ ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI
   // varying inside the loop.
   if (!isLoopInvariant(Accum, L))
     return None;
-  
+
   // *** Part2: Create the predicates 
 
   // Analysis was successful: we have a phi-with-cast pattern for which we
@@ -4493,27 +4493,71 @@ ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI
   //
   // By induction, the same applies to all iterations 1<=i<n:
   //
-  
+
   // Create a truncated addrec for which we will add a no overflow check (P1).
   const SCEV *StartVal = getSCEV(StartValueV);
-  const SCEV *PHISCEV = 
+  const SCEV *PHISCEV =
       getAddRecExpr(getTruncateExpr(StartVal, TruncTy),
-                    getTruncateExpr(Accum, TruncTy), L, SCEV::FlagAnyWrap); 
-  const auto *AR = cast<SCEVAddRecExpr>(PHISCEV);
+                    getTruncateExpr(Accum, TruncTy), L, SCEV::FlagAnyWrap);
 
-  SCEVWrapPredicate::IncrementWrapFlags AddedFlags =
-      Signed ? SCEVWrapPredicate::IncrementNSSW
-             : SCEVWrapPredicate::IncrementNUSW;
-  const SCEVPredicate *AddRecPred = getWrapPredicate(AR, AddedFlags);
-  Predicates.push_back(AddRecPred);
+  // PHISCEV can be either a SCEVConstant or a SCEVAddRecExpr.
+  // ex: If truncated Accum is 0 and StartVal is a constant, then PHISCEV
+  // will be constant.
+  //
+  //  If PHISCEV is a constant, then P1 degenerates into P2 or P3, so we don't
+  // add P1.
+  if (const auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV)) {
+    SCEVWrapPredicate::IncrementWrapFlags AddedFlags =
+        Signed ? SCEVWrapPredicate::IncrementNSSW
+               : SCEVWrapPredicate::IncrementNUSW;
+    const SCEVPredicate *AddRecPred = getWrapPredicate(AR, AddedFlags);
+    Predicates.push_back(AddRecPred);
+  } else
+    assert(isa<SCEVConstant>(PHISCEV) && "Expected constant SCEV");
 
   // Create the Equal Predicates P2,P3:
-  auto AppendPredicate = [&](const SCEV *Expr) -> void {
+
+  // It is possible that the predicates P2 and/or P3 are computable at
+  // compile time due to StartVal and/or Accum being constants.
+  // If either one is, then we can check that now and escape if either P2
+  // or P3 is false.
+
+  // Construct the extended SCEV: (Ext ix (Trunc iy (Expr) to ix) to iy)
+  // for each of StartVal and Accum
+  auto GetExtendedExpr = [&](const SCEV *Expr) -> const SCEV * {
     assert(isLoopInvariant(Expr, L) && "Expr is expected to be invariant");
     const SCEV *TruncatedExpr = getTruncateExpr(Expr, TruncTy);
     const SCEV *ExtendedExpr =
         Signed ? getSignExtendExpr(TruncatedExpr, Expr->getType())
                : getZeroExtendExpr(TruncatedExpr, Expr->getType());
+    return ExtendedExpr;
+  };
+
+  // Given:
+  //  ExtendedExpr = (Ext ix (Trunc iy (Expr) to ix) to iy
+  //               = GetExtendedExpr(Expr)
+  // Determine whether the predicate P: Expr == ExtendedExpr
+  // is known to be false at compile time
+  auto PredIsKnownFalse = [&](const SCEV *Expr,
+                              const SCEV *ExtendedExpr) -> bool {
+    return Expr != ExtendedExpr &&
+           isKnownPredicate(ICmpInst::ICMP_NE, Expr, ExtendedExpr);
+  };
+
+  const SCEV *StartExtended = GetExtendedExpr(StartVal);
+  if (PredIsKnownFalse(StartVal, StartExtended)) {
+    DEBUG(dbgs() << "P2 is compile-time false\n";);
+    return None;
+  }
+
+  const SCEV *AccumExtended = GetExtendedExpr(Accum);
+  if (PredIsKnownFalse(Accum, AccumExtended)) {
+    DEBUG(dbgs() << "P3 is compile-time false\n";);
+    return None;
+  }
+
+  auto AppendPredicate = [&](const SCEV *Expr,
+                             const SCEV *ExtendedExpr) -> void {
     if (Expr != ExtendedExpr &&
         !isKnownPredicate(ICmpInst::ICMP_EQ, Expr, ExtendedExpr)) {
       const SCEVPredicate *Pred = getEqualPredicate(Expr, ExtendedExpr);
@@ -4521,10 +4565,10 @@ ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI
       Predicates.push_back(Pred);
     }
   };
-  
-  AppendPredicate(StartVal);
-  AppendPredicate(Accum);
-  
+
+  AppendPredicate(StartVal, StartExtended);
+  AppendPredicate(Accum, AccumExtended);
+
   // *** Part3: Predicates are ready. Now go ahead and create the new addrec in
   // which the casts had been folded away. The caller can rewrite SymbolicPHI
   // into NewAR if it will also add the runtime overflow checks specified in

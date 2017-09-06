@@ -131,6 +131,9 @@ private:
   // sin/cos
   bool fold_sincos(CallInst * CI, IRBuilder<> &B, AliasAnalysis * AA);
 
+  // __read_pipe/__write_pipe
+  bool fold_read_write_pipe(CallInst *CI, IRBuilder<> &B, FuncInfo &FInfo);
+
   // Get insertion point at entry.
   BasicBlock::iterator getEntryIns(CallInst * UI);
   // Insert an Alloc instruction.
@@ -458,11 +461,11 @@ static TableRef getOptTable(AMDGPULibFunc::EFuncId id) {
 }
 
 static inline int getVecSize(const AMDGPULibFunc& FInfo) {
-  return FInfo.Leads[0].VectorSize;
+  return FInfo.getLeads()[0].VectorSize;
 }
 
 static inline AMDGPULibFunc::EType getArgType(const AMDGPULibFunc& FInfo) {
-  return (AMDGPULibFunc::EType)FInfo.Leads[0].ArgType;
+  return (AMDGPULibFunc::EType)FInfo.getLeads()[0].ArgType;
 }
 
 Constant *AMDGPULibCalls::getFunction(Module *M, const FuncInfo& fInfo) {
@@ -507,8 +510,8 @@ bool AMDGPULibCalls::sincosUseNative(CallInst *aCI, const FuncInfo &FInfo) {
     Value *opr0 = aCI->getArgOperand(0);
 
     AMDGPULibFunc nf;
-    nf.Leads[0].ArgType = FInfo.Leads[0].ArgType;
-    nf.Leads[0].VectorSize = FInfo.Leads[0].VectorSize;
+    nf.getLeads()[0].ArgType = FInfo.getLeads()[0].ArgType;
+    nf.getLeads()[0].VectorSize = FInfo.getLeads()[0].VectorSize;
 
     nf.setPrefix(AMDGPULibFunc::NATIVE);
     nf.setId(AMDGPULibFunc::EI_SIN);
@@ -537,11 +540,10 @@ bool AMDGPULibCalls::useNative(CallInst *aCI) {
   Function *Callee = aCI->getCalledFunction();
 
   FuncInfo FInfo;
-  if (!parseFunctionName(Callee->getName(), &FInfo) ||
+  if (!parseFunctionName(Callee->getName(), &FInfo) || !FInfo.isMangled() ||
       FInfo.getPrefix() != AMDGPULibFunc::NOPFX ||
-      getArgType(FInfo) == AMDGPULibFunc::F64 ||
-      !HasNative(FInfo.getId()) ||
-      !(AllNative || useNativeFunc(FInfo.getName())) ) {
+      getArgType(FInfo) == AMDGPULibFunc::F64 || !HasNative(FInfo.getId()) ||
+      !(AllNative || useNativeFunc(FInfo.getName()))) {
     return false;
   }
 
@@ -556,6 +558,73 @@ bool AMDGPULibCalls::useNative(CallInst *aCI) {
   aCI->setCalledFunction(F);
   DEBUG_WITH_TYPE("usenative", dbgs() << "<useNative> replace " << *aCI
                                       << " with native version");
+  return true;
+}
+
+// Clang emits call of __read_pipe_2 or __read_pipe_4 for OpenCL read_pipe
+// builtin, with appended type size and alignment arguments, where 2 or 4
+// indicates the original number of arguments. The library has optimized version
+// of __read_pipe_2/__read_pipe_4 when the type size and alignment has the same
+// power of 2 value. This function transforms __read_pipe_2 to __read_pipe_2_N
+// for such cases where N is the size in bytes of the type (N = 1, 2, 4, 8, ...,
+// 128). The same for __read_pipe_4, write_pipe_2, and write_pipe_4.
+bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
+                                          FuncInfo &FInfo) {
+  auto *Callee = CI->getCalledFunction();
+  if (!Callee->isDeclaration())
+    return false;
+
+  assert(Callee->hasName() && "Invalid read_pipe/write_pipe function");
+  auto *M = Callee->getParent();
+  auto &Ctx = M->getContext();
+  std::string Name = Callee->getName();
+  auto NumArg = CI->getNumArgOperands();
+  if (NumArg != 4 && NumArg != 6)
+    return false;
+  auto *PacketSize = CI->getArgOperand(NumArg - 2);
+  auto *PacketAlign = CI->getArgOperand(NumArg - 1);
+  if (!isa<ConstantInt>(PacketSize) || !isa<ConstantInt>(PacketAlign))
+    return false;
+  unsigned Size = cast<ConstantInt>(PacketSize)->getZExtValue();
+  unsigned Align = cast<ConstantInt>(PacketAlign)->getZExtValue();
+  if (Size != Align || !isPowerOf2_32(Size))
+    return false;
+
+  Type *PtrElemTy;
+  if (Size <= 8)
+    PtrElemTy = Type::getIntNTy(Ctx, Size * 8);
+  else
+    PtrElemTy = VectorType::get(Type::getInt64Ty(Ctx), Size / 8);
+  unsigned PtrArgLoc = CI->getNumArgOperands() - 3;
+  auto PtrArg = CI->getArgOperand(PtrArgLoc);
+  unsigned PtrArgAS = PtrArg->getType()->getPointerAddressSpace();
+  auto *PtrTy = llvm::PointerType::get(PtrElemTy, PtrArgAS);
+
+  SmallVector<llvm::Type *, 6> ArgTys;
+  for (unsigned I = 0; I != PtrArgLoc; ++I)
+    ArgTys.push_back(CI->getArgOperand(I)->getType());
+  ArgTys.push_back(PtrTy);
+
+  Name = Name + "_" + std::to_string(Size);
+  auto *FTy = FunctionType::get(Callee->getReturnType(),
+                                ArrayRef<Type *>(ArgTys), false);
+  AMDGPULibFunc NewLibFunc(Name, FTy);
+  auto *F = AMDGPULibFunc::getOrInsertFunction(M, NewLibFunc);
+  if (!F)
+    return false;
+
+  auto *BCast = B.CreatePointerCast(PtrArg, PtrTy);
+  SmallVector<Value *, 6> Args;
+  for (unsigned I = 0; I != PtrArgLoc; ++I)
+    Args.push_back(CI->getArgOperand(I));
+  Args.push_back(BCast);
+
+  auto *NCI = B.CreateCall(F, Args);
+  NCI->setAttributes(CI->getAttributes());
+  CI->replaceAllUsesWith(NCI);
+  CI->dropAllReferences();
+  CI->eraseFromParent();
+
   return true;
 }
 
@@ -636,6 +705,11 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
       return fold_sincos(CI, B, AA);
 
     break;
+  case AMDGPULibFunc::EI_READ_PIPE_2:
+  case AMDGPULibFunc::EI_READ_PIPE_4:
+  case AMDGPULibFunc::EI_WRITE_PIPE_2:
+  case AMDGPULibFunc::EI_WRITE_PIPE_4:
+    return fold_read_write_pipe(CI, B, FInfo);
 
   default:
     break;
@@ -1259,7 +1333,7 @@ bool AMDGPULibCalls::fold_sincos(CallInst *CI, IRBuilder<> &B,
   // for OpenCL 2.0 we have only generic implementation of sincos
   // function.
   AMDGPULibFunc nf(AMDGPULibFunc::EI_SINCOS, fInfo);
-  nf.Leads[0].PtrKind = AMDGPULibFunc::GENERIC;
+  nf.getLeads()[0].PtrKind = AMDGPULibFunc::GENERIC;
   Function *Fsincos = dyn_cast_or_null<Function>(getFunction(M, nf));
   if (!Fsincos) return false;
 

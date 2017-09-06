@@ -4963,6 +4963,19 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
     }
   }
 
+  // If we're just checking for a NaN (ORD/UNO) and have a non-NaN operand,
+  // then canonicalize the operand to 0.0.
+  if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
+    if (!match(Op0, m_Zero()) && isKnownNeverNaN(Op0)) {
+      I.setOperand(0, ConstantFP::getNullValue(Op0->getType()));
+      return &I;
+    }
+    if (!match(Op1, m_Zero()) && isKnownNeverNaN(Op1)) {
+      I.setOperand(1, ConstantFP::getNullValue(Op0->getType()));
+      return &I;
+    }
+  }
+
   // Test if the FCmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
   // any other folding. This helps out other analyses which understand
