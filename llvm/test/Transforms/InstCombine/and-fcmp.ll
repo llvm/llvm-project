@@ -41,10 +41,8 @@ define i1 @fcmp_ord_nonzero(float %x, float %y) {
 
 define <3 x i1> @fcmp_ord_nonzero_vec(<3 x float> %x, <3 x float> %y) {
 ; CHECK-LABEL: @fcmp_ord_nonzero_vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord <3 x float> %x, <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord <3 x float> %y, <float 3.000000e+00, float 2.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[AND:%.*]] = and <3 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <3 x i1> [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord <3 x float> %x, %y
+; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
 ;
   %cmp1 = fcmp ord <3 x float> %x, <float 1.0, float 2.0, float 3.0>
   %cmp2 = fcmp ord <3 x float> %y, <float 3.0, float 2.0, float 1.0>

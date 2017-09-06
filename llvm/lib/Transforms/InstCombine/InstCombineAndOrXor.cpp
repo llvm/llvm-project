@@ -938,21 +938,12 @@ Value *InstCombiner::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS, bool IsAnd) 
     if (LHS0->getType() != RHS0->getType())
       return nullptr;
 
-    auto *LHSC = dyn_cast<ConstantFP>(LHS1);
-    auto *RHSC = dyn_cast<ConstantFP>(RHS1);
-    if (LHSC && RHSC) {
-      assert(!LHSC->getValueAPF().isNaN() && !RHSC->getValueAPF().isNaN() &&
-             "Failed to simplify fcmp ord/uno with NAN operand");
-      // Ignore the constants because they can't be NANs:
-      // (fcmp ord x, c) & (fcmp ord y, c)  -> (fcmp ord x, y)
-      // (fcmp uno x, c) & (fcmp uno y, c)  -> (fcmp uno x, y)
-      return Builder.CreateFCmp(PredL, LHS0, RHS0);
-    }
-
-    // Handle vector zeros. This occurs because the canonical form of
-    // "fcmp ord/uno x,x" is "fcmp ord/uno x, 0".
-    if (isa<ConstantAggregateZero>(LHS1) &&
-        isa<ConstantAggregateZero>(RHS1))
+    // FCmp canonicalization ensures that (fcmp ord/uno X, X) and
+    // (fcmp ord/uno X, C) will be transformed to (fcmp X, 0.0).
+    if (match(LHS1, m_Zero()) && LHS1 == RHS1)
+      // Ignore the constants because they are obviously not NANs:
+      // (fcmp ord x, 0.0) & (fcmp ord y, 0.0)  -> (fcmp ord x, y)
+      // (fcmp uno x, 0.0) | (fcmp uno y, 0.0)  -> (fcmp uno x, y)
       return Builder.CreateFCmp(PredL, LHS0, RHS0);
   }
 

@@ -185,6 +185,11 @@ class Value;
   ///   x < -0 --> false
   bool CannotBeOrderedLessThanZero(const Value *V, const TargetLibraryInfo *TLI);
 
+  /// Return true if the floating-point scalar value is not a NaN or if the
+  /// floating-point vector value has no NaN elements. Return false if a value
+  /// could ever be NaN.
+  bool isKnownNeverNaN(const Value *V);
+
   /// Return true if we can prove that the specified FP value's sign bit is 0.
   ///
   ///      NaN --> true/false (depending on the NaN's sign bit)

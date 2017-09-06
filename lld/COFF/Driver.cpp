@@ -202,6 +202,7 @@ static bool isDecorated(StringRef Sym) {
 // specified by /defaultlib.
 void LinkerDriver::parseDirectives(StringRef S) {
   ArgParser Parser;
+  // .drectve is always tokenized using Windows shell rules.
   opt::InputArgList Args = Parser.parse(S);
 
   for (auto *Arg : Args) {

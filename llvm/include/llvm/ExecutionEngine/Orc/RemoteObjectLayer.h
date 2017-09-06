@@ -214,6 +214,9 @@ protected:
   JITSymbol remoteToJITSymbol(Expected<RemoteSymbol> RemoteSymOrErr) {
     if (RemoteSymOrErr) {
       auto &RemoteSym = *RemoteSymOrErr;
+      if (RemoteSym == nullRemoteSymbol())
+        return nullptr;
+      // else...
       RemoteSymbolMaterializer RSM(*this, RemoteSym.first);
       auto Sym =
         JITSymbol([RSM]() mutable { return RSM.materialize(); },

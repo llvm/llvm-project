@@ -7902,6 +7902,8 @@ def err_builtin_annotation_first_arg : Error<
   "first argument to __builtin_annotation must be an integer">;
 def err_builtin_annotation_second_arg : Error<
   "second argument to __builtin_annotation must be a non-wide string constant">;
+def err_msvc_annotation_wide_str : Error<
+  "arguments to __annotation must be wide string constants">;
 
 // CFString checking
 def err_cfstring_literal_not_string_constant : Error<

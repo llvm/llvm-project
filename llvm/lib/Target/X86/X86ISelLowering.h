@@ -814,6 +814,9 @@ namespace llvm {
 
     bool mergeStoresAfterLegalization() const override { return true; }
 
+    bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
+                          const SelectionDAG &DAG) const override;
+
     bool isCheapToSpeculateCttz() const override;
 
     bool isCheapToSpeculateCtlz() const override;
