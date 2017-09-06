@@ -597,8 +597,8 @@ public:
 private:
   // Expression handling.
   const Expression *createExpression(Instruction *) const;
-  const Expression *createBinaryExpression(unsigned, Type *, Value *,
-                                           Value *) const;
+  const Expression *createBinaryExpression(unsigned, Type *, Value *, Value *,
+                                           Instruction *) const;
   PHIExpression *createPHIExpression(Instruction *, bool &HasBackEdge,
                                      bool &OriginalOpsConstant) const;
   const DeadExpression *createDeadExpression() const;
@@ -713,7 +713,9 @@ private:
   void replaceInstruction(Instruction *, Value *);
   void markInstructionForDeletion(Instruction *);
   void deleteInstructionsInBlock(BasicBlock *);
-  Value *findPHIOfOpsLeader(const Expression *E, const BasicBlock *BB) const;
+  Value *findPHIOfOpsLeader(const Expression *, const Instruction *,
+                            const BasicBlock *) const;
+
   // New instruction creation.
   void handleNewInstruction(Instruction *){};
 
@@ -848,6 +850,25 @@ void NewGVN::deleteExpression(const Expression *E) const {
   const_cast<BasicExpression *>(BE)->deallocateOperands(ArgRecycler);
   ExpressionAllocator.Deallocate(E);
 }
+
+// If V is a predicateinfo copy, get the thing it is a copy of.
+static Value *getCopyOf(const Value *V) {
+  if (auto *II = dyn_cast<IntrinsicInst>(V))
+    if (II->getIntrinsicID() == Intrinsic::ssa_copy)
+      return II->getOperand(0);
+  return nullptr;
+}
+
+// Return true if V is really PN, even accounting for predicateinfo copies.
+static bool isCopyOfPHI(const Value *V, const PHINode *PN) {
+  return V == PN || getCopyOf(V) == PN;
+}
+
+static bool isCopyOfAPHI(const Value *V) {
+  auto *CO = getCopyOf(V);
+  return CO && isa<PHINode>(CO);
+}
+
 PHIExpression *NewGVN::createPHIExpression(Instruction *I, bool &HasBackedge,
                                            bool &OriginalOpsConstant) const {
   BasicBlock *PHIBlock = getBlockForValue(I);
@@ -877,23 +898,21 @@ PHIExpression *NewGVN::createPHIExpression(Instruction *I, bool &HasBackedge,
 
   // Filter out unreachable phi operands.
   auto Filtered = make_filter_range(PHIOperands, [&](const Use *U) {
-    if (*U == PN)
+    auto *BB = PN->getIncomingBlock(*U);
+    if (isCopyOfPHI(*U, PN))
       return false;
-    if (!ReachableEdges.count({PN->getIncomingBlock(*U), PHIBlock}))
+    if (!ReachableEdges.count({BB, PHIBlock}))
       return false;
     // Things in TOPClass are equivalent to everything.
     if (ValueToClass.lookup(*U) == TOPClass)
       return false;
+    OriginalOpsConstant = OriginalOpsConstant && isa<Constant>(*U);
+    HasBackedge = HasBackedge || isBackedge(BB, PHIBlock);
     return lookupOperandLeader(*U) != PN;
   });
-  std::transform(Filtered.begin(), Filtered.end(), op_inserter(E),
-                 [&](const Use *U) -> Value * {
-                   auto *BB = PN->getIncomingBlock(*U);
-                   HasBackedge = HasBackedge || isBackedge(BB, PHIBlock);
-                   OriginalOpsConstant =
-                       OriginalOpsConstant && isa<Constant>(*U);
-                   return lookupOperandLeader(*U);
-                 });
+  std::transform(
+      Filtered.begin(), Filtered.end(), op_inserter(E),
+      [&](const Use *U) -> Value * { return lookupOperandLeader(*U); });
   return E;
 }
 
@@ -920,8 +939,8 @@ bool NewGVN::setBasicExpressionInfo(Instruction *I, BasicExpression *E) const {
 }
 
 const Expression *NewGVN::createBinaryExpression(unsigned Opcode, Type *T,
-                                                 Value *Arg1,
-                                                 Value *Arg2) const {
+                                                 Value *Arg1, Value *Arg2,
+                                                 Instruction *I) const {
   auto *E = new (ExpressionAllocator) BasicExpression(2);
 
   E->setType(T);
@@ -939,7 +958,7 @@ const Expression *NewGVN::createBinaryExpression(unsigned Opcode, Type *T,
   E->op_push_back(lookupOperandLeader(Arg2));
 
   Value *V = SimplifyBinOp(Opcode, E->getOperand(0), E->getOperand(1), SQ);
-  if (const Expression *SimplifiedE = checkSimplificationResults(E, nullptr, V))
+  if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
     return SimplifiedE;
   return E;
 }
@@ -977,7 +996,6 @@ const Expression *NewGVN::checkSimplificationResults(Expression *E,
         addAdditionalUsers(V, I);
       return createVariableOrConstant(CC->getLeader());
     }
-
     if (CC->getDefiningExpr()) {
       // If we simplified to something else, we need to communicate
       // that we're users of the value we simplified to.
@@ -1598,8 +1616,9 @@ bool NewGVN::isCycleFree(const Instruction *I) const {
     if (SCC.size() == 1)
       InstCycleState.insert({I, ICS_CycleFree});
     else {
-      bool AllPhis =
-          llvm::all_of(SCC, [](const Value *V) { return isa<PHINode>(V); });
+      bool AllPhis = llvm::all_of(SCC, [](const Value *V) {
+        return isa<PHINode>(V) || isCopyOfAPHI(V);
+      });
       ICS = AllPhis ? ICS_CycleFree : ICS_Cycle;
       for (auto *Member : SCC)
         if (auto *MemberPhi = dyn_cast<PHINode>(Member))
@@ -1619,9 +1638,9 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) const {
   // This is really shorthand for "this phi cannot cycle due to forward
   // change in value of the phi is guaranteed not to later change the value of
   // the phi. IE it can't be v = phi(undef, v+1)
-  bool AllConstant = true;
-  auto *E =
-      cast<PHIExpression>(createPHIExpression(I, HasBackedge, AllConstant));
+  bool OriginalOpsConstant = true;
+  auto *E = cast<PHIExpression>(
+      createPHIExpression(I, HasBackedge, OriginalOpsConstant));
   // We match the semantics of SimplifyPhiNode from InstructionSimplify here.
   // See if all arguments are the same.
   // We track if any were undef because they need special handling.
@@ -1647,14 +1666,10 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) const {
     deleteExpression(E);
     return createDeadExpression();
   }
-  unsigned NumOps = 0;
   Value *AllSameValue = *(Filtered.begin());
   ++Filtered.begin();
   // Can't use std::equal here, sadly, because filter.begin moves.
-  if (llvm::all_of(Filtered, [&](Value *Arg) {
-        ++NumOps;
-        return Arg == AllSameValue;
-      })) {
+  if (llvm::all_of(Filtered, [&](Value *Arg) { return Arg == AllSameValue; })) {
     // In LLVM's non-standard representation of phi nodes, it's possible to have
     // phi nodes with cycles (IE dependent on other phis that are .... dependent
     // on the original phi node), especially in weird CFG's where some arguments
@@ -1669,9 +1684,8 @@ const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I) const {
       // multivalued phi, and we need to know if it's cycle free in order to
       // evaluate whether we can ignore the undef.  The other parts of this are
       // just shortcuts.  If there is no backedge, or all operands are
-      // constants, or all operands are ignored but the undef, it also must be
-      // cycle free.
-      if (!AllConstant && HasBackedge && NumOps > 0 &&
+      // constants, it also must be cycle free.
+      if (HasBackedge && !OriginalOpsConstant &&
           !isa<UndefValue>(AllSameValue) && !isCycleFree(I))
         return E;
 
@@ -1726,8 +1740,9 @@ NewGVN::performSymbolicAggrValueEvaluation(Instruction *I) const {
         // expression.
         assert(II->getNumArgOperands() == 2 &&
                "Expect two args for recognised intrinsics.");
-        return createBinaryExpression(
-            Opcode, EI->getType(), II->getArgOperand(0), II->getArgOperand(1));
+        return createBinaryExpression(Opcode, EI->getType(),
+                                      II->getArgOperand(0),
+                                      II->getArgOperand(1), I);
       }
     }
   }
@@ -1966,6 +1981,7 @@ void NewGVN::touchAndErase(Map &M, const KeyType &Key) {
 }
 
 void NewGVN::addAdditionalUsers(Value *To, Value *User) const {
+  assert(User && To != User);
   if (isa<Instruction>(To))
     AdditionalUsers[To].insert(User);
 }
@@ -2551,8 +2567,8 @@ Value *NewGVN::findLeaderForInst(Instruction *TransInst,
     TempToMemory.erase(TransInst);
   if (!E)
     return nullptr;
-  auto *FoundVal = findPHIOfOpsLeader(E, PredBB);
-  if (!FoundVal || FoundVal == OrigInst) {
+  auto *FoundVal = findPHIOfOpsLeader(E, OrigInst, PredBB);
+  if (!FoundVal) {
     ExpressionToPhiOfOps[E].insert(OrigInst);
     DEBUG(dbgs() << "Cannot find phi of ops operand for " << *TransInst
                  << " in block " << getBlockName(PredBB) << "\n");
@@ -3622,6 +3638,7 @@ CongruenceClass *NewGVN::getClassForExpression(const Expression *E) const {
 // Given a value and a basic block we are trying to see if it is available in,
 // see if the value has a leader available in that block.
 Value *NewGVN::findPHIOfOpsLeader(const Expression *E,
+                                  const Instruction *OrigInst,
                                   const BasicBlock *BB) const {
   // It would already be constant if we could make it constant
   if (auto *CE = dyn_cast<ConstantExpression>(E))
@@ -3640,6 +3657,8 @@ Value *NewGVN::findPHIOfOpsLeader(const Expression *E,
 
   for (auto Member : *CC) {
     auto *MemberInst = dyn_cast<Instruction>(Member);
+    if (MemberInst == OrigInst)
+      continue;
     // Anything that isn't an instruction is always available.
     if (!MemberInst)
       return Member;

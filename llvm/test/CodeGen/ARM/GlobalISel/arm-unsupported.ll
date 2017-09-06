@@ -113,16 +113,4 @@ define i32 @test_thread_local_global() {
   ret i32 %v
 }
 
-@a_global = external global i32
-
-define i32 @test_global_reloc_models() {
-; This is only unsupported for the RWPI relocation modes.
-; RWPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
-; RWPI-LABEL: warning: Instruction selection used fallback path for test_global_reloc_models
-; ROPI-RWPI: remark: {{.*}} cannot select: {{.*}} G_GLOBAL_VALUE
-; ROPI-RWPI-LABEL: warning: Instruction selection used fallback path for test_global_reloc_models
-  %v = load i32, i32* @a_global
-  ret i32 %v
-}
-
 attributes #0 = { "target-features"="+thumb-mode" }

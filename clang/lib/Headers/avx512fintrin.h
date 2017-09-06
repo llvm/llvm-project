@@ -9040,7 +9040,7 @@ _mm512_stream_si512 (__m512i * __P, __m512i __A)
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_stream_load_si512 (void *__P)
+_mm512_stream_load_si512 (void const *__P)
 {
   typedef __v8di __v8di_aligned __attribute__((aligned(64)));
   return (__m512i) __builtin_nontemporal_load((const __v8di_aligned *)__P);

@@ -71,8 +71,10 @@ define amdgpu_kernel void @v_fneg_fabs_f16(half addrspace(1)* %out, half addrspa
 ; FIXME: single bit op
 ; GCN-LABEL: {{^}}s_fneg_fabs_v2f16:
 ; CIVI: s_mov_b32 [[MASK:s[0-9]+]], 0x8000{{$}}
+; CI: v_or_b32_e32 [[OR:v[0-9]+]], [[MASK]], v{{[0-9]+}}
+; CI: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], 16, [[OR]]
+; CI: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[SHL]]
 ; VI: v_mov_b32_e32 [[VMASK:v[0-9]+]], [[MASK]]
-; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
 ; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[VMASK]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; CIVI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
 ; CIVI: flat_store_dword
@@ -87,10 +89,14 @@ define amdgpu_kernel void @s_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x
 
 ; GCN-LABEL: {{^}}fneg_fabs_v4f16:
 ; CIVI: s_mov_b32 [[MASK:s[0-9]+]], 0x8000{{$}}
-; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
+; CI: v_or_b32_e32 [[OR00:v[0-9]+]], [[MASK]], v{{[0-9]+}}
+; CI: v_lshlrev_b32_e32 [[SHL0:v[0-9]+]], 16, [[OR00]]
+; CI: v_or_b32_e32 [[OR01:v[0-9]+]], v{{[0-9]+}}, [[SHL0]]
+; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]], [[OR01]]
+; CI: v_or_b32_e32 [[OR10:v[0-9]+]], [[MASK]], v{{[0-9]+}}
+; CI: v_lshlrev_b32_e32 [[SHL1:v[0-9]+]], 16, [[OR10]]
+; CI: v_or_b32_e32 [[OR11:v[0-9]+]], v{{[0-9]+}}, [[SHL1]]
+; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]], [[OR11]]
 ; VI: v_mov_b32_e32 [[VMASK:v[0-9]+]], [[MASK]]
 ; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[VMASK]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],

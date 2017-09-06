@@ -6258,6 +6258,12 @@ __m512i test_mm512_stream_load_si512(void *__P) {
   return _mm512_stream_load_si512(__P); 
 }
 
+__m512i test_mm512_stream_load_si512_const(void const *__P) {
+  // CHECK-LABEL: @test_mm512_stream_load_si512_const
+  // CHECK: load <8 x i64>, <8 x i64>* %{{.*}}, align 64, !nontemporal
+  return _mm512_stream_load_si512(__P); 
+}
+
 void test_mm512_stream_pd(double *__P, __m512d __A) {
   // CHECK-LABEL: @test_mm512_stream_pd
   // CHECK: store <8 x double> %{{.*}}, <8 x double>* %{{.*}}, align 64, !nontemporal

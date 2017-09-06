@@ -112,17 +112,14 @@ int ShowEnabledWarnings::run(unsigned int argc, char **argv, raw_ostream &Out) {
   // which ones are turned on.
   // FIXME: It would be very nice to print which flags are turning on which
   // diagnostics, but this can be done with a diff.
-  ArrayRef<DiagnosticRecord> AllDiagnostics = getBuiltinDiagnosticsByName();
   std::vector<PrettyDiag> Active;
 
-  for (ArrayRef<DiagnosticRecord>::iterator I = AllDiagnostics.begin(),
-                                            E = AllDiagnostics.end();
-       I != E; ++I) {
-    unsigned DiagID = I->DiagID;
-    
+  for (const DiagnosticRecord &DR : getBuiltinDiagnosticsByName()) {
+    unsigned DiagID = DR.DiagID;
+
     if (DiagnosticIDs::isBuiltinNote(DiagID))
       continue;
-    
+
     if (!DiagnosticIDs::isBuiltinWarningOrExtension(DiagID))
       continue;
 
@@ -132,17 +129,16 @@ int ShowEnabledWarnings::run(unsigned int argc, char **argv, raw_ostream &Out) {
       continue;
 
     StringRef WarningOpt = DiagnosticIDs::getWarningOptionForDiag(DiagID);
-    Active.push_back(PrettyDiag(I->getName(), WarningOpt, DiagLevel));
+    Active.push_back(PrettyDiag(DR.getName(), WarningOpt, DiagLevel));
   }
 
   // Print them all out.
-  for (std::vector<PrettyDiag>::const_iterator I = Active.begin(),
-       E = Active.end(); I != E; ++I) {
+  for (const PrettyDiag &PD : Active) {
     if (ShouldShowLevels)
-      Out << getCharForLevel(I->Level) << "  ";
-    Out << I->Name;
-    if (!I->Flag.empty())
-      Out << " [-W" << I->Flag << "]";
+      Out << getCharForLevel(PD.Level) << "  ";
+    Out << PD.Name;
+    if (!PD.Flag.empty())
+      Out << " [-W" << PD.Flag << "]";
     Out << '\n';
   }
 

@@ -1680,15 +1680,20 @@ SDValue SelectionDAG::getRegisterMask(const uint32_t *RegMask) {
 
 SDValue SelectionDAG::getEHLabel(const SDLoc &dl, SDValue Root,
                                  MCSymbol *Label) {
+  return getLabelNode(ISD::EH_LABEL, dl, Root, Label);
+}
+
+SDValue SelectionDAG::getLabelNode(unsigned Opcode, const SDLoc &dl,
+                                   SDValue Root, MCSymbol *Label) {
   FoldingSetNodeID ID;
   SDValue Ops[] = { Root };
-  AddNodeIDNode(ID, ISD::EH_LABEL, getVTList(MVT::Other), Ops);
+  AddNodeIDNode(ID, Opcode, getVTList(MVT::Other), Ops);
   ID.AddPointer(Label);
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  auto *N = newSDNode<EHLabelSDNode>(dl.getIROrder(), dl.getDebugLoc(), Label);
+  auto *N = newSDNode<LabelSDNode>(dl.getIROrder(), dl.getDebugLoc(), Label);
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);

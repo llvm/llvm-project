@@ -1892,7 +1892,7 @@ static int __kmp_affinity_create_cpuinfo_map(AddrUnsPair **address2os,
         continue;
       }
       unsigned level;
-      if (KMP_SSCANF(buf, "node_%d id", &level) == 1) {
+      if (KMP_SSCANF(buf, "node_%u id", &level) == 1) {
         CHECK_LINE;
         char *p = strchr(buf + sizeof(s4) - 1, ':');
         unsigned val;
@@ -4038,12 +4038,11 @@ static void __kmp_aux_affinity_initialize(void) {
     if (f == NULL) {
       int code = errno;
       if (__kmp_cpuinfo_file != NULL) {
-        __kmp_msg(kmp_ms_fatal, KMP_MSG(CantOpenFileForReading, filename),
-                  KMP_ERR(code), KMP_HNT(NameComesFrom_CPUINFO_FILE),
-                  __kmp_msg_null);
+        __kmp_fatal(KMP_MSG(CantOpenFileForReading, filename), KMP_ERR(code),
+                    KMP_HNT(NameComesFrom_CPUINFO_FILE), __kmp_msg_null);
       } else {
-        __kmp_msg(kmp_ms_fatal, KMP_MSG(CantOpenFileForReading, filename),
-                  KMP_ERR(code), __kmp_msg_null);
+        __kmp_fatal(KMP_MSG(CantOpenFileForReading, filename), KMP_ERR(code),
+                    __kmp_msg_null);
       }
     }
     int line = 0;

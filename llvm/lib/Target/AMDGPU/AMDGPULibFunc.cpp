@@ -65,6 +65,51 @@ struct ManglingRule {
    unsigned getNumArgs() const;
 };
 
+// Information about library functions with unmangled names.
+class UnmangledFuncInfo {
+  StringRef const Name;
+  unsigned NumArgs;
+
+  // Table for all lib functions with unmangled names.
+  static const UnmangledFuncInfo Table[];
+
+  // Number of entries in Table.
+  static const unsigned TableSize;
+
+  // Map function name to index.
+  class NameMap : public StringMap<unsigned> {
+  public:
+    NameMap() {
+      for (unsigned I = 0; I != TableSize; ++I)
+        (*this)[Table[I].Name] = I;
+    }
+  };
+  friend class NameMap;
+  static NameMap Map;
+
+public:
+  using ID = AMDGPULibFunc::EFuncId;
+  UnmangledFuncInfo() = default;
+  UnmangledFuncInfo(StringRef _Name, unsigned _NumArgs)
+      : Name(_Name), NumArgs(_NumArgs) {}
+  // Get index to Table by function name.
+  static bool lookup(StringRef Name, ID &Id);
+  static unsigned toIndex(ID Id) {
+    assert(static_cast<unsigned>(Id) >
+               static_cast<unsigned>(AMDGPULibFunc::EI_LAST_MANGLED) &&
+           "Invalid unmangled library function");
+    return static_cast<unsigned>(Id) - 1 -
+           static_cast<unsigned>(AMDGPULibFunc::EI_LAST_MANGLED);
+  }
+  static ID toFuncId(unsigned Index) {
+    assert(Index < TableSize && "Invalid unmangled library function");
+    return static_cast<ID>(
+        Index + 1 + static_cast<unsigned>(AMDGPULibFunc::EI_LAST_MANGLED));
+  }
+  static unsigned getNumArgs(ID Id) { return Table[toIndex(Id)].NumArgs; }
+  static StringRef getName(ID Id) { return Table[toIndex(Id)].Name; }
+};
+
 unsigned ManglingRule::getNumArgs() const {
    unsigned I=0;
    while (I < (sizeof Param/sizeof Param[0]) && Param[I]) ++I;
@@ -215,7 +260,6 @@ static const ManglingRule manglingRules[] = {
 { "powr"                            , {1},   {E_ANY,E_COPY}},
 { "prefetch"                        , {1},   {E_CONSTPTR_ANY,EX_SIZET}},
 { "radians"                         , {1},   {E_ANY}},
-{ "read_pipe"                       , {4},   {E_COPY,EX_RESERVEDID,EX_UINT,E_ANY}},
 { "recip"                           , {1},   {E_ANY}},
 { "remainder"                       , {1},   {E_ANY,E_COPY}},
 { "remquo"                          , {1,3}, {E_ANY,E_COPY,E_ANY}},
@@ -283,7 +327,6 @@ static const ManglingRule manglingRules[] = {
 { "write_imagef"                    , {1},   {E_ANY,E_IMAGECOORDS,EX_FLOAT4}},
 { "write_imagei"                    , {1},   {E_ANY,E_IMAGECOORDS,EX_INTV4}},
 { "write_imageui"                   , {1},   {E_ANY,E_IMAGECOORDS,EX_UINTV4}},
-{ "write_pipe"                      , {4},   {E_COPY,EX_RESERVEDID,EX_UINT,E_ANY}},
 { "ncos"                            , {1},   {E_ANY} },
 { "nexp2"                           , {1},   {E_ANY} },
 { "nfma"                            , {1},   {E_ANY, E_COPY, E_COPY} },
@@ -297,6 +340,19 @@ static const ManglingRule manglingRules[] = {
 { "class"                           , {1},   {E_ANY, EX_UINT} },
 { "rcbrt"                           , {1},   {E_ANY} },
 };
+
+// Library functions with unmangled name.
+const UnmangledFuncInfo UnmangledFuncInfo::Table[] = {
+    {"__read_pipe_2", 4},
+    {"__read_pipe_4", 6},
+    {"__write_pipe_2", 4},
+    {"__write_pipe_4", 6},
+};
+
+const unsigned UnmangledFuncInfo::TableSize =
+    sizeof(UnmangledFuncInfo::Table) / sizeof(UnmangledFuncInfo::Table[0]);
+
+UnmangledFuncInfo::NameMap UnmangledFuncInfo::Map;
 
 static const struct ManglingRulesMap : public StringMap<int> {
   ManglingRulesMap()
@@ -461,23 +517,25 @@ static StringRef eatLengthPrefixedName(StringRef& mangledName) {
 
 } // end anonymous namespace
 
-AMDGPULibFunc::AMDGPULibFunc() {
-  reset();
-}
-
-AMDGPULibFunc::AMDGPULibFunc(EFuncId id, const AMDGPULibFunc& copyFrom)
-  : FuncId(id) {
-  FKind = copyFrom.FKind;
-  Leads[0] = copyFrom.Leads[0];
-  Leads[1] = copyFrom.Leads[1];
-}
-
-void AMDGPULibFunc::reset() {
+AMDGPUMangledLibFunc::AMDGPUMangledLibFunc() {
   FuncId = EI_NONE;
   FKind = NOPFX;
   Leads[0].reset();
   Leads[1].reset();
   Name.clear();
+}
+
+AMDGPUUnmangledLibFunc::AMDGPUUnmangledLibFunc() {
+  FuncId = EI_NONE;
+  FuncTy = nullptr;
+}
+
+AMDGPUMangledLibFunc::AMDGPUMangledLibFunc(
+    EFuncId id, const AMDGPUMangledLibFunc &copyFrom) {
+  FuncId = id;
+  FKind = copyFrom.FKind;
+  Leads[0] = copyFrom.Leads[0];
+  Leads[1] = copyFrom.Leads[1];
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -508,8 +566,8 @@ static AMDGPULibFunc::ENamePrefix parseNamePrefix(StringRef& mangledName) {
   return Pfx;
 }
 
-bool AMDGPULibFunc::parseName(const StringRef& fullName) {
-  FuncId = static_cast<EFuncId>(manglingRulesMap.lookup(fullName));
+bool AMDGPUMangledLibFunc::parseUnmangledName(StringRef FullName) {
+  FuncId = static_cast<EFuncId>(manglingRulesMap.lookup(FullName));
   return FuncId != EI_NONE;
 }
 
@@ -601,10 +659,11 @@ bool ItaniumParamParser::parseItaniumParam(StringRef& param,
   return true;
 }
 
-bool AMDGPULibFunc::parseItanuimName(StringRef& mangledName) {
+bool AMDGPUMangledLibFunc::parseFuncName(StringRef &mangledName) {
   StringRef Name = eatLengthPrefixedName(mangledName);
   FKind = parseNamePrefix(Name);
-  if (!parseName(Name)) return false;
+  if (!parseUnmangledName(Name))
+    return false;
 
   const ManglingRule& Rule = manglingRules[FuncId];
   ItaniumParamParser Parser;
@@ -619,30 +678,42 @@ bool AMDGPULibFunc::parseItanuimName(StringRef& mangledName) {
   return true;
 }
 
-bool AMDGPULibFunc::parse(StringRef mangledName, AMDGPULibFunc& iInfo) {
-  iInfo.reset();
-  if (mangledName.empty())
+bool AMDGPUUnmangledLibFunc::parseFuncName(StringRef &Name) {
+  if (!UnmangledFuncInfo::lookup(Name, FuncId))
     return false;
+  setName(Name);
+  return true;
+}
 
-  if (eatTerm(mangledName, "_Z")) {
-    return iInfo.parseItanuimName(mangledName);
+bool AMDGPULibFunc::parse(StringRef FuncName, AMDGPULibFunc &F) {
+  if (FuncName.empty()) {
+    F.Impl = std::unique_ptr<AMDGPULibFuncImpl>();
+    return false;
   }
+
+  if (eatTerm(FuncName, "_Z"))
+    F.Impl = make_unique<AMDGPUMangledLibFunc>();
+  else
+    F.Impl = make_unique<AMDGPUUnmangledLibFunc>();
+  if (F.Impl->parseFuncName(FuncName))
+    return true;
+
+  F.Impl = std::unique_ptr<AMDGPULibFuncImpl>();
   return false;
 }
 
-StringRef AMDGPULibFunc::getUnmangledName(const StringRef& mangledName) {
+StringRef AMDGPUMangledLibFunc::getUnmangledName(StringRef mangledName) {
   StringRef S = mangledName;
   if (eatTerm(S, "_Z"))
     return eatLengthPrefixedName(S);
   return StringRef();
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // Mangling
 
 template <typename Stream>
-void AMDGPULibFunc::writeName(Stream& OS) const {
+void AMDGPUMangledLibFunc::writeName(Stream &OS) const {
   const char *Pfx = "";
   switch (FKind) {
   case NATIVE: Pfx = "native_"; break;
@@ -658,9 +729,7 @@ void AMDGPULibFunc::writeName(Stream& OS) const {
   }
 }
 
-std::string AMDGPULibFunc::mangle() const {
-  return mangleNameItanium();
-}
+std::string AMDGPUMangledLibFunc::mangle() const { return mangleNameItanium(); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Itanium Mangling
@@ -788,7 +857,7 @@ public:
 };
 } // namespace
 
-std::string AMDGPULibFunc::mangleNameItanium() const {
+std::string AMDGPUMangledLibFunc::mangleNameItanium() const {
   SmallString<128> Buf;
   raw_svector_ostream S(Buf);
   SmallString<128> NameBuf;
@@ -850,7 +919,7 @@ static Type* getIntrinsicParamType(
   return T;
 }
 
-FunctionType* AMDGPULibFunc::getFunctionType(Module& M) const {
+FunctionType *AMDGPUMangledLibFunc::getFunctionType(Module &M) const {
   LLVMContext& C = M.getContext();
   std::vector<Type*> Args;
   ParamIterator I(Leads, manglingRules[FuncId]);
@@ -863,18 +932,22 @@ FunctionType* AMDGPULibFunc::getFunctionType(Module& M) const {
     Args, false);
 }
 
-unsigned AMDGPULibFunc::getNumArgs() const {
+unsigned AMDGPUMangledLibFunc::getNumArgs() const {
   return manglingRules[FuncId].getNumArgs();
 }
 
-std::string AMDGPULibFunc::getName() const {
+unsigned AMDGPUUnmangledLibFunc::getNumArgs() const {
+  return UnmangledFuncInfo::getNumArgs(FuncId);
+}
+
+std::string AMDGPUMangledLibFunc::getName() const {
   SmallString<128> Buf;
   raw_svector_ostream OS(Buf);
   writeName(OS);
   return OS.str();
 }
 
-Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc& fInfo) {
+Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
   std::string FuncName = fInfo.mangle();
   Function *F = dyn_cast_or_null<Function>(
     M->getValueSymbolTable().lookup(FuncName));
@@ -889,7 +962,7 @@ Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc& fInfo) {
 }
 
 Function *AMDGPULibFunc::getOrInsertFunction(Module *M,
-                                             const AMDGPULibFunc& fInfo) {
+                                             const AMDGPULibFunc &fInfo) {
   std::string const FuncName = fInfo.mangle();
   Function *F = dyn_cast_or_null<Function>(
     M->getValueSymbolTable().lookup(FuncName));
@@ -928,4 +1001,53 @@ Function *AMDGPULibFunc::getOrInsertFunction(Module *M,
   }
 
   return cast<Function>(C);
+}
+
+bool UnmangledFuncInfo::lookup(StringRef Name, ID &Id) {
+  auto Loc = Map.find(Name);
+  if (Loc != Map.end()) {
+    Id = toFuncId(Loc->second);
+    return true;
+  }
+  Id = AMDGPULibFunc::EI_NONE;
+  return false;
+}
+
+AMDGPULibFunc::AMDGPULibFunc(const AMDGPULibFunc &F) {
+  if (auto *MF = dyn_cast<AMDGPUMangledLibFunc>(F.Impl.get()))
+    Impl.reset(new AMDGPUMangledLibFunc(*MF));
+  else if (auto *UMF = dyn_cast<AMDGPUUnmangledLibFunc>(F.Impl.get()))
+    Impl.reset(new AMDGPUUnmangledLibFunc(*UMF));
+  else
+    Impl = std::unique_ptr<AMDGPULibFuncImpl>();
+}
+
+AMDGPULibFunc &AMDGPULibFunc::operator=(const AMDGPULibFunc &F) {
+  if (this == &F)
+    return *this;
+  new (this) AMDGPULibFunc(F);
+  return *this;
+}
+
+AMDGPULibFunc::AMDGPULibFunc(EFuncId Id, const AMDGPULibFunc &CopyFrom) {
+  assert(AMDGPULibFuncBase::isMangled(Id) && CopyFrom.isMangled() &&
+         "not supported");
+  Impl.reset(new AMDGPUMangledLibFunc(
+      Id, *cast<AMDGPUMangledLibFunc>(CopyFrom.Impl.get())));
+}
+
+AMDGPULibFunc::AMDGPULibFunc(StringRef Name, FunctionType *FT) {
+  Impl.reset(new AMDGPUUnmangledLibFunc(Name, FT));
+}
+
+void AMDGPULibFunc::initMangled() { Impl.reset(new AMDGPUMangledLibFunc()); }
+
+AMDGPULibFunc::Param *AMDGPULibFunc::getLeads() {
+  if (!Impl)
+    initMangled();
+  return cast<AMDGPUMangledLibFunc>(Impl.get())->Leads;
+}
+
+const AMDGPULibFunc::Param *AMDGPULibFunc::getLeads() const {
+  return cast<const AMDGPUMangledLibFunc>(Impl.get())->Leads;
 }

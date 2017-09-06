@@ -438,14 +438,14 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     //   - await-suspend is the expression e.await_suspend(h), which shall be
     //     a prvalue of type void or bool.
     QualType RetType = AwaitSuspend->getCallReturnType(S.Context);
+
     // Experimental support for coroutine_handle returning await_suspend.
     if (Expr *TailCallSuspend = maybeTailCall(S, RetType, AwaitSuspend, Loc))
       Calls.Results[ACT::ACT_Suspend] = TailCallSuspend;
     else {
       // non-class prvalues always have cv-unqualified types
-      QualType AdjRetType = RetType.getUnqualifiedType();
       if (RetType->isReferenceType() ||
-          (AdjRetType != S.Context.BoolTy && AdjRetType != S.Context.VoidTy)) {
+          (!RetType->isBooleanType() && !RetType->isVoidType())) {
         S.Diag(AwaitSuspend->getCalleeDecl()->getLocation(),
                diag::err_await_suspend_invalid_return_type)
             << RetType;
