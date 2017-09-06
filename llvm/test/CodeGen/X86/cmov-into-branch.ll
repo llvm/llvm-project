@@ -61,6 +61,24 @@ define i32 @test5(i32 %a, i32* nocapture %b, i32 %x, i32 %y) {
   ret i32 %cond5
 }
 
+; Zero-extended select.
+define void @test6(i32 %a, i32 %x, i32* %y.ptr, i64* %z.ptr) {
+; CHECK-LABEL: test6:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovnsl (%rdx), %esi
+; CHECK-NEXT:    movq %rsi, (%rcx)
+; CHECK-NEXT:    retq
+entry:
+  %y = load i32, i32* %y.ptr
+  %cmp = icmp slt i32 %a, 0
+  %z = select i1 %cmp, i32 %x, i32 %y
+  %z.ext = zext i32 %z to i64
+  store i64 %z.ext, i64* %z.ptr
+  ret void
+}
+
 ; If a select is not obviously predictable, don't turn it into a branch.
 define i32 @weighted_select1(i32 %a, i32 %b) {
 ; CHECK-LABEL: weighted_select1:
@@ -79,10 +97,10 @@ define i32 @weighted_select2(i32 %a, i32 %b) {
 ; CHECK-LABEL: weighted_select2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB5_2
+; CHECK-NEXT:    jne .LBB6_2
 ; CHECK-NEXT:  # BB#1: # %select.false
 ; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:  .LBB5_2: # %select.end
+; CHECK-NEXT:  .LBB6_2: # %select.end
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0
@@ -98,11 +116,11 @@ define i32 @weighted_select3(i32 %a, i32 %b) {
 ; CHECK-LABEL: weighted_select3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB6_1
+; CHECK-NEXT:    je .LBB7_1
 ; CHECK-NEXT:  # BB#2: # %select.end
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB6_1: # %select.false
+; CHECK-NEXT:  .LBB7_1: # %select.false
 ; CHECK-NEXT:    movl %esi, %edi
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
