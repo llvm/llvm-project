@@ -1171,7 +1171,6 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
 
 static void ParseFileSystemArgs(FileSystemOptions &Opts, ArgList &Args) {
   Opts.WorkingDir = Args.getLastArgValue(OPT_working_directory);
-  Opts.APINotesCachePath = Args.getLastArgValue(OPT_fapinotes_cache_path);
 }
 
 /// Parse the argument to the -ftest-module-file-extension
@@ -2696,13 +2695,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                   Res.getPreprocessorOpts(), Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
-
-    // -fapinotes and -fapinotes-modules requires -fapinotes-cache-path=<directory>.
-    if ((LangOpts.APINotes || LangOpts.APINotesModules) &&
-        Res.getFileSystemOpts().APINotesCachePath.empty()) {
-      Diags.Report(diag::err_no_apinotes_cache_path);
-      Success = false;
-    }
   }
 
   if (LangOpts.CUDA) {

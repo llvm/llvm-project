@@ -1,5 +1,5 @@
 // RUN: rm -rf %t
-// RUN: not %clang_cc1 -fsyntax-only -fapinotes -fapinotes-cache-path=%t %s -I %S/Inputs/BrokenHeaders2 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -fsyntax-only -fapinotes  %s -I %S/Inputs/BrokenHeaders2 2>&1 | FileCheck %s
 
 #include "SomeBrokenLib.h"
 
