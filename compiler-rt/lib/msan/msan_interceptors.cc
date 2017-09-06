@@ -983,11 +983,19 @@ static void SignalAction(int signo, void *si, void *uc) {
   cb(signo, si, uc);
 }
 
+static void read_sigaction(const __sanitizer_sigaction *act) {
+  CHECK_UNPOISONED(&act->sa_flags, sizeof(act->sa_flags));
+  if (act->sa_flags & __sanitizer::sa_siginfo)
+    CHECK_UNPOISONED(&act->sigaction, sizeof(act->sigaction));
+  else
+    CHECK_UNPOISONED(&act->handler, sizeof(act->handler));
+  CHECK_UNPOISONED(&act->sa_mask, sizeof(act->sa_mask));
+}
+
 INTERCEPTOR(int, sigaction, int signo, const __sanitizer_sigaction *act,
             __sanitizer_sigaction *oldact) {
   ENSURE_MSAN_INITED();
-  // FIXME: check that *act is unpoisoned.
-  // That requires intercepting all of sigemptyset, sigfillset, etc.
+  if (act) read_sigaction(act);
   int res;
   if (flags()->wrap_signals) {
     SpinMutexLock lock(&sigactions_mu);

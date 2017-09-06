@@ -25,8 +25,8 @@ namespace __sanitizer {
 // symbol names, embedded in Fuchsia's symbolization markup format.
 // Fuchsia's logging infrastructure emits enough information about
 // process memory layout that a post-processing filter can do the
-// symbolization and pretty-print the markup.
-// TODO(mcgrathr): URL to markup format document
+// symbolization and pretty-print the markup.  See the spec at:
+// https://fuchsia.googlesource.com/magenta/+/master/docs/symbolizer_markup.md
 
 // This is used by UBSan for type names, and by ASan for global variable names.
 constexpr const char *kFormatDemangle = "{{{symbol:%s}}}";

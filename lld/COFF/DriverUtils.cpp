@@ -38,8 +38,6 @@
 
 using namespace llvm::COFF;
 using namespace llvm;
-using llvm::cl::ExpandResponseFiles;
-using llvm::cl::TokenizeWindowsCommandLine;
 using llvm::sys::Process;
 
 namespace lld {
@@ -357,7 +355,7 @@ static std::string createDefaultXml() {
        << "  </dependency>\n";
   }
   OS << "</assembly>\n";
-  return Ret;
+  return OS.str();
 }
 
 static Expected<std::unique_ptr<MemoryBuffer>>
@@ -718,20 +716,40 @@ static const llvm::opt::OptTable::Info InfoTable[] = {
 
 COFFOptTable::COFFOptTable() : OptTable(InfoTable, true) {}
 
-// Parses a given list of options.
-opt::InputArgList ArgParser::parse(ArrayRef<const char *> ArgsArr) {
-  // First, replace respnose files (@<file>-style options).
-  std::vector<const char *> Argv = replaceResponseFiles(ArgsArr);
+static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &Args) {
+  if (auto *Arg = Args.getLastArg(OPT_rsp_quoting)) {
+    StringRef S = Arg->getValue();
+    if (S != "windows" && S != "posix")
+      error("invalid response file quoting: " + S);
+    if (S == "windows")
+      return cl::TokenizeWindowsCommandLine;
+    return cl::TokenizeGNUCommandLine;
+  }
+  // The COFF linker always defaults to Windows quoting.
+  return cl::TokenizeWindowsCommandLine;
+}
 
+// Parses a given list of options.
+opt::InputArgList ArgParser::parse(ArrayRef<const char *> Argv) {
   // Make InputArgList from string vectors.
   unsigned MissingIndex;
   unsigned MissingCount;
-  opt::InputArgList Args = Table.ParseArgs(Argv, MissingIndex, MissingCount);
+  SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
+
+  // We need to get the quoting style for response files before parsing all
+  // options so we parse here before and ignore all the options but
+  // --rsp-quoting.
+  opt::InputArgList Args = Table.ParseArgs(Vec, MissingIndex, MissingCount);
+
+  // Expand response files (arguments in the form of @<filename>)
+  // and then parse the argument again.
+  cl::ExpandResponseFiles(Saver, getQuotingStyle(Args), Vec);
+  Args = Table.ParseArgs(Vec, MissingIndex, MissingCount);
 
   // Print the real command line if response files are expanded.
-  if (Args.hasArg(OPT_verbose) && ArgsArr.size() != Argv.size()) {
+  if (Args.hasArg(OPT_verbose) && Argv.size() != Vec.size()) {
     std::string Msg = "Command line:";
-    for (const char *S : Argv)
+    for (const char *S : Vec)
       Msg += " " + std::string(S);
     message(Msg);
   }
@@ -746,31 +764,22 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> ArgsArr) {
 // link.exe has an interesting feature. If LINK or _LINK_ environment
 // variables exist, their contents are handled as command line strings.
 // So you can pass extra arguments using them.
-opt::InputArgList ArgParser::parseLINK(std::vector<const char *> Args) {
+opt::InputArgList ArgParser::parseLINK(std::vector<const char *> Argv) {
   // Concatenate LINK env and command line arguments, and then parse them.
   if (Optional<std::string> S = Process::GetEnv("LINK")) {
     std::vector<const char *> V = tokenize(*S);
-    Args.insert(Args.begin(), V.begin(), V.end());
+    Argv.insert(Argv.begin(), V.begin(), V.end());
   }
   if (Optional<std::string> S = Process::GetEnv("_LINK_")) {
     std::vector<const char *> V = tokenize(*S);
-    Args.insert(Args.begin(), V.begin(), V.end());
+    Argv.insert(Argv.begin(), V.begin(), V.end());
   }
-  return parse(Args);
+  return parse(Argv);
 }
 
 std::vector<const char *> ArgParser::tokenize(StringRef S) {
   SmallVector<const char *, 16> Tokens;
   cl::TokenizeWindowsCommandLine(S, Saver, Tokens);
-  return std::vector<const char *>(Tokens.begin(), Tokens.end());
-}
-
-// Creates a new command line by replacing options starting with '@'
-// character. '@<filename>' is replaced by the file's contents.
-std::vector<const char *>
-ArgParser::replaceResponseFiles(std::vector<const char *> Argv) {
-  SmallVector<const char *, 256> Tokens(Argv.data(), Argv.data() + Argv.size());
-  ExpandResponseFiles(Saver, TokenizeWindowsCommandLine, Tokens);
   return std::vector<const char *>(Tokens.begin(), Tokens.end());
 }
 
