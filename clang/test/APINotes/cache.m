@@ -1,4 +1,4 @@
-// RUN: rm -rf %t/APINotesCache
+// RUN: rm -rf %t
 // RUN: %clang_cc1 -fapinotes -fapinotes-modules -fapinotes-cache-path=%t/APINotesCache -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
 
 // Check for the presence of the cached compiled form.
@@ -6,11 +6,19 @@
 // RUN: ls %t/APINotesCache | grep "SomeKit-.*.apinotesc"
 
 // Run test again to ensure that caching doesn't cause problems.
-// RUN: %clang_cc1 -fapinotes -fapinotes-modules -fapinotes-cache-path=%t/APINotesCache -I %S/Inputs/Headers -F %S/Inputs/Frameworks  %s -verify
+// RUN: %clang_cc1 -fapinotes -fapinotes-modules -fapinotes-cache-path=%t/APINotesCache -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
 
-// Check that the driver provides a default -fapinotes-cache-path=
+// Check that the default path is taken from -fmodules-cache-path.
+// RUN: %clang_cc1 -fapinotes -fapinotes-modules -fmodules-cache-path=%t/ModuleCache -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
+// RUN: ls %t/ModuleCache | grep "APINotes-.*.apinotesc"
+// RUN: ls %t/ModuleCache | grep "SomeKit-.*.apinotesc"
+
+// RUN: not %clang_cc1 -fapinotes -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s 2>&1 | FileCheck --check-prefix=CHECK-NO-CACHE %s
+// CHECK-NO-CACHE: error: -fapinotes was provided without -fmodules-cache-path
+
+// Check that the driver does not provide a default -fapinotes-cache-path=.
 // RUN: %clang -fsyntax-only -fapinotes -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -### 2>&1 | FileCheck --check-prefix=CHECK-DEFAULT-PATH %s
-// CHECK-DEFAULT-PATH: -fapinotes-cache-path={{.*}}org.llvm.clang/APINotesCache
+// CHECK-DEFAULT-PATH-NOT: -fapinotes-cache-path
 
 // Check that the driver passes through a provided -fapinotes-cache-path=
 // RUN: %clang -fsyntax-only -fapinotes -fapinotes-modules -fapinotes-cache-path=/wobble -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -### 2>&1 | FileCheck --check-prefix=CHECK-PATH %s

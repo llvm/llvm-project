@@ -2731,11 +2731,16 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
 
-    // -fapinotes and -fapinotes-modules requires -fapinotes-cache-path=<directory>.
+    // -fapinotes and -fapinotes-modules requires -fmodules-cache-path=<directory>.
     if ((LangOpts.APINotes || LangOpts.APINotesModules) &&
         Res.getFileSystemOpts().APINotesCachePath.empty()) {
-      Diags.Report(diag::err_no_apinotes_cache_path);
-      Success = false;
+      if (!Res.getHeaderSearchOpts().ModuleCachePath.empty()) {
+        Res.getFileSystemOpts().APINotesCachePath =
+            Res.getHeaderSearchOpts().ModuleCachePath;
+      } else {
+        Diags.Report(diag::err_no_apinotes_cache_path);
+        Success = false;
+      }
     }
   }
 

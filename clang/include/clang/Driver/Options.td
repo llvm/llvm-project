@@ -719,7 +719,7 @@ def fno_apinotes_modules : Flag<["-"], "fno-apinotes-modules">, Group<f_clang_Gr
   Flags<[CC1Option]>, HelpText<"Disable module-based external API notes support">;
 def fapinotes_cache_path : Joined<["-"], "fapinotes-cache-path=">,
   Group<i_Group>, Flags<[DriverOption, CC1Option]>, MetaVarName<"<directory>">,
-  HelpText<"Specify the API notes cache path">;
+  HelpText<"Specify the API notes cache path (defaults to -fmodules-cache-path)">;
 def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Flags<[CC1Option]>, MetaVarName<"<version>">,
   HelpText<"Specify the Swift version to use when filtering API notes">;
