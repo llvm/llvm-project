@@ -235,6 +235,9 @@ OCKL_MANGLE_T(hsa_signal,store)(hsa_signal_t sig, long value, __ockl_memory_orde
     if (s->kind == AMD_SIGNAL_KIND_USER) {
         AS((__global atomic_long *)&s->value, value, mem_order, memory_scope_all_svm_devices);
         update_mbox(s);
+    } else if (__oclc_ISA_version() >= 900) {
+        // Hardware doorbell supports AQL semantics.
+        atomic_store_explicit((__global atomic_ulong *)s->hardware_doorbell_ptr, (ulong)value, memory_order_release, memory_scope_all_svm_devices);
     } else {
 
         {
