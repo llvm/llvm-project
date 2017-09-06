@@ -7,6 +7,8 @@
 //
 // RUN: rm pic-test-logging-*
 
+// UNSUPPORTED: target-is-mips64,target-is-mips64el
+
 #include <cstdio>
 
 [[clang::xray_always_instrument]]
