@@ -366,7 +366,11 @@ bool SIInstrInfo::shouldClusterMemOps(MachineInstr &FirstLdSt,
       (isMTBUF(FirstLdSt) && isMTBUF(SecondLdSt)) ||
       (isFLAT(FirstLdSt) && isFLAT(SecondLdSt))) {
     FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::vdata);
+    if (!FirstDst)
+      FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::vdst);
     SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::vdata);
+    if (!SecondDst)
+      SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::vdst);
   } else if (isSMRD(FirstLdSt) && isSMRD(SecondLdSt)) {
     FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::sdst);
     SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::sdst);

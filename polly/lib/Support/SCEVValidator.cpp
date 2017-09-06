@@ -735,30 +735,4 @@ extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
 
   return std::make_pair(ConstPart, SE.getMulExpr(LeftOvers));
 }
-
-const SCEV *tryForwardThroughPHI(const SCEV *Expr, Region &R,
-                                 ScalarEvolution &SE, LoopInfo &LI,
-                                 const DominatorTree &DT) {
-  if (auto *Unknown = dyn_cast<SCEVUnknown>(Expr)) {
-    Value *V = Unknown->getValue();
-    auto *PHI = dyn_cast<PHINode>(V);
-    if (!PHI)
-      return Expr;
-
-    Value *Final = nullptr;
-
-    for (unsigned i = 0; i < PHI->getNumIncomingValues(); i++) {
-      if (isErrorBlock(*PHI->getIncomingBlock(i), R, LI, DT))
-        continue;
-      if (Final)
-        return Expr;
-      Final = PHI->getIncomingValue(i);
-    }
-
-    if (Final)
-      return SE.getSCEV(Final);
-  }
-  return Expr;
-}
-
 } // namespace polly

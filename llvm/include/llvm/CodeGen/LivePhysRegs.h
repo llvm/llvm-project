@@ -159,12 +159,18 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LivePhysRegs& LR) {
   return OS;
 }
 
-/// \brief Computes the live-in list for \p MBB assuming all of its successors
-/// live-in lists are up-to-date. Uses the given LivePhysReg instance \p
-/// LiveRegs; This is just here to avoid repeated heap allocations when calling
-/// this multiple times in a pass.
-void computeLiveIns(LivePhysRegs &LiveRegs, const MachineRegisterInfo &MRI,
-                    MachineBasicBlock &MBB);
+/// \brief Computes registers live-in to \p MBB assuming all of its successors
+/// live-in lists are up-to-date. Puts the result into the given LivePhysReg
+/// instance \p LiveRegs.
+void computeLiveIns(LivePhysRegs &LiveRegs, const MachineBasicBlock &MBB);
+
+/// Adds registers contained in \p LiveRegs to the block live-in list of \p MBB.
+/// Does not add reserved registers.
+void addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs);
+
+/// Convenience function combining computeLiveIns() and addLiveIns().
+void computeAndAddLiveIns(LivePhysRegs &LiveRegs,
+                          MachineBasicBlock &MBB);
 
 } // end namespace llvm
 

@@ -2,11 +2,9 @@
 // RUN: %clang_cc1 -fmodules-ts %s -triple %itanium_abi_triple -fmodule-file=%t -emit-llvm -o - | FileCheck %s --implicit-check-not=unused --implicit-check-not=global_module
 
 // CHECK-DAG: @extern_var_exported = external global
-// FIXME: Should this be 'external global'?
 // CHECK-DAG: @inline_var_exported = linkonce_odr global
-// FIXME: These should be 'extern global' and 'extern constant'.
-// CHECK-DAG: @_ZW6ModuleE19static_var_exported = global
-// CHECK-DAG: @const_var_exported = constant
+// CHECK-DAG: @_ZW6ModuleE19static_var_exported = available_externally global i32 0
+// CHECK-DAG: @const_var_exported = available_externally constant i32 3
 
 import Module;
 

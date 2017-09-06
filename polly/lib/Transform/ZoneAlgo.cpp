@@ -363,17 +363,6 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
       continue;
     }
 
-    if (!isa<StoreInst>(MA->getAccessInstruction())) {
-      DEBUG(dbgs() << "WRITE that is not a StoreInst not supported\n");
-      OptimizationRemarkMissed R(PassName, "UnusualStore",
-                                 MA->getAccessInstruction());
-      R << "encountered write that is not a StoreInst: "
-        << printInstruction(MA->getAccessInstruction());
-      S->getFunction().getContext().diagnose(R);
-
-      IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
-    }
-
     // In region statements the order is less clear, eg. the load and store
     // might be in a boxed loop.
     if (Stmt->isRegionStmt() &&
@@ -432,6 +421,37 @@ void ZoneAlgorithm::addArrayReadAccess(MemoryAccess *MA) {
   }
 }
 
+isl::map ZoneAlgorithm::getWrittenValue(MemoryAccess *MA, isl::map AccRel) {
+  if (!MA->isMustWrite())
+    return {};
+
+  Value *AccVal = MA->getAccessValue();
+  ScopStmt *Stmt = MA->getStatement();
+  Instruction *AccInst = MA->getAccessInstruction();
+
+  // Write a value to a single element.
+  auto L = MA->isOriginalArrayKind() ? LI->getLoopFor(AccInst->getParent())
+                                     : Stmt->getSurroundingLoop();
+  if (AccVal &&
+      AccVal->getType() == MA->getLatestScopArrayInfo()->getElementType() &&
+      AccRel.is_single_valued())
+    return makeValInst(AccVal, Stmt, L);
+
+  // memset(_, '0', ) is equivalent to writing the null value to all touched
+  // elements. isMustWrite() ensures that all of an element's bytes are
+  // overwritten.
+  if (auto *Memset = dyn_cast<MemSetInst>(AccInst)) {
+    auto *WrittenConstant = dyn_cast<Constant>(Memset->getValue());
+    Type *Ty = MA->getLatestScopArrayInfo()->getElementType();
+    if (WrittenConstant && WrittenConstant->isZeroValue()) {
+      Constant *Zero = Constant::getNullValue(Ty);
+      return makeValInst(Zero, Stmt, L);
+    }
+  }
+
+  return {};
+}
+
 void ZoneAlgorithm::addArrayWriteAccess(MemoryAccess *MA) {
   assert(MA->isLatestArrayKind());
   assert(MA->isWrite());
@@ -449,10 +469,9 @@ void ZoneAlgorithm::addArrayWriteAccess(MemoryAccess *MA) {
         give(isl_union_map_add_map(AllMayWrites.take(), AccRel.copy()));
 
   // { Domain[] -> ValInst[] }
-  auto WriteValInstance =
-      makeValInst(MA->getAccessValue(), Stmt,
-                  LI->getLoopFor(MA->getAccessInstruction()->getParent()),
-                  MA->isMustWrite());
+  auto WriteValInstance = getWrittenValue(MA, AccRel);
+  if (!WriteValInstance)
+    WriteValInstance = makeUnknownForDomain(Stmt);
 
   // { Domain[] -> [Element[] -> Domain[]] }
   auto IncludeElement = give(isl_map_curry(isl_map_domain_map(AccRel.copy())));
@@ -697,8 +716,6 @@ void ZoneAlgorithm::computeCommon() {
   for (auto &Stmt : *S) {
     for (auto *MA : Stmt) {
       if (!MA->isLatestArrayKind())
-        continue;
-      if (!isCompatibleAccess(MA))
         continue;
 
       if (MA->isRead())

@@ -75,6 +75,8 @@ void EmitClangAttrDocs(RecordKeeper &Records, raw_ostream &OS);
 void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS);
 void EmitClangOptDocs(RecordKeeper &Records, raw_ostream &OS);
 
+void EmitClangDataCollectors(RecordKeeper &Records, raw_ostream &OS);
+
 void EmitTestPragmaAttributeSupportedAttributes(RecordKeeper &Records,
                                                 raw_ostream &OS);
 

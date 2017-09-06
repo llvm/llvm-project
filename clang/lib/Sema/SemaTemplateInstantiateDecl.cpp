@@ -2799,8 +2799,9 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
     SemaRef.ActOnOpenMPDeclareReductionCombinerEnd(NewDRD, SubstCombiner);
     // Initializers instantiation sequence.
     if (D->getInitializer()) {
-      SemaRef.ActOnOpenMPDeclareReductionInitializerStart(
-          /*S=*/nullptr, NewDRD);
+      VarDecl *OmpPrivParm =
+          SemaRef.ActOnOpenMPDeclareReductionInitializerStart(
+              /*S=*/nullptr, NewDRD);
       const char *Names[] = {"omp_orig", "omp_priv"};
       for (auto &Name : Names) {
         DeclarationName DN(&SemaRef.Context.Idents.get(Name));
@@ -2808,17 +2809,28 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
         auto Lookup = NewDRD->lookup(DN);
         if (!OldLookup.empty() && !Lookup.empty()) {
           assert(Lookup.size() == 1 && OldLookup.size() == 1);
-          SemaRef.CurrentInstantiationScope->InstantiatedLocal(
-              OldLookup.front(), Lookup.front());
+          auto *OldVD = cast<VarDecl>(OldLookup.front());
+          auto *NewVD = cast<VarDecl>(Lookup.front());
+          SemaRef.InstantiateVariableInitializer(NewVD, OldVD, TemplateArgs);
+          SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldVD, NewVD);
         }
       }
-      SubstInitializer =
-          SemaRef.SubstExpr(D->getInitializer(), TemplateArgs).get();
-      SemaRef.ActOnOpenMPDeclareReductionInitializerEnd(NewDRD,
-                                                        SubstInitializer);
+      if (D->getInitializerKind() == OMPDeclareReductionDecl::CallInit) {
+        SubstInitializer =
+            SemaRef.SubstExpr(D->getInitializer(), TemplateArgs).get();
+      } else {
+        IsCorrect = IsCorrect && OmpPrivParm->hasInit();
+      }
+      SemaRef.ActOnOpenMPDeclareReductionInitializerEnd(
+          NewDRD, SubstInitializer, OmpPrivParm);
     }
-    IsCorrect = IsCorrect && SubstCombiner &&
-                (!D->getInitializer() || SubstInitializer);
+    IsCorrect =
+        IsCorrect && SubstCombiner &&
+        (!D->getInitializer() ||
+         (D->getInitializerKind() == OMPDeclareReductionDecl::CallInit &&
+          SubstInitializer) ||
+         (D->getInitializerKind() != OMPDeclareReductionDecl::CallInit &&
+          !SubstInitializer && !SubstInitializer));
   } else
     IsCorrect = false;
 

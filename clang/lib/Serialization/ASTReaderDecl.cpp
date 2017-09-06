@@ -453,7 +453,7 @@ uint64_t ASTDeclReader::GetCurrentCursorOffset() {
 
 void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
   if (Record.readInt())
-    Reader.BodySource[FD] = Loc.F->Kind == ModuleKind::MK_MainFile;
+    Reader.DefinitionSource[FD] = Loc.F->Kind == ModuleKind::MK_MainFile;
   if (auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
     CD->NumCtorInitializers = Record.readInt();
     if (CD->NumCtorInitializers)
@@ -1294,6 +1294,9 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
     }
   }
 
+  if (VD->getStorageDuration() == SD_Static && Record.readInt())
+    Reader.DefinitionSource[VD] = Loc.F->Kind == ModuleKind::MK_MainFile;
+
   enum VarKind {
     VarNotTemplate = 0, VarTemplate, StaticDataMemberSpecialization
   };
@@ -1589,9 +1592,9 @@ void ASTDeclReader::ReadCXXDefinitionData(
   Data.HasODRHash = true;
 
   if (Record.readInt()) {
-    Reader.BodySource[D] = Loc.F->Kind == ModuleKind::MK_MainFile
-                               ? ExternalASTSource::EK_Never
-                               : ExternalASTSource::EK_Always;
+    Reader.DefinitionSource[D] = Loc.F->Kind == ModuleKind::MK_MainFile
+                                     ? ExternalASTSource::EK_Never
+                                     : ExternalASTSource::EK_Always;
   }
 
   Data.NumBases = Record.readInt();
@@ -2515,7 +2518,9 @@ void ASTDeclReader::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   VisitValueDecl(D);
   D->setLocation(ReadSourceLocation());
   D->setCombiner(Record.readExpr());
-  D->setInitializer(Record.readExpr());
+  D->setInitializer(
+      Record.readExpr(),
+      static_cast<OMPDeclareReductionDecl::InitKind>(Record.readInt()));
   D->PrevDeclInScope = ReadDeclID();
 }
 

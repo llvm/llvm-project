@@ -2767,6 +2767,7 @@ include "X86InstrSystem.td"
 
 // Compiler Pseudo Instructions and Pat Patterns
 include "X86InstrCompiler.td"
+include "X86InstrVecCompiler.td"
 
 //===----------------------------------------------------------------------===//
 // Assembler Mnemonic Aliases
