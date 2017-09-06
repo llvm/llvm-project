@@ -1322,7 +1322,7 @@ def : Pat<
 
 def : Pat<
   (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
-  (V_PK_MUL_F16 SRCMODS.OP_SEL_1, (i32 CONST.V2FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
+  (V_PK_MUL_F16 0, (i32 CONST.V2FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
 >;
 
 

@@ -1451,10 +1451,11 @@ getPwAff(Scop &S, BasicBlock *BB,
 /// This will fill @p ConditionSets with the conditions under which control
 /// will be moved from @p SI to its successors. Hence, @p ConditionSets will
 /// have as many elements as @p SI has successors.
-bool buildConditionSets(Scop &S, BasicBlock *BB, SwitchInst *SI, Loop *L,
-                        __isl_keep isl_set *Domain,
-                        DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
-                        SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
+static bool
+buildConditionSets(Scop &S, BasicBlock *BB, SwitchInst *SI, Loop *L,
+                   __isl_keep isl_set *Domain,
+                   DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
+                   SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
   Value *Condition = getConditionFromTerminator(SI);
   assert(Condition && "No condition for switch");
 
@@ -1496,7 +1497,7 @@ bool buildConditionSets(Scop &S, BasicBlock *BB, SwitchInst *SI, Loop *L,
 /// @param IsStrictUpperBound holds information on the predicate relation
 /// between TestVal and UpperBound, i.e,
 /// TestVal < UpperBound  OR  TestVal <= UpperBound
-__isl_give isl_set *
+static __isl_give isl_set *
 buildUnsignedConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
                            __isl_keep isl_set *Domain, const SCEV *SCEV_TestVal,
                            const SCEV *SCEV_UpperBound,
@@ -1536,10 +1537,11 @@ buildUnsignedConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
 /// have as many elements as @p TI has successors. If @p TI is nullptr the
 /// context under which @p Condition is true/false will be returned as the
 /// new elements of @p ConditionSets.
-bool buildConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
-                        TerminatorInst *TI, Loop *L, __isl_keep isl_set *Domain,
-                        DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
-                        SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
+static bool
+buildConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
+                   TerminatorInst *TI, Loop *L, __isl_keep isl_set *Domain,
+                   DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
+                   SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
   isl_set *ConsequenceCondSet = nullptr;
   if (auto *CCond = dyn_cast<ConstantInt>(Condition)) {
     if (CCond->isZero())
@@ -1575,10 +1577,6 @@ bool buildConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
            "Condition of exiting branch was neither constant nor ICmp!");
 
     ScalarEvolution &SE = *S.getSE();
-    LoopInfo &LI = *S.getLI();
-    DominatorTree &DT = *S.getDT();
-    Region &R = S.getRegion();
-
     isl_pw_aff *LHS, *RHS;
     // For unsigned comparisons we assumed the signed bit of neither operand
     // to be set. The comparison is equal to a signed comparison under this
@@ -1586,9 +1584,6 @@ bool buildConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
     bool NonNeg = ICond->isUnsigned();
     const SCEV *LeftOperand = SE.getSCEVAtScope(ICond->getOperand(0), L),
                *RightOperand = SE.getSCEVAtScope(ICond->getOperand(1), L);
-
-    LeftOperand = tryForwardThroughPHI(LeftOperand, R, SE, LI, DT);
-    RightOperand = tryForwardThroughPHI(RightOperand, R, SE, LI, DT);
 
     switch (ICond->getPredicate()) {
     case ICmpInst::ICMP_ULT:
@@ -1658,10 +1653,11 @@ bool buildConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
 /// This will fill @p ConditionSets with the conditions under which control
 /// will be moved from @p TI to its successors. Hence, @p ConditionSets will
 /// have as many elements as @p TI has successors.
-bool buildConditionSets(Scop &S, BasicBlock *BB, TerminatorInst *TI, Loop *L,
-                        __isl_keep isl_set *Domain,
-                        DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
-                        SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
+static bool
+buildConditionSets(Scop &S, BasicBlock *BB, TerminatorInst *TI, Loop *L,
+                   __isl_keep isl_set *Domain,
+                   DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
+                   SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
   if (SwitchInst *SI = dyn_cast<SwitchInst>(TI))
     return buildConditionSets(S, BB, SI, L, Domain, InvalidDomainMap,
                               ConditionSets);
@@ -3361,9 +3357,8 @@ int Scop::getNextID(std::string ParentFunc) {
 }
 
 Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
-           DominatorTree &DT, ScopDetection::DetectionContext &DC,
-           OptimizationRemarkEmitter &ORE)
-    : SE(&ScalarEvolution), DT(&DT), R(R), name(R.getNameStr()),
+           ScopDetection::DetectionContext &DC, OptimizationRemarkEmitter &ORE)
+    : SE(&ScalarEvolution), R(R), name(R.getNameStr()),
       HasSingleExitEdge(R.getExitingBlock()), DC(DC), ORE(ORE),
       IslCtx(isl_ctx_alloc(), isl_ctx_free), Affinator(this, LI),
       ID(getNextID((*R.getEntry()->getParent()).getName().str())) {

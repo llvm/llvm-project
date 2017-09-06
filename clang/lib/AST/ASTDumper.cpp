@@ -1317,6 +1317,16 @@ void ASTDumper::VisitOMPDeclareReductionDecl(const OMPDeclareReductionDecl *D) {
   dumpStmt(D->getCombiner());
   if (auto *Initializer = D->getInitializer()) {
     OS << " initializer";
+    switch (D->getInitializerKind()) {
+    case OMPDeclareReductionDecl::DirectInit:
+      OS << " omp_priv = ";
+      break;
+    case OMPDeclareReductionDecl::CopyInit:
+      OS << " omp_priv ()";
+      break;
+    case OMPDeclareReductionDecl::CallInit:
+      break;
+    }
     dumpStmt(Initializer);
   }
 }

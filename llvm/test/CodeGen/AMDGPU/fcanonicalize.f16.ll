@@ -211,7 +211,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(half addrspace
 ; VI-DAG: v_max_f16_e32 [[REG1:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; VI-NOT: v_and_b32
 
-; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, {{v[0-9]+$}}
+; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}} op_sel_hi:[0,1]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_var_v2f16(<2 x half> addrspace(1)* %out) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -232,7 +232,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f16(<2 x half> addrspace(1)
 ; VI: v_or_b32
 
 ; GFX9: v_and_b32_e32 [[ABS:v[0-9]+]], 0x7fff7fff, v{{[0-9]+}}
-; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, [[ABS]]{{$}}
+; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, [[ABS]] op_sel_hi:[0,1]{{$}}
 ; GCN: buffer_store_dword
 define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(<2 x half> addrspace(1)* %out) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -251,7 +251,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(<2 x half> addrspa
 ; VI: v_or_b32
 
 ; GFX9: v_and_b32_e32 [[ABS:v[0-9]+]], 0x7fff7fff, v{{[0-9]+}}
-; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, [[ABS]] neg_lo:[0,1] neg_hi:[0,1]{{$}}
+; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, [[ABS]] op_sel_hi:[0,1] neg_lo:[0,1] neg_hi:[0,1]{{$}}
 ; GCN: buffer_store_dword
 define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(<2 x half> addrspace(1)* %out) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -264,7 +264,6 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(<2 x half> ad
   ret void
 }
 
-; FIXME: Fold modifier
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_var_v2f16:
 ; VI:     v_xor_b32_e32 [[FNEG:v[0-9]+]], 0x80008000, v{{[0-9]+}}
 ; VI:     v_lshrrev_b32_e32 [[FNEGHI:v[0-9]+]], 16, [[FNEG]]
@@ -272,7 +271,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(<2 x half> ad
 ; VI-DAG: v_max_f16_e32 [[REG0:v[0-9]+]], [[FNEG]], [[FNEG]]
 ; VI-NOT: 0xffff
 
-; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}} neg_lo:[0,1] neg_hi:[0,1]{{$}}
+; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}} op_sel_hi:[0,1] neg_lo:[0,1] neg_hi:[0,1]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(<2 x half> addrspace(1)* %out) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -289,7 +288,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(<2 x half> addrspa
 ; VI: v_max_f16_e64 [[REG1:v[0-9]+]], {{s[0-9]+}}, {{s[0-9]+}}
 ; VI-NOT: v_and_b32
 
-; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, {{s[0-9]+$}}
+; GFX9: v_pk_mul_f16 [[REG:v[0-9]+]], 1.0, {{s[0-9]+}} op_sel_hi:[0,1]{{$}}
 ; GFX9: buffer_store_dword [[REG]]
 define amdgpu_kernel void @s_test_canonicalize_var_v2f16(<2 x half> addrspace(1)* %out, i32 zeroext %val.arg) #1 {
   %val = bitcast i32 %val.arg to <2 x half>

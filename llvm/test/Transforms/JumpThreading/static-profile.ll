@@ -23,6 +23,8 @@
 ;             (1) /  |
 ;        (loop exit) | (15)
 ;                    |
+;                  latch
+;                    |
 ;               (back edge)
 ;
 ; First we thread eq_1->check_2 to check_3.  Frequencies are updated to remove
@@ -41,12 +43,14 @@
 ;             (1) /  |
 ;        (loop exit) | (15)
 ;                    |
+;                  latch
+;                    |
 ;               (back edge)
 ;
-; Next we thread eq_1->check_3 and eq_2->check_3 to check_1 as new back edges.
-; Frequencies are updated to remove the frequency of eq_1 and eq_3 from
-; check_3 and then the false edge leaving check_3 (changed frequencies are
-; highlighted with * *):
+; Next we thread eq_1->check_3 and eq_2->check_3 to check_1 as new edges to
+; the loop latch.  Frequencies are updated to remove the frequency of eq_1
+; and eq_3 from check_3 and then the false edge leaving check_3 (changed
+; frequencies are highlighted with * *):
 ;
 ;                 check_1 (16)
 ;             (8) /  |
@@ -55,10 +59,12 @@
 ;           /     check_2 (*8*)
 ;          /  (8) /  |
 ;         /-- eq_2~  | (*0*)
-; (back edge)        |
-;                 check_3 (*0*)
-;           (*0*) /  |
-;        (loop exit) | (*0*)
+;        /           |
+;       /         check_3 (*0*)
+;      /    (*0*) /  |
+;     |  (loop exit) | (*0*)
+;      \             |
+;       `--------- latch
 ;                    |
 ;               (back edge)
 ;
@@ -83,10 +89,10 @@ check_1:
 eq_1:
   call void @bar()
   br label %check_2
-; Verify the new backedge:
+; Verify the new edge:
 ; CHECK: check_2.thread:
 ; CHECK-NEXT: call void @bar()
-; CHECK-NEXT: br label %check_3.thread
+; CHECK-NEXT: br label %latch
 
 check_2:
   %cond2 = icmp eq i32 %v, 2
@@ -97,16 +103,19 @@ check_2:
 eq_2:
   call void @bar()
   br label %check_3
-; Verify the new backedge:
+; Verify the new edge:
 ; CHECK: eq_2:
 ; CHECK-NEXT: call void @bar()
-; CHECK-NEXT: br label %check_3.thread
+; CHECK-NEXT: br label %latch
 
 check_3:
   %condE = icmp eq i32 %v, 3
-  br i1 %condE, label %exit, label %check_1
+  br i1 %condE, label %exit, label %latch
 ; No metadata:
-; CHECK: br i1 %condE, label %exit, label %check_1{{$}}
+; CHECK: br i1 %condE, label %exit, label %latch{{$}}
+
+latch:
+  br label %check_1
 
 exit:
   ret void

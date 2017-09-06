@@ -65,14 +65,6 @@ Tool *BareMetal::buildLinker() const {
   return new tools::baremetal::Linker(*this);
 }
 
-std::string BareMetal::getThreadModel() const {
-  return "single";
-}
-
-bool BareMetal::isThreadModelSupported(const StringRef Model) const {
-  return Model == "single";
-}
-
 std::string BareMetal::getRuntimesDir() const {
   SmallString<128> Dir(getDriver().ResourceDir);
   llvm::sys::path::append(Dir, "lib", "baremetal");

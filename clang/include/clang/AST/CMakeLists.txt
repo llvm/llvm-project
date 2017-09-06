@@ -50,3 +50,6 @@ clang_tablegen(CommentCommandList.inc -gen-clang-comment-command-list
   SOURCE CommentCommands.td
   TARGET ClangCommentCommandList)
 
+clang_tablegen(StmtDataCollectors.inc -gen-clang-data-collectors
+  SOURCE StmtDataCollectors.td
+  TARGET StmtDataCollectors)

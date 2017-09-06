@@ -8588,9 +8588,11 @@ public:
   /// \brief Finish current declare reduction construct initializer.
   void ActOnOpenMPDeclareReductionCombinerEnd(Decl *D, Expr *Combiner);
   /// \brief Initialize declare reduction construct initializer.
-  void ActOnOpenMPDeclareReductionInitializerStart(Scope *S, Decl *D);
+  /// \return omp_priv variable.
+  VarDecl *ActOnOpenMPDeclareReductionInitializerStart(Scope *S, Decl *D);
   /// \brief Finish current declare reduction construct initializer.
-  void ActOnOpenMPDeclareReductionInitializerEnd(Decl *D, Expr *Initializer);
+  void ActOnOpenMPDeclareReductionInitializerEnd(Decl *D, Expr *Initializer,
+                                                 VarDecl *OmpPrivParm);
   /// \brief Called at the end of '#pragma omp declare reduction'.
   DeclGroupPtrTy ActOnOpenMPDeclareReductionDirectiveEnd(
       Scope *S, DeclGroupPtrTy DeclReductions, bool IsValid);

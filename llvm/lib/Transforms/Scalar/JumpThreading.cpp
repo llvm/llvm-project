@@ -1791,10 +1791,15 @@ bool JumpThreadingPass::ThreadEdge(BasicBlock *BB,
 
   // If threading this would thread across a loop header, don't thread the edge.
   // See the comments above FindLoopHeaders for justifications and caveats.
-  if (LoopHeaders.count(BB)) {
-    DEBUG(dbgs() << "  Not threading across loop header BB '" << BB->getName()
-          << "' to dest BB '" << SuccBB->getName()
-          << "' - it might create an irreducible loop!\n");
+  if (LoopHeaders.count(BB) || LoopHeaders.count(SuccBB)) {
+    DEBUG({
+      bool BBIsHeader = LoopHeaders.count(BB);
+      bool SuccIsHeader = LoopHeaders.count(SuccBB);
+      dbgs() << "  Not threading across "
+          << (BBIsHeader ? "loop header BB '" : "block BB '") << BB->getName()
+          << "' to dest " << (SuccIsHeader ? "loop header BB '" : "block BB '")
+          << SuccBB->getName() << "' - it might create an irreducible loop!\n";
+    });
     return false;
   }
 

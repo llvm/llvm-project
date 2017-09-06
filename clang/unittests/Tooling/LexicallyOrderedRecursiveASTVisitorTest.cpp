@@ -83,7 +83,7 @@ bool LexicallyOrderedDeclVisitor::VisitNamedDecl(const NamedDecl *D) {
       OS << ND->getNameAsString();
     else
       OS << "???";
-    if (isa<DeclContext>(D) or isa<TemplateDecl>(D))
+    if (isa<DeclContext>(D) || isa<TemplateDecl>(D))
       OS << "/";
   }
   if (EmitDeclIndices)
