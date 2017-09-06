@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVMCTargetDesc.h"
-#include "RISCVMCAsmInfo.h"
 #include "InstPrinter/RISCVInstPrinter.h"
+#include "RISCVMCAsmInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
