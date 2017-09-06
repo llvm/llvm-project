@@ -225,7 +225,8 @@ int GCNHazardRecognizer::getWaitStatesSince(
         return WaitStates;
 
       unsigned Opcode = MI->getOpcode();
-      if (Opcode == AMDGPU::DBG_VALUE || Opcode == AMDGPU::IMPLICIT_DEF)
+      if (Opcode == AMDGPU::DBG_VALUE || Opcode == AMDGPU::IMPLICIT_DEF ||
+          Opcode == AMDGPU::INLINEASM)
         continue;
     }
     ++WaitStates;

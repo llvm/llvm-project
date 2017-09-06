@@ -192,9 +192,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
-  if (!Script->Opt.HasSections && !Config->Relocatable)
-    fixSectionAlignments();
-
   // If -compressed-debug-sections is specified, we need to compress
   // .debug_* sections. Do it right now because it changes the size of
   // output sections.
@@ -1253,7 +1250,7 @@ static bool computeIsPreemptible(const SymbolBody &B) {
   // doesn't matter whether we return true or false here. However, if
   // -unresolved-symbols=ignore-all is specified, undefined symbols in
   // executables are automatically exported so that the runtime linker
-  // can try to resolve them. In that case, they is preemptible. So, we
+  // can try to resolve them. In that case, they are preemptible. So, we
   // return true for an undefined symbol in case the option is specified.
   if (!Config->Shared)
     return B.isUndefined();
@@ -1384,6 +1381,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
                   In<ELFT>::VerSym,  In<ELFT>::VerNeed,
                   InX::Dynamic},
                  [](SyntheticSection *SS) { SS->finalizeContents(); });
+
+  if (!Script->Opt.HasSections && !Config->Relocatable)
+    fixSectionAlignments();
 
   // Some architectures use small displacements for jump instructions.
   // It is linker's responsibility to create thunks containing long

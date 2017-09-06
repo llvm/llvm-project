@@ -134,3 +134,21 @@ int main() {
   }
   return fun(15) + foo(15); // expected-note {{in instantiation of function template specialization 'foo<int>' requested here}}
 }
+
+#if __cplusplus == 201103L
+struct A {
+  A() {}
+  // expected-note@+1 {{copy constructor is implicitly deleted because 'A' has a user-declared move assignment operator}}
+  A& operator=(A&&) = default;
+};
+
+int A_TEST() {
+  A test;
+// expected-error@+1 {{call to implicitly-deleted copy constructor of 'A'}}
+#pragma omp declare reduction(+ : A : omp_out) initializer(omp_priv = A())
+// expected-error@+1 {{invalid operands to binary expression ('A' and 'A')}}
+#pragma omp parallel reduction(+ : test)
+  {}
+  return 0;
+}
+#endif

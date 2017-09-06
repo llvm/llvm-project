@@ -8908,7 +8908,7 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
 }
 
 static GVALinkage adjustGVALinkageForAttributes(const ASTContext &Context,
-                                                GVALinkage L, const Decl *D) {
+                                                const Decl *D, GVALinkage L) {
   // See http://msdn.microsoft.com/en-us/library/xa0d9ste.aspx
   // dllexport/dllimport on inline functions.
   if (D->hasAttr<DLLImportAttr>()) {
@@ -8927,23 +8927,35 @@ static GVALinkage adjustGVALinkageForAttributes(const ASTContext &Context,
   return L;
 }
 
-GVALinkage ASTContext::GetGVALinkageForFunction(const FunctionDecl *FD) const {
-  auto L = adjustGVALinkageForAttributes(
-      *this, basicGVALinkageForFunction(*this, FD), FD);
-  auto EK = ExternalASTSource::EK_ReplyHazy;
-  if (auto *Ext = getExternalSource())
-    EK = Ext->hasExternalDefinitions(FD);
-  switch (EK) {
+/// Adjust the GVALinkage for a declaration based on what an external AST source
+/// knows about whether there can be other definitions of this declaration.
+static GVALinkage
+adjustGVALinkageForExternalDefinitionKind(const ASTContext &Ctx, const Decl *D,
+                                          GVALinkage L) {
+  ExternalASTSource *Source = Ctx.getExternalSource();
+  if (!Source)
+    return L;
+
+  switch (Source->hasExternalDefinitions(D)) {
   case ExternalASTSource::EK_Never:
+    // Other translation units rely on us to provide the definition.
     if (L == GVA_DiscardableODR)
       return GVA_StrongODR;
     break;
+
   case ExternalASTSource::EK_Always:
     return GVA_AvailableExternally;
+
   case ExternalASTSource::EK_ReplyHazy:
     break;
   }
   return L;
+}
+
+GVALinkage ASTContext::GetGVALinkageForFunction(const FunctionDecl *FD) const {
+  return adjustGVALinkageForExternalDefinitionKind(*this, FD,
+           adjustGVALinkageForAttributes(*this, FD,
+             basicGVALinkageForFunction(*this, FD)));
 }
 
 static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
@@ -9024,8 +9036,9 @@ static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
 }
 
 GVALinkage ASTContext::GetGVALinkageForVariable(const VarDecl *VD) {
-  return adjustGVALinkageForAttributes(
-      *this, basicGVALinkageForVariable(*this, VD), VD);
+  return adjustGVALinkageForExternalDefinitionKind(*this, VD,
+           adjustGVALinkageForAttributes(*this, VD,
+             basicGVALinkageForVariable(*this, VD)));
 }
 
 bool ASTContext::DeclMustBeEmitted(const Decl *D) {
@@ -9108,8 +9121,13 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return false;
 
   // Variables that can be needed in other TUs are required.
-  if (!isDiscardableGVALinkage(GetGVALinkageForVariable(VD)))
+  auto Linkage = GetGVALinkageForVariable(VD);
+  if (!isDiscardableGVALinkage(Linkage))
     return true;
+
+  // We never need to emit a variable that is available in another TU.
+  if (Linkage == GVA_AvailableExternally)
+    return false;
 
   // Variables that have destruction with side-effects are required.
   if (VD->getType().isDestructedType())

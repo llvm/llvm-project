@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -365,15 +366,37 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
   return TailLen;
 }
 
-void BranchFolder::ReplaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
-                                           MachineBasicBlock *NewDest) {
-  TII->ReplaceTailWithBranchTo(OldInst, NewDest);
-
+void BranchFolder::replaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
+                                           MachineBasicBlock &NewDest) {
   if (UpdateLiveIns) {
-    NewDest->clearLiveIns();
-    computeLiveIns(LiveRegs, *MRI, *NewDest);
+    // OldInst should always point to an instruction.
+    MachineBasicBlock &OldMBB = *OldInst->getParent();
+    LiveRegs.clear();
+    LiveRegs.addLiveOuts(OldMBB);
+    // Move backward to the place where will insert the jump.
+    MachineBasicBlock::iterator I = OldMBB.end();
+    do {
+      --I;
+      LiveRegs.stepBackward(*I);
+    } while (I != OldInst);
+
+    // Merging the tails may have switched some undef operand to non-undef ones.
+    // Add IMPLICIT_DEFS into OldMBB as necessary to have a definition of the
+    // register.
+    for (MachineBasicBlock::RegisterMaskPair P : NewDest.liveins()) {
+      // We computed the liveins with computeLiveIn earlier and should only see
+      // full registers:
+      assert(P.LaneMask == LaneBitmask::getAll() &&
+             "Can only handle full register.");
+      MCPhysReg Reg = P.PhysReg;
+      if (!LiveRegs.available(*MRI, Reg))
+        continue;
+      DebugLoc DL;
+      BuildMI(OldMBB, OldInst, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Reg);
+    }
   }
 
+  TII->ReplaceTailWithBranchTo(OldInst, &NewDest);
   ++NumTailMerge;
 }
 
@@ -408,7 +431,7 @@ MachineBasicBlock *BranchFolder::SplitMBBAt(MachineBasicBlock &CurMBB,
   MBBFreqInfo.setBlockFreq(NewMBB, MBBFreqInfo.getBlockFreq(&CurMBB));
 
   if (UpdateLiveIns)
-    computeLiveIns(LiveRegs, *MRI, *NewMBB);
+    computeAndAddLiveIns(LiveRegs, *NewMBB);
 
   // Add the new block to the funclet.
   const auto &FuncletI = FuncletMembership.find(&CurMBB);
@@ -766,43 +789,6 @@ bool BranchFolder::CreateCommonTailOnlyBlock(MachineBasicBlock *&PredBB,
   return true;
 }
 
-void BranchFolder::MergeCommonTailDebugLocs(unsigned commonTailIndex) {
-  MachineBasicBlock *MBB = SameTails[commonTailIndex].getBlock();
-
-  std::vector<MachineBasicBlock::iterator> NextCommonInsts(SameTails.size());
-  for (unsigned int i = 0 ; i != SameTails.size() ; ++i) {
-    if (i != commonTailIndex)
-      NextCommonInsts[i] = SameTails[i].getTailStartPos();
-    else {
-      assert(SameTails[i].getTailStartPos() == MBB->begin() &&
-          "MBB is not a common tail only block");
-    }
-  }
-
-  for (auto &MI : *MBB) {
-    if (MI.isDebugValue())
-      continue;
-    DebugLoc DL = MI.getDebugLoc();
-    for (unsigned int i = 0 ; i < NextCommonInsts.size() ; i++) {
-      if (i == commonTailIndex)
-        continue;
-
-      auto &Pos = NextCommonInsts[i];
-      assert(Pos != SameTails[i].getBlock()->end() &&
-          "Reached BB end within common tail");
-      while (Pos->isDebugValue()) {
-        ++Pos;
-        assert(Pos != SameTails[i].getBlock()->end() &&
-            "Reached BB end within common tail");
-      }
-      assert(MI.isIdenticalTo(*Pos) && "Expected matching MIIs!");
-      DL = DILocation::getMergedLocation(DL, Pos->getDebugLoc());
-      NextCommonInsts[i] = ++Pos;
-    }
-    MI.setDebugLoc(DL);
-  }
-}
-
 static void
 mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
                 MachineBasicBlock &MBBCommon) {
@@ -850,6 +836,67 @@ mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
 
     ++MBBI;
     ++MBBICommon;
+  }
+}
+
+void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
+  MachineBasicBlock *MBB = SameTails[commonTailIndex].getBlock();
+
+  std::vector<MachineBasicBlock::iterator> NextCommonInsts(SameTails.size());
+  for (unsigned int i = 0 ; i != SameTails.size() ; ++i) {
+    if (i != commonTailIndex) {
+      NextCommonInsts[i] = SameTails[i].getTailStartPos();
+      mergeOperations(SameTails[i].getTailStartPos(), *MBB);
+    } else {
+      assert(SameTails[i].getTailStartPos() == MBB->begin() &&
+          "MBB is not a common tail only block");
+    }
+  }
+
+  for (auto &MI : *MBB) {
+    if (MI.isDebugValue())
+      continue;
+    DebugLoc DL = MI.getDebugLoc();
+    for (unsigned int i = 0 ; i < NextCommonInsts.size() ; i++) {
+      if (i == commonTailIndex)
+        continue;
+
+      auto &Pos = NextCommonInsts[i];
+      assert(Pos != SameTails[i].getBlock()->end() &&
+          "Reached BB end within common tail");
+      while (Pos->isDebugValue()) {
+        ++Pos;
+        assert(Pos != SameTails[i].getBlock()->end() &&
+            "Reached BB end within common tail");
+      }
+      assert(MI.isIdenticalTo(*Pos) && "Expected matching MIIs!");
+      DL = DILocation::getMergedLocation(DL, Pos->getDebugLoc());
+      NextCommonInsts[i] = ++Pos;
+    }
+    MI.setDebugLoc(DL);
+  }
+
+  if (UpdateLiveIns) {
+    LivePhysRegs NewLiveIns(*TRI);
+    computeLiveIns(NewLiveIns, *MBB);
+
+    // The flag merging may lead to some register uses no longer using the
+    // <undef> flag, add IMPLICIT_DEFs in the predecessors as necessary.
+    for (MachineBasicBlock *Pred : MBB->predecessors()) {
+      LiveRegs.init(*TRI);
+      LiveRegs.addLiveOuts(*Pred);
+      MachineBasicBlock::iterator InsertBefore = Pred->getFirstTerminator();
+      for (unsigned Reg : NewLiveIns) {
+        if (!LiveRegs.available(*MRI, Reg))
+          continue;
+        DebugLoc DL;
+        BuildMI(*Pred, InsertBefore, DL, TII->get(TargetOpcode::IMPLICIT_DEF),
+                Reg);
+      }
+    }
+
+    MBB->clearLiveIns();
+    addLiveIns(*MBB, NewLiveIns);
   }
 }
 
@@ -955,8 +1002,9 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
     // Recompute common tail MBB's edge weights and block frequency.
     setCommonTailEdgeWeights(*MBB);
 
-    // Merge debug locations across identical instructions for common tail.
-    MergeCommonTailDebugLocs(commonTailIndex);
+    // Merge debug locations, MMOs and undef flags across identical instructions
+    // for common tail.
+    mergeCommonTails(commonTailIndex);
 
     // MBB is common tail.  Adjust all other BB's to jump to this one.
     // Traversal must be forwards so erases work.
@@ -967,10 +1015,8 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
         continue;
       DEBUG(dbgs() << "BB#" << SameTails[i].getBlock()->getNumber()
                    << (i == e-1 ? "" : ", "));
-      // Merge operations (MMOs, undef flags)
-      mergeOperations(SameTails[i].getTailStartPos(), *MBB);
       // Hack the end off BB i, making it jump to BB commonTailIndex instead.
-      ReplaceTailWithBranchTo(SameTails[i].getTailStartPos(), MBB);
+      replaceTailWithBranchTo(SameTails[i].getTailStartPos(), *MBB);
       // BB i is no longer a predecessor of SuccBB; remove it from the worklist.
       MergePotentials.erase(SameTails[i].getMPIter());
     }

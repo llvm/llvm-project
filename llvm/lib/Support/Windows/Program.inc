@@ -103,9 +103,9 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
   return std::string(U8Result.begin(), U8Result.end());
 }
 
-static HANDLE RedirectIO(const StringRef *path, int fd, std::string* ErrMsg) {
+static HANDLE RedirectIO(const StringRef *Path, int fd, std::string* ErrMsg) {
   HANDLE h;
-  if (path == 0) {
+  if (Path == 0) {
     if (!DuplicateHandle(GetCurrentProcess(), (HANDLE)_get_osfhandle(fd),
                          GetCurrentProcess(), &h,
                          0, TRUE, DUPLICATE_SAME_ACCESS))
@@ -114,10 +114,10 @@ static HANDLE RedirectIO(const StringRef *path, int fd, std::string* ErrMsg) {
   }
 
   std::string fname;
-  if (path->empty())
+  if (Path->empty())
     fname = "NUL";
   else
-    fname = *path;
+    fname = *Path;
 
   SECURITY_ATTRIBUTES sa;
   sa.nLength = sizeof(sa);
@@ -125,7 +125,7 @@ static HANDLE RedirectIO(const StringRef *path, int fd, std::string* ErrMsg) {
   sa.bInheritHandle = TRUE;
 
   SmallVector<wchar_t, 128> fnameUnicode;
-  if (path->empty()) {
+  if (Path->empty()) {
     // Don't play long-path tricks on "NUL".
     if (windows::UTF8ToUTF16(fname, fnameUnicode))
       return INVALID_HANDLE_VALUE;
@@ -207,19 +207,19 @@ static unsigned int ArgLenWithQuotes(const char *Str) {
 
 }
 
-static std::unique_ptr<char[]> flattenArgs(const char **args) {
+static std::unique_ptr<char[]> flattenArgs(const char **Args) {
   // First, determine the length of the command line.
   unsigned len = 0;
-  for (unsigned i = 0; args[i]; i++) {
-    len += ArgLenWithQuotes(args[i]) + 1;
+  for (unsigned i = 0; Args[i]; i++) {
+    len += ArgLenWithQuotes(Args[i]) + 1;
   }
 
   // Now build the command line.
   std::unique_ptr<char[]> command(new char[len+1]);
   char *p = command.get();
 
-  for (unsigned i = 0; args[i]; i++) {
-    const char *arg = args[i];
+  for (unsigned i = 0; Args[i]; i++) {
+    const char *arg = Args[i];
     const char *start = arg;
 
     bool needsQuoting = ArgNeedsQuotes(arg);
@@ -248,9 +248,9 @@ static std::unique_ptr<char[]> flattenArgs(const char **args) {
   return command;
 }
 
-static bool Execute(ProcessInfo &PI, StringRef Program, const char **args,
-                    const char **envp, const StringRef **redirects,
-                    unsigned memoryLimit, std::string *ErrMsg) {
+static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
+                    const char **Envp, const StringRef **Redirects,
+                    unsigned MemoryLimit, std::string *ErrMsg) {
   if (!sys::fs::can_execute(Program)) {
     if (ErrMsg)
       *ErrMsg = "program not executable";
@@ -268,18 +268,18 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **args,
   // Windows wants a command line, not an array of args, to pass to the new
   // process.  We have to concatenate them all, while quoting the args that
   // have embedded spaces (or are empty).
-  std::unique_ptr<char[]> command = flattenArgs(args);
+  std::unique_ptr<char[]> command = flattenArgs(Args);
 
   // The pointer to the environment block for the new process.
   std::vector<wchar_t> EnvBlock;
 
-  if (envp) {
+  if (Envp) {
     // An environment block consists of a null-terminated block of
     // null-terminated strings. Convert the array of environment variables to
     // an environment block by concatenating them.
-    for (unsigned i = 0; envp[i]; ++i) {
+    for (unsigned i = 0; Envp[i]; ++i) {
       SmallVector<wchar_t, MAX_PATH> EnvString;
-      if (std::error_code ec = windows::UTF8ToUTF16(envp[i], EnvString)) {
+      if (std::error_code ec = windows::UTF8ToUTF16(Envp[i], EnvString)) {
         SetLastError(ec.value());
         MakeErrMsg(ErrMsg, "Unable to convert environment variable to UTF-16");
         return false;
@@ -299,21 +299,21 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **args,
   si.hStdOutput = INVALID_HANDLE_VALUE;
   si.hStdError = INVALID_HANDLE_VALUE;
 
-  if (redirects) {
+  if (Redirects) {
     si.dwFlags = STARTF_USESTDHANDLES;
 
-    si.hStdInput = RedirectIO(redirects[0], 0, ErrMsg);
+    si.hStdInput = RedirectIO(Redirects[0], 0, ErrMsg);
     if (si.hStdInput == INVALID_HANDLE_VALUE) {
       MakeErrMsg(ErrMsg, "can't redirect stdin");
       return false;
     }
-    si.hStdOutput = RedirectIO(redirects[1], 1, ErrMsg);
+    si.hStdOutput = RedirectIO(Redirects[1], 1, ErrMsg);
     if (si.hStdOutput == INVALID_HANDLE_VALUE) {
       CloseHandle(si.hStdInput);
       MakeErrMsg(ErrMsg, "can't redirect stdout");
       return false;
     }
-    if (redirects[1] && redirects[2] && *(redirects[1]) == *(redirects[2])) {
+    if (Redirects[1] && Redirects[2] && *Redirects[1] == *Redirects[2]) {
       // If stdout and stderr should go to the same place, redirect stderr
       // to the handle already open for stdout.
       if (!DuplicateHandle(GetCurrentProcess(), si.hStdOutput,
@@ -326,7 +326,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **args,
       }
     } else {
       // Just redirect stderr
-      si.hStdError = RedirectIO(redirects[2], 2, ErrMsg);
+      si.hStdError = RedirectIO(Redirects[2], 2, ErrMsg);
       if (si.hStdError == INVALID_HANDLE_VALUE) {
         CloseHandle(si.hStdInput);
         CloseHandle(si.hStdOutput);
@@ -386,14 +386,14 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **args,
 
   // Assign the process to a job if a memory limit is defined.
   ScopedJobHandle hJob;
-  if (memoryLimit != 0) {
+  if (MemoryLimit != 0) {
     hJob = CreateJobObjectW(0, 0);
     bool success = false;
     if (hJob) {
       JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli;
       memset(&jeli, 0, sizeof(jeli));
       jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_PROCESS_MEMORY;
-      jeli.ProcessMemoryLimit = uintptr_t(memoryLimit) * 1048576;
+      jeli.ProcessMemoryLimit = uintptr_t(MemoryLimit) * 1048576;
       if (SetInformationJobObject(hJob, JobObjectExtendedLimitInformation,
                                   &jeli, sizeof(jeli))) {
         if (AssignProcessToJobObject(hJob, pi.hProcess))
@@ -534,16 +534,16 @@ llvm::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
   return EC;
 }
 
-bool llvm::sys::commandLineFitsWithinSystemLimits(StringRef Program, ArrayRef<const char*> Args) {
+bool llvm::sys::commandLineFitsWithinSystemLimits(StringRef Program,
+                                                  ArrayRef<const char *> Args) {
   // The documented max length of the command line passed to CreateProcess.
   static const size_t MaxCommandStringLength = 32768;
   // Account for the trailing space for the program path and the
   // trailing NULL of the last argument.
   size_t ArgLength = ArgLenWithQuotes(Program.str().c_str()) + 2;
-  for (ArrayRef<const char*>::iterator I = Args.begin(), E = Args.end();
-       I != E; ++I) {
+  for (const char* Arg : Args) {
     // Account for the trailing space for every arg
-    ArgLength += ArgLenWithQuotes(*I) + 1;
+    ArgLength += ArgLenWithQuotes(Arg) + 1;
     if (ArgLength > MaxCommandStringLength) {
       return false;
     }

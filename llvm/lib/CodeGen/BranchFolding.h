@@ -146,8 +146,8 @@ namespace llvm {
 
     /// Delete the instruction OldInst and everything after it, replacing it
     /// with an unconditional branch to NewDest.
-    void ReplaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
-                                 MachineBasicBlock *NewDest);
+    void replaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
+                                 MachineBasicBlock &NewDest);
 
     /// Given a machine basic block and an iterator into it, split the MBB so
     /// that the part before the iterator falls into the part starting at the
@@ -182,8 +182,8 @@ namespace llvm {
                                    unsigned &commonTailIndex);
 
     /// Create merged DebugLocs of identical instructions across SameTails and
-    /// assign it to the instruction in common tail.
-    void MergeCommonTailDebugLocs(unsigned commonTailIndex);
+    /// assign it to the instruction in common tail; merge MMOs and undef flags.
+    void mergeCommonTails(unsigned commonTailIndex);
 
     bool OptimizeBranches(MachineFunction &MF);
 
