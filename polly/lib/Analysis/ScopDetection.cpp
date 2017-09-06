@@ -607,9 +607,6 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
   const SCEV *LHS = SE.getSCEVAtScope(ICmp->getOperand(0), L);
   const SCEV *RHS = SE.getSCEVAtScope(ICmp->getOperand(1), L);
 
-  LHS = tryForwardThroughPHI(LHS, Context.CurRegion, SE, LI, DT);
-  RHS = tryForwardThroughPHI(RHS, Context.CurRegion, SE, LI, DT);
-
   // If unsigned operations are not allowed try to approximate the region.
   if (ICmp->isUnsigned() && !PollyAllowUnsignedOperations)
     return !IsLoopBranch && AllowNonAffineSubRegions &&

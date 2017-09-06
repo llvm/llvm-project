@@ -251,15 +251,19 @@ void AArch64::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
     or32AArch64Imm(Loc, getBits(Val, 0, 11));
     break;
   case R_AARCH64_LDST16_ABS_LO12_NC:
+    checkAlignment<2>(Loc, Val, Type);
     or32AArch64Imm(Loc, getBits(Val, 1, 11));
     break;
   case R_AARCH64_LDST32_ABS_LO12_NC:
+    checkAlignment<4>(Loc, Val, Type);
     or32AArch64Imm(Loc, getBits(Val, 2, 11));
     break;
   case R_AARCH64_LDST64_ABS_LO12_NC:
+    checkAlignment<8>(Loc, Val, Type);
     or32AArch64Imm(Loc, getBits(Val, 3, 11));
     break;
   case R_AARCH64_LDST128_ABS_LO12_NC:
+    checkAlignment<16>(Loc, Val, Type);
     or32AArch64Imm(Loc, getBits(Val, 4, 11));
     break;
   case R_AARCH64_MOVW_UABS_G0_NC:

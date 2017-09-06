@@ -2613,6 +2613,9 @@ private:
       Decl *TagDecl = nullptr);
   /// \brief Parse 'omp declare reduction' construct.
   DeclGroupPtrTy ParseOpenMPDeclareReductionDirective(AccessSpecifier AS);
+  /// Parses initializer for provided omp_priv declaration inside the reduction
+  /// initializer.
+  void ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm);
 
   /// \brief Parses simple list of variables.
   ///

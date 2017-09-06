@@ -860,16 +860,15 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
   MI.eraseFromParent();
 
   // Recompute livein lists.
-  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   LivePhysRegs LiveRegs;
-  computeLiveIns(LiveRegs, MRI, *DoneBB);
-  computeLiveIns(LiveRegs, MRI, *StoreBB);
-  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  computeAndAddLiveIns(LiveRegs, *DoneBB);
+  computeAndAddLiveIns(LiveRegs, *StoreBB);
+  computeAndAddLiveIns(LiveRegs, *LoadCmpBB);
   // Do an extra pass around the loop to get loop carried registers right.
   StoreBB->clearLiveIns();
-  computeLiveIns(LiveRegs, MRI, *StoreBB);
+  computeAndAddLiveIns(LiveRegs, *StoreBB);
   LoadCmpBB->clearLiveIns();
-  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  computeAndAddLiveIns(LiveRegs, *LoadCmpBB);
 
   return true;
 }
@@ -980,16 +979,15 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   MI.eraseFromParent();
 
   // Recompute livein lists.
-  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   LivePhysRegs LiveRegs;
-  computeLiveIns(LiveRegs, MRI, *DoneBB);
-  computeLiveIns(LiveRegs, MRI, *StoreBB);
-  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  computeAndAddLiveIns(LiveRegs, *DoneBB);
+  computeAndAddLiveIns(LiveRegs, *StoreBB);
+  computeAndAddLiveIns(LiveRegs, *LoadCmpBB);
   // Do an extra pass around the loop to get loop carried registers right.
   StoreBB->clearLiveIns();
-  computeLiveIns(LiveRegs, MRI, *StoreBB);
+  computeAndAddLiveIns(LiveRegs, *StoreBB);
   LoadCmpBB->clearLiveIns();
-  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  computeAndAddLiveIns(LiveRegs, *LoadCmpBB);
 
   return true;
 }

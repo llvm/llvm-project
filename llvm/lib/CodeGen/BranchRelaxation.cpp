@@ -259,7 +259,7 @@ MachineBasicBlock *BranchRelaxation::splitBlockBeforeInstr(MachineInstr &MI,
 
   // Need to fix live-in lists if we track liveness.
   if (TRI->trackLivenessAfterRegAlloc(*MF))
-    computeLiveIns(LiveRegs, MF->getRegInfo(), *NewBB);
+    computeAndAddLiveIns(LiveRegs, *NewBB);
 
   ++NumSplit;
 
@@ -348,7 +348,7 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
 
     // Need to fix live-in lists if we track liveness.
     if (TRI->trackLivenessAfterRegAlloc(*MF))
-      computeLiveIns(LiveRegs, MF->getRegInfo(), NewBB);
+      computeAndAddLiveIns(LiveRegs, NewBB);
   }
 
   // We now have an appropriate fall-through block in place (either naturally or

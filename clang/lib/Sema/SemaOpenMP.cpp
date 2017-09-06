@@ -11533,7 +11533,7 @@ void Sema::ActOnOpenMPDeclareReductionCombinerEnd(Decl *D, Expr *Combiner) {
     DRD->setInvalidDecl();
 }
 
-void Sema::ActOnOpenMPDeclareReductionInitializerStart(Scope *S, Decl *D) {
+VarDecl *Sema::ActOnOpenMPDeclareReductionInitializerStart(Scope *S, Decl *D) {
   auto *DRD = cast<OMPDeclareReductionDecl>(D);
 
   // Enter new function scope.
@@ -11572,10 +11572,11 @@ void Sema::ActOnOpenMPDeclareReductionInitializerStart(Scope *S, Decl *D) {
     DRD->addDecl(OmpPrivParm);
     DRD->addDecl(OmpOrigParm);
   }
+  return OmpPrivParm;
 }
 
-void Sema::ActOnOpenMPDeclareReductionInitializerEnd(Decl *D,
-                                                     Expr *Initializer) {
+void Sema::ActOnOpenMPDeclareReductionInitializerEnd(Decl *D, Expr *Initializer,
+                                                     VarDecl *OmpPrivParm) {
   auto *DRD = cast<OMPDeclareReductionDecl>(D);
   DiscardCleanupsInEvaluationContext();
   PopExpressionEvaluationContext();
@@ -11583,10 +11584,16 @@ void Sema::ActOnOpenMPDeclareReductionInitializerEnd(Decl *D,
   PopDeclContext();
   PopFunctionScopeInfo();
 
-  if (Initializer != nullptr)
-    DRD->setInitializer(Initializer);
-  else
+  if (Initializer != nullptr) {
+    DRD->setInitializer(Initializer, OMPDeclareReductionDecl::CallInit);
+  } else if (OmpPrivParm->hasInit()) {
+    DRD->setInitializer(OmpPrivParm->getInit(),
+                        OmpPrivParm->isDirectInit()
+                            ? OMPDeclareReductionDecl::DirectInit
+                            : OMPDeclareReductionDecl::CopyInit);
+  } else {
     DRD->setInvalidDecl();
+  }
 }
 
 Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareReductionDirectiveEnd(

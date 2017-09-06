@@ -1764,6 +1764,12 @@ bool IfConverter::IfConvertDiamondCommon(
       Redefs.stepForward(MI, Dummy);
     }
   }
+  // Kill flags in the true block for registers living into the false block
+  // must be removed. This should be done before extracting the common
+  // instructions from the beginning of the MBB1, since these instructions
+  // can actually differ between MBB1 and MBB2 in terms of <kill> flags.
+  RemoveKills(MBB1.begin(), MBB1.end(), DontKill, *TRI);
+
   BBI.BB->splice(BBI.BB->end(), &MBB1, MBB1.begin(), DI1);
   MBB2.erase(MBB2.begin(), DI2);
 
@@ -1787,10 +1793,6 @@ bool IfConverter::IfConvertDiamondCommon(
       ++i;
   }
   MBB1.erase(DI1, MBB1.end());
-
-  // Kill flags in the true block for registers living into the false block
-  // must be removed.
-  RemoveKills(MBB1.begin(), MBB1.end(), DontKill, *TRI);
 
   DI2 = BBI2->BB->end();
   // The branches have been checked to match. Skip over the branch in the false

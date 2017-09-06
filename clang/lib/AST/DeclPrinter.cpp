@@ -1544,7 +1544,19 @@ void DeclPrinter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
     Out << ")";
     if (auto *Init = D->getInitializer()) {
       Out << " initializer(";
+      switch (D->getInitializerKind()) {
+      case OMPDeclareReductionDecl::DirectInit:
+        Out << "omp_priv(";
+        break;
+      case OMPDeclareReductionDecl::CopyInit:
+        Out << "omp_priv = ";
+        break;
+      case OMPDeclareReductionDecl::CallInit:
+        break;
+      }
       Init->printPretty(Out, nullptr, Policy, 0);
+      if (D->getInitializerKind() == OMPDeclareReductionDecl::DirectInit)
+        Out << ")";
       Out << ")";
     }
   }

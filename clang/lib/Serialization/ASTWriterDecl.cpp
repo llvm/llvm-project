@@ -928,6 +928,24 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   } else {
     Record.push_back(0);
   }
+
+  if (D->getStorageDuration() == SD_Static) {
+    bool ModulesCodegen = false;
+    if (Writer.WritingModule &&
+        !D->getDescribedVarTemplate() && !D->getMemberSpecializationInfo() &&
+        !isa<VarTemplateSpecializationDecl>(D)) {
+      // When building a C++ Modules TS module interface unit, a strong
+      // definition in the module interface is provided by the compilation of
+      // that module interface unit, not by its users. (Inline variables are
+      // still emitted in module users.)
+      ModulesCodegen =
+          (Writer.WritingModule->Kind == Module::ModuleInterfaceUnit &&
+           Writer.Context->GetGVALinkageForVariable(D) == GVA_StrongExternal);
+    }
+    Record.push_back(ModulesCodegen);
+    if (ModulesCodegen)
+      Writer.ModularCodegenDecls.push_back(Writer.GetDeclRef(D));
+  }
   
   enum {
     VarNotTemplate = 0, VarTemplate, StaticDataMemberSpecialization
@@ -963,6 +981,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
       !D->isConstexpr() &&
       !D->isInitCapture() &&
       !D->isPreviousDeclInSameBlockScope() &&
+      D->getStorageDuration() != SD_Static &&
       !D->getMemberSpecializationInfo())
     AbbrevToUse = Writer.getDeclVarAbbrev();
 
@@ -1697,6 +1716,7 @@ void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   Record.AddSourceLocation(D->getLocStart());
   Record.AddStmt(D->getCombiner());
   Record.AddStmt(D->getInitializer());
+  Record.push_back(D->getInitializerKind());
   Record.AddDeclRef(D->getPrevDeclInScope());
   Code = serialization::DECL_OMP_DECLARE_REDUCTION;
 }

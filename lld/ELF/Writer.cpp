@@ -192,9 +192,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
-  if (!Script->Opt.HasSections && !Config->Relocatable)
-    fixSectionAlignments();
-
   // If -compressed-debug-sections is specified, we need to compress
   // .debug_* sections. Do it right now because it changes the size of
   // output sections.
@@ -1384,6 +1381,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
                   In<ELFT>::VerSym,  In<ELFT>::VerNeed,
                   InX::Dynamic},
                  [](SyntheticSection *SS) { SS->finalizeContents(); });
+
+  if (!Script->Opt.HasSections && !Config->Relocatable)
+    fixSectionAlignments();
 
   // Some architectures use small displacements for jump instructions.
   // It is linker's responsibility to create thunks containing long

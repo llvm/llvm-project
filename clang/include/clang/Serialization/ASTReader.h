@@ -1133,7 +1133,7 @@ private:
   /// predefines buffer may contain additional definitions.
   std::string SuggestedPredefines;
 
-  llvm::DenseMap<const Decl *, bool> BodySource;
+  llvm::DenseMap<const Decl *, bool> DefinitionSource;
 
   /// \brief Reads a statement from the specified cursor.
   Stmt *ReadStmtFromStream(ModuleFile &F);
