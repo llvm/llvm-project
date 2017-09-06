@@ -1095,5 +1095,60 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetValue) {
   EXPECT_EQ(cast<SCEVConstant>(NewEC)->getAPInt().getLimitedValue(), 1999u);
 }
 
+TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
+  // Reference: https://reviews.llvm.org/D37265
+  // Make sure that SCEV does not blow up when constructing an AddRec
+  // with predicates for a phi with the update pattern:
+  //  (SExt/ZExt ix (Trunc iy (%SymbolicPHI) to ix) to iy) + InvariantAccum
+  // when either the initial value of the Phi or the InvariantAccum are
+  // constants that are too large to fit in an ix but are zero when truncated to
+  // ix.
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), std::vector<Type *>(), false);
+  Function *F = cast<Function>(M.getOrInsertFunction("addrecphitest", FTy));
+
+  /*
+    Create IR:
+    entry:
+     br label %loop
+    loop:
+     %0 = phi i64 [-9223372036854775808, %entry], [%3, %loop]
+     %1 = shl i64 %0, 32
+     %2 = ashr exact i64 %1, 32
+     %3 = add i64 %2, -9223372036854775808
+     br i1 undef, label %exit, label %loop
+    exit:
+     ret void
+   */
+  BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
+  BasicBlock *LoopBB = BasicBlock::Create(Context, "loop", F);
+  BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
+
+  // entry:
+  BranchInst::Create(LoopBB, EntryBB);
+  // loop:
+  auto *MinInt64 =
+      ConstantInt::get(Context, APInt(64, 0x8000000000000000U, true));
+  auto *Int64_32 = ConstantInt::get(Context, APInt(64, 32));
+  auto *Br = BranchInst::Create(
+      LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
+  auto *Phi = PHINode::Create(Type::getInt64Ty(Context), 2, "", Br);
+  auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br);
+  auto *AShr = BinaryOperator::CreateExactAShr(Shl, Int64_32, "", Br);
+  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt64, "", Br);
+  Phi->addIncoming(MinInt64, EntryBB);
+  Phi->addIncoming(Add, LoopBB);
+  // exit:
+  ReturnInst::Create(Context, nullptr, ExitBB);
+
+  // Make sure that SCEV doesn't blow up
+  ScalarEvolution SE = buildSE(*F);
+  SCEVUnionPredicate Preds;
+  const SCEV *Expr = SE.getSCEV(Phi);
+  EXPECT_NE(nullptr, Expr);
+  EXPECT_TRUE(isa<SCEVUnknown>(Expr));
+  auto Result = SE.createAddRecFromPHIWithCasts(cast<SCEVUnknown>(Expr));
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

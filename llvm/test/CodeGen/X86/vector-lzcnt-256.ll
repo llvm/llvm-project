@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=X64 --check-prefix=NOBW --check-prefix=AVX --check-prefix=AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl | FileCheck %s --check-prefix=X64 --check-prefix=NOBW --check-prefix=AVX512VL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512bw,+avx512dq | FileCheck %s --check-prefix=X64 --check-prefix=AVX512VLBWDQ
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=knl -mattr=+avx512cd -mattr=+avx512vl | FileCheck %s --check-prefix=X64 --check-prefix=NOBW --check-prefix=AVX512 --check-prefix=AVX512VLCD
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=knl -mattr=+avx512cd | FileCheck %s --check-prefix=X64 --check-prefix=NOBW --check-prefix=AVX512 --check-prefix=AVX512CD
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq,+avx512cd,+avx512vl | FileCheck %s --check-prefix=X64 --check-prefix=NOBW --check-prefix=AVX512 --check-prefix=AVX512VLCD
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq,+avx512cd | FileCheck %s --check-prefix=X64 --check-prefix=NOBW --check-prefix=AVX512 --check-prefix=AVX512CD
 ;
 ; Just one 32-bit run to make sure we do reasonable things for i64 lzcnt.
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=X32-AVX

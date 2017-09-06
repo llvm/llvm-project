@@ -268,19 +268,26 @@ ELF-MIPSEL-NEXT:     - Name:            '$.str'
 ELF-MIPSEL-NEXT:       Type:            STT_OBJECT
 ELF-MIPSEL-NEXT:       Section:         .rodata.str1.1
 ELF-MIPSEL-NEXT:       Size:            0x000000000000000D
-ELF-MIPSEL-NEXT:     - Type:            STT_SECTION
+ELF-MIPSEL-NEXT:     - Name:            .text
+ELF-MIPSEL-NEXT:       Type:            STT_SECTION
 ELF-MIPSEL-NEXT:       Section:         .text
-ELF-MIPSEL-NEXT:     - Type:            STT_SECTION
+ELF-MIPSEL-NEXT:     - Name:            .data
+ELF-MIPSEL-NEXT:       Type:            STT_SECTION
 ELF-MIPSEL-NEXT:       Section:         .data
-ELF-MIPSEL-NEXT:     - Type:            STT_SECTION
+ELF-MIPSEL-NEXT:     - Name:            .bss
+ELF-MIPSEL-NEXT:       Type:            STT_SECTION
 ELF-MIPSEL-NEXT:       Section:         .bss
-ELF-MIPSEL-NEXT:     - Type:            STT_SECTION
+ELF-MIPSEL-NEXT:     - Name:            .mdebug.abi32
+ELF-MIPSEL-NEXT:       Type:            STT_SECTION
 ELF-MIPSEL-NEXT:       Section:         .mdebug.abi32
-ELF-MIPSEL-NEXT:     - Type:            STT_SECTION
+ELF-MIPSEL-NEXT:     - Name:            .rodata.str1.1
+ELF-MIPSEL-NEXT:       Type:            STT_SECTION
 ELF-MIPSEL-NEXT:       Section:         .rodata.str1.1
-ELF-MIPSEL-NEXT:     - Type:            STT_SECTION
+ELF-MIPSEL-NEXT:     - Name:            .reginfo
+ELF-MIPSEL-NEXT:       Type:            STT_SECTION
 ELF-MIPSEL-NEXT:       Section:         .reginfo
-ELF-MIPSEL-NEXT:     - Type:            STT_SECTION
+ELF-MIPSEL-NEXT:     - Name:            .MIPS.abiflags
+ELF-MIPSEL-NEXT:       Type:            STT_SECTION
 ELF-MIPSEL-NEXT:       Section:         .MIPS.abiflags
 ELF-MIPSEL-NEXT:   Global:
 ELF-MIPSEL-NEXT:     - Name:            main
@@ -336,17 +343,22 @@ ELF-MIPS64EL-NEXT:     AddressAlign:    0x0000000000000004
 ELF-MIPS64EL-NEXT:     Content:         ''
 ELF-MIPS64EL-NEXT: Symbols:
 ELF-MIPS64EL-NEXT:   Local:
-ELF-MIPS64EL-NEXT:     - Type:            STT_SECTION
+ELF-MIPS64EL-NEXT:     - Name:            .text
+ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
 ELF-MIPS64EL-NEXT:       Section:         .text
-ELF-MIPS64EL-NEXT:     - Type:            STT_SECTION
+ELF-MIPS64EL-NEXT:     - Name:            .data
+ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
 ELF-MIPS64EL-NEXT:       Section:         .data
-ELF-MIPS64EL-NEXT:     - Type:            STT_SECTION
+ELF-MIPS64EL-NEXT:     - Name:            .bss
+ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
 ELF-MIPS64EL-NEXT:       Section:         .bss
 ELF-MIPS64EL-NEXT:     - Name:            bar
 ELF-MIPS64EL-NEXT:       Section:         .data
-ELF-MIPS64EL-NEXT:     - Type:            STT_SECTION
+ELF-MIPS64EL-NEXT:     - Name:            .MIPS.options
+ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
 ELF-MIPS64EL-NEXT:       Section:         .MIPS.options
-ELF-MIPS64EL-NEXT:     - Type:            STT_SECTION
+ELF-MIPS64EL-NEXT:     - Name:            .pdr
+ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
 ELF-MIPS64EL-NEXT:       Section:         .pdr
 ELF-MIPS64EL-NEXT:   Global:
 ELF-MIPS64EL-NEXT:     - Name:            zed
@@ -382,7 +394,7 @@ ELF-X86-64-NEXT:     AddressAlign:    0x0000000000000008
 ELF-X86-64-NEXT:     Info:            .text
 ELF-X86-64-NEXT:     Relocations:
 ELF-X86-64-NEXT:       - Offset:          0x000000000000000D
-ELF-X86-64-NEXT:         Symbol:          ''
+ELF-X86-64-NEXT:         Symbol:          .rodata.str1.1
 ELF-X86-64-NEXT:         Type:            R_X86_64_32S
 ELF-X86-64-NEXT:       - Offset:          0x0000000000000012
 ELF-X86-64-NEXT:         Symbol:          puts
@@ -396,11 +408,14 @@ ELF-X86-64-NEXT: Symbols:
 ELF-X86-64-NEXT:   Local:
 ELF-X86-64-NEXT:     - Name:            trivial-object-test.s
 ELF-X86-64-NEXT:       Type:            STT_FILE
-ELF-X86-64-NEXT:     - Type:            STT_SECTION
+ELF-X86-64-NEXT:     - Name:            .text
+ELF-X86-64-NEXT:       Type:            STT_SECTION
 ELF-X86-64-NEXT:       Section:         .text
-ELF-X86-64-NEXT:     - Type:            STT_SECTION
+ELF-X86-64-NEXT:     - Name:            .rodata.str1.1
+ELF-X86-64-NEXT:       Type:            STT_SECTION
 ELF-X86-64-NEXT:       Section:         .rodata.str1.1
-ELF-X86-64-NEXT:     - Type:            STT_SECTION
+ELF-X86-64-NEXT:     - Name:            .note.GNU-stack
+ELF-X86-64-NEXT:       Type:            STT_SECTION
 ELF-X86-64-NEXT:       Section:         .note.GNU-stack
 ELF-X86-64-NEXT:   Global:
 ELF-X86-64-NEXT:     - Name:            main
@@ -431,9 +446,11 @@ ELF-AVR-NEXT:     AddressAlign:    0x0000000000000001
 ELF-AVR-NEXT:     Content:         ''
 ELF-AVR-NEXT: Symbols:
 ELF-AVR-NEXT:   Local:
-ELF-AVR-NEXT:     - Type:            STT_SECTION
+ELF-AVR-NEXT:     - Name:           .text
+ELF-AVR-NEXT:       Type:            STT_SECTION
 ELF-AVR-NEXT:       Section:         .text
-ELF-AVR-NEXT:     - Type:            STT_SECTION
+ELF-AVR-NEXT:     - Name:           .data
+ELF-AVR-NEXT:       Type:            STT_SECTION
 ELF-AVR-NEXT:       Section:         .data
 ELF-AVR-NEXT:       Value:           0x0000000000800060
 ELF-AVR-NEXT:     - Name:            a.o

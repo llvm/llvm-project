@@ -32,6 +32,7 @@ HANDLE_TARGET_OPCODE(INLINEASM)
 HANDLE_TARGET_OPCODE(CFI_INSTRUCTION)
 HANDLE_TARGET_OPCODE(EH_LABEL)
 HANDLE_TARGET_OPCODE(GC_LABEL)
+HANDLE_TARGET_OPCODE(ANNOTATION_LABEL)
 
 /// KILL - This instruction is a noop that is used only to adjust the
 /// liveness of registers. This can be useful when dealing with

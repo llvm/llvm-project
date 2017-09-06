@@ -118,8 +118,8 @@ bool EvexToVexInstPass::runOnMachineFunction(MachineFunction &MF) {
   /// EVEX encoded instrs by VEX encoding when possible.
   for (MachineBasicBlock &MBB : MF) {
 
-    // Traverse the basic block. 
-    for (MachineInstr &MI : MBB)      
+    // Traverse the basic block.
+    for (MachineInstr &MI : MBB)
       Changed |= CompressEvexToVexImpl(MI);
   }
 
@@ -147,18 +147,18 @@ bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
   // Check for EVEX instructions only.
   if ((Desc.TSFlags & X86II::EncodingMask) != X86II::EVEX)
     return false;
- 
-  // Check for EVEX instructions with mask or broadcast as in these cases 
-  // the EVEX prefix is needed in order to carry this information 
+
+  // Check for EVEX instructions with mask or broadcast as in these cases
+  // the EVEX prefix is needed in order to carry this information
   // thus preventing the transformation to VEX encoding.
   if (Desc.TSFlags & (X86II::EVEX_K | X86II::EVEX_B))
     return false;
- 
+
   // Check for non EVEX_V512 instrs only.
   // EVEX_V512 instr: bit EVEX_L2 = 1; bit VEX_L = 0.
   if ((Desc.TSFlags & X86II::EVEX_L2) && !(Desc.TSFlags & X86II::VEX_L))
-    return false;  
-        
+    return false;
+
   // EVEX_V128 instr: bit EVEX_L2 = 0, bit VEX_L = 0.
   bool IsEVEX_V128 =
       (!(Desc.TSFlags & X86II::EVEX_L2) && !(Desc.TSFlags & X86II::VEX_L));
@@ -213,11 +213,11 @@ bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
     if (isHiRegIdx(Reg))
       return false;
   }
- 
+
   const MCInstrDesc &MCID = TII->get(NewOpc);
   MI.setDesc(MCID);
   MI.setAsmPrinterFlag(AC_EVEX_2_VEX);
-  return true; 
+  return true;
 }
 
 INITIALIZE_PASS(EvexToVexInstPass, EVEX2VEX_NAME, EVEX2VEX_DESC, false, false)

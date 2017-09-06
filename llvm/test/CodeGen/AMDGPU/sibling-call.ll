@@ -11,6 +11,22 @@ define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
   ret i32 %add0
 }
 
+; GCN-LABEL: {{^}}i32_fastcc_i32_i32_stack_object:
+; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN: s_mov_b32 s5, s32
+; GCN: v_add_i32_e32 v0, vcc, v1, v
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset:24
+; GCN: s_waitcnt vmcnt(0)
+; GCN: s_setpc_b64
+; GCN: ; ScratchSize: 68
+define fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %arg0, i32 %arg1) #1 {
+  %alloca = alloca [16 x i32], align 4
+  %gep = getelementptr inbounds [16 x i32], [16 x i32]* %alloca, i32 0, i32 5
+  store volatile i32 9, i32* %gep
+  %add0 = add i32 %arg0, %arg1
+  ret i32 %add0
+}
+
 ; GCN-LABEL: {{^}}sibling_call_i32_fastcc_i32_i32:
 define fastcc i32 @sibling_call_i32_fastcc_i32_i32(i32 %a, i32 %b, i32 %c) #1 {
 entry:
@@ -22,12 +38,27 @@ entry:
 ; GCN: v_mov_b32_e32 [[NINE:v[0-9]+]], 9
 ; GCN: buffer_store_dword [[NINE]], off, s[0:3], s5 offset:24
 ; GCN: s_setpc_b64
+; GCN: ; ScratchSize: 68
 define fastcc i32 @sibling_call_i32_fastcc_i32_i32_stack_object(i32 %a, i32 %b, i32 %c) #1 {
 entry:
   %alloca = alloca [16 x i32], align 4
   %gep = getelementptr inbounds [16 x i32], [16 x i32]* %alloca, i32 0, i32 5
   store volatile i32 9, i32* %gep
   %ret = tail call fastcc i32 @i32_fastcc_i32_i32(i32 %a, i32 %b)
+  ret i32 %ret
+}
+
+; GCN-LABEL: {{^}}sibling_call_i32_fastcc_i32_i32_callee_stack_object:
+; GCN: v_mov_b32_e32 [[NINE:v[0-9]+]], 9
+; GCN: buffer_store_dword [[NINE]], off, s[0:3], s5 offset:24
+; GCN: s_setpc_b64
+; GCN: ; ScratchSize: 136
+define fastcc i32 @sibling_call_i32_fastcc_i32_i32_callee_stack_object(i32 %a, i32 %b, i32 %c) #1 {
+entry:
+  %alloca = alloca [16 x i32], align 4
+  %gep = getelementptr inbounds [16 x i32], [16 x i32]* %alloca, i32 0, i32 5
+  store volatile i32 9, i32* %gep
+  %ret = tail call fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %a, i32 %b)
   ret i32 %ret
 }
 

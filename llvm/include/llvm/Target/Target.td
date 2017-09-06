@@ -840,6 +840,13 @@ def GC_LABEL : Instruction {
   let hasCtrlDep = 1;
   let isNotDuplicable = 1;
 }
+def ANNOTATION_LABEL : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins i32imm:$id);
+  let AsmString = "";
+  let hasCtrlDep = 1;
+  let isNotDuplicable = 1;
+}
 def KILL : Instruction {
   let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);

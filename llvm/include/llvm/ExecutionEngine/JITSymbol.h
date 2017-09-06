@@ -67,21 +67,22 @@ public:
     return (Flags & HasError) == HasError;
   }
 
-  /// @brief Returns true is the Weak flag is set.
+  /// @brief Returns true if the Weak flag is set.
   bool isWeak() const {
     return (Flags & Weak) == Weak;
   }
 
-  /// @brief Returns true is the Weak flag is set.
+  /// @brief Returns true if the Common flag is set.
   bool isCommon() const {
     return (Flags & Common) == Common;
   }
 
+  /// @brief Returns true if the symbol isn't weak or common.
   bool isStrongDefinition() const {
     return !isWeak() && !isCommon();
   }
 
-  /// @brief Returns true is the Weak flag is set.
+  /// @brief Returns true if the Exported flag is set.
   bool isExported() const {
     return (Flags & Exported) == Exported;
   }
