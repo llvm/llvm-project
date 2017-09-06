@@ -6914,6 +6914,8 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src2,
                             (_.ScalarLdFrag addr:$src3), _.FRC:$src1))), 1>;
 
+  // One pattern is 312 order so that the load is in a different place from the
+  // 213 and 231 patterns this helps tablegen's duplicate pattern detection.
   defm NAME#132#SUFF#Z: avx512_fma3s_common<opc132, OpcodeStr#"132"#_.Suffix, _,
                 (null_frag),
                 (_.VT (OpNodeRnds1 _.RC:$src1, _.ScalarIntMemCPat:$src3,
@@ -6921,8 +6923,8 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
                 (null_frag),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src1, _.FRC:$src3,
                          _.FRC:$src2))),
-                (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src1,
-                          (_.ScalarLdFrag addr:$src3), _.FRC:$src2))), 1>;
+                (set _.FRC:$dst, (_.EltVT (OpNode (_.ScalarLdFrag addr:$src3),
+                                 _.FRC:$src1, _.FRC:$src2))), 1>;
   }
 }
 

@@ -289,6 +289,16 @@ bool X86CmovConverterPass::collectCmovCandidates(
             // Can't handle mixed conditions with memory operands.
             SkipGroup = true;
         }
+        // Check if we were relying on zero-extending behavior of the CMOV.
+        if (!SkipGroup &&
+            llvm::any_of(
+                MRI->use_nodbg_instructions(I.defs().begin()->getReg()),
+                [&](MachineInstr &UseI) {
+                  return UseI.getOpcode() == X86::SUBREG_TO_REG;
+                }))
+          // FIXME: We should model the cost of using an explicit MOV to handle
+          // the zero-extension rather than just refusing to handle this.
+          SkipGroup = true;
         continue;
       }
       // If Group is empty, keep looking for first CMOV in the range.

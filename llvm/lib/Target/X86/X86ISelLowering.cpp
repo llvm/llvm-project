@@ -12081,7 +12081,8 @@ static SDValue lowerVectorShuffleAsSplitOrBlend(const SDLoc &DL, MVT VT,
 static SDValue lowerVectorShuffleAsLanePermuteAndBlend(const SDLoc &DL, MVT VT,
                                                        SDValue V1, SDValue V2,
                                                        ArrayRef<int> Mask,
-                                                       SelectionDAG &DAG) {
+                                                       SelectionDAG &DAG,
+                                                       const X86Subtarget &Subtarget) {
   // FIXME: This should probably be generalized for 512-bit vectors as well.
   assert(VT.is256BitVector() && "Only for 256-bit vector shuffles!");
   int Size = Mask.size();
@@ -12090,12 +12091,21 @@ static SDValue lowerVectorShuffleAsLanePermuteAndBlend(const SDLoc &DL, MVT VT,
   // If there are only inputs from one 128-bit lane, splitting will in fact be
   // less expensive. The flags track whether the given lane contains an element
   // that crosses to another lane.
-  bool LaneCrossing[2] = {false, false};
-  for (int i = 0; i < Size; ++i)
-    if (Mask[i] >= 0 && (Mask[i] % Size) / LaneSize != i / LaneSize)
-      LaneCrossing[(Mask[i] % Size) / LaneSize] = true;
-  if (!LaneCrossing[0] || !LaneCrossing[1])
-    return splitAndLowerVectorShuffle(DL, VT, V1, V2, Mask, DAG);
+  if (!Subtarget.hasAVX2()) {
+    bool LaneCrossing[2] = {false, false};
+    for (int i = 0; i < Size; ++i)
+      if (Mask[i] >= 0 && (Mask[i] % Size) / LaneSize != i / LaneSize)
+        LaneCrossing[(Mask[i] % Size) / LaneSize] = true;
+    if (!LaneCrossing[0] || !LaneCrossing[1])
+      return splitAndLowerVectorShuffle(DL, VT, V1, V2, Mask, DAG);
+  } else {
+    bool LaneUsed[2] = {false, false};
+    for (int i = 0; i < Size; ++i)
+      if (Mask[i] >= 0)
+        LaneUsed[(Mask[i] / LaneSize)] = true;
+    if (!LaneUsed[0] || !LaneUsed[1])
+      return splitAndLowerVectorShuffle(DL, VT, V1, V2, Mask, DAG);
+  }
 
   assert(V2.isUndef() &&
          "This last part of this routine only works on single input shuffles");
@@ -12710,7 +12720,7 @@ static SDValue lowerV4F64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
     // Otherwise, fall back.
     return lowerVectorShuffleAsLanePermuteAndBlend(DL, MVT::v4f64, V1, V2, Mask,
-                                                   DAG);
+                                                   DAG, Subtarget);
   }
 
   // Use dedicated unpack instructions for masks that match their pattern.
@@ -12913,7 +12923,7 @@ static SDValue lowerV8F32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
     // Otherwise, fall back.
     return lowerVectorShuffleAsLanePermuteAndBlend(DL, MVT::v8f32, V1, V2, Mask,
-                                                   DAG);
+                                                   DAG, Subtarget);
   }
 
   // Try to simplify this by merging 128-bit lanes to enable a lane-based
@@ -13114,7 +13124,7 @@ static SDValue lowerV16I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     // element types.
     if (is128BitLaneCrossingShuffleMask(MVT::v16i16, Mask))
       return lowerVectorShuffleAsLanePermuteAndBlend(DL, MVT::v16i16, V1, V2,
-                                                     Mask, DAG);
+                                                     Mask, DAG, Subtarget);
 
     SmallVector<int, 8> RepeatedMask;
     if (is128BitLaneRepeatedShuffleMask(MVT::v16i16, Mask, RepeatedMask)) {
@@ -13199,7 +13209,7 @@ static SDValue lowerV32I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // element types.
   if (V2.isUndef() && is128BitLaneCrossingShuffleMask(MVT::v32i8, Mask))
     return lowerVectorShuffleAsLanePermuteAndBlend(DL, MVT::v32i8, V1, V2, Mask,
-                                                   DAG);
+                                                   DAG, Subtarget);
 
   if (SDValue PSHUFB = lowerVectorShuffleWithPSHUFB(
           DL, MVT::v32i8, Mask, V1, V2, Zeroable, Subtarget, DAG))

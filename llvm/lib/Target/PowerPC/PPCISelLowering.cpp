@@ -7463,9 +7463,11 @@ static SDValue BuildVSLDOI(SDValue LHS, SDValue RHS, unsigned Amt, EVT VT,
 /// - The node is a "load-and-splat"
 /// In all other cases, we will choose to keep the BUILD_VECTOR.
 static bool haveEfficientBuildVectorPattern(BuildVectorSDNode *V,
-                                            bool HasDirectMove) {
+                                            bool HasDirectMove,
+                                            bool HasP8Vector) {
   EVT VecVT = V->getValueType(0);
-  bool RightType = VecVT == MVT::v2f64 || VecVT == MVT::v4f32 ||
+  bool RightType = VecVT == MVT::v2f64 ||
+    (HasP8Vector && VecVT == MVT::v4f32) ||
     (HasDirectMove && (VecVT == MVT::v2i64 || VecVT == MVT::v4i32));
   if (!RightType)
     return false;
@@ -7627,7 +7629,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // lowered to VSX instructions under certain conditions.
     // Without VSX, there is no pattern more efficient than expanding the node.
     if (Subtarget.hasVSX() &&
-        haveEfficientBuildVectorPattern(BVN, Subtarget.hasDirectMove()))
+        haveEfficientBuildVectorPattern(BVN, Subtarget.hasDirectMove(),
+                                        Subtarget.hasP8Vector()))
       return Op;
     return SDValue();
   }
