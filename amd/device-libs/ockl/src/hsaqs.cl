@@ -15,103 +15,11 @@
 
 #define ATTR __attribute__((always_inline))
 
-// TODO Remove this workaround when the compiler is ready
-
-#define AL(T,P,O,S) ({ \
-    T __l; \
-    switch (O) { \
-    case __ockl_memory_order_acquire: \
-        __l = atomic_load_explicit(P, memory_order_acquire, S); \
-        break; \
-    case __ockl_memory_order_seq_cst: \
-        __l = atomic_load_explicit(P, memory_order_seq_cst, S); \
-        break; \
-    default: \
-        __l = atomic_load_explicit(P, memory_order_relaxed, S); \
-        break; \
-    } \
-    __l; \
-})
-
-#define AS(P,V,O,S) ({ \
-    switch (O) { \
-    case __ockl_memory_order_release: \
-        atomic_store_explicit(P, V, memory_order_release, S); \
-        break; \
-    case __ockl_memory_order_seq_cst: \
-        atomic_store_explicit(P, V, memory_order_seq_cst, S); \
-        break; \
-    default: \
-        atomic_store_explicit(P, V, memory_order_relaxed, S); \
-        break; \
-    } \
-})
-
-#define AF(T,K,P,V,O,S) ({ \
-    T __f; \
-    switch (O) { \
-    case __ockl_memory_order_acquire: \
-        __f = atomic_fetch_##K##_explicit(P, V, memory_order_acquire, S); \
-        break; \
-    case __ockl_memory_order_release: \
-        __f = atomic_fetch_##K##_explicit(P, V, memory_order_release, S); \
-        break; \
-    case __ockl_memory_order_acq_rel: \
-        __f = atomic_fetch_##K##_explicit(P, V, memory_order_acq_rel, S); \
-        break; \
-    case __ockl_memory_order_seq_cst: \
-        __f = atomic_fetch_##K##_explicit(P, V, memory_order_seq_cst, S); \
-        break; \
-    default: \
-        __f = atomic_fetch_##K##_explicit(P, V, memory_order_relaxed, S); \
-        break; \
-    } \
-    __f; \
-})
-
-#define AX(T,P,V,O,S) ({ \
-    T __e; \
-    switch (O) { \
-    case __ockl_memory_order_acquire: \
-        __e = atomic_exchange_explicit(P, V, memory_order_acquire, S); \
-        break; \
-    case __ockl_memory_order_release: \
-        __e = atomic_exchange_explicit(P, V, memory_order_release, S); \
-        break; \
-    case __ockl_memory_order_acq_rel: \
-        __e = atomic_exchange_explicit(P, V, memory_order_acq_rel, S); \
-        break; \
-    case __ockl_memory_order_seq_cst: \
-        __e = atomic_exchange_explicit(P, V, memory_order_seq_cst, S); \
-        break; \
-    default: \
-        __e = atomic_exchange_explicit(P, V, memory_order_relaxed, S); \
-        break; \
-    } \
-    __e; \
-})
-
-#define AC(P,E,V,O,R,S) ({ \
-    bool __c; \
-    switch (O) { \
-    case __ockl_memory_order_acquire: \
-        __c = atomic_compare_exchange_strong_explicit(P, E, V, memory_order_acquire, R, S); \
-        break; \
-    case __ockl_memory_order_release: \
-        __c = atomic_compare_exchange_strong_explicit(P, E, V, memory_order_release, R, S); \
-        break; \
-    case __ockl_memory_order_acq_rel: \
-        __c = atomic_compare_exchange_strong_explicit(P, E, V, memory_order_acq_rel, R, S); \
-        break; \
-    case __ockl_memory_order_seq_cst: \
-        __c = atomic_compare_exchange_strong_explicit(P, E, V, memory_order_seq_cst, R, S); \
-        break; \
-    default: \
-        __c = atomic_compare_exchange_strong_explicit(P, E, V, memory_order_relaxed, R, S); \
-        break; \
-    } \
-    __c; \
-})
+#define AL(T,P,O,S) __opencl_atomic_load(P,O,S)
+#define AS(P,V,O,S) __opencl_atomic_store(P,V,O,S)
+#define AF(T,K,P,V,O,S) __opencl_atomic_fetch_##K(P,V,O,S)
+#define AX(T,P,V,O,S) __opencl_atomic_exchange(P,V,O,S)
+#define AC(P,E,V,O,R,S) __opencl_atomic_compare_exchange_strong(P,E,V,O,R,S)
 
 //
 // HSA queue ops
