@@ -616,14 +616,15 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
   else if (Sec->AddrExpr)
     setDot(Sec->AddrExpr, Sec->Location, false);
 
+  CurAddressState->MemRegion = Sec->MemRegion;
+  if (CurAddressState->MemRegion)
+    Dot = CurAddressState->MemRegionOffset[CurAddressState->MemRegion];
+
   if (Sec->LMAExpr) {
     uint64_t D = Dot;
     CurAddressState->LMAOffset = [=] { return Sec->LMAExpr().getValue() - D; };
   }
 
-  CurAddressState->MemRegion = Sec->MemRegion;
-  if (CurAddressState->MemRegion)
-    Dot = CurAddressState->MemRegionOffset[CurAddressState->MemRegion];
   switchTo(Sec);
 
   // We do not support custom layout for compressed debug sectons.
