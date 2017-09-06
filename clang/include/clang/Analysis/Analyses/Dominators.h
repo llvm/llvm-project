@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_DOMINATORS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_DOMINATORS_H
 
-#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/Support/GenericDomTree.h"

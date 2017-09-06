@@ -1,4 +1,4 @@
-//=== AnalysisContext.h - Analysis context for Path Sens analysis --*- C++ -*-//
+//=== AnalysisDeclContext.h - Analysis context for Path Sens analysis --*- C++ -*-//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_ANALYSISCONTEXT_H
-#define LLVM_CLANG_ANALYSIS_ANALYSISCONTEXT_H
+#ifndef LLVM_CLANG_ANALYSIS_ANALYSISDECLCONTEXT_H
+#define LLVM_CLANG_ANALYSIS_ANALYSISDECLCONTEXT_H
 
 #include "clang/AST/Decl.h"
 #include "clang/Analysis/CFG.h"

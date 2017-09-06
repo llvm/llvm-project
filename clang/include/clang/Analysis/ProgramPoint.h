@@ -15,7 +15,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_PROGRAMPOINT_H
 #define LLVM_CLANG_ANALYSIS_PROGRAMPOINT_H
 
-#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
