@@ -3985,12 +3985,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                      options::OPT_fno_apinotes_modules, false))
       CmdArgs.push_back("-fapinotes-modules");
 
-    if (Arg *A = Args.getLastArg(options::OPT_fapinotes_cache_path)) {
-      SmallString<128> APINotesCachePath{"-fapinotes-cache-path="};
-      APINotesCachePath += A->getValue();
-      CmdArgs.push_back(Args.MakeArgString(APINotesCachePath));
-    }
-
     Args.AddLastArg(CmdArgs, options::OPT_fapinotes_swift_version);
   }
 

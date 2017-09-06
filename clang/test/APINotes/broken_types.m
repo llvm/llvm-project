@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules -fapinotes-cache-path=%t/APINotesCache -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s 2> %t.err
+// RUN: not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s 2> %t.err
 // RUN: FileCheck %s < %t.err
 
 #include "BrokenTypes.h"

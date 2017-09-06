@@ -25,9 +25,6 @@ public:
   /// \brief If set, paths are resolved as if the working directory was
   /// set to the value of WorkingDir.
   std::string WorkingDir;
-
-  /// The path to the API notes cache.
-  std::string APINotesCachePath;
 };
 
 } // end namespace clang

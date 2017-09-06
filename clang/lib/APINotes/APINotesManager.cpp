@@ -46,12 +46,6 @@ STATISTIC(NumDirectoriesSearched,
           "header directories searched");
 STATISTIC(NumDirectoryCacheHits,
           "directory cache hits");
-STATISTIC(NumBinaryCacheHits,
-          "binary form cache hits");
-STATISTIC(NumBinaryCacheMisses,
-          "binary form cache misses");
-STATISTIC(NumBinaryCacheRebuilds,
-          "binary form cache rebuilds");
 
 namespace {
   /// Prints two successive strings, which much be kept alive as long as the
@@ -69,8 +63,7 @@ namespace {
 
 APINotesManager::APINotesManager(SourceManager &sourceMgr,
                                  const LangOptions &langOpts)
-  : SourceMgr(sourceMgr), ImplicitAPINotes(langOpts.APINotes),
-    PrunedCache(false) { }
+  : SourceMgr(sourceMgr), ImplicitAPINotes(langOpts.APINotes) { }
 
 APINotesManager::~APINotesManager() {
   // Free the API notes readers.
@@ -84,78 +77,8 @@ APINotesManager::~APINotesManager() {
   delete CurrentModuleReaders[1];
 }
 
-/// \brief Write a new timestamp file with the given path.
-static void writeTimestampFile(StringRef TimestampFile) {
-  std::error_code EC;
-  llvm::raw_fd_ostream Out(TimestampFile.str(), EC, llvm::sys::fs::F_None);
-}
-
-/// \brief Prune the API notes cache of API notes that haven't been accessed in
-/// a long time.
-static void pruneAPINotesCache(StringRef APINotesCachePath) {
-  struct stat StatBuf;
-  llvm::SmallString<128> TimestampFile;
-  TimestampFile = APINotesCachePath;
-  llvm::sys::path::append(TimestampFile, "APINotes.timestamp");
-
-  // Try to stat() the timestamp file.
-  if (::stat(TimestampFile.c_str(), &StatBuf)) {
-    // If the timestamp file wasn't there, create one now.
-    if (errno == ENOENT) {
-      llvm::sys::fs::create_directories(APINotesCachePath);
-      writeTimestampFile(TimestampFile);
-    }
-    return;
-  }
-
-  const unsigned APINotesCachePruneInterval = 7 * 24 * 60 * 60;
-  const unsigned APINotesCachePruneAfter = 31 * 24 * 60 * 60;
-
-  // Check whether the time stamp is older than our pruning interval.
-  // If not, do nothing.
-  time_t TimeStampModTime = StatBuf.st_mtime;
-  time_t CurrentTime = time(nullptr);
-  if (CurrentTime - TimeStampModTime <= time_t(APINotesCachePruneInterval))
-    return;
-
-  // Write a new timestamp file so that nobody else attempts to prune.
-  // There is a benign race condition here, if two Clang instances happen to
-  // notice at the same time that the timestamp is out-of-date.
-  writeTimestampFile(TimestampFile);
-
-  // Walk the entire API notes cache, looking for unused compiled API notes.
-  std::error_code EC;
-  SmallString<128> APINotesCachePathNative;
-  llvm::sys::path::native(APINotesCachePath, APINotesCachePathNative);
-  for (llvm::sys::fs::directory_iterator
-         File(APINotesCachePathNative.str(), EC), DirEnd;
-       File != DirEnd && !EC; File.increment(EC)) {
-    StringRef Extension = llvm::sys::path::extension(File->path());
-    if (Extension.empty())
-      continue;
-
-    if (Extension.substr(1) != BINARY_APINOTES_EXTENSION)
-      continue;
-
-    // Look at this file. If we can't stat it, there's nothing interesting
-    // there.
-    if (::stat(File->path().c_str(), &StatBuf))
-      continue;
-
-    // If the file has been used recently enough, leave it there.
-    time_t FileAccessTime = StatBuf.st_atime;
-    if (CurrentTime - FileAccessTime <= time_t(APINotesCachePruneAfter)) {
-      continue;
-    }
-
-    // Remove the file.
-    llvm::sys::fs::remove(File->path());
-  }
-}
-
 std::unique_ptr<APINotesReader>
 APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
-  FileManager &fileMgr = SourceMgr.getFileManager();
   PrettyStackTraceDoubleString trace("Loading API notes from ",
                                      apiNotesFile->getName());
 
@@ -174,59 +97,6 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
     return APINotesReader::getUnmanaged(buffer, SwiftVersion);
   }
 
-  // If we haven't pruned the API notes cache yet during this execution, do
-  // so now.
-  if (!PrunedCache) {
-    pruneAPINotesCache(fileMgr.getFileSystemOpts().APINotesCachePath);
-    PrunedCache = true;
-  }
-
-  // Compute a hash of the API notes file's directory and the Clang version,
-  // to be used as part of the filename for the cached binary copy.
-  auto code = llvm::hash_value(StringRef(apiNotesFile->getDir()->getName()));
-  code = hash_combine(code, getClangFullRepositoryVersion());
-
-  // Determine the file name for the cached binary form.
-  SmallString<128> compiledFileName;
-  compiledFileName += fileMgr.getFileSystemOpts().APINotesCachePath;
-  assert(!compiledFileName.empty() && "No API notes cache path provided?");
-  llvm::sys::path::append(compiledFileName,
-    (llvm::Twine(llvm::sys::path::stem(apiNotesFileName)) + "-"
-     + llvm::APInt(64, code).toString(36, /*Signed=*/false) + "."
-     + BINARY_APINOTES_EXTENSION));
-
-  // Try to open the cached binary form.
-  if (const FileEntry *compiledFile = fileMgr.getFile(compiledFileName,
-                                                      /*openFile=*/true,
-                                                      /*cacheFailure=*/false)) {
-    // Load the file contents.
-    if (auto buffer = fileMgr.getBufferForFile(compiledFile)) {
-      // Load the file.
-      if (auto reader = APINotesReader::get(std::move(buffer.get()),
-                                            SwiftVersion)) {
-        bool outOfDate = false;
-        if (auto sizeAndModTime = reader->getSourceFileSizeAndModTime()) {
-          if (sizeAndModTime->first != apiNotesFile->getSize() ||
-              sizeAndModTime->second != apiNotesFile->getModificationTime())
-            outOfDate = true;
-        }
-
-        if (!outOfDate) {
-          // Success.
-          ++NumBinaryCacheHits;
-          return reader;
-        }
-      }
-    }
-
-    // The cache entry was somehow broken; delete this one so we can build a
-    // new one below.
-    llvm::sys::fs::remove(compiledFileName.str());
-    ++NumBinaryCacheRebuilds;
-  } else {
-    ++NumBinaryCacheMisses;
-  }
-
   // Open the source file.
   auto sourceFileID = SourceMgr.createFileID(apiNotesFile, SourceLocation(), SrcMgr::C_User);
   auto sourceBuffer = SourceMgr.getBuffer(sourceFileID, SourceLocation());
@@ -235,6 +105,8 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
   // Compile the API notes source into a buffer.
   // FIXME: Either propagate OSType through or, better yet, improve the binary
   // APINotes format to maintain complete availability information.
+  // FIXME: We don't even really need to go through the binary format at all;
+  // we're just going to immediately deserialize it again.
   llvm::SmallVector<char, 1024> apiNotesBuffer;
   std::unique_ptr<llvm::MemoryBuffer> compiledBuffer;
   {
@@ -255,39 +127,6 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
     // Make a copy of the compiled form into the buffer.
     compiledBuffer = llvm::MemoryBuffer::getMemBufferCopy(
                StringRef(apiNotesBuffer.data(), apiNotesBuffer.size()));
-  }
-
-  // Save the binary form into the cache. Perform this operation
-  // atomically.
-  SmallString<64> temporaryBinaryFileName = compiledFileName.str();
-  temporaryBinaryFileName.erase(
-    temporaryBinaryFileName.end()
-      - llvm::sys::path::extension(temporaryBinaryFileName).size(),
-    temporaryBinaryFileName.end());
-  temporaryBinaryFileName += "-%%%%%%.";
-  temporaryBinaryFileName += BINARY_APINOTES_EXTENSION;
-
-  int temporaryFD;
-  llvm::sys::fs::create_directories(
-    fileMgr.getFileSystemOpts().APINotesCachePath);
-  if (!llvm::sys::fs::createUniqueFile(temporaryBinaryFileName.str(),
-                                       temporaryFD, temporaryBinaryFileName)) {
-    // Write the contents of the buffer.
-    bool hadError;
-    {
-      llvm::raw_fd_ostream out(temporaryFD, /*shouldClose=*/true);
-      out.write(compiledBuffer.get()->getBufferStart(),
-                compiledBuffer.get()->getBufferSize());
-      out.flush();
-
-      hadError = out.has_error();
-    }
-
-    if (!hadError) {
-      // Rename the temporary file to the actual compiled file.
-      llvm::sys::fs::rename(temporaryBinaryFileName.str(),
-                            compiledFileName.str());
-    }
   }
 
   // Load the binary form we just compiled.
