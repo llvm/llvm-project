@@ -17,3 +17,22 @@ add_lldb_unittest(debugserverTests
   LINK_COMPONENTS
     Support
   )
+
+if(IOS)
+  set_property(TARGET debugserverTests APPEND PROPERTY COMPILE_DEFINITIONS
+      WITH_LOCKDOWN
+      WITH_FBS
+      WITH_BKS
+      )
+  
+  add_lldb_unittest(debugserverNonUITests
+    RNBSocketTest.cpp
+    debugserver_LogCallback.cpp
+
+    LINK_LIBS
+      lldbDebugserverCommon_NonUI
+      lldbHost
+    LINK_COMPONENTS
+      Support
+    )
+endif()

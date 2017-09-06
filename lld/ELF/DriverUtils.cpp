@@ -160,6 +160,7 @@ std::string elf::createResponseFile(const opt::InputArgList &Args) {
     case OPT_library_path:
     case OPT_rpath:
     case OPT_script:
+    case OPT_symbol_ordering_file:
     case OPT_version_script:
       OS << Arg->getSpelling() << " " << quote(rewritePath(Arg->getValue()))
          << "\n";
