@@ -84,12 +84,22 @@ GroupRecord::subgroup_iterator GroupRecord::subgroup_end() const {
   return nullptr;
 }
 
+llvm::iterator_range<diagtool::GroupRecord::subgroup_iterator>
+GroupRecord::subgroups() const {
+  return llvm::make_range(subgroup_begin(), subgroup_end());
+}
+
 GroupRecord::diagnostics_iterator GroupRecord::diagnostics_begin() const {
   return DiagArrays + Members;
 }
 
 GroupRecord::diagnostics_iterator GroupRecord::diagnostics_end() const {
   return nullptr;
+}
+
+llvm::iterator_range<diagtool::GroupRecord::diagnostics_iterator>
+GroupRecord::diagnostics() const {
+  return llvm::make_range(diagnostics_begin(), diagnostics_end());
 }
 
 llvm::ArrayRef<GroupRecord> diagtool::getDiagnosticGroups() {

@@ -3071,10 +3071,11 @@ LexNextToken:
     Kind = tok::unknown;
     break;
       
-  case '\n':
   case '\r':
-    if (CurPtr[0] != Char && (CurPtr[0] == '\n' || CurPtr[0] == '\r'))
+    if (CurPtr[0] == '\n')
       Char = getAndAdvanceChar(CurPtr, Result);
+    LLVM_FALLTHROUGH;
+  case '\n':
     // If we are inside a preprocessor directive and we see the end of line,
     // we know we are done with the directive, so return an EOD token.
     if (ParsingPreprocessorDirective) {

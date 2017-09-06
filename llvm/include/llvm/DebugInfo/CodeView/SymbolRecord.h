@@ -942,6 +942,8 @@ public:
   uint32_t RecordOffset;
 };
 
+// S_ANNOTATION
+
 using CVSymbol = CVRecord<SymbolKind>;
 using CVSymbolArray = VarStreamArray<CVSymbol>;
 

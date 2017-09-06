@@ -936,6 +936,7 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSymbols() {
   PhdrEntry *Last = nullptr;
   PhdrEntry *LastRO = nullptr;
   PhdrEntry *LastRW = nullptr;
+
   for (PhdrEntry *P : Phdrs) {
     if (P->p_type != PT_LOAD)
       continue;
@@ -953,50 +954,50 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSymbols() {
     return Cmd;
   };
 
-  auto IsSection = [](OutputSection *Sec) {
-    return [=](BaseCommand *Base) { return Base == Sec; };
-  };
+  std::vector<BaseCommand *> &V = Script->Opt.Commands;
 
-  auto IsNoBits = [](BaseCommand *Base) {
-    if (auto *Sec = dyn_cast<OutputSection>(Base))
-      return Sec->Type == SHT_NOBITS;
-    return false;
-  };
-
+  // _end is the first location after the uninitialized data region.
   if (Last) {
-    // _end is the first location after the uninitialized data region.
-    auto E = Script->Opt.Commands.end();
-    auto I = Script->Opt.Commands.begin();
-    I = std::find_if(I, E, IsSection(Last->Last));
-    if (I != E) {
-      if (ElfSym::End1)
-        Script->Opt.Commands.insert(++I, Make(ElfSym::End1));
+    for (size_t I = 0; I < V.size(); ++I) {
+      if (V[I] != Last->Last)
+        continue;
       if (ElfSym::End2)
-        Script->Opt.Commands.insert(++I, Make(ElfSym::End2));
+        V.insert(V.begin() + I + 1, Make(ElfSym::End2));
+      if (ElfSym::End1)
+        V.insert(V.begin() + I + 1, Make(ElfSym::End1));
+      break;
     }
   }
+
+  // _etext is the first location after the last read-only loadable segment.
   if (LastRO) {
-    // _etext is the first location after the last read-only loadable segment.
-    auto E = Script->Opt.Commands.end();
-    auto I = Script->Opt.Commands.begin();
-    I = std::find_if(I, E, IsSection(LastRO->Last));
-    if (I != E) {
-      if (ElfSym::Etext1)
-        Script->Opt.Commands.insert(++I, Make(ElfSym::Etext1));
+    for (size_t I = 0; I < V.size(); ++I) {
+      if (V[I] != LastRO->Last)
+        continue;
       if (ElfSym::Etext2)
-        Script->Opt.Commands.insert(++I, Make(ElfSym::Etext2));
+        V.insert(V.begin() + I + 1, Make(ElfSym::Etext2));
+      if (ElfSym::Etext1)
+        V.insert(V.begin() + I + 1, Make(ElfSym::Etext1));
+      break;
     }
   }
+
+  // _edata points to the end of the last non SHT_NOBITS section.
   if (LastRW) {
-    // _edata points to the end of the last non SHT_NOBITS section.
-    auto E = Script->Opt.Commands.end();
-    auto I = Script->Opt.Commands.begin();
-    I = std::find_if(std::find_if(I, E, IsSection(LastRW->First)), E, IsNoBits);
-    if (I != E) {
+    size_t I = 0;
+    for (; I < V.size(); ++I)
+      if (V[I] == LastRW->First)
+        break;
+
+    for (; I < V.size(); ++I) {
+      auto *Sec = dyn_cast<OutputSection>(V[I]);
+      if (!Sec || Sec->Type != SHT_NOBITS)
+        continue;
       if (ElfSym::Edata2)
-        I = Script->Opt.Commands.insert(I, Make(ElfSym::Edata2));
+        V.insert(V.begin() + I, Make(ElfSym::Edata2));
       if (ElfSym::Edata1)
-        I = Script->Opt.Commands.insert(I, Make(ElfSym::Edata1));
+        V.insert(V.begin() + I, Make(ElfSym::Edata1));
+      break;
     }
   }
 }

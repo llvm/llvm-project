@@ -154,8 +154,9 @@ LINKAGE void __kmp_itt_region_forking(int gtid, int team_size, int barriers) {
     } else { // Region domain exists for this location
       // Check if team size was changed. Then create new region domain for this
       // location
-      int frm = (loc->reserved_2 & 0x0000FFFF) - 1;
-      if (__kmp_itt_region_team_size[frm] != team_size) {
+      unsigned int frm = (loc->reserved_2 & 0x0000FFFF) - 1;
+      if ((frm < KMP_MAX_FRAME_DOMAINS) &&
+          (__kmp_itt_region_team_size[frm] != team_size)) {
         const char *buff = NULL;
         kmp_str_loc_t str_loc = __kmp_str_loc_init(loc->psource, 1);
         buff = __kmp_str_format("%s$omp$parallel:%d@%s:%d:%d", str_loc.func,
@@ -231,8 +232,9 @@ LINKAGE void __kmp_itt_frame_submit(int gtid, __itt_timestamp begin,
     } else { // Region domain exists for this location
       // Check if team size was changed. Then create new region domain for this
       // location
-      int frm = (loc->reserved_2 & 0x0000FFFF) - 1;
-      if (__kmp_itt_region_team_size[frm] != team_size) {
+      unsigned int frm = (loc->reserved_2 & 0x0000FFFF) - 1;
+      if ((frm < KMP_MAX_FRAME_DOMAINS) &&
+          (__kmp_itt_region_team_size[frm] != team_size)) {
         const char *buff = NULL;
         kmp_str_loc_t str_loc = __kmp_str_loc_init(loc->psource, 1);
         buff = __kmp_str_format("%s$omp$parallel:%d@%s:%d:%d", str_loc.func,
@@ -443,7 +445,7 @@ LINKAGE void __kmp_itt_region_joined(int gtid) {
   }
   ident_t *loc = __kmp_thread_from_gtid(gtid)->th.th_ident;
   if (loc && loc->reserved_2) {
-    int frm = (loc->reserved_2 & 0x0000FFFF) - 1;
+    unsigned int frm = (loc->reserved_2 & 0x0000FFFF) - 1;
     if (frm < KMP_MAX_FRAME_DOMAINS) {
       KMP_ITT_DEBUG_LOCK();
       __itt_frame_end_v3(__kmp_itt_region_domains[frm], NULL);

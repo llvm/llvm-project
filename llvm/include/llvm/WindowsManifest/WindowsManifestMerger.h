@@ -35,6 +35,8 @@ class MemoryBuffer;
 
 namespace windows_manifest {
 
+bool isAvailable();
+
 class WindowsManifestError : public ErrorInfo<WindowsManifestError, ECError> {
 public:
   static char ID;

@@ -109,8 +109,7 @@ char *__kmp_env_get(char const *name) {
   if (!rc) {
     DWORD error = GetLastError();
     if (error != ERROR_ENVVAR_NOT_FOUND) {
-      __kmp_msg(kmp_ms_fatal, KMP_MSG(CantGetEnvVar, name), KMP_ERR(error),
-                __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(CantGetEnvVar, name), KMP_ERR(error), __kmp_msg_null);
     }; // if
     // Variable is not found, it's ok, just continue.
   } else {
@@ -127,8 +126,8 @@ char *__kmp_env_get(char const *name) {
       if (error != ERROR_SUCCESS) {
         // Unexpected error. The variable should be in the environment,
         // and buffer should be large enough.
-        __kmp_msg(kmp_ms_fatal, KMP_MSG(CantGetEnvVar, name), KMP_ERR(error),
-                  __kmp_msg_null);
+        __kmp_fatal(KMP_MSG(CantGetEnvVar, name), KMP_ERR(error),
+                    __kmp_msg_null);
         KMP_INTERNAL_FREE((void *)result);
         result = NULL;
       }; // if
@@ -163,8 +162,7 @@ int __kmp_env_exists(char const *name) {
   if (rc == 0) {
     DWORD error = GetLastError();
     if (error != ERROR_ENVVAR_NOT_FOUND) {
-      __kmp_msg(kmp_ms_fatal, KMP_MSG(CantGetEnvVar, name), KMP_ERR(error),
-                __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(CantGetEnvVar, name), KMP_ERR(error), __kmp_msg_null);
     }; // if
     return 0;
   }; // if
@@ -185,8 +183,8 @@ void __kmp_env_set(char const *name, char const *value, int overwrite) {
     // more than ~2.5 GB of memory, entire system feels bad. Sometimes
     // application is killed (by OS?), sometimes system stops
     // responding... But this error message never appears. --ln
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetEnvVar, name),
-              KMP_HNT(NotEnoughMemory), __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantSetEnvVar, name), KMP_HNT(NotEnoughMemory),
+                __kmp_msg_null);
   }; // if
 #elif KMP_OS_WINDOWS
   BOOL rc;
@@ -198,15 +196,13 @@ void __kmp_env_set(char const *name, char const *value, int overwrite) {
     }; // if
     DWORD error = GetLastError();
     if (error != ERROR_ENVVAR_NOT_FOUND) {
-      __kmp_msg(kmp_ms_fatal, KMP_MSG(CantGetEnvVar, name), KMP_ERR(error),
-                __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(CantGetEnvVar, name), KMP_ERR(error), __kmp_msg_null);
     }; // if
   }; // if
   rc = SetEnvironmentVariable(name, value);
   if (!rc) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetEnvVar, name), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantSetEnvVar, name), KMP_ERR(error), __kmp_msg_null);
   }; // if
 #else
 #error Unknown or unsupported OS.
@@ -222,8 +218,7 @@ void __kmp_env_unset(char const *name) {
   BOOL rc = SetEnvironmentVariable(name, NULL);
   if (!rc) {
     DWORD error = GetLastError();
-    __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetEnvVar, name), KMP_ERR(error),
-              __kmp_msg_null);
+    __kmp_fatal(KMP_MSG(CantSetEnvVar, name), KMP_ERR(error), __kmp_msg_null);
   }; // if
 #else
 #error Unknown or unsupported OS.
@@ -453,8 +448,8 @@ void __kmp_env_blk_init(kmp_env_blk_t *block, // M: Block to initialize.
       char *mem = GetEnvironmentStrings();
       if (mem == NULL) {
         DWORD error = GetLastError();
-        __kmp_msg(kmp_ms_fatal, KMP_MSG(CantGetEnvironment), KMP_ERR(error),
-                  __kmp_msg_null);
+        __kmp_fatal(KMP_MSG(CantGetEnvironment), KMP_ERR(error),
+                    __kmp_msg_null);
       }; // if
       ___kmp_env_blk_parse_windows(block, mem);
       FreeEnvironmentStrings(mem);

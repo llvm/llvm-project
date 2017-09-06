@@ -314,6 +314,9 @@ class MachineFunction {
   /// Map of invoke call site index values to associated begin EH_LABEL.
   DenseMap<MCSymbol*, unsigned> CallSiteMap;
 
+  /// CodeView label annotations.
+  std::vector<std::pair<MCSymbol *, MDNode *>> CodeViewAnnotations;
+
   bool CallsEHReturn = false;
   bool CallsUnwindInit = false;
   bool HasEHFunclets = false;
@@ -830,6 +833,15 @@ public:
   /// Return true if the begin label has a call site number associated with it.
   bool hasCallSiteBeginLabel(MCSymbol *BeginLabel) const {
     return CallSiteMap.count(BeginLabel);
+  }
+
+  /// Record annotations associated with a particular label.
+  void addCodeViewAnnotation(MCSymbol *Label, MDNode *MD) {
+    CodeViewAnnotations.push_back({Label, MD});
+  }
+
+  ArrayRef<std::pair<MCSymbol *, MDNode *>> getCodeViewAnnotations() const {
+    return CodeViewAnnotations;
   }
 
   /// Return a reference to the C++ typeinfo for the current function.

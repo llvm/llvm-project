@@ -1137,7 +1137,7 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::VNMSUBFP:        return "PPCISD::VNMSUBFP";
   case PPCISD::VPERM:           return "PPCISD::VPERM";
   case PPCISD::XXSPLT:          return "PPCISD::XXSPLT";
-  case PPCISD::XXINSERT:        return "PPCISD::XXINSERT";
+  case PPCISD::VECINSERT:       return "PPCISD::VECINSERT";
   case PPCISD::XXREVERSE:       return "PPCISD::XXREVERSE";
   case PPCISD::XXPERMDI:        return "PPCISD::XXPERMDI";
   case PPCISD::VECSHL:          return "PPCISD::VECSHL";
@@ -7463,9 +7463,11 @@ static SDValue BuildVSLDOI(SDValue LHS, SDValue RHS, unsigned Amt, EVT VT,
 /// - The node is a "load-and-splat"
 /// In all other cases, we will choose to keep the BUILD_VECTOR.
 static bool haveEfficientBuildVectorPattern(BuildVectorSDNode *V,
-                                            bool HasDirectMove) {
+                                            bool HasDirectMove,
+                                            bool HasP8Vector) {
   EVT VecVT = V->getValueType(0);
-  bool RightType = VecVT == MVT::v2f64 || VecVT == MVT::v4f32 ||
+  bool RightType = VecVT == MVT::v2f64 ||
+    (HasP8Vector && VecVT == MVT::v4f32) ||
     (HasDirectMove && (VecVT == MVT::v2i64 || VecVT == MVT::v4i32));
   if (!RightType)
     return false;
@@ -7627,7 +7629,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // lowered to VSX instructions under certain conditions.
     // Without VSX, there is no pattern more efficient than expanding the node.
     if (Subtarget.hasVSX() &&
-        haveEfficientBuildVectorPattern(BVN, Subtarget.hasDirectMove()))
+        haveEfficientBuildVectorPattern(BVN, Subtarget.hasDirectMove(),
+                                        Subtarget.hasP8Vector()))
       return Op;
     return SDValue();
   }
@@ -7893,7 +7896,7 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   bool isLittleEndian = Subtarget.isLittleEndian();
 
   unsigned ShiftElts, InsertAtByte;
-  bool Swap;
+  bool Swap = false;
   if (Subtarget.hasP9Vector() &&
       PPC::isXXINSERTWMask(SVOp, ShiftElts, InsertAtByte, Swap,
                            isLittleEndian)) {
@@ -7904,11 +7907,11 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     if (ShiftElts) {
       SDValue Shl = DAG.getNode(PPCISD::VECSHL, dl, MVT::v4i32, Conv2, Conv2,
                                 DAG.getConstant(ShiftElts, dl, MVT::i32));
-      SDValue Ins = DAG.getNode(PPCISD::XXINSERT, dl, MVT::v4i32, Conv1, Shl,
+      SDValue Ins = DAG.getNode(PPCISD::VECINSERT, dl, MVT::v4i32, Conv1, Shl,
                                 DAG.getConstant(InsertAtByte, dl, MVT::i32));
       return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Ins);
     }
-    SDValue Ins = DAG.getNode(PPCISD::XXINSERT, dl, MVT::v4i32, Conv1, Conv2,
+    SDValue Ins = DAG.getNode(PPCISD::VECINSERT, dl, MVT::v4i32, Conv1, Conv2,
                               DAG.getConstant(InsertAtByte, dl, MVT::i32));
     return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Ins);
   }

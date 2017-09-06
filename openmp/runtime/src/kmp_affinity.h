@@ -64,8 +64,7 @@ public:
       }
       int error = errno;
       if (abort_on_error) {
-        __kmp_msg(kmp_ms_fatal, KMP_MSG(FatalSysError), KMP_ERR(error),
-                  __kmp_msg_null);
+        __kmp_fatal(KMP_MSG(FatalSysError), KMP_ERR(error), __kmp_msg_null);
       }
       return error;
     }
@@ -79,8 +78,7 @@ public:
       }
       int error = errno;
       if (abort_on_error) {
-        __kmp_msg(kmp_ms_fatal, KMP_MSG(FatalSysError), KMP_ERR(error),
-                  __kmp_msg_null);
+        __kmp_fatal(KMP_MSG(FatalSysError), KMP_ERR(error), __kmp_msg_null);
       }
       return error;
     }
@@ -307,8 +305,7 @@ class KMPNativeAffinity : public KMPAffinity {
       }
       int error = errno;
       if (abort_on_error) {
-        __kmp_msg(kmp_ms_fatal, KMP_MSG(FatalSysError), KMP_ERR(error),
-                  __kmp_msg_null);
+        __kmp_fatal(KMP_MSG(FatalSysError), KMP_ERR(error), __kmp_msg_null);
       }
       return error;
     }
@@ -322,8 +319,7 @@ class KMPNativeAffinity : public KMPAffinity {
       }
       int error = errno;
       if (abort_on_error) {
-        __kmp_msg(kmp_ms_fatal, KMP_MSG(FatalSysError), KMP_ERR(error),
-                  __kmp_msg_null);
+        __kmp_fatal(KMP_MSG(FatalSysError), KMP_ERR(error), __kmp_msg_null);
       }
       return error;
     }
@@ -438,8 +434,8 @@ class KMPNativeAffinity : public KMPAffinity {
         if (__kmp_SetThreadGroupAffinity(GetCurrentThread(), &ga, NULL) == 0) {
           DWORD error = GetLastError();
           if (abort_on_error) {
-            __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetThreadAffMask),
-                      KMP_ERR(error), __kmp_msg_null);
+            __kmp_fatal(KMP_MSG(CantSetThreadAffMask), KMP_ERR(error),
+                        __kmp_msg_null);
           }
           return error;
         }
@@ -447,8 +443,8 @@ class KMPNativeAffinity : public KMPAffinity {
         if (!SetThreadAffinityMask(GetCurrentThread(), *mask)) {
           DWORD error = GetLastError();
           if (abort_on_error) {
-            __kmp_msg(kmp_ms_fatal, KMP_MSG(CantSetThreadAffMask),
-                      KMP_ERR(error), __kmp_msg_null);
+            __kmp_fatal(KMP_MSG(CantSetThreadAffMask), KMP_ERR(error),
+                        __kmp_msg_null);
           }
           return error;
         }
@@ -463,9 +459,8 @@ class KMPNativeAffinity : public KMPAffinity {
         if (__kmp_GetThreadGroupAffinity(GetCurrentThread(), &ga) == 0) {
           DWORD error = GetLastError();
           if (abort_on_error) {
-            __kmp_msg(kmp_ms_fatal,
-                      KMP_MSG(FunctionError, "GetThreadGroupAffinity()"),
-                      KMP_ERR(error), __kmp_msg_null);
+            __kmp_fatal(KMP_MSG(FunctionError, "GetThreadGroupAffinity()"),
+                        KMP_ERR(error), __kmp_msg_null);
           }
           return error;
         }
@@ -479,9 +474,8 @@ class KMPNativeAffinity : public KMPAffinity {
         if (!GetProcessAffinityMask(GetCurrentProcess(), &newMask, &sysMask)) {
           DWORD error = GetLastError();
           if (abort_on_error) {
-            __kmp_msg(kmp_ms_fatal,
-                      KMP_MSG(FunctionError, "GetProcessAffinityMask()"),
-                      KMP_ERR(error), __kmp_msg_null);
+            __kmp_fatal(KMP_MSG(FunctionError, "GetProcessAffinityMask()"),
+                        KMP_ERR(error), __kmp_msg_null);
           }
           return error;
         }
@@ -489,9 +483,8 @@ class KMPNativeAffinity : public KMPAffinity {
         if (!retval) {
           DWORD error = GetLastError();
           if (abort_on_error) {
-            __kmp_msg(kmp_ms_fatal,
-                      KMP_MSG(FunctionError, "SetThreadAffinityMask()"),
-                      KMP_ERR(error), __kmp_msg_null);
+            __kmp_fatal(KMP_MSG(FunctionError, "SetThreadAffinityMask()"),
+                        KMP_ERR(error), __kmp_msg_null);
           }
           return error;
         }
@@ -499,9 +492,8 @@ class KMPNativeAffinity : public KMPAffinity {
         if (!newMask) {
           DWORD error = GetLastError();
           if (abort_on_error) {
-            __kmp_msg(kmp_ms_fatal,
-                      KMP_MSG(FunctionError, "SetThreadAffinityMask()"),
-                      KMP_ERR(error), __kmp_msg_null);
+            __kmp_fatal(KMP_MSG(FunctionError, "SetThreadAffinityMask()"),
+                        KMP_ERR(error), __kmp_msg_null);
           }
         }
         *mask = retval;

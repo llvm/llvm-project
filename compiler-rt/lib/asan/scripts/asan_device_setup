@@ -181,6 +181,17 @@ if [[ -n $ARCH64 ]]; then
   ASAN_RT64="libclang_rt.asan-$ARCH64-android.so"
 fi
 
+RELEASE=$(adb_shell getprop ro.build.version.release)
+PRE_L=0
+if echo "$RELEASE" | grep '^4\.' >&/dev/null; then
+    PRE_L=1
+fi
+ANDROID_O=0
+if echo "$RELEASE" | grep '^8\.0\.' >&/dev/null; then
+    # 8.0.x is for Android O
+    ANDROID_O=1
+fi
+
 if [[ x$revert == xyes ]]; then
     echo '>> Uninstalling ASan'
 
@@ -200,6 +211,10 @@ if [[ x$revert == xyes ]]; then
       adb_shell rm /system/bin/asanwrapper
       adb_shell rm /system/bin/app_process
       adb_shell ln -s /system/bin/app_process32 /system/bin/app_process
+    fi
+
+    if [[ ANDROID_O -eq 1 ]]; then
+      adb_shell mv /system/etc/ld.config.txt.saved /system/etc/ld.config.txt
     fi
 
     echo '>> Restarting shell'
@@ -250,12 +265,6 @@ TMPDIRBASE=$(mktemp -d)
 TMPDIROLD="$TMPDIRBASE/old"
 TMPDIR="$TMPDIRBASE/new"
 mkdir "$TMPDIROLD"
-
-RELEASE=$(adb_shell getprop ro.build.version.release)
-PRE_L=0
-if echo "$RELEASE" | grep '^4\.' >&/dev/null; then
-    PRE_L=1
-fi
 
 if ! adb_shell ls -l /system/bin/app_process | grep -o '\->.*app_process' >&/dev/null; then
 
@@ -426,6 +435,11 @@ if ! ( cd "$TMPDIRBASE" && diff -qr old/ new/ ) ; then
 
     adb_shell cp /system/bin/sh /system/bin/sh-from-zygote
     adb_shell chcon $CTX /system/bin/sh-from-zygote
+
+    if [[ ANDROID_O -eq 1 ]]; then
+      # For Android O, the linker namespace is temporarily disabled.
+      adb_shell mv /system/etc/ld.config.txt /system/etc/ld.config.txt.saved
+    fi
 
     if [ $ENFORCING == 1 ]; then
         adb_shell setenforce 1

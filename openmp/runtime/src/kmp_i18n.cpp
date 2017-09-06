@@ -850,17 +850,18 @@ void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, ...) {
   __kmp_printf("%s", buffer.str);
   __kmp_str_buf_free(&buffer);
 
-  if (severity == kmp_ms_fatal) {
-#if KMP_OS_WINDOWS
-    __kmp_thread_sleep(
-        500); /* Delay to give message a chance to appear before reaping */
-#endif
-    __kmp_abort_process();
-  }; // if
-
   // __kmp_release_bootstrap_lock( & lock );  // GEH - this lock causing tests
   // to hang on OS X*.
 
 } // __kmp_msg
+
+void __kmp_fatal(kmp_msg_t message, ...) {
+  __kmp_msg(kmp_ms_fatal, message, __kmp_msg_null);
+#if KMP_OS_WINDOWS
+  // Delay to give message a chance to appear before reaping
+  __kmp_thread_sleep(500);
+#endif
+  __kmp_abort_process();
+} // __kmp_fatal
 
 // end of file //

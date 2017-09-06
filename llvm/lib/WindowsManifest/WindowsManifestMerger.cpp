@@ -682,6 +682,8 @@ WindowsManifestMerger::WindowsManifestMergerImpl::getMergedManifest() {
                     : nullptr;
 }
 
+bool windows_manifest::isAvailable() { return true; }
+
 #else
 
 WindowsManifestMerger::WindowsManifestMergerImpl::~WindowsManifestMergerImpl() {
@@ -696,6 +698,8 @@ std::unique_ptr<MemoryBuffer>
 WindowsManifestMerger::WindowsManifestMergerImpl::getMergedManifest() {
   return nullptr;
 }
+
+bool windows_manifest::isAvailable() { return false; }
 
 #endif
 

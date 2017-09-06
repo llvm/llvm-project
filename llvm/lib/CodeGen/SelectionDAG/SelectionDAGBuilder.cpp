@@ -5651,6 +5651,18 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     // Discard annotate attributes and assumptions
     return nullptr;
 
+  case Intrinsic::codeview_annotation: {
+    // Emit a label associated with this metadata.
+    MachineFunction &MF = DAG.getMachineFunction();
+    MCSymbol *Label =
+        MF.getMMI().getContext().createTempSymbol("annotation", true);
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(0))->getMetadata();
+    MF.addCodeViewAnnotation(Label, cast<MDNode>(MD));
+    Res = DAG.getLabelNode(ISD::ANNOTATION_LABEL, sdl, getRoot(), Label);
+    DAG.setRoot(Res);
+    return nullptr;
+  }
+
   case Intrinsic::init_trampoline: {
     const Function *F = cast<Function>(I.getArgOperand(1)->stripPointerCasts());
 
