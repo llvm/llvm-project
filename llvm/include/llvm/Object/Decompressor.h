@@ -13,7 +13,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
 namespace object {
@@ -32,9 +31,7 @@ public:
   /// @brief Resize the buffer and uncompress section data into it.
   /// @param Out         Destination buffer.
   template <class T> Error resizeAndDecompress(T &Out) {
-    install_bad_alloc_error_handler(outOfMemoryHandler, this);
     Out.resize(DecompressedSize);
-    remove_bad_alloc_error_handler();
     return decompress({Out.data(), (size_t)DecompressedSize});
   }
 
@@ -55,14 +52,11 @@ public:
   static bool isGnuStyle(StringRef Name);
 
 private:
-  static void outOfMemoryHandler(void *Data, const std::string &Message, bool);
-
-  Decompressor(StringRef Name, StringRef Data);
+  Decompressor(StringRef Data);
 
   Error consumeCompressedGnuHeader();
   Error consumeCompressedZLibHeader(bool Is64Bit, bool IsLittleEndian);
 
-  StringRef SectionName;
   StringRef SectionData;
   uint64_t DecompressedSize;
 };

@@ -33,6 +33,8 @@ static cl::opt<bool>
 VerifyARMPseudo("verify-arm-pseudo-expand", cl::Hidden,
                 cl::desc("Verify machine code after expanding ARM pseudos"));
 
+#define ARM_EXPAND_PSEUDO_NAME "ARM pseudo instruction expansion pass"
+
 namespace {
   class ARMExpandPseudo : public MachineFunctionPass {
   public:
@@ -52,7 +54,7 @@ namespace {
     }
 
     StringRef getPassName() const override {
-      return "ARM pseudo instruction expansion pass";
+      return ARM_EXPAND_PSEUDO_NAME;
     }
 
   private:
@@ -80,6 +82,9 @@ namespace {
   };
   char ARMExpandPseudo::ID = 0;
 }
+
+INITIALIZE_PASS(ARMExpandPseudo, DEBUG_TYPE, ARM_EXPAND_PSEUDO_NAME, false,
+                false)
 
 /// TransferImpOps - Transfer implicit operands on the pseudo instruction to
 /// the instructions created from the expansion.
@@ -659,6 +664,12 @@ static bool IsAnAddressOperand(const MachineOperand &MO) {
   llvm_unreachable("unhandled machine operand type");
 }
 
+static MachineOperand makeImplicit(const MachineOperand &MO) {
+  MachineOperand NewMO = MO;
+  NewMO.setImplicit();
+  return NewMO;
+}
+
 void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator &MBBI) {
   MachineInstr &MI = *MBBI;
@@ -693,6 +704,8 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
     HI16->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
     LO16.addImm(Pred).addReg(PredReg).add(condCodeOp());
     HI16.addImm(Pred).addReg(PredReg).add(condCodeOp());
+    if (isCC)
+      LO16.add(makeImplicit(MI.getOperand(1)));
     TransferImpOps(MI, LO16, HI16);
     MI.eraseFromParent();
     return;
@@ -746,6 +759,8 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
   if (RequiresBundling)
     finalizeBundle(MBB, LO16->getIterator(), MBBI->getIterator());
 
+  if (isCC)
+    LO16.add(makeImplicit(MI.getOperand(1)));
   TransferImpOps(MI, LO16, HI16);
   MI.eraseFromParent();
 }
@@ -1047,7 +1062,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
               MI.getOperand(1).getReg())
           .add(MI.getOperand(2))
           .addImm(MI.getOperand(3).getImm()) // 'pred'
-          .add(MI.getOperand(4));
+          .add(MI.getOperand(4))
+          .add(makeImplicit(MI.getOperand(1)));
 
       MI.eraseFromParent();
       return true;
@@ -1060,7 +1076,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .add(MI.getOperand(2))
           .addImm(MI.getOperand(3).getImm()) // 'pred'
           .add(MI.getOperand(4))
-          .add(condCodeOp()); // 's' bit
+          .add(condCodeOp()) // 's' bit
+          .add(makeImplicit(MI.getOperand(1)));
 
       MI.eraseFromParent();
       return true;
@@ -1072,7 +1089,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .addImm(MI.getOperand(3).getImm())
           .addImm(MI.getOperand(4).getImm()) // 'pred'
           .add(MI.getOperand(5))
-          .add(condCodeOp()); // 's' bit
+          .add(condCodeOp()) // 's' bit
+          .add(makeImplicit(MI.getOperand(1)));
 
       MI.eraseFromParent();
       return true;
@@ -1085,7 +1103,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .addImm(MI.getOperand(4).getImm())
           .addImm(MI.getOperand(5).getImm()) // 'pred'
           .add(MI.getOperand(6))
-          .add(condCodeOp()); // 's' bit
+          .add(condCodeOp()) // 's' bit
+          .add(makeImplicit(MI.getOperand(1)));
 
       MI.eraseFromParent();
       return true;
@@ -1097,7 +1116,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
               MI.getOperand(1).getReg())
           .addImm(MI.getOperand(2).getImm())
           .addImm(MI.getOperand(3).getImm()) // 'pred'
-          .add(MI.getOperand(4));
+          .add(MI.getOperand(4))
+          .add(makeImplicit(MI.getOperand(1)));
       MI.eraseFromParent();
       return true;
     }
@@ -1109,7 +1129,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .addImm(MI.getOperand(2).getImm())
           .addImm(MI.getOperand(3).getImm()) // 'pred'
           .add(MI.getOperand(4))
-          .add(condCodeOp()); // 's' bit
+          .add(condCodeOp()) // 's' bit
+          .add(makeImplicit(MI.getOperand(1)));
 
       MI.eraseFromParent();
       return true;
@@ -1122,7 +1143,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .addImm(MI.getOperand(2).getImm())
           .addImm(MI.getOperand(3).getImm()) // 'pred'
           .add(MI.getOperand(4))
-          .add(condCodeOp()); // 's' bit
+          .add(condCodeOp()) // 's' bit
+          .add(makeImplicit(MI.getOperand(1)));
 
       MI.eraseFromParent();
       return true;
@@ -1145,7 +1167,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .addImm(MI.getOperand(3).getImm())
           .addImm(MI.getOperand(4).getImm()) // 'pred'
           .add(MI.getOperand(5))
-          .add(condCodeOp()); // 's' bit
+          .add(condCodeOp()) // 's' bit
+          .add(makeImplicit(MI.getOperand(1)));
       MI.eraseFromParent();
       return true;
     }

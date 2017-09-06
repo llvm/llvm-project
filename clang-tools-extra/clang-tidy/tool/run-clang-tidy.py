@@ -35,12 +35,12 @@ http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
 """
 
 from __future__ import print_function
+
 import argparse
 import glob
 import json
 import multiprocessing
 import os
-import Queue
 import re
 import shutil
 import subprocess
@@ -50,6 +50,12 @@ import threading
 import traceback
 import yaml
 
+is_py2 = sys.version[0] == '2'
+
+if is_py2:
+    import Queue as queue
+else:
+    import queue as queue
 
 def find_compilation_database(path):
   """Adjusts the directory until a compilation database is found."""
@@ -233,20 +239,20 @@ def main():
 
   try:
     # Spin up a bunch of tidy-launching threads.
-    queue = Queue.Queue(max_task)
+    task_queue = queue.Queue(max_task)
     for _ in range(max_task):
       t = threading.Thread(target=run_tidy,
-                           args=(args, tmpdir, build_path, queue))
+                           args=(args, tmpdir, build_path, task_queue))
       t.daemon = True
       t.start()
 
     # Fill the queue with files.
     for name in files:
       if file_name_re.search(name):
-        queue.put(name)
+        task_queue.put(name)
 
     # Wait for all threads to be done.
-    queue.join()
+    task_queue.join()
 
   except KeyboardInterrupt:
     # This is a sad hack. Unfortunately subprocess goes

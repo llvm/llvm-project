@@ -908,10 +908,11 @@ static ld_plugin_status allSymbolsReadHook() {
         llvm::make_unique<llvm::raw_fd_ostream>(FD, true));
   };
 
-  auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
+  auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB,
+                       StringRef Path) {
     // Note that this requires that the memory buffers provided to AddBuffer are
     // backed by a file.
-    Filenames[Task] = MB->getBufferIdentifier();
+    Filenames[Task] = Path;
   };
 
   NativeObjectCache Cache;

@@ -1848,19 +1848,20 @@ public:
   }
 };
 
-class EHLabelSDNode : public SDNode {
+class LabelSDNode : public SDNode {
   friend class SelectionDAG;
 
   MCSymbol *Label;
 
-  EHLabelSDNode(unsigned Order, const DebugLoc &dl, MCSymbol *L)
+  LabelSDNode(unsigned Order, const DebugLoc &dl, MCSymbol *L)
       : SDNode(ISD::EH_LABEL, Order, dl, getSDVTList(MVT::Other)), Label(L) {}
 
 public:
   MCSymbol *getLabel() const { return Label; }
 
   static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::EH_LABEL;
+    return N->getOpcode() == ISD::EH_LABEL ||
+           N->getOpcode() == ISD::ANNOTATION_LABEL;
   }
 };
 

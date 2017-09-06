@@ -635,6 +635,8 @@ public:
   SDValue getRegister(unsigned Reg, EVT VT);
   SDValue getRegisterMask(const uint32_t *RegMask);
   SDValue getEHLabel(const SDLoc &dl, SDValue Root, MCSymbol *Label);
+  SDValue getLabelNode(unsigned Opcode, const SDLoc &dl, SDValue Root,
+                       MCSymbol *Label);
   SDValue getBlockAddress(const BlockAddress *BA, EVT VT,
                           int64_t Offset = 0, bool isTarget = false,
                           unsigned char TargetFlags = 0);

@@ -13626,6 +13626,27 @@ with arbitrary strings. This can be useful for special purpose
 optimizations that want to look for these annotations. These have no
 other defined use; they are ignored by code generation and optimization.
 
+'``llvm.codeview.annotation``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This annotation emits a label at its program point and an associated
+``S_ANNOTATION`` codeview record with some additional string metadata. This is
+used to implement MSVC's ``__annotation`` intrinsic. It is marked
+``noduplicate``, so calls to this intrinsic prevent inlining and should be
+considered expensive.
+
+::
+
+      declare void @llvm.codeview.annotation(metadata)
+
+Arguments:
+""""""""""
+
+The argument should be an MDTuple containing any number of MDStrings.
+
 '``llvm.trap``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

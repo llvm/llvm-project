@@ -500,7 +500,8 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
 
   // If there are no calls, MachineRegisterInfo can tell us the used register
   // count easily.
-  if (!FrameInfo.hasCalls()) {
+  // A tail call isn't considered a call for MachineFrameInfo's purposes.
+  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
     MCPhysReg HighestVGPRReg = AMDGPU::NoRegister;
     for (MCPhysReg Reg : reverse(AMDGPU::VGPR_32RegClass.getRegisters())) {
       if (MRI.isPhysRegUsed(Reg)) {

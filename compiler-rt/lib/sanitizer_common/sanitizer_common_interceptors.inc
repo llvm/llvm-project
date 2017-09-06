@@ -3589,7 +3589,7 @@ INTERCEPTOR(int, ppoll, __sanitizer_pollfd *fds, __sanitizer_nfds_t nfds,
   if (fds && nfds) read_pollfd(ctx, fds, nfds);
   if (timeout_ts)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, timeout_ts, struct_timespec_sz);
-  // FIXME: read sigmask when all of sigemptyset, etc are intercepted.
+  if (sigmask) COMMON_INTERCEPTOR_READ_RANGE(ctx, sigmask, sizeof(*sigmask));
   int res =
       COMMON_INTERCEPTOR_BLOCK_REAL(ppoll)(fds, nfds, timeout_ts, sigmask);
   if (fds && nfds) write_pollfd(ctx, fds, nfds);
@@ -3630,7 +3630,7 @@ INTERCEPTOR(int, wordexp, char *s, __sanitizer_wordexp_t *p, int flags) {
 INTERCEPTOR(int, sigwait, __sanitizer_sigset_t *set, int *sig) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, sigwait, set, sig);
-  // FIXME: read sigset_t when all of sigemptyset, etc are intercepted
+  if (set) COMMON_INTERCEPTOR_READ_RANGE(ctx, set, sizeof(*set));
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
@@ -3647,7 +3647,7 @@ INTERCEPTOR(int, sigwait, __sanitizer_sigset_t *set, int *sig) {
 INTERCEPTOR(int, sigwaitinfo, __sanitizer_sigset_t *set, void *info) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, sigwaitinfo, set, info);
-  // FIXME: read sigset_t when all of sigemptyset, etc are intercepted
+  if (set) COMMON_INTERCEPTOR_READ_RANGE(ctx, set, sizeof(*set));
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
@@ -3666,7 +3666,7 @@ INTERCEPTOR(int, sigtimedwait, __sanitizer_sigset_t *set, void *info,
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, sigtimedwait, set, info, timeout);
   if (timeout) COMMON_INTERCEPTOR_READ_RANGE(ctx, timeout, struct_timespec_sz);
-  // FIXME: read sigset_t when all of sigemptyset, etc are intercepted
+  if (set) COMMON_INTERCEPTOR_READ_RANGE(ctx, set, sizeof(*set));
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
@@ -3729,7 +3729,7 @@ INTERCEPTOR(int, sigprocmask, int how, __sanitizer_sigset_t *set,
             __sanitizer_sigset_t *oldset) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, sigprocmask, how, set, oldset);
-  // FIXME: read sigset_t when all of sigemptyset, etc are intercepted
+  if (set) COMMON_INTERCEPTOR_READ_RANGE(ctx, set, sizeof(*set));
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.

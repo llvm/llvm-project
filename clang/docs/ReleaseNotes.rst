@@ -74,7 +74,7 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-- Bitrig OS was merged back into OpenBSD, so Bitrig support has been 
+- Bitrig OS was merged back into OpenBSD, so Bitrig support has been
   removed from Clang/LLVM.
 
 New Compiler Flags
@@ -190,7 +190,20 @@ There are two main patterns affected by this:
 clang-format
 ------------
 
-...
+* Option *IndentPPDirectives* added to indent preprocessor directives on
+  conditionals.
+
+  +----------------------+----------------------+
+  | Before               | After                |
+  +======================+======================+
+  |  .. code-block:: c++ | .. code-block:: c++  |
+  |                      |                      |
+  |    #if FOO           |   #if FOO            |
+  |    #if BAR           |   #  if BAR          |
+  |    #include <foo>    |   #    include <foo> |
+  |    #endif            |   #  endif           |
+  |    #endif            |   #endif             |
+  +----------------------+----------------------+
 
 * Option -verbose added to the command line.
   Shows the list of processed files.

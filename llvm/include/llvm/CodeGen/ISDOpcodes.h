@@ -638,6 +638,12 @@ namespace ISD {
     /// take a chain as input and return a chain.
     EH_LABEL,
 
+    /// ANNOTATION_LABEL - Represents a mid basic block label used by
+    /// annotations. This should remain within the basic block and be ordered
+    /// with respect to other call instructions, but loads and stores may float
+    /// past it.
+    ANNOTATION_LABEL,
+
     /// CATCHPAD - Represents a catchpad instruction.
     CATCHPAD,
 

@@ -334,7 +334,7 @@ TEST(RemoteObjectLayer, FindSymbol) {
   auto ReportError =
     [](Error Err) {
       auto ErrMsg = toString(std::move(Err));
-      EXPECT_EQ(ErrMsg, "Could not find symbol 'barbaz'")
+      EXPECT_EQ(ErrMsg, "Could not find symbol 'badsymbol'")
         << "Expected error string to be \"Object handle 42 not found\"";
     };
 
@@ -352,7 +352,9 @@ TEST(RemoteObjectLayer, FindSymbol) {
         [](StringRef Name, bool ExportedSymbolsOnly) -> JITSymbol {
           if (Name == "foobar")
             return JITSymbol(0x12348765, JITSymbolFlags::Exported);
-          return make_error<JITSymbolNotFound>(Name);
+          if (Name == "badsymbol")
+            return make_error<JITSymbolNotFound>(Name);
+          return nullptr;
         };
       return 42;
     });
@@ -374,19 +376,30 @@ TEST(RemoteObjectLayer, FindSymbol) {
   cantFail(Client.addObject(std::move(TestObject),
                             std::make_shared<NullResolver>()));
 
+  // Check that we can find and materialize a valid symbol.
   auto Sym1 = Client.findSymbol("foobar", true);
-
   EXPECT_TRUE(!!Sym1) << "Symbol 'foobar' should be findable";
   EXPECT_EQ(cantFail(Sym1.getAddress()), 0x12348765ULL)
     << "Symbol 'foobar' does not return the correct address";
 
-  auto Sym2 = Client.findSymbol("barbaz", true);
-  EXPECT_FALSE(!!Sym2) << "Symbol 'barbaz' should not be findable";
-  auto Err = Sym2.takeError();
-  EXPECT_TRUE(!!Err) << "Sym2 should contain an error value";
-  auto ErrMsg = toString(std::move(Err));
-  EXPECT_EQ(ErrMsg, "Could not find symbol 'barbaz'")
-    << "Expected symbol-not-found error for Sym2";
+  {
+    // Check that we can return a symbol containing an error.
+    auto Sym2 = Client.findSymbol("badsymbol", true);
+    EXPECT_FALSE(!!Sym2) << "Symbol 'badsymbol' should not be findable";
+    auto Err = Sym2.takeError();
+    EXPECT_TRUE(!!Err) << "Sym2 should contain an error value";
+    auto ErrMsg = toString(std::move(Err));
+    EXPECT_EQ(ErrMsg, "Could not find symbol 'badsymbol'")
+      << "Expected symbol-not-found error for Sym2";
+  }
+
+  {
+    // Check that we can return a 'null' symbol.
+    auto Sym3 = Client.findSymbol("baz", true);
+    EXPECT_FALSE(!!Sym3) << "Symbol 'baz' should convert to false";
+    auto Err = Sym3.takeError();
+    EXPECT_FALSE(!!Err) << "Symbol 'baz' should not contain an error";
+  }
 
   cantFail(ClientEP.callB<remote::utils::TerminateSession>());
   ServerThread.join();
