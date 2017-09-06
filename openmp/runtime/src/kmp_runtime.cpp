@@ -309,8 +309,8 @@ void __kmp_check_stack_overlap(kmp_info_t *th) {
                 (size_t)TCR_PTR(f_th->th.th_info.ds.ds_stacksize),
                 "th_%d stack (overlapped)", __kmp_gtid_from_thread(f_th));
 
-          __kmp_msg(kmp_ms_fatal, KMP_MSG(StackOverlap),
-                    KMP_HNT(ChangeStackLimit), __kmp_msg_null);
+          __kmp_fatal(KMP_MSG(StackOverlap), KMP_HNT(ChangeStackLimit),
+                      __kmp_msg_null);
         }
       }
     }
@@ -3665,12 +3665,12 @@ int __kmp_register_root(int initial_thread) {
   /* see if there are too many threads */
   if (__kmp_all_nth >= capacity && !__kmp_expand_threads(1, 1)) {
     if (__kmp_tp_cached) {
-      __kmp_msg(kmp_ms_fatal, KMP_MSG(CantRegisterNewThread),
-                KMP_HNT(Set_ALL_THREADPRIVATE, __kmp_tp_capacity),
-                KMP_HNT(PossibleSystemLimitOnThreads), __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(CantRegisterNewThread),
+                  KMP_HNT(Set_ALL_THREADPRIVATE, __kmp_tp_capacity),
+                  KMP_HNT(PossibleSystemLimitOnThreads), __kmp_msg_null);
     } else {
-      __kmp_msg(kmp_ms_fatal, KMP_MSG(CantRegisterNewThread),
-                KMP_HNT(SystemLimitOnThreads), __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(CantRegisterNewThread), KMP_HNT(SystemLimitOnThreads),
+                  __kmp_msg_null);
     }
   }; // if
 
@@ -4474,8 +4474,8 @@ __kmp_set_thread_affinity_mask_full_tmp(kmp_affin_mask_t *old_mask) {
       status = __kmp_get_system_affinity(old_mask, TRUE);
       int error = errno;
       if (status != 0) {
-        __kmp_msg(kmp_ms_fatal, KMP_MSG(ChangeThreadAffMaskError),
-                  KMP_ERR(error), __kmp_msg_null);
+        __kmp_fatal(KMP_MSG(ChangeThreadAffMaskError), KMP_ERR(error),
+                    __kmp_msg_null);
       }
     }
     __kmp_set_system_affinity(__kmp_affin_fullMask, TRUE);
@@ -6319,9 +6319,8 @@ void __kmp_register_library_startup(void) {
         char *duplicate_ok = __kmp_env_get("KMP_DUPLICATE_LIB_OK");
         if (!__kmp_str_match_true(duplicate_ok)) {
           // That's not allowed. Issue fatal error.
-          __kmp_msg(kmp_ms_fatal,
-                    KMP_MSG(DuplicateLibrary, KMP_LIBRARY_FILE, file_name),
-                    KMP_HNT(DuplicateLibrary), __kmp_msg_null);
+          __kmp_fatal(KMP_MSG(DuplicateLibrary, KMP_LIBRARY_FILE, file_name),
+                      KMP_HNT(DuplicateLibrary), __kmp_msg_null);
         }; // if
         KMP_INTERNAL_FREE(duplicate_ok);
         __kmp_duplicate_library_ok = 1;
@@ -6626,8 +6625,8 @@ static void __kmp_do_serial_initialize(void) {
        library. For dynamic library, we already have _fini and DllMain. */
     int rc = atexit(__kmp_internal_end_atexit);
     if (rc != 0) {
-      __kmp_msg(kmp_ms_fatal, KMP_MSG(FunctionError, "atexit()"), KMP_ERR(rc),
-                __kmp_msg_null);
+      __kmp_fatal(KMP_MSG(FunctionError, "atexit()"), KMP_ERR(rc),
+                  __kmp_msg_null);
     }; // if
   }
 #endif

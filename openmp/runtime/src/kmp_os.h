@@ -294,6 +294,15 @@ extern "C" {
 #define KMP_ALIGN(bytes) __declspec(align(bytes))
 #endif
 
+// Define attribute that indicates a function does not return
+#if __cplusplus >= 201103L
+#define KMP_NORETURN [[noreturn]]
+#elif KMP_OS_WINDOWS
+#define KMP_NORETURN __declspec(noreturn)
+#else
+#define KMP_NORETURN __attribute__((noreturn))
+#endif
+
 /* General purpose fence types for memory operations */
 enum kmp_mem_fence_type {
   kmp_no_fence, /* No memory fence */

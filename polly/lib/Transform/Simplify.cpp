@@ -558,8 +558,9 @@ private:
 
     // Remove all non-reachable instructions.
     for (ScopStmt &Stmt : *S) {
-      if (!Stmt.isBlockStmt())
-        continue;
+      // Note that for region statements, we can only remove the non-terminator
+      // instructions of the entry block. All other instructions are not in the
+      // instructions list, but implicitly always part of the statement.
 
       SmallVector<Instruction *, 32> AllInsts(Stmt.insts_begin(),
                                               Stmt.insts_end());

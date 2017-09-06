@@ -175,9 +175,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   if (!Config->ThinLTOCacheDir.empty())
     Cache = check(
         lto::localCache(Config->ThinLTOCacheDir,
-                        [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
-                          Files[Task] = std::move(MB);
-                        }));
+                        [&](size_t Task, std::unique_ptr<MemoryBuffer> MB,
+                            StringRef Path) { Files[Task] = std::move(MB); }));
 
   checkError(LTOObj->run(
       [&](size_t Task) {
