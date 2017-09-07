@@ -137,6 +137,13 @@ private:
 
   void addArrayReadAccess(MemoryAccess *MA);
 
+  /// Return the ValInst write by a (must-)write access. Returns the 'unknown'
+  /// ValInst if there is no single ValInst[] the array element written to will
+  /// have.
+  ///
+  /// @return { ValInst[] }
+  isl::map getWrittenValue(MemoryAccess *MA, isl::map AccRel);
+
   void addArrayWriteAccess(MemoryAccess *MA);
 
 protected:
