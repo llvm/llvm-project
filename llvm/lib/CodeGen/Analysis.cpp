@@ -565,6 +565,17 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
     return false;
 
   const Value *RetVal = Ret->getOperand(0), *CallVal = I;
+  // Intrinsic like llvm.memcpy has no return value, but will return the
+  // first argument if it is expanded as libcall.
+  const CallInst *Call = cast<CallInst>(I);
+  if (Function *F = Call->getCalledFunction()) {
+    Intrinsic::ID IID = F->getIntrinsicID();
+    if ((IID == Intrinsic::memcpy || IID == Intrinsic::memmove ||
+         IID == Intrinsic::memset) &&
+        RetVal == Call->getArgOperand(0))
+      return true;
+  }
+
   SmallVector<unsigned, 4> RetPath, CallPath;
   SmallVector<CompositeType *, 4> RetSubTypes, CallSubTypes;
 

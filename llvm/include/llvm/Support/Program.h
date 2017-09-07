@@ -91,13 +91,13 @@ struct ProcessInfo {
   int ExecuteAndWait(
       StringRef Program, ///< Path of the program to be executed. It is
       ///< presumed this is the result of the findProgramByName method.
-      const char **args, ///< A vector of strings that are passed to the
+      const char **Args, ///< A vector of strings that are passed to the
       ///< program.  The first element should be the name of the program.
       ///< The list *must* be terminated by a null char* entry.
-      const char **env = nullptr, ///< An optional vector of strings to use for
+      const char **Env = nullptr, ///< An optional vector of strings to use for
       ///< the program's environment. If not provided, the current program's
       ///< environment will be used.
-      const StringRef **redirects = nullptr, ///< An optional array of pointers
+      const StringRef **Redirects = nullptr, ///< An optional array of pointers
       ///< to paths. If the array is null, no redirection is done. The array
       ///< should have a size of at least three. The inferior process's
       ///< stdin(0), stdout(1), and stderr(2) will be redirected to the
@@ -105,12 +105,12 @@ struct ProcessInfo {
       ///< When an empty path is passed in, the corresponding file
       ///< descriptor will be disconnected (ie, /dev/null'd) in a portable
       ///< way.
-      unsigned secondsToWait = 0, ///< If non-zero, this specifies the amount
+      unsigned SecondsToWait = 0, ///< If non-zero, this specifies the amount
       ///< of time to wait for the child process to exit. If the time
       ///< expires, the child is killed and this call returns. If zero,
       ///< this function will wait until the child finishes or forever if
       ///< it doesn't.
-      unsigned memoryLimit = 0, ///< If non-zero, this specifies max. amount
+      unsigned MemoryLimit = 0, ///< If non-zero, this specifies max. amount
       ///< of memory can be allocated by process. If memory usage will be
       ///< higher limit, the child is killed and this call returns. If zero
       ///< - no memory limit.
@@ -125,14 +125,17 @@ struct ProcessInfo {
   /// \note On Microsoft Windows systems, users will need to either call \see
   /// Wait until the process finished execution or win32 CloseHandle() API on
   /// ProcessInfo.ProcessHandle to avoid memory leaks.
-  ProcessInfo
-  ExecuteNoWait(StringRef Program, const char **args, const char **env = nullptr,
-                const StringRef **redirects = nullptr, unsigned memoryLimit = 0,
-                std::string *ErrMsg = nullptr, bool *ExecutionFailed = nullptr);
+  ProcessInfo ExecuteNoWait(StringRef Program, const char **Args,
+                            const char **Env = nullptr,
+                            const StringRef **Redirects = nullptr,
+                            unsigned MemoryLimit = 0,
+                            std::string *ErrMsg = nullptr,
+                            bool *ExecutionFailed = nullptr);
 
   /// Return true if the given arguments fit within system-specific
   /// argument length limits.
-  bool commandLineFitsWithinSystemLimits(StringRef Program, ArrayRef<const char*> Args);
+  bool commandLineFitsWithinSystemLimits(StringRef Program,
+                                         ArrayRef<const char *> Args);
 
   /// File encoding options when writing contents that a non-UTF8 tool will
   /// read (on Windows systems). For UNIX, we always use UTF-8.

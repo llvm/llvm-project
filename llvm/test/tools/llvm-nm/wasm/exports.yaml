@@ -24,12 +24,12 @@ Sections:
       - Type:        I32
         Mutable:     false
         InitExpr:
-          Opcode:          I64_CONST
+          Opcode:          I32_CONST
           Value:           64
       - Type:        I32
         Mutable:     false
         InitExpr:
-          Opcode:          I64_CONST
+          Opcode:          I32_CONST
           Value:           1024
   - Type:            IMPORT
     Imports:
@@ -50,6 +50,10 @@ Sections:
       - Name:            bar
         Kind:            GLOBAL
         Index:           0x00000003
+  - Type:            CUSTOM
+    Name:            "linking"
+    DataSize:        0
+    DataAlignment:   0
 
 # CHECK:      00000400 D bar
 # CHECK-NEXT:          U fimport

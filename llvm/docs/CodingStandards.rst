@@ -811,6 +811,21 @@ As a rule of thumb, use ``auto &`` unless you need to copy the result, and use
   for (const auto *Ptr : Container) { observe(*Ptr); }
   for (auto *Ptr : Container) { Ptr->change(); }
 
+Beware of non-determinism due to ordering of pointers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In general, there is no relative ordering among pointers. As a result,
+when unordered containers like sets and maps are used with pointer keys
+the iteration order is undefined. Hence, iterating such containers may
+result in non-deterministic code generation. While the generated code
+might not necessarily be "wrong code", this non-determinism might result
+in unexpected runtime crashes or simply hard to reproduce bugs on the
+customer side making it harder to debug and fix.
+
+As a rule of thumb, in case an ordered result is expected, remember to
+sort an unordered container before iteration. Or use ordered containers
+like vector/MapVector/SetVector if you want to iterate pointer keys.
+
 Style Issues
 ============
 

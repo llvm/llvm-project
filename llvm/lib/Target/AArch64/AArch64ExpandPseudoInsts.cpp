@@ -672,16 +672,15 @@ bool AArch64ExpandPseudo::expandCMP_SWAP(
   MI.eraseFromParent();
 
   // Recompute livein lists.
-  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   LivePhysRegs LiveRegs;
-  computeLiveIns(LiveRegs, MRI, *DoneBB);
-  computeLiveIns(LiveRegs, MRI, *StoreBB);
-  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  computeAndAddLiveIns(LiveRegs, *DoneBB);
+  computeAndAddLiveIns(LiveRegs, *StoreBB);
+  computeAndAddLiveIns(LiveRegs, *LoadCmpBB);
   // Do an extra pass around the loop to get loop carried registers right.
   StoreBB->clearLiveIns();
-  computeLiveIns(LiveRegs, MRI, *StoreBB);
+  computeAndAddLiveIns(LiveRegs, *StoreBB);
   LoadCmpBB->clearLiveIns();
-  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  computeAndAddLiveIns(LiveRegs, *LoadCmpBB);
 
   return true;
 }
@@ -766,16 +765,15 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   MI.eraseFromParent();
 
   // Recompute liveness bottom up.
-  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   LivePhysRegs LiveRegs;
-  computeLiveIns(LiveRegs, MRI, *DoneBB);
-  computeLiveIns(LiveRegs, MRI, *StoreBB);
-  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  computeAndAddLiveIns(LiveRegs, *DoneBB);
+  computeAndAddLiveIns(LiveRegs, *StoreBB);
+  computeAndAddLiveIns(LiveRegs, *LoadCmpBB);
   // Do an extra pass in the loop to get the loop carried dependencies right.
   StoreBB->clearLiveIns();
-  computeLiveIns(LiveRegs, MRI, *StoreBB);
+  computeAndAddLiveIns(LiveRegs, *StoreBB);
   LoadCmpBB->clearLiveIns();
-  computeLiveIns(LiveRegs, MRI, *LoadCmpBB);
+  computeAndAddLiveIns(LiveRegs, *LoadCmpBB);
 
   return true;
 }

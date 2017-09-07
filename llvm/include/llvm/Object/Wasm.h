@@ -204,6 +204,8 @@ private:
   Error parseRelocSection(StringRef Name, const uint8_t *Ptr,
                           const uint8_t *End);
 
+  void populateSymbolTable();
+
   wasm::WasmObjectHeader Header;
   std::vector<WasmSection> Sections;
   std::vector<wasm::WasmSignature> Signatures;
@@ -223,6 +225,8 @@ private:
   wasm::WasmLinkingData LinkingData;
   uint32_t NumImportedGlobals = 0;
   uint32_t NumImportedFunctions = 0;
+  uint32_t ImportSection = 0;
+  uint32_t ExportSection = 0;
 
   StringMap<uint32_t> SymbolMap;
 };

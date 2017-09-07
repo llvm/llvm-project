@@ -4430,6 +4430,9 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   EVT MemVT = Load->getMemoryVT();
 
   if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
+    if (MemVT == MVT::i16 && isTypeLegal(MVT::i16))
+      return SDValue();
+
     // FIXME: Copied from PPC
     // First, load into 32 bits, then truncate to 1 bit.
 

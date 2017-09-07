@@ -319,124 +319,6 @@ multiclass sse12_fp_packed_logical_rm<bits<8> opc, RegisterClass RC, Domain d,
        Sched<[WriteVecLogicLd, ReadAfterLd]>;
 }
 
-//===----------------------------------------------------------------------===//
-//  Non-instruction patterns
-//===----------------------------------------------------------------------===//
-
-// A vector extract of the first f32/f64 position is a subregister copy
-def : Pat<(f32 (extractelt (v4f32 VR128:$src), (iPTR 0))),
-          (COPY_TO_REGCLASS (v4f32 VR128:$src), FR32)>;
-def : Pat<(f64 (extractelt (v2f64 VR128:$src), (iPTR 0))),
-          (COPY_TO_REGCLASS (v2f64 VR128:$src), FR64)>;
-
-// A 128-bit subvector extract from the first 256-bit vector position
-// is a subregister copy that needs no instruction.
-def : Pat<(v4i32 (extract_subvector (v8i32 VR256:$src), (iPTR 0))),
-          (v4i32 (EXTRACT_SUBREG (v8i32 VR256:$src), sub_xmm))>;
-def : Pat<(v4f32 (extract_subvector (v8f32 VR256:$src), (iPTR 0))),
-          (v4f32 (EXTRACT_SUBREG (v8f32 VR256:$src), sub_xmm))>;
-
-def : Pat<(v2i64 (extract_subvector (v4i64 VR256:$src), (iPTR 0))),
-          (v2i64 (EXTRACT_SUBREG (v4i64 VR256:$src), sub_xmm))>;
-def : Pat<(v2f64 (extract_subvector (v4f64 VR256:$src), (iPTR 0))),
-          (v2f64 (EXTRACT_SUBREG (v4f64 VR256:$src), sub_xmm))>;
-
-def : Pat<(v8i16 (extract_subvector (v16i16 VR256:$src), (iPTR 0))),
-          (v8i16 (EXTRACT_SUBREG (v16i16 VR256:$src), sub_xmm))>;
-def : Pat<(v16i8 (extract_subvector (v32i8 VR256:$src), (iPTR 0))),
-          (v16i8 (EXTRACT_SUBREG (v32i8 VR256:$src), sub_xmm))>;
-
-// A 128-bit subvector insert to the first 256-bit vector position
-// is a subregister copy that needs no instruction.
-let AddedComplexity = 25 in { // to give priority over vinsertf128rm
-def : Pat<(insert_subvector undef, (v2i64 VR128:$src), (iPTR 0)),
-          (INSERT_SUBREG (v4i64 (IMPLICIT_DEF)), VR128:$src, sub_xmm)>;
-def : Pat<(insert_subvector undef, (v2f64 VR128:$src), (iPTR 0)),
-          (INSERT_SUBREG (v4f64 (IMPLICIT_DEF)), VR128:$src, sub_xmm)>;
-def : Pat<(insert_subvector undef, (v4i32 VR128:$src), (iPTR 0)),
-          (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)), VR128:$src, sub_xmm)>;
-def : Pat<(insert_subvector undef, (v4f32 VR128:$src), (iPTR 0)),
-          (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)), VR128:$src, sub_xmm)>;
-def : Pat<(insert_subvector undef, (v8i16 VR128:$src), (iPTR 0)),
-          (INSERT_SUBREG (v16i16 (IMPLICIT_DEF)), VR128:$src, sub_xmm)>;
-def : Pat<(insert_subvector undef, (v16i8 VR128:$src), (iPTR 0)),
-          (INSERT_SUBREG (v32i8 (IMPLICIT_DEF)), VR128:$src, sub_xmm)>;
-}
-
-// Implicitly promote a 32-bit scalar to a vector.
-def : Pat<(v4f32 (scalar_to_vector FR32:$src)),
-          (COPY_TO_REGCLASS FR32:$src, VR128)>;
-// Implicitly promote a 64-bit scalar to a vector.
-def : Pat<(v2f64 (scalar_to_vector FR64:$src)),
-          (COPY_TO_REGCLASS FR64:$src, VR128)>;
-
-// Bitcasts between 128-bit vector types. Return the original type since
-// no instruction is needed for the conversion
-def : Pat<(v2i64 (bitconvert (v4i32 VR128:$src))), (v2i64 VR128:$src)>;
-def : Pat<(v2i64 (bitconvert (v8i16 VR128:$src))), (v2i64 VR128:$src)>;
-def : Pat<(v2i64 (bitconvert (v16i8 VR128:$src))), (v2i64 VR128:$src)>;
-def : Pat<(v2i64 (bitconvert (v2f64 VR128:$src))), (v2i64 VR128:$src)>;
-def : Pat<(v2i64 (bitconvert (v4f32 VR128:$src))), (v2i64 VR128:$src)>;
-def : Pat<(v4i32 (bitconvert (v2i64 VR128:$src))), (v4i32 VR128:$src)>;
-def : Pat<(v4i32 (bitconvert (v8i16 VR128:$src))), (v4i32 VR128:$src)>;
-def : Pat<(v4i32 (bitconvert (v16i8 VR128:$src))), (v4i32 VR128:$src)>;
-def : Pat<(v4i32 (bitconvert (v2f64 VR128:$src))), (v4i32 VR128:$src)>;
-def : Pat<(v4i32 (bitconvert (v4f32 VR128:$src))), (v4i32 VR128:$src)>;
-def : Pat<(v8i16 (bitconvert (v2i64 VR128:$src))), (v8i16 VR128:$src)>;
-def : Pat<(v8i16 (bitconvert (v4i32 VR128:$src))), (v8i16 VR128:$src)>;
-def : Pat<(v8i16 (bitconvert (v16i8 VR128:$src))), (v8i16 VR128:$src)>;
-def : Pat<(v8i16 (bitconvert (v2f64 VR128:$src))), (v8i16 VR128:$src)>;
-def : Pat<(v8i16 (bitconvert (v4f32 VR128:$src))), (v8i16 VR128:$src)>;
-def : Pat<(v16i8 (bitconvert (v2i64 VR128:$src))), (v16i8 VR128:$src)>;
-def : Pat<(v16i8 (bitconvert (v4i32 VR128:$src))), (v16i8 VR128:$src)>;
-def : Pat<(v16i8 (bitconvert (v8i16 VR128:$src))), (v16i8 VR128:$src)>;
-def : Pat<(v16i8 (bitconvert (v2f64 VR128:$src))), (v16i8 VR128:$src)>;
-def : Pat<(v16i8 (bitconvert (v4f32 VR128:$src))), (v16i8 VR128:$src)>;
-def : Pat<(v4f32 (bitconvert (v2i64 VR128:$src))), (v4f32 VR128:$src)>;
-def : Pat<(v4f32 (bitconvert (v4i32 VR128:$src))), (v4f32 VR128:$src)>;
-def : Pat<(v4f32 (bitconvert (v8i16 VR128:$src))), (v4f32 VR128:$src)>;
-def : Pat<(v4f32 (bitconvert (v16i8 VR128:$src))), (v4f32 VR128:$src)>;
-def : Pat<(v4f32 (bitconvert (v2f64 VR128:$src))), (v4f32 VR128:$src)>;
-def : Pat<(v2f64 (bitconvert (v2i64 VR128:$src))), (v2f64 VR128:$src)>;
-def : Pat<(v2f64 (bitconvert (v4i32 VR128:$src))), (v2f64 VR128:$src)>;
-def : Pat<(v2f64 (bitconvert (v8i16 VR128:$src))), (v2f64 VR128:$src)>;
-def : Pat<(v2f64 (bitconvert (v16i8 VR128:$src))), (v2f64 VR128:$src)>;
-def : Pat<(v2f64 (bitconvert (v4f32 VR128:$src))), (v2f64 VR128:$src)>;
-def : Pat<(f128  (bitconvert (i128  FR128:$src))), (f128  FR128:$src)>;
-def : Pat<(i128  (bitconvert (f128  FR128:$src))), (i128  FR128:$src)>;
-
-// Bitcasts between 256-bit vector types. Return the original type since
-// no instruction is needed for the conversion
-def : Pat<(v4i64  (bitconvert (v8i32  VR256:$src))), (v4i64  VR256:$src)>;
-def : Pat<(v4i64  (bitconvert (v16i16 VR256:$src))), (v4i64  VR256:$src)>;
-def : Pat<(v4i64  (bitconvert (v32i8  VR256:$src))), (v4i64  VR256:$src)>;
-def : Pat<(v4i64  (bitconvert (v8f32  VR256:$src))), (v4i64  VR256:$src)>;
-def : Pat<(v4i64  (bitconvert (v4f64  VR256:$src))), (v4i64  VR256:$src)>;
-def : Pat<(v8i32  (bitconvert (v4i64  VR256:$src))), (v8i32  VR256:$src)>;
-def : Pat<(v8i32  (bitconvert (v16i16 VR256:$src))), (v8i32  VR256:$src)>;
-def : Pat<(v8i32  (bitconvert (v32i8  VR256:$src))), (v8i32  VR256:$src)>;
-def : Pat<(v8i32  (bitconvert (v4f64  VR256:$src))), (v8i32  VR256:$src)>;
-def : Pat<(v8i32  (bitconvert (v8f32  VR256:$src))), (v8i32  VR256:$src)>;
-def : Pat<(v16i16 (bitconvert (v4i64  VR256:$src))), (v16i16 VR256:$src)>;
-def : Pat<(v16i16 (bitconvert (v8i32  VR256:$src))), (v16i16 VR256:$src)>;
-def : Pat<(v16i16 (bitconvert (v32i8  VR256:$src))), (v16i16 VR256:$src)>;
-def : Pat<(v16i16 (bitconvert (v4f64  VR256:$src))), (v16i16 VR256:$src)>;
-def : Pat<(v16i16 (bitconvert (v8f32  VR256:$src))), (v16i16 VR256:$src)>;
-def : Pat<(v32i8  (bitconvert (v4i64  VR256:$src))), (v32i8  VR256:$src)>;
-def : Pat<(v32i8  (bitconvert (v8i32  VR256:$src))), (v32i8  VR256:$src)>;
-def : Pat<(v32i8  (bitconvert (v16i16 VR256:$src))), (v32i8  VR256:$src)>;
-def : Pat<(v32i8  (bitconvert (v4f64  VR256:$src))), (v32i8  VR256:$src)>;
-def : Pat<(v32i8  (bitconvert (v8f32  VR256:$src))), (v32i8  VR256:$src)>;
-def : Pat<(v8f32  (bitconvert (v4i64  VR256:$src))), (v8f32  VR256:$src)>;
-def : Pat<(v8f32  (bitconvert (v8i32  VR256:$src))), (v8f32  VR256:$src)>;
-def : Pat<(v8f32  (bitconvert (v16i16 VR256:$src))), (v8f32  VR256:$src)>;
-def : Pat<(v8f32  (bitconvert (v32i8  VR256:$src))), (v8f32  VR256:$src)>;
-def : Pat<(v8f32  (bitconvert (v4f64  VR256:$src))), (v8f32  VR256:$src)>;
-def : Pat<(v4f64  (bitconvert (v4i64  VR256:$src))), (v4f64  VR256:$src)>;
-def : Pat<(v4f64  (bitconvert (v8i32  VR256:$src))), (v4f64  VR256:$src)>;
-def : Pat<(v4f64  (bitconvert (v16i16 VR256:$src))), (v4f64  VR256:$src)>;
-def : Pat<(v4f64  (bitconvert (v32i8  VR256:$src))), (v4f64  VR256:$src)>;
-def : Pat<(v4f64  (bitconvert (v8f32  VR256:$src))), (v4f64  VR256:$src)>;
 
 // Alias instructions that map fld0 to xorps for sse or vxorps for avx.
 // This is expanded by ExpandPostRAPseudos.
@@ -630,35 +512,11 @@ let Predicates = [UseAVX] in {
             (VMOVSSrr (v4f32 VR128:$src1),
                       (COPY_TO_REGCLASS (v4f32 VR128:$src2), FR32))>;
 
-  // 256-bit variants
-  def : Pat<(v8i32 (X86Movss VR256:$src1, VR256:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSSrr (EXTRACT_SUBREG (v8i32 VR256:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v8i32 VR256:$src2), sub_xmm)),
-              sub_xmm)>;
-  def : Pat<(v8f32 (X86Movss VR256:$src1, VR256:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSSrr (EXTRACT_SUBREG (v8f32 VR256:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v8f32 VR256:$src2), sub_xmm)),
-              sub_xmm)>;
-
   // Shuffle with VMOVSD
   def : Pat<(v2i64 (X86Movsd VR128:$src1, VR128:$src2)),
             (VMOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
   def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
             (VMOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
-
-  // 256-bit variants
-  def : Pat<(v4i64 (X86Movsd VR256:$src1, VR256:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSDrr (EXTRACT_SUBREG (v4i64 VR256:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v4i64 VR256:$src2), sub_xmm)),
-              sub_xmm)>;
-  def : Pat<(v4f64 (X86Movsd VR256:$src1, VR256:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSDrr (EXTRACT_SUBREG (v4f64 VR256:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v4f64 VR256:$src2), sub_xmm)),
-              sub_xmm)>;
 
   // FIXME: Instead of a X86Movlps there should be a X86Movsd here, the problem
   // is during lowering, where it's not possible to recognize the fold cause
@@ -980,22 +838,6 @@ let Predicates = [HasAVX, NoVLX] in {
             (VMOVUPSYmr addr:$dst, VR256:$src)>;
   def : Pat<(store (v32i8 VR256:$src), addr:$dst),
             (VMOVUPSYmr addr:$dst, VR256:$src)>;
-
-  // Special patterns for storing subvector extracts of lower 128-bits
-  // Its cheaper to just use VMOVAPS/VMOVUPS instead of VEXTRACTF128mr
-  def : Pat<(alignedstore (v2f64 (extract_subvector
-                                  (v4f64 VR256:$src), (iPTR 0))), addr:$dst),
-            (VMOVAPDmr addr:$dst, (v2f64 (EXTRACT_SUBREG VR256:$src,sub_xmm)))>;
-  def : Pat<(alignedstore (v4f32 (extract_subvector
-                                  (v8f32 VR256:$src), (iPTR 0))), addr:$dst),
-            (VMOVAPSmr addr:$dst, (v4f32 (EXTRACT_SUBREG VR256:$src,sub_xmm)))>;
-
-  def : Pat<(store (v2f64 (extract_subvector
-                           (v4f64 VR256:$src), (iPTR 0))), addr:$dst),
-            (VMOVUPDmr addr:$dst, (v2f64 (EXTRACT_SUBREG VR256:$src,sub_xmm)))>;
-  def : Pat<(store (v4f32 (extract_subvector
-                           (v8f32 VR256:$src), (iPTR 0))), addr:$dst),
-            (VMOVUPSmr addr:$dst, (v4f32 (EXTRACT_SUBREG VR256:$src,sub_xmm)))>;
 }
 
 // Use movaps / movups for SSE integer load / store (one byte shorter).
@@ -3872,79 +3714,6 @@ let Predicates = [HasAVX, NoVLX] in {
             (VMOVDQUmr addr:$dst, VR128:$src)>;
   def : Pat<(store (v16i8 VR128:$src), addr:$dst),
             (VMOVDQUmr addr:$dst, VR128:$src)>;
-
-  // Special patterns for storing subvector extracts of lower 128-bits
-  // Its cheaper to just use VMOVDQA/VMOVDQU instead of VEXTRACTF128mr
-  def : Pat<(alignedstore (v2i64 (extract_subvector
-                                  (v4i64 VR256:$src), (iPTR 0))), addr:$dst),
-            (VMOVDQAmr addr:$dst, (v2i64 (EXTRACT_SUBREG VR256:$src,sub_xmm)))>;
-  def : Pat<(alignedstore (v4i32 (extract_subvector
-                                  (v8i32 VR256:$src), (iPTR 0))), addr:$dst),
-            (VMOVDQAmr addr:$dst, (v4i32 (EXTRACT_SUBREG VR256:$src,sub_xmm)))>;
-  def : Pat<(alignedstore (v8i16 (extract_subvector
-                                  (v16i16 VR256:$src), (iPTR 0))), addr:$dst),
-            (VMOVDQAmr addr:$dst, (v8i16 (EXTRACT_SUBREG VR256:$src,sub_xmm)))>;
-  def : Pat<(alignedstore (v16i8 (extract_subvector
-                                  (v32i8 VR256:$src), (iPTR 0))), addr:$dst),
-            (VMOVDQAmr addr:$dst, (v16i8 (EXTRACT_SUBREG VR256:$src,sub_xmm)))>;
-
-  def : Pat<(store (v2i64 (extract_subvector
-                           (v4i64 VR256:$src), (iPTR 0))), addr:$dst),
-            (VMOVDQUmr addr:$dst, (v2i64 (EXTRACT_SUBREG VR256:$src,sub_xmm)))>;
-  def : Pat<(store (v4i32 (extract_subvector
-                           (v8i32 VR256:$src), (iPTR 0))), addr:$dst),
-            (VMOVDQUmr addr:$dst, (v4i32 (EXTRACT_SUBREG VR256:$src,sub_xmm)))>;
-  def : Pat<(store (v8i16 (extract_subvector
-                           (v16i16 VR256:$src), (iPTR 0))), addr:$dst),
-            (VMOVDQUmr addr:$dst, (v8i16 (EXTRACT_SUBREG VR256:$src,sub_xmm)))>;
-  def : Pat<(store (v16i8 (extract_subvector
-                           (v32i8 VR256:$src), (iPTR 0))), addr:$dst),
-            (VMOVDQUmr addr:$dst, (v16i8 (EXTRACT_SUBREG VR256:$src,sub_xmm)))>;
-
-  // If we're inserting into an all zeros vector, just use a plain move which
-  // will zero the upper bits.
-  // TODO: Is there a safe way to detect whether the producing instruction
-  // already zeroed the upper bits?
-  def : Pat<(v4f64 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
-                                     (v2f64 VR128:$src), (iPTR 0))),
-            (SUBREG_TO_REG (i64 0), (VMOVAPDrr VR128:$src), sub_xmm)>;
-  def : Pat<(v8f32 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
-                                     (v4f32 VR128:$src), (iPTR 0))),
-            (SUBREG_TO_REG (i64 0), (VMOVAPSrr VR128:$src), sub_xmm)>;
-  def : Pat<(v4i64 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
-                                     (v2i64 VR128:$src), (iPTR 0))),
-            (SUBREG_TO_REG (i64 0), (VMOVDQArr VR128:$src), sub_xmm)>;
-  def : Pat<(v8i32 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
-                                     (v4i32 VR128:$src), (iPTR 0))),
-            (SUBREG_TO_REG (i64 0), (VMOVDQArr VR128:$src), sub_xmm)>;
-  def : Pat<(v16i16 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
-                                      (v8i16 VR128:$src), (iPTR 0))),
-            (SUBREG_TO_REG (i64 0), (VMOVDQArr VR128:$src), sub_xmm)>;
-  def : Pat<(v32i8 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
-                                     (v16i8 VR128:$src), (iPTR 0))),
-            (SUBREG_TO_REG (i64 0), (VMOVDQArr VR128:$src), sub_xmm)>;
-
-  def : Pat<(v4f64 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
-                                     (loadv2f64 addr:$src), (iPTR 0))),
-            (SUBREG_TO_REG (i64 0), (VMOVAPDrm addr:$src), sub_xmm)>;
-  def : Pat<(v8f32 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
-                                     (loadv4f32 addr:$src), (iPTR 0))),
-            (SUBREG_TO_REG (i64 0), (VMOVAPSrm addr:$src), sub_xmm)>;
-  def : Pat<(v4i64 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
-                                     (loadv2i64 addr:$src), (iPTR 0))),
-            (SUBREG_TO_REG (i64 0), (VMOVDQArm addr:$src), sub_xmm)>;
-  def : Pat<(v8i32 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
-                                     (bc_v4i32 (loadv2i64 addr:$src)),
-                                     (iPTR 0))),
-            (SUBREG_TO_REG (i64 0), (VMOVDQArm addr:$src), sub_xmm)>;
-  def : Pat<(v16i16 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
-                                      (bc_v8i16 (loadv2i64 addr:$src)),
-                                      (iPTR 0))),
-            (SUBREG_TO_REG (i64 0), (VMOVDQArm addr:$src), sub_xmm)>;
-  def : Pat<(v32i8 (insert_subvector (bitconvert (v8i32 immAllZerosV)),
-                                     (bc_v16i8 (loadv2i64 addr:$src)),
-                                     (iPTR 0))),
-            (SUBREG_TO_REG (i64 0), (VMOVDQArm addr:$src), sub_xmm)>;
 }
 
 //===---------------------------------------------------------------------===//
@@ -7914,22 +7683,12 @@ def : Pat<(v8i32 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
           (VPERM2F128rr VR256:$src1, VR256:$src2, imm:$imm)>;
 def : Pat<(v4i64 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
           (VPERM2F128rr VR256:$src1, VR256:$src2, imm:$imm)>;
-def : Pat<(v32i8 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPERM2F128rr VR256:$src1, VR256:$src2, imm:$imm)>;
-def : Pat<(v16i16 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPERM2F128rr VR256:$src1, VR256:$src2, imm:$imm)>;
 
 def : Pat<(v8i32 (X86VPerm2x128 VR256:$src1,
                   (bc_v8i32 (loadv4i64 addr:$src2)), (i8 imm:$imm))),
           (VPERM2F128rm VR256:$src1, addr:$src2, imm:$imm)>;
 def : Pat<(v4i64 (X86VPerm2x128 VR256:$src1,
                   (loadv4i64 addr:$src2), (i8 imm:$imm))),
-          (VPERM2F128rm VR256:$src1, addr:$src2, imm:$imm)>;
-def : Pat<(v32i8 (X86VPerm2x128 VR256:$src1,
-                  (bc_v32i8 (loadv4i64 addr:$src2)), (i8 imm:$imm))),
-          (VPERM2F128rm VR256:$src1, addr:$src2, imm:$imm)>;
-def : Pat<(v16i16 (X86VPerm2x128 VR256:$src1,
-                  (bc_v16i16 (loadv4i64 addr:$src2)), (i8 imm:$imm))),
           (VPERM2F128rm VR256:$src1, addr:$src2, imm:$imm)>;
 }
 
@@ -8341,17 +8100,7 @@ def VPERM2I128rm : AVX2AIi8<0x46, MRMSrcMem, (outs VR256:$dst),
 let Predicates = [HasAVX2] in {
 def : Pat<(v8i32 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
           (VPERM2I128rr VR256:$src1, VR256:$src2, imm:$imm)>;
-def : Pat<(v32i8 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPERM2I128rr VR256:$src1, VR256:$src2, imm:$imm)>;
-def : Pat<(v16i16 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPERM2I128rr VR256:$src1, VR256:$src2, imm:$imm)>;
 
-def : Pat<(v32i8 (X86VPerm2x128 VR256:$src1, (bc_v32i8 (loadv4i64 addr:$src2)),
-                  (i8 imm:$imm))),
-          (VPERM2I128rm VR256:$src1, addr:$src2, imm:$imm)>;
-def : Pat<(v16i16 (X86VPerm2x128 VR256:$src1,
-                   (bc_v16i16 (loadv4i64 addr:$src2)), (i8 imm:$imm))),
-          (VPERM2I128rm VR256:$src1, addr:$src2, imm:$imm)>;
 def : Pat<(v8i32 (X86VPerm2x128 VR256:$src1, (bc_v8i32 (loadv4i64 addr:$src2)),
                   (i8 imm:$imm))),
           (VPERM2I128rm VR256:$src1, addr:$src2, imm:$imm)>;
