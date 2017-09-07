@@ -1200,7 +1200,14 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
         .getAddress();
   });
   (void)Scope.Privatize();
-  CGF.EmitIgnoredExpr(CombinerInitializer);
+  if (!IsCombiner && Out->hasInit() &&
+      !CGF.isTrivialInitializer(Out->getInit())) {
+    CGF.EmitAnyExprToMem(Out->getInit(), CGF.GetAddrOfLocalVar(Out),
+                         Out->getType().getQualifiers(),
+                         /*IsInitializer=*/true);
+  }
+  if (CombinerInitializer)
+    CGF.EmitIgnoredExpr(CombinerInitializer);
   Scope.ForceCleanup();
   CGF.FinishFunction();
   return Fn;
@@ -1226,7 +1233,10 @@ void CGOpenMPRuntime::emitUserDefinedReduction(
       Orig = &C.Idents.get("omp_orig");
     }
     Initializer = emitCombinerOrInitializer(
-        CGM, D->getType(), Init, cast<VarDecl>(D->lookup(Orig).front()),
+        CGM, D->getType(),
+        D->getInitializerKind() == OMPDeclareReductionDecl::CallInit ? Init
+                                                                     : nullptr,
+        cast<VarDecl>(D->lookup(Orig).front()),
         cast<VarDecl>(D->lookup(Priv).front()),
         /*IsCombiner=*/false);
   }
@@ -3049,11 +3059,19 @@ void CGOpenMPRuntime::emitDistributeStaticInit(
 }
 
 void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
-                                          SourceLocation Loc) {
+                                          SourceLocation Loc,
+                                          OpenMPDirectiveKind DKind) {
   if (!CGF.HaveInsertPoint())
     return;
   // Call __kmpc_for_static_fini(ident_t *loc, kmp_int32 tid);
-  llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc)};
+  llvm::Value *Args[] = {
+      emitUpdateLocation(CGF, Loc,
+                         isOpenMPDistributeDirective(DKind)
+                             ? OMP_IDENT_WORK_DISTRIBUTE
+                             : isOpenMPLoopDirective(DKind)
+                                   ? OMP_IDENT_WORK_LOOP
+                                   : OMP_IDENT_WORK_SECTIONS),
+      getThreadID(CGF, Loc)};
   CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_for_static_fini),
                       Args);
 }

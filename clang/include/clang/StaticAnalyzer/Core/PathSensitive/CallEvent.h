@@ -19,7 +19,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -436,20 +436,7 @@ public:
     return cast<FunctionDecl>(CallEvent::getDecl());
   }
 
-  RuntimeDefinition getRuntimeDefinition() const override {
-    const FunctionDecl *FD = getDecl();
-    // Note that the AnalysisDeclContext will have the FunctionDecl with
-    // the definition (if one exists).
-    if (FD) {
-      AnalysisDeclContext *AD =
-        getLocationContext()->getAnalysisDeclContext()->
-        getManager()->getContext(FD);
-      if (AD->getBody())
-        return RuntimeDefinition(AD->getDecl());
-    }
-
-    return RuntimeDefinition();
-  }
+  RuntimeDefinition getRuntimeDefinition() const override;
 
   bool argumentsMayEscape() const override;
 

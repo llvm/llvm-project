@@ -1311,12 +1311,12 @@ bool clang::driver::findMIPSMultilibs(const Driver &D,
 
   if (TargetTriple.getVendor() == llvm::Triple::MipsTechnologies &&
       TargetTriple.getOS() == llvm::Triple::Linux &&
-      TargetTriple.getEnvironment() == llvm::Triple::GNU)
+      TargetTriple.isGNUEnvironment())
     return findMipsMtiMultilibs(Flags, NonExistent, Result);
 
   if (TargetTriple.getVendor() == llvm::Triple::ImaginationTechnologies &&
       TargetTriple.getOS() == llvm::Triple::Linux &&
-      TargetTriple.getEnvironment() == llvm::Triple::GNU)
+      TargetTriple.isGNUEnvironment())
     return findMipsImgMultilibs(Flags, NonExistent, Result);
 
   if (findMipsCsMultilibs(Flags, NonExistent, Result))

@@ -35,7 +35,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
   // MIPS32r6 is the default for mips(el)?-img-linux-gnu and MIPS64r6 is the
   // default for mips64(el)?-img-linux-gnu.
   if (Triple.getVendor() == llvm::Triple::ImaginationTechnologies &&
-      Triple.getEnvironment() == llvm::Triple::GNU) {
+      Triple.isGNUEnvironment()) {
     DefMips32CPU = "mips32r6";
     DefMips64CPU = "mips64r6";
   }

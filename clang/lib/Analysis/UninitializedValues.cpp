@@ -18,7 +18,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/Analyses/UninitializedValues.h"
-#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/DomainSpecific/ObjCNoReturn.h"
 #include "llvm/ADT/DenseMap.h"

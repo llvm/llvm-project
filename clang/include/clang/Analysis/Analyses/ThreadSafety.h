@@ -19,7 +19,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETY_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETY_H
 
-#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
 

@@ -23,3 +23,34 @@ namespace Explicit {
   using Y = decltype(b);
   using X = decltype(c);
 }
+
+namespace std {
+  template<typename T> struct initializer_list {
+    const T *ptr;
+    __SIZE_TYPE__ size;
+    initializer_list();
+  };
+}
+
+namespace p0702r1 {
+  template<typename T> struct X { // expected-note {{candidate}}
+    X(std::initializer_list<T>); // expected-note {{candidate}}
+  };
+
+  X xi = {0};
+  X xxi = {xi};
+  extern X<int> xi;
+  // Prior to P0702R1, this is X<X<int>>.
+  extern X<int> xxi;
+
+  struct Y : X<int> {};
+  Y y {{0}};
+  X xy {y};
+  extern X<int> xy;
+
+  struct Z : X<int>, X<float> {};
+  Z z = {{0}, {0.0f}};
+  // This is not X<Z> even though that would work. Instead, it's ambiguous
+  // between X<int> and X<float>.
+  X xz = {z}; // expected-error {{no viable constructor or deduction guide}}
+}
