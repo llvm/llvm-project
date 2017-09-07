@@ -35,12 +35,12 @@ Sections:
       - Type:        I32
         Mutable:     false
         InitExpr:
-          Opcode:          I64_CONST
+          Opcode:          I32_CONST
           Value:           64
       - Type:        I32
         Mutable:     false
         InitExpr:
-          Opcode:          I64_CONST
+          Opcode:          I32_CONST
           Value:           1024
   - Type:            EXPORT
     Exports:

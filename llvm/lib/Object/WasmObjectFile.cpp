@@ -300,9 +300,69 @@ Error WasmObjectFile::parseNameSection(const uint8_t *Ptr, const uint8_t *End) {
   return Error::success();
 }
 
+void WasmObjectFile::populateSymbolTable() {
+  // Add imports to symbol table
+  size_t ImportIndex = 0;
+  for (const wasm::WasmImport& Import : Imports) {
+    switch (Import.Kind) {
+    case wasm::WASM_EXTERNAL_GLOBAL:
+      assert(Import.Global.Type == wasm::WASM_TYPE_I32);
+      SymbolMap.try_emplace(Import.Field, Symbols.size());
+      Symbols.emplace_back(Import.Field, WasmSymbol::SymbolType::GLOBAL_IMPORT,
+                           ImportSection, ImportIndex);
+      DEBUG(dbgs() << "Adding import: " << Symbols.back()
+                   << " sym index:" << Symbols.size() << "\n");
+      break;
+    case wasm::WASM_EXTERNAL_FUNCTION:
+      SymbolMap.try_emplace(Import.Field, Symbols.size());
+      Symbols.emplace_back(Import.Field,
+                           WasmSymbol::SymbolType::FUNCTION_IMPORT,
+                           ImportSection, ImportIndex);
+      DEBUG(dbgs() << "Adding import: " << Symbols.back()
+                   << " sym index:" << Symbols.size() << "\n");
+      break;
+    default:
+      break;
+    }
+    ImportIndex++;
+  }
+
+  // Add exports to symbol table
+  size_t ExportIndex = 0;
+  for (const wasm::WasmExport& Export : Exports) {
+    if (Export.Kind == wasm::WASM_EXTERNAL_FUNCTION ||
+        Export.Kind == wasm::WASM_EXTERNAL_GLOBAL) {
+      WasmSymbol::SymbolType ExportType =
+          Export.Kind == wasm::WASM_EXTERNAL_FUNCTION
+              ? WasmSymbol::SymbolType::FUNCTION_EXPORT
+              : WasmSymbol::SymbolType::GLOBAL_EXPORT;
+      auto Pair = SymbolMap.try_emplace(Export.Name, Symbols.size());
+      if (Pair.second) {
+        Symbols.emplace_back(Export.Name, ExportType,
+                             ExportSection, ExportIndex);
+        DEBUG(dbgs() << "Adding export: " << Symbols.back()
+                     << " sym index:" << Symbols.size() << "\n");
+      } else {
+        uint32_t SymIndex = Pair.first->second;
+        Symbols[SymIndex] =
+            WasmSymbol(Export.Name, ExportType, ExportSection, ExportIndex);
+        DEBUG(dbgs() << "Replacing existing symbol:  " << Symbols[SymIndex]
+                     << " sym index:" << SymIndex << "\n");
+      }
+    }
+    ExportIndex++;
+  }
+}
+
 Error WasmObjectFile::parseLinkingSection(const uint8_t *Ptr,
                                           const uint8_t *End) {
   HasLinkingSection = true;
+
+  // Only populate the symbol table with imports and exports if the object
+  // has a linking section (i.e. its a relocatable object file). Otherwise
+  // the global might not represent symbols at all.
+  populateSymbolTable();
+
   while (Ptr < End) {
     uint8_t Type = readVarint7(Ptr);
     uint32_t Size = readVaruint32(Ptr);
@@ -463,6 +523,7 @@ Error WasmObjectFile::parseTypeSection(const uint8_t *Ptr, const uint8_t *End) {
 }
 
 Error WasmObjectFile::parseImportSection(const uint8_t *Ptr, const uint8_t *End) {
+  ImportSection = Sections.size();
   uint32_t Count = readVaruint32(Ptr);
   Imports.reserve(Count);
   for (uint32_t i = 0; i < Count; i++) {
@@ -474,31 +535,20 @@ Error WasmObjectFile::parseImportSection(const uint8_t *Ptr, const uint8_t *End)
     case wasm::WASM_EXTERNAL_FUNCTION:
       NumImportedFunctions++;
       Im.SigIndex = readVaruint32(Ptr);
-      SymbolMap.try_emplace(Im.Field, Symbols.size());
-      Symbols.emplace_back(Im.Field, WasmSymbol::SymbolType::FUNCTION_IMPORT,
-                           Sections.size(), i);
-      DEBUG(dbgs() << "Adding import: " << Symbols.back()
-                   << " sym index:" << Symbols.size() << "\n");
       break;
     case wasm::WASM_EXTERNAL_GLOBAL:
       NumImportedGlobals++;
       Im.Global.Type = readVarint7(Ptr);
       Im.Global.Mutable = readVaruint1(Ptr);
-      SymbolMap.try_emplace(Im.Field, Symbols.size());
-      Symbols.emplace_back(Im.Field, WasmSymbol::SymbolType::GLOBAL_IMPORT,
-                           Sections.size(), i);
-      DEBUG(dbgs() << "Adding import: " << Symbols.back()
-                   << " sym index:" << Symbols.size() << "\n");
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
       Im.Memory = readLimits(Ptr);
       break;
     case wasm::WASM_EXTERNAL_TABLE:
       Im.Table = readTable(Ptr);
-      if (Im.Table.ElemType != wasm::WASM_TYPE_ANYFUNC) {
+      if (Im.Table.ElemType != wasm::WASM_TYPE_ANYFUNC)
         return make_error<GenericBinaryError>("Invalid table element type",
                                               object_error::parse_failed);
-      }
       break;
     default:
       return make_error<GenericBinaryError>(
@@ -570,6 +620,7 @@ Error WasmObjectFile::parseGlobalSection(const uint8_t *Ptr, const uint8_t *End)
 }
 
 Error WasmObjectFile::parseExportSection(const uint8_t *Ptr, const uint8_t *End) {
+  ExportSection = Sections.size();
   uint32_t Count = readVaruint32(Ptr);
   Exports.reserve(Count);
   for (uint32_t i = 0; i < Count; i++) {
@@ -577,43 +628,24 @@ Error WasmObjectFile::parseExportSection(const uint8_t *Ptr, const uint8_t *End)
     Ex.Name = readString(Ptr);
     Ex.Kind = readUint8(Ptr);
     Ex.Index = readVaruint32(Ptr);
-    WasmSymbol::SymbolType ExportType;
-    bool MakeSymbol = false;
     switch (Ex.Kind) {
     case wasm::WASM_EXTERNAL_FUNCTION:
-      ExportType = WasmSymbol::SymbolType::FUNCTION_EXPORT;
       if (Ex.Index >= FunctionTypes.size() + NumImportedFunctions)
         return make_error<GenericBinaryError>("Invalid function export",
                                               object_error::parse_failed);
-      MakeSymbol = true;
       break;
-    case wasm::WASM_EXTERNAL_GLOBAL:
-      ExportType = WasmSymbol::SymbolType::GLOBAL_EXPORT;
+    case wasm::WASM_EXTERNAL_GLOBAL: {
       if (Ex.Index >= Globals.size() + NumImportedGlobals)
         return make_error<GenericBinaryError>("Invalid global export",
                                               object_error::parse_failed);
-      MakeSymbol = true;
       break;
+    }
     case wasm::WASM_EXTERNAL_MEMORY:
     case wasm::WASM_EXTERNAL_TABLE:
       break;
     default:
       return make_error<GenericBinaryError>(
           "Unexpected export kind", object_error::parse_failed);
-    }
-    if (MakeSymbol) {
-      auto Pair = SymbolMap.try_emplace(Ex.Name, Symbols.size());
-      if (Pair.second) {
-        Symbols.emplace_back(Ex.Name, ExportType,
-                             Sections.size(), i);
-        DEBUG(dbgs() << "Adding export: " << Symbols.back()
-                     << " sym index:" << Symbols.size() << "\n");
-      } else {
-        uint32_t SymIndex = Pair.first->second;
-        Symbols[SymIndex] = WasmSymbol(Ex.Name, ExportType, Sections.size(), i);
-        DEBUG(dbgs() << "Replacing existing symbol:  " << Symbols[SymIndex]
-                     << " sym index:" << SymIndex << "\n");
-      }
     }
     Exports.push_back(Ex);
   }
@@ -791,6 +823,8 @@ uint64_t WasmObjectFile::getSymbolValueImpl(DataRefImpl Symb) const {
     uint32_t GlobalIndex = Exports[Sym.ElementIndex].Index - NumImportedGlobals;
     assert(GlobalIndex < Globals.size());
     const wasm::WasmGlobal& Global = Globals[GlobalIndex];
+    // WasmSymbols correspond only to I32_CONST globals
+    assert(Global.InitExpr.Opcode == wasm::WASM_OPCODE_I32_CONST);
     return Global.InitExpr.Value.Int32;
   }
   case WasmSymbol::SymbolType::DEBUG_FUNCTION_NAME:

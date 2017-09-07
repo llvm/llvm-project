@@ -56,5 +56,4 @@
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        28
 ; CHECK-NEXT:     DataAlignment:   8
-; CHECK-NEXT:     SymbolInfo:      
 ; CHECK-NEXT: ...
