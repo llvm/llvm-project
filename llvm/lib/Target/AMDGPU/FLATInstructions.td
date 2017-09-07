@@ -706,6 +706,7 @@ def : FlatLoadPat <FLAT_LOAD_SBYTE, flat_sextloadi8, i32>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, flat_az_extloadi8, i16>;
 def : FlatLoadPat <FLAT_LOAD_SBYTE, flat_sextloadi8, i16>;
 def : FlatLoadPat <FLAT_LOAD_USHORT, flat_az_extloadi16, i32>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, flat_load, i16>;
 def : FlatLoadPat <FLAT_LOAD_SSHORT, flat_sextloadi16, i32>;
 def : FlatLoadPat <FLAT_LOAD_DWORD, flat_load, i32>;
 def : FlatLoadPat <FLAT_LOAD_DWORDX2, flat_load, v2i32>;
@@ -763,7 +764,7 @@ def : FlatLoadSignedPat <GLOBAL_LOAD_UBYTE, az_extloadi8_global, i16>;
 def : FlatLoadSignedPat <GLOBAL_LOAD_SBYTE, sextloadi8_global, i16>;
 def : FlatLoadSignedPat <GLOBAL_LOAD_USHORT, az_extloadi16_global, i32>;
 def : FlatLoadSignedPat <GLOBAL_LOAD_SSHORT, sextloadi16_global, i32>;
-
+def : FlatLoadSignedPat <GLOBAL_LOAD_USHORT, global_load, i16>;
 
 def : FlatLoadSignedPat <GLOBAL_LOAD_DWORD, global_load, i32>;
 def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX2, global_load, v2i32>;

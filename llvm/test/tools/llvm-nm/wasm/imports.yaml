@@ -20,6 +20,10 @@ Sections:
         Kind:            GLOBAL
         GlobalType:      I32
         GlobalMutable:   false
+  - Type:            CUSTOM
+    Name:            "linking"
+    DataSize:        0
+    DataAlignment:   0
 
 # CHECK:    U bar
 # CHECK:    U foo

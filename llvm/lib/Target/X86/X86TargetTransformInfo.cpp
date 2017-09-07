@@ -1170,7 +1170,11 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::FP_TO_UINT,  MVT::v2i32,  MVT::v2f32,  1 },
     { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  1 },
     { ISD::FP_TO_UINT,  MVT::v8i32,  MVT::v8f32,  1 },
+    { ISD::FP_TO_UINT,  MVT::v8i16,  MVT::v8f64,  2 },
+    { ISD::FP_TO_UINT,  MVT::v8i8,   MVT::v8f64,  2 },
     { ISD::FP_TO_UINT,  MVT::v16i32, MVT::v16f32, 1 },
+    { ISD::FP_TO_UINT,  MVT::v16i16, MVT::v16f32, 2 },
+    { ISD::FP_TO_UINT,  MVT::v16i8,  MVT::v16f32, 2 },
   };
 
   static const TypeConversionCostTblEntry AVX2ConversionTbl[] = {
