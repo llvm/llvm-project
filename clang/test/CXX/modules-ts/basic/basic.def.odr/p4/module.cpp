@@ -6,9 +6,8 @@
 // CHECK-DAG: @_ZW6ModuleE19static_var_exported = available_externally global i32 0,
 // CHECK-DAG: @const_var_exported = available_externally constant i32 3,
 //
-// FIXME: The module name should be mangled into all of these.
-// CHECK-DAG: @extern_var_module_linkage = external global
-// CHECK-DAG: @inline_var_module_linkage = linkonce_odr global
+// CHECK-DAG: @_ZW6ModuleE25extern_var_module_linkage = external global
+// CHECK-DAG: @_ZW6ModuleE25inline_var_module_linkage = linkonce_odr global
 // CHECK-DAG: @_ZW6ModuleE25static_var_module_linkage = available_externally global i32 0,
 // CHECK-DAG: @_ZW6ModuleE24const_var_module_linkage = available_externally constant i32 3,
 

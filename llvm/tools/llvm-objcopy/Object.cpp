@@ -154,6 +154,39 @@ void SymbolTableSectionImpl<ELFT>::writeSection(
   }
 }
 
+template <class ELFT> void RelocationSection<ELFT>::finalize() {
+  this->Link = Symbols->Index;
+  this->Info = SecToApplyRel->Index;
+}
+
+template <class ELFT>
+void setAddend(Elf_Rel_Impl<ELFT, false> &Rel, uint64_t Addend) {}
+
+template <class ELFT>
+void setAddend(Elf_Rel_Impl<ELFT, true> &Rela, uint64_t Addend) {
+  Rela.r_addend = Addend;
+}
+
+template <class ELFT>
+template <class T>
+void RelocationSection<ELFT>::writeRel(T *Buf) const {
+  for (const auto &Reloc : Relocations) {
+    Buf->r_offset = Reloc.Offset;
+    setAddend(*Buf, Reloc.Addend);
+    Buf->setSymbolAndType(Reloc.RelocSymbol->Index, Reloc.Type, false);
+    ++Buf;
+  }
+}
+
+template <class ELFT>
+void RelocationSection<ELFT>::writeSection(llvm::FileOutputBuffer &Out) const {
+  uint8_t *Buf = Out.getBufferStart() + Offset;
+  if (Type == SHT_REL)
+    writeRel(reinterpret_cast<Elf_Rel *>(Buf));
+  else
+    writeRel(reinterpret_cast<Elf_Rela *>(Buf));
+}
+
 // Returns true IFF a section is wholly inside the range of a segment
 static bool sectionWithinSegment(const SectionBase &Section,
                                  const Segment &Segment) {
@@ -231,11 +264,35 @@ void Object<ELFT>::initSymbolTable(const llvm::object::ELFFile<ELFT> &ElfFile,
 }
 
 template <class ELFT>
+static void getAddend(uint64_t &ToSet, const Elf_Rel_Impl<ELFT, false> &Rel) {}
+
+template <class ELFT>
+static void getAddend(uint64_t &ToSet, const Elf_Rel_Impl<ELFT, true> &Rela) {
+  ToSet = Rela.r_addend;
+}
+
+template <class ELFT, class T>
+void initRelocations(RelocationSection<ELFT> *Relocs,
+                     SymbolTableSection *SymbolTable, T RelRange) {
+  for (const auto &Rel : RelRange) {
+    Relocation ToAdd;
+    ToAdd.Offset = Rel.r_offset;
+    getAddend(ToAdd.Addend, Rel);
+    ToAdd.Type = Rel.getType(false);
+    ToAdd.RelocSymbol = SymbolTable->getSymbolByIndex(Rel.getSymbol(false));
+    Relocs->addRelocation(ToAdd);
+  }
+}
+
+template <class ELFT>
 std::unique_ptr<SectionBase>
 Object<ELFT>::makeSection(const llvm::object::ELFFile<ELFT> &ElfFile,
                           const Elf_Shdr &Shdr) {
   ArrayRef<uint8_t> Data;
   switch (Shdr.sh_type) {
+  case SHT_REL:
+  case SHT_RELA:
+    return llvm::make_unique<RelocationSection<ELFT>>();
   case SHT_STRTAB:
     return llvm::make_unique<StringTableSection>();
   case SHT_SYMTAB: {
@@ -279,6 +336,35 @@ void Object<ELFT>::readSectionHeaders(const ELFFile<ELFT> &ElfFile) {
   // details about symbol tables.
   if (SymbolTable)
     initSymbolTable(ElfFile, SymbolTable);
+
+  // Now that all sections and symbols have been added we can add
+  // relocations that reference symbols and set the link and info fields for
+  // relocation sections.
+  for (auto &Section : Sections) {
+    if (auto RelSec = dyn_cast<RelocationSection<ELFT>>(Section.get())) {
+      if (RelSec->Link - 1 >= Sections.size() || RelSec->Link == 0) {
+        error("Link field value " + Twine(RelSec->Link) + " in section " +
+              RelSec->Name + " is invalid");
+      }
+      if (RelSec->Info - 1 >= Sections.size() || RelSec->Info == 0) {
+        error("Info field value " + Twine(RelSec->Link) + " in section " +
+              RelSec->Name + " is invalid");
+      }
+      auto SymTab =
+          dyn_cast<SymbolTableSection>(Sections[RelSec->Link - 1].get());
+      if (SymTab == nullptr) {
+        error("Link field of relocation section " + RelSec->Name +
+              " is not a symbol table");
+      }
+      RelSec->setSymTab(SymTab);
+      RelSec->setSection(Sections[RelSec->Info - 1].get());
+      auto Shdr = unwrapOrError(ElfFile.sections()).begin() + RelSec->Index;
+      if (RelSec->Type == SHT_REL)
+        initRelocations(RelSec, SymTab, unwrapOrError(ElfFile.rels(Shdr)));
+      else
+        initRelocations(RelSec, SymTab, unwrapOrError(ElfFile.relas(Shdr)));
+    }
+  }
 }
 
 template <class ELFT> Object<ELFT>::Object(const ELFObjectFile<ELFT> &Obj) {

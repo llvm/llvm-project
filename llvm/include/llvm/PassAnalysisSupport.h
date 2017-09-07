@@ -20,11 +20,16 @@
 #define LLVM_PASSANALYSISSUPPORT_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Pass.h"
+#include "llvm/ADT/StringRef.h"
+#include <cassert>
+#include <utility>
 #include <vector>
 
 namespace llvm {
-class StringRef;
+
+class Function;
+class Pass;
+class PMDataManager;
 
 //===----------------------------------------------------------------------===//
 /// Represent the analysis usage information of a pass.  This tracks analyses
@@ -36,7 +41,7 @@ class StringRef;
 ///
 class AnalysisUsage {
 public:
-  typedef SmallVectorImpl<AnalysisID> VectorType;
+  using VectorType = SmallVectorImpl<AnalysisID>;
 
 private:
   /// Sets of analyses required and preserved by a pass
@@ -47,10 +52,10 @@ private:
   SmallVector<AnalysisID, 2> RequiredTransitive;
   SmallVector<AnalysisID, 2> Preserved;
   SmallVector<AnalysisID, 0> Used;
-  bool PreservesAll;
+  bool PreservesAll = false;
 
 public:
-  AnalysisUsage() : PreservesAll(false) {}
+  AnalysisUsage() = default;
 
   ///@{
   /// Add the specified ID to the required set of the usage info for a pass.
@@ -124,7 +129,6 @@ public:
   ///
   /// This function annotates the AnalysisUsage info object to say that analyses
   /// that only depend on the CFG are preserved by this pass.
-  ///
   void setPreservesCFG();
 
   const VectorType &getRequiredSet() const { return Required; }
@@ -140,15 +144,12 @@ public:
 /// analysis information out of pass manager that is responsible to manage
 /// the pass.
 ///
-class PMDataManager;
 class AnalysisResolver {
-private:
-  AnalysisResolver() = delete;
-
 public:
-  explicit AnalysisResolver(PMDataManager &P) : PM(P) { }
+  AnalysisResolver() = delete;
+  explicit AnalysisResolver(PMDataManager &P) : PM(P) {}
 
-  inline PMDataManager &getPMDataManager() { return PM; }
+  PMDataManager &getPMDataManager() { return PM; }
 
   /// Find pass that is implementing PI.
   Pass *findImplPass(AnalysisID PI) {
@@ -183,7 +184,7 @@ public:
 private:
   /// This keeps track of which passes implements the interfaces that are
   /// required by the current pass (to implement getAnalysis()).
-  std::vector<std::pair<AnalysisID, Pass*> > AnalysisImpls;
+  std::vector<std::pair<AnalysisID, Pass *>> AnalysisImpls;
 
   /// PassManager that is used to resolve analysis info
   PMDataManager &PM;
@@ -196,7 +197,6 @@ private:
 /// the case when the analysis is not available.  This method is often used by
 /// transformation APIs to update analysis results for a pass automatically as
 /// the transform is performed.
-///
 template<typename AnalysisType>
 AnalysisType *Pass::getAnalysisIfAvailable() const {
   assert(Resolver && "Pass not resident in a PassManager object!");
@@ -216,7 +216,6 @@ AnalysisType *Pass::getAnalysisIfAvailable() const {
 /// getAnalysis<AnalysisType>() - This function is used by subclasses to get
 /// to the analysis information that they claim to use by overriding the
 /// getAnalysisUsage function.
-///
 template<typename AnalysisType>
 AnalysisType &Pass::getAnalysis() const {
   assert(Resolver && "Pass has not been inserted into a PassManager object!");
@@ -231,9 +230,9 @@ AnalysisType &Pass::getAnalysisID(AnalysisID PI) const {
   // should be a small number, we just do a linear search over a (dense)
   // vector.
   Pass *ResultPass = Resolver->findImplPass(PI);
-  assert (ResultPass && 
-          "getAnalysis*() called on an analysis that was not "
-          "'required' by pass!");
+  assert(ResultPass && 
+         "getAnalysis*() called on an analysis that was not "
+         "'required' by pass!");
 
   // Because the AnalysisType may not be a subclass of pass (for
   // AnalysisGroups), we use getAdjustedAnalysisPointer here to potentially
@@ -245,7 +244,6 @@ AnalysisType &Pass::getAnalysisID(AnalysisID PI) const {
 /// getAnalysis<AnalysisType>() - This function is used by subclasses to get
 /// to the analysis information that they claim to use by overriding the
 /// getAnalysisUsage function.
-///
 template<typename AnalysisType>
 AnalysisType &Pass::getAnalysis(Function &F) {
   assert(Resolver &&"Pass has not been inserted into a PassManager object!");
@@ -270,6 +268,6 @@ AnalysisType &Pass::getAnalysisID(AnalysisID PI, Function &F) {
   return *(AnalysisType*)ResultPass->getAdjustedAnalysisPointer(PI);
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_PASSANALYSISSUPPORT_H

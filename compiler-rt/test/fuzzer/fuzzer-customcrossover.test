@@ -2,14 +2,16 @@ RUN: %cpp_compiler %S/CustomCrossOverTest.cpp -o %t-CustomCrossOverTest
 
 RUN: rm -rf %t/CustomCrossover
 RUN: mkdir -p %t/CustomCrossover
-RUN: echo "0123456789" > %t/CustomCrossover/digits
-RUN: echo "abcdefghij" > %t/CustomCrossover/chars
-TODO: make this test more stable (currently, the target can be found by usual strcmp magic)
-DISABLED: not %t-CustomCrossOverTest -seed=1 -runs=1000000 %t/CustomCrossover 2>&1 | FileCheck %s --check-prefix=LLVMFuzzerCustomCrossover
-RUN: echo In LLVMFuzzerCustomCrossover
-RUN: echo BINGO
+RUN: echo "A" > %t/CustomCrossover/digits
+RUN: echo "B" > %t/CustomCrossover/chars
+RUN: not %t-CustomCrossOverTest -seed=1 -runs=100000  %t/CustomCrossover               2>&1 | FileCheck %s --check-prefix=CHECK_CO
+Disable cross_over, verify that we can't find the target w/o it.
+RUN:     %t-CustomCrossOverTest -seed=1 -runs=1000000 %t/CustomCrossover -cross_over=0 2>&1 | FileCheck %s --check-prefix=CHECK_NO_CO
 RUN: rm -rf %t/CustomCrossover
 
-LLVMFuzzerCustomCrossover: In LLVMFuzzerCustomCrossover
-LLVMFuzzerCustomCrossover: BINGO
+CHECK_CO: In LLVMFuzzerCustomCrossover
+CHECK_CO: BINGO
+
+CHECK_NO_CO-NO: LLVMFuzzerCustomCrossover
+CHECK_NO_CO: DONE
 
