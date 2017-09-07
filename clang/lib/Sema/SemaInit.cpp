@@ -8339,6 +8339,16 @@ Sema::PerformCopyInitialization(const InitializedEntity &Entity,
   return Result;
 }
 
+/// Determine whether RD is, or is derived from, a specialization of CTD.
+static bool isOrIsDerivedFromSpecializationOf(CXXRecordDecl *RD,
+                                              ClassTemplateDecl *CTD) {
+  auto NotSpecialization = [&] (const CXXRecordDecl *Candidate) {
+    auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Candidate);
+    return !CTSD || !declaresSameEntity(CTSD->getSpecializedTemplate(), CTD);
+  };
+  return !(NotSpecialization(RD) && RD->forallBases(NotSpecialization));
+}
+
 QualType Sema::DeduceTemplateSpecializationFromInitializer(
     TypeSourceInfo *TSInfo, const InitializedEntity &Entity,
     const InitializationKind &Kind, MultiExprArg Inits) {
@@ -8483,6 +8493,17 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
           break;
         }
       }
+    } else if (ListInit->getNumInits() == 1) {
+      // C++ [over.match.class.deduct]:
+      //   As an exception, the first phase in [over.match.list] (considering
+      //   initializer-list constructors) is omitted if the initializer list
+      //   consists of a single expression of type cv U, where U is a
+      //   specialization of C or a class derived from a specialization of C.
+      Expr *E = ListInit->getInit(0);
+      auto *RD = E->getType()->getAsCXXRecordDecl();
+      if (!isa<InitListExpr>(E) && RD &&
+          isOrIsDerivedFromSpecializationOf(RD, Template))
+        TryListConstructors = false;
     }
 
     if (TryListConstructors)

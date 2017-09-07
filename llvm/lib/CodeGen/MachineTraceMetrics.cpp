@@ -694,25 +694,6 @@ static void getPHIDeps(const MachineInstr &UseMI,
   }
 }
 
-// Keep track of physreg data dependencies by recording each live register unit.
-// Associate each regunit with an instruction operand. Depending on the
-// direction instructions are scanned, it could be the operand that defined the
-// regunit, or the highest operand to read the regunit.
-namespace {
-
-struct LiveRegUnit {
-  unsigned RegUnit;
-  unsigned Cycle = 0;
-  const MachineInstr *MI = nullptr;
-  unsigned Op = 0;
-
-  unsigned getSparseSetIndex() const { return RegUnit; }
-
-  LiveRegUnit(unsigned RU) : RegUnit(RU) {}
-};
-
-} // end anonymous namespace
-
 // Identify physreg dependencies for UseMI, and update the live regunit
 // tracking set when scanning instructions downwards.
 static void updatePhysDepsDownwards(const MachineInstr *UseMI,
@@ -797,6 +778,51 @@ computeCrossBlockCriticalPath(const TraceBlockInfo &TBI) {
   return MaxLen;
 }
 
+void MachineTraceMetrics::Ensemble::
+updateDepth(MachineTraceMetrics::TraceBlockInfo &TBI, const MachineInstr &UseMI,
+            SparseSet<LiveRegUnit> &RegUnits) {
+  SmallVector<DataDep, 8> Deps;
+  // Collect all data dependencies.
+  if (UseMI.isPHI())
+    getPHIDeps(UseMI, Deps, TBI.Pred, MTM.MRI);
+  else if (getDataDeps(UseMI, Deps, MTM.MRI))
+    updatePhysDepsDownwards(&UseMI, Deps, RegUnits, MTM.TRI);
+
+  // Filter and process dependencies, computing the earliest issue cycle.
+  unsigned Cycle = 0;
+  for (const DataDep &Dep : Deps) {
+    const TraceBlockInfo&DepTBI =
+      BlockInfo[Dep.DefMI->getParent()->getNumber()];
+    // Ignore dependencies from outside the current trace.
+    if (!DepTBI.isUsefulDominator(TBI))
+      continue;
+    assert(DepTBI.HasValidInstrDepths && "Inconsistent dependency");
+    unsigned DepCycle = Cycles.lookup(Dep.DefMI).Depth;
+    // Add latency if DefMI is a real instruction. Transients get latency 0.
+    if (!Dep.DefMI->isTransient())
+      DepCycle += MTM.SchedModel
+        .computeOperandLatency(Dep.DefMI, Dep.DefOp, &UseMI, Dep.UseOp);
+    Cycle = std::max(Cycle, DepCycle);
+  }
+  // Remember the instruction depth.
+  InstrCycles &MICycles = Cycles[&UseMI];
+  MICycles.Depth = Cycle;
+
+  if (TBI.HasValidInstrHeights) {
+    // Update critical path length.
+    TBI.CriticalPath = std::max(TBI.CriticalPath, Cycle + MICycles.Height);
+    DEBUG(dbgs() << TBI.CriticalPath << '\t' << Cycle << '\t' << UseMI);
+  } else {
+    DEBUG(dbgs() << Cycle << '\t' << UseMI);
+  }
+}
+
+void MachineTraceMetrics::Ensemble::
+updateDepth(const MachineBasicBlock *MBB, const MachineInstr &UseMI,
+            SparseSet<LiveRegUnit> &RegUnits) {
+  updateDepth(BlockInfo[MBB->getNumber()], UseMI, RegUnits);
+}
+
 /// Compute instruction depths for all instructions above or in MBB in its
 /// trace. This assumes that the trace through MBB has already been computed.
 void MachineTraceMetrics::Ensemble::
@@ -822,7 +848,6 @@ computeInstrDepths(const MachineBasicBlock *MBB) {
   RegUnits.setUniverse(MTM.TRI->getNumRegUnits());
 
   // Go through trace blocks in top-down order, stopping after the center block.
-  SmallVector<DataDep, 8> Deps;
   while (!Stack.empty()) {
     MBB = Stack.pop_back_val();
     DEBUG(dbgs() << "\nDepths for BB#" << MBB->getNumber() << ":\n");
@@ -848,40 +873,7 @@ computeInstrDepths(const MachineBasicBlock *MBB) {
       TBI.CriticalPath = computeCrossBlockCriticalPath(TBI);
 
     for (const auto &UseMI : *MBB) {
-      // Collect all data dependencies.
-      Deps.clear();
-      if (UseMI.isPHI())
-        getPHIDeps(UseMI, Deps, TBI.Pred, MTM.MRI);
-      else if (getDataDeps(UseMI, Deps, MTM.MRI))
-        updatePhysDepsDownwards(&UseMI, Deps, RegUnits, MTM.TRI);
-
-      // Filter and process dependencies, computing the earliest issue cycle.
-      unsigned Cycle = 0;
-      for (const DataDep &Dep : Deps) {
-        const TraceBlockInfo&DepTBI =
-          BlockInfo[Dep.DefMI->getParent()->getNumber()];
-        // Ignore dependencies from outside the current trace.
-        if (!DepTBI.isUsefulDominator(TBI))
-          continue;
-        assert(DepTBI.HasValidInstrDepths && "Inconsistent dependency");
-        unsigned DepCycle = Cycles.lookup(Dep.DefMI).Depth;
-        // Add latency if DefMI is a real instruction. Transients get latency 0.
-        if (!Dep.DefMI->isTransient())
-          DepCycle += MTM.SchedModel
-            .computeOperandLatency(Dep.DefMI, Dep.DefOp, &UseMI, Dep.UseOp);
-        Cycle = std::max(Cycle, DepCycle);
-      }
-      // Remember the instruction depth.
-      InstrCycles &MICycles = Cycles[&UseMI];
-      MICycles.Depth = Cycle;
-
-      if (!TBI.HasValidInstrHeights) {
-        DEBUG(dbgs() << Cycle << '\t' << UseMI);
-        continue;
-      }
-      // Update critical path length.
-      TBI.CriticalPath = std::max(TBI.CriticalPath, Cycle + MICycles.Height);
-      DEBUG(dbgs() << TBI.CriticalPath << '\t' << Cycle << '\t' << UseMI);
+      updateDepth(TBI, UseMI, RegUnits);
     }
   }
 }

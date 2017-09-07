@@ -58,7 +58,9 @@ static bool isAlpha(char C) {
   return ('a' <= C && C <= 'z') || ('A' <= C && C <= 'Z') || C == '_';
 }
 
-static bool isAlnum(char C) { return isAlpha(C) || ('0' <= C && C <= '9'); }
+// Returns true if C is a valid letter, digit or underscore as defined in the
+// "C" locale.
+bool elf::isAlnum(char C) { return isAlpha(C) || ('0' <= C && C <= '9'); }
 
 // Returns true if S is valid as a C language identifier.
 bool elf::isValidCIdentifier(StringRef S) {

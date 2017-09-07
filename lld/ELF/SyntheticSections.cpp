@@ -523,9 +523,14 @@ template <class ELFT>
 static void writeCieFde(uint8_t *Buf, ArrayRef<uint8_t> D) {
   memcpy(Buf, D.data(), D.size());
 
+  size_t Aligned = alignTo(D.size(), sizeof(typename ELFT::uint));
+
+  // Zero-clear trailing padding if it exists.
+  memset(Buf + D.size(), 0, Aligned - D.size());
+
   // Fix the size field. -4 since size does not include the size field itself.
   const endianness E = ELFT::TargetEndianness;
-  write32<E>(Buf, alignTo(D.size(), sizeof(typename ELFT::uint)) - 4);
+  write32<E>(Buf, Aligned - 4);
 }
 
 template <class ELFT> void EhFrameSection<ELFT>::finalizeContents() {

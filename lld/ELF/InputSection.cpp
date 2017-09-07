@@ -485,9 +485,9 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t Type, uint64_t A,
 // of the RW segment.
 static uint64_t getARMStaticBase(const SymbolBody &Body) {
   OutputSection *OS = Body.getOutputSection();
-  if (!OS || !OS->FirstInPtLoad)
+  if (!OS || !OS->PtLoad || !OS->PtLoad->FirstSec)
     fatal("SBREL relocation to " + Body.getName() + " without static base");
-  return OS->FirstInPtLoad->Addr;
+  return OS->PtLoad->FirstSec->Addr;
 }
 
 static uint64_t getRelocTargetVA(uint32_t Type, int64_t A, uint64_t P,

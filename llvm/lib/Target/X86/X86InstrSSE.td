@@ -512,35 +512,11 @@ let Predicates = [UseAVX] in {
             (VMOVSSrr (v4f32 VR128:$src1),
                       (COPY_TO_REGCLASS (v4f32 VR128:$src2), FR32))>;
 
-  // 256-bit variants
-  def : Pat<(v8i32 (X86Movss VR256:$src1, VR256:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSSrr (EXTRACT_SUBREG (v8i32 VR256:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v8i32 VR256:$src2), sub_xmm)),
-              sub_xmm)>;
-  def : Pat<(v8f32 (X86Movss VR256:$src1, VR256:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSSrr (EXTRACT_SUBREG (v8f32 VR256:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v8f32 VR256:$src2), sub_xmm)),
-              sub_xmm)>;
-
   // Shuffle with VMOVSD
   def : Pat<(v2i64 (X86Movsd VR128:$src1, VR128:$src2)),
             (VMOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
   def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
             (VMOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
-
-  // 256-bit variants
-  def : Pat<(v4i64 (X86Movsd VR256:$src1, VR256:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSDrr (EXTRACT_SUBREG (v4i64 VR256:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v4i64 VR256:$src2), sub_xmm)),
-              sub_xmm)>;
-  def : Pat<(v4f64 (X86Movsd VR256:$src1, VR256:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSDrr (EXTRACT_SUBREG (v4f64 VR256:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v4f64 VR256:$src2), sub_xmm)),
-              sub_xmm)>;
 
   // FIXME: Instead of a X86Movlps there should be a X86Movsd here, the problem
   // is during lowering, where it's not possible to recognize the fold cause
@@ -7707,22 +7683,12 @@ def : Pat<(v8i32 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
           (VPERM2F128rr VR256:$src1, VR256:$src2, imm:$imm)>;
 def : Pat<(v4i64 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
           (VPERM2F128rr VR256:$src1, VR256:$src2, imm:$imm)>;
-def : Pat<(v32i8 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPERM2F128rr VR256:$src1, VR256:$src2, imm:$imm)>;
-def : Pat<(v16i16 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPERM2F128rr VR256:$src1, VR256:$src2, imm:$imm)>;
 
 def : Pat<(v8i32 (X86VPerm2x128 VR256:$src1,
                   (bc_v8i32 (loadv4i64 addr:$src2)), (i8 imm:$imm))),
           (VPERM2F128rm VR256:$src1, addr:$src2, imm:$imm)>;
 def : Pat<(v4i64 (X86VPerm2x128 VR256:$src1,
                   (loadv4i64 addr:$src2), (i8 imm:$imm))),
-          (VPERM2F128rm VR256:$src1, addr:$src2, imm:$imm)>;
-def : Pat<(v32i8 (X86VPerm2x128 VR256:$src1,
-                  (bc_v32i8 (loadv4i64 addr:$src2)), (i8 imm:$imm))),
-          (VPERM2F128rm VR256:$src1, addr:$src2, imm:$imm)>;
-def : Pat<(v16i16 (X86VPerm2x128 VR256:$src1,
-                  (bc_v16i16 (loadv4i64 addr:$src2)), (i8 imm:$imm))),
           (VPERM2F128rm VR256:$src1, addr:$src2, imm:$imm)>;
 }
 
@@ -8134,17 +8100,7 @@ def VPERM2I128rm : AVX2AIi8<0x46, MRMSrcMem, (outs VR256:$dst),
 let Predicates = [HasAVX2] in {
 def : Pat<(v8i32 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
           (VPERM2I128rr VR256:$src1, VR256:$src2, imm:$imm)>;
-def : Pat<(v32i8 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPERM2I128rr VR256:$src1, VR256:$src2, imm:$imm)>;
-def : Pat<(v16i16 (X86VPerm2x128 VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPERM2I128rr VR256:$src1, VR256:$src2, imm:$imm)>;
 
-def : Pat<(v32i8 (X86VPerm2x128 VR256:$src1, (bc_v32i8 (loadv4i64 addr:$src2)),
-                  (i8 imm:$imm))),
-          (VPERM2I128rm VR256:$src1, addr:$src2, imm:$imm)>;
-def : Pat<(v16i16 (X86VPerm2x128 VR256:$src1,
-                   (bc_v16i16 (loadv4i64 addr:$src2)), (i8 imm:$imm))),
-          (VPERM2I128rm VR256:$src1, addr:$src2, imm:$imm)>;
 def : Pat<(v8i32 (X86VPerm2x128 VR256:$src1, (bc_v8i32 (loadv4i64 addr:$src2)),
                   (i8 imm:$imm))),
           (VPERM2I128rm VR256:$src1, addr:$src2, imm:$imm)>;

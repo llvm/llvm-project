@@ -931,7 +931,7 @@ template <class ELFT> void BinaryFile::parse() {
   // characters in a filename are replaced with underscore.
   std::string S = "_binary_" + MB.getBufferIdentifier().str();
   for (size_t I = 0; I < S.size(); ++I)
-    if (!isalnum(S[I]))
+    if (!elf::isAlnum(S[I]))
       S[I] = '_';
 
   Symtab->addRegular<ELFT>(Saver.save(S + "_start"), STV_DEFAULT, STT_OBJECT,

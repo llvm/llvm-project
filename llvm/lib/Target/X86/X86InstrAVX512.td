@@ -4283,35 +4283,11 @@ let Predicates = [HasAVX512] in {
             (VMOVSSZrr (v4f32 VR128X:$src1),
                       (COPY_TO_REGCLASS (v4f32 VR128X:$src2), FR32X))>;
 
-  // 256-bit variants
-  def : Pat<(v8i32 (X86Movss VR256X:$src1, VR256X:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSSZrr (EXTRACT_SUBREG (v8i32 VR256X:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v8i32 VR256X:$src2), sub_xmm)),
-              sub_xmm)>;
-  def : Pat<(v8f32 (X86Movss VR256X:$src1, VR256X:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSSZrr (EXTRACT_SUBREG (v8f32 VR256X:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v8f32 VR256X:$src2), sub_xmm)),
-              sub_xmm)>;
-
   // Shuffle with VMOVSD
   def : Pat<(v2i64 (X86Movsd VR128X:$src1, VR128X:$src2)),
             (VMOVSDZrr VR128X:$src1, (COPY_TO_REGCLASS VR128X:$src2, FR64X))>;
   def : Pat<(v2f64 (X86Movsd VR128X:$src1, VR128X:$src2)),
             (VMOVSDZrr VR128X:$src1, (COPY_TO_REGCLASS VR128X:$src2, FR64X))>;
-
-  // 256-bit variants
-  def : Pat<(v4i64 (X86Movsd VR256X:$src1, VR256X:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSDZrr (EXTRACT_SUBREG (v4i64 VR256X:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v4i64 VR256X:$src2), sub_xmm)),
-              sub_xmm)>;
-  def : Pat<(v4f64 (X86Movsd VR256X:$src1, VR256X:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSDZrr (EXTRACT_SUBREG (v4f64 VR256X:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v4f64 VR256X:$src2), sub_xmm)),
-              sub_xmm)>;
 
   def : Pat<(v2f64 (X86Movlpd VR128X:$src1, VR128X:$src2)),
             (VMOVSDZrr VR128X:$src1, (COPY_TO_REGCLASS VR128X:$src2, FR64X))>;
@@ -8292,6 +8268,11 @@ defm VPMOVSWB   : avx512_trunc_wb<0x20, "vpmovswb",   X86vtruncs,
                                   truncstore_s_vi8, masked_truncstore_s_vi8>;
 defm VPMOVUSWB  : avx512_trunc_wb<0x10, "vpmovuswb",  X86vtruncus,
                                   truncstore_us_vi8, masked_truncstore_us_vi8>;
+
+def : Pat<(v16i16 (fp_to_uint (v16f32 VR512:$src1))),
+          (VPMOVDWZrr (v16i32 (VCVTTPS2UDQZrr VR512:$src1)))>, Requires<[HasAVX512]>;
+def : Pat<(v16i8 (fp_to_uint (v16f32 VR512:$src1))),
+          (VPMOVDBZrr (v16i32 (VCVTTPS2UDQZrr VR512:$src1)))>, Requires<[HasAVX512]>;
 
 let Predicates = [HasAVX512, NoVLX] in {
 def: Pat<(v8i16 (X86vtrunc (v8i32 VR256X:$src))),

@@ -746,6 +746,14 @@ struct FormatStyle {
   ///
   /// If ``BreakBeforeBraces`` is set to ``BS_Custom``, use this to specify how
   /// each individual brace case should be handled. Otherwise, this is ignored.
+  /// \code{.yaml}
+  ///   # Example of usage:
+  ///   BreakBeforeBraces: Custom
+  ///   BraceWrapping:
+  ///     AfterEnum: true
+  ///     AfterStruct: false
+  ///     SplitEmptyFunction: false
+  /// \endcode
   BraceWrappingFlags BraceWrapping;
 
   /// \brief If ``true``, ternary operators will be placed after line breaks.
