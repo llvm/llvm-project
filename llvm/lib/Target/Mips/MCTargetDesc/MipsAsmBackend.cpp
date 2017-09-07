@@ -211,8 +211,7 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 
 MCObjectWriter *
 MipsAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
-  return createMipsELFObjectWriter(OS,
-    MCELFObjectTargetWriter::getOSABI(OSType), IsLittle, Is64Bit);
+  return createMipsELFObjectWriter(OS, TheTriple);
 }
 
 // Little-endian fixup data byte ordering:
@@ -473,36 +472,4 @@ bool MipsAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
   // bigger problems), so just write zeros instead.
   OW->WriteZeros(Count);
   return true;
-}
-
-// MCAsmBackend
-MCAsmBackend *llvm::createMipsAsmBackendEL32(const Target &T,
-                                             const MCRegisterInfo &MRI,
-                                             const Triple &TT, StringRef CPU,
-                                             const MCTargetOptions &Options) {
-  return new MipsAsmBackend(T, TT.getOS(), /*IsLittle*/ true,
-                            /*Is64Bit*/ false);
-}
-
-MCAsmBackend *llvm::createMipsAsmBackendEB32(const Target &T,
-                                             const MCRegisterInfo &MRI,
-                                             const Triple &TT, StringRef CPU,
-                                             const MCTargetOptions &Options) {
-  return new MipsAsmBackend(T, TT.getOS(), /*IsLittle*/ false,
-                            /*Is64Bit*/ false);
-}
-
-MCAsmBackend *llvm::createMipsAsmBackendEL64(const Target &T,
-                                             const MCRegisterInfo &MRI,
-                                             const Triple &TT, StringRef CPU,
-                                             const MCTargetOptions &Options) {
-  return new MipsAsmBackend(T, TT.getOS(), /*IsLittle*/ true, /*Is64Bit*/ true);
-}
-
-MCAsmBackend *llvm::createMipsAsmBackendEB64(const Target &T,
-                                             const MCRegisterInfo &MRI,
-                                             const Triple &TT, StringRef CPU,
-                                             const MCTargetOptions &Options) {
-  return new MipsAsmBackend(T, TT.getOS(), /*IsLittle*/ false,
-                            /*Is64Bit*/ true);
 }

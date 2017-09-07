@@ -1,0 +1,35 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-readobj -symbols %t | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Symbols:
+  Global:
+    - Name:     test
+      Index:    SHN_ABS
+      Value:    0x1234
+
+#CHECK:     Symbols [
+#CHECK-NEXT:   Symbol {
+#CHECK-NEXT:    Name:  (0)
+#CHECK-NEXT:    Value: 0x0
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Local (0x0)
+#CHECK-NEXT:    Type: None (0x0)
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: Undefined (0x0)
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: test (1)
+#CHECK-NEXT:    Value: 0x1234
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Global (0x1)
+#CHECK-NEXT:    Type: None (0x0)
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: Absolute (0xFFF1)
+#CHECK-NEXT:  }
+#CHECK-NEXT:]
