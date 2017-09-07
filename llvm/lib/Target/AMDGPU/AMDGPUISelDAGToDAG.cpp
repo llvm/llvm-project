@@ -170,6 +170,7 @@ private:
   bool SelectMOVRELOffset(SDValue Index, SDValue &Base, SDValue &Offset) const;
 
   bool SelectVOP3Mods_NNaN(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3ModsImpl(SDValue In, SDValue &Src, unsigned &SrcMods) const;
   bool SelectVOP3Mods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3NoMods(SDValue In, SDValue &Src) const;
   bool SelectVOP3Mods0(SDValue In, SDValue &Src, SDValue &SrcMods,
@@ -195,6 +196,8 @@ private:
   bool SelectVOP3OpSelMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3OpSelMods0(SDValue In, SDValue &Src, SDValue &SrcMods,
                             SDValue &Clamp) const;
+  bool SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src, unsigned &Mods) const;
+  bool SelectVOP3PMadMixMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   void SelectADD_SUB_I64(SDNode *N);
   void SelectUADDO_USUBO(SDNode *N);
@@ -208,6 +211,7 @@ private:
   void SelectS_BFE(SDNode *N);
   bool isCBranchSCC(const SDNode *N) const;
   void SelectBRCOND(SDNode *N);
+  void SelectFMAD(SDNode *N);
   void SelectATOMIC_CMP_SWAP(SDNode *N);
 
 protected:
@@ -606,7 +610,9 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   case ISD::BRCOND:
     SelectBRCOND(N);
     return;
-
+  case ISD::FMAD:
+    SelectFMAD(N);
+    return;
   case AMDGPUISD::ATOMIC_CMP_SWAP:
     SelectATOMIC_CMP_SWAP(N);
     return;
@@ -1644,6 +1650,46 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
                        VCC.getValue(0));
 }
 
+void AMDGPUDAGToDAGISel::SelectFMAD(SDNode *N) {
+  MVT VT = N->getSimpleValueType(0);
+  if (VT != MVT::f32 || !Subtarget->hasMadMixInsts()) {
+    SelectCode(N);
+    return;
+  }
+
+  SDValue Src0 = N->getOperand(0);
+  SDValue Src1 = N->getOperand(1);
+  SDValue Src2 = N->getOperand(2);
+  unsigned Src0Mods, Src1Mods, Src2Mods;
+
+  // Avoid using v_mad_mix_f32 unless there is actually an operand using the
+  // conversion from f16.
+  bool Sel0 = SelectVOP3PMadMixModsImpl(Src0, Src0, Src0Mods);
+  bool Sel1 = SelectVOP3PMadMixModsImpl(Src1, Src1, Src1Mods);
+  bool Sel2 = SelectVOP3PMadMixModsImpl(Src2, Src2, Src2Mods);
+
+  assert(!Subtarget->hasFP32Denormals() &&
+         "fmad selected with denormals enabled");
+  // TODO: We can select this with f32 denormals enabled if all the sources are
+  // converted from f16 (in which case fmad isn't legal).
+
+  if (Sel0 || Sel1 || Sel2) {
+    // For dummy operands.
+    SDValue Zero = CurDAG->getTargetConstant(0, SDLoc(), MVT::i32);
+    SDValue Ops[] = {
+      CurDAG->getTargetConstant(Src0Mods, SDLoc(), MVT::i32), Src0,
+      CurDAG->getTargetConstant(Src1Mods, SDLoc(), MVT::i32), Src1,
+      CurDAG->getTargetConstant(Src2Mods, SDLoc(), MVT::i32), Src2,
+      CurDAG->getTargetConstant(0, SDLoc(), MVT::i1),
+      Zero, Zero
+    };
+
+    CurDAG->SelectNodeTo(N, AMDGPU::V_MAD_MIX_F32, MVT::f32, Ops);
+  } else {
+    SelectCode(N);
+  }
+}
+
 // This is here because there isn't a way to use the generated sub0_sub1 as the
 // subreg index to EXTRACT_SUBREG in tablegen.
 void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
@@ -1710,9 +1756,9 @@ void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
   CurDAG->RemoveDeadNode(N);
 }
 
-bool AMDGPUDAGToDAGISel::SelectVOP3Mods(SDValue In, SDValue &Src,
-                                        SDValue &SrcMods) const {
-  unsigned Mods = 0;
+bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
+                                            unsigned &Mods) const {
+  Mods = 0;
   Src = In;
 
   if (Src.getOpcode() == ISD::FNEG) {
@@ -1725,8 +1771,18 @@ bool AMDGPUDAGToDAGISel::SelectVOP3Mods(SDValue In, SDValue &Src,
     Src = Src.getOperand(0);
   }
 
-  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
   return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3Mods(SDValue In, SDValue &Src,
+                                        SDValue &SrcMods) const {
+  unsigned Mods;
+  if (SelectVOP3ModsImpl(In, Src, Mods)) {
+    SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+    return true;
+  }
+
+  return false;
 }
 
 bool AMDGPUDAGToDAGISel::SelectVOP3Mods_NNaN(SDValue In, SDValue &Src,
@@ -1906,6 +1962,41 @@ bool AMDGPUDAGToDAGISel::SelectVOP3OpSelMods0(SDValue In, SDValue &Src,
   Clamp = CurDAG->getTargetConstant(0, SL, MVT::i32);
 
   return SelectVOP3OpSelMods(In, Src, SrcMods);
+}
+
+// The return value is not whether the match is possible (which it always is),
+// but whether or not it a conversion is really used.
+bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
+                                                   unsigned &Mods) const {
+  Mods = 0;
+  SelectVOP3ModsImpl(In, Src, Mods);
+
+  if (Src.getOpcode() == ISD::FP_EXTEND) {
+    Src = Src.getOperand(0);
+    assert(Src.getValueType() == MVT::f16);
+    Src = stripBitcast(Src);
+
+    // op_sel/op_sel_hi decide the source type and source.
+    // If the source's op_sel_hi is set, it indicates to do a conversion from fp16.
+    // If the sources's op_sel is set, it picks the high half of the source
+    // register.
+
+    Mods |= SISrcMods::OP_SEL_1;
+    if (isExtractHiElt(Src, Src))
+      Mods |= SISrcMods::OP_SEL_0;
+
+    return true;
+  }
+
+  return false;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixMods(SDValue In, SDValue &Src,
+                                               SDValue &SrcMods) const {
+  unsigned Mods = 0;
+  SelectVOP3PMadMixModsImpl(In, Src, Mods);
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
 }
 
 void AMDGPUDAGToDAGISel::PostprocessISelDAG() {

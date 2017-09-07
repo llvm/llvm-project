@@ -1002,12 +1002,14 @@ public:
   /// declaration, but in the semantic context of the enclosing namespace
   /// scope.
   void setLocalExternDecl() {
-    assert((IdentifierNamespace == IDNS_Ordinary ||
-            IdentifierNamespace == IDNS_OrdinaryFriend) &&
-           "namespace is not ordinary");
-
     Decl *Prev = getPreviousDecl();
     IdentifierNamespace &= ~IDNS_Ordinary;
+
+    // It's OK for the declaration to still have the "invisible friend" flag or
+    // the "conflicts with tag declarations in this scope" flag for the outer
+    // scope.
+    assert((IdentifierNamespace & ~(IDNS_OrdinaryFriend | IDNS_Tag)) == 0 &&
+           "namespace is not ordinary");
 
     IdentifierNamespace |= IDNS_LocalExtern;
     if (Prev && Prev->getIdentifierNamespace() & IDNS_Ordinary)

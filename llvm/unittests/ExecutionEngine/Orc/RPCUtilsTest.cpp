@@ -263,6 +263,51 @@ TEST(DummyRPC, TestCallAsyncIntInt) {
   ServerThread.join();
 }
 
+TEST(DummyRPC, TestAsyncVoidBoolHandler) {
+  auto Channels = createPairedQueueChannels();
+  DummyRPCEndpoint Client(*Channels.first);
+  DummyRPCEndpoint Server(*Channels.second);
+
+  std::thread ServerThread([&]() {
+      Server.addAsyncHandler<DummyRPCAPI::VoidBool>(
+          [](std::function<Error(Error)> SendResult,
+             bool B) {
+            EXPECT_EQ(B, true) << "Server void(bool) receieved unexpected result";
+            cantFail(SendResult(Error::success()));
+            return Error::success();
+          });
+
+      {
+        // Poke the server to handle the negotiate call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to negotiate";
+      }
+
+      {
+        // Poke the server to handle the VoidBool call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to void(bool)";
+      }
+  });
+
+  {
+    auto Err = Client.callAsync<DummyRPCAPI::VoidBool>(
+        [](Error Result) {
+          EXPECT_FALSE(!!Result) << "Async void(bool) response handler failed";
+          return Error::success();
+        }, true);
+    EXPECT_FALSE(!!Err) << "Client.callAsync failed for void(bool)";
+  }
+
+  {
+    // Poke the client to process the result.
+    auto Err = Client.handleOne();
+    EXPECT_FALSE(!!Err) << "Client failed to handle response from void(bool)";
+  }
+
+  ServerThread.join();
+}
+
 TEST(DummyRPC, TestAsyncIntIntHandler) {
   auto Channels = createPairedQueueChannels();
   DummyRPCEndpoint Client(*Channels.first);

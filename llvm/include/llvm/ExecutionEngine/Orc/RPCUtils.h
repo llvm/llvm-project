@@ -534,6 +534,20 @@ public:
   using ResultType = Error;
 };
 
+template <typename... ArgTs>
+class AsyncHandlerTraits<ErrorSuccess(std::function<Error(Error)>, ArgTs...)> {
+public:
+  using Type = Error(ArgTs...);
+  using ResultType = Error;
+};
+
+template <typename... ArgTs>
+class AsyncHandlerTraits<void(std::function<Error(Error)>, ArgTs...)> {
+public:
+  using Type = Error(ArgTs...);
+  using ResultType = Error;
+};
+
 template <typename ResponseHandlerT, typename... ArgTs>
 class AsyncHandlerTraits<Error(ResponseHandlerT, ArgTs...)> :
     public AsyncHandlerTraits<Error(typename std::decay<ResponseHandlerT>::type,

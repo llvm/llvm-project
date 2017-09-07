@@ -313,6 +313,10 @@ public:
     return getGeneration() >= GFX9;
   }
 
+  bool hasMadMixInsts() const {
+    return getGeneration() >= GFX9;
+  }
+
   bool hasCARRY() const {
     return (getGeneration() >= EVERGREEN);
   }

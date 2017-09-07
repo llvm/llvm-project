@@ -477,6 +477,28 @@ void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
 #undef BCase
 }
 
+void ScalarEnumerationTraits<ELFYAML::ELF_SHN>::enumeration(
+    IO &IO, ELFYAML::ELF_SHN &Value) {
+#define ECase(X) IO.enumCase(Value, #X, ELF::X)
+  ECase(SHN_UNDEF);
+  ECase(SHN_LORESERVE);
+  ECase(SHN_LOPROC);
+  ECase(SHN_HIPROC);
+  ECase(SHN_LOOS);
+  ECase(SHN_HIOS);
+  ECase(SHN_ABS);
+  ECase(SHN_COMMON);
+  ECase(SHN_XINDEX);
+  ECase(SHN_HIRESERVE);
+  ECase(SHN_HEXAGON_SCOMMON);
+  ECase(SHN_HEXAGON_SCOMMON_1);
+  ECase(SHN_HEXAGON_SCOMMON_2);
+  ECase(SHN_HEXAGON_SCOMMON_4);
+  ECase(SHN_HEXAGON_SCOMMON_8);
+#undef ECase
+  IO.enumFallback<Hex32>(Value);
+}
+
 void ScalarEnumerationTraits<ELFYAML::ELF_STT>::enumeration(
     IO &IO, ELFYAML::ELF_STT &Value) {
 #define ECase(X) IO.enumCase(Value, #X, ELF::X)
@@ -701,12 +723,27 @@ void MappingTraits<ELFYAML::Symbol>::mapping(IO &IO, ELFYAML::Symbol &Symbol) {
   IO.mapOptional("Name", Symbol.Name, StringRef());
   IO.mapOptional("Type", Symbol.Type, ELFYAML::ELF_STT(0));
   IO.mapOptional("Section", Symbol.Section, StringRef());
+  IO.mapOptional("Index", Symbol.Index);
   IO.mapOptional("Value", Symbol.Value, Hex64(0));
   IO.mapOptional("Size", Symbol.Size, Hex64(0));
 
   MappingNormalization<NormalizedOther, uint8_t> Keys(IO, Symbol.Other);
   IO.mapOptional("Visibility", Keys->Visibility, ELFYAML::ELF_STV(0));
   IO.mapOptional("Other", Keys->Other, ELFYAML::ELF_STO(0));
+}
+
+StringRef MappingTraits<ELFYAML::Symbol>::validate(IO &IO,
+                                                   ELFYAML::Symbol &Symbol) {
+  if (Symbol.Index && Symbol.Section.data()) {
+    return "Index and Section cannot both be specified for Symbol";
+  }
+  if (Symbol.Index && *Symbol.Index == ELFYAML::ELF_SHN(ELF::SHN_XINDEX)) {
+    return "Large indexes are not supported";
+  }
+  if (Symbol.Index && *Symbol.Index < ELFYAML::ELF_SHN(ELF::SHN_LORESERVE)) {
+    return "Use a section name to define which section a symbol is defined in";
+  }
+  return StringRef();
 }
 
 void MappingTraits<ELFYAML::LocalGlobalWeakSymbols>::mapping(

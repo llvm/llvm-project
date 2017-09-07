@@ -1003,8 +1003,17 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
       OS << " and ";
     if (NumErrors)
       OS << NumErrors << " error" << (NumErrors == 1 ? "" : "s");
-    if (NumWarnings || NumErrors)
-      OS << " generated.\n";
+    if (NumWarnings || NumErrors) {
+      OS << " generated";
+      if (getLangOpts().CUDA) {
+        if (!getLangOpts().CUDAIsDevice) {
+          OS << " when compiling for host";
+        } else {
+          OS << " when compiling for " << getTargetOpts().CPU;
+        }
+      }
+      OS << ".\n";
+    }
   }
 
   if (getFrontendOpts().ShowStats) {

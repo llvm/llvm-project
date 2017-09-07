@@ -84,6 +84,7 @@ namespace format {
   TYPE(RegexLiteral) \
   TYPE(SelectorName) \
   TYPE(StartOfName) \
+  TYPE(StructuredBindingLSquare) \
   TYPE(TemplateCloser) \
   TYPE(TemplateOpener) \
   TYPE(TemplateString) \
