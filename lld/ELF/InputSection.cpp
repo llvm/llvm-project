@@ -200,12 +200,12 @@ void InputSectionBase::uncompress() {
                                                 Config->IsLE, Config->Is64));
 
   size_t Size = Dec.getDecompressedSize();
-  UncompressBuf.reset(new std::vector<uint8_t>(Size));
-  if (Error E = Dec.decompress({(char *)UncompressBuf->data(), Size}))
+  UncompressBuf.reset(new char[Size]());
+  if (Error E = Dec.decompress({UncompressBuf.get(), Size}))
     fatal(toString(this) +
           ": decompress failed: " + llvm::toString(std::move(E)));
 
-  this->Data = *UncompressBuf;
+  this->Data = makeArrayRef((uint8_t *)UncompressBuf.get(), Size);
   this->Flags &= ~(uint64_t)SHF_COMPRESSED;
 }
 
@@ -485,9 +485,9 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t Type, uint64_t A,
 // of the RW segment.
 static uint64_t getARMStaticBase(const SymbolBody &Body) {
   OutputSection *OS = Body.getOutputSection();
-  if (!OS || !OS->FirstInPtLoad)
+  if (!OS || !OS->PtLoad || !OS->PtLoad->FirstSec)
     fatal("SBREL relocation to " + Body.getName() + " without static base");
-  return OS->FirstInPtLoad->Addr;
+  return OS->PtLoad->FirstSec->Addr;
 }
 
 static uint64_t getRelocTargetVA(uint32_t Type, int64_t A, uint64_t P,
