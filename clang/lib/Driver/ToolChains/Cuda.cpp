@@ -49,6 +49,8 @@ static CudaVersion ParseCudaVersionFile(llvm::StringRef V) {
     return CudaVersion::CUDA_75;
   if (Major == 8 && Minor == 0)
     return CudaVersion::CUDA_80;
+  if (Major == 9 && Minor == 0)
+    return CudaVersion::CUDA_90;
   return CudaVersion::UNKNOWN;
 }
 
@@ -112,43 +114,55 @@ CudaInstallationDetector::CudaInstallationDetector(
       Version = ParseCudaVersionFile((*VersionFile)->getBuffer());
     }
 
-    std::error_code EC;
-    for (llvm::sys::fs::directory_iterator LI(LibDevicePath, EC), LE;
-         !EC && LI != LE; LI = LI.increment(EC)) {
-      StringRef FilePath = LI->path();
-      StringRef FileName = llvm::sys::path::filename(FilePath);
-      // Process all bitcode filenames that look like libdevice.compute_XX.YY.bc
-      const StringRef LibDeviceName = "libdevice.";
-      if (!(FileName.startswith(LibDeviceName) && FileName.endswith(".bc")))
-        continue;
-      StringRef GpuArch = FileName.slice(
-          LibDeviceName.size(), FileName.find('.', LibDeviceName.size()));
-      LibDeviceMap[GpuArch] = FilePath.str();
-      // Insert map entries for specifc devices with this compute
-      // capability. NVCC's choice of the libdevice library version is
-      // rather peculiar and depends on the CUDA version.
-      if (GpuArch == "compute_20") {
-        LibDeviceMap["sm_20"] = FilePath;
-        LibDeviceMap["sm_21"] = FilePath;
-        LibDeviceMap["sm_32"] = FilePath;
-      } else if (GpuArch == "compute_30") {
-        LibDeviceMap["sm_30"] = FilePath;
-        if (Version < CudaVersion::CUDA_80) {
-          LibDeviceMap["sm_50"] = FilePath;
-          LibDeviceMap["sm_52"] = FilePath;
-          LibDeviceMap["sm_53"] = FilePath;
-        }
-        LibDeviceMap["sm_60"] = FilePath;
-        LibDeviceMap["sm_61"] = FilePath;
-        LibDeviceMap["sm_62"] = FilePath;
-      } else if (GpuArch == "compute_35") {
-        LibDeviceMap["sm_35"] = FilePath;
-        LibDeviceMap["sm_37"] = FilePath;
-      } else if (GpuArch == "compute_50") {
-        if (Version >= CudaVersion::CUDA_80) {
-          LibDeviceMap["sm_50"] = FilePath;
-          LibDeviceMap["sm_52"] = FilePath;
-          LibDeviceMap["sm_53"] = FilePath;
+    if (Version == CudaVersion::CUDA_90) {
+      // CUDA-9 uses single libdevice file for all GPU variants.
+      std::string FilePath = LibDevicePath + "/libdevice.10.bc";
+      if (FS.exists(FilePath)) {
+        for (const char *GpuArch :
+             {"sm_20", "sm_30", "sm_32", "sm_35", "sm_50", "sm_52", "sm_53",
+              "sm_60", "sm_61", "sm_62", "sm_70"})
+          LibDeviceMap[GpuArch] = FilePath;
+      }
+    } else {
+      std::error_code EC;
+      for (llvm::sys::fs::directory_iterator LI(LibDevicePath, EC), LE;
+           !EC && LI != LE; LI = LI.increment(EC)) {
+        StringRef FilePath = LI->path();
+        StringRef FileName = llvm::sys::path::filename(FilePath);
+        // Process all bitcode filenames that look like
+        // libdevice.compute_XX.YY.bc
+        const StringRef LibDeviceName = "libdevice.";
+        if (!(FileName.startswith(LibDeviceName) && FileName.endswith(".bc")))
+          continue;
+        StringRef GpuArch = FileName.slice(
+            LibDeviceName.size(), FileName.find('.', LibDeviceName.size()));
+        LibDeviceMap[GpuArch] = FilePath.str();
+        // Insert map entries for specifc devices with this compute
+        // capability. NVCC's choice of the libdevice library version is
+        // rather peculiar and depends on the CUDA version.
+        if (GpuArch == "compute_20") {
+          LibDeviceMap["sm_20"] = FilePath;
+          LibDeviceMap["sm_21"] = FilePath;
+          LibDeviceMap["sm_32"] = FilePath;
+        } else if (GpuArch == "compute_30") {
+          LibDeviceMap["sm_30"] = FilePath;
+          if (Version < CudaVersion::CUDA_80) {
+            LibDeviceMap["sm_50"] = FilePath;
+            LibDeviceMap["sm_52"] = FilePath;
+            LibDeviceMap["sm_53"] = FilePath;
+          }
+          LibDeviceMap["sm_60"] = FilePath;
+          LibDeviceMap["sm_61"] = FilePath;
+          LibDeviceMap["sm_62"] = FilePath;
+        } else if (GpuArch == "compute_35") {
+          LibDeviceMap["sm_35"] = FilePath;
+          LibDeviceMap["sm_37"] = FilePath;
+        } else if (GpuArch == "compute_50") {
+          if (Version >= CudaVersion::CUDA_80) {
+            LibDeviceMap["sm_50"] = FilePath;
+            LibDeviceMap["sm_52"] = FilePath;
+            LibDeviceMap["sm_53"] = FilePath;
+          }
         }
       }
     }

@@ -16,6 +16,8 @@ const char *CudaVersionToString(CudaVersion V) {
     return "7.5";
   case CudaVersion::CUDA_80:
     return "8.0";
+  case CudaVersion::CUDA_90:
+    return "9.0";
   }
   llvm_unreachable("invalid enum");
 }
@@ -48,6 +50,8 @@ const char *CudaArchToString(CudaArch A) {
     return "sm_61";
   case CudaArch::SM_62:
     return "sm_62";
+  case CudaArch::SM_70:
+    return "sm_70";
   }
   llvm_unreachable("invalid enum");
 }
@@ -66,6 +70,7 @@ CudaArch StringToCudaArch(llvm::StringRef S) {
       .Case("sm_60", CudaArch::SM_60)
       .Case("sm_61", CudaArch::SM_61)
       .Case("sm_62", CudaArch::SM_62)
+      .Case("sm_70", CudaArch::SM_70)
       .Default(CudaArch::UNKNOWN);
 }
 
@@ -95,6 +100,8 @@ const char *CudaVirtualArchToString(CudaVirtualArch A) {
     return "compute_61";
   case CudaVirtualArch::COMPUTE_62:
     return "compute_62";
+  case CudaVirtualArch::COMPUTE_70:
+    return "compute_70";
   }
   llvm_unreachable("invalid enum");
 }
@@ -112,6 +119,7 @@ CudaVirtualArch StringToCudaVirtualArch(llvm::StringRef S) {
       .Case("compute_60", CudaVirtualArch::COMPUTE_60)
       .Case("compute_61", CudaVirtualArch::COMPUTE_61)
       .Case("compute_62", CudaVirtualArch::COMPUTE_62)
+      .Case("compute_70", CudaVirtualArch::COMPUTE_70)
       .Default(CudaVirtualArch::UNKNOWN);
 }
 
@@ -142,6 +150,8 @@ CudaVirtualArch VirtualArchForCudaArch(CudaArch A) {
     return CudaVirtualArch::COMPUTE_61;
   case CudaArch::SM_62:
     return CudaVirtualArch::COMPUTE_62;
+  case CudaArch::SM_70:
+    return CudaVirtualArch::COMPUTE_70;
   }
   llvm_unreachable("invalid enum");
 }
@@ -164,6 +174,8 @@ CudaVersion MinVersionForCudaArch(CudaArch A) {
   case CudaArch::SM_61:
   case CudaArch::SM_62:
     return CudaVersion::CUDA_80;
+  case CudaArch::SM_70:
+    return CudaVersion::CUDA_90;
   }
   llvm_unreachable("invalid enum");
 }

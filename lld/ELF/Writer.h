@@ -41,8 +41,8 @@ struct PhdrEntry {
   uint32_t p_type = 0;
   uint32_t p_flags = 0;
 
-  OutputSection *First = nullptr;
-  OutputSection *Last = nullptr;
+  OutputSection *FirstSec = nullptr;
+  OutputSection *LastSec = nullptr;
   bool HasLMA = false;
 };
 

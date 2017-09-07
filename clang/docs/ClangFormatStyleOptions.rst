@@ -271,15 +271,22 @@ the configuration (without a prefix: ``Auto``).
     int b = 2; // comment  b                int b = 2; // comment about b
 
 **AllowAllParametersOfDeclarationOnNextLine** (``bool``)
-  Allow putting all parameters of a function declaration onto
+  If the function declaration doesn't fit on a line,
+  allow putting all parameters of a function declaration onto
   the next line even if ``BinPackParameters`` is ``false``.
 
   .. code-block:: c++
 
-    true:                                   false:
-    myFunction(foo,                 vs.     myFunction(foo, bar, plop);
-               bar,
-               plop);
+    true:
+    void myFunction(
+        int a, int b, int c, int d, int e);
+
+    false:
+    void myFunction(int a,
+                    int b,
+                    int c,
+                    int d,
+                    int e);
 
 **AllowShortBlocksOnASingleLine** (``bool``)
   Allows contracting simple braced statements to a single line.
@@ -533,6 +540,15 @@ the configuration (without a prefix: ``Auto``).
   If ``BreakBeforeBraces`` is set to ``BS_Custom``, use this to specify how
   each individual brace case should be handled. Otherwise, this is ignored.
 
+  .. code-block:: yaml
+
+    # Example of usage:
+    BreakBeforeBraces: Custom
+    BraceWrapping:
+      AfterEnum: true
+      AfterStruct: false
+      SplitEmptyFunction: false
+
   Nested configuration flags:
 
 
@@ -679,7 +695,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``bool IndentBraces`` Indent the wrapped braces themselves.
 
-  * ``bool SplitEmptyFunctionBody`` If ``false``, empty function body can be put on a single line.
+  * ``bool SplitEmptyFunction`` If ``false``, empty function body can be put on a single line.
     This option is used only if the opening brace of the function has
     already been wrapped, i.e. the `AfterFunction` brace wrapping mode is
     set, and the function could/should not be put on a single line (as per
@@ -690,6 +706,28 @@ the configuration (without a prefix: ``Auto``).
       int f()   vs.   inf f()
       {}              {
                       }
+
+  * ``bool SplitEmptyRecord`` If ``false``, empty record (e.g. class, struct or union) body
+    can be put on a single line. This option is used only if the opening
+    brace of the record has already been wrapped, i.e. the `AfterClass`
+    (for classes) brace wrapping mode is set.
+
+    .. code-block:: c++
+
+      class Foo   vs.  class Foo
+      {}               {
+                       }
+
+  * ``bool SplitEmptyNamespace`` If ``false``, empty namespace body can be put on a single line.
+    This option is used only if the opening brace of the namespace has
+    already been wrapped, i.e. the `AfterNamespace` brace wrapping mode is
+    set.
+
+    .. code-block:: c++
+
+      namespace Foo   vs.  namespace Foo
+      {}                   {
+                           }
 
 
 **BreakAfterJavaFieldAnnotations** (``bool``)
@@ -1144,7 +1182,7 @@ the configuration (without a prefix: ``Auto``).
     IncludeCategories:
       - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
         Priority:        2
-      - Regex:           '^(<|"(gtest|isl|json)/)'
+      - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
         Priority:        3
       - Regex:           '.*'
         Priority:        1
@@ -1180,7 +1218,7 @@ the configuration (without a prefix: ``Auto``).
      }                                      }
 
 **IndentPPDirectives** (``PPDirectiveIndentStyle``)
-  Indent preprocessor directives on conditionals.
+  The preprocessor directive indenting style to use.
 
   Possible values:
 
@@ -1189,22 +1227,24 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      #if FOO
-      #if BAR
-      #include <foo>
-      #endif
-      #endif
+       #if FOO
+       #if BAR
+       #include <foo>
+       #endif
+       #endif
 
   * ``PPDIS_AfterHash`` (in configuration: ``AfterHash``)
     Indents directives after the hash.
 
     .. code-block:: c++
 
-      #if FOO
-      #  if BAR
-      #    include <foo>
-      #  endif
-      #endif
+       #if FOO
+       #  if BAR
+       #    include <foo>
+       #  endif
+       #endif
+
+
 
 **IndentWidth** (``unsigned``)
   The number of columns to use for indentation.
@@ -1317,6 +1357,10 @@ the configuration (without a prefix: ``Auto``).
 
   * ``LK_TableGen`` (in configuration: ``TableGen``)
     Should be used for TableGen code.
+
+  * ``LK_TextProto`` (in configuration: ``TextProto``)
+    Should be used for Protocol Buffer messages in text format
+    (https://developers.google.com/protocol-buffers/).
 
 
 

@@ -681,7 +681,6 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case CXXConversion:
     case EnumConstant:
     case Var:
-    case Binding:
     case ImplicitParam:
     case ParmVar:
     case ObjCMethod:
@@ -693,10 +692,11 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case IndirectField:
       return IDNS_Ordinary | IDNS_Member;
 
+    case Binding:
     case NonTypeTemplateParm:
-      // Non-type template parameters are not found by lookups that ignore
-      // non-types, but they are found by redeclaration lookups for tag types,
-      // so we include them in the tag namespace.
+    case VarTemplate:
+      // These (C++-only) declarations are found by redeclaration lookup for
+      // tag types, so we include them in the tag namespace.
       return IDNS_Ordinary | IDNS_Tag;
 
     case ObjCCompatibleAlias:
@@ -705,7 +705,6 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
 
     case Typedef:
     case TypeAlias:
-    case TypeAliasTemplate:
     case TemplateTypeParm:
     case ObjCTypeParam:
       return IDNS_Ordinary | IDNS_Type;
@@ -741,11 +740,11 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
       return IDNS_Namespace;
 
     case FunctionTemplate:
-    case VarTemplate:
       return IDNS_Ordinary;
 
     case ClassTemplate:
     case TemplateTemplateParm:
+    case TypeAliasTemplate:
       return IDNS_Ordinary | IDNS_Tag | IDNS_Type;
 
     case OMPDeclareReduction:

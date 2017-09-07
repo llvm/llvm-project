@@ -37,8 +37,6 @@ public:
   lldb::RegisterContextSP
   CreateRegisterContextForFrame(StackFrame *frame) override;
 
-  void ClearStackFrames() override;
-
 protected:
   lldb::RegisterContextSP m_thread_reg_ctx_sp;
   llvm::ArrayRef<uint8_t> m_gpregset_data;
