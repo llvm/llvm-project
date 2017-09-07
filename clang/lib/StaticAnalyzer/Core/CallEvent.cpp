@@ -343,6 +343,22 @@ ArrayRef<ParmVarDecl*> AnyFunctionCall::parameters() const {
   return D->parameters();
 }
 
+
+RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
+  const FunctionDecl *FD = getDecl();
+  // Note that the AnalysisDeclContext will have the FunctionDecl with
+  // the definition (if one exists).
+  if (FD) {
+    AnalysisDeclContext *AD =
+      getLocationContext()->getAnalysisDeclContext()->
+      getManager()->getContext(FD);
+    if (AD->getBody())
+      return RuntimeDefinition(AD->getDecl());
+  }
+
+  return RuntimeDefinition();
+}
+
 void AnyFunctionCall::getInitialStackFrameContents(
                                         const StackFrameContext *CalleeCtx,
                                         BindingsTy &Bindings) const {

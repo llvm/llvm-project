@@ -883,8 +883,10 @@ public:
   ///
   /// \param CGF Reference to current CodeGenFunction.
   /// \param Loc Clang source location.
+  /// \param DKind Kind of the directive for which the static finish is emitted.
   ///
-  virtual void emitForStaticFinish(CodeGenFunction &CGF, SourceLocation Loc);
+  virtual void emitForStaticFinish(CodeGenFunction &CGF, SourceLocation Loc,
+                                   OpenMPDirectiveKind DKind);
 
   /// Call __kmpc_dispatch_next(
   ///          ident_t *loc, kmp_int32 tid, kmp_int32 *p_lastiter,

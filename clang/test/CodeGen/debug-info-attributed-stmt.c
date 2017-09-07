@@ -6,7 +6,7 @@ void f(_Bool b)
   while (b);
 }
 
-// CHECK: br label %while.cond, !dbg ![[NUM:[0-9]+]]
-// CHECK: br i1 %tobool, label %while.body, label %while.end, !dbg ![[NUM]]
-// CHECK: br label %while.cond, !dbg ![[NUM]], !llvm.loop
+// CHECK: br label {{.*}}, !dbg ![[NUM:[0-9]+]]
+// CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !dbg ![[NUM]]
+// CHECK: br label {{.*}}, !dbg ![[NUM]], !llvm.loop
 // CHECK: ![[NUM]] = !DILocation(line: 6,

@@ -21,8 +21,10 @@ class LexicallyOrderedDeclVisitor
     : public LexicallyOrderedRecursiveASTVisitor<LexicallyOrderedDeclVisitor> {
 public:
   LexicallyOrderedDeclVisitor(DummyMatchVisitor &Matcher,
-                              const SourceManager &SM)
-      : LexicallyOrderedRecursiveASTVisitor(SM), Matcher(Matcher) {}
+                              const SourceManager &SM, bool EmitDeclIndices,
+                              bool EmitStmtIndices)
+      : LexicallyOrderedRecursiveASTVisitor(SM), Matcher(Matcher),
+        EmitDeclIndices(EmitDeclIndices), EmitStmtIndices(EmitStmtIndices) {}
 
   bool TraverseDecl(Decl *D) {
     TraversalStack.push_back(D);
@@ -31,25 +33,42 @@ public:
     return true;
   }
 
+  bool TraverseStmt(Stmt *S);
+
   bool VisitNamedDecl(const NamedDecl *D);
+  bool VisitDeclRefExpr(const DeclRefExpr *D);
 
 private:
   DummyMatchVisitor &Matcher;
+  bool EmitDeclIndices, EmitStmtIndices;
+  unsigned Index = 0;
   llvm::SmallVector<Decl *, 8> TraversalStack;
 };
 
 class DummyMatchVisitor : public ExpectedLocationVisitor<DummyMatchVisitor> {
+  bool EmitDeclIndices, EmitStmtIndices;
+
 public:
+  DummyMatchVisitor(bool EmitDeclIndices = false, bool EmitStmtIndices = false)
+      : EmitDeclIndices(EmitDeclIndices), EmitStmtIndices(EmitStmtIndices) {}
   bool VisitTranslationUnitDecl(TranslationUnitDecl *TU) {
     const ASTContext &Context = TU->getASTContext();
     const SourceManager &SM = Context.getSourceManager();
-    LexicallyOrderedDeclVisitor SubVisitor(*this, SM);
+    LexicallyOrderedDeclVisitor SubVisitor(*this, SM, EmitDeclIndices,
+                                           EmitStmtIndices);
     SubVisitor.TraverseDecl(TU);
     return false;
   }
 
-  void match(StringRef Path, const Decl *D) { Match(Path, D->getLocStart()); }
+  template <class T> void match(StringRef Path, const T *D) {
+    Match(Path, D->getLocStart());
+  }
 };
+
+bool LexicallyOrderedDeclVisitor::TraverseStmt(Stmt *S) {
+  Matcher.match("overridden TraverseStmt", S);
+  return LexicallyOrderedRecursiveASTVisitor::TraverseStmt(S);
+}
 
 bool LexicallyOrderedDeclVisitor::VisitNamedDecl(const NamedDecl *D) {
   std::string Path;
@@ -64,9 +83,20 @@ bool LexicallyOrderedDeclVisitor::VisitNamedDecl(const NamedDecl *D) {
       OS << ND->getNameAsString();
     else
       OS << "???";
-    if (isa<DeclContext>(D))
+    if (isa<DeclContext>(D) || isa<TemplateDecl>(D))
       OS << "/";
   }
+  if (EmitDeclIndices)
+    OS << "@" << Index++;
+  Matcher.match(OS.str(), D);
+  return true;
+}
+
+bool LexicallyOrderedDeclVisitor::VisitDeclRefExpr(const DeclRefExpr *D) {
+  std::string Name = D->getFoundDecl()->getNameAsString();
+  llvm::raw_string_ostream OS(Name);
+  if (EmitStmtIndices)
+    OS << "@" << Index++;
   Matcher.match(OS.str(), D);
   return true;
 }
@@ -136,6 +166,62 @@ MACRO_F(2)
   Visitor.ExpectMatch("/I/nestedFunction1/", 7, 20);
   Visitor.ExpectMatch("/nestedFunction2/", 7, 20);
   EXPECT_TRUE(Visitor.runOver(Source, DummyMatchVisitor::Lang_OBJC));
+}
+
+TEST(LexicallyOrderedRecursiveASTVisitor, VisitTemplateDecl) {
+  StringRef Source = R"(
+template <class T> T f();
+template <class U, class = void> class Class {};
+)";
+  DummyMatchVisitor Visitor(/*EmitIndices=*/true);
+  Visitor.ExpectMatch("/f/T@1", 2, 11);
+  Visitor.ExpectMatch("/f/f/@2", 2, 20);
+  Visitor.ExpectMatch("/Class/U@4", 3, 11);
+  Visitor.ExpectMatch("/Class/@5", 3, 20);
+  Visitor.ExpectMatch("/Class/Class/@6", 3, 34);
+  EXPECT_TRUE(Visitor.runOver(Source));
+}
+
+TEST(LexicallyOrderedRecursiveASTVisitor, VisitCXXOperatorCallExpr) {
+  StringRef Source = R"(
+struct S {
+  S &operator+(S&);
+  S *operator->();
+  S &operator++();
+  S operator++(int);
+  void operator()(int, int);
+  void operator[](int);
+  void f();
+};
+S a, b, c;
+
+void test() {
+  a = b + c;
+  a->f();
+  a(1, 2);
+  b[0];
+  ++a;
+  b++;
+}
+)";
+  DummyMatchVisitor Visitor(/*EmitDeclIndices=*/false,
+                            /*EmitStmtIndices=*/true);
+  // There are two overloaded operators that start at this point
+  // This makes sure they are both traversed using the overridden
+  // TraverseStmt, as the traversal is implemented by us for
+  // CXXOperatorCallExpr.
+  Visitor.ExpectMatch("overridden TraverseStmt", 14, 3, 2);
+  Visitor.ExpectMatch("a@0", 14, 3);
+  Visitor.ExpectMatch("operator=@1", 14, 5);
+  Visitor.ExpectMatch("b@2", 14, 7);
+  Visitor.ExpectMatch("operator+@3", 14, 9);
+  Visitor.ExpectMatch("c@4", 14, 11);
+  Visitor.ExpectMatch("operator->@6", 15, 4);
+  Visitor.ExpectMatch("operator()@8", 16, 4);
+  Visitor.ExpectMatch("operator[]@10", 17, 4);
+  Visitor.ExpectMatch("operator++@11", 18, 3);
+  Visitor.ExpectMatch("operator++@14", 19, 4);
+  EXPECT_TRUE(Visitor.runOver(Source));
 }
 
 } // end anonymous namespace
