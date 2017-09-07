@@ -2695,6 +2695,17 @@ static bool isSimpleTemplateIdType(QualType T) {
         = T->getAs<TemplateSpecializationType>())
     return Spec->getTemplateName().getAsTemplateDecl() != nullptr;
 
+  // C++17 [temp.local]p2:
+  //   the injected-class-name [...] is equivalent to the template-name followed
+  //   by the template-arguments of the class template specialization or partial
+  //   specialization enclosed in <>
+  // ... which means it's equivalent to a simple-template-id.
+  //
+  // This only arises during class template argument deduction for a copy
+  // deduction candidate, where it permits slicing.
+  if (T->getAs<InjectedClassNameType>())
+    return true;
+
   return false;
 }
 

@@ -43,25 +43,8 @@ MCCodeEmitter *createMipsMCCodeEmitterEL(const MCInstrInfo &MCII,
                                          const MCRegisterInfo &MRI,
                                          MCContext &Ctx);
 
-MCAsmBackend *createMipsAsmBackendEB32(const Target &T,
-                                       const MCRegisterInfo &MRI,
-                                       const Triple &TT, StringRef CPU,
-                                       const MCTargetOptions &Options);
-MCAsmBackend *createMipsAsmBackendEL32(const Target &T,
-                                       const MCRegisterInfo &MRI,
-                                       const Triple &TT, StringRef CPU,
-                                       const MCTargetOptions &Options);
-MCAsmBackend *createMipsAsmBackendEB64(const Target &T,
-                                       const MCRegisterInfo &MRI,
-                                       const Triple &TT, StringRef CPU,
-                                       const MCTargetOptions &Options);
-MCAsmBackend *createMipsAsmBackendEL64(const Target &T,
-                                       const MCRegisterInfo &MRI,
-                                       const Triple &TT, StringRef CPU,
-                                       const MCTargetOptions &Options);
-
-MCObjectWriter *createMipsELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
-                                          bool IsLittleEndian, bool Is64Bit);
+MCObjectWriter *createMipsELFObjectWriter(raw_pwrite_stream &OS,
+                                          const Triple &TT);
 
 namespace MIPS_MC {
 StringRef selectMipsCPU(const Triple &TT, StringRef CPU);

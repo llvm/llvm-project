@@ -215,9 +215,13 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   SetVector<FunctionSummary::ConstVCall> TypeTestAssumeConstVCalls,
       TypeCheckedLoadConstVCalls;
   ICallPromotionAnalysis ICallAnalysis;
+  SmallPtrSet<const User *, 8> Visited;
+
+  // Add personality function, prefix data and prologue data to function's ref
+  // list.
+  findRefEdges(Index, &F, RefEdges, Visited);
 
   bool HasInlineAsmMaybeReferencingInternal = false;
-  SmallPtrSet<const User *, 8> Visited;
   for (const BasicBlock &BB : F)
     for (const Instruction &I : BB) {
       if (isa<DbgInfoIntrinsic>(I))
@@ -455,12 +459,6 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                            !LocalsUsed.empty() || HasLocalInlineAsmSymbol,
                            CantBePromoted);
   }
-
-  // Set live flag for all personality functions. That allows to
-  // preserve them during DCE.
-  for (const llvm::Function &F : M)
-    if (!F.isDeclaration() && F.hasPersonalityFn())
-      setLiveRoot(Index, F.getPersonalityFn()->getName());
 
   // Compute summaries for all variables defined in module, and save in the
   // index.

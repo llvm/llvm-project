@@ -88,7 +88,7 @@ private:
   // Check if tokenizer can start reading an identifier at current position.
   // The original tool did non specify the rules to determine what is a correct
   // identifier. We assume they should follow the C convention:
-  // [a-zA-z_][a-zA-Z0-9_]*.
+  // [a-zA-Z_][a-zA-Z0-9_]*.
   bool canStartIdentifier() const;
   // Check if tokenizer can continue reading an identifier.
   bool canContinueIdentifier() const;
