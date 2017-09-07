@@ -64,7 +64,6 @@ public:
   void setSymbolRecordStreamIndex(uint32_t Index);
 
   Expected<DbiModuleDescriptorBuilder &> addModuleInfo(StringRef ModuleName);
-  Error addModuleSourceFile(StringRef Module, StringRef File);
   Error addModuleSourceFile(DbiModuleDescriptorBuilder &Module, StringRef File);
   Expected<uint32_t> getSourceFileNameIndex(StringRef FileName);
 
@@ -113,8 +112,7 @@ private:
 
   const DbiStreamHeader *Header;
 
-  StringMap<std::unique_ptr<DbiModuleDescriptorBuilder>> ModiMap;
-  std::vector<DbiModuleDescriptorBuilder *> ModiList;
+  std::vector<std::unique_ptr<DbiModuleDescriptorBuilder>> ModiList;
 
   StringMap<uint32_t> SourceFileNames;
 
