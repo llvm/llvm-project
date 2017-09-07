@@ -451,104 +451,14 @@ define <16 x i32> @f32to16ui(<16 x float> %a) nounwind {
 define <16 x i8> @f32to16uc(<16 x float> %f) {
 ; KNL-LABEL: f32to16uc:
 ; KNL:       # BB#0:
-; KNL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; KNL-NEXT:    vcvttss2si %xmm1, %eax
-; KNL-NEXT:    vcvttss2si %xmm0, %ecx
-; KNL-NEXT:    vmovd %ecx, %xmm1
-; KNL-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; KNL-NEXT:    vcvttss2si %xmm2, %eax
-; KNL-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,1,2,3]
-; KNL-NEXT:    vcvttss2si %xmm2, %eax
-; KNL-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; KNL-NEXT:    vcvttss2si %xmm2, %eax
-; KNL-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; KNL-NEXT:    vcvttss2si %xmm3, %eax
-; KNL-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
-; KNL-NEXT:    vcvttss2si %xmm3, %eax
-; KNL-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; KNL-NEXT:    vcvttss2si %xmm2, %eax
-; KNL-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
-; KNL-NEXT:    vcvttss2si %xmm2, %eax
-; KNL-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; KNL-NEXT:    vcvttss2si %xmm3, %eax
-; KNL-NEXT:    vpinsrb $9, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
-; KNL-NEXT:    vcvttss2si %xmm3, %eax
-; KNL-NEXT:    vpinsrb $10, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; KNL-NEXT:    vcvttss2si %xmm2, %eax
-; KNL-NEXT:    vpinsrb $11, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
-; KNL-NEXT:    vcvttss2si %xmm0, %eax
-; KNL-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; KNL-NEXT:    vcvttss2si %xmm2, %eax
-; KNL-NEXT:    vpinsrb $13, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; KNL-NEXT:    vcvttss2si %xmm2, %eax
-; KNL-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; KNL-NEXT:    vcvttss2si %xmm0, %eax
-; KNL-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm0
+; KNL-NEXT:    vcvttps2udq %zmm0, %zmm0
+; KNL-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; AVX512-LABEL: f32to16uc:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vcvttss2si %xmm1, %eax
-; AVX512-NEXT:    vcvttss2si %xmm0, %ecx
-; AVX512-NEXT:    vmovd %ecx, %xmm1
-; AVX512-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX512-NEXT:    vcvttss2si %xmm2, %eax
-; AVX512-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[3,1,2,3]
-; AVX512-NEXT:    vcvttss2si %xmm2, %eax
-; AVX512-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX512-NEXT:    vcvttss2si %xmm2, %eax
-; AVX512-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; AVX512-NEXT:    vcvttss2si %xmm3, %eax
-; AVX512-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
-; AVX512-NEXT:    vcvttss2si %xmm3, %eax
-; AVX512-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; AVX512-NEXT:    vcvttss2si %xmm2, %eax
-; AVX512-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
-; AVX512-NEXT:    vcvttss2si %xmm2, %eax
-; AVX512-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; AVX512-NEXT:    vcvttss2si %xmm3, %eax
-; AVX512-NEXT:    vpinsrb $9, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
-; AVX512-NEXT:    vcvttss2si %xmm3, %eax
-; AVX512-NEXT:    vpinsrb $10, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; AVX512-NEXT:    vcvttss2si %xmm2, %eax
-; AVX512-NEXT:    vpinsrb $11, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
-; AVX512-NEXT:    vcvttss2si %xmm0, %eax
-; AVX512-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vcvttss2si %xmm2, %eax
-; AVX512-NEXT:    vpinsrb $13, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX512-NEXT:    vcvttss2si %xmm2, %eax
-; AVX512-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512-NEXT:    vcvttss2si %xmm0, %eax
-; AVX512-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm0
+; AVX512-NEXT:    vcvttps2udq %zmm0, %zmm0
+; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %res = fptoui <16 x float> %f to <16 x i8>
@@ -558,54 +468,8 @@ define <16 x i8> @f32to16uc(<16 x float> %f) {
 define <16 x i16> @f32to16us(<16 x float> %f) {
 ; ALL-LABEL: f32to16us:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
-; ALL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; ALL-NEXT:    vcvttss2si %xmm2, %eax
-; ALL-NEXT:    vcvttss2si %xmm1, %ecx
-; ALL-NEXT:    vmovd %ecx, %xmm2
-; ALL-NEXT:    vpinsrw $1, %eax, %xmm2, %xmm2
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
-; ALL-NEXT:    vcvttss2si %xmm3, %eax
-; ALL-NEXT:    vpinsrw $2, %eax, %xmm2, %xmm2
-; ALL-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; ALL-NEXT:    vcvttss2si %xmm1, %eax
-; ALL-NEXT:    vpinsrw $3, %eax, %xmm2, %xmm1
-; ALL-NEXT:    vextractf32x4 $3, %zmm0, %xmm2
-; ALL-NEXT:    vcvttss2si %xmm2, %eax
-; ALL-NEXT:    vpinsrw $4, %eax, %xmm1, %xmm1
-; ALL-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; ALL-NEXT:    vcvttss2si %xmm3, %eax
-; ALL-NEXT:    vpinsrw $5, %eax, %xmm1, %xmm1
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
-; ALL-NEXT:    vcvttss2si %xmm3, %eax
-; ALL-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
-; ALL-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; ALL-NEXT:    vcvttss2si %xmm2, %eax
-; ALL-NEXT:    vpinsrw $7, %eax, %xmm1, %xmm1
-; ALL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; ALL-NEXT:    vcvttss2si %xmm2, %eax
-; ALL-NEXT:    vcvttss2si %xmm0, %ecx
-; ALL-NEXT:    vmovd %ecx, %xmm2
-; ALL-NEXT:    vpinsrw $1, %eax, %xmm2, %xmm2
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm0[1,0]
-; ALL-NEXT:    vcvttss2si %xmm3, %eax
-; ALL-NEXT:    vpinsrw $2, %eax, %xmm2, %xmm2
-; ALL-NEXT:    vpermilps {{.*#+}} xmm3 = xmm0[3,1,2,3]
-; ALL-NEXT:    vcvttss2si %xmm3, %eax
-; ALL-NEXT:    vpinsrw $3, %eax, %xmm2, %xmm2
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; ALL-NEXT:    vcvttss2si %xmm0, %eax
-; ALL-NEXT:    vpinsrw $4, %eax, %xmm2, %xmm2
-; ALL-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; ALL-NEXT:    vcvttss2si %xmm3, %eax
-; ALL-NEXT:    vpinsrw $5, %eax, %xmm2, %xmm2
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm0[1,0]
-; ALL-NEXT:    vcvttss2si %xmm3, %eax
-; ALL-NEXT:    vpinsrw $6, %eax, %xmm2, %xmm2
-; ALL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; ALL-NEXT:    vcvttss2si %xmm0, %eax
-; ALL-NEXT:    vpinsrw $7, %eax, %xmm2, %xmm0
-; ALL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vcvttps2udq %zmm0, %zmm0
+; ALL-NEXT:    vpmovdw %zmm0, %ymm0
 ; ALL-NEXT:    retq
   %res = fptoui <16 x float> %f to <16 x i16>
   ret <16 x i16> %res

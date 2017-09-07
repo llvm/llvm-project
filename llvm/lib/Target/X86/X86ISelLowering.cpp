@@ -1171,6 +1171,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::FP_TO_SINT,         MVT::v16i32, Legal);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v16i32, Legal);
+    setOperationAction(ISD::FP_TO_UINT,         MVT::v16i8, Legal);
+    setOperationAction(ISD::FP_TO_UINT,         MVT::v16i16, Legal);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v8i32, Legal);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v4i32, Legal);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v2i32, Custom);
@@ -12124,8 +12126,11 @@ static SDValue lowerVectorShuffleAsLanePermuteAndBlend(const SDLoc &DL, MVT VT,
   // the value 2 selects the low half of source 2. We only use source 2 to
   // allow folding it into a memory operand.
   unsigned PERMMask = 3 | 2 << 4;
-  SDValue Flipped = DAG.getNode(X86ISD::VPERM2X128, DL, VT, DAG.getUNDEF(VT),
-                                V1, DAG.getConstant(PERMMask, DL, MVT::i8));
+  MVT PVT = VT.isFloatingPoint() ? MVT::v4f64 : MVT::v4i64;
+  SDValue Flipped = DAG.getNode(X86ISD::VPERM2X128, DL, PVT, DAG.getUNDEF(VT),
+                                DAG.getBitcast(PVT, V1),
+                                DAG.getConstant(PERMMask, DL, MVT::i8));
+  Flipped = DAG.getBitcast(VT, Flipped);
   return DAG.getVectorShuffle(VT, DL, V1, Flipped, FlippedBlendMask);
 }
 

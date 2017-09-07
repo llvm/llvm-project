@@ -8,3 +8,11 @@ define void @bar() personality i32 (i32, i32, i64, i8*, i8*)* @personality_routi
 define protected i32 @personality_routine(i32, i32, i64, i8*, i8*) {
   ret i32 0
 }
+
+define protected i32 @personality_routine2(i32, i32, i64, i8*, i8*) {
+  ret i32 0
+}
+
+define protected i32 @personality_routine3(i32, i32, i64, i8*, i8*) {
+  ret i32 0
+}

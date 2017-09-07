@@ -1,4 +1,4 @@
-//===- llvm/InitializePasses.h -------- Initialize All Passes ---*- C++ -*-===//
+//===- llvm/InitializePasses.h - Initialize All Passes ----------*- C++ -*-===//
 //
 //                      The LLVM Compiler Infrastructure
 //
@@ -377,6 +377,7 @@ void initializeWinEHPreparePass(PassRegistry&);
 void initializeWriteBitcodePassPass(PassRegistry&);
 void initializeWriteThinLTOBitcodePass(PassRegistry&);
 void initializeXRayInstrumentationPass(PassRegistry&);
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_INITIALIZEPASSES_H

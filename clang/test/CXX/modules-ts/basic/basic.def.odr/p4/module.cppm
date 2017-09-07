@@ -14,14 +14,17 @@
 // CHECK-DAG: @_ZW6ModuleE19static_var_exported = global
 // CHECK-DAG: @const_var_exported = constant
 //
-// FIXME: The module name should be mangled into all of these.
-// CHECK-DAG: @extern_var_module_linkage = external global
+// CHECK-DAG: @_ZW6ModuleE25extern_var_module_linkage = external global
 // FIXME: Should this be 'weak_odr global'? Presumably it must be, since we
 // can discard this global and its initializer (if any), and other TUs are not
 // permitted to run the initializer for this variable.
-// CHECK-DAG: @inline_var_module_linkage = linkonce_odr global
+// CHECK-DAG: @_ZW6ModuleE25inline_var_module_linkage = linkonce_odr global
 // CHECK-DAG: @_ZW6ModuleE25static_var_module_linkage = global
 // CHECK-DAG: @_ZW6ModuleE24const_var_module_linkage = constant
+//
+// CHECK-DAG: @_ZW6ModuleE25unused_var_module_linkage = global i32 4
+// CHECK-DAG: @_ZW6ModuleE32unused_static_var_module_linkage = global i32 5
+// CHECK-DAG: @_ZW6ModuleE31unused_const_var_module_linkage = constant i32 7
 
 static void unused_static_global_module() {}
 static void used_static_global_module() {}
@@ -112,6 +115,11 @@ void noninline_module_linkage() {
   (void)&static_var_module_linkage;
   (void)&const_var_module_linkage;
 }
+
+int unused_var_module_linkage = 4;
+static int unused_static_var_module_linkage = 5;
+inline int unused_inline_var_module_linkage = 6;
+const int unused_const_var_module_linkage = 7;
 
 struct a {
   struct b {};

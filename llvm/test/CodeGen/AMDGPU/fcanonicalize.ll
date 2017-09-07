@@ -5,6 +5,7 @@ declare float @llvm.canonicalize.f32(float) #0
 declare double @llvm.fabs.f64(double) #0
 declare double @llvm.canonicalize.f64(double) #0
 declare half @llvm.canonicalize.f16(half) #0
+declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) #0
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_var_f32:
@@ -453,6 +454,32 @@ define amdgpu_kernel void @test_canonicalize_value_f16_flush(half addrspace(1)* 
   ret void
 }
 
+; GCN-LABEL:  {{^}}test_canonicalize_value_v2f16_flush_gfx8:
+; GCN:     v_mov_b32_e32 [[ONE:v[0-9]+]], 0x3c00
+; GCN-DAG: v_mul_f16_sdwa v{{[0-9]+}}, [[ONE]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GCN-DAG: v_mul_f16_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
+define amdgpu_kernel void @test_canonicalize_value_v2f16_flush_gfx8(<2 x half> addrspace(1)* %arg, <2 x half> addrspace(1)* %out) #4 {
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %arg, i32 %id
+  %v = load <2 x half>, <2 x half> addrspace(1)* %gep, align 4
+  %canonicalized = tail call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %v)
+  %gep2 = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %out, i32 %id
+  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %gep2, align 2
+  ret void
+}
+
+; GCN-LABEL:  {{^}}test_canonicalize_value_v2f16_flush_gfx9:
+; GCN-DAG: v_pk_mul_f16 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
+define amdgpu_kernel void @test_canonicalize_value_v2f16_flush_gfx9(<2 x half> addrspace(1)* %arg, <2 x half> addrspace(1)* %out) #6 {
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %arg, i32 %id
+  %v = load <2 x half>, <2 x half> addrspace(1)* %gep, align 4
+  %canonicalized = tail call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %v)
+  %gep2 = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %out, i32 %id
+  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %gep2, align 2
+  ret void
+}
+
 ; GCN-LABEL:  {{^}}test_canonicalize_value_f64_denorm:
 ; GCN: v_max_f64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
 define amdgpu_kernel void @test_canonicalize_value_f64_denorm(double addrspace(1)* %arg, double addrspace(1)* %out) #5 {
@@ -489,9 +516,22 @@ define amdgpu_kernel void @test_canonicalize_value_f16_denorm(half addrspace(1)*
   ret void
 }
 
+; GCN-LABEL:  {{^}}test_canonicalize_value_v2f16_denorm:
+; GCN: v_pk_max_f16 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+define amdgpu_kernel void @test_canonicalize_value_v2f16_denorm(<2 x half> addrspace(1)* %arg, <2 x half> addrspace(1)* %out) #5 {
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %arg, i32 %id
+  %v = load <2 x half>, <2 x half> addrspace(1)* %gep, align 4
+  %canonicalized = tail call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %v)
+  %gep2 = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %out, i32 %id
+  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %gep2, align 2
+  ret void
+}
+
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind "target-features"="-fp32-denormals,-fp64-fp16-denormals" }
 attributes #3 = { nounwind "target-features"="+fp32-denormals,+fp64-fp16-denormals" }
 attributes #4 = { nounwind "target-features"="-fp32-denormals,-fp64-fp16-denormals" "target-cpu"="tonga" }
 attributes #5 = { nounwind "target-features"="+fp32-denormals,+fp64-fp16-denormals" "target-cpu"="gfx900" }
+attributes #6 = { nounwind "target-features"="-fp32-denormals,-fp64-fp16-denormals" "target-cpu"="gfx900" }

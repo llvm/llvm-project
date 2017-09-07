@@ -865,11 +865,12 @@ EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
     // However, if this global is promoted into several functions we must ensure
     // we don't try and emit duplicate symbols!
     auto *ACPC = cast<ARMConstantPoolConstant>(ACPV);
-    auto *GV = ACPC->getPromotedGlobal();
-    if (!EmittedPromotedGlobalLabels.count(GV)) {
-      MCSymbol *GVSym = getSymbol(GV);
-      OutStreamer->EmitLabel(GVSym);
-      EmittedPromotedGlobalLabels.insert(GV);
+    for (const auto *GV : ACPC->promotedGlobals()) {
+      if (!EmittedPromotedGlobalLabels.count(GV)) {
+        MCSymbol *GVSym = getSymbol(GV);
+        OutStreamer->EmitLabel(GVSym);
+        EmittedPromotedGlobalLabels.insert(GV);
+      }
     }
     return EmitGlobalConstant(DL, ACPC->getPromotedGlobalInit());
   }
