@@ -1181,7 +1181,7 @@ static inline BasicBlock *getRegionNodeBasicBlock(RegionNode *RN) {
 
 void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
                             OptimizationRemarkEmitter &ORE) {
-  scop.reset(new Scop(R, SE, LI, DT, *SD.getDetectionContext(&R), ORE));
+  scop.reset(new Scop(R, SE, LI, *SD.getDetectionContext(&R), ORE));
 
   buildStmts(R);
   buildAccessFunctions();

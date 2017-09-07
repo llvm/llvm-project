@@ -6,6 +6,8 @@
 // RUN: ls | FileCheck xray.log.file.name
 // RUN: rm xray-log.* xray.log.file.name
 
+// UNSUPPORTED: target-is-mips64,target-is-mips64el
+
 #include <cstdio>
 #include <libgen.h>
 

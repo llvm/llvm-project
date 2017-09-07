@@ -33,10 +33,12 @@
 # RUN: echo "{};" > dyn
 # RUN: echo > file
 # RUN: echo > file2
+# RUN: echo "_start" > order
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o 'foo bar'
 # RUN: ld.lld --reproduce repro2.tar 'foo bar' -L"foo bar" -Lfile -Tfile2 \
-# RUN:   --dynamic-list dyn -rpath file --script=file --version-script ver \
-# RUN:   --dynamic-linker "some unusual/path" -soname 'foo bar' -soname='foo bar'
+# RUN:   --dynamic-list dyn -rpath file --script=file --symbol-ordering-file order \
+# RUN:   --version-script ver --dynamic-linker "some unusual/path" -soname 'foo bar' \
+# RUN:   -soname='foo bar'
 # RUN: tar xf repro2.tar
 # RUN: FileCheck %s --check-prefix=RSP2 < repro2/response.txt
 # RSP2:      --chroot .
@@ -47,7 +49,8 @@
 # RSP2-NEXT: --dynamic-list {{.+}}dyn
 # RSP2-NEXT: -rpath {{.+}}file
 # RSP2-NEXT: --script {{.+}}file
-# RSP2-NEXT: --version-script [[PATH:.*]]ver
+# RSP2-NEXT: --symbol-ordering-file [[PATH:.+]]order
+# RSP2-NEXT: --version-script [[PATH]]ver
 # RSP2-NEXT: --dynamic-linker "some unusual/path"
 # RSP2-NEXT: -soname "foo bar"
 # RSP2-NEXT: -soname "foo bar"
@@ -55,6 +58,7 @@
 # RUN: tar tf repro2.tar | FileCheck %s
 # CHECK:      repro2/response.txt
 # CHECK-NEXT: repro2/version.txt
+# CHECK-NEXT: repro2/{{.*}}/order
 # CHECK-NEXT: repro2/{{.*}}/dyn
 # CHECK-NEXT: repro2/{{.*}}/ver
 # CHECK-NEXT: repro2/{{.*}}/foo bar

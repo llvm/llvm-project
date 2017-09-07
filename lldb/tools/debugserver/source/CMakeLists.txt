@@ -149,6 +149,11 @@ if(NOT SKIP_DEBUGSERVER)
       WITH_FBS
       WITH_BKS
       )
+    set_property(TARGET debugserver APPEND PROPERTY COMPILE_DEFINITIONS
+      WITH_LOCKDOWN
+      WITH_FBS
+      WITH_BKS
+      )
     set_property(TARGET lldbDebugserverCommon APPEND PROPERTY COMPILE_FLAGS
       -F${CMAKE_OSX_SYSROOT}/System/Library/PrivateFrameworks
       )
