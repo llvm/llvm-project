@@ -81,6 +81,15 @@ static void ProtectGap(uptr addr, uptr size) {
   Die();
 }
 
+static void MaybeReportLinuxPIEBug() {
+#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__aarch64__))
+  Report("This might be related to ELF_ET_DYN_BASE change in Linux 4.12.\n");
+  Report(
+      "See https://github.com/google/sanitizers/issues/837 for possible "
+      "workarounds.\n");
+#endif
+}
+
 void InitializeShadowMemory() {
   // Set the shadow memory address to uninitialized.
   __asan_shadow_memory_dynamic_address = kDefaultShadowSentinel;
@@ -141,6 +150,7 @@ void InitializeShadowMemory() {
         "ASan cannot proceed correctly. ABORTING.\n");
     Report("ASan shadow was supposed to be located in the [%p-%p] range.\n",
            shadow_start, kHighShadowEnd);
+    MaybeReportLinuxPIEBug();
     DumpProcessMap();
     Die();
   }
