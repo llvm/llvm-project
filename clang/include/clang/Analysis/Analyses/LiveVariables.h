@@ -15,7 +15,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIVEVARIABLES_H
 
 #include "clang/AST/Decl.h"
-#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "llvm/ADT/ImmutableSet.h"
 
 namespace clang {

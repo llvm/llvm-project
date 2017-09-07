@@ -146,6 +146,35 @@ template <class ELFT> class SymbolTableSectionImpl : public SymbolTableSection {
   void writeSection(llvm::FileOutputBuffer &Out) const override;
 };
 
+struct Relocation {
+  const Symbol *RelocSymbol;
+  uint64_t Offset;
+  uint64_t Addend;
+  uint32_t Type;
+};
+
+template <class ELFT> class RelocationSection : public SectionBase {
+private:
+  typedef typename ELFT::Rel Elf_Rel;
+  typedef typename ELFT::Rela Elf_Rela;
+
+  std::vector<Relocation> Relocations;
+  SymbolTableSection *Symbols;
+  SectionBase *SecToApplyRel;
+
+  template <class T> void writeRel(T *Buf) const;
+
+public:
+  void setSymTab(SymbolTableSection *StrTab) { Symbols = StrTab; }
+  void setSection(SectionBase *Sec) { SecToApplyRel = Sec; }
+  void addRelocation(Relocation Rel) { Relocations.push_back(Rel); }
+  void finalize() override;
+  void writeSection(llvm::FileOutputBuffer &Out) const override;
+  static bool classof(const SectionBase *S) {
+    return S->Type == llvm::ELF::SHT_REL || S->Type == llvm::ELF::SHT_RELA;
+  }
+};
+
 template <class ELFT> class Object {
 private:
   typedef std::unique_ptr<SectionBase> SecPtr;

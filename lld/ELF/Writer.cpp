@@ -1250,7 +1250,7 @@ static bool computeIsPreemptible(const SymbolBody &B) {
   // doesn't matter whether we return true or false here. However, if
   // -unresolved-symbols=ignore-all is specified, undefined symbols in
   // executables are automatically exported so that the runtime linker
-  // can try to resolve them. In that case, they is preemptible. So, we
+  // can try to resolve them. In that case, they are preemptible. So, we
   // return true for an undefined symbol in case the option is specified.
   if (!Config->Shared)
     return B.isUndefined();

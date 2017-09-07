@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_ARM_ARMCONSTANTPOOLVALUE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/Support/Casting.h"
 #include <string>
@@ -80,8 +81,8 @@ protected:
     for (unsigned i = 0, e = Constants.size(); i != e; ++i) {
       if (Constants[i].isMachineConstantPoolEntry() &&
           (Constants[i].getAlignment() & AlignMask) == 0) {
-        ARMConstantPoolValue *CPV =
-            (ARMConstantPoolValue *)Constants[i].Val.MachineCPVal;
+        auto *CPV =
+          static_cast<ARMConstantPoolValue*>(Constants[i].Val.MachineCPVal);
         if (Derived *APC = dyn_cast<Derived>(CPV))
           if (cast<Derived>(this)->equals(APC))
             return i;
@@ -139,7 +140,7 @@ inline raw_ostream &operator<<(raw_ostream &O, const ARMConstantPoolValue &V) {
 /// Functions, and BlockAddresses.
 class ARMConstantPoolConstant : public ARMConstantPoolValue {
   const Constant *CVal;         // Constant being loaded.
-  const GlobalVariable *GVar = nullptr;
+  SmallPtrSet<const GlobalVariable*, 1> GVars;
 
   ARMConstantPoolConstant(const Constant *C,
                           unsigned ID,
@@ -173,8 +174,9 @@ public:
   const GlobalValue *getGV() const;
   const BlockAddress *getBlockAddress() const;
 
-  const GlobalVariable *getPromotedGlobal() const {
-    return dyn_cast_or_null<GlobalVariable>(GVar);
+  typedef SmallPtrSet<const GlobalVariable *, 1>::iterator promoted_iterator;
+  iterator_range<promoted_iterator> promotedGlobals() {
+    return iterator_range<promoted_iterator>(GVars.begin(), GVars.end());
   }
 
   const Constant *getPromotedGlobalInit() const {

@@ -21,15 +21,15 @@
 #ifndef LLVM_PASSSUPPORT_H
 #define LLVM_PASSSUPPORT_H
 
-#include "Pass.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/PassInfo.h"
 #include "llvm/PassRegistry.h"
-#include "llvm/Support/Atomic.h"
 #include "llvm/Support/Threading.h"
 #include <functional>
 
 namespace llvm {
+
+class Pass;
 
 #define INITIALIZE_PASS(passName, arg, name, cfg, analysis)                    \
   static void *initialize##passName##PassOnce(PassRegistry &Registry) {        \
@@ -88,7 +88,6 @@ template <typename PassName> Pass *callDefaultCtor() { return new PassName(); }
 ///
 /// This statement will cause your pass to be created by calling the default
 /// constructor exposed by the pass.
-///
 template <typename passName> struct RegisterPass : public PassInfo {
   // Register Pass using default constructor...
   RegisterPass(StringRef PassArg, StringRef Name, bool CFGOnly = false,
@@ -118,7 +117,6 @@ template <typename passName> struct RegisterPass : public PassInfo {
 /// The actual interface may also be registered as well (by not specifying the
 /// second template argument).  The interface should be registered to associate
 /// a nice name with the interface.
-///
 class RegisterAGBase : public PassInfo {
 public:
   RegisterAGBase(StringRef Name, const void *InterfaceID,
@@ -196,27 +194,23 @@ struct RegisterAnalysisGroup : public RegisterAGBase {
 /// at runtime (which can be because of the RegisterPass constructors being run
 /// as the program starts up, or may be because a shared object just got
 /// loaded).
-///
 struct PassRegistrationListener {
-  PassRegistrationListener() {}
-  virtual ~PassRegistrationListener() {}
+  PassRegistrationListener() = default;
+  virtual ~PassRegistrationListener() = default;
 
   /// Callback functions - These functions are invoked whenever a pass is loaded
   /// or removed from the current executable.
-  ///
   virtual void passRegistered(const PassInfo *) {}
 
   /// enumeratePasses - Iterate over the registered passes, calling the
   /// passEnumerate callback on each PassInfo object.
-  ///
   void enumeratePasses();
 
   /// passEnumerate - Callback function invoked when someone calls
   /// enumeratePasses on this PassRegistrationListener object.
-  ///
   virtual void passEnumerate(const PassInfo *) {}
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_PASSSUPPORT_H

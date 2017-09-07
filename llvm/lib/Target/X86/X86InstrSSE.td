@@ -512,35 +512,11 @@ let Predicates = [UseAVX] in {
             (VMOVSSrr (v4f32 VR128:$src1),
                       (COPY_TO_REGCLASS (v4f32 VR128:$src2), FR32))>;
 
-  // 256-bit variants
-  def : Pat<(v8i32 (X86Movss VR256:$src1, VR256:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSSrr (EXTRACT_SUBREG (v8i32 VR256:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v8i32 VR256:$src2), sub_xmm)),
-              sub_xmm)>;
-  def : Pat<(v8f32 (X86Movss VR256:$src1, VR256:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSSrr (EXTRACT_SUBREG (v8f32 VR256:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v8f32 VR256:$src2), sub_xmm)),
-              sub_xmm)>;
-
   // Shuffle with VMOVSD
   def : Pat<(v2i64 (X86Movsd VR128:$src1, VR128:$src2)),
             (VMOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
   def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
             (VMOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
-
-  // 256-bit variants
-  def : Pat<(v4i64 (X86Movsd VR256:$src1, VR256:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSDrr (EXTRACT_SUBREG (v4i64 VR256:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v4i64 VR256:$src2), sub_xmm)),
-              sub_xmm)>;
-  def : Pat<(v4f64 (X86Movsd VR256:$src1, VR256:$src2)),
-            (SUBREG_TO_REG (i32 0),
-              (VMOVSDrr (EXTRACT_SUBREG (v4f64 VR256:$src1), sub_xmm),
-                        (EXTRACT_SUBREG (v4f64 VR256:$src2), sub_xmm)),
-              sub_xmm)>;
 
   // FIXME: Instead of a X86Movlps there should be a X86Movsd here, the problem
   // is during lowering, where it's not possible to recognize the fold cause

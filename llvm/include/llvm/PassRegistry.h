@@ -18,16 +18,15 @@
 #define LLVM_PASSREGISTRY_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/PassInfo.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/RWMutex.h"
+#include <memory>
 #include <vector>
 
 namespace llvm {
 
-class StringRef;
 class PassInfo;
 struct PassRegistrationListener;
 
@@ -41,17 +40,17 @@ class PassRegistry {
   mutable sys::SmartRWMutex<true> Lock;
 
   /// PassInfoMap - Keep track of the PassInfo object for each registered pass.
-  typedef DenseMap<const void *, const PassInfo *> MapType;
+  using MapType = DenseMap<const void *, const PassInfo *>;
   MapType PassInfoMap;
 
-  typedef StringMap<const PassInfo *> StringMapType;
+  using StringMapType = StringMap<const PassInfo *>;
   StringMapType PassInfoStringMap;
 
   std::vector<std::unique_ptr<const PassInfo>> ToFree;
   std::vector<PassRegistrationListener *> Listeners;
 
 public:
-  PassRegistry() {}
+  PassRegistry() = default;
   ~PassRegistry();
 
   /// getPassRegistry - Access the global registry object, which is
@@ -94,6 +93,6 @@ public:
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_STDCXX_CONVERSION_FUNCTIONS(PassRegistry, LLVMPassRegistryRef)
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_PASSREGISTRY_H

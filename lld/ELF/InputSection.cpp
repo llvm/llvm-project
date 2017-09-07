@@ -200,12 +200,12 @@ void InputSectionBase::uncompress() {
                                                 Config->IsLE, Config->Is64));
 
   size_t Size = Dec.getDecompressedSize();
-  UncompressBuf.reset(new std::vector<uint8_t>(Size));
-  if (Error E = Dec.decompress({(char *)UncompressBuf->data(), Size}))
+  UncompressBuf.reset(new char[Size]());
+  if (Error E = Dec.decompress({UncompressBuf.get(), Size}))
     fatal(toString(this) +
           ": decompress failed: " + llvm::toString(std::move(E)));
 
-  this->Data = *UncompressBuf;
+  this->Data = makeArrayRef((uint8_t *)UncompressBuf.get(), Size);
   this->Flags &= ~(uint64_t)SHF_COMPRESSED;
 }
 
