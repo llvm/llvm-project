@@ -63,20 +63,6 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
         // Make sure the file is closed before committing it.
         OS.reset();
 
-#ifdef _WIN32
-        // Rename the file first on Windows because we cannot rename an open
-        // file on that platform using the sys::fs::rename function.
-        // FIXME: This code could race with the cache pruner, but it is unlikely
-        // that the cache pruner will choose to remove a newly created file.
-        // We should look at using the SetFileInformationByHandle function to
-        // rename the file while it is open.
-        if (auto EC = sys::fs::rename(TempFilename, EntryPath))
-          report_fatal_error(Twine("Failed to rename temporary file ") +
-                             TempFilename + ": " + EC.message() + "\n");
-
-        ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-            MemoryBuffer::getFile(EntryPath);
-#else
         // Open the file first to avoid racing with a cache pruner.
         ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
             MemoryBuffer::getFile(TempFilename);
@@ -85,7 +71,6 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
         if (auto EC = sys::fs::rename(TempFilename, EntryPath))
           report_fatal_error(Twine("Failed to rename temporary file ") +
                              TempFilename + ": " + EC.message() + "\n");
-#endif
 
         if (!MBOrErr)
           report_fatal_error(Twine("Failed to open cache file ") + EntryPath +

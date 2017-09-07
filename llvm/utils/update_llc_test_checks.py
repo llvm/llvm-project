@@ -29,7 +29,7 @@ def llc(args, cmd_args, ir):
 ASM_FUNCTION_X86_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n[^:]*?'
     r'(?P<body>^##?[ \t]+[^:]+:.*?)\s*'
-    r'^\s*(?:[^:\n]+?:\s*\n\s*\.size|\.cfi_endproc|\.globl|\.comm|\.(?:sub)?section|# -- End function)',
+    r'^\s*(?:[^:\n]+?:\s*\n\s*\.size|\.cfi_endproc|\.globl|\.comm|\.(?:sub)?section|#+ -- End function)',
     flags=(re.M | re.S))
 
 ASM_FUNCTION_ARM_RE = re.compile(

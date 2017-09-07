@@ -187,7 +187,7 @@ public:
 private:
   // A pointer that owns uncompressed data if a section is compressed by zlib.
   // Since the feature is not used often, this is usually a nullptr.
-  std::unique_ptr<std::vector<uint8_t>> UncompressBuf;
+  std::unique_ptr<char[]> UncompressBuf;
 };
 
 // SectionPiece represents a piece of splittable section contents.

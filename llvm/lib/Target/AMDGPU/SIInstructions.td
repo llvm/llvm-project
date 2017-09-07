@@ -1283,12 +1283,22 @@ def : Pat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
   (V_MUL_F16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src, 0, 0)
 >;
+
+def : Pat<
+  (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
+  (V_PK_MUL_F16 0, (i32 CONST.V2FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
+>;
 }
 
 let Predicates = [FP16Denormals] in {
 def : Pat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
   (V_MAX_F16_e64 $src_mods, $src, $src_mods, $src, 0, 0)
+>;
+
+def : Pat<
+  (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
+  (V_PK_MAX_F16 $src_mods, $src, $src_mods, $src, DSTCLAMP.NONE)
 >;
 }
 
@@ -1319,11 +1329,6 @@ def : Pat<
   (V_MAX_F64 $src_mods, $src, $src_mods, $src, 0, 0)
 >;
 }
-
-def : Pat<
-  (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
-  (V_PK_MUL_F16 0, (i32 CONST.V2FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
->;
 
 
 // Allow integer inputs
