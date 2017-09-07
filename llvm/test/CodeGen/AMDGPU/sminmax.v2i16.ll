@@ -10,8 +10,8 @@
 
 ; VI: v_sub_i32_e32
 ; VI-DAG: v_sub_i32_e32
-; VI: v_max_i32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, sext(v{{[0-9]+}}) dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; VI: v_max_i32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, sext(v{{[0-9]+}}) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; VI: v_max_i32_sdwa v{{[0-9]+}}, sext(v{{[0-9]+}}), sext(v{{[0-9]+}}) dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
+; VI: v_max_i32_sdwa v{{[0-9]+}}, sext(v{{[0-9]+}}), sext(v{{[0-9]+}}) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
 ; VI: v_add_i32_e32
 ; VI: v_add_i32_e32
 ; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD

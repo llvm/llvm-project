@@ -15,11 +15,19 @@
 static const char *Separator = "-########-";
 static const char *Target = "A-########-B";
 
+static volatile int sink;
+
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   assert(Data);
   std::string Str(reinterpret_cast<const char *>(Data), Size);
   static const size_t TargetHash = std::hash<std::string>{}(std::string(Target));
   size_t StrHash = std::hash<std::string>{}(Str);
+
+  // Ensure we have 'A' and 'B' in the corpus.
+  if (Size == 1 && *Data == 'A')
+    sink++;
+  if (Size == 1 && *Data == 'B')
+    sink--;
 
   if (TargetHash == StrHash) {
     std::cout << "BINGO; Found the target, exiting\n" << std::flush;
