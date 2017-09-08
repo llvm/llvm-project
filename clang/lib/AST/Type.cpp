@@ -2553,6 +2553,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "double";
   case LongDouble:
     return "long double";
+  case Float16:
+    return "_Float16";
   case Float128:
     return "__float128";
   case WChar_S:
