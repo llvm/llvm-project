@@ -704,7 +704,7 @@ static void yamlToPdb(StringRef Path) {
     ModiBuilder.setObjFileName(MI.Obj);
 
     for (auto S : MI.SourceFiles)
-      ExitOnErr(DbiBuilder.addModuleSourceFile(MI.Mod, S));
+      ExitOnErr(DbiBuilder.addModuleSourceFile(ModiBuilder, S));
     if (MI.Modi.hasValue()) {
       const auto &ModiStream = *MI.Modi;
       for (auto Symbol : ModiStream.Symbols) {

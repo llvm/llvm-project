@@ -3235,8 +3235,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   CmdArgs.push_back("-mthread-model");
-  if (Arg *A = Args.getLastArg(options::OPT_mthread_model))
+  if (Arg *A = Args.getLastArg(options::OPT_mthread_model)) {
+    if (!getToolChain().isThreadModelSupported(A->getValue()))
+      D.Diag(diag::err_drv_invalid_thread_model_for_target)
+          << A->getValue() << A->getAsString(Args);
     CmdArgs.push_back(A->getValue());
+  }
   else
     CmdArgs.push_back(Args.MakeArgString(getToolChain().getThreadModel()));
 

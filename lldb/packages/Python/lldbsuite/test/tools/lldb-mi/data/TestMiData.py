@@ -88,8 +88,6 @@ class MiDataTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    # FIXME: the global case worked before refactoring
-    @unittest2.skip("-data-evaluate-expression doesn't work on globals")
     def test_lldbmi_data_read_memory_bytes_global(self):
         """Test that -data-read-memory-bytes can access global buffers."""
 
@@ -115,7 +113,7 @@ class MiDataTestCase(lldbmi_testcase.MiTestCaseBase):
         # Test that -data-read-memory-bytes works for char[] type (global)
         self.runCmd("-data-read-memory-bytes %#x %d" % (addr, size))
         self.expect(
-            "\^done,memory=\[{begin=\"0x0*%x\",offset=\"0x0+\",end=\"0x0*%x\",contents=\"1112131400\"}\]" %
+            "\^done,memory=\[{begin=\"0x0*%x\",offset=\"0x0+\",end=\"0x0*%x\",contents=\"1011121300\"}\]" %
             (addr, addr + size))
 
         # Get address of static char[]
@@ -127,7 +125,7 @@ class MiDataTestCase(lldbmi_testcase.MiTestCaseBase):
         # Test that -data-read-memory-bytes works for static char[] type
         self.runCmd("-data-read-memory-bytes %#x %d" % (addr, size))
         self.expect(
-            "\^done,memory=\[{begin=\"0x0*%x\",offset=\"0x0+\",end=\"0x0*%x\",contents=\"1112131400\"}\]" %
+            "\^done,memory=\[{begin=\"0x0*%x\",offset=\"0x0+\",end=\"0x0*%x\",contents=\"2021222300\"}\]" %
             (addr, addr + size))
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows

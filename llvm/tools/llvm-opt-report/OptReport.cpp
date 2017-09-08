@@ -514,8 +514,10 @@ int main(int argc, const char **argv) {
       "A tool to generate an optimization report from YAML optimization"
       " record files.\n");
 
-  if (Help)
+  if (Help) {
     cl::PrintHelpMessage();
+    return 0;
+  }
 
   LocationInfoTy LocationInfo;
   if (!readLocationInfo(LocationInfo))

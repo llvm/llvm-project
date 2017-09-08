@@ -1350,8 +1350,7 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
                                       BranchToContinuation);
 
     NewPHI->addIncoming(PN->getIncomingValueForBlock(Preheader), Preheader);
-    auto *FixupValue =
-        LS.IsIndVarNext ? PN->getIncomingValueForBlock(LS.Latch) : PN;
+    auto *FixupValue = PN->getIncomingValueForBlock(LS.Latch);
     NewPHI->addIncoming(FixupValue, RRI.ExitSelector);
     RRI.PHIValuesAtPseudoExit.push_back(NewPHI);
   }
@@ -1493,7 +1492,6 @@ bool LoopConstrainer::run() {
       }
       ExitPreLoopAtSCEV = SE.getAddExpr(*SR.HighLimit, MinusOneS);
     }
-
     ExitPreLoopAt = Expander.expandCodeFor(ExitPreLoopAtSCEV, IVTy, InsertPt);
     ExitPreLoopAt->setName("exit.preloop.at");
   }
@@ -1512,7 +1510,9 @@ bool LoopConstrainer::run() {
       }
       ExitMainLoopAtSCEV = SE.getAddExpr(*SR.LowLimit, MinusOneS);
     }
-
+    if (!MainLoopStructure.IsIndVarNext)
+      ExitMainLoopAtSCEV = SE.getMinusSCEV(
+          ExitMainLoopAtSCEV, SE.getSCEV(MainLoopStructure.IndVarStep));
     ExitMainLoopAt = Expander.expandCodeFor(ExitMainLoopAtSCEV, IVTy, InsertPt);
     ExitMainLoopAt->setName("exit.mainloop.at");
   }

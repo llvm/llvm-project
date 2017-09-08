@@ -310,6 +310,16 @@ private:
     return false;
   }
 
+  bool isCppStructuredBinding(const FormatToken *Tok) {
+    if (!Style.isCpp() || !Tok->is(tok::l_square))
+      return false;
+    do {
+      Tok = Tok->getPreviousNonComment();
+    } while (Tok && Tok->isOneOf(tok::kw_const, tok::kw_volatile, tok::amp,
+                                 tok::ampamp));
+    return Tok && Tok->is(tok::kw_auto);
+  }
+
   bool parseSquare() {
     if (!CurrentToken)
       return false;
@@ -344,7 +354,9 @@ private:
 
     unsigned BindingIncrease = 1;
     if (Left->is(TT_Unknown)) {
-      if (StartsObjCMethodExpr) {
+      if (isCppStructuredBinding(Left)) {
+        Left->Type = TT_StructuredBindingLSquare;
+      } else if (StartsObjCMethodExpr) {
         Left->Type = TT_ObjCMethodExpr;
       } else if (Style.Language == FormatStyle::LK_JavaScript && Parent &&
                  Contexts.back().ContextKind == tok::l_brace &&
@@ -2261,17 +2273,20 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Left.is(tok::l_square))
     return (Left.is(TT_ArrayInitializerLSquare) &&
             Style.SpacesInContainerLiterals && Right.isNot(tok::r_square)) ||
-           (Left.is(TT_ArraySubscriptLSquare) && Style.SpacesInSquareBrackets &&
-            Right.isNot(tok::r_square));
+           (Left.isOneOf(TT_ArraySubscriptLSquare,
+                         TT_StructuredBindingLSquare) &&
+            Style.SpacesInSquareBrackets && Right.isNot(tok::r_square));
   if (Right.is(tok::r_square))
     return Right.MatchingParen &&
            ((Style.SpacesInContainerLiterals &&
              Right.MatchingParen->is(TT_ArrayInitializerLSquare)) ||
             (Style.SpacesInSquareBrackets &&
-             Right.MatchingParen->is(TT_ArraySubscriptLSquare)));
+             Right.MatchingParen->isOneOf(TT_ArraySubscriptLSquare,
+                                          TT_StructuredBindingLSquare)));
   if (Right.is(tok::l_square) &&
       !Right.isOneOf(TT_ObjCMethodExpr, TT_LambdaLSquare,
-                     TT_DesignatedInitializerLSquare) &&
+                     TT_DesignatedInitializerLSquare,
+                     TT_StructuredBindingLSquare) &&
       !Left.isOneOf(tok::numeric_constant, TT_DictLiteral))
     return false;
   if (Left.is(tok::l_brace) && Right.is(tok::r_brace))

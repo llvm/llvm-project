@@ -197,3 +197,22 @@ define <2 x i64> @fix_double_to_i64(<2 x double> %in) {
   ret <2 x i64> %conv
 }
 
+define i32 @multi_sint(double %c, i32* nocapture %p, i32* nocapture %q) {
+  %conv = fptosi double %c to i32
+  store i32 %conv, i32* %p, align 4
+  store i32 %conv, i32* %q, align 4
+  ret i32 %conv
+; CHECK-LABEL: multi_sint:
+; CHECK: vcvt.s32.f64
+; CHECK-NOT: vcvt
+}
+
+define i32 @multi_uint(double %c, i32* nocapture %p, i32* nocapture %q) {
+  %conv = fptoui double %c to i32
+  store i32 %conv, i32* %p, align 4
+  store i32 %conv, i32* %q, align 4
+  ret i32 %conv
+; CHECK-LABEL: multi_uint:
+; CHECK: vcvt.u32.f64
+; CHECK-NOT: vcvt
+}

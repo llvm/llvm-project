@@ -721,6 +721,9 @@ def HasDPP : Predicate<"Subtarget->hasDPP()">,
 def HasIntClamp : Predicate<"Subtarget->hasIntClamp()">,
   AssemblerPredicate<"FeatureIntClamp">;
 
+def HasMadMix : Predicate<"Subtarget->hasMadMixInsts()">,
+  AssemblerPredicate<"FeatureGFX9Insts">;
+
 class PredicateControl {
   Predicate SubtargetPredicate;
   Predicate SIAssemblerPredicate = isSICI;

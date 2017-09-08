@@ -97,6 +97,6 @@ template <> struct MappingTraits<xray::YAMLXRayTrace> {
 } // namespace yaml
 } // namespace llvm
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(xray::YAMLXRayRecord) 
+LLVM_YAML_IS_SEQUENCE_VECTOR(xray::YAMLXRayRecord)
 
 #endif // LLVM_TOOLS_LLVM_XRAY_XRAY_RECORD_YAML_H

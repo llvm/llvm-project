@@ -931,8 +931,10 @@ int main(int argc, const char **argv) {
       "one. The resulting file can also be unbundled into different files by \n"
       "this tool if -unbundle is provided.\n");
 
-  if (Help)
+  if (Help) {
     cl::PrintHelpMessage();
+    return 0;
+  }
 
   bool Error = false;
   if (Unbundle) {
