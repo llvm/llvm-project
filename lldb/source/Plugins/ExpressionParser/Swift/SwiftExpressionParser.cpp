@@ -1244,7 +1244,8 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   }
 
   swift::SourceFile *source_file = new (*ast_context) swift::SourceFile(
-      *module, source_file_kind, buffer_id, implicit_import_kind);
+      *module, source_file_kind, buffer_id, implicit_import_kind,
+      /*Keep tokens*/false);
   module->addFile(*source_file);
 
   bool done = false;
