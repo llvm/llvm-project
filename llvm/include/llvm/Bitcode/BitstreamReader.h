@@ -43,7 +43,7 @@ public:
     unsigned BlockID;
     std::vector<std::shared_ptr<BitCodeAbbrev>> Abbrevs;
     std::string Name;
-    std::vector<std::pair<unsigned, std::string> > RecordNames;
+    std::vector<std::pair<unsigned, std::string>> RecordNames;
   };
 
 private:
@@ -88,7 +88,7 @@ public:
   /// follow the word size of the host machine for efficiency. We use word_t in
   /// places that are aware of this to make it perfectly explicit what is going
   /// on.
-  typedef size_t word_t;
+  using word_t = size_t;
 
 private:
   word_t CurWord = 0;

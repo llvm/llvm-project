@@ -692,6 +692,13 @@ void BlockGenerator::generateScalarStores(
                   DT.dominates(cast<Instruction>(Address)->getParent(),
                                Builder.GetInsertBlock())) &&
                  "Domination violation");
+
+          // The new Val might have a different type than the old Val due to
+          // ScalarEvolution looking through bitcasts.
+          if (Val->getType() != Address->getType()->getPointerElementType())
+            Address = Builder.CreateBitOrPointerCast(
+                Address, Val->getType()->getPointerTo());
+
           Builder.CreateStore(Val, Address);
 
         });

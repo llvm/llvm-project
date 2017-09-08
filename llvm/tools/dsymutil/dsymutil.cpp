@@ -253,8 +253,10 @@ int main(int argc, char **argv) {
       "for the executable <input file> by using debug symbols information\n"
       "contained in its symbol table.\n");
 
-  if (Help)
+  if (Help) {
     PrintHelpMessage();
+    return 0;
+  }
 
   if (Version) {
     llvm::cl::PrintVersionMessage();

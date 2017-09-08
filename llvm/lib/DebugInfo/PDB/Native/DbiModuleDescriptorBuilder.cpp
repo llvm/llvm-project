@@ -89,14 +89,6 @@ uint32_t DbiModuleDescriptorBuilder::calculateSerializedLength() const {
   return alignTo(L + M + O, sizeof(uint32_t));
 }
 
-template <typename T> struct Foo {
-  explicit Foo(T &&Answer) : Answer(Answer) {}
-
-  T Answer;
-};
-
-template <typename T> Foo<T> makeFoo(T &&t) { return Foo<T>(std::move(t)); }
-
 void DbiModuleDescriptorBuilder::finalize() {
   Layout.SC.ModuleIndex = Layout.Mod;
   Layout.FileNameOffs = 0; // TODO: Fix this

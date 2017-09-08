@@ -99,13 +99,13 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   if (Args.hasArgNoClaim(OPT_INPUT) ||
       (!Args.hasArgNoClaim(OPT_d) && !Args.hasArgNoClaim(OPT_l))) {
     Table.PrintHelp(outs(), ArgsArr[0], "dlltool", false);
-    llvm::outs() << "\nTARGETS: i386, i386:x86-64, arm\n";
+    llvm::outs() << "\nTARGETS: i386, i386:x86-64, arm, arm64\n";
     return 1;
   }
 
   if (!Args.hasArgNoClaim(OPT_m) && Args.hasArgNoClaim(OPT_d)) {
     llvm::errs() << "error: no target machine specified\n"
-                 << "supported targets: i386, i386:x86-64, arm\n";
+                 << "supported targets: i386, i386:x86-64, arm, arm64\n";
     return 1;
   }
 

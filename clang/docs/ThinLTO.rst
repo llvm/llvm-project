@@ -119,23 +119,27 @@ Incremental
 ThinLTO supports fast incremental builds through the use of a cache,
 which currently must be enabled through a linker option.
 
-- gold (as of LLVM r279883):
+- gold (as of LLVM 4.0):
   ``-Wl,-plugin-opt,cache-dir=/path/to/cache``
 - ld64 (support in clang 3.9 and Xcode 8):
   ``-Wl,-cache_path_lto,/path/to/cache``
-- lld (as of LLVM r296702):
+- ELF lld (as of LLVM 5.0):
   ``-Wl,--thinlto-cache-dir=/path/to/cache``
+- COFF lld (as of LLVM 6.0):
+  ``/lldltocache:/path/to/cache``
 
 Cache Pruning
 -------------
 
 To help keep the size of the cache under control, ThinLTO supports cache
-pruning. Cache pruning is supported with ld64 and ELF lld, but currently only
-ELF lld allows you to control the policy with a policy string.  The cache
-policy must be specified with a linker option.
+pruning. Cache pruning is supported with ld64 and ELF and COFF lld, but
+currently only ELF and COFF lld allow you to control the policy with a
+policy string. The cache policy must be specified with a linker option.
 
-- ELF lld (as of LLVM r298036):
+- ELF lld (as of LLVM 5.0):
   ``-Wl,--thinlto-cache-policy,POLICY``
+- COFF lld (as of LLVM 6.0):
+  ``/lldltocachepolicy:POLICY``
 
 A policy string is a series of key-value pairs separated by ``:`` characters.
 Possible key-value pairs are:

@@ -113,15 +113,32 @@ public:
   }
 };
 
+// Symbols have a st_shndx field that normally stores an index but occasionally
+// stores a different special value. This enum keeps track of what the st_shndx
+// field means. Most of the values are just copies of the special SHN_* values.
+// SYMBOL_SIMPLE_INDEX means that the st_shndx is just an index of a section.
+enum SymbolShndxType {
+  SYMBOL_SIMPLE_INDEX = 0,
+  SYMBOL_ABS = llvm::ELF::SHN_ABS,
+  SYMBOL_COMMON = llvm::ELF::SHN_COMMON,
+  SYMBOL_HEXAGON_SCOMMON = llvm::ELF::SHN_HEXAGON_SCOMMON,
+  SYMBOL_HEXAGON_SCOMMON_2 = llvm::ELF::SHN_HEXAGON_SCOMMON_2,
+  SYMBOL_HEXAGON_SCOMMON_4 = llvm::ELF::SHN_HEXAGON_SCOMMON_4,
+  SYMBOL_HEXAGON_SCOMMON_8 = llvm::ELF::SHN_HEXAGON_SCOMMON_8,
+};
+
 struct Symbol {
   uint8_t Binding;
   SectionBase *DefinedIn;
+  SymbolShndxType ShndxType;
   uint32_t Index;
   llvm::StringRef Name;
   uint32_t NameIndex;
   uint64_t Size;
   uint8_t Type;
   uint64_t Value;
+
+  uint16_t getShndx() const;
 };
 
 class SymbolTableSection : public SectionBase {
@@ -132,7 +149,8 @@ protected:
 public:
   void setStrTab(StringTableSection *StrTab) { SymbolNames = StrTab; }
   void addSymbol(llvm::StringRef Name, uint8_t Bind, uint8_t Type,
-                 SectionBase *DefinedIn, uint64_t Value, uint64_t Sz);
+                 SectionBase *DefinedIn, uint64_t Value, uint16_t Shndx,
+                 uint64_t Sz);
   void addSymbolNames();
   const Symbol *getSymbolByIndex(uint32_t Index) const;
   void finalize() override;

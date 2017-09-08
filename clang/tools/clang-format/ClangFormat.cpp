@@ -351,8 +351,10 @@ int main(int argc, const char **argv) {
       "together with <file>s, the files are edited in-place. Otherwise, the\n"
       "result is written to the standard output.\n");
 
-  if (Help)
+  if (Help) {
     cl::PrintHelpMessage();
+    return 0;
+  }
 
   if (DumpConfig) {
     llvm::Expected<clang::format::FormatStyle> FormatStyle =

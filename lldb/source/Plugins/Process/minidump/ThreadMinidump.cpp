@@ -43,8 +43,6 @@ ThreadMinidump::~ThreadMinidump() {}
 
 void ThreadMinidump::RefreshStateAfterStop() {}
 
-void ThreadMinidump::ClearStackFrames() {}
-
 RegisterContextSP ThreadMinidump::GetRegisterContext() {
   if (!m_reg_context_sp) {
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);

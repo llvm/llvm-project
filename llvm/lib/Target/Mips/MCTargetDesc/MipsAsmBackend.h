@@ -23,18 +23,18 @@ namespace llvm {
 
 class MCAssembler;
 struct MCFixupKindInfo;
-class Target;
 class MCObjectWriter;
+class MCRegisterInfo;
+class Target;
 
 class MipsAsmBackend : public MCAsmBackend {
-  Triple::OSType OSType;
+  Triple TheTriple;
   bool IsLittle; // Big or little endian
-  bool Is64Bit;  // 32 or 64 bit words
 
 public:
-  MipsAsmBackend(const Target &T, Triple::OSType OSType, bool IsLittle,
-                 bool Is64Bit)
-      : MCAsmBackend(), OSType(OSType), IsLittle(IsLittle), Is64Bit(Is64Bit) {}
+  MipsAsmBackend(const Target &T, const MCRegisterInfo &MRI, const Triple &TT,
+                 StringRef CPU)
+      : TheTriple(TT), IsLittle(TT.isLittleEndian()) {}
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
 

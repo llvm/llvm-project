@@ -2922,6 +2922,32 @@ public:
       isl_pw_aff *Bound = Array->getDimensionSizePw(i).release();
       auto LS = isl_pw_aff_get_domain_space(Bound);
       auto Aff = isl_multi_aff_zero(LS);
+
+      // We need types to work out, which is why we perform this weird dance
+      // with `Aff` and `Bound`. Consider this example:
+
+      // LS: [p] -> { [] }
+      // Zero: [p] -> { [] } | Implicitly, is [p] -> { ~ -> [] }.
+      // This `~` is used to denote a "null space" (which is different from
+      // a *zero dimensional* space), which is something that ISL does not
+      // show you when pretty printing.
+
+      // Bound: [p] -> { [] -> [(10p)] } | Here, the [] is a *zero dimensional*
+      // space, not a "null space" which does not exist at all.
+
+      // When we pullback (precompose) `Bound` with `Zero`, we get:
+      // Bound . Zero =
+      //     ([p] -> { [] -> [(10p)] }) . ([p] -> {~ -> [] }) =
+      //     [p] -> { ~ -> [(10p)] } =
+      //     [p] -> [(10p)] (as ISL pretty prints it)
+      // Bound Pullback: [p] -> { [(10p)] }
+
+      // We want this kind of an expression for Bound, without a
+      // zero dimensional input, but with a "null space" input for the types
+      // to work out later on, as far as I (Siddharth Bhat) understand.
+      // I was unable to find a reference to this in the ISL manual.
+      // References: Tobias Grosser.
+
       Bound = isl_pw_aff_pullback_multi_aff(Bound, Aff);
       Bounds.push_back(Bound);
     }
