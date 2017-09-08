@@ -142,9 +142,10 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
 
           DEBUG(dbgs() << "Removing no effect instruction: " << *I << '\n');
 
-          for (auto &Op : I->operands())
+          for (auto &Op : I->operands()) {
             if (Op.isReg())
               RecalcRegs.insert(Op.getReg());
+          }
 
           auto Next = std::next(I);
           LIS->RemoveMachineInstrFromMaps(*I);
@@ -193,6 +194,11 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
 
     auto SaveExec = getOrExecSource(*Lead, *TII, MRI);
     unsigned SaveExecReg = getOrNonExecReg(*Lead, *TII);
+    for (auto &Op : Lead->operands()) {
+      if (Op.isReg())
+        RecalcRegs.insert(Op.getReg());
+    }
+
     LIS->RemoveMachineInstrFromMaps(*Lead);
     Lead->eraseFromParent();
     if (SaveExecReg) {

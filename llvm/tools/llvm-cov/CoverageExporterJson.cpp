@@ -57,6 +57,8 @@ using namespace llvm;
 using namespace coverage;
 
 class CoverageExporterJson {
+  const CoverageViewOptions &Options;
+
   /// \brief Output stream to print JSON to.
   raw_ostream &OS;
 
@@ -171,8 +173,8 @@ class CoverageExporterJson {
     std::vector<std::string> SourceFiles;
     for (StringRef SF : Coverage.getUniqueSourceFiles())
       SourceFiles.emplace_back(SF);
-    auto FileReports =
-        CoverageReport::prepareFileReports(Coverage, Totals, SourceFiles);
+    auto FileReports = CoverageReport::prepareFileReports(Coverage, Totals,
+                                                          SourceFiles, Options);
     renderFiles(SourceFiles, FileReports);
 
     emitDictKey("functions");
@@ -403,8 +405,9 @@ class CoverageExporterJson {
   }
 
 public:
-  CoverageExporterJson(const CoverageMapping &CoverageMapping, raw_ostream &OS)
-      : OS(OS), Coverage(CoverageMapping) {
+  CoverageExporterJson(const CoverageMapping &CoverageMapping,
+                       const CoverageViewOptions &Options, raw_ostream &OS)
+      : Options(Options), OS(OS), Coverage(CoverageMapping) {
     State.push(JsonState::None);
   }
 
@@ -414,8 +417,9 @@ public:
 
 /// \brief Export the given CoverageMapping to a JSON Format.
 void exportCoverageDataToJson(const CoverageMapping &CoverageMapping,
+                              const CoverageViewOptions &Options,
                               raw_ostream &OS) {
-  auto Exporter = CoverageExporterJson(CoverageMapping, OS);
+  auto Exporter = CoverageExporterJson(CoverageMapping, Options, OS);
 
   Exporter.print();
 }

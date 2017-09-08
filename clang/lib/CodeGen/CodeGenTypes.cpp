@@ -443,6 +443,12 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
                                  static_cast<unsigned>(Context.getTypeSize(T)));
       break;
 
+    case BuiltinType::Float16:
+      ResultType =
+          getTypeForFormat(getLLVMContext(), Context.getFloatTypeSemantics(T),
+                           /* UseNativeHalf = */ true);
+      break;
+
     case BuiltinType::Half:
       // Half FP can either be storage-only (lowered to i16) or native.
       ResultType =

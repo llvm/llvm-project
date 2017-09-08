@@ -18,6 +18,20 @@ int main() {
   int(42);
 }
 
+struct Foo {
+    Foo() = default;
+    Foo(const Foo&) = delete;
+};
+
+struct Bar {
+    Foo f;
+};
+
+void function() {
+    Bar b1;
+    Bar b2(b1);
+}
+
 // RUN: c-index-test -code-completion-at=%s:11:10 %s | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: OverloadCandidate:{Text S}{LeftParen (}{CurrentParameter const S<int> &}{RightParen )} (1)
 // CHECK-CC1: OverloadCandidate:{Text S}{LeftParen (}{CurrentParameter int}{Comma , }{Placeholder U}{Comma , }{Placeholder U}{RightParen )} (1)
@@ -138,3 +152,6 @@ int main() {
 // CHECK-CC10-NEXT: Class name
 // CHECK-CC10-NEXT: Nested name specifier
 // CHECK-CC10-NEXT: Objective-C interface
+
+// RUN: c-index-test -code-completion-at=%s:32:12 -std=c++11 %s | FileCheck -check-prefix=CHECK-CC11 %s
+// CHECK-CC11-NOT: OverloadCandidate:{Text Bar}{LeftParen (}{CurrentParameter const Bar &}{RightParen )} (1)

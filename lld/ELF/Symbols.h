@@ -27,6 +27,7 @@ namespace elf {
 
 class ArchiveFile;
 class BitcodeFile;
+class BssSection;
 class InputFile;
 class LazyObjFile;
 template <class ELFT> class ObjFile;
@@ -173,6 +174,7 @@ public:
   // Computed by the writer.
   uint64_t Offset;
   uint64_t Size;
+  BssSection *Section = nullptr;
 };
 
 // Regular defined symbols read from object file symbol tables.
