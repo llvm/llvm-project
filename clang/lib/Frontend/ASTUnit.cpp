@@ -243,7 +243,8 @@ static unsigned getDeclShowContexts(const NamedDecl *ND,
   
   uint64_t Contexts = 0;
   if (isa<TypeDecl>(ND) || isa<ObjCInterfaceDecl>(ND) || 
-      isa<ClassTemplateDecl>(ND) || isa<TemplateTemplateParmDecl>(ND)) {
+      isa<ClassTemplateDecl>(ND) || isa<TemplateTemplateParmDecl>(ND) ||
+      isa<TypeAliasTemplateDecl>(ND)) {
     // Types can appear in these contexts.
     if (LangOpts.CPlusPlus || !isa<TagDecl>(ND))
       Contexts |= (1LL << CodeCompletionContext::CCC_TopLevel)
