@@ -190,12 +190,14 @@ class LinuxLocalTI(DefaultTargetInfo):
 
     def platform_name(self):
         name, _, _ = platform.linux_distribution()
-        name = name.lower().strip()
+        # Some distros have spaces, e.g. 'SUSE Linux Enterprise Server'
+        # lit features can't have spaces
+        name = name.lower().strip().replace(' ', '-')
         return name # Permitted to be None
 
     def platform_ver(self):
         _, ver, _ = platform.linux_distribution()
-        ver = ver.lower().strip()
+        ver = ver.lower().strip().replace(' ', '-')
         return ver # Permitted to be None.
 
     def add_locale_features(self, features):

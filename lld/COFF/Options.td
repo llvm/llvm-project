@@ -31,6 +31,8 @@ def heap    : P<"heap", "Size of the heap">;
 def implib  : P<"implib", "Import library name">;
 def libpath : P<"libpath", "Additional library search path">;
 def linkrepro : P<"linkrepro", "Dump linker invocation and input files for debugging">;
+def lldltocache : P<"lldltocache", "Path to ThinLTO cached object file directory">;
+def lldltocachepolicy : P<"lldltocachepolicy", "Pruning policy for the ThinLTO cache">;
 def lldsavetemps : F<"lldsavetemps">,
     HelpText<"Save temporary files instead of deleting them">;
 def machine : P<"machine", "Specify target platform">;

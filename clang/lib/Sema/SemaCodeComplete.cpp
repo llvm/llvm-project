@@ -4286,9 +4286,12 @@ static void mergeCandidatesWithResults(Sema &SemaRef,
         });
 
     // Add the remaining viable overload candidates as code-completion results.
-    for (auto &Candidate : CandidateSet)
+    for (auto &Candidate : CandidateSet) {
+      if (Candidate.Function && Candidate.Function->isDeleted())
+        continue;
       if (Candidate.Viable)
         Results.push_back(ResultCandidate(Candidate.Function));
+    }
   }
 }
 

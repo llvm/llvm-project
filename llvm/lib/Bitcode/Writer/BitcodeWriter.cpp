@@ -1,4 +1,4 @@
-//===--- Bitcode/Writer/BitcodeWriter.cpp - Bitcode Writer ----------------===//
+//===- Bitcode/Writer/BitcodeWriter.cpp - Bitcode Writer ------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,39 +13,81 @@
 
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "ValueEnumerator.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Bitcode/BitCodes.h"
 #include "llvm/Bitcode/BitstreamWriter.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Comdat.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalIFunc.h"
+#include "llvm/IR/GlobalObject.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/UseListOrder.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/IRSymtab.h"
+#include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cctype>
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
 #include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
-namespace {
-
-cl::opt<unsigned>
+static cl::opt<unsigned>
     IndexThreshold("bitcode-mdindex-threshold", cl::Hidden, cl::init(25),
                    cl::desc("Number of metadatas above which we emit an index "
                             "to enable lazy-loading"));
+
+namespace {
+
 /// These are manifest constants used by the bitcode writer. They do not need to
 /// be kept in sync with the reader, but need to be consistent within this file.
 enum {
@@ -169,6 +211,7 @@ private:
   void assignValueId(GlobalValue::GUID ValGUID) {
     GUIDToValueIdMap[ValGUID] = ++GlobalValueId;
   }
+
   unsigned getValueId(GlobalValue::GUID ValGUID) {
     const auto &VMI = GUIDToValueIdMap.find(ValGUID);
     // Expect that any GUID value had a value Id assigned by an
@@ -177,12 +220,14 @@ private:
            "GUID does not have assigned value Id");
     return VMI->second;
   }
+
   // Helper to get the valueId for the type of value recorded in VI.
   unsigned getValueId(ValueInfo VI) {
     if (!VI.getValue())
       return getValueId(VI.getGUID());
     return VE.getValueID(VI.getValue());
   }
+
   std::map<GlobalValue::GUID, unsigned> &valueIds() { return GUIDToValueIdMap; }
 };
 
@@ -374,7 +419,7 @@ public:
   }
 
   /// The below iterator returns the GUID and associated summary.
-  typedef std::pair<GlobalValue::GUID, GlobalValueSummary *> GVInfo;
+  using GVInfo = std::pair<GlobalValue::GUID, GlobalValueSummary *>;
 
   /// Calls the callback for each value GUID and summary to be written to
   /// bitcode. This hides the details of whether they are being pulled from the
@@ -428,8 +473,10 @@ private:
       return None;
     return VMI->second;
   }
+
   std::map<GlobalValue::GUID, unsigned> &valueIds() { return GUIDToValueIdMap; }
 };
+
 } // end anonymous namespace
 
 static unsigned getEncodedCastOpcode(unsigned Opcode) {
@@ -726,7 +773,6 @@ void ModuleBitcodeWriter::writeTypeTable() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));  // isvararg
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, NumBits));
-
   unsigned FunctionAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
   // Abbrev for TYPE_CODE_STRUCT_ANON.
@@ -735,7 +781,6 @@ void ModuleBitcodeWriter::writeTypeTable() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));  // ispacked
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, NumBits));
-
   unsigned StructAnonAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
   // Abbrev for TYPE_CODE_STRUCT_NAME.
@@ -751,7 +796,6 @@ void ModuleBitcodeWriter::writeTypeTable() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));  // ispacked
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, NumBits));
-
   unsigned StructNamedAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
   // Abbrev for TYPE_CODE_ARRAY.
@@ -759,7 +803,6 @@ void ModuleBitcodeWriter::writeTypeTable() {
   Abbv->Add(BitCodeAbbrevOp(bitc::TYPE_CODE_ARRAY));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // size
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, NumBits));
-
   unsigned ArrayAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
   // Emit an entry count so the reader can reserve space.
@@ -2206,7 +2249,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         Record.push_back(p[0]);
         Record.push_back(p[1]);
       } else {
-        assert (0 && "Unknown FP type!");
+        assert(0 && "Unknown FP type!");
       }
     } else if (isa<ConstantDataSequential>(C) &&
                cast<ConstantDataSequential>(C)->isString()) {
@@ -3050,8 +3093,6 @@ void ModuleBitcodeWriter::writeBlockInfo() {
         VST_BBENTRY_6_ABBREV)
       llvm_unreachable("Unexpected abbrev ordering!");
   }
-
-
 
   { // SETTYPE abbrev for CONSTANTS_BLOCK.
     auto Abbv = std::make_shared<BitCodeAbbrev>();
@@ -4032,6 +4073,7 @@ void llvm::WriteIndexToFile(
 }
 
 namespace {
+
 /// Class to manage the bitcode writing for a thin link bitcode file.
 class ThinLinkBitcodeWriter : public ModuleBitcodeWriterBase {
   /// ModHash is for use in ThinLTO incremental build, generated while writing
@@ -4052,7 +4094,8 @@ public:
 private:
   void writeSimplifiedModuleInfo();
 };
-} // namespace
+
+} // end anonymous namespace
 
 // This function writes a simpilified module info for thin link bitcode file.
 // It only contains the source file name along with the name(the offset and

@@ -584,7 +584,7 @@ MemoryRegion *LinkerScript::findMemoryRegion(OutputSection *Sec) {
   if (!Sec->MemoryRegionName.empty()) {
     auto It = Opt.MemoryRegions.find(Sec->MemoryRegionName);
     if (It != Opt.MemoryRegions.end())
-      return &It->second;
+      return It->second;
     error("memory region '" + Sec->MemoryRegionName + "' not declared");
     return nullptr;
   }
@@ -597,9 +597,9 @@ MemoryRegion *LinkerScript::findMemoryRegion(OutputSection *Sec) {
 
   // See if a region can be found by matching section flags.
   for (auto &Pair : Opt.MemoryRegions) {
-    MemoryRegion &M = Pair.second;
-    if ((M.Flags & Sec->Flags) && (M.NegFlags & Sec->Flags) == 0)
-      return &M;
+    MemoryRegion *M = Pair.second;
+    if ((M->Flags & Sec->Flags) && (M->NegFlags & Sec->Flags) == 0)
+      return M;
   }
 
   // Otherwise, no suitable region was found.
@@ -778,7 +778,7 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &Phdrs) {
 
 LinkerScript::AddressState::AddressState(const ScriptConfiguration &Opt) {
   for (auto &MRI : Opt.MemoryRegions) {
-    const MemoryRegion *MR = &MRI.second;
+    const MemoryRegion *MR = MRI.second;
     MemRegionOffset[MR] = MR->Origin;
   }
 }

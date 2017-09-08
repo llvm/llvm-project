@@ -68,6 +68,7 @@ private:
   void readOutputArch();
   void readOutputFormat();
   void readPhdrs();
+  void readRegionAlias();
   void readSearchDir();
   void readSections();
   void readVersion();
@@ -241,6 +242,8 @@ void ScriptParser::readLinkerScript() {
       readOutputFormat();
     } else if (Tok == "PHDRS") {
       readPhdrs();
+    } else if (Tok == "REGION_ALIAS") {
+      readRegionAlias();
     } else if (Tok == "SEARCH_DIR") {
       readSearchDir();
     } else if (Tok == "SECTIONS") {
@@ -394,6 +397,20 @@ void ScriptParser::readPhdrs() {
         setError("unexpected header attribute: " + next());
     }
   }
+}
+
+void ScriptParser::readRegionAlias() {
+  expect("(");
+  StringRef Alias = unquote(next());
+  expect(",");
+  StringRef Name = next();
+  expect(")");
+
+  if (Script->Opt.MemoryRegions.count(Alias))
+    setError("redefinition of memory region '" + Alias + "'");
+  if (!Script->Opt.MemoryRegions.count(Name))
+    setError("memory region '" + Name + "' is not defined");
+  Script->Opt.MemoryRegions[Alias] = Script->Opt.MemoryRegions[Name];
 }
 
 void ScriptParser::readSearchDir() {
@@ -984,7 +1001,7 @@ Expr ScriptParser::readPrimary() {
     StringRef Name = readParenLiteral();
     if (Script->Opt.MemoryRegions.count(Name) == 0)
       setError("memory region not defined: " + Name);
-    return [=] { return Script->Opt.MemoryRegions[Name].Length; };
+    return [=] { return Script->Opt.MemoryRegions[Name]->Length; };
   }
   if (Tok == "LOADADDR") {
     StringRef Name = readParenLiteral();
@@ -995,7 +1012,7 @@ Expr ScriptParser::readPrimary() {
     StringRef Name = readParenLiteral();
     if (Script->Opt.MemoryRegions.count(Name) == 0)
       setError("memory region not defined: " + Name);
-    return [=] { return Script->Opt.MemoryRegions[Name].Origin; };
+    return [=] { return Script->Opt.MemoryRegions[Name]->Origin; };
   }
   if (Tok == "SEGMENT_START") {
     expect("(");
@@ -1226,12 +1243,12 @@ void ScriptParser::readMemory() {
     expect(",");
     uint64_t Length = readMemoryAssignment("LENGTH", "len", "l");
 
-    // Add the memory region to the region map (if it doesn't already exist).
-    auto It = Script->Opt.MemoryRegions.find(Name);
-    if (It != Script->Opt.MemoryRegions.end())
+    // Add the memory region to the region map.
+    if (Script->Opt.MemoryRegions.count(Name))
       setError("region '" + Name + "' already defined");
-    else
-      Script->Opt.MemoryRegions[Name] = {Name, Origin, Length, Flags, NegFlags};
+    MemoryRegion *MR = make<MemoryRegion>();
+    *MR = {Name, Origin, Length, Flags, NegFlags};
+    Script->Opt.MemoryRegions[Name] = MR;
   }
 }
 

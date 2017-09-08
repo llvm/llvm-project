@@ -55,7 +55,7 @@ raw_ostream &operator<<(raw_ostream &OS, const MipsRelocationEntry &RHS) {
 
 class MipsELFObjectWriter : public MCELFObjectTargetWriter {
 public:
-  MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI, bool _isN64,
+  MipsELFObjectWriter(uint8_t OSABI, bool HasRelocationAddend, bool IsN64,
                       bool IsLittleEndian);
 
   ~MipsELFObjectWriter() override = default;
@@ -209,11 +209,11 @@ static void dumpRelocs(const char *Prefix, const Container &Relocs) {
 }
 #endif
 
-MipsELFObjectWriter::MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI,
-                                         bool _isN64, bool IsLittleEndian)
-    : MCELFObjectTargetWriter(_is64Bit, OSABI, ELF::EM_MIPS,
-                              /*HasRelocationAddend*/ _isN64,
-                              /*IsN64*/ _isN64) {}
+MipsELFObjectWriter::MipsELFObjectWriter(uint8_t OSABI,
+                                         bool HasRelocationAddend, bool IsN64,
+                                         bool IsLittleEndian)
+    : MCELFObjectTargetWriter(IsN64, OSABI, ELF::EM_MIPS, HasRelocationAddend,
+                              IsN64) {}
 
 unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
                                            const MCValue &Target,
@@ -657,10 +657,13 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
 }
 
 MCObjectWriter *llvm::createMipsELFObjectWriter(raw_pwrite_stream &OS,
-                                                uint8_t OSABI,
-                                                bool IsLittleEndian,
-                                                bool Is64Bit) {
-  MCELFObjectTargetWriter *MOTW =
-      new MipsELFObjectWriter(Is64Bit, OSABI, Is64Bit, IsLittleEndian);
-  return createELFObjectWriter(MOTW, OS, IsLittleEndian);
+                                                const Triple &TT) {
+  uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
+  // FIXME: We need to check an actual ABI. mips64/mips64el do not
+  // always imply the N64 ABI and RELA relocation's format.
+  bool IsN64 = TT.isArch64Bit();
+  bool HasRelocationAddend = IsN64;
+  auto *MOTW = new MipsELFObjectWriter(OSABI, HasRelocationAddend, IsN64,
+                                       TT.isLittleEndian());
+  return createELFObjectWriter(MOTW, OS, TT.isLittleEndian());
 }

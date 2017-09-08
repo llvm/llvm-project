@@ -643,7 +643,6 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_plus_uconst:
     case dwarf::DW_OP_plus:
     case dwarf::DW_OP_minus:
-    case dwarf::DW_OP_mul:
     case dwarf::DW_OP_deref:
     case dwarf::DW_OP_xderef:
       break;

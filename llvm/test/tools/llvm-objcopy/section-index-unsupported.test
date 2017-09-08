@@ -1,0 +1,15 @@
+# RUN: yaml2obj %s > %t
+# RUN: not llvm-objcopy %t %t2 2>&1 >/dev/null | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Symbols:
+  Global:
+    - Name:     test
+      Index:    0xff05
+
+# CHECK: [[_:.*]] Symbol 'test' has unsupported value greater than or equal to SHN_LORESERVE: 65285

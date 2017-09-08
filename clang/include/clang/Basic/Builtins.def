@@ -1424,6 +1424,12 @@ LANGBUILTIN(to_global, "v*v*", "tn", OCLC20_LANG)
 LANGBUILTIN(to_local, "v*v*", "tn", OCLC20_LANG)
 LANGBUILTIN(to_private, "v*v*", "tn", OCLC20_LANG)
 
+// OpenCL half load/store builtin
+LANGBUILTIN(__builtin_store_half, "vdh*", "n", ALL_OCLC_LANGUAGES)
+LANGBUILTIN(__builtin_store_halff, "vfh*", "n", ALL_OCLC_LANGUAGES)
+LANGBUILTIN(__builtin_load_half, "dhC*", "nc", ALL_OCLC_LANGUAGES)
+LANGBUILTIN(__builtin_load_halff, "fhC*", "nc", ALL_OCLC_LANGUAGES)
+
 // Builtins for os_log/os_trace
 BUILTIN(__builtin_os_log_format_buffer_size, "zcC*.", "p:0:nut")
 BUILTIN(__builtin_os_log_format, "v*v*cC*.", "p:0:nt")

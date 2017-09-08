@@ -52,13 +52,20 @@ private:
   SyncScope::ID SSID = SyncScope::System;
   AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
   AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic;
+  bool IsNonTemporal = false;
 
   SIMemOpInfo(SyncScope::ID SSID, AtomicOrdering Ordering)
       : SSID(SSID), Ordering(Ordering) {}
 
   SIMemOpInfo(SyncScope::ID SSID, AtomicOrdering Ordering,
-              AtomicOrdering FailureOrdering)
-      : SSID(SSID), Ordering(Ordering), FailureOrdering(FailureOrdering) {}
+              AtomicOrdering FailureOrdering, bool IsNonTemporal = false)
+      : SSID(SSID), Ordering(Ordering), FailureOrdering(FailureOrdering),
+        IsNonTemporal(IsNonTemporal) {}
+
+  /// \returns Info constructed from \p MI, which has at least machine memory
+  /// operand.
+  static Optional<SIMemOpInfo> constructFromMIWithMMO(
+      const MachineBasicBlock::iterator &MI);
 
 public:
   /// \returns Synchronization scope ID of the machine instruction used to
@@ -75,6 +82,11 @@ public:
   /// create this SIMemOpInfo.
   AtomicOrdering getFailureOrdering() const {
     return FailureOrdering;
+  }
+  /// \returns True if memory access of the machine instruction used to
+  /// create this SIMemOpInfo is non-temporal, false otherwise.
+  bool isNonTemporal() const {
+    return IsNonTemporal;
   }
 
   /// \returns True if ordering constraint of the machine instruction used to
@@ -101,13 +113,15 @@ public:
   /// "None" otherwise.
   static Optional<SIMemOpInfo> getAtomicRmwInfo(
       const MachineBasicBlock::iterator &MI);
+
+  /// \brief Reports unknown synchronization scope used in \p MI to LLVM
+  /// context.
+  static void reportUnknownSyncScope(
+      const MachineBasicBlock::iterator &MI);
 };
 
 class SIMemoryLegalizer final : public MachineFunctionPass {
 private:
-  /// \brief LLVM context.
-  LLVMContext *CTX = nullptr;
-
   /// \brief Machine module info.
   const AMDGPUMachineModuleInfo *MMI = nullptr;
 
@@ -123,6 +137,34 @@ private:
   /// \brief List of atomic pseudo instructions.
   std::list<MachineBasicBlock::iterator> AtomicPseudoMIs;
 
+  /// \brief Sets named bit (BitName) to "true" if present in \p MI. Returns
+  /// true if \p MI is modified, false otherwise.
+  template <uint16_t BitName>
+  bool enableNamedBit(const MachineBasicBlock::iterator &MI) const {
+    int BitIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(), BitName);
+    if (BitIdx == -1)
+      return false;
+
+    MachineOperand &Bit = MI->getOperand(BitIdx);
+    if (Bit.getImm() != 0)
+      return false;
+
+    Bit.setImm(1);
+    return true;
+  }
+
+  /// \brief Sets GLC bit to "true" if present in \p MI. Returns true if \p MI
+  /// is modified, false otherwise.
+  bool enableGLCBit(const MachineBasicBlock::iterator &MI) const {
+    return enableNamedBit<AMDGPU::OpName::glc>(MI);
+  }
+
+  /// \brief Sets SLC bit to "true" if present in \p MI. Returns true if \p MI
+  /// is modified, false otherwise.
+  bool enableSLCBit(const MachineBasicBlock::iterator &MI) const {
+    return enableNamedBit<AMDGPU::OpName::slc>(MI);
+  }
+
   /// \brief Inserts "buffer_wbinvl1_vol" instruction \p Before or after \p MI.
   /// Always returns true.
   bool insertBufferWbinvl1Vol(MachineBasicBlock::iterator &MI,
@@ -132,17 +174,9 @@ private:
   bool insertWaitcntVmcnt0(MachineBasicBlock::iterator &MI,
                            bool Before = true) const;
 
-  /// \brief Sets GLC bit if present in \p MI. Returns true if \p MI is
-  /// modified, false otherwise.
-  bool setGLC(const MachineBasicBlock::iterator &MI) const;
-
   /// \brief Removes all processed atomic pseudo instructions from the current
   /// function. Returns true if current function is modified, false otherwise.
   bool removeAtomicPseudoMIs();
-
-  /// \brief Reports unknown synchronization scope used in \p MI to LLVM
-  /// context.
-  void reportUnknownSynchScope(const MachineBasicBlock::iterator &MI);
 
   /// \brief Expands load operation \p MI. Returns true if instructions are
   /// added/deleted or \p MI is modified, false otherwise.
@@ -185,18 +219,58 @@ public:
 } // end namespace anonymous
 
 /* static */
+Optional<SIMemOpInfo> SIMemOpInfo::constructFromMIWithMMO(
+    const MachineBasicBlock::iterator &MI) {
+  assert(MI->getNumMemOperands() > 0);
+
+  const MachineFunction *MF = MI->getParent()->getParent();
+  const AMDGPUMachineModuleInfo *MMI =
+      &MF->getMMI().getObjFileInfo<AMDGPUMachineModuleInfo>();
+
+  SyncScope::ID SSID = SyncScope::SingleThread;
+  AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
+  AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic;
+  bool IsNonTemporal = true;
+
+  // Validator should check whether or not MMOs cover the entire set of
+  // locations accessed by the memory instruction.
+  for (const auto &MMO : MI->memoperands()) {
+    const auto &IsSyncScopeInclusion =
+        MMI->isSyncScopeInclusion(SSID, MMO->getSyncScopeID());
+    if (!IsSyncScopeInclusion) {
+      reportUnknownSyncScope(MI);
+      return None;
+    }
+
+    SSID = IsSyncScopeInclusion.getValue() ? SSID : MMO->getSyncScopeID();
+    Ordering =
+        isStrongerThan(Ordering, MMO->getOrdering()) ?
+            Ordering : MMO->getOrdering();
+    FailureOrdering =
+        isStrongerThan(FailureOrdering, MMO->getFailureOrdering()) ?
+            FailureOrdering : MMO->getFailureOrdering();
+
+    if (!(MMO->getFlags() & MachineMemOperand::MONonTemporal))
+      IsNonTemporal = false;
+  }
+
+  return SIMemOpInfo(SSID, Ordering, FailureOrdering, IsNonTemporal);
+}
+
+/* static */
 Optional<SIMemOpInfo> SIMemOpInfo::getLoadInfo(
     const MachineBasicBlock::iterator &MI) {
   assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
 
   if (!(MI->mayLoad() && !MI->mayStore()))
     return None;
-  if (!MI->hasOneMemOperand())
+
+  // Be conservative if there are no memory operands.
+  if (MI->getNumMemOperands() == 0)
     return SIMemOpInfo(SyncScope::System,
                        AtomicOrdering::SequentiallyConsistent);
 
-  const MachineMemOperand *MMO = *MI->memoperands_begin();
-  return SIMemOpInfo(MMO->getSyncScopeID(), MMO->getOrdering());
+  return SIMemOpInfo::constructFromMIWithMMO(MI);
 }
 
 /* static */
@@ -206,12 +280,13 @@ Optional<SIMemOpInfo> SIMemOpInfo::getStoreInfo(
 
   if (!(!MI->mayLoad() && MI->mayStore()))
     return None;
-  if (!MI->hasOneMemOperand())
+
+  // Be conservative if there are no memory operands.
+  if (MI->getNumMemOperands() == 0)
     return SIMemOpInfo(SyncScope::System,
                        AtomicOrdering::SequentiallyConsistent);
 
-  const MachineMemOperand *MMO = *MI->memoperands_begin();
-  return SIMemOpInfo(MMO->getSyncScopeID(), MMO->getOrdering());
+  return SIMemOpInfo::constructFromMIWithMMO(MI);
 }
 
 /* static */
@@ -236,14 +311,14 @@ Optional<SIMemOpInfo> SIMemOpInfo::getAtomicCmpxchgInfo(
 
   if (!(MI->mayLoad() && MI->mayStore()))
     return None;
-  if (!MI->hasOneMemOperand())
+
+  // Be conservative if there are no memory operands.
+  if (MI->getNumMemOperands() == 0)
     return SIMemOpInfo(SyncScope::System,
                        AtomicOrdering::SequentiallyConsistent,
                        AtomicOrdering::SequentiallyConsistent);
 
-  const MachineMemOperand *MMO = *MI->memoperands_begin();
-  return SIMemOpInfo(MMO->getSyncScopeID(), MMO->getOrdering(),
-                     MMO->getFailureOrdering());
+  return SIMemOpInfo::constructFromMIWithMMO(MI);
 }
 
 /* static */
@@ -253,12 +328,22 @@ Optional<SIMemOpInfo> SIMemOpInfo::getAtomicRmwInfo(
 
   if (!(MI->mayLoad() && MI->mayStore()))
     return None;
-  if (!MI->hasOneMemOperand())
+
+  // Be conservative if there are no memory operands.
+  if (MI->getNumMemOperands() == 0)
     return SIMemOpInfo(SyncScope::System,
                        AtomicOrdering::SequentiallyConsistent);
 
-  const MachineMemOperand *MMO = *MI->memoperands_begin();
-  return SIMemOpInfo(MMO->getSyncScopeID(), MMO->getOrdering());
+  return SIMemOpInfo::constructFromMIWithMMO(MI);
+}
+
+/* static */
+void SIMemOpInfo::reportUnknownSyncScope(
+    const MachineBasicBlock::iterator &MI) {
+  DiagnosticInfoUnsupported Diag(*MI->getParent()->getParent()->getFunction(),
+                                 "Unsupported synchronization scope");
+  LLVMContext *CTX = &MI->getParent()->getParent()->getFunction()->getContext();
+  CTX->diagnose(Diag);
 }
 
 bool SIMemoryLegalizer::insertBufferWbinvl1Vol(MachineBasicBlock::iterator &MI,
@@ -293,19 +378,6 @@ bool SIMemoryLegalizer::insertWaitcntVmcnt0(MachineBasicBlock::iterator &MI,
   return true;
 }
 
-bool SIMemoryLegalizer::setGLC(const MachineBasicBlock::iterator &MI) const {
-  int GLCIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::glc);
-  if (GLCIdx == -1)
-    return false;
-
-  MachineOperand &GLC = MI->getOperand(GLCIdx);
-  if (GLC.getImm() == 1)
-    return false;
-
-  GLC.setImm(1);
-  return true;
-}
-
 bool SIMemoryLegalizer::removeAtomicPseudoMIs() {
   if (AtomicPseudoMIs.empty())
     return false;
@@ -315,13 +387,6 @@ bool SIMemoryLegalizer::removeAtomicPseudoMIs() {
 
   AtomicPseudoMIs.clear();
   return true;
-}
-
-void SIMemoryLegalizer::reportUnknownSynchScope(
-    const MachineBasicBlock::iterator &MI) {
-  DiagnosticInfoUnsupported Diag(*MI->getParent()->getParent()->getFunction(),
-                                 "Unsupported synchronization scope");
-  CTX->diagnose(Diag);
 }
 
 bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
@@ -335,7 +400,7 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
         MOI.getSSID() == MMI->getAgentSSID()) {
       if (MOI.getOrdering() == AtomicOrdering::Acquire ||
           MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
-        Changed |= setGLC(MI);
+        Changed |= enableGLCBit(MI);
 
       if (MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
         Changed |= insertWaitcntVmcnt0(MI);
@@ -347,14 +412,22 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
       }
 
       return Changed;
-    } else if (MOI.getSSID() == SyncScope::SingleThread ||
-               MOI.getSSID() == MMI->getWorkgroupSSID() ||
-               MOI.getSSID() == MMI->getWavefrontSSID()) {
-      return Changed;
-    } else {
-      reportUnknownSynchScope(MI);
+    }
+
+    if (MOI.getSSID() == SyncScope::SingleThread ||
+        MOI.getSSID() == MMI->getWorkgroupSSID() ||
+        MOI.getSSID() == MMI->getWavefrontSSID()) {
       return Changed;
     }
+
+    llvm_unreachable("Unsupported synchronization scope");
+  }
+
+  // Atomic instructions do not have the nontemporal attribute.
+  if (MOI.isNonTemporal()) {
+    Changed |= enableGLCBit(MI);
+    Changed |= enableSLCBit(MI);
+    return Changed;
   }
 
   return Changed;
@@ -374,14 +447,22 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
         Changed |= insertWaitcntVmcnt0(MI);
 
       return Changed;
-    } else if (MOI.getSSID() == SyncScope::SingleThread ||
-               MOI.getSSID() == MMI->getWorkgroupSSID() ||
-               MOI.getSSID() == MMI->getWavefrontSSID()) {
-      return Changed;
-    } else {
-      reportUnknownSynchScope(MI);
+    }
+
+    if (MOI.getSSID() == SyncScope::SingleThread ||
+        MOI.getSSID() == MMI->getWorkgroupSSID() ||
+        MOI.getSSID() == MMI->getWavefrontSSID()) {
       return Changed;
     }
+
+    llvm_unreachable("Unsupported synchronization scope");
+  }
+
+  // Atomic instructions do not have the nontemporal attribute.
+  if (MOI.isNonTemporal()) {
+    Changed |= enableGLCBit(MI);
+    Changed |= enableSLCBit(MI);
+    return Changed;
   }
 
   return Changed;
@@ -409,15 +490,16 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
 
       AtomicPseudoMIs.push_back(MI);
       return Changed;
-    } else if (MOI.getSSID() == SyncScope::SingleThread ||
-               MOI.getSSID() == MMI->getWorkgroupSSID() ||
-               MOI.getSSID() == MMI->getWavefrontSSID()) {
+    }
+
+    if (MOI.getSSID() == SyncScope::SingleThread ||
+        MOI.getSSID() == MMI->getWorkgroupSSID() ||
+        MOI.getSSID() == MMI->getWavefrontSSID()) {
       AtomicPseudoMIs.push_back(MI);
       return Changed;
-    } else {
-      reportUnknownSynchScope(MI);
-      return Changed;
     }
+
+    SIMemOpInfo::reportUnknownSyncScope(MI);
   }
 
   return Changed;
@@ -448,15 +530,16 @@ bool SIMemoryLegalizer::expandAtomicCmpxchg(const SIMemOpInfo &MOI,
       }
 
       return Changed;
-    } else if (MOI.getSSID() == SyncScope::SingleThread ||
-               MOI.getSSID() == MMI->getWorkgroupSSID() ||
-               MOI.getSSID() == MMI->getWavefrontSSID()) {
-      Changed |= setGLC(MI);
-      return Changed;
-    } else {
-      reportUnknownSynchScope(MI);
+    }
+
+    if (MOI.getSSID() == SyncScope::SingleThread ||
+        MOI.getSSID() == MMI->getWorkgroupSSID() ||
+        MOI.getSSID() == MMI->getWavefrontSSID()) {
+      Changed |= enableGLCBit(MI);
       return Changed;
     }
+
+    llvm_unreachable("Unsupported synchronization scope");
   }
 
   return Changed;
@@ -484,15 +567,16 @@ bool SIMemoryLegalizer::expandAtomicRmw(const SIMemOpInfo &MOI,
       }
 
       return Changed;
-    } else if (MOI.getSSID() == SyncScope::SingleThread ||
-               MOI.getSSID() == MMI->getWorkgroupSSID() ||
-               MOI.getSSID() == MMI->getWavefrontSSID()) {
-      Changed |= setGLC(MI);
-      return Changed;
-    } else {
-      reportUnknownSynchScope(MI);
+    }
+
+    if (MOI.getSSID() == SyncScope::SingleThread ||
+        MOI.getSSID() == MMI->getWorkgroupSSID() ||
+        MOI.getSSID() == MMI->getWavefrontSSID()) {
+      Changed |= enableGLCBit(MI);
       return Changed;
     }
+
+    llvm_unreachable("Unsupported synchronization scope");
   }
 
   return Changed;
@@ -503,7 +587,6 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   const IsaInfo::IsaVersion IV = IsaInfo::getIsaVersion(ST.getFeatureBits());
 
-  CTX = &MF.getFunction()->getContext();
   MMI = &MF.getMMI().getObjFileInfo<AMDGPUMachineModuleInfo>();
   TII = ST.getInstrInfo();
 
