@@ -61,13 +61,14 @@ public:
       Alignment = Val;
   }
 
-  // Pointer to the first section in PT_LOAD segment, which this section
-  // also resides in. This field is used to correctly compute file offset
-  // of a section. When two sections share the same load segment, difference
-  // between their file offsets should be equal to difference between their
-  // virtual addresses. To compute some section offset we use the following
-  // formula: Off = Off_first + VA - VA_first.
-  OutputSection *FirstInPtLoad = nullptr;
+  // Pointer to the PT_LOAD segment, which this section resides in. This field
+  // is used to correctly compute file offset of a section. When two sections
+  // share the same load segment, difference between their file offsets should
+  // be equal to difference between their virtual addresses. To compute some
+  // section offset we use the following formula: Off = Off_first + VA -
+  // VA_first, where Off_first and VA_first is file offset and VA of first
+  // section in PT_LOAD.
+  PhdrEntry *PtLoad = nullptr;
 
   // Pointer to a relocation section for this section. Usually nullptr because
   // we consume relocations, but if --emit-relocs is specified (which is rare),

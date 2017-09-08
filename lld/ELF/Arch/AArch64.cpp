@@ -232,8 +232,17 @@ void AArch64::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
     checkInt<21>(Loc, Val, Type);
     write32AArch64Addr(Loc, Val);
     break;
-  case R_AARCH64_CALL26:
   case R_AARCH64_JUMP26:
+    // Normally we would just write the bits of the immediate field, however
+    // when patching instructions for the cpu errata fix -fix-cortex-a53-843419
+    // we want to replace a non-branch instruction with a branch immediate
+    // instruction. By writing all the bits of the instruction including the
+    // opcode and the immediate (0 001 | 01 imm26) we can do this
+    // transformation by placing a R_AARCH64_JUMP26 relocation at the offset of
+    // the instruction we want to patch.
+    write32le(Loc, 0x14000000);
+    LLVM_FALLTHROUGH;
+  case R_AARCH64_CALL26:
     checkInt<28>(Loc, Val, Type);
     or32le(Loc, (Val & 0x0FFFFFFC) >> 2);
     break;

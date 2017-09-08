@@ -180,9 +180,22 @@ static ExprValue bitOr(ExprValue A, ExprValue B) {
 
 void ScriptParser::readDynamicList() {
   expect("{");
-  readAnonymousDeclaration();
-  if (!atEOF())
+  std::vector<SymbolVersion> Locals;
+  std::vector<SymbolVersion> Globals;
+  std::tie(Locals, Globals) = readSymbols();
+  expect(";");
+
+  if (!atEOF()) {
     setError("EOF expected, but got " + next());
+    return;
+  }
+  if (!Locals.empty()) {
+    setError("\"local:\" scope not supported in --dynamic-list");
+    return;
+  }
+
+  for (SymbolVersion V : Globals)
+    Config->DynamicList.push_back(V);
 }
 
 void ScriptParser::readVersionScript() {

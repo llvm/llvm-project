@@ -35,6 +35,10 @@
 # CHECK-NEXT:    1(0x8): 0x90000000 0x90000001
 # CHECK-NEXT:    2(0x14): 0x30000001
 
+# RUN: ld.lld --gdb-index --no-gdb-index -e main %t1.o %t2.o -o %t2
+# RUN: llvm-readobj -sections %t2 | FileCheck -check-prefix=NOGDB %s
+# NOGDB-NOT: Name: .gdb_index
+
 ## The following section contents are created by this using gcc 7.1.0:
 ## echo 'int main() { return 0; }' | gcc -gsplit-dwarf -xc++ -S -o- -
 

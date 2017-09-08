@@ -22,6 +22,7 @@ namespace lld {
 namespace elf {
 
 std::vector<uint8_t> parseHex(StringRef S);
+bool isAlnum(char C);
 bool isValidCIdentifier(StringRef S);
 
 // This is a lazy version of StringRef. String size is computed lazily
