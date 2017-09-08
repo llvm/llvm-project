@@ -470,6 +470,8 @@ public:
   /// Get the name of the file this data covers.
   StringRef getFilename() const { return Filename; }
 
+  /// Get an iterator over the coverage segments for this object. The segments
+  /// are guaranteed to be uniqued and sorted by location.
   std::vector<CoverageSegment>::const_iterator begin() const {
     return Segments.begin();
   }

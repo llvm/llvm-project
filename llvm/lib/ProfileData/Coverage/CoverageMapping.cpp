@@ -319,59 +319,130 @@ class SegmentBuilder {
 
   SegmentBuilder(std::vector<CoverageSegment> &Segments) : Segments(Segments) {}
 
-  /// Start a segment with no count specified.
-  void startSegment(unsigned Line, unsigned Col) {
-    DEBUG(dbgs() << "Top level segment at " << Line << ":" << Col << "\n");
-    Segments.emplace_back(Line, Col, /*IsRegionEntry=*/false);
-  }
+  /// Emit a segment with the count from \p Region starting at \p StartLoc.
+  //
+  /// \p IsRegionEntry: The segment is at the start of a new region.
+  /// \p EmitSkippedRegion: The segment must be emitted as a skipped region.
+  void startSegment(const CountedRegion &Region, LineColPair StartLoc,
+                    bool IsRegionEntry, bool EmitSkippedRegion = false) {
+    bool HasCount = !EmitSkippedRegion &&
+                    (Region.Kind != CounterMappingRegion::SkippedRegion);
 
-  /// Start a segment with the given Region's count.
-  void startSegment(unsigned Line, unsigned Col, bool IsRegionEntry,
-                    const CountedRegion &Region) {
-    // Avoid creating empty regions.
-    if (!Segments.empty() && Segments.back().Line == Line &&
-        Segments.back().Col == Col)
-      Segments.pop_back();
-    DEBUG(dbgs() << "Segment at " << Line << ":" << Col);
-    // Set this region's count.
-    if (Region.Kind != CounterMappingRegion::SkippedRegion) {
-      DEBUG(dbgs() << " with count " << Region.ExecutionCount);
-      Segments.emplace_back(Line, Col, Region.ExecutionCount, IsRegionEntry);
-    } else
-      Segments.emplace_back(Line, Col, IsRegionEntry);
-    DEBUG(dbgs() << "\n");
-  }
+    // If the new segment wouldn't affect coverage rendering, skip it.
+    if (!Segments.empty() && !IsRegionEntry && !EmitSkippedRegion) {
+      const auto &Last = Segments.back();
+      if (Last.HasCount == HasCount && Last.Count == Region.ExecutionCount &&
+          !Last.IsRegionEntry)
+        return;
+    }
 
-  /// Start a segment for the given region.
-  void startSegment(const CountedRegion &Region) {
-    startSegment(Region.LineStart, Region.ColumnStart, true, Region);
-  }
-
-  /// Pop the top region off of the active stack, starting a new segment with
-  /// the containing Region's count.
-  void popRegion() {
-    const CountedRegion *Active = ActiveRegions.back();
-    unsigned Line = Active->LineEnd, Col = Active->ColumnEnd;
-    ActiveRegions.pop_back();
-    if (ActiveRegions.empty())
-      startSegment(Line, Col);
+    if (HasCount)
+      Segments.emplace_back(StartLoc.first, StartLoc.second,
+                            Region.ExecutionCount, IsRegionEntry);
     else
-      startSegment(Line, Col, false, *ActiveRegions.back());
+      Segments.emplace_back(StartLoc.first, StartLoc.second, IsRegionEntry);
+
+    DEBUG({
+      const auto &Last = Segments.back();
+      dbgs() << "Segment at " << Last.Line << ":" << Last.Col
+             << " (count = " << Last.Count << ")"
+             << (Last.IsRegionEntry ? ", RegionEntry" : "")
+             << (!Last.HasCount ? ", Skipped" : "") << "\n";
+    });
+  }
+
+  /// Emit segments for active regions which end before \p Loc.
+  ///
+  /// \p Loc: The start location of the next region. If None, all active
+  /// regions are completed.
+  /// \p FirstCompletedRegion: Index of the first completed region.
+  void completeRegionsUntil(Optional<LineColPair> Loc,
+                            unsigned FirstCompletedRegion) {
+    // Sort the completed regions by end location. This makes it simple to
+    // emit closing segments in sorted order.
+    auto CompletedRegionsIt = ActiveRegions.begin() + FirstCompletedRegion;
+    std::stable_sort(CompletedRegionsIt, ActiveRegions.end(),
+                      [](const CountedRegion *L, const CountedRegion *R) {
+                        return L->endLoc() < R->endLoc();
+                      });
+
+    // Emit segments for all completed regions.
+    for (unsigned I = FirstCompletedRegion + 1, E = ActiveRegions.size(); I < E;
+         ++I) {
+      const auto *CompletedRegion = ActiveRegions[I];
+      assert((!Loc || CompletedRegion->endLoc() <= *Loc) &&
+             "Completed region ends after start of new region");
+
+      const auto *PrevCompletedRegion = ActiveRegions[I - 1];
+      auto CompletedSegmentLoc = PrevCompletedRegion->endLoc();
+
+      // Don't emit any more segments if they start where the new region begins.
+      if (Loc && CompletedSegmentLoc == *Loc)
+        break;
+
+      // Don't emit a segment if the next completed region ends at the same
+      // location as this one.
+      if (CompletedSegmentLoc == CompletedRegion->endLoc())
+        continue;
+
+      startSegment(*CompletedRegion, CompletedSegmentLoc, false);
+    }
+
+    auto Last = ActiveRegions.back();
+    if (FirstCompletedRegion && Last->endLoc() != *Loc) {
+      // If there's a gap after the end of the last completed region and the
+      // start of the new region, use the last active region to fill the gap.
+      startSegment(*ActiveRegions[FirstCompletedRegion - 1], Last->endLoc(),
+                   false);
+    } else if (!FirstCompletedRegion && (!Loc || *Loc != Last->endLoc())) {
+      // Emit a skipped segment if there are no more active regions. This
+      // ensures that gaps between functions are marked correctly.
+      startSegment(*Last, Last->endLoc(), false, true);
+    }
+
+    // Pop the completed regions.
+    ActiveRegions.erase(CompletedRegionsIt, ActiveRegions.end());
   }
 
   void buildSegmentsImpl(ArrayRef<CountedRegion> Regions) {
-    for (const auto &Region : Regions) {
-      // Pop any regions that end before this one starts.
-      while (!ActiveRegions.empty() &&
-             ActiveRegions.back()->endLoc() <= Region.startLoc())
-        popRegion();
-      // Add this region to the stack.
-      ActiveRegions.push_back(&Region);
-      startSegment(Region);
+    for (const auto &CR : enumerate(Regions)) {
+      auto CurStartLoc = CR.value().startLoc();
+
+      // Active regions which end before the current region need to be popped.
+      auto CompletedRegions =
+          std::stable_partition(ActiveRegions.begin(), ActiveRegions.end(),
+                                [&](const CountedRegion *Region) {
+                                  return !(Region->endLoc() <= CurStartLoc);
+                                });
+      if (CompletedRegions != ActiveRegions.end()) {
+        unsigned FirstCompletedRegion =
+            std::distance(ActiveRegions.begin(), CompletedRegions);
+        completeRegionsUntil(CurStartLoc, FirstCompletedRegion);
+      }
+
+      // Try to emit a segment for the current region.
+      if (CurStartLoc == CR.value().endLoc()) {
+        // Avoid making zero-length regions active. If it's the last region,
+        // emit a skipped segment. Otherwise use its predecessor's count.
+        const bool Skipped = (CR.index() + 1) == Regions.size();
+        startSegment(ActiveRegions.empty() ? CR.value() : *ActiveRegions.back(),
+                     CurStartLoc, true, Skipped);
+        continue;
+      }
+      if (CR.index() + 1 == Regions.size() ||
+          CurStartLoc != Regions[CR.index() + 1].startLoc()) {
+        // Emit a segment if the next region doesn't start at the same location
+        // as this one.
+        startSegment(CR.value(), CurStartLoc, true);
+      }
+
+      // This region is active (i.e not completed).
+      ActiveRegions.push_back(&CR.value());
     }
-    // Pop any regions that are left in the stack.
-    while (!ActiveRegions.empty())
-      popRegion();
+
+    // Complete any remaining active regions.
+    if (!ActiveRegions.empty())
+      completeRegionsUntil(None, 0);
   }
 
   /// Sort a nested sequence of regions from a single file.
@@ -432,7 +503,7 @@ class SegmentBuilder {
   }
 
 public:
-  /// Build a list of CoverageSegments from a list of Regions.
+  /// Build a sorted list of CoverageSegments from a list of Regions.
   static std::vector<CoverageSegment>
   buildSegments(MutableArrayRef<CountedRegion> Regions) {
     std::vector<CoverageSegment> Segments;
@@ -441,7 +512,28 @@ public:
     sortNestedRegions(Regions);
     ArrayRef<CountedRegion> CombinedRegions = combineRegions(Regions);
 
+    DEBUG({
+      dbgs() << "Combined regions:\n";
+      for (const auto &CR : CombinedRegions)
+        dbgs() << "  " << CR.LineStart << ":" << CR.ColumnStart << " -> "
+               << CR.LineEnd << ":" << CR.ColumnEnd
+               << " (count=" << CR.ExecutionCount << ")\n";
+    });
+
     Builder.buildSegmentsImpl(CombinedRegions);
+
+#ifndef NDEBUG
+    for (unsigned I = 1, E = Segments.size(); I < E; ++I) {
+      const auto &L = Segments[I - 1];
+      const auto &R = Segments[I];
+      if (!(L.Line < R.Line) && !(L.Line == R.Line && L.Col < R.Col)) {
+        DEBUG(dbgs() << " ! Segment " << L.Line << ":" << L.Col
+                     << " followed by " << R.Line << ":" << R.Col << "\n");
+        assert(false && "Coverage segments not unique or sorted");
+      }
+    }
+#endif
+
     return Segments;
   }
 };

@@ -10,7 +10,7 @@ void func2(int x) {
     while(x >= 9) {
       return;
       --x;                       // SHARED: Highlighted line [[@LINE]], 7 ->
-    }                            // SHARED: Highlighted line [[@LINE]], 1 -> 6
+    }
     int i = 0;                   // SHARED: Highlighted line [[@LINE]], 5 ->
   }                              // SHARED: Highlighted line [[@LINE]], 1 -> 4
 }
