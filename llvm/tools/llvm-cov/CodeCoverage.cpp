@@ -789,7 +789,6 @@ int CodeCoverageTool::show(int argc, const char **argv,
   ViewOpts.ShowLineStats = ShowLineExecutionCounts.getNumOccurrences() != 0 ||
                            !ShowRegions || ShowBestLineRegionsCounts;
   ViewOpts.ShowRegionMarkers = ShowRegions || ShowBestLineRegionsCounts;
-  ViewOpts.ShowLineStatsOrRegionMarkers = ShowBestLineRegionsCounts;
   ViewOpts.ShowExpandedRegions = ShowExpansions;
   ViewOpts.ShowFunctionInstantiations = ShowInstantiations;
   ViewOpts.ShowOutputDirectory = ShowOutputDirectory;
