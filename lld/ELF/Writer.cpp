@@ -1205,9 +1205,8 @@ static void removeUnusedSyntheticSections() {
     for (auto I = OS->Commands.begin(), E = OS->Commands.end(); I != E; ++I) {
       BaseCommand *B = *I;
       if (auto *ISD = dyn_cast<InputSectionDescription>(B)) {
-        auto P = std::find(ISD->Sections.begin(), ISD->Sections.end(), SS);
-        if (P != ISD->Sections.end())
-          ISD->Sections.erase(P);
+        llvm::erase_if(ISD->Sections,
+                       [=](InputSection *IS) { return IS == SS; });
         if (ISD->Sections.empty())
           Empty = I;
       }
@@ -1217,14 +1216,9 @@ static void removeUnusedSyntheticSections() {
 
     // If there are no other sections in the output section, remove it from the
     // output.
-    if (OS->Commands.empty()) {
-      // Also remove script commands matching the output section.
-      llvm::erase_if(Script->Opt.Commands, [&](BaseCommand *Cmd) {
-        if (auto *Sec = dyn_cast<OutputSection>(Cmd))
-          return Sec == OS;
-        return false;
-      });
-    }
+    if (OS->Commands.empty())
+      llvm::erase_if(Script->Opt.Commands,
+                     [&](BaseCommand *Cmd) { return Cmd == OS; });
   }
 }
 
