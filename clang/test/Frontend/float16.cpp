@@ -116,7 +116,7 @@ public:
 //CHECK-NEXT: | |-VarDecl {{.*}} used f2c 'const _Float16' static
 //CHECK-NEXT: | |-FieldDecl {{.*}} f3c 'volatile _Float16'
 //CHECK-NEXT: | |-AccessSpecDecl
-//CHECK-NEXT: | |-CXXConstructorDecl {{.*}} used C1 'void (_Float16)'
+//CHECK-NEXT: | |-CXXConstructorDecl {{.*}} used C1 'void (_Float16)
 //CHECK-NEXT: | | |-ParmVarDecl {{.*}} used arg '_Float16'
 //CHECK-NEXT: | | |-CXXCtorInitializer Field {{.*}} 'f1c' '_Float16'
 //CHECK-NEXT: | | | `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
@@ -125,7 +125,7 @@ public:
 //CHECK-NEXT: | | | `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT: | | |   `-DeclRefExpr {{.*}} '_Float16' lvalue ParmVar 0x{{.*}} 'arg' '_Float16'
 //CHECK-NEXT: | | `-CompoundStmt
-//CHECK-NEXT: | |-CXXMethodDecl {{.*}} used func1c '_Float16 (_Float16)'
+//CHECK-NEXT: | |-CXXMethodDecl {{.*}} used func1c '_Float16 (_Float16)
 //CHECK-NEXT: | | |-ParmVarDecl {{.*}} used arg '_Float16'
 //CHECK-NEXT: | | `-CompoundStmt
 //CHECK-NEXT: | |   `-ReturnStmt
@@ -209,7 +209,7 @@ int main(void) {
 
   C1 c1(f1l);
 //CHECK:       | `-VarDecl{{.*}} used c1 'class C1' callinit
-//CHECK-NEXT:  |   `-CXXConstructExpr {{.*}} 'class C1' 'void (_Float16)'
+//CHECK-NEXT:  |   `-CXXConstructExpr {{.*}} 'class C1' 'void (_Float16)
 //CHECK-NEXT:  |     `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT:  |       `-DeclRefExpr {{.*}} '_Float16' lvalue Var 0x{{.*}} 'f1l' '_Float16'
 

@@ -51,7 +51,7 @@ public:
   virtual ~StoreManager() {}
 
   /// Return the value bound to specified location in a given state.
-  /// \param[in] store The analysis state.
+  /// \param[in] store The store in which to make the lookup.
   /// \param[in] loc The symbolic memory location.
   /// \param[in] T An optional type that provides a hint indicating the
   ///   expected type of the returned value.  This is used if the value is
@@ -83,12 +83,12 @@ public:
     return getDefaultBinding(lcv.getStore(), lcv.getRegion());
   }
 
-  /// Return a state with the specified value bound to the given location.
-  /// \param[in] store The analysis state.
+  /// Return a store with the specified value bound to the given location.
+  /// \param[in] store The store in which to make the binding.
   /// \param[in] loc The symbolic memory location.
   /// \param[in] val The value to bind to location \c loc.
-  /// \return A pointer to a ProgramState object that contains the same
-  ///   bindings as \c state with the addition of having the value specified
+  /// \return A StoreRef object that contains the same
+  ///   bindings as \c store with the addition of having the value specified
   ///   by \c val bound to the location given for \c loc.
   virtual StoreRef Bind(Store store, Loc loc, SVal val) = 0;
 
