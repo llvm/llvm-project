@@ -379,6 +379,9 @@ KEYWORD(co_yield                    , KEYCOROUTINES)
 MODULES_KEYWORD(module)
 MODULES_KEYWORD(import)
 
+// C11 Extension
+KEYWORD(_Float16                    , KEYALL)
+
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(_Decimal32                  , KEYALL)
 KEYWORD(_Decimal64                  , KEYALL)

@@ -166,17 +166,32 @@ static void addCalleeSavedRegs(LivePhysRegs &LiveRegs,
     LiveRegs.addReg(*CSR);
 }
 
-/// Adds pristine registers to the given \p LiveRegs. Pristine registers are
-/// callee saved registers that are unused in the function.
-static void addPristines(LivePhysRegs &LiveRegs, const MachineFunction &MF) {
+void LivePhysRegs::addPristines(const MachineFunction &MF) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   if (!MFI.isCalleeSavedInfoValid())
     return;
+  /// This function will usually be called on an empty object, handle this
+  /// as a special case.
+  if (empty()) {
+    /// Add all callee saved regs, then remove the ones that are saved and
+    /// restored.
+    addCalleeSavedRegs(*this, MF);
+    /// Remove the ones that are not saved/restored; they are pristine.
+    for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo())
+      removeReg(Info.getReg());
+    return;
+  }
+  /// If a callee-saved register that is not pristine is already present
+  /// in the set, we should make sure that it stays in it. Precompute the
+  /// set of pristine registers in a separate object.
   /// Add all callee saved regs, then remove the ones that are saved+restored.
-  addCalleeSavedRegs(LiveRegs, MF);
+  LivePhysRegs Pristine(*TRI);
+  addCalleeSavedRegs(Pristine, MF);
   /// Remove the ones that are not saved/restored; they are pristine.
   for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo())
-    LiveRegs.removeReg(Info.getReg());
+    Pristine.removeReg(Info.getReg());
+  for (MCPhysReg R : Pristine)
+    addReg(R);
 }
 
 void LivePhysRegs::addLiveOutsNoPristines(const MachineBasicBlock &MBB) {
@@ -201,7 +216,7 @@ void LivePhysRegs::addLiveOutsNoPristines(const MachineBasicBlock &MBB) {
 void LivePhysRegs::addLiveOuts(const MachineBasicBlock &MBB) {
   const MachineFunction &MF = *MBB.getParent();
   if (!MBB.succ_empty()) {
-    addPristines(*this, MF);
+    addPristines(MF);
     addLiveOutsNoPristines(MBB);
   } else if (MBB.isReturnBlock()) {
     // For the return block: Add all callee saved registers.
@@ -213,7 +228,7 @@ void LivePhysRegs::addLiveOuts(const MachineBasicBlock &MBB) {
 
 void LivePhysRegs::addLiveIns(const MachineBasicBlock &MBB) {
   const MachineFunction &MF = *MBB.getParent();
-  addPristines(*this, MF);
+  addPristines(MF);
   addBlockLiveIns(MBB);
 }
 

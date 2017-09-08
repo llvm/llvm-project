@@ -451,6 +451,8 @@ public:
 
   unsigned getArithmeticReductionCost(unsigned, Type *, bool) { return 1; }
 
+  unsigned getMinMaxReductionCost(Type *, Type *, bool, bool) { return 1; }
+
   unsigned getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) { return 0; }
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) {

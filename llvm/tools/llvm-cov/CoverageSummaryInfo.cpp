@@ -82,7 +82,7 @@ FunctionCoverageSummary::get(const InstantiationGroup &Group,
        << Group.getColumn();
   }
 
-  FunctionCoverageSummary Summary(std::move(Name));
+  FunctionCoverageSummary Summary(Name);
   Summary.ExecutionCount = Group.getTotalExecutionCount();
   Summary.RegionCoverage = Summaries[0].RegionCoverage;
   Summary.LineCoverage = Summaries[0].LineCoverage;

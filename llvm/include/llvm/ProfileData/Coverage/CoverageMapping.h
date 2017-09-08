@@ -198,6 +198,8 @@ public:
   Counter subtract(Counter LHS, Counter RHS);
 };
 
+using LineColPair = std::pair<unsigned, unsigned>;
+
 /// A Counter mapping region associates a source range with a specific counter.
 struct CounterMappingRegion {
   enum RegionKind {
@@ -248,13 +250,11 @@ struct CounterMappingRegion {
                                 LineEnd, ColumnEnd, SkippedRegion);
   }
 
-  inline std::pair<unsigned, unsigned> startLoc() const {
-    return std::pair<unsigned, unsigned>(LineStart, ColumnStart);
+  inline LineColPair startLoc() const {
+    return LineColPair(LineStart, ColumnStart);
   }
 
-  inline std::pair<unsigned, unsigned> endLoc() const {
-    return std::pair<unsigned, unsigned>(LineEnd, ColumnEnd);
-  }
+  inline LineColPair endLoc() const { return LineColPair(LineEnd, ColumnEnd); }
 };
 
 /// Associates a source range with an execution count.
@@ -470,6 +470,8 @@ public:
   /// Get the name of the file this data covers.
   StringRef getFilename() const { return Filename; }
 
+  /// Get an iterator over the coverage segments for this object. The segments
+  /// are guaranteed to be uniqued and sorted by location.
   std::vector<CoverageSegment>::const_iterator begin() const {
     return Segments.begin();
   }

@@ -42,6 +42,7 @@ using namespace llvm;
 using namespace coverage;
 
 void exportCoverageDataToJson(const coverage::CoverageMapping &CoverageMapping,
+                              const CoverageViewOptions &Options,
                               raw_ostream &OS);
 
 namespace {
@@ -789,7 +790,6 @@ int CodeCoverageTool::show(int argc, const char **argv,
   ViewOpts.ShowLineStats = ShowLineExecutionCounts.getNumOccurrences() != 0 ||
                            !ShowRegions || ShowBestLineRegionsCounts;
   ViewOpts.ShowRegionMarkers = ShowRegions || ShowBestLineRegionsCounts;
-  ViewOpts.ShowLineStatsOrRegionMarkers = ShowBestLineRegionsCounts;
   ViewOpts.ShowExpandedRegions = ShowExpansions;
   ViewOpts.ShowFunctionInstantiations = ShowInstantiations;
   ViewOpts.ShowOutputDirectory = ShowOutputDirectory;
@@ -933,7 +933,7 @@ int CodeCoverageTool::export_(int argc, const char **argv,
     return 1;
   }
 
-  exportCoverageDataToJson(*Coverage.get(), outs());
+  exportCoverageDataToJson(*Coverage.get(), ViewOpts, outs());
 
   return 0;
 }

@@ -307,10 +307,9 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
   }
 }
 
-std::vector<FileCoverageSummary>
-CoverageReport::prepareFileReports(const coverage::CoverageMapping &Coverage,
-                                   FileCoverageSummary &Totals,
-                                   ArrayRef<std::string> Files) {
+std::vector<FileCoverageSummary> CoverageReport::prepareFileReports(
+    const coverage::CoverageMapping &Coverage, FileCoverageSummary &Totals,
+    ArrayRef<std::string> Files, const CoverageViewOptions &Options) {
   std::vector<FileCoverageSummary> FileReports;
   unsigned LCP = getRedundantPrefixLen(Files);
 
@@ -328,6 +327,11 @@ CoverageReport::prepareFileReports(const coverage::CoverageMapping &Coverage,
 
       auto GroupSummary =
           FunctionCoverageSummary::get(Group, InstantiationSummaries);
+
+      if (Options.Debug)
+        outs() << "InstantiationGroup: " << GroupSummary.Name << " with "
+               << "size = " << Group.size() << "\n";
+
       Summary.addFunction(GroupSummary);
       Totals.addFunction(GroupSummary);
     }
@@ -348,7 +352,7 @@ void CoverageReport::renderFileReports(raw_ostream &OS) const {
 void CoverageReport::renderFileReports(raw_ostream &OS,
                                        ArrayRef<std::string> Files) const {
   FileCoverageSummary Totals("TOTAL");
-  auto FileReports = prepareFileReports(Coverage, Totals, Files);
+  auto FileReports = prepareFileReports(Coverage, Totals, Files, Options);
 
   std::vector<StringRef> Filenames;
   for (const FileCoverageSummary &FCS : FileReports)

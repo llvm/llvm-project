@@ -484,6 +484,15 @@ int TargetTransformInfo::getArithmeticReductionCost(unsigned Opcode, Type *Ty,
   return Cost;
 }
 
+int TargetTransformInfo::getMinMaxReductionCost(Type *Ty, Type *CondTy,
+                                                bool IsPairwiseForm,
+                                                bool IsUnsigned) const {
+  int Cost =
+      TTIImpl->getMinMaxReductionCost(Ty, CondTy, IsPairwiseForm, IsUnsigned);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 unsigned
 TargetTransformInfo::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
   return TTIImpl->getCostOfKeepingLiveOverCall(Tys);

@@ -1166,6 +1166,66 @@ public:
     return ShuffleCost + ArithCost + getScalarizationOverhead(Ty, false, true);
   }
 
+  /// Try to calculate op costs for min/max reduction operations.
+  /// \param CondTy Conditional type for the Select instruction.
+  unsigned getMinMaxReductionCost(Type *Ty, Type *CondTy, bool IsPairwise,
+                                  bool) {
+    assert(Ty->isVectorTy() && "Expect a vector type");
+    Type *ScalarTy = Ty->getVectorElementType();
+    Type *ScalarCondTy = CondTy->getVectorElementType();
+    unsigned NumVecElts = Ty->getVectorNumElements();
+    unsigned NumReduxLevels = Log2_32(NumVecElts);
+    unsigned CmpOpcode;
+    if (Ty->isFPOrFPVectorTy()) {
+      CmpOpcode = Instruction::FCmp;
+    } else {
+      assert(Ty->isIntOrIntVectorTy() &&
+             "expecting floating point or integer type for min/max reduction");
+      CmpOpcode = Instruction::ICmp;
+    }
+    unsigned MinMaxCost = 0;
+    unsigned ShuffleCost = 0;
+    auto *ConcreteTTI = static_cast<T *>(this);
+    std::pair<unsigned, MVT> LT =
+        ConcreteTTI->getTLI()->getTypeLegalizationCost(DL, Ty);
+    unsigned LongVectorCount = 0;
+    unsigned MVTLen =
+        LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
+    while (NumVecElts > MVTLen) {
+      NumVecElts /= 2;
+      // Assume the pairwise shuffles add a cost.
+      ShuffleCost += (IsPairwise + 1) *
+                     ConcreteTTI->getShuffleCost(TTI::SK_ExtractSubvector, Ty,
+                                                 NumVecElts, Ty);
+      MinMaxCost +=
+          ConcreteTTI->getCmpSelInstrCost(CmpOpcode, Ty, CondTy, nullptr) +
+          ConcreteTTI->getCmpSelInstrCost(Instruction::Select, Ty, CondTy,
+                                          nullptr);
+      Ty = VectorType::get(ScalarTy, NumVecElts);
+      CondTy = VectorType::get(ScalarCondTy, NumVecElts);
+      ++LongVectorCount;
+    }
+    // The minimal length of the vector is limited by the real length of vector
+    // operations performed on the current platform. That's why several final
+    // reduction opertions are perfomed on the vectors with the same
+    // architecture-dependent length.
+    ShuffleCost += (NumReduxLevels - LongVectorCount) * (IsPairwise + 1) *
+                   ConcreteTTI->getShuffleCost(TTI::SK_ExtractSubvector, Ty,
+                                               NumVecElts, Ty);
+    MinMaxCost +=
+        (NumReduxLevels - LongVectorCount) *
+        (ConcreteTTI->getCmpSelInstrCost(CmpOpcode, Ty, CondTy, nullptr) +
+         ConcreteTTI->getCmpSelInstrCost(Instruction::Select, Ty, CondTy,
+                                         nullptr));
+    // Need 3 extractelement instructions for scalarization + an additional
+    // scalar select instruction.
+    return ShuffleCost + MinMaxCost +
+           3 * getScalarizationOverhead(Ty, /*Insert=*/false,
+                                        /*Extract=*/true) +
+           ConcreteTTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
+                                           ScalarCondTy, nullptr);
+  }
+
   unsigned getVectorSplitCost() { return 1; }
 
   /// @}
