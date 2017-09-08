@@ -417,10 +417,50 @@ void DWARFVerifier::verifyDebugLineRows() {
     // .debug_info verifier or in verifyDebugLineStmtOffsets().
     if (!LineTable)
       continue;
+
+    // Verify prologue.
     uint32_t MaxFileIndex = LineTable->Prologue.FileNames.size();
+    uint32_t MaxDirIndex = LineTable->Prologue.IncludeDirectories.size();
+    uint32_t FileIndex = 1;
+    StringMap<uint16_t> FullPathMap;
+    for (const auto &FileName : LineTable->Prologue.FileNames) {
+      // Verify directory index.
+      if (FileName.DirIdx > MaxDirIndex) {
+        ++NumDebugLineErrors;
+        OS << "error: .debug_line["
+           << format("0x%08" PRIx64,
+                     *toSectionOffset(Die.find(DW_AT_stmt_list)))
+           << "].prologue.file_names[" << FileIndex
+           << "].dir_idx contains an invalid index: " << FileName.DirIdx
+           << "\n";
+      }
+
+      // Check file paths for duplicates.
+      std::string FullPath;
+      const bool HasFullPath = LineTable->getFileNameByIndex(
+          FileIndex, CU->getCompilationDir(),
+          DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, FullPath);
+      assert(HasFullPath && "Invalid index?");
+      (void)HasFullPath;
+      auto It = FullPathMap.find(FullPath);
+      if (It == FullPathMap.end())
+        FullPathMap[FullPath] = FileIndex;
+      else if (It->second != FileIndex) {
+        OS << "warning: .debug_line["
+           << format("0x%08" PRIx64,
+                     *toSectionOffset(Die.find(DW_AT_stmt_list)))
+           << "].prologue.file_names[" << FileIndex
+           << "] is a duplicate of file_names[" << It->second << "]\n";
+      }
+
+      FileIndex++;
+    }
+
+    // Verify rows.
     uint64_t PrevAddress = 0;
     uint32_t RowIndex = 0;
     for (const auto &Row : LineTable->Rows) {
+      // Verify row address.
       if (Row.Address < PrevAddress) {
         ++NumDebugLineErrors;
         OS << "error: .debug_line["
@@ -436,6 +476,7 @@ void DWARFVerifier::verifyDebugLineRows() {
         OS << '\n';
       }
 
+      // Verify file index.
       if (Row.File > MaxFileIndex) {
         ++NumDebugLineErrors;
         OS << "error: .debug_line["
