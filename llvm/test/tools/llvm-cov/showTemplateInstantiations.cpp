@@ -91,3 +91,7 @@ int main() {         // ALL:         [[@LINE]]| 1|int main() {
 // RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -show-instantiations=false -path-equivalence=/tmp,%S %s | FileCheck -check-prefix=NO_INSTS %s
 // NO_INSTS-NOT: {{^ *}}| _Z4funcIbEiT_:
 // NO_INSTS-NOT: {{^ *}}| _Z4funcIiEiT_:
+
+// RUN: llvm-cov report %S/Inputs/templateInstantiations.covmapping -dump -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S %s | FileCheck -check-prefix=DUMP %s
+// DUMP: InstantiationGroup: Definition at line 7, column 30 with size = 2
+// DUMP: InstantiationGroup: main with size = 1

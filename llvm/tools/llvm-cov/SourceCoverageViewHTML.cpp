@@ -398,7 +398,7 @@ Error CoveragePrinterHTML::createIndexFile(
   emitColumnLabelsForIndex(OSRef);
   FileCoverageSummary Totals("TOTALS");
   auto FileReports =
-      CoverageReport::prepareFileReports(Coverage, Totals, SourceFiles);
+      CoverageReport::prepareFileReports(Coverage, Totals, SourceFiles, Opts);
   bool EmptyFiles = false;
   for (unsigned I = 0, E = FileReports.size(); I < E; ++I) {
     if (FileReports[I].FunctionCoverage.NumFunctions)

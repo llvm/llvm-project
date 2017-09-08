@@ -42,6 +42,7 @@ using namespace llvm;
 using namespace coverage;
 
 void exportCoverageDataToJson(const coverage::CoverageMapping &CoverageMapping,
+                              const CoverageViewOptions &Options,
                               raw_ostream &OS);
 
 namespace {
@@ -932,7 +933,7 @@ int CodeCoverageTool::export_(int argc, const char **argv,
     return 1;
   }
 
-  exportCoverageDataToJson(*Coverage.get(), outs());
+  exportCoverageDataToJson(*Coverage.get(), ViewOpts, outs());
 
   return 0;
 }
