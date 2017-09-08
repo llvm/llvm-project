@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;

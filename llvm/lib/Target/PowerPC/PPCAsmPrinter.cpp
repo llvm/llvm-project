@@ -1131,6 +1131,8 @@ void PPCLinuxAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     break;
   }
   case TargetOpcode::PATCHABLE_TAIL_CALL:
+    // TODO: Define a trampoline `__xray_FunctionTailExit` and differentiate a
+    // normal function exit from a tail exit.
   case TargetOpcode::PATCHABLE_RET:
     // PPC's tail call instruction, e.g. PPC::TCRETURNdi8, doesn't really
     // lower to a PPC::B instruction. The PPC::B instruction is generated

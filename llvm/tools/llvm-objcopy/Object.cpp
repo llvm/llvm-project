@@ -90,14 +90,54 @@ void StringTableSection::writeSection(FileOutputBuffer &Out) const {
   StrTabBuilder.write(Out.getBufferStart() + Offset);
 }
 
+static bool isValidReservedSectionIndex(uint16_t Index) {
+  switch (Index) {
+  case SHN_ABS:
+  case SHN_COMMON:
+  case SHN_HEXAGON_SCOMMON:
+  case SHN_HEXAGON_SCOMMON_2:
+  case SHN_HEXAGON_SCOMMON_4:
+  case SHN_HEXAGON_SCOMMON_8:
+    return true;
+  default:
+    return false;
+  }
+}
+
+uint16_t Symbol::getShndx() const {
+  if (DefinedIn != nullptr) {
+    return DefinedIn->Index;
+  }
+  switch (ShndxType) {
+  // This means that we don't have a defined section but we do need to
+  // output a legitimate section index.
+  case SYMBOL_SIMPLE_INDEX:
+    return SHN_UNDEF;
+  case SYMBOL_ABS:
+  case SYMBOL_COMMON:
+  case SYMBOL_HEXAGON_SCOMMON:
+  case SYMBOL_HEXAGON_SCOMMON_2:
+  case SYMBOL_HEXAGON_SCOMMON_4:
+  case SYMBOL_HEXAGON_SCOMMON_8:
+    return static_cast<uint16_t>(ShndxType);
+  }
+  llvm_unreachable("Symbol with invalid ShndxType encountered");
+}
+
 void SymbolTableSection::addSymbol(StringRef Name, uint8_t Bind, uint8_t Type,
                                    SectionBase *DefinedIn, uint64_t Value,
-                                   uint64_t Sz) {
+                                   uint16_t Shndx, uint64_t Sz) {
   Symbol Sym;
   Sym.Name = Name;
   Sym.Binding = Bind;
   Sym.Type = Type;
   Sym.DefinedIn = DefinedIn;
+  if (DefinedIn == nullptr) {
+    if (isValidReservedSectionIndex(Shndx))
+      Sym.ShndxType = static_cast<SymbolShndxType>(Shndx);
+    else
+      Sym.ShndxType = SYMBOL_SIMPLE_INDEX;
+  }
   Sym.Value = Value;
   Sym.Size = Sz;
   Sym.Index = Symbols.size();
@@ -146,10 +186,7 @@ void SymbolTableSectionImpl<ELFT>::writeSection(
     Sym->st_size = Symbol->Size;
     Sym->setBinding(Symbol->Binding);
     Sym->setType(Symbol->Type);
-    if (Symbol->DefinedIn)
-      Sym->st_shndx = Symbol->DefinedIn->Index;
-    else
-      Sym->st_shndx = SHN_UNDEF;
+    Sym->st_shndx = Symbol->getShndx();
     ++Sym;
   }
 }
@@ -251,7 +288,14 @@ void Object<ELFT>::initSymbolTable(const llvm::object::ELFFile<ELFT> &ElfFile,
   for (const auto &Sym : unwrapOrError(ElfFile.symbols(&Shdr))) {
     SectionBase *DefSection = nullptr;
     StringRef Name = unwrapOrError(Sym.getName(StrTabData));
-    if (Sym.st_shndx != SHN_UNDEF) {
+    if (Sym.st_shndx >= SHN_LORESERVE) {
+      if (!isValidReservedSectionIndex(Sym.st_shndx)) {
+        error(
+            "Symbol '" + Name +
+            "' has unsupported value greater than or equal to SHN_LORESERVE: " +
+            Twine(Sym.st_shndx));
+      }
+    } else if (Sym.st_shndx != SHN_UNDEF) {
       if (Sym.st_shndx >= Sections.size())
         error("Symbol '" + Name +
               "' is defined in invalid section with index " +
@@ -259,7 +303,7 @@ void Object<ELFT>::initSymbolTable(const llvm::object::ELFFile<ELFT> &ElfFile,
       DefSection = Sections[Sym.st_shndx - 1].get();
     }
     SymTab->addSymbol(Name, Sym.getBinding(), Sym.getType(), DefSection,
-                      Sym.getValue(), Sym.st_size);
+                      Sym.getValue(), Sym.st_shndx, Sym.st_size);
   }
 }
 
