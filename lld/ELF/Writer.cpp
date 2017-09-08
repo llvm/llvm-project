@@ -1294,9 +1294,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   applySynthetic({In<ELFT>::EhFrame},
                  [](SyntheticSection *SS) { SS->finalizeContents(); });
 
-  if (Config->DynamicList.empty())
-    for (Symbol *S : Symtab->getSymbols())
-      S->body()->IsPreemptible = computeIsPreemptible(*S->body());
+  for (Symbol *S : Symtab->getSymbols())
+    S->body()->IsPreemptible = computeIsPreemptible(*S->body());
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.

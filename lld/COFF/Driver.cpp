@@ -877,6 +877,16 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Args.hasArg(OPT_lldsavetemps))
     Config->SaveTemps = true;
 
+  // Handle /lldltocache
+  if (auto *Arg = Args.getLastArg(OPT_lldltocache))
+    Config->LTOCache = Arg->getValue();
+
+  // Handle /lldsavecachepolicy
+  if (auto *Arg = Args.getLastArg(OPT_lldltocachepolicy))
+    Config->LTOCachePolicy = check(
+        parseCachePruningPolicy(Arg->getValue()),
+        Twine("/lldltocachepolicy: invalid cache policy: ") + Arg->getValue());
+
   // Handle /failifmismatch
   for (auto *Arg : Args.filtered(OPT_failifmismatch))
     checkFailIfMismatch(Arg->getValue());
