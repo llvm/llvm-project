@@ -1492,9 +1492,13 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
   Selected = Results.size();
 
   for (unsigned i = 0, n = Results.size(); i != n; ++i) {
-    if (Results[i].first == version) {
-      Selected = i;
-      break;
+    if (version && Results[i].first >= version) {
+      // Pick the closest match. If the current version is "4", then entries for
+      // 4 are better than entries for 5, but both are valid.
+      if (Selected == Results.size() ||
+          Results[Selected].first > Results[i].first) {
+        Selected = i;
+      }
     }
 
     if (!Results[i].first) {

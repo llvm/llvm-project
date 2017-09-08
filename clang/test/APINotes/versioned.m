@@ -53,6 +53,10 @@
 // CHECK-UNVERSIONED: void acceptClosure(void (^block)(void) __attribute__((noescape)));
 // CHECK-VERSIONED: void acceptClosure(void (^block)(void));
 
+// CHECK-UNVERSIONED: void privateFunc() __attribute__((swift_private));
+
+// CHECK-UNVERSIONED: typedef double MyDoubleWrapper __attribute__((swift_wrapper("struct")));
+
 // CHECK-UNVERSIONED:      enum MyErrorCode {
 // CHECK-UNVERSIONED-NEXT:     MyErrorCodeFailed = 1
 // CHECK-UNVERSIONED-NEXT: } __attribute__((ns_error_domain(MyErrorDomain)));
@@ -60,9 +64,9 @@
 // CHECK-UNVERSIONED: __attribute__((swift_bridge("MyValueType")))
 // CHECK-UNVERSIONED: @interface MyReferenceType
 
-// CHECK-UNVERSIONED: void privateFunc() __attribute__((swift_private));
+// CHECK-VERSIONED: void privateFunc();
 
-// CHECK-UNVERSIONED: typedef double MyDoubleWrapper __attribute__((swift_wrapper("struct")));
+// CHECK-VERSIONED: typedef double MyDoubleWrapper;
 
 // CHECK-VERSIONED:      enum MyErrorCode {
 // CHECK-VERSIONED-NEXT:     MyErrorCodeFailed = 1
@@ -70,10 +74,6 @@
 
 // CHECK-VERSIONED-NOT: __attribute__((swift_bridge("MyValueType")))
 // CHECK-VERSIONED: @interface MyReferenceType
-
-// CHECK-VERSIONED: void privateFunc();
-
-// CHECK-VERSIONED: typedef double MyDoubleWrapper;
 
 // CHECK-UNVERSIONED: __attribute__((swift_objc_members)
 // CHECK-UNVERSIONED-NEXT: @interface TestProperties
