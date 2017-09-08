@@ -171,6 +171,10 @@ void SourceCoverageViewText::renderRegionMarkers(
   renderLinePrefix(OS, ViewDepth);
   OS.indent(getCombinedColumnWidth(getOptions()));
 
+  // Just consider the segments which start *and* end on this line.
+  if (Segments.size() > 1)
+    Segments = Segments.drop_back();
+
   unsigned PrevColumn = 1;
   for (const auto *S : Segments) {
     if (!S->IsRegionEntry)
@@ -182,13 +186,12 @@ void SourceCoverageViewText::renderRegionMarkers(
     std::string C = formatCount(S->Count);
     PrevColumn += C.size();
     OS << '^' << C;
+
+    if (getOptions().Debug)
+      errs() << "Marker at " << S->Line << ":" << S->Col << " = "
+            << formatCount(S->Count) << "\n";
   }
   OS << '\n';
-
-  if (getOptions().Debug)
-    for (const auto *S : Segments)
-      errs() << "Marker at " << S->Line << ":" << S->Col << " = "
-             << formatCount(S->Count) << (S->IsRegionEntry ? "\n" : " (pop)\n");
 }
 
 void SourceCoverageViewText::renderExpansionSite(

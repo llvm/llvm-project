@@ -27,7 +27,6 @@ struct CoverageViewOptions {
   bool ShowLineNumbers;
   bool ShowLineStats;
   bool ShowRegionMarkers;
-  bool ShowLineStatsOrRegionMarkers;
   bool ShowExpandedRegions;
   bool ShowFunctionInstantiations;
   bool ShowFullFilenames;

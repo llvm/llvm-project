@@ -116,6 +116,13 @@ static void writeCounter(ArrayRef<CounterExpression> Expressions, Counter C,
 }
 
 void CoverageMappingWriter::write(raw_ostream &OS) {
+  // Check that we don't have any bogus regions.
+  assert(all_of(MappingRegions,
+                [](const CounterMappingRegion &CMR) {
+                  return CMR.startLoc() <= CMR.endLoc();
+                }) &&
+         "Source region does not begin before it ends");
+
   // Sort the regions in an ascending order by the file id and the starting
   // location. Sort by region kinds to ensure stable order for tests.
   std::stable_sort(

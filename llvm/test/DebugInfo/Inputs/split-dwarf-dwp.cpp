@@ -1,5 +1,5 @@
-__attribute__((optnone)) void f1() {}
-inline __attribute__((always_inline)) void f2() {
+void f1() {}
+__attribute__((always_inline)) inline void f2() {
   f1();
 }
 // throw a gap in the address range to force use of DW_AT_ranges, ranges_base,
@@ -17,6 +17,6 @@ int main() {
 //   void other1() {}
 //   __attribute__((nodebug)) void other2() {}
 //   void other3() {}
-//   $ clang++ other.cpp split-dwarf-dwp.cpp -gsplit-dwarf -c -Xclang -fdebug-compilation-dir -Xclang Output -fno-split-dwarf-inlining
-//   $ llvm-dwp other.dwo other.dwo split-dwarf-dwp.dwo -o test/DebugInfo/Inputs/split-dwarf-dwp.o.dwp
+//   $ clang++ other.cpp split-dwarf-dwp.cpp -gsplit-dwarf -c -Xclang -fdebug-compilation-dir -Xclang . -fno-split-dwarf-inlining
+//   $ llvm-dwp other.dwo split-dwarf-dwp.dwo -o test/DebugInfo/Inputs/split-dwarf-dwp.o.dwp
 //   $ ld -r other.o split-dwarf-dwp.o -o test/DebugInfo/Inputs/split-dwarf-dwp.o
