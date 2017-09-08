@@ -2315,11 +2315,23 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       Actions.ActOnCXXEnterDeclInitializer(getCurScope(), ThisDecl);
     }
 
-    if (ParseExpressionList(Exprs, CommaLocs, [&] {
-          Actions.CodeCompleteConstructor(getCurScope(),
-                 cast<VarDecl>(ThisDecl)->getType()->getCanonicalTypeInternal(),
-                                          ThisDecl->getLocation(), Exprs);
-       })) {
+    llvm::function_ref<void()> ExprListCompleter;
+    auto ThisVarDecl = dyn_cast_or_null<VarDecl>(ThisDecl);
+    auto ConstructorCompleter = [&, ThisVarDecl] {
+      Actions.CodeCompleteConstructor(
+          getCurScope(), ThisVarDecl->getType()->getCanonicalTypeInternal(),
+          ThisDecl->getLocation(), Exprs);
+    };
+    if (ThisVarDecl) {
+      // ParseExpressionList can sometimes succeed even when ThisDecl is not
+      // VarDecl. This is an error and it is reported in a call to
+      // Actions.ActOnInitializerError(). However, we call
+      // CodeCompleteConstructor only on VarDecls, falling back to default
+      // completer in other cases.
+      ExprListCompleter = ConstructorCompleter;
+    }
+
+    if (ParseExpressionList(Exprs, CommaLocs, ExprListCompleter)) {
       Actions.ActOnInitializerError(ThisDecl);
       SkipUntil(tok::r_paren, StopAtSemi);
 
