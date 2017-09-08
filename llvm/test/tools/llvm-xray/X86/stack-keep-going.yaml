@@ -1,11 +1,6 @@
-# The redirects used in the commands to FileCheck against stderr cannot be used
-# with a windows test.
-#
-# UNSUPPORTED: windows
-
-#RUN: (llvm-xray stack %s 2>&1 1>&- || echo "Check Command Failed") | FileCheck --check-prefix HALT %s
-#RUN: (llvm-xray stack -k %s 2>&1 && echo "Check Command Succeeded") | FileCheck --check-prefix KEEP-GOING-SUCCEEDS %s
-#RUN: llvm-xray stack -k %s | FileCheck --check-prefix KEEP-GOING %s
+# RUN: not llvm-xray stack %s 2>&1 | FileCheck --check-prefix HALT %s
+# RUN: llvm-xray stack -k %s 2>&1 | FileCheck --check-prefix KEEP-GOING-SUCCEEDS %s
+# RUN: llvm-xray stack -k %s | FileCheck --check-prefix KEEP-GOING %s
 ---
 header:
   version: 1
@@ -24,10 +19,8 @@ records:
   - { type: 1, func-id: 1, cpu: 1, thread: 111, kind: function-exit, tsc: 10775 }
 ...
 
-#HALT: llvm-xray: Found record {FuncId: "#4", ThreadId: "111", RecordType: "Fn Exit"} with no matching function entry
-#HALT: Check Command Failed
+# HALT: llvm-xray: Found record {FuncId: "#4", ThreadId: "111", RecordType: "Fn Exit"} with no matching function entry
 #KEEP-GOING-SUCCEEDS: Found record {FuncId: "#4", ThreadId: "111", RecordType: "Fn Exit"} with no matching function entry
-#KEEP-GOING-SUCCEEDS: Check Command Succeeded
 #KEEP-GOING: Unique Stacks: 2
 # Note the interesting case here that the stack { fn-1 } is a prefix of { fn-1, fn-2, fn-3 } but they
 # are still counted as unique stacks.

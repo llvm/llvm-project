@@ -1362,8 +1362,8 @@ void DwarfDebug::recordSourceLine(unsigned Line, unsigned Col, const MDNode *S,
   if (auto *Scope = cast_or_null<DIScope>(S)) {
     Fn = Scope->getFilename();
     Dir = Scope->getDirectory();
-    if (auto *LBF = dyn_cast<DILexicalBlockFile>(Scope))
-      if (getDwarfVersion() >= 4)
+    if (Line != 0 && getDwarfVersion() >= 4)
+      if (auto *LBF = dyn_cast<DILexicalBlockFile>(Scope))
         Discriminator = LBF->getDiscriminator();
 
     unsigned CUID = Asm->OutStreamer->getContext().getDwarfCompileUnitID();

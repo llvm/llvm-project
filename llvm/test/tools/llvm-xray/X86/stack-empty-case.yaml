@@ -1,9 +1,4 @@
-# The redirects used in the commands to FileCheck against stderr cannot be used
-# with a windows test.
-#
-# UNSUPPORTED: windows
-
-#RUN: (llvm-xray stack %s 2>&1 || echo "Checking Command Failed") | FileCheck %s
+# RUN: not llvm-xray stack %s 2>&1 | FileCheck %s
 ---
 header:
   version: 1
@@ -14,5 +9,4 @@ header:
 records:
 ...
 # CHECK:     llvm-xray: No instrumented calls were accounted in the input file.
-# CHECK:     Checking Command Failed
 # CHECK-NOT: {{[0-9A-Z]+}}

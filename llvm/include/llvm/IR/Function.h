@@ -30,7 +30,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
@@ -43,6 +42,10 @@
 #include <string>
 
 namespace llvm {
+
+namespace Intrinsic {
+enum ID : unsigned;
+}
 
 class AssemblyAnnotationWriter;
 class Constant;

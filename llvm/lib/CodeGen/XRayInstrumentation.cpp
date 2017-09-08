@@ -14,8 +14,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -109,22 +109,13 @@ void XRayInstrumentation::replaceRetWithPatchableRet(
 
 void XRayInstrumentation::prependRetWithPatchableExit(
     MachineFunction &MF, const TargetInstrInfo *TII) {
-  for (auto &MBB : MF) {
-    for (auto &T : MBB.terminators()) {
-      unsigned Opc = 0;
+  for (auto &MBB : MF)
+    for (auto &T : MBB.terminators())
       if (T.isReturn()) {
-        Opc = TargetOpcode::PATCHABLE_FUNCTION_EXIT;
+        // Prepend the return instruction with PATCHABLE_FUNCTION_EXIT.
+        BuildMI(MBB, T, T.getDebugLoc(),
+                TII->get(TargetOpcode::PATCHABLE_FUNCTION_EXIT));
       }
-      if (TII->isTailCall(T)) {
-        Opc = TargetOpcode::PATCHABLE_TAIL_CALL;
-      }
-      if (Opc != 0) {
-        // Prepend the return instruction with PATCHABLE_FUNCTION_EXIT or
-        //   PATCHABLE_TAIL_CALL .
-        BuildMI(MBB, T, T.getDebugLoc(), TII->get(Opc));
-      }
-    }
-  }
 }
 
 bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
@@ -143,7 +134,7 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
 
     // Count the number of MachineInstr`s in MachineFunction
     int64_t MICount = 0;
-    for (const auto& MBB : MF)
+    for (const auto &MBB : MF)
       MICount += MBB.size();
 
     // Check if we have a loop.

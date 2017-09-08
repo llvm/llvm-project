@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fmodules-ts %s -emit-module-interface -o %t
-// RUN: %clang_cc1 -fmodules-ts -x pcm %t -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fmodules-ts -triple x86_64-linux %s -emit-module-interface -o %t
+// RUN: %clang_cc1 -fmodules-ts -triple x86_64-linux -x pcm %t -emit-llvm -o - | FileCheck %s
 
 export module M;
 

@@ -46,4 +46,5 @@ int main(int argc, char *argv[]) {
 
   // If all else fails, we still print the usage message.
   cl::PrintHelpMessage(false, true);
+  return 0;
 }

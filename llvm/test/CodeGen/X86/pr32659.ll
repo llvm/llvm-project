@@ -50,9 +50,7 @@ define void @fn2() nounwind optsize {
 ; CHECK-NEXT:    sarl $31, %eax
 ; CHECK-NEXT:    andl %eax, e+4
 ; CHECK-NEXT:    decl g
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    incl %eax
-; CHECK-NEXT:    addl %eax, f
+; CHECK-NEXT:    addl $1, f
 ; CHECK-NEXT:    adcl $0, f+4
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    popl %ebx

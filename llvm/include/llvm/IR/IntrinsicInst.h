@@ -71,6 +71,22 @@ namespace llvm {
     /// variable's value or its address.
     Value *getVariableLocation(bool AllowNullOp = true) const;
 
+    DILocalVariable *getVariable() const {
+      return cast<DILocalVariable>(getRawVariable());
+    }
+
+    DIExpression *getExpression() const {
+      return cast<DIExpression>(getRawExpression());
+    }
+
+    Metadata *getRawVariable() const {
+      return cast<MetadataAsValue>(getArgOperand(1))->getMetadata();
+    }
+
+    Metadata *getRawExpression() const {
+      return cast<MetadataAsValue>(getArgOperand(2))->getMetadata();
+    }
+
     // Methods for support type inquiry through isa, cast, and dyn_cast:
     static bool classof(const IntrinsicInst *I) {
       switch (I->getIntrinsicID()) {
@@ -90,22 +106,6 @@ namespace llvm {
   public:
     Value *getAddress() const { return getVariableLocation(); }
 
-    DILocalVariable *getVariable() const {
-      return cast<DILocalVariable>(getRawVariable());
-    }
-
-    DIExpression *getExpression() const {
-      return cast<DIExpression>(getRawExpression());
-    }
-
-    Metadata *getRawVariable() const {
-      return cast<MetadataAsValue>(getArgOperand(1))->getMetadata();
-    }
-
-    Metadata *getRawExpression() const {
-      return cast<MetadataAsValue>(getArgOperand(2))->getMetadata();
-    }
-
     // Methods for support type inquiry through isa, cast, and dyn_cast:
     static bool classof(const IntrinsicInst *I) {
       return I->getIntrinsicID() == Intrinsic::dbg_declare;
@@ -120,22 +120,6 @@ namespace llvm {
   public:
     Value *getValue() const {
       return getVariableLocation(/* AllowNullOp = */ false);
-    }
-
-    DILocalVariable *getVariable() const {
-      return cast<DILocalVariable>(getRawVariable());
-    }
-
-    DIExpression *getExpression() const {
-      return cast<DIExpression>(getRawExpression());
-    }
-
-    Metadata *getRawVariable() const {
-      return cast<MetadataAsValue>(getArgOperand(1))->getMetadata();
-    }
-
-    Metadata *getRawExpression() const {
-      return cast<MetadataAsValue>(getArgOperand(2))->getMetadata();
     }
 
     // Methods for support type inquiry through isa, cast, and dyn_cast:

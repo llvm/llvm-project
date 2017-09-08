@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Support/CachePruning.h"
 #include <cstdint>
 #include <map>
 #include <set>
@@ -122,6 +123,11 @@ struct Configuration {
   unsigned LTOJobs = 0;
   // Used for /opt:lldltopartitions=N
   unsigned LTOPartitions = 1;
+
+  // Used for /opt:lldltocache=path
+  StringRef LTOCache;
+  // Used for /opt:lldltocachepolicy=policy
+  llvm::CachePruningPolicy LTOCachePolicy;
 
   // Used for /merge:from=to (e.g. /merge:.rdata=.text)
   std::map<StringRef, StringRef> Merge;

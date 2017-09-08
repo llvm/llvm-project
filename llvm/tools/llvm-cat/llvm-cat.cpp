@@ -1,4 +1,4 @@
-//===-- llvm-cat.cpp - LLVM module concatenation utility ------------------===//
+//===- llvm-cat.cpp - LLVM module concatenation utility -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,11 +13,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <vector>
 
 using namespace llvm;
 
@@ -70,8 +82,8 @@ int main(int argc, char **argv) {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::F_None);
   if (EC) {
-    llvm::errs() << argv[0] << ": cannot open " << OutputFilename
-                 << " for writing: " << EC.message();
+    errs() << argv[0] << ": cannot open " << OutputFilename << " for writing: "
+           << EC.message();
     return 1;
   }
 

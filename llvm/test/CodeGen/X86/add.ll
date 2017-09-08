@@ -340,8 +340,7 @@ entry:
 define void @test12(i64* inreg %a) nounwind {
 ; X32-LABEL: test12:
 ; X32:       # BB#0: # %entry
-; X32-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
-; X32-NEXT:    addl %ecx, (%eax)
+; X32-NEXT:    addl $-2147483648, (%eax) # imm = 0x80000000
 ; X32-NEXT:    adcl $0, 4(%eax)
 ; X32-NEXT:    retl
 ;
@@ -364,8 +363,7 @@ entry:
 define void @test13(i64* inreg %a) nounwind {
 ; X32-LABEL: test13:
 ; X32:       # BB#0: # %entry
-; X32-NEXT:    movl $128, %ecx
-; X32-NEXT:    addl %ecx, (%eax)
+; X32-NEXT:    addl $128, (%eax)
 ; X32-NEXT:    adcl $0, 4(%eax)
 ; X32-NEXT:    retl
 ;

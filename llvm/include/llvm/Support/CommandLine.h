@@ -1762,8 +1762,6 @@ void PrintVersionMessage();
 /// This function just prints the help message, exactly the same way as if the
 /// -help or -help-hidden option had been given on the command line.
 ///
-/// NOTE: THIS FUNCTION TERMINATES THE PROGRAM!
-///
 /// \param Hidden if true will print hidden options
 /// \param Categorized if true print options in categories
 void PrintHelpMessage(bool Hidden = false, bool Categorized = false);

@@ -25,10 +25,10 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class IntrinsicInst;
 class OptimizationRemarkEmitter;
 
 /// A private "module" namespace for types and utilities used by GVN. These

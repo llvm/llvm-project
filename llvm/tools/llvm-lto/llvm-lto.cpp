@@ -1,4 +1,4 @@
-//===-- llvm-lto: a simple command-line program to link modules with LTO --===//
+//===- llvm-lto: a simple command-line program to link modules with LTO ---===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,20 +12,36 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm-c/lto.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/legacy/LTOCodeGenerator.h"
 #include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/LTO/legacy/ThinLTOCodeGenerator.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
@@ -33,7 +49,19 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetOptions.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
 #include <list>
+#include <map>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -179,10 +207,12 @@ static cl::opt<bool> CheckHasObjC(
     cl::desc("Only check if the module has objective-C defined in it"));
 
 namespace {
+
 struct ModuleInfo {
   std::vector<bool> CanBeHidden;
 };
-}
+
+} // end anonymous namespace
 
 static void handleDiagnostics(lto_codegen_diagnostic_severity_t Severity,
                               const char *Msg, void *) {
@@ -277,7 +307,7 @@ void printIndexStats() {
   for (auto &Filename : InputFilenames) {
     ExitOnError ExitOnErr("llvm-lto: error loading file '" + Filename + "': ");
     std::unique_ptr<ModuleSummaryIndex> Index =
-        ExitOnErr(llvm::getModuleSummaryIndexForFile(Filename));
+        ExitOnErr(getModuleSummaryIndexForFile(Filename));
     // Skip files without a module summary.
     if (!Index)
       report_fatal_error(Filename + " does not contain an index");
@@ -396,7 +426,7 @@ std::unique_ptr<ModuleSummaryIndex> loadCombinedIndex() {
     report_fatal_error("Missing -thinlto-index for ThinLTO promotion stage");
   ExitOnError ExitOnErr("llvm-lto: error loading file '" + ThinLTOIndex +
                         "': ");
-  return ExitOnErr(llvm::getModuleSummaryIndexForFile(ThinLTOIndex));
+  return ExitOnErr(getModuleSummaryIndexForFile(ThinLTOIndex));
 }
 
 static std::unique_ptr<Module> loadModule(StringRef Filename,
@@ -489,7 +519,6 @@ private:
     raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::F_None);
     error(EC, "error opening the file '" + OutputFilename + "'");
     WriteIndexToFile(*CombinedIndex, OS);
-    return;
   }
 
   /// Load the combined index from disk, then compute and generate
@@ -745,7 +774,7 @@ private:
   /// Load the combined index from disk, then load every file referenced by
 };
 
-} // namespace thinlto
+} // end namespace thinlto
 
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
@@ -784,7 +813,7 @@ int main(int argc, char **argv) {
       std::unique_ptr<MemoryBuffer> BufferOrErr =
           ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(Filename)));
       auto Buffer = std::move(BufferOrErr.get());
-      if (ExitOnErr(llvm::isBitcodeContainingObjCCategory(*Buffer)))
+      if (ExitOnErr(isBitcodeContainingObjCCategory(*Buffer)))
         outs() << "Bitcode " << Filename << " contains ObjC\n";
       else
         outs() << "Bitcode " << Filename << " does not contain ObjC\n";
@@ -822,7 +851,7 @@ int main(int argc, char **argv) {
   CodeGen.setTargetOptions(Options);
   CodeGen.setShouldRestoreGlobalsLinkage(RestoreGlobalsLinkage);
 
-  llvm::StringSet<llvm::MallocAllocator> DSOSymbolsSet;
+  StringSet<MallocAllocator> DSOSymbolsSet;
   for (unsigned i = 0; i < DSOSymbols.size(); ++i)
     DSOSymbolsSet.insert(DSOSymbols[i]);
 

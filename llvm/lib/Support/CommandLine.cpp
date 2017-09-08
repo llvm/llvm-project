@@ -1758,7 +1758,13 @@ public:
   void operator=(bool Value) {
     if (!Value)
       return;
+    printHelp();
 
+    // Halt the program since help information was printed
+    exit(0);
+  }
+
+  void printHelp() {
     SubCommand *Sub = GlobalParser->getActiveSubCommand();
     auto &OptionsMap = Sub->OptionsMap;
     auto &PositionalOpts = Sub->PositionalOpts;
@@ -1826,9 +1832,6 @@ public:
     for (auto I : GlobalParser->MoreHelp)
       outs() << I;
     GlobalParser->MoreHelp.clear();
-
-    // Halt the program since help information was printed
-    exit(0);
   }
 };
 
@@ -2098,21 +2101,14 @@ static cl::opt<VersionPrinter, true, parser<bool>>
 
 // Utility function for printing the help message.
 void cl::PrintHelpMessage(bool Hidden, bool Categorized) {
-  // This looks weird, but it actually prints the help message. The Printers are
-  // types of HelpPrinter and the help gets printed when its operator= is
-  // invoked. That's because the "normal" usages of the help printer is to be
-  // assigned true/false depending on whether -help or -help-hidden was given or
-  // not.  Since we're circumventing that we have to make it look like -help or
-  // -help-hidden were given, so we assign true.
-
   if (!Hidden && !Categorized)
-    UncategorizedNormalPrinter = true;
+    UncategorizedNormalPrinter.printHelp();
   else if (!Hidden && Categorized)
-    CategorizedNormalPrinter = true;
+    CategorizedNormalPrinter.printHelp();
   else if (Hidden && !Categorized)
-    UncategorizedHiddenPrinter = true;
+    UncategorizedHiddenPrinter.printHelp();
   else
-    CategorizedHiddenPrinter = true;
+    CategorizedHiddenPrinter.printHelp();
 }
 
 /// Utility function for printing version number.

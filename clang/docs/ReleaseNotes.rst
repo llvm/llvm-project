@@ -71,6 +71,13 @@ Improvements to Clang's diagnostics
   errors/warnings, as the system frameworks might add a method with the same
   selector which could make the message send to ``id`` ambiguous.
 
+- ``-Wtautological-compare`` now warns when comparing an unsigned integer and 0
+  regardless of whether the constant is signed or unsigned."
+
+- ``-Wtautological-compare`` now warns about comparing a signed integer and 0
+  when the signed integer is coerced to an unsigned type for the comparison.
+  ``-Wsign-compare`` was adjusted not to warn in this case.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 

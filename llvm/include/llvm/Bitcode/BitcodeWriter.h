@@ -1,4 +1,4 @@
-//===-- llvm/Bitcode/BitcodeWriter.h - Bitcode writers ----*- C++ -*-===//
+//===- llvm/Bitcode/BitcodeWriter.h - Bitcode writers -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,14 +14,20 @@
 #ifndef LLVM_BITCODE_BITCODEWRITER_H
 #define LLVM_BITCODE_BITCODEWRITER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Allocator.h"
+#include <map>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace llvm {
-  class BitstreamWriter;
-  class Module;
-  class raw_ostream;
+
+class BitstreamWriter;
+class Module;
+class raw_ostream;
 
   class BitcodeWriter {
     SmallVectorImpl<char> &Buffer;
@@ -39,7 +45,7 @@ namespace llvm {
 
     std::vector<Module *> Mods;
 
-   public:
+  public:
     /// Create a BitcodeWriter that writes to Buffer.
     BitcodeWriter(SmallVectorImpl<char> &Buffer);
 
@@ -145,6 +151,7 @@ namespace llvm {
   void WriteIndexToFile(const ModuleSummaryIndex &Index, raw_ostream &Out,
                         const std::map<std::string, GVSummaryMapTy>
                             *ModuleToSummariesForIndex = nullptr);
-} // End llvm namespace
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_BITCODE_BITCODEWRITER_H

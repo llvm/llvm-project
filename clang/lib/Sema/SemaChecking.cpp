@@ -8567,32 +8567,51 @@ bool HasEnumType(Expr *E) {
   return E->getType()->isEnumeralType();
 }
 
-void CheckTrivialUnsignedComparison(Sema &S, BinaryOperator *E) {
+bool isNonBooleanUnsignedValue(Expr *E) {
+  // We are checking that the expression is not known to have boolean value,
+  // is an integer type; and is either unsigned after implicit casts,
+  // or was unsigned before implicit casts.
+  return !E->isKnownToHaveBooleanValue() && E->getType()->isIntegerType() &&
+         (!E->getType()->isSignedIntegerType() ||
+          !E->IgnoreParenImpCasts()->getType()->isSignedIntegerType());
+}
+
+bool CheckTautologicalComparisonWithZero(Sema &S, BinaryOperator *E) {
   // Disable warning in template instantiations.
   if (S.inTemplateInstantiation())
-    return;
+    return false;
+
+  // bool values are handled by DiagnoseOutOfRangeComparison().
 
   BinaryOperatorKind op = E->getOpcode();
   if (E->isValueDependent())
-    return;
+    return false;
 
-  if (op == BO_LT && IsZero(S, E->getRHS())) {
+  Expr *LHS = E->getLHS();
+  Expr *RHS = E->getRHS();
+
+  bool Match = true;
+
+  if (op == BO_LT && isNonBooleanUnsignedValue(LHS) && IsZero(S, RHS)) {
     S.Diag(E->getOperatorLoc(), diag::warn_lunsigned_always_true_comparison)
-      << "< 0" << "false" << HasEnumType(E->getLHS())
-      << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
-  } else if (op == BO_GE && IsZero(S, E->getRHS())) {
+      << "< 0" << "false" << HasEnumType(LHS)
+      << LHS->getSourceRange() << RHS->getSourceRange();
+  } else if (op == BO_GE && isNonBooleanUnsignedValue(LHS) && IsZero(S, RHS)) {
     S.Diag(E->getOperatorLoc(), diag::warn_lunsigned_always_true_comparison)
-      << ">= 0" << "true" << HasEnumType(E->getLHS())
-      << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
-  } else if (op == BO_GT && IsZero(S, E->getLHS())) {
+      << ">= 0" << "true" << HasEnumType(LHS)
+      << LHS->getSourceRange() << RHS->getSourceRange();
+  } else if (op == BO_GT && isNonBooleanUnsignedValue(RHS) && IsZero(S, LHS)) {
     S.Diag(E->getOperatorLoc(), diag::warn_runsigned_always_true_comparison)
-      << "0 >" << "false" << HasEnumType(E->getRHS())
-      << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
-  } else if (op == BO_LE && IsZero(S, E->getLHS())) {
+      << "0 >" << "false" << HasEnumType(RHS)
+      << LHS->getSourceRange() << RHS->getSourceRange();
+  } else if (op == BO_LE && isNonBooleanUnsignedValue(RHS) && IsZero(S, LHS)) {
     S.Diag(E->getOperatorLoc(), diag::warn_runsigned_always_true_comparison)
-      << "0 <=" << "true" << HasEnumType(E->getRHS())
-      << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
-  }
+      << "0 <=" << "true" << HasEnumType(RHS)
+      << LHS->getSourceRange() << RHS->getSourceRange();
+  } else
+    Match = false;
+
+  return Match;
 }
 
 void DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E, Expr *Constant,
@@ -8612,7 +8631,7 @@ void DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E, Expr *Constant,
 
   bool OtherIsBooleanType = Other->isKnownToHaveBooleanValue();
 
-  // 0 values are handled later by CheckTrivialUnsignedComparison().
+  // 0 values are handled later by CheckTautologicalComparisonWithZero().
   if ((Value == 0) && (!OtherIsBooleanType))
     return;
 
@@ -8849,16 +8868,22 @@ void AnalyzeComparison(Sema &S, BinaryOperator *E) {
         (IsRHSIntegralLiteral && IsLHSIntegralLiteral);
   } else if (!T->hasUnsignedIntegerRepresentation())
       IsComparisonConstant = E->isIntegerConstantExpr(S.Context);
-  
+
+  // We don't care about value-dependent expressions or expressions
+  // whose result is a constant.
+  if (IsComparisonConstant)
+    return AnalyzeImpConvsInComparison(S, E);
+
+  // If this is a tautological comparison, suppress -Wsign-compare.
+  if (CheckTautologicalComparisonWithZero(S, E))
+    return AnalyzeImpConvsInComparison(S, E);
+
   // We don't do anything special if this isn't an unsigned integral
   // comparison:  we're only interested in integral comparisons, and
   // signed comparisons only happen in cases we don't care to warn about.
-  //
-  // We also don't care about value-dependent expressions or expressions
-  // whose result is a constant.
-  if (!T->hasUnsignedIntegerRepresentation() || IsComparisonConstant)
+  if (!T->hasUnsignedIntegerRepresentation())
     return AnalyzeImpConvsInComparison(S, E);
-  
+
   // Check to see if one of the (unmodified) operands is of different
   // signedness.
   Expr *signedOperand, *unsignedOperand;
@@ -8871,7 +8896,6 @@ void AnalyzeComparison(Sema &S, BinaryOperator *E) {
     signedOperand = RHS;
     unsignedOperand = LHS;
   } else {
-    CheckTrivialUnsignedComparison(S, E);
     return AnalyzeImpConvsInComparison(S, E);
   }
 
@@ -8883,11 +8907,9 @@ void AnalyzeComparison(Sema &S, BinaryOperator *E) {
   AnalyzeImplicitConversions(S, LHS, E->getOperatorLoc());
   AnalyzeImplicitConversions(S, RHS, E->getOperatorLoc());
 
-  // If the signed range is non-negative, -Wsign-compare won't fire,
-  // but we should still check for comparisons which are always true
-  // or false.
+  // If the signed range is non-negative, -Wsign-compare won't fire.
   if (signedRange.NonNegative)
-    return CheckTrivialUnsignedComparison(S, E);
+    return;
 
   // For (in)equality comparisons, if the unsigned operand is a
   // constant which cannot collide with a overflowed signed operand,

@@ -757,9 +757,24 @@ bool DevirtModule::trySingleImplDevirt(
   // to make it visible to thin LTO objects. We can only get here during the
   // ThinLTO export phase.
   if (TheFn->hasLocalLinkage()) {
+    std::string NewName = (TheFn->getName() + "$merged").str();
+
+    // Since we are renaming the function, any comdats with the same name must
+    // also be renamed. This is required when targeting COFF, as the comdat name
+    // must match one of the names of the symbols in the comdat.
+    if (Comdat *C = TheFn->getComdat()) {
+      if (C->getName() == TheFn->getName()) {
+        Comdat *NewC = M.getOrInsertComdat(NewName);
+        NewC->setSelectionKind(C->getSelectionKind());
+        for (GlobalObject &GO : M.global_objects())
+          if (GO.getComdat() == C)
+            GO.setComdat(NewC);
+      }
+    }
+
     TheFn->setLinkage(GlobalValue::ExternalLinkage);
     TheFn->setVisibility(GlobalValue::HiddenVisibility);
-    TheFn->setName(TheFn->getName() + "$merged");
+    TheFn->setName(NewName);
   }
 
   Res->TheKind = WholeProgramDevirtResolution::SingleImpl;

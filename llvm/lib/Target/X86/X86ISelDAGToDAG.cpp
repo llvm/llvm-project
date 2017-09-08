@@ -1932,6 +1932,73 @@ static bool hasNoSignedComparisonUses(SDNode *N) {
   return true;
 }
 
+/// Test whether the given node which sets flags has any uses which require the
+/// CF flag to be accurate.
+static bool hasNoCarryFlagUses(SDNode *N) {
+  // Examine each user of the node.
+  for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end(); UI != UE;
+       ++UI) {
+    // Only check things that use the flags.
+    if (UI.getUse().getResNo() != 1)
+      continue;
+    // Only examine CopyToReg uses.
+    if (UI->getOpcode() != ISD::CopyToReg)
+      return false;
+    // Only examine CopyToReg uses that copy to EFLAGS.
+    if (cast<RegisterSDNode>(UI->getOperand(1))->getReg() != X86::EFLAGS)
+      return false;
+    // Examine each user of the CopyToReg use.
+    for (SDNode::use_iterator FlagUI = UI->use_begin(), FlagUE = UI->use_end();
+         FlagUI != FlagUE; ++FlagUI) {
+      // Only examine the Flag result.
+      if (FlagUI.getUse().getResNo() != 1)
+        continue;
+      // Anything unusual: assume conservatively.
+      if (!FlagUI->isMachineOpcode())
+        return false;
+      // Examine the opcode of the user.
+      switch (FlagUI->getMachineOpcode()) {
+      // Comparisons which don't examine the CF flag.
+      case X86::SETOr: case X86::SETNOr: case X86::SETEr: case X86::SETNEr:
+      case X86::SETSr: case X86::SETNSr: case X86::SETPr: case X86::SETNPr:
+      case X86::SETLr: case X86::SETGEr: case X86::SETLEr: case X86::SETGr:
+      case X86::JO_1: case X86::JNO_1: case X86::JE_1: case X86::JNE_1:
+      case X86::JS_1: case X86::JNS_1: case X86::JP_1: case X86::JNP_1:
+      case X86::JL_1: case X86::JGE_1: case X86::JLE_1: case X86::JG_1:
+      case X86::CMOVO16rr: case X86::CMOVO32rr: case X86::CMOVO64rr:
+      case X86::CMOVO16rm: case X86::CMOVO32rm: case X86::CMOVO64rm:
+      case X86::CMOVNO16rr: case X86::CMOVNO32rr: case X86::CMOVNO64rr:
+      case X86::CMOVNO16rm: case X86::CMOVNO32rm: case X86::CMOVNO64rm:
+      case X86::CMOVE16rr: case X86::CMOVE32rr: case X86::CMOVE64rr:
+      case X86::CMOVE16rm: case X86::CMOVE32rm: case X86::CMOVE64rm:
+      case X86::CMOVNE16rr: case X86::CMOVNE32rr: case X86::CMOVNE64rr:
+      case X86::CMOVNE16rm: case X86::CMOVNE32rm: case X86::CMOVNE64rm:
+      case X86::CMOVS16rr: case X86::CMOVS32rr: case X86::CMOVS64rr:
+      case X86::CMOVS16rm: case X86::CMOVS32rm: case X86::CMOVS64rm:
+      case X86::CMOVNS16rr: case X86::CMOVNS32rr: case X86::CMOVNS64rr:
+      case X86::CMOVNS16rm: case X86::CMOVNS32rm: case X86::CMOVNS64rm:
+      case X86::CMOVP16rr: case X86::CMOVP32rr: case X86::CMOVP64rr:
+      case X86::CMOVP16rm: case X86::CMOVP32rm: case X86::CMOVP64rm:
+      case X86::CMOVNP16rr: case X86::CMOVNP32rr: case X86::CMOVNP64rr:
+      case X86::CMOVNP16rm: case X86::CMOVNP32rm: case X86::CMOVNP64rm:
+      case X86::CMOVL16rr: case X86::CMOVL32rr: case X86::CMOVL64rr:
+      case X86::CMOVL16rm: case X86::CMOVL32rm: case X86::CMOVL64rm:
+      case X86::CMOVGE16rr: case X86::CMOVGE32rr: case X86::CMOVGE64rr:
+      case X86::CMOVGE16rm: case X86::CMOVGE32rm: case X86::CMOVGE64rm:
+      case X86::CMOVLE16rr: case X86::CMOVLE32rr: case X86::CMOVLE64rr:
+      case X86::CMOVLE16rm: case X86::CMOVLE32rm: case X86::CMOVLE64rm:
+      case X86::CMOVG16rr: case X86::CMOVG32rr: case X86::CMOVG64rr:
+      case X86::CMOVG16rm: case X86::CMOVG32rm: case X86::CMOVG64rm:
+        continue;
+      // Anything else: assume conservatively.
+      default:
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 /// Check whether or not the chain ending in StoreNode is suitable for doing
 /// the {load; op; store} to modify transformation.
 static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
@@ -2050,6 +2117,9 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
   case X86ISD::DEC:
   case X86ISD::ADD:
   case X86ISD::SUB:
+  case X86ISD::AND:
+  case X86ISD::OR:
+  case X86ISD::XOR:
     break;
   }
 
@@ -2064,8 +2134,8 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
                   Segment))
     return false;
 
-  auto SelectOpcodeForSize = [&](unsigned Opc64, unsigned Opc32, unsigned Opc16,
-                                 unsigned Opc8) {
+  auto SelectOpcode = [&](unsigned Opc64, unsigned Opc32, unsigned Opc16,
+                          unsigned Opc8 = 0) {
     switch (MemVT.getSimpleVT().SimpleTy) {
     case MVT::i64:
       return Opc64;
@@ -2084,26 +2154,113 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
   switch (Opc) {
   case X86ISD::INC:
   case X86ISD::DEC: {
-    unsigned NewOpc = Opc == X86ISD::INC
-                          ? SelectOpcodeForSize(X86::INC64m, X86::INC32m,
-                                                X86::INC16m, X86::INC8m)
-                          : SelectOpcodeForSize(X86::DEC64m, X86::DEC32m,
-                                                X86::DEC16m, X86::DEC8m);
+    unsigned NewOpc =
+        Opc == X86ISD::INC
+            ? SelectOpcode(X86::INC64m, X86::INC32m, X86::INC16m, X86::INC8m)
+            : SelectOpcode(X86::DEC64m, X86::DEC32m, X86::DEC16m, X86::DEC8m);
     const SDValue Ops[] = {Base, Scale, Index, Disp, Segment, InputChain};
     Result =
         CurDAG->getMachineNode(NewOpc, SDLoc(Node), MVT::i32, MVT::Other, Ops);
     break;
   }
   case X86ISD::ADD:
-  case X86ISD::SUB: {
-    unsigned NewOpc = Opc == X86ISD::ADD
-                          ? SelectOpcodeForSize(X86::ADD64mr, X86::ADD32mr,
-                                                X86::ADD16mr, X86::ADD8mr)
-                          : SelectOpcodeForSize(X86::SUB64mr, X86::SUB32mr,
-                                                X86::SUB16mr, X86::SUB8mr);
-    const SDValue Ops[] = {Base,      Scale,   Index,
-                           Disp,      Segment, StoredVal->getOperand(1),
-                           InputChain};
+  case X86ISD::SUB:
+  case X86ISD::AND:
+  case X86ISD::OR:
+  case X86ISD::XOR: {
+    auto SelectRegOpcode = [SelectOpcode](unsigned Opc) {
+      switch (Opc) {
+      case X86ISD::ADD:
+        return SelectOpcode(X86::ADD64mr, X86::ADD32mr, X86::ADD16mr,
+                            X86::ADD8mr);
+      case X86ISD::SUB:
+        return SelectOpcode(X86::SUB64mr, X86::SUB32mr, X86::SUB16mr,
+                            X86::SUB8mr);
+      case X86ISD::AND:
+        return SelectOpcode(X86::AND64mr, X86::AND32mr, X86::AND16mr,
+                            X86::AND8mr);
+      case X86ISD::OR:
+        return SelectOpcode(X86::OR64mr, X86::OR32mr, X86::OR16mr, X86::OR8mr);
+      case X86ISD::XOR:
+        return SelectOpcode(X86::XOR64mr, X86::XOR32mr, X86::XOR16mr,
+                            X86::XOR8mr);
+      default:
+        llvm_unreachable("Invalid opcode!");
+      }
+    };
+    auto SelectImm8Opcode = [SelectOpcode](unsigned Opc) {
+      switch (Opc) {
+      case X86ISD::ADD:
+        return SelectOpcode(X86::ADD64mi8, X86::ADD32mi8, X86::ADD16mi8);
+      case X86ISD::SUB:
+        return SelectOpcode(X86::SUB64mi8, X86::SUB32mi8, X86::SUB16mi8);
+      case X86ISD::AND:
+        return SelectOpcode(X86::AND64mi8, X86::AND32mi8, X86::AND16mi8);
+      case X86ISD::OR:
+        return SelectOpcode(X86::OR64mi8, X86::OR32mi8, X86::OR16mi8);
+      case X86ISD::XOR:
+        return SelectOpcode(X86::XOR64mi8, X86::XOR32mi8, X86::XOR16mi8);
+      default:
+        llvm_unreachable("Invalid opcode!");
+      }
+    };
+    auto SelectImmOpcode = [SelectOpcode](unsigned Opc) {
+      switch (Opc) {
+      case X86ISD::ADD:
+        return SelectOpcode(X86::ADD64mi32, X86::ADD32mi, X86::ADD16mi,
+                            X86::ADD8mi);
+      case X86ISD::SUB:
+        return SelectOpcode(X86::SUB64mi32, X86::SUB32mi, X86::SUB16mi,
+                            X86::SUB8mi);
+      case X86ISD::AND:
+        return SelectOpcode(X86::AND64mi32, X86::AND32mi, X86::AND16mi,
+                            X86::AND8mi);
+      case X86ISD::OR:
+        return SelectOpcode(X86::OR64mi32, X86::OR32mi, X86::OR16mi,
+                            X86::OR8mi);
+      case X86ISD::XOR:
+        return SelectOpcode(X86::XOR64mi32, X86::XOR32mi, X86::XOR16mi,
+                            X86::XOR8mi);
+      default:
+        llvm_unreachable("Invalid opcode!");
+      }
+    };
+
+    unsigned NewOpc = SelectRegOpcode(Opc);
+    SDValue Operand = StoredVal->getOperand(1);
+
+    // See if the operand is a constant that we can fold into an immediate
+    // operand.
+    if (auto *OperandC = dyn_cast<ConstantSDNode>(Operand)) {
+      auto OperandV = OperandC->getAPIntValue();
+
+      // Check if we can shrink the operand enough to fit in an immediate (or
+      // fit into a smaller immediate) by negating it and switching the
+      // operation.
+      if ((Opc == X86ISD::ADD || Opc == X86ISD::SUB) &&
+          ((MemVT != MVT::i8 && OperandV.getMinSignedBits() > 8 &&
+            (-OperandV).getMinSignedBits() <= 8) ||
+           (MemVT == MVT::i64 && OperandV.getMinSignedBits() > 32 &&
+            (-OperandV).getMinSignedBits() <= 32)) &&
+          hasNoCarryFlagUses(StoredVal.getNode())) {
+        OperandV = -OperandV;
+        Opc = Opc == X86ISD::ADD ? X86ISD::SUB : X86ISD::ADD;
+      }
+
+      // First try to fit this into an Imm8 operand. If it doesn't fit, then try
+      // the larger immediate operand.
+      if (MemVT != MVT::i8 && OperandV.getMinSignedBits() <= 8) {
+        Operand = CurDAG->getTargetConstant(OperandV, SDLoc(Node), MemVT);
+        NewOpc = SelectImm8Opcode(Opc);
+      } else if (OperandV.getActiveBits() <= MemVT.getSizeInBits() &&
+                 (MemVT != MVT::i64 || OperandV.getMinSignedBits() <= 32)) {
+        Operand = CurDAG->getTargetConstant(OperandV, SDLoc(Node), MemVT);
+        NewOpc = SelectImmOpcode(Opc);
+      }
+    }
+
+    const SDValue Ops[] = {Base,    Scale,   Index,     Disp,
+                           Segment, Operand, InputChain};
     Result =
         CurDAG->getMachineNode(NewOpc, SDLoc(Node), MVT::i32, MVT::Other, Ops);
     break;
