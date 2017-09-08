@@ -104,6 +104,7 @@ struct Configuration {
   std::vector<llvm::StringRef> SearchPaths;
   std::vector<llvm::StringRef> SymbolOrderingFile;
   std::vector<llvm::StringRef> Undefined;
+  std::vector<SymbolVersion> DynamicList;
   std::vector<SymbolVersion> VersionScriptGlobals;
   std::vector<SymbolVersion> VersionScriptLocals;
   std::vector<uint8_t> BuildIdVector;

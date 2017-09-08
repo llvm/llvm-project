@@ -15,7 +15,7 @@ int main(int argc, const char *argv[]) {
   if (!argc) LBRAC
     return 0;
   // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:8 = #2
-  RBRAC
+  RBRAC // CHECK-NEXT: [[@LINE]]:8 -> [[@LINE+6]]:3 = (#0 - #2)
 
   // CHECK-NEXT: File 0, [[@LINE+4]]:3 -> [[@LINE+15]]:2 = (#0 - #2)
   // CHECK-NEXT: File 0, [[@LINE+3]]:7 -> [[@LINE+3]]:12 = (#0 - #2)
@@ -23,7 +23,7 @@ int main(int argc, const char *argv[]) {
   // CHECK-NEXT: File 0, [[@LINE+1]]:19 -> [[@LINE+3]]:4 = #3
   if (!argc) LBRAC
     return 0;
-  }
+  } // CHECK-NEXT: [[@LINE]]:4 -> [[@LINE+5]]:3 = ((#0 - #2) - #3)
 
   // CHECK-NEXT: File 0, [[@LINE+3]]:3 -> [[@LINE+7]]:2 = ((#0 - #2) - #3)
   // CHECK-NEXT: File 0, [[@LINE+2]]:7 -> [[@LINE+2]]:12 = ((#0 - #2) - #3)
@@ -31,7 +31,7 @@ int main(int argc, const char *argv[]) {
   if (!argc) {
     return 0;
   // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:8 = #4
-  RBRAC
+  RBRAC // CHECK-NEXT: [[@LINE]]:8 -> [[@LINE+1]]:2 = (((#0 - #2) - #3) - #4)
 }
 
 // CHECK-NEXT: File 1, 3:15 -> 3:16 = #2

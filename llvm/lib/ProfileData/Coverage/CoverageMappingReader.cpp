@@ -49,16 +49,18 @@ using namespace object;
 #define DEBUG_TYPE "coverage-mapping"
 
 void CoverageMappingIterator::increment() {
+  if (ReadErr != coveragemap_error::success)
+    return;
+
   // Check if all the records were read or if an error occurred while reading
   // the next record.
-  if (auto E = Reader->readNextRecord(Record)) {
+  if (auto E = Reader->readNextRecord(Record))
     handleAllErrors(std::move(E), [&](const CoverageMapError &CME) {
       if (CME.get() == coveragemap_error::eof)
         *this = CoverageMappingIterator();
       else
-        llvm_unreachable("Unexpected error in coverage mapping iterator");
+        ReadErr = CME.get();
     });
-  }
 }
 
 Error RawCoverageReader::readULEB128(uint64_t &Result) {
@@ -238,9 +240,12 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
       dbgs() << "\n";
     });
 
-    MappingRegions.push_back(CounterMappingRegion(
-        C, InferredFileID, ExpandedFileID, LineStart, ColumnStart,
-        LineStart + NumLines, ColumnEnd, Kind));
+    auto CMR = CounterMappingRegion(C, InferredFileID, ExpandedFileID,
+                                    LineStart, ColumnStart,
+                                    LineStart + NumLines, ColumnEnd, Kind);
+    if (CMR.startLoc() > CMR.endLoc())
+      return make_error<CoverageMapError>(coveragemap_error::malformed);
+    MappingRegions.push_back(CMR);
   }
   return Error::success();
 }

@@ -740,7 +740,7 @@ private:
   size_t Size = 0;
 };
 
-template <class ELFT> InputSection *createCommonSection();
+std::vector<InputSection *> createCommonSections();
 InputSection *createInterpSection();
 template <class ELFT> MergeInputSection *createCommentSection();
 void decompressAndMergeSections();
@@ -754,7 +754,6 @@ struct InX {
   static BssSection *Bss;
   static BssSection *BssRelRo;
   static BuildIdSection *BuildId;
-  static InputSection *Common;
   static SyntheticSection *Dynamic;
   static StringTableSection *DynStrTab;
   static SymbolTableBaseSection *DynSymTab;

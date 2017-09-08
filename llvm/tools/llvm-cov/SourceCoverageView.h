@@ -236,7 +236,7 @@ protected:
   static std::string formatCount(uint64_t N);
 
   /// \brief Check if region marker output is expected for a line.
-  bool shouldRenderRegionMarkers(bool LineHasMultipleRegions) const;
+  bool shouldRenderRegionMarkers(CoverageSegmentArray Segments) const;
 
   /// \brief Check if there are any sub-views attached to this view.
   bool hasSubViews() const;
