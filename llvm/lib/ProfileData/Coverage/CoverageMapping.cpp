@@ -295,8 +295,7 @@ namespace {
 /// An instantiation set is a collection of functions that have the same source
 /// code, ie, template functions specializations.
 class FunctionInstantiationSetCollector {
-  using MapT = DenseMap<std::pair<unsigned, unsigned>,
-                        std::vector<const FunctionRecord *>>;
+  using MapT = DenseMap<LineColPair, std::vector<const FunctionRecord *>>;
   MapT InstantiatedFunctions;
 
 public:
