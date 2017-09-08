@@ -174,17 +174,17 @@ bool BytesDataCommand::classof(const BaseCommand *C) {
   return C->Kind == BytesDataKind;
 }
 
-static std::string filename(InputSectionBase *S) {
-  if (!S->File)
+static std::string filename(InputFile *File) {
+  if (!File)
     return "";
-  if (S->File->ArchiveName.empty())
-    return S->File->getName();
-  return (S->File->ArchiveName + "(" + S->File->getName() + ")").str();
+  if (File->ArchiveName.empty())
+    return File->getName();
+  return (File->ArchiveName + "(" + File->getName() + ")").str();
 }
 
 bool LinkerScript::shouldKeep(InputSectionBase *S) {
   for (InputSectionDescription *ID : Opt.KeptSections) {
-    std::string Filename = filename(S);
+    std::string Filename = filename(S->File);
     if (ID->FilePat.match(Filename))
       for (SectionPattern &P : ID->SectionPatterns)
         if (P.SectionPat.match(S->Name))
@@ -284,7 +284,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
       if (Sec->Type == SHT_REL || Sec->Type == SHT_RELA)
         continue;
 
-      std::string Filename = filename(Sec);
+      std::string Filename = filename(Sec->File);
       if (!Cmd->FilePat.match(Filename) ||
           Pat.ExcludedFilePat.match(Filename) ||
           !Pat.SectionPat.match(Sec->Name))
@@ -328,8 +328,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
 void LinkerScript::discard(ArrayRef<InputSectionBase *> V) {
   for (InputSectionBase *S : V) {
     S->Live = false;
-    if (S == InX::ShStrTab || S == InX::Common || S == InX::Dynamic ||
-        S == InX::DynSymTab || S == InX::DynStrTab)
+    if (S == InX::ShStrTab || S == InX::Dynamic || S == InX::DynSymTab ||
+        S == InX::DynStrTab)
       error("discarding " + S->Name + " section is not allowed");
     discard(S->DependentSections);
   }
@@ -868,7 +868,7 @@ ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
     if (auto *D = dyn_cast<DefinedRegular>(B))
       return {D->Section, D->Value, Loc};
     if (auto *C = dyn_cast<DefinedCommon>(B))
-      return {InX::Common, C->Offset, Loc};
+      return {C->Section, C->Offset, Loc};
   }
   error(Loc + ": symbol not found: " + S);
   return 0;
