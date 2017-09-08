@@ -475,10 +475,16 @@ namespace {
   template<typename T>
   void emitVersionedInfo(
          raw_ostream &out,
-         const SmallVectorImpl<std::pair<VersionTuple, T>> &infoArray,
+         SmallVectorImpl<std::pair<VersionTuple, T>> &infoArray,
          llvm::function_ref<void(raw_ostream &out,
                                  const typename MakeDependent<T>::Type& info)>
            emitInfo) {
+    std::sort(infoArray.begin(), infoArray.end(),
+              [](const std::pair<VersionTuple, T> &left,
+                 const std::pair<VersionTuple, T> &right) -> bool {
+      assert(left.first != right.first && "two entries for the same version");
+      return left.first < right.first;
+    });
     endian::Writer<little> writer(out);
     writer.write<uint16_t>(infoArray.size());
     for (const auto &element : infoArray) {
@@ -528,7 +534,7 @@ namespace {
     using key_type_ref = key_type;
     using data_type =
       SmallVector<std::pair<VersionTuple, UnversionedDataType>, 1>;
-    using data_type_ref = const data_type &;
+    using data_type_ref = data_type &;
     using hash_value_type = size_t;
     using offset_type = unsigned;
 

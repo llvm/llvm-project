@@ -1487,31 +1487,30 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
     SmallVector<std::pair<VersionTuple, T>, 1> results)
   : Results(std::move(results)) {
 
-  // Look for an exact version match.
-  Optional<unsigned> unversioned;
-  Selected = Results.size();
+  assert(!Results.empty());
+  assert(std::is_sorted(Results.begin(), Results.end(),
+                        [](const std::pair<VersionTuple, T> &left,
+                           const std::pair<VersionTuple, T> &right) -> bool {
+    assert(left.first != right.first && "two entries for the same version");
+    return left.first < right.first;
+  }));
 
+  Selected = Results.size();
   for (unsigned i = 0, n = Results.size(); i != n; ++i) {
     if (version && Results[i].first >= version) {
-      // Pick the closest match. If the current version is "4", then entries for
-      // 4 are better than entries for 5, but both are valid.
-      if (Selected == Results.size() ||
-          Results[Selected].first > Results[i].first) {
-        Selected = i;
-      }
-    }
-
-    if (!Results[i].first) {
-      assert(!unversioned && "Two unversioned entries?");
-      unversioned = i;
+      // If the current version is "4", then entries for 4 are better than
+      // entries for 5, but both are valid. Because entries are sorted, we get
+      // that behavior by picking the first match.
+      Selected = i;
+      break;
     }
   }
 
   // If we didn't find a match but we have an unversioned result, use the
-  // unversioned result.
-  if (Selected == Results.size() && unversioned) {
-    Selected = *unversioned;
-  }
+  // unversioned result. This will always be the first entry because we encode
+  // it as version 0.
+  if (Selected == Results.size() && Results[0].first.empty())
+    Selected = 0;
 }
 
 auto APINotesReader::lookupObjCClassID(StringRef name) -> Optional<ContextID> {
