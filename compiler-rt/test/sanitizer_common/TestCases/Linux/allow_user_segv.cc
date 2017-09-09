@@ -2,20 +2,26 @@
 // https://code.google.com/p/address-sanitizer/issues/detail?id=180
 
 // clang-format off
-// RUN: %clangxx_asan -O0 %s -o %t
+// RUN: %clangxx -O0 %s -o %t
 
-// RUN: %env_asan_opts=handle_segv=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK0
-// RUN: %env_asan_opts=handle_segv=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK1
-// RUN: %env_asan_opts=handle_segv=2 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
+// RUN: %env_tool_opts=handle_segv=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK0
+// RUN: %env_tool_opts=handle_segv=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK1
+// RUN: %env_tool_opts=handle_segv=2 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
 
-// RUN: %env_asan_opts=handle_segv=0:allow_user_segv_handler=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK0
-// RUN: %env_asan_opts=handle_segv=1:allow_user_segv_handler=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
-// RUN: %env_asan_opts=handle_segv=2:allow_user_segv_handler=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
+// RUN: %env_tool_opts=handle_segv=0:allow_user_segv_handler=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK0
+// RUN: %env_tool_opts=handle_segv=1:allow_user_segv_handler=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
+// RUN: %env_tool_opts=handle_segv=2:allow_user_segv_handler=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
 
-// RUN: %env_asan_opts=handle_segv=0:allow_user_segv_handler=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK0
-// RUN: %env_asan_opts=handle_segv=1:allow_user_segv_handler=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK1
-// RUN: %env_asan_opts=handle_segv=2:allow_user_segv_handler=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
+// RUN: %env_tool_opts=handle_segv=0:allow_user_segv_handler=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK0
+// RUN: %env_tool_opts=handle_segv=1:allow_user_segv_handler=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK1
+// RUN: %env_tool_opts=handle_segv=2:allow_user_segv_handler=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
 // clang-format on
+
+// Remove when fixed: https://github.com/google/sanitizers/issues/637
+// UNSUPPORTED: lsan
+// UNSUPPORTED: msan
+// UNSUPPORTED: tsan
+// UNSUPPORTED: ubsan
 
 #include <signal.h>
 #include <stdio.h>
@@ -71,17 +77,17 @@ int main() {
   return DoSEGV();
 }
 
-// CHECK0-NOT: ASAN:DEADLYSIGNAL
+// CHECK0-NOT: AddressSanitizer:DEADLYSIGNAL
 // CHECK0-NOT: AddressSanitizer: SEGV on unknown address
 // CHECK0: User sigaction installed
 // CHECK0-NEXT: User sigaction called
 
 // CHECK1: User sigaction installed
 // CHECK1-NEXT: User sigaction called
-// CHECK1-NEXT: ASAN:DEADLYSIGNAL
+// CHECK1-NEXT: AddressSanitizer:DEADLYSIGNAL
 // CHECK1: AddressSanitizer: SEGV on unknown address
 
 // CHECK2-NOT: User sigaction called
 // CHECK2: User sigaction installed
-// CHECK2-NEXT: ASAN:DEADLYSIGNAL
+// CHECK2-NEXT: AddressSanitizer:DEADLYSIGNAL
 // CHECK2: AddressSanitizer: SEGV on unknown address

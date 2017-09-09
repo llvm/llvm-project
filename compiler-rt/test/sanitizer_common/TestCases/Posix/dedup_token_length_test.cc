@@ -11,6 +11,7 @@
 // XFAIL: msan
 // XFAIL: lsan
 // XFAIL: tsan
+// XFAIL: ubsan
 
 volatile int *null = 0;
 

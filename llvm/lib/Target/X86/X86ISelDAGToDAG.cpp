@@ -2326,7 +2326,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue VSelect = CurDAG->getNode(
         ISD::VSELECT, SDLoc(Node), Node->getValueType(0), Node->getOperand(0),
         Node->getOperand(1), Node->getOperand(2));
-    ReplaceUses(SDValue(Node, 0), VSelect);
+    ReplaceNode(Node, VSelect.getNode());
     SelectCode(VSelect.getNode());
     // We already called ReplaceUses.
     return;
@@ -2612,6 +2612,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       DEBUG(dbgs() << "=> "; ResHi.getNode()->dump(CurDAG); dbgs() << '\n');
     }
 
+    CurDAG->RemoveDeadNode(Node);
     return;
   }
 
@@ -2796,6 +2797,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       ReplaceUses(SDValue(Node, 1), Result);
       DEBUG(dbgs() << "=> "; Result.getNode()->dump(CurDAG); dbgs() << '\n');
     }
+    CurDAG->RemoveDeadNode(Node);
     return;
   }
 
@@ -2854,6 +2856,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         // one, do not call ReplaceAllUsesWith.
         ReplaceUses(SDValue(Node, (Opcode == X86ISD::SUB ? 1 : 0)),
                     SDValue(NewNode, 0));
+        CurDAG->RemoveDeadNode(Node);
         return;
       }
 
@@ -2889,6 +2892,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         // one, do not call ReplaceAllUsesWith.
         ReplaceUses(SDValue(Node, (Opcode == X86ISD::SUB ? 1 : 0)),
                     SDValue(NewNode, 0));
+        CurDAG->RemoveDeadNode(Node);
         return;
       }
 
@@ -2909,6 +2913,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         // one, do not call ReplaceAllUsesWith.
         ReplaceUses(SDValue(Node, (Opcode == X86ISD::SUB ? 1 : 0)),
                     SDValue(NewNode, 0));
+        CurDAG->RemoveDeadNode(Node);
         return;
       }
 
@@ -2929,6 +2934,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         // one, do not call ReplaceAllUsesWith.
         ReplaceUses(SDValue(Node, (Opcode == X86ISD::SUB ? 1 : 0)),
                     SDValue(NewNode, 0));
+        CurDAG->RemoveDeadNode(Node);
         return;
       }
     }

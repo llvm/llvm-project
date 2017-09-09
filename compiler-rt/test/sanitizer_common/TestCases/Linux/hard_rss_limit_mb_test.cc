@@ -14,6 +14,7 @@
 // XFAIL: lsan
 // XFAIL: tsan
 // XFAIL: msan
+// XFAIL: ubsan
 
 #include <string.h>
 #include <stdio.h>
