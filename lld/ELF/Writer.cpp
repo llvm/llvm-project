@@ -299,9 +299,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Add(InX::BuildId);
   }
 
-  InX::Common = createCommonSection<ELFT>();
-  if (InX::Common)
-    Add(InX::Common);
+  for (InputSection *S : createCommonSections())
+    Add(S);
 
   InX::Bss = make<BssSection>(".bss");
   Add(InX::Bss);
@@ -1205,9 +1204,8 @@ static void removeUnusedSyntheticSections() {
     for (auto I = OS->Commands.begin(), E = OS->Commands.end(); I != E; ++I) {
       BaseCommand *B = *I;
       if (auto *ISD = dyn_cast<InputSectionDescription>(B)) {
-        auto P = std::find(ISD->Sections.begin(), ISD->Sections.end(), SS);
-        if (P != ISD->Sections.end())
-          ISD->Sections.erase(P);
+        llvm::erase_if(ISD->Sections,
+                       [=](InputSection *IS) { return IS == SS; });
         if (ISD->Sections.empty())
           Empty = I;
       }
@@ -1217,14 +1215,9 @@ static void removeUnusedSyntheticSections() {
 
     // If there are no other sections in the output section, remove it from the
     // output.
-    if (OS->Commands.empty()) {
-      // Also remove script commands matching the output section.
-      llvm::erase_if(Script->Opt.Commands, [&](BaseCommand *Cmd) {
-        if (auto *Sec = dyn_cast<OutputSection>(Cmd))
-          return Sec == OS;
-        return false;
-      });
-    }
+    if (OS->Commands.empty())
+      llvm::erase_if(Script->Opt.Commands,
+                     [&](BaseCommand *Cmd) { return Cmd == OS; });
   }
 }
 
@@ -1232,12 +1225,6 @@ static void removeUnusedSyntheticSections() {
 // with the same name defined in other ELF executable or DSO.
 static bool computeIsPreemptible(const SymbolBody &B) {
   assert(!B.isLocal());
-  // Shared symbols resolve to the definition in the DSO. The exceptions are
-  // symbols with copy relocations (which resolve to .bss) or preempt plt
-  // entries (which resolve to that plt entry).
-  if (auto *SS = dyn_cast<SharedSymbol>(&B))
-    return !SS->CopyRelSec && !SS->NeedsPltAddr;
-
   // Only symbols that appear in dynsym can be preempted.
   if (!B.symbol()->includeInDynsym())
     return false;
@@ -1251,13 +1238,20 @@ static bool computeIsPreemptible(const SymbolBody &B) {
   // -unresolved-symbols=ignore-all is specified, undefined symbols in
   // executables are automatically exported so that the runtime linker
   // can try to resolve them. In that case, they are preemptible. So, we
-  // return true for an undefined symbol in case the option is specified.
+  // return true for an undefined symbols in all cases.
+  if (!B.isInCurrentDSO())
+    return true;
+
+  // If we have a dynamic list it specifies which local symbols are preemptible.
+  if (Config->HasDynamicList)
+    return false;
+
   if (!Config->Shared)
-    return B.isUndefined();
+    return false;
 
   // -Bsymbolic means that definitions are not preempted.
   if (Config->Bsymbolic || (Config->BsymbolicFunctions && B.isFunc()))
-    return !B.isDefined();
+    return false;
   return true;
 }
 
@@ -1295,7 +1289,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
                  [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   for (Symbol *S : Symtab->getSymbols())
-    S->body()->IsPreemptible = computeIsPreemptible(*S->body());
+    S->body()->IsPreemptible |= computeIsPreemptible(*S->body());
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.

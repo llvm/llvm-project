@@ -392,13 +392,13 @@ static int clangTidyMain(int argc, const char **argv) {
   if (EnabledChecks.empty()) {
     llvm::errs() << "Error: no checks enabled.\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
-    return 1;
+    return 0;
   }
 
   if (PathList.empty()) {
     llvm::errs() << "Error: no input files specified.\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
-    return 1;
+    return 0;
   }
 
   ProfileData Profile;
