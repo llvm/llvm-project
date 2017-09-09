@@ -112,6 +112,9 @@ namespace {
     // PhysRegState - One of the RegState enums, or a virtreg.
     std::vector<unsigned> PhysRegState;
 
+    SmallVector<unsigned, 16> VirtDead;
+    SmallVector<MachineInstr*, 32> Coalesced;
+
     // Set of register units.
     typedef SparseSet<unsigned> UsedInInstrSet;
 
@@ -810,8 +813,8 @@ void RAFast::AllocateBasicBlock() {
     if (MRI->isAllocatable(LI.PhysReg))
       definePhysReg(*MII, LI.PhysReg, regReserved);
 
-  SmallVector<unsigned, 8> VirtDead;
-  SmallVector<MachineInstr*, 32> Coalesced;
+  VirtDead.clear();
+  Coalesced.clear();
 
   // Otherwise, sequentially allocate each instruction in the MBB.
   while (MII != MBB->end()) {
