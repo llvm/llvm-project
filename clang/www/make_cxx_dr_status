@@ -111,9 +111,6 @@ def availability(issue):
   elif status == '6':
     avail = 'SVN'
     avail_style = ' class="svn"'
-  elif status == '5':
-    avail = 'Clang 5'
-    avail_style = ' class="svn"'
   elif re.match('^[0-9]+\.?[0-9]*', status):
     avail = 'Clang %s' % status
     avail_style = ' class="full"'

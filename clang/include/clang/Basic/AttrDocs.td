@@ -7,6 +7,24 @@
 //
 //===---------------------------------------------------------------------===//
 
+// To test that the documentation builds cleanly, you must run clang-tblgen to
+// convert the .td file into a .rst file, and then run sphinx to convert the
+// .rst file into an HTML file. After completing testing, you should revert the
+// generated .rst file so that the modified version does not get checked in to
+// version control.
+//
+// To run clang-tblgen to generate the .rst file:
+// clang-tblgen -gen-attr-docs -I <root>/llvm/tools/clang/include
+//   <root>/llvm/tools/clang/include/clang/Basic/Attr.td -o
+//   <root>/llvm/tools/clang/docs/AttributeReference.rst
+//
+// To run sphinx to generate the .html files (note that sphinx-build must be
+// available on the PATH):
+// Windows (from within the clang\docs directory):
+//   make.bat html
+// Non-Windows (from within the clang\docs directory):
+//   make -f Makefile.sphinx html
+
 def GlobalDocumentation {
   code Intro =[{..
   -------------------------------------------------------------------
