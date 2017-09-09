@@ -176,6 +176,10 @@ bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType) const {
   return TTIImpl->isLegalMaskedScatter(DataType);
 }
 
+bool TargetTransformInfo::hasDivRemOp(Type *DataType, bool IsSigned) const {
+  return TTIImpl->hasDivRemOp(DataType, IsSigned);
+}
+
 bool TargetTransformInfo::prefersVectorizedAddressing() const {
   return TTIImpl->prefersVectorizedAddressing();
 }
