@@ -680,6 +680,24 @@ void SymbolTable::handleAnonymousVersion() {
     assignWildcardVersion(Ver, VER_NDX_LOCAL);
 }
 
+// Handles -dynamic-list.
+void SymbolTable::handleDynamicList() {
+  for (SymbolVersion &Ver : Config->DynamicList) {
+    std::vector<SymbolBody *> Syms;
+    if (Ver.HasWildcard)
+      Syms = findByVersion(Ver);
+    else
+      Syms = findAllByVersion(Ver);
+
+    for (SymbolBody *B : Syms) {
+      if (!Config->Shared)
+        B->symbol()->VersionId = VER_NDX_GLOBAL;
+      else if (B->symbol()->includeInDynsym())
+        B->IsPreemptible = true;
+    }
+  }
+}
+
 // Set symbol versions to symbols. This function handles patterns
 // containing no wildcard characters.
 void SymbolTable::assignExactVersion(SymbolVersion Ver, uint16_t VersionId,
@@ -729,6 +747,7 @@ void SymbolTable::assignWildcardVersion(SymbolVersion Ver, uint16_t VersionId) {
 void SymbolTable::scanVersionScript() {
   // Handle edge cases first.
   handleAnonymousVersion();
+  handleDynamicList();
 
   // Now we have version definitions, so we need to set version ids to symbols.
   // Each version definition has a glob pattern, and all symbols that match

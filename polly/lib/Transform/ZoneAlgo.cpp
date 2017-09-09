@@ -258,18 +258,6 @@ isl::union_map polly::filterKnownValInst(const isl::union_map &UMap) {
   return Result;
 }
 
-static std::string printInstruction(Instruction *Instr,
-                                    bool IsForDebug = false) {
-  std::string Result;
-  raw_string_ostream OS(Result);
-  Instr->print(OS, IsForDebug);
-  OS.flush();
-  size_t i = 0;
-  while (i < Result.size() && Result[i] == ' ')
-    i += 1;
-  return Result.substr(i);
-}
-
 ZoneAlgorithm::ZoneAlgorithm(const char *PassName, Scop *S, LoopInfo *LI)
     : PassName(PassName), IslCtx(S->getSharedIslCtx()), S(S), LI(LI),
       Schedule(S->getSchedule()) {

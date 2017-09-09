@@ -185,6 +185,9 @@ def no_fatal_warnings: F<"no-fatal-warnings">;
 def no_gc_sections: F<"no-gc-sections">,
   HelpText<"Disable garbage collection of unused sections">;
 
+def no_gdb_index: F<"no-gdb-index">,
+  HelpText<"Do not generate .gdb_index section">;
+
 def no_gnu_unique: F<"no-gnu-unique">,
   HelpText<"Disable STB_GNU_UNIQUE symbol binding">;
 
