@@ -742,9 +742,8 @@ void RegAllocFast::handleThroughOperands(MachineInstr &MI,
     if (!TargetRegisterInfo::isVirtualRegister(Reg)) continue;
     if (MO.isUse()) {
       if (!MO.isTied()) continue;
-      unsigned DefIdx = MI.findTiedOperandIdx(I);
       DEBUG(dbgs() << "Operand " << I << "("<< MO << ") is tied to operand "
-        << DefIdx << ".\n");
+        << MI.findTiedOperandIdx(I) << ".\n");
       LiveRegMap::iterator LRI = reloadVirtReg(MI, I, Reg, 0);
       MCPhysReg PhysReg = LRI->PhysReg;
       setPhysReg(MI, I, PhysReg);
