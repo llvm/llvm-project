@@ -7,6 +7,7 @@
 // XFAIL: msan
 // XFAIL: lsan
 // XFAIL: tsan
+// XFAIL: ubsan
 //
 // FIXME: seems to fail on ARM
 // REQUIRES: x86_64-target-arch

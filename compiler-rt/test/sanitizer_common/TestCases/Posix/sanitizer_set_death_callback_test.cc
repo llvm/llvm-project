@@ -8,6 +8,7 @@
 // the last line of main function. The problem doesn't reproduce with ASan because
 // quarantine prohibits memory block reuse for different allocations.
 // XFAIL: lsan-x86
+// XFAIL: ubsan
 
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>

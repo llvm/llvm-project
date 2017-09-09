@@ -418,12 +418,12 @@ TEST_P(CoverageMappingTest, multiple_regions_end_after_parent_ends) {
   // 7| c} d{   e{
   // 8|
   // 9| d}      e} F}
-  addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9); //< F
-  addCMR(Counter::getCounter(0), "file1", 1, 1, 3, 5); //< a
-  addCMR(Counter::getCounter(0), "file1", 3, 5, 5, 4); //< b
-  addCMR(Counter::getCounter(1), "file1", 3, 5, 7, 3); //< c
-  addCMR(Counter::getCounter(1), "file1", 7, 3, 9, 2); //< d
-  addCMR(Counter::getCounter(1), "file1", 7, 7, 9, 7); //< e
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9); // < F
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 3, 5); // < a
+  addCMR(Counter::getCounter(0), "file1", 3, 5, 5, 4); // < b
+  addCMR(Counter::getCounter(1), "file1", 3, 5, 7, 3); // < c
+  addCMR(Counter::getCounter(1), "file1", 7, 3, 9, 2); // < d
+  addCMR(Counter::getCounter(1), "file1", 7, 7, 9, 7); // < e
 
   EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
   const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();

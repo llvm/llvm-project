@@ -1,6 +1,7 @@
 // RUN: %clang -w -O0 %s -o %t && %run %t 2>&1 | FileCheck %s
 // UNSUPPORTED: lsan
 // UNSUPPORTED: msan
+// UNSUPPORTED: ubsan
 #include <stdio.h>
 int main() {
   int a;

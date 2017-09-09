@@ -126,6 +126,7 @@
 #include <clc/integer/mad_sat.h>
 #include <clc/integer/mul24.h>
 #include <clc/integer/mul_hi.h>
+#include <clc/integer/popcount.h>
 #include <clc/integer/rhadd.h>
 #include <clc/integer/rotate.h>
 #include <clc/integer/sub_sat.h>

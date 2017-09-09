@@ -4,6 +4,7 @@
 // RUN: %env_tool_opts=symbolize_inline_frames=false:stack_trace_format=DEFAULT %run %t 2>&1 | FileCheck %s --check-prefix=NOINLINE
 
 // UNSUPPORTED: darwin
+// XFAIL: ubsan
 
 #include <sanitizer/common_interface_defs.h>
 
