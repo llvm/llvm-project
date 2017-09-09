@@ -7,6 +7,7 @@
 // XFAIL: msan
 // XFAIL: lsan
 // XFAIL: tsan
+// XFAIL: ubsan
 #include <assert.h>
 #include <stdio.h>
 #include <sanitizer/asan_interface.h>
