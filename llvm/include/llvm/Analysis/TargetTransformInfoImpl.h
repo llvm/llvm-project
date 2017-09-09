@@ -771,6 +771,25 @@ public:
         Operator::getOpcode(U), U->getType(),
         U->getNumOperands() == 1 ? U->getOperand(0)->getType() : nullptr);
   }
+
+  int getInstructionLatency(const Instruction *I) {
+    if (isa<PHINode>(I))
+      return 0;
+
+    if (isa<CallInst>(I))
+      return 40;
+
+    if (isa<LoadInst>(I))
+      return 4;
+
+    Type *dstTy = I->getType();
+    if (VectorType *VectorTy = dyn_cast<VectorType>(dstTy))
+      dstTy = VectorTy->getElementType();
+    if (dstTy->isFloatingPointTy())
+      return 3;
+
+    return 1;
+  }
 };
 }
 

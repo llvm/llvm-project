@@ -50,23 +50,34 @@ VSTORE_TYPES()
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
     VSTORE_ADDR_SPACES(double)
 #endif
-
-/* vstore_half are legal even without cl_khr_fp16 */
-#define DECLARE_HELPER(STYPE, AS) void __clc_vstore_half_##STYPE##_helper##AS(STYPE, AS half *);
-
-DECLARE_HELPER(float, __private);
-DECLARE_HELPER(float, __global);
-DECLARE_HELPER(float, __local);
-
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-DECLARE_HELPER(double, __private);
-DECLARE_HELPER(double, __global);
-DECLARE_HELPER(double, __local);
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+    VSTORE_ADDR_SPACES(half)
 #endif
 
+/* vstore_half are legal even without cl_khr_fp16 */
+#if __clang_major__ < 6
+#define DECLARE_HELPER(STYPE, AS, builtin) void __clc_vstore_half_##STYPE##_helper##AS(STYPE, AS half *);
+#else
+#define DECLARE_HELPER(STYPE, AS, __builtin) \
+inline void __clc_vstore_half_##STYPE##_helper##AS(STYPE s, AS half *d) \
+{ \
+	__builtin(s, d); \
+}
+#endif
+
+DECLARE_HELPER(float, __private, __builtin_store_halff);
+DECLARE_HELPER(float, __global, __builtin_store_halff);
+DECLARE_HELPER(float, __local, __builtin_store_halff);
+
+#ifdef cl_khr_fp64
+DECLARE_HELPER(double, __private, __builtin_store_half);
+DECLARE_HELPER(double, __global, __builtin_store_half);
+DECLARE_HELPER(double, __local, __builtin_store_half);
+#endif
 
 #define VEC_STORE1(STYPE, AS, val) __clc_vstore_half_##STYPE##_helper##AS (val, &mem[offset++]);
+
 #define VEC_STORE2(STYPE, AS, val) \
 	VEC_STORE1(STYPE, AS, val.lo) \
 	VEC_STORE1(STYPE, AS, val.hi)
@@ -94,4 +105,16 @@ DECLARE_HELPER(double, __local);
 
 #define __CLC_BODY "vstore_half.inc"
 #include <clc/math/gentype.inc>
-
+#undef __CLC_BODY
+#undef FUNC
+#undef __FUNC
+#undef VEC_LOAD16
+#undef VEC_LOAD8
+#undef VEC_LOAD4
+#undef VEC_LOAD3
+#undef VEC_LOAD2
+#undef VEC_LOAD1
+#undef DECLARE_HELPER
+#undef VSTORE_TYPES
+#undef VSTORE_ADDR_SPACES
+#undef VSTORE_VECTORIZE
