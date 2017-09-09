@@ -180,6 +180,7 @@ static ExprValue bitOr(ExprValue A, ExprValue B) {
 }
 
 void ScriptParser::readDynamicList() {
+  Config->HasDynamicList = true;
   expect("{");
   std::vector<SymbolVersion> Locals;
   std::vector<SymbolVersion> Globals;

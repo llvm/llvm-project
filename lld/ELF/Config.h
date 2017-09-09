@@ -126,6 +126,7 @@ struct Configuration {
   bool GcSections;
   bool GdbIndex;
   bool GnuHash;
+  bool HasDynamicList = false;
   bool ICF;
   bool MipsN32Abi = false;
   bool NoGnuUnique;

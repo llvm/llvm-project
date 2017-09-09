@@ -299,8 +299,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Add(InX::BuildId);
   }
 
-  auto Commons = createCommonSections();
-  for (InputSection *S : Commons)
+  for (InputSection *S : createCommonSections())
     Add(S);
 
   InX::Bss = make<BssSection>(".bss");
@@ -1244,7 +1243,7 @@ static bool computeIsPreemptible(const SymbolBody &B) {
     return true;
 
   // If we have a dynamic list it specifies which local symbols are preemptible.
-  if (!Config->DynamicList.empty())
+  if (Config->HasDynamicList)
     return false;
 
   if (!Config->Shared)
