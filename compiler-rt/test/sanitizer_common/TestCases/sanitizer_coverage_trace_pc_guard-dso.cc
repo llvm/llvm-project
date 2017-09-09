@@ -1,6 +1,7 @@
 // Tests trace pc guard coverage collection.
 //
 // REQUIRES: has_sancovcc,stable-runtime
+// UNSUPPORTED: ubsan
 // XFAIL: tsan,darwin,powerpc64,s390x,mips
 //
 // RUN: DIR=%t_workdir
@@ -68,5 +69,5 @@ int baz() {
 //
 // CHECK-SANCOV: Ignoring {{.*}}_1.so and its coverage because __sanitizer_cov* functions were not found.
 // CHECK-SANCOV: Ignoring {{.*}}_2.so and its coverage because __sanitizer_cov* functions were not found.
-// CHECK-SANCOV-NEXT: sanitizer_coverage_trace_pc_guard-dso.cc:29 foo
-// CHECK-SANCOV-NEXT: sanitizer_coverage_trace_pc_guard-dso.cc:34 main
+// CHECK-SANCOV-NEXT: sanitizer_coverage_trace_pc_guard-dso.cc:[[@LINE-42]] foo
+// CHECK-SANCOV-NEXT: sanitizer_coverage_trace_pc_guard-dso.cc:[[@LINE-38]] main

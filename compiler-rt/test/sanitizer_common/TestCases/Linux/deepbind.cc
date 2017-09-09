@@ -1,5 +1,5 @@
 // RUN: %clangxx %s -o %t && %run not %t 1 2>&1 | FileCheck %s
-// UNSUPPORTED: lsan, android
+// UNSUPPORTED: lsan,ubsan,android
 
 #include <dlfcn.h>
 #include <stdio.h>

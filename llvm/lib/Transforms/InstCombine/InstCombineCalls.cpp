@@ -3743,7 +3743,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         return replaceInstUsesWith(*II, ConstantPointerNull::get(PT));
 
       // isKnownNonNull -> nonnull attribute
-      if (isKnownNonNullAt(DerivedPtr, II, &DT))
+      if (isKnownNonZero(DerivedPtr, DL, 0, &AC, II, &DT))
         II->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
     }
 
@@ -3932,7 +3932,7 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
   for (Value *V : CS.args()) {
     if (V->getType()->isPointerTy() &&
         !CS.paramHasAttr(ArgNo, Attribute::NonNull) &&
-        isKnownNonNullAt(V, CS.getInstruction(), &DT))
+        isKnownNonZero(V, DL, 0, &AC, CS.getInstruction(), &DT))
       ArgNos.push_back(ArgNo);
     ArgNo++;
   }

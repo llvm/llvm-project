@@ -909,12 +909,13 @@ let RecomputePerFunction = 1 in {
   def OptForSize   : Predicate<"MF->getFunction()->optForSize()">;
   def OptForMinSize : Predicate<"MF->getFunction()->optForMinSize()">;
   def OptForSpeed  : Predicate<"!MF->getFunction()->optForSize()">;
+  def UseIncDec : Predicate<"!Subtarget->slowIncDec() || "
+                            "MF->getFunction()->optForSize()">;
 }
 
 def FastBTMem    : Predicate<"!Subtarget->isBTMemSlow()">;
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;
 def FavorMemIndirectCall  : Predicate<"!Subtarget->slowTwoMemOps()">;
-def NotSlowIncDec : Predicate<"!Subtarget->slowIncDec()">;
 def HasFastMem32 : Predicate<"!Subtarget->isUnalignedMem32Slow()">;
 def HasFastLZCNT : Predicate<"Subtarget->hasFastLZCNT()">;
 def HasFastSHLDRotate : Predicate<"Subtarget->hasFastSHLDRotate()">;

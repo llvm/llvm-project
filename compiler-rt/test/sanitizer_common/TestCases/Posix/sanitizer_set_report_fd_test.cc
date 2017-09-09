@@ -9,6 +9,7 @@
 // XFAIL: msan
 // XFAIL: lsan
 // XFAIL: tsan
+// XFAIL: ubsan
 
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>

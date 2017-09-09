@@ -483,6 +483,13 @@ public:
   bool isLegalMaskedScatter(Type *DataType) const;
   bool isLegalMaskedGather(Type *DataType) const;
 
+  /// Return true if the target has a unified operation to calculate division
+  /// and remainder. If so, the additional implicit multiplication and
+  /// subtraction required to calculate a remainder from division are free. This
+  /// can enable more aggressive transformations for division and remainder than
+  /// would typically be allowed using throughput or size cost models.
+  bool hasDivRemOp(Type *DataType, bool IsSigned) const;
+
   /// Return true if target doesn't mind addresses in vectors.
   bool prefersVectorizedAddressing() const;
 
@@ -960,6 +967,7 @@ public:
   virtual bool isLegalMaskedLoad(Type *DataType) = 0;
   virtual bool isLegalMaskedScatter(Type *DataType) = 0;
   virtual bool isLegalMaskedGather(Type *DataType) = 0;
+  virtual bool hasDivRemOp(Type *DataType, bool IsSigned) = 0;
   virtual bool prefersVectorizedAddressing() = 0;
   virtual int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                    int64_t BaseOffset, bool HasBaseReg,
@@ -1181,6 +1189,9 @@ public:
   }
   bool isLegalMaskedGather(Type *DataType) override {
     return Impl.isLegalMaskedGather(DataType);
+  }
+  bool hasDivRemOp(Type *DataType, bool IsSigned) override {
+    return Impl.hasDivRemOp(DataType, IsSigned);
   }
   bool prefersVectorizedAddressing() override {
     return Impl.prefersVectorizedAddressing();
