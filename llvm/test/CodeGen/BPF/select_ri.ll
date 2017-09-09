@@ -18,7 +18,7 @@ entry:
   %tobool = icmp eq i32 %0, 0
   %1 = load i32, i32* @c, align 4
   %. = select i1 %tobool, i32 0, i32 %1
-; CHECK:  r1 = <MCOperand Expr:(b)>ll
+; CHECK:  r1 = b
 ; CHECK:  r1 = *(u32 *)(r1 + 0)
 ; CHECK:  if r1 == 0 goto
   ret i32 %.

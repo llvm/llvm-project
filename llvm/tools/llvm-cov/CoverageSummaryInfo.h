@@ -120,14 +120,14 @@ struct FunctionCoverageSummary {
   RegionCoverageInfo RegionCoverage;
   LineCoverageInfo LineCoverage;
 
-  FunctionCoverageSummary(StringRef Name) : Name(Name), ExecutionCount(0) {}
+  FunctionCoverageSummary(const std::string &Name)
+      : Name(Name), ExecutionCount(0) {}
 
-  FunctionCoverageSummary(StringRef Name, uint64_t ExecutionCount,
+  FunctionCoverageSummary(const std::string &Name, uint64_t ExecutionCount,
                           const RegionCoverageInfo &RegionCoverage,
                           const LineCoverageInfo &LineCoverage)
       : Name(Name), ExecutionCount(ExecutionCount),
-        RegionCoverage(RegionCoverage), LineCoverage(LineCoverage) {
-  }
+        RegionCoverage(RegionCoverage), LineCoverage(LineCoverage) {}
 
   /// \brief Compute the code coverage summary for the given function coverage
   /// mapping record.

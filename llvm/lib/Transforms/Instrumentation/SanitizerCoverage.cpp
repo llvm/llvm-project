@@ -242,6 +242,7 @@ private:
   GlobalVariable *FunctionGuardArray;  // for trace-pc-guard.
   GlobalVariable *Function8bitCounterArray;  // for inline-8bit-counters.
   GlobalVariable *FunctionPCsArray;  // for pc-table.
+  SmallVector<GlobalValue *, 20> GlobalsToAppendToUsed;
 
   SanitizerCoverageOptions Options;
 };
@@ -400,6 +401,10 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
                        {IRB.CreatePointerCast(SecStartEnd.first, IntptrPtrTy),
                         IRB.CreatePointerCast(SecStartEnd.second, IntptrPtrTy)});
   }
+  // We don't reference these arrays directly in any of our runtime functions,
+  // so we need to prevent them from being dead stripped.
+  if (TargetTriple.isOSBinFormatMachO())
+    appendToUsed(M, GlobalsToAppendToUsed);
   return true;
 }
 
@@ -579,25 +584,20 @@ SanitizerCoverageModule::CreatePCArray(Function &F,
 
 void SanitizerCoverageModule::CreateFunctionLocalArrays(
     Function &F, ArrayRef<BasicBlock *> AllBlocks) {
-  SmallVector<GlobalValue *, 3> LocalArrays;
   if (Options.TracePCGuard) {
     FunctionGuardArray = CreateFunctionLocalArrayInSection(
         AllBlocks.size(), F, Int32Ty, SanCovGuardsSectionName);
-    LocalArrays.push_back(FunctionGuardArray);
+    GlobalsToAppendToUsed.push_back(FunctionGuardArray);
   }
   if (Options.Inline8bitCounters) {
     Function8bitCounterArray = CreateFunctionLocalArrayInSection(
         AllBlocks.size(), F, Int8Ty, SanCovCountersSectionName);
-    LocalArrays.push_back(Function8bitCounterArray);
+    GlobalsToAppendToUsed.push_back(Function8bitCounterArray);
   }
   if (Options.PCTable) {
     FunctionPCsArray = CreatePCArray(F, AllBlocks);
-    LocalArrays.push_back(FunctionPCsArray);
+    GlobalsToAppendToUsed.push_back(FunctionPCsArray);
   }
-
-  // We don't reference these arrays directly in any of our runtime functions,
-  // so we need to prevent them from being dead stripped.
-  appendToUsed(*F.getParent(), LocalArrays);
 }
 
 bool SanitizerCoverageModule::InjectCoverage(Function &F,

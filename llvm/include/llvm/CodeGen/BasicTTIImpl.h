@@ -350,6 +350,13 @@ public:
     UP.BEInsns = 2;
   }
 
+  int getInstructionLatency(const Instruction *I) {
+    if (isa<LoadInst>(I))
+      return getST()->getSchedModel().DefaultLoadLatency;
+
+    return BaseT::getInstructionLatency(I);
+  }
+
   /// @}
 
   /// \name Vector TTI Implementations

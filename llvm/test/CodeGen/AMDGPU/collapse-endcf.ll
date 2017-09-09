@@ -202,8 +202,68 @@ bb.end:                                           ; preds = %bb.then, %bb
   ret void
 }
 
+; Make sure scc liveness is updated if sor_b64 is removed
+; GCN-LABEL: {{^}}scc_liveness:
+
+; GCN: [[BB1_LOOP:BB[0-9]+_[0-9]+]]:
+; GCN: s_andn2_b64 exec, exec,
+; GCN-NEXT: s_cbranch_execnz [[BB1_LOOP]]
+
+; GCN: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen
+; GCN: s_and_b64 exec, exec, vcc
+
+; GCN-NOT: s_or_b64 exec, exec
+
+; GCN: s_or_b64 exec, exec, s{{\[[0-9]+:[0-9]+\]}}
+; GCN: s_andn2_b64
+; GCN-NEXT: s_cbranch_execnz
+
+; GCN: s_or_b64 exec, exec, s{{\[[0-9]+:[0-9]+\]}}
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: buffer_store_dword
+; GCN: s_setpc_b64
+define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %Flow1, %bb1, %bb
+  %tmp = icmp slt i32 %arg, 519
+  br i1 %tmp, label %bb2, label %bb1
+
+bb2:                                              ; preds = %bb1
+  %tmp3 = icmp eq i32 %arg, 0
+  br i1 %tmp3, label %bb4, label %bb10
+
+bb4:                                              ; preds = %bb2
+  %tmp6 = load float, float* undef
+  %tmp7 = fcmp olt float %tmp6, 0.0
+  br i1 %tmp7, label %bb8, label %Flow
+
+bb8:                                              ; preds = %bb4
+  %tmp9 = insertelement <4 x float> undef, float 0.0, i32 1
+  br label %Flow
+
+Flow:                                             ; preds = %bb8, %bb4
+  %tmp8 = phi <4 x float> [ %tmp9, %bb8 ], [ zeroinitializer, %bb4 ]
+  br label %bb10
+
+bb10:                                             ; preds = %Flow, %bb2
+  %tmp11 = phi <4 x float> [ zeroinitializer, %bb2 ], [ %tmp8, %Flow ]
+  br i1 %tmp3, label %bb12, label %Flow1
+
+Flow1:                                            ; preds = %bb10
+  br label %bb1
+
+bb12:                                             ; preds = %bb10
+  store volatile <4 x float> %tmp11, <4 x float>* undef, align 16
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare void @llvm.amdgcn.s.barrier() #1
 
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind convergent }
+attributes #2 = { nounwind }

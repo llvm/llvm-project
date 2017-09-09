@@ -2135,7 +2135,7 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
     return false;
 
   auto SelectOpcode = [&](unsigned Opc64, unsigned Opc32, unsigned Opc16,
-                          unsigned Opc8 = 0) {
+                          unsigned Opc8) {
     switch (MemVT.getSimpleVT().SimpleTy) {
     case MVT::i64:
       return Opc64;
@@ -2191,15 +2191,15 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
     auto SelectImm8Opcode = [SelectOpcode](unsigned Opc) {
       switch (Opc) {
       case X86ISD::ADD:
-        return SelectOpcode(X86::ADD64mi8, X86::ADD32mi8, X86::ADD16mi8);
+        return SelectOpcode(X86::ADD64mi8, X86::ADD32mi8, X86::ADD16mi8, 0);
       case X86ISD::SUB:
-        return SelectOpcode(X86::SUB64mi8, X86::SUB32mi8, X86::SUB16mi8);
+        return SelectOpcode(X86::SUB64mi8, X86::SUB32mi8, X86::SUB16mi8, 0);
       case X86ISD::AND:
-        return SelectOpcode(X86::AND64mi8, X86::AND32mi8, X86::AND16mi8);
+        return SelectOpcode(X86::AND64mi8, X86::AND32mi8, X86::AND16mi8, 0);
       case X86ISD::OR:
-        return SelectOpcode(X86::OR64mi8, X86::OR32mi8, X86::OR16mi8);
+        return SelectOpcode(X86::OR64mi8, X86::OR32mi8, X86::OR16mi8, 0);
       case X86ISD::XOR:
-        return SelectOpcode(X86::XOR64mi8, X86::XOR32mi8, X86::XOR16mi8);
+        return SelectOpcode(X86::XOR64mi8, X86::XOR32mi8, X86::XOR16mi8, 0);
       default:
         llvm_unreachable("Invalid opcode!");
       }
@@ -2326,7 +2326,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue VSelect = CurDAG->getNode(
         ISD::VSELECT, SDLoc(Node), Node->getValueType(0), Node->getOperand(0),
         Node->getOperand(1), Node->getOperand(2));
-    ReplaceUses(SDValue(Node, 0), VSelect);
+    ReplaceNode(Node, VSelect.getNode());
     SelectCode(VSelect.getNode());
     // We already called ReplaceUses.
     return;
@@ -2612,6 +2612,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       DEBUG(dbgs() << "=> "; ResHi.getNode()->dump(CurDAG); dbgs() << '\n');
     }
 
+    CurDAG->RemoveDeadNode(Node);
     return;
   }
 
@@ -2796,6 +2797,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       ReplaceUses(SDValue(Node, 1), Result);
       DEBUG(dbgs() << "=> "; Result.getNode()->dump(CurDAG); dbgs() << '\n');
     }
+    CurDAG->RemoveDeadNode(Node);
     return;
   }
 
@@ -2854,6 +2856,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         // one, do not call ReplaceAllUsesWith.
         ReplaceUses(SDValue(Node, (Opcode == X86ISD::SUB ? 1 : 0)),
                     SDValue(NewNode, 0));
+        CurDAG->RemoveDeadNode(Node);
         return;
       }
 
@@ -2889,6 +2892,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         // one, do not call ReplaceAllUsesWith.
         ReplaceUses(SDValue(Node, (Opcode == X86ISD::SUB ? 1 : 0)),
                     SDValue(NewNode, 0));
+        CurDAG->RemoveDeadNode(Node);
         return;
       }
 
@@ -2909,6 +2913,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         // one, do not call ReplaceAllUsesWith.
         ReplaceUses(SDValue(Node, (Opcode == X86ISD::SUB ? 1 : 0)),
                     SDValue(NewNode, 0));
+        CurDAG->RemoveDeadNode(Node);
         return;
       }
 
@@ -2929,6 +2934,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         // one, do not call ReplaceAllUsesWith.
         ReplaceUses(SDValue(Node, (Opcode == X86ISD::SUB ? 1 : 0)),
                     SDValue(NewNode, 0));
+        CurDAG->RemoveDeadNode(Node);
         return;
       }
     }
