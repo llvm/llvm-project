@@ -57,5 +57,6 @@ int main(void) {
 // CHECK-tsan: rw-p {{.*}} [trace 1]
 // CHECK-tsan: rw-p {{.*}} [trace header 1]
 
-// Nothing interesting with standalone LSan.
+// Nothing interesting with standalone LSan and UBSan.
 // CHECK-lsan: decorate_proc_maps
+// CHECK-ubsan: decorate_proc_maps
