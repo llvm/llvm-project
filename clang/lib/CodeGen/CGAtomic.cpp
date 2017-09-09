@@ -756,7 +756,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   std::tie(sizeChars, alignChars) = getContext().getTypeInfoInChars(AtomicTy);
   uint64_t Size = sizeChars.getQuantity();
   unsigned MaxInlineWidthInBits = getTarget().getMaxAtomicInlineWidth();
-  bool UseLibcall = (sizeChars != Ptr.getAlignment() ||
+  bool UseLibcall = ((Ptr.getAlignment() % sizeChars) != 0 ||
                      getContext().toBits(sizeChars) > MaxInlineWidthInBits);
 
   if (E->getOp() == AtomicExpr::AO__c11_atomic_init ||

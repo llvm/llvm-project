@@ -754,10 +754,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         goto failure;
 
       // Reinitialize the main file entry to refer to the new input.
-      if (!CI.InitializeSourceManager(FrontendInputFile(
-              Buffer.release(), Input.getKind().withFormat(InputKind::Source),
-              CurrentModule->IsSystem)))
-        goto failure;
+      auto Kind = CurrentModule->IsSystem ? SrcMgr::C_System : SrcMgr::C_User;
+      auto &SourceMgr = CI.getSourceManager();
+      auto BufferID = SourceMgr.createFileID(std::move(Buffer), Kind);
+      assert(BufferID.isValid() && "couldn't creaate module buffer ID");
+      SourceMgr.setMainFileID(BufferID);
     }
   }
 

@@ -70,7 +70,7 @@ def llvm_config(args):
 
 llvm_version = llvm_config(['--version']).replace('svn', '').split('.')
 llvm_int_version = int(llvm_version[0]) * 100 + int(llvm_version[1]) * 10
-llvm_string_version = 'LLVM' + llvm_version[0] + '.' + llvm_version[1]
+llvm_string_version = llvm_version[0] + '.' + llvm_version[1]
 
 if llvm_int_version < 400:
     print("libclc requires LLVM >= 4.0")
@@ -202,7 +202,7 @@ for target in targets:
 
     objects = []
     sources_seen = set()
-    compats_seen = set()
+    compats = []
 
     if device['gpu'] == '':
       full_target_name = target
@@ -222,7 +222,7 @@ for target in targets:
       if os.path.exists(compat_list_file):
         for compat in open(compat_list_file).readlines():
           compat = compat.rstrip()
-          compats_seen.add(compat)
+          compats.append(compat)
 
       # Add target overrides
       if os.path.exists(override_list_file):
@@ -230,15 +230,13 @@ for target in targets:
           override = override.rstrip()
           sources_seen.add(override)
 
-      for src in open(subdir_list_file).readlines():
+      for src in open(subdir_list_file).readlines() + compats:
         src = src.rstrip()
         if src not in sources_seen:
           sources_seen.add(src)
           obj = os.path.join(target, 'lib', src + obj_suffix + '.bc')
           objects.append(obj)
           src_path = libdir
-          if src in compats_seen:
-            src_path = os.path.join(libdir, llvm_string_version)
           src_file = os.path.join(src_path, src)
           ext = os.path.splitext(src)[1]
           if ext == '.ll':
