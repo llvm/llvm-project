@@ -155,7 +155,7 @@ define i64 @test_no_simplify2(i32 %x) {
 ; CHECK-LABEL: @test_no_simplify2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [7 x i32], [7 x i32]* @null_hello, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(i32* [[HELLO_P]])
+; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(i32* nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %hello_p = getelementptr inbounds [7 x i32], [7 x i32]* @null_hello, i32 0, i32 %x
@@ -170,7 +170,7 @@ define i64 @test_no_simplify3(i32 %x) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[AND]] to i64
 ; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [13 x i32], [13 x i32]* @null_hello_mid, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(i32* [[HELLO_P]])
+; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(i32* nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %and = and i32 %x, 15

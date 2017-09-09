@@ -16587,14 +16587,18 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
     if (ConstantSDNode *C =
         dyn_cast<ConstantSDNode>(ArithOp.getOperand(1))) {
       // An add of one will be selected as an INC.
-      if (C->isOne() && !Subtarget.slowIncDec()) {
+      if (C->isOne() &&
+          (!Subtarget.slowIncDec() ||
+           DAG.getMachineFunction().getFunction()->optForSize())) {
         Opcode = X86ISD::INC;
         NumOperands = 1;
         break;
       }
 
       // An add of negative one (subtract of one) will be selected as a DEC.
-      if (C->isAllOnesValue() && !Subtarget.slowIncDec()) {
+      if (C->isAllOnesValue() &&
+          (!Subtarget.slowIncDec() ||
+           DAG.getMachineFunction().getFunction()->optForSize())) {
         Opcode = X86ISD::DEC;
         NumOperands = 1;
         break;

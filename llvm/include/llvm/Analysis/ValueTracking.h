@@ -367,19 +367,6 @@ class Value;
   /// operands are not memory dependent.
   bool mayBeMemoryDependent(const Instruction &I);
 
-  /// Return true if this pointer couldn't possibly be null by its definition.
-  /// This returns true for allocas, non-extern-weak globals, and byval
-  /// arguments.
-  bool isKnownNonNull(const Value *V);
-
-  /// Return true if this pointer couldn't possibly be null. If the context
-  /// instruction and dominator tree are specified, perform context-sensitive
-  /// analysis and return true if the pointer couldn't possibly be null at the
-  /// specified instruction.
-  bool isKnownNonNullAt(const Value *V,
-                        const Instruction *CtxI = nullptr,
-                        const DominatorTree *DT = nullptr);
-
   /// Return true if it is valid to use the assumptions provided by an
   /// assume intrinsic, I, at the point in the control-flow identified by the
   /// context instruction, CxtI.

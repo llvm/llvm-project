@@ -17,11 +17,11 @@ entry:
 ; CHECK: bb3:
 ; CHECK-NEXT: call void @llvm.dbg.declare
 ; CHECK-NEXT: br label %fin
-; CHECK: call void @llvm.lifetime.start.p0i8(i64 1, i8* %[[T]])
-; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 1, i8* %[[B]])
-; CHECK-NEXT: call void @foo(i8* %[[B]], i8* %[[T]])
-; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 1, i8* %[[B]])
-; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 1, i8* %[[T]])
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %[[T]])
+; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %[[B]])
+; CHECK-NEXT: call void @foo(i8* nonnull %[[B]], i8* nonnull %[[T]])
+; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %[[B]])
+; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull %[[T]])
   %text = alloca [1 x i8], align 1
   %buff = alloca [1 x i8], align 1
   %0 = getelementptr inbounds [1 x i8], [1 x i8]* %text, i64 0, i64 0

@@ -1749,6 +1749,58 @@ static bool isGEPKnownNonNull(const GEPOperator *GEP, unsigned Depth,
   return false;
 }
 
+static bool isKnownNonNullFromDominatingCondition(const Value *V,
+                                                  const Instruction *CtxI,
+                                                  const DominatorTree *DT) {
+  assert(V->getType()->isPointerTy() && "V must be pointer type");
+  assert(!isa<ConstantData>(V) && "Did not expect ConstantPointerNull");
+
+  if (!CtxI || !DT)
+    return false;
+
+  unsigned NumUsesExplored = 0;
+  for (auto *U : V->users()) {
+    // Avoid massive lists
+    if (NumUsesExplored >= DomConditionsMaxUses)
+      break;
+    NumUsesExplored++;
+
+    // If the value is used as an argument to a call or invoke, then argument
+    // attributes may provide an answer about null-ness.
+    if (auto CS = ImmutableCallSite(U))
+      if (auto *CalledFunc = CS.getCalledFunction())
+        for (const Argument &Arg : CalledFunc->args())
+          if (CS.getArgOperand(Arg.getArgNo()) == V &&
+              Arg.hasNonNullAttr() && DT->dominates(CS.getInstruction(), CtxI))
+            return true;
+
+    // Consider only compare instructions uniquely controlling a branch
+    CmpInst::Predicate Pred;
+    if (!match(const_cast<User *>(U),
+               m_c_ICmp(Pred, m_Specific(V), m_Zero())) ||
+        (Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE))
+      continue;
+
+    for (auto *CmpU : U->users()) {
+      if (const BranchInst *BI = dyn_cast<BranchInst>(CmpU)) {
+        assert(BI->isConditional() && "uses a comparison!");
+
+        BasicBlock *NonNullSuccessor =
+            BI->getSuccessor(Pred == ICmpInst::ICMP_EQ ? 1 : 0);
+        BasicBlockEdge Edge(BI->getParent(), NonNullSuccessor);
+        if (Edge.isSingleEdge() && DT->dominates(Edge, CtxI->getParent()))
+          return true;
+      } else if (Pred == ICmpInst::ICMP_NE &&
+                 match(CmpU, m_Intrinsic<Intrinsic::experimental_guard>()) &&
+                 DT->dominates(cast<Instruction>(CmpU), CtxI)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 /// Does the 'Range' metadata (which must be a valid MD_range operand list)
 /// ensure that the value it's attached to is never Value?  'RangeType' is
 /// is the type of the value described by the range.
@@ -1794,7 +1846,15 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
       return true;
     }
 
-    return false;
+    // A global variable in address space 0 is non null unless extern weak
+    // or an absolute symbol reference. Other address spaces may have null as a
+    // valid address for a global, so we can't assume anything.
+    if (const GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
+      if (!GV->isAbsoluteSymbolRef() && !GV->hasExternalWeakLinkage() &&
+          GV->getType()->getAddressSpace() == 0)
+        return true;
+    } else
+      return false;
   }
 
   if (auto *I = dyn_cast<Instruction>(V)) {
@@ -1809,14 +1869,36 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
     }
   }
 
+  // Check for pointer simplifications.
+  if (V->getType()->isPointerTy()) {
+    // Alloca never returns null, malloc might.
+    if (isa<AllocaInst>(V) && Q.DL.getAllocaAddrSpace() == 0)
+      return true;
+
+    // A byval, inalloca, or nonnull argument is never null.
+    if (const Argument *A = dyn_cast<Argument>(V))
+      if (A->hasByValOrInAllocaAttr() || A->hasNonNullAttr())
+        return true;
+
+    // A Load tagged with nonnull metadata is never null.
+    if (const LoadInst *LI = dyn_cast<LoadInst>(V))
+      if (LI->getMetadata(LLVMContext::MD_nonnull))
+        return true;
+
+    if (auto CS = ImmutableCallSite(V))
+      if (CS.isReturnNonNull())
+        return true;
+  }
+
   // The remaining tests are all recursive, so bail out if we hit the limit.
   if (Depth++ >= MaxDepth)
     return false;
 
-  // Check for pointer simplifications.
+  // Check for recursive pointer simplifications.
   if (V->getType()->isPointerTy()) {
-    if (isKnownNonNullAt(V, Q.CxtI, Q.DT))
+    if (isKnownNonNullFromDominatingCondition(V, Q.CxtI, Q.DT))
       return true;
+
     if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V))
       if (isGEPKnownNonNull(GEP, Depth, Q))
         return true;
@@ -3480,100 +3562,6 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
 
 bool llvm::mayBeMemoryDependent(const Instruction &I) {
   return I.mayReadOrWriteMemory() || !isSafeToSpeculativelyExecute(&I);
-}
-
-/// Return true if we know that the specified value is never null.
-bool llvm::isKnownNonNull(const Value *V) {
-  assert(V->getType()->isPointerTy() && "V must be pointer type");
-
-  // Alloca never returns null, malloc might.
-  if (isa<AllocaInst>(V)) return true;
-
-  // A byval, inalloca, or nonnull argument is never null.
-  if (const Argument *A = dyn_cast<Argument>(V))
-    return A->hasByValOrInAllocaAttr() || A->hasNonNullAttr();
-
-  // A global variable in address space 0 is non null unless extern weak
-  // or an absolute symbol reference. Other address spaces may have null as a
-  // valid address for a global, so we can't assume anything.
-  if (const GlobalValue *GV = dyn_cast<GlobalValue>(V))
-    return !GV->isAbsoluteSymbolRef() && !GV->hasExternalWeakLinkage() &&
-           GV->getType()->getAddressSpace() == 0;
-
-  // A Load tagged with nonnull metadata is never null.
-  if (const LoadInst *LI = dyn_cast<LoadInst>(V))
-    return LI->getMetadata(LLVMContext::MD_nonnull);
-
-  if (auto CS = ImmutableCallSite(V))
-    if (CS.isReturnNonNull())
-      return true;
-
-  return false;
-}
-
-static bool isKnownNonNullFromDominatingCondition(const Value *V,
-                                                  const Instruction *CtxI,
-                                                  const DominatorTree *DT) {
-  assert(V->getType()->isPointerTy() && "V must be pointer type");
-  assert(!isa<ConstantData>(V) && "Did not expect ConstantPointerNull");
-  assert(CtxI && "Context instruction required for analysis");
-  assert(DT && "Dominator tree required for analysis");
-
-  unsigned NumUsesExplored = 0;
-  for (auto *U : V->users()) {
-    // Avoid massive lists
-    if (NumUsesExplored >= DomConditionsMaxUses)
-      break;
-    NumUsesExplored++;
-
-    // If the value is used as an argument to a call or invoke, then argument
-    // attributes may provide an answer about null-ness.
-    if (auto CS = ImmutableCallSite(U))
-      if (auto *CalledFunc = CS.getCalledFunction())
-        for (const Argument &Arg : CalledFunc->args())
-          if (CS.getArgOperand(Arg.getArgNo()) == V &&
-              Arg.hasNonNullAttr() && DT->dominates(CS.getInstruction(), CtxI))
-            return true;
-
-    // Consider only compare instructions uniquely controlling a branch
-    CmpInst::Predicate Pred;
-    if (!match(const_cast<User *>(U),
-               m_c_ICmp(Pred, m_Specific(V), m_Zero())) ||
-        (Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE))
-      continue;
-
-    for (auto *CmpU : U->users()) {
-      if (const BranchInst *BI = dyn_cast<BranchInst>(CmpU)) {
-        assert(BI->isConditional() && "uses a comparison!");
-
-        BasicBlock *NonNullSuccessor =
-            BI->getSuccessor(Pred == ICmpInst::ICMP_EQ ? 1 : 0);
-        BasicBlockEdge Edge(BI->getParent(), NonNullSuccessor);
-        if (Edge.isSingleEdge() && DT->dominates(Edge, CtxI->getParent()))
-          return true;
-      } else if (Pred == ICmpInst::ICMP_NE &&
-                 match(CmpU, m_Intrinsic<Intrinsic::experimental_guard>()) &&
-                 DT->dominates(cast<Instruction>(CmpU), CtxI)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-bool llvm::isKnownNonNullAt(const Value *V, const Instruction *CtxI,
-                            const DominatorTree *DT) {
-  if (isa<ConstantPointerNull>(V) || isa<UndefValue>(V))
-    return false;
-
-  if (isKnownNonNull(V))
-    return true;
-
-  if (!CtxI || !DT)
-    return false;
-
-  return ::isKnownNonNullFromDominatingCondition(V, CtxI, DT);
 }
 
 OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
