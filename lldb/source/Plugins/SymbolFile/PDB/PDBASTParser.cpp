@@ -95,11 +95,11 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
 
     m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
 
-    return std::make_shared<Type>(type.getSymIndexId(), m_ast.GetSymbolFile(),
-                                  ConstString(udt->getName()), udt->getLength(),
-                                  nullptr, LLDB_INVALID_UID,
-                                  Type::eEncodingIsUID, decl, clang_type,
-                                  Type::eResolveStateForward);
+    return std::make_shared<lldb_private::Type>(
+        type.getSymIndexId(), m_ast.GetSymbolFile(),
+        ConstString(udt->getName()), udt->getLength(), nullptr,
+        LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl, clang_type,
+        lldb_private::Type::eResolveStateForward);
   } else if (auto enum_type = llvm::dyn_cast<PDBSymbolTypeEnum>(&type)) {
     std::string name = enum_type->getName();
     lldb::Encoding encoding =
@@ -117,12 +117,12 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       AddEnumValue(ast_enum, *enum_value);
     }
 
-    return std::make_shared<Type>(type.getSymIndexId(), m_ast.GetSymbolFile(),
-                                  ConstString(name), bytes, nullptr,
-                                  LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
-                                  ast_enum, Type::eResolveStateFull);
+    return std::make_shared<lldb_private::Type>(
+        type.getSymIndexId(), m_ast.GetSymbolFile(), ConstString(name), bytes,
+        nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
+        ast_enum, lldb_private::Type::eResolveStateFull);
   } else if (auto type_def = llvm::dyn_cast<PDBSymbolTypeTypedef>(&type)) {
-    Type *target_type =
+    lldb_private::Type *target_type =
         m_ast.GetSymbolFile()->ResolveTypeUID(type_def->getTypeId());
     std::string name = type_def->getName();
     uint64_t bytes = type_def->getLength();
@@ -133,16 +133,17 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         m_ast.GetSymbolFile()->GetDeclContextForUID(target_type->GetID());
     CompilerType ast_typedef =
         m_ast.CreateTypedefType(target_ast_type, name.c_str(), target_decl_ctx);
-    return std::make_shared<Type>(
+    return std::make_shared<lldb_private::Type>(
         type_def->getSymIndexId(), m_ast.GetSymbolFile(), ConstString(name),
-        bytes, nullptr, target_type->GetID(), Type::eEncodingIsTypedefUID, decl,
-        ast_typedef, Type::eResolveStateFull);
+        bytes, nullptr, target_type->GetID(),
+        lldb_private::Type::eEncodingIsTypedefUID, decl, ast_typedef,
+        lldb_private::Type::eResolveStateFull);
   } else if (auto func_sig = llvm::dyn_cast<PDBSymbolTypeFunctionSig>(&type)) {
     auto arg_enum = func_sig->getArguments();
     uint32_t num_args = arg_enum->getChildCount();
     std::vector<CompilerType> arg_list(num_args);
     while (auto arg = arg_enum->getNext()) {
-      Type *arg_type =
+      lldb_private::Type *arg_type =
           m_ast.GetSymbolFile()->ResolveTypeUID(arg->getSymIndexId());
       // If there's some error looking up one of the dependent types of this
       // function signature, bail.
@@ -152,7 +153,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       arg_list.push_back(arg_ast_type);
     }
     auto pdb_return_type = func_sig->getReturnType();
-    Type *return_type =
+    lldb_private::Type *return_type =
         m_ast.GetSymbolFile()->ResolveTypeUID(pdb_return_type->getSymIndexId());
     // If there's some error looking up one of the dependent types of this
     // function signature, bail.
@@ -167,23 +168,24 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     CompilerType func_sig_ast_type = m_ast.CreateFunctionType(
         return_ast_type, &arg_list[0], num_args, false, type_quals);
 
-    return std::make_shared<Type>(
+    return std::make_shared<lldb_private::Type>(
         func_sig->getSymIndexId(), m_ast.GetSymbolFile(), ConstString(), 0,
-        nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
-        func_sig_ast_type, Type::eResolveStateFull);
+        nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
+        func_sig_ast_type, lldb_private::Type::eResolveStateFull);
   } else if (auto array_type = llvm::dyn_cast<PDBSymbolTypeArray>(&type)) {
     uint32_t num_elements = array_type->getCount();
     uint32_t element_uid = array_type->getElementType()->getSymIndexId();
     uint32_t bytes = array_type->getLength();
 
-    Type *element_type = m_ast.GetSymbolFile()->ResolveTypeUID(element_uid);
+    lldb_private::Type *element_type =
+        m_ast.GetSymbolFile()->ResolveTypeUID(element_uid);
     CompilerType element_ast_type = element_type->GetFullCompilerType();
     CompilerType array_ast_type =
         m_ast.CreateArrayType(element_ast_type, num_elements, false);
-    return std::make_shared<Type>(
+    return std::make_shared<lldb_private::Type>(
         array_type->getSymIndexId(), m_ast.GetSymbolFile(), ConstString(),
-        bytes, nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
-        array_ast_type, Type::eResolveStateFull);
+        bytes, nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID,
+        decl, array_ast_type, lldb_private::Type::eResolveStateFull);
   }
   return nullptr;
 }

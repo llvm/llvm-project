@@ -40,7 +40,7 @@ define i32 @ebpf_filter(%struct.__sk_buff* nocapture readnone %ebpf_packet) #0 s
 
 ; CHECK: r2 = r10
 ; CHECK: r2 += -8
-; CHECK: r1 = <MCOperand Expr:(routing)>ll
+; CHECK: r1 = routing
 ; CHECK: call bpf_map_lookup_elem
 ; CHECK: exit
   %key = alloca %struct.routing_key_2, align 1

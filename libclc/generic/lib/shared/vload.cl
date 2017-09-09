@@ -50,3 +50,62 @@ VLOAD_TYPES()
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
     VLOAD_ADDR_SPACES(double)
 #endif
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+    VLOAD_ADDR_SPACES(half)
+#endif
+
+/* vload_half are legal even without cl_khr_fp16 */
+/* no vload_half for double */
+#if __clang_major__ < 6
+float __clc_vload_half_float_helper__constant(const __constant half *);
+float __clc_vload_half_float_helper__global(const __global half *);
+float __clc_vload_half_float_helper__local(const __local half *);
+float __clc_vload_half_float_helper__private(const __private half *);
+
+#define VEC_LOAD1(val, AS) val = __clc_vload_half_float_helper##AS (&mem[offset++]);
+#else
+#define VEC_LOAD1(val, AS) val = __builtin_load_halff(&mem[offset++]);
+#endif
+
+#define VEC_LOAD2(val, AS) \
+	VEC_LOAD1(val.lo, AS) \
+	VEC_LOAD1(val.hi, AS)
+#define VEC_LOAD3(val, AS) \
+	VEC_LOAD1(val.s0, AS) \
+	VEC_LOAD1(val.s1, AS) \
+	VEC_LOAD1(val.s2, AS)
+#define VEC_LOAD4(val, AS) \
+	VEC_LOAD2(val.lo, AS) \
+	VEC_LOAD2(val.hi, AS)
+#define VEC_LOAD8(val, AS) \
+	VEC_LOAD4(val.lo, AS) \
+	VEC_LOAD4(val.hi, AS)
+#define VEC_LOAD16(val, AS) \
+	VEC_LOAD8(val.lo, AS) \
+	VEC_LOAD8(val.hi, AS)
+
+#define __FUNC(SUFFIX, VEC_SIZE, TYPE, AS) \
+  _CLC_OVERLOAD _CLC_DEF TYPE vload_half##SUFFIX(size_t offset, const AS half *mem) { \
+    offset *= VEC_SIZE; \
+    TYPE __tmp; \
+    VEC_LOAD##VEC_SIZE(__tmp, AS) \
+    return __tmp; \
+  }
+
+#define FUNC(SUFFIX, VEC_SIZE, TYPE, AS) __FUNC(SUFFIX, VEC_SIZE, TYPE, AS)
+
+#define __CLC_BODY "vload_half.inc"
+#include <clc/math/gentype.inc>
+#undef __CLC_BODY
+#undef FUNC
+#undef __FUNC
+#undef VEC_LOAD16
+#undef VEC_LOAD8
+#undef VEC_LOAD4
+#undef VEC_LOAD3
+#undef VEC_LOAD2
+#undef VEC_LOAD1
+#undef VLOAD_TYPES
+#undef VLOAD_ADDR_SPACES
+#undef VLOAD_VECTORIZE
