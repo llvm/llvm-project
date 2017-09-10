@@ -104,6 +104,7 @@ struct Configuration {
   std::vector<llvm::StringRef> SearchPaths;
   std::vector<llvm::StringRef> SymbolOrderingFile;
   std::vector<llvm::StringRef> Undefined;
+  std::vector<SymbolVersion> DynamicList;
   std::vector<SymbolVersion> VersionScriptGlobals;
   std::vector<SymbolVersion> VersionScriptLocals;
   std::vector<uint8_t> BuildIdVector;
@@ -125,6 +126,7 @@ struct Configuration {
   bool GcSections;
   bool GdbIndex;
   bool GnuHash;
+  bool HasDynamicList = false;
   bool ICF;
   bool MipsN32Abi = false;
   bool NoGnuUnique;

@@ -4339,8 +4339,8 @@ struct __invokable_r
     using _Result = decltype(
         _VSTD::__invoke(_VSTD::declval<_Fp>(), _VSTD::declval<_Args>()...));
 
-    static const bool value =
-        conditional<
+    using type =
+        typename conditional<
             !is_same<_Result, __nat>::value,
             typename conditional<
                 is_void<_Ret>::value,
@@ -4348,7 +4348,8 @@ struct __invokable_r
                 is_convertible<_Result, _Ret>
             >::type,
             false_type
-        >::type::value;
+        >::type;
+    static const bool value = type::value;
 };
 
 template <class _Fp, class ..._Args>
