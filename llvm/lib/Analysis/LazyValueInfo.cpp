@@ -817,12 +817,12 @@ bool LazyValueInfoImpl::solveBlockValueImpl(LVILatticeVal &Res,
   // definition.  We could easily extend this to look through geps, bitcasts,
   // and the like to prove non-nullness, but it's not clear that's worth it
   // compile time wise.  The context-insensitive value walk done inside
-  // isKnownNonNull gets most of the profitable cases at much less expense.
+  // isKnownNonZero gets most of the profitable cases at much less expense.
   // This does mean that we have a sensativity to where the defining
   // instruction is placed, even if it could legally be hoisted much higher.
   // That is unfortunate.
   PointerType *PT = dyn_cast<PointerType>(BBI->getType());
-  if (PT && isKnownNonNull(BBI)) {
+  if (PT && isKnownNonZero(BBI, DL)) {
     Res = LVILatticeVal::getNot(ConstantPointerNull::get(PT));
     return true;
   }
@@ -901,7 +901,7 @@ bool LazyValueInfoImpl::solveBlockValueNonLocal(LVILatticeVal &BBLV,
     // Before giving up, see if we can prove the pointer non-null local to
     // this particular block.
     if (Val->getType()->isPointerTy() &&
-        (isKnownNonNull(Val) || isObjectDereferencedInBlock(Val, BB))) {
+        (isKnownNonZero(Val, DL) || isObjectDereferencedInBlock(Val, BB))) {
       PointerType *PTy = cast<PointerType>(Val->getType());
       Result = LVILatticeVal::getNot(ConstantPointerNull::get(PTy));
     } else {
@@ -1886,17 +1886,17 @@ LazyValueInfo::Tristate
 LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
                               Instruction *CxtI) {
   // Is or is not NonNull are common predicates being queried. If
-  // isKnownNonNull can tell us the result of the predicate, we can
+  // isKnownNonZero can tell us the result of the predicate, we can
   // return it quickly. But this is only a fastpath, and falling
   // through would still be correct.
+  const DataLayout &DL = CxtI->getModule()->getDataLayout();
   if (V->getType()->isPointerTy() && C->isNullValue() &&
-      isKnownNonNull(V->stripPointerCasts())) {
+      isKnownNonZero(V->stripPointerCasts(), DL)) {
     if (Pred == ICmpInst::ICMP_EQ)
       return LazyValueInfo::False;
     else if (Pred == ICmpInst::ICMP_NE)
       return LazyValueInfo::True;
   }
-  const DataLayout &DL = CxtI->getModule()->getDataLayout();
   LVILatticeVal Result = getImpl(PImpl, AC, &DL, DT).getValueAt(V, CxtI);
   Tristate Ret = getPredicateResult(Pred, C, Result, DL, TLI);
   if (Ret != Unknown)
