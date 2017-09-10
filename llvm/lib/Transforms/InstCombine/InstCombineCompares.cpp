@@ -4468,7 +4468,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  // comparing -val or val with non-zero is the same as just comparing val
+  // Comparing -val or val with non-zero is the same as just comparing val
   // ie, abs(val) != 0 -> val != 0
   if (I.getPredicate() == ICmpInst::ICMP_NE && match(Op1, m_Zero())) {
     Value *Cond, *SelectTrue, *SelectFalse;

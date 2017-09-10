@@ -273,7 +273,7 @@ def : Pat<(i16 0), (EXTRACT_SUBREG (MOV32r0), sub_16bit)>;
 def : Pat<(i64 0), (SUBREG_TO_REG (i64 0), (MOV32r0), sub_32bit)>;
 }
 
-let Predicates = [OptForSize, NotSlowIncDec, Not64BitMode],
+let Predicates = [OptForSize, Not64BitMode],
     AddedComplexity = 10 in {
   // Pseudo instructions for materializing 1 and -1 using XOR+INC/DEC,
   // which only require 3 bytes compared to MOV32ri which requires 5.
@@ -698,7 +698,7 @@ defm LOCK_XOR : LOCK_ArithBinOp<0x30, 0x80, 0x83, MRM6m, X86lock_xor, "xor">;
 multiclass LOCK_ArithUnOp<bits<8> Opc8, bits<8> Opc, Format Form,
                           int Increment, string mnemonic> {
 let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
-    SchedRW = [WriteALULd, WriteRMW], Predicates = [NotSlowIncDec] in {
+    SchedRW = [WriteALULd, WriteRMW] in {
 def NAME#8m  : I<Opc8, Form, (outs), (ins i8mem :$dst),
                  !strconcat(mnemonic, "{b}\t$dst"),
                  [(set EFLAGS, (X86lock_add addr:$dst, (i8 Increment)))],
@@ -718,8 +718,10 @@ def NAME#64m : RI<Opc, Form, (outs), (ins i64mem:$dst),
 }
 }
 
+let Predicates = [UseIncDec] in {
 defm LOCK_INC    : LOCK_ArithUnOp<0xFE, 0xFF, MRM0m,  1, "inc">;
 defm LOCK_DEC    : LOCK_ArithUnOp<0xFE, 0xFF, MRM1m, -1, "dec">;
+}
 
 // Atomic compare and swap.
 multiclass LCMPXCHG_UnOp<bits<8> Opc, Format Form, string mnemonic,
@@ -942,17 +944,17 @@ multiclass RELEASE_UNOP<dag dag8, dag dag16, dag dag32, dag dag64> {
         [(atomic_store_64 addr:$dst, dag64)]>;
 }
 
-let Defs = [EFLAGS] in {
+let Defs = [EFLAGS], Predicates = [UseIncDec] in {
   defm RELEASE_INC : RELEASE_UNOP<
       (add (atomic_load_8  addr:$dst), (i8 1)),
       (add (atomic_load_16 addr:$dst), (i16 1)),
       (add (atomic_load_32 addr:$dst), (i32 1)),
-      (add (atomic_load_64 addr:$dst), (i64 1))>, Requires<[NotSlowIncDec]>;
+      (add (atomic_load_64 addr:$dst), (i64 1))>;
   defm RELEASE_DEC : RELEASE_UNOP<
       (add (atomic_load_8  addr:$dst), (i8 -1)),
       (add (atomic_load_16 addr:$dst), (i16 -1)),
       (add (atomic_load_32 addr:$dst), (i32 -1)),
-      (add (atomic_load_64 addr:$dst), (i64 -1))>, Requires<[NotSlowIncDec]>;
+      (add (atomic_load_64 addr:$dst), (i64 -1))>;
 }
 /*
 TODO: These don't work because the type inference of TableGen fails.
@@ -1917,7 +1919,7 @@ def : Pat<(mul (loadi64 addr:$src1), i64immSExt32:$src2),
 
 // Increment/Decrement reg.
 // Do not make INC/DEC if it is slow
-let Predicates = [NotSlowIncDec] in {
+let Predicates = [UseIncDec] in {
   def : Pat<(add GR8:$src, 1),   (INC8r GR8:$src)>;
   def : Pat<(add GR16:$src, 1),  (INC16r GR16:$src)>;
   def : Pat<(add GR32:$src, 1),  (INC32r GR32:$src)>;

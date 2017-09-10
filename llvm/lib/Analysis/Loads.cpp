@@ -72,7 +72,7 @@ static bool isDereferenceableAndAlignedPointer(
                         V->getPointerDereferenceableBytes(DL, CheckForNonNull));
   if (KnownDerefBytes.getBoolValue()) {
     if (KnownDerefBytes.uge(Size))
-      if (!CheckForNonNull || isKnownNonNullAt(V, CtxI, DT))
+      if (!CheckForNonNull || isKnownNonZero(V, DL, 0, nullptr, CtxI, DT))
         return isAligned(V, Align, DL);
   }
 

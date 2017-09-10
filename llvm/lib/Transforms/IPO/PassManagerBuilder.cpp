@@ -673,6 +673,11 @@ void PassManagerBuilder::populateModulePassManager(
   // Get rid of LCSSA nodes.
   MPM.add(createInstructionSimplifierPass());
 
+  // This hoists/decomposes div/rem ops. It should run after other sink/hoist
+  // passes to avoid re-sinking, but before SimplifyCFG because it can allow
+  // flattening of blocks.
+  MPM.add(createDivRemPairsPass());
+
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
   MPM.add(createCFGSimplificationPass());
