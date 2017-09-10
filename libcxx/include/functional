@@ -1597,11 +1597,9 @@ class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>
       return reinterpret_cast<__base*>(p);
     }
 
-    template <class _Fp, bool = __lazy_and<
-        integral_constant<bool, !is_same<__uncvref_t<_Fp>, function>::value>,
-        __invokable<_Fp&, _ArgTypes...>
-    >::value>
-    struct __callable;
+    template <class _Fp, bool = !is_same<_Fp, function>::value &&
+                                __invokable<_Fp&, _ArgTypes...>::value>
+        struct __callable;
     template <class _Fp>
         struct __callable<_Fp, true>
         {
@@ -1614,9 +1612,6 @@ class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>
         {
             static const bool value = false;
         };
-
-  template <class _Fp>
-  using _EnableIfCallable = typename enable_if<__callable<_Fp>::value>::type;
 public:
     typedef _Rp result_type;
 
@@ -1627,7 +1622,9 @@ public:
     function(nullptr_t) _NOEXCEPT : __f_(0) {}
     function(const function&);
     function(function&&) _NOEXCEPT;
-    template<class _Fp, class = _EnableIfCallable<_Fp>>
+    template<class _Fp, class = typename enable_if<
+        __callable<_Fp>::value && !is_same<_Fp, function>::value
+    >::type>
     function(_Fp);
 
 #if _LIBCPP_STD_VER <= 14
@@ -1641,15 +1638,21 @@ public:
       function(allocator_arg_t, const _Alloc&, const function&);
     template<class _Alloc>
       function(allocator_arg_t, const _Alloc&, function&&);
-    template<class _Fp, class _Alloc, class = _EnableIfCallable<_Fp>>
+    template<class _Fp, class _Alloc, class = typename enable_if<__callable<_Fp>::value>::type>
       function(allocator_arg_t, const _Alloc& __a, _Fp __f);
 #endif
 
     function& operator=(const function&);
     function& operator=(function&&) _NOEXCEPT;
     function& operator=(nullptr_t) _NOEXCEPT;
-    template<class _Fp, class = _EnableIfCallable<_Fp>>
-    function& operator=(_Fp&&);
+    template<class _Fp>
+      typename enable_if
+      <
+        __callable<typename decay<_Fp>::type>::value &&
+        !is_same<typename remove_reference<_Fp>::type, function>::value,
+        function&
+      >::type
+      operator=(_Fp&&);
 
     ~function();
 
@@ -1851,8 +1854,13 @@ function<_Rp(_ArgTypes...)>::operator=(nullptr_t) _NOEXCEPT
 }
 
 template<class _Rp, class ..._ArgTypes>
-template <class _Fp, class>
-function<_Rp(_ArgTypes...)>&
+template <class _Fp>
+typename enable_if
+<
+    function<_Rp(_ArgTypes...)>::template __callable<typename decay<_Fp>::type>::value &&
+    !is_same<typename remove_reference<_Fp>::type, function<_Rp(_ArgTypes...)>>::value,
+    function<_Rp(_ArgTypes...)>&
+>::type
 function<_Rp(_ArgTypes...)>::operator=(_Fp&& __f)
 {
     function(_VSTD::forward<_Fp>(__f)).swap(*this);
