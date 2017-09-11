@@ -1,8 +1,8 @@
 RUN: llvm-profdata merge %S/Inputs/hideUnexecutedSubviews.proftext -o %t.profdata
 
-RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S %S/showTemplateInstantiations.cpp | FileCheck -check-prefix=FILE %s
+RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %t.profdata -show-region-summary -show-instantiation-summary -path-equivalence=/tmp,%S %S/showTemplateInstantiations.cpp | FileCheck -check-prefix=FILE %s
 
-RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %t.profdata -format html -o %t.html.dir -path-equivalence=/tmp,%S %S/showTemplateInstantiations.cpp
+RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %t.profdata -format html -show-region-summary -show-instantiation-summary -o %t.html.dir -path-equivalence=/tmp,%S %S/showTemplateInstantiations.cpp
 RUN: FileCheck -check-prefix=FILE %s -input-file %t.html.dir/coverage/tmp/showTemplateInstantiations.cpp.html
 
 FILE: Unexecuted instantiation: _Z4funcIbEiT_
