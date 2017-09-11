@@ -16959,6 +16959,7 @@ static SDValue getBitTestCondition(SDValue Src, SDValue BitNo, ISD::CondCode CC,
 /// Result of 'and' is compared against zero. Change to a BT node if possible.
 static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
                             const SDLoc &dl, SelectionDAG &DAG) {
+  assert(And.getOpcode() == ISD::AND && "Expected AND node!");
   SDValue Op0 = And.getOperand(0);
   SDValue Op1 = And.getOperand(1);
   if (Op0.getOpcode() == ISD::TRUNCATE)
@@ -17004,32 +17005,6 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
   if (LHS.getNode())
     return getBitTestCondition(LHS, RHS, CC, dl, DAG);
 
-  return SDValue();
-}
-
-// Convert (truncate (srl X, N) to i1) to (bt X, N)
-static SDValue LowerTruncateToBT(SDValue Op, ISD::CondCode CC,
-                                 const SDLoc &dl, SelectionDAG &DAG) {
-
-  assert(Op.getOpcode() == ISD::TRUNCATE && Op.getValueType() == MVT::i1 &&
-         "Expected TRUNCATE to i1 node");
-
-  if (Op.getOperand(0).getOpcode() != ISD::SRL)
-    return SDValue();
-
-  SDValue ShiftRight = Op.getOperand(0);
-  return getBitTestCondition(ShiftRight.getOperand(0), ShiftRight.getOperand(1),
-                             CC, dl, DAG);
-}
-
-/// Result of 'and' or 'trunc to i1' is compared against zero.
-/// Change to a BT node if possible.
-SDValue X86TargetLowering::LowerToBT(SDValue Op, ISD::CondCode CC,
-                                     const SDLoc &dl, SelectionDAG &DAG) const {
-  if (Op.getOpcode() == ISD::AND)
-    return LowerAndToBT(Op, CC, dl, DAG);
-  if (Op.getOpcode() == ISD::TRUNCATE && Op.getValueType() == MVT::i1)
-    return LowerTruncateToBT(Op, CC, dl, DAG);
   return SDValue();
 }
 
@@ -17554,14 +17529,10 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   // Lower (X & (1 << N)) == 0 to BT(X, N).
   // Lower ((X >>u N) & 1) != 0 to BT(X, N).
   // Lower ((X >>s N) & 1) != 0 to BT(X, N).
-  // Lower (trunc (X >> N) to i1) to BT(X, N).
-  if (Op0.hasOneUse() && isNullConstant(Op1) &&
+  if (Op0.getOpcode() == ISD::AND && Op0.hasOneUse() && isNullConstant(Op1) &&
       (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-    if (SDValue NewSetCC = LowerToBT(Op0, CC, dl, DAG)) {
-      if (VT == MVT::i1)
-        return DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, NewSetCC);
+    if (SDValue NewSetCC = LowerAndToBT(Op0, CC, dl, DAG))
       return NewSetCC;
-    }
   }
 
   // Look for X == 0, X == 1, X != 0, or X != 1.  We can simplify some forms of
@@ -17935,7 +17906,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     // We know the result of AND is compared against zero. Try to match
     // it to BT.
     if (Cond.getOpcode() == ISD::AND && Cond.hasOneUse()) {
-      if (SDValue NewSetCC = LowerToBT(Cond, ISD::SETNE, DL, DAG)) {
+      if (SDValue NewSetCC = LowerAndToBT(Cond, ISD::SETNE, DL, DAG)) {
         CC = NewSetCC.getOperand(0);
         Cond = NewSetCC.getOperand(1);
         AddTest = false;
@@ -18790,9 +18761,10 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     if (isTruncWithZeroHighBitsInput(Cond, DAG))
         Cond = Cond.getOperand(0);
 
-    // We know the result is compared against zero. Try to match it to BT.
-    if (Cond.hasOneUse()) {
-      if (SDValue NewSetCC = LowerToBT(Cond, ISD::SETNE, dl, DAG)) {
+    // We know the result of AND is compared against zero. Try to match
+    // it to BT.
+    if (Cond.getOpcode() == ISD::AND && Cond.hasOneUse()) {
+      if (SDValue NewSetCC = LowerAndToBT(Cond, ISD::SETNE, dl, DAG)) {
         CC = NewSetCC.getOperand(0);
         Cond = NewSetCC.getOperand(1);
         addTest = false;
@@ -27089,6 +27061,18 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
     unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
     Tmp += VTBits - Src.getScalarValueSizeInBits();
     return Tmp;
+  }
+
+  case X86ISD::PACKSS: {
+    // PACKSS is just a truncation if the sign bits extend to the packed size.
+    // TODO: Add DemandedElts support.
+    unsigned SrcBits = Op.getOperand(0).getScalarValueSizeInBits();
+    unsigned Tmp0 = DAG.ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    unsigned Tmp1 = DAG.ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    unsigned Tmp = std::min(Tmp0, Tmp1);
+    if (Tmp > (SrcBits - VTBits))
+      return Tmp - (SrcBits - VTBits);
+    return 1;
   }
 
   case X86ISD::VSHLI: {

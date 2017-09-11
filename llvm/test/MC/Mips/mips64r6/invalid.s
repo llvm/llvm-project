@@ -137,6 +137,10 @@ local_label:
         evp 3                # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         jalr.hb $31          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
         jalr.hb $31, $31     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
+        lapc $7, 1048576     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+        lapc $6, -1048580    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+        lapc $3, 3           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+        lapc $3, -1          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
         lsa     $2, $3, $4, 0     # CHECK: :[[@LINE]]:29: error: expected immediate in range 1 .. 4
         lsa     $2, $3, $4, 5     # CHECK: :[[@LINE]]:29: error: expected immediate in range 1 .. 4
         pref -1, 255($7)     # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate

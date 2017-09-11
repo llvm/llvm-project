@@ -2083,6 +2083,19 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(MachineInstr &MIa,
   return false;
 }
 
+static int64_t getFoldableImm(const MachineOperand* MO) {
+  if (!MO->isReg())
+    return false;
+  const MachineFunction *MF = MO->getParent()->getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+  auto Def = MRI.getUniqueVRegDef(MO->getReg());
+  if (Def && (Def->getOpcode() == AMDGPU::S_MOV_B32 ||
+              Def->getOpcode() == AMDGPU::V_MOV_B32_e32) &&
+     Def->getOperand(1).isImm())
+    return Def->getOperand(1).getImm();
+  return AMDGPU::NoRegister;
+}
+
 MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
                                                  MachineInstr &MI,
                                                  LiveVariables *LV) const {
@@ -2119,6 +2132,35 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
   const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
   const MachineOperand *Clamp = getNamedOperand(MI, AMDGPU::OpName::clamp);
   const MachineOperand *Omod = getNamedOperand(MI, AMDGPU::OpName::omod);
+
+  if (!Src0Mods && !Src1Mods && !Clamp && !Omod) {
+    if (auto Imm = getFoldableImm(Src2)) {
+      return BuildMI(*MBB, MI, MI.getDebugLoc(),
+                     get(IsF16 ? AMDGPU::V_MADAK_F16 : AMDGPU::V_MADAK_F32))
+               .add(*Dst)
+               .add(*Src0)
+               .add(*Src1)
+               .addImm(Imm);
+    }
+    if (auto Imm = getFoldableImm(Src1)) {
+      return BuildMI(*MBB, MI, MI.getDebugLoc(),
+                     get(IsF16 ? AMDGPU::V_MADMK_F16 : AMDGPU::V_MADMK_F32))
+               .add(*Dst)
+               .add(*Src0)
+               .addImm(Imm)
+               .add(*Src2);
+    }
+    if (auto Imm = getFoldableImm(Src0)) {
+      if (isOperandLegal(MI, AMDGPU::getNamedOperandIdx(AMDGPU::V_MADMK_F32,
+                           AMDGPU::OpName::src0), Src1))
+        return BuildMI(*MBB, MI, MI.getDebugLoc(),
+                       get(IsF16 ? AMDGPU::V_MADMK_F16 : AMDGPU::V_MADMK_F32))
+                 .add(*Dst)
+                 .add(*Src1)
+                 .addImm(Imm)
+                 .add(*Src2);
+    }
+  }
 
   return BuildMI(*MBB, MI, MI.getDebugLoc(),
                  get(IsF16 ? AMDGPU::V_MAD_F16 : AMDGPU::V_MAD_F32))

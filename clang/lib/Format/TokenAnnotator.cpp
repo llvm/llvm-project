@@ -960,7 +960,6 @@ private:
            Tok.Next->Next && (Tok.Next->Next->TokenText == "module" ||
                               Tok.Next->Next->TokenText == "provide" ||
                               Tok.Next->Next->TokenText == "require" ||
-                              Tok.Next->Next->TokenText == "setTestOnly" ||
                               Tok.Next->Next->TokenText == "forwardDeclare") &&
            Tok.Next->Next->Next && Tok.Next->Next->Next->is(tok::l_paren);
   }

@@ -79,7 +79,8 @@ Preprocessor::AllocateVisibilityMacroDirective(SourceLocation Loc,
 }
 
 /// \brief Read and discard all tokens remaining on the current line until
-/// the tok::eod token is found.
+/// the tok::eod token is found. If the discarded tokens are in a skipped range,
+/// complete the range and pass it to the \c SourceRangeSkipped callback.
 void Preprocessor::DiscardUntilEndOfDirective() {
   Token Tmp;
   do {
@@ -350,7 +351,8 @@ void Preprocessor::CheckEndOfDirective(const char *DirType, bool EnableMacros) {
 /// If ElseOk is true, then \#else directives are ok, if not, then we have
 /// already seen one so a \#else directive is a duplicate.  When this returns,
 /// the caller can lex the first valid token.
-void Preprocessor::SkipExcludedConditionalBlock(SourceLocation IfTokenLoc,
+void Preprocessor::SkipExcludedConditionalBlock(const Token &HashToken,
+                                                SourceLocation IfTokenLoc,
                                                 bool FoundNonSkipPortion,
                                                 bool FoundElse,
                                                 SourceLocation ElseLoc) {
@@ -558,10 +560,10 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation IfTokenLoc,
   // the #if block.
   CurPPLexer->LexingRawMode = false;
 
-  if (Callbacks) {
-    SourceLocation BeginLoc = ElseLoc.isValid() ? ElseLoc : IfTokenLoc;
-    Callbacks->SourceRangeSkipped(SourceRange(BeginLoc, Tok.getLocation()));
-  }
+  if (Callbacks)
+    Callbacks->SourceRangeSkipped(
+        SourceRange(HashToken.getLocation(), CurPPLexer->getSourceLocation()),
+        Tok.getLocation());
 }
 
 void Preprocessor::PTHSkipExcludedConditionalBlock() {
@@ -949,15 +951,17 @@ void Preprocessor::HandleDirective(Token &Result) {
     default: break;
     // C99 6.10.1 - Conditional Inclusion.
     case tok::pp_if:
-      return HandleIfDirective(Result, ReadAnyTokensBeforeDirective);
+      return HandleIfDirective(Result, SavedHash, ReadAnyTokensBeforeDirective);
     case tok::pp_ifdef:
-      return HandleIfdefDirective(Result, false, true/*not valid for miopt*/);
+      return HandleIfdefDirective(Result, SavedHash, false,
+                                  true /*not valid for miopt*/);
     case tok::pp_ifndef:
-      return HandleIfdefDirective(Result, true, ReadAnyTokensBeforeDirective);
+      return HandleIfdefDirective(Result, SavedHash, true,
+                                  ReadAnyTokensBeforeDirective);
     case tok::pp_elif:
-      return HandleElifDirective(Result);
+      return HandleElifDirective(Result, SavedHash);
     case tok::pp_else:
-      return HandleElseDirective(Result);
+      return HandleElseDirective(Result, SavedHash);
     case tok::pp_endif:
       return HandleEndifDirective(Result);
 
@@ -2613,7 +2617,9 @@ void Preprocessor::HandleUndefDirective() {
 /// true if any tokens have been returned or pp-directives activated before this
 /// \#ifndef has been lexed.
 ///
-void Preprocessor::HandleIfdefDirective(Token &Result, bool isIfndef,
+void Preprocessor::HandleIfdefDirective(Token &Result,
+                                        const Token &HashToken,
+                                        bool isIfndef,
                                         bool ReadAnyTokensBeforeDirective) {
   ++NumIf;
   Token DirectiveTok = Result;
@@ -2625,8 +2631,8 @@ void Preprocessor::HandleIfdefDirective(Token &Result, bool isIfndef,
   if (MacroNameTok.is(tok::eod)) {
     // Skip code until we get to #endif.  This helps with recovery by not
     // emitting an error when the #endif is reached.
-    SkipExcludedConditionalBlock(DirectiveTok.getLocation(),
-                                 /*Foundnonskip*/false, /*FoundElse*/false);
+    SkipExcludedConditionalBlock(HashToken, DirectiveTok.getLocation(),
+                                 /*Foundnonskip*/ false, /*FoundElse*/ false);
     return;
   }
 
@@ -2674,15 +2680,16 @@ void Preprocessor::HandleIfdefDirective(Token &Result, bool isIfndef,
                                      /*foundelse*/false);
   } else {
     // No, skip the contents of this block.
-    SkipExcludedConditionalBlock(DirectiveTok.getLocation(),
-                                 /*Foundnonskip*/false,
-                                 /*FoundElse*/false);
+    SkipExcludedConditionalBlock(HashToken, DirectiveTok.getLocation(),
+                                 /*Foundnonskip*/ false,
+                                 /*FoundElse*/ false);
   }
 }
 
 /// HandleIfDirective - Implements the \#if directive.
 ///
 void Preprocessor::HandleIfDirective(Token &IfToken,
+                                     const Token &HashToken,
                                      bool ReadAnyTokensBeforeDirective) {
   ++NumIf;
 
@@ -2720,8 +2727,9 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
                                    /*foundnonskip*/true, /*foundelse*/false);
   } else {
     // No, skip the contents of this block.
-    SkipExcludedConditionalBlock(IfToken.getLocation(), /*Foundnonskip*/false,
-                                 /*FoundElse*/false);
+    SkipExcludedConditionalBlock(HashToken, IfToken.getLocation(),
+                                 /*Foundnonskip*/ false,
+                                 /*FoundElse*/ false);
   }
 }
 
@@ -2753,7 +2761,7 @@ void Preprocessor::HandleEndifDirective(Token &EndifToken) {
 
 /// HandleElseDirective - Implements the \#else directive.
 ///
-void Preprocessor::HandleElseDirective(Token &Result) {
+void Preprocessor::HandleElseDirective(Token &Result, const Token &HashToken) {
   ++NumElse;
 
   // #else directive in a non-skipping conditional... start skipping.
@@ -2784,13 +2792,14 @@ void Preprocessor::HandleElseDirective(Token &Result) {
   }
 
   // Finally, skip the rest of the contents of this block.
-  SkipExcludedConditionalBlock(CI.IfLoc, /*Foundnonskip*/true,
-                               /*FoundElse*/true, Result.getLocation());
+  SkipExcludedConditionalBlock(HashToken, CI.IfLoc, /*Foundnonskip*/ true,
+                               /*FoundElse*/ true, Result.getLocation());
 }
 
 /// HandleElifDirective - Implements the \#elif directive.
 ///
-void Preprocessor::HandleElifDirective(Token &ElifToken) {
+void Preprocessor::HandleElifDirective(Token &ElifToken,
+                                       const Token &HashToken) {
   ++NumElse;
 
   // #elif directive in a non-skipping conditional... start skipping.
@@ -2827,7 +2836,7 @@ void Preprocessor::HandleElifDirective(Token &ElifToken) {
   }
 
   // Finally, skip the rest of the contents of this block.
-  SkipExcludedConditionalBlock(CI.IfLoc, /*Foundnonskip*/true,
-                               /*FoundElse*/CI.FoundElse,
+  SkipExcludedConditionalBlock(HashToken, CI.IfLoc, /*Foundnonskip*/ true,
+                               /*FoundElse*/ CI.FoundElse,
                                ElifToken.getLocation());
 }

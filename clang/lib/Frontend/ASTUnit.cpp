@@ -1009,6 +1009,24 @@ static void checkAndSanitizeDiags(SmallVectorImpl<StoredDiagnostic> &
   }
 }
 
+static IntrusiveRefCntPtr<vfs::FileSystem> createVFSOverlayForPreamblePCH(
+    StringRef PCHFilename,
+    IntrusiveRefCntPtr<vfs::FileSystem> RealFS,
+    IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+  // We want only the PCH file from the real filesystem to be available,
+  // so we create an in-memory VFS with just that and overlay it on top.
+  auto Buf = RealFS->getBufferForFile(PCHFilename);
+  if (!Buf)
+    return VFS;
+  IntrusiveRefCntPtr<vfs::InMemoryFileSystem>
+      PCHFS(new vfs::InMemoryFileSystem());
+  PCHFS->addFile(PCHFilename, 0, std::move(*Buf));
+  IntrusiveRefCntPtr<vfs::OverlayFileSystem>
+      Overlay(new vfs::OverlayFileSystem(VFS));
+  Overlay->pushOverlay(PCHFS);
+  return Overlay;
+}
+
 /// Parse the source file into a translation unit using the given compiler
 /// invocation, replacing the current translation unit.
 ///
@@ -1028,6 +1046,24 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
            "VFS passed to Parse and VFS in FileMgr are different");
   } else if (VFS) {
     Clang->setVirtualFileSystem(VFS);
+  }
+
+  // Make sure we can access the PCH file even if we're using a VFS
+  if (!VFS && FileMgr)
+    VFS = FileMgr->getVirtualFileSystem();
+  IntrusiveRefCntPtr<vfs::FileSystem> RealFS = vfs::getRealFileSystem();
+  if (OverrideMainBuffer && VFS && RealFS && VFS != RealFS &&
+      !VFS->exists(Preamble->GetPCHPath())) {
+    // We have a slight inconsistency here -- we're using the VFS to
+    // read files, but the PCH was generated in the real file system.
+    VFS = createVFSOverlayForPreamblePCH(Preamble->GetPCHPath(), RealFS, VFS);
+    if (FileMgr) {
+      FileMgr = new FileManager(FileMgr->getFileSystemOpts(), VFS);
+      Clang->setFileManager(FileMgr.get());
+    }
+    else {
+      Clang->setVirtualFileSystem(VFS);
+    }
   }
 
   // Recover resources if we crash before exiting this method.

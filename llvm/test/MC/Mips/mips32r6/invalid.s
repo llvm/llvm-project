@@ -123,6 +123,10 @@ local_label:
         evp 3                # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         jalr.hb $31          # CHECK: :[[@LINE]]:9: error: source and destination must be different
         jalr.hb $31, $31     # CHECK: :[[@LINE]]:9: error: source and destination must be different
+        lapc $7, 1048576     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+        lapc $6, -1048580    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+        lapc $3, 3           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
+        lapc $3, -1          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 19-bit signed immediate and multiple of 4
         ldc2 $20, -1025($s2) # CHECK: :[[@LINE]]:9: error: instruction requires a CPU feature not currently enabled
         ldc2 $20, 1024($s2)  # CHECK: :[[@LINE]]:9: error: instruction requires a CPU feature not currently enabled
         lsa $2, $3, $4, 0    # CHECK: :[[@LINE]]:25: error: expected immediate in range 1 .. 4

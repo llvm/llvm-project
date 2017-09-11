@@ -49,7 +49,7 @@ static void initOnce() {
     ThreadContexts[i].init();
 }
 
-void initThread() {
+void initThread(bool MinimalInit) {
   pthread_once(&GlobalInitialized, initOnce);
   // Initial context assignment is done in a plain round-robin fashion.
   u32 Index = atomic_fetch_add(&ThreadContextCurrentIndex, 1,
