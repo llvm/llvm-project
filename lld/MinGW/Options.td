@@ -17,6 +17,11 @@ def shared: F<"shared">, HelpText<"Build a shared object">;
 def subs: Separate<["--"], "subsystem">, HelpText<"Specify subsystem">;
 def stack: Separate<["--"], "stack">;
 def outlib: Separate<["--"], "out-implib">, HelpText<"Import library name">;
+def verbose: F<"verbose">, HelpText<"Verbose mode">;
+
+// LLD specific options
+def _HASH_HASH_HASH : Flag<["-"], "###">,
+    HelpText<"Print (but do not run) the commands to run for this compilation">;
 
 // Currently stubs to avoid errors
 def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
@@ -26,8 +31,8 @@ def minor_image_version: Separate<["--"], "minor-image-version">;
 def enable_auto_image_base: Flag<["--"], "enable-auto-image-base">;
 def full_shutdown: Flag<["--"], "full-shutdown">;
 def O: Joined<["-"], "O">, HelpText<"Optimize output file size">;
+def sysroot: J<"sysroot">, HelpText<"Sysroot">;
 def v: Flag<["-"], "v">, HelpText<"Display the version number">;
-def verbose: F<"verbose">, HelpText<"Verbose mode">;
 def version: F<"version">, HelpText<"Display the version number and exit">;
 
 // Alias
