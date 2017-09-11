@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj -o %t.o < %s >/dev/null 2>&1
-; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s
+; RUN: llvm-dwarfdump -v -debug-info %t.o | FileCheck %s
 
 ; CHECK: DW_TAG_structure_type
 ; CHECK:  DW_AT_APPLE_objc_complete_type

@@ -1,7 +1,7 @@
 ; REQUIRES: object-emission
 
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s > %t
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 
 ; Make sure we're emitting DW_AT_main_subprogram.
 ; CHECK: DW_TAG_subprogram

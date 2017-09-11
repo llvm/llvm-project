@@ -1,4 +1,4 @@
-; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
 ; Test that DW_OP_piece is emitted for constants.
 ;
 ; // Generated from:

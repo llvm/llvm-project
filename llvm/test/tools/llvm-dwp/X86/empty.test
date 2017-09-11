@@ -1,5 +1,5 @@
 RUN: llvm-dwp %p/../Inputs/empty.dwo -o %t
-RUN: llvm-dwarfdump %t | FileCheck %s
+RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 CHECK-LABEL: .debug_cu_index
 CHECK-NOT: version

@@ -1,18 +1,18 @@
 ; RUN: llc -dwarf-version=4 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=SINGLE-4
+; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SINGLE-4
 
 ; RUN: llc -split-dwarf-file=foo.dwo -dwarf-version=4 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=SPLIT-4
+; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SPLIT-4
 
 ; RUN: llc -dwarf-version=5 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=SINGLE-5
+; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SINGLE-5
 
 ; RUN: llc -split-dwarf-file=foo.dwo -dwarf-version=5 -generate-type-units \
 ; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=SPLIT-5
+; RUN:     | llvm-dwarfdump -v - | FileCheck %s --check-prefix=SPLIT-5
 
 ; Looking for DWARF headers to be generated correctly.
 ; There are 7 variants: v4 CU, v4 TU, v5 (normal/skeleton/split) CU,

@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 ; RUN: %llc_dwarf -O0 -filetype=obj %s -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
+; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 ; Check that we emit ranges for this which has a non-traditional section and a normal section.
 

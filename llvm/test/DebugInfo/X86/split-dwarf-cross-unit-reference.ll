@@ -1,12 +1,12 @@
 ; RUN: llc -mtriple=x86_64-linux -split-dwarf-cross-cu-references -split-dwarf-file=foo.dwo -filetype=obj -o %t < %s
 ; RUN: llvm-objdump -r %t | FileCheck %s
-; RUN: llvm-dwarfdump -debug-info-dwo %t | FileCheck --check-prefix=ALL --check-prefix=INFO --check-prefix=DWO --check-prefix=CROSS %s
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=INFO %s
+; RUN: llvm-dwarfdump -v -debug-info-dwo %t | FileCheck --check-prefix=ALL --check-prefix=INFO --check-prefix=DWO --check-prefix=CROSS %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=INFO %s
 
 ; RUN: llc -mtriple=x86_64-linux -split-dwarf-file=foo.dwo -filetype=obj -o %t < %s
 ; RUN: llvm-objdump -r %t | FileCheck %s
-; RUN: llvm-dwarfdump -debug-info-dwo %t | FileCheck --check-prefix=ALL --check-prefix=DWO --check-prefix=NOCROSS %s
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=INFO %s
+; RUN: llvm-dwarfdump -v -debug-info-dwo %t | FileCheck --check-prefix=ALL --check-prefix=DWO --check-prefix=NOCROSS %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck --check-prefix=ALL --check-prefix=INFO %s
 
 ; Testing cross-CU references for types, subprograms, and variables
 ; Built from code something like this:

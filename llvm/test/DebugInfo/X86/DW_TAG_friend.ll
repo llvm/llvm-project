@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 
 ; Check that the friend tag is there and is followed by a DW_AT_friend that has a reference back.
 

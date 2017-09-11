@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple aarch64_be-gnu-linux -O0 -filetype=obj -o %t_be.o %s
-; RUN: llvm-dwarfdump -debug-info %t_be.o | FileCheck %s
+; RUN: llvm-dwarfdump -v -debug-info %t_be.o | FileCheck %s
 
 ; Produced at -O0 from:
 ; struct bitfield {

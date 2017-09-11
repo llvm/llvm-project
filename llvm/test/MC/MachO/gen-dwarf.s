@@ -1,5 +1,5 @@
 // RUN: llvm-mc -g -triple i386-apple-darwin10 %s -filetype=obj -o %t
-// RUN: llvm-dwarfdump -all %t | FileCheck %s
+// RUN: llvm-dwarfdump -v -all %t | FileCheck %s
 
 .globl _bar
 _bar:

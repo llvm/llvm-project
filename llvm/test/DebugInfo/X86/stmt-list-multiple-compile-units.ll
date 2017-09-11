@@ -1,7 +1,7 @@
 ; RUN: llc -O0 %s -mtriple=x86_64-apple-darwin -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
+; RUN: llvm-dwarfdump -v %t | FileCheck %s
 ; RUN: llc -O0 %s -mtriple=x86_64-apple-darwin -filetype=obj -o %t -dwarf-version=3
-; RUN: llvm-dwarfdump %t | FileCheck %s -check-prefix=DWARF3
+; RUN: llvm-dwarfdump -v %t | FileCheck %s -check-prefix=DWARF3
 ; RUN: llc < %s -O0 -mtriple=x86_64-apple-macosx10.7 | FileCheck %s -check-prefix=ASM
 
 ; rdar://13067005

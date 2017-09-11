@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf -O2 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O2 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; This is a test case that's as reduced as I can get it, though I haven't fully
 ; understood the mechanisms by which this bug occurs, so perhaps there's further

@@ -13,7 +13,7 @@
 ; }
 ;
 ; RUN: llc -filetype=asm %s -o - | FileCheck %s
-; RUN: llc -filetype=obj %s -o - | llvm-dwarfdump - ---debug-info | FileCheck %s --check-prefix=DWARF
+; RUN: llc -filetype=obj %s -o - | llvm-dwarfdump -v - ---debug-info | FileCheck %s --check-prefix=DWARF
 
 ; CHECK-LABEL: _main:
 ; CHECK: movaps {{.*}}, (%rsp)

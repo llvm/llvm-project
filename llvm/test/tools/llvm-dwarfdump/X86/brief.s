@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-apple-darwin -o - \
-# RUN: | llvm-dwarfdump -debug-info --brief - \
+# RUN: | llvm-dwarfdump -debug-info - \
 # RUN: | FileCheck %s
 
 # CHECK-NOT: .debug_abbrev contents:
@@ -15,9 +15,9 @@
 #
 # CHECK-NOT: {{.*}} contents:
 #
-# This test is meant to verify that -brief hides DW_FORMs and abbreviation
-# codes from .debug_info section. Furthermore it verifies that it also hides
-# .debug_str and die reference offsets into the CU.
+# This test is meant to verify that without specifying -verbose DW_FORMs and
+# abbreviation codes are hidden from .debug_info section. Furthermore it
+# verifies that it also hides .debug_str and die reference offsets into the CU.
 
 	.section	__TEXT,__text,regular,pure_instructions
 	.macosx_version_min 10, 12

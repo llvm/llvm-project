@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-darwin -O0 -filetype=obj -o - < %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: llc -mtriple=x86_64-apple-darwin -O0 -filetype=obj -o - < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ; PR33157. Don't crash on duplicate dbg.declare.
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: DW_AT_location [DW_FORM_exprloc]

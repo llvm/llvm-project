@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=i686-w64-mingw32 -o %t -filetype=obj %s
-; RUN: llvm-dwarfdump -all %t | FileCheck %s
+; RUN: llvm-dwarfdump -v -all %t | FileCheck %s
 ; RUN: llc -mtriple=i686-w64-mingw32 -o %t -filetype=obj -dwarf-version=3 %s
-; RUN: llvm-dwarfdump -all %t | FileCheck %s -check-prefix=DWARF3
+; RUN: llvm-dwarfdump -v -all %t | FileCheck %s -check-prefix=DWARF3
 
 ; CHECK:         DW_AT_stmt_list [DW_FORM_sec_offset]
 ; DWARF3:        DW_AT_stmt_list [DW_FORM_data4]

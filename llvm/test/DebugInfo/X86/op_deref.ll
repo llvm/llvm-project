@@ -1,8 +1,8 @@
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin < %s -filetype=obj \
-; RUN:     | llvm-dwarfdump -debug-info - \
+; RUN:     | llvm-dwarfdump -v -debug-info - \
 ; RUN:     | FileCheck %s -check-prefix=CHECK -check-prefix=DWARF4
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin < %s -filetype=obj -dwarf-version=3 \
-; RUN:     | llvm-dwarfdump -debug-info - \
+; RUN:     | llvm-dwarfdump -v -debug-info - \
 ; RUN:     | FileCheck %s -check-prefix=CHECK -check-prefix=DWARF3
 
 ; DWARF4: DW_AT_location [DW_FORM_sec_offset]                      (0x00000000

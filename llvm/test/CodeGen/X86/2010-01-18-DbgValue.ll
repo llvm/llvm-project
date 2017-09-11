@@ -1,4 +1,4 @@
-; RUN: llc -march=x86 -O0 < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -mtriple=i686-- -O0 < %s -filetype=obj | llvm-dwarfdump -v - | FileCheck %s
 
 ; CHECK-LABEL: .debug_info contents:
 

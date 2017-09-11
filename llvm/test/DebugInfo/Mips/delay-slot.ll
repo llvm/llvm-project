@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -O0 -relocation-model=pic < %s -mtriple mips-unknown-linux-gnu | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -filetype=obj -O0 -relocation-model=pic < %s -mtriple mips-unknown-linux-gnu | llvm-dwarfdump -v - | FileCheck %s
 ; PR19815
 
 ; Generated using clang -target mips-linux-gnu -g test.c -S -o - -flto|opt -sroa -S

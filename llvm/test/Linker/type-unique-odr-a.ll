@@ -2,11 +2,11 @@
 ;
 ; RUN: llvm-link %s %p/type-unique-odr-b.ll -S -o - \
 ; RUN:   | %llc_dwarf -dwarf-linkage-names=All -filetype=obj -O0 \
-; RUN:   | llvm-dwarfdump -debug-info - \
+; RUN:   | llvm-dwarfdump -v -debug-info - \
 ; RUN:   | FileCheck %s
 ; RUN: llvm-link %p/type-unique-odr-b.ll %s -S -o - \
 ; RUN:   | %llc_dwarf -dwarf-linkage-names=All -filetype=obj -O0 \
-; RUN:   | llvm-dwarfdump -debug-info - \
+; RUN:   | llvm-dwarfdump -v -debug-info - \
 ; RUN:   | FileCheck %s
 ;
 ; Test ODR-based type uniquing for C++ class members.

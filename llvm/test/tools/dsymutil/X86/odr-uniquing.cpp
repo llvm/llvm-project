@@ -11,8 +11,8 @@
     - without ODR uniquing: all types are re-emited in the second CU
  */
 
-// RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/odr-uniquing -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -debug-info - | FileCheck -check-prefix=ODR -check-prefix=CHECK %s
-// RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/odr-uniquing -y %p/dummy-debug-map.map -no-odr -o - | llvm-dwarfdump -debug-info - | FileCheck -check-prefix=NOODR -check-prefix=CHECK %s
+// RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/odr-uniquing -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -v -debug-info - | FileCheck -check-prefix=ODR -check-prefix=CHECK %s
+// RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/odr-uniquing -y %p/dummy-debug-map.map -no-odr -o - | llvm-dwarfdump -v -debug-info - | FileCheck -check-prefix=NOODR -check-prefix=CHECK %s
 
 // The first compile unit contains all the types:
 // CHECK: TAG_compile_unit

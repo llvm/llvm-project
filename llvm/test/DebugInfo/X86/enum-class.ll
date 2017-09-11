@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 
 source_filename = "test/DebugInfo/X86/enum-class.ll"
 

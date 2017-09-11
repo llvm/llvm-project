@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --implicit-check-not "{{DW_TAG|NULL}}" %s
+; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck --implicit-check-not "{{DW_TAG|NULL}}" %s
 
 ; Generated from the following source:
 ; namespace ns {

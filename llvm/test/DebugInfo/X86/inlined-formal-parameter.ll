@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=obj -o %t.o %s
-; RUN: llvm-dwarfdump %t.o | FileCheck %s
+; RUN: llvm-dwarfdump -v %t.o | FileCheck %s
 
 ; Testcase generated using 'clang -g -O2 -S -emit-llvm' from the following:
 ;; void sink(void);

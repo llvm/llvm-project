@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -O0 -filetype=obj -dwarf-version 4 \
-; RUN:     -o - < %s | llvm-dwarfdump - --debug-info \
+; RUN:     -o - < %s | llvm-dwarfdump -v - --debug-info \
 ; RUN:     | FileCheck %s -check-prefixes=CHECK,DWARF4
 ; RUN: llc -mtriple=x86_64-apple-darwin -O0 -filetype=obj -dwarf-version 5 \
-; RUN:     -o - < %s | llvm-dwarfdump - --debug-info \
+; RUN:     -o - < %s | llvm-dwarfdump -v - --debug-info \
 ; RUN:     | FileCheck %s -check-prefixes=CHECK,DWARF5
 
 ; Check that we can omit default array lower-bounds.

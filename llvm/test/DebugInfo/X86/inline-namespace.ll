@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf %s -o - -filetype=obj | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: %llc_dwarf %s -o - -filetype=obj | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ; Generated from:
 ; namespace normal { inline namespace inlined { int i; } }
 ; Check that an inline namespace is emitted with DW_AT_export_symbols

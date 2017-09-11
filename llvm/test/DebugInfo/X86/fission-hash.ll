@@ -1,5 +1,5 @@
 ; RUN: llc -split-dwarf-file=foo.dwo -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
-; RUN: llvm-dwarfdump -all %t | FileCheck %s
+; RUN: llvm-dwarfdump -v -all %t | FileCheck %s
 
 ; The source is an empty file, modified to include/retain an 'int' type, since empty CUs are omitted.
 
