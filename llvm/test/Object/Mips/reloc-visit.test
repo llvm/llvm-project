@@ -1,4 +1,4 @@
-RUN: llvm-dwarfdump -debug-dump=info %p/../Inputs/elf-mip64-reloc.o 2>&1 | \
+RUN: llvm-dwarfdump -debug-info %p/../Inputs/elf-mip64-reloc.o 2>&1 | \
 RUN:   FileCheck %s
 
 CHECK: DW_AT_name [DW_FORM_strp]	( .debug_str[0x00000037] = "<stdin>")

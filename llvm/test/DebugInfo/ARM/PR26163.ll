@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -o - < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: llc -filetype=obj -o - < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 ;
 ; Checks that we're creating two ranges, one that terminates immediately
 ; and one that spans the rest of the function. This isn't necessarily the

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple x86_64-apple-macosx -O0 -filetype=obj -o %t_le.o %s
-; RUN: llvm-dwarfdump -debug-dump=info %t_le.o | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t_le.o | FileCheck %s
 
 ; Produced at -O0 from:
 ; struct bitfield {

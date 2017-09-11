@@ -1,5 +1,5 @@
 ; RUN: llc -march=mips -mcpu=mips32r2 -O1 -filetype=obj -relocation-model=pic <%s | \
-; RUN:    llvm-dwarfdump -debug-dump=all - | FileCheck %s
+; RUN:    llvm-dwarfdump -all - | FileCheck %s
 
 ; void foo(int *);
 ;

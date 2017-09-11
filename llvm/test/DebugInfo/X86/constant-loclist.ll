@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -filetype=obj %s -o - | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: %llc_dwarf -filetype=obj %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; A hand-written testcase to check 64-bit constant handling in location lists.
 

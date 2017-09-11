@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 ; Generated from:
 ;
 ; struct A {

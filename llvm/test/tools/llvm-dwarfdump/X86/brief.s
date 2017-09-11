@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-apple-darwin -o - \
-# RUN: | llvm-dwarfdump -debug-dump=info -brief - \
+# RUN: | llvm-dwarfdump -debug-info --brief - \
 # RUN: | FileCheck %s
 
 # CHECK-NOT: .debug_abbrev contents:

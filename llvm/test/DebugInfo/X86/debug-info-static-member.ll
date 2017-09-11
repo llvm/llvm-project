@@ -1,9 +1,9 @@
 ; RUN: llc %s -o %t -filetype=obj -O0 -mtriple=x86_64-unknown-linux-gnu -dwarf-version=4
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s -check-prefix=PRESENT 
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s -check-prefix=ABSENT
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s -check-prefix=PRESENT 
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s -check-prefix=ABSENT
 ; RUN: llc %s -o %t -filetype=obj -O0 -mtriple=x86_64-apple-darwin -dwarf-version=4
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s -check-prefix=DARWINP
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s -check-prefix=DARWINA
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s -check-prefix=DARWINP
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s -check-prefix=DARWINA
 ; Verify that attributes we do want are PRESENT;
 ; verify that attributes we don't want are ABSENT.
 ; It's a lot easier to do this in two passes than in one.

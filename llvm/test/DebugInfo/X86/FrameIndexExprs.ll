@@ -1,6 +1,6 @@
 ; PR31381: An assertion in the DWARF backend when fragments in MMI slots are
 ; sorted by largest offset first.
-; RUN: llc -mtriple=x86_64-apple-darwin -filetype=obj < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: llc -mtriple=x86_64-apple-darwin -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_fbreg -8, DW_OP_piece 0x3, DW_OP_piece 0x6, DW_OP_fbreg -3, DW_OP_piece 0x3)

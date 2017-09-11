@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -O0 -filetype=obj -o %t %s
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 
 ; Generated from:
 ; clang -g -S -emit-llvm -o foo.ll foo.c

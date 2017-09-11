@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf -O0 -filetype=obj %s -o - | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Ensure that pointer constants are emitted as unsigned data. Alternatively,
 ; these could be signless data (dataN).

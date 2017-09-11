@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -filetype=obj < %s \
-; RUN:     | llvm-dwarfdump -debug-dump=info - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V4
+; RUN:     | llvm-dwarfdump -debug-info - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V4
 ; RUN: llc -mtriple=x86_64-apple-darwin -filetype=obj -dwarf-version=3 < %s \
-; RUN:     | llvm-dwarfdump -debug-dump=info - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V3
+; RUN:     | llvm-dwarfdump -debug-info - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V3
 
 
 ; Check that we use DW_AT_low_pc and that it has the right encoding depending

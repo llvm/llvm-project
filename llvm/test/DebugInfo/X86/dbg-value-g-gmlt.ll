@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj | llvm-dwarfdump - -debug-dump=info | FileCheck %s
+; RUN: llc < %s -filetype=obj | llvm-dwarfdump - --debug-info | FileCheck %s
 ;
 ; IR module created as follows:
 ;   clang -emit-llvm -S -O2 foo.cpp -o foo.ll -g

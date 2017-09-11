@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin < %s -filetype=obj \
-; RUN:     | llvm-dwarfdump -debug-dump=info - | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
+; RUN:     | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
 ; RUN: llc -mtriple=x86_64-linux-gnu < %s -filetype=obj \
-; RUN:     | llvm-dwarfdump -debug-dump=info - | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
+; RUN:     | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
 ; RUN: llc -mtriple=x86_64-apple-darwin < %s -filetype=obj -regalloc=basic \
-; RUN:     | llvm-dwarfdump -debug-dump=info - | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
+; RUN:     | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
 
 ; CHECK: DW_TAG_subprogram
 ; CHECK:   DW_AT_abstract_origin {{.*}} "foo"

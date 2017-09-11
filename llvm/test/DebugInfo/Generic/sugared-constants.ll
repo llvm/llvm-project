@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf -O0 -filetype=obj %s -o - | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 ; Use correct signedness when emitting constants of derived (sugared) types.
 
 ; CHECK: DW_AT_const_value [DW_FORM_sdata] (42)

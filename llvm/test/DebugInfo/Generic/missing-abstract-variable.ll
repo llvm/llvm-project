@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; The formal parameter 'b' for Function 'x' when inlined within 'a' is lost on
 ; mips and powerpc64 (and on x86_64 at at least -O2). Presumably this is a

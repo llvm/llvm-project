@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 ; RUN: llvm-as < %s | llvm-dis | FileCheck --check-prefix=CHECK-DIS %s
 
 ; CHECK: 0x0000000b: DW_TAG_compile_unit

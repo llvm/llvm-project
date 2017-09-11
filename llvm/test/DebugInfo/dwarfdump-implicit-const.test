@@ -1,2 +1,2 @@
-RUN: llvm-dwarfdump -debug-dump=abbrev %p/Inputs/implicit-const-test.o | FileCheck %s
+RUN: llvm-dwarfdump -debug-abbrev %p/Inputs/implicit-const-test.o | FileCheck %s
 CHECK: DW_FORM_implicit_const -9223372036854775808

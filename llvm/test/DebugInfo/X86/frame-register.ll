@@ -1,4 +1,4 @@
-; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump --debug-dump=info - | FileCheck %s
+; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump --debug-info - | FileCheck %s
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]      (DW_OP_fbreg +0)
 ; CHECK-NEXT: DW_AT_name {{.*}}"i"

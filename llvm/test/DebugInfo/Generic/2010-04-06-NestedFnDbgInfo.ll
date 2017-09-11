@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf -O0 -filetype=obj -o - < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -o - < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 ; Radar 7833483
 ; Do not emit a separate out-of-line definition DIE for the function-local 'foo'
 ; function (member of the function local 'A' type)

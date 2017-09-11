@@ -1,8 +1,8 @@
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=Abstract < %s | llvm-dwarfdump -debug-dump=info - > %t
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=Abstract < %s | llvm-dwarfdump -debug-info - > %t
 ; RUN: FileCheck %s -check-prefix=ONENAME < %t
 ; RUN: FileCheck %s -check-prefix=REF < %t 
 ; Verify tuning for SCE gets us Abstract only.
-; RUN: %llc_dwarf -O0 -filetype=obj -debugger-tune=sce < %s | llvm-dwarfdump -debug-dump=info - > %t
+; RUN: %llc_dwarf -O0 -filetype=obj -debugger-tune=sce < %s | llvm-dwarfdump -debug-info - > %t
 ; RUN: FileCheck %s -check-prefix=ONENAME < %t
 ; RUN: FileCheck %s -check-prefix=REF < %t 
 ; REQUIRES: object-emission
