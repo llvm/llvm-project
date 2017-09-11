@@ -1,4 +1,4 @@
-// RUN: llvm-cov show %S/Inputs/deferred-regions.covmapping -instr-profile %S/Inputs/deferred-regions.profdata -show-line-counts-or-regions -dump -path-equivalence=/Users/vk/src/llvm.org-coverage-braces/llvm/test/tools,%S/.. %s 2&>1 > %t.out && FileCheck %s -input-file %t.out && FileCheck %s -input-file %t.out -check-prefix=MARKER
+// RUN: llvm-cov show %S/Inputs/deferred-regions.covmapping -instr-profile %S/Inputs/deferred-regions.profdata -show-line-counts-or-regions -dump -path-equivalence=/Users/vk/src/llvm.org-coverage-braces/llvm/test/tools,%S/.. %s 2>&1 > %t.out && FileCheck %s -input-file %t.out && FileCheck %s -input-file %t.out -check-prefix=MARKER
 
 void foo(int x) {
   if (x == 0) {

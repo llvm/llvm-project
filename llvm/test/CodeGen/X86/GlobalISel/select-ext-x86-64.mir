@@ -17,6 +17,10 @@
     ret i64 %r
   }
 
+  define void @anyext_s64_from_s1() { ret void }
+  define void @anyext_s64_from_s8() { ret void }
+  define void @anyext_s64_from_s16() { ret void }
+  define void @anyext_s64_from_s32() { ret void }
 ...
 ---
 name:            test_zext_i1
@@ -101,4 +105,120 @@ body:             |
     %rax = COPY %1(s64)
     RET 0, implicit %rax
 
+...
+---
+name:            anyext_s64_from_s1
+# ALL-LABEL: name:  anyext_s64_from_s1
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr64_with_sub_8bit, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gr64, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:          %0 = COPY %rdi
+# ALL-NEXT:     %1 = COPY %0.sub_8bit
+# ALL-NEXT:     %2 = SUBREG_TO_REG 0, %1, 1
+# ALL-NEXT:     %rax = COPY %2
+# ALL-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s64) = COPY %rdi
+    %1(s1) = G_TRUNC %0(s64)
+    %2(s64) = G_ANYEXT %1(s1)
+    %rax = COPY %2(s64)
+    RET 0, implicit %rax
+...
+---
+name:            anyext_s64_from_s8
+# ALL-LABEL: name:  anyext_s64_from_s8
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr64_with_sub_8bit, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gr64, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:          %0 = COPY %rdi
+# ALL-NEXT:     %1 = COPY %0.sub_8bit
+# ALL-NEXT:     %2 = SUBREG_TO_REG 0, %1, 1
+# ALL-NEXT:     %rax = COPY %2
+# ALL-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s64) = COPY %rdi
+    %1(s8) = G_TRUNC %0(s64)
+    %2(s64) = G_ANYEXT %1(s8)
+    %rax = COPY %2(s64)
+    RET 0, implicit %rax
+...
+---
+name:            anyext_s64_from_s16
+# ALL-LABEL: name:  anyext_s64_from_s16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr64, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr16, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gr64, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:          %0 = COPY %rdi
+# ALL-NEXT:     %1 = COPY %0.sub_16bit
+# ALL-NEXT:     %2 = SUBREG_TO_REG 0, %1, 3
+# ALL-NEXT:     %rax = COPY %2
+# ALL-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s64) = COPY %rdi
+    %1(s16) = G_TRUNC %0(s64)
+    %2(s64) = G_ANYEXT %1(s16)
+    %rax = COPY %2(s64)
+    RET 0, implicit %rax
+...
+---
+name:            anyext_s64_from_s32
+# ALL-LABEL: name:  anyext_s64_from_s32
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr64, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gr64, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:          %0 = COPY %rdi
+# ALL-NEXT:     %1 = COPY %0.sub_32bit
+# ALL-NEXT:     %2 = SUBREG_TO_REG 0, %1, 4
+# ALL-NEXT:     %rax = COPY %2
+# ALL-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s64) = COPY %rdi
+    %1(s32) = G_TRUNC %0(s64)
+    %2(s64) = G_ANYEXT %1(s32)
+    %rax = COPY %2(s64)
+    RET 0, implicit %rax
 ...
