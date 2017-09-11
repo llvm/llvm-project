@@ -1,4 +1,4 @@
-; RUN: llc -O1 -filetype=obj -o - %s | llvm-dwarfdump -debug-dump=all - | FileCheck %s
+; RUN: llc -O1 -filetype=obj -o - %s | llvm-dwarfdump -all - | FileCheck %s
 ; Generated with -O1 from:
 ; int f1();
 ; void f2(int*);

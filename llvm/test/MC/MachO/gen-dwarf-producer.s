@@ -1,5 +1,5 @@
 // RUN: env DEBUG_PRODUCER="my producer" llvm-mc -g -triple i386-apple-darwin10 %s -filetype=obj -o %t
-// RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
+// RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 
 .globl _bar
 _bar:

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -O0 -filetype=obj -o %t < %s
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 ; <rdar://problem/12566646>
 
 source_filename = "test/DebugInfo/X86/empty-array.ll"

@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=asm -o - %s | FileCheck %s --check-prefix=ASM
-; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump --debug-dump=info - | FileCheck %s
+; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump --debug-info - | FileCheck %s
 ;
 ; Generated at -O2 from:
 ;   struct B;

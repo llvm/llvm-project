@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple x86_64-apple-darwin -filetype=obj -o %t.o < %s
-; RUN: llvm-dwarfdump -debug-dump=info %t.o | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s
 
 ; Generated from llvm/tools/clang/test/CodeGenObjC/debug-info-blocks.m
 ; rdar://problem/9279956

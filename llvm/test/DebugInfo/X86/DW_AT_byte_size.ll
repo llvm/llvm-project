@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-dump=all %t | FileCheck %s
+; RUN: llvm-dwarfdump -all %t | FileCheck %s
 
 ; Checks that we don't emit a size for a pointer type.
 ; CHECK: DW_TAG_pointer_type

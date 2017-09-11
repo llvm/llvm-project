@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-macosx %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 ;
 ; struct A {
 ;   A(int i);

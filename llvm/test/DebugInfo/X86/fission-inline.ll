@@ -1,5 +1,5 @@
 ; RUN: llc -split-dwarf-file=foo.dwo -O0 < %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj > %t
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 ; RUN: llvm-objdump -r %t | FileCheck --check-prefix=RELOCS %s
 
 ; Test the emission of gmlt-like inlining information into the skeleton unit.

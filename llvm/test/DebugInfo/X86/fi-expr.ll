@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -o - %s -filetype=obj \
-; RUN:   | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN:   | llvm-dwarfdump -debug-info - | FileCheck %s
 ; A hand-crafted FrameIndex location with a DW_OP_deref.
 ; CHECK: DW_TAG_formal_parameter
 ;                                          fbreg -8, deref

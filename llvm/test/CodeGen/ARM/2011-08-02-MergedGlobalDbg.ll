@@ -1,4 +1,4 @@
-; RUN: llc -arm-global-merge -global-merge-group-by-use=false -filetype=obj < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: llc -arm-global-merge -global-merge-group-by-use=false -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG

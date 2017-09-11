@@ -1,4 +1,4 @@
-; RUN: llc < %s -filetype=obj | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: llc < %s -filetype=obj | llvm-dwarfdump -debug-info - | FileCheck %s
 ; from (at -Os):
 ; void foo() {
 ;   float a = 3.14;

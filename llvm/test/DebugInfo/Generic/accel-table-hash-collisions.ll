@@ -1,5 +1,6 @@
 ; REQUIRES: object-emission
-; RUN: %llc_dwarf -dwarf-accel-tables=Enable -filetype=obj -o - < %s | llvm-dwarfdump -debug-dump=apple_names - | FileCheck %s
+; RUN: %llc_dwarf -dwarf-accel-tables=Enable -filetype=obj -o - < %s \
+; RUN:   | llvm-dwarfdump -apple-names - | FileCheck %s
 
 ; Generated from the following C code using
 ; clang -S -emit-llvm hash-collision.c

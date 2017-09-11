@@ -1,7 +1,7 @@
 ; RUN: %llc_dwarf -stop-after=livedebugvalues -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=SANITY
 ; RUN: %llc_dwarf -march=x86-64 -o - %s -filetype=obj \
-; RUN:   | llvm-dwarfdump -debug-dump=all - | FileCheck %s
+; RUN:   | llvm-dwarfdump -all - | FileCheck %s
 ;
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable

@@ -1,5 +1,5 @@
 ; RUN: llc -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 
 ; Make sure that the base type from the subrange type has a name.
 ; CHECK: DW_TAG_subrange_type

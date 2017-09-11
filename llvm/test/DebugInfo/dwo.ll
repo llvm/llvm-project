@@ -1,5 +1,5 @@
 ; RUN: %llc_dwarf %s -filetype=obj -o %t
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 ; REQUIRES: default_triple
 ;
 ; CHECK: DW_TAG_compile_unit

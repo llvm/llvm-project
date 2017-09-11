@@ -1,5 +1,5 @@
 ; RUN: llc  -mtriple=x86_64-apple-macosx10.8.0 -O0 -filetype=obj -o %t %s
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 ; Test that we generate debug info for by-value struct args that are not used.
 ;
 ; CHECK: DW_TAG_formal_parameter

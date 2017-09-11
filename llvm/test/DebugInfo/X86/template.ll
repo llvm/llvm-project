@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; IR generated with `clang++ -g -emit-llvm -S` from the following code:
 ; template<int x, int*, template<typename> class y, decltype(nullptr) n, int ...z>  int func() { return 3; }
