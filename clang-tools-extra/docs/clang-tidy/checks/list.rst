@@ -70,21 +70,31 @@ Clang-Tidy Checks
    google-runtime-operator
    google-runtime-references
    hicpp-braces-around-statements (redirects to readability-braces-around-statements) <hicpp-braces-around-statements>
+   hicpp-deprecated-headers (redirects to modernize-deprecated-headers) <hicpp-deprecated-headers>
    hicpp-exception-baseclass
    hicpp-explicit-conversions (redirects to google-explicit-constructor) <hicpp-explicit-conversions>
    hicpp-function-size (redirects to readability-function-size) <hicpp-function-size>
    hicpp-invalid-access-moved (redirects to misc-use-after-move) <hicpp-invalid-access-moved>
+   hicpp-move-const-arg (redirects to misc-move-const-arg) <hicpp-move-const-arg>
    hicpp-member-init (redirects to cppcoreguidelines-pro-type-member-init) <hicpp-member-init>
    hicpp-named-parameter (redirects to readability-named-parameter) <hicpp-named-parameter>
    hicpp-new-delete-operators (redirects to misc-new-delete-overloads) <hicpp-new-delete-operators>
+   hicpp-no-array-decay (redirects to cppcoreguidelines-pro-bounds-array-to-pointer-decay) <hicpp-no-array-decay>
    hicpp-no-assembler
+   hicpp-no-malloc (redirects to cppcoreguidelines-no-malloc) <hicpp-no-malloc>
    hicpp-noexcept-move (redirects to misc-noexcept-moveconstructor) <hicpp-noexcept-move>
    hicpp-signed-bitwise
    hicpp-special-member-functions (redirects to cppcoreguidelines-special-member-functions) <hicpp-special-member-functions>
+   hicpp-static-assert (redirects to misc-static-assert) <hicpp-static-assert>
    hicpp-undelegated-constructor (redirects to misc-undelegated-constructor) <hicpp-undelegated-constructor>
+   hicpp-use-auto (redirects to modernize-use-auto) <hicpp-use-auto>
+   hicpp-use-emplace (redirects to modernize-use-emplace) <hicpp-use-emplace>
    hicpp-use-equals-default (redirects to modernize-use-equals-default) <hicpp-use-equals-default>
    hicpp-use-equals-delete (redirects to modernize-use-equals-delete) <hicpp-use-equals-delete>
+   hicpp-use-noexcept (redirects to modernize-use-noexcept) <hicpp-use-noexcept>
+   hicpp-use-nullptr (redirects to modernize-use-nullptr) <hicpp-use-nullptr>
    hicpp-use-override (redirects to modernize-use-override) <hicpp-use-override>
+   hicpp-vararg (redirects to cppcoreguidelines-pro-type-varg) <hicpp-vararg>
    llvm-header-guard
    llvm-include-order
    llvm-namespace-comment
