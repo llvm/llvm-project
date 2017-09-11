@@ -95,9 +95,15 @@ LineCoverageStats::LineCoverageStats(
     if (isStartOfRegion(LineSegments[I]))
       ++MinRegionCount;
 
+  bool StartOfSkippedRegion = !LineSegments.empty() &&
+                              !LineSegments.front()->HasCount &&
+                              LineSegments.front()->IsRegionEntry;
+
   ExecutionCount = 0;
   HasMultipleRegions = MinRegionCount > 1;
-  Mapped = (WrappedSegment && WrappedSegment->HasCount) || (MinRegionCount > 0);
+  Mapped =
+      !StartOfSkippedRegion &&
+      ((WrappedSegment && WrappedSegment->HasCount) || (MinRegionCount > 0));
 
   if (!Mapped)
     return;
