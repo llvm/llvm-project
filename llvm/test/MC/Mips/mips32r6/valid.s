@@ -16,7 +16,7 @@ a:
         .set noat
         # FIXME: Add the instructions carried forward from older ISA's
         and     $2,4             # CHECK: andi $2, $2, 4      # encoding: [0x30,0x42,0x00,0x04]
-        addiupc $4, 100          # CHECK: addiupc $4, 100     # encoding: [0xec,0x80,0x00,0x19]
+        addiupc $4, 100          # CHECK: lapc $4, 100        # encoding: [0xec,0x80,0x00,0x19]
         addu    $9,10            # CHECK: addiu $9, $9, 10    # encoding: [0x25,0x29,0x00,0x0a]
         align   $4, $2, $3, 2    # CHECK: align $4, $2, $3, 2 # encoding: [0x7c,0x43,0x22,0xa0]
         aluipc  $3, 56           # CHECK: aluipc $3, 56       # encoding: [0xec,0x7f,0x00,0x38]
@@ -113,6 +113,7 @@ a:
         jic     $5, 256          # CHECK: jic $5, 256      # encoding: [0xd8,0x05,0x01,0x00]
         l.s     $f2, 8($3)       # CHECK: lwc1 $f2, 8($3)  # encoding: [0xc4,0x62,0x00,0x08]
         l.d     $f2, 8($3)       # CHECK: ldc1 $f2, 8($3)  # encoding: [0xd4,0x62,0x00,0x08]
+        lapc    $4, 100          # CHECK: lapc $4, 100     # encoding: [0xec,0x80,0x00,0x19]
         lsa     $2, $3, $4, 3    # CHECK: lsa  $2, $3, $4, 3 # encoding: [0x00,0x64,0x10,0x85]
         lwpc    $2,268           # CHECK: lwpc $2, 268     # encoding: [0xec,0x48,0x00,0x43]
         lwupc   $2,268           # CHECK: lwupc $2, 268    # encoding: [0xec,0x50,0x00,0x43]

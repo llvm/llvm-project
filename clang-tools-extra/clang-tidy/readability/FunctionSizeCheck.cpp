@@ -16,6 +16,7 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace tidy {
 namespace readability {
+namespace {
 
 class FunctionASTVisitor : public RecursiveASTVisitor<FunctionASTVisitor> {
   using Base = RecursiveASTVisitor<FunctionASTVisitor>;
@@ -84,6 +85,8 @@ public:
   std::vector<bool> TrackedParent;
   unsigned CurrentNestingLevel = 0;
 };
+
+} // namespace
 
 FunctionSizeCheck::FunctionSizeCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),

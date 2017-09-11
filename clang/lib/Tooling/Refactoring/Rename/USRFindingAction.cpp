@@ -198,8 +198,11 @@ private:
         return false;
       }
 
-      if (Force)
+      if (Force) {
+        SpellingNames.push_back(std::string());
+        USRList.push_back(std::vector<std::string>());
         return true;
+      }
 
       unsigned CouldNotFindSymbolNamed = Engine.getCustomDiagID(
           DiagnosticsEngine::Error, "clang-rename could not find symbol %0");

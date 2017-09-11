@@ -97,8 +97,11 @@ public:
   PrecompiledPreamble(PrecompiledPreamble &&) = default;
   PrecompiledPreamble &operator=(PrecompiledPreamble &&) = default;
 
-  /// PreambleBounds used to build the preamble
+  /// PreambleBounds used to build the preamble.
   PreambleBounds getBounds() const;
+
+  /// The temporary file path at which the preamble PCH was placed.
+  StringRef GetPCHPath() const { return PCHFile.getFilePath(); }
 
   /// Check whether PrecompiledPreamble can be reused for the new contents(\p
   /// MainFileBuffer) of the main file.
