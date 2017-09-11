@@ -34,11 +34,8 @@ class Decorator : public __sanitizer::SanitizerCommonDecorator {
  public:
   Decorator() : SanitizerCommonDecorator() {}
   const char *Access() { return Blue(); }
-  const char *EndAccess() { return Default(); }
   const char *Location() { return Green(); }
-  const char *EndLocation() { return Default(); }
   const char *Allocation() { return Magenta(); }
-  const char *EndAllocation() { return Default(); }
 
   const char *ShadowByte(u8 byte) {
     switch (byte) {
@@ -72,9 +69,7 @@ class Decorator : public __sanitizer::SanitizerCommonDecorator {
         return Default();
     }
   }
-  const char *EndShadowByte() { return Default(); }
   const char *MemoryByte() { return Magenta(); }
-  const char *EndMemoryByte() { return Default(); }
 };
 
 enum ShadowKind : u8 {
