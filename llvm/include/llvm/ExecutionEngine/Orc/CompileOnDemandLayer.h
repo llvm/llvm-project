@@ -140,12 +140,6 @@ private:
   struct LogicalDylib {
     using SymbolResolverFtor = std::function<JITSymbol(const std::string&)>;
 
-    using ModuleAdderFtor =
-      std::function<typename BaseLayerT::ModuleHandleT(
-                    BaseLayerT&,
-                    std::unique_ptr<Module>,
-                    std::unique_ptr<JITSymbolResolver>)>;
-
     struct SourceModuleEntry {
       std::shared_ptr<Module> SourceMod;
       std::set<Function*> StubsToClone;
