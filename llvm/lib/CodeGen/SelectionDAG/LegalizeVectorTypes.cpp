@@ -1970,13 +1970,12 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSCATTER(MaskedScatterSDNode *N,
                          MachineMemOperand::MOStore,  HiMemVT.getStoreSize(),
                          Alignment, N->getAAInfo(), N->getRanges());
 
-  SDValue OpsHi[] = {Ch, DataHi, MaskHi, Ptr, IndexHi};
-  Hi = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), DataHi.getValueType(),
-                            DL, OpsHi, MMO);
-
-  // Build a factor node to remember that this store is independent of the
-  // other one.
-  return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
+  // The order of the Scatter operation after split is well defined. The "Hi"
+  // part comes after the "Lo". So these two operations should be chained one
+  // after another.
+  SDValue OpsHi[] = {Lo, DataHi, MaskHi, Ptr, IndexHi};
+  return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), DataHi.getValueType(),
+                              DL, OpsHi, MMO);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
