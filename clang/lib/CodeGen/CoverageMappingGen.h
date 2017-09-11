@@ -39,7 +39,7 @@ class CoverageSourceInfo : public PPCallbacks {
 public:
   ArrayRef<SourceRange> getSkippedRanges() const { return SkippedRanges; }
 
-  void SourceRangeSkipped(SourceRange Range) override;
+  void SourceRangeSkipped(SourceRange Range, SourceLocation EndifLoc) override;
 };
 
 namespace CodeGen {
