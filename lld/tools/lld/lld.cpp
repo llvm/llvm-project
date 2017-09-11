@@ -49,6 +49,16 @@ static Flavor getFlavor(StringRef S) {
       .Default(Invalid);
 }
 
+static bool isPETarget(const std::vector<const char *> &V) {
+  for (auto It = V.begin(); It + 1 != V.end(); ++It) {
+    if (StringRef(*It) != "-m")
+      continue;
+    StringRef S = *(It + 1);
+    return S == "i386pe" || S == "i386pep" || S == "thumb2pe" || S == "arm64pe";
+  }
+  return false;
+}
+
 static Flavor parseProgname(StringRef Progname) {
 #if __APPLE__
   // Use Darwin driver for "ld" on Darwin.
@@ -101,6 +111,8 @@ int main(int Argc, const char **Argv) {
   std::vector<const char *> Args(Argv, Argv + Argc);
   switch (parseFlavor(Args)) {
   case Gnu:
+    if (isPETarget(Args))
+      return !mingw::link(Args);
     return !elf::link(Args, true);
   case WinLink:
     return !coff::link(Args);
