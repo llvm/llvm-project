@@ -53,8 +53,10 @@ static void initOnce() {
   initScudo();
 }
 
-void initThread() {
+void initThread(bool MinimalInit) {
   CHECK_EQ(pthread_once(&GlobalInitialized, initOnce), 0);
+  if (UNLIKELY(MinimalInit))
+    return;
   CHECK_EQ(pthread_setspecific(PThreadKey, reinterpret_cast<void *>(
       GetPthreadDestructorIterations())), 0);
   ThreadLocalContext.init();

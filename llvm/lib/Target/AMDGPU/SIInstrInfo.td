@@ -849,7 +849,7 @@ class EXP_Helper<bit done, SDPatternOperator node = null_frag> : EXPCommon<
 // Split EXP instruction into EXP and EXP_DONE so we can set
 // mayLoad for done=1.
 multiclass EXP_m<bit done, SDPatternOperator node> {
-  let mayLoad = done in {
+  let mayLoad = done, DisableWQM = 1 in {
     let isPseudo = 1, isCodeGenOnly = 1 in {
       def "" : EXP_Helper<done, node>,
                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.NONE>;

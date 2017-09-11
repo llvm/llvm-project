@@ -950,6 +950,9 @@ def : MipsInstAlias<"div $rs, $rt", (DIV GPR32Opnd:$rs, GPR32Opnd:$rs,
 def : MipsInstAlias<"divu $rs, $rt", (DIVU GPR32Opnd:$rs, GPR32Opnd:$rs,
                                            GPR32Opnd:$rt)>, ISA_MIPS32R6;
 
+def : MipsInstAlias<"lapc $rd, $imm",
+                    (ADDIUPC GPR32Opnd:$rd, simm19_lsl2:$imm)>, ISA_MIPS32R6;
+
 //===----------------------------------------------------------------------===//
 //
 // Patterns and Pseudo Instructions

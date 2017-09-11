@@ -114,6 +114,37 @@ public:
   /// \name Generic Target Information
   /// @{
 
+  /// \brief The kind of cost model.
+  ///
+  /// There are several different cost models that can be customized by the
+  /// target. The normalization of each cost model may be target specific.
+  enum TargetCostKind {
+    TCK_RecipThroughput, ///< Reciprocal throughput.
+    TCK_Latency,         ///< The latency of instruction.
+    TCK_CodeSize         ///< Instruction code size.
+  };
+
+  /// \brief Query the cost of a specified instruction.
+  ///
+  /// Clients should use this interface to query the cost of an existing
+  /// instruction. The instruction must have a valid parent (basic block).
+  ///
+  /// Note, this method does not cache the cost calculation and it
+  /// can be expensive in some cases.
+  int getInstructionCost(const Instruction *I, enum TargetCostKind kind) const {
+    switch (kind){
+    case TCK_RecipThroughput:
+      return getInstructionThroughput(I);
+
+    case TCK_Latency:
+      return getInstructionLatency(I);
+
+    case TCK_CodeSize:
+      return getUserCost(I);
+    }
+    llvm_unreachable("Unknown instruction cost kind");
+  }
+
   /// \brief Underlying constants for 'cost' values in this interface.
   ///
   /// Many APIs in this interface return a cost. This enum defines the
@@ -450,6 +481,13 @@ public:
   /// bits scalar type.
   bool isLegalMaskedScatter(Type *DataType) const;
   bool isLegalMaskedGather(Type *DataType) const;
+
+  /// Return true if the target has a unified operation to calculate division
+  /// and remainder. If so, the additional implicit multiplication and
+  /// subtraction required to calculate a remainder from division are free. This
+  /// can enable more aggressive transformations for division and remainder than
+  /// would typically be allowed using throughput or size cost models.
+  bool hasDivRemOp(Type *DataType, bool IsSigned) const;
 
   /// Return true if target doesn't mind addresses in vectors.
   bool prefersVectorizedAddressing() const;
@@ -868,6 +906,14 @@ public:
   /// @}
 
 private:
+  /// \brief Estimate the latency of specified instruction.
+  /// Returns 1 as the default value.
+  int getInstructionLatency(const Instruction *I) const;
+
+  /// \brief Returns the expected throughput cost of the instruction.
+  /// Returns -1 if the cost is unknown.
+  int getInstructionThroughput(const Instruction *I) const;
+
   /// \brief The abstract base class used to type erase specific TTI
   /// implementations.
   class Concept;
@@ -920,6 +966,7 @@ public:
   virtual bool isLegalMaskedLoad(Type *DataType) = 0;
   virtual bool isLegalMaskedScatter(Type *DataType) = 0;
   virtual bool isLegalMaskedGather(Type *DataType) = 0;
+  virtual bool hasDivRemOp(Type *DataType, bool IsSigned) = 0;
   virtual bool prefersVectorizedAddressing() = 0;
   virtual int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                    int64_t BaseOffset, bool HasBaseReg,
@@ -1044,6 +1091,7 @@ public:
   virtual bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                                      ReductionFlags) const = 0;
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const = 0;
+  virtual int getInstructionLatency(const Instruction *I) = 0;
 };
 
 template <typename T>
@@ -1140,6 +1188,9 @@ public:
   }
   bool isLegalMaskedGather(Type *DataType) override {
     return Impl.isLegalMaskedGather(DataType);
+  }
+  bool hasDivRemOp(Type *DataType, bool IsSigned) override {
+    return Impl.hasDivRemOp(DataType, IsSigned);
   }
   bool prefersVectorizedAddressing() override {
     return Impl.prefersVectorizedAddressing();
@@ -1405,6 +1456,9 @@ public:
   }
   bool shouldExpandReduction(const IntrinsicInst *II) const override {
     return Impl.shouldExpandReduction(II);
+  }
+  int getInstructionLatency(const Instruction *I) override {
+    return Impl.getInstructionLatency(I);
   }
 };
 

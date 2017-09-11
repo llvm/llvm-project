@@ -18,7 +18,7 @@ bb:
   %tmp3 = call i64 @llvm.objectsize.i64.p0i8(i8* %tmp2, i1 false, i1 true)
   %tmp4 = call i8* @__strncpy_chk(i8* %arg2, i8* %tmp2, i64 1023, i64 %tmp3)
 ; CHECK-NOT:     call
-; CHECK:         call i8* @strncpy(i8* %arg2, i8* %tmp2, i64 1023)
+; CHECK:         call i8* @strncpy(i8* %arg2, i8* nonnull %tmp2, i64 1023)
 ; CHECK-NOT:     call
 
   ret i8* %tmp4

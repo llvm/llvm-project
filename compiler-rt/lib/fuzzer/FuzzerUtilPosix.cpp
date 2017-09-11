@@ -18,7 +18,6 @@
 #include <errno.h>
 #include <iomanip>
 #include <signal.h>
-#include <sstream>
 #include <stdio.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>

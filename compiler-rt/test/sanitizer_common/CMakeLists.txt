@@ -11,6 +11,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT ANDROID)
   list(APPEND SUPPORTED_TOOLS tsan)
   list(APPEND SUPPORTED_TOOLS msan)
   list(APPEND SUPPORTED_TOOLS lsan)
+  list(APPEND SUPPORTED_TOOLS ubsan)
 endif()
 
 # Create a separate config for each tool we support.

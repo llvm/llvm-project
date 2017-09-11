@@ -8717,9 +8717,10 @@ template <> inline bool IsCPSRDead<MCInst>(const MCInst *Instr) {
 bool ARMAsmParser::isITBlockTerminator(MCInst &Inst) const {
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
 
-  // All branch & call instructions terminate IT blocks.
-  if (MCID.isTerminator() || MCID.isCall() || MCID.isReturn() ||
-      MCID.isBranch() || MCID.isIndirectBranch())
+  // All branch & call instructions terminate IT blocks with the exception of
+  // SVC.
+  if (MCID.isTerminator() || (MCID.isCall() && Inst.getOpcode() != ARM::tSVC) ||
+      MCID.isReturn() || MCID.isBranch() || MCID.isIndirectBranch())
     return true;
 
   // Any arithmetic instruction which writes to the PC also terminates the IT

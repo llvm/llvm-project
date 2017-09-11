@@ -1,0 +1,110 @@
+# RUN: llc -march=amdgcn %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: test_madmk_reg_imm_f32
+# GCN: V_MADMK_F32 killed %0.sub0, 1078523331, killed %1, implicit %exec
+---
+name:            test_madmk_reg_imm_f32
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = COPY %0.sub1
+    %2 = V_MOV_B32_e32 1078523331, implicit %exec
+    %3 = V_MAC_F32_e32 killed %0.sub0, %2, killed %1, implicit %exec
+
+...
+
+# GCN-LABEL: name: test_madmk_imm_reg_f32
+# GCN: V_MADMK_F32 killed %0.sub0, 1078523331, killed %1, implicit %exec
+---
+name:            test_madmk_imm_reg_f32
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = COPY %0.sub1
+    %2 = V_MOV_B32_e32 1078523331, implicit %exec
+    %3 = V_MAC_F32_e32 %2, killed %0.sub0, killed %1, implicit %exec
+
+...
+
+# GCN-LABEL: name: test_madak_f32
+# GCN: V_MADAK_F32 killed %0.sub0, %0.sub1, 1078523331, implicit %exec
+---
+name:            test_madak_f32
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = V_MOV_B32_e32 1078523331, implicit %exec
+    %2 = V_MAC_F32_e32 killed %0.sub0, %0.sub1, %1, implicit %exec
+
+...
+
+# GCN-LABEL: name: test_madmk_reg_imm_f16
+# GCN: V_MADMK_F16 killed %0.sub0, 1078523331, killed %1, implicit %exec
+---
+name:            test_madmk_reg_imm_f16
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = COPY %0.sub1
+    %2 = V_MOV_B32_e32 1078523331, implicit %exec
+    %3 = V_MAC_F16_e32 killed %0.sub0, %2, killed %1, implicit %exec
+
+...
+
+# GCN-LABEL: name: test_madmk_imm_reg_f16
+# GCN: V_MADMK_F16 killed %0.sub0, 1078523331, killed %1, implicit %exec
+---
+name:            test_madmk_imm_reg_f16
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = COPY %0.sub1
+    %2 = V_MOV_B32_e32 1078523331, implicit %exec
+    %3 = V_MAC_F16_e32 %2, killed %0.sub0, killed %1, implicit %exec
+
+...
+
+# GCN-LABEL: name: test_madak_f16
+# GCN: V_MADAK_F16 killed %0.sub0, %0.sub1, 1078523331, implicit %exec
+---
+name:            test_madak_f16
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = V_MOV_B32_e32 1078523331, implicit %exec
+    %2 = V_MAC_F16_e32 killed %0.sub0, %0.sub1, %1, implicit %exec
+...

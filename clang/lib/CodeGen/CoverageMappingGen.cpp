@@ -29,7 +29,7 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm::coverage;
 
-void CoverageSourceInfo::SourceRangeSkipped(SourceRange Range) {
+void CoverageSourceInfo::SourceRangeSkipped(SourceRange Range, SourceLocation) {
   SkippedRanges.push_back(Range);
 }
 

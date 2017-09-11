@@ -31,14 +31,14 @@ extern THREADLOCAL ThreadState ScudoThreadState;
 __attribute__((tls_model("initial-exec")))
 extern THREADLOCAL ScudoThreadContext ThreadLocalContext;
 
-ALWAYS_INLINE void initThreadMaybe() {
+ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
   if (LIKELY(ScudoThreadState != ThreadNotInitialized))
     return;
-  initThread();
+  initThread(MinimalInit);
 }
 
 ALWAYS_INLINE ScudoThreadContext *getThreadContextAndLock() {
-  if (UNLIKELY(ScudoThreadState == ThreadTornDown))
+  if (UNLIKELY(ScudoThreadState != ThreadInitialized))
     return nullptr;
   return &ThreadLocalContext;
 }

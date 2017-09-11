@@ -4,6 +4,7 @@
 
 // Hooks are not implemented for lsan.
 // XFAIL: lsan
+// XFAIL: ubsan
 
 #include <string.h>
 #include <assert.h>

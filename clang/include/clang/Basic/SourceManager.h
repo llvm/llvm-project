@@ -212,12 +212,6 @@ namespace SrcMgr {
     /// this content cache.  This is used for performance analysis.
     llvm::MemoryBuffer::BufferKind getMemoryBufferKind() const;
 
-    void setBuffer(std::unique_ptr<llvm::MemoryBuffer> B) {
-      assert(!Buffer.getPointer() && "MemoryBuffer already set.");
-      Buffer.setPointer(B.release());
-      Buffer.setInt(0);
-    }
-
     /// \brief Get the underlying buffer, returning NULL if the buffer is not
     /// yet available.
     llvm::MemoryBuffer *getRawBuffer() const { return Buffer.getPointer(); }
@@ -816,7 +810,22 @@ public:
                       SrcMgr::CharacteristicKind FileCharacter = SrcMgr::C_User,
                       int LoadedID = 0, unsigned LoadedOffset = 0,
                       SourceLocation IncludeLoc = SourceLocation()) {
-    return createFileID(createMemBufferContentCache(std::move(Buffer)),
+    return createFileID(
+        createMemBufferContentCache(Buffer.release(), /*DoNotFree*/ false),
+        IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
+  }
+
+  enum UnownedTag { Unowned };
+
+  /// \brief Create a new FileID that represents the specified memory buffer.
+  ///
+  /// This does no caching of the buffer and takes ownership of the
+  /// MemoryBuffer, so only pass a MemoryBuffer to this once.
+  FileID createFileID(UnownedTag, llvm::MemoryBuffer *Buffer,
+                      SrcMgr::CharacteristicKind FileCharacter = SrcMgr::C_User,
+                      int LoadedID = 0, unsigned LoadedOffset = 0,
+                      SourceLocation IncludeLoc = SourceLocation()) {
+    return createFileID(createMemBufferContentCache(Buffer, /*DoNotFree*/true),
                         IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
   }
 
@@ -1699,7 +1708,7 @@ private:
 
   /// \brief Create a new ContentCache for the specified  memory buffer.
   const SrcMgr::ContentCache *
-  createMemBufferContentCache(std::unique_ptr<llvm::MemoryBuffer> Buf);
+  createMemBufferContentCache(llvm::MemoryBuffer *Buf, bool DoNotFree);
 
   FileID getFileIDSlow(unsigned SLocOffset) const;
   FileID getFileIDLocal(unsigned SLocOffset) const;

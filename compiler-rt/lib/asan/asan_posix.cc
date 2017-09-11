@@ -38,7 +38,9 @@ void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   int code = (int)((siginfo_t*)siginfo)->si_code;
   // Write the first message using fd=2, just in case.
   // It may actually fail to write in case stderr is closed.
-  internal_write(2, "ASAN:DEADLYSIGNAL\n", 18);
+  internal_write(2, SanitizerToolName, internal_strlen(SanitizerToolName));
+  static const char kDeadlySignal[] = ":DEADLYSIGNAL\n";
+  internal_write(2, kDeadlySignal, sizeof(kDeadlySignal) - 1);
   SignalContext sig = SignalContext::Create(siginfo, context);
 
   // Access at a reasonable offset above SP, or slightly below it (to account

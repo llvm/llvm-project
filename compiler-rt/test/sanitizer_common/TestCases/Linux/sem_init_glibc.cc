@@ -1,7 +1,7 @@
 // RUN: %clangxx -O0 -g %s -lutil -o %t && %run %t
 // This test depends on the glibc layout of struct sem_t and checks that we
 // don't leave sem_t::private uninitialized.
-// UNSUPPORTED: android, lsan-x86
+// UNSUPPORTED: android, lsan-x86, ubsan
 #include <features.h>
 #include <assert.h>
 #include <semaphore.h>
