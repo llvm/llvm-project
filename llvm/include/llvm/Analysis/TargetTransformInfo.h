@@ -142,8 +142,7 @@ public:
     case TCK_CodeSize:
       return getUserCost(I);
     }
-
-    return 0;
+    llvm_unreachable("Unknown instruction cost kind");
   }
 
   /// \brief Underlying constants for 'cost' values in this interface.

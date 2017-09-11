@@ -104,6 +104,75 @@ define i32 @rem3(i32 %x, i32 %n) {
   ret i32 %mod1
 }
 
+define i32 @urem_quotient_known_smaller_than_constant_denom(i32 %x) {
+; CHECK-LABEL: @urem_quotient_known_smaller_than_constant_denom(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 250
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %and = and i32 %x, 250
+  %r = urem i32 %and, 251
+  ret i32 %r
+}
+
+define i32 @not_urem_quotient_known_smaller_than_constant_denom(i32 %x) {
+; CHECK-LABEL: @not_urem_quotient_known_smaller_than_constant_denom(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 251
+; CHECK-NEXT:    [[R:%.*]] = urem i32 [[AND]], 251
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %and = and i32 %x, 251
+  %r = urem i32 %and, 251
+  ret i32 %r
+}
+
+define i32 @urem_constant_quotient_known_smaller_than_denom(i32 %x) {
+; CHECK-LABEL: @urem_constant_quotient_known_smaller_than_denom(
+; CHECK-NEXT:    ret i32 250
+;
+  %or = or i32 %x, 251
+  %r = urem i32 250, %or
+  ret i32 %r
+}
+
+define i32 @not_urem_constant_quotient_known_smaller_than_denom(i32 %x) {
+; CHECK-LABEL: @not_urem_constant_quotient_known_smaller_than_denom(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 %x, 251
+; CHECK-NEXT:    [[R:%.*]] = urem i32 251, [[OR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %or = or i32 %x, 251
+  %r = urem i32 251, %or
+  ret i32 %r
+}
+
+; This would require computing known bits on both x and y. Is it worth doing?
+
+define i32 @urem_quotient_known_smaller_than_denom(i32 %x, i32 %y) {
+; CHECK-LABEL: @urem_quotient_known_smaller_than_denom(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 250
+; CHECK-NEXT:    [[OR:%.*]] = or i32 %y, 251
+; CHECK-NEXT:    [[R:%.*]] = urem i32 [[AND]], [[OR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %and = and i32 %x, 250
+  %or = or i32 %y, 251
+  %r = urem i32 %and, %or
+  ret i32 %r
+}
+
+define i32 @not_urem_quotient_known_smaller_than_denom(i32 %x, i32 %y) {
+; CHECK-LABEL: @not_urem_quotient_known_smaller_than_denom(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 251
+; CHECK-NEXT:    [[OR:%.*]] = or i32 %y, 251
+; CHECK-NEXT:    [[R:%.*]] = urem i32 [[AND]], [[OR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %and = and i32 %x, 251
+  %or = or i32 %y, 251
+  %r = urem i32 %and, %or
+  ret i32 %r
+}
+
 declare i32 @external()
 
 define i32 @rem4() {
