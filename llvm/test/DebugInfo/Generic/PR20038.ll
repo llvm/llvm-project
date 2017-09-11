@@ -3,7 +3,7 @@
 ; For some reason, the output when targetting sparc is not quite as expected.
 ; XFAIL: sparc
 
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; IR generated from clang -O0 with:
 ; struct C {

@@ -8,21 +8,21 @@ RUN: cat %p/../Inputs/basic-lto-dw4.macho.x86_64 > %t/basic-lto-dw4.macho.x86_64
 
 # Multiple inputs in flat mode
 RUN: llvm-dsymutil -f -oso-prepend-path=%p/.. %t/basic.macho.x86_64 %t/basic-archive.macho.x86_64 %t/basic-lto.macho.x86_64 %t/basic-lto-dw4.macho.x86_64
-RUN: llvm-dwarfdump %t/basic.macho.x86_64.dwarf \
+RUN: llvm-dwarfdump -v %t/basic.macho.x86_64.dwarf \
 RUN: | FileCheck %S/basic-linking-x86.test --check-prefix=CHECK --check-prefix=BASIC
-RUN: llvm-dwarfdump %t/basic-archive.macho.x86_64.dwarf \
+RUN: llvm-dwarfdump -v %t/basic-archive.macho.x86_64.dwarf \
 RUN: | FileCheck %S/basic-linking-x86.test --check-prefix=CHECK --check-prefix=ARCHIVE
-RUN: llvm-dwarfdump %t/basic-lto.macho.x86_64.dwarf | FileCheck %S/basic-lto-linking-x86.test
-RUN: llvm-dwarfdump %t/basic-lto-dw4.macho.x86_64.dwarf | FileCheck %S/basic-lto-dw4-linking-x86.test
+RUN: llvm-dwarfdump -v %t/basic-lto.macho.x86_64.dwarf | FileCheck %S/basic-lto-linking-x86.test
+RUN: llvm-dwarfdump -v %t/basic-lto-dw4.macho.x86_64.dwarf | FileCheck %S/basic-lto-dw4-linking-x86.test
 
 # Multiple inputs that end up in the same named bundle
 RUN: llvm-dsymutil -oso-prepend-path=%p/.. %t/basic.macho.x86_64 %t/basic-archive.macho.x86_64 %t/basic-lto.macho.x86_64 %t/basic-lto-dw4.macho.x86_64 -o %t.dSYM
-RUN: llvm-dwarfdump %t.dSYM/Contents/Resources/DWARF/basic.macho.x86_64 \
+RUN: llvm-dwarfdump -v %t.dSYM/Contents/Resources/DWARF/basic.macho.x86_64 \
 RUN: | FileCheck %S/basic-linking-x86.test --check-prefix=CHECK --check-prefix=BASIC
-RUN: llvm-dwarfdump %t.dSYM/Contents/Resources/DWARF/basic-archive.macho.x86_64 \
+RUN: llvm-dwarfdump -v %t.dSYM/Contents/Resources/DWARF/basic-archive.macho.x86_64 \
 RUN: | FileCheck %S/basic-linking-x86.test --check-prefix=CHECK --check-prefix=ARCHIVE
-RUN: llvm-dwarfdump %t.dSYM/Contents/Resources/DWARF/basic-lto.macho.x86_64 | FileCheck %S/basic-lto-linking-x86.test
-RUN: llvm-dwarfdump %t.dSYM/Contents/Resources/DWARF/basic-lto-dw4.macho.x86_64 | FileCheck %S/basic-lto-dw4-linking-x86.test
+RUN: llvm-dwarfdump -v %t.dSYM/Contents/Resources/DWARF/basic-lto.macho.x86_64 | FileCheck %S/basic-lto-linking-x86.test
+RUN: llvm-dwarfdump -v %t.dSYM/Contents/Resources/DWARF/basic-lto-dw4.macho.x86_64 | FileCheck %S/basic-lto-dw4-linking-x86.test
 
 # Multiple inputs in a named bundle in flat mode... impossible.
 RUN: not llvm-dsymutil -f -oso-prepend-path=%p/.. %t/basic.macho.x86_64 %t/basic-archive.macho.x86_64 %t/basic-lto.macho.x86_64 %t/basic-lto-dw4.macho.x86_64 -o %t.dSYM 2>&1 | FileCheck %s

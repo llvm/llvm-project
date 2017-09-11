@@ -1,5 +1,5 @@
 ; RUN: llc %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 
 ; Checks that we emit debug info for the block variable declare.
 ; CHECK: DW_TAG_subprogram

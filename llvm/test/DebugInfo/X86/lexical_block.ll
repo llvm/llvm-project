@@ -1,9 +1,9 @@
 ; REQUIRES: object-emission
 
 ; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj < %s \
-; RUN:     | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-V4 %s
+; RUN:     | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-V4 %s
 ; RUN: llc -mtriple=x86_64-linux -dwarf-version=3 -O0 -filetype=obj < %s \
-; RUN:     | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-V3 %s
+; RUN:     | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-V3 %s
 
 ; Check that we emit DW_TAG_lexical_block and that it has the right encoding
 ; depending on the dwarf version.

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-linux -O0 -o - -filetype=obj < %s | llvm-dwarfdump -debug-info -| FileCheck %s
-; RUN: llc -mtriple=x86_64-linux -dwarf-version=2 -O0 -o - -filetype=obj < %s | llvm-dwarfdump -debug-info -| FileCheck -check-prefix=DWARF2 %s
+; RUN: llc -mtriple=x86_64-linux -O0 -o - -filetype=obj < %s | llvm-dwarfdump -v -debug-info -| FileCheck %s
+; RUN: llc -mtriple=x86_64-linux -dwarf-version=2 -O0 -o - -filetype=obj < %s | llvm-dwarfdump -v -debug-info -| FileCheck -check-prefix=DWARF2 %s
 
 ; Generated from Clang with the following source:
 ;

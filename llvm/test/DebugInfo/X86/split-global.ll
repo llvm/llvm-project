@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin %s -o - -filetype=obj | \
-; RUN:     llvm-dwarfdump --debug-info - | FileCheck %s
+; RUN:     llvm-dwarfdump -v --debug-info - | FileCheck %s
 ;
 ; Test emitting debug info for fragmented global values.
 ; This is a handcrafted example of an SROAed global variable.

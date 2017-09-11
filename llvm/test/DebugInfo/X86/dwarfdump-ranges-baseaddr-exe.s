@@ -1,4 +1,4 @@
-# RUN: llvm-dwarfdump %S/../Inputs/dwarfdump-ranges-baseaddr-exe.elf-x86-64 \
+# RUN: llvm-dwarfdump -v %S/../Inputs/dwarfdump-ranges-baseaddr-exe.elf-x86-64 \
 # RUN:  | FileCheck %s
 
 ## Executable binary for test produced from object built in 

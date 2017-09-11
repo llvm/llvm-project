@@ -1,5 +1,5 @@
 ; RUN: llc -march=mips -mcpu=mips32r2 -O0 -filetype=obj -fast-isel=0 <%s | \
-; RUN:    llvm-dwarfdump -all - | FileCheck %s
+; RUN:    llvm-dwarfdump -v -all - | FileCheck %s
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 

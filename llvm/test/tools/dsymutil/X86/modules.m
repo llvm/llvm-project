@@ -20,7 +20,7 @@ EOF
 
 // RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/modules \
 // RUN:   -y %p/dummy-debug-map.map -o - \
-// RUN:     | llvm-dwarfdump --debug-info - | FileCheck %s
+// RUN:     | llvm-dwarfdump -v --debug-info - | FileCheck %s
 
 // RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/modules -y \
 // RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck --check-prefix=WARN %s

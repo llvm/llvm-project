@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 
 ; ModuleID = 'test.c'
 

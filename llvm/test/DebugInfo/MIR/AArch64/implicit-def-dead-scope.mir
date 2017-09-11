@@ -1,5 +1,5 @@
 # RUN: llc -start-after=livedebugvalues -filetype=obj -o - %s \
-# RUN:   | llvm-dwarfdump - | FileCheck %s
+# RUN:   | llvm-dwarfdump -v - | FileCheck %s
 
 # This tests for a crash in DwarfDebug's singular DBG_VALUE range promotion when
 #  encountering an IMPLICIT_DEF in its own lexical scope.

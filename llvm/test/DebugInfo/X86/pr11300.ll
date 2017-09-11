@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
+; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 
 ; test that the DW_AT_specification is a back edge in the file.
 

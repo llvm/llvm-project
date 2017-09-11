@@ -1,5 +1,5 @@
 ; RUN: llc -O0 %s -mtriple=x86_64-apple-darwin -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
+; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 ; rdar://13071590
 ; Check we are not emitting mutliple AT_const_value for a single member.

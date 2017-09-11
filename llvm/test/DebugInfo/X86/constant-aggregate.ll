@@ -1,5 +1,5 @@
 ; RUN: llc %s -filetype=obj -o %t.o
-; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s
+; RUN: llvm-dwarfdump -v -debug-info %t.o | FileCheck %s
 ; Test emitting a constant for an aggregate type.
 ;
 ; clang -S -O1 -emit-llvm

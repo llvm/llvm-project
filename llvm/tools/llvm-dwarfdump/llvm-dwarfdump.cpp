@@ -57,7 +57,10 @@ static cl::opt<bool>
 static cl::opt<bool> Verify("verify", cl::desc("Verify the DWARF debug info"));
 static cl::opt<bool> Quiet("quiet",
                            cl::desc("Use with -verify to not emit to STDOUT."));
-static cl::opt<bool> Brief("brief", cl::desc("Print fewer low-level details"));
+static cl::opt<bool> Verbose("verbose",
+                             cl::desc("Print more low-level encoding details"));
+static cl::alias VerboseAlias("v", cl::desc("Alias for -verbose"),
+                              cl::aliasopt(Verbose));
 
 static void error(StringRef Filename, std::error_code EC) {
   if (!EC)
@@ -79,7 +82,7 @@ static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
   DIDumpOptions DumpOpts;
   DumpOpts.DumpType = DumpType;
   DumpOpts.SummarizeTypes = SummarizeTypes;
-  DumpOpts.Brief = Brief;
+  DumpOpts.Brief = !Verbose;
   DICtx->dump(outs(), DumpOpts);
 }
 
@@ -199,10 +202,10 @@ int main(int argc, char **argv) {
   if (DumpAll)
     DumpType = DIDT_All;
   if (DumpType == DIDT_Null) {
-    if (Brief)
-      DumpType = DIDT_DebugInfo;
-    else
+    if (Verbose)
       DumpType = DIDT_All;
+    else
+      DumpType = DIDT_DebugInfo;
   }
 
   // Defaults to a.out if no filenames specified.

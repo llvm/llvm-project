@@ -1,4 +1,4 @@
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-header.elf-x86-64 | FileCheck %s
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-header.elf-x86-64 | FileCheck %s
 
 The input file is hand-coded assembler to generate all the units,
 so we're willing to make exact checks for offsets and such.

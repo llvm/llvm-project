@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=s390x-linux-gnu -disable-fp-elim < %s | FileCheck %s
 ; RUN: llc -mtriple=s390x-linux-gnu -disable-fp-elim -filetype=obj < %s \
-; RUN:     | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=DEBUG %s
+; RUN:     | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefix=DEBUG %s
 ;
 ; This is a regression test making sure the location of variables is correct in
 ; debugging information, even if they're addressed via the frame pointer.

@@ -1,4 +1,4 @@
-; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
 ; This tests a fragment that partially covers subregister compositions.
 ;
 ; Our fragment is 96 bits long and lies in a 128-bit register, which

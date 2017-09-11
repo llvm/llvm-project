@@ -18,7 +18,7 @@ EOF
 
 // RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/submodules \
 // RUN:   -y %p/dummy-debug-map.map -o - \
-// RUN:     | llvm-dwarfdump --debug-info - | FileCheck %s
+// RUN:     | llvm-dwarfdump -v --debug-info - | FileCheck %s
 
 // ---------------------------------------------------------------------
 #ifdef CHILD_H

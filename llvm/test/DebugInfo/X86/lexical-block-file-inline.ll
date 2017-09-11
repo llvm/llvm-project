@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -filetype=obj -O0 < %s  | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -filetype=obj -O0 < %s  | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ;; This test checks that Inlined DILexicalBlockFile with local decl entry
 ;; is skipped and only one DW_TAG_lexical_block is generated.

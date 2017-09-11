@@ -1,6 +1,6 @@
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-type-units.elf-x86-64 | FileCheck -check-prefix=CHECK -check-prefix=LONG %s
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-type-units.elf-x86-64 -summarize-types | FileCheck -check-prefix=CHECK -check-prefix=SHORT %s
-RUN: llvm-dwarfdump -debug-types %p/Inputs/dwarfdump-type-units.elf-x86-64 | FileCheck -check-prefix=TYPES %s
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-type-units.elf-x86-64 | FileCheck -check-prefix=CHECK -check-prefix=LONG %s
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-type-units.elf-x86-64 -summarize-types | FileCheck -check-prefix=CHECK -check-prefix=SHORT %s
+RUN: llvm-dwarfdump -v -debug-types %p/Inputs/dwarfdump-type-units.elf-x86-64 | FileCheck -check-prefix=TYPES %s
 
 CHECK: debug_info contents:
 

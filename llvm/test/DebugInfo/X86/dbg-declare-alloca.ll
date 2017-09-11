@@ -1,5 +1,5 @@
 ; RUN: llc < %s | FileCheck %s
-; RUN: llc < %s -filetype=obj | llvm-dwarfdump - --debug-info | FileCheck %s --check-prefix=DWARF
+; RUN: llc < %s -filetype=obj | llvm-dwarfdump -v - --debug-info | FileCheck %s --check-prefix=DWARF
 
 ; This should use the frame index side table for allocas, not DBG_VALUE
 ; instructions. For SDAG ISel, this test would see an SDNode materializing the
