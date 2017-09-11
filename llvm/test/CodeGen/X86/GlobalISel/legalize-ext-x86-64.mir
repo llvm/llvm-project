@@ -42,6 +42,23 @@
     %r = zext i32 %val to i64
     ret i64 %r
   }
+  
+  define void @test_anyext_i1(i8 %a) {
+    ret void
+  }
+
+  define void @test_anyext_i8(i8 %val) {
+    ret void
+  }
+
+  define void @test_anyext_i16(i16 %val) {
+    ret void
+  }
+
+  define void @test_anyext_i32(i32 %val) {
+    ret void
+  }
+  
 
 ...
 ---
@@ -234,3 +251,99 @@ body:             |
     RET 0, implicit %rax
 
 ...
+---
+name:            test_anyext_i1
+# CHECK-LABEL: name:  test_anyext_i1
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# CHECK:          %0(s8) = COPY %edi
+# CHECK-NEXT:     %1(s1) = G_TRUNC %0(s8)
+# CHECK-NEXT:     %2(s64) = G_ANYEXT %1(s1)
+# CHECK-NEXT:     %rax = COPY %2(s64)
+# CHECK-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s8) = COPY %edi
+    %1(s1) = G_TRUNC %0(s8)
+    %2(s64) = G_ANYEXT %1(s1)
+    %rax = COPY %2(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_anyext_i8
+# CHECK-LABEL: name:  test_anyext_i8
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+# CHECK:          %0(s8) = COPY %edi
+# CHECK-NEXT:     %1(s64) = G_ANYEXT %0(s8)
+# CHECK-NEXT:     %rax = COPY %1(s64)
+# CHECK-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s8) = COPY %edi
+    %1(s64) = G_ANYEXT %0(s8)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_anyext_i16
+# CHECK-LABEL: name:  test_anyext_i16
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+# CHECK:          %0(s16) = COPY %edi
+# CHECK-NEXT:     %1(s64) = G_ANYEXT %0(s16)
+# CHECK-NEXT:     %rax = COPY %1(s64)
+# CHECK-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s16) = COPY %edi
+    %1(s64) = G_ANYEXT %0(s16)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_anyext_i32
+# CHECK-LABEL: name:  test_anyext_i32
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+# CHECK:          %0(s32) = COPY %edi
+# CHECK-NEXT:     %1(s64) = G_ANYEXT %0(s32)
+# CHECK-NEXT:     %rax = COPY %1(s64)
+# CHECK-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s32) = COPY %edi
+    %1(s64) = G_ANYEXT %0(s32)
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...
+
