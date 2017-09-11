@@ -1145,6 +1145,17 @@ const internal::VariadicDynCastAllOfMatcher<
   Decl,
   ObjCInterfaceDecl> objcInterfaceDecl;
 
+/// \brief Matches Objective-C implementation declarations.
+///
+/// Example matches Foo
+/// \code
+///   @implementation Foo
+///   @end
+/// \endcode
+const internal::VariadicDynCastAllOfMatcher<
+  Decl,
+  ObjCImplementationDecl> objcImplementationDecl;
+
 /// \brief Matches Objective-C protocol declarations.
 ///
 /// Example matches FooDelegate

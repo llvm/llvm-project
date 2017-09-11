@@ -62,11 +62,13 @@ static bool CheckAsmLValue(const Expr *E, Sema &S) {
 
 /// isOperandMentioned - Return true if the specified operand # is mentioned
 /// anywhere in the decomposed asm string.
-static bool isOperandMentioned(unsigned OpNo,
-                         ArrayRef<GCCAsmStmt::AsmStringPiece> AsmStrPieces) {
+static bool
+isOperandMentioned(unsigned OpNo,
+                   ArrayRef<GCCAsmStmt::AsmStringPiece> AsmStrPieces) {
   for (unsigned p = 0, e = AsmStrPieces.size(); p != e; ++p) {
     const GCCAsmStmt::AsmStringPiece &Piece = AsmStrPieces[p];
-    if (!Piece.isOperand()) continue;
+    if (!Piece.isOperand())
+      continue;
 
     // If this is a reference to the input and if the input was the smaller
     // one, then we have to reject this asm.

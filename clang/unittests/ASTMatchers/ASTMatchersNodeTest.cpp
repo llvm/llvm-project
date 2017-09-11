@@ -1612,6 +1612,9 @@ TEST(ObjCDeclMacher, CoreDecls) {
     objcProtocolDecl(hasName("Proto"))));
   EXPECT_TRUE(matchesObjC(
     ObjCString,
+    objcImplementationDecl(hasName("Thing"))));
+  EXPECT_TRUE(matchesObjC(
+    ObjCString,
     objcCategoryDecl(hasName("ABC"))));
   EXPECT_TRUE(matchesObjC(
     ObjCString,
