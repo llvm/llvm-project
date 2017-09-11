@@ -6,6 +6,7 @@ add_clang_unittest(FrontendTests
   ASTUnitTest.cpp
   FrontendActionTest.cpp
   CodeGenActionTest.cpp
+  PCHPreambleTest.cpp
   )
 target_link_libraries(FrontendTests
   clangAST

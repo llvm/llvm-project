@@ -11,70 +11,79 @@
 ; Test whether isolation works as expected.
 ;
 ; CHECK:   // Inter iteration alias-free
-; CHECK-NEXT:    // 1st level tiling - Tiles
-; CHECK-NEXT:    for (int c0 = 0; c0 <= 1; c0 += 1)
-; CHECK-NEXT:      for (int c1 = 0; c1 <= 6; c1 += 1) {
-; CHECK-NEXT:        for (int c3 = 1536 * c0; c3 <= min(1999, 1536 * c0 + 1535); c3 += 1)
-; CHECK-NEXT:          for (int c4 = 307 * c1; c4 <= min(1999, 307 * c1 + 306); c4 += 1)
-; CHECK-NEXT:            CopyStmt_0(0, c3, c4);
-; CHECK-NEXT:        for (int c2 = 0; c2 <= 24; c2 += 1) {
-; CHECK-NEXT:          if (c0 == 0)
-; CHECK-NEXT:            for (int c3 = 80 * c2; c3 <= 80 * c2 + 79; c3 += 1)
-; CHECK-NEXT:              for (int c5 = 307 * c1; c5 <= min(1999, 307 * c1 + 306); c5 += 1)
-; CHECK-NEXT:                CopyStmt_1(c3, 0, c5);
-; CHECK-NEXT:          // 1st level tiling - Points
-; CHECK-NEXT:          // Register tiling - Tiles
-; CHECK-NEXT:          {
-; CHECK-NEXT:            for (int c3 = 0; c3 <= min(255, -256 * c0 + 332); c3 += 1)
-; CHECK-NEXT:              for (int c4 = 0; c4 <= 15; c4 += 1)
-; CHECK-NEXT:                for (int c5 = 0; c5 <= min(306, -307 * c1 + 1999); c5 += 1) {
-; CHECK-NEXT:                  // Loop Vectorizer Disabled
-; CHECK-NEXT:                  // Register tiling - Points
-; CHECK-NEXT:                  {
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4, 1536 * c0 + 6 * c3, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4, 1536 * c0 + 6 * c3 + 1, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4, 1536 * c0 + 6 * c3 + 2, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4, 1536 * c0 + 6 * c3 + 3, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4, 1536 * c0 + 6 * c3 + 4, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4, 1536 * c0 + 6 * c3 + 5, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1536 * c0 + 6 * c3, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1536 * c0 + 6 * c3 + 1, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1536 * c0 + 6 * c3 + 2, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1536 * c0 + 6 * c3 + 3, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1536 * c0 + 6 * c3 + 4, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1536 * c0 + 6 * c3 + 5, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1536 * c0 + 6 * c3, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1536 * c0 + 6 * c3 + 1, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1536 * c0 + 6 * c3 + 2, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1536 * c0 + 6 * c3 + 3, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1536 * c0 + 6 * c3 + 4, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1536 * c0 + 6 * c3 + 5, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1536 * c0 + 6 * c3, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1536 * c0 + 6 * c3 + 1, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1536 * c0 + 6 * c3 + 2, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1536 * c0 + 6 * c3 + 3, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1536 * c0 + 6 * c3 + 4, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1536 * c0 + 6 * c3 + 5, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1536 * c0 + 6 * c3, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1536 * c0 + 6 * c3 + 1, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1536 * c0 + 6 * c3 + 2, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1536 * c0 + 6 * c3 + 3, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1536 * c0 + 6 * c3 + 4, 307 * c1 + c5);
-; CHECK-NEXT:                    Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1536 * c0 + 6 * c3 + 5, 307 * c1 + c5);
-; CHECK-NEXT:                  }
+; CHECK-NEXT:          // 1st level tiling - Tiles
+; CHECK-NEXT:          for (int c0 = 0; c0 <= 1; c0 += 1)
+; CHECK-NEXT:            for (int c1 = 0; c1 <= 6; c1 += 1) {
+; CHECK-NEXT:              for (int c3 = 1536 * c0; c3 <= min(1999, 1536 * c0 + 1535); c3 += 1)
+; CHECK-NEXT:                for (int c4 = 307 * c1; c4 <= min(1999, 307 * c1 + 306); c4 += 1)
+; CHECK-NEXT:                  CopyStmt_0(0, c3, c4);
+; CHECK-NEXT:              for (int c2 = 0; c2 <= 24; c2 += 1) {
+; CHECK-NEXT:                if (c0 == 0)
+; CHECK-NEXT:                  for (int c3 = 80 * c2; c3 <= 80 * c2 + 79; c3 += 1)
+; CHECK-NEXT:                    for (int c5 = 307 * c1; c5 <= min(1999, 307 * c1 + 306); c5 += 1)
+; CHECK-NEXT:                      CopyStmt_1(c3, 0, c5);
+; CHECK-NEXT:                // 1st level tiling - Points
+; CHECK-NEXT:                // Register tiling - Tiles
+; CHECK-NEXT:                {
+; CHECK-NEXT:                  for (int c3 = 0; c3 <= min(255, -256 * c0 + 332); c3 += 1)
+; CHECK-NEXT:                    for (int c4 = 0; c4 <= 15; c4 += 1)
+; CHECK-NEXT:                      for (int c5 = 0; c5 <= min(306, -307 * c1 + 1999); c5 += 1) {
+; CHECK-NEXT:                        // Loop Vectorizer Disabled
+; CHECK-NEXT:                        // Register tiling - Points
+; CHECK-NEXT:                        {
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4, 1536 * c0 + 6 * c3, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4, 1536 * c0 + 6 * c3 + 1, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4, 1536 * c0 + 6 * c3 + 2, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4, 1536 * c0 + 6 * c3 + 3, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4, 1536 * c0 + 6 * c3 + 4, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4, 1536 * c0 + 6 * c3 + 5, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1536 * c0 + 6 * c3, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1536 * c0 + 6 * c3 + 1, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1536 * c0 + 6 * c3 + 2, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1536 * c0 + 6 * c3 + 3, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1536 * c0 + 6 * c3 + 4, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1536 * c0 + 6 * c3 + 5, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1536 * c0 + 6 * c3, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1536 * c0 + 6 * c3 + 1, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1536 * c0 + 6 * c3 + 2, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1536 * c0 + 6 * c3 + 3, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1536 * c0 + 6 * c3 + 4, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1536 * c0 + 6 * c3 + 5, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1536 * c0 + 6 * c3, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1536 * c0 + 6 * c3 + 1, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1536 * c0 + 6 * c3 + 2, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1536 * c0 + 6 * c3 + 3, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1536 * c0 + 6 * c3 + 4, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1536 * c0 + 6 * c3 + 5, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1536 * c0 + 6 * c3, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1536 * c0 + 6 * c3 + 1, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1536 * c0 + 6 * c3 + 2, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1536 * c0 + 6 * c3 + 3, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1536 * c0 + 6 * c3 + 4, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1536 * c0 + 6 * c3 + 5, 307 * c1 + c5);
+; CHECK-NEXT:                        }
+; CHECK-NEXT:                      }
+; CHECK-NEXT:                  if (c0 == 1)
+; CHECK-NEXT:                    for (int c4 = 0; c4 <= 15; c4 += 1)
+; CHECK-NEXT:                      for (int c5 = 0; c5 <= min(306, -307 * c1 + 1999); c5 += 1) {
+; CHECK-NEXT:                        // Loop Vectorizer Disabled
+; CHECK-NEXT:                        // Register tiling - Points
+; CHECK-NEXT:                        {
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4, 1998, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4, 1999, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1998, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 1, 1999, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1998, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 2, 1999, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1998, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 3, 1999, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1998, 307 * c1 + c5);
+; CHECK-NEXT:                          Stmt_for_body6(80 * c2 + 5 * c4 + 4, 1999, 307 * c1 + c5);
+; CHECK-NEXT:                        }
+; CHECK-NEXT:                      }
 ; CHECK-NEXT:                }
-; CHECK-NEXT:            if (c0 == 1)
-; CHECK-NEXT:              for (int c4 = 0; c4 <= 15; c4 += 1)
-; CHECK-NEXT:                for (int c5 = 0; c5 <= min(306, -307 * c1 + 1999); c5 += 1) {
-; CHECK-NEXT:                  // Loop Vectorizer Disabled
-; CHECK-NEXT:                  // Register tiling - Points
-; CHECK-NEXT:                  for (int c6 = 0; c6 <= 4; c6 += 1)
-; CHECK-NEXT:                    for (int c7 = 0; c7 <= 1; c7 += 1)
-; CHECK-NEXT:                      Stmt_for_body6(80 * c2 + 5 * c4 + c6, c7 + 1998, 307 * c1 + c5);
-; CHECK-NEXT:                }
-; CHECK-NEXT:          }
-; CHECK-NEXT:        }
-; CHECK-NEXT:      }
+; CHECK-NEXT:              }
+; CHECK-NEXT:            }
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

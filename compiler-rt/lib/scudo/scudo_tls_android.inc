@@ -20,10 +20,10 @@
 
 #if SANITIZER_LINUX && SANITIZER_ANDROID
 
-ALWAYS_INLINE void initThreadMaybe() {
+ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
   if (LIKELY(*get_android_tls_ptr()))
     return;
-  initThread();
+  initThread(MinimalInit);
 }
 
 ScudoThreadContext *getThreadContextAndLockSlow();

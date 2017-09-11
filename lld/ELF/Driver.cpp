@@ -113,12 +113,8 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
           .Case("elf_iamcu", {ELF32LEKind, EM_IAMCU})
           .Default({ELFNoneKind, EM_NONE});
 
-  if (Ret.first == ELFNoneKind) {
-    if (S == "i386pe" || S == "i386pep" || S == "thumb2pe")
-      error("Windows targets are not supported on the ELF frontend: " + Emul);
-    else
-      error("unknown emulation: " + Emul);
-  }
+  if (Ret.first == ELFNoneKind)
+    error("unknown emulation: " + Emul);
   return std::make_tuple(Ret.first, Ret.second, OSABI);
 }
 

@@ -90,17 +90,32 @@
 ; CHECK-NEXT:                  Stmt_for_body6(96 * c2 + 4 * c4 + 3, 8 * c3 + 7, 256 * c1 + c5);
 ; CHECK-NEXT:                }
 ; CHECK-NEXT:              }
-; CHECK-NEXT:          for (int c4 = 0; c4 <= min(23, -24 * c2 + 254); c4 += 1)
-; CHECK-NEXT:            for (int c5 = 0; c5 <= min(255, -256 * c1 + 1019); c5 += 1) {
-; CHECK-NEXT:              // Loop Vectorizer Disabled
-; CHECK-NEXT:              // Register tiling - Points
-; CHECK-NEXT:              for (int c6 = 0; c6 <= 3; c6 += 1)
-; CHECK-NEXT:                for (int c7 = 0; c7 <= 3; c7 += 1)
-; CHECK-NEXT:                  Stmt_for_body6(96 * c2 + 4 * c4 + c6, c7 + 1016, 256 * c1 + c5);
+; CHECK-NEXT:              for (int c4 = 0; c4 <= min(23, -24 * c2 + 254); c4 += 1)
+; CHECK-NEXT:                for (int c5 = 0; c5 <= min(255, -256 * c1 + 1019); c5 += 1) {
+; CHECK-NEXT:                  // Loop Vectorizer Disabled
+; CHECK-NEXT:                  // Register tiling - Points
+; CHECK-NEXT:                  {
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4, 1016, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4, 1017, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4, 1018, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4, 1019, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4 + 1, 1016, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4 + 1, 1017, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4 + 1, 1018, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4 + 1, 1019, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4 + 2, 1016, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4 + 2, 1017, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4 + 2, 1018, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4 + 2, 1019, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4 + 3, 1016, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4 + 3, 1017, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4 + 3, 1018, 256 * c1 + c5);
+; CHECK-NEXT:                    Stmt_for_body6(96 * c2 + 4 * c4 + 3, 1019, 256 * c1 + c5);
+; CHECK-NEXT:                  }
+; CHECK-NEXT:                }
 ; CHECK-NEXT:            }
+; CHECK-NEXT:          }
 ; CHECK-NEXT:        }
-; CHECK-NEXT:      }
-; CHECK-NEXT:    }
 ;
 ; AUTO-VECTORIZATION:  fmul <4 x double>
 ; AUTO-VECTORIZATION:  fadd <4 x double>
