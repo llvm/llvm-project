@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -36,6 +37,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Options.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -49,8 +51,13 @@ using namespace llvm::object;
 using namespace cl;
 
 OptionCategory DwpCategory("Specific Options");
-static list<std::string> InputFiles(Positional, OneOrMore,
+static list<std::string> InputFiles(Positional, ZeroOrMore,
                                     desc("<input files>"), cat(DwpCategory));
+
+static list<std::string> ExecFilenames(
+    "e", ZeroOrMore,
+    desc("Specify the executable/library files to get the list of *.dwo from"),
+    value_desc("filename"), cat(DwpCategory));
 
 static opt<std::string> OutputFilename(Required, "o",
                                        desc("Specify the output file."),
@@ -113,7 +120,7 @@ struct CompileUnitIdentifiers {
 };
 
 static Expected<const char *>
-getIndexedString(dwarf::Form Form, DataExtractor InfoData, 
+getIndexedString(dwarf::Form Form, DataExtractor InfoData,
                  uint32_t &InfoOffset, StringRef StrOffsets, StringRef Str) {
   if (Form == dwarf::DW_FORM_string)
     return InfoData.getCStr(&InfoOffset);
@@ -463,6 +470,35 @@ buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
       " and " + buildDWODescription(ID.Name, DWPName, ID.DWOName));
 }
 
+static Expected<SmallVector<std::string, 16>>
+getDWOFilenames(StringRef ExecFilename) {
+  auto ErrOrObj = object::ObjectFile::createObjectFile(ExecFilename);
+  if (!ErrOrObj)
+    return ErrOrObj.takeError();
+
+  const ObjectFile &Obj = *ErrOrObj.get().getBinary();
+  std::unique_ptr<DWARFContext> DWARFCtx = DWARFContext::create(Obj);
+
+  SmallVector<std::string, 16> DWOPaths;
+  for (const auto &CU : DWARFCtx->compile_units()) {
+    const DWARFDie &Die = CU->getUnitDIE();
+    std::string DWOName = dwarf::toString(
+        Die.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}), "");
+    if (DWOName.empty())
+      continue;
+    std::string DWOCompDir =
+        dwarf::toString(Die.find(dwarf::DW_AT_comp_dir), "");
+    if (!DWOCompDir.empty()) {
+      SmallString<16> DWOPath;
+      sys::path::append(DWOPath, DWOCompDir, DWOName);
+      DWOPaths.emplace_back(DWOPath.data(), DWOPath.size());
+    } else {
+      DWOPaths.push_back(std::move(DWOName));
+    }
+  }
+  return std::move(DWOPaths);
+}
+
 static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   const auto &MCOFI = *Out.getContext().getObjectFileInfo();
   MCSection *const StrSection = MCOFI.getDwarfStrDWOSection();
@@ -676,7 +712,19 @@ int main(int argc, char **argv) {
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 
-  if (auto Err = write(*MS, InputFiles)) {
+  std::vector<std::string> DWOFilenames = InputFiles;
+  for (const auto &ExecFilename : ExecFilenames) {
+    auto DWOs = getDWOFilenames(ExecFilename);
+    if (!DWOs) {
+      logAllUnhandledErrors(DWOs.takeError(), errs(), "error: ");
+      return 1;
+    }
+    DWOFilenames.insert(DWOFilenames.end(),
+                        std::make_move_iterator(DWOs->begin()),
+                        std::make_move_iterator(DWOs->end()));
+  }
+
+  if (auto Err = write(*MS, DWOFilenames)) {
     logAllUnhandledErrors(std::move(Err), errs(), "error: ");
     return 1;
   }
