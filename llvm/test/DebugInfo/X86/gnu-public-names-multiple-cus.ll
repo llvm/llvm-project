@@ -1,5 +1,7 @@
 ; RUN: llc < %s | FileCheck %s
 
+target triple = "x86_64-unknown-linux-gnu"
+
 !llvm.dbg.cu = !{!4, !11}
 !llvm.module.flags = !{!7}
 
