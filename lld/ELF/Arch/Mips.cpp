@@ -80,14 +80,23 @@ RelExpr MIPS<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
   default:
     return R_ABS;
   case R_MIPS_JALR:
+  case R_MICROMIPS_JALR:
     return R_HINT;
   case R_MIPS_GPREL16:
   case R_MIPS_GPREL32:
+  case R_MICROMIPS_GPREL16:
+  case R_MICROMIPS_GPREL7_S2:
     return R_MIPS_GOTREL;
   case R_MIPS_26:
     return R_PLT;
+  case R_MICROMIPS_26_S1:
+    return R_PLT;
+  case R_MICROMIPS_PC26_S1:
+    return R_PLT_PC;
   case R_MIPS_HI16:
   case R_MIPS_LO16:
+  case R_MICROMIPS_HI16:
+  case R_MICROMIPS_LO16:
     // R_MIPS_HI16/R_MIPS_LO16 relocations against _gp_disp calculate
     // offset between start of function and 'gp' value which by default
     // equal to the start of .got section. In that case we consider these
@@ -98,6 +107,7 @@ RelExpr MIPS<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
       return R_MIPS_GOT_GP;
     LLVM_FALLTHROUGH;
   case R_MIPS_GOT_OFST:
+  case R_MICROMIPS_GOT_OFST:
     return R_ABS;
   case R_MIPS_PC32:
   case R_MIPS_PC16:
@@ -106,25 +116,43 @@ RelExpr MIPS<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
   case R_MIPS_PC26_S2:
   case R_MIPS_PCHI16:
   case R_MIPS_PCLO16:
+  case R_MICROMIPS_PC7_S1:
+  case R_MICROMIPS_PC10_S1:
+  case R_MICROMIPS_PC16_S1:
+  case R_MICROMIPS_PC18_S3:
+  case R_MICROMIPS_PC19_S2:
+  case R_MICROMIPS_PC23_S2:
+  case R_MICROMIPS_PC21_S1:
     return R_PC;
   case R_MIPS_GOT16:
+  case R_MICROMIPS_GOT16:
     if (S.isLocal())
       return R_MIPS_GOT_LOCAL_PAGE;
     LLVM_FALLTHROUGH;
   case R_MIPS_CALL16:
   case R_MIPS_GOT_DISP:
   case R_MIPS_TLS_GOTTPREL:
+  case R_MICROMIPS_CALL16:
+  case R_MICROMIPS_GOT_DISP:
+  case R_MICROMIPS_TLS_GOTTPREL:
     return R_MIPS_GOT_OFF;
   case R_MIPS_CALL_HI16:
   case R_MIPS_CALL_LO16:
   case R_MIPS_GOT_HI16:
   case R_MIPS_GOT_LO16:
+  case R_MICROMIPS_CALL_HI16:
+  case R_MICROMIPS_CALL_LO16:
+  case R_MICROMIPS_GOT_HI16:
+  case R_MICROMIPS_GOT_LO16:
     return R_MIPS_GOT_OFF32;
   case R_MIPS_GOT_PAGE:
+  case R_MICROMIPS_GOT_PAGE:
     return R_MIPS_GOT_LOCAL_PAGE;
   case R_MIPS_TLS_GD:
+  case R_MICROMIPS_TLS_GD:
     return R_MIPS_TLSGD;
   case R_MIPS_TLS_LDM:
+  case R_MICROMIPS_TLS_LDM:
     return R_MIPS_TLSLD;
   }
 }
@@ -142,6 +170,19 @@ void MIPS<ELFT>::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
   write32<ELFT::TargetEndianness>(Buf, InX::Plt->getVA());
 }
 
+template <endianness E> static uint32_t readShuffle(const uint8_t *Loc) {
+  // The major opcode of a microMIPS instruction needs to appear
+  // in the first 16-bit word (lowest address) for efficient hardware
+  // decode so that it knows if the instruction is 16-bit or 32-bit
+  // as early as possible. To do so, little-endian binaries keep 16-bit
+  // words in a big-endian order. That is why we have to swap these
+  // words to get a correct value.
+  uint32_t V = read32<E>(Loc);
+  if (E == support::little)
+    return (V << 16) | (V >> 16);
+  return V;
+}
+
 template <endianness E>
 static void writeRelocation(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
                             uint8_t Shift) {
@@ -149,6 +190,37 @@ static void writeRelocation(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
   uint32_t Mask = 0xffffffff >> (32 - BitsSize);
   uint32_t Data = (Instr & ~Mask) | ((V >> Shift) & Mask);
   write32<E>(Loc, Data);
+}
+
+template <endianness E>
+static void writeMicroRelocation32(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
+                                   uint8_t Shift) {
+  // See comments in readShuffle for purpose of this code.
+  uint16_t *Words = (uint16_t *)Loc;
+  if (E == support::little)
+    std::swap(Words[0], Words[1]);
+
+  writeRelocation<E>(Loc, V, BitsSize, Shift);
+
+  if (E == support::little)
+    std::swap(Words[0], Words[1]);
+}
+
+template <endianness E>
+static void writeMicroRelocation16(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
+                                   uint8_t Shift) {
+  uint16_t Instr = read16<E>(Loc);
+  uint16_t Mask = 0xffff >> (16 - BitsSize);
+  uint16_t Data = (Instr & ~Mask) | ((V >> Shift) & Mask);
+  write16<E>(Loc, Data);
+}
+
+template <class ELFT> static bool isMicroMips() {
+  // FIXME (simon): This code does not support the case when both
+  // microMIPS and MIPS object files are linked together.
+  const auto &FirstObj = cast<ELFFileBase<ELFT>>(*Config->FirstElf);
+  uint32_t Arch = FirstObj.getObj().getHeader()->e_flags & EF_MIPS_ARCH_ASE;
+  return Arch == EF_MIPS_MICROMIPS;
 }
 
 template <class ELFT> static bool isMipsR6() {
@@ -159,6 +231,34 @@ template <class ELFT> static bool isMipsR6() {
 
 template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *Buf) const {
   const endianness E = ELFT::TargetEndianness;
+  if (isMicroMips<ELFT>()) {
+    uint64_t GotPlt = In<ELFT>::GotPlt->getVA();
+    uint64_t Plt = In<ELFT>::Plt->getVA();
+    // Overwrite trap instructions written by Writer::writeTrapInstr.
+    memset(Buf, 0, PltHeaderSize);
+
+    write16<E>(Buf, isMipsR6<ELFT>() ? 0x7860 : 0x7980);
+                                    // addiupc v1, (GOTPLT) - .
+    write16<E>(Buf + 4, 0xff23);    // lw      $25, 0($3)
+    write16<E>(Buf + 8, 0x0535);    // subu16  $2,  $2, $3
+    write16<E>(Buf + 10, 0x2525);   // srl16   $2,  $2, 2
+    write16<E>(Buf + 12, 0x3302);   // addiu   $24, $2, -2
+    write16<E>(Buf + 14, 0xfffe);
+    write16<E>(Buf + 16, 0x0dff);   // move    $15, $31
+    if (isMipsR6<ELFT>()) {
+      write16<E>(Buf + 18, 0x0f83); // move    $28, $3
+      write16<E>(Buf + 20, 0x472b); // jalrc   $25
+      write16<E>(Buf + 22, 0x0c00); // nop
+      relocateOne(Buf, R_MICROMIPS_PC19_S2, GotPlt - Plt);
+    } else {
+      write16<E>(Buf + 18, 0x45f9); // jalrc   $25
+      write16<E>(Buf + 20, 0x0f83); // move    $28, $3
+      write16<E>(Buf + 22, 0x0c00); // nop
+      relocateOne(Buf, R_MICROMIPS_PC23_S2, GotPlt - Plt);
+    }
+    return;
+  }
+
   if (Config->MipsN32Abi) {
     write32<E>(Buf, 0x3c0e0000);      // lui   $14, %hi(&GOTPLT[0])
     write32<E>(Buf + 4, 0x8dd90000);  // lw    $25, %lo(&GOTPLT[0])($14)
@@ -187,6 +287,26 @@ void MIPS<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                           uint64_t PltEntryAddr, int32_t Index,
                           unsigned RelOff) const {
   const endianness E = ELFT::TargetEndianness;
+  if (isMicroMips<ELFT>()) {
+    // Overwrite trap instructions written by Writer::writeTrapInstr.
+    memset(Buf, 0, PltEntrySize);
+
+    if (isMipsR6<ELFT>()) {
+      write16<E>(Buf, 0x7840);      // addiupc $2, (GOTPLT) - .
+      write16<E>(Buf + 4, 0xff22);  // lw $25, 0($2)
+      write16<E>(Buf + 8, 0x0f02);  // move $24, $2
+      write16<E>(Buf + 10, 0x4723); // jrc $25 / jr16 $25
+      relocateOne(Buf, R_MICROMIPS_PC19_S2, GotPltEntryAddr - PltEntryAddr);
+    } else {
+      write16<E>(Buf, 0x7900);      // addiupc $2, (GOTPLT) - .
+      write16<E>(Buf + 4, 0xff22);  // lw $25, 0($2)
+      write16<E>(Buf + 8, 0x4599);  // jrc $25 / jr16 $25
+      write16<E>(Buf + 10, 0x0f02); // move $24, $2
+      relocateOne(Buf, R_MICROMIPS_PC23_S2, GotPltEntryAddr - PltEntryAddr);
+    }
+    return;
+  }
+
   write32<E>(Buf, 0x3c0f0000);     // lui   $15, %hi(.got.plt entry)
   write32<E>(Buf + 4, 0x8df90000); // l[wd] $25, %lo(.got.plt entry)($15)
                                    // jr    $25
@@ -205,7 +325,8 @@ bool MIPS<ELFT>::needsThunk(RelExpr Expr, uint32_t Type, const InputFile *File,
   // we cannot make the jump directly and need to create a small stubs
   // to save the target function address.
   // See page 3-38 ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (Type != R_MIPS_26)
+  if (Type != R_MIPS_26 && Type != R_MICROMIPS_26_S1 &&
+      Type != R_MICROMIPS_PC26_S1)
     return false;
   auto *F = dyn_cast_or_null<ELFFileBase<ELFT>>(File);
   if (!F)
@@ -247,6 +368,18 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *Buf, uint32_t Type) const {
   case R_MIPS_TLS_TPREL_HI16:
   case R_MIPS_TLS_TPREL_LO16:
     return SignExtend64<16>(read32<E>(Buf));
+  case R_MICROMIPS_GOT16:
+  case R_MICROMIPS_HI16:
+    return SignExtend64<16>(readShuffle<E>(Buf)) << 16;
+  case R_MICROMIPS_GPREL16:
+  case R_MICROMIPS_LO16:
+  case R_MICROMIPS_TLS_DTPREL_HI16:
+  case R_MICROMIPS_TLS_DTPREL_LO16:
+  case R_MICROMIPS_TLS_TPREL_HI16:
+  case R_MICROMIPS_TLS_TPREL_LO16:
+    return SignExtend64<16>(readShuffle<E>(Buf));
+  case R_MICROMIPS_GPREL7_S2:
+    return SignExtend64<9>(readShuffle<E>(Buf) << 2);
   case R_MIPS_PC16:
     return SignExtend64<18>(read32<E>(Buf) << 2);
   case R_MIPS_PC19_S2:
@@ -257,6 +390,24 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *Buf, uint32_t Type) const {
     return SignExtend64<28>(read32<E>(Buf) << 2);
   case R_MIPS_PC32:
     return SignExtend64<32>(read32<E>(Buf));
+  case R_MICROMIPS_26_S1:
+    return SignExtend64<27>(readShuffle<E>(Buf) << 1);
+  case R_MICROMIPS_PC7_S1:
+    return SignExtend64<8>(read16<E>(Buf) << 1);
+  case R_MICROMIPS_PC10_S1:
+    return SignExtend64<11>(read16<E>(Buf) << 1);
+  case R_MICROMIPS_PC16_S1:
+    return SignExtend64<17>(readShuffle<E>(Buf) << 1);
+  case R_MICROMIPS_PC18_S3:
+    return SignExtend64<21>(readShuffle<E>(Buf) << 3);
+  case R_MICROMIPS_PC19_S2:
+    return SignExtend64<21>(readShuffle<E>(Buf) << 2);
+  case R_MICROMIPS_PC21_S1:
+    return SignExtend64<22>(readShuffle<E>(Buf) << 1);
+  case R_MICROMIPS_PC23_S2:
+    return SignExtend64<25>(readShuffle<E>(Buf) << 2);
+  case R_MICROMIPS_PC26_S1:
+    return SignExtend64<27>(readShuffle<E>(Buf) << 1);
   }
 }
 
@@ -282,6 +433,9 @@ calculateMipsRelChain(uint8_t *Loc, uint32_t Type, uint64_t Val) {
     return std::make_pair(Type2, Val);
   if (Type2 == R_MIPS_SUB && (Type3 == R_MIPS_HI16 || Type3 == R_MIPS_LO16))
     return std::make_pair(Type3, -Val);
+  if (Type2 == R_MICROMIPS_SUB &&
+      (Type3 == R_MICROMIPS_HI16 || Type3 == R_MICROMIPS_LO16))
+    return std::make_pair(Type3, -Val);
   error(getErrorLocation(Loc) + "unsupported relocations combination " +
         Twine(Type));
   return std::make_pair(Type & 0xff, Val);
@@ -293,10 +447,14 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   // Thread pointer and DRP offsets from the start of TLS data area.
   // https://www.linux-mips.org/wiki/NPTL
   if (Type == R_MIPS_TLS_DTPREL_HI16 || Type == R_MIPS_TLS_DTPREL_LO16 ||
-      Type == R_MIPS_TLS_DTPREL32 || Type == R_MIPS_TLS_DTPREL64)
+      Type == R_MIPS_TLS_DTPREL32 || Type == R_MIPS_TLS_DTPREL64 ||
+      Type == R_MICROMIPS_TLS_DTPREL_HI16 ||
+      Type == R_MICROMIPS_TLS_DTPREL_LO16)
     Val -= 0x8000;
   else if (Type == R_MIPS_TLS_TPREL_HI16 || Type == R_MIPS_TLS_TPREL_LO16 ||
-           Type == R_MIPS_TLS_TPREL32 || Type == R_MIPS_TLS_TPREL64)
+           Type == R_MIPS_TLS_TPREL32 || Type == R_MIPS_TLS_TPREL64 ||
+           Type == R_MICROMIPS_TLS_TPREL_HI16 ||
+           Type == R_MICROMIPS_TLS_TPREL_LO16)
     Val -= 0x7000;
   if (ELFT::Is64Bits || Config->MipsN32Abi)
     std::tie(Type, Val) = calculateMipsRelChain(Loc, Type, Val);
@@ -326,6 +484,14 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
       writeRelocation<E>(Loc, Val, 16, 0);
     }
     break;
+  case R_MICROMIPS_GOT16:
+    if (Config->Relocatable) {
+      writeMicroRelocation32<E>(Loc, Val + 0x8000, 16, 16);
+    } else {
+      checkInt<16>(Loc, Val, Type);
+      writeMicroRelocation32<E>(Loc, Val, 16, 0);
+    }
+    break;
   case R_MIPS_GOT_DISP:
   case R_MIPS_GOT_PAGE:
   case R_MIPS_GPREL16:
@@ -344,6 +510,27 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   case R_MIPS_TLS_TPREL_LO16:
     writeRelocation<E>(Loc, Val, 16, 0);
     break;
+  case R_MICROMIPS_GOT_DISP:
+  case R_MICROMIPS_GOT_PAGE:
+  case R_MICROMIPS_GPREL16:
+  case R_MICROMIPS_TLS_GD:
+  case R_MICROMIPS_TLS_LDM:
+    checkInt<16>(Loc, Val, Type);
+    writeMicroRelocation32<E>(Loc, Val, 16, 0);
+    break;
+  case R_MICROMIPS_CALL16:
+  case R_MICROMIPS_CALL_LO16:
+  case R_MICROMIPS_GOT_OFST:
+  case R_MICROMIPS_LO16:
+  case R_MICROMIPS_TLS_DTPREL_LO16:
+  case R_MICROMIPS_TLS_GOTTPREL:
+  case R_MICROMIPS_TLS_TPREL_LO16:
+    writeMicroRelocation32<E>(Loc, Val, 16, 0);
+    break;
+  case R_MICROMIPS_GPREL7_S2:
+    checkInt<7>(Loc, Val, Type);
+    writeMicroRelocation32<E>(Loc, Val, 7, 2);
+    break;
   case R_MIPS_CALL_HI16:
   case R_MIPS_GOT_HI16:
   case R_MIPS_HI16:
@@ -352,13 +539,27 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   case R_MIPS_TLS_TPREL_HI16:
     writeRelocation<E>(Loc, Val + 0x8000, 16, 16);
     break;
+  case R_MICROMIPS_CALL_HI16:
+  case R_MICROMIPS_GOT_HI16:
+  case R_MICROMIPS_HI16:
+  case R_MICROMIPS_TLS_DTPREL_HI16:
+  case R_MICROMIPS_TLS_TPREL_HI16:
+    writeMicroRelocation32<E>(Loc, Val + 0x8000, 16, 16);
+    break;
   case R_MIPS_HIGHER:
     writeRelocation<E>(Loc, Val + 0x80008000, 16, 32);
     break;
   case R_MIPS_HIGHEST:
     writeRelocation<E>(Loc, Val + 0x800080008000, 16, 48);
     break;
+  case R_MICROMIPS_HIGHER:
+    writeMicroRelocation32<E>(Loc, Val + 0x80008000, 16, 32);
+    break;
+  case R_MICROMIPS_HIGHEST:
+    writeMicroRelocation32<E>(Loc, Val + 0x800080008000, 16, 48);
+    break;
   case R_MIPS_JALR:
+  case R_MICROMIPS_JALR:
     // Ignore this optimization relocation for now
     break;
   case R_MIPS_PC16:
@@ -384,6 +585,39 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
   case R_MIPS_PC32:
     writeRelocation<E>(Loc, Val, 32, 0);
     break;
+  case R_MICROMIPS_26_S1:
+  case R_MICROMIPS_PC26_S1:
+    checkInt<27>(Loc, Val, Type);
+    writeMicroRelocation32<E>(Loc, Val, 26, 1);
+    break;
+  case R_MICROMIPS_PC7_S1:
+    checkInt<8>(Loc, Val, Type);
+    writeMicroRelocation16<E>(Loc, Val, 7, 1);
+    break;
+  case R_MICROMIPS_PC10_S1:
+    checkInt<11>(Loc, Val, Type);
+    writeMicroRelocation16<E>(Loc, Val, 10, 1);
+    break;
+  case R_MICROMIPS_PC16_S1:
+    checkInt<17>(Loc, Val, Type);
+    writeMicroRelocation32<E>(Loc, Val, 16, 1);
+    break;
+  case R_MICROMIPS_PC18_S3:
+    checkInt<21>(Loc, Val, Type);
+    writeMicroRelocation32<E>(Loc, Val, 18, 3);
+    break;
+  case R_MICROMIPS_PC19_S2:
+    checkInt<21>(Loc, Val, Type);
+    writeMicroRelocation32<E>(Loc, Val, 19, 2);
+    break;
+  case R_MICROMIPS_PC21_S1:
+    checkInt<22>(Loc, Val, Type);
+    writeMicroRelocation32<E>(Loc, Val, 21, 1);
+    break;
+  case R_MICROMIPS_PC23_S2:
+    checkInt<25>(Loc, Val, Type);
+    writeMicroRelocation32<E>(Loc, Val, 23, 2);
+    break;
   default:
     error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
@@ -391,7 +625,8 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {
 
 template <class ELFT>
 bool MIPS<ELFT>::usesOnlyLowPageBits(uint32_t Type) const {
-  return Type == R_MIPS_LO16 || Type == R_MIPS_GOT_OFST;
+  return Type == R_MIPS_LO16 || Type == R_MIPS_GOT_OFST ||
+         Type == R_MICROMIPS_LO16 || Type == R_MICROMIPS_GOT_OFST;
 }
 
 template <class ELFT> TargetInfo *elf::getMipsTargetInfo() {

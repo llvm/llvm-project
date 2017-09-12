@@ -10,6 +10,7 @@ target_link_libraries(lld
   lldDriver
   lldCOFF
   lldELF
+  lldMinGW
   )
 
 install(TARGETS lld

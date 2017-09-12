@@ -70,6 +70,10 @@ uint64_t ExprValue::getSecAddr() const {
   return 0;
 }
 
+uint64_t ExprValue::getSectionOffset() const {
+  return getValue() - getSecAddr();
+}
+
 static SymbolBody *addRegular(SymbolAssignment *Cmd) {
   Symbol *Sym;
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
@@ -141,7 +145,7 @@ void LinkerScript::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
     Sym->Value = V.getValue();
   } else {
     Sym->Section = V.Sec;
-    Sym->Value = alignTo(V.Val, V.Alignment);
+    Sym->Value = V.getSectionOffset();
   }
 }
 
@@ -868,7 +872,7 @@ ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
     if (auto *D = dyn_cast<DefinedRegular>(B))
       return {D->Section, D->Value, Loc};
     if (auto *C = dyn_cast<DefinedCommon>(B))
-      return {C->Section, C->Offset, Loc};
+      return {C->Section, 0, Loc};
   }
   error(Loc + ": symbol not found: " + S);
   return 0;
