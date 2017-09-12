@@ -103,6 +103,8 @@ static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
     if (!Config->DefineCommon)
       return 0;
     auto DC = cast<DefinedCommon>(Body);
+    if (!DC.Live)
+      return 0;
     return DC.Section->getParent()->Addr + DC.Section->OutSecOff;
   }
   case SymbolBody::SharedKind: {
