@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s
+; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump -v - | FileCheck %s
 ; RUN: %llc_dwarf -split-dwarf-file=foo.dwo < %s -filetype=obj | llvm-dwarfdump -v - | FileCheck --check-prefix=FISSION %s
 
 ; darwin has a workaround for a linker bug so it always emits one line table entry
