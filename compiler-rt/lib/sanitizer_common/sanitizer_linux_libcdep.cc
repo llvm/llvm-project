@@ -553,9 +553,11 @@ void LogMessageOnPrintf(const char *str) {
     WriteToSyslog(str);
 }
 
-#if SANITIZER_ANDROID && __ANDROID_API__ >= 21
-extern "C" void android_set_abort_message(const char *msg);
-void SetAbortMessage(const char *str) { android_set_abort_message(str); }
+#if SANITIZER_ANDROID
+extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
+void SetAbortMessage(const char *str) {
+  if (&android_set_abort_message) android_set_abort_message(str);
+}
 #else
 void SetAbortMessage(const char *str) {}
 #endif

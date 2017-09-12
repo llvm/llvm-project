@@ -241,6 +241,7 @@ void LinkerDriver::parseDirectives(StringRef S) {
     case OPT_editandcontinue:
     case OPT_fastfail:
     case OPT_guardsym:
+    case OPT_natvis:
     case OPT_throwingnew:
       break;
     default:

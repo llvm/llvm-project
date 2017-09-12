@@ -323,19 +323,20 @@ static isl::union_set getIsolateOptions(isl::set IsolateDomain,
   return isl::union_set(IsolateOption);
 }
 
-/// Create an isl::union_set, which describes the atomic option for the
+namespace {
+/// Create an isl::union_set, which describes the specified option for the
 /// dimension of the current node.
 ///
-/// It may help to reduce the size of generated code.
-///
-/// @param Ctx An isl::ctx, which is used to create the isl::union_set.
-static isl::union_set getAtomicOptions(isl::ctx Ctx) {
+/// @param Ctx    An isl::ctx, which is used to create the isl::union_set.
+/// @param Option The name of the option.
+isl::union_set getDimOptions(isl::ctx Ctx, const char *Option) {
   isl::space Space(Ctx, 0, 1);
-  isl::set AtomicOption = isl::set::universe(Space);
-  isl::id Id = isl::id::alloc(Ctx, "atomic", nullptr);
-  AtomicOption = AtomicOption.set_tuple_id(Id);
-  return isl::union_set(AtomicOption);
+  auto DimOption = isl::set::universe(Space);
+  auto Id = isl::id::alloc(Ctx, Option, nullptr);
+  DimOption = DimOption.set_tuple_id(Id);
+  return isl::union_set(DimOption);
 }
+} // namespace
 
 /// Create an isl::union_set, which describes the option of the form
 /// [isolate[] -> unroll[x]].
@@ -391,7 +392,7 @@ ScheduleTreeOptimizer::isolateFullPartialTiles(isl::schedule_node Node,
   isl::map ScheduleRelation = isl::map::from_union_map(SchedRelUMap);
   isl::set ScheduleRange = ScheduleRelation.range();
   isl::set IsolateDomain = getPartialTilePrefixes(ScheduleRange, VectorWidth);
-  isl::union_set AtomicOption = getAtomicOptions(IsolateDomain.get_ctx());
+  auto AtomicOption = getDimOptions(IsolateDomain.get_ctx(), "atomic");
   isl::union_set IsolateOption = getIsolateOptions(IsolateDomain, 1);
   Node = Node.parent().parent();
   isl::union_set Options = IsolateOption.unite(AtomicOption);
@@ -1207,13 +1208,12 @@ isolateAndUnrollMatMulInnerLoops(isl::schedule_node Node,
   isl::union_set IsolateOption =
       getIsolateOptions(Prefix.add_dims(isl::dim::set, 3), 3);
   isl::ctx Ctx = Node.get_ctx();
-  isl::union_set AtomicOption = getAtomicOptions(Ctx);
-  isl::union_set Options = IsolateOption.unite(AtomicOption);
+  auto Options = IsolateOption.unite(getDimOptions(Ctx, "unroll"));
   Options = Options.unite(getUnrollIsolatedSetOptions(Ctx));
   Node = Node.band_set_ast_build_options(Options);
   Node = Node.parent().parent().parent();
   IsolateOption = getIsolateOptions(Prefix, 3);
-  Options = IsolateOption.unite(AtomicOption);
+  Options = IsolateOption.unite(getDimOptions(Ctx, "separate"));
   Node = Node.band_set_ast_build_options(Options);
   Node = Node.child(0).child(0).child(0);
   return Node;

@@ -122,7 +122,6 @@ class Decorator: public __sanitizer::SanitizerCommonDecorator {
   Decorator() : SanitizerCommonDecorator() { }
   const char *Error() { return Red(); }
   const char *Leak() { return Blue(); }
-  const char *End() { return Default(); }
 };
 
 static inline bool CanBeAHeapPointer(uptr p) {
@@ -564,7 +563,7 @@ static bool CheckForLeaks() {
            "\n");
     Printf("%s", d.Error());
     Report("ERROR: LeakSanitizer: detected memory leaks\n");
-    Printf("%s", d.End());
+    Printf("%s", d.Default());
     param.leak_report.ReportTopLeaks(flags()->max_leaks);
   }
   if (common_flags()->print_suppressions)
@@ -698,7 +697,7 @@ void LeakReport::PrintReportForLeak(uptr index) {
   Printf("%s leak of %zu byte(s) in %zu object(s) allocated from:\n",
          leaks_[index].is_directly_leaked ? "Direct" : "Indirect",
          leaks_[index].total_size, leaks_[index].hit_count);
-  Printf("%s", d.End());
+  Printf("%s", d.Default());
 
   PrintStackTraceById(leaks_[index].stack_trace_id);
 

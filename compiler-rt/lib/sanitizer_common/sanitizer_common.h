@@ -29,8 +29,10 @@ extern "C" void _ReadWriteBarrier();
 #endif
 
 namespace __sanitizer {
-struct StackTrace;
+
 struct AddressInfo;
+struct SignalContext;
+struct StackTrace;
 
 // Constants.
 const uptr kWordSize = SANITIZER_WORDSIZE / 8;
@@ -306,6 +308,7 @@ void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded));
 // Functions related to signal handling.
 typedef void (*SignalHandlerType)(int, void *, void *);
 HandleSignalMode GetHandleSignalMode(int signum);
+bool IsStackOverflow(int code, const SignalContext &sig);
 void InstallDeadlySignalHandlers(SignalHandlerType handler);
 const char *DescribeSignalOrException(int signo);
 // Alternative signal stack (POSIX-only).

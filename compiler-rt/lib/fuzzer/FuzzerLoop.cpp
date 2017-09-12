@@ -525,6 +525,8 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
                                      bool DuringInitialCorpusExecution) {
   if (!HasMoreMallocsThanFrees) return;  // mallocs==frees, a leak is unlikely.
   if (!Options.DetectLeaks) return;
+  if (!DuringInitialCorpusExecution &&
+      TotalNumberOfRuns >= Options.MaxNumberOfRuns) return;
   if (!&(EF->__lsan_enable) || !&(EF->__lsan_disable) ||
       !(EF->__lsan_do_recoverable_leak_check))
     return;  // No lsan.
