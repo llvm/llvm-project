@@ -1,7 +1,7 @@
 ; REQUIRES: object-emission
 
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s > %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
+; RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 ; IR generated from the following code compiled with clang -g:
 ; enum e1 { I, J = 0xffffffffU, K = 0xf000000000000000ULL } a;

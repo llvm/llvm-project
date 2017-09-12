@@ -229,7 +229,10 @@ Static Analyzer
 Undefined Behavior Sanitizer (UBSan)
 ------------------------------------
 
-...
+* A minimal runtime is now available. It is suitable for use in production
+  environments, and has a small attack surface. It only provides very basic
+  issue logging and deduplication, and does not support ``-fsanitize=vptr``
+  checking.
 
 Core Analysis Improvements
 ==========================

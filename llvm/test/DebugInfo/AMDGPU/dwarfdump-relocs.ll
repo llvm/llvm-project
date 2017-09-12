@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs -filetype=obj < %s | llvm-dwarfdump - 2>&1 | FileCheck %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs -filetype=obj < %s | llvm-dwarfdump -v - 2>&1 | FileCheck %s
 
 ; LLVM IR generated with the following command and OpenCL source:
 ;

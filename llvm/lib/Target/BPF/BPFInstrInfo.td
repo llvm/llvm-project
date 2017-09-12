@@ -249,7 +249,7 @@ class MOV_RI<string OpcodeStr>
 
 class LD_IMM64<bits<4> Pseudo, string OpcodeStr>
     : InstBPF<(outs GPR:$dst), (ins u64imm:$imm),
-              "$dst "#OpcodeStr#" ${imm}",
+              "$dst "#OpcodeStr#" ${imm} ll",
               [(set GPR:$dst, (i64 imm:$imm))]> {
 
   bits<3> mode;

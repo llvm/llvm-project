@@ -42,7 +42,7 @@ define i32 @f_i32() #0 {
 
 define i64 @f_i64() #0 {
 ; CHECK: f_i64:
-; CHECK: r0 = 72623859790382856ll
+; CHECK: r0 = 72623859790382856 ll
 ; CHECK: exit
   ret i64 72623859790382856
 }

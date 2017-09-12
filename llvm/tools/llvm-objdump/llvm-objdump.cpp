@@ -191,7 +191,7 @@ cl::opt<bool> PrintFaultMaps("fault-map-section",
 
 cl::opt<DIDumpType> llvm::DwarfDumpType(
     "dwarf", cl::init(DIDT_Null), cl::desc("Dump of dwarf debug sections:"),
-    cl::values(clEnumValN(DIDT_Frames, "frames", ".debug_frame")));
+    cl::values(clEnumValN(DIDT_DebugFrames, "frames", ".debug_frame")));
 
 cl::opt<bool> PrintSource(
     "source",

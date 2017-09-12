@@ -1,5 +1,4 @@
 // RUN: %clangxx -O0 %s -o %t
-// UNSUPPORTED: ubsan
 
 // Recursive include: options1 includes options2
 // RUN: echo "symbolize=1" > %t.options1.txt

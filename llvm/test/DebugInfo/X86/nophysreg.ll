@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: llc -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 ;
 ; PR22296: In this testcase the DBG_VALUE describing "p5" becomes unavailable
 ; because the register its address is in is clobbered and we (currently) aren't

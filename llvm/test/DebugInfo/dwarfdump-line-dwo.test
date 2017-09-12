@@ -1,4 +1,4 @@
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-line-dwo.elf-x86-64 | FileCheck %s
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-line-dwo.elf-x86-64 | FileCheck %s
 
 CHECK: .debug_line.dwo contents:
 CHECK: version: 4

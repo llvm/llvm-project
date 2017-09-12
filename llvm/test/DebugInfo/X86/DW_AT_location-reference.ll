@@ -1,8 +1,8 @@
 ; RUN: llc -O1 -filetype=obj -mtriple=x86_64-apple-darwin < %s > %t
-; RUN: llvm-dwarfdump %t  | FileCheck %s
+; RUN: llvm-dwarfdump -v %t  | FileCheck %s
 ; RUN: llvm-objdump -r %t | FileCheck -check-prefix=DARWIN %s
 ; RUN: llc -O1 -filetype=obj -mtriple=x86_64-pc-linux-gnu < %s > %t
-; RUN: llvm-dwarfdump %t  | FileCheck %s
+; RUN: llvm-dwarfdump -v %t  | FileCheck %s
 ; RUN: llvm-objdump -r %t | FileCheck -check-prefix=LINUX %s
 
 ; PR9493

@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -o - < %s | llvm-dwarfdump - -debug-dump=loc | FileCheck %s
+; RUN: llc -filetype=obj -o - < %s | llvm-dwarfdump - --debug-loc | FileCheck %s
 ;
 ; Created using clang -g -O3 from:
 ; struct S0 {

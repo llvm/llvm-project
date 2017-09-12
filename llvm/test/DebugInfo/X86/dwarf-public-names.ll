@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj -o %t.o < %s
-; RUN: llvm-dwarfdump -debug-dump=pubnames %t.o | FileCheck --check-prefix=LINUX %s
+; RUN: llvm-dwarfdump -debug-pubnames %t.o | FileCheck --check-prefix=LINUX %s
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -o %t.o < %s
-; RUN: llvm-dwarfdump -debug-dump=pubnames %t.o | FileCheck --check-prefix=NOPUB %s
+; RUN: llvm-dwarfdump -debug-pubnames %t.o | FileCheck --check-prefix=NOPUB %s
 ; RUN: llc -mtriple=x86_64-scei-ps4 -filetype=obj -o %t.o < %s
-; RUN: llvm-dwarfdump -debug-dump=pubnames %t.o | FileCheck --check-prefix=NOPUB %s
+; RUN: llvm-dwarfdump -debug-pubnames %t.o | FileCheck --check-prefix=NOPUB %s
 ; ModuleID = 'dwarf-public-names.cpp'
 ;
 ; Generated from:

@@ -14,7 +14,7 @@
 ;   auto pr = &A::r;
 ; }
 ;
-; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump - | FileCheck %s
+; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump -v - | FileCheck %s
 ; CHECK: DW_TAG_subroutine_type     DW_CHILDREN_yes
 ; CHECK-NEXT: DW_AT_reference  DW_FORM_flag_present
 ; CHECK: DW_TAG_subroutine_type     DW_CHILDREN_yes

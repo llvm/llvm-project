@@ -1,4 +1,4 @@
-//===-- OptimizePHIs.cpp - Optimize machine instruction PHIs --------------===//
+//===- OptimizePHIs.cpp - Optimize machine instruction PHIs ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,13 +14,18 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/Function.h"
+#include "llvm/Pass.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "opt-phis"
@@ -29,12 +34,14 @@ STATISTIC(NumPHICycles, "Number of PHI cycles replaced");
 STATISTIC(NumDeadPHICycles, "Number of dead PHI cycles");
 
 namespace {
+
   class OptimizePHIs : public MachineFunctionPass {
     MachineRegisterInfo *MRI;
     const TargetInstrInfo *TII;
 
   public:
     static char ID; // Pass identification
+
     OptimizePHIs() : MachineFunctionPass(ID) {
       initializeOptimizePHIsPass(*PassRegistry::getPassRegistry());
     }
@@ -47,18 +54,21 @@ namespace {
     }
 
   private:
-    typedef SmallPtrSet<MachineInstr*, 16> InstrSet;
-    typedef SmallPtrSetIterator<MachineInstr*> InstrSetIterator;
+    using InstrSet = SmallPtrSet<MachineInstr *, 16>;
+    using InstrSetIterator = SmallPtrSetIterator<MachineInstr *>;
 
     bool IsSingleValuePHICycle(MachineInstr *MI, unsigned &SingleValReg,
                                InstrSet &PHIsInCycle);
     bool IsDeadPHICycle(MachineInstr *MI, InstrSet &PHIsInCycle);
     bool OptimizeBB(MachineBasicBlock &MBB);
   };
-}
+
+} // end anonymous namespace
 
 char OptimizePHIs::ID = 0;
+
 char &llvm::OptimizePHIsID = OptimizePHIs::ID;
+
 INITIALIZE_PASS(OptimizePHIs, DEBUG_TYPE,
                 "Optimize machine instruction PHIs", false, false)
 

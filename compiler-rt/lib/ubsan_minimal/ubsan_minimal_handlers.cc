@@ -44,11 +44,9 @@ static bool report_this_error(void *caller) {
 }
 
 #if defined(__ANDROID__)
-extern "C" void android_set_abort_message(const char *msg);
+extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
 static void abort_with_message(const char *msg) {
-#if __ANDROID_API__ >= 21
-  android_set_abort_message(msg);
-#endif
+  if (&android_set_abort_message) android_set_abort_message(msg);
   abort();
 }
 #else

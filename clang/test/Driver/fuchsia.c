@@ -1,6 +1,11 @@
 // RUN: %clang %s -### -no-canonical-prefixes --target=x86_64-unknown-fuchsia \
-// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 | FileCheck %s
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
+// RUN: %clang %s -### -no-canonical-prefixes --target=aarch64-unknown-fuchsia \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
+// CHECK: "-munwind-tables"
 // CHECK: "-fuse-init-array"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
@@ -15,7 +20,8 @@
 // CHECK-NOT: crti.o
 // CHECK-NOT: crtbegin.o
 // CHECK: "-L[[SYSROOT]]{{/|\\\\}}lib"
-// CHECK: "{{.*[/\\]}}libclang_rt.builtins-x86_64.a"
+// CHECK-X86_64: "{{.*[/\\]}}libclang_rt.builtins-x86_64.a"
+// CHECK-AARCH64: "{{.*[/\\]}}libclang_rt.builtins-aarch64.a"
 // CHECK: "-lc"
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o
