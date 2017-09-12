@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -filetype=obj %s -o - | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: %llc_dwarf -filetype=obj %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 ; Generated at -O2 from:
 ;   void f();
 ;   __attribute__((always_inline)) void g() {

@@ -522,6 +522,21 @@ public:
     Accesses.insert(MemAccessInfo(Ptr, true));
   }
 
+  /// \brief Check if we can emit a run-time no-alias check for \p Access.
+  ///
+  /// Returns true if we can emit a run-time no alias check for \p Access.
+  /// If we can check this access, this also adds it to a dependence set and
+  /// adds a run-time to check for it to \p RtCheck. If \p Assume is true,
+  /// we will attempt to use additional run-time checks in order to get
+  /// the bounds of the pointer.
+  bool createCheckForAccess(RuntimePointerChecking &RtCheck,
+                            MemAccessInfo Access,
+                            const ValueToValueMap &Strides,
+                            DenseMap<Value *, unsigned> &DepSetId,
+                            Loop *TheLoop, unsigned &RunningDepId,
+                            unsigned ASId, bool ShouldCheckStride,
+                            bool Assume);
+
   /// \brief Check whether we can check the pointers at runtime for
   /// non-intersection.
   ///
@@ -597,9 +612,11 @@ private:
 } // end anonymous namespace
 
 /// \brief Check whether a pointer can participate in a runtime bounds check.
+/// If \p Assume, try harder to prove that we can compute the bounds of \p Ptr
+/// by adding run-time checks (overflow checks) if necessary.
 static bool hasComputableBounds(PredicatedScalarEvolution &PSE,
                                 const ValueToValueMap &Strides, Value *Ptr,
-                                Loop *L) {
+                                Loop *L, bool Assume) {
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
 
   // The bounds for loop-invariant pointer is trivial.
@@ -607,6 +624,10 @@ static bool hasComputableBounds(PredicatedScalarEvolution &PSE,
     return true;
 
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
+
+  if (!AR && Assume)
+    AR = PSE.getAsAddRec(Ptr);
+
   if (!AR)
     return false;
 
@@ -621,8 +642,52 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE,
     return true;
 
   int64_t Stride = getPtrStride(PSE, Ptr, L, Strides);
-  return Stride == 1;
+  if (Stride == 1 || PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
+    return true;
+
+  return false;
 }
+
+bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
+                                          MemAccessInfo Access,
+                                          const ValueToValueMap &StridesMap,
+                                          DenseMap<Value *, unsigned> &DepSetId,
+                                          Loop *TheLoop, unsigned &RunningDepId,
+                                          unsigned ASId, bool ShouldCheckWrap,
+                                          bool Assume) {
+  Value *Ptr = Access.getPointer();
+
+  if (!hasComputableBounds(PSE, StridesMap, Ptr, TheLoop, Assume))
+    return false;
+
+  // When we run after a failing dependency check we have to make sure
+  // we don't have wrapping pointers.
+  if (ShouldCheckWrap && !isNoWrap(PSE, StridesMap, Ptr, TheLoop)) {
+    auto *Expr = PSE.getSCEV(Ptr);
+    if (!Assume || !isa<SCEVAddRecExpr>(Expr))
+      return false;
+    PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
+  }
+
+  // The id of the dependence set.
+  unsigned DepId;
+
+  if (isDependencyCheckNeeded()) {
+    Value *Leader = DepCands.getLeaderValue(Access).getPointer();
+    unsigned &LeaderId = DepSetId[Leader];
+    if (!LeaderId)
+      LeaderId = RunningDepId++;
+    DepId = LeaderId;
+  } else
+    // Each access has its own dependence set.
+    DepId = RunningDepId++;
+
+  bool IsWrite = Access.getInt();
+  RtCheck.insert(TheLoop, Ptr, IsWrite, DepId, ASId, StridesMap, PSE);
+  DEBUG(dbgs() << "LAA: Found a runtime check ptr:" << *Ptr << '\n');
+
+  return true;
+ }
 
 bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
                                      ScalarEvolution *SE, Loop *TheLoop,
@@ -643,11 +708,14 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
   for (auto &AS : AST) {
     int NumReadPtrChecks = 0;
     int NumWritePtrChecks = 0;
+    bool CanDoAliasSetRT = true;
 
     // We assign consecutive id to access from different dependence sets.
     // Accesses within the same set don't need a runtime check.
     unsigned RunningDepId = 1;
     DenseMap<Value *, unsigned> DepSetId;
+
+    SmallVector<MemAccessInfo, 4> Retries;
 
     for (auto A : AS) {
       Value *Ptr = A.getValue();
@@ -659,29 +727,11 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
       else
         ++NumReadPtrChecks;
 
-      if (hasComputableBounds(PSE, StridesMap, Ptr, TheLoop) &&
-          // When we run after a failing dependency check we have to make sure
-          // we don't have wrapping pointers.
-          (!ShouldCheckWrap || isNoWrap(PSE, StridesMap, Ptr, TheLoop))) {
-        // The id of the dependence set.
-        unsigned DepId;
-
-        if (IsDepCheckNeeded) {
-          Value *Leader = DepCands.getLeaderValue(Access).getPointer();
-          unsigned &LeaderId = DepSetId[Leader];
-          if (!LeaderId)
-            LeaderId = RunningDepId++;
-          DepId = LeaderId;
-        } else
-          // Each access has its own dependence set.
-          DepId = RunningDepId++;
-
-        RtCheck.insert(TheLoop, Ptr, IsWrite, DepId, ASId, StridesMap, PSE);
-
-        DEBUG(dbgs() << "LAA: Found a runtime check ptr:" << *Ptr << '\n');
-      } else {
+      if (!createCheckForAccess(RtCheck, Access, StridesMap, DepSetId, TheLoop,
+                                RunningDepId, ASId, ShouldCheckWrap, false)) {
         DEBUG(dbgs() << "LAA: Can't find bounds for ptr:" << *Ptr << '\n');
-        CanDoRT = false;
+        Retries.push_back(Access);
+        CanDoAliasSetRT = false;
       }
     }
 
@@ -693,10 +743,29 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     // For example CanDoRT=false, NeedRTCheck=false means that we have a pointer
     // for which we couldn't find the bounds but we don't actually need to emit
     // any checks so it does not matter.
-    if (!(IsDepCheckNeeded && CanDoRT && RunningDepId == 2))
-      NeedRTCheck |= (NumWritePtrChecks >= 2 || (NumReadPtrChecks >= 1 &&
-                                                 NumWritePtrChecks >= 1));
+    bool NeedsAliasSetRTCheck = false;
+    if (!(IsDepCheckNeeded && CanDoAliasSetRT && RunningDepId == 2))
+      NeedsAliasSetRTCheck = (NumWritePtrChecks >= 2 ||
+                             (NumReadPtrChecks >= 1 && NumWritePtrChecks >= 1));
 
+    // We need to perform run-time alias checks, but some pointers had bounds
+    // that couldn't be checked.
+    if (NeedsAliasSetRTCheck && !CanDoAliasSetRT) {
+      // Reset the CanDoSetRt flag and retry all accesses that have failed.
+      // We know that we need these checks, so we can now be more aggressive
+      // and add further checks if required (overflow checks).
+      CanDoAliasSetRT = true;
+      for (auto Access : Retries)
+        if (!createCheckForAccess(RtCheck, Access, StridesMap, DepSetId,
+                                  TheLoop, RunningDepId, ASId,
+                                  ShouldCheckWrap, /*Assume=*/true)) {
+          CanDoAliasSetRT = false;
+          break;
+        }
+    }
+
+    CanDoRT &= CanDoAliasSetRT;
+    NeedRTCheck |= NeedsAliasSetRTCheck;
     ++ASId;
   }
 

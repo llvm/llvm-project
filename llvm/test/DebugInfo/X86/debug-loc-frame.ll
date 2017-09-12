@@ -4,7 +4,7 @@
 ; for the stack location directly instead of generating a register+offset indirection.
 
 ; RUN: llc -O2 -filetype=obj -disable-post-ra -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN: | llvm-dwarfdump - | FileCheck %s
+; RUN: | llvm-dwarfdump -v - | FileCheck %s
 ;
 ; int data = 17;
 ; int sum  = 0;

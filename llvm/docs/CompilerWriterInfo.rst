@@ -119,7 +119,7 @@ ABI
 ===
 
 * `System V Application Binary Interface <http://www.sco.com/developers/gabi/latest/contents.html>`_
-* `Itanium C++ ABI <http://mentorembedded.github.io/cxx-abi/>`_
+* `Itanium C++ ABI <http://itanium-cxx-abi.github.io/cxx-abi/>`_
 
 Linux
 -----

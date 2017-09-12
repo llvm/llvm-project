@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=asm < %s | FileCheck %s
 ; RUN: llc -filetype=obj < %s \
-; RUN:   | llvm-dwarfdump -debug-dump=info - | FileCheck %s --check-prefix=DWARF
+; RUN:   | llvm-dwarfdump -debug-info - | FileCheck %s --check-prefix=DWARF
 ;
 ; CHECK: @DEBUG_VALUE: h:x <- [DW_OP_plus_uconst {{.*}}] [%R{{.*}}+0]
 ; DWARF: DW_TAG_formal_parameter

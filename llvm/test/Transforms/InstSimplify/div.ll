@@ -54,8 +54,8 @@ define <2 x i1> @udiv_bool_vec(<2 x i1> %x, <2 x i1> %y) {
   ret <2 x i1> %div
 }
 
-define i32 @udiv_quotient_known_smaller_than_constant_denom(i32 %x) {
-; CHECK-LABEL: @udiv_quotient_known_smaller_than_constant_denom(
+define i32 @udiv_dividend_known_smaller_than_constant_divisor(i32 %x) {
+; CHECK-LABEL: @udiv_dividend_known_smaller_than_constant_divisor(
 ; CHECK-NEXT:    ret i32 0
 ;
   %and = and i32 %x, 250
@@ -63,8 +63,8 @@ define i32 @udiv_quotient_known_smaller_than_constant_denom(i32 %x) {
   ret i32 %div
 }
 
-define i32 @not_udiv_quotient_known_smaller_than_constant_denom(i32 %x) {
-; CHECK-LABEL: @not_udiv_quotient_known_smaller_than_constant_denom(
+define i32 @not_udiv_dividend_known_smaller_than_constant_divisor(i32 %x) {
+; CHECK-LABEL: @not_udiv_dividend_known_smaller_than_constant_divisor(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 251
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[AND]], 251
 ; CHECK-NEXT:    ret i32 [[DIV]]
@@ -74,8 +74,8 @@ define i32 @not_udiv_quotient_known_smaller_than_constant_denom(i32 %x) {
   ret i32 %div
 }
 
-define i32 @udiv_constant_quotient_known_smaller_than_denom(i32 %x) {
-; CHECK-LABEL: @udiv_constant_quotient_known_smaller_than_denom(
+define i32 @udiv_constant_dividend_known_smaller_than_divisor(i32 %x) {
+; CHECK-LABEL: @udiv_constant_dividend_known_smaller_than_divisor(
 ; CHECK-NEXT:    ret i32 0
 ;
   %or = or i32 %x, 251
@@ -83,8 +83,8 @@ define i32 @udiv_constant_quotient_known_smaller_than_denom(i32 %x) {
   ret i32 %div
 }
 
-define i32 @not_udiv_constant_quotient_known_smaller_than_denom(i32 %x) {
-; CHECK-LABEL: @not_udiv_constant_quotient_known_smaller_than_denom(
+define i32 @not_udiv_constant_dividend_known_smaller_than_divisor(i32 %x) {
+; CHECK-LABEL: @not_udiv_constant_dividend_known_smaller_than_divisor(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 %x, 251
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 251, [[OR]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
@@ -96,8 +96,8 @@ define i32 @not_udiv_constant_quotient_known_smaller_than_denom(i32 %x) {
 
 ; This would require computing known bits on both x and y. Is it worth doing?
 
-define i32 @udiv_quotient_known_smaller_than_denom(i32 %x, i32 %y) {
-; CHECK-LABEL: @udiv_quotient_known_smaller_than_denom(
+define i32 @udiv_dividend_known_smaller_than_divisor(i32 %x, i32 %y) {
+; CHECK-LABEL: @udiv_dividend_known_smaller_than_divisor(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 250
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 %y, 251
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[AND]], [[OR]]
@@ -109,8 +109,8 @@ define i32 @udiv_quotient_known_smaller_than_denom(i32 %x, i32 %y) {
   ret i32 %div
 }
 
-define i32 @not_udiv_quotient_known_smaller_than_denom(i32 %x, i32 %y) {
-; CHECK-LABEL: @not_udiv_quotient_known_smaller_than_denom(
+define i32 @not_udiv_dividend_known_smaller_than_divisor(i32 %x, i32 %y) {
+; CHECK-LABEL: @not_udiv_dividend_known_smaller_than_divisor(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 251
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 %y, 251
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[AND]], [[OR]]

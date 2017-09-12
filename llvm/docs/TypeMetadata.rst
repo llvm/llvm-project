@@ -128,7 +128,7 @@ address points of the vtables of A, B and D respectively). If we then load
 an address from that pointer, we know that the address can only be one of
 ``&A::f``, ``&B::f`` or ``&D::f``.
 
-.. _address point: https://mentorembedded.github.io/cxx-abi/abi.html#vtable-general
+.. _address point: https://itanium-cxx-abi.github.io/cxx-abi/abi.html#vtable-general
 
 Testing Addresses For Type Membership
 =====================================

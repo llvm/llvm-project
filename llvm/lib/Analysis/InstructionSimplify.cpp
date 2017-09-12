@@ -792,90 +792,6 @@ Value *llvm::SimplifySubInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
   return ::SimplifySubInst(Op0, Op1, isNSW, isNUW, Q, RecursionLimit);
 }
 
-/// Given operands for an FAdd, see if we can fold the result.  If not, this
-/// returns null.
-static Value *SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                              const SimplifyQuery &Q, unsigned MaxRecurse) {
-  if (Constant *C = foldOrCommuteConstant(Instruction::FAdd, Op0, Op1, Q))
-    return C;
-
-  // fadd X, -0 ==> X
-  if (match(Op1, m_NegZero()))
-    return Op0;
-
-  // fadd X, 0 ==> X, when we know X is not -0
-  if (match(Op1, m_Zero()) &&
-      (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
-    return Op0;
-
-  // fadd [nnan ninf] X, (fsub [nnan ninf] 0, X) ==> 0
-  //   where nnan and ninf have to occur at least once somewhere in this
-  //   expression
-  Value *SubOp = nullptr;
-  if (match(Op1, m_FSub(m_AnyZero(), m_Specific(Op0))))
-    SubOp = Op1;
-  else if (match(Op0, m_FSub(m_AnyZero(), m_Specific(Op1))))
-    SubOp = Op0;
-  if (SubOp) {
-    Instruction *FSub = cast<Instruction>(SubOp);
-    if ((FMF.noNaNs() || FSub->hasNoNaNs()) &&
-        (FMF.noInfs() || FSub->hasNoInfs()))
-      return Constant::getNullValue(Op0->getType());
-  }
-
-  return nullptr;
-}
-
-/// Given operands for an FSub, see if we can fold the result.  If not, this
-/// returns null.
-static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                              const SimplifyQuery &Q, unsigned MaxRecurse) {
-  if (Constant *C = foldOrCommuteConstant(Instruction::FSub, Op0, Op1, Q))
-    return C;
-
-  // fsub X, 0 ==> X
-  if (match(Op1, m_Zero()))
-    return Op0;
-
-  // fsub X, -0 ==> X, when we know X is not -0
-  if (match(Op1, m_NegZero()) &&
-      (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
-    return Op0;
-
-  // fsub -0.0, (fsub -0.0, X) ==> X
-  Value *X;
-  if (match(Op0, m_NegZero()) && match(Op1, m_FSub(m_NegZero(), m_Value(X))))
-    return X;
-
-  // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
-  if (FMF.noSignedZeros() && match(Op0, m_AnyZero()) &&
-      match(Op1, m_FSub(m_AnyZero(), m_Value(X))))
-    return X;
-
-  // fsub nnan x, x ==> 0.0
-  if (FMF.noNaNs() && Op0 == Op1)
-    return Constant::getNullValue(Op0->getType());
-
-  return nullptr;
-}
-
-/// Given the operands for an FMul, see if we can fold the result
-static Value *SimplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                               const SimplifyQuery &Q, unsigned MaxRecurse) {
-  if (Constant *C = foldOrCommuteConstant(Instruction::FMul, Op0, Op1, Q))
-    return C;
-
-  // fmul X, 1.0 ==> X
-  if (match(Op1, m_FPOne()))
-    return Op0;
-
-  // fmul nnan nsz X, 0 ==> 0
-  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op1, m_AnyZero()))
-    return Op1;
-
-  return nullptr;
-}
-
 /// Given operands for a Mul, see if we can fold the result.
 /// If not, this returns null.
 static Value *SimplifyMulInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
@@ -933,27 +849,12 @@ static Value *SimplifyMulInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   return nullptr;
 }
 
-Value *llvm::SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                              const SimplifyQuery &Q) {
-  return ::SimplifyFAddInst(Op0, Op1, FMF, Q, RecursionLimit);
-}
-
-
-Value *llvm::SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                              const SimplifyQuery &Q) {
-  return ::SimplifyFSubInst(Op0, Op1, FMF, Q, RecursionLimit);
-}
-
-Value *llvm::SimplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                              const SimplifyQuery &Q) {
-  return ::SimplifyFMulInst(Op0, Op1, FMF, Q, RecursionLimit);
-}
-
 Value *llvm::SimplifyMulInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
   return ::SimplifyMulInst(Op0, Op1, Q, RecursionLimit);
 }
 
 /// Check for common or similar folds of integer division or integer remainder.
+/// This applies to all 4 opcodes (sdiv/udiv/srem/urem).
 static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv) {
   Type *Ty = Op0->getType();
 
@@ -1004,9 +905,8 @@ static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv) {
   return nullptr;
 }
 
-/// Given operands for an SDiv or UDiv, see if we can fold the result.
-/// If not, this returns null.
-static Value *SimplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
+/// These are simplifications common to SDiv and UDiv.
+static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
                           const SimplifyQuery &Q, unsigned MaxRecurse) {
   if (Constant *C = foldOrCommuteConstant(Opcode, Op0, Op1, Q))
     return C;
@@ -1061,113 +961,8 @@ static Value *SimplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   return nullptr;
 }
 
-/// Given operands for an SDiv, see if we can fold the result.
-/// If not, this returns null.
-static Value *SimplifySDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
-                               unsigned MaxRecurse) {
-  if (Value *V = SimplifyDiv(Instruction::SDiv, Op0, Op1, Q, MaxRecurse))
-    return V;
-
-  return nullptr;
-}
-
-Value *llvm::SimplifySDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
-  return ::SimplifySDivInst(Op0, Op1, Q, RecursionLimit);
-}
-
-/// Given a predicate and two operands, return true if the comparison is true.
-/// This is a helper for div/rem simplification where we return some other value
-/// when we can prove a relationship between the operands.
-static bool isICmpTrue(ICmpInst::Predicate Pred, Value *LHS, Value *RHS,
-                       const SimplifyQuery &Q, unsigned MaxRecurse) {
-  Value *V = SimplifyICmpInst(Pred, LHS, RHS, Q, MaxRecurse);
-  Constant *C = dyn_cast_or_null<Constant>(V);
-  return (C && C->isAllOnesValue());
-}
-
-static Value *simplifyUnsignedDivRem(Value *Op0, Value *Op1,
-                                     const SimplifyQuery &Q,
-                                     unsigned MaxRecurse, bool IsDiv) {
-  // Recursion is always used, so bail out at once if we already hit the limit.
-  if (!MaxRecurse--)
-    return nullptr;
-
-  // If we can prove that the quotient is unsigned less than the divisor, then
-  // we know the answer:
-  // X / Y --> 0
-  // X % Y --> X
-  if (isICmpTrue(ICmpInst::ICMP_ULT, Op0, Op1, Q, MaxRecurse))
-    return IsDiv ? Constant::getNullValue(Op0->getType()) : Op0;
-
-  return nullptr;
-}
-
-/// Given operands for a UDiv, see if we can fold the result.
-/// If not, this returns null.
-static Value *SimplifyUDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
-                               unsigned MaxRecurse) {
-  if (Value *V = SimplifyDiv(Instruction::UDiv, Op0, Op1, Q, MaxRecurse))
-    return V;
-
-  if (Value *V = simplifyUnsignedDivRem(Op0, Op1, Q, MaxRecurse, true))
-    return V;
-
-  return nullptr;
-}
-
-Value *llvm::SimplifyUDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
-  return ::SimplifyUDivInst(Op0, Op1, Q, RecursionLimit);
-}
-
-static Value *SimplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                               const SimplifyQuery &Q, unsigned) {
-  if (Constant *C = foldOrCommuteConstant(Instruction::FDiv, Op0, Op1, Q))
-    return C;
-
-  // undef / X -> undef    (the undef could be a snan).
-  if (match(Op0, m_Undef()))
-    return Op0;
-
-  // X / undef -> undef
-  if (match(Op1, m_Undef()))
-    return Op1;
-
-  // X / 1.0 -> X
-  if (match(Op1, m_FPOne()))
-    return Op0;
-
-  // 0 / X -> 0
-  // Requires that NaNs are off (X could be zero) and signed zeroes are
-  // ignored (X could be positive or negative, so the output sign is unknown).
-  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op0, m_AnyZero()))
-    return Op0;
-
-  if (FMF.noNaNs()) {
-    // X / X -> 1.0 is legal when NaNs are ignored.
-    if (Op0 == Op1)
-      return ConstantFP::get(Op0->getType(), 1.0);
-
-    // -X /  X -> -1.0 and
-    //  X / -X -> -1.0 are legal when NaNs are ignored.
-    // We can ignore signed zeros because +-0.0/+-0.0 is NaN and ignored.
-    if ((BinaryOperator::isFNeg(Op0, /*IgnoreZeroSign=*/true) &&
-         BinaryOperator::getFNegArgument(Op0) == Op1) ||
-        (BinaryOperator::isFNeg(Op1, /*IgnoreZeroSign=*/true) &&
-         BinaryOperator::getFNegArgument(Op1) == Op0))
-      return ConstantFP::get(Op0->getType(), -1.0);
-  }
-
-  return nullptr;
-}
-
-Value *llvm::SimplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                              const SimplifyQuery &Q) {
-  return ::SimplifyFDivInst(Op0, Op1, FMF, Q, RecursionLimit);
-}
-
-/// Given operands for an SRem or URem, see if we can fold the result.
-/// If not, this returns null.
-static Value *SimplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
+/// These are simplifications common to SRem and URem.
+static Value *simplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
                           const SimplifyQuery &Q, unsigned MaxRecurse) {
   if (Constant *C = foldOrCommuteConstant(Opcode, Op0, Op1, Q))
     return C;
@@ -1197,11 +992,69 @@ static Value *SimplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   return nullptr;
 }
 
+/// Given a predicate and two operands, return true if the comparison is true.
+/// This is a helper for div/rem simplification where we return some other value
+/// when we can prove a relationship between the operands.
+static bool isICmpTrue(ICmpInst::Predicate Pred, Value *LHS, Value *RHS,
+                       const SimplifyQuery &Q, unsigned MaxRecurse) {
+  Value *V = SimplifyICmpInst(Pred, LHS, RHS, Q, MaxRecurse);
+  Constant *C = dyn_cast_or_null<Constant>(V);
+  return (C && C->isAllOnesValue());
+}
+
+static Value *simplifyUnsignedDivRem(Value *Op0, Value *Op1,
+                                     const SimplifyQuery &Q,
+                                     unsigned MaxRecurse, bool IsDiv) {
+  // Recursion is always used, so bail out at once if we already hit the limit.
+  if (!MaxRecurse--)
+    return nullptr;
+
+  // If we can prove that the quotient is unsigned less than the divisor, then
+  // we know the answer:
+  // X / Y --> 0
+  // X % Y --> X
+  if (isICmpTrue(ICmpInst::ICMP_ULT, Op0, Op1, Q, MaxRecurse))
+    return IsDiv ? Constant::getNullValue(Op0->getType()) : Op0;
+
+  return nullptr;
+}
+
+/// Given operands for an SDiv, see if we can fold the result.
+/// If not, this returns null.
+static Value *SimplifySDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
+                               unsigned MaxRecurse) {
+  if (Value *V = simplifyDiv(Instruction::SDiv, Op0, Op1, Q, MaxRecurse))
+    return V;
+
+  return nullptr;
+}
+
+Value *llvm::SimplifySDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
+  return ::SimplifySDivInst(Op0, Op1, Q, RecursionLimit);
+}
+
+/// Given operands for a UDiv, see if we can fold the result.
+/// If not, this returns null.
+static Value *SimplifyUDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
+                               unsigned MaxRecurse) {
+  if (Value *V = simplifyDiv(Instruction::UDiv, Op0, Op1, Q, MaxRecurse))
+    return V;
+
+  if (Value *V = simplifyUnsignedDivRem(Op0, Op1, Q, MaxRecurse, true))
+    return V;
+
+  return nullptr;
+}
+
+Value *llvm::SimplifyUDivInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
+  return ::SimplifyUDivInst(Op0, Op1, Q, RecursionLimit);
+}
+
 /// Given operands for an SRem, see if we can fold the result.
 /// If not, this returns null.
 static Value *SimplifySRemInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                                unsigned MaxRecurse) {
-  if (Value *V = SimplifyRem(Instruction::SRem, Op0, Op1, Q, MaxRecurse))
+  if (Value *V = simplifyRem(Instruction::SRem, Op0, Op1, Q, MaxRecurse))
     return V;
 
   return nullptr;
@@ -1215,7 +1068,7 @@ Value *llvm::SimplifySRemInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
 /// If not, this returns null.
 static Value *SimplifyURemInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                                unsigned MaxRecurse) {
-  if (Value *V = SimplifyRem(Instruction::URem, Op0, Op1, Q, MaxRecurse))
+  if (Value *V = simplifyRem(Instruction::URem, Op0, Op1, Q, MaxRecurse))
     return V;
 
   if (Value *V = simplifyUnsignedDivRem(Op0, Op1, Q, MaxRecurse, false))
@@ -1226,33 +1079,6 @@ static Value *SimplifyURemInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
 
 Value *llvm::SimplifyURemInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
   return ::SimplifyURemInst(Op0, Op1, Q, RecursionLimit);
-}
-
-static Value *SimplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                               const SimplifyQuery &Q, unsigned) {
-  if (Constant *C = foldOrCommuteConstant(Instruction::FRem, Op0, Op1, Q))
-    return C;
-
-  // undef % X -> undef    (the undef could be a snan).
-  if (match(Op0, m_Undef()))
-    return Op0;
-
-  // X % undef -> undef
-  if (match(Op1, m_Undef()))
-    return Op1;
-
-  // 0 % X -> 0
-  // Requires that NaNs are off (X could be zero) and signed zeroes are
-  // ignored (X could be positive or negative, so the output sign is unknown).
-  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op0, m_AnyZero()))
-    return Op0;
-
-  return nullptr;
-}
-
-Value *llvm::SimplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
-                              const SimplifyQuery &Q) {
-  return ::SimplifyFRemInst(Op0, Op1, FMF, Q, RecursionLimit);
 }
 
 /// Returns true if a shift by \c Amount always yields undef.
@@ -4181,6 +4007,179 @@ Value *llvm::SimplifyShuffleVectorInst(Value *Op0, Value *Op1, Constant *Mask,
   return ::SimplifyShuffleVectorInst(Op0, Op1, Mask, RetTy, Q, RecursionLimit);
 }
 
+/// Given operands for an FAdd, see if we can fold the result.  If not, this
+/// returns null.
+static Value *SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
+                               const SimplifyQuery &Q, unsigned MaxRecurse) {
+  if (Constant *C = foldOrCommuteConstant(Instruction::FAdd, Op0, Op1, Q))
+    return C;
+
+  // fadd X, -0 ==> X
+  if (match(Op1, m_NegZero()))
+    return Op0;
+
+  // fadd X, 0 ==> X, when we know X is not -0
+  if (match(Op1, m_Zero()) &&
+      (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
+    return Op0;
+
+  // fadd [nnan ninf] X, (fsub [nnan ninf] 0, X) ==> 0
+  //   where nnan and ninf have to occur at least once somewhere in this
+  //   expression
+  Value *SubOp = nullptr;
+  if (match(Op1, m_FSub(m_AnyZero(), m_Specific(Op0))))
+    SubOp = Op1;
+  else if (match(Op0, m_FSub(m_AnyZero(), m_Specific(Op1))))
+    SubOp = Op0;
+  if (SubOp) {
+    Instruction *FSub = cast<Instruction>(SubOp);
+    if ((FMF.noNaNs() || FSub->hasNoNaNs()) &&
+        (FMF.noInfs() || FSub->hasNoInfs()))
+      return Constant::getNullValue(Op0->getType());
+  }
+
+  return nullptr;
+}
+
+/// Given operands for an FSub, see if we can fold the result.  If not, this
+/// returns null.
+static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
+                               const SimplifyQuery &Q, unsigned MaxRecurse) {
+  if (Constant *C = foldOrCommuteConstant(Instruction::FSub, Op0, Op1, Q))
+    return C;
+
+  // fsub X, 0 ==> X
+  if (match(Op1, m_Zero()))
+    return Op0;
+
+  // fsub X, -0 ==> X, when we know X is not -0
+  if (match(Op1, m_NegZero()) &&
+      (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
+    return Op0;
+
+  // fsub -0.0, (fsub -0.0, X) ==> X
+  Value *X;
+  if (match(Op0, m_NegZero()) && match(Op1, m_FSub(m_NegZero(), m_Value(X))))
+    return X;
+
+  // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
+  if (FMF.noSignedZeros() && match(Op0, m_AnyZero()) &&
+      match(Op1, m_FSub(m_AnyZero(), m_Value(X))))
+    return X;
+
+  // fsub nnan x, x ==> 0.0
+  if (FMF.noNaNs() && Op0 == Op1)
+    return Constant::getNullValue(Op0->getType());
+
+  return nullptr;
+}
+
+/// Given the operands for an FMul, see if we can fold the result
+static Value *SimplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
+                               const SimplifyQuery &Q, unsigned MaxRecurse) {
+  if (Constant *C = foldOrCommuteConstant(Instruction::FMul, Op0, Op1, Q))
+    return C;
+
+  // fmul X, 1.0 ==> X
+  if (match(Op1, m_FPOne()))
+    return Op0;
+
+  // fmul nnan nsz X, 0 ==> 0
+  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op1, m_AnyZero()))
+    return Op1;
+
+  return nullptr;
+}
+
+Value *llvm::SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
+                              const SimplifyQuery &Q) {
+  return ::SimplifyFAddInst(Op0, Op1, FMF, Q, RecursionLimit);
+}
+
+
+Value *llvm::SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
+                              const SimplifyQuery &Q) {
+  return ::SimplifyFSubInst(Op0, Op1, FMF, Q, RecursionLimit);
+}
+
+Value *llvm::SimplifyFMulInst(Value *Op0, Value *Op1, FastMathFlags FMF,
+                              const SimplifyQuery &Q) {
+  return ::SimplifyFMulInst(Op0, Op1, FMF, Q, RecursionLimit);
+}
+
+static Value *SimplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
+                               const SimplifyQuery &Q, unsigned) {
+  if (Constant *C = foldOrCommuteConstant(Instruction::FDiv, Op0, Op1, Q))
+    return C;
+
+  // undef / X -> undef    (the undef could be a snan).
+  if (match(Op0, m_Undef()))
+    return Op0;
+
+  // X / undef -> undef
+  if (match(Op1, m_Undef()))
+    return Op1;
+
+  // X / 1.0 -> X
+  if (match(Op1, m_FPOne()))
+    return Op0;
+
+  // 0 / X -> 0
+  // Requires that NaNs are off (X could be zero) and signed zeroes are
+  // ignored (X could be positive or negative, so the output sign is unknown).
+  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op0, m_AnyZero()))
+    return Op0;
+
+  if (FMF.noNaNs()) {
+    // X / X -> 1.0 is legal when NaNs are ignored.
+    if (Op0 == Op1)
+      return ConstantFP::get(Op0->getType(), 1.0);
+
+    // -X /  X -> -1.0 and
+    //  X / -X -> -1.0 are legal when NaNs are ignored.
+    // We can ignore signed zeros because +-0.0/+-0.0 is NaN and ignored.
+    if ((BinaryOperator::isFNeg(Op0, /*IgnoreZeroSign=*/true) &&
+         BinaryOperator::getFNegArgument(Op0) == Op1) ||
+        (BinaryOperator::isFNeg(Op1, /*IgnoreZeroSign=*/true) &&
+         BinaryOperator::getFNegArgument(Op1) == Op0))
+      return ConstantFP::get(Op0->getType(), -1.0);
+  }
+
+  return nullptr;
+}
+
+Value *llvm::SimplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
+                              const SimplifyQuery &Q) {
+  return ::SimplifyFDivInst(Op0, Op1, FMF, Q, RecursionLimit);
+}
+
+static Value *SimplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
+                               const SimplifyQuery &Q, unsigned) {
+  if (Constant *C = foldOrCommuteConstant(Instruction::FRem, Op0, Op1, Q))
+    return C;
+
+  // undef % X -> undef    (the undef could be a snan).
+  if (match(Op0, m_Undef()))
+    return Op0;
+
+  // X % undef -> undef
+  if (match(Op1, m_Undef()))
+    return Op1;
+
+  // 0 % X -> 0
+  // Requires that NaNs are off (X could be zero) and signed zeroes are
+  // ignored (X could be positive or negative, so the output sign is unknown).
+  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op0, m_AnyZero()))
+    return Op0;
+
+  return nullptr;
+}
+
+Value *llvm::SimplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
+                              const SimplifyQuery &Q) {
+  return ::SimplifyFRemInst(Op0, Op1, FMF, Q, RecursionLimit);
+}
+
 //=== Helper functions for higher up the class hierarchy.
 
 /// Given operands for a BinaryOperator, see if we can fold the result.
@@ -4190,28 +4189,18 @@ static Value *SimplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
   switch (Opcode) {
   case Instruction::Add:
     return SimplifyAddInst(LHS, RHS, false, false, Q, MaxRecurse);
-  case Instruction::FAdd:
-    return SimplifyFAddInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
   case Instruction::Sub:
     return SimplifySubInst(LHS, RHS, false, false, Q, MaxRecurse);
-  case Instruction::FSub:
-    return SimplifyFSubInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
   case Instruction::Mul:
     return SimplifyMulInst(LHS, RHS, Q, MaxRecurse);
-  case Instruction::FMul:
-    return SimplifyFMulInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
   case Instruction::SDiv:
     return SimplifySDivInst(LHS, RHS, Q, MaxRecurse);
   case Instruction::UDiv:
     return SimplifyUDivInst(LHS, RHS, Q, MaxRecurse);
-  case Instruction::FDiv:
-    return SimplifyFDivInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
   case Instruction::SRem:
     return SimplifySRemInst(LHS, RHS, Q, MaxRecurse);
   case Instruction::URem:
     return SimplifyURemInst(LHS, RHS, Q, MaxRecurse);
-  case Instruction::FRem:
-    return SimplifyFRemInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
   case Instruction::Shl:
     return SimplifyShlInst(LHS, RHS, false, false, Q, MaxRecurse);
   case Instruction::LShr:
@@ -4224,6 +4213,16 @@ static Value *SimplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
     return SimplifyOrInst(LHS, RHS, Q, MaxRecurse);
   case Instruction::Xor:
     return SimplifyXorInst(LHS, RHS, Q, MaxRecurse);
+  case Instruction::FAdd:
+    return SimplifyFAddInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
+  case Instruction::FSub:
+    return SimplifyFSubInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
+  case Instruction::FMul:
+    return SimplifyFMulInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
+  case Instruction::FDiv:
+    return SimplifyFDivInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
+  case Instruction::FRem:
+    return SimplifyFRemInst(LHS, RHS, FastMathFlags(), Q, MaxRecurse);
   default:
     llvm_unreachable("Unexpected opcode");
   }

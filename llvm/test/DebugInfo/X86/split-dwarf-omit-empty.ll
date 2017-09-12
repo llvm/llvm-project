@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -split-dwarf-file=foo.dwo  %s -filetype=obj -o - | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: %llc_dwarf -split-dwarf-file=foo.dwo  %s -filetype=obj -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Created from:
 ; a.cpp:

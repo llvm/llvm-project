@@ -1,4 +1,4 @@
-// RUN: llvm-dwarfdump -debug-dump=info %p/Inputs/dwarfdump-macho-relocs.macho.x86_64.o | FileCheck %s
+// RUN: llvm-dwarfdump -debug-info %p/Inputs/dwarfdump-macho-relocs.macho.x86_64.o | FileCheck %s
 
 // The dumped file has 2 functions in different sections of the __TEXT segment.
 // Check that the addresses are are dumped correctly

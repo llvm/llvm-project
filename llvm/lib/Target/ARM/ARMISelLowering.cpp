@@ -4029,7 +4029,7 @@ SDValue ARMTargetLowering::LowerUnsignedALUO(SDValue Op,
     Overflow = ConvertCarryFlagToBooleanCarry(Value.getValue(1), VT, DAG);
     // ARMISD::SUBC returns 0 when we have to borrow, so make it an overflow
     // value. So compute 1 - C.
-    Overflow = DAG.getNode(ISD::SUB, dl, VTs,
+    Overflow = DAG.getNode(ISD::SUB, dl, MVT::i32,
                            DAG.getConstant(1, dl, MVT::i32), Overflow);
     break;
   }
@@ -7469,8 +7469,8 @@ static SDValue LowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG) {
   } else {
     // ARMISD::SUBE expects a carry not a borrow like ISD::SUBCARRY so we
     // have to invert the carry first.
-    Carry =
-        DAG.getNode(ISD::SUB, DL, VTs, DAG.getConstant(1, DL, MVT::i32), Carry);
+    Carry = DAG.getNode(ISD::SUB, DL, MVT::i32,
+                        DAG.getConstant(1, DL, MVT::i32), Carry);
     // This converts the boolean value carry into the carry flag.
     Carry = ConvertBooleanCarryToCarryFlag(Carry, DAG);
 
@@ -7482,8 +7482,8 @@ static SDValue LowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG) {
     Carry = ConvertCarryFlagToBooleanCarry(Result.getValue(1), VT, DAG);
     // But the carry returned by ARMISD::SUBE is not a borrow as expected
     // by ISD::SUBCARRY, so compute 1 - C.
-    Carry =
-        DAG.getNode(ISD::SUB, DL, VTs, DAG.getConstant(1, DL, MVT::i32), Carry);
+    Carry = DAG.getNode(ISD::SUB, DL, MVT::i32,
+                        DAG.getConstant(1, DL, MVT::i32), Carry);
   }
 
   // Return both values.

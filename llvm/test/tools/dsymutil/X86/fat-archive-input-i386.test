@@ -1,5 +1,5 @@
 # REQUIRES: object-emission
-# RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs -y %s -o - | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+# RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs -y %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ---
 triple:          'i386-apple-darwin'

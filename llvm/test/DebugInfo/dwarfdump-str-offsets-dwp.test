@@ -1,4 +1,4 @@
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-str-offsets-dwp.x86_64.o | FileCheck %s
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-str-offsets-dwp.x86_64.o | FileCheck %s
 
 ; Verify that the correct strings from each unit are displayed and that the
 ; index for the .debug_str_offsets section has the right values.
