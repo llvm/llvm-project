@@ -2158,33 +2158,6 @@ bool llvm::promoteLoopAccessesToScalars(
   return true;
 }
 
-std::unique_ptr<AliasSetTracker>
-collectAliasInfoForLoopAtPoint(Loop *L, LoopInfo *LI,
-                                                 AliasAnalysis *AA, Instruction* I) {
-  AliasSetTracker *CurAST = nullptr;
-  SmallVector<Loop *, 4> RecomputeLoops;
-  for (Loop *InnerL : L->getSubLoops()) {
-      RecomputeLoops.push_back(InnerL);
-  }
-  if (CurAST == nullptr)
-    CurAST = new AliasSetTracker(*AA);
-
-  auto mergeLoop = [&](Loop *L) {
-    // Loop over the body of this loop, looking for calls, invokes, and stores.
-    for (BasicBlock *BB : L->blocks())
-        CurAST->add(*BB);          // Incorporate the specified basic block
-  };
-
-  // Add everything from the sub loops that are no longer directly available.
-  for (Loop *InnerL : RecomputeLoops)
-    mergeLoop(InnerL);
-
-  // And merge in this loop.
-  mergeLoop(L);
-
-  return CurAST;
-}
-
 /// Returns an owning pointer to an alias set which incorporates aliasing info
 /// from L and all subloops of L.
 /// FIXME: In new pass manager, there is no helper function to handle loop
