@@ -317,7 +317,9 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   const TargetRegisterClass *RC = nullptr;
 
   if (RegBank.getID() == AArch64::FPRRegBankID) {
-    if (DstSize <= 32)
+    if (DstSize <= 16)
+      RC = &AArch64::FPR16RegClass;
+    else if (DstSize <= 32)
       RC = &AArch64::FPR32RegClass;
     else if (DstSize <= 64)
       RC = &AArch64::FPR64RegClass;
@@ -1200,33 +1202,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     }
 
     I.setDesc(TII.get(AArch64::FCVTDSr));
-    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-
-    return true;
-  }
-
-  case TargetOpcode::G_FPTRUNC: {
-    if (MRI.getType(I.getOperand(0).getReg()) != LLT::scalar(32)) {
-      DEBUG(dbgs() << "G_FPTRUNC to type " << Ty
-                   << ", expected: " << LLT::scalar(32) << '\n');
-      return false;
-    }
-
-    if (MRI.getType(I.getOperand(1).getReg()) != LLT::scalar(64)) {
-      DEBUG(dbgs() << "G_FPTRUNC from type " << Ty
-                   << ", expected: " << LLT::scalar(64) << '\n');
-      return false;
-    }
-
-    const unsigned DefReg = I.getOperand(0).getReg();
-    const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
-
-    if (RB.getID() != AArch64::FPRRegBankID) {
-      DEBUG(dbgs() << "G_FPTRUNC on bank: " << RB << ", expected: FPR\n");
-      return false;
-    }
-
-    I.setDesc(TII.get(AArch64::FCVTSDr));
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 
     return true;
