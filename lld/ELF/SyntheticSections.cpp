@@ -65,7 +65,9 @@ std::vector<InputSection *> elf::createCommonSections() {
       continue;
 
     Sym->Section = make<BssSection>("COMMON");
-    Sym->Offset = Sym->Section->reserveSpace(Sym->Size, Sym->Alignment);
+    size_t Pos = Sym->Section->reserveSpace(Sym->Size, Sym->Alignment);
+    assert(Pos == 0);
+    (void)Pos;
     Sym->Section->File = Sym->getFile();
     Ret.push_back(Sym->Section);
   }
