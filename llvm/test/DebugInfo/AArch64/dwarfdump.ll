@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=aarch64-non-linux-gnu -dwarf-version=4 < %s -filetype=obj \
-; RUN:    | llvm-dwarfdump - | FileCheck -check-prefix=CHECK -check-prefix=CHECK-4 %s
+; RUN:    | llvm-dwarfdump -v - | FileCheck -check-prefix=CHECK -check-prefix=CHECK-4 %s
 ; RUN: llc -mtriple=aarch64-non-linux-gnu -dwarf-version=3 < %s -filetype=obj \
-; RUN:    | llvm-dwarfdump - | FileCheck -check-prefix=CHECK -check-prefix=CHECK-3 %s
+; RUN:    | llvm-dwarfdump -v - | FileCheck -check-prefix=CHECK -check-prefix=CHECK-3 %s
 
 ; We're mostly checking that relocations are applied correctly
 ; here. Currently R_AARCH64_ABS32 is used for references to debug data

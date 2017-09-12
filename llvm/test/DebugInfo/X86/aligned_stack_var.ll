@@ -1,5 +1,5 @@
 ; RUN: llc %s -mtriple=x86_64-pc-linux-gnu -O0 -filetype=obj -o %t
-; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 
 ; If stack is realigned, we shouldn't describe locations of local
 ; variables by giving offset from the frame pointer (%rbp):

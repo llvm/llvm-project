@@ -1,14 +1,20 @@
-; RUN: opt -wholeprogramdevirt -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -S -o - %s | FileCheck %s
-; RUN: FileCheck --check-prefix=SUMMARY %s < %t
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -wholeprogramdevirt -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -S -o - %s | FileCheck --check-prefixes=CHECK,X86 %s
+; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-X86 %s < %t
+
+; RUN: opt -mtriple=armv7-unknown-linux-gnu -wholeprogramdevirt -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -S -o - %s | FileCheck --check-prefixes=CHECK,ARM %s
+; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-ARM %s < %t
 
 target datalayout = "e-p:64:64"
-target triple = "x86_64-unknown-linux-gnu"
 
 ; SUMMARY:      TypeIdMap:
 ; SUMMARY-NEXT:   typeid3:
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            Unsat
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
+; SUMMARY-NEXT:       AlignLog2:       0
+; SUMMARY-NEXT:       SizeM1:          0
+; SUMMARY-NEXT:       BitMask:         0
+; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:
 ; SUMMARY-NEXT:       0:
 ; SUMMARY-NEXT:         Kind:            Indir
@@ -17,10 +23,18 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SUMMARY-NEXT:           12,24:
 ; SUMMARY-NEXT:             Kind:            VirtualConstProp
 ; SUMMARY-NEXT:             Info:            0
+; SUMMARY-X86-NEXT:         Byte:            0
+; SUMMARY-X86-NEXT:         Bit:             0
+; SUMMARY-ARM-NEXT:         Byte:            4294967295
+; SUMMARY-ARM-NEXT:         Bit:             1
 ; SUMMARY-NEXT:   typeid4:
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            Unsat
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
+; SUMMARY-NEXT:       AlignLog2:       0
+; SUMMARY-NEXT:       SizeM1:          0
+; SUMMARY-NEXT:       BitMask:         0
+; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:
 ; SUMMARY-NEXT:       0:
 ; SUMMARY-NEXT:         Kind:            Indir
@@ -29,6 +43,10 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SUMMARY-NEXT:           24,12:
 ; SUMMARY-NEXT:             Kind:            VirtualConstProp
 ; SUMMARY-NEXT:             Info:            0
+; SUMMARY-X86-NEXT:         Byte:            0
+; SUMMARY-X86-NEXT:         Bit:             0
+; SUMMARY-ARM-NEXT:         Byte:            4294967292
+; SUMMARY-ARM-NEXT:         Bit:             1
 
 ; CHECK: [[CVT3A:.*]] = private constant { [8 x i8], i1 (i8*, i32, i32)*, [0 x i8] } { [8 x i8] zeroinitializer, i1 (i8*, i32, i32)* @vf0i1, [0 x i8] zeroinitializer }, !type !0
 @vt3a = constant i1 (i8*, i32, i32)* @vf0i1, !type !0
@@ -48,10 +66,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: [[CVT4B:.*]] = private constant { [8 x i8], i32 (i8*, i32, i32)*, [0 x i8] } { [8 x i8] c"\00\00\00\00\02\00\00\00", i32 (i8*, i32, i32)* @vf2i32, [0 x i8] zeroinitializer }, !type !1
 @vt4b = constant i32 (i8*, i32, i32)* @vf2i32, !type !1
 
-; CHECK: @__typeid_typeid3_0_12_24_byte = hidden alias i8, inttoptr (i32 -1 to i8*)
-; CHECK: @__typeid_typeid3_0_12_24_bit = hidden alias i8, inttoptr (i8 1 to i8*)
-; CHECK: @__typeid_typeid4_0_24_12_byte = hidden alias i8, inttoptr (i32 -4 to i8*)
-; CHECK: @__typeid_typeid4_0_24_12_bit = hidden alias i8, inttoptr (i8 1 to i8*)
+; X86: @__typeid_typeid3_0_12_24_byte = hidden alias i8, inttoptr (i32 -1 to i8*)
+; X86: @__typeid_typeid3_0_12_24_bit = hidden alias i8, inttoptr (i32 1 to i8*)
+; X86: @__typeid_typeid4_0_24_12_byte = hidden alias i8, inttoptr (i32 -4 to i8*)
+; X86: @__typeid_typeid4_0_24_12_bit = hidden alias i8, inttoptr (i32 1 to i8*)
+; ARM-NOT: alias {{.*}} inttoptr
 
 ; CHECK: @vt3a = alias i1 (i8*, i32, i32)*, getelementptr inbounds ({ [8 x i8], i1 (i8*, i32, i32)*, [0 x i8] }, { [8 x i8], i1 (i8*, i32, i32)*, [0 x i8] }* [[CVT3A]], i32 0, i32 1)
 ; CHECK: @vt3b = alias i1 (i8*, i32, i32)*, getelementptr inbounds ({ [8 x i8], i1 (i8*, i32, i32)*, [0 x i8] }, { [8 x i8], i1 (i8*, i32, i32)*, [0 x i8] }* [[CVT3B]], i32 0, i32 1)

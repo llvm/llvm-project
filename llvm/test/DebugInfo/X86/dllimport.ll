@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-pc-windows-msvc -O0 -filetype=obj < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: llc -mtriple=i686-pc-windows-msvc -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; CHECK-NOT: DW_AT_location
 

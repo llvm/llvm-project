@@ -1,8 +1,8 @@
 REQUIRES: zlib
 
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-test-zlib.elf-x86-64 | FileCheck %s
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-test-zlib.o.elf-x86-64 | FileCheck %s
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-test-zlibgnu.elf-x86-64 | FileCheck %s
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-test-zlib.elf-x86-64 | FileCheck %s
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-test-zlib.o.elf-x86-64 | FileCheck %s
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-test-zlibgnu.elf-x86-64 | FileCheck %s
 
 CHECK: .debug_abbrev contents
 

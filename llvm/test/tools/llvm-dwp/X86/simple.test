@@ -1,10 +1,10 @@
 RUN: llvm-dwp %p/../Inputs/simple/notypes/a.dwo %p/../Inputs/simple/notypes/b.dwo -o %t
-RUN: llvm-dwarfdump %t | FileCheck --check-prefix=CHECK --check-prefix=NOTYP %s
+RUN: llvm-dwarfdump -v %t | FileCheck --check-prefix=CHECK --check-prefix=NOTYP %s
 RUN: llvm-objdump -h %t | FileCheck --check-prefix=NOTYPOBJ %s
 UN: llvm-dwp %p/../Inputs/simple/types/a.dwo %p/../Inputs/simple/types/b.dwo -o %t
-UN: llvm-dwarfdump %t | FileCheck --check-prefix=CHECK --check-prefix=TYPES %s
+UN: llvm-dwarfdump -v %t | FileCheck --check-prefix=CHECK --check-prefix=TYPES %s
 
-FIXME: For some reason, piping straight from llvm-dwp to llvm-dwarfdump doesn't behave well - looks like dwarfdump is reading/closes before dwp has finished.
+FIXME: For some reason, piping straight from llvm-dwp to llvm-dwarfdump -v doesn't behave well - looks like dwarfdump is reading/closes before dwp has finished.
 
 DWP from non-type-unit debug info for these two translation units:
 a.cpp:

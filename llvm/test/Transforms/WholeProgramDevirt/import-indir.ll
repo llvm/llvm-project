@@ -32,6 +32,10 @@
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            Unsat
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
+; SUMMARY-NEXT:       AlignLog2:       0
+; SUMMARY-NEXT:       SizeM1:          0
+; SUMMARY-NEXT:       BitMask:         0
+; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:
 ; SUMMARY-NEXT:       0:
 ; SUMMARY-NEXT:         Kind:            Indir
@@ -44,12 +48,18 @@
 ; SUMMARY-NEXT:           :
 ; SUMMARY-NEXT:             Kind:            UniformRetVal
 ; SUMMARY-NEXT:             Info:            12
+; SUMMARY-NEXT:             Byte:            0
+; SUMMARY-NEXT:             Bit:             0
 ; SUMMARY-NEXT:           12:
 ; SUMMARY-NEXT:             Kind:            UniformRetVal
 ; SUMMARY-NEXT:             Info:            24
+; SUMMARY-NEXT:             Byte:            0
+; SUMMARY-NEXT:             Bit:             0
 ; SUMMARY-NEXT:           12,24:
 ; SUMMARY-NEXT:             Kind:            UniformRetVal
 ; SUMMARY-NEXT:             Info:            48
+; SUMMARY-NEXT:             Byte:            0
+; SUMMARY-NEXT:             Bit:             0
 
 target datalayout = "e-p:32:32"
 

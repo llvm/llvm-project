@@ -1,4 +1,4 @@
-RUN: llvm-dwarfdump -debug-dump=gdb_index %p/Inputs/dwarfdump-gdbindex-v7.elf-x86-64 | FileCheck %s
+RUN: llvm-dwarfdump -gdb-index %p/Inputs/dwarfdump-gdbindex-v7.elf-x86-64 | FileCheck %s
 
 ; test.cpp:
 ; int main() { return 0; }

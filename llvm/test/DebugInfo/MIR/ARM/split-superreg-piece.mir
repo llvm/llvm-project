@@ -1,5 +1,5 @@
 # RUN: llc -start-before=livedebugvalues -filetype=obj -o - %s | \
-# RUN:     llvm-dwarfdump -debug-dump=info - | FileCheck %s
+# RUN:     llvm-dwarfdump -debug-info - | FileCheck %s
 # CHECK: .debug_info contents:
 # CHECK: DW_TAG_variable
 # CHECK-NEXT: DW_AT_location

@@ -16,8 +16,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -32,9 +30,10 @@
 using namespace lld;
 using namespace llvm;
 
-namespace lld {
-namespace mingw {
-namespace {
+LLVM_ATTRIBUTE_NORETURN static void error(const Twine &Msg) {
+  errs() << Msg << "\n";
+  exit(1);
+}
 
 // Create OptTable
 enum {
@@ -45,7 +44,7 @@ enum {
 };
 
 // Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE) static const char *const NAME[] = VALUE;
 #include "Options.inc"
 #undef PREFIX
 
@@ -58,17 +57,28 @@ static const opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class COFFLdOptTable : public opt::OptTable {
+namespace {
+class MinGWOptTable : public opt::OptTable {
 public:
-  COFFLdOptTable() : OptTable(InfoTable, false) {}
+  MinGWOptTable() : OptTable(InfoTable, false) {}
   opt::InputArgList parse(ArrayRef<const char *> Argv);
 };
-
 } // namespace
 
-LLVM_ATTRIBUTE_NORETURN static void error(const Twine &Msg) {
-  errs() << Msg << "\n";
-  exit(1);
+opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> Argv) {
+  unsigned MissingIndex;
+  unsigned MissingCount;
+
+  SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
+  opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
+
+  if (MissingCount)
+    error(StringRef(Args.getArgString(MissingIndex)) + ": missing argument");
+  for (auto *Arg : Args.filtered(OPT_UNKNOWN))
+    error("unknown argument: " + Arg->getSpelling());
+  if (!Args.hasArgNoClaim(OPT_INPUT) && !Args.hasArgNoClaim(OPT_l))
+    error("no input files");
+  return Args;
 }
 
 // Find a file by concatenating given paths.
@@ -100,26 +110,10 @@ searchLibrary(StringRef Name, ArrayRef<StringRef> SearchPaths, bool BStatic) {
   error("unable to find library -l" + Name);
 }
 
-opt::InputArgList COFFLdOptTable::parse(ArrayRef<const char *> Argv) {
-  unsigned MissingIndex;
-  unsigned MissingCount;
-
-  SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
-  opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
-
-  if (MissingCount)
-    error(StringRef(Args.getArgString(MissingIndex)) + ": missing argument");
-  for (auto *Arg : Args.filtered(OPT_UNKNOWN))
-    error("unknown argument: " + Arg->getSpelling());
-  if (!Args.hasArgNoClaim(OPT_INPUT) && !Args.hasArgNoClaim(OPT_l))
-    error("no input files");
-  return Args;
-}
-
 // Convert Unix-ish command line arguments to Windows-ish ones and
 // then call coff::link.
-bool link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
-  COFFLdOptTable Parser;
+bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
+  MinGWOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
 
   std::vector<std::string> LinkArgs;
@@ -160,6 +154,9 @@ bool link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
       error("unknown parameter: -m" + S);
   }
 
+  for (auto *A : Args.filtered(OPT_mllvm))
+    Add("-mllvm:" + StringRef(A->getValue()));
+
   if (Args.getLastArgValue(OPT_m) == "i386pe")
     Add("-alternatename:__image_base__=___ImageBase");
   else
@@ -191,6 +188,3 @@ bool link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
     Vec.push_back(S.c_str());
   return coff::link(Vec);
 }
-
-} // namespace mingw
-} // namespace lld

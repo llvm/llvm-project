@@ -1,4 +1,4 @@
-# RUN: llvm-mc < %s -triple=s390x-linux-gnu -filetype=obj | llvm-dwarfdump - | FileCheck %s
+# RUN: llvm-mc < %s -triple=s390x-linux-gnu -filetype=obj | llvm-dwarfdump -v - | FileCheck %s
 #
 # We use both R_390_32 and R_390_64 to encode the dwarf information.
 # Test that they are used correctly.  This uses the assembly output

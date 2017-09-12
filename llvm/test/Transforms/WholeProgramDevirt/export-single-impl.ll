@@ -6,6 +6,10 @@
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            Unsat
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
+; SUMMARY-NEXT:       AlignLog2:       0
+; SUMMARY-NEXT:       SizeM1:          0
+; SUMMARY-NEXT:       BitMask:         0
+; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:
 ; SUMMARY-NEXT:       0:
 ; SUMMARY-NEXT:         Kind:            SingleImpl
@@ -15,6 +19,10 @@
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            Unsat
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
+; SUMMARY-NEXT:       AlignLog2:       0
+; SUMMARY-NEXT:       SizeM1:          0
+; SUMMARY-NEXT:       BitMask:         0
+; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:
 ; SUMMARY-NEXT:       0:
 ; SUMMARY-NEXT:         Kind:            SingleImpl
@@ -24,6 +32,10 @@
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            Unsat
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
+; SUMMARY-NEXT:       AlignLog2:       0
+; SUMMARY-NEXT:       SizeM1:          0
+; SUMMARY-NEXT:       BitMask:         0
+; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:
 ; SUMMARY-NEXT:       0:
 ; SUMMARY-NEXT:         Kind:            SingleImpl
@@ -33,6 +45,10 @@
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            Unsat
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
+; SUMMARY-NEXT:       AlignLog2:       0
+; SUMMARY-NEXT:       SizeM1:          0
+; SUMMARY-NEXT:       BitMask:         0
+; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:
 ; SUMMARY-NEXT:       0:
 ; SUMMARY-NEXT:         Kind:            SingleImpl

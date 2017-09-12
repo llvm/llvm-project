@@ -197,6 +197,7 @@ struct ByteArrayInfo {
   uint64_t BitSize;
   GlobalVariable *ByteArray;
   GlobalVariable *MaskGlobal;
+  uint8_t *MaskPtr = nullptr;
 };
 
 /// A POD-like structure that we use to store a global reference together with
@@ -307,7 +308,8 @@ class LowerTypeTestsModule {
 
   Function *WeakInitializerFn = nullptr;
 
-  void exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
+  bool shouldExportConstantsAsAbsoluteSymbols();
+  uint8_t *exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
   TypeIdLowering importTypeId(StringRef TypeId);
   void importTypeTest(CallInst *CI);
   void importFunction(Function *F, bool isDefinition);
@@ -474,6 +476,8 @@ void LowerTypeTestsModule::allocateByteArrays() {
     BAI->MaskGlobal->replaceAllUsesWith(
         ConstantExpr::getIntToPtr(ConstantInt::get(Int8Ty, Mask), Int8PtrTy));
     BAI->MaskGlobal->eraseFromParent();
+    if (BAI->MaskPtr)
+      *BAI->MaskPtr = Mask;
   }
 
   Constant *ByteArrayConst = ConstantDataArray::get(M.getContext(), BAB.Bytes);
@@ -725,13 +729,21 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
   }
 }
 
+bool LowerTypeTestsModule::shouldExportConstantsAsAbsoluteSymbols() {
+  return (Arch == Triple::x86 || Arch == Triple::x86_64) &&
+         ObjectFormat == Triple::ELF;
+}
+
 /// Export the given type identifier so that ThinLTO backends may import it.
 /// Type identifiers are exported by adding coarse-grained information about how
 /// to test the type identifier to the summary, and creating symbols in the
 /// object file (aliases and absolute symbols) containing fine-grained
 /// information about the type identifier.
-void LowerTypeTestsModule::exportTypeId(StringRef TypeId,
-                                        const TypeIdLowering &TIL) {
+///
+/// Returns a pointer to the location in which to store the bitmask, if
+/// applicable.
+uint8_t *LowerTypeTestsModule::exportTypeId(StringRef TypeId,
+                                            const TypeIdLowering &TIL) {
   TypeTestResolution &TTRes =
       ExportSummary->getOrInsertTypeIdSummary(TypeId).TTRes;
   TTRes.TheKind = TIL.TheKind;
@@ -743,14 +755,21 @@ void LowerTypeTestsModule::exportTypeId(StringRef TypeId,
     GA->setVisibility(GlobalValue::HiddenVisibility);
   };
 
+  auto ExportConstant = [&](StringRef Name, uint64_t &Storage, Constant *C) {
+    if (shouldExportConstantsAsAbsoluteSymbols())
+      ExportGlobal(Name, ConstantExpr::getIntToPtr(C, Int8PtrTy));
+    else
+      Storage = cast<ConstantInt>(C)->getZExtValue();
+  };
+
   if (TIL.TheKind != TypeTestResolution::Unsat)
     ExportGlobal("global_addr", TIL.OffsetedGlobal);
 
   if (TIL.TheKind == TypeTestResolution::ByteArray ||
       TIL.TheKind == TypeTestResolution::Inline ||
       TIL.TheKind == TypeTestResolution::AllOnes) {
-    ExportGlobal("align", ConstantExpr::getIntToPtr(TIL.AlignLog2, Int8PtrTy));
-    ExportGlobal("size_m1", ConstantExpr::getIntToPtr(TIL.SizeM1, Int8PtrTy));
+    ExportConstant("align", TTRes.AlignLog2, TIL.AlignLog2);
+    ExportConstant("size_m1", TTRes.SizeM1, TIL.SizeM1);
 
     uint64_t BitSize = cast<ConstantInt>(TIL.SizeM1)->getZExtValue() + 1;
     if (TIL.TheKind == TypeTestResolution::Inline)
@@ -761,12 +780,16 @@ void LowerTypeTestsModule::exportTypeId(StringRef TypeId,
 
   if (TIL.TheKind == TypeTestResolution::ByteArray) {
     ExportGlobal("byte_array", TIL.TheByteArray);
-    ExportGlobal("bit_mask", TIL.BitMask);
+    if (shouldExportConstantsAsAbsoluteSymbols())
+      ExportGlobal("bit_mask", TIL.BitMask);
+    else
+      return &TTRes.BitMask;
   }
 
   if (TIL.TheKind == TypeTestResolution::Inline)
-    ExportGlobal("inline_bits",
-                 ConstantExpr::getIntToPtr(TIL.InlineBits, Int8PtrTy));
+    ExportConstant("inline_bits", TTRes.InlineBits, TIL.InlineBits);
+
+  return nullptr;
 }
 
 LowerTypeTestsModule::TypeIdLowering
@@ -779,16 +802,31 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
   TypeIdLowering TIL;
   TIL.TheKind = TTRes.TheKind;
 
-  auto ImportGlobal = [&](StringRef Name, unsigned AbsWidth) {
+  auto ImportGlobal = [&](StringRef Name) {
     Constant *C =
         M.getOrInsertGlobal(("__typeid_" + TypeId + "_" + Name).str(), Int8Ty);
-    auto *GV = dyn_cast<GlobalVariable>(C);
-    // We only need to set metadata if the global is newly created, in which
-    // case it would not have hidden visibility.
-    if (!GV || GV->getVisibility() == GlobalValue::HiddenVisibility)
+    if (auto *GV = dyn_cast<GlobalVariable>(C))
+      GV->setVisibility(GlobalValue::HiddenVisibility);
+    return C;
+  };
+
+  auto ImportConstant = [&](StringRef Name, uint64_t Const, unsigned AbsWidth,
+                            Type *Ty) {
+    if (!shouldExportConstantsAsAbsoluteSymbols()) {
+      Constant *C =
+          ConstantInt::get(isa<IntegerType>(Ty) ? Ty : Int64Ty, Const);
+      if (!isa<IntegerType>(Ty))
+        C = ConstantExpr::getIntToPtr(C, Ty);
+      return C;
+    }
+
+    Constant *C = ImportGlobal(Name);
+    auto *GV = cast<GlobalVariable>(C->stripPointerCasts());
+    if (isa<IntegerType>(Ty))
+      C = ConstantExpr::getPtrToInt(C, Ty);
+    if (GV->getMetadata(LLVMContext::MD_absolute_symbol))
       return C;
 
-    GV->setVisibility(GlobalValue::HiddenVisibility);
     auto SetAbsRange = [&](uint64_t Min, uint64_t Max) {
       auto *MinC = ConstantAsMetadata::get(ConstantInt::get(IntPtrTy, Min));
       auto *MaxC = ConstantAsMetadata::get(ConstantInt::get(IntPtrTy, Max));
@@ -797,30 +835,30 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
     };
     if (AbsWidth == IntPtrTy->getBitWidth())
       SetAbsRange(~0ull, ~0ull); // Full set.
-    else if (AbsWidth)
+    else
       SetAbsRange(0, 1ull << AbsWidth);
     return C;
   };
 
   if (TIL.TheKind != TypeTestResolution::Unsat)
-    TIL.OffsetedGlobal = ImportGlobal("global_addr", 0);
+    TIL.OffsetedGlobal = ImportGlobal("global_addr");
 
   if (TIL.TheKind == TypeTestResolution::ByteArray ||
       TIL.TheKind == TypeTestResolution::Inline ||
       TIL.TheKind == TypeTestResolution::AllOnes) {
-    TIL.AlignLog2 = ConstantExpr::getPtrToInt(ImportGlobal("align", 8), Int8Ty);
-    TIL.SizeM1 = ConstantExpr::getPtrToInt(
-        ImportGlobal("size_m1", TTRes.SizeM1BitWidth), IntPtrTy);
+    TIL.AlignLog2 = ImportConstant("align", TTRes.AlignLog2, 8, Int8Ty);
+    TIL.SizeM1 =
+        ImportConstant("size_m1", TTRes.SizeM1, TTRes.SizeM1BitWidth, IntPtrTy);
   }
 
   if (TIL.TheKind == TypeTestResolution::ByteArray) {
-    TIL.TheByteArray = ImportGlobal("byte_array", 0);
-    TIL.BitMask = ImportGlobal("bit_mask", 8);
+    TIL.TheByteArray = ImportGlobal("byte_array");
+    TIL.BitMask = ImportConstant("bit_mask", TTRes.BitMask, 8, Int8PtrTy);
   }
 
   if (TIL.TheKind == TypeTestResolution::Inline)
-    TIL.InlineBits = ConstantExpr::getPtrToInt(
-        ImportGlobal("inline_bits", 1 << TTRes.SizeM1BitWidth),
+    TIL.InlineBits = ImportConstant(
+        "inline_bits", TTRes.InlineBits, 1 << TTRes.SizeM1BitWidth,
         TTRes.SizeM1BitWidth <= 5 ? Int32Ty : Int64Ty);
 
   return TIL;
@@ -899,6 +937,7 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
       BSI.print(dbgs());
     });
 
+    ByteArrayInfo *BAI = nullptr;
     TypeIdLowering TIL;
     TIL.OffsetedGlobal = ConstantExpr::getGetElementPtr(
         Int8Ty, CombinedGlobalAddr, ConstantInt::get(IntPtrTy, BSI.ByteOffset)),
@@ -920,15 +959,18 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
     } else {
       TIL.TheKind = TypeTestResolution::ByteArray;
       ++NumByteArraysCreated;
-      ByteArrayInfo *BAI = createByteArray(BSI);
+      BAI = createByteArray(BSI);
       TIL.TheByteArray = BAI->ByteArray;
       TIL.BitMask = BAI->MaskGlobal;
     }
 
     TypeIdUserInfo &TIUI = TypeIdUsers[TypeId];
 
-    if (TIUI.IsExported)
-      exportTypeId(cast<MDString>(TypeId)->getString(), TIL);
+    if (TIUI.IsExported) {
+      uint8_t *MaskPtr = exportTypeId(cast<MDString>(TypeId)->getString(), TIL);
+      if (BAI)
+        BAI->MaskPtr = MaskPtr;
+    }
 
     // Lower each call to llvm.type.test for this type identifier.
     for (CallInst *CI : TIUI.CallSites) {

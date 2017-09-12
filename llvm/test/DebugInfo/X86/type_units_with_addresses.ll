@@ -1,10 +1,10 @@
 ; REQUIRES: object-emission
 
 ; RUN: llc -split-dwarf-file=foo.dwo -filetype=obj -O0 -generate-type-units -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN:     | llvm-dwarfdump - | FileCheck %s
+; RUN:     | llvm-dwarfdump -v - | FileCheck %s
 
 ; RUN: llc -filetype=obj -O0 -generate-type-units -mtriple=x86_64-unknown-linux-gnu < %s \
-; RUN:     | llvm-dwarfdump - | FileCheck --check-prefix=SINGLE %s
+; RUN:     | llvm-dwarfdump -v - | FileCheck --check-prefix=SINGLE %s
 
 ; Test case built from:
 ;int i;

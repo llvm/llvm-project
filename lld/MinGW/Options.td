@@ -11,6 +11,7 @@ def entry: S<"entry">, MetaVarName<"<entry>">,
 def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
   HelpText<"Root name of library to use">;
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
+def mllvm: S<"mllvm">;
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 def out_implib: Separate<["--"], "out-implib">, HelpText<"Import library name">;

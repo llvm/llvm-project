@@ -1,5 +1,5 @@
 // RUN: llvm-mc -g -triple i386-apple-darwin10 %s -filetype=obj -o %t
-// RUN: llvm-dwarfdump -debug-dump=line %t | FileCheck %s
+// RUN: llvm-dwarfdump -debug-line %t | FileCheck %s
 
 # 1 "foo.S" 2
 .macro switcher
