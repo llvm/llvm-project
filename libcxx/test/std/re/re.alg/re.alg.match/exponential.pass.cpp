@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // <regex>
+// XFAIL: c++03
 
 // template <class BidirectionalIterator, class Allocator, class charT, class traits>
 //     bool
