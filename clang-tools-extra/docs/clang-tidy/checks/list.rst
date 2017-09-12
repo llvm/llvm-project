@@ -41,6 +41,7 @@ Clang-Tidy Checks
    cppcoreguidelines-c-copy-assignment-signature
    cppcoreguidelines-interfaces-global-init
    cppcoreguidelines-no-malloc
+   cppcoreguidelines-owning-memory
    cppcoreguidelines-pro-bounds-array-to-pointer-decay
    cppcoreguidelines-pro-bounds-constant-array-index
    cppcoreguidelines-pro-bounds-pointer-arithmetic
