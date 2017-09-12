@@ -5490,7 +5490,7 @@ static bool tryToVectorizeHorReductionOrInstOperands(
       for (auto *Op : Inst->operand_values())
         if (VisitedInstrs.insert(Op).second)
           if (auto *I = dyn_cast<Instruction>(Op))
-            if (!isa<PHINode>(Inst) && I->getParent() == BB)
+            if (!isa<PHINode>(I) && I->getParent() == BB)
               Stack.emplace_back(Op, Level);
   }
   return Res;

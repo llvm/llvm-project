@@ -152,6 +152,9 @@ public:
                               llvm::opt::ArgStringList &CmdArgs) const {}
 
   /// Add the linker arguments to link the compiler runtime library.
+  ///
+  /// FIXME: This API is intended for use with embedded libraries only, and is
+  /// misleadingly named.
   virtual void AddLinkRuntimeLibArgs(const llvm::opt::ArgList &Args,
                                      llvm::opt::ArgStringList &CmdArgs) const;
 
@@ -169,10 +172,26 @@ public:
   /// Is the target either iOS or an iOS simulator?
   bool isTargetIOSBased() const { return false; }
 
+  /// Options to control how a runtime library is linked.
+  enum RuntimeLinkOptions : unsigned {
+    // Link the library in even if it can't be found in the VFS.
+    RLO_AlwaysLink = 1 << 0,
+
+    // Use the embedded runtime from the macho_embedded directory.
+    RLO_IsEmbedded = 1 << 1,
+
+    // Emit rpaths for @executable_path as well as the resource directory.
+    RLO_AddRPath = 1 << 2,
+
+    //< Link the library in before any others.
+    RLO_FirstLink = 1 << 3,
+  };
+
+  /// Add a runtime library to the list of items to link.
   void AddLinkRuntimeLib(const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs,
-                         StringRef DarwinLibName, bool AlwaysLink = false,
-                         bool IsEmbedded = false, bool AddRPath = false) const;
+                         StringRef DarwinLibName,
+                         RuntimeLinkOptions Opts = RuntimeLinkOptions()) const;
 
   /// Add any profiling runtime libraries that are needed. This is essentially a
   /// MachO specific version of addProfileRT in Tools.cpp.

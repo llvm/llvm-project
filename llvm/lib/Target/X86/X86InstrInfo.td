@@ -271,8 +271,6 @@ def X86lock_and  : SDNode<"X86ISD::LAND",  SDTLockBinaryArithWithFlags,
                           [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                            SDNPMemOperand]>;
 
-def X86bextr  : SDNode<"X86ISD::BEXTR",  SDTIntBinOp>;
-
 def X86mul_imm : SDNode<"X86ISD::MUL_IMM", SDTIntBinOp>;
 
 def X86WinAlloca : SDNode<"X86ISD::WIN_ALLOCA", SDT_X86WIN_ALLOCA,
@@ -2439,17 +2437,6 @@ let Predicates = [HasBMI2] in {
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$lz, sub_32bit))>;
 } // HasBMI2
 
-let Predicates = [HasBMI] in {
-  def : Pat<(X86bextr GR32:$src1, GR32:$src2),
-            (BEXTR32rr GR32:$src1, GR32:$src2)>;
-  def : Pat<(X86bextr (loadi32 addr:$src1), GR32:$src2),
-            (BEXTR32rm addr:$src1, GR32:$src2)>;
-  def : Pat<(X86bextr GR64:$src1, GR64:$src2),
-            (BEXTR64rr GR64:$src1, GR64:$src2)>;
-  def : Pat<(X86bextr (loadi64 addr:$src1), GR64:$src2),
-            (BEXTR64rm addr:$src1, GR64:$src2)>;
-} // HasBMI
-
 multiclass bmi_pdep_pext<string mnemonic, RegisterClass RC,
                          X86MemOperand x86memop, Intrinsic Int,
                          PatFrag ld_frag> {
@@ -2651,15 +2638,6 @@ def : InstAlias<"clzero\t{%rax|rax}", (CLZEROr)>, Requires<[In64BitMode]>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasTBM] in {
-  def : Pat<(X86bextr GR32:$src1, (i32 imm:$src2)),
-            (BEXTRI32ri GR32:$src1, imm:$src2)>;
-  def : Pat<(X86bextr (loadi32 addr:$src1), (i32 imm:$src2)),
-            (BEXTRI32mi addr:$src1, imm:$src2)>;
-  def : Pat<(X86bextr GR64:$src1, i64immSExt32:$src2),
-            (BEXTRI64ri GR64:$src1, i64immSExt32:$src2)>;
-  def : Pat<(X86bextr (loadi64 addr:$src1), i64immSExt32:$src2),
-            (BEXTRI64mi addr:$src1, i64immSExt32:$src2)>;
-
   // FIXME: patterns for the load versions are not implemented
   def : Pat<(and GR32:$src, (add GR32:$src, 1)),
             (BLCFILL32rr GR32:$src)>;

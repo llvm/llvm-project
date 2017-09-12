@@ -383,15 +383,8 @@ void Preprocessor::SkipExcludedConditionalBlock(const Token &HashToken,
 
     // If this is the end of the buffer, we have an error.
     if (Tok.is(tok::eof)) {
-      // Emit errors for each unterminated conditional on the stack, including
-      // the current one.
-      while (!CurPPLexer->ConditionalStack.empty()) {
-        if (CurLexer->getFileLoc() != CodeCompletionFileLoc)
-          Diag(CurPPLexer->ConditionalStack.back().IfLoc,
-               diag::err_pp_unterminated_conditional);
-        CurPPLexer->ConditionalStack.pop_back();
-      }
-
+      // We don't emit errors for unterminated conditionals here,
+      // Lexer::LexEndOfFile can do that propertly.
       // Just return and let the caller lex after this #include.
       break;
     }

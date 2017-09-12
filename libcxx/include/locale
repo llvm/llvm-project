@@ -4110,7 +4110,7 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::overflow(int_type __c)
                     if (__r == codecvt_base::partial)
                     {
                         this->setp(const_cast<char_type *>(__e), this->pptr());
-                        this->pbump(this->epptr() - this->pbase());
+                        this->__pbump(this->epptr() - this->pbase());
                     }
                 }
                 else

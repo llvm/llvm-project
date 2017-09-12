@@ -809,48 +809,6 @@ define <8 x i16> @test_x86_sse2_paddus_w(<8 x i16> %a0, <8 x i16> %a1) {
 declare <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 
-define <16 x i8> @test_x86_sse2_pavg_b(<16 x i8> %a0, <16 x i8> %a1) {
-; SSE-LABEL: test_x86_sse2_pavg_b:
-; SSE:       ## BB#0:
-; SSE-NEXT:    pavgb %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xe0,0xc1]
-; SSE-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX2-LABEL: test_x86_sse2_pavg_b:
-; AVX2:       ## BB#0:
-; AVX2-NEXT:    vpavgb %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xe0,0xc1]
-; AVX2-NEXT:    retl ## encoding: [0xc3]
-;
-; SKX-LABEL: test_x86_sse2_pavg_b:
-; SKX:       ## BB#0:
-; SKX-NEXT:    vpavgb %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xe0,0xc1]
-; SKX-NEXT:    retl ## encoding: [0xc3]
-  %res = call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
-  ret <16 x i8> %res
-}
-declare <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8>, <16 x i8>) nounwind readnone
-
-
-define <8 x i16> @test_x86_sse2_pavg_w(<8 x i16> %a0, <8 x i16> %a1) {
-; SSE-LABEL: test_x86_sse2_pavg_w:
-; SSE:       ## BB#0:
-; SSE-NEXT:    pavgw %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xe3,0xc1]
-; SSE-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX2-LABEL: test_x86_sse2_pavg_w:
-; AVX2:       ## BB#0:
-; AVX2-NEXT:    vpavgw %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xe3,0xc1]
-; AVX2-NEXT:    retl ## encoding: [0xc3]
-;
-; SKX-LABEL: test_x86_sse2_pavg_w:
-; SKX:       ## BB#0:
-; SKX-NEXT:    vpavgw %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xe3,0xc1]
-; SKX-NEXT:    retl ## encoding: [0xc3]
-  %res = call <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16> %a0, <8 x i16> %a1) ; <<8 x i16>> [#uses=1]
-  ret <8 x i16> %res
-}
-declare <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16>, <8 x i16>) nounwind readnone
-
-
 define <4 x i32> @test_x86_sse2_pmadd_wd(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE-LABEL: test_x86_sse2_pmadd_wd:
 ; SSE:       ## BB#0:
