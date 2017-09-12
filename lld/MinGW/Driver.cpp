@@ -121,8 +121,14 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
 
   Add("lld-link");
 
-  if (auto *A = Args.getLastArg(OPT_entry))
-    Add("-entry:" + StringRef(A->getValue()));
+  if (auto *A = Args.getLastArg(OPT_entry)) {
+    StringRef S = A->getValue();
+    if (Args.getLastArgValue(OPT_m) == "i386pe" && S.startswith("_"))
+      Add("-entry:" + S.substr(1));
+    else
+      Add("-entry:" + S);
+  }
+
   if (auto *A = Args.getLastArg(OPT_subs))
     Add("-subsystem:" + StringRef(A->getValue()));
   if (auto *A = Args.getLastArg(OPT_out_implib))
