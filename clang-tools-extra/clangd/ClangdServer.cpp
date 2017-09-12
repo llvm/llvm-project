@@ -144,12 +144,13 @@ ClangdScheduler::~ClangdScheduler() {
 ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                            DiagnosticsConsumer &DiagConsumer,
                            FileSystemProvider &FSProvider,
-                           unsigned AsyncThreadsCount,
+                           unsigned AsyncThreadsCount, bool SnippetCompletions,
                            llvm::Optional<StringRef> ResourceDir)
     : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
       ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       PCHs(std::make_shared<PCHContainerOperations>()),
-      WorkScheduler(AsyncThreadsCount) {}
+      WorkScheduler(AsyncThreadsCount), SnippetCompletions(SnippetCompletions) {
+}
 
 std::future<void> ClangdServer::addDocument(PathRef File, StringRef Contents) {
   DocVersion Version = DraftMgr.updateDraft(File, Contents);
@@ -206,10 +207,10 @@ ClangdServer::codeComplete(PathRef File, Position Pos,
   assert(Resources && "Calling completion on non-added file");
 
   auto Preamble = Resources->getPossiblyStalePreamble();
-  std::vector<CompletionItem> Result =
-      clangd::codeComplete(File, Resources->getCompileCommand(),
-                           Preamble ? &Preamble->Preamble : nullptr,
-                           *OverridenContents, Pos, TaggedFS.Value, PCHs);
+  std::vector<CompletionItem> Result = clangd::codeComplete(
+      File, Resources->getCompileCommand(),
+      Preamble ? &Preamble->Preamble : nullptr, *OverridenContents, Pos,
+      TaggedFS.Value, PCHs, SnippetCompletions);
   return make_tagged(std::move(Result), TaggedFS.Tag);
 }
 

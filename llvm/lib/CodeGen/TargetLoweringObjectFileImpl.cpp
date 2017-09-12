@@ -1252,11 +1252,9 @@ MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
   return nullptr;
 }
 
-static MCSectionWasm *
-selectWasmSectionForGlobal(MCContext &Ctx, const GlobalObject *GO,
-                           SectionKind Kind, Mangler &Mang,
-                           const TargetMachine &TM, bool EmitUniqueSection,
-                           unsigned Flags, unsigned *NextUniqueID) {
+static MCSectionWasm *selectWasmSectionForGlobal(
+    MCContext &Ctx, const GlobalObject *GO, SectionKind Kind, Mangler &Mang,
+    const TargetMachine &TM, bool EmitUniqueSection, unsigned *NextUniqueID) {
   StringRef Group = "";
   if (getWasmComdat(GO))
     llvm_unreachable("comdat not yet supported for wasm");
@@ -1279,8 +1277,7 @@ selectWasmSectionForGlobal(MCContext &Ctx, const GlobalObject *GO,
     UniqueID = *NextUniqueID;
     (*NextUniqueID)++;
   }
-  return Ctx.getWasmSection(Name, /*Type=*/0, Flags,
-                            Group, UniqueID);
+  return Ctx.getWasmSection(Name, /*Type=*/0, Group, UniqueID);
 }
 
 MCSection *TargetLoweringObjectFileWasm::SelectSectionForGlobal(
@@ -1299,8 +1296,7 @@ MCSection *TargetLoweringObjectFileWasm::SelectSectionForGlobal(
   EmitUniqueSection |= GO->hasComdat();
 
   return selectWasmSectionForGlobal(getContext(), GO, Kind, getMangler(), TM,
-                                    EmitUniqueSection, /*Flags=*/0,
-                                    &NextUniqueID);
+                                    EmitUniqueSection, &NextUniqueID);
 }
 
 bool TargetLoweringObjectFileWasm::shouldPutJumpTableInFunctionSection(

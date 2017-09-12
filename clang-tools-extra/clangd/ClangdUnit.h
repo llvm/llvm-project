@@ -253,7 +253,8 @@ std::vector<CompletionItem>
 codeComplete(PathRef FileName, tooling::CompileCommand Command,
              PrecompiledPreamble const *Preamble, StringRef Contents,
              Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-             std::shared_ptr<PCHContainerOperations> PCHs);
+             std::shared_ptr<PCHContainerOperations> PCHs,
+             bool SnippetCompletions);
 
 /// Get definition of symbol at a specified \p Pos.
 std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos);

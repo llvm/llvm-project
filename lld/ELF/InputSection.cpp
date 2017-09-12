@@ -534,7 +534,7 @@ static uint64_t getRelocTargetVA(uint32_t Type, int64_t A, uint64_t P,
     // formula for calculation "AHL + GP - P + 4". For details see p. 4-19 at
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
     uint64_t V = InX::MipsGot->getGp() + A - P;
-    if (Type == R_MIPS_LO16)
+    if (Type == R_MIPS_LO16 || Type == R_MICROMIPS_LO16)
       V += 4;
     return V;
   }

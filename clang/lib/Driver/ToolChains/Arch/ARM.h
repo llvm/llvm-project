@@ -32,6 +32,12 @@ StringRef getLLVMArchSuffixForARM(llvm::StringRef CPU, llvm::StringRef Arch,
 void appendEBLinkFlags(const llvm::opt::ArgList &Args,
                        llvm::opt::ArgStringList &CmdArgs,
                        const llvm::Triple &Triple);
+enum class ReadTPMode {
+  Invalid,
+  Soft,
+  Cp15,
+};
+
 enum class FloatABI {
   Invalid,
   Soft,
@@ -40,6 +46,7 @@ enum class FloatABI {
 };
 
 FloatABI getARMFloatABI(const ToolChain &TC, const llvm::opt::ArgList &Args);
+ReadTPMode getReadTPMode(const ToolChain &TC, const llvm::opt::ArgList &Args);
 
 bool useAAPCSForMachO(const llvm::Triple &T);
 void getARMArchCPUFromArgs(const llvm::opt::ArgList &Args,

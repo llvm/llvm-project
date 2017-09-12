@@ -494,7 +494,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (getToolChain().getSanitizerArgs().needsSafeStackRt()) {
     getMachOToolChain().AddLinkRuntimeLib(Args, CmdArgs,
                                           "libclang_rt.safestack_osx.a",
-                                          /*AlwaysLink=*/true);
+                                          toolchains::Darwin::RLO_AlwaysLink);
   }
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
@@ -897,10 +897,11 @@ unsigned DarwinClang::GetDefaultDwarfVersion() const {
 }
 
 void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
-                              StringRef DarwinLibName, bool AlwaysLink,
-                              bool IsEmbedded, bool AddRPath) const {
+                              StringRef DarwinLibName,
+                              RuntimeLinkOptions Opts) const {
   SmallString<128> Dir(getDriver().ResourceDir);
-  llvm::sys::path::append(Dir, "lib", IsEmbedded ? "macho_embedded" : "darwin");
+  llvm::sys::path::append(
+      Dir, "lib", (Opts & RLO_IsEmbedded) ? "macho_embedded" : "darwin");
 
   SmallString<128> P(Dir);
   llvm::sys::path::append(P, DarwinLibName);
@@ -908,14 +909,19 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   // For now, allow missing resource libraries to support developers who may
   // not have compiler-rt checked out or integrated into their build (unless
   // we explicitly force linking with this library).
-  if (AlwaysLink || getVFS().exists(P))
-    CmdArgs.push_back(Args.MakeArgString(P));
+  if ((Opts & RLO_AlwaysLink) || getVFS().exists(P)) {
+    const char *LibArg = Args.MakeArgString(P);
+    if (Opts & RLO_FirstLink)
+      CmdArgs.insert(CmdArgs.begin(), LibArg);
+    else
+      CmdArgs.push_back(LibArg);
+  }
 
   // Adding the rpaths might negatively interact when other rpaths are involved,
   // so we should make sure we add the rpaths last, after all user-specified
   // rpaths. This is currently true from this place, but we need to be
   // careful if this function is ever called before user's rpaths are emitted.
-  if (AddRPath) {
+  if (Opts & RLO_AddRPath) {
     assert(DarwinLibName.endswith(".dylib") && "must be a dynamic library");
 
     // Add @executable_path to rpath to support having the dylib copied with
@@ -984,21 +990,23 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
                               ArgStringList &CmdArgs) const {
   if (!needsProfileRT(Args)) return;
 
-  AddLinkRuntimeLib(Args, CmdArgs, (Twine("libclang_rt.profile_") +
-       getOSLibraryNameSuffix() + ".a").str(),
-                    /*AlwaysLink*/ true);
+  AddLinkRuntimeLib(
+      Args, CmdArgs,
+      (Twine("libclang_rt.profile_") + getOSLibraryNameSuffix() + ".a").str(),
+      RuntimeLinkOptions(RLO_AlwaysLink | RLO_FirstLink));
 }
 
 void DarwinClang::AddLinkSanitizerLibArgs(const ArgList &Args,
                                           ArgStringList &CmdArgs,
                                           StringRef Sanitizer,
                                           bool Shared) const {
-  AddLinkRuntimeLib(
-      Args, CmdArgs,
-      (Twine("libclang_rt.") + Sanitizer + "_" +
-       getOSLibraryNameSuffix() + (Shared ? "_dynamic.dylib" : ".a")).str(),
-      /*AlwaysLink*/ true, /*IsEmbedded*/ false,
-      /*AddRPath*/ Shared);
+  auto RLO = RuntimeLinkOptions(RLO_AlwaysLink | (Shared ? RLO_AddRPath : 0U));
+  AddLinkRuntimeLib(Args, CmdArgs,
+                    (Twine("libclang_rt.") + Sanitizer + "_" +
+                     getOSLibraryNameSuffix() +
+                     (Shared ? "_dynamic.dylib" : ".a"))
+                        .str(),
+                    RLO);
 }
 
 ToolChain::RuntimeLibType DarwinClang::GetRuntimeLibType(
@@ -1054,7 +1062,7 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     StringRef OS = isTargetMacOS() ? "osx" : "iossim";
     AddLinkRuntimeLib(Args, CmdArgs,
                       (Twine("libclang_rt.stats_client_") + OS + ".a").str(),
-                      /*AlwaysLink=*/true);
+                      RLO_AlwaysLink);
     AddLinkSanitizerLibArgs(Args, CmdArgs, "stats");
   }
   if (Sanitize.needsEsanRt())
@@ -1736,7 +1744,7 @@ void MachO::AddLinkRuntimeLibArgs(const ArgList &Args,
           : "soft";
   CompilerRT += Args.hasArg(options::OPT_fPIC) ? "_pic.a" : "_static.a";
 
-  AddLinkRuntimeLib(Args, CmdArgs, CompilerRT, false, true);
+  AddLinkRuntimeLib(Args, CmdArgs, CompilerRT, RLO_IsEmbedded);
 }
 
 bool Darwin::isAlignedAllocationUnavailable() const {

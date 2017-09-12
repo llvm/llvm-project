@@ -3978,12 +3978,21 @@ define <16 x i8> @test_pavgb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; ZNVER1-NEXT:    vpavgb %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpavgb (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
-  %1 = call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %a0, <16 x i8> %a1)
-  %2 = load <16 x i8>, <16 x i8> *%a2, align 16
-  %3 = call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %1, <16 x i8> %2)
-  ret <16 x i8> %3
+  %1 = zext <16 x i8> %a0 to <16 x i16>
+  %2 = zext <16 x i8> %a1 to <16 x i16>
+  %3 = add <16 x i16> %1, %2
+  %4 = add <16 x i16> %3, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %5 = lshr <16 x i16> %4, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %6 = trunc <16 x i16> %5 to <16 x i8>
+  %7 = load <16 x i8>, <16 x i8> *%a2, align 16
+  %8 = zext <16 x i8> %6 to <16 x i16>
+  %9 = zext <16 x i8> %7 to <16 x i16>
+  %10 = add <16 x i16> %8, %9
+  %11 = add <16 x i16> %10, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %12 = lshr <16 x i16> %11, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %13 = trunc <16 x i16> %12 to <16 x i8>
+  ret <16 x i8> %13
 }
-declare <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %arg0, <16 x i8> %arg1) nounwind readnone
 
 define <8 x i16> @test_pavgw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; GENERIC-LABEL: test_pavgw:
@@ -4037,12 +4046,21 @@ define <8 x i16> @test_pavgw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; ZNVER1-NEXT:    vpavgw %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpavgw (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
-  %1 = call <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16> %a0, <8 x i16> %a1)
-  %2 = load <8 x i16>, <8 x i16> *%a2, align 16
-  %3 = call <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16> %1, <8 x i16> %2)
-  ret <8 x i16> %3
+  %1 = zext <8 x i16> %a0 to <8 x i32>
+  %2 = zext <8 x i16> %a1 to <8 x i32>
+  %3 = add <8 x i32> %1, %2
+  %4 = add <8 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %5 = lshr <8 x i32> %4, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %6 = trunc <8 x i32> %5 to <8 x i16>
+  %7 = load <8 x i16>, <8 x i16> *%a2, align 16
+  %8 = zext <8 x i16> %6 to <8 x i32>
+  %9 = zext <8 x i16> %7 to <8 x i32>
+  %10 = add <8 x i32> %8, %9
+  %11 = add <8 x i32> %10, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %12 = lshr <8 x i32> %11, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %13 = trunc <8 x i32> %12 to <8 x i16>
+  ret <8 x i16> %13
 }
-declare <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <16 x i8> @test_pcmpeqb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; GENERIC-LABEL: test_pcmpeqb:

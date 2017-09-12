@@ -315,8 +315,8 @@ public:
     return RC.SpillSize;
   }
 
-  /// Return the minimum required alignment for a spill slot for a register
-  /// of this class.
+  /// Return the minimum required alignment in bytes for a spill slot for
+  /// a register of this class.
   unsigned getSpillAlignment(const TargetRegisterClass &RC) const {
     return RC.SpillAlignment;
   }
@@ -330,7 +330,7 @@ public:
   }
 
   /// Loop over all of the value types that can be represented by values
-  // in the given register class.
+  /// in the given register class.
   vt_iterator legalclasstypes_begin(const TargetRegisterClass &RC) const {
     return RC.VTs;
   }

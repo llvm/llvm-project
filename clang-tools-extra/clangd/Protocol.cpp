@@ -724,8 +724,8 @@ std::string CompletionItem::unparse(const CompletionItem &CI) {
   if (!CI.insertText.empty())
     Os << R"("insertText":")" << llvm::yaml::escape(CI.insertText) << R"(",)";
   if (CI.insertTextFormat != InsertTextFormat::Missing) {
-    Os << R"("insertTextFormat":")" << static_cast<int>(CI.insertTextFormat)
-       << R"(",)";
+    Os << R"("insertTextFormat":)" << static_cast<int>(CI.insertTextFormat)
+       << R"(,)";
   }
   if (CI.textEdit)
     Os << R"("textEdit":)" << TextEdit::unparse(*CI.textEdit) << ',';
