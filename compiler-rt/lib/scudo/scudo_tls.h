@@ -36,7 +36,7 @@ struct ALIGNED(64) ScudoThreadContext : public ScudoThreadContextPlatform {
   void commitBack();
 };
 
-void initThread();
+void initThread(bool MinimalInit);
 
 // Platform specific dastpath functions definitions.
 #include "scudo_tls_android.inc"

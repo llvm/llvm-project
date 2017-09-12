@@ -495,7 +495,13 @@ struct ScudoAllocator {
   // Deallocates a Chunk, which means adding it to the delayed free list (or
   // Quarantine).
   void deallocate(void *UserPtr, uptr DeleteSize, AllocType Type) {
-    initThreadMaybe();
+    // For a deallocation, we only ensure minimal initialization, meaning thread
+    // local data will be left uninitialized for now (when using ELF TLS). The
+    // fallback cache will be used instead. This is a workaround for a situation
+    // where the only heap operation performed in a thread would be a free past
+    // the TLS destructors, ending up in initialized thread specific data never
+    // being destroyed properly. Any other heap operation will do a full init.
+    initThreadMaybe(/*MinimalInit=*/true);
     // if (&__sanitizer_free_hook) __sanitizer_free_hook(UserPtr);
     if (UNLIKELY(!UserPtr))
       return;
