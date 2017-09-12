@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple x86_64-pc-linux -filetype=obj %s -o %t
-# RUN: llvm-dwarfdump %t | FileCheck %s
+# RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 # CHECK: .debug_info contents:
 # CHECK: DW_TAG_compile_unit
@@ -14,7 +14,7 @@
 # CHECK:   00000000 0000000000000000 0000000000000003
 # CHECK:   00000000 <End of list>
 
-# RUN: llvm-dwarfdump -brief=true %t | FileCheck %s --check-prefix=BRIEF
+# RUN: llvm-dwarfdump %t | FileCheck %s --check-prefix=BRIEF
 # BRIEF: DW_TAG_compile_unit
 # BRIEF: DW_AT_ranges         (0x00000000
 # BRIEF-NEXT:  [0x0000000000000000 - 0x0000000000000001)

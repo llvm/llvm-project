@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t1.o
 # RUN: ld.lld --gdb-index %t1.o -o %t
-# RUN: llvm-dwarfdump -debug-dump=gdb_index %t | FileCheck %s
+# RUN: llvm-dwarfdump -gdb-index %t | FileCheck %s
 
 # CHECK:      .gnu_index contents:
 # CHECK:       Address area offset = 0x28, has 2 entries:

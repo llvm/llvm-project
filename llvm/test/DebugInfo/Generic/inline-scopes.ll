@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; bool f();
 ; inline __attribute__((always_inline)) int f1() {

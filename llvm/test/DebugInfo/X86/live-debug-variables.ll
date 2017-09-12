@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj -o - %s | llvm-dwarfdump -debug-dump=loc - | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj -o - %s | llvm-dwarfdump -debug-loc - | FileCheck %s
 
 ; The test inlines the function F four times, with each inlined variable for
 ; "i4" sharing the same virtual register. This means the live interval of the

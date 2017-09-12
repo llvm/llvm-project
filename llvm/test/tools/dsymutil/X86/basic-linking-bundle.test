@@ -5,15 +5,15 @@ RUN: cat %p/../Inputs/basic.macho.x86_64 > %t/basic.macho.x86_64
 RUN: llvm-dsymutil -oso-prepend-path=%p/.. %t/basic.macho.x86_64
 
 Check that the object file in the bundle exists and is sane:
-RUN: llvm-dwarfdump %t/basic.macho.x86_64.dSYM/Contents/Resources/DWARF/basic.macho.x86_64 | FileCheck %S/basic-linking-x86.test
+RUN: llvm-dwarfdump -v %t/basic.macho.x86_64.dSYM/Contents/Resources/DWARF/basic.macho.x86_64 | FileCheck %S/basic-linking-x86.test
 
-Check that llvm-dwarfdump recognizes the bundle as a dSYM:
-RUN: llvm-dwarfdump %t/basic.macho.x86_64.dSYM | FileCheck %S/basic-linking-x86.test
+Check that llvm-dwarfdump -v recognizes the bundle as a dSYM:
+RUN: llvm-dwarfdump -v %t/basic.macho.x86_64.dSYM | FileCheck %S/basic-linking-x86.test
 
 RUN: FileCheck %s --input-file %t/basic.macho.x86_64.dSYM/Contents/Info.plist
 
 RUN: llvm-dsymutil -oso-prepend-path=%p/.. %t/basic.macho.x86_64 -o %t/dsymdest/basic.macho.x86_64.dSYM
-RUN: llvm-dwarfdump %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Resources/DWARF/basic.macho.x86_64 | FileCheck %S/basic-linking-x86.test
+RUN: llvm-dwarfdump -v %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Resources/DWARF/basic.macho.x86_64 | FileCheck %S/basic-linking-x86.test
 RUN: FileCheck %s --input-file %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Info.plist
 
 CHECK: <?xml version="1.0" encoding="UTF-8"?>

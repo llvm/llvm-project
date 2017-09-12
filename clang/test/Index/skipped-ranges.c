@@ -20,6 +20,6 @@ int probably_hot = 1;
 #endif // cool
 
 // RUN: env CINDEXTEST_SHOW_SKIPPED_RANGES=1 c-index-test -test-annotate-tokens=%s:1:1:16:1 %s | FileCheck %s
-// CHECK: Skipping: [5:2 - 6:7]
-// CHECK: Skipping: [8:2 - 12:7]
-// CHECK: Skipping: [14:2 - 20:7]
+// CHECK: Skipping: [5:1 - 6:7]
+// CHECK: Skipping: [8:1 - 12:7]
+// CHECK: Skipping: [14:1 - 20:7]

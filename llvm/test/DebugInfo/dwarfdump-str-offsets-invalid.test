@@ -1,14 +1,14 @@
 ; Verify that llvm-dwarfdump handles invalid string offset tables.
 
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-str-offsets-invalid-1.x86_64.o | \
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-str-offsets-invalid-1.x86_64.o | \
 RUN:   FileCheck --check-prefix=INVALIDCONTRIB %s
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-str-offsets-invalid-2.x86_64.o | \
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-str-offsets-invalid-2.x86_64.o | \
 RUN:   FileCheck --check-prefix=INVALIDCONTRIB %s
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-str-offsets-invalid-3.x86_64.o | \
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-str-offsets-invalid-3.x86_64.o | \
 RUN:   FileCheck --check-prefix=INVALIDCONTRIB %s
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-str-offsets-invalid-4.x86_64.o | \
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-str-offsets-invalid-4.x86_64.o | \
 RUN:   FileCheck --check-prefix=INVALIDLENGTH %s
-RUN: llvm-dwarfdump %p/Inputs/dwarfdump-str-offsets-invalid-5.x86_64.o | \
+RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-str-offsets-invalid-5.x86_64.o | \
 RUN:   FileCheck --check-prefix=INVALIDSECTIONLENGTH %s
 
 INVALIDCONTRIB:            .debug_str_offsets contents:

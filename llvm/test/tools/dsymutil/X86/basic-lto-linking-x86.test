@@ -1,5 +1,5 @@
-RUN: llvm-dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-lto.macho.x86_64 | llvm-dwarfdump - | FileCheck %s
-RUN: llvm-dsymutil -oso-prepend-path=%p/.. -dump-debug-map %p/../Inputs/basic-lto.macho.x86_64 | llvm-dsymutil -f -o - -y - | llvm-dwarfdump - | FileCheck %s
+RUN: llvm-dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-lto.macho.x86_64 | llvm-dwarfdump -v - | FileCheck %s
+RUN: llvm-dsymutil -oso-prepend-path=%p/.. -dump-debug-map %p/../Inputs/basic-lto.macho.x86_64 | llvm-dsymutil -f -o - -y - | llvm-dwarfdump -v - | FileCheck %s
 
 CHECK: file format Mach-O 64-bit x86-64
 

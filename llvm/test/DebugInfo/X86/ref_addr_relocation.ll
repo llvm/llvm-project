@@ -1,22 +1,22 @@
 ; RUN: llc -filetype=asm -O0 -mtriple=x86_64-linux-gnu < %s -dwarf-version 2 | FileCheck -check-prefixes=CHECK,ELF-ASM %s
 ; RUN: llc -filetype=obj -O0 %s -mtriple=x86_64-linux-gnu -o %t-2 -dwarf-version 2
-; RUN: llvm-dwarfdump %t-2 | FileCheck %s -check-prefix=CHECK-DWARF
+; RUN: llvm-dwarfdump -v %t-2 | FileCheck %s -check-prefix=CHECK-DWARF
 ; RUN: llc -filetype=obj -O0 %s -mtriple=x86_64-linux-gnu -o %t-4 -dwarf-version 2
-; RUN: llvm-dwarfdump %t-4 | FileCheck %s -check-prefix=CHECK-DWARF
+; RUN: llvm-dwarfdump -v %t-4 | FileCheck %s -check-prefix=CHECK-DWARF
 
 ; RUN: llc -filetype=asm -O0 -mtriple=x86_64-apple-darwin < %s -dwarf-version 2 | FileCheck -check-prefixes=CHECK,DARWIN-ASM2 %s
 ; RUN: llc -filetype=asm -O0 -mtriple=x86_64-apple-darwin < %s -dwarf-version 4 | FileCheck -check-prefixes=CHECK,DARWIN-ASM4 %s
 ; RUN: llc -filetype=obj %s -mtriple=x86_64-apple-darwin -o %t2-2 -dwarf-version 2
-; RUN: llvm-dwarfdump %t2-2 | FileCheck %s -check-prefix=CHECK-DWARF
+; RUN: llvm-dwarfdump -v %t2-2 | FileCheck %s -check-prefix=CHECK-DWARF
 ; RUN: llc -filetype=obj %s -mtriple=x86_64-apple-darwin -o %t2-4 -dwarf-version 4
-; RUN: llvm-dwarfdump %t2-4 | FileCheck %s -check-prefix=CHECK-DWARF
+; RUN: llvm-dwarfdump -v %t2-4 | FileCheck %s -check-prefix=CHECK-DWARF
 
 ; RUN: llc -filetype=asm -O0 -mtriple=x86_64-pc-win32 < %s -dwarf-version 2 | FileCheck -check-prefixes=CHECK,COFF-ASM %s
 ; RUN: llc -filetype=asm -O0 -mtriple=x86_64-pc-win32 < %s -dwarf-version 4 | FileCheck -check-prefixes=CHECK,COFF-ASM %s
 ; RUN: llc -filetype=obj -O0 %s -mtriple=x86_64-pc-win32 -o %t3-2 -dwarf-version 2
-; RUN: llvm-dwarfdump %t3-2 | FileCheck %s -check-prefix=CHECK-DWARF2
+; RUN: llvm-dwarfdump -v %t3-2 | FileCheck %s -check-prefix=CHECK-DWARF2
 ; RUN: llc -filetype=obj -O0 %s -mtriple=x86_64-pc-win32 -o %t3-4 -dwarf-version 4
-; RUN: llvm-dwarfdump %t3-4 | FileCheck %s -check-prefix=CHECK-DWARF
+; RUN: llvm-dwarfdump -v %t3-4 | FileCheck %s -check-prefix=CHECK-DWARF
 
 ; Testing case generated from:
 ; clang++ tu1.cpp tu2.cpp -g -emit-llvm -c

@@ -1,5 +1,5 @@
 ; RUN: llc -o - %s | FileCheck %s
-; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
+; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s --check-prefix=DWARF
 ; This test checks that parameters on the stack pointer are correctly
 ; referenced by debug info.
 target triple = "x86_64--"

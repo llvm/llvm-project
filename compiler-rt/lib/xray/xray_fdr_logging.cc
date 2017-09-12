@@ -42,7 +42,7 @@ namespace __xray {
 // NOTE: This is a pointer to avoid having to do atomic operations at
 // initialization time. This is OK to leak as there will only be one bufferqueue
 // for the runtime, initialized once through the fdrInit(...) sequence.
-std::shared_ptr<BufferQueue>* BQ = nullptr;
+std::shared_ptr<BufferQueue> *BQ = nullptr;
 
 __sanitizer::atomic_sint32_t LogFlushStatus = {
     XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING};
@@ -207,7 +207,6 @@ void fdrLoggingHandleCustomEvent(void *Event,
   auto TSC_CPU = getTimestamp();
   auto &TSC = std::get<0>(TSC_CPU);
   auto &CPU = std::get<1>(TSC_CPU);
-  thread_local bool Running = false;
   RecursionGuard Guard{Running};
   if (!Guard) {
     assert(Running && "RecursionGuard is buggy!");
@@ -298,7 +297,9 @@ static auto UNUSED Unused = [] {
   using namespace __xray;
   if (flags()->xray_fdr_log) {
     XRayLogImpl Impl{
-        fdrLoggingInit, fdrLoggingFinalize, fdrLoggingHandleArg0,
+        fdrLoggingInit,
+        fdrLoggingFinalize,
+        fdrLoggingHandleArg0,
         fdrLoggingFlush,
     };
     __xray_set_log_impl(Impl);

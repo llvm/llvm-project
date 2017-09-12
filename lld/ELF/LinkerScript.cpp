@@ -70,6 +70,10 @@ uint64_t ExprValue::getSecAddr() const {
   return 0;
 }
 
+uint64_t ExprValue::getSectionOffset() const {
+  return getValue() - getSecAddr();
+}
+
 static SymbolBody *addRegular(SymbolAssignment *Cmd) {
   Symbol *Sym;
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
@@ -141,7 +145,7 @@ void LinkerScript::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
     Sym->Value = V.getValue();
   } else {
     Sym->Section = V.Sec;
-    Sym->Value = alignTo(V.Val, V.Alignment);
+    Sym->Value = V.getSectionOffset();
   }
 }
 

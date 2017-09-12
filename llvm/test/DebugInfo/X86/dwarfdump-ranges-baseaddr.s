@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple x86_64-pc-linux -filetype=obj %s -o %t
-# RUN: llvm-dwarfdump %t | FileCheck %s
+# RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 # CHECK: .debug_info contents:
 # CHECK: 0x0000000b: DW_TAG_compile_unit [1]

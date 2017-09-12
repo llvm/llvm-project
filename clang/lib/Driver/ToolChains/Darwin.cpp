@@ -1039,7 +1039,9 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
   if (Sanitize.needsLsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "lsan");
   if (Sanitize.needsUbsanRt())
-    AddLinkSanitizerLibArgs(Args, CmdArgs, "ubsan");
+    AddLinkSanitizerLibArgs(Args, CmdArgs,
+                            Sanitize.requiresMinimalRuntime() ? "ubsan_minimal"
+                                                              : "ubsan");
   if (Sanitize.needsTsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan");
   if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib)) {

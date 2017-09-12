@@ -53,6 +53,7 @@ struct ExprValue {
   bool isAbsolute() const { return ForceAbsolute || Sec == nullptr; }
   uint64_t getValue() const;
   uint64_t getSecAddr() const;
+  uint64_t getSectionOffset() const;
 };
 
 // This represents an expression in the linker script.

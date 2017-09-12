@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Given the following source, ensure that the discriminator is emitted for
 ; the inlined callsite.

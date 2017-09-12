@@ -4,7 +4,7 @@
 # Compile with:
 #        llvm-mc -triple x86_64-apple-darwin -filetype=obj -o 1.o empty_range.o
 
-# RUN: llvm-dsymutil -f -y %p/dummy-debug-map.map -oso-prepend-path %p/../Inputs/empty_range -o - | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+# RUN: llvm-dsymutil -f -y %p/dummy-debug-map.map -oso-prepend-path %p/../Inputs/empty_range -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 
         .section	__TEXT,__text,regular,pure_instructions
 	.macosx_version_min 10, 11

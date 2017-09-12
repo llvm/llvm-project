@@ -112,45 +112,31 @@ struct DILineInfoSpecifier {
       : FLIKind(FLIKind), FNKind(FNKind) {}
 };
 
+namespace {
+/// This is just a helper to programmatically construct DIDumpType.
+enum DIDumpTypeCounter {
+  DIDT_ID_Null = 0,
+#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME) \
+  DIDT_ID##ENUM_NAME,
+#include "llvm/BinaryFormat/Dwarf.def"
+#undef HANDLE_DWARF_SECTION
+};
+}
+
 /// Selects which debug sections get dumped.
-enum DIDumpType {
+enum DIDumpType : uint64_t {
   DIDT_Null,
-  DIDT_All,
-  DIDT_Abbrev,
-  DIDT_AbbrevDwo,
-  DIDT_Aranges,
-  DIDT_Frames,
-  DIDT_Info,
-  DIDT_InfoDwo,
-  DIDT_Types,
-  DIDT_TypesDwo,
-  DIDT_Line,
-  DIDT_LineDwo,
-  DIDT_Loc,
-  DIDT_LocDwo,
-  DIDT_Macro,
-  DIDT_Ranges,
-  DIDT_Pubnames,
-  DIDT_Pubtypes,
-  DIDT_GnuPubnames,
-  DIDT_GnuPubtypes,
-  DIDT_Str,
-  DIDT_StrOffsets,
-  DIDT_StrDwo,
-  DIDT_StrOffsetsDwo,
-  DIDT_AppleNames,
-  DIDT_AppleTypes,
-  DIDT_AppleNamespaces,
-  DIDT_AppleObjC,
-  DIDT_CUIndex,
-  DIDT_GdbIndex,
-  DIDT_TUIndex,
+  DIDT_All             = ~0ULL,
+#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME) \
+  DIDT_##ENUM_NAME = 1 << DIDT_ID##ENUM_NAME,
+#include "llvm/BinaryFormat/Dwarf.def"
+#undef HANDLE_DWARF_SECTION
 };
 
 /// Container for dump options that control which debug information will be
 /// dumped.
 struct DIDumpOptions {
-    DIDumpType DumpType = DIDT_All;
+    uint64_t DumpType = DIDT_All;
     bool DumpEH = false;
     bool SummarizeTypes = false;
     bool Brief = false;
@@ -170,7 +156,7 @@ public:
 
   virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) = 0;
 
-  virtual bool verify(raw_ostream &OS, DIDumpType DumpType = DIDT_All) {
+  virtual bool verify(raw_ostream &OS, uint64_t DumpType = DIDT_All) {
     // No verifier? Just say things went well.
     return true;
   }

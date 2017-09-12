@@ -1,4 +1,4 @@
-//===-- PeepholeOptimizer.cpp - Peephole Optimizations --------------------===//
+//===- PeepholeOptimizer.cpp - Peephole Optimizations ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -67,6 +67,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -74,18 +75,21 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetOpcodes.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <cassert>
@@ -170,11 +174,11 @@ namespace {
     }
 
     /// \brief Track Def -> Use info used for rewriting copies.
-    typedef SmallDenseMap<TargetInstrInfo::RegSubRegPair, ValueTrackerResult>
-        RewriteMapTy;
+    using RewriteMapTy =
+        SmallDenseMap<TargetInstrInfo::RegSubRegPair, ValueTrackerResult>;
 
     /// \brief Sequence of instructions that formulate recurrence cycle.
-    typedef SmallVector<RecurrenceInstr, 4> RecurrenceCycle;
+    using RecurrenceCycle = SmallVector<RecurrenceInstr, 4>;
 
   private:
     bool optimizeCmpInstr(MachineInstr *MI, MachineBasicBlock *MBB);
@@ -195,6 +199,7 @@ namespace {
     bool foldImmediate(MachineInstr *MI, MachineBasicBlock *MBB,
                        SmallSet<unsigned, 4> &ImmDefRegs,
                        DenseMap<unsigned, MachineInstr*> &ImmDefMIs);
+
     /// \brief Finds recurrence cycles, but only ones that formulated around
     /// a def operand and a use operand that are tied. If there is a use
     /// operand commutable with the tied use operand, find recurrence cycle
@@ -254,7 +259,7 @@ namespace {
   /// maintained with CommutePair.
   class RecurrenceInstr {
   public:
-    typedef std::pair<unsigned, unsigned> IndexPair;
+    using IndexPair = std::pair<unsigned, unsigned>;
 
     RecurrenceInstr(MachineInstr *MI) : MI(MI) {}
     RecurrenceInstr(MachineInstr *MI, unsigned Idx1, unsigned Idx2)
@@ -277,11 +282,12 @@ namespace {
     SmallVector<TargetInstrInfo::RegSubRegPair, 2> RegSrcs;
 
     /// Instruction using the sources in 'RegSrcs'.
-    const MachineInstr *Inst;
+    const MachineInstr *Inst = nullptr;
 
   public:
-    ValueTrackerResult() : Inst(nullptr) {}
-    ValueTrackerResult(unsigned Reg, unsigned SubReg) : Inst(nullptr) {
+    ValueTrackerResult() = default;
+
+    ValueTrackerResult(unsigned Reg, unsigned SubReg) {
       addSource(Reg, SubReg);
     }
 
@@ -350,13 +356,17 @@ namespace {
   class ValueTracker {
   private:
     /// The current point into the use-def chain.
-    const MachineInstr *Def;
+    const MachineInstr *Def = nullptr;
+
     /// The index of the definition in Def.
-    unsigned DefIdx;
+    unsigned DefIdx = 0;
+
     /// The sub register index of the definition.
     unsigned DefSubReg;
+
     /// The register where the value can be found.
     unsigned Reg;
+
     /// Specifiy whether or not the value tracking looks through
     /// complex instructions. When this is false, the value tracker
     /// bails on everything that is not a copy or a bitcast.
@@ -365,8 +375,10 @@ namespace {
     /// the ValueTracker class but that would have complicated the code of
     /// the users of this class.
     bool UseAdvancedTracking;
+
     /// MachineRegisterInfo used to perform tracking.
     const MachineRegisterInfo &MRI;
+
     /// Optional TargetInstrInfo used to perform some complex
     /// tracking.
     const TargetInstrInfo *TII;
@@ -374,22 +386,29 @@ namespace {
     /// \brief Dispatcher to the right underlying implementation of
     /// getNextSource.
     ValueTrackerResult getNextSourceImpl();
+
     /// \brief Specialized version of getNextSource for Copy instructions.
     ValueTrackerResult getNextSourceFromCopy();
+
     /// \brief Specialized version of getNextSource for Bitcast instructions.
     ValueTrackerResult getNextSourceFromBitcast();
+
     /// \brief Specialized version of getNextSource for RegSequence
     /// instructions.
     ValueTrackerResult getNextSourceFromRegSequence();
+
     /// \brief Specialized version of getNextSource for InsertSubreg
     /// instructions.
     ValueTrackerResult getNextSourceFromInsertSubreg();
+
     /// \brief Specialized version of getNextSource for ExtractSubreg
     /// instructions.
     ValueTrackerResult getNextSourceFromExtractSubreg();
+
     /// \brief Specialized version of getNextSource for SubregToReg
     /// instructions.
     ValueTrackerResult getNextSourceFromSubregToReg();
+
     /// \brief Specialized version of getNextSource for PHI instructions.
     ValueTrackerResult getNextSourceFromPHI();
 
@@ -410,7 +429,7 @@ namespace {
                  const MachineRegisterInfo &MRI,
                  bool UseAdvancedTracking = false,
                  const TargetInstrInfo *TII = nullptr)
-        : Def(nullptr), DefIdx(0), DefSubReg(DefSubReg), Reg(Reg),
+        : DefSubReg(DefSubReg), Reg(Reg),
           UseAdvancedTracking(UseAdvancedTracking), MRI(MRI), TII(TII) {
       if (!TargetRegisterInfo::isPhysicalRegister(Reg)) {
         Def = MRI.getVRegDef(Reg);
@@ -453,6 +472,7 @@ namespace {
 } // end anonymous namespace
 
 char PeepholeOptimizer::ID = 0;
+
 char &llvm::PeepholeOptimizerID = PeepholeOptimizer::ID;
 
 INITIALIZE_PASS_BEGIN(PeepholeOptimizer, DEBUG_TYPE,
@@ -659,7 +679,7 @@ bool PeepholeOptimizer::optimizeSelect(MachineInstr *MI,
 }
 
 /// \brief Check if a simpler conditional branch can be
-// generated
+/// generated
 bool PeepholeOptimizer::optimizeCondBranch(MachineInstr *MI) {
   return TII->optimizeCondBranch(*MI);
 }
@@ -805,13 +825,13 @@ class CopyRewriter {
 protected:
   /// The copy-like instruction.
   MachineInstr &CopyLike;
+
   /// The index of the source being rewritten.
-  unsigned CurrentSrcIdx;
+  unsigned CurrentSrcIdx = 0;
 
 public:
-  CopyRewriter(MachineInstr &MI) : CopyLike(MI), CurrentSrcIdx(0) {}
-
-  virtual ~CopyRewriter() {}
+  CopyRewriter(MachineInstr &MI) : CopyLike(MI) {}
+  virtual ~CopyRewriter() = default;
 
   /// \brief Get the next rewritable source (SrcReg, SrcSubReg) and
   /// the related value that it affects (TrackReg, TrackSubReg).
@@ -944,6 +964,7 @@ class UncoalescableRewriter : public CopyRewriter {
 protected:
   const TargetInstrInfo &TII;
   MachineRegisterInfo   &MRI;
+
   /// The number of defs in the bitcast
   unsigned NumDefs;
 
@@ -958,7 +979,6 @@ public:
   /// All such sources need to be considered rewritable in order to
   /// rewrite a uncoalescable copy-like instruction. This method return
   /// each definition that must be checked if rewritable.
-  ///
   bool getNextRewritableSource(unsigned &SrcReg, unsigned &SrcSubReg,
                                unsigned &TrackReg,
                                unsigned &TrackSubReg) override {
@@ -1205,7 +1225,7 @@ public:
   }
 };
 
-}  // end anonymous namespace
+} // end anonymous namespace
 
 /// \brief Get the appropriated CopyRewriter for \p MI.
 /// \return A pointer to a dynamically allocated CopyRewriter or nullptr
@@ -1847,7 +1867,6 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
         DEBUG(dbgs() << "Encountered load fold barrier on " << *MI << "\n");
         FoldAsLoadDefCandidates.clear();
       }
-
     }
   }
 

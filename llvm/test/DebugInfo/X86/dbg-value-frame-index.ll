@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -o - %s | FileCheck %s
 ; RUN: llc -mtriple=x86_64-unknown-unknown -filetype=obj < %s \
-; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
+; RUN:   | llvm-dwarfdump -v - | FileCheck %s --check-prefix=DWARF
 
 define i1 @test() !dbg !4 {
 entry:

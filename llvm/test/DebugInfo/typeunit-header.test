@@ -1,4 +1,4 @@
-RUN: llvm-dwarfdump %p/Inputs/typeunit-header.elf-x86-64 | FileCheck %s
+RUN: llvm-dwarfdump -v %p/Inputs/typeunit-header.elf-x86-64 | FileCheck %s
 
 This is testing a bugfix where parsing the type unit header was not 
 taking the unit's intial length field into account when validating.

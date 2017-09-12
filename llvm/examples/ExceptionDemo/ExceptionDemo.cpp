@@ -41,7 +41,7 @@
 //     Cases -1 and 7 are caught by a C++ test harness where the validity of
 //         of a C++ catch(...) clause catching a generated exception with a
 //         type info type of 7 is explained by: example in rules 1.6.4 in
-//         http://mentorembedded.github.com/cxx-abi/abi-eh.html (v1.22)
+//         http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html (v1.22)
 //
 // This code uses code from the llvm compiler-rt project and the llvm
 // Kaleidoscope project.
@@ -101,7 +101,7 @@ struct OurExceptionType_t {
 ///
 /// Note: The above unwind.h defines struct _Unwind_Exception to be aligned
 ///       on a double word boundary. This is necessary to match the standard:
-///       http://mentorembedded.github.com/cxx-abi/abi-eh.html
+///       http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html
 struct OurBaseException_t {
   struct OurExceptionType_t type;
 
@@ -299,7 +299,7 @@ void deleteOurException(OurUnwindException *expToDelete) {
 /// This function is the struct _Unwind_Exception API mandated delete function
 /// used by foreign exception handlers when deleting our exception
 /// (OurException), instances.
-/// @param reason See @link http://mentorembedded.github.com/cxx-abi/abi-eh.html
+/// @param reason See @link http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html
 /// @unlink
 /// @param expToDelete exception instance to delete
 void deleteFromUnwindOurException(_Unwind_Reason_Code reason,
@@ -489,7 +489,7 @@ static uintptr_t readEncodedPointer(const uint8_t **data, uint8_t encoding) {
 /// are supported. Filters are not supported.
 /// See Variable Length Data in:
 /// @link http://dwarfstd.org/Dwarf3.pdf @unlink
-/// Also see @link http://mentorembedded.github.com/cxx-abi/abi-eh.html @unlink
+/// Also see @link http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html @unlink
 /// @param resultAction reference variable which will be set with result
 /// @param classInfo our array of type info pointers (to globals)
 /// @param actionEntry index into above type info array or 0 (clean up).
@@ -583,7 +583,7 @@ static bool handleActionValue(int64_t *resultAction,
 
 
 /// Deals with the Language specific data portion of the emitted dwarf code.
-/// See @link http://mentorembedded.github.com/cxx-abi/abi-eh.html @unlink
+/// See @link http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html @unlink
 /// @param version unsupported (ignored), unwind version
 /// @param lsda language specific data area
 /// @param _Unwind_Action actions minimally supported unwind stage
@@ -767,7 +767,7 @@ static _Unwind_Reason_Code handleLsda(int version, const uint8_t *lsda,
 
 /// This is the personality function which is embedded (dwarf emitted), in the
 /// dwarf unwind info block. Again see: JITDwarfEmitter.cpp.
-/// See @link http://mentorembedded.github.com/cxx-abi/abi-eh.html @unlink
+/// See @link http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html @unlink
 /// @param version unsupported (ignored), unwind version
 /// @param _Unwind_Action actions minimally supported unwind stage
 ///        (forced specifically not supported)
@@ -814,7 +814,7 @@ _Unwind_Reason_Code ourPersonality(int version, _Unwind_Action actions,
 /// Generates our _Unwind_Exception class from a given character array.
 /// thereby handling arbitrary lengths (not in standard), and handling
 /// embedded \0s.
-/// See @link http://mentorembedded.github.com/cxx-abi/abi-eh.html @unlink
+/// See @link http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html @unlink
 /// @param classChars char array to encode. NULL values not checkedf
 /// @param classCharsSize number of chars in classChars. Value is not checked.
 /// @returns class value
@@ -1571,7 +1571,7 @@ void runExceptionThrow(llvm::ExecutionEngine *engine,
   catch (...) {
     // Catch all exceptions including our generated ones. This latter
     // functionality works according to the example in rules 1.6.4 of
-    // http://mentorembedded.github.com/cxx-abi/abi-eh.html (v1.22),
+    // http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html (v1.22),
     // given that these will be exceptions foreign to C++
     // (the _Unwind_Exception::exception_class should be different from
     // the one used by C++).

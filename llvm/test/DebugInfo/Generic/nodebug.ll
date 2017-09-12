@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s
+; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump -v - | FileCheck %s
 
 ; Test that a nodebug function (a function not appearing in the debug info IR
 ; metadata subprogram list) with DebugLocs on its IR doesn't cause crashes/does
