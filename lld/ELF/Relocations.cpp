@@ -91,8 +91,12 @@ static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
   // relocation types occupy eight bit. In case of N64 ABI we extract first
   // relocation from 3-in-1 packet because only the first relocation can
   // be against a real symbol.
-  if (Config->EMachine == EM_MIPS && (Type & 0xff) == R_MIPS_GPREL16)
-    return false;
+  if (Config->EMachine == EM_MIPS) {
+    Type &= 0xff;
+    if (Type == R_MIPS_GPREL16 || Type == R_MICROMIPS_GPREL16 ||
+        Type == R_MICROMIPS_GPREL7_S2)
+      return false;
+  }
   return Body.isPreemptible();
 }
 
@@ -301,6 +305,8 @@ static uint32_t getMipsPairType(uint32_t Type, const SymbolBody &Sym) {
     return R_MIPS_LO16;
   case R_MIPS_GOT16:
     return Sym.isLocal() ? R_MIPS_LO16 : R_MIPS_NONE;
+  case R_MICROMIPS_GOT16:
+    return Sym.isLocal() ? R_MICROMIPS_LO16 : R_MIPS_NONE;
   case R_MIPS_PCHI16:
     return R_MIPS_PCLO16;
   case R_MICROMIPS_HI16:

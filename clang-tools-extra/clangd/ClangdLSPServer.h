@@ -27,6 +27,7 @@ class JSONOutput;
 class ClangdLSPServer {
 public:
   ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
+                  bool SnippetCompletions,
                   llvm::Optional<StringRef> ResourceDir);
 
   /// Run LSP server loop, receiving input for it from \p In. \p In must be

@@ -221,9 +221,11 @@ void ClangdLSPServer::LSPProtocolCallbacks::onGoToDefinition(
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
+                                 bool SnippetCompletions,
                                  llvm::Optional<StringRef> ResourceDir)
     : Out(Out), DiagConsumer(*this),
-      Server(CDB, DiagConsumer, FSProvider, AsyncThreadsCount, ResourceDir) {}
+      Server(CDB, DiagConsumer, FSProvider, AsyncThreadsCount,
+             SnippetCompletions, ResourceDir) {}
 
 void ClangdLSPServer::run(std::istream &In) {
   assert(!IsDone && "Run was called before");
